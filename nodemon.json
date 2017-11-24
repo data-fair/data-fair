@@ -1,5 +1,5 @@
 {
   "verbose": true,
   "ext": "js json html",
-  "watch": ["server/", "config/", "package.json", "contract/"]
+  "watch": ["server/", "config/", "package.json", "contract/", "public/bundles/webpack-assets.json"]
 }

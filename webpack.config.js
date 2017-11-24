@@ -1,12 +1,14 @@
 const webpack = require('webpack')
 const path = require('path')
+const AssetsPlugin = require('assets-webpack-plugin')
+const assetsPlugin = new AssetsPlugin({fullPath: false, path: path.join(__dirname, '/public/bundles'), prettyPrint: true})
 
 module.exports = {
   entry: './public/src/app.js',
   output: {
-    filename: 'app.js',
+    filename: process.env.NODE_ENV !== 'development' ? '[hash].app.js' : 'app.js',
     path: path.join(__dirname, '/public/bundles'),
-    publicPath: './bundles/',
+    publicPath: '/bundles/',
     chunkFilename: process.env.NODE_ENV !== 'development' ? '[name].[hash].app.js' : '[name].app.js'
   },
   module: {
@@ -35,6 +37,7 @@ module.exports = {
   },
   devtool: process.env.NODE_ENV !== 'development' ? 'source-map' : 'eval',
   plugins: process.env.NODE_ENV !== 'development' ? [
-    new webpack.optimize.UglifyJsPlugin()
-  ] : []
+    new webpack.optimize.UglifyJsPlugin(),
+    assetsPlugin
+  ] : [assetsPlugin]
 }

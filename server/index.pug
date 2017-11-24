@@ -68,6 +68,5 @@ html
   body
     #app
     script.
-      window.public_url='#{base_URL}';
-      window.koumoul_url='#{koumoul_URL}'
-    script(src=base_URL+'/bundles/app.js')
+      window.CONFIG = !{config};
+    script(src=appJS)

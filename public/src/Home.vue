@@ -75,14 +75,14 @@ export default {
   mounted() {
     this.listDatasets()
     if (this.user) {
-      this.$http.get(window.koumoul_url + '/api/organizations?is-member=true').then(response => {
+      this.$http.get(window.CONFIG.koumoulUrl + '/api/organizations?is-member=true').then(response => {
         this.organizations = response.data.results
       })
     }
   },
   methods: {
     listDatasets() {
-      this.$http.get(window.public_url + '/api/v1/datasets').then(results => {
+      this.$http.get(window.CONFIG.baseUrl + '/api/v1/datasets').then(results => {
         this.datasets = results.data
       })
     },
@@ -109,7 +109,7 @@ export default {
         formData.append('action[id]', this.actions[this.action].id)
       }
       formData.append('file', this.file)
-      this.$http.post(window.public_url + '/api/v1/datasets', formData).then(results => {
+      this.$http.post(window.CONFIG.baseUrl + '/api/v1/datasets', formData).then(results => {
         console.log(results.data)
         // this.datasets = results.data
       })
@@ -118,7 +118,7 @@ export default {
   watch: {
     currentStep() {
       if (this.currentStep === 2) {
-        this.$http.get(window.public_url + '/api/v1/datasets', {
+        this.$http.get(window.CONFIG.baseUrl + '/api/v1/datasets', {
           params: {
             'owner-type': this.owners[this.owner].type,
             'owner-id': this.owners[this.owner].id,

@@ -16,8 +16,7 @@ app.get('/api/v1/ping', status.ping)
 const oneWeek = process.env.NODE_ENV === 'development' ? 0 : 7 * 24 * 60 * 60
 const staticOptions = {
   setHeaders: (res) => {
-    // 'private' so that it doesn't get store in the reverse proxy's cache
-    res.set('cache-control', 'private, max-age=' + oneWeek)
+    res.set('cache-control', 'public, max-age=' + oneWeek)
   }
 }
 app.use('/bundles', express.static(path.join(__dirname, '../public/bundles'), staticOptions))
@@ -27,8 +26,11 @@ app.use('/favicon.ico', express.static(path.join(__dirname, '../public/favicon.i
 const pug = require('pug')
 const compiledIndex = pug.compileFile(path.join(__dirname, './index.pug'))
 const renderedIndex = compiledIndex({
-  base_URL: config.baseUrl,
-  koumoul_URL: config.koumoulUrl
+  appJS: config.baseUrl + '/bundles/' + require('../public/bundles/webpack-assets.json').main.js,
+  config: JSON.stringify({
+    baseUrl: config.baseUrl,
+    koumoulUrl: config.koumoulUrl
+  })
 })
 app.use('/*', (req, res) => {
   res.setHeader('Cache-Control', 'public, max-age=0')

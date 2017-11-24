@@ -31,7 +31,7 @@ Vue.material.registerTheme('default', {
   }
 })
 
-let base = window.public_url.split('//').pop().split('/')
+let base = window.CONFIG.baseUrl.split('//').pop().split('/')
 base.shift()
 base = base.join('/')
 

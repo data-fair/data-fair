@@ -31,7 +31,7 @@ export default {
   computed: mapState({
     user: state => state.user,
     loginUrl() {
-      return window.koumoul_url + '/login?url=' + window.location.origin
+      return window.CONFIG.koumoulUrl + '/login?url=' + window.location.origin
     }
   })
 }

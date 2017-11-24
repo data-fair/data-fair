@@ -15,7 +15,7 @@ export default {
     api: null
   }),
   mounted: function() {
-    this.$http.get('./api/v1/api-docs.json').then(response => {
+    this.$http.get(window.CONFIG.baseUrl + '/api/v1/api-docs.json').then(response => {
       this.api = response.body
     })
   }

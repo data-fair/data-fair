@@ -24,7 +24,7 @@ module.exports = new Vuex.Store({
           text: 'Vous n\'avez pas saisi d\'email'
         })
       }
-      Vue.http.post(window.public_url + '/api/v1/auth/passwordless', {
+      Vue.http.post(window.CONFIG.baseUrl + '/api/v1/auth/passwordless', {
         email: email
       }).then((response) => {
         global.vue.$notify({
@@ -49,7 +49,7 @@ module.exports = new Vuex.Store({
       if (jwt) {
         const user = jwtDecode(jwt)
         context.commit('user', user)
-        Vue.http.get(window.koumoul_url + '/api/accounts/' + user._id).then(response => {
+        Vue.http.get(window.CONFIG.koumoulUrl + '/api/accounts/' + user._id).then(response => {
           context.commit('user', Object.assign(response.data, {organizations: user.organizations}))
         })
       } else {

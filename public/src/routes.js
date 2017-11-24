@@ -1,5 +1,3 @@
-import Vue from 'vue'
-
 import Home from './Home.vue'
 import ApiDoc from './ApiDoc.vue'
 
