@@ -1,0 +1,60 @@
+const config = require('config')
+const express = require('express')
+const path = require('path')
+const dbUtils = require('./db-utils')
+
+const status = require('./status')
+let app = module.exports = express()
+
+// Business routers
+app.use('/api/v1', require('./root'))
+app.use('/api/v1/datasets', require('./datasets'))
+app.get('/api/v1/status', status.status)
+app.get('/api/v1/ping', status.ping)
+
+// Static routing
+const oneWeek = process.env.NODE_ENV === 'development' ? 0 : 7 * 24 * 60 * 60
+const staticOptions = {
+  setHeaders: (res) => {
+    // 'private' so that it doesn't get store in the reverse proxy's cache
+    res.set('cache-control', 'private, max-age=' + oneWeek)
+  }
+}
+app.use('/bundles', express.static(path.join(__dirname, '../public/bundles'), staticOptions))
+app.use('/assets', express.static(path.join(__dirname, '../public/assets'), staticOptions))
+app.use('/favicon.ico', express.static(path.join(__dirname, '../public/favicon.ico'), staticOptions))
+
+const pug = require('pug')
+const compiledIndex = pug.compileFile(path.join(__dirname, './index.pug'))
+const renderedIndex = compiledIndex({
+  base_URL: config.baseUrl,
+  koumoul_URL: config.koumoulUrl
+})
+app.use('/*', (req, res) => {
+  res.setHeader('Cache-Control', 'public, max-age=0')
+  res.send(renderedIndex)
+})
+
+// Error handling to complement express default error handling. TODO do something useful of errors.
+app.use((err, req, res, next) => {
+  console.error('Error, what to do ?', err.stack)
+
+  // Default error handler of express is actually not bad.
+  // It will send stack to client only if not in production and manage interrupted streams.
+  next(err)
+})
+
+dbUtils.init(function(err, db) {
+  if (err) throw err
+  app.set('db', db)
+  app.listen(config.port, (err) => {
+    if (err) {
+      console.log('Could not run server : ', err.stack)
+      app.get('db').close()
+      throw err
+    }
+    console.log('Listening on http://localhost:%s', config.port)
+    // Emit this event for the test suite
+    app.emit('listening')
+  })
+})

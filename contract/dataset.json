@@ -1,0 +1,81 @@
+{
+  "title": "Statut du service",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Identifier of the dataset"
+    },
+    "title": {
+      "type": "string",
+      "description": "Short title of the dataset"
+    },
+    "description": {
+      "type": "string",
+      "description": "Detailed description of the dataset"
+    },
+    "originalFileName": {
+      "type": "string",
+      "description": "Name of the first file that was used to create this dataset"
+    },
+    "createdBy": {
+      "type": "string",
+      "description": "Id of the account that created this dataset"
+    },
+    "updatedBy": {
+      "type": "string",
+      "description": "Id of the account that last updated this dataset"
+    },
+    "createdAt": {
+      "type": "string",
+      "description": "Creation date of this dataset",
+      "format":"date-time"
+    },
+    "updatedAt": {
+      "type": "string",
+      "description": "Date of the last update for this dataset",
+      "format":"date-time"
+    },
+    "owner":{
+      "type":"object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["user", "organization"],
+          "description": "If the owner is a user or an organization"
+        },
+        "id": {
+          "type": "string",
+          "description": "Identifier of the owner of this dataset"
+        }
+      }
+    },
+    "public": {
+      "type": "boolean",
+      "enum": [true, false],
+      "description": "If the dataset is public or not"
+    },
+    "permissions":{
+      "type":"array",
+      "items": {
+        "type":"object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["user", "organization"],
+            "description": "If the entity is a user or an organization"
+          },
+          "id": {
+            "type": "string",
+            "description": "Identifier of the entity"
+          },
+          "mode": {
+            "type": "string",
+            "enum": ["read", "write"],
+            "description": "Type of permission"
+          }
+        }
+      }
+    }
+  }
+}
