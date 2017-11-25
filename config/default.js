@@ -3,5 +3,13 @@ module.exports = {
   publicUrl: 'http://localhost:5601',
   directoryUrl: 'https://localhost:5680',
   dataDir: './data',
-  mongoUrl: 'mongodb://localhost:27017/accessible-data-' + (process.env.NODE_ENV || 'development')
+  mongoUrl: 'mongodb://localhost:27017/accessible-data-' + (process.env.NODE_ENV || 'development'),
+  info: {
+    termsOfService: 'https://koumoul.com/term-of-service',
+    contact: {
+      name: 'Koumoul',
+      url: 'https://koumoul.com',
+      email: 'support@koumoul.com'
+    }
+  }
 }
