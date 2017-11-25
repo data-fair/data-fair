@@ -148,9 +148,7 @@ const storage = multer.diskStorage({
   },
   filename: async function(req, file, cb) {
     let id = shortid.generate()
-    while (await req.app.get('db').collection('datasets').findOne({
-        id: id
-      })) {
+    while (await req.app.get('db').collection('datasets').findOne({id})) {
       id = shortid.generate()
     }
     cb(null, id + '.' + file.originalname.split('.').pop())

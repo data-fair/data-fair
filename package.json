@@ -6,7 +6,7 @@
   "scripts": {
     "build": "webpack",
     "dev": "NODE_ENV=development webpack --watch & browser-sync start --config bs-config.js & NODE_ENV=development nodemon server/app.js",
-    "lint": "echo 'TODO: run eslint'",
+    "lint": "eslint .",
     "test": "echo 'TODO: run some tests'"
   },
   "author": "",

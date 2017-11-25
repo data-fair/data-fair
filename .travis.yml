@@ -20,7 +20,7 @@ install:
   - npm run build
 
 script:
-  - npm lint
+  - npm run lint
   - npm test
 
 after_success:
