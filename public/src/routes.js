@@ -1,4 +1,4 @@
-import Home from './Home.vue'
+import Home from './pages/Home.vue'
 import ApiDoc from './ApiDoc.vue'
 
 export default [{
