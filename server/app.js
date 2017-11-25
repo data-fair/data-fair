@@ -26,10 +26,10 @@ app.use('/favicon.ico', express.static(path.join(__dirname, '../public/favicon.i
 const pug = require('pug')
 const compiledIndex = pug.compileFile(path.join(__dirname, './index.pug'))
 const renderedIndex = compiledIndex({
-  appJS: config.baseUrl + '/bundles/' + require('../public/bundles/webpack-assets.json').main.js,
+  appJS: config.publicUrl + '/bundles/' + require('../public/bundles/webpack-assets.json').main.js,
   config: JSON.stringify({
-    baseUrl: config.baseUrl,
-    koumoulUrl: config.koumoulUrl
+    publicUrl: config.publicUrl,
+    directoryUrl: config.directoryUrl
   })
 })
 app.use('/*', (req, res) => {

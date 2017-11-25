@@ -55,7 +55,7 @@ export default {
   },
   mounted() {
     if (this.user) {
-      this.$http.get(window.CONFIG.koumoulUrl + '/api/organizations?is-member=true').then(response => {
+      this.$http.get(window.CONFIG.directoryUrl + '/api/organizations?is-member=true').then(response => {
         this.userOrganizations = response.data.results
       })
     }
@@ -70,12 +70,12 @@ export default {
         formData.append('owner[type]', this.owners[this.owner].type)
         formData.append('owner[id]', this.owners[this.owner].id)
         formData.append('file', this.file)
-        this.$http.post(window.CONFIG.baseUrl + '/api/v1/datasets', formData).then(results => {
+        this.$http.post(window.CONFIG.publicUrl + '/api/v1/datasets', formData).then(results => {
           // this.datasets = results.data
         })
       } else {
         formData.append('file', this.file)
-        this.$http.post(window.CONFIG.baseUrl + '/api/v1/datasets/' + this.actions[this.action].id, formData).then(results => {
+        this.$http.post(window.CONFIG.publicUrl + '/api/v1/datasets/' + this.actions[this.action].id, formData).then(results => {
           // console.log(results.data)
           // this.datasets = results.data
         })
@@ -86,7 +86,7 @@ export default {
   watch: {
     currentStep() {
       if (this.currentStep === 2) {
-        this.$http.get(window.CONFIG.baseUrl + '/api/v1/datasets', {
+        this.$http.get(window.CONFIG.publicUrl + '/api/v1/datasets', {
           params: {
             'owner-type': this.owners[this.owner].type,
             'owner-id': this.owners[this.owner].id,

@@ -7,7 +7,7 @@ module.exports.jwtMiddleware = expressJWT({
     cache: true,
     rateLimit: true,
     jwksRequestsPerMinute: 5,
-    jwksUri: config.koumoulUrl + '/.well-known/jwks.json'
+    jwksUri: config.directoryUrl + '/.well-known/jwks.json'
   }),
   getToken: function fromHeaderOrQuerystring(req) {
     return req.headers && req.headers.authorization && req.headers.authorization.split(' ').pop()
@@ -19,7 +19,7 @@ module.exports.optionalJwtMiddleware = expressJWT({
     cache: true,
     rateLimit: true,
     jwksRequestsPerMinute: 5,
-    jwksUri: config.koumoulUrl + '/.well-known/jwks.json'
+    jwksUri: config.directoryUrl + '/.well-known/jwks.json'
   }),
   credentialsRequired: false,
   getToken: function fromHeaderOrQuerystring(req) {

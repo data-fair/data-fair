@@ -31,7 +31,7 @@ Vue.material.registerTheme('default', {
   }
 })
 
-let base = window.CONFIG.baseUrl.split('//').pop().split('/')
+let base = window.CONFIG.publicUrl.split('//').pop().split('/')
 base.shift()
 base = base.join('/')
 
@@ -78,7 +78,7 @@ new Vue({
   created: function() {
     store.dispatch('userAccount')
     if (localStorage.getItem('id_token')) {
-      this.$http.post(window.CONFIG.koumoulUrl + '/api/auth/exchange').then(response => {
+      this.$http.post(window.CONFIG.directoryUrl + '/api/auth/exchange').then(response => {
         localStorage.setItem('id_token', response.body)
       }, response => {
         localStorage.removeItem('id_token')

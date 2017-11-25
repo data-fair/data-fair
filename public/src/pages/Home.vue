@@ -25,7 +25,7 @@
                 </md-card-actions>
                 <!-- <md-layout flex="true"></md-layout> -->
                 <md-card-content>
-                  <span v-if="dataset.owner.type === 'user'"><md-icon>person</md-icon></span>
+                  <span v-if="dataset.owner.type === 'user'"><md-icon>person</md-icon>{{user.firstName}} {{user.lastName}}</span>
                   <span v-if="dataset.owner.type === 'organization'"><md-icon>group</md-icon>{{organizations[dataset.owner.id] && organizations[dataset.owner.id].name}}</span>
 
 
@@ -76,7 +76,7 @@ export default {
   },
   methods: {
     listDatasets() {
-      this.$http.get(window.CONFIG.baseUrl + '/api/v1/datasets').then(results => {
+      this.$http.get(window.CONFIG.publicUrl + '/api/v1/datasets').then(results => {
         this.datasets = results.data
       })
     }
@@ -84,13 +84,10 @@ export default {
   watch:{
     datasets(){
       const orgIds = this.datasets.results.filter(dataset => dataset.owner.type === 'organization').map(dataset => dataset.owner.id)
-      this.$http.get(window.CONFIG.koumoulUrl + '/api/organizations?ids='+orgIds.join(',')).then(results => {
-        console.log(results.data)
-
+      this.$http.get(window.CONFIG.directoryUrl + '/api/organizations?ids='+orgIds.join(',')).then(results => {
         this.organizations = Object.assign({}, ...results.data.results.map(organization => ({
           [organization.id]: organization
         })))
-        console.log(this.organizations)
       })
     }
   }
