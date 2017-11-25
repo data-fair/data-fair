@@ -78,7 +78,7 @@ new Vue({
   created: function() {
     store.dispatch('userAccount')
     if (localStorage.getItem('id_token')) {
-      this.$http.post(window.koumoul_url + '/api/auth/exchange').then(response => {
+      this.$http.post(window.CONFIG.koumoulUrl + '/api/auth/exchange').then(response => {
         localStorage.setItem('id_token', response.body)
       }, response => {
         localStorage.removeItem('id_token')
