@@ -147,25 +147,11 @@ const storage = multer.diskStorage({
     cb(null, uploadDir)
   },
   filename: async function(req, file, cb) {
-    if (!req.body.action || !req.body.action.type) {
-      return cb(new Error(400))
-    }
-    let id
-    if (req.body.action.type === 'create') {
-      id = shortid.generate()
-      while (await req.app.get('db').collection('datasets').findOne({
+    let id = shortid.generate()
+    while (await req.app.get('db').collection('datasets').findOne({
         id: id
       })) {
-        id = shortid.generate()
-      }
-    } else if (req.body.action.type === 'update') {
-      if (!req.body.action.id) {
-        return cb(new Error(400))
-      }
-      // TODO: verify permissions
-      id = req.body.action.id
-    } else {
-      return cb(new Error(400))
+      id = shortid.generate()
     }
     cb(null, id + '.' + file.originalname.split('.').pop())
   }
@@ -175,16 +161,30 @@ const upload = multer({
 })
 
 // Create a dataset by uploading tabular data
-router.post('', auth.jwtMiddleware, upload.single('file'), (req, res, next) => {
+router.post('', auth.jwtMiddleware, upload.single('file'), async(req, res, next) => {
   // TODO verify quota
   console.log(req.body, req.file)
-  // TODO create dataset by uploading data
-  res.status(201).send(req.dataset)
+  const dataset = {
+    id: req.file.filename.split('.').shift(),
+    title: req.file.originalname.split('.').shift(),
+    public: false,
+    owner: req.body.owner,
+    createdBy: req.user._id,
+    createdAt: moment().toISOString()
+  }
+  try {
+    await req.app.get('db').collection('datasets').insertOne(dataset)
+    res.status(201).send(dataset)
+  } catch (err) {
+    next(err)
+  }
 })
 
 // Update an existing dataset data
-router.post('/:datasetId', (req, res, next) => {
+router.post('/:datasetId', upload.single('file'), (req, res, next) => {
   if (!req.canWrite) return res.sendStatus(403)
+  // TODO: verify permissions
+
   // TODO update dataset data
   res.status(200).send(req.dataset)
 })
