@@ -27,7 +27,7 @@ module.exports = new Vuex.Store({
       if (jwt) {
         const user = jwtDecode(jwt)
         context.commit('user', user)
-        Vue.http.get(window.CONFIG.directoryUrl + '/api/accounts/' + user._id).then(response => {
+        Vue.http.get(window.CONFIG.directoryUrl + '/api/users/' + user.id).then(response => {
           context.commit('user', Object.assign(response.data, {organizations: user.organizations}))
         })
       } else {

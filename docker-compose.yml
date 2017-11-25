@@ -8,3 +8,9 @@ services:
     image: mvertes/alpine-mongo:3.4.9-0
     ports:
       - 27017:27017
+  simple-directory:
+    image: koumoul/simple-directory:latest
+    ports:
+      - 5700:8080
+    environment:
+      - PUBLIC_URL=http://localhost:5700

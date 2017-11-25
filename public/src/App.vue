@@ -31,7 +31,7 @@ export default {
   computed: mapState({
     user: state => state.user,
     loginUrl() {
-      return window.CONFIG.directoryUrl + '/login?url=' + window.location.origin
+      return window.CONFIG.directoryUrl + '/login?redirect=' + window.location.origin + '/signin?id_token='
     }
   })
 }
