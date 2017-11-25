@@ -2,6 +2,8 @@
 
 **Your data as a Web API with ease and power.**
 
+[![Build Status](https://travis-ci.org/koumoul-dev/accessible-data.svg?branch=master)](https://travis-ci.org/koumoul-dev/accessible-data)
+
 *WARNING : This repo is a work in progress, it is not ready yet for the public.*
 
 ## Indexing in ElasticSearch

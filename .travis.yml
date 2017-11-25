@@ -1,0 +1,33 @@
+env:
+  global:
+    # DOCKER_EMAIL
+    - secure: "QS/N39+QvFJ6uNOILHRylYbr0mHAf1KZyqtdf/rN01KvsajozsgttsrZus/NLFrkVCxhGnNQTeicbRMLlgCIW4w9ak0grtwv+s5j0rDMDDhV1t1pSYdfqBPIzM5Rp/E+B69CZU354qz3NvjKIuENzbgzI/O/FWjb+4xgQjBST5SXegsr+PG9a/H+EXubCJS3/VMlN4YbVWUsdOyZx9SpeiPFxTq2XnuZjq+sVjSLDP9W5zJnEuv0L/3ZysTXOAe9TGj5f3sM5rph8PJBLTWtVtiKW5NThu1fPvgXA9VbxmNzCZhHyWozqSKPVZBcq6ZH7jGZkn++GangODwikO0ILJKyJYI2nlvqgKMT7cOtZJH5+EyJou/g2sLio1o1uuuzNQj9wAxd3DM5tb0FT+G430+yOy0FfcIHI7zWKOsLpyHQtOGY6514n42f4UmYRIcWuaWSC3KkJCFJFmX5nUXsoCaE6t76a1PVokDiicJnQXY+uhzCSo/FBZY9DD0Slb3U5nyAATt/QXCjA7sOK9KQboEj6qBHLrHlWLY3soIZgiZJgihxNBnBQCOf1tnfxGNTmOSL07tmtvM1xyvfaWMe8Gxr+SpMy4yr2U4t5faC6XHOS5sFuK8Ou/UH+8kB0tsiX7pqTfaHei1U3tr78BdN+JWpVFhgQob09lwdsCvyE6c="
+    # DOCKER_USER
+    - secure: "sV6ls2MiN0mHcdyc9n8pmlYfiJS72+l8Hmm1kxxa7Gdd8LXLie9iw3TG4LUmqxDVa72FtN8P8POrCAFXsAo+b2w4tBwDOnlNDa3Jpt6z1DfsgDPtFAkaXCPq9agCJaeBTtrRCO3Sd2Q8qSsT903S4L2Eg0Vuqgjc126AOuwjjCZJJfw7FVZvCdSAiJsu0aUniv7mG5W3N9r67qEvWb4jH17ihmukYCcD3yKvleilTZyvKGUxLWGCOYIEdRwihiV7p53uue9WCSrfvMSueskTzs5BymxetJ+REKdmCvHr2AgPojp8H3WALevk7KBaNUgkY2JxxsWMuAo1CwUcYtbA8qqQ7upBk9uEQ/zadrj8n+gWzRDvV8CxX+GOW5c4J/JQKXHLwezKLeQXctfDK5iRQGgB/Rs6E1wHkQXOPdFMx6jdpdahIko82nmBIklkOhicDhdXAzPIG+1GxWIfSw6Mmtu6rWnK5w7z+Q8VT1tLH3HBILRMOwBFl+QxtXuJK8SsKNogNwtSyZOORCWojFB3/z3HF/uCx/c7BKTiAiu78oJ1hobs51KsRO+IckPNHGyqF0PxHhv0PR96kcjmycx1ruE26tVpv17oAwOZIUr46t2N6Xy6FO2zhAmgX8svQSz0u2ckQJB+OjcKPmENVoKmpRnSxsh6CSehIFNLZEzLRZo="
+    # DOCKER_PASS
+    - secure: "AQ6ddRO0dNhzeBPO2bg+FPA/ygbqki+eoJvnfm+bYbz61sZFTzGKJ+sWxl4wWk/F/8L4TAsXSRcr/S3irXfWCdW3wkNkzLI8FsON/eZBvg7LDRqr3xCI4daS7wXTOEYcWLnfoEh0hJ3gDVaTTme51NytXlreskWgc6v1fyv+jJlngTUtCYEl6iuYjExZCsiYFSRoaXmtnlXy2GNlDBucA9eJyJcOlQhxAM2F0smuLOE7VEDvlj3MCS9K+g9w1CS3u4mxdfGUUJ6C9HHhAvRp9uUAwwVdKMtjAjzuX6K400s30rj/fzyoxzorfooRcewywqZ32A2I6jeeoiwyrZjCEp8ZZ0OVhxOzcqgTgMqJFseNirdv54UzcfPN9VTpHHJ4GmUVZZ079mol23lBERbrU8UJF1iMxR3ZSKWXWvCDb8rgKAco30e9Xn4jGcS5K6ZSWUr9ORradP0lC9+ZjW/y3QX8M3e7wkT2CtmacVmu3avtJfNu5ScNfutoaDlADx6P4Xg98hldYG+z7Ni3G56isezGHnptEg30RhsjMwtG258HZNT3G74AaH2SV4sGLggn+BLxttadwQ80RgjFR0Nhq2K2mTidFnAdrMqc2/TeGFuV4eBwFVGnuTfXl+W9Unr/9Tq+24Ju4QJZydFW56L2j4OdXT0bkBPYIX3Wm89OPRo="
+
+language: node_js
+node_js:
+  - '8'
+
+sudo: required
+services:
+  - docker
+
+install:
+  - npm install
+  - npm run build
+
+script:
+  - npm lint
+  - npm test
+
+after_success:
+  # No docker push on pull requests
+  - if [ "$TRAVIS_PULL_REQUEST" == "true" ]; then exit; fi
+  - docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS
+  - export REPO=koumoul/accessible-data
+  - export TAG=`if [ "$TRAVIS_BRANCH" == "master" ]; then echo "latest"; else echo $TRAVIS_BRANCH ; fi`
+  - docker build -f Dockerfile -t $REPO:$TAG .
+  - docker push $REPO
