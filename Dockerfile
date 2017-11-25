@@ -8,12 +8,12 @@ ADD package-lock.json .
 RUN npm install --production
 
 # Adding UI files
-ADD public .
+ADD public public
 
 # Adding server files
-ADD server .
-ADD contract .
-ADD config .
+ADD server server
+ADD contract contract
+ADD config config
 ADD README.md .
 
 VOLUME /webapp/data
