@@ -14,6 +14,7 @@ import App from './App.vue'
 Vue.use(VueMaterial)
 Vue.use(VueResource)
 Vue.use(VueRouter)
+Vue.use(require('vue-moment'))
 // Vue.use(VueCookie)
 
 Vue.material.registerTheme('default', {
