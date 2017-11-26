@@ -1,10 +1,14 @@
 const config = require('config')
 const express = require('express')
+const bodyParser = require('body-parser')
 const path = require('path')
 const dbUtils = require('./db-utils')
 
 const status = require('./status')
 let app = module.exports = express()
+app.use(bodyParser.json({
+  limit: '100kb'
+}))
 
 // Business routers
 app.use('/api/v1', require('./root'))

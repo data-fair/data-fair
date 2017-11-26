@@ -75,12 +75,12 @@ router.use('/:datasetId', auth.optionalJwtMiddleware, async function(req, res, n
     return res.sendStatus(401)
   }
   if (req.user) {
-    if ((req.dataset.owner.type === 'user' && req.dataset.owner.id === req.user._id) || (req.dataset.owner.type === 'organization' && req.user.organizations.indexOf(req.dataset.owner.id) >= 0)) {
+    if ((req.dataset.owner.type === 'user' && req.dataset.owner.id === req.user.id) || (req.dataset.owner.type === 'organization' && req.user.organizations.indexOf(req.dataset.owner.id) >= 0)) {
       req.canRead = true
       req.canWrite = true
     } else {
-      req.dataset.permissions.forEach(permission => {
-        if ((permission.type === 'user' && permission.id === req.user._id) || (permission.type === 'organization' && req.user.organizations.indexOf(permission.id) >= 0)) {
+      (req.dataset.permissions || []).forEach(permission => {
+        if ((permission.type === 'user' && permission.id === req.user.id) || (permission.type === 'organization' && req.user.organizations.indexOf(permission.id) >= 0)) {
           if (permission.mode.indexOf('read') >= 0) {
             req.canRead = true
           }
@@ -167,7 +167,7 @@ router.post('', auth.jwtMiddleware, upload.single('file'), async(req, res, next)
     title: req.file.originalname.split('.').shift(),
     public: false,
     owner: req.body.owner,
-    createdBy: req.user._id,
+    createdBy: req.user.id,
     createdAt: moment().toISOString()
   }
   try {

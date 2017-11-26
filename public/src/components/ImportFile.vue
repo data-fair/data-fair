@@ -71,13 +71,12 @@ export default {
         formData.append('owner[id]', this.owners[this.owner].id)
         formData.append('file', this.file)
         this.$http.post(window.CONFIG.publicUrl + '/api/v1/datasets', formData).then(results => {
-          // this.datasets = results.data
+          this.$emit('datasets-change')
         })
       } else {
         formData.append('file', this.file)
         this.$http.post(window.CONFIG.publicUrl + '/api/v1/datasets/' + this.actions[this.action].id, formData).then(results => {
-          // console.log(results.data)
-          // this.datasets = results.data
+          this.$emit('datasets-change')
         })
       }
 
