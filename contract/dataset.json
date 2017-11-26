@@ -20,6 +20,10 @@
       "type": "string",
       "description": "Name of the first file that was used to create this dataset"
     },
+    "fileSize": {
+      "type": "number",
+      "description": "Size of the file on disk"
+    },
     "createdBy": {
       "type": "string",
       "description": "Id of the account that created this dataset"

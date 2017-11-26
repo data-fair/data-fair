@@ -87,7 +87,7 @@ router.use('/:datasetId', auth.optionalJwtMiddleware, async function(req, res, n
     return res.sendStatus(401)
   }
   if (req.user) {
-    if ((req.dataset.owner.type === 'user' && req.dataset.owner.id === req.user.id) || (req.dataset.owner.type === 'organization' && req.user.organizations.indexOf(req.dataset.owner.id) >= 0)) {
+    if ((req.dataset.owner.type === 'user' && req.dataset.owner.id === req.user.id) || (req.dataset.owner.type === 'organization' && req.user.organizations.findIndex(o => o.id === req.dataset.owner.id) >= 0)) {
       // TODO check if we handle organization permissions with roles too
       req.canRead = true
       req.canWrite = true
@@ -187,14 +187,18 @@ const upload = multer({
 // Create a dataset by uploading tabular data
 router.post('', auth.jwtMiddleware, upload.single('file'), async(req, res, next) => {
   // TODO verify quota
+  const date = moment().toISOString()
   const dataset = {
     id: req.file.filename.split('.').shift(),
     title: req.file.originalname.split('.').shift(),
     originalFileName: req.file.originalname,
+    fileSize: req.file.size,
     public: false,
     owner: req.body.owner,
     createdBy: req.user.id,
-    createdAt: moment().toISOString()
+    createdAt: date,
+    updatedBy: req.user.id,
+    updatedAt: date
   }
   try {
     await req.app.get('db').collection('datasets').insertOne(dataset)
@@ -206,12 +210,24 @@ router.post('', auth.jwtMiddleware, upload.single('file'), async(req, res, next)
 })
 
 // Update an existing dataset data
-router.post('/:datasetId', upload.single('file'), (req, res, next) => {
+router.post('/:datasetId', upload.single('file'), async(req, res, next) => {
   if (!req.canWrite) return res.sendStatus(403)
-  // TODO verify quota
+  try {
+    req.dataset.originalFileName = req.file.originalname
+    req.dataset.fileSize = req.file.size
+    req.dataset.updatedBy = req.user.id
+    req.dataset.updatedAt = moment().toISOString()
+    await req.app.get('db').collection('datasets').updateOne({
+      id: req.params.datasetId
+    }, req.dataset)
 
-  // TODO reindex
-  res.status(200).send(req.dataset)
+    // TODO verify quota
+
+    // TODO reindex
+    res.status(200).send(req.dataset)
+  } catch (err) {
+    return next(err)
+  }
 })
 
 // Read data for a dataset
