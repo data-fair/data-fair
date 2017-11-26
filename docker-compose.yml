@@ -9,7 +9,7 @@ services:
     ports:
       - 27017:27017
   simple-directory:
-    image: koumoul/simple-directory:latest
+    image: koumoul/simple-directory:0.1.0
     ports:
       - 5700:8080
     environment:
