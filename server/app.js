@@ -25,7 +25,6 @@ const staticOptions = {
 }
 app.use('/bundles', express.static(path.join(__dirname, '../public/bundles'), staticOptions))
 app.use('/assets', express.static(path.join(__dirname, '../public/assets'), staticOptions))
-app.use('/favicon.ico', express.static(path.join(__dirname, '../public/favicon.ico'), staticOptions))
 
 const pug = require('pug')
 const compiledIndex = pug.compileFile(path.join(__dirname, './index.pug'))
