@@ -43,7 +43,7 @@ export default {
       return (this.user && Object.assign({
         user: {
           type: 'user',
-          id: this.user._id
+          id: this.user.id
         }
       }, ...this.userOrganizations.map(o => ({
         ['orga' + o.id]: {
