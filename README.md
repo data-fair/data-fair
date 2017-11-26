@@ -27,3 +27,5 @@ Run a development server with nodemon, webpack and browser-sync all watching, bu
 ```
 npm run dev
     ```
+
+Take an account in `test/resources/users.json` and use its email to login
