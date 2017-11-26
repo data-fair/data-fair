@@ -26,6 +26,18 @@ router.get('', auth.optionalJwtMiddleware, async function(req, res, next) {
         $search: req.query.q
       }
     }
+    Object.assign(query, ...[{
+      name: 'owner-type',
+      field: 'owner.type'
+    }, {
+      name: 'owner-id',
+      field: 'owner.id'
+    }, {
+      name: 'original-filename',
+      field: 'originalFileName'
+    }].filter(p => req.query[p.name] !== undefined).map(p => ({
+      [p.field]: req.query[p.name]
+    })))
   }
   if (req.query.sort) {
     Object.assign(sort, ...req.query.sort.split(',').map(s => {
@@ -35,7 +47,7 @@ router.get('', auth.optionalJwtMiddleware, async function(req, res, next) {
       }
     }))
   }
-  // TODO : handle permissions
+  // TODO : handle permissions and set the correct filter on the list
   let mongoQueries = [
     size > 0 ? datasets.find(query).limit(size).skip(skip).sort(sort).project({
       _id: 0
@@ -76,6 +88,7 @@ router.use('/:datasetId', auth.optionalJwtMiddleware, async function(req, res, n
   }
   if (req.user) {
     if ((req.dataset.owner.type === 'user' && req.dataset.owner.id === req.user.id) || (req.dataset.owner.type === 'organization' && req.user.organizations.indexOf(req.dataset.owner.id) >= 0)) {
+      // TODO check if we handle organization permissions with roles too
       req.canRead = true
       req.canWrite = true
     } else {
@@ -139,7 +152,13 @@ const path = require('path')
 const multer = require('multer')
 const storage = multer.diskStorage({
   destination: function(req, file, cb) {
-    if (!req.body || !req.body.owner || !req.body.owner.type || !req.body.owner.id) {
+    if (!req.body) {
+      return cb(new Error(400))
+    }
+    if (req.dataset) {
+      req.body.owner = req.dataset.owner
+    }
+    if (!req.body.owner || !req.body.owner.type || !req.body.owner.id) {
       return cb(new Error(400))
     }
     const uploadDir = path.join(config.dataDir, req.body.owner.type, req.body.owner.id)
@@ -147,9 +166,16 @@ const storage = multer.diskStorage({
     cb(null, uploadDir)
   },
   filename: async function(req, file, cb) {
-    let id = shortid.generate()
-    while (await req.app.get('db').collection('datasets').findOne({id})) {
-      id = shortid.generate()
+    let id
+    if (req.dataset) {
+      id = req.dataset.id
+    } else {
+      do {
+        id = shortid.generate()
+        var dataset = await req.app.get('db').collection('datasets').findOne({
+          id: id
+        })
+      } while (dataset)
     }
     cb(null, id + '.' + file.originalname.split('.').pop())
   }
@@ -161,10 +187,10 @@ const upload = multer({
 // Create a dataset by uploading tabular data
 router.post('', auth.jwtMiddleware, upload.single('file'), async(req, res, next) => {
   // TODO verify quota
-  console.log(req.body, req.file)
   const dataset = {
     id: req.file.filename.split('.').shift(),
     title: req.file.originalname.split('.').shift(),
+    originalFileName: req.file.originalname,
     public: false,
     owner: req.body.owner,
     createdBy: req.user.id,
@@ -172,6 +198,7 @@ router.post('', auth.jwtMiddleware, upload.single('file'), async(req, res, next)
   }
   try {
     await req.app.get('db').collection('datasets').insertOne(dataset)
+    // TODO index data
     res.status(201).send(dataset)
   } catch (err) {
     next(err)
@@ -181,9 +208,9 @@ router.post('', auth.jwtMiddleware, upload.single('file'), async(req, res, next)
 // Update an existing dataset data
 router.post('/:datasetId', upload.single('file'), (req, res, next) => {
   if (!req.canWrite) return res.sendStatus(403)
-  // TODO: verify permissions
+  // TODO verify quota
 
-  // TODO update dataset data
+  // TODO reindex
   res.status(200).send(req.dataset)
 })
 
