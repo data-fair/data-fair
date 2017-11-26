@@ -9,12 +9,20 @@
     <router-link to="/api-doc" style="color:white;">
       <md-button>Documentation de l'API</md-button>
     </router-link>
-    <router-link to="/me" v-if="user">
-      <md-button>{{user.firstName ? user.firstName : user.email.split('@')[0]}}</md-button>
-    </router-link>
+
     <a :href="loginUrl" v-if="!user">
       <md-button class="md-raised md-dense">Se connecter / S'inscrire</md-button>
     </a>
+    <md-menu md-align-trigger md-size="3" md-direction="bottom left" class="navbar-menu" v-if="user">
+      <md-button md-menu-trigger class="page-link">
+        <md-icon>person</md-icon>&nbsp;{{user.firstName ? user.firstName : user.email.split('@')[0]}}
+      </md-button>
+      <md-menu-content class="navbar-menu-content">
+        <md-menu-item @click.native="logout()">
+            Se déconnecter
+        </md-menu-item>
+      </md-menu-content>
+    </md-menu>
 
   </md-toolbar>
   <router-view></router-view>
@@ -23,7 +31,8 @@
 
 <script>
 const {
-  mapState
+  mapState,
+  mapActions
 } = require('vuex')
 
 export default {
@@ -33,6 +42,7 @@ export default {
     loginUrl() {
       return window.CONFIG.directoryUrl + '/login?redirect=' + window.location.origin + '/signin?id_token='
     }
-  })
+  }),
+  methods: mapActions(['logout'])
 }
 </script>

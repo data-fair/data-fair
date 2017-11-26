@@ -35,7 +35,7 @@ let base = window.CONFIG.publicUrl.split('//').pop().split('/')
 base.shift()
 base = base.join('/')
 
-const router = new VueRouter({
+const router = global.router = new VueRouter({
   mode: 'history',
   routes,
   base,
