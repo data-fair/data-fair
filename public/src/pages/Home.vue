@@ -86,6 +86,11 @@ export default {
     }
   },
   watch: {
+    user(newVal, oldVal){
+      if(!newVal || !oldVal || newVal.id != oldVal.id){
+        this.listDatasets()
+      }
+    },
     datasets() {
       const orgIds = this.datasets.results.filter(dataset => dataset.owner.type === 'organization').map(dataset => dataset.owner.id)
       if (orgIds.length) {
