@@ -1,6 +1,6 @@
 <template>
 <div>
-  <md-toolbar class="md-whiteframe md-whiteframe-3dp">
+  <md-toolbar class="md-dense md-whiteframe md-whiteframe-3dp">
     <div class="logo-container">
       <img src="../assets/logo.svg"></img>
     </div>
@@ -65,7 +65,6 @@ body {
   color: rgba(0, 0, 0, .87); // same as in body
 
   .logo-container {
-    margin: 4px;
     padding: 2px;
     width: 56px;
     height: 56px;
