@@ -19,17 +19,12 @@ Vue.use(require('vue-moment'))
 
 Vue.material.registerTheme('default', {
   primary: {
-    color: 'teal',
-    hue: '500'
+    color: 'light-blue',
+    hue: '700'
   },
-  accent: {
-    color: 'deep-orange',
-    hue: '600'
-  },
-  warn: {
-    color: 'orange',
-    hue: '400'
-  }
+  warn: 'pink',
+  accent: 'deep-orange',
+  background: 'white'
 })
 
 let base = window.CONFIG.publicUrl.split('//').pop().split('/')
