@@ -11,6 +11,8 @@ import store from './store.js'
 
 import App from './App.vue'
 
+__webpack_public_path__ = window.CONFIG.publicUrl + '/bundles/' // eslint-disable-line
+
 Vue.use(VueMaterial)
 Vue.use(VueResource)
 Vue.use(VueRouter)
