@@ -4,9 +4,6 @@
     <div class="logo-container">
       <img src="../assets/logo.svg"></img>
     </div>
-    <div class="logo-container">
-      <img src="../assets/logo2.svg"></img>
-    </div>
     <div class="double-title">
       <h1>Accessible Data</h1>
       <span>Le Web des données pour tous</span>

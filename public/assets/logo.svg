@@ -10,8 +10,10 @@
     </filter>
    </defs>
     <g>
-        <path d="M35,5 L65,5 L31,92 A4,4 0 0 1 28,95 L2,95 A3,3 0 0 1 1,92 Z" fill="#90caf9" filter="url(#dropshadow)"></path>
-        <!--<rect x="25" y="50" width="50" height="20" rx="4" ry="4" fill="#607d8b" filter="url(#dropshadow)"></rect>-->
-        <path d="M65,5 L35,5 L69,92 A4,4 0 0 0 72,95 L98,95 A3,3 0 0 0 99,92 Z" fill="#0288d1" filter="url(#dropshadow)"></path>
+        <!--<path d="M35,5 L65,5 L31,92 A4,4 0 0 1 28,95 L2,95 A3,3 0 0 1 1,92 Z" fill="#90caf9" filter="url(#dropshadow)"></path>
+        <path d="M65,5 L35,5 L69,92 A4,4 0 0 0 72,95 L98,95 A3,3 0 0 0 99,92 Z" fill="#0288d1" filter="url(#dropshadow)"></path>-->
+
+        <path d="M48,4 L71,52 L0,100 Z" fill="#0288d1" filter="url(#dropshadow)"></path>
+        <path d="M50,0 L25,50 L100,100 Z" fill="#90caf9" filter="url(#dropshadow)"></path>
     </g>
 </svg>
