@@ -28,6 +28,14 @@ export default {
       'data-updated': {
         icon: 'update',
         text: 'Les données ont été mises à jour'
+      },
+      'analyze-start': {
+        icon: 'search',
+        text: 'Début de l\'analyze du fichier'
+      },
+      'analyze-end': {
+        icon: 'search',
+        text: 'Fin de l\'analyze du fichier'
       }
     }
   }),

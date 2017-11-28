@@ -19,7 +19,7 @@
     "file": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["id", "owner", "public"],
+      "required": ["name", "size", "encoding", "mimetype"],
       "properties": {
         "name": {
           "type": "string",
@@ -33,10 +33,32 @@
           "type": "string",
           "description": "Encoding of the file"
         },
-        "mimetype":{
+        "mimetype": {
           "type": "string",
           "enum": ["text/csv"],
           "description": "Mime type of the file"
+        },
+        "props":{
+          "type": "object",
+          "additionalProperties": false,
+          "properties":{
+            "numLines": {
+              "type": "number",
+              "description": "Number of lines this file has."
+            },
+            "linesDelimiter": {
+              "type": "string",
+              "description": "New line character or characters (can be \r\n))"
+            },
+            "fieldsDelimiter": {
+              "type": "string",
+              "description": "Fields delimiter"
+            },
+            "escapeChar": {
+              "type": "string",
+              "description": "Character used to escape string"
+            }
+          }
         }
       }
     },
@@ -105,7 +127,7 @@
     },
     "status": {
       "type": "string",
-      "enum": ["loaded", "analyzed", "indexed"],
+      "enum": ["loaded", "analyzed", "schematized", "indexed"],
       "description": "The processing steps of a dataset."
     }
   }

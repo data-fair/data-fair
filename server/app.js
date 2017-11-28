@@ -62,6 +62,6 @@ dbUtils.init(function(err, db) {
     console.log('Listening on http://localhost:%s', config.port)
     // Emit this event for the test suite
     app.emit('listening')
-    require('./workers/schema-analyzer')(db)
+    require('./workers/analyzer')(db)
   })
 })
