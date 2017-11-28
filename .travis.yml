@@ -24,6 +24,7 @@ script:
   - npm test
 
 after_success:
+  - npm run coveralls
   # No docker push on pull requests
   - if [ "$TRAVIS_PULL_REQUEST" == "true" ]; then exit; fi
   - docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS

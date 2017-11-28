@@ -8,7 +8,7 @@
     </router-link>
 
     <div class="double-title">
-      <h1>Accessible Data</h1>
+      <h1>Accessible data</h1>
       <span>Le Web des données pour tous</span>
     </div>
 
