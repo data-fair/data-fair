@@ -218,10 +218,7 @@ router.post('', auth.jwtMiddleware, upload.single('file'), async(req, res, next)
   dataset.file.encoding = detectCharacterEncoding(fileSample).encoding
   try {
     await req.app.get('db').collection('datasets').insertOne(dataset)
-    await journals.log(req.app.get('db'), dataset, {
-      type: 'created'
-    })
-    // TODO index data
+    await journals.log(req.app.get('db'), dataset, {type: 'created'})
     res.status(201).send(dataset)
   } catch (err) {
     next(err)

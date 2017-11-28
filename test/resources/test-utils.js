@@ -15,8 +15,16 @@ exports.prepare = (key, port) => {
     app.on('listening', t.end)
   })
 
-  test.cb.after('drop db', t => {
-    app.get('db').dropDatabase(t.end)
+  test.before('clear datasets', async t => {
+    await app.get('db').collection('datasets').remove()
+  })
+
+  test.after('drop db', async t => {
+    await app.get('db').dropDatabase()
+  })
+
+  test.before('drop ES indices', async t => {
+    await app.get('es').indices.delete({index: 'dataset-*'})
   })
 
   return [test, config]

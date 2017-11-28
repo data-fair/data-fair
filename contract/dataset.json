@@ -137,6 +137,10 @@
     "schema": {
       "type": "object",
       "description": "JSON schema of the dataset"
+    },
+    "count": {
+      "type": "number",
+      "description": "The number of indexed documents of a dataset"
     }
   }
 }

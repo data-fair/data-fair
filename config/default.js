@@ -4,6 +4,9 @@ module.exports = {
   directoryUrl: 'http://localhost:5700',
   dataDir: './data',
   mongoUrl: 'mongodb://localhost:27017/accessible-data-' + (process.env.NODE_ENV || 'development'),
+  elasticsearch: {
+    host: 'localhost:9200'
+  },
   info: {
     termsOfService: 'https://koumoul.com/term-of-service',
     contact: {

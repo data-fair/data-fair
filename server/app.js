@@ -4,9 +4,11 @@ const bodyParser = require('body-parser')
 const cookieParser = require('cookie-parser')
 const path = require('path')
 const dbUtils = require('./utils/db')
+const esUtils = require('./utils/es')
 const status = require('./status')
 
 let app = module.exports = express()
+app.set('es', esUtils.client)
 app.use(bodyParser.json({limit: '100kb'}))
 app.use(cookieParser())
 
@@ -62,7 +64,8 @@ dbUtils.init(function(err, db) {
     console.log('Listening on http://localhost:%s', config.port)
     // Emit this event for the test suite
     app.emit('listening')
-    require('./workers/analyzer')(db)
-    require('./workers/schematizer')(db)
+    require('./workers/analyzer').loop(db)
+    require('./workers/schematizer').loop(db)
+    require('./workers/indexer').loop(db, app.get('es'))
   })
 })

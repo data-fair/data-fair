@@ -7,49 +7,63 @@ const countLines = require('../utils/count-lines')
 const datasetUtils = require('../utils/dataset')
 const journals = require('../journals')
 
+// A hook/spy for testing purposes
+let resolveHook, rejectHook
+exports.hook = function() {
+  return new Promise((resolve, reject) => {
+    resolveHook = resolve
+    rejectHook = reject
+  })
+}
+
+exports.loop = async function loop(db) {
+  try {
+    const dataset = await analyzeDataset(db)
+    if (dataset && resolveHook) resolveHook(dataset)
+  } catch (err) {
+    console.error(err)
+    if (rejectHook) rejectHook(err)
+  }
+
+  setTimeout(() => loop(db), 1000)
+}
+
 const analyzeDataset = async function(db) {
   let dataset = await db.collection('datasets').find({
     status: 'loaded',
     'file.mimetype': 'text/csv'
-  }).sort({
-    updatedAt: 1
-  }).toArray()
+  }).limit(1).sort({updatedAt: 1}).toArray()
   dataset = dataset.pop()
   if (!dataset) return
-  await journals.log(db, dataset, {
-    type: 'analyze-start'
-  })
-  const fileSample = await datasetFileSample(dataset)
-  const sniffResult = sniffer.sniff(iconv.decode(fileSample, dataset.file.encoding))
 
-  const schema = Object.assign({}, ...sniffResult.labels.map((field, i) => ({
+  await journals.log(db, dataset, {type: 'analyze-start'})
+
+  const fileSample = await datasetFileSample(dataset)
+  const sniffResult = sniffer.sniff(iconv.decode(fileSample, dataset.file.encoding), {hasHeader: true})
+  const schema = dataset.file.schema = Object.assign({}, ...sniffResult.labels.map((field, i) => ({
     [field.replace(/\.|\$/g, '_')]: {
       type: sniffResult.types[i],
       'x-originalName': field,
       title: field
     }
   })))
-  const props = {
+  const props = dataset.file.props = {
     linesDelimiter: sniffResult.newlineStr,
     fieldsDelimiter: sniffResult.delimiter,
     escapeChar: sniffResult.quoteChar
   }
   props.numLines = await countLines(datasetUtils.fileName(dataset), sniffResult.newlineStr)
-  await db.collection('datasets').updateOne({
-    id: dataset.id
-  }, {
+
+  dataset.status = 'analyzed'
+  await db.collection('datasets').updateOne({id: dataset.id}, {
     $set: {
       'file.props': props,
       status: 'analyzed',
       'file.schema': schema
     }
   })
-  await journals.log(db, dataset, {
-    type: 'analyze-end'
-  })
-}
 
-module.exports = async function loop(db) {
-  await analyzeDataset(db)
-  setTimeout(() => loop(db), 1000)
+  await journals.log(db, dataset, {type: 'analyze-end'})
+
+  return dataset
 }
