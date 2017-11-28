@@ -4,6 +4,7 @@ const datasetSchema = require('../contract/dataset.json')
 const validate = ajv.compile(datasetSchema)
 const moment = require('moment')
 const auth = require('./auth')
+const journals = require('./journals')
 
 let router = express.Router()
 
@@ -181,7 +182,11 @@ const storage = multer.diskStorage({
   }
 })
 const upload = multer({
-  storage: storage
+  storage: storage,
+  fileFilter: function fileFilter (req, file, cb) {
+    console.log('filter', file)
+    cb(null, true)
+  }
 })
 
 // Create a dataset by uploading tabular data
@@ -198,10 +203,14 @@ router.post('', auth.jwtMiddleware, upload.single('file'), async(req, res, next)
     createdBy: req.user.id,
     createdAt: date,
     updatedBy: req.user.id,
-    updatedAt: date
+    updatedAt: date,
+    status: 'loaded'
   }
   try {
     await req.app.get('db').collection('datasets').insertOne(dataset)
+    await journals.log(req.app.get('db'), dataset, {
+      type: 'created'
+    })
     // TODO index data
     res.status(201).send(dataset)
   } catch (err) {
@@ -220,7 +229,9 @@ router.post('/:datasetId', upload.single('file'), async(req, res, next) => {
     await req.app.get('db').collection('datasets').updateOne({
       id: req.params.datasetId
     }, req.dataset)
-
+    await journals.log(req.app.get('db'), req.dataset, {
+      type: 'data-updated'
+    })
     // TODO verify quota
 
     // TODO reindex

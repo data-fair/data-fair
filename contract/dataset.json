@@ -86,6 +86,11 @@
           }
         }
       }
+    },
+    "status": {
+      "type": "string",
+      "enum": ["loaded", "analyzed", "indexed"],
+      "description": "The processing steps of a dataset."
     }
   }
 }
