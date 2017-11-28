@@ -36,14 +36,13 @@
         <p>Lorem ipsum dolor sit amet, consectetur adipisicing elit. Deserunt dolorum quas amet cum vitae, omnis! Illum quas voluptatem, expedita iste, dicta ipsum ea veniam dolore in, quod saepe reiciendis nihil.</p>
       </md-tab>
 
-      <md-tab md-label="Permissions" md-icon="lock">
+      <!-- <md-tab md-label="Permissions" md-icon="lock">
         <permissions :dataset="dataset" @change="save"></permissions>
-      </md-tab>
-
+      </md-tab> -->
 
 
       <md-tab md-label="Journal" md-icon="event_note">
-        <p>Lorem ipsum dolor sit amet, consectetur adipisicing elit. Deserunt dolorum quas.</p>
+        <journal :dataset="dataset"></journal>
       </md-tab>
     </md-tabs>
   </md-layout>
@@ -55,11 +54,13 @@ const {
   mapState
 } = require('vuex')
 import Permissions from '../components/Permissions.vue'
+import Journal from '../components/Journal.vue'
 
 export default {
   name: 'dataset',
   components: {
-    Permissions
+    Permissions,
+    Journal
   },
   data: () => ({
     dataset: null

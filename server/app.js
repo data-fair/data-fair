@@ -13,6 +13,7 @@ app.use(bodyParser.json({
 // Business routers
 app.use('/api/v1', require('./root'))
 app.use('/api/v1/datasets', require('./datasets'))
+app.use('/api/v1/journals', require('./journals').router)
 app.get('/api/v1/status', status.status)
 app.get('/api/v1/ping', status.ping)
 
