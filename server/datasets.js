@@ -181,18 +181,20 @@ const storage = multer.diskStorage({
     cb(null, id + '.' + file.originalname.split('.').pop())
   }
 })
+
+const allowedTypes = new Set(['text/csv'])
+
 const upload = multer({
   storage: storage,
   fileFilter: function fileFilter(req, file, cb) {
-    console.log('filter', file)
-    cb(null, true)
+    cb(null, allowedTypes.has(file.mimetype))
   }
 })
 
 // Create a dataset by uploading tabular data
 router.post('', auth.jwtMiddleware, upload.single('file'), async(req, res, next) => {
+  if (!req.file) return res.sendStatus(400)
   // TODO verify quota
-  console.log('create', req.file)
   const date = moment().toISOString()
   const dataset = {
     id: req.file.filename.split('.').shift(),
@@ -226,6 +228,7 @@ router.post('', auth.jwtMiddleware, upload.single('file'), async(req, res, next)
 // Update an existing dataset data
 router.post('/:datasetId', upload.single('file'), async(req, res, next) => {
   if (!req.canWrite) return res.sendStatus(403)
+  if (!req.file) return res.sendStatus(400)
   try {
     req.dataset.file = {
       name: req.file.originalname,

@@ -5,7 +5,7 @@
     <md-step :md-editable="true" :md-label="currentStep ? 'Fichier sélectionné' : 'Sélection du fichier'" :md-continue="file !== null" :md-message="fileName ? fileName: 'Chargez un fichier csv'" :md-button-back="null" md-button-continue="Suivant">
       <md-input-container>
         <label>Single</label>
-        <md-file v-model="fileName" @selected="onFileUpload"></md-file>
+        <md-file v-model="fileName" @selected="onFileUpload" accept="text/csv"></md-file>
       </md-input-container>
     </md-step>
     <md-step :md-editable="true" :md-disabled="!file" :md-label="currentStep > 1 ? 'Propriétaire choisi' : 'Choix du propriétaire'" :md-continue="file !== null && owner !== null" :md-message="owner ? (owners[owner].type === 'user' ? 'Vous même' : userOrganizations.find(o => o.id === owners[owner].id).name): 'Choisissez dans la liste'"
