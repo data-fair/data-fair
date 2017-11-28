@@ -1,5 +1,7 @@
 // schematize dataset data and try to guess the schém
 const journals = require('../journals')
+const dataSample = require('../utils/data-sample')
+const fieldsSniffer = require('../utils/fields-sniffer')
 
 // A hook/spy for testing purposes
 let resolveHook, rejectHook
@@ -32,6 +34,22 @@ const schematizeDataset = async function(db) {
 
   await journals.log(db, dataset, {type: 'schematize-start'})
 
+  // get a random sampling to test values type on fewer elements
+  const sample = await dataSample(dataset)
+  const firstLine = sample.pop()
+  // Convert an array of objects to an object of sets
+  // Each set will hold the differents values for each field
+  const myCSVObject = sample.reduce((acc, current) => {
+    // TODO We should not add items to the set if it's size is > 100 or the item's length > 50 (numbers may be tweaked)
+    Object.keys(acc).forEach(k => acc[k].add(current[k]))
+    return acc
+  }, Object.assign({}, ...Object.keys(firstLine).map(k => ({[k]: new Set([firstLine[k]])}))))
+  // Now we can extract infos for each field
+  Object.keys(myCSVObject).forEach(field => {
+    Object.assign(dataset.file.schema[field.replace(/\.|\$/g, '_')], fieldsSniffer(myCSVObject[field]))
+  })
+
+  // We copy fields in the detected schema that have not been modified by the user
   const schema = dataset.schema = dataset.schema || {}
   Object.assign(schema, ...Object.keys(dataset.file.schema).filter(field => !schema[field] || !schema[field].auto).map(field => ({
     [field]: Object.assign(dataset.file.schema[field], {

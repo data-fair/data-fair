@@ -36,6 +36,14 @@ export default {
       'analyze-end': {
         icon: 'search',
         text: 'Fin de l\'analyze du fichier'
+      },
+      'schematize-start': {
+        icon: 'toc',
+        text: 'Début de la détection automatique du schéma des données'
+      },
+      'schematize-end': {
+        icon: 'toc',
+        text: 'Fin de la détection automatique du schéma des données'
       }
     }
   }),

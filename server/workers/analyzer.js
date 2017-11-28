@@ -50,7 +50,7 @@ const analyzeDataset = async function(db) {
   const props = dataset.file.props = {
     linesDelimiter: sniffResult.newlineStr,
     fieldsDelimiter: sniffResult.delimiter,
-    escapeChar: sniffResult.quoteChar
+    escapeChar: sniffResult.quoteChar || '"'
   }
   props.numLines = await countLines(datasetUtils.fileName(dataset), sniffResult.newlineStr)
 
