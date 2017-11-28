@@ -44,6 +44,14 @@ export default {
       'schematize-end': {
         icon: 'toc',
         text: 'Fin de la détection automatique du schéma des données'
+      },
+      'index-start': {
+        icon: 'assignment',
+        text: 'Début de l\'indexation des données'
+      },
+      'index-end': {
+        icon: 'assignment_turned_in',
+        text: 'Les données sont indexées, le jeu de données est maintenant disponible'
       }
     }
   }),
