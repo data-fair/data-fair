@@ -3,6 +3,7 @@
 **Your data as a Web API with ease and power.**
 
 [![Build Status](https://travis-ci.org/koumoul-dev/accessible-data.svg?branch=master)](https://travis-ci.org/koumoul-dev/accessible-data)
+[![Coverage Status](https://coveralls.io/repos/github/koumoul-dev/accessible-data/badge.svg?branch=master)](https://coveralls.io/github/koumoul-dev/accessible-data?branch=master)
 
 *WARNING : This repo is a work in progress, it is not ready yet for the public.*
 
