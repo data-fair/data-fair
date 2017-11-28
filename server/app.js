@@ -1,14 +1,14 @@
 const config = require('config')
 const express = require('express')
 const bodyParser = require('body-parser')
+const cookieParser = require('cookie-parser')
 const path = require('path')
 const dbUtils = require('./utils/db')
-
 const status = require('./status')
+
 let app = module.exports = express()
-app.use(bodyParser.json({
-  limit: '100kb'
-}))
+app.use(bodyParser.json({limit: '100kb'}))
+app.use(cookieParser())
 
 // Business routers
 app.use('/api/v1', require('./root'))
@@ -43,7 +43,7 @@ app.use('/*', (req, res) => {
 
 // Error handling to complement express default error handling. TODO do something useful of errors.
 app.use((err, req, res, next) => {
-  console.error('Error, what to do ?', err.stack)
+  // console.error('Error, what to do ?', err.stack)
 
   // Default error handler of express is actually not bad.
   // It will send stack to client only if not in production and manage interrupted streams.
@@ -55,7 +55,7 @@ dbUtils.init(function(err, db) {
   app.set('db', db)
   app.listen(config.port, (err) => {
     if (err) {
-      console.log('Could not run server : ', err.stack)
+      console.error('Could not run server : ', err.stack)
       app.get('db').close()
       throw err
     }
