@@ -38,10 +38,14 @@
           "enum": ["text/csv"],
           "description": "Mime type of the file"
         },
-        "props":{
+        "schema": {
+          "type": "object",
+          "description": "JSON schema of the fields in the file"
+        },
+        "props": {
           "type": "object",
           "additionalProperties": false,
-          "properties":{
+          "properties": {
             "numLines": {
               "type": "number",
               "description": "Number of lines this file has."
@@ -129,6 +133,10 @@
       "type": "string",
       "enum": ["loaded", "analyzed", "schematized", "indexed"],
       "description": "The processing steps of a dataset."
+    },
+    "schema": {
+      "type": "object",
+      "description": "JSON schema of the dataset"
     }
   }
 }

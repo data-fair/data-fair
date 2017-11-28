@@ -1,13 +1,13 @@
 // Analyze dataset data and try to guess the schém
 const datasetFileSample = require('../utils/dataset-file-sample')
 const CSVSniffer = require('csv-sniffer')()
-const sniffer = new CSVSniffer()
+const sniffer = new CSVSniffer([',', ';', '\t', '|'])
 const iconv = require('iconv-lite')
 const countLines = require('../utils/count-lines')
 const datasetUtils = require('../utils/dataset')
 const journals = require('../journals')
 
-const analyzeDataset = module.exports = async function(db) {
+const analyzeDataset = async function(db) {
   let dataset = await db.collection('datasets').find({
     status: 'loaded',
     'file.mimetype': 'text/csv'
@@ -21,17 +21,14 @@ const analyzeDataset = module.exports = async function(db) {
   })
   const fileSample = await datasetFileSample(dataset)
   const sniffResult = sniffer.sniff(iconv.decode(fileSample, dataset.file.encoding))
-  // Results :
-  // {
-  //   warnings: [],
-  //   newlineStr: '\r\n',
-  //   delimiter: ',',
-  //   quoteChar: null,
-  //   hasHeader: true,
-  //   types: ['string','integer', ... ],
-  //   labels: ['Voie ou lieu-dit','field_2', ... ]
-  // }
 
+  const schema = Object.assign({}, ...sniffResult.labels.map((field, i) => ({
+    [field.replace(/\.|\$/g, '_')]: {
+      type: sniffResult.types[i],
+      'x-originalName': field,
+      title: field
+    }
+  })))
   const props = {
     linesDelimiter: sniffResult.newlineStr,
     fieldsDelimiter: sniffResult.delimiter,
@@ -43,7 +40,8 @@ const analyzeDataset = module.exports = async function(db) {
   }, {
     $set: {
       'file.props': props,
-      status: 'analyzed'
+      status: 'analyzed',
+      'file.schema': schema
     }
   })
   await journals.log(db, dataset, {
@@ -53,5 +51,5 @@ const analyzeDataset = module.exports = async function(db) {
 
 module.exports = async function loop(db) {
   await analyzeDataset(db)
-  setTimeout(() => analyzeDataset(db), 1000)
+  setTimeout(() => loop(db), 1000)
 }

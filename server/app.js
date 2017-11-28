@@ -63,5 +63,6 @@ dbUtils.init(function(err, db) {
     // Emit this event for the test suite
     app.emit('listening')
     require('./workers/analyzer')(db)
+    require('./workers/schematizer')(db)
   })
 })
