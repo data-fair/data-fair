@@ -3,9 +3,9 @@ const axios = require('axios')
 
 exports.prepare = (key, port) => {
   process.env.NODE_CONFIG = JSON.stringify({
-    port: 5605,
-    publicUrl: 'http://localhost:5605',
-    mongoUrl: 'mongodb://localhost:27017/accessible-data-test-status'
+    port: port,
+    publicUrl: 'http://localhost:' + port,
+    mongoUrl: 'mongodb://localhost:27017/accessible-data-test-' + key
   })
   const config = require('config')
 
@@ -19,9 +19,22 @@ exports.prepare = (key, port) => {
     app.get('db').dropDatabase(t.end)
   })
 
-  const ax = axios.create({
+  return [test, config]
+}
+
+const axiosInstances = {}
+exports.axios = async (email) => {
+  if (axiosInstances[email]) return axiosInstances[email]
+  const config = require('config')
+  let ax = axios.create({
     baseURL: config.publicUrl
   })
+  if (email) {
+    const res = await ax.post('http://localhost:5700/api/auth/passwordless', {email}, {withCredentials: true})
+    const idTokenCookie = res.headers['set-cookie'][0]
+    ax.defaults.headers.common['Cookie'] = idTokenCookie
+  }
 
-  return [test, ax, config]
+  axiosInstances[email] = ax
+  return ax
 }

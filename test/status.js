@@ -1,6 +1,16 @@
-const [test, ax] = require('./resources/test-utils').prepare('status', 5605)
+const testUtils = require('./resources/test-utils')
+const [test] = testUtils.prepare('status', 5605)
 
 test('Get status', async t => {
+  const ax = await testUtils.axios()
   const res = await ax.get('/api/v1/status')
   t.is(res.status, 200)
+  t.is(res.data.status, 'ok')
+})
+
+test('Ping service', async t => {
+  const ax = await testUtils.axios()
+  const res = await ax.get('/api/v1/ping')
+  t.is(res.status, 200)
+  t.is(res.data, 'ok')
 })
