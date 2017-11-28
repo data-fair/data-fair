@@ -2,7 +2,7 @@ const config = require('config')
 const express = require('express')
 const bodyParser = require('body-parser')
 const path = require('path')
-const dbUtils = require('./db-utils')
+const dbUtils = require('./utils/db')
 
 const status = require('./status')
 let app = module.exports = express()
@@ -62,5 +62,6 @@ dbUtils.init(function(err, db) {
     console.log('Listening on http://localhost:%s', config.port)
     // Emit this event for the test suite
     app.emit('listening')
+    require('./workers/schema-analyzer')(db)
   })
 })

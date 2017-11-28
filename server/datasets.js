@@ -190,7 +190,8 @@ const upload = multer({
     cb(null, allowedTypes.has(file.mimetype))
   }
 })
-const detectEncoding = require('./detect-encoding')
+const datasetFileSample = require('./utils/dataset-file-sample')
+const detectCharacterEncoding = require('detect-character-encoding')
 
 // Create a dataset by uploading tabular data
 router.post('', auth.jwtMiddleware, upload.single('file'), async(req, res, next) => {
@@ -213,7 +214,8 @@ router.post('', auth.jwtMiddleware, upload.single('file'), async(req, res, next)
     updatedAt: date,
     status: 'loaded'
   }
-  dataset.file.encoding = await detectEncoding(dataset)
+  const fileSample = await datasetFileSample(dataset)
+  dataset.file.encoding = detectCharacterEncoding(fileSample).encoding
   try {
     await req.app.get('db').collection('datasets').insertOne(dataset)
     await journals.log(req.app.get('db'), dataset, {
@@ -236,9 +238,11 @@ router.post('/:datasetId', upload.single('file'), async(req, res, next) => {
       size: req.file.size,
       mimetype: req.file.mimetype
     }
-    req.dataset.file.encoding = await detectEncoding(req.dataset)
+    const fileSample = await datasetFileSample(req.dataset)
+    req.dataset.file.encoding = detectCharacterEncoding(fileSample).encoding
     req.dataset.updatedBy = req.user.id
     req.dataset.updatedAt = moment().toISOString()
+    req.dataset.status = 'loaded'
     await req.app.get('db').collection('datasets').updateOne({
       id: req.params.datasetId
     }, req.dataset)
