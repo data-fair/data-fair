@@ -111,7 +111,7 @@ export default {
           params: {
             'owner-type': this.owners[this.owner].type,
             'owner-id': this.owners[this.owner].id,
-            'original-filename': this.fileName
+            'filename': this.fileName
           }
         }).then(response => {
           this.actions = Object.assign({

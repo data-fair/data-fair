@@ -2,7 +2,7 @@
   "title": "Dataset",
   "type": "object",
   "additionalProperties": false,
-  "required": ["id", "owner", "public"],
+  "required": ["id", "owner", "public", "originalFile"],
   "properties": {
     "id": {
       "type": "string",
@@ -16,13 +16,29 @@
       "type": "string",
       "description": "Detailed description of the dataset"
     },
-    "originalFileName": {
-      "type": "string",
-      "description": "Name of the first file that was used to create this dataset"
-    },
-    "fileSize": {
-      "type": "number",
-      "description": "Size of the file on disk"
+    "file": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "owner", "public"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Name of the file that was used to create or update this dataset"
+        },
+        "size": {
+          "type": "number",
+          "description": "Size of the file on disk"
+        },
+        "encoding": {
+          "type": "string",
+          "description": "Encoding of the file"
+        },
+        "mimetype":{
+          "type": "string",
+          "enum": ["text/csv"],
+          "description": "Mime type of the file"
+        }
+      }
     },
     "createdBy": {
       "type": "string",
@@ -35,15 +51,15 @@
     "createdAt": {
       "type": "string",
       "description": "Creation date of this dataset",
-      "format":"date-time"
+      "format": "date-time"
     },
     "updatedAt": {
       "type": "string",
       "description": "Date of the last update for this dataset",
-      "format":"date-time"
+      "format": "date-time"
     },
-    "owner":{
-      "type":"object",
+    "owner": {
+      "type": "object",
       "additionalProperties": false,
       "required": ["type", "id"],
       "properties": {
@@ -63,10 +79,10 @@
       "enum": [true, false],
       "description": "If the dataset is public or not"
     },
-    "permissions":{
-      "type":"array",
+    "permissions": {
+      "type": "array",
       "items": {
-        "type":"object",
+        "type": "object",
         "additionalProperties": false,
         "required": ["type", "id", "mode"],
         "properties": {

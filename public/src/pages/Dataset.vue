@@ -18,7 +18,7 @@
             <md-card>
               <md-list>
                 <md-list-item>
-                  <md-icon>insert_drive_file</md-icon> <span>{{dataset.originalFileName}}</span> <span>{{(dataset.fileSize / 1024).toFixed(2)}} ko</span>
+                  <md-icon>insert_drive_file</md-icon> <span>{{dataset.file.name}}</span> <span>{{(dataset.file.size / 1024).toFixed(2)}} ko</span>
                 </md-list-item>
                 <md-list-item>
                   <md-icon>update</md-icon> <span>{{dataset.updatedBy}}</span> <span>{{dataset.updatedAt | moment("DD/MM/YYYY, HH:mm")}}</span>

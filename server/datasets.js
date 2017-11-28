@@ -34,8 +34,8 @@ router.get('', auth.optionalJwtMiddleware, async function(req, res, next) {
       name: 'owner-id',
       field: 'owner.id'
     }, {
-      name: 'original-filename',
-      field: 'originalFileName'
+      name: 'filename',
+      field: 'file.name'
     }].filter(p => req.query[p.name] !== undefined).map(p => ({
       [p.field]: req.query[p.name]
     })))
@@ -183,7 +183,7 @@ const storage = multer.diskStorage({
 })
 const upload = multer({
   storage: storage,
-  fileFilter: function fileFilter (req, file, cb) {
+  fileFilter: function fileFilter(req, file, cb) {
     console.log('filter', file)
     cb(null, true)
   }
@@ -192,12 +192,17 @@ const upload = multer({
 // Create a dataset by uploading tabular data
 router.post('', auth.jwtMiddleware, upload.single('file'), async(req, res, next) => {
   // TODO verify quota
+  console.log('create', req.file)
   const date = moment().toISOString()
   const dataset = {
     id: req.file.filename.split('.').shift(),
     title: req.file.originalname.split('.').shift(),
-    originalFileName: req.file.originalname,
-    fileSize: req.file.size,
+    file: {
+      name: req.file.originalname,
+      size: req.file.size,
+      encoding: req.file.encoding,
+      mimetype: req.file.mimetype
+    },
     public: false,
     owner: req.body.owner,
     createdBy: req.user.id,
@@ -222,8 +227,12 @@ router.post('', auth.jwtMiddleware, upload.single('file'), async(req, res, next)
 router.post('/:datasetId', upload.single('file'), async(req, res, next) => {
   if (!req.canWrite) return res.sendStatus(403)
   try {
-    req.dataset.originalFileName = req.file.originalname
-    req.dataset.fileSize = req.file.size
+    req.dataset.file = {
+      name: req.file.originalname,
+      size: req.file.size,
+      encoding: req.file.encoding,
+      mimetype: req.file.mimetype
+    }
     req.dataset.updatedBy = req.user.id
     req.dataset.updatedAt = moment().toISOString()
     await req.app.get('db').collection('datasets').updateOne({
