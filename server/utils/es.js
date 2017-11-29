@@ -29,6 +29,7 @@ exports.initDatasetIndex = async (dataset) => {
     else if (jsProp.type === 'number') esProp.type = 'double'
     else if (jsProp.type === 'boolean') esProp.type = 'boolean'
     else if (jsProp.type === 'string' && jsProp.format === 'date-time') esProp.type = 'date'
+    else if (jsProp.type === 'string' && jsProp.format === 'date') esProp.type = 'date'
     else if (jsProp.type === 'string' && jsProp.format === 'uri-reference') esProp.type = 'keyword'
     else esProp.type = 'text'
   })
