@@ -9,7 +9,7 @@
 
     <md-table-body>
       <md-table-row v-for="row in data.results">
-        <md-table-cell v-for="(fieldInfos, field) in dataset.schema" :md-numeric="fieldInfos.type === 'number' || fieldInfos.type === 'integer'">{{row.doc[field]}}</md-table-cell>
+        <md-table-cell v-for="(fieldInfos, field) in dataset.schema" :md-numeric="fieldInfos.type === 'number' || fieldInfos.type === 'integer'">{{row[field]}}</md-table-cell>
       </md-table-row>
     </md-table-body>
   </md-table>
