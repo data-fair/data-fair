@@ -15,7 +15,7 @@
         <md-layout md-flex="20">
           <md-input-container>
             <label>Libellé</label>
-            <md-input v-model="field.title"></md-input>
+            <md-input v-model="field.title" :placeholder="field['x-originalName']"></md-input>
           </md-input-container>
         </md-layout>
 
