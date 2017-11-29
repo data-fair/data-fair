@@ -43,8 +43,7 @@ const analyzeDataset = async function(db) {
   const schema = dataset.file.schema = Object.assign({}, ...sniffResult.labels.map((field, i) => ({
     [field.replace(/\.|\$/g, '_')]: {
       type: sniffResult.types[i],
-      'x-originalName': field,
-      title: field
+      'x-originalName': field
     }
   })))
   const props = dataset.file.props = {
