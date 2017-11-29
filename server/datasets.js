@@ -9,6 +9,7 @@ const auth = require('./auth')
 const journals = require('./journals')
 const esUtils = require('./utils/es')
 const filesUtils = require('./utils/files')
+const datasetAPIDocs = require('../contract/dataset-api-docs')
 
 let router = express.Router()
 
@@ -231,6 +232,11 @@ router.get('/:datasetId/lines', async(req, res, next) => {
   } catch (err) {
     return next(err)
   }
+})
+
+router.get('/:datasetId/api-docs.json', (req, res) => {
+  if (!req.canRead) return res.sendStatus(403)
+  res.send(datasetAPIDocs(req.dataset))
 })
 
 module.exports = router

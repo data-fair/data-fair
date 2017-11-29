@@ -105,12 +105,7 @@ exports.searchInDataset = async (dataset, query) => {
 const prepareResponse = (esResponse) => {
   const response = {}
   response.total = esResponse.hits.total
-  response.results = esResponse.hits.hits.map(hit => {
-    return {
-      score: hit._score,
-      doc: hit._source
-    }
-  })
+  response.results = esResponse.hits.hits.map(hit => hit._source)
   return response
 }
 

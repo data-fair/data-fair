@@ -5,7 +5,7 @@ const version = require('../package.json').version
 module.exports = {
   openapi: '3.0.0',
   info: Object.assign({
-    title: 'API documentation',
+    title: 'Accessible Data - API',
     version: version
   }, config.info),
   servers: [{

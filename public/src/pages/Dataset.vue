@@ -65,6 +65,10 @@
       <md-tab md-label="Journal" md-icon="event_note">
         <journal :dataset="dataset"></journal>
       </md-tab>
+
+      <md-tab md-label="API" md-icon="cloud">
+        <DatasetAPIDoc :dataset="dataset"></DatasetAPIDoc>
+      </md-tab>
     </md-tabs>
   </md-layout>
 </md-layout>
@@ -77,13 +81,15 @@ const {
 import Permissions from '../components/Permissions.vue'
 import Journal from '../components/Journal.vue'
 import Schema from '../components/Schema.vue'
+import DatasetAPIDoc from '../components/DatasetAPIDoc.vue'
 
 export default {
   name: 'dataset',
   components: {
     Permissions,
     Journal,
-    Schema
+    Schema,
+    DatasetAPIDoc
   },
   data: () => ({
     dataset: null
