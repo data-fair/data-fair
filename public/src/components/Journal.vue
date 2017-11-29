@@ -57,6 +57,10 @@ export default {
   }),
   mounted() {
     this.refresh()
+    this.refreshInterval = setInterval(this.refresh, 1000)
+  },
+  destroyed() {
+    clearInterval(this.refreshInterval)
   },
   methods: {
     refresh() {
