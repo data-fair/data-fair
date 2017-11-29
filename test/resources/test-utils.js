@@ -1,12 +1,15 @@
 const test = require('ava')
 const axios = require('axios')
+const fs = require('fs-extra')
 
 exports.prepare = (key, port) => {
+  const dataDir = './data/test-' + key
   process.env.NODE_CONFIG = JSON.stringify({
     port: port,
     publicUrl: 'http://localhost:' + port,
+    dataDir,
     mongoUrl: 'mongodb://localhost:27017/accessible-data-test-' + key,
-    indicesPrefix: 'dataset-' + key
+    indicesPrefix: 'dataset-test-' + key
   })
   const config = require('config')
 
@@ -26,6 +29,10 @@ exports.prepare = (key, port) => {
 
   test.before('drop ES indices', async t => {
     await app.get('es').indices.delete({index: `dataset-${key}-*`, ignore: [404]})
+  })
+
+  test.before('remove test data', async t => {
+    await fs.remove(dataDir)
   })
 
   return [test, config]
