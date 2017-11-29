@@ -2,12 +2,12 @@ module.exports = {
   port: 5600,
   publicUrl: 'http://localhost:5601',
   directoryUrl: 'http://localhost:5700',
-  dataDir: './data',
+  dataDir: './data/' + (process.env.NODE_ENV || 'development'),
   mongoUrl: 'mongodb://localhost:27017/accessible-data-' + (process.env.NODE_ENV || 'development'),
   elasticsearch: {
     host: 'localhost:9200'
   },
-  indicesPrefix: 'dataset',
+  indicesPrefix: 'dataset-' + (process.env.NODE_ENV || 'development'),
   info: {
     termsOfService: 'https://koumoul.com/term-of-service',
     contact: {
