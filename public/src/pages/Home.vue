@@ -3,7 +3,7 @@
   <md-layout md-column md-flex="90">
     <md-layout md-row>
       <md-layout md-column md-flex="60">
-        <h3 class="md-display-1">Vous pouvez consulter {{datasets.count}} jeux de données</h3>
+        <h3 class="md-display-1">{{datasets.count}} flux de données disponibles</h3>
         <md-layout md-row>
           <md-layout v-for="dataset in datasets.results" md-flex="50" md-flex-small="100" style="padding:16px">
             <md-card style="width:100%">

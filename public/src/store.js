@@ -26,12 +26,12 @@ module.exports = new Vuex.Store({
   },
   actions: {
     logout(context) {
-      localStorage.removeItem('id_token')
+      Vue.cookie.delete('id_token')
       context.commit('user')
       global.router.push('/')
     },
     userAccount(context) {
-      const jwt = localStorage.getItem('id_token')
+      const jwt = Vue.cookie.get('id_token')
       if (jwt) {
         const user = jwtDecode(jwt)
         context.commit('user', user)

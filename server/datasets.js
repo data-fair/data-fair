@@ -54,6 +54,21 @@ router.get('', auth.optionalJwtMiddleware, async function(req, res, next) {
     }))
   }
   // TODO : handle permissions and set the correct filter on the list
+  query.$or = [{
+    public: true
+  }]
+  if (req.user) {
+    query.$or.push({
+      'owner.type': 'user',
+      'owner.id': req.user.id
+    })
+    query.$or.push({
+      'owner.type': 'organization',
+      'owner.id': {
+        $in: req.user.organizations.map(o => o.id)
+      }
+    })
+  }
   let mongoQueries = [
     size > 0 ? datasets.find(query).limit(size).skip(skip).sort(sort).project({
       _id: 0
@@ -210,9 +225,7 @@ router.post('/:datasetId', filesUtils.uploadFile(), async(req, res, next) => {
     await req.app.get('db').collection('datasets').updateOne({
       id: req.params.datasetId
     }, req.dataset)
-    await journals.log(req.app.get('db'), req.dataset, {
-      type: 'data-updated'
-    })
+    await journals.log(req.app.get('db'), req.dataset, {type: 'data-updated'})
     // TODO verify quota
 
     // TODO reindex
@@ -225,13 +238,19 @@ router.post('/:datasetId', filesUtils.uploadFile(), async(req, res, next) => {
 // Read/search data for a dataset
 router.get('/:datasetId/lines', async(req, res, next) => {
   if (!req.canRead) return res.sendStatus(403)
-
   try {
     const result = await esUtils.searchInDataset(req.dataset, req.query)
     res.status(200).send(result)
   } catch (err) {
     return next(err)
   }
+})
+
+// Read/search data for a dataset
+router.get('/:datasetId/raw/:fileName', async(req, res, next) => {
+  if (req.params.fileName !== req.dataset.file.name) return res.sendStatus(404)
+  if (!req.canRead) return res.sendStatus(403)
+  res.download(datasetUtils.fileName(req.dataset))
 })
 
 router.get('/:datasetId/api-docs.json', (req, res) => {

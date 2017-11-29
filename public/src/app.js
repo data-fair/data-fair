@@ -3,7 +3,7 @@ import VueMaterial from 'vue-material'
 import 'vue-material/dist/vue-material.css'
 import VueResource from 'vue-resource'
 import VueRouter from 'vue-router'
-// import VueCookie from 'vue-cookie'
+import VueCookie from 'vue-cookie'
 
 import routes from './routes.js'
 import store from './store.js'
@@ -16,7 +16,7 @@ Vue.use(VueMaterial)
 Vue.use(VueResource)
 Vue.use(VueRouter)
 Vue.use(require('vue-moment'))
-// Vue.use(VueCookie)
+Vue.use(VueCookie)
 
 Vue.material.registerTheme('default', {
   primary: {
@@ -63,9 +63,13 @@ const router = global.router = new VueRouter({
 })
 
 Vue.http.interceptors.push(function(request, next) {
-  const jwt = localStorage.getItem('id_token')
-  if (jwt) {
-    request.headers.set('Authorization', 'Bearer ' + jwt)
+  // We use authorization header for cross-domain requests
+  // request.crossOrigin is still undefined here
+  if (new URL(request.url).origin !== new URL(window.location.href).origin) {
+    const jwt = Vue.cookie.get('id_token')
+    if (jwt) {
+      request.headers.set('Authorization', 'Bearer ' + jwt)
+    }
   }
   next()
 })
@@ -80,11 +84,11 @@ new Vue({
   },
   created: function() {
     store.dispatch('userAccount')
-    if (localStorage.getItem('id_token')) {
+    if (this.$cookie.get('id_token')) {
       this.$http.post(window.CONFIG.directoryUrl + '/api/auth/exchange').then(response => {
-        localStorage.setItem('id_token', response.body)
+        this.$cookie.set('id_token', response.body, 30)
       }, response => {
-        localStorage.removeItem('id_token')
+        this.$cookie.delete('id_token')
         this.$notify({
           type: 'danger',
           text: `Une erreur est survenue lors du renouvellement de votre jeton d'authentification : ` +

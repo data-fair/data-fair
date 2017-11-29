@@ -47,6 +47,11 @@
         </md-dialog>
 
         <md-layout md-align="center">
+          <a :href="downloadLink">
+            <md-button class="md-icon-button md-raised md-primary">
+              <md-icon>file_download</md-icon>
+            </md-button>
+          </a>
           <md-button class="md-icon-button md-raised md-warn" id="delete" @click="$refs['delete-dialog'].open()">
             <md-icon>delete</md-icon>
           </md-button>
@@ -84,7 +89,6 @@ import Schema from '../components/Schema.vue'
 import DatasetAPIDoc from '../components/DatasetAPIDoc.vue'
 import TabularView from '../components/TabularView.vue'
 
-
 export default {
   name: 'dataset',
   components: {
@@ -98,7 +102,10 @@ export default {
     dataset: null
   }),
   computed: mapState({
-    user: state => state.user
+    user: state => state.user,
+    downloadLink() {
+      if (this.dataset) return window.CONFIG.publicUrl + '/api/v1/datasets/' + this.dataset.id + '/raw/' + this.dataset.file.name
+    }
   }),
   mounted() {
     this.$http.get(window.CONFIG.publicUrl + '/api/v1/datasets/' + this.$route.params.datasetId).then(result => {
@@ -114,11 +121,13 @@ export default {
         this.$store.dispatch('notifyError', `Erreur ${error.status} pendant la mise à jour du jeu de données`)
       })
     },
-    remove(){
+    remove() {
       this.$refs['delete-dialog'].close()
       this.$http.delete(window.CONFIG.publicUrl + '/api/v1/datasets/' + this.$route.params.datasetId).then(result => {
         this.$store.dispatch('notify', `Le jeu de données ${this.dataset.title} a bien été supprimé`)
-        this.$router.push({name:'Home'})
+        this.$router.push({
+          name: 'Home'
+        })
       }, error => {
         this.$store.dispatch('notifyError', `Erreur ${error.status} pendant la suppression du jeu de données ${this.dataset.title}`)
       })

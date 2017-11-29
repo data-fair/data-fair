@@ -19,6 +19,7 @@ module.exports = {
     'space-before-function-paren': 0
   },
   globals:{
-    localStorage: true
+    localStorage: true,
+    URL: true
   }
 }

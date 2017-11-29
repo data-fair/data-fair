@@ -1,3 +1,5 @@
+import Vue from 'vue'
+
 import Home from './pages/Home.vue'
 import Dataset from './pages/Dataset.vue'
 import ApiDoc from './ApiDoc.vue'
@@ -18,7 +20,7 @@ export default [{
   path: '/signin',
   name: 'Signin',
   redirect: to => {
-    localStorage.setItem('id_token', to.query.id_token)
+    Vue.cookie.set('id_token', to.query.id_token, 30)
     return {
       path: '/',
       query: null
