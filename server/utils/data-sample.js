@@ -3,6 +3,7 @@ const csv = require('csv-parser')
 const util = require('util')
 const shuffle = require('shuffle-array')
 const datasetUtils = require('./dataset')
+const iconv = require('iconv-lite')
 
 const countLines = (dataset, callback) => {
   const linesNumber = [...Array(dataset.file.props.numLines - 1).keys()]
@@ -12,6 +13,7 @@ const countLines = (dataset, callback) => {
   let readError
   let currentLine = 0
   fs.createReadStream(datasetUtils.fileName(dataset))
+    .pipe(iconv.decodeStream(dataset.file.encoding))
     .pipe(csv({
       separator: dataset.file.props.fieldsDelimiter,
       quote: dataset.file.props.escapeChar,
