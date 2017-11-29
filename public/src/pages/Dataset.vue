@@ -54,7 +54,7 @@
       </md-tab>
 
       <md-tab md-label="Vue tableau" md-icon="view_list">
-        <p>Lorem ipsum dolor sit amet, consectetur adipisicing elit. Deserunt dolorum quas amet cum vitae, omnis! Illum quas voluptatem, expedita iste, dicta ipsum ea veniam dolore in, quod saepe reiciendis nihil.</p>
+        <tabular-view :dataset="dataset"></tabular-view>
       </md-tab>
 
       <!-- <md-tab md-label="Permissions" md-icon="security">
@@ -82,6 +82,8 @@ import Permissions from '../components/Permissions.vue'
 import Journal from '../components/Journal.vue'
 import Schema from '../components/Schema.vue'
 import DatasetAPIDoc from '../components/DatasetAPIDoc.vue'
+import TabularView from '../components/TabularView.vue'
+
 
 export default {
   name: 'dataset',
@@ -89,7 +91,8 @@ export default {
     Permissions,
     Journal,
     Schema,
-    DatasetAPIDoc
+    DatasetAPIDoc,
+    TabularView
   },
   data: () => ({
     dataset: null
