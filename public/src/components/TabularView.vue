@@ -3,7 +3,7 @@
   <md-table @sort="orderBy">
     <md-table-header>
       <md-table-row>
-        <md-table-head v-for="(fieldInfos, field) in dataset.schema" :md-tooltip="fieldInfos.description" :md-numeric="fieldInfos.type === 'number' || fieldInfos.type === 'integer'" :md-sort-by="field">{{fieldInfos.title || fieldInfos['x-originalName']}}</md-table-head>
+        <md-table-head v-for="(fieldInfos, field) in dataset.schema" :md-tooltip="fieldInfos.description || (fieldInfos['x-refersTo'] && terms[fieldInfos['x-refersTo']])" :md-numeric="fieldInfos.type === 'number' || fieldInfos.type === 'integer'" :md-sort-by="field">{{fieldInfos.title || fieldInfos['x-originalName']}}</md-table-head>
       </md-table-row>
     </md-table-header>
 
@@ -30,10 +30,16 @@ export default {
     data: {},
     size: 10,
     page: 1,
-    sort: null
+    sort: null,
+    terms: {}
   }),
   mounted() {
     this.refresh()
+    this.$http.get(window.CONFIG.publicUrl + '/api/v1/terms').then(results => {
+      this.terms = Object.assign({}, ...results.data.map(t => ({
+        [t.term]: t.description
+      })))
+    })
   },
   methods: {
     refresh(pagination) {
@@ -45,7 +51,7 @@ export default {
         size: this.size,
         page: this.page
       }
-      if(this.sort) params.sort = this.sort
+      if (this.sort) params.sort = this.sort
       this.$http.get(window.CONFIG.publicUrl + '/api/v1/datasets/' + this.dataset.id + '/lines', {
         params
       }).then(results => {
