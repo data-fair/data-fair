@@ -7,6 +7,7 @@ module.exports = {
   elasticsearch: {
     host: 'localhost:9200'
   },
+  indicesPrefix: 'dataset',
   info: {
     termsOfService: 'https://koumoul.com/term-of-service',
     contact: {

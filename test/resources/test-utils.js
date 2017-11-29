@@ -5,7 +5,8 @@ exports.prepare = (key, port) => {
   process.env.NODE_CONFIG = JSON.stringify({
     port: port,
     publicUrl: 'http://localhost:' + port,
-    mongoUrl: 'mongodb://localhost:27017/accessible-data-test-' + key
+    mongoUrl: 'mongodb://localhost:27017/accessible-data-test-' + key,
+    indicesPrefix: 'dataset-' + key
   })
   const config = require('config')
 
@@ -24,7 +25,7 @@ exports.prepare = (key, port) => {
   })
 
   test.before('drop ES indices', async t => {
-    await app.get('es').indices.delete({index: 'dataset-*'})
+    await app.get('es').indices.delete({index: `dataset-${key}-*`, ignore: [404]})
   })
 
   return [test, config]

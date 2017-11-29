@@ -11,24 +11,33 @@ const indexBase = {
     // TODO: a way to override this ? Maybe intelligently based on size of the file ?
       number_of_shards: 1,
       number_of_replicas: 1
-    },
-    mappings: {
-      line: {
-      // TODO: json-schema -> ES mapping transformation
-        properties: {}
-      }
     }
+  },
+  mappings: {
+    line: {}
   }
 }
 
 exports.initDatasetIndex = async (dataset) => {
-  const tempId = `dataset-${dataset._id}-${Date.now()}`
-  await client.indices.create({index: tempId, body: Object.assign({}, indexBase)})
+  const tempId = `${config.indicesPrefix}-${dataset._id}-${Date.now()}`
+  const body = Object.assign({}, indexBase)
+  const properties = body.mappings.line.properties = {}
+  Object.keys(dataset.schema).forEach(key => {
+    const jsProp = dataset.schema[key]
+    const esProp = properties[key] = {}
+    if (jsProp.type === 'integer') esProp.type = 'long'
+    else if (jsProp.type === 'number') esProp.type = 'double'
+    else if (jsProp.type === 'boolean') esProp.type = 'boolean'
+    else if (jsProp.type === 'string' && jsProp.format === 'date-time') esProp.type = 'date'
+    else if (jsProp.type === 'string' && jsProp.format === 'uri-reference') esProp.type = 'keyword'
+    else esProp.type = 'text'
+  })
+  await client.indices.create({index: tempId, body})
   return tempId
 }
 
 exports.switchAlias = async (dataset, tempId) => {
-  const name = `dataset-${dataset._id}`
+  const name = `${config.indicesPrefix}-${dataset._id}`
   await client.indices.putAlias({name, index: tempId})
 
   // Delete all other indices that from this dataset

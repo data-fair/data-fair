@@ -7,6 +7,7 @@ const [test] = testUtils.prepare('workers', 5608)
 const analyzer = require('../server/workers/analyzer')
 const schematizer = require('../server/workers/schematizer')
 const indexer = require('../server/workers/indexer')
+const esUtils = require('../server/utils/es')
 
 const dataset1 = fs.readFileSync('./test/resources/dataset1.csv')
 const form1 = new FormData()
@@ -26,4 +27,8 @@ test('Process newly uploaded dataset', async t => {
   dataset = await indexer.hook()
   t.is(dataset.status, 'indexed')
   t.is(dataset.count, 2)
+  const esIndices = await esUtils.client.indices.get({index: `dataset-workers-${dataset._id}`})
+  const esIndex = Object.values(esIndices)[0]
+  const mapping = esIndex.mappings.line
+  t.is(mapping.properties.id.type, 'text')
 })
