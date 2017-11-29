@@ -85,3 +85,8 @@ exports.indexStream = async (inputStream, index) => {
       .on('finish', () => resolve(indexStream.i))
   })
 }
+
+exports.searchInDataset = async (dataset, query) => {
+  const result = client.search({index: `${config.indicesPrefix}-${dataset._id}`, body: {}})
+  return result
+}

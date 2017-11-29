@@ -1,12 +1,14 @@
 const express = require('express')
 const ajv = require('ajv')()
+const fs = require('fs-extra')
+const util = require('util')
 const datasetSchema = require('../contract/dataset.json')
 const validate = ajv.compile(datasetSchema)
 const moment = require('moment')
 const auth = require('./auth')
 const journals = require('./journals')
-const fs = require('fs-extra')
-const util = require('util')
+const esUtils = require('./utils/es')
+const filesUtils = require('./utils/files')
 
 let router = express.Router()
 
@@ -154,76 +156,33 @@ router.delete('/:datasetId', async(req, res, next) => {
   }
 })
 
-const shortid = require('shortid')
-const config = require('config')
-const path = require('path')
-const multer = require('multer')
-const storage = multer.diskStorage({
-  destination: function(req, file, cb) {
-    if (!req.body) {
-      return cb(new Error(400))
-    }
-    if (req.dataset) {
-      req.body.owner = req.dataset.owner
-    }
-    if (!req.body.owner || !req.body.owner.type || !req.body.owner.id) {
-      return cb(new Error(400))
-    }
-    const uploadDir = path.join(config.dataDir, req.body.owner.type, req.body.owner.id)
-    fs.ensureDirSync(uploadDir)
-    cb(null, uploadDir)
-  },
-  filename: async function(req, file, cb) {
-    let id
-    if (req.dataset) {
-      id = req.dataset.id
-    } else {
-      do {
-        id = shortid.generate()
-        var dataset = await req.app.get('db').collection('datasets').findOne({
-          id: id
-        })
-      } while (dataset)
-    }
-    cb(null, id + '.' + file.originalname.split('.').pop())
-  }
-})
-
-const allowedTypes = new Set(['text/csv'])
-
-const upload = multer({
-  storage: storage,
-  fileFilter: function fileFilter(req, file, cb) {
-    cb(null, allowedTypes.has(file.mimetype))
-  }
-})
 const datasetFileSample = require('./utils/dataset-file-sample')
 const detectCharacterEncoding = require('detect-character-encoding')
 
 // Create a dataset by uploading tabular data
-router.post('', auth.jwtMiddleware, upload.single('file'), async(req, res, next) => {
+router.post('', auth.jwtMiddleware, filesUtils.uploadFile(), async(req, res, next) => {
   if (!req.file) return res.sendStatus(400)
   // TODO verify quota
-  const date = moment().toISOString()
-  const dataset = {
-    id: req.file.filename.split('.').shift(),
-    title: req.file.originalname.split('.').shift(),
-    file: {
-      name: req.file.originalname,
-      size: req.file.size,
-      mimetype: req.file.mimetype
-    },
-    public: false,
-    owner: req.body.owner,
-    createdBy: req.user.id,
-    createdAt: date,
-    updatedBy: req.user.id,
-    updatedAt: date,
-    status: 'loaded'
-  }
-  const fileSample = await datasetFileSample(dataset)
-  dataset.file.encoding = detectCharacterEncoding(fileSample).encoding
   try {
+    const date = moment().toISOString()
+    const dataset = {
+      id: req.file.id,
+      title: req.file.title,
+      file: {
+        name: req.file.originalname,
+        size: req.file.size,
+        mimetype: req.file.mimetype
+      },
+      public: false,
+      owner: req.body.owner,
+      createdBy: req.user.id,
+      createdAt: date,
+      updatedBy: req.user.id,
+      updatedAt: date,
+      status: 'loaded'
+    }
+    const fileSample = await datasetFileSample(dataset)
+    dataset.file.encoding = detectCharacterEncoding(fileSample).encoding
     await req.app.get('db').collection('datasets').insertOne(dataset)
     await journals.log(req.app.get('db'), dataset, {type: 'created'})
     res.status(201).send(dataset)
@@ -233,7 +192,7 @@ router.post('', auth.jwtMiddleware, upload.single('file'), async(req, res, next)
 })
 
 // Update an existing dataset data
-router.post('/:datasetId', upload.single('file'), async(req, res, next) => {
+router.post('/:datasetId', filesUtils.uploadFile(), async(req, res, next) => {
   if (!req.canWrite) return res.sendStatus(403)
   if (!req.file) return res.sendStatus(400)
   try {
@@ -262,11 +221,16 @@ router.post('/:datasetId', upload.single('file'), async(req, res, next) => {
   }
 })
 
-// Read data for a dataset
-router.get('/:datasetId/data', (req, res, next) => {
+// Read/search data for a dataset
+router.get('/:datasetId/lines', async(req, res, next) => {
   if (!req.canRead) return res.sendStatus(403)
-  // TODO send data
-  res.status(200).send(req.dataset)
+
+  try {
+    const res = await esUtils.searchInDataset(req.dataset, req.query)
+    res.status(200).send(res)
+  } catch (err) {
+    return next(err)
+  }
 })
 
 module.exports = router
