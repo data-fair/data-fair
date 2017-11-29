@@ -49,7 +49,7 @@ test('Upload new dataset in organization zone', async t => {
   t.is(res.status, 201)
 })
 
-test.only('Uploading same file twice shoud increment id', async t => {
+test('Uploading same file twice shoud increment id', async t => {
   const ax = await testUtils.axios('dmeadus0@answers.com')
   for (let i of [1, 2, 3]) {
     const form = new FormData()

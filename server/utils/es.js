@@ -18,8 +18,12 @@ const indexBase = {
   }
 }
 
+const indexName = exports.indexName = (dataset) => {
+  return `${config.indicesPrefix}-${dataset.id}`
+}
+
 exports.initDatasetIndex = async (dataset) => {
-  const tempId = `${config.indicesPrefix}-${dataset._id}-${Date.now()}`
+  const tempId = `${indexName(dataset)}-${Date.now()}`
   const body = Object.assign({}, indexBase)
   const properties = body.mappings.line.properties = {}
   Object.keys(dataset.schema).forEach(key => {
@@ -38,7 +42,7 @@ exports.initDatasetIndex = async (dataset) => {
 }
 
 exports.switchAlias = async (dataset, tempId) => {
-  const name = `${config.indicesPrefix}-${dataset._id}`
+  const name = indexName(dataset)
   await client.indices.putAlias({name, index: tempId})
 
   // Delete all other indices that from this dataset
@@ -87,6 +91,6 @@ exports.indexStream = async (inputStream, index) => {
 }
 
 exports.searchInDataset = async (dataset, query) => {
-  const result = client.search({index: `${config.indicesPrefix}-${dataset._id}`, body: {}})
+  const result = client.search({index: indexName(dataset), body: {}})
   return result
 }
