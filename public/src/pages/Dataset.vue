@@ -31,8 +31,9 @@
             </md-card>
           </md-layout>
         </md-layout>
-        <h3 class="md-headline">Schéma</h3>
-        <schema :dataset="dataset"></schema>
+
+        <schema :dataset="dataset" @schema-updated="dataset.schema = $event; dataset.status = 'schematized';save()"></schema>
+
         <h3 class="md-headline">Actions</h3>
         <md-dialog md-open-from="#delete" md-close-to="#delete" ref="delete-dialog">
           <md-dialog-title>Suppression du jeu de données</md-dialog-title>
