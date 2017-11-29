@@ -25,9 +25,11 @@
 const {
   mapState
 } = require('vuex')
+const routerMixin = require('../mixins.js').routerMixin
 
 export default {
   name: 'import-file',
+  mixins: [routerMixin],
   data: () => ({
     fileName: null,
     file: null,
@@ -94,14 +96,21 @@ export default {
         this.$http.post(window.CONFIG.publicUrl + '/api/v1/datasets', formData, options).then(results => {
           this.$emit('datasets-change')
           this.reset()
+          const link = this.urlFromRoute({name:'Dataset', params:{datasetId: results.body.id}})
+          this.$store.dispatch('notify', `Le fichier a bien été importé et le jeu de données a été créé. <a href="${link}">Accéder au jeu de données</a>`)
+        }, error => {
+          this.$store.dispatch('notifyError', `Erreur ${error.status} pendant l'import du fichier`)
         })
       } else {
         formData.append('file', this.file)
         this.$http.post(window.CONFIG.publicUrl + '/api/v1/datasets/' + this.actions[this.action].id, formData, options).then(results => {
           this.reset()
+          const link = this.urlFromRoute({name:'Dataset', params:{datasetId: results.body.id}})
+          this.$store.dispatch('notify', `Le fichier a bien été importé et le jeu de données a été mis à jour. <a href="${link}">Accéder au jeu de données</a>`)
+        }, error => {
+          this.$store.dispatch('notifyError', `Erreur ${error.status} pendant l'import du fichier`)
         })
       }
-
     }
   },
   watch: {

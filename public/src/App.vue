@@ -31,9 +31,26 @@
         </md-menu-item>
       </md-menu-content>
     </md-menu>
-
   </md-toolbar>
+
   <router-view></router-view>
+
+  <md-snackbar md-position="bottom center" ref="notificationErrorSnackbar" md-duration="12000" @close="notifyError">
+    <md-icon md-theme="error" class="md-primary">error</md-icon>
+    &nbsp;&nbsp;&nbsp;
+    <div v-html="notificationError"></div>
+    <md-button class="md-icon-button md-dense" @click.native="$refs.notificationErrorSnackbar.close()">
+      <md-icon>close</md-icon>
+    </md-button>
+  </md-snackbar>
+  <md-snackbar md-position="bottom center" ref="notificationSnackbar" md-duration="60000" @close="notify">
+    <md-icon md-theme="success" class="md-primary">check_circle</md-icon>
+    &nbsp;&nbsp;&nbsp;
+    <div v-html="notification"></div>
+    <md-button class="md-icon-button md-dense" @click.native="$refs.notificationSnackbar.close()">
+      <md-icon>close</md-icon>
+    </md-button>
+  </md-snackbar>
 </div>
 </template>
 
@@ -47,11 +64,23 @@ export default {
   name: 'app',
   computed: mapState({
     user: state => state.user,
+    notification: state => state.notification,
+    notificationError: state => state.notificationError,
     loginUrl() {
       return window.CONFIG.directoryUrl + '/login?redirect=' + window.location.origin + '/signin?id_token='
     }
   }),
-  methods: mapActions(['logout'])
+  methods: mapActions(['logout', 'notify', 'notifyError']),
+  watch: {
+    notification(val) {
+      if (val) this.$refs.notificationSnackbar.open()
+      else this.$refs.notificationSnackbar.close()
+    },
+    notificationError(val) {
+      if (val) this.$refs.notificationErrorSnackbar.open()
+      else this.$refs.notificationErrorSnackbar.close()
+    }
+  }
 }
 </script>
 
@@ -87,5 +116,9 @@ body {
             // color: #FFF;
         }
     }
+}
+
+.md-snackbar-content a {
+    color: #ff9966 !important;
 }
 </style>

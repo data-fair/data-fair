@@ -6,7 +6,9 @@ Vue.use(Vuex)
 
 module.exports = new Vuex.Store({
   state: {
-    user: null
+    user: null,
+    notification: '',
+    notificationError: ''
   },
   mutations: {
     user(state, account) {
@@ -14,6 +16,12 @@ module.exports = new Vuex.Store({
         account.isAdmin = account.roles && account.roles.indexOf('administrator') >= 0
       }
       state.user = account
+    },
+    notification(state, notification) {
+      state.notification = notification
+    },
+    notificationError(state, notificationError) {
+      state.notificationError = notificationError
     }
   },
   actions: {
@@ -33,6 +41,12 @@ module.exports = new Vuex.Store({
       } else {
         context.commit('user')
       }
+    },
+    notify(context, notification) {
+      context.commit('notification', notification)
+    },
+    notifyError(context, notification) {
+      context.commit('notificationError', notification)
     }
   }
 })

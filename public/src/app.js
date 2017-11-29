@@ -4,7 +4,6 @@ import 'vue-material/dist/vue-material.css'
 import VueResource from 'vue-resource'
 import VueRouter from 'vue-router'
 // import VueCookie from 'vue-cookie'
-// import VueAnalytics from 'vue-ua'
 
 import routes from './routes.js'
 import store from './store.js'
@@ -29,6 +28,20 @@ Vue.material.registerTheme('default', {
   background: 'white'
 })
 
+Vue.material.registerTheme('success', {
+  primary: {
+    color: 'green',
+    hue: '400'
+  }
+})
+
+Vue.material.registerTheme('error', {
+  primary: {
+    color: 'red',
+    hue: '400'
+  }
+})
+
 let base = window.CONFIG.publicUrl.split('//').pop().split('/')
 base.shift()
 base = base.join('/')
@@ -48,14 +61,6 @@ const router = global.router = new VueRouter({
     }
   }
 })
-
-// Vue.use(VueAnalytics, {
-//   appName: 'Business Site', // Mandatory
-//   appVersion: '1.0.0', // Mandatory
-//   trackingId: 'UA-91383222-1', // Mandatory
-//   debug: false, // Whether or not display console logs debugs (optional)
-//   vueRouter: router
-// })
 
 Vue.http.interceptors.push(function(request, next) {
   const jwt = localStorage.getItem('id_token')

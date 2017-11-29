@@ -99,13 +99,19 @@ export default {
   methods: {
     save() {
       this.$http.put(window.CONFIG.publicUrl + '/api/v1/datasets/' + this.$route.params.datasetId, this.dataset).then(result => {
+        this.$store.dispatch('notify', `Le jeu de données a bien été mis à jour`)
         this.dataset = result.data
+      }, error => {
+        this.$store.dispatch('notifyError', `Erreur ${error.status} pendant la mise à jour du jeu de données`)
       })
     },
     remove(){
       this.$refs['delete-dialog'].close()
       this.$http.delete(window.CONFIG.publicUrl + '/api/v1/datasets/' + this.$route.params.datasetId).then(result => {
+        this.$store.dispatch('notify', `Le jeu de données ${this.dataset.title} a bien été supprimé`)
         this.$router.push({name:'Home'})
+      }, error => {
+        this.$store.dispatch('notifyError', `Erreur ${error.status} pendant la suppression du jeu de données ${this.dataset.title}`)
       })
     }
   }
