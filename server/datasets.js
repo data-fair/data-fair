@@ -5,6 +5,8 @@ const validate = ajv.compile(datasetSchema)
 const moment = require('moment')
 const auth = require('./auth')
 const journals = require('./journals')
+const fs = require('fs-extra')
+const util = require('util')
 
 let router = express.Router()
 
@@ -132,12 +134,18 @@ router.put('/:datasetId', async(req, res, next) => {
   }
 })
 
+const datasetUtils = require('./utils/dataset')
+const unlink = util.promisify(fs.unlink)
 // Delete a dataset
 router.delete('/:datasetId', async(req, res, next) => {
   if (!req.canWrite) return res.sendStatus(403)
   try {
-    // TODO : Remove data
+    // TODO : Remove indexes
+    await unlink(datasetUtils.fileName(req.dataset))
     await req.app.get('db').collection('datasets').deleteOne({
+      id: req.params.datasetId
+    })
+    await req.app.get('db').collection('journals').deleteOne({
       id: req.params.datasetId
     })
     res.sendStatus(204)
@@ -148,7 +156,6 @@ router.delete('/:datasetId', async(req, res, next) => {
 
 const shortid = require('shortid')
 const config = require('config')
-const fs = require('fs-extra')
 const path = require('path')
 const multer = require('multer')
 const storage = multer.diskStorage({
