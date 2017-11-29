@@ -1,6 +1,7 @@
 const Transform = require('stream').Transform
 const config = require('config')
 const elasticsearch = require('elasticsearch')
+const createError = require('http-errors')
 
 const client = exports.client = elasticsearch.Client(config.elasticsearch)
 
@@ -86,11 +87,65 @@ exports.indexStream = async (inputStream, index) => {
       .on('error', reject)
       .pipe(indexStream)
       .on('error', reject)
-      .on('finish', () => resolve(indexStream.i))
+      .on('finish', () => {
+        setTimeout(() => resolve(indexStream.i), 1000)
+      })
   })
 }
 
 exports.searchInDataset = async (dataset, query) => {
-  const result = client.search({index: indexName(dataset), body: {}})
-  return result
+  const body = prepareQuery(query)
+  const esResponse = await client.search({index: indexName(dataset), body})
+  return prepareResponse(esResponse)
+}
+
+const prepareResponse = (esResponse) => {
+  const response = {}
+  response.total = esResponse.hits.total
+  response.results = esResponse.hits.hits.map(hit => {
+    return {
+      score: hit._score,
+      doc: hit._source
+    }
+  })
+  return response
+}
+
+const prepareQuery = query => {
+  const esQuery = {}
+
+  // Pagination
+  esQuery.size = query.size ? Number(query.size) : 20
+  if (query.size > 10000) throw createError(400, '"size" cannot be more than 10000')
+  esQuery.from = (query.page ? Number(query.page) - 1 : 0) * esQuery.size
+
+  // Select fields to return
+  esQuery._source = query.select ? query.select.split(',') : '*'
+
+  // Sort by list of fields (prefixed by - for descending sort)
+  if (query.sort) {
+    esQuery.sort = query.sort.split(',').map(s => {
+      if (s.indexOf('-') === 0) return { [s.slice(1)]: 'desc' }
+      else return { [s]: 'asc' }
+    })
+  } else {
+    esQuery.sort = []
+  }
+  // Also implicitly sort by score
+  esQuery.sort.push('_score')
+
+  const filter = []
+  const must = []
+
+  // query and simple query string for a lot a functionalities in a simple exposition (too open ??)
+  if (query.qs) {
+    must.push({ query_string: { query: query.qs } })
+  }
+  if (query.q) {
+    must.push({ simple_query_string: { query: query.q } })
+  }
+
+  esQuery.query = { bool: { filter, must } }
+
+  return esQuery
 }

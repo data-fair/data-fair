@@ -80,7 +80,7 @@ router.use('/:datasetId', auth.optionalJwtMiddleware, async function(req, res, n
         _id: 0
       }
     })
-    if (!req.dataset) return res.sendStatus(404)
+    if (!req.dataset) return res.status(404).send('Dataset not found')
     next()
   } catch (err) {
     next(err)
@@ -226,8 +226,8 @@ router.get('/:datasetId/lines', async(req, res, next) => {
   if (!req.canRead) return res.sendStatus(403)
 
   try {
-    const res = await esUtils.searchInDataset(req.dataset, req.query)
-    res.status(200).send(res)
+    const result = await esUtils.searchInDataset(req.dataset, req.query)
+    res.status(200).send(result)
   } catch (err) {
     return next(err)
   }

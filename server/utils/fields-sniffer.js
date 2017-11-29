@@ -2,9 +2,6 @@ const Ajv = require('ajv')
 const ajv = new Ajv()
 
 exports.sniff = (values) => {
-  // either set or array as input
-  if (Array.isArray(values)) values = new Set(values)
-
   if (checkAll(values, isBoolean)) return {type: 'boolean'}
   if (checkAll(values, val => intRegexp.test(val))) return {type: 'integer'}
   if (checkAll(values, val => floatRegexp.test(val))) return {type: 'number'}
