@@ -51,9 +51,9 @@ const schematizeDataset = async function(db) {
 
   // We copy fields in the detected schema that have not been modified by the user
   const schema = dataset.schema = dataset.schema || {}
-  Object.assign(schema, ...Object.keys(dataset.file.schema).filter(field => !schema[field] || !schema[field].auto).map(field => ({
+  Object.assign(schema, ...Object.keys(dataset.file.schema).filter(field => !schema[field] || !schema[field]['x-auto']).map(field => ({
     [field]: Object.assign(dataset.file.schema[field], {
-      auto: true
+      'x-auto': true
     })
   })))
 
