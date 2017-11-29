@@ -74,7 +74,10 @@ class IndexStream extends Transform {
     this._sendBulk(callback)
   }
   _sendBulk(callback) {
-    client.bulk({body: this.body}, callback)
+    client.bulk({body: this.body}, () => {
+      // Super weird ! When passing callback directly it seems that it is not called.
+      callback()
+    })
     this.body = []
   }
 }
