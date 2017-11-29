@@ -46,7 +46,7 @@ const schematizeDataset = async function(db) {
   }, Object.assign({}, ...Object.keys(firstLine).map(k => ({[k]: new Set([firstLine[k]])}))))
   // Now we can extract infos for each field
   Object.keys(myCSVObject).forEach(field => {
-    Object.assign(dataset.file.schema[field.replace(/\.|\$/g, '_')], fieldsSniffer.sniff(myCSVObject[field]))
+    Object.assign(dataset.file.schema[fieldsSniffer.escapeKey(field)], fieldsSniffer.sniff(myCSVObject[field]))
   })
 
   // We copy fields in the detected schema that have not been modified by the user

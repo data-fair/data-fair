@@ -6,6 +6,7 @@ const iconv = require('iconv-lite')
 const countLines = require('../utils/count-lines')
 const datasetUtils = require('../utils/dataset')
 const journals = require('../journals')
+const fieldsSniffer = require('../utils/fields-sniffer')
 
 // A hook/spy for testing purposes
 let resolveHook, rejectHook
@@ -41,7 +42,7 @@ const analyzeDataset = async function(db) {
   const fileSample = await datasetFileSample(dataset)
   const sniffResult = sniffer.sniff(iconv.decode(fileSample, dataset.file.encoding), {hasHeader: true})
   const schema = dataset.file.schema = Object.assign({}, ...sniffResult.labels.map((field, i) => ({
-    [field.replace(/\.|\$/g, '_')]: {
+    [fieldsSniffer.escapeKey(field)]: {
       type: sniffResult.types[i],
       'x-originalName': field
     }

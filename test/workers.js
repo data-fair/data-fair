@@ -21,14 +21,21 @@ test('Process newly uploaded dataset', async t => {
   t.is(res.status, 201)
   let dataset = await analyzer.hook()
   t.is(dataset.status, 'analyzed')
+
   dataset = await schematizer.hook()
   t.is(dataset.status, 'schematized')
   t.is(dataset.schema.id.type, 'string')
+  t.is(dataset.schema.id.format, 'uri-reference')
+  t.is(dataset.schema.some_date.type, 'string')
+  t.is(dataset.schema.some_date.format, 'date')
+
   dataset = await indexer.hook()
   t.is(dataset.status, 'indexed')
   t.is(dataset.count, 2)
   const esIndices = await esUtils.client.indices.get({index: `dataset-workers-${dataset._id}`})
   const esIndex = Object.values(esIndices)[0]
   const mapping = esIndex.mappings.line
-  t.is(mapping.properties.id.type, 'text')
+  t.is(mapping.properties.id.type, 'keyword')
+  t.is(mapping.properties.adr.type, 'text')
+  t.is(mapping.properties.some_date.type, 'date')
 })

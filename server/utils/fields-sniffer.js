@@ -2,6 +2,9 @@ const Ajv = require('ajv')
 const ajv = new Ajv()
 
 exports.sniff = (values) => {
+  // either set or array as input
+  if (Array.isArray(values)) values = new Set(values)
+
   if (checkAll(values, isBoolean)) return {type: 'boolean'}
   if (checkAll(values, val => intRegexp.test(val))) return {type: 'integer'}
   if (checkAll(values, val => floatRegexp.test(val))) return {type: 'number'}
@@ -18,9 +21,13 @@ exports.format = (value, prop) => {
   if (prop.type === 'integer' || prop.type === 'number') return value ? Number(value) : null
 }
 
+exports.escapeKey = (key) => {
+  return key.replace(/\.|\s|\$/g, '_')
+}
+
 function checkAll(values, check) {
-  for (let i = 0; i < values.length; i++) {
-    if (values[i] && !check(values[i])) {
+  for (let value of values) {
+    if (value && !check(value)) {
       return false
     }
   }
