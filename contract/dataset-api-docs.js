@@ -51,7 +51,7 @@ Pour plus d'information voir la documentation [ElasticSearch](https://www.elasti
             }
           }, { in: 'query',
             name: 'page',
-            description: 'Le numéro de la page (indice de la pagination). Débute à 1',
+            description: 'Le numéro de la page (indice de la pagination). Débute à 1.',
             required: false,
             schema: {
               default: 1,

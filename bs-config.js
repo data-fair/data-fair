@@ -10,5 +10,7 @@ module.exports = {
   server: false,
   proxy: 'localhost:5600',
   port: 5601,
-  startPath: '/'
+  startPath: '/',
+  ghostMode: false,
+  reloadDebounce: 200
 }
