@@ -62,10 +62,12 @@
         <tabular-view :dataset="dataset"></tabular-view>
       </md-tab>
 
-      <!-- <md-tab md-label="Permissions" md-icon="security">
-        <permissions :dataset="dataset" @change="save"></permissions>
-      </md-tab> -->
+      <md-tab md-label="Permissions" md-icon="security">
+        <permissions :dataset="dataset" @toggle-visibility="dataset.public = !dataset.public;save()"></permissions>
+      </md-tab>
 
+      <!-- <md-tab md-label="Enrichissement" md-icon="merge_type">
+      </md-tab> -->
 
       <md-tab md-label="Journal" md-icon="event_note">
         <journal :dataset="dataset"></journal>
