@@ -19,6 +19,10 @@
   "description": "Coordonné géographique qui permet de se situer par rapport au méridien de Greenwich",
   "term": "http://www.w3.org/2003/01/geo/wgs84_pos#long"
 },{
+  "title": "Latitude / Longitude",
+  "description": "Paire latitude / longitude, séparées par une virgule",
+  "term": "http://www.w3.org/2003/01/geo/wgs84_pos#lat_long"
+},{
   "title": "SIRET",
   "description": "Le numéro SIRET est un identifiant numérique de 14 chiffres composé du SIREN (9 chiffres) et du NIC (5 chiffres)",
   "term": "http://www.datatourisme.fr/ontology/core/1.0/#siret"
