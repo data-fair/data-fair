@@ -26,7 +26,7 @@ const storage = multer.diskStorage({
   filename: async function(req, file, cb) {
     file.title = path.parse(file.originalname).name
     const ext = path.parse(file.originalname).ext
-    const baseId = fieldsSniffer.escapeKey(file.title)
+    const baseId = fieldsSniffer.escapeKey(file.title).toLowerCase()
 
     if (req.dataset) {
       // Update dataset case
