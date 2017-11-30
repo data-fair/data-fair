@@ -100,17 +100,13 @@
         }
       }
     },
-    "public": {
-      "type": "boolean",
-      "enum": [true, false],
-      "description": "If the dataset is public or not"
-    },
     "permissions": {
       "type": "array",
       "items": {
         "type": "object",
+        "description": "Permission to do the operation with the gived operationId. If type and id are not set, then the operation is set to public.",
         "additionalProperties": false,
-        "required": ["type", "id", "mode"],
+        "required": ["operationId"],
         "properties": {
           "type": {
             "type": "string",
@@ -121,10 +117,9 @@
             "type": "string",
             "description": "Identifier of the entity"
           },
-          "mode": {
+          "operationId": {
             "type": "string",
-            "enum": ["read", "write"],
-            "description": "Type of permission"
+            "description": "API operation that can be used"
           }
         }
       }

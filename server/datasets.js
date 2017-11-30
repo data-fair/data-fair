@@ -10,6 +10,7 @@ const journals = require('./journals')
 const esUtils = require('./utils/es')
 const filesUtils = require('./utils/files')
 const datasetAPIDocs = require('../contract/dataset-api-docs')
+const permissions = require('./utils/permissions')
 
 let router = express.Router()
 
@@ -54,10 +55,8 @@ router.get('', auth.optionalJwtMiddleware, async function(req, res, next) {
     }))
   }
   // TODO : handle permissions and set the correct filter on the list
-  query.$or = [{
-    public: true
-  }]
   if (req.user) {
+    query.$or = []
     query.$or.push({
       'owner.type': 'user',
       'owner.id': req.user.id
@@ -101,42 +100,17 @@ router.use('/:datasetId', auth.optionalJwtMiddleware, async function(req, res, n
   } catch (err) {
     next(err)
   }
-}, function(req, res, next) {
-  if (req.dataset.public) {
-    req.canRead = true
-  } else if (!req.user) {
-    return res.sendStatus(401)
-  }
-  if (req.user) {
-    if ((req.dataset.owner.type === 'user' && req.dataset.owner.id === req.user.id) || (req.dataset.owner.type === 'organization' && req.user.organizations.findIndex(o => o.id === req.dataset.owner.id) >= 0)) {
-      // TODO check if we handle organization permissions with roles too
-      req.canRead = true
-      req.canWrite = true
-    } else {
-      (req.dataset.permissions || []).forEach(permission => {
-        if ((permission.type === 'user' && permission.id === req.user.id) || (permission.type === 'organization' && req.user.organizations.indexOf(permission.id) >= 0)) {
-          if (permission.mode.indexOf('read') >= 0) {
-            req.canRead = true
-          }
-          if (permission.mode.indexOf('write') >= 0) {
-            req.canWrite = true
-          }
-        }
-      })
-    }
-  }
-  next()
 })
 
 // retrieve a dataset by its id
 router.get('/:datasetId', (req, res, next) => {
-  if (!req.canRead) return res.sendStatus(403)
+  if (!permissions(req.dataset, 'readDescription', req.user)) return res.sendStatus(403)
   res.status(200).send(req.dataset)
 })
 
 // update a dataset
 router.put('/:datasetId', async(req, res, next) => {
-  if (!req.canWrite) return res.sendStatus(403)
+  if (!permissions(req.dataset, 'writeDescription', req.user)) return res.sendStatus(403)
   var valid = validate(req.body)
   if (!valid) return res.status(400).send(validate.errors)
   req.body.updatedAt = moment().toISOString()
@@ -156,7 +130,7 @@ const datasetUtils = require('./utils/dataset')
 const unlink = util.promisify(fs.unlink)
 // Delete a dataset
 router.delete('/:datasetId', async(req, res, next) => {
-  if (!req.canWrite) return res.sendStatus(403)
+  if (!permissions(req.dataset, 'delete', req.user)) return res.sendStatus(403)
   try {
     // TODO : Remove indexes
     await unlink(datasetUtils.fileName(req.dataset))
@@ -209,7 +183,7 @@ router.post('', auth.jwtMiddleware, filesUtils.uploadFile(), async(req, res, nex
 
 // Update an existing dataset data
 router.post('/:datasetId', filesUtils.uploadFile(), async(req, res, next) => {
-  if (!req.canWrite) return res.sendStatus(403)
+  if (!permissions(req.dataset, 'writeData', req.user)) return res.sendStatus(403)
   if (!req.file) return res.sendStatus(400)
   try {
     req.dataset.file = {
@@ -237,7 +211,7 @@ router.post('/:datasetId', filesUtils.uploadFile(), async(req, res, next) => {
 
 // Read/search data for a dataset
 router.get('/:datasetId/lines', async(req, res, next) => {
-  if (!req.canRead) return res.sendStatus(403)
+  if (!permissions(req.dataset, 'readData', req.user)) return res.sendStatus(403)
   try {
     const result = await esUtils.searchInDataset(req.dataset, req.query)
     res.status(200).send(result)
@@ -249,12 +223,11 @@ router.get('/:datasetId/lines', async(req, res, next) => {
 // Read/search data for a dataset
 router.get('/:datasetId/raw/:fileName', async(req, res, next) => {
   if (req.params.fileName !== req.dataset.file.name) return res.sendStatus(404)
-  if (!req.canRead) return res.sendStatus(403)
+  if (!permissions(req.dataset, 'readData', req.user)) return res.sendStatus(403)
   res.download(datasetUtils.fileName(req.dataset))
 })
 
 router.get('/:datasetId/api-docs.json', (req, res) => {
-  if (!req.canRead) return res.sendStatus(403)
   res.send(datasetAPIDocs(req.dataset))
 })
 
