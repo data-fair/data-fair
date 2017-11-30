@@ -163,7 +163,6 @@ router.post('', auth.jwtMiddleware, filesUtils.uploadFile(), async(req, res, nex
         size: req.file.size,
         mimetype: req.file.mimetype
       },
-      public: false,
       owner: req.body.owner,
       createdBy: req.user.id,
       createdAt: date,

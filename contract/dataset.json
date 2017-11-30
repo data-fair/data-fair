@@ -2,7 +2,7 @@
   "title": "Dataset",
   "type": "object",
   "additionalProperties": false,
-  "required": ["id", "owner", "public", "file"],
+  "required": ["id", "owner", "file"],
   "properties": {
     "id": {
       "type": "string",
