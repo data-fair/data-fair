@@ -1,0 +1,332 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Documentation de l'API",
+    "description": "Cette documentation s'adresse aux développeurs et décrit l'ensemble des opérations de l'API de géocodage. Le format de cette documentation est basé sur la spécification [OpenAPI 3.0](https://www.openapis.org/) qui est le successeur de Swagger. Cette documentation peut être chargée dans n'importe quel lecteur compatible avec le format OpenAPI 3.0 en utilisant le lien vers le [fichier source](./api/v1/api-docs.json).\n\nCette API est utilisable gratuitement sans conditions, mais l'utilisation est alors très réduite. Pour pouvoir l'utiliser plus largement, il faut créer un compte sur [notre site](https://koumoul.com) et utiliser votre [jeton d'authentification](/t/my-access) pour faire les requêtes. Vous trouverez plus de détails sur les plans et conditions d'utilisation de nos service [à cette page](/t/).",
+    "termsOfService": "https://koumoul.com/term-of-service",
+    "contact": {
+      "name": "Koumoul",
+      "url": "https://koumoul.com",
+      "email": "support@koumoul.com"
+    },
+    "version": "1.0.0"
+  },
+  "servers": [{
+    "url": "https://koumoul.com/s/geocoder/api/v1",
+    "description": "Serveur de production"
+  }],
+  "paths": {
+    "/status": {
+      "get": {
+        "summary": "Pour connaitre l'état de santé du service.",
+        "operationId": "getStatus",
+        "responses": {
+          "200": {
+            "description": "Etat de santé du service",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "Statut du service",
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": ["ok", "error"],
+                      "description": "Si le service fonctionne correctement ou non"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Description de l'état du service en une phrase"
+                    },
+                    "details": {
+                      "type": "array",
+                      "description": "Détail du statut des services utilisés",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string",
+                            "description": "Identifiant du service"
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": ["ok", "error"],
+                            "description": "Si le service fonctionne correctement ou non"
+                          },
+                          "details": {
+                            "type": "object",
+                            "description": "Détail du statut du service utilisé"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/coord": {
+      "get": {
+        "summary": "Géocoder une adresse",
+        "operationId": "getCoord",
+        "parameters": [{
+          "name": "q",
+          "description": "Requête textuelle pouvant contenir n'importe quels éléments d'une adresse",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        }, {
+          "name": "name",
+          "description": "Nom de la voie ou du lieu-dit",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        }, {
+          "name": "city",
+          "description": "Nom de la commune",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        }, {
+          "name": "housenumber",
+          "description": "Numéro dans la voie",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        }, {
+          "name": "postcode",
+          "description": "Code postal, sur 5 caractères",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        }, {
+          "name": "citycode",
+          "description": "Code INSEE, sur 5 caractères",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        }],
+        "responses": {
+          "200": {
+            "description": "Coordonnées de l'adresse",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "lat": {
+                      "description": "Latitude",
+                      "type": "number"
+                    },
+                    "lon": {
+                      "description": "Longitude",
+                      "type": "number"
+                    },
+                    "matchLevel": {
+                      "description": "Niveau de précision du géocodage",
+                      "type": "string",
+                      "enum": ["housenumber", "name", "postcode"]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Aucune localisation n'a été trouvée pour les paramètres donnés en entrée."
+          }
+        }
+      }
+    },
+    "/coords": {
+      "post": {
+        "summary": "Géocoder un ensemble d'adresses",
+        "operationId": "postCoords",
+        "requestBody": {
+          "description": "Ensemble d'adresses à géocoder",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "title": "Requête pour une adresse",
+                  "type": "object",
+                  "properties": {
+                    "key": {
+                      "type": "string",
+                      "description": "Identifiant de l'adresse"
+                    },
+                    "q": {
+                      "type": "string",
+                      "description": "Requête textuelle pouvant contenir n'importe quels éléments d'une adresse"
+                    },
+                    "name": {
+                      "type": "string",
+                      "description": "Nom de la voie ou du lieu-dit"
+                    },
+                    "city": {
+                      "type": "string",
+                      "description": "Nom de la commune"
+                    },
+                    "housenumber": {
+                      "type": "string",
+                      "description": "Numéro dans la voie"
+                    },
+                    "postcode": {
+                      "type": "string",
+                      "description": "Code postal, sur 5 caractères"
+                    },
+                    "citycode": {
+                      "type": "string",
+                      "description": "Code INSEE, sur 5 caractères"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Géocodage des adresses",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "title": "Réponse",
+                    "type": "object",
+                    "properties": {
+                      "key": {
+                        "description": "Identifiant de l'adresse",
+                        "type": "string"
+                      },
+                      "lat": {
+                        "description": "Latitude",
+                        "type": "number"
+                      },
+                      "lon": {
+                        "description": "Longitude",
+                        "type": "number"
+                      },
+                      "matchLevel": {
+                        "description": "Niveau de précision du géocodage",
+                        "type": "string",
+                        "enum": ["housenumber", "name", "postcode"]
+                      },
+                      "error": {
+                        "description": "Si il y a eu une erreur",
+                        "type": "string"
+                      },
+                      "status": {
+                        "description": "Si le traitement a été bon ou pas",
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              },
+              "text/csv": {}
+            }
+          }
+        }
+      }
+    },
+    "/geocode": {
+      "post": {
+        "summary": "Géocoder un ensemble de documents",
+        "operationId": "postGeocode",
+        "parameters": [{
+          "name": "q",
+          "description": "Champ du fichier à utiliser comme requête textuelle pouvant contenir n'importe quels éléments d'une adresse",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        }, {
+          "name": "name",
+          "description": "Champ du fichier à utiliser comme nom de la voie ou du lieu-dit",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        }, {
+          "name": "city",
+          "description": "Champ du fichier à utiliser comme nom de la commune",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        }, {
+          "name": "housenumber",
+          "description": "Champ du fichier à utiliser comme numéro dans la voie",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        }, {
+          "name": "postcode",
+          "description": "Champ du fichier à utiliser comme code postal, sur 5 caractères",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        }, {
+          "name": "citycode",
+          "description": "Champ du fichier à utiliser comme code insee, sur 5 caractères",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        }],
+        "requestBody": {
+          "description": "Ensemble de documents à géocoder",
+          "required": true,
+          "content": {
+            "application/json": {},
+            "text/csv": {}
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Documents complétés par les champs lat, lon et matchLevel",
+            "content": {
+              "application/json": {
+
+              },
+              "text/csv": {
+
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "externalDocs": {
+    "description": "Documentation Koumoul",
+    "url": "https://koumoul.com/documentation"
+  }
+}

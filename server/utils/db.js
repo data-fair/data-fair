@@ -20,13 +20,25 @@ exports.init = function(callback) {
     if (err) return callback(err)
 
     Promise.all([
-      // accounts indexes
+      // datasets indexes
       ensureIndex(db, 'datasets', {
         'id': 1
       }, {
         unique: true
       }),
       ensureIndex(db, 'datasets', {
+        'title': 'text',
+        'description': 'text'
+      }, {
+        name: 'fulltext'
+      }),
+      // external-apis indexes
+      ensureIndex(db, 'external-apis', {
+        'id': 1
+      }, {
+        unique: true
+      }),
+      ensureIndex(db, 'external-apis', {
         'title': 'text',
         'description': 'text'
       }, {
