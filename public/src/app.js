@@ -65,7 +65,7 @@ const router = global.router = new VueRouter({
 Vue.http.interceptors.push(function(request, next) {
   // We use authorization header for cross-domain requests
   // request.crossOrigin is still undefined here
-  if (new URL(request.url).origin !== new URL(window.location.href).origin) {
+  if (request.url.indexOf(window.CONFIG.directoryUrl) >= 0) {
     const jwt = Vue.cookie.get('id_token')
     if (jwt) {
       request.headers.set('Authorization', 'Bearer ' + jwt)
