@@ -54,7 +54,7 @@ export default {
     uploading: false,
     uploadProgress: 0,
     apiDoc: null,
-    apiDocUrl: 'http://localhost:6601/api/v1/api-docs.json'
+    apiDocUrl: 'https://staging.koumoul.com/s/geocoder/api/v1/api-docs.json'
   }),
   computed: {
     ...mapState({

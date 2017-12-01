@@ -36,6 +36,8 @@
         </md-layout>
 
         <!-- <schema :externalApi="externalApi" @schema-updated="externalApi.schema = $event; externalApi.status = 'schematized';save()"></schema> -->
+        <h3 class="md-headline">Opérations</h3>
+        {{operations}}
 
         <h3 class="md-headline">Actions</h3>
         <md-dialog md-open-from="#delete" md-close-to="#delete" ref="delete-dialog">
@@ -86,6 +88,8 @@ const {
 import ApiConfiguration from '../components/ApiConfiguration.vue'
 import Permissions from '../components/Permissions.vue'
 
+import soas from '../soas.js'
+
 export default {
   name: 'externalApi',
   components: {
@@ -97,11 +101,19 @@ export default {
     externalApi: null
   }),
   computed: mapState({
-    user: state => state.user
+    user: state => state.user,
+    operations(){
+      return soas.endPoints().filter(e => e.operation['x-operationType']).map(e => ({
+        // input:
+        // output:
+        operation: e.operation['x-operationType']
+      }))
+    }
   }),
   mounted() {
     this.$http.get(window.CONFIG.publicUrl + '/api/v1/external-apis/' + this.$route.params.externalApiId).then(result => {
       this.externalApi = result.data
+      soas.load(this.externalApi.apiDoc)
     })
   },
   methods: {
