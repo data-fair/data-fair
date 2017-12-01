@@ -1,0 +1,86 @@
+[{
+  "title": "Identifiant",
+  "description": "Identifiant, doit être unique",
+  "identifiers": ["http://schema.org/identifier"],
+  "type": "text"
+},{
+  "title": "Numéro de rue",
+  "description": "Un numéro de rue, qui peut contenir des mots comme bis ou ter",
+  "identifiers": ["http://www.ontotext.com/proton/protonext#StreetNumber"],
+  "type": "text"
+}, {
+  "title": "Rue ou lieu-dit",
+  "description": "Une adresse écrite sur une ligne",
+  "identifiers": ["http://schema.org/streetAddress"],
+  "type": "text"
+}, {
+  "title": "Adresse",
+  "description": "Une adresse écrite sur une ligne",
+  "identifiers": ["http://schema.org/address"],
+  "type": "text"
+}, {
+  "title": "Commune",
+  "description": "Libellé d'une commune",
+  "identifiers": ["http://schema.org/City"],
+  "type": "text"
+}, {
+  "title": "Code postal",
+  "description": "Code postal, sur 5 chiffre",
+  "identifiers": ["http://schema.org/postalCode"],
+  "type": "integer"
+}, {
+  "title": "Code commune",
+  "description": "Code INSEE de la commune, sur 5 caractères, à ne pas confondre avec le code postal.",
+  "identifiers": ["http://rdf.insee.fr/def/geo#codeCommune"],
+  "type": "text"
+}, {
+  "title": "Code département",
+  "description": "Code du département, sur 2 ou 3 caractères",
+  "identifiers": ["http://rdf.insee.fr/def/geo#codeDepartement"],
+  "type": "text"
+}, {
+  "title": "Code région",
+  "description": "Code de la région, sur 2 chiffres",
+  "identifiers": ["http://rdf.insee.fr/def/geo#codeRegion"],
+  "type": "integer"
+}, {
+  "title": "Latitude",
+  "description": "Coordonné géographique qui permet de se situer par rapport à l'équateur",
+  "identifiers": ["http://schema.org/latitude", "http://www.w3.org/2003/01/geo/wgs84_pos#lat"],
+  "type": "float"
+}, {
+  "title": "Longitude",
+  "description": "Coordonné géographique qui permet de se situer par rapport au méridien de Greenwich",
+  "identifiers": ["http://schema.org/longitude", "http://www.w3.org/2003/01/geo/wgs84_pos#long"],
+  "type": "float"
+}, {
+  "title": "Latitude / Longitude",
+  "description": "Paire latitude / longitude, séparées par une virgule",
+  "identifiers": ["http://www.w3.org/2003/01/geo/wgs84_pos#lat_long"],
+  "type": "text"
+}, {
+  "title": "SIRET",
+  "description": "Le numéro SIRET est un identifiant numérique de 14 chiffres composé du SIREN (9 chiffres) et du NIC (5 chiffres)",
+  "identifiers": ["http://www.datatourisme.fr/ontology/core/1.0/#siret"],
+  "type": "integer"
+}, {
+  "title": "Code APE",
+  "description": "Le code APE (activité principale exercée) permet d'identifier la branche d'activité principale de l'entreprise ou du travailleur indépendant en référence à la nomenclature des activités françaises",
+  "identifiers": ["http://www.datatourisme.fr/ontology/core/1.0#apeNaf"],
+  "type": "text"
+}, {
+  "title": "Date",
+  "description": "Correspond à la date de l'évenement",
+  "identifiers": ["http://schema.org/Date", "http://purl.org/dc/identifierss/date"],
+  "type": "date"
+}, {
+  "title": "Date de création",
+  "description": "Date à laquelle a été créée la ressource",
+  "identifiers": ["http://schema.org/dateCreated", "http://purl.org/dc/identifierss/created"],
+  "type": "date"
+}, {
+  "title": "Code parcelle",
+  "description": "Le code de la parcelle cadastrale est le numéro unique attribué par le Service du cadastre pour identifier une parcelle cadastrale au niveau national",
+  "identifiers": ["http://dbpedia.org/ontology/codeLandRegistry"],
+  "type": "text"
+}]

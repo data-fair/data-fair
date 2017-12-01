@@ -30,7 +30,7 @@
           <md-input-container>
             <label>Concept</label>
             <md-select v-model="field['x-refersTo']">
-              <md-option :value="term.term" v-for="term in terms">{{term.title}}</md-option>
+              <md-option :value="term.identifiers[0]" v-for="term in vocabulary">{{term.title}}</md-option>
             </md-select>
           </md-input-container>
         </md-layout>
@@ -49,7 +49,7 @@ export default {
   name: 'schema',
   props: ['dataset'],
   data: () => ({
-    terms: [],
+    vocabulary: [],
     schema: {},
     originalSchema: null
   }),
@@ -58,8 +58,8 @@ export default {
       this.schema = Object.assign({}, this.dataset.schema)
       this.originalSchema = JSON.stringify(this.schema)
     }
-    this.$http.get(window.CONFIG.publicUrl + '/api/v1/terms').then(results => {
-      this.terms = results.data
+    this.$http.get(window.CONFIG.publicUrl + '/api/v1/vocabulary').then(results => {
+      this.vocabulary = results.data
     })
   },
   computed: {
