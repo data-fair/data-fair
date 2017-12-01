@@ -4,7 +4,7 @@
   <md-stepper :md-alternate-labels="true" @change="currentStep = $event" @completed="importData">
     <md-step :md-editable="true" :md-label="currentStep ? 'Fichier sélectionné' : 'Sélection du fichier'" :md-continue="file !== null" :md-message="fileName ? fileName: 'Chargez un fichier csv'" :md-button-back="null" md-button-continue="Suivant">
       <md-input-container>
-        <label>Single</label>
+        <label>Fichier CSV</label>
         <md-file v-model="fileName" @selected="onFileUpload" accept="text/csv"></md-file>
       </md-input-container>
     </md-step>

@@ -54,6 +54,7 @@
   },
   "dependencies": {
     "ajv": "^5.3.0",
+    "ajv-error-messages": "^1.0.0",
     "axios": "^0.17.1",
     "body-parser": "^1.18.2",
     "config": "^1.28.1",

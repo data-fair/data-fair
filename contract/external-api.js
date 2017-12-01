@@ -86,6 +86,10 @@ module.exports = {
     apiKey: {
       type: 'string',
       description: 'The value of the required apiKey'
+    },
+    server: {
+      type: 'string',
+      description: 'URL of the selected server in the apiDoc servers property'
     }
   }
 }

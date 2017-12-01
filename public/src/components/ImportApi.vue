@@ -2,17 +2,30 @@
 <div>
   <h3 class="md-display-1">Importer une API</h3>
   <md-stepper :md-alternate-labels="true" @change="currentStep = $event" @completed="importApi">
-    <md-step :md-editable="true" :md-label="currentStep ? 'Fichier sélectionné' : 'Sélection du fichier'" :md-continue="file !== null" :md-message="fileName ? fileName: 'Chargez un fichier json'" :md-button-back="null" md-button-continue="Suivant">
+    <md-step :md-editable="true" :md-label="currentStep ? 'Fichier sélectionné' : 'Sélection du fichier'" :md-continue="apiDoc !== null" :md-message="fileName ? fileName: 'Chargez un fichier json'" :md-button-back="null" md-button-continue="Suivant">
       <md-input-container>
-        <label>Single</label>
+        <label>Fichier JSON</label>
         <md-file v-model="fileName" @selected="onFileUpload" accept="application/json"></md-file>
       </md-input-container>
+      <md-layout md-row>
+        <md-layout md-flex="85">
+          <md-input-container>
+            <label>URL de la description</label>
+            <md-input v-model="apiDocUrl"></md-input>
+          </md-input-container>
+        </md-layout>
+        <md-layout>
+          <md-button class="md-icon-button md-raised md-primary" @click="downloadFromUrl" :disabled="!apiDocUrl">
+            <md-icon>file_download</md-icon>
+          </md-button>
+        </md-layout>
+      </md-layout>
     </md-step>
-    <md-step :md-editable="true" :md-disabled="!file" :md-label="currentStep > 1 ? 'Propriétaire choisi' : 'Choix du propriétaire'" :md-continue="file !== null && owner !== null" :md-message="owner ? (owners[owner].type === 'user' ? 'Vous même' : userOrganizations.find(o => o.id === owners[owner].id).name): 'Choisissez dans la liste'"
+    <md-step :md-editable="true" :md-disabled="!apiDoc" :md-label="currentStep > 1 ? 'Propriétaire choisi' : 'Choix du propriétaire'" :md-continue="apiDoc !== null && owner !== null" :md-message="owner ? (owners[owner].type === 'user' ? 'Vous même' : userOrganizations.find(o => o.id === owners[owner].id).name): 'Choisissez dans la liste'"
       md-button-back="Précédent" md-button-continue="Suivant">
       <md-radio v-model="owner" :md-value="key" v-for="key in Object.keys(owners)">{{key === 'user' ? 'Vous-même' : userOrganizations.find(o => o.id === owners[key].id).name}}</md-radio>
     </md-step>
-    <md-step :md-disabled="!file || !owner" md-label="Action à effectuer" :md-continue="file !== null && owner !== null && action !== null && !uploading" :md-message="action ? actions[action].title : 'Choisissez dans la liste'" md-button-back="Précédent"
+    <md-step :md-disabled="!apiDoc || !owner" md-label="Action à effectuer" :md-continue="apiDoc !== null && owner !== null && action !== null && !uploading" :md-message="action ? actions[action].title : 'Choisissez dans la liste'" md-button-back="Précédent"
       md-button-continue="Lancer l'import">
       <md-radio v-model="action" :md-value="key" v-for="key in Object.keys(actions)">{{actions[key].title}}</md-radio>
       <md-progress :md-progress="uploadProgress" v-if="uploading"></md-progress>
@@ -40,7 +53,8 @@ export default {
     action: null,
     uploading: false,
     uploadProgress: 0,
-    apiDoc: null
+    apiDoc: null,
+    apiDocUrl: 'http://localhost:6601/api/v1/api-docs.json'
   }),
   computed: {
     ...mapState({
@@ -72,10 +86,17 @@ export default {
       this.file = e[0]
       const reader = new FileReader()
       reader.onload = (event) => {
-        // The file's text will be printed here
-        this.apiDoc = JSON.parse(event.target.result)
+        const api = JSON.parse(event.target.result)
+        this.checkApi(api)
       }
       reader.readAsText(this.file)
+    },
+    downloadFromUrl(){
+      this.$http.get(this.apiDocUrl).then(response => {
+        this.checkApi(response.data)
+      }, error =>{
+        this.$store.dispatch('notifyError', `Erreur ${error.status} pendant la récupération du fichier`)
+      })
     },
     reset() {
       this.currentStep = null
@@ -85,6 +106,15 @@ export default {
       this.action = null
       this.uploading = false
       this.uploadProgress = 0
+    },
+    checkApi(api){
+      this.$http.post(window.CONFIG.publicUrl + '/api/v1/_check-api', api).then(result => {
+        this.apiDoc = api
+        this.$store.dispatch('notify', `Le format de la description de l'API est correct`)
+      }, error => {
+        this.$store.dispatch('notifyError', `Le format de la description de l'API est incorrect`)
+        this.reset()
+      })
     },
     importApi() {
       const options = {
@@ -98,11 +128,19 @@ export default {
       if (this.actions[this.action].type === 'create') {
         this.$http.post(window.CONFIG.publicUrl + '/api/v1/external-apis', {
           owner: this.owners[this.owner],
-          apiDoc: this.apiDoc
+          apiDoc: this.apiDoc,
+          url: this.apiDocUrl,
+          server: this.apiDoc.servers && this.apiDoc.servers.length && this.apiDoc.servers[0].url
         }, options).then(results => {
           this.$emit('external-api-change')
           this.reset()
-          const link = this.urlFromRoute({name:'ExternalApi', params:{externalApiId: results.body.id}})
+          const link = this.urlFromRoute({
+            name: 'ExternalApi',
+            params: {
+              externalApiId: results.body.id
+            }
+          })
+          console.log(link)
           this.$store.dispatch('notify', `La description de l'API a bien été importée. <a href="${link}">Accéder à la description</a>`)
         }, error => {
           this.$store.dispatch('notifyError', `Erreur ${error.status} pendant l'import du fichier`)
@@ -111,7 +149,12 @@ export default {
         formData.append('file', this.file)
         this.$http.post(window.CONFIG.publicUrl + '/api/v1/external-apis/' + this.actions[this.action].id, formData, options).then(results => {
           this.reset()
-          const link = this.urlFromRoute({name:'Dataset', params:{datasetId: results.body.id}})
+          const link = this.urlFromRoute({
+            name: 'Dataset',
+            params: {
+              datasetId: results.body.id
+            }
+          })
           this.$store.dispatch('notify', `La description de l'API a bien été mise à jour. <a href="${link}">Accéder à la description</a>`)
         }, error => {
           this.$store.dispatch('notifyError', `Erreur ${error.status} pendant l'import du fichier`)
@@ -131,13 +174,13 @@ export default {
           this.actions = Object.assign({
             create: {
               type: 'create',
-              title: 'Créer un nouveau jeu de données'
+              title: 'Créer une nouvelle réutilisation de l\'API'
             }
           }, ...response.data.results.map(d => ({
             ['update' + d.id]: {
               type: 'update',
               id: d.id,
-              title: 'Mettre à jour les données du jeu ' + d.title
+              title: 'Mettre à jour la description de l\'API ' + d.title
             }
           })))
         })

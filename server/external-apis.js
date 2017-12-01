@@ -92,6 +92,10 @@ router.post('', auth.jwtMiddleware, async(req, res, next) => {
   req.body.createdBy = req.user.id
   req.body.updatedAt = date
   req.body.updatedBy = req.user.id
+  if (req.body.apiDoc && req.body.apiDoc.info) {
+    req.body.title = req.body.apiDoc.info.title
+    req.body.description = req.body.apiDoc.info.description
+  }
   try {
     await req.app.get('db').collection('external-apis').insertOne(req.body)
     res.status(201).json(req.body)
