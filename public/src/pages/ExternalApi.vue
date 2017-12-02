@@ -37,7 +37,47 @@
 
         <!-- <schema :externalApi="externalApi" @schema-updated="externalApi.schema = $event; externalApi.status = 'schematized';save()"></schema> -->
         <h3 class="md-headline">Opérations</h3>
-        {{operations}}
+        <md-list>
+          <md-list-item v-for="operation in operations">
+            <md-layout md-row style="padding:8px" md-vertical-align="center">
+              <md-layout md-column md-flex="5">
+                <md-icon v-if="!operation.inputCollection || !operation.outputCollection">description<md-tooltip>Opération unitaire</md-tooltip></md-icon>
+                <md-icon v-if="operation.inputCollection && operation.outputCollection">view_list<md-tooltip>Opération de masse</md-tooltip></md-icon>
+              </md-layout>
+              <md-layout md-column md-flex="15">
+                {{operation.summary}}
+              </md-layout>
+              <md-layout md-flex="35" md-align="center">
+                  <div v-if="!Object.keys(operation.input).length">Pas de données en entrée</div>
+                  <md-chip v-for="(input, id) in operation.input" style="margin:4px 4px;">{{vocabulary[id].title}}
+                    <md-tooltip md-direction="top">{{vocabulary[id].description}}</md-tooltip>
+                  </md-chip>
+              </md-layout>
+              <md-layout md-column md-flex="15" style="padding: 8px 16px">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 42">
+                  <defs>
+                    <filter id="dropshadow">
+                        <feGaussianBlur in="SourceAlpha" stdDeviation="1"></feGaussianBlur>
+                        <feOffset dx="1" dy="1" result="offsetblur"></feOffset>
+                        <feMerge>
+                            <feMergeNode></feMergeNode>
+                            <feMergeNode in="SourceGraphic"></feMergeNode>
+                        </feMerge>
+                    </filter>
+                   </defs>
+                  <path d='M0,10 70,10 65,0 100,20 65,40 70,30 0,30 Z' fill="#90caf9" filter="url(#dropshadow)"/>
+                  <text text-anchor="middle" x="45" y="24" style="font-size:10px">{{actions[operation.operation]}}</text>
+                </svg>
+              </md-layout>
+              <md-layout md-flex="30">
+                <md-chip v-for="(output, id) in operation.output" style="margin:4px 4px;">{{vocabulary[id].title}}
+                  <md-tooltip md-direction="top">{{vocabulary[id].description}}</md-tooltip>
+                </md-chip>
+              </md-layout>
+            </md-layout>
+            <md-divider class="md-inset"></md-divider>
+          </md-list-item>
+        </md-list>
 
         <h3 class="md-headline">Actions</h3>
         <md-dialog md-open-from="#delete" md-close-to="#delete" ref="delete-dialog">
@@ -98,22 +138,24 @@ export default {
     // ExternalApiAPIDoc
   },
   data: () => ({
-    externalApi: null
+    externalApi: null,
+    vocabulary: {},
+    actions: {
+      'http://schema.org/SearchAction': 'Recherche',
+      'http://schema.org/CheckAction': 'Vérification'
+    }
   }),
   computed: mapState({
     user: state => state.user,
-    operations(){
-      return soas.endPoints().filter(e => e.operation['x-operationType']).map(e => ({
-        // input:
-        // output:
-        operation: e.operation['x-operationType']
-      }))
-    }
+    operations: soas.operations
   }),
   mounted() {
     this.$http.get(window.CONFIG.publicUrl + '/api/v1/external-apis/' + this.$route.params.externalApiId).then(result => {
       this.externalApi = result.data
       soas.load(this.externalApi.apiDoc)
+    })
+    this.$http.get(window.CONFIG.publicUrl + '/api/v1/vocabulary').then(results => {
+      results.data.forEach(term => term.identifiers.forEach(id => this.vocabulary[id] = term))
     })
   },
   methods: {

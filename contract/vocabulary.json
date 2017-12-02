@@ -10,7 +10,7 @@
   "type": "text"
 }, {
   "title": "Rue ou lieu-dit",
-  "description": "Une adresse écrite sur une ligne",
+  "description": "Un nom de rue ou de lieu-dit",
   "identifiers": ["http://schema.org/streetAddress"],
   "type": "text"
 }, {
