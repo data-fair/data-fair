@@ -30,6 +30,7 @@
           <md-input-container>
             <label>Concept</label>
             <md-select v-model="field['x-refersTo']">
+              <md-option :value="null">Pas de concept</md-option>
               <md-option :value="term.identifiers[0]" v-for="term in vocabulary">{{term.title}}</md-option>
             </md-select>
           </md-input-container>

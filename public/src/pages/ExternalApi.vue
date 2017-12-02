@@ -128,7 +128,7 @@ const {
 import ApiConfiguration from '../components/ApiConfiguration.vue'
 import Permissions from '../components/Permissions.vue'
 
-import soas from '../soas.js'
+import soasLoader from 'soas'
 
 export default {
   name: 'externalApi',
@@ -143,16 +143,19 @@ export default {
     actions: {
       'http://schema.org/SearchAction': 'Recherche',
       'http://schema.org/CheckAction': 'Vérification'
-    }
+    },
+    soas: null
   }),
   computed: mapState({
     user: state => state.user,
-    operations: soas.operations
+    operations: function(){
+      return this.soas.operations()
+    }
   }),
   mounted() {
     this.$http.get(window.CONFIG.publicUrl + '/api/v1/external-apis/' + this.$route.params.externalApiId).then(result => {
       this.externalApi = result.data
-      soas.load(this.externalApi.apiDoc)
+      this.soas = soasLoader(this.externalApi.apiDoc)
     })
     this.$http.get(window.CONFIG.publicUrl + '/api/v1/vocabulary').then(results => {
       results.data.forEach(term => term.identifiers.forEach(id => this.vocabulary[id] = term))

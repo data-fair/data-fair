@@ -3,7 +3,7 @@
   <md-table @sort="orderBy">
     <md-table-header>
       <md-table-row>
-        <md-table-head v-for="(fieldInfos, field) in dataset.schema" :md-tooltip="fieldInfos.description || (fieldInfos['x-refersTo'] && terms[fieldInfos['x-refersTo']])" :md-numeric="fieldInfos.type === 'number' || fieldInfos.type === 'integer'" :md-sort-by="field">{{fieldInfos.title || fieldInfos['x-originalName']}}</md-table-head>
+        <md-table-head v-for="(fieldInfos, field) in dataset.schema" :md-tooltip="fieldInfos.description || (fieldInfos['x-refersTo'] && vocabulary[fieldInfos['x-refersTo']])" :md-numeric="fieldInfos.type === 'number' || fieldInfos.type === 'integer'" :md-sort-by="field">{{fieldInfos.title || fieldInfos['x-originalName']}}</md-table-head>
       </md-table-row>
     </md-table-header>
 
@@ -31,14 +31,12 @@ export default {
     size: 10,
     page: 1,
     sort: null,
-    terms: {}
+    vocabulary: {}
   }),
   mounted() {
     this.refresh()
-    this.$http.get(window.CONFIG.publicUrl + '/api/v1/terms').then(results => {
-      this.terms = Object.assign({}, ...results.data.map(t => ({
-        [t.term]: t.description
-      })))
+    this.$http.get(window.CONFIG.publicUrl + '/api/v1/vocabulary').then(results => {
+      results.data.forEach(term => term.identifiers.forEach(id => this.vocabulary[id] = term.description))
     })
   },
   methods: {
