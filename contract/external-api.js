@@ -90,6 +90,9 @@ module.exports = {
     server: {
       type: 'string',
       description: 'URL of the selected server in the apiDoc servers property'
+    },
+    actions: {
+      type: 'array'
     }
   }
 }

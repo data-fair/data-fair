@@ -38,19 +38,19 @@
         <!-- <schema :externalApi="externalApi" @schema-updated="externalApi.schema = $event; externalApi.status = 'schematized';save()"></schema> -->
         <h3 class="md-headline">Opérations</h3>
         <md-list>
-          <md-list-item v-for="operation in operations">
+          <md-list-item v-for="action in externalApi.actions">
             <md-layout md-row style="padding:8px" md-vertical-align="center">
               <md-layout md-column md-flex="5">
-                <md-icon v-if="!operation.inputCollection || !operation.outputCollection">description<md-tooltip>Opération unitaire</md-tooltip></md-icon>
-                <md-icon v-if="operation.inputCollection && operation.outputCollection">view_list<md-tooltip>Opération de masse</md-tooltip></md-icon>
+                <md-icon v-if="!action.inputCollection || !action.outputCollection">description<md-tooltip>Opération unitaire</md-tooltip></md-icon>
+                <md-icon v-if="action.inputCollection && action.outputCollection">view_list<md-tooltip>Opération de masse</md-tooltip></md-icon>
               </md-layout>
               <md-layout md-column md-flex="15">
-                {{operation.summary}}
+                {{action.summary}}
               </md-layout>
               <md-layout md-flex="35" md-align="center">
-                  <div v-if="!Object.keys(operation.input).length">Pas de données en entrée</div>
-                  <md-chip v-for="(input, id) in operation.input" style="margin:4px 4px;">{{vocabulary[id].title}}
-                    <md-tooltip md-direction="top">{{vocabulary[id].description}}</md-tooltip>
+                  <div v-if="!Object.keys(action.input).length">Pas de données en entrée</div>
+                  <md-chip v-for="input in action.input" style="margin:4px 4px;" v-if="vocabulary[input.concept]">{{vocabulary[input.concept].title}}
+                    <md-tooltip md-direction="top">{{vocabulary[input.concept].description}}</md-tooltip>
                   </md-chip>
               </md-layout>
               <md-layout md-column md-flex="15" style="padding: 8px 16px">
@@ -66,12 +66,12 @@
                     </filter>
                    </defs>
                   <path d='M0,10 70,10 65,0 100,20 65,40 70,30 0,30 Z' fill="#90caf9" filter="url(#dropshadow)"/>
-                  <text text-anchor="middle" x="45" y="24" style="font-size:10px">{{actions[operation.operation]}}</text>
+                  <text text-anchor="middle" x="45" y="24" style="font-size:10px">{{actions[action.type]}}</text>
                 </svg>
               </md-layout>
               <md-layout md-flex="30">
-                <md-chip v-for="(output, id) in operation.output" style="margin:4px 4px;">{{vocabulary[id].title}}
-                  <md-tooltip md-direction="top">{{vocabulary[id].description}}</md-tooltip>
+                <md-chip v-for="output in action.output" style="margin:4px 4px;" v-if="vocabulary[output.concept]">{{vocabulary[output.concept].title}}
+                  <md-tooltip md-direction="top">{{vocabulary[output.concept].description}}</md-tooltip>
                 </md-chip>
               </md-layout>
             </md-layout>
@@ -128,8 +128,6 @@ const {
 import ApiConfiguration from '../components/ApiConfiguration.vue'
 import Permissions from '../components/Permissions.vue'
 
-import soasLoader from 'soas'
-
 export default {
   name: 'externalApi',
   components: {
@@ -143,19 +141,14 @@ export default {
     actions: {
       'http://schema.org/SearchAction': 'Recherche',
       'http://schema.org/CheckAction': 'Vérification'
-    },
-    soas: null
+    }
   }),
   computed: mapState({
-    user: state => state.user,
-    operations: function(){
-      return this.soas.operations()
-    }
+    user: state => state.user
   }),
   mounted() {
     this.$http.get(window.CONFIG.publicUrl + '/api/v1/external-apis/' + this.$route.params.externalApiId).then(result => {
       this.externalApi = result.data
-      this.soas = soasLoader(this.externalApi.apiDoc)
     })
     this.$http.get(window.CONFIG.publicUrl + '/api/v1/vocabulary').then(results => {
       results.data.forEach(term => term.identifiers.forEach(id => this.vocabulary[id] = term))
