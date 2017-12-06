@@ -1,0 +1,61 @@
+{
+  "title": "Application configuration",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "owner", "url"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Identifier of the application configuration"
+    },
+    "title": {
+      "type": "string",
+      "description": "Short title of the application configuration"
+    },
+    "description": {
+      "type": "string",
+      "description": "Detailed description of the application configuration"
+    },
+    "createdBy": {
+      "type": "string",
+      "description": "Id of the account that created this application configuration"
+    },
+    "updatedBy": {
+      "type": "string",
+      "description": "Id of the account that last updated this application configuration"
+    },
+    "createdAt": {
+      "type": "string",
+      "description": "Creation date of this application configuration",
+      "format": "date-time"
+    },
+    "updatedAt": {
+      "type": "string",
+      "description": "Date of the last update for this application configuration",
+      "format": "date-time"
+    },
+    "owner": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "id"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["user", "organization"],
+          "description": "If the owner is a user or an organization"
+        },
+        "id": {
+          "type": "string",
+          "description": "Identifier of the owner of this application configuration"
+        }
+      }
+    },
+    "configuration": {
+      "type": "object"
+    },
+    "url":{
+      "type": "string",
+      "description": "The URL the application is located to"
+    }
+  }
+}

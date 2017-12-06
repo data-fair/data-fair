@@ -15,10 +15,12 @@ app.use(cookieParser())
 // Business routers
 app.use('/api/v1', require('./root'))
 app.use('/api/v1/external-apis', require('./external-apis'))
+app.use('/api/v1/application-configs', require('./application-configs'))
 app.use('/api/v1/datasets', require('./datasets'))
 app.use('/api/v1/journals', require('./journals').router)
 app.get('/api/v1/status', status.status)
 app.get('/api/v1/ping', status.ping)
+app.use('/applications', require('./applications'))
 
 // Static routing
 const oneWeek = process.env.NODE_ENV === 'development' ? 0 : 7 * 24 * 60 * 60

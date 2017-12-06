@@ -3,6 +3,7 @@ import Vue from 'vue'
 import Home from './pages/Home.vue'
 import Dataset from './pages/Dataset.vue'
 import ExternalApi from './pages/ExternalApi.vue'
+import ApplicationConfig from './pages/ApplicationConfig.vue'
 import ApiDoc from './ApiDoc.vue'
 
 export default [{
@@ -17,6 +18,10 @@ export default [{
   path: '/external-api/:externalApiId',
   name: 'ExternalApi',
   component: ExternalApi
+}, {
+  path: '/application-config/:applicationConfigId',
+  name: 'ApplicationConfig',
+  component: ApplicationConfig
 }, {
   path: '/api-doc',
   name: 'ApiDoc',
