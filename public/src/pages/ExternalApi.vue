@@ -122,14 +122,11 @@
 </template>
 
 <script>
-const {
-  mapState
-} = require('vuex')
 import ApiConfiguration from '../components/ApiConfiguration.vue'
 import Permissions from '../components/Permissions.vue'
 
 export default {
-  name: 'externalApi',
+  name: 'external-api',
   components: {
     ApiConfiguration,
     Permissions,
@@ -142,9 +139,6 @@ export default {
       'http://schema.org/SearchAction': 'Recherche',
       'http://schema.org/CheckAction': 'Vérification'
     }
-  }),
-  computed: mapState({
-    user: state => state.user
   }),
   mounted() {
     this.$http.get(window.CONFIG.publicUrl + '/api/v1/external-apis/' + this.$route.params.externalApiId).then(result => {

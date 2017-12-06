@@ -108,9 +108,6 @@
 </template>
 
 <script>
-const {
-  mapState
-} = require('vuex')
 import Permissions from '../components/Permissions.vue'
 import Journal from '../components/Journal.vue'
 import Schema from '../components/Schema.vue'
@@ -131,8 +128,7 @@ export default {
     actions: [],
     vocabulary: {}
   }),
-  computed: mapState({
-    user: state => state.user,
+  computed:{
     downloadLink() {
       if (this.dataset) return window.CONFIG.publicUrl + '/api/v1/datasets/' + this.dataset.id + '/raw/' + this.dataset.file.name
     },
@@ -140,7 +136,7 @@ export default {
       if (this.dataset) return new Set(Object.values(this.dataset.schema).filter(field => field['x-refersTo']).map(field => field['x-refersTo']))
       return []
     }
-  }),
+  },
   mounted() {
     this.$http.get(window.CONFIG.publicUrl + '/api/v1/datasets/' + this.$route.params.datasetId).then(result => {
       this.dataset = result.data

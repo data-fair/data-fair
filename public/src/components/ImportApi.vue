@@ -146,7 +146,6 @@ export default {
           this.$store.dispatch('notifyError', `Erreur ${error.status} pendant l'import du fichier`)
         })
       } else {
-        formData.append('file', this.file)
         this.$http.post(window.CONFIG.publicUrl + '/api/v1/external-apis/' + this.actions[this.action].id, formData, options).then(results => {
           this.reset()
           const link = this.urlFromRoute({
