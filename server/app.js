@@ -20,6 +20,7 @@ app.use('/api/v1/datasets', require('./datasets'))
 app.use('/api/v1/journals', require('./journals').router)
 app.get('/api/v1/status', status.status)
 app.get('/api/v1/ping', status.ping)
+app.use('/api/v1/actions', require('./actions'))
 app.use('/applications', require('./applications'))
 
 // Static routing
