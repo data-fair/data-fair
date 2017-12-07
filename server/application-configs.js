@@ -153,3 +153,21 @@ router.delete('/:applicationConfigId', async(req, res, next) => {
     return next(err)
   }
 })
+
+// retrieve a applicationConfig by its id
+router.get('/:applicationConfigId/config', (req, res, next) => {
+  res.status(200).send(req.applicationConfig.configuration || {})
+})
+
+// retrieve a applicationConfig by its id
+router.put('/:applicationConfigId/config', async(req, res, next) => {
+  if (!permissions(req.applicationConfig, 'writeConfig', req.user)) return res.sendStatus(403)
+  await req.app.get('db').collection('application-configs').updateOne({
+    id: req.params.applicationConfigId
+  }, {
+    $set: {
+      configuration: req.body
+    }
+  })
+  res.status(200).json(req.body)
+})
