@@ -144,6 +144,7 @@ export default {
           this.$store.dispatch('notify', `La description de l'API a bien été importée. <a href="${link}">Accéder à la description</a>`)
         }, error => {
           this.$store.dispatch('notifyError', `Erreur ${error.status} pendant l'import du fichier`)
+          this.reset()
         })
       } else {
         this.$http.post(window.CONFIG.publicUrl + '/api/v1/external-apis/' + this.actions[this.action].id, formData, options).then(results => {
@@ -157,6 +158,7 @@ export default {
           this.$store.dispatch('notify', `La description de l'API a bien été mise à jour. <a href="${link}">Accéder à la description</a>`)
         }, error => {
           this.$store.dispatch('notifyError', `Erreur ${error.status} pendant l'import du fichier`)
+          this.reset()
         })
       }
     }

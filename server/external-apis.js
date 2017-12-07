@@ -1,14 +1,34 @@
 const express = require('express')
 const auth = require('./auth')
 const ajv = require('ajv')()
+
 const externalApiSchema = require('../contract/external-api.js')
-const validate = ajv.compile(externalApiSchema)
+const validateExternalApi = ajv.compile(externalApiSchema)
+const openApiSchema = require('../contract/openapi-3.0.json')
+openApiSchema.$id = openApiSchema.$id + '-2' // dirty hack to handle ajv error
+const validateOpenApi = ajv.compile(openApiSchema)
+const normalise = require('ajv-error-messages')
+
 const permissions = require('./utils/permissions')
 const moment = require('moment')
 const shortid = require('shortid')
 const soasLoader = require('soas')
+const axios = require('axios')
 
 const router = module.exports = express.Router()
+
+const computeActions = (apiDoc) => {
+  const actions = soasLoader(apiDoc).actions()
+  actions.forEach(a => {
+    a.input = Object.keys(a.input).map(concept => Object.assign({
+      concept: concept
+    }, a.input[concept][0]))
+    a.output = Object.keys(a.output).map(concept => Object.assign({
+      concept: concept
+    }, a.output[concept][0]))
+  })
+  return actions
+}
 
 // Get the list of external-apis
 router.get('', auth.optionalJwtMiddleware, async function(req, res, next) {
@@ -41,6 +61,9 @@ router.get('', auth.optionalJwtMiddleware, async function(req, res, next) {
     }, {
       name: 'output-concepts',
       field: 'actions.output.concept'
+    }, {
+      name: 'api-id',
+      field: 'apiDoc.info.x-api-id'
     }].filter(p => req.query[p.name] !== undefined).map(p => ({
       [p.field]: {
         $in: req.query[p.name].split(',')
@@ -91,8 +114,8 @@ router.get('', auth.optionalJwtMiddleware, async function(req, res, next) {
 router.post('', auth.jwtMiddleware, async(req, res, next) => {
   // This id is temporary, we should have an human understandable id, or perhaps manage it UI side ?
   req.body.id = req.body.id || shortid.generate()
-  var valid = validate(req.body)
-  if (!valid) return res.status(400).send(validate.errors)
+  var valid = validateExternalApi(req.body)
+  if (!valid) return res.status(400).send(normalise(validateExternalApi.errors))
   const date = moment().toISOString()
   req.body.createdAt = date
   req.body.createdBy = req.user.id
@@ -103,15 +126,7 @@ router.post('', auth.jwtMiddleware, async(req, res, next) => {
       req.body.title = req.body.apiDoc.info.title
       req.body.description = req.body.apiDoc.info.description
     }
-    req.body.actions = soasLoader(req.body.apiDoc).actions()
-    req.body.actions.forEach(a => {
-      a.input = Object.keys(a.input).map(concept => Object.assign({
-        concept: concept
-      }, a.input))
-      a.output = Object.keys(a.output).map(concept => Object.assign({
-        concept: concept
-      }, a.output))
-    })
+    req.body.actions = computeActions(req.body.apiDoc)
   }
   try {
     await req.app.get('db').collection('external-apis').insertOne(req.body)
@@ -147,22 +162,13 @@ router.get('/:externalApiId', (req, res, next) => {
 // update a externalApi
 router.put('/:externalApiId', async(req, res, next) => {
   if (!permissions(req.externalApi, 'writeDescription', req.user)) return res.sendStatus(403)
-  var valid = validate(req.body)
-  if (!valid) return res.status(400).send(validate.errors)
+  var valid = validateExternalApi(req.body)
+  if (!valid) return res.status(400).send(normalise(validateExternalApi.errors))
   req.body.updatedAt = moment().toISOString()
   req.body.updatedBy = req.user.id
   req.body.id = req.params.externalApiId
   if (req.body.apiDoc) {
-    req.body.actions = soasLoader(req.body.apiDoc).actions()
-    req.body.actions.forEach(a => {
-      a.input = Object.keys(a.input).map(concept => Object.assign({
-        concept: concept
-      }, a.input[concept][0]))
-      console.log(a.input)
-      a.output = Object.keys(a.output).map(concept => Object.assign({
-        concept: concept
-      }, a.output[concept][0]))
-    })
+    req.body.actions = computeActions(req.body.apiDoc)
   }
   try {
     await req.app.get('db').collection('external-apis').updateOne({
@@ -185,6 +191,29 @@ router.delete('/:externalApiId', async(req, res, next) => {
     res.sendStatus(204)
   } catch (err) {
     return next(err)
+  }
+})
+
+router.post('/:externalApiId/_update', async(req, res, next) => {
+  if (!permissions(req.externalApi, 'writeDescription', req.user)) return res.sendStatus(403)
+  if (req.externalApi.url) {
+    try {
+      const reponse = await axios.get(req.externalApi.url)
+      var valid = validateOpenApi(reponse.data)
+      if (!valid) return res.status(400).send(normalise(validateOpenApi.errors))
+      req.externalApi.updatedAt = moment().toISOString()
+      req.externalApi.updatedBy = req.user.id
+      req.externalApi.apiDoc = reponse.data
+      req.externalApi.actions = computeActions(req.externalApi.apiDoc)
+      await req.app.get('db').collection('external-apis').updateOne({
+        id: req.params.externalApiId
+      }, req.externalApi)
+      res.status(200).json(req.externalApi)
+    } catch (err) {
+      return next(err)
+    }
+  } else {
+    res.sendStatus(204)
   }
 })
 

@@ -41,17 +41,21 @@
           <md-list-item v-for="action in externalApi.actions">
             <md-layout md-row style="padding:8px" md-vertical-align="center">
               <md-layout md-column md-flex="5">
-                <md-icon v-if="!action.inputCollection || !action.outputCollection">description<md-tooltip>Opération unitaire</md-tooltip></md-icon>
-                <md-icon v-if="action.inputCollection && action.outputCollection">view_list<md-tooltip>Opération de masse</md-tooltip></md-icon>
+                <md-icon v-if="!action.inputCollection || !action.outputCollection">description
+                  <md-tooltip>Opération unitaire</md-tooltip>
+                </md-icon>
+                <md-icon v-if="action.inputCollection && action.outputCollection">view_list
+                  <md-tooltip>Opération de masse</md-tooltip>
+                </md-icon>
               </md-layout>
               <md-layout md-column md-flex="15">
                 {{action.summary}}
               </md-layout>
               <md-layout md-flex="35" md-align="center">
-                  <div v-if="!Object.keys(action.input).length">Pas de données en entrée</div>
-                  <md-chip v-for="input in action.input" style="margin:4px 4px;" v-if="vocabulary[input.concept]">{{vocabulary[input.concept].title}}
-                    <md-tooltip md-direction="top">{{vocabulary[input.concept].description}}</md-tooltip>
-                  </md-chip>
+                <div v-if="!Object.keys(action.input).length">Pas de données en entrée</div>
+                <md-chip v-for="input in action.input" style="margin:4px 4px;" v-if="vocabulary[input.concept]">{{vocabulary[input.concept].title}}
+                  <md-tooltip md-direction="top">{{vocabulary[input.concept].description}}</md-tooltip>
+                </md-chip>
               </md-layout>
               <md-layout md-column md-flex="15" style="padding: 8px 16px">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 42">
@@ -99,6 +103,9 @@
               <md-tooltip md-direction="top">{{externalApi.apiDoc.externalDocs.description}}</md-tooltip>
             </md-button>
           </a>
+          <md-button class="md-icon-button md-raised md-primary" @click="refresh">
+            <md-icon>refresh</md-icon>
+          </md-button>
           <md-button class="md-icon-button md-raised md-warn" id="delete" @click="$refs['delete-dialog'].open()">
             <md-icon>delete</md-icon>
           </md-button>
@@ -166,6 +173,14 @@ export default {
         })
       }, error => {
         this.$store.dispatch('notifyError', `Erreur ${error.status} pendant la suppression de la description de l'API ${this.externalApi.title}`)
+      })
+    },
+    refresh() {
+      this.$http.post(window.CONFIG.publicUrl + '/api/v1/external-apis/' + this.$route.params.externalApiId + '/_update').then(result => {
+        this.$store.dispatch('notify', `La définition de l'API a bien été mise à jour`)
+        this.externalApi = result.data
+      }, error => {
+        this.$store.dispatch('notifyError', `Erreur ${error.status} pendant la mise à jour de la définition de l'API`)
       })
     }
   }
