@@ -39,7 +39,7 @@
           "description": "Mime type of the file"
         },
         "schema": {
-          "type": "object",
+          "type": "array",
           "description": "JSON schema of the fields in the file"
         },
         "props": {
@@ -130,7 +130,7 @@
       "description": "The processing steps of a dataset."
     },
     "schema": {
-      "type": "object",
+      "type": "array",
       "description": "JSON schema of the dataset"
     },
     "count": {

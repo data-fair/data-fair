@@ -3,13 +3,13 @@
   <md-table @sort="orderBy">
     <md-table-header>
       <md-table-row>
-        <md-table-head v-for="(fieldInfos, field) in dataset.schema" :md-tooltip="fieldInfos.description || (fieldInfos['x-refersTo'] && vocabulary[fieldInfos['x-refersTo']])" :md-numeric="fieldInfos.type === 'number' || fieldInfos.type === 'integer'" :md-sort-by="field">{{fieldInfos.title || fieldInfos['x-originalName']}}</md-table-head>
+        <md-table-head v-for="field in dataset.schema" :md-tooltip="field.description || (field['x-refersTo'] && vocabulary[field['x-refersTo']])" :md-numeric="field.type === 'number' || field.type === 'integer'" :md-sort-by="field.key">{{field.title || field['x-originalName']}}</md-table-head>
       </md-table-row>
     </md-table-header>
 
     <md-table-body>
       <md-table-row v-for="row in data.results">
-        <md-table-cell v-for="(fieldInfos, field) in dataset.schema" :md-numeric="fieldInfos.type === 'number' || fieldInfos.type === 'integer'">{{row[field]}}</md-table-cell>
+        <md-table-cell v-for="field in dataset.schema" :md-numeric="field.type === 'number' || field.key.type === 'integer'">{{row[field.key]}}</md-table-cell>
       </md-table-row>
     </md-table-body>
   </md-table>

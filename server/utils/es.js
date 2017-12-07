@@ -27,9 +27,8 @@ exports.initDatasetIndex = async (dataset) => {
   const tempId = `${indexName(dataset)}-${Date.now()}`
   const body = Object.assign({}, indexBase)
   const properties = body.mappings.line.properties = {}
-  Object.keys(dataset.schema).forEach(key => {
-    const jsProp = dataset.schema[key]
-    const esProp = properties[key] = {}
+  dataset.schema.forEach(jsProp => {
+    const esProp = properties[jsProp.key] = {}
     if (jsProp.type === 'integer') esProp.type = 'long'
     else if (jsProp.type === 'number') esProp.type = 'double'
     else if (jsProp.type === 'boolean') esProp.type = 'boolean'

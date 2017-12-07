@@ -25,10 +25,9 @@ exports.readStream = (dataset) => {
       objectMode: true,
       transform(chunk, encoding, callback) {
         const line = {}
-        Object.keys(dataset.schema).forEach(key => {
-          const prop = dataset.schema[key]
+        dataset.schema.forEach(prop => {
           const value = fieldsSniffer.format(chunk[prop['x-originalName']], prop)
-          if (value !== null) line[key] = value
+          if (value !== null) line[prop.key] = value
         })
         callback(null, line)
       }

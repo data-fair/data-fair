@@ -51,12 +51,12 @@ export default {
   props: ['dataset'],
   data: () => ({
     vocabulary: [],
-    schema: {},
+    schema: [],
     originalSchema: null
   }),
   mounted() {
     if (this.dataset) {
-      this.schema = Object.assign({}, this.dataset.schema)
+      this.schema = this.dataset.schema.slice()
       this.originalSchema = JSON.stringify(this.schema)
     }
     this.$http.get(window.CONFIG.publicUrl + '/api/v1/vocabulary').then(results => {

@@ -33,20 +33,25 @@ const analyzeDataset = async function(db) {
   let dataset = await db.collection('datasets').find({
     status: 'loaded',
     'file.mimetype': 'text/csv'
-  }).limit(1).sort({updatedAt: 1}).toArray()
+  }).limit(1).sort({
+    updatedAt: 1
+  }).toArray()
   dataset = dataset.pop()
   if (!dataset) return
 
-  await journals.log(db, dataset, {type: 'analyze-start'})
+  await journals.log(db, dataset, {
+    type: 'analyze-start'
+  })
 
   const fileSample = await datasetFileSample(dataset)
-  const sniffResult = sniffer.sniff(iconv.decode(fileSample, dataset.file.encoding), {hasHeader: true})
-  const schema = dataset.file.schema = Object.assign({}, ...sniffResult.labels.map((field, i) => ({
-    [fieldsSniffer.escapeKey(field)]: {
-      type: sniffResult.types[i],
-      'x-originalName': field
-    }
-  })))
+  const sniffResult = sniffer.sniff(iconv.decode(fileSample, dataset.file.encoding), {
+    hasHeader: true
+  })
+  const schema = dataset.file.schema = sniffResult.labels.map((field, i) => ({
+    key: fieldsSniffer.escapeKey(field),
+    type: sniffResult.types[i],
+    'x-originalName': field
+  }))
   const props = dataset.file.props = {
     linesDelimiter: sniffResult.newlineStr,
     fieldsDelimiter: sniffResult.delimiter,
@@ -55,7 +60,9 @@ const analyzeDataset = async function(db) {
   props.numLines = await countLines(datasetUtils.fileName(dataset), sniffResult.newlineStr)
 
   dataset.status = 'analyzed'
-  await db.collection('datasets').updateOne({id: dataset.id}, {
+  await db.collection('datasets').updateOne({
+    id: dataset.id
+  }, {
     $set: {
       'file.props': props,
       status: 'analyzed',
@@ -63,7 +70,9 @@ const analyzeDataset = async function(db) {
     }
   })
 
-  await journals.log(db, dataset, {type: 'analyze-end'})
+  await journals.log(db, dataset, {
+    type: 'analyze-end'
+  })
 
   return dataset
 }

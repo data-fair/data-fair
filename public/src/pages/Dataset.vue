@@ -133,7 +133,7 @@ export default {
       if (this.dataset) return window.CONFIG.publicUrl + '/api/v1/datasets/' + this.dataset.id + '/raw/' + this.dataset.file.name
     },
     concepts() {
-      if (this.dataset) return new Set(Object.values(this.dataset.schema).filter(field => field['x-refersTo']).map(field => field['x-refersTo']))
+      if (this.dataset) return new Set(this.dataset.schema.filter(field => field['x-refersTo']).map(field => field['x-refersTo']))
       return []
     }
   },
