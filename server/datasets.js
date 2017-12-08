@@ -249,6 +249,17 @@ router.get('/:datasetId/lines', async(req, res, next) => {
   }
 })
 
+// Special geo aggregation
+router.get('/:datasetId/geo_agg', async(req, res, next) => {
+  if (!permissions(req.dataset, 'readData', req.user)) return res.sendStatus(403)
+  try {
+    const result = await esUtils.geoAgg(req.dataset, req.query)
+    res.status(200).send(result)
+  } catch (err) {
+    return next(err)
+  }
+})
+
 // Download the full dataset in its original form
 router.get('/:datasetId/raw/:fileName', async(req, res, next) => {
   if (req.params.fileName !== req.dataset.file.name) return res.sendStatus(404)

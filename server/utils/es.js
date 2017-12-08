@@ -3,6 +3,7 @@ const config = require('config')
 const elasticsearch = require('elasticsearch')
 const createError = require('http-errors')
 const geoUtils = require('./geo')
+const geohash = require('./geohash')
 
 const client = exports.client = elasticsearch.Client(config.elasticsearch)
 
@@ -109,8 +110,8 @@ exports.indexStream = async (inputStream, index, dataset) => {
 }
 
 exports.searchInDataset = async (dataset, query) => {
-  const body = prepareQuery(dataset, query)
-  const esResponse = await client.search({index: indexName(dataset), body})
+  const esQuery = prepareQuery(dataset, query)
+  const esResponse = await client.search({index: indexName(dataset), body: esQuery})
   return prepareResponse(esResponse)
 }
 
@@ -118,6 +119,47 @@ const prepareResponse = (esResponse) => {
   const response = {}
   response.total = esResponse.hits.total
   response.results = esResponse.hits.hits.map(hit => hit._source)
+  return response
+}
+
+exports.geoAgg = async (dataset, query) => {
+  // France bbox by default
+  query.bbox = query.bbox || '-5.1406,41.33374,9.55932,51.089062'
+  const bbox = query.bbox.split(',').map(Number)
+  const aggSize = query.agg_size ? Number(query.agg_size) : 20
+  const size = query.size ? Number(query.size) : 1
+  const precision = geohash.bbox2precision(bbox, aggSize)
+
+  query.size = '0'
+  const esQuery = prepareQuery(dataset, query)
+  esQuery.aggs = {
+    geo: {
+      geohash_grid: {
+        field: '_geopoint',
+        precision: precision,
+        size: aggSize
+      },
+      aggs: {
+        centroid: { geo_centroid: { field: '_geopoint' } },
+        topHits: { top_hits: { size, _source: esQuery._source } }
+      }
+    }
+  }
+  const esResponse = await client.search({index: indexName(dataset), body: esQuery})
+  return prepareGeoAggResponse(esResponse)
+}
+
+const prepareGeoAggResponse = (esResponse) => {
+  const response = {total: esResponse.hits.total}
+  response.aggs = esResponse.aggregations.geo.buckets.map(b => {
+    return {
+      total: b.doc_count,
+      centroid: b.centroid.location,
+      center: geohash.hash2coord(b.key),
+      bbox: geohash.hash2bbox(b.key),
+      results: b.topHits.hits.hits.map(hit => hit._source)
+    }
+  })
   return response
 }
 
