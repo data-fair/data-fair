@@ -42,6 +42,9 @@ router.get('', auth.optionalJwtMiddleware, async function(req, res, next) {
     }, {
       name: 'filename',
       field: 'file.name'
+    }, {
+      name: 'concepts',
+      field: 'schema.x-refersTo'
     }].filter(p => req.query[p.name] !== undefined).map(p => ({
       [p.field]: req.query[p.name]
     })))
