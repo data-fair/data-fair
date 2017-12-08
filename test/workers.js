@@ -10,18 +10,21 @@ const indexer = require('../server/workers/indexer')
 const esUtils = require('../server/utils/es')
 
 test('Process newly uploaded dataset', async t => {
+  // Send dataset
   const datasetFd = fs.readFileSync('./test/resources/dataset1.csv')
   const form = new FormData()
   form.append('owner[type]', 'user')
   form.append('owner[id]', 'dmeadus0')
   form.append('file', datasetFd, 'dataset.csv')
-
   const ax = await testUtils.axios('dmeadus0@answers.com')
-  const res = await ax.post('/api/v1/datasets', form, {headers: form.getHeaders()})
+  let res = await ax.post('/api/v1/datasets', form, {headers: form.getHeaders()})
   t.is(res.status, 201)
+
+  // Dataset received and parsed
   let dataset = await analyzer.hook()
   t.is(dataset.status, 'analyzed')
 
+  // Auto schema proposal
   dataset = await schematizer.hook()
   t.is(dataset.status, 'schematized')
   const idField = dataset.schema.find(f => f.key === 'id')
@@ -31,6 +34,7 @@ test('Process newly uploaded dataset', async t => {
   t.is(dateField.type, 'string')
   t.is(dateField.format, 'date')
 
+  // ES indexation
   dataset = await indexer.hook()
   t.is(dataset.status, 'indexed')
   t.is(dataset.count, 2)
@@ -40,4 +44,23 @@ test('Process newly uploaded dataset', async t => {
   t.is(mapping.properties.id.type, 'keyword')
   t.is(mapping.properties.adr.type, 'text')
   t.is(mapping.properties.some_date.type, 'date')
+
+  // Update schema to specify geo point
+  const locProp = dataset.schema.find(p => p.key === 'loc')
+  locProp['x-refersTo'] = 'http://www.w3.org/2003/01/geo/wgs84_pos#lat_long'
+  res = await ax.patch('/api/v1/datasets/' + dataset.id, {schema: dataset.schema})
+  t.is(res.status, 200)
+
+  // Second ES indexation
+  dataset = await indexer.hook()
+  t.is(dataset.status, 'indexed')
+  t.is(dataset.count, 2)
+  const esIndices2 = await esUtils.client.indices.get({index: esUtils.indexName(dataset)})
+  const esIndex2 = Object.values(esIndices2)[0]
+  const mapping2 = esIndex2.mappings.line
+  t.is(mapping2.properties.id.type, 'keyword')
+  t.is(mapping2.properties.adr.type, 'text')
+  t.is(mapping2.properties.some_date.type, 'date')
+  t.is(mapping2.properties.loc.type, 'keyword')
+  t.is(mapping2.properties._geopoint.type, 'geo_point')
 })

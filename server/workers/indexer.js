@@ -3,6 +3,7 @@
 const esUtils = require('../utils/es')
 const datasetUtils = require('../utils/dataset')
 const journals = require('../journals')
+const geoUtils = require('../utils/geo')
 
 // A hook/spy for testing purposes
 let resolveHook, rejectHook
@@ -33,8 +34,9 @@ async function indexDataset(db, es) {
 
   await journals.log(db, dataset, {type: 'index-start'})
 
+  dataset.geopoint = geoUtils.schemaHasGeopoint(dataset.schema)
   const tempId = await esUtils.initDatasetIndex(dataset)
-  const count = dataset.count = await esUtils.indexStream(datasetUtils.readStream(dataset), tempId)
+  const count = dataset.count = await esUtils.indexStream(datasetUtils.readStream(dataset), tempId, dataset)
   await esUtils.switchAlias(dataset, tempId)
 
   dataset.status = 'indexed'

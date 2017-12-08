@@ -2,6 +2,7 @@ const Transform = require('stream').Transform
 const config = require('config')
 const elasticsearch = require('elasticsearch')
 const createError = require('http-errors')
+const geoUtils = require('./geo')
 
 const client = exports.client = elasticsearch.Client(config.elasticsearch)
 
@@ -27,6 +28,7 @@ exports.initDatasetIndex = async (dataset) => {
   const tempId = `${indexName(dataset)}-${Date.now()}`
   const body = Object.assign({}, indexBase)
   const properties = body.mappings.line.properties = {}
+
   dataset.schema.forEach(jsProp => {
     const esProp = properties[jsProp.key] = {}
     if (jsProp.type === 'integer') esProp.type = 'long'
@@ -37,6 +39,12 @@ exports.initDatasetIndex = async (dataset) => {
     else if (jsProp.type === 'string' && jsProp.format === 'uri-reference') esProp.type = 'keyword'
     else esProp.type = 'text'
   })
+
+  // "hidden" field for geopoint indexing
+  if (dataset.geopoint) {
+    properties['_geopoint'] = {type: 'geo_point'}
+  }
+
   await client.indices.create({index: tempId, body})
   return tempId
 }
@@ -53,14 +61,19 @@ exports.switchAlias = async (dataset, tempId) => {
 }
 
 class IndexStream extends Transform {
-  constructor(index) {
+  constructor(index, dataset) {
     super({objectMode: true})
     this.index = index
+    this.dataset = dataset
     this.body = []
     this.i = 0
   }
   _transform(chunk, encoding, callback) {
     this.body.push({index: {_index: this.index, _type: 'line'}})
+    if (this.dataset.geopoint) {
+      // "hidden" field for geopoint indexing
+      chunk._geopoint = geoUtils.getGeopoint(this.dataset.schema, chunk)
+    }
     this.body.push(chunk)
     this.i += 1
     if (this.i % 1000 === 0) {
@@ -81,9 +94,9 @@ class IndexStream extends Transform {
   }
 }
 
-exports.indexStream = async (inputStream, index) => {
+exports.indexStream = async (inputStream, index, dataset) => {
   return new Promise((resolve, reject) => {
-    const indexStream = new IndexStream(index)
+    const indexStream = new IndexStream(index, dataset)
 
     inputStream
       .on('error', reject)

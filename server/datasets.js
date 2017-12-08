@@ -3,7 +3,6 @@ const ajv = require('ajv')()
 const fs = require('fs-extra')
 const util = require('util')
 const datasetSchema = require('../contract/dataset.json')
-const validate = ajv.compile(datasetSchema)
 const moment = require('moment')
 const auth = require('./auth')
 const journals = require('./journals')
@@ -11,6 +10,11 @@ const esUtils = require('./utils/es')
 const filesUtils = require('./utils/files')
 const datasetAPIDocs = require('../contract/dataset-api-docs')
 const permissions = require('./utils/permissions')
+
+const validate = ajv.compile(datasetSchema)
+const datasetSchemaNoRequired = Object.assign(datasetSchema)
+delete datasetSchemaNoRequired.required
+const validateNoRequired = ajv.compile(datasetSchemaNoRequired)
 
 let router = express.Router()
 
@@ -112,6 +116,7 @@ router.get('/:datasetId', (req, res, next) => {
 })
 
 // update a dataset
+// TODO: deprecate. Use PATCH.
 router.put('/:datasetId', async(req, res, next) => {
   if (!permissions(req.dataset, 'writeDescription', req.user)) return res.sendStatus(403)
   var valid = validate(req.body)
@@ -123,6 +128,28 @@ router.put('/:datasetId', async(req, res, next) => {
     await req.app.get('db').collection('datasets').updateOne({
       id: req.params.datasetId
     }, req.body)
+    res.status(200).json(req.body)
+  } catch (err) {
+    return next(err)
+  }
+})
+
+router.patch('/:datasetId', async (req, res, next) => {
+  try {
+    if (!permissions(req.dataset, 'writeDescription', req.user)) return res.sendStatus(403)
+    var valid = validateNoRequired(req.body)
+    if (!valid) return res.status(400).send(validate.errors)
+
+    const forbiddenKey = Object.keys(req.body).find(key => {
+      return ['permissions', 'schema', 'description'].indexOf(key) === -1
+    })
+    if (forbiddenKey) return res.status(400).send('Only some parts of the dataset can be modified through this route')
+
+    req.body.updatedAt = moment().toISOString()
+    req.body.updatedBy = req.user.id
+    req.body.status = 'schematized'
+
+    await req.app.get('db').collection('datasets').updateOne({id: req.params.datasetId}, {'$set': req.body})
     res.status(200).json(req.body)
   } catch (err) {
     return next(err)
