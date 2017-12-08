@@ -35,7 +35,7 @@ module.exports = {
       'vue$': 'vue/dist/vue.common.js'
     }
   },
-  devtool: process.env.NODE_ENV !== 'development' ? 'source-map' : 'eval',
+  devtool: process.env.NODE_ENV !== 'development' ? 'source-map' : 'eval-source-map',
   plugins: process.env.NODE_ENV !== 'development' ? [
     new webpack.optimize.UglifyJsPlugin(),
     assetsPlugin

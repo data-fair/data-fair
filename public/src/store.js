@@ -8,7 +8,8 @@ module.exports = new Vuex.Store({
   state: {
     user: null,
     notification: '',
-    notificationError: ''
+    notificationError: '',
+    vocabulary: null
   },
   mutations: {
     user(state, account) {
@@ -22,6 +23,9 @@ module.exports = new Vuex.Store({
     },
     notificationError(state, notificationError) {
       state.notificationError = notificationError
+    },
+    vocabulary(state, vocab) {
+      state.vocabulary = vocab
     }
   },
   actions: {
@@ -30,14 +34,13 @@ module.exports = new Vuex.Store({
       context.commit('user')
       global.router.push('/')
     },
-    userAccount(context) {
+    async userAccount(context) {
       const jwt = Vue.cookie.get('id_token')
       if (jwt) {
         const user = jwtDecode(jwt)
         context.commit('user', user)
-        Vue.http.get(window.CONFIG.directoryUrl + '/api/users/' + user.id).then(response => {
-          context.commit('user', Object.assign(response.data, {organizations: user.organizations}))
-        })
+        const response = await Vue.http.get(window.CONFIG.directoryUrl + '/api/users/' + user.id)
+        context.commit('user', Object.assign(response.data, {organizations: user.organizations}))
       } else {
         context.commit('user')
       }
@@ -47,6 +50,15 @@ module.exports = new Vuex.Store({
     },
     notifyError(context, notification) {
       context.commit('notificationError', notification)
+    },
+    async fetchVocabulary(context) {
+      if (context.state.vocabulary) return
+      const vocabulary = {}
+      const results = await Vue.http.get(window.CONFIG.publicUrl + '/api/v1/vocabulary')
+      results.data.forEach(term => {
+        term.identifiers.forEach(id => { vocabulary[id] = term })
+      })
+      context.commit('vocabulary', vocabulary)
     }
   }
 })

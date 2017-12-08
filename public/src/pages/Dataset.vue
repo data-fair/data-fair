@@ -67,32 +67,7 @@
       </md-tab> -->
 
       <md-tab md-label="Enrichissement" md-icon="merge_type" :md-disabled="!actions.length">
-        <md-list>
-          <md-list-item v-for="action in actions">
-            <md-layout md-row style="padding:8px" md-vertical-align="center">
-              <md-layout md-column md-flex="10">
-                <h5 class="md-title">Utilisez</h5>
-              </md-layout>
-              <md-layout md-flex="40" md-align="center">
-                <md-checkbox v-for="input in action.input" :md-value="input.concept" v-model="input.selected" class="md-primary" v-if="vocabulary[input.concept] && input.concept !== 'http://schema.org/identifier'">{{vocabulary[input.concept].title}}
-                  <md-tooltip md-direction="top">{{vocabulary[input.concept].description}}</md-tooltip>
-                </md-checkbox>
-              </md-layout>
-              <md-layout md-column md-flex="15" style="padding: 8px 16px">
-                <h5 class="md-title">pour rajouter</h5>
-              </md-layout>
-              <md-layout md-flex="20">
-                <md-chip v-for="output in action.output" class="md-warn" style="margin:4px 4px;" v-if="vocabulary[output.concept] && output.concept !== 'http://schema.org/identifier'">{{vocabulary[output.concept].title}}
-                  <md-tooltip md-direction="top">{{vocabulary[output.concept].description}}</md-tooltip>
-                </md-chip>
-              </md-layout>
-              <md-layout md-column md-flex="15">
-                <md-button class="md-raised md-primary" :disabled="action.input.filter(i => i.selected).length === 0" @click="execute(action)">Démarrer</md-button>
-              </md-layout>
-            </md-layout>
-            <md-divider class="md-inset"></md-divider>
-          </md-list-item>
-        </md-list>
+        <enrich-dataset :dataset="dataset" :actions="actions"></enrich-dataset>
       </md-tab>
 
       <md-tab md-label="Journal" md-icon="event_note">
@@ -113,6 +88,7 @@ import Journal from '../components/Journal.vue'
 import Schema from '../components/Schema.vue'
 import DatasetAPIDoc from '../components/DatasetAPIDoc.vue'
 import TabularView from '../components/TabularView.vue'
+import EnrichDataset from '../components/EnrichDataset.vue'
 
 export default {
   name: 'dataset',
@@ -121,12 +97,12 @@ export default {
     Journal,
     Schema,
     DatasetAPIDoc,
-    TabularView
+    TabularView,
+    EnrichDataset
   },
   data: () => ({
     dataset: null,
-    actions: [],
-    vocabulary: {}
+    actions: []
   }),
   computed:{
     downloadLink() {
@@ -140,9 +116,6 @@ export default {
   mounted() {
     this.$http.get(window.CONFIG.publicUrl + '/api/v1/datasets/' + this.$route.params.datasetId).then(result => {
       this.dataset = result.data
-    })
-    this.$http.get(window.CONFIG.publicUrl + '/api/v1/vocabulary').then(results => {
-      results.data.forEach(term => term.identifiers.forEach(id => this.vocabulary[id] = term))
     })
   },
   methods: {
@@ -164,13 +137,6 @@ export default {
       }, error => {
         this.$store.dispatch('notifyError', `Erreur ${error.status} pendant la suppression du jeu de données ${this.dataset.title}`)
       })
-    },
-    execute(action) {
-      const params = {
-        inputConcepts: action.input.filter(i => i.selected).map(i => i.concept),
-        dataset: this.dataset.id
-      }
-      this.$http.post(window.CONFIG.publicUrl + '/api/v1/external-apis/' + action.api + '/actions/' + action.id, params)
     }
   },
   watch: {
