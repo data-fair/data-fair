@@ -24,10 +24,12 @@ test('Process newly uploaded dataset', async t => {
 
   dataset = await schematizer.hook()
   t.is(dataset.status, 'schematized')
-  t.is(dataset.schema.id.type, 'string')
-  t.is(dataset.schema.id.format, 'uri-reference')
-  t.is(dataset.schema.some_date.type, 'string')
-  t.is(dataset.schema.some_date.format, 'date')
+  const idField = dataset.schema.find(f => f.key === 'id')
+  const dateField = dataset.schema.find(f => f.key === 'some_date')
+  t.is(idField.type, 'string')
+  t.is(idField.format, 'uri-reference')
+  t.is(dateField.type, 'string')
+  t.is(dateField.format, 'date')
 
   dataset = await indexer.hook()
   t.is(dataset.status, 'indexed')

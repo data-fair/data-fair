@@ -56,8 +56,8 @@ const schematizeDataset = async function(db) {
   })
 
   // We copy fields in the detected schema that have not been modified by the user
-  let schema = dataset.schema = dataset.schema || []
-  schema = schema.concat(schema, dataset.file.schema.filter(field => !schema.find(f => f.key === field.key)))
+  const previousSchema = dataset.schema || []
+  dataset.schema = previousSchema.concat(dataset.file.schema.filter(field => !previousSchema.find(f => f.key === field.key)))
 
   dataset.status = 'schematized'
   await db.collection('datasets').updateOne({
@@ -65,7 +65,7 @@ const schematizeDataset = async function(db) {
   }, {
     $set: {
       status: 'schematized',
-      schema
+      schema: dataset.schema
     }
   })
 
