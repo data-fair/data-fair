@@ -249,7 +249,7 @@ router.get('/:datasetId/lines', async(req, res, next) => {
   }
 })
 
-// Read/search data for a dataset
+// Download the full dataset in its original form
 router.get('/:datasetId/raw/:fileName', async(req, res, next) => {
   if (req.params.fileName !== req.dataset.file.name) return res.sendStatus(404)
   if (!permissions(req.dataset, 'readData', req.user)) return res.sendStatus(403)

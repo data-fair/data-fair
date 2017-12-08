@@ -110,6 +110,17 @@ Pour plus d'information voir la documentation [ElasticSearch](https://www.elasti
             schema: {
               type: 'string'
             }
+          }, { in: 'query',
+            name: 'bbox',
+            description: "Un filtre pour restreindre les résultats à une zone géographique. Le format est 'gauche,bas,droite,haut' autrement dit 'lonMin,latMin,lonMax,latMax'.",
+            required: false,
+            schema: {
+              type: 'array',
+              items: {
+                type: 'number'
+              }
+            },
+            style: 'commaDelimited'
           }],
           responses: {
             200: {

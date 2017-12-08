@@ -40,7 +40,7 @@ async function indexDataset(db, es) {
   await esUtils.switchAlias(dataset, tempId)
 
   dataset.status = 'indexed'
-  await collection.updateOne({id: dataset.id}, {$set: {status: 'indexed', count}})
+  await collection.updateOne({id: dataset.id}, {$set: {status: 'indexed', count, geopoint: dataset.geopoint}})
 
   await journals.log(db, dataset, {type: 'index-end'})
 

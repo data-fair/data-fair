@@ -109,7 +109,7 @@ exports.indexStream = async (inputStream, index, dataset) => {
 }
 
 exports.searchInDataset = async (dataset, query) => {
-  const body = prepareQuery(query)
+  const body = prepareQuery(dataset, query)
   const esResponse = await client.search({index: indexName(dataset), body})
   return prepareResponse(esResponse)
 }
@@ -121,7 +121,7 @@ const prepareResponse = (esResponse) => {
   return response
 }
 
-const prepareQuery = query => {
+const prepareQuery = (dataset, query) => {
   const esQuery = {}
 
   // Pagination
@@ -147,7 +147,7 @@ const prepareQuery = query => {
   const filter = []
   const must = []
 
-  // query and simple query string for a lot a functionalities in a simple exposition (too open ??)
+  // query and simple query string for a lot of functionalities in a simple exposition (too open ??)
   if (query.qs) {
     must.push({ query_string: { query: query.qs } })
   }
@@ -155,7 +155,14 @@ const prepareQuery = query => {
     must.push({ simple_query_string: { query: query.q } })
   }
 
-  esQuery.query = { bool: { filter, must } }
+  // bounding box filter to restrict results on geo zone: left,bottom,right,top
+  if (query.bbox) {
+    if (!dataset.geopoint) throw createError(400, '"bbox" filter cannot be used on this dataset. It is not geolocalized.')
+    const bbox = query.bbox.split(',').map(Number)
+    const esBoundingBox = { left: bbox[0], bottom: bbox[1], right: bbox[2], top: bbox[3] }
+    filter.push({ geo_bounding_box: { _geopoint: esBoundingBox } })
+  }
 
+  esQuery.query = { bool: { filter, must } }
   return esQuery
 }

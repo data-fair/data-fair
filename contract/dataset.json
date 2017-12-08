@@ -136,6 +136,10 @@
     "count": {
       "type": "number",
       "description": "The number of indexed documents of a dataset"
+    },
+    "geopoint": {
+      "type": "boolean",
+      "description": "Specify if the dataset items are indexed as geopoints"
     }
   }
 }
