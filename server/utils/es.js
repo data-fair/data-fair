@@ -152,10 +152,11 @@ exports.geoAgg = async (dataset, query) => {
 const prepareGeoAggResponse = (esResponse) => {
   const response = {total: esResponse.hits.total}
   response.aggs = esResponse.aggregations.geo.buckets.map(b => {
+    const center = geohash.hash2coord(b.key)
     return {
       total: b.doc_count,
       centroid: b.centroid.location,
-      center: geohash.hash2coord(b.key),
+      center: {lat: center[1], lon: center[0]},
       bbox: geohash.hash2bbox(b.key),
       results: b.topHits.hits.hits.map(hit => hit._source)
     }
