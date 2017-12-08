@@ -14,6 +14,7 @@ const moment = require('moment')
 const shortid = require('shortid')
 const soasLoader = require('soas')
 const axios = require('axios')
+const requestProxy = require('express-request-proxy')
 
 const router = module.exports = express.Router()
 
@@ -215,6 +216,14 @@ router.post('/:externalApiId/_update', async(req, res, next) => {
   } else {
     res.sendStatus(204)
   }
+})
+
+router.use('/:externalApiId/proxy*', function(req, res, next) {
+  // TODO add API key
+  const options = {
+    url: req.externalApi.server + '*'
+  }
+  requestProxy(options)(req, res, next)
 })
 
 router.post('/:externalApiId/actions/:actionId', async(req, res, next) => {
