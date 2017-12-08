@@ -105,9 +105,9 @@ body {
 
     .double-title {
         h1 {
-            margin-top: 9px;
+            margin-top: 8px;
             margin-left: 16px;
-            margin-bottom: 5px;
+            margin-bottom: 4px;
             // color: #FFF;
         }
         span {
