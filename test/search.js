@@ -35,5 +35,8 @@ test('Get lines in dataset', async t => {
 
   res = await ax.get('/api/v1/datasets/dataset/geo_agg')
   t.is(res.status, 200)
-  console.log(JSON.stringify(res.data, null, 2))
+  t.is(res.data.aggs.length, 1)
+  res = await ax.get('/api/v1/datasets/dataset/geo_agg?bbox=2.5,45,3,48')
+  t.is(res.status, 200)
+  t.is(res.data.aggs.length, 2)
 })
