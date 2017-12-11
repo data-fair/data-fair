@@ -1,3 +1,4 @@
+// TODO : replace api with a name that match external-api and dataset
 module.exports = function(api, operationId, user) {
   if (!user) {
     const operationPermissions = api.permissions.filter(p => p.operationId === operationId)
