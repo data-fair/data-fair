@@ -14,9 +14,9 @@
 
     <span style="flex:1"></span>
 
-    <router-link to="/api-doc">
+    <!-- <router-link to="/api-doc">
       <md-button>Documentation de l'API</md-button>
-    </router-link>
+    </router-link> -->
 
     <a :href="loginUrl" v-if="!user">
       <md-button class="md-raised md-dense">Se connecter / S'inscrire</md-button>
