@@ -1,5 +1,6 @@
 remote_theme: mmistakes/minimal-mistakes
-title: Accessible-Data - Documentation
+name: Koumoul
+title: Accessible Data
 description: Partagez et enrichissez facilement vos données pour pouvoir les utiliser dans des applications dédiées
 
 # Plugins (previously gems:)
@@ -7,3 +8,37 @@ plugins:
   - jekyll-remote-theme
 
 minimal_mistakes_skin: "air" # "default", "aqua", "contrast", "dark", "dirt", "neon", "mint", "plum" "sunrise"
+include:
+  - _pages
+
+defaults:
+  # _pages
+  - scope:
+      path: "_pages"
+      type: pages
+    values:
+      layout: single
+      author_profile: false
+      read_time: true
+      share: true
+
+repository: "koumoul-dev/accessible-data"
+
+author:
+  name   : "Koumoul"
+  # avatar : "/assets/images/bio-photo.jpg"
+  bio    : "La donnée accessible"
+  email  : contact@koumoul.com
+  uri    : "https://koumoul.com"
+
+twitter:
+  username: Koumoul_fr
+social:
+  type: Organization
+  name:  Koumoul
+  links:
+    - "https://twitter.com/Koumoul_fr"
+    # - "https://facebook.com/yourFacebook"
+    # - "https://instagram.com/yourProfile"
+    # - "https://www.linkedin.com/in/yourprofile"
+    # - "https://plus.google.com/your_profile"

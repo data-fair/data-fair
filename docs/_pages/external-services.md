@@ -1,4 +1,8 @@
-# APIs externes
+---
+title: Services externes
+permalink: /external-services
+---
+
 Les APIs externes sont des fonctionnalités externalisées à ce service. Elles permettent de récupérer des données supplémentaires, de faire des traitements sur certaines données, ... Elles sont optionnelles pour pouvoir exposer ses données, mais nécessaires si l'on souhaite faire de l'enrichissement ou utiliser certaines applications. Ces APIs peuvent être ouvertes ou fermées, dans le 2e cas il faut alors paramétrer des codes d'accès à ces APIs.
 
 ## Importer et configurer l'accès à une API externe

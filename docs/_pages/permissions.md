@@ -1,4 +1,7 @@
-# Permissions
+---
+title: Contrôles d'accès
+permalink: /permissions
+---
 
 Le contrôle d'accès sur les flux de données se fait avec un système de permissions. Il y a des permissions sur les jeux de données et les APIs externes, mais pas sur les applications : celles-ci ont besoin des flux de données pour fonctionner, et en contrôlant les modalités d'accès à ces flux on peut déterminer si l'utilisateur peut utiliser l'application. Le niveau de granularité du contrôle d'accès est le fait d'être propriétaire ou non de la ressource (droits sur toutes les opérations liées à cette ressource), ou sinon sur chaque opération unitairement.
 

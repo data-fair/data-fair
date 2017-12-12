@@ -1,5 +1,40 @@
-# Accessible Data
+---
+title: Accessible Data
+layout: splash
+header:
+  overlay_color: "#0288d1"
+  overlay_filter: "0.1"
+  overlay_image: assets/images/rocket.png
+  cta_label: "Télécharger"
+  cta_url: "https://github.com/koumoul-dev/accessible-data/"
+excerpt: Partagez et enrichissez facilement vos données pour pouvoir les utiliser dans des applications dédiées.
+intro:
+  - excerpt: "Ce service permet d'exposer facilement ses données via une API web, **contractualisée et documentée**, ce qui permet aux développeurs de les **réutiliser facilement dans leurs applications**. Le partage des données peut se faire en mode privé (private-data) ou public (open-data)."
+feature_row:
+  - image_path: assets/images/file.png
+    alt: Données
+    title: Importer des données
+    excerpt: "Les jeux de données sont créés en chargeant des fichiers. Ils sont stockés, analysés et un schéma de données est déduit. Les données sont ensuite indexées suivant ce schéma et peuvent être requêtées au travers d'une API Rest. Les champs du schéma peuvent être sémantisés, ce qui permet ensuite d'enrichir les données et de les réutiliser dans des applications dédiées."
+    btn_label: "Détails"
+    btn_class: "btn--primary"
+  - image_path: assets/images/robot.png
+    alt: "Services externes"
+    title: "Intégrer des services externes"
+    excerpt: "Les fonctionnalités de services externes peuvent être intégrées facilement. Le service stocke les informations d'accès et permet de réappliquer des permissions sur chaque fonctionnalité. On peut grâce à ce mécanisme enrichir facilement ses propre données avec d'autres données. Des non informaticiens peuvent utiliser facilement des APIs externes avec leurs propres données."
+    btn_label: "Détails"
+    btn_class: "btn--primary"
+  - image_path: assets/images/smartphone.png
+    alt: "Applications"
+    title: "Configurer des applications"
+    excerpt: "Les applications sont des services externes qui permettent d'exploiter au maximum le potentiel des données. Grâce à la sémantisation, on peut déterminer les applications les plus appropriées aux données que l'on manipule. Il ne reste alors plus qu'à les configurer pour pouvoir les utiliser."
+    btn_label: "Détails"
+    btn_class: "btn--primary"
+---
+{% include feature_row id="intro" type="center" %}
 
+{% include feature_row %}
+
+<!--
 Ce service permet d'enrichir et de partager facilement ses données pour pouvoir ensuite les utiliser dans des applications. Le partage des données peut se faire en mode privé (private-data) ou public (open-data). Pour l'instant, les données partageables sont des données de type tabulaire, mais le service devrait bientôt supporter d'autres formats, comme les données géographiques. Ce service permet de mettre facilement des données à disposition, mais les métadonnées sont minimes et **ce n'est donc pas un service de catalogage**. Il peut donc être un excellent complément à un service comme [udata](https://github.com/opendatateam/udata) utilisé sur le site [data.gouv.fr](http://data.gouv.fr).
 
 Ce service permet d'exposer facilement ses données via une API web, **contractualisée et documentée**, ce qui permet aux développeurs de les **réutiliser facilement dans leurs applications**. De plus les données peuvent être **sémantisées, ce qui permet ensuite de les enrichir** avec d'autres données sémantisées. Ainsi, des données qui ont une adresse peuvent par exemple être complétées par des coordonnées GPS, ce qui permet ensuite de les afficher sur une carte. Mais bien qu'il puisse être utilisé pour de l'enrichissement, ce service **n'est pas un atelier de traitement de la donnée**. Il est plutôt complémentaire et permet de publier de la donnée prétraitée.
@@ -20,4 +55,4 @@ Ce service tourne autour de 3 concepts : les jeux de données, les APIs externes
 
 Le service permet de contrôler simplement mais de manière puissante les [permissions sur les différentes ressources](permissions.md). Les utilisateurs peuvent faire partie de une ou plusieurs organisations, qui peuvent elles même contenir un ou plusieurs utilisateurs. Quand un utilisateur importe un jeux de données, une API externe ou configure une application, il peut déterminer quels utilisateurs et organisations y ont accès. Ouvrir un accès à une organisation donne l'accès à tous les membres de cette organisation. Les accès peuvent également être ouvert en public et même les personnes non authentifiées pourront alors accéder à la ressource.
 
-Les **utilisateurs et organisations ne sont pas gérées dans ce service**. Ce service doit être connecté à un annuaire qui implémente le contrat du service [simple-directory](https://github.com/koumoul-dev/simple-directory).
+Les **utilisateurs et organisations ne sont pas gérées dans ce service**. Ce service doit être connecté à un annuaire qui implémente le contrat du service [simple-directory](https://github.com/koumoul-dev/simple-directory). -->

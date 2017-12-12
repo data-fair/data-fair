@@ -1,0 +1,7 @@
+main:
+  - title: "Présentation"
+    url: /overview
+  - title: "Permissions"
+    url: /permissions/
+  - title: "Stack technique"
+    url: /technical-stack/

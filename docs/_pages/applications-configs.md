@@ -1,4 +1,8 @@
-# Configurations d'applications
+---
+title: Configurations d'applications
+permalink: /applications-configs
+---
+
 Un aspect essentiel du service et de pouvoir facilement réutiliser les données dans des applications. Ces applications peuvent consommer différents flux de données, du moment qu'ils soient sémantisés et contiennent les informations dons les applications on besoin. Les applications on donc besoin d'être configurées, de stocker leur configuration et on doit facilement pouvoir configurer une application.
 
 Les applications ne sont pas développées dans ce projet : elles peuvent être privées et développées par des éditeurs ou être opensource. Un des prérequis est qu'elles soient accessibles en ligne. Plus précisément, les applications sont des services web externes réexposés par ce service.

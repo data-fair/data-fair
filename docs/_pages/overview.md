@@ -1,4 +1,7 @@
-# Accessible Data
+---
+title: Présentation
+permalink: /overview
+---
 
 Ce service permet d'enrichir et de partager facilement ses données pour pouvoir ensuite les utiliser dans des applications. Le partage des données peut se faire en mode privé (private-data) ou public (open-data). Pour l'instant, les données partageables sont des données de type tabulaire, mais le service devrait bientôt supporter d'autres formats, comme les données géographiques. Ce service permet de mettre facilement des données à disposition, mais les métadonnées sont minimes et **ce n'est donc pas un service de catalogage**. Il peut donc être un excellent complément à un service comme [udata](https://github.com/opendatateam/udata) utilisé sur le site [data.gouv.fr](http://data.gouv.fr).
 
