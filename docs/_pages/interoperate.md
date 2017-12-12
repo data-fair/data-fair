@@ -1,12 +1,37 @@
 ---
-title: Services externes
-permalink: /external-services
+title: Interopérabilité
+permalink: /interoperate
 ---
 
-Les APIs externes sont des fonctionnalités externalisées à ce service. Elles permettent de récupérer des données supplémentaires, de faire des traitements sur certaines données, ... Elles sont optionnelles pour pouvoir exposer ses données, mais nécessaires si l'on souhaite faire de l'enrichissement ou utiliser certaines applications. Ces APIs peuvent être ouvertes ou fermées, dans le 2e cas il faut alors paramétrer des codes d'accès à ces APIs.
+Ce service est fait pour interopérer avec d'autres services Web : en tant que consommateur d'APIs externes ou fournisseur de données et de configuration pour les applications.
 
-## Importer et configurer l'accès à une API externe
-Pour importer une API externe, on peut soit déposer un fichier JSON qui la décrit, soit rentrer une URL qui pointe vers ce fichier JSON.
+## Développement d'une nouvelle application
+
+N'importe qui peut développer une nouvelle application utilisable dans ce service. Les applications sont servicialisées : ce sont des applications web servies par un backend. Ce service fait office de proxy et les réexpose en leur donnant des information de contexte pour qu'elles puissent fonctionner correctement. Pour pouvoir être intégrée et comprise, une application doit exposer certaines informations.
+
+### Exposition des informations
+
+Une application expose les informations la concernant en servant un fichier HTML, typiquement un fichier `ìndex.html` à sa racine. Ce fichier doit contenir certaines informations, renseignées dans des balise de la section HEAD :
+ * **tittle** : Le titre de l'application, dans une balise title.
+ * **description** : La description de l'application, dans une balise meta.
+ * **configuration** : Un lien vers la page de configuration de l'application. Le formalisme des balises à utiliser n'a pas encore été défini, ce lien peut aussi apparaître directement dans la page (lien a.href dans le body).
+
+### Informations de contexte
+
+Les applications ont besoin d'avoir accès à certaines informations pour bien fonctionner : quels jeux de données ou APIs utiliser, comment authentifier les utilisateurs, ... Le service qui les réexpose fait office de proxy et leur transmet ces informations. Cette transmission s'effectue à l'aide de headers HTTP : le backend de l'application les intercepte et peut ensuite, si il ne fait pas lui même le rendu client, les transmettre au front-end. Les headers suivant sont transmis par le service :
+ * **X-Exposed-Url** : URL d'exposition de l'application
+ * **X-Config-Url** : URL à utiliser pour enregistrer / lire la configuration de l'application
+ * **X-Directory-Url** : URL de l'annuaire, qui implémente le même contrat que [simple-directory](https://github.com/koumoul-dev/simple-directory)
+ * **X-API-Url** : URL de l'API de ce service, ce qui permet ensuite d'accéder aux APIs externes et aux datasets
+
+### Authentification
+
+L'application doit utiliser le même mécanisme d'authentification que ce service, c'est à dire celui décrit dans [simple-directory](https://github.com/koumoul-dev/simple-directory). A moins de stocker des données supplémentaire, l'application n'utilise le lien vers l'annuaire que pour authentifier et renouveler le jeton d'authentification d'un utilisateur. L'authentification se fait en mettant un lien vers la page appropriée de l'annuaire, tout en renseignant une URL de redirection. Le renouvellement du jeton se fait en utilisant le point d'accès d'API approprié (se référer à la documentation de l'annuaire).
+
+Tous les appels aux APIs de se service doivent se faire en passant les informations d'authentification, typiquement le JWT (Json Web Token) obtenu avec les opérations décrites précédemment, envoyé dans un cookie `id_token`.
+
+Les mécanisme à utiliser sont les même que ceux utilisés par ce service. Vous pouvez vous inspirer des pages dans le dossier `public/src` de ce projet.
+
 
 ## Développer une nouvelle API compatible
 Une API peut être utlisée par ce service si elle respecte certains critères. De plus la description de cette APIs doit se faire en suivant un certain formalisme : spécification OpenAPI 3.0, annotations sémantiques particulières et mécanisme d'identification de l'API.

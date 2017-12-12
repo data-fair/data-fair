@@ -1,7 +1,11 @@
 main:
   - title: "Présentation"
     url: /overview
-  - title: "Permissions"
-    url: /permissions
-  - title: "Stack technique"
-    url: /technical-stack
+  - title: "Guide d'utilisation"
+    url: /user-guide
+  - title: "Installation"
+    url: /install
+  - title: "Interopérabilité"
+    url: /interoperate
+  - title: "A propos"
+    url: /about

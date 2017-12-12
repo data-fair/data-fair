@@ -27,7 +27,7 @@ defaults:
       toc_label: "Table des matières"
 
 repository: "koumoul-dev/accessible-data"
-
+search: true
 
 twitter:
   username: &twitter "Koumoul_fr"
