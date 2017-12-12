@@ -9,7 +9,7 @@ header:
   cta_url: "https://github.com/koumoul-dev/accessible-data/"
 excerpt: Partagez et enrichissez facilement vos données pour pouvoir les utiliser dans des applications dédiées.
 intro:
-  - excerpt: "<h2>/!\\ Ce service et sa documentation sont en cours développement</h2>Ce service permet d'exposer facilement ses données via une API web, **contractualisée et documentée**, ce qui permet de les rendre **interopérables** et utilisables dans d'autres applications. Le partage des données peut se faire en mode privé ou public (opendata)."
+  - excerpt: "<h2><i class=\"fa fa-exclamation-triangle\"></i> Ce service et sa documentation sont en cours développement</h2>Ce service permet d'exposer facilement ses données via une API web, **contractualisée et documentée**, ce qui permet de les rendre **interopérables** et utilisables dans d'autres applications. Le partage des données peut se faire en mode privé ou public (opendata)."
 feature_row:
   - image_path: assets/images/file.png
     alt: Données
