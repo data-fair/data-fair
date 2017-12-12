@@ -2,6 +2,6 @@ main:
   - title: "Présentation"
     url: /overview
   - title: "Permissions"
-    url: /permissions/
+    url: /permissions
   - title: "Stack technique"
-    url: /technical-stack/
+    url: /technical-stack

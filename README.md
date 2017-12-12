@@ -30,3 +30,22 @@ npm run dev
     ```
 
 Take an account in `test/resources/users.json` and use its email to login
+
+## Writing documentation
+Documentation is in the `docs` folder and is built with jekyll when commiting to Github. The theme used is minimal-mistakes and its documentation can be [found here](https://mmistakes.github.io/minimal-mistakes/). If you want to preview the documentation on your computer, you will have to install some dependencies. With ubuntu :
+
+```
+sudo apt-get install rubysudo apt-get install ruby ruby-dev cmake libxml2 libxml2-dev libxslt1-dev libxslt1.1
+```
+
+Then go in the `docs` folder and install ruby bundles :
+
+```
+bundle install
+```
+
+You can then launch a server with :
+
+```
+bundle exec jekyll serve
+```

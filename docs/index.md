@@ -15,18 +15,21 @@ feature_row:
     alt: Données
     title: Importer des données
     excerpt: "Les jeux de données sont créés en chargeant des fichiers. Ils sont stockés, analysés et un schéma de données est déduit. Les données sont ensuite indexées suivant ce schéma et peuvent être requêtées au travers d'une API Rest. Les champs du schéma peuvent être sémantisés, ce qui permet ensuite d'enrichir les données et de les réutiliser dans des applications dédiées."
+    url: "/datasets"
     btn_label: "Détails"
     btn_class: "btn--primary"
   - image_path: assets/images/robot.png
     alt: "Services externes"
     title: "Intégrer des services externes"
     excerpt: "Les fonctionnalités de services externes peuvent être intégrées facilement. Le service stocke les informations d'accès et permet de réappliquer des permissions sur chaque fonctionnalité. On peut grâce à ce mécanisme enrichir facilement ses propre données avec d'autres données. Des non informaticiens peuvent utiliser facilement des APIs externes avec leurs propres données."
+    url: "/external-services"
     btn_label: "Détails"
     btn_class: "btn--primary"
   - image_path: assets/images/smartphone.png
     alt: "Applications"
     title: "Configurer des applications"
     excerpt: "Les applications sont des services externes qui permettent d'exploiter au maximum le potentiel des données. Grâce à la sémantisation, on peut déterminer les applications les plus appropriées aux données que l'on manipule. Il ne reste alors plus qu'à les configurer pour pouvoir les utiliser."
+    url: "/applications-configs"
     btn_label: "Détails"
     btn_class: "btn--primary"
 ---

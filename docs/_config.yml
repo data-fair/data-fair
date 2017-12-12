@@ -3,6 +3,8 @@ name: Koumoul
 title: Accessible Data
 description: Partagez et enrichissez facilement vos données pour pouvoir les utiliser dans des applications dédiées
 
+locale: "fr-FR"
+
 # Plugins (previously gems:)
 plugins:
   - jekyll-remote-theme
@@ -21,18 +23,14 @@ defaults:
       author_profile: false
       read_time: true
       share: true
+      toc: true
+      toc_label: "Table des matières"
 
 repository: "koumoul-dev/accessible-data"
 
-author:
-  name   : "Koumoul"
-  # avatar : "/assets/images/bio-photo.jpg"
-  bio    : "La donnée accessible"
-  email  : contact@koumoul.com
-  uri    : "https://koumoul.com"
 
 twitter:
-  username: Koumoul_fr
+  username: &twitter "Koumoul_fr"
 social:
   type: Organization
   name:  Koumoul
@@ -42,3 +40,13 @@ social:
     # - "https://instagram.com/yourProfile"
     # - "https://www.linkedin.com/in/yourprofile"
     # - "https://plus.google.com/your_profile"
+
+author:
+  name   : "Koumoul"
+  avatar : "/assets/images/koumoul.png"
+  bio    : "La donnée accessible"
+  email  : contact@koumoul.com
+  uri    : "https://koumoul.com"
+  github : koumoul-dev
+  gitlab : koumoul
+  twitter: *twitter
