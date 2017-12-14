@@ -1,4 +1,4 @@
-# <img alt="Accessible Data logo" src="https://cdn.rawgit.com/koumoul-dev/accessible-data/master/public/assets/logo.svg" style="width:40px"> Accessible Data
+# <img alt="Accessible Data logo" src="https://cdn.rawgit.com/koumoul-dev/accessible-data/master/public/assets/logo.svg" width="40"> Accessible Data
 
 *Open Data, Open Source, Open API*
 
