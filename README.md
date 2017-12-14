@@ -1,4 +1,4 @@
-# ![Accessible Data logo](https://raw.githubusercontent.com/koumoul-dev/accessible-data/master/public/assets/logo.svg) Accessible Data
+# ![Accessible Data logo](https://cdn.rawgit.com/koumoul-dev/accessible-data/master/public/assets/logo.svg) Accessible Data
 
 *Open Data, Open Source, Open API*
 
