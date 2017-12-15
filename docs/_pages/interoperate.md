@@ -46,7 +46,7 @@ La spécification OpenAPI 3.0 n'offre pas de mécanisme permettant d'identifier 
  * Il est difficile de suivre l'évolution de l'API, on ne sait pas si 2 descriptions similaires correspondent à 2 APIs différentes ou a 2 versions différentes d'une même API.
  * Certaines applications nécessitent des fonctionnalités particulières d'API qu'il est difficile de décrire sémantiquement. Une identification unique de l'API permet au moins de dire que les applications ont besoin de cette API (et plus précisément d'une version minimale) en particulier.
 
-Pour déterminer comment identifier de manière unique une API, nous avons choisi d'adopter [ces recommandations](https://github.com/zalando/restful-api-guidelines/blob/master/chapters/compatibility.adoc) : il faut renseigner un attribut `x-api-id` dans le bloc `ìnfo`. Plus précisément, il doit avoir cette forme :
+Pour identifier de manière unique une API, nous avons choisi d'adopter [ces recommandations](https://github.com/zalando/restful-api-guidelines/blob/master/chapters/compatibility.adoc) : il faut renseigner un attribut `x-api-id` dans le bloc `ìnfo`. Plus précisément, il doit avoir cette forme :
 
 ```
 /info/x-api-id:

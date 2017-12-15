@@ -1,6 +1,6 @@
 <template>
 <div>
-  <md-toolbar class="md-dense md-whiteframe md-whiteframe-3dp">
+  <md-toolbar class="md-whiteframe md-whiteframe-3dp">
     <router-link to="/">
       <div class="logo-container">
         <img src="../assets/logo.svg"></img>
