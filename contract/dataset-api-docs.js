@@ -5,11 +5,10 @@ const version = require('../package.json').version
 module.exports = (dataset) => {
   const properties = Object.keys(dataset.schema)
   const nonTextProperties = properties.filter(p => dataset.schema[p].type !== 'string' || dataset.schema[p].format)
-
-  return {
+  const api = {
     openapi: '3.0.0',
     info: Object.assign({
-      title: `Dataset ${dataset.title || dataset.id} - API`,
+      title: `API du jeu de données : ${dataset.title || dataset.id}`,
       version: version
     }, config.info),
     servers: [{
@@ -152,4 +151,55 @@ Pour plus d'information voir la documentation [ElasticSearch](https://www.elasti
       }
     }
   }
+  if (dataset.geopoint) {
+    api.paths['/geo_agg'] = {
+      get: {
+        summary: 'Récupérer des informations agrégées spatialement sur le jeu de données.',
+        operationId: 'getGeoAgg',
+        parameters: [{ in: 'query',
+          name: 'bbox',
+          description: "Un filtre pour restreindre les résultats à une zone géographique. Le format est 'gauche,bas,droite,haut' autrement dit 'lonMin,latMin,lonMax,latMax'. Par défaut la zone est la France métropolitaine.",
+          required: false,
+          schema: {
+            type: 'array',
+            items: {
+              type: 'number'
+            }
+          },
+          style: 'commaDelimited'
+        }, { in: 'query',
+          name: 'size',
+          description: 'Le nombre de résultats à retourner par bucket (défaut 1)',
+          required: false,
+          schema: {
+            default: 1,
+            type: 'integer',
+            max: 10000
+          }
+        }, { in: 'query',
+          name: 'agg_size',
+          description: 'Le nombre de buckets pour l\'agrégation (défaut 20)',
+          required: false,
+          schema: {
+            default: 20,
+            type: 'integer',
+            max: 10000
+          }
+        }],
+        responses: {
+          200: {
+            description: 'Les informations du jeu de données agrégées spatialement.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object'
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  return api
 }
