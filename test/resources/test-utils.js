@@ -1,8 +1,14 @@
 const test = require('ava')
 const axios = require('axios')
 const fs = require('fs-extra')
+const path = require('path')
 
-exports.prepare = (key, port) => {
+const testDir = path.join(__dirname, '../')
+const testFiles = fs.readdirSync(testDir).map(f => path.join(testDir, f))
+
+exports.prepare = (testFile) => {
+  const key = path.basename(testFile, '.js')
+  const port = 5601 + testFiles.indexOf(testFile)
   const dataDir = './data/test-' + key
   process.env.NODE_CONFIG = JSON.stringify({
     port: port,
@@ -53,4 +59,8 @@ exports.axios = async (email) => {
 
   axiosInstances[email] = ax
   return ax
+}
+
+exports.formHeaders = (form) => {
+  return {'Content-Length': form.getLengthSync(), ...form.getHeaders()}
 }

@@ -33,3 +33,13 @@ exports.readStream = (dataset) => {
       }
     }))
 }
+
+exports.storageSize = async (db, owner) => {
+  const aggQuery = [
+    {$match: {'owner.type': owner.type, 'owner.id': owner.id}},
+    {$project: {'file.size': 1}},
+    {$group: {_id: null, totalSize: {$sum: '$file.size'}}}
+  ]
+  const res = await db.collection('datasets').aggregate(aggQuery).toArray()
+  return res.length ? res[0].totalSize : 0
+}

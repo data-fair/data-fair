@@ -15,5 +15,12 @@ module.exports = {
       url: 'https://koumoul.com',
       email: 'support@koumoul.com'
     }
+  },
+  defaultLimits: {
+    // Maximum storage space per user or organization
+    // -1 for unlimited storage
+    totalStorage: -1,
+    // Maximum storage space for 1 dataset
+    datasetStorage: -1
   }
 }

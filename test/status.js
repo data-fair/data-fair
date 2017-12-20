@@ -1,5 +1,6 @@
 const testUtils = require('./resources/test-utils')
-const [test] = testUtils.prepare('status', 5605)
+
+const [test] = testUtils.prepare(__filename)
 
 test('Get status', async t => {
   const ax = await testUtils.axios()

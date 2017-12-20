@@ -2,7 +2,9 @@ const fs = require('fs-extra')
 const config = require('config')
 const path = require('path')
 const multer = require('multer')
+const createError = require('http-errors')
 const fieldsSniffer = require('./fields-sniffer')
+const datasetUtils = require('./dataset')
 
 function uploadDir(req) {
   return path.join(config.dataDir, req.body.owner.type, req.body.owner.id)
@@ -10,15 +12,6 @@ function uploadDir(req) {
 
 const storage = multer.diskStorage({
   destination: function(req, file, cb) {
-    if (!req.body) {
-      return cb(new Error(400))
-    }
-    if (req.dataset) {
-      req.body.owner = req.dataset.owner
-    }
-    if (!req.body.owner || !req.body.owner.type || !req.body.owner.id) {
-      return cb(new Error(400))
-    }
     const dir = uploadDir(req)
     fs.ensureDirSync(dir)
     cb(null, dir)
@@ -56,8 +49,33 @@ const allowedTypes = new Set(['text/csv'])
 
 const upload = multer({
   storage: storage,
-  fileFilter: function fileFilter(req, file, cb) {
-    cb(null, allowedTypes.has(file.mimetype))
+  fileFilter: async function fileFilter(req, file, cb) {
+    if (!req.body) return cb(createError(400, 'Missing body'))
+
+    if (req.dataset) req.body.owner = req.dataset.owner
+    const owner = req.body.owner
+    if (!owner || !owner.type || !owner.id) return cb(createError(400, 'Missing owner.id and owner.type metadata'))
+    // manage disk storage quota
+    if (!req.get('Content-Length')) return cb(createError(411, 'Content-Length is mandatory'))
+    const contentLength = Number(req.get('Content-Length'))
+    if (Number.isNaN(contentLength)) return cb(createError(400, 'Content-Length is not a number'))
+    let totalSize = await datasetUtils.storageSize(req.app.get('db'), owner)
+
+    if (req.dataset) {
+      // Ignore the size of the dataset we are overwriting
+      totalSize -= req.dataset.file.size
+    }
+    let limit = config.defaultLimits.totalStorage
+    // Special header from TaxMan : the payment reverse proxy used on koumoul.com
+    if (req.get('X-TaxMan-RateLimit')) {
+      const rateLimit = JSON.parse()
+      limit = rateLimit['storebytes-limit'] !== undefined ? rateLimit['storebytes-limit'] : limit
+    }
+    if (limit !== -1 && limit < totalSize + contentLength) return cb(createError(429, 'Requested storage exceeds the authorized limit'))
+
+    if (!allowedTypes.has(file.mimetype)) return cb(createError(400, file.mimetype + ' type is not supported'))
+
+    cb(null, true)
   }
 })
 

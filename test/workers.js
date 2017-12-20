@@ -2,7 +2,8 @@ const fs = require('fs')
 const FormData = require('form-data')
 
 const testUtils = require('./resources/test-utils')
-const [test] = testUtils.prepare('workers', 5608)
+
+const [test] = testUtils.prepare(__filename)
 
 const analyzer = require('../server/workers/analyzer')
 const schematizer = require('../server/workers/schematizer')
@@ -17,7 +18,7 @@ test('Process newly uploaded dataset', async t => {
   form.append('owner[id]', 'dmeadus0')
   form.append('file', datasetFd, 'dataset.csv')
   const ax = await testUtils.axios('dmeadus0@answers.com')
-  let res = await ax.post('/api/v1/datasets', form, {headers: form.getHeaders()})
+  let res = await ax.post('/api/v1/datasets', form, {headers: testUtils.formHeaders(form)})
   t.is(res.status, 201)
 
   // Dataset received and parsed
