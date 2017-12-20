@@ -23,10 +23,10 @@ const computeActions = (apiDoc) => {
   actions.forEach(a => {
     a.input = Object.keys(a.input).map(concept => Object.assign({
       concept: concept
-    }, a.input[concept][0]))
+    }, a.input[concept]))
     a.output = Object.keys(a.output).map(concept => Object.assign({
       concept: concept
-    }, a.output[concept][0]))
+    }, a.output[concept]))
   })
   return actions
 }
