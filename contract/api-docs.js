@@ -7,6 +7,7 @@ module.exports = {
   openapi: '3.0.0',
   info: Object.assign({
     title: 'Mes jeux de données',
+    description: 'Ce service permet d’exposer facilement ses données via une API web, contractualisée et documentée, ce qui permet de les rendre interopérables et utilisables dans d’autres applications. Le partage des données peut se faire en mode privé ou public (opendata).',
     version: version,
     'x-api-id': 'accessible-data'
   }, config.info),
