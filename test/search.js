@@ -33,7 +33,7 @@ test('Get lines in dataset', async t => {
   res = await ax.get('/api/v1/datasets/dataset/lines?bbox=2.5,40,3,47')
   t.is(res.data.total, 1)
 
-  res = await ax.get('/api/v1/datasets/dataset/geo_agg')
+  res = await ax.get('/api/v1/datasets/dataset/geo_agg?bbox=-5.1406,41.33374,9.55932,51.089062')
   t.is(res.status, 200)
   t.is(res.data.aggs.length, 1)
   res = await ax.get('/api/v1/datasets/dataset/geo_agg?bbox=2.5,45,3,48')

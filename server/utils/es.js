@@ -25,7 +25,7 @@ const indexName = exports.indexName = (dataset) => {
   return `${config.indicesPrefix}-${dataset.id}`
 }
 
-exports.initDatasetIndex = async (dataset) => {
+exports.initDatasetIndex = async (dataset, geopoint) => {
   const tempId = `${indexName(dataset)}-${Date.now()}`
   const body = Object.assign({}, indexBase)
   const properties = body.mappings.line.properties = {}
@@ -42,7 +42,7 @@ exports.initDatasetIndex = async (dataset) => {
   })
 
   // "hidden" field for geopoint indexing
-  if (dataset.geopoint) {
+  if (geopoint) {
     properties['_geopoint'] = {type: 'geo_point'}
   }
 
@@ -62,16 +62,17 @@ exports.switchAlias = async (dataset, tempId) => {
 }
 
 class IndexStream extends Transform {
-  constructor(index, dataset) {
+  constructor(index, dataset, geopoint) {
     super({objectMode: true})
     this.index = index
     this.dataset = dataset
+    this.geopoint = geopoint
     this.body = []
     this.i = 0
   }
   _transform(chunk, encoding, callback) {
     this.body.push({index: {_index: this.index, _type: 'line'}})
-    if (this.dataset.geopoint) {
+    if (this.geopoint) {
       // "hidden" field for geopoint indexing
       chunk._geopoint = geoUtils.getGeopoint(this.dataset.schema, chunk)
     }
@@ -95,16 +96,17 @@ class IndexStream extends Transform {
   }
 }
 
-exports.indexStream = async (inputStream, index, dataset) => {
+exports.indexStream = async (inputStream, index, dataset, geopoint) => {
   return new Promise((resolve, reject) => {
-    const indexStream = new IndexStream(index, dataset)
+    const indexStream = new IndexStream(index, dataset, geopoint)
 
     inputStream
       .on('error', reject)
       .pipe(indexStream)
       .on('error', reject)
       .on('finish', () => {
-        setTimeout(() => resolve(indexStream.i), 1000)
+        // Wait for write to be applied in ES
+        setTimeout(() => resolve(indexStream.i), 1500)
       })
   })
 }
@@ -122,10 +124,26 @@ const prepareResponse = (esResponse) => {
   return response
 }
 
+exports.bboxAgg = async (dataset, query = {}) => {
+  query.size = '0'
+  const esQuery = prepareQuery(dataset, query)
+  esQuery.aggs = {
+    bbox: {
+      geo_bounds: {
+        field: '_geopoint'
+      }
+    }
+  }
+  const esResponse = await client.search({index: indexName(dataset), body: esQuery})
+  const response = {total: esResponse.hits.total}
+  // ES bounds to standard bounding box: left,bottom,right,top
+  const bounds = esResponse.aggregations.bbox.bounds
+  response.bbox = [bounds.top_left.lon, bounds.bottom_right.lat, bounds.bottom_right.lon, bounds.top_left.lat]
+  return response
+}
+
 exports.geoAgg = async (dataset, query) => {
-  // France bbox by default
-  query.bbox = query.bbox || '-5.1406,41.33374,9.55932,51.089062'
-  const bbox = query.bbox.split(',').map(Number)
+  const bbox = query.bbox ? query.bbox.split(',').map(Number) : dataset.bbox
   const aggSize = query.agg_size ? Number(query.agg_size) : 20
   const size = query.size ? Number(query.size) : 1
   const precision = geohash.bbox2precision(bbox, aggSize)
@@ -200,7 +218,7 @@ const prepareQuery = (dataset, query) => {
 
   // bounding box filter to restrict results on geo zone: left,bottom,right,top
   if (query.bbox) {
-    if (!dataset.geopoint) throw createError(400, '"bbox" filter cannot be used on this dataset. It is not geolocalized.')
+    if (!dataset.bbox) throw createError(400, '"bbox" filter cannot be used on this dataset. It is not geolocalized.')
     const bbox = query.bbox.split(',').map(Number)
     const esBoundingBox = { left: bbox[0], bottom: bbox[1], right: bbox[2], top: bbox[3] }
     filter.push({ geo_bounding_box: { _geopoint: esBoundingBox } })

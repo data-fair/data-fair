@@ -34,13 +34,17 @@ async function indexDataset(db, es) {
 
   await journals.log(db, dataset, {type: 'index-start'})
 
-  dataset.geopoint = geoUtils.schemaHasGeopoint(dataset.schema)
-  const tempId = await esUtils.initDatasetIndex(dataset)
-  const count = dataset.count = await esUtils.indexStream(datasetUtils.readStream(dataset), tempId, dataset)
+  const geopoint = geoUtils.schemaHasGeopoint(dataset.schema)
+  const tempId = await esUtils.initDatasetIndex(dataset, geopoint)
+  const count = dataset.count = await esUtils.indexStream(datasetUtils.readStream(dataset), tempId, dataset, geopoint)
   await esUtils.switchAlias(dataset, tempId)
+  if (geopoint) {
+    const res = await esUtils.bboxAgg(dataset)
+    dataset.bbox = res.bbox
+  }
 
   dataset.status = 'indexed'
-  await collection.updateOne({id: dataset.id}, {$set: {status: 'indexed', count, geopoint: dataset.geopoint}})
+  await collection.updateOne({id: dataset.id}, {$set: {status: 'indexed', count, bbox: dataset.bbox}})
 
   await journals.log(db, dataset, {type: 'index-end'})
 
