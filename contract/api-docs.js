@@ -1,12 +1,14 @@
 const config = require('config')
 const status = require('./status.json')
 const version = require('../package.json').version
+const dataset = require('./dataset.json')
 
 module.exports = {
   openapi: '3.0.0',
   info: Object.assign({
-    title: 'Accessible Data - API',
-    version: version
+    title: 'Mes jeux de données',
+    version: version,
+    'x-api-id': 'accessible-data'
   }, config.info),
   servers: [{
     url: config.publicUrl + '/api/v1',
@@ -17,6 +19,7 @@ module.exports = {
       get: {
         summary: 'Pour connaitre l\'état de santé du service.',
         operationId: 'getStatus',
+        'x-operationType': 'http://schema.org/CheckAction',
         responses: {
           200: {
             description: 'Etat de santé du service',
@@ -33,6 +36,31 @@ module.exports = {
           }
         }
       }
+    },
+    '/datasets': {
+      post: {
+        summary: 'Charger un jeu de données',
+        operationId: 'postDataset',
+        requestBody: {
+          description: 'Fichier à charger et informations de propriété',
+          required: true,
+          content: {}
+        },
+        responses: {
+          200: {
+            description: 'Métadonnées sur le dataset créé',
+            content: {
+              'application/json': {
+                schema: dataset
+              }
+            }
+          }
+        }
+      }
     }
+  },
+  externalDocs: {
+    description: 'Documentation sur Github',
+    url: 'https://koumoul-dev.github.io/accessible-data/'
   }
 }
