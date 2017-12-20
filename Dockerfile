@@ -3,6 +3,7 @@ MAINTAINER "contact@koumoul.com"
 
 ENV NODE_ENV production
 WORKDIR /webapp
+RUN apk update && apk add python make g++
 ADD package.json .
 ADD package-lock.json .
 RUN npm install --production

@@ -29,7 +29,7 @@ after_success:
   - npm run coveralls
   # No docker push on pull requests
   - if [ "$TRAVIS_PULL_REQUEST" == "true" ]; then exit; fi
-  - docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS
+  - docker login -u $DOCKER_USER -p $DOCKER_PASS
   - export REPO=koumoul/accessible-data
   - export TAG=`if [ "$TRAVIS_BRANCH" == "master" ]; then echo "latest"; else echo $TRAVIS_BRANCH ; fi`
   - docker build -f Dockerfile -t $REPO:$TAG .
