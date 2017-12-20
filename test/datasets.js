@@ -47,12 +47,13 @@ test('Failure to upload dataset exceeding limit', async t => {
   const form = new FormData()
   form.append('owner[type]', 'user')
   form.append('owner[id]', 'dmeadus0')
-  form.append('file', Buffer.alloc(1100), 'largedataset.csv')
+  form.append('file', Buffer.alloc(1200), 'largedataset.csv')
+  console.log(form.getLengthSync())
   try {
     await ax.post('/api/v1/datasets', form, {headers: testUtils.formHeaders(form)})
     t.fail()
   } catch (err) {
-    t.is(err.response.status, 429)
+    t.is(err.response.status, 413)
   }
 })
 

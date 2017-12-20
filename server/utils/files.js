@@ -59,8 +59,11 @@ const upload = multer({
     if (!req.get('Content-Length')) return cb(createError(411, 'Content-Length is mandatory'))
     const contentLength = Number(req.get('Content-Length'))
     if (Number.isNaN(contentLength)) return cb(createError(400, 'Content-Length is not a number'))
+    // Approximate size of multi-part overhead and owner metadata
+    const estimatedFileSize = contentLength - 500
+    const datasetLimit = config.defaultLimits.datasetStorage
+    if (datasetLimit !== -1 && datasetLimit < estimatedFileSize) return cb(createError(413, 'Dataset size exceeds the authorized limit'))
     let totalSize = await datasetUtils.storageSize(req.app.get('db'), owner)
-
     if (req.dataset) {
       // Ignore the size of the dataset we are overwriting
       totalSize -= req.dataset.file.size
@@ -71,7 +74,7 @@ const upload = multer({
       const rateLimit = JSON.parse()
       limit = rateLimit['storebytes-limit'] !== undefined ? rateLimit['storebytes-limit'] : limit
     }
-    if (limit !== -1 && limit < totalSize + contentLength) return cb(createError(429, 'Requested storage exceeds the authorized limit'))
+    if (limit !== -1 && limit < totalSize + estimatedFileSize) return cb(createError(429, 'Requested storage exceeds the authorized limit'))
 
     if (!allowedTypes.has(file.mimetype)) return cb(createError(400, file.mimetype + ' type is not supported'))
 
