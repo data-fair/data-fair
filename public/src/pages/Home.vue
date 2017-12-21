@@ -1,41 +1,56 @@
 <template>
 <md-layout md-align="center">
   <md-layout md-column md-flex="90">
-    <!-- <md-layout md-row>
-      <md-layout md-column md-flex="60">
-        <datasets></datasets>
-        <external-apis></external-apis>
-        <application-configs></application-configs>
-      </md-layout>
-      <md-layout md-column md-flex="40">
-        <import-application></import-application>
-        <import-file></import-file>
-        <import-api></import-api>
-        <import-file @datasets-change="listDatasets"></import-file>
-      </md-layout>
-    </md-layout> -->
+    <md-table-card>
+      <md-table v-if="userOrganizations">
+        <md-table-header>
+          <md-table-row>
+            <md-table-head></md-table-head>
+            <md-table-head>Espace personnel</md-table-head>
+            <md-table-head v-for="organization in Object.values(userOrganizations)">{{organization.name}}</md-table-head>
+          </md-table-row>
+        </md-table-header>
+
+        <md-table-body>
+          <md-table-row>
+            <md-table-cell>Nombre de jeux de données</md-table-cell>
+            <md-table-cell>{{stats.user.datasets}}</md-table-cell>
+            <md-table-cell v-for="organization in Object.keys(userOrganizations)">{{stats.organizations[organization].datasets}}</md-table-cell>
+          </md-table-row>
+          <md-table-row>
+            <md-table-cell>Espace consommé</md-table-cell>
+            <md-table-cell>{{stats.user.storage}}</md-table-cell>
+            <md-table-cell v-for="organization in Object.keys(userOrganizations)">{{stats.organizations[organization].storage}}</md-table-cell>
+          </md-table-row>
+        </md-table-body>
+      </md-table>
+
+    </md-table-card>
 
   </md-layout>
 </md-layout>
 </template>
 
 <script>
-// import ImportFile from '../components/ImportFile.vue'
-// import ImportApi from '../components/ImportApi.vue'
-// import ImportApplication from '../components/ImportApplication.vue'
-// import Datasets from '../components/Datasets.vue'
-// import ExternalApis from '../components/ExternalApis.vue'
-// import ApplicationConfigs from '../components/ApplicationConfigs.vue'
+const {
+  mapState
+} = require('vuex')
 
 export default {
   name: 'home',
-  // components: {
-  //   ImportFile,
-  //   ImportApi,
-  //   ImportApplication,
-  //   Datasets,
-  //   ExternalApis,
-  //   ApplicationConfigs
-  // }
+  data:()=>({
+    stats: null
+  }),
+  computed: {
+    ...mapState({
+      user: state => state.user,
+      userOrganizations: state => state.userOrganizations
+    })
+  },
+  mounted(){
+    this.$http.get(window.CONFIG.publicUrl + '/api/v1/stats').then(results => {
+      this.stats = results.data
+    })
+  }
 }
 </script>

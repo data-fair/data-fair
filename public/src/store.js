@@ -7,6 +7,7 @@ Vue.use(Vuex)
 module.exports = new Vuex.Store({
   state: {
     user: null,
+    userOrganizations: null,
     notification: '',
     notificationError: '',
     vocabulary: null
@@ -17,6 +18,9 @@ module.exports = new Vuex.Store({
         account.isAdmin = account.roles && account.roles.indexOf('administrator') >= 0
       }
       state.user = account
+    },
+    userOrganizations(state, userOrganizations) {
+      state.userOrganizations = userOrganizations
     },
     notification(state, notification) {
       state.notification = notification
@@ -39,10 +43,15 @@ module.exports = new Vuex.Store({
       if (jwt) {
         const user = jwtDecode(jwt)
         context.commit('user', user)
-        const response = await Vue.http.get(window.CONFIG.directoryUrl + '/api/users/' + user.id)
-        context.commit('user', Object.assign(response.data, {organizations: user.organizations}))
+        Vue.http.get(window.CONFIG.directoryUrl + '/api/users/' + user.id).then(response => {
+          context.commit('user', Object.assign(response.data, {organizations: user.organizations}))
+        })
+        Vue.http.get(window.CONFIG.directoryUrl + '/api/organizations?is-member=true').then(response => {
+          context.commit('userOrganizations', Object.assign({}, ...response.data.results.map(o => ({[o.id]: o}))))
+        })
       } else {
         context.commit('user')
+        context.commit('userOrganizations')
       }
     },
     notify(context, notification) {

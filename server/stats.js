@@ -7,14 +7,17 @@ const router = module.exports = express.Router()
 router.get('', auth.jwtMiddleware, async (req, res, next) => {
   try {
     const stats = {
-      storage: {}
+      user: {},
+      organizations: {}
     }
-    const owners = [{id: req.user.id, type: 'user'}]
+    stats.user.storage = await datasetUtils.storageSize(req.app.get('db'), {id: req.user.id, type: 'user'})
+    stats.user.datasets = await datasetUtils.ownerCount(req.app.get('db'), {id: req.user.id, type: 'user'})
     req.user.organizations.forEach(orga => {
-      owners.push({id: orga.id, type: 'organization'})
+      stats.organizations[orga.id] = {}
     })
-    for (let owner of owners) {
-      stats.storage[owner.id] = await datasetUtils.storageSize(req.app.get('db'), owner)
+    for (let owner of Object.keys(stats.organizations)) {
+      stats.organizations[owner].storage = await datasetUtils.storageSize(req.app.get('db'), {id: owner, type: 'organization'})
+      stats.organizations[owner].datasets = await datasetUtils.ownerCount(req.app.get('db'), {id: owner, type: 'organization'})
     }
     res.send(stats)
   } catch (err) {
