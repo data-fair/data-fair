@@ -7,7 +7,7 @@ const fieldsSniffer = require('./fields-sniffer')
 const datasetUtils = require('./dataset')
 
 function uploadDir(req) {
-  return path.join(config.dataDir, req.body.owner.type, req.body.owner.id)
+  return path.join(config.dataDir, req.get('x-organisationId') ? 'organization' : 'user', req.get('x-organisationId') || req.user.id)
 }
 
 const storage = multer.diskStorage({
@@ -52,9 +52,8 @@ const upload = multer({
   fileFilter: async function fileFilter(req, file, cb) {
     if (!req.body) return cb(createError(400, 'Missing body'))
 
-    if (req.dataset) req.body.owner = req.dataset.owner
-    const owner = req.body.owner
-    if (!owner || !owner.type || !owner.id) return cb(createError(400, 'Missing owner.id and owner.type metadata'))
+    let owner = {type: req.get('x-organisationId') ? 'organization' : 'user', id: req.get('x-organisationId') || req.user.id}
+    if (req.dataset) owner = req.dataset.owner
     // manage disk storage quota
     if (!req.get('Content-Length')) return cb(createError(411, 'Content-Length is mandatory'))
     const contentLength = Number(req.get('Content-Length'))
@@ -68,12 +67,7 @@ const upload = multer({
       // Ignore the size of the dataset we are overwriting
       totalSize -= req.dataset.file.size
     }
-    let limit = config.defaultLimits.totalStorage
-    // Special header from TaxMan : the payment reverse proxy used on koumoul.com
-    if (req.get('X-TaxMan-RateLimit')) {
-      const rateLimit = JSON.parse()
-      limit = rateLimit['storebytes-limit'] !== undefined ? rateLimit['storebytes-limit'] : limit
-    }
+    const limit = req.get(config.headers.storedBytesLimit) || config.defaultLimits.totalStorage
     if (limit !== -1 && limit < totalSize + estimatedFileSize) return cb(createError(429, 'Requested storage exceeds the authorized limit'))
 
     if (!allowedTypes.has(file.mimetype)) return cb(createError(400, file.mimetype + ' type is not supported'))

@@ -208,7 +208,7 @@ router.post('', auth.jwtMiddleware, filesUtils.uploadFile(), async(req, res, nex
         size: req.file.size,
         mimetype: req.file.mimetype
       },
-      owner: req.body.owner,
+      owner: {type: req.get('x-organisationId') ? 'organization' : 'user', id: req.get('x-organisationId') || req.user.id},
       createdBy: req.user.id,
       createdAt: date,
       updatedBy: req.user.id,

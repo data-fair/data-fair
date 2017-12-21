@@ -90,8 +90,11 @@ export default {
       const formData = new FormData()
       this.uploading = true
       if (this.actions[this.action].type === 'create') {
-        formData.append('owner[type]', this.owners[this.owner].type)
-        formData.append('owner[id]', this.owners[this.owner].id)
+        if(this.owners[this.owner].type === 'organization'){
+          options.headers = {
+            'x-organisationId' : this.owners[this.owner].id
+          }
+        }
         formData.append('file', this.file)
         this.$http.post(window.CONFIG.publicUrl + '/api/v1/datasets', formData, options).then(results => {
           this.$emit('datasets-change')

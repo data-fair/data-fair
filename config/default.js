@@ -22,5 +22,8 @@ module.exports = {
     totalStorage: -1,
     // Maximum storage space for 1 dataset
     datasetStorage: -1
+  },
+  headers: {
+    storedBytesLimit: 'X-TaxMan-RateLimit'
   }
 }
