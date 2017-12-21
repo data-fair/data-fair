@@ -46,7 +46,7 @@ const {
 } = require('vuex')
 
 export default {
-  name: 'datasets',
+  name: 'datasets-list',
   data: () => ({
     datasets: {
       count: 0,

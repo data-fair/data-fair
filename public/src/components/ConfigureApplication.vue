@@ -1,6 +1,6 @@
 <template>
 <div>
-  <h3 class="md-display-1">Créer une configuration d'application</h3>
+  <h3 class="md-display-1">Configuration une application</h3>
   <md-stepper :md-alternate-labels="true" @change="currentStep = $event" @completed="createApplicationConfig">
     <md-step :md-editable="true" :md-label="currentStep ? 'Adresse de l\'application' : 'Aucune adresse'" :md-continue="description !== null" :md-message="description ? description.url: 'Entrez une adresse'" :md-button-back="null" md-button-continue="Suivant">
       <md-layout md-row>
@@ -34,7 +34,7 @@ const Extractor = require('html-extractor')
 const htmlExtractor = new Extractor()
 
 export default {
-  name: 'import-api',
+  name: 'configure-application',
   mixins: [routerMixin],
   data: () => ({
     currentStep: null,
@@ -42,7 +42,7 @@ export default {
     userOrganizations: [],
     uploading: false,
     description: null,
-    applicationUrl: 'https://staging.koumoul.com/s/cadastre/'
+    applicationUrl: 'https://staging.koumoul.com/s/infos-parcelles/'
   }),
   computed: {
     ...mapState({

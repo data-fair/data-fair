@@ -44,7 +44,7 @@ const {
 } = require('vuex')
 
 export default {
-  name: 'application-configs',
+  name: 'application-configs-list',
   data: () => ({
     applicationConfigs: {
       count: 0,

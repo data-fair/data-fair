@@ -14,9 +14,17 @@
 
     <span style="flex:1"></span>
 
-    <!-- <router-link to="/api-doc">
-      <md-button>Documentation de l'API</md-button>
-    </router-link> -->
+    <router-link :to="{name: 'Datasets'}">
+      <md-button>Jeux de données</md-button>
+    </router-link>
+
+    <router-link :to="{name: 'ExternalServices'}">
+      <md-button>Services externes</md-button>
+    </router-link>
+
+    <router-link :to="{name: 'ApplicationConfigs'}">
+      <md-button>Configurations d'applications</md-button>
+    </router-link>
 
     <a :href="loginUrl" v-if="!user">
       <md-button class="md-raised md-dense">Se connecter / S'inscrire</md-button>
