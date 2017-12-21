@@ -61,6 +61,12 @@ router.get('', auth.optionalJwtMiddleware, async function(req, res, next) {
         $in: req.user.organizations.map(o => o.id)
       }
     })
+  } else {
+    // If we want to respond a 401, then we should change auth middleware
+    return res.json({
+      results: [],
+      count: 0
+    })
   }
   let mongoQueries = [
     size > 0 ? applicationConfigs.find(query).limit(size).skip(skip).sort(sort).project({

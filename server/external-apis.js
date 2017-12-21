@@ -79,9 +79,12 @@ router.get('', auth.optionalJwtMiddleware, async function(req, res, next) {
       }
     }))
   }
-  // TODO : handle permissions and set the correct filter on the list
+  query.$or = [{
+    'permissions.operationId': 'getInfo',
+    'permissions.type': null,
+    'permissions.id': null
+  }]
   if (req.user) {
-    query.$or = []
     query.$or.push({
       'owner.type': 'user',
       'owner.id': req.user.id
@@ -89,6 +92,18 @@ router.get('', auth.optionalJwtMiddleware, async function(req, res, next) {
     query.$or.push({
       'owner.type': 'organization',
       'owner.id': {
+        $in: req.user.organizations.map(o => o.id)
+      }
+    })
+    query.$or.push({
+      'permissions.operationId': 'getInfo',
+      'permissions.type': 'user',
+      'permissions.id': req.user.id
+    })
+    query.$or.push({
+      'permissions.operationId': 'getInfo',
+      'permissions.type': 'organization',
+      'permissions.id': {
         $in: req.user.organizations.map(o => o.id)
       }
     })
