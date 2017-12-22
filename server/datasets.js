@@ -134,8 +134,13 @@ router.get('/:datasetId', (req, res, next) => {
 // TODO: deprecate. Use PATCH.
 router.put('/:datasetId', async(req, res, next) => {
   if (!permissions(req.dataset, 'writeDescription', req.user)) return res.sendStatus(403)
-  var valid = validate(req.body)
+  let valid = validate(req.body)
   if (!valid) return res.status(400).send(validate.errors)
+  req.body.permissions = req.body.permissions || []
+  req.body.permissions.forEach(permission => {
+    if ((!permission.type && permission.id) || (permission.type && !permission.id)) valid = false
+  })
+  if (!valid) return res.status(400).send('Error in permissions format')
   req.body.updatedAt = moment().toISOString()
   req.body.updatedBy = req.user.id
   req.body.id = req.params.datasetId

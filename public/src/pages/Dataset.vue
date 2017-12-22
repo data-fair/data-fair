@@ -62,20 +62,20 @@
         <tabular-view :dataset="dataset"></tabular-view>
       </md-tab>
 
-      <!-- <md-tab md-label="Permissions" md-icon="security">
-        <permissions :dataset="dataset" @toggle-visibility="dataset.public = !dataset.public;save()"></permissions>
-      </md-tab> -->
+      <md-tab md-label="Permissions" md-icon="security" :md-active="activeTab === '2'">
+        <permissions :dataset="dataset" :api="api" @permissions-updated="save"></permissions>
+      </md-tab>
 
-      <md-tab md-label="Enrichissement" md-icon="merge_type" :md-disabled="!actions.length" :md-active="activeTab === '2'">
+      <md-tab md-label="Enrichissement" md-icon="merge_type" :md-disabled="!actions.length" :md-active="activeTab === '3'">
         <enrich-dataset :dataset="dataset" :actions="actions"></enrich-dataset>
       </md-tab>
 
-      <md-tab md-label="Journal" md-icon="event_note" :md-active="activeTab === '3'">
+      <md-tab md-label="Journal" md-icon="event_note" :md-active="activeTab === '4'">
         <journal :dataset="dataset"></journal>
       </md-tab>
 
-      <md-tab md-label="API" md-icon="cloud" :md-active="activeTab === '4'">
-        <DatasetAPIDoc :dataset="dataset"></DatasetAPIDoc>
+      <md-tab md-label="API" md-icon="cloud" :md-active="activeTab === '5'">
+        <open-api v-if="api" :api="api"></open-api>
       </md-tab>
     </md-tabs>
   </md-layout>
@@ -86,10 +86,10 @@
 import Permissions from '../components/Permissions.vue'
 import Journal from '../components/Journal.vue'
 import Schema from '../components/Schema.vue'
-import DatasetAPIDoc from '../components/DatasetAPIDoc.vue'
 import TabularView from '../components/TabularView.vue'
 import EnrichDataset from '../components/EnrichDataset.vue'
 import UserName from '../components/UserName.vue'
+import OpenApi from 'vue-openapi'
 
 const {
   mapState
@@ -101,16 +101,17 @@ export default {
     Permissions,
     Journal,
     Schema,
-    DatasetAPIDoc,
     TabularView,
     EnrichDataset,
-    UserName
+    UserName,
+    OpenApi
   },
   data: () => ({
     dataset: null,
     actions: [],
     users :{},
-    activeTab: null
+    activeTab: null,
+    api: null
   }),
   computed:{
     downloadLink() {
@@ -129,6 +130,9 @@ export default {
         this.users = Object.assign({}, ...results.data.results.map(user => ({
           [user.id]: user
         })))
+      })
+      this.$http.get(`${window.CONFIG.publicUrl}/api/v1/datasets/${this.dataset.id}/api-docs.json`).then(response => {
+        this.api = response.body
       })
     })
   },
