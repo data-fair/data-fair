@@ -19,6 +19,31 @@ module.exports = (dataset) => {
         get: {
           summary: 'Récupérer les informations du jeu de données.',
           operationId: 'getInfo',
+          tags: ['Métadonnées'],
+          responses: {
+            200: {
+              description: 'Les informations du jeu de données.',
+              content: {
+                'application/json': {
+                  schema: datasetSchema
+                }
+              }
+            }
+          }
+        },
+        put: {
+          summary: 'Mettre à jour les informations du jeu de données.',
+          operationId: 'setInfo',
+          tags: ['Métadonnées'],
+          requestBody: {
+            description: 'Fichier à charger et informations de propriété',
+            required: true,
+            content: {
+              'application/json': {
+                schema: datasetSchema
+              }
+            }
+          },
           responses: {
             200: {
               description: 'Les informations du jeu de données.',
@@ -35,6 +60,7 @@ module.exports = (dataset) => {
         get: {
           summary: 'Requêter les lignes du jeu de données.',
           operationId: 'search',
+          tags: ['Données'],
           parameters: [{ in: 'query',
             name: 'q',
             description: `
@@ -156,6 +182,7 @@ Pour plus d'information voir la documentation [ElasticSearch](https://www.elasti
       get: {
         summary: 'Récupérer des informations agrégées spatialement sur le jeu de données.',
         operationId: 'getGeoAgg',
+        tags: ['Données'],
         parameters: [{ in: 'query',
           name: 'bbox',
           description: "Un filtre pour restreindre les résultats à une zone géographique. Le format est 'gauche,bas,droite,haut' autrement dit 'lonMin,latMin,lonMax,latMax'. Par défaut la zone est la France métropolitaine.",
