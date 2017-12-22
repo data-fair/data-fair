@@ -1,7 +1,8 @@
 <template>
 <md-layout md-align="center">
   <md-layout md-column md-flex="90">
-    <md-table-card>
+    <h3 class="md-display-1">Statistiques</h3>
+    <md-table-card v-if="stats">
       <md-table v-if="userOrganizations">
         <md-table-header>
           <md-table-row>

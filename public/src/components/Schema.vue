@@ -31,7 +31,7 @@
               <label>Concept</label>
               <md-select v-model="field['x-refersTo']">
                 <md-option :value="null">Pas de concept</md-option>
-                <md-option :value="term.identifiers[0]" v-for="term in vocabulary.filter(term => !schema.find(f => f['x-refersTo'] === term.identifiers[0]))">{{term.title}}</md-option>
+                <md-option :value="term.identifiers[0]" v-for="term in vocabulary.filter(term => !schema.find(f => (f['x-refersTo'] === term.identifiers[0]) && (f.id !== field.id)))">{{term.title}}</md-option>
               </md-select>
             </md-input-container>
           </md-layout>

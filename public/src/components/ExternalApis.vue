@@ -1,6 +1,6 @@
 <template>
   <div>
-    <h3 class="md-display-1">{{externalApis.count}} API</h3>
+    <h3 class="md-display-1">{{externalApis.count}} services externes</h3>
     <md-layout md-row>
       <md-layout v-for="externalApi in externalApis.results" md-flex="50" md-flex-small="100" style="padding:16px">
         <md-card style="width:100%">

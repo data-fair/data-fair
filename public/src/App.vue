@@ -31,7 +31,7 @@
     </a>
     <md-menu md-align-trigger md-size="3" md-direction="bottom left" class="navbar-menu" v-if="user">
       <md-button md-menu-trigger class="page-link">
-        <md-icon>person</md-icon>&nbsp;{{user.firstName ? user.firstName : user.email.split('@')[0]}}
+        <md-icon>person</md-icon>&nbsp; <user-name :user="user"></user-name>
       </md-button>
       <md-menu-content class="navbar-menu-content">
         <md-menu-item @click.native="logout()">
@@ -67,9 +67,13 @@ const {
   mapState,
   mapActions
 } = require('vuex')
+import UserName from './components/UserName.vue'
 
 export default {
   name: 'app',
+  components : {
+    UserName
+  },
   computed: mapState({
     user: state => state.user,
     notification: state => state.notification,
