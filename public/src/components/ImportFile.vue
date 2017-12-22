@@ -1,6 +1,8 @@
 <template>
 <div>
-  <h3 class="md-display-1">Importer un fichier</h3>
+  <md-toolbar class="md-dense md-primary">
+    <h2 class="md-title" style="flex: 1">Importer un fichier</h2>
+  </md-toolbar>
   <md-stepper :md-alternate-labels="true" @change="currentStep = $event" @completed="importData">
     <md-step :md-editable="true" :md-label="currentStep ? 'Fichier sélectionné' : 'Sélection du fichier'" :md-continue="file !== null" :md-message="fileName ? fileName: 'Chargez un fichier csv'" :md-button-back="null" md-button-continue="Suivant">
       <md-input-container>
@@ -8,9 +10,9 @@
         <md-file v-model="fileName" @selected="onFileUpload" accept="text/csv"></md-file>
       </md-input-container>
     </md-step>
-    <md-step :md-editable="true" :md-disabled="!file" :md-label="currentStep > 1 ? 'Propriétaire choisi' : 'Choix du propriétaire'" :md-continue="file !== null && owner !== null" :md-message="owner ? (owners[owner].type === 'user' ? 'Vous même' : userOrganizations.find(o => o.id === owners[owner].id).name): 'Choisissez dans la liste'"
+    <md-step :md-editable="true" :md-disabled="!file" :md-label="currentStep > 1 ? 'Propriétaire choisi' : 'Choix du propriétaire'" :md-continue="file !== null && owner !== null" :md-message="owner ? (owners[owner].type === 'user' ? 'Vous même' : userOrganizations[owners[owner].id].name) : 'Choisissez dans la liste'"
       md-button-back="Précédent" md-button-continue="Suivant">
-      <md-radio v-model="owner" :md-value="key" v-for="key in Object.keys(owners)">{{key === 'user' ? 'Vous-même' : userOrganizations.find(o => o.id === owners[key].id).name}}</md-radio>
+      <md-radio v-model="owner" :md-value="key" v-for="key in Object.keys(owners)">{{key === 'user' ? 'Vous-même' : userOrganizations[owners[key].id].name}}</md-radio>
     </md-step>
     <md-step :md-disabled="!file || !owner" md-label="Action à effectuer" :md-continue="file !== null && owner !== null && action !== null && !uploading" :md-message="action ? actions[action].title : 'Choisissez dans la liste'" md-button-back="Précédent"
       md-button-continue="Lancer l'import">
@@ -35,7 +37,6 @@ export default {
     file: null,
     currentStep: null,
     owner: null,
-    userOrganizations: [],
     actions: {},
     action: null,
     uploading: false,
@@ -52,10 +53,10 @@ export default {
           type: 'user',
           id: this.user.id
         }
-      }, ...this.userOrganizations.map(o => ({
-        ['orga' + o.id]: {
+      }, ...Object.keys(this.userOrganizations || {}).map(o => ({
+        ['orga' + o]: {
           type: 'organization',
-          id: o.id
+          id: o
         }
       })))) || {}
     }
@@ -96,7 +97,14 @@ export default {
           const link = this.urlFromRoute({name:'Dataset', params:{datasetId: results.body.id}})
           this.$store.dispatch('notify', `Le fichier a bien été importé et le jeu de données a été créé. <a href="${link}">Accéder au jeu de données</a>`)
         }, error => {
-          this.$store.dispatch('notifyError', `Erreur ${error.status} pendant l'import du fichier`)
+          this.uploading = false
+          if(error.status === 413){
+              this.$store.dispatch('notifyError', `Le fichier est trop volumineux pour être importé`)
+          }else if(error.status === 429){
+              this.$store.dispatch('notifyError', `L'espace de stockage du propriétaire sélectionné n'a pas assez d'espace disponible pour contenir le fichier`)
+          }else{
+            this.$store.dispatch('notifyError', `Erreur ${error.status} pendant l'import du fichier`)
+          }
         })
       } else {
         formData.append('file', this.file)
@@ -105,7 +113,14 @@ export default {
           const link = this.urlFromRoute({name:'Dataset', params:{datasetId: results.body.id}})
           this.$store.dispatch('notify', `Le fichier a bien été importé et le jeu de données a été mis à jour. <a href="${link}">Accéder au jeu de données</a>`)
         }, error => {
-          this.$store.dispatch('notifyError', `Erreur ${error.status} pendant l'import du fichier`)
+          this.uploading = false
+          if(error.status === 413){
+              this.$store.dispatch('notifyError', `Le fichier est trop volumineux pour être importé`)
+          }else if(error.status === 429){
+              this.$store.dispatch('notifyError', `L'espace de stockage du propriétaire sélectionné n'a pas assez d'espace disponible pour contenir le fichier`)
+          }else{
+            this.$store.dispatch('notifyError', `Erreur ${error.status} pendant l'import du fichier`)
+          }
         })
       }
     }

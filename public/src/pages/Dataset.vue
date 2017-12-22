@@ -1,8 +1,8 @@
 <template>
 <md-layout md-align="center">
   <md-layout md-column md-flex="90" v-if="dataset">
-    <md-tabs md-fixed class="md-transparent">
-      <md-tab md-label="Métadonnées" md-icon="toc">
+    <md-tabs md-fixed class="md-transparent" @change="$router.push({query:{tab:$event}})">
+      <md-tab md-label="Métadonnées" md-icon="toc" :md-active="activeTab === '0'">
         <h3 class="md-headline">Informations</h3>
         <md-layout md-row>
           <md-layout md-column md-flex="45">
@@ -22,10 +22,10 @@
                   <md-icon>insert_drive_file</md-icon> <span>{{dataset.file.name}}</span> <span>{{(dataset.file.size / 1024).toFixed(2)}} ko</span>
                 </md-list-item>
                 <md-list-item>
-                  <md-icon>update</md-icon> <span>{{dataset.updatedBy}}</span> <span>{{dataset.updatedAt | moment("DD/MM/YYYY, HH:mm")}}</span>
+                  <md-icon>update</md-icon> <user-name :user="users[dataset.updatedBy]"></user-name> <span>{{dataset.updatedAt | moment("DD/MM/YYYY, HH:mm")}}</span>
                 </md-list-item>
                 <md-list-item>
-                  <md-icon>add_circle_outline</md-icon> <span>{{dataset.createdBy}}</span> <span>{{dataset.createdAt | moment("DD/MM/YYYY, HH:mm")}}</span>
+                  <md-icon>add_circle_outline</md-icon> <user-name :user="users[dataset.createdBy]"></user-name> <span>{{dataset.createdAt | moment("DD/MM/YYYY, HH:mm")}}</span>
                 </md-list-item>
               </md-list>
             </md-card>
@@ -58,7 +58,7 @@
         </md-layout>
       </md-tab>
 
-      <md-tab md-label="Vue tableau" md-icon="view_list">
+      <md-tab md-label="Vue tableau" md-icon="view_list" :md-active="activeTab === '1'">
         <tabular-view :dataset="dataset"></tabular-view>
       </md-tab>
 
@@ -66,15 +66,15 @@
         <permissions :dataset="dataset" @toggle-visibility="dataset.public = !dataset.public;save()"></permissions>
       </md-tab> -->
 
-      <md-tab md-label="Enrichissement" md-icon="merge_type" :md-disabled="!actions.length">
+      <md-tab md-label="Enrichissement" md-icon="merge_type" :md-disabled="!actions.length" :md-active="activeTab === '2'">
         <enrich-dataset :dataset="dataset" :actions="actions"></enrich-dataset>
       </md-tab>
 
-      <md-tab md-label="Journal" md-icon="event_note">
+      <md-tab md-label="Journal" md-icon="event_note" :md-active="activeTab === '3'">
         <journal :dataset="dataset"></journal>
       </md-tab>
 
-      <md-tab md-label="API" md-icon="cloud">
+      <md-tab md-label="API" md-icon="cloud" :md-active="activeTab === '4'">
         <DatasetAPIDoc :dataset="dataset"></DatasetAPIDoc>
       </md-tab>
     </md-tabs>
@@ -89,6 +89,11 @@ import Schema from '../components/Schema.vue'
 import DatasetAPIDoc from '../components/DatasetAPIDoc.vue'
 import TabularView from '../components/TabularView.vue'
 import EnrichDataset from '../components/EnrichDataset.vue'
+import UserName from '../components/UserName.vue'
+
+const {
+  mapState
+} = require('vuex')
 
 export default {
   name: 'dataset',
@@ -98,11 +103,14 @@ export default {
     Schema,
     DatasetAPIDoc,
     TabularView,
-    EnrichDataset
+    EnrichDataset,
+    UserName
   },
   data: () => ({
     dataset: null,
-    actions: []
+    actions: [],
+    users :{},
+    activeTab: null
   }),
   computed:{
     downloadLink() {
@@ -114,8 +122,14 @@ export default {
     }
   },
   mounted() {
+    this.activeTab = this.$route.query.tab || '0'
     this.$http.get(window.CONFIG.publicUrl + '/api/v1/datasets/' + this.$route.params.datasetId).then(result => {
       this.dataset = result.data
+      this.$http.get(window.CONFIG.directoryUrl + '/api/users?ids=' + this.dataset.createdBy +',' +this.dataset.createdBy).then(results => {
+        this.users = Object.assign({}, ...results.data.results.map(user => ({
+          [user.id]: user
+        })))
+      })
     })
   },
   methods: {

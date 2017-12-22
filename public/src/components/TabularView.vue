@@ -9,7 +9,7 @@
 
     <md-table-body>
       <md-table-row v-for="row in data.results">
-        <md-table-cell v-for="field in dataset.schema" :md-numeric="field.type === 'number' || field.key.type === 'integer'">{{row[field.key]}}</md-table-cell>
+        <md-table-cell v-for="field in dataset.schema" :md-numeric="field.type === 'number' || field.key.type === 'integer'">{{(row[field.key] + '') | truncate(50)}}<md-tooltip md-direction="top" v-if="(row[field.key] + '').length > 50">{{row[field.key]}}</md-tooltip></md-table-cell>
       </md-table-row>
     </md-table-body>
   </md-table>

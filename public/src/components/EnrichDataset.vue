@@ -1,5 +1,5 @@
 <template lang="html">
-  <md-list>
+  <md-list v-if="vocabulary">
     <md-list-item v-for="action in actions">
       <md-layout md-row style="padding:8px" md-vertical-align="center">
         <md-layout md-column md-flex="10">

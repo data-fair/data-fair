@@ -4,6 +4,7 @@ import 'vue-material/dist/vue-material.css'
 import VueResource from 'vue-resource'
 import VueRouter from 'vue-router'
 import VueCookie from 'vue-cookie'
+import VueTruncate from 'vue-truncate-filter'
 
 import routes from './routes.js'
 import store from './store.js'
@@ -17,6 +18,7 @@ Vue.use(VueResource)
 Vue.use(VueRouter)
 Vue.use(require('vue-moment'))
 Vue.use(VueCookie)
+Vue.use(VueTruncate)
 
 Vue.material.registerTheme('default', {
   primary: {
