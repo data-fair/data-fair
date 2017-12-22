@@ -59,7 +59,7 @@ const upload = multer({
     const contentLength = Number(req.get('Content-Length'))
     if (Number.isNaN(contentLength)) return cb(createError(400, 'Content-Length is not a number'))
     // Approximate size of multi-part overhead and owner metadata
-    const estimatedFileSize = contentLength - 500
+    const estimatedFileSize = contentLength - 210
     const datasetLimit = config.defaultLimits.datasetStorage
     if (datasetLimit !== -1 && datasetLimit < estimatedFileSize) return cb(createError(413, 'Dataset size exceeds the authorized limit'))
     let totalSize = await datasetUtils.storageSize(req.app.get('db'), owner)

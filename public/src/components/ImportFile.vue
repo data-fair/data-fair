@@ -43,7 +43,8 @@ export default {
   }),
   computed: {
     ...mapState({
-      user: state => state.user
+      user: state => state.user,
+      userOrganizations: state => state.userOrganizations
     }),
     owners() {
       return (this.user && Object.assign({
@@ -57,13 +58,6 @@ export default {
           id: o.id
         }
       })))) || {}
-    }
-  },
-  mounted() {
-    if (this.user) {
-      this.$http.get(window.CONFIG.directoryUrl + '/api/organizations?is-member=true').then(response => {
-        this.userOrganizations = response.data.results
-      })
     }
   },
   methods: {

@@ -9,8 +9,6 @@ const indexer = require('../server/workers/indexer')
 test('Get lines in dataset', async t => {
   const datasetData = fs.readFileSync('./test/resources/dataset1.csv')
   const form = new FormData()
-  form.append('owner[type]', 'user')
-  form.append('owner[id]', 'dmeadus0')
   form.append('file', datasetData, 'dataset.csv')
   const ax = await testUtils.axios('dmeadus0@answers.com')
 

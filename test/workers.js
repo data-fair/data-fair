@@ -14,8 +14,6 @@ test('Process newly uploaded dataset', async t => {
   // Send dataset
   const datasetFd = fs.readFileSync('./test/resources/dataset1.csv')
   const form = new FormData()
-  form.append('owner[type]', 'user')
-  form.append('owner[id]', 'dmeadus0')
   form.append('file', datasetFd, 'dataset.csv')
   const ax = await testUtils.axios('dmeadus0@answers.com')
   let res = await ax.post('/api/v1/datasets', form, {headers: testUtils.formHeaders(form)})
