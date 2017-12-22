@@ -140,6 +140,13 @@
     "geopoint": {
       "type": "boolean",
       "description": "Specify if the dataset items are indexed as geopoints"
+    },
+    "bbox": {
+      "type": "array",
+      "description": "The spatial coverage of this dataset, in bounding box format.",
+      "items": {
+        "type":"number"
+      }
     }
   }
 }
