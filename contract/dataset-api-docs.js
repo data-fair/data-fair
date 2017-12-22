@@ -18,7 +18,7 @@ module.exports = (dataset) => {
       '/': {
         get: {
           summary: 'Récupérer les informations du jeu de données.',
-          operationId: 'getInfo',
+          operationId: 'readDescription',
           tags: ['Métadonnées'],
           responses: {
             200: {
@@ -33,7 +33,7 @@ module.exports = (dataset) => {
         },
         put: {
           summary: 'Mettre à jour les informations du jeu de données.',
-          operationId: 'setInfo',
+          operationId: 'writeDescription',
           tags: ['Métadonnées'],
           requestBody: {
             description: 'Fichier à charger et informations de propriété',

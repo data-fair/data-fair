@@ -62,7 +62,7 @@ router.get('', auth.optionalJwtMiddleware, async function(req, res, next) {
     }))
   }
   query.$or = [{
-    'permissions.operationId': 'getInfo',
+    'permissions.operationId': 'readDescription',
     'permissions.type': null,
     'permissions.id': null
   }]
@@ -78,12 +78,12 @@ router.get('', auth.optionalJwtMiddleware, async function(req, res, next) {
       }
     })
     query.$or.push({
-      'permissions.operationId': 'getInfo',
+      'permissions.operationId': 'readDescription',
       'permissions.type': 'user',
       'permissions.id': req.user.id
     })
     query.$or.push({
-      'permissions.operationId': 'getInfo',
+      'permissions.operationId': 'readDescription',
       'permissions.type': 'organization',
       'permissions.id': {
         $in: req.user.organizations.map(o => o.id)
@@ -260,7 +260,7 @@ router.post('/:datasetId', filesUtils.uploadFile(), async(req, res, next) => {
 
 // Read/search data for a dataset
 router.get('/:datasetId/lines', async(req, res, next) => {
-  if (!permissions(req.dataset, 'readData', req.user)) return res.sendStatus(403)
+  if (!permissions(req.dataset, 'readLines', req.user)) return res.sendStatus(403)
   try {
     const result = await esUtils.searchInDataset(req.dataset, req.query)
     res.status(200).send(result)
@@ -271,7 +271,7 @@ router.get('/:datasetId/lines', async(req, res, next) => {
 
 // Special geo aggregation
 router.get('/:datasetId/geo_agg', async(req, res, next) => {
-  if (!permissions(req.dataset, 'readData', req.user)) return res.sendStatus(403)
+  if (!permissions(req.dataset, 'getGeoAgg', req.user)) return res.sendStatus(403)
   try {
     const result = await esUtils.geoAgg(req.dataset, req.query)
     res.status(200).send(result)
