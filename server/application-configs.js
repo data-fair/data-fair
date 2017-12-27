@@ -9,68 +9,24 @@ const validate = ajv.compile(applicationConfigSchema)
 
 const permissions = require('./utils/permissions')
 const usersUtils = require('./utils/users')
+const findUtils = require('./utils/find')
 
 const router = module.exports = express.Router()
 
 // Get the list of application-configs
 router.get('', auth.optionalJwtMiddleware, async function(req, res, next) {
   const applicationConfigs = req.app.get('db').collection('application-configs')
-  let query = {}
-  let sort = {}
-  let size = 10
-  let skip = 0
-  if (req.query) {
-    if (req.query.size && !isNaN(parseInt(req.query.size))) {
-      size = parseInt(req.query.size)
-    }
-    if (req.query.skip && !isNaN(parseInt(req.query.skip))) {
-      skip = parseInt(req.query.skip)
-    }
-    if (req.query.q) {
-      query.$text = {
-        $search: req.query.q
-      }
-    }
-    Object.assign(query, ...[{
-      name: 'owner-type',
-      field: 'owner.type'
-    }, {
-      name: 'owner-id',
-      field: 'owner.id'
-    }].filter(p => req.query[p.name] !== undefined).map(p => ({
-      [p.field]: {
-        $in: req.query[p.name].split(',')
-      }
-    })))
-  }
-  if (req.query.sort) {
-    Object.assign(sort, ...req.query.sort.split(',').map(s => {
-      let toks = s.split(':')
-      return {
-        [toks[0]]: Number(toks[1])
-      }
-    }))
-  }
-  // TODO : handle permissions and set the correct filter on the list
-  if (req.user) {
-    query.$or = []
-    query.$or.push({
-      'owner.type': 'user',
-      'owner.id': req.user.id
-    })
-    query.$or.push({
-      'owner.type': 'organization',
-      'owner.id': {
-        $in: req.user.organizations.map(o => o.id)
-      }
-    })
-  } else {
+  if (!req.user) {
     // If we want to respond a 401, then we should change auth middleware
     return res.json({
       results: [],
       count: 0
     })
   }
+  const query = findUtils.query(req.query, {})
+  const sort = findUtils.sort(req.query.sort)
+  const [skip, size] = findUtils.pagination(req.query)
+  query.$or = permissions.filter(req.user)
   let mongoQueries = [
     size > 0 ? applicationConfigs.find(query).limit(size).skip(skip).sort(sort).project({
       _id: 0,
@@ -79,11 +35,8 @@ router.get('', auth.optionalJwtMiddleware, async function(req, res, next) {
     applicationConfigs.find(query).count()
   ]
   try {
-    let [documents, count] = await Promise.all(mongoQueries)
-    res.json({
-      results: documents,
-      count: count
-    })
+    let [results, count] = await Promise.all(mongoQueries)
+    res.json({results, count})
   } catch (err) {
     next(err)
   }
@@ -128,14 +81,14 @@ router.use('/:applicationConfigId', auth.optionalJwtMiddleware, async function(r
 
 // retrieve a applicationConfig by its id
 router.get('/:applicationConfigId', (req, res, next) => {
-  if (!permissions(req.applicationConfig, 'readDescription', req.user)) return res.sendStatus(403)
+  if (!permissions.can(req.applicationConfig, 'readDescription', req.user)) return res.sendStatus(403)
   res.status(200).send(req.applicationConfig)
 })
 
 // update a applicationConfig
 // TODO: prevent overwriting owner and maybe other calculated fields.. A PATCH route like in datasets ?
 router.put('/:applicationConfigId', async(req, res, next) => {
-  if (!permissions(req.applicationConfig, 'writeDescription', req.user)) return res.sendStatus(403)
+  if (!permissions.can(req.applicationConfig, 'writeDescription', req.user)) return res.sendStatus(403)
   var valid = validate(req.body)
   if (!valid) return res.status(400).send(validate.errors)
   req.body.updatedAt = moment().toISOString()
@@ -153,7 +106,7 @@ router.put('/:applicationConfigId', async(req, res, next) => {
 
 // Delete a applicationConfig
 router.delete('/:applicationConfigId', async(req, res, next) => {
-  if (!permissions(req.applicationConfig, 'delete', req.user)) return res.sendStatus(403)
+  if (!permissions.can(req.applicationConfig, 'delete', req.user)) return res.sendStatus(403)
   try {
     // TODO : Remove indexes
     await req.app.get('db').collection('application-configs').deleteOne({
@@ -172,7 +125,7 @@ router.get('/:applicationConfigId/config', (req, res, next) => {
 
 // retrieve a applicationConfig by its id
 router.put('/:applicationConfigId/config', async(req, res, next) => {
-  if (!permissions(req.applicationConfig, 'writeConfig', req.user)) return res.sendStatus(403)
+  if (!permissions.can(req.applicationConfig, 'writeConfig', req.user)) return res.sendStatus(403)
   await req.app.get('db').collection('application-configs').updateOne({
     id: req.params.applicationConfigId
   }, {

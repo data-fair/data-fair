@@ -16,9 +16,11 @@ const validateOpenApi = ajv.compile(openApiSchema)
 
 const permissions = require('./utils/permissions')
 const usersUtils = require('./utils/users')
+const findUtils = require('./utils/find')
 
 const router = module.exports = express.Router()
 
+// TODO: explain ? simplify ? hard to understand piece of code
 const computeActions = (apiDoc) => {
   const actions = soasLoader(apiDoc).actions()
   actions.forEach(a => {
@@ -35,93 +37,21 @@ const computeActions = (apiDoc) => {
 // Get the list of external-apis
 router.get('', auth.optionalJwtMiddleware, async function(req, res, next) {
   const externalApis = req.app.get('db').collection('external-apis')
-  let query = {}
-  let sort = {}
-  let size = 10
-  let skip = 0
-  if (req.query) {
-    if (req.query.size && !isNaN(parseInt(req.query.size))) {
-      size = parseInt(req.query.size)
-    }
-    if (req.query.skip && !isNaN(parseInt(req.query.skip))) {
-      skip = parseInt(req.query.skip)
-    }
-    if (req.query.q) {
-      query.$text = {
-        $search: req.query.q
-      }
-    }
-    Object.assign(query, ...[{
-      name: 'owner-type',
-      field: 'owner.type'
-    }, {
-      name: 'owner-id',
-      field: 'owner.id'
-    }, {
-      name: 'input-concepts',
-      field: 'actions.input.concept'
-    }, {
-      name: 'output-concepts',
-      field: 'actions.output.concept'
-    }, {
-      name: 'api-id',
-      field: 'apiDoc.info.x-api-id'
-    }].filter(p => req.query[p.name] !== undefined).map(p => ({
-      [p.field]: {
-        $in: req.query[p.name].split(',')
-      }
-    })))
-  }
-  if (req.query.sort) {
-    Object.assign(sort, ...req.query.sort.split(',').map(s => {
-      let toks = s.split(':')
-      return {
-        [toks[0]]: Number(toks[1])
-      }
-    }))
-  }
-  query.$or = [{
-    'permissions.operationId': 'getInfo',
-    'permissions.type': null,
-    'permissions.id': null
-  }]
-  if (req.user) {
-    query.$or.push({
-      'owner.type': 'user',
-      'owner.id': req.user.id
-    })
-    query.$or.push({
-      'owner.type': 'organization',
-      'owner.id': {
-        $in: req.user.organizations.map(o => o.id)
-      }
-    })
-    query.$or.push({
-      'permissions.operationId': 'getInfo',
-      'permissions.type': 'user',
-      'permissions.id': req.user.id
-    })
-    query.$or.push({
-      'permissions.operationId': 'getInfo',
-      'permissions.type': 'organization',
-      'permissions.id': {
-        $in: req.user.organizations.map(o => o.id)
-      }
-    })
-  }
+  const query = findUtils.query(req.query, {
+    'input-concepts': 'actions.input.concept',
+    'output-concepts': 'actions.output.concept',
+    'api-id': 'apiDoc.info.x-api-id'
+  })
+  const sort = findUtils.sort(req.query.sort)
+  const [skip, size] = findUtils.pagination(req.query)
+  query.$or = permissions.filter(req.user)
   let mongoQueries = [
-    size > 0 ? externalApis.find(query).limit(size).skip(skip).sort(sort).project({
-      _id: 0,
-      source: 0
-    }).toArray() : Promise.resolve([]),
+    size > 0 ? externalApis.find(query).limit(size).skip(skip).sort(sort).project({_id: 0}).toArray() : Promise.resolve([]),
     externalApis.find(query).count()
   ]
   try {
-    let [documents, count] = await Promise.all(mongoQueries)
-    res.json({
-      results: documents,
-      count: count
-    })
+    const [results, count] = await Promise.all(mongoQueries)
+    res.json({results, count})
   } catch (err) {
     next(err)
   }
@@ -173,14 +103,14 @@ router.use('/:externalApiId', auth.optionalJwtMiddleware, async function(req, re
 
 // retrieve a externalApi by its id
 router.get('/:externalApiId', (req, res, next) => {
-  if (!permissions(req.externalApi, 'readDescription', req.user)) return res.sendStatus(403)
+  if (!permissions.can(req.externalApi, 'readDescription', req.user)) return res.sendStatus(403)
   res.status(200).send(req.externalApi)
 })
 
 // update a externalApi
 // TODO: prevent overwriting owner and maybe other calculated fields.. A PATCH route like in datasets ?
 router.put('/:externalApiId', async(req, res, next) => {
-  if (!permissions(req.externalApi, 'writeDescription', req.user)) return res.sendStatus(403)
+  if (!permissions.can(req.externalApi, 'writeDescription', req.user)) return res.sendStatus(403)
   var valid = validateExternalApi(req.body)
   if (!valid) return res.status(400).send(normalise(validateExternalApi.errors))
   req.body.updatedAt = moment().toISOString()
@@ -201,7 +131,7 @@ router.put('/:externalApiId', async(req, res, next) => {
 
 // Delete a externalApi
 router.delete('/:externalApiId', async(req, res, next) => {
-  if (!permissions(req.externalApi, 'delete', req.user)) return res.sendStatus(403)
+  if (!permissions.can(req.externalApi, 'delete', req.user)) return res.sendStatus(403)
   try {
     // TODO : Remove indexes
     await req.app.get('db').collection('external-apis').deleteOne({
@@ -214,7 +144,7 @@ router.delete('/:externalApiId', async(req, res, next) => {
 })
 
 router.post('/:externalApiId/_update', async(req, res, next) => {
-  if (!permissions(req.externalApi, 'writeDescription', req.user)) return res.sendStatus(403)
+  if (!permissions.can(req.externalApi, 'writeDescription', req.user)) return res.sendStatus(403)
   if (req.externalApi.url) {
     try {
       const reponse = await axios.get(req.externalApi.url)

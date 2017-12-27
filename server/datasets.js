@@ -11,6 +11,7 @@ const filesUtils = require('./utils/files')
 const datasetAPIDocs = require('../contract/dataset-api-docs')
 const permissions = require('./utils/permissions')
 const usersUtils = require('./utils/users')
+const findUtils = require('./utils/find')
 
 const validate = ajv.compile(datasetSchema)
 const datasetSchemaNoRequired = Object.assign(datasetSchema)
@@ -22,87 +23,20 @@ let router = express.Router()
 // Get the list of datasets
 router.get('', auth.optionalJwtMiddleware, async function(req, res, next) {
   let datasets = req.app.get('db').collection('datasets')
-  let query = {}
-  let sort = {}
-  let size = 10
-  let skip = 0
-  if (req.query) {
-    if (req.query.size && !isNaN(parseInt(req.query.size))) {
-      size = parseInt(req.query.size)
-    }
-    if (req.query.skip && !isNaN(parseInt(req.query.skip))) {
-      skip = parseInt(req.query.skip)
-    }
-    if (req.query.q) {
-      query.$text = {
-        $search: req.query.q
-      }
-    }
-    Object.assign(query, ...[{
-      name: 'owner-type',
-      field: 'owner.type'
-    }, {
-      name: 'owner-id',
-      field: 'owner.id'
-    }, {
-      name: 'filename',
-      field: 'file.name'
-    }, {
-      name: 'concepts',
-      field: 'schema.x-refersTo'
-    }].filter(p => req.query[p.name] !== undefined).map(p => ({
-      [p.field]: req.query[p.name]
-    })))
-  }
-  if (req.query.sort) {
-    Object.assign(sort, ...req.query.sort.split(',').map(s => {
-      let toks = s.split(':')
-      return {
-        [toks[0]]: Number(toks[1])
-      }
-    }))
-  }
-  query.$or = [{
-    'permissions.operationId': 'readDescription',
-    'permissions.type': null,
-    'permissions.id': null
-  }]
-  if (req.user) {
-    query.$or.push({
-      'owner.type': 'user',
-      'owner.id': req.user.id
-    })
-    query.$or.push({
-      'owner.type': 'organization',
-      'owner.id': {
-        $in: req.user.organizations.map(o => o.id)
-      }
-    })
-    query.$or.push({
-      'permissions.operationId': 'readDescription',
-      'permissions.type': 'user',
-      'permissions.id': req.user.id
-    })
-    query.$or.push({
-      'permissions.operationId': 'readDescription',
-      'permissions.type': 'organization',
-      'permissions.id': {
-        $in: req.user.organizations.map(o => o.id)
-      }
-    })
-  }
+  const query = findUtils.query(req.query, {
+    'filename': 'file.name',
+    'concepts': 'schema.x-refersTo'
+  })
+  const sort = findUtils.sort(req.query.sort)
+  const [skip, size] = findUtils.pagination(req.query)
+  query.$or = permissions.filter(req.user)
   let mongoQueries = [
-    size > 0 ? datasets.find(query).limit(size).skip(skip).sort(sort).project({
-      _id: 0
-    }).toArray() : Promise.resolve([]),
+    size > 0 ? datasets.find(query).limit(size).skip(skip).sort(sort).project({_id: 0}).toArray() : Promise.resolve([]),
     datasets.find(query).count()
   ]
   try {
-    let [documents, count] = await Promise.all(mongoQueries)
-    res.json({
-      results: documents,
-      count: count
-    })
+    const [results, count] = await Promise.all(mongoQueries)
+    res.json({results, count})
   } catch (err) {
     next(err)
   }
@@ -127,14 +61,14 @@ router.use('/:datasetId', auth.optionalJwtMiddleware, async function(req, res, n
 
 // retrieve a dataset by its id
 router.get('/:datasetId', (req, res, next) => {
-  if (!permissions(req.dataset, 'readDescription', req.user)) return res.sendStatus(403)
+  if (!permissions.can(req.dataset, 'readDescription', req.user)) return res.sendStatus(403)
   res.status(200).send(req.dataset)
 })
 
 // update a dataset
 // TODO: deprecate. Use PATCH.
 router.put('/:datasetId', async(req, res, next) => {
-  if (!permissions(req.dataset, 'writeDescription', req.user)) return res.sendStatus(403)
+  if (!permissions.can(req.dataset, 'writeDescription', req.user)) return res.sendStatus(403)
   let valid = validate(req.body)
   if (!valid) return res.status(400).send(validate.errors)
   req.body.permissions = req.body.permissions || []
@@ -157,7 +91,7 @@ router.put('/:datasetId', async(req, res, next) => {
 
 router.patch('/:datasetId', async (req, res, next) => {
   try {
-    if (!permissions(req.dataset, 'writeDescription', req.user)) return res.sendStatus(403)
+    if (!permissions.can(req.dataset, 'writeDescription', req.user)) return res.sendStatus(403)
     var valid = validateNoRequired(req.body)
     if (!valid) return res.status(400).send(validate.errors)
 
@@ -181,7 +115,7 @@ const datasetUtils = require('./utils/dataset')
 const unlink = util.promisify(fs.unlink)
 // Delete a dataset
 router.delete('/:datasetId', async(req, res, next) => {
-  if (!permissions(req.dataset, 'delete', req.user)) return res.sendStatus(403)
+  if (!permissions.can(req.dataset, 'delete', req.user)) return res.sendStatus(403)
   try {
     // TODO : Remove indexes
     await unlink(datasetUtils.fileName(req.dataset))
@@ -233,7 +167,7 @@ router.post('', auth.jwtMiddleware, filesUtils.uploadFile(), async(req, res, nex
 
 // Update an existing dataset data
 router.post('/:datasetId', filesUtils.uploadFile(), async(req, res, next) => {
-  if (!permissions(req.dataset, 'writeData', req.user)) return res.sendStatus(403)
+  if (!permissions.can(req.dataset, 'writeData', req.user)) return res.sendStatus(403)
   if (!req.file) return res.sendStatus(400)
   try {
     req.dataset.file = {
@@ -261,7 +195,7 @@ router.post('/:datasetId', filesUtils.uploadFile(), async(req, res, next) => {
 
 // Read/search data for a dataset
 router.get('/:datasetId/lines', async(req, res, next) => {
-  if (!permissions(req.dataset, 'readLines', req.user)) return res.sendStatus(403)
+  if (!permissions.can(req.dataset, 'readLines', req.user)) return res.sendStatus(403)
   try {
     const result = await esUtils.searchInDataset(req.dataset, req.query)
     res.status(200).send(result)
@@ -272,7 +206,7 @@ router.get('/:datasetId/lines', async(req, res, next) => {
 
 // Special geo aggregation
 router.get('/:datasetId/geo_agg', async(req, res, next) => {
-  if (!permissions(req.dataset, 'getGeoAgg', req.user)) return res.sendStatus(403)
+  if (!permissions.can(req.dataset, 'getGeoAgg', req.user)) return res.sendStatus(403)
   try {
     const result = await esUtils.geoAgg(req.dataset, req.query)
     res.status(200).send(result)
@@ -283,7 +217,7 @@ router.get('/:datasetId/geo_agg', async(req, res, next) => {
 
 // Standard aggregation to group items by value and perform an optional metric calculation on each group
 router.get('/:datasetId/values_agg', async(req, res, next) => {
-  if (!permissions(req.dataset, 'getValuesAgg', req.user)) return res.sendStatus(403)
+  if (!permissions.can(req.dataset, 'getValuesAgg', req.user)) return res.sendStatus(403)
   try {
     const result = await esUtils.valuesAgg(req.dataset, req.query)
     res.status(200).send(result)
@@ -294,7 +228,7 @@ router.get('/:datasetId/values_agg', async(req, res, next) => {
 
 // Simple metric aggregation to calculate some value (sum, avg, etc.)
 router.get('/:datasetId/metric_agg', async(req, res, next) => {
-  if (!permissions(req.dataset, 'getMetricAgg', req.user)) return res.sendStatus(403)
+  if (!permissions.can(req.dataset, 'getMetricAgg', req.user)) return res.sendStatus(403)
   try {
     const result = await esUtils.metricAgg(req.dataset, req.query)
     res.status(200).send(result)
@@ -306,7 +240,7 @@ router.get('/:datasetId/metric_agg', async(req, res, next) => {
 // Download the full dataset in its original form
 router.get('/:datasetId/raw/:fileName', async(req, res, next) => {
   if (req.params.fileName !== req.dataset.file.name) return res.sendStatus(404)
-  if (!permissions(req.dataset, 'readData', req.user)) return res.sendStatus(403)
+  if (!permissions.can(req.dataset, 'readData', req.user)) return res.sendStatus(403)
   res.download(datasetUtils.fileName(req.dataset))
 })
 
