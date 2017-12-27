@@ -7,7 +7,7 @@ const fieldsSniffer = require('./fields-sniffer')
 const datasetUtils = require('./dataset')
 
 function uploadDir(req) {
-  return path.join(config.dataDir, req.get('x-organisationId') ? 'organization' : 'user', req.get('x-organisationId') || req.user.id)
+  return path.join(config.dataDir, req.get('x-organizationId') ? 'organization' : 'user', req.get('x-organizationId') || req.user.id)
 }
 
 const storage = multer.diskStorage({
@@ -52,7 +52,7 @@ const upload = multer({
   fileFilter: async function fileFilter(req, file, cb) {
     if (!req.body) return cb(createError(400, 'Missing body'))
 
-    let owner = {type: req.get('x-organisationId') ? 'organization' : 'user', id: req.get('x-organisationId') || req.user.id}
+    let owner = {type: req.get('x-organizationId') ? 'organization' : 'user', id: req.get('x-organizationId') || req.user.id}
     if (req.dataset) owner = req.dataset.owner
     // manage disk storage quota
     if (!req.get('Content-Length')) return cb(createError(411, 'Content-Length is mandatory'))

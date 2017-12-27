@@ -29,18 +29,6 @@ test('Get datasets when authenticated', async t => {
 })
 
 const datasetFd = fs.readFileSync('./test/resources/dataset1.csv')
-//
-// test('Failure to upload new dataset with missing metadata', async t => {
-//   const ax = await testUtils.axios('dmeadus0@answers.com')
-//   const form = new FormData()
-//   form.append('file', datasetFd, 'dataset1.csv')
-//   try {
-//     await ax.post('/api/v1/datasets', form, {headers: testUtils.formHeaders(form)})
-//     t.fail()
-//   } catch (err) {
-//     t.is(err.response.status, 400)
-//   }
-// })
 
 test('Failure to upload dataset exceeding limit', async t => {
   const ax = await testUtils.axios('dmeadus0@answers.com')
@@ -76,14 +64,18 @@ test('Upload new dataset in user zone', async t => {
   form.append('file', datasetFd, 'dataset1.csv')
   const res = await ax.post('/api/v1/datasets', form, {headers: testUtils.formHeaders(form)})
   t.is(res.status, 201)
+  t.is(res.data.owner.type, 'user')
+  t.is(res.data.owner.id, 'dmeadus0')
 })
 
 test('Upload new dataset in organization zone', async t => {
   const ax = await testUtils.axios('dmeadus0@answers.com')
   const form = new FormData()
   form.append('file', datasetFd, 'dataset2.csv')
-  const res = await ax.post('/api/v1/datasets', form, {headers: Object.assign({'x-organisationId': 'KWqAGZ4mG'}, testUtils.formHeaders(form))})
+  const res = await ax.post('/api/v1/datasets', form, {headers: testUtils.formHeaders(form, 'KWqAGZ4mG')})
   t.is(res.status, 201)
+  t.is(res.data.owner.type, 'organization')
+  t.is(res.data.owner.id, 'KWqAGZ4mG')
 })
 
 test('Uploading same file twice should increment id', async t => {
@@ -91,7 +83,7 @@ test('Uploading same file twice should increment id', async t => {
   for (let i of [1, 2, 3]) {
     const form = new FormData()
     form.append('file', datasetFd, 'my-dataset.csv')
-    const res = await ax.post('/api/v1/datasets', form, {headers: Object.assign({'x-organisationId': 'KWqAGZ4mG'}, testUtils.formHeaders(form))})
+    const res = await ax.post('/api/v1/datasets', form, {headers: testUtils.formHeaders(form, 'KWqAGZ4mG')})
     t.is(res.status, 201)
     t.is(res.data.id, 'my-dataset' + (i === 1 ? '' : i))
   }

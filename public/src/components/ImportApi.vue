@@ -126,8 +126,12 @@ export default {
       }
       this.uploading = true
       if (this.actions[this.action].type === 'create') {
+        if(this.owners[this.owner].type === 'organization'){
+          options.headers = {
+            'x-organizationId' : this.owners[this.owner].id
+          }
+        }
         this.$http.post(window.CONFIG.publicUrl + '/api/v1/external-apis', {
-          owner: this.owners[this.owner],
           apiDoc: this.apiDoc,
           url: this.apiDocUrl,
           server: this.apiDoc.servers && this.apiDoc.servers.length && this.apiDoc.servers[0].url
@@ -147,6 +151,7 @@ export default {
           this.reset()
         })
       } else {
+        /* TODO: What is this supposed to do ? formData is not defined.
         this.$http.post(window.CONFIG.publicUrl + '/api/v1/external-apis/' + this.actions[this.action].id, formData, options).then(results => {
           this.reset()
           const link = this.urlFromRoute({
@@ -160,6 +165,7 @@ export default {
           this.$store.dispatch('notifyError', `Erreur ${error.status} pendant l'import du fichier`)
           this.reset()
         })
+        */
       }
     }
   },

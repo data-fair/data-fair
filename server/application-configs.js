@@ -1,11 +1,14 @@
 const express = require('express')
 const auth = require('./auth')
+const moment = require('moment')
+const shortid = require('shortid')
+
 const ajv = require('ajv')()
 const applicationConfigSchema = require('../contract/application-config.json')
 const validate = ajv.compile(applicationConfigSchema)
+
 const permissions = require('./utils/permissions')
-const moment = require('moment')
-const shortid = require('shortid')
+const usersUtils = require('./utils/users')
 
 const router = module.exports = express.Router()
 
@@ -90,6 +93,7 @@ router.get('', auth.optionalJwtMiddleware, async function(req, res, next) {
 router.post('', auth.jwtMiddleware, async(req, res, next) => {
   // This id is temporary, we should have an human understandable id, or perhaps manage it UI side ?
   req.body.id = req.body.id || shortid.generate()
+  req.body.owner = usersUtils.owner(req)
   var valid = validate(req.body)
   if (!valid) return res.status(400).send(validate.errors)
   const date = moment().toISOString()
@@ -129,6 +133,7 @@ router.get('/:applicationConfigId', (req, res, next) => {
 })
 
 // update a applicationConfig
+// TODO: prevent overwriting owner and maybe other calculated fields.. A PATCH route like in datasets ?
 router.put('/:applicationConfigId', async(req, res, next) => {
   if (!permissions(req.applicationConfig, 'writeDescription', req.user)) return res.sendStatus(403)
   var valid = validate(req.body)

@@ -87,7 +87,7 @@ export default {
       if (this.actions[this.action].type === 'create') {
         if(this.owners[this.owner].type === 'organization'){
           options.headers = {
-            'x-organisationId' : this.owners[this.owner].id
+            'x-organizationId' : this.owners[this.owner].id
           }
         }
         formData.append('file', this.file)

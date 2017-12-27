@@ -95,10 +95,15 @@ export default {
     },
     createApplicationConfig() {
       this.uploading = true
+      const options = {}
+      if(this.owners[this.owner].type === 'organization'){
+        options.headers = {
+          'x-organizationId' : this.owners[this.owner].id
+        }
+      }
       this.$http.post(window.CONFIG.publicUrl + '/api/v1/application-configs', Object.assign({
-        owner: this.owners[this.owner],
         url: this.applicationUrl
-      }, this.description)).then(results => {
+      }, this.description), options).then(results => {
         this.$emit('application-config-created')
         this.reset()
         const link = this.urlFromRoute({

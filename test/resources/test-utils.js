@@ -61,6 +61,8 @@ exports.axios = async (email) => {
   return ax
 }
 
-exports.formHeaders = (form) => {
-  return {'Content-Length': form.getLengthSync(), ...form.getHeaders()}
+exports.formHeaders = (form, organizationId) => {
+  const headers = {'Content-Length': form.getLengthSync(), ...form.getHeaders()}
+  if (organizationId) headers['x-organizationId'] = organizationId
+  return headers
 }

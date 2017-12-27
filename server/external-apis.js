@@ -1,20 +1,21 @@
 const express = require('express')
 const auth = require('./auth')
-const ajv = require('ajv')()
-
-const externalApiSchema = require('../contract/external-api.js')
-const validateExternalApi = ajv.compile(externalApiSchema)
-const openApiSchema = require('../contract/openapi-3.0.json')
-openApiSchema.$id = openApiSchema.$id + '-2' // dirty hack to handle ajv error
-const validateOpenApi = ajv.compile(openApiSchema)
 const normalise = require('ajv-error-messages')
-
-const permissions = require('./utils/permissions')
 const moment = require('moment')
 const shortid = require('shortid')
 const soasLoader = require('soas')
 const axios = require('axios')
 const requestProxy = require('express-request-proxy')
+
+const ajv = require('ajv')()
+const externalApiSchema = require('../contract/external-api.js')
+const validateExternalApi = ajv.compile(externalApiSchema)
+const openApiSchema = require('../contract/openapi-3.0.json')
+openApiSchema.$id = openApiSchema.$id + '-2' // dirty hack to handle ajv error
+const validateOpenApi = ajv.compile(openApiSchema)
+
+const permissions = require('./utils/permissions')
+const usersUtils = require('./utils/users')
 
 const router = module.exports = express.Router()
 
@@ -130,6 +131,7 @@ router.get('', auth.optionalJwtMiddleware, async function(req, res, next) {
 router.post('', auth.jwtMiddleware, async(req, res, next) => {
   // This id is temporary, we should have an human understandable id, or perhaps manage it UI side ?
   req.body.id = req.body.id || shortid.generate()
+  req.body.owner = usersUtils.owner(req)
   var valid = validateExternalApi(req.body)
   if (!valid) return res.status(400).send(normalise(validateExternalApi.errors))
   const date = moment().toISOString()
@@ -176,6 +178,7 @@ router.get('/:externalApiId', (req, res, next) => {
 })
 
 // update a externalApi
+// TODO: prevent overwriting owner and maybe other calculated fields.. A PATCH route like in datasets ?
 router.put('/:externalApiId', async(req, res, next) => {
   if (!permissions(req.externalApi, 'writeDescription', req.user)) return res.sendStatus(403)
   var valid = validateExternalApi(req.body)

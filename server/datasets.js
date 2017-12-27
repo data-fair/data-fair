@@ -10,6 +10,7 @@ const esUtils = require('./utils/es')
 const filesUtils = require('./utils/files')
 const datasetAPIDocs = require('../contract/dataset-api-docs')
 const permissions = require('./utils/permissions')
+const usersUtils = require('./utils/users')
 
 const validate = ajv.compile(datasetSchema)
 const datasetSchemaNoRequired = Object.assign(datasetSchema)
@@ -213,7 +214,7 @@ router.post('', auth.jwtMiddleware, filesUtils.uploadFile(), async(req, res, nex
         size: req.file.size,
         mimetype: req.file.mimetype
       },
-      owner: {type: req.get('x-organisationId') ? 'organization' : 'user', id: req.get('x-organisationId') || req.user.id},
+      owner: usersUtils.owner(req),
       createdBy: req.user.id,
       createdAt: date,
       updatedBy: req.user.id,
@@ -274,6 +275,28 @@ router.get('/:datasetId/geo_agg', async(req, res, next) => {
   if (!permissions(req.dataset, 'getGeoAgg', req.user)) return res.sendStatus(403)
   try {
     const result = await esUtils.geoAgg(req.dataset, req.query)
+    res.status(200).send(result)
+  } catch (err) {
+    return next(err)
+  }
+})
+
+// Standard aggregation to group items by value and perform an optional metric calculation on each group
+router.get('/:datasetId/values_agg', async(req, res, next) => {
+  if (!permissions(req.dataset, 'getValuesAgg', req.user)) return res.sendStatus(403)
+  try {
+    const result = await esUtils.valuesAgg(req.dataset, req.query)
+    res.status(200).send(result)
+  } catch (err) {
+    return next(err)
+  }
+})
+
+// Simple metric aggregation to calculate some value (sum, avg, etc.)
+router.get('/:datasetId/metric_agg', async(req, res, next) => {
+  if (!permissions(req.dataset, 'getMetricAgg', req.user)) return res.sendStatus(403)
+  try {
+    const result = await esUtils.metricAgg(req.dataset, req.query)
     res.status(200).send(result)
   } catch (err) {
     return next(err)

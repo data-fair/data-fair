@@ -142,10 +142,80 @@ exports.bboxAgg = async (dataset, query = {}) => {
   return response
 }
 
+exports.metricAgg = async (dataset, query) => {
+  if (!query.metric || !query.metric_field) throw createError(400, '"metric" and "metric_field" parameters are required')
+  query.size = '0'
+  const esQuery = prepareQuery(dataset, query)
+  esQuery.aggs = {
+    metric: {
+      [query.metric]: {field: query.metric_field}
+    }
+  }
+  const esResponse = await client.search({index: indexName(dataset), body: esQuery})
+  return {total: esResponse.hits.total, metric: esResponse.aggregations.metric.value}
+}
+
+exports.valuesAgg = async (dataset, query) => {
+  const aggSize = query.agg_size ? Number(query.agg_size) : 20
+  if (aggSize > 1000) throw createError(400, '"agg_size" cannot be more than 1000')
+  const size = query.size ? Number(query.size) : 0
+  if (size > 100) throw createError(400, '"size" cannot be more than 100')
+  if (!query.field) throw createError(400, '"field" parameter is required')
+
+  query.size = '0'
+  const esQuery = prepareQuery(dataset, query)
+  esQuery.aggs = {
+    card: {
+      cardinality: {
+        field: query.field
+      }
+    },
+    values: {
+      terms: {
+        field: query.field,
+        size: aggSize
+      },
+      aggs: {
+        topHits: { top_hits: { size, _source: esQuery._source } }
+      }
+    }
+  }
+  if (query.metric && query.metric_field) {
+    esQuery.aggs.values.terms.order = { metric: 'desc' }
+    esQuery.aggs.values.aggs.metric = {
+      [query.metric]: {field: query.metric_field}
+    }
+  }
+  const esResponse = await client.search({index: indexName(dataset), body: esQuery})
+  return prepareValuesAggResponse(esResponse)
+}
+
+const prepareValuesAggResponse = (esResponse) => {
+  const response = {
+    total: esResponse.hits.total,
+    total_values: esResponse.aggregations.card.value,
+    total_other: esResponse.aggregations.values.sum_other_doc_count
+  }
+  response.aggs = esResponse.aggregations.values.buckets.map(b => {
+    const aggItem = {
+      total: b.doc_count,
+      value: b.key,
+      results: b.topHits.hits.hits.map(hit => hit._source)
+    }
+    if (b.metric) {
+      aggItem.metric = b.metric.value
+    }
+    return aggItem
+  })
+  return response
+}
+
 exports.geoAgg = async (dataset, query) => {
   const bbox = query.bbox ? query.bbox.split(',').map(Number) : dataset.bbox
   const aggSize = query.agg_size ? Number(query.agg_size) : 20
+  if (aggSize > 1000) throw createError(400, '"agg_size" cannot be more than 1000')
   const size = query.size ? Number(query.size) : 1
+  if (size > 100) throw createError(400, '"size" cannot be more than 100')
   const precision = geohash.bbox2precision(bbox, aggSize)
 
   query.size = '0'
@@ -163,6 +233,11 @@ exports.geoAgg = async (dataset, query) => {
       }
     }
   }
+  if (query.metric && query.metric_field) {
+    esQuery.aggs.geo.aggs.metric = {
+      [query.metric]: {field: query.metric_field}
+    }
+  }
   const esResponse = await client.search({index: indexName(dataset), body: esQuery})
   return prepareGeoAggResponse(esResponse)
 }
@@ -171,13 +246,17 @@ const prepareGeoAggResponse = (esResponse) => {
   const response = {total: esResponse.hits.total}
   response.aggs = esResponse.aggregations.geo.buckets.map(b => {
     const center = geohash.hash2coord(b.key)
-    return {
+    const aggItem = {
       total: b.doc_count,
       centroid: b.centroid.location,
       center: {lat: center[1], lon: center[0]},
       bbox: geohash.hash2bbox(b.key),
       results: b.topHits.hits.hits.map(hit => hit._source)
     }
+    if (b.metric) {
+      aggItem.metric = b.metric.value
+    }
+    return aggItem
   })
   return response
 }
