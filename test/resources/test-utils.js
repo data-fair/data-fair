@@ -48,8 +48,11 @@ const axiosInstances = {}
 exports.axios = async (email) => {
   if (axiosInstances[email]) return axiosInstances[email]
   const config = require('config')
-  let ax = axios.create({
-    baseURL: config.publicUrl
+  const ax = axios.create({baseURL: config.publicUrl})
+  // customize axios errors to for shorter stack traces when a request fails in a test
+  ax.interceptors.response.use(response => response, error => {
+    delete error.response.request
+    return Promise.reject(error.response)
   })
   if (email) {
     const res = await ax.post('http://localhost:5700/api/auth/passwordless', {email}, {withCredentials: true})

@@ -17,7 +17,7 @@ test('Failure to get datasets with bad auth', async t => {
     await ax.get('/api/v1/datasets', {headers: {Authorization: 'badtoken'}})
     t.fail()
   } catch (err) {
-    t.is(err.response.status, 401)
+    t.is(err.status, 401)
   }
 })
 
@@ -38,7 +38,7 @@ test('Failure to upload dataset exceeding limit', async t => {
     await ax.post('/api/v1/datasets', form, {headers: testUtils.formHeaders(form)})
     t.fail()
   } catch (err) {
-    t.is(err.response.status, 413)
+    t.is(err.status, 413)
   }
 })
 
@@ -54,7 +54,7 @@ test('Failure to upload multiple datasets exceeding limit', async t => {
     await ax.post('/api/v1/datasets', form, {headers: testUtils.formHeaders(form)})
     t.fail()
   } catch (err) {
-    t.is(err.response.status, 429)
+    t.is(err.status, 429)
   }
 })
 
@@ -96,6 +96,6 @@ test('Fail to upload new dataset when not authenticated', async t => {
     await ax.post('/api/v1/datasets', form, {headers: testUtils.formHeaders(form)})
     t.fail()
   } catch (err) {
-    t.is(err.response.status, 401)
+    t.is(err.status, 401)
   }
 })
