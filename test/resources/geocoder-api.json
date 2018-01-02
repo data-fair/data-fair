@@ -1,6 +1,7 @@
 {
   "openapi": "3.0.0",
   "info": {
+    "x-api-id": "geocoder-koumoul",
     "title": "Géocodage d'adresse",
     "description": "Ce service permet de géocoder des adresses, c'est à dire de déterminer des coordonnées latitude / longitude à partir d'éléments constituant une adresse comme le nom et le numéro de rue, le code postal ou le code INSEE, le nom de la ville ou une requête textuelle contenant ces différents éléments.",
     "termsOfService": "https://koumoul.com/term-of-service",
@@ -297,6 +298,50 @@
                 }
               }
             },
+            "application/x-ndjson": {
+              "schema": {
+                "x-collectionOn": "http://schema.org/PostalAddress",
+                "title": "Requête pour une adresse",
+                "type": "object",
+                "properties": {
+                  "key": {
+                    "x-refersTo": "http://schema.org/identifier",
+                    "type": "string",
+                    "description": "Identifiant de l'adresse"
+                  },
+                  "q": {
+                    "x-refersTo": "http://schema.org/address",
+                    "type": "string",
+                    "description": "Requête textuelle pouvant contenir n'importe quels éléments d'une adresse"
+                  },
+                  "name": {
+                    "x-refersTo": "http://schema.org/streetAddress",
+                    "type": "string",
+                    "description": "Nom de la voie ou du lieu-dit"
+                  },
+                  "city": {
+                    "x-refersTo": "http://schema.org/City",
+                    "type": "string",
+                    "description": "Nom de la commune"
+                  },
+                  "housenumber": {
+                    "x-refersTo": "http://www.ontotext.com/proton/protonext#StreetNumber",
+                    "type": "string",
+                    "description": "Numéro dans la voie. Peut contenir des mots comme bis ou ter"
+                  },
+                  "postcode": {
+                    "x-refersTo": "http://schema.org/postalCode",
+                    "type": "string",
+                    "description": "Code postal, sur 5 caractères"
+                  },
+                  "citycode": {
+                    "x-refersTo": "http://rdf.insee.fr/def/geo#codeCommune",
+                    "type": "string",
+                    "description": "Code INSEE, sur 5 caractères"
+                  }
+                }
+              }
+            },
             "text/csv": {}
           }
         },
@@ -341,6 +386,44 @@
                         "description": "Si le traitement a été bon ou pas",
                         "type": "string"
                       }
+                    }
+                  }
+                }
+              },
+              "application/x-ndjson": {
+                "schema": {
+                  "x-collectionOn": "http://schema.org/GeoCoordinates",
+                  "title": "Réponse",
+                  "x-refersTo": "http://schema.org/GeoCoordinates",
+                  "type": "object",
+                  "properties": {
+                    "key": {
+                      "x-refersTo": "http://schema.org/identifier",
+                      "description": "Identifiant de l'adresse",
+                      "type": "string"
+                    },
+                    "lat": {
+                      "x-refersTo": "http://schema.org/latitude",
+                      "description": "Latitude",
+                      "type": "number"
+                    },
+                    "lon": {
+                      "x-refersTo": "http://schema.org/longitude",
+                      "description": "Longitude",
+                      "type": "number"
+                    },
+                    "matchLevel": {
+                      "description": "Niveau de précision du géocodage",
+                      "type": "string",
+                      "enum": ["housenumber", "name", "postcode"]
+                    },
+                    "error": {
+                      "description": "Si il y a eu une erreur",
+                      "type": "string"
+                    },
+                    "status": {
+                      "description": "Si le traitement a été bon ou pas",
+                      "type": "string"
                     }
                   }
                 }

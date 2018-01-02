@@ -8,7 +8,7 @@ const testFiles = fs.readdirSync(testDir).map(f => path.join(testDir, f))
 
 exports.prepare = (testFile) => {
   const key = path.basename(testFile, '.js')
-  const port = 5601 + testFiles.indexOf(testFile)
+  const port = 5800 + testFiles.indexOf(testFile)
   const dataDir = './data/test-' + key
   process.env.NODE_CONFIG = JSON.stringify({
     port: port,
@@ -25,11 +25,7 @@ exports.prepare = (testFile) => {
     app.on('listening', t.end)
   })
 
-  test.before('clear datasets', async t => {
-    await app.get('db').collection('datasets').remove()
-  })
-
-  test.after('drop db', async t => {
+  test.before('drop db', async t => {
     await app.get('db').dropDatabase()
   })
 
@@ -38,6 +34,18 @@ exports.prepare = (testFile) => {
   })
 
   test.before('remove test data', async t => {
+    await fs.remove(dataDir)
+  })
+
+  test.after('drop db', async t => {
+    await app.get('db').dropDatabase()
+  })
+
+  test.after('drop ES indices', async t => {
+    await app.get('es').indices.delete({index: `dataset-${key}-*`, ignore: [404]})
+  })
+
+  test.after('remove test data', async t => {
     await fs.remove(dataDir)
   })
 

@@ -38,6 +38,7 @@
     "jwt-decode": "^2.2.0",
     "less": "^2.7.3",
     "less-loader": "^4.0.5",
+    "nock": "^9.1.5",
     "nodemon": "^1.11.0",
     "nyc": "^11.3.0",
     "style-loader": "^0.18.2",

@@ -4,7 +4,7 @@ const config = require('config')
 
 const router = module.exports = express.Router()
 
-// Get the list of application-configs
+// Proxy for applications
 router.get('/:applicationConfigId*', async function(req, res, next) {
   try {
     const applicationConfig = await req.app.get('db').collection('application-configs').findOne({
