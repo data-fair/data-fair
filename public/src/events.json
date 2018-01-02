@@ -1,0 +1,34 @@
+{
+  "created": {
+    "icon": "add_circle_outline",
+    "text": "Le jeu de donné a été créé"
+  },
+  "data-updated": {
+    "icon": "update",
+    "text": "Les données ont été mises à jour"
+  },
+  "analyze-start": {
+    "icon": "search",
+    "text": "Début de l'analyze du fichier"
+  },
+  "analyze-end": {
+    "icon": "search",
+    "text": "Fin de l'analyze du fichier"
+  },
+  "schematize-start": {
+    "icon": "toc",
+    "text": "Début de la détection automatique du schéma des données"
+  },
+  "schematize-end": {
+    "icon": "toc",
+    "text": "Fin de la détection automatique du schéma des données"
+  },
+  "index-start": {
+    "icon": "assignment",
+    "text": "Début de l'indexation des données"
+  },
+  "index-end": {
+    "icon": "assignment_turned_in",
+    "text": "Les données sont indexées, le jeu de données est maintenant disponible"
+  }
+}

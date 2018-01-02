@@ -7,6 +7,7 @@ import ExternalServices from './pages/ExternalServices.vue'
 import ExternalApi from './pages/ExternalApi.vue'
 import ApplicationConfigs from './pages/ApplicationConfigs.vue'
 import ApplicationConfig from './pages/ApplicationConfig.vue'
+import Settings from './pages/Settings.vue'
 import ApiDoc from './ApiDoc.vue'
 
 export default [{
@@ -37,6 +38,10 @@ export default [{
   path: '/application-config/:applicationConfigId',
   name: 'ApplicationConfig',
   component: ApplicationConfig
+}, {
+  path: '/settings/:type/:id',
+  name: 'Settings',
+  component: Settings
 }, {
   path: '/api-doc',
   name: 'ApiDoc',

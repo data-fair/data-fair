@@ -1,0 +1,43 @@
+{
+  "title": "Settings",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "type"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Identifier of the owner of this settings"
+    },
+    "type": {
+      "type": "string",
+      "enum": ["user", "organization"],
+      "description": "If the owner is a user or an organization"
+    },
+    "webhooks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "description": "List of webhooks",
+        "additionalProperties": false,
+        "required": ["title", "events", "url"],
+        "properties": {
+          "title": {
+            "type": "string",
+            "description": "Short title of the external service called"
+          },
+          "events": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "description": "The event type that triggers this webhook"
+            }
+          },
+          "url":{
+            "type": "string",
+            "description": "The URL to call"
+          }
+        }
+      }
+    }
+  }
+}

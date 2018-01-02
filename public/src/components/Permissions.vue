@@ -108,7 +108,7 @@ export default {
     removePermission(rowIndex){
       this.dataset.permissions.splice(rowIndex, 1)
       this.$emit('permissions-updated')
-  }
+    }
   },
   watch: {
     dataset() {

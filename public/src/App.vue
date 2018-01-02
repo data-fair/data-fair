@@ -33,7 +33,18 @@
       <md-button md-menu-trigger class="page-link">
         <md-icon>person</md-icon>&nbsp; <user-name :user="user"></user-name>
       </md-button>
+
       <md-menu-content class="navbar-menu-content">
+        <md-menu-item>
+          <router-link :to="{name:'Settings', params:{type:'user', id: user.id}}" class="md-button">
+            Mes paramètres
+          </router-link>
+        </md-menu-item>
+        <md-menu-item v-for="organization in userOrganizations">
+          <router-link :to="{name:'Settings', params:{type:'organization', id: organization.id}}" class="md-button">
+            Paramètres {{organization.name}}
+          </router-link>
+        </md-menu-item>
         <md-menu-item @click.native="logout()">
           Se déconnecter
         </md-menu-item>
@@ -76,6 +87,7 @@ export default {
   },
   computed: mapState({
     user: state => state.user,
+    userOrganizations: state => state.userOrganizations,
     notification: state => state.notification,
     notificationError: state => state.notificationError,
     loginUrl() {

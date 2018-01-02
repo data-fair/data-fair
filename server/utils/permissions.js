@@ -49,3 +49,9 @@ exports.filter = function(user) {
   }
   return or
 }
+
+// Test if user is owner or belong to the owner organization
+exports.isOwner = function(owner, user) {
+  if (!user) return false
+  return ((owner.type === 'user' && owner.id === user.id) || (owner.type === 'organization' && user.organizations.find(o => o.id === owner.id)))
+}

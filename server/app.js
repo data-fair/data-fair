@@ -21,6 +21,7 @@ app.use('/api/v1/journals', require('./journals').router)
 app.get('/api/v1/status', status.status)
 app.get('/api/v1/ping', status.ping)
 app.use('/api/v1/stats', require('./stats'))
+app.use('/api/v1/settings', require('./settings'))
 app.use('/applications', require('./applications'))
 
 // Static routing
