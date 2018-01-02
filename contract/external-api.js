@@ -3,7 +3,7 @@ module.exports = {
   description: 'An external API must be described with the openAPI 3.0 specification. If the API is secured, there must be at least one api-key based security scheme available.',
   type: 'object',
   additionalProperties: false,
-  required: ['id', 'owner'],
+  required: ['id', 'owner', 'apiDoc'],
   properties: {
     id: {
       type: 'string',
