@@ -7,7 +7,7 @@ Accessible Date est conçu pour interopérer avec d'autres services Web : en tan
 
 ## Développement d'une nouvelle application
 
-N'importe qui peut développer une nouvelle application compatible. Les applications elles aussi sont mises à disposition sous forme de services : ce sont des applications Web disponibles en ligne. Une instance de Accessible Data fait office de proxy vers les applications configurées et les réexpose en leu communiquant les informations de contexte nécessaires à l'intéropérabilité. Pour pouvoir être intégrée dans une instance Accessible Data, une application doit exposer certaines informations.
+N'importe qui peut développer une nouvelle application compatible. Les applications elles aussi sont mises à disposition sous forme de services : ce sont des applications Web disponibles en ligne. Une instance de Accessible Data fait office de proxy vers les applications configurées et les réexpose en leur communiquant les informations de contexte nécessaires à l'intéropérabilité. Pour pouvoir être intégrée dans une instance Accessible Data, une application doit exposer certaines informations.
 
 ### Exposition des informations
 
@@ -36,7 +36,7 @@ Une API peut être utlisée par ce service si elle respecte certains critères. 
 
 ### Spécification OpenAPI 3.0
 
-Le schéma utilisé pour décrire une API est celui de la [spécification OpenAPI 3.0](https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.0.md). Le format à utiliser est JSON (YAML sera supporté prochainement). Les autres format ne sont pas supportés, en particulier le format Swagger 2.0. Si votre API est décrite dans un autre format, [certains outils](https://github.com/Mermade/awesome-openapi3) permettent de la convertir dans le format OpenAPI 3.0.
+Le schéma utilisé pour décrire une API est celui de la [spécification OpenAPI 3.0](https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.0.md). Le format à utiliser est JSON (YAML sera supporté prochainement). Les autres formats ne sont pas supportés, en particulier le format Swagger 2.0. Si votre API est décrite dans un autre format, [certains outils](https://github.com/Mermade/awesome-openapi3) permettent de la convertir dans le format OpenAPI 3.0.
 
 Néamoins, une description en pur OpenAPI 3.0 est insuffisante et il faut renseigner des informations complémentaires, notamment pour identifier l'API plus facilement et la sémantiser. Ces informations sont ajoutées en utilisant le format d'extensions autorisé par la spécification est les attributs supplémentaires sont de la forme *x-PropertyName*.
 

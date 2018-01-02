@@ -59,7 +59,7 @@ module.exports = (dataset) => {
       '/lines': {
         get: {
           summary: 'Requêter les lignes du jeu de données.',
-          operationId: 'search',
+          operationId: 'readLines',
           tags: ['Données'],
           parameters: [{ in: 'query',
             name: 'q',

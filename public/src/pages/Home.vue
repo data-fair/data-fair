@@ -49,9 +49,11 @@ export default {
     })
   },
   mounted(){
-    this.$http.get(window.CONFIG.publicUrl + '/api/v1/stats').then(results => {
-      this.stats = results.data
-    })
+    if(this.user){
+      this.$http.get(window.CONFIG.publicUrl + '/api/v1/stats').then(results => {
+        this.stats = results.data
+      })
+    }
   }
 }
 </script>
