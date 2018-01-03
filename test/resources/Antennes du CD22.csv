@@ -1,5 +1,5 @@
-﻿﻿Sites,adresse,CS,codepostal,cdinseecommune,ville,cedex,tel,fax
-"Agence Technique Départementale de Dinan","7 Rue Victor Schoelcher","CS 96370","22106","22050","Dinan","cédex","02 96 80 00 80","02 96 80 00 89"
-"Agence Technique Départementale de Guingamp","9 Place Saint-Sauveur","CS 60517","22205","22070","Guingamp","cédex","02 96 44 39 40","02 96 44 85 55"
-"Agence Technique Départementale de Lamballe","2 rue de la Jeannaie","","22402","22093","Lamballe","cédex","02 96 50 99 20","02 96 50 99 86"
-"Agence Technique Départementale de Lannion","Boulevard Louis Guilloux","","22302","22113","Lannion","cédex","02 96 04 01 04","02 96 04 01 52"
+Sites,adresse,CS,codepostal,cdinseecommune,ville,cedex,tel,fax,lat,lon,matchLevel
+Agence Technique Départementale de Dinan,7 Rue Victor Schoelcher,CS 96370,22106,22050,Dinan,cédex,02 96 80 00 80,02 96 80 00 89,48.454903,-2.057803,housenumber
+Agence Technique Départementale de Guingamp,9 Place Saint-Sauveur,CS 60517,22205,22070,Guingamp,cédex,02 96 44 39 40,02 96 44 85 55,48.563478,-3.157236,housenumber
+Agence Technique Départementale de Lamballe,2 rue de la Jeannaie,,22402,22093,Lamballe,cédex,02 96 50 99 20,02 96 50 99 86,48.468906,-2.544215,housenumber
+Agence Technique Départementale de Lannion,Boulevard Louis Guilloux,,22302,22113,Lannion,cédex,02 96 04 01 04,02 96 04 01 52,48.726277,-3.449934,name

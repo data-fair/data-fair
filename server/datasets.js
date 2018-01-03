@@ -184,9 +184,6 @@ router.post('/:datasetId', filesUtils.uploadFile(), async(req, res, next) => {
       id: req.params.datasetId
     }, req.dataset)
     await journals.log(req.app.get('db'), req.dataset, {type: 'data-updated'})
-    // TODO verify quota
-
-    // TODO reindex
     res.status(200).send(req.dataset)
   } catch (err) {
     return next(err)

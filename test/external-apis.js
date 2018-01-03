@@ -22,9 +22,40 @@ test('Post a minimal external API, read it, update it and delete it', async t =>
   res = await ax.put('/api/v1/external-apis/' + eaId, Object.assign(res.data, {title: 'Test external api'}))
   t.is(res.status, 200)
   t.is(res.data.title, 'Test external api')
+  // Permissions
+  const ax1 = await testUtils.axios('cdurning2@desdev.cn')
+  try {
+    await ax1.get('/api/v1/external-apis/' + eaId)
+    t.fail()
+  } catch (err) {
+    t.is(err.status, 403)
+  }
+  try {
+    await ax1.put('/api/v1/external-apis/' + eaId, Object.assign(res.data, {title: 'Test external api'}))
+    t.fail()
+  } catch (err) {
+    t.is(err.status, 403)
+  }
+  try {
+    await ax1.delete('/api/v1/external-apis/' + eaId)
+    t.fail()
+  } catch (err) {
+    t.is(err.status, 403)
+  }
+  // We delete the entity
   res = await ax.delete('/api/v1/external-apis/' + eaId)
   t.is(res.status, 204)
   res = await ax.get('/api/v1/external-apis')
   t.is(res.status, 200)
   t.is(res.data.count, 0)
+})
+
+test('Unknown external service', async t => {
+  const ax = await testUtils.axios()
+  try {
+    await ax.get('/api/v1/external-apis/unknownId')
+    t.fail()
+  } catch (err) {
+    t.is(err.status, 404)
+  }
 })

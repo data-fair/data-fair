@@ -119,6 +119,7 @@ test('Upload dataset - full test with webhooks', async t => {
   t.is(res.status, 200)
   t.is(res.data.openapi, '3.0.0')
   const datasetId = webhook.href.split('/').pop()
+  // testing journal, updating data and then journal length again
   res = await ax.get('/api/v1/journals/' + datasetId)
   t.is(res.status, 200)
   t.is(res.data.length, 7)
@@ -129,4 +130,27 @@ test('Upload dataset - full test with webhooks', async t => {
   await eventToPromise(notifier, 'webhook')
   res = await ax.get('/api/v1/journals/' + datasetId)
   t.is(res.data.length, 14)
+  // testing permissions
+  const ax1 = await testUtils.axios('dmeadus0@answers.com')
+  try {
+    await ax1.get(webhook.href)
+    t.fail()
+  } catch (err) {
+    t.is(err.status, 403)
+  }
+  const ax2 = await testUtils.axios()
+  try {
+    await ax2.get(webhook.href)
+    t.fail()
+  } catch (err) {
+    t.is(err.status, 403)
+  }
+  // Updating schema
+  res = await ax.get(webhook.href)
+  const dataset = res.data
+  dataset.schema.find(field => field.key === 'lat')['x-refersTo'] = 'http://schema.org/latitude'
+  dataset.schema.find(field => field.key === 'lon')['x-refersTo'] = 'http://schema.org/longitude'
+  dataset.status = 'schematized'
+  await ax.put(webhook.href, dataset)
+  await eventToPromise(notifier, 'webhook')
 })
