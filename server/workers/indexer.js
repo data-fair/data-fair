@@ -4,6 +4,7 @@ const esUtils = require('../utils/es')
 const datasetUtils = require('../utils/dataset')
 const journals = require('../journals')
 const geoUtils = require('../utils/geo')
+const config = require('config')
 
 // A hook/spy for testing purposes
 let resolveHook, rejectHook
@@ -23,7 +24,7 @@ exports.loop = async function loop(db, es) {
     if (rejectHook) rejectHook(err)
   }
 
-  setTimeout(() => loop(db, es), 1000)
+  setTimeout(() => loop(db, es), config.workersPollingIntervall)
 }
 
 async function indexDataset(db, es) {

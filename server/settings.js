@@ -32,7 +32,9 @@ router.get('/:type/:id', auth.jwtMiddleware, async (req, res, next) => {
       id: req.params.id
     }, {
       fields: {
-        _id: 0
+        _id: 0,
+        id: 0,
+        type: 0
       }
     })
     res.status(200).send(result || {})
@@ -55,6 +57,8 @@ router.put('/:type/:id', auth.jwtMiddleware, async (req, res, next) => {
     }, req.body, {
       upsert: true
     })
+    delete req.body.type
+    delete req.body.id
     res.status(200).send(req.body)
   } catch (err) {
     next(err)

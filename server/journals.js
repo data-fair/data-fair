@@ -13,7 +13,8 @@ module.exports.log = async function(db, dataset, event) {
   settings.webhooks.filter(webhook => webhook.events.indexOf(event.type) >= 0).forEach(webhook => {
     const text = 'Le jeux de données ' + (dataset.title || dataset.id) + (event.type === 'created' ? ' vient juste d\'être créé' : ' est maintenant indexé et consultable à l\'adresse : ' + config.publicUrl + '/dataset/' + dataset.id)
     axios.post(webhook.url, {
-      text: text
+      text: text,
+      href: config.publicUrl + '/api/v1/datasets/' + dataset.id
     })
   })
   await db.collection('journals').update({

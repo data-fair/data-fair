@@ -7,7 +7,7 @@
     "build": "webpack",
     "dev": "NODE_ENV=development webpack --watch & browser-sync start --config bs-config.js & NODE_ENV=development nodemon server/app.js",
     "lint": "eslint .",
-    "test": "nyc ava --timeout=30000 -v test/*.js",
+    "test": "nyc ava --timeout=60000 -v test/*.js",
     "coveralls": "nyc report --reporter=text-lcov | coveralls",
     "report": "nyc report --reporter=html"
   },
@@ -32,6 +32,7 @@
     "eslint-plugin-node": "^5.2.1",
     "eslint-plugin-promise": "^3.6.0",
     "eslint-plugin-standard": "^3.0.1",
+    "event-to-promise": "^0.8.0",
     "file-loader": "^0.11.2",
     "form-data": "^2.3.1",
     "html-extractor": "^0.2.2",

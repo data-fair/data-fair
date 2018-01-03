@@ -2,6 +2,7 @@
 const journals = require('../journals')
 const dataSample = require('../utils/data-sample')
 const fieldsSniffer = require('../utils/fields-sniffer')
+const config = require('config')
 
 // A hook/spy for testing purposes
 let resolveHook, rejectHook
@@ -21,7 +22,7 @@ exports.loop = async function loop(db) {
     if (rejectHook) rejectHook(err)
   }
 
-  setTimeout(() => loop(db), 1000)
+  setTimeout(() => loop(db), config.workersPollingIntervall)
 }
 
 const schematizeDataset = async function(db) {

@@ -7,6 +7,7 @@ const countLines = require('../utils/count-lines')
 const datasetUtils = require('../utils/dataset')
 const journals = require('../journals')
 const fieldsSniffer = require('../utils/fields-sniffer')
+const config = require('config')
 
 // A hook/spy for testing purposes
 let resolveHook, rejectHook
@@ -26,7 +27,7 @@ exports.loop = async function loop(db) {
     if (rejectHook) rejectHook(err)
   }
 
-  setTimeout(() => loop(db), 1000)
+  setTimeout(() => loop(db), config.workersPollingIntervall)
 }
 
 const analyzeDataset = async function(db) {

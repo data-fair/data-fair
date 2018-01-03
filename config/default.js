@@ -23,6 +23,7 @@ module.exports = {
     // Maximum storage space for 1 dataset
     datasetStorage: -1
   },
+  workersPollingIntervall: 1000,
   headers: {
     storedBytesLimit: 'X-TaxMan-RateLimit'
   }
