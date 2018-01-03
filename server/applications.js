@@ -1,6 +1,7 @@
 const express = require('express')
 const requestProxy = require('express-request-proxy')
 const config = require('config')
+const permissions = require('./utils/permissions')
 
 const router = module.exports = express.Router()
 
@@ -11,6 +12,7 @@ router.get('/:applicationConfigId*', async function(req, res, next) {
       id: req.params.applicationConfigId
     })
     if (!applicationConfig) return res.status(404).send('No application configured for this id')
+    if (!permissions.can(req.applicationConfig, 'useApplication', req.user)) return res.sendStatus(403)
     const options = {
       url: applicationConfig.url,
       headers: {
