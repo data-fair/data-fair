@@ -1,6 +1,6 @@
 # <img alt="Accessible Data logo" src="https://cdn.rawgit.com/koumoul-dev/accessible-data/master/public/assets/logo.svg" width="40"> Accessible Data
 
-*Open Data, Open Source, Open API*
+*Findable, Accessible, Interoperable and Reusable Data*
 
 [![Build Status](https://travis-ci.org/koumoul-dev/accessible-data.svg?branch=master)](https://travis-ci.org/koumoul-dev/accessible-data)
 [![Coverage Status](https://coveralls.io/repos/github/koumoul-dev/accessible-data/badge.svg?branch=master)](https://coveralls.io/github/koumoul-dev/accessible-data?branch=master)
