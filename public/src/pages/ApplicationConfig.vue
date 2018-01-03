@@ -1,20 +1,30 @@
 <template>
-<md-layout md-align="center">
-  <md-layout md-column md-flex="90" v-if="applicationConfig">
-    <md-input-container>
-      <label>Titre</label>
-      <md-input v-model="applicationConfig.title" @blur="save"></md-input>
-    </md-input-container>
-    <md-input-container>
-      <label>Description</label>
-      <md-textarea v-model="applicationConfig.description" @blur="save"></md-textarea>
-    </md-input-container>
-    <md-input-container>
-      <label>Adresse</label>
-      <md-input v-model="applicationConfig.url" @blur="save"></md-input>
-    </md-input-container>
+<md-layout md-align="center" class="application-config" v-if="applicationConfig">
+  <md-layout md-column md-flex="85" md-flex-offset="5">
+    <md-tabs md-fixed class="md-transparent">
+      <md-tab md-label="Description" md-icon="toc">
+        <h3 class="md-headline">Informations</h3>
+        <md-input-container>
+          <label>Titre</label>
+          <md-input v-model="applicationConfig.title" @blur="save"></md-input>
+        </md-input-container>
+        <md-input-container>
+          <label>Description</label>
+          <md-textarea v-model="applicationConfig.description" @blur="save"></md-textarea>
+        </md-input-container>
+        <md-input-container>
+          <label>Adresse</label>
+          <md-input v-model="applicationConfig.url" @blur="save"></md-input>
+        </md-input-container>
+      </md-tab>
 
-    <h3 class="md-headline">Actions</h3>
+      <md-tab md-label="Permissions" md-icon="security">
+        <!-- <permissions :resource="applicationConfig" :api="externalApi.apiDoc" @permissions-updated="save"></permissions> -->
+      </md-tab>
+    </md-tabs>
+  </md-layout>
+
+  <md-layout md-column md-flex-offset="5" class="action">
     <md-dialog md-open-from="#delete" md-close-to="#delete" ref="delete-dialog">
       <md-dialog-title>Suppression du jeu de données</md-dialog-title>
 
@@ -26,18 +36,24 @@
       </md-dialog-actions>
     </md-dialog>
 
-    <md-layout md-align="center">
+    <md-layout md-flex="30"></md-layout>
+
+    <md-layout md-flex="10">
       <a :href="applicationLink" target="_blank">
         <md-button class="md-icon-button md-raised md-primary">
           <md-icon>description</md-icon>
-          <md-tooltip md-direction="top">Accéder à l'application</md-tooltip>
+          <md-tooltip md-direction="left">Accéder à l'application</md-tooltip>
         </md-button>
       </a>
+    </md-layout>
+    <md-layout md-flex="10">
       <md-button class="md-icon-button md-raised md-warn" id="delete" @click="$refs['delete-dialog'].open()">
         <md-icon>delete</md-icon>
+        <md-tooltip md-direction="left">Supprimer cette configuration d'application</md-tooltip>
       </md-button>
     </md-layout>
   </md-layout>
+
 </md-layout>
 </template>
 
@@ -45,9 +61,13 @@
 const {
   mapState
 } = require('vuex')
+import Permissions from '../components/Permissions.vue'
 
 export default {
   name: 'application-config',
+  components: {
+    Permissions
+  },
   data: () => ({
     applicationConfig: null
   }),
@@ -84,3 +104,9 @@ export default {
   }
 }
 </script>
+
+<style>
+.application-config .action{
+  height: calc(100vh - 64px);
+}
+</style>

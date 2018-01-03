@@ -1,8 +1,8 @@
 <template>
-<md-layout md-align="center">
-  <md-layout md-column md-flex="90" v-if="externalApi">
+<md-layout md-align="center" class="external-service" v-if="externalApi">
+  <md-layout md-column md-flex="85" md-flex-offset="5">
     <md-tabs md-fixed class="md-transparent">
-      <md-tab md-label="Métadonnées" md-icon="toc">
+      <md-tab md-label="Description" md-icon="toc">
         <h3 class="md-headline">Informations</h3>
         <md-layout md-row>
           <md-layout md-column md-flex="55">
@@ -82,62 +82,72 @@
             <md-divider class="md-inset"></md-divider>
           </md-list-item>
         </md-list>
-
-        <h3 class="md-headline">Actions</h3>
-        <md-dialog md-open-from="#delete" md-close-to="#delete" ref="delete-dialog">
-          <md-dialog-title>Suppression du jeu de données</md-dialog-title>
-
-          <md-dialog-content>Voulez vous vraiment supprimer la description de l'API <code>{{externalApi.title}}</code> ? La suppression est définitive et le paramétrage sera perdu.</md-dialog-content>
-
-          <md-dialog-actions>
-            <md-button class="md-default md-raised" @click="$refs['delete-dialog'].close()">Non</md-button>
-            <md-button class="md-warn md-raised" @click="remove">Oui</md-button>
-          </md-dialog-actions>
-        </md-dialog>
-
-        <md-layout md-align="center">
-          <!-- link to external doc -->
-          <a :href="externalApi.apiDoc.externalDocs.url" v-if="externalApi.apiDoc.externalDocs" target="_blank">
-            <md-button class="md-icon-button md-raised md-primary">
-              <md-icon>description</md-icon>
-              <md-tooltip md-direction="top">{{externalApi.apiDoc.externalDocs.description}}</md-tooltip>
-            </md-button>
-          </a>
-          <md-button class="md-icon-button md-raised md-primary" @click="refresh">
-            <md-icon>refresh</md-icon>
-          </md-button>
-          <md-button class="md-icon-button md-raised md-warn" id="delete" @click="$refs['delete-dialog'].open()">
-            <md-icon>delete</md-icon>
-          </md-button>
-        </md-layout>
       </md-tab>
 
       <md-tab md-label="Configuration" md-icon="build">
         <api-configuration :external-api="externalApi"></api-configuration>
       </md-tab>
 
-      <!-- <md-tab md-label="Permissions" md-icon="security">
-        <permissions :externalApi="externalApi" @toggle-visibility="externalApi.public = !externalApi.public;save()"></permissions>
-      </md-tab> -->
+      <md-tab md-label="Permissions" md-icon="security">
+        <permissions :resource="externalApi" :api="externalApi.apiDoc" @permissions-updated="save"></permissions>
+      </md-tab>
 
       <md-tab md-label="API" md-icon="cloud">
-        <!-- <ExternalApiAPIDoc :externalApi="externalApi"></ExternalApiAPIDoc> -->
+        <open-api v-if="externalApi" :api="externalApi.apiDoc"></open-api>
       </md-tab>
     </md-tabs>
   </md-layout>
+
+  <md-layout md-column md-flex-offset="5" class="action">
+    <md-dialog md-open-from="#delete" md-close-to="#delete" ref="delete-dialog">
+      <md-dialog-title>Suppression du jeu de données</md-dialog-title>
+
+      <md-dialog-content>Voulez vous vraiment supprimer la description de l'API <code>{{externalApi.title}}</code> ? La suppression est définitive et le paramétrage sera perdu.</md-dialog-content>
+
+      <md-dialog-actions>
+        <md-button class="md-default md-raised" @click="$refs['delete-dialog'].close()">Non</md-button>
+        <md-button class="md-warn md-raised" @click="remove">Oui</md-button>
+      </md-dialog-actions>
+    </md-dialog>
+
+    <md-layout md-flex="30"></md-layout>
+
+    <md-layout md-flex="10">
+      <a :href="externalApi.apiDoc.externalDocs.url" v-if="externalApi.apiDoc.externalDocs" target="_blank">
+        <md-button class="md-icon-button md-raised md-primary">
+          <md-icon>description</md-icon>
+          <md-tooltip md-direction="left">{{externalApi.apiDoc.externalDocs.description}}</md-tooltip>
+        </md-button>
+      </a>
+    </md-layout>
+    <md-layout md-flex="10">
+      <md-button class="md-icon-button md-raised md-primary" @click="refresh">
+        <md-icon>refresh</md-icon>
+        <md-tooltip md-direction="left">Mettre a jour la description de l'API</md-tooltip>
+      </md-button>
+    </md-layout>
+    <md-layout md-flex="10">
+      <md-button class="md-icon-button md-raised md-warn" id="delete" @click="$refs['delete-dialog'].open()">
+        <md-icon>delete</md-icon>
+        <md-tooltip md-direction="left">Supprimer cette configuration du service externe</md-tooltip>
+      </md-button>
+    </md-layout>
+  </md-layout>
+
 </md-layout>
 </template>
 
 <script>
 import ApiConfiguration from '../components/ApiConfiguration.vue'
 import Permissions from '../components/Permissions.vue'
+import OpenApi from 'vue-openapi'
 
 export default {
-  name: 'external-api',
+  name: 'external-service',
   components: {
     ApiConfiguration,
     Permissions,
-    // ExternalApiAPIDoc
+    OpenApi
   },
   data: () => ({
     externalApi: null,
@@ -186,3 +196,9 @@ export default {
   }
 }
 </script>
+
+<style>
+.external-service .action{
+  height: calc(100vh - 64px);
+}
+</style>

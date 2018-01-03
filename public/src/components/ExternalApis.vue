@@ -6,7 +6,7 @@
         <md-card style="width:100%">
           <md-card-header>
             <div class="md-title">
-              <router-link :to="{name: 'ExternalApi', params:{externalApiId:externalApi.id}}">{{externalApi.title}}</router-link>
+              <router-link :to="{name: 'ExternalService', params:{externalApiId:externalApi.id}}">{{externalApi.title}}</router-link>
             </div>
           </md-card-header>
           <md-card-content>

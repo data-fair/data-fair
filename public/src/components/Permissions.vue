@@ -36,7 +36,7 @@
           </md-button>
         </md-table-cell>
       </md-table-row>
-      <md-table-row v-for="(permission, rowIndex) in dataset.permissions" :key="rowIndex">
+      <md-table-row v-for="(permission, rowIndex) in resource.permissions" :key="rowIndex">
         <md-table-cell>
           <span v-if="!permission.type">Public</span>
           <span v-else>{{permission.type.slice(0,1).toUpperCase() + permission.type.slice(1)}}</span>
@@ -70,7 +70,7 @@ const {
 
 export default {
   name: 'permissions',
-  props: ['dataset', 'api'],
+  props: ['resource', 'api'],
   data: () => ({
     newPermission: {
       type: 'organization',
@@ -89,7 +89,7 @@ export default {
     }
   },
   mounted() {
-    this.dataset.permissions = this.dataset.permissions || []
+    this.resource.permissions = this.resource.permissions || []
     this.$http.get(window.CONFIG.directoryUrl + '/api/organizations').then(results => {
       this.organizations = results.data.results
     })
@@ -102,17 +102,17 @@ export default {
       const permission = Object.assign({}, this.newPermission)
       if (!permission.type) delete permission.type
       if (!permission.id) delete permission.id
-      this.dataset.permissions.push(permission)
+      this.resource.permissions.push(permission)
       this.$emit('permissions-updated')
     },
     removePermission(rowIndex){
-      this.dataset.permissions.splice(rowIndex, 1)
+      this.resource.permissions.splice(rowIndex, 1)
       this.$emit('permissions-updated')
     }
   },
   watch: {
-    dataset() {
-      this.dataset.permissions = this.dataset.permissions || []
+    resource() {
+      this.resource.permissions = this.resource.permissions || []
     }
   }
 }
