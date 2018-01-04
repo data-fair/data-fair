@@ -3,12 +3,19 @@ const express = require('express')
 const bodyParser = require('body-parser')
 const cookieParser = require('cookie-parser')
 const path = require('path')
+const WebSocket = require('ws')
+const http = require('http')
+const util = require('util')
+const eventToPromise = require('event-to-promise')
 const dbUtils = require('./utils/db')
 const esUtils = require('./utils/es')
+const wsUtils = require('./utils/ws.js')
 const status = require('./status')
+const analyzer = require('./workers/analyzer')
+const schematizer = require('./workers/schematizer')
+const indexer = require('./workers/indexer')
 
-let app = module.exports = express()
-app.set('es', esUtils.client)
+const app = express()
 app.use(bodyParser.json({limit: '100kb'}))
 app.use(cookieParser())
 
@@ -57,20 +64,31 @@ app.use((err, req, res, next) => {
   next(err)
 })
 
-dbUtils.init(function(err, db) {
-  if (err) throw err
+const server = http.createServer(app)
+const wss = new WebSocket.Server({server})
+
+// Run app and return it in a promise
+exports.run = async () => {
+  const db = await dbUtils.init()
   app.set('db', db)
-  app.listen(config.port, (err) => {
-    if (err) {
-      console.error('Could not run server : ', err.stack)
-      app.get('db').close()
-      throw err
-    }
-    console.log('Listening on http://localhost:%s', config.port)
-    // Emit this event for the test suite
-    app.emit('listening')
-    require('./workers/analyzer').loop(db)
-    require('./workers/schematizer').loop(db)
-    require('./workers/indexer').loop(db, app.get('es'))
-  })
-})
+  app.set('es', esUtils.init())
+  app.publish = await wsUtils.init(wss, db)
+  server.listen(config.port)
+  await eventToPromise(server, 'listening')
+  analyzer.loop(db)
+  schematizer.loop(db)
+  indexer.loop(db, app.get('es'))
+  return app
+}
+
+exports.stop = async() => {
+  await util.promisify((cb) => wss.close(cb))()
+  server.close()
+  await eventToPromise(server, 'close')
+  wsUtils.stop()
+  await analyzer.stop()
+  await schematizer.stop()
+  await indexer.stop()
+  await app.get('db').close()
+  await app.get('es').close()
+}

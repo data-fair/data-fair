@@ -3,7 +3,6 @@
 const config = require('config')
 const mongoClient = require('mongodb').MongoClient
 
-// Index creations are non blocking for faster startup.
 async function ensureIndex(db, collection, key, options) {
   try {
     await db.collection(collection).createIndex(key, options || {})
@@ -12,40 +11,13 @@ async function ensureIndex(db, collection, key, options) {
   }
 }
 
-exports.init = function(callback) {
-  mongoClient.connect(config.mongoUrl, {
-    autoReconnect: true,
-    bufferMaxEntries: -1
-  }, function(err, db) {
-    if (err) return callback(err)
-
-    Promise.all([
-      // datasets indexes
-      ensureIndex(db, 'datasets', {
-        'id': 1
-      }, {
-        unique: true
-      }),
-      ensureIndex(db, 'datasets', {
-        'title': 'text',
-        'description': 'text'
-      }, {
-        name: 'fulltext'
-      }),
-      // external-apis indexes
-      ensureIndex(db, 'external-apis', {
-        'id': 1
-      }, {
-        unique: true
-      }),
-      ensureIndex(db, 'external-apis', {
-        'title': 'text',
-        'description': 'text'
-      }, {
-        name: 'fulltext'
-      })
-    ]).then(result => {
-      callback(null, db)
-    })
-  })
+exports.init = async () => {
+  const db = await mongoClient.connect(config.mongoUrl, {autoReconnect: true, bufferMaxEntries: -1})
+  // datasets indexes
+  await ensureIndex(db, 'datasets', {id: 1}, {unique: true})
+  await ensureIndex(db, 'datasets', {title: 'text', description: 'text'}, {name: 'fulltext'})
+  // external-apis indexes
+  await ensureIndex(db, 'external-apis', {id: 1}, {unique: true})
+  await ensureIndex(db, 'external-apis', {title: 'text', description: 'text'}, {name: 'fulltext'})
+  return db
 }

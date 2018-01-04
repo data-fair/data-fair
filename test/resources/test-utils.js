@@ -2,6 +2,7 @@ const test = require('ava')
 const axios = require('axios')
 const fs = require('fs-extra')
 const path = require('path')
+const elasticsearch = require('elasticsearch')
 
 const testDir = path.join(__dirname, '../')
 const testFiles = fs.readdirSync(testDir).map(f => path.join(testDir, f))
@@ -12,26 +13,33 @@ exports.prepare = (testFile) => {
   const dataDir = './data/test-' + key
   const indicesPrefix = 'dataset-test-' + key
   process.env.NODE_CONFIG = JSON.stringify({
-    port: port,
+    port,
     publicUrl: 'http://localhost:' + port,
     dataDir,
     mongoUrl: 'mongodb://localhost:27017/accessible-data-test-' + key,
     indicesPrefix
   })
   const config = require('config')
+  const app = require('../../server/app.js')
 
-  let app
-  test.cb.before('run app', t => {
-    app = require('../../server/app.js')
-    app.on('listening', t.end)
+  test.before('run app', async t => {
+    test.app = await app.run()
+  })
+
+  test.after.always('stop app', async t => {
+    await app.stop()
   })
 
   test.after.always('drop db', async t => {
-    await app.get('db').dropDatabase()
+    const db = await require('../../server/utils/db.js').init()
+    await db.dropDatabase()
+    await db.close()
   })
 
   test.after.always('drop ES indices', async t => {
-    await app.get('es').indices.delete({index: `${indicesPrefix}-*`, ignore: [404]})
+    const es = require('../../server/utils/es.js').init()
+    await es.indices.delete({index: `${indicesPrefix}-*`, ignore: [404]})
+    await es.close()
   })
 
   test.after.always('remove test data', async t => {
@@ -41,16 +49,20 @@ exports.prepare = (testFile) => {
   return [test, config]
 }
 
+const customReject = error => {
+  if (!error.response) return Promise.reject(error)
+  delete error.response.request
+  return Promise.reject(error.response)
+}
+
 const axiosInstances = {}
 exports.axios = async (email) => {
   const config = require('config')
+
   if (!email) {
     const ax = axios.create({baseURL: config.publicUrl})
     // customize axios errors for shorter stack traces when a request fails in a test
-    ax.interceptors.response.use(response => response, error => {
-      delete error.response.request
-      return Promise.reject(error.response)
-    })
+    ax.interceptors.response.use(response => response, customReject)
     return ax
   }
   if (axiosInstances[email]) return axiosInstances[email]
@@ -61,10 +73,7 @@ exports.axios = async (email) => {
       'Cookie': idTokenCookie
     }})
   // customize axios errors for shorter stack traces when a request fails in a test
-  ax.interceptors.response.use(response => response, error => {
-    delete error.response.request
-    return Promise.reject(error.response)
-  })
+  ax.interceptors.response.use(response => response, customReject)
   axiosInstances[email] = ax
   return ax
 }

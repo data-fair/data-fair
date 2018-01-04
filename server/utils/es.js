@@ -5,7 +5,7 @@ const createError = require('http-errors')
 const geoUtils = require('./geo')
 const geohash = require('./geohash')
 
-const client = exports.client = elasticsearch.Client(config.elasticsearch)
+exports.init = () => elasticsearch.Client(Object.assign({}, config.elasticsearch))
 
 const indexBase = {
   settings: {
@@ -35,7 +35,7 @@ exports.esType = prop => {
   return 'text'
 }
 
-exports.initDatasetIndex = async (dataset, geopoint) => {
+exports.initDatasetIndex = async (client, dataset, geopoint) => {
   const tempId = `${indexName(dataset)}-${Date.now()}`
   const body = Object.assign({}, indexBase)
   const properties = body.mappings.line.properties = {}
@@ -53,7 +53,7 @@ exports.initDatasetIndex = async (dataset, geopoint) => {
   return tempId
 }
 
-exports.switchAlias = async (dataset, tempId) => {
+exports.switchAlias = async (client, dataset, tempId) => {
   const name = indexName(dataset)
   await client.indices.putAlias({name, index: tempId})
 
@@ -65,8 +65,9 @@ exports.switchAlias = async (dataset, tempId) => {
 }
 
 class IndexStream extends Writable {
-  constructor(index, dataset, geopoint) {
+  constructor(client, index, dataset, geopoint) {
     super({objectMode: true})
+    this.client = client
     this.index = index
     this.dataset = dataset
     this.geopoint = geopoint
@@ -92,7 +93,7 @@ class IndexStream extends Writable {
   }
   _sendBulk(callback) {
     if (this.body.length === 0) return callback()
-    client.bulk({body: this.body, refresh: 'true'}, (err) => {
+    this.client.bulk({body: this.body, refresh: 'true'}, (err) => {
       if (err) return callback(err)
       // Super weird ! When passing callback directly it seems that it is not called.
       callback()
@@ -101,9 +102,9 @@ class IndexStream extends Writable {
   }
 }
 
-exports.indexStream = async (inputStream, index, dataset, geopoint) => {
+exports.indexStream = async (client, inputStream, index, dataset, geopoint) => {
   return new Promise((resolve, reject) => {
-    const indexStream = new IndexStream(index, dataset, geopoint)
+    const indexStream = new IndexStream(client, index, dataset, geopoint)
 
     inputStream
       .on('error', reject)
@@ -115,7 +116,7 @@ exports.indexStream = async (inputStream, index, dataset, geopoint) => {
   })
 }
 
-exports.searchInDataset = async (dataset, query) => {
+exports.searchInDataset = async (client, dataset, query) => {
   const esQuery = prepareQuery(dataset, query)
   const esResponse = await client.search({index: indexName(dataset), body: esQuery})
   return prepareResponse(esResponse)
@@ -128,7 +129,7 @@ const prepareResponse = (esResponse) => {
   return response
 }
 
-exports.bboxAgg = async (dataset, query = {}) => {
+exports.bboxAgg = async (client, dataset, query = {}) => {
   query.size = '0'
   const esQuery = prepareQuery(dataset, query)
   esQuery.aggs = {
@@ -147,7 +148,7 @@ exports.bboxAgg = async (dataset, query = {}) => {
   return response
 }
 
-exports.metricAgg = async (dataset, query) => {
+exports.metricAgg = async (client, dataset, query) => {
   if (!query.metric || !query.metric_field) throw createError(400, '"metric" and "metric_field" parameters are required')
   query.size = '0'
   const esQuery = prepareQuery(dataset, query)
@@ -160,7 +161,7 @@ exports.metricAgg = async (dataset, query) => {
   return {total: esResponse.hits.total, metric: esResponse.aggregations.metric.value}
 }
 
-exports.valuesAgg = async (dataset, query) => {
+exports.valuesAgg = async (client, dataset, query) => {
   const aggSize = query.agg_size ? Number(query.agg_size) : 20
   if (aggSize > 1000) throw createError(400, '"agg_size" cannot be more than 1000')
   const size = query.size ? Number(query.size) : 0
@@ -221,7 +222,7 @@ const prepareValuesAggResponse = (esResponse) => {
   return response
 }
 
-exports.geoAgg = async (dataset, query) => {
+exports.geoAgg = async (client, dataset, query) => {
   const bbox = query.bbox ? query.bbox.split(',').map(Number) : dataset.bbox
   const aggSize = query.agg_size ? Number(query.agg_size) : 20
   if (aggSize > 1000) throw createError(400, '"agg_size" cannot be more than 1000')

@@ -7,7 +7,7 @@ const geoUtils = require('../utils/geo')
 const config = require('config')
 
 // A hook/spy for testing purposes
-let resolveHook, rejectHook
+let resolveHook, rejectHook, stopResolve
 exports.hook = function() {
   return new Promise((resolve, reject) => {
     resolveHook = resolve
@@ -16,6 +16,7 @@ exports.hook = function() {
 }
 
 exports.loop = async function loop(db, es) {
+  if (stopResolve) return stopResolve()
   try {
     const dataset = await indexDataset(db, es)
     if (dataset && resolveHook) resolveHook(dataset)
@@ -27,6 +28,10 @@ exports.loop = async function loop(db, es) {
   setTimeout(() => loop(db, es), config.workersPollingIntervall)
 }
 
+exports.stop = () => {
+  return new Promise(resolve => { stopResolve = resolve })
+}
+
 async function indexDataset(db, es) {
   const collection = db.collection('datasets')
   const datasets = await collection.find({status: 'schematized'}).limit(1).sort({updatedAt: 1}).toArray()
@@ -36,13 +41,13 @@ async function indexDataset(db, es) {
   await journals.log(db, dataset, {type: 'index-start'})
 
   const geopoint = geoUtils.schemaHasGeopoint(dataset.schema)
-  const tempId = await esUtils.initDatasetIndex(dataset, geopoint)
-  const count = dataset.count = await esUtils.indexStream(datasetUtils.readStream(dataset), tempId, dataset, geopoint)
-  await esUtils.switchAlias(dataset, tempId)
+  const tempId = await esUtils.initDatasetIndex(es, dataset, geopoint)
+  const count = dataset.count = await esUtils.indexStream(es, datasetUtils.readStream(dataset), tempId, dataset, geopoint)
+  await esUtils.switchAlias(es, dataset, tempId)
   const updateQuery = {$set: {status: 'indexed', count}}
 
   if (geopoint) {
-    const res = await esUtils.bboxAgg(dataset)
+    const res = await esUtils.bboxAgg(es, dataset)
     updateQuery.$set.bbox = dataset.bbox = res.bbox
   }
 
@@ -50,7 +55,7 @@ async function indexDataset(db, es) {
     // no cardinality on text field
     if (prop.type === 'string' && !prop.format) continue
     updateQuery.$set.schema = dataset.schema
-    const aggResult = await esUtils.valuesAgg(dataset, {field: prop.key, agg_size: 10})
+    const aggResult = await esUtils.valuesAgg(es, dataset, {field: prop.key, agg_size: 10})
     prop['x-cardinality'] = aggResult.total_values
     if (aggResult.total_values <= 10) {
       prop.enum = aggResult.aggs.map(a => a.value)

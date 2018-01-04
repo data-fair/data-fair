@@ -194,7 +194,7 @@ router.post('/:datasetId', filesUtils.uploadFile(), async(req, res, next) => {
 router.get('/:datasetId/lines', async(req, res, next) => {
   if (!permissions.can(req.dataset, 'readLines', req.user)) return res.sendStatus(403)
   try {
-    const result = await esUtils.searchInDataset(req.dataset, req.query)
+    const result = await esUtils.searchInDataset(req.app.get('es'), req.dataset, req.query)
     res.status(200).send(result)
   } catch (err) {
     return next(err)
@@ -205,7 +205,7 @@ router.get('/:datasetId/lines', async(req, res, next) => {
 router.get('/:datasetId/geo_agg', async(req, res, next) => {
   if (!permissions.can(req.dataset, 'getGeoAgg', req.user)) return res.sendStatus(403)
   try {
-    const result = await esUtils.geoAgg(req.dataset, req.query)
+    const result = await esUtils.geoAgg(req.app.get('es'), req.dataset, req.query)
     res.status(200).send(result)
   } catch (err) {
     return next(err)
@@ -216,7 +216,7 @@ router.get('/:datasetId/geo_agg', async(req, res, next) => {
 router.get('/:datasetId/values_agg', async(req, res, next) => {
   if (!permissions.can(req.dataset, 'getValuesAgg', req.user)) return res.sendStatus(403)
   try {
-    const result = await esUtils.valuesAgg(req.dataset, req.query)
+    const result = await esUtils.valuesAgg(req.app.get('es'), req.dataset, req.query)
     res.status(200).send(result)
   } catch (err) {
     return next(err)
@@ -227,7 +227,7 @@ router.get('/:datasetId/values_agg', async(req, res, next) => {
 router.get('/:datasetId/metric_agg', async(req, res, next) => {
   if (!permissions.can(req.dataset, 'getMetricAgg', req.user)) return res.sendStatus(403)
   try {
-    const result = await esUtils.metricAgg(req.dataset, req.query)
+    const result = await esUtils.metricAgg(req.app.get('es'), req.dataset, req.query)
     res.status(200).send(result)
   } catch (err) {
     return next(err)

@@ -40,7 +40,7 @@ test('Process newly uploaded dataset', async t => {
   const idProp = dataset.schema.find(p => p.key === 'id')
   t.is(idProp['x-cardinality'], 2)
   t.not(idProp.enum.indexOf('koumoul'), -1)
-  const esIndices = await esUtils.client.indices.get({index: esUtils.indexName(dataset)})
+  const esIndices = await test.app.get('es').indices.get({index: esUtils.indexName(dataset)})
   const esIndex = Object.values(esIndices)[0]
   const mapping = esIndex.mappings.line
   t.is(mapping.properties.id.type, 'keyword')
@@ -57,7 +57,7 @@ test('Process newly uploaded dataset', async t => {
   dataset = await indexer.hook()
   t.is(dataset.status, 'indexed')
   t.is(dataset.count, 2)
-  const esIndices2 = await esUtils.client.indices.get({index: esUtils.indexName(dataset)})
+  const esIndices2 = await test.app.get('es').indices.get({index: esUtils.indexName(dataset)})
   const esIndex2 = Object.values(esIndices2)[0]
   const mapping2 = esIndex2.mappings.line
   t.is(mapping2.properties.id.type, 'keyword')

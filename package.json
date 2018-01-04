@@ -2,10 +2,11 @@
   "name": "data-fair",
   "version": "0.1.0",
   "description": "",
-  "main": "server/app.js",
+  "main": "server",
   "scripts": {
     "build": "webpack",
-    "dev": "NODE_ENV=development webpack --watch & browser-sync start --config bs-config.js & NODE_ENV=development nodemon server/app.js",
+    "start": "node server",
+    "dev": "NODE_ENV=development webpack --watch & browser-sync start --config bs-config.js & NODE_ENV=development nodemon server",
     "lint": "eslint .",
     "test": "nyc ava --timeout=60000 -v test/*.js",
     "coveralls": "nyc report --reporter=text-lcov | coveralls",
@@ -85,6 +86,7 @@
     "soas": "^0.3.0",
     "split": "^1.0.1",
     "swagger2openapi": "^2.11.7",
+    "ws": "^3.3.3",
     "xlsx": "^0.11.10"
   }
 }

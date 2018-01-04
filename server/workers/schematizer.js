@@ -5,7 +5,7 @@ const fieldsSniffer = require('../utils/fields-sniffer')
 const config = require('config')
 
 // A hook/spy for testing purposes
-let resolveHook, rejectHook
+let resolveHook, rejectHook, stopResolve
 exports.hook = function() {
   return new Promise((resolve, reject) => {
     resolveHook = resolve
@@ -14,6 +14,7 @@ exports.hook = function() {
 }
 
 exports.loop = async function loop(db) {
+  if (stopResolve) return stopResolve()
   try {
     const dataset = await schematizeDataset(db)
     if (dataset && resolveHook) resolveHook(dataset)
@@ -25,14 +26,18 @@ exports.loop = async function loop(db) {
   setTimeout(() => loop(db), config.workersPollingIntervall)
 }
 
+exports.stop = () => {
+  return new Promise(resolve => { stopResolve = resolve })
+}
+
 const schematizeDataset = async function(db) {
-  let dataset = await db.collection('datasets').find({
+  const datasets = await db.collection('datasets').find({
     status: 'analyzed',
     'file.mimetype': 'text/csv'
   }).limit(1).sort({
     updatedAt: -1
   }).toArray()
-  dataset = dataset.pop()
+  const dataset = datasets.pop()
   if (!dataset) return
 
   await journals.log(db, dataset, {
