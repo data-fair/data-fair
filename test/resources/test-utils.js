@@ -10,12 +10,13 @@ exports.prepare = (testFile) => {
   const key = path.basename(testFile, '.js')
   const port = 5800 + testFiles.indexOf(testFile)
   const dataDir = './data/test-' + key
+  const indicesPrefix = 'dataset-test-' + key
   process.env.NODE_CONFIG = JSON.stringify({
     port: port,
     publicUrl: 'http://localhost:' + port,
     dataDir,
     mongoUrl: 'mongodb://localhost:27017/accessible-data-test-' + key,
-    indicesPrefix: 'dataset-test-' + key
+    indicesPrefix
   })
   const config = require('config')
 
@@ -30,7 +31,7 @@ exports.prepare = (testFile) => {
   })
 
   test.after.always('drop ES indices', async t => {
-    await app.get('es').indices.delete({index: `dataset-${key}-*`, ignore: [404]})
+    await app.get('es').indices.delete({index: `${indicesPrefix}-*`, ignore: [404]})
   })
 
   test.after.always('remove test data', async t => {
