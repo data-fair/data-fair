@@ -104,9 +104,9 @@
       "type": "array",
       "items": {
         "type": "object",
-        "description": "Permission to do the operation with the gived operationId. If type and id are not set, then the operation is set to public.",
+        "description": "Permission to do the operations (identified by their id). If type and id are not set, then the operation is set to public. roles array is used only with type organization",
         "additionalProperties": false,
-        "required": ["operationId"],
+        "required": ["operations"],
         "properties": {
           "type": {
             "type": "string",
@@ -117,9 +117,19 @@
             "type": "string",
             "description": "Identifier of the entity"
           },
-          "operationId": {
-            "type": "string",
-            "description": "API operation that can be used"
+          "operations": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "description": "API operation that can be used"
+            }
+          },
+          "roles": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "description": "Role name"
+            }
           }
         }
       }

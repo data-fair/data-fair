@@ -23,7 +23,7 @@
           </md-card-actions>
           <!-- <md-layout flex="true"></md-layout> -->
           <md-card-content>
-            <span v-if="dataset.owner.type === 'user'"><md-icon>person</md-icon>{{users[dataset.owner.id] && (users[dataset.owner.id].firstName + ' ' + users[dataset.owner.id].lastName)}}</span>
+            <span v-if="dataset.owner.type === 'user'"><md-icon>person</md-icon>{{users[dataset.owner.id] && users[dataset.owner.id].name}}</span>
             <span v-if="dataset.owner.type === 'organization'"><md-icon>group</md-icon>{{organizations[dataset.owner.id] && organizations[dataset.owner.id].name}}</span>
 
 

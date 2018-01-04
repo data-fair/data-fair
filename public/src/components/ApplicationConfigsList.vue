@@ -23,7 +23,7 @@
           </md-card-actions>
           <!-- <md-layout flex="true"></md-layout> -->
           <md-card-content>
-            <span v-if="applicationConfig.owner.type === 'user'"><md-icon>person</md-icon>{{users[applicationConfig.owner.id] && (users[applicationConfig.owner.id].firstName + ' ' + users[applicationConfig.owner.id].lastName)}}</span>
+            <span v-if="applicationConfig.owner.type === 'user'"><md-icon>person</md-icon>{{users[applicationConfig.owner.id] && users[applicationConfig.owner.id].name}}</span>
             <span v-if="applicationConfig.owner.type === 'organization'"><md-icon>group</md-icon>{{organizations[applicationConfig.owner.id] && organizations[applicationConfig.owner.id].name}}</span>
 
             <!-- <div class="md-subhead">Sources</div>

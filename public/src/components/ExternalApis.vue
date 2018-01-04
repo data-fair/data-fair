@@ -23,7 +23,7 @@
           </md-card-actions>
           <!-- <md-layout flex="true"></md-layout> -->
           <md-card-content>
-            <span v-if="externalApi.owner.type === 'user'"><md-icon>person</md-icon>{{users[externalApi.owner.id] && (users[externalApi.owner.id].firstName + ' ' + users[externalApi.owner.id].lastName)}}</span>
+            <span v-if="externalApi.owner.type === 'user'"><md-icon>person</md-icon>{{users[externalApi.owner.id] && users[externalApi.owner.id].name}}</span>
             <span v-if="externalApi.owner.type === 'organization'"><md-icon>group</md-icon>{{organizations[externalApi.owner.id] && organizations[externalApi.owner.id].name}}</span>
 
 

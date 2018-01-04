@@ -1,7 +1,7 @@
 // resource can be an application, a dataset of an external API
 exports.can = function(resource, operationId, user) {
   if (!user) {
-    const operationPermissions = (resource.permissions || []).filter(p => p.operationId === operationId)
+    const operationPermissions = (resource.permissions || []).filter(p => p.operations.indexOf(operationId) >= 0)
     // check if the operation is public
     if (operationPermissions.find(p => !p.type && !p.id)) return true
     return false
@@ -10,8 +10,12 @@ exports.can = function(resource, operationId, user) {
     if ((resource.owner.type === 'user' && resource.owner.id === user.id) || (resource.owner.type === 'organization' && user.organizations.find(o => o.id === resource.owner.id))) {
       return true
     } else {
-      const operationPermissions = (resource.permissions || []).filter(p => p.operationId === operationId)
-      if (operationPermissions.find(p => (p.type === 'user' && p.id === user.id) || (p.type === 'organization' && user.organizations.find(o => o.id === p.id)))) return true
+      const operationPermissions = (resource.permissions || []).filter(p => p.operations.indexOf(operationId) >= 0)
+      if (operationPermissions.find(p => p.type === 'user' && p.id === user.id)) return true
+      if (operationPermissions.find(p => {
+        const orgaUser = p.type === 'organization' && user.organizations.find(o => o.id === p.id)
+        return orgaUser && ((!p.roles || !p.roles.length) || p.roles.indexOf(orgaUser.role) >= 0)
+      })) return true
       return false
     }
   }
@@ -21,7 +25,7 @@ exports.can = function(resource, operationId, user) {
 exports.filter = function(user) {
   // this filter is for public resources
   const or = [{
-    'permissions.operationId': 'readDescription',
+    'permissions.operations': 'readDescription',
     'permissions.type': null,
     'permissions.id': null
   }]
@@ -37,12 +41,12 @@ exports.filter = function(user) {
       'owner.id': {$in: organizationIds}
     })
     or.push({
-      'permissions.operationId': 'readDescription',
+      'permissions.operations': 'readDescription',
       'permissions.type': 'user',
       'permissions.id': user.id
     })
     or.push({
-      'permissions.operationId': 'readDescription',
+      'permissions.operations': 'readDescription',
       'permissions.type': 'organization',
       'permissions.id': {$in: organizationIds}
     })

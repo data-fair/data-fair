@@ -51,30 +51,7 @@ module.exports = {
         }
       }
     },
-    permissions: {
-      type: 'array',
-      items: {
-        type: 'object',
-        description: 'Permission to do the operation with the gived operationId. If type and id are not set, then the operation is set to public.',
-        additionalProperties: false,
-        required: ['operationId'],
-        properties: {
-          type: {
-            type: 'string',
-            enum: ['user', 'organization'],
-            description: 'If the entity is a user or an organization'
-          },
-          id: {
-            type: 'string',
-            description: 'Identifier of the entity'
-          },
-          operationId: {
-            type: 'string',
-            description: 'API operation that can be used'
-          }
-        }
-      }
-    },
+    permissions: require('./permissions.json'),
     // TODO replace this schema with the official one when available
     // see https://github.com/OAI/OpenAPI-Specification/issues/1032
     // apiDoc: require('swagger2openapi/schemas/openapi-3.0.json'),
