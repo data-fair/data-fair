@@ -140,7 +140,8 @@ exports.bboxAgg = async (dataset, query = {}) => {
   const response = {total: esResponse.hits.total}
   // ES bounds to standard bounding box: left,bottom,right,top
   const bounds = esResponse.aggregations.bbox.bounds
-  response.bbox = [bounds.top_left.lon, bounds.bottom_right.lat, bounds.bottom_right.lon, bounds.top_left.lat]
+  if (!bounds) response.bbox = []
+  else response.bbox = [bounds.top_left.lon, bounds.bottom_right.lat, bounds.bottom_right.lon, bounds.top_left.lat]
   return response
 }
 
