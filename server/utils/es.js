@@ -85,10 +85,10 @@ class IndexStream extends Transform {
     }
   }
   _flush(callback) {
-    this._sendBulk(callback)
+    this._sendBulk(callback, 'true')
   }
-  _sendBulk(callback) {
-    client.bulk({body: this.body}, () => {
+  _sendBulk(callback, refresh = 'false') {
+    client.bulk({body: this.body, refresh}, () => {
       // Super weird ! When passing callback directly it seems that it is not called.
       callback()
     })
@@ -105,8 +105,7 @@ exports.indexStream = async (inputStream, index, dataset, geopoint) => {
       .pipe(indexStream)
       .on('error', reject)
       .on('finish', () => {
-        // Wait for write to be applied in ES
-        setTimeout(() => resolve(indexStream.i), 1500)
+        resolve(indexStream.i)
       })
   })
 }
