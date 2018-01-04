@@ -9,7 +9,7 @@ module.exports = {
     title: 'Mes jeux de données',
     description: 'Ce service permet d’exposer facilement ses données via une API web, contractualisée et documentée, ce qui permet de les rendre interopérables et utilisables dans d’autres applications. Le partage des données peut se faire en mode privé ou public (opendata).',
     version: version,
-    'x-api-id': 'accessible-data'
+    'x-api-id': 'data-fair'
   }, config.info),
   servers: [{
     url: config.publicUrl + '/api/v1',
@@ -62,6 +62,6 @@ module.exports = {
   },
   externalDocs: {
     description: 'Documentation sur Github',
-    url: 'https://koumoul-dev.github.io/accessible-data/'
+    url: 'https://koumoul-dev.github.io/data-fair/'
   }
 }

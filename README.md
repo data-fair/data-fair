@@ -1,9 +1,9 @@
-# <img alt="Accessible Data logo" src="https://cdn.rawgit.com/koumoul-dev/accessible-data/master/public/assets/logo.svg" width="40"> Accessible Data
+# <img alt="Accessible Data logo" src="https://cdn.rawgit.com/koumoul-dev/data-fair/master/public/assets/logo.svg" width="40"> Accessible Data
 
 *Findable, Accessible, Interoperable and Reusable Data*
 
-[![Build Status](https://travis-ci.org/koumoul-dev/accessible-data.svg?branch=master)](https://travis-ci.org/koumoul-dev/accessible-data)
-[![Coverage Status](https://coveralls.io/repos/github/koumoul-dev/accessible-data/badge.svg?branch=master)](https://coveralls.io/github/koumoul-dev/accessible-data?branch=master)
+[![Build Status](https://travis-ci.org/koumoul-dev/data-fair.svg?branch=master)](https://travis-ci.org/koumoul-dev/data-fair)
+[![Coverage Status](https://coveralls.io/repos/github/koumoul-dev/data-fair/badge.svg?branch=master)](https://coveralls.io/github/koumoul-dev/data-fair?branch=master)
 
 *WARNING : This repo is a work in progress, it is not ready yet for the general public.*
 

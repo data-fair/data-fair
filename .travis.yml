@@ -30,7 +30,7 @@ after_success:
   # No docker push on pull requests
   - if [ "$TRAVIS_PULL_REQUEST" == "true" ]; then exit; fi
   - docker login -u $DOCKER_USER -p $DOCKER_PASS
-  - export REPO=koumoul/accessible-data
+  - export REPO=koumoul/data-fair
   - export TAG=`if [ "$TRAVIS_BRANCH" == "master" ]; then echo "latest"; else echo $TRAVIS_BRANCH ; fi`
   - docker build -f Dockerfile -t $REPO:$TAG .
   - docker push $REPO
