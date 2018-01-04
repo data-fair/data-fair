@@ -57,7 +57,7 @@ exports.switchAlias = async (dataset, tempId) => {
   const name = indexName(dataset)
   await client.indices.putAlias({name, index: tempId})
 
-  // Delete all other indices that from this dataset
+  // Delete all other indices from this dataset
   const previousIndices = await client.indices.get({index: `${name}-*`})
   for (let key in previousIndices) {
     if (key !== tempId && key !== name) await client.indices.delete({index: key})
@@ -81,17 +81,18 @@ class IndexStream extends Transform {
     }
     this.body.push(chunk)
     this.i += 1
-    if (this.i % 1000 === 0) {
+    if (this.i % 10000 === 0) {
       this._sendBulk(callback)
     } else {
       callback()
     }
   }
   _flush(callback) {
-    this._sendBulk(callback, 'true')
+    this._sendBulk(callback)
   }
-  _sendBulk(callback, refresh = 'false') {
-    client.bulk({body: this.body, refresh}, () => {
+  _sendBulk(callback) {
+    if (this.body.length === 0) return callback()
+    client.bulk({body: this.body, refresh: 'true'}, () => {
       // Super weird ! When passing callback directly it seems that it is not called.
       callback()
     })
