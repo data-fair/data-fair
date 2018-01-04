@@ -25,20 +25,23 @@ const indexName = exports.indexName = (dataset) => {
   return `${config.indicesPrefix}-${dataset.id}`
 }
 
+exports.esType = prop => {
+  if (prop.type === 'integer') return 'long'
+  if (prop.type === 'number') return 'double'
+  if (prop.type === 'boolean') return 'boolean'
+  if (prop.type === 'string' && prop.format === 'date-time') return 'date'
+  if (prop.type === 'string' && prop.format === 'date') return 'date'
+  if (prop.type === 'string' && prop.format === 'uri-reference') return 'keyword'
+  return 'text'
+}
+
 exports.initDatasetIndex = async (dataset, geopoint) => {
   const tempId = `${indexName(dataset)}-${Date.now()}`
   const body = Object.assign({}, indexBase)
   const properties = body.mappings.line.properties = {}
 
   dataset.schema.forEach(jsProp => {
-    const esProp = properties[jsProp.key] = {}
-    if (jsProp.type === 'integer') esProp.type = 'long'
-    else if (jsProp.type === 'number') esProp.type = 'double'
-    else if (jsProp.type === 'boolean') esProp.type = 'boolean'
-    else if (jsProp.type === 'string' && jsProp.format === 'date-time') esProp.type = 'date'
-    else if (jsProp.type === 'string' && jsProp.format === 'date') esProp.type = 'date'
-    else if (jsProp.type === 'string' && jsProp.format === 'uri-reference') esProp.type = 'keyword'
-    else esProp.type = 'text'
+    properties[jsProp.key] = {type: exports.esType(jsProp)}
   })
 
   // "hidden" field for geopoint indexing
@@ -160,6 +163,10 @@ exports.valuesAgg = async (dataset, query) => {
   const size = query.size ? Number(query.size) : 0
   if (size > 100) throw createError(400, '"size" cannot be more than 100')
   if (!query.field) throw createError(400, '"field" parameter is required')
+  const prop = dataset.schema.find(p => p.key === query.field)
+  if (!prop) throw createError(400, '"field" parameter references an unknown field')
+  const esType = exports.esType(prop)
+  if (esType === 'text') throw createError(400, 'values aggregation is not permitted on a full text field')
 
   query.size = '0'
   const esQuery = prepareQuery(dataset, query)
@@ -173,10 +180,12 @@ exports.valuesAgg = async (dataset, query) => {
       terms: {
         field: query.field,
         size: aggSize
-      },
-      aggs: {
-        topHits: { top_hits: { size, _source: esQuery._source } }
       }
+    }
+  }
+  if (size) {
+    esQuery.aggs.values.aggs = {
+      topHits: { top_hits: { size, _source: esQuery._source } }
     }
   }
   if (query.metric && query.metric_field) {
@@ -199,7 +208,7 @@ const prepareValuesAggResponse = (esResponse) => {
     const aggItem = {
       total: b.doc_count,
       value: b.key,
-      results: b.topHits.hits.hits.map(hit => hit._source)
+      results: b.topHits ? b.topHits.hits.hits.map(hit => hit._source) : []
     }
     if (b.metric) {
       aggItem.metric = b.metric.value

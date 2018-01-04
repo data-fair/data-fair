@@ -40,10 +40,21 @@ async function indexDataset(db, es) {
   const count = dataset.count = await esUtils.indexStream(datasetUtils.readStream(dataset), tempId, dataset, geopoint)
   await esUtils.switchAlias(dataset, tempId)
   const updateQuery = {$set: {status: 'indexed', count}}
+
   if (geopoint) {
     const res = await esUtils.bboxAgg(dataset)
-    dataset.bbox = res.bbox
-    updateQuery.$set.bbox = dataset.bbox
+    updateQuery.$set.bbox = dataset.bbox = res.bbox
+  }
+
+  for (const prop of dataset.schema) {
+    // no cardinality on text field
+    if (prop.type === 'string' && !prop.format) continue
+    updateQuery.$set.schema = dataset.schema
+    const aggResult = await esUtils.valuesAgg(dataset, {field: prop.key, agg_size: 10})
+    prop['x-cardinality'] = aggResult.total_values
+    if (aggResult.total_values <= 10) {
+      prop.enum = aggResult.aggs.map(a => a.value)
+    }
   }
 
   dataset.status = 'indexed'
