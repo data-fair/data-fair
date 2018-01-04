@@ -1,4 +1,4 @@
-const Transform = require('stream').Transform
+const Writable = require('stream').Writable
 const config = require('config')
 const elasticsearch = require('elasticsearch')
 const createError = require('http-errors')
@@ -64,7 +64,7 @@ exports.switchAlias = async (dataset, tempId) => {
   }
 }
 
-class IndexStream extends Transform {
+class IndexStream extends Writable {
   constructor(index, dataset, geopoint) {
     super({objectMode: true})
     this.index = index
@@ -73,7 +73,7 @@ class IndexStream extends Transform {
     this.body = []
     this.i = 0
   }
-  _transform(chunk, encoding, callback) {
+  _write(chunk, encoding, callback) {
     this.body.push({index: {_index: this.index, _type: 'line'}})
     if (this.geopoint) {
       // "hidden" field for geopoint indexing
@@ -87,12 +87,13 @@ class IndexStream extends Transform {
       callback()
     }
   }
-  _flush(callback) {
+  _final(callback) {
     this._sendBulk(callback)
   }
   _sendBulk(callback) {
     if (this.body.length === 0) return callback()
-    client.bulk({body: this.body, refresh: 'true'}, () => {
+    client.bulk({body: this.body, refresh: 'true'}, (err) => {
+      if (err) return callback(err)
       // Super weird ! When passing callback directly it seems that it is not called.
       callback()
     })
