@@ -25,27 +25,15 @@ exports.prepare = (testFile) => {
     app.on('listening', t.end)
   })
 
-  test.before('drop db', async t => {
+  test.after.always('drop db', async t => {
     await app.get('db').dropDatabase()
   })
 
-  test.before('drop ES indices', async t => {
+  test.after.always('drop ES indices', async t => {
     await app.get('es').indices.delete({index: `dataset-${key}-*`, ignore: [404]})
   })
 
-  test.before('remove test data', async t => {
-    await fs.remove(dataDir)
-  })
-
-  test.after('drop db', async t => {
-    await app.get('db').dropDatabase()
-  })
-
-  test.after('drop ES indices', async t => {
-    await app.get('es').indices.delete({index: `dataset-${key}-*`, ignore: [404]})
-  })
-
-  test.after('remove test data', async t => {
+  test.after.always('remove test data', async t => {
     await fs.remove(dataDir)
   })
 
