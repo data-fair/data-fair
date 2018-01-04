@@ -8,8 +8,8 @@
     </router-link>
 
     <div class="double-title">
-      <h1>Accessible data</h1>
-      <span>Le Web des données pour tous</span>
+      <h1>Data FAIR</h1>
+      <span>Find, Access, Interopere, Reuse</span>
     </div>
 
     <span style="flex:1"></span>

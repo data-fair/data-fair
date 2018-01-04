@@ -5,8 +5,8 @@ header:
   overlay_color: "#0288d1"
   overlay_filter: "0.1"
   overlay_image: assets/images/rocket.png
-  cta_label: "Télécharger"
-  cta_url: "https://github.com/koumoul-dev/accessible-data/"
+  cta_label: "Accéder au projet"
+  cta_url: "https://github.com/koumoul-dev/data-fair/"
 excerpt: Partagez et enrichissez facilement vos données pour pouvoir les utiliser dans des applications dédiées.
 intro:
   - excerpt: "<h2><i class=\"fa fa-exclamation-triangle\"></i> Ce service et sa documentation sont en cours développement</h2>Ce service permet d'exposer facilement ses données via une API web, **contractualisée et documentée**, ce qui permet de les rendre **interopérables** et utilisables dans d'autres applications. Le partage des données peut se faire en mode privé ou public (opendata)."

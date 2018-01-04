@@ -1,7 +1,7 @@
 remote_theme: mmistakes/minimal-mistakes
 name: Koumoul
-title: Accessible Data
-description: Partagez et enrichissez facilement vos données pour pouvoir les utiliser dans des applications dédiées
+title: Data FAIR
+description: Rendez vos données Faciles à trouver, Accessibles, Interopérables, Réutilisables.
 
 locale: "fr-FR"
 

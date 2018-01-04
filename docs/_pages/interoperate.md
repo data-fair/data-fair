@@ -3,7 +3,7 @@ title: Interopérabilité
 permalink: /interoperate
 ---
 
-Accessible Date est conçu pour interopérer avec d'autres services Web : en tant que consommateur d'APIs externes et en tant que fournisseur de données pour des applications.
+DataFair est conçu pour interopérer avec d'autres services Web : en tant que consommateur d'APIs externes et en tant que fournisseur de données pour des applications.
 
 ## Développement d'une nouvelle application
 
