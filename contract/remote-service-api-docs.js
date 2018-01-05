@@ -62,6 +62,10 @@ module.exports = (remoteService) => {
           }
         }
       }
+    },
+    externalDocs: {
+      description: 'Documentation sur Github',
+      url: 'https://koumoul-dev.github.io/data-fair/'
     }
   }
   Object.assign(api.paths, ...Object.keys(remoteService.apiDoc.paths).map(path => ({['/proxy' + path]: remoteService.apiDoc.paths[path]})))

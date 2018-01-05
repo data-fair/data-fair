@@ -2,6 +2,8 @@ const config = require('config')
 const status = require('./status.json')
 const version = require('../package.json').version
 const dataset = require('./dataset.json')
+const remoteService = require('./remote-service.js')
+const application = require('./application.json')
 
 module.exports = {
   openapi: '3.0.0',
@@ -40,7 +42,7 @@ module.exports = {
     },
     '/datasets': {
       post: {
-        summary: 'Charger un jeu de données',
+        summary: 'Importer un jeu de données',
         operationId: 'postDataset',
         requestBody: {
           description: 'Fichier à charger et informations de propriété',
@@ -53,6 +55,54 @@ module.exports = {
             content: {
               'application/json': {
                 schema: dataset
+              }
+            }
+          }
+        }
+      }
+    },
+    '/remote-services': {
+      post: {
+        summary: 'Configurer une réutilisation d\'un service externe',
+        operationId: 'postRemoteService',
+        requestBody: {
+          description: 'Les informations de configuration du service distant.',
+          required: true,
+          content: {
+            'application/json': {
+              schema: remoteService
+            }
+          }
+        },
+        responses: {
+          200: {
+            description: 'Les informations de configuration du service distant.',
+            content: {
+              'application/json': {
+                schema: remoteService
+              }
+            }
+          }
+        }
+      }
+    },
+    '/applications': {
+      post: {
+        summary: 'Configurer une application',
+        operationId: 'postApplication',
+        requestBody: {
+          description: 'Les informations de configuration de l\'application',
+          required: true,
+          content: {
+            schema: application
+          }
+        },
+        responses: {
+          200: {
+            description: 'Les informations de configuration de l\'application',
+            content: {
+              'application/json': {
+                schema: application
               }
             }
           }

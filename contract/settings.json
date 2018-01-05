@@ -38,6 +38,9 @@
           }
         }
       }
+    },
+    "operationsPermissions":{
+      "type": "object"
     }
   }
 }

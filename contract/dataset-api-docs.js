@@ -175,6 +175,10 @@ Pour plus d'information voir la documentation [ElasticSearch](https://www.elasti
           }
         }
       }
+    },
+    externalDocs: {
+      description: 'Documentation sur Github',
+      url: 'https://koumoul-dev.github.io/data-fair/'
     }
   }
   if (dataset.geopoint) {

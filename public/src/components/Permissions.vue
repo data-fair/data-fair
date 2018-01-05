@@ -13,7 +13,7 @@
           <span v-if="!permission.type">Public</span>
           <span v-else>{{permission.type === 'user' ? ('Utilisateur ' + (users[permission.id] && users[permission.id].name)) : ('Organisation ' + (organizations[permission.id] && organizations[permission.id].name))}}</span>
           <span v-if="permission.type === 'organization' && (!permission.roles || !permission.roles.length)">Tout le monde</span>
-          <span v-if="permission.type === 'organization' && (permission.roles && permission.roles.length)">Rôles : {{permission.roles.join(', ')}}</span>
+          <span v-if="permission.type === 'organization' && (permission.roles && permission.roles.length)">Restreint aux rôles : {{permission.roles.join(', ')}}</span>
         </md-layout>
 
         <md-layout md-flex="60" md-column v-if="operations && operations.length">
@@ -53,8 +53,8 @@
         </md-select>
       </md-input-container>
 
-      <md-input-container v-if="newPermission.type === 'organization' && newPermission.id && userOrganizations[newPermission.id]">
-        <label>Rôles</label>
+      <md-input-container v-if="newPermission.type === 'organization' && newPermissionOrganizationRoles.length">
+        <label>Restreindre à des rôles</label>
         <md-select v-model="newPermission.roles" multiple>
           <md-option :value="role" v-for="role in newPermissionOrganizationRoles">{{role}}</md-option>
         </md-select>
@@ -138,11 +138,9 @@ export default {
     },
     'newPermission.id': function(id) {
       if (this.newPermission.type === 'organization' && id) {
-        if(this.userOrganizations[this.newPermission.id]){
+        if((this.resource.owner.type === 'organization' && this.resource.owner.id === id) || (this.resource.owner.type === 'user' && this.userOrganizations[id])){
           this.$http.get(window.CONFIG.directoryUrl + '/api/organizations/' + id + '/roles').then(results => {
-            this.newPermissionOrganizationRoles = results.data
-          }, error => {
-            this.newPermissionOrganizationRoles = []
+            this.newPermissionOrganizationRoles = results.data.filter(role => role !== window.CONFIG.adminRole)
           })
         }else{
           this.newPermissionOrganizationRoles = []

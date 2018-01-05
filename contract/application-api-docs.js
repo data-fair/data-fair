@@ -111,6 +111,10 @@ module.exports = (application) => {
           }
         }
       }
+    },
+    externalDocs: {
+      description: 'Documentation sur Github',
+      url: 'https://koumoul-dev.github.io/data-fair/'
     }
   }
   return api

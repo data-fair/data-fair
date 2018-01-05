@@ -63,6 +63,7 @@ router.post('', auth.jwtMiddleware, async(req, res, next) => {
   // This id is temporary, we should have an human understandable id, or perhaps manage it UI side ?
   req.body.id = req.body.id || shortid.generate()
   req.body.owner = usersUtils.owner(req)
+  if (!permissions.canDoForOwner(req.body.owner, 'postRemoteService', req.user, req.app.get('db'))) return res.sendStatus(403)
   var valid = validateRemoteService(req.body)
   if (!valid) return res.status(400).send(normalise(validateRemoteService.errors))
   const date = moment().toISOString()

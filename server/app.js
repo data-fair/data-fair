@@ -47,7 +47,8 @@ const renderedIndex = compiledIndex({
   config: JSON.stringify({
     publicUrl: config.publicUrl,
     wsPublicUrl: config.wsPublicUrl,
-    directoryUrl: config.directoryUrl
+    directoryUrl: config.directoryUrl,
+    adminRole: config.adminRole
   })
 })
 app.use('/*', (req, res) => {

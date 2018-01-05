@@ -71,3 +71,19 @@ exports.isOwner = function(owner, user) {
   }
   return false
 }
+
+//
+exports.canDoForOwner = async function(owner, operationId, user, db) {
+  if (!user) return false
+  if (owner.type === 'user' && owner.id === user.id) return true
+  if (owner.type === 'organization') {
+    const userOrga = user.organizations.find(o => o.id === owner.id)
+    if (userOrga) {
+      if (userOrga.role === config.adminRole) return true
+      const settings = await db.collection('settings').findOne(owner)
+      const operationsPermissions = settings.operationsPermissions && settings.operationsPermissions[operationId]
+      if (operationsPermissions) return operationsPermissions.indexOf(userOrga.role) >= 0
+    }
+  }
+  return false
+}

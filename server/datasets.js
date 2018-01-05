@@ -136,6 +136,8 @@ const detectCharacterEncoding = require('detect-character-encoding')
 
 // Create a dataset by uploading tabular data
 router.post('', auth.jwtMiddleware, filesUtils.uploadFile(), async(req, res, next) => {
+  const owner = usersUtils.owner(req)
+  if (!permissions.canDoForOwner(owner, 'postDataset', req.user, req.app.get('db'))) return res.sendStatus(403)
   if (!req.file) return res.sendStatus(400)
   // TODO verify quota
   try {
@@ -148,7 +150,7 @@ router.post('', auth.jwtMiddleware, filesUtils.uploadFile(), async(req, res, nex
         size: req.file.size,
         mimetype: req.file.mimetype
       },
-      owner: usersUtils.owner(req),
+      owner,
       createdBy: req.user.id,
       createdAt: date,
       updatedBy: req.user.id,

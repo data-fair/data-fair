@@ -52,7 +52,7 @@
     </md-menu>
   </md-toolbar>
 
-  <router-view></router-view>
+  <router-view :key="$route.fullPath"></router-view>
 
   <md-snackbar md-position="bottom center" ref="notificationErrorSnackbar" md-duration="12000" @close="notifyError">
     <md-icon md-theme="error" class="md-primary">error</md-icon>
