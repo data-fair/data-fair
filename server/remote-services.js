@@ -168,9 +168,14 @@ router.post('/:remoteServiceId/_update', async(req, res, next) => {
 })
 
 router.use('/:remoteServiceId/proxy*', function(req, res, next) {
-  // TODO add API key
   const options = {
     url: req.remoteService.server + '*'
+  }
+  // TODO handle query & cookie header types
+  if (req.remoteService.apiKey.in === 'header') {
+    options.headers = {
+      [req.remoteService.apiKey.name]: req.remoteService.apiKey.value
+    }
   }
   requestProxy(options)(req, res, next)
 })

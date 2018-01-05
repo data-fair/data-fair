@@ -3,7 +3,7 @@ module.exports = {
   description: 'An remote service must be described with the openAPI 3.0 specification. If the API is secured, there must be at least one api-key based security scheme available.',
   type: 'object',
   additionalProperties: false,
-  required: ['id', 'owner', 'apiDoc'],
+  required: ['id', 'owner', 'apiDoc', 'apiKey'],
   properties: {
     id: {
       type: 'string',
@@ -61,8 +61,24 @@ module.exports = {
       description: 'The url to fetch the apiDoc. Can be used for refresh purpose'
     },
     apiKey: {
-      type: 'string',
-      description: 'The value of the required apiKey'
+      type: 'object',
+      additionalProperties: false,
+      required: ['in', 'name'],
+      properties: {
+        in: {
+          type: 'string',
+          enum: ['query', 'header', 'cookie'],
+          description: 'Where the api key is located'
+        },
+        name: {
+          type: 'string',
+          description: 'Identifier of the owner of this configuration for an remote service'
+        },
+        value: {
+          type: 'string',
+          description: 'The value of the required api key'
+        }
+      }
     },
     server: {
       type: 'string',

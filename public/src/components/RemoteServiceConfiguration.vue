@@ -9,7 +9,7 @@
     </md-input-container>
     <md-input-container>
       <label>Clé d'API</label>
-      <md-input v-model="remoteService.apiKey"></md-input>
+      <md-input v-model="remoteService.apiKey.value"></md-input>
     </md-input-container>
     <md-input-container>
       <label>URL de mise à jour</label>
