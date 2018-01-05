@@ -7,7 +7,7 @@ Cette application expose des services Web et interopère avec d'autres applicati
 
 La procédure d'installation décrite ici est une procédure simplifiée, qui ne couvre pas toutes les étapes de configuration d'un environnement de production comme le *reverse proxy* avec certificat SSL, le DNS ou l'équilibrage de charge.
 
-Nous proposons une installation simple grâce à l'utilisation de conteneurs [Docker](https://docker.com) basés sur [l'image](https://hub.docker.com/r/koumoul/accessible-data/) que nous mettons à disposition. Le service peut être installé hors Docker, nous vous conseillons dans ce cas de regarder la documentation pour les développeurs directement dans le [répertoire du projet](https://github.com/koumoul-dev/accessible-data).
+Nous proposons une installation simple grâce à l'utilisation de conteneurs [Docker](https://docker.com) basés sur [l'image](https://hub.docker.com/r/koumoul/data-fair/) que nous mettons à disposition. Le service peut être installé hors Docker, nous vous conseillons dans ce cas de regarder la documentation pour les développeurs directement dans le [répertoire du projet](https://github.com/koumoul-dev/data-fair).
 
 
 ## Prérequis
@@ -71,8 +71,8 @@ Le contenu du fichier `docker-compose.yml` est le suivant (vous pouvez bien sûr
 ```
 version: '3'
 services:
-  accessible-data:
-    image: koumoul/accessible-data:0.1.0
+  data-fair:
+    image: koumoul/data-fair:0.1.0
     ports:
       - 8080:8080
   elastic-search:

@@ -26,7 +26,7 @@ defaults:
       toc: true
       toc_label: "Table des matières"
 
-repository: "koumoul-dev/accessible-data"
+repository: "koumoul-dev/data-fair"
 search: true
 
 twitter:

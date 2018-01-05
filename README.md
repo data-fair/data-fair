@@ -1,4 +1,4 @@
-# <img alt="Accessible Data logo" src="https://cdn.rawgit.com/koumoul-dev/data-fair/master/public/assets/logo.svg" width="40"> Accessible Data
+# <img alt="Data FAIR logo" src="https://cdn.rawgit.com/koumoul-dev/data-fair/master/public/assets/logo.svg" width="40"> Data FAIR
 
 *Findable, Accessible, Interoperable and Reusable Data*
 

@@ -27,7 +27,7 @@ exports.prepare = (testFile) => {
     port,
     publicUrl: 'http://localhost:' + port,
     dataDir,
-    mongoUrl: 'mongodb://localhost:27017/accessible-data-test-' + key,
+    mongoUrl: 'mongodb://localhost:27017/data-fair-test-' + key,
     indicesPrefix
   })
   const config = require('config')

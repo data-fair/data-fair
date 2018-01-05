@@ -1,5 +1,5 @@
 ---
-title: Accessible Data
+title: Data FAIR
 layout: splash
 header:
   overlay_color: "#0288d1"
