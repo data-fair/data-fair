@@ -93,7 +93,7 @@ class IndexStream extends Writable {
   }
   _sendBulk(callback) {
     if (this.body.length === 0) return callback()
-    this.client.bulk({body: this.body, refresh: 'true'}, (err) => {
+    this.client.bulk({body: this.body, refresh: 'wait_for'}, (err) => {
       if (err) return callback(err)
       // Super weird ! When passing callback directly it seems that it is not called.
       callback()
