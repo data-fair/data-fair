@@ -21,7 +21,7 @@ app.use(cookieParser())
 
 // Business routers
 app.use('/api/v1', require('./root'))
-app.use('/api/v1/external-apis', require('./external-apis'))
+app.use('/api/v1/remote-services', require('./remote-services'))
 app.use('/api/v1/application-configs', require('./application-configs'))
 app.use('/api/v1/datasets', require('./datasets'))
 app.get('/api/v1/status', status.status)

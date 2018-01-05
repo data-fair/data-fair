@@ -1,33 +1,33 @@
 <template>
   <div>
-    <h3 class="md-display-1">{{externalApis.count}} services externes</h3>
+    <h3 class="md-display-1">{{remoteServices.count}} services distants configurés</h3>
     <md-layout md-row>
-      <md-layout v-for="externalApi in externalApis.results" md-flex="50" md-flex-small="100" style="padding:16px">
+      <md-layout v-for="remoteService in remoteServices.results" md-flex="50" md-flex-small="100" style="padding:16px">
         <md-card style="width:100%">
           <md-card-header>
             <div class="md-title">
-              <router-link :to="{name: 'ExternalService', params:{externalApiId:externalApi.id}}">{{externalApi.title}}</router-link>
+              <router-link :to="{name: 'RemoteService', params:{remoteServiceId:remoteService.id}}">{{remoteService.title}}</router-link>
             </div>
           </md-card-header>
           <md-card-content>
-            {{externalApi.description}}
+            {{remoteService.description}}
           </md-card-content>
           <md-layout flex="true"></md-layout>
           <md-card-actions>
-            <!-- <a :href="externalApi.links.fields" target="_blank" v-if="externalApi.links.fields">
+            <!-- <a :href="remoteService.links.fields" target="_blank" v-if="remoteService.links.fields">
                 <md-button>Schémas</md-button>
               </a>
-              <a :href="externalApi.links.externalApidoc" target="_blank">
+              <a :href="remoteService.links.remoteServicedoc" target="_blank">
                 <md-button>Documentation</md-button>
               </a> -->
           </md-card-actions>
           <!-- <md-layout flex="true"></md-layout> -->
           <md-card-content>
-            <span v-if="externalApi.owner.type === 'user'"><md-icon>person</md-icon>{{users[externalApi.owner.id] && users[externalApi.owner.id].name}}</span>
-            <span v-if="externalApi.owner.type === 'organization'"><md-icon>group</md-icon>{{organizations[externalApi.owner.id] && organizations[externalApi.owner.id].name}}</span>
+            <span v-if="remoteService.owner.type === 'user'"><md-icon>person</md-icon>{{users[remoteService.owner.id] && users[remoteService.owner.id].name}}</span>
+            <span v-if="remoteService.owner.type === 'organization'"><md-icon>group</md-icon>{{organizations[remoteService.owner.id] && organizations[remoteService.owner.id].name}}</span>
 
 
-            <md-chip :class="externalApi.public ? 'md-primary' : 'md-accent'">{{externalApi.public ? 'Public' : 'Privé'}}</md-chip>
+            <md-chip :class="remoteService.public ? 'md-primary' : 'md-accent'">{{remoteService.public ? 'Public' : 'Privé'}}</md-chip>
             <!-- <div class="md-subhead">Sources</div>
               <span v-for="(source, index) in api.sources">
           <a :href="source.link" target="_blank">{{source.name}}</a>
@@ -46,9 +46,9 @@ const {
 } = require('vuex')
 
 export default {
-  name: 'external-apis',
+  name: 'remote-services',
   data: () => ({
-    externalApis: {
+    remoteServices: {
       count: 0,
       results: []
     },
@@ -61,23 +61,23 @@ export default {
     })
   },
   mounted() {
-    this.listExternalApis()
+    this.listRemoteServices()
   },
   methods: {
-    listExternalApis() {
-      this.$http.get(window.CONFIG.publicUrl + '/api/v1/external-apis').then(results => {
-        this.externalApis = results.data
+    listRemoteServices() {
+      this.$http.get(window.CONFIG.publicUrl + '/api/v1/remote-services').then(results => {
+        this.remoteServices = results.data
       })
     }
   },
   watch: {
     user(newVal, oldVal){
       if(!newVal || !oldVal || newVal.id != oldVal.id){
-        this.listExternalApis()
+        this.listRemoteServices()
       }
     },
-    externalApis() {
-      const orgIds = this.externalApis.results.filter(externalApi => externalApi.owner.type === 'organization').map(externalApi => externalApi.owner.id)
+    remoteServices() {
+      const orgIds = this.remoteServices.results.filter(remoteService => remoteService.owner.type === 'organization').map(remoteService => remoteService.owner.id)
       if (orgIds.length) {
         this.$http.get(window.CONFIG.directoryUrl + '/api/organizations?ids=' + orgIds.join(',')).then(results => {
           this.organizations = Object.assign({}, ...results.data.results.map(organization => ({
@@ -85,7 +85,7 @@ export default {
           })))
         })
       }
-      const userIds = this.externalApis.results.filter(externalApi => externalApi.owner.type === 'user').map(externalApi => externalApi.owner.id)
+      const userIds = this.remoteServices.results.filter(remoteService => remoteService.owner.type === 'user').map(remoteService => remoteService.owner.id)
       if (userIds.length) {
         this.$http.get(window.CONFIG.directoryUrl + '/api/users?ids=' + userIds.join(',')).then(results => {
           this.users = Object.assign({}, ...results.data.results.map(user => ({

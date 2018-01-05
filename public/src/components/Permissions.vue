@@ -18,7 +18,9 @@
 
         <md-layout md-flex="60" md-column v-if="operations && operations.length">
           <md-subheader>Opérations</md-subheader>
-          {{permission.operations.map(oid => operations.find(o => o.id === oid).title).join(', ')}}
+          <ul>
+            <li v-for="operation in permission.operations.map(oid => operations.find(o => o.id === oid))">{{operation.title}}</li>
+          </ul>
         </md-layout>
 
         <md-layout md-flex="5" md-flex-offset="5" md-column v-if="operations && operations.length">
@@ -58,12 +60,10 @@
         </md-select>
       </md-input-container>
 
-      <md-input-container>
-        <label>Opérations</label>
-        <md-select v-model="newPermission.operations" multiple>
-          <md-option :value="operation.id" v-for="operation in Object.values(operations)">{{operation.title}}</md-option>
-        </md-select>
-      </md-input-container>
+      <md-layout md-column>
+        <md-subheader>Opérations</md-subheader>
+        <md-checkbox :md-value="operation.id" v-model="newPermission.operations" v-for="operation in Object.values(operations)">{{operation.title}}</md-checkbox>
+      </md-layout>
     </md-dialog-content>
 
     <md-dialog-actions>

@@ -72,7 +72,7 @@ router.use('/:applicationConfigId', auth.optionalJwtMiddleware, async function(r
         _id: 0
       }
     })
-    if (!req.applicationConfig) return res.status(404).send('External Api not found')
+    if (!req.applicationConfig) return res.status(404).send('Application configuration not found')
     next()
   } catch (err) {
     next(err)

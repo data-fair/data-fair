@@ -6,10 +6,11 @@ const shortid = require('shortid')
 const soasLoader = require('soas')
 const axios = require('axios')
 const requestProxy = require('express-request-proxy')
+const remoteServiceAPIDocs = require('../contract/remote-service-api-docs')
 
 const ajv = require('ajv')()
-const externalApiSchema = require('../contract/external-api.js')
-const validateExternalApi = ajv.compile(externalApiSchema)
+const remoteServiceSchema = require('../contract/remote-service.js')
+const validateRemoteService = ajv.compile(remoteServiceSchema)
 const openApiSchema = require('../contract/openapi-3.0.json')
 openApiSchema.$id = openApiSchema.$id + '-2' // dirty hack to handle ajv error
 const validateOpenApi = ajv.compile(openApiSchema)
@@ -34,9 +35,9 @@ const computeActions = (apiDoc) => {
   return actions
 }
 
-// Get the list of external-apis
+// Get the list of remote-services
 router.get('', auth.optionalJwtMiddleware, async function(req, res, next) {
-  const externalApis = req.app.get('db').collection('external-apis')
+  const remoteServices = req.app.get('db').collection('remote-services')
   const query = findUtils.query(req.query, {
     'input-concepts': 'actions.input.concept',
     'output-concepts': 'actions.output.concept',
@@ -46,8 +47,8 @@ router.get('', auth.optionalJwtMiddleware, async function(req, res, next) {
   const [skip, size] = findUtils.pagination(req.query)
   query.$or = permissions.filter(req.user)
   let mongoQueries = [
-    size > 0 ? externalApis.find(query).limit(size).skip(skip).sort(sort).project({_id: 0}).toArray() : Promise.resolve([]),
-    externalApis.find(query).count()
+    size > 0 ? remoteServices.find(query).limit(size).skip(skip).sort(sort).project({_id: 0}).toArray() : Promise.resolve([]),
+    remoteServices.find(query).count()
   ]
   try {
     const [results, count] = await Promise.all(mongoQueries)
@@ -57,13 +58,13 @@ router.get('', auth.optionalJwtMiddleware, async function(req, res, next) {
   }
 })
 
-// Create an external Api
+// Create an remote Api
 router.post('', auth.jwtMiddleware, async(req, res, next) => {
   // This id is temporary, we should have an human understandable id, or perhaps manage it UI side ?
   req.body.id = req.body.id || shortid.generate()
   req.body.owner = usersUtils.owner(req)
-  var valid = validateExternalApi(req.body)
-  if (!valid) return res.status(400).send(normalise(validateExternalApi.errors))
+  var valid = validateRemoteService(req.body)
+  if (!valid) return res.status(400).send(normalise(validateRemoteService.errors))
   const date = moment().toISOString()
   req.body.createdAt = date
   req.body.createdBy = req.user.id
@@ -77,7 +78,7 @@ router.post('', auth.jwtMiddleware, async(req, res, next) => {
     req.body.actions = computeActions(req.body.apiDoc)
   }
   try {
-    await req.app.get('db').collection('external-apis').insertOne(req.body)
+    await req.app.get('db').collection('remote-services').insertOne(req.body)
     res.status(201).json(req.body)
   } catch (err) {
     return next(err)
@@ -85,43 +86,43 @@ router.post('', auth.jwtMiddleware, async(req, res, next) => {
 })
 
 // Middlewares
-router.use('/:externalApiId', auth.optionalJwtMiddleware, async function(req, res, next) {
+router.use('/:remoteServiceId', auth.optionalJwtMiddleware, async function(req, res, next) {
   try {
-    req.externalApi = await req.app.get('db').collection('external-apis').findOne({
-      id: req.params.externalApiId
+    req.remoteService = await req.app.get('db').collection('remote-services').findOne({
+      id: req.params.remoteServiceId
     }, {
       fields: {
         _id: 0
       }
     })
-    if (!req.externalApi) return res.status(404).send('External Api not found')
+    if (!req.remoteService) return res.status(404).send('Remote Api not found')
     next()
   } catch (err) {
     next(err)
   }
 })
 
-// retrieve a externalApi by its id
-router.get('/:externalApiId', (req, res, next) => {
-  if (!permissions.can(req.externalApi, 'readDescription', req.user)) return res.sendStatus(403)
-  res.status(200).send(req.externalApi)
+// retrieve a remoteService by its id
+router.get('/:remoteServiceId', (req, res, next) => {
+  if (!permissions.can(req.remoteService, 'readDescription', req.user)) return res.sendStatus(403)
+  res.status(200).send(req.remoteService)
 })
 
-// update a externalApi
+// update a remoteService
 // TODO: prevent overwriting owner and maybe other calculated fields.. A PATCH route like in datasets ?
-router.put('/:externalApiId', async(req, res, next) => {
-  if (!permissions.can(req.externalApi, 'writeDescription', req.user)) return res.sendStatus(403)
-  var valid = validateExternalApi(req.body)
-  if (!valid) return res.status(400).send(normalise(validateExternalApi.errors))
+router.put('/:remoteServiceId', async(req, res, next) => {
+  if (!permissions.can(req.remoteService, 'writeDescription', req.user)) return res.sendStatus(403)
+  var valid = validateRemoteService(req.body)
+  if (!valid) return res.status(400).send(normalise(validateRemoteService.errors))
   req.body.updatedAt = moment().toISOString()
   req.body.updatedBy = req.user.id
-  req.body.id = req.params.externalApiId
+  req.body.id = req.params.remoteServiceId
   if (req.body.apiDoc) {
     req.body.actions = computeActions(req.body.apiDoc)
   }
   try {
-    await req.app.get('db').collection('external-apis').updateOne({
-      id: req.params.externalApiId
+    await req.app.get('db').collection('remote-services').updateOne({
+      id: req.params.remoteServiceId
     }, req.body)
     res.status(200).json(req.body)
   } catch (err) {
@@ -129,13 +130,13 @@ router.put('/:externalApiId', async(req, res, next) => {
   }
 })
 
-// Delete a externalApi
-router.delete('/:externalApiId', async(req, res, next) => {
-  if (!permissions.can(req.externalApi, 'delete', req.user)) return res.sendStatus(403)
+// Delete a remoteService
+router.delete('/:remoteServiceId', async(req, res, next) => {
+  if (!permissions.can(req.remoteService, 'delete', req.user)) return res.sendStatus(403)
   try {
     // TODO : Remove indexes
-    await req.app.get('db').collection('external-apis').deleteOne({
-      id: req.params.externalApiId
+    await req.app.get('db').collection('remote-services').deleteOne({
+      id: req.params.remoteServiceId
     })
     res.sendStatus(204)
   } catch (err) {
@@ -143,21 +144,21 @@ router.delete('/:externalApiId', async(req, res, next) => {
   }
 })
 
-router.post('/:externalApiId/_update', async(req, res, next) => {
-  if (!permissions.can(req.externalApi, 'writeDescription', req.user)) return res.sendStatus(403)
-  if (req.externalApi.url) {
+router.post('/:remoteServiceId/_update', async(req, res, next) => {
+  if (!permissions.can(req.remoteService, 'writeDescription', req.user)) return res.sendStatus(403)
+  if (req.remoteService.url) {
     try {
-      const reponse = await axios.get(req.externalApi.url)
+      const reponse = await axios.get(req.remoteService.url)
       var valid = validateOpenApi(reponse.data)
       if (!valid) return res.status(400).send(normalise(validateOpenApi.errors))
-      req.externalApi.updatedAt = moment().toISOString()
-      req.externalApi.updatedBy = req.user.id
-      req.externalApi.apiDoc = reponse.data
-      req.externalApi.actions = computeActions(req.externalApi.apiDoc)
-      await req.app.get('db').collection('external-apis').updateOne({
-        id: req.params.externalApiId
-      }, req.externalApi)
-      res.status(200).json(req.externalApi)
+      req.remoteService.updatedAt = moment().toISOString()
+      req.remoteService.updatedBy = req.user.id
+      req.remoteService.apiDoc = reponse.data
+      req.remoteService.actions = computeActions(req.remoteService.apiDoc)
+      await req.app.get('db').collection('remote-services').updateOne({
+        id: req.params.remoteServiceId
+      }, req.remoteService)
+      res.status(200).json(req.remoteService)
     } catch (err) {
       return next(err)
     }
@@ -166,20 +167,24 @@ router.post('/:externalApiId/_update', async(req, res, next) => {
   }
 })
 
-router.use('/:externalApiId/proxy*', function(req, res, next) {
+router.use('/:remoteServiceId/proxy*', function(req, res, next) {
   // TODO add API key
   const options = {
-    url: req.externalApi.server + '*'
+    url: req.remoteService.server + '*'
   }
   requestProxy(options)(req, res, next)
 })
 
-router.post('/:externalApiId/actions/:actionId', async(req, res, next) => {
+router.post('/:remoteServiceId/actions/:actionId', async(req, res, next) => {
   console.log(req.params.actionId, req.body)
-  // const soas = soasLoader(req.externalApi.apiDoc)
+  // const soas = soasLoader(req.remoteService.apiDoc)
   // prepare input by reading req.body.inputConcept and prepare a stream of objects with these keys
   // for each object, generate an id or get the one generated by es ?
   // const output = await soas.execute(req.params.actionId, input)
   // output is a stream of json objects with an id and additionnal data
   res.sendStatus(201)
+})
+
+router.get('/:remoteServiceId/api-docs.json', (req, res) => {
+  res.send(remoteServiceAPIDocs(req.remoteService))
 })

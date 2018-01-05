@@ -18,7 +18,7 @@ router.get('/vocabulary', (req, res) => {
   res.json(vocabulary)
 })
 
-// Create an external Api
+// Check an Api documentation format
 router.post('/_check-api', async(req, res, next) => {
   var valid = validateApi(req.body)
   if (!valid) return res.status(400).send(normalise(validateApi.errors))

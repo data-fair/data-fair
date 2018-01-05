@@ -3,8 +3,8 @@ import Vue from 'vue'
 import Home from './pages/Home.vue'
 import Datasets from './pages/Datasets.vue'
 import Dataset from './pages/Dataset.vue'
-import ExternalServices from './pages/ExternalServices.vue'
-import ExternalService from './pages/ExternalService.vue'
+import RemoteServices from './pages/RemoteServices.vue'
+import RemoteService from './pages/RemoteService.vue'
 import ApplicationConfigs from './pages/ApplicationConfigs.vue'
 import ApplicationConfig from './pages/ApplicationConfig.vue'
 import Settings from './pages/Settings.vue'
@@ -23,13 +23,13 @@ export default [{
   name: 'Dataset',
   component: Dataset
 }, {
-  path: '/external-services',
-  name: 'ExternalServices',
-  component: ExternalServices
+  path: '/remote-services',
+  name: 'RemoteServices',
+  component: RemoteServices
 }, {
-  path: '/external-api/:externalApiId',
-  name: 'ExternalService',
-  component: ExternalService
+  path: '/remote-service/:remoteServiceId',
+  name: 'RemoteService',
+  component: RemoteService
 }, {
   path: '/application-configs',
   name: 'ApplicationConfigs',

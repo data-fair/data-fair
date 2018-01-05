@@ -16,8 +16,11 @@ exports.init = async () => {
   // datasets indexes
   await ensureIndex(db, 'datasets', {id: 1}, {unique: true})
   await ensureIndex(db, 'datasets', {title: 'text', description: 'text'}, {name: 'fulltext'})
-  // external-apis indexes
-  await ensureIndex(db, 'external-apis', {id: 1}, {unique: true})
-  await ensureIndex(db, 'external-apis', {title: 'text', description: 'text'}, {name: 'fulltext'})
+  // remote-services indexes
+  await ensureIndex(db, 'remote-services', {id: 1}, {unique: true})
+  await ensureIndex(db, 'remote-services', {title: 'text', description: 'text'}, {name: 'fulltext'})
+  // application-configs indexes
+  await ensureIndex(db, 'application-configs', {id: 1}, {unique: true})
+  await ensureIndex(db, 'application-configs', {title: 'text', description: 'text'}, {name: 'fulltext'})
   return db
 }

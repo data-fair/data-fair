@@ -1,5 +1,5 @@
 <template>
-<md-layout md-align="center" class="external-service" v-if="externalApi">
+<md-layout md-align="center" class="remote-service" v-if="remoteService">
   <md-layout md-column md-flex="85" md-flex-offset="5">
     <md-tabs md-fixed class="md-transparent">
       <md-tab md-label="Description" md-icon="toc">
@@ -8,37 +8,37 @@
           <md-layout md-column md-flex="55">
             <md-input-container>
               <label>Titre</label>
-              <md-input v-model="externalApi.title" @blur="save"></md-input>
+              <md-input v-model="remoteService.title" @blur="save"></md-input>
             </md-input-container>
             <md-input-container>
               <label>Description</label>
-              <md-textarea v-model="externalApi.description" @blur="save"></md-textarea>
+              <md-textarea v-model="remoteService.description" @blur="save"></md-textarea>
             </md-input-container>
           </md-layout>
           <md-layout md-column md-flex="35" md-flex-offset="10">
             <md-card>
               <md-list>
-                <md-list-item v-if="externalApi.apiDoc.info.contact && externalApi.apiDoc.info.contact.url">
-                  <md-icon>home</md-icon> <span><a :href="externalApi.apiDoc.info.contact.url">{{externalApi.apiDoc.info.contact.name || externalApi.apiDoc.info.contact.url}}</a></span>
+                <md-list-item v-if="remoteService.apiDoc.info.contact && remoteService.apiDoc.info.contact.url">
+                  <md-icon>home</md-icon> <span><a :href="remoteService.apiDoc.info.contact.url">{{remoteService.apiDoc.info.contact.name || remoteService.apiDoc.info.contact.url}}</a></span>
                 </md-list-item>
-                <md-list-item v-if="externalApi.apiDoc.info.contact && externalApi.apiDoc.info.contact.email">
-                  <md-icon>email</md-icon> <span><a :href="'mailto:'+externalApi.apiDoc.info.contact.email">{{externalApi.apiDoc.info.contact.email}}</a></span>
+                <md-list-item v-if="remoteService.apiDoc.info.contact && remoteService.apiDoc.info.contact.email">
+                  <md-icon>email</md-icon> <span><a :href="'mailto:'+remoteService.apiDoc.info.contact.email">{{remoteService.apiDoc.info.contact.email}}</a></span>
                 </md-list-item>
-                <md-list-item v-if="externalApi.apiDoc.info.version">
-                  <md-icon>label</md-icon> <span>{{externalApi.apiDoc.info.version}}</span>
+                <md-list-item v-if="remoteService.apiDoc.info.version">
+                  <md-icon>label</md-icon> <span>{{remoteService.apiDoc.info.version}}</span>
                 </md-list-item>
-                <md-list-item v-if="externalApi.apiDoc.info.termsOfService">
-                  <md-icon>description</md-icon> <span><a :href="externalApi.apiDoc.info.termsOfService">Terms of Service</a></span>
+                <md-list-item v-if="remoteService.apiDoc.info.termsOfService">
+                  <md-icon>description</md-icon> <span><a :href="remoteService.apiDoc.info.termsOfService">Terms of Service</a></span>
                 </md-list-item>
               </md-list>
             </md-card>
           </md-layout>
         </md-layout>
 
-        <!-- <schema :externalApi="externalApi" @schema-updated="externalApi.schema = $event; externalApi.status = 'schematized';save()"></schema> -->
+        <!-- <schema :remoteService="remoteService" @schema-updated="remoteService.schema = $event; remoteService.status = 'schematized';save()"></schema> -->
         <h3 class="md-headline">Opérations</h3>
         <md-list>
-          <md-list-item v-for="action in externalApi.actions">
+          <md-list-item v-for="action in remoteService.actions">
             <md-layout md-row style="padding:8px" md-vertical-align="center">
               <md-layout md-column md-flex="5">
                 <md-icon v-if="!action.inputCollection || !action.outputCollection">description
@@ -85,15 +85,15 @@
       </md-tab>
 
       <md-tab md-label="Configuration" md-icon="build">
-        <api-configuration :external-api="externalApi"></api-configuration>
+        <remote-service-configuration :remote-service="remoteService"></remote-service-configuration>
       </md-tab>
 
       <md-tab md-label="Permissions" md-icon="security">
-        <permissions :resource="externalApi" :api="externalApi.apiDoc" @permissions-updated="save"></permissions>
+        <permissions :resource="remoteService" :api="api" @permissions-updated="save"></permissions>
       </md-tab>
 
       <md-tab md-label="API" md-icon="cloud">
-        <open-api v-if="externalApi" :api="externalApi.apiDoc"></open-api>
+        <open-api v-if="api" :api="api"></open-api>
       </md-tab>
     </md-tabs>
   </md-layout>
@@ -102,7 +102,7 @@
     <md-dialog md-open-from="#delete" md-close-to="#delete" ref="delete-dialog">
       <md-dialog-title>Suppression du jeu de données</md-dialog-title>
 
-      <md-dialog-content>Voulez vous vraiment supprimer la description de l'API <code>{{externalApi.title}}</code> ? La suppression est définitive et le paramétrage sera perdu.</md-dialog-content>
+      <md-dialog-content>Voulez vous vraiment supprimer la description de l'API <code>{{remoteService.title}}</code> ? La suppression est définitive et le paramétrage sera perdu.</md-dialog-content>
 
       <md-dialog-actions>
         <md-button class="md-default md-raised" @click="$refs['delete-dialog'].close()">Non</md-button>
@@ -113,10 +113,10 @@
     <md-layout md-flex="30"></md-layout>
 
     <md-layout md-flex="10">
-      <a :href="externalApi.apiDoc.externalDocs.url" v-if="externalApi.apiDoc.externalDocs" target="_blank">
+      <a :href="remoteService.apiDoc.externalDocs.url" v-if="remoteService.apiDoc.externalDocs" target="_blank">
         <md-button class="md-icon-button md-raised md-primary">
           <md-icon>description</md-icon>
-          <md-tooltip md-direction="left">{{externalApi.apiDoc.externalDocs.description}}</md-tooltip>
+          <md-tooltip md-direction="left">{{remoteService.apiDoc.externalDocs.description}}</md-tooltip>
         </md-button>
       </a>
     </md-layout>
@@ -138,19 +138,20 @@
 </template>
 
 <script>
-import ApiConfiguration from '../components/ApiConfiguration.vue'
+import RemoteServiceConfiguration from '../components/RemoteServiceConfiguration.vue'
 import Permissions from '../components/Permissions.vue'
 import OpenApi from 'vue-openapi'
 
 export default {
-  name: 'external-service',
+  name: 'remote-service',
   components: {
-    ApiConfiguration,
+    RemoteServiceConfiguration,
     Permissions,
     OpenApi
   },
   data: () => ({
-    externalApi: null,
+    remoteService: null,
+    api: null,
     vocabulary: {},
     actions: {
       'http://schema.org/SearchAction': 'Recherche',
@@ -158,8 +159,11 @@ export default {
     }
   }),
   mounted() {
-    this.$http.get(window.CONFIG.publicUrl + '/api/v1/external-apis/' + this.$route.params.externalApiId).then(result => {
-      this.externalApi = result.data
+    this.$http.get(window.CONFIG.publicUrl + '/api/v1/remote-services/' + this.$route.params.remoteServiceId).then(result => {
+      this.remoteService = result.data
+      this.$http.get(`${window.CONFIG.publicUrl}/api/v1/remote-services/${this.remoteService.id}/api-docs.json`).then(response => {
+        this.api = response.body
+      })
     })
     this.$http.get(window.CONFIG.publicUrl + '/api/v1/vocabulary').then(results => {
       results.data.forEach(term => term.identifiers.forEach(id => this.vocabulary[id] = term))
@@ -167,28 +171,28 @@ export default {
   },
   methods: {
     save() {
-      this.$http.put(window.CONFIG.publicUrl + '/api/v1/external-apis/' + this.$route.params.externalApiId, this.externalApi).then(result => {
+      this.$http.put(window.CONFIG.publicUrl + '/api/v1/remote-services/' + this.$route.params.remoteServiceId, this.remoteService).then(result => {
         this.$store.dispatch('notify', `La description de l'API a bien été mise à jour`)
-        this.externalApi = result.data
+        this.remoteService = result.data
       }, error => {
         this.$store.dispatch('notifyError', `Erreur ${error.status} pendant la mise à jour de la description de l'API`)
       })
     },
     remove() {
       this.$refs['delete-dialog'].close()
-      this.$http.delete(window.CONFIG.publicUrl + '/api/v1/external-apis/' + this.$route.params.externalApiId).then(result => {
-        this.$store.dispatch('notify', `La description de l'API ${this.externalApi.title} a bien été supprimée`)
+      this.$http.delete(window.CONFIG.publicUrl + '/api/v1/remote-services/' + this.$route.params.remoteServiceId).then(result => {
+        this.$store.dispatch('notify', `La description de l'API ${this.remoteService.title} a bien été supprimée`)
         this.$router.push({
           name: 'Home'
         })
       }, error => {
-        this.$store.dispatch('notifyError', `Erreur ${error.status} pendant la suppression de la description de l'API ${this.externalApi.title}`)
+        this.$store.dispatch('notifyError', `Erreur ${error.status} pendant la suppression de la description de l'API ${this.remoteService.title}`)
       })
     },
     refresh() {
-      this.$http.post(window.CONFIG.publicUrl + '/api/v1/external-apis/' + this.$route.params.externalApiId + '/_update').then(result => {
+      this.$http.post(window.CONFIG.publicUrl + '/api/v1/remote-services/' + this.$route.params.remoteServiceId + '/_update').then(result => {
         this.$store.dispatch('notify', `La définition de l'API a bien été mise à jour`)
-        this.externalApi = result.data
+        this.remoteService = result.data
       }, error => {
         this.$store.dispatch('notifyError', `Erreur ${error.status} pendant la mise à jour de la définition de l'API`)
       })
@@ -198,7 +202,7 @@ export default {
 </script>
 
 <style>
-.external-service .action{
+.remote-service .action{
   height: calc(100vh - 64px);
 }
 </style>

@@ -1,38 +1,38 @@
 module.exports = {
-  title: 'External API',
-  description: 'An external API must be described with the openAPI 3.0 specification. If the API is secured, there must be at least one api-key based security scheme available.',
+  title: 'Remote service',
+  description: 'An remote service must be described with the openAPI 3.0 specification. If the API is secured, there must be at least one api-key based security scheme available.',
   type: 'object',
   additionalProperties: false,
   required: ['id', 'owner', 'apiDoc'],
   properties: {
     id: {
       type: 'string',
-      description: 'Identifier of the API'
+      description: 'Identifier of the configuration for an remote service'
     },
     title: {
       type: 'string',
-      description: 'Short title of the API'
+      description: 'Short title of the configuration for an remote service'
     },
     description: {
       type: 'string',
-      description: 'Detailed description of the API'
+      description: 'Detailed description of the configuration for an remote service'
     },
     createdBy: {
       type: 'string',
-      description: 'Id of the account that created this API'
+      description: 'Id of the account that created this configuration for an remote service'
     },
     updatedBy: {
       type: 'string',
-      description: 'Id of the account that last updated this API'
+      description: 'Id of the account that last updated this configuration for an remote service'
     },
     createdAt: {
       type: 'string',
-      description: 'Creation date of this API',
+      description: 'Creation date of this configuration for an remote service',
       format: 'date-time'
     },
     updatedAt: {
       type: 'string',
-      description: 'Date of the last update for this API',
+      description: 'Date of the last update for this configuration for an remote service',
       format: 'date-time'
     },
     owner: {
@@ -47,7 +47,7 @@ module.exports = {
         },
         id: {
           type: 'string',
-          description: 'Identifier of the owner of this API'
+          description: 'Identifier of the owner of this configuration for an remote service'
         }
       }
     },

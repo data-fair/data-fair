@@ -1,4 +1,4 @@
-// resource can be an application, a dataset of an external API
+// resource can be an application, a dataset of an remote service
 exports.can = function(resource, operationId, user) {
   if (!user) {
     const operationPermissions = (resource.permissions || []).filter(p => p.operations.indexOf(operationId) >= 0)
@@ -21,7 +21,7 @@ exports.can = function(resource, operationId, user) {
   }
 }
 
-// Manage filters for datasets, applications and external-apis
+// Manage filters for datasets, applications and remote services
 exports.filter = function(user) {
   // this filter is for public resources
   const or = [{

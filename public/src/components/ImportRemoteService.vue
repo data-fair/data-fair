@@ -1,6 +1,6 @@
 <template>
 <div>
-  <h3 class="md-display-1">Importer une API</h3>
+  <h3 class="md-display-1">Importer un service distant</h3>
   <md-stepper :md-alternate-labels="true" @change="currentStep = $event" @completed="importApi">
     <md-step :md-editable="true" :md-label="currentStep ? 'Fichier sélectionné' : 'Sélection du fichier'" :md-continue="apiDoc !== null" :md-message="fileName ? fileName: 'Chargez un fichier json'" :md-button-back="null" md-button-continue="Suivant">
       <md-input-container>
@@ -41,7 +41,7 @@ const {
 const routerMixin = require('../mixins.js').routerMixin
 
 export default {
-  name: 'import-api',
+  name: 'import-remote-service',
   mixins: [routerMixin],
   data: () => ({
     fileName: null,
@@ -131,17 +131,17 @@ export default {
             'x-organizationId' : this.owners[this.owner].id
           }
         }
-        this.$http.post(window.CONFIG.publicUrl + '/api/v1/external-apis', {
+        this.$http.post(window.CONFIG.publicUrl + '/api/v1/remote-services', {
           apiDoc: this.apiDoc,
           url: this.apiDocUrl,
           server: this.apiDoc.servers && this.apiDoc.servers.length && this.apiDoc.servers[0].url
         }, options).then(results => {
-          this.$emit('external-api-change')
+          this.$emit('remote-service-change')
           this.reset()
           const link = this.urlFromRoute({
             name: 'ExternalApi',
             params: {
-              externalApiId: results.body.id
+              remoteServiceId: results.body.id
             }
           })
           console.log(link)
@@ -152,7 +152,7 @@ export default {
         })
       } else {
         /* TODO: What is this supposed to do ? formData is not defined.
-        this.$http.post(window.CONFIG.publicUrl + '/api/v1/external-apis/' + this.actions[this.action].id, formData, options).then(results => {
+        this.$http.post(window.CONFIG.publicUrl + '/api/v1/remote-services/' + this.actions[this.action].id, formData, options).then(results => {
           this.reset()
           const link = this.urlFromRoute({
             name: 'Dataset',
@@ -172,7 +172,7 @@ export default {
   watch: {
     currentStep() {
       if (this.currentStep === 2) {
-        this.$http.get(window.CONFIG.publicUrl + '/api/v1/external-apis', {
+        this.$http.get(window.CONFIG.publicUrl + '/api/v1/remote-services', {
           params: {
             'owner-type': this.owners[this.owner].type,
             'owner-id': this.owners[this.owner].id

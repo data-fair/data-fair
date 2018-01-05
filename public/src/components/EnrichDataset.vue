@@ -40,13 +40,13 @@ export default {
     this.$store.dispatch('fetchVocabulary')
   },
   methods: {
-    // An action is using an external APIs endpoint to enrich a specific dataset
+    // An action is using an remote services endpoint to enrich a specific dataset
     execute(action) {
       const params = {
         inputConcepts: action.input.filter(i => i.selected).map(i => i.concept),
         dataset: this.dataset.id
       }
-      this.$http.post(window.CONFIG.publicUrl + '/api/v1/external-apis/' + action.api + '/actions/' + action.id, params)
+      this.$http.post(window.CONFIG.publicUrl + '/api/v1/remote-services/' + action.api + '/actions/' + action.id, params)
     }
   }
 }

@@ -18,8 +18,8 @@
       <md-button :class="$route.name.indexOf('Dataset') >= 0 ? 'md-warning' : 'md-primary'">Jeux de données</md-button>
     </router-link>
 
-    <router-link :to="{name: 'ExternalServices'}">
-      <md-button :class="$route.name.indexOf('ExternalService') >= 0 ? 'md-warning' : 'md-primary'">Services externes</md-button>
+    <router-link :to="{name: 'RemoteServices'}">
+      <md-button :class="$route.name.indexOf('RemoteService') >= 0 ? 'md-warning' : 'md-primary'">Services distants</md-button>
     </router-link>
 
     <router-link :to="{name: 'ApplicationConfigs'}">
