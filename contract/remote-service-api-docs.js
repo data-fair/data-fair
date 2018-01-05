@@ -50,6 +50,16 @@ module.exports = (remoteService) => {
               }
             }
           }
+        },
+        delete: {
+          summary: 'Pour supprimer cette configuration du service distant',
+          operationId: 'delete',
+          tags: ['Configuration'],
+          responses: {
+            204: {
+              description: 'Aucun contenu'
+            }
+          }
         }
       }
     }
