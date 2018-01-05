@@ -26,5 +26,6 @@ module.exports = {
   workersPollingIntervall: 1000,
   headers: {
     storedBytesLimit: 'X-TaxMan-RateLimit'
-  }
+  },
+  adminRole: 'admin'
 }
