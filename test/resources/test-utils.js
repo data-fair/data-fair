@@ -2,7 +2,6 @@ const test = require('ava')
 const axios = require('axios')
 const fs = require('fs-extra')
 const path = require('path')
-const elasticsearch = require('elasticsearch')
 
 const testDir = path.join(__dirname, '../')
 const testFiles = fs.readdirSync(testDir).map(f => path.join(testDir, f))
