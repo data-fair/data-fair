@@ -9,7 +9,7 @@
 
     <div class="double-title">
       <h1>Data FAIR</h1>
-      <span>Find, Access, Interopere, Reuse</span>
+      <span>Find, Access, Interoperate, Reuse</span>
     </div>
 
     <span style="flex:1"></span>
