@@ -30,7 +30,7 @@ test('Failure to get datasets with bad auth', async t => {
 })
 
 test('Get datasets when authenticated', async t => {
-  const ax = await testUtils.axios('dmeadus0@answers.com')
+  const ax = await testUtils.axios('alone@no.org')
   const res = await ax.get('/api/v1/datasets')
   t.is(res.status, 200)
   t.is(res.data.count, 0)
