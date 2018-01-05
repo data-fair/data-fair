@@ -5,8 +5,8 @@ import Datasets from './pages/Datasets.vue'
 import Dataset from './pages/Dataset.vue'
 import RemoteServices from './pages/RemoteServices.vue'
 import RemoteService from './pages/RemoteService.vue'
-import ApplicationConfigs from './pages/ApplicationConfigs.vue'
-import ApplicationConfig from './pages/ApplicationConfig.vue'
+import Applications from './pages/Applications.vue'
+import Application from './pages/Application.vue'
 import Settings from './pages/Settings.vue'
 import ApiDoc from './ApiDoc.vue'
 
@@ -31,13 +31,13 @@ export default [{
   name: 'RemoteService',
   component: RemoteService
 }, {
-  path: '/application-configs',
-  name: 'ApplicationConfigs',
-  component: ApplicationConfigs
+  path: '/applications',
+  name: 'Applications',
+  component: Applications
 }, {
-  path: '/application-config/:applicationConfigId',
-  name: 'ApplicationConfig',
-  component: ApplicationConfig
+  path: '/application/:applicationId',
+  name: 'Application',
+  component: Application
 }, {
   path: '/settings/:type/:id',
   name: 'Settings',

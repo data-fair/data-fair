@@ -4,7 +4,7 @@
     <md-layout md-row>
       <md-button class="md-raised md-primary" @click="$refs.sidenav.open()">Configurer une application</md-button>
     </md-layout>
-    <application-configs-list></application-configs-list>
+    <applications-list></applications-list>
   </md-layout>
   <md-sidenav class="md-right sidenav-half" ref="sidenav">
     <configure-application></configure-application>
@@ -14,13 +14,13 @@
 
 <script>
 import ConfigureApplication from '../components/ConfigureApplication.vue'
-import ApplicationConfigsList from '../components/ApplicationConfigsList.vue'
+import ApplicationsList from '../components/ApplicationsList.vue'
 
 export default {
-  name: 'application-configs',
+  name: 'applications',
   components: {
     ConfigureApplication,
-    ApplicationConfigsList
+    ApplicationsList
   }
 }
 </script>

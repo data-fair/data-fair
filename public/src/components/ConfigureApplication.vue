@@ -1,7 +1,7 @@
 <template>
 <div>
   <h3 class="md-display-1">Configuration une application</h3>
-  <md-stepper :md-alternate-labels="true" @change="currentStep = $event" @completed="createApplicationConfig">
+  <md-stepper :md-alternate-labels="true" @change="currentStep = $event" @completed="createApplication">
     <md-step :md-editable="true" :md-label="currentStep ? 'Adresse de l\'application' : 'Aucune adresse'" :md-continue="description !== null" :md-message="description ? description.url: 'Entrez une adresse'" :md-button-back="null" md-button-continue="Suivant">
       <md-layout md-row>
         <md-layout md-flex="85">
@@ -93,7 +93,7 @@ export default {
       this.description = null
       this.uploading = false
     },
-    createApplicationConfig() {
+    createApplication() {
       this.uploading = true
       const options = {}
       if(this.owners[this.owner].type === 'organization'){
@@ -101,18 +101,18 @@ export default {
           'x-organizationId' : this.owners[this.owner].id
         }
       }
-      this.$http.post(window.CONFIG.publicUrl + '/api/v1/application-configs', Object.assign({
+      this.$http.post(window.CONFIG.publicUrl + '/api/v1/applications', Object.assign({
         url: this.applicationUrl
       }, this.description), options).then(results => {
-        this.$emit('application-config-created')
+        this.$emit('application-created')
         this.reset()
         const link = this.urlFromRoute({
-          name: 'ApplicationConfig',
+          name: 'Application',
           params: {
-            applicationConfigId: results.body.id
+            applicationId: results.body.id
           }
         })
-        this.$store.dispatch('notify', `Une configuration spécifique pour l'application a bien été créée. <a href="${link}">Accéder à l'application'</a>`)
+        this.$store.dispatch('notify', `Une configuration spécifique pour l'application a bien été créée. <a href="${link}">Accéder à l'application</a>`)
       }, error => {
         this.$store.dispatch('notifyError', `Erreur ${error.status} pendant la création de la configuration d'application`)
       })

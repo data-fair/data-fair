@@ -1,30 +1,30 @@
 <template>
   <div>
-    <h3 class="md-display-1">{{applicationConfigs.count}} configurations d'applications</h3>
+    <h3 class="md-display-1">{{applications.count}} configurations d'applications</h3>
     <md-layout md-row>
-      <md-layout v-for="applicationConfig in applicationConfigs.results" md-flex="50" md-flex-small="100" style="padding:16px">
+      <md-layout v-for="application in applications.results" md-flex="50" md-flex-small="100" style="padding:16px">
         <md-card style="width:100%">
           <md-card-header>
             <div class="md-title">
-              <router-link :to="{name: 'ApplicationConfig', params:{applicationConfigId:applicationConfig.id}}">{{applicationConfig.title}}</router-link>
+              <router-link :to="{name: 'Application', params:{applicationId:application.id}}">{{application.title}}</router-link>
             </div>
           </md-card-header>
           <md-card-content>
-            {{applicationConfig.description}}
+            {{application.description}}
           </md-card-content>
           <md-layout flex="true"></md-layout>
           <md-card-actions>
-            <!-- <a :href="applicationConfig.links.fields" target="_blank" v-if="applicationConfig.links.fields">
+            <!-- <a :href="application.links.fields" target="_blank" v-if="application.links.fields">
                 <md-button>Schémas</md-button>
               </a>
-              <a :href="applicationConfig.links.applicationConfigdoc" target="_blank">
+              <a :href="application.links.applicationdoc" target="_blank">
                 <md-button>Documentation</md-button>
               </a> -->
           </md-card-actions>
           <!-- <md-layout flex="true"></md-layout> -->
           <md-card-content>
-            <span v-if="applicationConfig.owner.type === 'user'"><md-icon>person</md-icon>{{users[applicationConfig.owner.id] && users[applicationConfig.owner.id].name}}</span>
-            <span v-if="applicationConfig.owner.type === 'organization'"><md-icon>group</md-icon>{{organizations[applicationConfig.owner.id] && organizations[applicationConfig.owner.id].name}}</span>
+            <span v-if="application.owner.type === 'user'"><md-icon>person</md-icon>{{users[application.owner.id] && users[application.owner.id].name}}</span>
+            <span v-if="application.owner.type === 'organization'"><md-icon>group</md-icon>{{organizations[application.owner.id] && organizations[application.owner.id].name}}</span>
 
             <!-- <div class="md-subhead">Sources</div>
               <span v-for="(source, index) in api.sources">
@@ -44,9 +44,9 @@ const {
 } = require('vuex')
 
 export default {
-  name: 'application-configs-list',
+  name: 'applications-list',
   data: () => ({
-    applicationConfigs: {
+    applications: {
       count: 0,
       results: []
     },
@@ -59,23 +59,23 @@ export default {
     })
   },
   mounted() {
-    this.listApplicationConfigs()
+    this.listApplications()
   },
   methods: {
-    listApplicationConfigs() {
-      this.$http.get(window.CONFIG.publicUrl + '/api/v1/application-configs').then(results => {
-        this.applicationConfigs = results.data
+    listApplications() {
+      this.$http.get(window.CONFIG.publicUrl + '/api/v1/applications').then(results => {
+        this.applications = results.data
       })
     }
   },
   watch: {
     user(newVal, oldVal){
       if(!newVal || !oldVal || newVal.id != oldVal.id){
-        this.listApplicationConfigs()
+        this.listApplications()
       }
     },
-    applicationConfigs() {
-      const orgIds = this.applicationConfigs.results.filter(applicationConfig => applicationConfig.owner.type === 'organization').map(applicationConfig => applicationConfig.owner.id)
+    applications() {
+      const orgIds = this.applications.results.filter(application => application.owner.type === 'organization').map(application => application.owner.id)
       if (orgIds.length) {
         this.$http.get(window.CONFIG.directoryUrl + '/api/organizations?ids=' + orgIds.join(',')).then(results => {
           this.organizations = Object.assign({}, ...results.data.results.map(organization => ({
@@ -83,7 +83,7 @@ export default {
           })))
         })
       }
-      const userIds = this.applicationConfigs.results.filter(applicationConfig => applicationConfig.owner.type === 'user').map(applicationConfig => applicationConfig.owner.id)
+      const userIds = this.applications.results.filter(application => application.owner.type === 'user').map(application => application.owner.id)
       if (userIds.length) {
         this.$http.get(window.CONFIG.directoryUrl + '/api/users?ids=' + userIds.join(',')).then(results => {
           this.users = Object.assign({}, ...results.data.results.map(user => ({

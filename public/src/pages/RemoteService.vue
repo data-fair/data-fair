@@ -1,8 +1,8 @@
 <template>
 <md-layout md-align="center" class="remote-service" v-if="remoteService">
   <md-layout md-column md-flex="85" md-flex-offset="5">
-    <md-tabs md-fixed class="md-transparent">
-      <md-tab md-label="Description" md-icon="toc">
+    <md-tabs md-fixed class="md-transparent" @change="$router.push({query:{tab:$event}})">
+      <md-tab md-label="Description" md-icon="toc" :md-active="activeTab === '0'">
         <h3 class="md-headline">Informations</h3>
         <md-layout md-row>
           <md-layout md-column md-flex="55">
@@ -84,15 +84,15 @@
         </md-list>
       </md-tab>
 
-      <md-tab md-label="Configuration" md-icon="build">
+      <md-tab md-label="Configuration" md-icon="build" :md-active="activeTab === '1'">
         <remote-service-configuration :remote-service="remoteService"></remote-service-configuration>
       </md-tab>
 
-      <md-tab md-label="Permissions" md-icon="security">
+      <md-tab md-label="Permissions" md-icon="security" :md-active="activeTab === '2'">
         <permissions :resource="remoteService" :api="api" @permissions-updated="save"></permissions>
       </md-tab>
 
-      <md-tab md-label="API" md-icon="cloud">
+      <md-tab md-label="API" md-icon="cloud" :md-active="activeTab === '3'">
         <open-api v-if="api" :api="api"></open-api>
       </md-tab>
     </md-tabs>
@@ -153,12 +153,14 @@ export default {
     remoteService: null,
     api: null,
     vocabulary: {},
+    activeTab: null,
     actions: {
       'http://schema.org/SearchAction': 'Recherche',
       'http://schema.org/CheckAction': 'Vérification'
     }
   }),
   mounted() {
+    this.activeTab = this.$route.query.tab || '0'
     this.$http.get(window.CONFIG.publicUrl + '/api/v1/remote-services/' + this.$route.params.remoteServiceId).then(result => {
       this.remoteService = result.data
       this.$http.get(`${window.CONFIG.publicUrl}/api/v1/remote-services/${this.remoteService.id}/api-docs.json`).then(response => {

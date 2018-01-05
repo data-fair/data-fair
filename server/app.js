@@ -22,13 +22,13 @@ app.use(cookieParser())
 // Business routers
 app.use('/api/v1', require('./root'))
 app.use('/api/v1/remote-services', require('./remote-services'))
-app.use('/api/v1/application-configs', require('./application-configs'))
+app.use('/api/v1/applications', require('./applications'))
 app.use('/api/v1/datasets', require('./datasets'))
 app.get('/api/v1/status', status.status)
 app.get('/api/v1/ping', status.ping)
 app.use('/api/v1/stats', require('./stats'))
 app.use('/api/v1/settings', require('./settings'))
-app.use('/applications', require('./applications'))
+app.use('/app', require('./application-proxy'))
 
 // Static routing
 const oneWeek = process.env.NODE_ENV === 'development' ? 0 : 7 * 24 * 60 * 60

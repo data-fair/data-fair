@@ -22,8 +22,8 @@
       <md-button :class="$route.name.indexOf('RemoteService') >= 0 ? 'md-warning' : 'md-primary'">Services distants</md-button>
     </router-link>
 
-    <router-link :to="{name: 'ApplicationConfigs'}">
-      <md-button :class="$route.name.indexOf('ApplicationConfig') >= 0 ? 'md-warning' : 'md-primary'">Configurations d'applications</md-button>
+    <router-link :to="{name: 'Applications'}">
+      <md-button :class="$route.name.indexOf('Application') >= 0 ? 'md-warning' : 'md-primary'">Configurations d'applications</md-button>
     </router-link>
 
     <a :href="loginUrl" v-if="!user">
