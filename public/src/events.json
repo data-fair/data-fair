@@ -1,7 +1,7 @@
 {
   "created": {
     "icon": "add_circle_outline",
-    "text": "Le jeu de donné a été créé"
+    "text": "Le jeu de données a été créé"
   },
   "data-updated": {
     "icon": "update",
@@ -9,11 +9,11 @@
   },
   "analyze-start": {
     "icon": "search",
-    "text": "Début de l'analyze du fichier"
+    "text": "Début de l'analyse du fichier"
   },
   "analyze-end": {
     "icon": "search",
-    "text": "Fin de l'analyze du fichier"
+    "text": "Fin de l'analyse du fichier"
   },
   "schematize-start": {
     "icon": "toc",

@@ -11,24 +11,30 @@
 </template>
 
 <script>
-const {
-  mapState
-} = require('vuex')
+const {mapState} = require('vuex')
 const events = require('../events.json')
+const ws = require('../ws.js')
 
 export default {
   name: 'journal',
   props: ['dataset'],
-  data: () => ({
-    journal: [],
-    types: events
-  }),
+  data() {
+    return {
+      journal: [],
+      types: events,
+      channel: 'datasets/' + this.dataset.id + '/journal'
+    }
+  },
+  computed: {
+    ...mapState(['ws'])
+  },
   mounted() {
     this.refresh()
-    this.refreshInterval = setInterval(this.refresh, 1000)
+    ws.$emit('subscribe', this.channel)
+    ws.$on(this.channel, event => this.journal.unshift(event))
   },
   destroyed() {
-    clearInterval(this.refreshInterval)
+    ws.$emit('unsubscribe', this.channel)
   },
   methods: {
     refresh() {

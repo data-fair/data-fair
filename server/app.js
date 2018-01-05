@@ -46,6 +46,7 @@ const renderedIndex = compiledIndex({
   appJS: config.publicUrl + '/bundles/' + require('../public/bundles/webpack-assets.json').main.js,
   config: JSON.stringify({
     publicUrl: config.publicUrl,
+    wsPublicUrl: config.wsPublicUrl,
     directoryUrl: config.directoryUrl
   })
 })

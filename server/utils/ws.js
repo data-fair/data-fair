@@ -60,6 +60,8 @@ exports.init = async (wss, db) => {
       delete clients[clientId]
     })
 
+    ws.on('error', () => ws.terminate())
+
     ws.isAlive = true
     ws.on('pong', () => { ws.isAlive = true })
   })
