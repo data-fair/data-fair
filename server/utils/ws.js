@@ -76,14 +76,12 @@ exports.init = async (wss, db) => {
   }, 30000)
 
   // A pubsub channel based on mongodb to support scaling on multiple processes
-  const mongoChannel = await db.createCollection('messages', {capped: true, size: 100000})
+  const mongoChannel = await db.createCollection('messages', {capped: true, size: 100000, max: 1000})
   await mongoChannel.insert({type: 'init'})
   const cursor = mongoChannel.find({}, {tailable: true, awaitdata: true, numberOfRetries: -1})
   cursor.each((err, doc) => {
-    if (err) {
-      if (stopped) return
-      console.error('Error in cursor for mongodb pubsub', err)
-    }
+    if (stopped) return
+    if (err) console.error('Error in cursor for mongodb pubsub', err)
     if (doc && doc.type === 'message') {
       const subs = subscribers[doc.channel] || {}
       Object.keys(subs).forEach(sub => {
