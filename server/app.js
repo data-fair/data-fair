@@ -24,7 +24,6 @@ app.use('/api/v1', require('./root'))
 app.use('/api/v1/external-apis', require('./external-apis'))
 app.use('/api/v1/application-configs', require('./application-configs'))
 app.use('/api/v1/datasets', require('./datasets'))
-app.use('/api/v1/journals', require('./journals').router)
 app.get('/api/v1/status', status.status)
 app.get('/api/v1/ping', status.ping)
 app.use('/api/v1/stats', require('./stats'))
@@ -75,9 +74,9 @@ exports.run = async () => {
   app.publish = await wsUtils.init(wss, db)
   server.listen(config.port)
   await eventToPromise(server, 'listening')
-  analyzer.loop(db)
-  schematizer.loop(db)
-  indexer.loop(db, app.get('es'))
+  analyzer.loop(app)
+  schematizer.loop(app)
+  indexer.loop(app)
   return app
 }
 

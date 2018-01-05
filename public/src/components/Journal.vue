@@ -32,7 +32,7 @@ export default {
   },
   methods: {
     refresh() {
-      this.$http.get(window.CONFIG.publicUrl + '/api/v1/journals/' + this.dataset.id).then(results => {
+      this.$http.get(window.CONFIG.publicUrl + '/api/v1/datasets/' + this.dataset.id + '/journal').then(results => {
         this.journal = results.data
       })
     }

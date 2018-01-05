@@ -34,7 +34,7 @@ test('Subscribe to channel', async t => {
   let msg = await receive(cli)
   t.is(msg.type, 'subscribe-confirm')
   t.is(msg.channel, 'test_channel')
-  test.app.publish('test_channel', 'test_data')
+  await test.app.publish('test_channel', 'test_data')
   msg = await receive(cli)
   t.is(msg.type, 'message')
   t.is(msg.channel, 'test_channel')
@@ -61,7 +61,7 @@ test.skip('Send lots of events', async t => {
     })
   })
   for (let i of Array(nbMessages).keys()) {
-    test.app.publish('test_channel', 'test_data' + i)
+    await test.app.publish('test_channel', 'test_data' + i)
     await new Promise(resolve => setTimeout(resolve, interval))
   }
   await allReceivedPromise

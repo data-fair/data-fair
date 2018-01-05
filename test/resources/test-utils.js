@@ -6,6 +6,18 @@ const path = require('path')
 const testDir = path.join(__dirname, '../')
 const testFiles = fs.readdirSync(testDir).map(f => path.join(testDir, f))
 
+async function clean(key) {
+  const dataDir = './data/test-' + key
+  const indicesPrefix = 'dataset-test-' + key
+  const db = await require('../../server/utils/db.js').init()
+  await db.dropDatabase()
+  await db.close()
+  const es = require('../../server/utils/es.js').init()
+  await es.indices.delete({index: `${indicesPrefix}-*`, ignore: [404]})
+  await es.close()
+  await fs.remove(dataDir)
+}
+
 exports.prepare = (testFile) => {
   const key = path.basename(testFile, '.js')
   const port = 5800 + testFiles.indexOf(testFile)
@@ -21,6 +33,10 @@ exports.prepare = (testFile) => {
   const config = require('config')
   const app = require('../../server/app.js')
 
+  test.before('clean', async t => {
+    await clean(key)
+  })
+
   test.before('run app', async t => {
     test.app = await app.run()
   })
@@ -29,20 +45,8 @@ exports.prepare = (testFile) => {
     await app.stop()
   })
 
-  test.after.always('drop db', async t => {
-    const db = await require('../../server/utils/db.js').init()
-    await db.dropDatabase()
-    await db.close()
-  })
-
-  test.after.always('drop ES indices', async t => {
-    const es = require('../../server/utils/es.js').init()
-    await es.indices.delete({index: `${indicesPrefix}-*`, ignore: [404]})
-    await es.close()
-  })
-
-  test.after.always('remove test data', async t => {
-    await fs.remove(dataDir)
+  test.after.always('clean', async t => {
+    await clean(key)
   })
 
   return [test, config]

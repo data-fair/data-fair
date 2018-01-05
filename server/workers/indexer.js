@@ -2,7 +2,7 @@
 // const datasetUtils = require('../utils/dataset')
 const esUtils = require('../utils/es')
 const datasetUtils = require('../utils/dataset')
-const journals = require('../journals')
+const journals = require('../utils/journals')
 const geoUtils = require('../utils/geo')
 const config = require('config')
 
@@ -15,30 +15,32 @@ exports.hook = function() {
   })
 }
 
-exports.loop = async function loop(db, es) {
+exports.loop = async function loop(app) {
   if (stopResolve) return stopResolve()
   try {
-    const dataset = await indexDataset(db, es)
+    const dataset = await indexDataset(app)
     if (dataset && resolveHook) resolveHook(dataset)
   } catch (err) {
     console.error(err)
     if (rejectHook) rejectHook(err)
   }
 
-  setTimeout(() => loop(db, es), config.workersPollingIntervall)
+  setTimeout(() => loop(app), config.workersPollingIntervall)
 }
 
 exports.stop = () => {
   return new Promise(resolve => { stopResolve = resolve })
 }
 
-async function indexDataset(db, es) {
+async function indexDataset(app) {
+  const db = app.get('db')
+  const es = app.get('es')
   const collection = db.collection('datasets')
   const datasets = await collection.find({status: 'schematized'}).limit(1).sort({updatedAt: 1}).toArray()
   const dataset = datasets.pop()
   if (!dataset) return
 
-  await journals.log(db, dataset, {type: 'index-start'})
+  await journals.log(app, dataset, {type: 'index-start'})
 
   const geopoint = geoUtils.schemaHasGeopoint(dataset.schema)
   const tempId = await esUtils.initDatasetIndex(es, dataset, geopoint)
@@ -65,7 +67,7 @@ async function indexDataset(db, es) {
   dataset.status = 'indexed'
   await collection.updateOne({id: dataset.id}, updateQuery)
 
-  await journals.log(db, dataset, {type: 'index-end'})
+  await journals.log(app, dataset, {type: 'index-end'})
 
   return dataset
 }

@@ -1,5 +1,5 @@
 // schematize dataset data and try to guess the schém
-const journals = require('../journals')
+const journals = require('../utils/journals')
 const dataSample = require('../utils/data-sample')
 const fieldsSniffer = require('../utils/fields-sniffer')
 const config = require('config')
@@ -13,24 +13,25 @@ exports.hook = function() {
   })
 }
 
-exports.loop = async function loop(db) {
+exports.loop = async function loop(app) {
   if (stopResolve) return stopResolve()
   try {
-    const dataset = await schematizeDataset(db)
+    const dataset = await schematizeDataset(app)
     if (dataset && resolveHook) resolveHook(dataset)
   } catch (err) {
     console.error(err)
     if (rejectHook) rejectHook(err)
   }
 
-  setTimeout(() => loop(db), config.workersPollingIntervall)
+  setTimeout(() => loop(app), config.workersPollingIntervall)
 }
 
 exports.stop = () => {
   return new Promise(resolve => { stopResolve = resolve })
 }
 
-const schematizeDataset = async function(db) {
+const schematizeDataset = async function(app) {
+  const db = app.get('db')
   const datasets = await db.collection('datasets').find({
     status: 'analyzed',
     'file.mimetype': 'text/csv'
@@ -40,9 +41,7 @@ const schematizeDataset = async function(db) {
   const dataset = datasets.pop()
   if (!dataset) return
 
-  await journals.log(db, dataset, {
-    type: 'schematize-start'
-  })
+  await journals.log(app, dataset, {type: 'schematize-start'})
 
   // get a random sampling to test values type on fewer elements
   const sample = await dataSample(dataset)
@@ -75,9 +74,7 @@ const schematizeDataset = async function(db) {
     }
   })
 
-  await journals.log(db, dataset, {
-    type: 'schematize-end'
-  })
+  await journals.log(app, dataset, {type: 'schematize-end'})
 
   return dataset
 }

@@ -90,7 +90,5 @@ exports.init = async (wss, db) => {
     }
   })
 
-  return (channel, data) => {
-    mongoChannel.insert({type: 'message', channel, data})
-  }
+  return (channel, data) => mongoChannel.insert({type: 'message', channel, data})
 }

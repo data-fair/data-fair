@@ -5,7 +5,7 @@ const sniffer = new CSVSniffer([',', ';', '\t', '|'])
 const iconv = require('iconv-lite')
 const countLines = require('../utils/count-lines')
 const datasetUtils = require('../utils/dataset')
-const journals = require('../journals')
+const journals = require('../utils/journals')
 const fieldsSniffer = require('../utils/fields-sniffer')
 const config = require('config')
 
@@ -18,24 +18,25 @@ exports.hook = function() {
   })
 }
 
-exports.loop = async function loop(db) {
+exports.loop = async function loop(app) {
   if (stopResolve) return stopResolve()
   try {
-    const dataset = await analyzeDataset(db)
+    const dataset = await analyzeDataset(app)
     if (dataset && resolveHook) resolveHook(dataset)
   } catch (err) {
     console.error(err)
     if (rejectHook) rejectHook(err)
   }
 
-  setTimeout(() => loop(db), config.workersPollingIntervall)
+  setTimeout(() => loop(app), config.workersPollingIntervall)
 }
 
 exports.stop = () => {
   return new Promise(resolve => { stopResolve = resolve })
 }
 
-const analyzeDataset = async function(db) {
+const analyzeDataset = async function(app) {
+  const db = app.get('db')
   let dataset = await db.collection('datasets').find({
     status: 'loaded',
     'file.mimetype': 'text/csv'
@@ -45,9 +46,7 @@ const analyzeDataset = async function(db) {
   dataset = dataset.pop()
   if (!dataset) return
 
-  await journals.log(db, dataset, {
-    type: 'analyze-start'
-  })
+  await journals.log(app, dataset, {type: 'analyze-start'})
 
   const fileSample = await datasetFileSample(dataset)
   const sniffResult = sniffer.sniff(iconv.decode(fileSample, dataset.file.encoding), {
@@ -76,9 +75,7 @@ const analyzeDataset = async function(db) {
     }
   })
 
-  await journals.log(db, dataset, {
-    type: 'analyze-end'
-  })
+  await journals.log(app, dataset, {type: 'analyze-end'})
 
   return dataset
 }

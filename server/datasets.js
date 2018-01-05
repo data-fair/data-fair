@@ -5,7 +5,7 @@ const util = require('util')
 const datasetSchema = require('../contract/dataset.json')
 const moment = require('moment')
 const auth = require('./auth')
-const journals = require('./journals')
+const journals = require('./utils/journals')
 const esUtils = require('./utils/es')
 const filesUtils = require('./utils/files')
 const datasetAPIDocs = require('../contract/dataset-api-docs')
@@ -158,7 +158,7 @@ router.post('', auth.jwtMiddleware, filesUtils.uploadFile(), async(req, res, nex
     const fileSample = await datasetFileSample(dataset)
     dataset.file.encoding = detectCharacterEncoding(fileSample).encoding
     await req.app.get('db').collection('datasets').insertOne(dataset)
-    await journals.log(req.app.get('db'), dataset, {type: 'created'})
+    await journals.log(req.app, dataset, {type: 'created'})
     res.status(201).send(dataset)
   } catch (err) {
     next(err)
@@ -183,7 +183,7 @@ router.post('/:datasetId', filesUtils.uploadFile(), async(req, res, next) => {
     await req.app.get('db').collection('datasets').updateOne({
       id: req.params.datasetId
     }, req.dataset)
-    await journals.log(req.app.get('db'), req.dataset, {type: 'data-updated'})
+    await journals.log(req.app, req.dataset, {type: 'data-updated'})
     res.status(200).send(req.dataset)
   } catch (err) {
     return next(err)
@@ -242,7 +242,21 @@ router.get('/:datasetId/raw/:fileName', async(req, res, next) => {
 })
 
 router.get('/:datasetId/api-docs.json', (req, res) => {
+  // TODO: permission ?
   res.send(datasetAPIDocs(req.dataset))
+})
+
+router.get('/:datasetId/journal', auth.jwtMiddleware, async(req, res, next) => {
+  try {
+    const journal = await req.app.get('db').collection('journals').findOne({
+      id: req.params.datasetId
+    })
+    if (!journal) return res.sendStatus(404)
+    journal.events.reverse()
+    res.json(journal.events)
+  } catch (err) {
+    next(err)
+  }
 })
 
 module.exports = router
