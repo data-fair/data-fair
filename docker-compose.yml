@@ -4,6 +4,9 @@ services:
     image: docker.elastic.co/elasticsearch/elasticsearch:6.1.1
     ports:
       - 9200:9200
+      - 9300:9300
+    environment:
+      - discovery.type=single-node
   mongo:
     image: mvertes/alpine-mongo:3.4.9-0
     ports:

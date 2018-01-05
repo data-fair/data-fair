@@ -7,12 +7,6 @@
 
 *WARNING : This repo is a work in progress, it is not ready yet for the general public.*
 
-## Indexing in ElasticSearch
-
-Configure your host to run an Elasticsearch instance:
-
-    sudo sysctl -w vm.max_map_count=262144
-
 ## Development environment
 
 This project uses the following stack : Mongo, ElasticSearch, NodeJS, Express, VueJS, and Docker. The primary language used is javascript with the ES7 syntax.
