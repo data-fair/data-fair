@@ -4,33 +4,20 @@
     <h2 class="md-title" style="flex: 1">Importer un service distant</h2>
   </md-toolbar>
   <md-stepper :md-alternate-labels="true" @change="currentStep = $event" @completed="importApi">
-    <md-step :md-editable="true" :md-label="currentStep ? 'Fichier sélectionné' : 'Sélection du fichier'" :md-continue="apiDoc !== null" :md-message="fileName ? fileName: 'Chargez un fichier json'" :md-button-back="null" md-button-continue="Suivant">
+    <md-step :md-editable="true" :md-label="currentStep ? 'Fichier sélectionné' : 'Sélection du service'" :md-continue="apiDoc !== null" :md-message="apiDoc ? apiDoc.info.title : 'Choisissez dans la liste'" :md-button-back="null" md-button-continue="Suivant">
       <md-input-container>
-        <label>Fichier JSON</label>
-        <md-file v-model="fileName" @selected="onFileUpload" accept="application/json"></md-file>
+        <label>Choisissez un service distant à configurer</label>
+        <md-select v-model="apiDocUrl" @change="downloadFromUrl">
+          <md-option :value="remoteService.href" v-for="remoteService in configurableRemoteServices">
+            {{remoteService.title}}
+          </md-option>
+        </md-select>
       </md-input-container>
-      <md-layout md-row>
-        <md-layout md-flex="85">
-          <md-input-container>
-            <label>URL de la description</label>
-            <md-input v-model="apiDocUrl"></md-input>
-          </md-input-container>
-        </md-layout>
-        <md-layout>
-          <md-button class="md-icon-button md-raised md-primary" @click="downloadFromUrl" :disabled="!apiDocUrl">
-            <md-icon>file_download</md-icon>
-          </md-button>
-        </md-layout>
-      </md-layout>
+      <p v-if="apiDocUrl">{{configurableRemoteServices.find(a => a.href === apiDocUrl).description}}</p>
     </md-step>
     <md-step :md-editable="true" :md-disabled="!apiDoc" :md-label="currentStep > 1 ? 'Propriétaire choisi' : 'Choix du propriétaire'" :md-continue="apiDoc !== null && owner !== null" :md-message="owner ? (owners[owner].type === 'user' ? 'Vous même' : userOrganizations.find(o => o.id === owners[owner].id).name): 'Choisissez dans la liste'"
-      md-button-back="Précédent" md-button-continue="Suivant">
+      md-button-back="Précédent" md-button-continue="Lancer l'import">
       <md-radio v-model="owner" :md-value="key" v-for="key in Object.keys(owners)">{{key === 'user' ? 'Vous-même' : userOrganizations.find(o => o.id === owners[key].id).name}}</md-radio>
-    </md-step>
-    <md-step :md-disabled="!apiDoc || !owner" md-label="Action à effectuer" :md-continue="apiDoc !== null && owner !== null && action !== null && !uploading" :md-message="action ? actions[action].title : 'Choisissez dans la liste'" md-button-back="Précédent"
-      md-button-continue="Lancer l'import">
-      <md-radio v-model="action" :md-value="key" v-for="key in Object.keys(actions)">{{actions[key].title}}</md-radio>
-      <md-progress :md-progress="uploadProgress" v-if="uploading"></md-progress>
     </md-step>
   </md-stepper>
 </div>
@@ -44,17 +31,14 @@ export default {
   name: 'import-remote-service',
   mixins: [routerMixin],
   data: () => ({
-    fileName: null,
-    file: null,
     currentStep: null,
     owner: null,
     userOrganizations: [],
-    actions: {},
-    action: null,
     uploading: false,
     uploadProgress: 0,
     apiDoc: null,
-    apiDocUrl: 'https://staging.koumoul.com/s/geocoder/api/v1/api-docs.json'
+    apiDocUrl: null,
+    configurableRemoteServices: []
   }),
   computed: {
     ...mapState({
@@ -80,17 +64,11 @@ export default {
         this.userOrganizations = response.data.results
       })
     }
+    this.$http.get(window.CONFIG.publicUrl + '/api/v1/configurable-remote-services').then(response => {
+      this.configurableRemoteServices = response.data
+    })
   },
   methods: {
-    onFileUpload(e) {
-      this.file = e[0]
-      const reader = new FileReader()
-      reader.onload = (event) => {
-        const api = JSON.parse(event.target.result)
-        this.checkApi(api)
-      }
-      reader.readAsText(this.file)
-    },
     downloadFromUrl(){
       this.$http.get(this.apiDocUrl).then(response => {
         this.checkApi(response.data)
@@ -100,10 +78,7 @@ export default {
     },
     reset() {
       this.currentStep = null
-      this.fileName = null
-      this.file = null
       this.owner = null
-      this.action = null
       this.uploading = false
       this.uploadProgress = 0
     },
@@ -123,76 +98,33 @@ export default {
         }
       }
       this.uploading = true
-      if (this.actions[this.action].type === 'create') {
-        if(this.owners[this.owner].type === 'organization'){
-          options.headers = {'x-organizationId' : this.owners[this.owner].id}
-        }
-        const securities = this.apiDoc.security.map(s => Object.keys(s).pop()).map(s => this.apiDoc.components.securitySchemes[s])
-        const apiKeySecurity = securities.find(s => s.type === 'apiKey')
-        if (!apiKeySecurity) return this.$store.dispatch('notifyError', `Erreur, l'API importée n'a pas de schéma de sécurité adapté`)
+      if(this.owners[this.owner].type === 'organization'){
+        options.headers = {'x-organizationId' : this.owners[this.owner].id}
+      }
+      const securities = this.apiDoc.security.map(s => Object.keys(s).pop()).map(s => this.apiDoc.components.securitySchemes[s])
+      const apiKeySecurity = securities.find(s => s.type === 'apiKey')
+      if (!apiKeySecurity) return this.$store.dispatch('notifyError', `Erreur, l'API importée n'a pas de schéma de sécurité adapté`)
 
-        this.$http.post(window.CONFIG.publicUrl + '/api/v1/remote-services', {
-          apiDoc: this.apiDoc,
-          apiKey: {in: apiKeySecurity.in, name: apiKeySecurity.name},
-          url: this.apiDocUrl,
-          server: this.apiDoc.servers && this.apiDoc.servers.length && this.apiDoc.servers[0].url
-        }, options).then(results => {
-          this.$emit('remote-service-change')
-          this.reset()
-          const link = this.urlFromRoute({
-            name: 'RemoteService',
-            params: {
-              remoteServiceId: results.body.id
-            }
-          })
-          this.$store.dispatch('notify', `La description de l'API a bien été importée. <a href="${link}">Accéder à la description</a>`)
-          this.$emit('success')
-        }, error => {
-          this.$store.dispatch('notifyError', `Erreur ${error.status} pendant l'import du fichier`)
-          this.reset()
-        })
-      } else {
-        /* TODO: implement patch route ro update apiDoc property by drag & droping json file
-        this.$http.patch(window.CONFIG.publicUrl + '/api/v1/remote-services/' + this.actions[this.action].id, {apiDoc: this.apiDoc}, options).then(results => {
-          this.reset()
-          const link = this.urlFromRoute({
-            name: 'RemoteService',
-            params: {
-              remoteServiceId: results.body.id
-            }
-          })
-          this.$store.dispatch('notify', `La description de l'API a bien été mise à jour. <a href="${link}">Accéder à la description</a>`)
-        }, error => {
-          this.$store.dispatch('notifyError', `Erreur ${error.status} pendant l'import du fichier`)
-          this.reset()
-        })
-        */
-      }
-    }
-  },
-  watch: {
-    currentStep() {
-      if (this.currentStep === 2) {
-        this.$http.get(window.CONFIG.publicUrl + '/api/v1/remote-services', {
+      this.$http.post(window.CONFIG.publicUrl + '/api/v1/remote-services', {
+        apiDoc: this.apiDoc,
+        apiKey: {in: apiKeySecurity.in, name: apiKeySecurity.name},
+        url: this.apiDocUrl,
+        server: this.apiDoc.servers && this.apiDoc.servers.length && this.apiDoc.servers[0].url
+      }, options).then(results => {
+        this.$emit('remote-service-change')
+        this.reset()
+        const link = this.urlFromRoute({
+          name: 'RemoteService',
           params: {
-            'owner-type': this.owners[this.owner].type,
-            'owner-id': this.owners[this.owner].id
+            remoteServiceId: results.body.id
           }
-        }).then(response => {
-          this.actions = Object.assign({
-            create: {
-              type: 'create',
-              title: 'Créer une nouvelle réutilisation de l\'API'
-            }
-          }, ...response.data.results.map(d => ({
-            ['update' + d.id]: {
-              type: 'update',
-              id: d.id,
-              title: 'Mettre à jour la description de l\'API ' + d.title
-            }
-          })))
         })
-      }
+        this.$store.dispatch('notify', `La description du service distant a bien été importée. <a href="${link}">Accéder à la configuration du service</a>`)
+        this.$emit('success')
+      }, error => {
+        this.$store.dispatch('notifyError', `Erreur ${error.status} pendant l'import du fichier`)
+        this.reset()
+      })
     }
   }
 }

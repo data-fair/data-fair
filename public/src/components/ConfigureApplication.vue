@@ -4,15 +4,17 @@
     <h2 class="md-title" style="flex: 1">Configurer une application</h2>
   </md-toolbar>
   <md-stepper :md-alternate-labels="true" @change="currentStep = $event" @completed="createApplication">
-    <md-step :md-editable="true" :md-label="currentStep ? 'Adresse de l\'application' : 'Aucune adresse'" :md-continue="description !== null" :md-message="description ? description.url: 'Entrez une adresse'" :md-button-back="null" md-button-continue="Suivant">
+    <md-step :md-editable="true" :md-label="currentStep ? 'Application sélectionnée' : 'Selection de l\'application'" :md-continue="description !== null" :md-message="description ? description.title: 'Choisissez dans la liste'" :md-button-back="null" md-button-continue="Suivant">
       <md-layout md-row>
         <md-input-container>
-          <label>URL de l'application'</label>
-          <md-input v-model="applicationUrl" @keyup.native.enter="downloadFromUrl"></md-input>
-          <md-button class="md-icon-button md-primary" @click="downloadFromUrl" :disabled="!applicationUrl">
-            <md-icon>file_download</md-icon>
-          </md-button>
+          <label>Choisissez une application à configurer</label>
+          <md-select v-model="applicationUrl" @change="downloadFromUrl">
+            <md-option :value="application.href" v-for="application in configurableApplications">
+              {{application.title}}
+            </md-option>
+          </md-select>
         </md-input-container>
+        <p v-if="applicationUrl">{{configurableApplications.find(a => a.href === applicationUrl).description}}</p>
       </md-layout>
     </md-step>
     <md-step :md-editable="true" :md-disabled="!description" :md-label="currentStep > 1 ? 'Propriétaire choisi' : 'Choix du propriétaire'" :md-continue="description !== null && owner !== null" :md-message="owner ? (owners[owner].type === 'user' ? 'Vous même' : userOrganizations.find(o => o.id === owners[owner].id).name): 'Choisissez dans la liste'"
@@ -38,7 +40,8 @@ export default {
     userOrganizations: [],
     uploading: false,
     description: null,
-    applicationUrl: 'https://staging.koumoul.com/s/infos-parcelles/'
+    applicationUrl: null,
+    configurableApplications: []
   }),
   computed: {
     ...mapState({
@@ -64,6 +67,9 @@ export default {
         this.userOrganizations = response.data.results
       })
     }
+    this.$http.get(window.CONFIG.publicUrl + '/api/v1/configurable-applications').then(response => {
+      this.configurableApplications = response.data
+    })
   },
   methods: {
     downloadFromUrl() {

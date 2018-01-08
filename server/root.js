@@ -9,6 +9,7 @@ const ajv = require('ajv')()
 const openApiSchema = require('../contract/openapi-3.0.json')
 const validateApi = ajv.compile(openApiSchema)
 const normalise = require('ajv-error-messages')
+const config = require('config')
 
 router.get('/api-docs.json', (req, res) => {
   res.json(apiDocs)
@@ -23,6 +24,14 @@ router.post('/_check-api', async(req, res, next) => {
   var valid = validateApi(req.body)
   if (!valid) return res.status(400).send(normalise(validateApi.errors))
   res.sendStatus(200)
+})
+
+router.get('/configurable-remote-services', (req, res) => {
+  res.json(config.remoteServices)
+})
+
+router.get('/configurable-applications', (req, res) => {
+  res.json(config.applications)
 })
 
 module.exports = router

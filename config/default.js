@@ -39,5 +39,15 @@ module.exports = {
   }, {
     title: 'Open Database License (ODbL)',
     href: 'https://spdx.org/licenses/ODbL-1.0.html#licenseText'
+  }],
+  applications: [{
+    title: 'Infos parcelles',
+    description: 'Cette application permet de visualiser des informations additionnelles sur certaines parcelles et de les mettre en évidence.',
+    href: 'https://staging.koumoul.com/s/infos-parcelles/'
+  }],
+  remoteServices: [{
+    title: 'Géocoder',
+    description: 'Ce service permet de géocoder des adresses, c\'est à dire de déterminer des coordonnées latitude / longitude à partir d\'éléments constituant une adresse comme le nom et le numéro de rue, le code postal ou le code INSEE, le nom de la ville ou une requête textuelle contenant ces différents éléments.',
+    href: 'https://staging.koumoul.com/s/geocoder/api/v1/api-docs.json'
   }]
 }
