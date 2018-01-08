@@ -3,8 +3,8 @@ const datasetSchema = require('./dataset.json')
 const version = require('../package.json').version
 
 module.exports = (dataset) => {
-  const properties = Object.keys(dataset.schema)
-  const nonTextProperties = properties.filter(p => dataset.schema[p].type !== 'string' || dataset.schema[p].format)
+  const properties = dataset.schema.map(p => p.key)
+  const nonTextProperties = dataset.schema.filter(p => p.type !== 'string' || p.format).map(p => p.key)
   const api = {
     openapi: '3.0.0',
     info: Object.assign({
