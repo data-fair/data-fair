@@ -12,8 +12,8 @@ exports.sniff = (values) => {
 }
 
 exports.format = (value, prop) => {
-  if (prop.type === 'string') return value
   if (!value) return null
+  if (prop.type === 'string') return value.trim()
   if (prop.type === 'boolean') return value === '1' || value.toLowerCase() === 'true'
   if (prop.type === 'integer' || prop.type === 'number') return value ? Number(value) : null
 }
