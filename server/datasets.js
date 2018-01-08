@@ -12,6 +12,7 @@ const datasetAPIDocs = require('../contract/dataset-api-docs')
 const permissions = require('./utils/permissions')
 const usersUtils = require('./utils/users')
 const findUtils = require('./utils/find')
+const config = require('config')
 
 const validate = ajv.compile(datasetSchema)
 const datasetSchemaNoRequired = Object.assign(datasetSchema)
@@ -160,7 +161,7 @@ router.post('', auth.jwtMiddleware, filesUtils.uploadFile(), async(req, res, nex
     const fileSample = await datasetFileSample(dataset)
     dataset.file.encoding = detectCharacterEncoding(fileSample).encoding
     await req.app.get('db').collection('datasets').insertOne(dataset)
-    await journals.log(req.app, dataset, {type: 'created'})
+    await journals.log(req.app, dataset, {type: 'dataset-created', href: config.publicUrl + '/dataset/' + dataset.id})
     res.status(201).send(dataset)
   } catch (err) {
     next(err)

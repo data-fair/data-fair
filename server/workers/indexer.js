@@ -69,7 +69,7 @@ async function indexDataset(app) {
   dataset.status = 'indexed'
   await collection.updateOne({id: dataset.id}, updateQuery)
 
-  await journals.log(app, dataset, {type: 'index-end'})
+  await journals.log(app, dataset, {type: 'index-end', href: config.publicUrl + '/dataset/' + dataset.id + '?tab=1'})
 
   return dataset
 }

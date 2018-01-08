@@ -12,7 +12,7 @@
 
 <script>
 const {mapState} = require('vuex')
-const events = require('../events.json')
+const events = require('../../../shared/events.json')
 const ws = require('../ws.js')
 
 export default {

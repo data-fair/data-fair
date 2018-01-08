@@ -1,6 +1,7 @@
 const moment = require('moment')
 const axios = require('axios')
 const config = require('config')
+const events = require('../../shared/events.json')
 
 module.exports.log = async function(app, dataset, event) {
   const db = app.get('db')
@@ -22,10 +23,9 @@ module.exports.log = async function(app, dataset, event) {
   // webhooks notifications
   const settings = await db.collection('settings').findOne(dataset.owner) || {}
   settings.webhooks = settings.webhooks || []
-  settings.webhooks.filter(webhook => webhook.events.indexOf(event.type) >= 0).forEach(webhook => {
-    const text = 'Le jeux de données ' + (dataset.title || dataset.id) + (event.type === 'created' ? ' vient juste d\'être créé' : ' est maintenant indexé et consultable à l\'adresse : ' + config.publicUrl + '/dataset/' + dataset.id)
+  settings.webhooks.forEach(webhook => {
     axios.post(webhook.url, {
-      text: text,
+      text: (dataset.title || dataset.id) + ' - ' + events[event.type].text + (event.href ? ' - ' + event.href : ''),
       href: config.publicUrl + '/api/v1/datasets/' + dataset.id
     })
   })
