@@ -1,20 +1,20 @@
 <template>
   <div>
-    <h3 class="md-display-1">{{applications.count}} configuration{{plural}} d'application{{plural}}</h3>
+    <h3 class="md-display-1">{{ applications.count }} configuration{{ plural }} d'application{{ plural }}</h3>
     <md-layout md-row>
-      <md-layout v-for="application in applications.results" md-flex="25" md-flex-large="33" md-flex-medium="50" md-flex-xsmall="100" style="padding:16px">
+      <md-layout v-for="application in applications.results" :key="application.id" md-flex="25" md-flex-large="33" md-flex-medium="50" md-flex-xsmall="100" style="padding:16px">
         <md-card style="width:100%">
           <md-card-header>
             <div class="md-title">
-              <router-link :to="{name: 'Application', params:{applicationId:application.id}}">{{application.title}}</router-link>
+              <router-link :to="{name: 'Application', params:{applicationId:application.id}}">{{ application.title }}</router-link>
             </div>
           </md-card-header>
           <md-card-content>
-            {{application.description}}
+            {{ application.description }}
           </md-card-content>
-          <md-layout flex="true"></md-layout>
+          <md-layout flex="true"/>
           <md-card-actions>
-            <!-- <a :href="application.links.fields" target="_blank" v-if="application.links.fields">
+          <!-- <a :href="application.links.fields" target="_blank" v-if="application.links.fields">
                 <md-button>Schémas</md-button>
               </a>
               <a :href="application.links.applicationdoc" target="_blank">
@@ -23,8 +23,8 @@
           </md-card-actions>
           <!-- <md-layout flex="true"></md-layout> -->
           <md-card-content>
-            <span v-if="application.owner.type === 'user'"><md-icon>person</md-icon>{{users[application.owner.id] && users[application.owner.id].name}}</span>
-            <span v-if="application.owner.type === 'organization'"><md-icon>group</md-icon>{{organizations[application.owner.id] && organizations[application.owner.id].name}}</span>
+            <span v-if="application.owner.type === 'user'"><md-icon>person</md-icon>{{ users[application.owner.id] && users[application.owner.id].name }}</span>
+            <span v-if="application.owner.type === 'organization'"><md-icon>group</md-icon>{{ organizations[application.owner.id] && organizations[application.owner.id].name }}</span>
 
             <!-- <div class="md-subhead">Sources</div>
               <span v-for="(source, index) in api.sources">
@@ -42,7 +42,7 @@
 const {mapState} = require('vuex')
 
 export default {
-  name: 'applications-list',
+  name: 'ApplicationsList',
   data: () => ({
     applications: {
       count: 0,
@@ -57,19 +57,9 @@ export default {
       return this.applications.count > 1 ? 's' : ''
     }
   },
-  mounted() {
-    this.refresh()
-  },
-  methods: {
-    refresh() {
-      this.$http.get(window.CONFIG.publicUrl + '/api/v1/applications').then(results => {
-        this.applications = results.data
-      })
-    }
-  },
   watch: {
-    user(newVal, oldVal){
-      if(!newVal || !oldVal || newVal.id != oldVal.id){
+    user(newVal, oldVal) {
+      if (!newVal || !oldVal || newVal.id !== oldVal.id) {
         this.refresh()
       }
     },
@@ -90,6 +80,16 @@ export default {
           })))
         })
       }
+    }
+  },
+  mounted() {
+    this.refresh()
+  },
+  methods: {
+    refresh() {
+      this.$http.get(window.CONFIG.publicUrl + '/api/v1/applications').then(results => {
+        this.applications = results.data
+      })
     }
   }
 }

@@ -1,13 +1,13 @@
 <template>
-<div>
-  <open-api v-if="api" :api="api"></open-api>
-</div>
+  <div>
+    <open-api v-if="api" :api="api"/>
+  </div>
 </template>
 
 <script>
 import OpenApi from 'vue-openapi'
 export default {
-  name: 'api-doc',
+  name: 'ApiDoc',
   components: {
     OpenApi
   },

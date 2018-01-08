@@ -1,20 +1,20 @@
 <template>
   <div>
-    <h3 class="md-display-1">{{remoteServices.count}} service{{plural}} distant{{plural}} configuré{{plural}}</h3>
+    <h3 class="md-display-1">{{ remoteServices.count }} service{{ plural }} distant{{ plural }} configuré{{ plural }}</h3>
     <md-layout md-row>
-      <md-layout v-for="remoteService in remoteServices.results" md-flex="25" md-flex-large="33" md-flex-medium="50" md-flex-xsmall="100" style="padding:16px">
+      <md-layout v-for="remoteService in remoteServices.results" :key="remoteService.id" md-flex="25" md-flex-large="33" md-flex-medium="50" md-flex-xsmall="100" style="padding:16px">
         <md-card style="width:100%">
           <md-card-header>
             <div class="md-title">
-              <router-link :to="{name: 'RemoteService', params:{remoteServiceId:remoteService.id}}">{{remoteService.title}}</router-link>
+              <router-link :to="{name: 'RemoteService', params:{remoteServiceId:remoteService.id}}">{{ remoteService.title }}</router-link>
             </div>
           </md-card-header>
           <md-card-content>
-            {{remoteService.description}}
+            {{ remoteService.description }}
           </md-card-content>
-          <md-layout flex="true"></md-layout>
+          <md-layout flex="true"/>
           <md-card-actions>
-            <!-- <a :href="remoteService.links.fields" target="_blank" v-if="remoteService.links.fields">
+          <!-- <a :href="remoteService.links.fields" target="_blank" v-if="remoteService.links.fields">
                 <md-button>Schémas</md-button>
               </a>
               <a :href="remoteService.links.remoteServicedoc" target="_blank">
@@ -23,11 +23,10 @@
           </md-card-actions>
           <!-- <md-layout flex="true"></md-layout> -->
           <md-card-content>
-            <span v-if="remoteService.owner.type === 'user'"><md-icon>person</md-icon>{{users[remoteService.owner.id] && users[remoteService.owner.id].name}}</span>
-            <span v-if="remoteService.owner.type === 'organization'"><md-icon>group</md-icon>{{organizations[remoteService.owner.id] && organizations[remoteService.owner.id].name}}</span>
+            <span v-if="remoteService.owner.type === 'user'"><md-icon>person</md-icon>{{ users[remoteService.owner.id] && users[remoteService.owner.id].name }}</span>
+            <span v-if="remoteService.owner.type === 'organization'"><md-icon>group</md-icon>{{ organizations[remoteService.owner.id] && organizations[remoteService.owner.id].name }}</span>
 
-
-            <md-chip :class="remoteService.public ? 'md-primary' : 'md-accent'">{{remoteService.public ? 'Public' : 'Privé'}}</md-chip>
+            <md-chip :class="remoteService.public ? 'md-primary' : 'md-accent'">{{ remoteService.public ? 'Public' : 'Privé' }}</md-chip>
             <!-- <div class="md-subhead">Sources</div>
               <span v-for="(source, index) in api.sources">
           <a :href="source.link" target="_blank">{{source.name}}</a>
@@ -44,7 +43,7 @@
 const {mapState} = require('vuex')
 
 export default {
-  name: 'remote-services',
+  name: 'RemoteServices',
   data: () => ({
     remoteServices: {
       count: 0,
@@ -59,19 +58,9 @@ export default {
       return this.remoteServices.count > 1 ? 's' : ''
     }
   },
-  mounted() {
-    this.refresh()
-  },
-  methods: {
-    refresh() {
-      this.$http.get(window.CONFIG.publicUrl + '/api/v1/remote-services').then(results => {
-        this.remoteServices = results.data
-      })
-    }
-  },
   watch: {
-    user(newVal, oldVal){
-      if(!newVal || !oldVal || newVal.id != oldVal.id){
+    user(newVal, oldVal) {
+      if (!newVal || !oldVal || newVal.id !== oldVal.id) {
         this.refresh()
       }
     },
@@ -92,7 +81,17 @@ export default {
           })))
         })
       }
+    },
+    methods: {
+      refresh() {
+        this.$http.get(window.CONFIG.publicUrl + '/api/v1/remote-services').then(results => {
+          this.remoteServices = results.data
+        })
+      }
     }
+  },
+  mounted() {
+    this.refresh()
   }
 }
 </script>

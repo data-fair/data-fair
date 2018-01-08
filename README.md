@@ -10,7 +10,8 @@
 ## Development environment
 
 This project uses the following stack : Mongo, ElasticSearch, NodeJS, Express, VueJS, and Docker. The primary language used is javascript with the ES7 syntax.
-You should use linters and beautifiers compliants with the ES7 syntax in your editor.
+
+We use [eslint]() both as a linter an a formatter (thanks to its fix mode). It also works on .vue files thant to [vue-eslint-plugin](https://github.com/vuejs/eslint-plugin-vue). We strongly suggest integrating these tools in your editor, this [article](https://alligator.io/vuejs/vue-eslint-plugin/) can be useful to configure vue-eslint-plugin in your editor.
 
 Install dependencies, run bundler and launch service dependencies with docker-compose:
 

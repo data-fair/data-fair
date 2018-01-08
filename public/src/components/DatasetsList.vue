@@ -1,20 +1,20 @@
 <template>
   <md-layout md-column>
-    <h3 class="md-display-1">{{datasets.count}} {{plural ? 'jeux' : 'jeu'}} de données</h3>
+    <h3 class="md-display-1">{{ datasets.count }} {{ plural ? 'jeux' : 'jeu' }} de données</h3>
     <md-layout md-row>
-      <md-layout v-for="dataset in datasets.results" md-flex="25" md-flex-large="33" md-flex-medium="50" md-flex-xsmall="100" style="padding:16px">
+      <md-layout v-for="dataset in datasets.results" :key="dataset.id" md-flex="25" md-flex-large="33" md-flex-medium="50" md-flex-xsmall="100" style="padding:16px">
         <md-card style="width:100%">
           <md-card-header>
             <div class="md-title">
-              <router-link :to="{name: 'Dataset', params:{datasetId:dataset.id}}">{{dataset.title}}</router-link>
+              <router-link :to="{name: 'Dataset', params:{datasetId:dataset.id}}">{{ dataset.title }}</router-link>
             </div>
           </md-card-header>
           <md-card-content>
-            {{dataset.description}}
+            {{ dataset.description }}
           </md-card-content>
-          <md-layout flex="true"></md-layout>
+          <md-layout flex="true"/>
           <md-card-actions>
-            <!-- <a :href="dataset.links.fields" target="_blank" v-if="dataset.links.fields">
+          <!-- <a :href="dataset.links.fields" target="_blank" v-if="dataset.links.fields">
                 <md-button>Schémas</md-button>
               </a>
               <a :href="dataset.links.datasetdoc" target="_blank">
@@ -23,11 +23,10 @@
           </md-card-actions>
           <!-- <md-layout flex="true"></md-layout> -->
           <md-card-content>
-            <span v-if="dataset.owner.type === 'user'"><md-icon>person</md-icon>{{users[dataset.owner.id] && users[dataset.owner.id].name}}</span>
-            <span v-if="dataset.owner.type === 'organization'"><md-icon>group</md-icon>{{organizations[dataset.owner.id] && organizations[dataset.owner.id].name}}</span>
+            <span v-if="dataset.owner.type === 'user'"><md-icon>person</md-icon>{{ users[dataset.owner.id] && users[dataset.owner.id].name }}</span>
+            <span v-if="dataset.owner.type === 'organization'"><md-icon>group</md-icon>{{ organizations[dataset.owner.id] && organizations[dataset.owner.id].name }}</span>
 
-
-            <md-chip :class="dataset.public ? 'md-primary' : 'md-accent'">{{dataset.public ? 'Public' : 'Privé'}}</md-chip>
+            <md-chip :class="dataset.public ? 'md-primary' : 'md-accent'">{{ dataset.public ? 'Public' : 'Privé' }}</md-chip>
             <!-- <div class="md-subhead">Sources</div>
               <span v-for="(source, index) in api.sources">
           <a :href="source.link" target="_blank">{{source.name}}</a>
@@ -44,7 +43,7 @@
 const {mapState} = require('vuex')
 
 export default {
-  name: 'datasets-list',
+  name: 'DatasetsList',
   data: () => ({
     datasets: {
       count: 0,
@@ -59,19 +58,9 @@ export default {
       return this.datasets.count > 1
     }
   },
-  mounted() {
-    this.refresh()
-  },
-  methods: {
-    refresh() {
-      this.$http.get(window.CONFIG.publicUrl + '/api/v1/datasets').then(results => {
-        this.datasets = results.data
-      })
-    }
-  },
   watch: {
-    user(newVal, oldVal){
-      if(!newVal || !oldVal || newVal.id != oldVal.id){
+    user(newVal, oldVal) {
+      if (!newVal || !oldVal || newVal.id !== oldVal.id) {
         this.refresh()
       }
     },
@@ -92,6 +81,16 @@ export default {
           })))
         })
       }
+    }
+  },
+  mounted() {
+    this.refresh()
+  },
+  methods: {
+    refresh() {
+      this.$http.get(window.CONFIG.publicUrl + '/api/v1/datasets').then(results => {
+        this.datasets = results.data
+      })
     }
   }
 }

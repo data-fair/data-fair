@@ -1,33 +1,33 @@
 <template>
-<div class="application" v-if="application">
+  <div class="application" v-if="application">
     <md-tabs md-fixed class="md-transparent" @change="$router.push({query:{tab:$event}})">
       <md-tab md-label="Description" md-icon="toc" :md-active="activeTab === '0'">
         <h3 class="md-headline">Informations</h3>
         <md-input-container>
           <label>Titre</label>
-          <md-input v-model="application.title" @blur="save"></md-input>
+          <md-input v-model="application.title" @blur="save"/>
         </md-input-container>
         <md-input-container>
           <label>Description</label>
-          <md-textarea v-model="application.description" @blur="save"></md-textarea>
+          <md-textarea v-model="application.description" @blur="save"/>
         </md-input-container>
         <md-input-container>
           <label>Adresse</label>
-          <md-input v-model="application.url" @blur="save"></md-input>
+          <md-input v-model="application.url" @blur="save"/>
         </md-input-container>
       </md-tab>
 
       <md-tab md-label="Permissions" md-icon="security" :md-active="activeTab === '1'">
-        <permissions :resource="application" :resource-url="resourceUrl" :api="api"></permissions>
+        <permissions :resource="application" :resource-url="resourceUrl" :api="api"/>
       </md-tab>
 
       <md-tab md-label="API" md-icon="cloud" :md-active="activeTab === '2'">
-        <open-api v-if="api" :api="api"></open-api>
+        <open-api v-if="api" :api="api"/>
       </md-tab>
     </md-tabs>
 
     <div class="actions-buttons">
-      <div style='margin-top: 100px'>
+      <div style="margin-top: 100px">
         <md-button class="md-icon-button md-raised md-primary" :href="applicationLink" target="_blank">
           <md-icon>exit_to_app</md-icon>
           <md-tooltip md-direction="left">Accéder à l'application</md-tooltip>
@@ -44,23 +44,22 @@
     <md-dialog md-open-from="#delete" md-close-to="#delete" ref="delete-dialog">
       <md-dialog-title>Suppression de la configuration d'application</md-dialog-title>
 
-      <md-dialog-content>Voulez vous vraiment supprimer la configuration de l'application <code>{{application.title}}</code> ? La suppression est définitive et le paramétrage sera perdu.</md-dialog-content>
+      <md-dialog-content>Voulez vous vraiment supprimer la configuration de l'application <code>{{ application.title }}</code> ? La suppression est définitive et le paramétrage sera perdu.</md-dialog-content>
 
       <md-dialog-actions>
         <md-button class="md-default md-raised" @click="$refs['delete-dialog'].close()">Non</md-button>
         <md-button class="md-warn md-raised" @click="remove">Oui</md-button>
       </md-dialog-actions>
     </md-dialog>
-</div>
+  </div>
 </template>
 
 <script>
-const {mapState} = require('vuex')
 import Permissions from '../components/Permissions.vue'
 import OpenApi from 'vue-openapi'
 
 export default {
-  name: 'application',
+  name: 'Application',
   components: {
     Permissions,
     OpenApi
@@ -70,6 +69,14 @@ export default {
     activeTab: null,
     api: null
   }),
+  computed: {
+    applicationLink() {
+      if (this.application) return window.CONFIG.publicUrl + '/app/' + this.application.id
+    },
+    resourceUrl() {
+      return window.CONFIG.publicUrl + '/api/v1/applications/' + this.$route.params.applicationId
+    }
+  },
   mounted() {
     this.activeTab = this.$route.query.tab || '0'
     this.$http.get(this.resourceUrl).then(result => {
@@ -78,14 +85,6 @@ export default {
         this.api = response.body
       })
     })
-  },
-  computed:{
-    applicationLink() {
-      if (this.application) return window.CONFIG.publicUrl + '/app/' + this.application.id
-    },
-    resourceUrl(){
-      return window.CONFIG.publicUrl + '/api/v1/applications/' + this.$route.params.applicationId
-    }
   },
   methods: {
     save() {

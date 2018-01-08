@@ -1,58 +1,58 @@
 <template>
-<div class="dataset"  v-if="dataset">
-  <md-tabs md-fixed class="md-transparent" @change="$router.push({query:{tab:$event}})">
-    <md-tab md-label="Description" md-icon="toc" :md-active="activeTab === '0'">
-      <dataset-info :dataset="dataset" @changed="save(['title', 'description', 'license'])"></dataset-info>
-      <schema :dataset="dataset" @schema-updated="dataset.schema = $event; dataset.status = 'schematized';save(['schema'])"></schema>
-    </md-tab>
+  <div class="dataset" v-if="dataset">
+    <md-tabs md-fixed class="md-transparent" @change="$router.push({query:{tab:$event}})">
+      <md-tab md-label="Description" md-icon="toc" :md-active="activeTab === '0'">
+        <dataset-info :dataset="dataset" @changed="save(['title', 'description', 'license'])"/>
+        <schema :dataset="dataset" @schema-updated="dataset.schema = $event; dataset.status = 'schematized';save(['schema'])"/>
+      </md-tab>
 
-    <md-tab md-label="Vue tableau" md-icon="view_list" :md-active="activeTab === '1'">
-      <tabular-view :dataset="dataset"></tabular-view>
-    </md-tab>
+      <md-tab md-label="Vue tableau" md-icon="view_list" :md-active="activeTab === '1'">
+        <tabular-view :dataset="dataset"/>
+      </md-tab>
 
-    <md-tab md-label="Permissions" md-icon="security" :md-active="activeTab === '2'">
-      <permissions :resource="dataset" :resource-url="resourceUrl" :api="api"></permissions>
-    </md-tab>
+      <md-tab md-label="Permissions" md-icon="security" :md-active="activeTab === '2'">
+        <permissions :resource="dataset" :resource-url="resourceUrl" :api="api"/>
+      </md-tab>
 
-    <md-tab md-label="Enrichissement" md-icon="merge_type" :md-active="activeTab === '3'">
-      <enrich-dataset :dataset="dataset"></enrich-dataset>
-    </md-tab>
+      <md-tab md-label="Enrichissement" md-icon="merge_type" :md-active="activeTab === '3'">
+        <enrich-dataset :dataset="dataset"/>
+      </md-tab>
 
-    <md-tab md-label="Journal" md-icon="event_note" :md-active="activeTab === '4'">
-      <journal :dataset="dataset"></journal>
-    </md-tab>
+      <md-tab md-label="Journal" md-icon="event_note" :md-active="activeTab === '4'">
+        <journal :dataset="dataset"/>
+      </md-tab>
 
-    <md-tab md-label="API" md-icon="cloud" :md-active="activeTab === '5'">
-      <open-api v-if="api" :api="api"></open-api>
-    </md-tab>
-  </md-tabs>
+      <md-tab md-label="API" md-icon="cloud" :md-active="activeTab === '5'">
+        <open-api v-if="api" :api="api"/>
+      </md-tab>
+    </md-tabs>
 
-  <div class="actions-buttons">
-    <div style='margin-top: 100px'>
-      <md-button class="md-icon-button md-raised md-primary" :href="downloadLink">
-        <md-icon>file_download</md-icon>
-        <md-tooltip md-direction="left">Télécharger les données brutes</md-tooltip>
-      </md-button>
+    <div class="actions-buttons">
+      <div style="margin-top: 100px">
+        <md-button class="md-icon-button md-raised md-primary" :href="downloadLink">
+          <md-icon>file_download</md-icon>
+          <md-tooltip md-direction="left">Télécharger les données brutes</md-tooltip>
+        </md-button>
+      </div>
+      <div>
+        <md-button class="md-icon-button md-raised md-warn" id="delete" @click="$refs['delete-dialog'].open()">
+          <md-icon>delete</md-icon>
+          <md-tooltip md-direction="left">Supprimer ce jeu de données</md-tooltip>
+        </md-button>
+      </div>
     </div>
-    <div>
-      <md-button class="md-icon-button md-raised md-warn" id="delete" @click="$refs['delete-dialog'].open()">
-        <md-icon>delete</md-icon>
-        <md-tooltip md-direction="left">Supprimer ce jeu de données</md-tooltip>
-      </md-button>
-    </div>
+
+    <md-dialog md-open-from="#delete" md-close-to="#delete" ref="delete-dialog">
+      <md-dialog-title>Suppression du jeu de données</md-dialog-title>
+
+      <md-dialog-content>Voulez vous vraiment supprimer le jeux de données <code>{{ dataset.title }}</code> ? La suppression est définitive et les données ne pourront pas être récupérées.</md-dialog-content>
+
+      <md-dialog-actions>
+        <md-button class="md-default md-raised" @click="$refs['delete-dialog'].close()">Non</md-button>
+        <md-button class="md-warn md-raised" @click="remove">Oui</md-button>
+      </md-dialog-actions>
+    </md-dialog>
   </div>
-
-  <md-dialog md-open-from="#delete" md-close-to="#delete" ref="delete-dialog">
-    <md-dialog-title>Suppression du jeu de données</md-dialog-title>
-
-    <md-dialog-content>Voulez vous vraiment supprimer le jeux de données <code>{{dataset.title}}</code> ? La suppression est définitive et les données ne pourront pas être récupérées.</md-dialog-content>
-
-    <md-dialog-actions>
-      <md-button class="md-default md-raised" @click="$refs['delete-dialog'].close()">Non</md-button>
-      <md-button class="md-warn md-raised" @click="remove">Oui</md-button>
-    </md-dialog-actions>
-  </md-dialog>
-</div>
 </template>
 
 <script>
@@ -64,10 +64,8 @@ import EnrichDataset from '../components/EnrichDataset.vue'
 import DatasetInfo from '../components/DatasetInfo.vue'
 import OpenApi from 'vue-openapi'
 
-const {mapState} = require('vuex')
-
 export default {
-  name: 'dataset',
+  name: 'Dataset',
   components: {
     Permissions,
     Journal,
@@ -86,7 +84,7 @@ export default {
     downloadLink() {
       if (this.dataset) return this.resourceUrl + '/raw/' + this.dataset.file.name
     },
-    resourceUrl(){
+    resourceUrl() {
       return window.CONFIG.publicUrl + '/api/v1/datasets/' + this.$route.params.datasetId
     }
   },

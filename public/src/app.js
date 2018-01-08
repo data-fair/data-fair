@@ -79,14 +79,11 @@ Vue.http.interceptors.push(function(request, next) {
 
 /* eslint-disable no-new */
 new Vue({
-  render(h) {
-    return h('App')
-  },
-  router,
-  store,
   components: {
     App
   },
+  router,
+  store,
   created: function() {
     store.dispatch('userAccount')
     if (this.$cookie.get('id_token')) {
@@ -101,5 +98,8 @@ new Vue({
         })
       })
     }
+  },
+  render(h) {
+    return h('App')
   }
 }).$mount('#app')
