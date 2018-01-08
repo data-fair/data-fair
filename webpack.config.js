@@ -32,6 +32,7 @@ module.exports = {
   },
   devtool: process.env.NODE_ENV !== 'development' ? 'source-map' : 'cheap-module-eval-source-map',
   plugins: process.env.NODE_ENV !== 'development' ? [
+    new webpack.DefinePlugin({'process.env': {NODE_ENV: '"production"'}}),
     new webpack.optimize.UglifyJsPlugin(),
     assetsPlugin
   ] : [assetsPlugin]
