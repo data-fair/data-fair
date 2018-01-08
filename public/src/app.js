@@ -79,7 +79,9 @@ Vue.http.interceptors.push(function(request, next) {
 
 /* eslint-disable no-new */
 new Vue({
-  template: '<App />',
+  render(h) {
+    return h('App')
+  },
   router,
   store,
   components: {
