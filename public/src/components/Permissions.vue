@@ -6,29 +6,31 @@
   <h3 class="md-headline">Permissions</h3>
   <md-button id="new-permissions" class="md-raised md-primary" @click="$refs['new-permissions-dialog'].open()">Ajouter des permissions</md-button>
   <md-list v-if="resource">
-    <md-list-item v-for="(permission, rowIndex) in resource.permissions">
-      <md-layout md-row md-vertical-align="center">
-        <md-layout md-flex="30" md-column>
-          <md-subheader>Portée</md-subheader>
-          <span v-if="!permission.type">Public</span>
-          <span v-else>{{permission.type === 'user' ? ('Utilisateur ' + (users[permission.id] && users[permission.id].name)) : ('Organisation ' + (organizations[permission.id] && organizations[permission.id].name))}}</span>
-          <span v-if="permission.type === 'organization' && (!permission.roles || !permission.roles.length)">Tout le monde</span>
-          <span v-if="permission.type === 'organization' && (permission.roles && permission.roles.length)">Restreint aux rôles : {{permission.roles.join(', ')}}</span>
-        </md-layout>
+    <md-list-item v-for="(permission, rowIndex) in resource.permissions" style="padding:8px 0">
+      <md-card style="padding:16px;width:100%">
+        <md-layout md-row md-vertical-align="center">
+          <md-layout md-flex="30" md-column>
+            <md-subheader>Portée</md-subheader>
+            <span v-if="!permission.type">Public</span>
+            <span v-else>{{permission.type === 'user' ? ('Utilisateur ' + (users[permission.id] && users[permission.id].name)) : ('Organisation ' + (organizations[permission.id] && organizations[permission.id].name))}}</span>
+            <span v-if="permission.type === 'organization' && (!permission.roles || !permission.roles.length)">Tout le monde</span>
+            <span v-if="permission.type === 'organization' && (permission.roles && permission.roles.length)">Restreint aux rôles : {{permission.roles.join(', ')}}</span>
+          </md-layout>
 
-        <md-layout md-flex="60" md-column v-if="operations && operations.length">
-          <md-subheader>Opérations</md-subheader>
-          <ul>
-            <li v-for="operation in permission.operations.map(oid => operations.find(o => o.id === oid))">{{operation.title}}</li>
-          </ul>
-        </md-layout>
+          <md-layout md-flex="60" md-column v-if="operations && operations.length">
+            <md-subheader>Opérations</md-subheader>
+            <ul>
+              <li v-for="operation in permission.operations.map(oid => operations.find(o => o.id === oid))">{{operation.title}}</li>
+            </ul>
+          </md-layout>
 
-        <md-layout md-flex="5" md-flex-offset="5" md-column v-if="operations && operations.length">
-          <md-button class="md-icon-button md-raised md-warn md-dense" @click="removePermission(rowIndex)">
-            <md-icon>remove</md-icon>
-          </md-button>
+          <md-layout md-flex="5" md-flex-offset="5" md-column v-if="operations && operations.length">
+            <md-button class="md-icon-button md-raised md-warn md-dense" @click="removePermission(rowIndex)">
+              <md-icon>remove</md-icon>
+            </md-button>
+          </md-layout>
         </md-layout>
-      </md-layout>
+      </md-card>
     </md-list-item>
   </md-list>
 
