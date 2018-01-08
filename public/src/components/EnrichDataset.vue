@@ -31,11 +31,18 @@
 import { mapState } from 'vuex'
 
 export default {
-  props: ['dataset', 'actions'],
+  props: ['dataset'],
   data() {
-    return {}
+    return {
+      actions: []
+    }
   },
-  computed: mapState(['vocabulary']),
+  computed: {
+    ...mapState(['vocabulary']),
+    concepts() {
+      return new Set(this.dataset.schema.map(field => field['x-refersTo']).filter(c => c))
+    }
+  },
   mounted() {
     this.$store.dispatch('fetchVocabulary')
   },
@@ -47,6 +54,18 @@ export default {
         dataset: this.dataset.id
       }
       this.$http.post(window.CONFIG.publicUrl + '/api/v1/remote-services/' + action.api + '/actions/' + action.id, params)
+    }
+  },
+  watch: {
+    concepts() {
+      if (this.concepts.size) {
+        this.$http.get(window.CONFIG.publicUrl + '/api/v1/remote-services?input-concepts=' + [...this.concepts].map(encodeURIComponent).join(',')).then(result => {
+          result.data.results.forEach(r => r.actions.forEach(a => a.api = r.id))
+          this.actions = [].concat(...result.data.results.map(r => r.actions.filter(a => a.input.map(i => i.concept).filter(x => this.concepts.has(x)).length))).filter(a => a.inputCollection && a.outputCollection)
+        })
+      } else {
+        this.actions = []
+      }
     }
   }
 }

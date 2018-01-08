@@ -45,8 +45,8 @@
         <permissions :resource="dataset" :api="api" @permissions-updated="save"></permissions>
       </md-tab>
 
-      <md-tab md-label="Enrichissement" md-icon="merge_type" :md-disabled="!actions.length" :md-active="activeTab === '3'">
-        <enrich-dataset :dataset="dataset" :actions="actions"></enrich-dataset>
+      <md-tab md-label="Enrichissement" md-icon="merge_type" :md-active="activeTab === '3'">
+        <enrich-dataset :dataset="dataset"></enrich-dataset>
       </md-tab>
 
       <md-tab md-label="Journal" md-icon="event_note" :md-active="activeTab === '4'">
@@ -117,7 +117,6 @@ export default {
   },
   data: () => ({
     dataset: null,
-    actions: [],
     users: {},
     activeTab: null,
     api: null
@@ -125,10 +124,6 @@ export default {
   computed: {
     downloadLink() {
       if (this.dataset) return window.CONFIG.publicUrl + '/api/v1/datasets/' + this.dataset.id + '/raw/' + this.dataset.file.name
-    },
-    concepts() {
-      if (this.dataset) return new Set(this.dataset.schema.filter(field => field['x-refersTo']).map(field => field['x-refersTo']))
-      return []
     }
   },
   mounted() {
@@ -164,18 +159,6 @@ export default {
       }, error => {
         this.$store.dispatch('notifyError', `Erreur ${error.status} pendant la suppression du jeu de données ${this.dataset.title}`)
       })
-    }
-  },
-  watch: {
-    concepts() {
-      if (this.concepts.size) {
-        this.$http.get(window.CONFIG.publicUrl + '/api/v1/remote-services?input-concepts=' + [...this.concepts].map(encodeURIComponent).join(',')).then(result => {
-          result.data.results.forEach(r => r.actions.forEach(a => a.api = r.id))
-          this.actions = [].concat(...result.data.results.map(r => r.actions.filter(a => a.input.map(i => i.concept).filter(x => this.concepts.has(x)).length))).filter(a => a.inputCollection && a.outputCollection)
-        })
-      } else {
-        this.actions = []
-      }
     }
   }
 }
