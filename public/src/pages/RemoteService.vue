@@ -1,6 +1,5 @@
 <template>
-<md-layout md-align="center" class="remote-service" v-if="remoteService">
-  <md-layout md-column md-flex="85" md-flex-offset="5">
+<div class="remote-service" v-if="remoteService">
     <md-tabs md-fixed class="md-transparent" @change="$router.push({query:{tab:$event}})">
       <md-tab md-label="Description" md-icon="toc" :md-active="activeTab === '0'">
         <h3 class="md-headline">Informations</h3>
@@ -98,43 +97,38 @@
     </md-tabs>
   </md-layout>
 
-  <md-layout md-column md-flex-offset="5" class="action">
-    <md-dialog md-open-from="#delete" md-close-to="#delete" ref="delete-dialog">
-      <md-dialog-title>Suppression du jeu de données</md-dialog-title>
-
-      <md-dialog-content>Voulez vous vraiment supprimer la description de l'API <code>{{remoteService.title}}</code> ? La suppression est définitive et le paramétrage sera perdu.</md-dialog-content>
-
-      <md-dialog-actions>
-        <md-button class="md-default md-raised" @click="$refs['delete-dialog'].close()">Non</md-button>
-        <md-button class="md-warn md-raised" @click="remove">Oui</md-button>
-      </md-dialog-actions>
-    </md-dialog>
-
-    <md-layout md-flex="30"></md-layout>
-
-    <md-layout md-flex="10">
-      <a :href="remoteService.apiDoc.externalDocs.url" v-if="remoteService.apiDoc.externalDocs" target="_blank">
-        <md-button class="md-icon-button md-raised md-primary">
-          <md-icon>description</md-icon>
-          <md-tooltip md-direction="left">{{remoteService.apiDoc.externalDocs.description}}</md-tooltip>
-        </md-button>
-      </a>
-    </md-layout>
-    <md-layout md-flex="10">
+  <div class="actions-buttons">
+    <div style='margin-top: 100px'>
+      <md-button class="md-icon-button md-raised md-primary" :href="remoteService.apiDoc.externalDocs.url" v-if="remoteService.apiDoc.externalDocs" target="_blank">
+        <md-icon>description</md-icon>
+        <md-tooltip md-direction="left">{{remoteService.apiDoc.externalDocs.description}}</md-tooltip>
+      </md-button>
+    </div>
+    <div>
       <md-button class="md-icon-button md-raised md-primary" @click="refresh">
         <md-icon>refresh</md-icon>
         <md-tooltip md-direction="left">Mettre a jour la description de l'API</md-tooltip>
       </md-button>
-    </md-layout>
-    <md-layout md-flex="10">
+    </div>
+    <div>
       <md-button class="md-icon-button md-raised md-warn" id="delete" @click="$refs['delete-dialog'].open()">
         <md-icon>delete</md-icon>
         <md-tooltip md-direction="left">Supprimer cette configuration du service externe</md-tooltip>
       </md-button>
-    </md-layout>
-  </md-layout>
+    </div>
+  </div>
 
-</md-layout>
+  <md-dialog md-open-from="#delete" md-close-to="#delete" ref="delete-dialog">
+    <md-dialog-title>Suppression du jeu de données</md-dialog-title>
+
+    <md-dialog-content>Voulez vous vraiment supprimer la description de l'API <code>{{remoteService.title}}</code> ? La suppression est définitive et le paramétrage sera perdu.</md-dialog-content>
+
+    <md-dialog-actions>
+      <md-button class="md-default md-raised" @click="$refs['delete-dialog'].close()">Non</md-button>
+      <md-button class="md-warn md-raised" @click="remove">Oui</md-button>
+    </md-dialog-actions>
+  </md-dialog>
+</div>
 </template>
 
 <script>

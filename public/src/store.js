@@ -10,7 +10,14 @@ module.exports = new Vuex.Store({
     userOrganizations: null,
     notification: '',
     notificationError: '',
-    vocabulary: null
+    vocabulary: null,
+    usersInfo: {},
+    licenses: {}
+  },
+  getters: {
+    ownerLicenses: (state) => (owner) => {
+      return state.licenses[owner.type + '/' + owner.id]
+    }
   },
   mutations: {
     user(state, account) {
@@ -30,6 +37,13 @@ module.exports = new Vuex.Store({
     },
     vocabulary(state, vocab) {
       state.vocabulary = vocab
+    },
+    userInfo(state, userInfo) {
+      state.usersInfo[userInfo.id] = userInfo
+    },
+    ownerLicenses(state, payload) {
+      Vue.set(state.licenses, payload.owner.type + '/' + payload.owner.id, payload.licenses)
+      console.log(state.licenses)
     }
   },
   actions: {
@@ -68,6 +82,19 @@ module.exports = new Vuex.Store({
         term.identifiers.forEach(id => { vocabulary[id] = term })
       })
       context.commit('vocabulary', vocabulary)
+    },
+    async fetchUsers(context, ids) {
+      const missingIds = ids.filter(id => !context.state.usersInfo[id])
+      if (missingIds.length === 0) return
+      Vue.http.get(window.CONFIG.directoryUrl + '/api/users', {params: {ids: missingIds}}).then(res => {
+        res.data.results.forEach(user => context.commit('userInfo', user))
+      })
+    },
+    async fetchLicenses(context, owner) {
+      if (context.getters.ownerLicenses(owner)) return
+      Vue.http.get(window.CONFIG.publicUrl + '/api/v1/settings/' + owner.type + '/' + owner.id + '/licenses').then(res => {
+        context.commit('ownerLicenses', {owner, licenses: res.body})
+      })
     }
   }
 })

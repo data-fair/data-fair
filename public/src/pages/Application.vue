@@ -1,6 +1,5 @@
 <template>
-<md-layout md-align="center" class="application" v-if="application">
-  <md-layout md-column md-flex="85" md-flex-offset="5">
+<div class="application" v-if="application">
     <md-tabs md-fixed class="md-transparent" @change="$router.push({query:{tab:$event}})">
       <md-tab md-label="Description" md-icon="toc" :md-active="activeTab === '0'">
         <h3 class="md-headline">Informations</h3>
@@ -26,9 +25,22 @@
         <open-api v-if="api" :api="api"></open-api>
       </md-tab>
     </md-tabs>
-  </md-layout>
 
-  <md-layout md-column md-flex-offset="5" class="action">
+    <div class="actions-buttons">
+      <div style='margin-top: 100px'>
+        <md-button class="md-icon-button md-raised md-primary" :href="applicationLink" target="_blank">
+          <md-icon>exit_to_app</md-icon>
+          <md-tooltip md-direction="left">Accéder à l'application</md-tooltip>
+        </md-button>
+      </div>
+      <div>
+        <md-button class="md-icon-button md-raised md-warn" id="delete" @click="$refs['delete-dialog'].open()">
+          <md-icon>delete</md-icon>
+          <md-tooltip md-direction="left">Supprimer cette configuration d'application</md-tooltip>
+        </md-button>
+      </div>
+    </div>
+
     <md-dialog md-open-from="#delete" md-close-to="#delete" ref="delete-dialog">
       <md-dialog-title>Suppression de la configuration d'application</md-dialog-title>
 
@@ -39,32 +51,11 @@
         <md-button class="md-warn md-raised" @click="remove">Oui</md-button>
       </md-dialog-actions>
     </md-dialog>
-
-    <md-layout md-flex="30"></md-layout>
-
-    <md-layout md-flex="10">
-      <a :href="applicationLink" target="_blank">
-        <md-button class="md-icon-button md-raised md-primary">
-          <md-icon>description</md-icon>
-          <md-tooltip md-direction="left">Accéder à l'application</md-tooltip>
-        </md-button>
-      </a>
-    </md-layout>
-    <md-layout md-flex="10">
-      <md-button class="md-icon-button md-raised md-warn" id="delete" @click="$refs['delete-dialog'].open()">
-        <md-icon>delete</md-icon>
-        <md-tooltip md-direction="left">Supprimer cette configuration d'application</md-tooltip>
-      </md-button>
-    </md-layout>
-  </md-layout>
-
-</md-layout>
+</div>
 </template>
 
 <script>
-const {
-  mapState
-} = require('vuex')
+const {mapState} = require('vuex')
 import Permissions from '../components/Permissions.vue'
 import OpenApi from 'vue-openapi'
 

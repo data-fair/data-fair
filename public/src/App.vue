@@ -156,5 +156,9 @@ body {
   top: 76px;
   right: 8px;
   margin: 0;
+
+  .md-button {
+    margin-bottom: 16px;
+  }
 }
 </style>
