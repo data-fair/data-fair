@@ -1,47 +1,13 @@
 // schematize dataset data and try to guess the schém
-const journals = require('../utils/journals')
 const dataSample = require('../utils/data-sample')
 const fieldsSniffer = require('../utils/fields-sniffer')
-const config = require('config')
 
-// A hook/spy for testing purposes
-let resolveHook, rejectHook, stopResolve
-exports.hook = function() {
-  return new Promise((resolve, reject) => {
-    resolveHook = resolve
-    rejectHook = reject
-  })
-}
+exports.eventsPrefix = 'schematize'
 
-exports.loop = async function loop(app) {
-  if (stopResolve) return stopResolve()
-  try {
-    const dataset = await schematizeDataset(app)
-    if (dataset && resolveHook) resolveHook(dataset)
-  } catch (err) {
-    console.error(err)
-    if (rejectHook) rejectHook(err)
-  }
+exports.filter = {status: 'analyzed', 'file.mimetype': 'text/csv'}
 
-  setTimeout(() => loop(app), config.workersPollingIntervall)
-}
-
-exports.stop = () => {
-  return new Promise(resolve => { stopResolve = resolve })
-}
-
-const schematizeDataset = async function(app) {
+exports.process = async function(app, dataset) {
   const db = app.get('db')
-  const datasets = await db.collection('datasets').find({
-    status: 'analyzed',
-    'file.mimetype': 'text/csv'
-  }).limit(1).sort({
-    updatedAt: -1
-  }).toArray()
-  const dataset = datasets.pop()
-  if (!dataset) return
-
-  await journals.log(app, dataset, {type: 'schematize-start'})
 
   // get a random sampling to test values type on fewer elements
   const sample = await dataSample(dataset)
@@ -63,18 +29,11 @@ const schematizeDataset = async function(app) {
   // We copy fields in the detected schema that have not been modified by the user
   const previousSchema = dataset.schema || []
   dataset.schema = previousSchema.concat(dataset.file.schema.filter(field => !previousSchema.find(f => f.key === field.key)))
-
   dataset.status = 'schematized'
-  await db.collection('datasets').updateOne({
-    id: dataset.id
-  }, {
+  await db.collection('datasets').updateOne({id: dataset.id}, {
     $set: {
       status: 'schematized',
       schema: dataset.schema
     }
   })
-
-  await journals.log(app, dataset, {type: 'schematize-end'})
-
-  return dataset
 }

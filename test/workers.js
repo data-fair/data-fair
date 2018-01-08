@@ -5,9 +5,7 @@ const testUtils = require('./resources/test-utils')
 
 const [test] = testUtils.prepare(__filename)
 
-const analyzer = require('../server/workers/analyzer')
-const schematizer = require('../server/workers/schematizer')
-const indexer = require('../server/workers/indexer')
+const workers = require('../server/workers')
 const esUtils = require('../server/utils/es')
 
 test('Process newly uploaded dataset', async t => {
@@ -20,11 +18,11 @@ test('Process newly uploaded dataset', async t => {
   t.is(res.status, 201)
 
   // Dataset received and parsed
-  let dataset = await analyzer.hook()
+  let dataset = await workers.hook('analyzer')
   t.is(dataset.status, 'analyzed')
 
   // Auto schema proposal
-  dataset = await schematizer.hook()
+  dataset = await workers.hook('schematizer')
   t.is(dataset.status, 'schematized')
   const idField = dataset.schema.find(f => f.key === 'id')
   const dateField = dataset.schema.find(f => f.key === 'some_date')
@@ -34,7 +32,7 @@ test('Process newly uploaded dataset', async t => {
   t.is(dateField.format, 'date')
 
   // ES indexation
-  dataset = await indexer.hook()
+  dataset = await workers.hook('indexer')
   t.is(dataset.status, 'indexed')
   t.is(dataset.count, 2)
   const idProp = dataset.schema.find(p => p.key === 'id')
@@ -54,7 +52,7 @@ test('Process newly uploaded dataset', async t => {
   t.is(res.status, 200)
 
   // Second ES indexation
-  dataset = await indexer.hook()
+  dataset = await workers.hook('indexer')
   t.is(dataset.status, 'indexed')
   t.is(dataset.count, 2)
   const esIndices2 = await test.app.get('es').indices.get({index: esUtils.indexName(dataset)})

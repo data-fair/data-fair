@@ -5,49 +5,14 @@ const sniffer = new CSVSniffer([',', ';', '\t', '|'])
 const iconv = require('iconv-lite')
 const countLines = require('../utils/count-lines')
 const datasetUtils = require('../utils/dataset')
-const journals = require('../utils/journals')
 const fieldsSniffer = require('../utils/fields-sniffer')
-const config = require('config')
 
-// A hook/spy for testing purposes
-let resolveHook, rejectHook, stopResolve
-exports.hook = function() {
-  return new Promise((resolve, reject) => {
-    resolveHook = resolve
-    rejectHook = reject
-  })
-}
+exports.eventsPrefix = 'analyze'
 
-exports.loop = async function loop(app) {
-  if (stopResolve) return stopResolve()
-  try {
-    const dataset = await analyzeDataset(app)
-    if (dataset && resolveHook) resolveHook(dataset)
-  } catch (err) {
-    console.error(err)
-    if (rejectHook) rejectHook(err)
-  }
+exports.filter = {status: 'loaded', 'file.mimetype': 'text/csv'}
 
-  setTimeout(() => loop(app), config.workersPollingIntervall)
-}
-
-exports.stop = () => {
-  return new Promise(resolve => { stopResolve = resolve })
-}
-
-const analyzeDataset = async function(app) {
+exports.process = async function(app, dataset) {
   const db = app.get('db')
-  let dataset = await db.collection('datasets').find({
-    status: 'loaded',
-    'file.mimetype': 'text/csv'
-  }).limit(1).sort({
-    updatedAt: 1
-  }).toArray()
-  dataset = dataset.pop()
-  if (!dataset) return
-
-  await journals.log(app, dataset, {type: 'analyze-start'})
-
   const fileSample = await datasetFileSample(dataset)
   const sniffResult = sniffer.sniff(iconv.decode(fileSample, dataset.file.encoding), {
     hasHeader: true
@@ -65,17 +30,11 @@ const analyzeDataset = async function(app) {
   props.numLines = await countLines(datasetUtils.fileName(dataset), sniffResult.newlineStr)
 
   dataset.status = 'analyzed'
-  await db.collection('datasets').updateOne({
-    id: dataset.id
-  }, {
+  await db.collection('datasets').updateOne({id: dataset.id}, {
     $set: {
       'file.props': props,
       status: 'analyzed',
       'file.schema': schema
     }
   })
-
-  await journals.log(app, dataset, {type: 'analyze-end'})
-
-  return dataset
 }

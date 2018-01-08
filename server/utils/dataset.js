@@ -5,6 +5,7 @@ const iconv = require('iconv-lite')
 const config = require('config')
 const csv = require('csv-parser')
 const fieldsSniffer = require('./fields-sniffer')
+const locks = require('./locks')
 
 exports.fileName = (dataset) => {
   return path.join(config.dataDir, dataset.owner.type, dataset.owner.id, dataset.id + '.' + dataset.file.name.split('.').pop())

@@ -28,5 +28,9 @@ module.exports = {
   headers: {
     storedBytesLimit: 'X-TaxMan-RateLimit'
   },
-  adminRole: 'admin'
+  adminRole: 'admin',
+  locks: {
+    // in seconds
+    ttl: 60
+  }
 }

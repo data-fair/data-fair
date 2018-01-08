@@ -10,10 +10,9 @@ const eventToPromise = require('event-to-promise')
 const dbUtils = require('./utils/db')
 const esUtils = require('./utils/es')
 const wsUtils = require('./utils/ws.js')
+const locksUtils = require('./utils/locks.js')
 const status = require('./status')
-const analyzer = require('./workers/analyzer')
-const schematizer = require('./workers/schematizer')
-const indexer = require('./workers/indexer')
+const workers = require('./workers')
 
 const app = express()
 app.use(bodyParser.json({limit: '100kb'}))
@@ -77,11 +76,10 @@ exports.run = async () => {
   app.set('db', db)
   app.set('es', esUtils.init())
   app.publish = await wsUtils.init(wss, db)
+  await locksUtils.init(db)
+  workers.start(app)
   server.listen(config.port)
   await eventToPromise(server, 'listening')
-  analyzer.loop(app)
-  schematizer.loop(app)
-  indexer.loop(app)
   return app
 }
 
@@ -90,9 +88,8 @@ exports.stop = async() => {
   server.close()
   await eventToPromise(server, 'close')
   wsUtils.stop()
-  await analyzer.stop()
-  await schematizer.stop()
-  await indexer.stop()
+  locksUtils.stop()
+  await workers.stop()
   await app.get('db').close()
   await app.get('es').close()
 }
