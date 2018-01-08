@@ -51,7 +51,6 @@ module.exports = {
         }
       }
     },
-    permissions: require('./permissions.json'),
     // TODO replace this schema with the official one when available
     // see https://github.com/OAI/OpenAPI-Specification/issues/1032
     // apiDoc: require('swagger2openapi/schemas/openapi-3.0.json'),

@@ -6,7 +6,7 @@
   <h3 class="md-headline">Permissions</h3>
   <md-button id="new-permissions" class="md-raised md-primary" @click="$refs['new-permissions-dialog'].open()">Ajouter des permissions</md-button>
   <md-list v-if="resource">
-    <md-list-item v-for="(permission, rowIndex) in resource.permissions" style="padding:8px 0">
+    <md-list-item v-for="(permission, rowIndex) in permissions" style="padding:8px 0">
       <md-card style="padding:16px;width:100%">
         <md-layout md-row md-vertical-align="center">
           <md-layout md-flex="30" md-column>
@@ -84,8 +84,9 @@ const {
 
 export default {
   name: 'permissions',
-  props: ['resource', 'api'],
+  props: ['resource', 'resourceUrl', 'api'],
   data: () => ({
+    permissions: [],
     newPermission: {
       type: 'organization',
       id: null,
@@ -108,7 +109,9 @@ export default {
     }
   },
   mounted() {
-    this.resource.permissions = this.resource.permissions || []
+    this.$http.get(this.resourceUrl + '/permissions').then(result => {
+      this.permissions = result.data
+    })
     this.$http.get(window.CONFIG.directoryUrl + '/api/organizations').then(results => {
       this.organizations = Object.assign({}, ...results.data.results.map(organization => ({
         [organization.id]: organization
@@ -121,23 +124,28 @@ export default {
     })
   },
   methods: {
+    save(){
+      this.$http.put(this.resourceUrl + '/permissions', this.permissions).then(result => {
+        this.$store.dispatch('notify', `Les permissions ont bien été mises à jour`)
+        this.dataset = result.data
+      }, error => {
+        this.$store.dispatch('notifyError', `Erreur ${error.status} pendant la mise à jour des permissions`)
+      })
+    },
     addPermission() {
       const permission = Object.assign({}, this.newPermission)
       if (!permission.type) delete permission.type
       if (!permission.id) delete permission.id
-      this.resource.permissions.push(permission)
+      this.permissions.push(permission)
       this.$refs['new-permissions-dialog'].close()
-      this.$emit('permissions-updated')
+      this.save()
     },
     removePermission(rowIndex) {
-      this.resource.permissions.splice(rowIndex, 1)
-      this.$emit('permissions-updated')
+      this.permissions.splice(rowIndex, 1)
+      this.save()
     }
   },
   watch: {
-    resource() {
-      this.resource.permissions = this.resource.permissions || []
-    },
     'newPermission.id': function(id) {
       if (this.newPermission.type === 'organization' && id) {
         if((this.resource.owner.type === 'organization' && this.resource.owner.id === id) || (this.resource.owner.type === 'user' && this.userOrganizations[id])){

@@ -31,7 +31,7 @@ router.get('', auth.optionalJwtMiddleware, async function(req, res, next) {
   let mongoQueries = [
     size > 0 ? applications.find(query).limit(size).skip(skip).sort(sort).project({
       _id: 0,
-      source: 0
+      permissions: 0
     }).toArray() : Promise.resolve([]),
     applications.find(query).count()
   ]
@@ -81,9 +81,12 @@ router.use('/:applicationId', auth.optionalJwtMiddleware, async function(req, re
   }
 })
 
+router.use('/:applicationId/permissions', permissions.router('applications', 'application'))
+
 // retrieve a application by its id
 router.get('/:applicationId', (req, res, next) => {
   if (!permissions.can(req.application, 'readDescription', req.user)) return res.sendStatus(403)
+  delete req.application.permissions
   res.status(200).send(req.application)
 })
 

@@ -100,40 +100,6 @@
         }
       }
     },
-    "permissions": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "description": "Permission to do the operations (identified by their id). If type and id are not set, then the operation is set to public. roles array is used only with type organization",
-        "additionalProperties": false,
-        "required": ["operations"],
-        "properties": {
-          "type": {
-            "type": "string",
-            "enum": ["user", "organization"],
-            "description": "If the entity is a user or an organization"
-          },
-          "id": {
-            "type": "string",
-            "description": "Identifier of the entity"
-          },
-          "operations": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "description": "API operation that can be used"
-            }
-          },
-          "roles": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "description": "Role name"
-            }
-          }
-        }
-      }
-    },
     "status": {
       "type": "string",
       "enum": ["loaded", "analyzed", "schematized", "indexed"],

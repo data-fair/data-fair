@@ -89,7 +89,7 @@
       </md-tab>
 
       <md-tab md-label="Permissions" md-icon="security" :md-active="activeTab === '2'">
-        <permissions :resource="remoteService" :api="api" @permissions-updated="save"></permissions>
+        <permissions :resource="remoteService" :resource-url="resourceUrl" :api="api"></permissions>
       </md-tab>
 
       <md-tab md-label="API" md-icon="cloud" :md-active="activeTab === '3'">
@@ -159,11 +159,16 @@ export default {
       'http://schema.org/CheckAction': 'Vérification'
     }
   }),
+  computed: {
+    resourceUrl(){
+      return window.CONFIG.publicUrl + '/api/v1/remote-services/' + this.$route.params.remoteServiceId
+    }
+  },
   mounted() {
     this.activeTab = this.$route.query.tab || '0'
-    this.$http.get(window.CONFIG.publicUrl + '/api/v1/remote-services/' + this.$route.params.remoteServiceId).then(result => {
+    this.$http.get(this.resourceUrl).then(result => {
       this.remoteService = result.data
-      this.$http.get(`${window.CONFIG.publicUrl}/api/v1/remote-services/${this.remoteService.id}/api-docs.json`).then(response => {
+      this.$http.get(this.resourceUrl + '/api-docs.json').then(response => {
         this.api = response.body
       })
     })
@@ -173,7 +178,7 @@ export default {
   },
   methods: {
     save() {
-      this.$http.put(window.CONFIG.publicUrl + '/api/v1/remote-services/' + this.$route.params.remoteServiceId, this.remoteService).then(result => {
+      this.$http.put(this.resourceUrl, this.remoteService).then(result => {
         this.$store.dispatch('notify', `La description de l'API a bien été mise à jour`)
         this.remoteService = result.data
       }, error => {
@@ -182,7 +187,7 @@ export default {
     },
     remove() {
       this.$refs['delete-dialog'].close()
-      this.$http.delete(window.CONFIG.publicUrl + '/api/v1/remote-services/' + this.$route.params.remoteServiceId).then(result => {
+      this.$http.delete(this.resourceUrl).then(result => {
         this.$store.dispatch('notify', `La description de l'API ${this.remoteService.title} a bien été supprimée`)
         this.$router.push({
           name: 'Home'
@@ -192,7 +197,7 @@ export default {
       })
     },
     refresh() {
-      this.$http.post(window.CONFIG.publicUrl + '/api/v1/remote-services/' + this.$route.params.remoteServiceId + '/_update').then(result => {
+      this.$http.post(this.resourceUrl + '/_update').then(result => {
         this.$store.dispatch('notify', `La définition de l'API a bien été mise à jour`)
         this.remoteService = result.data
       }, error => {

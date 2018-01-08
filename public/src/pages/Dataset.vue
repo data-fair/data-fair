@@ -42,7 +42,7 @@
       </md-tab>
 
       <md-tab md-label="Permissions" md-icon="security" :md-active="activeTab === '2'">
-        <permissions :resource="dataset" :api="api" @permissions-updated="save"></permissions>
+        <permissions :resource="dataset" :resource-url="resourceUrl" :api="api"></permissions>
       </md-tab>
 
       <md-tab md-label="Enrichissement" md-icon="merge_type" :md-active="activeTab === '3'">
@@ -123,26 +123,29 @@ export default {
   }),
   computed: {
     downloadLink() {
-      if (this.dataset) return window.CONFIG.publicUrl + '/api/v1/datasets/' + this.dataset.id + '/raw/' + this.dataset.file.name
+      if (this.dataset) return this.resourceUrl + '/raw/' + this.dataset.file.name
+    },
+    resourceUrl(){
+      return window.CONFIG.publicUrl + '/api/v1/datasets/' + this.$route.params.datasetId
     }
   },
   mounted() {
     this.activeTab = this.$route.query.tab || '0'
-    this.$http.get(window.CONFIG.publicUrl + '/api/v1/datasets/' + this.$route.params.datasetId).then(result => {
+    this.$http.get(this.resourceUrl).then(result => {
       this.dataset = result.data
       this.$http.get(window.CONFIG.directoryUrl + '/api/users?ids=' + this.dataset.createdBy + ',' + this.dataset.createdBy).then(results => {
         this.users = Object.assign({}, ...results.data.results.map(user => ({
           [user.id]: user
         })))
       })
-      this.$http.get(`${window.CONFIG.publicUrl}/api/v1/datasets/${this.dataset.id}/api-docs.json`).then(response => {
+      this.$http.get(this.resourceUrl + '/api-docs.json').then(response => {
         this.api = response.body
       })
     })
   },
   methods: {
     save() {
-      this.$http.put(window.CONFIG.publicUrl + '/api/v1/datasets/' + this.$route.params.datasetId, this.dataset).then(result => {
+      this.$http.put(this.resourceUrl, this.dataset).then(result => {
         this.$store.dispatch('notify', `Le jeu de données a bien été mis à jour`)
         this.dataset = result.data
       }, error => {
@@ -151,7 +154,7 @@ export default {
     },
     remove() {
       this.$refs['delete-dialog'].close()
-      this.$http.delete(window.CONFIG.publicUrl + '/api/v1/datasets/' + this.$route.params.datasetId).then(result => {
+      this.$http.delete(this.resourceUrl).then(result => {
         this.$store.dispatch('notify', `Le jeu de données ${this.dataset.title} a bien été supprimé`)
         this.$router.push({name: 'Datasets'})
       }, error => {

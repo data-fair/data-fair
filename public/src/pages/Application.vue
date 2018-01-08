@@ -19,7 +19,7 @@
       </md-tab>
 
       <md-tab md-label="Permissions" md-icon="security" :md-active="activeTab === '1'">
-        <permissions :resource="application" :api="api" @permissions-updated="save"></permissions>
+        <permissions :resource="application" :resource-url="resourceUrl" :api="api"></permissions>
       </md-tab>
 
       <md-tab md-label="API" md-icon="cloud" :md-active="activeTab === '2'">
@@ -81,9 +81,9 @@ export default {
   }),
   mounted() {
     this.activeTab = this.$route.query.tab || '0'
-    this.$http.get(window.CONFIG.publicUrl + '/api/v1/applications/' + this.$route.params.applicationId).then(result => {
+    this.$http.get(this.resourceUrl).then(result => {
       this.application = result.data
-      this.$http.get(`${window.CONFIG.publicUrl}/api/v1/applications/${this.application.id}/api-docs.json`).then(response => {
+      this.$http.get(this.resourceUrl + '/api-docs.json').then(response => {
         this.api = response.body
       })
     })
@@ -91,11 +91,14 @@ export default {
   computed:{
     applicationLink() {
       if (this.application) return window.CONFIG.publicUrl + '/app/' + this.application.id
+    },
+    resourceUrl(){
+      return window.CONFIG.publicUrl + '/api/v1/applications/' + this.$route.params.applicationId
     }
   },
   methods: {
     save() {
-      this.$http.put(window.CONFIG.publicUrl + '/api/v1/applications/' + this.$route.params.applicationId, this.application).then(result => {
+      this.$http.put(this.resourceUrl, this.application).then(result => {
         this.$store.dispatch('notify', `La configuration de l'application a bien été mise à jour`)
         this.application = result.data
       }, error => {
@@ -104,7 +107,7 @@ export default {
     },
     remove() {
       this.$refs['delete-dialog'].close()
-      this.$http.delete(window.CONFIG.publicUrl + '/api/v1/applications/' + this.$route.params.applicationId).then(result => {
+      this.$http.delete(this.resourceUrl).then(result => {
         this.$store.dispatch('notify', `La configuration de l'application ${this.application.title} a bien été supprimée`)
         this.$router.push({
           name: 'Home'

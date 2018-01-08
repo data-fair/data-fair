@@ -32,7 +32,7 @@ router.get('', auth.optionalJwtMiddleware, async function(req, res, next) {
   const [skip, size] = findUtils.pagination(req.query)
   query.$or = permissions.filter(req.user)
   let mongoQueries = [
-    size > 0 ? datasets.find(query).limit(size).skip(skip).sort(sort).project({_id: 0}).toArray() : Promise.resolve([]),
+    size > 0 ? datasets.find(query).limit(size).skip(skip).sort(sort).project({_id: 0, permissions: 0}).toArray() : Promise.resolve([]),
     datasets.find(query).count()
   ]
   try {
@@ -60,9 +60,12 @@ router.use('/:datasetId', auth.optionalJwtMiddleware, async function(req, res, n
   }
 })
 
+router.use('/:datasetId/permissions', permissions.router('datasets', 'dataset'))
+
 // retrieve a dataset by its id
 router.get('/:datasetId', (req, res, next) => {
   if (!permissions.can(req.dataset, 'readDescription', req.user)) return res.sendStatus(403)
+  delete req.dataset.permissions
   res.status(200).send(req.dataset)
 })
 
@@ -72,11 +75,6 @@ router.put('/:datasetId', async(req, res, next) => {
   if (!permissions.can(req.dataset, 'writeDescription', req.user)) return res.sendStatus(403)
   let valid = validate(req.body)
   if (!valid) return res.status(400).send(validate.errors)
-  req.body.permissions = req.body.permissions || []
-  req.body.permissions.forEach(permission => {
-    if ((!permission.type && permission.id) || (permission.type && !permission.id)) valid = false
-  })
-  if (!valid) return res.status(400).send('Error in permissions format')
   req.body.updatedAt = moment().toISOString()
   req.body.updatedBy = req.user.id
   req.body.id = req.params.datasetId
@@ -97,7 +95,7 @@ router.patch('/:datasetId', async (req, res, next) => {
     if (!valid) return res.status(400).send(validate.errors)
 
     const forbiddenKey = Object.keys(req.body).find(key => {
-      return ['permissions', 'schema', 'description', 'title'].indexOf(key) === -1
+      return ['schema', 'description', 'title'].indexOf(key) === -1
     })
     if (forbiddenKey) return res.status(400).send('Only some parts of the dataset can be modified through this route')
 

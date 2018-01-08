@@ -47,7 +47,7 @@ router.get('', auth.optionalJwtMiddleware, async function(req, res, next) {
   const [skip, size] = findUtils.pagination(req.query)
   query.$or = permissions.filter(req.user)
   let mongoQueries = [
-    size > 0 ? remoteServices.find(query).limit(size).skip(skip).sort(sort).project({_id: 0}).toArray() : Promise.resolve([]),
+    size > 0 ? remoteServices.find(query).limit(size).skip(skip).sort(sort).project({_id: 0, permissions: 0}).toArray() : Promise.resolve([]),
     remoteServices.find(query).count()
   ]
   try {
@@ -103,9 +103,12 @@ router.use('/:remoteServiceId', auth.optionalJwtMiddleware, async function(req, 
   }
 })
 
+router.use('/:remoteServiceId/permissions', permissions.router('remote-services', 'remoteService'))
+
 // retrieve a remoteService by its id
 router.get('/:remoteServiceId', (req, res, next) => {
   if (!permissions.can(req.remoteService, 'readDescription', req.user)) return res.sendStatus(403)
+  delete req.remoteService.permissions
   res.status(200).send(req.remoteService)
 })
 

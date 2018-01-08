@@ -1,4 +1,8 @@
 const config = require('config')
+const express = require('express')
+const permissionsSchema = require('../../contract/permissions.json')
+const ajv = require('ajv')()
+const validate = ajv.compile(permissionsSchema)
 
 // resource can be an application, a dataset of an remote service
 exports.can = function(resource, operationId, user) {
@@ -86,4 +90,34 @@ exports.canDoForOwner = async function(owner, operationId, user, db) {
     }
   }
   return false
+}
+
+module.exports.router = (collectionName, resourceName) => {
+  const router = express.Router()
+
+  router.get('', async (req, res, next) => {
+    res.status(200).send(req[resourceName].permissions || [])
+  })
+
+  // update settings
+  router.put('', async (req, res, next) => {
+    let valid = validate(req.body)
+    if (!valid) return res.status(400).send(validate.errors)
+    req.body = req.body || []
+    req.body.forEach(permission => {
+      if ((!permission.type && permission.id) || (permission.type && !permission.id)) valid = false
+    })
+    if (!valid) return res.status(400).send('Error in permissions format')
+    const resources = req.app.get('db').collection(collectionName)
+    try {
+      await resources.updateOne({
+        id: req[resourceName].id
+      }, {$set: {permissions: req.body}})
+      res.status(200).send(req.body)
+    } catch (err) {
+      next(err)
+    }
+  })
+
+  return router
 }
