@@ -58,6 +58,9 @@ app.use('/*', (req, res) => {
 
 // Error handling to complement express default error handling. TODO do something useful of errors.
 app.use((err, req, res, next) => {
+  if (err.name === 'UnauthorizedError') {
+    return res.status(401).send('invalid token...')
+  }
   // console.error('Error, what to do ?', err.stack)
 
   // Default error handler of express is actually not bad.
