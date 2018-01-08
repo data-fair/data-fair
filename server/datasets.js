@@ -76,7 +76,7 @@ router.patch('/:datasetId', async (req, res, next) => {
     if (!valid) return res.status(400).send(validate.errors)
 
     const forbiddenKey = Object.keys(req.body).find(key => {
-      return ['schema', 'description', 'title'].indexOf(key) === -1
+      return ['schema', 'description', 'title', 'license'].indexOf(key) === -1
     })
     if (forbiddenKey) return res.status(400).send('Only some parts of the dataset can be modified through this route')
 

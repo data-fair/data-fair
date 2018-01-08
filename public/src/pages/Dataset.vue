@@ -14,6 +14,12 @@
               <label>Description</label>
               <md-textarea v-model="dataset.description" @blur="save"></md-textarea>
             </md-input-container>
+            <md-input-container>
+              <label>Licence</label>
+              <md-select v-model="license" @change="save">
+                <md-option :value="license.href" v-for="license in licenses">{{license.title}}</md-option>
+              </md-select>
+            </md-input-container>
           </md-layout>
           <md-layout md-column md-flex="45" md-flex-offset="10">
             <md-card>
@@ -119,7 +125,10 @@ export default {
     dataset: null,
     users: {},
     activeTab: null,
-    api: null
+    api: null,
+    licenses: [],
+    license: null,
+    canSave: false
   }),
   computed: {
     downloadLink() {
@@ -133,22 +142,30 @@ export default {
     this.activeTab = this.$route.query.tab || '0'
     this.$http.get(this.resourceUrl).then(result => {
       this.dataset = result.data
+      // Hack to work around object binding to md-select
+      if(this.dataset.license && this.dataset.license.href) this.license = this.dataset.license.href
       this.$http.get(window.CONFIG.directoryUrl + '/api/users?ids=' + this.dataset.createdBy + ',' + this.dataset.createdBy).then(results => {
         this.users = Object.assign({}, ...results.data.results.map(user => ({
           [user.id]: user
         })))
+        this.canSave = true
       })
       this.$http.get(this.resourceUrl + '/api-docs.json').then(response => {
         this.api = response.body
       })
+      this.$http.get(window.CONFIG.publicUrl + '/api/v1/settings/'+this.dataset.owner.type+'/'+this.dataset.owner.id+'/licenses').then(response => {
+        this.licenses = response.body
+      })
     })
   },
   methods: {
-    save() {
-      const patch = Object.assign({}, ...['schema', 'description', 'title'].map(key => ({ [key]: this.dataset[key] })))
+    save(event) {
+      if (!this.canSave) return
+      const patch = Object.assign({}, ...['schema', 'description', 'title', 'license'].map(key => ({ [key]: this.dataset[key] })))
+      // Hack to work around object binding to md-select
+      if(this.license) patch.license = this.licenses.find(l => l.href === this.license)
       this.$http.patch(this.resourceUrl, patch).then(result => {
         this.$store.dispatch('notify', `Le jeu de données a bien été mis à jour`)
-        this.dataset = result.data
       }, error => {
         this.$store.dispatch('notifyError', `Erreur ${error.status} pendant la mise à jour du jeu de données`)
       })

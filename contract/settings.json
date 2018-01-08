@@ -15,9 +15,9 @@
     },
     "webhooks": {
       "type": "array",
+      "description": "List of webhooks",
       "items": {
         "type": "object",
-        "description": "List of webhooks",
         "additionalProperties": false,
         "required": ["title", "events", "url"],
         "properties": {
@@ -35,6 +35,25 @@
           "url":{
             "type": "string",
             "description": "The URL to call"
+          }
+        }
+      }
+    },
+    "licenses": {
+      "type": "array",
+      "description": "List of licenses",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["title", "href"],
+        "properties": {
+          "title": {
+            "type": "string",
+            "description": "Short title for the license"
+          },
+          "href":{
+            "type": "string",
+            "description": "The URL where the license can be read"
           }
         }
       }

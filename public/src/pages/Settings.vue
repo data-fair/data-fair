@@ -29,6 +29,9 @@
       </md-table>
     </div>
 
+    <h3 class="md-headline">Licences</h3>
+    <licenses :settings="settings" @license-updated="save"></licenses>
+
     <h3 class="md-headline">Webhooks</h3>
     <webhooks :settings="settings" @webhook-updated="save"></webhooks>
   </md-layout>
@@ -40,10 +43,12 @@ const {
   mapState
 } = require('vuex')
 import Webhooks from '../components/Webhooks.vue'
+import Licenses from '../components/Licenses.vue'
 
 export default {
   name: 'settings',
   components:{
+    Licenses,
     Webhooks
   },
   data: () => ({

@@ -123,6 +123,21 @@
       "items": {
         "type":"number"
       }
+    },
+    "license": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["title", "href"],
+      "properties": {
+        "title": {
+          "type": "string",
+          "description": "Short title for the license"
+        },
+        "href":{
+          "type": "string",
+          "description": "The URL where the license can be read"
+        }
+      }
     }
   }
 }

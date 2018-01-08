@@ -87,7 +87,7 @@ exports.init = async (wss, db) => {
     if (doc && doc.type === 'message') {
       const subs = subscribers[doc.channel] || {}
       Object.keys(subs).forEach(sub => {
-        clients[sub].send(JSON.stringify(doc))
+        if (clients[sub]) clients[sub].send(JSON.stringify(doc))
       })
     }
   })

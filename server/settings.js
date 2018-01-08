@@ -4,6 +4,7 @@ const settingSchema = require('../contract/settings.json')
 const validate = ajv.compile(settingSchema)
 const auth = require('./auth')
 const permissions = require('./utils/permissions')
+const config = require('config')
 
 let router = express.Router()
 
@@ -60,6 +61,20 @@ router.put('/:type/:id', auth.jwtMiddleware, async (req, res, next) => {
     delete req.body.type
     delete req.body.id
     res.status(200).send(req.body)
+  } catch (err) {
+    next(err)
+  }
+})
+
+// Get licenses list
+router.get('/:type/:id/licenses', auth.jwtMiddleware, async (req, res, next) => {
+  const settings = req.app.get('db').collection('settings')
+  try {
+    const result = await settings.findOne({
+      type: req.params.type,
+      id: req.params.id
+    })
+    res.status(200).send([].concat(config.licenses, (result && result.licenses) || []))
   } catch (err) {
     next(err)
   }

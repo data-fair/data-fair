@@ -32,5 +32,12 @@ module.exports = {
   locks: {
     // in seconds
     ttl: 60
-  }
+  },
+  licenses: [{
+    title: 'Licence Ouverte / Open Licence',
+    href: 'https://www.etalab.gouv.fr/licence-ouverte-open-licence'
+  }, {
+    title: 'Open Database License (ODbL)',
+    href: 'https://spdx.org/licenses/ODbL-1.0.html#licenseText'
+  }]
 }
