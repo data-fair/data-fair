@@ -177,7 +177,8 @@ exports.valuesAgg = async (client, dataset, query) => {
   esQuery.aggs = {
     card: {
       cardinality: {
-        field: query.field
+        field: query.field,
+        precision_threshold: 40000
       }
     },
     values: {

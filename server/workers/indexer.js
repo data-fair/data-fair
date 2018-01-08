@@ -59,6 +59,8 @@ async function indexDataset(app) {
     updateQuery.$set.schema = dataset.schema
     const aggResult = await esUtils.valuesAgg(es, dataset, {field: prop.key, agg_size: 10})
     prop['x-cardinality'] = aggResult.total_values
+    const firstValue = aggResult.aggs[0]
+    if (firstValue.total === 1) prop['x-cardinality'] = dataset.count
     if (aggResult.total_values <= 10) {
       prop.enum = aggResult.aggs.map(a => a.value)
     }
