@@ -10,7 +10,8 @@
     "lint": "eslint .",
     "test": "nyc ava --timeout=60000 -v test/*.js",
     "coveralls": "nyc report --reporter=text-lcov | coveralls",
-    "report": "nyc report --reporter=html"
+    "report": "nyc report --reporter=html",
+    "analyze": "webpack --profile --json > public/bundles/stats.json && webpack-bundle-analyzer public/bundles/stats.json"
   },
   "author": "",
   "license": "ISC",
@@ -55,7 +56,8 @@
     "vue-template-compiler": "^2.5.13",
     "vue-truncate-filter": "^1.1.7",
     "vuex": "^3.0.1",
-    "webpack": "^3.10.0"
+    "webpack": "^3.10.0",
+    "webpack-bundle-analyzer": "^2.9.2"
   },
   "dependencies": {
     "ajv": "^5.5.2",
