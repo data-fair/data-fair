@@ -1,6 +1,8 @@
 <template>
 <div>
-  <h3 class="md-display-1">Importer un service distant</h3>
+  <md-toolbar class="md-dense md-primary">
+    <h2 class="md-title" style="flex: 1">Importer un service distant</h2>
+  </md-toolbar>
   <md-stepper :md-alternate-labels="true" @change="currentStep = $event" @completed="importApi">
     <md-step :md-editable="true" :md-label="currentStep ? 'Fichier sélectionné' : 'Sélection du fichier'" :md-continue="apiDoc !== null" :md-message="fileName ? fileName: 'Chargez un fichier json'" :md-button-back="null" md-button-continue="Suivant">
       <md-input-container>
@@ -35,9 +37,7 @@
 </template>
 
 <script>
-const {
-  mapState
-} = require('vuex')
+const {mapState} = require('vuex')
 const routerMixin = require('../mixins.js').routerMixin
 
 export default {
@@ -119,46 +119,38 @@ export default {
     importApi() {
       const options = {
         progress: (e) => {
-          if (e.lengthComputable) {
-            this.uploadProgress = (e.loaded / e.total) * 100
-          }
+          if (e.lengthComputable) this.uploadProgress = (e.loaded / e.total) * 100
         }
       }
       this.uploading = true
       if (this.actions[this.action].type === 'create') {
         if(this.owners[this.owner].type === 'organization'){
-          options.headers = {
-            'x-organizationId' : this.owners[this.owner].id
-          }
+          options.headers = {'x-organizationId' : this.owners[this.owner].id}
         }
         const securities = this.apiDoc.security.map(s => Object.keys(s).pop()).map(s => this.apiDoc.components.securitySchemes[s])
         const apiKeySecurity = securities.find(s => s.type === 'apiKey')
-        if(apiKeySecurity){
-          this.$http.post(window.CONFIG.publicUrl + '/api/v1/remote-services', {
-            apiDoc: this.apiDoc,
-            apiKey: {
-              in: apiKeySecurity.in,
-              name: apiKeySecurity.name
-            },
-            url: this.apiDocUrl,
-            server: this.apiDoc.servers && this.apiDoc.servers.length && this.apiDoc.servers[0].url
-          }, options).then(results => {
-            this.$emit('remote-service-change')
-            this.reset()
-            const link = this.urlFromRoute({
-              name: 'RemoteService',
-              params: {
-                remoteServiceId: results.body.id
-              }
-            })
-            this.$store.dispatch('notify', `La description de l'API a bien été importée. <a href="${link}">Accéder à la description</a>`)
-          }, error => {
-            this.$store.dispatch('notifyError', `Erreur ${error.status} pendant l'import du fichier`)
-            this.reset()
+        if (!apiKeySecurity) return this.$store.dispatch('notifyError', `Erreur, l'API importée n'a pas de schéma de sécurité adapté`)
+
+        this.$http.post(window.CONFIG.publicUrl + '/api/v1/remote-services', {
+          apiDoc: this.apiDoc,
+          apiKey: {in: apiKeySecurity.in, name: apiKeySecurity.name},
+          url: this.apiDocUrl,
+          server: this.apiDoc.servers && this.apiDoc.servers.length && this.apiDoc.servers[0].url
+        }, options).then(results => {
+          this.$emit('remote-service-change')
+          this.reset()
+          const link = this.urlFromRoute({
+            name: 'RemoteService',
+            params: {
+              remoteServiceId: results.body.id
+            }
           })
-        } else {
-          this.$store.dispatch('notifyError', `Erreur, l'API importée n'a pas de schéma de sécurité adapté`)
-        }
+          this.$store.dispatch('notify', `La description de l'API a bien été importée. <a href="${link}">Accéder à la description</a>`)
+          this.$emit('success')
+        }, error => {
+          this.$store.dispatch('notifyError', `Erreur ${error.status} pendant l'import du fichier`)
+          this.reset()
+        })
       } else {
         /* TODO: implement patch route ro update apiDoc property by drag & droping json file
         this.$http.patch(window.CONFIG.publicUrl + '/api/v1/remote-services/' + this.actions[this.action].id, {apiDoc: this.apiDoc}, options).then(results => {

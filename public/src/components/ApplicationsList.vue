@@ -1,8 +1,8 @@
 <template>
   <div>
-    <h3 class="md-display-1">{{applications.count}} configurations d'applications</h3>
+    <h3 class="md-display-1">{{applications.count}} configuration{{plural}} d'application{{plural}}</h3>
     <md-layout md-row>
-      <md-layout v-for="application in applications.results" md-flex="50" md-flex-small="100" style="padding:16px">
+      <md-layout v-for="application in applications.results" md-flex="25" md-flex-large="33" md-flex-medium="50" md-flex-xsmall="100" style="padding:16px">
         <md-card style="width:100%">
           <md-card-header>
             <div class="md-title">
@@ -39,9 +39,7 @@
 </template>
 
 <script>
-const {
-  mapState
-} = require('vuex')
+const {mapState} = require('vuex')
 
 export default {
   name: 'applications-list',
@@ -54,15 +52,16 @@ export default {
     organizations: {}
   }),
   computed: {
-    ...mapState({
-      user: state => state.user
-    })
+    ...mapState(['user']),
+    plural() {
+      return this.applications.count > 1 ? 's' : ''
+    }
   },
   mounted() {
-    this.listApplications()
+    this.refresh()
   },
   methods: {
-    listApplications() {
+    refresh() {
       this.$http.get(window.CONFIG.publicUrl + '/api/v1/applications').then(results => {
         this.applications = results.data
       })
@@ -71,7 +70,7 @@ export default {
   watch: {
     user(newVal, oldVal){
       if(!newVal || !oldVal || newVal.id != oldVal.id){
-        this.listApplications()
+        this.refresh()
       }
     },
     applications() {

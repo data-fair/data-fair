@@ -1,8 +1,8 @@
 <template>
-  <div>
-    <h3 class="md-display-1">{{datasets.count}} jeux de données</h3>
+  <md-layout md-column>
+    <h3 class="md-display-1">{{datasets.count}} {{plural ? 'jeux' : 'jeu'}} de données</h3>
     <md-layout md-row>
-      <md-layout v-for="dataset in datasets.results" md-flex="50" md-flex-small="100" style="padding:16px">
+      <md-layout v-for="dataset in datasets.results" md-flex="25" md-flex-large="33" md-flex-medium="50" md-flex-xsmall="100" style="padding:16px">
         <md-card style="width:100%">
           <md-card-header>
             <div class="md-title">
@@ -37,13 +37,11 @@
         </md-card>
       </md-layout>
     </md-layout>
-  </div>
+  </md-layout>
 </template>
 
 <script>
-const {
-  mapState
-} = require('vuex')
+const {mapState} = require('vuex')
 
 export default {
   name: 'datasets-list',
@@ -56,15 +54,16 @@ export default {
     organizations: {}
   }),
   computed: {
-    ...mapState({
-      user: state => state.user
-    })
+    ...mapState(['user']),
+    plural() {
+      return this.datasets.count > 1
+    }
   },
   mounted() {
-    this.listDatasets()
+    this.refresh()
   },
   methods: {
-    listDatasets() {
+    refresh() {
       this.$http.get(window.CONFIG.publicUrl + '/api/v1/datasets').then(results => {
         this.datasets = results.data
       })
@@ -73,7 +72,7 @@ export default {
   watch: {
     user(newVal, oldVal){
       if(!newVal || !oldVal || newVal.id != oldVal.id){
-        this.listDatasets()
+        this.refresh()
       }
     },
     datasets() {

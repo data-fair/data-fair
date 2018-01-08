@@ -1,8 +1,8 @@
 <template>
   <div>
-    <h3 class="md-display-1">{{remoteServices.count}} services distants configurés</h3>
+    <h3 class="md-display-1">{{remoteServices.count}} service{{plural}} distant{{plural}} configuré{{plural}}</h3>
     <md-layout md-row>
-      <md-layout v-for="remoteService in remoteServices.results" md-flex="50" md-flex-small="100" style="padding:16px">
+      <md-layout v-for="remoteService in remoteServices.results" md-flex="25" md-flex-large="33" md-flex-medium="50" md-flex-xsmall="100" style="padding:16px">
         <md-card style="width:100%">
           <md-card-header>
             <div class="md-title">
@@ -41,9 +41,7 @@
 </template>
 
 <script>
-const {
-  mapState
-} = require('vuex')
+const {mapState} = require('vuex')
 
 export default {
   name: 'remote-services',
@@ -56,15 +54,16 @@ export default {
     organizations: {}
   }),
   computed: {
-    ...mapState({
-      user: state => state.user
-    })
+    ...mapState(['user']),
+    plural() {
+      return this.remoteServices.count > 1 ? 's' : ''
+    }
   },
   mounted() {
-    this.listRemoteServices()
+    this.refresh()
   },
   methods: {
-    listRemoteServices() {
+    refresh() {
       this.$http.get(window.CONFIG.publicUrl + '/api/v1/remote-services').then(results => {
         this.remoteServices = results.data
       })
@@ -73,7 +72,7 @@ export default {
   watch: {
     user(newVal, oldVal){
       if(!newVal || !oldVal || newVal.id != oldVal.id){
-        this.listRemoteServices()
+        this.refresh()
       }
     },
     remoteServices() {

@@ -1,20 +1,18 @@
 <template>
 <div>
-  <h3 class="md-display-1">Configuration une application</h3>
+  <md-toolbar class="md-dense md-primary">
+    <h2 class="md-title" style="flex: 1">Configurer une application</h2>
+  </md-toolbar>
   <md-stepper :md-alternate-labels="true" @change="currentStep = $event" @completed="createApplication">
     <md-step :md-editable="true" :md-label="currentStep ? 'Adresse de l\'application' : 'Aucune adresse'" :md-continue="description !== null" :md-message="description ? description.url: 'Entrez une adresse'" :md-button-back="null" md-button-continue="Suivant">
       <md-layout md-row>
-        <md-layout md-flex="85">
-          <md-input-container>
-            <label>URL de l'application'</label>
-            <md-input v-model="applicationUrl"></md-input>
-          </md-input-container>
-        </md-layout>
-        <md-layout>
-          <md-button class="md-icon-button md-raised md-primary" @click="downloadFromUrl" :disabled="!applicationUrl">
+        <md-input-container>
+          <label>URL de l'application'</label>
+          <md-input v-model="applicationUrl" @keyup.native.enter="downloadFromUrl"></md-input>
+          <md-button class="md-icon-button md-primary" @click="downloadFromUrl" :disabled="!applicationUrl">
             <md-icon>file_download</md-icon>
           </md-button>
-        </md-layout>
+        </md-input-container>
       </md-layout>
     </md-step>
     <md-step :md-editable="true" :md-disabled="!description" :md-label="currentStep > 1 ? 'Propriétaire choisi' : 'Choix du propriétaire'" :md-continue="description !== null && owner !== null" :md-message="owner ? (owners[owner].type === 'user' ? 'Vous même' : userOrganizations.find(o => o.id === owners[owner].id).name): 'Choisissez dans la liste'"
@@ -26,9 +24,7 @@
 </template>
 
 <script>
-const {
-  mapState
-} = require('vuex')
+const {mapState} = require('vuex')
 const routerMixin = require('../mixins.js').routerMixin
 const Extractor = require('html-extractor')
 const htmlExtractor = new Extractor()
@@ -71,6 +67,7 @@ export default {
   },
   methods: {
     downloadFromUrl() {
+      if (!this.applicationUrl) return
       this.$http.get(this.applicationUrl).then(response => {
         htmlExtractor.extract(response.data, (err, data) => {
           if (err) {
@@ -97,9 +94,7 @@ export default {
       this.uploading = true
       const options = {}
       if(this.owners[this.owner].type === 'organization'){
-        options.headers = {
-          'x-organizationId' : this.owners[this.owner].id
-        }
+        options.headers = {'x-organizationId' : this.owners[this.owner].id}
       }
       this.$http.post(window.CONFIG.publicUrl + '/api/v1/applications', Object.assign({
         url: this.applicationUrl
@@ -113,6 +108,7 @@ export default {
           }
         })
         this.$store.dispatch('notify', `Une configuration spécifique pour l'application a bien été créée. <a href="${link}">Accéder à l'application</a>`)
+        this.$emit('success')
       }, error => {
         this.$store.dispatch('notifyError', `Erreur ${error.status} pendant la création de la configuration d'application`)
       })

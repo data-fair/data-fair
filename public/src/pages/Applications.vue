@@ -1,15 +1,22 @@
 <template>
-<md-layout md-align="center">
-  <md-layout md-column md-flex="90">
-    <md-layout md-row>
-      <md-button class="md-raised md-primary" @click="$refs.sidenav.open()">Configurer une application</md-button>
-    </md-layout>
-    <applications-list></applications-list>
-  </md-layout>
-  <md-sidenav class="md-right sidenav-half" ref="sidenav">
-    <configure-application></configure-application>
-  </md-sidenav>
-</md-layout>
+  <div class="applications">
+    <applications-list ref="applicationsList"></applications-list>
+
+    <div class="actions-buttons">
+      <md-button @click="$refs.configAppDialog.open()" id="config-app-button" class="md-fab md-primary" title="Configurer une application">
+        <md-icon>add</md-icon>
+      </md-button>
+    </div>
+
+    <md-dialog md-open-from="#config-app-button" md-close-to="#config-app-button" id="config-app-dialog" ref="configAppDialog" @open="dialogOpened = true" @close="dialogOpened = false">
+      <md-dialog-content>
+        <configure-application v-if="dialogOpened" @success="$refs.configAppDialog.close();$refs.applicationsList.refresh()"></configure-application>
+      </md-dialog-content>
+      <md-dialog-actions>
+        <md-button class="md-primary" @click="$refs.configAppDialog.close()">Annuler</md-button>
+      </md-dialog-actions>
+    </md-dialog>
+  </div>
 </template>
 
 <script>
@@ -21,12 +28,15 @@ export default {
   components: {
     ConfigureApplication,
     ApplicationsList
+  },
+  data() {
+    return {dialogOpened: false}
   }
 }
 </script>
 
 <style>
-.sidenav-half .md-sidenav-content{
-  width:50%;
+#config-app-dialog .md-dialog{
+  min-width:50%;
 }
 </style>

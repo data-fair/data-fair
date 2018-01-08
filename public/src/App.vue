@@ -52,7 +52,11 @@
     </md-menu>
   </md-toolbar>
 
-  <router-view :key="$route.path"></router-view>
+  <md-layout md-align="center">
+    <md-layout md-column md-flex="90">
+      <router-view :key="$route.path"></router-view>
+    </md-layout>
+  </md-layout>
 
   <md-snackbar md-position="bottom center" ref="notificationErrorSnackbar" md-duration="12000" @close="notifyError">
     <md-icon md-theme="error" class="md-primary">error</md-icon>
@@ -116,6 +120,7 @@ body {
 .md-theme-default.md-toolbar {
     background-color: #fafafa; // grey 50
     color: rgba(0, 0, 0, .87); // same as in body
+    margin-bottom: 8px;
 
     .logo-container {
         padding: 2px;
@@ -144,5 +149,12 @@ body {
 
 .md-snackbar-content a {
     color: #ff9966 !important;
+}
+
+.actions-buttons {
+  position: absolute;
+  top: 76px;
+  right: 8px;
+  margin: 0;
 }
 </style>

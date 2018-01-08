@@ -153,9 +153,7 @@ export default {
       this.$refs['delete-dialog'].close()
       this.$http.delete(window.CONFIG.publicUrl + '/api/v1/datasets/' + this.$route.params.datasetId).then(result => {
         this.$store.dispatch('notify', `Le jeu de données ${this.dataset.title} a bien été supprimé`)
-        this.$router.push({
-          name: 'Home'
-        })
+        this.$router.push({name: 'Datasets'})
       }, error => {
         this.$store.dispatch('notifyError', `Erreur ${error.status} pendant la suppression du jeu de données ${this.dataset.title}`)
       })

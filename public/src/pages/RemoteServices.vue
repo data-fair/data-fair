@@ -1,14 +1,22 @@
 <template>
-<md-layout md-align="center">
-<md-layout md-column md-flex="90">
-  <md-layout md-row>
-    <md-button class="md-raised md-primary" @click="$refs.sidenav.open()">Configurer un service distant</md-button>
-  </md-layout>
-    <remote-services-list></remote-services-list>
-  </md-layout>
-  <md-sidenav class="md-right sidenav-half" ref="sidenav">
-    <import-remote-service></import-remote-service>
-  </md-sidenav>
+<div>
+    <remote-services-list ref="remoteServicesList"></remote-services-list>
+
+    <div class="actions-buttons">
+      <md-button @click="$refs.configServiceDialog.open()" id="config-service-button" class="md-fab md-primary" title="Configurer un service distant">
+        <md-icon>add</md-icon>
+      </md-button>
+    </div>
+
+    <md-dialog md-open-from="#config-service-button" md-close-to="#config-service-button" id="config-service-dialog" ref="configServiceDialog" @open="dialogOpened = true" @close="dialogOpened = false">
+      <md-dialog-content>
+        <import-remote-service v-if="dialogOpened" @success="$refs.configServiceDialog.close();$refs.remoteServicesList.refresh()"></import-remote-service>
+      </md-dialog-content>
+      <md-dialog-actions>
+        <md-button class="md-primary" @click="$refs.configServiceDialog.close()">Annuler</md-button>
+      </md-dialog-actions>
+    </md-dialog>
+</div>
 </md-layout>
 </template>
 
@@ -21,12 +29,15 @@ export default {
   components: {
     ImportRemoteService,
     RemoteServicesList
+  },
+  data() {
+    return {dialogOpened: false}
   }
 }
 </script>
 
 <style>
-.sidenav-half .md-sidenav-content{
-  width:50%;
+#config-service-dialog .md-dialog{
+  min-width:50%;
 }
 </style>

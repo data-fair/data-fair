@@ -24,9 +24,7 @@
 </template>
 
 <script>
-const {
-  mapState
-} = require('vuex')
+const {mapState} = require('vuex')
 const routerMixin = require('../mixins.js').routerMixin
 
 export default {
@@ -96,6 +94,7 @@ export default {
           this.reset()
           const link = this.urlFromRoute({name:'Dataset', params:{datasetId: results.body.id}})
           this.$store.dispatch('notify', `Le fichier a bien été importé et le jeu de données a été créé. <a href="${link}">Accéder au jeu de données</a>`)
+          this.$emit('success')
         }, error => {
           this.uploading = false
           if(error.status === 413){
@@ -112,6 +111,7 @@ export default {
           this.reset()
           const link = this.urlFromRoute({name:'Dataset', params:{datasetId: results.body.id}})
           this.$store.dispatch('notify', `Le fichier a bien été importé et le jeu de données a été mis à jour. <a href="${link}">Accéder au jeu de données</a>`)
+          this.$emit('success')
         }, error => {
           this.uploading = false
           if(error.status === 413){

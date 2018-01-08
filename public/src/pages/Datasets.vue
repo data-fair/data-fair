@@ -1,14 +1,32 @@
 <template>
-<md-layout md-align="center">
-  <md-layout md-column md-flex="90">
+  <div>
+      <datasets-list ref="datasetsList"></datasets-list>
+
+      <div class="actions-buttons">
+        <md-button @click="$refs.importFileDialog.open()" id="import-file-button" class="md-fab md-primary" title="Importer un fichier">
+          <md-icon>file_upload</md-icon>
+        </md-button>
+      </div>
+
+      <md-dialog md-open-from="#import-file-button" md-close-to="#import-file-button" ref="importFileDialog" id="import-file-dialog" @open="dialogOpened = true" @close="dialogOpened = false">
+        <md-dialog-content>
+          <import-file v-if="dialogOpened" @success="$refs.importFileDialog.close();$refs.datasetsList.refresh()"></import-file>
+        </md-dialog-content>
+        <md-dialog-actions>
+          <md-button class="md-primary" @click="$refs.importFileDialog.close()">Annuler</md-button>
+        </md-dialog-actions>
+      </md-dialog>
+  </div>
+
+
+  <!--<md-layout md-column md-flex="90">
     <md-layout md-row>
       <md-button class="md-raised md-primary" @click="$refs.sidenav.open()">Importer un fichier</md-button>
     </md-layout>
-    <datasets-list></datasets-list>
-  </md-layout>
-  <md-sidenav class="md-right sidenav-half" ref="sidenav">
+  </md-layout>-->
+  <!--<md-sidenav class="md-right sidenav-half" ref="sidenav">
     <import-file></import-file>
-  </md-sidenav>
+  </md-sidenav>-->
 </md-layout>
 </template>
 
@@ -21,12 +39,15 @@ export default {
   components: {
     ImportFile,
     DatasetsList
+  },
+  data() {
+    return {dialogOpened: false}
   }
 }
 </script>
 
 <style>
-.sidenav-half .md-sidenav-content{
-  width:50%;
+#import-file-dialog .md-dialog{
+  min-width:50%;
 }
 </style>
