@@ -26,7 +26,8 @@ module.exports.log = async function(app, dataset, event) {
   settings.webhooks.forEach(webhook => {
     axios.post(webhook.url, {
       text: (dataset.title || dataset.id) + ' - ' + events[event.type].text + (event.href ? ' - ' + event.href : ''),
-      href: config.publicUrl + '/api/v1/datasets/' + dataset.id
+      href: config.publicUrl + '/api/v1/datasets/' + dataset.id,
+      event: event.type
     })
   })
 }

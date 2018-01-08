@@ -5,7 +5,7 @@ const app = module.exports = express()
 app.use(bodyParser.json({limit: '100kb'}))
 
 app.post('/', (req, res, next) => {
-  app.emit('webhook', req.body)
+  if (req.body.event === 'index-end') app.emit('webhook', req.body)
 })
 
 app.listen(5900, (err) => {

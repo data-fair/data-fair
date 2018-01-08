@@ -13,6 +13,7 @@ ADD public public
 
 # Adding server files
 ADD server server
+ADD shared shared
 ADD contract contract
 ADD config config
 ADD README.md .
