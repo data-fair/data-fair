@@ -17,10 +17,12 @@ services:
 
 install:
   - npm install
+  - npm run lint
+
+before_script:
   - npm run build
 
 script:
-  - npm run lint
   - docker-compose up -d
   - sleep 10
   - npm test
