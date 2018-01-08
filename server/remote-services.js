@@ -11,6 +11,10 @@ const remoteServiceAPIDocs = require('../contract/remote-service-api-docs')
 const ajv = require('ajv')()
 const remoteServiceSchema = require('../contract/remote-service.js')
 const validateRemoteService = ajv.compile(remoteServiceSchema)
+const remoteServiceSchemaNoRequired = Object.assign(remoteServiceSchema)
+delete remoteServiceSchemaNoRequired.required
+const validateRemoteServiceNoRequired = ajv.compile(remoteServiceSchemaNoRequired)
+
 const openApiSchema = require('../contract/openapi-3.0.json')
 openApiSchema.$id = openApiSchema.$id + '-2' // dirty hack to handle ajv error
 const validateOpenApi = ajv.compile(openApiSchema)
@@ -112,22 +116,25 @@ router.get('/:remoteServiceId', (req, res, next) => {
   res.status(200).send(req.remoteService)
 })
 
-// update a remoteService
-// TODO: prevent overwriting owner and maybe other calculated fields.. A PATCH route like in datasets ?
-router.put('/:remoteServiceId', async(req, res, next) => {
-  if (!permissions.can(req.remoteService, 'writeDescription', req.user)) return res.sendStatus(403)
-  var valid = validateRemoteService(req.body)
-  if (!valid) return res.status(400).send(normalise(validateRemoteService.errors))
-  req.body.updatedAt = moment().toISOString()
-  req.body.updatedBy = req.user.id
-  req.body.id = req.params.remoteServiceId
-  if (req.body.apiDoc) {
-    req.body.actions = computeActions(req.body.apiDoc)
-  }
+// Update a remote service configuration
+router.patch('/:remoteServiceId', async (req, res, next) => {
   try {
-    await req.app.get('db').collection('remote-services').updateOne({
-      id: req.params.remoteServiceId
-    }, req.body)
+    if (!permissions.can(req.remoteService, 'writeDescription', req.user)) return res.sendStatus(403)
+    var valid = validateRemoteServiceNoRequired(req.body)
+    if (!valid) return res.status(400).send(validateRemoteServiceNoRequired.errors)
+
+    const forbiddenKey = Object.keys(req.body).find(key => {
+      return ['apiDoc', 'url', 'apiKey', 'server', 'description', 'title'].indexOf(key) === -1
+    })
+    if (forbiddenKey) return res.status(400).send('Only some parts of the remote service configuration can be modified through this route')
+
+    req.body.updatedAt = moment().toISOString()
+    req.body.updatedBy = req.user.id
+    if (req.body.apiDoc) {
+      req.body.actions = computeActions(req.body.apiDoc)
+    }
+
+    await req.app.get('db').collection('remote-services').updateOne({id: req.params.remoteServiceId}, {'$set': req.body})
     res.status(200).json(req.body)
   } catch (err) {
     return next(err)

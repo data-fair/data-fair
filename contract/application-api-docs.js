@@ -29,7 +29,7 @@ module.exports = (application) => {
             }
           }
         },
-        put: {
+        patch: {
           summary: 'Mettre à jour les informations de configuration de l\'application.',
           operationId: 'writeDescription',
           tags: ['Configuration'],

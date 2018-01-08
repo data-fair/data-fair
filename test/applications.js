@@ -23,7 +23,7 @@ test('Post an external application configuration, read it, update it and delete 
   t.is(res.data.count, 1)
   res = await ax.get('/api/v1/applications/' + acId)
   t.is(res.data.url, 'http://monapp.com')
-  res = await ax.put('/api/v1/applications/' + acId, Object.assign(res.data, {title: 'Test application config'}))
+  res = await ax.patch('/api/v1/applications/' + acId, {title: 'Test application config'})
   t.is(res.status, 200)
   t.is(res.data.title, 'Test application config')
   res = await ax.get('/app/' + acId)

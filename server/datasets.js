@@ -2,7 +2,6 @@ const express = require('express')
 const ajv = require('ajv')()
 const fs = require('fs-extra')
 const util = require('util')
-const datasetSchema = require('../contract/dataset.json')
 const moment = require('moment')
 const auth = require('./auth')
 const journals = require('./utils/journals')
@@ -14,10 +13,10 @@ const usersUtils = require('./utils/users')
 const findUtils = require('./utils/find')
 const config = require('config')
 
-const validate = ajv.compile(datasetSchema)
+const datasetSchema = require('../contract/dataset.json')
 const datasetSchemaNoRequired = Object.assign(datasetSchema)
 delete datasetSchemaNoRequired.required
-const validateNoRequired = ajv.compile(datasetSchemaNoRequired)
+const validate = ajv.compile(datasetSchemaNoRequired)
 
 let router = express.Router()
 
@@ -69,29 +68,11 @@ router.get('/:datasetId', (req, res, next) => {
   res.status(200).send(req.dataset)
 })
 
-// update a dataset
-// TODO: deprecate. Use PATCH.
-router.put('/:datasetId', async(req, res, next) => {
-  if (!permissions.can(req.dataset, 'writeDescription', req.user)) return res.sendStatus(403)
-  let valid = validate(req.body)
-  if (!valid) return res.status(400).send(validate.errors)
-  req.body.updatedAt = moment().toISOString()
-  req.body.updatedBy = req.user.id
-  req.body.id = req.params.datasetId
-  try {
-    await req.app.get('db').collection('datasets').updateOne({
-      id: req.params.datasetId
-    }, req.body)
-    res.status(200).json(req.body)
-  } catch (err) {
-    return next(err)
-  }
-})
-
+// Update a dataset
 router.patch('/:datasetId', async (req, res, next) => {
   try {
     if (!permissions.can(req.dataset, 'writeDescription', req.user)) return res.sendStatus(403)
-    var valid = validateNoRequired(req.body)
+    var valid = validate(req.body)
     if (!valid) return res.status(400).send(validate.errors)
 
     const forbiddenKey = Object.keys(req.body).find(key => {

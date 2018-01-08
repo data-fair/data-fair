@@ -145,7 +145,8 @@ export default {
   },
   methods: {
     save() {
-      this.$http.put(this.resourceUrl, this.dataset).then(result => {
+      const patch = Object.assign({}, ...['schema', 'description', 'title'].map(key => ({ [key]: this.dataset[key] })))
+      this.$http.patch(this.resourceUrl, patch).then(result => {
         this.$store.dispatch('notify', `Le jeu de données a bien été mis à jour`)
         this.dataset = result.data
       }, error => {

@@ -6,7 +6,10 @@ const applicationAPIDocs = require('../contract/application-api-docs')
 
 const ajv = require('ajv')()
 const applicationSchema = require('../contract/application.json')
+const applicationSchemaNoRequired = Object.assign(applicationSchema)
+delete applicationSchemaNoRequired.required
 const validate = ajv.compile(applicationSchema)
+const validateNoRequired = ajv.compile(applicationSchemaNoRequired)
 
 const permissions = require('./utils/permissions')
 const usersUtils = require('./utils/users')
@@ -90,26 +93,29 @@ router.get('/:applicationId', (req, res, next) => {
   res.status(200).send(req.application)
 })
 
-// update a application
-// TODO: prevent overwriting owner and maybe other calculated fields.. A PATCH route like in datasets ?
-router.put('/:applicationId', async(req, res, next) => {
-  if (!permissions.can(req.application, 'writeDescription', req.user)) return res.sendStatus(403)
-  var valid = validate(req.body)
-  if (!valid) return res.status(400).send(validate.errors)
-  req.body.updatedAt = moment().toISOString()
-  req.body.updatedBy = req.user.id
-  req.body.id = req.params.applicationId
+// Update an application configuration
+router.patch('/:applicationId', async (req, res, next) => {
   try {
-    await req.app.get('db').collection('applications').updateOne({
-      id: req.params.applicationId
-    }, req.body)
+    if (!permissions.can(req.application, 'writeDescription', req.user)) return res.sendStatus(403)
+    var valid = validateNoRequired(req.body)
+    if (!valid) return res.status(400).send(validateNoRequired.errors)
+
+    const forbiddenKey = Object.keys(req.body).find(key => {
+      return ['configuration', 'url', 'description', 'title'].indexOf(key) === -1
+    })
+    if (forbiddenKey) return res.status(400).send('Only some parts of the application configuration can be modified through this route')
+
+    req.body.updatedAt = moment().toISOString()
+    req.body.updatedBy = req.user.id
+
+    await req.app.get('db').collection('applications').updateOne({id: req.params.applicationId}, {'$set': req.body})
     res.status(200).json(req.body)
   } catch (err) {
     return next(err)
   }
 })
 
-// Delete a application
+// Delete an application configuration
 router.delete('/:applicationId', async(req, res, next) => {
   if (!permissions.can(req.application, 'delete', req.user)) return res.sendStatus(403)
   try {

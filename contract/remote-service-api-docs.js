@@ -27,7 +27,7 @@ module.exports = (remoteService) => {
             }
           }
         },
-        put: {
+        patch: {
           summary: 'Mettre à jour les informations de configuration du service distant.',
           operationId: 'writeDescription',
           tags: ['Configuration'],

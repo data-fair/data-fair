@@ -152,10 +152,9 @@ test('Upload dataset - full test with webhooks', async t => {
   }
   // Updating schema
   res = await ax.get(webhook.href)
-  const dataset = res.data
-  dataset.schema.find(field => field.key === 'lat')['x-refersTo'] = 'http://schema.org/latitude'
-  dataset.schema.find(field => field.key === 'lon')['x-refersTo'] = 'http://schema.org/longitude'
-  dataset.status = 'schematized'
-  await ax.put(webhook.href, dataset)
+  const schema = res.data.schema
+  schema.find(field => field.key === 'lat')['x-refersTo'] = 'http://schema.org/latitude'
+  schema.find(field => field.key === 'lon')['x-refersTo'] = 'http://schema.org/longitude'
+  await ax.patch(webhook.href, {schema: schema})
   await eventToPromise(notifier, 'webhook')
 })

@@ -178,7 +178,8 @@ export default {
   },
   methods: {
     save() {
-      this.$http.put(this.resourceUrl, this.remoteService).then(result => {
+      const patch = Object.assign({}, ...['apiDoc', 'url', 'apiKey', 'server', 'description', 'title'].map(key => ({ [key]: this.remoteService[key] })))
+      this.$http.patch(this.resourceUrl, patch).then(result => {
         this.$store.dispatch('notify', `La description de l'API a bien été mise à jour`)
         this.remoteService = result.data
       }, error => {

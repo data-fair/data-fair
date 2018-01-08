@@ -22,7 +22,7 @@ test('Post a minimal external API, read it, update it and delete it', async t =>
   t.is(res.data.openapi, '3.0.0')
   res = await ax.get('/api/v1/remote-services/' + eaId)
   t.is(res.data.apiDoc.info['x-api-id'], 'geocoder-koumoul')
-  res = await ax.put('/api/v1/remote-services/' + eaId, Object.assign(res.data, {title: 'Test external api'}))
+  res = await ax.patch('/api/v1/remote-services/' + eaId, {title: 'Test external api'})
   t.is(res.status, 200)
   t.is(res.data.title, 'Test external api')
   // Permissions
@@ -34,7 +34,7 @@ test('Post a minimal external API, read it, update it and delete it', async t =>
     t.is(err.status, 403)
   }
   try {
-    await ax1.put('/api/v1/remote-services/' + eaId, Object.assign(res.data, {title: 'Test external api'}))
+    await ax1.patch('/api/v1/remote-services/' + eaId, {title: 'Test external api'})
     t.fail()
   } catch (err) {
     t.is(err.status, 403)

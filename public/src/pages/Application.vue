@@ -98,7 +98,8 @@ export default {
   },
   methods: {
     save() {
-      this.$http.put(this.resourceUrl, this.application).then(result => {
+      const patch = Object.assign({}, ...['configuration', 'url', 'description', 'title'].map(key => ({ [key]: this.application[key] })))
+      this.$http.patch(this.resourceUrl, patch).then(result => {
         this.$store.dispatch('notify', `La configuration de l'application a bien été mise à jour`)
         this.application = result.data
       }, error => {

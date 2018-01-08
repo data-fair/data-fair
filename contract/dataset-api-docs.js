@@ -31,7 +31,7 @@ module.exports = (dataset) => {
             }
           }
         },
-        put: {
+        patch: {
           summary: 'Mettre à jour les informations du jeu de données.',
           operationId: 'writeDescription',
           tags: ['Métadonnées'],
