@@ -17,19 +17,22 @@ const storage = multer.diskStorage({
     cb(null, dir)
   },
   filename: async function(req, file, cb) {
-    file.title = path.parse(file.originalname).name
     const ext = path.parse(file.originalname).ext
-    const baseId = fieldsSniffer.escapeKey(file.title).toLowerCase()
-
     if (req.dataset) {
       // Update dataset case
       file.id = req.dataset.id
     } else {
       // Create dataset case
+      const baseTitle = path.parse(file.originalname).name
+      const baseId = fieldsSniffer.escapeKey(baseTitle).toLowerCase()
       file.id = baseId
+      file.title = baseTitle
       let i = 1
       do {
-        if (i > 1) file.id = baseId + i
+        if (i > 1) {
+          file.id = baseId + i
+          file.title = baseTitle + ' ' + i
+        }
         // better to check file than db entry in case of file currently uploading
         var dbExists = await req.app.get('db').collection('datasets').count({id: file.id})
         var fileExists = true
