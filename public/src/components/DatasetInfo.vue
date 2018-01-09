@@ -78,8 +78,10 @@ export default {
     },
     changeLicense() {
       // Hack to work around object binding to md-select
-      if (this.license) this.dataset.license = this.licenses.find(l => l.href === this.license)
-      this.save()
+      if (this.license && (!this.dataset.license || this.dataset.license.href !== this.license)) {
+        this.dataset.license = this.licenses.find(l => l.href === this.license)
+        this.save()
+      }
     }
   }
 }
