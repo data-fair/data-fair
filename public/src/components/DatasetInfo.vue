@@ -17,6 +17,10 @@
             <md-option :value="license.href" v-for="(license, i) in licenses" :key="i">{{ license.title }}</md-option>
           </md-select>
         </md-input-container>
+        <md-input-container>
+          <label>Provenance</label>
+          <md-input v-model="dataset.origin" @blur="save" placeholder="Page où l'on peut trouver la donnée d'origine"/>
+        </md-input-container>
       </md-layout>
       <md-layout md-column md-flex="45" md-flex-offset="10">
         <md-card>
@@ -31,6 +35,10 @@
             <md-list-item>
               <md-icon>add_circle_outline</md-icon>
               <user-name :user="usersInfo[dataset.createdBy]"/> <span>{{ dataset.createdAt | moment("DD/MM/YYYY, HH:mm") }}</span>
+            </md-list-item>
+            <md-list-item>
+              <md-icon>view_headline</md-icon>
+              <span>{{ dataset.count }} enregistrements</span>
             </md-list-item>
           </md-list>
         </md-card>

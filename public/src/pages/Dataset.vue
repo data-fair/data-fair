@@ -2,7 +2,7 @@
   <div class="dataset" v-if="dataset">
     <md-tabs md-fixed class="md-transparent" @change="$router.push({query:{tab:$event}})">
       <md-tab md-label="Description" md-icon="toc" :md-active="activeTab === '0'">
-        <dataset-info :dataset="dataset" @changed="save(['title', 'description', 'license'])"/>
+        <dataset-info :dataset="dataset" @changed="save(['title', 'description', 'license', 'origin'])"/>
         <schema :dataset="dataset" @schema-updated="dataset.schema = $event; dataset.status = 'schematized';save(['schema'])"/>
       </md-tab>
 

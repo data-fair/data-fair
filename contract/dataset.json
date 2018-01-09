@@ -138,6 +138,10 @@
           "description": "The URL where the license can be read"
         }
       }
+    },
+    "origin":{
+      "type": "string",
+      "description": "The URL where the original data can be found"
     }
   }
 }
