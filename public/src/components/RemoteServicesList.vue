@@ -43,7 +43,7 @@
 const {mapState} = require('vuex')
 
 export default {
-  name: 'RemoteServices',
+  name: 'RemoteServicesList',
   data: () => ({
     remoteServices: {
       count: 0,
@@ -81,17 +81,17 @@ export default {
           })))
         })
       }
-    },
-    methods: {
-      refresh() {
-        this.$http.get(window.CONFIG.publicUrl + '/api/v1/remote-services').then(results => {
-          this.remoteServices = results.data
-        })
-      }
     }
   },
   mounted() {
     this.refresh()
+  },
+  methods: {
+    refresh() {
+      this.$http.get(window.CONFIG.publicUrl + '/api/v1/remote-services').then(results => {
+        this.remoteServices = results.data
+      })
+    }
   }
 }
 </script>
