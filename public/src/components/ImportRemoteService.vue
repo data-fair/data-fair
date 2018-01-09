@@ -110,7 +110,8 @@ export default {
     checkApi(api) {
       this.$http.post(window.CONFIG.publicUrl + '/api/v1/_check-api', api).then(result => {
         this.apiDoc = api
-        this.$store.dispatch('notify', `Le format de la description de l'API est correct`)
+        // Notification not very useful now that services are taken from a list
+        // this.$store.dispatch('notify', `Le format de la description de l'API est correct`)
       }, error => {
         this.$store.dispatch('notifyError', `Le format de la description de l'API est incorrect`, error)
         this.reset()

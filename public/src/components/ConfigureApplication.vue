@@ -18,7 +18,7 @@
         </md-layout>
       </md-step>
       <md-step :md-editable="true" :md-disabled="!description" :md-label="currentStep > 1 ? 'Propriétaire choisi' : 'Choix du propriétaire'" :md-continue="description !== null && owner !== null" :md-message="owner ? (owners[owner].type === 'user' ? 'Vous même' : userOrganizations.find(o => o.id === owners[owner].id).name): 'Choisissez dans la liste'"
-               md-button-back="Précédent" md-button-continue="Suivant">
+               md-button-back="Précédent" md-button-continue="Enregistrer la configuration">
         <md-radio v-model="owner" :md-value="key" v-for="key in Object.keys(owners)" :key="key">{{ key === 'user' ? 'Vous-même' : userOrganizations.find(o => o.id === owners[key].id).name }}</md-radio>
       </md-step>
     </md-stepper>
