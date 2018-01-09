@@ -113,7 +113,7 @@ export default {
             applicationId: results.body.id
           }
         })
-        this.$store.dispatch('notify', `Une configuration spécifique pour l'application a bien été créée. <a href="${link}">Accéder à l'application</a>`)
+        this.$store.dispatch('notify', `Une configuration spécifique pour l'application a bien été créée. <a href="${link}">Accéder à la configuration de l'application</a>`)
         this.$emit('success')
       }, error => {
         this.$store.dispatch('notifyError', `Erreur ${error.status} pendant la création de la configuration d'application`)

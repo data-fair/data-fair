@@ -1,7 +1,7 @@
 <template>
   <div>
     <md-toolbar class="md-dense md-primary">
-      <h2 class="md-title" style="flex: 1">Importer un service distant</h2>
+      <h2 class="md-title" style="flex: 1">Configurer un service distant</h2>
     </md-toolbar>
     <md-stepper :md-alternate-labels="true" @change="currentStep = $event" @completed="importApi">
       <md-step :md-editable="true" :md-label="currentStep ? 'Fichier sélectionné' : 'Sélection du service'" :md-continue="apiDoc !== null" :md-message="apiDoc ? apiDoc.info.title : 'Choisissez dans la liste'" :md-button-back="null" md-button-continue="Suivant">
@@ -16,7 +16,7 @@
         <p v-if="apiDocUrl">{{ configurableRemoteServices.find(a => a.href === apiDocUrl).description }}</p>
       </md-step>
       <md-step :md-editable="true" :md-disabled="!apiDoc" :md-label="currentStep > 1 ? 'Propriétaire choisi' : 'Choix du propriétaire'" :md-continue="apiDoc !== null && owner !== null" :md-message="owner ? (owners[owner].type === 'user' ? 'Vous même' : userOrganizations.find(o => o.id === owners[owner].id).name): 'Choisissez dans la liste'"
-               md-button-back="Précédent" md-button-continue="Lancer l'import">
+               md-button-back="Précédent" md-button-continue="Enregistrer la configuration">
         <md-radio v-model="owner" :md-value="key" v-for="key in Object.keys(owners)" :key="key">{{ key === 'user' ? 'Vous-même' : userOrganizations.find(o => o.id === owners[key].id).name }}</md-radio>
       </md-step>
     </md-stepper>

@@ -7,6 +7,11 @@
           <md-card-header>
             <div class="md-title">
               <router-link :to="{name: 'Application', params:{applicationId:application.id}}">{{ application.title }}</router-link>
+
+              <md-button class="md-icon-button md-primary md-dense" :href="application.href" target="_blank" style="float:right">
+                <md-icon>exit_to_app</md-icon>
+                <md-tooltip md-direction="top">Accéder à l'application</md-tooltip>
+              </md-button>
             </div>
           </md-card-header>
           <md-card-content>
@@ -89,6 +94,7 @@ export default {
     refresh() {
       this.$http.get(window.CONFIG.publicUrl + '/api/v1/applications').then(results => {
         this.applications = results.data
+        this.applications.results.forEach(app => { app.href = window.CONFIG.publicUrl + '/app/' + app.id })
       })
     }
   }
