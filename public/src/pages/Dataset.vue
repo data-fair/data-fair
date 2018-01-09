@@ -7,7 +7,7 @@
       </md-tab>
 
       <md-tab md-label="Vue tableau" md-icon="view_list" id="tabular" :md-active="activeTab === 'tabular'">
-        <tabular-view :dataset="dataset"/>
+        <tabular-view :dataset="dataset" v-if="dataset && activeTab === 'tabular'"/>
       </md-tab>
 
       <md-tab md-label="Permissions" md-icon="security" id="permissions" :md-active="activeTab === 'permissions'">
@@ -23,7 +23,7 @@
       </md-tab>
 
       <md-tab md-label="API" md-icon="cloud" id="api" :md-active="activeTab === 'api'">
-        <open-api v-if="api" :api="api"/>
+        <open-api v-if="api && activeTab === 'api'" :api="api"/>
       </md-tab>
     </md-tabs>
 
