@@ -7,6 +7,7 @@ const soasLoader = require('soas')
 const axios = require('axios')
 const requestProxy = require('express-request-proxy')
 const remoteServiceAPIDocs = require('../contract/remote-service-api-docs')
+const matchstick = require('matchstick')
 
 const ajv = require('ajv')()
 const remoteServiceSchema = require('../contract/remote-service.js')
@@ -179,16 +180,29 @@ router.post('/:remoteServiceId/_update', async(req, res, next) => {
 })
 
 router.use('/:remoteServiceId/proxy*', function(req, res, next) {
-  const options = {
-    url: req.remoteService.server + '*'
-  }
-  // TODO handle query & cookie header types
-  if (req.remoteService.apiKey.in === 'header') {
-    options.headers = {
-      [req.remoteService.apiKey.name]: req.remoteService.apiKey.value
+  // console.log(req.remoteService.apiDoc.paths)
+  const paths = Object.keys(req.remoteService.apiDoc.paths).filter(path => {
+    const ms = matchstick(path, 'template')
+    return ms.match(req.params['0'])
+  }).map(path => req.remoteService.apiDoc.paths[path])
+  if (paths.length === 1) {
+    const operation = paths.pop()[req.method.toLowerCase()]
+    if (!permissions.can(req.remoteService, operation.operationId, req.user)) return res.sendStatus(403)
+    // console.log((req.user && req.user.email) || 'Anonymous', 'is using operation', operation.operationId)
+    const options = {
+      url: req.remoteService.server + '*'
     }
+    // TODO handle query & cookie header types
+    if (req.remoteService.apiKey.in === 'header') {
+      options.headers = {
+        [req.remoteService.apiKey.name]: req.remoteService.apiKey.value
+      }
+    }
+    requestProxy(options)(req, res, next)
+  } else {
+    console.log('Error, path length is not 1 :', paths)
+    next(new Error())
   }
-  requestProxy(options)(req, res, next)
 })
 
 router.post('/:remoteServiceId/actions/:actionId', async(req, res, next) => {

@@ -58,31 +58,6 @@ export default {
       })))) || {}
     }
   },
-  watch: {
-    currentStep() {
-      if (this.currentStep === 2) {
-        this.$http.get(window.CONFIG.publicUrl + '/api/v1/remote-services', {
-          params: {
-            'owner-type': this.owners[this.owner].type,
-            'owner-id': this.owners[this.owner].id
-          }
-        }).then(response => {
-          this.actions = Object.assign({
-            create: {
-              type: 'create',
-              title: 'Créer une nouvelle réutilisation de l\'API'
-            }
-          }, ...response.data.results.map(d => ({
-            ['update' + d.id]: {
-              type: 'update',
-              id: d.id,
-              title: 'Mettre à jour la description de l\'API ' + d.title
-            }
-          })))
-        })
-      }
-    }
-  },
   mounted() {
     if (this.user) {
       this.$http.get(window.CONFIG.directoryUrl + '/api/organizations?is-member=true').then(response => {
@@ -127,7 +102,7 @@ export default {
       if (this.owners[this.owner].type === 'organization') {
         options.headers = {'x-organizationId': this.owners[this.owner].id}
       }
-      const securities = this.apiDoc.security.map(s => Object.keys(s).pop()).map(s => this.apiDoc.components.securitySchemes[s])
+      const securities = (this.apiDoc.security || []).map(s => Object.keys(s).pop()).map(s => this.apiDoc.components.securitySchemes[s])
       const apiKeySecurity = securities.find(s => s.type === 'apiKey')
       if (!apiKeySecurity) return this.$store.dispatch('notifyError', `Erreur, l'API importée n'a pas de schéma de sécurité adapté`)
 

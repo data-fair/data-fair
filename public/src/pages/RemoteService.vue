@@ -149,6 +149,7 @@ export default {
     activeTab: null,
     actions: {
       'http://schema.org/SearchAction': 'Recherche',
+      'http://schema.org/ReadAction': 'Lecture',
       'http://schema.org/CheckAction': 'Vérification'
     }
   }),
