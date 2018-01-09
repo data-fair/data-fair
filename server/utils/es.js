@@ -4,6 +4,7 @@ const elasticsearch = require('elasticsearch')
 const createError = require('http-errors')
 const geoUtils = require('./geo')
 const geohash = require('./geohash')
+const tiles = require('./tiles')
 
 exports.init = () => elasticsearch.Client(Object.assign({}, config.elasticsearch))
 
@@ -224,7 +225,8 @@ const prepareValuesAggResponse = (esResponse) => {
 }
 
 exports.geoAgg = async (client, dataset, query) => {
-  const bbox = query.bbox ? query.bbox.split(',').map(Number) : dataset.bbox
+  if (!dataset.bbox) throw createError(400, 'geo aggregation cannot be used on this dataset. It is not geolocalized.')
+  const bbox = getQueryBBOX(query) || dataset.bbox
   const aggSize = query.agg_size ? Number(query.agg_size) : 20
   if (aggSize > 1000) throw createError(400, '"agg_size" cannot be more than 1000')
   const size = query.size ? Number(query.size) : 1
@@ -309,13 +311,23 @@ const prepareQuery = (dataset, query) => {
   }
 
   // bounding box filter to restrict results on geo zone: left,bottom,right,top
-  if (query.bbox) {
+  if (query.bbox || query.xyz) {
     if (!dataset.bbox) throw createError(400, '"bbox" filter cannot be used on this dataset. It is not geolocalized.')
-    const bbox = query.bbox.split(',').map(Number)
+    const bbox = getQueryBBOX(query, dataset)
     const esBoundingBox = { left: bbox[0], bottom: bbox[1], right: bbox[2], top: bbox[3] }
     filter.push({ geo_bounding_box: { _geopoint: esBoundingBox } })
   }
 
   esQuery.query = { bool: { filter, must } }
   return esQuery
+}
+
+const getQueryBBOX = (query) => {
+  let bbox
+  if (query.bbox) {
+    bbox = query.bbox.split(',').map(Number)
+  } else if (query.xyz) {
+    bbox = tiles.xyz2bbox(...query.xyz.split(',').map(Number))
+  }
+  return bbox
 }

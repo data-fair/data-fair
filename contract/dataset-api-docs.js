@@ -146,6 +146,21 @@ Pour plus d'information voir la documentation [ElasticSearch](https://www.elasti
               }
             },
             style: 'commaDelimited'
+          }, { in: 'query',
+            name: 'xyz',
+            description: `
+Un filtre pour restreindre les résultats à une zone géographique avec les paramètres standards de tuiles géographiques x,y et z.
+
+Le format est 'x,y,z'.
+`,
+            required: false,
+            schema: {
+              type: 'array',
+              items: {
+                type: 'number'
+              }
+            },
+            style: 'commaDelimited'
           }],
           responses: {
             200: {
