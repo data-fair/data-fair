@@ -43,7 +43,6 @@ module.exports = new Vuex.Store({
     },
     ownerLicenses(state, payload) {
       Vue.set(state.licenses, payload.owner.type + '/' + payload.owner.id, payload.licenses)
-      console.log(state.licenses)
     }
   },
   actions: {

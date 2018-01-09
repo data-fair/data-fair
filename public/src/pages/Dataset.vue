@@ -1,28 +1,28 @@
 <template>
   <div class="dataset" v-if="dataset">
-    <md-tabs md-fixed class="md-transparent" @change="$router.push({query:{tab:$event}})">
-      <md-tab md-label="Description" md-icon="toc" :md-active="activeTab === '0'">
+    <md-tabs md-fixed class="md-transparent" ref="tabs" @change="changeTab">
+      <md-tab md-label="Description" md-icon="toc" id="description" :md-active="activeTab === 'description'">
         <dataset-info :dataset="dataset" @changed="save(['title', 'description', 'license', 'origin'])"/>
         <schema :dataset="dataset" @schema-updated="dataset.schema = $event; dataset.status = 'schematized';save(['schema'])"/>
       </md-tab>
 
-      <md-tab md-label="Vue tableau" md-icon="view_list" :md-active="activeTab === '1'">
+      <md-tab md-label="Vue tableau" md-icon="view_list" id="tabular" :md-active="activeTab === 'tabular'">
         <tabular-view :dataset="dataset"/>
       </md-tab>
 
-      <md-tab md-label="Permissions" md-icon="security" :md-active="activeTab === '2'">
+      <md-tab md-label="Permissions" md-icon="security" id="permissions" :md-active="activeTab === 'permissions'">
         <permissions :resource="dataset" :resource-url="resourceUrl" :api="api"/>
       </md-tab>
 
-      <md-tab md-label="Enrichissement" md-icon="merge_type" :md-active="activeTab === '3'">
-        <enrich-dataset :dataset="dataset"/>
-      </md-tab>
+      <!--<md-tab md-label="Enrichissement" md-icon="merge_type" id="extend" :md-active="activeTab === '3'">
+          <enrich-dataset :dataset="dataset"/>
+        </md-tab>-->
 
-      <md-tab md-label="Journal" md-icon="event_note" :md-active="activeTab === '4'">
+      <md-tab md-label="Journal" md-icon="event_note" id="journal" :md-active="activeTab === 'journal'">
         <journal :dataset="dataset"/>
       </md-tab>
 
-      <md-tab md-label="API" md-icon="cloud" :md-active="activeTab === '5'">
+      <md-tab md-label="API" md-icon="cloud" id="api" :md-active="activeTab === 'api'">
         <open-api v-if="api" :api="api"/>
       </md-tab>
     </md-tabs>
@@ -89,7 +89,7 @@ export default {
     }
   },
   mounted() {
-    this.activeTab = this.$route.query.tab || '0'
+    this.activeTab = this.$route.query.tab || 'description'
     this.$http.get(this.resourceUrl).then(result => {
       this.dataset = result.data
       this.$http.get(this.resourceUrl + '/api-docs.json').then(response => {
@@ -114,6 +114,10 @@ export default {
       }, error => {
         this.$store.dispatch('notifyError', `Erreur ${error.status} pendant la suppression du jeu de données ${this.dataset.title}`)
       })
+    },
+    changeTab(event) {
+      this.activeTab = this.$refs.tabs.activeTab
+      this.$router.push({query: {tab: this.$refs.tabs.activeTab}})
     }
   }
 }
