@@ -14,7 +14,7 @@
       </md-table-body>
     </md-table>
 
-    <md-table-pagination :md-size="size" :md-total="data.total" :md-page="page" md-label="Lignes par page" md-separator="sur" @pagination="refresh"/>
+    <md-table-pagination :md-size="size" :md-total="data.total" :md-page="page" md-label="Lignes par page" md-separator="sur" @pagination="refresh" v-if="data.total !== undefined"/>
   </md-table-card>
 </template>
 
