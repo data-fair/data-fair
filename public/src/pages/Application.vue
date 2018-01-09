@@ -100,9 +100,7 @@ export default {
       this.$refs['delete-dialog'].close()
       this.$http.delete(this.resourceUrl).then(result => {
         this.$store.dispatch('notify', `La configuration de l'application ${this.application.title} a bien été supprimée`)
-        this.$router.push({
-          name: 'Home'
-        })
+        this.$router.push({name: 'Applications'})
       }, error => {
         this.$store.dispatch('notifyError', `Erreur ${error.status} pendant la suppression de la configuration de l'application ${this.application.title}`)
       })

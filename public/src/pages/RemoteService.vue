@@ -183,9 +183,7 @@ export default {
       this.$refs['delete-dialog'].close()
       this.$http.delete(this.resourceUrl).then(result => {
         this.$store.dispatch('notify', `La description de l'API ${this.remoteService.title} a bien été supprimée`)
-        this.$router.push({
-          name: 'Home'
-        })
+        this.$router.push({name: 'RemoteServices'})
       }, error => {
         this.$store.dispatch('notifyError', `Erreur ${error.status} pendant la suppression de la description de l'API ${this.remoteService.title}`)
       })
