@@ -90,7 +90,7 @@ export default {
     notification: state => state.notification,
     notificationError: state => state.notificationError,
     loginUrl() {
-      return window.CONFIG.directoryUrl + '/login?redirect=' + window.location.origin + '/signin?id_token='
+      return window.CONFIG.directoryUrl + '/login?redirect=' + window.CONFIG.publicUrl + '/signin?id_token='
     }
   }),
   watch: {
