@@ -15,7 +15,7 @@ Ce service utilise 3 types de persistance : fichier, base de données et moteur 
 
 La persistance fichier est utilisée pour stocker les datasets des utilisateurs : les fichiers sont stockés tels quels sur le système de fichier et sont ensuite analysés puis indexés.
 
-Les informations sur les datasets, les APIs externes et les configurations d'applications sont stockées dans une base de données MongoDB, qui est une base NoSQL open source orientée documents. Cette base a été choisie car il y a peu de liens entre les données, et celles ci peuvent par contre être complexes avec des niveaux de profondeur importants.
+Les informations sur les datasets, les services distants et les configurations d'applications sont stockées dans une base de données MongoDB, qui est une base NoSQL open source orientée documents. Cette base a été choisie car il y a peu de liens entre les données, et celles ci peuvent par contre être complexes avec des niveaux de profondeur importants.
 
 Les datasets sont indexés dans un moteur de recherche open source ElasticSearch. Très performant il permet de faire des recherches textuelles et des agrégations puissantes pour des temps de réponse irréprochables.
 

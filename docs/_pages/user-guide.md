@@ -15,7 +15,7 @@ Pour l'instant, seul le format CSV est supporté mais d'autres devraient bientô
 
 ### Décrire les métadonnées
 
-Une fois le jeu de données créé par import d'un fichier, il est fortement conseillé de renseigner ses métadonnées : cela permet de le trouver et de le réutiliser plus facilement. Les informations générales sont surtout utiles pour le catalogage, alors que les informations du schéma sont très important pour la réutilisabilité. Les libellés et descriptions des champs apparaîtront sur la vue en table ou dans les infobulles des applications. Le choix de concepts appropriés pour vos champs est ce qui va permettre de réutiliser vos données dans des applications tierces ou de les enrichir avec des services externes.
+Une fois le jeu de données créé par import d'un fichier, il est fortement conseillé de renseigner ses métadonnées : cela permet de le trouver et de le réutiliser plus facilement. Les informations générales sont surtout utiles pour le catalogage, alors que les informations du schéma sont très important pour la réutilisabilité. Les libellés et descriptions des champs apparaîtront sur la vue en table ou dans les infobulles des applications. Le choix de concepts appropriés pour vos champs est ce qui va permettre de réutiliser vos données dans des applications tierces ou de les enrichir avec des services distants.
 
 ### Vue tableau
 
@@ -26,7 +26,7 @@ Voir à la section plus bas correspondante de ce document.
 
 ### Enrichissement
 
-Suivant les services externes que vous avez configurés, et les concepts que vous avez assigné aux champs de vos données, il peut être possible d'enrichir les données. On peut par exemple rajouter des champs latitude et longitude si des champs décrivant une adresse sont présents, ou un secteur d'activité si un champ correspond à un SIRET d'un établissement.
+Suivant les services distants que vous avez configurés, et les concepts que vous avez assigné aux champs de vos données, il peut être possible d'enrichir les données. On peut par exemple rajouter des champs latitude et longitude si des champs décrivant une adresse sont présents, ou un secteur d'activité si un champ correspond à un SIRET d'un établissement.
 
 ### Journal d'activité
 
@@ -35,19 +35,19 @@ Ce journal décrit l'ensemble des activité liées au jeu de données et permet 
 ### Documentation d'API
 Cette documentation est destinée aux développeurs et va leur permettre de bien comprendre comment réutiliser vos données pour les intégrer dans d'autres applications. Cette documentation permet de faire des appels aux différents points d'accès de l'API pour bien comprendre comment elle marche.
 
-## Services externes
+## Services distants
 
-Les services externes sont des fonctionnalités externalisées à ce service. Ils permettent par exemple de récupérer des données supplémentaires ou de faire des traitements sur certaines données. Ces services externes sont optionnels pour pouvoir exposer ses données, mais nécessaires si l'on souhaite faire de l'enrichissement ou utiliser certaines applications. Ils se présentent sous la forme d'APIs Web qui peuvent être ouvertes ou fermées, dans le 2e cas il faut alors paramétrer des codes d'accès à ces APIs.
+Les services distants sont des fonctionnalités externalisées à ce service. Ils permettent par exemple de récupérer des données supplémentaires ou de faire des traitements sur certaines données. Ces services distants sont optionnels pour pouvoir exposer ses données, mais nécessaires si l'on souhaite faire de l'enrichissement ou utiliser certaines applications. Ils se présentent sous la forme d'APIs Web qui peuvent être ouvertes ou fermées, dans le 2e cas il faut alors paramétrer des codes d'accès à ces APIs.
 
-### Importer et configurer l'accès à un service externe
-Pour importer un service externe, on peut soit déposer un fichier JSON qui décrit son API, soit rentrer une URL qui pointe vers ce fichier JSON. La description de l'API du service doit être rédigée avec un certain formalisme qui est décrit dans la section [Interopérabilité](interoperate).
+### Importer et configurer l'accès à un service distant
+Pour importer un service distant, on peut soit déposer un fichier JSON qui décrit son API, soit rentrer une URL qui pointe vers ce fichier JSON. La description de l'API du service doit être rédigée avec un certain formalisme qui est décrit dans la section [Interopérabilité](interoperate).
 
 
 ## Configurations d'applications
 
 Un aspect essentiel du service et de pouvoir facilement réutiliser les données dans des applications. Ces applications peuvent consommer différents flux de données, du moment qu'ils soient sémantisés et contiennent les informations dons les applications on besoin. Les applications on donc besoin d'être configurées, de stocker leur configuration et on doit facilement pouvoir configurer une application.
 
-Les applications ne sont pas développées dans ce projet : elles peuvent être privées et développées par des éditeurs ou être opensource. Un des prérequis est qu'elles soient accessibles en ligne. Plus précisément, les applications sont des services web externes réexposés par ce service. La section [Interopérabilité](interoperate) décrit comment concevoir une application pour qu'elle puisse être réutilisée.
+Les applications ne sont pas développées dans ce projet : elles peuvent être privées et développées par des éditeurs ou être opensource. Un des prérequis est qu'elles soient accessibles en ligne. Plus précisément, les applications sont des services web réexposés par ce service. La section [Interopérabilité](interoperate) décrit comment concevoir une application pour qu'elle puisse être réutilisée.
 
 ### Paramétrage d'une application existante
 
@@ -60,7 +60,7 @@ Des boutons d'action en bas de l'écran de paramétrage permettent de réaliser 
 
 ## Contrôles d'accès
 
-Le contrôle d'accès sur les flux de données se fait avec un système de permissions. Il y a des permissions sur les jeux de données, les services externes et les applications. Le niveau de granularité du contrôle d'accès est le fait d'être propriétaire ou non de la ressource (droits sur toutes les opérations liées à cette ressource), ou sinon sur chaque opération unitairement.
+Le contrôle d'accès sur les flux de données se fait avec un système de permissions. Il y a des permissions sur les jeux de données, les services distants et les applications. Le niveau de granularité du contrôle d'accès est le fait d'être propriétaire ou non de la ressource (droits sur toutes les opérations liées à cette ressource), ou sinon sur chaque opération unitairement.
 
 ### Utilisateurs et Organisations
 
@@ -72,7 +72,7 @@ Ce système est simple mais permet de couvrir beaucoup de cas fonctionnels. Il f
 
 ### Portée des permissions
 
-L'utilisateur propriétaire ou tous les membres de l'organisation propriétaire peuvent faire toutes les opérations sur la ressource possédée. Pour les autres utilisateurs, la permission est octroyée à un niveau opération. Une opération est un point d'accès exposé par l'API (externe ou d'un jeu de données). On peut par exemple accorder la permission à quelqu'un de lire la description d'un jeu de données, mais pas les données.
+L'utilisateur propriétaire ou tous les membres de l'organisation propriétaire peuvent faire toutes les opérations sur la ressource possédée. Pour les autres utilisateurs, la permission est octroyée à un niveau opération. Une opération est un point d'accès exposé par l'API (tierce ou d'un jeu de données). On peut par exemple accorder la permission à quelqu'un de lire la description d'un jeu de données, mais pas les données.
 
 
 ## Paramètres

@@ -1,6 +1,6 @@
 remote_theme: mmistakes/minimal-mistakes
 name: Koumoul
-title: Data FAIR
+title: DataFair
 description: Rendez vos données Faciles à trouver, Accessibles, Interopérables, Réutilisables.
 
 locale: "fr-FR"
@@ -9,7 +9,7 @@ locale: "fr-FR"
 plugins:
   - jekyll-remote-theme
 
-minimal_mistakes_skin: "air" # "default", "aqua", "contrast", "dark", "dirt", "neon", "mint", "plum" "sunrise"
+minimal_mistakes_skin: "contrast" # "default",  "air", "aqua", "contrast", "dark", "dirt", "neon", "mint", "plum" "sunrise"
 include:
   - _pages
 

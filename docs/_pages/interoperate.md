@@ -3,7 +3,7 @@ title: Interopérabilité
 permalink: /interoperate
 ---
 
-DataFair est conçu pour interopérer avec d'autres services Web : en tant que consommateur d'APIs externes et en tant que fournisseur de données pour des applications.
+DataFair est conçu pour interopérer avec d'autres services Web : en tant que consommateur de services distants et en tant que fournisseur de données pour des applications.
 
 ## Développement d'une nouvelle application
 
@@ -22,7 +22,7 @@ Les applications ont besoin d'avoir accès à certaines informations pour bien f
  * **X-Exposed-Url** : URL d'exposition de l'application
  * **X-Config-Url** : URL à utiliser pour enregistrer / lire la configuration de l'application
  * **X-Directory-Url** : URL de l'annuaire, qui implémente le même contrat que [simple-directory](https://github.com/koumoul-dev/simple-directory)
- * **X-API-Url** : URL de l'API de ce service, ce qui permet ensuite d'accéder aux APIs externes et aux datasets
+ * **X-API-Url** : URL de l'API de ce service, ce qui permet ensuite d'accéder aux services distants et aux datasets
 
 ### Authentification
 
