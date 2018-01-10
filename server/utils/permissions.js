@@ -96,11 +96,13 @@ module.exports.router = (collectionName, resourceName) => {
   const router = express.Router()
 
   router.get('', async (req, res, next) => {
+    if (!exports.isOwner(req[resourceName].owner, req.user)) return res.sendStatus(403)
     res.status(200).send(req[resourceName].permissions || [])
   })
 
   // update settings
   router.put('', async (req, res, next) => {
+    if (!exports.isOwner(req[resourceName].owner, req.user)) return res.sendStatus(403)
     let valid = validate(req.body)
     if (!valid) return res.status(400).send(validate.errors)
     req.body = req.body || []
