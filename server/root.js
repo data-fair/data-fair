@@ -8,7 +8,6 @@ const vocabulary = require('../contract/vocabulary')
 const ajv = require('ajv')()
 const openApiSchema = require('../contract/openapi-3.0.json')
 const validateApi = ajv.compile(openApiSchema)
-const normalise = require('ajv-error-messages')
 const config = require('config')
 
 router.get('/api-docs.json', (req, res) => {
@@ -22,7 +21,7 @@ router.get('/vocabulary', (req, res) => {
 // Check an Api documentation format
 router.post('/_check-api', async(req, res, next) => {
   var valid = validateApi(req.body)
-  if (!valid) return res.status(400).send(normalise(validateApi.errors))
+  if (!valid) return res.status(400).send(validateApi.errors)
   res.sendStatus(200)
 })
 
