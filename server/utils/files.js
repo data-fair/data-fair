@@ -3,8 +3,8 @@ const config = require('config')
 const path = require('path')
 const multer = require('multer')
 const createError = require('http-errors')
-const fieldsSniffer = require('./fields-sniffer')
 const datasetUtils = require('./dataset')
+const slug = require('slug')
 
 function uploadDir(req) {
   return path.join(config.dataDir, req.get('x-organizationId') ? 'organization' : 'user', req.get('x-organizationId') || req.user.id)
@@ -24,7 +24,7 @@ const storage = multer.diskStorage({
     } else {
       // Create dataset case
       const baseTitle = path.parse(file.originalname).name
-      const baseId = fieldsSniffer.escapeKey(baseTitle).toLowerCase()
+      const baseId = slug(baseTitle, {lower: true})
       file.id = baseId
       file.title = baseTitle
       let i = 1

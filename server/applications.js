@@ -1,7 +1,6 @@
 const express = require('express')
 const auth = require('./auth')
 const moment = require('moment')
-const shortid = require('shortid')
 const applicationAPIDocs = require('../contract/application-api-docs')
 
 const ajv = require('ajv')()
@@ -49,7 +48,20 @@ router.get('', auth.optionalJwtMiddleware, async function(req, res, next) {
 // Create an application configuration
 router.post('', auth.jwtMiddleware, async(req, res, next) => {
   // This id is temporary, we should have an human understandable id, or perhaps manage it UI side ?
-  req.body.id = req.body.id || shortid.generate()
+  if (!req.body.url) return res.sendStatus(400)
+  const toks = req.body.url.split('/')
+  let lastUrlPart
+  do {
+    lastUrlPart = toks.pop()
+  } while (!lastUrlPart.length)
+  const baseId = req.body.id || lastUrlPart.toLowerCase()
+  req.body.id = baseId
+  let i = 1
+  do {
+    if (i > 1) req.body.id = baseId + i
+    var dbExists = await req.app.get('db').collection('applications').count({id: req.body.id})
+    i += 1
+  } while (dbExists)
   req.body.owner = usersUtils.owner(req)
   if (!permissions.canDoForOwner(req.body.owner, 'postApplication', req.user, req.app.get('db'))) return res.sendStatus(403)
   var valid = validate(req.body)
