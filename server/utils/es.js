@@ -151,7 +151,7 @@ exports.bboxAgg = async (client, dataset, query = {}) => {
 
 exports.metricAgg = async (client, dataset, query) => {
   if (!query.metric || !query.metric_field) throw createError(400, '"metric" and "metric_field" parameters are required')
-  query.size = '0'
+  query.size = 0
   const esQuery = prepareQuery(dataset, query)
   esQuery.aggs = {
     metric: {
@@ -233,20 +233,22 @@ exports.geoAgg = async (client, dataset, query) => {
   if (size > 100) throw createError(400, '"size" cannot be more than 100')
   const precision = geohash.bbox2precision(bbox, aggSize)
 
-  query.size = '0'
+  query.size = 0
   const esQuery = prepareQuery(dataset, query)
   esQuery.aggs = {
     geo: {
       geohash_grid: {
         field: '_geopoint',
-        precision: precision,
+        precision,
         size: aggSize
       },
       aggs: {
-        centroid: { geo_centroid: { field: '_geopoint' } },
-        topHits: { top_hits: { size, _source: esQuery._source } }
+        centroid: {geo_centroid: { field: '_geopoint' }}
       }
     }
+  }
+  if (size) {
+    esQuery.aggs.geo.aggs.topHits = {top_hits: { size, _source: esQuery._source }}
   }
   if (query.metric && query.metric_field) {
     esQuery.aggs.geo.aggs.metric = {
@@ -266,7 +268,7 @@ const prepareGeoAggResponse = (esResponse) => {
       centroid: b.centroid.location,
       center: {lat: center[1], lon: center[0]},
       bbox: geohash.hash2bbox(b.key),
-      results: b.topHits.hits.hits.map(hit => hit._source)
+      results: b.topHits ? b.topHits.hits.hits.map(hit => hit._source) : []
     }
     if (b.metric) {
       aggItem.metric = b.metric.value
