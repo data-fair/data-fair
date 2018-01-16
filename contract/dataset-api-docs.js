@@ -190,13 +190,24 @@ Le format est 'x,y,z'.
           }
         }
       }
+      // values_agg: {
+      //   get: {
+      //     summary: '',
+      //     operationId: '',
+      //     tags: ['Données'],
+      //     parameters: []
+      //   }
+      // },
+      // metric_agg: {
+      //
+      // }
     },
     externalDocs: {
       description: 'Documentation sur Github',
       url: 'https://koumoul-dev.github.io/data-fair/'
     }
   }
-  if (dataset.geopoint) {
+  if (dataset.bbox && dataset.bbox.length === 4) {
     api.paths['/geo_agg'] = {
       get: {
         summary: 'Récupérer des informations agrégées spatialement sur le jeu de données.',
