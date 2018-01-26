@@ -33,6 +33,7 @@ module.exports = {
     // in seconds
     ttl: 60
   },
+  analytics: null, // use a tracking id for google analytics here
   licenses: [{
     title: 'Licence Ouverte / Open Licence',
     href: 'https://www.etalab.gouv.fr/licence-ouverte-open-licence'

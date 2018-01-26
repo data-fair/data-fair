@@ -5,6 +5,7 @@ import VueResource from 'vue-resource'
 import VueRouter from 'vue-router'
 import VueCookie from 'vue-cookie'
 import VueTruncate from 'vue-truncate-filter'
+import VueAnalytics from 'vue-analytics'
 
 import routes from './routes.js'
 import store from './store.js'
@@ -103,3 +104,20 @@ new Vue({
     return h('App')
   }
 }).$mount('#app')
+
+if (window.CONFIG.analytics) {
+  Vue.use(VueAnalytics, {
+    id: window.CONFIG.analytics,
+    router,
+    autoTracking: {
+      exception: true,
+      pageviewTemplate (route) {
+        return {
+          title: 'Data FAIR - ' + route.name,
+          page: base + route.path,
+          location: window.location.href
+        }
+      }
+    }
+  })
+}

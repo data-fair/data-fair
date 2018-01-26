@@ -3,6 +3,7 @@ module.exports = {
   wsPublicUrl: 'WS_PUBLIC_URL',
   directoryUrl: 'DIRECTORY_URL',
   mongoUrl: 'MONGO_URL',
+  analytics: 'ANALYTICS',
   elasticsearch: {
     host: 'ES_HOST'
   }
