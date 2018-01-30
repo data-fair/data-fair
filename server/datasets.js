@@ -116,10 +116,10 @@ const detectCharacterEncoding = require('detect-character-encoding')
 
 // Create a dataset by uploading tabular data
 router.post('', auth.jwtMiddleware, filesUtils.uploadFile(), async(req, res, next) => {
+  if (req.storageRemaining !== undefined) res.set(config.headers.storedBytesRemaining, req.storageRemaining)
   const owner = usersUtils.owner(req)
   if (!permissions.canDoForOwner(owner, 'postDataset', req.user, req.app.get('db'))) return res.sendStatus(403)
   if (!req.file) return res.sendStatus(400)
-  // TODO verify quota
   try {
     const date = moment().toISOString()
     const dataset = {
@@ -149,6 +149,7 @@ router.post('', auth.jwtMiddleware, filesUtils.uploadFile(), async(req, res, nex
 
 // Update an existing dataset data
 router.post('/:datasetId', filesUtils.uploadFile(), async(req, res, next) => {
+  if (req.storageRemaining !== undefined) res.set(config.headers.storedBytesRemaining, req.storageRemaining)
   if (!permissions.can(req.dataset, 'writeData', req.user)) return res.sendStatus(403)
   if (!req.file) return res.sendStatus(400)
   try {

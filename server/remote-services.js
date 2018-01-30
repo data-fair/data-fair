@@ -197,14 +197,18 @@ router.use('/:remoteServiceId/proxy*', function(req, res, next) {
     if (!permissions.can(req.remoteService, operation.operationId, req.user)) return res.sendStatus(403)
     // console.log((req.user && req.user.email) || 'Anonymous', 'is using operation', operation.operationId)
     const options = {
-      url: req.remoteService.server + '*'
+      url: req.remoteService.server + '*',
+      headers: {}
     }
     // TODO handle query & cookie header types
     if (req.remoteService.apiKey.in === 'header') {
-      options.headers = {
-        [req.remoteService.apiKey.name]: req.remoteService.apiKey.value
-      }
+      options.headers[req.remoteService.apiKey.name] = req.remoteService.apiKey.value
     }
+    // transmit organization id as it tends to complement authorization information
+    if (req.remoteService.owner.type === 'organization') {
+      options.headers['x-organizationId'] = req.remoteService.owner.id
+    }
+
     requestProxy(options)(req, res, next)
   } else {
     console.log('Error, path length is not 1 :', paths)

@@ -70,8 +70,12 @@ const upload = multer({
       // Ignore the size of the dataset we are overwriting
       totalSize -= req.dataset.file.size
     }
-    const limit = req.get(config.headers.storedBytesLimit) || config.defaultLimits.totalStorage
-    if (limit !== -1 && limit < totalSize + estimatedFileSize) return cb(createError(429, 'Requested storage exceeds the authorized limit'))
+    const proxyLimit = req.get(config.headers.storedBytesLimit)
+    const limit = proxyLimit ? parseInt(proxyLimit) : config.defaultLimits.totalStorage
+    if (limit !== -1) {
+      req.storageRemaining = Math.max(0, limit - (totalSize + estimatedFileSize))
+      if (req.storageRemaining === 0) return cb(createError(429, 'Requested storage exceeds the authorized limit'))
+    }
 
     if (!allowedTypes.has(file.mimetype)) return cb(createError(400, file.mimetype + ' type is not supported'))
 
