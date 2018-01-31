@@ -13,11 +13,12 @@ const validateNoRequired = ajv.compile(applicationSchemaNoRequired)
 const permissions = require('./utils/permissions')
 const usersUtils = require('./utils/users')
 const findUtils = require('./utils/find')
+const asyncWrap = require('./utils/async-wrap')
 
 const router = module.exports = express.Router()
 
 // Get the list of applications
-router.get('', auth.optionalJwtMiddleware, async function(req, res, next) {
+router.get('', auth.optionalJwtMiddleware, asyncWrap(async(req, res) => {
   const applications = req.app.get('db').collection('applications')
   if (!req.user) {
     // If we want to respond a 401, then we should change auth middleware
@@ -37,16 +38,12 @@ router.get('', auth.optionalJwtMiddleware, async function(req, res, next) {
     }).toArray() : Promise.resolve([]),
     applications.find(query).count()
   ]
-  try {
-    let [results, count] = await Promise.all(mongoQueries)
-    res.json({results, count})
-  } catch (err) {
-    next(err)
-  }
-})
+  let [results, count] = await Promise.all(mongoQueries)
+  res.json({results, count})
+}))
 
 // Create an application configuration
-router.post('', auth.jwtMiddleware, async(req, res, next) => {
+router.post('', auth.jwtMiddleware, asyncWrap(async(req, res) => {
   // This id is temporary, we should have an human understandable id, or perhaps manage it UI side ?
   if (!req.body.url) return res.sendStatus(400)
   const toks = req.body.url.split('/')
@@ -71,30 +68,22 @@ router.post('', auth.jwtMiddleware, async(req, res, next) => {
   req.body.createdBy = req.user.id
   req.body.updatedAt = date
   req.body.updatedBy = req.user.id
-  try {
-    await req.app.get('db').collection('applications').insertOne(req.body)
-    res.status(201).json(req.body)
-  } catch (err) {
-    return next(err)
-  }
-})
+  await req.app.get('db').collection('applications').insertOne(req.body)
+  res.status(201).json(req.body)
+}))
 
 // Middlewares
-router.use('/:applicationId', auth.optionalJwtMiddleware, async function(req, res, next) {
-  try {
-    req.application = await req.app.get('db').collection('applications').findOne({
-      id: req.params.applicationId
-    }, {
-      fields: {
-        _id: 0
-      }
-    })
-    if (!req.application) return res.status(404).send('Application configuration not found')
-    next()
-  } catch (err) {
-    next(err)
-  }
-})
+router.use('/:applicationId', auth.optionalJwtMiddleware, asyncWrap(async(req, res, next) => {
+  req.application = await req.app.get('db').collection('applications').findOne({
+    id: req.params.applicationId
+  }, {
+    fields: {
+      _id: 0
+    }
+  })
+  if (!req.application) return res.status(404).send('Application configuration not found')
+  next()
+}))
 
 router.use('/:applicationId/permissions', permissions.router('applications', 'application'))
 
@@ -106,40 +95,32 @@ router.get('/:applicationId', (req, res, next) => {
 })
 
 // Update an application configuration
-router.patch('/:applicationId', async (req, res, next) => {
-  try {
-    if (!permissions.can(req.application, 'writeDescription', req.user)) return res.sendStatus(403)
-    var valid = validateNoRequired(req.body)
-    if (!valid) return res.status(400).send(validateNoRequired.errors)
+router.patch('/:applicationId', asyncWrap(async(req, res) => {
+  if (!permissions.can(req.application, 'writeDescription', req.user)) return res.sendStatus(403)
+  var valid = validateNoRequired(req.body)
+  if (!valid) return res.status(400).send(validateNoRequired.errors)
 
-    const forbiddenKey = Object.keys(req.body).find(key => {
-      return ['configuration', 'url', 'description', 'title'].indexOf(key) === -1
-    })
-    if (forbiddenKey) return res.status(400).send('Only some parts of the application configuration can be modified through this route')
+  const forbiddenKey = Object.keys(req.body).find(key => {
+    return ['configuration', 'url', 'description', 'title'].indexOf(key) === -1
+  })
+  if (forbiddenKey) return res.status(400).send('Only some parts of the application configuration can be modified through this route')
 
-    req.body.updatedAt = moment().toISOString()
-    req.body.updatedBy = req.user.id
+  req.body.updatedAt = moment().toISOString()
+  req.body.updatedBy = req.user.id
 
-    await req.app.get('db').collection('applications').updateOne({id: req.params.applicationId}, {'$set': req.body})
-    res.status(200).json(req.body)
-  } catch (err) {
-    return next(err)
-  }
-})
+  await req.app.get('db').collection('applications').updateOne({id: req.params.applicationId}, {'$set': req.body})
+  res.status(200).json(req.body)
+}))
 
 // Delete an application configuration
-router.delete('/:applicationId', async(req, res, next) => {
+router.delete('/:applicationId', asyncWrap(async(req, res) => {
   if (!permissions.can(req.application, 'delete', req.user)) return res.sendStatus(403)
-  try {
-    // TODO : Remove indexes
-    await req.app.get('db').collection('applications').deleteOne({
-      id: req.params.applicationId
-    })
-    res.sendStatus(204)
-  } catch (err) {
-    return next(err)
-  }
-})
+  // TODO : Remove indexes
+  await req.app.get('db').collection('applications').deleteOne({
+    id: req.params.applicationId
+  })
+  res.sendStatus(204)
+}))
 
 // retrieve a application by its id
 router.get('/:applicationId/config', (req, res, next) => {
@@ -148,7 +129,7 @@ router.get('/:applicationId/config', (req, res, next) => {
 })
 
 // retrieve a application by its id
-router.put('/:applicationId/config', async(req, res, next) => {
+router.put('/:applicationId/config', asyncWrap(async(req, res) => {
   if (!permissions.can(req.application, 'writeConfig', req.user)) return res.sendStatus(403)
   await req.app.get('db').collection('applications').updateOne({
     id: req.params.applicationId
@@ -158,7 +139,7 @@ router.put('/:applicationId/config', async(req, res, next) => {
     }
   })
   res.status(200).json(req.body)
-})
+}))
 
 router.get('/:applicationId/api-docs.json', (req, res) => {
   // TODO: permission ?

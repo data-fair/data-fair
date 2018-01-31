@@ -19,7 +19,7 @@ router.get('/vocabulary', (req, res) => {
 })
 
 // Check an Api documentation format
-router.post('/_check-api', async(req, res, next) => {
+router.post('/_check-api', (req, res, next) => {
   var valid = validateApi(req.body)
   if (!valid) return res.status(400).send(validateApi.errors)
   res.sendStatus(200)
