@@ -31,7 +31,7 @@ exports.process = async function(app, dataset) {
     const aggResult = await esUtils.valuesAgg(es, dataset, {field: prop.key, agg_size: 10})
     prop['x-cardinality'] = aggResult.total_values
     const firstValue = aggResult.aggs[0]
-    if (firstValue.total === 1) prop['x-cardinality'] = dataset.count
+    if (firstValue && firstValue.total === 1) prop['x-cardinality'] = dataset.count
     if (aggResult.total_values <= 10) {
       prop.enum = aggResult.aggs.map(a => a.value)
     }

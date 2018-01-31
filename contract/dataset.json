@@ -113,10 +113,6 @@
       "type": "number",
       "description": "The number of indexed documents of a dataset"
     },
-    "geopoint": {
-      "type": "boolean",
-      "description": "Specify if the dataset items are indexed as geopoints"
-    },
     "bbox": {
       "type": "array",
       "description": "The spatial coverage of this dataset, in bounding box format.",
@@ -142,6 +138,29 @@
     "origin":{
       "type": "string",
       "description": "The URL where the original data can be found"
+    },
+    "extensions": {
+      "type": "array",
+      "description": "Définition des enrichissements appliqués à ce jeu de données",
+      "items": {
+        "type": "object",
+        "properties": {
+          "active": {
+            "type": "boolean"
+          },
+          "id": {
+            "type": "string"
+          },
+          "remoteService": {
+            "type": "string",
+            "description": "L'identifiant du service distant utilisé pour l'enrichissement"
+          },
+          "action": {
+            "type": "string",
+            "description": "L'identifiant de l'action du service distant à utiliser pour l'enrichissement"
+          }
+        }
+      }
     }
   }
 }

@@ -12,6 +12,7 @@ const permissions = require('./utils/permissions')
 const usersUtils = require('./utils/users')
 const findUtils = require('./utils/find')
 const asyncWrap = require('./utils/async-wrap')
+const extensions = require('./utils/extensions')
 const config = require('config')
 
 const datasetSchema = require('../contract/dataset.json')
@@ -62,19 +63,20 @@ router.get('/:datasetId', (req, res, next) => {
 })
 
 // Update a dataset
+const patchKeys = ['schema', 'description', 'title', 'license', 'origin', 'extensions']
 router.patch('/:datasetId', asyncWrap(async(req, res) => {
   if (!permissions.can(req.dataset, 'writeDescription', req.user)) return res.sendStatus(403)
+  if (req.dataset.status !== 'indexed') return res.status(400).accept('Dataset is not in proper status to be updated')
   var valid = validate(req.body)
   if (!valid) return res.status(400).send(validate.errors)
 
-  const forbiddenKey = Object.keys(req.body).find(key => {
-    return ['schema', 'description', 'title', 'license', 'origin'].indexOf(key) === -1
-  })
+  const forbiddenKey = Object.keys(req.body).find(key => !patchKeys.includes(key))
   if (forbiddenKey) return res.status(400).send('Only some parts of the dataset can be modified through this route')
 
   req.body.updatedAt = moment().toISOString()
   req.body.updatedBy = req.user.id
-  if (req.body.schema) req.body.status = 'schematized'
+  if (req.body.extensions) req.body.schema = await extensions.prepareSchema(req.app.get('db'), req.body.schema || req.dataset.schema, req.body.extensions)
+  if (req.body.schema || req.body.extensions) req.body.status = 'schematized'
 
   await req.app.get('db').collection('datasets').updateOne({id: req.params.datasetId}, {'$set': req.body})
   res.status(200).json(req.body)
@@ -200,6 +202,22 @@ router.get('/:datasetId/journal', auth.jwtMiddleware, asyncWrap(async(req, res) 
   if (!journal) return res.sendStatus(404)
   journal.events.reverse()
   res.json(journal.events)
+}))
+
+router.post('/:datasetId/_extend', auth.jwtMiddleware, asyncWrap(async(req, res) => {
+  if (!permissions.can(req.dataset, 'writeData', req.user)) return res.status(403).send('No permission to write data in this dataset')
+
+  const extension = (req.dataset.extensions || []).find(e => e.remoteService === req.query.remoteService && e.action === req.query.action)
+  if (!extension) return res.status(404).send('Extension unknown')
+  const remoteService = await req.app.get('db').collection('remote-services').findOne({id: extension.remoteService})
+  if (!remoteService) return res.status(404).send('Remote service unknown')
+  if (!permissions.can(remoteService, 'readDescription', req.user)) return res.status(403).send('No permission to read from this remote service')
+  const action = remoteService.actions.find(a => a.id === extension.action)
+  if (!action) return res.status(404).send('Action unknown')
+
+  if (req.dataset.status !== 'indexed') return res.status(400).send('Dataset is not ready for extension.')
+  await extensions.extend(req.app.get('es'), req.dataset, remoteService, action, true)
+  res.send()
 }))
 
 module.exports = router

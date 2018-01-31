@@ -14,9 +14,9 @@
         <permissions :resource="dataset" :resource-url="resourceUrl" :api="api"/>
       </md-tab>
 
-      <!--<md-tab md-label="Enrichissement" md-icon="merge_type" id="extend" :md-active="activeTab === '3'">
-          <enrich-dataset :dataset="dataset"/>
-        </md-tab>-->
+      <md-tab md-label="Enrichissement" md-icon="merge_type" id="extend" :md-active="activeTab === 'extend'">
+        <enrich-dataset :dataset="dataset"/>
+      </md-tab>
 
       <md-tab md-label="Journal" md-icon="event_note" id="journal" :md-active="activeTab === 'journal'">
         <journal :dataset="dataset"/>

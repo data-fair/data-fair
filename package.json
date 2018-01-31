@@ -82,6 +82,7 @@
     "http-errors": "^1.6.2",
     "iconv-lite": "^0.4.19",
     "jwks-rsa": "^1.2.1",
+    "ldjson-stream": "^1.2.1",
     "matchstick": "^1.2.1",
     "moment": "^2.20.1",
     "mongodb": "^2.2.34",
