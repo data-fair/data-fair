@@ -103,18 +103,8 @@ class IndexStream extends Writable {
   }
 }
 
-exports.indexStream = async (client, inputStream, index, dataset, geopoint) => {
-  return new Promise((resolve, reject) => {
-    const indexStream = new IndexStream(client, index, dataset, geopoint)
-
-    inputStream
-      .on('error', reject)
-      .pipe(indexStream)
-      .on('error', reject)
-      .on('finish', () => {
-        resolve(indexStream.i)
-      })
-  })
+exports.indexStream = (client, index, dataset, geopoint) => {
+  return new IndexStream(client, index, dataset, geopoint)
 }
 
 exports.searchInDataset = async (client, dataset, query) => {

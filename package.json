@@ -45,6 +45,7 @@
     "nock": "^9.1.5",
     "nodemon": "^1.14.9",
     "nyc": "^11.4.1",
+    "object-hash": "^1.2.0",
     "reconnecting-websocket": "^3.2.2",
     "style-loader": "^0.18.2",
     "vue": "^2.5.13",

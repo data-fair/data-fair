@@ -3,6 +3,8 @@
 const esUtils = require('../utils/es')
 const datasetUtils = require('../utils/dataset')
 const geoUtils = require('../utils/geo')
+const extensionsUtils = require('../utils/extensions')
+const eventToPromise = require('event-to-promise')
 
 exports.eventsPrefix = 'index'
 
@@ -15,7 +17,11 @@ exports.process = async function(app, dataset) {
 
   const geopoint = geoUtils.schemaHasGeopoint(dataset.schema)
   const tempId = await esUtils.initDatasetIndex(es, dataset, geopoint)
-  const count = dataset.count = await esUtils.indexStream(es, datasetUtils.readStream(dataset), tempId, dataset, geopoint)
+  const stream = datasetUtils.readStream(dataset)
+    .pipe(extensionsUtils.extendStream({db, es, dataset}))
+    .pipe(esUtils.indexStream(es, tempId, dataset, geopoint))
+  await eventToPromise(stream, 'finish')
+  const count = dataset.count = stream.i
   await esUtils.switchAlias(es, dataset, tempId)
   const updateQuery = {$set: {status: 'indexed', count}}
 

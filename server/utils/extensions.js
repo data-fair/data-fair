@@ -2,8 +2,85 @@ const eventToPromise = require('event-to-promise')
 const axios = require('axios')
 const ldj = require('ldjson-stream')
 const es = require('./es')
+const hash = require('object-hash')
 
 const { Readable, Transform, Writable } = require('stream')
+
+// Create a function that will transform items from a dataset into inputs for an action
+function prepareMapping(action, schema) {
+  const mapping = action.input.map(input => {
+    const field = schema.find(f => f['x-refersTo'] === input.concept && f['x-refersTo'] !== 'http://schema.org/identifier')
+    if (field) return [field.key, input.name]
+  }).filter(i => i)
+  const idInput = action.input.find(input => input.concept === 'http://schema.org/identifier').name
+  return (item) => {
+    const mappedItem = {}
+    mapping.forEach(m => {
+      mappedItem[m[1]] = item._source[m[0]]
+    })
+    // remember a hash of the input.. so that we can store it alongside the resul and use this to reapply
+    // extension to a new version of the index without using the remote service
+    const h = hash(mappedItem)
+    mappedItem[idInput] = item._id
+    return [mappedItem, h]
+  }
+}
+
+// Maps input from documents to the expected parameters of a remote service action
+class PrepareInputStream extends Transform {
+  constructor(options) {
+    super({objectMode: true})
+    this.hashes = options.hashes
+    this.mapping = prepareMapping(options.action, options.dataset.schema)
+  }
+  _transform(item, encoding, callback) {
+    const [mappedItem, h] = this.mapping(item)
+    this.hashes[item._id] = h
+    callback(null, JSON.stringify(mappedItem) + '\n')
+  }
+}
+
+// Transform stream fetching extensions data from previous index
+// used when re-indexing
+class ExtendStream extends Transform {
+  constructor(options) {
+    super({objectMode: true})
+    this.options = options
+  }
+  async init() {
+    const db = this.options.db
+    this.indexName = es.indexName(this.options.dataset)
+    const extensions = this.options.dataset.extensions || []
+    this.mappings = {}
+    for (let extension of extensions) {
+      if (extension.active === false) return
+      const remoteService = await db.collection('remote-services').findOne({id: extension.remoteService})
+      if (!remoteService) continue
+      const action = remoteService.actions.find(action => action.id === extension.action)
+      if (!action) continue
+      const extensionKey = getExtensionKey(extension.remoteService, extension.action)
+      this.mappings[extensionKey] = prepareMapping(action, this.options.dataset.schema)
+    }
+  }
+  async _transform(item, encoding, callback) {
+    if (!this.mappings) await this.init()
+    const esClient = this.options.es
+    for (let extensionKey in this.mappings) {
+      /* eslint no-unused-vars: off */
+      const [mappedItem, h] = this.mappings[extensionKey]({_source: item})
+      const res = await esClient.search({
+        index: this.indexName,
+        body: {query: {constant_score: {filter: {term: {[extensionKey + '._hash']: h}}}}}
+      })
+      if (res.hits.total > 0) {
+        item[extensionKey] = res.hits.hits[0]._source[extensionKey]
+      }
+    }
+    callback(null, item)
+  }
+}
+
+exports.extendStream = (options) => new ExtendStream(options)
 
 // Input stream scanning a full ES index using the scroll api
 class ESInputStream extends Readable {
@@ -38,39 +115,19 @@ class ESInputStream extends Readable {
   }
 }
 
-// Maps input from documents to the expected parameters of a remote service action
-class PrepareInputStream extends Transform {
-  constructor(options) {
-    super({objectMode: true})
-    const action = options.action
-    const schema = options.dataset.schema
-
-    this.mapping = action.input.map(input => {
-      const field = schema.find(f => f['x-refersTo'] === input.concept)
-      if (field) return [field.key, input.name]
-    }).filter(i => i)
-    this.idInput = action.input.find(input => input.concept === 'http://schema.org/identifier').name
-  }
-  _transform(item, encoding, callback) {
-    const mappedItem = {}
-    this.mapping.forEach(m => {
-      mappedItem[m[1]] = item._source[m[0]]
-    })
-    mappedItem[this.idInput] = item._id
-    callback(null, JSON.stringify(mappedItem) + '\n')
-  }
-}
-
 // Maps output from a remote service action to new fields in the documents
 class PrepareOutputStream extends Transform {
   constructor(options) {
     super({objectMode: true})
+    this.hashes = options.hashes
     const action = options.action
     this.idOutput = action.output.find(output => output.concept === 'http://schema.org/identifier').name
   }
   _transform(item, encoding, callback) {
     const mappedItem = {doc: item}
     mappedItem.id = item[this.idOutput]
+    item._hash = this.hashes[mappedItem.id]
+    delete this.hashes[mappedItem.id]
     delete item[this.idOutput]
     callback(null, mappedItem)
   }
@@ -84,7 +141,7 @@ class ESOutputStream extends Writable {
     this.indexName = options.indexName
     this.keyPrefix = options.keyPrefix
   }
-  async _write(item, encoding, callback) {
+  _write(item, encoding, callback) {
     const opts = {
       index: this.indexName,
       type: 'line',
@@ -97,11 +154,15 @@ class ESOutputStream extends Writable {
     }
     this.client.update(opts, callback)
   }
+  _final(callback) {
+    this.client.indices.refresh({index: this.indexName}, callback)
+  }
 }
 
 exports.extend = async(client, dataset, remoteService, action) => {
+  const hashes = {}
   const inputStream = new ESInputStream({client, indexName: es.indexName(dataset)})
-    .pipe(new PrepareInputStream({action, dataset}))
+    .pipe(new PrepareInputStream({action, dataset, hashes}))
   const opts = {
     method: action.operation.method,
     baseURL: remoteService.server,
@@ -123,8 +184,8 @@ exports.extend = async(client, dataset, remoteService, action) => {
   const res = await axios(opts)
   const outputStream = res.data
     .pipe(ldj.parse())
-    .pipe(new PrepareOutputStream({action}))
-    .pipe(new ESOutputStream({client, indexName: es.indexName(dataset), keyPrefix: getPrefix(remoteService.id, action.id)}))
+    .pipe(new PrepareOutputStream({action, hashes}))
+    .pipe(new ESOutputStream({client, indexName: es.indexName(dataset), keyPrefix: getExtensionKey(remoteService.id, action.id)}))
   await eventToPromise(outputStream, 'finish')
 }
 
@@ -135,7 +196,7 @@ exports.prepareSchema = async (db, schema, extensions) => {
     if (!remoteService) continue
     const action = remoteService.actions.find(action => action.id === extension.action)
     if (!action) continue
-    const prefix = getPrefix(extension.remoteService, extension.action)
+    const prefix = getExtensionKey(extension.remoteService, extension.action)
     if (!schema.find(field => field.key === prefix + '._error')) {
       schema.push({key: prefix + '._error', type: 'string'})
     }
@@ -146,7 +207,7 @@ exports.prepareSchema = async (db, schema, extensions) => {
     for (let output of action.output) {
       if (!schema.find(field => field.key === prefix + output.name)) {
         // TODO : other types and format ?
-        const field = {key: prefix + output.name, type: 'string'}
+        const field = {key: prefix + '.' + output.name, type: 'string'}
         if (output.concept) {
           field['x-refertsTo'] = output.concept
         }
@@ -157,6 +218,6 @@ exports.prepareSchema = async (db, schema, extensions) => {
   return schema
 }
 
-function getPrefix(remoteServiceId, actionId) {
+function getExtensionKey(remoteServiceId, actionId) {
   return `_ext_${remoteServiceId}_${actionId}`
 }
