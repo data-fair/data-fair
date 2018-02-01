@@ -4,8 +4,9 @@ const journals = require('../utils/journals')
 
 const workers = {
   analyzer: require('./analyzer'),
+  schematizer: require('./schematizer'),
   indexer: require('./indexer'),
-  schematizer: require('./schematizer')
+  extender: require('./extender')
 }
 
 // resolve functions that will be filled when we will be asked to stop the workers

@@ -24,6 +24,7 @@ module.exports.log = async function(app, dataset, event) {
   const settings = await db.collection('settings').findOne(dataset.owner) || {}
   settings.webhooks = settings.webhooks || []
   settings.webhooks.forEach(webhook => {
+    if (webhook.events && webhook.events.length && !webhook.events.includes(event.type)) return
     axios.post(webhook.url, {
       text: (dataset.title || dataset.id) + ' - ' + events[event.type].text + (event.href ? ' - ' + event.href : ''),
       href: config.publicUrl + '/api/v1/datasets/' + dataset.id,

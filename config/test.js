@@ -4,9 +4,9 @@ module.exports = {
     totalStorage: 1500,
     datasetStorage: 1000
   },
-  workersPollingIntervall: 10,
+  workersPollingIntervall: 1,
   locks: {
     // in seconds
-    ttl: 1
+    ttl: 0.1
   }
 }

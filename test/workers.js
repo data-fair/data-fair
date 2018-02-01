@@ -45,6 +45,10 @@ test('Process newly uploaded dataset', async t => {
   t.is(mapping.properties.adr.type, 'text')
   t.is(mapping.properties.some_date.type, 'date')
 
+  // Empty extension
+  dataset = await workers.hook('extender')
+  t.is(dataset.status, 'extended')
+
   // Update schema to specify geo point
   const locProp = dataset.schema.find(p => p.key === 'loc')
   locProp['x-refersTo'] = 'http://www.w3.org/2003/01/geo/wgs84_pos#lat_long'

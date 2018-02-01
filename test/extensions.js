@@ -18,7 +18,7 @@ other,unknown address
   form.append('file', content, 'dataset.csv')
   let res = await ax.post('/api/v1/datasets', form, {headers: testUtils.formHeaders(form)})
   t.is(res.status, 201)
-  await workers.hook('indexer')
+  await workers.hook('extender')
 
   // A geocoder remote service
   res = await ax.post('/api/v1/remote-services', {
@@ -29,16 +29,7 @@ other,unknown address
   t.is(res.status, 201)
   const remoteServiceId = res.data.id
 
-  // Patch dataset to add extension using created remote service
-  res = await ax.patch('/api/v1/datasets/dataset', {extensions: [{remoteService: remoteServiceId, action: 'postCoords'}]})
-  t.is(res.status, 200)
-  const dataset = await workers.hook('indexer')
-  const extensionKey = `_ext_${remoteServiceId}_postCoords`
-  t.truthy(dataset.schema.find(field => field.key === extensionKey + '._error'))
-  t.truthy(dataset.schema.find(field => field.key === extensionKey + '.lat'))
-  t.truthy(dataset.schema.find(field => field.key === extensionKey + '.lon'))
-
-  // Perform extension
+  // Prepare for extension using created remote service and patch dataset to ask for it
   nock('http://test.com').post('/coords').reply(200, (uri, requestBody) => {
     const inputs = requestBody.trim().split('\n').map(JSON.parse)
     t.is(inputs.length, 2)
@@ -46,20 +37,19 @@ other,unknown address
     return inputs.map(input => ({key: input.key}))
       .map(JSON.stringify).join('\n') + '\n'
   })
-  res = await ax.post(`/api/v1/datasets/dataset/_extend?remoteService=${remoteServiceId}&action=postCoords`)
+  res = await ax.patch('/api/v1/datasets/dataset', {extensions: [{remoteService: remoteServiceId, action: 'postCoords'}]})
   t.is(res.status, 200)
-
+  const dataset = await workers.hook('extender')
+  const extensionKey = `_ext_${remoteServiceId}_postCoords`
+  t.truthy(dataset.schema.find(field => field.key === extensionKey + '._error'))
+  t.truthy(dataset.schema.find(field => field.key === extensionKey + '.lat'))
+  t.truthy(dataset.schema.find(field => field.key === extensionKey + '.lon'))
   // A search to check results
   res = await ax.get(`/api/v1/datasets/dataset/lines`)
   t.is(res.data.total, 2)
   t.truthy(res.data.results[0][extensionKey])
 
   // Patch dataset to add concept useful for extension
-  dataset.schema.find(field => field.key === 'adr')['x-refersTo'] = 'http://schema.org/address'
-  res = await ax.patch('/api/v1/datasets/dataset', {schema: dataset.schema})
-  await workers.hook('indexer')
-
-  // Re-perform extension
   nock('http://test.com').post('/coords').reply(200, (uri, requestBody) => {
     const inputs = requestBody.trim().split('\n').map(JSON.parse)
     t.is(inputs.length, 2)
@@ -67,41 +57,39 @@ other,unknown address
     return inputs.map(input => ({key: input.key, lat: 10, lon: 10}))
       .map(JSON.stringify).join('\n') + '\n'
   })
-  res = await ax.post(`/api/v1/datasets/dataset/_extend?remoteService=${remoteServiceId}&action=postCoords`)
-  t.is(res.status, 200)
-
+  dataset.schema.find(field => field.key === 'adr')['x-refersTo'] = 'http://schema.org/address'
+  res = await ax.patch('/api/v1/datasets/dataset', {schema: dataset.schema})
+  await workers.hook('extender')
   // A search to check results
   res = await ax.get(`/api/v1/datasets/dataset/lines`)
   t.is(res.data.total, 2)
-  t.truthy(res.data.results[0][extensionKey].lat)
-  t.truthy(res.data.results[0][extensionKey].lon)
+  t.is(res.data.results[0][extensionKey].lat, 10)
+  t.is(res.data.results[0][extensionKey].lon, 10)
   t.truthy(res.data.results[0][extensionKey]._hash)
 
   // Add a line to dataset
+  // Re-prepare for extension, it should only process the new line
+  nock('http://test.com').post('/coords').reply(200, (uri, requestBody) => {
+    const inputs = requestBody.trim().split('\n').map(JSON.parse)
+    t.is(inputs.length, 1)
+    t.deepEqual(Object.keys(inputs[0]), ['q', 'key'])
+    return inputs.map(input => ({key: input.key, lat: 100, lon: 100}))
+      .map(JSON.stringify).join('\n') + '\n'
+  })
   form = new FormData()
   content += 'me,3 les noés la chapelle caro\n'
   form.append('file', content, 'dataset1.csv')
   res = await ax.post('/api/v1/datasets/dataset', form, {headers: testUtils.formHeaders(form)})
   t.is(res.status, 200)
-  await workers.hook('indexer')
-
+  await workers.hook('extender')
   // A search to check re-indexed results with preserved extensions
+  // and new result with new extension
   res = await ax.get(`/api/v1/datasets/dataset/lines`)
   t.is(res.data.total, 3)
   const existingResult = res.data.results.find(l => l.label === 'koumoul')
-  t.truthy(existingResult[extensionKey])
+  t.is(existingResult[extensionKey].lat, 10)
+  t.is(existingResult[extensionKey].lon, 10)
   const newResult = res.data.results.find(l => l.label === 'me')
-  t.falsy(newResult[extensionKey])
-
-  // Re-perform extension with keep=true
-  // it should only process the new line
-  nock('http://test.com').post('/coords').reply(200, (uri, requestBody) => {
-    const inputs = requestBody.trim().split('\n').map(JSON.parse)
-    t.is(inputs.length, 1)
-    t.deepEqual(Object.keys(inputs[0]), ['q', 'key'])
-    return inputs.map(input => ({key: input.key, lat: 10, lon: 10}))
-      .map(JSON.stringify).join('\n') + '\n'
-  })
-  res = await ax.post(`/api/v1/datasets/dataset/_extend?remoteService=${remoteServiceId}&action=postCoords&keep=true`)
-  t.is(res.status, 200)
+  t.is(newResult[extensionKey].lat, 100)
+  t.is(newResult[extensionKey].lon, 100)
 })

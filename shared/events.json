@@ -30,5 +30,13 @@
   "index-end": {
     "icon": "assignment_turned_in",
     "text": "Les données sont indexées, le jeu de données est maintenant disponible"
+  },
+  "extend-start": {
+    "icon": "compare_arrows",
+    "text": "Début de l'enrichissement des données"
+  },
+  "extend-end": {
+    "icon": "compare_arrows",
+    "text": "Les données sont enrichies"
   }
 }
