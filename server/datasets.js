@@ -216,7 +216,7 @@ router.post('/:datasetId/_extend', auth.jwtMiddleware, asyncWrap(async(req, res)
   if (!action) return res.status(404).send('Action unknown')
 
   if (req.dataset.status !== 'indexed') return res.status(400).send('Dataset is not ready for extension.')
-  await extensions.extend(req.app.get('es'), req.dataset, remoteService, action, true)
+  await extensions.extend(req.app.get('es'), req.dataset, remoteService, action, req.query.keep === 'true')
   res.send()
 }))
 

@@ -92,4 +92,16 @@ other,unknown address
   t.truthy(existingResult[extensionKey])
   const newResult = res.data.results.find(l => l.label === 'me')
   t.falsy(newResult[extensionKey])
+
+  // Re-perform extension with keep=true
+  // it should only process the new line
+  nock('http://test.com').post('/coords').reply(200, (uri, requestBody) => {
+    const inputs = requestBody.trim().split('\n').map(JSON.parse)
+    t.is(inputs.length, 1)
+    t.deepEqual(Object.keys(inputs[0]), ['q', 'key'])
+    return inputs.map(input => ({key: input.key, lat: 10, lon: 10}))
+      .map(JSON.stringify).join('\n') + '\n'
+  })
+  res = await ax.post(`/api/v1/datasets/dataset/_extend?remoteService=${remoteServiceId}&action=postCoords&keep=true`)
+  t.is(res.status, 200)
 })

@@ -1,10 +1,10 @@
 const eventToPromise = require('event-to-promise')
 const axios = require('axios')
 const ldj = require('ldjson-stream')
-const es = require('./es')
 const hash = require('object-hash')
-
+const promisePipe = require('promisepipe')
 const { Readable, Transform, Writable } = require('stream')
+const es = require('./es')
 
 // Create a function that will transform items from a dataset into inputs for an action
 function prepareMapping(action, schema) {
@@ -88,15 +88,22 @@ class ESInputStream extends Readable {
     super({objectMode: true})
     this.client = options.client
     this.indexName = options.indexName
+    this.keep = options.keep
+    this.extensionKey = options.extensionKey
     this.keepPushing = true
+    this.i = 0
   }
   async _read() {
     let res
     if (!this.scrollId) {
+      let query = {match_all: {}}
+      if (this.keep) {
+        query = {bool: {must_not: {exists: {field: this.extensionKey + '._hash'}}}}
+      }
       res = await this.client.search({
         index: this.indexName,
         scroll: '100s',
-        body: {query: {match_all: {}}}
+        body: {query}
       })
     } else {
       res = await this.client.scroll({scroll_id: this.scrollId, scroll: '100s'})
@@ -105,9 +112,10 @@ class ESInputStream extends Readable {
 
     for (let hit of res.hits.hits) {
       this.keepPushing = this.push(hit)
+      this.i += 1
     }
 
-    if (res.hits.hits.length) {
+    if (res.hits.total > this.i) {
       if (this.keepPushing) await this._read()
     } else {
       this.push(null)
@@ -139,7 +147,7 @@ class ESOutputStream extends Writable {
     super({objectMode: true})
     this.client = options.client
     this.indexName = options.indexName
-    this.keyPrefix = options.keyPrefix
+    this.extensionKey = options.extensionKey
   }
   _write(item, encoding, callback) {
     const opts = {
@@ -148,7 +156,7 @@ class ESOutputStream extends Writable {
       id: item.id,
       body: {
         doc: {
-          [this.keyPrefix]: item.doc
+          [this.extensionKey]: item.doc
         }
       }
     }
@@ -159,10 +167,10 @@ class ESOutputStream extends Writable {
   }
 }
 
-exports.extend = async(client, dataset, remoteService, action) => {
+exports.extend = async(client, dataset, remoteService, action, keep) => {
   const hashes = {}
-  const inputStream = new ESInputStream({client, indexName: es.indexName(dataset)})
-    .pipe(new PrepareInputStream({action, dataset, hashes}))
+  const extensionKey = getExtensionKey(remoteService.id, action.id)
+  const inputStream = new PrepareInputStream({action, dataset, hashes})
   const opts = {
     method: action.operation.method,
     baseURL: remoteService.server,
@@ -181,12 +189,16 @@ exports.extend = async(client, dataset, remoteService, action) => {
     opts.headers['x-organizationId'] = remoteService.owner.id
   }
 
+  const inputPromise = promisePipe(new ESInputStream({client, indexName: es.indexName(dataset), keep, extensionKey}), inputStream)
   const res = await axios(opts)
-  const outputStream = res.data
-    .pipe(ldj.parse())
-    .pipe(new PrepareOutputStream({action, hashes}))
-    .pipe(new ESOutputStream({client, indexName: es.indexName(dataset), keyPrefix: getExtensionKey(remoteService.id, action.id)}))
-  await eventToPromise(outputStream, 'finish')
+  const outputPromise = promisePipe(
+    res.data,
+    ldj.parse(),
+    new PrepareOutputStream({action, hashes}),
+    new ESOutputStream({client, indexName: es.indexName(dataset), extensionKey})
+  )
+
+  await Promise.all([inputPromise, outputPromise])
 }
 
 exports.prepareSchema = async (db, schema, extensions) => {

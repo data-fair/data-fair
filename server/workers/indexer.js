@@ -1,10 +1,10 @@
 // Index tabular datasets with elasticsearch using available information on dataset schema
+const promisePipe = require('promisepipe')
 // const datasetUtils = require('../utils/dataset')
 const esUtils = require('../utils/es')
 const datasetUtils = require('../utils/dataset')
 const geoUtils = require('../utils/geo')
 const extensionsUtils = require('../utils/extensions')
-const eventToPromise = require('event-to-promise')
 
 exports.eventsPrefix = 'index'
 
@@ -17,11 +17,9 @@ exports.process = async function(app, dataset) {
 
   const geopoint = geoUtils.schemaHasGeopoint(dataset.schema)
   const tempId = await esUtils.initDatasetIndex(es, dataset, geopoint)
-  const stream = datasetUtils.readStream(dataset)
-    .pipe(extensionsUtils.extendStream({db, es, dataset}))
-    .pipe(esUtils.indexStream(es, tempId, dataset, geopoint))
-  await eventToPromise(stream, 'finish')
-  const count = dataset.count = stream.i
+  const indexStream = esUtils.indexStream(es, tempId, dataset, geopoint)
+  await promisePipe(datasetUtils.readStream(dataset), extensionsUtils.extendStream({db, es, dataset}), indexStream)
+  const count = dataset.count = indexStream.i
   await esUtils.switchAlias(es, dataset, tempId)
   const updateQuery = {$set: {status: 'indexed', count}}
 
