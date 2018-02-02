@@ -2,18 +2,16 @@
   <div>
     <md-table-card>
       <md-layout>
-        <md-layout md-flex="30" md-flex-offset="5">
+        <md-layout md-flex="30" md-flex-offset="5" md-hide-small>
           <md-input-container>
             <label>Rechercher</label>
             <md-input v-model="query" @keyup.enter.native="refresh"/>
+            <md-button class="md-icon-button" @click="refresh">
+              <md-icon>search</md-icon>
+            </md-button>
           </md-input-container>
         </md-layout>
-        <md-layout md-flex="5" style="padding:12px">
-          <md-button class="md-raised" @click="refresh">
-            <md-icon>search</md-icon>
-          </md-button>
-        </md-layout>
-        <md-layout md-flex="50" md-flex-offset="10">
+        <md-layout md-flex="50" md-flex-offset="10" md-flex-small="90">
           <md-table-pagination :md-size="size" :md-total="data.total" :md-page="page" md-label="Lignes par page" md-separator="sur" @pagination="refresh" v-if="data.total !== undefined"/>
         </md-layout>
       </md-layout>

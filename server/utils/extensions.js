@@ -214,7 +214,10 @@ exports.extend = async(app, dataset, remoteService, action, keep) => {
     url: action.operation.path,
     data: inputStream,
     responseType: 'stream',
-    headers: {}
+    headers: {
+      accept: 'application/x-ndjson',
+      'content-type': 'application/x-ndjson'
+    }
   }
 
   // TODO handle query & cookie header types
