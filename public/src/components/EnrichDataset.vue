@@ -3,12 +3,13 @@
     <p>Les actions d'enrichissement proposées ci-dessous dépendent des concepts associés à ce jeu de données et des services distants configurés.</p>
 
     <md-layout>
-      <md-list v-if="vocabulary">
+      <md-list v-if="ready">
         <md-list-item v-for="(extension, i) in dataset.extensions" :key="i">
           <span>
             <md-checkbox v-model="extension.active" class="md-primary"/>
           </span>
           <span>{{ remoteServices[extension.remoteService].actions[extension.action].summary }} (service {{ remoteServices[extension.remoteService].title }})</span>
+          <p v-if="extension.error" class="md-error">{{ extension.error }}</p>
           <div style="position:absolute;bottom:0;left:0;right:0;" v-if="extension.progress !== undefined">
             <md-progress :md-progress="100 * (extension.progress || 0)"/>
           </div>
@@ -45,13 +46,15 @@
 
 <script>
 import { mapState } from 'vuex'
+const ws = require('../ws.js')
 
 export default {
   props: ['dataset'],
   data() {
     return {
-      actions: [],
-      remoteServices: {}
+      ready: false,
+      remoteServices: {},
+      channel: 'datasets/' + this.dataset.id + '/extend-progress'
     }
   },
   computed: {
@@ -71,6 +74,17 @@ export default {
   mounted() {
     this.$store.dispatch('fetchVocabulary')
     this.fetchRemoteServices()
+    ws.$emit('subscribe', this.channel)
+    ws.$on(this.channel, info => {
+      const extension = this.dataset.extensions.find(e => e.remoteService === info.remoteService && e.action === info.action)
+      if (extension) {
+        this.$set(extension, 'progress', info.progress)
+        this.$set(extension, 'error', info.error)
+      }
+    })
+  },
+  destroyed() {
+    ws.$emit('unsubscribe', this.channel)
   },
   methods: {
     // An action is using an remote services endpoint to enrich a specific dataset
@@ -82,36 +96,36 @@ export default {
         this.$store.dispatch('notifyError', `Erreur ${error.status} pendant la mise à jour du jeu de données`)
       })
     },
-    fetchRemoteServices() {
+    async fetchRemoteServices() {
       if (this.concepts.size) {
-        this.$http.get(window.CONFIG.publicUrl + '/api/v1/remote-services?input-concepts=' + [...this.concepts].map(encodeURIComponent).join(',')).then(res => {
-          this.remoteServices = {}
-          res.data.results
-            .filter(s => s.owner.type === this.dataset.owner.type && s.owner.id === this.dataset.owner.id)
-            .forEach(s => {
-              s.actions = s.actions
-                .filter(a => a.inputCollection && a.outputCollection)
-                .filter(a => a.input.find(i => this.concepts.has(i.concept)))
-                .reduce((a, b) => { a[b.id] = b; return a }, {})
-              this.remoteServices[s.id] = s
-            })
-
-          // Add/remove available extensions
-          const extensions = (this.dataset.extensions || []).filter(e => {
-            return this.remoteServices[e.remoteService] && this.remoteServices[e.remoteService].actions[e.action]
+        const res = await this.$http.get(window.CONFIG.publicUrl + '/api/v1/remote-services?input-concepts=' + [...this.concepts].map(encodeURIComponent).join(','))
+        this.remoteServices = {}
+        res.data.results
+          .filter(s => s.owner.type === this.dataset.owner.type && s.owner.id === this.dataset.owner.id)
+          .forEach(s => {
+            s.actions = s.actions
+              .filter(a => a.inputCollection && a.outputCollection)
+              .filter(a => a.input.find(i => this.concepts.has(i.concept)))
+              .reduce((a, b) => { a[b.id] = b; return a }, {})
+            this.remoteServices[s.id] = s
           })
-          Object.keys(this.remoteServices).forEach(s => {
-            Object.keys(this.remoteServices[s].actions).forEach(a => {
-              if (!extensions.find(e => e.remoteService === s && e.action === a)) {
-                extensions.push({remoteService: s, action: a, active: false})
-              }
-            })
-          })
-          this.$set(this.dataset, 'extensions', extensions)
-        })
       } else {
         this.remoteServices = {}
       }
+
+      // Add/remove available extensions
+      const extensions = (this.dataset.extensions || []).filter(e => {
+        return this.remoteServices[e.remoteService] && this.remoteServices[e.remoteService].actions[e.action]
+      })
+      Object.keys(this.remoteServices).forEach(s => {
+        Object.keys(this.remoteServices[s].actions).forEach(a => {
+          if (!extensions.find(e => e.remoteService === s && e.action === a)) {
+            extensions.push({remoteService: s, action: a, active: false})
+          }
+        })
+      })
+      this.ready = true
+      this.$set(this.dataset, 'extensions', extensions)
     }
   }
 }

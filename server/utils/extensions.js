@@ -179,6 +179,7 @@ class ESOutputStream extends Writable {
   }
   _write(item, encoding, callback) {
     if (this.stats) this.stats.count += 1
+
     if (Object.keys(item.doc) === 0) return callback()
     const opts = {
       index: this.indexName,
@@ -201,9 +202,11 @@ exports.extend = async(app, dataset, remoteService, action, forceNext, indexName
   const hashes = {}
   const extensionKey = getExtensionKey(remoteService.id, action.id)
 
+  const stats = {count: dataset.count}
+
   const setProgress = async (error) => {
     try {
-      const progress = dataset.count / stats.count
+      const progress = stats.count / dataset.count
       await app.publish('datasets/' + dataset.id + '/extend-progress', {remoteService: remoteService.id, action: action.id, progress, error})
       await db.collection('datasets').updateOne({
         id: dataset.id,
@@ -238,7 +241,6 @@ exports.extend = async(app, dataset, remoteService, action, forceNext, indexName
     opts.headers['x-organizationId'] = remoteService.owner.id
   }
 
-  const stats = {count: dataset.count}
   const esInputStream = new ESInputStream({esClient, indexName, forceNext, extensionKey, stats})
   try {
     const inputPromise = promisePipe(esInputStream, inputStream)

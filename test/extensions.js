@@ -115,6 +115,7 @@ other,unknown address
   t.is(newResult._geopoint, '40,40')
   dataset = (await ax.get('/api/v1/datasets/dataset')).data
   t.false(dataset.extensions[0].forceNext)
+  t.is(dataset.extensions[0].progress, 1)
 })
 
 test.serial('Manage errors during extension', async t => {
