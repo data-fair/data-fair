@@ -7,9 +7,13 @@ const { Readable, Transform, Writable } = require('stream')
 const es = require('./es')
 
 // Create a function that will transform items from a dataset into inputs for an action
-function prepareMapping(action, schema) {
+function prepareMapping(action, schema, extensionKey) {
   const mapping = action.input.map(input => {
-    const field = schema.find(f => f['x-refersTo'] === input.concept && f['x-refersTo'] !== 'http://schema.org/identifier')
+    const field = schema.find(f =>
+      f['x-refersTo'] === input.concept &&
+      f['x-refersTo'] !== 'http://schema.org/identifier' &&
+      f.key.indexOf(extensionKey) !== 0
+    )
     if (field) return [field.key, input.name]
   }).filter(i => i)
   const idInput = action.input.find(input => input.concept === 'http://schema.org/identifier').name
@@ -31,7 +35,7 @@ class PrepareInputStream extends Transform {
   constructor(options) {
     super({objectMode: true})
     this.hashes = options.hashes
-    this.mapping = prepareMapping(options.action, options.dataset.schema)
+    this.mapping = prepareMapping(options.action, options.dataset.schema, options.extensionKey)
   }
   _transform(item, encoding, callback) {
     const [mappedItem, h] = this.mapping(item)
@@ -59,7 +63,7 @@ class ExtendStream extends Transform {
       const action = remoteService.actions.find(action => action.id === extension.action)
       if (!action) continue
       const extensionKey = getExtensionKey(extension.remoteService, extension.action)
-      this.mappings[extensionKey] = prepareMapping(action, this.options.dataset.schema)
+      this.mappings[extensionKey] = prepareMapping(action, this.options.dataset.schema, extensionKey)
     }
   }
   async _transform(item, encoding, callback) {
@@ -207,7 +211,7 @@ exports.extend = async(app, dataset, remoteService, action, keep) => {
     }
   }
 
-  const inputStream = new PrepareInputStream({action, dataset, hashes})
+  const inputStream = new PrepareInputStream({action, dataset, hashes, extensionKey})
   const opts = {
     method: action.operation.method,
     baseURL: remoteService.server,
@@ -215,8 +219,8 @@ exports.extend = async(app, dataset, remoteService, action, keep) => {
     data: inputStream,
     responseType: 'stream',
     headers: {
-      accept: 'application/x-ndjson',
-      'content-type': 'application/x-ndjson'
+      Accept: 'application/x-ndjson',
+      'Content-Type': 'application/x-ndjson'
     }
   }
 
@@ -269,10 +273,14 @@ exports.prepareSchema = async (db, schema, extensions) => {
 
     for (let output of action.output) {
       if (!schema.find(field => field.key === prefix + output.name)) {
-        // TODO : other types and format ?
-        const field = {key: prefix + '.' + output.name, type: 'string'}
-        if (output.concept) {
-          field['x-refertsTo'] = output.concept
+        const field = {
+          key: prefix + '.' + output.name,
+          'x-originalName': output.name,
+          title: output.title || output.description,
+          type: output.type || 'string'
+        }
+        if (output.concept && output.concept !== 'http://schema.org/identifier') {
+          field['x-refersTo'] = output.concept
         }
         schema.push(field)
       }
