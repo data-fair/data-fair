@@ -205,20 +205,4 @@ router.get('/:datasetId/journal', auth.jwtMiddleware, asyncWrap(async(req, res) 
   res.json(journal.events)
 }))
 
-router.post('/:datasetId/_extend', auth.jwtMiddleware, asyncWrap(async(req, res) => {
-  if (!permissions.can(req.dataset, 'writeData', req.user)) return res.status(403).send('No permission to write data in this dataset')
-
-  const extension = (req.dataset.extensions || []).find(e => e.remoteService === req.query.remoteService && e.action === req.query.action)
-  if (!extension) return res.status(404).send('Extension unknown')
-  const remoteService = await req.app.get('db').collection('remote-services').findOne({id: extension.remoteService})
-  if (!remoteService) return res.status(404).send('Remote service unknown')
-  if (!permissions.can(remoteService, 'readDescription', req.user)) return res.status(403).send('No permission to read from this remote service')
-  const action = remoteService.actions.find(a => a.id === extension.action)
-  if (!action) return res.status(404).send('Action unknown')
-
-  if (req.dataset.status !== 'indexed') return res.status(409).send('Dataset is not ready for extension.')
-  await extensions.extend(req.app, req.dataset, remoteService, action, req.query.keep === 'true')
-  res.send()
-}))
-
 module.exports = router

@@ -98,10 +98,9 @@ class ESInputStream extends Readable {
     super({objectMode: true})
     this.esClient = options.esClient
     this.indexName = options.indexName
-    this.keep = options.keep
+    this.forceNext = options.forceNext
     this.extensionKey = options.extensionKey
     this.stats = options.stats
-    this.keepPushing = true
     this.i = 0
   }
   async _read() {
@@ -110,9 +109,9 @@ class ESInputStream extends Readable {
     try {
       let res
       if (!this.scrollId) {
-        let query = {match_all: {}}
-        if (this.keep) {
-          query = {bool: {must_not: {exists: {field: this.extensionKey + '._hash'}}}}
+        let query = {bool: {must_not: {exists: {field: this.extensionKey + '._hash'}}}}
+        if (this.forceNext) {
+          query = {match_all: {}}
         }
         res = await this.esClient.search({
           index: this.indexName,
@@ -193,7 +192,7 @@ class ESOutputStream extends Writable {
   }
 }
 
-exports.extend = async(app, dataset, remoteService, action, keep, indexName) => {
+exports.extend = async(app, dataset, remoteService, action, forceNext, indexName) => {
   const esClient = app.get('es')
   const db = app.get('db')
   const hashes = {}
@@ -207,7 +206,7 @@ exports.extend = async(app, dataset, remoteService, action, keep, indexName) => 
         id: dataset.id,
         extensions: {$elemMatch: {'remoteService': remoteService.id, 'action': action.id}}
       }, {
-        $set: {'extensions.$.progress': progress, 'extensions.$.error': error}
+        $set: {'extensions.$.progress': progress, 'extensions.$.error': error, 'extensions.$.forceNext': false}
       })
     } catch (err) {
       console.error('Failure to update progress of an extension', err)
@@ -237,7 +236,7 @@ exports.extend = async(app, dataset, remoteService, action, keep, indexName) => 
   }
 
   const stats = {count: dataset.count}
-  const esInputStream = new ESInputStream({esClient, indexName, keep, extensionKey, stats})
+  const esInputStream = new ESInputStream({esClient, indexName, forceNext, extensionKey, stats})
   try {
     const inputPromise = promisePipe(esInputStream, inputStream)
 

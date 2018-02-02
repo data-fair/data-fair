@@ -146,7 +146,12 @@
         "type": "object",
         "properties": {
           "active": {
-            "type": "boolean"
+            "type": "boolean",
+            "description": "Toggle on and off the extension"
+          },
+          "forceNext": {
+            "type": "boolean",
+            "description": "Set to true to force overwriting extension results on next indexing."
           },
           "progress": {
             "type": "number",

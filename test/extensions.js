@@ -38,7 +38,7 @@ other,unknown address
   })
   res = await ax.patch('/api/v1/datasets/dataset', {extensions: [{active: true, remoteService: remoteServiceId, action: 'postCoords'}]})
   t.is(res.status, 200)
-  const dataset = await workers.hook('indexer')
+  let dataset = await workers.hook('indexer')
   const extensionKey = `_ext_${remoteServiceId}_postCoords`
   t.truthy(dataset.schema.find(field => field.key === extensionKey + '.lat'))
   t.truthy(dataset.schema.find(field => field.key === extensionKey + '.lon'))
@@ -80,19 +80,41 @@ other,unknown address
   res = await ax.post('/api/v1/datasets/dataset', form, {headers: testUtils.formHeaders(form)})
   t.is(res.status, 200)
   await workers.hook('indexer')
-
   // A search to check re-indexed results with preserved extensions
   // and new result with new extension
   res = await ax.get(`/api/v1/datasets/dataset/lines`)
   t.is(res.data.total, 3)
-  const existingResult = res.data.results.find(l => l.label === 'koumoul')
+  let existingResult = res.data.results.find(l => l.label === 'koumoul')
   t.is(existingResult[extensionKey + '.lat'], 10)
   t.is(existingResult[extensionKey + '.lon'], 10)
-  const newResult = res.data.results.find(l => l.label === 'me')
+  let newResult = res.data.results.find(l => l.label === 'me')
   t.is(newResult[extensionKey + '.lat'], 50)
   t.is(newResult[extensionKey + '.lon'], 50)
   t.is(newResult._geopoint, '50,50')
-  console.log(newResult)
+
+  // Re process full extension because of forceNext parameter
+  nock('http://test.com').post('/coords').reply(200, (uri, requestBody) => {
+    const inputs = requestBody.trim().split('\n').map(JSON.parse)
+    t.is(inputs.length, 3)
+    t.deepEqual(Object.keys(inputs[0]), ['q', 'key'])
+    return inputs.map(input => ({key: input.key, lat: 40, lon: 40}))
+      .map(JSON.stringify).join('\n') + '\n'
+  })
+  res = await ax.patch('/api/v1/datasets/dataset', {extensions: [{active: true, forceNext: true, remoteService: remoteServiceId, action: 'postCoords'}]})
+  t.is(res.status, 200)
+  await workers.hook('indexer')
+  // A search to check re-indexed results with overwritten extensions
+  res = await ax.get(`/api/v1/datasets/dataset/lines`)
+  t.is(res.data.total, 3)
+  existingResult = res.data.results.find(l => l.label === 'koumoul')
+  t.is(existingResult[extensionKey + '.lat'], 40)
+  t.is(existingResult[extensionKey + '.lon'], 40)
+  newResult = res.data.results.find(l => l.label === 'me')
+  t.is(newResult[extensionKey + '.lat'], 40)
+  t.is(newResult[extensionKey + '.lon'], 40)
+  t.is(newResult._geopoint, '40,40')
+  dataset = (await ax.get('/api/v1/datasets/dataset')).data
+  t.false(dataset.extensions[0].forceNext)
 })
 
 test.serial('Manage errors during extension', async t => {
