@@ -20,7 +20,8 @@ module.exports = {
   paths: {
     '/status': {
       get: {
-        summary: 'Pour connaitre l\'état de santé du service.',
+        summary: 'Etat de santé du service.',
+        description: 'Pour connaitre l\'état de santé du service.',
         operationId: 'getStatus',
         'x-operationType': 'http://schema.org/CheckAction',
         responses: {
@@ -42,7 +43,7 @@ module.exports = {
     },
     '/datasets': {
       post: {
-        summary: 'Importer un jeu de données',
+        summary: 'Importer un jeu de données.',
         operationId: 'postDataset',
         requestBody: {
           description: 'Fichier à charger et informations de propriété',
@@ -63,7 +64,7 @@ module.exports = {
     },
     '/remote-services': {
       post: {
-        summary: 'Configurer une réutilisation d\'un service externe',
+        summary: 'Configurer un service distant.',
         operationId: 'postRemoteService',
         requestBody: {
           description: 'Les informations de configuration du service distant.',
@@ -88,7 +89,7 @@ module.exports = {
     },
     '/applications': {
       post: {
-        summary: 'Configurer une application',
+        summary: 'Configurer une application.',
         operationId: 'postApplication',
         requestBody: {
           description: 'Les informations de configuration de l\'application',
