@@ -130,7 +130,10 @@ class ESInputStream extends Readable {
       }
 
       if (res.hits.total > this.i) {
-        if (this.reading) await this._read()
+        if (this.reading) {
+          this.reading = false
+          await this._read()
+        }
       } else {
         this.push(null)
       }

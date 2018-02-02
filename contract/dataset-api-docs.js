@@ -3,6 +3,7 @@ const datasetSchema = require('./dataset.json')
 const version = require('../package.json').version
 
 module.exports = (dataset) => {
+  dataset.schema = dataset.schema || []
   const properties = dataset.schema.map(p => p.key)
   const nonTextProperties = dataset.schema.filter(p => p.type !== 'string' || p.format).map(p => p.key)
   const api = {
