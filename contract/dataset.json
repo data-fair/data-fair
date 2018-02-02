@@ -148,8 +148,9 @@
           "active": {
             "type": "boolean"
           },
-          "id": {
-            "type": "string"
+          "progress": {
+            "type": "number",
+            "description": "From 0 to 1 based on progress of the extension."
           },
           "remoteService": {
             "type": "string",

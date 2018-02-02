@@ -63,20 +63,24 @@ class ExtendStream extends Transform {
     }
   }
   async _transform(item, encoding, callback) {
-    if (!this.mappings) await this.init()
-    const esClient = this.options.es
-    for (let extensionKey in this.mappings) {
+    try {
+      if (!this.mappings) await this.init()
+      const esClient = this.options.es
+      for (let extensionKey in this.mappings) {
       /* eslint no-unused-vars: off */
-      const [mappedItem, h] = this.mappings[extensionKey]({_source: item})
-      const res = await esClient.search({
-        index: this.indexName,
-        body: {query: {constant_score: {filter: {term: {[extensionKey + '._hash']: h}}}}}
-      })
-      if (res.hits.total > 0) {
-        item[extensionKey] = res.hits.hits[0]._source[extensionKey]
+        const [mappedItem, h] = this.mappings[extensionKey]({_source: item})
+        const res = await esClient.search({
+          index: this.indexName,
+          body: {query: {constant_score: {filter: {term: {[extensionKey + '._hash']: h}}}}}
+        })
+        if (res.hits.total > 0) {
+          item[extensionKey] = res.hits.hits[0]._source[extensionKey]
+        }
       }
+      callback(null, item)
+    } catch (err) {
+      callback(err)
     }
-    callback(null, item)
   }
 }
 
@@ -86,39 +90,46 @@ exports.extendStream = (options) => new ExtendStream(options)
 class ESInputStream extends Readable {
   constructor(options) {
     super({objectMode: true})
-    this.client = options.client
+    this.esClient = options.esClient
     this.indexName = options.indexName
     this.keep = options.keep
     this.extensionKey = options.extensionKey
+    this.stats = options.stats
     this.keepPushing = true
     this.i = 0
   }
   async _read() {
-    let res
-    if (!this.scrollId) {
-      let query = {match_all: {}}
-      if (this.keep) {
-        query = {bool: {must_not: {exists: {field: this.extensionKey + '._hash'}}}}
+    try {
+      let res
+      if (!this.scrollId) {
+        let query = {match_all: {}}
+        if (this.keep) {
+          query = {bool: {must_not: {exists: {field: this.extensionKey + '._hash'}}}}
+        }
+        res = await this.esClient.search({
+          index: this.indexName,
+          scroll: '100s',
+          body: {query}
+        })
+        this.stats.count -= res.hits.total
+      } else {
+        res = await this.esClient.scroll({scroll_id: this.scrollId, scroll: '100s'})
       }
-      res = await this.client.search({
-        index: this.indexName,
-        scroll: '100s',
-        body: {query}
-      })
-    } else {
-      res = await this.client.scroll({scroll_id: this.scrollId, scroll: '100s'})
-    }
-    this.scrollId = res._scroll_id
+      this.scrollId = res._scroll_id
 
-    for (let hit of res.hits.hits) {
-      this.keepPushing = this.push(hit)
-      this.i += 1
-    }
+      for (let hit of res.hits.hits) {
+        this.keepPushing = this.push(hit)
+        this.i += 1
+      }
 
-    if (res.hits.total > this.i) {
-      if (this.keepPushing) await this._read()
-    } else {
-      this.push(null)
+      if (res.hits.total > this.i) {
+        if (this.keepPushing) await this._read()
+      } else {
+        this.push(null)
+      }
+    } catch (err) {
+      console.error('ES read error', err)
+      this.emit('error', err)
     }
   }
 }
@@ -145,11 +156,13 @@ class PrepareOutputStream extends Transform {
 class ESOutputStream extends Writable {
   constructor(options) {
     super({objectMode: true})
-    this.client = options.client
+    this.esClient = options.esClient
     this.indexName = options.indexName
     this.extensionKey = options.extensionKey
+    this.stats = options.stats
   }
   _write(item, encoding, callback) {
+    this.stats.count += 1
     const opts = {
       index: this.indexName,
       type: 'line',
@@ -160,14 +173,16 @@ class ESOutputStream extends Writable {
         }
       }
     }
-    this.client.update(opts, callback)
+    this.esClient.update(opts, callback)
   }
   _final(callback) {
-    this.client.indices.refresh({index: this.indexName}, callback)
+    this.esClient.indices.refresh({index: this.indexName}, callback)
   }
 }
 
-exports.extend = async(client, dataset, remoteService, action, keep) => {
+exports.extend = async(app, dataset, remoteService, action, keep) => {
+  const esClient = app.get('es')
+  const db = app.get('db')
   const hashes = {}
   const extensionKey = getExtensionKey(remoteService.id, action.id)
   const inputStream = new PrepareInputStream({action, dataset, hashes})
@@ -189,16 +204,38 @@ exports.extend = async(client, dataset, remoteService, action, keep) => {
     opts.headers['x-organizationId'] = remoteService.owner.id
   }
 
-  const inputPromise = promisePipe(new ESInputStream({client, indexName: es.indexName(dataset), keep, extensionKey}), inputStream)
+  const stats = {count: dataset.count}
+  const inputPromise = promisePipe(new ESInputStream({esClient, indexName: es.indexName(dataset), keep, extensionKey, stats}), inputStream)
+
   const res = await axios(opts)
+
   const outputPromise = promisePipe(
     res.data,
     ldj.parse(),
     new PrepareOutputStream({action, hashes}),
-    new ESOutputStream({client, indexName: es.indexName(dataset), extensionKey})
+    new ESOutputStream({esClient, indexName: es.indexName(dataset), extensionKey, stats})
   )
 
+  const setProgress = async () => {
+    try {
+      const progress = dataset.count / stats.count
+      await app.publish('datasets/' + dataset.id + '/extend-progress', {remoteService: remoteService.id, action: action.id, progress})
+      await db.collection('datasets').updateOne({
+        id: dataset.id,
+        extensions: {$elemMatch: {'remoteService': remoteService.id, 'action': action.id}}
+      }, {
+        $set: {'extensions.$.progress': progress}
+      })
+    } catch (err) {
+      console.error('Failure to update progress of an extension', err)
+    }
+  }
+
+  const progressInterval = setInterval(setProgress, 1000)
+
   await Promise.all([inputPromise, outputPromise])
+  clearInterval(progressInterval)
+  await setProgress()
 }
 
 exports.prepareSchema = async (db, schema, extensions) => {

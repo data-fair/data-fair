@@ -16,7 +16,7 @@ exports.process = async function(app, dataset) {
     if (dataset.owner.type !== remoteService.owner.type || dataset.owner.id !== remoteService.owner.id) continue
     const action = remoteService.actions.find(a => a.id === extension.action)
     if (!action) continue
-    promises.push(extensionsUtils.extend(app.get('es'), dataset, remoteService, action, true))
+    promises.push(extensionsUtils.extend(app, dataset, remoteService, action, true))
   }
 
   await Promise.all(promises)
