@@ -15,13 +15,13 @@ test('Get lines in dataset', async t => {
   let res = await ax.post('/api/v1/datasets', form, {headers: testUtils.formHeaders(form)})
 
   t.is(res.status, 201)
-  const dataset = await workers.hook('extender')
+  const dataset = await workers.hook('indexer')
   // Update schema to specify geo point
   const locProp = dataset.schema.find(p => p.key === 'loc')
   locProp['x-refersTo'] = 'http://www.w3.org/2003/01/geo/wgs84_pos#lat_long'
   res = await ax.patch('/api/v1/datasets/' + dataset.id, {schema: dataset.schema})
   t.is(res.status, 200)
-  await workers.hook('extender')
+  await workers.hook('indexer')
   res = await ax.get('/api/v1/datasets/dataset/lines')
   t.is(res.data.total, 2)
   res = await ax.get('/api/v1/datasets/dataset/lines?q=koumoul')

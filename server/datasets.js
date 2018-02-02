@@ -66,7 +66,7 @@ router.get('/:datasetId', (req, res, next) => {
 const patchKeys = ['schema', 'description', 'title', 'license', 'origin', 'extensions']
 router.patch('/:datasetId', asyncWrap(async(req, res) => {
   if (!permissions.can(req.dataset, 'writeDescription', req.user)) return res.sendStatus(403)
-  if (req.dataset.status !== 'extended' && (req.body.schema || req.body.extensions)) return res.status(409).accept('Dataset is not in proper state to be updated')
+  if (req.dataset.status !== 'indexed' && (req.body.schema || req.body.extensions)) return res.status(409).accept('Dataset is not in proper state to be updated')
   var valid = validate(req.body)
   if (!valid) return res.status(400).send(validate.errors)
 
@@ -134,7 +134,7 @@ router.post('', auth.jwtMiddleware, filesUtils.uploadFile(), asyncWrap(async(req
 
 // Update an existing dataset data
 router.post('/:datasetId', filesUtils.uploadFile(), asyncWrap(async(req, res) => {
-  if (req.dataset.status !== 'extended') return res.status(409).accept('Dataset is not in proper state to be updated')
+  if (req.dataset.status !== 'indexed') return res.status(409).accept('Dataset is not in proper state to be updated')
   if (req.storageRemaining !== undefined) res.set(config.headers.storedBytesRemaining, req.storageRemaining)
   if (!permissions.can(req.dataset, 'writeData', req.user)) return res.sendStatus(403)
   if (!req.file) return res.sendStatus(400)
@@ -216,7 +216,7 @@ router.post('/:datasetId/_extend', auth.jwtMiddleware, asyncWrap(async(req, res)
   const action = remoteService.actions.find(a => a.id === extension.action)
   if (!action) return res.status(404).send('Action unknown')
 
-  if (req.dataset.status !== 'extended') return res.status(409).send('Dataset is not ready for extension.')
+  if (req.dataset.status !== 'indexed') return res.status(409).send('Dataset is not ready for extension.')
   await extensions.extend(req.app, req.dataset, remoteService, action, req.query.keep === 'true')
   res.send()
 }))

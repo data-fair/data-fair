@@ -20,6 +20,22 @@ exports.process = async function(app, dataset) {
   const indexStream = esUtils.indexStream(es, tempId, dataset, geopoint)
   await promisePipe(datasetUtils.readStream(dataset), extensionsUtils.extendStream({db, es, dataset}), indexStream)
   const count = dataset.count = indexStream.i
+
+  // Perform all extensions with remote services.
+  // the "extendStream" previously used was simply to preserve extensions from previous indexing tasks
+  const extensions = dataset.extensions || []
+  const extensionsPromises = []
+  for (let extension of extensions) {
+    const remoteService = await db.collection('remote-services').findOne({id: extension.remoteService})
+    if (!remoteService) continue
+    // TODO: check that owner can use remoteservice event if not owner ?
+    if (dataset.owner.type !== remoteService.owner.type || dataset.owner.id !== remoteService.owner.id) continue
+    const action = remoteService.actions.find(a => a.id === extension.action)
+    if (!action) continue
+    extensionsPromises.push(extensionsUtils.extend(app, dataset, remoteService, action, true, tempId))
+  }
+  await Promise.all(extensionsPromises)
+
   await esUtils.switchAlias(es, dataset, tempId)
   const updateQuery = {$set: {status: 'indexed', count}}
 

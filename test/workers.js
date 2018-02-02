@@ -46,7 +46,7 @@ test('Process newly uploaded dataset', async t => {
   t.is(mapping.properties.some_date.type, 'date')
 
   // Empty extension
-  dataset = await workers.hook('extender')
+  dataset = await workers.hook('indexer')
   t.is(dataset.status, 'extended')
 
   // Update schema to specify geo point

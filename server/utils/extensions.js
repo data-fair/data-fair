@@ -190,7 +190,7 @@ class ESOutputStream extends Writable {
   }
 }
 
-exports.extend = async(app, dataset, remoteService, action, keep) => {
+exports.extend = async(app, dataset, remoteService, action, keep, indexName) => {
   const esClient = app.get('es')
   const db = app.get('db')
   const hashes = {}
@@ -234,7 +234,7 @@ exports.extend = async(app, dataset, remoteService, action, keep) => {
   }
 
   const stats = {count: dataset.count}
-  const esInputStream = new ESInputStream({esClient, indexName: es.indexName(dataset), keep, extensionKey, stats})
+  const esInputStream = new ESInputStream({esClient, indexName, keep, extensionKey, stats})
   try {
     const inputPromise = promisePipe(esInputStream, inputStream)
 
@@ -244,7 +244,7 @@ exports.extend = async(app, dataset, remoteService, action, keep) => {
       res.data,
       byline.createStream(),
       new PrepareOutputStream({action, hashes}),
-      new ESOutputStream({esClient, indexName: es.indexName(dataset), extensionKey, stats})
+      new ESOutputStream({esClient, indexName, extensionKey, stats})
     )
 
     const progressInterval = setInterval(setProgress, 1000)

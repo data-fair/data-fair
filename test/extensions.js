@@ -18,7 +18,7 @@ other,unknown address
   form.append('file', content, 'dataset.csv')
   let res = await ax.post('/api/v1/datasets', form, {headers: testUtils.formHeaders(form)})
   t.is(res.status, 201)
-  await workers.hook('extender')
+  await workers.hook('indexer')
 
   // A geocoder remote service
   res = await ax.post('/api/v1/remote-services', {
@@ -39,7 +39,7 @@ other,unknown address
   })
   res = await ax.patch('/api/v1/datasets/dataset', {extensions: [{active: true, remoteService: remoteServiceId, action: 'postCoords'}]})
   t.is(res.status, 200)
-  const dataset = await workers.hook('extender')
+  const dataset = await workers.hook('indexer')
   const extensionKey = `_ext_${remoteServiceId}_postCoords`
   t.truthy(dataset.schema.find(field => field.key === extensionKey + '.lat'))
   t.truthy(dataset.schema.find(field => field.key === extensionKey + '.lon'))
@@ -58,7 +58,7 @@ other,unknown address
   })
   dataset.schema.find(field => field.key === 'adr')['x-refersTo'] = 'http://schema.org/address'
   res = await ax.patch('/api/v1/datasets/dataset', {schema: dataset.schema})
-  await workers.hook('extender')
+  await workers.hook('indexer')
   // A search to check results
   res = await ax.get(`/api/v1/datasets/dataset/lines`)
   t.is(res.data.total, 2)
@@ -80,7 +80,7 @@ other,unknown address
   form.append('file', content, 'dataset1.csv')
   res = await ax.post('/api/v1/datasets/dataset', form, {headers: testUtils.formHeaders(form)})
   t.is(res.status, 200)
-  await workers.hook('extender')
+  await workers.hook('indexer')
   // A search to check re-indexed results with preserved extensions
   // and new result with new extension
   res = await ax.get(`/api/v1/datasets/dataset/lines`)
@@ -93,7 +93,7 @@ other,unknown address
   t.is(newResult[extensionKey].lon, 100)
 })
 
-test.serial('Manage errors during extension', async t => {
+test('Manage errors during extension', async t => {
   const ax = await testUtils.axios('dmeadus0@answers.com')
 
   // Initial dataset with addresses
@@ -105,7 +105,7 @@ other,unknown address
   form.append('file', content, 'dataset2.csv')
   let res = await ax.post('/api/v1/datasets', form, {headers: testUtils.formHeaders(form)})
   t.is(res.status, 201)
-  await workers.hook('extender')
+  await workers.hook('indexer')
 
   // A geocoder remote service
   res = await ax.post('/api/v1/remote-services', {
@@ -121,7 +121,7 @@ other,unknown address
   res = await ax.patch('/api/v1/datasets/dataset2', {extensions: [{active: true, remoteService: remoteServiceId, action: 'postCoords'}]})
   t.is(res.status, 200)
   try {
-    await workers.hook('extender')
+    await workers.hook('indexer')
     t.fail()
   } catch (err) {
     t.is(err.response.status, 500)
@@ -133,7 +133,7 @@ other,unknown address
   // Prepare for extension failure with bad body in response
   nock('http://test.com').post('/coords').reply(200, 'some error')
   try {
-    await workers.hook('extender')
+    await workers.hook('indexer')
     t.fail()
   } catch (err) {
     // expected failure
