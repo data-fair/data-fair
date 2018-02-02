@@ -31,7 +31,7 @@ exports.stop = async () => {
 async function loop(app, key) {
   if (stopResolves[key]) return stopResolves[key]()
   await iter(app, key)
-  setTimeout(() => loop(app, key), config.workersPollingIntervall)
+  setTimeout(() => loop(app, key), config.workers.pollingInterval)
 }
 
 async function iter(app, key) {
@@ -47,6 +47,8 @@ async function iter(app, key) {
     console.error('Failure in worker ' + key, err)
     if (hooks[key]) hooks[key].reject(err)
     await journals.log(app, dataset, {type: worker.eventsPrefix + '-fail'})
+    // special wait in case of error to prevent errors in quick series
+    await new Promise(resolve => setTimeout(resolve, config.workers.errorInterval))
   } finally {
     await locks.release(app.get('db'), 'dataset:' + dataset.id)
   }

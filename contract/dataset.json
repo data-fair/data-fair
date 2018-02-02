@@ -152,6 +152,10 @@
             "type": "number",
             "description": "From 0 to 1 based on progress of the extension."
           },
+          "error": {
+            "type": "string",
+            "description": "An error that occured during the last time the extension was run"
+          },
           "remoteService": {
             "type": "string",
             "description": "L'identifiant du service distant utilisé pour l'enrichissement"

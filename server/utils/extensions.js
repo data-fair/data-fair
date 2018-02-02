@@ -1,6 +1,6 @@
 const eventToPromise = require('event-to-promise')
 const axios = require('axios')
-const ldj = require('ldjson-stream')
+const byline = require('byline')
 const hash = require('object-hash')
 const promisePipe = require('promisepipe')
 const { Readable, Transform, Writable } = require('stream')
@@ -53,7 +53,7 @@ class ExtendStream extends Transform {
     const extensions = this.options.dataset.extensions || []
     this.mappings = {}
     for (let extension of extensions) {
-      if (extension.active === false) return
+      if (!extension.active) return
       const remoteService = await db.collection('remote-services').findOne({id: extension.remoteService})
       if (!remoteService) continue
       const action = remoteService.actions.find(action => action.id === extension.action)
@@ -142,7 +142,13 @@ class PrepareOutputStream extends Transform {
     const action = options.action
     this.idOutput = action.output.find(output => output.concept === 'http://schema.org/identifier').name
   }
-  _transform(item, encoding, callback) {
+  _transform(chunk, encoding, callback) {
+    let item
+    try {
+      item = JSON.parse(chunk)
+    } catch (err) {
+      return callback(new Error('Bad content - ' + chunk))
+    }
     const mappedItem = {doc: item}
     mappedItem.id = item[this.idOutput]
     item._hash = this.hashes[mappedItem.id]
@@ -185,6 +191,22 @@ exports.extend = async(app, dataset, remoteService, action, keep) => {
   const db = app.get('db')
   const hashes = {}
   const extensionKey = getExtensionKey(remoteService.id, action.id)
+
+  const setProgress = async (error) => {
+    try {
+      const progress = dataset.count / stats.count
+      await app.publish('datasets/' + dataset.id + '/extend-progress', {remoteService: remoteService.id, action: action.id, progress, error})
+      await db.collection('datasets').updateOne({
+        id: dataset.id,
+        extensions: {$elemMatch: {'remoteService': remoteService.id, 'action': action.id}}
+      }, {
+        $set: {'extensions.$.progress': progress, 'extensions.$.error': error}
+      })
+    } catch (err) {
+      console.error('Failure to update progress of an extension', err)
+    }
+  }
+
   const inputStream = new PrepareInputStream({action, dataset, hashes})
   const opts = {
     method: action.operation.method,
@@ -205,50 +227,39 @@ exports.extend = async(app, dataset, remoteService, action, keep) => {
   }
 
   const stats = {count: dataset.count}
-  const inputPromise = promisePipe(new ESInputStream({esClient, indexName: es.indexName(dataset), keep, extensionKey, stats}), inputStream)
+  const esInputStream = new ESInputStream({esClient, indexName: es.indexName(dataset), keep, extensionKey, stats})
+  try {
+    const inputPromise = promisePipe(esInputStream, inputStream)
 
-  const res = await axios(opts)
+    const res = await axios(opts)
 
-  const outputPromise = promisePipe(
-    res.data,
-    ldj.parse(),
-    new PrepareOutputStream({action, hashes}),
-    new ESOutputStream({esClient, indexName: es.indexName(dataset), extensionKey, stats})
-  )
+    const outputPromise = promisePipe(
+      res.data,
+      byline.createStream(),
+      new PrepareOutputStream({action, hashes}),
+      new ESOutputStream({esClient, indexName: es.indexName(dataset), extensionKey, stats})
+    )
 
-  const setProgress = async () => {
-    try {
-      const progress = dataset.count / stats.count
-      await app.publish('datasets/' + dataset.id + '/extend-progress', {remoteService: remoteService.id, action: action.id, progress})
-      await db.collection('datasets').updateOne({
-        id: dataset.id,
-        extensions: {$elemMatch: {'remoteService': remoteService.id, 'action': action.id}}
-      }, {
-        $set: {'extensions.$.progress': progress}
-      })
-    } catch (err) {
-      console.error('Failure to update progress of an extension', err)
-    }
+    const progressInterval = setInterval(setProgress, 1000)
+    await Promise.all([inputPromise, outputPromise])
+    clearInterval(progressInterval)
+    await setProgress()
+  } catch (err) {
+    await setProgress(err.message)
+    esInputStream.unpipe(inputStream)
+    esInputStream.destroy()
+    throw err
   }
-
-  const progressInterval = setInterval(setProgress, 1000)
-
-  await Promise.all([inputPromise, outputPromise])
-  clearInterval(progressInterval)
-  await setProgress()
 }
 
 exports.prepareSchema = async (db, schema, extensions) => {
   for (let extension of extensions) {
-    if (extension.active === false) continue
+    if (!extension.active) continue
     const remoteService = await db.collection('remote-services').findOne({id: extension.remoteService})
     if (!remoteService) continue
     const action = remoteService.actions.find(action => action.id === extension.action)
     if (!action) continue
     const prefix = getExtensionKey(extension.remoteService, extension.action)
-    if (!schema.find(field => field.key === prefix + '._error')) {
-      schema.push({key: prefix + '._error', type: 'string'})
-    }
     if (!schema.find(field => field.key === prefix + '._hash')) {
       schema.push({key: prefix + '._hash', type: 'string', format: 'uri-reference'})
     }

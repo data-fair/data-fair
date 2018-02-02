@@ -6,7 +6,7 @@ const [test] = testUtils.prepare(__filename)
 
 const workers = require('../server/workers')
 
-test('Extend dataset using remote service', async t => {
+test.serial('Extend dataset using remote service', async t => {
   const ax = await testUtils.axios('dmeadus0@answers.com')
 
   // Initial dataset with addresses
@@ -37,11 +37,10 @@ other,unknown address
     return inputs.map(input => ({key: input.key}))
       .map(JSON.stringify).join('\n') + '\n'
   })
-  res = await ax.patch('/api/v1/datasets/dataset', {extensions: [{remoteService: remoteServiceId, action: 'postCoords'}]})
+  res = await ax.patch('/api/v1/datasets/dataset', {extensions: [{active: true, remoteService: remoteServiceId, action: 'postCoords'}]})
   t.is(res.status, 200)
   const dataset = await workers.hook('extender')
   const extensionKey = `_ext_${remoteServiceId}_postCoords`
-  t.truthy(dataset.schema.find(field => field.key === extensionKey + '._error'))
   t.truthy(dataset.schema.find(field => field.key === extensionKey + '.lat'))
   t.truthy(dataset.schema.find(field => field.key === extensionKey + '.lon'))
   // A search to check results
@@ -92,4 +91,54 @@ other,unknown address
   const newResult = res.data.results.find(l => l.label === 'me')
   t.is(newResult[extensionKey].lat, 100)
   t.is(newResult[extensionKey].lon, 100)
+})
+
+test.serial('Manage errors during extension', async t => {
+  const ax = await testUtils.axios('dmeadus0@answers.com')
+
+  // Initial dataset with addresses
+  let form = new FormData()
+  let content = `label,adr
+koumoul,19 rue de la voie lactée saint avé
+other,unknown address
+`
+  form.append('file', content, 'dataset2.csv')
+  let res = await ax.post('/api/v1/datasets', form, {headers: testUtils.formHeaders(form)})
+  t.is(res.status, 201)
+  await workers.hook('extender')
+
+  // A geocoder remote service
+  res = await ax.post('/api/v1/remote-services', {
+    apiDoc: require('./resources/geocoder-api.json'),
+    apiKey: {in: 'header', name: 'x-apiKey'},
+    server: 'http://test.com'
+  })
+  t.is(res.status, 201)
+  const remoteServiceId = res.data.id
+
+  // Prepare for extension failure with HTTP error code
+  nock('http://test.com').post('/coords').reply(500, 'some error')
+  res = await ax.patch('/api/v1/datasets/dataset2', {extensions: [{active: true, remoteService: remoteServiceId, action: 'postCoords'}]})
+  t.is(res.status, 200)
+  try {
+    await workers.hook('extender')
+    t.fail()
+  } catch (err) {
+    t.is(err.response.status, 500)
+  }
+
+  let dataset = (await ax.get('/api/v1/datasets/dataset2')).data
+  t.truthy(dataset.extensions[0].error)
+
+  // Prepare for extension failure with bad body in response
+  nock('http://test.com').post('/coords').reply(200, 'some error')
+  try {
+    await workers.hook('extender')
+    t.fail()
+  } catch (err) {
+    // expected failure
+  }
+
+  dataset = (await ax.get('/api/v1/datasets/dataset2')).data
+  t.truthy(dataset.extensions[0].error)
 })
