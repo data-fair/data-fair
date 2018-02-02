@@ -14,5 +14,5 @@ exports.getGeopoint = (schema, doc) => {
 
   const latProp = schema.find(p => lat.indexOf(p['x-refersTo']) !== -1)
   const lonProp = schema.find(p => lon.indexOf(p['x-refersTo']) !== -1)
-  if (latProp && lonProp) return doc[latProp.key] + ',' + doc[lonProp.key]
+  if (latProp && lonProp && doc[latProp.key] !== undefined && doc[lonProp.key] !== undefined) return doc[latProp.key] + ',' + doc[lonProp.key]
 }
