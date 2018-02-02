@@ -78,6 +78,7 @@
     "express": "^4.16.2",
     "express-jwt": "^5.3.0",
     "express-request-proxy": "^2.0.0",
+    "flat": "^4.0.0",
     "fs-extra": "^4.0.3",
     "geolib": "^2.0.24",
     "http-errors": "^1.6.2",

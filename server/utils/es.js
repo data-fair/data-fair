@@ -2,7 +2,7 @@ const Writable = require('stream').Writable
 const config = require('config')
 const elasticsearch = require('elasticsearch')
 const createError = require('http-errors')
-const geoUtils = require('./geo')
+const flatten = require('flat')
 const geohash = require('./geohash')
 const tiles = require('./tiles')
 
@@ -66,21 +66,16 @@ exports.switchAlias = async (client, dataset, tempId) => {
 }
 
 class IndexStream extends Writable {
-  constructor(client, index, dataset, geopoint) {
+  constructor(client, index, dataset) {
     super({objectMode: true})
     this.client = client
     this.index = index
     this.dataset = dataset
-    this.geopoint = geopoint
     this.body = []
     this.i = 0
   }
   _write(chunk, encoding, callback) {
     this.body.push({index: {_index: this.index, _type: 'line'}})
-    if (this.geopoint) {
-      // "hidden" field for geopoint indexing
-      chunk._geopoint = geoUtils.getGeopoint(this.dataset.schema, chunk)
-    }
     this.body.push(chunk)
     this.i += 1
     if (this.i % 10000 === 0) {
@@ -107,8 +102,8 @@ class IndexStream extends Writable {
   }
 }
 
-exports.indexStream = (client, index, dataset, geopoint) => {
-  return new IndexStream(client, index, dataset, geopoint)
+exports.indexStream = (client, index, dataset) => {
+  return new IndexStream(client, index, dataset)
 }
 
 exports.searchInDataset = async (client, dataset, query) => {
@@ -120,7 +115,7 @@ exports.searchInDataset = async (client, dataset, query) => {
 const prepareResponse = (esResponse) => {
   const response = {}
   response.total = esResponse.hits.total
-  response.results = esResponse.hits.hits.map(hit => hit._source)
+  response.results = esResponse.hits.hits.map(hit => flatten(hit._source))
   return response
 }
 
@@ -208,7 +203,7 @@ const prepareValuesAggResponse = (esResponse) => {
     const aggItem = {
       total: b.doc_count,
       value: b.key,
-      results: b.topHits ? b.topHits.hits.hits.map(hit => hit._source) : []
+      results: b.topHits ? b.topHits.hits.hits.map(hit => flatten(hit._source)) : []
     }
     if (b.metric) {
       aggItem.metric = b.metric.value
@@ -262,7 +257,7 @@ const prepareGeoAggResponse = (esResponse) => {
       centroid: b.centroid.location,
       center: {lat: center[1], lon: center[0]},
       bbox: geohash.hash2bbox(b.key),
-      results: b.topHits ? b.topHits.hits.hits.map(hit => hit._source) : []
+      results: b.topHits ? b.topHits.hits.hits.map(hit => flatten(hit._source)) : []
     }
     if (b.metric) {
       aggItem.metric = b.metric.value

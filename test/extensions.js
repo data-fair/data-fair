@@ -8,7 +8,6 @@ const workers = require('../server/workers')
 
 test.serial('Extend dataset using remote service', async t => {
   const ax = await testUtils.axios('dmeadus0@answers.com')
-
   // Initial dataset with addresses
   let form = new FormData()
   let content = `label,adr
@@ -46,7 +45,7 @@ other,unknown address
   // A search to check results
   res = await ax.get(`/api/v1/datasets/dataset/lines`)
   t.is(res.data.total, 2)
-  t.truthy(res.data.results[0][extensionKey])
+  t.truthy(res.data.results[0][extensionKey + '._hash'])
 
   // Patch dataset to add concept useful for extension
   nock('http://test.com').post('/coords').reply(200, (uri, requestBody) => {
@@ -62,9 +61,9 @@ other,unknown address
   // A search to check results
   res = await ax.get(`/api/v1/datasets/dataset/lines`)
   t.is(res.data.total, 2)
-  t.is(res.data.results[0][extensionKey].lat, 10)
-  t.is(res.data.results[0][extensionKey].lon, 10)
-  t.truthy(res.data.results[0][extensionKey]._hash)
+  t.is(res.data.results[0][extensionKey + '.lat'], 10)
+  t.is(res.data.results[0][extensionKey + '.lon'], 10)
+  t.truthy(res.data.results[0][extensionKey + '._hash'])
 
   // Add a line to dataset
   // Re-prepare for extension, it should only process the new line
@@ -72,7 +71,7 @@ other,unknown address
     const inputs = requestBody.trim().split('\n').map(JSON.parse)
     t.is(inputs.length, 1)
     t.deepEqual(Object.keys(inputs[0]), ['q', 'key'])
-    return inputs.map(input => ({key: input.key, lat: 100, lon: 100}))
+    return inputs.map(input => ({key: input.key, lat: 50, lon: 50}))
       .map(JSON.stringify).join('\n') + '\n'
   })
   form = new FormData()
@@ -81,19 +80,22 @@ other,unknown address
   res = await ax.post('/api/v1/datasets/dataset', form, {headers: testUtils.formHeaders(form)})
   t.is(res.status, 200)
   await workers.hook('indexer')
+
   // A search to check re-indexed results with preserved extensions
   // and new result with new extension
   res = await ax.get(`/api/v1/datasets/dataset/lines`)
   t.is(res.data.total, 3)
   const existingResult = res.data.results.find(l => l.label === 'koumoul')
-  t.is(existingResult[extensionKey].lat, 10)
-  t.is(existingResult[extensionKey].lon, 10)
+  t.is(existingResult[extensionKey + '.lat'], 10)
+  t.is(existingResult[extensionKey + '.lon'], 10)
   const newResult = res.data.results.find(l => l.label === 'me')
-  t.is(newResult[extensionKey].lat, 100)
-  t.is(newResult[extensionKey].lon, 100)
+  t.is(newResult[extensionKey + '.lat'], 50)
+  t.is(newResult[extensionKey + '.lon'], 50)
+  t.is(newResult._geopoint, '50,50')
+  console.log(newResult)
 })
 
-test('Manage errors during extension', async t => {
+test.serial('Manage errors during extension', async t => {
   const ax = await testUtils.axios('dmeadus0@answers.com')
 
   // Initial dataset with addresses
@@ -120,25 +122,15 @@ other,unknown address
   nock('http://test.com').post('/coords').reply(500, 'some error')
   res = await ax.patch('/api/v1/datasets/dataset2', {extensions: [{active: true, remoteService: remoteServiceId, action: 'postCoords'}]})
   t.is(res.status, 200)
-  try {
-    await workers.hook('indexer')
-    t.fail()
-  } catch (err) {
-    t.is(err.response.status, 500)
-  }
-
+  await workers.hook('indexer')
   let dataset = (await ax.get('/api/v1/datasets/dataset2')).data
   t.truthy(dataset.extensions[0].error)
 
   // Prepare for extension failure with bad body in response
   nock('http://test.com').post('/coords').reply(200, 'some error')
-  try {
-    await workers.hook('indexer')
-    t.fail()
-  } catch (err) {
-    // expected failure
-  }
-
+  res = await ax.patch('/api/v1/datasets/dataset2', {extensions: [{active: true, remoteService: remoteServiceId, action: 'postCoords'}]})
+  t.is(res.status, 200)
+  await workers.hook('indexer')
   dataset = (await ax.get('/api/v1/datasets/dataset2')).data
   t.truthy(dataset.extensions[0].error)
 })

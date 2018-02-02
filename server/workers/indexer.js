@@ -17,7 +17,7 @@ exports.process = async function(app, dataset) {
 
   const geopoint = geoUtils.schemaHasGeopoint(dataset.schema)
   const tempId = await esUtils.initDatasetIndex(es, dataset, geopoint)
-  const indexStream = esUtils.indexStream(es, tempId, dataset, geopoint)
+  const indexStream = esUtils.indexStream(es, tempId, dataset)
   await promisePipe(datasetUtils.readStream(dataset), extensionsUtils.extendStream({db, es, dataset}), indexStream)
   const count = dataset.count = indexStream.i
 
@@ -34,7 +34,10 @@ exports.process = async function(app, dataset) {
     if (!action) continue
     extensionsPromises.push(extensionsUtils.extend(app, dataset, remoteService, action, true, tempId))
   }
+
   await Promise.all(extensionsPromises)
+
+  await extensionsUtils.extendCalculated(app, tempId, dataset, geopoint)
 
   await esUtils.switchAlias(es, dataset, tempId)
   const updateQuery = {$set: {status: 'indexed', count}}

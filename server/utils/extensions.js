@@ -3,8 +3,10 @@ const axios = require('axios')
 const byline = require('byline')
 const hash = require('object-hash')
 const promisePipe = require('promisepipe')
+const flatten = require('flat')
 const { Readable, Transform, Writable } = require('stream')
 const es = require('./es')
+const geoUtils = require('./geo')
 
 // Create a function that will transform items from a dataset into inputs for an action
 function prepareMapping(action, schema, extensionKey) {
@@ -20,12 +22,12 @@ function prepareMapping(action, schema, extensionKey) {
   return (item) => {
     const mappedItem = {}
     mapping.forEach(m => {
-      mappedItem[m[1]] = item._source[m[0]]
+      mappedItem[m[1]] = item.doc[m[0]]
     })
     // remember a hash of the input.. so that we can store it alongside the resul and use this to reapply
     // extension to a new version of the index without using the remote service
     const h = hash(mappedItem)
-    mappedItem[idInput] = item._id
+    mappedItem[idInput] = item.id
     return [mappedItem, h]
   }
 }
@@ -39,7 +41,7 @@ class PrepareInputStream extends Transform {
   }
   _transform(item, encoding, callback) {
     const [mappedItem, h] = this.mapping(item)
-    this.hashes[item._id] = h
+    this.hashes[item.id] = h
     callback(null, JSON.stringify(mappedItem) + '\n')
   }
 }
@@ -72,7 +74,7 @@ class ExtendStream extends Transform {
       const esClient = this.options.es
       for (let extensionKey in this.mappings) {
       /* eslint no-unused-vars: off */
-        const [mappedItem, h] = this.mappings[extensionKey]({_source: item})
+        const [mappedItem, h] = this.mappings[extensionKey]({doc: item})
         const res = await esClient.search({
           index: this.indexName,
           body: {query: {constant_score: {filter: {term: {[extensionKey + '._hash']: h}}}}}
@@ -103,6 +105,8 @@ class ESInputStream extends Readable {
     this.i = 0
   }
   async _read() {
+    if (this.reading) return
+    this.reading = true
     try {
       let res
       if (!this.scrollId) {
@@ -115,19 +119,19 @@ class ESInputStream extends Readable {
           scroll: '100s',
           body: {query}
         })
-        this.stats.count -= res.hits.total
+        if (this.stats) this.stats.count -= res.hits.total
       } else {
         res = await this.esClient.scroll({scroll_id: this.scrollId, scroll: '100s'})
       }
       this.scrollId = res._scroll_id
 
       for (let hit of res.hits.hits) {
-        this.keepPushing = this.push(hit)
+        this.reading = this.push({id: hit._id, doc: flatten(hit._source)})
         this.i += 1
       }
 
       if (res.hits.total > this.i) {
-        if (this.keepPushing) await this._read()
+        if (this.reading) await this._read()
       } else {
         this.push(null)
       }
@@ -143,6 +147,7 @@ class PrepareOutputStream extends Transform {
   constructor(options) {
     super({objectMode: true})
     this.hashes = options.hashes
+    this.extensionKey = options.extensionKey
     const action = options.action
     this.idOutput = action.output.find(output => output.concept === 'http://schema.org/identifier').name
   }
@@ -153,7 +158,7 @@ class PrepareOutputStream extends Transform {
     } catch (err) {
       return callback(new Error('Bad content - ' + chunk))
     }
-    const mappedItem = {doc: item}
+    const mappedItem = {doc: {[this.extensionKey]: item}}
     mappedItem.id = item[this.idOutput]
     item._hash = this.hashes[mappedItem.id]
     delete this.hashes[mappedItem.id]
@@ -168,19 +173,17 @@ class ESOutputStream extends Writable {
     super({objectMode: true})
     this.esClient = options.esClient
     this.indexName = options.indexName
-    this.extensionKey = options.extensionKey
     this.stats = options.stats
   }
   _write(item, encoding, callback) {
-    this.stats.count += 1
+    if (this.stats) this.stats.count += 1
+    if (Object.keys(item.doc) === 0) return callback()
     const opts = {
       index: this.indexName,
       type: 'line',
       id: item.id,
       body: {
-        doc: {
-          [this.extensionKey]: item.doc
-        }
+        doc: item.doc
       }
     }
     this.esClient.update(opts, callback)
@@ -243,8 +246,8 @@ exports.extend = async(app, dataset, remoteService, action, keep, indexName) => 
     const outputPromise = promisePipe(
       res.data,
       byline.createStream(),
-      new PrepareOutputStream({action, hashes}),
-      new ESOutputStream({esClient, indexName, extensionKey, stats})
+      new PrepareOutputStream({action, hashes, extensionKey}),
+      new ESOutputStream({esClient, indexName, stats})
     )
 
     const progressInterval = setInterval(setProgress, 1000)
@@ -252,11 +255,38 @@ exports.extend = async(app, dataset, remoteService, action, keep, indexName) => 
     clearInterval(progressInterval)
     await setProgress()
   } catch (err) {
+    // catch the error, as a failure to use remote service should not prevent the dataset
+    // to be processed and used
+    console.error('Failure to extend using remote service', err)
     await setProgress(err.message)
-    esInputStream.unpipe(inputStream)
     esInputStream.destroy()
-    throw err
   }
+}
+
+class CalculatedExtension extends Transform {
+  constructor(options) {
+    super({objectMode: true})
+    this.indexName = options.indexName
+    this.geopoint = options.geopoint
+    this.dataset = options.dataset
+  }
+  _transform(item, encoding, callback) {
+    const doc = {}
+    if (this.geopoint) {
+      // "hidden" field for geopoint indexing
+      doc._geopoint = geoUtils.getGeopoint(this.dataset.schema, item.doc)
+    }
+    callback(null, {id: item.id, doc})
+  }
+}
+
+exports.extendCalculated = async (app, indexName, dataset, geopoint) => {
+  const esClient = app.get('es')
+  return promisePipe(
+    new ESInputStream({esClient, indexName}),
+    new CalculatedExtension({indexName, geopoint, dataset}),
+    new ESOutputStream({esClient, indexName})
+  )
 }
 
 exports.prepareSchema = async (db, schema, extensions) => {
