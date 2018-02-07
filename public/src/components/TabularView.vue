@@ -24,7 +24,7 @@
 
         <md-table-body>
           <md-table-row v-for="(row, i) in data.results" :key="i">
-            <md-table-cell v-for="field in dataset.schema" :key="field.key" :md-numeric="field.type === 'number' || field.key.type === 'integer'">{{ (row[field.key] + '') | truncate(50) }}</md-table-cell>
+            <md-table-cell v-for="field in dataset.schema" :key="field.key" :md-numeric="field.type === 'number' || field.key.type === 'integer'">{{ ((row[field.key] === undefined || row[field.key] === null ? '' : row[field.key]) + '') | truncate(50) }}</md-table-cell>
           </md-table-row>
         </md-table-body>
       </md-table>
