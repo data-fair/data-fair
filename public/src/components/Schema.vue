@@ -9,8 +9,10 @@
         </div>
       </md-layout>
 
-      <md-list>
-        <md-list-item v-for="field in schema" :key="field.key">
+      <md-list v-for="extension in extensions" :key="extension.key">
+        <br v-if="extension.key">
+        <md-subheader v-if="extension.key && remoteServices">Extension: {{ remoteServices[extension.remoteService].actions[extension.action].summary }} (service {{ remoteServices[extension.remoteService].title }})</md-subheader>
+        <md-list-item v-for="field in schema.filter(field => field['x-extension'] === extension.key)" :key="field.key">
           <md-layout md-row>
             <md-layout md-flex="20">
               <md-input-container>
@@ -29,7 +31,7 @@
             <md-layout md-flex="25" md-flex-offset="5">
               <md-input-container>
                 <label>Concept</label>
-                <md-select v-model="field['x-refersTo']">
+                <md-select v-model="field['x-refersTo']" :disabled="!!field['x-extension']">
                   <md-option :value="null">Pas de concept</md-option>
                   <md-option :value="term.identifiers[0]" v-for="(term, i) in vocabularyArray.filter(term => !schema.find(f => (f['x-refersTo'] === term.identifiers[0]) && (f.id !== field.id)))" :key="i">{{ term.title }}</md-option>
                 </md-select>
@@ -52,7 +54,7 @@ export default {
   }),
   computed: {
     ...mapState(['vocabularyArray']),
-    ...mapState('dataset', ['dataset']),
+    ...mapState('dataset', ['dataset', 'remoteServices']),
     originalSchema() {
       return JSON.stringify(this.dataset && this.dataset.schema)
     },
@@ -60,7 +62,7 @@ export default {
       return JSON.stringify(this.schema) !== this.originalSchema
     },
     extensions() {
-      return [{}].concat(this.dataset.extensions)
+      return [{key: undefined}].concat(this.dataset.extensions.map(ext => ({key: ext.remoteService + '/' + ext.action, ...ext})))
     }
   },
   mounted() {

@@ -9,7 +9,7 @@ module.exports = {
     dataset: null,
     api: null,
     journal: [],
-    remoteServices: {}
+    remoteServices: null
   },
   getters: {
     resourceUrl: state => window.CONFIG.publicUrl + '/api/v1/datasets/' + state.datasetId,
