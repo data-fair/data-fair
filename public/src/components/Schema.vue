@@ -1,6 +1,6 @@
 <template>
   <md-layout md-column>
-    <form @submit.prevent="updateSchema">
+    <form @submit.prevent="patch({schema})">
       <md-layout md-row>
         <h3 class="md-headline" style="flex:1">Schéma</h3>
         <div style="margin-top: 24px;">
@@ -9,7 +9,6 @@
         </div>
       </md-layout>
 
-      {{ extensions }}
       <md-list>
         <md-list-item v-for="field in schema" :key="field.key">
           <md-layout md-row>
@@ -32,7 +31,7 @@
                 <label>Concept</label>
                 <md-select v-model="field['x-refersTo']">
                   <md-option :value="null">Pas de concept</md-option>
-                  <md-option :value="term.identifiers[0]" v-for="(term, i) in vocabulary.filter(term => !schema.find(f => (f['x-refersTo'] === term.identifiers[0]) && (f.id !== field.id)))" :key="i">{{ term.title }}</md-option>
+                  <md-option :value="term.identifiers[0]" v-for="(term, i) in vocabularyArray.filter(term => !schema.find(f => (f['x-refersTo'] === term.identifiers[0]) && (f.id !== field.id)))" :key="i">{{ term.title }}</md-option>
                 </md-select>
               </md-input-container>
             </md-layout>
@@ -44,17 +43,18 @@
 </template>
 
 <script>
+import { mapState, mapActions } from 'vuex'
 
 export default {
   name: 'Schema',
-  props: ['dataset'],
   data: () => ({
-    vocabulary: [],
     schema: []
   }),
   computed: {
+    ...mapState(['vocabularyArray']),
+    ...mapState('dataset', ['dataset']),
     originalSchema() {
-      return JSON.stringify(this.dataset.schema)
+      return JSON.stringify(this.dataset && this.dataset.schema)
     },
     updated() {
       return JSON.stringify(this.schema) !== this.originalSchema
@@ -67,16 +67,11 @@ export default {
     if (this.dataset) {
       this.schema = this.dataset.schema.map(field => Object.assign({}, field))
     }
-    this.$http.get(window.CONFIG.publicUrl + '/api/v1/vocabulary').then(results => {
-      this.vocabulary = results.data
-    })
   },
   methods: {
+    ...mapActions('dataset', ['patch']),
     resetSchema() {
       this.schema = JSON.parse(this.originalSchema)
-    },
-    updateSchema() {
-      this.$emit('schema-updated', this.schema.map(field => Object.assign({}, field)))
     }
   }
 }

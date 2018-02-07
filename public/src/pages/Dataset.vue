@@ -2,12 +2,12 @@
   <div class="dataset" v-if="dataset">
     <md-tabs md-fixed class="md-transparent" ref="tabs" @change="changeTab">
       <md-tab md-label="Description" md-icon="toc" id="description" :md-active="activeTab === 'description'">
-        <dataset-info :dataset="dataset" @changed="save(['title', 'description', 'license', 'origin'])"/>
-        <schema :dataset="dataset" @schema-updated="saveSchema($event)"/>
+        <dataset-info/>
+        <schema v-if="dataset"/>
       </md-tab>
 
       <md-tab md-label="Vue tableau" md-icon="view_list" id="tabular" :md-active="activeTab === 'tabular'">
-        <tabular-view :dataset="dataset" v-if="dataset && activeTab === 'tabular'"/>
+        <tabular-view v-if="dataset && activeTab === 'tabular'"/>
       </md-tab>
 
       <md-tab md-label="Permissions" md-icon="security" id="permissions" :md-active="activeTab === 'permissions'">
@@ -15,11 +15,11 @@
       </md-tab>
 
       <md-tab md-label="Enrichissement" md-icon="merge_type" id="extend" :md-active="activeTab === 'extend'">
-        <enrich-dataset :dataset="dataset"/>
+        <enrich-dataset/>
       </md-tab>
 
       <md-tab md-label="Journal" md-icon="event_note" id="journal" :md-active="activeTab === 'journal'">
-        <journal :dataset="dataset"/>
+        <journal/>
       </md-tab>
 
       <md-tab md-label="API" md-icon="cloud" id="api" :md-active="activeTab === 'api'">
@@ -49,13 +49,15 @@
 
       <md-dialog-actions>
         <md-button class="md-default md-raised" @click="$refs['delete-dialog'].close()">Non</md-button>
-        <md-button class="md-warn md-raised" @click="remove">Oui</md-button>
+        <md-button class="md-warn md-raised" @click="confirmRemove">Oui</md-button>
       </md-dialog-actions>
     </md-dialog>
   </div>
 </template>
 
 <script>
+import {mapState, mapActions, mapGetters} from 'vuex'
+
 import Permissions from '../components/Permissions.vue'
 import Journal from '../components/Journal.vue'
 import Schema from '../components/Schema.vue'
@@ -76,44 +78,27 @@ export default {
     DatasetInfo
   },
   data: () => ({
-    dataset: null,
-    activeTab: null,
-    api: null
+    activeTab: null
   }),
   computed: {
+    ...mapState('dataset', ['dataset', 'api']),
+    ...mapGetters('dataset', ['resourceUrl']),
     downloadLink() {
       if (this.dataset) return this.resourceUrl + '/raw/' + this.dataset.file.name
-    },
-    resourceUrl() {
-      return window.CONFIG.publicUrl + '/api/v1/datasets/' + this.$route.params.datasetId
     }
   },
   mounted() {
     this.activeTab = this.$route.query.tab || 'description'
-    this.$http.get(this.resourceUrl).then(result => {
-      this.dataset = result.data
-      this.$http.get(this.resourceUrl + '/api-docs.json').then(response => {
-        this.api = response.body
-      })
-    })
+    this.setId(this.$route.params.datasetId)
+    this.fetchVocabulary()
   },
   methods: {
-
-    save(keys) {
-      const patch = Object.assign({}, ...keys.map(key => ({ [key]: this.dataset[key] })))
-      this.$store.dispatch('patchDataset', {dataset: this.dataset, patch})
-    },
-    saveSchema(schema) {
-      this.$store.dispatch('patchDataset', {dataset: this.dataset, patch: {schema}})
-    },
-    remove() {
+    ...mapActions(['fetchVocabulary']),
+    ...mapActions('dataset', ['setId', 'patch', 'remove']),
+    async confirmRemove() {
       this.$refs['delete-dialog'].close()
-      this.$http.delete(this.resourceUrl).then(result => {
-        this.$store.dispatch('notify', `Le jeu de données ${this.dataset.title} a bien été supprimé`)
-        this.$router.push({name: 'Datasets'})
-      }, error => {
-        this.$store.dispatch('notifyError', `Erreur ${error.status} pendant la suppression du jeu de données ${this.dataset.title}`)
-      })
+      await this.remove()
+      this.$router.push({name: 'Datasets'})
     },
     changeTab(event) {
       this.activeTab = this.$refs.tabs.activeTab

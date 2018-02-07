@@ -62,7 +62,7 @@
       <md-icon md-theme="error" class="md-primary">error</md-icon>
       &nbsp;&nbsp;&nbsp;
       <div v-html="notificationError"/>
-      <md-button class="md-icon-button md-dense" @click.native="$refs.notificationErrorSnackbar.close()">
+      <md-button class="md-icon-button md-dense" @click.native="notifyError(null)">
         <md-icon>close</md-icon>
       </md-button>
     </md-snackbar>
@@ -70,7 +70,7 @@
       <md-icon md-theme="success" class="md-primary">check_circle</md-icon>
       &nbsp;&nbsp;&nbsp;
       <div v-html="notification"/>
-      <md-button class="md-icon-button md-dense" @click.native="$refs.notificationSnackbar.close()">
+      <md-button class="md-icon-button md-dense" @click.native="notify(null)">
         <md-icon>close</md-icon>
       </md-button>
     </md-snackbar>
@@ -84,15 +84,12 @@ const {mapState, mapActions} = require('vuex')
 export default {
   name: 'App',
   components: {UserName},
-  computed: mapState({
-    user: state => state.user,
-    userOrganizations: state => state.userOrganizations,
-    notification: state => state.notification,
-    notificationError: state => state.notificationError,
+  computed: {
+    ...mapState(['user', 'userOrganizations', 'notification', 'notificationError']),
     loginUrl() {
       return window.CONFIG.directoryUrl + '/login?redirect=' + window.CONFIG.publicUrl + '/signin?id_token='
     }
-  }),
+  },
   watch: {
     notification(val) {
       if (val) this.$refs.notificationSnackbar.open()

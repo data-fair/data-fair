@@ -11,37 +11,32 @@
 </template>
 
 <script>
-const {mapState} = require('vuex')
+const {mapState, mapActions} = require('vuex')
 const events = require('../../../shared/events.json')
 const ws = require('../ws.js')
 
 export default {
   name: 'Journal',
-  props: ['dataset'],
   data() {
-    return {
-      journal: [],
-      types: events,
-      channel: 'datasets/' + this.dataset.id + '/journal'
-    }
+    return {types: events}
   },
   computed: {
-    ...mapState(['ws'])
+    ...mapState(['ws']),
+    ...mapState('dataset', ['dataset', 'journal']),
+    channel() {
+      return 'datasets/' + this.dataset.id + '/journal'
+    }
   },
   mounted() {
-    this.refresh()
+    this.fetchJournal()
     ws.$emit('subscribe', this.channel)
-    ws.$on(this.channel, event => this.journal.unshift(event))
+    ws.$on(this.channel, event => this.addJournalEvent(event))
   },
   destroyed() {
     ws.$emit('unsubscribe', this.channel)
   },
   methods: {
-    refresh() {
-      this.$http.get(window.CONFIG.publicUrl + '/api/v1/datasets/' + this.dataset.id + '/journal').then(results => {
-        this.journal = results.data
-      })
-    }
+    ...mapActions('dataset', ['fetchJournal', 'addJournalEvent'])
   }
 }
 </script>

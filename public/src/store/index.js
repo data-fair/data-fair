@@ -2,15 +2,19 @@ import Vue from 'vue'
 import Vuex from 'vuex'
 import jwtDecode from 'jwt-decode'
 
+import dataset from './dataset.js'
+
 Vue.use(Vuex)
 
 module.exports = new Vuex.Store({
+  modules: {dataset},
   state: {
     user: null,
     userOrganizations: null,
     notification: '',
     notificationError: '',
     vocabulary: null,
+    vocabularyArray: [],
     usersInfo: {},
     licenses: {}
   },
@@ -26,17 +30,11 @@ module.exports = new Vuex.Store({
       }
       state.user = account
     },
+    setAny(state, params) {
+      Object.assign(state, params)
+    },
     userOrganizations(state, userOrganizations) {
       state.userOrganizations = userOrganizations
-    },
-    notification(state, notification) {
-      state.notification = notification
-    },
-    notificationError(state, notificationError) {
-      state.notificationError = notificationError
-    },
-    vocabulary(state, vocab) {
-      state.vocabulary = vocab
     },
     userInfo(state, userInfo) {
       state.usersInfo[userInfo.id] = userInfo
@@ -60,40 +58,41 @@ module.exports = new Vuex.Store({
           context.commit('user', Object.assign(response.data, {organizations: user.organizations}))
         })
         Vue.http.get(window.CONFIG.directoryUrl + '/api/organizations?is-member=true').then(response => {
-          context.commit('userOrganizations', Object.assign({}, ...response.data.results.map(o => ({[o.id]: o}))))
+          context.commit('setAny', {userOrganizations: Object.assign({}, ...response.data.results.map(o => ({[o.id]: o})))})
         })
       } else {
         context.commit('user')
-        context.commit('userOrganizations')
+        context.commit('setAny', {userOrganizations: null})
       }
     },
     notify(context, notification) {
-      context.commit('notification', notification)
+      context.commit('setAny', {notification})
     },
-    notifyError(context, notification) {
-      context.commit('notificationError', notification)
+    notifyError(context, notificationError) {
+      context.commit('setAny', {notificationError})
     },
     async fetchVocabulary(context) {
       if (context.state.vocabulary) return
       const vocabulary = {}
-      const results = await Vue.http.get(window.CONFIG.publicUrl + '/api/v1/vocabulary')
-      results.data.forEach(term => {
-        term.identifiers.forEach(id => { vocabulary[id] = term })
+      const vocabularyArray = (await Vue.http.get(window.CONFIG.publicUrl + '/api/v1/vocabulary')).data
+      context.commit('setAny', {vocabularyArray})
+      vocabularyArray.forEach(term => {
+        term.identifiers.forEach(id => {
+          vocabulary[id] = term
+        })
       })
-      context.commit('vocabulary', vocabulary)
+      context.commit('setAny', {vocabulary})
     },
     async fetchUsers(context, ids) {
       const missingIds = ids.filter(id => !context.state.usersInfo[id])
       if (missingIds.length === 0) return
-      Vue.http.get(window.CONFIG.directoryUrl + '/api/users', {params: {ids: missingIds}}).then(res => {
-        res.data.results.forEach(user => context.commit('userInfo', user))
-      })
+      const res = await Vue.http.get(window.CONFIG.directoryUrl + '/api/users', {params: {ids: missingIds}})
+      res.data.results.forEach(user => context.commit('userInfo', user))
     },
     async fetchLicenses(context, owner) {
       if (context.getters.ownerLicenses(owner)) return
-      Vue.http.get(window.CONFIG.publicUrl + '/api/v1/settings/' + owner.type + '/' + owner.id + '/licenses').then(res => {
-        context.commit('ownerLicenses', {owner, licenses: res.body})
-      })
+      const res = await Vue.http.get(window.CONFIG.publicUrl + '/api/v1/settings/' + owner.type + '/' + owner.id + '/licenses')
+      context.commit('ownerLicenses', {owner, licenses: res.body})
     }
   }
 })

@@ -3,6 +3,10 @@ module.exports = {
     totalStorage: 1024 * 1024 * 1024,
     datasetStorage: -1
   },
+  locks: {
+    // in seconds
+    ttl: 4
+  },
   applications: [{
     title: 'Infos parcelles (recette)',
     description: 'Cette application permet de visualiser des informations additionnelles sur certaines parcelles et de les mettre en évidence.',

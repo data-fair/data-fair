@@ -6,7 +6,12 @@ let interval
 exports.init = async db => {
   const locks = db.collection('locks')
   await locks.createIndex({pid: 1})
-  await locks.createIndex({updatedAt: 1}, {expireAfterSeconds: config.locks.ttl})
+  try {
+    await locks.createIndex({updatedAt: 1}, {expireAfterSeconds: config.locks.ttl})
+  } catch (err) {
+    console.log('Failure to create TTL index. Probably because the value changed. Try to update it.')
+    db.command({collMod: 'locks', index: {keyPattern: {updatedAt: 1}, expireAfterSeconds: config.locks.ttl}})
+  }
 
   // prolongate lock acquired by this process while it is still active
   interval = setInterval(() => {

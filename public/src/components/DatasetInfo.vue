@@ -5,11 +5,11 @@
       <md-layout md-column md-flex="45">
         <md-input-container>
           <label>Titre</label>
-          <md-input v-model="dataset.title" @blur="save"/>
+          <md-input v-model="dataset.title" @blur="patch({title: dataset.title})"/>
         </md-input-container>
         <md-input-container>
           <label>Description</label>
-          <md-textarea v-model="dataset.description" @blur="save"/>
+          <md-textarea v-model="dataset.description" @blur="patch({description: dataset.description})"/>
         </md-input-container>
         <md-input-container>
           <label>Licence</label>
@@ -19,7 +19,7 @@
         </md-input-container>
         <md-input-container>
           <label>Provenance</label>
-          <md-input v-model="dataset.origin" @blur="save" placeholder="Page où l'on peut trouver la donnée d'origine"/>
+          <md-input v-model="dataset.origin" @blur="patch({origin: dataset.origin})" placeholder="Page où l'on peut trouver la donnée d'origine"/>
         </md-input-container>
       </md-layout>
       <md-layout md-column md-flex="45" md-flex-offset="10">
@@ -49,12 +49,10 @@
 
 <script>
 import UserName from './UserName.vue'
-const {mapState} = require('vuex')
-const store = require('../store')
+const {mapState, mapActions} = require('vuex')
 
 export default {
   components: {UserName},
-  props: ['dataset'],
   data() {
     return {
       license: null
@@ -62,25 +60,24 @@ export default {
   },
   computed: {
     ...mapState(['usersInfo']),
+    ...mapState('dataset', ['dataset']),
     licenses() {
-      return store.getters.ownerLicenses(this.dataset.owner)
+      return this.$store.getters.ownerLicenses(this.dataset.owner)
     }
   },
   mounted() {
     // Hack to work around object binding to md-select
     if (this.dataset.license && this.dataset.license.href) this.license = this.dataset.license.href
-    store.dispatch('fetchLicenses', this.dataset.owner)
-    store.dispatch('fetchUsers', [this.dataset.createdBy, this.dataset.updatedBy])
+    this.$store.dispatch('fetchLicenses', this.dataset.owner)
+    this.$store.dispatch('fetchUsers', [this.dataset.createdBy, this.dataset.updatedBy])
   },
   methods: {
-    save() {
-      this.$emit('changed')
-    },
+    ...mapActions('dataset', ['patch']),
     changeLicense() {
       // Hack to work around object binding to md-select
       if (this.license && (!this.dataset.license || this.dataset.license.href !== this.license)) {
         this.dataset.license = this.licenses.find(l => l.href === this.license)
-        this.save()
+        this.patch({license: this.dataset.license})
       }
     }
   }

@@ -18,7 +18,7 @@
       <md-table @sort="orderBy">
         <md-table-header>
           <md-table-row>
-            <md-table-head v-for="field in dataset.schema" :key="field.key" :md-tooltip="field.description || (field['x-refersTo'] && vocabulary[field['x-refersTo']])" :md-numeric="field.type === 'number' || field.type === 'integer'" :md-sort-by="field.key">{{ field.title || field['x-originalName'] }}</md-table-head>
+            <md-table-head v-for="field in dataset.schema" :key="field.key" :md-tooltip="field.description || (field['x-refersTo'] && vocabulary && vocabulary[field['x-refersTo']] && vocabulary[field['x-refersTo']].description)" :md-numeric="field.type === 'number' || field.type === 'integer'" :md-sort-by="field.key">{{ field.title || field['x-originalName'] }}</md-table-head>
           </md-table-row>
         </md-table-header>
 
@@ -33,23 +33,23 @@
 </template>
 
 <script>
+import { mapState } from 'vuex'
 
 export default {
   name: 'TabularView',
-  props: ['dataset'],
   data: () => ({
     data: {},
     query: null,
     size: 10,
     page: 1,
-    sort: null,
-    vocabulary: {}
+    sort: null
   }),
+  computed: {
+    ...mapState(['vocabulary']),
+    ...mapState('dataset', ['dataset'])
+  },
   mounted() {
     this.refresh()
-    this.$http.get(window.CONFIG.publicUrl + '/api/v1/vocabulary').then(results => {
-      results.data.forEach(term => term.identifiers.forEach(id => { this.vocabulary[id] = term.description }))
-    })
   },
   methods: {
     refresh(pagination) {

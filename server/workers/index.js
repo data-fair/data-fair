@@ -51,6 +51,7 @@ async function iter(app, key) {
     await new Promise(resolve => setTimeout(resolve, config.workers.errorInterval))
   } finally {
     await locks.release(app.get('db'), 'dataset:' + dataset.id)
+    console.log(`Worker "${worker.eventsPrefix}" released dataset "${dataset.id}"`)
   }
 }
 

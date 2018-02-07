@@ -8,7 +8,7 @@ import VueTruncate from 'vue-truncate-filter'
 import VueAnalytics from 'vue-analytics'
 
 import routes from './routes.js'
-import store from './store.js'
+import store from './store/index.js'
 import './ws.js'
 
 import App from './App.vue'
