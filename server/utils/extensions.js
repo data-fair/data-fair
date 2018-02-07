@@ -300,22 +300,21 @@ exports.prepareSchema = async (db, schema, extensions) => {
     if (!remoteService) continue
     const action = remoteService.actions.find(action => action.id === extension.action)
     if (!action) continue
-    const prefix = getExtensionKey(extension.remoteService, extension.action)
-    if (!schema.find(field => field.key === prefix + '._hash')) {
-      schema.push({key: prefix + '._hash', type: 'string', format: 'uri-reference'})
-    }
-
+    const extensionKey = getExtensionKey(extension.remoteService, extension.action)
     for (let output of action.output) {
-      if (!schema.find(field => field.key === prefix + output.name)) {
+      if (output.concept && output.concept === 'http://schema.org/identifier') continue
+      const key = extensionKey + '.' + output.name
+      if (!schema.find(field => field.key === key)) {
         const field = {
-          key: prefix + '.' + output.name,
+          key,
           'x-originalName': output.name,
-          title: output.title || output.description,
+          'x-extension': `${extension.remoteService}/${extension.action}`,
+          'x-refersTo': output.concept,
+          title: output.title,
+          description: output.description,
           type: output.type || 'string'
         }
-        if (output.concept && output.concept !== 'http://schema.org/identifier') {
-          field['x-refersTo'] = output.concept
-        }
+
         schema.push(field)
       }
     }

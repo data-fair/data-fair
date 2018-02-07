@@ -31,12 +31,9 @@ const router = module.exports = express.Router()
 const computeActions = (apiDoc) => {
   const actions = soasLoader(apiDoc).actions()
   actions.forEach(a => {
-    a.input = Object.keys(a.input).map(concept => Object.assign({
-      concept: concept
-    }, a.input[concept]))
-    a.output = Object.keys(a.output).map(concept => Object.assign({
-      concept: concept
-    }, a.output[concept]))
+    a.input = Object.keys(a.input).map(concept => ({concept, ...a.input[concept]}))
+    const outputProps = a.outputSchema.properties || (a.outputSchema.items && a.outputSchema.items.properties) || {}
+    a.output = Object.keys(outputProps).map(prop => ({name: prop, concept: outputProps[prop]['x-refersTo'], ...outputProps[prop]}))
   })
   return actions
 }

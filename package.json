@@ -95,7 +95,7 @@
     "shortid": "^2.2.8",
     "shuffle-array": "^1.0.1",
     "slug": "^0.9.1",
-    "soas": "^0.3.0",
+    "soas": "^0.4.0",
     "split": "^1.0.1",
     "swagger2openapi": "^2.11.7",
     "ws": "^3.3.3",

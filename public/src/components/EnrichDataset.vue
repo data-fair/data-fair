@@ -8,8 +8,10 @@
           <span>
             <md-checkbox v-model="extension.active" class="md-primary"/>
           </span>
-          <span>{{ remoteServices[extension.remoteService].actions[extension.action].summary }} (service {{ remoteServices[extension.remoteService].title }})</span>
-          <p v-if="extension.error" class="md-error">{{ extension.error }}</p>
+          <div class="md-list-text-container">
+            <span>{{ remoteServices[extension.remoteService].actions[extension.action].summary }} (service {{ remoteServices[extension.remoteService].title }})</span>
+            <p v-if="extension.error" style="color: red;">{{ extension.error }}</p>
+          </div>
           <div style="position:absolute;bottom:0;left:0;right:0;" v-if="extension.progress !== undefined">
             <md-progress :md-progress="100 * (extension.progress || 0)"/>
           </div>
@@ -89,12 +91,7 @@ export default {
   methods: {
     // An action is using an remote services endpoint to enrich a specific dataset
     save() {
-      const patch = { extensions: this.dataset.extensions }
-      this.$http.patch(this.resourceUrl, patch).then(result => {
-        this.$store.dispatch('notify', `Le jeu de données a bien été mis à jour`)
-      }, error => {
-        this.$store.dispatch('notifyError', `Erreur ${error.status} pendant la mise à jour du jeu de données`)
-      })
+      this.$store.dispatch('patchDataset', {dataset: this.dataset, patch: { extensions: this.dataset.extensions }})
     },
     async fetchRemoteServices() {
       if (this.concepts.size) {

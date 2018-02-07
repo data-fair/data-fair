@@ -9,6 +9,7 @@
         </div>
       </md-layout>
 
+      {{ extensions }}
       <md-list>
         <md-list-item v-for="field in schema" :key="field.key">
           <md-layout md-row>
@@ -49,18 +50,22 @@ export default {
   props: ['dataset'],
   data: () => ({
     vocabulary: [],
-    schema: [],
-    originalSchema: null
+    schema: []
   }),
   computed: {
+    originalSchema() {
+      return JSON.stringify(this.dataset.schema)
+    },
     updated() {
       return JSON.stringify(this.schema) !== this.originalSchema
+    },
+    extensions() {
+      return [{}].concat(this.dataset.extensions)
     }
   },
   mounted() {
     if (this.dataset) {
-      this.schema = this.dataset.schema.slice()
-      this.originalSchema = JSON.stringify(this.schema)
+      this.schema = this.dataset.schema.map(field => Object.assign({}, field))
     }
     this.$http.get(window.CONFIG.publicUrl + '/api/v1/vocabulary').then(results => {
       this.vocabulary = results.data
@@ -71,8 +76,7 @@ export default {
       this.schema = JSON.parse(this.originalSchema)
     },
     updateSchema() {
-      this.$emit('schema-updated', this.schema)
-      this.originalSchema = JSON.stringify(this.schema)
+      this.$emit('schema-updated', this.schema.map(field => Object.assign({}, field)))
     }
   }
 }

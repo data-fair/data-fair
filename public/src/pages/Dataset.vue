@@ -3,7 +3,7 @@
     <md-tabs md-fixed class="md-transparent" ref="tabs" @change="changeTab">
       <md-tab md-label="Description" md-icon="toc" id="description" :md-active="activeTab === 'description'">
         <dataset-info :dataset="dataset" @changed="save(['title', 'description', 'license', 'origin'])"/>
-        <schema :dataset="dataset" @schema-updated="dataset.schema = $event; dataset.status = 'schematized';save(['schema'])"/>
+        <schema :dataset="dataset" @schema-updated="saveSchema($event)"/>
       </md-tab>
 
       <md-tab md-label="Vue tableau" md-icon="view_list" id="tabular" :md-active="activeTab === 'tabular'">
@@ -98,13 +98,13 @@ export default {
     })
   },
   methods: {
+
     save(keys) {
       const patch = Object.assign({}, ...keys.map(key => ({ [key]: this.dataset[key] })))
-      this.$http.patch(this.resourceUrl, patch).then(result => {
-        this.$store.dispatch('notify', `Le jeu de données a bien été mis à jour`)
-      }, error => {
-        this.$store.dispatch('notifyError', `Erreur ${error.status} pendant la mise à jour du jeu de données`)
-      })
+      this.$store.dispatch('patchDataset', {dataset: this.dataset, patch})
+    },
+    saveSchema(schema) {
+      this.$store.dispatch('patchDataset', {dataset: this.dataset, patch: {schema}})
     },
     remove() {
       this.$refs['delete-dialog'].close()
