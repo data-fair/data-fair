@@ -10,7 +10,7 @@
         <tabular-view v-if="dataset && activeTab === 'tabular'"/>
       </md-tab>
 
-      <md-tab md-label="Permissions" md-icon="security" id="permissions" :md-active="activeTab === 'permissions'">
+      <md-tab md-label="Permissions" v-if="isOwner" md-icon="security" id="permissions" :md-active="activeTab === 'permissions'">
         <permissions :resource="dataset" :resource-url="resourceUrl" :api="api"/>
       </md-tab>
 
@@ -82,7 +82,7 @@ export default {
   }),
   computed: {
     ...mapState('dataset', ['dataset', 'api']),
-    ...mapGetters('dataset', ['resourceUrl']),
+    ...mapGetters('dataset', ['resourceUrl', 'isOwner']),
     downloadLink() {
       if (this.dataset) return this.resourceUrl + '/raw/' + this.dataset.file.name
     }
