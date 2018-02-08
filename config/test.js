@@ -11,5 +11,6 @@ module.exports = {
   locks: {
     // in seconds
     ttl: 0.1
-  }
+  },
+  defaultRemoteKey: 'test_default_key'
 }

@@ -6,7 +6,7 @@ const [test] = testUtils.prepare(__filename)
 
 const workers = require('../server/workers')
 
-test.serial('Extend dataset using remote service', async t => {
+test.only('Extend dataset using remote service', async t => {
   const ax = await testUtils.axios('dmeadus0@answers.com')
   // Initial dataset with addresses
   let form = new FormData()
@@ -29,13 +29,14 @@ other,unknown address
   const remoteServiceId = res.data.id
 
   // Prepare for extension using created remote service and patch dataset to ask for it
-  nock('http://test.com').post('/coords').reply(200, (uri, requestBody) => {
-    const inputs = requestBody.trim().split('\n').map(JSON.parse)
-    t.is(inputs.length, 2)
-    t.deepEqual(Object.keys(inputs[0]), ['key'])
-    return inputs.map(input => ({key: input.key}))
-      .map(JSON.stringify).join('\n') + '\n'
-  })
+  nock('http://test.com', {reqheaders: {'x-apiKey': 'test_default_key'}})
+    .post('/coords').reply(200, (uri, requestBody) => {
+      const inputs = requestBody.trim().split('\n').map(JSON.parse)
+      t.is(inputs.length, 2)
+      t.deepEqual(Object.keys(inputs[0]), ['key'])
+      return inputs.map(input => ({key: input.key}))
+        .map(JSON.stringify).join('\n') + '\n'
+    })
   res = await ax.patch('/api/v1/datasets/dataset', {extensions: [{active: true, remoteService: remoteServiceId, action: 'postCoords'}]})
   t.is(res.status, 200)
   let dataset = await workers.hook('indexer')

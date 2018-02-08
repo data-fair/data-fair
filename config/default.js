@@ -33,6 +33,8 @@ module.exports = {
     storedBytesRemaining: 'X-TaxMan-RateLimit-Remaining-StoreBytes'
   },
   adminRole: 'admin',
+  // A global default API key for backend to backend calls to remote services
+  defaultRemoteKey: null,
   locks: {
     // in seconds
     ttl: 60

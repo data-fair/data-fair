@@ -1,5 +1,5 @@
+const config = require('config')
 const eventToPromise = require('event-to-promise')
-// const axios = require('axios')
 const request = require('request')
 const byline = require('byline')
 const hash = require('object-hash')
@@ -231,12 +231,19 @@ exports.extend = async(app, dataset, remoteService, action, forceNext, indexName
       }
     }
     // TODO handle query & cookie header types
-    if (remoteService.apiKey.in === 'header' && remoteService.apiKey.value) {
-      opts.headers[remoteService.apiKey.name] = remoteService.apiKey.value
+    if (remoteService.apiKey.in === 'header') {
+      if (remoteService.apiKey.value) {
+        opts.headers[remoteService.apiKey.name] = remoteService.apiKey.value
+      } else if (config.defaultRemoteKey) {
+        opts.headers[remoteService.apiKey.name] = config.defaultRemoteKey
+      }
     }
     // transmit organization id as it tends to complement authorization information
     if (remoteService.owner.type === 'organization') {
       opts.headers['x-organizationId'] = remoteService.owner.id
+    }
+    if (remoteService.owner.type === 'user') {
+      opts.headers['x-userId'] = remoteService.owner.id
     }
     await promisePipe(
       new ESInputStream({esClient, indexName, forceNext, extensionKey, stats}),
