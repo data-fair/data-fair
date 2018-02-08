@@ -16,17 +16,18 @@ router.use('/:type/:id', auth.jwtMiddleware, (req, res, next) => {
   if (!allowedTypes.has(req.params.type)) {
     return res.status(400).send('Invalid type, it must be one of the following : ' + Array.from(allowedTypes).join(', '))
   }
-  if (!permissions.isOwner({
-    type: req.params.type,
-    id: req.params.id
-  }, req.user)) {
-    return res.sendStatus(403)
-  }
   next()
 })
 
+function isOwner(req, res, next) {
+  if (!permissions.isOwner({type: req.params.type, id: req.params.id}, req.user)) {
+    return res.sendStatus(403)
+  }
+  next()
+}
+
 // read settings
-router.get('/:type/:id', auth.jwtMiddleware, asyncWrap(async(req, res) => {
+router.get('/:type/:id', auth.jwtMiddleware, isOwner, asyncWrap(async(req, res) => {
   const settings = req.app.get('db').collection('settings')
 
   const result = await settings.findOne({
@@ -37,7 +38,7 @@ router.get('/:type/:id', auth.jwtMiddleware, asyncWrap(async(req, res) => {
 }))
 
 // update settings
-router.put('/:type/:id', auth.jwtMiddleware, asyncWrap(async(req, res) => {
+router.put('/:type/:id', auth.jwtMiddleware, isOwner, asyncWrap(async(req, res) => {
   req.body.type = req.params.type
   req.body.id = req.params.id
   const valid = validate(req.body)
