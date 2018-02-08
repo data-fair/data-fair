@@ -119,12 +119,24 @@ router.post('', auth.jwtMiddleware, filesUtils.uploadFile(), asyncWrap(async(req
       mimetype: req.file.mimetype
     },
     owner,
+    permissions: [],
     createdBy: req.user.id,
     createdAt: date,
     updatedBy: req.user.id,
     updatedAt: date,
     status: 'loaded'
   }
+
+  // Make sure the creator can work on the resource he just created
+  // even if he created it in an organization
+  if (owner.type === 'organization') {
+    dataset.permissions.push({
+      type: 'user',
+      id: req.user.id,
+      operations: []
+    })
+  }
+
   const fileSample = await datasetFileSample(dataset)
   dataset.file.encoding = detectCharacterEncoding(fileSample).encoding
   await req.app.get('db').collection('datasets').insertOne(dataset)

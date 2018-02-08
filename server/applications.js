@@ -44,32 +44,46 @@ router.get('', auth.optionalJwtMiddleware, asyncWrap(async(req, res) => {
 
 // Create an application configuration
 router.post('', auth.jwtMiddleware, asyncWrap(async(req, res) => {
+  const application = req.body
   // This id is temporary, we should have an human understandable id, or perhaps manage it UI side ?
-  if (!req.body.url) return res.sendStatus(400)
-  const toks = req.body.url.split('/')
+  if (!application.url) return res.sendStatus(400)
+  const toks = application.url.split('/')
   let lastUrlPart
   do {
     lastUrlPart = toks.pop()
   } while (!lastUrlPart.length)
-  const baseId = req.body.id || lastUrlPart.toLowerCase()
-  req.body.id = baseId
+  const baseId = application.id || lastUrlPart.toLowerCase()
+  application.id = baseId
   let i = 1
   do {
-    if (i > 1) req.body.id = baseId + i
-    var dbExists = await req.app.get('db').collection('applications').count({id: req.body.id})
+    if (i > 1) application.id = baseId + i
+    var dbExists = await req.app.get('db').collection('applications').count({id: application.id})
     i += 1
   } while (dbExists)
-  req.body.owner = usersUtils.owner(req)
-  if (!permissions.canDoForOwner(req.body.owner, 'postApplication', req.user, req.app.get('db'))) return res.sendStatus(403)
-  var valid = validate(req.body)
+  application.owner = usersUtils.owner(req)
+  if (!permissions.canDoForOwner(application.owner, 'postApplication', req.user, req.app.get('db'))) return res.sendStatus(403)
+  var valid = validate(application)
   if (!valid) return res.status(400).send(validate.errors)
   const date = moment().toISOString()
-  req.body.createdAt = date
-  req.body.createdBy = req.user.id
-  req.body.updatedAt = date
-  req.body.updatedBy = req.user.id
-  await req.app.get('db').collection('applications').insertOne(req.body)
-  res.status(201).json(req.body)
+  application.createdAt = date
+  application.createdBy = req.user.id
+  application.updatedAt = date
+  application.updatedBy = req.user.id
+
+  application.permissions = []
+
+  // Make sure the creator can work on the resource he just created
+  // even if he created it in an organization
+  if (application.owner.type === 'organization') {
+    application.permissions.push({
+      type: 'user',
+      id: req.user.id,
+      operations: []
+    })
+  }
+
+  await req.app.get('db').collection('applications').insertOne(application)
+  res.status(201).json(application)
 }))
 
 // Middlewares
@@ -96,20 +110,21 @@ router.get('/:applicationId', (req, res, next) => {
 
 // Update an application configuration
 router.patch('/:applicationId', asyncWrap(async(req, res) => {
+  const patch = req.body
   if (!permissions.can(req.application, 'writeDescription', req.user)) return res.sendStatus(403)
-  var valid = validateNoRequired(req.body)
+  var valid = validateNoRequired(patch)
   if (!valid) return res.status(400).send(validateNoRequired.errors)
 
-  const forbiddenKey = Object.keys(req.body).find(key => {
+  const forbiddenKey = Object.keys(patch).find(key => {
     return ['configuration', 'url', 'description', 'title'].indexOf(key) === -1
   })
   if (forbiddenKey) return res.status(400).send('Only some parts of the application configuration can be modified through this route')
 
-  req.body.updatedAt = moment().toISOString()
-  req.body.updatedBy = req.user.id
+  patch.updatedAt = moment().toISOString()
+  patch.updatedBy = req.user.id
 
-  await req.app.get('db').collection('applications').updateOne({id: req.params.applicationId}, {'$set': req.body})
-  res.status(200).json(req.body)
+  await req.app.get('db').collection('applications').updateOne({id: req.params.applicationId}, {'$set': patch})
+  res.status(200).json(patch)
 }))
 
 // Delete an application configuration

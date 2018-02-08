@@ -64,33 +64,46 @@ router.get('', auth.optionalJwtMiddleware, asyncWrap(async(req, res) => {
 
 // Create an remote Api
 router.post('', auth.jwtMiddleware, asyncWrap(async(req, res) => {
-  if (!req.body.apiDoc || !req.body.apiDoc.info || !req.body.apiDoc.info['x-api-id']) return res.sendStatus(400)
-  const baseId = req.body.id || slug(req.body.apiDoc.info['x-api-id'], {lower: true})
-  req.body.id = baseId
+  const service = req.body
+  if (!service.apiDoc || !service.apiDoc.info || !service.apiDoc.info['x-api-id']) return res.sendStatus(400)
+  const baseId = service.id || slug(service.apiDoc.info['x-api-id'], {lower: true})
+  service.id = baseId
   let i = 1
   do {
-    if (i > 1) req.body.id = baseId + i
-    var dbExists = await req.app.get('db').collection('remote-services').count({id: req.body.id})
+    if (i > 1) service.id = baseId + i
+    var dbExists = await req.app.get('db').collection('remote-services').count({id: service.id})
     i += 1
   } while (dbExists)
-  req.body.owner = usersUtils.owner(req)
-  if (!permissions.canDoForOwner(req.body.owner, 'postRemoteService', req.user, req.app.get('db'))) return res.sendStatus(403)
-  var valid = validateRemoteService(req.body)
+  service.owner = usersUtils.owner(req)
+  if (!permissions.canDoForOwner(service.owner, 'postRemoteService', req.user, req.app.get('db'))) return res.sendStatus(403)
+  var valid = validateRemoteService(service)
   if (!valid) return res.status(400).send(normalise(validateRemoteService.errors))
   const date = moment().toISOString()
-  req.body.createdAt = date
-  req.body.createdBy = req.user.id
-  req.body.updatedAt = date
-  req.body.updatedBy = req.user.id
-  if (req.body.apiDoc) {
-    if (req.body.apiDoc.info) {
-      req.body.title = req.body.apiDoc.info.title
-      req.body.description = req.body.apiDoc.info.description
+  service.createdAt = date
+  service.createdBy = req.user.id
+  service.updatedAt = date
+  service.updatedBy = req.user.id
+  if (service.apiDoc) {
+    if (service.apiDoc.info) {
+      service.title = service.apiDoc.info.title
+      service.description = service.apiDoc.info.description
     }
-    req.body.actions = computeActions(req.body.apiDoc)
+    service.actions = computeActions(service.apiDoc)
   }
-  await req.app.get('db').collection('remote-services').insertOne(req.body)
-  res.status(201).json(req.body)
+  service.permissions = []
+
+  // Make sure the creator can work on the resource he just created
+  // even if he created it in an organization
+  if (service.owner.type === 'organization') {
+    service.permissions.push({
+      type: 'user',
+      id: req.user.id,
+      operations: []
+    })
+  }
+
+  await req.app.get('db').collection('remote-services').insertOne(service)
+  res.status(201).json(service)
 }))
 
 // Middlewares
@@ -117,23 +130,24 @@ router.get('/:remoteServiceId', (req, res, next) => {
 
 // Update a remote service configuration
 router.patch('/:remoteServiceId', asyncWrap(async(req, res) => {
+  const patch = req.body
   if (!permissions.can(req.remoteService, 'writeDescription', req.user)) return res.sendStatus(403)
-  var valid = validateRemoteServiceNoRequired(req.body)
+  var valid = validateRemoteServiceNoRequired(patch)
   if (!valid) return res.status(400).send(validateRemoteServiceNoRequired.errors)
 
-  const forbiddenKey = Object.keys(req.body).find(key => {
+  const forbiddenKey = Object.keys(patch).find(key => {
     return ['apiDoc', 'url', 'apiKey', 'server', 'description', 'title'].indexOf(key) === -1
   })
   if (forbiddenKey) return res.status(400).send('Only some parts of the remote service configuration can be modified through this route')
 
-  req.body.updatedAt = moment().toISOString()
-  req.body.updatedBy = req.user.id
-  if (req.body.apiDoc) {
-    req.body.actions = computeActions(req.body.apiDoc)
+  patch.updatedAt = moment().toISOString()
+  patch.updatedBy = req.user.id
+  if (patch.apiDoc) {
+    patch.actions = computeActions(patch.apiDoc)
   }
 
-  await req.app.get('db').collection('remote-services').updateOne({id: req.params.remoteServiceId}, {'$set': req.body})
-  res.status(200).json(req.body)
+  await req.app.get('db').collection('remote-services').updateOne({id: req.params.remoteServiceId}, {'$set': patch})
+  res.status(200).json(patch)
 }))
 
 // Delete a remoteService
