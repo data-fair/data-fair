@@ -25,8 +25,7 @@ module.exports = {
     datasetStorage: -1
   },
   workers: {
-    pollingInterval: 1000,
-    errorInterval: 20000
+    pollingInterval: 1000
   },
   headers: {
     storedBytesLimit: 'X-TaxMan-RateLimit-Limit-StoreBytes',

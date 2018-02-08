@@ -47,8 +47,6 @@ async function iter(app, key) {
     console.error('Failure in worker ' + key, err)
     if (hooks[key]) hooks[key].reject(err)
     await journals.log(app, dataset, {type: worker.eventsPrefix + '-fail'})
-    // special wait in case of error to prevent errors in quick series
-    await new Promise(resolve => setTimeout(resolve, config.workers.errorInterval))
   } finally {
     await locks.release(app.get('db'), 'dataset:' + dataset.id)
     console.log(`Worker "${worker.eventsPrefix}" released dataset "${dataset.id}"`)
@@ -56,7 +54,8 @@ async function iter(app, key) {
 }
 
 async function acquireNext(db, filter) {
-  const cursor = db.collection('datasets').find(filter).sort({updatedAt: 1})
+  // Random sort prevents from insisting on the same failed dataset again and again
+  const cursor = db.collection('datasets').aggregate([{$match: filter}, {$sample: {size: 100}}])
   while (await cursor.hasNext()) {
     const dataset = await cursor.next()
     const ack = await locks.acquire(db, 'dataset:' + dataset.id)

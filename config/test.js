@@ -5,8 +5,7 @@ module.exports = {
     datasetStorage: 1000
   },
   workers: {
-    pollingInterval: 1,
-    errorInterval: 20
+    pollingInterval: 1
   },
   locks: {
     // in seconds
