@@ -19,7 +19,8 @@
 
             <md-layout md-flex="60" md-column v-if="operations && operations.length">
               <md-subheader>Opérations</md-subheader>
-              <ul>
+              <span v-if="!permission.operations.length">Toutes</span>
+              <ul v-else>
                 <li v-for="operation in permission.operations.map(oid => operations.find(o => o.id === oid))" :key="operation.id">{{ operation.title }}</li>
               </ul>
             </md-layout>
@@ -49,10 +50,10 @@
 
         <md-input-container v-if="newPermission.type === 'organization' || newPermission.type === 'user'">
           <label>Nom</label>
-          <md-select v-model="newPermission.id" v-if="newPermission.type === 'organization'">
+          <md-select required v-model="newPermission.id" v-if="newPermission.type === 'organization'">
             <md-option :value="organization.id" v-for="organization in organizations" :key="organization.id" >{{ organization.name }}</md-option>
           </md-select>
-          <md-select v-model="newPermission.id" v-if="newPermission.type === 'user'">
+          <md-select required v-model="newPermission.id" v-if="newPermission.type === 'user'">
             <md-option :value="user.id" v-for="user in Object.values(users)" :key="user.id">{{ user.name }}</md-option>
           </md-select>
         </md-input-container>
@@ -65,7 +66,7 @@
         </md-input-container>
 
         <md-layout md-column>
-          <md-subheader>Opérations</md-subheader>
+          <md-subheader>Opérations (toutes si aucune cochée)</md-subheader>
           <md-checkbox :md-value="operation.id" v-model="newPermission.operations" v-for="operation in Object.values(operations)" :key="operation.id">{{ operation.title }}</md-checkbox>
         </md-layout>
       </md-dialog-content>
@@ -80,21 +81,23 @@
 </template>
 
 <script>
-const {
-  mapState
-} = require('vuex')
+const {mapState} = require('vuex')
+
+function initPermission() {
+  return {
+    type: 'organization',
+    id: null,
+    roles: [],
+    operations: []
+  }
+}
 
 export default {
   name: 'Permissions',
   props: ['resource', 'resourceUrl', 'api'],
   data: () => ({
     permissions: [],
-    newPermission: {
-      type: 'organization',
-      id: null,
-      roles: [],
-      operations: []
-    },
+    newPermission: initPermission(),
     organizations: {},
     users: {},
     newPermissionOrganizationRoles: []
@@ -149,6 +152,7 @@ export default {
     },
     addPermission() {
       const permission = Object.assign({}, this.newPermission)
+      this.newPermission = initPermission()
       if (!permission.type) delete permission.type
       if (!permission.id) delete permission.id
       this.permissions.push(permission)
