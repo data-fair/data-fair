@@ -32,8 +32,13 @@ const computeActions = (apiDoc) => {
   const actions = soasLoader(apiDoc).actions()
   actions.forEach(a => {
     a.input = Object.keys(a.input).map(concept => ({concept, ...a.input[concept]}))
-    const outputProps = a.outputSchema.properties || (a.outputSchema.items && a.outputSchema.items.properties) || {}
-    a.output = Object.keys(outputProps).map(prop => ({name: prop, concept: outputProps[prop]['x-refersTo'], ...outputProps[prop]}))
+    const outputSchema = a.outputSchema
+    if (outputSchema) {
+      const outputProps = a.outputSchema.properties || (a.outputSchema.items && a.outputSchema.items.properties) || {}
+      a.output = Object.keys(outputProps).map(prop => ({name: prop, concept: outputProps[prop]['x-refersTo'], ...outputProps[prop]}))
+    } else {
+      a.output = []
+    }
   })
   return actions
 }

@@ -3,7 +3,7 @@
     <applications-list ref="applicationsList"/>
 
     <div class="actions-buttons">
-      <md-button @click="$refs.configAppDialog.open()" id="config-app-button" class="md-fab md-primary" title="Configurer une application">
+      <md-button v-if="user" @click="$refs.configAppDialog.open()" id="config-app-button" class="md-fab md-primary" title="Configurer une application">
         <md-icon>add</md-icon>
       </md-button>
     </div>
@@ -20,6 +20,8 @@
 </template>
 
 <script>
+import {mapState} from 'vuex'
+
 import ConfigureApplication from '../components/ConfigureApplication.vue'
 import ApplicationsList from '../components/ApplicationsList.vue'
 
@@ -31,6 +33,9 @@ export default {
   },
   data() {
     return {dialogOpened: false}
+  },
+  computed: {
+    ...mapState(['user'])
   }
 }
 </script>

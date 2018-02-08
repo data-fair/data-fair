@@ -92,6 +92,7 @@
     "object-hash": "^1.2.0",
     "promisepipe": "^2.1.1",
     "pug": "^2.0.0-rc.4",
+    "request": "^2.83.0",
     "shortid": "^2.2.8",
     "shuffle-array": "^1.0.1",
     "slug": "^0.9.1",

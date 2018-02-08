@@ -13,7 +13,6 @@
 <script>
 const {mapState, mapActions} = require('vuex')
 const events = require('../../../shared/events.json')
-const ws = require('../ws.js')
 
 export default {
   name: 'Journal',
@@ -22,18 +21,10 @@ export default {
   },
   computed: {
     ...mapState(['ws']),
-    ...mapState('dataset', ['dataset', 'journal']),
-    channel() {
-      return 'datasets/' + this.dataset.id + '/journal'
-    }
+    ...mapState('dataset', ['dataset', 'journal'])
   },
   mounted() {
     this.fetchJournal()
-    ws.$emit('subscribe', this.channel)
-    ws.$on(this.channel, event => this.addJournalEvent(event))
-  },
-  destroyed() {
-    ws.$emit('unsubscribe', this.channel)
   },
   methods: {
     ...mapActions('dataset', ['fetchJournal', 'addJournalEvent'])

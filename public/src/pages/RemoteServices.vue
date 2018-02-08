@@ -3,7 +3,7 @@
     <remote-services-list ref="remoteServicesList"/>
 
     <div class="actions-buttons">
-      <md-button @click="$refs.configServiceDialog.open()" id="config-service-button" class="md-fab md-primary" title="Configurer un service distant">
+      <md-button v-if="user" @click="$refs.configServiceDialog.open()" id="config-service-button" class="md-fab md-primary" title="Configurer un service distant">
         <md-icon>add</md-icon>
       </md-button>
     </div>
@@ -20,6 +20,8 @@
 </template>
 
 <script>
+import {mapState} from 'vuex'
+
 import ImportRemoteService from '../components/ImportRemoteService.vue'
 import RemoteServicesList from '../components/RemoteServicesList.vue'
 
@@ -31,6 +33,9 @@ export default {
   },
   data() {
     return {dialogOpened: false}
+  },
+  computed: {
+    ...mapState(['user'])
   }
 }
 </script>

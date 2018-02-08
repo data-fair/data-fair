@@ -9,23 +9,23 @@
             <md-checkbox v-model="extension.active" class="md-primary"/>
           </span>
           <div class="md-list-text-container">
-            <span>{{ remoteServices[extension.remoteService].actions[extension.action].summary }} (service {{ remoteServices[extension.remoteService].title }})</span>
-            <p v-if="extension.error" style="color: red;">{{ extension.error }}</p>
+            <span v-if="remoteServicesMap[extension.remoteService]">{{ remoteServicesMap[extension.remoteService].actions[extension.action].summary }} (service {{ remoteServicesMap[extension.remoteService].title }})</span>
+            <p v-if="extension.active && extension.error" style="color: red;">{{ extension.error }}</p>
           </div>
-          <div style="position:absolute;bottom:0;left:0;right:0;" v-if="extension.progress !== undefined">
+          <div style="position:absolute;bottom:0;left:0;right:0;" v-if="extension.active && extension.progress !== undefined">
             <md-progress :md-progress="100 * (extension.progress || 0)"/>
           </div>
         </md-list-item>
       </md-list>
     </md-layout>
     <div>
-      <md-button @click="patch({extensions: dataset.extensions})" class="md-raised md-warn">Appliquer</md-button>
+      <md-button @click="save" class="md-raised md-warn">Appliquer</md-button>
     </div>
   </md-layout>
 </template>
 
 <script>
-import { mapState, mapActions } from 'vuex'
+import { mapState, mapActions, mapGetters } from 'vuex'
 const ws = require('../ws.js')
 
 export default {
@@ -34,22 +34,20 @@ export default {
   },
   computed: {
     ...mapState(['vocabulary']),
-    ...mapState('dataset', ['dataset', 'resourceUrl', 'remoteServices']),
+    ...mapState('dataset', ['dataset', 'resourceUrl']),
+    ...mapGetters('dataset', ['remoteServicesMap']),
     channel() {
       return 'datasets/' + this.dataset.id + '/extend-progress'
     }
   },
   watch: {
-    concepts() {
-      this.fetchRemoteServices()
-    },
-    remoteServices() {
+    remoteServicesMap() {
       // Add/remove available extensions
       const extensions = (this.dataset.extensions || []).filter(e => {
-        return this.remoteServices[e.remoteService] && this.remoteServices[e.remoteService].actions[e.action]
+        return this.remoteServicesMap[e.remoteService] && this.remoteServicesMap[e.remoteService].actions[e.action]
       })
-      Object.keys(this.remoteServices).forEach(s => {
-        Object.keys(this.remoteServices[s].actions).forEach(a => {
+      Object.keys(this.remoteServicesMap).forEach(s => {
+        Object.keys(this.remoteServicesMap[s].actions).forEach(a => {
           if (!extensions.find(e => e.remoteService === s && e.action === a)) {
             extensions.push({remoteService: s, action: a, active: false})
           }
@@ -74,7 +72,13 @@ export default {
     ws.$emit('unsubscribe', this.channel)
   },
   methods: {
-    ...mapActions('dataset', ['fetchRemoteServices', 'patch'])
+    ...mapActions('dataset', ['fetchRemoteServices', 'patch']),
+    save() {
+      this.dataset.extensions.forEach(ext => {
+        ext.error = ext.error || ''
+      })
+      this.patch({extensions: this.dataset.extensions})
+    }
   }
 }
 </script>

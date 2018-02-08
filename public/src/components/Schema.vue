@@ -11,7 +11,7 @@
 
       <md-list v-for="extension in extensions" :key="extension.key">
         <br v-if="extension.key">
-        <md-subheader v-if="extension.key && remoteServices">Extension: {{ remoteServices[extension.remoteService].actions[extension.action].summary }} (service {{ remoteServices[extension.remoteService].title }})</md-subheader>
+        <md-subheader v-if="extension.key && remoteServicesMap[extension.remoteService]">Extension: {{ remoteServicesMap[extension.remoteService].actions[extension.action].summary }} (service {{ remoteServicesMap[extension.remoteService].title }})</md-subheader>
         <md-list-item v-for="field in schema.filter(field => field['x-extension'] === extension.key)" :key="field.key">
           <md-layout md-row>
             <md-layout md-flex="20">
@@ -45,7 +45,7 @@
 </template>
 
 <script>
-import { mapState, mapActions } from 'vuex'
+import { mapState, mapActions, mapGetters } from 'vuex'
 
 export default {
   name: 'Schema',
@@ -54,7 +54,8 @@ export default {
   }),
   computed: {
     ...mapState(['vocabularyArray']),
-    ...mapState('dataset', ['dataset', 'remoteServices']),
+    ...mapState('dataset', ['dataset']),
+    ...mapGetters('dataset', ['remoteServicesMap']),
     originalSchema() {
       return JSON.stringify(this.dataset && this.dataset.schema)
     },
@@ -62,16 +63,19 @@ export default {
       return JSON.stringify(this.schema) !== this.originalSchema
     },
     extensions() {
-      return [{key: undefined}].concat(this.dataset.extensions.map(ext => ({key: ext.remoteService + '/' + ext.action, ...ext})))
+      return [{key: undefined}].concat((this.dataset.extensions || [])
+        .filter(ext => ext.active)
+        .map(ext => ({key: ext.remoteService + '/' + ext.action, ...ext})))
     }
   },
   mounted() {
     if (this.dataset) {
       this.schema = this.dataset.schema.map(field => Object.assign({}, field))
+      this.dataset.extensions.filter(ext => ext.active).forEach(extension => this.fetchRemoteService(extension.remoteService))
     }
   },
   methods: {
-    ...mapActions('dataset', ['patch']),
+    ...mapActions('dataset', ['patch', 'fetchRemoteService']),
     resetSchema() {
       this.schema = JSON.parse(this.originalSchema)
     }

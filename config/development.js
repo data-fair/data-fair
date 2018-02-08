@@ -29,6 +29,10 @@ module.exports = {
     description: 'Ce service permet de récupérer des informations de parcelles cadastrales depuis leurs codes officiels. Les informations retournées contiennent notamment la localisation et la contenance de la parcelle.',
     href: 'https://staging.koumoul.com/s/cadastre/api-docs.json'
   }, {
+    title: 'Cadastre (dev)',
+    description: 'Ce service permet de récupérer des informations de parcelles cadastrales depuis leurs codes officiels. Les informations retournées contiennent notamment la localisation et la contenance de la parcelle.',
+    href: 'http://localhost:7600/api-docs.json'
+  }, {
     title: 'Divisions administratives (recette)',
     description: 'Ce service permet de récupérer des informations sur les divisions administratives françaises : régions, départements, EPCI et communes. Les données portent, entre-autres, sur la population, la fiscalité et des tracés vectoriels.',
     href: 'https://staging.koumoul.com/s/insee-mapping/api/v1/api-docs.json'

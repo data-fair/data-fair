@@ -15,11 +15,11 @@
       </md-tab>
 
       <md-tab md-label="Enrichissement" md-icon="merge_type" id="extend" :md-active="activeTab === 'extend'">
-        <enrich-dataset/>
+        <enrich-dataset v-if="dataset && activeTab === 'extend'"/>
       </md-tab>
 
       <md-tab md-label="Journal" md-icon="event_note" id="journal" :md-active="activeTab === 'journal'">
-        <journal/>
+        <journal v-if="dataset && activeTab === 'journal'"/>
       </md-tab>
 
       <md-tab md-label="API" md-icon="cloud" id="api" :md-active="activeTab === 'api'">

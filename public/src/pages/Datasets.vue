@@ -3,7 +3,7 @@
     <datasets-list ref="datasetsList"/>
 
     <div class="actions-buttons">
-      <md-button @click="$refs.importFileDialog.open()" id="import-file-button" class="md-fab md-primary" title="Importer un fichier">
+      <md-button v-if="user" @click="$refs.importFileDialog.open()" id="import-file-button" class="md-fab md-primary" title="Importer un fichier">
         <md-icon>file_upload</md-icon>
       </md-button>
     </div>
@@ -29,6 +29,8 @@
 </template>
 
 <script>
+import {mapState} from 'vuex'
+
 import ImportFile from '../components/ImportFile.vue'
 import DatasetsList from '../components/DatasetsList.vue'
 
@@ -37,6 +39,9 @@ export default {
   components: {ImportFile, DatasetsList},
   data() {
     return {dialogOpened: false}
+  },
+  computed: {
+    ...mapState(['user'])
   }
 }
 </script>

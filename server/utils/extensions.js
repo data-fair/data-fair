@@ -1,5 +1,6 @@
 const eventToPromise = require('event-to-promise')
-const axios = require('axios')
+// const axios = require('axios')
+const request = require('request')
 const byline = require('byline')
 const hash = require('object-hash')
 const promisePipe = require('promisepipe')
@@ -204,7 +205,7 @@ exports.extend = async(app, dataset, remoteService, action, forceNext, indexName
 
   const stats = {count: dataset.count}
 
-  const setProgress = async (error) => {
+  const setProgress = async (error = '') => {
     try {
       const progress = stats.count / dataset.count
       await app.publish('datasets/' + dataset.id + '/extend-progress', {remoteService: remoteService.id, action: action.id, progress, error})
@@ -219,51 +220,40 @@ exports.extend = async(app, dataset, remoteService, action, forceNext, indexName
     }
   }
 
-  const inputStream = new PrepareInputStream({action, dataset, hashes, extensionKey})
-  const opts = {
-    method: action.operation.method,
-    baseURL: remoteService.server,
-    url: action.operation.path,
-    data: inputStream,
-    responseType: 'stream',
-    headers: {
-      Accept: 'application/x-ndjson',
-      'Content-Type': 'application/x-ndjson'
-    }
-  }
-
-  // TODO handle query & cookie header types
-  if (remoteService.apiKey.in === 'header' && remoteService.apiKey.value) {
-    opts.headers[remoteService.apiKey.name] = remoteService.apiKey.value
-  }
-  // transmit organization id as it tends to complement authorization information
-  if (remoteService.owner.type === 'organization') {
-    opts.headers['x-organizationId'] = remoteService.owner.id
-  }
-
-  const esInputStream = new ESInputStream({esClient, indexName, forceNext, extensionKey, stats})
+  const progressInterval = setInterval(setProgress, 1000)
   try {
-    const inputPromise = promisePipe(esInputStream, inputStream)
-
-    const res = await axios(opts)
-
-    const outputPromise = promisePipe(
-      res.data,
+    const opts = {
+      method: action.operation.method,
+      url: remoteService.server + action.operation.path,
+      headers: {
+        Accept: 'application/x-ndjson',
+        'Content-Type': 'application/x-ndjson'
+      }
+    }
+    // TODO handle query & cookie header types
+    if (remoteService.apiKey.in === 'header' && remoteService.apiKey.value) {
+      opts.headers[remoteService.apiKey.name] = remoteService.apiKey.value
+    }
+    // transmit organization id as it tends to complement authorization information
+    if (remoteService.owner.type === 'organization') {
+      opts.headers['x-organizationId'] = remoteService.owner.id
+    }
+    await promisePipe(
+      new ESInputStream({esClient, indexName, forceNext, extensionKey, stats}),
+      new PrepareInputStream({action, dataset, hashes, extensionKey}),
+      request(opts),
       byline.createStream(),
       new PrepareOutputStream({action, hashes, extensionKey}),
       new ESOutputStream({esClient, indexName, stats})
     )
-
-    const progressInterval = setInterval(setProgress, 1000)
-    await Promise.all([inputPromise, outputPromise])
     clearInterval(progressInterval)
     await setProgress()
   } catch (err) {
     // catch the error, as a failure to use remote service should not prevent the dataset
     // to be processed and used
     console.error('Failure to extend using remote service', err)
+    clearInterval(progressInterval)
     await setProgress(err.message)
-    esInputStream.destroy()
   }
 }
 
