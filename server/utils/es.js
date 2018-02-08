@@ -42,7 +42,7 @@ exports.initDatasetIndex = async (client, dataset, geopoint) => {
   const properties = body.mappings.line.properties = {}
 
   dataset.schema.forEach(jsProp => {
-    properties[jsProp.key] = {type: exports.esType(jsProp)}
+    if (jsProp.key) properties[jsProp.key] = {type: exports.esType(jsProp)}
   })
 
   // "hidden" field for geopoint indexing

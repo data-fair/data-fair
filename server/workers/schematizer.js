@@ -28,7 +28,7 @@ exports.process = async function(app, dataset) {
 
   // We copy fields in the detected schema that have not been modified by the user
   const previousSchema = dataset.schema || []
-  dataset.schema = previousSchema.concat(dataset.file.schema.filter(field => !previousSchema.find(f => f.key === field.key)))
+  dataset.schema = previousSchema.concat(dataset.file.schema.filter(field => field.key && !previousSchema.find(f => f.key === field.key)))
   dataset.status = 'schematized'
   await db.collection('datasets').updateOne({id: dataset.id}, {
     $set: {
