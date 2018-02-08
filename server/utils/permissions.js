@@ -17,7 +17,7 @@ exports.can = function(resource, operationId, user) {
     // Check if the user is admin in an organization that have the resource
     if (resource.owner.type === 'organization') {
       const userOrga = user.organizations.find(o => o.id === resource.owner.id)
-      return userOrga && userOrga.role === config.adminRole
+      if (userOrga && userOrga.role === config.adminRole) return true
     }
     // Check if user have permissions
     if (operationPermissions.find(p => p.type === 'user' && p.id === user.id)) return true
@@ -31,33 +31,45 @@ exports.can = function(resource, operationId, user) {
 
 // Manage filters for datasets, applications and remote services
 exports.filter = function(user) {
+  const operationFilter = [{operations: 'readDescription'}, {operations: {$size: 0}}]
+
   // this filter is for public resources
   const or = [{
-    'permissions.operations': 'readDescription',
-    'permissions.type': null,
-    'permissions.id': null
+    permissions: {
+      $elemMatch: {$or: operationFilter, type: null, id: null}
+    }
   }]
 
   if (user) {
+    // user is owner
     or.push({
       'owner.type': 'user',
       'owner.id': user.id
     })
+    // user is admin of owner organization
     or.push({
       'owner.type': 'organization',
       'owner.id': {$in: user.organizations.filter(o => o.role === config.adminRole).map(o => o.id)}
     })
+
+    // user has specific permission to read
     or.push({
-      'permissions.operations': 'readDescription',
-      'permissions.type': 'user',
-      'permissions.id': user.id
+      permissions: {
+        $elemMatch: {$or: operationFilter, type: 'user', id: user.id}
+      }
     })
     user.organizations.forEach(o => {
       or.push({
-        'permissions.operations': 'readDescription',
-        'permissions.type': 'organization',
-        'permissions.id': o.id,
-        'permissions.role': o.role
+        permissions: {
+          $elemMatch: {
+            $and: [
+              {$or: operationFilter},
+              {$or: [{roles: o.role}, {roles: {$size: 0}}]}
+            ],
+            type: 'organization',
+            id: o.id
+          }
+        }
       })
     })
   }
