@@ -6,7 +6,7 @@ const validate = ajv.compile(permissionsSchema)
 
 // resource can be an application, a dataset of an remote service
 exports.can = function(resource, operationId, user) {
-  const operationPermissions = (resource.permissions || []).filter(p => p.operations.indexOf(operationId) >= 0)
+  const operationPermissions = (resource.permissions || []).filter(p => !p.operations.length || p.operations.indexOf(operationId) >= 0)
   // check if the operation is public
   if (operationPermissions.find(p => !p.type && !p.id)) return true
   if (!user) {
@@ -20,7 +20,6 @@ exports.can = function(resource, operationId, user) {
       return userOrga && userOrga.role === config.adminRole
     }
     // Check if user have permissions
-    const operationPermissions = (resource.permissions || []).filter(p => p.operations.indexOf(operationId) >= 0)
     if (operationPermissions.find(p => p.type === 'user' && p.id === user.id)) return true
     if (operationPermissions.find(p => {
       const orgaUser = p.type === 'organization' && user.organizations.find(o => o.id === p.id)
