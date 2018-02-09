@@ -5,8 +5,6 @@
 [![Build Status](https://travis-ci.org/koumoul-dev/data-fair.svg?branch=master)](https://travis-ci.org/koumoul-dev/data-fair)
 [![Coverage Status](https://coveralls.io/repos/github/koumoul-dev/data-fair/badge.svg?branch=master)](https://coveralls.io/github/koumoul-dev/data-fair?branch=master)
 
-*WARNING : This repo is a work in progress, it is not ready yet for the general public.*
-
 ## Development environment
 
 This project uses the following stack : Mongo, ElasticSearch, NodeJS, Express, VueJS, and Docker. The primary language used is javascript with the ES7 syntax.
