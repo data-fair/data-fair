@@ -6,7 +6,7 @@ const [test] = testUtils.prepare(__filename)
 
 const workers = require('../server/workers')
 
-test.only('Extend dataset using remote service', async t => {
+test.serial('Extend dataset using remote service', async t => {
   const ax = await testUtils.axios('dmeadus0@answers.com')
   // Initial dataset with addresses
   let form = new FormData()
