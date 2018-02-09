@@ -71,6 +71,7 @@ export default {
   mounted() {
     if (this.dataset) {
       this.schema = this.dataset.schema.map(field => Object.assign({}, field))
+      this.dataset.extensions = this.dataset.extensions || []
       this.dataset.extensions.filter(ext => ext.active).forEach(extension => this.fetchRemoteService(extension.remoteService))
     }
   },

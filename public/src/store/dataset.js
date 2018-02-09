@@ -2,6 +2,7 @@
 // Used in the DatasetVue and all its tabs and their components
 import Vue from 'vue'
 const ws = require('../ws.js')
+const utils = require('../utils.js')
 
 module.exports = {
   namespaced: true,
@@ -28,15 +29,7 @@ module.exports = {
       return res
     },
     isOwner: (state, getters, rootState) => {
-      if (!rootState.user || !state.dataset) return false
-      const user = rootState.user
-      const owner = state.dataset.owner
-      if (owner.type === 'user' && owner.id === user.id) return true
-      if (owner.type === 'organization') {
-        const userOrga = user.organizations.find(o => o.id === owner.id)
-        return userOrga && userOrga.role === window.CONFIG.adminRole
-      }
-      return false
+      return utils.isOwner(state.dataset, rootState.user)
     }
   },
   mutations: {

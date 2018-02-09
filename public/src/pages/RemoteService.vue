@@ -1,7 +1,7 @@
 <template>
   <div class="remote-service" v-if="remoteService">
-    <md-tabs md-fixed class="md-transparent" @change="$router.push({query:{tab:$event}})">
-      <md-tab md-label="Description" md-icon="toc" :md-active="activeTab === '0'">
+    <md-tabs md-fixed class="md-transparent" ref="tabs" @change="changeTab">
+      <md-tab md-label="Description" md-icon="toc" id="description" :md-active="activeTab === 'description'">
         <h3 class="md-headline">Informations</h3>
         <md-layout md-row>
           <md-layout md-column md-flex="55">
@@ -83,15 +83,15 @@
         </md-list>
       </md-tab>
 
-      <md-tab md-label="Configuration" md-icon="build" :md-active="activeTab === '1'">
+      <md-tab md-label="Configuration" md-icon="build" id="config" :md-active="activeTab === 'config'">
         <remote-service-configuration :remote-service="remoteService"/>
       </md-tab>
 
-      <md-tab md-label="Permissions" md-icon="security" :md-active="activeTab === '2'">
+      <md-tab md-label="Permissions" md-icon="security" v-if="isOwner" id="permissions" :md-active="activeTab === 'permissions'">
         <permissions :resource="remoteService" :resource-url="resourceUrl" :api="api"/>
       </md-tab>
 
-      <md-tab md-label="API" md-icon="cloud" :md-active="activeTab === '3'">
+      <md-tab md-label="API" md-icon="cloud" id="api" :md-active="activeTab === 'api'">
         <open-api v-if="api" :api="api"/>
       </md-tab>
     </md-tabs>
@@ -131,9 +131,11 @@
 </template>
 
 <script>
+import {mapState} from 'vuex'
 import RemoteServiceConfiguration from '../components/RemoteServiceConfiguration.vue'
 import Permissions from '../components/Permissions.vue'
 import OpenApi from 'vue-openapi'
+import utils from '../utils.js'
 
 export default {
   name: 'RemoteService',
@@ -154,12 +156,16 @@ export default {
     }
   }),
   computed: {
+    ...mapState(['user']),
     resourceUrl() {
       return window.CONFIG.publicUrl + '/api/v1/remote-services/' + this.$route.params.remoteServiceId
+    },
+    isOwner() {
+      return utils.isOwner(this.remoteService, this.user)
     }
   },
   mounted() {
-    this.activeTab = this.$route.query.tab || '0'
+    this.activeTab = this.$route.query.tab || 'description'
     this.$http.get(this.resourceUrl).then(result => {
       this.remoteService = result.data
       this.$http.get(this.resourceUrl + '/api-docs.json').then(response => {
@@ -196,6 +202,10 @@ export default {
       }, error => {
         this.$store.dispatch('notifyError', `Erreur ${error.status} pendant la mise à jour de la définition de l'API`)
       })
+    },
+    changeTab(event) {
+      this.activeTab = this.$refs.tabs.activeTab
+      this.$router.push({query: {tab: this.$refs.tabs.activeTab}})
     }
   }
 }

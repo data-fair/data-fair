@@ -1,7 +1,7 @@
 <template>
   <div class="application" v-if="application">
-    <md-tabs md-fixed class="md-transparent" @change="$router.push({query:{tab:$event}})">
-      <md-tab md-label="Description" md-icon="toc" :md-active="activeTab === '0'">
+    <md-tabs md-fixed class="md-transparent" ref="tabs" @change="changeTab">
+      <md-tab md-label="Description" md-icon="toc" id="description" :md-active="activeTab === 'description'">
         <h3 class="md-headline">Informations</h3>
         <md-input-container>
           <label>Titre</label>
@@ -17,12 +17,12 @@
         </md-input-container>
       </md-tab>
 
-      <md-tab md-label="Permissions" md-icon="security" :md-active="activeTab === '1'">
+      <md-tab md-label="Permissions" md-icon="security" v-if="isOwner" id="permissions" :md-active="activeTab === 'permissions'">
         <permissions :resource="application" :resource-url="resourceUrl" :api="api"/>
       </md-tab>
 
-      <md-tab md-label="API" md-icon="cloud" :md-active="activeTab === '2'">
-        <open-api v-if="api" :api="api"/>
+      <md-tab md-label="API" md-icon="cloud" id="api" :md-active="activeTab === 'api'">
+        <open-api v-if="activeTab === 'api' && api" :api="api"/>
       </md-tab>
     </md-tabs>
 
@@ -55,8 +55,10 @@
 </template>
 
 <script>
-import Permissions from '../components/Permissions.vue'
+import {mapState} from 'vuex'
 import OpenApi from 'vue-openapi'
+import Permissions from '../components/Permissions.vue'
+import utils from '../utils.js'
 
 export default {
   name: 'Application',
@@ -70,15 +72,19 @@ export default {
     api: null
   }),
   computed: {
+    ...mapState(['user']),
     applicationLink() {
       if (this.application) return window.CONFIG.publicUrl + '/app/' + this.application.id
     },
     resourceUrl() {
       return window.CONFIG.publicUrl + '/api/v1/applications/' + this.$route.params.applicationId
+    },
+    isOwner() {
+      return utils.isOwner(this.application, this.user)
     }
   },
   mounted() {
-    this.activeTab = this.$route.query.tab || '0'
+    this.activeTab = this.$route.query.tab || 'description'
     this.$http.get(this.resourceUrl).then(result => {
       this.application = result.data
       this.$http.get(this.resourceUrl + '/api-docs.json').then(response => {
@@ -104,6 +110,10 @@ export default {
       }, error => {
         this.$store.dispatch('notifyError', `Erreur ${error.status} pendant la suppression de la configuration de l'application ${this.application.title}`)
       })
+    },
+    changeTab(event) {
+      this.activeTab = this.$refs.tabs.activeTab
+      this.$router.push({query: {tab: this.$refs.tabs.activeTab}})
     }
   }
 }
