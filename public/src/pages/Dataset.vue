@@ -3,11 +3,11 @@
     <md-tabs md-fixed class="md-transparent" ref="tabs" @change="changeTab">
       <md-tab md-label="Description" md-icon="toc" id="description" :md-active="activeTab === 'description'">
         <dataset-info/>
-        <schema v-if="dataset"/>
+        <schema/>
       </md-tab>
 
       <md-tab md-label="Vue tableau" md-icon="view_list" id="tabular" :md-active="activeTab === 'tabular'">
-        <tabular-view v-if="dataset && activeTab === 'tabular'"/>
+        <tabular-view v-if="activeTab === 'tabular'"/>
       </md-tab>
 
       <md-tab md-label="Permissions" v-if="isOwner" md-icon="security" id="permissions" :md-active="activeTab === 'permissions'">
@@ -15,11 +15,11 @@
       </md-tab>
 
       <md-tab md-label="Enrichissement" md-icon="merge_type" id="extend" :md-active="activeTab === 'extend'">
-        <enrich-dataset v-if="dataset && activeTab === 'extend'"/>
+        <enrich-dataset v-if="activeTab === 'extend'"/>
       </md-tab>
 
       <md-tab md-label="Journal" md-icon="event_note" id="journal" :md-active="activeTab === 'journal'">
-        <journal v-if="dataset && activeTab === 'journal'"/>
+        <journal v-if="activeTab === 'journal'"/>
       </md-tab>
 
       <md-tab md-label="API" md-icon="cloud" id="api" :md-active="activeTab === 'api'">
