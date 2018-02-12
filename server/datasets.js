@@ -3,6 +3,8 @@ const ajv = require('ajv')()
 const fs = require('fs-extra')
 const util = require('util')
 const moment = require('moment')
+const promisePipe = require('promisepipe')
+const csvStringify = require('csv-stringify')
 const auth = require('./auth')
 const journals = require('./utils/journals')
 const esUtils = require('./utils/es')
@@ -10,6 +12,7 @@ const filesUtils = require('./utils/files')
 const datasetAPIDocs = require('../contract/dataset-api-docs')
 const permissions = require('./utils/permissions')
 const usersUtils = require('./utils/users')
+const datasetUtils = require('./utils/dataset')
 const findUtils = require('./utils/find')
 const asyncWrap = require('./utils/async-wrap')
 const extensions = require('./utils/extensions')
@@ -82,7 +85,6 @@ router.patch('/:datasetId', asyncWrap(async(req, res) => {
   res.status(200).json(req.body)
 }))
 
-const datasetUtils = require('./utils/dataset')
 const unlink = util.promisify(fs.unlink)
 // Delete a dataset
 router.delete('/:datasetId', asyncWrap(async(req, res) => {
@@ -197,11 +199,23 @@ router.get('/:datasetId/metric_agg', asyncWrap(async(req, res) => {
 }))
 
 // Download the full dataset in its original form
-router.get('/:datasetId/raw/:fileName', (req, res, next) => {
-  if (req.params.fileName !== req.dataset.file.name) return res.sendStatus(404)
+router.get('/:datasetId/raw', (req, res, next) => {
   if (!permissions.can(req.dataset, 'readData', req.user)) return res.sendStatus(403)
-  res.download(datasetUtils.fileName(req.dataset))
+  res.download(datasetUtils.fileName(req.dataset), req.dataset.file.name)
 })
+
+// Download the full dataset with extensions
+router.get('/:datasetId/full', asyncWrap(async (req, res, next) => {
+  if (!permissions.can(req.dataset, 'readData', req.user)) return res.sendStatus(403)
+  res.setHeader('Content-disposition', 'attachment; filename=' + req.dataset.file.name)
+  res.setHeader('Content-type', 'text/csv')
+  await promisePipe(
+    datasetUtils.readStream(req.dataset),
+    extensions.extendStream({db: req.app.get('db'), es: req.app.get('es'), dataset: req.dataset}),
+    csvStringify({header: true}),
+    res
+  )
+}))
 
 router.get('/:datasetId/api-docs.json', (req, res) => {
   // TODO: permission ?

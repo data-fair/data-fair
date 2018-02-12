@@ -29,10 +29,20 @@
 
     <div class="actions-buttons">
       <div style="margin-top: 100px">
-        <md-button class="md-icon-button md-raised md-primary" :href="downloadLink">
-          <md-icon>file_download</md-icon>
-          <md-tooltip md-direction="left">Télécharger les données brutes</md-tooltip>
-        </md-button>
+        <md-menu md-size="4" md-direction="bottom left" ref="downloadMenu">
+          <md-button class="md-icon-button md-raised md-primary" md-menu-trigger>
+            <md-icon>file_download</md-icon>
+          </md-button>
+
+          <md-menu-content>
+            <md-menu-item :href="downloadLink">
+              <span>Fichier d'origine</span>
+            </md-menu-item>
+            <md-menu-item :href="downloadFullLink">
+              <span>Fichier enrichi</span>
+            </md-menu-item>
+          </md-menu-content>
+        </md-menu>
       </div>
       <div>
         <md-button class="md-icon-button md-raised md-warn" id="delete" @click="$refs['delete-dialog'].open()">
@@ -84,7 +94,10 @@ export default {
     ...mapState('dataset', ['dataset', 'api']),
     ...mapGetters('dataset', ['resourceUrl', 'isOwner']),
     downloadLink() {
-      if (this.dataset) return this.resourceUrl + '/raw/' + this.dataset.file.name
+      if (this.dataset) return this.resourceUrl + '/raw'
+    },
+    downloadFullLink() {
+      if (this.dataset) return this.resourceUrl + '/full'
     }
   },
   mounted() {
