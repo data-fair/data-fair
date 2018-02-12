@@ -10,7 +10,7 @@ const es = require('./es')
 const geoUtils = require('./geo')
 
 // Create a function that will transform items from a dataset into inputs for an action
-function prepareMapping(action, schema, extensionKey) {
+function prepareMapping(action, schema, extensionKey, selectFields) {
   const mapping = action.input.map(input => {
     const field = schema.find(f =>
       f['x-refersTo'] === input.concept &&
@@ -25,7 +25,7 @@ function prepareMapping(action, schema, extensionKey) {
     mapping.forEach(m => {
       mappedItem[m[1]] = item.doc[m[0]]
     })
-    // remember a hash of the input.. so that we can store it alongside the resul and use this to reapply
+    // remember a hash of the input.. so that we can store it alongside the result and use this to reapply
     // extension to a new version of the index without using the remote service
     const h = hash(mappedItem)
     mappedItem[idInput] = item.id
@@ -38,7 +38,7 @@ class PrepareInputStream extends Transform {
   constructor(options) {
     super({objectMode: true})
     this.hashes = options.hashes
-    this.mapping = prepareMapping(options.action, options.dataset.schema, options.extensionKey)
+    this.mapping = prepareMapping(options.action, options.dataset.schema, options.extensionKey, options.selectFields)
   }
   _transform(item, encoding, callback) {
     const [mappedItem, h] = this.mapping(item)
@@ -59,6 +59,7 @@ class ExtendStream extends Transform {
     this.indexName = es.indexName(this.options.dataset)
     const extensions = this.options.dataset.extensions || []
     this.mappings = {}
+    this.extensionsMap = {}
     for (let extension of extensions) {
       if (!extension.active) return
       const remoteService = await db.collection('remote-services').findOne({id: extension.remoteService})
@@ -67,6 +68,7 @@ class ExtendStream extends Transform {
       if (!action) continue
       const extensionKey = getExtensionKey(extension.remoteService, extension.action)
       this.mappings[extensionKey] = prepareMapping(action, this.options.dataset.schema, extensionKey)
+      this.extensionsMap[extensionKey] = extension
     }
   }
   async _transform(item, encoding, callback) {
@@ -81,7 +83,12 @@ class ExtendStream extends Transform {
           body: {query: {constant_score: {filter: {term: {[extensionKey + '._hash']: h}}}}}
         })
         if (res.hits.total > 0) {
-          item[extensionKey] = res.hits.hits[0]._source[extensionKey]
+          const extensionResult = res.hits.hits[0]._source[extensionKey]
+          const selectFields = this.extensionsMap[extensionKey].select || []
+          const selectedExtensionResult = Object.keys(extensionResult)
+            .filter(key => key === '_hash' || selectFields.length === 0 || selectFields.includes(key))
+            .reduce((a, key) => { a[key] = extensionResult[key]; return a }, {})
+          item[extensionKey] = selectedExtensionResult
         }
       }
       callback(null, item)
@@ -103,6 +110,19 @@ class ESInputStream extends Readable {
     this.extensionKey = options.extensionKey
     this.stats = options.stats
     this.i = 0
+
+    this.query = {bool: {must_not: {exists: {field: this.extensionKey + '._hash'}}}}
+    if (this.forceNext || !this.extensionKey) {
+      this.query = {match_all: {}}
+    }
+  }
+  async init() {
+    if (!this.stats) return
+    const res = await this.esClient.count({
+      index: this.indexName,
+      body: {query: this.query}
+    })
+    this.stats.missing = res.count
   }
   async _read() {
     if (this.reading) return
@@ -110,16 +130,11 @@ class ESInputStream extends Readable {
     try {
       let res
       if (!this.scrollId) {
-        let query = {bool: {must_not: {exists: {field: this.extensionKey + '._hash'}}}}
-        if (this.forceNext) {
-          query = {match_all: {}}
-        }
         res = await this.esClient.search({
           index: this.indexName,
           scroll: '100s',
-          body: {query}
+          body: {query: this.query}
         })
-        if (this.stats) this.stats.count -= res.hits.total
       } else {
         res = await this.esClient.scroll({scroll_id: this.scrollId, scroll: '100s'})
       }
@@ -152,6 +167,7 @@ class PrepareOutputStream extends Transform {
     this.hashes = options.hashes
     this.extensionKey = options.extensionKey
     const action = options.action
+    this.selectFields = options.selectFields || []
     this.idOutput = action.output.find(output => output.concept === 'http://schema.org/identifier').name
   }
   _transform(chunk, encoding, callback) {
@@ -161,11 +177,14 @@ class PrepareOutputStream extends Transform {
     } catch (err) {
       return callback(new Error('Bad content - ' + chunk))
     }
-    const mappedItem = {doc: {[this.extensionKey]: item}}
+    const selectedItem = Object.keys(item)
+      .filter(itemKey => this.selectFields.length === 0 || this.selectFields.includes(itemKey))
+      .reduce((a, itemKey) => { a[itemKey] = item[itemKey]; return a }, {})
+
+    const mappedItem = {doc: {[this.extensionKey]: selectedItem}}
     mappedItem.id = item[this.idOutput]
-    item._hash = this.hashes[mappedItem.id]
+    selectedItem._hash = this.hashes[mappedItem.id]
     delete this.hashes[mappedItem.id]
-    delete item[this.idOutput]
     callback(null, mappedItem)
   }
 }
@@ -197,13 +216,13 @@ class ESOutputStream extends Writable {
   }
 }
 
-exports.extend = async(app, dataset, remoteService, action, forceNext, indexName) => {
+exports.extend = async(app, dataset, extension, remoteService, action, indexName) => {
   const esClient = app.get('es')
   const db = app.get('db')
   const hashes = {}
   const extensionKey = getExtensionKey(remoteService.id, action.id)
 
-  const stats = {count: dataset.count}
+  const stats = {}
 
   const setProgress = async (error = '') => {
     try {
@@ -220,7 +239,7 @@ exports.extend = async(app, dataset, remoteService, action, forceNext, indexName
     }
   }
 
-  const progressInterval = setInterval(setProgress, 1000)
+  let progressInterval
   try {
     const opts = {
       method: action.operation.method,
@@ -228,7 +247,8 @@ exports.extend = async(app, dataset, remoteService, action, forceNext, indexName
       headers: {
         Accept: 'application/x-ndjson',
         'Content-Type': 'application/x-ndjson'
-      }
+      },
+      qs: {}
     }
     // TODO handle query & cookie header types
     if (remoteService.apiKey.in === 'header') {
@@ -245,16 +265,27 @@ exports.extend = async(app, dataset, remoteService, action, forceNext, indexName
     if (remoteService.owner.type === 'user') {
       opts.headers['x-userId'] = remoteService.owner.id
     }
-    await promisePipe(
-      new ESInputStream({esClient, indexName, forceNext, extensionKey, stats}),
-      new PrepareInputStream({action, dataset, hashes, extensionKey}),
-      request(opts),
-      byline.createStream(),
-      new PrepareOutputStream({action, hashes, extensionKey}),
-      new ESOutputStream({esClient, indexName, stats})
-    )
-    clearInterval(progressInterval)
+    if (extension.select && extension.select.length) {
+      opts.qs.select = extension.select.join(',')
+    }
+    const inputStream = new ESInputStream({esClient, indexName, forceNext: extension.forceNext, extensionKey, stats})
+    await inputStream.init()
+    stats.count = dataset.count - stats.missing
     await setProgress()
+    progressInterval = setInterval(setProgress, 600)
+
+    if (stats.missing !== 0) {
+      await promisePipe(
+        inputStream,
+        new PrepareInputStream({action, dataset, hashes, extensionKey, selectFields: extension.select}),
+        request(opts),
+        byline.createStream(),
+        new PrepareOutputStream({action, hashes, extensionKey, selectFields: extension.select}),
+        new ESOutputStream({esClient, indexName, stats})
+      )
+    }
+    await setProgress()
+    clearInterval(progressInterval)
   } catch (err) {
     // catch the error, as a failure to use remote service should not prevent the dataset
     // to be processed and used
@@ -291,6 +322,7 @@ exports.extendCalculated = async (app, indexName, dataset, geopoint) => {
 }
 
 exports.prepareSchema = async (db, schema, extensions) => {
+  let extensionsFields = []
   for (let extension of extensions) {
     if (!extension.active) continue
     const remoteService = await db.collection('remote-services').findOne({id: extension.remoteService})
@@ -298,25 +330,27 @@ exports.prepareSchema = async (db, schema, extensions) => {
     const action = remoteService.actions.find(action => action.id === extension.action)
     if (!action) continue
     const extensionKey = getExtensionKey(extension.remoteService, extension.action)
-    for (let output of action.output) {
-      if (output.concept && output.concept === 'http://schema.org/identifier') continue
-      const key = extensionKey + '.' + output.name
-      if (!schema.find(field => field.key === key)) {
-        const field = {
+    const extensionId = `${extension.remoteService}/${extension.action}`
+    const selectFields = extension.select || []
+    extensionsFields = extensionsFields.concat(action.output
+      .filter(output => !output.concept || output.concept !== 'http://schema.org/identifier')
+      .filter(output => selectFields.length === 0 || selectFields.includes(output.name))
+      .map(output => {
+        const key = extensionKey + '.' + output.name
+        const existingField = schema.find(field => field.key === key)
+        if (existingField) return existingField
+        return {
           key,
           'x-originalName': output.name,
-          'x-extension': `${extension.remoteService}/${extension.action}`,
+          'x-extension': extensionId,
           'x-refersTo': output.concept,
           title: output.title,
           description: output.description,
           type: output.type || 'string'
         }
-
-        schema.push(field)
-      }
-    }
+      }))
   }
-  return schema
+  return schema.filter(field => !field['x-extension']).concat(extensionsFields)
 }
 
 function getExtensionKey(remoteServiceId, actionId) {

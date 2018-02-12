@@ -49,6 +49,12 @@ module.exports = {
   actions: {
     async fetchInfo({commit, getters}) {
       const dataset = (await Vue.http.get(getters.resourceUrl)).data
+      const extensions = (dataset.extensions || []).map(ext => {
+        ext.error = ext.error || ''
+        ext.progress = ext.progress || 0
+        return ext
+      })
+      Vue.set(dataset, 'extensions', extensions)
       commit('setAny', {dataset})
       const api = (await Vue.http.get(getters.resourceUrl + '/api-docs.json')).data
       commit('setAny', {api})
@@ -62,7 +68,7 @@ module.exports = {
         const newChannel = 'datasets/' + datasetId + '/journal'
         ws.$emit('subscribe', newChannel)
         ws.$on(newChannel, event => {
-          dispatch('fetchInfo')
+          if (event.type === 'index-end') dispatch('notify', 'Le jeu de données a été traité en fonction de vos dernières modifications et est prêt à être utilisé ou édité de nouveau.', {root: true})
           dispatch('addJournalEvent', event)
         })
       }, 2000)
@@ -74,15 +80,20 @@ module.exports = {
     async patch({commit, getters, dispatch}, patch) {
       try {
         await Vue.http.patch(getters.resourceUrl, patch)
-        commit('patch', patch)
         dispatch('notify', 'Le jeu de données a bien été mis à jour.', {root: true})
+        return true
       } catch (error) {
         if (error.status === 409) {
           dispatch('notifyError', `Le jeu de données est en cours de traitement et votre modification n'a pas pu être appliquée. Veuillez essayer de nouveau un peu plus tard.`, {root: true})
         } else {
           dispatch('notifyError', `Erreur ${error.status} pendant la mise à jour du jeu de données`, {root: true})
         }
+        return false
       }
+    },
+    async patchAndCommit({commit, getters, dispatch}, patch) {
+      const patched = await dispatch('patch', patch)
+      if (patched) commit('patch', patch)
     },
     async remove({state, getters, dispatch}) {
       try {

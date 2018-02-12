@@ -37,7 +37,7 @@ async function iter(app, key) {
   const worker = workers[key]
   const dataset = await acquireNext(app.get('db'), worker.filter)
   if (!dataset) return
-  console.log(`Worker "${worker.eventsPrefix}" acquired dataset "${dataset.id}"`)
+  // console.log(`Worker "${worker.eventsPrefix}" acquired dataset "${dataset.id}"`)
   await journals.log(app, dataset, {type: worker.eventsPrefix + '-start'})
   try {
     await worker.process(app, dataset)
@@ -49,7 +49,7 @@ async function iter(app, key) {
     await journals.log(app, dataset, {type: worker.eventsPrefix + '-fail'})
   } finally {
     await locks.release(app.get('db'), 'dataset:' + dataset.id)
-    console.log(`Worker "${worker.eventsPrefix}" released dataset "${dataset.id}"`)
+    // console.log(`Worker "${worker.eventsPrefix}" released dataset "${dataset.id}"`)
   }
 }
 

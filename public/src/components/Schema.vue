@@ -1,6 +1,6 @@
 <template>
   <md-layout md-column>
-    <form @submit.prevent="patch({schema})">
+    <form @submit.prevent="patchAndCommit({schema})">
       <md-layout md-row>
         <h3 class="md-headline" style="flex:1">Schéma</h3>
         <div style="margin-top: 24px;">
@@ -76,7 +76,7 @@ export default {
     }
   },
   methods: {
-    ...mapActions('dataset', ['patch', 'fetchRemoteService']),
+    ...mapActions('dataset', ['patchAndCommit', 'fetchRemoteService']),
     resetSchema() {
       this.schema = JSON.parse(this.originalSchema)
     }

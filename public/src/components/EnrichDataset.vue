@@ -3,13 +3,22 @@
     <p>Les actions d'enrichissement proposées ci-dessous dépendent des concepts associés à ce jeu de données et des services distants configurés.</p>
 
     <md-layout>
-      <md-list v-if="ready">
+      <md-list v-if="ready" class="extensions-list">
         <md-list-item v-for="(extension, i) in dataset.extensions" :key="i">
           <span>
             <md-checkbox v-model="extension.active" class="md-primary"/>
           </span>
           <div class="md-list-text-container">
             <span v-if="remoteServicesMap[extension.remoteService]">{{ remoteServicesMap[extension.remoteService].actions[extension.action].summary }} (service {{ remoteServicesMap[extension.remoteService].title }})</span>
+            <md-input-container v-if="extension.active && remoteServicesMap[extension.remoteService]">
+              <md-select multiple placeholder="Tous les champs en sortie" v-model="extension.select">
+                <md-option v-for="(output, index) in remoteServicesMap[extension.remoteService].actions[extension.action].output.filter(o => !o.concept || o.concept !== 'http://schema.org/identifier')"
+                           :key="index"
+                           :value="output.name">
+                  {{ output.title || output.name }}
+                </md-option>
+              </md-select>
+            </md-input-container>
             <p v-if="extension.active && extension.error" style="color: red;">{{ extension.error }}</p>
           </div>
           <span v-if="extension.active && extension.progress === 1">
@@ -31,10 +40,12 @@
 </template>
 
 <script>
+import vSelect from 'vue-select'
 import { mapState, mapActions, mapGetters } from 'vuex'
 const ws = require('../ws.js')
 
 export default {
+  components: {vSelect},
   data() {
     return {ready: false}
   },
@@ -49,18 +60,17 @@ export default {
   watch: {
     remoteServicesMap() {
       // Add/remove available extensions
-      const extensions = (this.dataset.extensions || []).filter(e => {
+      this.dataset.extensions = this.dataset.extensions.filter(e => {
         return this.remoteServicesMap[e.remoteService] && this.remoteServicesMap[e.remoteService].actions[e.action]
       })
       Object.keys(this.remoteServicesMap).forEach(s => {
         Object.keys(this.remoteServicesMap[s].actions).forEach(a => {
-          if (!extensions.find(e => e.remoteService === s && e.action === a)) {
-            extensions.push({remoteService: s, action: a, active: false})
+          if (!this.dataset.extensions.find(e => e.remoteService === s && e.action === a)) {
+            this.dataset.extensions.push({remoteService: s, action: a, active: false, progress: 0})
           }
         })
       })
       this.ready = true
-      this.$set(this.dataset, 'extensions', extensions)
     }
   },
   mounted() {
@@ -69,8 +79,8 @@ export default {
     ws.$on(this.channel, info => {
       const extension = this.dataset.extensions.find(e => e.remoteService === info.remoteService && e.action === info.action)
       if (extension) {
-        this.$set(extension, 'progress', info.progress)
-        this.$set(extension, 'error', info.error)
+        extension.progress = info.progress
+        extension.error = info.error
       }
     })
   },
@@ -80,18 +90,29 @@ export default {
   methods: {
     ...mapActions('dataset', ['fetchRemoteServices', 'patch']),
     save(forceNextExtension) {
-      const extensions = this.dataset.extensions.map(ext => Object.assign({}, ext)).map(ext => {
+      this.dataset.extensions.forEach(ext => {
         if (forceNextExtension && forceNextExtension.remoteService === ext.remoteService && forceNextExtension.action === ext.action) {
           ext.forceNext = true
+          ext.progress = 0
+        } else {
+          ext.forceNext = false
         }
+        ext.progress = ext.progress || 0
         ext.error = ext.error || ''
-        return ext
       })
-      this.patch({extensions})
+      this.patch({extensions: this.dataset.extensions})
     }
   }
 }
 </script>
 
-<style lang="css">
+<style lang="less">
+.extensions-list {
+  .md-input-container {
+    padding-top: 4px;
+    .md-select {
+      width: auto;
+    }
+  }
+}
 </style>

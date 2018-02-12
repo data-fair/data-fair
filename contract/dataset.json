@@ -168,6 +168,13 @@
           "action": {
             "type": "string",
             "description": "L'identifiant de l'action du service distant à utiliser pour l'enrichissement"
+          },
+          "select": {
+            "type": "array",
+            "description": "La liste des champs à sélectionner dans le retour du service distant. Tous les champs si absent ou vide.",
+            "items": {
+              "type": "string"
+            }
           }
         }
       }
