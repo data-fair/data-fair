@@ -64,6 +64,11 @@
   "identifiers": ["http://www.datatourisme.fr/ontology/core/1.0/#siret"],
   "type": "integer"
 }, {
+  "title": "SIREN",
+  "description": "Le numéro SIREN est un identifiant numérique d'entreprise (9 chiffres)",
+  "identifiers": ["http://dbpedia.org/ontology/siren"],
+  "type": "integer"
+}, {
   "title": "Code APE",
   "description": "Le code APE (activité principale exercée) permet d'identifier la branche d'activité principale de l'entreprise ou du travailleur indépendant en référence à la nomenclature des activités françaises",
   "identifiers": ["http://www.datatourisme.fr/ontology/core/1.0#apeNaf"],

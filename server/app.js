@@ -15,7 +15,7 @@ const status = require('./status')
 const workers = require('./workers')
 
 const app = express()
-app.use(bodyParser.json({limit: '100kb'}))
+app.use(bodyParser.json({limit: '1000kb'}))
 app.use(cookieParser())
 
 // Business routers

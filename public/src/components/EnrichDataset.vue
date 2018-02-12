@@ -40,12 +40,11 @@
 </template>
 
 <script>
-import vSelect from 'vue-select'
 import { mapState, mapActions, mapGetters } from 'vuex'
 const ws = require('../ws.js')
 
 export default {
-  components: {vSelect},
+  components: {},
   data() {
     return {ready: false}
   },
