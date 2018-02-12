@@ -38,7 +38,7 @@
             <md-menu-item :href="downloadLink">
               <span>Fichier d'origine</span>
             </md-menu-item>
-            <md-menu-item :href="downloadFullLink">
+            <md-menu-item :href="downloadFullLink" :disabled="!dataset.extensions || !dataset.extensions.find(e => e.active)">
               <span>Fichier enrichi</span>
             </md-menu-item>
           </md-menu-content>
