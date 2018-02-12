@@ -12,6 +12,12 @@
             <span v-if="remoteServicesMap[extension.remoteService]">{{ remoteServicesMap[extension.remoteService].actions[extension.action].summary }} (service {{ remoteServicesMap[extension.remoteService].title }})</span>
             <p v-if="extension.active && extension.error" style="color: red;">{{ extension.error }}</p>
           </div>
+          <span v-if="extension.active && extension.progress === 1">
+            <md-button class="md-icon-button md-warn" @click="save(extension)">
+              <md-tooltip>Recommencer et écraser les valeurs enrichies précédemment</md-tooltip>
+              <md-icon>play_circle_filled</md-icon>
+            </md-button>
+          </span>
           <div style="position:absolute;bottom:0;left:0;right:0;" v-if="extension.active && extension.progress !== undefined">
             <md-progress :md-progress="100 * (extension.progress || 0)"/>
           </div>
@@ -73,11 +79,15 @@ export default {
   },
   methods: {
     ...mapActions('dataset', ['fetchRemoteServices', 'patch']),
-    save() {
-      this.dataset.extensions.forEach(ext => {
+    save(forceNextExtension) {
+      const extensions = this.dataset.extensions.map(ext => Object.assign({}, ext)).map(ext => {
+        if (forceNextExtension && forceNextExtension.remoteService === ext.remoteService && forceNextExtension.action === ext.action) {
+          ext.forceNext = true
+        }
         ext.error = ext.error || ''
+        return ext
       })
-      this.patch({extensions: this.dataset.extensions})
+      this.patch({extensions})
     }
   }
 }
