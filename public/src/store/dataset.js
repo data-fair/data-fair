@@ -54,12 +54,11 @@ module.exports = {
       commit('setAny', {api})
     },
     async setId({commit, getters, dispatch, state}, datasetId) {
-      commit('setAny', {datasetId, dataset: null, api: null})
+      commit('setAny', {datasetId})
       dispatch('fetchInfo')
 
       // TODO: better way to wait for connected state of websocket
       setTimeout(() => {
-        if (state.datasetId) ws.$emit('unsubscribe', 'datasets/' + state.datasetId + '/journal')
         const newChannel = 'datasets/' + datasetId + '/journal'
         ws.$emit('subscribe', newChannel)
         ws.$on(newChannel, event => {
@@ -67,6 +66,10 @@ module.exports = {
           dispatch('addJournalEvent', event)
         })
       }, 2000)
+    },
+    clear({commit, state}) {
+      if (state.datasetId) ws.$emit('unsubscribe', 'datasets/' + state.datasetId + '/journal')
+      commit('setAny', {datasetId: null, dataset: null, api: null})
     },
     async patch({commit, getters, dispatch}, patch) {
       try {

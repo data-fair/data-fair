@@ -88,7 +88,8 @@ export default {
     DatasetInfo
   },
   data: () => ({
-    activeTab: null
+    activeTab: null,
+    datasetId: null
   }),
   computed: {
     ...mapState('dataset', ['dataset', 'api']),
@@ -105,9 +106,12 @@ export default {
     this.setId(this.$route.params.datasetId)
     this.fetchVocabulary()
   },
+  destroyed() {
+    this.clear()
+  },
   methods: {
     ...mapActions(['fetchVocabulary']),
-    ...mapActions('dataset', ['setId', 'patch', 'remove']),
+    ...mapActions('dataset', ['setId', 'patch', 'remove', 'clear']),
     async confirmRemove() {
       this.$refs['delete-dialog'].close()
       await this.remove()
