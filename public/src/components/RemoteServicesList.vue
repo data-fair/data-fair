@@ -9,9 +9,7 @@
               <router-link :to="{name: 'RemoteService', params:{remoteServiceId:remoteService.id}}">{{ remoteService.title }}</router-link>
             </div>
           </md-card-header>
-          <md-card-content>
-            {{ remoteService.description }}
-          </md-card-content>
+          <md-card-content v-html="remoteService.description"/>
           <md-layout flex="true"/>
           <md-card-actions>
           <!-- <a :href="remoteService.links.fields" target="_blank" v-if="remoteService.links.fields">

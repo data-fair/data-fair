@@ -13,7 +13,7 @@
             </md-option>
           </md-select>
         </md-input-container>
-        <p v-if="apiDocUrl">{{ configurableRemoteServices.find(a => a.href === apiDocUrl).description }}</p>
+        <p v-if="apiDocUrl" v-html="configurableRemoteServices.find(a => a.href === apiDocUrl).description"/>
       </md-step>
       <md-step :md-editable="true" :md-disabled="!apiDoc" :md-label="currentStep > 1 ? 'Propriétaire choisi' : 'Choix du propriétaire'" :md-continue="apiDoc !== null && owner !== null" :md-message="owner ? (owners[owner].type === 'user' ? 'Vous même' : userOrganizations.find(o => o.id === owners[owner].id).name): 'Choisissez dans la liste'"
                md-button-back="Précédent" md-button-continue="Enregistrer la configuration">

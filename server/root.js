@@ -1,4 +1,5 @@
 const express = require('express')
+const marked = require('marked')
 
 const router = express.Router()
 
@@ -9,6 +10,8 @@ const ajv = require('ajv')()
 const openApiSchema = require('../contract/openapi-3.0.json')
 const validateApi = ajv.compile(openApiSchema)
 const config = require('config')
+
+const remoteServices = config.remoteServices.map(s => ({...s, description: marked(s.description)}))
 
 router.get('/api-docs.json', (req, res) => {
   res.json(apiDocs)
@@ -26,7 +29,7 @@ router.post('/_check-api', (req, res, next) => {
 })
 
 router.get('/configurable-remote-services', (req, res) => {
-  res.json(config.remoteServices)
+  res.json(remoteServices)
 })
 
 router.get('/configurable-applications', (req, res) => {
