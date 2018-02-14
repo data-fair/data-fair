@@ -11,9 +11,27 @@
           <div class="md-list-text-container">
             <span v-if="remoteServicesMap[extension.remoteService]">{{ remoteServicesMap[extension.remoteService].actions[extension.action].summary }} (service {{ remoteServicesMap[extension.remoteService].title }})</span>
             <md-input-container v-if="extension.active && remoteServicesMap[extension.remoteService]">
-              <md-select multiple placeholder="Tous les champs en sortie" v-model="extension.select">
-                <md-option v-for="(output, index) in remoteServicesMap[extension.remoteService].actions[extension.action].output.filter(o => !o.concept || o.concept !== 'http://schema.org/identifier')"
-                           :key="index"
+
+              <md-select v-if="selectFields[extension.remoteService + '_' + extension.action].tags.length" multiple placeholder="Tous les champs en sortie" v-model="extension.select">
+                <template v-for="tag in selectFields[extension.remoteService + '_' + extension.action].tags">
+                  <md-subheader :key="tag">{{ tag }}</md-subheader>
+                  <md-option v-for="output in selectFields[extension.remoteService + '_' + extension.action].fields.filter(field => field['x-tags'].includes(tag))"
+                             :key="tag + output.name"
+                             :value="output.name">
+                    {{ output.title || output.name }}
+                  </md-option>
+                </template>
+                <md-subheader>Autres</md-subheader>
+                <md-option v-for="output in selectFields[extension.remoteService + '_' + extension.action].fields.filter(field => !field['x-tags'].length)"
+                           :key="output.name"
+                           :value="output.name">
+                  {{ output.title || output.name }}
+                </md-option>
+              </md-select>
+
+              <md-select v-else multiple placeholder="Tous les champs en sortie" v-model="extension.select">
+                <md-option v-for="output in selectFields[extension.remoteService + '_' + extension.action].fields"
+                           :key="output.name"
                            :value="output.name">
                   {{ output.title || output.name }}
                 </md-option>
@@ -54,6 +72,18 @@ export default {
     ...mapGetters('dataset', ['remoteServicesMap']),
     channel() {
       return 'datasets/' + this.dataset.id + '/extend-progress'
+    },
+    selectFields() {
+      const res = {}
+      this.dataset.extensions.forEach(extension => {
+        const fields = this.remoteServicesMap[extension.remoteService].actions[extension.action].output
+          .map(field => { field['x-tags'] = field['x-tags'] || []; return field })
+          .filter(o => !o.concept || o.concept !== 'http://schema.org/identifier')
+          .sort((a, b) => a.title.localeCompare(b.title))
+        const tags = [...new Set(Array.concat([], ...fields.map(f => f['x-tags'])))].sort()
+        res[extension.remoteService + '_' + extension.action] = {fields, tags}
+      })
+      return res
     }
   },
   watch: {
@@ -107,6 +137,7 @@ export default {
 
 <style lang="less">
 .extensions-list {
+  max-width: 100%;
   .md-input-container {
     padding-top: 4px;
     .md-select {

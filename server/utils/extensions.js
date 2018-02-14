@@ -91,10 +91,10 @@ class ExtendStream extends Transform {
           item[extensionKey] = selectedExtensionResult
         }
       }
-      callback(null, item)
     } catch (err) {
-      callback(err)
+      return callback(err)
     }
+    callback(null, item)
   }
 }
 

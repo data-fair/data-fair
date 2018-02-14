@@ -8,6 +8,7 @@ const axios = require('axios')
 const requestProxy = require('express-request-proxy')
 const remoteServiceAPIDocs = require('../contract/remote-service-api-docs')
 const matchstick = require('matchstick')
+const mongoEscape = require('mongo-escape')
 
 const ajv = require('ajv')()
 const remoteServiceSchema = require('../contract/remote-service.js')
@@ -59,7 +60,7 @@ router.get('', auth.optionalJwtMiddleware, asyncWrap(async(req, res) => {
     remoteServices.find(query).count()
   ]
   const [results, count] = await Promise.all(mongoQueries)
-  res.json({results, count})
+  res.json({results: results.map(result => mongoEscape.unescape(result, true)), count})
 }))
 
 // Create an remote Api
@@ -102,20 +103,21 @@ router.post('', auth.jwtMiddleware, asyncWrap(async(req, res) => {
     })
   }
 
-  await req.app.get('db').collection('remote-services').insertOne(service)
+  await req.app.get('db').collection('remote-services').insertOne(mongoEscape.escape(service, true))
   res.status(201).json(service)
 }))
 
 // Middlewares
 router.use('/:remoteServiceId', auth.optionalJwtMiddleware, asyncWrap(async(req, res, next) => {
-  req.remoteService = await req.app.get('db').collection('remote-services').findOne({
+  const service = await req.app.get('db').collection('remote-services').findOne({
     id: req.params.remoteServiceId
   }, {
     fields: {
       _id: 0
     }
   })
-  if (!req.remoteService) return res.status(404).send('Remote Api not found')
+  if (!service) return res.status(404).send('Remote Api not found')
+  req.remoteService = mongoEscape.unescape(service, true)
   next()
 }))
 
@@ -146,7 +148,7 @@ router.patch('/:remoteServiceId', asyncWrap(async(req, res) => {
     patch.actions = computeActions(patch.apiDoc)
   }
 
-  await req.app.get('db').collection('remote-services').updateOne({id: req.params.remoteServiceId}, {'$set': patch})
+  await req.app.get('db').collection('remote-services').updateOne({id: req.params.remoteServiceId}, {'$set': mongoEscape.escape(patch, true)})
   res.status(200).json(patch)
 }))
 
@@ -174,7 +176,7 @@ router.post('/:remoteServiceId/_update', asyncWrap(async(req, res) => {
   req.remoteService.actions = computeActions(req.remoteService.apiDoc)
   await req.app.get('db').collection('remote-services').updateOne({
     id: req.params.remoteServiceId
-  }, req.remoteService)
+  }, mongoEscape.escape(req.remoteService, true))
   res.status(200).json(req.remoteService)
 }))
 

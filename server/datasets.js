@@ -1,3 +1,4 @@
+const { Transform } = require('stream')
 const express = require('express')
 const ajv = require('ajv')()
 const fs = require('fs-extra')
@@ -5,6 +6,7 @@ const util = require('util')
 const moment = require('moment')
 const promisePipe = require('promisepipe')
 const csvStringify = require('csv-stringify')
+const flatten = require('flat')
 const auth = require('./auth')
 const journals = require('./utils/journals')
 const esUtils = require('./utils/es')
@@ -212,6 +214,7 @@ router.get('/:datasetId/full', asyncWrap(async (req, res, next) => {
   await promisePipe(
     datasetUtils.readStream(req.dataset),
     extensions.extendStream({db: req.app.get('db'), es: req.app.get('es'), dataset: req.dataset}),
+    new Transform({transform(chunk, encoding, callback) { callback(null, flatten(chunk)) }, objectMode: true}),
     csvStringify({header: true}),
     res
   )
