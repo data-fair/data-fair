@@ -18,13 +18,13 @@
       <md-table @sort="orderBy">
         <md-table-header>
           <md-table-row>
-            <md-table-head v-for="field in dataset.schema" :key="field.key" :md-tooltip="field.description || (field['x-refersTo'] && vocabulary && vocabulary[field['x-refersTo']] && vocabulary[field['x-refersTo']].description)" :md-numeric="field.type === 'number' || field.type === 'integer'" :md-sort-by="field.key">{{ field.title || field['x-originalName'] }}</md-table-head>
+            <md-table-head v-for="field in dataset.schema" :key="field.key" :md-tooltip="field.description || (field['x-refersTo'] && vocabulary && vocabulary[field['x-refersTo']] && vocabulary[field['x-refersTo']].description)" :md-sort-by="field.key">{{ field.title || field['x-originalName'] }}</md-table-head>
           </md-table-row>
         </md-table-header>
 
         <md-table-body>
           <md-table-row v-for="(row, i) in data.results" :key="i">
-            <md-table-cell v-for="field in dataset.schema" :key="field.key" :md-numeric="field.type === 'number' || field.key.type === 'integer'">{{ ((row[field.key] === undefined || row[field.key] === null ? '' : row[field.key]) + '') | truncate(50) }}</md-table-cell>
+            <md-table-cell v-for="field in dataset.schema" :key="field.key">{{ ((row[field.key] === undefined || row[field.key] === null ? '' : row[field.key]) + '') | truncate(50) }}</md-table-cell>
           </md-table-row>
         </md-table-body>
       </md-table>
