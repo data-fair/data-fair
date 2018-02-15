@@ -52,6 +52,7 @@ module.exports = {
       const extensions = (dataset.extensions || []).map(ext => {
         ext.error = ext.error || ''
         ext.progress = ext.progress || 0
+        ext.select = ext.select || []
         return ext
       })
       Vue.set(dataset, 'extensions', extensions)

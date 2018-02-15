@@ -2,16 +2,16 @@
   <div class="dataset" v-if="dataset">
     <md-tabs md-fixed class="md-transparent" ref="tabs" @change="changeTab">
       <md-tab md-label="Description" md-icon="toc" id="description" :md-active="activeTab === 'description'">
-        <dataset-info/>
-        <schema/>
+        <dataset-info v-if="activeTab === 'description' || initialLoad"/>
+        <schema v-if="activeTab === 'description' || initialLoad"/>
       </md-tab>
 
       <md-tab md-label="Vue tableau" md-icon="view_list" id="tabular" :md-active="activeTab === 'tabular'">
-        <tabular-view v-if="activeTab === 'tabular'"/>
+        <tabular-view v-if="activeTab === 'tabular' || initialLoad"/>
       </md-tab>
 
       <md-tab md-label="Permissions" v-if="isOwner" md-icon="security" id="permissions" :md-active="activeTab === 'permissions'">
-        <permissions :resource="dataset" :resource-url="resourceUrl" :api="api"/>
+        <permissions :resource="dataset" :resource-url="resourceUrl" :api="api" v-if="activeTab === 'permissions'"/>
       </md-tab>
 
       <md-tab md-label="Enrichissement" md-icon="merge_type" id="extend" :md-active="activeTab === 'extend'">
@@ -19,11 +19,11 @@
       </md-tab>
 
       <md-tab md-label="Journal" md-icon="event_note" id="journal" :md-active="activeTab === 'journal'">
-        <journal v-if="activeTab === 'journal'"/>
+        <journal v-if="activeTab === 'journal' || initialLoad"/>
       </md-tab>
 
       <md-tab md-label="API" md-icon="cloud" id="api" :md-active="activeTab === 'api'">
-        <open-api v-if="api && activeTab === 'api'" :api="api"/>
+        <open-api :api="api" v-if="activeTab === 'api' || initialLoad"/>
       </md-tab>
     </md-tabs>
 
@@ -89,7 +89,8 @@ export default {
   },
   data: () => ({
     activeTab: null,
-    datasetId: null
+    datasetId: null,
+    initialLoad: false
   }),
   computed: {
     ...mapState('dataset', ['dataset', 'api']),
@@ -105,6 +106,9 @@ export default {
     this.activeTab = this.$route.query.tab || 'description'
     this.setId(this.$route.params.datasetId)
     this.fetchVocabulary()
+    setTimeout(() => {
+      this.initialLoad = true
+    }, 1000)
   },
   destroyed() {
     this.clear()
@@ -118,6 +122,7 @@ export default {
       this.$router.push({name: 'Datasets'})
     },
     changeTab(event) {
+      this.changingTab = true
       this.activeTab = this.$refs.tabs.activeTab
       this.$router.push({query: {tab: this.$refs.tabs.activeTab}})
     }
