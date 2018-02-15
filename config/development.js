@@ -7,6 +7,11 @@ module.exports = {
     // in seconds
     ttl: 4
   },
+  /* For virtual box debugging
+  publicUrl: 'http://10.0.2.2:5600',
+  wsPublicUrl: 'ws://10.0.2.2:5600',
+  directoryUrl: 'https://staging.koumoul.com',
+  */
   applications: [{
     title: 'Infos parcelles (recette)',
     description: 'Cette application permet de visualiser des informations additionnelles sur certaines parcelles et de les mettre en évidence.',

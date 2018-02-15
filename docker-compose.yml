@@ -17,6 +17,8 @@ services:
       - 5700:8080
     environment:
       - PUBLIC_URL=http://localhost:5700
+      # For virtual box debugging
+      # - PUBLIC_URL=http://10.0.2.2:5700
     volumes:
       - ./test/resources/users.json:/webapp/resources/users.json
       - ./test/resources/organizations.json:/webapp/resources/organizations.json

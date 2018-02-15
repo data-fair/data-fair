@@ -5,6 +5,7 @@ const multer = require('multer')
 const createError = require('http-errors')
 const datasetUtils = require('./dataset')
 const slug = require('slug')
+const mime = require('mime-types')
 
 function uploadDir(req) {
   return path.join(config.dataDir, req.get('x-organizationId') ? 'organization' : 'user', req.get('x-organizationId') || req.user.id)
@@ -77,6 +78,8 @@ const upload = multer({
       if (req.storageRemaining === 0) return cb(createError(429, 'Requested storage exceeds the authorized limit'))
     }
 
+    // mime type is broken on windows it seems.. detect based on extension instead
+    file.mimetype = mime.lookup(file.originalname)
     if (!allowedTypes.has(file.mimetype)) return cb(createError(400, file.mimetype + ' type is not supported'))
 
     cb(null, true)
