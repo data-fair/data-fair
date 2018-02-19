@@ -56,16 +56,13 @@ app.use('/*', (req, res) => {
   res.send(renderedIndex)
 })
 
-// Error handling to complement express default error handling. TODO do something useful of errors.
+// Error management
 app.use((err, req, res, next) => {
   if (err.name === 'UnauthorizedError') {
     return res.status(401).send('invalid token...')
   }
-  // console.error('Error, what to do ?', err.stack)
-
-  // Default error handler of express is actually not bad.
-  // It will send stack to client only if not in production and manage interrupted streams.
-  next(err)
+  if (err.statusCode === 500) console.error('Error in express route', err)
+  if (!res.headersSent) res.status(err.statusCode).send(err.message)
 })
 
 const server = http.createServer(app)
