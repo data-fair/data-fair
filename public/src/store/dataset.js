@@ -80,8 +80,10 @@ module.exports = {
     },
     async patch({commit, getters, dispatch}, patch) {
       try {
+        const silent = patch.silent
+        delete patch.silent
         await Vue.http.patch(getters.resourceUrl, patch)
-        dispatch('notify', 'Le jeu de données a bien été mis à jour.', {root: true})
+        if (!silent) dispatch('notify', 'Le jeu de données a bien été mis à jour.', {root: true})
         return true
       } catch (error) {
         if (error.status === 409) {
@@ -119,7 +121,8 @@ module.exports = {
     async fetchRemoteServices({getters, commit, state}) {
       let remoteServices = []
       if (getters.concepts.size) {
-        const res = await Vue.http.get(window.CONFIG.publicUrl + '/api/v1/remote-services?input-concepts=' + [...getters.concepts].map(encodeURIComponent).join(','))
+        const inputConcepts = [...getters.concepts].filter(c => c !== 'http://schema.org/identifier').map(encodeURIComponent).join(',')
+        const res = await Vue.http.get(window.CONFIG.publicUrl + '/api/v1/remote-services?input-concepts=' + inputConcepts)
         remoteServices = res.data.results.filter(s => s.owner.type === state.dataset.owner.type && s.owner.id === state.dataset.owner.id)
       }
       commit('setAny', {remoteServices})

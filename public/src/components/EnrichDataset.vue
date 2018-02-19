@@ -79,7 +79,7 @@ export default {
         const fields = this.remoteServicesMap[extension.remoteService].actions[extension.action].output
           .map(field => { field['x-tags'] = field['x-tags'] || []; return field })
           .filter(o => !o.concept || o.concept !== 'http://schema.org/identifier')
-          .sort((a, b) => a.title.localeCompare(b.title))
+          .sort((a, b) => (a.title || a.name).localeCompare(b.title || b.name))
         const tags = [...new Set(Array.concat([], ...fields.map(f => f['x-tags'])))].sort()
         res[extension.remoteService + '_' + extension.action] = {fields, tags}
       })
@@ -129,7 +129,7 @@ export default {
         ext.progress = ext.progress || 0
         ext.error = ext.error || ''
       })
-      this.patch({extensions: this.dataset.extensions})
+      this.patch({extensions: this.dataset.extensions, silent: true})
     }
   }
 }
