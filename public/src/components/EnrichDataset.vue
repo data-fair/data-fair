@@ -10,7 +10,7 @@
           </span>
           <div class="md-list-text-container">
             <span v-if="remoteServicesMap[extension.remoteService]">{{ remoteServicesMap[extension.remoteService].actions[extension.action].summary }} (service {{ remoteServicesMap[extension.remoteService].title }})</span>
-            <md-input-container v-if="extension.active && remoteServicesMap[extension.remoteService]">
+            <md-input-container v-if="extension.active && remoteServicesMap[extension.remoteService] && selectFields[extension.remoteService + '_' + extension.action].fields">
 
               <md-select v-if="selectFields[extension.remoteService + '_' + extension.action].tags.length" multiple placeholder="Tous les champs en sortie" v-model="extension.select">
                 <template v-for="tag in selectFields[extension.remoteService + '_' + extension.action].tags">
@@ -37,7 +37,7 @@
                 </md-option>
               </md-select>
             </md-input-container>
-            <p v-if="extension.active && extension.error" style="color: red;">{{ extension.error }}</p>
+            <p v-if="extension.active && extension.error" class="error">Erreur récente: {{ extension.error }}</p>
           </div>
           <span v-if="extension.active && extension.progress === 1">
             <md-button class="md-icon-button md-warn" @click="save(extension)">
@@ -143,6 +143,13 @@ export default {
     .md-select {
       width: auto;
     }
+    &:after {
+      height: 0;
+    }
+  }
+  .error {
+    color: red;
+    padding-bottom: 16px;
   }
 }
 </style>
