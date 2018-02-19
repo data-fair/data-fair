@@ -289,7 +289,7 @@ exports.extend = async(app, dataset, extension, remoteService, action) => {
   } catch (err) {
     // catch the error, as a failure to use remote service should not prevent the dataset
     // to be processed and used
-    console.error('Failure to extend using remote service', err)
+    console.error('Failure to extend using remote service', err.message)
     clearInterval(progressInterval)
     await setProgress(err.message)
   }
