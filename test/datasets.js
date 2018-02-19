@@ -70,7 +70,7 @@ test('Upload new dataset in user zone', async t => {
   const ax = await testUtils.axios('dmeadus0@answers.com')
   const form = new FormData()
   form.append('file', datasetFd, 'dataset1.csv')
-  const res = await ax.post('/api/v1/datasets', form, {headers: testUtils.formHeaders(form)})
+  let res = await ax.post('/api/v1/datasets', form, {headers: testUtils.formHeaders(form)})
   t.is(res.status, 201)
   t.is(res.data.owner.type, 'user')
   t.is(res.data.owner.id, 'dmeadus0')
@@ -108,7 +108,7 @@ test('Fail to upload new dataset when not authenticated', async t => {
   }
 })
 
-test('Upload dataset - full test with webhooks', async t => {
+test.only('Upload dataset - full test with webhooks', async t => {
   const wsCli = new WebSocket(config.publicUrl)
   const ax = await testUtils.axios('cdurning2@desdev.cn')
   await ax.put('/api/v1/settings/user/cdurning2', {webhooks: [{title: 'test', events: ['finalize-end'], url: 'http://localhost:5900'}]})
@@ -157,4 +157,12 @@ test('Upload dataset - full test with webhooks', async t => {
   schema.find(field => field.key === 'lon')['x-refersTo'] = 'http://schema.org/longitude'
   await ax.patch(webhook.href, {schema: schema})
   await eventToPromise(notifier, 'webhook')
+  // Delete the dataset
+  res = await ax.delete('/api/v1/datasets/' + datasetId)
+  t.is(res.status, 204)
+  try {
+    await ax.get('/api/v1/datasets/' + datasetId)
+  } catch (err) {
+    t.is(err.status, 404)
+  }
 })

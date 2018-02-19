@@ -3,7 +3,7 @@ const config = require('config')
 const elasticsearch = require('elasticsearch')
 const createError = require('http-errors')
 const flatten = require('flat')
-const sha1 = crypto.createHash('sha1')
+const crypto = require('crypto')
 const geohash = require('./geohash')
 const tiles = require('./tiles')
 const geoUtils = require('../utils/geo')
@@ -55,20 +55,30 @@ exports.indexDefinition = (dataset) => {
   return body
 }
 
+function indexPrefix(dataset) {
+  return `${indexName(dataset)}-${crypto.createHash('sha1').update(dataset.id).digest('hex').slice(0, 12)}`
+}
+
 exports.initDatasetIndex = async (client, dataset) => {
-  const tempId = `${indexName(dataset)}-${Date.now()}`
+  const tempId = `${indexPrefix(dataset)}-${Date.now()}`
   const body = exports.indexDefinition(dataset)
   await client.indices.create({index: tempId, body})
   return tempId
 }
 
+exports.delete = async (client, dataset) => {
+  await client.indices.deleteAlias({name: indexName(dataset), index: '_all'})
+  await client.indices.delete({index: `${indexPrefix(dataset)}-*`})
+}
+
 exports.switchAlias = async (client, dataset, tempId) => {
   const name = indexName(dataset)
   // Delete all other indices from this dataset
-  const previousIndices = await client.indices.get({index: `${name}-*`})
+  const previousIndices = await client.indices.get({index: `${indexPrefix(dataset)}-*`})
   for (let key in previousIndices) {
-    if (key !== tempId && key !== name) await client.indices.delete({index: key})
+    if (key !== tempId) await client.indices.delete({index: key})
   }
+  await client.indices.deleteAlias({name, index: '_all', ignore: [404]})
   await client.indices.putAlias({name, index: tempId})
 }
 

@@ -108,6 +108,7 @@ router.delete('/:datasetId', asyncWrap(async(req, res) => {
   await req.app.get('db').collection('journals').deleteOne({
     id: req.params.datasetId
   })
+  await esUtils.delete(req.app.get('es'), req.dataset)
   res.sendStatus(204)
 }))
 
