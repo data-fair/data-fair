@@ -31,9 +31,9 @@ test('Process newly uploaded dataset', async t => {
   t.is(dateField.type, 'string')
   t.is(dateField.format, 'date')
 
-  // ES indexation
-  dataset = await workers.hook('indexer')
-  t.is(dataset.status, 'indexed')
+  // ES indexation and finalization
+  dataset = await workers.hook('finalizer')
+  t.is(dataset.status, 'finalized')
   t.is(dataset.count, 2)
   const idProp = dataset.schema.find(p => p.key === 'id')
   t.is(idProp['x-cardinality'], 2)
@@ -52,8 +52,8 @@ test('Process newly uploaded dataset', async t => {
   t.is(res.status, 200)
 
   // Second ES indexation
-  dataset = await workers.hook('indexer')
-  t.is(dataset.status, 'indexed')
+  dataset = await workers.hook('finalizer')
+  t.is(dataset.status, 'finalized')
   t.is(dataset.count, 2)
   const esIndices2 = await test.app.get('es').indices.get({index: esUtils.indexName(dataset)})
   const esIndex2 = Object.values(esIndices2)[0]

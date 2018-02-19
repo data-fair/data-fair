@@ -17,7 +17,7 @@ other,unknown address
   form.append('file', content, 'dataset.csv')
   let res = await ax.post('/api/v1/datasets', form, {headers: testUtils.formHeaders(form)})
   t.is(res.status, 201)
-  await workers.hook('indexer')
+  let dataset = await workers.hook('finalizer')
 
   // A geocoder remote service
   res = await ax.post('/api/v1/remote-services', {
@@ -33,34 +33,21 @@ other,unknown address
     .post('/coords').reply(200, (uri, requestBody) => {
       const inputs = requestBody.trim().split('\n').map(JSON.parse)
       t.is(inputs.length, 2)
-      t.deepEqual(Object.keys(inputs[0]), ['key'])
-      return inputs.map(input => ({key: input.key}))
+      t.deepEqual(Object.keys(inputs[0]), ['q', 'key'])
+      return inputs.map(input => ({key: input.key, lat: 10, lon: 10}))
         .map(JSON.stringify).join('\n') + '\n'
     })
-  res = await ax.patch('/api/v1/datasets/dataset', {extensions: [{active: true, remoteService: remoteServiceId, action: 'postCoords'}]})
+  dataset.schema.find(field => field.key === 'adr')['x-refersTo'] = 'http://schema.org/address'
+  res = await ax.patch('/api/v1/datasets/dataset', {
+    schema: dataset.schema,
+    extensions: [{active: true, remoteService: remoteServiceId, action: 'postCoords'}]
+  })
   t.is(res.status, 200)
-  let dataset = await workers.hook('indexer')
+  dataset = await workers.hook('finalizer')
   nockScope.done()
   const extensionKey = `_ext_${remoteServiceId}_postCoords`
   t.truthy(dataset.schema.find(field => field.key === extensionKey + '.lat'))
   t.truthy(dataset.schema.find(field => field.key === extensionKey + '.lon'))
-  // A search to check results
-  res = await ax.get(`/api/v1/datasets/dataset/lines`)
-  t.is(res.data.total, 2)
-  t.truthy(res.data.results[0][extensionKey + '._hash'])
-
-  // Patch dataset to add concept useful for extension
-  nockScope = nock('http://test.com').post('/coords').reply(200, (uri, requestBody) => {
-    const inputs = requestBody.trim().split('\n').map(JSON.parse)
-    t.is(inputs.length, 2)
-    t.deepEqual(Object.keys(inputs[0]), ['q', 'key'])
-    return inputs.map(input => ({key: input.key, lat: 10, lon: 10}))
-      .map(JSON.stringify).join('\n') + '\n'
-  })
-  dataset.schema.find(field => field.key === 'adr')['x-refersTo'] = 'http://schema.org/address'
-  res = await ax.patch('/api/v1/datasets/dataset', {schema: dataset.schema})
-  await workers.hook('indexer')
-  nockScope.done()
   // A search to check results
   res = await ax.get(`/api/v1/datasets/dataset/lines`)
   t.is(res.data.total, 2)
@@ -82,7 +69,7 @@ other,unknown address
   form.append('file', content, 'dataset1.csv')
   res = await ax.post('/api/v1/datasets/dataset', form, {headers: testUtils.formHeaders(form)})
   t.is(res.status, 200)
-  await workers.hook('indexer')
+  await workers.hook('finalizer')
   nockScope.done()
   // A search to check re-indexed results with preserved extensions
   // and new result with new extension
@@ -106,7 +93,7 @@ other,unknown address
   })
   res = await ax.patch('/api/v1/datasets/dataset', {extensions: [{active: true, forceNext: true, remoteService: remoteServiceId, action: 'postCoords'}]})
   t.is(res.status, 200)
-  await workers.hook('indexer')
+  await workers.hook('finalizer')
   nockScope.done()
   // A search to check re-indexed results with overwritten extensions
   res = await ax.get(`/api/v1/datasets/dataset/lines`)
@@ -125,7 +112,7 @@ other,unknown address
   // Reduce selected output using extension.select
   res = await ax.patch('/api/v1/datasets/dataset', {extensions: [{active: true, remoteService: remoteServiceId, action: 'postCoords', select: ['lat']}]})
   t.is(res.status, 200)
-  await workers.hook('indexer')
+  await workers.hook('finalizer')
   // A search to check that only lat is present now
   res = await ax.get(`/api/v1/datasets/dataset/lines`)
   t.is(res.data.total, 3)
@@ -144,7 +131,7 @@ other,unknown address
   })
   res = await ax.patch('/api/v1/datasets/dataset', {extensions: [{active: true, forceNext: true, remoteService: remoteServiceId, action: 'postCoords', select: ['lat']}]})
   t.is(res.status, 200)
-  await workers.hook('indexer')
+  await workers.hook('finalizer')
   nockScope.done()
   // A search to check re-indexed results with overwritten extensions
   res = await ax.get(`/api/v1/datasets/dataset/lines`)
@@ -169,7 +156,7 @@ other,unknown address
   form.append('file', content, 'dataset2.csv')
   let res = await ax.post('/api/v1/datasets', form, {headers: testUtils.formHeaders(form)})
   t.is(res.status, 201)
-  await workers.hook('indexer')
+  await workers.hook('finalizer')
 
   // A geocoder remote service
   res = await ax.post('/api/v1/remote-services', {
@@ -184,7 +171,7 @@ other,unknown address
   nock('http://test.com').post('/coords').reply(500, 'some error')
   res = await ax.patch('/api/v1/datasets/dataset2', {extensions: [{active: true, remoteService: remoteServiceId, action: 'postCoords'}]})
   t.is(res.status, 200)
-  await workers.hook('indexer')
+  await workers.hook('finalizer')
   let dataset = (await ax.get('/api/v1/datasets/dataset2')).data
   t.truthy(dataset.extensions[0].error)
 
@@ -192,7 +179,7 @@ other,unknown address
   nock('http://test.com').post('/coords').reply(200, 'some error')
   res = await ax.patch('/api/v1/datasets/dataset2', {extensions: [{active: true, remoteService: remoteServiceId, action: 'postCoords'}]})
   t.is(res.status, 200)
-  await workers.hook('indexer')
+  await workers.hook('finalizer')
   dataset = (await ax.get('/api/v1/datasets/dataset2')).data
   t.truthy(dataset.extensions[0].error)
 })

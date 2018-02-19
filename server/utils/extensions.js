@@ -216,11 +216,12 @@ class ESOutputStream extends Writable {
   }
 }
 
-exports.extend = async(app, dataset, extension, remoteService, action, indexName) => {
+exports.extend = async(app, dataset, extension, remoteService, action) => {
   const esClient = app.get('es')
   const db = app.get('db')
   const hashes = {}
   const extensionKey = getExtensionKey(remoteService.id, action.id)
+  const indexName = es.indexName(dataset)
 
   const stats = {}
 
@@ -273,7 +274,6 @@ exports.extend = async(app, dataset, extension, remoteService, action, indexName
     stats.count = dataset.count - stats.missing
     await setProgress()
     progressInterval = setInterval(setProgress, 600)
-
     if (stats.missing !== 0) {
       await promisePipe(
         inputStream,
@@ -312,7 +312,8 @@ class CalculatedExtension extends Transform {
   }
 }
 
-exports.extendCalculated = async (app, indexName, dataset, geopoint) => {
+exports.extendCalculated = async (app, dataset, geopoint) => {
+  const indexName = es.indexName(dataset)
   const esClient = app.get('es')
   return promisePipe(
     new ESInputStream({esClient, indexName}),

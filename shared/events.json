@@ -29,6 +29,22 @@
   },
   "index-end": {
     "icon": "assignment_turned_in",
-    "text": "Les données sont indexées, le jeu de données est maintenant disponible"
+    "text": "Les données sont indexées"
+  },
+  "extend-start": {
+    "icon": "extension",
+    "text": "Début de l'enrichissement des données"
+  },
+  "extend-end": {
+    "icon": "extension",
+    "text": "Les données sont enrichies, le jeu de données est maintenant disponible"
+  },
+  "finalize-start": {
+    "icon": "build",
+    "text": "Finalisation du jeu de données"
+  },
+  "finalize-end": {
+    "icon": "extension",
+    "text": "Les données et meta-données sont à jour, le jeu de données est disponible"
   }
 }

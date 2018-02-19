@@ -71,7 +71,7 @@ router.get('/:datasetId', (req, res, next) => {
 const patchKeys = ['schema', 'description', 'title', 'license', 'origin', 'extensions']
 router.patch('/:datasetId', asyncWrap(async(req, res) => {
   if (!permissions.can(req.dataset, 'writeDescription', req.user)) return res.sendStatus(403)
-  if (req.dataset.status !== 'indexed' && (req.body.schema || req.body.extensions)) return res.status(409).send('Dataset is not in proper state to be updated')
+  if (req.dataset.status !== 'finalized' && (req.body.schema || req.body.extensions)) return res.status(409).send('Dataset is not in proper state to be updated')
   var valid = validate(req.body)
   if (!valid) return res.status(400).send(validate.errors)
 
@@ -81,7 +81,15 @@ router.patch('/:datasetId', asyncWrap(async(req, res) => {
   req.body.updatedAt = moment().toISOString()
   req.body.updatedBy = req.user.id
   if (req.body.extensions) req.body.schema = await extensions.prepareSchema(req.app.get('db'), req.body.schema || req.dataset.schema, req.body.extensions)
-  if (req.body.schema || req.body.extensions) req.body.status = 'schematized'
+
+  // Back to schematized state if schema changed in a manner significant for ES indexing
+  if (req.body.schema) {
+    if (JSON.stringify(esUtils.indexDefinition(req.body)) !== JSON.stringify(esUtils.indexDefinition(req.dataset))) {
+      req.body.status = 'schematized'
+    } else {
+      req.body.status = 'indexed'
+    }
+  }
 
   await req.app.get('db').collection('datasets').updateOne({id: req.params.datasetId}, {'$set': req.body})
   res.status(200).json(req.body)
@@ -150,7 +158,7 @@ router.post('', auth.jwtMiddleware, filesUtils.uploadFile(), asyncWrap(async(req
 
 // Update an existing dataset data
 router.post('/:datasetId', filesUtils.uploadFile(), asyncWrap(async(req, res) => {
-  if (req.dataset.status !== 'indexed') return res.status(409).send('Dataset is not in proper state to be updated')
+  if (req.dataset.status !== 'finalized') return res.status(409).send('Dataset is not in proper state to be updated')
   if (req.storageRemaining !== undefined) res.set(config.headers.storedBytesRemaining, req.storageRemaining)
   if (!permissions.can(req.dataset, 'writeData', req.user)) return res.sendStatus(403)
   if (!req.file) return res.sendStatus(400)

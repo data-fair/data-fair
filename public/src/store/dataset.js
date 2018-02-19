@@ -69,7 +69,7 @@ module.exports = {
         const newChannel = 'datasets/' + datasetId + '/journal'
         ws.$emit('subscribe', newChannel)
         ws.$on(newChannel, event => {
-          if (event.type === 'index-end') dispatch('notify', 'Le jeu de données a été traité en fonction de vos dernières modifications et est prêt à être utilisé ou édité de nouveau.', {root: true})
+          if (event.type === 'finalize-end') dispatch('notify', 'Le jeu de données a été traité en fonction de vos dernières modifications et est prêt à être utilisé ou édité de nouveau.', {root: true})
           dispatch('addJournalEvent', event)
         })
       }, 2000)

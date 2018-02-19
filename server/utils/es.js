@@ -3,8 +3,10 @@ const config = require('config')
 const elasticsearch = require('elasticsearch')
 const createError = require('http-errors')
 const flatten = require('flat')
+const sha1 = crypto.createHash('sha1')
 const geohash = require('./geohash')
 const tiles = require('./tiles')
+const geoUtils = require('../utils/geo')
 
 exports.init = () => elasticsearch.Client(Object.assign({}, config.elasticsearch))
 
@@ -36,9 +38,10 @@ exports.esType = prop => {
   return 'text'
 }
 
-exports.initDatasetIndex = async (client, dataset, geopoint) => {
-  const tempId = `${indexName(dataset)}-${Date.now()}`
-  const body = Object.assign({}, indexBase)
+exports.indexDefinition = (dataset) => {
+  const body = JSON.parse(JSON.stringify(indexBase))
+  const geopoint = geoUtils.schemaHasGeopoint(dataset.schema)
+
   const properties = body.mappings.line.properties = {}
 
   dataset.schema.forEach(jsProp => {
@@ -49,20 +52,24 @@ exports.initDatasetIndex = async (client, dataset, geopoint) => {
   if (geopoint) {
     properties['_geopoint'] = {type: 'geo_point'}
   }
+  return body
+}
 
+exports.initDatasetIndex = async (client, dataset) => {
+  const tempId = `${indexName(dataset)}-${Date.now()}`
+  const body = exports.indexDefinition(dataset)
   await client.indices.create({index: tempId, body})
   return tempId
 }
 
 exports.switchAlias = async (client, dataset, tempId) => {
   const name = indexName(dataset)
-  await client.indices.putAlias({name, index: tempId})
-
   // Delete all other indices from this dataset
   const previousIndices = await client.indices.get({index: `${name}-*`})
   for (let key in previousIndices) {
     if (key !== tempId && key !== name) await client.indices.delete({index: key})
   }
+  await client.indices.putAlias({name, index: tempId})
 }
 
 class IndexStream extends Writable {

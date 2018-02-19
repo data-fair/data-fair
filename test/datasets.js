@@ -7,7 +7,7 @@ const testUtils = require('./resources/test-utils')
 const [test, config] = testUtils.prepare(__filename)
 
 let notifier
-test.before('run app', async t => {
+test.before('prepare notifier', async t => {
   notifier = require('./resources/app-notifier.js')
   await eventToPromise(notifier, 'listening')
 })
@@ -111,7 +111,7 @@ test('Fail to upload new dataset when not authenticated', async t => {
 test('Upload dataset - full test with webhooks', async t => {
   const wsCli = new WebSocket(config.publicUrl)
   const ax = await testUtils.axios('cdurning2@desdev.cn')
-  await ax.put('/api/v1/settings/user/cdurning2', {webhooks: [{title: 'test', events: ['index-end'], url: 'http://localhost:5900'}]})
+  await ax.put('/api/v1/settings/user/cdurning2', {webhooks: [{title: 'test', events: ['finalize-end'], url: 'http://localhost:5900'}]})
   let form = new FormData()
   form.append('file', fs.readFileSync('./test/resources/Antennes du CD22.csv'), 'Antennes du CD22.csv')
   let res = await ax.post('/api/v1/datasets', form, {headers: testUtils.formHeaders(form)})
@@ -125,7 +125,7 @@ test('Upload dataset - full test with webhooks', async t => {
   wsCli.send(JSON.stringify({type: 'subscribe', channel: 'datasets/' + datasetId + '/journal'}))
   res = await ax.get('/api/v1/datasets/' + datasetId + '/journal')
   t.is(res.status, 200)
-  t.is(res.data.length, 7)
+  t.is(res.data.length, 9)
   form = new FormData()
   form.append('file', fs.readFileSync('./test/resources/Antennes du CD22.csv'), 'Antennes du CD22.csv')
   res = await ax.post(webhook.href, form, {headers: testUtils.formHeaders(form)})
@@ -134,7 +134,7 @@ test('Upload dataset - full test with webhooks', async t => {
   t.is(JSON.parse(wsRes.data).channel, 'datasets/' + datasetId + '/journal')
   await eventToPromise(notifier, 'webhook')
   res = await ax.get('/api/v1/datasets/' + datasetId + '/journal')
-  t.is(res.data.length, 14)
+  t.is(res.data.length, 18)
   // testing permissions
   const ax1 = await testUtils.axios('dmeadus0@answers.com')
   try {

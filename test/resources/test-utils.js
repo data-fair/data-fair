@@ -33,19 +33,19 @@ exports.prepare = (testFile) => {
   const config = require('config')
   const app = require('../../server/app.js')
 
-  test.before('clean', async t => {
+  test.serial.before('clean', async t => {
     await clean(key)
   })
 
-  test.before('run app', async t => {
+  test.serial.before('run app', async t => {
     test.app = await app.run()
   })
 
-  test.after.always('stop app', async t => {
+  test.serial.after.always('stop app', async t => {
     await app.stop()
   })
 
-  test.after.always('clean', async t => {
+  test.serial.after.always('clean', async t => {
     await clean(key)
   })
 
