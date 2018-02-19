@@ -5,6 +5,7 @@ module.exports = {
     datasetStorage: 1000
   },
   workers: {
+    concurrency: 1,
     pollingInterval: 1
   },
   locks: {
