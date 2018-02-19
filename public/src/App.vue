@@ -58,19 +58,19 @@
       </md-layout>
     </md-layout>
 
-    <md-snackbar md-position="bottom center" ref="notificationErrorSnackbar" md-duration="12000">
+    <md-snackbar md-position="bottom center" ref="notificationErrorSnackbar" md-duration="60000" @close="notifyError(null)">
       <md-icon md-theme="error" class="md-primary">error</md-icon>
       &nbsp;&nbsp;&nbsp;
       <div v-html="notificationError"/>
-      <md-button class="md-icon-button md-dense" @click.native="notifyError(null)">
+      <md-button class="md-icon-button md-dense" @click.native="$refs.notificationErrorSnackbar.close()">
         <md-icon>close</md-icon>
       </md-button>
     </md-snackbar>
-    <md-snackbar md-position="bottom center" ref="notificationSnackbar" md-duration="60000">
+    <md-snackbar md-position="bottom center" ref="notificationSnackbar" md-duration="12000" @close="notify(null)">
       <md-icon md-theme="success" class="md-primary">check_circle</md-icon>
       &nbsp;&nbsp;&nbsp;
       <div v-html="notification"/>
-      <md-button class="md-icon-button md-dense" @click.native="notify(null)">
+      <md-button class="md-icon-button md-dense" @click.native="$refs.notificationSnackbar.close()">
         <md-icon>close</md-icon>
       </md-button>
     </md-snackbar>
