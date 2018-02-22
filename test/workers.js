@@ -63,4 +63,18 @@ test('Process newly uploaded dataset', async t => {
   t.is(mapping2.properties.some_date.type, 'date')
   t.is(mapping2.properties.loc.type, 'keyword')
   t.is(mapping2.properties._geopoint.type, 'geo_point')
+
+  // Reupload data with bad localization
+  const datasetFd2 = fs.readFileSync('./test/resources/dataset-bad-format.csv')
+  const form2 = new FormData()
+  form2.append('file', datasetFd2, 'dataset.csv')
+  res = await ax.post('/api/v1/datasets/' + dataset.id, form2, {headers: testUtils.formHeaders(form2)})
+  try {
+    console.log('try')
+    await workers.hook('finalizer')
+    t.fail()
+  } catch (err) {
+    t.is(err.dataset.status, 'error')
+    t.true(err.message.indexOf('illegal latitude value') !== -1)
+  }
 })

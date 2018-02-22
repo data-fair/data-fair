@@ -52,8 +52,12 @@ async function iter(app, key) {
     await journals.log(app, dataset, {type: worker.eventsPrefix + '-end'})
   } catch (err) {
     console.error('Failure in worker ' + key, err)
-    if (hooks[key]) hooks[key].reject(err)
-    if (dataset) await journals.log(app, dataset, {type: worker.eventsPrefix + '-fail'})
+    if (dataset) {
+      await journals.log(app, dataset, {type: 'error', data: err.message})
+      await app.get('db').collection('datasets').updateOne({id: dataset.id}, {$set: {status: 'error'}})
+      dataset.status = 'error'
+    }
+    if (hooks[key]) hooks[key].reject({dataset, message: err.message})
   } finally {
     if (dataset) await locks.release(app.get('db'), 'dataset:' + dataset.id)
     // console.log(`Worker "${worker.eventsPrefix}" released dataset "${dataset.id}"`)

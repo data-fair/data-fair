@@ -40,7 +40,9 @@ module.exports = {
       Object.assign(state.dataset, patch)
     },
     addJournalEvent(state, event) {
-      state.journal.unshift(event)
+      if (!state.journal.find(e => e.date === event.date)) {
+        state.journal.unshift(event)
+      }
     },
     addRemoteService(state, service) {
       state.remoteServices.push(service)
@@ -70,6 +72,7 @@ module.exports = {
         ws.$emit('subscribe', newChannel)
         ws.$on(newChannel, event => {
           if (event.type === 'finalize-end') dispatch('notify', 'Le jeu de données a été traité en fonction de vos dernières modifications et est prêt à être utilisé ou édité de nouveau.', {root: true})
+          if (event.type === 'error') dispatch('notifyError', 'Le service a rencontré une erreur pendant le traitement du jeu de données: ' + event.data, {root: true})
           dispatch('addJournalEvent', event)
         })
       }, 2000)

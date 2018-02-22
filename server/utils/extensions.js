@@ -209,7 +209,24 @@ class ESOutputStream extends Writable {
         doc: item.doc
       }
     }
-    this.esClient.update(opts, callback)
+    this.esClient.update(opts, err => {
+      if (err) {
+        let message = err.message
+        try {
+          const res = JSON.parse(err.toJSON().response)
+          if (res.error && res.error.reason) {
+            message = res.error.reason
+            if (res.error.caused_by && res.error.caused_by.reason) {
+              message += ' - ' + res.error.caused_by.reason
+            }
+          }
+        } catch (err) {
+          // do nothing
+        }
+        return callback(new Error(message))
+      }
+      callback()
+    })
   }
   _final(callback) {
     this.esClient.indices.refresh({index: this.indexName}, callback)

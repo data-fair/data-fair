@@ -110,7 +110,7 @@ class IndexStream extends Writable {
       if (err) return callback(err)
       if (res.errors) {
         const msg = res.items.map(item => JSON.stringify(item.index.error)).join('\n')
-        return callback(new Error('Bulk indexing errors: ' + msg))
+        return callback(new Error('Erreurs à l\'indexation: ' + msg))
       }
       // Super weird ! When passing callback directly it seems that it is not called.
       callback()

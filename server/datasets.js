@@ -27,6 +27,8 @@ const validate = ajv.compile(datasetSchemaNoRequired)
 
 let router = express.Router()
 
+const acceptedStatuses = ['finalized', 'error']
+
 // Get the list of datasets
 router.get('', auth.optionalJwtMiddleware, asyncWrap(async(req, res) => {
   let datasets = req.app.get('db').collection('datasets')
@@ -71,7 +73,7 @@ router.get('/:datasetId', (req, res, next) => {
 const patchKeys = ['schema', 'description', 'title', 'license', 'origin', 'extensions']
 router.patch('/:datasetId', asyncWrap(async(req, res) => {
   if (!permissions.can(req.dataset, 'writeDescription', req.user)) return res.sendStatus(403)
-  if (req.dataset.status !== 'finalized' && (req.body.schema || req.body.extensions)) return res.status(409).send('Dataset is not in proper state to be updated')
+  if (!acceptedStatuses.includes(req.dataset.status) && (req.body.schema || req.body.extensions)) return res.status(409).send('Dataset is not in proper state to be updated')
   var valid = validate(req.body)
   if (!valid) return res.status(400).send(validate.errors)
 
@@ -82,6 +84,10 @@ router.patch('/:datasetId', asyncWrap(async(req, res) => {
   req.body.updatedBy = req.user.id
   if (req.body.extensions) req.body.schema = await extensions.prepareSchema(req.app.get('db'), req.body.schema || req.dataset.schema, req.body.extensions)
 
+  // Changed a previously failed dataset, retry everything.
+  if (req.dataset.status === 'error') {
+    req.body.status = 'loaded'
+  }
   // Back to schematized state if schema changed in a manner significant for ES indexing
   if (req.body.schema) {
     if (JSON.stringify(esUtils.indexDefinition(req.body)) !== JSON.stringify(esUtils.indexDefinition(req.dataset))) {
@@ -159,7 +165,7 @@ router.post('', auth.jwtMiddleware, filesUtils.uploadFile(), asyncWrap(async(req
 
 // Update an existing dataset data
 router.post('/:datasetId', filesUtils.uploadFile(), asyncWrap(async(req, res) => {
-  if (req.dataset.status !== 'finalized') return res.status(409).send('Dataset is not in proper state to be updated')
+  if (!acceptedStatuses.includes(req.dataset.status)) return res.status(409).send('Dataset is not in proper state to be updated')
   if (req.storageRemaining !== undefined) res.set(config.headers.storedBytesRemaining, req.storageRemaining)
   if (!permissions.can(req.dataset, 'writeData', req.user)) return res.sendStatus(403)
   if (!req.file) return res.sendStatus(400)

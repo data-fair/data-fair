@@ -61,7 +61,7 @@
     <md-snackbar md-position="bottom center" ref="notificationErrorSnackbar" md-duration="60000" @close="notifyError(null)">
       <md-icon md-theme="error" class="md-primary">error</md-icon>
       &nbsp;&nbsp;&nbsp;
-      <div v-html="notificationError"/>
+      <div v-html="notifError"/>
       <md-button class="md-icon-button md-dense" @click.native="$refs.notificationErrorSnackbar.close()">
         <md-icon>close</md-icon>
       </md-button>
@@ -69,7 +69,7 @@
     <md-snackbar md-position="bottom center" ref="notificationSnackbar" md-duration="12000" @close="notify(null)">
       <md-icon md-theme="success" class="md-primary">check_circle</md-icon>
       &nbsp;&nbsp;&nbsp;
-      <div v-html="notification"/>
+      <div v-html="notif"/>
       <md-button class="md-icon-button md-dense" @click.native="$refs.notificationSnackbar.close()">
         <md-icon>close</md-icon>
       </md-button>
@@ -84,6 +84,12 @@ const {mapState, mapActions} = require('vuex')
 export default {
   name: 'App',
   components: {UserName},
+  data() {
+    return {
+      notif: '',
+      notifError: ''
+    }
+  },
   computed: {
     ...mapState(['user', 'userOrganizations', 'notification', 'notificationError']),
     loginUrl() {
@@ -92,12 +98,16 @@ export default {
   },
   watch: {
     notification(val) {
-      if (val) this.$refs.notificationSnackbar.open()
-      else this.$refs.notificationSnackbar.close()
+      if (val) {
+        this.notif = this.notification
+        this.$refs.notificationSnackbar.open()
+      } else this.$refs.notificationSnackbar.close()
     },
     notificationError(val) {
-      if (val) this.$refs.notificationErrorSnackbar.open()
-      else this.$refs.notificationErrorSnackbar.close()
+      if (val) {
+        this.notifError = this.notificationError
+        this.$refs.notificationErrorSnackbar.open()
+      } else this.$refs.notificationErrorSnackbar.close()
     }
   },
   methods: mapActions(['logout', 'notify', 'notifyError'])

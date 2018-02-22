@@ -1,4 +1,8 @@
 {
+  "error": {
+    "icon": "error",
+    "text": "Le service a rencontré une erreur pendant le traitement du jeu de données"
+  },
   "dataset-created": {
     "icon": "add_circle_outline",
     "text": "Le jeu de données a été créé"

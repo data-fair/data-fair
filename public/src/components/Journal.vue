@@ -3,7 +3,12 @@
     <md-layout md-column md-flex="60">
       <md-list>
         <md-list-item v-for="event in journal" v-if="types[event.type]" :key="event.date">
-          <md-icon>{{ types[event.type].icon }}</md-icon> <span>{{ types[event.type].text }}</span> <span>{{ event.date | moment("DD/MM/YYYY, HH:mm") }}</span>
+          <md-icon>{{ types[event.type].icon }}</md-icon>
+          <div>
+            <p>{{ types[event.type].text }}</p>
+            <p v-if="event.type === 'error'" style="color: red;">{{ event.data }}</p>
+          </div>
+          <span>{{ event.date | moment("DD/MM/YYYY, HH:mm") }}</span>
         </md-list-item>
       </md-list>
     </md-layout>

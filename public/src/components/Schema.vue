@@ -1,6 +1,6 @@
 <template>
   <md-layout md-column>
-    <form @submit.prevent="patchAndCommit({schema})">
+    <form @submit.prevent="save()">
       <md-layout md-row>
         <h3 class="md-headline" style="flex:1">Schéma</h3>
         <div style="margin-top: 24px;">
@@ -95,6 +95,9 @@ export default {
       this.editField = key
       // cf https://learn.jquery.com/using-jquery-core/faq/how-do-i-select-an-element-by-an-id-that-has-characters-used-in-css-notation/
       this.$nextTick(() => document.querySelector('#description-' + key.replace(/(:|\.|\[|\]|,|=|@)/g, '\\$1')).focus())
+    },
+    save() {
+      this.patchAndCommit({schema: this.schema.map(field => Object.assign({}, field))})
     }
   }
 }

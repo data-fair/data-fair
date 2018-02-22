@@ -102,7 +102,7 @@
     },
     "status": {
       "type": "string",
-      "enum": ["loaded", "analyzed", "schematized", "indexed"],
+      "enum": ["loaded", "analyzed", "schematized", "indexed", "extended", "finalized", "error"],
       "description": "The processing steps of a dataset."
     },
     "schema": {
