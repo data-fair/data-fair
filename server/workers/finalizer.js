@@ -24,22 +24,28 @@ exports.process = async function(app, dataset) {
 
   const result = {status: 'finalized'}
 
+  let bboxPromise
   if (geopoint) {
-    const res = await esUtils.bboxAgg(es, dataset)
-    result.bbox = dataset.bbox = res.bbox
+    bboxPromise = esUtils.bboxAgg(es, dataset)
   }
 
-  for (const prop of dataset.schema) {
-    // no cardinality on text field
-    if (prop.type === 'string' && !prop.format) continue
+  const nonTextProps = dataset.schema.filter(prop => prop.type !== 'string' || prop.format)
+  if (nonTextProps.length) {
     result.schema = dataset.schema
-    const aggResult = await esUtils.valuesAgg(es, dataset, {field: prop.key, agg_size: 10})
-    prop['x-cardinality'] = aggResult.total_values
-    const firstValue = aggResult.aggs[0]
-    if (firstValue && firstValue.total === 1) prop['x-cardinality'] = dataset.count
-    if (aggResult.total_values <= 10) {
-      prop.enum = aggResult.aggs.map(a => a.value)
-    }
+    const responses = await Promise.all(nonTextProps.map(p => esUtils.valuesAgg(es, dataset, {field: p.key, agg_size: 10})))
+    nonTextProps.forEach((prop, i) => {
+      const aggResult = responses[i]
+      prop['x-cardinality'] = aggResult.total_values
+      const firstValue = aggResult.aggs[0]
+      if (firstValue && firstValue.total === 1) prop['x-cardinality'] = dataset.count
+      if (aggResult.total_values <= 10) {
+        prop.enum = aggResult.aggs.map(a => a.value)
+      }
+    })
+  }
+
+  if (bboxPromise) {
+    result.bbox = dataset.bbox = (await bboxPromise).bbox
   }
 
   Object.assign(dataset, result)
