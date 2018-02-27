@@ -23,7 +23,8 @@ function prepareMapping(action, schema, extensionKey, selectFields) {
   return (item) => {
     const mappedItem = {}
     mapping.forEach(m => {
-      mappedItem[m[1]] = item.doc[m[0]]
+      const val = item.doc[m[0]]
+      if (val !== undefined && val !== '') mappedItem[m[1]] = val
     })
     // remember a hash of the input.. so that we can store it alongside the result and use this to reapply
     // extension to a new version of the index without using the remote service
@@ -42,6 +43,8 @@ class PrepareInputStream extends Transform {
   }
   _transform(item, encoding, callback) {
     const [mappedItem, h] = this.mapping(item)
+    // No actual parameters on this line (only the key)
+    if (Object.keys(mappedItem).length === 1) return callback()
     this.hashes[item.id] = h
     callback(null, JSON.stringify(mappedItem) + '\n')
   }

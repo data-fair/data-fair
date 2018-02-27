@@ -183,3 +183,44 @@ other,unknown address
   dataset = (await ax.get('/api/v1/datasets/dataset2')).data
   t.truthy(dataset.extensions[0].error)
 })
+
+test.only('Manage empty queries', async t => {
+  const ax = await testUtils.axios('dmeadus0@answers.com')
+
+  // Initial dataset with addresses
+  let form = new FormData()
+  let content = `label,adr
+koumoul,19 rue de la voie lactée saint avé
+empty,
+`
+  form.append('file', content, 'dataset3.csv')
+  let res = await ax.post('/api/v1/datasets', form, {headers: testUtils.formHeaders(form)})
+  t.is(res.status, 201)
+  const dataset = await workers.hook('finalizer')
+
+  // A geocoder remote service
+  res = await ax.post('/api/v1/remote-services', {
+    apiDoc: require('./resources/geocoder-api.json'),
+    apiKey: {in: 'header', name: 'x-apiKey'},
+    server: 'http://test.com'
+  })
+  t.is(res.status, 201)
+  const remoteServiceId = res.data.id
+
+  // Prepare for extension failure with HTTP error code
+  nock('http://test.com', {reqheaders: {'x-apiKey': 'test_default_key'}})
+    .post('/coords').reply(200, (uri, requestBody) => {
+      const inputs = requestBody.trim().split('\n').map(JSON.parse)
+      t.is(inputs.length, 1)
+      return inputs.map(input => ({key: input.key, lat: 10, lon: 10}))
+        .map(JSON.stringify).join('\n') + '\n'
+    })
+
+  dataset.schema.find(field => field.key === 'adr')['x-refersTo'] = 'http://schema.org/address'
+  res = await ax.patch('/api/v1/datasets/dataset3', {
+    schema: dataset.schema,
+    extensions: [{active: true, remoteService: remoteServiceId, action: 'postCoords'}]
+  })
+  t.is(res.status, 200)
+  await workers.hook('finalizer')
+})
