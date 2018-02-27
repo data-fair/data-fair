@@ -126,6 +126,11 @@ export default {
       this.activeTab = this.$refs.tabs.activeTab
       this.$router.push({query: {tab: this.$refs.tabs.activeTab}})
     }
+  },
+  watch: {
+    '$route.query.tab'() {
+      this.activeTab = this.$route.query.tab || 'description'
+    }
   }
 }
 </script>

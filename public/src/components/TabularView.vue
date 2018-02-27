@@ -1,6 +1,10 @@
 <template>
   <div>
-    <md-table-card>
+    <div v-if="notFound">
+      <p>Les données ne sont pas accessibles. Soit le jeu de données n'a pas encore été entièrement traité, soit il y a eu une erreur dans le traitement.</p>
+      <p>Vous pouvez consulter <router-link :to="{name: 'Dataset', params:{datasetId:dataset.id}, query:{tab:'journal'}}">le journal</router-link> pour en savoir plus.</p>
+    </div>
+    <md-table-card v-else>
       <md-layout>
         <md-layout md-flex="30" md-flex-offset="5" md-hide-small>
           <md-input-container>
@@ -42,7 +46,8 @@ export default {
     query: null,
     size: 10,
     page: 1,
-    sort: null
+    sort: null,
+    notFound: false
   }),
   computed: {
     ...mapState(['vocabulary']),
@@ -68,7 +73,8 @@ export default {
       }).then(results => {
         this.data = results.body
       }, error => {
-        this.$store.dispatch('notifyError', `Erreur ${error.status} pendant la récupération des données`)
+        if (error.status === 404) this.notFound = true
+        else this.$store.dispatch('notifyError', `Erreur ${error.status} pendant la récupération des données`)
       })
     },
     orderBy(options) {
