@@ -1,7 +1,7 @@
 // A module of the store for the currently worked on dataset
 // Used in the DatasetVue and all its tabs and their components
 import Vue from 'vue'
-const ws = require('../ws.js')
+const eventBus = require('../event-bus.js')
 const utils = require('../utils.js')
 
 module.exports = {
@@ -68,8 +68,8 @@ module.exports = {
       dispatch('fetchInfo')
 
       const newChannel = 'datasets/' + datasetId + '/journal'
-      ws.$emit('subscribe', newChannel)
-      ws.$on(newChannel, event => {
+      eventBus.$emit('subscribe', newChannel)
+      eventBus.$on(newChannel, event => {
         if (event.type === 'finalize-end') {
           dispatch('notify', 'Le jeu de données a été traité en fonction de vos dernières modifications et est prêt à être utilisé ou édité de nouveau.', {root: true})
           dispatch('fetchInfo')
@@ -79,7 +79,7 @@ module.exports = {
       })
     },
     clear({commit, state}) {
-      if (state.datasetId) ws.$emit('unsubscribe', 'datasets/' + state.datasetId + '/journal')
+      if (state.datasetId) eventBus.$emit('unsubscribe', 'datasets/' + state.datasetId + '/journal')
       commit('setAny', {datasetId: null, dataset: null, api: null, journal: []})
     },
     async patch({commit, getters, dispatch}, patch) {

@@ -25,7 +25,6 @@ export default {
     return {types: events}
   },
   computed: {
-    ...mapState(['ws']),
     ...mapState('dataset', ['dataset', 'journal'])
   },
   mounted() {

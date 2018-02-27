@@ -3,6 +3,7 @@ import Vuex from 'vuex'
 import jwtDecode from 'jwt-decode'
 
 import dataset from './dataset.js'
+const eventBus = require('../event-bus.js')
 
 Vue.use(Vuex)
 
@@ -11,8 +12,6 @@ module.exports = new Vuex.Store({
   state: {
     user: null,
     userOrganizations: null,
-    notification: '',
-    notificationError: '',
     vocabulary: null,
     vocabularyArray: [],
     usersInfo: {},
@@ -65,11 +64,11 @@ module.exports = new Vuex.Store({
         context.commit('setAny', {userOrganizations: null})
       }
     },
-    notify(context, notification) {
-      context.commit('setAny', {notification})
+    notify(context, msg) {
+      eventBus.$emit('notification', {type: 'info', msg})
     },
-    notifyError(context, notificationError) {
-      context.commit('setAny', {notificationError})
+    notifyError(context, msg) {
+      eventBus.$emit('notification', {type: 'error', msg})
     },
     async fetchVocabulary(context) {
       if (context.state.vocabulary) return

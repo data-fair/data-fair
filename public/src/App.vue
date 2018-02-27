@@ -58,18 +58,11 @@
       </md-layout>
     </md-layout>
 
-    <md-snackbar md-position="bottom center" ref="notificationErrorSnackbar" md-duration="20000" @close="notifyError(null)">
-      <md-icon md-theme="error" class="md-primary">error</md-icon>
+    <md-snackbar md-position="bottom center" ref="notificationSnackbar" md-duration="8000">
+      <md-icon v-if="notif.type === 'error'" md-theme="error" class="md-primary">error</md-icon>
+      <md-icon v-if="notif.type === 'info'" md-theme="success" class="md-primary">check_circle</md-icon>
       &nbsp;&nbsp;&nbsp;
-      <div v-html="notifError"/>
-      <md-button class="md-icon-button md-dense" @click.native="$refs.notificationErrorSnackbar.close()">
-        <md-icon>close</md-icon>
-      </md-button>
-    </md-snackbar>
-    <md-snackbar md-position="bottom center" ref="notificationSnackbar" md-duration="8000" @close="notify(null)">
-      <md-icon md-theme="success" class="md-primary">check_circle</md-icon>
-      &nbsp;&nbsp;&nbsp;
-      <div v-html="notif"/>
+      <div v-html="notif.msg"/>
       <md-button class="md-icon-button md-dense" @click.native="$refs.notificationSnackbar.close()">
         <md-icon>close</md-icon>
       </md-button>
@@ -80,37 +73,29 @@
 <script>
 import UserName from './components/UserName.vue'
 const {mapState, mapActions} = require('vuex')
+const eventBus = require('./event-bus.js')
 
 export default {
   name: 'App',
   components: {UserName},
   data() {
     return {
-      notif: '',
-      notifError: ''
+      notif: {}
     }
   },
   computed: {
-    ...mapState(['user', 'userOrganizations', 'notification', 'notificationError']),
+    ...mapState(['user', 'userOrganizations']),
     loginUrl() {
       return window.CONFIG.directoryUrl + '/login?redirect=' + window.CONFIG.publicUrl + '/signin?id_token='
     }
   },
-  watch: {
-    notification(val) {
-      if (val) {
-        this.notif = this.notification
-        this.$refs.notificationSnackbar.open()
-      } else this.$refs.notificationSnackbar.close()
-    },
-    notificationError(val) {
-      if (val) {
-        this.notifError = this.notificationError
-        this.$refs.notificationErrorSnackbar.open()
-      } else this.$refs.notificationErrorSnackbar.close()
-    }
+  mounted() {
+    eventBus.$on('notification', notif => {
+      this.notif = notif
+      this.$refs.notificationSnackbar.open()
+    })
   },
-  methods: mapActions(['logout', 'notify', 'notifyError'])
+  methods: mapActions(['logout'])
 }
 </script>
 
