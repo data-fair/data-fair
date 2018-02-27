@@ -102,6 +102,11 @@ export default {
       if (this.dataset) return this.resourceUrl + '/full'
     }
   },
+  watch: {
+    '$route.query.tab'() {
+      this.activeTab = this.$route.query.tab || 'description'
+    }
+  },
   mounted() {
     this.activeTab = this.$route.query.tab || 'description'
     this.setId(this.$route.params.datasetId)
@@ -125,11 +130,6 @@ export default {
       this.changingTab = true
       this.activeTab = this.$refs.tabs.activeTab
       this.$router.push({query: {tab: this.$refs.tabs.activeTab}})
-    }
-  },
-  watch: {
-    '$route.query.tab'() {
-      this.activeTab = this.$route.query.tab || 'description'
     }
   }
 }
