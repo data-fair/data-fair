@@ -67,20 +67,20 @@ module.exports = {
       commit('setAny', {datasetId})
       dispatch('fetchInfo')
 
-      // TODO: better way to wait for connected state of websocket
-      setTimeout(() => {
-        const newChannel = 'datasets/' + datasetId + '/journal'
-        ws.$emit('subscribe', newChannel)
-        ws.$on(newChannel, event => {
-          if (event.type === 'finalize-end') dispatch('notify', 'Le jeu de données a été traité en fonction de vos dernières modifications et est prêt à être utilisé ou édité de nouveau.', {root: true})
-          if (event.type === 'error') dispatch('notifyError', 'Le service a rencontré une erreur pendant le traitement du jeu de données: ' + event.data, {root: true})
-          dispatch('addJournalEvent', event)
-        })
-      }, 2000)
+      const newChannel = 'datasets/' + datasetId + '/journal'
+      ws.$emit('subscribe', newChannel)
+      ws.$on(newChannel, event => {
+        if (event.type === 'finalize-end') {
+          dispatch('notify', 'Le jeu de données a été traité en fonction de vos dernières modifications et est prêt à être utilisé ou édité de nouveau.', {root: true})
+          dispatch('fetchInfo')
+        }
+        if (event.type === 'error') dispatch('notifyError', 'Le service a rencontré une erreur pendant le traitement du jeu de données: ' + event.data, {root: true})
+        dispatch('addJournalEvent', event)
+      })
     },
     clear({commit, state}) {
       if (state.datasetId) ws.$emit('unsubscribe', 'datasets/' + state.datasetId + '/journal')
-      commit('setAny', {datasetId: null, dataset: null, api: null})
+      commit('setAny', {datasetId: null, dataset: null, api: null, journal: []})
     },
     async patch({commit, getters, dispatch}, patch) {
       try {

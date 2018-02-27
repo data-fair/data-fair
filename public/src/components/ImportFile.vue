@@ -115,11 +115,10 @@ export default {
           }
         }
         formData.append('file', this.file)
-        this.$http.post(window.CONFIG.publicUrl + '/api/v1/datasets', formData, options).then(results => {
+        this.$http.post(window.CONFIG.publicUrl + '/api/v1/datasets', formData, options).then(res => {
           this.$emit('datasets-change')
           this.reset()
-          const link = this.urlFromRoute({name: 'Dataset', params: {datasetId: results.body.id}})
-          this.$store.dispatch('notify', `Le fichier a bien été importé et le jeu de données a été créé. <a href="${link}">Accéder au jeu de données</a>`)
+          this.$router.push({name: 'Dataset', params: {datasetId: res.body.id}})
           this.$emit('success')
         }, error => {
           this.uploading = false

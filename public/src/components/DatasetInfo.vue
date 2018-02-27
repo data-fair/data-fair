@@ -25,6 +25,9 @@
       <md-layout md-column md-flex="45" md-flex-offset="10">
         <md-card>
           <md-list>
+            <md-list-item v-if="journal[0]" :class="'event-' + journal[0].type">
+              <md-icon>{{ events[journal[0].type].icon }}</md-icon> <span>{{ events[journal[0].type].text }}</span>
+            </md-list-item>
             <md-list-item>
               <md-icon>insert_drive_file</md-icon> <span>{{ dataset.file.name }}</span> <span>{{ (dataset.file.size / 1024).toFixed(2) }} ko</span>
             </md-list-item>
@@ -50,17 +53,19 @@
 <script>
 import UserName from './UserName.vue'
 const {mapState, mapActions} = require('vuex')
+const events = require('../../../shared/events.json')
 
 export default {
   components: {UserName},
   data() {
     return {
-      license: null
+      license: null,
+      events
     }
   },
   computed: {
     ...mapState(['usersInfo']),
-    ...mapState('dataset', ['dataset']),
+    ...mapState('dataset', ['dataset', 'journal']),
     licenses() {
       return this.$store.getters.ownerLicenses(this.dataset.owner)
     }

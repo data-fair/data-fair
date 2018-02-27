@@ -61,15 +61,13 @@ export default {
   name: 'Schema',
   data: () => ({
     schema: [],
-    editField: null
+    editField: null,
+    originalSchema: null
   }),
   computed: {
     ...mapState(['vocabularyArray', 'vocabulary']),
     ...mapState('dataset', ['dataset']),
     ...mapGetters('dataset', ['remoteServicesMap']),
-    originalSchema() {
-      return JSON.stringify(this.dataset && this.dataset.schema)
-    },
     updated() {
       return JSON.stringify(this.schema) !== this.originalSchema
     },
@@ -79,15 +77,26 @@ export default {
         .map(ext => ({key: ext.remoteService + '/' + ext.action, ...ext})))
     }
   },
+  watch: {
+    'dataset.schema'() {
+      this.initSchema()
+    }
+  },
   mounted() {
     if (this.dataset) {
-      this.schema = this.dataset.schema.map(field => Object.assign({}, field))
-      this.dataset.extensions = this.dataset.extensions || []
-      this.dataset.extensions.filter(ext => ext.active).forEach(extension => this.fetchRemoteService(extension.remoteService))
+      this.initSchema()
     }
   },
   methods: {
     ...mapActions('dataset', ['patchAndCommit', 'fetchRemoteService']),
+    initSchema() {
+      const originalSchema = JSON.stringify(this.dataset && this.dataset.schema)
+      if (this.originalSchema === originalSchema) return
+      this.originalSchema = originalSchema
+      this.schema = this.dataset.schema.map(field => Object.assign({}, field))
+      this.dataset.extensions = this.dataset.extensions || []
+      this.dataset.extensions.filter(ext => ext.active).forEach(extension => this.fetchRemoteService(extension.remoteService))
+    },
     resetSchema() {
       this.schema = JSON.parse(this.originalSchema)
     },

@@ -53,6 +53,11 @@ export default {
     ...mapState(['vocabulary']),
     ...mapState('dataset', ['dataset'])
   },
+  watch: {
+    'dataset.schema'() {
+      this.refresh()
+    }
+  },
   mounted() {
     this.refresh()
   },
@@ -71,6 +76,7 @@ export default {
       this.$http.get(window.CONFIG.publicUrl + '/api/v1/datasets/' + this.dataset.id + '/lines', {
         params
       }).then(results => {
+        this.notFound = false
         this.data = results.body
       }, error => {
         if (error.status === 404) this.notFound = true

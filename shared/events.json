@@ -48,7 +48,7 @@
     "text": "Finalisation du jeu de données"
   },
   "finalize-end": {
-    "icon": "build",
+    "icon": "check",
     "text": "Les données et meta-données sont à jour, le jeu de données est disponible"
   }
 }
