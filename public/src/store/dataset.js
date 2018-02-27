@@ -58,6 +58,7 @@ module.exports = {
         return ext
       })
       Vue.set(dataset, 'extensions', extensions)
+      Vue.set(dataset, 'schema', dataset.schema || [])
       commit('setAny', {dataset})
       const api = (await Vue.http.get(getters.resourceUrl + '/api-docs.json')).data
       commit('setAny', {api})
