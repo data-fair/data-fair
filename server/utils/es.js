@@ -109,7 +109,13 @@ class IndexStream extends Writable {
     this.client.bulk({body: this.body, refresh: 'wait_for'}, (err, res) => {
       if (err) return callback(err)
       if (res.errors) {
-        const msg = res.items.map(item => JSON.stringify(item.index.error)).join('\n')
+        const msg = res.items
+          .filter(item => item.index && item.index.error)
+          .map(item => {
+            let itemMsg = item.index.error.reason
+            if (item.index.error.caused_by) itemMsg += ' - ' + item.index.error.caused_by.reason
+            return itemMsg
+          }).join('\n')
         return callback(new Error('Erreurs à l\'indexation: ' + msg))
       }
       // Super weird ! When passing callback directly it seems that it is not called.
