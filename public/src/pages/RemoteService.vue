@@ -84,8 +84,7 @@
       </md-tab>
 
       <md-tab md-label="Configuration" md-icon="build" id="config" :md-active="activeTab === 'config'">
-        <remote-service-configuration :remote-service="remoteService"/>
-      </md-tab>
+      <remote-service-configuration :remote-service="remoteService" @save="save"/></md-tab>
 
       <md-tab md-label="Permissions" md-icon="security" v-if="isOwner" id="permissions" :md-active="activeTab === 'permissions'">
         <permissions :resource="remoteService" :resource-url="resourceUrl" :api="api"/>
