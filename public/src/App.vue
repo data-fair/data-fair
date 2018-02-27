@@ -58,7 +58,7 @@
       </md-layout>
     </md-layout>
 
-    <md-snackbar md-position="bottom center" ref="notificationErrorSnackbar" md-duration="60000" @close="notifyError(null)">
+    <md-snackbar md-position="bottom center" ref="notificationErrorSnackbar" md-duration="20000" @close="notifyError(null)">
       <md-icon md-theme="error" class="md-primary">error</md-icon>
       &nbsp;&nbsp;&nbsp;
       <div v-html="notifError"/>
@@ -66,7 +66,7 @@
         <md-icon>close</md-icon>
       </md-button>
     </md-snackbar>
-    <md-snackbar md-position="bottom center" ref="notificationSnackbar" md-duration="12000" @close="notify(null)">
+    <md-snackbar md-position="bottom center" ref="notificationSnackbar" md-duration="8000" @close="notify(null)">
       <md-icon md-theme="success" class="md-primary">check_circle</md-icon>
       &nbsp;&nbsp;&nbsp;
       <div v-html="notif"/>
