@@ -63,5 +63,11 @@
     "firstName": "I am",
     "lastName": "Alone",
     "email": "alone@no.org"
+  },
+  {
+      "id": "albanm",
+      "firstName": "Alban",
+      "lastName": "Mouton",
+      "email": "alban.mouton@koumoul.com"
   }
 ]

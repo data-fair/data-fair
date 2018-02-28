@@ -81,5 +81,13 @@
       "id": "dhannan8",
       "role": "user"
     }]
+  },
+  {
+    "id": "EnTgB2UbH",
+    "name": "Koumoul",
+    "members": [{
+      "id": "albanm",
+      "role": "admin"
+    }]
   }
 ]
