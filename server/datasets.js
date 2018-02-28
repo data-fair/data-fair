@@ -36,6 +36,9 @@ router.get('', auth.optionalJwtMiddleware, asyncWrap(async(req, res) => {
     'filename': 'file.name',
     'concepts': 'schema.x-refersTo'
   })
+  if (req.query.bbox === 'true') {
+    query.bbox = {$exists: true}
+  }
   const sort = findUtils.sort(req.query.sort)
   const [skip, size] = findUtils.pagination(req.query)
   query.$or = permissions.filter(req.user)
