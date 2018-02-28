@@ -54,7 +54,7 @@ module.exports = {
   }, {
     title: 'Infos localisations',
     description: 'Cette application permet de visualiser sur une carte des données géolocalisées.',
-    href: 'https://koumoul.com/s/infos-loc/'
+    href: 'https://staging.koumoul.com/s/infos-loc/'
   }],
   remoteServices: [{
     title: 'Données Entreprises',
