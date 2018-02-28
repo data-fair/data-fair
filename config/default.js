@@ -51,6 +51,10 @@ module.exports = {
     title: 'Infos parcelles',
     description: 'Cette application permet de visualiser des informations additionnelles sur certaines parcelles et de les mettre en évidence.',
     href: 'https://koumoul.com/s/infos-parcelles/'
+  }, {
+    title: 'Infos localisations',
+    description: 'Cette application permet de visualiser sur une carte des données géolocalisées.',
+    href: 'https://koumoul.com/s/infos-loc/'
   }],
   remoteServices: [{
     title: 'Données Entreprises',

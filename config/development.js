@@ -20,6 +20,14 @@ module.exports = {
     title: 'Infos parcelles (dev)',
     description: 'Cette application permet de visualiser des informations additionnelles sur certaines parcelles et de les mettre en évidence.',
     href: 'http://localhost:5801/'
+  }, {
+    title: 'Infos localisations (recette)',
+    description: 'Cette application permet de visualiser sur une carte des données géolocalisées.',
+    href: 'https://staging.koumoul.com/s/infos-loc/'
+  }, {
+    title: 'Infos localisations (dev)',
+    description: 'Cette application permet de visualiser sur une carte des données géolocalisées.',
+    href: 'http://localhost:5811/'
   }],
   remoteServices: [{
     title: 'Données Entreprises (recette)',
