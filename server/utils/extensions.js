@@ -39,12 +39,16 @@ class PrepareInputStream extends Transform {
   constructor(options) {
     super({objectMode: true})
     this.hashes = options.hashes
+    this.stats = options.stats
     this.mapping = prepareMapping(options.action, options.dataset.schema, options.extensionKey, options.selectFields)
   }
   _transform(item, encoding, callback) {
     const [mappedItem, h] = this.mapping(item)
     // No actual parameters on this line (only the key)
-    if (Object.keys(mappedItem).length === 1) return callback()
+    if (Object.keys(mappedItem).length === 1) {
+      if (this.stats) this.stats.count += 1
+      return callback()
+    }
     this.hashes[item.id] = h
     callback(null, JSON.stringify(mappedItem) + '\n')
   }
@@ -297,7 +301,7 @@ exports.extend = async(app, dataset, extension, remoteService, action) => {
     if (stats.missing !== 0) {
       await promisePipe(
         inputStream,
-        new PrepareInputStream({action, dataset, hashes, extensionKey, selectFields: extension.select}),
+        new PrepareInputStream({action, dataset, hashes, extensionKey, selectFields: extension.select, stats}),
         request(opts),
         byline.createStream(),
         new PrepareOutputStream({action, hashes, extensionKey, selectFields: extension.select}),
