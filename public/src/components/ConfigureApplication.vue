@@ -81,7 +81,8 @@ export default {
           } else {
             this.description = {
               title: data.meta.title,
-              description: data.meta.description
+              description: data.meta.description,
+              applicationName: data.meta['application-name']
             }
           }
         })

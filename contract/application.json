@@ -16,6 +16,10 @@
       "type": "string",
       "description": "Detailed description of the application configuration"
     },
+    "applicationName": {
+      "type": "string",
+      "description": "Identifier of the origin application"
+    },
     "createdBy": {
       "type": "string",
       "description": "Id of the account that created this application configuration"

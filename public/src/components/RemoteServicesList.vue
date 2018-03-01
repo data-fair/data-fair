@@ -6,7 +6,7 @@
         <md-card style="width:100%">
           <md-card-header>
             <div class="md-title">
-              <router-link :to="{name: 'RemoteService', params:{remoteServiceId:remoteService.id}}">{{ remoteService.title }}</router-link>
+              <router-link :to="{name: 'RemoteService', params:{remoteServiceId:remoteService.id}}">{{ remoteService.title || remoteService.id }}</router-link>
             </div>
           </md-card-header>
           <md-card-content v-html="remoteService.description"/>

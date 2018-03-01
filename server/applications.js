@@ -1,6 +1,7 @@
 const express = require('express')
-const auth = require('./auth')
+const slug = require('slug')
 const moment = require('moment')
+const auth = require('./auth')
 const applicationAPIDocs = require('../contract/application-api-docs')
 
 const ajv = require('ajv')()
@@ -48,11 +49,8 @@ router.post('', auth.jwtMiddleware, asyncWrap(async(req, res) => {
   // This id is temporary, we should have an human understandable id, or perhaps manage it UI side ?
   if (!application.url) return res.sendStatus(400)
   const toks = application.url.split('/')
-  let lastUrlPart
-  do {
-    lastUrlPart = toks.pop()
-  } while (!lastUrlPart.length)
-  const baseId = application.id || lastUrlPart.toLowerCase()
+  const lastUrlPart = toks[toks.length - 1]
+  const baseId = application.id || slug(application.applicationName || lastUrlPart, {lower: true})
   application.id = baseId
   let i = 1
   do {

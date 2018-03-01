@@ -6,7 +6,7 @@
         <md-card style="width:100%">
           <md-card-header>
             <div class="md-title">
-              <router-link :to="{name: 'Dataset', params:{datasetId:dataset.id}}">{{ dataset.title }}</router-link>
+              <router-link :to="{name: 'Dataset', params:{datasetId:dataset.id}}">{{ dataset.title || dataset.id }}</router-link>
             </div>
           </md-card-header>
           <md-card-content>

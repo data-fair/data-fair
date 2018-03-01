@@ -17,6 +17,8 @@ const workers = require('./workers')
 const app = express()
 app.use(bodyParser.json({limit: '1000kb'}))
 app.use(cookieParser())
+// In production CORS is taken care of by the reverse proxy if necessary
+if (process.env.NODE_ENV === 'development') app.use(require('cors')())
 
 // Business routers
 app.use('/api/v1', require('./root'))

@@ -27,7 +27,7 @@ module.exports = {
   }, {
     title: 'Infos localisations (dev)',
     description: 'Cette application permet de visualiser sur une carte des données géolocalisées.',
-    href: 'http://localhost:5811/'
+    href: 'http://localhost:5810/'
   }],
   remoteServices: [{
     title: 'Données Entreprises (recette)',

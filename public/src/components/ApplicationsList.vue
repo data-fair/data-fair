@@ -6,7 +6,7 @@
         <md-card style="width:100%">
           <md-card-header>
             <div class="md-title">
-              <router-link :to="{name: 'Application', params:{applicationId:application.id}}">{{ application.title }}</router-link>
+              <router-link :to="{name: 'Application', params:{applicationId:application.id}}">{{ application.title || application.id }}</router-link>
 
               <md-button class="md-icon-button md-primary md-dense" :href="application.href" target="_blank" style="float:right">
                 <md-icon>exit_to_app</md-icon>
