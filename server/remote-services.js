@@ -10,6 +10,8 @@ const remoteServiceAPIDocs = require('../contract/remote-service-api-docs')
 const matchstick = require('matchstick')
 const mongoEscape = require('mongo-escape')
 const marked = require('marked')
+const config = require('config')
+const { URL } = require('url')
 
 const ajv = require('ajv')()
 const remoteServiceSchema = require('../contract/remote-service.js')
@@ -181,6 +183,7 @@ router.post('/:remoteServiceId/_update', asyncWrap(async(req, res) => {
   res.status(200).json(req.remoteService)
 }))
 
+const directoryDomain = new URL(config.directoryUrl).host
 router.use('/:remoteServiceId/proxy*', (req, res, next) => {
   // console.log(req.remoteService.apiDoc.paths)
   const paths = Object.keys(req.remoteService.apiDoc.paths).filter(path => {
@@ -196,12 +199,20 @@ router.use('/:remoteServiceId/proxy*', (req, res, next) => {
       headers: {}
     }
     // TODO handle query & cookie header types
-    if (req.remoteService.apiKey.in === 'header') {
+    if (req.remoteService.apiKey.in === 'header' && req.remoteService.apiKey.value) {
       options.headers[req.remoteService.apiKey.name] = req.remoteService.apiKey.value
     }
     // transmit organization id as it tends to complement authorization information
     if (req.remoteService.owner.type === 'organization') {
       options.headers['x-organizationId'] = req.remoteService.owner.id
+    }
+    // Only transmit Authorization header if directoryUrl and the remoteService are from the same domain
+    // Not sure this is the right policy. But always sending Authorization header results in 401 errors
+    // and could be considered a security breach
+    // TODO: same for cookies ?
+    if (req.headers.authorization) {
+      const remoteDomain = new URL(req.remoteService.server).host
+      if (remoteDomain !== directoryDomain) delete req.headers.authorization
     }
 
     requestProxy(options)(req, res, next)
