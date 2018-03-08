@@ -2,7 +2,6 @@
 // Used in the DatasetVue and all its tabs and their components
 import Vue from 'vue'
 const eventBus = require('../event-bus.js')
-const utils = require('../utils.js')
 
 module.exports = {
   namespaced: true,
@@ -29,7 +28,7 @@ module.exports = {
       return res
     },
     isOwner: (state, getters, rootState) => {
-      return utils.isOwner(state.dataset, rootState.user)
+      return state.dataset.userPermissions.isOwner
     }
   },
   mutations: {

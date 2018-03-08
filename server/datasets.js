@@ -44,10 +44,15 @@ router.get('', auth.optionalJwtMiddleware, asyncWrap(async(req, res) => {
   const [skip, size] = findUtils.pagination(req.query)
   query.$or = permissions.filter(req.user)
   let mongoQueries = [
-    size > 0 ? datasets.find(query).limit(size).skip(skip).sort(sort).project({_id: 0, permissions: 0}).toArray() : Promise.resolve([]),
+    size > 0 ? datasets.find(query).limit(size).skip(skip).sort(sort).project({_id: 0}).toArray() : Promise.resolve([]),
     datasets.find(query).count()
   ]
   const [results, count] = await Promise.all(mongoQueries)
+  results.forEach(r => {
+    r.userPermissions = permissions.list(r, req.user)
+    r.public = r.userPermissions.public === 'all' || r.userPermissions.public.indexOf('readDescription') >= 0
+    delete r.permissions
+  })
   res.json({results, count})
 }))
 
@@ -69,6 +74,7 @@ router.use('/:datasetId/permissions', permissions.router('datasets', 'dataset'))
 // retrieve a dataset by its id
 router.get('/:datasetId', (req, res, next) => {
   if (!permissions.can(req.dataset, 'readDescription', req.user)) return res.sendStatus(403)
+  req.dataset.userPermissions = permissions.list(req.dataset, req.user)
   delete req.dataset.permissions
   res.status(200).send(req.dataset)
 })

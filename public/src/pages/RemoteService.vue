@@ -134,7 +134,6 @@ import {mapState} from 'vuex'
 import RemoteServiceConfiguration from '../components/RemoteServiceConfiguration.vue'
 import Permissions from '../components/Permissions.vue'
 import OpenApi from 'vue-openapi'
-import utils from '../utils.js'
 
 export default {
   name: 'RemoteService',
@@ -160,7 +159,7 @@ export default {
       return window.CONFIG.publicUrl + '/api/v1/remote-services/' + this.$route.params.remoteServiceId
     },
     isOwner() {
-      return utils.isOwner(this.remoteService, this.user)
+      return this.remoteService.userPermissions.isOwner
     }
   },
   mounted() {

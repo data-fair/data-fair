@@ -31,6 +31,7 @@
             <span v-if="application.owner.type === 'user'"><md-icon>person</md-icon>{{ users[application.owner.id] && users[application.owner.id].name }}</span>
             <span v-if="application.owner.type === 'organization'"><md-icon>group</md-icon>{{ organizations[application.owner.id] && organizations[application.owner.id].name }}</span>
 
+            <md-chip :class="application.public ? 'md-primary' : 'md-accent'">{{ application.public ? 'Public' : 'Privé' }}</md-chip>
             <!-- <div class="md-subhead">Sources</div>
               <span v-for="(source, index) in api.sources">
           <a :href="source.link" target="_blank">{{source.name}}</a>
@@ -92,7 +93,7 @@ export default {
   },
   methods: {
     refresh() {
-      this.$http.get(window.CONFIG.publicUrl + '/api/v1/applications').then(results => {
+      this.$http.get(window.CONFIG.publicUrl + '/api/v1/applications?size=100').then(results => {
         this.applications = results.data
         this.applications.results.forEach(app => { app.href = window.CONFIG.publicUrl + '/app/' + app.id })
       })

@@ -88,7 +88,7 @@ export default {
   },
   methods: {
     refresh() {
-      this.$http.get(window.CONFIG.publicUrl + '/api/v1/datasets').then(results => {
+      this.$http.get(window.CONFIG.publicUrl + '/api/v1/datasets?size=100').then(results => {
         this.datasets = results.data
       })
     }

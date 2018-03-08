@@ -58,7 +58,6 @@
 import {mapState} from 'vuex'
 import OpenApi from 'vue-openapi'
 import Permissions from '../components/Permissions.vue'
-import utils from '../utils.js'
 
 export default {
   name: 'Application',
@@ -80,7 +79,7 @@ export default {
       return window.CONFIG.publicUrl + '/api/v1/applications/' + this.$route.params.applicationId
     },
     isOwner() {
-      return utils.isOwner(this.application, this.user)
+      return this.remoteService.userPermissions.isOwner
     }
   },
   mounted() {

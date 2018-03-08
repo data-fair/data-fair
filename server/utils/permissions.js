@@ -29,6 +29,42 @@ exports.can = function(resource, operationId, user) {
   }
 }
 
+// list permissions of a user over a resource
+exports.list = function(resource, user) {
+  const permissions = {
+    public: (resource.permissions || []).filter(p => !p.type && !p.id).map(p => (p.operations && p.operations.length) ? p.operations : 'all'),
+    user: (resource.permissions || []).filter(p => p.type === 'user' && p.id === user.id).map(p => (p.operations && p.operations.length) ? p.operations : 'all'),
+    isOwner: false,
+    organizations: {}
+  }
+
+  // Check if the user is the owner of the resource
+  if (resource.owner.type === 'user' && resource.owner.id === user.id) permissions.isOwner = true
+  // Check if the user is admin in an organization that have the resource
+  if (resource.owner.type === 'organization') {
+    const userOrga = user.organizations.find(o => o.id === resource.owner.id)
+    if (userOrga && userOrga.role === config.adminRole) permissions.isOwner = true
+  }
+
+  (resource.permissions || []).filter(p => p.type === 'organization').forEach(p => {
+    const orgaUser = user.organizations.find(o => o.id === p.id)
+    if (orgaUser && ((orgaUser.role === config.adminRole) || (!p.roles || !p.roles.length) || p.roles.indexOf(orgaUser.role) >= 0)) {
+      permissions.organizations[orgaUser.id] = permissions.organizations[orgaUser.id] || []
+      permissions.organizations[orgaUser.id].push((p.operations && p.operations.length) ? p.operations : 'all')
+    }
+  })
+
+  const reducer = (accumulator, currentValue) => (accumulator === 'all' || currentValue === 'all') ? 'all' : accumulator.concat(currentValue)
+  permissions.public = permissions.public.reduce(reducer, [])
+  permissions.user = permissions.user.reduce(reducer, [])
+  Object.keys(permissions.organizations).forEach(o => {
+    permissions.organizations[o] = permissions.organizations[o].reduce(reducer, [])
+  })
+  permissions.summary = (permissions.isOwner && 'owner') || [].concat(permissions.public, permissions.user, ...Object.values(permissions.organizations)).reduce(reducer, [])
+
+  return permissions
+}
+
 // Manage filters for datasets, applications and remote services
 exports.filter = function(user) {
   const operationFilter = [{operations: 'readDescription'}, {operations: {$size: 0}}]
@@ -77,6 +113,7 @@ exports.filter = function(user) {
 }
 
 // Test if user is owner or belong to the owner organization
+// Should we deprecate this since we have a more general function that list permissions and tells if we are owner above ?
 exports.isOwner = function(owner, user) {
   if (!user) return false
   if (owner.type === 'user' && owner.id === user.id) return true

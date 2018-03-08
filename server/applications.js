@@ -36,12 +36,16 @@ router.get('', auth.optionalJwtMiddleware, asyncWrap(async(req, res) => {
   query.$or = permissions.filter(req.user)
   let mongoQueries = [
     size > 0 ? applications.find(query).limit(size).skip(skip).sort(sort).project({
-      _id: 0,
-      permissions: 0
+      _id: 0
     }).toArray() : Promise.resolve([]),
     applications.find(query).count()
   ]
   let [results, count] = await Promise.all(mongoQueries)
+  results.forEach(r => {
+    r.userPermissions = permissions.list(r, req.user)
+    r.public = r.userPermissions.public === 'all' || r.userPermissions.public.indexOf('readDescription') >= 0
+    delete r.permissions
+  })
   res.json({results, count})
 }))
 
@@ -104,6 +108,7 @@ router.use('/:applicationId/permissions', permissions.router('applications', 'ap
 // retrieve a application by its id
 router.get('/:applicationId', (req, res, next) => {
   if (!permissions.can(req.application, 'readDescription', req.user)) return res.sendStatus(403)
+  req.application.userPermissions = permissions.list(req.application, req.user)
   delete req.application.permissions
   res.status(200).send(req.application)
 })
