@@ -96,7 +96,7 @@ export default {
       const patch = Object.assign({}, ...['configuration', 'url', 'description', 'title'].map(key => ({ [key]: this.application[key] })))
       this.$http.patch(this.resourceUrl, patch).then(result => {
         this.$store.dispatch('notify', `La configuration de l'application a bien été mise à jour`)
-        this.application = result.data
+        Object.assign(this.application, result.data)
       }, error => {
         this.$store.dispatch('notifyError', `Erreur ${error.status} pendant la mise à jour de la configuration de l'application`)
       })
