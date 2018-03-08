@@ -23,5 +23,9 @@ router.get('/:applicationId*', auth.optionalJwtMiddleware, asyncWrap(async(req, 
       'X-Config-Url': config.publicUrl + '/api/v1/applications/' + req.params.applicationId + '/config'
     }
   }
+  // Small hack that mainly fixes a problem occuring in development
+  if (application.url[application.url.length - 1] === '/' && req.params['0'][0] === '/') {
+    req.params['0'] = req.params['0'].slice(1)
+  }
   requestProxy(options)(req, res, next)
 }))
