@@ -48,13 +48,17 @@ module.exports = {
     href: 'https://spdx.org/licenses/ODbL-1.0.html#licenseText'
   }],
   applications: [{
-    title: 'Infos parcelles',
+    title: 'Infos parcelles (bêta)',
     description: 'Cette application permet de visualiser des informations additionnelles sur certaines parcelles et de les mettre en évidence.',
     href: 'https://koumoul.com/s/infos-parcelles/'
   }, {
-    title: 'Infos localisations',
+    title: 'Infos localisations (bêta)',
     description: 'Cette application permet de visualiser sur une carte des données géolocalisées.',
-    href: 'https://staging.koumoul.com/s/infos-loc/'
+    href: 'https://koumoul.com/s/infos-loc/'
+  }, {
+    title: 'Portail thématique (bêta)',
+    description: 'Cette application permet de créer rapidement un portail pour exposer des jeux de données, des réutilisations et des ressources externes autour de thèmes définis lors de la configuration du portail.',
+    href: 'https://staging.koumoul.com/s/portail-thematique/'
   }],
   remoteServices: [{
     title: 'Données Entreprises',

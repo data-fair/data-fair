@@ -28,6 +28,14 @@ module.exports = {
     title: 'Infos localisations (dev)',
     description: 'Cette application permet de visualiser sur une carte des données géolocalisées.',
     href: 'http://localhost:5810/'
+  }, {
+    title: 'Portail thématique (recette)',
+    description: 'Cette application permet de créer rapidement un portail pour exposer des jeux de données, des réutilisations et des ressources externes autour de thèmes définis lors de la configuration du portail.',
+    href: 'https://staging.koumoul.com/s/portail-thematique/'
+  }, {
+    title: 'Portail thématique (dev)',
+    description: 'Cette application permet de créer rapidement un portail pour exposer des jeux de données, des réutilisations et des ressources externes autour de thèmes définis lors de la configuration du portail.',
+    href: 'http://localhost:5810/'
   }],
   remoteServices: [{
     title: 'Données Entreprises (recette)',
@@ -55,6 +63,10 @@ Toutes les modifications sont historisées, ce qui permet d'avoir accès à des 
     title: 'Géocoder (recette)',
     description: 'Ce service permet de géocoder des adresses, c\'est à dire de déterminer des coordonnées latitude / longitude à partir d\'éléments constituant une adresse comme le nom et le numéro de rue, le code postal ou le code INSEE, le nom de la ville ou une requête textuelle contenant ces différents éléments.',
     href: 'https://staging.koumoul.com/s/geocoder/api/v1/api-docs.json'
+  }, {
+    title: 'Géocoder (dev)',
+    description: 'Ce service permet de géocoder des adresses, c\'est à dire de déterminer des coordonnées latitude / longitude à partir d\'éléments constituant une adresse comme le nom et le numéro de rue, le code postal ou le code INSEE, le nom de la ville ou une requête textuelle contenant ces différents éléments.',
+    href: 'http://localhost:6601/api/v1/api-docs.json'
   }, {
     title: 'Cadastre (recette)',
     description: 'Ce service permet de récupérer des informations de parcelles cadastrales depuis leurs codes officiels. Les informations retournées contiennent notamment la localisation et la contenance de la parcelle.',
