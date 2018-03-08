@@ -79,7 +79,7 @@ export default {
       return window.CONFIG.publicUrl + '/api/v1/applications/' + this.$route.params.applicationId
     },
     isOwner() {
-      return this.remoteService.userPermissions.isOwner
+      return this.application.userPermissions.isOwner
     }
   },
   mounted() {
