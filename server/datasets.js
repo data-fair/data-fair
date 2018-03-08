@@ -34,7 +34,8 @@ router.get('', auth.optionalJwtMiddleware, asyncWrap(async(req, res) => {
   let datasets = req.app.get('db').collection('datasets')
   const query = findUtils.query(req.query, {
     'filename': 'file.name',
-    'concepts': 'schema.x-refersTo'
+    'concepts': 'schema.x-refersTo',
+    'ids': 'id'
   })
   if (req.query.bbox === 'true') {
     query.bbox = {$exists: true}

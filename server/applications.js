@@ -28,7 +28,9 @@ router.get('', auth.optionalJwtMiddleware, asyncWrap(async(req, res) => {
       count: 0
     })
   }
-  const query = findUtils.query(req.query, {})
+  const query = findUtils.query(req.query, {
+    'ids': 'id'
+  })
   const sort = findUtils.sort(req.query.sort)
   const [skip, size] = findUtils.pagination(req.query)
   query.$or = permissions.filter(req.user)
