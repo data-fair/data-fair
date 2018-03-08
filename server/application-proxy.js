@@ -13,7 +13,7 @@ router.get('/:applicationId*', auth.optionalJwtMiddleware, asyncWrap(async(req, 
   })
   if (!application) return res.status(404).send('No application configured for this id')
   const options = {
-    url: application.url,
+    url: application.url + '*',
     headers: {
       'X-Exposed-Url': config.publicUrl + '/app/' + req.params.applicationId,
       'X-Application-Url': config.publicUrl + '/api/v1/applications/' + req.params.applicationId,
