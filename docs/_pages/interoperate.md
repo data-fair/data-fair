@@ -20,7 +20,7 @@ Une application expose un fichier HTML, typiquement un fichier `ìndex.html` à 
 
 Les applications ont besoin d'avoir accès à certaines informations pour bien fonctionner dans le contexte de votre instance Data FAIR : quels jeux de données ou APIs utiliser, comment authentifier les utilisateurs, etc. Ces informations sont transmises à l'aide de headers HTTP que le serveur de l'application interprète. Les headers suivant sont transmis par le service :
  * **X-Exposed-Url** : URL d'exposition de l'application
- * **X-Config-Url** : URL à utiliser pour enregistrer / lire la configuration de l'application
+ * **X-Application-Url** : URL à utiliser pour connaître le propriétaire de l'application, les droits de l'utilisateur courant (pour par exemple masquer / afficher un bouton de configuration). En rajoutant */config* au bout de cette URL, on peut enregistrer / lire la configuration de l'application
  * **X-Directory-Url** : URL de l'annuaire, qui implémente le même contrat que [simple-directory](https://github.com/koumoul-dev/simple-directory)
  * **X-API-Url** : URL de l'API de ce service, ce qui permet ensuite d'accéder aux services distants et aux datasets
 

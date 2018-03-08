@@ -16,9 +16,11 @@ router.get('/:applicationId*', auth.optionalJwtMiddleware, asyncWrap(async(req, 
     url: application.url,
     headers: {
       'X-Exposed-Url': config.publicUrl + '/app/' + req.params.applicationId,
-      'X-Config-Url': config.publicUrl + '/api/v1/applications/' + req.params.applicationId + '/config',
+      'X-Application-Url': config.publicUrl + '/api/v1/applications/' + req.params.applicationId,
       'X-Directory-Url': config.directoryUrl,
-      'X-API-Url': config.publicUrl + '/api/v1'
+      'X-API-Url': config.publicUrl + '/api/v1',
+      // This header is deprecated, use X-Application-Url instead and concatenate /config to it
+      'X-Config-Url': config.publicUrl + '/api/v1/applications/' + req.params.applicationId + '/config'
     }
   }
   requestProxy(options)(req, res, next)
