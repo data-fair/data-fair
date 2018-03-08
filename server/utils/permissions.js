@@ -33,7 +33,7 @@ exports.can = function(resource, operationId, user) {
 exports.list = function(resource, user) {
   const permissions = {
     public: (resource.permissions || []).filter(p => !p.type && !p.id).map(p => (p.operations && p.operations.length) ? p.operations : 'all'),
-    user: (resource.permissions || []).filter(p => p.type === 'user' && p.id === user.id).map(p => (p.operations && p.operations.length) ? p.operations : 'all'),
+    user: (user && (resource.permissions || []).filter(p => p.type === 'user' && p.id === user.id).map(p => (p.operations && p.operations.length) ? p.operations : 'all')) || [],
     isOwner: false,
     organizations: {}
   }
@@ -42,12 +42,12 @@ exports.list = function(resource, user) {
   if (resource.owner.type === 'user' && resource.owner.id === user.id) permissions.isOwner = true
   // Check if the user is admin in an organization that have the resource
   if (resource.owner.type === 'organization') {
-    const userOrga = user.organizations.find(o => o.id === resource.owner.id)
+    const userOrga = user && user.organizations.find(o => o.id === resource.owner.id)
     if (userOrga && userOrga.role === config.adminRole) permissions.isOwner = true
   }
 
   (resource.permissions || []).filter(p => p.type === 'organization').forEach(p => {
-    const orgaUser = user.organizations.find(o => o.id === p.id)
+    const orgaUser = user && user.organizations.find(o => o.id === p.id)
     if (orgaUser && ((orgaUser.role === config.adminRole) || (!p.roles || !p.roles.length) || p.roles.indexOf(orgaUser.role) >= 0)) {
       permissions.organizations[orgaUser.id] = permissions.organizations[orgaUser.id] || []
       permissions.organizations[orgaUser.id].push((p.operations && p.operations.length) ? p.operations : 'all')

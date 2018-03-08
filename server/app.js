@@ -64,7 +64,7 @@ app.use((err, req, res, next) => {
     return res.status(401).send('invalid token...')
   }
   if (err.statusCode === 500) console.error('Error in express route', err)
-  if (!res.headersSent) res.status(err.statusCode).send(err.message)
+  if (!res.headersSent) res.status(err.statusCode || 500).send(err.message)
 })
 
 const server = http.createServer(app)
