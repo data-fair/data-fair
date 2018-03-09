@@ -39,7 +39,7 @@ exports.list = function(resource, user) {
   }
 
   // Check if the user is the owner of the resource
-  if (resource.owner.type === 'user' && resource.owner.id === user.id) permissions.isOwner = true
+  if (user && resource.owner.type === 'user' && resource.owner.id === user.id) permissions.isOwner = true
   // Check if the user is admin in an organization that have the resource
   if (resource.owner.type === 'organization') {
     const userOrga = user && user.organizations.find(o => o.id === resource.owner.id)
