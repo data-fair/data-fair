@@ -114,6 +114,7 @@ router.patch('/:datasetId', asyncWrap(async(req, res) => {
 const unlink = util.promisify(fs.unlink)
 // Delete a dataset
 router.delete('/:datasetId', asyncWrap(async(req, res) => {
+  const owner = usersUtils.owner(req)
   if (!permissions.can(req.dataset, 'delete', req.user)) return res.sendStatus(403)
 
   // TODO : Remove indexes
@@ -125,6 +126,8 @@ router.delete('/:datasetId', asyncWrap(async(req, res) => {
     id: req.params.datasetId
   })
   await esUtils.delete(req.app.get('es'), req.dataset)
+  const storageRemaining = await datasetUtils.storageRemaining(req.app.get('db'), owner, req)
+  if (storageRemaining !== -1) res.set(config.headers.storedBytesRemaining, storageRemaining)
   res.sendStatus(204)
 }))
 
@@ -133,7 +136,6 @@ const detectCharacterEncoding = require('detect-character-encoding')
 
 // Create a dataset by uploading tabular data
 router.post('', auth.jwtMiddleware, filesUtils.uploadFile(), asyncWrap(async(req, res) => {
-  if (req.storageRemaining !== undefined) res.set(config.headers.storedBytesRemaining, req.storageRemaining)
   const owner = usersUtils.owner(req)
   if (!permissions.canDoForOwner(owner, 'postDataset', req.user, req.app.get('db'))) return res.sendStatus(403)
   if (!req.file) return res.sendStatus(400)
@@ -169,14 +171,16 @@ router.post('', auth.jwtMiddleware, filesUtils.uploadFile(), asyncWrap(async(req
   const fileSample = await datasetFileSample(dataset)
   dataset.file.encoding = detectCharacterEncoding(fileSample).encoding
   await req.app.get('db').collection('datasets').insertOne(dataset)
+  const storageRemaining = await datasetUtils.storageRemaining(req.app.get('db'), owner, req)
+  if (storageRemaining !== -1) res.set(config.headers.storedBytesRemaining, storageRemaining)
   await journals.log(req.app, dataset, {type: 'dataset-created', href: config.publicUrl + '/dataset/' + dataset.id})
   res.status(201).send(dataset)
 }))
 
 // Update an existing dataset data
 router.post('/:datasetId', filesUtils.uploadFile(), asyncWrap(async(req, res) => {
+  const owner = usersUtils.owner(req)
   if (!acceptedStatuses.includes(req.dataset.status)) return res.status(409).send('Dataset is not in proper state to be updated')
-  if (req.storageRemaining !== undefined) res.set(config.headers.storedBytesRemaining, req.storageRemaining)
   if (!permissions.can(req.dataset, 'writeData', req.user)) return res.sendStatus(403)
   if (!req.file) return res.sendStatus(400)
 
@@ -193,6 +197,8 @@ router.post('/:datasetId', filesUtils.uploadFile(), asyncWrap(async(req, res) =>
   await req.app.get('db').collection('datasets').updateOne({
     id: req.params.datasetId
   }, req.dataset)
+  const storageRemaining = await datasetUtils.storageRemaining(req.app.get('db'), owner, req)
+  if (storageRemaining !== -1) res.set(config.headers.storedBytesRemaining, storageRemaining)
   await journals.log(req.app, req.dataset, {type: 'data-updated'})
   res.status(200).send(req.dataset)
 }))

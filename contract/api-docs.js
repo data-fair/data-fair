@@ -81,6 +81,11 @@ module.exports = {
             }
           }
         }
+      },
+      delete: {
+        summary: 'Supprimer un jeu de données.',
+        operationId: 'deleteDataset',
+        responses: {}
       }
     },
     '/remote-services': {

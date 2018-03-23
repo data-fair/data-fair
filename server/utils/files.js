@@ -66,16 +66,12 @@ const upload = multer({
     const estimatedFileSize = contentLength - 210
     const datasetLimit = config.defaultLimits.datasetStorage
     if (datasetLimit !== -1 && datasetLimit < estimatedFileSize) return cb(createError(413, 'Dataset size exceeds the authorized limit'))
-    let totalSize = await datasetUtils.storageSize(req.app.get('db'), owner)
-    if (req.dataset) {
+    let storageRemaining = await datasetUtils.storageRemaining(req.app.get('db'), owner, req)
+    if (storageRemaining !== -1) {
       // Ignore the size of the dataset we are overwriting
-      totalSize -= req.dataset.file.size
-    }
-    const proxyLimit = req.get(config.headers.storedBytesLimit)
-    const limit = proxyLimit ? parseInt(proxyLimit) : config.defaultLimits.totalStorage
-    if (limit !== -1) {
-      req.storageRemaining = Math.max(0, limit - (totalSize + estimatedFileSize))
-      if (req.storageRemaining === 0) return cb(createError(429, 'Requested storage exceeds the authorized limit'))
+      if (req.dataset) storageRemaining += req.dataset.file.size
+      storageRemaining = Math.max(0, storageRemaining - estimatedFileSize)
+      if (storageRemaining === 0) return cb(createError(429, 'Requested storage exceeds the authorized limit'))
     }
 
     // mime type is broken on windows it seems.. detect based on extension instead

@@ -44,6 +44,14 @@ exports.storageSize = async (db, owner) => {
   return res.length ? res[0].totalSize : 0
 }
 
+exports.storageRemaining = async (db, owner, req) => {
+  const proxyLimit = req.get(config.headers.storedBytesLimit)
+  const limit = proxyLimit ? parseInt(proxyLimit) : config.defaultLimits.totalStorage
+  if (limit === -1) return -1
+  const size = await exports.storageSize(db, owner)
+  return Math.max(0, limit - size)
+}
+
 exports.ownerCount = async (db, owner) => {
   const aggQuery = [
     {$match: {'owner.type': owner.type, 'owner.id': owner.id}},
