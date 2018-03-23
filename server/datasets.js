@@ -79,7 +79,7 @@ router.get('/:datasetId', (req, res, next) => {
   res.status(200).send(req.dataset)
 })
 
-// Update a dataset
+// Update a dataset's metadata
 const patchKeys = ['schema', 'description', 'title', 'license', 'origin', 'extensions']
 router.patch('/:datasetId', asyncWrap(async(req, res) => {
   if (!permissions.can(req.dataset, 'writeDescription', req.user)) return res.sendStatus(403)

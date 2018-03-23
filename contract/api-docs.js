@@ -62,6 +62,27 @@ module.exports = {
         }
       }
     },
+    '/datasets/{datasetId}': {
+      post: {
+        summary: 'Mettre à jour un jeu de données.',
+        operationId: 'updateDataset',
+        requestBody: {
+          description: 'Fichier à charger et informations de propriété',
+          required: true,
+          content: {}
+        },
+        responses: {
+          200: {
+            description: 'Métadonnées sur le dataset modifié',
+            content: {
+              'application/json': {
+                schema: dataset
+              }
+            }
+          }
+        }
+      }
+    },
     '/remote-services': {
       post: {
         summary: 'Configurer un service distant.',
