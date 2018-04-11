@@ -3,7 +3,17 @@
   "description": "Identifiant, doit être unique",
   "identifiers": ["http://schema.org/identifier"],
   "type": "text"
-},{
+}, {
+  "title": "Libellé",
+  "description": "Un libellé facilement lisible",
+  "identifiers": ["http://www.w3.org/2000/01/rdf-schema#label", "http://www.bbc.co.uk/ontologies/coreconcepts/label"],
+  "type": "text"
+}, {
+  "title": "Description",
+  "description": "Un petit texte descriptif",
+  "identifiers": ["http://schema.org/description"],
+  "type": "text"
+}, {
   "title": "Numéro de rue",
   "description": "Un numéro de rue, qui peut contenir des mots comme bis ou ter",
   "identifiers": ["http://www.ontotext.com/proton/protonext#StreetNumber"],
