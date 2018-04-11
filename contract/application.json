@@ -51,6 +51,9 @@
         "id": {
           "type": "string",
           "description": "Identifier of the owner of this application configuration"
+        },
+        "name": {
+          "type": "string"
         }
       }
     },

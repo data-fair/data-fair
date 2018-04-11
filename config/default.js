@@ -1,6 +1,6 @@
 module.exports = {
   port: 5600,
-  publicUrl: 'http://localhost:5601',
+  publicUrl: 'http://localhost:5600',
   wsPublicUrl: 'ws://localhost:5600',
   directoryUrl: 'http://localhost:5700',
   dataDir: './data/' + (process.env.NODE_ENV || 'development'),
@@ -16,6 +16,10 @@ module.exports = {
       url: 'https://koumoul.com',
       email: 'support@koumoul.com'
     }
+  },
+  htmlMeta: {
+    title: 'Data FAIR',
+    description: 'Find, Access, Interoperate, Reuse data on the Web'
   },
   defaultLimits: {
     // Maximum storage space per user or organization

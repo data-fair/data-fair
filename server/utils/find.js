@@ -24,12 +24,11 @@ exports.query = (reqQuery, fieldsMap) => {
 exports.sort = (sortStr) => {
   const sort = {}
   if (!sortStr) return sort
-  Object.assign(sort, ...sortStr.split(',').map(s => {
+  sortStr.split(',').forEach(s => {
     const toks = s.split(':')
-    return {
-      [toks[0]]: Number(toks[1])
-    }
-  }))
+    sort[toks[0]] = Number(toks[1])
+  })
+  return sort
 }
 
 exports.pagination = (query, defaultSize = 10) => {

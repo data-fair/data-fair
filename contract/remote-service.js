@@ -48,6 +48,9 @@ module.exports = {
         id: {
           type: 'string',
           description: 'Identifier of the owner of this configuration for an remote service'
+        },
+        name: {
+          type: 'string'
         }
       }
     },

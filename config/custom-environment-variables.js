@@ -7,5 +7,9 @@ module.exports = {
   elasticsearch: {
     host: 'ES_HOST'
   },
-  defaultRemoteKey: 'DEFAULT_REMOTE_KEY'
+  defaultRemoteKey: 'DEFAULT_REMOTE_KEY',
+  htmlMeta: {
+    title: 'META_TITLE',
+    description: 'META_DESCRIPTION'
+  }
 }

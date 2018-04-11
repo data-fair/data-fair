@@ -87,7 +87,7 @@
     "owner": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["type", "id"],
+      "required": ["type", "id", "name"],
       "properties": {
         "type": {
           "type": "string",
@@ -97,6 +97,9 @@
         "id": {
           "type": "string",
           "description": "Identifier of the owner of this dataset"
+        },
+        "name": {
+          "type": "string"
         }
       }
     },
