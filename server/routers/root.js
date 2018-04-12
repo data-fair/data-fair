@@ -43,7 +43,6 @@ router.get('/configurable-applications', (req, res) => {
 
 // Used by the users' directory to notify name updates
 router.post('/owner-names', asyncWrap(async (req, res) => {
-  console.log('BOUM', req.body)
   const key = req.query.key
   if (!config.secretKeys.ownerNames || config.secretKeys.ownerNames !== key) {
     return res.status(403).send('Bad secret in "key" parameter')
