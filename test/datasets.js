@@ -108,7 +108,7 @@ test('Fail to upload new dataset when not authenticated', async t => {
   }
 })
 
-test.only('Upload dataset - full test with webhooks', async t => {
+test('Upload dataset - full test with webhooks', async t => {
   const wsCli = new WebSocket(config.publicUrl)
   const ax = await testUtils.axios('cdurning2@desdev.cn')
   await ax.put('/api/v1/settings/user/cdurning2', {webhooks: [{title: 'test', events: ['finalize-end'], url: 'http://localhost:5900'}]})

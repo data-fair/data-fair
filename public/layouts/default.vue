@@ -20,7 +20,7 @@
           Se connecter / S'inscrire
         </v-btn>
         <v-menu offset-y v-else>
-          <v-btn slot="activator" flat><user-name :user="user"/></v-btn>
+          <v-btn slot="activator" flat>{{ user.name }}</v-btn>
           <v-list>
             <v-list-tile :to="`/settings/user/${user.id}`">
               <v-list-tile-title>Mes paramètres</v-list-tile-title>
