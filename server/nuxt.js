@@ -15,7 +15,7 @@ module.exports = async () => {
     if (req.query.id_token) {
       res.cookie('id_token', req.query.id_token, { maxAge: 30000 })
       delete req.query.id_token
-      res.redirect(config.publicUrl + req.path)
+      return res.redirect(config.publicUrl + req.path)
     }
 
     // re-apply the prefix that was removed by our reverse proxy in prod configs
