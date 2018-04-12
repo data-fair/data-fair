@@ -69,7 +69,7 @@ exports.axios = async (email) => {
     return ax
   }
   if (axiosInstances[email]) return axiosInstances[email]
-  const res = await axios.post('http://localhost:5700/api/auth/passwordless', {email}, {withCredentials: true})
+  const res = await axios.post('http://localhost:8080/api/auth/passwordless', {email}, {withCredentials: true})
   const idTokenCookie = res.headers['set-cookie'][0]
   const ax = axios.create({baseURL: config.publicUrl,
     headers: {
