@@ -1,8 +1,8 @@
 module.exports = {
   port: 5800,
   defaultLimits: {
-    totalStorage: 1500,
-    datasetStorage: 1000
+    totalStorage: 15000,
+    datasetStorage: 10000
   },
   workers: {
     concurrency: 1,

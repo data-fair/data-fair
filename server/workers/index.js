@@ -3,8 +3,9 @@ const locks = require('../utils/locks')
 const journals = require('../utils/journals')
 
 const workers = {
-  analyzer: require('./analyzer'),
-  schematizer: require('./schematizer'),
+  csvAnalyzer: require('./csv-analyzer'),
+  geojsonAnalyzer: require('./geojson-analyzer'),
+  csvSchematizer: require('./csv-schematizer'),
   indexer: require('./indexer'),
   extender: require('./extender'),
   finalizer: require('./finalizer')

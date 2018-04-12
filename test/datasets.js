@@ -41,7 +41,7 @@ const datasetFd = fs.readFileSync('./test/resources/dataset1.csv')
 test('Failure to upload dataset exceeding limit', async t => {
   const ax = await testUtils.axios('dmeadus0@answers.com')
   const form = new FormData()
-  form.append('file', Buffer.alloc(1200), 'largedataset.csv')
+  form.append('file', Buffer.alloc(12000), 'largedataset.csv')
   try {
     await ax.post('/api/v1/datasets', form, {headers: testUtils.formHeaders(form)})
     t.fail()
@@ -53,11 +53,11 @@ test('Failure to upload dataset exceeding limit', async t => {
 test('Failure to upload multiple datasets exceeding limit', async t => {
   const ax = await testUtils.axios('dmeadus0@answers.com')
   let form = new FormData()
-  form.append('file', fs.readFileSync('./test/resources/Antennes du CD22.csv'), 'largedataset1.csv')
+  form.append('file', Buffer.alloc(9000), 'largedataset1.csv')
   await ax.post('/api/v1/datasets', form, {headers: testUtils.formHeaders(form)})
 
   form = new FormData()
-  form.append('file', Buffer.alloc(900), 'largedataset2.csv')
+  form.append('file', Buffer.alloc(9000), 'largedataset2.csv')
   try {
     await ax.post('/api/v1/datasets', form, {headers: testUtils.formHeaders(form)})
     t.fail()

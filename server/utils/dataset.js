@@ -1,9 +1,11 @@
 const fs = require('fs')
 const path = require('path')
-const { Transform } = require('stream')
+const Combine = require('stream-combiner')
+const { Transform, PassThrough } = require('stream')
 const iconv = require('iconv-lite')
 const config = require('config')
 const csv = require('csv-parser')
+const JSONStream = require('JSONStream')
 const fieldsSniffer = require('./fields-sniffer')
 
 exports.fileName = (dataset) => {
@@ -11,27 +13,49 @@ exports.fileName = (dataset) => {
 }
 
 exports.readStream = (dataset) => {
-  return fs.createReadStream(exports.fileName(dataset))
-    .pipe(iconv.decodeStream(dataset.file.encoding))
-    // TODO: use mime-type to parse other formats
+  let parser, transformer
+  if (dataset.file.mimetype === 'text/csv') {
     // use result from csv-sniffer to configure parser
-    .pipe(csv({
+    parser = csv({
       separator: dataset.file.props.fieldsDelimiter,
       quote: dataset.file.props.escapeChar,
       newline: dataset.file.props.linesDelimiter
-    }))
+    })
+    transformer = new PassThrough({objectMode: true})
+  } else if (dataset.file.mimetype === 'application/geo+json') {
+    parser = JSONStream.parse('features.*')
+    // transform geojson features into raw data items
+    transformer = new Transform({
+      objectMode: true,
+      transform(feature, encoding, callback) {
+        const item = {...feature.properties}
+        if (feature.id) item.id = feature.id
+        item._geoshape = feature.geometry
+        callback(null, item)
+      }
+    })
+  } else {
+    throw new Error('Dataset type is not supported ' + dataset.file.mimetype)
+  }
+  return Combine(
+    fs.createReadStream(exports.fileName(dataset)),
+    iconv.decodeStream(dataset.file.encoding),
+    parser,
+    transformer,
     // Fix the objects based on fields sniffing
-    .pipe(new Transform({
+    new Transform({
       objectMode: true,
       transform(chunk, encoding, callback) {
         const line = {}
         dataset.schema.forEach(prop => {
-          const value = fieldsSniffer.format(chunk[prop['x-originalName']], prop)
+          const strValue = chunk[prop['x-originalName']] === undefined ? '' : '' + chunk[prop['x-originalName']]
+          const value = fieldsSniffer.format(strValue, prop)
           if (value !== null) line[prop.key] = value
         })
         callback(null, line)
       }
-    }))
+    })
+  )
 }
 
 exports.storageSize = async (db, owner) => {

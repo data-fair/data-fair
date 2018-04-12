@@ -15,7 +15,7 @@ exports.process = async function(app, dataset) {
 
   const tempId = await esUtils.initDatasetIndex(es, dataset)
   const indexStream = esUtils.indexStream(es, tempId, dataset)
-  // reindex and preserver previous extensions
+  // reindex and preserve previous extensions
   await promisePipe(datasetUtils.readStream(dataset), extensionsUtils.extendStream({db, es, dataset}), indexStream)
   const count = dataset.count = indexStream.i
 

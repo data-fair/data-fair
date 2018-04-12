@@ -49,7 +49,7 @@ const storage = multer.diskStorage({
   }
 })
 
-const allowedTypes = new Set(['text/csv'])
+const allowedTypes = new Set(['text/csv', 'application/geo+json'])
 
 const upload = multer({
   storage: storage,

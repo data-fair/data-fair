@@ -1,4 +1,4 @@
-// Analyze dataset data and try to guess the schém
+// Analyze dataset data, check validity and extract a few metadata for next workers
 const datasetFileSample = require('../utils/dataset-file-sample')
 const CSVSniffer = require('csv-sniffer')()
 const possibleDelimiters = [',', ';', '\t', '|']

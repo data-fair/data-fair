@@ -8,7 +8,7 @@ const [test] = testUtils.prepare(__filename)
 const workers = require('../server/workers')
 const esUtils = require('../server/utils/es')
 
-test('Process newly uploaded dataset', async t => {
+test('Process newly uploaded CSV dataset', async t => {
   // Send dataset
   const datasetFd = fs.readFileSync('./test/resources/dataset1.csv')
   const form = new FormData()
@@ -18,11 +18,11 @@ test('Process newly uploaded dataset', async t => {
   t.is(res.status, 201)
 
   // Dataset received and parsed
-  let dataset = await workers.hook('analyzer')
+  let dataset = await workers.hook('csvAnalyzer')
   t.is(dataset.status, 'analyzed')
 
   // Auto schema proposal
-  dataset = await workers.hook('schematizer')
+  dataset = await workers.hook('csvSchematizer')
   t.is(dataset.status, 'schematized')
   const idField = dataset.schema.find(f => f.key === 'id')
   const dateField = dataset.schema.find(f => f.key === 'some_date')
@@ -77,4 +77,31 @@ test('Process newly uploaded dataset', async t => {
     t.is(err.dataset.status, 'error')
     t.true(err.message.indexOf('illegal latitude value') !== -1)
   }
+})
+
+test('Process newly uploaded geojson dataset', async t => {
+  // Send dataset
+  const datasetFd = fs.readFileSync('./test/resources/geojson-example.geojson')
+  const form = new FormData()
+  form.append('file', datasetFd, 'geojson-example.geojson')
+  const ax = await testUtils.axios('dmeadus0@answers.com')
+  let res = await ax.post('/api/v1/datasets', form, {headers: testUtils.formHeaders(form)})
+  t.is(res.status, 201)
+
+  // Dataset received and parsed
+  let dataset = await workers.hook('geojsonAnalyzer')
+  t.is(dataset.status, 'schematized')
+  t.is(dataset.schema.length, 4)
+  const idField = dataset.schema.find(field => field.key === 'id')
+  t.is(idField.type, 'string')
+  t.is(idField.format, 'uri-reference')
+  const descField = dataset.schema.find(field => field.key === 'desc')
+  t.is(descField.type, 'string')
+  t.falsy(descField.format)
+  const boolField = dataset.schema.find(field => field.key === 'bool')
+  t.is(boolField.type, 'boolean')
+
+  // ES indexation and finalization
+  dataset = await workers.hook('finalizer')
+  t.is(dataset.status, 'finalized')
 })
