@@ -57,7 +57,7 @@ router.post('', auth.jwtMiddleware, asyncWrap(async(req, res) => {
   if (!application.url) return res.sendStatus(400)
   const toks = application.url.split('/')
   const lastUrlPart = toks[toks.length - 1]
-  const baseId = application.id || slug(application.applicationName || application.application.title || lastUrlPart, {lower: true})
+  const baseId = application.id || slug(application.applicationName || application.title || lastUrlPart, {lower: true})
   application.id = baseId
   let i = 1
   do {
