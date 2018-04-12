@@ -79,13 +79,9 @@
 
 <script>
 import eventBus from '../event-bus'
-import UserName from '../components/UserName.vue'
 const {mapState, mapActions, mapGetters} = require('vuex')
 
 export default {
-  components: {
-    UserName
-  },
   data() {
     return {
       notification: null,
