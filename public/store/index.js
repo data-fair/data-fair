@@ -1,8 +1,9 @@
 import Vue from 'vue'
 import Vuex from 'vuex'
 import jwtDecode from 'jwt-decode'
-import dataset from './dataset.js'
-import remoteService from './remote-service.js'
+import dataset from './dataset'
+import remoteService from './remote-service'
+import application from './application'
 import eventBus from '../event-bus.js'
 import Cookie from 'js-cookie'
 const cookieparser = require('cookieparser')
@@ -11,7 +12,7 @@ Vue.use(Vuex)
 
 export default () => {
   return new Vuex.Store({
-    modules: {dataset, remoteService},
+    modules: {dataset, remoteService, application},
     state: {
       user: null,
       vocabulary: null,

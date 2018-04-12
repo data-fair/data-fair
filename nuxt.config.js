@@ -27,7 +27,8 @@ module.exports = {
   env: {
     publicUrl: config.publicUrl,
     wsPublicUrl: config.wsPublicUrl,
-    directoryUrl: config.directoryUrl
+    directoryUrl: config.directoryUrl,
+    adminRole: config.adminRole
   },
   head: {
     title: config.htmlMeta.title,

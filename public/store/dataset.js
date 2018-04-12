@@ -27,7 +27,7 @@ export default {
       })
       return res
     },
-    isOwner: (state, getters, rootState) => {
+    isOwner: (state) => {
       return state.dataset.userPermissions.isOwner
     }
   },

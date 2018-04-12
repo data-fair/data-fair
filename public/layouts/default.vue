@@ -19,9 +19,15 @@
         <v-btn v-if="!user" :href="loginUrl" color="primary">
           Se connecter / S'inscrire
         </v-btn>
-        <v-menu bottom left v-else>
+        <v-menu offset-y v-else>
           <v-btn slot="activator" flat><user-name :user="user"/></v-btn>
           <v-list>
+            <v-list-tile :to="`/settings/user/${user.id}`">
+              <v-list-tile-title>Mes paramètres</v-list-tile-title>
+            </v-list-tile>
+            <v-list-tile :to="`/settings/organization/${orga.id}`" v-for="orga in user.organizations || []" :key="orga.id">
+              <v-list-tile-title>Paramètres {{ orga.name || orga.id }}</v-list-tile-title>
+            </v-list-tile>
             <v-list-tile @click="logout">
               <v-list-tile-title>Se déconnecter</v-list-tile-title>
             </v-list-tile>

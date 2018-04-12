@@ -10,8 +10,7 @@ export default {
   },
   getters: {
     resourceUrl: (state, getters, rootState) => state.remoteServiceId ? rootState.env.publicUrl + '/api/v1/remote-services/' + state.remoteServiceId : null,
-    concepts: state => new Set(state.remoteService.schema.map(field => field['x-refersTo']).filter(c => c)),
-    isOwner: (state, getters, rootState) => {
+    isOwner: (state) => {
       return state.remoteService.userPermissions.isOwner
     }
   },
@@ -45,7 +44,7 @@ export default {
         const silent = patch.silent
         delete patch.silent
         await this.$axios.patch(getters.resourceUrl, patch)
-        if (!silent) dispatch('notify', 'La configuration de service distant a bien été mis à jour.', {root: true})
+        if (!silent) dispatch('notify', 'La configuration de service distant a bien été miss à jour.', {root: true})
         return true
       } catch (error) {
         if (error.status === 409) {

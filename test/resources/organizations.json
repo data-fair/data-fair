@@ -88,6 +88,9 @@
     "members": [{
       "id": "albanm",
       "role": "admin"
+    }, {
+      "id": "dhannan8",
+      "role": "user"
     }]
   }
 ]
