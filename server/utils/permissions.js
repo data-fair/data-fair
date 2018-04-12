@@ -132,7 +132,7 @@ exports.canDoForOwner = async function(owner, operationId, user, db) {
     const userOrga = user.organizations.find(o => o.id === owner.id)
     if (userOrga) {
       if (userOrga.role === config.adminRole) return true
-      const settings = await db.collection('settings').findOne(owner)
+      const settings = await db.collection('settings').findOne({id: owner.id, type: owner.type})
       const operationsPermissions = settings.operationsPermissions && settings.operationsPermissions[operationId]
       if (operationsPermissions) return operationsPermissions.indexOf(userOrga.role) >= 0
     }

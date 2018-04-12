@@ -184,7 +184,7 @@ other,unknown address
   t.truthy(dataset.extensions[0].error)
 })
 
-test.only('Manage empty queries', async t => {
+test('Manage empty queries', async t => {
   const ax = await testUtils.axios('dmeadus0@answers.com')
 
   // Initial dataset with addresses

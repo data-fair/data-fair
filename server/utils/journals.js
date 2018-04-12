@@ -21,7 +21,7 @@ module.exports.log = async function(app, dataset, event) {
   await app.publish('datasets/' + dataset.id + '/journal', event)
 
   // webhooks notifications
-  const settings = await db.collection('settings').findOne(dataset.owner) || {}
+  const settings = await db.collection('settings').findOne({id: dataset.owner.id, type: dataset.owner.type}) || {}
   settings.webhooks = settings.webhooks || []
   settings.webhooks.forEach(webhook => {
     if (webhook.events && webhook.events.length && !webhook.events.includes(event.type)) return
