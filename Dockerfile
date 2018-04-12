@@ -10,6 +10,7 @@ RUN npm install --production
 
 # Adding UI files
 ADD public public
+ADD nuxt.config.js
 
 # Adding server files
 ADD server server
