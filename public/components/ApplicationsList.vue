@@ -63,7 +63,7 @@ export default {
   methods: {
     async refresh() {
       this.applications = await this.$axios.$get(this.env.publicUrl + '/api/v1/applications', {params:
-        {size: this.size, page: this.page, q: this.search, public: this.showPublic || !this.user}
+        {size: this.size, page: this.page, q: this.search, public: this.showPublic}
       })
     }
   }

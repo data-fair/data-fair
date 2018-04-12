@@ -61,7 +61,7 @@ export default {
   methods: {
     async refresh() {
       this.datasets = await this.$axios.$get(this.env.publicUrl + '/api/v1/datasets', {params:
-        {size: this.size, page: this.page, q: this.search, public: this.showPublic || !this.user}
+        {size: this.size, page: this.page, q: this.search, public: this.showPublic}
       })
     }
   }

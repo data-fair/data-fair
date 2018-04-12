@@ -59,7 +59,7 @@ export default {
   methods: {
     async refresh() {
       this.remoteServices = await this.$axios.$get(this.env.publicUrl + '/api/v1/remote-services', {params:
-        {size: this.size, page: this.page, q: this.search, public: this.showPublic || !this.user}
+        {size: this.size, page: this.page, q: this.search, public: this.showPublic}
       })
     }
   }

@@ -70,7 +70,7 @@ exports.filter = function(user, showPublic) {
   const operationFilter = [{operations: 'readDescription'}, {operations: {$size: 0}}]
 
   const or = []
-  if (showPublic) {
+  if (showPublic || !user) {
     or.push({permissions: {
       $elemMatch: {$or: operationFilter, type: null, id: null}
     }})
