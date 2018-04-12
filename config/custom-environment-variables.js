@@ -8,6 +8,9 @@ module.exports = {
     host: 'ES_HOST'
   },
   defaultRemoteKey: 'DEFAULT_REMOTE_KEY',
+  secretKeys: {
+    ownerNames: 'SECRET_OWNERNAMES'
+  },
   htmlMeta: {
     title: 'META_TITLE',
     description: 'META_DESCRIPTION'

@@ -12,6 +12,9 @@ module.exports = {
   wsPublicUrl: 'ws://10.0.2.2:5600',
   directoryUrl: 'https://staging.koumoul.com',
   */
+  secretKeys: {
+    ownerNames: 'dev_secret'
+  },
   applications: [{
     title: 'Infos parcelles (recette)',
     description: 'Cette application permet de visualiser des informations additionnelles sur certaines parcelles et de les mettre en évidence.',

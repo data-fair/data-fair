@@ -2,7 +2,7 @@ module.exports = {
   port: 5600,
   publicUrl: 'http://localhost:5600',
   wsPublicUrl: 'ws://localhost:5600',
-  directoryUrl: 'http://localhost:5700',
+  directoryUrl: 'http://localhost:8080',
   dataDir: './data/' + (process.env.NODE_ENV || 'development'),
   mongoUrl: 'mongodb://localhost:27017/data-fair-' + (process.env.NODE_ENV || 'development'),
   elasticsearch: {
@@ -39,6 +39,10 @@ module.exports = {
   adminRole: 'admin',
   // A global default API key for backend to backend calls to remote services
   defaultRemoteKey: null,
+  // secrets that can be used to configure global webhooks for example to update users and organizations
+  secretKeys: {
+    ownerNames: null
+  },
   locks: {
     // in seconds
     ttl: 60

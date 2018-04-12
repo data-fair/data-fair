@@ -12,11 +12,13 @@ services:
     ports:
       - 27017:27017
   simple-directory:
-    image: koumoul/simple-directory:0.6.0
+    image: koumoul/simple-directory:0.7.0
+    network_mode: host
     ports:
-      - 5700:8080
+      - 8080
     environment:
-      - PUBLIC_URL=http://localhost:5700
+      - NAMES_WEBHOOKS=["http://localhost:5600/api/v1/owner-names?key=dev_secret"]
+      - PUBLIC_URL=http://localhost:8080
       # For virtual box debugging
       # - PUBLIC_URL=http://10.0.2.2:5700
     volumes:
