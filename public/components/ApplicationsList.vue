@@ -2,6 +2,16 @@
   <v-container fluid grid-list-lg>
     <h3 class="display-1">{{ applications.count }} configuration{{ plural }} d'application{{ plural }}</h3>
     <v-layout row wrap>
+      <v-flex xs12 sm5 md4 lg3>
+        <v-text-field label="Rechercher" v-model="search" append-icon="search" @keyup.enter.native="refresh" :append-icon-cb="refresh"/>
+      </v-flex>
+      <v-spacer/>
+      <v-flex xs12 sm7 md5 lg3 class="pt-4">
+        <v-switch v-if="user" label="Voir les applications publiques des autres utilisateurs" v-model="showPublic" @change="refresh"/>
+      </v-flex>
+    </v-layout>
+
+    <v-layout row wrap class="resourcesList">
       <v-flex sm12 md6 lg4 xl3 v-for="application in applications.results" :key="application.id">
         <v-card>
           <v-card-title primary-title>
@@ -11,7 +21,7 @@
               <v-icon>exit_to_app</v-icon>
             </v-btn>
           </v-card-title>
-          <v-card-text v-if="application.description" v-html="application.description"/>
+          <v-card-text style="min-height:80px" v-html="application.description"/>
           <v-card-actions>
             <span v-if="application.owner.type === 'user'"><v-icon>person</v-icon>{{ application.owner.name }}</span>
             <span v-if="application.owner.type === 'organization'"><v-icon>group</v-icon>{{ application.owner.name }}</span>
@@ -19,6 +29,10 @@
           </v-card-actions>
         </v-card>
       </v-flex>
+    </v-layout>
+
+    <v-layout row wrap>
+      <v-spacer/><v-pagination :length="Math.ceil(applications.count / size)" v-model="page" @input="$vuetify.goTo('.resourcesList', {offset: -20});refresh()"/>
     </v-layout>
   </v-container>
 </template>
@@ -31,7 +45,11 @@ export default {
     applications: {
       count: 0,
       results: []
-    }
+    },
+    search: '',
+    showPublic: false,
+    size: 10,
+    page: 1
   }),
   computed: {
     ...mapState(['user', 'env']),
@@ -44,7 +62,9 @@ export default {
   },
   methods: {
     async refresh() {
-      this.applications = await this.$axios.$get(this.env.publicUrl + '/api/v1/applications?size=100')
+      this.applications = await this.$axios.$get(this.env.publicUrl + '/api/v1/applications', {params:
+        {size: this.size, page: this.page, q: this.search, public: this.showPublic || !this.user}
+      })
     }
   }
 }

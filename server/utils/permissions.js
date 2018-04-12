@@ -66,15 +66,15 @@ exports.list = function(resource, user) {
 }
 
 // Manage filters for datasets, applications and remote services
-exports.filter = function(user) {
+exports.filter = function(user, showPublic) {
   const operationFilter = [{operations: 'readDescription'}, {operations: {$size: 0}}]
 
-  // this filter is for public resources
-  const or = [{
-    permissions: {
+  const or = []
+  if (showPublic) {
+    or.push({permissions: {
       $elemMatch: {$or: operationFilter, type: null, id: null}
-    }
-  }]
+    }})
+  }
 
   if (user) {
     // user is owner

@@ -35,7 +35,7 @@
       </template>
     </v-data-table>
 
-    <v-dialog v-model="showDialog" max-width="800">
+    <v-dialog v-model="showDialog" max-width="800" persistent>
       <v-card>
         <v-card-title>Ajout de nouvelles permissions</v-card-title>
 
