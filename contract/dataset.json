@@ -84,6 +84,11 @@
       "description": "Date of the last update for this dataset",
       "format": "date-time"
     },
+    "finalizedAt": {
+      "type": "string",
+      "description": "Date of the last finalization for this dataset",
+      "format": "date-time"
+    },
     "owner": {
       "type": "object",
       "additionalProperties": false,

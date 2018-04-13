@@ -50,6 +50,7 @@ exports.process = async function(app, dataset) {
     result.bbox = dataset.bbox = (await bboxPromise).bbox
   }
 
+  result.finalizedAt = (new Date()).toISOString()
   Object.assign(dataset, result)
   await collection.updateOne({id: dataset.id}, {$set: result})
 }

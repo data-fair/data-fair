@@ -205,8 +205,25 @@ router.post('/:datasetId', filesUtils.uploadFile(), asyncWrap(async(req, res) =>
   res.status(200).send(req.dataset)
 }))
 
+// Compare if-modified-since header (filled by browser or reverse proxy cache using last last-modified header)
+// only send data if the dataset was finalized since then
+// prevent running expensive queries while always presenting fresh data
+// also set last finalized date into last-modified header
+function onlyIfModified(req, res, next) {
+  if (!req.dataset.finalizedAt) return next()
+  const finalizedAt = new Date(req.dataset.finalizedAt)
+  // The UTC dates in the headers are precise up to the second
+  finalizedAt.setMilliseconds(0)
+  const ifModifiedSince = req.get('If-Modified-Since')
+  if (ifModifiedSince) {
+    if (finalizedAt <= new Date(ifModifiedSince)) return res.status(304).send()
+  }
+  res.setHeader('Last-Modified', finalizedAt.toUTCString())
+  next()
+}
+
 // Read/search data for a dataset
-router.get('/:datasetId/lines', asyncWrap(async(req, res) => {
+router.get('/:datasetId/lines', onlyIfModified, asyncWrap(async(req, res) => {
   if (!permissions.can(req.dataset, 'readLines', req.user)) return res.sendStatus(403)
 
   // make sure geoshape is present if the output format is geo
@@ -233,21 +250,21 @@ router.get('/:datasetId/lines', asyncWrap(async(req, res) => {
 }))
 
 // Special geo aggregation
-router.get('/:datasetId/geo_agg', asyncWrap(async(req, res) => {
+router.get('/:datasetId/geo_agg', onlyIfModified, asyncWrap(async(req, res) => {
   if (!permissions.can(req.dataset, 'getGeoAgg', req.user)) return res.sendStatus(403)
   const result = await esUtils.geoAgg(req.app.get('es'), req.dataset, req.query)
   res.status(200).send(result)
 }))
 
 // Standard aggregation to group items by value and perform an optional metric calculation on each group
-router.get('/:datasetId/values_agg', asyncWrap(async(req, res) => {
+router.get('/:datasetId/values_agg', onlyIfModified, asyncWrap(async(req, res) => {
   if (!permissions.can(req.dataset, 'getValuesAgg', req.user)) return res.sendStatus(403)
   const result = await esUtils.valuesAgg(req.app.get('es'), req.dataset, req.query)
   res.status(200).send(result)
 }))
 
 // Simple metric aggregation to calculate some value (sum, avg, etc.)
-router.get('/:datasetId/metric_agg', asyncWrap(async(req, res) => {
+router.get('/:datasetId/metric_agg', onlyIfModified, asyncWrap(async(req, res) => {
   if (!permissions.can(req.dataset, 'getMetricAgg', req.user)) return res.sendStatus(403)
   const result = await esUtils.metricAgg(req.app.get('es'), req.dataset, req.query)
   res.status(200).send(result)
@@ -260,7 +277,7 @@ router.get('/:datasetId/raw', (req, res, next) => {
 })
 
 // Download the full dataset with extensions
-router.get('/:datasetId/full', asyncWrap(async (req, res, next) => {
+router.get('/:datasetId/full', onlyIfModified, asyncWrap(async (req, res, next) => {
   if (!permissions.can(req.dataset, 'readData', req.user)) return res.sendStatus(403)
   res.setHeader('Content-disposition', 'attachment; filename=' + req.dataset.file.name)
   res.setHeader('Content-type', 'text/csv')
