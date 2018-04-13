@@ -216,6 +216,7 @@ function onlyIfModified(req, res, next) {
   if (ifModifiedSince) {
     if (finalizedAt === ifModifiedSince) return res.status(304).send()
   }
+  res.setHeader('Cache-Control', 'public')
   res.setHeader('Last-Modified', finalizedAt)
   next()
 }
