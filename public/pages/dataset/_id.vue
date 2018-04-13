@@ -9,6 +9,10 @@
         Vue tableau
         <v-icon>view_list</v-icon>
       </v-tab>
+      <v-tab :nuxt="true" :to="`/dataset/${dataset.id}/map`" v-if="dataset.bbox">
+        Carte
+        <v-icon>map</v-icon>
+      </v-tab>
       <v-tab v-if="isOwner" :nuxt="true" :to="`/dataset/${dataset.id}/permissions`">
         Permissions
         <v-icon>security</v-icon>
@@ -113,4 +117,11 @@ export default {
 </script>
 
 <style>
+.event-finalize-end * {
+  color: green !important;
+}
+
+.event-error * {
+  color: red !important;
+}
 </style>

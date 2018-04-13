@@ -24,7 +24,7 @@
 </template>
 
 <script>
-const {mapState, mapActions} = require('vuex')
+const {mapState} = require('vuex')
 const events = require('../../../../shared/events.json')
 
 export default {
@@ -34,22 +34,6 @@ export default {
   },
   computed: {
     ...mapState('dataset', ['dataset', 'journal'])
-  },
-  mounted() {
-    this.fetchJournal()
-  },
-  methods: {
-    ...mapActions('dataset', ['fetchJournal'])
   }
 }
 </script>
-
-<style lang="less">
-  .event-finalize-end * {
-    color: green !important;
-  }
-
-  .event-error * {
-    color: red !important;
-  }
-</style>

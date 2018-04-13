@@ -30,7 +30,7 @@ exports.readStream = (dataset) => {
       transform(feature, encoding, callback) {
         const item = {...feature.properties}
         if (feature.id) item.id = feature.id
-        item._geoshape = feature.geometry
+        item.geometry = feature.geometry
         callback(null, item)
       }
     })
@@ -48,8 +48,9 @@ exports.readStream = (dataset) => {
       transform(chunk, encoding, callback) {
         const line = {}
         dataset.schema.forEach(prop => {
-          const strValue = chunk[prop['x-originalName']] === undefined ? '' : '' + chunk[prop['x-originalName']]
-          const value = fieldsSniffer.format(strValue, prop)
+          // console.log(chunk[prop['x-originalName']])
+          // console.log(fieldsSniffer.format(chunk[prop['x-originalName']], prop))
+          const value = fieldsSniffer.format(chunk[prop['x-originalName']], prop)
           if (value !== null) line[prop.key] = value
         })
         callback(null, line)

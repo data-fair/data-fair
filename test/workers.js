@@ -8,7 +8,7 @@ const [test] = testUtils.prepare(__filename)
 const workers = require('../server/workers')
 const esUtils = require('../server/utils/es')
 
-test('Process newly uploaded CSV dataset', async t => {
+test.serial('Process newly uploaded CSV dataset', async t => {
   // Send dataset
   const datasetFd = fs.readFileSync('./test/resources/dataset1.csv')
   const form = new FormData()
@@ -70,7 +70,6 @@ test('Process newly uploaded CSV dataset', async t => {
   form2.append('file', datasetFd2, 'dataset.csv')
   res = await ax.post('/api/v1/datasets/' + dataset.id, form2, {headers: testUtils.formHeaders(form2)})
   try {
-    console.log('try')
     await workers.hook('finalizer')
     t.fail()
   } catch (err) {
@@ -79,7 +78,7 @@ test('Process newly uploaded CSV dataset', async t => {
   }
 })
 
-test('Process newly uploaded geojson dataset', async t => {
+test.only('Process newly uploaded geojson dataset', async t => {
   // Send dataset
   const datasetFd = fs.readFileSync('./test/resources/geojson-example.geojson')
   const form = new FormData()
@@ -91,7 +90,8 @@ test('Process newly uploaded geojson dataset', async t => {
   // Dataset received and parsed
   let dataset = await workers.hook('geojsonAnalyzer')
   t.is(dataset.status, 'schematized')
-  t.is(dataset.schema.length, 4)
+  console.log(dataset.schema)
+  t.is(dataset.schema.length, 5)
   const idField = dataset.schema.find(field => field.key === 'id')
   t.is(idField.type, 'string')
   t.is(idField.format, 'uri-reference')

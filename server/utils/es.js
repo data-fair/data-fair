@@ -29,6 +29,7 @@ const indexName = exports.indexName = (dataset) => {
 }
 
 exports.esType = prop => {
+  if (prop.type === 'object') return 'object'
   if (prop.type === 'integer') return 'long'
   if (prop.type === 'number') return 'double'
   if (prop.type === 'boolean') return 'boolean'
@@ -40,17 +41,21 @@ exports.esType = prop => {
 
 exports.indexDefinition = (dataset) => {
   const body = JSON.parse(JSON.stringify(indexBase))
-  const geopoint = geoUtils.schemaHasGeopoint(dataset.schema)
 
   const properties = body.mappings.line.properties = {}
-
   dataset.schema.forEach(jsProp => {
-    if (jsProp.key) properties[jsProp.key] = {type: exports.esType(jsProp)}
+    if (jsProp.key) {
+      properties[jsProp.key] = {type: exports.esType(jsProp)}
+      // Do not index geometry, it will copied and simplified in _geoshape
+      if (jsProp['x-refersTo'] === 'https://purl.org/geojson/vocab#geometry') properties[jsProp.key].index = false
+    }
   })
 
-  // "hidden" field for geopoint indexing
-  if (geopoint) {
+  // "hidden" fields for geo indexing (lat/lon in dataset or geojson data type)
+  // console.log(dataset.file)
+  if (geoUtils.schemaHasGeopoint(dataset.schema) || geoUtils.schemaHasGeometry(dataset.schema)) {
     properties['_geopoint'] = {type: 'geo_point'}
+    properties['_geoshape'] = {type: 'geo_shape'}
   }
   return body
 }
@@ -132,14 +137,7 @@ exports.indexStream = (client, index, dataset) => {
 exports.searchInDataset = async (client, dataset, query) => {
   const esQuery = prepareQuery(dataset, query)
   const esResponse = await client.search({index: indexName(dataset), body: esQuery})
-  return prepareResponse(esResponse)
-}
-
-const prepareResponse = (esResponse) => {
-  const response = {}
-  response.total = esResponse.hits.total
-  response.results = esResponse.hits.hits.map(hit => flatten(hit._source))
-  return response
+  return esResponse
 }
 
 exports.bboxAgg = async (client, dataset, query = {}) => {
@@ -329,7 +327,15 @@ const prepareQuery = (dataset, query) => {
     if (!dataset.bbox) throw createError(400, '"bbox" filter cannot be used on this dataset. It is not geolocalized.')
     const bbox = getQueryBBOX(query, dataset)
     const esBoundingBox = { left: bbox[0], bottom: bbox[1], right: bbox[2], top: bbox[3] }
-    filter.push({ geo_bounding_box: { _geopoint: esBoundingBox } })
+    // use geo_shape intersection instead geo_bounding_box in order to get even
+    // partial geometries in tiles
+    filter.push({geo_shape: {_geoshape: {
+      relation: 'intersects',
+      shape: {
+        type: 'envelope',
+        coordinates: [[esBoundingBox.left, esBoundingBox.top], [esBoundingBox.right, esBoundingBox.bottom]]
+      }
+    }}})
   }
 
   esQuery.query = { bool: { filter, must } }

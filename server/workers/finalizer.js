@@ -19,13 +19,14 @@ exports.process = async function(app, dataset) {
   const es = app.get('es')
   const collection = db.collection('datasets')
   const geopoint = geoUtils.schemaHasGeopoint(dataset.schema)
+  const geometry = geoUtils.schemaHasGeometry(dataset.schema)
 
-  await extensionsUtils.extendCalculated(app, dataset, geopoint)
+  await extensionsUtils.extendCalculated(app, dataset, geopoint, geometry)
 
   const result = {status: 'finalized'}
 
   let bboxPromise
-  if (geopoint) {
+  if (geopoint || geometry) {
     bboxPromise = esUtils.bboxAgg(es, dataset)
   }
 

@@ -1,5 +1,6 @@
 // Index tabular datasets with elasticsearch using available information on dataset schema
-const promisePipe = require('promisepipe')
+const util = require('util')
+const pump = util.promisify(require('pump'))
 const esUtils = require('../utils/es')
 const datasetUtils = require('../utils/dataset')
 const extensionsUtils = require('../utils/extensions')
@@ -16,7 +17,7 @@ exports.process = async function(app, dataset) {
   const tempId = await esUtils.initDatasetIndex(es, dataset)
   const indexStream = esUtils.indexStream(es, tempId, dataset)
   // reindex and preserve previous extensions
-  await promisePipe(datasetUtils.readStream(dataset), extensionsUtils.extendStream({db, es, dataset}), indexStream)
+  await pump(datasetUtils.readStream(dataset), extensionsUtils.extendStream({db, es, dataset}), indexStream)
   const count = dataset.count = indexStream.i
 
   await esUtils.switchAlias(es, dataset, tempId)

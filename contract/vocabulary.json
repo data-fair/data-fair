@@ -93,4 +93,9 @@
   "description": "Le code de la parcelle cadastrale est le numéro unique attribué par le Service du cadastre pour identifier une parcelle cadastrale au niveau national",
   "identifiers": ["http://dbpedia.org/ontology/codeLandRegistry"],
   "type": "text"
+}, {
+  "title": "Géometrie GeoJSON",
+  "description": "Une géométrie (point, polygone, ligne, etc.) au format GeoJSON.",
+  "identifiers": ["https://purl.org/geojson/vocab#geometry"],
+  "type": "object"
 }]

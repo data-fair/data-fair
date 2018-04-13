@@ -28,7 +28,8 @@ module.exports = {
     publicUrl: config.publicUrl,
     wsPublicUrl: config.wsPublicUrl,
     directoryUrl: config.directoryUrl,
-    adminRole: config.adminRole
+    adminRole: config.adminRole,
+    map: config.map
   },
   head: {
     title: config.htmlMeta.title,

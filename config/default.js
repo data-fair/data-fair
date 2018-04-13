@@ -5,6 +5,12 @@ module.exports = {
   directoryUrl: 'http://localhost:8080',
   dataDir: './data/' + (process.env.NODE_ENV || 'development'),
   mongoUrl: 'mongodb://localhost:27017/data-fair-' + (process.env.NODE_ENV || 'development'),
+  map: {
+    // A mapbox style to display geo data
+    style: 'https://free.tilehosting.com/styles/basic/style.json?key=o3lyi2a3gsPOuVB4ZgUv',
+    // The layer before which ou data layers will be inserted (empty to add layer on top of everything)
+    beforeLayer: 'poi_label'
+  },
   elasticsearch: {
     host: 'localhost:9200'
   },

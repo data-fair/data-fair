@@ -4,7 +4,7 @@ const ajv = require('ajv')()
 const fs = require('fs-extra')
 const util = require('util')
 const moment = require('moment')
-const promisePipe = require('promisepipe')
+const pump = util.promisify(require('pump'))
 const csvStringify = require('csv-stringify')
 const flatten = require('flat')
 const auth = require('./auth')
@@ -18,6 +18,8 @@ const datasetUtils = require('../utils/dataset')
 const findUtils = require('../utils/find')
 const asyncWrap = require('../utils/async-wrap')
 const extensions = require('../utils/extensions')
+const geo = require('../utils/geo')
+const tiles = require('../utils/tiles')
 const config = require('config')
 
 const datasetSchema = require('../../contract/dataset.json')
@@ -206,7 +208,27 @@ router.post('/:datasetId', filesUtils.uploadFile(), asyncWrap(async(req, res) =>
 // Read/search data for a dataset
 router.get('/:datasetId/lines', asyncWrap(async(req, res) => {
   if (!permissions.can(req.dataset, 'readLines', req.user)) return res.sendStatus(403)
-  const result = await esUtils.searchInDataset(req.app.get('es'), req.dataset, req.query)
+
+  // make sure geoshape is present if the output format is geo
+  if (['geojson', 'vt', 'pbf'].includes(req.query.format) && req.query.select) {
+    req.query.select += ',_geoshape'
+  }
+
+  const esResponse = await esUtils.searchInDataset(req.app.get('es'), req.dataset, req.query)
+  if (req.query.format === 'geojson') {
+    return res.status(200).send(geo.result2geojson(esResponse))
+  }
+  if (req.query.format === 'pbf' || req.query.format === 'vt') {
+    if (!req.query.xyz) return res.status(400).send('xyz parameter is required for vector tile format.')
+    const tile = tiles.geojson2pbf(geo.result2geojson(esResponse), req.query.xyz.split(',').map(Number))
+    if (!tile) return res.status(404).send()
+    res.type('application/x-protobuf')
+    return res.status(200).send(tile)
+  }
+  const result = {
+    total: esResponse.hits.total,
+    results: esResponse.hits.hits.map(hit => flatten(hit._source))
+  }
   res.status(200).send(result)
 }))
 
@@ -242,7 +264,7 @@ router.get('/:datasetId/full', asyncWrap(async (req, res, next) => {
   if (!permissions.can(req.dataset, 'readData', req.user)) return res.sendStatus(403)
   res.setHeader('Content-disposition', 'attachment; filename=' + req.dataset.file.name)
   res.setHeader('Content-type', 'text/csv')
-  await promisePipe(
+  await pump(
     datasetUtils.readStream(req.dataset),
     extensions.extendStream({db: req.app.get('db'), es: req.app.get('es'), dataset: req.dataset}),
     new Transform({transform(chunk, encoding, callback) { callback(null, flatten(chunk)) }, objectMode: true}),

@@ -36,4 +36,8 @@ test('Get lines in dataset', async t => {
   t.is(res.data.aggs.length, 2)
   res = await ax.get('/api/v1/datasets/dataset/lines?xyz=63,44,7')
   t.is(res.data.total, 1)
+  res = await ax.get('/api/v1/datasets/dataset/lines?xyz=63,44,7&format=geojson')
+  t.is(res.data.total, 1)
+  t.is(res.data.features.length, 1)
+  t.truthy(res.data.features[0].geometry)
 })

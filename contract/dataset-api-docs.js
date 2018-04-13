@@ -198,13 +198,23 @@ module.exports = (dataset) => {
           summary: 'Requêter les lignes du jeu de données.',
           operationId: 'readLines',
           tags: ['Données'],
-          parameters: [{ in: 'query',
+          parameters: [{
+            in: 'query',
             name: 'page',
             description: 'Le numéro de la page (indice de la pagination). Débute à 1.',
             required: false,
             schema: {
               default: 1,
               type: 'integer'
+            }
+          }, {
+            in: 'query',
+            name: 'format',
+            description: 'Le format de la donnée. json par défaut, geojson et pbf pour tuiles vectorielles.',
+            required: false,
+            schema: {
+              default: 'json',
+              enum: ['json'].concat(dataset.bbox && dataset.bbox.length === 4 ? ['pbf', 'geojson'] : [])
             }
           }].concat(queryParams),
           responses: {

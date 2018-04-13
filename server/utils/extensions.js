@@ -1,11 +1,13 @@
+const { Readable, Transform, Writable } = require('stream')
+const util = require('util')
 const config = require('config')
 const eventToPromise = require('event-to-promise')
 const request = require('request')
 const byline = require('byline')
 const hash = require('object-hash')
-const promisePipe = require('promisepipe')
+const pump = util.promisify(require('pump'))
 const flatten = require('flat')
-const { Readable, Transform, Writable } = require('stream')
+const turf = require('turf')
 const es = require('./es')
 const geoUtils = require('./geo')
 
@@ -299,7 +301,7 @@ exports.extend = async(app, dataset, extension, remoteService, action) => {
     await setProgress()
     progressInterval = setInterval(setProgress, 600)
     if (stats.missing !== 0) {
-      await promisePipe(
+      await pump(
         inputStream,
         new PrepareInputStream({action, dataset, hashes, extensionKey, selectFields: extension.select, stats}),
         request(opts),
@@ -322,26 +324,30 @@ exports.extend = async(app, dataset, extension, remoteService, action) => {
 class CalculatedExtension extends Transform {
   constructor(options) {
     super({objectMode: true})
-    this.indexName = options.indexName
-    this.geopoint = options.geopoint
-    this.dataset = options.dataset
+    this.options = options
   }
   _transform(item, encoding, callback) {
     const doc = {}
-    if (this.geopoint) {
-      // "hidden" field for geopoint indexing
-      doc._geopoint = geoUtils.getGeopoint(this.dataset.schema, item.doc)
+    // "hidden" fields for geo indexing
+    try {
+      if (this.options.geometry) {
+        Object.assign(doc, geoUtils.geometry2fields(this.options.dataset.schema, item.doc))
+      } else if (this.options.geopoint) {
+        Object.assign(doc, geoUtils.latlon2fields(this.options.dataset.schema, item.doc))
+      }
+    } catch (err) {
+      return callback(err)
     }
     callback(null, {id: item.id, doc})
   }
 }
 
-exports.extendCalculated = async (app, dataset, geopoint) => {
+exports.extendCalculated = async (app, dataset, geopoint, geometry) => {
   const indexName = es.indexName(dataset)
   const esClient = app.get('es')
-  return promisePipe(
+  return pump(
     new ESInputStream({esClient, indexName}),
-    new CalculatedExtension({indexName, geopoint, dataset}),
+    new CalculatedExtension({indexName, geopoint, geometry, dataset}),
     new ESOutputStream({esClient, indexName})
   )
 }

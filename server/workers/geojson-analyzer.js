@@ -19,7 +19,12 @@ class AnalyzerWritable extends Writable {
   constructor(options) {
     super({objectMode: true})
     this.samples = {}
-    this.schema = []
+    this.schema = [{
+      type: 'string',
+      key: 'geometry',
+      'x-originalName': 'geometry',
+      'x-refersTo': 'https://purl.org/geojson/vocab#geometry'
+    }]
   }
   _write(feature, encoding, callback) {
     const properties = feature.properties || {}

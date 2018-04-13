@@ -48,7 +48,7 @@
 </template>
 
 <script>
-import { mapState } from 'vuex'
+import { mapState, mapGetters } from 'vuex'
 import eventBus from '../../../event-bus'
 
 export default {
@@ -68,6 +68,7 @@ export default {
   computed: {
     ...mapState(['vocabulary']),
     ...mapState('dataset', ['dataset']),
+    ...mapGetters('dataset', ['resourceUrl']),
     headers() {
       console.log(this.dataset.schema)
       return this.dataset.schema.map(field => ({
@@ -103,7 +104,7 @@ export default {
       if (this.query) params.q = this.query
       this.loading = true
       try {
-        this.data = await this.$axios.$get('api/v1/datasets/' + this.dataset.id + '/lines', {params})
+        this.data = await this.$axios.$get(this.resourceUrl + '/lines', {params})
         this.notFound = false
       } catch (error) {
         if (error.status === 404) this.notFound = true

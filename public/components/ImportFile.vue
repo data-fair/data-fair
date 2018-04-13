@@ -26,7 +26,7 @@
           <v-radio :label="a.title" :value="a" v-for="a in actions" :key="a.id"/>
         </v-radio-group>
         <v-progress-linear v-model="uploadProgress"/>
-        <v-btn color="primary" @click.native="importData()">Lancer l'import</v-btn>
+        <v-btn color="primary" :disabled="!action" @click.native="importData()">Lancer l'import</v-btn>
         <v-btn flat @click.native="$emit('cancel')">Annuler</v-btn>
       </v-stepper-content>
     </v-stepper-items>

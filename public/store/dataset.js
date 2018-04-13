@@ -61,6 +61,8 @@ export default {
       commit('setAny', {dataset})
       const api = await this.$axios.$get(getters.resourceUrl + '/api-docs.json')
       commit('setAny', {api})
+      const journal = await this.$axios.$get(getters.resourceUrl + '/journal')
+      commit('setAny', {journal})
     },
     async setId({commit, getters, dispatch, state}, datasetId) {
       commit('setAny', {datasetId})
@@ -108,10 +110,6 @@ export default {
       } catch (error) {
         dispatch('notifyError', `Erreur ${error.status || error.message} pendant la suppression du jeu de données ${state.dataset.title}`, {root: true})
       }
-    },
-    async fetchJournal({getters, commit}) {
-      const journal = await this.$axios.$get(getters.resourceUrl + '/journal')
-      commit('setAny', {journal})
     },
     addJournalEvent({commit}, event) {
       commit('addJournalEvent', event)
