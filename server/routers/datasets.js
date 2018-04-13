@@ -211,14 +211,12 @@ router.post('/:datasetId', filesUtils.uploadFile(), asyncWrap(async(req, res) =>
 // also set last finalized date into last-modified header
 function onlyIfModified(req, res, next) {
   if (!req.dataset.finalizedAt) return next()
-  const finalizedAt = new Date(req.dataset.finalizedAt)
-  // The UTC dates in the headers are precise up to the second
-  finalizedAt.setMilliseconds(0)
+  const finalizedAt = (new Date(req.dataset.finalizedAt)).toUTCString()
   const ifModifiedSince = req.get('If-Modified-Since')
   if (ifModifiedSince) {
-    if (finalizedAt <= new Date(ifModifiedSince)) return res.status(304).send()
+    if (finalizedAt === ifModifiedSince) return res.status(304).send()
   }
-  res.setHeader('Last-Modified', finalizedAt.toUTCString())
+  res.setHeader('Last-Modified', finalizedAt)
   next()
 }
 
