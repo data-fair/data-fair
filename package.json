@@ -82,7 +82,7 @@
     "slug": "^0.9.1",
     "soas": "^0.4.0",
     "split": "^1.0.1",
-    "stream-combiner2": "^1.1.1",
+    "stream-combiner": "^0.2.2",
     "swagger2openapi": "^2.11.7",
     "turf": "^3.0.14",
     "vt-pbf": "^3.1.0",
