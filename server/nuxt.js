@@ -9,7 +9,7 @@ module.exports = async () => {
   // Prepare nuxt for rendering and serving UI
   const nuxt = new Nuxt(nuxtConfig)
   if (nuxtConfig.dev) new Builder(nuxt).build()
-  else if (!alreadyBuilt) await new Builder(nuxt).build()
+  else if (!alreadyBuilt && process.env.NODE_ENV !== 'test') await new Builder(nuxt).build()
   return (req, res, next) => {
     // Signin from the directory url
     if (req.query.id_token) {

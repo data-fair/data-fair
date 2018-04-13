@@ -90,7 +90,6 @@ test.only('Process newly uploaded geojson dataset', async t => {
   // Dataset received and parsed
   let dataset = await workers.hook('geojsonAnalyzer')
   t.is(dataset.status, 'schematized')
-  console.log(dataset.schema)
   t.is(dataset.schema.length, 5)
   const idField = dataset.schema.find(field => field.key === 'id')
   t.is(idField.type, 'string')
