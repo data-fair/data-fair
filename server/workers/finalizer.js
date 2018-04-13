@@ -20,6 +20,8 @@ exports.process = async function(app, dataset) {
   const collection = db.collection('datasets')
   const geopoint = geoUtils.schemaHasGeopoint(dataset.schema)
   const geometry = geoUtils.schemaHasGeometry(dataset.schema)
+
+  // Calculate fields after indexing and extension as we might depend on all fields
   await extensionsUtils.extendCalculated(app, dataset, geopoint, geometry)
 
   const result = {status: 'finalized'}

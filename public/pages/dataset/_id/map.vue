@@ -28,7 +28,8 @@ const polygonLayer = {
   'source-layer': 'results',
   'type': 'fill',
   'paint': {
-    'fill-color': 'rgb(255, 152, 0)'
+    'fill-color': 'rgba(255, 152, 0, 0.2)',
+    'fill-outline-color': 'rgba(255, 152, 0, 0.5)'
   },
   'filter': ['==', '$type', 'Polygon']
 }
@@ -39,7 +40,12 @@ const lineLayer = {
   'source-layer': 'results',
   'type': 'line',
   'paint': {
-    'line-color': 'rgb(156, 39, 176)'
+    'line-color': 'rgba(156, 39, 176, 0.5)',
+    'line-width': {'stops': [[4, 1], [24, 4]]}
+  },
+  layout: {
+    'line-cap': 'round',
+    'line-join': 'round'
   },
   'filter': ['==', '$type', 'LineString']
 }
@@ -50,8 +56,8 @@ const pointLayer = {
   'source-layer': 'results',
   'type': 'circle',
   'paint': {
-    'circle-color': 'rgb(233, 30, 99)',
-    'circle-radius': 2
+    'circle-color': 'rgba(233, 30, 99, 0.5)',
+    'circle-radius': {'stops': [[6, 1], [24, 16]]}
   },
   'filter': ['==', '$type', 'Point']
 }
@@ -82,9 +88,9 @@ export default {
     // Add custom source and layers for this dataset
     this.map.once('load', () => {
       this.map.addSource('data-fair', {type: 'vector', tiles: [this.resourceUrl + '/lines?size=10000&format=pbf&xyz={x},{y},{z}']})
-      this.map.addLayer(polygonLayer)
-      this.map.addLayer(lineLayer)
-      this.map.addLayer(pointLayer)
+      this.map.addLayer(polygonLayer, this.env.map.beforeLayer)
+      this.map.addLayer(lineLayer, this.env.map.beforeLayer)
+      this.map.addLayer(pointLayer, this.env.map.beforeLayer)
     })
   }
 }
