@@ -53,6 +53,12 @@ module.exports = {
     // in seconds
     ttl: 60
   },
+  cache: {
+    // set cache-control max-age for public GET endpoints
+    publicMaxAge: 1000,
+    // size of cache of vector tiles in mongodb (in mb)
+    cacheSize: 1000
+  },
   analytics: null, // use a tracking id for google analytics here
   licenses: [{
     title: 'Licence Ouverte / Open Licence',
