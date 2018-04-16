@@ -297,7 +297,11 @@ const prepareQuery = (dataset, query) => {
   esQuery.from = (query.page ? Number(query.page) - 1 : 0) * esQuery.size
 
   // Select fields to return
-  esQuery._source = query.select ? query.select.split(',') : '*'
+  esQuery._source = {includes: query.select ? query.select.split(',') : ['*'], excludes: []}
+
+  // Some fields are excluded, unless explicitly included
+  if (!esQuery._source.includes.includes('_geoshape')) esQuery._source.excludes.push('_geoshape')
+  if (!esQuery._source.includes.includes('_geopoint')) esQuery._source.excludes.push('_geopoint')
 
   // Sort by list of fields (prefixed by - for descending sort)
   if (query.sort) {
