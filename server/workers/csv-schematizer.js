@@ -26,14 +26,14 @@ exports.process = async function(app, dataset) {
     Object.assign(dataset.file.schema.find(f => f.key === fieldsSniffer.escapeKey(field)), fieldsSniffer.sniff(myCSVObject[field]))
   })
 
-  // We copy fields in the detected schema that have not been modified by the user
-  const previousSchema = dataset.schema || []
-  dataset.schema = previousSchema.concat(dataset.file.schema.filter(field => field.key && !previousSchema.find(f => f.key === field.key)))
+  dataset.schema = dataset.schema || []
+  // Remove fields present in the stored schema, when absent from the raw file schema and not coming from extension
+  dataset.schema = dataset.schema.filter(field => field['x-extension'] || dataset.file.schema.find(f => f.key === field.key))
+  // Add fields not yet present in the stored schema
+  dataset.schema = dataset.schema.concat(dataset.file.schema.filter(field => !dataset.schema.find(f => f.key === field.key)))
+
   dataset.status = 'schematized'
   await db.collection('datasets').updateOne({id: dataset.id}, {
-    $set: {
-      status: 'schematized',
-      schema: dataset.schema
-    }
+    $set: {status: 'schematized', schema: dataset.schema}
   })
 }
