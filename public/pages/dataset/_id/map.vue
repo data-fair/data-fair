@@ -87,7 +87,7 @@ export default {
 
     // Add custom source and layers for this dataset
     this.map.once('load', () => {
-      this.map.addSource('data-fair', {type: 'vector', tiles: [this.resourceUrl + '/lines?size=10000&format=pbf&xyz={x},{y},{z}']})
+      this.map.addSource('data-fair', {type: 'vector', tiles: [this.resourceUrl + '/lines?format=pbf&size=10000&select=_geoshape&xyz={x},{y},{z}']})
       this.map.addLayer(polygonLayer, this.env.map.beforeLayer)
       this.map.addLayer(lineLayer, this.env.map.beforeLayer)
       this.map.addLayer(pointLayer, this.env.map.beforeLayer)
