@@ -209,7 +209,7 @@ class ESOutputStream extends Writable {
   _write(item, encoding, callback) {
     if (this.stats) this.stats.count += 1
 
-    if (Object.keys(item.doc) === 0) return callback()
+    if (Object.keys(item.doc).length === 0) return callback()
     const opts = {
       index: this.indexName,
       type: 'line',
@@ -242,6 +242,8 @@ class ESOutputStream extends Writable {
   }
 }
 
+// Apply an extension to a dataset: meaning, query a remote service in streaming manner
+// and update the documents
 exports.extend = async(app, dataset, extension, remoteService, action) => {
   const esClient = app.get('es')
   const db = app.get('db')
@@ -321,6 +323,8 @@ exports.extend = async(app, dataset, extension, remoteService, action) => {
   }
 }
 
+// A stream that takes documents from a dataset (read from ES), applies some calculations
+// And returns a doc to apply to the document
 class CalculatedExtension extends Transform {
   constructor(options) {
     super({objectMode: true})
@@ -338,6 +342,14 @@ class CalculatedExtension extends Transform {
     } catch (err) {
       return callback(err)
     }
+
+    const unflattenedItem = flatten.unflatten(item.doc)
+    Object.keys(doc).forEach(key => {
+      if (JSON.stringify(doc[key]) === JSON.stringify(unflattenedItem[key])) {
+        delete doc[key]
+      }
+    })
+
     callback(null, {id: item.id, doc})
   }
 }

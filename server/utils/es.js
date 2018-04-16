@@ -121,7 +121,7 @@ class IndexStream extends Writable {
             if (item.index.error.caused_by) itemMsg += ' - ' + item.index.error.caused_by.reason
             return itemMsg
           }).join('\n')
-        return callback(new Error('Erreurs à l\'indexation: ' + msg))
+        return callback(new Error(msg))
       }
       // Super weird ! When passing callback directly it seems that it is not called.
       callback()
