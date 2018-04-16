@@ -73,7 +73,7 @@ other,unknown address
   nockScope.done()
   // A search to check re-indexed results with preserved extensions
   // and new result with new extension
-  res = await ax.get(`/api/v1/datasets/dataset/lines`)
+  res = await ax.get(`/api/v1/datasets/dataset/lines?select=*,_geopoint`)
   t.is(res.data.total, 3)
   let existingResult = res.data.results.find(l => l.label === 'koumoul')
   t.is(existingResult[extensionKey + '.lat'], 10)
@@ -96,7 +96,7 @@ other,unknown address
   await workers.hook('finalizer')
   nockScope.done()
   // A search to check re-indexed results with overwritten extensions
-  res = await ax.get(`/api/v1/datasets/dataset/lines`)
+  res = await ax.get(`/api/v1/datasets/dataset/lines?select=*,_geopoint`)
   t.is(res.data.total, 3)
   existingResult = res.data.results.find(l => l.label === 'koumoul')
   t.is(existingResult[extensionKey + '.lat'], 40)
