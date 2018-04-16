@@ -6,7 +6,14 @@
     </div>
     <v-card>
       <v-card-title>
-        <v-text-field label="Rechercher" v-model="query" @keyup.enter.native="refresh" append-icon="search" style="min-width:150px;"/>
+        <v-text-field
+          label="Rechercher"
+          v-model="query"
+          @keyup.enter.native="refresh"
+          :append-icon-cb="refresh"
+          append-icon="search"
+          class="mr-3"
+          style="min-width:150px;"/>
         <v-spacer/>
         <div class="datatable__actions">
           Nombre de lignes
@@ -55,6 +62,7 @@ export default {
   data: () => ({
     data: {},
     query: null,
+    select: [],
     pagination: {
       page: 1,
       rowsPerPage: 10,
@@ -70,13 +78,14 @@ export default {
     ...mapState('dataset', ['dataset']),
     ...mapGetters('dataset', ['resourceUrl']),
     headers() {
-      console.log(this.dataset.schema)
-      return this.dataset.schema.map(field => ({
-        text: field.title || field['x-originalName'],
-        value: field.key,
-        sortable: (field.type === 'string' && field.format) || field.type === 'number' || field.type === 'integer',
-        tooltip: field.description || (field['x-refersTo'] && this.vocabulary && this.vocabulary[field['x-refersTo']] && this.vocabulary[field['x-refersTo']].description)
-      }))
+      return this.dataset.schema
+        .filter(field => !this.select.length || this.select.includes(field.key))
+        .map(field => ({
+          text: field.title || field['x-originalName'],
+          value: field.key,
+          sortable: (field.type === 'string' && field.format) || field.type === 'number' || field.type === 'integer',
+          tooltip: field.description || (field['x-refersTo'] && this.vocabulary && this.vocabulary[field['x-refersTo']] && this.vocabulary[field['x-refersTo']].description)
+        }))
     }
   },
   watch: {
@@ -95,13 +104,14 @@ export default {
   },
   methods: {
     async refresh() {
-      console.log('this.pagination', this.pagination)
+      // this.data = {}
       const params = {
         size: this.pagination.rowsPerPage,
         page: this.pagination.page
       }
       if (this.pagination.sortBy) params.sort = (this.pagination.descending ? '-' : '') + this.pagination.sortBy
       if (this.query) params.q = this.query
+      if (this.select.length) params.select = this.select.join(',')
       this.loading = true
       try {
         this.data = await this.$axios.$get(this.resourceUrl + '/lines', {params})

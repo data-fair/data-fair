@@ -7,7 +7,8 @@ module.exports = {
   mongoUrl: 'mongodb://localhost:27017/data-fair-' + (process.env.NODE_ENV || 'development'),
   map: {
     // A mapbox style to display geo data
-    style: 'https://free.tilehosting.com/styles/basic/style.json?key=o3lyi2a3gsPOuVB4ZgUv',
+    // style: 'https://free.tilehosting.com/styles/basic/style.json?key=o3lyi2a3gsPOuVB4ZgUv',
+    style: 'https://koumoul.com/s/tileserver/styles/klokantech-basic/style.json',
     // The layer before which ou data layers will be inserted (empty to add layer on top of everything)
     beforeLayer: 'poi_label'
   },
@@ -57,7 +58,7 @@ module.exports = {
     // set cache-control max-age for public GET endpoints
     publicMaxAge: 1000,
     // size of cache of vector tiles in mongodb (in mb)
-    cacheSize: 1000
+    size: 1000
   },
   analytics: null, // use a tracking id for google analytics here
   licenses: [{

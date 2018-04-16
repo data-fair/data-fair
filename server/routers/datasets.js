@@ -228,9 +228,15 @@ router.get('/:datasetId/lines', asyncWrap(async(req, res) => {
   if (!permissions.can(req.dataset, 'readLines', req.user)) return res.sendStatus(403)
   if (!req.user && managePublicCache(req, res)) return res.status(304).send()
 
-  // make sure geoshape is present if the output format is geo
-  if (['geojson', 'mvt', 'vt', 'pbf'].includes(req.query.format) && req.query.select) {
-    req.query.select += ',_geoshape'
+  // if the output format is geo default is empty select and make sure geoshape is present
+  if (['geojson', 'mvt', 'vt', 'pbf'].includes(req.query.format)) {
+    req.query.select = (req.query.select ? req.query.select + ',' : '') + '_geoshape'
+  }
+
+  // geojson format benefits from bbox info
+  let bboxPromise
+  if (req.query.format === 'geojson') {
+    bboxPromise = esUtils.bboxAgg(req.app.get('es'), req.dataset, req.query)
   }
 
   const vectorTileRequested = ['mvt', 'vt', 'pbf'].includes(req.query.format)
@@ -249,13 +255,16 @@ router.get('/:datasetId/lines', asyncWrap(async(req, res) => {
 
   const esResponse = await esUtils.searchInDataset(req.app.get('es'), req.dataset, req.query)
   if (req.query.format === 'geojson') {
-    return res.status(200).send(geo.result2geojson(esResponse))
+    const geojson = geo.result2geojson(esResponse)
+    geojson.bbox = (await bboxPromise).bbox
+    return res.status(200).send(geojson)
   }
 
   if (vectorTileRequested) {
     if (!req.query.xyz) return res.status(400).send('xyz parameter is required for vector tile format.')
     const tile = tiles.geojson2pbf(geo.result2geojson(esResponse), req.query.xyz.split(',').map(Number))
-    if (!tile) return res.status(404).send()
+    // 204 = no-content, better than 404
+    if (!tile) return res.status(204).send()
     res.type('application/x-protobuf')
     // write in cache without await on purpose for minimal latency, a cache failure must be detected in the logs
     cache.set(db, cacheHash, new mongodb.Binary(tile))

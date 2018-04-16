@@ -15,6 +15,9 @@ module.exports = {
   secretKeys: {
     ownerNames: 'dev_secret'
   },
+  cache: {
+    size: 20
+  },
   applications: [{
     title: 'Infos parcelles (recette)',
     description: 'Cette application permet de visualiser des informations additionnelles sur certaines parcelles et de les mettre en évidence.',

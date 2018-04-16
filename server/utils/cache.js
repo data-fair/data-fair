@@ -6,7 +6,7 @@ const config = require('config')
 const objectHash = require('object-hash')
 
 exports.init = async(db) => {
-  await db.createCollection('cache', {capped: true, size: config.cache.cacheSize * 1000000})
+  await db.createCollection('cache', {capped: true, size: config.cache.size * 1000000})
 }
 
 exports.get = async(db, params) => {

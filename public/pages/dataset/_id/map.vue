@@ -1,6 +1,26 @@
 <template lang="html">
 
   <v-card>
+    <v-card class="mt-3 ml-3 pl-3 pr-3" style="position: absolute;z-index:2;">
+      <v-text-field
+        label="Rechercher"
+        v-model="query"
+        @keyup.enter.native="refresh"
+        :append-icon-cb="refresh"
+        append-icon="search"
+        hide-details
+        single-line/>
+
+      <v-select
+        :items="dataset.schema.map(f => ({value: f.key, text: f.title || f['x-originalName']}))"
+        item-value="value"
+        item-text="text"
+        v-model="select"
+        label="Choisir les champs"
+        multiple
+        @change="refresh"
+      />
+    </v-card>
     <div id="map" :style="'height:' + mapHeight + 'px'"/>
   </v-card>
 
@@ -8,6 +28,8 @@
 
 <script>
 import {mapState, mapGetters} from 'vuex'
+import eventBus from '../../../event-bus'
+
 let mapboxgl = null
 if (process.browser) {
   mapboxgl = require('mapbox-gl')
@@ -22,7 +44,7 @@ function resizeBBOX(bbox, ratio) {
   return [bbox[0] - d1diff, bbox[1] - d2diff, bbox[2] + d1diff, bbox[3] + d2diff]
 }
 
-const polygonLayer = {
+const dataLayers = [{
   'id': 'results_polygon',
   'source': 'data-fair',
   'source-layer': 'results',
@@ -32,25 +54,21 @@ const polygonLayer = {
     'fill-outline-color': 'rgba(255, 152, 0, 0.5)'
   },
   'filter': ['==', '$type', 'Polygon']
-}
-
-const lineLayer = {
+}, {
   'id': 'results_line',
   'source': 'data-fair',
   'source-layer': 'results',
   'type': 'line',
   'paint': {
     'line-color': 'rgba(156, 39, 176, 0.5)',
-    'line-width': {'stops': [[4, 1], [24, 4]]}
+    'line-width': {'stops': [[4, 1], [24, 6]]}
   },
   layout: {
     'line-cap': 'round',
     'line-join': 'round'
   },
   'filter': ['==', '$type', 'LineString']
-}
-
-const pointLayer = {
+}, {
   'id': 'results_point',
   'source': 'data-fair',
   'source-layer': 'results',
@@ -60,38 +78,88 @@ const pointLayer = {
     'circle-radius': {'stops': [[6, 1], [24, 16]]}
   },
   'filter': ['==', '$type', 'Point']
-}
+}]
 
 export default {
-  data: () => ({mapHeight: 0}),
+  data: () => ({mapHeight: 0, query: '', select: []}),
   computed: {
     ...mapState(['env']),
     ...mapState('dataset', ['dataset']),
-    ...mapGetters('dataset', ['resourceUrl'])
+    ...mapGetters('dataset', ['resourceUrl']),
+    tileUrl() {
+      let url = this.resourceUrl + '/lines?format=pbf&size=10000&xyz={x},{y},{z}'
+      if (this.query) url += '&qs=' + encodeURIComponent(this.query)
+      if (this.select.length) url += '&select=' + encodeURIComponent(this.select.join(','))
+      return url
+    }
   },
   async mounted() {
-    if (!mapboxgl) return
-    /* eslint no-new:off */
-    this.mapHeight = Math.max(window.innerHeight - this.$el.getBoundingClientRect().y - 60, 300)
-    await new Promise(resolve => setTimeout(resolve, 0))
-    this.map = new mapboxgl.Map({
-      container: 'map',
-      style: this.env.map.style
-    })
-    this.map.fitBounds(resizeBBOX(this.dataset.bbox, 1.1), {duration: 0})
-    this.map.addControl(new mapboxgl.NavigationControl(), 'top-left')
-    // Disable map rotation using right click + drag
-    this.map.dragRotate.disable()
-    // Disable map rotation using touch rotation gesture
-    this.map.touchZoomRotate.disableRotation()
+    this.refresh()
+  },
+  methods: {
+    async getBBox() {
+      return (await this.$axios.$get(this.resourceUrl + '/lines', {params: {format: 'geojson', size: 0, qs: this.query}})).bbox
+    },
+    async refresh() {
+      if (!mapboxgl) return
+      const bbox = await this.getBBox()
+      if (!bbox || !bbox.length) {
+        return eventBus.$emit('notification', {type: 'info', msg: 'Aucune donnée correspondante.'})
+      }
 
-    // Add custom source and layers for this dataset
-    this.map.once('load', () => {
-      this.map.addSource('data-fair', {type: 'vector', tiles: [this.resourceUrl + '/lines?format=pbf&size=10000&select=_geoshape&xyz={x},{y},{z}']})
-      this.map.addLayer(polygonLayer, this.env.map.beforeLayer)
-      this.map.addLayer(lineLayer, this.env.map.beforeLayer)
-      this.map.addLayer(pointLayer, this.env.map.beforeLayer)
-    })
+      this.mapHeight = Math.max(window.innerHeight - this.$el.getBoundingClientRect().y - 60, 300)
+      await new Promise(resolve => setTimeout(resolve, 0))
+      this.map = new mapboxgl.Map({container: 'map', style: this.env.map.style})
+      this.map.on('error', (error) => {
+        console.log(error)
+        eventBus.$emit('notification', {type: 'error', msg: 'Erreur pendant le rendu de la carte : ' + (error.message || error.status || error)})
+      })
+      this.map.fitBounds(resizeBBOX(bbox, 1.1), {duration: 0})
+      this.map.addControl(new mapboxgl.NavigationControl(), 'top-right')
+      // Disable map rotation using right click + drag
+      this.map.dragRotate.disable()
+      // Disable map rotation using touch rotation gesture
+      this.map.touchZoomRotate.disableRotation()
+
+      // Add custom source and layers for this dataset
+      this.map.once('load', () => {
+        this.map.addSource('data-fair', {type: 'vector', tiles: [this.tileUrl]})
+        dataLayers.forEach(layer => this.map.addLayer(layer, this.env.map.beforeLayer))
+      })
+
+      // Create a popup, but don't add it to the map yet.
+      const popup = new mapboxgl.Popup({closeButton: false, closeOnClick: false})
+
+      const enterCallback = (e) => {
+        // Change the cursor style as a UI indicator.
+        this.map.getCanvas().style.cursor = 'pointer'
+        const htmlList = Object.keys(e.features[0].properties || {})
+          .map(key => {
+            const field = this.dataset.schema.find(f => f.key === key)
+            return `<li>${field.title || field['x-originalName']}: ${e.features[0].properties[key]}</li>`
+          })
+          .join('\n')
+        const html = `<ul style="list-style-type: none;">${htmlList}</ul>`
+
+        // Populate the popup and set its coordinates
+        // based on the feature found.
+        popup.setLngLat(e.lngLat)
+          .setHTML(html)
+          .addTo(this.map)
+      }
+
+      const leaveCallback = () => {
+        this.map.getCanvas().style.cursor = ''
+        popup.remove()
+      }
+
+      if (this.select.length) {
+        dataLayers.forEach(layer => {
+          this.map.on('mouseenter', layer.id, enterCallback)
+          this.map.on('mouseleave', layer.id, leaveCallback)
+        })
+      }
+    }
   }
 }
 </script>
