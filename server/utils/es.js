@@ -13,8 +13,8 @@ exports.init = () => elasticsearch.Client(Object.assign({}, config.elasticsearch
 const indexBase = {
   settings: {
     index: {
-    // Minimal overhead by default as we might deal with a lot of small indices.
-    // TODO: a way to override this ? Maybe intelligently based on size of the file ?
+      // Minimal overhead by default as we might deal with a lot of small indices.
+      // TODO: a way to override this ? Maybe intelligently based on size of the file ?
       number_of_shards: 1,
       number_of_replicas: 1
     }
@@ -28,15 +28,15 @@ const indexName = exports.indexName = (dataset) => {
   return `${config.indicesPrefix}-${dataset.id}`
 }
 
-exports.esType = prop => {
-  if (prop.type === 'object') return 'object'
-  if (prop.type === 'integer') return 'long'
-  if (prop.type === 'number') return 'double'
-  if (prop.type === 'boolean') return 'boolean'
-  if (prop.type === 'string' && prop.format === 'date-time') return 'date'
-  if (prop.type === 'string' && prop.format === 'date') return 'date'
-  if (prop.type === 'string' && prop.format === 'uri-reference') return 'keyword'
-  return 'text'
+exports.esProperty = prop => {
+  if (prop.type === 'object') return {type: 'object'}
+  if (prop.type === 'integer') return {type: 'long'}
+  if (prop.type === 'number') return {type: 'double'}
+  if (prop.type === 'boolean') return {type: 'boolean'}
+  if (prop.type === 'string' && prop.format === 'date-time') return {type: 'date'}
+  if (prop.type === 'string' && prop.format === 'date') return {type: 'date'}
+  if (prop.type === 'string' && prop.format === 'uri-reference') return {type: 'keyword', fields: {text: {type: 'text', analyzer: config.elasticsearch.defaultAnalyzer}}}
+  return {type: 'text', analyzer: config.elasticsearch.defaultAnalyzer}
 }
 
 exports.indexDefinition = (dataset) => {
@@ -45,7 +45,7 @@ exports.indexDefinition = (dataset) => {
   const properties = body.mappings.line.properties = {}
   dataset.schema.forEach(jsProp => {
     if (jsProp.key) {
-      properties[jsProp.key] = {type: exports.esType(jsProp)}
+      properties[jsProp.key] = exports.esProperty(jsProp)
       // Do not index geometry, it will copied and simplified in _geoshape
       if (jsProp['x-refersTo'] === 'https://purl.org/geojson/vocab#geometry') properties[jsProp.key].index = false
     }
@@ -180,7 +180,7 @@ exports.valuesAgg = async (client, dataset, query) => {
   if (!query.field) throw createError(400, '"field" parameter is required')
   const prop = dataset.schema.find(p => p.key === query.field)
   if (!prop) throw createError(400, '"field" parameter references an unknown field')
-  const esType = exports.esType(prop)
+  const esType = exports.esProperty(prop).type
   if (esType === 'text') throw createError(400, 'values aggregation is not permitted on a full text field')
 
   query.size = '0'

@@ -13,7 +13,8 @@ module.exports = {
     beforeLayer: 'poi_label'
   },
   elasticsearch: {
-    host: 'localhost:9200'
+    host: 'localhost:9200',
+    defaultAnalyzer: 'french'
   },
   indicesPrefix: 'dataset-' + (process.env.NODE_ENV || 'development'),
   info: {

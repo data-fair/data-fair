@@ -236,7 +236,7 @@ router.get('/:datasetId/lines', asyncWrap(async(req, res) => {
   // geojson format benefits from bbox info
   let bboxPromise
   if (req.query.format === 'geojson') {
-    bboxPromise = esUtils.bboxAgg(req.app.get('es'), req.dataset, req.query)
+    bboxPromise = esUtils.bboxAgg(req.app.get('es'), req.dataset, {...req.query})
   }
 
   const vectorTileRequested = ['mvt', 'vt', 'pbf'].includes(req.query.format)

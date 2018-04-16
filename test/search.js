@@ -24,7 +24,16 @@ test('Get lines in dataset', async t => {
   await workers.hook('finalizer')
   res = await ax.get('/api/v1/datasets/dataset/lines')
   t.is(res.data.total, 2)
+  // Filter on keyword field
   res = await ax.get('/api/v1/datasets/dataset/lines?q=koumoul')
+  t.is(res.data.total, 1)
+  // Filter on keyword field and child text field
+  res = await ax.get('/api/v1/datasets/dataset/lines?q=Koumoul')
+  t.is(res.data.total, 1)
+  // Filter on text field
+  res = await ax.get('/api/v1/datasets/dataset/lines?q=lactée')
+  // Filter on text field with default french stemming
+  res = await ax.get('/api/v1/datasets/dataset/lines?q=lacté')
   t.is(res.data.total, 1)
   res = await ax.get('/api/v1/datasets/dataset/lines?bbox=-2.5,40,3,47')
   t.is(res.data.total, 1)
