@@ -110,9 +110,8 @@ export default {
       this.mapHeight = Math.max(window.innerHeight - this.$el.getBoundingClientRect().y - 60, 300)
       await new Promise(resolve => setTimeout(resolve, 0))
       this.map = new mapboxgl.Map({container: 'map', style: this.env.map.style})
-      this.map.on('error', (error) => {
-        console.log(error)
-        eventBus.$emit('notification', {type: 'error', msg: 'Erreur pendant le rendu de la carte : ' + (error.message || error.status || error)})
+      this.map.on('error', (e) => {
+        eventBus.$emit('notification', {type: 'error', msg: 'Erreur pendant le rendu de la carte : ' + (e.error.message || e.error.status || e.error)})
       })
       this.map.fitBounds(resizeBBOX(bbox, 1.1), {duration: 0})
       this.map.addControl(new mapboxgl.NavigationControl(), 'top-right')
