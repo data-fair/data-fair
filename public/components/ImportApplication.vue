@@ -18,6 +18,12 @@
           label="Choisissez une application à configurer"
           @input="downloadFromUrl"
         />
+        <v-text-field
+          label="Ou saisissez une URL"
+          v-model="applicationUrl"
+          @blur="downloadFromUrl"
+          @keyup.native.enter="downloadFromUrl"
+        />
         <p v-if="description" v-html="description.description"/>
         <v-btn color="primary" :disabled="!description" @click.native="currentStep = 2">Continuer</v-btn>
         <v-btn flat @click.native="$emit('cancel')">Annuler</v-btn>
@@ -71,6 +77,7 @@ export default {
   methods: {
     async downloadFromUrl() {
       if (!this.applicationUrl) return
+      this.description = null
       try {
         const html = await this.$axios.$get(this.applicationUrl)
         const data = await new Promise((resolve, reject) => {

@@ -18,6 +18,12 @@
           label="Choisissez un service distant à configurer"
           @input="downloadFromUrl"
         />
+        <v-text-field
+          label="Ou saisissez une URL de documentation"
+          v-model="apiDocUrl"
+          @blur="downloadFromUrl"
+          @keyup.native.enter="downloadFromUrl"
+        />
         <p v-if="apiDoc" v-html="marked(apiDoc.info.description)"/>
         <v-btn color="primary" :disabled="!apiDoc" @click.native="currentStep = 2">Continuer</v-btn>
         <v-btn flat @click.native="$emit('cancel')">Annuler</v-btn>
@@ -70,9 +76,9 @@ export default {
   },
   methods: {
     async downloadFromUrl() {
+      this.apiDoc = null
+      if (!this.apiDocUrl) return
       try {
-        console.log('API', this.apiDocUrl)
-
         const api = await this.$axios.$get(this.apiDocUrl)
         this.checkApi(api)
       } catch (error) {
