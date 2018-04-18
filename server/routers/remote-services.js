@@ -9,7 +9,6 @@ const requestProxy = require('express-request-proxy')
 const remoteServiceAPIDocs = require('../../contract/remote-service-api-docs')
 const matchstick = require('matchstick')
 const mongoEscape = require('mongo-escape')
-const marked = require('marked')
 const config = require('config')
 const { URL } = require('url')
 
@@ -95,7 +94,7 @@ router.post('', auth.jwtMiddleware, asyncWrap(async(req, res) => {
   if (service.apiDoc) {
     if (service.apiDoc.info) {
       service.title = service.apiDoc.info.title
-      service.description = marked(service.apiDoc.info.description)
+      service.description = service.apiDoc.info.description
     }
     service.actions = computeActions(service.apiDoc)
   }

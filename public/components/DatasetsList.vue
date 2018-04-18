@@ -17,9 +17,7 @@
           <v-card-title primary-title>
             <nuxt-link :to="`/dataset/${dataset.id}/description`">{{ dataset.title || dataset.id }}</nuxt-link>
           </v-card-title>
-          <v-card-text style="min-height:80px">
-            {{ dataset.description }}
-          </v-card-text>
+          <v-card-text style="min-height:80px" v-html="marked(dataset.description || '')"/>
           <v-card-actions>
             <span v-if="dataset.owner.type === 'user'"><v-icon>person</v-icon>{{ dataset.owner.name }}</span>
             <span v-if="dataset.owner.type === 'organization'"><v-icon>group</v-icon>{{ dataset.owner.name }}</span>
@@ -36,6 +34,7 @@
 </template>
 
 <script>
+const marked = require('marked')
 const {mapState} = require('vuex')
 
 export default {
@@ -47,7 +46,8 @@ export default {
     search: '',
     showPublic: false,
     size: 10,
-    page: 1
+    page: 1,
+    marked
   }),
   computed: {
     ...mapState(['user', 'env']),

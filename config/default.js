@@ -71,43 +71,28 @@ module.exports = {
   }],
   applications: [{
     title: 'Infos parcelles (bêta)',
-    description: 'Cette application permet de visualiser des informations additionnelles sur certaines parcelles et de les mettre en évidence.',
     href: 'https://koumoul.com/s/infos-parcelles/'
   }, {
     title: 'Infos localisations (bêta)',
-    description: 'Cette application permet de visualiser sur une carte des données géolocalisées.',
     href: 'https://koumoul.com/s/infos-loc/'
   }, {
     title: 'Portail thématique (bêta)',
-    description: 'Cette application permet de créer rapidement un portail pour exposer des jeux de données, des réutilisations et des ressources externes autour de thèmes définis lors de la configuration du portail.',
     href: 'https://staging.koumoul.com/s/portail-thematique/'
   }],
   remoteServices: [{
     title: 'Données Entreprises',
-    description: `
-Ce service permet de récupérer les informations des entreprises de France et de leurs établissements. Les principales clés sont les codes officiels SIRET et SIREN.
-
-La donnée provient initialement de la base Sirène publiée par l'INSEE et est enrichie avec ces sources : BODACC, Infogreffe, NAF et BAN.
-
-La documentation de tous les champs disponibles est consultable [ici](https://koumoul.com/s/sirene/schema-doc).
-
-Toutes les modifications sont historisées, ce qui permet d'avoir accès à des dynamiques dans le temps, comme par exemple le nombre de créations ou de suppressions d'entreprises dans un secteur particulier.`,
     href: 'https://koumoul.com/s/sirene/api-docs.json'
   }, {
     title: 'Géocoder',
-    description: 'Ce service permet de géocoder des adresses, c\'est à dire de déterminer des coordonnées latitude / longitude à partir d\'éléments constituant une adresse comme le nom et le numéro de rue, le code postal ou le code INSEE, le nom de la ville ou une requête textuelle contenant ces différents éléments.',
     href: 'https://koumoul.com/s/geocoder/api/v1/api-docs.json'
   }, {
     title: 'Cadastre',
-    description: 'Ce service permet de récupérer des informations de parcelles cadastrales depuis leurs codes officiels. Les informations retournées contiennent notamment la localisation et la contenance de la parcelle.',
     href: 'https://koumoul.com/s/cadastre/api-docs.json'
   }, {
     title: 'Divisions administratives',
-    description: 'Ce service permet de récupérer des informations sur les divisions administratives françaises : régions, départements, EPCI et communes. Les données portent, entre-autres, sur la population, la fiscalité et des tracés vectoriels.',
     href: 'https://koumoul.com/s/insee-mapping/api/v1/api-docs.json'
   }, {
     title: 'Service de données cartographiques',
-    description: 'Ce service permet de récupérer des données cartographiques et des fonds de carte pour le territoire Français.',
     href: 'https://koumoul.com/s/tileserver/api/v1/api-docs.json'
   }]
 }

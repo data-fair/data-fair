@@ -17,7 +17,7 @@
           <v-card-title primary-title>
             <nuxt-link :to="`/remote-service/${remoteService.id}/description`">{{ remoteService.title || remoteService.id }}</nuxt-link>
           </v-card-title>
-          <v-card-text style="min-height:80px" v-html="remoteService.description"/>
+          <v-card-text style="min-height:80px" v-html="marked(remoteService.description || '')"/>
           <v-card-actions>
             <span v-if="remoteService.owner.type === 'user'"><v-icon>person</v-icon>{{ remoteService.owner.name }}</span>
             <span v-if="remoteService.owner.type === 'organization'"><v-icon>group</v-icon>{{ remoteService.owner.name }}</span>
@@ -34,6 +34,7 @@
 </template>
 
 <script>
+const marked = require('marked')
 const {mapState} = require('vuex')
 
 export default {
@@ -45,7 +46,8 @@ export default {
     search: '',
     showPublic: false,
     size: 10,
-    page: 1
+    page: 1,
+    marked
   }),
   computed: {
     ...mapState(['user', 'env']),

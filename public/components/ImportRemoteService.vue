@@ -18,7 +18,7 @@
           label="Choisissez un service distant à configurer"
           @input="downloadFromUrl"
         />
-        <p v-if="apiDocUrl" v-html="configurableRemoteServices.find(a => a.href === apiDocUrl).description"/>
+        <p v-if="apiDoc" v-html="marked(apiDoc.info.description)"/>
         <v-btn color="primary" :disabled="!apiDoc" @click.native="currentStep = 2">Continuer</v-btn>
         <v-btn flat @click.native="$emit('cancel')">Annuler</v-btn>
       </v-stepper-content>
@@ -39,6 +39,7 @@
 </template>
 
 <script>
+import marked from 'marked'
 import {mapState} from 'vuex'
 import eventBus from '../event-bus'
 
@@ -49,7 +50,8 @@ export default {
     uploadProgress: 0,
     apiDoc: null,
     apiDocUrl: null,
-    configurableRemoteServices: []
+    configurableRemoteServices: [],
+    marked
   }),
   computed: {
     ...mapState(['user', 'env']),

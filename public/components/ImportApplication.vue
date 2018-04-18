@@ -18,7 +18,7 @@
           label="Choisissez une application à configurer"
           @input="downloadFromUrl"
         />
-        <p v-if="applicationUrl" v-html="configurableApplications.find(a => a.href === applicationUrl).description"/>
+        <p v-if="description" v-html="description.description"/>
         <v-btn color="primary" :disabled="!description" @click.native="currentStep = 2">Continuer</v-btn>
         <v-btn flat @click.native="$emit('cancel')">Annuler</v-btn>
       </v-stepper-content>

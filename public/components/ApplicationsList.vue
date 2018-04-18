@@ -21,7 +21,7 @@
               <v-icon>exit_to_app</v-icon>
             </v-btn>
           </v-card-title>
-          <v-card-text style="min-height:80px" v-html="application.description"/>
+          <v-card-text style="min-height:80px" v-html="marked(application.description || '')"/>
           <v-card-actions>
             <span v-if="application.owner.type === 'user'"><v-icon>person</v-icon>{{ application.owner.name }}</span>
             <span v-if="application.owner.type === 'organization'"><v-icon>group</v-icon>{{ application.owner.name }}</span>
@@ -38,6 +38,7 @@
 </template>
 
 <script>
+const marked = require('marked')
 const {mapState} = require('vuex')
 
 export default {
@@ -49,7 +50,8 @@ export default {
     search: '',
     showPublic: false,
     size: 10,
-    page: 1
+    page: 1,
+    marked
   }),
   computed: {
     ...mapState(['user', 'env']),

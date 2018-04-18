@@ -1,5 +1,4 @@
 const express = require('express')
-const marked = require('marked')
 
 const asyncWrap = require('../utils/async-wrap')
 const status = require('../routers/status')
@@ -13,7 +12,7 @@ const config = require('config')
 
 const router = express.Router()
 
-const remoteServices = config.remoteServices.map(s => ({...s, description: marked(s.description)}))
+const remoteServices = config.remoteServices.map(s => ({...s}))
 
 router.get('/status', status.status)
 router.get('/ping', status.ping)
