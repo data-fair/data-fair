@@ -17,7 +17,7 @@
           <v-card-title primary-title>
             <nuxt-link :to="`/application/${application.id}/description`">{{ application.title || application.id }}</nuxt-link>
             <v-spacer/>
-            <v-btn icon flat color="primary" :href="application.url" target="_blank" title="Accéder à l'application">
+            <v-btn icon flat color="primary" :href="`${env.publicUrl}/app/${application.id}`" target="_blank" title="Accéder à l'application">
               <v-icon>exit_to_app</v-icon>
             </v-btn>
           </v-card-title>
