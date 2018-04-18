@@ -3,11 +3,12 @@
     <v-toolbar app scroll-off-screen class="main-toolbar">
       <div class="logo-container">
         <nuxt-link :to="{name: 'index'}" title="Accueil">
-          <img src="../assets/logo.svg">
+          <img v-if="env.brand.logo" :src="env.brand.logo">
+          <img v-else src="../assets/logo.svg">
         </nuxt-link>
       </div>
 
-      <v-toolbar-title><h1 class="headline">Data FAIR</h1></v-toolbar-title>
+      <v-toolbar-title><h1 class="headline">{{ env.brand.title || 'Data FAIR' }}</h1></v-toolbar-title>
 
       <v-spacer/>
 

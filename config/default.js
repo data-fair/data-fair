@@ -25,7 +25,8 @@ module.exports = {
       email: 'support@koumoul.com'
     }
   },
-  htmlMeta: {
+  brand: {
+    logo: null,
     title: 'Data FAIR',
     description: 'Find, Access, Interoperate, Reuse data on the Web'
   },

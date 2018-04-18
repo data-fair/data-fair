@@ -11,8 +11,9 @@ module.exports = {
   secretKeys: {
     ownerNames: 'SECRET_OWNERNAMES'
   },
-  htmlMeta: {
-    title: 'META_TITLE',
-    description: 'META_DESCRIPTION'
+  brand: {
+    logo: 'BRAND_LOGO',
+    title: 'BRAND_TITLE',
+    description: 'BRAND_DESCRIPTION'
   }
 }
