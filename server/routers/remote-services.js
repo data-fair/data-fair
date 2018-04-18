@@ -146,7 +146,7 @@ router.patch('/:remoteServiceId', asyncWrap(async(req, res) => {
   if (!valid) return res.status(400).send(validateRemoteServiceNoRequired.errors)
 
   const forbiddenKey = Object.keys(patch).find(key => {
-    return ['apiDoc', 'url', 'apiKey', 'server', 'description', 'title'].indexOf(key) === -1
+    return ['apiDoc', 'url', 'apiKey', 'server', 'description', 'title', 'parameters'].indexOf(key) === -1
   })
   if (forbiddenKey) return res.status(400).send('Only some parts of the remote service configuration can be modified through this route')
 
@@ -201,7 +201,14 @@ router.use('/:remoteServiceId/proxy*', (req, res, next) => {
     // console.log((req.user && req.user.email) || 'Anonymous', 'is using operation', operation.operationId)
     const options = {
       url: req.remoteService.server + '*',
-      headers: {}
+      headers: {},
+      query: {}
+    }
+    // Add static parameters values from configuration
+    if (req.remoteService.parameters) {
+      req.remoteService.parameters.forEach(param => {
+        options.query[param.name] = param.value
+      })
     }
     // TODO handle query & cookie header types
     if (req.remoteService.apiKey.in === 'header' && req.remoteService.apiKey.value) {

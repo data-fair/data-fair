@@ -26,6 +26,7 @@ export default {
     async fetchInfo({commit, dispatch, getters}) {
       try {
         const remoteService = await this.$axios.$get(getters.resourceUrl)
+        remoteService.parameters = remoteService.parameters || []
         const api = await this.$axios.$get(getters.resourceUrl + '/api-docs.json')
         commit('setAny', {remoteService, api})
       } catch (error) {

@@ -88,6 +88,22 @@ module.exports = {
     },
     actions: {
       type: 'array'
+    },
+    parameters: {
+      type: 'array',
+      description: 'Some parameters name/values associations to send to all operations of the reverse proxy',
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['operationId', 'name', 'value'],
+        properties: {
+          name: {type: 'string'},
+          operationId: {type: 'string'},
+          value: {type: 'string'},
+          'x-refersTo': {type: 'string'},
+          title: {type: 'string'}
+        }
+      }
     }
   }
 }
