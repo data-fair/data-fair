@@ -7,7 +7,7 @@ exports.sniff = (values) => {
   if (checkAll(values, val => floatRegexp.test(val))) return {type: 'number'}
   if (checkAll(values, dateTimeSchema)) return {type: 'string', format: 'date-time'}
   if (checkAll(values, dateSchema)) return {type: 'string', format: 'date'}
-  if (checkAll(values, uriRefSchema)) return {type: 'string', format: 'uri-reference'}
+  if (checkAll(values, isUriRef)) return {type: 'string', format: 'uri-reference'}
   return {type: 'string'}
 }
 
@@ -37,4 +37,5 @@ const intRegexp = /^(-|\+)?[0-9]+$/
 const floatRegexp = /^(-|\+)?([0-9]+(\.[0-9]+)?)$/
 const dateTimeSchema = ajv.compile({'type': 'string', 'format': 'date-time'})
 const dateSchema = ajv.compile({'type': 'string', 'format': 'date'})
-const uriRefSchema = (value) => value.length < 500 && ajv.compile({'type': 'string', 'format': 'uri-reference'})
+const uriRefSchema = ajv.compile({'type': 'string', 'format': 'uri-reference'})
+const isUriRef = (value) => value.length < 500 && uriRefSchema(value)
