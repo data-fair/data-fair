@@ -17,7 +17,7 @@
         Permissions
         <v-icon>security</v-icon>
       </v-tab>
-      <v-tab v-if="isOwner" :nuxt="true" :to="`/dataset/${dataset.id}/extend`">
+      <v-tab :nuxt="true" :to="`/dataset/${dataset.id}/extend`">
         Enrichissement
         <v-icon>merge_type</v-icon>
       </v-tab>
