@@ -1,7 +1,7 @@
 const fs = require('fs')
 const path = require('path')
 const Combine = require('stream-combiner')
-const { Transform, PassThrough } = require('stream')
+const { Transform } = require('stream')
 const iconv = require('iconv-lite')
 const config = require('config')
 const csv = require('csv-parser')
@@ -12,6 +12,7 @@ exports.fileName = (dataset) => {
   return path.join(config.dataDir, dataset.owner.type, dataset.owner.id, dataset.id + '.' + dataset.file.name.split('.').pop())
 }
 
+// Read the dataset file and get a stream of line items
 exports.readStream = (dataset) => {
   let parser, transformer
   if (dataset.file.mimetype === 'text/csv') {
@@ -21,7 +22,15 @@ exports.readStream = (dataset) => {
       quote: dataset.file.props.escapeChar,
       newline: dataset.file.props.linesDelimiter
     })
-    transformer = new PassThrough({objectMode: true})
+    // reject empty lines (parsing failures from csv-parser)
+    transformer = new Transform({
+      objectMode: true,
+      transform(item, encoding, callback) {
+        const hasContent = Object.keys(item).reduce((a, b) => a || item[b] !== undefined, false)
+        if (hasContent) callback(null, item)
+        else callback()
+      }
+    })
   } else if (dataset.file.mimetype === 'application/geo+json') {
     parser = JSONStream.parse('features.*')
     // transform geojson features into raw data items
