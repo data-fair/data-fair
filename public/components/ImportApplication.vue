@@ -51,6 +51,7 @@ const Extractor = require('html-extractor')
 const htmlExtractor = new Extractor()
 
 export default {
+  props: ['initApp'],
   data: () => ({
     currentStep: null,
     owner: 'user',
@@ -73,6 +74,10 @@ export default {
   },
   async mounted() {
     this.configurableApplications = await this.$axios.$get('api/v1/configurable-applications')
+    if (this.initApp) {
+      this.applicationUrl = this.initApp
+      this.downloadFromUrl()
+    }
   },
   methods: {
     async downloadFromUrl() {

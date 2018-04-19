@@ -50,6 +50,7 @@ import {mapState} from 'vuex'
 import eventBus from '../event-bus'
 
 export default {
+  props: ['initService'],
   data: () => ({
     currentStep: null,
     owner: 'user',
@@ -73,6 +74,10 @@ export default {
   },
   async mounted() {
     this.configurableRemoteServices = await this.$axios.$get('api/v1/configurable-remote-services')
+    if (this.initService) {
+      this.apiDocUrl = this.initService
+      this.downloadFromUrl()
+    }
   },
   methods: {
     async downloadFromUrl() {

@@ -1,6 +1,5 @@
 <template>
   <v-layout row>
-
     <applications-list/>
 
     <div class="actions-buttons">
@@ -11,7 +10,7 @@
     <template>
       <div class="text-xs-center">
         <v-bottom-sheet v-model="importApplicationSheet">
-          <import-application v-if="importApplicationSheet" @cancel="importApplicationSheet = false"/>
+          <import-application v-if="importApplicationSheet" @cancel="importApplicationSheet = false" :init-app="importApp"/>
         </v-bottom-sheet>
       </div>
     </template>
@@ -28,10 +27,13 @@ export default {
   name: 'Datasets',
   components: {ImportApplication, ApplicationsList},
   data() {
-    return {importApplicationSheet: false}
+    return {importApplicationSheet: !!this.$route.query.import}
   },
   computed: {
-    ...mapState(['user'])
+    ...mapState(['user']),
+    importApp() {
+      return this.$route.query.import
+    }
   }
 }
 </script>

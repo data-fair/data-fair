@@ -11,7 +11,7 @@
     <template>
       <div class="text-xs-center">
         <v-bottom-sheet v-model="importServiceSheet">
-          <import-remote-service v-if="importServiceSheet" @cancel="importServiceSheet = false"/>
+          <import-remote-service v-if="importServiceSheet" @cancel="importServiceSheet = false" :init-service="importService"/>
         </v-bottom-sheet>
       </div>
     </template>
@@ -28,10 +28,13 @@ export default {
   name: 'Datasets',
   components: {ImportRemoteService, RemoteServicesList},
   data() {
-    return {importServiceSheet: false}
+    return {importServiceSheet: !!this.$route.query.import}
   },
   computed: {
-    ...mapState(['user'])
+    ...mapState(['user']),
+    importService() {
+      return this.$route.query.import
+    }
   }
 }
 </script>
