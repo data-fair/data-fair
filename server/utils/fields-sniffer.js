@@ -37,4 +37,4 @@ const intRegexp = /^(-|\+)?[0-9]+$/
 const floatRegexp = /^(-|\+)?([0-9]+(\.[0-9]+)?)$/
 const dateTimeSchema = ajv.compile({'type': 'string', 'format': 'date-time'})
 const dateSchema = ajv.compile({'type': 'string', 'format': 'date'})
-const uriRefSchema = ajv.compile({'type': 'string', 'format': 'uri-reference'})
+const uriRefSchema = (value) => value.length < 500 && ajv.compile({'type': 'string', 'format': 'uri-reference'})
