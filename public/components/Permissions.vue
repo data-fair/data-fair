@@ -16,7 +16,7 @@
         <tr>
           <td>
             <div v-if="!props.item.type">Public</div>
-            <div v-else>{{ props.item.type === 'user' ? ('Utilisateur ' + (usersMap[props.item.id] && usersMap[props.item.id].name)) : ('Organisation ' + (organizationsMap[props.item.id] && organizationsMap[props.item.id].name)) }}</div>
+            <div v-else>{{ (props.item.type === 'user' ? 'Utilisateur ' : 'Organisation ') + (props.item.name || props.item.id) }}</div>
             <div v-if="props.item.type === 'organization' && (!props.item.roles || !props.item.roles.length)">Tout le monde</div>
             <div v-if="props.item.type === 'organization' && (props.item.roles && props.item.roles.length)">Restreint aux rôles : {{ props.item.roles.join(', ') }}</div>
           </td>
@@ -51,18 +51,22 @@
 
           <v-select
             v-if="newPermission.type"
+            autocomplete
             :items="newPermission.type === 'organization' ? organizations : users"
             item-text="name"
             item-value="id"
             v-model="newPermission.id"
             label="Nom"
             required
+            :search-input.sync="search"
+            :loading="loading"
+            cache-items
           />
 
           <v-select
             v-if="newPermission.type === 'organization' && newPermissionOrganizationRoles.length"
             :items="newPermissionOrganizationRoles"
-            label="Restreindre à des rôles"
+            label="Rôles (tous si aucun coché)"
             multiple
             v-model="newPermission.roles"
           />
@@ -80,7 +84,7 @@
         <v-card-actions>
           <v-spacer/>
           <v-btn @click="showDialog = false" flat>Annuler</v-btn>
-          <v-btn color="primary" @click="addPermission">Ajouter</v-btn>
+          <v-btn color="primary" :disabled="newPermission.type && !newPermission.id" @click="addPermission">Ajouter</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -110,7 +114,9 @@ export default {
     newPermissionOrganizationRoles: [],
     users: [],
     organizations: [],
-    showDialog: false
+    showDialog: false,
+    search: null,
+    loading: false
   }),
   computed: {
     ...mapState(['user', 'env']),
@@ -119,19 +125,13 @@ export default {
         id: this.api.paths[path][method].operationId,
         title: this.api.paths[path][method].summary
       }))))) || []
-    },
-    organizationsMap() {
-      return Object.assign({}, ...this.organizations.map(organization => ({
-        [organization.id]: organization
-      })))
-    },
-    usersMap() {
-      return Object.assign({}, ...this.users.map(user => ({
-        [user.id]: user
-      })))
     }
   },
   watch: {
+    'newPermission.type'() {
+      this.newPermission.id = null
+      this.newPermission.roles = []
+    },
     'newPermission.id': async function(id) {
       if (this.newPermission.type === 'organization' && id) {
         if ((this.resource.owner.type === 'organization' && this.resource.owner.id === id) || (this.resource.owner.type === 'user' && this.user.organizations.find(o => o.id === id))) {
@@ -141,12 +141,24 @@ export default {
           this.newPermissionOrganizationRoles = []
         }
       }
+    },
+    search: async function() {
+      this.loading = true
+      if (this.newPermission && this.newPermission.type === 'organization') {
+        this.users = []
+        if (!this.search || this.search.length < 3) this.organizations = []
+        else this.organizations = (await this.$axios.$get(this.env.directoryUrl + '/api/organizations', {params: {q: this.search}})).results
+      } else {
+        this.organizations = []
+        if (!this.search || this.search.length < 3) this.users = []
+        else this.users = (await this.$axios.$get(this.env.directoryUrl + '/api/users', {params: {q: this.search}})).results
+      }
+
+      this.loading = false
     }
   },
   async mounted() {
     this.permissions = await this.$axios.$get(this.resourceUrl + '/permissions')
-    this.organizations = (await this.$axios.$get(this.env.directoryUrl + '/api/organizations')).results
-    this.users = (await this.$axios.$get(this.env.directoryUrl + '/api/users')).results
   },
   methods: {
     async save() {
