@@ -78,7 +78,7 @@ module.exports = {
     href: 'https://koumoul.com/s/infos-loc/'
   }, {
     title: 'Portail thématique (bêta)',
-    href: 'https://staging.koumoul.com/s/portail-thematique/'
+    href: 'https://koumoul.com/s/portail-thematique/'
   }],
   remoteServices: [{
     title: 'Données Entreprises',
