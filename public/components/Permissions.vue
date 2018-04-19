@@ -166,7 +166,7 @@ export default {
         await this.$axios.$put(this.resourceUrl + '/permissions', this.permissions)
         this.$store.dispatch('notify', `Les permissions ont bien été mises à jour`)
       } catch (error) {
-        eventBus.$emit('notification', {type: 'error', msg: `Erreur "${error.status || error.message}" pendant la mise à jour des permissions`})
+        eventBus.$emit('notification', {error, msg: `Erreur pendant la mise à jour des permissions:`})
       }
     },
     addPermission() {

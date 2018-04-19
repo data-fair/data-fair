@@ -1,5 +1,6 @@
 // A module of the store for the currently worked on application
 // Used in the application vue and all its tabs and their components
+import eventBus from '../event-bus.js'
 
 export default {
   namespaced: true,
@@ -29,7 +30,7 @@ export default {
         const api = await this.$axios.$get(getters.resourceUrl + '/api-docs.json')
         commit('setAny', {application, api})
       } catch (error) {
-        dispatch('notifyError', `Erreur ${error.status || error.message} pendant la récupération de la définition de l'API`, {root: true})
+        eventBus.$emit('notification', {error, msg: `Erreur pendant la récupération de la définition de l'API`})
       }
     },
     async setId({commit, getters, dispatch, state}, applicationId) {
@@ -44,14 +45,10 @@ export default {
         const silent = patch.silent
         delete patch.silent
         await this.$axios.patch(getters.resourceUrl, patch)
-        if (!silent) dispatch('notify', `La configuration d'application a bien été mise à jour.`, {root: true})
+        if (!silent) eventBus.$emit('notification', `La configuration d'application a bien été mise à jour.`)
         return true
       } catch (error) {
-        if (error.status === 409) {
-          dispatch('notifyError', `La configuration d'application est en cours de traitement et votre modification n'a pas pu être appliquée. Veuillez essayer de nouveau un peu plus tard.`, {root: true})
-        } else {
-          dispatch('notifyError', `Erreur ${error.status || error.message} pendant la mise à jour de la configuration d'application`, {root: true})
-        }
+        eventBus.$emit('notification', {error, msg: `Erreur pendant la mise à jour de la configuration d'application:`})
         return false
       }
     },
@@ -62,9 +59,9 @@ export default {
     async remove({state, getters, dispatch}) {
       try {
         await this.$axios.delete(getters.resourceUrl)
-        dispatch('notify', `La configuration d'application ${state.application.title} a bien été supprimée`, {root: true})
+        eventBus.$emit('notification', `La configuration d'application ${state.application.title} a bien été supprimée.`)
       } catch (error) {
-        dispatch('notifyError', `Erreur ${error.status || error.message} pendant la suppression de la configuration d'application ${state.application.title}`, {root: true})
+        eventBus.$emit('notification', {error, msg: `Erreur pendant la suppression de la configuration d'application:`})
       }
     }
   }

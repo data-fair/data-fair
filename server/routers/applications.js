@@ -93,7 +93,7 @@ router.post('', auth.jwtMiddleware, asyncWrap(async(req, res) => {
 
 // Middlewares
 router.use('/:applicationId', auth.optionalJwtMiddleware, asyncWrap(async(req, res, next) => {
-  req.application = await req.app.get('db').collection('applications').findOne({
+  req.application = req.resource = await req.app.get('db').collection('applications').findOne({
     id: req.params.applicationId
   }, {
     fields: {
@@ -101,14 +101,14 @@ router.use('/:applicationId', auth.optionalJwtMiddleware, asyncWrap(async(req, r
     }
   })
   if (!req.application) return res.status(404).send('Application configuration not found')
+  req.resourceApiDoc = applicationAPIDocs(req.application)
   next()
 }))
 
 router.use('/:applicationId/permissions', permissions.router('applications', 'application'))
 
 // retrieve a application by its id
-router.get('/:applicationId', (req, res, next) => {
-  if (!permissions.can(req.application, 'readDescription', req.user)) return res.sendStatus(403)
+router.get('/:applicationId', permissions.middleware('readDescription'), (req, res, next) => {
   req.application.userPermissions = permissions.list(req.application, req.user)
   delete req.application.permissions
   delete req.application.configuration
@@ -116,9 +116,8 @@ router.get('/:applicationId', (req, res, next) => {
 })
 
 // Update an application configuration
-router.patch('/:applicationId', asyncWrap(async(req, res) => {
+router.patch('/:applicationId', permissions.middleware('writeDescription'), asyncWrap(async(req, res) => {
   const patch = req.body
-  if (!permissions.can(req.application, 'writeDescription', req.user)) return res.sendStatus(403)
   var valid = validateNoRequired(patch)
   if (!valid) return res.status(400).send(validateNoRequired.errors)
 
@@ -135,9 +134,7 @@ router.patch('/:applicationId', asyncWrap(async(req, res) => {
 }))
 
 // Delete an application configuration
-router.delete('/:applicationId', asyncWrap(async(req, res) => {
-  if (!permissions.can(req.application, 'delete', req.user)) return res.sendStatus(403)
-  // TODO : Remove indexes
+router.delete('/:applicationId', permissions.middleware('delete'), asyncWrap(async(req, res) => {
   await req.app.get('db').collection('applications').deleteOne({
     id: req.params.applicationId
   })
@@ -145,25 +142,19 @@ router.delete('/:applicationId', asyncWrap(async(req, res) => {
 }))
 
 // retrieve a application by its id
-router.get('/:applicationId/config', (req, res, next) => {
-  if (!permissions.can(req.application, 'readConfig', req.user)) return res.sendStatus(403)
+router.get('/:applicationId/config', permissions.middleware('readConfig'), (req, res, next) => {
   res.status(200).send(req.application.configuration || {})
 })
 
 // retrieve a application by its id
-router.put('/:applicationId/config', asyncWrap(async(req, res) => {
-  if (!permissions.can(req.application, 'writeConfig', req.user)) return res.sendStatus(403)
-  await req.app.get('db').collection('applications').updateOne({
-    id: req.params.applicationId
-  }, {
-    $set: {
-      configuration: req.body
-    }
-  })
+router.put('/:applicationId/config', permissions.middleware('writeConfig'), asyncWrap(async(req, res) => {
+  await req.app.get('db').collection('applications').updateOne(
+    {id: req.params.applicationId},
+    {$set: {configuration: req.body}}
+  )
   res.status(200).json(req.body)
 }))
 
-router.get('/:applicationId/api-docs.json', (req, res) => {
-  // TODO: permission ?
+router.get('/:applicationId/api-docs.json', permissions.middleware('readDescription'), (req, res) => {
   res.send(applicationAPIDocs(req.application))
 })

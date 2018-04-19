@@ -63,11 +63,11 @@
       <v-container fluid>
         <nuxt/>
       </v-container>
-      <v-snackbar v-if="notification" ref="notificationSnackbar" v-model="showSnackbar" bottom>
-        <v-icon v-if="notification.type === 'error'" color="error">error</v-icon>
-        <v-icon v-if="notification.type === 'info'" color="success">check_circle</v-icon>
-        &nbsp;
-        {{ notification.msg }}
+      <v-snackbar class="notification" v-if="notification" ref="notificationSnackbar" v-model="showSnackbar" :color="notification.type" bottom :timeout="notification.type === 'error' ? 30000 : 6000">
+        <div>
+          <p>{{ notification.msg }}</p>
+          <p v-if="notification.errorMsg" class="ml-3">{{ notification.errorMsg }}</p>
+        </div>
         <v-btn flat icon @click.native="showSnackbar = false"><v-icon>close</v-icon></v-btn>
       </v-snackbar>
     </v-content>
@@ -95,6 +95,11 @@ export default {
   },
   mounted() {
     eventBus.$on('notification', notif => {
+      if (typeof notif === 'string') notif = {msg: notif}
+      if (notif.error) {
+        notif.type = 'error'
+        notif.errorMsg = (notif.error.response && (notif.error.response.data || notif.error.response.status)) || notif.error.message || notif.error
+      }
       this.notification = notif
       this.showSnackbar = true
     })
@@ -135,6 +140,14 @@ body .application {
 
     .v-btn {
       margin-bottom: 16px;
+    }
+  }
+
+  .notification .snack__content {
+    height: auto;
+    p {
+      margin-bottom: 4px;
+      margin-top: 4px;
     }
   }
 }

@@ -71,9 +71,9 @@ export default {
     async save() {
       try {
         await this.$axios.$put('api/v1/settings/' + this.$route.params.type + '/' + this.$route.params.id, this.settings)
-        eventBus.$emit('notification', {type: 'info', msg: `Les paramètres ont bien été mis à jour`})
-      } catch (err) {
-        eventBus.$emit('notification', {type: 'error', msg: `Erreur ${err.status || err.message || err} pendant la mise à jour des paramètres`})
+        eventBus.$emit('notification', `Les paramètres ont bien été mis à jour`)
+      } catch (error) {
+        eventBus.$emit('notification', {error, msg: `Erreur pendant la mise à jour des paramètres`})
       }
     }
   }

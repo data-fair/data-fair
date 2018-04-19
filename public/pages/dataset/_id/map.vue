@@ -104,14 +104,14 @@ export default {
       if (!mapboxgl) return
       const bbox = await this.getBBox()
       if (!bbox || !bbox.length) {
-        return eventBus.$emit('notification', {type: 'info', msg: 'Aucune donnée correspondante.'})
+        return eventBus.$emit('notification', 'Aucune donnée correspondante.')
       }
 
       this.mapHeight = Math.max(window.innerHeight - this.$el.getBoundingClientRect().y - 60, 300)
       await new Promise(resolve => setTimeout(resolve, 0))
       this.map = new mapboxgl.Map({container: 'map', style: this.env.map.style})
-      this.map.on('error', (e) => {
-        eventBus.$emit('notification', {type: 'error', msg: 'Erreur pendant le rendu de la carte : ' + (e.error.message || e.error.status || e.error)})
+      this.map.on('error', (error) => {
+        eventBus.$emit('notification', {error, msg: 'Erreur pendant le rendu de la carte:'})
       })
       this.map.fitBounds(resizeBBOX(bbox, 1.1), {duration: 0})
       this.map.addControl(new mapboxgl.NavigationControl(), 'top-right')

@@ -33,7 +33,7 @@ app.use((err, req, res, next) => {
   if (err.name === 'UnauthorizedError') {
     return res.status(401).send('invalid token...')
   }
-  if (err.statusCode === 500) console.error('Error in express route', err)
+  if (err.statusCode === 500 || !err.statusCode) console.error('Error in express route', err)
   if (!res.headersSent) res.status(err.statusCode || 500).send(err.message)
 })
 

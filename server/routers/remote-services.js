@@ -124,24 +124,23 @@ router.use('/:remoteServiceId', auth.optionalJwtMiddleware, asyncWrap(async(req,
     }
   })
   if (!service) return res.status(404).send('Remote Api not found')
-  req.remoteService = mongoEscape.unescape(service, true)
+  req.remoteService = req.resource = mongoEscape.unescape(service, true)
+  req.resourceApiDoc = remoteServiceAPIDocs(req.remoteService)
   next()
 }))
 
 router.use('/:remoteServiceId/permissions', permissions.router('remote-services', 'remoteService'))
 
 // retrieve a remoteService by its id
-router.get('/:remoteServiceId', (req, res, next) => {
-  if (!permissions.can(req.remoteService, 'readDescription', req.user)) return res.sendStatus(403)
+router.get('/:remoteServiceId', permissions.middleware('readDescription'), (req, res, next) => {
   req.remoteService.userPermissions = permissions.list(req.remoteService, req.user)
   delete req.remoteService.permissions
   res.status(200).send(req.remoteService)
 })
 
 // Update a remote service configuration
-router.patch('/:remoteServiceId', asyncWrap(async(req, res) => {
+router.patch('/:remoteServiceId', permissions.middleware('writeDescription'), asyncWrap(async(req, res) => {
   const patch = req.body
-  if (!permissions.can(req.remoteService, 'writeDescription', req.user)) return res.sendStatus(403)
   var valid = validateRemoteServiceNoRequired(patch)
   if (!valid) return res.status(400).send(validateRemoteServiceNoRequired.errors)
 
@@ -161,9 +160,7 @@ router.patch('/:remoteServiceId', asyncWrap(async(req, res) => {
 }))
 
 // Delete a remoteService
-router.delete('/:remoteServiceId', asyncWrap(async(req, res) => {
-  if (!permissions.can(req.remoteService, 'delete', req.user)) return res.sendStatus(403)
-
+router.delete('/:remoteServiceId', permissions.middleware('delete'), asyncWrap(async(req, res) => {
   // TODO : Remove indexes
   await req.app.get('db').collection('remote-services').deleteOne({
     id: req.params.remoteServiceId
@@ -171,8 +168,7 @@ router.delete('/:remoteServiceId', asyncWrap(async(req, res) => {
   res.sendStatus(204)
 }))
 
-router.post('/:remoteServiceId/_update', asyncWrap(async(req, res) => {
-  if (!permissions.can(req.remoteService, 'writeDescription', req.user)) return res.sendStatus(403)
+router.post('/:remoteServiceId/_update', permissions.middleware('writeDescription'), asyncWrap(async(req, res) => {
   if (!req.remoteService.url) return res.sendStatus(204)
 
   const reponse = await axios.get(req.remoteService.url)
@@ -234,6 +230,6 @@ router.use('/:remoteServiceId/proxy*', (req, res, next) => {
   }
 })
 
-router.get('/:remoteServiceId/api-docs.json', (req, res) => {
-  res.send(remoteServiceAPIDocs(req.remoteService))
+router.get('/:remoteServiceId/api-docs.json', permissions.middleware('readDescription'), (req, res) => {
+  res.send(req.resourceApiDoc)
 })

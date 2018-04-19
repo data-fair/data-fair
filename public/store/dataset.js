@@ -49,7 +49,13 @@ export default {
   },
   actions: {
     async fetchInfo({commit, getters}) {
-      const dataset = await this.$axios.$get(getters.resourceUrl)
+      let dataset
+      try {
+        dataset = await this.$axios.$get(getters.resourceUrl)
+      } catch (error) {
+        eventBus.$emit('notification', {error, msg: `Erreur pendant la récupération des informations du jeu de données:`})
+        return
+      }
       const extensions = (dataset.extensions || []).map(ext => {
         ext.error = ext.error || ''
         ext.progress = ext.progress || 0
@@ -72,10 +78,10 @@ export default {
       eventBus.$emit('subscribe', newChannel)
       eventBus.$on(newChannel, event => {
         if (event.type === 'finalize-end') {
-          dispatch('notify', 'Le jeu de données a été traité en fonction de vos dernières modifications et est prêt à être utilisé ou édité de nouveau.', {root: true})
+          eventBus.$emit('notification', {type: 'success', msg: 'Le jeu de données a été traité en fonction de vos dernières modifications et est prêt à être utilisé ou édité de nouveau.'})
           dispatch('fetchInfo')
         }
-        if (event.type === 'error') dispatch('notifyError', 'Le service a rencontré une erreur pendant le traitement du jeu de données: ' + event.data, {root: true})
+        if (event.type === 'error') eventBus.$emit('notification', {error: event.data, msg: 'Le service a rencontré une erreur pendant le traitement du jeu de données:'})
         dispatch('addJournalEvent', event)
       })
     },
@@ -88,13 +94,13 @@ export default {
         const silent = patch.silent
         delete patch.silent
         await this.$axios.patch(getters.resourceUrl, patch)
-        if (!silent) dispatch('notify', 'Le jeu de données a bien été mis à jour.', {root: true})
+        if (!silent) eventBus.$emit('notification', 'Le jeu de données a bien été mis à jour.')
         return true
       } catch (error) {
         if (error.status === 409) {
-          dispatch('notifyError', `Le jeu de données est en cours de traitement et votre modification n'a pas pu être appliquée. Veuillez essayer de nouveau un peu plus tard.`, {root: true})
+          eventBus.$emit('notification', `Le jeu de données est en cours de traitement et votre modification n'a pas pu être appliquée. Veuillez essayer de nouveau un peu plus tard.`)
         } else {
-          dispatch('notifyError', `Erreur ${error.status || error.message} pendant la mise à jour du jeu de données`, {root: true})
+          eventBus.$emit('notification', {error, msg: 'Erreur pendant la mise à jour du jeu de données'})
         }
         return false
       }
@@ -106,9 +112,9 @@ export default {
     async remove({state, getters, dispatch}) {
       try {
         await this.$axios.delete(getters.resourceUrl)
-        dispatch('notify', `Le jeu de données ${state.dataset.title} a bien été supprimé`, {root: true})
+        eventBus.$emit('notification', `Le jeu de données ${state.dataset.title} a bien été supprimé`)
       } catch (error) {
-        dispatch('notifyError', `Erreur ${error.status || error.message} pendant la suppression du jeu de données ${state.dataset.title}`, {root: true})
+        eventBus.$emit('notification', {error, msg: 'Erreur pendant la suppression du jeu de données'})
       }
     },
     addJournalEvent({commit}, event) {

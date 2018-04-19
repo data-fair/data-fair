@@ -1,8 +1,22 @@
 const config = require('config')
 const express = require('express')
 const permissionsSchema = require('../../contract/permissions.json')
+const apiDocsUtil = require('./api-docs')
 const ajv = require('ajv')()
 const validate = ajv.compile(permissionsSchema)
+
+exports.middleware = function(operationId) {
+  return function(req, res, next) {
+    if (!exports.can(req.resource, operationId, req.user)) {
+      res.status(403)
+      const operation = apiDocsUtil.operations(req.resourceApiDoc).find(o => o.id === operationId)
+      if (operation) res.send(`Permission manquante pour l'opération "${operation.title}"`)
+      else res.send('Permission manquante pour cette opération')
+      return
+    }
+    next()
+  }
+}
 
 // resource can be an application, a dataset of an remote service
 exports.can = function(resource, operationId, user) {

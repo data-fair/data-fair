@@ -4,7 +4,6 @@ import jwtDecode from 'jwt-decode'
 import dataset from './dataset'
 import remoteService from './remote-service'
 import application from './application'
-import eventBus from '../event-bus.js'
 import Cookie from 'js-cookie'
 const cookieparser = require('cookieparser')
 
@@ -52,12 +51,6 @@ export default () => {
         context.commit('setUser')
         context.commit('setUserOrganizations', {})
         this.$router.push('/')
-      },
-      notify(context, msg) {
-        eventBus.$emit('notification', {type: 'info', msg})
-      },
-      notifyError(context, msg) {
-        eventBus.$emit('notification', {type: 'error', msg})
       },
       async fetchVocabulary({state, commit}) {
         if (state.vocabulary) return

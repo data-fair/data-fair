@@ -97,7 +97,7 @@ export default {
           applicationName: data.meta['application-name']
         }
       } catch (error) {
-        eventBus.$emit('notification', {type: 'error', msg: `Erreur ${error.status || error.message || error} pendant la récupération de la description de l'application`})
+        eventBus.$emit('notification', {error, msg: `Erreur pendant la récupération de la description de l'application`})
       }
     },
     async createApplication() {
@@ -109,7 +109,7 @@ export default {
         const application = await this.$axios.$post(this.env.publicUrl + '/api/v1/applications', {...this.description, url: this.applicationUrl}, options)
         this.$router.push({path: `/application/${application.id}/description`})
       } catch (error) {
-        eventBus.$emit('notification', {type: 'error', msg: `Erreur ${error.status || error.message} pendant la création de la configuration d'application`})
+        eventBus.$emit('notification', {error, msg: `Erreur pendant la création de la configuration d'application`})
       }
     }
   }
