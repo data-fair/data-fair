@@ -77,6 +77,7 @@
     "pug": "^2.0.0-rc.4",
     "reconnecting-websocket": "^3.2.2",
     "request": "^2.83.0",
+    "request-promise-native": "^1.0.5",
     "shortid": "^2.2.8",
     "shuffle-array": "^1.0.1",
     "slug": "^0.9.1",
