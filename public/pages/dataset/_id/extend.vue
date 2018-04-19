@@ -21,13 +21,17 @@
             <span v-if="remoteServicesMap[props.item.remoteService]">
               {{ remoteServicesMap[props.item.remoteService].actions[props.item.action].summary }} (service {{ remoteServicesMap[props.item.remoteService].title }})
             </span>
+
             <v-select
               v-if="props.item.active && remoteServicesMap[props.item.remoteService] && selectFields[props.item.remoteService + '_' + props.item.action].fieldsAndTags"
               :items="selectFields[props.item.remoteService + '_' + props.item.action].fieldsAndTags"
               item-value="name"
+              item-text="title"
               v-model="props.item.select"
               label=""
+              multiple
               placeholder="Tous les champs en sortie"
+              persistent-hint
             >
               <template slot="item" slot-scope="data">
                 <template v-if="typeof data.item !== 'object'">
@@ -101,6 +105,11 @@ export default {
           fieldsAndTags.push(tag)
           fields.filter(field => field['x-tags'].includes(tag)).forEach(field => fieldsAndTags.push(field))
         })
+        const noTagsFields = fields.filter(field => !field['x-tags'] || field['x-tags'].length === 0)
+        if (fieldsAndTags.length > 0 && noTagsFields.length > 0) {
+          fieldsAndTags.push('Autres')
+        }
+        noTagsFields.forEach(field => fieldsAndTags.push(field))
         res[extension.remoteService + '_' + extension.action] = {fields, tags, fieldsAndTags}
       })
       return res
