@@ -167,6 +167,7 @@ router.post('', auth.jwtMiddleware, filesUtils.uploadFile(), asyncWrap(async(req
     dataset.permissions.push({
       type: 'user',
       id: req.user.id,
+      name: req.user.name,
       operations: []
     })
   }

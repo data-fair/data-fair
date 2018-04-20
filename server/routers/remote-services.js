@@ -106,6 +106,7 @@ router.post('', auth.jwtMiddleware, asyncWrap(async(req, res) => {
     service.permissions.push({
       type: 'user',
       id: req.user.id,
+      name: req.user.name,
       operations: []
     })
   }
