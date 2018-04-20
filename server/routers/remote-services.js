@@ -202,9 +202,11 @@ router.use('/:remoteServiceId/proxy*', (req, res, next) => {
     }
     // Add static parameters values from configuration
     if (req.remoteService.parameters) {
-      req.remoteService.parameters.forEach(param => {
-        options.query[param.name] = param.value
-      })
+      req.remoteService.parameters
+        .filter(param => !!param.value)
+        .forEach(param => {
+          options.query[param.name] = param.value
+        })
     }
     // TODO handle query & cookie header types
     if (req.remoteService.apiKey.in === 'header' && req.remoteService.apiKey.value) {
