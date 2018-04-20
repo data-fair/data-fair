@@ -12,7 +12,8 @@ async function ensureIndex(db, collection, key, options) {
 }
 
 exports.init = async () => {
-  const db = await mongoClient.connect(config.mongoUrl, {autoReconnect: true, bufferMaxEntries: -1})
+  const client = await mongoClient.connect(config.mongoUrl, {autoReconnect: true, bufferMaxEntries: -1})
+  const db = client.db()
   // datasets indexes
   await ensureIndex(db, 'datasets', {id: 1}, {unique: true})
   await ensureIndex(db, 'datasets', {'owner.type': 1, 'owner.id': 1})
@@ -25,5 +26,5 @@ exports.init = async () => {
   await ensureIndex(db, 'applications', {id: 1}, {unique: true})
   await ensureIndex(db, 'applications', {'owner.type': 1, 'owner.id': 1})
   await ensureIndex(db, 'applications', {title: 'text', description: 'text', 'owner.name': 'text'}, {name: 'fulltext'})
-  return db
+  return {db, client}
 }

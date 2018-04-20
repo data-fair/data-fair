@@ -45,12 +45,10 @@ router.put('/:type/:id', auth.jwtMiddleware, isOwner, asyncWrap(async(req, res) 
   if (!valid) return res.status(400).send(validate.errors)
   const settings = req.app.get('db').collection('settings')
 
-  await settings.updateOne({
+  await settings.replaceOne({
     type: req.params.type,
     id: req.params.id
-  }, req.body, {
-    upsert: true
-  })
+  }, req.body, {upsert: true})
   delete req.body.type
   delete req.body.id
   res.status(200).send(req.body)

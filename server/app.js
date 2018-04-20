@@ -44,8 +44,9 @@ const wss = new WebSocket.Server({server})
 exports.run = async () => {
   const nuxt = await require('./nuxt')()
   app.use(nuxt)
-  const db = await dbUtils.init()
+  const {db, client} = await dbUtils.init()
   app.set('db', db)
+  app.set('mongoClient', client)
   await cache.init(db)
   app.set('es', esUtils.init())
   app.publish = await wsUtils.init(wss, db)
@@ -63,6 +64,6 @@ exports.stop = async() => {
   wsUtils.stop()
   locksUtils.stop()
   await workers.stop()
-  await app.get('db').close()
+  await app.get('mongoClient').close()
   await app.get('es').close()
 }

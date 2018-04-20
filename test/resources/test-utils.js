@@ -9,9 +9,9 @@ const testFiles = fs.readdirSync(testDir).map(f => path.join(testDir, f))
 async function clean(key) {
   const dataDir = './data/test-' + key
   const indicesPrefix = 'dataset-test-' + key
-  const db = await require('../../server/utils/db.js').init()
+  const {db, client} = await require('../../server/utils/db.js').init()
   await db.dropDatabase()
-  await db.close()
+  await client.close()
   const es = require('../../server/utils/es.js').init()
   await es.indices.delete({index: `${indicesPrefix}-*`, ignore: [404]})
   await es.close()
