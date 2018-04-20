@@ -24,7 +24,7 @@ const tiles = require('../utils/tiles')
 const cache = require('../utils/cache')
 const config = require('config')
 
-const datasetSchema = require('../../contract/dataset.json')
+const datasetSchema = require('../../contract/dataset')
 const datasetSchemaNoRequired = Object.assign(datasetSchema)
 delete datasetSchemaNoRequired.required
 const validate = ajv.compile(datasetSchemaNoRequired)
@@ -95,7 +95,7 @@ router.patch('/:datasetId', permissions.middleware('writeDescription'), asyncWra
   if (forbiddenKey) return res.status(400).send('Only some parts of the dataset can be modified through this route')
 
   req.body.updatedAt = moment().toISOString()
-  req.body.updatedBy = req.user.id
+  req.body.updatedBy = {id: req.user.id, name: req.user.name}
   if (req.body.extensions) req.body.schema = await extensions.prepareSchema(req.app.get('db'), req.body.schema || req.dataset.schema, req.body.extensions)
 
   // Changed a previously failed dataset, retry everything.
@@ -154,9 +154,9 @@ router.post('', auth.jwtMiddleware, filesUtils.uploadFile(), asyncWrap(async(req
     },
     owner,
     permissions: [],
-    createdBy: req.user.id,
+    createdBy: {id: req.user.id, name: req.user.name},
     createdAt: date,
-    updatedBy: req.user.id,
+    updatedBy: {id: req.user.id, name: req.user.name},
     updatedAt: date,
     status: 'loaded'
   }
@@ -193,10 +193,10 @@ router.post('/:datasetId', permissions.middleware('writeData'), filesUtils.uploa
   }
   const fileSample = await datasetFileSample(req.dataset)
   req.dataset.file.encoding = detectCharacterEncoding(fileSample).encoding
-  req.dataset.updatedBy = req.user.id
+  req.dataset.updatedBy = {id: req.user.id, name: req.user.name}
   req.dataset.updatedAt = moment().toISOString()
   req.dataset.status = 'loaded'
-  await req.app.get('db').collection('datasets').updateOne({
+  await req.app.get('db').collection('datasets').replaceOne({
     id: req.params.datasetId
   }, req.dataset)
   const storageRemaining = await datasetUtils.storageRemaining(req.app.get('db'), owner, req)

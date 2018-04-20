@@ -50,7 +50,20 @@ router.post('/owner-names', asyncWrap(async (req, res) => {
   for (let c of collectionNames) {
     const collection = req.app.get('db').collection(c)
     for (let owner of req.body) {
+      // owners
       await collection.updateMany({'owner.type': owner.type, 'owner.id': owner.id}, {$set: {'owner.name': owner.name}})
+
+      // permissions
+      await collection.updateMany({}, {$set: {'permissions.$[element].name': owner.name}},
+        {multi: true, arrayFilters: [{'element.type': owner.type, 'element.id': owner.id}]})
+
+      // created/updated events
+      if (owner.type === 'user') {
+        await collection.updateMany({'createdBy': owner.id}, {$set: {'createdBy': {id: owner.id, name: owner.name}}})
+        await collection.updateMany({'createdBy.id': owner.id}, {$set: {'createdBy': {id: owner.id, name: owner.name}}})
+        await collection.updateMany({'updatedBy': owner.id}, {$set: {'updatedBy': {id: owner.id, name: owner.name}}})
+        await collection.updateMany({'updatedBy.id': owner.id}, {$set: {'updatedBy': {id: owner.id, name: owner.name}}})
+      }
     }
   }
   res.send()

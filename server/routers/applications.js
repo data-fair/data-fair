@@ -5,7 +5,7 @@ const auth = require('./auth')
 const applicationAPIDocs = require('../../contract/application-api-docs')
 
 const ajv = require('ajv')()
-const applicationSchema = require('../../contract/application.json')
+const applicationSchema = require('../../contract/application')
 const applicationSchemaNoRequired = Object.assign(applicationSchema)
 delete applicationSchemaNoRequired.required
 const validate = ajv.compile(applicationSchema)
@@ -71,9 +71,9 @@ router.post('', auth.jwtMiddleware, asyncWrap(async(req, res) => {
   if (!valid) return res.status(400).send(validate.errors)
   const date = moment().toISOString()
   application.createdAt = date
-  application.createdBy = req.user.id
+  application.createdBy = {id: req.user.id, name: req.user.name}
   application.updatedAt = date
-  application.updatedBy = req.user.id
+  application.updatedBy = {id: req.user.id, name: req.user.name}
 
   application.permissions = []
 
@@ -127,7 +127,7 @@ router.patch('/:applicationId', permissions.middleware('writeDescription'), asyn
   if (forbiddenKey) return res.status(400).send('Only some parts of the application configuration can be modified through this route')
 
   patch.updatedAt = moment().toISOString()
-  patch.updatedBy = req.user.id
+  patch.updatedBy = {id: req.user.id, name: req.user.name}
 
   await req.app.get('db').collection('applications').updateOne({id: req.params.applicationId}, {'$set': patch})
   res.status(200).json(patch)

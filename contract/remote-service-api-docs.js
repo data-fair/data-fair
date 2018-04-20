@@ -1,5 +1,5 @@
 const config = require('config')
-const remoteServiceSchema = require('./remote-service.js')
+const remoteServiceSchema = require('./remote-service')
 
 module.exports = (remoteService) => {
   const api = {

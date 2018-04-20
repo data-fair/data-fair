@@ -14,11 +14,11 @@
             </v-list-tile>
             <v-list-tile>
               <v-list-tile-avatar><v-icon>update</v-icon></v-list-tile-avatar>
-              <span>{{ dataset.updatedBy }} {{ dataset.updatedAt | moment("DD/MM/YYYY, HH:mm") }}</span>
+              <span>{{ dataset.updatedBy.name }} {{ dataset.updatedAt | moment("DD/MM/YYYY, HH:mm") }}</span>
             </v-list-tile>
             <v-list-tile>
               <v-list-tile-avatar><v-icon>add_circle_outline</v-icon></v-list-tile-avatar>
-              <span>{{ dataset.createdBy }} {{ dataset.createdAt | moment("DD/MM/YYYY, HH:mm") }}</span>
+              <span>{{ dataset.createdBy.name }} {{ dataset.createdAt | moment("DD/MM/YYYY, HH:mm") }}</span>
             </v-list-tile>
             <v-list-tile>
               <v-list-tile-avatar><v-icon>view_headline</v-icon></v-list-tile-avatar>

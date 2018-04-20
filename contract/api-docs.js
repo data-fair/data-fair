@@ -1,9 +1,9 @@
 const config = require('config')
-const status = require('./status.json')
+const status = require('./status')
 const version = require('../package.json').version
-const dataset = require('./dataset.json')
-const remoteService = require('./remote-service.js')
-const application = require('./application.json')
+const dataset = require('./dataset')
+const remoteService = require('./remote-service')
+const application = require('./application')
 
 module.exports = {
   openapi: '3.0.0',

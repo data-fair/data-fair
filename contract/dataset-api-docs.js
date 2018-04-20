@@ -1,5 +1,5 @@
 const config = require('config')
-const datasetSchema = require('./dataset.json')
+const datasetSchema = require('./dataset')
 const version = require('../package.json').version
 
 module.exports = (dataset) => {

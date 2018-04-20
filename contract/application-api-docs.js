@@ -1,5 +1,5 @@
 const config = require('config')
-const applicationSchema = require('./application.json')
+const applicationSchema = require('./application')
 const version = require('../package.json').version
 
 module.exports = (application) => {

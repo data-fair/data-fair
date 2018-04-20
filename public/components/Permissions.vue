@@ -16,7 +16,7 @@
         <tr>
           <td>
             <div v-if="!props.item.type">Public</div>
-            <div v-else>{{ (props.item.type === 'user' ? 'Utilisateur ' : 'Organisation ') + (props.item.name || props.item.id) }}</div>
+            <div v-else>{{ (props.item.type === 'user' ? 'Utilisateur ' : 'Organisation ') + props.item.name }}</div>
             <div v-if="props.item.type === 'organization' && (!props.item.roles || !props.item.roles.length)">Tout le monde</div>
             <div v-if="props.item.type === 'organization' && (props.item.roles && props.item.roles.length)">Restreint aux rôles : {{ props.item.roles.join(', ') }}</div>
           </td>

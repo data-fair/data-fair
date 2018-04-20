@@ -88,9 +88,9 @@ router.post('', auth.jwtMiddleware, asyncWrap(async(req, res) => {
   if (!valid) return res.status(400).send(normalise(validateRemoteService.errors))
   const date = moment().toISOString()
   service.createdAt = date
-  service.createdBy = req.user.id
+  service.createdBy = {id: req.user.id, name: req.user.name}
   service.updatedAt = date
-  service.updatedBy = req.user.id
+  service.updatedBy = {id: req.user.id, name: req.user.name}
   if (service.apiDoc) {
     if (service.apiDoc.info) {
       service.title = service.apiDoc.info.title
@@ -150,7 +150,7 @@ router.patch('/:remoteServiceId', permissions.middleware('writeDescription'), as
   if (forbiddenKey) return res.status(400).send('Only some parts of the remote service configuration can be modified through this route')
 
   patch.updatedAt = moment().toISOString()
-  patch.updatedBy = req.user.id
+  patch.updatedBy = {id: req.user.id, name: req.user.name}
   if (patch.apiDoc) {
     patch.actions = computeActions(patch.apiDoc)
   }
@@ -175,10 +175,10 @@ router.post('/:remoteServiceId/_update', permissions.middleware('writeDescriptio
   var valid = validateOpenApi(reponse.data)
   if (!valid) return res.status(400).send(normalise(validateOpenApi.errors))
   req.remoteService.updatedAt = moment().toISOString()
-  req.remoteService.updatedBy = req.user.id
+  req.remoteService.updatedBy = {id: req.user.id, name: req.user.name}
   req.remoteService.apiDoc = reponse.data
   req.remoteService.actions = computeActions(req.remoteService.apiDoc)
-  await req.app.get('db').collection('remote-services').updateOne({
+  await req.app.get('db').collection('remote-services').replaceOne({
     id: req.params.remoteServiceId
   }, mongoEscape.escape(req.remoteService, true))
   res.status(200).json(req.remoteService)

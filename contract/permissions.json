@@ -15,6 +15,10 @@
         "type": "string",
         "description": "Identifier of the entity"
       },
+      "name": {
+        "type": "string",
+        "description": "Name of the entity"
+      },
       "operations": {
         "type": "array",
         "items": {
