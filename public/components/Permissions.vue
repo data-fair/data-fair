@@ -133,6 +133,10 @@ export default {
       this.newPermission.roles = []
     },
     'newPermission.id': async function(id) {
+      if (id) {
+        this.newPermission.name = (this.newPermission.type === 'organization' ? this.organizations : this.users)
+          .find(entity => entity.id === id).name
+      }
       if (this.newPermission.type === 'organization' && id) {
         if ((this.resource.owner.type === 'organization' && this.resource.owner.id === id) || (this.resource.owner.type === 'user' && this.user.organizations.find(o => o.id === id))) {
           const roles = await this.$axios.$get(this.env.directoryUrl + '/api/organizations/' + id + '/roles')
