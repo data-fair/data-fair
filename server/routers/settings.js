@@ -55,7 +55,7 @@ router.put('/:type/:id', auth.jwtMiddleware, isOwner, asyncWrap(async(req, res) 
 }))
 
 // Get licenses list
-router.get('/:type/:id/licenses', auth.jwtMiddleware, asyncWrap(async(req, res) => {
+router.get('/:type/:id/licenses', asyncWrap(async(req, res) => {
   const settings = req.app.get('db').collection('settings')
   const result = await settings.findOne({
     type: req.params.type,
