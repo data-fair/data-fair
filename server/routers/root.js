@@ -54,8 +54,16 @@ router.post('/owner-names', asyncWrap(async (req, res) => {
       await collection.updateMany({'owner.type': owner.type, 'owner.id': owner.id}, {$set: {'owner.name': owner.name}})
 
       // permissions
-      await collection.updateMany({}, {$set: {'permissions.$[element].name': owner.name}},
-        {multi: true, arrayFilters: [{'element.type': owner.type, 'element.id': owner.id}]})
+      const cursor = collection.find({permissions: {$elemMatch: {type: owner.type, id: owner.id}}})
+      while (await cursor.hasNext()) {
+        const doc = await cursor.next()
+        doc.permissions
+          .filter(permission => permission.type === owner.type && permission.id === owner.id)
+          .forEach(permission => {
+            permission.name = owner.name
+          })
+        await collection.updateOne({id: doc.id}, {$set: {permissions: doc.permissions}})
+      }
 
       // created/updated events
       if (owner.type === 'user') {
