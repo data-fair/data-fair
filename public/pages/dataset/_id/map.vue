@@ -18,7 +18,7 @@
         v-model="select"
         label="Choisir les champs"
         multiple
-        @change="refresh"
+        @input="refresh"
       />
     </v-card>
     <div id="map" :style="'height:' + mapHeight + 'px'"/>
@@ -94,70 +94,85 @@ export default {
     }
   },
   async mounted() {
-    this.refresh()
+    if (!mapboxgl) return
+
+    this.mapHeight = Math.max(window.innerHeight - this.$el.getBoundingClientRect().y - 60, 300)
+    await new Promise(resolve => setTimeout(resolve, 0))
+    this.map = new mapboxgl.Map({container: 'map', style: this.env.map.style})
+    this.map.on('error', (error) => {
+      eventBus.$emit('notification', {error, msg: 'Erreur pendant le rendu de la carte:'})
+    })
+    const bbox = await this.getBBox()
+    this.map.fitBounds(bbox, {duration: 0})
+    this.map.addControl(new mapboxgl.NavigationControl(), 'top-right')
+    // Disable map rotation using right click + drag
+    this.map.dragRotate.disable()
+    // Disable map rotation using touch rotation gesture
+    this.map.touchZoomRotate.disableRotation()
+
+    // Create a popup, but don't add it to the map yet.
+    const popup = new mapboxgl.Popup({closeButton: false, closeOnClick: false})
+
+    const enterCallback = (e) => {
+      if (!this.select.length) return
+      // Change the cursor style as a UI indicator.
+      this.map.getCanvas().style.cursor = 'pointer'
+      const htmlList = Object.keys(e.features[0].properties || {})
+        .map(key => {
+          const field = this.dataset.schema.find(f => f.key === key)
+          return `<li>${field.title || field['x-originalName']}: ${e.features[0].properties[key]}</li>`
+        })
+        .join('\n')
+      const html = `<ul style="list-style-type: none;">${htmlList}</ul>`
+
+      // Populate the popup and set its coordinates
+      // based on the feature found.
+      popup.setLngLat(e.lngLat)
+        .setHTML(html)
+        .addTo(this.map)
+    }
+
+    const leaveCallback = () => {
+      this.map.getCanvas().style.cursor = ''
+      popup.remove()
+    }
+
+    dataLayers.forEach(layer => {
+      this.map.on('mouseenter', layer.id, enterCallback)
+      this.map.on('mouseleave', layer.id, leaveCallback)
+    })
+
+    // Add custom source and layers
+    this.map.once('load', () => {
+      this.initCustomSource()
+    })
   },
   methods: {
     async getBBox() {
-      return (await this.$axios.$get(this.resourceUrl + '/lines', {params: {format: 'geojson', size: 0, qs: this.query}})).bbox
-    },
-    async refresh() {
-      if (!mapboxgl) return
-      const bbox = await this.getBBox()
+      const bbox = (await this.$axios.$get(this.resourceUrl + '/lines', {params: {format: 'geojson', size: 0, qs: this.query}})).bbox
       if (!bbox || !bbox.length) {
         return eventBus.$emit('notification', 'Aucune donnée correspondante.')
       }
-
-      this.mapHeight = Math.max(window.innerHeight - this.$el.getBoundingClientRect().y - 60, 300)
-      await new Promise(resolve => setTimeout(resolve, 0))
-      this.map = new mapboxgl.Map({container: 'map', style: this.env.map.style})
-      this.map.on('error', (error) => {
-        eventBus.$emit('notification', {error, msg: 'Erreur pendant le rendu de la carte:'})
+      return resizeBBOX(bbox, 1.1)
+    },
+    async refresh() {
+      console.log('refresh', this.tileUrl)
+      // First clear layers and source to be able to change the tiles url
+      dataLayers.forEach(layer => {
+        if (this.map.getLayer(layer.id)) this.map.removeLayer(layer.id)
       })
-      this.map.fitBounds(resizeBBOX(bbox, 1.1), {duration: 0})
-      this.map.addControl(new mapboxgl.NavigationControl(), 'top-right')
-      // Disable map rotation using right click + drag
-      this.map.dragRotate.disable()
-      // Disable map rotation using touch rotation gesture
-      this.map.touchZoomRotate.disableRotation()
+      if (this.map.getSource('data-fair')) this.map.removeSource('data-fair')
 
-      // Add custom source and layers for this dataset
-      this.map.once('load', () => {
-        this.map.addSource('data-fair', {type: 'vector', tiles: [this.tileUrl]})
-        dataLayers.forEach(layer => this.map.addLayer(layer, this.env.map.beforeLayer))
-      })
+      // Then add them again
+      this.initCustomSource()
 
-      // Create a popup, but don't add it to the map yet.
-      const popup = new mapboxgl.Popup({closeButton: false, closeOnClick: false})
-
-      const enterCallback = (e) => {
-        // Change the cursor style as a UI indicator.
-        this.map.getCanvas().style.cursor = 'pointer'
-        const htmlList = Object.keys(e.features[0].properties || {})
-          .map(key => {
-            const field = this.dataset.schema.find(f => f.key === key)
-            return `<li>${field.title || field['x-originalName']}: ${e.features[0].properties[key]}</li>`
-          })
-          .join('\n')
-        const html = `<ul style="list-style-type: none;">${htmlList}</ul>`
-
-        // Populate the popup and set its coordinates
-        // based on the feature found.
-        popup.setLngLat(e.lngLat)
-          .setHTML(html)
-          .addTo(this.map)
-      }
-
-      const leaveCallback = () => {
-        this.map.getCanvas().style.cursor = ''
-        popup.remove()
-      }
-
-      if (this.select.length) {
-        dataLayers.forEach(layer => {
-          this.map.on('mouseenter', layer.id, enterCallback)
-          this.map.on('mouseleave', layer.id, leaveCallback)
-        })
-      }
+      // And fit box to results
+      const bbox = await this.getBBox()
+      this.map.fitBounds(bbox)
+    },
+    initCustomSource() {
+      this.map.addSource('data-fair', {type: 'vector', tiles: [this.tileUrl]})
+      dataLayers.forEach(layer => this.map.addLayer(layer, this.env.map.beforeLayer))
     }
   }
 }
