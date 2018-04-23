@@ -198,7 +198,7 @@ router.use('/:remoteServiceId/proxy*', (req, res, next) => {
     // console.log((req.user && req.user.email) || 'Anonymous', 'is using operation', operation.operationId)
     const options = {
       url: req.remoteService.server + '*',
-      headers: {},
+      headers: {'x-forwarded-url': `${config.publicUrl}/api/v1/remote-services/${req.remoteService.id}/proxy/`},
       query: {}
     }
     // Add static parameters values from configuration
