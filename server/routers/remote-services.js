@@ -214,12 +214,21 @@ router.use('/:remoteServiceId/proxy*', (req, res, next) => {
       })
   }
   // TODO handle query & cookie header types
-  if (req.remoteService.apiKey.in === 'header' && req.remoteService.apiKey.value) {
-    options.headers[req.remoteService.apiKey.name] = req.remoteService.apiKey.value
+  if (req.remoteService.apiKey.in === 'header') {
+    if (req.remoteService.apiKey.value) {
+      options.headers[req.remoteService.apiKey.name] = req.remoteService.apiKey.value
+    } else if (config.defaultRemoteKey) {
+      options.headers[req.remoteService.apiKey.name] = config.defaultRemoteKey
+    }
   }
   // transmit organization id as it tends to complement authorization information
   if (req.remoteService.owner.type === 'organization') {
     options.headers['x-organizationId'] = req.remoteService.owner.id
+    options.headers['x-organizationName'] = req.remoteService.owner.name
+  }
+  if (req.remoteService.owner.type === 'user') {
+    options.headers['x-userId'] = req.remoteService.owner.id
+    options.headers['x-userName'] = req.remoteService.owner.name
   }
   // Only transmit Authorization header if directoryUrl and the remoteService are from the same domain
   // Not sure this is the right policy. But always sending Authorization header results in 401 errors

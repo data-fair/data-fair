@@ -290,9 +290,11 @@ exports.extend = async(app, dataset, extension, remoteService, action) => {
     // transmit organization id as it tends to complement authorization information
     if (remoteService.owner.type === 'organization') {
       opts.headers['x-organizationId'] = remoteService.owner.id
+      opts.headers['x-organizationName'] = remoteService.owner.name
     }
     if (remoteService.owner.type === 'user') {
       opts.headers['x-userId'] = remoteService.owner.id
+      opts.headers['x-userName'] = remoteService.owner.name
     }
     if (extension.select && extension.select.length) {
       opts.qs.select = extension.select.join(',')
