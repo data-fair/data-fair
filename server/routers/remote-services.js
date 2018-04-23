@@ -58,7 +58,7 @@ router.get('', auth.optionalJwtMiddleware, asyncWrap(async(req, res) => {
   const [skip, size] = findUtils.pagination(req.query)
   query.$or = permissions.filter(req.user, req.query.public === 'true')
   let mongoQueries = [
-    size > 0 ? remoteServices.find(query).limit(size).skip(skip).sort(sort).project({_id: 0}).toArray() : Promise.resolve([]),
+    size > 0 ? remoteServices.find(query).limit(size).skip(skip).sort(sort).project({_id: 0, apiDoc: 0}).toArray() : Promise.resolve([]),
     remoteServices.find(query).count()
   ]
   const [results, count] = await Promise.all(mongoQueries)
