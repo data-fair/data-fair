@@ -187,50 +187,50 @@ router.post('/:remoteServiceId/_update', permissions.middleware('writeDescriptio
 
 const directoryDomain = new URL(config.directoryUrl).host
 router.use('/:remoteServiceId/proxy*', (req, res, next) => {
-  // console.log(req.remoteService.apiDoc.paths)
-  const paths = Object.keys(req.remoteService.apiDoc.paths).filter(path => {
+  // Match the path with an operation from the doc
+  const operationPath = Object.keys(req.remoteService.apiDoc.paths).filter(path => {
     const ms = matchstick(path, 'template')
     return ms.match(req.params['0'])
-  }).map(path => req.remoteService.apiDoc.paths[path])
-  if (paths.length === 1) {
-    const operation = paths.pop()[req.method.toLowerCase()]
-    if (!permissions.can(req.remoteService, operation.operationId, req.user)) return res.sendStatus(403)
-    // console.log((req.user && req.user.email) || 'Anonymous', 'is using operation', operation.operationId)
-    const options = {
-      url: req.remoteService.server + '*',
-      headers: {'x-forwarded-url': `${config.publicUrl}/api/v1/remote-services/${req.remoteService.id}/proxy/`},
-      query: {}
-    }
-    // Add static parameters values from configuration
-    if (req.remoteService.parameters) {
-      req.remoteService.parameters
-        .filter(param => !!param.value)
-        .forEach(param => {
-          options.query[param.name] = param.value
-        })
-    }
-    // TODO handle query & cookie header types
-    if (req.remoteService.apiKey.in === 'header' && req.remoteService.apiKey.value) {
-      options.headers[req.remoteService.apiKey.name] = req.remoteService.apiKey.value
-    }
-    // transmit organization id as it tends to complement authorization information
-    if (req.remoteService.owner.type === 'organization') {
-      options.headers['x-organizationId'] = req.remoteService.owner.id
-    }
-    // Only transmit Authorization header if directoryUrl and the remoteService are from the same domain
-    // Not sure this is the right policy. But always sending Authorization header results in 401 errors
-    // and could be considered a security breach
-    // TODO: same for cookies ?
-    if (req.headers.authorization) {
-      const remoteDomain = new URL(req.remoteService.server).host
-      if (remoteDomain !== directoryDomain) delete req.headers.authorization
-    }
+  }).map(path => req.remoteService.apiDoc.paths[path])[0]
 
-    requestProxy(options)(req, res, next)
-  } else {
-    console.log('Error, path length is not 1 :', paths)
-    next(new Error())
+  // If the operation exists, apply permissions
+  if (operationPath) {
+    const operation = operationPath[req.method.toLowerCase()]
+    if (!permissions.can(req.remoteService, operation.operationId, req.user)) return res.sendStatus(403)
   }
+
+  // console.log((req.user && req.user.email) || 'Anonymous', 'is using operation', operation.operationId)
+  const options = {
+    url: req.remoteService.server + '*',
+    headers: {'x-forwarded-url': `${config.publicUrl}/api/v1/remote-services/${req.remoteService.id}/proxy/`},
+    query: {}
+  }
+  // Add static parameters values from configuration
+  if (req.remoteService.parameters) {
+    req.remoteService.parameters
+      .filter(param => !!param.value)
+      .forEach(param => {
+        options.query[param.name] = param.value
+      })
+  }
+  // TODO handle query & cookie header types
+  if (req.remoteService.apiKey.in === 'header' && req.remoteService.apiKey.value) {
+    options.headers[req.remoteService.apiKey.name] = req.remoteService.apiKey.value
+  }
+  // transmit organization id as it tends to complement authorization information
+  if (req.remoteService.owner.type === 'organization') {
+    options.headers['x-organizationId'] = req.remoteService.owner.id
+  }
+  // Only transmit Authorization header if directoryUrl and the remoteService are from the same domain
+  // Not sure this is the right policy. But always sending Authorization header results in 401 errors
+  // and could be considered a security breach
+  // TODO: same for cookies ?
+  if (req.headers.authorization) {
+    const remoteDomain = new URL(req.remoteService.server).host
+    if (remoteDomain !== directoryDomain) delete req.headers.authorization
+  }
+
+  requestProxy(options)(req, res, next)
 })
 
 router.get('/:remoteServiceId/api-docs.json', permissions.middleware('readDescription'), (req, res) => {
