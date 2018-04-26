@@ -5,8 +5,19 @@
         <v-card class="mb-3">
           <v-list>
             <v-list-tile v-if="journal[0]" :class="'event-' + journal[0].type">
-              <v-list-tile-avatar><v-icon>{{ events[journal[0].type].icon }}</v-icon></v-list-tile-avatar>
+              <v-list-tile-avatar v-if="journal[0].type === 'finalize-end' || journal[0].type === 'error'">
+                <v-icon>{{ events[journal[0].type].icon }}</v-icon>
+              </v-list-tile-avatar>
+              <v-list-tile-avatar v-else>
+                <v-progress-circular :size="20" :width="3" small indeterminate color="primary"/>
+              </v-list-tile-avatar>
               <span>{{ events[journal[0].type].text }}</span>
+              <v-spacer/>
+              <v-list-tile-action v-if="journal[0].type === 'error'">
+                <v-btn icon title="Relancer" @click="patch({})">
+                  <v-icon>play_arrow</v-icon>
+                </v-btn>
+              </v-list-tile-action>
             </v-list-tile>
             <v-list-tile>
               <v-list-tile-avatar><v-icon>insert_drive_file</v-icon></v-list-tile-avatar>
