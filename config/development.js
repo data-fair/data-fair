@@ -16,7 +16,7 @@ module.exports = {
     ownerNames: 'dev_secret'
   },
   cache: {
-    size: 20
+    disabled: true
   },
   applications: [{
     title: 'Infos parcelles (recette)',

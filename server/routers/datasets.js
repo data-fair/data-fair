@@ -239,7 +239,7 @@ router.get('/:datasetId/lines', permissions.middleware('readLines'), asyncWrap(a
   const vectorTileRequested = ['mvt', 'vt', 'pbf'].includes(req.query.format)
   // Is the tile cached ?
   let cacheHash
-  if (vectorTileRequested) {
+  if (vectorTileRequested && !config.cache.disabled) {
     const {hash, value} = await cache.get(db, {
       type: 'tile',
       datasetId: req.dataset.id,
@@ -264,7 +264,7 @@ router.get('/:datasetId/lines', permissions.middleware('readLines'), asyncWrap(a
     if (!tile) return res.status(204).send()
     res.type('application/x-protobuf')
     // write in cache without await on purpose for minimal latency, a cache failure must be detected in the logs
-    cache.set(db, cacheHash, new mongodb.Binary(tile))
+    if (!config.cache.disabled) cache.set(db, cacheHash, new mongodb.Binary(tile))
     return res.status(200).send(tile)
   }
 
