@@ -56,6 +56,7 @@ exports.indexDefinition = (dataset) => {
   if (geoUtils.schemaHasGeopoint(dataset.schema) || geoUtils.schemaHasGeometry(dataset.schema)) {
     properties['_geopoint'] = {type: 'geo_point'}
     properties['_geoshape'] = {type: 'geo_shape'}
+    properties['_geocorners'] = {type: 'geo_point'}
   }
   properties['_rand'] = {type: 'integer'}
   return body
@@ -147,7 +148,7 @@ exports.bboxAgg = async (client, dataset, query = {}) => {
   esQuery.aggs = {
     bbox: {
       geo_bounds: {
-        field: '_geopoint'
+        field: '_geocorners'
       }
     }
   }
@@ -301,7 +302,7 @@ const prepareQuery = (dataset, query) => {
   esQuery._source = {includes: query.select ? query.select.split(',') : ['*'], excludes: []};
 
   // Some fields are excluded, unless explicitly included
-  ['_geoshape', '_geopoint', '_rand'].forEach(f => {
+  ['_geoshape', '_geopoint', '_geocorners', '_rand'].forEach(f => {
     if (!esQuery._source.includes.includes(f)) esQuery._source.excludes.push(f)
   })
 

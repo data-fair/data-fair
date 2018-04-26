@@ -31,7 +31,8 @@ exports.latlon2fields = (schema, doc) => {
   if (!lat || !lon) return {}
   return {
     _geopoint: lat + ',' + lon,
-    _geoshape: {type: 'Point', coordinates: [Number(lon), Number(lat)]}
+    _geoshape: {type: 'Point', coordinates: [Number(lon), Number(lat)]},
+    _geocorners: [lat + ',' + lon]
   }
 }
 
@@ -39,12 +40,16 @@ exports.geometry2fields = (schema, doc) => {
   const prop = schema.find(p => p['x-refersTo'] === geomUri)
   if (!prop || !doc[prop.key] || doc[prop.key] === '{}') return {}
   const geometry = JSON.parse(doc[prop.key])
+  const feature = {type: 'Feature', geometry}
   // check if simplify is a good idea ? too CPU intensive for our backend ?
   // const simplified = turf.simplify({type: 'Feature', geometry: JSON.parse(doc[prop.key])}, {tolerance: 0.01, highQuality: false})
-  const centroid = turf.centroid({type: 'Feature', geometry})
+
+  const centroid = turf.centroid(feature)
+  const bboxPolygon = turf.bboxPolygon(turf.bbox(feature))
   return {
     _geopoint: centroid.geometry.coordinates[1] + ',' + centroid.geometry.coordinates[0],
-    _geoshape: geometry
+    _geoshape: geometry,
+    _geocorners: bboxPolygon.geometry.coordinates[0].map(c => c[1] + ',' + c[0])
   }
 }
 

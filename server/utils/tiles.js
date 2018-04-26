@@ -25,5 +25,5 @@ exports.geojson2pbf = (geojson, xyz) => {
   // and do not share indexes in memory
   const tile = geojsonvt(geojson, {indexMaxZoom: 0, tolerance: 4, maxZoom: 24}).getTile(xyz[2], xyz[0], xyz[1])
   if (tile) layers.results = tile
-  return Buffer.from(vtpbf.fromGeojsonVt(layers))
+  return Buffer.from(vtpbf.fromGeojsonVt(layers, {version: 2}))
 }
