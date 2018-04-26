@@ -347,7 +347,7 @@ class CalculatedExtension extends Transform {
     }
 
     // Add a pseudo-random number for random sorting (more natural distribution)
-    doc._rand = randomSeed.create(item.doc._id)(1000000)
+    doc._rand = randomSeed.create(item.id)(1000000)
 
     const unflattenedItem = flatten.unflatten(item.doc)
     Object.keys(doc).forEach(key => {
