@@ -43,8 +43,16 @@ exports.geometry2fields = (schema, doc) => {
   if (!prop || !doc[prop.key] || doc[prop.key] === '{}') return {}
   const feature = {type: 'Feature', geometry: JSON.parse(doc[prop.key])}
   // Do the best we can to fix invalid geojson
-  cleanCoords(feature, {mutate: true})
-  rewind(feature, {mutate: true})
+  try {
+    cleanCoords(feature, {mutate: true})
+  } catch (err) {
+    console.error('Failure while applying cleanCoords to geojson', err)
+  }
+  try {
+    rewind(feature, {mutate: true})
+  } catch (err) {
+    console.error('Failure while applying rewind to geojson', err)
+  }
 
   // check if simplify is a good idea ? too CPU intensive for our backend ?
   // const simplified = turf.simplify({type: 'Feature', geometry: JSON.parse(doc[prop.key])}, {tolerance: 0.01, highQuality: false})
