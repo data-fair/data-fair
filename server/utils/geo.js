@@ -1,4 +1,6 @@
 const turf = require('turf')
+const rewind = require('@turf/rewind').default
+const cleanCoords = require('@turf/clean-coords').default
 const flatten = require('flat')
 
 const geomUri = 'https://purl.org/geojson/vocab#geometry'
@@ -39,8 +41,11 @@ exports.latlon2fields = (schema, doc) => {
 exports.geometry2fields = (schema, doc) => {
   const prop = schema.find(p => p['x-refersTo'] === geomUri)
   if (!prop || !doc[prop.key] || doc[prop.key] === '{}') return {}
-  const geometry = JSON.parse(doc[prop.key])
-  const feature = {type: 'Feature', geometry}
+  const feature = {type: 'Feature', geometry: JSON.parse(doc[prop.key])}
+  // Do the best we can to fix invalid geojson
+  cleanCoords(feature, {mutate: true})
+  rewind(feature, {mutate: true})
+
   // check if simplify is a good idea ? too CPU intensive for our backend ?
   // const simplified = turf.simplify({type: 'Feature', geometry: JSON.parse(doc[prop.key])}, {tolerance: 0.01, highQuality: false})
 
@@ -48,7 +53,7 @@ exports.geometry2fields = (schema, doc) => {
   const bboxPolygon = turf.bboxPolygon(turf.bbox(feature))
   return {
     _geopoint: centroid.geometry.coordinates[1] + ',' + centroid.geometry.coordinates[0],
-    _geoshape: geometry,
+    _geoshape: feature.geometry,
     _geocorners: bboxPolygon.geometry.coordinates[0].map(c => c[1] + ',' + c[0])
   }
 }

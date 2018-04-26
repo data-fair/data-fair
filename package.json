@@ -33,6 +33,8 @@
   "dependencies": {
     "@nuxtjs/axios": "^5.1.1",
     "@nuxtjs/google-analytics": "^2.0.2",
+    "@turf/clean-coords": "^6.0.1",
+    "@turf/rewind": "^5.1.5",
     "JSONStream": "^1.3.2",
     "ajv": "^5.5.2",
     "ajv-error-messages": "^1.0.0",
@@ -88,7 +90,7 @@
     "stream-combiner": "^0.2.2",
     "swagger2openapi": "^2.11.7",
     "turf": "^3.0.14",
-    "vt-pbf": "^3.1.0",
+    "vt-pbf": "2.1.4",
     "vue-moment": "^3.1.0",
     "vue-truncate-filter": "^1.1.7",
     "vuetify": "^1.0.13",
