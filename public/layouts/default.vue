@@ -73,7 +73,7 @@
     </v-content>
     <v-footer class="pa-3">
       <v-spacer/>
-      <div>&copy;2018 — <a href="https://koumoul.com">Koumoul</a></div>
+      <div>Powered by <a href="https://koumoul-dev.github.io/data-fair/">DataFAIR</a></div>
     </v-footer>
   </v-app>
 </template>
