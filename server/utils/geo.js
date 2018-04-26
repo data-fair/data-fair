@@ -21,7 +21,7 @@ exports.schemaHasGeometry = (schema) => {
 exports.latlon2fields = (schema, doc) => {
   let lat, lon
   const latlonProp = schema.find(p => p['x-refersTo'] === latlonUri)
-  if (latlonProp) [lat, lon] = doc[latlonProp.key].split(',')
+  if (latlonProp && doc[latlonProp.key]) [lat, lon] = doc[latlonProp.key].split(',')
 
   const latProp = schema.find(p => latUri.indexOf(p['x-refersTo']) !== -1)
   const lonProp = schema.find(p => lonUri.indexOf(p['x-refersTo']) !== -1)
