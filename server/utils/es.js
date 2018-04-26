@@ -57,6 +57,7 @@ exports.indexDefinition = (dataset) => {
     properties['_geopoint'] = {type: 'geo_point'}
     properties['_geoshape'] = {type: 'geo_shape'}
   }
+  properties['_rand'] = {type: 'integer'}
   return body
 }
 
@@ -297,11 +298,12 @@ const prepareQuery = (dataset, query) => {
   esQuery.from = (query.page ? Number(query.page) - 1 : 0) * esQuery.size
 
   // Select fields to return
-  esQuery._source = {includes: query.select ? query.select.split(',') : ['*'], excludes: []}
+  esQuery._source = {includes: query.select ? query.select.split(',') : ['*'], excludes: []};
 
   // Some fields are excluded, unless explicitly included
-  if (!esQuery._source.includes.includes('_geoshape')) esQuery._source.excludes.push('_geoshape')
-  if (!esQuery._source.includes.includes('_geopoint')) esQuery._source.excludes.push('_geopoint')
+  ['_geoshape', '_geopoint', '_rand'].forEach(f => {
+    if (!esQuery._source.includes.includes(f)) esQuery._source.excludes.push(f)
+  })
 
   // Sort by list of fields (prefixed by - for descending sort)
   if (query.sort) {
@@ -314,6 +316,8 @@ const prepareQuery = (dataset, query) => {
   }
   // Also implicitly sort by score
   esQuery.sort.push('_score')
+  // And lastly random order for natural distribution (mostly important for geo results)
+  esQuery.sort.push('_rand')
 
   const filter = []
   const must = []
@@ -343,6 +347,7 @@ const prepareQuery = (dataset, query) => {
   }
 
   esQuery.query = { bool: { filter, must } }
+
   return esQuery
 }
 

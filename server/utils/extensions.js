@@ -8,6 +8,7 @@ const hash = require('object-hash')
 const pump = util.promisify(require('pump'))
 const flatten = require('flat')
 const turf = require('turf')
+const randomSeed = require('random-seed')
 const es = require('./es')
 const geoUtils = require('./geo')
 
@@ -344,6 +345,9 @@ class CalculatedExtension extends Transform {
     } catch (err) {
       return callback(err)
     }
+
+    // Add a pseudo-random number for random sorting (more natural distribution)
+    doc._rand = randomSeed.create(item.doc._id)(1000000)
 
     const unflattenedItem = flatten.unflatten(item.doc)
     Object.keys(doc).forEach(key => {
