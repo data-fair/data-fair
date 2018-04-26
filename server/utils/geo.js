@@ -37,7 +37,7 @@ exports.latlon2fields = (schema, doc) => {
 
 exports.geometry2fields = (schema, doc) => {
   const prop = schema.find(p => p['x-refersTo'] === geomUri)
-  if (!prop || !doc[prop.key]) return {}
+  if (!prop || !doc[prop.key] || doc[prop.key] === '{}') return {}
   const geometry = JSON.parse(doc[prop.key])
   // check if simplify is a good idea ? too CPU intensive for our backend ?
   // const simplified = turf.simplify({type: 'Feature', geometry: JSON.parse(doc[prop.key])}, {tolerance: 0.01, highQuality: false})
