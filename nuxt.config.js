@@ -5,7 +5,15 @@ module.exports = {
   srcDir: 'public/',
   build: {
     publicPath: config.publicUrl + '/_nuxt/',
-    extractCSS: true
+    extractCSS: true,
+    vendor: ['babel-polyfill'],
+    // Use babel polyfill, not runtime transform to support Array.includes and other methods
+    // cf https://github.com/nuxt/nuxt.js/issues/93
+    babel: {
+      presets: [
+        ['vue-app', {useBuiltIns: true, targets: { ie: 11, uglify: true }}]
+      ]
+    }
   },
   loading: { color: '#1e88e5' }, // Customize the progress bar color
   plugins: [
