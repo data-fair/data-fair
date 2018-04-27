@@ -38,7 +38,7 @@ module.exports = {
     datasetStorage: -1
   },
   workers: {
-    concurrency: 4,
+    concurrency: 2,
     pollingInterval: 1000
   },
   headers: {
