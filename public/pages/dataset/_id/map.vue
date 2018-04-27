@@ -75,7 +75,7 @@ const dataLayers = [{
   'type': 'circle',
   'paint': {
     'circle-color': 'rgba(233, 30, 99, 0.5)',
-    'circle-radius': {'stops': [[6, 1], [24, 16]]}
+    'circle-radius': {'stops': [[6, 1.5], [24, 16]]}
   },
   'filter': ['==', '$type', 'Point']
 }]
