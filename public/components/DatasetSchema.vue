@@ -12,7 +12,9 @@
 
       <v-container fluid grid-list-md v-for="extension in extensions" :key="extension.key">
         <br v-if="extension.key">
-        <v-subheader v-if="extension.key && remoteServicesMap[extension.remoteService]">Extension: {{ remoteServicesMap[extension.remoteService].actions[extension.action].summary }} (service {{ remoteServicesMap[extension.remoteService].title }})</v-subheader>
+        <v-subheader v-if="extension.key && remoteServicesMap[extension.remoteService]">
+          Extension: {{ remoteServicesMap[extension.remoteService].actions[extension.action].summary }} (service {{ remoteServicesMap[extension.remoteService].title }})
+        </v-subheader>
         <v-layout row v-for="field in schema.filter(field => field['x-extension'] === extension.key)" :key="field.key">
           <v-flex xs4>
             <v-text-field label="Libellé" v-model="field.title" :placeholder="field['x-originalName']"/>
@@ -57,14 +59,15 @@ export default {
     extensions() {
       return [{key: undefined}].concat((this.dataset.extensions || [])
         .filter(ext => ext.active)
+        .filter(ext => this.remoteServicesMap[ext.remoteService] && this.remoteServicesMap[ext.remoteService].actions[ext.action])
         .map(ext => ({key: ext.remoteService + '/' + ext.action, ...ext})))
     },
     fieldsVocabulary() {
       return this.schema.reduce((a, field) => {
         if (field['x-extension']) return a
-        a[field.key] = this.vocabularyArray
+        a[field.key] = [{title: 'Aucun concept', id: null}].concat(this.vocabularyArray
           .map(term => ({title: term.title, id: term.identifiers[0]}))
-          .filter(term => !this.schema.find(f => (f['x-refersTo'] === term.id) && (f.key !== field.key)))
+          .filter(term => !this.schema.find(f => (f['x-refersTo'] === term.id) && (f.key !== field.key))))
         return a
       }, {})
     }
