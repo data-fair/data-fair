@@ -88,13 +88,9 @@ exports.searchInDataset = async (client, dataset, query) => {
 exports.bboxAgg = async (client, dataset, query = {}) => {
   query.size = '0'
   const esQuery = prepareQuery(dataset, query)
-  esQuery.aggs = {
-    bbox: {
-      geo_bounds: {
-        field: '_geocorners'
-      }
-    }
-  }
+  // Use corners, not centroid in order to get truly surrounding box
+  // and to function even with a single document
+  esQuery.aggs = {bbox: {geo_bounds: {field: '_geocorners'}}}
   const esResponse = await client.search({index: indexName(dataset), body: esQuery})
   const response = {total: esResponse.hits.total}
   // ES bounds to standard bounding box: left,bottom,right,top
@@ -279,15 +275,8 @@ const prepareQuery = (dataset, query) => {
     if (!dataset.bbox) throw createError(400, '"bbox" filter cannot be used on this dataset. It is not geolocalized.')
     const bbox = getQueryBBOX(query, dataset)
     const esBoundingBox = { left: bbox[0], bottom: bbox[1], right: bbox[2], top: bbox[3] }
-    // use geo_shape intersection instead geo_bounding_box in order to get even
-    // partial geometries in tiles
-    filter.push({geo_shape: {_geoshape: {
-      relation: 'intersects',
-      shape: {
-        type: 'envelope',
-        coordinates: [[esBoundingBox.left, esBoundingBox.top], [esBoundingBox.right, esBoundingBox.bottom]]
-      }
-    }}})
+    // bbox filter on corners, not centroid in order to get partial geometries in tiles
+    filter.push({ geo_bounding_box: { _geocorners: esBoundingBox } })
   }
 
   esQuery.query = { bool: { filter, must } }
