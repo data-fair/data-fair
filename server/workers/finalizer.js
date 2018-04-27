@@ -48,6 +48,8 @@ exports.process = async function(app, dataset) {
 
   if (bboxPromise) {
     result.bbox = dataset.bbox = (await bboxPromise).bbox
+  } else {
+    result.bbox = null
   }
 
   result.finalizedAt = (new Date()).toISOString()
