@@ -1,7 +1,7 @@
 <template lang="html">
 
   <v-card>
-    <v-card class="mt-3 ml-3 pl-3 pr-3" style="position: absolute;z-index:2;">
+    <v-card class="mt-2 ml-2 px-2" style="position: absolute;z-index:2;max-width:400px;">
       <v-text-field
         label="Rechercher"
         v-model="query"
