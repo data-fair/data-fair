@@ -1,4 +1,3 @@
-const Writable = require('stream').Writable
 const config = require('config')
 const elasticsearch = require('elasticsearch')
 const createError = require('http-errors')
@@ -11,22 +10,13 @@ const geoUtils = require('../utils/geo')
 exports.init = () => elasticsearch.Client(Object.assign({}, config.elasticsearch))
 
 const indexBase = {
-  settings: {
-    index: {
-      // Minimal overhead by default as we might deal with a lot of small indices.
-      // TODO: a way to override this ? Maybe intelligently based on size of the file ?
-      number_of_shards: 1,
-      number_of_replicas: 1
-    }
-  },
-  mappings: {
-    line: {}
-  }
+  // Minimal overhead by default as we might deal with a lot of small indices.
+  // TODO: a way to override this ? Maybe intelligently based on size of the file ?
+  settings: {index: {number_of_shards: 1, number_of_replicas: 1}},
+  mappings: {line: {}}
 }
 
-const indexName = exports.indexName = (dataset) => {
-  return `${config.indicesPrefix}-${dataset.id}`
-}
+const indexName = exports.indexName = dataset => `${config.indicesPrefix}-${dataset.id}`
 
 exports.esProperty = prop => {
   if (prop.type === 'object') return {type: 'object'}
@@ -87,53 +77,6 @@ exports.switchAlias = async (client, dataset, tempId) => {
   }
   await client.indices.deleteAlias({name, index: '_all', ignore: [404]})
   await client.indices.putAlias({name, index: tempId})
-}
-
-class IndexStream extends Writable {
-  constructor(client, index, dataset) {
-    super({objectMode: true})
-    this.client = client
-    this.index = index
-    this.dataset = dataset
-    this.body = []
-    this.i = 0
-  }
-  _write(chunk, encoding, callback) {
-    this.body.push({index: {_index: this.index, _type: 'line'}})
-    this.body.push(chunk)
-    this.i += 1
-    if (this.i % 10000 === 0) {
-      this._sendBulk(callback)
-    } else {
-      callback()
-    }
-  }
-  _final(callback) {
-    this._sendBulk(callback)
-  }
-  _sendBulk(callback) {
-    if (this.body.length === 0) return callback()
-    this.client.bulk({body: this.body, refresh: 'wait_for'}, (err, res) => {
-      if (err) return callback(err)
-      if (res.errors) {
-        const msg = res.items
-          .filter(item => item.index && item.index.error)
-          .map(item => {
-            let itemMsg = item.index.error.reason
-            if (item.index.error.caused_by) itemMsg += ' - ' + item.index.error.caused_by.reason
-            return itemMsg
-          }).join('\n')
-        return callback(new Error(msg))
-      }
-      // Super weird ! When passing callback directly it seems that it is not called.
-      callback()
-    })
-    this.body = []
-  }
-}
-
-exports.indexStream = (client, index, dataset) => {
-  return new IndexStream(client, index, dataset)
 }
 
 exports.searchInDataset = async (client, dataset, query) => {

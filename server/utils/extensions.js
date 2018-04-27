@@ -10,6 +10,7 @@ const flatten = require('flat')
 const turf = require('turf')
 const randomSeed = require('random-seed')
 const es = require('./es')
+const esStreams = require('./es-streams')
 const geoUtils = require('./geo')
 
 // Create a function that will transform items from a dataset into inputs for an action
@@ -84,7 +85,7 @@ class ExtendStream extends Transform {
   async _transform(item, encoding, callback) {
     try {
       if (!this.mappings) await this.init()
-      const esClient = this.options.es
+      const esClient = this.options.esClient
       for (let extensionKey in this.mappings) {
       /* eslint no-unused-vars: off */
         const [mappedItem, h] = this.mappings[extensionKey]({doc: item})
@@ -199,50 +200,6 @@ class PrepareOutputStream extends Transform {
   }
 }
 
-// Output stream performing partial doc updates in ES
-class ESOutputStream extends Writable {
-  constructor(options) {
-    super({objectMode: true})
-    this.esClient = options.esClient
-    this.indexName = options.indexName
-    this.stats = options.stats
-  }
-  _write(item, encoding, callback) {
-    if (this.stats) this.stats.count += 1
-
-    if (Object.keys(item.doc).length === 0) return callback()
-    const opts = {
-      index: this.indexName,
-      type: 'line',
-      id: item.id,
-      body: {
-        doc: item.doc
-      }
-    }
-    this.esClient.update(opts, err => {
-      if (err) {
-        let message = err.message
-        try {
-          const res = JSON.parse(err.toJSON().response)
-          if (res.error && res.error.reason) {
-            message = res.error.reason
-            if (res.error.caused_by && res.error.caused_by.reason) {
-              message += ' - ' + res.error.caused_by.reason
-            }
-          }
-        } catch (err) {
-          // do nothing
-        }
-        return callback(new Error(message))
-      }
-      callback()
-    })
-  }
-  _final(callback) {
-    this.esClient.indices.refresh({index: this.indexName}, callback)
-  }
-}
-
 // Apply an extension to a dataset: meaning, query a remote service in streaming manner
 // and update the documents
 exports.extend = async(app, dataset, extension, remoteService, action) => {
@@ -312,7 +269,7 @@ exports.extend = async(app, dataset, extension, remoteService, action) => {
         request(opts),
         byline.createStream(),
         new PrepareOutputStream({action, hashes, extensionKey, selectFields: extension.select}),
-        new ESOutputStream({esClient, indexName, stats})
+        esStreams.indexStream({esClient, indexName, stats, updateMode: true})
       )
     }
     await setProgress()
@@ -366,7 +323,7 @@ exports.extendCalculated = async (app, dataset, geopoint, geometry) => {
   return pump(
     new ESInputStream({esClient, indexName}),
     new CalculatedExtension({indexName, geopoint, geometry, dataset}),
-    new ESOutputStream({esClient, indexName})
+    esStreams.indexStream({esClient, indexName, updateMode: true})
   )
 }
 
