@@ -11,14 +11,14 @@
       </v-flex>
     </v-layout>
 
-    <v-layout row wrap class="resourcesList">
+    <v-layout row wrap class="resourcesList" v-match-heights="{el: ['.item-title', '.item-text', '.item-actions']}">
       <v-flex sm12 md6 lg4 xl3 v-for="remoteService in remoteServices.results" :key="remoteService.id">
         <v-card>
-          <v-card-title primary-title>
+          <v-card-title primary-title class="item-title">
             <nuxt-link :to="`/remote-service/${remoteService.id}/description`">{{ remoteService.title || remoteService.id }}</nuxt-link>
           </v-card-title>
-          <v-card-text style="min-height:80px" v-html="marked(remoteService.description || '')"/>
-          <v-card-actions>
+          <v-card-text style="min-height:80px" v-html="marked($options.filters.truncate(remoteService.description || '', 200))" class="item-text"/>
+          <v-card-actions class="item-actions">
             <span v-if="remoteService.owner.type === 'user'"><v-icon>person</v-icon>{{ remoteService.owner.name }}</span>
             <span v-if="remoteService.owner.type === 'organization'"><v-icon>group</v-icon>{{ remoteService.owner.name }}</span>
             <v-chip text-color="white" :color="remoteService.public ? 'primary' : 'accent'">{{ remoteService.public ? 'Public' : 'Privé' }}</v-chip>

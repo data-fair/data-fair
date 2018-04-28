@@ -22,7 +22,8 @@ module.exports = {
     {src: '~plugins/ws', ssr: false},
     {src: '~plugins/vuetify'},
     {src: '~plugins/moment'},
-    {src: '~plugins/truncate'}
+    {src: '~plugins/truncate'},
+    {src: '~plugins/match-heights'}
   ],
   router: {
     base: ('/' + config.publicUrl.split('//')[1].split('/').slice(1).join('/')).replace('//', '/')

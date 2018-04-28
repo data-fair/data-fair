@@ -11,14 +11,14 @@
       </v-flex>
     </v-layout>
 
-    <v-layout row wrap class="resourcesList">
+    <v-layout row wrap class="resourcesList" v-match-heights="{el: ['.item-title', '.item-text', '.item-actions']}">
       <v-flex sm12 md6 lg4 xl3 v-for="dataset in datasets.results" :key="dataset.id">
         <v-card>
-          <v-card-title primary-title>
+          <v-card-title primary-title class="item-title">
             <nuxt-link :to="`/dataset/${dataset.id}/description`">{{ dataset.title || dataset.id }}</nuxt-link>
           </v-card-title>
-          <v-card-text style="min-height:80px" v-html="marked(dataset.description || '')"/>
-          <v-card-actions>
+          <v-card-text style="min-height:80px" v-html="marked($options.filters.truncate(dataset.description || '', 200))" class="item-text"/>
+          <v-card-actions class="item-actions">
             <span v-if="dataset.owner.type === 'user'"><v-icon>person</v-icon>{{ dataset.owner.name }}</span>
             <span v-if="dataset.owner.type === 'organization'"><v-icon>group</v-icon>{{ dataset.owner.name }}</span>
             <v-chip text-color="white" :color="dataset.public ? 'primary' : 'accent'">{{ dataset.public ? 'Public' : 'Privé' }}</v-chip>

@@ -91,6 +91,7 @@
     "swagger2openapi": "^2.11.7",
     "turf": "^3.0.14",
     "vt-pbf": "2.1.4",
+    "vue-match-heights": "^0.1.0",
     "vue-moment": "^3.1.0",
     "vue-truncate-filter": "^1.1.7",
     "vuetify": "^1.0.13",
