@@ -49,8 +49,9 @@ export default {
     operations() {
       return (this.api && [].concat(...Object.keys(this.api.paths).map(path => Object.keys(this.api.paths[path]).map(method => ({
         id: this.api.paths[path][method].operationId,
-        title: this.api.paths[path][method].summary
-      }))))) || []
+        title: this.api.paths[path][method].summary,
+        public: !this.api.paths[path][method].security || this.api.paths[path][method].security.find(sr => !Object.keys(sr).length)
+      })))).filter(o => !o.public)) || []
     }
   },
   async mounted() {

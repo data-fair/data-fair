@@ -26,6 +26,13 @@
           "description": "API operation that can be used"
         }
       },
+      "classes": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "description": "API permission classes that can be used"
+        }
+      },
       "roles": {
         "type": "array",
         "items": {

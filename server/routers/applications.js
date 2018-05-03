@@ -44,7 +44,7 @@ router.get('', auth.optionalJwtMiddleware, asyncWrap(async(req, res) => {
   let [results, count] = await Promise.all(mongoQueries)
   results.forEach(r => {
     r.userPermissions = permissions.list(r, req.user)
-    r.public = r.userPermissions.public === 'all' || r.userPermissions.public.indexOf('readDescription') >= 0
+    r.public = r.userPermissions.public === 'all' || r.userPermissions.public.indexOf('list') >= 0
     delete r.permissions
   })
   res.json({results, count})
@@ -156,6 +156,6 @@ router.put('/:applicationId/config', permissions.middleware('writeConfig'), asyn
   res.status(200).json(req.body)
 }))
 
-router.get('/:applicationId/api-docs.json', permissions.middleware('readDescription'), (req, res) => {
+router.get('/:applicationId/api-docs.json', permissions.middleware('readApiDoc'), (req, res) => {
   res.send(applicationAPIDocs(req.application))
 })

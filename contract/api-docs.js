@@ -17,6 +17,20 @@ module.exports = {
     url: config.publicUrl + '/api/v1',
     description: 'Serveur de ' + process.env.NODE_ENV || 'development'
   }],
+  components: {
+    schemas: {
+      dataset,
+      remoteService,
+      application
+    },
+    securitySchemes: {
+      jwt: {
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT'
+      }
+    }
+  },
   paths: {
     '/status': {
       get: {
@@ -42,9 +56,39 @@ module.exports = {
       }
     },
     '/datasets': {
+      get: {
+        summary: 'Récupérer la liste des jeux de données.',
+        operationId: 'listDatasets',
+        security: [{}, { jwt: [] }],
+        responses: {
+          200: {
+            description: 'Liste des jeux de données que l\'utilisateur est autorisé à voir',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    count: {
+                      type: 'number',
+                      description: 'Nombre total de jeux de données'
+                    },
+                    results: {
+                      type: 'array',
+                      items: {
+                        $ref: '#/components/schemas/dataset'
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
       post: {
         summary: 'Importer un jeu de données.',
         operationId: 'postDataset',
+        security: [{ jwt: [] }],
         requestBody: {
           description: 'Fichier à charger et informations de propriété',
           required: true,
@@ -55,49 +99,57 @@ module.exports = {
             description: 'Métadonnées sur le dataset créé',
             content: {
               'application/json': {
-                schema: dataset
+                schema: {
+                  $ref: '#/components/schemas/dataset'
+                }
               }
             }
           }
         }
       }
     },
-    '/datasets/{datasetId}': {
-      post: {
-        summary: 'Mettre à jour un jeu de données.',
-        operationId: 'updateDataset',
-        requestBody: {
-          description: 'Fichier à charger et informations de propriété',
-          required: true,
-          content: {}
-        },
+    '/remote-services': {
+      get: {
+        summary: 'Récupérer la liste des services distants.',
+        operationId: 'listRemoteServices',
+        security: [{}, { jwt: [] }],
         responses: {
           200: {
-            description: 'Métadonnées sur le dataset modifié',
+            description: 'Liste des services distants que l\'utilisateur est autorisé à voir',
             content: {
               'application/json': {
-                schema: dataset
+                schema: {
+                  type: 'object',
+                  properties: {
+                    count: {
+                      type: 'number',
+                      description: 'Nombre total de services distants'
+                    },
+                    results: {
+                      type: 'array',
+                      items: {
+                        $ref: '#/components/schemas/remoteService'
+                      }
+                    }
+                  }
+                }
               }
             }
           }
         }
       },
-      delete: {
-        summary: 'Supprimer un jeu de données.',
-        operationId: 'deleteDataset',
-        responses: {}
-      }
-    },
-    '/remote-services': {
       post: {
         summary: 'Configurer un service distant.',
         operationId: 'postRemoteService',
+        security: [{ jwt: [] }],
         requestBody: {
           description: 'Les informations de configuration du service distant.',
           required: true,
           content: {
             'application/json': {
-              schema: remoteService
+              schema: {
+                $ref: '#/components/schemas/remoteService'
+              }
             }
           }
         },
@@ -106,7 +158,9 @@ module.exports = {
             description: 'Les informations de configuration du service distant.',
             content: {
               'application/json': {
-                schema: remoteService
+                schema: {
+                  $ref: '#/components/schemas/remoteService'
+                }
               }
             }
           }
@@ -114,14 +168,46 @@ module.exports = {
       }
     },
     '/applications': {
+      get: {
+        summary: 'Récupérer la liste des applications.',
+        operationId: 'listApplications',
+        security: [{}, { jwt: [] }],
+        responses: {
+          200: {
+            description: 'Liste des applications que l\'utilisateur est autorisé à voir',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    count: {
+                      type: 'number',
+                      description: 'Nombre total d\'applications'
+                    },
+                    results: {
+                      type: 'array',
+                      items: {
+                        $ref: '#/components/schemas/application'
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
       post: {
         summary: 'Configurer une application.',
         operationId: 'postApplication',
+        security: [{ jwt: [] }],
         requestBody: {
           description: 'Les informations de configuration de l\'application',
           required: true,
           content: {
-            schema: application
+            schema: {
+              $ref: '#/components/schemas/application'
+            }
           }
         },
         responses: {
@@ -129,7 +215,9 @@ module.exports = {
             description: 'Les informations de configuration de l\'application',
             content: {
               'application/json': {
-                schema: application
+                schema: {
+                  $ref: '#/components/schemas/application'
+                }
               }
             }
           }

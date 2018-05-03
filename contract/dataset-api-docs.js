@@ -1,8 +1,12 @@
 const config = require('config')
 const datasetSchema = require('./dataset')
 const version = require('../package.json').version
+const permissionsDoc = require('../server/utils/permissions').apiDoc
 
 module.exports = (dataset) => {
+  const publicPermissions = (dataset.permissions || []).find(p => !p.type && !p.id)
+  const publicOperations = (publicPermissions && publicPermissions.operations) || []
+  const publicClasses = (publicPermissions && publicPermissions.classes) || []
   dataset.schema = dataset.schema || []
   const properties = dataset.schema.map(p => p.key)
   const nonTextProperties = dataset.schema.filter(p => p.type !== 'string' || p.format).map(p => p.key)
@@ -148,6 +152,15 @@ module.exports = (dataset) => {
       title: `API du jeu de données : ${dataset.title || dataset.id}`,
       version: version
     }, config.info),
+    components: {
+      securitySchemes: {
+        jwt: {
+          type: 'http',
+          scheme: 'bearer',
+          bearerFormat: 'JWT'
+        }
+      }
+    },
     servers: [{
       url: `${config.publicUrl}/api/v1/datasets/${dataset.id}`
     }],
@@ -156,7 +169,9 @@ module.exports = (dataset) => {
         get: {
           summary: 'Récupérer les informations du jeu de données.',
           operationId: 'readDescription',
-          tags: ['Métadonnées'],
+          'x-permissionClass': 'read',
+          security: (publicOperations.indexOf('readDescription') || publicClasses.indexOf('read')) ? [] : [{ jwt: [] }],
+          tags: ['Description'],
           responses: {
             200: {
               description: 'Les informations du jeu de données.',
@@ -171,7 +186,9 @@ module.exports = (dataset) => {
         patch: {
           summary: 'Mettre à jour les informations du jeu de données.',
           operationId: 'writeDescription',
-          tags: ['Métadonnées'],
+          'x-permissionClass': 'write',
+          security: (publicOperations.indexOf('writeDescription') || publicClasses.indexOf('write')) ? [] : [{ jwt: [] }],
+          tags: ['Description'],
           requestBody: {
             description: 'Fichier à charger et informations de propriété',
             required: true,
@@ -191,12 +208,44 @@ module.exports = (dataset) => {
               }
             }
           }
+        },
+        post: {
+          summary: 'Mettre à jour les données du jeu de données.',
+          operationId: 'writeData',
+          'x-permissionClass': 'write',
+          security: (publicOperations.indexOf('writeData') || publicClasses.indexOf('write')) ? [] : [{ jwt: [] }],
+          tags: ['Données'],
+          requestBody: {
+            description: 'Fichier à charger',
+            required: true,
+            content: {}
+          },
+          responses: {
+            200: {
+              description: 'Métadonnées sur le dataset modifié',
+              content: {
+                'application/json': {
+                  schema: dataset
+                }
+              }
+            }
+          }
+        },
+        delete: {
+          summary: 'Supprimer le jeu de données.',
+          operationId: 'delete',
+          'x-permissionClass': 'admin',
+          security: [{ jwt: [] }],
+          tags: ['Description'],
+          responses: {}
         }
       },
       '/lines': {
         get: {
           summary: 'Requêter les lignes du jeu de données.',
           operationId: 'readLines',
+          'x-permissionClass': 'read',
+          security: (publicOperations.indexOf('readLines') || publicClasses.indexOf('read')) ? [] : [{ jwt: [] }],
           tags: ['Données'],
           parameters: [{
             in: 'query',
@@ -249,6 +298,8 @@ module.exports = (dataset) => {
         get: {
           summary: 'Récupérer des informations agrégées en fonction des valeurs d\'un champ.',
           operationId: 'getValuesAgg',
+          'x-permissionClass': 'read',
+          security: (publicOperations.indexOf('getValuesAgg') || publicClasses.indexOf('read')) ? [] : [{ jwt: [] }],
           tags: ['Données'],
           parameters: [{
             in: 'query',
@@ -278,6 +329,8 @@ module.exports = (dataset) => {
         get: {
           summary: 'Calculer une métrique sur un ensemble de lignes.',
           operationId: 'getMetricAgg',
+          'x-permissionClass': 'read',
+          security: (publicOperations.indexOf('getMetricAgg') || publicClasses.indexOf('read')) ? [] : [{ jwt: [] }],
           tags: ['Données'],
           parameters: [
             Object.assign({}, metricParam, {required: true}),
@@ -297,18 +350,92 @@ module.exports = (dataset) => {
             }
           }
         }
-      }
-      // values_agg: {
-      //   get: {
-      //     summary: '',
-      //     operationId: '',
-      //     tags: ['Données'],
-      //     parameters: []
-      //   }
-      // },
-      // metric_agg: {
-      //
-      // }
+      },
+      '/raw': {
+        get: {
+          summary: 'Télécharger le jeu de données',
+          operationId: 'downloadOriginalData',
+          'x-permissionClass': 'read',
+          security: (publicOperations.indexOf('downloadOriginalData') || publicClasses.indexOf('read')) ? [] : [{ jwt: [] }],
+          tags: ['Données'],
+          responses: {
+            200: {
+              description: 'Le jeu de données.',
+              content: {
+                'text/csv': {
+                  schema: {
+                    type: 'string'
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      '/full': {
+        get: {
+          summary: 'Télécharger le jeu de données enrichi',
+          operationId: 'downloadFullData',
+          'x-permissionClass': 'read',
+          security: (publicOperations.indexOf('downloadFullData') || publicClasses.indexOf('read')) ? [] : [{ jwt: [] }],
+          tags: ['Données'],
+          responses: {
+            200: {
+              description: 'Le jeu de données.',
+              content: {
+                'text/csv': {
+                  schema: {
+                    type: 'string'
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      '/api-docs.json': {
+        get: {
+          summary: 'Accéder à la documentation de l\'API',
+          operationId: 'readApiDoc',
+          'x-permissionClass': 'read',
+          security: (publicOperations.indexOf('readApiDoc') || publicClasses.indexOf('read')) ? [] : [{ jwt: [] }],
+          tags: ['Informations'],
+          responses: {
+            200: {
+              description: 'La documentation de l\'API',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object'
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      '/journal': {
+        get: {
+          summary: 'Accéder au journal',
+          operationId: 'readJournal',
+          'x-permissionClass': 'read',
+          security: (publicOperations.indexOf('readJournal') || publicClasses.indexOf('read')) ? [] : [{ jwt: [] }],
+          tags: ['Informations'],
+          responses: {
+            200: {
+              description: 'Le journal.',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object'
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      '/permissions': permissionsDoc
     },
     externalDocs: {
       description: 'Documentation sur Github',
@@ -320,6 +447,8 @@ module.exports = (dataset) => {
       get: {
         summary: 'Récupérer des informations agrégées spatialement sur le jeu de données.',
         operationId: 'getGeoAgg',
+        'x-permissionClass': 'read',
+        security: (publicOperations.indexOf('getGeoAgg') || publicClasses.indexOf('read')) ? [] : [{ jwt: [] }],
         tags: ['Données'],
         parameters: [aggSizeParam].concat(queryParams),
         responses: {

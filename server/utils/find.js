@@ -46,3 +46,39 @@ exports.pagination = (query, defaultSize = 10) => {
 
   return [skip, size]
 }
+
+exports.parametersDoc = (filterFields) => [
+  { in: 'query',
+    name: 'size',
+    description: 'Le nombre de résultats à retourner (taille de la pagination)',
+    required: false,
+    schema: {
+      default: 10,
+      type: 'integer'
+    }
+  },
+  { in: 'query',
+    name: 'skip',
+    description: 'Nombre de résultats à ignorer. Permet par exemple de lire la prochaine page de données',
+    required: false,
+    schema: {
+      default: 0,
+      type: 'integer'
+    }
+  },
+  { in: 'query',
+    name: 'sort',
+    description: `Permet de trier les résultat. Utiliser la syntaxte suivante : id_champ:1 ou idchamp:-1 suivant pour avoir un tri par ordre croissant ou décroissant respectivement`,
+    required: false,
+    schema: {
+      default: 1,
+      type: 'string'
+    }
+  }
+].concat(filterFields.concat([{
+  param: 'owner-type',
+  title: 'Type de propriétaire (user ou organization)'
+}, {
+  param: 'owner-id',
+  title: 'Identifiant du propriétaire'
+}]))

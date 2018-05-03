@@ -54,7 +54,7 @@ router.get('', auth.optionalJwtMiddleware, asyncWrap(async(req, res) => {
   const [results, count] = await Promise.all(mongoQueries)
   results.forEach(r => {
     r.userPermissions = permissions.list(r, req.user)
-    r.public = r.userPermissions.public === 'all' || r.userPermissions.public.includes('readDescription')
+    r.public = r.userPermissions.public === 'all' || r.userPermissions.public.includes('list')
     delete r.permissions
   })
   res.json({results, count})
@@ -297,12 +297,12 @@ router.get('/:datasetId/metric_agg', permissions.middleware('getMetricAgg'), asy
 }))
 
 // Download the full dataset in its original form
-router.get('/:datasetId/raw', permissions.middleware('readData'), (req, res, next) => {
+router.get('/:datasetId/raw', permissions.middleware('downloadOriginalData'), (req, res, next) => {
   res.download(datasetUtils.fileName(req.dataset), req.dataset.file.name)
 })
 
 // Download the full dataset with extensions
-router.get('/:datasetId/full', permissions.middleware('readData'), asyncWrap(async (req, res, next) => {
+router.get('/:datasetId/full', permissions.middleware('downloadFullData'), asyncWrap(async (req, res, next) => {
   res.setHeader('Content-disposition', 'attachment; filename=' + req.dataset.file.name)
   res.setHeader('Content-type', 'text/csv')
   await pump(
@@ -314,12 +314,11 @@ router.get('/:datasetId/full', permissions.middleware('readData'), asyncWrap(asy
   )
 }))
 
-router.get('/:datasetId/api-docs.json', permissions.middleware('readDescription'), (req, res) => {
-  // TODO: permission ?
+router.get('/:datasetId/api-docs.json', permissions.middleware('readApiDoc'), (req, res) => {
   res.send(req.resourceApiDoc)
 })
 
-router.get('/:datasetId/journal', permissions.middleware('readDescription'), asyncWrap(async(req, res) => {
+router.get('/:datasetId/journal', permissions.middleware('readJournal'), asyncWrap(async(req, res) => {
   const journal = await req.app.get('db').collection('journals').findOne({
     id: req.params.datasetId
   })

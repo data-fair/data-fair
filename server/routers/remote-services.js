@@ -64,7 +64,7 @@ router.get('', auth.optionalJwtMiddleware, asyncWrap(async(req, res) => {
   const [results, count] = await Promise.all(mongoQueries)
   results.forEach(r => {
     r.userPermissions = permissions.list(r, req.user)
-    r.public = r.userPermissions.public === 'all' || r.userPermissions.public.length > 0
+    r.public = r.userPermissions.public === 'all' || r.userPermissions.public.indexOf('list') >= 0
     delete r.permissions
   })
   res.json({results: results.map(result => mongoEscape.unescape(result, true)), count})
@@ -169,7 +169,7 @@ router.delete('/:remoteServiceId', permissions.middleware('delete'), asyncWrap(a
   res.sendStatus(204)
 }))
 
-router.post('/:remoteServiceId/_update', permissions.middleware('writeDescription'), asyncWrap(async(req, res) => {
+router.post('/:remoteServiceId/_update', permissions.middleware('updateApiDoc'), asyncWrap(async(req, res) => {
   if (!req.remoteService.url) return res.sendStatus(204)
 
   const reponse = await axios.get(req.remoteService.url)
@@ -242,6 +242,6 @@ router.use('/:remoteServiceId/proxy*', (req, res, next) => {
   requestProxy(options)(req, res, next)
 })
 
-router.get('/:remoteServiceId/api-docs.json', permissions.middleware('readDescription'), (req, res) => {
+router.get('/:remoteServiceId/api-docs.json', permissions.middleware('readApiDoc'), (req, res) => {
   res.send(req.resourceApiDoc)
 })

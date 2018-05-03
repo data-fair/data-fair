@@ -13,7 +13,9 @@ export default {
       return Math.max(window.innerHeight, 1000)
     },
     src() {
-      return 'https://koumoul.com/openapi-viewer/?proxy=false&hide-toolbar=true&url=' + encodeURIComponent(this.url)
+      let url = 'https://koumoul.com/openapi-viewer/?proxy=false&hide-toolbar=true'
+      if (this.$store.state.jwt) url += '&headers=' + encodeURIComponent(JSON.stringify({Authorization: 'Bearer ' + this.$store.state.jwt}))
+      return url + '&url=' + this.url
     }
   }
 }

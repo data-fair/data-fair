@@ -20,7 +20,7 @@ exports.middleware = function(operationId) {
 
 // resource can be an application, a dataset of an remote service
 exports.can = function(resource, operationId, user) {
-  const operationPermissions = (resource.permissions || []).filter(p => !p.operations.length || p.operations.indexOf(operationId) >= 0)
+  const operationPermissions = (resource.permissions || []).filter(p => p.operations && p.operations.indexOf(operationId) >= 0)
   // check if the operation is public
   if (operationPermissions.find(p => !p.type && !p.id)) return true
   if (!user) {
@@ -46,8 +46,8 @@ exports.can = function(resource, operationId, user) {
 // list permissions of a user over a resource
 exports.list = function(resource, user) {
   const permissions = {
-    public: (resource.permissions || []).filter(p => !p.type && !p.id).map(p => (p.operations && p.operations.length) ? p.operations : 'all'),
-    user: (user && (resource.permissions || []).filter(p => p.type === 'user' && p.id === user.id).map(p => (p.operations && p.operations.length) ? p.operations : 'all')) || [],
+    public: (resource.permissions || []).filter(p => !p.type && !p.id && p.operations && p.operations.length).map(p => p.operations),
+    user: (user && (resource.permissions || []).filter(p => p.type === 'user' && p.id === user.id && p.operations && p.operations.length).map(p => p.operations)) || [],
     isOwner: false,
     organizations: {}
   }
@@ -63,11 +63,14 @@ exports.list = function(resource, user) {
   (resource.permissions || []).filter(p => p.type === 'organization').forEach(p => {
     const orgaUser = user && user.organizations.find(o => o.id === p.id)
     if (orgaUser && ((orgaUser.role === config.adminRole) || (!p.roles || !p.roles.length) || p.roles.indexOf(orgaUser.role) >= 0)) {
-      permissions.organizations[orgaUser.id] = permissions.organizations[orgaUser.id] || []
-      permissions.organizations[orgaUser.id].push((p.operations && p.operations.length) ? p.operations : 'all')
+      if (p.operations && p.operations.length) {
+        permissions.organizations[orgaUser.id] = permissions.organizations[orgaUser.id] || []
+        permissions.organizations[orgaUser.id].push(p.operations)
+      }
     }
   })
 
+  // TODO 'all' does not exists anymore, we could simplify following code
   const reducer = (accumulator, currentValue) => (accumulator === 'all' || currentValue === 'all') ? 'all' : accumulator.concat(currentValue)
   permissions.public = permissions.public.reduce(reducer, [])
   permissions.user = permissions.user.reduce(reducer, [])
@@ -81,7 +84,7 @@ exports.list = function(resource, user) {
 
 // Manage filters for datasets, applications and remote services
 exports.filter = function(user, showPublic) {
-  const operationFilter = [{operations: 'readDescription'}, {operations: {$size: 0}}]
+  const operationFilter = [{operations: 'list'}]
 
   const or = []
   if (showPublic || !user) {
@@ -184,4 +187,50 @@ module.exports.router = (collectionName, resourceName) => {
   })
 
   return router
+}
+
+module.exports.apiDoc = {
+  get: {
+    summary: 'Récupérer la liste des permissions.',
+    operationId: 'getPermissions',
+    'x-permissionClass': 'admin',
+    security: [{ jwt: [] }],
+    tags: ['Permissions'],
+    responses: {
+      200: {
+        description: 'Liste des permissions',
+        content: {
+          'application/json': {
+            schema: permissionsSchema
+          }
+        }
+      }
+    }
+  },
+  put: {
+    summary: 'Définir la liste des permissions.',
+    operationId: 'setPermissions',
+    'x-permissionClass': 'admin',
+    security: [{ jwt: [] }],
+    tags: ['Permissions'],
+    requestBody: {
+      description: 'Liste des permissions',
+      required: true,
+      content: {
+        'application/json': {
+          schema: permissionsSchema
+        }
+      }
+    },
+    responses: {
+      200: {
+        description: 'Liste des permissions',
+        content: {
+          'application/json': {
+            schema: permissionsSchema
+          }
+        }
+      }
+    }
+  }
 }
