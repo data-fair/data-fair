@@ -23,8 +23,7 @@ module.exports = {
     {src: '~plugins/ws', ssr: false},
     {src: '~plugins/vuetify'},
     {src: '~plugins/moment'},
-    {src: '~plugins/truncate'},
-    {src: '~plugins/match-heights'}
+    {src: '~plugins/truncate'}
   ],
   router: {
     base: new URL(config.publicUrl + '/').pathname

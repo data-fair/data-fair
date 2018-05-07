@@ -11,18 +11,18 @@
       </v-flex>
     </v-layout>
 
-    <v-layout row wrap class="resourcesList" v-match-heights="{el: ['.item-title', '.item-text', '.item-actions']}">
+    <v-layout row wrap class="resourcesList">
       <v-flex sm12 md6 lg4 xl3 v-for="application in applications.results" :key="application.id">
-        <v-card>
-          <v-card-title primary-title class="item-title">
+        <v-card height="100%">
+          <v-card-title primary-title style="height:25%">
             <nuxt-link :to="`/application/${application.id}/description`">{{ application.title || application.id }}</nuxt-link>
             <v-spacer/>
             <v-btn icon flat color="primary" :href="`${env.publicUrl}/app/${application.id}`" target="_blank" title="Accéder à l'application">
               <v-icon>exit_to_app</v-icon>
             </v-btn>
           </v-card-title>
-          <v-card-text style="min-height:80px" v-html="marked($options.filters.truncate(application.description || '', 200))" class="item-text"/>
-          <v-card-actions class="item-actions">
+          <v-card-text style="height:50%;min-height:80px" v-html="marked($options.filters.truncate(application.description || '', 200))"/>
+          <v-card-actions style="height:25%">
             <span v-if="application.owner.type === 'user'"><v-icon>person</v-icon>{{ application.owner.name }}</span>
             <span v-if="application.owner.type === 'organization'"><v-icon>group</v-icon>{{ application.owner.name }}</span>
             <v-chip text-color="white" :color="application.public ? 'primary' : 'accent'">{{ application.public ? 'Public' : 'Privé' }}</v-chip>
