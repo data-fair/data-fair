@@ -1,4 +1,5 @@
 const config = require('config')
+const URL = require('url').URL
 
 module.exports = {
   dev: process.env.NODE_ENV === 'development',
@@ -26,7 +27,7 @@ module.exports = {
     {src: '~plugins/match-heights'}
   ],
   router: {
-    base: ('/' + config.publicUrl.split('//')[1].split('/').slice(1).join('/')).replace('//', '/')
+    base: new URL(config.publicUrl + '/').pathname
   },
   modules: ['@nuxtjs/axios'],
   axios: {
