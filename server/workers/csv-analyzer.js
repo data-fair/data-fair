@@ -25,11 +25,21 @@ exports.process = async function(app, dataset) {
     if (hasDelimiter) throw new Error('Échec de l\'analyse du fichier, le CSV est probablement mal formé.')
   }
 
-  const schema = dataset.file.schema = sniffResult.labels.map((field, i) => ({
-    key: fieldsSniffer.escapeKey(field),
-    type: sniffResult.types[i],
-    'x-originalName': field
-  }))
+  const schema = dataset.file.schema = sniffResult.labels
+    .map((field, i) => ({
+      key: fieldsSniffer.escapeKey(field),
+      type: sniffResult.types[i],
+      'x-originalName': field
+    }))
+    // do not keep columns with empty string as header
+    .filter(field => !!field.key)
+
+  const keys = new Set([])
+  schema.forEach(field => {
+    if (keys.has(field.key)) throw new Error(`Échec de l'analyse du fichier, le CSV contient plusieurs fois la colonne "${field.key}".`)
+    keys.add(field.key)
+  })
+
   const props = dataset.file.props = {
     linesDelimiter: sniffResult.newlineStr,
     fieldsDelimiter: sniffResult.delimiter,
