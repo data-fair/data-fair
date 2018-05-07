@@ -18,6 +18,13 @@ const asyncWrap = require('../utils/async-wrap')
 
 const router = module.exports = express.Router()
 
+const operationsClasses = {
+  list: ['list'],
+  read: ['readDescription', 'readConfig', 'readApiDoc'],
+  write: ['writeDescription', 'writeConfig'],
+  admin: ['delete', 'getPermissions', 'setPermissions']
+}
+
 // Get the list of applications
 router.get('', auth.optionalJwtMiddleware, asyncWrap(async(req, res) => {
   const applications = req.app.get('db').collection('applications')
@@ -43,7 +50,7 @@ router.get('', auth.optionalJwtMiddleware, asyncWrap(async(req, res) => {
   ]
   let [results, count] = await Promise.all(mongoQueries)
   results.forEach(r => {
-    r.userPermissions = permissions.list(r, req.user)
+    r.userPermissions = permissions.list(r, operationsClasses, req.user)
     r.public = r.userPermissions.public === 'all' || r.userPermissions.public.indexOf('list') >= 0
     delete r.permissions
   })
@@ -110,7 +117,7 @@ router.use('/:applicationId/permissions', permissions.router('applications', 'ap
 
 // retrieve a application by its id
 router.get('/:applicationId', permissions.middleware('readDescription', 'read'), (req, res, next) => {
-  req.application.userPermissions = permissions.list(req.application, req.user)
+  req.application.userPermissions = permissions.list(req.application, operationsClasses, req.user)
   delete req.application.permissions
   delete req.application.configuration
   res.status(200).send(req.application)

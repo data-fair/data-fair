@@ -46,10 +46,11 @@ exports.can = function(resource, operationId, permissionClass, user) {
 }
 
 // list permissions of a user over a resource
-exports.list = function(resource, user) {
+exports.list = function(resource, operationsClasses, user) {
+  const permissionOperations = p => (p.operations || []).concat(...(p.classes || []).map(c => operationsClasses[c]))
   const permissions = {
-    public: (resource.permissions || []).filter(p => !p.type && !p.id && p.operations && p.operations.length).map(p => p.operations),
-    user: (user && (resource.permissions || []).filter(p => p.type === 'user' && p.id === user.id && p.operations && p.operations.length).map(p => p.operations)) || [],
+    public: (resource.permissions || []).filter(p => !p.type && !p.id).map(permissionOperations),
+    user: (user && (resource.permissions || []).filter(p => p.type === 'user' && p.id === user.id).map(permissionOperations)) || [],
     isOwner: false,
     organizations: {}
   }
@@ -65,10 +66,8 @@ exports.list = function(resource, user) {
   (resource.permissions || []).filter(p => p.type === 'organization').forEach(p => {
     const orgaUser = user && user.organizations.find(o => o.id === p.id)
     if (orgaUser && ((orgaUser.role === config.adminRole) || (!p.roles || !p.roles.length) || p.roles.indexOf(orgaUser.role) >= 0)) {
-      if (p.operations && p.operations.length) {
-        permissions.organizations[orgaUser.id] = permissions.organizations[orgaUser.id] || []
-        permissions.organizations[orgaUser.id].push(p.operations)
-      }
+      permissions.organizations[orgaUser.id] = permissions.organizations[orgaUser.id] || []
+      permissions.organizations[orgaUser.id].push(permissionOperations(p))
     }
   })
 

@@ -46,6 +46,14 @@ const computeActions = (apiDoc) => {
   return actions
 }
 
+const operationsClasses = {
+  list: ['list'],
+  read: ['readDescription', 'readApiDoc'],
+  write: ['writeDescription', 'updateApiDoc'],
+  admin: ['delete', 'getPermissions', 'setPermissions'],
+  use: []
+}
+
 // Get the list of remote-services
 router.get('', auth.optionalJwtMiddleware, asyncWrap(async(req, res) => {
   const remoteServices = req.app.get('db').collection('remote-services')
@@ -63,7 +71,7 @@ router.get('', auth.optionalJwtMiddleware, asyncWrap(async(req, res) => {
   ]
   const [results, count] = await Promise.all(mongoQueries)
   results.forEach(r => {
-    r.userPermissions = permissions.list(r, req.user)
+    r.userPermissions = permissions.list(r, operationsClasses, req.user)
     r.public = r.userPermissions.public === 'all' || r.userPermissions.public.indexOf('list') >= 0
     delete r.permissions
   })
@@ -134,7 +142,7 @@ router.use('/:remoteServiceId/permissions', permissions.router('remote-services'
 
 // retrieve a remoteService by its id
 router.get('/:remoteServiceId', permissions.middleware('readDescription', 'read'), (req, res, next) => {
-  req.remoteService.userPermissions = permissions.list(req.remoteService, req.user)
+  req.remoteService.userPermissions = permissions.list(req.remoteService, operationsClasses, req.user)
   delete req.remoteService.permissions
   res.status(200).send(req.remoteService)
 })

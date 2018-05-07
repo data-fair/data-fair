@@ -33,6 +33,13 @@ let router = express.Router()
 
 const acceptedStatuses = ['finalized', 'error']
 
+const operationsClasses = {
+  list: ['list'],
+  read: ['readDescription', 'readLines', 'getGeoAgg', 'getValuesAgg', 'getMetricAgg', 'downloadOriginalData', 'downloadFullData', 'readJournal', 'readApiDoc'],
+  write: ['writeDescription', 'writeData'],
+  admin: ['delete', 'getPermissions', 'setPermissions']
+}
+
 // Get the list of datasets
 router.get('', auth.optionalJwtMiddleware, asyncWrap(async(req, res) => {
   let datasets = req.app.get('db').collection('datasets')
@@ -53,7 +60,7 @@ router.get('', auth.optionalJwtMiddleware, asyncWrap(async(req, res) => {
   ]
   const [results, count] = await Promise.all(mongoQueries)
   results.forEach(r => {
-    r.userPermissions = permissions.list(r, req.user)
+    r.userPermissions = permissions.list(r, operationsClasses, req.user)
     r.public = r.userPermissions.public === 'all' || r.userPermissions.public.includes('list')
     delete r.permissions
   })
@@ -70,7 +77,7 @@ router.use('/:datasetId', auth.optionalJwtMiddleware, asyncWrap(async(req, res, 
     }
   })
   if (!req.dataset) return res.status(404).send('Dataset not found')
-  req.dataset.userPermissions = permissions.list(req.dataset, req.user)
+  req.dataset.userPermissions = permissions.list(req.dataset, operationsClasses, req.user)
   req.dataset.public = req.dataset.userPermissions.public === 'all' || req.dataset.userPermissions.public.includes('readDescription')
   req.resourceApiDoc = datasetAPIDocs(req.dataset)
   next()
