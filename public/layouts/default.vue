@@ -94,7 +94,9 @@ export default {
     ...mapGetters(['loginUrl'])
   },
   mounted() {
-    eventBus.$on('notification', notif => {
+    eventBus.$on('notification', async notif => {
+      this.showSnackbar = false
+      await this.$nextTick()
       if (typeof notif === 'string') notif = {msg: notif}
       if (notif.error) {
         notif.type = 'error'
