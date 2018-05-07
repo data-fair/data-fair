@@ -133,14 +133,14 @@ router.use('/:remoteServiceId', auth.optionalJwtMiddleware, asyncWrap(async(req,
 router.use('/:remoteServiceId/permissions', permissions.router('remote-services', 'remoteService'))
 
 // retrieve a remoteService by its id
-router.get('/:remoteServiceId', permissions.middleware('readDescription'), (req, res, next) => {
+router.get('/:remoteServiceId', permissions.middleware('readDescription', 'read'), (req, res, next) => {
   req.remoteService.userPermissions = permissions.list(req.remoteService, req.user)
   delete req.remoteService.permissions
   res.status(200).send(req.remoteService)
 })
 
 // Update a remote service configuration
-router.patch('/:remoteServiceId', permissions.middleware('writeDescription'), asyncWrap(async(req, res) => {
+router.patch('/:remoteServiceId', permissions.middleware('writeDescription', 'write'), asyncWrap(async(req, res) => {
   const patch = req.body
   var valid = validateRemoteServiceNoRequired(patch)
   if (!valid) return res.status(400).send(validateRemoteServiceNoRequired.errors)
@@ -161,7 +161,7 @@ router.patch('/:remoteServiceId', permissions.middleware('writeDescription'), as
 }))
 
 // Delete a remoteService
-router.delete('/:remoteServiceId', permissions.middleware('delete'), asyncWrap(async(req, res) => {
+router.delete('/:remoteServiceId', permissions.middleware('delete', 'admin'), asyncWrap(async(req, res) => {
   // TODO : Remove indexes
   await req.app.get('db').collection('remote-services').deleteOne({
     id: req.params.remoteServiceId
@@ -169,7 +169,7 @@ router.delete('/:remoteServiceId', permissions.middleware('delete'), asyncWrap(a
   res.sendStatus(204)
 }))
 
-router.post('/:remoteServiceId/_update', permissions.middleware('updateApiDoc'), asyncWrap(async(req, res) => {
+router.post('/:remoteServiceId/_update', permissions.middleware('updateApiDoc', 'write'), asyncWrap(async(req, res) => {
   if (!req.remoteService.url) return res.sendStatus(204)
 
   const reponse = await axios.get(req.remoteService.url)
@@ -196,7 +196,7 @@ router.use('/:remoteServiceId/proxy*', (req, res, next) => {
   // If the operation exists, apply permissions
   if (operationPath) {
     const operation = operationPath[req.method.toLowerCase()]
-    if (!permissions.can(req.remoteService, operation.operationId, req.user)) return res.sendStatus(403)
+    if (!permissions.can(req.remoteService, operation.operationId, 'use', req.user)) return res.sendStatus(403)
   }
 
   // console.log((req.user && req.user.email) || 'Anonymous', 'is using operation', operation.operationId)
@@ -242,6 +242,6 @@ router.use('/:remoteServiceId/proxy*', (req, res, next) => {
   requestProxy(options)(req, res, next)
 })
 
-router.get('/:remoteServiceId/api-docs.json', permissions.middleware('readApiDoc'), (req, res) => {
+router.get('/:remoteServiceId/api-docs.json', permissions.middleware('readApiDoc', 'read'), (req, res) => {
   res.send(req.resourceApiDoc)
 })

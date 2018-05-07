@@ -104,7 +104,7 @@ module.exports = (application) => {
           }
         },
         put: {
-          summary: 'Mettre à jour le paramétrage de l\'application..',
+          summary: 'Mettre à jour le paramétrage de l\'application.',
           operationId: 'writeConfig',
           'x-permissionClass': 'write',
           security: (publicOperations.indexOf('writeConfig') || publicClasses.indexOf('write')) ? [] : [{ jwt: [] }],

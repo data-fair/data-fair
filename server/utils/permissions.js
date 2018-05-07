@@ -5,13 +5,13 @@ const apiDocsUtil = require('./api-docs')
 const ajv = require('ajv')()
 const validate = ajv.compile(permissionsSchema)
 
-exports.middleware = function(operationId) {
+exports.middleware = function(operationId, permissionClass) {
   return function(req, res, next) {
-    if (!exports.can(req.resource, operationId, req.user)) {
+    if (!exports.can(req.resource, operationId, permissionClass, req.user)) {
       res.status(403)
       const operation = apiDocsUtil.operations(req.resourceApiDoc).find(o => o.id === operationId)
-      if (operation) res.send(`Permission manquante pour l'opération "${operation.title}"`)
-      else res.send('Permission manquante pour cette opération')
+      if (operation) res.send(`Permission manquante pour l'opération "${operation.title}" ou la catégorie "${permissionClass}"`)
+      else res.send(`Permission manquante pour cette opération ou la catégorie "${permissionClass}"`)
       return
     }
     next()
@@ -19,10 +19,12 @@ exports.middleware = function(operationId) {
 }
 
 // resource can be an application, a dataset of an remote service
-exports.can = function(resource, operationId, user) {
+exports.can = function(resource, operationId, permissionClass, user) {
   const operationPermissions = (resource.permissions || []).filter(p => p.operations && p.operations.indexOf(operationId) >= 0)
+  const permissionClasses = (resource.permissions || []).filter(p => p.classes && p.classes.indexOf(permissionClass) >= 0)
+  const matchingPermissions = operationPermissions.concat(permissionClasses)
   // check if the operation is public
-  if (operationPermissions.find(p => !p.type && !p.id)) return true
+  if (matchingPermissions.find(p => !p.type && !p.id)) return true
   if (!user) {
     return false
   } else {
@@ -34,8 +36,8 @@ exports.can = function(resource, operationId, user) {
       if (userOrga && userOrga.role === config.adminRole) return true
     }
     // Check if user have permissions
-    if (operationPermissions.find(p => p.type === 'user' && p.id === user.id)) return true
-    if (operationPermissions.find(p => {
+    if (matchingPermissions.find(p => p.type === 'user' && p.id === user.id)) return true
+    if (matchingPermissions.find(p => {
       const orgaUser = p.type === 'organization' && user.organizations.find(o => o.id === p.id)
       return orgaUser && ((!p.roles || !p.roles.length) || p.roles.indexOf(orgaUser.role) >= 0)
     })) return true
@@ -84,7 +86,7 @@ exports.list = function(resource, user) {
 
 // Manage filters for datasets, applications and remote services
 exports.filter = function(user, showPublic) {
-  const operationFilter = [{operations: 'list'}]
+  const operationFilter = [{operations: 'list'}, {classes: 'list'}]
 
   const or = []
   if (showPublic || !user) {
@@ -131,6 +133,7 @@ exports.filter = function(user, showPublic) {
 
 // Test if user is owner or belong to the owner organization
 // Should we deprecate this since we have a more general function that list permissions and tells if we are owner above ?
+// See the settings router that still use this function
 exports.isOwner = function(owner, user) {
   if (!user) return false
   if (owner.type === 'user' && owner.id === user.id) return true
@@ -141,7 +144,8 @@ exports.isOwner = function(owner, user) {
   return false
 }
 
-//
+// Only operationId level : it is used only for creation of resources and
+// setting screen only set creation permissions at operationId level
 exports.canDoForOwner = async function(owner, operationId, user, db) {
   if (!user) return false
   if (owner.type === 'user' && owner.id === user.id) return true
@@ -160,14 +164,12 @@ exports.canDoForOwner = async function(owner, operationId, user, db) {
 module.exports.router = (collectionName, resourceName) => {
   const router = express.Router()
 
-  router.get('', async (req, res, next) => {
-    if (!exports.isOwner(req[resourceName].owner, req.user)) return res.sendStatus(403)
+  router.get('', exports.middleware('getPermissions', 'admin'), async (req, res, next) => {
     res.status(200).send(req[resourceName].permissions || [])
   })
 
   // update settings
-  router.put('', async (req, res, next) => {
-    if (!exports.isOwner(req[resourceName].owner, req.user)) return res.sendStatus(403)
+  router.put('', exports.middleware('setPermissions', 'admin'), async (req, res, next) => {
     let valid = validate(req.body)
     if (!valid) return res.status(400).send(validate.errors)
     req.body = req.body || []

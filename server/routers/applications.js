@@ -109,7 +109,7 @@ router.use('/:applicationId', auth.optionalJwtMiddleware, asyncWrap(async(req, r
 router.use('/:applicationId/permissions', permissions.router('applications', 'application'))
 
 // retrieve a application by its id
-router.get('/:applicationId', permissions.middleware('readDescription'), (req, res, next) => {
+router.get('/:applicationId', permissions.middleware('readDescription', 'read'), (req, res, next) => {
   req.application.userPermissions = permissions.list(req.application, req.user)
   delete req.application.permissions
   delete req.application.configuration
@@ -117,7 +117,7 @@ router.get('/:applicationId', permissions.middleware('readDescription'), (req, r
 })
 
 // Update an application configuration
-router.patch('/:applicationId', permissions.middleware('writeDescription'), asyncWrap(async(req, res) => {
+router.patch('/:applicationId', permissions.middleware('writeDescription', 'write'), asyncWrap(async(req, res) => {
   const patch = req.body
   var valid = validateNoRequired(patch)
   if (!valid) return res.status(400).send(validateNoRequired.errors)
@@ -135,7 +135,7 @@ router.patch('/:applicationId', permissions.middleware('writeDescription'), asyn
 }))
 
 // Delete an application configuration
-router.delete('/:applicationId', permissions.middleware('delete'), asyncWrap(async(req, res) => {
+router.delete('/:applicationId', permissions.middleware('delete', 'admin'), asyncWrap(async(req, res) => {
   await req.app.get('db').collection('applications').deleteOne({
     id: req.params.applicationId
   })
@@ -143,12 +143,12 @@ router.delete('/:applicationId', permissions.middleware('delete'), asyncWrap(asy
 }))
 
 // retrieve a application by its id
-router.get('/:applicationId/config', permissions.middleware('readConfig'), (req, res, next) => {
+router.get('/:applicationId/config', permissions.middleware('readConfig', 'read'), (req, res, next) => {
   res.status(200).send(req.application.configuration || {})
 })
 
 // retrieve a application by its id
-router.put('/:applicationId/config', permissions.middleware('writeConfig'), asyncWrap(async(req, res) => {
+router.put('/:applicationId/config', permissions.middleware('writeConfig', 'write'), asyncWrap(async(req, res) => {
   await req.app.get('db').collection('applications').updateOne(
     {id: req.params.applicationId},
     {$set: {configuration: req.body}}
@@ -156,6 +156,6 @@ router.put('/:applicationId/config', permissions.middleware('writeConfig'), asyn
   res.status(200).json(req.body)
 }))
 
-router.get('/:applicationId/api-docs.json', permissions.middleware('readApiDoc'), (req, res) => {
+router.get('/:applicationId/api-docs.json', permissions.middleware('readApiDoc', 'read'), (req, res) => {
   res.send(applicationAPIDocs(req.application))
 })
