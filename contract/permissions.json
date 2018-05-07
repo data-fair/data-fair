@@ -4,7 +4,7 @@
     "type": "object",
     "description": "Permission to do the operations (identified by their id). If type and id are not set, then the operation is set to public. roles array is used only with type organization",
     "additionalProperties": false,
-    "oneOf": [{
+    "anyOf": [{
         "required": ["operations"]
       },
       {
