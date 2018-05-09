@@ -42,6 +42,12 @@ const operationsClasses = {
 
 // Get the list of datasets
 router.get('', auth.optionalJwtMiddleware, asyncWrap(async(req, res) => {
+  if (!req.user && (req.query['is-owner'] === 'true')) {
+    return res.json({
+      results: [],
+      count: 0
+    })
+  }
   let datasets = req.app.get('db').collection('datasets')
   const query = findUtils.query(req.query, {
     'filename': 'file.name',

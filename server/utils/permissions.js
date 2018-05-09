@@ -58,7 +58,7 @@ exports.list = function(resource, operationsClasses, user) {
     const permissionOperations = p => (p.operations || []).concat(...(p.classes || []).map(c => operationsClasses[c]))
     const permissions = {
       public: [].concat(...(resource.permissions || []).filter(p => !p.type && !p.id).map(permissionOperations)),
-      user: [].concat(...(user && (resource.permissions || []).filter(p => p.type === 'user' && p.id === user.id).map(permissionOperations))) || [],
+      user: (user && [].concat(...(user && (resource.permissions || []).filter(p => p.type === 'user' && p.id === user.id).map(permissionOperations)))) || [],
       organizations: {}
     };
 
@@ -91,7 +91,7 @@ exports.filter = function(user, showNotOwned) {
   const operationFilter = [{operations: 'list'}, {classes: 'list'}]
 
   const or = []
-  if (showNotOwned || !user) {
+  if (showNotOwned) {
     or.push({permissions: {
       $elemMatch: {$or: operationFilter, type: null, id: null}
     }})

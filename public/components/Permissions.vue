@@ -233,6 +233,7 @@ export default {
         this.addPermissions = false
         eventBus.$emit('notification', `Les permissions ont bien été mises à jour`)
       } catch (error) {
+        this.permissions.pop()
         eventBus.$emit('notification', {error, msg: `Erreur pendant la mise à jour des permissions:`})
       }
     },

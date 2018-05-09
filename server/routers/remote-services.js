@@ -56,6 +56,12 @@ const operationsClasses = {
 
 // Get the list of remote-services
 router.get('', auth.optionalJwtMiddleware, asyncWrap(async(req, res) => {
+  if (!req.user && (req.query['is-owner'] === 'true')) {
+    return res.json({
+      results: [],
+      count: 0
+    })
+  }
   const remoteServices = req.app.get('db').collection('remote-services')
   const query = findUtils.query(req.query, {
     'input-concepts': 'actions.input.concept',

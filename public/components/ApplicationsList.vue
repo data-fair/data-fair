@@ -7,7 +7,7 @@
       </v-flex>
       <v-spacer/>
       <v-flex xs12 sm7 md6 lg5 class="pt-4">
-        <v-switch v-if="user" label="Voir les applications dont je ne suis pas propriétaire" v-model="showNotOwned" @change="refresh"/>
+        <v-switch label="Voir les applications dont je ne suis pas propriétaire" v-model="showNotOwned" @change="refresh"/>
       </v-flex>
     </v-layout>
 

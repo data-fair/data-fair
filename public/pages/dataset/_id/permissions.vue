@@ -1,6 +1,6 @@
 <template lang="html">
   <v-container>
-    <permissions :resource="dataset" :resource-url="resourceUrl" :api="api"/>
+    <permissions v-if="can('getPermissions')" :resource="dataset" :resource-url="resourceUrl" :api="api"/>
   </v-container>
 </template>
 
@@ -12,7 +12,7 @@ export default {
   components: {Permissions},
   computed: {
     ...mapState('dataset', ['dataset', 'api']),
-    ...mapGetters('dataset', ['resourceUrl'])
+    ...mapGetters('dataset', ['resourceUrl', 'can'])
   }
 }
 </script>
