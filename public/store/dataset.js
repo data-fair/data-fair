@@ -27,9 +27,7 @@ export default {
       })
       return res
     },
-    isOwner: (state) => {
-      return state.dataset.userPermissions.isOwner
-    }
+    can: (state) => (operation) => (state.dataset && state.dataset.userPermissions.includes(operation)) || false
   },
   mutations: {
     setAny(state, params) {

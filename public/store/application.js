@@ -11,9 +11,7 @@ export default {
   },
   getters: {
     resourceUrl: (state, getters, rootState) => state.applicationId ? rootState.env.publicUrl + '/api/v1/applications/' + state.applicationId : null,
-    isOwner: (state) => {
-      return state.application.userPermissions.isOwner
-    }
+    can: (state) => (operation) => (state.application && state.application.userPermissions.includes(operation)) || false
   },
   mutations: {
     setAny(state, params) {

@@ -1,19 +1,19 @@
 <template>
   <v-layout column class="remoteService" v-if="remoteService">
     <v-tabs icons-and-text grow color="transparent" slider-color="primary" class="mb-3">
-      <v-tab :nuxt="true" :to="`/remote-service/${remoteService.id}/description`">
+      <v-tab :disabled="!can('readDescription')" :nuxt="true" :to="`/remote-service/${remoteService.id}/description`">
         Description
         <v-icon>toc</v-icon>
       </v-tab>
-      <v-tab :nuxt="true" :to="`/remote-service/${remoteService.id}/config`">
+      <v-tab :disabled="!can('readDescription')" :nuxt="true" :to="`/remote-service/${remoteService.id}/config`">
         Configuration
         <v-icon>build</v-icon>
       </v-tab>
-      <v-tab v-if="isOwner" :nuxt="true" :to="`/remote-service/${remoteService.id}/permissions`">
+      <v-tab v-if="can('getPermissions')" :nuxt="true" :to="`/remote-service/${remoteService.id}/permissions`">
         Permissions
         <v-icon>security</v-icon>
       </v-tab>
-      <v-tab :nuxt="true" :to="`/remote-service/${remoteService.id}/api`">
+      <v-tab :disabled="!can('readApiDoc')" :nuxt="true" :to="`/remote-service/${remoteService.id}/api`">
         API
         <v-icon>cloud</v-icon>
       </v-tab>
@@ -36,14 +36,14 @@
             <v-list-tile-title>Documentation externe</v-list-tile-title>
           </v-list-tile>
 
-          <v-list-tile @click="refresh">
+          <v-list-tile :disabled="!can('updateApiDoc')" @click="refresh">
             <v-list-tile-avatar>
               <v-icon color="accent">refresh</v-icon>
             </v-list-tile-avatar>
             <v-list-tile-title>Mettre a jour la description de l'API</v-list-tile-title>
           </v-list-tile>
 
-          <v-list-tile v-if="isOwner" @click="showDeleteDialog = true">
+          <v-list-tile v-if="can('delete')" @click="showDeleteDialog = true">
             <v-list-tile-avatar>
               <v-icon color="warning">delete</v-icon>
             </v-list-tile-avatar>
@@ -80,7 +80,7 @@ export default {
   }),
   computed: {
     ...mapState('remoteService', ['remoteService', 'api']),
-    ...mapGetters('remoteService', ['resourceUrl', 'isOwner'])
+    ...mapGetters('remoteService', ['resourceUrl', 'can'])
   },
   mounted() {
     this.setId(this.$route.params.id)

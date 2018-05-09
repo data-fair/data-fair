@@ -1,15 +1,15 @@
 <template>
   <v-layout column class="application" v-if="application">
     <v-tabs icons-and-text grow color="transparent" slider-color="primary" class="mb-3">
-      <v-tab :nuxt="true" :to="`/application/${application.id}/description`">
+      <v-tab :disabled="!can('readDescription')" :nuxt="true" :to="`/application/${application.id}/description`">
         Description
         <v-icon>toc</v-icon>
       </v-tab>
-      <v-tab v-if="isOwner" :nuxt="true" :to="`/application/${application.id}/permissions`">
+      <v-tab v-if="can('getPermissions')" :nuxt="true" :to="`/application/${application.id}/permissions`">
         Permissions
         <v-icon>security</v-icon>
       </v-tab>
-      <v-tab :nuxt="true" :to="`/application/${application.id}/api`">
+      <v-tab :disabled="!can('readApiDoc')" :nuxt="true" :to="`/application/${application.id}/api`">
         API
         <v-icon>cloud</v-icon>
       </v-tab>
@@ -24,14 +24,14 @@
           <v-icon>more_vert</v-icon>
         </v-btn>
         <v-list>
-          <v-list-tile :href="applicationLink" target="_blank">
+          <v-list-tile :disabled="!can('readConfig')" :href="applicationLink" target="_blank">
             <v-list-tile-avatar>
               <v-icon color="accent">exit_to_app</v-icon>
             </v-list-tile-avatar>
             <v-list-tile-title>Accéder à l'application</v-list-tile-title>
           </v-list-tile>
 
-          <v-list-tile v-if="isOwner" @click="showDeleteDialog = true">
+          <v-list-tile v-if="can('delete')" @click="showDeleteDialog = true">
             <v-list-tile-avatar>
               <v-icon color="warning">delete</v-icon>
             </v-list-tile-avatar>
@@ -69,7 +69,7 @@ export default {
   computed: {
     ...mapState(['env']),
     ...mapState('application', ['application', 'api']),
-    ...mapGetters('application', ['resourceUrl', 'isOwner']),
+    ...mapGetters('application', ['resourceUrl', 'can']),
     applicationLink() {
       if (this.application) return this.env.publicUrl + '/app/' + this.application.id
     }

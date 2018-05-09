@@ -53,7 +53,7 @@ router.get('', auth.optionalJwtMiddleware, asyncWrap(async(req, res) => {
   }
   const sort = findUtils.sort(req.query.sort)
   const [skip, size] = findUtils.pagination(req.query)
-  query.$or = permissions.filter(req.user, req.query.public === 'true')
+  query.$or = permissions.filter(req.user, !(req.query['is-owner'] === 'true'))
   let mongoQueries = [
     size > 0 ? datasets.find(query).limit(size).skip(skip).sort(sort).project({_id: 0}).toArray() : Promise.resolve([]),
     datasets.find(query).count()
@@ -61,7 +61,7 @@ router.get('', auth.optionalJwtMiddleware, asyncWrap(async(req, res) => {
   const [results, count] = await Promise.all(mongoQueries)
   results.forEach(r => {
     r.userPermissions = permissions.list(r, operationsClasses, req.user)
-    r.public = r.userPermissions.public === 'all' || r.userPermissions.public.includes('list')
+    r.public = permissions.isPublic(r, operationsClasses)
     delete r.permissions
   })
   res.json({results, count})
@@ -77,8 +77,6 @@ router.use('/:datasetId', auth.optionalJwtMiddleware, asyncWrap(async(req, res, 
     }
   })
   if (!req.dataset) return res.status(404).send('Dataset not found')
-  req.dataset.userPermissions = permissions.list(req.dataset, operationsClasses, req.user)
-  req.dataset.public = req.dataset.userPermissions.public === 'all' || req.dataset.userPermissions.public.includes('readDescription')
   req.resourceApiDoc = datasetAPIDocs(req.dataset)
   next()
 }))
@@ -87,6 +85,7 @@ router.use('/:datasetId/permissions', permissions.router('datasets', 'dataset'))
 
 // retrieve a dataset by its id
 router.get('/:datasetId', permissions.middleware('readDescription', 'read'), (req, res, next) => {
+  req.dataset.userPermissions = permissions.list(req.dataset, operationsClasses, req.user)
   delete req.dataset.permissions
   res.status(200).send(req.dataset)
 })
@@ -175,7 +174,7 @@ router.post('', auth.jwtMiddleware, filesUtils.uploadFile(), asyncWrap(async(req
       type: 'user',
       id: req.user.id,
       name: req.user.name,
-      operations: []
+      classes: ['list', 'read', 'write', 'admin']
     })
   }
 

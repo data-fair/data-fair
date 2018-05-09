@@ -40,7 +40,7 @@ router.get('', auth.optionalJwtMiddleware, asyncWrap(async(req, res) => {
   })
   const sort = findUtils.sort(req.query.sort)
   const [skip, size] = findUtils.pagination(req.query)
-  query.$or = permissions.filter(req.user, req.query.public === 'true')
+  query.$or = permissions.filter(req.user, !(req.query['is-owner'] === 'true'))
   let mongoQueries = [
     size > 0 ? applications.find(query).limit(size).skip(skip).sort(sort).project({
       _id: 0,
@@ -51,7 +51,7 @@ router.get('', auth.optionalJwtMiddleware, asyncWrap(async(req, res) => {
   let [results, count] = await Promise.all(mongoQueries)
   results.forEach(r => {
     r.userPermissions = permissions.list(r, operationsClasses, req.user)
-    r.public = r.userPermissions.public === 'all' || r.userPermissions.public.indexOf('list') >= 0
+    r.public = permissions.isPublic(r, operationsClasses)
     delete r.permissions
   })
   res.json({results, count})
@@ -91,7 +91,7 @@ router.post('', auth.jwtMiddleware, asyncWrap(async(req, res) => {
       type: 'user',
       id: req.user.id,
       name: req.user.name,
-      operations: []
+      classes: ['list', 'read', 'write', 'admin']
     })
   }
 

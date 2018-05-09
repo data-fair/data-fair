@@ -11,9 +11,7 @@ export default {
   },
   getters: {
     resourceUrl: (state, getters, rootState) => state.remoteServiceId ? rootState.env.publicUrl + '/api/v1/remote-services/' + state.remoteServiceId : null,
-    isOwner: (state) => {
-      return state.remoteService.userPermissions.isOwner
-    }
+    can: (state) => (operation) => (state.remoteService && state.remoteService.userPermissions.includes(operation)) || false
   },
   mutations: {
     setAny(state, params) {

@@ -1,31 +1,31 @@
 <template>
   <v-layout column class="dataset" v-if="dataset">
     <v-tabs icons-and-text grow color="transparent" slider-color="primary" class="mb-3">
-      <v-tab :nuxt="true" :to="`/dataset/${dataset.id}/description`">
+      <v-tab :disabled="!can('readDescription')" :nuxt="true" :to="`/dataset/${dataset.id}/description`">
         Description
         <v-icon>toc</v-icon>
       </v-tab>
-      <v-tab :nuxt="true" :to="`/dataset/${dataset.id}/tabular`">
+      <v-tab :disabled="!can('readLines')" :nuxt="true" :to="`/dataset/${dataset.id}/tabular`">
         Vue tableau
         <v-icon>view_list</v-icon>
       </v-tab>
-      <v-tab :nuxt="true" :to="`/dataset/${dataset.id}/map`" v-if="dataset.bbox">
+      <v-tab :disabled="!can('readLines')" :nuxt="true" :to="`/dataset/${dataset.id}/map`" v-if="dataset.bbox">
         Carte
         <v-icon>map</v-icon>
       </v-tab>
-      <v-tab v-if="isOwner" :nuxt="true" :to="`/dataset/${dataset.id}/permissions`">
+      <v-tab v-if="can('getPermissions')" :nuxt="true" :to="`/dataset/${dataset.id}/permissions`">
         Permissions
         <v-icon>security</v-icon>
       </v-tab>
-      <v-tab :nuxt="true" :to="`/dataset/${dataset.id}/extend`">
+      <v-tab :disabled="!can('writeDescription')" :nuxt="true" :to="`/dataset/${dataset.id}/extend`">
         Enrichissement
         <v-icon>merge_type</v-icon>
       </v-tab>
-      <v-tab :nuxt="true" :to="`/dataset/${dataset.id}/journal`">
+      <v-tab :disabled="!can('readJournal')" :nuxt="true" :to="`/dataset/${dataset.id}/journal`">
         Journal
         <v-icon>event_note</v-icon>
       </v-tab>
-      <v-tab :nuxt="true" :to="`/dataset/${dataset.id}/api`">
+      <v-tab :disabled="!can('readApiDoc')" :nuxt="true" :to="`/dataset/${dataset.id}/api`">
         API
         <v-icon>cloud</v-icon>
       </v-tab>
@@ -40,19 +40,19 @@
           <v-icon>more_vert</v-icon>
         </v-btn>
         <v-list>
-          <v-list-tile v-if="isOwner" @click="showDeleteDialog = true">
+          <v-list-tile v-if="can('delete')" @click="showDeleteDialog = true">
             <v-list-tile-avatar>
               <v-icon color="warning">delete</v-icon>
             </v-list-tile-avatar>
             <v-list-tile-title>Supprimer</v-list-tile-title>
           </v-list-tile>
-          <v-list-tile :href="downloadLink">
+          <v-list-tile :disabled="!can('downloadOriginalData')" :href="downloadLink">
             <v-list-tile-avatar>
               <v-icon color="primary">file_download</v-icon>
             </v-list-tile-avatar>
             <v-list-tile-title>Fichier d'origine</v-list-tile-title>
           </v-list-tile>
-          <v-list-tile :href="downloadFullLink" :disabled="!dataset.extensions || !dataset.extensions.find(e => e.active)">
+          <v-list-tile :href="downloadFullLink" :disabled="!can('downloadFullData') || !dataset.extensions || !dataset.extensions.find(e => e.active)">
             <v-list-tile-avatar>
               <v-icon color="primary">file_download</v-icon>
             </v-list-tile-avatar>
@@ -89,7 +89,7 @@ export default {
   }),
   computed: {
     ...mapState('dataset', ['dataset', 'api']),
-    ...mapGetters('dataset', ['resourceUrl', 'isOwner']),
+    ...mapGetters('dataset', ['resourceUrl', 'can']),
     downloadLink() {
       if (this.dataset) return this.resourceUrl + '/raw'
     },

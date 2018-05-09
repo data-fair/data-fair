@@ -18,6 +18,16 @@ exports.middleware = function(operationId, permissionClass) {
   }
 }
 
+const isOwner = exports.isOwner = function(owner, user) {
+  if (!user) return false
+  if (owner.type === 'user' && owner.id === user.id) return true
+  if (owner.type === 'organization') {
+    const userOrga = user.organizations.find(o => o.id === owner.id)
+    return userOrga && userOrga.role === config.adminRole
+  }
+  return false
+}
+
 // resource can be an application, a dataset of an remote service
 exports.can = function(resource, operationId, permissionClass, user) {
   const operationPermissions = (resource.permissions || []).filter(p => p.operations && p.operations.indexOf(operationId) >= 0)
@@ -29,12 +39,7 @@ exports.can = function(resource, operationId, permissionClass, user) {
     return false
   } else {
     // Check if the user is the owner of the resource
-    if (resource.owner.type === 'user' && resource.owner.id === user.id) return true
-    // Check if the user is admin in an organization that have the resource
-    if (resource.owner.type === 'organization') {
-      const userOrga = user.organizations.find(o => o.id === resource.owner.id)
-      if (userOrga && userOrga.role === config.adminRole) return true
-    }
+    if (isOwner(resource.owner, user)) return true
     // Check if user have permissions
     if (matchingPermissions.find(p => p.type === 'user' && p.id === user.id)) return true
     if (matchingPermissions.find(p => {
@@ -45,50 +50,48 @@ exports.can = function(resource, operationId, permissionClass, user) {
   }
 }
 
-// list permissions of a user over a resource
+// list operations a user can do with a resource
 exports.list = function(resource, operationsClasses, user) {
+  if (isOwner(resource.owner, user)) {
+    return [].concat(...Object.values(operationsClasses))
+  } else {
+    const permissionOperations = p => (p.operations || []).concat(...(p.classes || []).map(c => operationsClasses[c]))
+    const permissions = {
+      public: [].concat(...(resource.permissions || []).filter(p => !p.type && !p.id).map(permissionOperations)),
+      user: [].concat(...(user && (resource.permissions || []).filter(p => p.type === 'user' && p.id === user.id).map(permissionOperations))) || [],
+      organizations: {}
+    };
+
+    (resource.permissions || []).filter(p => p.type === 'organization').forEach(p => {
+      const orgaUser = user && user.organizations.find(o => o.id === p.id)
+      if (orgaUser && ((orgaUser.role === config.adminRole) || (!p.roles || !p.roles.length) || p.roles.indexOf(orgaUser.role) >= 0)) {
+        permissions.organizations[orgaUser.id] = [].concat(...permissions.organizations[orgaUser.id] || [], permissionOperations(p))
+      }
+    })
+    return [].concat(permissions.public, permissions.user, ...Object.values(permissions.organizations)).filter((o, i, s) => s.indexOf(o) === i)
+  }
+}
+
+// resource is public if there are public permissions for all operations of the classes 'read' and 'use'
+// list is not here as someone can set a resource publicly usable but not appearing in lists
+exports.isPublic = function(resource, operationsClasses) {
   const permissionOperations = p => (p.operations || []).concat(...(p.classes || []).map(c => operationsClasses[c]))
-  const permissions = {
-    public: (resource.permissions || []).filter(p => !p.type && !p.id).map(permissionOperations),
-    user: (user && (resource.permissions || []).filter(p => p.type === 'user' && p.id === user.id).map(permissionOperations)) || [],
-    isOwner: false,
-    organizations: {}
-  }
-
-  // Check if the user is the owner of the resource
-  if (user && resource.owner.type === 'user' && resource.owner.id === user.id) permissions.isOwner = true
-  // Check if the user is admin in an organization that have the resource
-  if (resource.owner.type === 'organization') {
-    const userOrga = user && user.organizations.find(o => o.id === resource.owner.id)
-    if (userOrga && userOrga.role === config.adminRole) permissions.isOwner = true
-  }
-
-  (resource.permissions || []).filter(p => p.type === 'organization').forEach(p => {
-    const orgaUser = user && user.organizations.find(o => o.id === p.id)
-    if (orgaUser && ((orgaUser.role === config.adminRole) || (!p.roles || !p.roles.length) || p.roles.indexOf(orgaUser.role) >= 0)) {
-      permissions.organizations[orgaUser.id] = permissions.organizations[orgaUser.id] || []
-      permissions.organizations[orgaUser.id].push(permissionOperations(p))
+  const publicOperations = new Set([].concat(operationsClasses.read || [], operationsClasses.use || []))
+  const resourcePublicOperations = new Set([].concat(...(resource.permissions || []).filter(p => !p.type && !p.id).map(permissionOperations)))
+  for (let op of publicOperations) {
+    if (!resourcePublicOperations.has(op)) {
+      return false
     }
-  })
-
-  // TODO 'all' does not exists anymore, we could simplify following code
-  const reducer = (accumulator, currentValue) => (accumulator === 'all' || currentValue === 'all') ? 'all' : accumulator.concat(currentValue)
-  permissions.public = permissions.public.reduce(reducer, [])
-  permissions.user = permissions.user.reduce(reducer, [])
-  Object.keys(permissions.organizations).forEach(o => {
-    permissions.organizations[o] = permissions.organizations[o].reduce(reducer, [])
-  })
-  permissions.summary = (permissions.isOwner && 'owner') || [].concat(permissions.public, permissions.user, ...Object.values(permissions.organizations)).reduce(reducer, [])
-
-  return permissions
+  }
+  return true
 }
 
 // Manage filters for datasets, applications and remote services
-exports.filter = function(user, showPublic) {
+exports.filter = function(user, showNotOwned) {
   const operationFilter = [{operations: 'list'}, {classes: 'list'}]
 
   const or = []
-  if (showPublic || !user) {
+  if (showNotOwned || !user) {
     or.push({permissions: {
       $elemMatch: {$or: operationFilter, type: null, id: null}
     }})
@@ -107,40 +110,29 @@ exports.filter = function(user, showPublic) {
     })
 
     // user has specific permission to read
-    or.push({
-      permissions: {
-        $elemMatch: {$or: operationFilter, type: 'user', id: user.id}
-      }
-    })
-    user.organizations.forEach(o => {
+    if (showNotOwned) {
       or.push({
         permissions: {
-          $elemMatch: {
-            $and: [
-              {$or: operationFilter},
-              {$or: [{roles: o.role}, {roles: {$size: 0}}]}
-            ],
-            type: 'organization',
-            id: o.id
-          }
+          $elemMatch: {$or: operationFilter, type: 'user', id: user.id}
         }
       })
-    })
+      user.organizations.forEach(o => {
+        or.push({
+          permissions: {
+            $elemMatch: {
+              $and: [
+                {$or: operationFilter},
+                {$or: [{roles: o.role}, {roles: {$size: 0}}]}
+              ],
+              type: 'organization',
+              id: o.id
+            }
+          }
+        })
+      })
+    }
   }
   return or
-}
-
-// Test if user is owner or belong to the owner organization
-// Should we deprecate this since we have a more general function that list permissions and tells if we are owner above ?
-// See the settings router that still use this function
-exports.isOwner = function(owner, user) {
-  if (!user) return false
-  if (owner.type === 'user' && owner.id === user.id) return true
-  if (owner.type === 'organization') {
-    const userOrga = user.organizations.find(o => o.id === owner.id)
-    return userOrga && userOrga.role === config.adminRole
-  }
-  return false
 }
 
 // Only operationId level : it is used only for creation of resources and

@@ -6,8 +6,8 @@
         <v-text-field label="Rechercher" v-model="search" append-icon="search" @keyup.enter.native="refresh" :append-icon-cb="refresh"/>
       </v-flex>
       <v-spacer/>
-      <v-flex xs12 sm7 md5 lg3 class="pt-4">
-        <v-switch v-if="user" label="Voir les jeux publics des autres utilisateurs" v-model="showPublic" @change="refresh"/>
+      <v-flex xs12 sm7 md6 lg5 class="pt-4">
+        <v-switch v-if="user" label="Voir les jeux dont je ne suis pas propriétaire" v-model="showNotOwned" @change="refresh"/>
       </v-flex>
     </v-layout>
 
@@ -44,7 +44,7 @@ export default {
       results: []
     },
     search: '',
-    showPublic: false,
+    showNotOwned: false,
     size: 10,
     page: 1,
     marked
@@ -61,7 +61,7 @@ export default {
   methods: {
     async refresh() {
       this.datasets = await this.$axios.$get(this.env.publicUrl + '/api/v1/datasets', {params:
-        {size: this.size, page: this.page, q: this.search, public: this.showPublic}
+        {size: this.size, page: this.page, q: this.search, 'is-owner': !this.showNotOwned}
       })
     }
   }

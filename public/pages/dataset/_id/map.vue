@@ -156,7 +156,6 @@ export default {
       return resizeBBOX(bbox, 1.1)
     },
     async refresh() {
-      console.log('refresh', this.tileUrl)
       // First clear layers and source to be able to change the tiles url
       dataLayers.forEach(layer => {
         if (this.map.getLayer(layer.id)) this.map.removeLayer(layer.id)
