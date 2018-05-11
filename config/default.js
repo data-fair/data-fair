@@ -79,6 +79,9 @@ module.exports = {
   }, {
     title: 'Portail thématique (bêta)',
     href: 'https://koumoul.com/s/portail-thematique/'
+  }, {
+    title: 'Observatoire des entreprises (bêta)',
+    href: 'https://koumoul.com/s/observatoire-entreprises/'
   }],
   remoteServices: [{
     title: 'Données Entreprises',

@@ -27,13 +27,13 @@ const operationsClasses = {
 
 // Get the list of applications
 router.get('', auth.optionalJwtMiddleware, asyncWrap(async(req, res) => {
-  const applications = req.app.get('db').collection('applications')
   if (!req.user && (req.query['is-owner'] === 'true')) {
     return res.json({
       results: [],
       count: 0
     })
   }
+  const applications = req.app.get('db').collection('applications')
   const query = findUtils.query(req.query, {
     'ids': 'id'
   })
