@@ -3,7 +3,7 @@ const eventToPromise = require('event-to-promise')
 
 const testUtils = require('./resources/test-utils')
 
-const {test, config, axiosBuilder} = testUtils.prepare(__filename)
+const {test, config} = testUtils.prepare(__filename)
 
 async function receive(cli) {
   const res = await eventToPromise(cli, 'message')
