@@ -23,6 +23,7 @@ before_script:
 
 script:
   - npm run lint
+  - docker-compose pull
   - docker-compose up -d
   - sleep 10
   - npm test
