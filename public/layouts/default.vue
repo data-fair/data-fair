@@ -17,7 +17,7 @@
         <v-btn flat to="/datasets" color="primary">Jeux de données</v-btn>
         <v-btn flat to="/remote-services" color="primary">Services distants</v-btn>
         <v-btn flat to="/applications" color="primary">Configurations d'applications</v-btn>
-        <v-btn v-if="!user" :href="loginUrl" color="primary">
+        <v-btn v-if="!user" @click="login" color="primary">
           Se connecter / S'inscrire
         </v-btn>
         <v-menu offset-y v-else>
@@ -49,7 +49,7 @@
           <v-list-tile to="/applications">
             <v-list-tile-title>Configurations d'applications</v-list-tile-title>
           </v-list-tile>
-          <v-list-tile v-if="!user" :href="loginUrl" color="primary">
+          <v-list-tile v-if="!user" @click="login" color="primary">
             <v-list-tile-title>Se connecter / S'inscrire</v-list-tile-title>
           </v-list-tile>
           <v-list-tile v-else @click="logout">
@@ -80,7 +80,7 @@
 
 <script>
 import eventBus from '../event-bus'
-const {mapState, mapActions, mapGetters} = require('vuex')
+const {mapState, mapActions} = require('vuex')
 
 export default {
   data() {
@@ -90,8 +90,7 @@ export default {
     }
   },
   computed: {
-    ...mapState(['user', 'userOrganizations', 'env']),
-    ...mapGetters(['loginUrl'])
+    ...mapState(['user', 'userOrganizations', 'env'])
   },
   mounted() {
     eventBus.$on('notification', async notif => {
@@ -106,7 +105,7 @@ export default {
       this.showSnackbar = true
     })
   },
-  methods: mapActions(['logout'])
+  methods: mapActions(['logout', 'login'])
 }
 
 </script>

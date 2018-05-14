@@ -12,15 +12,16 @@ services:
     ports:
       - 27017:27017
   simple-directory:
-    image: koumoul/simple-directory:0.7.0
+    image: koumoul/simple-directory:latest
     network_mode: host
     ports:
       - 8080
+      - 1080
     environment:
       - NAMES_WEBHOOKS=["http://localhost:5600/api/v1/owner-names?key=dev_secret"]
       - PUBLIC_URL=http://localhost:8080
-      # For virtual box debugging
-      # - PUBLIC_URL=http://10.0.2.2:5700
+      - MAILDEV_ACTIVE=true
+      - STORAGE_TYPE=file
     volumes:
-      - ./test/resources/users.json:/webapp/resources/users.json
-      - ./test/resources/organizations.json:/webapp/resources/organizations.json
+      - ./test/resources/users.json:/webapp/data/users.json
+      - ./test/resources/organizations.json:/webapp/data/organizations.json

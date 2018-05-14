@@ -8,7 +8,6 @@ const pump = util.promisify(require('pump'))
 const csvStringify = require('csv-stringify')
 const flatten = require('flat')
 const mongodb = require('mongodb')
-const auth = require('./auth')
 const journals = require('../utils/journals')
 const esUtils = require('../utils/es')
 const filesUtils = require('../utils/files')
@@ -41,7 +40,7 @@ const operationsClasses = {
 }
 
 // Get the list of datasets
-router.get('', auth.optionalJwtMiddleware, asyncWrap(async(req, res) => {
+router.get('', asyncWrap(async(req, res) => {
   if (!req.user && (req.query['is-owner'] === 'true')) {
     return res.json({
       results: [],
@@ -74,7 +73,7 @@ router.get('', auth.optionalJwtMiddleware, asyncWrap(async(req, res) => {
 }))
 
 // Middlewares
-router.use('/:datasetId', auth.optionalJwtMiddleware, asyncWrap(async(req, res, next) => {
+router.use('/:datasetId', asyncWrap(async(req, res, next) => {
   req.dataset = req.resource = await req.app.get('db').collection('datasets').findOne({
     id: req.params.datasetId
   }, {
@@ -150,7 +149,8 @@ const datasetFileSample = require('../utils/dataset-file-sample')
 const detectCharacterEncoding = require('detect-character-encoding')
 
 // Create a dataset by uploading tabular data
-router.post('', auth.jwtMiddleware, filesUtils.uploadFile(), asyncWrap(async(req, res) => {
+router.post('', filesUtils.uploadFile(), asyncWrap(async(req, res) => {
+  if (!req.user) return res.status(401).send()
   const owner = usersUtils.owner(req)
   if (!permissions.canDoForOwner(owner, 'postDataset', req.user, req.app.get('db'))) return res.sendStatus(403)
   if (!req.file) return res.sendStatus(400)

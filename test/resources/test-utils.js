@@ -49,36 +49,42 @@ exports.prepare = (testFile) => {
     await clean(key)
   })
 
-  return [test, config]
+  const axiosInstances = {}
+  const axiosBuilder = async (email) => {
+    const config = require('config')
+
+    if (!email) {
+      const ax = axios.create({baseURL: config.publicUrl})
+      // customize axios errors for shorter stack traces when a request fails in a test
+      ax.interceptors.response.use(response => response, customReject)
+      return ax
+    }
+    if (axiosInstances[email]) return axiosInstances[email]
+
+    // await axios.delete('http://localhost:1080/email/all')
+    await axios.post(`http://localhost:8080/api/auth/passwordless`, {email}, {params: {redirect: `http://localhost:${port}?id_token=`}})
+    const emails = (await axios.get('http://localhost:1080/email')).data
+    const match = emails
+      .find(e => e.subject.indexOf('localhost:' + port) !== -1 && e.to[0].address === email)
+      .text.match(/id_token=(.*)\s/)
+    if (!match) throw new Error('Failed to extract id_token from mail content')
+    const ax = axios.create({baseURL: config.publicUrl,
+      headers: {
+        'Cookie': 'id_token=' + match[1]
+      }})
+    // customize axios errors for shorter stack traces when a request fails in a test
+    ax.interceptors.response.use(response => response, customReject)
+    axiosInstances[email] = ax
+    return ax
+  }
+
+  return {test, config, axiosBuilder}
 }
 
 const customReject = error => {
   if (!error.response) return Promise.reject(error)
   delete error.response.request
   return Promise.reject(error.response)
-}
-
-const axiosInstances = {}
-exports.axios = async (email) => {
-  const config = require('config')
-
-  if (!email) {
-    const ax = axios.create({baseURL: config.publicUrl})
-    // customize axios errors for shorter stack traces when a request fails in a test
-    ax.interceptors.response.use(response => response, customReject)
-    return ax
-  }
-  if (axiosInstances[email]) return axiosInstances[email]
-  const res = await axios.post('http://localhost:8080/api/auth/passwordless', {email}, {withCredentials: true})
-  const idTokenCookie = res.headers['set-cookie'][0]
-  const ax = axios.create({baseURL: config.publicUrl,
-    headers: {
-      'Cookie': idTokenCookie
-    }})
-  // customize axios errors for shorter stack traces when a request fails in a test
-  ax.interceptors.response.use(response => response, customReject)
-  axiosInstances[email] = ax
-  return ax
 }
 
 exports.formHeaders = (form, organizationId) => {

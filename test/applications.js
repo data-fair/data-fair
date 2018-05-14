@@ -1,10 +1,10 @@
 const testUtils = require('./resources/test-utils')
 const nock = require('nock')
 
-const [test] = testUtils.prepare(__filename)
+const {test, axiosBuilder} = testUtils.prepare(__filename)
 
 test('Get applications when not authenticated', async t => {
-  const ax = await testUtils.axios()
+  const ax = await axiosBuilder()
   const res = await ax.get('/api/v1/applications')
   t.is(res.status, 200)
   t.is(res.data.count, 0)
@@ -14,7 +14,7 @@ const html = '<html><head></head><body></body></html>'
 nock('http://monapp.com').persist().get('/').reply(200, html)
 
 test('Post an external application configuration, read it, update it and delete it', async t => {
-  const ax = await testUtils.axios('dmeadus0@answers.com')
+  const ax = await axiosBuilder('dmeadus0@answers.com')
   let res = await ax.post('/api/v1/applications', {url: 'http://monapp.com'})
   t.is(res.status, 201)
   const acId = res.data.id
@@ -40,7 +40,7 @@ test('Post an external application configuration, read it, update it and delete 
 })
 
 test('Access an unknown applicationId on proxy endpoint', async t => {
-  const ax = await testUtils.axios()
+  const ax = await axiosBuilder()
   try {
     await ax.get('/app/unknownId')
     t.fail()

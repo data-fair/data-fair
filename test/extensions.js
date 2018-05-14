@@ -2,12 +2,12 @@ const nock = require('nock')
 const FormData = require('form-data')
 const testUtils = require('./resources/test-utils')
 
-const [test] = testUtils.prepare(__filename)
+const {test, axiosBuilder} = testUtils.prepare(__filename)
 
 const workers = require('../server/workers')
 
 test.serial('Extend dataset using remote service', async t => {
-  const ax = await testUtils.axios('dmeadus0@answers.com')
+  const ax = await axiosBuilder('dmeadus0@answers.com')
   // Initial dataset with addresses
   let form = new FormData()
   let content = `label,adr
@@ -145,7 +145,7 @@ other,unknown address
 })
 
 test.serial('Manage errors during extension', async t => {
-  const ax = await testUtils.axios('dmeadus0@answers.com')
+  const ax = await axiosBuilder('dmeadus0@answers.com')
 
   // Initial dataset with addresses
   let form = new FormData()
@@ -185,7 +185,7 @@ other,unknown address
 })
 
 test('Manage empty queries', async t => {
-  const ax = await testUtils.axios('dmeadus0@answers.com')
+  const ax = await axiosBuilder('dmeadus0@answers.com')
 
   // Initial dataset with addresses
   let form = new FormData()

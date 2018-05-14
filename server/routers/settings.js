@@ -2,7 +2,6 @@ const express = require('express')
 const ajv = require('ajv')()
 const settingSchema = require('../../contract/settings.json')
 const validate = ajv.compile(settingSchema)
-const auth = require('./auth')
 const permissions = require('../utils/permissions')
 const asyncWrap = require('../utils/async-wrap')
 const config = require('config')
@@ -12,7 +11,8 @@ let router = express.Router()
 const allowedTypes = new Set(['user', 'organization'])
 
 // Middlewares
-router.use('/:type/:id', auth.jwtMiddleware, (req, res, next) => {
+router.use('/:type/:id', (req, res, next) => {
+  if (!req.user) return res.status(401).send()
   if (!allowedTypes.has(req.params.type)) {
     return res.status(400).send('Invalid type, it must be one of the following : ' + Array.from(allowedTypes).join(', '))
   }
@@ -20,6 +20,7 @@ router.use('/:type/:id', auth.jwtMiddleware, (req, res, next) => {
 })
 
 function isOwner(req, res, next) {
+  if (!req.user) return res.status(401).send()
   if (!permissions.isOwner({type: req.params.type, id: req.params.id}, req.user)) {
     return res.sendStatus(403)
   }
@@ -27,7 +28,7 @@ function isOwner(req, res, next) {
 }
 
 // read settings
-router.get('/:type/:id', auth.jwtMiddleware, isOwner, asyncWrap(async(req, res) => {
+router.get('/:type/:id', isOwner, asyncWrap(async(req, res) => {
   const settings = req.app.get('db').collection('settings')
 
   const result = await settings.findOne({
@@ -38,7 +39,7 @@ router.get('/:type/:id', auth.jwtMiddleware, isOwner, asyncWrap(async(req, res) 
 }))
 
 // update settings
-router.put('/:type/:id', auth.jwtMiddleware, isOwner, asyncWrap(async(req, res) => {
+router.put('/:type/:id', isOwner, asyncWrap(async(req, res) => {
   req.body.type = req.params.type
   req.body.id = req.params.id
   const valid = validate(req.body)

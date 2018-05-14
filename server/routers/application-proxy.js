@@ -1,13 +1,12 @@
 const express = require('express')
 const requestProxy = require('express-request-proxy')
 const config = require('config')
-const auth = require('./auth')
 const asyncWrap = require('../utils/async-wrap')
 
 const router = module.exports = express.Router()
 
 // Proxy for applications
-router.get('/:applicationId*', auth.optionalJwtMiddleware, asyncWrap(async(req, res, next) => {
+router.get('/:applicationId*', asyncWrap(async(req, res, next) => {
   const application = await req.app.get('db').collection('applications').findOne({
     id: req.params.applicationId
   })

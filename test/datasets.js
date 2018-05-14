@@ -4,7 +4,7 @@ const eventToPromise = require('event-to-promise')
 const WebSocket = require('ws')
 const testUtils = require('./resources/test-utils')
 
-const [test, config] = testUtils.prepare(__filename)
+const {test, config, axiosBuilder} = testUtils.prepare(__filename)
 
 let notifier
 test.before('prepare notifier', async t => {
@@ -13,24 +13,14 @@ test.before('prepare notifier', async t => {
 })
 
 test('Get datasets when not authenticated', async t => {
-  const ax = await testUtils.axios()
+  const ax = await axiosBuilder()
   const res = await ax.get('/api/v1/datasets')
   t.is(res.status, 200)
   t.is(res.data.count, 0)
 })
 
-test('Failure to get datasets with bad auth', async t => {
-  const ax = await testUtils.axios()
-  try {
-    await ax.get('/api/v1/datasets', {headers: {Authorization: 'badtoken'}})
-    t.fail()
-  } catch (err) {
-    t.is(err.status, 401)
-  }
-})
-
 test('Get datasets when authenticated', async t => {
-  const ax = await testUtils.axios('alone@no.org')
+  const ax = await axiosBuilder('alone@no.org')
   const res = await ax.get('/api/v1/datasets')
   t.is(res.status, 200)
   t.is(res.data.count, 0)
@@ -39,7 +29,7 @@ test('Get datasets when authenticated', async t => {
 const datasetFd = fs.readFileSync('./test/resources/dataset1.csv')
 
 test('Failure to upload dataset exceeding limit', async t => {
-  const ax = await testUtils.axios('dmeadus0@answers.com')
+  const ax = await axiosBuilder('dmeadus0@answers.com')
   const form = new FormData()
   form.append('file', Buffer.alloc(12000), 'largedataset.csv')
   try {
@@ -51,7 +41,7 @@ test('Failure to upload dataset exceeding limit', async t => {
 })
 
 test('Failure to upload multiple datasets exceeding limit', async t => {
-  const ax = await testUtils.axios('dmeadus0@answers.com')
+  const ax = await axiosBuilder('dmeadus0@answers.com')
   let form = new FormData()
   form.append('file', Buffer.alloc(9000), 'largedataset1.csv')
   await ax.post('/api/v1/datasets', form, {headers: testUtils.formHeaders(form)})
@@ -67,7 +57,7 @@ test('Failure to upload multiple datasets exceeding limit', async t => {
 })
 
 test('Upload new dataset in user zone', async t => {
-  const ax = await testUtils.axios('dmeadus0@answers.com')
+  const ax = await axiosBuilder('dmeadus0@answers.com')
   const form = new FormData()
   form.append('file', datasetFd, 'dataset1.csv')
   let res = await ax.post('/api/v1/datasets', form, {headers: testUtils.formHeaders(form)})
@@ -77,7 +67,7 @@ test('Upload new dataset in user zone', async t => {
 })
 
 test('Upload new dataset in organization zone', async t => {
-  const ax = await testUtils.axios('dmeadus0@answers.com')
+  const ax = await axiosBuilder('dmeadus0@answers.com')
   const form = new FormData()
   form.append('file', datasetFd, 'dataset2.csv')
   const res = await ax.post('/api/v1/datasets', form, {headers: testUtils.formHeaders(form, 'KWqAGZ4mG')})
@@ -87,7 +77,7 @@ test('Upload new dataset in organization zone', async t => {
 })
 
 test('Uploading same file twice should increment id', async t => {
-  const ax = await testUtils.axios('dmeadus0@answers.com')
+  const ax = await axiosBuilder('dmeadus0@answers.com')
   for (let i of [1, 2, 3]) {
     const form = new FormData()
     form.append('file', datasetFd, 'my-dataset.csv')
@@ -98,7 +88,7 @@ test('Uploading same file twice should increment id', async t => {
 })
 
 test('Fail to upload new dataset when not authenticated', async t => {
-  const ax = await testUtils.axios()
+  const ax = await axiosBuilder()
   const form = new FormData()
   try {
     await ax.post('/api/v1/datasets', form, {headers: testUtils.formHeaders(form)})
@@ -110,7 +100,7 @@ test('Fail to upload new dataset when not authenticated', async t => {
 
 test('Upload dataset - full test with webhooks', async t => {
   const wsCli = new WebSocket(config.publicUrl)
-  const ax = await testUtils.axios('cdurning2@desdev.cn')
+  const ax = await axiosBuilder('cdurning2@desdev.cn')
   await ax.put('/api/v1/settings/user/cdurning2', {webhooks: [{title: 'test', events: ['finalize-end'], url: 'http://localhost:5900'}]})
   let form = new FormData()
   form.append('file', fs.readFileSync('./test/resources/Antennes du CD22.csv'), 'Antennes du CD22.csv')
@@ -136,14 +126,14 @@ test('Upload dataset - full test with webhooks', async t => {
   res = await ax.get('/api/v1/datasets/' + datasetId + '/journal')
   t.is(res.data.length, 18)
   // testing permissions
-  const ax1 = await testUtils.axios('dmeadus0@answers.com')
+  const ax1 = await axiosBuilder('dmeadus0@answers.com')
   try {
     await ax1.get(webhook.href)
     t.fail()
   } catch (err) {
     t.is(err.status, 403)
   }
-  const ax2 = await testUtils.axios()
+  const ax2 = await axiosBuilder()
   try {
     await ax2.get(webhook.href)
     t.fail()

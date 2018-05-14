@@ -1,16 +1,16 @@
 const testUtils = require('./resources/test-utils')
 
-const [test] = testUtils.prepare(__filename)
+const {test, axiosBuilder} = testUtils.prepare(__filename)
 
 test('Get external APIs when not authenticated', async t => {
-  const ax = await testUtils.axios()
+  const ax = await axiosBuilder()
   const res = await ax.get('/api/v1/remote-services')
   t.is(res.status, 200)
   t.is(res.data.count, 0)
 })
 
 test('Post a minimal external API, read it, update it and delete it', async t => {
-  const ax = await testUtils.axios('dmeadus0@answers.com')
+  const ax = await axiosBuilder('dmeadus0@answers.com')
   let res = await ax.post('/api/v1/remote-services', {apiDoc: require('./resources/geocoder-api.json'), apiKey: {in: 'header', name: 'x-apiKey'}})
   t.is(res.status, 201)
   const eaId = res.data.id
@@ -26,7 +26,7 @@ test('Post a minimal external API, read it, update it and delete it', async t =>
   t.is(res.status, 200)
   t.is(res.data.title, 'Test external api')
   // Permissions
-  const ax1 = await testUtils.axios('cdurning2@desdev.cn')
+  const ax1 = await axiosBuilder('cdurning2@desdev.cn')
   try {
     await ax1.get('/api/v1/remote-services/' + eaId)
     t.fail()
@@ -54,7 +54,7 @@ test('Post a minimal external API, read it, update it and delete it', async t =>
 })
 
 test('Unknown external service', async t => {
-  const ax = await testUtils.axios()
+  const ax = await axiosBuilder()
   try {
     await ax.get('/api/v1/remote-services/unknownId')
     t.fail()

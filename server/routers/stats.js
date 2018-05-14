@@ -1,11 +1,11 @@
 const express = require('express')
-const auth = require('./auth')
 const datasetUtils = require('../utils/dataset')
 const asyncWrap = require('../utils/async-wrap')
 
 const router = module.exports = express.Router()
 
-router.get('', auth.jwtMiddleware, asyncWrap(async(req, res) => {
+router.get('', asyncWrap(async(req, res) => {
+  if (!req.user) res.status(401).send()
   const stats = {
     user: {},
     organizations: {}

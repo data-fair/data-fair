@@ -3,7 +3,7 @@ const FormData = require('form-data')
 
 const testUtils = require('./resources/test-utils')
 
-const [test] = testUtils.prepare(__filename)
+const {test, axiosBuilder} = testUtils.prepare(__filename)
 
 const workers = require('../server/workers')
 const esUtils = require('../server/utils/es')
@@ -13,7 +13,7 @@ test.serial('Process newly uploaded CSV dataset', async t => {
   const datasetFd = fs.readFileSync('./test/resources/dataset1.csv')
   const form = new FormData()
   form.append('file', datasetFd, 'dataset.csv')
-  const ax = await testUtils.axios('dmeadus0@answers.com')
+  const ax = await axiosBuilder('dmeadus0@answers.com')
   let res = await ax.post('/api/v1/datasets', form, {headers: testUtils.formHeaders(form)})
   t.is(res.status, 201)
 
@@ -83,7 +83,7 @@ test.serial('Process newly uploaded geojson dataset', async t => {
   const datasetFd = fs.readFileSync('./test/resources/geojson-example.geojson')
   const form = new FormData()
   form.append('file', datasetFd, 'geojson-example.geojson')
-  const ax = await testUtils.axios('dmeadus0@answers.com')
+  const ax = await axiosBuilder('dmeadus0@answers.com')
   let res = await ax.post('/api/v1/datasets', form, {headers: testUtils.formHeaders(form)})
   t.is(res.status, 201)
 

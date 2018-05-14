@@ -22,7 +22,7 @@
             <v-flex text-xs-center>
               <h3 class="display-2 mb-5 mt-5">Vos données, vos services et vos applications.</h3>
 
-              <v-btn :href="loginUrl" color="primary">
+              <v-btn @click="login" color="primary">
                 Se connecter / S'inscrire
               </v-btn>
             </v-flex>
@@ -34,7 +34,7 @@
 </template>
 
 <script>
-const {mapState, mapGetters} = require('vuex')
+const {mapState, mapActions} = require('vuex')
 
 export default {
   name: 'Home',
@@ -48,7 +48,6 @@ export default {
   }),
   computed: {
     ...mapState(['user', 'env']),
-    ...mapGetters(['loginUrl']),
     items() {
       if (!this.stats) return []
       const orgasItems = this.user.organizations.map(o => {
@@ -61,6 +60,9 @@ export default {
     if (this.user) {
       this.stats = await this.$axios.$get(this.env.publicUrl + '/api/v1/stats')
     }
+  },
+  methods: {
+    ...mapActions(['login'])
   }
 }
 </script>

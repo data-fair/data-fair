@@ -85,6 +85,7 @@
     "request-promise-native": "^1.0.5",
     "shortid": "^2.2.8",
     "shuffle-array": "^1.0.1",
+    "simple-directory-client-express": "^0.3.2",
     "slug": "^0.9.1",
     "soas": "^0.4.0",
     "split": "^1.0.1",

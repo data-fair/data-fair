@@ -12,6 +12,7 @@ const wsUtils = require('./utils/ws.js')
 const locksUtils = require('./utils/locks.js')
 const cache = require('./utils/cache')
 const workers = require('./workers')
+const session = require('simple-directory-client-express')({directoryUrl: config.directoryUrl, publicUrl: config.publicUrl})
 
 const app = express()
 app.use(bodyParser.json({limit: '1000kb'}))
@@ -21,12 +22,13 @@ if (process.env.NODE_ENV === 'development') app.use(require('cors')())
 
 // Business routers
 app.use('/api/v1', require('./routers/root'))
-app.use('/api/v1/remote-services', require('./routers/remote-services'))
-app.use('/api/v1/applications', require('./routers/applications'))
-app.use('/api/v1/datasets', require('./routers/datasets'))
-app.use('/api/v1/stats', require('./routers/stats'))
-app.use('/api/v1/settings', require('./routers/settings'))
-app.use('/app', require('./routers/application-proxy'))
+app.use('/api/v1/remote-services', session.auth, require('./routers/remote-services'))
+app.use('/api/v1/applications', session.auth, require('./routers/applications'))
+app.use('/api/v1/datasets', session.auth, require('./routers/datasets'))
+app.use('/api/v1/stats', session.auth, require('./routers/stats'))
+app.use('/api/v1/settings', session.auth, require('./routers/settings'))
+app.use('/app', session.auth, require('./routers/application-proxy'))
+app.use('/api/v1/session', session.router)
 
 // Error management
 app.use((err, req, res, next) => {
@@ -42,6 +44,8 @@ const wss = new WebSocket.Server({server})
 
 // Run app and return it in a promise
 exports.run = async () => {
+  app.use(session.decode)
+  app.use(session.loginCallback)
   const nuxt = await require('./nuxt')()
   app.use(nuxt)
   const {db, client} = await dbUtils.init()

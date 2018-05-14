@@ -18,8 +18,6 @@ module.exports = {
   },
   loading: { color: '#1e88e5' }, // Customize the progress bar color
   plugins: [
-    {src: '~plugins/interceptor', ssr: false},
-    {src: '~plugins/exchange-jwt', ssr: false},
     {src: '~plugins/ws', ssr: false},
     {src: '~plugins/vuetify'},
     {src: '~plugins/moment'},

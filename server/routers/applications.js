@@ -1,7 +1,6 @@
 const express = require('express')
 const slug = require('slug')
 const moment = require('moment')
-const auth = require('./auth')
 const applicationAPIDocs = require('../../contract/application-api-docs')
 
 const ajv = require('ajv')()
@@ -26,7 +25,7 @@ const operationsClasses = {
 }
 
 // Get the list of applications
-router.get('', auth.optionalJwtMiddleware, asyncWrap(async(req, res) => {
+router.get('', asyncWrap(async(req, res) => {
   if (!req.user && (req.query['is-owner'] === 'true')) {
     return res.json({
       results: [],
@@ -57,7 +56,8 @@ router.get('', auth.optionalJwtMiddleware, asyncWrap(async(req, res) => {
 }))
 
 // Create an application configuration
-router.post('', auth.jwtMiddleware, asyncWrap(async(req, res) => {
+router.post('', asyncWrap(async(req, res) => {
+  if (!req.user) return res.status(401).send()
   const application = req.body
   // This id is temporary, we should have an human understandable id, or perhaps manage it UI side ?
   if (!application.url) return res.sendStatus(400)
@@ -99,7 +99,7 @@ router.post('', auth.jwtMiddleware, asyncWrap(async(req, res) => {
 }))
 
 // Middlewares
-router.use('/:applicationId', auth.optionalJwtMiddleware, asyncWrap(async(req, res, next) => {
+router.use('/:applicationId', asyncWrap(async(req, res, next) => {
   req.application = req.resource = await req.app.get('db').collection('applications').findOne({
     id: req.params.applicationId
   }, {

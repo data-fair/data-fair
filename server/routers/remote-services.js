@@ -1,5 +1,4 @@
 const express = require('express')
-const auth = require('./auth')
 const normalise = require('ajv-error-messages')
 const moment = require('moment')
 const slug = require('slug')
@@ -55,7 +54,7 @@ const operationsClasses = {
 }
 
 // Get the list of remote-services
-router.get('', auth.optionalJwtMiddleware, asyncWrap(async(req, res) => {
+router.get('', asyncWrap(async(req, res) => {
   if (!req.user && (req.query['is-owner'] === 'true')) {
     return res.json({
       results: [],
@@ -85,7 +84,7 @@ router.get('', auth.optionalJwtMiddleware, asyncWrap(async(req, res) => {
 }))
 
 // Create an remote Api
-router.post('', auth.jwtMiddleware, asyncWrap(async(req, res) => {
+router.post('', asyncWrap(async(req, res) => {
   const service = req.body
   if (!service.apiDoc || !service.apiDoc.info || !service.apiDoc.info['x-api-id']) return res.sendStatus(400)
   const baseId = service.id || slug(service.apiDoc.info['x-api-id'], {lower: true})
@@ -130,7 +129,7 @@ router.post('', auth.jwtMiddleware, asyncWrap(async(req, res) => {
 }))
 
 // Middlewares
-router.use('/:remoteServiceId', auth.optionalJwtMiddleware, asyncWrap(async(req, res, next) => {
+router.use('/:remoteServiceId', asyncWrap(async(req, res, next) => {
   const service = await req.app.get('db').collection('remote-services').findOne({
     id: req.params.remoteServiceId
   }, {

@@ -2,7 +2,7 @@ const fs = require('fs')
 const FormData = require('form-data')
 const testUtils = require('./resources/test-utils')
 
-const [test] = testUtils.prepare(__filename)
+const {test, axiosBuilder} = testUtils.prepare(__filename)
 
 const workers = require('../server/workers')
 
@@ -10,7 +10,7 @@ test('Get lines in dataset', async t => {
   const datasetData = fs.readFileSync('./test/resources/dataset1.csv')
   const form = new FormData()
   form.append('file', datasetData, 'dataset.csv')
-  const ax = await testUtils.axios('dmeadus0@answers.com')
+  const ax = await axiosBuilder('dmeadus0@answers.com')
 
   let res = await ax.post('/api/v1/datasets', form, {headers: testUtils.formHeaders(form)})
 
