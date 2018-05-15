@@ -156,7 +156,7 @@ export default {
       read: 'Lecture',
       write: 'Ecriture',
       admin: 'Administration',
-      use: 'Utiliser le service distant'
+      use: 'Utiliser le service'
     },
     expertMode: false,
     addPermissions: false

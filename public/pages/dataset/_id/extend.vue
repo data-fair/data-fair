@@ -1,6 +1,6 @@
 <template lang="html">
   <v-container>
-    <p>Les actions d'enrichissement proposées ci-dessous dépendent des concepts associés à ce jeu de données et des services distants configurés.</p>
+    <p>Les actions d'enrichissement proposées ci-dessous dépendent des concepts associés à ce jeu de données et des services configurés.</p>
 
     <v-data-table
       v-if="ready"

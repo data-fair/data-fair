@@ -44,10 +44,10 @@
     <v-dialog v-model="showDeleteDialog" max-width="500">
       <v-card>
         <v-card-title primary-title>
-          Suppression de la configuration de service distant
+          Suppression de la configuration de l'application
         </v-card-title>
         <v-card-text>
-          Voulez vous vraiment supprimer la configuration de service distant "{{ application.title }}" ? La suppression est définitive et le paramétrage ne pourra pas être récupéré.
+          Voulez vous vraiment supprimer la configuration de l'application "{{ application.title }}" ? La suppression est définitive et le paramétrage ne pourra pas être récupéré.
         </v-card-text>
         <v-card-actions>
           <v-spacer/>

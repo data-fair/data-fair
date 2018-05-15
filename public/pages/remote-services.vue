@@ -4,7 +4,7 @@
     <remote-services-list/>
 
     <div class="actions-buttons">
-      <v-btn v-if="user" @click="importServiceSheet = true" color="primary" fab title="Configurer un service distant">
+      <v-btn v-if="user" @click="importServiceSheet = true" color="primary" fab title="Configurer un service">
         <v-icon>add</v-icon>
       </v-btn>
     </div>

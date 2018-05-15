@@ -15,7 +15,7 @@
           item-value="href"
           item-text="title"
           v-model="apiDocUrl"
-          label="Choisissez un service distant à configurer"
+          label="Choisissez un service à configurer"
           @input="downloadFromUrl"
         />
         <v-text-field

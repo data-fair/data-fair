@@ -44,10 +44,10 @@ export default {
         const silent = patch.silent
         delete patch.silent
         await this.$axios.patch(getters.resourceUrl, patch)
-        if (!silent) eventBus.$emit('notification', 'La configuration de service distant a bien été mise à jour.')
+        if (!silent) eventBus.$emit('notification', 'La configuration du service a bien été mise à jour.')
         return true
       } catch (error) {
-        eventBus.$emit('notification', {error, msg: `Erreur pendant la mise à jour de la configuration de service distant:`})
+        eventBus.$emit('notification', {error, msg: `Erreur pendant la mise à jour de la configuration du service:`})
         return false
       }
     },
@@ -58,9 +58,9 @@ export default {
     async remove({state, getters, dispatch}) {
       try {
         await this.$axios.delete(getters.resourceUrl)
-        eventBus.$emit('notification', `La configuration de service distant ${state.remoteService.title} a bien été supprimée`)
+        eventBus.$emit('notification', `La configuration du service ${state.remoteService.title} a bien été supprimée`)
       } catch (error) {
-        eventBus.$emit('notification', {error, msg: `Erreur pendant la suppression de la configuration de service distant:`})
+        eventBus.$emit('notification', {error, msg: `Erreur pendant la suppression de la configuration du service:`})
       }
     },
     async refresh({commit, getters, dispatch}) {

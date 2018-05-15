@@ -1,6 +1,6 @@
 <template>
   <v-container fluid grid-list-lg>
-    <h3 class="display-1">{{ remoteServices.count }} service{{ plural }} distant{{ plural }} configuré{{ plural }}</h3>
+    <h3 class="display-1">{{ remoteServices.count }} service{{ plural }} configuré{{ plural }}</h3>
     <v-layout row wrap>
       <v-flex xs12 sm5 md4 lg3>
         <v-text-field label="Rechercher" v-model="search" append-icon="search" @keyup.enter.native="refresh" :append-icon-cb="refresh"/>

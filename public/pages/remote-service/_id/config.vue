@@ -27,7 +27,7 @@
     <div v-if="remoteService.parameters.length">
       <h2 class="headline mt-3 mb-3">Paramètres statiques</h2>
 
-      <p>Ces paramètres seront associés à toutes les requêtes émises vers le service distant au travers de cette exposition.
+      <p>Ces paramètres seront associés à toutes les requêtes émises vers le service au travers de cette exposition.
       Ils vous permettent par exemple de filtrer la source pour obtenir une spécialisation du service sur un secteur.</p>
 
       <p>Les filtres peuvent contenir plusieurs valeurs séparées par des virgules.</p>
