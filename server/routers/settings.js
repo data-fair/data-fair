@@ -12,7 +12,6 @@ const allowedTypes = new Set(['user', 'organization'])
 
 // Middlewares
 router.use('/:type/:id', (req, res, next) => {
-  if (!req.user) return res.status(401).send()
   if (!allowedTypes.has(req.params.type)) {
     return res.status(400).send('Invalid type, it must be one of the following : ' + Array.from(allowedTypes).join(', '))
   }
