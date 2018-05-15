@@ -5,8 +5,6 @@ exports.owner = (req) => {
   if (!organizationId) {
     return { type: 'user', id: req.user.id, name: req.user.name }
   } else {
-    console.log(req.user)
-    console.log(organizationId)
     const orga = req.user.organizations.find(o => o.id === organizationId)
     if (!orga) {
       throw createError(403, 'You cannot set an organization you do not belong to as owner')

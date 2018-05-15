@@ -1,7 +1,7 @@
 version: '3'
 services:
   es:
-    image: docker.elastic.co/elasticsearch/elasticsearch:6.1.1
+    image: docker.elastic.co/elasticsearch/elasticsearch-oss:6.2.2
     ports:
       - 9200:9200
       - 9300:9300
@@ -11,7 +11,7 @@ services:
     image: mvertes/alpine-mongo:3.4.9-0
     ports:
       - 27017:27017
-  simple-directory:
+  sd:
     image: koumoul/simple-directory:latest
     network_mode: host
     ports:
