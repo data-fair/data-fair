@@ -27,7 +27,7 @@ module.exports = {
   },
   brand: {
     logo: null,
-    title: 'Data FAIR',
+    title: 'DataFair',
     description: 'Find, Access, Interoperate, Reuse data on the Web'
   },
   defaultLimits: {

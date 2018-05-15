@@ -14,7 +14,8 @@ module.exports = {
   brand: {
     logo: 'BRAND_LOGO',
     title: 'BRAND_TITLE',
-    description: 'BRAND_DESCRIPTION'
+    description: 'BRAND_DESCRIPTION',
+    url: 'BRAND_URL'
   },
   workers: {
     concurrency: 'WORKERS_CONCURRENCY'

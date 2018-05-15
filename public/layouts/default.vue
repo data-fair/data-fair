@@ -2,21 +2,23 @@
   <v-app>
     <v-toolbar app scroll-off-screen class="main-toolbar">
       <div class="logo-container">
-        <nuxt-link :to="{name: 'index'}" title="Accueil">
+        <a :href="env.brand.url" v-if="env.brand.url" :title="env.brand.title || env.brand.url">
           <img v-if="env.brand.logo" :src="env.brand.logo">
           <img v-else src="../assets/logo.svg">
-        </nuxt-link>
+        </a>
+        <img v-else src="../assets/logo.svg">
       </div>
 
-      <v-toolbar-title><h1 class="headline">{{ env.brand.title || 'Data FAIR' }}</h1></v-toolbar-title>
+      <v-toolbar-title><h1 class="headline">{{ env.brand.title || 'DataFair' }}</h1><small>{{ env.brand.description }}</small></v-toolbar-title>
 
       <v-spacer/>
 
       <!-- larger screens: navigation in toolbar -->
       <v-toolbar-items class="hidden-md-and-down">
-        <v-btn flat to="/datasets" color="primary">Jeux de données</v-btn>
-        <v-btn flat to="/remote-services" color="primary">Services distants</v-btn>
-        <v-btn flat to="/applications" color="primary">Configurations d'applications</v-btn>
+        <v-btn flat :to="{name: 'index'}" color="primary" exact>Accueil</v-btn>
+        <v-btn flat to="/datasets" color="primary" :class="$route.name.split('-').shift() === 'dataset' ? 'btn--active' : ''">Jeux de données</v-btn>
+        <v-btn flat to="/remote-services" color="primary" :class="$route.name.split('-').shift() === 'remote' ? 'btn--active' : ''">Services</v-btn>
+        <v-btn flat to="/applications" color="primary" :class="$route.name.split('-').shift() === 'application' ? 'btn--active' : ''">Applications</v-btn>
         <v-btn v-if="!user" @click="login" color="primary">
           Se connecter / S'inscrire
         </v-btn>
@@ -40,14 +42,17 @@
       <v-menu bottom left class="hidden-lg-and-up">
         <v-btn slot="activator" icon><v-icon>menu</v-icon></v-btn>
         <v-list>
+          <v-list-tile :to="{name: 'index'}" exact>
+            <v-list-tile-title>Accueil</v-list-tile-title>
+          </v-list-tile>
           <v-list-tile to="/datasets">
             <v-list-tile-title>Jeux de données</v-list-tile-title>
           </v-list-tile>
           <v-list-tile to="/remote-services">
-            <v-list-tile-title>Services distants</v-list-tile-title>
+            <v-list-tile-title>Services</v-list-tile-title>
           </v-list-tile>
           <v-list-tile to="/applications">
-            <v-list-tile-title>Configurations d'applications</v-list-tile-title>
+            <v-list-tile-title>Applications</v-list-tile-title>
           </v-list-tile>
           <v-list-tile v-if="!user" @click="login" color="primary">
             <v-list-tile-title>Se connecter / S'inscrire</v-list-tile-title>
