@@ -54,7 +54,7 @@ export default {
     marked
   }),
   computed: {
-    ...mapState(['user', 'env']),
+    ...mapState('session', ['user']),...mapState(['env']),
     plural() {
       return this.applications.count > 1 ? 's' : ''
     }

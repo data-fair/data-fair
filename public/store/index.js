@@ -1,5 +1,6 @@
 import Vue from 'vue'
 import Vuex from 'vuex'
+import {sessionStore} from 'simple-directory-client-nuxt'
 import dataset from './dataset'
 import remoteService from './remote-service'
 import application from './application'
@@ -8,7 +9,7 @@ Vue.use(Vuex)
 
 export default () => {
   return new Vuex.Store({
-    modules: {dataset, remoteService, application},
+    modules: {dataset, remoteService, application, session: sessionStore},
     state: {
       user: null,
       vocabulary: null,
@@ -30,15 +31,6 @@ export default () => {
       }
     },
     actions: {
-      login({state}) {
-        const path = this.$router.currentRoute.path
-        window.location.href = `${state.env.publicUrl}/api/v1/session/login?redirect=${state.env.publicUrl}${path}?id_token=`
-      },
-      async logout({commit}) {
-        await this.$axios.post('api/v1/session/logout')
-        commit('setAny', {user: null})
-        this.$router.push('/')
-      },
       async fetchVocabulary({state, commit}) {
         if (state.vocabulary) return
         const vocabulary = {}
@@ -58,6 +50,7 @@ export default () => {
       },
       nuxtServerInit({commit, dispatch}, {req, env, app}) {
         commit('setAny', {env: {...env}, user: req.user})
+        dispatch('session/init', {user: req.user, baseUrl: env.publicUrl + '/api/v1/session'})
       }
     }
   })

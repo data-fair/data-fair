@@ -50,7 +50,7 @@ export default {
     marked
   }),
   computed: {
-    ...mapState(['user', 'env']),
+    ...mapState('session', ['user']),...mapState(['env']),
     plural() {
       return this.datasets.count > 1
     }

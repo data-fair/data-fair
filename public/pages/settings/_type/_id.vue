@@ -45,7 +45,7 @@ export default {
     settings: null
   }),
   computed: {
-    ...mapState(['user', 'env']),
+    ...mapState('session', ['user']),...mapState(['env']),
     operations() {
       return (this.api && [].concat(...Object.keys(this.api.paths).map(path => Object.keys(this.api.paths[path]).map(method => ({
         id: this.api.paths[path][method].operationId,

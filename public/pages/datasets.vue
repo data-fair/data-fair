@@ -31,7 +31,7 @@ export default {
     return {importFileSheet: false}
   },
   computed: {
-    ...mapState(['user'])
+    ...mapState('session', ['user'])
   }
 }
 </script>

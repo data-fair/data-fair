@@ -19,6 +19,7 @@ module.exports = {
   loading: { color: '#1e88e5' }, // Customize the progress bar color
   plugins: [
     {src: '~plugins/ws', ssr: false},
+    {src: '~plugins/session', ssr: false},
     {src: '~plugins/vuetify'},
     {src: '~plugins/moment'},
     {src: '~plugins/truncate'}

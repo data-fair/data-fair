@@ -50,7 +50,7 @@ export default {
     marked
   }),
   computed: {
-    ...mapState(['user', 'env']),
+    ...mapState('session', ['user']),...mapState(['env']),
     plural() {
       return this.remoteServices.count > 1 ? 's' : ''
     }

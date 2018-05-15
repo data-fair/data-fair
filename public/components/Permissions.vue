@@ -162,7 +162,7 @@ export default {
     addPermissions: false
   }),
   computed: {
-    ...mapState(['user', 'env']),
+    ...mapState('session', ['user']),...mapState(['env']),
     permissionClasses() {
       const classes = {
         list: [{

@@ -47,7 +47,7 @@ export default {
     ]
   }),
   computed: {
-    ...mapState(['user', 'env']),
+    ...mapState('session', ['user']),...mapState(['env']),
     items() {
       if (!this.stats) return []
       const orgasItems = this.user.organizations.map(o => {
@@ -62,7 +62,7 @@ export default {
     }
   },
   methods: {
-    ...mapActions(['login'])
+    ...mapActions('session', ['login'])
   }
 }
 </script>

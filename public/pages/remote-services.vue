@@ -31,7 +31,7 @@ export default {
     return {importServiceSheet: !!this.$route.query.import}
   },
   computed: {
-    ...mapState(['user']),
+    ...mapState('session', ['user']),
     importService() {
       return this.$route.query.import
     }

@@ -30,7 +30,7 @@ export default {
     return {importApplicationSheet: !!this.$route.query.import}
   },
   computed: {
-    ...mapState(['user']),
+    ...mapState('session', ['user']),
     importApp() {
       return this.$route.query.import
     }

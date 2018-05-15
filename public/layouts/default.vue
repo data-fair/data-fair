@@ -90,7 +90,8 @@ export default {
     }
   },
   computed: {
-    ...mapState(['user', 'userOrganizations', 'env'])
+    ...mapState('session', ['user']),
+    ...mapState(['env'])
   },
   mounted() {
     eventBus.$on('notification', async notif => {
@@ -105,7 +106,7 @@ export default {
       this.showSnackbar = true
     })
   },
-  methods: mapActions(['logout', 'login'])
+  methods: mapActions('session', ['logout', 'login'])
 }
 
 </script>
