@@ -47,7 +47,8 @@ export default {
     action: null
   }),
   computed: {
-    ...mapState('session', ['user']),...mapState(['env']),
+    ...mapState('session', ['user']),
+    ...mapState(['env']),
     owners() {
       return {
         user: {type: 'user', id: this.user.id, name: this.user.name},

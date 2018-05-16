@@ -47,7 +47,8 @@ export default {
     ]
   }),
   computed: {
-    ...mapState('session', ['user']),...mapState(['env']),
+    ...mapState('session', ['user']),
+    ...mapState(['env']),
     items() {
       if (!this.stats) return []
       const orgasItems = this.user.organizations.map(o => {
