@@ -251,8 +251,7 @@ router.use('/:remoteServiceId/proxy*', (req, res, next) => {
     const remoteOrigin = new URL(req.remoteService.server).origin
     if (remoteOrigin !== publicOrigin) {
       delete req.headers.authorization
-    } else {
-      options.headers.cookie = req.headers.cookie
+      delete req.headers.cookie
     }
   }
 

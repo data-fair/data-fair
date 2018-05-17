@@ -26,9 +26,5 @@ router.get('/:applicationId*', asyncWrap(async(req, res, next) => {
   if (application.url[application.url.length - 1] === '/' && req.params['0'][0] === '/') {
     req.params['0'] = req.params['0'].slice(1)
   }
-  // We transmit cookies to the app, as it is exposed on our domain..
-  // WARNING, this implies a high level of trust with the application provider
-  // TODO: find an integration scenario where this is not necessary ?
-  options.headers.cookie = req.headers.cookie
   requestProxy(options)(req, res, next)
 }))
