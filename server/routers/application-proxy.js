@@ -6,7 +6,7 @@ const asyncWrap = require('../utils/async-wrap')
 const router = module.exports = express.Router()
 
 // Proxy for applications
-router.use('/:applicationId*', asyncWrap(async(req, res, next) => {
+router.all('/:applicationId*', asyncWrap(async(req, res, next) => {
   const application = await req.app.get('db').collection('applications').findOne({
     id: req.params.applicationId
   })
