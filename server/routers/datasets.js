@@ -146,7 +146,7 @@ router.delete('/:datasetId', permissions.middleware('delete', 'admin'), asyncWra
 }))
 
 const datasetFileSample = require('../utils/dataset-file-sample')
-const detectCharacterEncoding = require('detect-character-encoding')
+const chardet = require('chardet')
 
 // Create a dataset by uploading tabular data
 router.post('', filesUtils.uploadFile(), asyncWrap(async(req, res) => {
@@ -185,7 +185,7 @@ router.post('', filesUtils.uploadFile(), asyncWrap(async(req, res) => {
   }
 
   const fileSample = await datasetFileSample(dataset)
-  dataset.file.encoding = detectCharacterEncoding(fileSample).encoding
+  dataset.file.encoding = chardet.detect(fileSample)
   await req.app.get('db').collection('datasets').insertOne(dataset)
   const storageRemaining = await datasetUtils.storageRemaining(req.app.get('db'), owner, req)
   if (storageRemaining !== -1) res.set(config.headers.storedBytesRemaining, storageRemaining)
@@ -205,7 +205,7 @@ router.post('/:datasetId', permissions.middleware('writeData', 'write'), filesUt
     mimetype: req.file.mimetype
   }
   const fileSample = await datasetFileSample(req.dataset)
-  req.dataset.file.encoding = detectCharacterEncoding(fileSample).encoding
+  req.dataset.file.encoding = chardet.detect(fileSample)
   req.dataset.updatedBy = {id: req.user.id, name: req.user.name}
   req.dataset.updatedAt = moment().toISOString()
   req.dataset.status = 'loaded'

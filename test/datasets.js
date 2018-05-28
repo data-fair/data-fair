@@ -64,6 +64,7 @@ test('Upload new dataset in user zone', async t => {
   t.is(res.status, 201)
   t.is(res.data.owner.type, 'user')
   t.is(res.data.owner.id, 'dmeadus0')
+  t.is(res.data.file.encoding, 'UTF-8')
 })
 
 test('Upload new dataset in organization zone', async t => {

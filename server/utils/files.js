@@ -55,6 +55,7 @@ const upload = multer({
   storage: storage,
   fileFilter: async function fileFilter(req, file, cb) {
     if (!req.body) return cb(createError(400, 'Missing body'))
+    if (!req.user) return cb(createError(401))
 
     let owner = {type: req.get('x-organizationId') ? 'organization' : 'user', id: req.get('x-organizationId') || req.user.id}
     if (req.dataset) owner = req.dataset.owner
