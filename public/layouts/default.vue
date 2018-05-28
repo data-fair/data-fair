@@ -6,7 +6,10 @@
           <img v-if="env.brand.logo" :src="env.brand.logo">
           <img v-else src="../assets/logo.svg">
         </a>
-        <img v-else src="../assets/logo.svg">
+        <template v-else>
+          <img v-if="env.brand.logo" :src="env.brand.logo">
+          <img v-else src="../assets/logo.svg">
+        </template>
       </div>
 
       <v-toolbar-title><h1 class="headline">{{ env.brand.title || 'DataFair' }}</h1><small>{{ env.brand.description }}</small></v-toolbar-title>
