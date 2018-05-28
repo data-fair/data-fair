@@ -1,5 +1,4 @@
 const fs = require('fs')
-const config = require('config')
 const { Nuxt, Builder } = require('nuxt')
 
 const nuxtConfig = require('../nuxt.config.js')
