@@ -11,13 +11,6 @@ module.exports = async () => {
   if (nuxtConfig.dev) new Builder(nuxt).build()
   else if (!alreadyBuilt && process.env.NODE_ENV !== 'test') await new Builder(nuxt).build()
   return (req, res, next) => {
-    // Signin from the directory url
-    if (req.query.id_token) {
-      res.cookie('id_token', req.query.id_token, { maxAge: 30000 })
-      delete req.query.id_token
-      return res.redirect(config.publicUrl + req.path)
-    }
-
     // re-apply the prefix that was removed by our reverse proxy in prod configs
     req.url = (nuxtConfig.router.base + req.url).replace('//', '/')
     nuxt.render(req, res, next)
