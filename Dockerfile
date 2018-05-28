@@ -1,12 +1,12 @@
-FROM koumoul/webapp-base:1.6.0
+FROM node:8.9.1-alpine
 MAINTAINER "contact@koumoul.com"
 
 ENV NODE_ENV production
 WORKDIR /webapp
-RUN apk add --update python make g++
+RUN apk update && apk add python make g++ git
 ADD package.json .
 ADD package-lock.json .
-RUN npm install --production && node-prune
+RUN npm install --production
 
 # Adding UI files
 ADD public public

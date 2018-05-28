@@ -18,6 +18,9 @@ services:
 install:
   - npm install
 
+before_script:
+  - npm run build
+
 script:
   - npm run lint
   - docker-compose pull
