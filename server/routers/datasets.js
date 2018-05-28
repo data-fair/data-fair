@@ -321,13 +321,11 @@ router.get('/:datasetId/full', permissions.middleware('downloadFullData', 'read'
     datasetUtils.readStream(req.dataset),
     extensions.extendStream({db: req.app.get('db'), esClient: req.app.get('es'), dataset: req.dataset}),
     new Transform({transform(chunk, encoding, callback) {
-      Object.keys(chunk).forEach(key => {
-        if (key.indexOf('_ext_') === 0 && chunk[key]._hash) delete chunk[key]._hash
-      })
-      callback(null, flatten(chunk))
+      const flatChunk = flatten(chunk)
+      callback(null, req.dataset.schema.map(field => flatChunk[field.key]))
     },
     objectMode: true}),
-    csvStringify({header: true}),
+    csvStringify({columns: req.dataset.schema.map(field => field.title || field['x-originalName'] || field.key), header: true}),
     res
   )
 }))

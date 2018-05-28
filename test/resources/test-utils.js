@@ -65,6 +65,7 @@ exports.prepare = (testFile) => {
     await axios.post(`http://localhost:8080/api/auth/passwordless`, {email}, {params: {redirect: `http://localhost:${port}?id_token=`}})
     const emails = (await axios.get('http://localhost:1080/email')).data
     const match = emails
+      .reverse()
       .find(e => e.subject.indexOf('localhost:' + port) !== -1 && e.to[0].address === email)
       .text.match(/id_token=(.*)\s/)
     if (!match) throw new Error('Failed to extract id_token from mail content')
