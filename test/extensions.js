@@ -142,6 +142,12 @@ other,unknown address
   dataset = (await ax.get('/api/v1/datasets/dataset')).data
   t.truthy(dataset.schema.find(field => field.key === extensionKey + '.lat'))
   t.falsy(dataset.schema.find(field => field.key === extensionKey + '.lon'))
+
+  // Download extended file
+  res = await ax.get(`/api/v1/datasets/dataset/full`)
+  const lines = res.data.split('\n')
+  t.is(lines[0], 'label,adr,_ext_geocoder-koumoul_postCoords.lat')
+  t.is(lines[1], 'koumoul,19 rue de la voie lactée saint avé,40')
 })
 
 test.serial('Manage errors during extension', async t => {

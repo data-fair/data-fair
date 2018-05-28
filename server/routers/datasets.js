@@ -319,8 +319,14 @@ router.get('/:datasetId/full', permissions.middleware('downloadFullData', 'read'
   res.setHeader('Content-type', 'text/csv')
   await pump(
     datasetUtils.readStream(req.dataset),
-    extensions.extendStream({db: req.app.get('db'), es: req.app.get('es'), dataset: req.dataset}),
-    new Transform({transform(chunk, encoding, callback) { callback(null, flatten(chunk)) }, objectMode: true}),
+    extensions.extendStream({db: req.app.get('db'), esClient: req.app.get('es'), dataset: req.dataset}),
+    new Transform({transform(chunk, encoding, callback) {
+      Object.keys(chunk).forEach(key => {
+        if (key.indexOf('_ext_') === 0 && chunk[key]._hash) delete chunk[key]._hash
+      })
+      callback(null, flatten(chunk))
+    },
+    objectMode: true}),
     csvStringify({header: true}),
     res
   )
