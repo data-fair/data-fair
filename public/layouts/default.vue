@@ -16,9 +16,9 @@
       <!-- larger screens: navigation in toolbar -->
       <v-toolbar-items class="hidden-md-and-down">
         <v-btn flat :to="{name: 'index'}" color="primary" exact>Accueil</v-btn>
-        <v-btn flat to="/datasets" color="primary" :class="$route.name.split('-').shift() === 'dataset' ? 'btn--active' : ''">Jeux de données</v-btn>
-        <v-btn flat to="/remote-services" color="primary" :class="$route.name.split('-').shift() === 'remote' ? 'btn--active' : ''">Services</v-btn>
-        <v-btn flat to="/applications" color="primary" :class="$route.name.split('-').shift() === 'application' ? 'btn--active' : ''">Applications</v-btn>
+        <v-btn flat to="/datasets" color="primary" :class="routePrefix === 'dataset' ? 'btn--active' : ''">Jeux de données</v-btn>
+        <v-btn flat to="/remote-services" color="primary" :class="routePrefix === 'remote' ? 'btn--active' : ''">Services</v-btn>
+        <v-btn flat to="/applications" color="primary" :class="routePrefix === 'application' ? 'btn--active' : ''">Applications</v-btn>
         <v-btn v-if="!user" @click="login" color="primary">
           Se connecter / S'inscrire
         </v-btn>
@@ -96,7 +96,10 @@ export default {
   },
   computed: {
     ...mapState('session', ['user']),
-    ...mapState(['env'])
+    ...mapState(['env']),
+    routePrefix() {
+      return this.$route && this.$route.name && this.$route.name.split('-')[0]
+    }
   },
   mounted() {
     eventBus.$on('notification', async notif => {
