@@ -22,23 +22,25 @@
         <v-btn flat to="/datasets" color="primary" :class="routePrefix === 'dataset' ? 'btn--active' : ''">Jeux de données</v-btn>
         <v-btn flat to="/remote-services" color="primary" :class="routePrefix === 'remote' ? 'btn--active' : ''">Services</v-btn>
         <v-btn flat to="/applications" color="primary" :class="routePrefix === 'application' ? 'btn--active' : ''">Applications</v-btn>
-        <v-btn v-if="!user" @click="login" color="primary">
-          Se connecter / S'inscrire
-        </v-btn>
-        <v-menu offset-y v-else>
-          <v-btn slot="activator" flat>{{ user.name }}</v-btn>
-          <v-list>
-            <v-list-tile :to="`/settings/user/${user.id}`">
-              <v-list-tile-title>Mes paramètres</v-list-tile-title>
-            </v-list-tile>
-            <v-list-tile :to="`/settings/organization/${orga.id}`" v-for="orga in user.organizations || []" :key="orga.id">
-              <v-list-tile-title>Paramètres {{ orga.name || orga.id }}</v-list-tile-title>
-            </v-list-tile>
-            <v-list-tile @click="logout">
-              <v-list-tile-title>Se déconnecter</v-list-tile-title>
-            </v-list-tile>
-          </v-list>
-        </v-menu>
+        <template v-if="session.initialized">
+          <v-btn v-if="!user" @click="login" color="primary">
+            Se connecter / S'inscrire
+          </v-btn>
+          <v-menu offset-y v-else>
+            <v-btn slot="activator" flat>{{ user.name }}</v-btn>
+            <v-list>
+              <v-list-tile :to="`/settings/user/${user.id}`">
+                <v-list-tile-title>Mes paramètres</v-list-tile-title>
+              </v-list-tile>
+              <v-list-tile :to="`/settings/organization/${orga.id}`" v-for="orga in user.organizations || []" :key="orga.id">
+                <v-list-tile-title>Paramètres {{ orga.name || orga.id }}</v-list-tile-title>
+              </v-list-tile>
+              <v-list-tile @click="logout">
+                <v-list-tile-title>Se déconnecter</v-list-tile-title>
+              </v-list-tile>
+            </v-list>
+          </v-menu>
+        </template>
       </v-toolbar-items>
 
       <!-- smaller screens: navigation in menu -->
@@ -98,8 +100,13 @@ export default {
     }
   },
   computed: {
-    ...mapState('session', ['user']),
     ...mapState(['env']),
+    session() {
+      return this.$store.state.session
+    },
+    user() {
+      return this.session.user
+    },
     routePrefix() {
       return this.$route && this.$route.name && this.$route.name.split('-')[0]
     }

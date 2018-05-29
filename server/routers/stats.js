@@ -5,7 +5,7 @@ const asyncWrap = require('../utils/async-wrap')
 const router = module.exports = express.Router()
 
 router.get('', asyncWrap(async(req, res) => {
-  if (!req.user) res.status(401).send()
+  if (!req.user) return res.status(401).send()
   const stats = {
     user: {},
     organizations: {}
