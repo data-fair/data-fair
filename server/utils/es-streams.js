@@ -7,6 +7,7 @@ class IndexStream extends Writable {
     this.options = options
     this.body = []
     this.bulkChars = 0
+    this.i = 0
   }
   _write(item, encoding, callback) {
     if (this.options.stats) this.options.stats.count += 1
@@ -21,6 +22,7 @@ class IndexStream extends Writable {
       this.body.push(item)
       this.bulkChars += JSON.stringify(item).length
     }
+    this.i += 1
 
     if (
       this.body.length / 2 >= config.elasticsearch.maxBulkLines ||
