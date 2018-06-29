@@ -290,12 +290,12 @@ class CalculatedExtension extends Transform {
     super({objectMode: true})
     this.options = options
   }
-  _transform(item, encoding, callback) {
+  async _transform(item, encoding, callback) {
     const doc = {}
     // "hidden" fields for geo indexing
     try {
       if (this.options.geometry) {
-        Object.assign(doc, geoUtils.geometry2fields(this.options.dataset.schema, item.doc))
+        Object.assign(doc, await geoUtils.geometry2fields(this.options.dataset.schema, item.doc))
       } else if (this.options.geopoint) {
         Object.assign(doc, geoUtils.latlon2fields(this.options.dataset.schema, item.doc))
       }

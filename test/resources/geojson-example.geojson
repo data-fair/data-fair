@@ -31,6 +31,22 @@
                "prop1": "value2",
                "desc": "blabla"
            }
+       },
+       {
+           "type": "Feature",
+           "id": "id2",
+           "geometry": {
+               "type": "Polygon",
+               "coordinates": [
+                 [
+                   [-12.034835, 8.901183], [-12.060413, 8.899826], [-12.03638, 8.873199], [-12.059383, 8.871418], [-12.034835, 8.901183]
+                 ]
+               ]
+           },
+           "properties": {
+               "prop1": "value3",
+               "desc": "This is a kinked polygon (meaning it has self intersections)"
+           }
        }
    ]
 }
