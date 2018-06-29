@@ -1,7 +1,7 @@
 FROM koumoul/webapp-base:1.6.0
 MAINTAINER "contact@koumoul.com"
 
-RUN apk add --update python make g++ cmake linux-headers gmp
+RUN apk add --update python make g++ cmake linux-headers gmp gmp-dev mpfr-dev boost-dev
 
 # Install the prepair command line tool
 RUN mkdir /prepair
@@ -25,15 +25,16 @@ RUN curl -L https://github.com/CGAL/cgal/releases/download/releases%2FCGAL-4.12/
     make install && \
     cd .. && \
     rm -rf CGAL-4.12
-WORKDIR /tmp/prepair
+WORKDIR /tmp
 RUN curl -L https://github.com/tudelft3d/prepair/archive/v0.7.1.tar.gz -o prepair.tar.gz && \
     tar -xzf prepair.tar.gz && \
     rm prepair.tar.gz && \
+    cd prepair-0.7.1 && \
     cmake . && \
     make && \
     mv prepair /prepair/prepair && \
     cd .. && \
-    rm -rf prepair
+    rm -rf prepair-0.7.1
 
 ENV NODE_ENV production
 WORKDIR /webapp
