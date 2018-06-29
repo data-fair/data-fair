@@ -78,7 +78,7 @@ test.serial('Process newly uploaded CSV dataset', async t => {
   }
 })
 
-test.only('Process newly uploaded geojson dataset', async t => {
+test.serial('Process newly uploaded geojson dataset', async t => {
   // Send dataset
   const datasetFd = fs.readFileSync('./test/resources/geojson-example.geojson')
   const form = new FormData()
