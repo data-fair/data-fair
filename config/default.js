@@ -14,7 +14,9 @@ module.exports = {
   },
   elasticsearch: {
     host: 'localhost:9200',
-    defaultAnalyzer: 'french'
+    defaultAnalyzer: 'french',
+    maxBulkLines: 10000,
+    maxBulkChars: 1000000
   },
   indicesPrefix: 'dataset-' + (process.env.NODE_ENV || 'development'),
   info: {

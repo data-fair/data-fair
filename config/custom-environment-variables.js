@@ -5,7 +5,16 @@ module.exports = {
   mongoUrl: 'MONGO_URL',
   analytics: 'ANALYTICS',
   elasticsearch: {
-    host: 'ES_HOST'
+    host: 'ES_HOST',
+    defaultAnalyzer: 'ES_DEFAULT_ANALYZER',
+    maxBulkLines: {
+      __name: 'ES_MAX_BULK_LINES',
+      __format: 'json'
+    },
+    maxBulkChars: {
+      __name: 'ES_MAX_BULK_CHARS',
+      __format: 'json'
+    }
   },
   defaultRemoteKey: 'DEFAULT_REMOTE_KEY',
   secretKeys: {
