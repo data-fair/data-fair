@@ -1,22 +1,17 @@
 FROM koumoul/webapp-base:1.6.0
 MAINTAINER "contact@koumoul.com"
 
-RUN apk add --update python make g++ cmake linux-headers gmp gmp-dev mpfr-dev boost-dev
+RUN apk add --no-cache --update python make g++
 
 # Install the prepair command line tool
 RUN mkdir /prepair
 WORKDIR /tmp
-RUN curl -L http://download.osgeo.org/gdal/2.3.1/gdal-2.3.1.tar.gz -o gdal.tar.gz && \
-    tar -xzf gdal.tar.gz && \
-    rm gdal.tar.gz && \
-    cd gdal-2.3.1 && \
-    ./configure && \
-    make && \
-    make install && \
-    cd .. && \
-    rm -rf gdal-2.3.1
-WORKDIR /tmp
-RUN curl -L https://github.com/CGAL/cgal/releases/download/releases%2FCGAL-4.12/CGAL-4.12.tar.xz -o cgal.tar.xz && \
+# cf https://github.com/appropriate/docker-postgis/pull/97/commits/9fbb21cf5866be05459a6a7794c329b40bdb1b37
+RUN apk add --no-cache --virtual .build-deps cmake linux-headers boost-dev gmp gmp-dev mpfr-dev && \
+    apk add --no-cache --repository http://dl-cdn.alpinelinux.org/alpine/edge/main libressl2.7-libcrypto && \
+    apk add --no-cache --virtual .gdal-build-deps --repository http://dl-cdn.alpinelinux.org/alpine/edge/testing gdal-dev && \
+    apk add --no-cache --repository http://dl-cdn.alpinelinux.org/alpine/edge/testing gdal && \
+    curl -L https://github.com/CGAL/cgal/releases/download/releases%2FCGAL-4.12/CGAL-4.12.tar.xz -o cgal.tar.xz && \
     tar -xf cgal.tar.xz && \
     rm cgal.tar.xz && \
     cd CGAL-4.12 && \
@@ -24,9 +19,8 @@ RUN curl -L https://github.com/CGAL/cgal/releases/download/releases%2FCGAL-4.12/
     make && \
     make install && \
     cd .. && \
-    rm -rf CGAL-4.12
-WORKDIR /tmp
-RUN curl -L https://github.com/tudelft3d/prepair/archive/v0.7.1.tar.gz -o prepair.tar.gz && \
+    rm -rf CGAL-4.12 && \
+    curl -L https://github.com/tudelft3d/prepair/archive/v0.7.1.tar.gz -o prepair.tar.gz && \
     tar -xzf prepair.tar.gz && \
     rm prepair.tar.gz && \
     cd prepair-0.7.1 && \
@@ -34,7 +28,8 @@ RUN curl -L https://github.com/tudelft3d/prepair/archive/v0.7.1.tar.gz -o prepai
     make && \
     mv prepair /prepair/prepair && \
     cd .. && \
-    rm -rf prepair-0.7.1
+    rm -rf prepair-0.7.1 && \
+    apk del .build-deps .gdal-build-deps
 
 ENV NODE_ENV production
 WORKDIR /webapp
