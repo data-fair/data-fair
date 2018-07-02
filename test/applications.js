@@ -55,7 +55,7 @@ test.serial('Manage the custom configuration part of the object', async t => {
   const acId = res.data.id
   res = await ax.put('/api/v1/applications/' + acId + '/config', {
     datasets: [{'href': config.publicUrl + '/api/v1/datasets/111'}],
-    remoteServices: [{'href': config.publicUrl + '/api/v1/remote-services/aaa'}]
+    remoteServices: [{'href': config.publicUrl + '/api/v1/remote-services/aaa/proxy'}]
   })
   t.is(res.status, 200)
   res = await ax.get('/api/v1/applications/' + acId + '/config')
