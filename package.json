@@ -98,6 +98,7 @@
     "stream-combiner": "^0.2.2",
     "swagger2openapi": "^2.11.7",
     "terraformer-wkt-parser": "^1.2.0",
+    "tmp-promise": "^1.0.4",
     "turf": "^3.0.14",
     "vt-pbf": "2.1.4",
     "vue-match-heights": "^0.1.0",
