@@ -1,4 +1,4 @@
-const dbUtils = require('../server/utils/db')
+const dbUtils = require('../../server/utils/db')
 
 // One shot script to update permissions by adding classes from operationIds
 async function main() {

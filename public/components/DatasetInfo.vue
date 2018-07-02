@@ -35,6 +35,15 @@
               <v-list-tile-avatar><v-icon>view_headline</v-icon></v-list-tile-avatar>
               <span>{{ dataset.count }} enregistrements</span>
             </v-list-tile>
+            <v-list-tile>
+              <v-list-tile-avatar v-if="nbApplications === null">
+                <v-progress-circular :size="20" :width="3" small indeterminate color="primary"/>
+              </v-list-tile-avatar>
+              <template v-else>
+                <v-list-tile-avatar ><v-icon>touch_app</v-icon></v-list-tile-avatar>
+                <span>{{ nbApplications }} application{{ nbApplications > 1 ? 's' : '' }}</span>
+              </template>
+            </v-list-tile>
           </v-list>
         </v-card>
       </v-flex>
@@ -64,7 +73,7 @@ export default {
     return { events }
   },
   computed: {
-    ...mapState('dataset', ['dataset', 'journal']),
+    ...mapState('dataset', ['dataset', 'journal', 'nbApplications']),
     licenses() {
       return this.$store.getters.ownerLicenses(this.dataset.owner)
     }

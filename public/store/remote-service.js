@@ -7,7 +7,8 @@ export default {
   state: {
     remoteServiceId: null,
     remoteService: null,
-    api: null
+    api: null,
+    nbApplications: null
   },
   getters: {
     resourceUrl: (state, getters, rootState) => state.remoteServiceId ? rootState.env.publicUrl + '/api/v1/remote-services/' + state.remoteServiceId : null,
@@ -22,12 +23,15 @@ export default {
     }
   },
   actions: {
-    async fetchInfo({commit, dispatch, getters}) {
+    async fetchInfo({commit, dispatch, getters, rootState}) {
       try {
         const remoteService = await this.$axios.$get(getters.resourceUrl)
         remoteService.parameters = remoteService.parameters || []
+        commit('setAny', {remoteService})
         const api = await this.$axios.$get(getters.resourceUrl + '/api-docs.json')
-        commit('setAny', {remoteService, api})
+        commit('setAny', {api})
+        const apps = await this.$axios.$get(rootState.env.publicUrl + '/api/v1/applications', {params: {service: remoteService.id, size: 0}})
+        commit('setAny', {nbApplications: apps.count})
       } catch (error) {
         eventBus.$emit('notification', {error, msg: `Erreur pendant la récupération de la définition de l'API:`})
       }

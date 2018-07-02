@@ -20,6 +20,15 @@
               <v-list-tile-avatar><v-icon>description</v-icon></v-list-tile-avatar>
               <span><a :href="remoteService.apiDoc.info.termsOfService">Terms of Service</a></span>
             </v-list-tile>
+            <v-list-tile>
+              <v-list-tile-avatar v-if="nbApplications === null">
+                <v-progress-circular :size="20" :width="3" small indeterminate color="primary"/>
+              </v-list-tile-avatar>
+              <template v-else>
+                <v-list-tile-avatar ><v-icon>touch_app</v-icon></v-list-tile-avatar>
+                <span>{{ nbApplications }} application{{ nbApplications > 1 ? 's' : '' }}</span>
+              </template>
+            </v-list-tile>
           </v-list>
         </v-card>
       </v-flex>
@@ -36,7 +45,7 @@ const {mapState, mapActions} = require('vuex')
 
 export default {
   computed: {
-    ...mapState('remoteService', ['remoteService'])
+    ...mapState('remoteService', ['remoteService', 'nbApplications'])
   },
   methods: {
     ...mapActions('remoteService', ['patch'])
