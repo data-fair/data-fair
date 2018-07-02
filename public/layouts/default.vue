@@ -163,7 +163,7 @@ body .application {
     }
   }
 
-  .notification .snack__content {
+  .notification .v-snack__content {
     height: auto;
     p {
       margin-bottom: 4px;

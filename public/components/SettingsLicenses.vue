@@ -1,5 +1,7 @@
 <template>
   <div>
+    <p>Définissez des licenses pour clarifier les utilisations possibles des jeux de données que vous diffusez.</p>
+
     <v-btn color="primary" @click="showDialog = true" class="mb-3">Ajouter une license</v-btn>
 
     <v-list two-line v-if="settings.licenses.length">

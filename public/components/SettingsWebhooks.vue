@@ -1,5 +1,9 @@
 <template>
   <div>
+    <p>
+      Les <i>webhooks</i> sont un moyen de lier vos propres services à des événements internes à ce service de diffusion de données (créations, mises à jour, etc.).
+      Il s'agit d'une configuration technique pour personne avertie.
+    </p>
     <v-btn color="primary" @click="showDialog = true" class="mb-3">Ajouter un webhook</v-btn>
     <v-container grid-list-md>
       <v-layout row wrap>
