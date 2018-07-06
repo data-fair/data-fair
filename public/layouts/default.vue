@@ -150,6 +150,9 @@ body .application {
 
   .main-toolbar {
     background-color: white;
+    .v-toolbar__content {
+      padding-left: 0;
+    }
   }
 
   .actions-buttons {

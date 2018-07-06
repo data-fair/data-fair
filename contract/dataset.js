@@ -165,6 +165,34 @@ module.exports = {
           }
         }
       }
+    },
+    publications: {
+      type: 'array',
+      description: 'References to all the catalogs the dataset metadata is published too',
+      items: {
+        type: 'object',
+        required: ['catalogUrl'],
+        additionalProperties: false,
+        properties: {
+          catalogUrl: {
+            type: 'string'
+          },
+          catalogType: {
+            type: 'string',
+            enum: ['udata']
+          },
+          udata: {
+            type: 'object',
+            additionalProperties: false,
+            properties: {
+              dataset: {
+                type: 'object'
+              }
+            }
+          }
+        }
+      }
     }
+
   }
 }

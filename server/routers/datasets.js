@@ -8,6 +8,7 @@ const pump = util.promisify(require('pump'))
 const csvStringify = require('csv-stringify')
 const flatten = require('flat')
 const mongodb = require('mongodb')
+const shortid = require('shortid')
 const journals = require('../utils/journals')
 const esUtils = require('../utils/es')
 const filesUtils = require('../utils/files')
@@ -21,6 +22,7 @@ const extensions = require('../utils/extensions')
 const geo = require('../utils/geo')
 const tiles = require('../utils/tiles')
 const cache = require('../utils/cache')
+const udata = require('../utils/udata')
 const config = require('config')
 
 const datasetSchema = require('../../contract/dataset')
@@ -36,7 +38,7 @@ const operationsClasses = {
   list: ['list'],
   read: ['readDescription', 'readLines', 'getGeoAgg', 'getValuesAgg', 'getMetricAgg', 'downloadOriginalData', 'downloadFullData', 'readJournal', 'readApiDoc'],
   write: ['writeDescription', 'writeData'],
-  admin: ['delete', 'getPermissions', 'setPermissions']
+  admin: ['delete', 'getPermissions', 'setPermissions', 'writePublication', 'deletePublication']
 }
 
 // Get the list of datasets
@@ -124,6 +126,32 @@ router.patch('/:datasetId', permissions.middleware('writeDescription', 'write'),
 
   await req.app.get('db').collection('datasets').updateOne({id: req.params.datasetId}, {'$set': req.body})
   res.status(200).json(req.body)
+}))
+
+// Publish a dataset in a catalog
+router.post('/:datasetId/publications', permissions.middleware('writePublication', 'admin'), asyncWrap(async(req, res) => {
+  const publication = req.body
+  const settings = await req.app.get('db').collection('settings').findOne({
+    type: req.dataset.owner.type,
+    id: req.dataset.owner.id
+  })
+  const catalog = (settings.catalogs || []).find(c => c.url === publication.catalogUrl)
+  if (!catalog) return res.status(404).send(`Le catalogue ${publication.catalogUrl} n'est pas présent dans les paramètres du propriétaire de ce jeu de données.`)
+  if (catalog.type === 'udata') {
+    await udata.publishDataset(req.dataset, publication, catalog)
+  } else {
+    res.status(400).send('Type de catalogue non supporté.')
+  }
+  publication.id = shortid.generate()
+  await req.app.get('db').collection('datasets').updateOne({id: req.params.datasetId}, {'$push': {publications: publication}})
+  res.status(201).send(publication)
+}))
+
+// Remove a publication
+router.delete('/:datasetId/publications/:publicationId', permissions.middleware('deletePublication', 'admin'), asyncWrap(async(req, res) => {
+  await req.app.get('db').collection('datasets')
+    .updateOne({id: req.params.datasetId}, {'$pull': {publications: {id: req.params.publicationId}}})
+  res.status(204).send()
 }))
 
 const unlink = util.promisify(fs.unlink)

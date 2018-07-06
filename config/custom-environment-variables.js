@@ -19,5 +19,9 @@ module.exports = {
   },
   workers: {
     concurrency: 'WORKERS_CONCURRENCY'
+  },
+  defaultCatalog: {
+    url: 'DEFAULT_CATALOG_URL',
+    type: 'DEFAULT_CATALOG_TYPE'
   }
 }

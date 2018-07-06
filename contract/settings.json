@@ -64,13 +64,9 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["title", "href", "apiKey"],
+        "required": ["url", "apiKey"],
         "properties": {
-          "title": {
-            "type": "string",
-            "description": "Short title for the license"
-          },
-          "href":{
+          "url":{
             "type": "string",
             "description": "The root URL of the catalog"
           },

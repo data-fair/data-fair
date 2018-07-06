@@ -10,7 +10,8 @@ export default {
     dataset: null,
     api: null,
     journal: [],
-    remoteServices: []
+    remoteServices: [],
+    catalogs: null
   },
   getters: {
     resourceUrl: (state, getters, rootState) => state.datasetId ? rootState.env.publicUrl + '/api/v1/datasets/' + state.datasetId : null,
@@ -27,7 +28,16 @@ export default {
       })
       return res
     },
-    can: (state) => (operation) => (state.dataset && state.dataset.userPermissions.includes(operation)) || false
+    can: (state) => (operation) => (state.dataset && state.dataset.userPermissions.includes(operation)) || false,
+    isOwner: (state, getters, rootState) => {
+      if (!rootState.session || !rootState.session.user) return false
+      if (state.dataset.owner.type === 'user' && state.dataset.owner.id === rootState.session.user.id) return true
+      if (state.dataset.owner.type === 'organization') {
+        const userOrga = rootState.session.user.organizations.find(o => o.id === state.dataset.owner.id)
+        return userOrga && userOrga.role === 'admin'
+      }
+      return false
+    }
   },
   mutations: {
     setAny(state, params) {
@@ -43,6 +53,12 @@ export default {
     },
     addRemoteService(state, service) {
       state.remoteServices.push(service)
+    },
+    writePublication(state, publication) {
+      state.dataset.publications.push(publication)
+    },
+    deletePublication(state, id) {
+      state.dataset.publications = state.dataset.publications.filter(p => p.id !== id)
     }
   },
   actions: {
@@ -62,6 +78,8 @@ export default {
       })
       Vue.set(dataset, 'extensions', extensions)
       Vue.set(dataset, 'schema', dataset.schema || [])
+      Vue.set(dataset, 'publications', dataset.publications || [])
+
       commit('setAny', {dataset})
       const api = await this.$axios.$get(getters.resourceUrl + '/api-docs.json')
       commit('setAny', {api})
@@ -131,6 +149,22 @@ export default {
         remoteServices = data.results.filter(s => s.owner.type === state.dataset.owner.type && s.owner.id === state.dataset.owner.id)
       }
       commit('setAny', {remoteServices})
+    },
+    async fetchCatalogs({getters, commit, state}) {
+      const catalogs = await this.$axios.$get(`api/v1/settings/${state.dataset.owner.type}/${state.dataset.owner.id}/catalogs`)
+      commit('setAny', {catalogs})
+    },
+    async writePublication({commit, state, getters}, publication) {
+      try {
+        const createdPublication = await this.$axios.$post(`${getters.resourceUrl}/publications`, publication)
+        commit('writePublication', createdPublication)
+      } catch (error) {
+        eventBus.$emit('notification', {error, msg: 'Erreur pendant la création d\'une publication'})
+      }
+    },
+    async deletePublication({commit, state, getters}, id) {
+      await this.$axios.$delete(`${getters.resourceUrl}/publications/${id}`)
+      commit('deletePublication', id)
     }
   }
 }

@@ -7,8 +7,7 @@
     <v-list two-line v-if="settings.catalogs.length">
       <v-list-tile v-for="(catalog, rowIndex) in settings.catalogs" :key="rowIndex">
         <v-list-tile-content>
-          <v-list-tile-title>{{ catalog.title }}</v-list-tile-title>
-          <v-list-tile-sub-title>{{ catalog.href }}</v-list-tile-sub-title>
+          <v-list-tile-title>{{ catalog.url }}</v-list-tile-title>
         </v-list-tile-content>
         <v-list-tile-action>
           <v-btn color="warning" icon flat title="Supprimer ce catalogue" @click="removeCatalog(rowIndex)">
@@ -25,8 +24,7 @@
         </v-card-title>
         <v-card-text>
           <v-form v-model="newCatalogValid">
-            <v-text-field label="Titre" v-model="newCatalog.title" required :rules="[() => !!newCatalog.title]"/>
-            <v-text-field label="URL" v-model="newCatalog.href" required :rules="[() => !!newCatalog.href]"/>
+            <v-text-field label="URL" v-model="newCatalog.url" required :rules="[() => !!newCatalog.url]"/>
             <v-text-field label="Clé d'API" :hint="apiKeyHint" persistent-hint v-model="newCatalog.apiKey" required :rules="[() => !!newCatalog.apiKey]"/>
             <v-text-field label="Identifiant d'organisation" :hint="orgHint" persistent-hint v-model="newCatalog.organizationId" />
           </v-form>
@@ -43,25 +41,30 @@
 </template>
 
 <script>
-
-const emptyOrg = {id: null, name: 'Compte personnel'}
+import {mapState} from 'vuex'
 
 export default {
   name: 'Catalogs',
   props: ['settings'],
   data: () => ({
     newCatalog: {
-      title: 'data.gouv.fr',
-      href: 'https://www.data.gouv.fr',
+      url: null,
       apiKey: null,
-      type: 'udata',
+      type: null,
       organizationId: ''
     },
-    showDialog: true,
+    showDialog: false,
     apiKeyHint: 'Cette clé est à configurer dans votre profil sur le catalogue, par exemple sur <a target="_blank" href="https://www.data.gouv.fr/fr/admin/me/#apikey">data.gouv.fr</a>.',
     newCatalogValid: true,
     orgHint: `Laissez vide pour travailler sur un compte personnel. Sinon utilisez l'identifiant d'une organisation dans laquelle vous avez le droit d'écriture.`
   }),
+  computed: {
+    ...mapState(['env'])
+  },
+  created() {
+    this.newCatalog.url = this.env.defaultCatalog.url
+    this.newCatalog.type = this.env.defaultCatalog.type
+  },
   methods: {
     addCatalog() {
       const catalog = Object.assign({}, this.newCatalog)
