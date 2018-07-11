@@ -11,7 +11,8 @@
     "dev": "NODE_ENV=development nodemon server",
     "build": "nuxt build",
     "start": "node server",
-    "analyze": "nuxt build --analyze"
+    "analyze": "nuxt build --analyze",
+    "upgrade": "node upgrade"
   },
   "author": "",
   "license": "AGPL-3.0-only",
