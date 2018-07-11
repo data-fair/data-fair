@@ -12,6 +12,7 @@ const wsUtils = require('./utils/ws.js')
 const locksUtils = require('./utils/locks.js')
 const cache = require('./utils/cache')
 const workers = require('./workers')
+const upgrade = require('../upgrade')
 const session = require('simple-directory-client-express')({directoryUrl: config.directoryUrl, publicUrl: config.publicUrl})
 
 const app = express()
@@ -45,6 +46,7 @@ const wss = new WebSocket.Server({server})
 
 // Run app and return it in a promise
 exports.run = async () => {
+  await upgrade()
   app.use(session.decode)
   app.use(session.loginCallback)
   const nuxt = await require('./nuxt')()

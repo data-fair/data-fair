@@ -1,6 +1,6 @@
 {
   "name": "data-fair",
-  "version": "0.2.0",
+  "version": "0.18.0",
   "description": "",
   "main": "server",
   "scripts": {
@@ -52,6 +52,7 @@
     "csv-parser": "^1.12.0",
     "csv-sniffer": "^0.1.1",
     "csv-stringify": "^2.0.2",
+    "debug": "^3.1.0",
     "elasticsearch": "^13.3.1",
     "event-to-promise": "^0.8.0",
     "express": "^4.16.2",
@@ -88,6 +89,7 @@
     "reconnecting-websocket": "^3.2.2",
     "request": "^2.83.0",
     "request-promise-native": "^1.0.5",
+    "semver": "^5.5.0",
     "shortid": "^2.2.8",
     "shuffle-array": "^1.0.1",
     "simple-directory-client-express": "^0.8.1",
