@@ -71,8 +71,16 @@
         <v-card-title primary-title>
           Suppression du jeu de données
         </v-card-title>
+        <v-card-text v-if="nbApplications > 0">
+          <v-alert :value="nbApplications === 1" type="error" outline>
+            Attention ! Ce jeu de données est utilisé par une application. Si vous le supprimez cette application ne sera plus fonctionnelle.
+          </v-alert>
+          <v-alert :value="nbApplications > 1" type="error" outline>
+            Attention ! Ce jeu de données est utilisé par {{ nbApplications }} applications. Si vous le supprimez ces applications ne seront plus fonctionnelles.
+          </v-alert>
+        </v-card-text>
         <v-card-text>
-          Voulez vous vraiment supprimer le jeux de données "{{ dataset.title }}" ? La suppression est définitive et les données ne pourront pas être récupérées.
+          Voulez vous vraiment supprimer le jeu de données "{{ dataset.title }}" ? La suppression est définitive et les données ne pourront pas être récupérées.
         </v-card-text>
         <v-card-actions>
           <v-spacer/>
@@ -92,7 +100,7 @@ export default {
     showDeleteDialog: false
   }),
   computed: {
-    ...mapState('dataset', ['dataset', 'api']),
+    ...mapState('dataset', ['dataset', 'api', 'nbApplications']),
     ...mapGetters('dataset', ['resourceUrl', 'can']),
     downloadLink() {
       if (this.dataset) return this.resourceUrl + '/raw'
@@ -101,7 +109,7 @@ export default {
       if (this.dataset) return this.resourceUrl + '/full'
     }
   },
-  mounted() {
+  created() {
     this.setId(this.$route.params.id)
     this.fetchVocabulary()
   },

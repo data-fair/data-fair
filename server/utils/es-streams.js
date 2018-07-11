@@ -1,10 +1,12 @@
 const Writable = require('stream').Writable
+const config = require('config')
 
 class IndexStream extends Writable {
   constructor(options) {
     super({objectMode: true})
     this.options = options
     this.body = []
+    this.bulkChars = 0
     this.i = 0
   }
   _write(item, encoding, callback) {
@@ -14,13 +16,18 @@ class IndexStream extends Writable {
       if (Object.keys(item.doc).length === 0) return callback()
       this.body.push({update: {_index: this.options.indexName, _type: 'line', _id: item.id, retry_on_conflict: 3}})
       this.body.push({doc: item.doc})
+      this.bulkChars += JSON.stringify(item.doc).length
     } else {
       this.body.push({index: {_index: this.options.indexName, _type: 'line'}})
       this.body.push(item)
+      this.bulkChars += JSON.stringify(item).length
     }
-
     this.i += 1
-    if (this.i % 10000 === 0) {
+
+    if (
+      this.body.length / 2 >= config.elasticsearch.maxBulkLines ||
+      this.bulkChars >= config.elasticsearch.maxBulkChars
+    ) {
       this._sendBulk(callback)
     } else {
       callback()
@@ -47,6 +54,7 @@ class IndexStream extends Writable {
       callback()
     })
     this.body = []
+    this.bulkChars = 0
   }
 }
 

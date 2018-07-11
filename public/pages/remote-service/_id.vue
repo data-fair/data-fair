@@ -58,6 +58,14 @@
         <v-card-title primary-title>
           Suppression de la configuration du service
         </v-card-title>
+        <v-card-text v-if="nbApplications > 0">
+          <v-alert :value="nbApplications === 1" type="error" outline>
+            Attention ! Ce service est utilisé par une application. Si vous le supprimez cette application ne sera plus fonctionnelle.
+          </v-alert>
+          <v-alert :value="nbApplications > 1" type="error" outline>
+            Attention ! Ce service est utilisé par {{ nbApplications }} applications. Si vous le supprimez ces applications ne seront plus fonctionnelles.
+          </v-alert>
+        </v-card-text>
         <v-card-text>
           Voulez vous vraiment supprimer la configuration du service "{{ remoteService.title }}" ? La suppression est définitive et le paramétrage ne pourra pas être récupéré.
         </v-card-text>
@@ -79,7 +87,7 @@ export default {
     showDeleteDialog: false
   }),
   computed: {
-    ...mapState('remoteService', ['remoteService', 'api']),
+    ...mapState('remoteService', ['remoteService', 'api', 'nbApplications']),
     ...mapGetters('remoteService', ['resourceUrl', 'can'])
   },
   mounted() {

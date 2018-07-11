@@ -1,6 +1,7 @@
 const express = require('express')
 const slug = require('slug')
 const moment = require('moment')
+const config = require('config')
 const applicationAPIDocs = require('../../contract/application-api-docs')
 
 const ajv = require('ajv')()
@@ -32,9 +33,23 @@ router.get('', asyncWrap(async(req, res) => {
       count: 0
     })
   }
+
   const applications = req.app.get('db').collection('applications')
+
+  if (req.query.dataset &&
+      !req.query.dataset.startsWith('http://') &&
+      !req.query.dataset.startsWith('https://')) {
+    req.query.dataset = config.publicUrl + '/api/v1/datasets/' + req.query.dataset
+  }
+  if (req.query.service &&
+      !req.query.service.startsWith('http://') &&
+      !req.query.service.startsWith('https://')) {
+    req.query.service = config.publicUrl + '/api/v1/remote-services/' + req.query.service + '/proxy'
+  }
   const query = findUtils.query(req.query, {
-    'ids': 'id'
+    'ids': 'id',
+    'dataset': 'configuration.datasets.href',
+    'service': 'configuration.remoteServices.href'
   })
   const sort = findUtils.sort(req.query.sort)
   const [skip, size] = findUtils.pagination(req.query)
@@ -148,12 +163,12 @@ router.delete('/:applicationId', permissions.middleware('delete', 'admin'), asyn
   res.sendStatus(204)
 }))
 
-// retrieve a application by its id
+// Get only the configuration part of the application
 router.get('/:applicationId/config', permissions.middleware('readConfig', 'read'), (req, res, next) => {
   res.status(200).send(req.application.configuration || {})
 })
 
-// retrieve a application by its id
+// Update only the configuration part of the application
 router.put('/:applicationId/config', permissions.middleware('writeConfig', 'write'), asyncWrap(async(req, res) => {
   await req.app.get('db').collection('applications').updateOne(
     {id: req.params.applicationId},

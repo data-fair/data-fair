@@ -28,6 +28,7 @@
 
 <script>
 import {mapState, mapGetters} from 'vuex'
+import debounce from 'lodash.debounce'
 import eventBus from '../../../event-bus'
 
 let mapboxgl = null
@@ -54,6 +55,16 @@ const dataLayers = [{
     'fill-outline-color': 'rgba(255, 152, 0, 0.5)'
   },
   'filter': ['==', '$type', 'Polygon']
+}, {
+  'id': 'results_hover',
+  'source': 'data-fair',
+  'source-layer': 'results',
+  'type': 'line',
+  'paint': {
+    'line-color': '#E91E63',
+    'line-width': {'stops': [[4, 1.5], [24, 9]]}
+  },
+  'filter': ['==', '_id', '']
 }, {
   'id': 'results_line',
   'source': 'data-fair',
@@ -113,11 +124,14 @@ export default {
     // Create a popup, but don't add it to the map yet.
     const popup = new mapboxgl.Popup({closeButton: false, closeOnClick: false})
 
-    const enterCallback = (e) => {
+    const moveCallback = (e) => {
+      console.log(e.features[0].properties._id)
+      this.map.setFilter('results_hover', ['==', '_id', e.features[0].properties._id])
       if (!this.select.length) return
       // Change the cursor style as a UI indicator.
       this.map.getCanvas().style.cursor = 'pointer'
       const htmlList = Object.keys(e.features[0].properties || {})
+        .filter(key => key !== '_id')
         .map(key => {
           const field = this.dataset.schema.find(f => f.key === key)
           return `<li>${field.title || field['x-originalName']}: ${e.features[0].properties[key]}</li>`
@@ -138,7 +152,7 @@ export default {
     }
 
     dataLayers.forEach(layer => {
-      this.map.on('mouseenter', layer.id, enterCallback)
+      this.map.on('mousemove', layer.id, debounce(moveCallback, 30))
       this.map.on('mouseleave', layer.id, leaveCallback)
     })
 

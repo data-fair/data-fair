@@ -37,7 +37,49 @@ module.exports = {
     },
     owner,
     'configuration': {
-      'type': 'object'
+      type: 'object',
+      description: 'A free format configuration object used by applications. A minimal common structure is used to ensure proper linking between applications and datasets and remote services',
+      additionalProperties: true,
+      properties: {
+        datasets: {
+          type: 'array',
+          items: {
+            type: 'object',
+            required: ['href'],
+            properties: {
+              href: {
+                type: 'string'
+              },
+              key: {
+                type: 'string',
+                description: 'Not the id of the dataset, but a key inside this configuration object to define the role of the dataset in this context.'
+              },
+              name: {
+                type: 'string'
+              }
+            }
+          }
+        },
+        remoteServices: {
+          type: 'array',
+          items: {
+            type: 'object',
+            required: ['href'],
+            properties: {
+              href: {
+                type: 'string'
+              },
+              key: {
+                type: 'string',
+                description: 'Not the id of the dataset, but a key inside this configuration object to define the role of the dataset in this context.'
+              },
+              name: {
+                type: 'string'
+              }
+            }
+          }
+        }
+      }
     },
     'url': {
       'type': 'string',

@@ -11,7 +11,8 @@ export default {
     api: null,
     journal: [],
     remoteServices: [],
-    catalogs: null
+    catalogs: null,
+    nbApplications: null
   },
   getters: {
     resourceUrl: (state, getters, rootState) => state.datasetId ? rootState.env.publicUrl + '/api/v1/datasets/' + state.datasetId : null,
@@ -62,7 +63,7 @@ export default {
     }
   },
   actions: {
-    async fetchInfo({commit, getters}) {
+    async fetchInfo({commit, getters, rootState}) {
       let dataset
       try {
         dataset = await this.$axios.$get(getters.resourceUrl)
@@ -81,6 +82,8 @@ export default {
       Vue.set(dataset, 'publications', dataset.publications || [])
 
       commit('setAny', {dataset})
+      const apps = await this.$axios.$get(rootState.env.publicUrl + '/api/v1/applications', {params: {dataset: dataset.id, size: 0}})
+      commit('setAny', {nbApplications: apps.count})
       const api = await this.$axios.$get(getters.resourceUrl + '/api-docs.json')
       commit('setAny', {api})
       const journal = await this.$axios.$get(getters.resourceUrl + '/journal')

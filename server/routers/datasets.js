@@ -56,7 +56,7 @@ router.get('', asyncWrap(async(req, res) => {
     'ids': 'id'
   })
   if (req.query.bbox === 'true') {
-    query.bbox = {$exists: true}
+    query.bbox = {$ne: null}
   }
   const sort = findUtils.sort(req.query.sort)
   const [skip, size] = findUtils.pagination(req.query)

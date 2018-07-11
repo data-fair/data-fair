@@ -1,7 +1,15 @@
+const util = require('util')
+const fs = require('fs')
 const turf = require('turf')
 const rewind = require('@turf/rewind').default
 const cleanCoords = require('@turf/clean-coords').default
+const kinks = require('@turf/kinks').default
+const unkink = require('@turf/unkink-polygon').default
 const flatten = require('flat')
+const exec = require('child-process-promise').exec
+const wktParser = require('terraformer-wkt-parser')
+const tmp = require('tmp-promise')
+const writeFile = util.promisify(fs.writeFile)
 
 const geomUri = 'https://purl.org/geojson/vocab#geometry'
 const latlonUri = 'http://www.w3.org/2003/01/geo/wgs84_pos#lat_long'
@@ -38,7 +46,7 @@ exports.latlon2fields = (schema, doc) => {
   }
 }
 
-exports.geometry2fields = (schema, doc) => {
+exports.geometry2fields = async (schema, doc) => {
   const prop = schema.find(p => p['x-refersTo'] === geomUri)
   if (!prop || !doc[prop.key] || doc[prop.key] === '{}') return {}
   const feature = {type: 'Feature', geometry: JSON.parse(doc[prop.key])}
@@ -52,6 +60,16 @@ exports.geometry2fields = (schema, doc) => {
     rewind(feature, {mutate: true})
   } catch (err) {
     console.error('Failure while applying rewind to geojson', err)
+  }
+  try {
+    if (feature.geometry.type === 'Polygon') {
+      const kinked = !!kinks(feature).features.length
+      if (kinked) {
+        await polygonRepair(feature)
+      }
+    }
+  } catch (err) {
+    console.error('Failure while removing self intersections from geojson polygons', err)
   }
 
   // check if simplify is a good idea ? too CPU intensive for our backend ?
@@ -74,9 +92,28 @@ exports.result2geojson = esResponse => {
       const {_geoshape, ...properties} = hit._source
       return {
         type: 'Feature',
+        id: hit._id,
         geometry: hit._source._geoshape,
-        properties: flatten(properties)
+        properties: flatten({...properties, _id: hit._id})
       }
     })
   }
+}
+
+// Simple wrapping of the command line prepair https://github.com/tudelft3d/prepair
+// help fixing some polygons
+const polygonRepair = async (feature) => {
+  let tmpFile
+  try {
+    // const wkt = wktParser.convert(feature.geometry)
+    tmpFile = await tmp.file({postfix: '.geojson'})
+    await writeFile(tmpFile.fd, JSON.stringify(feature))
+    const repaired = await exec(`../prepair/prepair --ogr '${tmpFile.path}'`, {maxBuffer: 100000000})
+    feature.geometry = wktParser.parse(repaired.stdout)
+  } catch (err) {
+    console.error('Failed to use the prepair command line tool', err)
+    const unkinked = unkink(feature)
+    feature.geometry = {type: 'MultiPolygon', coordinates: unkinked.features.map(f => f.geometry.coordinates)}
+  }
+  if (tmpFile) tmpFile.cleanup()
 }
