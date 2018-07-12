@@ -131,7 +131,7 @@ export default {
       this.ready = true
     }
   },
-  mounted() {
+  created() {
     this.fetchRemoteServices()
     eventBus.$emit('subscribe', this.channel)
     eventBus.$on(this.channel, info => {

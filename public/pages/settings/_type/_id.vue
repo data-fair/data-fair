@@ -25,6 +25,8 @@
 
     <h3 class="headline mt-3 mb-3">Licenses</h3>
     <settings-licenses v-if="settings" :settings="settings" @license-updated="save"/>
+    <h3 class="headline mt-3 mb-3">Catalogues</h3>
+    <settings-catalogs v-if="settings" :settings="settings" @catalog-updated="save"/>
     <h3 class="headline mt-3 mb-3">Webhooks</h3>
     <settings-webhooks v-if="settings" :settings="settings" @webhook-updated="save"/>
   </v-container>
@@ -35,10 +37,11 @@
 import {mapState} from 'vuex'
 import SettingsWebhooks from '../../../components/SettingsWebhooks.vue'
 import SettingsLicenses from '../../../components/SettingsLicenses.vue'
+import SettingsCatalogs from '../../../components/SettingsCatalogs.vue'
 import eventBus from '../../../event-bus'
 
 export default {
-  components: {SettingsWebhooks, SettingsLicenses},
+  components: {SettingsWebhooks, SettingsLicenses, SettingsCatalogs},
   data: () => ({
     api: null,
     organizationRoles: [],
@@ -64,6 +67,7 @@ export default {
     this.$set(this.settings, 'operationsPermissions', this.settings.operationsPermissions || {})
     this.$set(this.settings, 'webhooks', this.settings.webhooks || [])
     this.$set(this.settings, 'licenses', this.settings.licenses || [])
+    this.$set(this.settings, 'catalogs', this.settings.catalogs || [])
     this.api = await this.$axios.$get('api/v1/api-docs.json')
     this.operations.forEach(operation => {
       this.$set(this.settings.operationsPermissions, operation.id, this.settings.operationsPermissions[operation.id] || [])

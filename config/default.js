@@ -100,5 +100,9 @@ module.exports = {
   }, {
     title: 'Service de données cartographiques',
     href: 'https://koumoul.com/s/tileserver/api/v1/api-docs.json'
-  }]
+  }],
+  defaultCatalog: {
+    url: 'https://data.gouv.fr',
+    type: 'udata'
+  }
 }

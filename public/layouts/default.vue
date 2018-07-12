@@ -150,6 +150,9 @@ body .application {
 
   .main-toolbar {
     background-color: white;
+    .v-toolbar__content {
+      padding-left: 0;
+    }
   }
 
   .actions-buttons {
@@ -163,7 +166,7 @@ body .application {
     }
   }
 
-  .notification .snack__content {
+  .notification .v-snack__content {
     height: auto;
     p {
       margin-bottom: 4px;

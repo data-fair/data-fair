@@ -19,9 +19,9 @@
           </v-card-title>
           <v-card-text style="height:50%;min-height:80px" v-html="marked($options.filters.truncate(remoteService.description || '', 200))"/>
           <v-card-actions style="height:25%">
-            <span v-if="remoteService.owner.type === 'user'"><v-icon>person</v-icon>{{ remoteService.owner.name }}</span>
-            <span v-if="remoteService.owner.type === 'organization'"><v-icon>group</v-icon>{{ remoteService.owner.name }}</span>
-            <v-chip text-color="white" :color="remoteService.public ? 'primary' : 'accent'">{{ remoteService.public ? 'Public' : 'Privé' }}</v-chip>
+            <span v-if="remoteService.owner.type === 'user'">&nbsp;<v-icon>person</v-icon>{{ remoteService.owner.name }}</span>
+            <span v-if="remoteService.owner.type === 'organization'">&nbsp;<v-icon>group</v-icon>{{ remoteService.owner.name }}</span>
+            &nbsp;<v-chip text-color="white" :color="remoteService.public ? 'primary' : 'accent'">{{ remoteService.public ? 'Public' : 'Privé' }}</v-chip>
           </v-card-actions>
         </v-card>
       </v-flex>

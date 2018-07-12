@@ -19,9 +19,9 @@
           </v-card-title>
           <v-card-text style="height:50%;min-height:80px" v-html="marked($options.filters.truncate(dataset.description || '', 200))"/>
           <v-card-actions style="height:25%">
-            <span v-if="dataset.owner.type === 'user'"><v-icon>person</v-icon>{{ dataset.owner.name }}</span>
-            <span v-if="dataset.owner.type === 'organization'"><v-icon>group</v-icon>{{ dataset.owner.name }}</span>
-            <v-chip text-color="white" :color="dataset.public ? 'primary' : 'accent'">{{ dataset.public ? 'Public' : 'Privé' }}</v-chip>
+            <span v-if="dataset.owner.type === 'user'"><v-icon>person</v-icon>&nbsp;{{ dataset.owner.name }}</span>
+            <span v-if="dataset.owner.type === 'organization'"><v-icon>group</v-icon>&nbsp;{{ dataset.owner.name }}</span>
+            &nbsp;<v-chip text-color="white" :color="dataset.public ? 'primary' : 'accent'">{{ dataset.public ? 'Public' : 'Privé' }}</v-chip>
           </v-card-actions>
         </v-card>
       </v-flex>
