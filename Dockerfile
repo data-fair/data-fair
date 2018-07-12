@@ -47,6 +47,7 @@ ADD shared shared
 ADD contract contract
 ADD config config
 ADD scripts scripts
+ADD upgrade upgrade
 ADD README.md .
 
 VOLUME /webapp/data
