@@ -3,7 +3,7 @@
     <h3 class="display-1">{{ remoteServices.count }} service{{ plural }} configuré{{ plural }}</h3>
     <v-layout row wrap>
       <v-flex xs12 sm5 md4 lg3>
-        <v-text-field label="Rechercher" v-model="search" append-icon="search" @keyup.enter.native="refresh" :append-icon-cb="refresh"/>
+        <v-text-field label="Rechercher" v-model="search" append-icon="search" @keyup.enter.native="refresh" @click:append="refresh"/>
       </v-flex>
       <v-spacer/>
       <v-flex xs12 sm7 md6 lg5 class="pt-4">

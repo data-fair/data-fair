@@ -10,7 +10,7 @@
           label="Rechercher"
           v-model="query"
           @keyup.enter.native="refresh"
-          :append-icon-cb="refresh"
+          @click:append="refresh"
           append-icon="search"
           class="mr-3"
           style="min-width:150px;"/>

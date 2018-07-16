@@ -47,10 +47,10 @@ async function iter(app, key) {
     dataset = await acquireNext(app.get('db'), worker.filter)
     // console.log(`Worker "${worker.eventsPrefix}" acquired dataset "${dataset.id}"`)
     if (!dataset) return
-    await journals.log(app, dataset, {type: worker.eventsPrefix + '-start'})
+    if (worker.eventsPrefix) await journals.log(app, dataset, {type: worker.eventsPrefix + '-start'})
     await worker.process(app, dataset)
     if (hooks[key]) hooks[key].resolve(dataset)
-    await journals.log(app, dataset, {type: worker.eventsPrefix + '-end'})
+    if (worker.eventsPrefix) await journals.log(app, dataset, {type: worker.eventsPrefix + '-end'})
   } catch (err) {
     console.error('Failure in worker ' + key, err)
     if (dataset) {

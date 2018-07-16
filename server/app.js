@@ -24,6 +24,7 @@ if (process.env.NODE_ENV === 'development') app.use(require('cors')())
 // Business routers
 app.use('/api/v1', require('./routers/root'))
 app.use('/api/v1/remote-services', session.auth, require('./routers/remote-services'))
+app.use('/api/v1/catalogs', session.auth, require('./routers/catalogs'))
 app.use('/api/v1/applications', session.auth, require('./routers/applications'))
 app.use('/api/v1/datasets', session.auth, require('./routers/datasets'))
 app.use('/api/v1/stats', session.auth, require('./routers/stats'))

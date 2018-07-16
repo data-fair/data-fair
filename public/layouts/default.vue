@@ -22,6 +22,7 @@
         <v-btn flat to="/datasets" color="primary" :class="routePrefix === 'dataset' ? 'btn--active' : ''">Jeux de données</v-btn>
         <v-btn flat to="/remote-services" color="primary" :class="routePrefix === 'remote' ? 'btn--active' : ''">Services</v-btn>
         <v-btn flat to="/applications" color="primary" :class="routePrefix === 'application' ? 'btn--active' : ''">Applications</v-btn>
+        <v-btn flat to="/catalogs" color="primary" :class="routePrefix === 'catalog' ? 'btn--active' : ''">Catalogues</v-btn>
         <template v-if="session.initialized">
           <v-btn v-if="!user" @click="login" color="primary">
             Se connecter / S'inscrire
@@ -58,6 +59,9 @@
           </v-list-tile>
           <v-list-tile to="/applications">
             <v-list-tile-title>Applications</v-list-tile-title>
+          </v-list-tile>
+          <v-list-tile to="/catalogs">
+            <v-list-tile-title>Catalogues</v-list-tile-title>
           </v-list-tile>
           <v-list-tile v-if="!user" @click="login" color="primary">
             <v-list-tile-title>Se connecter / S'inscrire</v-list-tile-title>

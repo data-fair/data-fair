@@ -32,7 +32,7 @@ test('User has permissions on classe', async t => {
   t.is(res.status, 200)
 })
 
-test('User can create a remote-service for its organization', async t => {
+test('User can create a remote-service for his organization', async t => {
   const ax = await axiosBuilder('dmeadus0@answers.com')
   let res = await ax.post('/api/v1/remote-services', {apiDoc: require('./resources/geocoder-api.json'), apiKey: {in: 'header', name: 'x-apiKey'}}, {headers: {'x-organizationId': 'KWqAGZ4mG'}})
   t.is(res.status, 201)
@@ -42,7 +42,7 @@ test('User can create a remote-service for its organization', async t => {
   t.is(res.status, 200)
 })
 
-test('User cannot create remote-service for its organization', async t => {
+test('User cannot create remote-service for his organization', async t => {
   const ax = await axiosBuilder('bhazeldean7@cnbc.com')
   const res = await ax.post('/api/v1/remote-services', {apiDoc: require('./resources/geocoder-api.json'), apiKey: {in: 'header', name: 'x-apiKey'}}, {headers: {'x-organizationId': 'KWqAGZ4mG'}})
   t.is(res.status, 201)

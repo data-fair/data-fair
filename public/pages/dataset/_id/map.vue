@@ -6,7 +6,7 @@
         label="Rechercher"
         v-model="query"
         @keyup.enter.native="refresh"
-        :append-icon-cb="refresh"
+        @click:append="refresh"
         append-icon="search"
         hide-details
         single-line/>

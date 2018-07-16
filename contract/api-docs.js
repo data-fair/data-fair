@@ -3,6 +3,7 @@ const status = require('./status')
 const version = require('../package.json').version
 const dataset = require('./dataset')
 const remoteService = require('./remote-service')
+const catalog = require('./catalog')
 const application = require('./application')
 
 module.exports = {
@@ -21,7 +22,8 @@ module.exports = {
     schemas: {
       dataset,
       remoteService,
-      application
+      application,
+      catalog
     },
     securitySchemes: {
       jwt: {
@@ -160,6 +162,65 @@ module.exports = {
               'application/json': {
                 schema: {
                   $ref: '#/components/schemas/remoteService'
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    '/catalogs': {
+      get: {
+        summary: 'Récupérer la liste des catalogues.',
+        operationId: 'listCatalogs',
+        security: [{}, { jwt: [] }],
+        responses: {
+          200: {
+            description: 'Liste des catalogues que l\'utilisateur est autorisé à voir',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    count: {
+                      type: 'number',
+                      description: 'Nombre total de catalogues'
+                    },
+                    results: {
+                      type: 'array',
+                      items: {
+                        $ref: '#/components/schemas/catalog'
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      post: {
+        summary: 'Configurer un catalogue.',
+        operationId: 'postCatalog',
+        security: [{ jwt: [] }],
+        requestBody: {
+          description: 'Les informations de configuration du catalogue.',
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                $ref: '#/components/schemas/catalog'
+              }
+            }
+          }
+        },
+        responses: {
+          200: {
+            description: 'Les informations de configuration du catalogue.',
+            content: {
+              'application/json': {
+                schema: {
+                  $ref: '#/components/schemas/catalog'
                 }
               }
             }

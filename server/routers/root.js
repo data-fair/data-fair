@@ -40,6 +40,10 @@ router.get('/configurable-applications', (req, res) => {
   res.json(config.applications)
 })
 
+router.get('/configurable-catalogs', (req, res) => {
+  res.json(config.catalogs)
+})
+
 // Used by the users' directory to notify name updates
 router.post('/owner-names', asyncWrap(async (req, res) => {
   const key = req.query.key

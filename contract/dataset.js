@@ -174,21 +174,23 @@ module.exports = {
         required: ['catalogUrl'],
         additionalProperties: false,
         properties: {
-          catalogUrl: {
+          id: {
             type: 'string'
           },
-          catalogType: {
+          catalog: {
             type: 'string',
-            enum: ['udata']
+            description: 'L\'identifiant du catalogue de destination de cette publication.'
           },
-          udata: {
-            type: 'object',
-            additionalProperties: false,
-            properties: {
-              dataset: {
-                type: 'object'
-              }
-            }
+          status: {
+            type: 'string',
+            description: 'A simple flag to clearly identify the publications that wre successful. If "published" then the targetUrl key should be defined, If "error" then the error key should be defined.',
+            enum: ['waiting', 'published', 'error']
+          },
+          error: {
+            type: 'string'
+          },
+          targetUrl: {
+            type: 'string'
           }
         }
       }

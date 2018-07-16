@@ -58,34 +58,6 @@
         }
       }
     },
-    "catalogs": {
-      "type": "array",
-      "description": "List of catalog connections",
-      "items": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": ["url", "apiKey"],
-        "properties": {
-          "url":{
-            "type": "string",
-            "description": "The root URL of the catalog"
-          },
-          "type": {
-            "type": "string",
-            "description": "The type of catalog (udata, ckan, etc.)",
-            "enum": ["udata"]
-          },
-          "apiKey":{
-            "type": "string",
-            "description": "The API key to use when interacting with the catalog for this owner"
-          },
-          "organizationId": {
-            "type": "string",
-            "description": "Leave empty to write in a personnal space, otherwise use the id of an organization that you have the right to write into."
-          }
-        }
-      }
-    },
     "operationsPermissions":{
       "type": "object"
     }

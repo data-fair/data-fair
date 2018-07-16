@@ -8,7 +8,6 @@ const pump = util.promisify(require('pump'))
 const csvStringify = require('csv-stringify')
 const flatten = require('flat')
 const mongodb = require('mongodb')
-const shortid = require('shortid')
 const journals = require('../utils/journals')
 const esUtils = require('../utils/es')
 const filesUtils = require('../utils/files')
@@ -22,7 +21,6 @@ const extensions = require('../utils/extensions')
 const geo = require('../utils/geo')
 const tiles = require('../utils/tiles')
 const cache = require('../utils/cache')
-const udata = require('../utils/udata')
 const config = require('config')
 
 const datasetSchema = require('../../contract/dataset')
@@ -98,7 +96,7 @@ router.get('/:datasetId', permissions.middleware('readDescription', 'read'), (re
 })
 
 // Update a dataset's metadata
-const patchKeys = ['schema', 'description', 'title', 'license', 'origin', 'extensions']
+const patchKeys = ['schema', 'description', 'title', 'license', 'origin', 'extensions', 'publications']
 router.patch('/:datasetId', permissions.middleware('writeDescription', 'write'), asyncWrap(async(req, res) => {
   if (!acceptedStatuses.includes(req.dataset.status) && (req.body.schema || req.body.extensions)) return res.status(409).send('Dataset is not in proper state to be updated')
   var valid = validate(req.body)
@@ -115,43 +113,19 @@ router.patch('/:datasetId', permissions.middleware('writeDescription', 'write'),
   if (req.dataset.status === 'error') {
     req.body.status = 'loaded'
   }
-  // Back to schematized state if schema changed in a manner significant for ES indexing
+
   if (req.body.schema) {
     if (JSON.stringify(esUtils.indexDefinition(req.body)) !== JSON.stringify(esUtils.indexDefinition(req.dataset))) {
+      // Back to schematized state if schema changed in a manner significant for ES indexing
       req.body.status = 'schematized'
-    } else {
+    } else if (req.body.extensions && req.body.extensions.find(e => e.forceNext)) {
+      // Back to indexed state if schema did not change in significant manner, but one extension is forced
       req.body.status = 'indexed'
     }
   }
 
   await req.app.get('db').collection('datasets').updateOne({id: req.params.datasetId}, {'$set': req.body})
   res.status(200).json(req.body)
-}))
-
-// Publish a dataset in a catalog
-router.post('/:datasetId/publications', permissions.middleware('writePublication', 'admin'), asyncWrap(async(req, res) => {
-  const publication = req.body
-  const settings = await req.app.get('db').collection('settings').findOne({
-    type: req.dataset.owner.type,
-    id: req.dataset.owner.id
-  })
-  const catalog = (settings.catalogs || []).find(c => c.url === publication.catalogUrl)
-  if (!catalog) return res.status(404).send(`Le catalogue ${publication.catalogUrl} n'est pas présent dans les paramètres du propriétaire de ce jeu de données.`)
-  if (catalog.type === 'udata') {
-    await udata.publishDataset(req.dataset, publication, catalog)
-  } else {
-    res.status(400).send('Type de catalogue non supporté.')
-  }
-  publication.id = shortid.generate()
-  await req.app.get('db').collection('datasets').updateOne({id: req.params.datasetId}, {'$push': {publications: publication}})
-  res.status(201).send(publication)
-}))
-
-// Remove a publication
-router.delete('/:datasetId/publications/:publicationId', permissions.middleware('deletePublication', 'admin'), asyncWrap(async(req, res) => {
-  await req.app.get('db').collection('datasets')
-    .updateOne({id: req.params.datasetId}, {'$pull': {publications: {id: req.params.publicationId}}})
-  res.status(204).send()
 }))
 
 const unlink = util.promisify(fs.unlink)
