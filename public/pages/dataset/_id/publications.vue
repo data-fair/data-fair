@@ -10,10 +10,11 @@
     </p>
     <v-list two-line v-else>
       <v-list-tile v-for="(publication, i) in dataset.publications" :key="publication.id">
-        <v-list-tile-content>
-          <v-list-tile-title v-if="catalogsById[publication.catalog]">Jeu de données publié sur {{ catalogsById[publication.catalog].title }}</v-list-tile-title>
+        <v-list-tile-content v-if="catalogsById[publication.catalog]">
+          <v-list-tile-title v-if="publication.addToDataset && publication.addToDataset.id">Ressource ajoutée au jeu de données "{{ publication.addToDataset.title }}" sur le catalogue "{{ catalogsById[publication.catalog].title }}"</v-list-tile-title>
+          <v-list-tile-title v-else>Jeu de données publié sur le catalogue "{{ catalogsById[publication.catalog].title }}"</v-list-tile-title>
           <v-list-tile-sub-title v-if="publication.status==='published'"><a :href="publication.targetUrl" target="_blank">{{ publication.targetUrl }}</a></v-list-tile-sub-title>
-          <v-list-tile-sub-title v-else-if="publication.status==='error'">{{ publication.error }}</v-list-tile-sub-title>
+          <v-list-tile-sub-title v-else-if="publication.status==='error'" style="color:red;">{{ publication.error }}</v-list-tile-sub-title>
           <v-list-tile-sub-title v-else>En attente</v-list-tile-sub-title>
         </v-list-tile-content>
         <v-list-tile-action>
@@ -45,6 +46,23 @@
               required
               :rules="[() => !!newPublication.catalog]"
             />
+
+            <v-autocomplete
+              class="mb-4"
+              :disabled="!newPublication.catalog"
+              v-model="newPublication.addToDataset"
+              :items="catalogDatasets"
+              :loading="catalogDatasetsLoading"
+              :search-input.sync="searchCatalogDatasets"
+              label="Ajouter comme ressource à un jeu de données du catalogue"
+              placeholder="Tapez pour rechercher"
+              return-object
+              item-text="title"
+              item-value="id"
+              hint="Laissez vide pour créer un nouveau jeu de données dans le catalogue."
+              persistent-hint
+              no-data-text="Aucun jeu de données du catalogue ne correspond"
+            />
           </v-form>
         </v-card-text>
 
@@ -59,10 +77,10 @@
     <v-dialog v-model="showDeleteDialog" max-width="500">
       <v-card v-if="showDeleteDialog">
         <v-card-title primary-title>
-          Suppression d'une publication'
+          Suppression d'une publication
         </v-card-title>
         <v-card-text>
-          Voulez vous vraiment supprimer la publication vers {{ dataset.publications.targetUrl }} ? La suppression est définitive et les données ne pourront pas être récupérées.
+          Voulez vous vraiment supprimer la publication ? La suppression est définitive et les données ne pourront pas être récupérées.
         </v-card-text>
         <v-card-actions>
           <v-spacer/>
@@ -76,6 +94,8 @@
 
 <script>
 import {mapState, mapGetters, mapActions} from 'vuex'
+import eventBus from '../../../event-bus.js'
+
 export default {
   data() {
     return {
@@ -87,23 +107,42 @@ export default {
       },
       deletePublicationInd: null,
       showDeleteDialog: false,
-      catalogs: []
+      catalogs: [],
+      catalogDatasets: [],
+      catalogDatasetsLoading: false,
+      searchCatalogDatasets: ''
     }
   },
   computed: {
     ...mapState(['env']),
     ...mapState('dataset', ['dataset']),
-    ...mapGetters('dataset', ['can']),
+    ...mapGetters('dataset', ['can', 'journalChannel']),
     catalogsById() {
       return this.catalogs.reduce((a, c) => { a[c.id] = c; return a }, {})
+    }
+  },
+  watch: {
+    async searchCatalogDatasets() {
+      if (!this.searchCatalogDatasets || this.searchCatalogDatasets === (this.newPublication.addToDataset && this.newPublication.addToDataset.title)) return
+      this.catalogDatasetsLoading = true
+      const catalog = this.catalogsById[this.newPublication.catalog]
+      this.catalogDatasets = (await this.$axios.$get('api/v1/catalogs/_datasets', {params: {type: catalog.type, url: catalog.url, q: this.searchCatalogDatasets}})).results
+      this.catalogDatasetsLoading = false
     }
   },
   async created() {
     const params = {'owner-type': this.dataset.owner.type, 'owner-id': this.dataset.owner.id}
     this.catalogs = (await this.$axios.$get('api/v1/catalogs', {params})).results
+    eventBus.$on(this.journalChannel, this.onJournalEvent)
+  },
+  async destroyed() {
+    eventBus.$off(this.journalChannel, this.onJournalEvent)
   },
   methods: {
-    ...mapActions('dataset', ['patch']),
+    ...mapActions('dataset', ['patch', 'fetchInfo']),
+    onJournalEvent(event) {
+      if (event.type === 'publication') this.fetchInfo()
+    },
     addPublication(publication) {
       this.dataset.publications.push(publication)
       this.patch({publications: this.dataset.publications})

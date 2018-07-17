@@ -195,6 +195,18 @@ module.exports = {
           result: {
             type: 'object',
             description: 'The result of pushing the publication. The structure of this object is permissive and depends on the type of catalog'
+          },
+          addToDataset: {
+            type: 'object',
+            description: 'Fill this object to create a new resource (or community resource) to an existing dataset. If empty a new dataset will be created.',
+            properties: {
+              id: {
+                type: 'string'
+              },
+              title: {
+                type: 'string'
+              }
+            }
           }
         }
       }

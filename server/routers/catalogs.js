@@ -39,8 +39,16 @@ router.get('/_organizations', asyncWrap(async(req, res) => {
   if (!req.query.url) return res.status(400).send('"url" query parameter is required')
   if (!req.query.type) return res.status(400).send('"type" query parameter is required')
   if (!req.query.q) return res.status(400).send('"q" query parameter is required')
-  const organizations = await catalogs.findOrganizations(req.query.type, req.query.url, req.query.q)
+  const organizations = await catalogs.suggestOrganizations(req.query.type, req.query.url, req.query.q)
   res.status(200).json(organizations)
+}))
+
+router.get('/_datasets', asyncWrap(async(req, res) => {
+  if (!req.query.url) return res.status(400).send('"url" query parameter is required')
+  if (!req.query.type) return res.status(400).send('"type" query parameter is required')
+  if (!req.query.q) return res.status(400).send('"q" query parameter is required')
+  const datasets = await catalogs.suggestDatasets(req.query.type, req.query.url, req.query.q)
+  res.status(200).json(datasets)
 }))
 
 // Get the list of catalogs

@@ -15,6 +15,7 @@ export default {
   },
   getters: {
     resourceUrl: (state, getters, rootState) => state.datasetId ? rootState.env.publicUrl + '/api/v1/datasets/' + state.datasetId : null,
+    journalChannel: (state) => 'datasets/' + state.datasetId + '/journal',
     concepts: state => new Set(state.dataset.schema.map(field => field['x-refersTo']).filter(c => c)),
     remoteServicesMap: (state, getters) => {
       const res = {}
@@ -84,11 +85,9 @@ export default {
     },
     async setId({commit, getters, dispatch, state}, datasetId) {
       commit('setAny', {datasetId})
-      dispatch('fetchInfo')
-
-      const newChannel = 'datasets/' + datasetId + '/journal'
-      eventBus.$emit('subscribe', newChannel)
-      eventBus.$on(newChannel, event => {
+      await dispatch('fetchInfo')
+      eventBus.$emit('subscribe', getters.journalChannel)
+      eventBus.$on(getters.journalChannel, event => {
         if (event.type === 'finalize-end') {
           eventBus.$emit('notification', {type: 'success', msg: 'Le jeu de données a été traité en fonction de vos dernières modifications et est prêt à être utilisé ou édité de nouveau.'})
           dispatch('fetchInfo')
