@@ -72,3 +72,8 @@ async function createNewDataset(catalog, dataset, publication) {
     else throw err
   }
 }
+
+exports.publishApplication = async (catalog, application, publication) => {
+  console.log('Publish application')
+  return {}
+}

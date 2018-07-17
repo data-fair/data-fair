@@ -8,8 +8,8 @@ const countLines = require('../utils/count-lines')
 const datasetUtils = require('../utils/dataset')
 const fieldsSniffer = require('../utils/fields-sniffer')
 
+exports.type = 'dataset'
 exports.eventsPrefix = 'analyze'
-
 exports.filter = {status: 'loaded', 'file.mimetype': 'text/csv'}
 
 exports.process = async function(app, dataset) {

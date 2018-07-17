@@ -52,17 +52,19 @@
 </template>
 
 <script>
-const events = require('../../shared/events.json')
+// TODO: manage webhooks for other types of resources
+const events = require('../../shared/events.json').dataset
 
 export default {
   name: 'Webhooks',
   props: ['settings'],
   data: () => ({
-    events: events,
+    events,
     newWebhook: {
       title: null,
       events: [],
-      url: null
+      url: null,
+      type: 'dataset'
     },
     showDialog: false
   }),

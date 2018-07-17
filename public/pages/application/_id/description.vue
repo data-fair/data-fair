@@ -1,7 +1,7 @@
 <template lang="html">
   <v-container>
     <v-text-field label="Titre" v-model="application.title" @blur="patch({title: application.title})"/>
-    <v-text-field label="Description" v-model="application.description" box multi-line rows="4" @blur="patch({description: application.description})"/>
+    <v-textarea label="Description" v-model="application.description" box rows="4" @blur="patch({description: application.description})"/>
     <v-text-field label="Adresse" v-model="application.url" @blur="patch({url: application.url})"/>
   </v-container>
 </template>

@@ -6,8 +6,8 @@ const esStreams = require('../utils/es-streams')
 const datasetUtils = require('../utils/dataset')
 const extensionsUtils = require('../utils/extensions')
 
+exports.type = 'dataset'
 exports.eventsPrefix = 'index'
-
 exports.filter = {status: 'schematized'}
 
 exports.process = async function(app, dataset) {

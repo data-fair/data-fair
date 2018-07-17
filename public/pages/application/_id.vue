@@ -9,6 +9,14 @@
         Permissions
         <v-icon>security</v-icon>
       </v-tab>
+      <v-tab v-if="can('getPermissions')" :nuxt="true" :to="`/application/${application.id}/publications`">
+        Publications
+        <v-icon>publish</v-icon>
+      </v-tab>
+      <v-tab :disabled="!can('readJournal')" :nuxt="true" :to="`/application/${application.id}/journal`">
+        Journal
+        <v-icon>event_note</v-icon>
+      </v-tab>
       <v-tab :disabled="!can('readApiDoc')" :nuxt="true" :to="`/application/${application.id}/api`">
         API
         <v-icon>cloud</v-icon>

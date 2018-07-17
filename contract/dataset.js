@@ -1,5 +1,18 @@
 const owner = require('./owner')
 const eventBy = require('./event-by')
+const publicationSchema = JSON.parse(JSON.stringify(require('./publication')))
+publicationSchema.properties.addToDataset = {
+  type: 'object',
+  description: 'Fill this object to create a new resource (or community resource) to an existing dataset. If empty a new dataset will be created.',
+  properties: {
+    id: {
+      type: 'string'
+    },
+    title: {
+      type: 'string'
+    }
+  }
+}
 
 module.exports = {
   'title': 'Dataset',
@@ -169,48 +182,7 @@ module.exports = {
     publications: {
       type: 'array',
       description: 'References to all the catalogs the dataset metadata is published too',
-      items: {
-        type: 'object',
-        required: ['catalog', 'status'],
-        additionalProperties: false,
-        properties: {
-          id: {
-            type: 'string'
-          },
-          catalog: {
-            type: 'string',
-            description: 'L\'identifiant du catalogue de destination de cette publication.'
-          },
-          status: {
-            type: 'string',
-            description: 'A simple flag to clearly identify the publications that were successful. If "published" then the targetUrl key should be defined, If "error" then the error key should be defined.',
-            enum: ['waiting', 'published', 'error']
-          },
-          error: {
-            type: 'string'
-          },
-          targetUrl: {
-            type: 'string'
-          },
-          result: {
-            type: 'object',
-            description: 'The result of pushing the publication. The structure of this object is permissive and depends on the type of catalog'
-          },
-          addToDataset: {
-            type: 'object',
-            description: 'Fill this object to create a new resource (or community resource) to an existing dataset. If empty a new dataset will be created.',
-            properties: {
-              id: {
-                type: 'string'
-              },
-              title: {
-                type: 'string'
-              }
-            }
-          }
-        }
-      }
+      items: publicationSchema
     }
-
   }
 }

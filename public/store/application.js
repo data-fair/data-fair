@@ -1,5 +1,6 @@
 // A module of the store for the currently worked on application
 // Used in the application vue and all its tabs and their components
+import Vue from 'vue'
 import eventBus from '../event-bus.js'
 
 export default {
@@ -7,11 +8,13 @@ export default {
   state: {
     applicationId: null,
     application: null,
-    api: null
+    api: null,
+    journal: []
   },
   getters: {
     resourceUrl: (state, getters, rootState) => state.applicationId ? rootState.env.publicUrl + '/api/v1/applications/' + state.applicationId : null,
-    can: (state) => (operation) => (state.application && state.application.userPermissions.includes(operation)) || false
+    can: (state) => (operation) => (state.application && state.application.userPermissions.includes(operation)) || false,
+    journalChannel: (state) => 'application/' + state.datasetId + '/journal'
   },
   mutations: {
     setAny(state, params) {
@@ -19,21 +22,35 @@ export default {
     },
     patch(state, patch) {
       Object.assign(state.application, patch)
+    },
+    addJournalEvent(state, event) {
+      if (!state.journal.find(e => e.date === event.date)) {
+        state.journal.unshift(event)
+      }
     }
   },
   actions: {
     async fetchInfo({commit, dispatch, getters}) {
       try {
         const application = await this.$axios.$get(getters.resourceUrl)
+        Vue.set(application, 'publications', application.publications || [])
+        commit('setAny', {application})
         const api = await this.$axios.$get(getters.resourceUrl + '/api-docs.json')
-        commit('setAny', {application, api})
+        commit('setAny', {api})
+        const journal = await this.$axios.$get(getters.resourceUrl + '/journal')
+        commit('setAny', {journal})
       } catch (error) {
-        eventBus.$emit('notification', {error, msg: `Erreur pendant la récupération de la définition de l'API`})
+        eventBus.$emit('notification', {error, msg: `Erreur pendant la récupération des informations de l'application`})
       }
     },
     async setId({commit, getters, dispatch, state}, applicationId) {
       commit('setAny', {applicationId})
       dispatch('fetchInfo')
+      eventBus.$emit('subscribe', getters.journalChannel)
+      eventBus.$on(getters.journalChannel, event => {
+        if (event.type === 'error') eventBus.$emit('notification', {error: event.data, msg: `Le service a rencontré une erreur pendant le traitement de l'application:`})
+        dispatch('addJournalEvent', event)
+      })
     },
     clear({commit, state}) {
       commit('setAny', {applicationId: null, application: null})

@@ -1,5 +1,5 @@
 <template>
-<journal type="dataset" :journal="journal"/></template>
+<journal type="application" :journal="journal"/></template>
 
 <script>
 import Journal from '../../../components/Journal.vue'
@@ -8,7 +8,7 @@ const {mapState} = require('vuex')
 export default {
   components: {Journal},
   computed: {
-    ...mapState('dataset', ['journal'])
+    ...mapState('application', ['journal'])
   }
 }
 </script>

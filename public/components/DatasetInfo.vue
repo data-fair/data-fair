@@ -66,7 +66,7 @@
 
 <script>
 const {mapState, mapActions} = require('vuex')
-const events = require('../../shared/events.json')
+const events = require('../../shared/events.json').dataset
 
 export default {
   data() {

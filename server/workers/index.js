@@ -9,7 +9,8 @@ const workers = {
   indexer: require('./indexer'),
   extender: require('./extender'),
   finalizer: require('./finalizer'),
-  publisher: require('./publisher')
+  datasetPublisher: require('./dataset-publisher'),
+  applicationPublisher: require('./application-publisher')
 }
 
 // resolve functions that will be filled when we will be asked to stop the workers
@@ -43,35 +44,35 @@ exports.stop = async () => {
 
 async function iter(app, key) {
   const worker = workers[key]
-  let dataset
+  let resource
   try {
-    dataset = await acquireNext(app.get('db'), worker.filter)
+    resource = await acquireNext(app.get('db'), worker.type, worker.filter)
     // console.log(`Worker "${worker.eventsPrefix}" acquired dataset "${dataset.id}"`)
-    if (!dataset) return
-    if (worker.eventsPrefix) await journals.log(app, dataset, {type: worker.eventsPrefix + '-start'})
-    await worker.process(app, dataset)
-    if (hooks[key]) hooks[key].resolve(dataset)
-    if (worker.eventsPrefix) await journals.log(app, dataset, {type: worker.eventsPrefix + '-end'})
+    if (!resource) return
+    if (worker.eventsPrefix) await journals.log(app, resource, {type: worker.eventsPrefix + '-start'}, worker.type)
+    await worker.process(app, resource)
+    if (hooks[key]) hooks[key].resolve(resource)
+    if (worker.eventsPrefix) await journals.log(app, resource, {type: worker.eventsPrefix + '-end'}, worker.type)
   } catch (err) {
     console.error('Failure in worker ' + key, err)
-    if (dataset) {
-      await journals.log(app, dataset, {type: 'error', data: err.message})
-      await app.get('db').collection('datasets').updateOne({id: dataset.id}, {$set: {status: 'error'}})
-      dataset.status = 'error'
+    if (resource) {
+      await journals.log(app, resource, {type: 'error', data: err.message}, worker.type)
+      await app.get('db').collection(worker.type + 's').updateOne({id: resource.id}, {$set: {status: 'error'}})
+      resource.status = 'error'
     }
-    if (hooks[key]) hooks[key].reject({dataset, message: err.message})
+    if (hooks[key]) hooks[key].reject({resource, message: err.message})
   } finally {
-    if (dataset) await locks.release(app.get('db'), 'dataset:' + dataset.id)
+    if (resource) await locks.release(app.get('db'), `${worker.type}:${resource.id}`)
     // console.log(`Worker "${worker.eventsPrefix}" released dataset "${dataset.id}"`)
   }
 }
 
-async function acquireNext(db, filter) {
+async function acquireNext(db, type, filter) {
   // Random sort prevents from insisting on the same failed dataset again and again
-  const cursor = db.collection('datasets').aggregate([{$match: filter}, {$sample: {size: 100}}])
+  const cursor = db.collection(type + 's').aggregate([{$match: filter}, {$sample: {size: 100}}])
   while (await cursor.hasNext()) {
-    const dataset = await cursor.next()
-    const ack = await locks.acquire(db, 'dataset:' + dataset.id)
-    if (ack) return dataset
+    const resource = await cursor.next()
+    const ack = await locks.acquire(db, `${type}:${resource.id}`)
+    if (ack) return resource
   }
 }

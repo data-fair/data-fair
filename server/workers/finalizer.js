@@ -3,6 +3,7 @@ const esUtils = require('../utils/es')
 const geoUtils = require('../utils/geo')
 const extensionsUtils = require('../utils/extensions')
 
+exports.type = 'dataset'
 exports.eventsPrefix = 'finalize'
 
 // either extended or there are no extensions to perform

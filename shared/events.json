@@ -1,58 +1,78 @@
 {
-  "error": {
-    "icon": "error",
-    "text": "Le service a rencontré une erreur pendant le traitement du jeu de données"
+  "dataset": {
+    "error": {
+      "icon": "error",
+      "text": "Le service a rencontré une erreur pendant le traitement du jeu de données"
+    },
+    "dataset-created": {
+      "icon": "add_circle_outline",
+      "text": "Le jeu de données a été créé"
+    },
+    "data-updated": {
+      "icon": "update",
+      "text": "Les données ont été mises à jour"
+    },
+    "analyze-start": {
+      "icon": "search",
+      "text": "Début de l'analyse du fichier"
+    },
+    "analyze-end": {
+      "icon": "search",
+      "text": "Fin de l'analyse du fichier"
+    },
+    "schematize-start": {
+      "icon": "toc",
+      "text": "Début de la détection automatique du schéma des données"
+    },
+    "schematize-end": {
+      "icon": "toc",
+      "text": "Fin de la détection automatique du schéma des données"
+    },
+    "index-start": {
+      "icon": "assignment",
+      "text": "Début de l'indexation des données"
+    },
+    "index-end": {
+      "icon": "assignment_turned_in",
+      "text": "Les données sont indexées"
+    },
+    "extend-start": {
+      "icon": "extension",
+      "text": "Début de l'enrichissement des données"
+    },
+    "extend-end": {
+      "icon": "extension",
+      "text": "Les données sont enrichies, le jeu de données est maintenant disponible"
+    },
+    "finalize-start": {
+      "icon": "build",
+      "text": "Finalisation du jeu de données"
+    },
+    "finalize-end": {
+      "icon": "check",
+      "text": "Les données et meta-données sont à jour, le jeu de données est disponible"
+    },
+    "publication": {
+      "icon": "publish",
+      "text": "Publication du jeu de données vers un catalogue effectuée"
+    }
   },
-  "dataset-created": {
-    "icon": "add_circle_outline",
-    "text": "Le jeu de données a été créé"
-  },
-  "data-updated": {
-    "icon": "update",
-    "text": "Les données ont été mises à jour"
-  },
-  "analyze-start": {
-    "icon": "search",
-    "text": "Début de l'analyse du fichier"
-  },
-  "analyze-end": {
-    "icon": "search",
-    "text": "Fin de l'analyse du fichier"
-  },
-  "schematize-start": {
-    "icon": "toc",
-    "text": "Début de la détection automatique du schéma des données"
-  },
-  "schematize-end": {
-    "icon": "toc",
-    "text": "Fin de la détection automatique du schéma des données"
-  },
-  "index-start": {
-    "icon": "assignment",
-    "text": "Début de l'indexation des données"
-  },
-  "index-end": {
-    "icon": "assignment_turned_in",
-    "text": "Les données sont indexées"
-  },
-  "extend-start": {
-    "icon": "extension",
-    "text": "Début de l'enrichissement des données"
-  },
-  "extend-end": {
-    "icon": "extension",
-    "text": "Les données sont enrichies, le jeu de données est maintenant disponible"
-  },
-  "finalize-start": {
-    "icon": "build",
-    "text": "Finalisation du jeu de données"
-  },
-  "finalize-end": {
-    "icon": "check",
-    "text": "Les données et meta-données sont à jour, le jeu de données est disponible"
-  },
-  "publication": {
-    "icon": "publish",
-    "text": "Publication effectuée vers un catalogue"
+  "application": {
+    "error": {
+      "icon": "error",
+      "text": "Le service a rencontré une erreur pendant le traitement de l'application"
+    },
+    "application-created": {
+      "icon": "add_circle_outline",
+      "text": "L'application a été créée"
+    },
+    "publication": {
+      "icon": "publish",
+      "text": "Publication de l'application vers un catalogue effectuée"
+    },
+    "config-updated": {
+      "icon": "update",
+      "text": "La configuration a été mise à jour"
+    }
   }
 }

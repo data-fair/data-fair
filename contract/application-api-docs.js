@@ -1,5 +1,6 @@
 const config = require('config')
 const applicationSchema = require('./application')
+const journalSchema = require('./journal')
 const version = require('../package.json').version
 const permissionsDoc = require('../server/utils/permissions').apiDoc
 
@@ -149,6 +150,25 @@ module.exports = (application) => {
                   schema: {
                     type: 'object'
                   }
+                }
+              }
+            }
+          }
+        }
+      },
+      '/journal': {
+        get: {
+          summary: 'Accéder au journal',
+          operationId: 'readJournal',
+          'x-permissionClass': 'read',
+          security: (publicOperations.indexOf('readJournal') || publicClasses.indexOf('read')) ? [] : [{ jwt: [] }],
+          tags: ['Informations'],
+          responses: {
+            200: {
+              description: 'Le journal.',
+              content: {
+                'application/json': {
+                  schema: journalSchema
                 }
               }
             }

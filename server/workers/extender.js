@@ -1,6 +1,7 @@
 // Index tabular datasets with elasticsearch using available information on dataset schema
 const extensionsUtils = require('../utils/extensions')
 
+exports.type = 'dataset'
 exports.eventsPrefix = 'extend'
 
 // Indexed and at least one active extension

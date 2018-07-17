@@ -1,0 +1,6 @@
+[
+  {"id": "dataset", "name": "Jeu de données"},
+  {"id": "remote-service", "name": "Service distant"},
+  {"id": "application", "name": "Application"},
+  {"id": "Catalog", "name": "Catalogue"}
+]

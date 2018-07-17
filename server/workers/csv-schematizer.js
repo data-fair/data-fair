@@ -2,8 +2,8 @@
 const dataSample = require('../utils/data-sample')
 const fieldsSniffer = require('../utils/fields-sniffer')
 
+exports.type = 'dataset'
 exports.eventsPrefix = 'schematize'
-
 exports.filter = {status: 'analyzed', 'file.mimetype': 'text/csv'}
 
 exports.process = async function(app, dataset) {

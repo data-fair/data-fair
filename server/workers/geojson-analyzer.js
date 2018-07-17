@@ -10,8 +10,8 @@ const iconv = require('iconv-lite')
 const datasetUtils = require('../utils/dataset')
 const fieldsSniffer = require('../utils/fields-sniffer')
 
+exports.type = 'dataset'
 exports.eventsPrefix = 'analyze'
-
 exports.filter = {status: 'loaded', 'file.mimetype': 'application/geo+json'}
 
 // This writable stream will receive geojson features, take samples and and deduce a dataset schema

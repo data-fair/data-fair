@@ -1,5 +1,6 @@
 const config = require('config')
 const datasetSchema = require('./dataset')
+const journalSchema = require('./journal')
 const version = require('../package.json').version
 const permissionsDoc = require('../server/utils/permissions').apiDoc
 
@@ -426,9 +427,7 @@ module.exports = (dataset) => {
               description: 'Le journal.',
               content: {
                 'application/json': {
-                  schema: {
-                    type: 'object'
-                  }
+                  schema: journalSchema
                 }
               }
             }

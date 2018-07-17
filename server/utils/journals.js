@@ -3,31 +3,24 @@ const axios = require('axios')
 const config = require('config')
 const events = require('../../shared/events.json')
 
-module.exports.log = async function(app, dataset, event) {
+module.exports.log = async function(app, resource, event, type = 'dataset') {
   const db = app.get('db')
   event.date = moment().toISOString()
 
-  await db.collection('journals').update({
-    id: dataset.id
-  }, {
-    $push: {
-      events: event
-    }
-  }, {
-    upsert: true
-  })
+  await db.collection('journals')
+    .update({id: resource.id, type}, {$push: {events: event}}, {upsert: true})
 
   // websockets notifications
-  await app.publish('datasets/' + dataset.id + '/journal', event)
+  await app.publish(`${type}s/${resource.id}/journal`, event)
 
   // webhooks notifications
-  const settings = await db.collection('settings').findOne({id: dataset.owner.id, type: dataset.owner.type}) || {}
+  const settings = await db.collection('settings').findOne({id: resource.owner.id, type: resource.owner.type}) || {}
   settings.webhooks = settings.webhooks || []
   settings.webhooks.forEach(webhook => {
     if (webhook.events && webhook.events.length && !webhook.events.includes(event.type)) return
     axios.post(webhook.url, {
-      text: (dataset.title || dataset.id) + ' - ' + events[event.type].text + (event.href ? ' - ' + event.href : ''),
-      href: config.publicUrl + '/api/v1/datasets/' + dataset.id,
+      text: (resource.title || resource.id) + ' - ' + events[event.type].text + (event.href ? ' - ' + event.href : ''),
+      href: `${config.publicUrl}/api/v1/${type}s/${resource.id}`,
       event: event.type
     })
   })

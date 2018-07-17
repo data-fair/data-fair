@@ -139,6 +139,7 @@ router.delete('/:datasetId', permissions.middleware('delete', 'admin'), asyncWra
     id: req.params.datasetId
   })
   await req.app.get('db').collection('journals').deleteOne({
+    type: 'dataset',
     id: req.params.datasetId
   })
   await esUtils.delete(req.app.get('es'), req.dataset)
@@ -191,7 +192,7 @@ router.post('', filesUtils.uploadFile(), asyncWrap(async(req, res) => {
   await req.app.get('db').collection('datasets').insertOne(dataset)
   const storageRemaining = await datasetUtils.storageRemaining(req.app.get('db'), owner, req)
   if (storageRemaining !== -1) res.set(config.headers.storedBytesRemaining, storageRemaining)
-  await journals.log(req.app, dataset, {type: 'dataset-created', href: config.publicUrl + '/dataset/' + dataset.id})
+  await journals.log(req.app, dataset, {type: 'dataset-created', href: config.publicUrl + '/dataset/' + dataset.id}, 'dataset')
   res.status(201).send(dataset)
 }))
 
@@ -216,7 +217,7 @@ router.post('/:datasetId', permissions.middleware('writeData', 'write'), filesUt
   }, req.dataset)
   const storageRemaining = await datasetUtils.storageRemaining(req.app.get('db'), owner, req)
   if (storageRemaining !== -1) res.set(config.headers.storedBytesRemaining, storageRemaining)
-  await journals.log(req.app, req.dataset, {type: 'data-updated'})
+  await journals.log(req.app, req.dataset, {type: 'data-updated'}, 'dataset')
   res.status(200).send(req.dataset)
 }))
 
@@ -338,9 +339,10 @@ router.get('/:datasetId/api-docs.json', permissions.middleware('readApiDoc', 're
 
 router.get('/:datasetId/journal', permissions.middleware('readJournal', 'read'), asyncWrap(async(req, res) => {
   const journal = await req.app.get('db').collection('journals').findOne({
+    type: 'dataset',
     id: req.params.datasetId
   })
-  if (!journal) return res.sendStatus(404)
+  if (!journal) return res.send([])
   journal.events.reverse()
   res.json(journal.events)
 }))

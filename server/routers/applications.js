@@ -15,12 +15,13 @@ const permissions = require('../utils/permissions')
 const usersUtils = require('../utils/users')
 const findUtils = require('../utils/find')
 const asyncWrap = require('../utils/async-wrap')
+const journals = require('../utils/journals')
 
 const router = module.exports = express.Router()
 
 const operationsClasses = {
   list: ['list'],
-  read: ['readDescription', 'readConfig', 'readApiDoc'],
+  read: ['readDescription', 'readConfig', 'readApiDoc', 'readJournal'],
   write: ['writeDescription', 'writeConfig'],
   admin: ['delete', 'getPermissions', 'setPermissions']
 }
@@ -110,6 +111,7 @@ router.post('', asyncWrap(async(req, res) => {
   }
 
   await req.app.get('db').collection('applications').insertOne(application)
+  await journals.log(req.app, application, {type: 'application-created', href: config.publicUrl + '/application/' + application.id}, 'application')
   res.status(201).json(application)
 }))
 
@@ -144,7 +146,7 @@ router.patch('/:applicationId', permissions.middleware('writeDescription', 'writ
   if (!valid) return res.status(400).send(validateNoRequired.errors)
 
   const forbiddenKey = Object.keys(patch).find(key => {
-    return ['configuration', 'url', 'description', 'title'].indexOf(key) === -1
+    return ['configuration', 'url', 'description', 'title', 'publications'].indexOf(key) === -1
   })
   if (forbiddenKey) return res.status(400).send('Only some parts of the application configuration can be modified through this route')
 
@@ -158,6 +160,10 @@ router.patch('/:applicationId', permissions.middleware('writeDescription', 'writ
 // Delete an application configuration
 router.delete('/:applicationId', permissions.middleware('delete', 'admin'), asyncWrap(async(req, res) => {
   await req.app.get('db').collection('applications').deleteOne({
+    id: req.params.applicationId
+  })
+  await req.app.get('db').collection('journals').deleteOne({
+    type: 'application',
     id: req.params.applicationId
   })
   res.sendStatus(204)
@@ -174,9 +180,20 @@ router.put('/:applicationId/config', permissions.middleware('writeConfig', 'writ
     {id: req.params.applicationId},
     {$set: {configuration: req.body}}
   )
+  await journals.log(req.app, req.application, {type: 'config-updated'}, 'application')
   res.status(200).json(req.body)
 }))
 
 router.get('/:applicationId/api-docs.json', permissions.middleware('readApiDoc', 'read'), (req, res) => {
   res.send(applicationAPIDocs(req.application))
 })
+
+router.get('/:applicationId/journal', permissions.middleware('readJournal', 'read'), asyncWrap(async(req, res) => {
+  const journal = await req.app.get('db').collection('journals').findOne({
+    type: 'application',
+    id: req.params.applicationId
+  })
+  if (!journal) return res.send([])
+  journal.events.reverse()
+  res.json(journal.events)
+}))

@@ -19,11 +19,16 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["title", "events", "url"],
+        "required": ["title", "type", "events", "url"],
         "properties": {
           "title": {
             "type": "string",
             "description": "Short title of the external service called"
+          },
+          "type": {
+            "type": "string",
+            "description": "The type of resource concerned by the event",
+            "enum": ["dataset", "application", "remote-service", "catalog"]
           },
           "events": {
             "type": "array",

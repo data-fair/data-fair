@@ -24,6 +24,11 @@
           @blur="downloadFromUrl"
           @keyup.native.enter="downloadFromUrl"
         />
+        <v-text-field
+          v-if="description"
+          label="Titre"
+          v-model="description.title"
+        />
         <p v-if="description" v-html="description.description"/>
         <v-btn color="primary" :disabled="!description" @click.native="currentStep = 2">Continuer</v-btn>
         <v-btn flat @click.native="$emit('cancel')">Annuler</v-btn>
