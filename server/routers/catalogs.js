@@ -62,6 +62,7 @@ router.get('', asyncWrap(async(req, res) => {
     r.userPermissions = permissions.list(r, operationsClasses, req.user)
     r.public = permissions.isPublic(r, operationsClasses)
     delete r.permissions
+    if (r.apiKey) r.apiKey = '**********'
   })
   res.json({results: results.map(result => mongoEscape.unescape(result, true)), count})
 }))
@@ -112,7 +113,7 @@ router.use('/:catalogId', asyncWrap(async(req, res, next) => {
       _id: 0
     }
   })
-  if (!catalog) return res.status(404).send('Remote Api not found')
+  if (!catalog) return res.status(404).send('Catalog not found')
   req.catalog = req.resource = mongoEscape.unescape(catalog, true)
   req.resourceApiDoc = catalogAPIDocs(req.catalog)
   next()
@@ -124,6 +125,7 @@ router.use('/:catalogId/permissions', permissions.router('catalogs', 'catalog'))
 router.get('/:catalogId', permissions.middleware('readDescription', 'read'), (req, res, next) => {
   req.catalog.userPermissions = permissions.list(req.catalog, operationsClasses, req.user)
   delete req.catalog.permissions
+  if (req.catalog.apiKey) req.catalog.apiKey = '**********'
   res.status(200).send(req.catalog)
 })
 
@@ -134,7 +136,7 @@ router.patch('/:catalogId', permissions.middleware('writeDescription', 'write'),
   if (!valid) return res.status(400).send(validateCatalogNoRequired.errors)
 
   const forbiddenKey = Object.keys(patch).find(key => {
-    return ['apiKey', 'description', 'title', 'organizationId'].indexOf(key) === -1
+    return ['apiKey', 'description', 'title', 'organization'].indexOf(key) === -1
   })
   if (forbiddenKey) return res.status(400).send('Only some parts of the catalog configuration can be modified through this route')
 

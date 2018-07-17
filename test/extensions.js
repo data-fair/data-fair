@@ -183,7 +183,7 @@ other,unknown address
 
   // Prepare for extension failure with bad body in response
   nock('http://test.com').post('/coords').reply(200, 'some error')
-  res = await ax.patch('/api/v1/datasets/dataset2', {extensions: [{active: true, remoteService: remoteServiceId, action: 'postCoords'}]})
+  res = await ax.patch('/api/v1/datasets/dataset2', {extensions: [{active: true, forceNext: true, remoteService: remoteServiceId, action: 'postCoords'}]})
   t.is(res.status, 200)
   await workers.hook('finalizer')
   dataset = (await ax.get('/api/v1/datasets/dataset2')).data

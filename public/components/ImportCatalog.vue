@@ -36,21 +36,7 @@
       </v-stepper-content>
 
       <v-stepper-content step="2">
-        <v-text-field label="Clé d'API" :hint="apiKeyHint" persistent-hint v-model="catalog.apiKey" required :rules="[() => !!catalog.apiKey]"/>
-        <v-autocomplete
-          v-model="catalog.organization"
-          :items="organizations"
-          :loading="organizationsLoading"
-          :search-input.sync="searchOrganizations"
-          label="Organisation"
-          placeholder="Tapez pour rechercher"
-          return-object
-          item-text="name"
-          item-value="id"
-          :hint="apiKeyHint"
-          persistent-hint
-          no-data-text="Aucune organisation ne correspond"
-        />
+        <catalog-config-form :catalog="catalog"/>
         <v-btn color="primary" :disabled="!catalog.apiKey" @click.native="currentStep = 3">Continuer</v-btn>
         <v-btn flat @click.native="$emit('cancel')">Annuler</v-btn>
       </v-stepper-content>
@@ -76,8 +62,10 @@
 import marked from 'marked'
 import {mapState} from 'vuex'
 import eventBus from '../event-bus'
+import CatalogConfigForm from './CatalogConfigForm.vue'
 
 export default {
+  components: {CatalogConfigForm},
   props: ['initCatalog'],
   data: () => ({
     currentStep: null,
@@ -86,11 +74,7 @@ export default {
     catalogUrl: null,
     configurableCatalogs: [],
     marked,
-    catalog: {},
-    orgHint: `Laissez vide pour travailler sur un compte personnel. Sinon utilisez l'identifiant d'une organisation dans laquelle vous avez le droit d'écriture.`,
-    organizations: [],
-    searchOrganizations: '',
-    organizationsLoading: false
+    catalog: {}
   }),
   computed: {
     ...mapState('session', ['user']),
@@ -103,17 +87,6 @@ export default {
           return a
         }, {})
       }
-    },
-    apiKeyHint() {
-      return `Cette clé est à configurer dans <a target="_blank" href="${this.catalog.url}/fr/admin/me/#apikey">votre profil</a> sur le catalogue.`
-    }
-  },
-  watch: {
-    async searchOrganizations() {
-      if (!this.searchOrganizations) return
-      this.organizationsLoading = true
-      this.organizations = (await this.$axios.$get('api/v1/catalogs/_organizations', {params: {type: this.catalog.type, url: this.catalog.url, q: this.searchOrganizations}})).results
-      this.organizationsLoading = false
     }
   },
   async mounted() {

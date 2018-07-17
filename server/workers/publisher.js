@@ -16,14 +16,15 @@ exports.process = async function(app, dataset) {
 
   const waitingPublication = dataset.publications.find(p => p.status === 'waiting')
 
-  async function setResult(error, result) {
+  async function setResult(error) {
     let patch = {}
     if (error) {
-      patch['publications.$.status'] = 'error'
-      patch['publications.$.error'] = error
+      waitingPublication.status = patch['publications.$.status'] = 'error'
+      waitingPublication.error = patch['publications.$.error'] = error
     } else {
-      patch['publications.$.status'] = 'published'
-      patch['publications.$.result'] = result
+      waitingPublication.status = patch['publications.$.status'] = 'published'
+      patch['publications.$.result'] = waitingPublication.result
+      patch['publications.$.targetUrl'] = waitingPublication.targetUrl
     }
     await datasetsCollection.updateOne(
       {id: dataset.id, 'publications.id': waitingPublication.id},
@@ -31,7 +32,7 @@ exports.process = async function(app, dataset) {
     )
   }
 
-  const catalog = catalogsCollection.findOne({id: waitingPublication.catalog})
+  const catalog = await catalogsCollection.findOne({id: waitingPublication.catalog})
 
   if (!catalog) {
     await journals.log(app, dataset, {type: 'error', data: `Une publication fait référence à un catalogue inexistant (${waitingPublication.id})`})
@@ -39,7 +40,7 @@ exports.process = async function(app, dataset) {
   }
 
   try {
-    const res = await catalogs.publish(catalog, waitingPublication)
+    const res = await catalogs.publishDataset(catalog, dataset, waitingPublication)
     await journals.log(app, dataset, {type: 'publication', data: `Publication OK vers ${catalog.title || catalog.url}`})
     await setResult(null, res)
   } catch (err) {

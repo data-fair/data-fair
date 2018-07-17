@@ -21,9 +21,9 @@
         Enrichissement
         <v-icon>merge_type</v-icon>
       </v-tab>
-      <v-tab v-if="can('getPermissions')" :nuxt="true" :to="`/dataset/${dataset.id}/catalogs`">
-        Catalogues
-        <v-icon>cloud_queue</v-icon>
+      <v-tab v-if="can('getPermissions')" :nuxt="true" :to="`/dataset/${dataset.id}/publications`">
+        Publications
+        <v-icon>publish</v-icon>
       </v-tab>
       <v-tab :disabled="!can('readJournal')" :nuxt="true" :to="`/dataset/${dataset.id}/journal`">
         Journal
@@ -130,6 +130,10 @@ export default {
 
 <style>
 .event-finalize-end * {
+  color: green !important;
+}
+
+.event-publication * {
   color: green !important;
 }
 

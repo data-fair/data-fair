@@ -4,7 +4,7 @@
     <span>{{ (resource.owner.type === 'user' ? 'Utilisateur ' : 'Organisation ') + resource.owner.name }}</span>
 
     <h3 class="headline mt-3 mb-3">Permissions</h3>
-    <v-btn id="new-permissions" color="primary" @click="permissions.push(currentPermission = initPermission());addPermissions = true;showDialog = true">Ajouter des permissions</v-btn>
+    <v-btn id="new-permissions" color="primary" @click="currentPermission = initPermission();addPermissions = true;showDialog = true">Ajouter des permissions</v-btn>
     <v-data-table
       v-if="permissions && permissions.length"
       :headers="[{text: 'Portée', sortable: false}, {text: 'Actions', sortable: false}, { text: '', sortable: false }]"
@@ -63,18 +63,19 @@
             required
           />
 
-          <v-select
+          <v-autocomplete
             v-if="currentPermission.type"
-            autocomplete
             :items="currentPermission.type === 'organization' ? organizations : users"
             item-text="name"
             item-value="id"
-            v-model="currentPermission.id"
+            v-model="currentEntity"
             label="Nom"
             required
             :search-input.sync="search"
             :loading="loading"
             cache-items
+            hide-no-data
+            return-object
           />
 
           <v-select
@@ -126,8 +127,8 @@
 
         <v-card-actions>
           <v-spacer/>
-          <v-btn @click="addPermissions && permissions.pop();showDialog = false" flat>Annuler</v-btn>
-          <v-btn color="primary" :disabled="(currentPermission.type && !currentPermission.id) || ((!currentPermission.operations || !currentPermission.operations.length) && (!currentPermission.classes ||!currentPermission.classes.length))" @click="showDialog = false;save()">Ajouter</v-btn>
+          <v-btn @click="showDialog = false" flat>Annuler</v-btn>
+          <v-btn color="primary" :disabled="(currentPermission.type && !currentPermission.id) || ((!currentPermission.operations || !currentPermission.operations.length) && (!currentPermission.classes ||!currentPermission.classes.length))" @click="showDialog = false;save()">Valider</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -146,6 +147,7 @@ export default {
     permissions: [],
     currentPermission: {},
     currentPermissionOrganizationRoles: [],
+    currentEntity: {},
     users: [],
     organizations: [],
     showDialog: false,
@@ -191,11 +193,9 @@ export default {
       this.currentPermission.id = this.currentPermission.id || null
       this.currentPermission.roles = this.currentPermission.roles || []
     },
-    'currentPermission.id': async function(id) {
-      if (id && this.currentPermission.type) {
-        this[this.currentPermission.type + 's'] = (await this.$axios.$get(this.env.directoryUrl + '/api/' + this.currentPermission.type + 's', {params: {ids: id}})).results
-        this.currentPermission.name = this[this.currentPermission.type + 's'][0].name
-      }
+    'currentEntity.id': async function(id) {
+      this.currentPermission.id = this.currentEntity.id
+      this.currentPermission.name = this.currentEntity.name
       if (this.currentPermission.type === 'organization' && id) {
         if ((this.resource.owner.type === 'organization' && this.resource.owner.id === id) || (this.resource.owner.type === 'user' && this.user.organizations.find(o => o.id === id))) {
           const roles = await this.$axios.$get(this.env.directoryUrl + '/api/organizations/' + id + '/roles')
@@ -206,6 +206,12 @@ export default {
       }
     },
     search: async function() {
+      console.log('SEARCH', this.search)
+      console.log('NAME', this.currentEntity.name)
+      if (this.search && this.search === this.currentEntity.name) {
+        console.log('SEARCH SAME')
+        return
+      }
       this.loading = true
       if (this.currentPermission && this.currentPermission.type === 'organization') {
         this.users = []
@@ -225,6 +231,7 @@ export default {
   },
   methods: {
     async save() {
+      if (this.addPermissions) this.permissions.push((this.currentPermission))
       try {
         this.permissions.forEach(permission => {
           if (!permission.type) delete permission.type

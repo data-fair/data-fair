@@ -11,7 +11,6 @@ export default {
     api: null,
     journal: [],
     remoteServices: [],
-    catalogs: null,
     nbApplications: null
   },
   getters: {
@@ -54,12 +53,6 @@ export default {
     },
     addRemoteService(state, service) {
       state.remoteServices.push(service)
-    },
-    writePublication(state, publication) {
-      state.dataset.publications.push(publication)
-    },
-    deletePublication(state, id) {
-      state.dataset.publications = state.dataset.publications.filter(p => p.id !== id)
     }
   },
   actions: {
@@ -152,22 +145,6 @@ export default {
         remoteServices = data.results.filter(s => s.owner.type === state.dataset.owner.type && s.owner.id === state.dataset.owner.id)
       }
       commit('setAny', {remoteServices})
-    },
-    async fetchCatalogs({getters, commit, state}) {
-      const catalogs = await this.$axios.$get(`api/v1/settings/${state.dataset.owner.type}/${state.dataset.owner.id}/catalogs`)
-      commit('setAny', {catalogs})
-    },
-    async writePublication({commit, state, getters}, publication) {
-      try {
-        const createdPublication = await this.$axios.$post(`${getters.resourceUrl}/publications`, publication)
-        commit('writePublication', createdPublication)
-      } catch (error) {
-        eventBus.$emit('notification', {error, msg: 'Erreur pendant la création d\'une publication'})
-      }
-    },
-    async deletePublication({commit, state, getters}, id) {
-      await this.$axios.$delete(`${getters.resourceUrl}/publications/${id}`)
-      commit('deletePublication', id)
     }
   }
 }

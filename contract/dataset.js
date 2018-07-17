@@ -171,7 +171,7 @@ module.exports = {
       description: 'References to all the catalogs the dataset metadata is published too',
       items: {
         type: 'object',
-        required: ['catalogUrl'],
+        required: ['catalog', 'status'],
         additionalProperties: false,
         properties: {
           id: {
@@ -183,7 +183,7 @@ module.exports = {
           },
           status: {
             type: 'string',
-            description: 'A simple flag to clearly identify the publications that wre successful. If "published" then the targetUrl key should be defined, If "error" then the error key should be defined.',
+            description: 'A simple flag to clearly identify the publications that were successful. If "published" then the targetUrl key should be defined, If "error" then the error key should be defined.',
             enum: ['waiting', 'published', 'error']
           },
           error: {
@@ -191,6 +191,10 @@ module.exports = {
           },
           targetUrl: {
             type: 'string'
+          },
+          result: {
+            type: 'object',
+            description: 'The result of pushing the publication. The structure of this object is permissive and depends on the type of catalog'
           }
         }
       }

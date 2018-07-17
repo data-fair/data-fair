@@ -1,9 +1,9 @@
 <template>
   <v-layout column class="catalog" v-if="catalog">
     <v-tabs icons-and-text grow color="transparent" slider-color="primary" class="mb-3">
-      <v-tab :disabled="!can('readDescription')" :nuxt="true" :to="`/catalog/${catalog.id}/config`">
-        Configuration
-        <v-icon>build</v-icon>
+      <v-tab :disabled="!can('readDescription')" :nuxt="true" :to="`/catalog/${catalog.id}/description`">
+        Description
+        <v-icon>toc</v-icon>
       </v-tab>
       <v-tab v-if="can('getPermissions')" :nuxt="true" :to="`/catalog/${catalog.id}/permissions`">
         Permissions

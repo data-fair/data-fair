@@ -4,7 +4,7 @@ const testUtils = require('./resources/test-utils')
 const {test, axiosBuilder} = testUtils.prepare(__filename)
 
 // Prepare mock for outgoing HTTP requests
-nock('http://mycatalog.com').persist()
+nock('http://test-catalog.com').persist()
   .get('/api/1/site/').reply(200, {title: 'My catalog'})
   .get('/api/1/organizations/?q=koumoul').reply(200, {data: [{name: 'Koumoul'}]})
 
@@ -17,7 +17,7 @@ test('Get catalogs when not authenticated', async t => {
 
 test('Init catalog definition based on url', async t => {
   const ax = await axiosBuilder()
-  const res = await ax.post('/api/v1/catalogs/_init', null, {params: {url: 'http://mycatalog.com'}})
+  const res = await ax.post('/api/v1/catalogs/_init', null, {params: {url: 'http://test-catalog.com'}})
   t.is(res.status, 200)
   t.is(res.data.type, 'udata')
   t.is(res.data.title, 'My catalog')
@@ -34,14 +34,14 @@ test('Fail to init catalog definition based on bad url', async t => {
 
 test('Search organizations in a udata catalog', async t => {
   const ax = await axiosBuilder()
-  const res = await ax.get('/api/v1/catalogs/_organizations', {params: {type: 'udata', url: 'http://mycatalog.com', q: 'koumoul'}})
+  const res = await ax.get('/api/v1/catalogs/_organizations', {params: {type: 'udata', url: 'http://test-catalog.com', q: 'koumoul'}})
   t.truthy(res.data.results)
   t.is(res.data.results[0].name, 'Koumoul')
 })
 
 test('Post a minimal catalog definition, read it, update it and delete it', async t => {
   const ax = await axiosBuilder('dmeadus0@answers.com')
-  let res = await ax.post('/api/v1/catalogs', {url: 'http://mycatalog.com', title: 'Test catalog', apiKey: 'apiKey'})
+  let res = await ax.post('/api/v1/catalogs', {url: 'http://test-catalog.com', title: 'Test catalog', apiKey: 'apiKey', type: 'udata'})
   t.is(res.status, 201)
   const eaId = res.data.id
   res = await ax.get('/api/v1/catalogs')

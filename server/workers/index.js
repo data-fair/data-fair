@@ -8,7 +8,8 @@ const workers = {
   csvSchematizer: require('./csv-schematizer'),
   indexer: require('./indexer'),
   extender: require('./extender'),
-  finalizer: require('./finalizer')
+  finalizer: require('./finalizer'),
+  publisher: require('./publisher')
 }
 
 // resolve functions that will be filled when we will be asked to stop the workers

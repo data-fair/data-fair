@@ -8,7 +8,7 @@ exports.connectors = fs.readdirSync(__dirname)
   .map(f => ({key: f.replace('.js', ''), ...require('./' + f)}))
 
 // Loosely validate connectors
-const expectedKeys = ['key', 'title', 'description', 'docUrl', 'init', 'findOrganizations']
+const expectedKeys = ['key', 'title', 'description', 'docUrl', 'init', 'findOrganizations', 'publishDataset']
 exports.connectors.forEach(c => {
   assert.deepEqual(Object.keys(c), expectedKeys, `The catalog connector ${c.key} does not have all expected exported properties (${expectedKeys.join(', ')}).`)
 })
@@ -29,4 +29,10 @@ exports.findOrganizations = async (type, url, q) => {
   const connector = exports.connectors.find(c => c.key === type)
   if (!connector) throw createError(404, 'No connector found for catalog type ' + type)
   return connector.findOrganizations(url, q)
+}
+
+exports.publishDataset = async (catalog, dataset, publication) => {
+  const connector = exports.connectors.find(c => c.key === catalog.type)
+  if (!connector) throw createError(404, 'No connector found for catalog type ' + catalog.type)
+  return connector.publishDataset(catalog, dataset, publication)
 }

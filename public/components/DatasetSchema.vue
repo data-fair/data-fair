@@ -20,7 +20,7 @@
             <v-text-field label="Libellé" v-model="field.title" :placeholder="field['x-originalName']"/>
           </v-flex>
           <v-flex xs5>
-            <v-text-field label="Description" multi-line rows="1" v-model="field.description" :id="'description-' + field.key"/>
+            <v-textarea label="Description" rows="1" v-model="field.description" :id="'description-' + field.key"/>
           </v-flex>
           <v-flex xs3>
             <v-select

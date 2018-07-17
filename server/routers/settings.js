@@ -64,14 +64,4 @@ router.get('/:type/:id/licenses', asyncWrap(async(req, res) => {
   res.status(200).send([].concat(config.licenses, (result && result.licenses) || []))
 }))
 
-// Get licenses list as anyone (without confidential parts)
-router.get('/:type/:id/catalogs', asyncWrap(async(req, res) => {
-  const settings = req.app.get('db').collection('settings')
-  const result = await settings.findOne({
-    type: req.params.type,
-    id: req.params.id
-  })
-  res.status(200).send((result.catalogs || []).map(c => ({url: c.url, type: c.type})))
-}))
-
 module.exports = router

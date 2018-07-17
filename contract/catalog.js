@@ -7,7 +7,7 @@ module.exports = {
   description: 'A catalog configuration to publish metadatas from datasets, services and applications.',
   type: 'object',
   additionalProperties: false,
-  required: ['id', 'owner', 'url', 'apiKey'],
+  required: ['id', 'owner', 'url', 'apiKey', 'type'],
   properties: {
     id: {
       type: 'string',

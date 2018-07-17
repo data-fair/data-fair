@@ -36,7 +36,7 @@ const operationsClasses = {
   list: ['list'],
   read: ['readDescription', 'readLines', 'getGeoAgg', 'getValuesAgg', 'getMetricAgg', 'downloadOriginalData', 'downloadFullData', 'readJournal', 'readApiDoc'],
   write: ['writeDescription', 'writeData'],
-  admin: ['delete', 'getPermissions', 'setPermissions', 'writePublication', 'deletePublication']
+  admin: ['delete', 'getPermissions', 'setPermissions']
 }
 
 // Get the list of datasets

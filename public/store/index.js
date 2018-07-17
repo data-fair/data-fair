@@ -4,12 +4,13 @@ import {sessionStore} from 'simple-directory-client-nuxt'
 import dataset from './dataset'
 import remoteService from './remote-service'
 import application from './application'
+import catalog from './catalog'
 
 Vue.use(Vuex)
 
 export default () => {
   return new Vuex.Store({
-    modules: {dataset, remoteService, application, session: sessionStore},
+    modules: {dataset, remoteService, application, catalog, session: sessionStore},
     state: {
       user: null,
       vocabulary: null,

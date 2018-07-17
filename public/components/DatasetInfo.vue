@@ -5,7 +5,7 @@
         <v-card class="mb-3">
           <v-list>
             <v-list-tile v-if="journal[0]" :class="'event-' + journal[0].type">
-              <v-list-tile-avatar v-if="journal[0].type === 'finalize-end' || journal[0].type === 'error'">
+              <v-list-tile-avatar v-if="['finalize-end', 'error', 'publication'].includes(journal[0].type)">
                 <v-icon>{{ events[journal[0].type].icon }}</v-icon>
               </v-list-tile-avatar>
               <v-list-tile-avatar v-else>
@@ -49,7 +49,7 @@
       </v-flex>
       <v-flex xs12 md6 order-md1>
         <v-text-field label="Titre" v-model="dataset.title" @blur="patch({title: dataset.title})"/>
-        <v-text-field label="Description" v-model="dataset.description" box multi-line rows="4" @blur="patch({description: dataset.description})"/>
+        <v-textarea label="Description" v-model="dataset.description" box rows="4" @blur="patch({description: dataset.description})"/>
         <v-select
           :items="licenses"
           item-text="title"
