@@ -78,7 +78,7 @@ test.serial('Process newly uploaded CSV dataset', async t => {
     await workers.hook('finalizer')
     t.fail()
   } catch (err) {
-    t.is(err.dataset.status, 'error')
+    t.is(err.resource.status, 'error')
     t.true(err.message.indexOf('illegal latitude value') !== -1)
   }
 })
@@ -103,7 +103,7 @@ test.serial('Publish a dataset after finalization', async t => {
   t.is(res.status, 200)
 
   // Go through the publisher worker
-  dataset = await workers.hook('publisher')
+  dataset = await workers.hook('datasetPublisher')
   t.is(dataset.status, 'finalized')
   t.is(dataset.publications[0].status, 'published')
   t.is(dataset.publications[0].targetUrl, 'http://test-catalog.com/datasets/my-dataset')

@@ -4,7 +4,7 @@
   "description": "",
   "main": "server",
   "scripts": {
-    "test": "nyc ava --serial --timeout=60000 -v test/*.js",
+    "test": "nyc ava --timeout=60000 -v test/*.js",
     "coveralls": "nyc report --reporter=text-lcov | coveralls",
     "report": "nyc report --reporter=html",
     "lint": "eslint --ext js,vue --ignore-path .gitignore .",

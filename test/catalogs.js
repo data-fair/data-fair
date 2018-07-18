@@ -6,7 +6,7 @@ const {test, axiosBuilder} = testUtils.prepare(__filename)
 // Prepare mock for outgoing HTTP requests
 nock('http://test-catalog.com').persist()
   .get('/api/1/site/').reply(200, {title: 'My catalog'})
-  .get('/api/1/organizations/?q=koumoul').reply(200, {data: [{name: 'Koumoul'}]})
+  .get('/api/1/organizations/suggest/?q=koumoul').reply(200, [{name: 'Koumoul'}])
 
 test('Get catalogs when not authenticated', async t => {
   const ax = await axiosBuilder()

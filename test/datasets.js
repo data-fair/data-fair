@@ -102,7 +102,7 @@ test('Fail to upload new dataset when not authenticated', async t => {
 test('Upload dataset - full test with webhooks', async t => {
   const wsCli = new WebSocket(config.publicUrl)
   const ax = await axiosBuilder('cdurning2@desdev.cn')
-  await ax.put('/api/v1/settings/user/cdurning2', {webhooks: [{title: 'test', events: ['finalize-end'], url: 'http://localhost:5900'}]})
+  await ax.put('/api/v1/settings/user/cdurning2', {webhooks: [{type: 'dataset', title: 'test', events: ['finalize-end'], url: 'http://localhost:5900'}]})
   let form = new FormData()
   form.append('file', fs.readFileSync('./test/resources/Antennes du CD22.csv'), 'Antennes du CD22.csv')
   let res = await ax.post('/api/v1/datasets', form, {headers: testUtils.formHeaders(form)})

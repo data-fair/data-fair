@@ -19,7 +19,7 @@ module.exports.log = async function(app, resource, event, type = 'dataset') {
   settings.webhooks.forEach(webhook => {
     if (webhook.events && webhook.events.length && !webhook.events.includes(event.type)) return
     axios.post(webhook.url, {
-      text: (resource.title || resource.id) + ' - ' + events[event.type].text + (event.href ? ' - ' + event.href : ''),
+      text: (resource.title || resource.id) + ' - ' + events[webhook.type][event.type].text + (event.href ? ' - ' + event.href : ''),
       href: `${config.publicUrl}/api/v1/${type}s/${resource.id}`,
       event: event.type
     })
