@@ -13,7 +13,7 @@ module.exports = {
     status: {
       type: 'string',
       description: 'A simple flag to clearly identify the publications that were successful. If "published" then the targetUrl key should be defined, If "error" then the error key should be defined.',
-      enum: ['waiting', 'published', 'error']
+      enum: ['waiting', 'published', 'error', 'deleted']
     },
     error: {
       type: 'string'

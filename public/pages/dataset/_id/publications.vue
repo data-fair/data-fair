@@ -15,7 +15,8 @@
           <v-list-tile-title v-else>Jeu de données publié sur le catalogue "{{ catalogsById[publication.catalog].title }}"</v-list-tile-title>
           <v-list-tile-sub-title v-if="publication.status==='published'"><a :href="publication.targetUrl" target="_blank">{{ publication.targetUrl }}</a></v-list-tile-sub-title>
           <v-list-tile-sub-title v-else-if="publication.status==='error'" style="color:red;">{{ publication.error }}</v-list-tile-sub-title>
-          <v-list-tile-sub-title v-else>En attente</v-list-tile-sub-title>
+          <v-list-tile-sub-title v-else-if="publication.status==='deleted'">En attente de suppression</v-list-tile-sub-title>
+          <v-list-tile-sub-title v-else>En attente de publication</v-list-tile-sub-title>
         </v-list-tile-content>
         <v-list-tile-action>
           <v-btn v-if="can('writeDescription')" color="warning" icon flat title="Supprimer cette publication" @click="deletePublicationInd = i; showDeleteDialog = true;">
@@ -81,6 +82,9 @@
         </v-card-title>
         <v-card-text>
           Voulez vous vraiment supprimer la publication ? La suppression est définitive et les données ne pourront pas être récupérées.
+          <br>
+          <br>
+          <b>Attention</b> les données seront également supprimées dans le catalogue destinataire de la publication.
         </v-card-text>
         <v-card-actions>
           <v-spacer/>
@@ -148,7 +152,7 @@ export default {
       this.patch({publications: this.dataset.publications})
     },
     deletePublication(publicationInd) {
-      this.dataset.publications.splice(publicationInd, 1)
+      this.dataset.publications[publicationInd].status = 'deleted'
       this.patch({publications: this.dataset.publications})
     },
     catalogLabel(catalog) {

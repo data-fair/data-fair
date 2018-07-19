@@ -26,23 +26,68 @@ exports.publishDataset = async (catalog, dataset, publication) => {
   else return createNewDataset(catalog, dataset, publication)
 }
 
+exports.deleteDataset = async (catalog, dataset, publication) => {
+  if (publication.addToDataset && publication.addToDataset.id) return deleteResourceFromDataset(catalog, dataset, publication)
+  else return deleteDataset(catalog, dataset, publication)
+}
+
+exports.publishApplication = async (catalog, application, publication) => {
+  console.log('Publish application')
+  return {}
+}
+
+exports.deleteApplication = async (catalog, application, publication) => {
+  console.log('Delete application')
+  return {}
+}
+
+function datasetPageUrl(dataset) {
+  return `${config.publicUrl}/dataset/${dataset.id}/description`
+}
+
+function datasetFileUrl(dataset) {
+  return `${config.publicUrl}/api/v1/datasets/${dataset.id}/full`
+}
+
+function datasetPageDesc(dataset) {
+  const url = datasetPageUrl(dataset)
+  return `Ce jeu de données a été publié depuis [${config.publicUrl}](config.publicUrl). Consultez [sa page](${url}) pour accéder à sa description détaillée, prévisualisation, documentation d'API, etc.`
+}
+
 async function addResourceToDataset(catalog, dataset, publication) {
   // TODO: no equivalent of "private" on a resource
-  const resource = {
-    title: dataset.title,
-    description: dataset.description,
-    url: `${config.publicUrl}/dataset/${dataset.id}/description`,
+  const resources = [{
+    title: `${dataset.title} - Page sur ${config.publicUrl}`,
+    description: dataset.description + '\n\n' + datasetPageDesc(dataset),
+    url: datasetPageUrl(dataset),
     filetype: 'remote',
+    format: 'Page Web',
+    mime: 'text/html',
     extras: {
       datafairOrigin: config.publicUrl,
       datafairDatasetId: dataset.id
     }
-  }
+  }, {
+    title: `${dataset.title} - ${dataset.file.name}`,
+    description: dataset.description + '\n\nTéléchargez le fichier complet.',
+    url: datasetFileUrl(dataset),
+    type: 'main',
+    filetype: 'remote',
+    format: 'fichier',
+    filesize: dataset.file.size,
+    mime: dataset.file.mimetype,
+    extras: {
+      datafairOrigin: config.publicUrl,
+      datafairDatasetId: dataset.id
+    }
+  }]
   try {
+    for (let resource of resources) {
+      await axios.post(url.resolve(catalog.url, `api/1/datasets/${publication.addToDataset.id}/resources/`), resource, {headers: {'X-API-KEY': catalog.apiKey}})
+    }
     const udataDataset = (await axios.get(url.resolve(catalog.url, `api/1/datasets/${publication.addToDataset.id}`))).data
-    const res = await axios.post(url.resolve(catalog.url, `api/1/datasets/${publication.addToDataset.id}/resources/`), resource, {headers: {'X-API-KEY': catalog.apiKey}})
     publication.targetUrl = udataDataset.page
-    publication.result = res.data
+    publication.result = udataDataset
   } catch (err) {
     if (err.response) throw new Error(`Erreur lors de l'envoi à ${catalog.url} : ${JSON.stringify(err.response.data, null, 2)}`)
     else throw err
@@ -52,12 +97,29 @@ async function addResourceToDataset(catalog, dataset, publication) {
 async function createNewDataset(catalog, dataset, publication) {
   const udataDataset = {
     title: dataset.title,
-    description: dataset.description,
+    description: dataset.description + '\n\n' + datasetPageDesc(dataset),
     private: true,
     extras: {
       datafairOrigin: config.publicUrl,
       datafairDatasetId: dataset.id
-    }
+    },
+    resources: [{
+      title: `Page sur ${config.publicUrl}`,
+      description: `Accédez à la description détaillée, prévisualisation, documentation d'API, etc.`,
+      url: datasetPageUrl(dataset),
+      type: 'documentation',
+      filetype: 'remote',
+      format: 'Page Web',
+      mime: 'text/html'
+    }, {
+      title: dataset.file.name,
+      description: `Téléchargez le fichier complet.`,
+      url: datasetFileUrl(dataset),
+      type: 'main',
+      filetype: 'remote',
+      filesize: dataset.file.size,
+      mime: dataset.file.mimetype
+    }]
   }
   if (catalog.organization && catalog.organization.id) {
     udataDataset.organization = {id: catalog.organization.id}
@@ -72,7 +134,33 @@ async function createNewDataset(catalog, dataset, publication) {
   }
 }
 
-exports.publishApplication = async (catalog, application, publication) => {
-  console.log('Publish application')
-  return {}
+async function deleteResourceFromDataset(catalog, dataset, publication) {
+  const udataDataset = publication.result
+  // The dataset was never really created in udata
+  if (!udataDataset) return
+  const resources = (udataDataset.resources || []).filter(resource => {
+    return resource.extras && resource.extras.datafairDatasetId === dataset.id
+  })
+  for (let resource of resources) {
+    try {
+      await axios.delete(url.resolve(catalog.url, `api/1/datasets/${udataDataset.id}/resources/${resource.id}/`), {headers: {'X-API-KEY': catalog.apiKey}})
+    } catch (err) {
+    // The dataset was already deleted
+      if (err.response && [404, 410].includes(err.response.status)) continue
+      throw err
+    }
+  }
+}
+
+async function deleteDataset(catalog, dataset, publication) {
+  const udataDataset = publication.result
+  // The dataset was never really created in udata
+  if (!udataDataset) return
+  try {
+    await axios.delete(url.resolve(catalog.url, `api/1/datasets/${udataDataset.id}/`), {headers: {'X-API-KEY': catalog.apiKey}})
+  } catch (err) {
+    // The dataset was already deleted
+    if (err.response && [404, 410].includes(err.response.status)) return
+    throw err
+  }
 }
