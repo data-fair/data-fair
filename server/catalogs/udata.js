@@ -18,7 +18,6 @@ exports.suggestOrganizations = async (catalogUrl, q) => {
 
 exports.suggestDatasets = async (catalogUrl, q) => {
   const res = await axios.get(url.resolve(catalogUrl, 'api/1/datasets/suggest/'), {params: {q}})
-  console.log(res.data)
   return {results: res.data.map(o => ({id: o.id, title: o.title}))}
 }
 
@@ -61,7 +60,7 @@ async function createNewDataset(catalog, dataset, publication) {
     }
   }
   if (catalog.organization && catalog.organization.id) {
-    udataDataset.organization = {id: catalog.organizationId}
+    udataDataset.organization = {id: catalog.organization.id}
   }
   try {
     const res = await axios.post(url.resolve(catalog.url, 'api/1/datasets/'), udataDataset, {headers: {'X-API-KEY': catalog.apiKey}})
