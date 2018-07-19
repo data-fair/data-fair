@@ -83,6 +83,10 @@ exports.processPublications = async function(app, type, resource) {
     await journals.log(app, resource, {type: 'error', data: `Une publication fait référence à un catalogue inexistant (${waitingPublication.id})`}, type)
     await setResult('Catalogue inexistant')
   }
+  if (catalog.owner.type !== resource.owner.type || catalog.owner.id !== resource.owner.id) {
+    await journals.log(app, resource, {type: 'error', data: `Une publication fait référence à un catalogue qui n'appartient pas au propriétaire de la resource à publier (${waitingPublication.id})`}, type)
+    await setResult(`Le catalogue n'appartient pas au propriétaire de la resource à publier`)
+  }
 
   try {
     const connector = exports.connectors.find(c => c.key === catalog.type)
