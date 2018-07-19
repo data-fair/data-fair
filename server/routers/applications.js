@@ -150,6 +150,13 @@ router.patch('/:applicationId', permissions.middleware('writeDescription', 'writ
   })
   if (forbiddenKey) return res.status(400).send('Only some parts of the application configuration can be modified through this route')
 
+  // Retry previously failed publications
+  const failedPublications = (req.application.publications || []).filter(p => p.status === 'error')
+  if (failedPublications.length) {
+    failedPublications.forEach(p => { p.status = 'waiting' })
+    patch.publications = req.application.publications
+  }
+
   patch.updatedAt = moment().toISOString()
   patch.updatedBy = {id: req.user.id, name: req.user.name}
 

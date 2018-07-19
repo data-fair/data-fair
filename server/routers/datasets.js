@@ -113,6 +113,11 @@ router.patch('/:datasetId', permissions.middleware('writeDescription', 'write'),
   if (req.dataset.status === 'error') {
     req.body.status = 'loaded'
   }
+  const failedPublications = (req.dataset.publications || []).filter(p => p.status === 'error')
+  if (failedPublications.length) {
+    failedPublications.forEach(p => { p.status = 'waiting' })
+    req.body.publications = req.dataset.publications
+  }
 
   if (req.body.schema) {
     if (JSON.stringify(esUtils.indexDefinition(req.body)) !== JSON.stringify(esUtils.indexDefinition(req.dataset))) {
