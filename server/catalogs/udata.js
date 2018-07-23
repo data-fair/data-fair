@@ -31,14 +31,50 @@ exports.deleteDataset = async (catalog, dataset, publication) => {
   else return deleteDataset(catalog, dataset, publication)
 }
 
-exports.publishApplication = async (catalog, application, publication) => {
-  console.log('Publish application')
-  return {}
+exports.publishApplication = async (catalog, application, publication, datasets) => {
+  const udataDatasets = []
+  datasets.forEach(dataset => {
+    (dataset.publications || []).forEach(publication => {
+      if (publication.catalog === catalog.id && publication.status === 'published') {
+        udataDatasets.push(publication.result)
+      }
+    })
+  })
+  const udataReuse = {
+    title: application.title,
+    description: application.description + '\n\n' + appPageDesc(application),
+    private: true,
+    type: 'application',
+    url: `${config.publicUrl}/app/${application.id}`,
+    extras: {
+      datafairOrigin: config.publicUrl,
+      datafairApplicationId: application.id
+    },
+    datasets: udataDatasets.map(d => ({id: d.id}))
+  }
+  if (catalog.organization && catalog.organization.id) {
+    udataReuse.organization = {id: catalog.organization.id}
+  }
+  try {
+    const res = await axios.post(url.resolve(catalog.url, 'api/1/reuses/'), udataReuse, {headers: {'X-API-KEY': catalog.apiKey}})
+    publication.targetUrl = res.data.page
+    publication.result = res.data
+  } catch (err) {
+    if (err.response) throw new Error(`Erreur lors de l'envoi à ${catalog.url} : ${JSON.stringify(err.response.data, null, 2)}`)
+    else throw err
+  }
 }
 
 exports.deleteApplication = async (catalog, application, publication) => {
-  console.log('Delete application')
-  return {}
+  const udataReuse = publication.result
+  // The dataset was never really created in udata
+  if (!udataReuse) return
+  try {
+    await axios.delete(url.resolve(catalog.url, `api/1/reuses/${udataReuse.id}/`), {headers: {'X-API-KEY': catalog.apiKey}})
+  } catch (err) {
+    // The reuse was already deleted ?
+    if (!err.response || ![404, 410].includes(err.response.status)) throw err
+  }
 }
 
 function datasetPageUrl(dataset) {
@@ -52,6 +88,11 @@ function datasetFileUrl(dataset) {
 function datasetPageDesc(dataset) {
   const url = datasetPageUrl(dataset)
   return `Ce jeu de données a été publié depuis [${config.publicUrl}](config.publicUrl). Consultez [sa page](${url}) pour accéder à sa description détaillée, prévisualisation, documentation d'API, etc.`
+}
+
+function appPageDesc(app) {
+  const url = `${config.publicUrl}/application/${app.id}/description`
+  return `Cette application a été publiée depuis [${config.publicUrl}](${config.publicUrl}). Consultez [sa page](${url}) pour accéder à sa description détaillée, documentation d'API, etc.`
 }
 
 async function addResourceToDataset(catalog, dataset, publication) {
@@ -145,9 +186,8 @@ async function deleteResourceFromDataset(catalog, dataset, publication) {
     try {
       await axios.delete(url.resolve(catalog.url, `api/1/datasets/${udataDataset.id}/resources/${resource.id}/`), {headers: {'X-API-KEY': catalog.apiKey}})
     } catch (err) {
-    // The dataset was already deleted
-      if (err.response && [404, 410].includes(err.response.status)) continue
-      throw err
+      // The resource was already deleted ?
+      if (!err.response || ![404, 410].includes(err.response.status)) throw err
     }
   }
 }
@@ -159,8 +199,7 @@ async function deleteDataset(catalog, dataset, publication) {
   try {
     await axios.delete(url.resolve(catalog.url, `api/1/datasets/${udataDataset.id}/`), {headers: {'X-API-KEY': catalog.apiKey}})
   } catch (err) {
-    // The dataset was already deleted
-    if (err.response && [404, 410].includes(err.response.status)) return
-    throw err
+    // The dataset was already deleted ?
+    if (!err.response || ![404, 410].includes(err.response.status)) throw err
   }
 }

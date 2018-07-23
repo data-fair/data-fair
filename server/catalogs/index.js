@@ -108,7 +108,11 @@ exports.processPublications = async function(app, type, resource) {
     if (!connector) throw createError(404, 'No connector found for catalog type ' + catalog.type)
     let res
     if (type === 'dataset' && processedPublication.status === 'waiting') res = await connector.publishDataset(catalog, resource, processedPublication)
-    if (type === 'application' && processedPublication.status === 'waiting') res = await connector.publishApplication(catalog, resource, processedPublication)
+    if (type === 'application' && processedPublication.status === 'waiting') {
+      const datasets = await getApplicationDatasets(db, resource)
+      // Next line is only here for compatibility.. in next generation of apps, all datasets references should be in .datasets"
+      res = await connector.publishApplication(catalog, resource, processedPublication, datasets)
+    }
     if (type === 'dataset' && processedPublication.status === 'deleted') res = await connector.deleteDataset(catalog, resource, processedPublication)
     if (type === 'application' && processedPublication.status === 'deleted') res = await connector.deleteApplication(catalog, resource, processedPublication)
     if (processedPublication.status === 'waiting') {
@@ -121,4 +125,13 @@ exports.processPublications = async function(app, type, resource) {
     await journals.log(app, resource, {type: 'error', data: err.message || err}, type)
     await setResult(err.message || err)
   }
+}
+
+async function getApplicationDatasets(db, app) {
+  app.configuration = app.configuration || {}
+  const datasetReferences = (app.configuration.datasets || []).map(d => d.href);
+  ['datasetUrl', 'networksDatasetUrl', 'networksMembersDatasetUrl'].forEach(k => {
+    if (app.configuration[k]) datasetReferences.push(app.configuration[k])
+  })
+  return db.collection('datasets').find({id: {$in: datasetReferences.map(r => r.split('/').pop())}}).toArray()
 }

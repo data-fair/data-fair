@@ -129,15 +129,4 @@ export default {
 </script>
 
 <style>
-.event-finalize-end * {
-  color: green !important;
-}
-
-.event-publication * {
-  color: green !important;
-}
-
-.event-error * {
-  color: red !important;
-}
 </style>

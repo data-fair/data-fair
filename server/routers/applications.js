@@ -140,21 +140,22 @@ router.get('/:applicationId', permissions.middleware('readDescription', 'read'),
 })
 
 // Update an application configuration
+const patchKeys = ['configuration', 'url', 'description', 'title', 'publications']
 router.patch('/:applicationId', permissions.middleware('writeDescription', 'write'), asyncWrap(async(req, res) => {
   const patch = req.body
   var valid = validateNoRequired(patch)
   if (!valid) return res.status(400).send(validateNoRequired.errors)
 
-  const forbiddenKey = Object.keys(patch).find(key => {
-    return ['configuration', 'url', 'description', 'title', 'publications'].indexOf(key) === -1
-  })
+  const forbiddenKey = Object.keys(req.body).find(key => !patchKeys.includes(key))
   if (forbiddenKey) return res.status(400).send('Only some parts of the application configuration can be modified through this route')
 
   // Retry previously failed publications
-  const failedPublications = (req.application.publications || []).filter(p => p.status === 'error')
-  if (failedPublications.length) {
-    failedPublications.forEach(p => { p.status = 'waiting' })
-    patch.publications = req.application.publications
+  if (!patch.publications) {
+    const failedPublications = (req.application.publications || []).filter(p => p.status === 'error')
+    if (failedPublications.length) {
+      failedPublications.forEach(p => { p.status = 'waiting' })
+      patch.publications = req.application.publications
+    }
   }
 
   patch.updatedAt = moment().toISOString()

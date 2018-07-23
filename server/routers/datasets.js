@@ -98,39 +98,43 @@ router.get('/:datasetId', permissions.middleware('readDescription', 'read'), (re
 // Update a dataset's metadata
 const patchKeys = ['schema', 'description', 'title', 'license', 'origin', 'extensions', 'publications']
 router.patch('/:datasetId', permissions.middleware('writeDescription', 'write'), asyncWrap(async(req, res) => {
-  if (!acceptedStatuses.includes(req.dataset.status) && (req.body.schema || req.body.extensions)) return res.status(409).send('Dataset is not in proper state to be updated')
-  var valid = validate(req.body)
+  const patch = req.body
+  if (!acceptedStatuses.includes(req.dataset.status) && (patch.schema || patch.extensions)) return res.status(409).send('Dataset is not in proper state to be updated')
+  var valid = validate(patch)
   if (!valid) return res.status(400).send(validate.errors)
 
-  const forbiddenKey = Object.keys(req.body).find(key => !patchKeys.includes(key))
+  const forbiddenKey = Object.keys(patch).find(key => !patchKeys.includes(key))
   if (forbiddenKey) return res.status(400).send('Only some parts of the dataset can be modified through this route')
 
-  req.body.updatedAt = moment().toISOString()
-  req.body.updatedBy = {id: req.user.id, name: req.user.name}
-  if (req.body.extensions) req.body.schema = await extensions.prepareSchema(req.app.get('db'), req.body.schema || req.dataset.schema, req.body.extensions)
+  patch.updatedAt = moment().toISOString()
+  patch.updatedBy = {id: req.user.id, name: req.user.name}
+  if (patch.extensions) patch.schema = await extensions.prepareSchema(req.app.get('db'), patch.schema || req.dataset.schema, patch.extensions)
 
   // Changed a previously failed dataset, retry everything.
   if (req.dataset.status === 'error') {
-    req.body.status = 'loaded'
-  }
-  const failedPublications = (req.dataset.publications || []).filter(p => p.status === 'error')
-  if (failedPublications.length) {
-    failedPublications.forEach(p => { p.status = 'waiting' })
-    req.body.publications = req.dataset.publications
+    patch.status = 'loaded'
   }
 
-  if (req.body.schema) {
-    if (JSON.stringify(esUtils.indexDefinition(req.body)) !== JSON.stringify(esUtils.indexDefinition(req.dataset))) {
-      // Back to schematized state if schema changed in a manner significant for ES indexing
-      req.body.status = 'schematized'
-    } else if (req.body.extensions && req.body.extensions.find(e => e.forceNext)) {
-      // Back to indexed state if schema did not change in significant manner, but one extension is forced
-      req.body.status = 'indexed'
+  if (!patch.publications) {
+    const failedPublications = (req.dataset.publications || []).filter(p => p.status === 'error')
+    if (failedPublications.length) {
+      failedPublications.forEach(p => { p.status = 'waiting' })
+      patch.publications = req.dataset.publications
     }
   }
 
-  await req.app.get('db').collection('datasets').updateOne({id: req.params.datasetId}, {'$set': req.body})
-  res.status(200).json(req.body)
+  if (patch.schema) {
+    if (JSON.stringify(esUtils.indexDefinition(patch)) !== JSON.stringify(esUtils.indexDefinition(req.dataset))) {
+      // Back to schematized state if schema changed in a manner significant for ES indexing
+      patch.status = 'schematized'
+    } else if (patch.extensions && patch.extensions.find(e => e.forceNext)) {
+      // Back to indexed state if schema did not change in significant manner, but one extension is forced
+      patch.status = 'indexed'
+    }
+  }
+
+  await req.app.get('db').collection('datasets').updateOne({id: req.params.datasetId}, {'$set': patch})
+  res.status(200).json(patch)
 }))
 
 const unlink = util.promisify(fs.unlink)

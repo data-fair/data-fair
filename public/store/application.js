@@ -14,7 +14,7 @@ export default {
   getters: {
     resourceUrl: (state, getters, rootState) => state.applicationId ? rootState.env.publicUrl + '/api/v1/applications/' + state.applicationId : null,
     can: (state) => (operation) => (state.application && state.application.userPermissions.includes(operation)) || false,
-    journalChannel: (state) => 'application/' + state.datasetId + '/journal'
+    journalChannel: (state) => 'applications/' + state.applicationId + '/journal'
   },
   mutations: {
     setAny(state, params) {
@@ -78,6 +78,9 @@ export default {
       } catch (error) {
         eventBus.$emit('notification', {error, msg: `Erreur pendant la suppression de la configuration d'application:`})
       }
+    },
+    addJournalEvent({commit}, event) {
+      commit('addJournalEvent', event)
     }
   }
 }
