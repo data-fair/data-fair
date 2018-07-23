@@ -52,8 +52,6 @@
 <script>
 import {mapState} from 'vuex'
 import eventBus from '../event-bus'
-const Extractor = require('html-extractor')
-const htmlExtractor = new Extractor()
 
 export default {
   props: ['initApp'],
@@ -69,6 +67,7 @@ export default {
     ...mapState('session', ['user']),
     ...mapState(['env']),
     owners() {
+      if (!this.user) return {}
       return {
         user: {type: 'user', id: this.user.id, name: this.user.name},
         ...this.user.organizations.reduce((a, o) => {
@@ -90,18 +89,7 @@ export default {
       if (!this.applicationUrl) return
       this.description = null
       try {
-        const html = await this.$axios.$get(this.applicationUrl)
-        const data = await new Promise((resolve, reject) => {
-          htmlExtractor.extract(html, (err, data) => {
-            if (err) reject(err)
-            else resolve(data)
-          })
-        })
-        this.description = {
-          title: data.meta.title,
-          description: data.meta.description,
-          applicationName: data.meta['application-name']
-        }
+        this.description = await this.$axios.$get(this.env.publicUrl + '/api/v1/applications/_description', {params: {url: this.applicationUrl}})
       } catch (error) {
         eventBus.$emit('notification', {error, msg: `Erreur pendant la récupération de la description de l'application`})
       }

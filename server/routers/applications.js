@@ -2,6 +2,8 @@ const express = require('express')
 const slug = require('slug')
 const moment = require('moment')
 const config = require('config')
+const util = require('util')
+const axios = require('axios')
 const applicationAPIDocs = require('../../contract/application-api-docs')
 
 const ajv = require('ajv')()
@@ -10,6 +12,9 @@ const applicationSchemaNoRequired = Object.assign(applicationSchema)
 delete applicationSchemaNoRequired.required
 const validate = ajv.compile(applicationSchema)
 const validateNoRequired = ajv.compile(applicationSchemaNoRequired)
+const Extractor = require('html-extractor')
+const htmlExtractor = new Extractor()
+htmlExtractor.extract = util.promisify(htmlExtractor.extract)
 
 const permissions = require('../utils/permissions')
 const usersUtils = require('../utils/users')
@@ -25,6 +30,19 @@ const operationsClasses = {
   write: ['writeDescription', 'writeConfig'],
   admin: ['delete', 'getPermissions', 'setPermissions']
 }
+
+// Attempts to init an application's description from a URL
+router.get('/_description', asyncWrap(async(req, res) => {
+  if (!req.query.url) return res.status(400).send('"url" query parameter is required')
+  const html = (await axios.get(req.query.url)).data
+  const data = await htmlExtractor.extract(html)
+  console.log(data)
+  res.send({
+    title: data.meta.title,
+    description: data.meta.description,
+    applicationName: data.meta['application-name']
+  })
+}))
 
 // Get the list of applications
 router.get('', asyncWrap(async(req, res) => {
