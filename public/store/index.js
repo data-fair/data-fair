@@ -1,6 +1,6 @@
 import Vue from 'vue'
 import Vuex from 'vuex'
-import {sessionStore} from 'simple-directory-client-nuxt'
+import {sessionStore} from '@koumoul/sd-vue'
 import dataset from './dataset'
 import remoteService from './remote-service'
 import application from './application'
