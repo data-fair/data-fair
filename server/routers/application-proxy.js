@@ -20,7 +20,8 @@ router.all('/:applicationId*', asyncWrap(async(req, res, next) => {
     'X-Directory-Url': config.directoryUrl,
     'X-API-Url': config.publicUrl + '/api/v1',
     // This header is deprecated, use X-Application-Url instead and concatenate /config to it
-    'X-Config-Url': config.publicUrl + '/api/v1/applications/' + req.params.applicationId + '/config'
+    'X-Config-Url': config.publicUrl + '/api/v1/applications/' + req.params.applicationId + '/config',
+    'Accept-Encoding': 'identity'
   }
   const options = {url: application.url + '*', headers}
   // Small hack that mainly fixes a problem occuring in development
@@ -36,6 +37,10 @@ router.all('/:applicationId*', asyncWrap(async(req, res, next) => {
       /* if (resp.statusCode === 302 && resp.headers.location.indexOf('/') === 0) {
         resp.headers.location = new URL(exposedUrl).pathname + resp.headers.location
       } */
+      if (resp.headers['content-encoding'] && resp.headers['content-encoding'] !== 'identity') {
+        console.log(`A proxied application (${req.originalUrl}) sent compressed data (${resp.headers['content-encoding']})`)
+        return false
+      }
       return resp.headers['content-type'] && resp.headers['content-type'].indexOf('text/html') === 0
     },
     transform: () => replaceStream('%DATA_FAIR_CONFIG%', JSON.stringify({
