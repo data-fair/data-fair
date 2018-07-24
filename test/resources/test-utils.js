@@ -2,7 +2,7 @@ const test = require('ava')
 const axios = require('axios')
 const fs = require('fs-extra')
 const path = require('path')
-const axiosAuth = require('simple-directory-client-express').axiosAuth
+const axiosAuth = require('@koumoul/sd-express').axiosAuth
 
 const testDir = path.join(__dirname, '../')
 const testFiles = fs.readdirSync(testDir).map(f => path.join(testDir, f))
