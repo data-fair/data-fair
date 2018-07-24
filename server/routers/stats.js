@@ -7,17 +7,23 @@ const router = module.exports = express.Router()
 router.get('', asyncWrap(async(req, res) => {
   if (!req.user) return res.status(401).send()
   const stats = {
-    user: {},
+    user: await ownerStats(req.app.get('db'), {id: req.user.id, type: 'user'}),
     organizations: {}
   }
-  stats.user.storage = await datasetUtils.storageSize(req.app.get('db'), {id: req.user.id, type: 'user'})
-  stats.user.datasets = await datasetUtils.ownerCount(req.app.get('db'), {id: req.user.id, type: 'user'})
-  req.user.organizations.forEach(orga => {
-    stats.organizations[orga.id] = {}
-  })
-  for (let owner of Object.keys(stats.organizations)) {
-    stats.organizations[owner].storage = await datasetUtils.storageSize(req.app.get('db'), {id: owner, type: 'organization'})
-    stats.organizations[owner].datasets = await datasetUtils.ownerCount(req.app.get('db'), {id: owner, type: 'organization'})
+  for (let orga of req.user.organizations) {
+    stats.organizations[orga.id] = await ownerStats(req.app.get('db'), {id: orga.id, type: 'organization'})
   }
   res.send(stats)
 }))
+
+async function ownerStats(db, owner) {
+  return {
+    storage: await datasetUtils.storageSize(db, owner),
+    datasets: await ownerCount(db, 'datasets', owner),
+    applications: await ownerCount(db, 'applications', owner)
+  }
+}
+
+async function ownerCount(db, collection, owner) {
+  return db.collection(collection).count({'owner.id': owner.id, 'owner.type': owner.type})
+}

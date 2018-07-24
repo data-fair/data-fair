@@ -8,8 +8,9 @@
       <v-data-table v-if="stats" :headers="headers" :items="items" hide-actions class="elevation-1 mt-4">
         <template slot="items" slot-scope="props">
           <td>{{ props.item.name }}</td>
-          <td>{{ props.item.storage }}</td>
           <td>{{ props.item.datasets }}</td>
+          <td>{{ (props.item.storage / 1000).toFixed(2) }} ko</td>
+          <td>{{ props.item.applications }}</td>
         </template>
       </v-data-table>
     </v-flex>
@@ -43,7 +44,8 @@ export default {
     headers: [
       {text: '', value: 'name', sortable: false},
       {text: 'Nombre de jeux de données', value: 'storage', sortable: false},
-      {text: 'Espace consommé', value: 'datasets', sortable: false}
+      {text: 'Espace consommé', value: 'datasets', sortable: false},
+      {text: 'Nombre d\'applications', value: 'applications', sortable: false}
     ]
   }),
   computed: {

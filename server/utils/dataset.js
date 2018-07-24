@@ -85,12 +85,3 @@ exports.storageRemaining = async (db, owner, req) => {
   const size = await exports.storageSize(db, owner)
   return Math.max(0, limit - size)
 }
-
-exports.ownerCount = async (db, owner) => {
-  const aggQuery = [
-    {$match: {'owner.type': owner.type, 'owner.id': owner.id}},
-    {$group: {_id: null, count: {$sum: 1}}}
-  ]
-  const res = await db.collection('datasets').aggregate(aggQuery).toArray()
-  return res.length ? res[0].count : 0
-}
