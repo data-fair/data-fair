@@ -2,7 +2,7 @@ const express = require('express')
 const requestProxy = require('express-request-proxy')
 const config = require('config')
 const replaceStream = require('replacestream')
-const URL = require('url').URL
+// const URL = require('url').URL
 const asyncWrap = require('../utils/async-wrap')
 
 const router = module.exports = express.Router()
