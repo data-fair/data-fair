@@ -28,5 +28,10 @@ exports.init = async () => {
   await ensureIndex(db, 'applications', {'configuration.datasets.href': 1})
   await ensureIndex(db, 'applications', {'configuration.remoteServices.href': 1})
   await ensureIndex(db, 'applications', {title: 'text', description: 'text', 'owner.name': 'text'}, {name: 'fulltext'})
+  // catalogs indexes
+  await ensureIndex(db, 'catalogs', {id: 1}, {unique: true})
+  await ensureIndex(db, 'catalogs', {'owner.type': 1, 'owner.id': 1})
+  await ensureIndex(db, 'catalogs', {title: 'text', description: 'text', 'owner.name': 'text'}, {name: 'fulltext'})
+
   return {db, client}
 }

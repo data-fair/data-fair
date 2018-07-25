@@ -9,6 +9,9 @@
       <v-flex xs12 sm7 md6 lg5 class="pt-4">
         <v-switch label="Voir les applications dont je ne suis pas propriétaire" v-model="showNotOwned" @change="refresh"/>
       </v-flex>
+
+      <search-progress :loading="loading"/>
+
     </v-layout>
 
     <v-layout row wrap class="resourcesList">
@@ -31,17 +34,19 @@
       </v-flex>
     </v-layout>
 
-    <v-layout row wrap>
+    <v-layout row wrap v-if="applications.count">
       <v-spacer/><v-pagination :length="Math.ceil(applications.count / size)" v-model="page" @input="$vuetify.goTo('.resourcesList', {offset: -20});refresh()"/>
     </v-layout>
   </v-container>
 </template>
 
 <script>
+import SearchProgress from './SearchProgress.vue'
 const marked = require('marked')
 const {mapState} = require('vuex')
 
 export default {
+  components: {SearchProgress},
   data: () => ({
     applications: {
       count: 0,
@@ -51,7 +56,8 @@ export default {
     showNotOwned: false,
     size: 10,
     page: 1,
-    marked
+    marked,
+    loading: true
   }),
   computed: {
     ...mapState('session', ['user']),
@@ -60,14 +66,16 @@ export default {
       return this.applications.count > 1 ? 's' : ''
     }
   },
-  mounted() {
+  created() {
     this.refresh()
   },
   methods: {
     async refresh() {
+      this.loading = true
       this.applications = await this.$axios.$get(this.env.publicUrl + '/api/v1/applications', {params:
-        {size: this.size, page: this.page, q: this.search, 'is-owner': !this.showNotOwned}
+        {size: this.size, page: this.page, q: this.search, 'is-owner': !this.showNotOwned, select: 'title,description'}
       })
+      this.loading = false
     }
   }
 }
