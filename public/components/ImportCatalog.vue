@@ -107,8 +107,12 @@ export default {
       }
     },
     async importCatalog() {
+      const options = {}
+      if (this.owners[this.owner].type === 'organization') {
+        options.headers = {'x-organizationId': this.owners[this.owner].id}
+      }
       try {
-        const catalog = await this.$axios.$post('api/v1/catalogs', this.catalog)
+        const catalog = await this.$axios.$post('api/v1/catalogs', this.catalog, options)
         this.$router.push({path: `/catalog/${catalog.id}/description`})
       } catch (error) {
         eventBus.$emit('notification', {error, msg: `Erreur pendant l'import de la description du catalogue`})
