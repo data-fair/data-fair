@@ -42,7 +42,7 @@ exports.publishApplication = async (catalog, application, publication, datasets)
   })
   const udataReuse = {
     title: application.title,
-    description: application.description + '\n\n' + appPageDesc(application),
+    description: appPageDesc(application),
     private: true,
     type: 'application',
     url: `${config.publicUrl}/app/${application.id}`,
@@ -86,20 +86,22 @@ function datasetFileUrl(dataset) {
 }
 
 function datasetPageDesc(dataset) {
+  const desc = dataset.description ? dataset.description + '\n\n' : ''
   const url = datasetPageUrl(dataset)
-  return `Ce jeu de données a été publié depuis [${config.publicUrl}](config.publicUrl). Consultez [sa page](${url}) pour accéder à sa description détaillée, prévisualisation, documentation d'API, etc.`
+  return desc + `Ce jeu de données a été publié depuis [${config.publicUrl}](config.publicUrl). Consultez [sa page](${url}) pour accéder à sa description détaillée, prévisualisation, documentation d'API, etc.`
 }
 
 function appPageDesc(app) {
+  const desc = app.description ? app.description + '\n\n' : ''
   const url = `${config.publicUrl}/application/${app.id}/description`
-  return `Cette application a été publiée depuis [${config.publicUrl}](${config.publicUrl}). Consultez [sa page](${url}) pour accéder à sa description détaillée, documentation d'API, etc.`
+  return desc + `Cette application a été publiée depuis [${config.publicUrl}](${config.publicUrl}). Consultez [sa page](${url}) pour accéder à sa description détaillée, documentation d'API, etc.`
 }
 
 async function addResourceToDataset(catalog, dataset, publication) {
   // TODO: no equivalent of "private" on a resource
   const resources = [{
     title: `${dataset.title} - Page sur ${config.publicUrl}`,
-    description: dataset.description + '\n\n' + datasetPageDesc(dataset),
+    description: datasetPageDesc(dataset),
     url: datasetPageUrl(dataset),
     filetype: 'remote',
     format: 'Page Web',
@@ -138,7 +140,7 @@ async function addResourceToDataset(catalog, dataset, publication) {
 async function createNewDataset(catalog, dataset, publication) {
   const udataDataset = {
     title: dataset.title,
-    description: dataset.description + '\n\n' + datasetPageDesc(dataset),
+    description: datasetPageDesc(dataset),
     private: true,
     extras: {
       datafairOrigin: config.publicUrl,
