@@ -24,9 +24,16 @@ router.all('/:applicationId*', asyncWrap(async(req, res, next) => {
     'accept-encoding': 'identity'
   }
   const options = {url: application.url + '*', headers}
+
   // Small hack that mainly fixes a problem occuring in development
   if (application.url[application.url.length - 1] === '/' && req.params['0'][0] === '/') {
     req.params['0'] = req.params['0'].slice(1)
+  }
+
+  // Prevent infinite redirect loops
+  // it seems that express routing does not catch a single '/' after /:applicationId*
+  if (req.params['0'] === '') {
+    req.params['0'] = '/'
   }
 
   // Transform HTML content from response to inject params.
@@ -34,15 +41,24 @@ router.all('/:applicationId*', asyncWrap(async(req, res, next) => {
   options.transforms = [{
     name: 'config-injector',
     match: (resp) => {
-      /* if (resp.statusCode === 302 && resp.headers.location.indexOf('/') === 0) {
-        resp.headers.location = new URL(exposedUrl).pathname + resp.headers.location
-      } */
-      // Do not attempt to transform errors or redirects (transforming redirects causes hard to understand bugs)
+      // No permanent redirects, they are a pain for developping, debugging, etc.
+      if (resp.statusCode === 301) resp.statusCode = 302
+
+      // Fix redirects
+      if (resp.statusCode === 302) {
+        resp.headers.location = resp.headers.location.replace(application.url, exposedUrl)
+        resp.headers.location = resp.headers.location.replace(application.url.replace('https://', 'http://'), exposedUrl)
+      }
+
+      // Do not attempt to transform errors or redirects
       if (resp.statusCode !== 200) return false
+
+      // Do not transform compressed content
       if (resp.headers['content-encoding'] && resp.headers['content-encoding'] !== 'identity') {
         console.error(`A proxied application (${req.originalUrl}) sent compressed data (${resp.headers['content-encoding']})`)
         return false
       }
+
       return resp.headers['content-type'] && resp.headers['content-type'].indexOf('text/html') === 0
     },
     transform: () => replaceStream('%DATA_FAIR_CONFIG%', JSON.stringify({
