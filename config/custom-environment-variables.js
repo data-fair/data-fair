@@ -29,6 +29,16 @@ module.exports = {
   workers: {
     concurrency: 'WORKERS_CONCURRENCY'
   },
+  nuxtBuild: {
+    active: {
+      __name: 'NUXT_BUILD_ACTIVE',
+      __format: 'json'
+    },
+    blocking: {
+      __name: 'NUXT_BUILD_BLOCKING',
+      __format: 'json'
+    }
+  },
   defaultCatalog: {
     url: 'DEFAULT_CATALOG_URL',
     type: 'DEFAULT_CATALOG_TYPE'

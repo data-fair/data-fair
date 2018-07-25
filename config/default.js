@@ -47,6 +47,10 @@ module.exports = {
     storedBytesLimit: 'X-TaxMan-RateLimit-Limit-StoreBytes',
     storedBytesRemaining: 'X-TaxMan-RateLimit-Remaining-StoreBytes'
   },
+  nuxtBuild: {
+    active: true,
+    blocking: true
+  },
   adminRole: 'admin',
   // A global default API key for backend to backend calls to remote services
   defaultRemoteKey: null,

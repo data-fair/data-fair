@@ -18,6 +18,9 @@ module.exports = {
   cache: {
     disabled: true
   },
+  nuxtBuild: {
+    blocking: false
+  },
   applications: [{
     title: 'Infos parcelles (recette)',
     href: 'https://staging.koumoul.com/s/infos-parcelles/'
