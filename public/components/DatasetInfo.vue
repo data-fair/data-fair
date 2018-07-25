@@ -4,6 +4,13 @@
       <v-flex xs12 md6 order-md2>
         <v-card class="mb-3">
           <v-list>
+            <v-list-tile>
+              <v-list-tile-avatar>
+                <v-icon v-if="dataset.owner.type === 'user'">person</v-icon>
+                <v-icon v-else>group</v-icon>
+              </v-list-tile-avatar>
+              <span>{{ dataset.owner.name }}</span>
+            </v-list-tile>
             <v-list-tile v-if="journal[0]" :class="'event-' + journal[0].type">
               <v-list-tile-avatar v-if="['finalize-end', 'error', 'publication'].includes(journal[0].type)">
                 <v-icon>{{ events[journal[0].type].icon }}</v-icon>

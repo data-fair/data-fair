@@ -4,6 +4,13 @@
       <v-flex xs12 md6 order-md2>
         <v-card class="mb-3">
           <v-list>
+            <v-list-tile>
+              <v-list-tile-avatar>
+                <v-icon v-if="remoteService.owner.type === 'user'">person</v-icon>
+                <v-icon v-else>group</v-icon>
+              </v-list-tile-avatar>
+              <span>{{ remoteService.owner.name }}</span>
+            </v-list-tile>
             <v-list-tile v-if="remoteService.apiDoc.info.contact && remoteService.apiDoc.info.contact.url">
               <v-list-tile-avatar><v-icon>home</v-icon></v-list-tile-avatar>
               <span><a :href="remoteService.apiDoc.info.contact.url">{{ remoteService.apiDoc.info.contact.name || remoteService.apiDoc.info.contact.url }}</a></span>
