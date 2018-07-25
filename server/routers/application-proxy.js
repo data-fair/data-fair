@@ -25,11 +25,6 @@ router.all('/:applicationId*', asyncWrap(async(req, res, next) => {
   }
   const options = {url: application.url + '*', headers}
 
-  // Small hack that mainly fixes a problem occuring in development
-  if (application.url[application.url.length - 1] === '/' && req.params['0'][0] === '/') {
-    req.params['0'] = req.params['0'].slice(1)
-  }
-
   // Prevent infinite redirect loops
   // it seems that express routing does not catch a single '/' after /:applicationId*
   if (req.params['0'] === '') {
