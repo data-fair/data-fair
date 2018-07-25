@@ -12,6 +12,7 @@ const applicationSchemaNoRequired = Object.assign(applicationSchema)
 delete applicationSchemaNoRequired.required
 const validate = ajv.compile(applicationSchema)
 const validateNoRequired = ajv.compile(applicationSchemaNoRequired)
+const validateConfiguration = ajv.compile(applicationSchema.properties.configuration)
 const Extractor = require('html-extractor')
 const htmlExtractor = new Extractor()
 htmlExtractor.extract = util.promisify(htmlExtractor.extract)
@@ -36,7 +37,6 @@ router.get('/_description', asyncWrap(async(req, res) => {
   if (!req.query.url) return res.status(400).send('"url" query parameter is required')
   const html = (await axios.get(req.query.url)).data
   const data = await htmlExtractor.extract(html)
-  console.log(data)
   res.send({
     title: data.meta.title,
     description: data.meta.description,
@@ -71,13 +71,11 @@ router.get('', asyncWrap(async(req, res) => {
     'service': 'configuration.remoteServices.href'
   })
   const sort = findUtils.sort(req.query.sort)
+  const project = findUtils.project(req.query.select, ['configuration'])
   const [skip, size] = findUtils.pagination(req.query)
   query.$or = permissions.filter(req.user, !(req.query['is-owner'] === 'true'))
   let mongoQueries = [
-    size > 0 ? applications.find(query).limit(size).skip(skip).sort(sort).project({
-      _id: 0,
-      configuration: 0
-    }).toArray() : Promise.resolve([]),
+    size > 0 ? applications.find(query).limit(size).skip(skip).sort(sort).project(project).toArray() : Promise.resolve([]),
     applications.find(query).count()
   ]
   let [results, count] = await Promise.all(mongoQueries)
@@ -85,6 +83,7 @@ router.get('', asyncWrap(async(req, res) => {
     r.userPermissions = permissions.list(r, operationsClasses, req.user)
     r.public = permissions.isPublic(r, operationsClasses)
     delete r.permissions
+    findUtils.setResourceLinks(r, 'application')
   })
   res.json({results, count})
 }))
@@ -143,6 +142,7 @@ router.use('/:applicationId', asyncWrap(async(req, res, next) => {
     }
   })
   if (!req.application) return res.status(404).send('Application configuration not found')
+  findUtils.setResourceLinks(req.application, 'application')
   req.resourceApiDoc = applicationAPIDocs(req.application)
   next()
 }))
@@ -196,19 +196,25 @@ router.delete('/:applicationId', permissions.middleware('delete', 'admin'), asyn
 }))
 
 // Get only the configuration part of the application
-router.get('/:applicationId/config', permissions.middleware('readConfig', 'read'), (req, res, next) => {
-  res.status(200).send(req.application.configuration || {})
-})
+const getConfig = (req, res, next) => res.status(200).send(req.application.configuration || {})
+// 2 paths kept for compatibility.. but /config is deprecated because not homogeneous with the structure of the object
+router.get('/:applicationId/config', permissions.middleware('readConfig', 'read'), getConfig)
+router.get('/:applicationId/configuration', permissions.middleware('readConfig', 'read'), getConfig)
 
 // Update only the configuration part of the application
-router.put('/:applicationId/config', permissions.middleware('writeConfig', 'write'), asyncWrap(async(req, res) => {
+const writeConfig = asyncWrap(async(req, res) => {
+  const valid = validateConfiguration(req.body)
+  if (!valid) return res.status(400).send(validateConfiguration.errors)
   await req.app.get('db').collection('applications').updateOne(
     {id: req.params.applicationId},
     {$set: {configuration: req.body}}
   )
   await journals.log(req.app, req.application, {type: 'config-updated'}, 'application')
   res.status(200).json(req.body)
-}))
+})
+// 2 paths kept for compatibility.. but /config is deprecated because not homogeneous with the structure of the object
+router.put('/:applicationId/config', permissions.middleware('writeConfig', 'write'), writeConfig)
+router.put('/:applicationId/configuration', permissions.middleware('writeConfig', 'write'), writeConfig)
 
 router.get('/:applicationId/api-docs.json', permissions.middleware('readApiDoc', 'read'), (req, res) => {
   res.send(applicationAPIDocs(req.application))

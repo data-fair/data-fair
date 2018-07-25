@@ -57,10 +57,11 @@ router.get('', asyncWrap(async(req, res) => {
     query.bbox = {$ne: null}
   }
   const sort = findUtils.sort(req.query.sort)
+  const project = findUtils.project(req.query.select)
   const [skip, size] = findUtils.pagination(req.query)
   query.$or = permissions.filter(req.user, !(req.query['is-owner'] === 'true'))
   let mongoQueries = [
-    size > 0 ? datasets.find(query).limit(size).skip(skip).sort(sort).project({_id: 0}).toArray() : Promise.resolve([]),
+    size > 0 ? datasets.find(query).limit(size).skip(skip).sort(sort).project(project).toArray() : Promise.resolve([]),
     datasets.find(query).count()
   ]
   const [results, count] = await Promise.all(mongoQueries)
@@ -68,6 +69,7 @@ router.get('', asyncWrap(async(req, res) => {
     r.userPermissions = permissions.list(r, operationsClasses, req.user)
     r.public = permissions.isPublic(r, operationsClasses)
     delete r.permissions
+    findUtils.setResourceLinks(r, 'dataset')
   })
   res.json({results, count})
 }))
@@ -82,6 +84,7 @@ router.use('/:datasetId', asyncWrap(async(req, res, next) => {
     }
   })
   if (!req.dataset) return res.status(404).send('Dataset not found')
+  findUtils.setResourceLinks(req.dataset, 'dataset')
   req.resourceApiDoc = datasetAPIDocs(req.dataset)
   next()
 }))

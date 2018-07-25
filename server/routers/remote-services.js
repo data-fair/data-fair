@@ -68,10 +68,11 @@ router.get('', asyncWrap(async(req, res) => {
     'api-id': 'apiDoc.info.x-api-id'
   })
   const sort = findUtils.sort(req.query.sort)
+  const project = findUtils.project(req.query.select, ['apiDoc'])
   const [skip, size] = findUtils.pagination(req.query)
   query.$or = permissions.filter(req.user, !(req.query['is-owner'] === 'true'))
   let mongoQueries = [
-    size > 0 ? remoteServices.find(query).limit(size).skip(skip).sort(sort).project({_id: 0, apiDoc: 0}).toArray() : Promise.resolve([]),
+    size > 0 ? remoteServices.find(query).limit(size).skip(skip).sort(sort).project(project).toArray() : Promise.resolve([]),
     remoteServices.find(query).count()
   ]
   const [results, count] = await Promise.all(mongoQueries)
@@ -79,6 +80,7 @@ router.get('', asyncWrap(async(req, res) => {
     r.userPermissions = permissions.list(r, operationsClasses, req.user)
     r.public = permissions.isPublic(r, operationsClasses)
     delete r.permissions
+    findUtils.setResourceLinks(r, 'remote-service')
   })
   res.json({results: results.map(result => mongoEscape.unescape(result, true)), count})
 }))
@@ -138,6 +140,7 @@ router.use('/:remoteServiceId', asyncWrap(async(req, res, next) => {
     }
   })
   if (!service) return res.status(404).send('Remote Api not found')
+  findUtils.setResourceLinks(service, 'remote-service')
   req.remoteService = req.resource = mongoEscape.unescape(service, true)
   req.resourceApiDoc = remoteServiceAPIDocs(req.remoteService)
   next()

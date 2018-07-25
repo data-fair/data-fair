@@ -13,6 +13,14 @@ module.exports = {
       type: 'string',
       description: 'Identifier of the configuration for a catalog'
     },
+    href: {
+      type: 'string',
+      description: 'Readonly field. The URL where this resource can be fetched'
+    },
+    page: {
+      type: 'string',
+      description: 'Readonly field. The URL where this resource can be viewed in the UI'
+    },
     title: {
       type: 'string',
       description: 'Short title of the configuration for a catalog'

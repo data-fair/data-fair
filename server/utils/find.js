@@ -1,3 +1,5 @@
+const config = require('config')
+
 // Util functions shared accross the main find (GET on collection) endpoints
 
 exports.query = (reqQuery, fieldsMap) => {
@@ -47,6 +49,24 @@ exports.pagination = (query, defaultSize = 10) => {
   return [skip, size]
 }
 
+exports.project = (selectStr, exclude = []) => {
+  const select = {_id: 0}
+  if (!selectStr) {
+    exclude.forEach(e => {
+      select[e] = 0
+    })
+  } else {
+    selectStr.split(',').forEach(s => {
+      select[s] = 1
+    })
+    Object.assign(select, {permissions: 1, id: 1, owner: 1})
+    exclude.forEach(e => {
+      delete select[e]
+    })
+  }
+  return select
+}
+
 exports.parametersDoc = (filterFields) => [
   { in: 'query',
     name: 'size',
@@ -82,3 +102,8 @@ exports.parametersDoc = (filterFields) => [
   param: 'owner-id',
   title: 'Identifiant du propriétaire'
 }]))
+
+exports.setResourceLinks = (resource, resourceType) => {
+  resource.href = `${config.publicUrl}/api/v1/${resourceType}s/${resource.id}`
+  resource.page = `${config.publicUrl}/${resourceType}/${resource.id}`
+}

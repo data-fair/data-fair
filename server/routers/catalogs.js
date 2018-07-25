@@ -59,10 +59,11 @@ router.get('', asyncWrap(async(req, res) => {
   const catalogs = req.app.get('db').collection('catalogs')
   const query = findUtils.query(req.query, {})
   const sort = findUtils.sort(req.query.sort)
+  const project = findUtils.project(req.query.select)
   const [skip, size] = findUtils.pagination(req.query)
   query.$or = permissions.filter(req.user, !(req.query['is-owner'] === 'true'))
   let mongoQueries = [
-    size > 0 ? catalogs.find(query).limit(size).skip(skip).sort(sort).project({_id: 0, apiDoc: 0}).toArray() : Promise.resolve([]),
+    size > 0 ? catalogs.find(query).limit(size).skip(skip).sort(sort).project(project).toArray() : Promise.resolve([]),
     catalogs.find(query).count()
   ]
   const [results, count] = await Promise.all(mongoQueries)
@@ -71,6 +72,7 @@ router.get('', asyncWrap(async(req, res) => {
     r.public = permissions.isPublic(r, operationsClasses)
     delete r.permissions
     if (r.apiKey) r.apiKey = '**********'
+    findUtils.setResourceLinks(r, 'catalog')
   })
   res.json({results: results.map(result => mongoEscape.unescape(result, true)), count})
 }))
@@ -122,6 +124,7 @@ router.use('/:catalogId', asyncWrap(async(req, res, next) => {
     }
   })
   if (!catalog) return res.status(404).send('Catalog not found')
+  findUtils.setResourceLinks(catalog, 'catalog')
   req.catalog = req.resource = mongoEscape.unescape(catalog, true)
   req.resourceApiDoc = catalogAPIDocs(req.catalog)
   next()
