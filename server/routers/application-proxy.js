@@ -37,8 +37,10 @@ router.all('/:applicationId*', asyncWrap(async(req, res, next) => {
       /* if (resp.statusCode === 302 && resp.headers.location.indexOf('/') === 0) {
         resp.headers.location = new URL(exposedUrl).pathname + resp.headers.location
       } */
+      // Do not attempt to transform errors or redirects (transforming redirects causes hard to understand bugs)
+      if (res.statusCode !== 200) return false
       if (resp.headers['content-encoding'] && resp.headers['content-encoding'] !== 'identity') {
-        console.log(`A proxied application (${req.originalUrl}) sent compressed data (${resp.headers['content-encoding']})`)
+        console.error(`A proxied application (${req.originalUrl}) sent compressed data (${resp.headers['content-encoding']})`)
         return false
       }
       return resp.headers['content-type'] && resp.headers['content-type'].indexOf('text/html') === 0
