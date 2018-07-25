@@ -12,5 +12,8 @@ module.exports = {
     // in seconds
     ttl: 0.1
   },
-  defaultRemoteKey: 'test_default_key'
+  defaultRemoteKey: 'test_default_key',
+  nuxtBuild: {
+    active: false
+  }
 }
