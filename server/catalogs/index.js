@@ -64,24 +64,26 @@ exports.processPublications = async function(app, type, resource) {
   async function setResult(error) {
     let patch = {}
     if (error) {
+      // Publishing or deletion failed
       processedPublication.status = patch['publications.$.status'] = 'error'
       processedPublication.error = patch['publications.$.error'] = error
     } else if (processedPublication.status === 'waiting') {
+      // Publishing worked
       processedPublication.status = patch['publications.$.status'] = 'published'
       patch['publications.$.result'] = processedPublication.result
       patch['publications.$.targetUrl'] = processedPublication.targetUrl
-    }
-
-    if (['error', 'published'].includes(processedPublication.status)) {
-      await resourcesCollection.updateOne(
-        {id: resource.id, 'publications.id': processedPublication.id},
-        {$set: patch}
-      )
-    }
-    if (processedPublication.status === 'deleted') {
+    } else if (processedPublication.status === 'deleted') {
+      // Deletion worked
       await resourcesCollection.updateOne(
         {id: resource.id},
         {$pull: {publications: {id: processedPublication.id}}}
+      )
+    }
+
+    if (Object.keys(patch).length) {
+      await resourcesCollection.updateOne(
+        {id: resource.id, 'publications.id': processedPublication.id},
+        {$set: patch}
       )
     }
   }
