@@ -5,10 +5,10 @@
         Description
         <v-icon>toc</v-icon>
       </v-tab>
-      <v-tab v-if="can('getPermissions')" :nuxt="true" :to="`/catalog/${catalog.id}/permissions`">
+      <!-- <v-tab v-if="can('getPermissions')" :nuxt="true" :to="`/catalog/${catalog.id}/permissions`">
         Permissions
         <v-icon>security</v-icon>
-      </v-tab>
+      </v-tab>-->
     </v-tabs>
 
     <nuxt-child />
