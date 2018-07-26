@@ -88,7 +88,7 @@ function datasetFileUrl(dataset) {
 function datasetPageDesc(dataset) {
   const desc = dataset.description ? dataset.description + '\n\n' : ''
   const url = datasetPageUrl(dataset)
-  return desc + `Ce jeu de données a été publié depuis [${config.publicUrl}](config.publicUrl). Consultez [sa page](${url}) pour accéder à sa description détaillée, prévisualisation, documentation d'API, etc.`
+  return desc + `Ce jeu de données a été publié depuis [${config.publicUrl}](${config.publicUrl}). Consultez [sa page](${url}) pour accéder à sa description détaillée, prévisualisation, documentation d'API, etc.`
 }
 
 function appPageDesc(app) {
