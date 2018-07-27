@@ -1,7 +1,7 @@
 <template>
   <v-stepper v-model="currentStep">
     <v-stepper-header>
-      <v-stepper-step step="1" :complete="!!description" editable>Selection de l'application</v-stepper-step>
+      <v-stepper-step step="1" :complete="!!description" editable>Sélection de l'application</v-stepper-step>
       <v-divider/>
       <v-stepper-step step="2" :complete="currentStep > 2">Choix du propriétaire</v-stepper-step>
       <v-divider/>
