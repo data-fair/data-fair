@@ -25,8 +25,6 @@
 
     <h3 class="headline mt-3 mb-3">Licenses</h3>
     <settings-licenses v-if="settings" :settings="settings" @license-updated="save"/>
-    <h3 class="headline mt-3 mb-3">Catalogues</h3>
-    <settings-catalogs v-if="settings" :settings="settings" @catalog-updated="save"/>
     <h3 class="headline mt-3 mb-3">Webhooks</h3>
     <settings-webhooks v-if="settings" :settings="settings" @webhook-updated="save"/>
   </v-container>
@@ -37,11 +35,10 @@
 import {mapState} from 'vuex'
 import SettingsWebhooks from '../../../components/SettingsWebhooks.vue'
 import SettingsLicenses from '../../../components/SettingsLicenses.vue'
-import SettingsCatalogs from '../../../components/SettingsCatalogs.vue'
 import eventBus from '../../../event-bus'
 
 export default {
-  components: {SettingsWebhooks, SettingsLicenses, SettingsCatalogs},
+  components: {SettingsWebhooks, SettingsLicenses},
   data: () => ({
     api: null,
     organizationRoles: [],

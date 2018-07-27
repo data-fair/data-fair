@@ -48,7 +48,8 @@
               </v-list-tile-avatar>
               <template v-else>
                 <v-list-tile-avatar ><v-icon>touch_app</v-icon></v-list-tile-avatar>
-                <span>{{ nbApplications }} application{{ nbApplications > 1 ? 's' : '' }}</span>
+                <span v-if="nbApplications === 0">0 application</span>
+                <nuxt-link v-else :to="`/applications?dataset=${dataset.id}`">{{ nbApplications }} application{{ nbApplications > 1 ? 's' : '' }}</nuxt-link>
               </template>
             </v-list-tile>
           </v-list>

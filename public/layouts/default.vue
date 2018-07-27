@@ -27,7 +27,7 @@
           <v-btn v-if="!user" @click="login" color="primary">
             Se connecter / S'inscrire
           </v-btn>
-          <v-menu offset-y v-else>
+          <v-menu offset-y left v-else>
             <v-btn slot="activator" flat>{{ user.name }}</v-btn>
             <v-list>
               <v-list-tile :to="`/settings/user/${user.id}`">

@@ -6,7 +6,7 @@
         <v-text-field label="Rechercher" v-model="search" append-icon="search" @keyup.enter.native="refresh" @click:append="refresh"/>
       </v-flex>
       <v-spacer/>
-      <v-flex xs12 sm7 md6 lg5 class="pt-4">
+      <v-flex xs12 sm7 md6 lg5>
         <v-switch label="Voir les catalogues dont je ne suis pas propriétaire" v-model="showNotOwned" @change="refresh"/>
       </v-flex>
 

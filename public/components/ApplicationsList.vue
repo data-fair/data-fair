@@ -6,15 +6,16 @@
         <v-text-field label="Rechercher" v-model="search" append-icon="search" @keyup.enter.native="refresh" @click:append="refresh"/>
       </v-flex>
       <v-spacer/>
-      <v-flex xs12 sm7 md6 lg5 class="pt-4">
+      <v-flex xs12 sm7 md6 lg5>
         <v-switch label="Voir les applications dont je ne suis pas propriétaire" v-model="showNotOwned" @change="refresh"/>
       </v-flex>
-
-      <search-progress :loading="loading"/>
-
     </v-layout>
 
+    <search-filters :filter-labels="{'dataset': 'Jeu de données', 'service': 'Service'}" :filters="filters" @apply="refresh"/>
+
     <v-layout row wrap class="resourcesList">
+      <search-progress :loading="loading"/>
+
       <v-flex sm12 md6 lg4 xl3 v-for="application in applications.results" :key="application.id">
         <v-card height="100%">
           <v-card-title primary-title style="height:25%">
@@ -42,38 +43,42 @@
 
 <script>
 import SearchProgress from './SearchProgress.vue'
+import SearchFilters from './SearchFilters.vue'
 const marked = require('marked')
 const {mapState} = require('vuex')
 
 export default {
-  components: {SearchProgress},
-  data: () => ({
-    applications: {
-      count: 0,
-      results: []
-    },
-    search: '',
-    showNotOwned: false,
-    size: 10,
-    page: 1,
-    marked,
-    loading: true
-  }),
+  components: {SearchProgress, SearchFilters},
+  data() {
+    return {
+      applications: {
+        count: 0,
+        results: []
+      },
+      search: '',
+      showNotOwned: false,
+      size: 10,
+      page: 1,
+      marked,
+      loading: true,
+      filters: {}
+    }
+  },
   computed: {
     ...mapState('session', ['user']),
     ...mapState(['env']),
     plural() {
       return this.applications.count > 1 ? 's' : ''
+    },
+    hasFilter() {
+      return Object.keys(this.filters).find(key => !!this.filters[key])
     }
-  },
-  created() {
-    this.refresh()
   },
   methods: {
     async refresh() {
       this.loading = true
       this.applications = await this.$axios.$get(this.env.publicUrl + '/api/v1/applications', {params:
-        {size: this.size, page: this.page, q: this.search, 'is-owner': !this.showNotOwned, select: 'title,description'}
+        {size: this.size, page: this.page, q: this.search, 'is-owner': !this.showNotOwned, select: 'title,description', ...this.filters}
       })
       this.loading = false
     }

@@ -33,7 +33,8 @@
               </v-list-tile-avatar>
               <template v-else>
                 <v-list-tile-avatar ><v-icon>touch_app</v-icon></v-list-tile-avatar>
-                <span>{{ nbApplications }} application{{ nbApplications > 1 ? 's' : '' }}</span>
+                <span v-if="nbApplications === 0">0 application</span>
+                <nuxt-link v-else :to="`/applications?service=${remoteService.id}`">{{ nbApplications }} application{{ nbApplications > 1 ? 's' : '' }}</nuxt-link>
               </template>
             </v-list-tile>
           </v-list>
@@ -41,7 +42,7 @@
       </v-flex>
       <v-flex xs12 md6 order-md1>
         <v-text-field label="Titre" v-model="remoteService.title" @blur="patch({title: remoteService.title})"/>
-        <v-text-field label="Description" v-model="remoteService.description" multi-line box rows="5" @blur="patch({description: remoteService.description})"/>
+        <v-textarea label="Description" v-model="remoteService.description" box rows="5" @blur="patch({description: remoteService.description})"/>
       </v-flex>
     </v-layout>
   </v-container>
