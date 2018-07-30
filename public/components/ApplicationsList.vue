@@ -69,9 +69,6 @@ export default {
     ...mapState(['env']),
     plural() {
       return this.applications.count > 1 ? 's' : ''
-    },
-    hasFilter() {
-      return Object.keys(this.filters).find(key => !!this.filters[key])
     }
   },
   methods: {

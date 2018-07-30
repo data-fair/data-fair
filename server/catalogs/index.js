@@ -61,8 +61,17 @@ exports.processPublications = async function(app, type, resource) {
 
   const processedPublication = resource.publications.find(p => ['waiting', 'deleted'].includes(p.status))
 
-  async function setResult(error) {
+  async function setResult(error, nonBlocking) {
     let patch = {}
+
+    if ((!error || nonBlocking) && processedPublication.status === 'deleted') {
+      // Deletion worked
+      return resourcesCollection.updateOne(
+        {id: resource.id},
+        {$pull: {publications: {id: processedPublication.id}}}
+      )
+    }
+
     if (error) {
       // Publishing or deletion failed
       processedPublication.status = patch['publications.$.status'] = 'error'
@@ -72,12 +81,6 @@ exports.processPublications = async function(app, type, resource) {
       processedPublication.status = patch['publications.$.status'] = 'published'
       patch['publications.$.result'] = processedPublication.result
       patch['publications.$.targetUrl'] = processedPublication.targetUrl
-    } else if (processedPublication.status === 'deleted') {
-      // Deletion worked
-      await resourcesCollection.updateOne(
-        {id: resource.id},
-        {$pull: {publications: {id: processedPublication.id}}}
-      )
     }
 
     if (Object.keys(patch).length) {
@@ -95,14 +98,14 @@ exports.processPublications = async function(app, type, resource) {
       type: 'error',
       data: `Une publication fait référence à un catalogue inexistant (${processedPublication.id})`
     }, type)
-    await setResult('Catalogue inexistant')
+    return setResult('Catalogue inexistant', true)
   }
   if (catalog.owner.type !== resource.owner.type || catalog.owner.id !== resource.owner.id) {
     await journals.log(app, resource, {
       type: 'error',
       data: `Une publication fait référence à un catalogue qui n'appartient pas au propriétaire de la resource à publier (${processedPublication.id})`
     }, type)
-    await setResult(`Le catalogue n'appartient pas au propriétaire de la resource à publier`)
+    return setResult(`Le catalogue n'appartient pas au propriétaire de la resource à publier`)
   }
 
   try {

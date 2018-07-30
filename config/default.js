@@ -107,6 +107,6 @@ module.exports = {
   }],
   catalogs: [{
     title: 'Data.gouv.fr',
-    href: 'https://data.gouv.fr'
+    href: 'https://www.data.gouv.fr'
   }]
 }

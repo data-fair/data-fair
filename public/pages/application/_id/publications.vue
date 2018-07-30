@@ -17,6 +17,9 @@
           <v-list-tile-sub-title v-else-if="publication.status==='deleted'">En attente de suppression</v-list-tile-sub-title>
           <v-list-tile-sub-title v-else>En attente de publication</v-list-tile-sub-title>
         </v-list-tile-content>
+        <v-list-tile-content v-else>
+          Cette publication référence une configuration de catalogue inconnue ({{ publication.catalog }}).
+        </v-list-tile-content>
         <v-list-tile-action>
           <v-btn v-if="can('writeDescription')" color="warning" icon flat title="Supprimer cette publication" @click="deletePublicationInd = i; showDeleteDialog = true;">
             <v-icon>delete</v-icon>

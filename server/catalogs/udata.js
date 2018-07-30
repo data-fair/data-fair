@@ -169,6 +169,9 @@ async function createNewDataset(catalog, dataset, publication) {
   }
   try {
     const res = await axios.post(url.resolve(catalog.url, 'api/1/datasets/'), udataDataset, {headers: {'X-API-KEY': catalog.apiKey}})
+    if (!res.data.page || typeof res.data.page !== 'string') {
+      throw new Error(`Erreur lors de l'envoi à ${catalog.url} : le format de retour n'est pas correct.`)
+    }
     publication.targetUrl = res.data.page
     publication.result = res.data
   } catch (err) {
