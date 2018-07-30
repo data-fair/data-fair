@@ -24,13 +24,15 @@
           Ajout d'une nouvelle license
         </v-card-title>
         <v-card-text>
-          <v-text-field label="Titre" v-model="newLicense.title"/>
-          <v-text-field label="URL" v-model="newLicense.href"/>
+          <v-form v-model="newLicenseValid">
+            <v-text-field label="Titre" v-model="newLicense.title" :rules="[v => !!v || '']" required/>
+            <v-text-field label="URL" v-model="newLicense.href" :rules="[v => !!v || '']" required/>
+          </v-form>
         </v-card-text>
         <v-card-actions>
           <v-spacer/>
           <v-btn flat @click="showDialog = false">Annuler</v-btn>
-          <v-btn color="primary" @click="addLicense">Ajouter</v-btn>
+          <v-btn color="primary" @click="addLicense" :disabled="!newLicenseValid">Ajouter</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -47,6 +49,7 @@ export default {
       title: null,
       href: null
     },
+    newLicenseValid: false,
     showDialog: false
   }),
   methods: {

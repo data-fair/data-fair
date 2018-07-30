@@ -64,7 +64,6 @@ export default {
     this.$set(this.settings, 'operationsPermissions', this.settings.operationsPermissions || {})
     this.$set(this.settings, 'webhooks', this.settings.webhooks || [])
     this.$set(this.settings, 'licenses', this.settings.licenses || [])
-    this.$set(this.settings, 'catalogs', this.settings.catalogs || [])
     this.api = await this.$axios.$get('api/v1/api-docs.json')
     this.operations.forEach(operation => {
       this.$set(this.settings.operationsPermissions, operation.id, this.settings.operationsPermissions[operation.id] || [])

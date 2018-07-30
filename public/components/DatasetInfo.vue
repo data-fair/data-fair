@@ -61,8 +61,10 @@
         <v-select
           :items="licenses"
           item-text="title"
+          item-key="href"
           v-model="dataset.license"
           label="Licence"
+          return-object
           @input="patch({license: dataset.license})"
         />
         <v-text-field label="Provenance" v-model="dataset.origin" @blur="patch({origin: dataset.origin})"/>

@@ -37,14 +37,16 @@
           Ajout d'un nouveau webhook
         </v-card-title>
         <v-card-text>
-          <v-text-field label="Titre" v-model="newWebhook.title"/>
-          <v-text-field label="URL" v-model="newWebhook.url"/>
-          <v-checkbox :label="event.text" v-model="newWebhook.events" :value="eventId" v-for="(event, eventId) in events" :key="eventId"/>
+          <v-form v-model="newWebhookValid">
+            <v-text-field label="Titre" v-model="newWebhook.title" :rules="[v => !!v || '']" required/>
+            <v-text-field label="URL" v-model="newWebhook.url" :rules="[v => !!v || '']" required/>
+            <v-checkbox :label="event.text" v-model="newWebhook.events" :value="eventId" v-for="(event, eventId) in events" :key="eventId"/>
+          </v-form>
         </v-card-text>
         <v-card-actions>
           <v-spacer/>
           <v-btn flat @click="showDialog = false">Annuler</v-btn>
-          <v-btn color="primary" @click="addWebhook">Ajouter</v-btn>
+          <v-btn color="primary" @click="addWebhook" :disabled="!newWebhookValid">Ajouter</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -66,6 +68,7 @@ export default {
       url: null,
       type: 'dataset'
     },
+    newWebhookValid: false,
     showDialog: false
   }),
   methods: {
