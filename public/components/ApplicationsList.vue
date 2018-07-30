@@ -1,20 +1,11 @@
 <template>
   <v-container fluid grid-list-lg>
-    <h3 class="display-1">{{ applications.count }} configuration{{ plural }} d'application{{ plural }}</h3>
-    <v-layout row wrap>
-      <v-flex xs12 sm5 md4 lg3>
-        <v-text-field label="Rechercher" v-model="search" append-icon="search" @keyup.enter.native="refresh" @click:append="refresh"/>
-      </v-flex>
-      <v-spacer/>
-      <v-flex xs12 sm7 md6 lg5>
-        <v-switch label="Voir les applications dont je ne suis pas propriétaire" v-model="showNotOwned" @change="refresh"/>
-      </v-flex>
-    </v-layout>
+    <h3 class="display-1" v-if="applications">{{ applications.count }} configuration{{ plural }} d'application{{ plural }}</h3>
 
     <search-filters :filter-labels="{'dataset': 'Jeu de données', 'service': 'Service'}" :filters="filters" @apply="refresh"/>
+    <search-progress :loading="loading"/>
 
-    <v-layout row wrap class="resourcesList">
-      <search-progress :loading="loading"/>
+    <v-layout row wrap class="resourcesList" v-if="applications">
 
       <v-flex sm12 md6 lg4 xl3 v-for="application in applications.results" :key="application.id">
         <v-card height="100%">
@@ -35,7 +26,7 @@
       </v-flex>
     </v-layout>
 
-    <v-layout row wrap v-if="applications.count">
+    <v-layout row wrap v-if="applications && applications.count">
       <v-spacer/><v-pagination :length="Math.ceil(applications.count / size)" v-model="page" @input="$vuetify.goTo('.resourcesList', {offset: -20});refresh()"/>
     </v-layout>
   </v-container>
@@ -49,33 +40,28 @@ const {mapState} = require('vuex')
 
 export default {
   components: {SearchProgress, SearchFilters},
-  data() {
-    return {
-      applications: {
-        count: 0,
-        results: []
-      },
-      search: '',
-      showNotOwned: false,
-      size: 10,
-      page: 1,
-      marked,
-      loading: true,
-      filters: {}
-    }
-  },
+  data: () => ({
+    applications: null,
+    page: 1,
+    marked,
+    loading: true,
+    filters: {}
+  }),
   computed: {
     ...mapState('session', ['user']),
     ...mapState(['env']),
     plural() {
       return this.applications.count > 1 ? 's' : ''
+    },
+    size() {
+      return {xs: 4, sm: 4, md: 8, lg: 12, xl: 16}[this.$vuetify.breakpoint.name]
     }
   },
   methods: {
     async refresh() {
       this.loading = true
       this.applications = await this.$axios.$get(this.env.publicUrl + '/api/v1/applications', {params:
-        {size: this.size, page: this.page, q: this.search, 'is-owner': !this.showNotOwned, select: 'title,description', ...this.filters}
+        {size: this.size, page: this.page, select: 'title,description', ...this.filters}
       })
       this.loading = false
     }

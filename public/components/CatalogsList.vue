@@ -1,20 +1,11 @@
 <template>
   <v-container fluid grid-list-lg>
-    <h3 class="display-1">{{ catalogs.count }} catalogue{{ plural }} configuré{{ plural }}</h3>
-    <v-layout row wrap>
-      <v-flex xs12 sm5 md4 lg3>
-        <v-text-field label="Rechercher" v-model="search" append-icon="search" @keyup.enter.native="refresh" @click:append="refresh"/>
-      </v-flex>
-      <v-spacer/>
-      <v-flex xs12 sm7 md6 lg5>
-        <v-switch label="Voir les catalogues dont je ne suis pas propriétaire" v-model="showNotOwned" @change="refresh"/>
-      </v-flex>
+    <h3 class="display-1" v-if="catalogs">{{ catalogs.count }} catalogue{{ plural }} configuré{{ plural }}</h3>
 
-      <search-progress :loading="loading"/>
+    <search-filters :filter-labels="{}" :filters="filters" @apply="refresh"/>
+    <search-progress :loading="loading"/>
 
-    </v-layout>
-
-    <v-layout row wrap class="resourcesList">
+    <v-layout row wrap class="resourcesList" v-if="catalogs">
       <v-flex sm12 md6 lg4 xl3 v-for="catalog in catalogs.results" :key="catalog.id">
         <v-card height="100%">
           <v-card-title primary-title style="height:25%">
@@ -30,7 +21,7 @@
       </v-flex>
     </v-layout>
 
-    <v-layout row wrap v-if="catalogs.count">
+    <v-layout row wrap v-if="catalogs && catalogs.count">
       <v-spacer/><v-pagination :length="Math.ceil(catalogs.count / size)" v-model="page" @input="$vuetify.goTo('.resourcesList', {offset: -20});refresh()"/>
     </v-layout>
   </v-container>
@@ -38,38 +29,34 @@
 
 <script>
 import SearchProgress from './SearchProgress.vue'
+import SearchFilters from './SearchFilters.vue'
 const marked = require('marked')
 const {mapState} = require('vuex')
 
 export default {
-  components: {SearchProgress},
+  components: {SearchProgress, SearchFilters},
   data: () => ({
-    catalogs: {
-      count: 0,
-      results: []
-    },
-    search: '',
-    showNotOwned: false,
-    size: 10,
+    catalogs: null,
     page: 1,
     marked,
-    loading: true
+    loading: true,
+    filters: {}
   }),
   computed: {
     ...mapState('session', ['user']),
     ...mapState(['env']),
     plural() {
       return this.catalogs.count > 1 ? 's' : ''
+    },
+    size() {
+      return {xs: 4, sm: 4, md: 8, lg: 12, xl: 16}[this.$vuetify.breakpoint.name]
     }
-  },
-  created() {
-    this.refresh()
   },
   methods: {
     async refresh() {
       this.loading = true
       this.catalogs = await this.$axios.$get(this.env.publicUrl + '/api/v1/catalogs', {params:
-        {size: this.size, page: this.page, q: this.search, 'is-owner': !this.showNotOwned, select: 'title,description'}
+        {size: this.size, page: this.page, select: 'title,description', ...this.filters}
       })
       this.loading = false
     }

@@ -74,6 +74,7 @@ export default {
           id: d.id,
           title: 'Mettre à jour les données du jeu ' + d.title
         }))]
+        this.action = this.actions[0]
       }
     }
   },
