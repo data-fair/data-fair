@@ -1,16 +1,18 @@
-const fs = require('fs')
+const fs = require('fs-extra')
 const assert = require('assert')
 const createError = require('http-errors')
 const shortid = require('shortid')
 const journals = require('../utils/journals')
 const config = require('config')
 const path = require('path')
+
 // Dynamic loading of all modules in the current directory
+fs.ensureDirSync(path.resolve(config.pluginsDir, 'catalogs'))
 exports.connectors = fs.readdirSync(__dirname)
   .filter(f => f !== 'index.js')
   .map(f => ({key: f.replace('.js', ''), ...require('./' + f)}))
-  .concat(fs.readdirSync(config.pluginsDir)
-    .map(f => ({key: f.replace('.js', ''), ...require(path.resolve(config.pluginsDir, f))})))
+  .concat(fs.readdirSync(path.resolve(config.pluginsDir, 'catalogs'))
+    .map(f => ({key: f.replace('.js', ''), ...require(path.resolve(config.pluginsDir, 'catalogs', f))})))
 
 // Loosely validate connectors
 const expectedKeys = new Set([
