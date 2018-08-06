@@ -3,11 +3,14 @@ const assert = require('assert')
 const createError = require('http-errors')
 const shortid = require('shortid')
 const journals = require('../utils/journals')
-
+const config = require('config')
+const path = require('path')
 // Dynamic loading of all modules in the current directory
 exports.connectors = fs.readdirSync(__dirname)
   .filter(f => f !== 'index.js')
   .map(f => ({key: f.replace('.js', ''), ...require('./' + f)}))
+  .concat(fs.readdirSync(config.pluginsDir)
+    .map(f => ({key: f.replace('.js', ''), ...require(path.resolve(config.pluginsDir, f))})))
 
 // Loosely validate connectors
 const expectedKeys = new Set([
@@ -31,8 +34,10 @@ exports.init = async (catalogUrl) => {
   for (let connector of exports.connectors) {
     try {
       const catalog = await connector.init(catalogUrl)
-      catalog.type = connector.key
-      return catalog
+      if (catalog.title) {
+        catalog.type = connector.key
+        return catalog
+      }
     } catch (err) {
       // Nothing.. an error simply means that this connector is not the right one
     }

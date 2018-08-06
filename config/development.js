@@ -64,5 +64,12 @@ module.exports = {
   }, {
     title: 'Service de données cartographiques (recette)',
     href: 'https://staging.koumoul.com/s/tileserver/api/v1/api-docs.json'
+  }],
+  catalogs: [{
+    title: 'Data.gouv.fr',
+    href: 'https://www.data.gouv.fr'
+  }, {
+    title: 'Mydatacatalogue',
+    href: 'https://mydatacatalogue.fr'
   }]
 }
