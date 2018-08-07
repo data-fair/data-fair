@@ -13,6 +13,8 @@ router.all('/:applicationId*', asyncWrap(async(req, res, next) => {
     id: req.params.applicationId
   })
   if (!application) return res.status(404).send('No application configured for this id')
+  // Remove trailing slash for more homogeneous rules afterward
+  const cleanApplicationUrl = application.url.replace(/\/$/, '')
   const exposedUrl = config.publicUrl + '/app/' + req.params.applicationId
   const headers = {
     'X-Exposed-Url': exposedUrl,
@@ -23,7 +25,7 @@ router.all('/:applicationId*', asyncWrap(async(req, res, next) => {
     'X-Config-Url': config.publicUrl + '/api/v1/applications/' + req.params.applicationId + '/config',
     'accept-encoding': 'identity'
   }
-  const options = {url: application.url + '*', headers}
+  const options = {url: cleanApplicationUrl + '/*', headers}
 
   // Prevent infinite redirect loops
   // it seems that express routing does not catch a single '/' after /:applicationId*
@@ -41,8 +43,8 @@ router.all('/:applicationId*', asyncWrap(async(req, res, next) => {
 
       // Fix redirects
       if (resp.statusCode === 302) {
-        resp.headers.location = resp.headers.location.replace(application.url, exposedUrl)
-        resp.headers.location = resp.headers.location.replace(application.url.replace('https://', 'http://'), exposedUrl)
+        resp.headers.location = resp.headers.location.replace(cleanApplicationUrl, exposedUrl)
+        resp.headers.location = resp.headers.location.replace(cleanApplicationUrl.replace('https://', 'http://'), exposedUrl)
       }
 
       // Do not attempt to transform errors or redirects
