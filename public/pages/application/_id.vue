@@ -77,10 +77,7 @@ export default {
   computed: {
     ...mapState(['env']),
     ...mapState('application', ['application', 'api']),
-    ...mapGetters('application', ['resourceUrl', 'can']),
-    applicationLink() {
-      if (this.application) return this.env.publicUrl + '/app/' + this.application.id
-    }
+    ...mapGetters('application', ['resourceUrl', 'can', 'applicationLink'])
   },
   mounted() {
     this.setId(this.$route.params.id)

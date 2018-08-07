@@ -14,7 +14,10 @@ export default {
   getters: {
     resourceUrl: (state, getters, rootState) => state.applicationId ? rootState.env.publicUrl + '/api/v1/applications/' + state.applicationId : null,
     can: (state) => (operation) => (state.application && state.application.userPermissions.includes(operation)) || false,
-    journalChannel: (state) => 'applications/' + state.applicationId + '/journal'
+    journalChannel: (state) => 'applications/' + state.applicationId + '/journal',
+    applicationLink: (state, getters, rootState) => {
+      if (state.application) return rootState.env.publicUrl + '/app/' + state.application.id
+    }
   },
   mutations: {
     setAny(state, params) {

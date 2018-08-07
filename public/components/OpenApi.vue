@@ -22,8 +22,4 @@ export default {
 </script>
 
 <style lang="css">
-iframe {
-  background-color: transparent;
-  border: none;
-}
 </style>

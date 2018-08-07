@@ -28,14 +28,22 @@
         <v-text-field label="Adresse" v-model="application.url" @blur="patch({url: application.url})"/>
       </v-flex>
     </v-layout>
+    <v-layout column v-if="application.userPermissions.includes('writeConfig')">
+      <h2 class="title my-4" >Configuration</h2>
+      <iframe :src="applicationLink + '/config?embed=true'" :height="height" width="100%"/>
+    </v-layout>
   </v-container>
 </template>
 
 <script>
-import {mapState, mapActions} from 'vuex'
+import {mapState, mapActions, mapGetters} from 'vuex'
 export default {
   computed: {
-    ...mapState('application', ['application'])
+    ...mapState('application', ['application']),
+    ...mapGetters('application', ['applicationLink']),
+    height() {
+      return Math.max(window.innerHeight, 1000)
+    }
   },
   methods: {
     ...mapActions('application', ['patch'])

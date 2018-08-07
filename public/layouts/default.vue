@@ -191,4 +191,8 @@ body .application {
   color: red !important;
 }
 
+iframe {
+  background-color: transparent;
+  border: none;
+}
 </style>
