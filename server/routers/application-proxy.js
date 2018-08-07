@@ -54,7 +54,7 @@ router.all('/:applicationId*', asyncWrap(async(req, res, next) => {
         return false
       }
 
-      return resp.headers['content-type'] && resp.headers['content-type'].indexOf('text/html') === 0
+      return !resp.headers['content-type'] || (resp.headers['content-type'].indexOf('text/html') === 0)
     },
     transform: () => replaceStream('%DATA_FAIR_CONFIG%', JSON.stringify({
       exposedUrl,
