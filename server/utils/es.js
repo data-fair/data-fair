@@ -147,6 +147,7 @@ exports.valuesAgg = async (client, dataset, query) => {
   }
   if (query.metric && query.metric_field) {
     esQuery.aggs.values.terms.order = { metric: 'desc' }
+    esQuery.aggs.values.aggs = esQuery.aggs.values.aggs || {}
     esQuery.aggs.values.aggs.metric = {
       [query.metric]: {field: query.metric_field}
     }
