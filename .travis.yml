@@ -32,5 +32,7 @@ after_success:
   - docker login -u $DOCKER_USER -p $DOCKER_PASS
   - export REPO=koumoul/data-fair
   - export TAG=`if [ "$TRAVIS_BRANCH" == "master" ]; then echo "latest"; else echo $TRAVIS_BRANCH ; fi`
-  - docker build -f Dockerfile -t $REPO:$TAG .
+  # Pull before push in order to fill docker cache
+  - docker pull $REPO:latest
+  - docker build -f Dockerfile --cache-from $REPO:latest -t $REPO:$TAG .
   - docker push $REPO
