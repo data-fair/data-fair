@@ -2,7 +2,7 @@ const express = require('express')
 const requestProxy = require('express-request-proxy')
 const config = require('config')
 const replaceStream = require('replacestream')
-// const URL = require('url').URL
+const url = require('url')
 const asyncWrap = require('../utils/async-wrap')
 
 const router = module.exports = express.Router()
@@ -31,6 +31,11 @@ router.all('/:applicationId*', asyncWrap(async(req, res, next) => {
   // it seems that express routing does not catch a single '/' after /:applicationId*
   if (req.params['0'] === '') {
     req.params['0'] = '/'
+  }
+  const originalUrl = url.parse(req.originalUrl)
+  // Trailing / are removed by express... we want them or else we enter infinite redirect loops with gh-pages
+  if (originalUrl.pathname[originalUrl.pathname.length - 1] === '/' && req.params['0'][req.params['0'].length - 1] !== '/') {
+    req.params['0'] += '/'
   }
 
   // Transform HTML content from response to inject params.
