@@ -35,6 +35,9 @@
           </v-flex>
         </v-layout>
       </v-container>
+      <h4>Renseigner le schéma avec un fichier de métadonnées</h4>
+      <p>Le fichier de métadonnées doit respecter <a href="https://frictionlessdata.io/specs/table-schema/" target="_blank">ce format</a></p>
+      <input type="file" @change="onMetadataUpload" ref="schemaInput">
     </form>
   </v-layout>
 </template>
@@ -102,6 +105,22 @@ export default {
     },
     save() {
       this.patchAndCommit({schema: this.schema.map(field => Object.assign({}, field))})
+    },
+    onMetadataUpload(e) {
+      const reader = new FileReader()
+      reader.onload = (event) => {
+        const infos = JSON.parse(event.target.result)
+        // TODO check format is compliant with https://frictionlessdata.io/specs/table-schema/
+        infos.fields.forEach(f => {
+          const field = this.schema.find(sf => sf.key === f.name)
+          if (field) {
+            if (f.title) this.$set(field, 'title', f.title)
+            if (f.description) this.$set(field, 'description', f.description)
+          }
+        })
+        this.$refs.schemaInput.value = ''
+      }
+      reader.readAsText(e.target.files[0])
     }
   }
 }
