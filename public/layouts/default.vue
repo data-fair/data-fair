@@ -23,6 +23,17 @@
         <v-btn flat to="/remote-services" color="primary" :class="routePrefix === 'remote' ? 'v-btn--active' : ''">Services</v-btn>
         <v-btn flat to="/applications" color="primary" :class="routePrefix === 'application' ? 'v-btn--active' : ''">Applications</v-btn>
         <v-btn flat to="/catalogs" color="primary" :class="routePrefix === 'catalog' ? 'v-btn--active' : ''">Catalogues</v-btn>
+        <v-menu>
+          <v-btn slot="activator" flat>Documentation</v-btn>
+          <v-list>
+            <v-list-tile href="https://videos.koumoul.com/" target="_blank">
+              <v-list-tile-title>Tutoriels</v-list-tile-title>
+            </v-list-tile>
+            <v-list-tile :to="`/api`">
+              <v-list-tile-title>API</v-list-tile-title>
+            </v-list-tile>
+          </v-list>
+        </v-menu>
         <template v-if="session.initialized">
           <v-btn v-if="!user" @click="login" color="primary">
             Se connecter / S'inscrire

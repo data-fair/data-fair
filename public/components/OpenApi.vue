@@ -10,7 +10,7 @@ export default {
   computed: {
     ...mapGetters('dataset', ['resourceUrl']),
     height() {
-      return Math.max(window.innerHeight, 1000)
+      return Math.max((window && window.innerHeight) || 0, 1000)
     },
     src() {
       let url = 'https://koumoul.com/openapi-viewer/?proxy=false&hide-toolbar=true'

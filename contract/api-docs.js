@@ -5,6 +5,7 @@ const dataset = require('./dataset')
 const remoteService = require('./remote-service')
 const catalog = require('./catalog')
 const application = require('./application')
+const openAPI3 = require('./openapi-3.0.json')
 
 module.exports = {
   openapi: '3.0.0',
@@ -289,5 +290,6 @@ module.exports = {
   externalDocs: {
     description: 'Documentation sur Github',
     url: 'https://koumoul-dev.github.io/data-fair/'
-  }
+  },
+  definitions: openAPI3.definitions
 }
