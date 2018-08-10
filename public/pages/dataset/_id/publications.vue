@@ -138,7 +138,7 @@ export default {
     }
   },
   async created() {
-    const params = {'owner-type': this.dataset.owner.type, 'owner-id': this.dataset.owner.id}
+    const params = {owner: this.dataset.owner.type + ':' + this.dataset.owner.id}
     this.catalogs = (await this.$axios.$get('api/v1/catalogs', {params})).results
     eventBus.$on(this.journalChannel, this.onJournalEvent)
   },

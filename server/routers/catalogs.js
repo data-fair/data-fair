@@ -17,6 +17,7 @@ const permissions = require('../utils/permissions')
 const usersUtils = require('../utils/users')
 const findUtils = require('../utils/find')
 const asyncWrap = require('../utils/async-wrap')
+const clone = require('fast-clone')
 
 const router = module.exports = express.Router()
 
@@ -53,20 +54,21 @@ router.get('/_datasets', asyncWrap(async(req, res) => {
 
 // Get the list of catalogs
 router.get('', asyncWrap(async(req, res) => {
-  if (!req.user && (req.query['is-owner'] === 'true')) {
-    return res.json({results: [], count: 0})
-  }
   const catalogs = req.app.get('db').collection('catalogs')
-  const query = findUtils.query(req.query, {})
+  const query = findUtils.query(req, {})
   const sort = findUtils.sort(req.query.sort)
   const project = findUtils.project(req.query.select)
   const [skip, size] = findUtils.pagination(req.query)
-  query.$or = permissions.filter(req.user, !(req.query['is-owner'] === 'true'))
-  let mongoQueries = [
+  const mongoQueries = [
     size > 0 ? catalogs.find(query).limit(size).skip(skip).sort(sort).project(project).toArray() : Promise.resolve([]),
     catalogs.find(query).count()
   ]
-  const [results, count] = await Promise.all(mongoQueries)
+  if (req.query.facets) {
+    const q = clone(query)
+    if (req.query.owner) q.$and.pop()
+    mongoQueries.push(catalogs.aggregate(findUtils.facetsQuery(req.query.facets, q)).toArray())
+  }
+  let [results, count, facets] = await Promise.all(mongoQueries)
   results.forEach(r => {
     r.userPermissions = permissions.list(r, operationsClasses, req.user)
     r.public = permissions.isPublic(r, operationsClasses)
@@ -74,7 +76,8 @@ router.get('', asyncWrap(async(req, res) => {
     if (r.apiKey) r.apiKey = '**********'
     findUtils.setResourceLinks(r, 'catalog')
   })
-  res.json({results: results.map(result => mongoEscape.unescape(result, true)), count})
+  facets = findUtils.parseFacets(facets)
+  res.json({results: results.map(result => mongoEscape.unescape(result, true)), count, facets})
 }))
 
 // Create a catalog

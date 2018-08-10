@@ -2,7 +2,7 @@
   <v-container fluid grid-list-lg>
     <h3 class="display-1" v-if="applications">{{ applications.count }} configuration{{ plural }} d'application{{ plural }}</h3>
 
-    <search-filters :filter-labels="{'dataset': 'Jeu de données', 'service': 'Service'}" :filters="filters" @apply="refresh"/>
+    <search-filters :filter-labels="{'dataset': 'Jeu de données', 'service': 'Service'}" :filters="filters" :facets="datasets && datasets.facets" @apply="refresh"/>
     <search-progress :loading="loading"/>
 
     <v-layout row wrap class="resourcesList" v-if="applications">
@@ -61,7 +61,7 @@ export default {
     async refresh() {
       this.loading = true
       this.applications = await this.$axios.$get(this.env.publicUrl + '/api/v1/applications', {params:
-        {size: this.size, page: this.page, select: 'title,description', ...this.filters}
+        {size: this.size, page: this.page, select: 'title,description', ...this.filters, facets: 'owner'}
       })
       this.loading = false
     }

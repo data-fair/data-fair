@@ -64,8 +64,7 @@ export default {
       if (this.currentStep === 3) {
         const datasets = await this.$axios.$get('api/v1/datasets', {
           params: {
-            'owner-type': this.owners[this.owner].type,
-            'owner-id': this.owners[this.owner].id,
+            owner: this.owners[this.owner].type + ':' + this.owners[this.owner].id,
             'filename': this.file.name
           }
         })

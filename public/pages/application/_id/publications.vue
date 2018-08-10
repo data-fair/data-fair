@@ -108,7 +108,7 @@ export default {
     }
   },
   async created() {
-    const params = {'owner-type': this.application.owner.type, 'owner-id': this.application.owner.id}
+    const params = {owner: this.application.owner.type + ':' + this.application.owner.id}
     this.catalogs = (await this.$axios.$get('api/v1/catalogs', {params})).results
     eventBus.$on(this.journalChannel, this.onJournalEvent)
   },

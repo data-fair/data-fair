@@ -22,6 +22,7 @@ const geo = require('../utils/geo')
 const tiles = require('../utils/tiles')
 const cache = require('../utils/cache')
 const config = require('config')
+const clone = require('fast-clone')
 
 const datasetSchema = require('../../contract/dataset')
 const datasetSchemaNoRequired = Object.assign(datasetSchema)
@@ -41,14 +42,8 @@ const operationsClasses = {
 
 // Get the list of datasets
 router.get('', asyncWrap(async(req, res) => {
-  if (!req.user && (req.query['is-owner'] === 'true')) {
-    return res.json({
-      results: [],
-      count: 0
-    })
-  }
   let datasets = req.app.get('db').collection('datasets')
-  const query = findUtils.query(req.query, {
+  const query = findUtils.query(req, {
     'filename': 'file.name',
     'concepts': 'schema.x-refersTo',
     'ids': 'id'
@@ -59,19 +54,24 @@ router.get('', asyncWrap(async(req, res) => {
   const sort = findUtils.sort(req.query.sort)
   const project = findUtils.project(req.query.select)
   const [skip, size] = findUtils.pagination(req.query)
-  query.$or = permissions.filter(req.user, !(req.query['is-owner'] === 'true'))
-  let mongoQueries = [
+  const mongoQueries = [
     size > 0 ? datasets.find(query).limit(size).skip(skip).sort(sort).project(project).toArray() : Promise.resolve([]),
     datasets.find(query).count()
   ]
-  const [results, count] = await Promise.all(mongoQueries)
+  if (req.query.facets) {
+    const q = clone(query)
+    if (req.query.owner) q.$and.pop()
+    mongoQueries.push(datasets.aggregate(findUtils.facetsQuery(req.query.facets, q)).toArray())
+  }
+  let [results, count, facets] = await Promise.all(mongoQueries)
   results.forEach(r => {
     r.userPermissions = permissions.list(r, operationsClasses, req.user)
     r.public = permissions.isPublic(r, operationsClasses)
     delete r.permissions
     findUtils.setResourceLinks(r, 'dataset')
   })
-  res.json({results, count})
+  facets = findUtils.parseFacets(facets)
+  res.json({results, count, facets})
 }))
 
 // Middlewares

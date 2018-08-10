@@ -87,15 +87,12 @@ exports.isPublic = function(resource, operationsClasses) {
 }
 
 // Manage filters for datasets, applications and remote services
-exports.filter = function(user, showNotOwned) {
+exports.filter = function(user) {
   const operationFilter = [{operations: 'list'}, {classes: 'list'}]
 
-  const or = []
-  if (showNotOwned) {
-    or.push({permissions: {
-      $elemMatch: {$or: operationFilter, type: null, id: null}
-    }})
-  }
+  const or = [{permissions: {
+    $elemMatch: {$or: operationFilter, type: null, id: null}
+  }}]
 
   if (user) {
     // user is owner
@@ -110,27 +107,25 @@ exports.filter = function(user, showNotOwned) {
     })
 
     // user has specific permission to read
-    if (showNotOwned) {
+    or.push({
+      permissions: {
+        $elemMatch: {$or: operationFilter, type: 'user', id: user.id}
+      }
+    })
+    user.organizations.forEach(o => {
       or.push({
         permissions: {
-          $elemMatch: {$or: operationFilter, type: 'user', id: user.id}
+          $elemMatch: {
+            $and: [
+              {$or: operationFilter},
+              {$or: [{roles: o.role}, {roles: {$size: 0}}]}
+            ],
+            type: 'organization',
+            id: o.id
+          }
         }
       })
-      user.organizations.forEach(o => {
-        or.push({
-          permissions: {
-            $elemMatch: {
-              $and: [
-                {$or: operationFilter},
-                {$or: [{roles: o.role}, {roles: {$size: 0}}]}
-              ],
-              type: 'organization',
-              id: o.id
-            }
-          }
-        })
-      })
-    }
+    })
   }
   return or
 }

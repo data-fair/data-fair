@@ -26,6 +26,7 @@ const permissions = require('../utils/permissions')
 const usersUtils = require('../utils/users')
 const findUtils = require('../utils/find')
 const asyncWrap = require('../utils/async-wrap')
+const clone = require('fast-clone')
 
 const router = module.exports = express.Router()
 
@@ -55,14 +56,8 @@ const operationsClasses = {
 
 // Get the list of remote-services
 router.get('', asyncWrap(async(req, res) => {
-  if (!req.user && (req.query['is-owner'] === 'true')) {
-    return res.json({
-      results: [],
-      count: 0
-    })
-  }
   const remoteServices = req.app.get('db').collection('remote-services')
-  const query = findUtils.query(req.query, {
+  const query = findUtils.query(req, {
     'input-concepts': 'actions.input.concept',
     'output-concepts': 'actions.output.concept',
     'api-id': 'apiDoc.info.x-api-id'
@@ -70,19 +65,24 @@ router.get('', asyncWrap(async(req, res) => {
   const sort = findUtils.sort(req.query.sort)
   const project = findUtils.project(req.query.select, ['apiDoc'])
   const [skip, size] = findUtils.pagination(req.query)
-  query.$or = permissions.filter(req.user, !(req.query['is-owner'] === 'true'))
-  let mongoQueries = [
+  const mongoQueries = [
     size > 0 ? remoteServices.find(query).limit(size).skip(skip).sort(sort).project(project).toArray() : Promise.resolve([]),
     remoteServices.find(query).count()
   ]
-  const [results, count] = await Promise.all(mongoQueries)
+  if (req.query.facets) {
+    const q = clone(query)
+    if (req.query.owner) q.$and.pop()
+    mongoQueries.push(remoteServices.aggregate(findUtils.facetsQuery(req.query.facets, q)).toArray())
+  }
+  let [results, count, facets] = await Promise.all(mongoQueries)
   results.forEach(r => {
     r.userPermissions = permissions.list(r, operationsClasses, req.user)
     r.public = permissions.isPublic(r, operationsClasses)
     delete r.permissions
     findUtils.setResourceLinks(r, 'remote-service')
   })
-  res.json({results: results.map(result => mongoEscape.unescape(result, true)), count})
+  facets = findUtils.parseFacets(facets)
+  res.json({results: results.map(result => mongoEscape.unescape(result, true)), count, facets})
 }))
 
 // Create an remote Api

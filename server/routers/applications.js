@@ -22,6 +22,7 @@ const usersUtils = require('../utils/users')
 const findUtils = require('../utils/find')
 const asyncWrap = require('../utils/async-wrap')
 const journals = require('../utils/journals')
+const clone = require('fast-clone')
 
 const router = module.exports = express.Router()
 
@@ -46,13 +47,6 @@ router.get('/_description', asyncWrap(async(req, res) => {
 
 // Get the list of applications
 router.get('', asyncWrap(async(req, res) => {
-  if (!req.user && (req.query['is-owner'] === 'true')) {
-    return res.json({
-      results: [],
-      count: 0
-    })
-  }
-
   const applications = req.app.get('db').collection('applications')
 
   if (req.query.dataset &&
@@ -65,7 +59,7 @@ router.get('', asyncWrap(async(req, res) => {
       !req.query.service.startsWith('https://')) {
     req.query.service = config.publicUrl + '/api/v1/remote-services/' + req.query.service + '/proxy'
   }
-  const query = findUtils.query(req.query, {
+  const query = findUtils.query(req, {
     'ids': 'id',
     'dataset': 'configuration.datasets.href',
     'service': 'configuration.remoteServices.href'
@@ -73,19 +67,24 @@ router.get('', asyncWrap(async(req, res) => {
   const sort = findUtils.sort(req.query.sort)
   const project = findUtils.project(req.query.select, ['configuration'])
   const [skip, size] = findUtils.pagination(req.query)
-  query.$or = permissions.filter(req.user, !(req.query['is-owner'] === 'true'))
-  let mongoQueries = [
+  const mongoQueries = [
     size > 0 ? applications.find(query).limit(size).skip(skip).sort(sort).project(project).toArray() : Promise.resolve([]),
     applications.find(query).count()
   ]
-  let [results, count] = await Promise.all(mongoQueries)
+  if (req.query.facets) {
+    const q = clone(query)
+    if (req.query.owner) q.$and.pop()
+    mongoQueries.push(applications.aggregate(findUtils.facetsQuery(req.query.facets, q)).toArray())
+  }
+  let [results, count, facets] = await Promise.all(mongoQueries)
   results.forEach(r => {
     r.userPermissions = permissions.list(r, operationsClasses, req.user)
     r.public = permissions.isPublic(r, operationsClasses)
     delete r.permissions
     findUtils.setResourceLinks(r, 'application')
   })
-  res.json({results, count})
+  facets = findUtils.parseFacets(facets)
+  res.json({results, count, facets})
 }))
 
 // Create an application configuration

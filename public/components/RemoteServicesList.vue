@@ -2,7 +2,7 @@
   <v-container fluid grid-list-lg>
     <h3 class="display-1" v-if="remoteServices">{{ remoteServices.count }} service{{ plural }} configuré{{ plural }}</h3>
 
-    <search-filters :filter-labels="{}" :filters="filters" @apply="refresh"/>
+    <search-filters :filter-labels="{}" :filters="filters" :facets="datasets && datasets.facets" @apply="refresh"/>
     <search-progress :loading="loading"/>
 
     <v-layout row wrap class="resourcesList" v-if="remoteServices">
@@ -40,6 +40,7 @@ export default {
     page: 1,
     marked,
     loading: true,
+    remoteServices: null,
     filters: {}
   }),
   computed: {
@@ -56,7 +57,7 @@ export default {
     async refresh() {
       this.loading = true
       this.remoteServices = await this.$axios.$get(this.env.publicUrl + '/api/v1/remote-services', {params:
-        {size: this.size, page: this.page, select: 'title,description', ...this.filters}
+        {size: this.size, page: this.page, select: 'title,description', ...this.filters, facets: 'owner'}
       })
       this.loading = false
     }
