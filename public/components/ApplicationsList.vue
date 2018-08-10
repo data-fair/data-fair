@@ -2,7 +2,7 @@
   <v-container fluid grid-list-lg>
     <h3 class="display-1" v-if="applications">{{ applications.count }} configuration{{ plural }} d'application{{ plural }}</h3>
 
-    <search-filters :filter-labels="{'dataset': 'Jeu de données', 'service': 'Service'}" :filters="filters" :facets="datasets && datasets.facets" @apply="refresh"/>
+    <search-filters :filter-labels="{'dataset': 'Jeu de données', 'service': 'Service'}" :filters="filters" :facets="applications && applications.facets" @apply="refresh"/>
     <search-progress :loading="loading"/>
 
     <v-layout row wrap class="resourcesList" v-if="applications">
