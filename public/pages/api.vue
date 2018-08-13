@@ -7,7 +7,6 @@
 </template>
 
 <script>
-import {mapGetters} from 'vuex'
 import OpenApi from '../components/OpenApi.vue'
 
 export default {
