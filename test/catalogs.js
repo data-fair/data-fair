@@ -7,6 +7,7 @@ const {test, axiosBuilder} = testUtils.prepare(__filename)
 nock('http://test-catalog.com').persist()
   .get('/api/1/site/').reply(200, {title: 'My catalog'})
   .get('/api/1/organizations/suggest/?q=koumoul').reply(200, [{name: 'Koumoul'}])
+  .get('/api/1/datasets/suggest/?q=test').reply(200, [{title: 'Test dataset'}])
 
 test('Get catalogs when not authenticated', async t => {
   const ax = await axiosBuilder()
@@ -37,6 +38,33 @@ test('Search organizations in a udata catalog', async t => {
   const res = await ax.get('/api/v1/catalogs/_organizations', {params: {type: 'udata', url: 'http://test-catalog.com', q: 'koumoul'}})
   t.truthy(res.data.results)
   t.is(res.data.results[0].name, 'Koumoul')
+})
+
+test('Search datasets in a udata catalog', async t => {
+  const ax = await axiosBuilder()
+  const res = await ax.get('/api/v1/catalogs/_datasets', {params: {type: 'udata', url: 'http://test-catalog.com', q: 'test'}})
+  t.truthy(res.data.results)
+  t.is(res.data.results[0].title, 'Test dataset')
+})
+
+test('Search organizations in a unknown catalog type', async t => {
+  const ax = await axiosBuilder()
+  try {
+    await ax.get('/api/v1/catalogs/_organizations', {params: {type: 'unknown', url: 'http://test-catalog.com', q: 'koumoul'}})
+    t.fail()
+  } catch (err) {
+    t.is(err.status, 404)
+  }
+})
+
+test('Search datasets in a unknown catalog type', async t => {
+  const ax = await axiosBuilder()
+  try {
+    await ax.get('/api/v1/catalogs/_datasets', {params: {type: 'unknown', url: 'http://test-catalog.com', q: 'test'}})
+    t.fail()
+  } catch (err) {
+    t.is(err.status, 404)
+  }
 })
 
 test('Post a minimal catalog definition, read it, update it and delete it', async t => {
