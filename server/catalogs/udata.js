@@ -147,16 +147,39 @@ async function createNewDataset(catalog, dataset, publication) {
       datafairDatasetId: dataset.id
     },
     resources: [{
-      title: `Page sur ${config.publicUrl}`,
-      description: `Accédez à la description détaillée, prévisualisation, documentation d'API, etc.`,
-      url: datasetPageUrl(dataset),
+      title: `Description des champs`,
+      description: `Description détaillée et types sémantiques des champs`,
+      url: `${config.publicUrl}/dataset/${dataset.id}/description`,
       type: 'documentation',
       filetype: 'remote',
       format: 'Page Web',
-      mime: 'text/html'
+      mime: 'text/html',
+      extras: {
+        datafairEmbed: 'fields'
+      }
     }, {
-      title: dataset.file.name,
-      description: `Téléchargez le fichier complet.`,
+      title: `Documentation de l'API`,
+      description: `Documentation interactive de l'API à destination des développeurs. La description de l'API utilise la spécification [OpenAPI 3.0.1](https://github.com/OAI/OpenAPI-Specification)`,
+      url: `${config.publicUrl}/dataset/${dataset.id}/api`,
+      type: 'documentation',
+      filetype: 'remote',
+      format: 'Page Web',
+      mime: 'text/html',
+      extras: {
+        embedUrl: `https://koumoul.com/openapi-viewer/?proxy=false&hide-toolbar=true&url=${config.publicUrl}/api/v1/datasets/${dataset.id}/api-docs.json`
+      }
+    }, {
+      title: 'Consultez les données',
+      description: `Consultez directement les données dans ${dataset.bbox ? 'une carte interactive' : 'un tableau'}.`,
+      url: `${config.publicUrl}/dataset/${dataset.id}/${dataset.bbox ? 'map' : 'tabular'}`,
+      type: 'main',
+      filetype: 'remote',
+      extras: {
+        datafairEmbed: dataset.bbox ? 'map' : 'table'
+      }
+    }, {
+      title: `Fichier ${dataset.file.mimetype.split('/').pop()}`,
+      description: `Téléchargez le fichier complet au format ${dataset.file.mimetype.split('/').pop()}.`,
       url: datasetFileUrl(dataset),
       type: 'main',
       filetype: 'remote',
