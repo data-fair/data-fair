@@ -166,7 +166,7 @@ async function createNewDataset(catalog, dataset, publication) {
       format: 'Page Web',
       mime: 'text/html',
       extras: {
-        embedUrl: `https://koumoul.com/openapi-viewer/?proxy=false&hide-toolbar=true&url=${config.publicUrl}/api/v1/datasets/${dataset.id}/api-docs.json`
+        apidocUrl: `${config.publicUrl}/api/v1/datasets/${dataset.id}/api-docs.json`
       }
     }, {
       title: 'Consultez les données',
