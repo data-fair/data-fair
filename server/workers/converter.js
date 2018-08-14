@@ -19,10 +19,10 @@ const tabularTypes = exports.tabularTypes = new Set([
 const geographicalTypes = exports.geographicalTypes = new Set([])
 
 const writeFile = (path, data, opts = 'utf8') =>
-  new Promise((res, rej) => {
+  new Promise((resolve, reject) => {
     fs.writeFile(path, data, opts, (err) => {
-      if (err) rej(err)
-      else res()
+      if (err) reject(err)
+      else resolve()
     })
   })
 
@@ -42,10 +42,10 @@ exports.process = async function(app, dataset) {
       mimetype: 'text/csv',
       encoding: 'utf-8'
     }
-  } else if (geographicalTypes.has(req.originalFile.mimetype)) {
+  } else if (geographicalTypes.has(dataset.originalFile.mimetype)) {
     dataset.file = {
       name: path.parse(dataset.originalFile.name).name + '.geojson',
-      size: req.file.size,
+      // size: req.file.size,
       mimetype: 'application/geo+json',
       encoding: 'utf-8'
     }
