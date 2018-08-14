@@ -111,7 +111,7 @@
     "vue-truncate-filter": "^1.1.7",
     "vuetify": "^1.1.1",
     "ws": "^3.3.3",
-    "xlsx": "^0.11.16"
+    "xlsx": "^0.13.3"
   },
   "ava": {
     "babel": false,

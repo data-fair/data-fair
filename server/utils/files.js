@@ -6,6 +6,13 @@ const createError = require('http-errors')
 const datasetUtils = require('./dataset')
 const slug = require('slug')
 const mime = require('mime-types')
+const fallbackMimeTypes = {
+  dbf: 'application/dbase',
+  dif: 'text/plain',
+  fods: 'application/vnd.oasis.opendocument.spreadsheet'
+}
+
+const {tabularTypes, geographicalTypes} = require('../workers/converter')
 
 function uploadDir(req) {
   return path.join(config.dataDir, req.get('x-organizationId') ? 'organization' : 'user', req.get('x-organizationId') || req.user.id)
@@ -49,7 +56,7 @@ const storage = multer.diskStorage({
   }
 })
 
-const allowedTypes = new Set(['text/csv', 'application/geo+json'])
+const allowedTypes = new Set(['text/csv', 'application/geo+json', ...tabularTypes, ...geographicalTypes])
 
 const upload = multer({
   storage: storage,
@@ -76,7 +83,7 @@ const upload = multer({
     }
 
     // mime type is broken on windows it seems.. detect based on extension instead
-    file.mimetype = mime.lookup(file.originalname)
+    file.mimetype = mime.lookup(file.originalname) || fallbackMimeTypes[file.originalname.split('.').pop()] || file.originalname.split('.').pop()
     if (!allowedTypes.has(file.mimetype)) return cb(createError(400, file.mimetype + ' type is not supported'))
 
     cb(null, true)

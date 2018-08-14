@@ -28,7 +28,7 @@
             </v-list-tile>
             <v-list-tile>
               <v-list-tile-avatar><v-icon>insert_drive_file</v-icon></v-list-tile-avatar>
-              <span>{{ dataset.file.name }} {{ (dataset.file.size / 1000).toFixed(2) }} ko</span>
+              <span>{{ (dataset.originalFile || dataset.file).name }} {{ ((dataset.originalFile || dataset.file).size / 1000).toFixed(2) }} ko</span>
             </v-list-tile>
             <v-list-tile>
               <v-list-tile-avatar><v-icon>update</v-icon></v-list-tile-avatar>

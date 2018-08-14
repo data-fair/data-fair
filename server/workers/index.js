@@ -3,6 +3,7 @@ const locks = require('../utils/locks')
 const journals = require('../utils/journals')
 
 const workers = {
+  converter: require('./converter'),
   csvAnalyzer: require('./csv-analyzer'),
   geojsonAnalyzer: require('./geojson-analyzer'),
   csvSchematizer: require('./csv-schematizer'),

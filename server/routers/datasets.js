@@ -162,8 +162,9 @@ router.delete('/:datasetId', permissions.middleware('delete', 'admin'), asyncWra
 
 const datasetFileSample = require('../utils/dataset-file-sample')
 const chardet = require('chardet')
+const baseTypes = new Set(['text/csv', 'application/geo+json'])
 
-// Create a dataset by uploading tabular data
+// Create a dataset by uploading data
 router.post('', filesUtils.uploadFile(), asyncWrap(async(req, res) => {
   if (!req.user) return res.status(401).send()
   const owner = usersUtils.owner(req)
@@ -174,18 +175,32 @@ router.post('', filesUtils.uploadFile(), asyncWrap(async(req, res) => {
   const dataset = {
     id: req.file.id,
     title: req.file.title,
-    file: {
-      name: req.file.originalname,
-      size: req.file.size,
-      mimetype: req.file.mimetype
-    },
     owner,
     permissions: [],
     createdBy: {id: req.user.id, name: req.user.name},
     createdAt: date,
     updatedBy: {id: req.user.id, name: req.user.name},
-    updatedAt: date,
-    status: 'loaded'
+    updatedAt: date
+  }
+
+  if (!baseTypes.has(req.file.mimetype)) {
+    // we first need to convert the file in a textual format easy to index
+    dataset.status = 'uploaded'
+    dataset.originalFile = {
+      name: req.file.originalname,
+      size: req.file.size,
+      mimetype: req.file.mimetype
+    }
+  } else {
+    // The format of the original file is already well suited to workers
+    dataset.status = 'loaded'
+    dataset.file = {
+      name: req.file.originalname,
+      size: req.file.size,
+      mimetype: req.file.mimetype
+    }
+    const fileSample = await datasetFileSample(dataset)
+    dataset.file.encoding = chardet.detect(fileSample)
   }
 
   // Make sure the creator can work on the resource he just created
@@ -199,8 +214,6 @@ router.post('', filesUtils.uploadFile(), asyncWrap(async(req, res) => {
     })
   }
 
-  const fileSample = await datasetFileSample(dataset)
-  dataset.file.encoding = chardet.detect(fileSample)
   await req.app.get('db').collection('datasets').insertOne(dataset)
   const storageRemaining = await datasetUtils.storageRemaining(req.app.get('db'), owner, req)
   if (storageRemaining !== -1) res.set(config.headers.storedBytesRemaining, storageRemaining)
@@ -214,13 +227,26 @@ router.post('/:datasetId', permissions.middleware('writeData', 'write'), filesUt
   if (!acceptedStatuses.includes(req.dataset.status)) return res.status(409).send('Dataset is not in proper state to be updated')
   if (!req.file) return res.sendStatus(400)
 
-  req.dataset.file = {
-    name: req.file.originalname,
-    size: req.file.size,
-    mimetype: req.file.mimetype
+  if (!baseTypes.has(req.file.mimetype)) {
+    // we first need to convert the file in a textual format easy to index
+    req.dataset.status = 'uploaded'
+    req.dataset.originalFile = {
+      name: req.file.originalname,
+      size: req.file.size,
+      mimetype: req.file.mimetype
+    }
+  } else {
+    // The format of the original file is already well suited to workers
+    req.dataset.status = 'loaded'
+    req.dataset.file = {
+      name: req.file.originalname,
+      size: req.file.size,
+      mimetype: req.file.mimetype
+    }
+    const fileSample = await datasetFileSample(req.dataset)
+    req.dataset.file.encoding = chardet.detect(fileSample)
   }
-  const fileSample = await datasetFileSample(req.dataset)
-  req.dataset.file.encoding = chardet.detect(fileSample)
+
   req.dataset.updatedBy = {id: req.user.id, name: req.user.name}
   req.dataset.updatedAt = moment().toISOString()
   req.dataset.status = 'loaded'
@@ -325,7 +351,7 @@ router.get('/:datasetId/metric_agg', permissions.middleware('getMetricAgg', 'rea
 
 // Download the full dataset in its original form
 router.get('/:datasetId/raw', permissions.middleware('downloadOriginalData', 'read'), (req, res, next) => {
-  res.download(datasetUtils.fileName(req.dataset), req.dataset.file.name)
+  res.download(datasetUtils.fileName(req.dataset), (req.dataset.originalFile || req.dataset.file).name)
 })
 
 // Download the full dataset with extensions

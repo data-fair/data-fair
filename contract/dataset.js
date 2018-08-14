@@ -90,6 +90,26 @@ module.exports = {
         }
       }
     },
+    'originalFile': {
+      'type': 'object',
+      'additionalProperties': false,
+      'required': ['name', 'size', 'mimetype'],
+      'properties': {
+        'name': {
+          'type': 'string',
+          'description': 'Name of the file that was used to create or update this dataset'
+        },
+        'size': {
+          'type': 'number',
+          'description': 'Size of the file on disk'
+        },
+        'mimetype': {
+          'type': 'string',
+          'enum': ['text/csv'],
+          'description': 'Mime type of the file'
+        }
+      }
+    },
     'createdBy': eventBy,
     'updatedBy': eventBy,
     'createdAt': {
