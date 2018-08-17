@@ -25,11 +25,16 @@ Run a development server with:
 
 Chose an account in `test/resources/users.json` and use its email to login.
 
-## Writing documentation
+## Embedded documentation
 
-Documentation is in the `docs` folder and is built with [jekyll](https://jekyllrb.com/) when pushing to Github. The theme used is minimal-mistakes and its documentation can be [found here](https://mmistakes.github.io/minimal-mistakes/). If you want to preview the documentation on your computer you can use docker-compose (the first time will take a while):
+Documentation is maintained in ./doc as a small separate nuxt project. Its content is built and pushed on gitlab-pages by the Travis build.
 
-    cd docs
-    docker-compose up
+The pages are also linked to the main nuxt project, so that any Simple Directory instance embeds its full documentation.
 
-You should be able to open the documentation on http://localhost:4000.
+Run the documentation development server:
+
+```
+npm run doc
+```
+
+Then open http://localhost:3000/data-fair/

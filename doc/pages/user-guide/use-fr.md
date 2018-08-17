@@ -1,7 +1,4 @@
----
-title: Manuel utilisateur
-permalink: /user-guide
----
+## Documentation utilisateur
 
 ## Jeux de données
 

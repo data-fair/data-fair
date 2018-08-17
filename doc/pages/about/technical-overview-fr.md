@@ -1,8 +1,3 @@
----
-title: Stack technique du projet
-permalink: /technical-stack
----
-
 Cette page présente les langages de programmation, services et outils utilisés pour réaliser ce projet.
 
 ## Backend

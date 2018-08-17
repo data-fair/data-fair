@@ -18,19 +18,25 @@
 
       <!-- larger screens: navigation in toolbar -->
       <v-toolbar-items class="hidden-md-and-down">
-        <v-btn flat :to="{name: 'index'}" color="primary" exact>Accueil</v-btn>
-        <v-btn flat to="/datasets" color="primary" :class="routePrefix === 'dataset' ? 'v-btn--active' : ''">Jeux de données</v-btn>
-        <v-btn flat to="/remote-services" color="primary" :class="routePrefix === 'remote' ? 'v-btn--active' : ''">Services</v-btn>
-        <v-btn flat to="/applications" color="primary" :class="routePrefix === 'application' ? 'v-btn--active' : ''">Applications</v-btn>
-        <v-btn flat to="/catalogs" color="primary" :class="routePrefix === 'catalog' ? 'v-btn--active' : ''">Catalogues</v-btn>
+        <v-btn flat :to="localePath('index')" color="primary" exact>Accueil</v-btn>
+        <v-btn flat :to="localePath('datasets')" color="primary" :class="routePrefix === 'dataset' ? 'v-btn--active' : ''">Jeux de données</v-btn>
+        <v-btn flat :to="localePath('remote-services')" color="primary" :class="routePrefix === 'remote' ? 'v-btn--active' : ''">Services</v-btn>
+        <v-btn flat :to="localePath('applications')" color="primary" :class="routePrefix === 'application' ? 'v-btn--active' : ''">Applications</v-btn>
+        <v-btn flat :to="localePath('catalogs')" color="primary" :class="routePrefix === 'catalog' ? 'v-btn--active' : ''">Catalogues</v-btn>
         <v-menu>
-          <v-btn slot="activator" flat>Documentation</v-btn>
+          <v-btn slot="activator" :class="(routePrefix === 'user' || routePrefix === 'interoperate') ? 'v-btn--active' : ''" flat>Documentation</v-btn>
           <v-list>
+            <v-list-tile :to="localePath('user-guide')">
+              <v-list-tile-title>{{ $t('pages.userguide.title') }}</v-list-tile-title>
+            </v-list-tile>
             <v-list-tile href="https://videos.koumoul.com/" target="_blank">
               <v-list-tile-title>Tutoriels</v-list-tile-title>
             </v-list-tile>
-            <v-list-tile :to="`/api`">
+            <v-list-tile :to="localePath('api')">
               <v-list-tile-title>API</v-list-tile-title>
+            </v-list-tile>
+            <v-list-tile :to="localePath('interoperate')">
+              <v-list-tile-title>{{ $t('pages.interoperate.title') }}</v-list-tile-title>
             </v-list-tile>
           </v-list>
         </v-menu>
@@ -59,19 +65,19 @@
       <v-menu bottom left class="hidden-lg-and-up">
         <v-btn slot="activator" icon><v-icon>menu</v-icon></v-btn>
         <v-list>
-          <v-list-tile :to="{name: 'index'}" exact>
+          <v-list-tile :to="localePath('index')" exact>
             <v-list-tile-title>Accueil</v-list-tile-title>
           </v-list-tile>
-          <v-list-tile to="/datasets">
+          <v-list-tile :to="localePath('datasets')">
             <v-list-tile-title>Jeux de données</v-list-tile-title>
           </v-list-tile>
-          <v-list-tile to="/remote-services">
+          <v-list-tile :to="localePath('remote-services')">
             <v-list-tile-title>Services</v-list-tile-title>
           </v-list-tile>
-          <v-list-tile to="/applications">
+          <v-list-tile :to="localePath('applications')">
             <v-list-tile-title>Applications</v-list-tile-title>
           </v-list-tile>
-          <v-list-tile to="/catalogs">
+          <v-list-tile :to="localePath('catalogs')">
             <v-list-tile-title>Catalogues</v-list-tile-title>
           </v-list-tile>
           <v-list-tile v-if="!user" @click="login" color="primary">

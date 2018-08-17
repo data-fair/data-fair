@@ -70,6 +70,26 @@ module.exports = {
     size: 1000
   },
   analytics: null, // use a tracking id for google analytics here
+  i18n: {
+    defaultLocale: 'fr',
+    locales: ['fr', 'en']
+  },
+  theme: {
+    logo: null,
+    dark: false,
+    colors: {
+      // standard vuetify colors
+      primary: '#1E88E5', // blue.darken1
+      secondary: '#42A5F5', // blue.lighten1,
+      accent: '#FF9800', // orange.base
+      error: 'FF5252', // red.accent2
+      info: '#2196F3', // blue.base
+      success: '#4CAF50', // green.base
+      warning: '#E91E63' // pink.base
+    },
+    cssUrl: null,
+    cssText: ''
+  },
   licenses: [{
     title: 'Licence Ouverte / Open Licence',
     href: 'https://www.etalab.gouv.fr/licence-ouverte-open-licence'

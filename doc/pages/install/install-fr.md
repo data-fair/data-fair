@@ -1,7 +1,4 @@
----
-title: Installation
-permalink: /install
----
+## Installation
 
 Cette application expose des services Web et interopère avec d'autres applications du même type. Pour comprendre comment ce *DataFair* fonctionne, vous pouvez aller voir la [description technique](technical-overview.md).
 

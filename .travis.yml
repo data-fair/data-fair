@@ -39,3 +39,13 @@ after_success:
   - docker pull $REPO:latest
   - docker build -f Dockerfile --cache-from $REPO:latest -t $REPO:$TAG .
   - docker push $REPO
+  # Doc build
+#   - npm run build-doc
+#
+# deploy:
+#   provider: pages
+#   local_dir: doc-dist
+#   skip-cleanup: true
+#   github-token: $GITHUB_TOKEN  # Set in the settings page of your repository, as a secure variable
+#   on:
+#     tags: true
