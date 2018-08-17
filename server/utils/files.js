@@ -85,7 +85,8 @@ const upload = multer({
     // mime type is broken on windows it seems.. detect based on extension instead
     file.mimetype = mime.lookup(file.originalname) || fallbackMimeTypes[file.originalname.split('.').pop()] || file.originalname.split('.').pop()
     if (!allowedTypes.has(file.mimetype)) return cb(createError(400, file.mimetype + ' type is not supported'))
-
+    if (tabularTypes.has(file.mimetype) && estimatedFileSize > 10 * 1000 * 1000) return cb(createError(400, 'File size of this format must not exceed 10 MB. You can however convert your file to CSV with an external tool and reupload it.'))
+    if (geographicalTypes.has(file.mimetype) && estimatedFileSize > 100 * 1000 * 1000) return cb(createError(400, 'File size of this format must not exceed 10 MB. You can however convert your file to geoJSON with an external tool and reupload it.'))
     cb(null, true)
   }
 })

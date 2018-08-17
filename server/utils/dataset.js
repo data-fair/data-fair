@@ -9,7 +9,11 @@ const JSONStream = require('JSONStream')
 const fieldsSniffer = require('./fields-sniffer')
 
 exports.fileName = (dataset) => {
-  return path.join(config.dataDir, dataset.owner.type, dataset.owner.id, dataset.id + '.' + (dataset.originalFile || dataset.file).name.split('.').pop())
+  return path.join(config.dataDir, dataset.owner.type, dataset.owner.id, dataset.id + '.' + dataset.file.name.split('.').pop())
+}
+
+exports.originalFileName = (dataset) => {
+  return path.join(config.dataDir, dataset.owner.type, dataset.owner.id, dataset.id + '.' + dataset.originalFile.name.split('.').pop())
 }
 
 // Read the dataset file and get a stream of line items

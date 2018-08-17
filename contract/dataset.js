@@ -130,7 +130,7 @@ module.exports = {
     owner,
     'status': {
       'type': 'string',
-      'enum': ['loaded', 'analyzed', 'schematized', 'indexed', 'extended', 'finalized', 'error'],
+      'enum': ['uploaded', 'loaded', 'analyzed', 'schematized', 'indexed', 'extended', 'finalized', 'error'],
       'description': 'The processing steps of a dataset.'
     },
     'schema': {

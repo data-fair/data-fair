@@ -3,6 +3,8 @@ const path = require('path')
 const fs = require('fs')
 const config = require('config')
 const XLSX = require('xlsx')
+const ogr2ogr = require('ogr2ogr')
+const util = require('util')
 
 exports.type = 'dataset'
 exports.eventsPrefix = 'convert'
@@ -16,15 +18,35 @@ const tabularTypes = exports.tabularTypes = new Set([
   'text/plain', // txt, dif
   'text/tab-separated-values' // tsv
 ])
-const geographicalTypes = exports.geographicalTypes = new Set([])
+const geographicalTypes = exports.geographicalTypes = new Set([
+  'application/vnd.google-earth.kml+xml', // kml
+  'application/vnd.google-earth.kmz', // kmz
+  'application/gpx+xml', // gpx or xml ?
+  'application/zip' // shp
+])
 
-const writeFile = (path, data, opts = 'utf8') =>
-  new Promise((resolve, reject) => {
-    fs.writeFile(path, data, opts, (err) => {
-      if (err) reject(err)
-      else resolve()
-    })
+const writeFile = util.promisify(fs.writeFile)
+const writeStream = util.promisify((filePath, stream, callback) => {
+  stream.on('error', (error) => {
+    callback(error)
   })
+  stream.on('end', () => {
+    callback(null)
+  })
+  let writeError
+  const ws = fs.createWriteStream(filePath)
+    .on('end', () => {
+      if (writeError) {
+        return
+      }
+      callback(null)
+    })
+    .on('error', (error) => {
+      writeError = true
+      callback(error)
+    })
+  stream.pipe(ws)
+})
 
 exports.process = async function(app, dataset) {
   const db = app.get('db')
@@ -43,6 +65,12 @@ exports.process = async function(app, dataset) {
       encoding: 'utf-8'
     }
   } else if (geographicalTypes.has(dataset.originalFile.mimetype)) {
+    const geoJsonFile = ogr2ogr(originalFilePath)
+      .format('GeoJSON')
+      .options(['-lco', 'RFC7946=YES', '-t_srs', 'EPSG:4326'])
+      // .skipfailures()
+      .stream()
+    await writeStream(path.join(config.dataDir, dataset.owner.type, dataset.owner.id, dataset.id + '.geojson'), geoJsonFile)
     dataset.file = {
       name: path.parse(dataset.originalFile.name).name + '.geojson',
       // size: req.file.size,

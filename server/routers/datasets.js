@@ -115,7 +115,7 @@ router.patch('/:datasetId', permissions.middleware('writeDescription', 'write'),
 
   // Changed a previously failed dataset, retry everything.
   if (req.dataset.status === 'error') {
-    patch.status = 'loaded'
+    patch.status = 'uploaded'
   }
 
   if (!patch.publications) {
@@ -147,6 +147,7 @@ router.delete('/:datasetId', permissions.middleware('delete', 'admin'), asyncWra
 
   // TODO : Remove indexes
   await unlink(datasetUtils.fileName(req.dataset))
+  if (req.dataset.originalFile) await unlink(datasetUtils.originalFileName(req.dataset))
   await req.app.get('db').collection('datasets').deleteOne({
     id: req.params.datasetId
   })
@@ -351,7 +352,7 @@ router.get('/:datasetId/metric_agg', permissions.middleware('getMetricAgg', 'rea
 
 // Download the full dataset in its original form
 router.get('/:datasetId/raw', permissions.middleware('downloadOriginalData', 'read'), (req, res, next) => {
-  res.download(datasetUtils.fileName(req.dataset), (req.dataset.originalFile || req.dataset.file).name)
+  res.download(req.dataset.originalFile ? datasetUtils.originalFileName(req.dataset) : datasetUtils.fileName(req.dataset), (req.dataset.originalFile || req.dataset.file).name)
 })
 
 // Download the full dataset with extensions
