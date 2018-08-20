@@ -24,7 +24,7 @@
 <script>
 export default {
   data: () => ({
-    pages: ['use']
+    pages: ['introduction', 'dataset', 'concepts', 'service-entreprise', 'service-geocoder', 'service-land-register']
   })
 }
 </script>

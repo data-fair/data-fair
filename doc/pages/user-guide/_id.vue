@@ -19,7 +19,7 @@ const context = require.context('.', true, /\.md$/)
 export default {
   data: () => ({
     ready: false,
-    pages: ['use']
+    pages: ['introduction', 'dataset', 'concepts', 'service-entreprise', 'service-geocoder', 'service-land-register']
   }),
   computed: {
     content() {

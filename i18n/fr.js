@@ -58,8 +58,23 @@ module.exports = {
     userguide: {
       title: 'Manuel utilisateur',
       description: `Ceci est la documentation de notre service de publication de données`,
-      use: {
-        title: 'Utilisation !!'
+      introduction: {
+        title: 'Introduction à la plateforme'
+      },
+      dataset: {
+        title: 'Ajouter et configurer vos jeux de données'
+      },
+      concepts: {
+        title: 'Les concepts'
+      },
+      serviceentreprise: {
+        title: 'Services : Données des entreprises'
+      },
+      servicegeocoder: {
+        title: 'Service : Géocoder'
+      },
+      servicelandregister: {
+        title: 'Service : Cadastre'
       }
     }
   },
