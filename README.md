@@ -34,6 +34,7 @@ The pages are also linked to the main nuxt project, so that any Simple Directory
 Run the documentation development server:
 
 ```
+npm install
 npm run doc
 ```
 
