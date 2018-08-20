@@ -12,10 +12,14 @@
             <nuxt-link :to="`/dataset/${dataset.id}/description`">{{ dataset.title || dataset.id }}</nuxt-link>
           </v-card-title>
           <v-card-text style="height:50%;min-height:80px" v-html="marked($options.filters.truncate(dataset.description || '', 200))"/>
-          <v-card-actions style="height:25%">
+          <v-card-actions style="width:100%;height:25%">
             <span v-if="dataset.owner.type === 'user'"><v-icon>person</v-icon>&nbsp;{{ dataset.owner.name }}</span>
             <span v-if="dataset.owner.type === 'organization'"><v-icon>group</v-icon>&nbsp;{{ dataset.owner.name }}</span>
             &nbsp;<v-chip text-color="white" :color="dataset.public ? 'primary' : 'accent'">{{ dataset.public ? 'Public' : 'Privé' }}</v-chip>
+            <template v-if="dataset.status === 'error'">
+              <v-spacer />
+              <span><v-icon color="red">warning</v-icon>&nbsp;Erreurs pendant la publication</span>
+            </template>
           </v-card-actions>
         </v-card>
       </v-flex>
@@ -56,7 +60,7 @@ export default {
     async refresh() {
       this.loading = true
       this.datasets = await this.$axios.$get(this.env.publicUrl + '/api/v1/datasets', {params:
-        {size: this.size, page: this.page, select: 'title,description', ...this.filters, facets: 'owner', sort: 'createdAt: -1'}
+        {size: this.size, page: this.page, select: 'title,description,status', ...this.filters, facets: 'owner', sort: 'createdAt: -1'}
       })
       this.loading = false
     }
