@@ -14,9 +14,6 @@ module.exports = {
     datasets: {
       title: 'Jeux de données'
     },
-    root: {
-      title: 'Accueil'
-    },
     about: {
       title: 'A propos',
       description: 'Cette section donne un aperçu rapide de ce que fait le service.',

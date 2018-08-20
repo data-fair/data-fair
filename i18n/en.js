@@ -13,9 +13,6 @@ module.exports = {
     datasets: {
       title: 'Jeux de données'
     },
-    root: {
-      title: 'Accueil'
-    },
     about: {
       title: 'A propos'
     },

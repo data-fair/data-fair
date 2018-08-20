@@ -1,4 +1,3 @@
-const fs = require('fs')
 const config = require('config')
 const messages = require('../i18n').messages
 

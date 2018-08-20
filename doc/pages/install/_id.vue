@@ -19,19 +19,19 @@ const flatten = require('flat')
 const context = require.context('.', true, /\.md$/)
 
 // Used to flatten var definitions from custom-environment-variables.js
-// const defaults = require('../../../config/default.js')
-// function flattenVars(vars, flatVars = [], prefix = '') {
-//   Object.keys(vars).forEach(v => {
-//     const key = prefix + v
-//     let def = key.split('.').reduce((a, k) => { return a[k] }, defaults)
-//     if (typeof def === 'object') def = JSON.stringify(def)
-//     if (typeof vars[v] === 'string') flatVars.push({key, name: vars[v], def})
-//     else if (typeof vars[v] === 'object' && vars[v].__name) flatVars.push({key, name: vars[v].__name, def})
-//     else flattenVars(vars[v], flatVars, prefix + v + '.')
-//   })
-//   return flatVars
-// }
-// const customEnvVars = flattenVars(require('../../../config/custom-environment-variables'))
+const defaults = require('../../../config/default.js')
+function flattenVars(vars, flatVars = [], prefix = '') {
+  Object.keys(vars).forEach(v => {
+    const key = prefix + v
+    let def = key.split('.').reduce((a, k) => { return a[k] }, defaults)
+    if (typeof def === 'object') def = JSON.stringify(def)
+    if (typeof vars[v] === 'string') flatVars.push({key, name: vars[v], def})
+    else if (typeof vars[v] === 'object' && vars[v].__name) flatVars.push({key, name: vars[v].__name, def})
+    else flattenVars(vars[v], flatVars, prefix + v + '.')
+  })
+  return flatVars
+}
+const customEnvVars = flattenVars(require('../../../config/custom-environment-variables'))
 
 function escapeHtml(unsafe) {
   return unsafe
