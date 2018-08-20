@@ -4,7 +4,7 @@ const path = require('path')
 const multer = require('multer')
 const createError = require('http-errors')
 const datasetUtils = require('./dataset')
-const slug = require('slug')
+const slug = require('slugify')
 const mime = require('mime-types')
 const fallbackMimeTypes = {
   dbf: 'application/dbase',

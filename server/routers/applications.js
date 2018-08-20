@@ -1,5 +1,5 @@
 const express = require('express')
-const slug = require('slug')
+const slug = require('slugify')
 const moment = require('moment')
 const config = require('config')
 const util = require('util')
