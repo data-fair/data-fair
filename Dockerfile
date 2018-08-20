@@ -44,6 +44,7 @@ ADD nuxt.config.js .
 # Adding server files
 ADD server server
 ADD shared shared
+ADD i18n i18n
 ADD contract contract
 ADD config config
 ADD scripts scripts
