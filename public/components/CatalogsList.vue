@@ -1,5 +1,5 @@
 <template>
-  <v-container fluid grid-list-lg>
+  <v-container fluid grid-list-lg style="width:100vw">
     <h3 class="display-1" v-if="catalogs">{{ catalogs.count }} catalogue{{ plural }} configuré{{ plural }}</h3>
 
     <search-filters :filter-labels="{}" :filters="filters" :facets="catalogs && catalogs.facets" @apply="refresh"/>
@@ -24,6 +24,17 @@
     <v-layout row wrap v-if="catalogs && catalogs.count">
       <v-spacer/><v-pagination :length="Math.ceil(catalogs.count / size)" v-model="page" @input="$vuetify.goTo('.resourcesList', {offset: -20});refresh()"/>
     </v-layout>
+
+    <v-jumbotron v-if="!hasCatalogs" height="auto">
+      <v-container fill-height>
+        <v-layout align-center>
+          <v-flex text-xs-center>
+            <div class="headline" v-if="!filtered">Vous n'avez pas encore ajouté de catalogues externes.<br>Vous pouvez <nuxt-link :to="localePath('user-guide')">consulter la documentation</nuxt-link> pour en savoir plus.</div>
+            <div class="headline" v-else>Aucun résultat ne correspond aux critères de recherche</div>
+          </v-flex>
+        </v-layout>
+      </v-container>
+    </v-jumbotron>
   </v-container>
 </template>
 
@@ -50,6 +61,9 @@ export default {
     },
     size() {
       return {xs: 4, sm: 4, md: 8, lg: 12, xl: 16}[this.$vuetify.breakpoint.name]
+    },
+    hasCatalogs() {
+      return !this.catalogs || (this.user && this.catalogs.facets.owner.filter(f => (f.value.type === 'user' && f.value.id === this.user.id) || ((f.value.type === 'organization' && (this.user.organizations || []).map(o => o.id).includes(f.value.id)))).length)
     }
   },
   methods: {

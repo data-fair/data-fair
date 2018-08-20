@@ -1,31 +1,30 @@
 <template>
   <v-layout row>
-
     <!-- User: show stats -->
-    <v-flex md8 offset-md2 v-if="user">
+    <div v-if="user" style="width:100vw">
+      <v-subheader>{{ $t('pages.root.description') }}</v-subheader>
       <h2 class="display-1">Statistiques</h2>
-
-      <v-data-table v-if="stats" :headers="headers" :items="items" hide-actions class="elevation-1 mt-4">
-        <template slot="items" slot-scope="props">
-          <td>{{ props.item.name }}</td>
-          <td>{{ props.item.datasets }}</td>
-          <td>{{ (props.item.storage / 1000).toFixed(2) }} ko</td>
-          <td>{{ props.item.applications }}</td>
-        </template>
-      </v-data-table>
-    </v-flex>
-
+      <v-flex md8 offset-md2>
+        <v-data-table v-if="stats" :headers="headers" :items="items" hide-actions class="elevation-1 mt-4">
+          <template slot="items" slot-scope="props">
+            <td>{{ props.item.name }}</td>
+            <td>{{ props.item.datasets }}</td>
+            <td>{{ (props.item.storage / 1000).toFixed(2) }} ko</td>
+            <td>{{ props.item.applications }}</td>
+          </template>
+        </v-data-table>
+      </v-flex>
+    </div>
     <!-- Anonymous: show jumbotron -->
-    <v-flex md8 offset-xs2 v-else>
+    <v-flex md6 offset-md3 v-else>
       <v-jumbotron>
         <v-container fill-height>
           <v-layout align-center>
             <v-flex text-xs-center>
-              <h3 class="display-2 mb-5 mt-5">Vos données, vos services et vos applications.</h3>
-
-              <v-btn @click="login" color="primary">
-                Se connecter / S'inscrire
-              </v-btn>
+              <h3 class="display-1 mb-3 mt-5">{{ $t('common.title') }}</h3>
+              <div class="headline">{{ $t('pages.root.description') }}</div>
+              <p class="title mt-5">{{ $t('common.authrequired') }}</p>
+              <v-btn @click="login" color="primary">{{ $t('common.login') }}</v-btn>
             </v-flex>
           </v-layout>
         </v-container>

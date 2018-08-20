@@ -66,6 +66,9 @@ export default {
   },
   created() {
     this.readParams()
+    if (this.user && !this.$route.query.owner) {
+      this.$router.push({ query: { owner: `user:${this.user.id}` } })
+    }
   },
   methods: {
     readParams() {

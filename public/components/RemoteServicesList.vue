@@ -1,5 +1,5 @@
 <template>
-  <v-container fluid grid-list-lg>
+  <v-container fluid grid-list-lg style="width:100vw">
     <h3 class="display-1" v-if="remoteServices">{{ remoteServices.count }} service{{ plural }} configuré{{ plural }}</h3>
 
     <search-filters :filter-labels="{}" :filters="filters" :facets="remoteServices && remoteServices.facets" @apply="refresh"/>
@@ -25,6 +25,16 @@
       <v-spacer/><v-pagination :length="Math.ceil(remoteServices.count / size)" v-model="page" @input="$vuetify.goTo('.resourcesList', {offset: -20});refresh()"/>
     </v-layout>
 
+    <v-jumbotron v-if="!hasServices" height="auto">
+      <v-container fill-height>
+        <v-layout align-center>
+          <v-flex text-xs-center>
+            <div class="headline" v-if="!filtered">Vous n'avez pas encore ajouté de services distants (API).<br>Vous pouvez <nuxt-link :to="localePath('user-guide')">consulter la documentation</nuxt-link> pour en savoir plus.</div>
+            <div class="headline" v-else>Aucun résultat ne correspond aux critères de recherche</div>
+          </v-flex>
+        </v-layout>
+      </v-container>
+    </v-jumbotron>
   </v-container>
 </template>
 
@@ -51,6 +61,9 @@ export default {
     },
     size() {
       return {xs: 4, sm: 4, md: 8, lg: 12, xl: 16}[this.$vuetify.breakpoint.name]
+    },
+    hasServices() {
+      return !this.services || (this.user && this.services.facets.owner.filter(f => (f.value.type === 'user' && f.value.id === this.user.id) || ((f.value.type === 'organization' && (this.user.organizations || []).map(o => o.id).includes(f.value.id)))).length)
     }
   },
   methods: {

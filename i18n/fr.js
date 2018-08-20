@@ -4,7 +4,9 @@
 module.exports = {
   common: {
     title: 'DataFair',
-    description: 'Données facilement Trouvables, Accessibles, Interopérables et Réutilisables'
+    description: 'Données facilement Trouvables, Accessibles, Interopérables et Réutilisables',
+    login: `Se connecter / S'inscrire`,
+    authrequired: 'Vous devez être authentifié pour utiliser ce service.'
   },
   pages: {
     root: {
@@ -12,7 +14,20 @@ module.exports = {
       description: 'Partagez et enrichissez facilement vos données pour pouvoir les utiliser dans des applications dédiées.'
     },
     datasets: {
-      title: 'Jeux de données'
+      title: 'Jeux de données',
+      description: `Cet espace vous permet de transformer vos fichiers de données en flux interopérables que vous pouvez mettre à disposition d'autres utilisateurs ou utiliser dans des applications spécifiques.`
+    },
+    services: {
+      title: 'Services',
+      description: `Vous pouvez réutiliser d'autres services (API) pour enrichir vos données ou accéder à d'autres données dans les applications, comme par exemple des fonds de carte.`
+    },
+    applications: {
+      title: 'Applications',
+      description: `Vous pouvez ici configurer des applications qui vont utiliser vos flux de données. Ces applications peuvent ensuite être partagées ou intégrées dans d'autres sites web.`
+    },
+    catalogs: {
+      title: 'Catalogues externes',
+      description: `Cette espace vous permet de configurer des liens vers des catalogues distants, dans lesquels vous pouvez ensuite publier vos jeux de données et réutilisations.`
     },
     about: {
       title: 'A propos',
