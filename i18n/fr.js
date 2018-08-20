@@ -75,6 +75,12 @@ module.exports = {
       },
       servicelandregister: {
         title: 'Service : Cadastre'
+      },
+      applicationinfosparcel: {
+        title: 'Application : Infos-Parcelles'
+      },
+      applicationinfoslocation: {
+        title: 'Application : Infos-Localisation'
       }
     }
   },

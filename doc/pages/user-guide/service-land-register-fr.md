@@ -1,6 +1,6 @@
-Ce service permet de géocoder des codes parcelles, c'est à dire de déterminer des coordonnées latitude / longitude à partir d'un code de 14 caractères : *code commune INSEE* de 5 chiffres + *code section cadastre* de 5 caractères + *numéro parcelle cadastre* de 4 chiffres. Par exemple 56197037ZC0063 est un code valide de 14 caractères.
+Ce service permet de géocoder des codes parcelles, c'est à dire de déterminer des coordonnées latitude / longitude à partir d'un code de 14 caractères : *code commune INSEE* de 5 chiffres + *code section cadastre* de 5 caractères + *numéro parcelle cadastre* de 4 chiffres. Par exemple *56197037ZC0063* est un code valide de 14 caractères.
 
-## Ajout d'un service géocoder
+## Ajout d'un service Cadastre
 
 Pour pouvoir utiliser ce service, il faut tout d'abord l'ajouter.  
 

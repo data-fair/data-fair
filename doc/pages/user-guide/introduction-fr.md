@@ -1,5 +1,5 @@
 Bonjour et bienvenue sur la plateforme de diffusion de données [Nom de la plateforme] de [Koumoul](https://koumoul.com).  
-Nous allons vous guider pour vous permettre d'ajouter, partager, enrichir et visualiser dans des applications vos données grâce à nos différents services. Si vous avez la moindre question, n’hésitez pas à nous [contacter](https://koumoul.com/contact).
+Nous allons vous guider pour vous permettre d'ajouter, partager, enrichir et visualiser vos données grâce à nos différents services et applications. Si vous avez la moindre question, n’hésitez pas à nous [contacter](https://koumoul.com/contact).
 
 ## Présentation de l'interface
 

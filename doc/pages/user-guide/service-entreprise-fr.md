@@ -1,6 +1,6 @@
 Ce service permet d'enrichir vos jeux de données à partir d'une colonne contenant un code SIRET ou un code SIREN. Grâce à l'un de ces codes, vous allez avoir accès à la base SIREN utilisée dans notre service et pouvoir obtenir des informations sur les entreprises ou bâtiments correspondants aux codes SIREN/SIRET.
 
-Ce service peut aussi être utilisé en tant que filtre de l'application *Observatoir des entreprises* **lien tuto observatoire des entreprises**.
+Ce service peut aussi être utilisé en tant que filtre de l'application *Observatoire des entreprises* **lien tuto observatoire des entreprises**.
 **Souci, si on veut configurer beaucoup d'observatoires des entreprises, on va avoir beaucoup de services Données des entreprises qui vont venir polluer la section enrichissement.**   
 
 ## Ajout d'un service Données des entreprises
@@ -16,7 +16,7 @@ Cliquez ensuite sur le bouton *Continuer*. Choisissez le propriétaire du servic
 
 Une fois ajouté, vous arrivez sur la page *DESCRIPTION* du service. Comme pour un  jeu de données, vous pouvez changer le titre du service et la description. Vous avez sur votre droite différentes informations, le propriétaire du service, l’hébergeur du service, le contact, la version du service, les termes d'utilisation du service et le nombre d'applications qui utilisent ce service.
 
-En bas de la page de *DESCRIPTION*, vous avez les concepts **lien concept** qu'il faut associer dans votre jeu de données pour obtenir différentes informations des entreprises avec l'enrichissement **lien enrichissement** via ce service. Vous pouvez obtenir les latitudes, longitudes, les code commune, etc ... si ils sont present dans la base SIREN.
+En bas de la page de *DESCRIPTION*, vous avez les concepts **lien concept** qu'il faut associer dans votre jeu de données pour obtenir différentes informations des entreprises avec l'enrichissement **lien enrichissement** via ce service. Vous pouvez obtenir les latitudes, longitudes, les code commune, etc ... si ils sont présents dans la base SIREN.
 
 La section *CONFIGURATION* permet de configurer le service s'il s'agit d'un service externe. Si vous utilisez des services Koumoul, vous n'aurez pas à modifier cette partie, sachez juste qu'il est possible d'importer des services externes dans la plateforme. **lien services externes**
 

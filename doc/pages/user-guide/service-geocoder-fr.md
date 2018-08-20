@@ -2,13 +2,13 @@ Ce service permet de géocoder des adresses, c'est à dire de déterminer des co
 
 C'est ce service que vous allez utiliser dans vos applications cartographiques pour pouvoir faire une recherche sur l'application grâce à une adresse.
 
-## Ajout d'un service géocoder
+## Ajout d'un service Géocoder
 
 Pour pouvoir utiliser ce service, il faut tout d'abord l'ajouter.  
 
 Allez dans la section *SERVICES* de data-fair, puis cliquez sur le bouton *Ajouter un service*.  
 Un bandeau en bas de page apparaît, cliquez sur *Choisissez un service à configurer* et sélectionner le service *Géocoder*.  
-L'adresse du service géocoger Koumoul va se compléter automatiquement, vous n'avez donc pas à la modifier.  
+L'adresse du service *Géocoder* Koumoul va se compléter automatiquement, vous n'avez donc pas à la modifier.  
 Cliquez ensuite sur le bouton *Continuer*. Choisissez le propriétaire du service puis cliquez sur le bouton *Continuer* et enfin lancer l'import du service. **dernière étapes inutile**
 
 ## Interface du service Géocoder
