@@ -276,6 +276,8 @@ function managePublicCache(req, res) {
 
 // Read/search data for a dataset
 router.get('/:datasetId/lines', permissions.middleware('readLines', 'read'), asyncWrap(async(req, res) => {
+  if (req.query && req.query.page && req.query.size && req.query.page * req.query.size > 10000) { return res.status(404).send('You can only access the first 10 000 elements.') }
+
   const db = req.app.get('db')
   if (!req.user && managePublicCache(req, res)) return res.status(304).send()
 

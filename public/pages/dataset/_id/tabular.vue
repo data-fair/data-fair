@@ -6,25 +6,29 @@
     </div>
     <v-card>
       <v-card-title>
-        <v-text-field
-          label="Rechercher"
-          v-model="query"
-          @keyup.enter.native="refresh"
-          @click:append="refresh"
-          append-icon="search"
-          class="mr-3"
-          style="min-width:150px;"/>
-        <v-spacer/>
-        <div class="datatable__actions">
-          Nombre de lignes
-          <v-select
-            :items="[10,20,50]"
-            v-model="pagination.rowsPerPage"
-            label=""
-            style="margin-left:20px;margin-right:30px;"
-          />
-          <v-pagination v-if="data.total" v-model="pagination.page" :length="Math.ceil(data.total / pagination.rowsPerPage)"/>
-        </div>
+        <v-layout column>
+          <h3 v-if="data.total <= 10000">Consultez {{ data.total.toLocaleString() }} {{ plural ? 'enregistrements' : 'enregistrement' }}</h3>
+          <h3 v-if="data.total > 10000">Consultez {{ plural ? 'les' : 'le' }} {{ (10000).toLocaleString() }} {{ plural ? 'premiers enregistrements' : 'premier enregistrement' }} ({{ data.total.toLocaleString() }} au total)</h3>
+          <v-layout row>
+            <v-text-field
+              label="Rechercher"
+              v-model="query"
+              @keyup.enter.native="refresh"
+              @click:append="refresh"
+              append-icon="search"
+              class="mr-3"
+              style="min-width:150px;"/>
+            <v-spacer/>
+            <v-flex sm4 md2 lg1 xl1>
+              <v-select
+                :items="[10,20,50]"
+                v-model="pagination.rowsPerPage"
+                label="Nombre de lignes"
+              />
+            </v-flex>
+            <v-pagination v-if="data.total > pagination.rowsPerPage" v-model="pagination.page" total-visible="6" :length="Math.ceil(Math.min(data.total, 10000) / pagination.rowsPerPage)" class="mx-4"/>
+          </v-layout>
+        </v-layout>
       </v-card-title>
 
       <v-data-table :headers="headers" :items="data.results" :total-items="data.total" :loading="loading" :pagination.sync="pagination" hide-actions>
@@ -86,6 +90,9 @@ export default {
           sortable: (field.type === 'string' && field.format) || field.type === 'number' || field.type === 'integer',
           tooltip: field.description || (field['x-refersTo'] && this.vocabulary && this.vocabulary[field['x-refersTo']] && this.vocabulary[field['x-refersTo']].description)
         }))
+    },
+    plural() {
+      return this.data.total > 1
     }
   },
   watch: {
