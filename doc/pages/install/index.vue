@@ -4,7 +4,7 @@
       <v-subheader>{{ $t("pages.install.title") }}</v-subheader>
       <v-list>
         <v-list-tile v-for="page in pages" :key="page" :to="localePath({name: 'install-id', params: {id: page}})">
-          <v-list-tile-title>{{ $t(`pages.install.${page.replace('-', '')}.title`) }}</v-list-tile-title>
+          <v-list-tile-title>{{ $t(`pages.install.${page.replace(/\-/g, '')}.title`) }}</v-list-tile-title>
         </v-list-tile>
       </v-list>
     </v-navigation-drawer>

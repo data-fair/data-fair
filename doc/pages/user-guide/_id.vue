@@ -4,7 +4,7 @@
       <v-subheader>{{ $t("pages.userguide.title") }}</v-subheader>
       <v-list>
         <v-list-tile v-for="page in pages" :key="page" :to="localePath({name: 'user-guide-id', params: {id: page}})">
-          <v-list-tile-title>{{ $t(`pages.userguide.${page.replace('-', '')}.title`) }}</v-list-tile-title>
+          <v-list-tile-title>{{ $t(`pages.userguide.${page.replace(/\-/g, '')}.title`) }}</v-list-tile-title>
         </v-list-tile>
       </v-list>
     </v-navigation-drawer>
