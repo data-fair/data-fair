@@ -4,8 +4,7 @@
 /data
 /coverage
 /.nyc_output
-/docs/_site
-/docs/vendor
-/docs/.jekyll-metadata
 /.nuxt/
 /plugins/*
+/public/pages/interoperate
+/public/pages/user-guide
