@@ -40,11 +40,13 @@ RUN npm install --production && node-prune
 # Adding UI files
 ADD public public
 ADD nuxt.config.js .
+ADD i18n i18n
+ADD doc/pages/user-guide public/pages/user-guide
+ADD doc/pages/interoperate public/pages/interoperate
 
 # Adding server files
 ADD server server
 ADD shared shared
-ADD i18n i18n
 ADD contract contract
 ADD config config
 ADD scripts scripts
