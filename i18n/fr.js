@@ -96,6 +96,12 @@ module.exports = {
       },
       applicationinfoslocation: {
         title: 'Application : Infos-Localisation'
+      },
+      enrichment: {
+        title: 'Enrichissez vos données avec nos services'
+      },
+      catalog: {
+        title: 'Publiez vos données sur d\'autres plateformes'
       }
     }
   },
