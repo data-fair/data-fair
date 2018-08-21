@@ -19,7 +19,7 @@
               class="mr-3"
               style="min-width:150px;"/>
             <v-spacer/>
-            <v-flex sm4 md2 lg1 xl1>
+            <v-flex v-if="data.total > pagination.rowsPerPage" sm4 md2 lg1 xl1>
               <v-select
                 :items="[10,20,50]"
                 v-model="pagination.rowsPerPage"

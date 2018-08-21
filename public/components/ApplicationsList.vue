@@ -34,7 +34,7 @@
       <v-container fill-height>
         <v-layout align-center>
           <v-flex text-xs-center>
-            <div class="headline" v-if="!filtered">Vous n'avez pas encore ajouté d'applications.<br>Vous pouvez <nuxt-link :to="localePath('user-guide')">consulter la documentation</nuxt-link> pour en savoir plus.</div>
+            <div class="headline" v-if="!filtered">Vous n'avez pas encore configuré d'applications.<br>Vous pouvez <nuxt-link :to="localePath('user-guide')">consulter la documentation</nuxt-link> pour en savoir plus.</div>
             <div class="headline" v-else>Aucun résultat ne correspond aux critères de recherche</div>
           </v-flex>
         </v-layout>
