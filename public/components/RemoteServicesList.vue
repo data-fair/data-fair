@@ -51,7 +51,8 @@ export default {
     marked,
     loading: true,
     remoteServices: null,
-    filters: {}
+    filters: {},
+    filtered: false
   }),
   computed: {
     ...mapState('session', ['user']),
@@ -72,6 +73,7 @@ export default {
       this.remoteServices = await this.$axios.$get(this.env.publicUrl + '/api/v1/remote-services', {params:
         {size: this.size, page: this.page, select: 'title,description', ...this.filters, facets: 'owner'}
       })
+      this.filtered = this.filters.q !== undefined
       this.loading = false
     }
   }
