@@ -34,7 +34,7 @@ Pour le moment, nous mettons à votre disposition cinq services :
 Dans cette section, vous allez pour voir ajouter et configurer les différentes applications que nous vous proposons pour pouvoir visualiser vos données.  
 Pour le moment, nous mettons à votre disposition quatre applications :
 * [Infos-Parcelles](user-guide/application-infos-parcel)
-* [Infos-Localisation](user-guide/application-infos-location)
+* [Infos-Localisations](user-guide/application-infos-location)
 * Portail thématique
 * Observatoire des entreprises qui n'a pas besoin de concept. Cette application fonctionne grâce au service [Données des entreprises](user-guide/service-entreprise) configuré en tant que filtre.<br></br>Pour chaque nouvelle réutilisation d'un jeu de données, vous aurez une nouvelle application à ajouter et à configurer.
 
