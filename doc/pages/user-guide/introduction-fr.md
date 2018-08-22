@@ -1,45 +1,43 @@
-Bonjour et bienvenue sur la plateforme de diffusion de données [Nom de la plateforme] de [Koumoul](https://koumoul.com).  
-Nous allons vous guider pour vous permettre d'ajouter, partager, enrichir et visualiser vos données grâce à nos différents services et applications. Si vous avez la moindre question, n’hésitez pas à nous [contacter](https://koumoul.com/contact).
+Bonjour et bienvenue sur la plateforme de diffusion de données de [Koumoul](https://koumoul.com).  
+Notre plateforme vous permet d’héberger, partager, enrichir et visualiser vos données grâce à nos différents services et applications. Si vous avez des questions, n’hésitez pas à nous [contacter](https://koumoul.com/contact).
 
-## Présentation de l'interface
+### Présentation de l'interface
 
 La [plateforme](https://koumoul.com/s/data-fair/) est divisée en plusieurs parties :
-* Les *Jeux de données* qui sont en faites vos fichiers de données, dans cette section vous allez aussi retrouver les données de votre organisation ou bien les données qui ont étés listées en public et donc accessibles à tout le monde.
-* Les *Services* qui vont servir à améliorer vos données grâce à l'enrichissement **lien vers l'enrichissement**.
-* Les *Applications* qui vont vous permettre d'avoir un visuel de vos données.
-* Les *Catalogues* qui vont vous permettre de publier vos données sur d'autres plateformes telles que [data.gouv.fr](https://www.data.gouv.fr/fr/)
-* La partie *Documentation* vous permet d'avoir accès aux différentes vidéos des tutoriels de [notre blog](https://koumoul.com/blog) mais aussi à la documentation de l'API pour les plus techniques d'entre vous.
+* Les [Jeux de données](https://koumoul.com/s/data-fair/datasets) qui sont en faites vos fichiers de données, dans cette section vous allez aussi retrouver les données de votre organisation ou bien les données qui ont étés listées en public et donc accessibles à tout le monde.
+* Les [Services](https://koumoul.com/s/data-fair/remote-services) qui vont vous servir à améliorer vos données grâce à [l'enrichissement](user-guide/enrichment).
+* Les [Applications](https://koumoul.com/s/data-fair/applications) qui vont vous permettre d'avoir un visuel de vos données.
+* Les [Catalogues](https://koumoul.com/s/data-fair/catalogs) qui vont vous permettre de publier vos données sur d'autres plateformes telles que [data.gouv.fr](https://www.data.gouv.fr/fr/)
+* La *Documentation* vous permet d'avoir accès au [manuel utilisateur](https://koumoul.com/s/data-fair/user-guide), aux différentes [vidéos](https://videos.koumoul.com/) des tutoriels de [notre blog](https://koumoul.com/blog), à la documentation de l'[API](https://koumoul.com/s/data-fair/api) et à la [documentation développeur](https://koumoul.com/s/data-fair/interoperate) pour les plus techniques d'entre vous.
 
 ### Jeux de données
 
-C'est ici que vous allez retrouver vos fichiers de données. Dans cette section vous allez pouvoir ajouter des données **lien dataset**, décrire chacun de vos fichiers de données, associer des concepts **lien vers la page des concepts** , donner les droits pour chacun de vos jeux de données **lien vers la page des droits** , etc ...  
-C'est la partie la plus importante, c'est d'ici que vous allez pouvoir, presque, tout faire et réaliser la majorité des manipulations sur vos données.
+Dans cette section vous allez retrouver la liste des fichiers que vous avez télécharger sur la plateforme. Vous allez pouvoir ajouter des données, décrire chacun de vos [fichiers de données](user-guide/dataset), associer [des concepts](user-guide/concepts), donner les droits pour chacun de vos jeux de données **lien vers la page des droits** ,  [enrichir](user-guide/enrichment) et [publier](user-guide/catalog) vos données.
+
+C'est la partie la plus importante, c'est dans cette section que vous allez pouvoir réaliser la majorité des manipulations sur vos données.
 
 ### Services
 
-Dans cette section vous allez pour voir ajouter et configurer les différents services que nous vous proposons pour pouvoir améliorer vos données.  
-Pour le moment, nous mettons à votre disposition cinq services :
-* Données des entreprises **lien vers la page du service**
-* Géocoder **lien vers la page du service**
-* Cadastre **lien vers la page du service**
-* Divisions administratives **lien vers la page du service**
-* Services de données cartographiques **lien vers la page du service**
+Dans cette partie de la plateforme, vous allez pour voir ajouter et configurer les différents services que nous vous proposons pour pouvoir améliorer vos données en les [enrichissant](user-guide/enrichment).
 
-L'enrichissement de vos données s'effectue dans la section [Jeux de données](https://koumoul.com/s/data-fair/datasets) une fois que vous avez configurer vos services et associer les concepts nécessaires à votre jeu de données. **lien vers la page des concepts**
+Pour le moment, nous mettons à votre disposition cinq services :  
+* [Données des entreprises](user-guide/service-entreprise)
+* [Géocoder](user-guide/service-geocoder)
+* [Cadastre](user-guide/service-land-register)
+* Divisions administratives n'est pas encore disponible pour le moment.
+* Services de données cartographiques. Ce service n'a pas besoin de concepts en entrée. Il est nécessaire pour toutes vos applications cartographiques.<br></br>
 
-Si vous voulez que votre organisation ait accès à vos services, vous n'aurez à les configurer qu'une seule fois. **lien vers la page des droits**
+ [L'enrichissement](user-guide/enrichment) de vos données s'effectue dans la section [Jeux de données](https://koumoul.com/s/data-fair/datasets) une fois que vous avez configuré vos services et associé [les concepts](user-guide/concepts) nécessaires à votre jeu de données.
 
 ### Applications
 
-Dans cette section vous allez pour voir ajouter et configurer les différentes applications que nous vous proposons pour pouvoir visualiser vos données.  
+Dans cette section, vous allez pour voir ajouter et configurer les différentes applications que nous vous proposons pour pouvoir visualiser vos données.  
 Pour le moment, nous mettons à votre disposition quatre applications :
-* Infos-parcelles **lien vers la page de l'application**
-* Infos-localisations **lien vers la page de l'application**
-* Portail thématique **lien vers la page de l'application**
-* Observatoire des entreprises **lien vers la page de l'application**
-
-Pour chaque nouvelle réutilisation d'un jeu de données que vous voulez faire, vous aurez une nouvelle application à ajouter et à configurer.
+* [Infos-Parcelles](user-guide/application-infos-parcel)
+* [Infos-Localisation](user-guide/application-infos-location)
+* Portail thématique
+* Observatoire des entreprises qui n'a pas besoin de concept. Cette application fonctionne grâce au service [Données des entreprises](user-guide/service-entreprise) configuré en tant que filtre.<br></br>Pour chaque nouvelle réutilisation d'un jeu de données, vous aurez une nouvelle application à ajouter et à configurer.
 
 ### Catalogues
 
-Dans cette section vous allez pour voir ajouter et configurer **lien vers la page d'ajout d'un catalogue** les différents catalogues que vous voulez utiliser. Ils vous permettront d'importer des données ou de partager vos données sur d'autres plateformes telles que le [portail français des données publiques](https://www.data.gouv.fr/fr/).
+Dans cette section, vous allez pour voir ajouter et configurer les différents [catalogues](user-guide/catalog) que vous voulez utiliser. Ils vous permettront d'importer des données ou de partager vos données sur d'autres plateformes. Pour le moment les catalogues permettent seulement de partager vos données, la fonctionnalité d'importation sera développé plus tard.

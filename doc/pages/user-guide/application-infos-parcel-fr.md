@@ -1,6 +1,6 @@
-L'application *Infos-Parcelles* va vous permettre de visualiser vos données sur le plan cadastral. Vos données devrons contenir un code parcelle de 14 caractères sous la forme suivante :  *code commune INSEE* de 5 chiffres + *code section cadastre* de 5 caractères + *numéro parcelle cadastre* de 4 chiffres. Par exemple *56197037ZC0063* est un code valide de 14 caractères. Vos données devrons aussi contenir une latitude et une longitude par code parcelle, si vous n'avez qu'un code parcelle de 14 caractères, vous pouvez utiliser notre service [*Cadastre*](./service-land-register-fr.md) pour géolocaliser vos parcelles.
+L'application *Infos-Parcelles* va vous permettre de visualiser vos données sur le plan cadastral. Vos données devrons contenir un code parcelle de 14 caractères sous la forme suivante :  *code commune INSEE* de 5 chiffres + *code section cadastre* de 5 caractères + *numéro parcelle cadastre* de 4 chiffres. Par exemple *56197037ZC0063* est un code valide de 14 caractères. Vos données devrons aussi contenir une latitude et une longitude par code parcelle, si vous n'avez qu'un code parcelle de 14 caractères, vous pouvez utiliser notre service [*Cadastre*](user-guide/service-land-register) pour géolocaliser vos parcelles.
 
-Un fois que vous avez associer [les concepts](./concepts-fr.md) *Code parcelle*, *Latitude*, *Longitude* à votre jeu de données, vous pouvez utiliser l'application *Infos-Parcelles*.
+Un fois que vous avez associer [les concepts](user-guide/concepts) *Code parcelle*, *Latitude*, *Longitude* à votre jeu de données, vous pouvez utiliser l'application *Infos-Parcelles*.
 
 ### Ajout d'une application Infos-Parcelles
 
@@ -27,11 +27,11 @@ Une fois que vous avez ajouté les informations que vous voulez faire apparaîtr
 
 Pour accéder à votre application cliquer sur le bouton en haut à droite.
 
-Voici un exemple de configuration sur les [permis de construire de Montpellier](https://koumoul.com/s/data-fair/application/infos-parcelles50/description).
+Voici un exemple de configuration d'une aplication *Infos-Parcelles* sur les [permis de construire de Montpellier](https://koumoul.com/s/data-fair/application/infos-parcelles50/description).
 
 La section *PERMISSIONS* va vous permettre de définir les droits d'utilisation de votre application. Vous pouvez ouvrir cette application à une organisation, à une seule personne, la rendre publique, etc ... Pour de plus amples informations, concerter la page des permissions **lien permissions**
 
-La section *PUBLICATION* vous permet, à l'aide d'un [catalogue](./catalog-fr.md), de publier votre application sur une autre plateforme.
+La section *PUBLICATION* vous permet, à l'aide d'un [catalogue](user-guide/catalog), de publier votre application sur une autre plateforme.
 
 La section *JOURNAL* va vous permettre d'avoir l'historique de toutes les actions réalisées sur votre application.
 
@@ -41,8 +41,8 @@ La section *API* va vous permettre d’accéder à la documentation API de l'app
 
 Une fois que vous avez configurer correctement votre application, l'utilisation est très simple. Cliquez sur le bouton en haut à droite pour accéder à votre application, vous pouvez maintenant zoomer sur la partie de la carte qui vous intéresse ou vous pouvez utiliser la fonction de recherche d'adresses si vous avez configurer le service *Géocoder* sur votre application.
 
-Une fois votre parcelle trouvée, vous pouvez cliquer dessus. Une info-bulle apparaît à coté de votre parcelle et elle continent toutes les colonnes que vous avez sélectionnées lors de la configuration de votre application. Vous avez aussi, dans chaque info-bulle, les informations cadastre de la parcelle. 
+Une fois votre parcelle trouvée, vous pouvez cliquer dessus. Une info-bulle apparaît à coté de votre parcelle et elle continent toutes les colonnes que vous avez sélectionnées lors de la configuration de votre application. Vous avez aussi, dans chaque info-bulle, les informations cadastre de la parcelle.
 
 Si votre niveau de zoom est assez bas et que vous pouvez voir les parcelles, vous aurez la légende que vous avez configuré en bas à droite.
 
-Voici un exemple d'application Info-parcelles sur les [permis de construire de Montpellier](https://koumoul.com/s/data-fair/app/infos-parcelles50).
+Voici un exemple d'application Info-Parcelles sur les [permis de construire de Montpellier](https://koumoul.com/s/data-fair/app/infos-parcelles50).

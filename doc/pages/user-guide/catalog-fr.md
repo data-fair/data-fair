@@ -8,7 +8,7 @@ Il vous faut des droits de publication sur les différentes plateforme sur lesqu
 
 ### Ajout d'un catalogue
 
-Pour ajouter un catalogue, rendez vous sur la section *CATALOGUES* puis cliquez sur le bouton *ajouter un catalogue*.  
+Pour ajouter un catalogue, rendez vous sur la section [CATALOGUES](https://koumoul.com/s/data-fair/catalogs) puis cliquez sur le bouton *ajouter un catalogue*.  
 
 Un bandeau en bas de page apparaît, cliquez sur *Choisissez un catalogue à configurer* et sélectionnez la plateforme sur laquelle vous voulez publier.  
 L'adresse du catalogue choisi va se compléter automatiquement, vous n'avez donc pas à la modifier.  

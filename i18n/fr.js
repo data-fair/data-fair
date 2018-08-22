@@ -95,7 +95,7 @@ module.exports = {
         title: 'Application : Infos-Parcelles'
       },
       applicationinfoslocation: {
-        title: 'Application : Infos-Localisation'
+        title: 'Application : Infos-Localisations'
       },
       enrichment: {
         title: 'Enrichissez vos données avec nos services'
