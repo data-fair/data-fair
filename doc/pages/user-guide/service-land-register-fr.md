@@ -17,7 +17,7 @@ En bas de la page de *DESCRIPTION*, vous avez [les concepts](user-guide/concepts
 
 La section *CONFIGURATION* permet de configurer le service s'il s'agit d'un service externe. Si vous utilisez des services Koumoul, vous n'aurez pas à modifier cette partie, sachez juste qu'il est possible d'importer des services externes dans la plateforme.
 
-La section *PERMISSIONS* va vous permettre de définir les droits d'utilisation du service. Vous pouvez ouvrir ce service à une organisation, à une seule personne, etc ... Pour de plus amples informations, concertez la page des permissions **lien permissions**
+La section *PERMISSIONS* va vous permettre de définir les droits d'utilisation du service. Vous pouvez ouvrir ce service à une organisation, à une seule personne, etc ... Pour de plus amples informations, concertez la page des [permissions](user-guide/permission).
 
 La section *API* va vous permettre d’accéder à la documentation API du service que vous venez de créer.
 

@@ -82,6 +82,9 @@ module.exports = {
       concepts: {
         title: 'Les concepts'
       },
+      permission: {
+        title: 'Permissions : Gérez les droits d\'accès'
+      },
       serviceentreprise: {
         title: 'Services : Données des entreprises'
       },

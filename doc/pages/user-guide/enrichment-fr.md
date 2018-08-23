@@ -2,7 +2,7 @@ L’enrichissement va vous permettre de compléter et d’améliorer vos donnée
 Chaque service va vous permettre de réaliser un type d'enrichissement.
 
 Pour le bon fonctionnement de l'enrichissement, il vous faut :
-* Un jeu de données contenant les données minimale d'entrée d'un service
+* Un jeu de données contenant les données minimales d'entrée d'un service
 * Ajouter ou avoir accès au service dont vous avez besoin
 * Associer les [concepts](user-guide/concepts) nécessaire au bon fonctionnement du service.
 

@@ -29,7 +29,7 @@ Pour accéder à votre application cliquer sur le bouton en haut à droite.
 
 Voici un exemple de configuration d'une aplication *Infos-Parcelles* sur les [permis de construire de Montpellier](https://koumoul.com/s/data-fair/application/infos-parcelles50/description).
 
-La section *PERMISSIONS* va vous permettre de définir les droits d'utilisation de votre application. Vous pouvez ouvrir cette application à une organisation, à une seule personne, la rendre publique, etc ... Pour de plus amples informations, concerter la page des permissions **lien permissions**
+La section *PERMISSIONS* va vous permettre de définir les droits d'utilisation de votre application. Vous pouvez ouvrir cette application à une organisation, à une seule personne, la rendre publique, etc ... Pour de plus amples informations, concerter la page des [permissions](user-guide/permission).
 
 La section *PUBLICATION* vous permet, à l'aide d'un [catalogue](user-guide/catalog), de publier votre application sur une autre plateforme.
 

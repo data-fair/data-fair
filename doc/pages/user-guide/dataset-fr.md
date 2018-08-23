@@ -25,7 +25,7 @@ Enfin, en bas de votre page de description, vous avez le schéma de votre jeu de
 
 Vous pouvez voir le contenu de votre jeu de données dans la section *VUE TABLEAU*. Vous pouvez parcourir vos données dans cette section et aussi accéder à une donnée en particulier grâce à la fonction recherche.
 
-La section *PERMISSIONS* permet de gérer les droits d'accès à votre jeu de données. Vous pouvez le rendre public ou bien le partager à une organisation. Pour plus de détails, consulter la documentation sur les permissions. **lien vers permissions**
+La section *PERMISSIONS* permet de gérer les droits d'accès à votre jeu de données. Vous pouvez le rendre public ou bien le partager à une organisation. Pour plus de détails, consulter la documentation sur les [permissions](user-guide/permission).
 
 La section *ENRICHISSEMENT* permet de choisir et d'utiliser les services que vous avez préalablement configurer. Si vous n'avez renseigné aucun concept ou configuré aucun service, vous aurez ce message : Aucun enrichissement possible. Pour plus de détails, consulter la documentation sur [l'enrichissement](user-guide/enrichment).
 

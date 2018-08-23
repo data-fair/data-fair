@@ -12,7 +12,7 @@ La [plateforme](https://koumoul.com/s/data-fair/) est divisée en plusieurs part
 
 ### Jeux de données
 
-Dans cette section vous allez retrouver la liste des fichiers que vous avez télécharger sur la plateforme. Vous allez pouvoir ajouter des données, décrire chacun de vos [fichiers de données](user-guide/dataset), associer [des concepts](user-guide/concepts), donner les droits pour chacun de vos jeux de données **lien vers la page des droits** ,  [enrichir](user-guide/enrichment) et [publier](user-guide/catalog) vos données.
+Dans cette section vous allez retrouver la liste des fichiers que vous avez télécharger sur la plateforme. Vous allez pouvoir ajouter des données, décrire chacun de vos [fichiers de données](user-guide/dataset), associer [des concepts](user-guide/concepts), donner les [permissions](user-guide/permission) pour chacun de vos jeux de données,  [enrichir](user-guide/enrichment) et [publier](user-guide/catalog) vos données.
 
 C'est la partie la plus importante, c'est dans cette section que vous allez pouvoir réaliser la majorité des manipulations sur vos données.
 
