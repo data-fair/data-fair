@@ -88,13 +88,22 @@
 
           <v-select
             v-if="!expertMode"
-            :items="Object.keys(permissionClasses).map(c => ({id: c, title: classNames[c]}))"
+            :items="Object.keys(permissionClasses).filter(c => classNames[c]).map(c => ({class: c, title: classNames[c]}))"
             item-text="title"
-            item-value="id"
+            item-value="class"
             v-model="currentPermission.classes"
             label="Actions"
             multiple
-          />
+          >
+            <template slot="item" slot-scope="data">
+              <template>
+                <v-list-tile-action>
+                  <v-checkbox v-model="currentPermission.classes" :value="data.item.class" :off-icon="permissionClasses[data.item.class].filter(o => !(currentPermission.operations || []).includes(o.id)).length === 0 ? '$vuetify.icons.checkboxOn' : '$vuetify.icons.checkboxOff'"/>
+                </v-list-tile-action>
+                <v-list-tile-content v-html="data.item.title"/>
+              </template>
+            </template>
+          </v-select>
 
           <v-select
             v-if="expertMode"
@@ -111,7 +120,7 @@
               </template>
               <template v-else>
                 <v-list-tile-action>
-                  <v-checkbox v-model="currentPermission.operations" :value="data.item.id"/>
+                  <v-checkbox v-model="currentPermission.operations" :value="data.item.id" :off-icon="currentPermission.classes.includes(data.item.class) ? '$vuetify.icons.checkboxOn' : '$vuetify.icons.checkboxOff'"/>
                 </v-list-tile-action>
                 <v-list-tile-content v-html="data.item.title"/>
               </template>
@@ -156,8 +165,8 @@ export default {
     classNames: {
       list: 'Lister',
       read: 'Lecture',
-      write: 'Ecriture',
-      admin: 'Administration',
+      // write: 'Ecriture',
+      // admin: 'Administration',
       use: 'Utiliser le service'
     },
     expertMode: false,
@@ -170,7 +179,8 @@ export default {
       const classes = {
         list: [{
           id: 'list',
-          title: 'Lister la ressource'
+          title: 'Lister la ressource',
+          class: 'list'
         }]
       }
       if (this.api) {
@@ -178,14 +188,15 @@ export default {
           const permClass = this.api.paths[path][method]['x-permissionClass']
           classes[permClass] = (classes[permClass] || []).concat({
             id: this.api.paths[path][method].operationId,
-            title: this.api.paths[path][method].summary
+            title: this.api.paths[path][method].summary,
+            class: permClass
           })
         }))
       }
       return classes
     },
     operations() {
-      return [].concat(...Object.keys(this.permissionClasses).map(pc => [{header: this.classNames[pc]}].concat(this.permissionClasses[pc])))
+      return [].concat(...Object.keys(this.permissionClasses).filter(c => this.classNames[c]).map(c => [{header: this.classNames[c]}].concat(this.permissionClasses[c])))
     }
   },
   watch: {
@@ -203,6 +214,16 @@ export default {
         } else {
           this.currentPermissionOrganizationRoles = []
         }
+      }
+    },
+    'currentPermission.classes'(classes) {
+      if (classes.includes('list') && !classes.includes('read')) {
+        classes.push('read')
+      }
+    },
+    'currentPermission.operations'(operations) {
+      if (operations.includes('list') && !operations.includes('readDescription')) {
+        operations.push('readDescription')
       }
     },
     search: async function() {
