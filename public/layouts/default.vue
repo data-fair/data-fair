@@ -104,7 +104,7 @@
     </v-content>
     <v-footer class="pa-3">
       <v-spacer/>
-      <div>Powered by <a href="https://koumoul-dev.github.io/data-fair/">DataFAIR</a></div>
+      <div>Powered by <a href="https://koumoul.com">Koumoul</a></div>
     </v-footer>
   </v-app>
 </template>

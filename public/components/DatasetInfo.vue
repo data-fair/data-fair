@@ -10,6 +10,7 @@
                 <v-icon v-else>group</v-icon>
               </v-list-tile-avatar>
               <span>{{ dataset.owner.name }}</span>
+              <span v-if="dataset.owner.role">&nbsp;(rôle {{ dataset.owner.role }})</span>
             </v-list-tile>
             <v-list-tile v-if="journal[0]" :class="'event-' + journal[0].type">
               <v-list-tile-avatar v-if="['finalize-end', 'error', 'publication'].includes(journal[0].type)">
