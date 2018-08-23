@@ -23,7 +23,7 @@ const isOwner = exports.isOwner = function(owner, user) {
   if (owner.type === 'user' && owner.id === user.id) return true
   if (owner.type === 'organization') {
     const userOrga = user.organizations.find(o => o.id === owner.id)
-    return userOrga && (userOrga.role === config.adminRole || userOrga.role === owner.role)
+    return userOrga && (!owner.role || userOrga.role === config.adminRole || userOrga.role === owner.role)
   }
   return false
 }
@@ -104,6 +104,19 @@ exports.filter = function(user) {
     or.push({
       'owner.type': 'organization',
       'owner.id': {$in: user.organizations.filter(o => o.role === config.adminRole).map(o => o.id)}
+    })
+    // organizations where user does not have admin role
+    user.organizations.filter(o => o.role !== config.adminRole).forEach(o => {
+      or.push({
+        'owner.type': 'organization',
+        'owner.id': o.id,
+        'owner.role': o.role
+      })
+      or.push({
+        'owner.type': 'organization',
+        'owner.id': o.id,
+        'owner.role': null
+      })
     })
 
     // user has specific permission to read

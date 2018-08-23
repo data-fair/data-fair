@@ -1,10 +1,10 @@
 <template>
   <div>
-    <h3 class="headline mt-3 mb-3">Propriétaire</h3>
-    <div v-if="resource.owner.type === 'user'">Utilisateur {{ resource.owner.name }}</div>
+    <h3 class="headline mt-3 mb-3">Propriétaire{{ resource.owner.type === 'organization' ? 's' : '' }}</h3>
+    <div v-if="resource.owner.type === 'user'">Utilisateur <nuxt-link :to="localePath({name: 'settings-type-id', params: resource.owner})">{{ resource.owner.name }}</nuxt-link></div>
     <div v-else>
-      <span>Organisation {{ resource.owner.name }}</span>
-      <span v-if="resource.owner.role"> restreinte au rôle {{ resource.owner.role }}</span>
+      <span>Membres de l'organisation <nuxt-link :to="localePath({name: 'settings-type-id', params: resource.owner})">{{ resource.owner.name }}</nuxt-link></span>
+      <span v-if="resource.owner.role"> ayant le rôle <strong>{{ resource.owner.role }}</strong><span v-if="resource.owner.role !== env.adminRole"> ou <strong>{{ env.adminRole }}</strong></span></span>
     </div>
 
     <h3 class="headline mt-3 mb-3">Permissions</h3>
