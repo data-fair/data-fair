@@ -1,7 +1,11 @@
 <template>
   <div>
     <h3 class="headline mt-3 mb-3">Propriétaire</h3>
-    <span>{{ (resource.owner.type === 'user' ? 'Utilisateur ' : 'Organisation ') + resource.owner.name }}</span>
+    <div v-if="resource.owner.type === 'user'">Utilisateur {{ resource.owner.name }}</div>
+    <div v-else>
+      <span>Organisation {{ resource.owner.name }}</span>
+      <span v-if="resource.owner.role"> restreinte au rôle {{ resource.owner.role }}</span>
+    </div>
 
     <h3 class="headline mt-3 mb-3">Permissions</h3>
     <v-btn id="new-permissions" color="primary" @click="currentPermission = initPermission();addPermissions = true;showDialog = true">Ajouter des permissions</v-btn>

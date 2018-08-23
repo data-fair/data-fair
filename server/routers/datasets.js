@@ -44,7 +44,7 @@ const operationsClasses = {
 router.get('', asyncWrap(async(req, res) => {
   let datasets = req.app.get('db').collection('datasets')
   const query = findUtils.query(req, {
-    'filename': 'file.name',
+    'filename': 'originalFile.name',
     'concepts': 'schema.x-refersTo',
     'ids': 'id'
   })
@@ -115,7 +115,8 @@ router.patch('/:datasetId', permissions.middleware('writeDescription', 'write'),
 
   // Changed a previously failed dataset, retry everything.
   if (req.dataset.status === 'error') {
-    patch.status = 'uploaded'
+    if (!baseTypes.has(req.dataset.originalFile.mimetype)) patch.status = 'uploaded'
+    else patch.status = 'loaded'
   }
 
   if (!patch.publications) {
@@ -146,8 +147,8 @@ router.delete('/:datasetId', permissions.middleware('delete', 'admin'), asyncWra
   const owner = usersUtils.owner(req)
 
   // TODO : Remove indexes
-  await unlink(datasetUtils.fileName(req.dataset))
-  if (req.dataset.originalFile) await unlink(datasetUtils.originalFileName(req.dataset))
+  await unlink(datasetUtils.originalFileName(req.dataset))
+  if (!baseTypes.has(req.dataset.originalFile.mimetype)) await unlink(datasetUtils.fileName(req.dataset))
   await req.app.get('db').collection('datasets').deleteOne({
     id: req.params.datasetId
   })
@@ -178,20 +179,19 @@ router.post('', filesUtils.uploadFile(), asyncWrap(async(req, res) => {
     title: req.file.title,
     owner,
     permissions: [],
+    originalFile: {
+      name: req.file.originalname,
+      size: req.file.size,
+      mimetype: req.file.mimetype
+    },
     createdBy: {id: req.user.id, name: req.user.name},
     createdAt: date,
     updatedBy: {id: req.user.id, name: req.user.name},
     updatedAt: date
   }
-
   if (!baseTypes.has(req.file.mimetype)) {
     // we first need to convert the file in a textual format easy to index
     dataset.status = 'uploaded'
-    dataset.originalFile = {
-      name: req.file.originalname,
-      size: req.file.size,
-      mimetype: req.file.mimetype
-    }
   } else {
     // The format of the original file is already well suited to workers
     dataset.status = 'loaded'
@@ -202,17 +202,6 @@ router.post('', filesUtils.uploadFile(), asyncWrap(async(req, res) => {
     }
     const fileSample = await datasetFileSample(dataset)
     dataset.file.encoding = chardet.detect(fileSample)
-  }
-
-  // Make sure the creator can work on the resource he just created
-  // even if he created it in an organization
-  if (owner.type === 'organization') {
-    dataset.permissions.push({
-      type: 'user',
-      id: req.user.id,
-      name: req.user.name,
-      classes: ['list', 'read', 'write', 'admin']
-    })
   }
 
   await req.app.get('db').collection('datasets').insertOne(dataset)
@@ -228,14 +217,14 @@ router.post('/:datasetId', permissions.middleware('writeData', 'write'), filesUt
   if (!acceptedStatuses.includes(req.dataset.status)) return res.status(409).send('Dataset is not in proper state to be updated')
   if (!req.file) return res.sendStatus(400)
 
+  req.dataset.originalFile = {
+    name: req.file.originalname,
+    size: req.file.size,
+    mimetype: req.file.mimetype
+  }
   if (!baseTypes.has(req.file.mimetype)) {
     // we first need to convert the file in a textual format easy to index
     req.dataset.status = 'uploaded'
-    req.dataset.originalFile = {
-      name: req.file.originalname,
-      size: req.file.size,
-      mimetype: req.file.mimetype
-    }
   } else {
     // The format of the original file is already well suited to workers
     req.dataset.status = 'loaded'
@@ -354,7 +343,7 @@ router.get('/:datasetId/metric_agg', permissions.middleware('getMetricAgg', 'rea
 
 // Download the full dataset in its original form
 router.get('/:datasetId/raw', permissions.middleware('downloadOriginalData', 'read'), (req, res, next) => {
-  res.download(req.dataset.originalFile ? datasetUtils.originalFileName(req.dataset) : datasetUtils.fileName(req.dataset), (req.dataset.originalFile || req.dataset.file).name)
+  res.download(datasetUtils.originalFileName(req.dataset), req.dataset.originalFile.name)
 })
 
 // Download the full dataset with extensions

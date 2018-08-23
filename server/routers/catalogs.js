@@ -102,17 +102,6 @@ router.post('', asyncWrap(async(req, res) => {
   catalog.updatedBy = {id: req.user.id, name: req.user.name}
   catalog.permissions = []
 
-  // Make sure the creator can work on the resource he just created
-  // even if he created it in an organization
-  if (catalog.owner.type === 'organization') {
-    catalog.permissions.push({
-      type: 'user',
-      id: req.user.id,
-      name: req.user.name,
-      classes: ['list', 'read', 'write', 'admin', 'use']
-    })
-  }
-
   await req.app.get('db').collection('catalogs').insertOne(mongoEscape.escape(catalog, true))
   res.status(201).json(catalog)
 }))

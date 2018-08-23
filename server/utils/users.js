@@ -9,6 +9,7 @@ exports.owner = (req) => {
     if (!orga) {
       throw createError(403, 'You cannot set an organization you do not belong to as owner')
     }
-    return { type: 'organization', id: orga.id, name: orga.name }
+    const role = req.get('x-organizationRole')
+    return { type: 'organization', id: orga.id, name: orga.name, role }
   }
 }

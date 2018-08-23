@@ -34,9 +34,7 @@
         <v-btn flat @click.native="$emit('cancel')">Annuler</v-btn>
       </v-stepper-content>
       <v-stepper-content step="2">
-        <v-radio-group v-model="owner" class="mt-3 mb-3">
-          <v-radio :label="key === 'user' ? 'Vous-même' : user.organizations.find(o => o.id === owners[key].id).name" :value="key" v-for="key in Object.keys(owners)" :key="key"/>
-        </v-radio-group>
+        <owner-pick v-model="owner"/>
         <v-btn color="primary" :disabled="!owner" @click.native="currentStep = 3">Continuer</v-btn>
         <v-btn flat @click.native="$emit('cancel')">Annuler</v-btn>
       </v-stepper-content>
@@ -52,8 +50,10 @@
 <script>
 import {mapState} from 'vuex'
 import eventBus from '../event-bus'
+import OwnerPick from './OwnerPick.vue'
 
 export default {
+  components: { OwnerPick },
   props: ['initApp'],
   data: () => ({
     currentStep: null,
@@ -65,17 +65,7 @@ export default {
   }),
   computed: {
     ...mapState('session', ['user']),
-    ...mapState(['env']),
-    owners() {
-      if (!this.user) return {}
-      return {
-        user: {type: 'user', id: this.user.id, name: this.user.name},
-        ...this.user.organizations.reduce((a, o) => {
-          a['orga' + o.id] = {type: 'organization', id: o.id, name: o.name}
-          return a
-        }, {})
-      }
-    }
+    ...mapState(['env'])
   },
   async mounted() {
     this.configurableApplications = await this.$axios.$get('api/v1/configurable-applications')
@@ -96,8 +86,9 @@ export default {
     },
     async createApplication() {
       const options = {}
-      if (this.owners[this.owner].type === 'organization') {
-        options.headers = {'x-organizationId': this.owners[this.owner].id}
+      if (this.owner.type === 'organization') {
+        options.headers = {'x-organizationId': this.owner.id}
+        if (this.owner.role) options.headers['x-organizationRole'] = this.owner.role
       }
       try {
         const application = await this.$axios.$post(this.env.publicUrl + '/api/v1/applications', {...this.description, url: this.applicationUrl}, options)

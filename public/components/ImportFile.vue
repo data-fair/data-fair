@@ -11,13 +11,12 @@
     <v-stepper-items>
       <v-stepper-content step="1">
         <div class="mt-3 mb-3"><input type="file" @change="onFileUpload"></div>
+        <p>La liste des formats supportés est accessible dans la <nuxt-link :to="localePath({name: 'user-guide-id', params: {id: 'dataset'}})">la documentation</nuxt-link>.</p>
         <v-btn color="primary" :disabled="!file" @click.native="currentStep = 2">Continuer</v-btn>
         <v-btn flat @click.native="$emit('cancel')">Annuler</v-btn>
       </v-stepper-content>
       <v-stepper-content step="2">
-        <v-radio-group v-model="owner" class="mt-3 mb-3">
-          <v-radio :label="key === 'user' ? 'Vous-même' : user.organizations.find(o => o.id === owners[key].id).name" :value="key" v-for="key in Object.keys(owners)" :key="key"/>
-        </v-radio-group>
+        <owner-pick v-model="owner"/>
         <v-btn color="primary" :disabled="!owner" @click.native="currentStep = 3">Continuer</v-btn>
         <v-btn flat @click.native="$emit('cancel')">Annuler</v-btn>
       </v-stepper-content>
@@ -36,35 +35,28 @@
 <script>
 import {mapState} from 'vuex'
 import eventBus from '../event-bus'
+import OwnerPick from './OwnerPick.vue'
 
 export default {
+  components: { OwnerPick },
   data: () => ({
     file: null,
     currentStep: null,
-    owner: 'user',
+    owner: null,
     uploadProgress: 0,
     actions: [],
     action: null
   }),
   computed: {
     ...mapState('session', ['user']),
-    ...mapState(['env']),
-    owners() {
-      return {
-        user: {type: 'user', id: this.user.id, name: this.user.name},
-        ...this.user.organizations.reduce((a, o) => {
-          a['orga' + o.id] = {type: 'organization', id: o.id, name: o.name}
-          return a
-        }, {})
-      }
-    }
+    ...mapState(['env'])
   },
   watch: {
     async currentStep() {
       if (this.currentStep === 3) {
         const datasets = await this.$axios.$get('api/v1/datasets', {
           params: {
-            owner: this.owners[this.owner].type + ':' + this.owners[this.owner].id,
+            owner: this.owner.type + ':' + this.owner.id,
             'filename': this.file.name
           }
         })
@@ -92,10 +84,9 @@ export default {
       const formData = new FormData()
       formData.append('file', this.file)
 
-      if (this.owners[this.owner].type === 'organization') {
-        options.headers = {
-          'x-organizationId': this.owners[this.owner].id
-        }
+      if (this.owner.type === 'organization') {
+        options.headers = {'x-organizationId': this.owner.id}
+        if (this.owner.role) options.headers['x-organizationRole'] = this.owner.role
       }
 
       try {

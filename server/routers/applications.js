@@ -115,17 +115,6 @@ router.post('', asyncWrap(async(req, res) => {
 
   application.permissions = []
 
-  // Make sure the creator can work on the resource he just created
-  // even if he created it in an organization
-  if (application.owner.type === 'organization') {
-    application.permissions.push({
-      type: 'user',
-      id: req.user.id,
-      name: req.user.name,
-      classes: ['list', 'read', 'write', 'admin']
-    })
-  }
-
   await req.app.get('db').collection('applications').insertOne(application)
   await journals.log(req.app, application, {type: 'application-created', href: config.publicUrl + '/application/' + application.id}, 'application')
   res.status(201).json(application)

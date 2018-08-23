@@ -42,9 +42,7 @@
       </v-stepper-content>
 
       <v-stepper-content step="3">
-        <v-radio-group v-model="owner" class="mt-3 mb-3">
-          <v-radio :label="key === 'user' ? 'Vous-même' : user.organizations.find(o => o.id === owners[key].id).name" :value="key" v-for="key in Object.keys(owners)" :key="key"/>
-        </v-radio-group>
+        <owner-pick v-model="owner"/>
         <v-btn color="primary" :disabled="!owner" @click.native="currentStep = 4">Continuer</v-btn>
         <v-btn flat @click.native="$emit('cancel')">Annuler</v-btn>
       </v-stepper-content>
@@ -63,13 +61,14 @@ import marked from 'marked'
 import {mapState} from 'vuex'
 import eventBus from '../event-bus'
 import CatalogConfigForm from './CatalogConfigForm.vue'
+import OwnerPick from './OwnerPick.vue'
 
 export default {
-  components: {CatalogConfigForm},
+  components: {CatalogConfigForm, OwnerPick},
   props: ['initCatalog'],
   data: () => ({
     currentStep: null,
-    owner: 'user',
+    owner: null,
     uploadProgress: 0,
     catalogUrl: null,
     configurableCatalogs: [],
@@ -78,16 +77,7 @@ export default {
   }),
   computed: {
     ...mapState('session', ['user']),
-    ...mapState(['env']),
-    owners() {
-      return {
-        user: {type: 'user', id: this.user.id, name: this.user.name},
-        ...this.user.organizations.reduce((a, o) => {
-          a['orga' + o.id] = {type: 'organization', id: o.id, name: o.name}
-          return a
-        }, {})
-      }
-    }
+    ...mapState(['env'])
   },
   async mounted() {
     this.configurableCatalogs = await this.$axios.$get('api/v1/configurable-catalogs')
@@ -108,8 +98,9 @@ export default {
     },
     async importCatalog() {
       const options = {}
-      if (this.owners[this.owner].type === 'organization') {
-        options.headers = {'x-organizationId': this.owners[this.owner].id}
+      if (this.owner.type === 'organization') {
+        options.headers = {'x-organizationId': this.owner.id}
+        if (this.owner.role) options.headers['x-organizationRole'] = this.owner.role
       }
       try {
         const catalog = await this.$axios.$post('api/v1/catalogs', this.catalog, options)

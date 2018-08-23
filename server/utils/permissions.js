@@ -23,12 +23,12 @@ const isOwner = exports.isOwner = function(owner, user) {
   if (owner.type === 'user' && owner.id === user.id) return true
   if (owner.type === 'organization') {
     const userOrga = user.organizations.find(o => o.id === owner.id)
-    return userOrga && userOrga.role === config.adminRole
+    return userOrga && (userOrga.role === config.adminRole || userOrga.role === owner.role)
   }
   return false
 }
 
-// resource can be an application, a dataset of an remote service
+// resource can be an application, a dataset or an remote service
 exports.can = function(resource, operationId, permissionClass, user) {
   const operationPermissions = (resource.permissions || []).filter(p => p.operations && p.operations.indexOf(operationId) >= 0)
   const permissionClasses = (resource.permissions || []).filter(p => p.classes && p.classes.indexOf(permissionClass) >= 0)
@@ -44,7 +44,7 @@ exports.can = function(resource, operationId, permissionClass, user) {
     if (matchingPermissions.find(p => p.type === 'user' && p.id === user.id)) return true
     if (matchingPermissions.find(p => {
       const orgaUser = p.type === 'organization' && user.organizations.find(o => o.id === p.id)
-      return orgaUser && ((!p.roles || !p.roles.length) || p.roles.indexOf(orgaUser.role) >= 0)
+      return orgaUser && ((!p.roles || !p.roles.length) || orgaUser.role === config.adminRole || p.roles.indexOf(orgaUser.role) >= 0)
     })) return true
     return false
   }

@@ -115,17 +115,6 @@ router.post('', asyncWrap(async(req, res) => {
   }
   service.permissions = []
 
-  // Make sure the creator can work on the resource he just created
-  // even if he created it in an organization
-  if (service.owner.type === 'organization') {
-    service.permissions.push({
-      type: 'user',
-      id: req.user.id,
-      name: req.user.name,
-      classes: ['list', 'read', 'write', 'admin', 'use']
-    })
-  }
-
   await req.app.get('db').collection('remote-services').insertOne(mongoEscape.escape(service, true))
   res.status(201).json(service)
 }))

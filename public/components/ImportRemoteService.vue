@@ -29,9 +29,7 @@
         <v-btn flat @click.native="$emit('cancel')">Annuler</v-btn>
       </v-stepper-content>
       <v-stepper-content step="2">
-        <v-radio-group v-model="owner" class="mt-3 mb-3">
-          <v-radio :label="key === 'user' ? 'Vous-même' : user.organizations.find(o => o.id === owners[key].id).name" :value="key" v-for="key in Object.keys(owners)" :key="key"/>
-        </v-radio-group>
+        <owner-pick v-model="owner"/>
         <v-btn color="primary" :disabled="!owner" @click.native="currentStep = 3">Continuer</v-btn>
         <v-btn flat @click.native="$emit('cancel')">Annuler</v-btn>
       </v-stepper-content>
@@ -48,12 +46,14 @@
 import marked from 'marked'
 import {mapState} from 'vuex'
 import eventBus from '../event-bus'
+import OwnerPick from './OwnerPick.vue'
 
 export default {
+  components: { OwnerPick },
   props: ['initService'],
   data: () => ({
     currentStep: null,
-    owner: 'user',
+    owner: null,
     uploadProgress: 0,
     apiDoc: null,
     apiDocUrl: null,
@@ -62,16 +62,7 @@ export default {
   }),
   computed: {
     ...mapState('session', ['user']),
-    ...mapState(['env']),
-    owners() {
-      return {
-        user: {type: 'user', id: this.user.id, name: this.user.name},
-        ...this.user.organizations.reduce((a, o) => {
-          a['orga' + o.id] = {type: 'organization', id: o.id, name: o.name}
-          return a
-        }, {})
-      }
-    }
+    ...mapState(['env'])
   },
   async mounted() {
     this.configurableRemoteServices = await this.$axios.$get('api/v1/configurable-remote-services')
@@ -105,8 +96,9 @@ export default {
           if (e.lengthComputable) this.uploadProgress = (e.loaded / e.total) * 100
         }
       }
-      if (this.owners[this.owner].type === 'organization') {
-        options.headers = {'x-organizationId': this.owners[this.owner].id}
+      if (this.owner.type === 'organization') {
+        options.headers = {'x-organizationId': this.owner.id}
+        if (this.owner.role) options.headers['x-organizationRole'] = this.owner.role
       }
       const securities = (this.apiDoc.security || []).map(s => Object.keys(s).pop()).map(s => this.apiDoc.components.securitySchemes[s])
       const apiKeySecurity = securities.find(s => s.type === 'apiKey')

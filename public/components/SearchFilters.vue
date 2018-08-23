@@ -52,8 +52,8 @@ export default {
         const userCount = this.facets.owner.find(o => o.value.type === 'user' && o.value.id === this.user.id)
         if (userCount) Object.assign(counts, {['user:' + this.user.id]: userCount.count});
         (this.user.organizations || []).forEach(orga => {
-          const orgaCount = this.facets.owner.find(o => o.value.type === 'organization' && o.value.id === orga.id)
-          if (orgaCount) Object.assign(counts, {['organization:' + orga.id]: orgaCount.count})
+          const orgaCount = this.facets.owner.filter(o => o.value.type === 'organization' && o.value.id === orga.id).reduce((acc, val) => acc + val.count, 0)
+          if (orgaCount) Object.assign(counts, {['organization:' + orga.id]: orgaCount})
         })
       }
       return counts
