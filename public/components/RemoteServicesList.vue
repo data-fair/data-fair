@@ -14,7 +14,7 @@
           <v-card-text style="height:50%;min-height:80px" v-html="marked($options.filters.truncate(remoteService.description || '', 200))"/>
           <v-card-actions style="height:25%">
             <span v-if="remoteService.owner.type === 'user'">&nbsp;<v-icon>person</v-icon>{{ remoteService.owner.name }}</span>
-            <span v-if="remoteService.owner.type === 'organization'">&nbsp;<v-icon>group</v-icon>{{ remoteService.owner.name }}</span>
+            <span v-if="remoteService.owner.type === 'organization'">&nbsp;<v-icon>group</v-icon>{{ remoteService.owner.name }}<span v-if="dataset.owner.role"> ({{ dataset.owner.role }})</span></span>
             &nbsp;<v-chip text-color="white" :color="remoteService.public ? 'primary' : 'accent'">{{ remoteService.public ? 'Public' : 'Privé' }}</v-chip>
           </v-card-actions>
         </v-card>
@@ -64,7 +64,7 @@ export default {
       return {xs: 4, sm: 4, md: 8, lg: 12, xl: 16}[this.$vuetify.breakpoint.name]
     },
     hasServices() {
-      return !this.services || (this.user && this.services.facets.owner.filter(f => (f.value.type === 'user' && f.value.id === this.user.id) || ((f.value.type === 'organization' && (this.user.organizations || []).map(o => o.id).includes(f.value.id)))).length)
+      return !this.remoteServices || (this.user && this.remoteServices.facets.owner.filter(f => (f.value.type === 'user' && f.value.id === this.user.id) || ((f.value.type === 'organization' && (this.user.organizations || []).map(o => o.id).includes(f.value.id)))).length)
     }
   },
   methods: {

@@ -11,7 +11,7 @@
     <v-stepper-items>
       <v-stepper-content step="1">
         <div class="mt-3 mb-3"><input type="file" @change="onFileUpload"></div>
-        <p>La liste des formats supportés est accessible dans la <nuxt-link :to="localePath({name: 'user-guide-id', params: {id: 'dataset'}})" target="_blank">la documentation</nuxt-link>.</p>
+        <p>La liste des formats supportés est accessible dans <nuxt-link :to="localePath({name: 'user-guide-id', params: {id: 'dataset'}})" target="_blank">la documentation</nuxt-link>.</p>
         <v-btn color="primary" :disabled="!file" @click.native="currentStep = 2">Continuer</v-btn>
         <v-btn flat @click.native="$emit('cancel')">Annuler</v-btn>
       </v-stepper-content>

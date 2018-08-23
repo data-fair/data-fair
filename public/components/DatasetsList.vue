@@ -14,7 +14,7 @@
           <v-card-text style="height:50%;min-height:80px" v-html="marked($options.filters.truncate(dataset.description || '', 200))"/>
           <v-card-actions style="width:100%;height:25%">
             <span v-if="dataset.owner.type === 'user'"><v-icon>person</v-icon>&nbsp;{{ dataset.owner.name }}</span>
-            <span v-if="dataset.owner.type === 'organization'"><v-icon>group</v-icon>&nbsp;{{ dataset.owner.name }}</span>
+            <span v-if="dataset.owner.type === 'organization'"><v-icon>group</v-icon>&nbsp;{{ dataset.owner.name }}<span v-if="dataset.owner.role"> ({{ dataset.owner.role }})</span></span>
             &nbsp;<v-chip text-color="white" :color="dataset.public ? 'primary' : 'accent'">{{ dataset.public ? 'Public' : 'Privé' }}</v-chip>
             <template v-if="dataset.status === 'error'">
               <v-spacer />
