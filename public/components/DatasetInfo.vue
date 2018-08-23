@@ -56,8 +56,8 @@
         </v-card>
       </v-flex>
       <v-flex xs12 md6 order-md1>
-        <v-text-field label="Titre" v-model="dataset.title" @blur="patch({title: dataset.title})"/>
-        <v-textarea label="Description" v-model="dataset.description" box rows="4" @blur="patch({description: dataset.description})"/>
+        <v-text-field label="Titre" v-model="dataset.title" @blur="patch({title: dataset.title})" :disabled="!can('writeDescription')"/>
+        <v-textarea label="Description" v-model="dataset.description" box rows="4" @blur="patch({description: dataset.description})" :disabled="!can('writeDescription')"/>
         <v-select
           :items="licenses"
           item-text="title"
@@ -66,8 +66,9 @@
           label="Licence"
           return-object
           @input="patch({license: dataset.license})"
+          :disabled="!can('writeDescription')"
         />
-        <v-text-field label="Provenance" v-model="dataset.origin" @blur="patch({origin: dataset.origin})"/>
+        <v-text-field label="Provenance" v-model="dataset.origin" @blur="patch({origin: dataset.origin})" :disabled="!can('writeDescription')"/>
       </v-flex>
 
     </v-layout>
@@ -75,7 +76,7 @@
 </template>
 
 <script>
-const {mapState, mapActions} = require('vuex')
+const {mapState, mapActions, mapGetters} = require('vuex')
 const events = require('../../shared/events.json').dataset
 
 export default {
@@ -84,6 +85,7 @@ export default {
   },
   computed: {
     ...mapState('dataset', ['dataset', 'journal', 'nbApplications']),
+    ...mapGetters('dataset', ['can']),
     licenses() {
       return this.$store.getters.ownerLicenses(this.dataset.owner)
     }
