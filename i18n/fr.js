@@ -83,6 +83,9 @@ module.exports = {
       dataset: {
         title: 'Ajouter et configurer vos jeux de données'
       },
+      format: {
+        title: 'Format de fichiers pris en charge'
+      },
       concepts: {
         title: 'Les concepts'
       },

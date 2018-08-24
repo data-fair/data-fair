@@ -1,10 +1,10 @@
-Les concepts sont le lien entre les données de votre jeu de données et le service (ou application) que vous voulez utiliser.  
+Les concepts sont le lien entre les données de votre jeu de données et le service (ou application) que vous voulez utiliser.
+
+Le choix de concepts appropriés pour vos champs est ce qui va permettre de réutiliser vos données dans des applications tierces ou de les enrichir avec des services distants.
 
 Par exemple, votre jeu de données contient des colonnes *Latitude* et *Longitude*.  
 Pour le moment, nos services et applications ne savent pas que ces colonnes contiennent des coordonnées qui peuvent être réutilisables (même si c'est le nom de la colonne, nos services ne sont pas encore capable de reconnaître les données).  
-Il va falloir faire pointer nos concepts, latitude et longitude vers les colonnes *Latitude* et *Longitude* de votre jeu de données pour que nos services les associent à des données qu'ils peuvent utiliser.
-
-Pour chacun de vos jeux de données, vous allez devoir associer les concepts nécessaires au bon fonctionnement des nos services ou applications.
+Lorsque vous allez faire pointer nos concepts, latitude et longitude vers les colonnes *Latitude* et *Longitude* de votre jeu de données, nos services et applications vont les associer à des données qu'ils peuvent utiliser. Vous pourrez ainsi projeter vos données sur des cartes par exemple.
 
 ### Comment associer des concepts
 
@@ -12,7 +12,7 @@ Pour associer ces concepts, rendez vous dans la section *DESCRIPTION* de votre j
 
 
 ### Liste des concepts nécessaires aux services et applications
-Voici la liste des services et applications koumoul et les concepts que vous devez associer à votre jeu de données pour leur bon fonctionnement.
+Voici la liste des services et applications Koumoul et les concepts que vous devez associer à votre jeu de données pour leur bon fonctionnement.
 
 #### Services
 
