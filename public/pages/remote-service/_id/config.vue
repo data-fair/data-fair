@@ -72,7 +72,8 @@ export default {
       this.setRestrictions()
     }
   },
-  mounted() {
+  created() {
+    this.remoteService.apiKey = this.remoteService.apiKey || {}
     this.setRestrictions()
   },
   methods: {

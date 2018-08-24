@@ -26,14 +26,14 @@
           </td>
           <td>
             <v-list dense>
-              <v-list-tile v-for="(classOperations, permClass) in permissionClasses" v-if="(props.item.classes && props.item.classes.includes(permClass)) || classOperations.filter(o => props.item.operations.includes(o.id)).length" :key="permClass">
+              <v-list-tile v-for="(classOperations, permClass) in permissionClasses" v-if="((props.item.classes || []).includes(permClass)) || classOperations.filter(o => (props.item.operations || []).includes(o.id)).length" :key="permClass">
                 <v-list-tile-content>
                   <v-layout row style="width:100%">
                     <v-flex xs3>{{ classNames[permClass] }}</v-flex>
                     <v-flex xs9>
-                      <span v-if="props.item.classes && props.item.classes.includes(permClass)">Toutes</span>
+                      <span v-if="(props.item.classes || []).includes(permClass)">Toutes</span>
                       <ul v-else>
-                        <li v-for="operation in classOperations.filter(o => props.item.operations.find(oid => o.id && o.id === oid))" :key="operation.id">{{ operation.title }}</li>
+                        <li v-for="operation in classOperations.filter(o => (props.item.operations || []).find(oid => o.id && o.id === oid))" :key="operation.id">{{ operation.title }}</li>
                       </ul>
                     </v-flex>
                   </v-layout>

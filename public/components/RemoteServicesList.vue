@@ -2,7 +2,7 @@
   <v-container fluid grid-list-lg style="width:100vw">
     <h3 class="display-1" v-if="remoteServices">{{ remoteServices.count }} service{{ plural }} configuré{{ plural }}</h3>
 
-    <search-filters :filter-labels="{}" :filters="filters" :facets="remoteServices && remoteServices.facets" @apply="refresh"/>
+    <search-filters v-if="initDone" :filter-labels="{}" :filters="filters" :facets="remoteServices && remoteServices.facets" @apply="refresh"/>
     <search-progress :loading="loading"/>
 
     <v-layout row wrap class="resourcesList" v-if="remoteServices">
@@ -52,7 +52,8 @@ export default {
     loading: true,
     remoteServices: null,
     filters: {},
-    filtered: false
+    filtered: false,
+    initDone: false
   }),
   computed: {
     ...mapState('session', ['user']),
@@ -66,6 +67,10 @@ export default {
     hasServices() {
       return !this.remoteServices || (this.user && this.remoteServices.facets.owner.filter(f => (f.value.type === 'user' && f.value.id === this.user.id) || ((f.value.type === 'organization' && (this.user.organizations || []).map(o => o.id).includes(f.value.id)))).length)
     }
+  },
+  async created() {
+    await this.$axios.$post(this.env.publicUrl + '/api/v1/remote-services/_init')
+    this.initDone = true
   },
   methods: {
     async refresh() {

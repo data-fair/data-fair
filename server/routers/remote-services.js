@@ -85,7 +85,7 @@ router.get('', asyncWrap(async(req, res) => {
   res.json({results: results.map(result => mongoEscape.unescape(result, true)), count, facets})
 }))
 
-// Create an remote Api
+// Create a remote Api
 router.post('', asyncWrap(async(req, res) => {
   const service = req.body
   if (!service.apiDoc || !service.apiDoc.info || !service.apiDoc.info['x-api-id']) return res.sendStatus(400)
@@ -117,6 +117,49 @@ router.post('', asyncWrap(async(req, res) => {
 
   await req.app.get('db').collection('remote-services').insertOne(mongoEscape.escape(service, true))
   res.status(201).json(service)
+}))
+
+// Create service
+router.post('/_init', asyncWrap(async(req, res) => {
+  if (!req.user) return res.sendStatus(401)
+  const remoteServices = req.app.get('db').collection('remote-services')
+  const query = {
+    $or: [{
+      'owner.type': 'user',
+      'owner.id': req.user.id
+    }]
+  }
+  if (req.user.organizations && req.user.organizations.length) {
+    query.$or.push({
+      'owner.type': 'organization',
+      'owner.id': {$in: req.user.organizations.map(o => o.id)}
+    })
+  }
+  const existingServices = await remoteServices.find(query).project({owner: 1, url: 1}).toArray()
+  const owners = [{type: 'user', id: req.user.id, name: req.user.name}].concat((req.user.organizations || []).map(o => ({type: 'organization', id: o.id, name: o.name})))
+  const ownerServices = [].concat(...owners.map(o => config.remoteServices.map(s => ({owner: o, url: s.href, title: s.title}))))
+  const servicesToAdd = ownerServices.filter(os => !existingServices.find(es => es.owner.type === os.owner.type && es.owner.id === os.owner.id && es.url === os.url))
+  const apisToFetch = new Set(servicesToAdd.map(s => s.url))
+  const apis = (await Promise.all([...apisToFetch].map(url => axios.get(url).then(resp => ({url, api: resp.data})).catch(err => ({url, error: err.response}))))).filter(a => a.api)
+  const apisDict = Object.assign({}, ...apis.map(a => ({[a.url]: a.api})))
+  const servicesToInsert = servicesToAdd.filter(s => apisDict[s.url]).map(s => mongoEscape.escape({
+    id: slug(apisDict[s.url].info['x-api-id'] + '-' + s.owner.id, {lower: true}),
+    title: apisDict[s.url].info.title,
+    description: apisDict[s.url].info.description,
+    url: s.url,
+    apiDoc: apisDict[s.url],
+    actions: computeActions(apisDict[s.url]),
+    owner: Object.assign(s.owner.type === 'organization' ? {role: config.adminRole} : {}, s.owner),
+    permissions: (s.owner.type === 'organization' ? [{
+      type: 'organization',
+      id: s.owner.id,
+      name: s.owner.name,
+      classes: ['list', 'read', 'use'],
+      roles: []
+    }] : [])
+  }, true))
+  if (servicesToInsert.length) await remoteServices.insertMany(servicesToInsert)
+  res.status(201).json(`Added ${servicesToInsert.length} services`)
 }))
 
 // Middlewares
