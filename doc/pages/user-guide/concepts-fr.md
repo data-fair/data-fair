@@ -1,6 +1,6 @@
 Les concepts sont le lien entre les données de votre jeu de données et le service (ou application) que vous voulez utiliser.  
 
-Par exemple, votre jeu de données contient des colonnes des *Latitude* et *Longitude*.  
+Par exemple, votre jeu de données contient des colonnes *Latitude* et *Longitude*.  
 Pour le moment, nos services et applications ne savent pas que ces colonnes contiennent des coordonnées qui peuvent être réutilisables (même si c'est le nom de la colonne, nos services ne sont pas encore capable de reconnaître les données).  
 Il va falloir faire pointer nos concepts, latitude et longitude vers les colonnes *Latitude* et *Longitude* de votre jeu de données pour que nos services les associent à des données qu'ils peuvent utiliser.
 

@@ -4,21 +4,21 @@ Notre plateforme vous permet d’héberger, partager, enrichir et visualiser vos
 ### Présentation de l'interface
 
 La [plateforme](https://koumoul.com/s/data-fair/) est divisée en plusieurs parties :
-* Les [Jeux de données](https://koumoul.com/s/data-fair/datasets) qui sont en faites vos fichiers de données, dans cette section vous allez aussi retrouver les données de votre organisation ou bien les données qui ont étés listées en public et donc accessibles à tout le monde.
-* Les [Services](https://koumoul.com/s/data-fair/remote-services) qui vont vous servir à améliorer vos données grâce à [l'enrichissement](user-guide/enrichment).
-* Les [Applications](https://koumoul.com/s/data-fair/applications) qui vont vous permettre d'avoir un visuel de vos données.
+* Les [Jeux de données](https://koumoul.com/s/data-fair/datasets) qui sont créés à partir de vos fichiers de données. Dans cette section vous allez aussi retrouver les données de votre organisation ou bien les données qui ont étés partagées en public et donc accessibles à tout le monde.
+* Les [Services](https://koumoul.com/s/data-fair/remote-services) qui vont vous servir à améliorer vos données grâce à [l'enrichissement](user-guide/enrichment) ou à utiliser des données à jour directement dans les applications (comme des fonds de carte par exemple).
+* Les [Applications](https://koumoul.com/s/data-fair/applications) qui vont vous permettre d'avoir un visuel de vos données et d'interagir avec elles.
 * Les [Catalogues](https://koumoul.com/s/data-fair/catalogs) qui vont vous permettre de publier vos données sur d'autres plateformes telles que [data.gouv.fr](https://www.data.gouv.fr/fr/)
-* La *Documentation* vous permet d'avoir accès au [manuel utilisateur](https://koumoul.com/s/data-fair/user-guide), aux différentes [vidéos](https://videos.koumoul.com/) des tutoriels de [notre blog](https://koumoul.com/blog), à la documentation de l'[API](https://koumoul.com/s/data-fair/api) et à la [documentation développeur](https://koumoul.com/s/data-fair/interoperate) pour les plus techniques d'entre vous.
+* La *Documentation* vous permet d'avoir accès au [manuel utilisateur](https://koumoul.com/s/data-fair/user-guide), à différentes [vidéos](https://videos.koumoul.com/) explicatives, aux tutoriels postés régulièrement sur notre [notre blog](https://koumoul.com/blog), à la documentation de l'[API racine](https://koumoul.com/s/data-fair/api) et à la [documentation développeurs](https://koumoul.com/s/data-fair/interoperate) pour les plus techniques d'entre vous.
 
 ### Jeux de données
 
-Dans cette section vous allez retrouver la liste des fichiers que vous avez télécharger sur la plateforme. Vous allez pouvoir ajouter des données, décrire chacun de vos [fichiers de données](user-guide/dataset), associer [des concepts](user-guide/concepts), donner les [permissions](user-guide/permission) pour chacun de vos jeux de données,  [enrichir](user-guide/enrichment) et [publier](user-guide/catalog) vos données.
+Dans cette section vous allez retrouver la liste des fichiers que vous avez chargé sur la plateforme. Vous allez pouvoir ajouter des données, décrire chacun de vos [fichiers de données](user-guide/dataset), associer [des concepts](user-guide/concepts), donner les [permissions](user-guide/permission) pour chacun de vos jeux de données,  [enrichir](user-guide/enrichment) et [publier](user-guide/catalog) vos données.
 
 C'est la partie la plus importante, c'est dans cette section que vous allez pouvoir réaliser la majorité des manipulations sur vos données.
 
 ### Services
 
-Dans cette partie de la plateforme, vous allez pour voir ajouter et configurer les différents services que nous vous proposons pour pouvoir améliorer vos données en les [enrichissant](user-guide/enrichment).
+Dans cette partie de la plateforme, vous allez pouvoir ajouter et configurer les différents services que nous vous proposons pour pouvoir améliorer vos données en les [enrichissant](user-guide/enrichment).
 
 Pour le moment, nous mettons à votre disposition cinq services :  
 * [Données des entreprises](user-guide/service-entreprise)
@@ -31,13 +31,17 @@ Pour le moment, nous mettons à votre disposition cinq services :
 
 ### Applications
 
-Dans cette section, vous allez pour voir ajouter et configurer les différentes applications que nous vous proposons pour pouvoir visualiser vos données.  
+Dans cette section, vous allez pouvoir ajouter et configurer les différentes applications que nous vous proposons pour pouvoir visualiser vos données.  
 Pour le moment, nous mettons à votre disposition quatre applications :
 * [Infos-Parcelles](user-guide/application-infos-parcel)
 * [Infos-Localisations](user-guide/application-infos-location)
 * Portail thématique
-* Observatoire des entreprises qui n'a pas besoin de concept. Cette application fonctionne grâce au service [Données des entreprises](user-guide/service-entreprise) configuré en tant que filtre.<br></br>Pour chaque nouvelle réutilisation d'un jeu de données, vous aurez une nouvelle application à ajouter et à configurer.
+* Observatoire des entreprises qui n'a pas besoin de concept. Cette application fonctionne grâce au service [Données des entreprises](user-guide/service-entreprise) configuré en tant que filtre.
+
+<br>
+
+Pour chaque nouvelle réutilisation d'un jeu de données, vous aurez une nouvelle application à ajouter et à configurer.
 
 ### Catalogues
 
-Dans cette section, vous allez pour voir ajouter et configurer les différents [catalogues](user-guide/catalog) que vous voulez utiliser. Ils vous permettront d'importer des données ou de partager vos données sur d'autres plateformes. Pour le moment les catalogues permettent seulement de partager vos données, la fonctionnalité d'importation sera développé plus tard.
+Dans cette section, vous allez pouvoir ajouter et configurer les différents [catalogues](user-guide/catalog) que vous voulez utiliser. Ils vous permettront d'importer des données ou de partager vos données sur d'autres plateformes. Pour le moment les catalogues permettent seulement de partager vos données, la fonctionnalité d'importation sera développé plus tard.

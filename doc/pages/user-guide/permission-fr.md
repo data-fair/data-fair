@@ -19,13 +19,13 @@ Pour attribuer les permissions vous devez aller sur la page *PERMISSIONS* de la 
 
 Si on reprend notre exemple précédent, le propriétaire du jeu de données est le rôle *administrateur* de votre organisation. Un administrateur de votre organisation peut donc aller sur la page *PERMISSIONS* du jeu de données et ajouter le droit **lecture** aux rôle *utilisateurs*.  
 Les *utilisateurs* pourront maintenant accéder à votre jeu de données par un lien sur lequel ils auront cliqué sur une page web ou un lien que vous leur avez donné.  
-Si maintenant, l'administrateur donne le droit **lecture** et **lister** au rôle *réutilisateur* de votre organisation. Vos réutilisateurs auront accès à votre jeu données à partir de notre plateforme. Autrement dit, il sera listé dans leur section [Jeux de données](https://koumoul.com/s/data-fair/datasets), ils pourront cliquer dessus et accéder aux données du jeu en lecture.  
+Si maintenant, l'administrateur donne le droit **lecture** et **lister** au rôle *réutilisateur* de votre organisation, vos réutilisateurs auront accès à votre jeu données à partir de notre plateforme. Autrement dit, il sera listé dans leur section [Jeux de données](https://koumoul.com/s/data-fair/datasets), ils pourront cliquer dessus et accéder aux données du jeu en lecture.  
 Si vous avez associé [les concepts](user-guide/concepts) à votre jeu de données, lorsque les réutilisateurs vont configurer une application, le jeu sera listé comme source possible de leur application. Si un utilisateur configure une application, il n'aura pas le jeu de données de listé dans la source de l'application, vu qu'il n'a que la permission de **lecture**.
 L'administrateur peut aussi donne le droit de lecture à un rôle d'une autre organisation ou à toute l'organisation s'il le désire.
 
 ### Utiliser : les Services
 
-Pour les [SERVICES](https://koumoul.com/s/data-fair/remote-services), il existe une permission supplémentaire : **Utiliser**. Cette permission donne, comme elle l'indique, le droit d'utiliser le service à une personne, à une organisation ou à un rôle d'une organisation.
+Pour les [services](https://koumoul.com/s/data-fair/remote-services), il existe une permission supplémentaire : **Utiliser**. Cette permission donne, comme elle l'indique, le droit d'utiliser le service à une personne, à une organisation ou à un rôle d'une organisation.
 
 ### Le mode expert
 
