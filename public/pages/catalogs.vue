@@ -42,7 +42,6 @@ import ImportCatalog from '../components/ImportCatalog.vue'
 import CatalogsList from '../components/CatalogsList.vue'
 
 export default {
-  name: 'Datasets',
   components: {ImportCatalog, CatalogsList},
   data() {
     return {importCatalogSheet: !!this.$route.query.import}
