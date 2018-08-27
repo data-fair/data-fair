@@ -6,7 +6,7 @@ module.exports = {
   description: 'An remote service must be described with the openAPI 3.0 specification. If the API is secured, there must be at least one api-key based security scheme available.',
   type: 'object',
   additionalProperties: false,
-  required: ['id', 'owner', 'apiDoc', 'apiKey'],
+  required: ['id', 'owner', 'apiDoc'],
   properties: {
     id: {
       type: 'string',
