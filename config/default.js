@@ -54,7 +54,11 @@ module.exports = {
   },
   adminRole: 'admin',
   // A global default API key for backend to backend calls to remote services
-  defaultRemoteKey: null,
+  defaultRemoteKey: {
+    in: 'header',
+    name: 'x-apiKey',
+    value: null
+  },
   // secrets that can be used to configure global webhooks for example to update users and organizations
   secretKeys: {
     ownerNames: null

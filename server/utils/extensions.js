@@ -240,8 +240,8 @@ exports.extend = async(app, dataset, extension, remoteService, action) => {
     // TODO handle query & cookie header types
     if (remoteService.apiKey && remoteService.apiKey.in === 'header' && remoteService.apiKey.value) {
       opts.headers[remoteService.apiKey.name] = remoteService.apiKey.value
-    } else if (config.defaultRemoteKey) {
-      opts.headers[remoteService.apiKey.name] = config.defaultRemoteKey
+    } else if (config.defaultRemoteKey.in === 'header' && config.defaultRemoteKey.value) {
+      opts.headers[config.defaultRemoteKey.name] = config.defaultRemoteKey.value
     }
     // transmit organization id as it tends to complement authorization information
     if (remoteService.owner.type === 'organization') {

@@ -264,8 +264,8 @@ router.use('/:remoteServiceId/proxy*', (req, res, next) => {
   // TODO handle query & cookie header types
   if (req.remoteService.apiKey && req.remoteService.apiKey.in === 'header' && req.remoteService.apiKey.value) {
     options.headers[req.remoteService.apiKey.name] = req.remoteService.apiKey.value
-  } else if (config.defaultRemoteKey) {
-    options.headers[req.remoteService.apiKey.name] = config.defaultRemoteKey
+  } else if (config.defaultRemoteKey.in === 'header' && config.defaultRemoteKey.value) {
+    options.headers[config.defaultRemoteKey.name] = config.defaultRemoteKey.value
   }
   // transmit organization id as it tends to complement authorization information
   if (req.remoteService.owner.type === 'organization') {

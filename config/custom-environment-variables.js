@@ -16,7 +16,9 @@ module.exports = {
       __format: 'json'
     }
   },
-  defaultRemoteKey: 'DEFAULT_REMOTE_KEY',
+  defaultRemoteKey: {
+    value: 'DEFAULT_REMOTE_KEY'
+  },
   secretKeys: {
     ownerNames: 'SECRET_OWNERNAMES'
   },
