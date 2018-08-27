@@ -1,8 +1,8 @@
-Les services sont des fonctionnalités externalisées à ce service. Ils permettent par exemple de récupérer des données supplémentaires ou de faire des traitements sur certaines données. Ces services distants sont optionnels pour pouvoir exposer ses données, mais nécessaires si l'on souhaite faire de l'enrichissement ou utiliser certaines applications. Ils se présentent sous la forme d'APIs Web qui peuvent être ouvertes ou fermées, dans le 2e cas il faut alors paramétrer des codes d'accès à ces APIs.
+Les services sont des fonctionnalités externalisées. Ils permettent par exemple de récupérer des données supplémentaires ou de faire des traitements sur certaines données. Ces services distants sont optionnels pour pouvoir exposer ses données, mais nécessaires si l'on souhaite faire de l'enrichissement ou utiliser certaines applications. Ils se présentent sous la forme d'APIs Web qui peuvent être ouvertes ou fermées, dans le 2e cas il faut alors paramétrer des codes d'accès à ces APIs.
 
 Les services Koumoul sont accessibles avec des configurations par défaut.  
-Pour des services Koumoul dont vous êtes le propriétaire, par défaut, il n'y a que vous qui avez accès aux services. Lorsque vous utilisez ces services, vous utiliser les quota de votre compte personnel Koumoul.
-Pour des services Koumoul organisation, par défaut, les *administrateurs* de l'organisation sont les propriétaires et tous les rôles de l'organisation peuvent lister, lire et utiliser les services de l'organisation. Il n'y a donc que les *administrateurs* de l'organisation qui peuvent modifier et administrer les services créés par défaut. Lorsque vous utilisez ces services, vous utiliser les quota du compte de votre organisation.
+Pour des services Koumoul dont vous êtes le propriétaire, par défaut, il n'y a que vous qui avez accès aux services. Lorsque vous utilisez ces services, vous utiliser les quotas de votre compte personnel Koumoul.
+Pour des services Koumoul organisation, par défaut, les *administrateurs* de l'organisation sont les propriétaires et tous les rôles de l'organisation peuvent lister, lire et utiliser les services de l'organisation. Il n'y a donc que les *administrateurs* de l'organisation qui peuvent modifier et administrer les services créés par défaut. Lorsque vous utilisez ces services, vous utiliser les quotas du compte de votre organisation.
 
 ### Ajout d'un service
 
@@ -11,7 +11,7 @@ Un bandeau en bas de page apparaît, cliquez sur *Choisissez un service à confi
 L'adresse du service de Koumoul va se compléter automatiquement, vous n'avez donc pas à la modifier. Si vous voulez ajouter un service externe, vous devez mettre l'adresse du service à cet endroit.
 Cliquez ensuite sur le bouton *Continuer*. Choisissez le propriétaire du service puis cliquez sur le bouton *Continuer* et enfin lancer l'import du service.
 
-### Interface du service Données des entreprises
+### Configuration du service
 
 Une fois votre service ajouté, vous arrivez sur la page *DESCRIPTION* du service. Comme pour un jeu de données, vous pouvez changer le titre du service et la description. Vous avez sur votre droite différentes informations, le propriétaire du service, l’hébergeur du service, le contact, la version du service, les termes d'utilisation du service et le nombre d'applications qui utilisent ce service.
 

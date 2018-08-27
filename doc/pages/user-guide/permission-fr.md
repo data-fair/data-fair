@@ -24,7 +24,7 @@ Si on reprend notre exemple précédent, le propriétaire du jeu de données est
 Les *utilisateur* pourront maintenant accéder à votre jeu de données par un lien sur lequel ils auront cliqué sur une page web ou un lien que vous leur avez donné.  
 Si maintenant, l'*administrateur* donne le droit **lecture** et **lister** au rôle *réutilisateur* de votre organisation. Vos *réutilisateur* auront accès à votre jeu données à partir de notre plateforme. Autrement dit, il sera listé dans leur section [JEUX DE DONNEES](https://koumoul.com/s/data-fair/datasets), ils pourront cliquer dessus et accéder aux données du jeu en lecture.  
 Si vous avez associé [les concepts](user-guide/concepts) à votre jeu de données, lorsque les *réutilisateur* vont configurer une application, le jeu sera listé comme source possible de leur application. Si une personnes, avec le rôle *utilisateur*, configure une application, elle n'aura pas le jeu de données de listé dans la source de l'application, vu qu'elle n'a que la permission de **lecture**, elle n'a pas non plus le jeu listé dans sa section [JEUX DE DONNEES](https://koumoul.com/s/data-fair/datasets) mais elle peut tout de même accéder aux données via un lien externe.  
-L'*administrateur* peut aussi donne le droit de lecture et de lister à une autre organisation s'il le désire. Lorsqu'il donne ces droits, tous les rôles de l'organisation auront accès aux données de la ressource.
+L'*administrateur* peut aussi donner le droit de lecture et de lister à une autre organisation s'il le désire. Lorsqu'il donne ces droits, tous les rôles de l'organisation auront accès aux données de la ressource.
 
 ### Utiliser : les Services
 
