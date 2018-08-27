@@ -26,7 +26,7 @@
                 label="Nombre de lignes"
               />
             </v-flex>
-            <v-pagination v-if="data.total > pagination.rowsPerPage" v-model="pagination.page" total-visible="6" :length="Math.ceil(Math.min(data.total, 10000) / pagination.rowsPerPage)" class="mx-4"/>
+            <v-pagination v-if="data.total > pagination.rowsPerPage" v-model="pagination.page" total-visible="7" :length="Math.ceil(Math.min(data.total, 10000) / pagination.rowsPerPage)" class="mx-4"/>
           </v-layout>
         </v-layout>
       </v-card-title>
