@@ -47,8 +47,7 @@ module.exports = {
     directoryUrl: config.directoryUrl,
     adminRole: config.adminRole,
     map: config.map,
-    brand: config.brand,
-    defaultCatalog: config.defaultCatalog
+    brand: config.brand
   },
   head: {
     title: config.brand.title,

@@ -41,10 +41,6 @@ module.exports = {
       __format: 'json'
     }
   },
-  defaultCatalog: {
-    url: 'DEFAULT_CATALOG_URL',
-    type: 'DEFAULT_CATALOG_TYPE'
-  },
   i18n: {
     defaultLocale: 'I18N_DEFAULT_LOCALE',
     locales: {

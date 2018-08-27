@@ -61,7 +61,43 @@ module.exports = {
         varKey: 'Clé dans le fichier de configuration',
         varName: `Variable d'environnement`,
         varDesc: 'Description',
-        varDefault: 'Valeur par défaut'
+        varDefault: 'Valeur par défaut',
+        varDescriptions: {
+          publicUrl: `<b>IMPORTANT.</b> L'URL à laquelle le service sera exposé. Par exemple https://koumoul.com/s/data-fair`,
+          wsPublicUrl: `<b>IMPORTANT.</b> L'URL à laquelle la connection socket sera exposée. Par exemple wss://koumoul.com/s/data-fair`,
+          directoryUrl: `<b>IMPORTANT.</b> L'URL à laquelle le service de gestion des utilisateurs est exposé. Par exemple https://koumoul.com/s/simple-directory`,
+          mongoUrl: 'La chaine de connexion complète à la base de données MongoDB.',
+          analytics: 'Id de tracking pour Google Analytics.',
+          elasticsearch: {
+            host: `Serveur ElasticSearch.`,
+            defaultAnalyzer: 'Analyseur par défaut.',
+            maxBulkLines: 'Nombre de lignes maximum pour les traitements en masse.',
+            maxBulkChars: 'Nombre de caractères maximum pour les traitements en masse.'
+          },
+          defaultRemoteKey: {
+            value: `Clé a utiliser pour appeler les services distants. A n'utiliser que si vous déployer vos propres services distants.`
+          },
+          secretKeys: {
+            ownerNames: 'Secret partagé avec le service de gestion des utilisateurs et organisations.'
+          },
+          brand: {
+            logo: 'Un lien vers un fichier image représentant votre logo.',
+            title: 'Le nom de votre organisation.',
+            description: 'La description de votre organisation.',
+            url: 'Un lien vers le site web principal de votre organisation.'
+          },
+          workers: {
+            concurrency: 'Le nombre de workers pouvant travailler en parallèle. Ce nombre ne devrait jamais dépasser le nombre de coeurs disponibles sur la machine ou est installé le service.'
+          },
+          nuxtBuild: {
+            active: 'Build Nuxt actif',
+            blocking: 'Build Nuxt bloquant'
+          },
+          i18n: {
+            defaultLocale: 'Locale par défaut',
+            locales: 'Liste des locales'
+          }
+        }
       }
     },
     interoperate: {
@@ -92,7 +128,7 @@ module.exports = {
       permission: {
         title: 'Permissions, gérez les droits d\'accès'
       },
-      service
+      service: {
         title: 'Services, ameliorer vos données'
       },
       application: {
