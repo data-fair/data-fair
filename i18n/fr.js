@@ -90,22 +90,13 @@ module.exports = {
         title: 'Les concepts'
       },
       permission: {
-        title: 'Permissions : Gérez les droits d\'accès'
+        title: 'Permissions, gérez les droits d\'accès'
       },
-      serviceentreprise: {
-        title: 'Services : Données des entreprises'
+      service
+        title: 'Services, ameliorer vos données'
       },
-      servicegeocoder: {
-        title: 'Service : Géocoder'
-      },
-      servicelandregister: {
-        title: 'Service : Cadastre'
-      },
-      applicationinfosparcel: {
-        title: 'Application : Infos-Parcelles'
-      },
-      applicationinfoslocation: {
-        title: 'Application : Infos-Localisations'
+      application: {
+        title: 'Applications, visualiser vos donées'
       },
       enrichment: {
         title: 'Enrichissez vos données avec nos services'

@@ -33,7 +33,7 @@ La section *PUBLICATION* permet de choisir et d'utiliser les catalogues que vous
 
 La section *JOURNAL* permet d'avoir un historique de toutes les actions réalisées sur votre jeu de données.
 
-La section *API* permet d'avoir une documentation d'api propre à votre jeu de données.
+La section *API* permet d'avoir une documentation de l'api. Elle destinée aux développeurs et va leur permettre de bien comprendre comment réutiliser les données pour les intégrer dans d'autres applications. Cette documentation permet de faire des appels aux différents points d'accès de l'API pour bien comprendre comment elle marche.
 
 Sur toutes les pages, vous avez accès au bouton en haut à droite pour supprimer, télécharger votre fichier ou télécharger le fichier enrichi (si vous avez effectué un enrichissement sur votre fichier).
 

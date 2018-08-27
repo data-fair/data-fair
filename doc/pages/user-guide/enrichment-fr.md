@@ -1,3 +1,5 @@
+Suivant les services distants que vous avez configurés, et les concepts que vous avez assigné aux champs de vos données, il peut être possible d'enrichir les données. On peut par exemple rajouter des champs latitude et longitude si des champs décrivant une adresse sont présents, ou un secteur d'activité si un champ correspond à un SIRET d'un établissement.
+
 L’enrichissement va vous permettre de compléter et d’améliorer vos données grâces à nos services.
 Chaque service va vous permettre de réaliser un type d'enrichissement.
 
@@ -10,7 +12,7 @@ Si vous voulez compléter vos données grâce à la base SIREN, vous aurez recou
 Pour géolocaliser des adresses, vous allez utiliser le service de [*Géocodage*](user-guide/service-geocoder).  
 Pour géolocaliser des codes parcelles, vous allez utiliser le service [*Cadastre*](user-guide/service-land-register).
 
-Les données fournies par enrichissement sont directement associés à des concepts connus quand c'est possible.
+Les données fournies par enrichissement sont automatiquement associées à des concepts connus quand c'est possible.
 
 ### Enrichissement via le service Données des entreprises
 
