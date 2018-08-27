@@ -6,6 +6,8 @@ env:
     - secure: "RI+qFojXg8Yb3sVJABZTBo90Z8F/JjC8B6WBO/1P+2vkUfKkhdnrAzePoMheWFXfLuGdAYpgWfCUM6NY4WGdEnC4dR4NxjdpNXoscHPOWUDe2NgbKCop8jOJ9lksnuhmHpMFNo5zQshCfsPNBEIURiemg16tIJ1DtBNaWs4Xgm7lmV5rQ1Ucz6cddCw8FCIduULbgUbPBtiuLiQ3ExZW+spdP9iRvZUiXDA8qoCCFAzm6sjPYcS8EbryCnRlu1zu4Rr4m+9DUvcs9Rwbd+g9XvWUh0Be1dKRYHMzTgvZjdnV5WtO+TGIQuPb97u19nL9w8CNaqpev4XzoXpiDTmKA4GIXmZNPsiLUoaTtwXXC+GdBM2J2qfjQ+9kIBXGdp2BDIdI9haC04URA+EkoYB5HtIRq8qbRbtfQg/Vtn2MLZKQ3ndgNSI7Y+Q3n1VyGuhMtFyBz975jBm1QgmsxyHrxUPtXCliGJHVu3dCpU9OK5Fv3fttop5YpVy8bF2WB1C9RoN5fK105B6yowHeU96ckw99baI2c1Z1MiRw9er+ogs2Ii+v6GuGkB76BtkudcsHVz2PP3kysNcveowmk8y+P6Z2+TsH5yvOu9mxZRGp/Im48W48uTnmg6RxWjh26ZfOD+Mts19YhTQWyVGATozpYAPrgeJyGvThkBFa7w+9TEc="
     # DOCKER_PASS
     - secure: "S4ge+eD5ywmFIhgmKSiRPJWtjCNBZ14vG5yJM1bEOGpfeK/04TRAP2/Bwf2yyHxf/pJI0LYJp909MQWSqjOYP168unhvmQWn6GopnZ2GUqQzKTGKk9xv1Jn2acevmJigsPpvHrx2a3FsEg1HPejjrR1FIlZQhSYQEFBiSwEiwpgaM5EFLSNwYtlB372M6czJxdiClxXOuzRaTrIRr7p7yem0kEn1pCAxlHH5y9UsPn1s40gyGLp6XPDeZHxXcJuJOHmS9Eb4CwWqKnNCuDBMafCv0CS5qvrlK2Kn2ep+p/W5tXQ/HlbAzppernTN2ErgF/I5QdUR1ua7BxaSDsDQNdRC4iZ77P6GrImyjKAWTw0ikORxGYqhQ0Z5AsmCEcgS446s29L82owx/ft/f24eS+dN30J7awduryOAEWnooqE85RIVrvRIWlsiJ07go+COWUZyQWew3YTuWKaE/huTl+P+j3uGAfL+4uo57tAMR3LE60n9vbJlfOhLY9lqAV75E6UIRdGiOH93vfzmntuBoTSrSsktSdxP43u8hA6bQ2RFItry6c5FckSstKAFLQu2yFTOk4WRYzzCXQMtI92pABNRZOyosOGQw+pIh+LVZ5WSppFXGy90+pmp/8Jq+86h4qyCJ0cNZ3C1xextCkbdd7Ssw5bpTr4TEJvABJPxFs8="
+    # GITHUB_TOKEN
+    - secure: "XwPnGr4C5U6cokWxs4jkzLymHKzK4BeEM+IK224hJzva91v70VGolcVOXQreW8fnJWbSAUMhWJZZDOQXePj4XoRAB+Zcds9o3ljK1H6lnuFPvQLD1c0AZoxmAcysH1CjgMT+vUbi3EViOYJCfzgkVTskBiiGI+r4T3ZAXbcaOMokM1PERXg8WrFfPLc07BD42vNlmJeXd5ggbG0B2aHrD8QFrMAk9+QCeYj+6ANk0vO+/diXhnnARY96+/lrZiiKVNjpb3TiMh1xIyu2EJl+TZddncLRjDZRZIgqCEhCW4D4BP/6XbI5kKK98vm34RelM9wRTPTp2nOLiHS1W44Jh8Bf8F6i49p4wQF2i+pPXEMR7HOZjYE2iAUG6C7B20xTPWF51iKsHCDm2xM0RduDxQAvcTTiFO2K/FLR2XYAyS39+JQajOp20m9Vw/4A8LJjfBmSwGcI8JDv0rbDHuUTjlvC98O24Vu+8lUKaysysS1AtIdLEpWMpdzPDwXtAIpHuMTQ9LAszWPEYeDajazuD6EbkOybjVXUmJnsIu1JGzeYwVpI7lblwhD5/4lt70MjEjEQBBcDN9yGdBYfu7jDuwMB1bDsHw1Fp6kU2aUOnpRn0Q9Biw7FyC2sC0+v0ErCS7w+d3hVQRyhAJQy8fTBopB+3KJc/Wb/SRwLZZ/JhZM="
 
 language: node_js
 node_js:
@@ -40,12 +42,12 @@ after_success:
   - docker build -f Dockerfile --cache-from $REPO:latest -t $REPO:$TAG .
   - docker push $REPO
   # Doc build
-#   - npm run build-doc
-#
-# deploy:
-#   provider: pages
-#   local_dir: doc-dist
-#   skip-cleanup: true
-#   github-token: $GITHUB_TOKEN  # Set in the settings page of your repository, as a secure variable
-#   on:
-#     tags: true
+  - npm run build-doc
+
+deploy:
+  provider: pages
+  local_dir: doc-dist
+  skip-cleanup: true
+  github-token: $GITHUB_TOKEN  # Set in the settings page of your repository, as a secure variable
+  on:
+    branch: master
