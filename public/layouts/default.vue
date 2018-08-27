@@ -32,7 +32,7 @@
             <v-list-tile href="https://videos.koumoul.com/" target="_blank">
               <v-list-tile-title>Tutoriels</v-list-tile-title>
             </v-list-tile>
-            <v-list-tile :to="localePath('api')">
+            <v-list-tile :to="localePath('api-doc')">
               <v-list-tile-title>API</v-list-tile-title>
             </v-list-tile>
             <v-list-tile :to="localePath('interoperate')">
