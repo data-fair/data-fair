@@ -35,7 +35,7 @@ export default {
       h3: ['title', 'mb-4', 'mt-5'],
       h4: ['subheading', 'mb-3', 'mt-4'],
       p: ['body1'],
-      table: ['datatable', 'table', 'card']
+      table: ['v-datatable', 'v-table', 'v-card']
     }
     Object.keys(elemClasses).forEach(k => {
       this.$el.querySelectorAll(k).forEach(e => {

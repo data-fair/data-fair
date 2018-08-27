@@ -4,14 +4,15 @@
 module.exports = {
   common: {
     title: 'DataFair',
-    description: 'Données facilement Trouvables, Accessibles, Interopérables et Réutilisables',
+    description: 'Données Facilement trouvables, Accessibles, Interopérables et Réutilisables',
     login: `Se connecter / S'inscrire`,
-    authrequired: 'Vous devez être authentifié pour utiliser ce service.'
+    authrequired: 'Vous devez être authentifié pour utiliser ce service.',
+    seemore: 'En savoir plus'
   },
   pages: {
     root: {
       title: 'Accueil',
-      description: 'Partagez et enrichissez facilement vos données pour pouvoir les utiliser dans des applications dédiées.'
+      description: `Enrichissez et publiez facilement vos données. Vous pouvez les utiliser dans des applications dédiées et les mettre a disposition d'autres personnes en mode ouvert ou privé.`
     },
     datasets: {
       title: 'Jeux de données',
@@ -117,7 +118,8 @@ module.exports = {
         title: 'Introduction à la plateforme'
       },
       dataset: {
-        title: 'Ajouter et configurer vos jeux de données'
+        title: 'Importer ses propres données',
+        description: `Les jeux de données sont créés en chargeant des fichiers. Ils sont stockés, analysés et un schéma de données est déduit. Les données sont ensuite indexées suivant ce schéma et peuvent être requêtées au travers d'une API Rest. Les champs du schéma peuvent être sémantisés, ce qui permet ensuite d'enrichir les données et de les réutiliser dans des applications dédiées.`
       },
       format: {
         title: 'Format de fichiers pris en charge'
@@ -129,10 +131,12 @@ module.exports = {
         title: 'Permissions, gérez les droits d\'accès'
       },
       service: {
-        title: 'Services, ameliorer vos données'
+        title: 'Intégrer des services distants',
+        description: `Les fonctionnalités de services distants peuvent être intégrées facilement. Le service stocke les informations d'accès et permet de réappliquer des permissions sur chaque fonctionnalité. On peut grâce à ce mécanisme enrichir facilement ses propres données avec d'autres données. Des non informaticiens peuvent utiliser facilement des APIs tierces avec leurs propres données.`
       },
       application: {
-        title: 'Applications, visualiser vos donées'
+        title: 'Configurer des applications',
+        description: `Les applications sont des services distants qui permettent d'exploiter au maximum le potentiel des données. Grâce à la sémantisation, on peut déterminer les applications les plus appropriées aux données que l'on manipule. Il ne reste alors plus qu'à les configurer pour pouvoir les utiliser.`
       },
       enrichment: {
         title: 'Enrichissez vos données avec nos services'

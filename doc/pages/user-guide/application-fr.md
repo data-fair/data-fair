@@ -1,4 +1,6 @@
-Les applications vont vous permettre de ré-exposer vos données et de mieux les visualiser. Les applications Koumouls sont prè-configurées et vous pouvez donc les sélectionner lors de l'ajout d'une application. Il est aussi possible d'ajouter des applications externes à plateforme.
+Les applications permettent d'exploiter au maximum le potentiel des données. Grâce à la sémantisation, on peut déterminer les applications les plus appropriées aux données que l'on manipule. Il ne reste alors plus qu'à les configurer pour pouvoir les utiliser.
+
+Les applications produites par Koumoul sont prè-configurées et vous pouvez donc les sélectionner lors de l'ajout d'une application. Il est aussi possible d'ajouter des applications externes à plateforme.
 
 
 ### Ajout d'une application Infos-Parcelles et Info-Localisations
