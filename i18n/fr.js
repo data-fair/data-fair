@@ -128,7 +128,7 @@ module.exports = {
       permission: {
         title: 'Permissions, gérez les droits d\'accès'
       },
-      service: {
+      service: {
         title: 'Services, ameliorer vos données'
       },
       application: {
