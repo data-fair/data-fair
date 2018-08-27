@@ -148,6 +148,7 @@ router.post('/_init', asyncWrap(async(req, res) => {
     description: apisDict[s.url].info.description,
     url: s.url,
     apiDoc: apisDict[s.url],
+    server: apisDict[s.url].servers && apisDict[s.url].servers.length && apisDict[s.url].servers[0].url,
     actions: computeActions(apisDict[s.url]),
     owner: Object.assign(s.owner.type === 'organization' ? {role: config.adminRole} : {}, s.owner),
     permissions: (s.owner.type === 'organization' ? [{
