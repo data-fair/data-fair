@@ -81,10 +81,6 @@ function datasetPageUrl(dataset) {
   return `${config.publicUrl}/dataset/${dataset.id}/description`
 }
 
-function datasetFileUrl(dataset) {
-  return `${config.publicUrl}/api/v1/datasets/${dataset.id}/full`
-}
-
 function datasetPageDesc(dataset) {
   const desc = dataset.description ? dataset.description + '\n\n' : ''
   const url = datasetPageUrl(dataset)
@@ -111,9 +107,9 @@ async function addResourceToDataset(catalog, dataset, publication) {
       datafairDatasetId: dataset.id
     }
   }, {
-    title: `${dataset.title} - ${dataset.file.name}`,
-    description: dataset.description + '\n\nTéléchargez le fichier complet.',
-    url: datasetFileUrl(dataset),
+    title: `Fichier ${dataset.originalFile.mimetype.split('/').pop()}`,
+    description: `Téléchargez le fichier complet au format ${dataset.originalFile.mimetype.split('/').pop()}.`,
+    url: `${config.publicUrl}/api/v1/datasets/${dataset.id}/raw`,
     type: 'main',
     filetype: 'remote',
     format: 'fichier',
@@ -178,14 +174,25 @@ async function createNewDataset(catalog, dataset, publication) {
         datafairEmbed: dataset.bbox ? 'map' : 'table'
       }
     }, {
-      title: `Fichier ${dataset.file.mimetype.split('/').pop()}`,
-      description: `Téléchargez le fichier complet au format ${dataset.file.mimetype.split('/').pop()}.`,
-      url: datasetFileUrl(dataset),
+      title: `Fichier ${dataset.originalFile.name.split('.').pop()}`,
+      description: `Téléchargez le fichier complet au format ${dataset.originalFile.name.split('.').pop()}.`,
+      url: `${config.publicUrl}/api/v1/datasets/${dataset.id}/raw`,
+      type: 'main',
+      filetype: 'remote',
+      filesize: dataset.originalFile.size,
+      mime: dataset.originalFile.mimetype
+    }]
+  }
+  if (dataset.file.mimetype !== dataset.originalFile.mimetype) {
+    udataDataset.resources.push({
+      title: `Fichier ${dataset.file.name.split('.').pop()}`,
+      description: `Téléchargez le fichier complet au format ${dataset.file.name.split('.').pop()}.`,
+      url: `${config.publicUrl}/api/v1/datasets/${dataset.id}/convert`,
       type: 'main',
       filetype: 'remote',
       filesize: dataset.file.size,
       mime: dataset.file.mimetype
-    }]
+    })
   }
   if (catalog.organization && catalog.organization.id) {
     udataDataset.organization = {id: catalog.organization.id}

@@ -346,6 +346,13 @@ router.get('/:datasetId/raw', permissions.middleware('downloadOriginalData', 're
   res.download(datasetUtils.originalFileName(req.dataset), req.dataset.originalFile.name)
 })
 
+// Download the dataset in various formats
+router.get('/:datasetId/convert', permissions.middleware('downloadOriginalData', 'read'), (req, res, next) => {
+  if (!req.query || !req.query.format) res.download(datasetUtils.fileName(req.dataset), req.dataset.file.name)
+  // TODO add logic to support other formats
+  else res.status(400).send(`Format ${req.query.format} is not supported.`)
+})
+
 // Download the full dataset with extensions
 router.get('/:datasetId/full', permissions.middleware('downloadFullData', 'read'), asyncWrap(async (req, res, next) => {
   res.setHeader('Content-disposition', 'attachment; filename=' + req.dataset.file.name)
