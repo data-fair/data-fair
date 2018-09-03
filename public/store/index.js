@@ -16,11 +16,17 @@ export default () => {
       vocabulary: null,
       vocabularyArray: [],
       licenses: {},
-      env: {}
+      env: {},
+      searchQueries: {}
     },
     getters: {
       ownerLicenses: (state) => (owner) => {
         return state.licenses[owner.type + '/' + owner.id]
+      },
+      searchQuery: (state) => (type) => {
+        const searchQuery = Object.assign({}, state.searchQueries[type])
+        if (searchQuery.owner === undefined) searchQuery.owner = `user:${state.user.id}`
+        return searchQuery
       }
     },
     mutations: {
@@ -29,6 +35,9 @@ export default () => {
       },
       ownerLicenses(state, payload) {
         Vue.set(state.licenses, payload.owner.type + '/' + payload.owner.id, payload.licenses)
+      },
+      setSearchQuery(state, {type, query}) {
+        Vue.set(state.searchQueries, type, query)
       }
     },
     actions: {
@@ -52,6 +61,9 @@ export default () => {
       nuxtServerInit({commit, dispatch}, {req, env, app}) {
         commit('setAny', {env: {...env}, user: req.user})
         dispatch('session/init', {user: req.user, baseUrl: env.publicUrl + '/api/v1/session'})
+      },
+      searchQuery({commit}, params) {
+        commit('setSearchQuery', params)
       }
     }
   })

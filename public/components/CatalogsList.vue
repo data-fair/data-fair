@@ -2,7 +2,7 @@
   <v-container fluid grid-list-lg style="width:100vw">
     <h3 class="display-1" v-if="catalogs">{{ catalogs.count }} catalogue{{ plural }} configuré{{ plural }}</h3>
 
-    <search-filters :filter-labels="{}" :filters="filters" :facets="catalogs && catalogs.facets" @apply="refresh"/>
+    <search-filters :filter-labels="{}" :filters="filters" :facets="catalogs && catalogs.facets" type="catalogs" @apply="refresh"/>
     <search-progress :loading="loading"/>
 
     <v-layout row wrap class="resourcesList" v-if="catalogs">

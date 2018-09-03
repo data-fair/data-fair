@@ -35,8 +35,10 @@
 </template>
 
 <script>
+import {mapActions} from 'vuex'
+
 export default {
-  props: ['filters', 'filterLabels', 'facets'],
+  props: ['filters', 'filterLabels', 'facets', 'type'],
   data: () => ({
     owners: []
   }),
@@ -66,11 +68,9 @@ export default {
   },
   created() {
     this.readParams()
-    if (this.user && !this.$route.query.owner) {
-      this.$router.push({ query: { owner: `user:${this.user.id}` } })
-    }
   },
   methods: {
+    ...mapActions(['searchQuery']),
     readParams() {
       Object.keys(this.filterLabels).forEach(key => {
         this.$set(this.filters, key, this.$route.query[key])
@@ -91,8 +91,9 @@ export default {
         else delete query[key]
       })
       if (this.owners.length) query.owner = this.owners.join(',').replace()
-      else delete query.owner
+      else query.owner = null
       this.$router.push({ query })
+      this.searchQuery({type: this.type, query})
     }
   }
 }

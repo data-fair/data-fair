@@ -2,7 +2,7 @@
   <v-container fluid grid-list-lg style="width:100vw">
     <h3 class="display-1" v-if="remoteServices">{{ remoteServices.count }} service{{ plural }} configuré{{ plural }}</h3>
 
-    <search-filters v-if="initDone" :filter-labels="{}" :filters="filters" :facets="remoteServices && remoteServices.facets" @apply="refresh"/>
+    <search-filters v-if="initDone" :filter-labels="{}" :filters="filters" :facets="remoteServices && remoteServices.facets" type="remote-services" @apply="refresh"/>
     <search-progress :loading="loading"/>
 
     <v-layout row wrap class="resourcesList" v-if="remoteServices">

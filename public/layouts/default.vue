@@ -19,10 +19,10 @@
       <!-- larger screens: navigation in toolbar -->
       <v-toolbar-items class="hidden-md-and-down">
         <v-btn flat :to="localePath('index')" color="primary" exact>Accueil</v-btn>
-        <v-btn flat :to="localePath('datasets')" color="primary" :class="routePrefix === 'dataset' ? 'v-btn--active' : ''">Jeux de données</v-btn>
-        <v-btn flat :to="localePath('remote-services')" color="primary" :class="routePrefix === 'remote' ? 'v-btn--active' : ''">Services</v-btn>
-        <v-btn flat :to="localePath('applications')" color="primary" :class="routePrefix === 'application' ? 'v-btn--active' : ''">Applications</v-btn>
-        <v-btn flat :to="localePath('catalogs')" color="primary" :class="routePrefix === 'catalog' ? 'v-btn--active' : ''">Catalogues</v-btn>
+        <v-btn flat :to="localePath({name: 'datasets', query: searchQuery('datasets')})" color="primary" :class="routePrefix === 'dataset' ? 'v-btn--active' : ''">Jeux de données</v-btn>
+        <v-btn flat :to="localePath({name: 'remote-services', query: searchQuery('remote-services')})" color="primary" :class="routePrefix === 'remote' ? 'v-btn--active' : ''">Services</v-btn>
+        <v-btn flat :to="localePath({name: 'applications', query: searchQuery('applications')})" color="primary" :class="routePrefix === 'application' ? 'v-btn--active' : ''">Applications</v-btn>
+        <v-btn flat :to="localePath({name: 'catalogs', query: searchQuery('catalogs')})" color="primary" :class="routePrefix === 'catalog' ? 'v-btn--active' : ''">Catalogues</v-btn>
         <v-menu>
           <v-btn slot="activator" :class="(routePrefix === 'user' || routePrefix === 'interoperate') ? 'v-btn--active' : ''" flat>Documentation</v-btn>
           <v-list>
@@ -68,16 +68,16 @@
           <v-list-tile :to="localePath('index')" exact>
             <v-list-tile-title>Accueil</v-list-tile-title>
           </v-list-tile>
-          <v-list-tile :to="localePath('datasets')">
+          <v-list-tile :to="localePath({name: 'datasets', query: searchQuery('datasets')})">
             <v-list-tile-title>Jeux de données</v-list-tile-title>
           </v-list-tile>
-          <v-list-tile :to="localePath('remote-services')">
+          <v-list-tile :to="localePath({name: 'remote-services', query: searchQuery('remote-services')})">
             <v-list-tile-title>Services</v-list-tile-title>
           </v-list-tile>
-          <v-list-tile :to="localePath('applications')">
+          <v-list-tile :to="localePath({name: 'applications', query: searchQuery('applications')})">
             <v-list-tile-title>Applications</v-list-tile-title>
           </v-list-tile>
-          <v-list-tile :to="localePath('catalogs')">
+          <v-list-tile :to="localePath({name: 'catalogs', query: searchQuery('catalogs')})">
             <v-list-tile-title>Catalogues</v-list-tile-title>
           </v-list-tile>
           <v-list-tile v-if="!user" @click="login" color="primary">
@@ -111,7 +111,7 @@
 
 <script>
 import eventBus from '../event-bus'
-const {mapState, mapActions} = require('vuex')
+const {mapState, mapActions, mapGetters} = require('vuex')
 
 export default {
   data() {
@@ -122,6 +122,7 @@ export default {
   },
   computed: {
     ...mapState(['env']),
+    ...mapGetters(['searchQuery']),
     session() {
       return this.$store.state.session
     },
