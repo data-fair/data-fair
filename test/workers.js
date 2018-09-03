@@ -47,7 +47,8 @@ test.serial('Process newly uploaded CSV dataset', async t => {
   const esIndex = Object.values(esIndices)[0]
   const mapping = esIndex.mappings.line
   t.is(mapping.properties.id.type, 'keyword')
-  t.is(mapping.properties.adr.type, 'text')
+  t.is(mapping.properties.adr.type, 'keyword')
+  t.is(mapping.properties.adr.fields.text.type, 'text')
   t.is(mapping.properties.some_date.type, 'date')
 
   // Update schema to specify geo point
@@ -64,7 +65,7 @@ test.serial('Process newly uploaded CSV dataset', async t => {
   const esIndex2 = Object.values(esIndices2)[0]
   const mapping2 = esIndex2.mappings.line
   t.is(mapping2.properties.id.type, 'keyword')
-  t.is(mapping2.properties.adr.type, 'text')
+  t.is(mapping2.properties.adr.type, 'keyword')
   t.is(mapping2.properties.some_date.type, 'date')
   t.is(mapping2.properties.loc.type, 'keyword')
   t.is(mapping2.properties._geopoint.type, 'geo_point')

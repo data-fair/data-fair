@@ -10,7 +10,6 @@ module.exports = (dataset) => {
   const publicClasses = (publicPermissions && publicPermissions.classes) || []
   dataset.schema = dataset.schema || []
   const properties = dataset.schema.map(p => p.key)
-  const nonTextProperties = dataset.schema.filter(p => p.type !== 'string' || p.format).map(p => p.key)
   const numberProperties = dataset.schema.filter(p => p.type === 'number').map(p => p.key)
   const queryParams = [{
     in: 'query',
@@ -65,7 +64,7 @@ module.exports = (dataset) => {
       type: 'array',
       items: {
         type: 'string',
-        enum: nonTextProperties
+        enum: properties
       }
     },
     style: 'commaDelimited'
@@ -309,7 +308,7 @@ module.exports = (dataset) => {
             required: true,
             schema: {
               type: 'string',
-              enum: nonTextProperties
+              enum: properties
             }
           }, metricParam, metricFieldParam, aggSizeParam].concat(queryParams),
           responses: {

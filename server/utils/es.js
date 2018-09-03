@@ -25,10 +25,12 @@ exports.esProperty = prop => {
   if (prop.type === 'boolean') return {type: 'boolean'}
   if (prop.type === 'string' && prop.format === 'date-time') return {type: 'date'}
   if (prop.type === 'string' && prop.format === 'date') return {type: 'date'}
-  if (prop.type === 'string' && prop.format === 'uri-reference') return {type: 'keyword', fields: {text: {type: 'text', analyzer: config.elasticsearch.defaultAnalyzer}}}
-  return {type: 'text', analyzer: config.elasticsearch.defaultAnalyzer}
+  // uri-reference and full text fields are managed in the same way from now on, because we want to be able to aggregate on small full text fields
+  // TODO: maybe ignore_above should be only for uri-reference fields
+  const textField = {type: 'keyword', ignore_above: 200, fields: {text: {type: 'text', analyzer: config.elasticsearch.defaultAnalyzer}}}
+  if (prop.type === 'string' && prop.format === 'uri-reference') return textField
+  return textField
 }
-
 exports.indexDefinition = (dataset) => {
   const body = JSON.parse(JSON.stringify(indexBase))
 
