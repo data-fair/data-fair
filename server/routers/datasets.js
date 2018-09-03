@@ -250,7 +250,7 @@ router.post('/:datasetId', permissions.middleware('writeData', 'write'), filesUt
 }))
 
 // Set max-age
-// Also compare manage last-modified and if-modified-since headers for cache revalidation
+// Also compare last-modified and if-modified-since headers for cache revalidation
 // only send data if the dataset was finalized since then
 // prevent running expensive queries while always presenting fresh data
 // also set last finalized date into last-modified header
@@ -263,9 +263,20 @@ function managePublicCache(req, res) {
   res.setHeader('Last-Modified', finalizedAt)
 }
 
+// Error from ES backend should be stored in the journal
+async function manageESError(req, err) {
+  if (req.dataset.status === 'finalized' && err.statusCode >= 404) {
+    await req.app.get('db').collection('datasets').updateOne({id: req.params.datasetId}, {'$set': {status: 'error'}})
+    await journals.log(req.app, req.dataset, {type: 'error', data: err.message})
+  }
+  throw err
+}
+
 // Read/search data for a dataset
 router.get('/:datasetId/lines', permissions.middleware('readLines', 'read'), asyncWrap(async(req, res) => {
-  if (req.query && req.query.page && req.query.size && req.query.page * req.query.size > 10000) { return res.status(404).send('You can only access the first 10 000 elements.') }
+  if (req.query && req.query.page && req.query.size && req.query.page * req.query.size > 10000) {
+    return res.status(404).send('You can only access the first 10 000 elements.')
+  }
 
   const db = req.app.get('db')
   if (!req.user && managePublicCache(req, res)) return res.status(304).send()
@@ -295,7 +306,12 @@ router.get('/:datasetId/lines', permissions.middleware('readLines', 'read'), asy
     cacheHash = hash
   }
 
-  const esResponse = await esUtils.searchInDataset(req.app.get('es'), req.dataset, req.query)
+  let esResponse
+  try {
+    esResponse = await esUtils.searchInDataset(req.app.get('es'), req.dataset, req.query)
+  } catch (err) {
+    await manageESError(req, err)
+  }
   if (req.query.format === 'geojson') {
     const geojson = geo.result2geojson(esResponse)
     geojson.bbox = (await bboxPromise).bbox
@@ -323,21 +339,36 @@ router.get('/:datasetId/lines', permissions.middleware('readLines', 'read'), asy
 // Special geo aggregation
 router.get('/:datasetId/geo_agg', permissions.middleware('getGeoAgg', 'read'), asyncWrap(async(req, res) => {
   if (!req.user && managePublicCache(req, res)) return res.status(304).send()
-  const result = await esUtils.geoAgg(req.app.get('es'), req.dataset, req.query)
+  let result
+  try {
+    result = await esUtils.geoAgg(req.app.get('es'), req.dataset, req.query)
+  } catch (err) {
+    await manageESError(req, err)
+  }
   res.status(200).send(result)
 }))
 
 // Standard aggregation to group items by value and perform an optional metric calculation on each group
 router.get('/:datasetId/values_agg', permissions.middleware('getValuesAgg', 'read'), asyncWrap(async(req, res) => {
   if (!req.user && managePublicCache(req, res)) return res.status(304).send()
-  const result = await esUtils.valuesAgg(req.app.get('es'), req.dataset, req.query)
+  let result
+  try {
+    result = await esUtils.valuesAgg(req.app.get('es'), req.dataset, req.query)
+  } catch (err) {
+    await manageESError(req, err)
+  }
   res.status(200).send(result)
 }))
 
 // Simple metric aggregation to calculate some value (sum, avg, etc.)
 router.get('/:datasetId/metric_agg', permissions.middleware('getMetricAgg', 'read'), asyncWrap(async(req, res) => {
   if (!req.user && managePublicCache(req, res)) return res.status(304).send()
-  const result = await esUtils.metricAgg(req.app.get('es'), req.dataset, req.query)
+  let result
+  try {
+    result = await esUtils.metricAgg(req.app.get('es'), req.dataset, req.query)
+  } catch (err) {
+    await manageESError(req, err)
+  }
   res.status(200).send(result)
 }))
 

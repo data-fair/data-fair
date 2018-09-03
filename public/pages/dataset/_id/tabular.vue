@@ -124,7 +124,7 @@ export default {
         this.data = await this.$axios.$get(this.resourceUrl + '/lines', {params})
         this.notFound = false
       } catch (error) {
-        if (error.status === 404) this.notFound = true
+        if (error.response && error.response.status === 404) this.notFound = true
         else eventBus.$emit('notification', {error, msg: `Erreur pendant la récupération des données`})
       }
       this.loading = false

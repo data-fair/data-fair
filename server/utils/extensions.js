@@ -67,10 +67,13 @@ class ExtendStream extends Transform {
   }
   async init() {
     const db = this.options.db
+    const esClient = this.options.esClient
     this.indexName = es.indexName(this.options.dataset)
     const extensions = this.options.dataset.extensions || []
     this.mappings = {}
     this.extensionsMap = {}
+    // The ES index was not yet created, we will not try to extract previous extensions
+    if (!await esClient.indices.exists({index: this.indexName})) return
     for (let extension of extensions) {
       if (!extension.active) return
       const remoteService = await db.collection('remote-services').findOne({id: extension.remoteService})

@@ -82,11 +82,11 @@ const events = require('../../shared/events.json').dataset
 
 export default {
   data() {
-    return { events }
+    return { events, error: null }
   },
   computed: {
     ...mapState('dataset', ['dataset', 'journal', 'nbApplications']),
-    ...mapGetters('dataset', ['can']),
+    ...mapGetters('dataset', ['can', 'resourceUrl']),
     licenses() {
       return this.$store.getters.ownerLicenses(this.dataset.owner)
     }
@@ -98,8 +98,14 @@ export default {
       this.dataset.license = this.licenses.find(l => l.href === this.dataset.license.href)
     }
   },
-  mounted() {
+  async mounted() {
     this.$store.dispatch('fetchLicenses', this.dataset.owner)
+    // Ping the data endpoint to check that index is available
+    try {
+      this.data = await this.$axios.$get(this.resourceUrl + '/lines', {size: 0})
+    } catch (err) {
+      // Do nothing, error should be added to the journal
+    }
   },
   methods: {
     ...mapActions('dataset', ['patch'])
