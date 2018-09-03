@@ -21,7 +21,7 @@
               </v-list-tile-avatar>
               <span>{{ events[journal[0].type].text }}</span>
               <v-spacer/>
-              <v-list-tile-action v-if="journal[0].type === 'error'">
+              <v-list-tile-action v-if="journal[0].type === 'error' && can('writeDescription')">
                 <v-btn icon title="Relancer" @click="patch({})">
                   <v-icon>play_arrow</v-icon>
                 </v-btn>
