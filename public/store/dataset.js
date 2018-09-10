@@ -121,8 +121,10 @@ export default {
       if (patched) commit('patch', patch)
     },
     async remove({state, getters, dispatch}) {
+      const options = {}
+      if (state.dataset.owner.type === 'organization') options.headers = {'x-organizationId': state.dataset.owner.id}
       try {
-        await this.$axios.delete(getters.resourceUrl)
+        await this.$axios.delete(getters.resourceUrl, options)
         eventBus.$emit('notification', `Le jeu de données ${state.dataset.title} a bien été supprimé`)
       } catch (error) {
         eventBus.$emit('notification', {error, msg: 'Erreur pendant la suppression du jeu de données'})
