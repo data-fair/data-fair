@@ -78,6 +78,7 @@ exports.switchAlias = async (client, dataset, tempId) => {
     if (key !== tempId) await client.indices.delete({index: key})
   }
   await client.indices.deleteAlias({name, index: '_all', ignore: [404]})
+  await client.indices.delete({index: name, ignore: [404]})
   await client.indices.putAlias({name, index: tempId})
 }
 

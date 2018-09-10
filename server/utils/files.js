@@ -66,7 +66,7 @@ const upload = multer({
     if (!req.body) return cb(createError(400, 'Missing body'))
     if (!req.user) return cb(createError(401))
 
-    let owner = userUtils.owner(req)
+    let owner = usersUtils.owner(req)
     if (req.dataset) owner = req.dataset.owner
     // manage disk storage quota
     if (!req.get('Content-Length')) return cb(createError(411, 'Content-Length is mandatory'))
