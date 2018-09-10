@@ -3,9 +3,10 @@ const config = require('config')
 const path = require('path')
 const multer = require('multer')
 const createError = require('http-errors')
-const datasetUtils = require('./dataset')
 const slug = require('slugify')
 const mime = require('mime-types')
+const usersUtils = require('./users')
+const datasetUtils = require('./dataset')
 const fallbackMimeTypes = {
   dbf: 'application/dbase',
   dif: 'text/plain',
@@ -15,7 +16,8 @@ const fallbackMimeTypes = {
 const {tabularTypes, geographicalTypes} = require('../workers/converter')
 
 function uploadDir(req) {
-  return path.join(config.dataDir, (req.get('x-organizationId') && req.get('x-organizationId') !== 'user') ? 'organization' : 'user', req.get('x-organizationId') || req.user.id)
+  const owner = usersUtils.owner(req)
+  return path.join(config.dataDir, owner.type, owner.id)
 }
 
 const storage = multer.diskStorage({
@@ -64,7 +66,7 @@ const upload = multer({
     if (!req.body) return cb(createError(400, 'Missing body'))
     if (!req.user) return cb(createError(401))
 
-    let owner = {type: (req.get('x-organizationId') && req.get('x-organizationId') !== 'user') ? 'organization' : 'user', id: req.get('x-organizationId') || req.user.id}
+    let owner = userUtils.owner(req)
     if (req.dataset) owner = req.dataset.owner
     // manage disk storage quota
     if (!req.get('Content-Length')) return cb(createError(411, 'Content-Length is mandatory'))
