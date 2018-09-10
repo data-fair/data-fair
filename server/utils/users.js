@@ -2,7 +2,7 @@ const createError = require('http-errors')
 
 exports.owner = (req) => {
   const organizationId = req.get('x-organizationId')
-  if (!organizationId) {
+  if (!organizationId || organizationId === 'user') {
     return { type: 'user', id: req.user.id, name: req.user.name }
   } else {
     const orga = req.user.organizations.find(o => o.id === organizationId)
