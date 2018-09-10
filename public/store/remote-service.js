@@ -60,6 +60,8 @@ export default {
       if (patched) commit('patch', patch)
     },
     async remove({state, getters, dispatch}) {
+      const options = {headers: {'x-organizationId': 'user'}}
+      if (state.remoteService.owner.type === 'organization') options.headers = {'x-organizationId': state.remoteService.owner.id}
       try {
         await this.$axios.delete(getters.resourceUrl)
         eventBus.$emit('notification', `La configuration du service ${state.remoteService.title} a bien été supprimée`)

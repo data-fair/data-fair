@@ -92,6 +92,7 @@ export default {
     },
     async importApi() {
       const options = {
+        headers: {'x-organizationId': 'user'},
         progress: (e) => {
           if (e.lengthComputable) this.uploadProgress = (e.loaded / e.total) * 100
         }

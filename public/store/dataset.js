@@ -121,7 +121,7 @@ export default {
       if (patched) commit('patch', patch)
     },
     async remove({state, getters, dispatch}) {
-      const options = {}
+      const options = {headers: {'x-organizationId': 'user'}}
       if (state.dataset.owner.type === 'organization') options.headers = {'x-organizationId': state.dataset.owner.id}
       try {
         await this.$axios.delete(getters.resourceUrl, options)

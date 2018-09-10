@@ -85,7 +85,7 @@ export default {
       }
     },
     async createApplication() {
-      const options = {}
+      const options = {headers: {'x-organizationId': 'user'}}
       if (this.owner.type === 'organization') {
         options.headers = {'x-organizationId': this.owner.id}
         if (this.owner.role) options.headers['x-organizationRole'] = this.owner.role

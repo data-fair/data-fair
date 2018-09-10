@@ -75,6 +75,7 @@ export default {
     },
     async importData() {
       const options = {
+        headers: {'x-organizationId': 'user'},
         onUploadProgress: (e) => {
           if (e.lengthComputable) {
             this.uploadProgress = (e.loaded / e.total) * 100
