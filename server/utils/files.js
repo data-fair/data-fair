@@ -15,7 +15,7 @@ const fallbackMimeTypes = {
 const {tabularTypes, geographicalTypes} = require('../workers/converter')
 
 function uploadDir(req) {
-  return path.join(config.dataDir, req.get('x-organizationId') ? 'organization' : 'user', req.get('x-organizationId') || req.user.id)
+  return path.join(config.dataDir, (req.get('x-organizationId') && req.get('x-organizationId') !== 'user') ? 'organization' : 'user', req.get('x-organizationId') || req.user.id)
 }
 
 const storage = multer.diskStorage({
@@ -64,7 +64,7 @@ const upload = multer({
     if (!req.body) return cb(createError(400, 'Missing body'))
     if (!req.user) return cb(createError(401))
 
-    let owner = {type: req.get('x-organizationId') ? 'organization' : 'user', id: req.get('x-organizationId') || req.user.id}
+    let owner = {type: (req.get('x-organizationId') && req.get('x-organizationId') !== 'user') ? 'organization' : 'user', id: req.get('x-organizationId') || req.user.id}
     if (req.dataset) owner = req.dataset.owner
     // manage disk storage quota
     if (!req.get('Content-Length')) return cb(createError(411, 'Content-Length is mandatory'))
