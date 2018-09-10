@@ -195,11 +195,7 @@ router.post('', filesUtils.uploadFile(), asyncWrap(async(req, res) => {
   } else {
     // The format of the original file is already well suited to workers
     dataset.status = 'loaded'
-    dataset.file = {
-      name: req.file.originalname,
-      size: req.file.size,
-      mimetype: req.file.mimetype
-    }
+    dataset.file = dataset.originalFile
     const fileSample = await datasetFileSample(dataset)
     dataset.file.encoding = chardet.detect(fileSample)
   }
@@ -228,11 +224,7 @@ router.post('/:datasetId', permissions.middleware('writeData', 'write'), filesUt
   } else {
     // The format of the original file is already well suited to workers
     req.dataset.status = 'loaded'
-    req.dataset.file = {
-      name: req.file.originalname,
-      size: req.file.size,
-      mimetype: req.file.mimetype
-    }
+    req.dataset.file = req.dataset.originalFile
     const fileSample = await datasetFileSample(req.dataset)
     req.dataset.file.encoding = chardet.detect(fileSample)
   }
