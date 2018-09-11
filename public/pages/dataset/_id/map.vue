@@ -1,5 +1,5 @@
 <template lang="html">
-  <dataset-map :height-margin="60" />
+  <dataset-map :height-margin="60" :show-select="true" />
 </template>
 
 <script>

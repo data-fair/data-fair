@@ -2,7 +2,9 @@
 
   <v-card>
     <v-card class="mt-2 ml-2 px-2" style="position: absolute;z-index:2;max-width:400px;" v-if="dataset">
+
       <v-text-field
+        style="margin-top: 8px;margin-bottom: 8px;"
         label="Rechercher"
         v-model="query"
         @keyup.enter.native="refresh"
@@ -12,6 +14,8 @@
         single-line/>
 
       <v-select
+        v-if="showSelect"
+        style="margin-top: 30px;"
         :items="dataset.schema.map(f => ({value: f.key, text: f.title || f['x-originalName']}))"
         item-value="value"
         item-text="text"
@@ -92,7 +96,7 @@ const dataLayers = [{
 }]
 
 export default {
-  props: ['heightMargin'],
+  props: ['heightMargin', 'showSelect'],
   data: () => ({mapHeight: 0, query: '', select: []}),
   computed: {
     ...mapState(['env']),
