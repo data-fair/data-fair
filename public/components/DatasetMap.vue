@@ -110,8 +110,8 @@ export default {
 
     this.mapHeight = Math.max(window.innerHeight - this.$el.getBoundingClientRect().y - this.heightMargin, 300)
 
-    // Prevent overloading the tiles with long texts
-    this.select = this.dataset.schema.filter(field => field.type !== 'string' || field.format === 'uri-reference').map(field => field.key)
+    // Prevent overloading the tiles with long texts, geometries, etc.
+    this.select = this.dataset.schema.filter(field => field.type === 'string' && field.format === 'uri-reference').map(field => field.key)
 
     await new Promise(resolve => setTimeout(resolve, 0))
     this.map = new mapboxgl.Map({container: 'map', style: this.env.map.style})
