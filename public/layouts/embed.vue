@@ -43,4 +43,7 @@ export default {
 body .application {
   font-family: 'Nunito', sans-serif;
 }
+html {
+  overflow-y: auto;
+}
 </style>

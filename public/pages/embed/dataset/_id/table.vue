@@ -5,7 +5,7 @@
       <p>Vous pouvez consulter <nuxt-link :to="`/dataset/${dataset.id}/journal`">le journal</nuxt-link> pour en savoir plus.</p>
     </div>
     <v-card>
-      <v-card-title>
+      <v-card-title style="padding-bottom: 0;">
         <v-text-field
           label="Rechercher"
           v-model="query"
@@ -16,13 +16,6 @@
           style="min-width:150px;"/>
         <v-spacer/>
         <div class="datatable__actions">
-          Nombre de lignes
-          <v-select
-            :items="[10,20,50]"
-            v-model="pagination.rowsPerPage"
-            label=""
-            style="margin-left:20px;margin-right:30px;"
-          />
           <v-pagination v-if="data.total" v-model="pagination.page" :length="Math.ceil(data.total / pagination.rowsPerPage)"/>
         </div>
       </v-card-title>
@@ -65,7 +58,7 @@ export default {
     select: [],
     pagination: {
       page: 1,
-      rowsPerPage: 10,
+      rowsPerPage: 5,
       sortBy: null,
       descending: false
     },
