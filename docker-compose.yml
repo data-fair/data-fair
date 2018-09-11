@@ -28,3 +28,8 @@ services:
     volumes:
       - ./test/resources/users.json:/webapp/data/users.json
       - ./test/resources/organizations.json:/webapp/data/organizations.json
+
+  openapi-viewer:
+    image: koumoul/openapi-viewer:0.8.0
+    ports:
+      - 5680:8080

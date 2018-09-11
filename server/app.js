@@ -16,6 +16,13 @@ const upgrade = require('../upgrade')
 const session = require('@koumoul/sd-express')({directoryUrl: config.directoryUrl, publicUrl: config.publicUrl})
 
 const app = express()
+
+// Create a mono-domain environment with other services in dev
+if (process.env.NODE_ENV === 'development') {
+  const proxy = require('http-proxy-middleware')
+  app.use('/openapi-viewer', proxy({target: 'http://localhost:5680', pathRewrite: {'^/openapi-viewer': ''}}))
+}
+
 app.use(bodyParser.json({limit: '1000kb'}))
 app.use(cookieParser())
 // In production CORS is taken care of by the reverse proxy if necessary

@@ -47,7 +47,8 @@ module.exports = {
     directoryUrl: config.directoryUrl,
     adminRole: config.adminRole,
     map: config.map,
-    brand: config.brand
+    brand: config.brand,
+    openapiViewerUrl: config.openapiViewerUrl
   },
   head: {
     title: config.brand.title,

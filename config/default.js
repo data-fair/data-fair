@@ -3,6 +3,7 @@ module.exports = {
   publicUrl: 'http://localhost:5600',
   wsPublicUrl: 'ws://localhost:5600',
   directoryUrl: 'http://localhost:8080',
+  openapiViewerUrl: 'https://koumoul.com/openapi-viewer/',
   dataDir: './data/' + (process.env.NODE_ENV || 'development'),
   pluginsDir: './plugins',
   mongoUrl: 'mongodb://localhost:27017/data-fair-' + (process.env.NODE_ENV || 'development'),

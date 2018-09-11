@@ -31,6 +31,7 @@
     "eslint-plugin-promise": "^3.6.0",
     "eslint-plugin-standard": "^3.0.1",
     "eslint-plugin-vue": "^4.1.0",
+    "http-proxy-middleware": "^0.19.0",
     "lodash": "^4.17.10",
     "nock": "^9.1.5",
     "nodemon": "^1.18.3",

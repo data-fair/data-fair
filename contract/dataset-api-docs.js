@@ -433,6 +433,19 @@ module.exports = (dataset) => {
           }
         }
       },
+      '/_diagnose': {
+        get: {
+          summary: 'Récupérer des informations techniques',
+          tags: ['Administration'],
+          responses: {
+            200: {
+              content: {
+                'application/json': {}
+              }
+            }
+          }
+        }
+      },
       '/permissions': permissionsDoc
     },
     externalDocs: {
