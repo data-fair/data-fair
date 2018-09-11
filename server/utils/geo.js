@@ -62,10 +62,10 @@ exports.geometry2fields = async (schema, doc) => {
     console.error('Failure while applying rewind to geojson', err)
   }
   try {
-    if (feature.geometry.type === 'Polygon') {
+    if (['Polygon', 'MultiPolygon'].includes(feature.geometry.type)) {
       const kinked = !!kinks(feature).features.length
       if (kinked) {
-        await polygonRepair(feature)
+        await customUnkink(feature)
       }
     }
   } catch (err) {
@@ -102,7 +102,30 @@ exports.result2geojson = esResponse => {
 
 // Simple wrapping of the command line prepair https://github.com/tudelft3d/prepair
 // help fixing some polygons
-const polygonRepair = async (feature) => {
+const customUnkink = async (feature) => {
+  let tmpFile
+  try {
+    if (feature.geometry.type === 'MultiPolygon') {
+      const newCoordinates = []
+      for (let coordinates of feature.geometry.coordinates) {
+        const childPolygon = {type: 'Feature', geometry: {type: 'Polygon', coordinates}}
+        await prepair(childPolygon)
+        if (childPolygon.geometry.type === 'Polygon') newCoordinates.push(childPolygon.geometry.coordinates)
+        else childPolygon.geometry.coordinates.forEach(c => newCoordinates.push(c))
+      }
+      feature.geometry.coordinates = newCoordinates
+    } else {
+      await prepair(feature)
+    }
+  } catch (err) {
+    console.error('Failed to use the prepair command line tool', err)
+    const unkinked = unkink(feature)
+    feature.geometry = {type: 'MultiPolygon', coordinates: unkinked.features.map(f => f.geometry.coordinates)}
+  }
+  if (tmpFile) tmpFile.cleanup()
+}
+
+const prepair = async (feature) => {
   let tmpFile
   try {
     // const wkt = wktParser.convert(feature.geometry)
@@ -110,10 +133,9 @@ const polygonRepair = async (feature) => {
     await writeFile(tmpFile.fd, JSON.stringify(feature))
     const repaired = await exec(`../prepair/prepair --ogr '${tmpFile.path}'`, {maxBuffer: 100000000})
     feature.geometry = wktParser.parse(repaired.stdout)
+    return feature
   } catch (err) {
-    console.error('Failed to use the prepair command line tool', err)
-    const unkinked = unkink(feature)
-    feature.geometry = {type: 'MultiPolygon', coordinates: unkinked.features.map(f => f.geometry.coordinates)}
+    if (tmpFile) tmpFile.cleanup()
+    throw err
   }
-  if (tmpFile) tmpFile.cleanup()
 }
