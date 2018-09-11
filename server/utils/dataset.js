@@ -31,6 +31,7 @@ exports.readStream = (dataset) => {
       objectMode: true,
       transform(item, encoding, callback) {
         const hasContent = Object.keys(item).reduce((a, b) => a || item[b] !== undefined, false)
+        item._i = this.i = (this.i || 0) + 1
         if (hasContent) callback(null, item)
         else callback()
       }
@@ -44,6 +45,7 @@ exports.readStream = (dataset) => {
         const item = {...feature.properties}
         if (feature.id) item.id = feature.id
         item.geometry = feature.geometry
+        item._i = this.i = (this.i || 0) + 1
         callback(null, item)
       }
     })

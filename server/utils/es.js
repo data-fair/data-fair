@@ -51,6 +51,7 @@ exports.indexDefinition = (dataset) => {
     properties['_geocorners'] = {type: 'geo_point'}
   }
   properties['_rand'] = {type: 'integer'}
+  properties['_i'] = {type: 'integer'}
   return body
 }
 
@@ -245,7 +246,7 @@ const prepareQuery = (dataset, query) => {
   esQuery._source = {includes: query.select ? query.select.split(',') : ['*'], excludes: []};
 
   // Some fields are excluded, unless explicitly included
-  ['_geoshape', '_geopoint', '_geocorners', '_rand'].forEach(f => {
+  ['_geoshape', '_geopoint', '_geocorners', '_rand', '_i'].forEach(f => {
     if (!esQuery._source.includes.includes(f)) esQuery._source.excludes.push(f)
   })
 
