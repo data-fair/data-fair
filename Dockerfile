@@ -10,7 +10,7 @@ WORKDIR /tmp
 RUN apk add --no-cache --virtual .build-deps cmake linux-headers boost-dev gmp gmp-dev mpfr-dev && \
     apk add --no-cache --repository http://dl-cdn.alpinelinux.org/alpine/edge/main libressl2.7-libcrypto && \
     apk add --no-cache --virtual .gdal-build-deps --repository http://dl-cdn.alpinelinux.org/alpine/edge/testing gdal-dev && \
-    apk add --no-cache --repository http://dl-cdn.alpinelinux.org/alpine/edge/testing gdal && \
+    apk add --no-cache --repository http://dl-cdn.alpinelinux.org/alpine/edge/testing gdal proj4 && \
     curl -L https://github.com/CGAL/cgal/releases/download/releases%2FCGAL-4.12/CGAL-4.12.tar.xz -o cgal.tar.xz && \
     tar -xf cgal.tar.xz && \
     rm cgal.tar.xz && \
