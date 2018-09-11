@@ -407,4 +407,14 @@ router.get('/:datasetId/journal', permissions.middleware('readJournal', 'read'),
   res.json(journal.events)
 }))
 
+// Special route with very technical informations to help diagnose bugs, broken indices, etc.
+router.get('/:datasetId/_diagnose', asyncWrap(async(req, res) => {
+  if (!req.user) return res.status(401).send()
+  if (!req.user.isAdmin) return res.status(401).send()
+  const esInfos = await esUtils.datasetInfos(req.app.get('es'), req.dataset)
+  res.json({
+    esInfos
+  })
+}))
+
 module.exports = router

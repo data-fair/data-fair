@@ -16,7 +16,7 @@ const indexBase = {
   mappings: {line: {}}
 }
 
-const indexName = exports.indexName = dataset => `${config.indicesPrefix}-${dataset.id}`
+const aliasName = exports.aliasName = dataset => `${config.indicesPrefix}-${dataset.id}`
 
 exports.esProperty = prop => {
   if (prop.type === 'object') return {type: 'object'}
@@ -56,7 +56,7 @@ exports.indexDefinition = (dataset) => {
 }
 
 function indexPrefix(dataset) {
-  return `${indexName(dataset)}-${crypto.createHash('sha1').update(dataset.id).digest('hex').slice(0, 12)}`
+  return `${aliasName(dataset)}-${crypto.createHash('sha1').update(dataset.id).digest('hex').slice(0, 12)}`
 }
 
 exports.initDatasetIndex = async (client, dataset) => {
@@ -67,12 +67,12 @@ exports.initDatasetIndex = async (client, dataset) => {
 }
 
 exports.delete = async (client, dataset) => {
-  await client.indices.deleteAlias({name: indexName(dataset), index: '_all'})
+  await client.indices.deleteAlias({name: aliasName(dataset), index: '_all'})
   await client.indices.delete({index: `${indexPrefix(dataset)}-*`})
 }
 
 exports.switchAlias = async (client, dataset, tempId) => {
-  const name = indexName(dataset)
+  const name = aliasName(dataset)
   // Delete all other indices from this dataset
   const previousIndices = await client.indices.get({index: `${indexPrefix(dataset)}-*`})
   for (let key in previousIndices) {
@@ -85,7 +85,7 @@ exports.switchAlias = async (client, dataset, tempId) => {
 
 exports.searchInDataset = async (client, dataset, query) => {
   const esQuery = prepareQuery(dataset, query)
-  const esResponse = await client.search({index: indexName(dataset), body: esQuery})
+  const esResponse = await client.search({index: aliasName(dataset), body: esQuery})
   return esResponse
 }
 
@@ -95,7 +95,7 @@ exports.bboxAgg = async (client, dataset, query = {}) => {
   // Use corners, not centroid in order to get truly surrounding box
   // and to function even with a single document
   esQuery.aggs = {bbox: {geo_bounds: {field: '_geocorners'}}}
-  const esResponse = await client.search({index: indexName(dataset), body: esQuery})
+  const esResponse = await client.search({index: aliasName(dataset), body: esQuery})
   const response = {total: esResponse.hits.total}
   // ES bounds to standard bounding box: left,bottom,right,top
   const bounds = esResponse.aggregations.bbox.bounds
@@ -113,7 +113,7 @@ exports.metricAgg = async (client, dataset, query) => {
       [query.metric]: {field: query.metric_field}
     }
   }
-  const esResponse = await client.search({index: indexName(dataset), body: esQuery})
+  const esResponse = await client.search({index: aliasName(dataset), body: esQuery})
   return {total: esResponse.hits.total, metric: esResponse.aggregations.metric.value}
 }
 
@@ -156,7 +156,7 @@ exports.valuesAgg = async (client, dataset, query) => {
       [query.metric]: {field: query.metric_field}
     }
   }
-  const esResponse = await client.search({index: indexName(dataset), body: esQuery})
+  const esResponse = await client.search({index: aliasName(dataset), body: esQuery})
   return prepareValuesAggResponse(esResponse)
 }
 
@@ -211,7 +211,7 @@ exports.geoAgg = async (client, dataset, query) => {
       [query.metric]: {field: query.metric_field}
     }
   }
-  const esResponse = await client.search({index: indexName(dataset), body: esQuery})
+  const esResponse = await client.search({index: aliasName(dataset), body: esQuery})
   return prepareGeoAggResponse(esResponse)
 }
 
@@ -304,4 +304,16 @@ const getQueryBBOX = (query) => {
     bbox = tiles.xyz2bbox(...query.xyz.split(',').map(Number))
   }
   return bbox
+}
+
+exports.datasetInfos = async (client, dataset) => {
+  // const indices = await client.indices.get({index: `${indexPrefix(dataset)}-*`})
+  const indices = await client.cat.indices({index: `${indexPrefix(dataset)}-*`, format: 'json'})
+  const alias = await client.indices.getAlias({index: aliasName(dataset)})
+  return {
+    aliasName: aliasName(dataset),
+    indexPrefix: indexPrefix(dataset),
+    indices,
+    alias
+  }
 }

@@ -69,7 +69,7 @@ class ExtendStream extends Transform {
   async init() {
     const db = this.options.db
     const esClient = this.options.esClient
-    this.indexName = es.indexName(this.options.dataset)
+    this.indexName = es.aliasName(this.options.dataset)
     const extensions = this.options.dataset.extensions || []
     this.mappings = {}
     this.extensionsMap = {}
@@ -211,7 +211,7 @@ exports.extend = async(app, dataset, extension, remoteService, action) => {
   const db = app.get('db')
   const hashes = {}
   const extensionKey = getExtensionKey(remoteService.id, action.id)
-  const indexName = es.indexName(dataset)
+  const indexName = es.aliasName(dataset)
 
   const stats = {}
 
@@ -324,7 +324,7 @@ class CalculatedExtension extends Transform {
 }
 
 exports.extendCalculated = async (app, dataset, geopoint, geometry) => {
-  const indexName = es.indexName(dataset)
+  const indexName = es.aliasName(dataset)
   const esClient = app.get('es')
   const indexStream = esStreams.indexStream({esClient, indexName, updateMode: true})
   await pump(
