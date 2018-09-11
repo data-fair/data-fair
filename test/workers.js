@@ -136,3 +136,24 @@ test.serial('Process newly uploaded geojson dataset', async t => {
   dataset = await workers.hook('finalizer')
   t.is(dataset.status, 'finalized')
 })
+
+test.only('Log error for geojson with broken feature', async t => {
+  // Send dataset
+  const datasetFd = fs.readFileSync('./test/resources/geojson-broken.geojson')
+  const form = new FormData()
+  form.append('file', datasetFd, 'geojson-example.geojson')
+  const ax = await axiosBuilder('dmeadus0@answers.com')
+  let res = await ax.post('/api/v1/datasets', form, {headers: testUtils.formHeaders(form)})
+  t.is(res.status, 201)
+
+  // ES indexation and finalization
+  let dataset = await workers.hook('finalizer')
+  t.is(dataset.status, 'finalized')
+
+  // Check that there is an error message in the journal
+  res = await ax.get('/api/v1/datasets/' + dataset.id + '/journal')
+  t.is(res.status, 200)
+  t.is(res.data.length, 8)
+  t.is(res.data[1].type, 'error')
+  t.is(res.data[1].data.slice(0, 36), 'Élément 1 du jeu de données - failed')
+})

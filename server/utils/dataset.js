@@ -68,6 +68,7 @@ exports.readStream = (dataset) => {
           const value = fieldsSniffer.format(chunk[prop['x-originalName']], prop)
           if (value !== null) line[prop.key] = value
         })
+        line._i = chunk._i
         callback(null, line)
       }
     })

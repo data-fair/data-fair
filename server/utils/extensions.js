@@ -12,6 +12,7 @@ const randomSeed = require('random-seed')
 const es = require('./es')
 const esStreams = require('./es-streams')
 const geoUtils = require('./geo')
+const journals = require('./journals')
 
 // Create a function that will transform items from a dataset into inputs for an action
 function prepareMapping(action, schema, extensionKey, selectFields) {
@@ -264,14 +265,17 @@ exports.extend = async(app, dataset, extension, remoteService, action) => {
     await setProgress()
     progressInterval = setInterval(setProgress, 600)
     if (stats.missing !== 0) {
+      const indexStream = esStreams.indexStream({esClient, indexName, stats, updateMode: true})
       await pump(
         inputStream,
         new PrepareInputStream({action, dataset, hashes, extensionKey, selectFields: extension.select, stats}),
         request(opts),
         byline.createStream(),
         new PrepareOutputStream({action, hashes, extensionKey, selectFields: extension.select}),
-        esStreams.indexStream({esClient, indexName, stats, updateMode: true})
+        indexStream
       )
+      const errorsSummary = indexStream.errorsSummary()
+      if (errorsSummary) await journals.log(app, dataset, {type: 'error', data: errorsSummary})
     }
     await setProgress()
     clearInterval(progressInterval)
@@ -306,10 +310,11 @@ class CalculatedExtension extends Transform {
 
     // Add a pseudo-random number for random sorting (more natural distribution)
     doc._rand = randomSeed.create(item.id)(1000000)
+    doc._i = item.doc._i
 
     const unflattenedItem = flatten.unflatten(item.doc)
     Object.keys(doc).forEach(key => {
-      if (JSON.stringify(doc[key]) === JSON.stringify(unflattenedItem[key])) {
+      if (JSON.stringify(doc[key]) === JSON.stringify(unflattenedItem[key]) && key !== '_i') {
         delete doc[key]
       }
     })
@@ -321,11 +326,14 @@ class CalculatedExtension extends Transform {
 exports.extendCalculated = async (app, dataset, geopoint, geometry) => {
   const indexName = es.indexName(dataset)
   const esClient = app.get('es')
-  return pump(
+  const indexStream = esStreams.indexStream({esClient, indexName, updateMode: true})
+  await pump(
     new ESInputStream({esClient, indexName}),
     new CalculatedExtension({indexName, geopoint, geometry, dataset}),
-    esStreams.indexStream({esClient, indexName, updateMode: true})
+    indexStream
   )
+  const errorsSummary = indexStream.errorsSummary()
+  if (errorsSummary) await journals.log(app, dataset, {type: 'error', data: errorsSummary})
 }
 
 exports.prepareSchema = async (db, schema, extensions) => {

@@ -8,6 +8,7 @@ class IndexStream extends Writable {
     this.body = []
     this.bulkChars = 0
     this.i = 0
+    this.erroredItems = []
   }
   _write(item, encoding, callback) {
     if (this.options.stats) this.options.stats.count += 1
@@ -38,23 +39,36 @@ class IndexStream extends Writable {
   }
   _sendBulk(callback) {
     if (this.body.length === 0) return callback()
+    const bodyClone = [].concat(this.body)
     this.options.esClient.bulk({body: this.body, refresh: 'wait_for'}, (err, res) => {
       if (err) return callback(err)
       if (res.errors) {
-        const msg = res.items
-          .map(item => (item.index && item.index.error) || (item.update && item.update.error))
-          .filter(err => !!err)
-          .map(err => {
-            let itemMsg = err.reason
-            if (err.caused_by) itemMsg += ' - ' + err.caused_by.reason
-            return itemMsg
-          }).join('\n')
-        return callback(new Error(msg))
+        res.items
+          .map((item, i) => ({
+            _i: (this.options.updateMode ? bodyClone[(i * 2) + 1].doc : bodyClone[(i * 2) + 1])._i,
+            error: (item.index && item.index.error) || (item.update && item.update.error)
+          }))
+          .filter(item => !!item.error)
+          .forEach(item => this.erroredItems.push(item))
       }
       callback()
     })
     this.body = []
     this.bulkChars = 0
+  }
+  errorsSummary() {
+    if (!this.erroredItems.length) return null
+    const leftOutErrors = this.erroredItems.length - 3
+    let msg = this.erroredItems.slice(0, 3).map(item => {
+      let itemMsg = ''
+      if (item._i !== undefined) itemMsg += `Élément ${item._i} du jeu de données - `
+      itemMsg += item.error.reason
+      if (item.error.caused_by) itemMsg += ' - ' + item.error.caused_by.reason
+      itemMsg += '\n' + JSON.stringify(item.input)
+      return itemMsg
+    }).join('\n')
+    if (leftOutErrors > 0) msg += `\n${leftOutErrors} autres erreurs...`
+    return msg
   }
 }
 

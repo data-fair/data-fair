@@ -5,6 +5,7 @@ const esUtils = require('../utils/es')
 const esStreams = require('../utils/es-streams')
 const datasetUtils = require('../utils/dataset')
 const extensionsUtils = require('../utils/extensions')
+const journals = require('../utils/journals')
 
 exports.type = 'dataset'
 exports.eventsPrefix = 'index'
@@ -20,6 +21,8 @@ exports.process = async function(app, dataset) {
   // reindex and preserve previous extensions
   await pump(datasetUtils.readStream(dataset), extensionsUtils.extendStream({db, esClient, dataset}), indexStream)
   const count = dataset.count = indexStream.i
+  const errorsSummary = indexStream.errorsSummary()
+  if (errorsSummary) await journals.log(app, dataset, {type: 'error', data: errorsSummary})
 
   await esUtils.switchAlias(esClient, dataset, tempId)
 
