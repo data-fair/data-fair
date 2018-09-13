@@ -25,7 +25,7 @@ test.serial('Post a minimal external API, read it, update it and delete it', asy
   const eaId = res.data.id
   res = await ax.get('/api/v1/remote-services')
   t.is(res.status, 200)
-  t.is(res.data.count, 1)
+  t.is(res.data.count, 16)
   res = await ax.get('/api/v1/remote-services/' + eaId + '/api-docs.json')
   t.is(res.status, 200)
   t.is(res.data.openapi, '3.0.0')
@@ -59,7 +59,7 @@ test.serial('Post a minimal external API, read it, update it and delete it', asy
   t.is(res.status, 204)
   res = await ax.get('/api/v1/remote-services')
   t.is(res.status, 200)
-  t.is(res.data.count, 0)
+  t.is(res.data.count, 15)
 })
 
 test.serial('Unknown external service', async t => {
