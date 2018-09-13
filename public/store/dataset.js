@@ -133,8 +133,11 @@ export default {
     async fetchRemoteServices({getters, commit, state}) {
       let remoteServices = []
       if (getters.concepts.size) {
-        const inputConcepts = [...getters.concepts].filter(c => c !== 'http://schema.org/identifier').map(encodeURIComponent).join(',')
-        const data = await this.$axios.$get('api/v1/remote-services?input-concepts=' + inputConcepts)
+        const inputConcepts = [...getters.concepts].filter(c => c !== 'http://schema.org/identifier').join(',')
+        const data = await this.$axios.$get('api/v1/remote-services', {params: {
+          'input-concepts': inputConcepts,
+          owner: state.dataset.owner.type + ':' + state.dataset.owner.id,
+          size: 100 }})
         remoteServices = data.results.filter(s => s.owner.type === state.dataset.owner.type && s.owner.id === state.dataset.owner.id)
       }
       commit('setAny', {remoteServices})
