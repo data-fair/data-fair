@@ -2,14 +2,14 @@ const testUtils = require('./resources/test-utils')
 
 const {test, axiosBuilder, config} = testUtils.prepare(__filename)
 
-test('Get external APIs when not authenticated', async t => {
+test.serial('Get external APIs when not authenticated', async t => {
   const ax = await axiosBuilder()
   const res = await ax.get('/api/v1/remote-services')
   t.is(res.status, 200)
   t.is(res.data.count, 0)
 })
 
-test('Initialize default services', async t => {
+test.serial('Initialize default services', async t => {
   const ax = await axiosBuilder('dmeadus0@answers.com')
   let res = await ax.post('/api/v1/remote-services/_default_services')
   t.is(res.status, 201)
@@ -18,7 +18,7 @@ test('Initialize default services', async t => {
   t.is(res.data.count, 3 * config.remoteServices.length)
 })
 
-test('Post a minimal external API, read it, update it and delete it', async t => {
+test.serial('Post a minimal external API, read it, update it and delete it', async t => {
   const ax = await axiosBuilder('dmeadus0@answers.com')
   let res = await ax.post('/api/v1/remote-services', {apiDoc: require('./resources/geocoder-api.json'), apiKey: {in: 'header', name: 'x-apiKey'}})
   t.is(res.status, 201)
@@ -62,7 +62,7 @@ test('Post a minimal external API, read it, update it and delete it', async t =>
   t.is(res.data.count, 0)
 })
 
-test('Unknown external service', async t => {
+test.serial('Unknown external service', async t => {
   const ax = await axiosBuilder()
   try {
     await ax.get('/api/v1/remote-services/unknownId')
