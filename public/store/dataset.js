@@ -51,9 +51,6 @@ export default {
       if (!state.journal.find(e => e.date === event.date)) {
         state.journal.unshift(event)
       }
-    },
-    addRemoteService(state, service) {
-      state.remoteServices.push(service)
     }
   },
   actions: {
@@ -132,11 +129,6 @@ export default {
     },
     addJournalEvent({commit}, event) {
       commit('addJournalEvent', event)
-    },
-    async fetchRemoteService({commit, getters, state}, id) {
-      if (getters.remoteServicesMap[id]) return
-      const remoteService = await this.$axios.$get('api/v1/remote-services/' + id)
-      commit('addRemoteService', remoteService)
     },
     async fetchRemoteServices({getters, commit, state}) {
       let remoteServices = []

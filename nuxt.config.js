@@ -23,7 +23,8 @@ module.exports = {
     {src: '~plugins/session', ssr: false},
     {src: '~plugins/vuetify'},
     {src: '~plugins/moment'},
-    {src: '~plugins/truncate'}
+    {src: '~plugins/truncate'},
+    {src: '~plugins/logger', ssr: false}
   ],
   router: {
     base: new URL(config.publicUrl + '/').pathname
@@ -48,7 +49,8 @@ module.exports = {
     adminRole: config.adminRole,
     map: config.map,
     brand: config.brand,
-    openapiViewerUrl: config.openapiViewerUrl
+    openapiViewerUrl: config.openapiViewerUrl,
+    browserLogLevel: config.browserLogLevel
   },
   head: {
     title: config.brand.title,

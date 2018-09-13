@@ -22,6 +22,7 @@ module.exports = {
   nuxtBuild: {
     blocking: false
   },
+  browserLogLevel: 'debug',
   applications: [{
     title: 'Infos parcelles (recette)',
     href: 'https://staging.koumoul.com/s/infos-parcelles/'

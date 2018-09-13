@@ -95,6 +95,7 @@ module.exports = {
     cssUrl: null,
     cssText: ''
   },
+  browserLogLevel: 'error',
   licenses: [{
     title: 'Licence Ouverte / Open Licence',
     href: 'https://www.etalab.gouv.fr/licence-ouverte-open-licence'

@@ -48,5 +48,6 @@ module.exports = {
       __name: 'I18N_LOCALES',
       __format: 'json'
     }
-  }
+  },
+  browserLogLevel: 'BROWER_LOG_LEVEL'
 }

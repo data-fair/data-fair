@@ -79,6 +79,7 @@
 <script>
 import { mapState, mapActions, mapGetters } from 'vuex'
 import eventBus from '../../../event-bus.js'
+import logger from '../../../logger'
 
 export default {
   components: {},
@@ -115,24 +116,7 @@ export default {
       return res
     }
   },
-  watch: {
-    remoteServicesMap() {
-      // Add/remove available extensions
-      this.dataset.extensions = this.dataset.extensions.filter(e => {
-        return this.remoteServicesMap[e.remoteService] && this.remoteServicesMap[e.remoteService].actions[e.action]
-      })
-      Object.keys(this.remoteServicesMap).forEach(s => {
-        Object.keys(this.remoteServicesMap[s].actions).forEach(a => {
-          if (!this.dataset.extensions.find(e => e.remoteService === s && e.action === a)) {
-            this.dataset.extensions.push({remoteService: s, action: a, active: false, progress: 0})
-          }
-        })
-      })
-      this.ready = true
-    }
-  },
-  created() {
-    this.fetchRemoteServices()
+  async created() {
     eventBus.$emit('subscribe', this.channel)
     eventBus.$on(this.channel, info => {
       const extension = this.dataset.extensions.find(e => e.remoteService === info.remoteService && e.action === info.action)
@@ -141,6 +125,24 @@ export default {
         extension.error = info.error
       }
     })
+
+    await this.fetchRemoteServices()
+    logger.debug('remoteServicesMap after fetchRemoteServices', this.remoteServicesMap)
+
+    // Add/remove proposed extensions based on available services
+    this.dataset.extensions = this.dataset.extensions.filter(e => {
+      return this.remoteServicesMap[e.remoteService] && this.remoteServicesMap[e.remoteService].actions[e.action]
+    })
+    Object.keys(this.remoteServicesMap).forEach(s => {
+      Object.keys(this.remoteServicesMap[s].actions).forEach(a => {
+        if (!this.dataset.extensions.find(e => e.remoteService === s && e.action === a)) {
+          this.dataset.extensions.push({remoteService: s, action: a, active: false, progress: 0})
+        }
+      })
+    })
+    logger.debug('dataset.extensions after fetchRemoteServices', this.dataset.extensions)
+
+    this.ready = true
   },
   destroyed() {
     eventBus.$emit('unsubscribe', this.channel)
