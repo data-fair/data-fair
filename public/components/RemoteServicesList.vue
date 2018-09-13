@@ -69,7 +69,7 @@ export default {
     }
   },
   async created() {
-    await this.$axios.$post(this.env.publicUrl + '/api/v1/remote-services/_init')
+    await this.$axios.$post(this.env.publicUrl + '/api/v1/remote-services/_default_services')
     this.initDone = true
   },
   methods: {

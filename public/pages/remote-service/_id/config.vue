@@ -17,11 +17,12 @@
       @keyup.native.enter="patch({apiKey: remoteService.apiKey})"
     />
 
+    <!-- Read only, updating can cause problems and confusion.
+    For example the POST _default_services will crash because it will create duplicates -->
     <v-text-field
       label="URL de mise à jour"
       v-model="remoteService.url"
-      @blur="patch({url: remoteService.url})"
-      @keyup.native.enter="patch({url: remoteService.url})"
+      :disabled="true"
     />
 
     <div v-if="remoteService.parameters.length">

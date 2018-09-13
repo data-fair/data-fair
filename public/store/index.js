@@ -25,7 +25,7 @@ export default () => {
       },
       searchQuery: (state) => (type) => {
         const searchQuery = Object.assign({}, state.searchQueries[type])
-        if (searchQuery.owner === undefined) searchQuery.owner = `user:${state.user.id}`
+        if (searchQuery.owner === undefined && state.user) searchQuery.owner = `user:${state.user.id}`
         return searchQuery
       }
     },

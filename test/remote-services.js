@@ -1,12 +1,21 @@
 const testUtils = require('./resources/test-utils')
 
-const {test, axiosBuilder} = testUtils.prepare(__filename)
+const {test, axiosBuilder, config} = testUtils.prepare(__filename)
 
 test('Get external APIs when not authenticated', async t => {
   const ax = await axiosBuilder()
   const res = await ax.get('/api/v1/remote-services')
   t.is(res.status, 200)
   t.is(res.data.count, 0)
+})
+
+test('Initialize default services', async t => {
+  const ax = await axiosBuilder('dmeadus0@answers.com')
+  let res = await ax.post('/api/v1/remote-services/_default_services')
+  t.is(res.status, 201)
+  res = await ax.get('/api/v1/remote-services')
+  // 3 times all services, for user himself and all the organizations he belongs to
+  t.is(res.data.count, 3 * config.remoteServices.length)
 })
 
 test('Post a minimal external API, read it, update it and delete it', async t => {

@@ -119,16 +119,11 @@ router.post('', asyncWrap(async(req, res) => {
   res.status(201).json(service)
 }))
 
-// Create service
-router.post('/_init', asyncWrap(async(req, res) => {
+// Create default services for the user and all his organizations, if necessary
+router.post('/_default_services', asyncWrap(async(req, res) => {
   if (!req.user) return res.sendStatus(401)
   const remoteServices = req.app.get('db').collection('remote-services')
-  const query = {
-    $or: [{
-      'owner.type': 'user',
-      'owner.id': req.user.id
-    }]
-  }
+  const query = {$or: [{'owner.type': 'user', 'owner.id': req.user.id}]}
   if (req.user.organizations && req.user.organizations.length) {
     query.$or.push({
       'owner.type': 'organization',
@@ -136,14 +131,25 @@ router.post('/_init', asyncWrap(async(req, res) => {
     })
   }
   const existingServices = await remoteServices.find(query).project({owner: 1, url: 1}).toArray()
-  const owners = [{type: 'user', id: req.user.id, name: req.user.name}].concat((req.user.organizations || []).map(o => ({type: 'organization', id: o.id, name: o.name})))
+
+  const owners = [{type: 'user', id: req.user.id, name: req.user.name}]
+    .concat((req.user.organizations || []).map(o => ({type: 'organization', id: o.id, name: o.name})))
   const ownerServices = [].concat(...owners.map(o => config.remoteServices.map(s => ({owner: o, url: s.href, title: s.title}))))
-  const servicesToAdd = ownerServices.filter(os => !existingServices.find(es => es.owner.type === os.owner.type && es.owner.id === os.owner.id && es.url === os.url))
+
+  const servicesToAdd = ownerServices
+    // exclude service with this owner and url
+    .filter(os => !existingServices.find(es => es.owner.type === os.owner.type && es.owner.id === os.owner.id && es.url === os.url))
+
   const apisToFetch = new Set(servicesToAdd.map(s => s.url))
-  const apis = (await Promise.all([...apisToFetch].map(url => axios.get(url).then(resp => ({url, api: resp.data})).catch(err => ({url, error: err.response}))))).filter(a => a.api)
+  const apisPromises = [...apisToFetch].map(url => {
+    return axios.get(url)
+      .then(resp => ({url, api: resp.data}))
+      .catch(err => console.error('Failure to init remote service', err))
+  })
+  const apis = (await Promise.all(apisPromises)).filter(a => a && a.api)
   const apisDict = Object.assign({}, ...apis.map(a => ({[a.url]: a.api})))
   const servicesToInsert = servicesToAdd.filter(s => apisDict[s.url]).map(s => mongoEscape.escape({
-    id: slug(apisDict[s.url].info['x-api-id'] + '-' + s.owner.id, {lower: true}),
+    id: slug(apisDict[s.url].info['x-api-id']) + '-' + s.owner.type + '-' + s.owner.id,
     title: apisDict[s.url].info.title,
     description: apisDict[s.url].info.description,
     url: s.url,
@@ -195,7 +201,7 @@ router.patch('/:remoteServiceId', permissions.middleware('writeDescription', 'wr
   if (!valid) return res.status(400).send(validateRemoteServiceNoRequired.errors)
 
   const forbiddenKey = Object.keys(patch).find(key => {
-    return ['apiDoc', 'url', 'apiKey', 'server', 'description', 'title', 'parameters'].indexOf(key) === -1
+    return ['apiDoc', 'apiKey', 'server', 'description', 'title', 'parameters'].indexOf(key) === -1
   })
   if (forbiddenKey) return res.status(400).send('Only some parts of the remote service configuration can be modified through this route')
 
