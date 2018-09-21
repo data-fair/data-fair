@@ -39,8 +39,8 @@
     "push-dir": "^0.4.1"
   },
   "dependencies": {
-    "@koumoul/sd-express": "^0.10.3",
-    "@koumoul/sd-vue": "^0.9.0",
+    "@koumoul/sd-express": "^0.11.0",
+    "@koumoul/sd-vue": "^0.10.2",
     "@nuxtjs/axios": "^5.1.1",
     "@nuxtjs/google-analytics": "^2.0.2",
     "@nuxtjs/markdownit": "^1.2.1",
