@@ -9,7 +9,8 @@ export default {
     applicationId: null,
     application: null,
     api: null,
-    journal: []
+    journal: [],
+    config: null
   },
   getters: {
     resourceUrl: (state, getters, rootState) => state.applicationId ? rootState.env.publicUrl + '/api/v1/applications/' + state.applicationId : null,
@@ -86,6 +87,15 @@ export default {
     },
     addJournalEvent({commit}, event) {
       commit('addJournalEvent', event)
+    },
+    async readConfig({state, commit, getters}) {
+      const config = await this.$axios.$get(getters.resourceUrl + '/configuration')
+      commit('setAny', {config})
+      return config
+    },
+    async writeConfig({state, commit, getters}, config) {
+      await this.$axios.$put(getters.resourceUrl + '/configuration', config)
+      commit('setAny', {config})
     }
   }
 }

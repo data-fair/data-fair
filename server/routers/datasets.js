@@ -98,6 +98,19 @@ router.get('/:datasetId', permissions.middleware('readDescription', 'read'), (re
   res.status(200).send(req.dataset)
 })
 
+// retrieve only the schema.. Mostly useful for easy select fields
+router.get('/:datasetId/schema', permissions.middleware('readDescription', 'read'), (req, res, next) => {
+  let schema = req.dataset.schema
+  schema.forEach(field => {
+    field.label = field.title || field['x-originalName']
+  })
+  if (req.query.type) {
+    const types = req.query.type.split(',')
+    schema = schema.filter(field => types.includes(field.type))
+  }
+  res.status(200).send(schema)
+})
+
 // Update a dataset's metadata
 const patchKeys = ['schema', 'description', 'title', 'license', 'origin', 'extensions', 'publications']
 router.patch('/:datasetId', permissions.middleware('writeDescription', 'write'), asyncWrap(async(req, res) => {

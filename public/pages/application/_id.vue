@@ -5,6 +5,10 @@
         Description
         <v-icon>toc</v-icon>
       </v-tab>
+      <v-tab :disabled="!can('writeConfig')" :nuxt="true" :to="`/application/${application.id}/config`">
+        Configuration
+        <v-icon>build</v-icon>
+      </v-tab>
       <v-tab v-if="can('getPermissions')" :nuxt="true" :to="`/application/${application.id}/permissions`">
         Permissions
         <v-icon>security</v-icon>

@@ -14,10 +14,11 @@ exports.query = (req, fieldsMap) => {
   }
 
   // "standard" field mapping for applications/apis/datasets routes
-  // @deprecated : we shall use the owner parameter bellow : owner=organization:id1,user:id2,organization:id3
+  // @deprecated owner-type and owner-id : we shall use the owner parameter bellow : owner=organization:id1,user:id2,organization:id3
   Object.assign(fieldsMap, {
     'owner-type': 'owner.type',
-    'owner-id': 'owner.id'
+    'owner-id': 'owner.id',
+    status: 'status'
   })
   Object.keys(fieldsMap).filter(name => req.query[name] !== undefined).forEach(name => {
     query[fieldsMap[name]] = {$in: req.query[name].split(',')}
@@ -129,6 +130,7 @@ exports.parametersDoc = (filterFields) => [
 exports.setResourceLinks = (resource, resourceType) => {
   resource.href = `${config.publicUrl}/api/v1/${resourceType}s/${resource.id}`
   resource.page = `${config.publicUrl}/${resourceType}/${resource.id}`
+  if (resourceType === 'application') resource.exposedUrl = `${config.publicUrl}/app/${resource.id}`
 }
 
 exports.facetsQuery = (facetsQueryParam, query) => {
