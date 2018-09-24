@@ -16,13 +16,19 @@
           Extension: {{ remoteServicesMap[extension.remoteService].actions[extension.action].summary }} (service {{ remoteServicesMap[extension.remoteService].title }})
         </v-subheader>
         <v-layout row v-for="field in schema.filter(field => field['x-extension'] === extension.key)" :key="field.key">
-          <v-flex xs4>
-            <v-text-field label="Libellé" v-model="field.title" :placeholder="field['x-originalName']"/>
+          <v-flex xs2>
+            <v-text-field label="Clé" v-model="field.key" :disabled="true"/>
           </v-flex>
-          <v-flex xs5>
-            <v-textarea label="Description" rows="1" v-model="field.description" :id="'description-' + field.key"/>
+          <v-flex xs1>
+            <v-text-field label="Type" v-model="field.type" :disabled="true"/>
           </v-flex>
           <v-flex xs3>
+            <v-text-field label="Libellé" v-model="field.title" :placeholder="field['x-originalName']"/>
+          </v-flex>
+          <v-flex xs4>
+            <v-textarea label="Description" rows="1" v-model="field.description" :id="'description-' + field.key"/>
+          </v-flex>
+          <v-flex xs2>
             <v-select
               v-if="!field['x-extension']"
               :items="fieldsVocabulary[field.key]"

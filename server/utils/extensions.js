@@ -348,6 +348,7 @@ exports.prepareSchema = async (db, schema, extensions) => {
     const extensionId = `${extension.remoteService}/${extension.action}`
     const selectFields = extension.select || []
     extensionsFields = extensionsFields.concat(action.output
+      .filter(output => !!output)
       .filter(output => !output.concept || output.concept !== 'http://schema.org/identifier')
       .filter(output => selectFields.length === 0 || selectFields.includes(output.name))
       .map(output => {
