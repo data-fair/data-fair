@@ -16,12 +16,14 @@ test('Work with numbers', t => {
   t.is(sniffer.sniff(['1.1', '2.2']).type, 'number')
   t.is(sniffer.sniff(['1', '22']).type, 'integer')
   t.is(sniffer.sniff(['1', '10 426']).type, 'integer')
+  t.is(sniffer.sniff(['27 589']).type, 'integer') // I don't know what is that whitespace char, but it is not a simple space
   t.is(sniffer.sniff(['111', '-2.2']).type, 'number')
   t.is(sniffer.sniff(['1', '20 000.2']).type, 'number')
   t.is(sniffer.format('-11', {type: 'number'}), -11)
   t.is(sniffer.format('-1', {type: 'integer'}), -1)
   t.is(sniffer.format('10 426', {type: 'integer'}), 10426)
-  t.is(sniffer.format('20 000.2', {type: 'integer'}), 20000.2)
+  t.is(sniffer.format('20 000.2', {type: 'number'}), 20000.2)
+  t.is(sniffer.format('27 589', {type: 'integer'}), 27589)
 })
 
 test('Work with dates', t => {
