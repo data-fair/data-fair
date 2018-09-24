@@ -15,9 +15,13 @@ test('Work with booleans', t => {
 test('Work with numbers', t => {
   t.is(sniffer.sniff(['1.1', '2.2']).type, 'number')
   t.is(sniffer.sniff(['1', '22']).type, 'integer')
+  t.is(sniffer.sniff(['1', '10 426']).type, 'integer')
   t.is(sniffer.sniff(['111', '-2.2']).type, 'number')
+  t.is(sniffer.sniff(['1', '20 000.2']).type, 'number')
   t.is(sniffer.format('-11', {type: 'number'}), -11)
   t.is(sniffer.format('-1', {type: 'integer'}), -1)
+  t.is(sniffer.format('10 426', {type: 'integer'}), 10426)
+  t.is(sniffer.format('20 000.2', {type: 'integer'}), 20000.2)
 })
 
 test('Work with dates', t => {
