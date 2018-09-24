@@ -27,7 +27,7 @@ module.exports = (remoteService) => {
               description: 'Les informations de configuration du service distant.',
               content: {
                 'application/json': {
-                  schema: remoteServiceSchema
+                  schema: {...remoteServiceSchema, definitions: {}}
                 }
               }
             }
@@ -117,7 +117,8 @@ module.exports = (remoteService) => {
     externalDocs: {
       description: 'Documentation sur Github',
       url: 'https://koumoul-dev.github.io/data-fair/'
-    }
+    },
+    definitions: remoteServiceSchema.definitions
   }
   const apiPaths = Object.keys(remoteService.apiDoc.paths).map(path => ({['/proxy' + path]: remoteService.apiDoc.paths[path]}))
   apiPaths.forEach(path => Object.values(path).forEach(operations => Object.values(operations).forEach(operation => { operation['x-permissionClass'] = 'use' })))

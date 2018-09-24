@@ -17,7 +17,6 @@ const validateRemoteService = ajv.compile(remoteServiceSchema)
 const remoteServiceSchemaNoRequired = Object.assign(remoteServiceSchema)
 delete remoteServiceSchemaNoRequired.required
 const validateRemoteServiceNoRequired = ajv.compile(remoteServiceSchemaNoRequired)
-
 const openApiSchema = require('../../contract/openapi-3.0.json')
 openApiSchema.$id = openApiSchema.$id + '-2' // dirty hack to handle ajv error
 const validateOpenApi = ajv.compile(openApiSchema)

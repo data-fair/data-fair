@@ -1,52 +1,53 @@
 {
-  "type": "object",
-  "$id":"openapi3",
-  "required": [
-    "openapi",
-    "info",
-    "paths"
-  ],
-  "properties": {
-    "openapi": {
-      "type": "string",
-      "pattern": "^3\\.0\\.\\d(-.+)?$"
-    },
-    "info": {
-      "$ref": "#/definitions/Info"
-    },
-    "externalDocs": {
-      "$ref": "#/definitions/ExternalDocumentation"
-    },
-    "servers": {
-      "type": "array",
-      "items": {
-        "$ref": "#/definitions/Server"
-      }
-    },
-    "security": {
-      "type": "array",
-      "items": {
-        "$ref": "#/definitions/SecurityRequirement"
-      }
-    },
-    "tags": {
-      "type": "array",
-      "items": {
-        "$ref": "#/definitions/Tag"
-      }
-    },
-    "paths": {
-      "$ref": "#/definitions/Paths"
-    },
-    "components": {
-      "$ref": "#/definitions/Components"
-    }
-  },
-  "patternProperties": {
-    "^x-": {}
-  },
-  "additionalProperties": false,
   "definitions": {
+    "API": {
+      "type": "object",
+      "required": [
+        "openapi",
+        "info",
+        "paths"
+      ],
+      "properties": {
+        "openapi": {
+          "type": "string",
+          "pattern": "^3\\.0\\.\\d(-.+)?$"
+        },
+        "info": {
+          "$ref": "#/definitions/Info"
+        },
+        "externalDocs": {
+          "$ref": "#/definitions/ExternalDocumentation"
+        },
+        "servers": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Server"
+          }
+        },
+        "security": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/SecurityRequirement"
+          }
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Tag"
+          }
+        },
+        "paths": {
+          "$ref": "#/definitions/Paths"
+        },
+        "components": {
+          "$ref": "#/definitions/Components"
+        }
+      },
+      "patternProperties": {
+        "^x-": {}
+      },
+      "additionalProperties": false
+    },
     "Reference": {
       "type": "object",
       "required": [

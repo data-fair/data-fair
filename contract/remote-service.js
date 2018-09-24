@@ -1,5 +1,9 @@
 const owner = require('./owner')
 const eventBy = require('./event-by')
+// TODO replace this schema with the official one when available
+// see https://github.com/OAI/OpenAPI-Specification/issues/1032
+// apiDoc: require('swagger2openapi/schemas/openapi-3.0.json'),
+const apiDoc = require('./openapi-3.0.json')
 
 module.exports = {
   title: 'Remote service',
@@ -41,10 +45,7 @@ module.exports = {
       format: 'date-time'
     },
     owner,
-    // TODO replace this schema with the official one when available
-    // see https://github.com/OAI/OpenAPI-Specification/issues/1032
-    // apiDoc: require('swagger2openapi/schemas/openapi-3.0.json'),
-    apiDoc: require('./openapi-3.0.json'),
+    apiDoc: {$ref: '#/definitions/API'},
     url: {
       type: 'string',
       description: 'The url to fetch the apiDoc. Can be used for refresh purpose'
@@ -92,5 +93,6 @@ module.exports = {
         }
       }
     }
-  }
+  },
+  definitions: apiDoc.definitions
 }
