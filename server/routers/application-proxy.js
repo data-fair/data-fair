@@ -69,8 +69,8 @@ router.all('/:applicationId*', setResource, permissions.middleware('readDescript
     match: (resp) => {
       // fix cache. Remove etag,  calculate last-modified, etc.
       delete resp.headers.expires
-      delete resp.headers['cache-control']
       delete resp.headers.etag
+      resp.headers['cache-control'] = 'private'
       const lastModified = new Date(resp.headers['last-modified'] || req.application.updatedAt)
       if (resp.statusCode !== 200) return false
       if (ifModifiedSince >= updatedAt && ifModifiedSince >= lastModified) {
