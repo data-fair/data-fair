@@ -195,7 +195,11 @@ const writeConfig = asyncWrap(async(req, res) => {
   if (!valid) return res.status(400).send(validateConfiguration.errors)
   await req.app.get('db').collection('applications').updateOne(
     {id: req.params.applicationId},
-    {$set: {configuration: req.body}}
+    {$set: {
+      configuration: req.body,
+      updatedAt: moment().toISOString(),
+      updatedBy: {id: req.user.id, name: req.user.name}
+    }}
   )
   await journals.log(req.app, req.application, {type: 'config-updated'}, 'application')
   res.status(200).json(req.body)

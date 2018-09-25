@@ -38,7 +38,7 @@ app.use('/api/v1/stats', session.auth, require('./routers/stats'))
 app.use('/api/v1/settings', session.auth, require('./routers/settings'))
 app.use('/api/v1/session', session.router)
 // External applications proxy
-app.use('/app', session.loginCallback, require('./routers/application-proxy'))
+app.use('/app', session.loginCallback, session.auth, require('./routers/application-proxy'))
 
 // Error management
 app.use((err, req, res, next) => {
