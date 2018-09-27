@@ -10,11 +10,11 @@ const testFiles = fs.readdirSync(testDir).map(f => path.join(testDir, f))
 async function clean(key) {
   const dataDir = './data/test-' + key
   const indicesPrefix = 'dataset-test-' + key
-  const {db, client} = await require('../../server/utils/db.js').init()
+  const { db, client } = await require('../../server/utils/db.js').init()
   await db.dropDatabase()
   await client.close()
   const es = require('../../server/utils/es.js').init()
-  await es.indices.delete({index: `${indicesPrefix}-*`, ignore: [404]})
+  await es.indices.delete({ index: `${indicesPrefix}-*`, ignore: [404] })
   await es.close()
   await fs.remove(dataDir)
 }
@@ -45,7 +45,7 @@ exports.prepare = (testFile) => {
   })
 
   const axiosBuilder = async (email) => {
-    const opts = {baseURL: config.publicUrl}
+    const opts = { baseURL: config.publicUrl }
 
     let ax
     if (email) ax = await axiosAuth(email, null, opts)
@@ -60,11 +60,11 @@ exports.prepare = (testFile) => {
     return ax
   }
 
-  return {test, config, axiosBuilder}
+  return { test, config, axiosBuilder }
 }
 
 exports.formHeaders = (form, organizationId) => {
-  const headers = {'Content-Length': form.getLengthSync(), ...form.getHeaders()}
+  const headers = { 'Content-Length': form.getLengthSync(), ...form.getHeaders() }
   if (organizationId) headers['x-organizationId'] = organizationId
   return headers
 }

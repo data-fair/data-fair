@@ -12,22 +12,22 @@ exports.init = () => elasticsearch.Client(Object.assign({}, config.elasticsearch
 const indexBase = {
   // Minimal overhead by default as we might deal with a lot of small indices.
   // TODO: a way to override this ? Maybe intelligently based on size of the file ?
-  settings: {index: {number_of_shards: 1, number_of_replicas: 1}},
-  mappings: {line: {}}
+  settings: { index: { number_of_shards: 1, number_of_replicas: 1 } },
+  mappings: { line: {} }
 }
 
 const aliasName = exports.aliasName = dataset => `${config.indicesPrefix}-${dataset.id}`
 
 exports.esProperty = prop => {
-  if (prop.type === 'object') return {type: 'object'}
-  if (prop.type === 'integer') return {type: 'long'}
-  if (prop.type === 'number') return {type: 'double'}
-  if (prop.type === 'boolean') return {type: 'boolean'}
-  if (prop.type === 'string' && prop.format === 'date-time') return {type: 'date'}
-  if (prop.type === 'string' && prop.format === 'date') return {type: 'date'}
+  if (prop.type === 'object') return { type: 'object' }
+  if (prop.type === 'integer') return { type: 'long' }
+  if (prop.type === 'number') return { type: 'double' }
+  if (prop.type === 'boolean') return { type: 'boolean' }
+  if (prop.type === 'string' && prop.format === 'date-time') return { type: 'date' }
+  if (prop.type === 'string' && prop.format === 'date') return { type: 'date' }
   // uri-reference and full text fields are managed in the same way from now on, because we want to be able to aggregate on small full text fields
   // TODO: maybe ignore_above should be only for uri-reference fields
-  const textField = {type: 'keyword', ignore_above: 200, fields: {text: {type: 'text', analyzer: config.elasticsearch.defaultAnalyzer}}}
+  const textField = { type: 'keyword', ignore_above: 200, fields: { text: { type: 'text', analyzer: config.elasticsearch.defaultAnalyzer } } }
   if (prop.type === 'string' && prop.format === 'uri-reference') return textField
   return textField
 }
@@ -46,12 +46,12 @@ exports.indexDefinition = (dataset) => {
   // "hidden" fields for geo indexing (lat/lon in dataset or geojson data type)
   // console.log(dataset.file)
   if (geoUtils.schemaHasGeopoint(dataset.schema) || geoUtils.schemaHasGeometry(dataset.schema)) {
-    properties['_geopoint'] = {type: 'geo_point'}
-    properties['_geoshape'] = {type: 'geo_shape'}
-    properties['_geocorners'] = {type: 'geo_point'}
+    properties['_geopoint'] = { type: 'geo_point' }
+    properties['_geoshape'] = { type: 'geo_shape' }
+    properties['_geocorners'] = { type: 'geo_point' }
   }
-  properties['_rand'] = {type: 'integer'}
-  properties['_i'] = {type: 'integer'}
+  properties['_rand'] = { type: 'integer' }
+  properties['_i'] = { type: 'integer' }
   return body
 }
 
@@ -62,30 +62,30 @@ function indexPrefix(dataset) {
 exports.initDatasetIndex = async (client, dataset) => {
   const tempId = `${indexPrefix(dataset)}-${Date.now()}`
   const body = exports.indexDefinition(dataset)
-  await client.indices.create({index: tempId, body})
+  await client.indices.create({ index: tempId, body })
   return tempId
 }
 
 exports.delete = async (client, dataset) => {
-  await client.indices.deleteAlias({name: aliasName(dataset), index: '_all'})
-  await client.indices.delete({index: `${indexPrefix(dataset)}-*`})
+  await client.indices.deleteAlias({ name: aliasName(dataset), index: '_all' })
+  await client.indices.delete({ index: `${indexPrefix(dataset)}-*` })
 }
 
 exports.switchAlias = async (client, dataset, tempId) => {
   const name = aliasName(dataset)
   // Delete all other indices from this dataset
-  const previousIndices = await client.indices.get({index: `${indexPrefix(dataset)}-*`})
+  const previousIndices = await client.indices.get({ index: `${indexPrefix(dataset)}-*` })
   for (let key in previousIndices) {
-    if (key !== tempId) await client.indices.delete({index: key})
+    if (key !== tempId) await client.indices.delete({ index: key })
   }
-  await client.indices.deleteAlias({name, index: '_all', ignore: [404]})
-  await client.indices.delete({index: name, ignore: [404]})
-  await client.indices.putAlias({name, index: tempId})
+  await client.indices.deleteAlias({ name, index: '_all', ignore: [404] })
+  await client.indices.delete({ index: name, ignore: [404] })
+  await client.indices.putAlias({ name, index: tempId })
 }
 
 exports.searchInDataset = async (client, dataset, query) => {
   const esQuery = prepareQuery(dataset, query)
-  const esResponse = await client.search({index: aliasName(dataset), body: esQuery})
+  const esResponse = await client.search({ index: aliasName(dataset), body: esQuery })
   return esResponse
 }
 
@@ -94,9 +94,9 @@ exports.bboxAgg = async (client, dataset, query = {}) => {
   const esQuery = prepareQuery(dataset, query)
   // Use corners, not centroid in order to get truly surrounding box
   // and to function even with a single document
-  esQuery.aggs = {bbox: {geo_bounds: {field: '_geocorners'}}}
-  const esResponse = await client.search({index: aliasName(dataset), body: esQuery})
-  const response = {total: esResponse.hits.total}
+  esQuery.aggs = { bbox: { geo_bounds: { field: '_geocorners' } } }
+  const esResponse = await client.search({ index: aliasName(dataset), body: esQuery })
+  const response = { total: esResponse.hits.total }
   // ES bounds to standard bounding box: left,bottom,right,top
   const bounds = esResponse.aggregations.bbox.bounds
   if (!bounds) response.bbox = []
@@ -110,11 +110,11 @@ exports.metricAgg = async (client, dataset, query) => {
   const esQuery = prepareQuery(dataset, query)
   esQuery.aggs = {
     metric: {
-      [query.metric]: {field: query.metric_field}
+      [query.metric]: { field: query.metric_field }
     }
   }
-  const esResponse = await client.search({index: aliasName(dataset), body: esQuery})
-  return {total: esResponse.hits.total, metric: esResponse.aggregations.metric.value}
+  const esResponse = await client.search({ index: aliasName(dataset), body: esQuery })
+  return { total: esResponse.hits.total, metric: esResponse.aggregations.metric.value }
 }
 
 exports.valuesAgg = async (client, dataset, query) => {
@@ -153,10 +153,10 @@ exports.valuesAgg = async (client, dataset, query) => {
     esQuery.aggs.values.terms.order = { metric: 'desc' }
     esQuery.aggs.values.aggs = esQuery.aggs.values.aggs || {}
     esQuery.aggs.values.aggs.metric = {
-      [query.metric]: {field: query.metric_field}
+      [query.metric]: { field: query.metric_field }
     }
   }
-  const esResponse = await client.search({index: aliasName(dataset), body: esQuery})
+  const esResponse = await client.search({ index: aliasName(dataset), body: esQuery })
   return prepareValuesAggResponse(esResponse)
 }
 
@@ -199,30 +199,30 @@ exports.geoAgg = async (client, dataset, query) => {
         size: aggSize
       },
       aggs: {
-        centroid: {geo_centroid: { field: '_geopoint' }}
+        centroid: { geo_centroid: { field: '_geopoint' } }
       }
     }
   }
   if (size) {
-    esQuery.aggs.geo.aggs.topHits = {top_hits: { size, _source: esQuery._source }}
+    esQuery.aggs.geo.aggs.topHits = { top_hits: { size, _source: esQuery._source } }
   }
   if (query.metric && query.metric_field) {
     esQuery.aggs.geo.aggs.metric = {
-      [query.metric]: {field: query.metric_field}
+      [query.metric]: { field: query.metric_field }
     }
   }
-  const esResponse = await client.search({index: aliasName(dataset), body: esQuery})
+  const esResponse = await client.search({ index: aliasName(dataset), body: esQuery })
   return prepareGeoAggResponse(esResponse)
 }
 
 const prepareGeoAggResponse = (esResponse) => {
-  const response = {total: esResponse.hits.total}
+  const response = { total: esResponse.hits.total }
   response.aggs = esResponse.aggregations.geo.buckets.map(b => {
     const center = geohash.hash2coord(b.key)
     const aggItem = {
       total: b.doc_count,
       centroid: b.centroid.location,
-      center: {lat: center[1], lon: center[0]},
+      center: { lat: center[1], lon: center[0] },
       bbox: geohash.hash2bbox(b.key),
       results: b.topHits ? b.topHits.hits.hits.map(hit => flatten(hit._source)) : []
     }
@@ -243,7 +243,7 @@ const prepareQuery = (dataset, query) => {
   esQuery.from = (query.page ? Number(query.page) - 1 : 0) * esQuery.size
 
   // Select fields to return
-  esQuery._source = {includes: query.select ? query.select.split(',') : ['*'], excludes: []};
+  esQuery._source = { includes: query.select ? query.select.split(',') : ['*'], excludes: [] };
 
   // Some fields are excluded, unless explicitly included
   ['_geoshape', '_geopoint', '_geocorners', '_rand', '_i'].forEach(f => {
@@ -282,13 +282,13 @@ const prepareQuery = (dataset, query) => {
     const esBoundingBox = { left: bbox[0], bottom: bbox[1], right: bbox[2], top: bbox[3] }
     // use geo_shape intersection instead geo_bounding_box in order to get even
     // partial geometries in tiles
-    filter.push({geo_shape: {_geoshape: {
+    filter.push({ geo_shape: { _geoshape: {
       relation: 'intersects',
       shape: {
         type: 'envelope',
         coordinates: [[esBoundingBox.left, esBoundingBox.top], [esBoundingBox.right, esBoundingBox.bottom]]
       }
-    }}})
+    } } })
   }
 
   esQuery.query = { bool: { filter, must } }
@@ -308,8 +308,8 @@ const getQueryBBOX = (query) => {
 
 exports.datasetInfos = async (client, dataset) => {
   // const indices = await client.indices.get({index: `${indexPrefix(dataset)}-*`})
-  const indices = await client.cat.indices({index: `${indexPrefix(dataset)}-*`, format: 'json'})
-  const alias = await client.indices.getAlias({index: aliasName(dataset)})
+  const indices = await client.cat.indices({ index: `${indexPrefix(dataset)}-*`, format: 'json' })
+  const alias = await client.indices.getAlias({ index: aliasName(dataset) })
   return {
     aliasName: aliasName(dataset),
     indexPrefix: indexPrefix(dataset),

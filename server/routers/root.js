@@ -12,7 +12,7 @@ const config = require('config')
 
 const router = express.Router()
 
-const remoteServices = config.remoteServices.map(s => ({...s}))
+const remoteServices = config.remoteServices.map(s => ({ ...s }))
 
 router.get('/status', status.status)
 router.get('/ping', status.ping)
@@ -56,10 +56,10 @@ router.post('/owner-names', asyncWrap(async (req, res) => {
     const collection = req.app.get('db').collection(c)
 
     // owners
-    await collection.updateMany({'owner.type': owner.type, 'owner.id': owner.id}, {$set: {'owner.name': owner.name}})
+    await collection.updateMany({ 'owner.type': owner.type, 'owner.id': owner.id }, { $set: { 'owner.name': owner.name } })
 
     // permissions
-    const cursor = collection.find({permissions: {$elemMatch: {type: owner.type, id: owner.id}}})
+    const cursor = collection.find({ permissions: { $elemMatch: { type: owner.type, id: owner.id } } })
     while (await cursor.hasNext()) {
       const doc = await cursor.next()
       doc.permissions
@@ -67,15 +67,15 @@ router.post('/owner-names', asyncWrap(async (req, res) => {
         .forEach(permission => {
           permission.name = owner.name
         })
-      await collection.updateOne({id: doc.id}, {$set: {permissions: doc.permissions}})
+      await collection.updateOne({ id: doc.id }, { $set: { permissions: doc.permissions } })
     }
 
     // created/updated events
     if (owner.type === 'user') {
-      await collection.updateMany({'createdBy': owner.id}, {$set: {'createdBy': {id: owner.id, name: owner.name}}})
-      await collection.updateMany({'createdBy.id': owner.id}, {$set: {'createdBy': {id: owner.id, name: owner.name}}})
-      await collection.updateMany({'updatedBy': owner.id}, {$set: {'updatedBy': {id: owner.id, name: owner.name}}})
-      await collection.updateMany({'updatedBy.id': owner.id}, {$set: {'updatedBy': {id: owner.id, name: owner.name}}})
+      await collection.updateMany({ 'createdBy': owner.id }, { $set: { 'createdBy': { id: owner.id, name: owner.name } } })
+      await collection.updateMany({ 'createdBy.id': owner.id }, { $set: { 'createdBy': { id: owner.id, name: owner.name } } })
+      await collection.updateMany({ 'updatedBy': owner.id }, { $set: { 'updatedBy': { id: owner.id, name: owner.name } } })
+      await collection.updateMany({ 'updatedBy.id': owner.id }, { $set: { 'updatedBy': { id: owner.id, name: owner.name } } })
     }
   }
   res.send()

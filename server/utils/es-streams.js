@@ -3,7 +3,7 @@ const config = require('config')
 
 class IndexStream extends Writable {
   constructor(options) {
-    super({objectMode: true})
+    super({ objectMode: true })
     this.options = options
     this.body = []
     this.bulkChars = 0
@@ -15,11 +15,11 @@ class IndexStream extends Writable {
 
     if (this.options.updateMode) {
       if (Object.keys(item.doc).length === 0) return callback()
-      this.body.push({update: {_index: this.options.indexName, _type: 'line', _id: item.id, retry_on_conflict: 3}})
-      this.body.push({doc: item.doc})
+      this.body.push({ update: { _index: this.options.indexName, _type: 'line', _id: item.id, retry_on_conflict: 3 } })
+      this.body.push({ doc: item.doc })
       this.bulkChars += JSON.stringify(item.doc).length
     } else {
-      this.body.push({index: {_index: this.options.indexName, _type: 'line'}})
+      this.body.push({ index: { _index: this.options.indexName, _type: 'line' } })
       this.body.push(item)
       this.bulkChars += JSON.stringify(item).length
     }
@@ -40,7 +40,7 @@ class IndexStream extends Writable {
   _sendBulk(callback) {
     if (this.body.length === 0) return callback()
     const bodyClone = [].concat(this.body)
-    this.options.esClient.bulk({body: this.body, refresh: 'wait_for'}, (err, res) => {
+    this.options.esClient.bulk({ body: this.body, refresh: 'wait_for' }, (err, res) => {
       if (err) return callback(err)
       if (res.errors) {
         res.items

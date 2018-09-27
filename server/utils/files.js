@@ -13,7 +13,7 @@ const fallbackMimeTypes = {
   fods: 'application/vnd.oasis.opendocument.spreadsheet'
 }
 
-const {tabularTypes, geographicalTypes} = require('../workers/converter')
+const { tabularTypes, geographicalTypes } = require('../workers/converter')
 
 function uploadDir(req) {
   const owner = usersUtils.owner(req)
@@ -34,7 +34,7 @@ const storage = multer.diskStorage({
     } else {
       // Create dataset case
       const baseTitle = path.parse(file.originalname).name
-      const baseId = slug(baseTitle, {lower: true})
+      const baseId = slug(baseTitle, { lower: true })
       file.id = baseId
       file.title = baseTitle
       let i = 1
@@ -44,7 +44,7 @@ const storage = multer.diskStorage({
           file.title = baseTitle + ' ' + i
         }
         // better to check file than db entry in case of file currently uploading
-        var dbExists = await req.app.get('db').collection('datasets').count({id: file.id})
+        var dbExists = await req.app.get('db').collection('datasets').count({ id: file.id })
         var fileExists = true
         try {
           await fs.stat(path.join(uploadDir(req), file.id + ext))

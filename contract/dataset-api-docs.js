@@ -333,8 +333,8 @@ module.exports = (dataset) => {
           security: (publicOperations.indexOf('getMetricAgg') || publicClasses.indexOf('read')) ? [] : [{ jwt: [] }],
           tags: ['Données'],
           parameters: [
-            Object.assign({}, metricParam, {required: true}),
-            Object.assign({}, metricFieldParam, {required: true}),
+            Object.assign({}, metricParam, { required: true }),
+            Object.assign({}, metricFieldParam, { required: true }),
             aggSizeParam
           ].concat(queryParams),
           responses: {

@@ -3,7 +3,7 @@ const eventToPromise = require('event-to-promise')
 
 const testUtils = require('./resources/test-utils')
 
-const {test, config} = testUtils.prepare(__filename)
+const { test, config } = testUtils.prepare(__filename)
 
 async function receive(cli) {
   const res = await eventToPromise(cli, 'message')
@@ -30,7 +30,7 @@ test('Receive error when sending bad input', async t => {
 test('Subscribe to channel', async t => {
   const cli = new WebSocket(config.publicUrl)
   await eventToPromise(cli, 'open')
-  cli.send(JSON.stringify({type: 'subscribe', channel: 'test_channel'}))
+  cli.send(JSON.stringify({ type: 'subscribe', channel: 'test_channel' }))
   let msg = await receive(cli)
   t.is(msg.type, 'subscribe-confirm')
   t.is(msg.channel, 'test_channel')
@@ -44,7 +44,7 @@ test('Subscribe to channel', async t => {
 test.skip('Send lots of events', async t => {
   const cli = new WebSocket(config.publicUrl)
   await eventToPromise(cli, 'open')
-  cli.send(JSON.stringify({type: 'subscribe', channel: 'test_channel'}))
+  cli.send(JSON.stringify({ type: 'subscribe', channel: 'test_channel' }))
   let msg = await receive(cli)
   t.is(msg.type, 'subscribe-confirm')
   t.is(msg.channel, 'test_channel')

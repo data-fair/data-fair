@@ -8,13 +8,13 @@ module.exports.log = async function(app, resource, event, type = 'dataset') {
   event.date = moment().toISOString()
 
   await db.collection('journals')
-    .update({id: resource.id, type}, {$push: {events: event}}, {upsert: true})
+    .update({ id: resource.id, type }, { $push: { events: event } }, { upsert: true })
 
   // websockets notifications
   await app.publish(`${type}s/${resource.id}/journal`, event)
 
   // webhooks notifications
-  const settings = await db.collection('settings').findOne({id: resource.owner.id, type: resource.owner.type}) || {}
+  const settings = await db.collection('settings').findOne({ id: resource.owner.id, type: resource.owner.type }) || {}
   settings.webhooks = settings.webhooks || []
   settings.webhooks.forEach(webhook => {
     if (webhook.events && webhook.events.length && !webhook.events.includes(event.type)) return

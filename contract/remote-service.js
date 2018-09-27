@@ -45,7 +45,7 @@ module.exports = {
       format: 'date-time'
     },
     owner,
-    apiDoc: {$ref: '#/definitions/API'},
+    apiDoc: { $ref: '#/definitions/API' },
     url: {
       type: 'string',
       description: 'The url to fetch the apiDoc. Can be used for refresh purpose'
@@ -85,11 +85,11 @@ module.exports = {
         additionalProperties: false,
         required: ['operationId', 'name', 'value'],
         properties: {
-          name: {type: 'string'},
-          operationId: {type: 'string'},
-          value: {type: 'string'},
-          'x-refersTo': {type: 'string'},
-          title: {type: 'string'}
+          name: { type: 'string' },
+          operationId: { type: 'string' },
+          value: { type: 'string' },
+          'x-refersTo': { type: 'string' },
+          title: { type: 'string' }
         }
       }
     }

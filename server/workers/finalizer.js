@@ -7,13 +7,13 @@ exports.type = 'dataset'
 exports.eventsPrefix = 'finalize'
 
 // either extended or there are no extensions to perform
-exports.filter = {$or: [
-  {status: 'extended'},
-  {$and: [
-    {status: 'indexed'},
-    {extensions: {$not: {$elemMatch: {active: true}}}}
-  ]}
-]}
+exports.filter = { $or: [
+  { status: 'extended' },
+  { $and: [
+    { status: 'indexed' },
+    { extensions: { $not: { $elemMatch: { active: true } } } }
+  ] }
+] }
 
 exports.process = async function(app, dataset) {
   const db = app.get('db')
@@ -25,7 +25,7 @@ exports.process = async function(app, dataset) {
   // Calculate fields after indexing and extension as we might depend on all fields
   await extensionsUtils.extendCalculated(app, dataset, geopoint, geometry)
 
-  const result = {status: 'finalized'}
+  const result = { status: 'finalized' }
 
   let bboxPromise
   if (geopoint || geometry) {
@@ -35,7 +35,7 @@ exports.process = async function(app, dataset) {
   const nonTextProps = dataset.schema.filter(prop => prop.type !== 'string' || prop.format)
   if (nonTextProps.length) {
     result.schema = dataset.schema
-    const responses = await Promise.all(nonTextProps.map(p => esUtils.valuesAgg(es, dataset, {field: p.key, agg_size: 10})))
+    const responses = await Promise.all(nonTextProps.map(p => esUtils.valuesAgg(es, dataset, { field: p.key, agg_size: 10 })))
     nonTextProps.forEach((prop, i) => {
       const aggResult = responses[i]
       prop['x-cardinality'] = aggResult.total_values
@@ -55,5 +55,5 @@ exports.process = async function(app, dataset) {
 
   result.finalizedAt = (new Date()).toISOString()
   Object.assign(dataset, result)
-  await collection.updateOne({id: dataset.id}, {$set: result})
+  await collection.updateOne({ id: dataset.id }, { $set: result })
 }

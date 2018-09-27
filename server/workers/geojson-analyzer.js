@@ -12,12 +12,12 @@ const fieldsSniffer = require('../utils/fields-sniffer')
 
 exports.type = 'dataset'
 exports.eventsPrefix = 'analyze'
-exports.filter = {status: 'loaded', 'file.mimetype': 'application/geo+json'}
+exports.filter = { status: 'loaded', 'file.mimetype': 'application/geo+json' }
 
 // This writable stream will receive geojson features, take samples and and deduce a dataset schema
 class AnalyzerWritable extends Writable {
   constructor(options) {
-    super({objectMode: true})
+    super({ objectMode: true })
     this.samples = {}
     this.schema = [{
       type: 'string',
@@ -65,7 +65,7 @@ exports.process = async function(app, dataset) {
 
   dataset.status = 'schematized'
   dataset.schema = analyzer.schema
-  await db.collection('datasets').updateOne({id: dataset.id}, {
+  await db.collection('datasets').updateOne({ id: dataset.id }, {
     $set: {
       status: 'schematized',
       'schema': analyzer.schema

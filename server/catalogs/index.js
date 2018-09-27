@@ -10,9 +10,9 @@ const path = require('path')
 fs.ensureDirSync(path.resolve(config.pluginsDir, 'catalogs'))
 exports.connectors = fs.readdirSync(__dirname)
   .filter(f => f !== 'index.js')
-  .map(f => ({key: f.replace('.js', ''), ...require('./' + f)}))
+  .map(f => ({ key: f.replace('.js', ''), ...require('./' + f) }))
   .concat(fs.readdirSync(path.resolve(config.pluginsDir, 'catalogs'))
-    .map(f => ({key: f.replace('.js', ''), ...require(path.resolve(config.pluginsDir, 'catalogs', f))})))
+    .map(f => ({ key: f.replace('.js', ''), ...require(path.resolve(config.pluginsDir, 'catalogs', f)) })))
 
 // Loosely validate connectors
 const expectedKeys = new Set([
@@ -29,7 +29,7 @@ const expectedKeys = new Set([
   'deleteApplication'
 ])
 exports.connectors.forEach(c => {
-  assert.deepEqual(new Set(Object.keys(c)), expectedKeys, `The catalog connector ${c.key} does not have the expected exported properties (${[...expectedKeys].join(', ')}).`)
+  assert.deepStrictEqual(new Set(Object.keys(c)), expectedKeys, `The catalog connector ${c.key} does not have the expected exported properties (${[...expectedKeys].join(', ')}).`)
 })
 
 exports.init = async (catalogUrl) => {
@@ -64,7 +64,7 @@ exports.processPublications = async function(app, type, resource) {
   const catalogsCollection = db.collection('catalogs')
 
   resource.publications.filter(p => !p.id).forEach(p => { p.id = shortid.generate() })
-  await resourcesCollection.updateOne({id: resource.id}, {$set: {publications: resource.publications}})
+  await resourcesCollection.updateOne({ id: resource.id }, { $set: { publications: resource.publications } })
 
   const processedPublication = resource.publications.find(p => ['waiting', 'deleted'].includes(p.status))
 
@@ -74,8 +74,8 @@ exports.processPublications = async function(app, type, resource) {
     if ((!error || nonBlocking) && processedPublication.status === 'deleted') {
       // Deletion worked
       return resourcesCollection.updateOne(
-        {id: resource.id},
-        {$pull: {publications: {id: processedPublication.id}}}
+        { id: resource.id },
+        { $pull: { publications: { id: processedPublication.id } } }
       )
     }
 
@@ -92,13 +92,13 @@ exports.processPublications = async function(app, type, resource) {
 
     if (Object.keys(patch).length) {
       await resourcesCollection.updateOne(
-        {id: resource.id, 'publications.id': processedPublication.id},
-        {$set: patch}
+        { id: resource.id, 'publications.id': processedPublication.id },
+        { $set: patch }
       )
     }
   }
 
-  const catalog = await catalogsCollection.findOne({id: processedPublication.catalog})
+  const catalog = await catalogsCollection.findOne({ id: processedPublication.catalog })
 
   if (!catalog) {
     await journals.log(app, resource, {
@@ -128,13 +128,13 @@ exports.processPublications = async function(app, type, resource) {
     if (type === 'dataset' && processedPublication.status === 'deleted') res = await connector.deleteDataset(catalog, resource, processedPublication)
     if (type === 'application' && processedPublication.status === 'deleted') res = await connector.deleteApplication(catalog, resource, processedPublication)
     if (processedPublication.status === 'waiting') {
-      await journals.log(app, resource, {type: 'publication', data: `Publication OK vers ${catalog.title || catalog.url}`}, type)
+      await journals.log(app, resource, { type: 'publication', data: `Publication OK vers ${catalog.title || catalog.url}` }, type)
     } else {
-      await journals.log(app, resource, {type: 'publication', data: `Suppression de la publication OK vers ${catalog.title || catalog.url}`}, type)
+      await journals.log(app, resource, { type: 'publication', data: `Suppression de la publication OK vers ${catalog.title || catalog.url}` }, type)
     }
     await setResult(null, res)
   } catch (err) {
-    await journals.log(app, resource, {type: 'error', data: err.message || err}, type)
+    await journals.log(app, resource, { type: 'error', data: err.message || err }, type)
     await setResult(err.message || err)
   }
 }
@@ -145,5 +145,5 @@ async function getApplicationDatasets(db, app) {
   ['datasetUrl', 'networksDatasetUrl', 'networksMembersDatasetUrl'].forEach(k => {
     if (app.configuration[k]) datasetReferences.push(app.configuration[k])
   })
-  return db.collection('datasets').find({id: {$in: datasetReferences.map(r => r.split('/').pop())}}).toArray()
+  return db.collection('datasets').find({ id: { $in: datasetReferences.map(r => r.split('/').pop()) } }).toArray()
 }

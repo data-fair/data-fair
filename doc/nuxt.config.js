@@ -3,14 +3,14 @@ const messages = require('../i18n').messages
 
 module.exports = {
   srcDir: 'doc/',
-  build: {extractCSS: true},
+  build: { extractCSS: true },
   generate: {
     dir: 'doc-dist'
   },
   loading: { color: '#1e88e5' }, // Customize the progress bar color
-  plugins: [{src: '~plugins/vuetify'}],
-  router: {base: '/data-fair/'},
-  env: {theme: config.theme},
+  plugins: [{ src: '~plugins/vuetify' }],
+  router: { base: '/data-fair/' },
+  env: { theme: config.theme },
   modules: ['@nuxtjs/markdownit', ['nuxt-i18n', {
     seo: false,
     locales: [

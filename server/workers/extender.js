@@ -5,7 +5,7 @@ exports.type = 'dataset'
 exports.eventsPrefix = 'extend'
 
 // Indexed and at least one active extension
-exports.filter = {status: 'indexed', 'extensions.active': true}
+exports.filter = { status: 'indexed', 'extensions.active': true }
 
 exports.process = async function(app, dataset) {
   const db = app.get('db')
@@ -17,7 +17,7 @@ exports.process = async function(app, dataset) {
   const extensionsPromises = []
   for (let extension of extensions) {
     if (!extension.active) continue
-    const remoteService = await db.collection('remote-services').findOne({id: extension.remoteService})
+    const remoteService = await db.collection('remote-services').findOne({ id: extension.remoteService })
     if (!remoteService) continue
     // TODO: check that owner can use remoteservice event if not owner ?
     if (dataset.owner.type !== remoteService.owner.type || dataset.owner.id !== remoteService.owner.id) continue
@@ -27,7 +27,7 @@ exports.process = async function(app, dataset) {
   }
   await Promise.all(extensionsPromises)
 
-  const result = {status: 'extended'}
+  const result = { status: 'extended' }
   Object.assign(dataset, result)
-  await collection.updateOne({id: dataset.id}, {$set: result})
+  await collection.updateOne({ id: dataset.id }, { $set: result })
 }

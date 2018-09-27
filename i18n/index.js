@@ -2,9 +2,9 @@ const config = require('config')
 const flatten = require('flat')
 const unflatten = flatten.unflatten
 const acceptLangParser = require('accept-language-parser')
-const flatOpts = {delimiter: '_'}
+const flatOpts = { delimiter: '_' }
 
-exports.locales = config.i18n.locales.map(l => ({code: l}))
+exports.locales = config.i18n.locales.map(l => ({ code: l }))
 
 // Build a map of messages of this form
 // {fr: {msg1: 'libellé 1'}, en: {msg1: 'label 1'}}

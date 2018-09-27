@@ -8,17 +8,17 @@ exports.docUrl = 'https://udata.readthedocs.io/en/latest/'
 
 exports.init = async (catalogUrl) => {
   const siteInfo = (await axios.get(url.resolve(catalogUrl, 'api/1/site/'))).data
-  return {url: catalogUrl, title: siteInfo.title}
+  return { url: catalogUrl, title: siteInfo.title }
 }
 
 exports.suggestOrganizations = async (catalogUrl, q) => {
-  const res = await axios.get(url.resolve(catalogUrl, 'api/1/organizations/suggest/'), {params: {q}})
-  return {results: res.data.map(o => ({id: o.id, name: o.name}))}
+  const res = await axios.get(url.resolve(catalogUrl, 'api/1/organizations/suggest/'), { params: { q } })
+  return { results: res.data.map(o => ({ id: o.id, name: o.name })) }
 }
 
 exports.suggestDatasets = async (catalogUrl, q) => {
-  const res = await axios.get(url.resolve(catalogUrl, 'api/1/datasets/suggest/'), {params: {q}})
-  return {results: res.data.map(o => ({id: o.id, title: o.title}))}
+  const res = await axios.get(url.resolve(catalogUrl, 'api/1/datasets/suggest/'), { params: { q } })
+  return { results: res.data.map(o => ({ id: o.id, title: o.title })) }
 }
 
 exports.publishDataset = async (catalog, dataset, publication) => {
@@ -50,13 +50,13 @@ exports.publishApplication = async (catalog, application, publication, datasets)
       datafairOrigin: config.publicUrl,
       datafairApplicationId: application.id
     },
-    datasets: udataDatasets.map(d => ({id: d.id}))
+    datasets: udataDatasets.map(d => ({ id: d.id }))
   }
   if (catalog.organization && catalog.organization.id) {
-    udataReuse.organization = {id: catalog.organization.id}
+    udataReuse.organization = { id: catalog.organization.id }
   }
   try {
-    const res = await axios.post(url.resolve(catalog.url, 'api/1/reuses/'), udataReuse, {headers: {'X-API-KEY': catalog.apiKey}})
+    const res = await axios.post(url.resolve(catalog.url, 'api/1/reuses/'), udataReuse, { headers: { 'X-API-KEY': catalog.apiKey } })
     publication.targetUrl = res.data.page
     publication.result = res.data
   } catch (err) {
@@ -70,7 +70,7 @@ exports.deleteApplication = async (catalog, application, publication) => {
   // The dataset was never really created in udata
   if (!udataReuse) return
   try {
-    await axios.delete(url.resolve(catalog.url, `api/1/reuses/${udataReuse.id}/`), {headers: {'X-API-KEY': catalog.apiKey}})
+    await axios.delete(url.resolve(catalog.url, `api/1/reuses/${udataReuse.id}/`), { headers: { 'X-API-KEY': catalog.apiKey } })
   } catch (err) {
     // The reuse was already deleted ?
     if (!err.response || ![404, 410].includes(err.response.status)) throw err
@@ -122,7 +122,7 @@ async function addResourceToDataset(catalog, dataset, publication) {
   }]
   try {
     for (let resource of resources) {
-      await axios.post(url.resolve(catalog.url, `api/1/datasets/${publication.addToDataset.id}/resources/`), resource, {headers: {'X-API-KEY': catalog.apiKey}})
+      await axios.post(url.resolve(catalog.url, `api/1/datasets/${publication.addToDataset.id}/resources/`), resource, { headers: { 'X-API-KEY': catalog.apiKey } })
     }
     const udataDataset = (await axios.get(url.resolve(catalog.url, `api/1/datasets/${publication.addToDataset.id}`))).data
     publication.targetUrl = udataDataset.page
@@ -195,10 +195,10 @@ async function createNewDataset(catalog, dataset, publication) {
     })
   }
   if (catalog.organization && catalog.organization.id) {
-    udataDataset.organization = {id: catalog.organization.id}
+    udataDataset.organization = { id: catalog.organization.id }
   }
   try {
-    const res = await axios.post(url.resolve(catalog.url, 'api/1/datasets/'), udataDataset, {headers: {'X-API-KEY': catalog.apiKey}})
+    const res = await axios.post(url.resolve(catalog.url, 'api/1/datasets/'), udataDataset, { headers: { 'X-API-KEY': catalog.apiKey } })
     if (!res.data.page || typeof res.data.page !== 'string') {
       throw new Error(`Erreur lors de l'envoi à ${catalog.url} : le format de retour n'est pas correct.`)
     }
@@ -219,7 +219,7 @@ async function deleteResourceFromDataset(catalog, dataset, publication) {
   })
   for (let resource of resources) {
     try {
-      await axios.delete(url.resolve(catalog.url, `api/1/datasets/${udataDataset.id}/resources/${resource.id}/`), {headers: {'X-API-KEY': catalog.apiKey}})
+      await axios.delete(url.resolve(catalog.url, `api/1/datasets/${udataDataset.id}/resources/${resource.id}/`), { headers: { 'X-API-KEY': catalog.apiKey } })
     } catch (err) {
       // The resource was already deleted ?
       if (!err.response || ![404, 410].includes(err.response.status)) throw err
@@ -232,7 +232,7 @@ async function deleteDataset(catalog, dataset, publication) {
   // The dataset was never really created in udata
   if (!udataDataset) return
   try {
-    await axios.delete(url.resolve(catalog.url, `api/1/datasets/${udataDataset.id}/`), {headers: {'X-API-KEY': catalog.apiKey}})
+    await axios.delete(url.resolve(catalog.url, `api/1/datasets/${udataDataset.id}/`), { headers: { 'X-API-KEY': catalog.apiKey } })
   } catch (err) {
     // The dataset was already deleted ?
     if (!err.response || ![404, 410].includes(err.response.status)) throw err

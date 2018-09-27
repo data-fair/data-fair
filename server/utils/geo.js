@@ -41,7 +41,7 @@ exports.latlon2fields = (schema, doc) => {
   if (!lat || !lon) return {}
   return {
     _geopoint: lat + ',' + lon,
-    _geoshape: {type: 'Point', coordinates: [Number(lon), Number(lat)]},
+    _geoshape: { type: 'Point', coordinates: [Number(lon), Number(lat)] },
     _geocorners: [lat + ',' + lon]
   }
 }
@@ -49,15 +49,15 @@ exports.latlon2fields = (schema, doc) => {
 exports.geometry2fields = async (schema, doc) => {
   const prop = schema.find(p => p['x-refersTo'] === geomUri)
   if (!prop || !doc[prop.key] || doc[prop.key] === '{}') return {}
-  const feature = {type: 'Feature', geometry: JSON.parse(doc[prop.key])}
+  const feature = { type: 'Feature', geometry: JSON.parse(doc[prop.key]) }
   // Do the best we can to fix invalid geojson
   try {
-    cleanCoords(feature, {mutate: true})
+    cleanCoords(feature, { mutate: true })
   } catch (err) {
     console.error('Failure while applying cleanCoords to geojson', err)
   }
   try {
-    rewind(feature, {mutate: true})
+    rewind(feature, { mutate: true })
   } catch (err) {
     console.error('Failure while applying rewind to geojson', err)
   }
@@ -89,12 +89,12 @@ exports.result2geojson = esResponse => {
     type: 'FeatureCollection',
     total: esResponse.hits.total,
     features: esResponse.hits.hits.map(hit => {
-      const {_geoshape, ...properties} = hit._source
+      const { _geoshape, ...properties } = hit._source
       return {
         type: 'Feature',
         id: hit._id,
         geometry: hit._source._geoshape,
-        properties: flatten({...properties, _id: hit._id})
+        properties: flatten({ ...properties, _id: hit._id })
       }
     })
   }
@@ -108,7 +108,7 @@ const customUnkink = async (feature) => {
     if (feature.geometry.type === 'MultiPolygon') {
       const newCoordinates = []
       for (let coordinates of feature.geometry.coordinates) {
-        const childPolygon = {type: 'Feature', geometry: {type: 'Polygon', coordinates}}
+        const childPolygon = { type: 'Feature', geometry: { type: 'Polygon', coordinates } }
         await prepair(childPolygon)
         if (childPolygon.geometry.type === 'Polygon') newCoordinates.push(childPolygon.geometry.coordinates)
         else childPolygon.geometry.coordinates.forEach(c => newCoordinates.push(c))
@@ -120,7 +120,7 @@ const customUnkink = async (feature) => {
   } catch (err) {
     console.error('Failed to use the prepair command line tool', err)
     const unkinked = unkink(feature)
-    feature.geometry = {type: 'MultiPolygon', coordinates: unkinked.features.map(f => f.geometry.coordinates)}
+    feature.geometry = { type: 'MultiPolygon', coordinates: unkinked.features.map(f => f.geometry.coordinates) }
   }
   if (tmpFile) tmpFile.cleanup()
 }
@@ -129,9 +129,9 @@ const prepair = async (feature) => {
   let tmpFile
   try {
     // const wkt = wktParser.convert(feature.geometry)
-    tmpFile = await tmp.file({postfix: '.geojson'})
+    tmpFile = await tmp.file({ postfix: '.geojson' })
     await writeFile(tmpFile.fd, JSON.stringify(feature))
-    const repaired = await exec(`../prepair/prepair --ogr '${tmpFile.path}'`, {maxBuffer: 100000000})
+    const repaired = await exec(`../prepair/prepair --ogr '${tmpFile.path}'`, { maxBuffer: 100000000 })
     feature.geometry = wktParser.parse(repaired.stdout)
     return feature
   } catch (err) {

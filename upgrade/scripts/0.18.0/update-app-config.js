@@ -14,11 +14,11 @@ exports.exec = async (db, debug) => {
 
     if (conf.datasets.length || conf.remoteServices.length) {
       await db.collection('applications').updateOne(
-        {_id: app._id},
-        {$set: {
+        { _id: app._id },
+        { $set: {
           'configuration.datasets': conf.datasets,
           'configuration.remoteServices': conf.remoteServices
-        }}
+        } }
       )
     }
   }
@@ -27,7 +27,7 @@ exports.exec = async (db, debug) => {
 function ensureDataset(conf, oldKey, newKey, debug) {
   conf.datasets = conf.datasets || []
   if (conf[oldKey] && !conf.datasets.find(d => d.href === conf[oldKey])) {
-    conf.datasets.push({href: conf[oldKey], key: newKey})
+    conf.datasets.push({ href: conf[oldKey], key: newKey })
     debug(`Configuration ${conf.id} : ${oldKey} -> datasets.${newKey} (${conf[oldKey]})`)
   }
 }
@@ -35,7 +35,7 @@ function ensureDataset(conf, oldKey, newKey, debug) {
 function ensureRemoteService(conf, oldKey, newKey, debug) {
   conf.remoteServices = conf.remoteServices || []
   if (conf[oldKey] && !conf.remoteServices.find(d => d.href === conf[oldKey])) {
-    conf.remoteServices.push({href: conf[oldKey], key: newKey})
+    conf.remoteServices.push({ href: conf[oldKey], key: newKey })
     debug(`Configuration ${conf.id} : ${oldKey} -> remoteServices.${newKey} (${conf[oldKey]})`)
   }
 }

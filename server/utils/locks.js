@@ -5,17 +5,17 @@ const pid = shortid.generate()
 let interval
 exports.init = async db => {
   const locks = db.collection('locks')
-  await locks.createIndex({pid: 1})
+  await locks.createIndex({ pid: 1 })
   try {
-    await locks.createIndex({updatedAt: 1}, {expireAfterSeconds: config.locks.ttl})
+    await locks.createIndex({ updatedAt: 1 }, { expireAfterSeconds: config.locks.ttl })
   } catch (err) {
     console.log('Failure to create TTL index. Probably because the value changed. Try to update it.')
-    db.command({collMod: 'locks', index: {keyPattern: {updatedAt: 1}, expireAfterSeconds: config.locks.ttl}})
+    db.command({ collMod: 'locks', index: { keyPattern: { updatedAt: 1 }, expireAfterSeconds: config.locks.ttl } })
   }
 
   // prolongate lock acquired by this process while it is still active
   interval = setInterval(() => {
-    locks.update({pid}, {'$currentDate': {updatedAt: true}})
+    locks.update({ pid }, { '$currentDate': { updatedAt: true } })
   }, (config.locks.ttl / 2) * 1000)
 }
 
@@ -26,8 +26,8 @@ exports.stop = () => {
 exports.acquire = async (db, _id) => {
   const locks = db.collection('locks')
   try {
-    await locks.insert({_id, pid})
-    await locks.update({_id}, {'$currentDate': {updatedAt: true}})
+    await locks.insert({ _id, pid })
+    await locks.update({ _id }, { '$currentDate': { updatedAt: true } })
     return true
   } catch (err) {
     if (err.code !== 11000) throw err
@@ -38,5 +38,5 @@ exports.acquire = async (db, _id) => {
 
 exports.release = async (db, _id) => {
   const locks = db.collection('locks')
-  await locks.remove({_id, pid})
+  await locks.remove({ _id, pid })
 }

@@ -77,18 +77,18 @@ router.get('', asyncWrap(async(req, res) => {
     findUtils.setResourceLinks(r, 'catalog')
   })
   facets = findUtils.parseFacets(facets)
-  res.json({results: results.map(result => mongoEscape.unescape(result, true)), count, facets})
+  res.json({ results: results.map(result => mongoEscape.unescape(result, true)), count, facets })
 }))
 
 // Create a catalog
 router.post('', asyncWrap(async(req, res) => {
   const catalog = req.body
-  const baseId = catalog.id || slug(catalog.url, {lower: true})
+  const baseId = catalog.id || slug(catalog.url, { lower: true })
   catalog.id = baseId
   let i = 1
   do {
     if (i > 1) catalog.id = baseId + i
-    var dbExists = await req.app.get('db').collection('catalogs').count({id: catalog.id})
+    var dbExists = await req.app.get('db').collection('catalogs').count({ id: catalog.id })
     i += 1
   } while (dbExists)
   catalog.owner = usersUtils.owner(req)
@@ -97,9 +97,9 @@ router.post('', asyncWrap(async(req, res) => {
   if (!valid) return res.status(400).send(normalise(validateCatalog.errors))
   const date = moment().toISOString()
   catalog.createdAt = date
-  catalog.createdBy = {id: req.user.id, name: req.user.name}
+  catalog.createdBy = { id: req.user.id, name: req.user.name }
   catalog.updatedAt = date
-  catalog.updatedBy = {id: req.user.id, name: req.user.name}
+  catalog.updatedBy = { id: req.user.id, name: req.user.name }
   catalog.permissions = []
 
   await req.app.get('db').collection('catalogs').insertOne(mongoEscape.escape(catalog, true))
@@ -144,9 +144,9 @@ router.patch('/:catalogId', permissions.middleware('writeDescription', 'write'),
   if (forbiddenKey) return res.status(400).send('Only some parts of the catalog configuration can be modified through this route')
 
   patch.updatedAt = moment().toISOString()
-  patch.updatedBy = {id: req.user.id, name: req.user.name}
+  patch.updatedBy = { id: req.user.id, name: req.user.name }
 
-  await req.app.get('db').collection('catalogs').updateOne({id: req.params.catalogId}, {'$set': mongoEscape.escape(patch, true)})
+  await req.app.get('db').collection('catalogs').updateOne({ id: req.params.catalogId }, { '$set': mongoEscape.escape(patch, true) })
   res.status(200).json(patch)
 }))
 

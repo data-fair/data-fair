@@ -21,10 +21,10 @@ exports.query = (req, fieldsMap) => {
     status: 'status'
   })
   Object.keys(fieldsMap).filter(name => req.query[name] !== undefined).forEach(name => {
-    query[fieldsMap[name]] = {$in: req.query[name].split(',')}
+    query[fieldsMap[name]] = { $in: req.query[name].split(',') }
   })
 
-  query.$and = [{$or: permissions.filter(req.user)}]
+  query.$and = [{ $or: permissions.filter(req.user) }]
   if (req.query.owner) {
     delete query['owner.type']
     delete query['owner.id']
@@ -34,15 +34,15 @@ exports.query = (req, fieldsMap) => {
       ownerTypes[t] = ownerTypes[t] || []
       ownerTypes[t].push(id)
     })
-    let ownerFilters = ['user', 'organization'].filter(t => ownerTypes[t]).map(t => ({'owner.type': t, 'owner.id': {$in: ownerTypes[t]}}))
+    let ownerFilters = ['user', 'organization'].filter(t => ownerTypes[t]).map(t => ({ 'owner.type': t, 'owner.id': { $in: ownerTypes[t] } }))
     if (ownerTypes['-user'] || ownerTypes['-organization']) {
       ownerFilters = ownerFilters.concat(['-user', '-organization'].map(t => {
-        const f = {'owner.type': t.substring(1)}
-        if (ownerTypes[t]) f['owner.id'] = {$nin: ownerTypes[t]}
+        const f = { 'owner.type': t.substring(1) }
+        if (ownerTypes[t]) f['owner.id'] = { $nin: ownerTypes[t] }
         return f
       }))
     }
-    query.$and.push({$or: ownerFilters})
+    query.$and.push({ $or: ownerFilters })
   }
   return query
 }
@@ -74,7 +74,7 @@ exports.pagination = (query, defaultSize = 10) => {
 }
 
 exports.project = (selectStr, exclude = []) => {
-  const select = {_id: 0}
+  const select = { _id: 0 }
   if (!selectStr) {
     exclude.forEach(e => {
       select[e] = 0
@@ -83,7 +83,7 @@ exports.project = (selectStr, exclude = []) => {
     selectStr.split(',').forEach(s => {
       select[s] = 1
     })
-    Object.assign(select, {permissions: 1, id: 1, owner: 1})
+    Object.assign(select, { permissions: 1, id: 1, owner: 1 })
     exclude.forEach(e => {
       delete select[e]
     })
@@ -160,5 +160,5 @@ exports.facetsQuery = (facetsQueryParam, query) => {
 exports.parseFacets = (facets) => {
   if (!facets) return
   const ret = facets.pop()
-  return Object.assign({}, ...Object.keys(ret).map(k => ({[k]: ret[k].map(r => ({count: r.count, value: r._id}))})))
+  return Object.assign({}, ...Object.keys(ret).map(k => ({ [k]: ret[k].map(r => ({ count: r.count, value: r._id })) })))
 }

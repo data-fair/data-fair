@@ -42,7 +42,7 @@ function prepareMapping(action, schema, extensionKey, selectFields) {
 // Maps input from documents to the expected parameters of a remote service action
 class PrepareInputStream extends Transform {
   constructor(options) {
-    super({objectMode: true})
+    super({ objectMode: true })
     this.hashes = options.hashes
     this.stats = options.stats
     this.mapping = prepareMapping(options.action, options.dataset.schema, options.extensionKey, options.selectFields)
@@ -63,7 +63,7 @@ class PrepareInputStream extends Transform {
 // used when re-indexing
 class ExtendStream extends Transform {
   constructor(options) {
-    super({objectMode: true})
+    super({ objectMode: true })
     this.options = options
   }
   async init() {
@@ -74,10 +74,10 @@ class ExtendStream extends Transform {
     this.mappings = {}
     this.extensionsMap = {}
     // The ES index was not yet created, we will not try to extract previous extensions
-    if (!await esClient.indices.exists({index: this.indexName})) return
+    if (!await esClient.indices.exists({ index: this.indexName })) return
     for (let extension of extensions) {
       if (!extension.active) return
-      const remoteService = await db.collection('remote-services').findOne({id: extension.remoteService})
+      const remoteService = await db.collection('remote-services').findOne({ id: extension.remoteService })
       if (!remoteService) continue
       const action = remoteService.actions.find(action => action.id === extension.action)
       if (!action) continue
@@ -92,10 +92,10 @@ class ExtendStream extends Transform {
       const esClient = this.options.esClient
       for (let extensionKey in this.mappings) {
       /* eslint no-unused-vars: off */
-        const [mappedItem, h] = this.mappings[extensionKey]({doc: item})
+        const [mappedItem, h] = this.mappings[extensionKey]({ doc: item })
         const res = await esClient.search({
           index: this.indexName,
-          body: {query: {constant_score: {filter: {term: {[extensionKey + '._hash']: h}}}}}
+          body: { query: { constant_score: { filter: { term: { [extensionKey + '._hash']: h } } } } }
         })
         if (res.hits.total > 0) {
           const extensionResult = res.hits.hits[0]._source[extensionKey]
@@ -118,7 +118,7 @@ exports.extendStream = (options) => new ExtendStream(options)
 // Input stream scanning a full ES index using the scroll api
 class ESInputStream extends Readable {
   constructor(options) {
-    super({objectMode: true})
+    super({ objectMode: true })
     this.esClient = options.esClient
     this.indexName = options.indexName
     this.forceNext = options.forceNext
@@ -126,16 +126,16 @@ class ESInputStream extends Readable {
     this.stats = options.stats
     this.i = 0
 
-    this.query = {bool: {must_not: {exists: {field: this.extensionKey + '._hash'}}}}
+    this.query = { bool: { must_not: { exists: { field: this.extensionKey + '._hash' } } } }
     if (this.forceNext || !this.extensionKey) {
-      this.query = {match_all: {}}
+      this.query = { match_all: {} }
     }
   }
   async init() {
     if (!this.stats) return
     const res = await this.esClient.count({
       index: this.indexName,
-      body: {query: this.query}
+      body: { query: this.query }
     })
     this.stats.missing = res.count
   }
@@ -148,15 +148,15 @@ class ESInputStream extends Readable {
         res = await this.esClient.search({
           index: this.indexName,
           scroll: '100s',
-          body: {query: this.query}
+          body: { query: this.query }
         })
       } else {
-        res = await this.esClient.scroll({scroll_id: this.scrollId, scroll: '100s'})
+        res = await this.esClient.scroll({ scroll_id: this.scrollId, scroll: '100s' })
       }
       this.scrollId = res._scroll_id
 
       for (let hit of res.hits.hits) {
-        this.reading = this.push({id: hit._id, doc: flatten(hit._source)})
+        this.reading = this.push({ id: hit._id, doc: flatten(hit._source) })
         this.i += 1
       }
 
@@ -178,7 +178,7 @@ class ESInputStream extends Readable {
 // Maps output from a remote service action to new fields in the documents
 class PrepareOutputStream extends Transform {
   constructor(options) {
-    super({objectMode: true})
+    super({ objectMode: true })
     this.hashes = options.hashes
     this.extensionKey = options.extensionKey
     const action = options.action
@@ -196,7 +196,7 @@ class PrepareOutputStream extends Transform {
       .filter(itemKey => this.selectFields.length === 0 || this.selectFields.includes(itemKey))
       .reduce((a, itemKey) => { a[itemKey] = item[itemKey]; return a }, {})
 
-    const mappedItem = {doc: {[this.extensionKey]: selectedItem}}
+    const mappedItem = { doc: { [this.extensionKey]: selectedItem } }
     mappedItem.id = item[this.idOutput]
     selectedItem._hash = this.hashes[mappedItem.id]
     delete this.hashes[mappedItem.id]
@@ -218,12 +218,12 @@ exports.extend = async(app, dataset, extension, remoteService, action) => {
   const setProgress = async (error = '') => {
     try {
       const progress = stats.count / dataset.count
-      await app.publish('datasets/' + dataset.id + '/extend-progress', {remoteService: remoteService.id, action: action.id, progress, error})
+      await app.publish('datasets/' + dataset.id + '/extend-progress', { remoteService: remoteService.id, action: action.id, progress, error })
       await db.collection('datasets').updateOne({
         id: dataset.id,
-        extensions: {$elemMatch: {'remoteService': remoteService.id, 'action': action.id}}
+        extensions: { $elemMatch: { 'remoteService': remoteService.id, 'action': action.id } }
       }, {
-        $set: {'extensions.$.progress': progress, 'extensions.$.error': error, 'extensions.$.forceNext': false}
+        $set: { 'extensions.$.progress': progress, 'extensions.$.error': error, 'extensions.$.forceNext': false }
       })
     } catch (err) {
       console.error('Failure to update progress of an extension', err)
@@ -259,23 +259,23 @@ exports.extend = async(app, dataset, extension, remoteService, action) => {
     if (extension.select && extension.select.length) {
       opts.qs.select = extension.select.join(',')
     }
-    const inputStream = new ESInputStream({esClient, indexName, forceNext: extension.forceNext, extensionKey, stats})
+    const inputStream = new ESInputStream({ esClient, indexName, forceNext: extension.forceNext, extensionKey, stats })
     await inputStream.init()
     stats.count = dataset.count - stats.missing
     await setProgress()
     progressInterval = setInterval(setProgress, 600)
     if (stats.missing !== 0) {
-      const indexStream = esStreams.indexStream({esClient, indexName, stats, updateMode: true})
+      const indexStream = esStreams.indexStream({ esClient, indexName, stats, updateMode: true })
       await pump(
         inputStream,
-        new PrepareInputStream({action, dataset, hashes, extensionKey, selectFields: extension.select, stats}),
+        new PrepareInputStream({ action, dataset, hashes, extensionKey, selectFields: extension.select, stats }),
         request(opts),
         byline.createStream(),
-        new PrepareOutputStream({action, hashes, extensionKey, selectFields: extension.select}),
+        new PrepareOutputStream({ action, hashes, extensionKey, selectFields: extension.select }),
         indexStream
       )
       const errorsSummary = indexStream.errorsSummary()
-      if (errorsSummary) await journals.log(app, dataset, {type: 'error', data: errorsSummary})
+      if (errorsSummary) await journals.log(app, dataset, { type: 'error', data: errorsSummary })
     }
     await setProgress()
     clearInterval(progressInterval)
@@ -292,7 +292,7 @@ exports.extend = async(app, dataset, extension, remoteService, action) => {
 // And returns a doc to apply to the document
 class CalculatedExtension extends Transform {
   constructor(options) {
-    super({objectMode: true})
+    super({ objectMode: true })
     this.options = options
   }
   async _transform(item, encoding, callback) {
@@ -319,28 +319,28 @@ class CalculatedExtension extends Transform {
       }
     })
 
-    callback(null, {id: item.id, doc})
+    callback(null, { id: item.id, doc })
   }
 }
 
 exports.extendCalculated = async (app, dataset, geopoint, geometry) => {
   const indexName = es.aliasName(dataset)
   const esClient = app.get('es')
-  const indexStream = esStreams.indexStream({esClient, indexName, updateMode: true})
+  const indexStream = esStreams.indexStream({ esClient, indexName, updateMode: true })
   await pump(
-    new ESInputStream({esClient, indexName}),
-    new CalculatedExtension({indexName, geopoint, geometry, dataset}),
+    new ESInputStream({ esClient, indexName }),
+    new CalculatedExtension({ indexName, geopoint, geometry, dataset }),
     indexStream
   )
   const errorsSummary = indexStream.errorsSummary()
-  if (errorsSummary) await journals.log(app, dataset, {type: 'error', data: errorsSummary})
+  if (errorsSummary) await journals.log(app, dataset, { type: 'error', data: errorsSummary })
 }
 
 exports.prepareSchema = async (db, schema, extensions) => {
   let extensionsFields = []
   for (let extension of extensions) {
     if (!extension.active) continue
-    const remoteService = await db.collection('remote-services').findOne({id: extension.remoteService})
+    const remoteService = await db.collection('remote-services').findOne({ id: extension.remoteService })
     if (!remoteService) continue
     const action = remoteService.actions.find(action => action.id === extension.action)
     if (!action) continue

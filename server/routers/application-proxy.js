@@ -14,7 +14,7 @@ const setResource = asyncWrap(async(req, res, next) => {
   req.application = req.resource = await req.app.get('db').collection('applications').findOne({
     id: req.params.applicationId
   }, {
-    fields: {_id: 0}
+    fields: { _id: 0 }
   })
   if (!req.application) return res.status(404).send('Application configuration not found')
   findUtils.setResourceLinks(req.application, 'application')
@@ -49,7 +49,7 @@ router.all('/:applicationId*', setResource, permissions.middleware('readDescript
     'X-Config-Url': config.publicUrl + '/api/v1/applications/' + req.params.applicationId + '/config',
     'accept-encoding': 'identity'
   }
-  const options = {url: cleanApplicationUrl + '/*', headers}
+  const options = { url: cleanApplicationUrl + '/*', headers }
 
   // Prevent infinite redirect loops
   // it seems that express routing does not catch a single '/' after /:applicationId*
@@ -85,7 +85,7 @@ router.all('/:applicationId*', setResource, permissions.middleware('readDescript
       return false
     },
     // Empty the stream if the content was not modified
-    transform: new Transform({_transform(chunk, encoding, cb) { cb() }})
+    transform: new Transform({ _transform(chunk, encoding, cb) { cb() } })
   }, {
     name: 'config-injector',
     match: (resp) => {

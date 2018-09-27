@@ -42,7 +42,7 @@ exports.readStream = (dataset) => {
     transformer = new Transform({
       objectMode: true,
       transform(feature, encoding, callback) {
-        const item = {...feature.properties}
+        const item = { ...feature.properties }
         if (feature.id) item.id = feature.id
         item.geometry = feature.geometry
         item._i = this.i = (this.i || 0) + 1
@@ -77,9 +77,9 @@ exports.readStream = (dataset) => {
 
 exports.storageSize = async (db, owner) => {
   const aggQuery = [
-    {$match: {'owner.type': owner.type, 'owner.id': owner.id}},
-    {$project: {'file.size': 1}},
-    {$group: {_id: null, totalSize: {$sum: '$file.size'}}}
+    { $match: { 'owner.type': owner.type, 'owner.id': owner.id } },
+    { $project: { 'file.size': 1 } },
+    { $group: { _id: null, totalSize: { $sum: '$file.size' } } }
   ]
   const res = await db.collection('datasets').aggregate(aggQuery).toArray()
   return res.length ? res[0].totalSize : 0

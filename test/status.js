@@ -1,6 +1,6 @@
 const testUtils = require('./resources/test-utils')
 
-const {test, axiosBuilder} = testUtils.prepare(__filename)
+const { test, axiosBuilder } = testUtils.prepare(__filename)
 
 test('Get status', async t => {
   const ax = await axiosBuilder()

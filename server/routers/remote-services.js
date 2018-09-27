@@ -33,11 +33,11 @@ const router = module.exports = express.Router()
 const computeActions = (apiDoc) => {
   const actions = soasLoader(apiDoc).actions()
   actions.forEach(a => {
-    a.input = Object.keys(a.input).map(concept => ({concept, ...a.input[concept]}))
+    a.input = Object.keys(a.input).map(concept => ({ concept, ...a.input[concept] }))
     const outputSchema = a.outputSchema
     if (outputSchema) {
       const outputProps = a.outputSchema.properties || (a.outputSchema.items && a.outputSchema.items.properties) || {}
-      a.output = Object.keys(outputProps).map(prop => ({name: prop, concept: outputProps[prop]['x-refersTo'], ...outputProps[prop]}))
+      a.output = Object.keys(outputProps).map(prop => ({ name: prop, concept: outputProps[prop]['x-refersTo'], ...outputProps[prop] }))
     } else {
       a.output = []
     }
@@ -81,19 +81,19 @@ router.get('', asyncWrap(async(req, res) => {
     findUtils.setResourceLinks(r, 'remote-service')
   })
   facets = findUtils.parseFacets(facets)
-  res.json({results: results.map(result => mongoEscape.unescape(result, true)), count, facets})
+  res.json({ results: results.map(result => mongoEscape.unescape(result, true)), count, facets })
 }))
 
 // Create a remote Api
 router.post('', asyncWrap(async(req, res) => {
   const service = req.body
   if (!service.apiDoc || !service.apiDoc.info || !service.apiDoc.info['x-api-id']) return res.sendStatus(400)
-  const baseId = service.id || slug(service.apiDoc.info['x-api-id'], {lower: true})
+  const baseId = service.id || slug(service.apiDoc.info['x-api-id'], { lower: true })
   service.id = baseId
   let i = 1
   do {
     if (i > 1) service.id = baseId + i
-    var dbExists = await req.app.get('db').collection('remote-services').count({id: service.id})
+    var dbExists = await req.app.get('db').collection('remote-services').count({ id: service.id })
     i += 1
   } while (dbExists)
   service.owner = usersUtils.owner(req)
@@ -102,9 +102,9 @@ router.post('', asyncWrap(async(req, res) => {
   if (!valid) return res.status(400).send(normalise(validateRemoteService.errors))
   const date = moment().toISOString()
   service.createdAt = date
-  service.createdBy = {id: req.user.id, name: req.user.name}
+  service.createdBy = { id: req.user.id, name: req.user.name }
   service.updatedAt = date
-  service.updatedBy = {id: req.user.id, name: req.user.name}
+  service.updatedBy = { id: req.user.id, name: req.user.name }
   if (service.apiDoc) {
     if (service.apiDoc.info) {
       service.title = service.apiDoc.info.title
@@ -122,18 +122,18 @@ router.post('', asyncWrap(async(req, res) => {
 router.post('/_default_services', asyncWrap(async(req, res) => {
   if (!req.user) return res.sendStatus(401)
   const remoteServices = req.app.get('db').collection('remote-services')
-  const query = {$or: [{'owner.type': 'user', 'owner.id': req.user.id}]}
+  const query = { $or: [{ 'owner.type': 'user', 'owner.id': req.user.id }] }
   if (req.user.organizations && req.user.organizations.length) {
     query.$or.push({
       'owner.type': 'organization',
-      'owner.id': {$in: req.user.organizations.map(o => o.id)}
+      'owner.id': { $in: req.user.organizations.map(o => o.id) }
     })
   }
-  const existingServices = await remoteServices.find(query).project({owner: 1, url: 1}).toArray()
+  const existingServices = await remoteServices.find(query).project({ owner: 1, url: 1 }).toArray()
 
-  const owners = [{type: 'user', id: req.user.id, name: req.user.name}]
-    .concat((req.user.organizations || []).map(o => ({type: 'organization', id: o.id, name: o.name})))
-  const ownerServices = [].concat(...owners.map(o => config.remoteServices.map(s => ({owner: o, url: s.href, title: s.title}))))
+  const owners = [{ type: 'user', id: req.user.id, name: req.user.name }]
+    .concat((req.user.organizations || []).map(o => ({ type: 'organization', id: o.id, name: o.name })))
+  const ownerServices = [].concat(...owners.map(o => config.remoteServices.map(s => ({ owner: o, url: s.href, title: s.title }))))
 
   const servicesToAdd = ownerServices
     // exclude service with this owner and url
@@ -142,11 +142,11 @@ router.post('/_default_services', asyncWrap(async(req, res) => {
   const apisToFetch = new Set(servicesToAdd.map(s => s.url))
   const apisPromises = [...apisToFetch].map(url => {
     return axios.get(url)
-      .then(resp => ({url, api: resp.data}))
+      .then(resp => ({ url, api: resp.data }))
       .catch(err => console.error('Failure to init remote service', err))
   })
   const apis = (await Promise.all(apisPromises)).filter(a => a && a.api)
-  const apisDict = Object.assign({}, ...apis.map(a => ({[a.url]: a.api})))
+  const apisDict = Object.assign({}, ...apis.map(a => ({ [a.url]: a.api })))
   const servicesToInsert = servicesToAdd.filter(s => apisDict[s.url]).map(s => mongoEscape.escape({
     id: slug(apisDict[s.url].info['x-api-id']) + '-' + s.owner.type + '-' + s.owner.id,
     title: apisDict[s.url].info.title,
@@ -155,7 +155,7 @@ router.post('/_default_services', asyncWrap(async(req, res) => {
     apiDoc: apisDict[s.url],
     server: apisDict[s.url].servers && apisDict[s.url].servers.length && apisDict[s.url].servers[0].url,
     actions: computeActions(apisDict[s.url]),
-    owner: Object.assign(s.owner.type === 'organization' ? {role: config.adminRole} : {}, s.owner),
+    owner: Object.assign(s.owner.type === 'organization' ? { role: config.adminRole } : {}, s.owner),
     permissions: (s.owner.type === 'organization' ? [{
       type: 'organization',
       id: s.owner.id,
@@ -205,12 +205,12 @@ router.patch('/:remoteServiceId', permissions.middleware('writeDescription', 'wr
   if (forbiddenKey) return res.status(400).send('Only some parts of the remote service configuration can be modified through this route')
 
   patch.updatedAt = moment().toISOString()
-  patch.updatedBy = {id: req.user.id, name: req.user.name}
+  patch.updatedBy = { id: req.user.id, name: req.user.name }
   if (patch.apiDoc) {
     patch.actions = computeActions(patch.apiDoc)
   }
 
-  await req.app.get('db').collection('remote-services').updateOne({id: req.params.remoteServiceId}, {'$set': mongoEscape.escape(patch, true)})
+  await req.app.get('db').collection('remote-services').updateOne({ id: req.params.remoteServiceId }, { '$set': mongoEscape.escape(patch, true) })
   res.status(200).json(patch)
 }))
 
@@ -230,7 +230,7 @@ router.post('/:remoteServiceId/_update', permissions.middleware('updateApiDoc', 
   var valid = validateOpenApi(reponse.data)
   if (!valid) return res.status(400).send(normalise(validateOpenApi.errors))
   req.remoteService.updatedAt = moment().toISOString()
-  req.remoteService.updatedBy = {id: req.user.id, name: req.user.name}
+  req.remoteService.updatedBy = { id: req.user.id, name: req.user.name }
   req.remoteService.apiDoc = reponse.data
   req.remoteService.actions = computeActions(req.remoteService.apiDoc)
   await req.app.get('db').collection('remote-services').replaceOne({
@@ -256,7 +256,7 @@ router.use('/:remoteServiceId/proxy*', (req, res, next) => {
   // console.log((req.user && req.user.email) || 'Anonymous', 'is using operation', operation.operationId)
   const options = {
     url: req.remoteService.server + '*',
-    headers: {'x-forwarded-url': `${config.publicUrl}/api/v1/remote-services/${req.remoteService.id}/proxy/`},
+    headers: { 'x-forwarded-url': `${config.publicUrl}/api/v1/remote-services/${req.remoteService.id}/proxy/` },
     query: {}
   }
   // Add static parameters values from configuration

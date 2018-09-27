@@ -1,6 +1,6 @@
 const testUtils = require('./resources/test-utils')
 
-const {test, axiosBuilder} = testUtils.prepare(__filename)
+const { test, axiosBuilder } = testUtils.prepare(__filename)
 
 test('Wrong type', async t => {
   const ax = await axiosBuilder('dmeadus0@answers.com')
@@ -32,7 +32,7 @@ test('Read my empty settings', async t => {
 test('Update with wrong format', async t => {
   const ax = await axiosBuilder('dmeadus0@answers.com')
   try {
-    await ax.put('/api/v1/settings/user/dmeadus0', {forbiddenKey: 'not allowed'})
+    await ax.put('/api/v1/settings/user/dmeadus0', { forbiddenKey: 'not allowed' })
     t.fail()
   } catch (err) {
     t.is(err.status, 400)

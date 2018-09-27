@@ -2,7 +2,7 @@ const express = require('express')
 const bodyParser = require('body-parser')
 
 const app = module.exports = express()
-app.use(bodyParser.json({limit: '100kb'}))
+app.use(bodyParser.json({ limit: '100kb' }))
 
 app.post('/', (req, res, next) => {
   if (req.body.event === 'finalize-end') app.emit('webhook', req.body)

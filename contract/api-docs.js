@@ -21,7 +21,7 @@ module.exports = {
   components: {
     schemas: {
       dataset,
-      remoteService: {...remoteService, definitions: {}},
+      remoteService: { ...remoteService, definitions: {} },
       application,
       catalog
     },

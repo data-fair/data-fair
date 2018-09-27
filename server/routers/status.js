@@ -12,7 +12,7 @@ async function esStatus(req) {
 }
 
 async function jwksStatus(req) {
-  const jwksRes = await rp.get({url: config.directoryUrl + '/.well-known/jwks.json', json: true})
+  const jwksRes = await rp.get({ url: config.directoryUrl + '/.well-known/jwks.json', json: true })
   if (!jwksRes || !jwksRes.keys || !jwksRes.keys.length) throw new Error('Incomplete JWKS response')
 }
 
@@ -20,9 +20,9 @@ async function singleStatus(req, fn, name) {
   let time = moment()
   try {
     await fn(req)
-    return {status: 'ok', name, timeInMs: moment().diff(time)}
+    return { status: 'ok', name, timeInMs: moment().diff(time) }
   } catch (err) {
-    return {status: 'error', message: err.toString(), name, timeInMs: moment().diff(time)}
+    return { status: 'error', message: err.toString(), name, timeInMs: moment().diff(time) }
   }
 }
 

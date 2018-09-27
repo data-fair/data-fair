@@ -10,7 +10,7 @@ const fieldsSniffer = require('../utils/fields-sniffer')
 
 exports.type = 'dataset'
 exports.eventsPrefix = 'analyze'
-exports.filter = {status: 'loaded', 'file.mimetype': 'text/csv'}
+exports.filter = { status: 'loaded', 'file.mimetype': 'text/csv' }
 
 exports.process = async function(app, dataset) {
   const db = app.get('db')
@@ -48,7 +48,7 @@ exports.process = async function(app, dataset) {
   props.numLines = await countLines(datasetUtils.fileName(dataset), sniffResult.newlineStr)
 
   dataset.status = 'analyzed'
-  await db.collection('datasets').updateOne({id: dataset.id}, {
+  await db.collection('datasets').updateOne({ id: dataset.id }, {
     $set: {
       'file.props': props,
       status: 'analyzed',

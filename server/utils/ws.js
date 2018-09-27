@@ -33,23 +33,23 @@ exports.init = async (wss, db) => {
       try {
         message = JSON.parse(str)
       } catch (err) {
-        return ws.send(JSON.stringify({type: 'error', data: err.message}))
+        return ws.send(JSON.stringify({ type: 'error', data: err.message }))
       }
       if (!message.type || ['subscribe', 'unsubscribe'].indexOf(message.type) === -1) {
-        return ws.send(JSON.stringify({type: 'error', data: 'type should be "subscribe" or "unsubscribe"'}))
+        return ws.send(JSON.stringify({ type: 'error', data: 'type should be "subscribe" or "unsubscribe"' }))
       }
       if (!message.channel) {
-        return ws.send(JSON.stringify({type: 'error', data: '"channel" is required'}))
+        return ws.send(JSON.stringify({ type: 'error', data: '"channel" is required' }))
       }
       if (message.type === 'subscribe') {
         subscribers[message.channel] = subscribers[message.channel] || {}
         subscribers[message.channel][clientId] = 1
-        return ws.send(JSON.stringify({type: 'subscribe-confirm', channel: message.channel}))
+        return ws.send(JSON.stringify({ type: 'subscribe-confirm', channel: message.channel }))
       }
       if (message.type === 'unsubscribe') {
         subscribers[message.channel] = subscribers[message.channel] || {}
         delete subscribers[message.channel][clientId]
-        return ws.send(JSON.stringify({type: 'unsubscribe-confirm', channel: message.channel}))
+        return ws.send(JSON.stringify({ type: 'unsubscribe-confirm', channel: message.channel }))
       }
     })
 
@@ -78,9 +78,9 @@ exports.init = async (wss, db) => {
   }, 30000)
 
   // A pubsub channel based on mongodb to support scaling on multiple processes
-  const mongoChannel = await db.createCollection('messages', {capped: true, size: 100000, max: 1000})
-  await mongoChannel.insert({type: 'init'})
-  const cursor = mongoChannel.find({}, {tailable: true, awaitdata: true, numberOfRetries: -1})
+  const mongoChannel = await db.createCollection('messages', { capped: true, size: 100000, max: 1000 })
+  await mongoChannel.insert({ type: 'init' })
+  const cursor = mongoChannel.find({}, { tailable: true, awaitdata: true, numberOfRetries: -1 })
   cursor.each((err, doc) => {
     if (stopped) return
     if (err) console.error('Error in cursor for mongodb pubsub', err)
@@ -92,5 +92,5 @@ exports.init = async (wss, db) => {
     }
   })
 
-  return (channel, data) => mongoChannel.insert({type: 'message', channel, data})
+  return (channel, data) => mongoChannel.insert({ type: 'message', channel, data })
 }

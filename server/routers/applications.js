@@ -84,7 +84,7 @@ router.get('', asyncWrap(async(req, res) => {
     findUtils.setResourceLinks(r, 'application')
   })
   facets = findUtils.parseFacets(facets)
-  res.json({results, count, facets})
+  res.json({ results, count, facets })
 }))
 
 // Create an application configuration
@@ -95,12 +95,12 @@ router.post('', asyncWrap(async(req, res) => {
   if (!application.url) return res.sendStatus(400)
   const toks = application.url.split('/')
   const lastUrlPart = toks[toks.length - 1]
-  const baseId = application.id || slug(application.title || application.applicationName || lastUrlPart, {lower: true})
+  const baseId = application.id || slug(application.title || application.applicationName || lastUrlPart, { lower: true })
   application.id = baseId
   let i = 1
   do {
     if (i > 1) application.id = baseId + i
-    var dbExists = await req.app.get('db').collection('applications').count({id: application.id})
+    var dbExists = await req.app.get('db').collection('applications').count({ id: application.id })
     i += 1
   } while (dbExists)
   application.owner = usersUtils.owner(req)
@@ -109,14 +109,14 @@ router.post('', asyncWrap(async(req, res) => {
   if (!valid) return res.status(400).send(validate.errors)
   const date = moment().toISOString()
   application.createdAt = date
-  application.createdBy = {id: req.user.id, name: req.user.name}
+  application.createdBy = { id: req.user.id, name: req.user.name }
   application.updatedAt = date
-  application.updatedBy = {id: req.user.id, name: req.user.name}
+  application.updatedBy = { id: req.user.id, name: req.user.name }
 
   application.permissions = []
 
   await req.app.get('db').collection('applications').insertOne(application)
-  await journals.log(req.app, application, {type: 'application-created', href: config.publicUrl + '/application/' + application.id}, 'application')
+  await journals.log(req.app, application, { type: 'application-created', href: config.publicUrl + '/application/' + application.id }, 'application')
   res.status(201).json(application)
 }))
 
@@ -165,9 +165,9 @@ router.patch('/:applicationId', permissions.middleware('writeDescription', 'writ
   }
 
   patch.updatedAt = moment().toISOString()
-  patch.updatedBy = {id: req.user.id, name: req.user.name}
+  patch.updatedBy = { id: req.user.id, name: req.user.name }
 
-  await req.app.get('db').collection('applications').updateOne({id: req.params.applicationId}, {'$set': patch})
+  await req.app.get('db').collection('applications').updateOne({ id: req.params.applicationId }, { '$set': patch })
   res.status(200).json(patch)
 }))
 
@@ -194,14 +194,14 @@ const writeConfig = asyncWrap(async(req, res) => {
   const valid = validateConfiguration(req.body)
   if (!valid) return res.status(400).send(validateConfiguration.errors)
   await req.app.get('db').collection('applications').updateOne(
-    {id: req.params.applicationId},
-    {$set: {
+    { id: req.params.applicationId },
+    { $set: {
       configuration: req.body,
       updatedAt: moment().toISOString(),
-      updatedBy: {id: req.user.id, name: req.user.name}
-    }}
+      updatedBy: { id: req.user.id, name: req.user.name }
+    } }
   )
-  await journals.log(req.app, req.application, {type: 'config-updated'}, 'application')
+  await journals.log(req.app, req.application, { type: 'config-updated' }, 'application')
   res.status(200).json(req.body)
 })
 // 2 paths kept for compatibility.. but /config is deprecated because not homogeneous with the structure of the object

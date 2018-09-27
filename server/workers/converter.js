@@ -8,7 +8,7 @@ const util = require('util')
 
 exports.type = 'dataset'
 exports.eventsPrefix = 'convert'
-exports.filter = {status: 'uploaded'}
+exports.filter = { status: 'uploaded' }
 
 const tabularTypes = exports.tabularTypes = new Set([
   'application/vnd.oasis.opendocument.spreadsheet', // ods, fods
@@ -83,7 +83,7 @@ exports.process = async function(app, dataset) {
 
   dataset.status = 'loaded'
 
-  await db.collection('datasets').updateOne({id: dataset.id}, {
-    $set: {status: 'loaded', file: dataset.file}
+  await db.collection('datasets').updateOne({ id: dataset.id }, {
+    $set: { status: 'loaded', file: dataset.file }
   })
 }

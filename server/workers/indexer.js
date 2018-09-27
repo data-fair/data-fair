@@ -9,7 +9,7 @@ const journals = require('../utils/journals')
 
 exports.type = 'dataset'
 exports.eventsPrefix = 'index'
-exports.filter = {status: 'schematized'}
+exports.filter = { status: 'schematized' }
 
 exports.process = async function(app, dataset) {
   const db = app.get('db')
@@ -17,16 +17,16 @@ exports.process = async function(app, dataset) {
   const collection = db.collection('datasets')
 
   const tempId = await esUtils.initDatasetIndex(esClient, dataset)
-  const indexStream = esStreams.indexStream({esClient, indexName: tempId, dataset})
+  const indexStream = esStreams.indexStream({ esClient, indexName: tempId, dataset })
   // reindex and preserve previous extensions
-  await pump(datasetUtils.readStream(dataset), extensionsUtils.extendStream({db, esClient, dataset}), indexStream)
+  await pump(datasetUtils.readStream(dataset), extensionsUtils.extendStream({ db, esClient, dataset }), indexStream)
   const count = dataset.count = indexStream.i
   const errorsSummary = indexStream.errorsSummary()
-  if (errorsSummary) await journals.log(app, dataset, {type: 'error', data: errorsSummary})
+  if (errorsSummary) await journals.log(app, dataset, { type: 'error', data: errorsSummary })
 
   await esUtils.switchAlias(esClient, dataset, tempId)
 
-  const result = {status: 'indexed', count}
+  const result = { status: 'indexed', count }
   Object.assign(dataset, result)
-  await collection.updateOne({id: dataset.id}, {$set: result})
+  await collection.updateOne({ id: dataset.id }, { $set: result })
 }

@@ -1,6 +1,6 @@
 const testUtils = require('./resources/test-utils')
 
-const {test, axiosBuilder, config} = testUtils.prepare(__filename)
+const { test, axiosBuilder, config } = testUtils.prepare(__filename)
 
 test.serial('Get external APIs when not authenticated', async t => {
   const ax = await axiosBuilder()
@@ -20,7 +20,7 @@ test.serial('Initialize default services', async t => {
 
 test.serial('Post a minimal external API, read it, update it and delete it', async t => {
   const ax = await axiosBuilder('dmeadus0@answers.com')
-  let res = await ax.post('/api/v1/remote-services', {apiDoc: require('./resources/geocoder-api.json'), apiKey: {in: 'header', name: 'x-apiKey'}})
+  let res = await ax.post('/api/v1/remote-services', { apiDoc: require('./resources/geocoder-api.json'), apiKey: { in: 'header', name: 'x-apiKey' } })
   t.is(res.status, 201)
   const eaId = res.data.id
   res = await ax.get('/api/v1/remote-services')
@@ -31,7 +31,7 @@ test.serial('Post a minimal external API, read it, update it and delete it', asy
   t.is(res.data.openapi, '3.0.0')
   res = await ax.get('/api/v1/remote-services/' + eaId)
   t.is(res.data.apiDoc.info['x-api-id'], 'geocoder-koumoul')
-  res = await ax.patch('/api/v1/remote-services/' + eaId, {title: 'Test external api'})
+  res = await ax.patch('/api/v1/remote-services/' + eaId, { title: 'Test external api' })
   t.is(res.status, 200)
   t.is(res.data.title, 'Test external api')
   // Permissions
@@ -43,7 +43,7 @@ test.serial('Post a minimal external API, read it, update it and delete it', asy
     t.is(err.status, 403)
   }
   try {
-    await ax1.patch('/api/v1/remote-services/' + eaId, {title: 'Test external api'})
+    await ax1.patch('/api/v1/remote-services/' + eaId, { title: 'Test external api' })
     t.fail()
   } catch (err) {
     t.is(err.status, 403)

@@ -14,7 +14,7 @@ exports.exec = async (db, debug) => {
           if (p.operations) p.operations = p.operations.filter(c => c !== 'admin' && c !== 'write')
         })
         debug('new :', resource.permissions)
-        await db.collection(resourceName).updateOne({_id: resource._id}, {$set: {permissions: resource.permissions}})
+        await db.collection(resourceName).updateOne({ _id: resource._id }, { $set: { permissions: resource.permissions } })
       }
     }
   }

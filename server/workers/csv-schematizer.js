@@ -4,7 +4,7 @@ const fieldsSniffer = require('../utils/fields-sniffer')
 
 exports.type = 'dataset'
 exports.eventsPrefix = 'schematize'
-exports.filter = {status: 'analyzed', 'file.mimetype': 'text/csv'}
+exports.filter = { status: 'analyzed', 'file.mimetype': 'text/csv' }
 
 exports.process = async function(app, dataset) {
   const db = app.get('db')
@@ -33,7 +33,7 @@ exports.process = async function(app, dataset) {
   dataset.schema = dataset.schema.concat(dataset.file.schema.filter(field => !dataset.schema.find(f => f.key === field.key)))
 
   dataset.status = 'schematized'
-  await db.collection('datasets').updateOne({id: dataset.id}, {
-    $set: {status: 'schematized', schema: dataset.schema}
+  await db.collection('datasets').updateOne({ id: dataset.id }, {
+    $set: { status: 'schematized', schema: dataset.schema }
   })
 }

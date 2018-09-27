@@ -2,7 +2,7 @@ exports.description = `Journal events are not restricted to datasets anymore. Ad
 
 exports.exec = async (db, debug) => {
   // First journals
-  await db.collection('journals').update({type: {$exists: false}}, {$set: {type: 'dataset'}})
+  await db.collection('journals').update({ type: { $exists: false } }, { $set: { type: 'dataset' } })
 
   // Then webhooks in settings
   const settingsCursor = db.collection('settings').find({})
@@ -12,6 +12,6 @@ exports.exec = async (db, debug) => {
     webhooks.forEach(webhook => {
       webhook.type = webhook.type || 'dataset'
     })
-    await db.collection('settings').updateOne({_id: settings._id}, {$set: {webhooks}})
+    await db.collection('settings').updateOne({ _id: settings._id }, { $set: { webhooks } })
   }
 }

@@ -49,7 +49,7 @@ router.get('', asyncWrap(async(req, res) => {
     'ids': 'id'
   })
   if (req.query.bbox === 'true') {
-    query.bbox = {$ne: null}
+    query.bbox = { $ne: null }
   }
   const sort = findUtils.sort(req.query.sort)
   const project = findUtils.project(req.query.select)
@@ -71,7 +71,7 @@ router.get('', asyncWrap(async(req, res) => {
     findUtils.setResourceLinks(r, 'dataset')
   })
   facets = findUtils.parseFacets(facets)
-  res.json({results, count, facets})
+  res.json({ results, count, facets })
 }))
 
 // Middlewares
@@ -123,7 +123,7 @@ router.patch('/:datasetId', permissions.middleware('writeDescription', 'write'),
   if (forbiddenKey) return res.status(400).send('Only some parts of the dataset can be modified through this route')
 
   patch.updatedAt = moment().toISOString()
-  patch.updatedBy = {id: req.user.id, name: req.user.name}
+  patch.updatedBy = { id: req.user.id, name: req.user.name }
   if (patch.extensions) patch.schema = await extensions.prepareSchema(req.app.get('db'), patch.schema || req.dataset.schema, patch.extensions)
 
   // Changed a previously failed dataset, retry everything.
@@ -150,7 +150,7 @@ router.patch('/:datasetId', permissions.middleware('writeDescription', 'write'),
     }
   }
 
-  await req.app.get('db').collection('datasets').updateOne({id: req.params.datasetId}, {'$set': patch})
+  await req.app.get('db').collection('datasets').updateOne({ id: req.params.datasetId }, { '$set': patch })
   res.status(200).json(patch)
 }))
 
@@ -197,9 +197,9 @@ router.post('', filesUtils.uploadFile(), asyncWrap(async(req, res) => {
       size: req.file.size,
       mimetype: req.file.mimetype
     },
-    createdBy: {id: req.user.id, name: req.user.name},
+    createdBy: { id: req.user.id, name: req.user.name },
     createdAt: date,
-    updatedBy: {id: req.user.id, name: req.user.name},
+    updatedBy: { id: req.user.id, name: req.user.name },
     updatedAt: date
   }
   if (!baseTypes.has(req.file.mimetype)) {
@@ -216,7 +216,7 @@ router.post('', filesUtils.uploadFile(), asyncWrap(async(req, res) => {
   await req.app.get('db').collection('datasets').insertOne(dataset)
   const storageRemaining = await datasetUtils.storageRemaining(req.app.get('db'), owner, req)
   if (storageRemaining !== -1) res.set(config.headers.storedBytesRemaining, storageRemaining)
-  await journals.log(req.app, dataset, {type: 'dataset-created', href: config.publicUrl + '/dataset/' + dataset.id}, 'dataset')
+  await journals.log(req.app, dataset, { type: 'dataset-created', href: config.publicUrl + '/dataset/' + dataset.id }, 'dataset')
   res.status(201).send(dataset)
 }))
 
@@ -242,7 +242,7 @@ router.post('/:datasetId', permissions.middleware('writeData', 'write'), filesUt
     req.dataset.file.encoding = chardet.detect(fileSample)
   }
 
-  req.dataset.updatedBy = {id: req.user.id, name: req.user.name}
+  req.dataset.updatedBy = { id: req.user.id, name: req.user.name }
   req.dataset.updatedAt = moment().toISOString()
   req.dataset.status = 'loaded'
   await req.app.get('db').collection('datasets').replaceOne({
@@ -250,7 +250,7 @@ router.post('/:datasetId', permissions.middleware('writeData', 'write'), filesUt
   }, req.dataset)
   const storageRemaining = await datasetUtils.storageRemaining(req.app.get('db'), owner, req)
   if (storageRemaining !== -1) res.set(config.headers.storedBytesRemaining, storageRemaining)
-  await journals.log(req.app, req.dataset, {type: 'data-updated'}, 'dataset')
+  await journals.log(req.app, req.dataset, { type: 'data-updated' }, 'dataset')
   res.status(200).send(req.dataset)
 }))
 
@@ -271,8 +271,8 @@ function managePublicCache(req, res) {
 // Error from ES backend should be stored in the journal
 async function manageESError(req, err) {
   if (req.dataset.status === 'finalized' && err.statusCode >= 404) {
-    await req.app.get('db').collection('datasets').updateOne({id: req.params.datasetId}, {'$set': {status: 'error'}})
-    await journals.log(req.app, req.dataset, {type: 'error', data: err.message})
+    await req.app.get('db').collection('datasets').updateOne({ id: req.params.datasetId }, { '$set': { status: 'error' } })
+    await journals.log(req.app, req.dataset, { type: 'error', data: err.message })
   }
   throw err
 }
@@ -294,14 +294,14 @@ router.get('/:datasetId/lines', permissions.middleware('readLines', 'read'), asy
   // geojson format benefits from bbox info
   let bboxPromise
   if (req.query.format === 'geojson') {
-    bboxPromise = esUtils.bboxAgg(req.app.get('es'), req.dataset, {...req.query})
+    bboxPromise = esUtils.bboxAgg(req.app.get('es'), req.dataset, { ...req.query })
   }
 
   const vectorTileRequested = ['mvt', 'vt', 'pbf'].includes(req.query.format)
   // Is the tile cached ?
   let cacheHash
   if (vectorTileRequested && !config.cache.disabled) {
-    const {hash, value} = await cache.get(db, {
+    const { hash, value } = await cache.get(db, {
       type: 'tile',
       datasetId: req.dataset.id,
       finalizedAt: req.dataset.finalizedAt,
@@ -395,13 +395,13 @@ router.get('/:datasetId/full', permissions.middleware('downloadFullData', 'read'
   res.setHeader('Content-type', 'text/csv')
   await pump(
     datasetUtils.readStream(req.dataset),
-    extensions.extendStream({db: req.app.get('db'), esClient: req.app.get('es'), dataset: req.dataset}),
-    new Transform({transform(chunk, encoding, callback) {
+    extensions.extendStream({ db: req.app.get('db'), esClient: req.app.get('es'), dataset: req.dataset }),
+    new Transform({ transform(chunk, encoding, callback) {
       const flatChunk = flatten(chunk)
       callback(null, req.dataset.schema.map(field => flatChunk[field.key]))
     },
-    objectMode: true}),
-    csvStringify({columns: req.dataset.schema.map(field => field.title || field['x-originalName'] || field.key), header: true}),
+    objectMode: true }),
+    csvStringify({ columns: req.dataset.schema.map(field => field.title || field['x-originalName'] || field.key), header: true }),
     res
   )
 }))

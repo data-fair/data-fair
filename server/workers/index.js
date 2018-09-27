@@ -20,7 +20,7 @@ const stopResolves = {}
 // Hooks for testing
 const hooks = {}
 exports.hook = (key) => new Promise((resolve, reject) => {
-  hooks[key] = {resolve, reject}
+  hooks[key] = { resolve, reject }
 })
 
 // Run all !
@@ -50,18 +50,18 @@ async function iter(app, key) {
     resource = await acquireNext(app.get('db'), worker.type, worker.filter)
     // console.log(`Worker "${worker.eventsPrefix}" acquired dataset "${dataset.id}"`)
     if (!resource) return
-    if (worker.eventsPrefix) await journals.log(app, resource, {type: worker.eventsPrefix + '-start'}, worker.type)
+    if (worker.eventsPrefix) await journals.log(app, resource, { type: worker.eventsPrefix + '-start' }, worker.type)
     await worker.process(app, resource)
     if (hooks[key]) hooks[key].resolve(resource)
-    if (worker.eventsPrefix) await journals.log(app, resource, {type: worker.eventsPrefix + '-end'}, worker.type)
+    if (worker.eventsPrefix) await journals.log(app, resource, { type: worker.eventsPrefix + '-end' }, worker.type)
   } catch (err) {
     console.error('Failure in worker ' + key, err)
     if (resource) {
-      await journals.log(app, resource, {type: 'error', data: err.message}, worker.type)
-      await app.get('db').collection(worker.type + 's').updateOne({id: resource.id}, {$set: {status: 'error'}})
+      await journals.log(app, resource, { type: 'error', data: err.message }, worker.type)
+      await app.get('db').collection(worker.type + 's').updateOne({ id: resource.id }, { $set: { status: 'error' } })
       resource.status = 'error'
     }
-    if (hooks[key]) hooks[key].reject({resource, message: err.message})
+    if (hooks[key]) hooks[key].reject({ resource, message: err.message })
   } finally {
     if (resource) await locks.release(app.get('db'), `${worker.type}:${resource.id}`)
     // console.log(`Worker "${worker.eventsPrefix}" released dataset "${dataset.id}"`)
@@ -70,7 +70,7 @@ async function iter(app, key) {
 
 async function acquireNext(db, type, filter) {
   // Random sort prevents from insisting on the same failed dataset again and again
-  const cursor = db.collection(type + 's').aggregate([{$match: filter}, {$sample: {size: 100}}])
+  const cursor = db.collection(type + 's').aggregate([{ $match: filter }, { $sample: { size: 100 } }])
   while (await cursor.hasNext()) {
     const resource = await cursor.next()
     const ack = await locks.acquire(db, `${type}:${resource.id}`)

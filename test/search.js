@@ -2,7 +2,7 @@ const fs = require('fs')
 const FormData = require('form-data')
 const testUtils = require('./resources/test-utils')
 
-const {test, axiosBuilder} = testUtils.prepare(__filename)
+const { test, axiosBuilder } = testUtils.prepare(__filename)
 
 const workers = require('../server/workers')
 
@@ -12,14 +12,14 @@ test('Get lines in dataset', async t => {
   form.append('file', datasetData, 'dataset.csv')
   const ax = await axiosBuilder('dmeadus0@answers.com')
 
-  let res = await ax.post('/api/v1/datasets', form, {headers: testUtils.formHeaders(form)})
+  let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
 
   t.is(res.status, 201)
   const dataset = await workers.hook('finalizer')
   // Update schema to specify geo point
   const locProp = dataset.schema.find(p => p.key === 'loc')
   locProp['x-refersTo'] = 'http://www.w3.org/2003/01/geo/wgs84_pos#lat_long'
-  res = await ax.patch('/api/v1/datasets/' + dataset.id, {schema: dataset.schema})
+  res = await ax.patch('/api/v1/datasets/' + dataset.id, { schema: dataset.schema })
   t.is(res.status, 200)
   await workers.hook('finalizer')
   res = await ax.get('/api/v1/datasets/dataset/lines')

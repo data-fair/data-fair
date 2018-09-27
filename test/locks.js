@@ -1,6 +1,6 @@
 const testUtils = require('./resources/test-utils')
 
-const {test} = testUtils.prepare(__filename)
+const { test } = testUtils.prepare(__filename)
 
 const locks = require('../server/utils/locks')
 
