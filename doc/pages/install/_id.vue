@@ -19,7 +19,7 @@ const flatten = require('flat')
 const context = require.context('.', true, /\.md$/)
 
 // Used to flatten var definitions from custom-environment-variables.js
-const defaults = require('../../../config/default.js')
+const defaults = Object.assign({}, require('../../../config/default.js'), require('../../../config/production.js'))
 function flattenVars(vars, flatVars = [], prefix = '') {
   Object.keys(vars).forEach(v => {
     const key = prefix + v
