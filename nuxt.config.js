@@ -1,35 +1,52 @@
 const config = require('config')
 const URL = require('url').URL
+const webpack = require('webpack')
 const i18n = require('./i18n')
 
 module.exports = {
   dev: process.env.NODE_ENV === 'development',
   srcDir: 'public/',
   build: {
-    publicPath: config.publicUrl + '/_nuxt/',
-    extractCSS: true,
-    vendor: ['babel-polyfill'],
-    // Use babel polyfill, not runtime transform to support Array.includes and other methods
-    // cf https://github.com/nuxt/nuxt.js/issues/93
+    transpile: [/^vuetify/], // Necessary for "à la carte" import of vuetify components
     babel: {
-      presets: [
-        ['vue-app', {useBuiltIns: true, targets: { ie: 11, uglify: true }}]
-      ]
+      // Necessary for "à la carte" import of vuetify components
+      plugins: [['transform-imports', {
+        vuetify: {
+          transform: 'vuetify/es5/components/${member}',
+          preventFullImport: true
+        }
+      }]]
+    },
+    publicPath: config.publicUrl + '/_nuxt/',
+    minimal: true,
+    extend (config, { isDev, isClient }) {
+      // Run ESLint on save
+      if (isDev && isClient) {
+        config.module.rules.push({
+          enforce: 'pre',
+          test: /\.(js|vue)$/,
+          loader: 'eslint-loader',
+          exclude: /(node_modules)/
+        })
+      }
+
+      // Ignore all locale files of moment.js, those we want are loaded in plugins/moment.js
+      config.plugins.push(new webpack.IgnorePlugin(/^\.\/locale$/, /moment$/))
     }
   },
   loading: { color: '#1e88e5' }, // Customize the progress bar color
   plugins: [
-    {src: '~plugins/ws', ssr: false},
-    {src: '~plugins/session', ssr: false},
-    {src: '~plugins/vuetify'},
-    {src: '~plugins/moment'},
-    {src: '~plugins/truncate'},
-    {src: '~plugins/logger', ssr: false}
+    { src: '~plugins/ws', ssr: false },
+    { src: '~plugins/session', ssr: false },
+    { src: '~plugins/vuetify' },
+    { src: '~plugins/moment' },
+    { src: '~plugins/truncate' },
+    { src: '~plugins/logger', ssr: false }
   ],
   router: {
     base: new URL(config.publicUrl + '/').pathname
   },
-  modules: ['@nuxtjs/markdownit', '@nuxtjs/axios', ['nuxt-i18n', {
+  modules: ['@digibytes/markdownit', '@nuxtjs/axios', ['nuxt-i18n', {
     seo: false,
     locales: i18n.locales,
     defaultLocale: config.i18n.defaultLocale,
@@ -69,6 +86,6 @@ module.exports = {
 if (config.analytics) {
   module.exports.modules.push(['@nuxtjs/google-analytics', {
     id: config.analytics,
-    autoTracking: {exception: true}
+    autoTracking: { exception: true }
   }])
 }

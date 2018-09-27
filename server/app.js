@@ -13,17 +13,17 @@ const locksUtils = require('./utils/locks.js')
 const cache = require('./utils/cache')
 const workers = require('./workers')
 const upgrade = require('../upgrade')
-const session = require('@koumoul/sd-express')({directoryUrl: config.directoryUrl, publicUrl: config.publicUrl})
+const session = require('@koumoul/sd-express')({ directoryUrl: config.directoryUrl, publicUrl: config.publicUrl })
 
 const app = express()
 
 // Create a mono-domain environment with other services in dev
 if (process.env.NODE_ENV === 'development') {
   const proxy = require('http-proxy-middleware')
-  app.use('/openapi-viewer', proxy({target: 'http://localhost:5680', pathRewrite: {'^/openapi-viewer': ''}}))
+  app.use('/openapi-viewer', proxy({ target: 'http://localhost:5680', pathRewrite: { '^/openapi-viewer': '' } }))
 }
 
-app.use(bodyParser.json({limit: '1000kb'}))
+app.use(bodyParser.json({ limit: '1000kb' }))
 app.use(cookieParser())
 // In production CORS is taken care of by the reverse proxy if necessary
 if (process.env.NODE_ENV === 'development') app.use(require('cors')())
@@ -50,7 +50,7 @@ app.use((err, req, res, next) => {
 })
 
 const server = http.createServer(app)
-const wss = new WebSocket.Server({server})
+const wss = new WebSocket.Server({ server })
 
 // Run app and return it in a promise
 exports.run = async () => {
@@ -59,7 +59,7 @@ exports.run = async () => {
   app.use(session.loginCallback)
   const nuxt = await require('./nuxt')()
   app.use(nuxt)
-  const {db, client} = await dbUtils.init()
+  const { db, client } = await dbUtils.init()
   app.set('db', db)
   app.set('mongoClient', client)
   await cache.init(db)

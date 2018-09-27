@@ -57,19 +57,19 @@
         </v-card>
       </v-flex>
       <v-flex xs12 md6 order-md1>
-        <v-text-field label="Titre" v-model="dataset.title" @blur="patch({title: dataset.title})" :disabled="!can('writeDescription')"/>
-        <v-textarea label="Description" v-model="dataset.description" box rows="4" @blur="patch({description: dataset.description})" :disabled="!can('writeDescription')"/>
+        <v-text-field v-model="dataset.title" :disabled="!can('writeDescription')" label="Titre" @blur="patch({title: dataset.title})"/>
+        <v-textarea v-model="dataset.description" :disabled="!can('writeDescription')" label="Description" box rows="4" @blur="patch({description: dataset.description})"/>
         <v-select
           :items="licenses"
+          v-model="dataset.license"
+          :disabled="!can('writeDescription')"
           item-text="title"
           item-key="href"
-          v-model="dataset.license"
           label="Licence"
           return-object
           @input="patch({license: dataset.license})"
-          :disabled="!can('writeDescription')"
         />
-        <v-text-field label="Provenance" v-model="dataset.origin" @blur="patch({origin: dataset.origin})" :disabled="!can('writeDescription')"/>
+        <v-text-field v-model="dataset.origin" :disabled="!can('writeDescription')" label="Provenance" @blur="patch({origin: dataset.origin})"/>
       </v-flex>
 
     </v-layout>
@@ -77,7 +77,7 @@
 </template>
 
 <script>
-const {mapState, mapActions, mapGetters} = require('vuex')
+const { mapState, mapActions, mapGetters } = require('vuex')
 const events = require('../../shared/events.json').dataset
 
 export default {
@@ -102,7 +102,7 @@ export default {
     this.$store.dispatch('fetchLicenses', this.dataset.owner)
     // Ping the data endpoint to check that index is available
     try {
-      this.data = await this.$axios.$get(this.resourceUrl + '/lines', {size: 0})
+      this.data = await this.$axios.$get(this.resourceUrl + '/lines', { size: 0 })
     } catch (err) {
       // Do nothing, error should be added to the journal
     }

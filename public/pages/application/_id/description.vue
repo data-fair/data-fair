@@ -23,16 +23,16 @@
         </v-card>
       </v-flex>
       <v-flex xs12 md6 order-md1>
-        <v-text-field label="Titre" v-model="application.title" @blur="patch({title: application.title})"/>
-        <v-textarea label="Description" v-model="application.description" box rows="4" @blur="patch({description: application.description})"/>
-        <v-text-field label="Adresse" v-model="application.url" @blur="patch({url: application.url})"/>
+        <v-text-field v-model="application.title" label="Titre" @blur="patch({title: application.title})"/>
+        <v-textarea v-model="application.description" label="Description" box rows="4" @blur="patch({description: application.description})"/>
+        <v-text-field v-model="application.url" label="Adresse" @blur="patch({url: application.url})"/>
       </v-flex>
     </v-layout>
   </v-container>
 </template>
 
 <script>
-import {mapState, mapActions} from 'vuex'
+import { mapState, mapActions } from 'vuex'
 export default {
   computed: {
     ...mapState('application', ['application'])

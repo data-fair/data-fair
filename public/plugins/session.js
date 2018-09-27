@@ -1,3 +1,3 @@
-export default ({store}) => {
+export default ({ store }) => {
   store.dispatch('session/loop')
 }

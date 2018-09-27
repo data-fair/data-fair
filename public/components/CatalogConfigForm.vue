@@ -1,27 +1,27 @@
 <template lang="html">
   <div>
     <v-text-field
+      :hint="apiKeyHint"
+      v-model="catalog.apiKey"
+      :rules="[() => !!catalog.apiKey || `La clé d'API est obligatoire`]"
       class="mb-4"
       label="Clé d'API"
-      :hint="apiKeyHint"
       persistent-hint
-      v-model="catalog.apiKey"
       required
-      :rules="[() => !!catalog.apiKey || `La clé d'API est obligatoire`]"
       @blur="changeApiKey"
     />
     <v-autocomplete
-      class="mb-4"
       v-model="catalog.organization"
       :items="organizations"
       :loading="organizationsLoading"
       :search-input.sync="searchOrganizations"
+      :hint="orgHint"
+      class="mb-4"
       label="Organisation"
       placeholder="Tapez pour rechercher"
       return-object
       item-text="name"
       item-value="id"
-      :hint="orgHint"
       persistent-hint
       no-data-text="Aucune organisation ne correspond"
       @change="$emit('change', {organization: catalog.organization})"
@@ -49,7 +49,7 @@ export default {
     async searchOrganizations() {
       if (!this.searchOrganizations || this.searchOrganizations === (this.catalog.organization && this.catalog.organization.name)) return
       this.organizationsLoading = true
-      this.organizations = (await this.$axios.$get('api/v1/catalogs/_organizations', {params: {type: this.catalog.type, url: this.catalog.url, q: this.searchOrganizations}})).results
+      this.organizations = (await this.$axios.$get('api/v1/catalogs/_organizations', { params: { type: this.catalog.type, url: this.catalog.url, q: this.searchOrganizations } })).results
       this.organizationsLoading = false
     }
   },
@@ -60,7 +60,7 @@ export default {
   },
   methods: {
     changeApiKey() {
-      if (this.catalog.apiKey && this.catalog.apiKey !== '**********') this.$emit('change', {apiKey: this.catalog.apiKey})
+      if (this.catalog.apiKey && this.catalog.apiKey !== '**********') this.$emit('change', { apiKey: this.catalog.apiKey })
     }
   }
 }

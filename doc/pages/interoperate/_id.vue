@@ -8,7 +8,7 @@
         </v-list-tile>
       </v-list>
     </v-navigation-drawer>
-    <v-container v-show="ready" class="doc-page" v-html="content" style="overflow-y:scroll;height:calc(100vh - 148px)"/>
+    <v-container v-show="ready" class="doc-page" style="overflow-y:scroll;height:calc(100vh - 148px)" v-html="content"/>
   </v-layout>
 </template>
 

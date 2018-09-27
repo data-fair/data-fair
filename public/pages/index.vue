@@ -16,7 +16,7 @@
       </v-flex>
     </div>
     <!-- Anonymous: show jumbotron -->
-    <v-flex md6 offset-md3 v-else>
+    <v-flex v-else md6 offset-md3>
       <v-jumbotron>
         <v-container fill-height>
           <v-layout align-center>
@@ -24,7 +24,7 @@
               <h3 class="display-1 mb-3 mt-5">{{ $t('common.title') }}</h3>
               <div class="headline">{{ $t('pages.root.description') }}</div>
               <p class="title mt-5">{{ $t('common.authrequired') }}</p>
-              <v-btn @click="login" color="primary">{{ $t('common.login') }}</v-btn>
+              <v-btn color="primary" @click="login">{{ $t('common.login') }}</v-btn>
             </v-flex>
           </v-layout>
         </v-container>
@@ -34,17 +34,17 @@
 </template>
 
 <script>
-const {mapState, mapActions} = require('vuex')
+const { mapState, mapActions } = require('vuex')
 
 export default {
   name: 'Home',
   data: () => ({
     stats: null,
     headers: [
-      {text: '', value: 'name', sortable: false},
-      {text: 'Nombre de jeux de données', value: 'storage', sortable: false},
-      {text: 'Espace consommé', value: 'datasets', sortable: false},
-      {text: 'Nombre d\'applications', value: 'applications', sortable: false}
+      { text: '', value: 'name', sortable: false },
+      { text: 'Nombre de jeux de données', value: 'storage', sortable: false },
+      { text: 'Espace consommé', value: 'datasets', sortable: false },
+      { text: 'Nombre d\'applications', value: 'applications', sortable: false }
     ]
   }),
   computed: {
@@ -53,9 +53,9 @@ export default {
     items() {
       if (!this.stats) return []
       const orgasItems = this.user.organizations.map(o => {
-        return {name: o.name, ...this.stats.organizations[o.id]}
+        return { name: o.name, ...this.stats.organizations[o.id] }
       })
-      return [{name: 'Espace personnel', ...this.stats.user}].concat(orgasItems)
+      return [{ name: 'Espace personnel', ...this.stats.user }].concat(orgasItems)
     }
   },
   async mounted() {

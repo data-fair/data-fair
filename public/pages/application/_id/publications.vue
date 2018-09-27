@@ -8,7 +8,7 @@
     <p v-if="!application.publications.length">
       Il n'existe pas encore de publication de cette application.
     </p>
-    <v-list two-line v-else>
+    <v-list v-else two-line>
       <v-list-tile v-for="(publication, i) in application.publications" :key="publication.id">
         <v-list-tile-content v-if="catalogsById[publication.catalog]">
           <v-list-tile-title>Application publiée sur le catalogue "{{ catalogsById[publication.catalog].title }}"</v-list-tile-title>
@@ -28,7 +28,7 @@
       </v-list-tile>
     </v-list>
 
-    <v-layout row wrap v-if="can('writeDescription')">
+    <v-layout v-if="can('writeDescription')" row wrap>
       <v-spacer/>
       <v-btn color="primary" @click="addPublicationDialog = true">Ajouter une publication</v-btn>
     </v-layout>
@@ -43,11 +43,11 @@
             <v-select
               :items="catalogs"
               :item-text="catalogLabel"
-              item-value="id"
               v-model="newPublication.catalog"
+              :rules="[() => !!newPublication.catalog]"
+              item-value="id"
               label="Catalogue"
               required
-              :rules="[() => !!newPublication.catalog]"
             />
           </v-form>
         </v-card-text>
@@ -55,7 +55,7 @@
         <v-card-actions>
           <v-spacer/>
           <v-btn flat @click="addPublicationDialog = false">Annuler</v-btn>
-          <v-btn color="primary" :disabled="!newPublicationValid" @click="addPublicationDialog = false; addPublication(newPublication)">Ajouter</v-btn>
+          <v-btn :disabled="!newPublicationValid" color="primary" @click="addPublicationDialog = false; addPublication(newPublication)">Ajouter</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -82,7 +82,7 @@
 </template>
 
 <script>
-import {mapState, mapGetters, mapActions} from 'vuex'
+import { mapState, mapGetters, mapActions } from 'vuex'
 import eventBus from '../../../event-bus.js'
 
 export default {
@@ -108,8 +108,8 @@ export default {
     }
   },
   async created() {
-    const params = {owner: this.application.owner.type + ':' + this.application.owner.id}
-    this.catalogs = (await this.$axios.$get('api/v1/catalogs', {params})).results
+    const params = { owner: this.application.owner.type + ':' + this.application.owner.id }
+    this.catalogs = (await this.$axios.$get('api/v1/catalogs', { params })).results
     eventBus.$on(this.journalChannel, this.onJournalEvent)
   },
   async destroyed() {
@@ -122,12 +122,12 @@ export default {
     },
     addPublication(publication) {
       this.application.publications.push(publication)
-      this.patch({publications: this.application.publications})
+      this.patch({ publications: this.application.publications })
     },
     deletePublication(publicationInd) {
       const publication = this.application.publications[publicationInd]
       publication.status = 'deleted'
-      this.patch({publications: this.application.publications})
+      this.patch({ publications: this.application.publications })
     },
     catalogLabel(catalog) {
       if (!catalog) return 'catalogue inconnu'

@@ -3,16 +3,16 @@
 
     <v-select
       :items="remoteService.apiDoc.servers"
+      v-model="remoteService.server"
       item-value="url"
       item-text="description"
-      v-model="remoteService.server"
       label="Serveur"
       @input="patch({server: remoteService.server})"
     />
 
     <v-text-field
-      label="Clé d'API"
       v-model="remoteService.apiKey.value"
+      label="Clé d'API"
       @blur="patch({apiKey: remoteService.apiKey})"
       @keyup.native.enter="patch({apiKey: remoteService.apiKey})"
     />
@@ -20,9 +20,9 @@
     <!-- Read only, updating can cause problems and confusion.
     For example the POST _default_services will crash because it will create duplicates -->
     <v-text-field
-      label="URL de mise à jour"
       v-model="remoteService.url"
       :disabled="true"
+      label="URL de mise à jour"
     />
 
     <div v-if="remoteService.parameters.length">
@@ -33,7 +33,7 @@
 
       <p>Les filtres peuvent contenir plusieurs valeurs séparées par des virgules.</p>
 
-      <div v-for="operation in operations" :key="operation.id" v-if="remoteService.parameters.filter(p => p.operationId === operation.id).length">
+      <div v-for="operation in operations" v-if="remoteService.parameters.filter(p => p.operationId === operation.id).length" :key="operation.id">
         <h3 class="title mt-4 mb-2">{{ operation.title }}</h3>
         <v-text-field
           v-for="(param, i) in remoteService.parameters.filter(p => p.operationId === operation.id)"
@@ -49,7 +49,7 @@
 </template>
 
 <script>
-import {mapState, mapActions} from 'vuex'
+import { mapState, mapActions } from 'vuex'
 
 export default {
   data: () => ({
@@ -84,7 +84,7 @@ export default {
         operation.parameters.filter(p => !!p['x-refersTo'] && p.in === 'query').forEach(param => {
           let staticParam = this.remoteService.parameters.find(p => p.operationId === operation.id && p.name === param.name)
           if (!staticParam) {
-            staticParam = {operationId: operation.id, name: param.name, value: ''}
+            staticParam = { operationId: operation.id, name: param.name, value: '' }
             this.remoteService.parameters.push(staticParam)
           }
           staticParam['x-refersTo'] = param['x-refersTo']

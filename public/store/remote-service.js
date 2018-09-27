@@ -23,27 +23,27 @@ export default {
     }
   },
   actions: {
-    async fetchInfo({commit, dispatch, getters, rootState}) {
+    async fetchInfo({ commit, dispatch, getters, rootState }) {
       try {
         const remoteService = await this.$axios.$get(getters.resourceUrl)
         remoteService.parameters = remoteService.parameters || []
-        commit('setAny', {remoteService})
+        commit('setAny', { remoteService })
         const api = await this.$axios.$get(getters.resourceUrl + '/api-docs.json')
-        commit('setAny', {api})
-        const apps = await this.$axios.$get(rootState.env.publicUrl + '/api/v1/applications', {params: {service: remoteService.id, size: 0}})
-        commit('setAny', {nbApplications: apps.count})
+        commit('setAny', { api })
+        const apps = await this.$axios.$get(rootState.env.publicUrl + '/api/v1/applications', { params: { service: remoteService.id, size: 0 } })
+        commit('setAny', { nbApplications: apps.count })
       } catch (error) {
-        eventBus.$emit('notification', {error, msg: `Erreur pendant la récupération de la définition de l'API:`})
+        eventBus.$emit('notification', { error, msg: `Erreur pendant la récupération de la définition de l'API:` })
       }
     },
-    async setId({commit, getters, dispatch, state}, remoteServiceId) {
-      commit('setAny', {remoteServiceId})
+    async setId({ commit, getters, dispatch, state }, remoteServiceId) {
+      commit('setAny', { remoteServiceId })
       dispatch('fetchInfo')
     },
-    clear({commit, state}) {
-      commit('setAny', {remoteServiceId: null, remoteService: null})
+    clear({ commit, state }) {
+      commit('setAny', { remoteServiceId: null, remoteService: null })
     },
-    async patch({commit, getters, dispatch}, patch) {
+    async patch({ commit, getters, dispatch }, patch) {
       try {
         const silent = patch.silent
         delete patch.silent
@@ -51,31 +51,31 @@ export default {
         if (!silent) eventBus.$emit('notification', 'La configuration du service a bien été mise à jour.')
         return true
       } catch (error) {
-        eventBus.$emit('notification', {error, msg: `Erreur pendant la mise à jour de la configuration du service:`})
+        eventBus.$emit('notification', { error, msg: `Erreur pendant la mise à jour de la configuration du service:` })
         return false
       }
     },
-    async patchAndCommit({commit, getters, dispatch}, patch) {
+    async patchAndCommit({ commit, getters, dispatch }, patch) {
       const patched = await dispatch('patch', patch)
       if (patched) commit('patch', patch)
     },
-    async remove({state, getters, dispatch}) {
-      const options = {headers: {'x-organizationId': 'user'}}
-      if (state.remoteService.owner.type === 'organization') options.headers = {'x-organizationId': state.remoteService.owner.id}
+    async remove({ state, getters, dispatch }) {
+      const options = { headers: { 'x-organizationId': 'user' } }
+      if (state.remoteService.owner.type === 'organization') options.headers = { 'x-organizationId': state.remoteService.owner.id }
       try {
         await this.$axios.delete(getters.resourceUrl)
         eventBus.$emit('notification', `La configuration du service ${state.remoteService.title} a bien été supprimée`)
       } catch (error) {
-        eventBus.$emit('notification', {error, msg: `Erreur pendant la suppression de la configuration du service:`})
+        eventBus.$emit('notification', { error, msg: `Erreur pendant la suppression de la configuration du service:` })
       }
     },
-    async refresh({commit, getters, dispatch}) {
+    async refresh({ commit, getters, dispatch }) {
       try {
         await this.$axios.$post(getters.resourceUrl + '/_update')
         eventBus.$emit('notification', `La définition de l'API a bien été mise à jour`)
         dispatch('fetchInfo')
       } catch (error) {
-        eventBus.$emit('notification', {error, msg: `Erreur pendant la mise à jour de la définition de l'API:`})
+        eventBus.$emit('notification', { error, msg: `Erreur pendant la mise à jour de la définition de l'API:` })
       }
     }
   }

@@ -54,12 +54,12 @@ export default {
     }
   },
   actions: {
-    async fetchInfo({commit, getters, rootState}) {
+    async fetchInfo({ commit, getters, rootState }) {
       let dataset
       try {
         dataset = await this.$axios.$get(getters.resourceUrl)
       } catch (error) {
-        eventBus.$emit('notification', {error, msg: `Erreur pendant la récupération des informations du jeu de données:`})
+        eventBus.$emit('notification', { error, msg: `Erreur pendant la récupération des informations du jeu de données:` })
         return
       }
       const extensions = (dataset.extensions || []).map(ext => {
@@ -72,32 +72,32 @@ export default {
       Vue.set(dataset, 'schema', dataset.schema || [])
       Vue.set(dataset, 'publications', dataset.publications || [])
 
-      commit('setAny', {dataset})
-      const apps = await this.$axios.$get(rootState.env.publicUrl + '/api/v1/applications', {params: {dataset: dataset.id, size: 0}})
-      commit('setAny', {nbApplications: apps.count})
+      commit('setAny', { dataset })
+      const apps = await this.$axios.$get(rootState.env.publicUrl + '/api/v1/applications', { params: { dataset: dataset.id, size: 0 } })
+      commit('setAny', { nbApplications: apps.count })
       const api = await this.$axios.$get(getters.resourceUrl + '/api-docs.json')
-      commit('setAny', {api})
+      commit('setAny', { api })
       const journal = await this.$axios.$get(getters.resourceUrl + '/journal')
-      commit('setAny', {journal})
+      commit('setAny', { journal })
     },
-    async setId({commit, getters, dispatch, state}, datasetId) {
-      commit('setAny', {datasetId})
+    async setId({ commit, getters, dispatch, state }, datasetId) {
+      commit('setAny', { datasetId })
       await dispatch('fetchInfo')
       eventBus.$emit('subscribe', getters.journalChannel)
       eventBus.$on(getters.journalChannel, event => {
         if (event.type === 'finalize-end') {
-          eventBus.$emit('notification', {type: 'success', msg: 'Le jeu de données a été traité en fonction de vos dernières modifications et est prêt à être utilisé ou édité de nouveau.'})
+          eventBus.$emit('notification', { type: 'success', msg: 'Le jeu de données a été traité en fonction de vos dernières modifications et est prêt à être utilisé ou édité de nouveau.' })
           dispatch('fetchInfo')
         }
-        if (event.type === 'error') eventBus.$emit('notification', {error: event.data, msg: 'Le service a rencontré une erreur pendant le traitement du jeu de données:'})
+        if (event.type === 'error') eventBus.$emit('notification', { error: event.data, msg: 'Le service a rencontré une erreur pendant le traitement du jeu de données:' })
         dispatch('addJournalEvent', event)
       })
     },
-    clear({commit, state}) {
+    clear({ commit, state }) {
       if (state.datasetId) eventBus.$emit('unsubscribe', 'datasets/' + state.datasetId + '/journal')
-      commit('setAny', {datasetId: null, dataset: null, api: null, journal: []})
+      commit('setAny', { datasetId: null, dataset: null, api: null, journal: [] })
     },
-    async patch({commit, getters, dispatch}, patch) {
+    async patch({ commit, getters, dispatch }, patch) {
       try {
         const silent = patch.silent
         delete patch.silent
@@ -108,39 +108,39 @@ export default {
         if (error.status === 409) {
           eventBus.$emit('notification', `Le jeu de données est en cours de traitement et votre modification n'a pas pu être appliquée. Veuillez essayer de nouveau un peu plus tard.`)
         } else {
-          eventBus.$emit('notification', {error, msg: 'Erreur pendant la mise à jour du jeu de données'})
+          eventBus.$emit('notification', { error, msg: 'Erreur pendant la mise à jour du jeu de données' })
         }
         return false
       }
     },
-    async patchAndCommit({commit, getters, dispatch}, patch) {
+    async patchAndCommit({ commit, getters, dispatch }, patch) {
       const patched = await dispatch('patch', patch)
       if (patched) commit('patch', patch)
     },
-    async remove({state, getters, dispatch}) {
-      const options = {headers: {'x-organizationId': 'user'}}
-      if (state.dataset.owner.type === 'organization') options.headers = {'x-organizationId': state.dataset.owner.id}
+    async remove({ state, getters, dispatch }) {
+      const options = { headers: { 'x-organizationId': 'user' } }
+      if (state.dataset.owner.type === 'organization') options.headers = { 'x-organizationId': state.dataset.owner.id }
       try {
         await this.$axios.delete(getters.resourceUrl, options)
         eventBus.$emit('notification', `Le jeu de données ${state.dataset.title} a bien été supprimé`)
       } catch (error) {
-        eventBus.$emit('notification', {error, msg: 'Erreur pendant la suppression du jeu de données'})
+        eventBus.$emit('notification', { error, msg: 'Erreur pendant la suppression du jeu de données' })
       }
     },
-    addJournalEvent({commit}, event) {
+    addJournalEvent({ commit }, event) {
       commit('addJournalEvent', event)
     },
-    async fetchRemoteServices({getters, commit, state}) {
+    async fetchRemoteServices({ getters, commit, state }) {
       let remoteServices = []
       if (getters.concepts.size) {
         const inputConcepts = [...getters.concepts].filter(c => c !== 'http://schema.org/identifier').join(',')
-        const data = await this.$axios.$get('api/v1/remote-services', {params: {
+        const data = await this.$axios.$get('api/v1/remote-services', { params: {
           'input-concepts': inputConcepts,
           owner: state.dataset.owner.type + ':' + state.dataset.owner.id,
-          size: 100 }})
+          size: 100 } })
         remoteServices = data.results.filter(s => s.owner.type === state.dataset.owner.type && s.owner.id === state.dataset.owner.id)
       }
-      commit('setAny', {remoteServices})
+      commit('setAny', { remoteServices })
     }
   }
 }

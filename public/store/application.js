@@ -34,32 +34,32 @@ export default {
     }
   },
   actions: {
-    async fetchInfo({commit, dispatch, getters}) {
+    async fetchInfo({ commit, dispatch, getters }) {
       try {
         const application = await this.$axios.$get(getters.resourceUrl)
         Vue.set(application, 'publications', application.publications || [])
-        commit('setAny', {application})
+        commit('setAny', { application })
         const api = await this.$axios.$get(getters.resourceUrl + '/api-docs.json')
-        commit('setAny', {api})
+        commit('setAny', { api })
         const journal = await this.$axios.$get(getters.resourceUrl + '/journal')
-        commit('setAny', {journal})
+        commit('setAny', { journal })
       } catch (error) {
-        eventBus.$emit('notification', {error, msg: `Erreur pendant la récupération des informations de l'application`})
+        eventBus.$emit('notification', { error, msg: `Erreur pendant la récupération des informations de l'application` })
       }
     },
-    async setId({commit, getters, dispatch, state}, applicationId) {
-      commit('setAny', {applicationId})
+    async setId({ commit, getters, dispatch, state }, applicationId) {
+      commit('setAny', { applicationId })
       dispatch('fetchInfo')
       eventBus.$emit('subscribe', getters.journalChannel)
       eventBus.$on(getters.journalChannel, event => {
-        if (event.type === 'error') eventBus.$emit('notification', {error: event.data, msg: `Le service a rencontré une erreur pendant le traitement de l'application:`})
+        if (event.type === 'error') eventBus.$emit('notification', { error: event.data, msg: `Le service a rencontré une erreur pendant le traitement de l'application:` })
         dispatch('addJournalEvent', event)
       })
     },
-    clear({commit, state}) {
-      commit('setAny', {applicationId: null, application: null})
+    clear({ commit, state }) {
+      commit('setAny', { applicationId: null, application: null })
     },
-    async patch({commit, getters, dispatch}, patch) {
+    async patch({ commit, getters, dispatch }, patch) {
       try {
         const silent = patch.silent
         delete patch.silent
@@ -67,35 +67,39 @@ export default {
         if (!silent) eventBus.$emit('notification', `La configuration d'application a bien été mise à jour.`)
         return true
       } catch (error) {
-        eventBus.$emit('notification', {error, msg: `Erreur pendant la mise à jour de la configuration d'application:`})
+        eventBus.$emit('notification', { error, msg: `Erreur pendant la mise à jour de la configuration d'application:` })
         return false
       }
     },
-    async patchAndCommit({commit, getters, dispatch}, patch) {
+    async patchAndCommit({ commit, getters, dispatch }, patch) {
       const patched = await dispatch('patch', patch)
       if (patched) commit('patch', patch)
     },
-    async remove({state, getters, dispatch}) {
-      const options = {headers: {'x-organizationId': 'user'}}
-      if (state.application.owner.type === 'organization') options.headers = {'x-organizationId': state.application.owner.id}
+    async remove({ state, getters, dispatch }) {
+      const options = { headers: { 'x-organizationId': 'user' } }
+      if (state.application.owner.type === 'organization') options.headers = { 'x-organizationId': state.application.owner.id }
       try {
         await this.$axios.delete(getters.resourceUrl)
         eventBus.$emit('notification', `La configuration d'application ${state.application.title} a bien été supprimée.`)
       } catch (error) {
-        eventBus.$emit('notification', {error, msg: `Erreur pendant la suppression de la configuration d'application:`})
+        eventBus.$emit('notification', { error, msg: `Erreur pendant la suppression de la configuration d'application:` })
       }
     },
-    addJournalEvent({commit}, event) {
+    addJournalEvent({ commit }, event) {
       commit('addJournalEvent', event)
     },
-    async readConfig({state, commit, getters}) {
+    async readConfig({ state, commit, getters }) {
       const config = await this.$axios.$get(getters.resourceUrl + '/configuration')
-      commit('setAny', {config})
+      commit('setAny', { config })
       return config
     },
-    async writeConfig({state, commit, getters}, config) {
-      await this.$axios.$put(getters.resourceUrl + '/configuration', config)
-      commit('setAny', {config})
+    async writeConfig({ state, commit, getters }, config) {
+      try {
+        await this.$axios.$put(getters.resourceUrl + '/configuration', config)
+        commit('setAny', { config })
+      } catch (error) {
+        eventBus.$emit('notification', { error, msg: `Erreur pendant l'écriture de la configuration d'application:` })
+      }
     }
   }
 }

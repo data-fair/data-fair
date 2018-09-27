@@ -3,13 +3,13 @@
     <v-layout column>
       <p>Le propriétaire est le seul à pouvoir modifier la ressource</p>
       <v-radio-group v-model="selectedOwner" class="mt-3 mb-3">
-        <v-radio :label="owner.type === 'user' ? 'Vous-même' : 'Organisation ' + owner.name" :value="owner" v-for="(owner, $index) in owners" :key="$index"/>
+        <v-radio v-for="(owner, $index) in owners" :label="owner.type === 'user' ? 'Vous-même' : 'Organisation ' + owner.name" :value="owner" :key="$index"/>
       </v-radio-group>
     </v-layout>
-    <v-layout column v-if="selectedOwner && selectedOwner.type === 'organization'">
+    <v-layout v-if="selectedOwner && selectedOwner.type === 'organization'" column>
       <p>Dans une organisation, vous pouvez restreindre la propriété à un rôle (les administrateurs de l'organisation seront quand même considérés comme propriétaires)</p>
       <v-radio-group v-model="selectedRole" class="mt-3 mb-3">
-        <v-radio label="Organisation entière" :value="null"/>
+        <v-radio :value="null" label="Organisation entière"/>
         <v-radio :label="`Restreinte au rôle ${user.organizations.find(o => o.id === selectedOwner.id).role}`" :value="user.organizations.find(o => o.id === selectedOwner.id).role"/>
       </v-radio-group>
     </v-layout>
@@ -17,7 +17,7 @@
 </template>
 
 <script>
-import {mapState} from 'vuex'
+import { mapState } from 'vuex'
 
 export default {
   props: ['value'],
@@ -30,8 +30,8 @@ export default {
     ...mapState(['env']),
     owners() {
       return [
-        {type: 'user', id: this.user.id, name: this.user.name},
-        ...this.user.organizations.map(o => ({type: 'organization', id: o.id, name: o.name}))
+        { type: 'user', id: this.user.id, name: this.user.name },
+        ...this.user.organizations.map(o => ({ type: 'organization', id: o.id, name: o.name }))
       ]
     }
   },
@@ -46,7 +46,7 @@ export default {
   },
   methods: {
     update () {
-      this.$emit('input', Object.assign({role: this.selectedRole}, this.selectedOwner))
+      this.$emit('input', Object.assign({ role: this.selectedRole }, this.selectedOwner))
     }
   }
 }

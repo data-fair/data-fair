@@ -27,8 +27,8 @@
         </v-card>
       </v-flex>
       <v-flex xs12 md6 order-md1>
-        <v-text-field label="Titre" v-model="catalog.title" @blur="patch({title: catalog.title})"/>
-        <v-textarea label="Description" v-model="catalog.description" box rows="4" @blur="patch({description: catalog.description})"/>
+        <v-text-field v-model="catalog.title" label="Titre" @blur="patch({title: catalog.title})"/>
+        <v-textarea v-model="catalog.description" label="Description" box rows="4" @blur="patch({description: catalog.description})"/>
         <catalog-config-form :catalog="catalog" @change="changes => patch(changes)"/>
       </v-flex>
     </v-layout>
@@ -36,11 +36,11 @@
 </template>
 
 <script>
-import {mapState, mapActions} from 'vuex'
+import { mapState, mapActions } from 'vuex'
 import CatalogConfigForm from '../../../components/CatalogConfigForm.vue'
 
 export default {
-  components: {CatalogConfigForm},
+  components: { CatalogConfigForm },
   computed: {
     ...mapState('catalog', ['catalog'])
   },

@@ -20,7 +20,7 @@
                 {{ props.item.title }}
               </td>
               <td v-for="role in organizationRoles" :key="role">
-                <v-checkbox label="" v-model="settings.operationsPermissions[props.item.id]" :value="role" @change="save"/>
+                <v-checkbox v-model="settings.operationsPermissions[props.item.id]" :value="role" label="" @change="save"/>
               </td>
             </tr>
           </template>
@@ -46,14 +46,14 @@
 </template>
 
 <script>
-import {mapState} from 'vuex'
+import { mapState } from 'vuex'
 import SettingsWebhooks from '../../../components/SettingsWebhooks.vue'
 import SettingsLicenses from '../../../components/SettingsLicenses.vue'
 import eventBus from '../../../event-bus'
 
 export default {
   middleware: 'auth',
-  components: {SettingsWebhooks, SettingsLicenses},
+  components: { SettingsWebhooks, SettingsLicenses },
   data: () => ({
     api: null,
     organizationRoles: [],
@@ -82,7 +82,7 @@ export default {
           this.organization = await this.$axios.$get(this.env.directoryUrl + '/api/organizations/' + this.$route.params.id)
           roles = await this.$axios.$get(this.env.directoryUrl + '/api/organizations/' + this.$route.params.id + '/roles')
         } catch (err) {
-          eventBus.$emit('notification', {type: 'error', msg: `Erreur pendant la récupération de la liste des rôles de l'organisation`})
+          eventBus.$emit('notification', { type: 'error', msg: `Erreur pendant la récupération de la liste des rôles de l'organisation` })
         }
         this.organizationRoles = roles.filter(role => role !== this.env.adminRole)
       }
@@ -102,7 +102,7 @@ export default {
         await this.$axios.$put('api/v1/settings/' + this.$route.params.type + '/' + this.$route.params.id, this.settings)
         eventBus.$emit('notification', `Les paramètres ont bien été mis à jour`)
       } catch (error) {
-        eventBus.$emit('notification', {error, msg: `Erreur pendant la mise à jour des paramètres`})
+        eventBus.$emit('notification', { error, msg: `Erreur pendant la mise à jour des paramètres` })
       }
     }
   }

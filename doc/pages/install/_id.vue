@@ -8,7 +8,7 @@
         </v-list-tile>
       </v-list>
     </v-navigation-drawer>
-    <v-container v-show="ready" class="doc-page" v-html="content" style="overflow-y:scroll;height:calc(100vh - 148px)"/>
+    <v-container v-show="ready" class="doc-page" style="overflow-y:scroll;height:calc(100vh - 148px)" v-html="content"/>
   </v-layout>
 </template>
 
@@ -25,8 +25,8 @@ function flattenVars(vars, flatVars = [], prefix = '') {
     const key = prefix + v
     let def = key.split('.').reduce((a, k) => { return a[k] }, defaults)
     if (typeof def === 'object') def = JSON.stringify(def)
-    if (typeof vars[v] === 'string') flatVars.push({key, name: vars[v], def})
-    else if (typeof vars[v] === 'object' && vars[v].__name) flatVars.push({key, name: vars[v].__name, def})
+    if (typeof vars[v] === 'string') flatVars.push({ key, name: vars[v], def })
+    else if (typeof vars[v] === 'object' && vars[v].__name) flatVars.push({ key, name: vars[v].__name, def })
     else flattenVars(vars[v], flatVars, prefix + v + '.')
   })
   return flatVars
@@ -62,7 +62,7 @@ export default {
       return table
     },
     i18nVars() {
-      const flatMessages = flatten(this.$i18n.messages[this.$i18n.locale], {delimiter: '_'})
+      const flatMessages = flatten(this.$i18n.messages[this.$i18n.locale], { delimiter: '_' })
       let table = `<table><thead><tr><th>${this.$t('pages.install.config.i18nKey')}</th><th>${this.$t('pages.install.config.i18nVar')}</th><th>${this.$t('pages.install.config.i18nVal')}</th></tr></thead><tbody>\n`
       table += Object.keys(flatMessages)
         .filter(k => k.indexOf('doc_') !== 0)

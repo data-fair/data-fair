@@ -1,6 +1,6 @@
 import Vue from 'vue'
 import Vuex from 'vuex'
-import {sessionStore} from '@koumoul/sd-vue'
+import { sessionStore } from '@koumoul/sd-vue'
 import dataset from './dataset'
 import remoteService from './remote-service'
 import application from './application'
@@ -10,7 +10,7 @@ Vue.use(Vuex)
 
 export default () => {
   return new Vuex.Store({
-    modules: {dataset, remoteService, application, catalog, session: sessionStore},
+    modules: { dataset, remoteService, application, catalog, session: sessionStore },
     state: {
       user: null,
       vocabulary: null,
@@ -36,33 +36,33 @@ export default () => {
       ownerLicenses(state, payload) {
         Vue.set(state.licenses, payload.owner.type + '/' + payload.owner.id, payload.licenses)
       },
-      setSearchQuery(state, {type, query}) {
+      setSearchQuery(state, { type, query }) {
         Vue.set(state.searchQueries, type, query)
       }
     },
     actions: {
-      async fetchVocabulary({state, commit}) {
+      async fetchVocabulary({ state, commit }) {
         if (state.vocabulary) return
         const vocabulary = {}
         const vocabularyArray = await this.$axios.$get('api/v1/vocabulary')
-        commit('setAny', {vocabularyArray})
+        commit('setAny', { vocabularyArray })
         vocabularyArray.forEach(term => {
           term.identifiers.forEach(id => {
             vocabulary[id] = term
           })
         })
-        commit('setAny', {vocabulary})
+        commit('setAny', { vocabulary })
       },
-      async fetchLicenses({getters, state, commit}, owner) {
+      async fetchLicenses({ getters, state, commit }, owner) {
         if (getters.ownerLicenses(owner)) return
         const licenses = await this.$axios.$get('api/v1/settings/' + owner.type + '/' + owner.id + '/licenses')
-        commit('ownerLicenses', {owner, licenses})
+        commit('ownerLicenses', { owner, licenses })
       },
-      nuxtServerInit({commit, dispatch}, {req, env, app}) {
-        commit('setAny', {env: {...env}, user: req.user})
-        dispatch('session/init', {user: req.user, baseUrl: env.publicUrl + '/api/v1/session'})
+      nuxtServerInit({ commit, dispatch }, { req, env, app }) {
+        commit('setAny', { env: { ...env }, user: req.user })
+        dispatch('session/init', { user: req.user, baseUrl: env.publicUrl + '/api/v1/session' })
       },
-      searchQuery({commit}, params) {
+      searchQuery({ commit }, params) {
         commit('setSearchQuery', params)
       }
     }

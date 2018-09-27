@@ -8,7 +8,7 @@
     <p v-if="!dataset.publications.length">
       Il n'existe pas encore de publication de ce jeu de données.
     </p>
-    <v-list two-line v-else>
+    <v-list v-else two-line>
       <v-list-tile v-for="(publication, i) in dataset.publications" :key="publication.id">
         <v-list-tile-content v-if="catalogsById[publication.catalog]">
           <v-list-tile-title v-if="publication.addToDataset && publication.addToDataset.id">Ressource ajoutée au jeu de données "{{ publication.addToDataset.title }}" sur le catalogue "{{ catalogsById[publication.catalog].title }}"</v-list-tile-title>
@@ -29,7 +29,7 @@
       </v-list-tile>
     </v-list>
 
-    <v-layout row wrap v-if="can('writeDescription')">
+    <v-layout v-if="can('writeDescription')" row wrap>
       <v-spacer/>
       <v-btn color="primary" @click="addPublicationDialog = true">Ajouter une publication</v-btn>
     </v-layout>
@@ -44,20 +44,20 @@
             <v-select
               :items="catalogs"
               :item-text="catalogLabel"
-              item-value="id"
               v-model="newPublication.catalog"
+              :rules="[() => !!newPublication.catalog]"
+              item-value="id"
               label="Catalogue"
               required
-              :rules="[() => !!newPublication.catalog]"
             />
 
             <v-autocomplete
-              class="mb-4"
               :disabled="!newPublication.catalog"
               v-model="newPublication.addToDataset"
               :items="catalogDatasets"
               :loading="catalogDatasetsLoading"
               :search-input.sync="searchCatalogDatasets"
+              class="mb-4"
               label="Ajouter comme ressource à un jeu de données du catalogue"
               placeholder="Tapez pour rechercher"
               return-object
@@ -73,7 +73,7 @@
         <v-card-actions>
           <v-spacer/>
           <v-btn flat @click="addPublicationDialog = false">Annuler</v-btn>
-          <v-btn color="primary" :disabled="!newPublicationValid" @click="addPublicationDialog = false; addPublication(newPublication)">Ajouter</v-btn>
+          <v-btn :disabled="!newPublicationValid" color="primary" @click="addPublicationDialog = false; addPublication(newPublication)">Ajouter</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -100,7 +100,7 @@
 </template>
 
 <script>
-import {mapState, mapGetters, mapActions} from 'vuex'
+import { mapState, mapGetters, mapActions } from 'vuex'
 import eventBus from '../../../event-bus.js'
 
 export default {
@@ -133,13 +133,13 @@ export default {
       if (!this.searchCatalogDatasets || this.searchCatalogDatasets === (this.newPublication.addToDataset && this.newPublication.addToDataset.title)) return
       this.catalogDatasetsLoading = true
       const catalog = this.catalogsById[this.newPublication.catalog]
-      this.catalogDatasets = (await this.$axios.$get('api/v1/catalogs/_datasets', {params: {type: catalog.type, url: catalog.url, q: this.searchCatalogDatasets}})).results
+      this.catalogDatasets = (await this.$axios.$get('api/v1/catalogs/_datasets', { params: { type: catalog.type, url: catalog.url, q: this.searchCatalogDatasets } })).results
       this.catalogDatasetsLoading = false
     }
   },
   async created() {
-    const params = {owner: this.dataset.owner.type + ':' + this.dataset.owner.id}
-    this.catalogs = (await this.$axios.$get('api/v1/catalogs', {params})).results
+    const params = { owner: this.dataset.owner.type + ':' + this.dataset.owner.id }
+    this.catalogs = (await this.$axios.$get('api/v1/catalogs', { params })).results
     eventBus.$on(this.journalChannel, this.onJournalEvent)
   },
   async destroyed() {
@@ -152,11 +152,11 @@ export default {
     },
     addPublication(publication) {
       this.dataset.publications.push(publication)
-      this.patch({publications: this.dataset.publications})
+      this.patch({ publications: this.dataset.publications })
     },
     deletePublication(publicationInd) {
       this.dataset.publications[publicationInd].status = 'deleted'
-      this.patch({publications: this.dataset.publications})
+      this.patch({ publications: this.dataset.publications })
     },
     catalogLabel(catalog) {
       if (!catalog) return 'catalogue inconnu'

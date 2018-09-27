@@ -1,25 +1,25 @@
 <template lang="html">
 
   <v-card>
-    <v-card class="mt-2 ml-2 px-2" style="position: absolute;z-index:2;max-width:400px;" v-if="dataset">
+    <v-card v-if="dataset" class="mt-2 ml-2 px-2" style="position: absolute;z-index:2;max-width:400px;">
 
       <v-text-field
+        v-model="query"
         style="margin-top: 8px;margin-bottom: 8px;"
         label="Rechercher"
-        v-model="query"
-        @keyup.enter.native="refresh"
-        @click:append="refresh"
         append-icon="search"
         hide-details
-        single-line/>
+        single-line
+        @keyup.enter.native="refresh"
+        @click:append="refresh"/>
 
       <v-select
         v-if="showSelect"
-        style="margin-top: 30px;"
         :items="dataset.schema.map(f => ({value: f.key, text: f.title || f['x-originalName']}))"
+        v-model="select"
+        style="margin-top: 30px;"
         item-value="value"
         item-text="text"
-        v-model="select"
         label="Choisir les champs"
         multiple
         @input="refresh"
@@ -31,7 +31,7 @@
 </template>
 
 <script>
-import {mapState, mapGetters} from 'vuex'
+import { mapState, mapGetters } from 'vuex'
 import debounce from 'lodash.debounce'
 import eventBus from '../event-bus'
 
@@ -66,7 +66,7 @@ const dataLayers = [{
   'type': 'line',
   'paint': {
     'line-color': '#E91E63',
-    'line-width': {'stops': [[4, 1.5], [24, 9]]}
+    'line-width': { 'stops': [[4, 1.5], [24, 9]] }
   },
   'filter': ['==', '_id', '']
 }, {
@@ -76,7 +76,7 @@ const dataLayers = [{
   'type': 'line',
   'paint': {
     'line-color': 'rgba(156, 39, 176, 0.5)',
-    'line-width': {'stops': [[4, 1], [24, 6]]}
+    'line-width': { 'stops': [[4, 1], [24, 6]] }
   },
   layout: {
     'line-cap': 'round',
@@ -90,14 +90,14 @@ const dataLayers = [{
   'type': 'circle',
   'paint': {
     'circle-color': 'rgba(233, 30, 99, 0.5)',
-    'circle-radius': {'stops': [[6, 1.5], [24, 16]]}
+    'circle-radius': { 'stops': [[6, 1.5], [24, 16]] }
   },
   'filter': ['==', '$type', 'Point']
 }]
 
 export default {
   props: ['heightMargin', 'showSelect'],
-  data: () => ({mapHeight: 0, query: '', select: []}),
+  data: () => ({ mapHeight: 0, query: '', select: [] }),
   computed: {
     ...mapState(['env']),
     ...mapState('dataset', ['dataset']),
@@ -118,12 +118,12 @@ export default {
     this.select = this.dataset.schema.filter(field => field.type === 'string' && field.format === 'uri-reference').map(field => field.key)
 
     await new Promise(resolve => setTimeout(resolve, 0))
-    this.map = new mapboxgl.Map({container: 'map', style: this.env.map.style})
+    this.map = new mapboxgl.Map({ container: 'map', style: this.env.map.style })
     this.map.on('error', (error) => {
-      eventBus.$emit('notification', {error, msg: 'Erreur pendant le rendu de la carte:'})
+      eventBus.$emit('notification', { error, msg: 'Erreur pendant le rendu de la carte:' })
     })
     const bbox = await this.getBBox()
-    this.map.fitBounds(bbox, {duration: 0})
+    this.map.fitBounds(bbox, { duration: 0 })
     this.map.addControl(new mapboxgl.NavigationControl(), 'top-right')
     // Disable map rotation using right click + drag
     this.map.dragRotate.disable()
@@ -131,7 +131,7 @@ export default {
     this.map.touchZoomRotate.disableRotation()
 
     // Create a popup, but don't add it to the map yet.
-    const popup = new mapboxgl.Popup({closeButton: false, closeOnClick: false})
+    const popup = new mapboxgl.Popup({ closeButton: false, closeOnClick: false })
 
     const moveCallback = (e) => {
       // console.log(e.features[0].properties._id)
@@ -172,7 +172,7 @@ export default {
   },
   methods: {
     async getBBox() {
-      const bbox = (await this.$axios.$get(this.resourceUrl + '/lines', {params: {format: 'geojson', size: 0, qs: this.query}})).bbox
+      const bbox = (await this.$axios.$get(this.resourceUrl + '/lines', { params: { format: 'geojson', size: 0, qs: this.query } })).bbox
       if (!bbox || !bbox.length) {
         return eventBus.$emit('notification', 'Aucune donnée correspondante.')
       }
@@ -193,7 +193,7 @@ export default {
       this.map.fitBounds(bbox)
     },
     initCustomSource() {
-      this.map.addSource('data-fair', {type: 'vector', tiles: [this.tileUrl]})
+      this.map.addSource('data-fair', { type: 'vector', tiles: [this.tileUrl] })
       dataLayers.forEach(layer => this.map.addLayer(layer, this.env.map.beforeLayer))
     }
   }

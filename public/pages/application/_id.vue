@@ -1,11 +1,11 @@
 <template>
-  <v-layout column class="application" v-if="application">
+  <v-layout v-if="application" column class="application">
     <v-tabs icons-and-text grow color="transparent" slider-color="primary" class="mb-3">
       <v-tab :disabled="!can('readDescription')" :nuxt="true" :to="`/application/${application.id}/description`">
         Description
         <v-icon>toc</v-icon>
       </v-tab>
-      <v-tab :disabled="!can('writeConfig')" :nuxt="true" :to="`/application/${application.id}/config`">
+      <v-tab :disabled="!can('readConfig')" :nuxt="true" :to="`/application/${application.id}/config`">
         Configuration
         <v-icon>build</v-icon>
       </v-tab>
@@ -32,7 +32,7 @@
     <div class="actions-buttons">
       <div style="height:56px;"/>
       <v-menu bottom left>
-        <v-btn fab small slot="activator" color="accent">
+        <v-btn slot="activator" fab small color="accent">
           <v-icon>more_vert</v-icon>
         </v-btn>
         <v-list>
@@ -72,7 +72,7 @@
 </template>
 
 <script>
-import {mapState, mapActions, mapGetters} from 'vuex'
+import { mapState, mapActions, mapGetters } from 'vuex'
 
 export default {
   data: () => ({
@@ -95,7 +95,7 @@ export default {
     async confirmRemove() {
       this.showDeleteDialog = false
       await this.remove()
-      this.$router.push({path: '/applications'})
+      this.$router.push({ path: '/applications' })
     }
   }
 }

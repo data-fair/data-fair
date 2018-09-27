@@ -1,9 +1,9 @@
 <template>
   <v-stepper v-model="currentStep">
     <v-stepper-header>
-      <v-stepper-step step="1" :complete="!!apiDoc" editable>Sélection du service</v-stepper-step>
+      <v-stepper-step :complete="!!apiDoc" step="1" editable>Sélection du service</v-stepper-step>
       <v-divider/>
-      <v-stepper-step step="2" :complete="currentStep > 2">Choix du propriétaire</v-stepper-step>
+      <v-stepper-step :complete="currentStep > 2" step="2">Choix du propriétaire</v-stepper-step>
       <v-divider/>
       <v-stepper-step step="3">Effectuer l'action</v-stepper-step>
     </v-stepper-header>
@@ -12,25 +12,25 @@
       <v-stepper-content step="1">
         <v-select
           :items="configurableRemoteServices"
+          v-model="apiDocUrl"
           item-value="href"
           item-text="title"
-          v-model="apiDocUrl"
           label="Choisissez un service à configurer"
           @input="downloadFromUrl"
         />
         <v-text-field
-          label="Ou saisissez une URL de documentation"
           v-model="apiDocUrl"
+          label="Ou saisissez une URL de documentation"
           @blur="downloadFromUrl"
           @keyup.native.enter="downloadFromUrl"
         />
         <p v-if="apiDoc" v-html="marked(apiDoc.info.description)"/>
-        <v-btn color="primary" :disabled="!apiDoc" @click.native="currentStep = 2">Continuer</v-btn>
+        <v-btn :disabled="!apiDoc" color="primary" @click.native="currentStep = 2">Continuer</v-btn>
         <v-btn flat @click.native="$emit('cancel')">Annuler</v-btn>
       </v-stepper-content>
       <v-stepper-content step="2">
         <owner-pick v-model="owner"/>
-        <v-btn color="primary" :disabled="!owner" @click.native="currentStep = 3">Continuer</v-btn>
+        <v-btn :disabled="!owner" color="primary" @click.native="currentStep = 3">Continuer</v-btn>
         <v-btn flat @click.native="$emit('cancel')">Annuler</v-btn>
       </v-stepper-content>
       <v-stepper-content step="3">
@@ -44,7 +44,7 @@
 
 <script>
 import marked from 'marked'
-import {mapState} from 'vuex'
+import { mapState } from 'vuex'
 import eventBus from '../event-bus'
 import OwnerPick from './OwnerPick.vue'
 
@@ -79,7 +79,7 @@ export default {
         const api = await this.$axios.$get(this.apiDocUrl)
         this.checkApi(api)
       } catch (error) {
-        eventBus.$emit('notification', {error, msg: `Erreur pendant la récupération du fichier`})
+        eventBus.$emit('notification', { error, msg: `Erreur pendant la récupération du fichier` })
       }
     },
     async checkApi(api) {
@@ -87,34 +87,34 @@ export default {
         await this.$axios.$post('api/v1/_check-api', api)
         this.apiDoc = api
       } catch (error) {
-        eventBus.$emit('notification', {type: 'error', msg: `Le format de la description de l'API est incorrect`})
+        eventBus.$emit('notification', { type: 'error', msg: `Le format de la description de l'API est incorrect` })
       }
     },
     async importApi() {
       const options = {
-        headers: {'x-organizationId': 'user'},
+        headers: { 'x-organizationId': 'user' },
         progress: (e) => {
           if (e.lengthComputable) this.uploadProgress = (e.loaded / e.total) * 100
         }
       }
       if (this.owner.type === 'organization') {
-        options.headers = {'x-organizationId': this.owner.id}
+        options.headers = { 'x-organizationId': this.owner.id }
         if (this.owner.role) options.headers['x-organizationRole'] = this.owner.role
       }
       const securities = (this.apiDoc.security || []).map(s => Object.keys(s).pop()).map(s => this.apiDoc.components.securitySchemes[s])
       const apiKeySecurity = securities.find(s => s.type === 'apiKey')
-      if (!apiKeySecurity) return eventBus.$emit('notification', {type: 'error', msg: `Erreur, l'API importée n'a pas de schéma de sécurité adapté`})
+      if (!apiKeySecurity) return eventBus.$emit('notification', { type: 'error', msg: `Erreur, l'API importée n'a pas de schéma de sécurité adapté` })
 
       try {
         const remoteService = await this.$axios.$post(this.env.publicUrl + '/api/v1/remote-services', {
           apiDoc: this.apiDoc,
-          apiKey: {in: apiKeySecurity.in, name: apiKeySecurity.name},
+          apiKey: { in: apiKeySecurity.in, name: apiKeySecurity.name },
           url: this.apiDocUrl,
           server: this.apiDoc.servers && this.apiDoc.servers.length && this.apiDoc.servers[0].url
         }, options)
-        this.$router.push({path: `/remote-service/${remoteService.id}/description`})
+        this.$router.push({ path: `/remote-service/${remoteService.id}/description` })
       } catch (error) {
-        eventBus.$emit('notification', {error, msg: `Erreur pendant l'import de la description du service`})
+        eventBus.$emit('notification', { error, msg: `Erreur pendant l'import de la description du service` })
       }
     }
   }

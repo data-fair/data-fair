@@ -1,9 +1,9 @@
 <template>
   <v-stepper v-model="currentStep">
     <v-stepper-header>
-      <v-stepper-step step="1" :complete="!!description" editable>Sélection de l'application</v-stepper-step>
+      <v-stepper-step :complete="!!description" step="1" editable>Sélection de l'application</v-stepper-step>
       <v-divider/>
-      <v-stepper-step step="2" :complete="currentStep > 2">Choix du propriétaire</v-stepper-step>
+      <v-stepper-step :complete="currentStep > 2" step="2">Choix du propriétaire</v-stepper-step>
       <v-divider/>
       <v-stepper-step step="3">Effectuer l'action</v-stepper-step>
     </v-stepper-header>
@@ -12,30 +12,30 @@
       <v-stepper-content step="1">
         <v-select
           :items="configurableApplications"
+          v-model="applicationUrl"
           item-value="href"
           item-text="title"
-          v-model="applicationUrl"
           label="Choisissez une application à configurer"
           @input="downloadFromUrl"
         />
         <v-text-field
-          label="Ou saisissez une URL"
           v-model="applicationUrl"
+          label="Ou saisissez une URL"
           @blur="downloadFromUrl"
           @keyup.native.enter="downloadFromUrl"
         />
         <v-text-field
           v-if="description"
-          label="Titre"
           v-model="description.title"
+          label="Titre"
         />
         <p v-if="description" v-html="description.description"/>
-        <v-btn color="primary" :disabled="!description" @click.native="currentStep = 2">Continuer</v-btn>
+        <v-btn :disabled="!description" color="primary" @click.native="currentStep = 2">Continuer</v-btn>
         <v-btn flat @click.native="$emit('cancel')">Annuler</v-btn>
       </v-stepper-content>
       <v-stepper-content step="2">
         <owner-pick v-model="owner"/>
-        <v-btn color="primary" :disabled="!owner" @click.native="currentStep = 3">Continuer</v-btn>
+        <v-btn :disabled="!owner" color="primary" @click.native="currentStep = 3">Continuer</v-btn>
         <v-btn flat @click.native="$emit('cancel')">Annuler</v-btn>
       </v-stepper-content>
       <v-stepper-content step="3">
@@ -48,7 +48,7 @@
 </template>
 
 <script>
-import {mapState} from 'vuex'
+import { mapState } from 'vuex'
 import eventBus from '../event-bus'
 import OwnerPick from './OwnerPick.vue'
 
@@ -79,22 +79,22 @@ export default {
       if (!this.applicationUrl) return
       this.description = null
       try {
-        this.description = await this.$axios.$get(this.env.publicUrl + '/api/v1/applications/_description', {params: {url: this.applicationUrl}})
+        this.description = await this.$axios.$get(this.env.publicUrl + '/api/v1/applications/_description', { params: { url: this.applicationUrl } })
       } catch (error) {
-        eventBus.$emit('notification', {error, msg: `Erreur pendant la récupération de la description de l'application`})
+        eventBus.$emit('notification', { error, msg: `Erreur pendant la récupération de la description de l'application` })
       }
     },
     async createApplication() {
-      const options = {headers: {'x-organizationId': 'user'}}
+      const options = { headers: { 'x-organizationId': 'user' } }
       if (this.owner.type === 'organization') {
-        options.headers = {'x-organizationId': this.owner.id}
+        options.headers = { 'x-organizationId': this.owner.id }
         if (this.owner.role) options.headers['x-organizationRole'] = this.owner.role
       }
       try {
-        const application = await this.$axios.$post(this.env.publicUrl + '/api/v1/applications', {...this.description, url: this.applicationUrl}, options)
-        this.$router.push({path: `/application/${application.id}/description`})
+        const application = await this.$axios.$post(this.env.publicUrl + '/api/v1/applications', { ...this.description, url: this.applicationUrl }, options)
+        this.$router.push({ path: `/application/${application.id}/description` })
       } catch (error) {
-        eventBus.$emit('notification', {error, msg: `Erreur pendant la création de la configuration d'application`})
+        eventBus.$emit('notification', { error, msg: `Erreur pendant la création de la configuration d'application` })
       }
     }
   }

@@ -10,10 +10,10 @@
 import DatasetInfo from '../../../components/DatasetInfo.vue'
 import DatasetSchemaEdit from '../../../components/DatasetSchemaEdit.vue'
 import DatasetSchemaView from '../../../components/DatasetSchemaView.vue'
-import {mapGetters} from 'vuex'
+import { mapGetters } from 'vuex'
 
 export default {
-  components: {DatasetInfo, DatasetSchemaView, DatasetSchemaEdit},
+  components: { DatasetInfo, DatasetSchemaView, DatasetSchemaEdit },
   computed: {
     ...mapGetters('dataset', ['can'])
   }

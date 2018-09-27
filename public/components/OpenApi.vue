@@ -3,7 +3,7 @@
 </template>
 
 <script>
-import {mapGetters, mapState} from 'vuex'
+import { mapGetters, mapState } from 'vuex'
 
 export default {
   props: ['url'],
@@ -15,7 +15,7 @@ export default {
     },
     src() {
       let url = this.env.openapiViewerUrl + '?proxy=false&hide-toolbar=true'
-      if (this.$store.state.jwt) url += '&headers=' + encodeURIComponent(JSON.stringify({Authorization: 'Bearer ' + this.$store.state.jwt}))
+      if (this.$store.state.jwt) url += '&headers=' + encodeURIComponent(JSON.stringify({ Authorization: 'Bearer ' + this.$store.state.jwt }))
       return url + '&url=' + this.url
     }
   }

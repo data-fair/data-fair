@@ -29,7 +29,7 @@ const events = require('../../shared/events.json')
 export default {
   props: ['journal', 'type'],
   data() {
-    return {eventTypes: events[this.type]}
+    return { eventTypes: events[this.type] }
   }
 }
 </script>

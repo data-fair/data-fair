@@ -5,7 +5,7 @@
         <h2 class="title my-4" >Configuration</h2>
         <iframe v-if="showConfigIframe" :src="applicationLink + '/config?embed=true'" :height="Math.max(height, 1000)" width="100%"/>
         <v-form v-if="showForm" v-model="formValid">
-          <v-jsonschema-form :schema="schema" :model="editConfig" @error="error => eventBus.$emit('notification', {error})" />
+          <v-jsonschema-form :schema="schema" :model="editConfig" :options="{disableAll: !!can(writeConfig)}" @error="error => eventBus.$emit('notification', {error})" />
           <v-layout row>
             <v-spacer/>
             <v-btn color="primary" @click="writeConfig(editConfig)">Enregistrer</v-btn>
@@ -28,12 +28,12 @@
 </template>
 
 <script>
-import {mapState, mapActions, mapGetters} from 'vuex'
+import { mapState, mapActions, mapGetters } from 'vuex'
 import VJsonschemaForm from '@koumoul/vuetify-jsonschema-form'
 import eventBus from '../../../event-bus.js'
 
 export default {
-  components: {VJsonschemaForm},
+  components: { VJsonschemaForm },
   data() {
     return {
       showConfigIframe: false,
@@ -47,7 +47,7 @@ export default {
   },
   computed: {
     ...mapState('application', ['application', 'config']),
-    ...mapGetters('application', ['applicationLink']),
+    ...mapGetters('application', ['applicationLink', 'can']),
     height() {
       return window.innerHeight
     }
@@ -65,7 +65,7 @@ export default {
         console.error(`Schema fetched at ${this.applicationLink}/config-schema.json is not a valid JSON`)
         this.showConfigIframe = true
       } else {
-        this.editConfig = {...await this.readConfig()}
+        this.editConfig = { ...await this.readConfig() }
         this.showForm = true
       }
     } catch (error) {
@@ -73,7 +73,7 @@ export default {
         console.error(`Schema not found at ${this.applicationLink}/config-schema.json`)
         this.showConfigIframe = true
       } else {
-        eventBus.$emit('notification', {error})
+        eventBus.$emit('notification', { error })
       }
     }
   },

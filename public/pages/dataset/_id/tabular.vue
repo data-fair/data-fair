@@ -11,13 +11,13 @@
           <h3 v-if="data.total > 10000">Consultez {{ plural ? 'les' : 'le' }} {{ (10000).toLocaleString() }} {{ plural ? 'premiers enregistrements' : 'premier enregistrement' }} ({{ data.total.toLocaleString() }} au total)</h3>
           <v-layout row>
             <v-text-field
-              label="Rechercher"
               v-model="query"
-              @keyup.enter.native="refresh"
-              @click:append="refresh"
+              label="Rechercher"
               append-icon="search"
               class="mr-3"
-              style="min-width:150px;"/>
+              style="min-width:150px;"
+              @keyup.enter.native="refresh"
+              @click:append="refresh"/>
             <v-spacer/>
             <v-flex v-if="data.total > pagination.rowsPerPage" sm4 md2 lg1 xl1>
               <v-select
@@ -26,7 +26,7 @@
                 label="Nombre de lignes"
               />
             </v-flex>
-            <v-pagination v-if="data.total > pagination.rowsPerPage" v-model="pagination.page" total-visible="7" :length="Math.ceil(Math.min(data.total, 10000) / pagination.rowsPerPage)" class="mx-4"/>
+            <v-pagination v-if="data.total > pagination.rowsPerPage" v-model="pagination.page" :length="Math.ceil(Math.min(data.total, 10000) / pagination.rowsPerPage)" total-visible="7" class="mx-4"/>
           </v-layout>
         </v-layout>
       </v-card-title>
@@ -39,13 +39,13 @@
               :key="header.text"
               :class="['column text-xs-left', header.sortable ? 'sortable' : '', pagination.descending ? 'desc' : 'asc', header.value === pagination.sortBy ? 'active' : '']"
             >
-              <v-tooltip bottom v-if="header.tooltip" style="margin-right: 8px;">
+              <v-tooltip v-if="header.tooltip" bottom style="margin-right: 8px;">
                 <span slot="activator"><v-icon small>info</v-icon></span>
                 <span>{{ header.tooltip }}</span>
               </v-tooltip>
               <span @click="orderBy(header)">
                 {{ header.text }}
-                <v-icon small v-if="header.sortable">arrow_upward</v-icon>
+                <v-icon v-if="header.sortable" small>arrow_upward</v-icon>
               </span>
             </th>
           </tr>
@@ -121,11 +121,11 @@ export default {
       if (this.select.length) params.select = this.select.join(',')
       this.loading = true
       try {
-        this.data = await this.$axios.$get(this.resourceUrl + '/lines', {params})
+        this.data = await this.$axios.$get(this.resourceUrl + '/lines', { params })
         this.notFound = false
       } catch (error) {
         if (error.response && error.response.status === 404) this.notFound = true
-        else eventBus.$emit('notification', {error, msg: `Erreur pendant la récupération des données`})
+        else eventBus.$emit('notification', { error, msg: `Erreur pendant la récupération des données` })
       }
       this.loading = false
     },

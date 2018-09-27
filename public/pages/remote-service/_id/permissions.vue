@@ -5,11 +5,11 @@
 </template>
 
 <script>
-import {mapState, mapGetters} from 'vuex'
+import { mapState, mapGetters } from 'vuex'
 import Permissions from '../../../components/Permissions.vue'
 
 export default {
-  components: {Permissions},
+  components: { Permissions },
   computed: {
     ...mapState('remoteService', ['remoteService', 'api']),
     ...mapGetters('remoteService', ['resourceUrl'])

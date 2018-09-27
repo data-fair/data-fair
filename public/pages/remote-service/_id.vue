@@ -1,5 +1,5 @@
 <template>
-  <v-layout column class="remoteService" v-if="remoteService">
+  <v-layout v-if="remoteService" column class="remoteService">
     <v-tabs icons-and-text grow color="transparent" slider-color="primary" class="mb-3">
       <v-tab :disabled="!can('readDescription')" :nuxt="true" :to="`/remote-service/${remoteService.id}/description`">
         Description
@@ -24,12 +24,12 @@
     <div class="actions-buttons">
       <div style="height:56px;"/>
       <v-menu bottom left>
-        <v-btn fab small slot="activator" color="accent">
+        <v-btn slot="activator" fab small color="accent">
           <v-icon>more_vert</v-icon>
         </v-btn>
         <v-list>
 
-          <v-list-tile :href="remoteService.apiDoc.externalDocs.url" v-if="remoteService.apiDoc.externalDocs" target="_blank">
+          <v-list-tile v-if="remoteService.apiDoc.externalDocs" :href="remoteService.apiDoc.externalDocs.url" target="_blank">
             <v-list-tile-avatar>
               <v-icon>description</v-icon>
             </v-list-tile-avatar>
@@ -80,7 +80,7 @@
 </template>
 
 <script>
-import {mapState, mapActions, mapGetters} from 'vuex'
+import { mapState, mapActions, mapGetters } from 'vuex'
 
 export default {
   data: () => ({
@@ -103,7 +103,7 @@ export default {
     async confirmRemove() {
       this.showDeleteDialog = false
       await this.remove()
-      this.$router.push({path: '/remote-services'})
+      this.$router.push({ path: '/remote-services' })
     }
   }
 }

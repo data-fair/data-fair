@@ -2,7 +2,7 @@
   <v-app>
     <v-content>
       <nuxt/>
-      <v-snackbar class="notification" v-if="notification" ref="notificationSnackbar" v-model="showSnackbar" :color="notification.type" bottom :timeout="notification.type === 'error' ? 30000 : 6000">
+      <v-snackbar v-if="notification" ref="notificationSnackbar" v-model="showSnackbar" :color="notification.type" :timeout="notification.type === 'error' ? 30000 : 6000" class="notification" bottom>
         <div>
           <p>{{ notification.msg }}</p>
           <p v-if="notification.errorMsg" class="ml-3">{{ notification.errorMsg }}</p>
@@ -26,7 +26,7 @@ export default {
     eventBus.$on('notification', async notif => {
       this.showSnackbar = false
       await this.$nextTick()
-      if (typeof notif === 'string') notif = {msg: notif}
+      if (typeof notif === 'string') notif = { msg: notif }
       if (notif.error) {
         notif.type = 'error'
         notif.errorMsg = (notif.error.response && (notif.error.response.data || notif.error.response.status)) || notif.error.message || notif.error

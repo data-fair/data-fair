@@ -8,8 +8,8 @@ if (window.WebSocket) {
   ws.addEventListener('open', () => {
     ready = true
     Object.keys(subscriptions).forEach(channel => {
-      if (subscriptions[channel]) ws.send(JSON.stringify({type: 'subscribe', channel}))
-      else ws.send(JSON.stringify({type: 'unsubscribe', channel}))
+      if (subscriptions[channel]) ws.send(JSON.stringify({ type: 'subscribe', channel }))
+      else ws.send(JSON.stringify({ type: 'unsubscribe', channel }))
     })
   })
   ws.addEventListener('close', () => {
@@ -18,11 +18,11 @@ if (window.WebSocket) {
 
   eventBus.$on('subscribe', channel => {
     subscriptions[channel] = true
-    if (ready) ws.send(JSON.stringify({type: 'subscribe', channel}))
+    if (ready) ws.send(JSON.stringify({ type: 'subscribe', channel }))
   })
   eventBus.$on('unsubscribe', channel => {
     subscriptions[channel] = false
-    if (ready) ws.send(JSON.stringify({type: 'unsubscribe', channel}))
+    if (ready) ws.send(JSON.stringify({ type: 'unsubscribe', channel }))
   })
 
   ws.onmessage = event => {

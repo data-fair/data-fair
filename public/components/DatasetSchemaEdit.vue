@@ -5,45 +5,45 @@
         <h3 class="headline">Schéma</h3>
         <v-spacer/>
         <div>
-          <v-btn type="submit" color="primary" v-if="updated">Appliquer</v-btn>
+          <v-btn v-if="updated" type="submit" color="primary">Appliquer</v-btn>
           <v-btn v-if="updated" flat @click="resetSchema">Annuler les modifications</v-btn>
         </div>
       </v-layout>
 
-      <v-container fluid grid-list-md v-for="extension in extensions" :key="extension.key">
+      <v-container v-for="extension in extensions" :key="extension.key" fluid grid-list-md>
         <br v-if="extension.key">
         <v-subheader v-if="extension.key && remoteServicesMap[extension.remoteService]">
           Extension: {{ remoteServicesMap[extension.remoteService].actions[extension.action].summary }} (service {{ remoteServicesMap[extension.remoteService].title }})
         </v-subheader>
-        <v-layout row v-for="field in schema.filter(field => field['x-extension'] === extension.key)" :key="field.key">
+        <v-layout v-for="field in schema.filter(field => field['x-extension'] === extension.key)" :key="field.key" row>
           <v-flex xs2>
-            <v-text-field label="Clé" v-model="field.key" :disabled="true"/>
+            <v-text-field v-model="field.key" :disabled="true" label="Clé"/>
           </v-flex>
           <v-flex xs1>
-            <v-text-field label="Type" v-model="field.type" :disabled="true"/>
+            <v-text-field v-model="field.type" :disabled="true" label="Type"/>
           </v-flex>
           <v-flex xs3>
-            <v-text-field label="Libellé" v-model="field.title" :placeholder="field['x-originalName']"/>
+            <v-text-field v-model="field.title" :placeholder="field['x-originalName']" label="Libellé"/>
           </v-flex>
           <v-flex xs4>
-            <v-textarea label="Description" rows="1" v-model="field.description" :id="'description-' + field.key"/>
+            <v-textarea v-model="field.description" :id="'description-' + field.key" label="Description" rows="1"/>
           </v-flex>
           <v-flex xs2>
             <v-select
               v-if="!field['x-extension']"
               :items="fieldsVocabulary[field.key]"
+              v-model="field['x-refersTo']"
               item-text="title"
               item-value="id"
-              v-model="field['x-refersTo']"
               label="Concept"
             />
-            <v-text-field v-else-if="field['x-refersTo'] && vocabulary[field['x-refersTo']]" label="Concept" disabled v-model="vocabulary[field['x-refersTo']].title"/>
+            <v-text-field v-else-if="field['x-refersTo'] && vocabulary[field['x-refersTo']]" v-model="vocabulary[field['x-refersTo']].title" label="Concept" disabled/>
           </v-flex>
         </v-layout>
       </v-container>
       <h4>Renseigner le schéma avec un fichier de métadonnées</h4>
       <p>Le fichier de métadonnées doit respecter <a href="https://frictionlessdata.io/specs/table-schema/" target="_blank">ce format</a></p>
-      <input type="file" @change="onMetadataUpload" ref="schemaInput">
+      <input ref="schemaInput" type="file" @change="onMetadataUpload">
     </form>
   </v-layout>
 </template>
@@ -66,16 +66,16 @@ export default {
       return JSON.stringify(this.schema) !== this.originalSchema
     },
     extensions() {
-      return [{key: undefined}].concat((this.dataset.extensions || [])
+      return [{ key: undefined }].concat((this.dataset.extensions || [])
         .filter(ext => ext.active)
         .filter(ext => this.remoteServicesMap[ext.remoteService] && this.remoteServicesMap[ext.remoteService].actions[ext.action])
-        .map(ext => ({key: ext.remoteService + '/' + ext.action, ...ext})))
+        .map(ext => ({ key: ext.remoteService + '/' + ext.action, ...ext })))
     },
     fieldsVocabulary() {
       return this.schema.reduce((a, field) => {
         if (field['x-extension']) return a
-        a[field.key] = [{title: 'Aucun concept', id: null}].concat(this.vocabularyArray
-          .map(term => ({title: term.title, id: term.identifiers[0]}))
+        a[field.key] = [{ title: 'Aucun concept', id: null }].concat(this.vocabularyArray
+          .map(term => ({ title: term.title, id: term.identifiers[0] }))
           .filter(term => !this.schema.find(f => (f['x-refersTo'] === term.id) && (f.key !== field.key))))
         return a
       }, {})
@@ -110,7 +110,7 @@ export default {
       this.$nextTick(() => document.querySelector('#description-' + key.replace(/(:|\.|\[|\]|,|=|@)/g, '\\$1')).focus())
     },
     save() {
-      this.patchAndCommit({schema: this.schema.map(field => Object.assign({}, field))})
+      this.patchAndCommit({ schema: this.schema.map(field => Object.assign({}, field)) })
     },
     onMetadataUpload(e) {
       const reader = new FileReader()

@@ -15,7 +15,7 @@
       <template slot="items" slot-scope="props">
         <tr>
           <td>
-            <v-checkbox primary hide-details v-model="props.item.active"/>
+            <v-checkbox v-model="props.item.active" primary hide-details/>
           </td>
           <td class="pt-2 pb-2">
             <span v-if="remoteServicesMap[props.item.remoteService]">
@@ -25,9 +25,9 @@
             <v-select
               v-if="props.item.active && remoteServicesMap[props.item.remoteService] && selectFields[props.item.remoteService + '_' + props.item.action].fieldsAndTags"
               :items="selectFields[props.item.remoteService + '_' + props.item.action].fieldsAndTags"
+              v-model="props.item.select"
               item-value="name"
               item-text="title"
-              v-model="props.item.select"
               label=""
               multiple
               placeholder="Tous les champs en sortie"
@@ -44,7 +44,7 @@
                 </template>
               </template>
             </v-select>
-            <v-alert type="error" :value="props.item.active && props.item.error">
+            <v-alert :value="props.item.active && props.item.error" type="error">
               {{ props.item.error }}
             </v-alert>
           </td>
@@ -59,7 +59,7 @@
               class="mt-2"
             >
               <span v-if="props.item.active && (props.item.progress === 1 || props.item.error)">
-                <v-btn icon flat color="accent" @click="save(props.item)" title="Recommencer et écraser les valeurs enrichies précédemment">
+                <v-btn icon flat color="accent" title="Recommencer et écraser les valeurs enrichies précédemment" @click="save(props.item)">
                   <v-icon>play_circle_filled</v-icon>
                 </v-btn>
               </span>
@@ -71,7 +71,7 @@
       </template>
     </v-data-table>
     <v-layout row>
-      <v-spacer/><v-btn @click="save" class="md-raised" color="primary">Appliquer</v-btn>
+      <v-spacer/><v-btn class="md-raised" color="primary" @click="save">Appliquer</v-btn>
     </v-layout>
   </v-container>
 </template>
@@ -84,7 +84,7 @@ import logger from '../../../logger'
 export default {
   components: {},
   data() {
-    return {ready: false}
+    return { ready: false }
   },
   computed: {
     ...mapState(['vocabulary']),
@@ -111,7 +111,7 @@ export default {
           fieldsAndTags.push('Autres')
         }
         noTagsFields.forEach(field => fieldsAndTags.push(field))
-        res[extension.remoteService + '_' + extension.action] = {fields, tags, fieldsAndTags}
+        res[extension.remoteService + '_' + extension.action] = { fields, tags, fieldsAndTags }
       })
       return res
     }
@@ -136,7 +136,7 @@ export default {
     Object.keys(this.remoteServicesMap).forEach(s => {
       Object.keys(this.remoteServicesMap[s].actions).forEach(a => {
         if (!this.dataset.extensions.find(e => e.remoteService === s && e.action === a)) {
-          this.dataset.extensions.push({remoteService: s, action: a, active: false, progress: 0})
+          this.dataset.extensions.push({ remoteService: s, action: a, active: false, progress: 0 })
         }
       })
     })
@@ -160,7 +160,7 @@ export default {
         ext.progress = ext.progress || 0
         ext.error = ext.error || ''
       })
-      this.patch({extensions: this.dataset.extensions, silent: true})
+      this.patch({ extensions: this.dataset.extensions, silent: true })
     }
   }
 }

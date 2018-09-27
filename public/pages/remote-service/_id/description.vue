@@ -10,7 +10,7 @@ import RemoteServiceInfo from '../../../components/RemoteServiceInfo.vue'
 import RemoteServiceSchema from '../../../components/RemoteServiceSchema.vue'
 
 export default {
-  components: {RemoteServiceInfo, RemoteServiceSchema}
+  components: { RemoteServiceInfo, RemoteServiceSchema }
 }
 </script>
 

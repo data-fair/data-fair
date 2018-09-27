@@ -2,7 +2,7 @@
   <v-app>
     <v-toolbar app scroll-off-screen class="main-toolbar">
       <div class="logo-container">
-        <a :href="env.brand.url" v-if="env.brand.url" :title="env.brand.title || env.brand.url">
+        <a v-if="env.brand.url" :href="env.brand.url" :title="env.brand.title || env.brand.url">
           <img v-if="env.brand.logo" :src="env.brand.logo">
           <img v-else src="../assets/logo.svg">
         </a>
@@ -18,11 +18,11 @@
 
       <!-- larger screens: navigation in toolbar -->
       <v-toolbar-items class="hidden-md-and-down">
-        <v-btn flat :to="localePath('index')" color="primary" exact>Accueil</v-btn>
-        <v-btn flat :to="localePath({name: 'datasets', query: searchQuery('datasets')})" color="primary" :class="routePrefix === 'dataset' ? 'v-btn--active' : ''">Jeux de données</v-btn>
-        <v-btn flat :to="localePath({name: 'remote-services', query: searchQuery('remote-services')})" color="primary" :class="routePrefix === 'remote' ? 'v-btn--active' : ''">Services</v-btn>
-        <v-btn flat :to="localePath({name: 'applications', query: searchQuery('applications')})" color="primary" :class="routePrefix === 'application' ? 'v-btn--active' : ''">Applications</v-btn>
-        <v-btn flat :to="localePath({name: 'catalogs', query: searchQuery('catalogs')})" color="primary" :class="routePrefix === 'catalog' ? 'v-btn--active' : ''">Catalogues</v-btn>
+        <v-btn :to="localePath('index')" flat color="primary" exact>Accueil</v-btn>
+        <v-btn :to="localePath({name: 'datasets', query: searchQuery('datasets')})" :class="routePrefix === 'dataset' ? 'v-btn--active' : ''" flat color="primary">Jeux de données</v-btn>
+        <v-btn :to="localePath({name: 'remote-services', query: searchQuery('remote-services')})" :class="routePrefix === 'remote' ? 'v-btn--active' : ''" flat color="primary">Services</v-btn>
+        <v-btn :to="localePath({name: 'applications', query: searchQuery('applications')})" :class="routePrefix === 'application' ? 'v-btn--active' : ''" flat color="primary">Applications</v-btn>
+        <v-btn :to="localePath({name: 'catalogs', query: searchQuery('catalogs')})" :class="routePrefix === 'catalog' ? 'v-btn--active' : ''" flat color="primary">Catalogues</v-btn>
         <v-menu>
           <v-btn slot="activator" :class="(routePrefix === 'user' || routePrefix === 'interoperate') ? 'v-btn--active' : ''" flat>Documentation</v-btn>
           <v-list>
@@ -41,16 +41,16 @@
           </v-list>
         </v-menu>
         <template v-if="session.initialized">
-          <v-btn v-if="!user" @click="login" color="primary">
+          <v-btn v-if="!user" color="primary" @click="login">
             Se connecter / S'inscrire
           </v-btn>
-          <v-menu offset-y left v-else>
+          <v-menu v-else offset-y left>
             <v-btn slot="activator" flat>{{ user.name }}</v-btn>
             <v-list>
               <v-list-tile :to="`/settings/user/${user.id}`">
                 <v-list-tile-title>Mes paramètres</v-list-tile-title>
               </v-list-tile>
-              <v-list-tile :to="`/settings/organization/${orga.id}`" v-for="orga in user.organizations || []" :key="orga.id">
+              <v-list-tile v-for="orga in user.organizations || []" :to="`/settings/organization/${orga.id}`" :key="orga.id">
                 <v-list-tile-title>Paramètres {{ orga.name || orga.id }}</v-list-tile-title>
               </v-list-tile>
               <v-list-tile @click="logout">
@@ -80,7 +80,7 @@
           <v-list-tile :to="localePath({name: 'catalogs', query: searchQuery('catalogs')})">
             <v-list-tile-title>Catalogues</v-list-tile-title>
           </v-list-tile>
-          <v-list-tile v-if="!user" @click="login" color="primary">
+          <v-list-tile v-if="!user" color="primary" @click="login">
             <v-list-tile-title>Se connecter / S'inscrire</v-list-tile-title>
           </v-list-tile>
           <v-list-tile v-else @click="logout">
@@ -94,7 +94,7 @@
       <v-container fluid>
         <nuxt/>
       </v-container>
-      <v-snackbar class="notification" v-if="notification" ref="notificationSnackbar" v-model="showSnackbar" :color="notification.type" bottom :timeout="notification.type === 'error' ? 30000 : 6000">
+      <v-snackbar v-if="notification" ref="notificationSnackbar" v-model="showSnackbar" :color="notification.type" :timeout="notification.type === 'error' ? 30000 : 6000" class="notification" bottom>
         <div>
           <p>{{ notification.msg }}</p>
           <p v-if="notification.errorMsg" class="ml-3">{{ notification.errorMsg }}</p>
@@ -111,7 +111,7 @@
 
 <script>
 import eventBus from '../event-bus'
-const {mapState, mapActions, mapGetters} = require('vuex')
+const { mapState, mapActions, mapGetters } = require('vuex')
 
 export default {
   data() {
@@ -137,7 +137,7 @@ export default {
     eventBus.$on('notification', async notif => {
       this.showSnackbar = false
       await this.$nextTick()
-      if (typeof notif === 'string') notif = {msg: notif}
+      if (typeof notif === 'string') notif = { msg: notif }
       if (notif.error) {
         notif.type = 'error'
         notif.errorMsg = (notif.error.response && (notif.error.response.data || notif.error.response.status)) || notif.error.message || notif.error

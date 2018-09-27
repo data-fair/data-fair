@@ -59,9 +59,9 @@
         <v-card-text>
           <v-select
             :items="[{value: null, label: 'Public'}, {value: 'organization', label: 'Organisation'}, {value: 'user', label: 'Utilisateur'}]"
+            v-model="currentPermission.type"
             item-text="label"
             item-value="value"
-            v-model="currentPermission.type"
             label="Portée"
             required
           />
@@ -69,13 +69,13 @@
           <v-autocomplete
             v-if="currentPermission.type"
             :items="currentPermission.type === 'organization' ? organizations : users"
-            item-text="name"
-            item-value="id"
             v-model="currentEntity"
-            label="Nom"
-            required
             :search-input.sync="search"
             :loading="loading"
+            item-text="name"
+            item-value="id"
+            label="Nom"
+            required
             cache-items
             hide-no-data
             return-object
@@ -84,17 +84,17 @@
           <v-select
             v-if="currentPermission.type === 'organization' && currentPermissionOrganizationRoles.length"
             :items="currentPermissionOrganizationRoles"
+            v-model="currentPermission.roles"
             label="Rôles (tous si aucun coché)"
             multiple
-            v-model="currentPermission.roles"
           />
 
           <v-select
             v-if="!expertMode"
             :items="Object.keys(permissionClasses).filter(c => classNames[c]).map(c => ({class: c, title: classNames[c]}))"
+            v-model="currentPermission.classes"
             item-text="title"
             item-value="class"
-            v-model="currentPermission.classes"
             label="Actions"
             multiple
           >
@@ -111,9 +111,9 @@
           <v-select
             v-if="expertMode"
             :items="operations"
+            v-model="currentPermission.operations"
             item-text="title"
             item-value="id"
-            v-model="currentPermission.operations"
             label="Actions"
             multiple
           >
@@ -131,16 +131,16 @@
           </v-select>
 
           <v-switch
+            v-model="expertMode"
             color="primary"
             label="Mode expert"
-            v-model="expertMode"
           />
         </v-card-text>
 
         <v-card-actions>
           <v-spacer/>
-          <v-btn @click="showDialog = false" flat>Annuler</v-btn>
-          <v-btn color="primary" :disabled="(currentPermission.type && !currentPermission.id) || ((!currentPermission.operations || !currentPermission.operations.length) && (!currentPermission.classes ||!currentPermission.classes.length))" @click="showDialog = false;save()">Valider</v-btn>
+          <v-btn flat @click="showDialog = false">Annuler</v-btn>
+          <v-btn :disabled="(currentPermission.type && !currentPermission.id) || ((!currentPermission.operations || !currentPermission.operations.length) && (!currentPermission.classes ||!currentPermission.classes.length))" color="primary" @click="showDialog = false;save()">Valider</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -149,7 +149,7 @@
 </template>
 
 <script>
-import {mapState} from 'vuex'
+import { mapState } from 'vuex'
 import eventBus from '../event-bus'
 
 export default {
@@ -199,7 +199,7 @@ export default {
       return classes
     },
     operations() {
-      return [].concat(...Object.keys(this.permissionClasses).filter(c => this.classNames[c]).map(c => [{header: this.classNames[c]}].concat(this.permissionClasses[c])))
+      return [].concat(...Object.keys(this.permissionClasses).filter(c => this.classNames[c]).map(c => [{ header: this.classNames[c] }].concat(this.permissionClasses[c])))
     }
   },
   watch: {
@@ -242,11 +242,11 @@ export default {
       if (this.currentPermission && this.currentPermission.type === 'organization') {
         this.users = []
         if (!this.search || this.search.length < 3) this.organizations = []
-        else this.organizations = (await this.$axios.$get(this.env.directoryUrl + '/api/organizations', {params: {q: this.search}})).results
+        else this.organizations = (await this.$axios.$get(this.env.directoryUrl + '/api/organizations', { params: { q: this.search } })).results
       } else {
         this.organizations = []
         if (!this.search || this.search.length < 3) this.users = []
-        else this.users = (await this.$axios.$get(this.env.directoryUrl + '/api/users', {params: {q: this.search}})).results
+        else this.users = (await this.$axios.$get(this.env.directoryUrl + '/api/users', { params: { q: this.search } })).results
       }
 
       this.loading = false
@@ -268,7 +268,7 @@ export default {
         eventBus.$emit('notification', `Les permissions ont bien été mises à jour`)
       } catch (error) {
         this.permissions.pop()
-        eventBus.$emit('notification', {error, msg: `Erreur pendant la mise à jour des permissions:`})
+        eventBus.$emit('notification', { error, msg: `Erreur pendant la mise à jour des permissions:` })
       }
     },
     removePermission(rowIndex) {
@@ -285,7 +285,7 @@ export default {
       }
     },
     editPermission(permission) {
-      this.currentEntity = {id: permission.id, name: permission.name}
+      this.currentEntity = { id: permission.id, name: permission.name }
       if (permission.type === 'organization') this.organizations = [this.currentEntity]
       if (permission.type === 'user') this.users = [this.currentEntity]
       this.currentPermission = permission

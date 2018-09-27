@@ -1,5 +1,5 @@
 <template>
-  <v-layout column class="catalog" v-if="catalog">
+  <v-layout v-if="catalog" column class="catalog">
     <v-tabs icons-and-text grow color="transparent" slider-color="primary" class="mb-3">
       <v-tab :disabled="!can('readDescription')" :nuxt="true" :to="`/catalog/${catalog.id}/description`">
         Description
@@ -16,7 +16,7 @@
     <div class="actions-buttons">
       <div style="height:56px;"/>
       <v-menu bottom left>
-        <v-btn fab small slot="activator" color="accent">
+        <v-btn slot="activator" fab small color="accent">
           <v-icon>more_vert</v-icon>
         </v-btn>
         <v-list>
@@ -58,7 +58,7 @@
 </template>
 
 <script>
-import {mapState, mapActions, mapGetters} from 'vuex'
+import { mapState, mapActions, mapGetters } from 'vuex'
 
 export default {
   data: () => ({
@@ -79,7 +79,7 @@ export default {
     async confirmRemove() {
       this.showDeleteDialog = false
       await this.remove()
-      this.$router.push({path: '/catalogs'})
+      this.$router.push({ path: '/catalogs' })
     }
   }
 }

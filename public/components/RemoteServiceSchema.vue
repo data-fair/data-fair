@@ -1,7 +1,7 @@
 <template lang="html">
   <v-data-table
-    hide-headers
     :items="remoteService.actions"
+    hide-headers
     hide-actions
     class="elevation-1"
   >
@@ -14,13 +14,13 @@
         <td>{{ props.item.summary }}</td>
         <td>
           <span v-if="!Object.keys(props.item.input).length">Pas de données en entrée</span>
-          <v-chip v-for="input in props.item.input" :key="input.concept" style="margin:4px 4px;" v-if="vocabulary[input.concept]" :title="vocabulary[input.concept].description">
+          <v-chip v-for="input in props.item.input" v-if="vocabulary[input.concept]" :key="input.concept" :title="vocabulary[input.concept].description" style="margin:4px 4px;">
             {{ vocabulary[input.concept].title }}
           </v-chip>
         </td>
         <td><v-icon large color="primary">arrow_forward</v-icon></td>
         <td>
-          <v-chip v-for="output in props.item.output" :key="output.concept" style="margin:4px 4px;" v-if="vocabulary[output.concept]" :title="vocabulary[output.concept].description">
+          <v-chip v-for="output in props.item.output" v-if="vocabulary[output.concept]" :key="output.concept" :title="vocabulary[output.concept].description" style="margin:4px 4px;">
             {{ vocabulary[output.concept].title }}
           </v-chip>
         </td>
@@ -30,7 +30,7 @@
 </template>
 
 <script>
-const {mapState} = require('vuex')
+const { mapState } = require('vuex')
 
 export default {
   data: () => ({

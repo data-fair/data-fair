@@ -11,7 +11,7 @@
       <v-spacer/>
 
       <v-toolbar-items>
-        <v-btn flat color="primary" v-for="page in pages" :key="page" :to="localePath({name: page})" :class="routePrefix === page ? 'v-btn--active' : ''">{{ $t(`pages.${page.replace('-', '')}.title`) }}</v-btn>
+        <v-btn v-for="page in pages" :key="page" :to="localePath({name: page})" :class="routePrefix === page ? 'v-btn--active' : ''" flat color="primary">{{ $t(`pages.${page.replace('-', '')}.title`) }}</v-btn>
       </v-toolbar-items>
 
       <v-spacer/>

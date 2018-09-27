@@ -1,12 +1,12 @@
 <template>
   <v-container fluid grid-list-lg style="width:100vw">
-    <h3 class="display-1" v-if="remoteServices">{{ remoteServices.count }} service{{ plural }} configuré{{ plural }}</h3>
+    <h3 v-if="remoteServices" class="display-1">{{ remoteServices.count }} service{{ plural }} configuré{{ plural }}</h3>
 
     <search-filters v-if="initDone" :filter-labels="{}" :filters="filters" :facets="remoteServices && remoteServices.facets" type="remote-services" @apply="refresh"/>
     <search-progress :loading="loading"/>
 
-    <v-layout row wrap class="resourcesList" v-if="remoteServices">
-      <v-flex sm12 md6 lg4 xl3 v-for="remoteService in remoteServices.results" :key="remoteService.id">
+    <v-layout v-if="remoteServices" row wrap class="resourcesList">
+      <v-flex v-for="remoteService in remoteServices.results" :key="remoteService.id" sm12 md6 lg4 xl3>
         <v-card height="100%">
           <v-card-title primary-title style="height:25%">
             <nuxt-link :to="`/remote-service/${remoteService.id}/description`">{{ remoteService.title || remoteService.id }}</nuxt-link>
@@ -15,13 +15,13 @@
           <v-card-actions style="height:25%">
             <span v-if="remoteService.owner.type === 'user'">&nbsp;<v-icon>person</v-icon>{{ remoteService.owner.name }}</span>
             <span v-if="remoteService.owner.type === 'organization'">&nbsp;<v-icon>group</v-icon>{{ remoteService.owner.name }}<span v-if="remoteService.owner.role"> ({{ remoteService.owner.role }})</span></span>
-            &nbsp;<v-chip text-color="white" :color="remoteService.public ? 'primary' : 'accent'">{{ remoteService.public ? 'Public' : 'Privé' }}</v-chip>
+            &nbsp;<v-chip :color="remoteService.public ? 'primary' : 'accent'" text-color="white">{{ remoteService.public ? 'Public' : 'Privé' }}</v-chip>
           </v-card-actions>
         </v-card>
       </v-flex>
     </v-layout>
 
-    <v-layout row wrap v-if="remoteServices && remoteServices.count">
+    <v-layout v-if="remoteServices && remoteServices.count" row wrap>
       <v-spacer/><v-pagination :length="Math.ceil(remoteServices.count / size)" v-model="page" @input="$vuetify.goTo('.resourcesList', {offset: -20});refresh()"/>
     </v-layout>
 
@@ -29,8 +29,8 @@
       <v-container fill-height>
         <v-layout align-center>
           <v-flex text-xs-center>
-            <div class="headline" v-if="!filtered">Vous n'avez pas encore ajouté de services distants (API).<br>Vous pouvez <nuxt-link :to="localePath('user-guide')">consulter la documentation</nuxt-link> pour en savoir plus.</div>
-            <div class="headline" v-else>Aucun résultat ne correspond aux critères de recherche</div>
+            <div v-if="!filtered" class="headline">Vous n'avez pas encore ajouté de services distants (API).<br>Vous pouvez <nuxt-link :to="localePath('user-guide')">consulter la documentation</nuxt-link> pour en savoir plus.</div>
+            <div v-else class="headline">Aucun résultat ne correspond aux critères de recherche</div>
           </v-flex>
         </v-layout>
       </v-container>
@@ -42,10 +42,10 @@
 import SearchProgress from './SearchProgress.vue'
 import SearchFilters from './SearchFilters.vue'
 const marked = require('marked')
-const {mapState} = require('vuex')
+const { mapState } = require('vuex')
 
 export default {
-  components: {SearchProgress, SearchFilters},
+  components: { SearchProgress, SearchFilters },
   data: () => ({
     page: 1,
     marked,
@@ -62,7 +62,7 @@ export default {
       return this.remoteServices.count > 1 ? 's' : ''
     },
     size() {
-      return {xs: 4, sm: 4, md: 8, lg: 12, xl: 16}[this.$vuetify.breakpoint.name]
+      return { xs: 4, sm: 4, md: 8, lg: 12, xl: 16 }[this.$vuetify.breakpoint.name]
     },
     hasServices() {
       return !this.remoteServices || (this.user && this.remoteServices.facets.owner.filter(f => (f.value.type === 'user' && f.value.id === this.user.id) || ((f.value.type === 'organization' && (this.user.organizations || []).map(o => o.id).includes(f.value.id)))).length)
@@ -75,8 +75,8 @@ export default {
   methods: {
     async refresh() {
       this.loading = true
-      this.remoteServices = await this.$axios.$get(this.env.publicUrl + '/api/v1/remote-services', {params:
-        {size: this.size, page: this.page, select: 'title,description', ...this.filters, facets: 'owner'}
+      this.remoteServices = await this.$axios.$get(this.env.publicUrl + '/api/v1/remote-services', { params:
+        { size: this.size, page: this.page, select: 'title,description', ...this.filters, facets: 'owner' }
       })
       this.filtered = this.filters.q !== undefined
       this.loading = false

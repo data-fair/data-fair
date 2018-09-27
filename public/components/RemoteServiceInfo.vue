@@ -41,15 +41,15 @@
         </v-card>
       </v-flex>
       <v-flex xs12 md6 order-md1>
-        <v-text-field label="Titre" v-model="remoteService.title" @blur="patch({title: remoteService.title})"/>
-        <v-textarea label="Description" v-model="remoteService.description" box rows="5" @blur="patch({description: remoteService.description})"/>
+        <v-text-field v-model="remoteService.title" label="Titre" @blur="patch({title: remoteService.title})"/>
+        <v-textarea v-model="remoteService.description" label="Description" box rows="5" @blur="patch({description: remoteService.description})"/>
       </v-flex>
     </v-layout>
   </v-container>
 </template>
 
 <script>
-const {mapState, mapActions} = require('vuex')
+const { mapState, mapActions } = require('vuex')
 
 export default {
   computed: {

@@ -11,11 +11,11 @@
 </template>
 
 <script>
-import {mapState} from 'vuex'
+import { mapState } from 'vuex'
 
 export default {
   data: () => ({
-    headers: [{value: 'key', text: 'Clé'}, {value: 'name', text: 'Nom'}, {value: 'type', text: 'Type'}, {value: 'x-refersTo', text: 'Concept'}, {value: 'description', text: 'Description'}]
+    headers: [{ value: 'key', text: 'Clé' }, { value: 'name', text: 'Nom' }, { value: 'type', text: 'Type' }, { value: 'x-refersTo', text: 'Concept' }, { value: 'description', text: 'Description' }]
   }),
   computed: {
     ...mapState(['vocabulary']),

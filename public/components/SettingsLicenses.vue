@@ -2,9 +2,9 @@
   <div>
     <p>Définissez des licenses pour clarifier les utilisations possibles des jeux de données que vous diffusez.</p>
 
-    <v-btn color="primary" @click="showDialog = true" class="mb-3">Ajouter une license</v-btn>
+    <v-btn color="primary" class="mb-3" @click="showDialog = true">Ajouter une license</v-btn>
 
-    <v-list two-line v-if="settings.licenses.length">
+    <v-list v-if="settings.licenses.length" two-line>
       <v-list-tile v-for="(license, rowIndex) in settings.licenses" :key="rowIndex">
         <v-list-tile-content>
           <v-list-tile-title>{{ license.title }}</v-list-tile-title>
@@ -25,14 +25,14 @@
         </v-card-title>
         <v-card-text>
           <v-form v-model="newLicenseValid">
-            <v-text-field label="Titre" v-model="newLicense.title" :rules="[v => !!v || '']" required/>
-            <v-text-field label="URL" v-model="newLicense.href" :rules="[v => !!v || '']" required/>
+            <v-text-field v-model="newLicense.title" :rules="[v => !!v || '']" label="Titre" required/>
+            <v-text-field v-model="newLicense.href" :rules="[v => !!v || '']" label="URL" required/>
           </v-form>
         </v-card-text>
         <v-card-actions>
           <v-spacer/>
           <v-btn flat @click="showDialog = false">Annuler</v-btn>
-          <v-btn color="primary" @click="addLicense" :disabled="!newLicenseValid">Ajouter</v-btn>
+          <v-btn :disabled="!newLicenseValid" color="primary" @click="addLicense">Ajouter</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>

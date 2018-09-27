@@ -6,7 +6,7 @@
 import DatasetMap from '../../../../components/DatasetMap.vue'
 
 export default {
-  components: {DatasetMap}
+  components: { DatasetMap }
 }
 </script>
 

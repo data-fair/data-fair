@@ -24,6 +24,7 @@ module.exports = {
     // Turn off vuejs rules, not because ther are not good, but mostly because
     // they are very present in initial code base.. Maybe we should clean that up someday..
     'vue/max-attributes-per-line': 'off',
-    'vue/require-prop-types': 'off'
+    'vue/require-prop-types': 'off',
+    'no-template-curly-in-string': 'off'
   }
 }

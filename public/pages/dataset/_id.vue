@@ -1,5 +1,5 @@
 <template>
-  <v-layout column class="dataset" v-if="dataset">
+  <v-layout v-if="dataset" column class="dataset">
     <v-tabs icons-and-text grow color="transparent" slider-color="primary" class="mb-3">
       <v-tab :disabled="!can('readDescription')" :nuxt="true" :to="`/dataset/${dataset.id}/description`">
         Description
@@ -9,7 +9,7 @@
         Vue tableau
         <v-icon>view_list</v-icon>
       </v-tab>
-      <v-tab :disabled="!can('readLines')" :nuxt="true" :to="`/dataset/${dataset.id}/map`" v-if="dataset.bbox">
+      <v-tab v-if="dataset.bbox" :disabled="!can('readLines')" :nuxt="true" :to="`/dataset/${dataset.id}/map`">
         Carte
         <v-icon>map</v-icon>
       </v-tab>
@@ -40,7 +40,7 @@
     <div class="actions-buttons">
       <!--<div style="height:60px;"/>-->
       <v-menu bottom left>
-        <v-btn fab small slot="activator" color="accent">
+        <v-btn slot="activator" fab small color="accent">
           <v-icon>more_vert</v-icon>
         </v-btn>
         <v-list>
@@ -93,7 +93,7 @@
 </template>
 
 <script>
-import {mapState, mapActions, mapGetters} from 'vuex'
+import { mapState, mapActions, mapGetters } from 'vuex'
 
 export default {
   data: () => ({
@@ -122,7 +122,7 @@ export default {
     async confirmRemove() {
       this.showDeleteDialog = false
       await this.remove()
-      this.$router.push({path: '/datasets'})
+      this.$router.push({ path: '/datasets' })
     }
   }
 }

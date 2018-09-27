@@ -23,24 +23,24 @@ export default {
     }
   },
   actions: {
-    async fetchInfo({commit, dispatch, getters, rootState}) {
+    async fetchInfo({ commit, dispatch, getters, rootState }) {
       try {
         const catalog = await this.$axios.$get(getters.resourceUrl)
-        commit('setAny', {catalog})
+        commit('setAny', { catalog })
         const api = await this.$axios.$get(getters.resourceUrl + '/api-docs.json')
-        commit('setAny', {api})
+        commit('setAny', { api })
       } catch (error) {
-        eventBus.$emit('notification', {error, msg: `Erreur pendant la récupération des informations du catalogue:`})
+        eventBus.$emit('notification', { error, msg: `Erreur pendant la récupération des informations du catalogue:` })
       }
     },
-    async setId({commit, getters, dispatch, state}, catalogId) {
-      commit('setAny', {catalogId})
+    async setId({ commit, getters, dispatch, state }, catalogId) {
+      commit('setAny', { catalogId })
       dispatch('fetchInfo')
     },
-    clear({commit, state}) {
-      commit('setAny', {catalogId: null, catalog: null})
+    clear({ commit, state }) {
+      commit('setAny', { catalogId: null, catalog: null })
     },
-    async patch({commit, getters, dispatch}, patch) {
+    async patch({ commit, getters, dispatch }, patch) {
       try {
         const silent = patch.silent
         delete patch.silent
@@ -48,22 +48,22 @@ export default {
         if (!silent) eventBus.$emit('notification', 'La configuration du catalogue a bien été mise à jour.')
         return true
       } catch (error) {
-        eventBus.$emit('notification', {error, msg: `Erreur pendant la mise à jour de la configuration du catalogue:`})
+        eventBus.$emit('notification', { error, msg: `Erreur pendant la mise à jour de la configuration du catalogue:` })
         return false
       }
     },
-    async patchAndCommit({commit, getters, dispatch}, patch) {
+    async patchAndCommit({ commit, getters, dispatch }, patch) {
       const patched = await dispatch('patch', patch)
       if (patched) commit('patch', patch)
     },
-    async remove({state, getters, dispatch}) {
-      const options = {headers: {'x-organizationId': 'user'}}
-      if (state.catalog.owner.type === 'organization') options.headers = {'x-organizationId': state.catalog.owner.id}
+    async remove({ state, getters, dispatch }) {
+      const options = { headers: { 'x-organizationId': 'user' } }
+      if (state.catalog.owner.type === 'organization') options.headers = { 'x-organizationId': state.catalog.owner.id }
       try {
         await this.$axios.delete(getters.resourceUrl)
         eventBus.$emit('notification', `La configuration du catalogue ${state.catalog.title} a bien été supprimée`)
       } catch (error) {
-        eventBus.$emit('notification', {error, msg: `Erreur pendant la suppression de la configuration du catalogue:`})
+        eventBus.$emit('notification', { error, msg: `Erreur pendant la suppression de la configuration du catalogue:` })
       }
     }
   }

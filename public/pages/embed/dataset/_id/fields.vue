@@ -8,6 +8,6 @@
 import DatasetSchemaView from '../../../../components/DatasetSchemaView.vue'
 
 export default {
-  components: {DatasetSchemaView}
+  components: { DatasetSchemaView }
 }
 </script>
