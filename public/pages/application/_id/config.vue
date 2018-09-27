@@ -5,7 +5,7 @@
         <h2 class="title my-4" >Configuration</h2>
         <iframe v-if="showConfigIframe" :src="applicationLink + '/config?embed=true'" :height="Math.max(height, 1000)" width="100%"/>
         <v-form v-if="showForm" v-model="formValid">
-          <v-jsonschema-form :schema="schema" :model="editConfig" :options="{disableAll: !!can('writeConfig')}" @error="error => eventBus.$emit('notification', {error})" />
+          <v-jsonschema-form :schema="schema" :model="editConfig" :options="{disableAll: !can('writeConfig')}" @error="error => eventBus.$emit('notification', {error})" />
           <v-layout row>
             <v-spacer/>
             <v-btn color="primary" @click="writeConfig(editConfig)">Enregistrer</v-btn>
