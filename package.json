@@ -43,7 +43,7 @@
     "@digibytes/markdownit": "^1.2.1",
     "@koumoul/sd-express": "^0.11.0",
     "@koumoul/sd-vue": "^0.10.2",
-    "@koumoul/vuetify-jsonschema-form": "^0.4.2",
+    "@koumoul/vuetify-jsonschema-form": "^0.5.0",
     "@nuxtjs/axios": "^5.3.2",
     "@nuxtjs/google-analytics": "^2.0.2",
     "@turf/clean-coords": "^6.0.1",
@@ -124,6 +124,7 @@
     "vue-match-heights": "^0.1.1",
     "vue-moment": "^4.0.0",
     "vue-truncate-filter": "^1.1.7",
+    "vuedraggable": "^2.16.0",
     "vuetify": "^1.2.5",
     "ws": "^3.3.3",
     "xlsx": "^0.13.3"
