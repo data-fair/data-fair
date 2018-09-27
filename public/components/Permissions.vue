@@ -42,7 +42,7 @@
             </v-list>
           </td>
           <td class="text-xs-right">
-            <v-btn flat icon color="warning" @click="currentPermission = props.item;showDialog = true">
+            <v-btn flat icon color="warning" @click="editPermission(props.item);showDialog = true">
               <v-icon>edit</v-icon>
             </v-btn>
             <v-btn flat icon color="warning" @click="removePermission(props.index)">
@@ -56,7 +56,6 @@
     <v-dialog v-model="showDialog" max-width="800" persistent>
       <v-card>
         <v-card-title>Editer un ensemble de permissions</v-card-title>
-
         <v-card-text>
           <v-select
             :items="[{value: null, label: 'Public'}, {value: 'organization', label: 'Organisation'}, {value: 'user', label: 'Utilisateur'}]"
@@ -205,8 +204,14 @@ export default {
   },
   watch: {
     'currentPermission.type'() {
-      this.currentPermission.id = this.currentPermission.id || null
-      this.currentPermission.roles = this.currentPermission.roles || []
+      if (this.currentPermission.type === null) {
+        delete this.currentPermission.id
+        delete this.currentPermission.name
+        delete this.currentPermission.roles
+      } else {
+        this.currentPermission.id = this.currentPermission.id || null
+        this.currentPermission.roles = this.currentPermission.roles || []
+      }
     },
     'currentEntity.id': async function(id) {
       this.currentPermission.id = this.currentEntity.id
@@ -231,12 +236,8 @@ export default {
       }
     },
     search: async function() {
-      console.log('SEARCH', this.search)
-      console.log('NAME', this.currentEntity.name)
-      if (this.search && this.search === this.currentEntity.name) {
-        console.log('SEARCH SAME')
-        return
-      }
+      if (this.search && this.search === this.currentEntity.name) return
+
       this.loading = true
       if (this.currentPermission && this.currentPermission.type === 'organization') {
         this.users = []
@@ -282,6 +283,12 @@ export default {
         operations: [],
         classes: []
       }
+    },
+    editPermission(permission) {
+      this.currentEntity = {id: permission.id, name: permission.name}
+      if (permission.type === 'organization') this.organizations = [this.currentEntity]
+      if (permission.type === 'user') this.users = [this.currentEntity]
+      this.currentPermission = permission
     }
   }
 }
