@@ -7,7 +7,27 @@ const geohash = require('./geohash')
 const tiles = require('./tiles')
 const geoUtils = require('../utils/geo')
 
-exports.init = () => elasticsearch.Client(Object.assign({}, config.elasticsearch))
+exports.init = async () => {
+  const client = elasticsearch.Client(Object.assign({}, config.elasticsearch))
+  await client.ping()
+  await client.ingest.putPipeline({
+    id: 'attachment',
+    body: {
+      description: 'Extract information from attached files',
+      processors: [
+        {
+          attachment: {
+            field: '_file_raw',
+            target_field: '_file_infos',
+            ignore_missing: true,
+            properties: ['content', 'content_type', 'content_length']
+          }
+        }
+      ]
+    }
+  })
+  return client
+}
 
 const indexBase = {
   // Minimal overhead by default as we might deal with a lot of small indices.
