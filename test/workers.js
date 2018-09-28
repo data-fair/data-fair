@@ -43,7 +43,7 @@ test.serial('Process newly uploaded CSV dataset', async t => {
   const idProp = dataset.schema.find(p => p.key === 'id')
   t.is(idProp['x-cardinality'], 2)
   t.not(idProp.enum.indexOf('koumoul'), -1)
-  const esIndices = await test.app.get('es').indices.get({ index: esUtils.indexName(dataset) })
+  const esIndices = await test.app.get('es').indices.get({ index: esUtils.aliasName(dataset) })
   const esIndex = Object.values(esIndices)[0]
   const mapping = esIndex.mappings.line
   t.is(mapping.properties.id.type, 'keyword')
@@ -61,7 +61,7 @@ test.serial('Process newly uploaded CSV dataset', async t => {
   dataset = await workers.hook('finalizer')
   t.is(dataset.status, 'finalized')
   t.is(dataset.count, 2)
-  const esIndices2 = await test.app.get('es').indices.get({ index: esUtils.indexName(dataset) })
+  const esIndices2 = await test.app.get('es').indices.get({ index: esUtils.aliasName(dataset) })
   const esIndex2 = Object.values(esIndices2)[0]
   const mapping2 = esIndex2.mappings.line
   t.is(mapping2.properties.id.type, 'keyword')
@@ -74,14 +74,13 @@ test.serial('Process newly uploaded CSV dataset', async t => {
   const datasetFd2 = fs.readFileSync('./test/resources/dataset-bad-format.csv')
   const form2 = new FormData()
   form2.append('file', datasetFd2, 'dataset.csv')
-  res = await ax.post('/api/v1/datasets/' + dataset.id, form2, { headers: testUtils.formHeaders(form2) })
-  try {
-    await workers.hook('finalizer')
-    t.fail()
-  } catch (err) {
-    t.is(err.resource.status, 'error')
-    t.true(err.message.indexOf('illegal latitude value') !== -1)
-  }
+  await ax.post('/api/v1/datasets/' + dataset.id, form2, { headers: testUtils.formHeaders(form2) })
+  dataset = await workers.hook('finalizer')
+  // Check that there is an error message in the journal
+  res = await ax.get('/api/v1/datasets/' + dataset.id + '/journal')
+  t.is(res.status, 200)
+  t.is(res.data[1].type, 'error')
+  t.is(res.data[1].data.slice(0, 36), 'Élément 1 du jeu de données - failed')
 })
 
 test.serial('Publish a dataset after finalization', async t => {
@@ -137,7 +136,7 @@ test.serial('Process newly uploaded geojson dataset', async t => {
   t.is(dataset.status, 'finalized')
 })
 
-test.only('Log error for geojson with broken feature', async t => {
+test.serial('Log error for geojson with broken feature', async t => {
   // Send dataset
   const datasetFd = fs.readFileSync('./test/resources/geojson-broken.geojson')
   const form = new FormData()
@@ -156,4 +155,19 @@ test.only('Log error for geojson with broken feature', async t => {
   t.is(res.data.length, 8)
   t.is(res.data[1].type, 'error')
   t.is(res.data[1].data.slice(0, 36), 'Élément 1 du jeu de données - failed')
+})
+
+test.serial('Process newly uploaded shapefile dataset', async t => {
+  // Send dataset
+  const datasetFd = fs.readFileSync('./test/resources/stations.zip')
+  const form = new FormData()
+  form.append('file', datasetFd, 'stations.zip')
+  const ax = await axiosBuilder('dmeadus0@answers.com')
+  let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
+  t.is(res.status, 201)
+
+  // dataset converted
+  let dataset = await workers.hook('converter')
+  t.is(dataset.status, 'loaded')
+  t.is(dataset.file.name, 'stations.geojson')
 })
