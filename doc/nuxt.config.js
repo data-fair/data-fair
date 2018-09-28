@@ -1,11 +1,24 @@
 const config = require('config')
+const readdir = require('fs-readdir-recursive')
 const messages = require('../i18n').messages
+
+// Additional dynamic routes for generate
+const routes = readdir('doc/pages/')
+  .filter(f => f.endsWith('.md'))
+  .map(f => {
+    f = f.replace('.md', '')
+    const dashInd = f.lastIndexOf('-')
+    const key = f.slice(0, dashInd)
+    const lang = f.slice(dashInd + 1, f.length)
+    return lang === 'fr' ? `/${key}` : `/${lang}/${key}`
+  })
 
 module.exports = {
   srcDir: 'doc/',
   build: { extractCSS: true },
   generate: {
-    dir: 'doc-dist'
+    dir: 'doc-dist',
+    routes
   },
   loading: { color: '#1e88e5' }, // Customize the progress bar color
   plugins: [{ src: '~plugins/vuetify' }],

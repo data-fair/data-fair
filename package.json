@@ -32,6 +32,7 @@
     "eslint-plugin-promise": "^4.0.1",
     "eslint-plugin-standard": "^4.0.0",
     "eslint-plugin-vue": "^4.7.1",
+    "fs-readdir-recursive": "^1.1.0",
     "http-proxy-middleware": "^0.19.0",
     "lodash": "^4.17.10",
     "nock": "^9.1.5",
