@@ -12,8 +12,8 @@ async function ensureIndex(db, collection, key, options) {
 }
 
 exports.init = async () => {
-  let client
   console.log('Connecting to mongodb ' + config.mongoUrl)
+  let client
   try {
     client = await mongoClient.connect(config.mongoUrl)
   } catch (err) {
