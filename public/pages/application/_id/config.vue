@@ -30,6 +30,7 @@
 <script>
 import { mapState, mapActions, mapGetters } from 'vuex'
 import VJsonschemaForm from '@koumoul/vuetify-jsonschema-form'
+import '@koumoul/vuetify-jsonschema-form/dist/main.css'
 import eventBus from '../../../event-bus.js'
 
 export default {
