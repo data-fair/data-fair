@@ -12,7 +12,16 @@ async function ensureIndex(db, collection, key, options) {
 }
 
 exports.init = async () => {
-  const client = await mongoClient.connect(config.mongoUrl)
+  let client
+  console.log('Connecting to mongodb ' + config.mongoUrl)
+  try {
+    client = await mongoClient.connect(config.mongoUrl)
+  } catch (err) {
+    // 1 retry after 1s
+    // solve the quite common case in docker-compose of the service starting at the same time as the db
+    await new Promise(resolve => setTimeout(resolve, 1000))
+    client = await mongoClient.connect(config.mongoUrl)
+  }
   const db = client.db()
   // datasets indexes
   await ensureIndex(db, 'datasets', { id: 1 }, { unique: true })
