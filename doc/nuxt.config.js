@@ -11,7 +11,7 @@ module.exports = {
   plugins: [{ src: '~plugins/vuetify' }],
   router: { base: '/data-fair/' },
   env: { theme: config.theme },
-  modules: ['@nuxtjs/markdownit', ['nuxt-i18n', {
+  modules: ['@digibytes/markdownit', ['nuxt-i18n', {
     seo: false,
     locales: [
       { code: 'fr' },
