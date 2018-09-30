@@ -40,7 +40,10 @@ class IndexStream extends Writable {
   _sendBulk(callback) {
     if (this.body.length === 0) return callback()
     const bodyClone = [].concat(this.body)
-    this.options.esClient.bulk({ body: this.body, refresh: 'wait_for' }, (err, res) => {
+    const bulkOpts = { body: this.body, refresh: 'wait_for' }
+    // Use the ingest plugin to parse attached files
+    if (this.options.attachments) bulkOpts.pipeline = 'attachment'
+    this.options.esClient.bulk(bulkOpts, (err, res) => {
       if (err) return callback(err)
       if (res.errors) {
         res.items

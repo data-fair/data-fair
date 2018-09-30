@@ -23,7 +23,10 @@ const tiles = require('../utils/tiles')
 const cache = require('../utils/cache')
 const config = require('config')
 const clone = require('fast-clone')
+const chardet = require('chardet')
+const rimraf = util.promisify(require('rimraf'))
 
+const converter = require('../workers/converter')
 const datasetSchema = require('../../contract/dataset')
 const datasetSchemaNoRequired = Object.assign(datasetSchema)
 delete datasetSchemaNoRequired.required
@@ -31,6 +34,8 @@ const validate = ajv.compile(datasetSchemaNoRequired)
 
 let router = express.Router()
 
+const datasetFileSample = require('../utils/dataset-file-sample')
+const baseTypes = new Set(['text/csv', 'application/geo+json'])
 const acceptedStatuses = ['finalized', 'error']
 
 const operationsClasses = {
@@ -162,6 +167,7 @@ router.delete('/:datasetId', permissions.middleware('delete', 'admin'), asyncWra
   // TODO : Remove indexes
   await unlink(datasetUtils.originalFileName(req.dataset))
   if (!baseTypes.has(req.dataset.originalFile.mimetype)) await unlink(datasetUtils.fileName(req.dataset))
+  if (converter.archiveTypes.has(req.dataset.originalFile.mimetype)) await rimraf(datasetUtils.extractedFilesDirname(req.dataset))
   await req.app.get('db').collection('datasets').deleteOne({
     id: req.params.datasetId
   })
@@ -174,10 +180,6 @@ router.delete('/:datasetId', permissions.middleware('delete', 'admin'), asyncWra
   if (storageRemaining !== -1) res.set(config.headers.storedBytesRemaining, storageRemaining)
   res.sendStatus(204)
 }))
-
-const datasetFileSample = require('../utils/dataset-file-sample')
-const chardet = require('chardet')
-const baseTypes = new Set(['text/csv', 'application/geo+json'])
 
 // Create a dataset by uploading data
 router.post('', filesUtils.uploadFile(), asyncWrap(async(req, res) => {
@@ -336,7 +338,12 @@ router.get('/:datasetId/lines', permissions.middleware('readLines', 'read'), asy
 
   const result = {
     total: esResponse.hits.total,
-    results: esResponse.hits.hits.map(hit => flatten(hit._source))
+    results: esResponse.hits.hits.map(hit => {
+      const res = flatten(hit._source)
+      res._score = hit._score
+      if (hit.highlight) res._highlight = hit.highlight
+      return res
+    })
   }
   res.status(200).send(result)
 }))

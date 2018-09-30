@@ -211,6 +211,11 @@ module.exports = {
       type: 'array',
       description: 'References to all the catalogs the dataset metadata is published too',
       items: publicationSchema
+    },
+    hasFiles: {
+      type: 'boolean',
+      default: false,
+      description: 'true when the dataset has attached files'
     }
   }
 }

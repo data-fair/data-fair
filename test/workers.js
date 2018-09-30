@@ -171,3 +171,38 @@ test.serial('Process newly uploaded shapefile dataset', async t => {
   t.is(dataset.status, 'loaded')
   t.is(dataset.file.name, 'stations.geojson')
 })
+
+test.only('Process newly uploaded zip archive', async t => {
+  // Send dataset
+  const datasetFd = fs.readFileSync('./test/resources/files.zip')
+  const form = new FormData()
+  form.append('file', datasetFd, 'files.zip')
+  const ax = await axiosBuilder('dmeadus0@answers.com')
+  let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
+  t.is(res.status, 201)
+
+  // dataset converted
+  let dataset = await workers.hook('converter')
+  t.is(dataset.status, 'loaded')
+  t.is(dataset.file.name, 'files.csv')
+  t.is(dataset.hasFiles, true)
+
+  // ES indexation and finalization
+  dataset = await workers.hook('finalizer')
+  t.is(dataset.status, 'finalized')
+
+  // hidden _file field should be available
+  const esIndices = await test.app.get('es').indices.get({ index: esUtils.aliasName(dataset) })
+  const esIndex = Object.values(esIndices)[0]
+  const mapping = esIndex.mappings.line
+  t.truthy(mapping.properties._file.properties)
+
+  res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`, {
+    params: { select: 'file,_file.content', highlight: '_file.content', q: 'test' }
+  })
+  t.is(res.data.total, 2)
+  console.log(res.data.results[0])
+  const odtItem = res.data.results.find(item => item.file === 'test.odt')
+  t.truthy(odtItem)
+  t.is(odtItem['_file.content'], 'This is a test libreoffice file.')
+})

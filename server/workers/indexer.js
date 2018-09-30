@@ -17,9 +17,9 @@ exports.process = async function(app, dataset) {
   const collection = db.collection('datasets')
 
   const tempId = await esUtils.initDatasetIndex(esClient, dataset)
-  const indexStream = esStreams.indexStream({ esClient, indexName: tempId, dataset })
+  const indexStream = esStreams.indexStream({ esClient, indexName: tempId, dataset, attachments: !!dataset.hasFiles })
   // reindex and preserve previous extensions
-  await pump(datasetUtils.readStream(dataset), extensionsUtils.extendStream({ db, esClient, dataset }), indexStream)
+  await pump(datasetUtils.readStream(dataset), extensionsUtils.extendStream({ db, esClient, dataset, attachments: !!dataset.hasFiles }), indexStream)
   const count = dataset.count = indexStream.i
   const errorsSummary = indexStream.errorsSummary()
   if (errorsSummary) await journals.log(app, dataset, { type: 'error', data: errorsSummary })
