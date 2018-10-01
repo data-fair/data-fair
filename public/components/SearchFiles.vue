@@ -30,68 +30,36 @@
           </v-layout>
         </v-layout>
       </v-card-title>
-
-      <v-data-table :headers="headers" :items="data.results" :total-items="data.total" :loading="loading" :pagination.sync="pagination" hide-actions>
-        <template slot="headers" slot-scope="props">
-          <tr>
-            <th
-              v-for="header in headers"
-              :key="header.text"
-              :class="['column text-xs-left', header.sortable ? 'sortable' : '', pagination.descending ? 'desc' : 'asc', header.value === pagination.sortBy ? 'active' : '']"
-            >
-              <v-tooltip v-if="header.tooltip" bottom style="margin-right: 8px;">
-                <span slot="activator"><v-icon small>info</v-icon></span>
-                <span>{{ header.tooltip }}</span>
-              </v-tooltip>
-              <span @click="orderBy(header)">
-                {{ header.text }}
-                <v-icon v-if="header.sortable" small>arrow_upward</v-icon>
-              </span>
-            </th>
-          </tr>
-        </template>
-        <template slot="items" slot-scope="props">
-          <td v-for="header in headers" :key="header.value">{{ ((props.item[header.value] === undefined || props.item[header.value] === null ? '' : props.item[header.value]) + '') | truncate(50) }}</td>
-        </template>
-      </v-data-table>
+      <v-list three-line style="padding-top: 0;" class="search-results">
+        <v-list-tile v-for="(item, i) in data.results" :key="i">
+          <v-list-tile-content>
+            <v-list-tile-title><a :href="resourceUrl + '/files/' + item.file">{{ item.file }}</a></v-list-tile-title>
+            <v-list-tile-sub-title v-html="item._highlight['_file.content'].join(' ')"/>
+          </v-list-tile-content>
+        </v-list-tile>
+      </v-list>
     </v-card>
   </div>
 </template>
 
 <script>
 import { mapState, mapGetters } from 'vuex'
-import eventBus from '../../../event-bus'
+import eventBus from '../event-bus'
 
 export default {
   data: () => ({
     data: {},
     query: null,
-    select: [],
     pagination: {
       page: 1,
-      rowsPerPage: 10,
-      sortBy: null,
-      descending: false
+      rowsPerPage: 10
     },
-    sort: null,
     notFound: false,
     loading: false
   }),
   computed: {
-    ...mapState(['vocabulary']),
     ...mapState('dataset', ['dataset']),
     ...mapGetters('dataset', ['resourceUrl']),
-    headers() {
-      return this.dataset.schema
-        .filter(field => field.key !== '_file.content')
-        .filter(field => !this.select.length || this.select.includes(field.key))
-        .map(field => ({
-          text: field.title || field['x-originalName'],
-          value: field.key,
-          sortable: (field.type === 'string' && field.format) || field.type === 'number' || field.type === 'integer',
-          tooltip: field.description || (field['x-refersTo'] && this.vocabulary && this.vocabulary[field['x-refersTo']] && this.vocabulary[field['x-refersTo']].description)
-        }))
-    },
     plural() {
       return this.data.total > 1
     }
@@ -115,11 +83,11 @@ export default {
       // this.data = {}
       const params = {
         size: this.pagination.rowsPerPage,
-        page: this.pagination.page
+        page: this.pagination.page,
+        select: ['file', '_file.content_type', '_file.content_length'].join(','),
+        highlight: '_file.content'
       }
-      if (this.pagination.sortBy) params.sort = (this.pagination.descending ? '-' : '') + this.pagination.sortBy
       if (this.query) params.q = this.query
-      if (this.select.length) params.select = this.select.join(',')
       this.loading = true
       try {
         this.data = await this.$axios.$get(this.resourceUrl + '/lines', { params })
@@ -129,16 +97,15 @@ export default {
         else eventBus.$emit('notification', { error, msg: `Erreur pendant la récupération des données` })
       }
       this.loading = false
-    },
-    orderBy(header) {
-      if (!header.sortable) return
-      if (this.pagination.sortBy === header.value) {
-        this.pagination.descending = !this.pagination.descending
-      } else {
-        this.pagination.sortBy = header.value
-        this.pagination.descending = true
-      }
     }
   }
 }
 </script>
+
+<style lang="less">
+  .search-results {
+    .highlighted {
+      font-weight: bold;
+    }
+  }
+</style>

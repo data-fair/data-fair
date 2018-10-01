@@ -2,6 +2,7 @@ const { Transform } = require('stream')
 const express = require('express')
 const ajv = require('ajv')()
 const fs = require('fs-extra')
+const path = require('path')
 const util = require('util')
 const moment = require('moment')
 const pump = util.promisify(require('pump'))
@@ -341,7 +342,11 @@ router.get('/:datasetId/lines', permissions.middleware('readLines', 'read'), asy
     results: esResponse.hits.hits.map(hit => {
       const res = flatten(hit._source)
       res._score = hit._score
-      if (hit.highlight) res._highlight = hit.highlight
+      if (hit.highlight) {
+        // return hightlight results and remote .text suffix of fields
+        res._highlight = Object.keys(hit.highlight)
+          .reduce((a, key) => { a[key.slice(0, key.length - 5)] = hit.highlight[key]; return a }, {})
+      }
       return res
     })
   }
@@ -394,6 +399,12 @@ router.get('/:datasetId/convert', permissions.middleware('downloadOriginalData',
   if (!req.query || !req.query.format) res.download(datasetUtils.fileName(req.dataset), req.dataset.file.name)
   // TODO add logic to support other formats
   else res.status(400).send(`Format ${req.query.format} is not supported.`)
+})
+
+// For datasets with attached files
+router.get('/:datasetId/files/*', permissions.middleware('downloadOriginalData', 'read'), (req, res, next) => {
+  if (!req.dataset.hasFiles) return res.status(400).send('This datasets does not have attached files')
+  res.download(path.join(datasetUtils.extractedFilesDirname(req.dataset), req.params['0']))
 })
 
 // Download the full dataset with extensions

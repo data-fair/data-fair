@@ -288,8 +288,9 @@ const prepareQuery = (dataset, query) => {
   // Simple highlight management
   // https://www.elastic.co/guide/en/elasticsearch/reference/current/search-request-highlighting.html
   if (query.highlight) {
-    esQuery.highlight = { fields: {}, no_match_size: 300, fragment_size: 100 }
+    esQuery.highlight = { fields: {}, no_match_size: 300, fragment_size: 100, pre_tags: ['<em class="highlighted">'], post_tags: ['</em>'] }
     query.highlight.split(',').forEach(key => {
+      if (!key.endsWith('.text')) key = key + '.text'
       esQuery.highlight.fields[key] = {}
     })
   }

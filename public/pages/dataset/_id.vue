@@ -13,6 +13,10 @@
         Carte
         <v-icon>map</v-icon>
       </v-tab>
+      <v-tab v-if="dataset.hasFiles" :disabled="!can('readLines')" :nuxt="true" :to="`/dataset/${dataset.id}/search-files`">
+        Fichiers
+        <v-icon>file_copy</v-icon>
+      </v-tab>
       <v-tab v-if="can('getPermissions')" :nuxt="true" :to="`/dataset/${dataset.id}/permissions`">
         Permissions
         <v-icon>security</v-icon>
