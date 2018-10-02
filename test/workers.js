@@ -157,7 +157,8 @@ test.serial('Log error for geojson with broken feature', async t => {
   t.is(res.data[1].data.slice(0, 36), 'Élément 1 du jeu de données - failed')
 })
 
-test.serial('Process newly uploaded shapefile dataset', async t => {
+// skipped, because requires ogr2ogr in the build env
+test.skip('Process newly uploaded shapefile dataset', async t => {
   // Send dataset
   const datasetFd = fs.readFileSync('./test/resources/stations.zip')
   const form = new FormData()
