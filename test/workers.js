@@ -201,7 +201,6 @@ test.only('Process newly uploaded zip archive', async t => {
     params: { select: 'file,_file.content', highlight: '_file.content', q: 'test' }
   })
   t.is(res.data.total, 2)
-  console.log(res.data.results[0])
   const odtItem = res.data.results.find(item => item.file === 'test.odt')
   t.truthy(odtItem)
   t.is(odtItem['_file.content'], 'This is a test libreoffice file.')

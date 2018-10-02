@@ -5,7 +5,7 @@
       <p>Vous pouvez consulter <nuxt-link :to="`/dataset/${dataset.id}/journal`">le journal</nuxt-link> pour en savoir plus.</p>
     </div>
     <v-card>
-      <v-card-title>
+      <v-card-title style="padding-bottom: 0;">
         <v-layout column>
           <h3 v-if="data.total <= 10000">Consultez {{ data.total.toLocaleString() }} {{ plural ? 'enregistrements' : 'enregistrement' }}</h3>
           <h3 v-if="data.total > 10000">Consultez {{ plural ? 'les' : 'le' }} {{ (10000).toLocaleString() }} {{ plural ? 'premiers enregistrements' : 'premier enregistrement' }} ({{ data.total.toLocaleString() }} au total)</h3>
@@ -19,7 +19,7 @@
               @keyup.enter.native="refresh"
               @click:append="refresh"/>
             <v-spacer/>
-            <v-flex v-if="data.total > pagination.rowsPerPage" sm4 md2 lg1 xl1>
+            <v-flex v-if="!hideRowsPerPage && data.total > pagination.rowsPerPage" sm4 md2 lg1 xl1>
               <v-select
                 :items="[10,20,50]"
                 v-model="pagination.rowsPerPage"
@@ -30,14 +30,14 @@
           </v-layout>
         </v-layout>
       </v-card-title>
-      <v-list three-line style="padding-top: 0;" class="search-results">
-        <v-list-tile v-for="(item, i) in data.results" :key="i">
-          <v-list-tile-content>
-            <v-list-tile-title><a :href="resourceUrl + '/files/' + item.file">{{ item.file }}</a></v-list-tile-title>
-            <v-list-tile-sub-title v-html="item._highlight['_file.content'].join(' ')"/>
-          </v-list-tile-content>
-        </v-list-tile>
-      </v-list>
+      <v-container fluid class="search-results">
+        <v-layout v-for="(item, i) in data.results" :key="i" row wrap>
+          <v-flex xs12>
+            <h4><a :href="resourceUrl + '/files/' + item.file">{{ item.file }}</a></h4>
+            <p class="body-1" v-html="item._highlight['_file.content'].join('... ')" />
+          </v-flex>
+        </v-layout>
+      </v-container>
     </v-card>
   </div>
 </template>
@@ -47,6 +47,7 @@ import { mapState, mapGetters } from 'vuex'
 import eventBus from '../event-bus'
 
 export default {
+  props: ['initRowsPerPage', 'hideRowsPerPage'],
   data: () => ({
     data: {},
     query: null,
@@ -76,6 +77,7 @@ export default {
     }
   },
   mounted() {
+    if (this.initRowsPerPage) this.pagination.rowsPerPage = this.initRowsPerPage
     this.refresh()
   },
   methods: {

@@ -290,8 +290,7 @@ const prepareQuery = (dataset, query) => {
   if (query.highlight) {
     esQuery.highlight = { fields: {}, no_match_size: 300, fragment_size: 100, pre_tags: ['<em class="highlighted">'], post_tags: ['</em>'] }
     query.highlight.split(',').forEach(key => {
-      if (!key.endsWith('.text')) key = key + '.text'
-      esQuery.highlight.fields[key] = {}
+      esQuery.highlight.fields[key + '.text'] = {}
     })
   }
 

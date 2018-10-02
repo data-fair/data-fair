@@ -342,10 +342,13 @@ router.get('/:datasetId/lines', permissions.middleware('readLines', 'read'), asy
     results: esResponse.hits.hits.map(hit => {
       const res = flatten(hit._source)
       res._score = hit._score
-      if (hit.highlight) {
-        // return hightlight results and remote .text suffix of fields
-        res._highlight = Object.keys(hit.highlight)
-          .reduce((a, key) => { a[key.slice(0, key.length - 5)] = hit.highlight[key]; return a }, {})
+      if (req.query.highlight) {
+        // return hightlight results and remove .text suffix of fields
+        res._highlight = req.query.highlight.split(',')
+          .reduce((a, key) => {
+            a[key] = (hit.highlight && hit.highlight[key + '.text']) || []
+            return a
+          }, {})
       }
       return res
     })
@@ -389,6 +392,14 @@ router.get('/:datasetId/metric_agg', permissions.middleware('getMetricAgg', 'rea
   res.status(200).send(result)
 }))
 
+// For datasets with attached files
+router.get('/:datasetId/files/*', permissions.middleware('downloadOriginalData', 'read'), (req, res, next) => {
+  if (!req.dataset.hasFiles) return res.status(404).send('This datasets does not have attached files')
+  const filePath = req.params['0']
+  if (filePath.includes('..')) return res.status(400).send()
+  res.download(path.resolve(datasetUtils.extractedFilesDirname(req.dataset), filePath))
+})
+
 // Download the full dataset in its original form
 router.get('/:datasetId/raw', permissions.middleware('downloadOriginalData', 'read'), (req, res, next) => {
   res.download(datasetUtils.originalFileName(req.dataset), req.dataset.originalFile.name)
@@ -399,12 +410,6 @@ router.get('/:datasetId/convert', permissions.middleware('downloadOriginalData',
   if (!req.query || !req.query.format) res.download(datasetUtils.fileName(req.dataset), req.dataset.file.name)
   // TODO add logic to support other formats
   else res.status(400).send(`Format ${req.query.format} is not supported.`)
-})
-
-// For datasets with attached files
-router.get('/:datasetId/files/*', permissions.middleware('downloadOriginalData', 'read'), (req, res, next) => {
-  if (!req.dataset.hasFiles) return res.status(400).send('This datasets does not have attached files')
-  res.download(path.join(datasetUtils.extractedFilesDirname(req.dataset), req.params['0']))
 })
 
 // Download the full dataset with extensions
