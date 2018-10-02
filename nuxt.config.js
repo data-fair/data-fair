@@ -7,6 +7,7 @@ module.exports = {
   dev: process.env.NODE_ENV === 'development',
   srcDir: 'public/',
   build: {
+    cache: true,
     transpile: [/^vuetify/], // Necessary for "à la carte" import of vuetify components
     babel: {
       // Necessary for "à la carte" import of vuetify components
