@@ -40,7 +40,8 @@
     "nodemon": "^1.18.3",
     "nyc": "^13.0.1",
     "pump": "^3.0.0",
-    "push-dir": "^0.4.1"
+    "push-dir": "^0.4.1",
+    "semver-extract": "^1.1.1"
   },
   "dependencies": {
     "@digibytes/markdownit": "^1.2.1",

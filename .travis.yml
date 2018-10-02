@@ -33,7 +33,7 @@ script:
 after_success:
   - npm run coveralls
   # No docker push on pull requests
-  - if [ "$TRAVIS_PULL_REQUEST" == "true" ]; then exit; fi
+  - if [ "$TRAVIS_PULL_REQUEST" != "false" ]; then exit; fi
   - docker login -u $DOCKER_USER -p $DOCKER_PASS
   - export REPO=koumoul/data-fair
   - export TAG=`if [ "$TRAVIS_BRANCH" == "master" ]; then echo "latest"; else echo $TRAVIS_BRANCH ; fi`
@@ -51,3 +51,13 @@ deploy:
   github-token: $GITHUB_TOKEN  # Set in the settings page of your repository, as a secure variable
   on:
     tags: true
+
+after_deploy:
+  # create alternative tags for the docker image
+  - docker login -u $DOCKER_USER -p $DOCKER_PASS
+  - export MAJOR = ${./node_modules/.bin/semver-extract --major $TRAVIS_TAG}
+  - docker tag $REPO:$TRAVIS_TAG $REPO:$MAJOR
+  - docker push $REPO:$MAJOR
+  - export MINOR = ${./node_modules/.bin/semver-extract --minor $TRAVIS_TAG}
+  - docker tag $REPO:$TRAVIS_TAG $REPO:$MINOR
+  - docker push $REPO:$MINOR
