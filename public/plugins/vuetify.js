@@ -37,7 +37,8 @@ import {
   VNavigationDrawer,
   VJumbotron,
   VResponsive,
-  VDatePicker
+  VDatePicker,
+  VTooltip
 } from 'vuetify'
 require('vuetify/src/stylus/app.styl')
 
@@ -77,7 +78,8 @@ Vue.use(Vuetify, {
     VNavigationDrawer,
     VJumbotron,
     VResponsive,
-    VDatePicker
+    VDatePicker,
+    VTooltip
   },
   theme: {
     primary: colors.blue.darken1,
