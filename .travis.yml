@@ -36,31 +36,28 @@ after_success:
   - if [ "$TRAVIS_PULL_REQUEST" != "false" ]; then exit; fi
   - docker login -u $DOCKER_USER -p $DOCKER_PASS
   - export REPO=koumoul/data-fair
-  - export TAG=`if [ "$TRAVIS_BRANCH" == "master" ]; then echo "latest"; else echo $TRAVIS_BRANCH ; fi`
   # Pull before push in order to fill docker cache
   - docker pull $REPO:latest
-  - docker build -f Dockerfile --cache-from $REPO:latest -t $REPO:$TAG .
-  - docker push $REPO
+  - docker build -f Dockerfile --cache-from $REPO:latest -t $REPO:$TRAVIS_BRANCH .
+  - docker push $REPO:$TRAVIS_BRANCH
   # Doc build
   - npm run build-doc
-
-deploy:
-  provider: pages
-  local_dir: doc-dist
-  skip-cleanup: true
-  github-token: $GITHUB_TOKEN  # Set in the settings page of your repository, as a secure variable
-  on:
-    tags: true
-
-after_deploy:
+  # The following is only for tags
+  - if [ -z "$TRAVIS_TAG" ]; then exit 0; fi
   # create alternative tags for the docker image
-  - export REPO=koumoul/data-fair
-  - docker login -u $DOCKER_USER -p $DOCKER_PASS
+  - docker tag $REPO:$TRAVIS_TAG $REPO:latest
+  - docker push $REPO:latest
   - export MAJOR = ${./node_modules/.bin/semver-extract --major $TRAVIS_TAG}
   - docker tag $REPO:$TRAVIS_TAG $REPO:$MAJOR
   - docker push $REPO:$MAJOR
   - export MINOR = ${./node_modules/.bin/semver-extract --minor $TRAVIS_TAG}
   - docker tag $REPO:$TRAVIS_TAG $REPO:$MINOR
   - docker push $REPO:$MINOR
+
+deploy:
+  provider: pages
+  local_dir: doc-dist
+  skip-cleanup: true
+  github-token: $GITHUB_TOKEN  # Set in the settings page of your repository, as a secure variable
   on:
     tags: true
