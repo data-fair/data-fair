@@ -54,6 +54,7 @@ deploy:
 
 after_deploy:
   # create alternative tags for the docker image
+  - export REPO=koumoul/data-fair
   - docker login -u $DOCKER_USER -p $DOCKER_PASS
   - export MAJOR = ${./node_modules/.bin/semver-extract --major $TRAVIS_TAG}
   - docker tag $REPO:$TRAVIS_TAG $REPO:$MAJOR
