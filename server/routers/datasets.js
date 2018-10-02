@@ -1,9 +1,10 @@
 const { Transform } = require('stream')
 const express = require('express')
 const ajv = require('ajv')()
-const fs = require('fs-extra')
-const path = require('path')
 const util = require('util')
+const fs = require('fs-extra')
+const unlink = util.promisify(fs.unlink)
+const path = require('path')
 const moment = require('moment')
 const pump = util.promisify(require('pump'))
 const csvStringify = require('csv-stringify')
@@ -160,23 +161,37 @@ router.patch('/:datasetId', permissions.middleware('writeDescription', 'write'),
   res.status(200).json(patch)
 }))
 
-const unlink = util.promisify(fs.unlink)
 // Delete a dataset
 router.delete('/:datasetId', permissions.middleware('delete', 'admin'), asyncWrap(async(req, res) => {
   const owner = usersUtils.owner(req)
 
-  // TODO : Remove indexes
-  await unlink(datasetUtils.originalFileName(req.dataset))
-  if (!baseTypes.has(req.dataset.originalFile.mimetype)) await unlink(datasetUtils.fileName(req.dataset))
-  if (converter.archiveTypes.has(req.dataset.originalFile.mimetype)) await rimraf(datasetUtils.extractedFilesDirname(req.dataset))
-  await req.app.get('db').collection('datasets').deleteOne({
-    id: req.params.datasetId
-  })
-  await req.app.get('db').collection('journals').deleteOne({
-    type: 'dataset',
-    id: req.params.datasetId
-  })
-  await esUtils.delete(req.app.get('es'), req.dataset)
+  try {
+    await unlink(datasetUtils.originalFileName(req.dataset))
+  } catch (err) {
+    console.error('Error while deleting original file', err)
+  }
+  try {
+    if (!baseTypes.has(req.dataset.originalFile.mimetype)) {
+      await unlink(datasetUtils.fileName(req.dataset))
+    }
+  } catch (err) {
+    console.error('Error while deleting converted file', err)
+  }
+  try {
+    if (converter.archiveTypes.has(req.dataset.originalFile.mimetype)) {
+      await rimraf(datasetUtils.extractedFilesDirname(req.dataset))
+    }
+  } catch (err) {
+    console.error('Error while deleting decompressed files', err)
+  }
+
+  await req.app.get('db').collection('datasets').deleteOne({ id: req.params.datasetId })
+  await req.app.get('db').collection('journals').deleteOne({ type: 'dataset', id: req.params.datasetId })
+  try {
+    await esUtils.delete(req.app.get('es'), req.dataset)
+  } catch (err) {
+    console.error('Error while deleting dataset indexes and alias', err)
+  }
   const storageRemaining = await datasetUtils.storageRemaining(req.app.get('db'), owner, req)
   if (storageRemaining !== -1) res.set(config.headers.storedBytesRemaining, storageRemaining)
   res.sendStatus(204)
