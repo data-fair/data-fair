@@ -13,7 +13,7 @@ async function clean(key) {
   const { db, client } = await require('../../server/utils/db.js').init()
   await db.dropDatabase()
   await client.close()
-  const es = require('../../server/utils/es.js').init()
+  const es = await require('../../server/utils/es.js').init()
   await es.indices.delete({ index: `${indicesPrefix}-*`, ignore: [404] })
   await es.close()
   await fs.remove(dataDir)

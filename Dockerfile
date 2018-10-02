@@ -1,7 +1,7 @@
 FROM koumoul/webapp-base:1.6.0
 MAINTAINER "contact@koumoul.com"
 
-RUN apk add --no-cache --update python make g++
+RUN apk add --no-cache --update python make g++ unzip
 
 # Install the prepair command line tool
 RUN mkdir /prepair

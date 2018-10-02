@@ -17,8 +17,10 @@ const session = require('@koumoul/sd-express')({ directoryUrl: config.directoryU
 
 const app = express()
 
-// Create a mono-domain environment with other services in dev
 if (process.env.NODE_ENV === 'development') {
+  app.set('json spaces', 2)
+
+  // Create a mono-domain environment with other services in dev
   const proxy = require('http-proxy-middleware')
   app.use('/openapi-viewer', proxy({ target: 'http://localhost:5680', pathRewrite: { '^/openapi-viewer': '' } }))
 }
@@ -63,7 +65,7 @@ exports.run = async () => {
   app.set('db', db)
   app.set('mongoClient', client)
   await cache.init(db)
-  app.set('es', esUtils.init())
+  app.set('es', await esUtils.init())
   app.publish = await wsUtils.init(wss, db)
   await locksUtils.init(db)
   workers.start(app)

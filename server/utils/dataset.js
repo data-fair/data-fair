@@ -16,6 +16,10 @@ exports.originalFileName = (dataset) => {
   return path.join(config.dataDir, dataset.owner.type, dataset.owner.id, dataset.id + '.' + dataset.originalFile.name.split('.').pop())
 }
 
+exports.extractedFilesDirname = (dataset) => {
+  return path.join(config.dataDir, dataset.owner.type, dataset.owner.id, dataset.id + '.files')
+}
+
 // Read the dataset file and get a stream of line items
 exports.readStream = (dataset) => {
   let parser, transformer

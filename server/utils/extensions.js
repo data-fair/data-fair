@@ -1,5 +1,8 @@
 const { Readable, Transform, Writable } = require('stream')
 const util = require('util')
+const fs = require('fs')
+const path = require('path')
+const readFile = util.promisify(fs.readFile)
 const config = require('config')
 const eventToPromise = require('event-to-promise')
 const request = require('request')
@@ -13,6 +16,7 @@ const es = require('./es')
 const esStreams = require('./es-streams')
 const geoUtils = require('./geo')
 const journals = require('./journals')
+const datasetUtils = require('./dataset')
 
 // Create a function that will transform items from a dataset into inputs for an action
 function prepareMapping(action, schema, extensionKey, selectFields) {
@@ -89,6 +93,11 @@ class ExtendStream extends Transform {
   async _transform(item, encoding, callback) {
     try {
       if (!this.mappings) await this.init()
+      if (this.options.attachments) {
+        // TODO fetch the file path in other field ? based on concept ?
+        item._file_raw = (await readFile(path.join(datasetUtils.extractedFilesDirname(this.options.dataset), item.file)))
+          .toString('base64')
+      }
       const esClient = this.options.esClient
       for (let extensionKey in this.mappings) {
       /* eslint no-unused-vars: off */

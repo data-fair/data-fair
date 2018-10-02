@@ -7,7 +7,28 @@ const geohash = require('./geohash')
 const tiles = require('./tiles')
 const geoUtils = require('../utils/geo')
 
-exports.init = () => elasticsearch.Client(Object.assign({}, config.elasticsearch))
+exports.init = async () => {
+  const client = elasticsearch.Client(Object.assign({}, config.elasticsearch))
+  await client.ping()
+  await client.ingest.putPipeline({
+    id: 'attachment',
+    body: {
+      description: 'Extract information from attached files',
+      processors: [{
+        attachment: {
+          field: '_file_raw',
+          target_field: '_file',
+          // ignore_missing: true,
+          properties: ['content', 'content_type', 'content_length']
+        },
+        remove: {
+          field: '_file_raw'
+        }
+      }]
+    }
+  })
+  return client
+}
 
 const indexBase = {
   // Minimal overhead by default as we might deal with a lot of small indices.
@@ -44,12 +65,12 @@ exports.indexDefinition = (dataset) => {
   })
 
   // "hidden" fields for geo indexing (lat/lon in dataset or geojson data type)
-  // console.log(dataset.file)
   if (geoUtils.schemaHasGeopoint(dataset.schema) || geoUtils.schemaHasGeometry(dataset.schema)) {
     properties['_geopoint'] = { type: 'geo_point' }
     properties['_geoshape'] = { type: 'geo_shape' }
     properties['_geocorners'] = { type: 'geo_point' }
   }
+  // "hidden" handy fields for sorting
   properties['_rand'] = { type: 'integer' }
   properties['_i'] = { type: 'integer' }
   return body
@@ -246,7 +267,7 @@ const prepareQuery = (dataset, query) => {
   esQuery._source = { includes: query.select ? query.select.split(',') : ['*'], excludes: [] };
 
   // Some fields are excluded, unless explicitly included
-  ['_geoshape', '_geopoint', '_geocorners', '_rand', '_i'].forEach(f => {
+  ['_geoshape', '_geopoint', '_geocorners', '_rand', '_i', '_file.content'].forEach(f => {
     if (!esQuery._source.includes.includes(f)) esQuery._source.excludes.push(f)
   })
 
@@ -263,6 +284,15 @@ const prepareQuery = (dataset, query) => {
   esQuery.sort.push('_score')
   // And lastly random order for natural distribution (mostly important for geo results)
   esQuery.sort.push('_rand')
+
+  // Simple highlight management
+  // https://www.elastic.co/guide/en/elasticsearch/reference/current/search-request-highlighting.html
+  if (query.highlight) {
+    esQuery.highlight = { fields: {}, no_match_size: 300, fragment_size: 100, pre_tags: ['<em class="highlighted">'], post_tags: ['</em>'] }
+    query.highlight.split(',').forEach(key => {
+      esQuery.highlight.fields[key + '.text'] = {}
+    })
+  }
 
   const filter = []
   const must = []

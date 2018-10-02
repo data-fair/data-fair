@@ -13,7 +13,7 @@ const fallbackMimeTypes = {
   fods: 'application/vnd.oasis.opendocument.spreadsheet'
 }
 
-const { tabularTypes, geographicalTypes } = require('../workers/converter')
+const { tabularTypes, geographicalTypes, archiveTypes } = require('../workers/converter')
 
 function uploadDir(req) {
   const owner = usersUtils.owner(req)
@@ -58,7 +58,7 @@ const storage = multer.diskStorage({
   }
 })
 
-const allowedTypes = new Set(['text/csv', 'application/geo+json', ...tabularTypes, ...geographicalTypes])
+const allowedTypes = new Set(['text/csv', 'application/geo+json', ...tabularTypes, ...geographicalTypes, ...archiveTypes])
 
 const upload = multer({
   storage: storage,

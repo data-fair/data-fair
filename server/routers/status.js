@@ -8,7 +8,10 @@ async function mongoStatus(req) {
 }
 
 async function esStatus(req) {
-  await req.app.get('es').ping()
+  const es = req.app.get('es')
+  await es.ping()
+  const ingestAttachment = (await es.cat.plugins({ format: 'json' })).find(p => p.component === 'ingest-attachment')
+  if (!ingestAttachment) throw new Error('Ingest attachment plugin is not installed.')
 }
 
 async function jwksStatus(req) {

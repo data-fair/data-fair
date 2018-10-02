@@ -2,6 +2,7 @@ const { Transform } = require('stream')
 const express = require('express')
 const ajv = require('ajv')()
 const fs = require('fs-extra')
+const path = require('path')
 const util = require('util')
 const moment = require('moment')
 const pump = util.promisify(require('pump'))
@@ -23,7 +24,10 @@ const tiles = require('../utils/tiles')
 const cache = require('../utils/cache')
 const config = require('config')
 const clone = require('fast-clone')
+const chardet = require('chardet')
+const rimraf = util.promisify(require('rimraf'))
 
+const converter = require('../workers/converter')
 const datasetSchema = require('../../contract/dataset')
 const datasetSchemaNoRequired = Object.assign(datasetSchema)
 delete datasetSchemaNoRequired.required
@@ -31,6 +35,8 @@ const validate = ajv.compile(datasetSchemaNoRequired)
 
 let router = express.Router()
 
+const datasetFileSample = require('../utils/dataset-file-sample')
+const baseTypes = new Set(['text/csv', 'application/geo+json'])
 const acceptedStatuses = ['finalized', 'error']
 
 const operationsClasses = {
@@ -162,6 +168,7 @@ router.delete('/:datasetId', permissions.middleware('delete', 'admin'), asyncWra
   // TODO : Remove indexes
   await unlink(datasetUtils.originalFileName(req.dataset))
   if (!baseTypes.has(req.dataset.originalFile.mimetype)) await unlink(datasetUtils.fileName(req.dataset))
+  if (converter.archiveTypes.has(req.dataset.originalFile.mimetype)) await rimraf(datasetUtils.extractedFilesDirname(req.dataset))
   await req.app.get('db').collection('datasets').deleteOne({
     id: req.params.datasetId
   })
@@ -174,10 +181,6 @@ router.delete('/:datasetId', permissions.middleware('delete', 'admin'), asyncWra
   if (storageRemaining !== -1) res.set(config.headers.storedBytesRemaining, storageRemaining)
   res.sendStatus(204)
 }))
-
-const datasetFileSample = require('../utils/dataset-file-sample')
-const chardet = require('chardet')
-const baseTypes = new Set(['text/csv', 'application/geo+json'])
 
 // Create a dataset by uploading data
 router.post('', filesUtils.uploadFile(), asyncWrap(async(req, res) => {
@@ -336,7 +339,19 @@ router.get('/:datasetId/lines', permissions.middleware('readLines', 'read'), asy
 
   const result = {
     total: esResponse.hits.total,
-    results: esResponse.hits.hits.map(hit => flatten(hit._source))
+    results: esResponse.hits.hits.map(hit => {
+      const res = flatten(hit._source)
+      res._score = hit._score
+      if (req.query.highlight) {
+        // return hightlight results and remove .text suffix of fields
+        res._highlight = req.query.highlight.split(',')
+          .reduce((a, key) => {
+            a[key] = (hit.highlight && hit.highlight[key + '.text']) || []
+            return a
+          }, {})
+      }
+      return res
+    })
   }
   res.status(200).send(result)
 }))
@@ -376,6 +391,14 @@ router.get('/:datasetId/metric_agg', permissions.middleware('getMetricAgg', 'rea
   }
   res.status(200).send(result)
 }))
+
+// For datasets with attached files
+router.get('/:datasetId/files/*', permissions.middleware('downloadOriginalData', 'read'), (req, res, next) => {
+  if (!req.dataset.hasFiles) return res.status(404).send('This datasets does not have attached files')
+  const filePath = req.params['0']
+  if (filePath.includes('..')) return res.status(400).send()
+  res.download(path.resolve(datasetUtils.extractedFilesDirname(req.dataset), filePath))
+})
 
 // Download the full dataset in its original form
 router.get('/:datasetId/raw', permissions.middleware('downloadOriginalData', 'read'), (req, res, next) => {
