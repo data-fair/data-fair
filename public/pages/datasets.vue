@@ -1,6 +1,6 @@
 <template>
   <v-layout row>
-    <div v-if="user">
+    <v-layout v-if="user" column>
       <v-subheader>{{ $t('pages.datasets.description') }}</v-subheader>
       <datasets-list/>
 
@@ -9,14 +9,14 @@
           <v-icon>file_upload</v-icon>
         </v-btn>
       </div>
-      <template>
-        <div class="text-xs-center">
-          <v-bottom-sheet v-model="importFileSheet">
-            <import-file v-if="importFileSheet" @cancel="importFileSheet = false"/>
-          </v-bottom-sheet>
-        </div>
-      </template>
-    </div>
+
+      <div class="text-xs-center">
+        <v-bottom-sheet v-model="importFileSheet">
+          <import-file v-if="importFileSheet" @cancel="importFileSheet = false"/>
+        </v-bottom-sheet>
+      </div>
+
+    </v-layout>
     <!-- Anonymous: show jumbotron -->
     <v-flex v-else md6 offset-xs3>
       <v-jumbotron>

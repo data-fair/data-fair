@@ -1,6 +1,6 @@
 <template>
   <v-layout row>
-    <div v-if="user">
+    <v-layout v-if="user" column>
       <v-subheader>{{ $t('pages.applications.description') }}</v-subheader>
       <applications-list/>
 
@@ -9,14 +9,14 @@
           <v-icon>add</v-icon>
         </v-btn>
       </div>
-      <template>
-        <div class="text-xs-center">
-          <v-bottom-sheet v-model="importApplicationSheet">
-            <import-application v-if="importApplicationSheet" :init-app="importApp" @cancel="importApplicationSheet = false"/>
-          </v-bottom-sheet>
-        </div>
-      </template>
-    </div>
+
+      <div class="text-xs-center">
+        <v-bottom-sheet v-model="importApplicationSheet">
+          <import-application v-if="importApplicationSheet" :init-app="importApp" @cancel="importApplicationSheet = false"/>
+        </v-bottom-sheet>
+      </div>
+
+    </v-layout>
     <!-- Anonymous: show jumbotron -->
     <v-flex v-else md6 offset-xs3>
       <v-jumbotron>

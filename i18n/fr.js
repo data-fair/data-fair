@@ -28,7 +28,7 @@ module.exports = {
     },
     catalogs: {
       title: 'Catalogues externes',
-      description: `Cette espace vous permet de configurer des liens vers des catalogues distants, dans lesquels vous pouvez ensuite publier vos jeux de données et réutilisations.`
+      description: `Cet espace vous permet de configurer des liens vers des catalogues distants, vers lesquels vous pourrez ensuite publier vos jeux de données et réutilisations.`
     },
     settings: {
       title: 'Paramètres',
