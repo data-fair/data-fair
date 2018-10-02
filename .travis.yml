@@ -47,10 +47,10 @@ after_success:
   # create alternative tags for the docker image
   - docker tag $REPO:$TRAVIS_TAG $REPO:latest
   - docker push $REPO:latest
-  - export MAJOR = ${./node_modules/.bin/semver-extract --major $TRAVIS_TAG}
+  - export MAJOR=$(./node_modules/.bin/semver-extract --major $TRAVIS_TAG)
   - docker tag $REPO:$TRAVIS_TAG $REPO:$MAJOR
   - docker push $REPO:$MAJOR
-  - export MINOR = ${./node_modules/.bin/semver-extract --minor $TRAVIS_TAG}
+  - export MINOR=$(./node_modules/.bin/semver-extract --minor $TRAVIS_TAG)
   - docker tag $REPO:$TRAVIS_TAG $REPO:$MINOR
   - docker push $REPO:$MINOR
 

@@ -172,7 +172,7 @@ test.serial('Process newly uploaded shapefile dataset', async t => {
   t.is(dataset.file.name, 'stations.geojson')
 })
 
-test.only('Process newly uploaded zip archive', async t => {
+test.serial('Process newly uploaded zip archive', async t => {
   // Send dataset
   const datasetFd = fs.readFileSync('./test/resources/files.zip')
   const form = new FormData()
