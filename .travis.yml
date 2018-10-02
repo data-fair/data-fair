@@ -61,3 +61,5 @@ after_deploy:
   - export MINOR = ${./node_modules/.bin/semver-extract --minor $TRAVIS_TAG}
   - docker tag $REPO:$TRAVIS_TAG $REPO:$MINOR
   - docker push $REPO:$MINOR
+  on:
+    tags: true
