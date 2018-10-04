@@ -32,7 +32,8 @@ exports.process = async function(app, dataset) {
     bboxPromise = esUtils.bboxAgg(es, dataset)
   }
 
-  const nonTextProps = dataset.schema.filter(prop => prop.type !== 'string' || prop.format)
+  // Try to calculate enum values for non-text strings
+  const nonTextProps = dataset.schema.filter(prop => prop.type === 'string' && prop.format === 'uri-reference')
   if (nonTextProps.length) {
     result.schema = dataset.schema
     const responses = await Promise.all(nonTextProps.map(p => esUtils.valuesAgg(es, dataset, { field: p.key, agg_size: 10 })))
