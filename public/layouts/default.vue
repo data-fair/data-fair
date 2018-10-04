@@ -53,6 +53,9 @@
               <v-list-tile v-for="orga in user.organizations || []" :to="`/settings/organization/${orga.id}`" :key="orga.id">
                 <v-list-tile-title>Paramètres {{ orga.name || orga.id }}</v-list-tile-title>
               </v-list-tile>
+              <v-list-tile v-if="user.isAdmin" to="/admin/info">
+                <v-list-tile-title>Administratopn</v-list-tile-title>
+              </v-list-tile>
               <v-list-tile @click="logout">
                 <v-list-tile-title>Se déconnecter</v-list-tile-title>
               </v-list-tile>

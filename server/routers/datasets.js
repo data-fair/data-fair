@@ -49,7 +49,7 @@ const operationsClasses = {
 
 // Get the list of datasets
 router.get('', asyncWrap(async(req, res) => {
-  let datasets = req.app.get('db').collection('datasets')
+  const datasets = req.app.get('db').collection('datasets')
   const query = findUtils.query(req, {
     'filename': 'originalFile.name',
     'concepts': 'schema.x-refersTo',
