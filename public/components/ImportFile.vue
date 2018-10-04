@@ -25,7 +25,7 @@
           <v-radio v-for="a in actions" :label="a.title" :value="a" :key="a.id"/>
         </v-radio-group>
         <v-progress-linear v-model="uploadProgress"/>
-        <v-btn :disabled="!action" color="primary" @click.native="importData()">Lancer l'import</v-btn>
+        <v-btn :disabled="!action || importing" color="primary" @click.native="importData()">Lancer l'import</v-btn>
         <v-btn flat @click.native="$emit('cancel')">Annuler</v-btn>
       </v-stepper-content>
     </v-stepper-items>
@@ -45,7 +45,8 @@ export default {
     owner: null,
     uploadProgress: 0,
     actions: [],
-    action: null
+    action: null,
+    importing: false
   }),
   computed: {
     ...mapState('session', ['user']),
@@ -90,6 +91,7 @@ export default {
         if (this.owner.role) options.headers['x-organizationRole'] = this.owner.role
       }
 
+      this.importing = true
       try {
         let dataset
         if (this.action.type === 'create') {
@@ -107,6 +109,7 @@ export default {
         } else {
           eventBus.$emit('notification', { error, msg: `Erreur pendant l'import du fichier:` })
         }
+        this.importing = false
       }
     }
   }

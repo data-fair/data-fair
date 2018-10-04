@@ -35,7 +35,7 @@
       </v-stepper-content>
       <v-stepper-content step="3">
         <v-progress-linear v-model="uploadProgress"/>
-        <v-btn color="primary" @click.native="importApi()">Lancer l'import</v-btn>
+        <v-btn :disabled="importing" color="primary" @click.native="importApi()">Lancer l'import</v-btn>
         <v-btn flat @click.native="$emit('cancel')">Annuler</v-btn>
       </v-stepper-content>
     </v-stepper-items>
@@ -58,7 +58,8 @@ export default {
     apiDoc: null,
     apiDocUrl: null,
     configurableRemoteServices: [],
-    marked
+    marked,
+    importing: false
   }),
   computed: {
     ...mapState('session', ['user']),
@@ -105,6 +106,7 @@ export default {
       const apiKeySecurity = securities.find(s => s.type === 'apiKey')
       if (!apiKeySecurity) return eventBus.$emit('notification', { type: 'error', msg: `Erreur, l'API importée n'a pas de schéma de sécurité adapté` })
 
+      this.importing = true
       try {
         const remoteService = await this.$axios.$post(this.env.publicUrl + '/api/v1/remote-services', {
           apiDoc: this.apiDoc,
@@ -115,6 +117,7 @@ export default {
         this.$router.push({ path: `/remote-service/${remoteService.id}/description` })
       } catch (error) {
         eventBus.$emit('notification', { error, msg: `Erreur pendant l'import de la description du service` })
+        this.importing = false
       }
     }
   }

@@ -40,7 +40,7 @@
       </v-stepper-content>
       <v-stepper-content step="3">
         <v-progress-linear v-model="uploadProgress"/>
-        <v-btn color="primary" @click.native="createApplication()">Enregistrer la configuration</v-btn>
+        <v-btn :disabled="importing" color="primary" @click.native="createApplication()">Enregistrer la configuration</v-btn>
         <v-btn flat @click.native="$emit('cancel')">Annuler</v-btn>
       </v-stepper-content>
     </v-stepper-items>
@@ -61,7 +61,8 @@ export default {
     uploadProgress: 0,
     description: null,
     applicationUrl: null,
-    configurableApplications: []
+    configurableApplications: [],
+    importing: false
   }),
   computed: {
     ...mapState('session', ['user']),
@@ -90,11 +91,13 @@ export default {
         options.headers = { 'x-organizationId': this.owner.id }
         if (this.owner.role) options.headers['x-organizationRole'] = this.owner.role
       }
+      this.importing = true
       try {
         const application = await this.$axios.$post(this.env.publicUrl + '/api/v1/applications', { ...this.description, url: this.applicationUrl }, options)
         this.$router.push({ path: `/application/${application.id}/description` })
       } catch (error) {
         eventBus.$emit('notification', { error, msg: `Erreur pendant la création de la configuration d'application` })
+        this.importing = false
       }
     }
   }

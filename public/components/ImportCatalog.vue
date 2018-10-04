@@ -49,7 +49,7 @@
 
       <v-stepper-content step="4">
         <v-progress-linear v-model="uploadProgress"/>
-        <v-btn color="primary" @click.native="importCatalog()">Lancer l'import</v-btn>
+        <v-btn :disabled="importing" color="primary" @click.native="importCatalog()">Lancer l'import</v-btn>
         <v-btn flat @click.native="$emit('cancel')">Annuler</v-btn>
       </v-stepper-content>
     </v-stepper-items>
@@ -73,7 +73,8 @@ export default {
     catalogUrl: null,
     configurableCatalogs: [],
     marked,
-    catalog: {}
+    catalog: {},
+    importing: false
   }),
   computed: {
     ...mapState('session', ['user']),
@@ -102,11 +103,13 @@ export default {
         options.headers = { 'x-organizationId': this.owner.id }
         if (this.owner.role) options.headers['x-organizationRole'] = this.owner.role
       }
+      this.importing = true
       try {
         const catalog = await this.$axios.$post('api/v1/catalogs', this.catalog, options)
         this.$router.push({ path: `/catalog/${catalog.id}/description` })
       } catch (error) {
         eventBus.$emit('notification', { error, msg: `Erreur pendant l'import de la description du catalogue` })
+        this.importing = false
       }
     }
   }
