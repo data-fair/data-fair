@@ -53,9 +53,10 @@ exports.process = async function(app, dataset) {
   if (archiveTypes.has(dataset.originalFile.mimetype)) {
     const dirName = datasetUtils.extractedFilesDirname(dataset)
     const files = await decompress(dataset.originalFile.mimetype, originalFilePath, dirName)
+    const fileNames = files.map(f => path.parse(f).base)
     const baseName = path.parse(dataset.originalFile.name).name
     // Check if this archive is actually a shapefile source
-    if (files.find(f => f === baseName + '.shp') && files.find(f => f === baseName + '.shx') && files.find(f => f === baseName + '.dbf')) {
+    if (fileNames.find(f => f === baseName + '.shp') && fileNames.find(f => f === baseName + '.shx') && fileNames.find(f => f === baseName + '.dbf')) {
       isShapefile = true
     } else {
       const csvFilePath = path.join(config.dataDir, dataset.owner.type, dataset.owner.id, dataset.id + '.csv')
