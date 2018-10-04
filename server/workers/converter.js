@@ -40,7 +40,7 @@ const geographicalTypes = exports.geographicalTypes = new Set([
 ])
 
 async function decompress(mimetype, filePath, dirPath) {
-  if (mimetype === 'application/zip') await exec(`unzip -q ${filePath} -d ${dirPath}`)
+  if (mimetype === 'application/zip') await exec(`unzip -o -q ${filePath} -d ${dirPath}`)
   return glob(`**/*`, { nodir: true, cwd: dirPath })
 }
 
