@@ -42,7 +42,8 @@ module.exports = {
     { src: '~plugins/vuetify' },
     { src: '~plugins/moment' },
     { src: '~plugins/truncate' },
-    { src: '~plugins/logger', ssr: false }
+    { src: '~plugins/logger', ssr: false },
+    { src: '~plugins/analytics', ssr: false }
   ],
   router: {
     base: new URL(config.publicUrl + '/').pathname
@@ -68,7 +69,8 @@ module.exports = {
     map: config.map,
     brand: config.brand,
     openapiViewerUrl: config.openapiViewerUrl,
-    browserLogLevel: config.browserLogLevel
+    browserLogLevel: config.browserLogLevel,
+    analytics: config.analytics
   },
   head: {
     title: config.brand.title,
@@ -82,11 +84,4 @@ module.exports = {
       { rel: 'stylesheet', href: 'https://fonts.googleapis.com/css?family=Nunito:300,400,500,700,400italic|Material+Icons' }
     ]
   }
-}
-
-if (config.analytics) {
-  module.exports.modules.push(['@nuxtjs/google-analytics', {
-    id: config.analytics,
-    autoTracking: { exception: true }
-  }])
 }

@@ -74,7 +74,7 @@ module.exports = {
     // size of cache of vector tiles in mongodb (in mb)
     size: 1000
   },
-  analytics: null, // use a tracking id for google analytics here
+  analytics: {}, // a "modules" definition for @koumoul/vue-multianalytics
   i18n: {
     defaultLocale: 'fr',
     locales: ['fr', 'en']

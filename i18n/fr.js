@@ -68,7 +68,7 @@ module.exports = {
           wsPublicUrl: `<b>IMPORTANT.</b> L'URL à laquelle la connection socket sera exposée. Par exemple wss://koumoul.com/s/data-fair`,
           directoryUrl: `<b>IMPORTANT.</b> L'URL à laquelle le service de gestion des utilisateurs est exposé. Par exemple https://koumoul.com/s/simple-directory`,
           mongoUrl: 'La chaine de connexion complète à la base de données MongoDB.',
-          analytics: 'Id de tracking pour Google Analytics.',
+          analytics: 'JSON de configuration des analytics, correspond à la partie "modules" de configuration de la librairie <a href="https://github.com/koumoul-dev/vue-multianalytics#modules">vue-multianalytics</a>',
           elasticsearch: {
             host: `Serveur ElasticSearch.`,
             defaultAnalyzer: 'Analyseur par défaut.',

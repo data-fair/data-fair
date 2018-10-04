@@ -4,7 +4,10 @@ module.exports = {
   directoryUrl: 'DIRECTORY_URL',
   openapiViewerUrl: 'OPENAPI_VIEWER_URL',
   mongoUrl: 'MONGO_URL',
-  analytics: 'ANALYTICS',
+  analytics: {
+    __name: 'ANALYTICS',
+    __format: 'json'
+  },
   elasticsearch: {
     host: 'ES_HOST',
     defaultAnalyzer: 'ES_DEFAULT_ANALYZER',
