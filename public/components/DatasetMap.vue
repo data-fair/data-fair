@@ -177,9 +177,6 @@ export default {
       if (!bbox || !bbox.length) {
         return eventBus.$emit('notification', 'Aucune donnée correspondante.')
       }
-      console.log('BBOX', bbox)
-      console.log('resized BBOX', resizeBBOX(bbox, 1.1))
-
       return resizeBBOX(bbox, 1.1)
     },
     async refresh() {
@@ -194,7 +191,6 @@ export default {
 
       // And fit box to results
       const bbox = await this.getBBox()
-      console.log('resized BBOX', bbox)
       this.map.fitBounds(bbox)
     },
     initCustomSource() {
