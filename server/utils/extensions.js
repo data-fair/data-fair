@@ -161,7 +161,7 @@ class ESInputStream extends Readable {
           body: { query: this.query }
         })
       } else {
-        res = await this.esClient.scroll({ scroll_id: this.scrollId, scroll: '15m', size: 1000 })
+        res = await this.esClient.scroll({ scroll_id: this.scrollId, scroll: '15m' })
       }
       this.scrollId = res._scroll_id
 
