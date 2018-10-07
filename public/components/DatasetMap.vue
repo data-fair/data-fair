@@ -46,7 +46,7 @@ function resizeBBOX(bbox, ratio) {
   const d1diff = ((d1 * ratio) - d1) / 2
   const d2 = bbox[3] - bbox[1]
   const d2diff = ((d2 * ratio) - d2) / 2
-  return [bbox[0] - d1diff, bbox[1] - d2diff, bbox[2] + d1diff, bbox[3] + d2diff]
+  return [Math.max(bbox[0] - d1diff, -180), Math.max(bbox[1] - d2diff, -90), Math.min(bbox[2] + d1diff, 180), Math.min(bbox[3] + d2diff, 90)]
 }
 
 const dataLayers = [{
@@ -131,22 +131,23 @@ export default {
     this.map.touchZoomRotate.disableRotation()
 
     // Create a popup, but don't add it to the map yet.
-    const popup = new mapboxgl.Popup({ closeButton: false, closeOnClick: false })
+    const popup = new mapboxgl.Popup({ closeButton: true, closeOnClick: true })
 
     const moveCallback = (e) => {
-      // console.log(e.features[0].properties._id)
-      this.map.setFilter('results_hover', ['==', '_id', e.features[0].properties._id])
       if (!this.select.length) return
+      const feature = this.map.queryRenderedFeatures(e.point).find(f => f.source === 'data-fair')
+      if (!feature) return
+      this.map.setFilter('results_hover', ['==', '_id', feature.properties._id])
       // Change the cursor style as a UI indicator.
       this.map.getCanvas().style.cursor = 'pointer'
-      const htmlList = Object.keys(e.features[0].properties || {})
+      const htmlList = Object.keys(feature.properties || {})
         .filter(key => key !== '_id')
         .map(key => {
           const field = this.dataset.schema.find(f => f.key === key)
-          return `<li>${field.title || field['x-originalName']}: ${e.features[0].properties[key]}</li>`
+          return `<li>${field.title || field['x-originalName']}: ${feature.properties[key]}</li>`
         })
         .join('\n')
-      const html = `<ul style="list-style-type: none;">${htmlList}</ul>`
+      const html = `<ul style="list-style-type: none;padding-left: 0;">${htmlList}</ul>`
 
       // Populate the popup and set its coordinates
       // based on the feature found.
@@ -176,6 +177,9 @@ export default {
       if (!bbox || !bbox.length) {
         return eventBus.$emit('notification', 'Aucune donnée correspondante.')
       }
+      console.log('BBOX', bbox)
+      console.log('resized BBOX', resizeBBOX(bbox, 1.1))
+
       return resizeBBOX(bbox, 1.1)
     },
     async refresh() {
@@ -190,6 +194,7 @@ export default {
 
       // And fit box to results
       const bbox = await this.getBBox()
+      console.log('resized BBOX', bbox)
       this.map.fitBounds(bbox)
     },
     initCustomSource() {
@@ -201,4 +206,7 @@ export default {
 </script>
 
 <style lang="css">
+.mapboxgl-popup-close-button {
+  width: 16px;
+}
 </style>

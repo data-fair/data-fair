@@ -22,14 +22,14 @@ module.exports = {
     minimal: true,
     extend (config, { isDev, isClient }) {
       // Run ESLint on save
-      if (isDev && isClient) {
+      /* if (isDev && isClient) {
         config.module.rules.push({
           enforce: 'pre',
           test: /\.(js|vue)$/,
           loader: 'eslint-loader',
           exclude: /(node_modules)/
         })
-      }
+      } */
 
       // Ignore all locale files of moment.js, those we want are loaded in plugins/moment.js
       config.plugins.push(new webpack.IgnorePlugin(/^\.\/locale$/, /moment$/))
