@@ -156,11 +156,12 @@ class ESInputStream extends Readable {
       if (!this.scrollId) {
         res = await this.esClient.search({
           index: this.indexName,
-          scroll: '100s',
+          scroll: '15m',
+          size: 1000,
           body: { query: this.query }
         })
       } else {
-        res = await this.esClient.scroll({ scroll_id: this.scrollId, scroll: '100s' })
+        res = await this.esClient.scroll({ scroll_id: this.scrollId, scroll: '15m', size: 1000 })
       }
       this.scrollId = res._scroll_id
 
