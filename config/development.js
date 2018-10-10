@@ -19,28 +19,35 @@ module.exports = {
   cache: {
     disabled: true
   },
-  nuxtBuild: {
-    blocking: false
-  },
   browserLogLevel: 'debug',
   applications: [{
     title: 'Infos parcelles (recette)',
-    href: 'https://staging.koumoul.com/s/infos-parcelles/'
+    url: 'https://staging.koumoul.com/s/infos-parcelles/',
+    public: true
   }, {
     title: 'Infos parcelles (dev)',
-    href: 'http://localhost:5801/'
+    url: 'http://localhost:5801/',
+    public: true
   }, {
     title: 'Infos localisations (recette)',
-    href: 'https://staging.koumoul.com/s/infos-loc/'
+    url: 'https://staging.koumoul.com/s/infos-loc/',
+    public: true
   }, {
     title: 'Infos localisations (dev)',
-    href: 'http://localhost:5810/'
+    url: 'http://localhost:5810/',
+    public: true
   }, {
     title: 'Portail thématique (recette)',
-    href: 'https://staging.koumoul.com/s/portail-thematique/'
+    url: 'https://staging.koumoul.com/s/portail-thematique/',
+    public: true
   }, {
     title: 'Portail thématique (dev)',
-    href: 'http://localhost:5810/'
+    url: 'http://localhost:5810/',
+    public: true
+  }, {
+    title: 'Graphiques simples (dev)',
+    url: 'http://localhost:3001/',
+    public: true
   }],
   remoteServices: [{
     title: 'Données Entreprises (recette)',

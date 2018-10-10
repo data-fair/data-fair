@@ -49,10 +49,6 @@ module.exports = {
     storedBytesLimit: 'X-TaxMan-RateLimit-Limit-StoreBytes',
     storedBytesRemaining: 'X-TaxMan-RateLimit-Remaining-StoreBytes'
   },
-  nuxtBuild: {
-    active: true,
-    blocking: true
-  },
   adminRole: 'admin',
   // A global default API key for backend to backend calls to remote services
   defaultRemoteKey: {
@@ -105,16 +101,20 @@ module.exports = {
   }],
   applications: [{
     title: 'Infos parcelles (bêta)',
-    href: 'https://koumoul.com/s/infos-parcelles/'
+    url: 'https://koumoul.com/s/infos-parcelles/',
+    public: true
   }, {
     title: 'Infos localisations (bêta)',
-    href: 'https://koumoul.com/s/infos-loc/'
+    url: 'https://koumoul.com/s/infos-loc/',
+    public: true
   }, {
     title: 'Portail thématique (bêta)',
-    href: 'https://koumoul.com/s/portail-thematique/'
+    url: 'https://koumoul.com/s/portail-thematique/',
+    public: true
   }, {
     title: 'Observatoire des entreprises (bêta)',
-    href: 'https://koumoul.com/s/observatoire-entreprises/'
+    url: 'https://koumoul.com/s/observatoire-entreprises/',
+    public: true
   }],
   remoteServices: [{
     title: 'Données Entreprises',

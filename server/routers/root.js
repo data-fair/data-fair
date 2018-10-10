@@ -36,10 +36,6 @@ router.get('/configurable-remote-services', (req, res) => {
   res.json(remoteServices)
 })
 
-router.get('/configurable-applications', (req, res) => {
-  res.json(config.applications)
-})
-
 router.get('/configurable-catalogs', (req, res) => {
   res.json(config.catalogs)
 })

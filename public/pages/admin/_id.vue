@@ -13,6 +13,10 @@
         Erreurs
         <v-icon>warning</v-icon>
       </v-tab>
+      <v-tab :nuxt="true" :to="`/admin/base-apps`">
+        Applications de base
+        <v-icon>apps</v-icon>
+      </v-tab>
     </v-tabs>
 
     <nuxt-child />

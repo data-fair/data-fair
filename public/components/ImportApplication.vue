@@ -1,7 +1,7 @@
 <template>
   <v-stepper v-model="currentStep">
     <v-stepper-header>
-      <v-stepper-step :complete="!!description" step="1" editable>Sélection de l'application</v-stepper-step>
+      <v-stepper-step :complete="!!baseApp" step="1" editable>Sélection de l'application</v-stepper-step>
       <v-divider/>
       <v-stepper-step :complete="currentStep > 2" step="2">Choix du propriétaire</v-stepper-step>
       <v-divider/>
@@ -13,7 +13,7 @@
         <v-select
           :items="configurableApplications"
           v-model="applicationUrl"
-          item-value="href"
+          item-value="url"
           item-text="title"
           label="Choisissez une application à configurer"
           @input="downloadFromUrl"
@@ -25,12 +25,12 @@
           @keyup.native.enter="downloadFromUrl"
         />
         <v-text-field
-          v-if="description"
-          v-model="description.title"
+          v-if="baseApp"
+          v-model="baseApp.title"
           label="Titre"
         />
-        <p v-if="description" v-html="description.description"/>
-        <v-btn :disabled="!description" color="primary" @click.native="currentStep = 2">Continuer</v-btn>
+        <p v-if="baseApp" v-html="baseApp.description"/>
+        <v-btn :disabled="!baseApp" color="primary" @click.native="currentStep = 2">Continuer</v-btn>
         <v-btn flat @click.native="$emit('cancel')">Annuler</v-btn>
       </v-stepper-content>
       <v-stepper-content step="2">
@@ -59,7 +59,7 @@ export default {
     currentStep: null,
     owner: 'user',
     uploadProgress: 0,
-    description: null,
+    baseApp: null,
     applicationUrl: null,
     configurableApplications: [],
     importing: false
@@ -69,7 +69,7 @@ export default {
     ...mapState(['env'])
   },
   async mounted() {
-    this.configurableApplications = await this.$axios.$get('api/v1/configurable-applications')
+    this.configurableApplications = (await this.$axios.$get('api/v1/base-applications', { params: { public: true, size: 10000 } })).results
     if (this.initApp) {
       this.applicationUrl = this.initApp
       this.downloadFromUrl()
@@ -78,9 +78,10 @@ export default {
   methods: {
     async downloadFromUrl() {
       if (!this.applicationUrl) return
-      this.description = null
+      this.baseApp = null
       try {
-        this.description = await this.$axios.$get(this.env.publicUrl + '/api/v1/applications/_description', { params: { url: this.applicationUrl } })
+        this.baseApp = await this.$axios.$post('api/v1/base-applications', { url: this.applicationUrl })
+        delete this.baseApp.id
       } catch (error) {
         eventBus.$emit('notification', { error, msg: `Erreur pendant la récupération de la description de l'application` })
       }
@@ -93,7 +94,12 @@ export default {
       }
       this.importing = true
       try {
-        const application = await this.$axios.$post(this.env.publicUrl + '/api/v1/applications', { ...this.description, url: this.applicationUrl }, options)
+        const application = await this.$axios.$post(this.env.publicUrl + '/api/v1/applications', {
+          url: this.baseApp.url,
+          title: this.baseApp.title,
+          description: this.baseApp.description,
+          applicationName: this.baseApp.applicationName
+        }, options)
         this.$router.push({ path: `/application/${application.id}/description` })
       } catch (error) {
         eventBus.$emit('notification', { error, msg: `Erreur pendant la création de la configuration d'application` })

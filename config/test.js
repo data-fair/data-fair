@@ -19,5 +19,13 @@ module.exports = {
   },
   nuxtBuild: {
     active: false
-  }
+  },
+  applications: [{
+    title: 'App test1',
+    url: 'http://monapp1.com',
+    public: true
+  }, {
+    title: 'App test2',
+    url: 'http://monapp2.com'
+  }]
 }

@@ -6,7 +6,7 @@ const { Nuxt, Builder } = require('nuxt')
 const nuxtConfig = require('../nuxt.config.js')
 
 module.exports = async () => {
-  if (process.env.NODE_ENV === 'development') {
+  if (['development', 'test'].includes(process.env.NODE_ENV)) {
     // in dev mode the nuxt dev server is already running, we re-expose it
     return require('http-proxy-middleware')({ target: 'http://localhost:3000' })
   } else {
