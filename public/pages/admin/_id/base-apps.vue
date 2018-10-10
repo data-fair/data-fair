@@ -9,7 +9,7 @@
               {{ baseApp.title }} (<a :href="baseApp.url">{{ baseApp.url }}</a>)
             </v-list-tile-title>
             <v-list-tile-sub-title>{{ baseApp.description }}</v-list-tile-sub-title>
-            <v-list-tile-sub-title>Jeux de données : {{ baseApp.datasetsFilter }} - Services distants: {{ baseApp.servicesFilter }}</v-list-tile-sub-title>
+            <v-list-tile-sub-title>Jeux de données : {{ baseApp.datasetsFilters }} - Services distants: {{ baseApp.servicesFilters }}</v-list-tile-sub-title>
           </v-list-tile-content>
           <v-list-tile-action>
             <v-icon v-if="baseApp.public" color="green">lock_open</v-icon>

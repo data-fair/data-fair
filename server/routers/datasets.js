@@ -53,10 +53,15 @@ router.get('', asyncWrap(async(req, res) => {
   const query = findUtils.query(req, {
     'filename': 'originalFile.name',
     'concepts': 'schema.x-refersTo',
+    'field-type': 'schema.type',
+    'field-format': 'schema.format',
     'ids': 'id'
   })
   if (req.query.bbox === 'true') {
     query.bbox = { $ne: null }
+  }
+  if (req.query.files === 'true') {
+    query.hasFiles = true
   }
   const sort = findUtils.sort(req.query.sort)
   const project = findUtils.project(req.query.select)

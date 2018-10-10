@@ -23,6 +23,12 @@ exports.init = async (db) => {
   }
 }
 
+function prepareQuery(query) {
+  return Object.keys(query)
+    .filter(key => !['skip', 'size', 'q', 'status'].includes(key))
+    .reduce((a, key) => { a[key] = query[key].split(','); return a }, {})
+}
+
 // Attempts to init an application's description from a URL
 async function initBaseApp(db, app) {
   const html = (await axios.get(app.url)).data
@@ -41,43 +47,26 @@ async function initBaseApp(db, app) {
     patch.hasConfigSchema = true
 
     // Read the config schema to deduce filters on datasets and remoteServices
-    let datasetsUrl
-    const datasetsItems = configSchema.properties && configSchema.properties.datasets && configSchema.properties.datasets.items
-    if (datasetsItems) {
-      if (Array.isArray(datasetsItems)) {
-        datasetsUrl = datasetsItems[0]['x-fromUrl']
-      } else {
-        datasetsUrl = datasetsItems['x-fromUrl']
-      }
-    }
-    if (datasetsUrl) {
-      const datasetsQuery = url.parse(datasetsUrl, { parseQueryString: true }).query
-      patch.datasetsFilter = {}
-      if (datasetsQuery.concepts) patch.datasetsFilter.concepts = datasetsQuery.concepts.split(',')
-      if (datasetsQuery.bbox === 'true') patch.datasetsFilter.bbox = true
-    }
+    const datasetsItems = (configSchema.properties && configSchema.properties.datasets && configSchema.properties.datasets.items) || []
+    const datasetsUrls = Array.isArray(datasetsItems) ? datasetsItems.map(item => item['x-fromUrl']) : [datasetsItems['x-fromUrl']]
+    const datasetsQueries = datasetsUrls.map(datasetsUrl => url.parse(datasetsUrl, { parseQueryString: true }).query)
+    patch.datasetsFilters = datasetsQueries.map(prepareQuery)
 
-    let servicesUrl
-    const servicesItems = configSchema.properties && configSchema.properties.remoteServices && configSchema.properties.remoteServices.items
-    if (servicesItems) {
-      if (Array.isArray(servicesItems)) {
-        servicesUrl = servicesItems[0]['x-fromUrl']
-      } else {
-        servicesUrl = servicesItems['x-fromUrl']
-      }
-    }
-    if (servicesUrl) {
-      const servicesQuery = url.parse(servicesUrl, { parseQueryString: true })
-      patch.servicesFilter = {}
-      if (servicesQuery['api-id']) patch.servicesFilter['api-id'] = servicesQuery['api-id']
-    }
+    const servicesItems = (configSchema.properties && configSchema.properties.remoteServices && configSchema.properties.remoteServices.items) || []
+    const servicesUrls = Array.isArray(servicesItems) ? servicesItems.map(item => item['x-fromUrl']) : [servicesItems['x-fromUrl']]
+    const servicesQueries = servicesUrls.map(servicesUrl => url.parse(servicesUrl, { parseQueryString: true }).query)
+    patch.servicesFilters = servicesQueries.map(prepareQuery)
   } catch (err) {
     patch.hasConfigSchema = false
     console.error(`Failed to fetch a config schema for application ${app.url}`, err.message)
   }
 
-  patch.servicesFilter = patch.servicesFilter || {}
-  patch.datasetsFilter = patch.datasetsFilter || {}
+  if (!patch.hasConfigSchema && !patch.applicationName) {
+    throw new Error(`La page à l'adresse ${app.url} ne semble pas héberger une application compatible avec ce service.`)
+  }
+
+  patch.servicesFilters = patch.servicesFilters || {}
+  patch.datasetsFilters = patch.datasetsFilters || {}
 
   const storedBaseApp = (await db.collection('base-applications')
     .findOneAndUpdate({ id: patch.id }, { $set: patch }, { upsert: true, returnOriginal: false })).value
@@ -89,6 +78,7 @@ router.post('', asyncWrap(async(req, res) => {
   if (!req.body.url || Object.keys(req.body).length !== 1) {
     return res.status(400).send('Initializing a base application only accepts the "url" part.')
   }
+  if (req.body.url[req.body.url.length - 1] !== '/') req.body.url += '/'
   const defaultApp = config.applications.find(a => a.url === req.body.url)
   res.send(await initBaseApp(req.app.get('db'), defaultApp || req.body))
 }))

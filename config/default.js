@@ -102,11 +102,15 @@ module.exports = {
   applications: [{
     title: 'Infos parcelles (bêta)',
     url: 'https://koumoul.com/s/infos-parcelles/',
-    public: true
+    public: true,
+    servicesFilters: [{ 'api-id': ['geocoder-koumoul'] }, { 'api-id': ['tileserver'] }],
+    datasetsFilters: [{ bbox: ['true'], concepts: ['http://dbpedia.org/ontology/codeLandRegistry'] }]
   }, {
     title: 'Infos localisations (bêta)',
     url: 'https://koumoul.com/s/infos-loc/',
-    public: true
+    public: true,
+    servicesFilters: [{ 'api-id': ['geocoder-koumoul'] }, { 'api-id': ['tileserver'] }],
+    datasetsFilters: [{ bbox: ['true'] }]
   }, {
     title: 'Portail thématique (bêta)',
     url: 'https://koumoul.com/s/portail-thematique/',
@@ -114,7 +118,8 @@ module.exports = {
   }, {
     title: 'Observatoire des entreprises (bêta)',
     url: 'https://koumoul.com/s/observatoire-entreprises/',
-    public: true
+    public: true,
+    servicesFilters: [{ 'api-id': ['geocoder-koumoul'] }, { 'api-id': ['tileserver'] }, { 'api-id': ['sirene-koumoul'] }]
   }],
   remoteServices: [{
     title: 'Données Entreprises',

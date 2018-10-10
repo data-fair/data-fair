@@ -27,15 +27,21 @@ module.exports = {
   }, {
     title: 'Infos parcelles (dev)',
     url: 'http://localhost:5801/',
-    public: true
+    public: true,
+    servicesFilters: [{ 'api-id': ['geocoder-koumoul'] }, { 'api-id': ['tileserver'] }],
+    datasetsFilters: [{ bbox: ['true'], concepts: ['http://dbpedia.org/ontology/codeLandRegistry'] }]
   }, {
     title: 'Infos localisations (recette)',
     url: 'https://staging.koumoul.com/s/infos-loc/',
-    public: true
+    public: true,
+    servicesFilters: [{ 'api-id': ['geocoder-koumoul'] }, { 'api-id': ['tileserver'] }],
+    datasetsFilters: [{ bbox: ['true'] }]
   }, {
     title: 'Infos localisations (dev)',
     url: 'http://localhost:5810/',
-    public: true
+    public: true,
+    servicesFilters: [{ 'api-id': ['geocoder-koumoul'] }, { 'api-id': ['tileserver'] }],
+    datasetsFilters: [{ bbox: ['true'] }]
   }, {
     title: 'Portail thématique (recette)',
     url: 'https://staging.koumoul.com/s/portail-thematique/',
@@ -48,6 +54,11 @@ module.exports = {
     title: 'Graphiques simples (dev)',
     url: 'http://localhost:3001/',
     public: true
+  }, {
+    title: 'Observatoire des entreprises (bêta)',
+    url: 'https://koumoul.com/s/observatoire-entreprises/',
+    public: true,
+    servicesFilters: [{ 'api-id': ['geocoder-koumoul'] }, { 'api-id': ['tileserver'] }, { 'api-id': ['sirene-koumoul'] }]
   }],
   remoteServices: [{
     title: 'Données Entreprises (recette)',
