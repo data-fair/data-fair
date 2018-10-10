@@ -97,7 +97,7 @@
       <v-container fluid>
         <nuxt/>
       </v-container>
-      <v-snackbar v-if="notification" ref="notificationSnackbar" v-model="showSnackbar" :color="notification.type" :timeout="notification.type === 'error' ? 30000 : 6000" class="notification" bottom>
+      <v-snackbar v-if="notification" ref="notificationSnackbar" v-model="showSnackbar" :color="notification.type" :timeout="notification.type === 'error' ? 0 : 6000" class="notification" bottom>
         <div>
           <p>{{ notification.msg }}</p>
           <p v-if="notification.errorMsg" class="ml-3">{{ notification.errorMsg }}</p>
