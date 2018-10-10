@@ -3,7 +3,7 @@ const nock = require('nock')
 
 const { test, config, axiosBuilder } = testUtils.prepare(__filename)
 
-const html = '<html><head></head><body></body></html>'
+const html = '<html><head><meta name="application-name" content="test"></head><body></body></html>'
 nock('http://monapp1.com').persist().get('/').reply(200, html)
 nock('http://monapp2.com').persist().get('/').reply(200, html)
 
