@@ -1,7 +1,7 @@
 // TODO add ensureIndex instructions to init logic.
 
 const config = require('config')
-const mongoClient = require('mongodb').MongoClient
+const { MongoClient } = require('mongodb')
 
 async function ensureIndex(db, collection, key, options) {
   try {
@@ -15,12 +15,12 @@ exports.init = async () => {
   console.log('Connecting to mongodb ' + config.mongoUrl)
   let client
   try {
-    client = await mongoClient.connect(config.mongoUrl)
+    client = await MongoClient.connect(config.mongoUrl)
   } catch (err) {
     // 1 retry after 1s
     // solve the quite common case in docker-compose of the service starting at the same time as the db
     await new Promise(resolve => setTimeout(resolve, 1000))
-    client = await mongoClient.connect(config.mongoUrl)
+    client = await MongoClient.connect(config.mongoUrl)
   }
   const db = client.db()
   // datasets indexes

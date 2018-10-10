@@ -36,7 +36,12 @@ exports.prepare = (testFile) => {
 
   test.serial.before('clean and run app', async t => {
     await clean(key)
-    test.app = await app.run()
+    try {
+      test.app = await app.run()
+    } catch (err) {
+      console.error('Failed to run the application', err)
+      throw err
+    }
   })
 
   test.serial.after.always('stop app and clean', async t => {

@@ -44,7 +44,7 @@ const storage = multer.diskStorage({
           file.title = baseTitle + ' ' + i
         }
         // better to check file than db entry in case of file currently uploading
-        var dbExists = await req.app.get('db').collection('datasets').count({ id: file.id })
+        var dbExists = await req.app.get('db').collection('datasets').countDocuments({ id: file.id })
         var fileExists = true
         try {
           await fs.stat(path.join(uploadDir(req), file.id + ext))

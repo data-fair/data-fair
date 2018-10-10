@@ -16,5 +16,5 @@ exports.get = async(db, params) => {
 }
 
 exports.set = async(db, hash, value) => {
-  await db.collection('cache').insert({ value, _id: hash })
+  await db.collection('cache').insertOne({ value, _id: hash })
 }

@@ -52,7 +52,7 @@ router.get('', asyncWrap(async(req, res) => {
   const [skip, size] = findUtils.pagination(req.query)
   const mongoQueries = [
     size > 0 ? applications.find(query).limit(size).skip(skip).sort(sort).project(project).toArray() : Promise.resolve([]),
-    applications.find(query).count()
+    applications.countDocuments(query)
   ]
   if (req.query.facets) {
     const q = clone(query)
@@ -83,7 +83,7 @@ router.post('', asyncWrap(async(req, res) => {
   let i = 1
   do {
     if (i > 1) application.id = baseId + i
-    var dbExists = await req.app.get('db').collection('applications').count({ id: application.id })
+    var dbExists = await req.app.get('db').collection('applications').countDocuments({ id: application.id })
     i += 1
   } while (dbExists)
   application.owner = usersUtils.owner(req)
@@ -105,13 +105,8 @@ router.post('', asyncWrap(async(req, res) => {
 
 // Middlewares
 router.use('/:applicationId', asyncWrap(async(req, res, next) => {
-  req.application = req.resource = await req.app.get('db').collection('applications').findOne({
-    id: req.params.applicationId
-  }, {
-    fields: {
-      _id: 0
-    }
-  })
+  req.application = req.resource = await req.app.get('db').collection('applications')
+    .findOne({ id: req.params.applicationId }, { _id: 0 })
   if (!req.application) return res.status(404).send('Application configuration not found')
   findUtils.setResourceLinks(req.application, 'application')
   req.resourceApiDoc = applicationAPIDocs(req.application)

@@ -37,7 +37,7 @@ router.get('/errors', asyncWrap(async (req, res, next) => {
     { $project: { id: 1, title: 1, description: 1, updatedAt: 1, owner: 1, event: 1 } }
   ]).toArray()
 
-  const [total, results] = await Promise.all([ datasets.find(query).count(), aggregatePromise ])
+  const [total, results] = await Promise.all([ datasets.countDocuments(query), aggregatePromise ])
 
   res.send({ total, results })
 }))

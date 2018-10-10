@@ -15,7 +15,7 @@ exports.init = async db => {
 
   // prolongate lock acquired by this process while it is still active
   interval = setInterval(() => {
-    locks.update({ pid }, { '$currentDate': { updatedAt: true } })
+    locks.updateOne({ pid }, { '$currentDate': { updatedAt: true } })
   }, (config.locks.ttl / 2) * 1000)
 }
 
@@ -26,8 +26,8 @@ exports.stop = () => {
 exports.acquire = async (db, _id) => {
   const locks = db.collection('locks')
   try {
-    await locks.insert({ _id, pid })
-    await locks.update({ _id }, { '$currentDate': { updatedAt: true } })
+    await locks.insertOne({ _id, pid })
+    await locks.updateOne({ _id }, { '$currentDate': { updatedAt: true } })
     return true
   } catch (err) {
     if (err.code !== 11000) throw err

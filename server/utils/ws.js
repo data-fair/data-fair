@@ -14,11 +14,15 @@ Downstream examples:
 */
 const shortid = require('shortid')
 
+let cursor
 const subscribers = {}
 const clients = {}
 
 let stopped = false
-exports.stop = () => { stopped = true }
+exports.stop = () => {
+  stopped = true
+  cursor.close()
+}
 
 exports.init = async (wss, db) => {
   wss.on('connection', ws => {
@@ -79,11 +83,10 @@ exports.init = async (wss, db) => {
 
   // A pubsub channel based on mongodb to support scaling on multiple processes
   const mongoChannel = await db.createCollection('messages', { capped: true, size: 100000, max: 1000 })
-  await mongoChannel.insert({ type: 'init' })
-  const cursor = mongoChannel.find({}, { tailable: true, awaitdata: true, numberOfRetries: -1 })
-  cursor.each((err, doc) => {
+  await mongoChannel.insertOne({ type: 'init' })
+  cursor = mongoChannel.find({}, { tailable: true, awaitdata: true, numberOfRetries: -1 })
+  cursor.forEach(doc => {
     if (stopped) return
-    if (err) console.error('Error in cursor for mongodb pubsub', err)
     if (doc && doc.type === 'message') {
       const subs = subscribers[doc.channel] || {}
       Object.keys(subs).forEach(sub => {
@@ -92,5 +95,5 @@ exports.init = async (wss, db) => {
     }
   })
 
-  return (channel, data) => mongoChannel.insert({ type: 'message', channel, data })
+  return (channel, data) => mongoChannel.insertOne({ type: 'message', channel, data })
 }

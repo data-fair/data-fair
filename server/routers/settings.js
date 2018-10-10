@@ -30,10 +30,8 @@ function isOwner(req, res, next) {
 router.get('/:type/:id', isOwner, asyncWrap(async(req, res) => {
   const settings = req.app.get('db').collection('settings')
 
-  const result = await settings.findOne({
-    type: req.params.type,
-    id: req.params.id
-  }, { fields: { _id: 0, id: 0, type: 0 } })
+  const result = await settings
+    .findOne({ type: req.params.type, id: req.params.id }, { _id: 0, id: 0, type: 0 })
   res.status(200).send(result || {})
 }))
 

@@ -66,7 +66,7 @@ router.get('', asyncWrap(async(req, res) => {
   const [skip, size] = findUtils.pagination(req.query)
   const mongoQueries = [
     size > 0 ? remoteServices.find(query).limit(size).skip(skip).sort(sort).project(project).toArray() : Promise.resolve([]),
-    remoteServices.find(query).count()
+    remoteServices.countDocuments(query)
   ]
   if (req.query.facets) {
     const q = clone(query)
@@ -93,7 +93,7 @@ router.post('', asyncWrap(async(req, res) => {
   let i = 1
   do {
     if (i > 1) service.id = baseId + i
-    var dbExists = await req.app.get('db').collection('remote-services').count({ id: service.id })
+    var dbExists = await req.app.get('db').collection('remote-services').countDocuments({ id: service.id })
     i += 1
   } while (dbExists)
   service.owner = usersUtils.owner(req)
@@ -170,13 +170,7 @@ router.post('/_default_services', asyncWrap(async(req, res) => {
 
 // Middlewares
 router.use('/:remoteServiceId', asyncWrap(async(req, res, next) => {
-  const service = await req.app.get('db').collection('remote-services').findOne({
-    id: req.params.remoteServiceId
-  }, {
-    fields: {
-      _id: 0
-    }
-  })
+  const service = await req.app.get('db').collection('remote-services').findOne({ id: req.params.remoteServiceId }, { _id: 0 })
   if (!service) return res.status(404).send('Remote Api not found')
   findUtils.setResourceLinks(service, 'remote-service')
   req.remoteService = req.resource = mongoEscape.unescape(service, true)

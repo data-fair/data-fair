@@ -93,7 +93,7 @@ router.get('', asyncWrap(async(req, res) => {
   if (req.query.public) query.public = true
   const [skip, size] = findUtils.pagination(req.query)
   const findPromise = baseApplications.find(query).limit(size).skip(skip).toArray()
-  const countPromise = baseApplications.find(query).count()
+  const countPromise = baseApplications.countDocuments(query)
   const [results, count] = await Promise.all([findPromise, countPromise])
   res.send({ results, count })
 }))

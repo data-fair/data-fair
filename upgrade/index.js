@@ -41,7 +41,7 @@ async function main() {
 
   const newService = { id: pjson.name, version: semver.coerce(pjson.version).version }
   debug(`Upgrade scripts are over, save current version number ${newService.version}`)
-  await services.update({ id: pjson.name }, newService, { upsert: true })
+  await services.updateOne({ id: pjson.name }, { $set: newService }, { upsert: true })
   await client.close()
 }
 

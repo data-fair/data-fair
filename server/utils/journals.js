@@ -8,7 +8,7 @@ module.exports.log = async function(app, resource, event, type = 'dataset') {
   event.date = moment().toISOString()
 
   await db.collection('journals')
-    .update({ id: resource.id, type }, { $push: { events: event } }, { upsert: true })
+    .updateOne({ id: resource.id, type }, { $push: { events: event } }, { upsert: true })
 
   // websockets notifications
   await app.publish(`${type}s/${resource.id}/journal`, event)

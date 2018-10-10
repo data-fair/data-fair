@@ -25,5 +25,5 @@ async function ownerStats(db, owner) {
 }
 
 async function ownerCount(db, collection, owner) {
-  return db.collection(collection).count({ 'owner.id': owner.id, 'owner.type': owner.type })
+  return db.collection(collection).countDocuments({ 'owner.id': owner.id, 'owner.type': owner.type })
 }

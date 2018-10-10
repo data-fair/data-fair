@@ -68,7 +68,7 @@ router.get('', asyncWrap(async(req, res) => {
   const [skip, size] = findUtils.pagination(req.query)
   const mongoQueries = [
     size > 0 ? datasets.find(query).limit(size).skip(skip).sort(sort).project(project).toArray() : Promise.resolve([]),
-    datasets.find(query).count()
+    datasets.countDocuments(query)
   ]
   if (req.query.facets) {
     const q = clone(query)
@@ -88,13 +88,8 @@ router.get('', asyncWrap(async(req, res) => {
 
 // Middlewares
 router.use('/:datasetId', asyncWrap(async(req, res, next) => {
-  req.dataset = req.resource = await req.app.get('db').collection('datasets').findOne({
-    id: req.params.datasetId
-  }, {
-    fields: {
-      _id: 0
-    }
-  })
+  req.dataset = req.resource = await req.app.get('db').collection('datasets')
+    .findOne({ id: req.params.datasetId }, { _id: 0 })
   if (!req.dataset) return res.status(404).send('Dataset not found')
   findUtils.setResourceLinks(req.dataset, 'dataset')
   req.resourceApiDoc = datasetAPIDocs(req.dataset)

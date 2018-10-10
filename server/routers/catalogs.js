@@ -61,7 +61,7 @@ router.get('', asyncWrap(async(req, res) => {
   const [skip, size] = findUtils.pagination(req.query)
   const mongoQueries = [
     size > 0 ? catalogs.find(query).limit(size).skip(skip).sort(sort).project(project).toArray() : Promise.resolve([]),
-    catalogs.find(query).count()
+    catalogs.countDocuments(query)
   ]
   if (req.query.facets) {
     const q = clone(query)
@@ -88,7 +88,7 @@ router.post('', asyncWrap(async(req, res) => {
   let i = 1
   do {
     if (i > 1) catalog.id = baseId + i
-    var dbExists = await req.app.get('db').collection('catalogs').count({ id: catalog.id })
+    var dbExists = await req.app.get('db').collection('catalogs').countDocuments({ id: catalog.id })
     i += 1
   } while (dbExists)
   catalog.owner = usersUtils.owner(req)
@@ -108,13 +108,8 @@ router.post('', asyncWrap(async(req, res) => {
 
 // Middlewares
 router.use('/:catalogId', asyncWrap(async(req, res, next) => {
-  const catalog = await req.app.get('db').collection('catalogs').findOne({
-    id: req.params.catalogId
-  }, {
-    fields: {
-      _id: 0
-    }
-  })
+  const catalog = await req.app.get('db').collection('catalogs')
+    .findOne({ id: req.params.catalogId }, { _id: 0 })
   if (!catalog) return res.status(404).send('Catalog not found')
   findUtils.setResourceLinks(catalog, 'catalog')
   req.catalog = req.resource = mongoEscape.unescape(catalog, true)
