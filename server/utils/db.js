@@ -31,6 +31,9 @@ exports.init = async () => {
   await ensureIndex(db, 'remote-services', { id: 1 }, { unique: true })
   await ensureIndex(db, 'remote-services', { 'owner.type': 1, 'owner.id': 1 })
   await ensureIndex(db, 'remote-services', { title: 'text', description: 'text', 'owner.name': 'text' }, { name: 'fulltext' })
+  // base applications indexes
+  await ensureIndex(db, 'base-applications', { url: 1 }, { unique: true })
+  await ensureIndex(db, 'base-applications', { id: 1 }, { unique: true })
   // applications indexes
   await ensureIndex(db, 'applications', { id: 1 }, { unique: true })
   await ensureIndex(db, 'applications', { 'owner.type': 1, 'owner.id': 1 })

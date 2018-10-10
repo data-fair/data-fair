@@ -4,10 +4,8 @@ const webpack = require('webpack')
 const i18n = require('./i18n')
 
 module.exports = {
-  dev: process.env.NODE_ENV === 'development',
   srcDir: 'public/',
   build: {
-    cache: true,
     transpile: [/^vuetify/], // Necessary for "à la carte" import of vuetify components
     babel: {
       // Necessary for "à la carte" import of vuetify components
@@ -21,32 +19,8 @@ module.exports = {
     publicPath: config.publicUrl + '/_nuxt/',
     minimal: true,
     extend (config, { isServer, isDev, isClient }) {
-      // Run ESLint on save
-      /* if (isDev && isClient) {
-        config.module.rules.push({
-          enforce: 'pre',
-          test: /\.(js|vue)$/,
-          loader: 'eslint-loader',
-          exclude: /(node_modules)/
-        })
-      } */
-
       // Ignore all locale files of moment.js, those we want are loaded in plugins/moment.js
       config.plugins.push(new webpack.IgnorePlugin(/^\.\/locale$/, /moment$/))
-
-      // cf https://github.com/nuxt/nuxt.js/issues/3804#issuecomment-419629639
-      // temporary fix to support caching
-      if (isServer) {
-        for (const rules of config.module.rules.filter(({ test }) =>
-          /\.((c|le|sa|sc)ss|styl.*)/.test(test.toString())
-        )) {
-          for (const rule of rules.oneOf || []) {
-            rule.use = rule.use.filter(
-              ({ loader }) => loader !== 'cache-loader'
-            )
-          }
-        }
-      }
     }
   },
   loading: { color: '#1e88e5' }, // Customize the progress bar color

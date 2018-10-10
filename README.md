@@ -19,11 +19,12 @@ Install dependencies, run bundler and launch service dependencies with docker-co
     npm run build
     docker-compose up -d
 
-Run a development server with:
+Run the 2 development servers with these commands et separate shells:
 
-    npm run dev
+    npm run dev-server
+    npm run dev-client
 
-Chose an account in `test/resources/users.json` and use its email to login.
+When both servers are ready, go to [http://localhost:5600](http://localhost:5600) and chose an account in `test/resources/users.json` and to login with its email.
 
 ## Embedded documentation
 

@@ -35,16 +35,6 @@ module.exports = {
   workers: {
     concurrency: 'WORKERS_CONCURRENCY'
   },
-  nuxtBuild: {
-    active: {
-      __name: 'NUXT_BUILD_ACTIVE',
-      __format: 'json'
-    },
-    blocking: {
-      __name: 'NUXT_BUILD_BLOCKING',
-      __format: 'json'
-    }
-  },
   i18n: {
     defaultLocale: 'I18N_DEFAULT_LOCALE',
     locales: {
