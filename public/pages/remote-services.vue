@@ -17,7 +17,7 @@
       </div>
     </v-layout>
     <!-- Anonymous: show jumbotron -->
-    <v-flex v-else md6 offset-xs3>
+    <v-flex v-else-if="initialized" md6 offset-xs3>
       <v-jumbotron>
         <v-container fill-height>
           <v-layout align-center>
@@ -47,7 +47,7 @@ export default {
     return { importServiceSheet: !!this.$route.query.import }
   },
   computed: {
-    ...mapState('session', ['user']),
+    ...mapState('session', ['user', 'initialized']),
     importService() {
       return this.$route.query.import
     }
