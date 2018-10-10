@@ -100,7 +100,7 @@ export default {
           .map(field => { field['x-tags'] = field['x-tags'] || []; return field })
           .filter(o => !o.concept || o.concept !== 'http://schema.org/identifier')
           .sort((a, b) => (a.title || a.name).localeCompare(b.title || b.name))
-        const tags = [...new Set(Array.concat([], ...fields.map(f => f['x-tags'])))].sort()
+        const tags = [...new Set([].concat(...fields.map(f => f['x-tags'])))].sort()
         const fieldsAndTags = []
         tags.forEach(tag => {
           fieldsAndTags.push(tag)
