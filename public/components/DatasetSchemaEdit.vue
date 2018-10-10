@@ -92,14 +92,14 @@ export default {
     }
   },
   methods: {
-    ...mapActions('dataset', ['patchAndCommit', 'fetchRemoteService']),
+    ...mapActions('dataset', ['patchAndCommit', 'fetchRemoteServices']),
     initSchema() {
       const originalSchema = JSON.stringify(this.dataset && this.dataset.schema)
       if (this.originalSchema === originalSchema) return
       this.originalSchema = originalSchema
       this.schema = this.dataset.schema.map(field => Object.assign({}, field))
       this.dataset.extensions = this.dataset.extensions || []
-      this.dataset.extensions.filter(ext => ext.active).forEach(extension => this.fetchRemoteService(extension.remoteService))
+      this.fetchRemoteServices()
     },
     resetSchema() {
       this.schema = JSON.parse(this.originalSchema)
