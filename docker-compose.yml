@@ -8,11 +8,11 @@ services:
     environment:
       - discovery.type=single-node
   mongo:
-    image: mvertes/alpine-mongo:4.0.3-0
+    image: mongo:4.0
     ports:
       - 27017:27017
   sd:
-    image: koumoul/simple-directory:latest
+    image: koumoul/simple-directory:1
     network_mode: host
     ports:
       - 8080
@@ -30,6 +30,6 @@ services:
       - ./test/resources/organizations.json:/webapp/data/organizations.json
 
   openapi-viewer:
-    image: koumoul/openapi-viewer:0.8.0
+    image: koumoul/openapi-viewer:1
     ports:
       - 5680:8080
