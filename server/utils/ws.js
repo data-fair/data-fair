@@ -19,9 +19,9 @@ const subscribers = {}
 const clients = {}
 
 let stopped = false
-exports.stop = () => {
+exports.stop = async () => {
   stopped = true
-  cursor.close()
+  await cursor.close()
 }
 
 exports.init = async (wss, db) => {

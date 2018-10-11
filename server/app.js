@@ -82,7 +82,7 @@ exports.stop = async() => {
   await util.promisify((cb) => wss.close(cb))()
   server.close()
   await eventToPromise(server, 'close')
-  wsUtils.stop()
+  await wsUtils.stop()
   locksUtils.stop()
   await workers.stop()
   await app.get('mongoClient').close()
