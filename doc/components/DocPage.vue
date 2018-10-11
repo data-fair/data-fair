@@ -16,6 +16,8 @@
 </template>
 
 <script>
+require('highlight.js/styles/github.css')
+
 export default {
   props: ['prefix', 'pages', 'page', 'content'],
   data: () => ({ ready: false }),
@@ -28,7 +30,7 @@ export default {
       p: ['body1'],
       table: ['v-datatable', 'v-table', 'theme--light', 'elevation-1'],
       code: ['theme--light'],
-      'pre code': ['v-card', 'py-4']
+      'pre code': ['v-card', 'pt-3']
     }
     Object.keys(elemClasses).forEach(k => {
       this.$el.querySelectorAll(k).forEach(e => {
@@ -44,6 +46,12 @@ export default {
 .doc-page {
     pre {
       white-space: pre-wrap;
+    }
+    code {
+      padding-left: 6px;
+    }
+    code:before {
+      content: ''
     }
 }
 </style>

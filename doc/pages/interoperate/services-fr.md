@@ -14,7 +14,7 @@ La spécification OpenAPI 3.0 n'offre pas de mécanisme permettant d'identifier 
 
 Pour identifier de manière unique une API, nous avons choisi d'adopter [ces recommandations](https://github.com/zalando/restful-api-guidelines/blob/master/chapters/compatibility.adoc) : il faut renseigner un attribut `x-api-id` dans le bloc `ìnfo`. Plus précisément, il doit avoir cette forme :
 
-```
+```yaml
 /info/x-api-id:
   type: string
   format: urn

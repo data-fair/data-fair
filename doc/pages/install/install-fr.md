@@ -1,4 +1,4 @@
-Cette application expose des services Web et interopère avec d'autres applications du même type. Pour comprendre comment ce *DataFair* fonctionne, vous pouvez aller voir la [description technique](technical-overview.md).
+Cette application expose des services Web et interopère avec d'autres applications du même type. Pour comprendre comment ce *DataFair* fonctionne, vous pouvez aller voir la [description technique](https://koumoul-dev.github.io/data-fair/about/technical-overview).
 
 La procédure d'installation décrite ici est une procédure simplifiée, qui ne couvre pas toutes les étapes de configuration d'un environnement de production comme le *reverse proxy* avec certificat SSL, le DNS ou l'équilibrage de charge.
 
@@ -149,13 +149,13 @@ volumes:
 
 Récupérer les dernières versions des images compatibles:
 
-```
+```sh
 docker-compose pull
 ```
 
 Configurez quelques variables d'environnement nécessaires:
 
-```
+```sh
 export ADMINS='["alban.mouton@koumoul.com"]'
 ```
 
@@ -165,14 +165,13 @@ Cette variante est utile pour se faire la main sur la logique de déploiement et
 
 Créez une paire identifiant / mot de passe pour la protection de la boite mail locale:
 
-```
+```sh
 export MAILDEV_BASIC="$(htpasswd -nbm user passwd)"
 ```
 
 Configurez les autres variables d'environnement puis lancez les services:
 
-```
-
+```sh
 export MAILDEV=true
 export PROTOCOL=http
 export DOMAIN=localhost
@@ -180,13 +179,13 @@ export DOMAIN=localhost
 
 Lancez les services:
 
-```
+```sh
 docker-compose up -d --force-recreate
 ```
 
 Vérifiez l'état des services:
 
-```
+```sh
 docker-compose ps
 ```
 
@@ -201,7 +200,7 @@ Vous pouvez suivre les instructions précédentes. Mais les variables d'environn
 
 La variable MAILS_TRANSPORT attend un objet JSON de configuration compatible avec la librairie [nodemailer](https://nodemailer.com/smtp/)
 
-```
+```sh
 export ADMINS='["alban.mouton@koumoul.com"]'
 export MAILDEV=false
 export PROTOCOL=http
@@ -226,7 +225,7 @@ Cette variante est une solution complète de déploiement sécurisé. En pré-re
 
 La mise à jour s'effectue en lançant les 2 commandes suivantes :
 
-```
+```sh
 docker-compose pull
 docker-compose up -d
 ```
