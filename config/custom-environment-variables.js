@@ -2,6 +2,7 @@ module.exports = {
   publicUrl: 'PUBLIC_URL',
   wsPublicUrl: 'WS_PUBLIC_URL',
   directoryUrl: 'DIRECTORY_URL',
+  privateDirectoryUrl: 'PRIVATE_DIRECTORY_URL',
   openapiViewerUrl: 'OPENAPI_VIEWER_URL',
   mongoUrl: 'MONGO_URL',
   analytics: {

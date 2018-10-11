@@ -14,7 +14,11 @@ const cache = require('./utils/cache')
 const workers = require('./workers')
 const upgrade = require('../upgrade')
 const baseApplications = require('./routers/base-applications')
-const session = require('@koumoul/sd-express')({ directoryUrl: config.directoryUrl, publicUrl: config.publicUrl })
+const session = require('@koumoul/sd-express')({
+  directoryUrl: config.directoryUrl,
+  privateDirectoryUrl: config.privateDirectoryUrl || config.directoryUrl,
+  publicUrl: config.publicUrl
+})
 
 const app = express()
 

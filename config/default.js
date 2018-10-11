@@ -3,6 +3,7 @@ module.exports = {
   publicUrl: 'http://localhost:5600',
   wsPublicUrl: 'ws://localhost:5600',
   directoryUrl: 'http://localhost:8080',
+  privateDirectoryUrl: '',
   openapiViewerUrl: 'https://koumoul.com/openapi-viewer/',
   dataDir: './data/' + (process.env.NODE_ENV || 'development'),
   pluginsDir: './plugins',
