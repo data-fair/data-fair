@@ -42,6 +42,7 @@ RUN npm install --production && node-prune
 ADD public public
 ADD nuxt.config.js .
 ADD i18n i18n
+ADD doc/components/DocPage.vue public/components/DocPage.vue
 ADD doc/pages/user-guide public/pages/user-guide
 ADD doc/pages/interoperate public/pages/interoperate
 
