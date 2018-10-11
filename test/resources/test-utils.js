@@ -45,8 +45,12 @@ exports.prepare = (testFile) => {
   })
 
   test.serial.after.always('stop app and clean', async t => {
-    await app.stop()
-    await clean(key)
+    try {
+      await app.stop()
+    } catch (err) {
+      console.error('Failed to stop the application', err)
+      throw err
+    }
   })
 
   const axiosBuilder = async (email) => {
