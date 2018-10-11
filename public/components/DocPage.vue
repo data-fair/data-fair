@@ -1,0 +1,1 @@
+/home/alban/github/data-fair/doc/components/DocPage.vue
