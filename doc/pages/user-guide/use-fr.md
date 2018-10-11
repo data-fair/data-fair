@@ -1,6 +1,4 @@
-## Documentation utilisateur
-
-## Jeux de données
+### Jeux de données
 
 Les jeux de données sont créés à partir de fichiers chargés par les utilisateurs. Dés métadonnées sont rajoutées et complétées par les utilisateurs, ce qui permet de les trouver et réutiliser plus facilement. Les données sont indexées et rendues disponible au travers d'une API Web, ce qui les rend accessibles. Les champs peuvent être décrits avec un vocabulaire sémantique, ce qui permet de mieux comprendre la données et de la rendre plus facilement interopérable.
 

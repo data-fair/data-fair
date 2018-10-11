@@ -26,8 +26,8 @@
         <v-menu>
           <v-btn slot="activator" :class="(routePrefix === 'user' || routePrefix === 'interoperate') ? 'v-btn--active' : ''" flat>Documentation</v-btn>
           <v-list>
-            <v-list-tile :to="localePath('user-guide')">
-              <v-list-tile-title>{{ $t('pages.userguide.title') }}</v-list-tile-title>
+            <v-list-tile :to="localePath({name: 'user-guide-id', params: {id: 'introduction'}})">
+              <v-list-tile-title>{{ $t('pages.user-guide.title') }}</v-list-tile-title>
             </v-list-tile>
             <v-list-tile href="https://videos.koumoul.com/" target="_blank">
               <v-list-tile-title>Tutoriels</v-list-tile-title>
@@ -35,7 +35,7 @@
             <v-list-tile :to="localePath('api-doc')">
               <v-list-tile-title>API</v-list-tile-title>
             </v-list-tile>
-            <v-list-tile :to="localePath('interoperate')">
+            <v-list-tile :to="localePath({name: 'interoperate-id', params: {id: 'applications'}})">
               <v-list-tile-title>{{ $t('pages.interoperate.title') }}</v-list-tile-title>
             </v-list-tile>
           </v-list>
@@ -54,7 +54,7 @@
                 <v-list-tile-title>Paramètres {{ orga.name || orga.id }}</v-list-tile-title>
               </v-list-tile>
               <v-list-tile v-if="user.isAdmin" to="/admin/info">
-                <v-list-tile-title>Administratopn</v-list-tile-title>
+                <v-list-tile-title>Administration</v-list-tile-title>
               </v-list-tile>
               <v-list-tile @click="logout">
                 <v-list-tile-title>Se déconnecter</v-list-tile-title>
@@ -94,9 +94,9 @@
 
     </v-toolbar>
     <v-content>
-      <v-container fluid>
-        <nuxt/>
-      </v-container>
+
+      <nuxt/>
+
       <v-snackbar v-if="notification" ref="notificationSnackbar" v-model="showSnackbar" :color="notification.type" :timeout="notification.type === 'error' ? 0 : 6000" class="notification" bottom>
         <div>
           <p>{{ notification.msg }}</p>

@@ -1,6 +1,4 @@
-### Formats pris en charge
-
-Le tableau suivant reprend les formats pris en charge par Data-fair :
+Le tableau suivant reprend les formats de fichier pris en charge par Data-fair pour créer des jeux de données :
 
 Type | Description | Format | Format archivé (.zip)
 ----------|---------------------------|--------------------|--------------------
@@ -17,6 +15,6 @@ KML/KMZ | Format destiné à la gestion de l'affichage de données géospatiales
 GPX |  Format de fichier permettant l'échange de coordonnées GPS | .gpx ou .xml | **-**
 ESRI Shapefile |  Format de fichier pour les systèmes d'informations géographiques  |**-** | .shp, .dbf et .shx (.prj optionel)
 
-<br></br>Pour le moment, seules les données Shapefile doivent etre contenue dans un fichier .zip.  
+<br></br>Pour le moment, seules les données Shapefile doivent etre contenues dans un fichier .zip.  
 
 Si vous avez un besoin différent ou que vous rencontrez un problème de compatibilité, n’hésitez pas à nous [contacter](https://koumoul.com/contact).

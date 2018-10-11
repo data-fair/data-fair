@@ -1,5 +1,3 @@
-## Installation
-
 Cette application expose des services Web et interopère avec d'autres applications du même type. Pour comprendre comment ce *DataFair* fonctionne, vous pouvez aller voir la [description technique](technical-overview.md).
 
 La procédure d'installation décrite ici est une procédure simplifiée, qui ne couvre pas toutes les étapes de configuration d'un environnement de production comme le *reverse proxy* avec certificat SSL, le DNS ou l'équilibrage de charge.

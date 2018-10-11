@@ -40,7 +40,7 @@ module.exports = {
       overview: {
         title: 'Aperçu fonctionnel'
       },
-      technicaloverview: {
+      'technical-overview': {
         title: 'Aperçu technique'
       },
       license: {
@@ -111,7 +111,7 @@ module.exports = {
         title: 'Créer des services'
       }
     },
-    userguide: {
+    'user-guide': {
       title: 'Manuel utilisateur',
       description: `Ceci est la documentation de notre service de publication de données`,
       introduction: {

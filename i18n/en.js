@@ -29,15 +29,8 @@ module.exports = {
         varDefault: 'Valeur par défaut'
       }
     },
-    interoperate: {
-      title: 'Créer des applications et services'
-    },
-    userguide: {
-      title: 'Manuel utilisateur',
-      use: {
-        title: 'Utilisation !!'
-      }
-    }
+    interoperate: {},
+    'user-guide': {}
   },
   notifications: {
     successes: {

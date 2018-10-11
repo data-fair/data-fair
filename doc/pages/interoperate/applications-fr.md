@@ -1,5 +1,3 @@
-## Développement d'une nouvelle application
-
 N'importe qui peut développer une nouvelle application compatible. Les applications elles aussi sont mises à disposition sous forme de services : ce sont des applications Web disponibles en ligne. Une instance de Data FAIR fait office de proxy vers les applications configurées et les réexpose en leur communiquant les informations de contexte nécessaires à l'intéropérabilité. Pour pouvoir être intégrée dans une instance Data FAIR, une application doit exposer certaines informations.
 
 ### Exemples

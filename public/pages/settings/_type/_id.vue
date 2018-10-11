@@ -1,48 +1,49 @@
 <template lang="html">
-  <v-layout column>
-    <v-subheader>{{ $t('pages.settings.description') }}</v-subheader>
-    <h2 class="display-1 mb-4">Paramètres de l'{{ $route.params.type ==='organization' ? ('organisation ' + organization.name): ('utilisateur ' +user.name) }}</h2>
-    <p v-if="$route.params.type ==='organization'">Vous êtes <strong>{{ user.organizations.find(o => o.id===$route.params.id).role }}</strong> dans cette organisation.</p>
-    <v-container v-if="$route.params.type === 'user' || isAdmin">
-      <div v-if="$route.params.type ==='organization'">
-        <h3 class="headline mb-3">Permissions générales par rôle</h3>
-        <p>Le rôle <strong>{{ env.adminRole }}</strong> peut tout faire</p>
+  <v-container fluid>
+    <v-layout column>
+      <!--<v-subheader>{{ $t('pages.settings.description') }}</v-subheader>-->
+      <h2 class="display-1 mb-4">Paramètres de l'{{ $route.params.type ==='organization' ? ('organisation ' + organization.name): ('utilisateur ' + user.name) }}</h2>
+      <p v-if="$route.params.type ==='organization'">Vous êtes <strong>{{ user.organizations.find(o => o.id===$route.params.id).role }}</strong> dans cette organisation.</p>
+      <v-container v-if="$route.params.type === 'user' || isAdmin">
+        <div v-if="$route.params.type ==='organization'">
+          <h3 class="headline mb-3">Permissions générales par rôle</h3>
+          <p>Le rôle <strong>{{ env.adminRole }}</strong> peut tout faire</p>
 
-        <v-data-table
-          :headers="[{text: 'Opération', sortable: false}].concat(organizationRoles.map(role => ({text: role, sortable: false, align: 'center'})))"
-          :items="Object.values(operations)"
-          hide-actions
-          class="elevation-1"
-        >
-          <template slot="items" slot-scope="props">
-            <tr>
-              <td>
-                {{ props.item.title }}
-              </td>
-              <td v-for="role in organizationRoles" :key="role">
-                <v-checkbox v-model="settings.operationsPermissions[props.item.id]" :value="role" label="" @change="save"/>
-              </td>
-            </tr>
-          </template>
-        </v-data-table>
-      </div>
+          <v-data-table
+            :headers="[{text: 'Opération', sortable: false}].concat(organizationRoles.map(role => ({text: role, sortable: false, align: 'center'})))"
+            :items="Object.values(operations)"
+            hide-actions
+            class="elevation-1"
+          >
+            <template slot="items" slot-scope="props">
+              <tr>
+                <td>
+                  {{ props.item.title }}
+                </td>
+                <td v-for="role in organizationRoles" :key="role">
+                  <v-checkbox v-model="settings.operationsPermissions[props.item.id]" :value="role" label="" @change="save"/>
+                </td>
+              </tr>
+            </template>
+          </v-data-table>
+        </div>
 
-      <h3 class="headline mt-3 mb-3">Licenses</h3>
-      <settings-licenses v-if="settings" :settings="settings" @license-updated="save"/>
-      <h3 class="headline mt-3 mb-3">Webhooks</h3>
-      <settings-webhooks v-if="settings" :settings="settings" @webhook-updated="save"/>
-    </v-container>
-    <v-jumbotron v-else height="auto">
-      <v-container fill-height>
-        <v-layout align-center>
-          <v-flex text-xs-center>
-            <div class="headline">Vous n'êtes pas authorisé à voir ou modifier le contenu de cette page. Si vous voulez changer les paramètres de votre organisation, veuillez contacter un administrateur de celle ci.</div>
-          </v-flex>
-        </v-layout>
+        <h3 class="headline mt-3 mb-3">Licenses</h3>
+        <settings-licenses v-if="settings" :settings="settings" @license-updated="save"/>
+        <h3 class="headline mt-3 mb-3">Webhooks</h3>
+        <settings-webhooks v-if="settings" :settings="settings" @webhook-updated="save"/>
       </v-container>
-    </v-jumbotron>
-  </v-layout>
-
+      <v-jumbotron v-else height="auto">
+        <v-container fill-height>
+          <v-layout align-center>
+            <v-flex text-xs-center>
+              <div class="headline">Vous n'êtes pas authorisé à voir ou modifier le contenu de cette page. Si vous voulez changer les paramètres de votre organisation, veuillez contacter un administrateur de celle ci.</div>
+            </v-flex>
+          </v-layout>
+        </v-container>
+      </v-jumbotron>
+    </v-layout>
+  </v-container>
 </template>
 
 <script>
@@ -52,7 +53,7 @@ import SettingsLicenses from '../../../components/SettingsLicenses.vue'
 import eventBus from '../../../event-bus'
 
 export default {
-  middleware: 'auth',
+  // middleware: 'auth',
   components: { SettingsWebhooks, SettingsLicenses },
   data: () => ({
     api: null,

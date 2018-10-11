@@ -11,7 +11,11 @@
       <v-spacer/>
 
       <v-toolbar-items>
-        <v-btn v-for="page in pages" :key="page" :to="localePath({name: page})" :class="routePrefix === page ? 'v-btn--active' : ''" flat color="primary">{{ $t(`pages.${page.replace('-', '')}.title`) }}</v-btn>
+        <v-btn v-for="page in pages" :key="page.prefix"
+               :to="localePath({name: page.prefix + '-id', params: {id: page.id}})"
+               :class="($route.name && $route.name.startsWith(page.prefix)) ? 'v-btn--active' : ''" flat color="primary">
+          {{ $t(`pages.${page.prefix}.title`) }}
+        </v-btn>
       </v-toolbar-items>
 
       <v-spacer/>
@@ -27,11 +31,11 @@
       </v-speed-dial>
 
     </v-toolbar>
+
     <v-content>
-      <v-container fluid>
-        <nuxt/>
-      </v-container>
+      <nuxt/>
     </v-content>
+
     <v-footer class="pa-3">
       <v-spacer/>
       <div>Powered by <a href="https://koumoul.com">Koumoul</a></div>
@@ -44,13 +48,13 @@
 export default {
   data: () => ({
     drawer: true,
-    pages: ['about', 'install', 'interoperate', 'user-guide']
-  }),
-  computed: {
-    routePrefix() {
-      return this.$route && this.$route.name && this.$route.name.split('-')[0]
-    }
-  }
+    pages: [
+      { prefix: 'about', id: 'overview' },
+      { prefix: 'install', id: 'install' },
+      { prefix: 'interoperate', id: 'applications' },
+      { prefix: 'user-guide', id: 'introduction' }
+    ]
+  })
 }
 
 </script>

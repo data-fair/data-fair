@@ -1,24 +1,15 @@
 <template lang="html">
-  <v-layout row>
-    <v-navigation-drawer clipped>
-      <v-subheader>{{ $t("pages.interoperate.title") }}</v-subheader>
-      <v-list>
-        <v-list-tile v-for="page in pages" :key="page" :to="localePath({name: 'interoperate-id', params: {id: page}})">
-          <v-list-tile-title>{{ $t(`pages.interoperate.${page.replace(/\-/g, '')}.title`) }}</v-list-tile-title>
-        </v-list-tile>
-      </v-list>
-    </v-navigation-drawer>
-    <v-container v-show="ready" class="doc-page" style="overflow-y:scroll;height:calc(100vh - 148px)" v-html="content"/>
-  </v-layout>
+  <doc-page :page="$route.params.id" :pages="pages" :content="content" prefix="interoperate"/>
 </template>
 
 <script>
+import DocPage from '../../components/DocPage'
 // Webpack way of requiring a bunch of modules at once
 const context = require.context('.', true, /\.md$/)
 
 export default {
+  components: { DocPage },
   data: () => ({
-    ready: false,
     pages: ['applications', 'services']
   }),
   computed: {
@@ -27,30 +18,6 @@ export default {
       const content = context(`./${this.$route.params.id}-${this.$i18n.locale}.md`) || context(`./${this.$route.params.id}-fr.md`)
       return content
     }
-  },
-  mounted() {
-    // Apply classes from vuetify to markdown generated HTML
-    const elemClasses = {
-      h2: ['display-1'],
-      h3: ['title', 'mb-4', 'mt-5'],
-      h4: ['subheading', 'mb-3', 'mt-4'],
-      p: ['body1'],
-      table: ['datatable', 'table', 'card']
-    }
-    Object.keys(elemClasses).forEach(k => {
-      this.$el.querySelectorAll(k).forEach(e => {
-        elemClasses[k].forEach(c => e.classList.add(c))
-      })
-    })
-    this.ready = true
   }
 }
 </script>
-
-<style lang="less">
-.doc-page {
-    pre {
-      white-space: pre-wrap;
-    }
-}
-</style>

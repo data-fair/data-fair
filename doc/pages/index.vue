@@ -1,6 +1,6 @@
 <template>
   <div>
-    <v-jumbotron src="./images/ThemePark.svg" height="500px">
+    <v-img src="./images/ThemePark.svg" height="500px">
       <v-container fill-height>
         <v-layout align-center>
           <v-flex text-xs-center>
@@ -11,7 +11,7 @@
           </v-flex>
         </v-layout>
       </v-container>
-    </v-jumbotron>
+    </v-img>
     <v-container justify-center>
       <v-flex md10 offset-md1>
         <blockquote class="blockquote display-1" style="text-align: center">{{ $t("pages.root.description") }}</blockquote>
@@ -20,10 +20,10 @@
         <v-flex v-for="(feature, $index) in features" :key="$index" md4 class="pa-5">
           <v-card height="100%">
             <v-card-title primary-title style="height:15%">
-              <h3 class="title" style="text-align: center">{{ $t(`pages.userguide.${feature.id}.title`) }}</h3>
+              <h3 class="title" style="text-align: center">{{ $t(`pages.user-guide.${feature.id}.title`) }}</h3>
             </v-card-title>
-            <v-card-media :src="feature.img" height="160px"/>
-            <v-card-text style="height:45%;min-height:80px">{{ $t(`pages.userguide.${feature.id}.description`) }}</v-card-text>
+            <v-img :src="feature.img" height="160px"/>
+            <v-card-text style="height:45%;min-height:80px">{{ $t(`pages.user-guide.${feature.id}.description`) }}</v-card-text>
 
             <v-card-actions style="height:10%">
               <v-spacer/>
@@ -38,7 +38,6 @@
 
 <script>
 export default {
-  layout: 'home',
   data: () => ({
     features: [{
       img: './images/file.png',
