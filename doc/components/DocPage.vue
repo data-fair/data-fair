@@ -30,7 +30,7 @@ export default {
       p: ['body1'],
       table: ['v-datatable', 'v-table', 'theme--light', 'elevation-1'],
       code: ['theme--light'],
-      'pre code': ['v-card', 'pt-3']
+      'pre code': ['v-card', 'pt-3', 'mb-4']
     }
     Object.keys(elemClasses).forEach(k => {
       this.$el.querySelectorAll(k).forEach(e => {
