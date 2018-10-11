@@ -80,7 +80,7 @@ services:
   #########################
 
   data-fair:
-    image: koumoul/data-fair:master
+    image: koumoul/data-fair:0
     restart: always
     volumes:
       - data-fair-data:/webapp/data
