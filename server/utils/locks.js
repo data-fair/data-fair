@@ -38,5 +38,5 @@ exports.acquire = async (db, _id) => {
 
 exports.release = async (db, _id) => {
   const locks = db.collection('locks')
-  await locks.remove({ _id, pid })
+  await locks.deleteOne({ _id, pid })
 }
