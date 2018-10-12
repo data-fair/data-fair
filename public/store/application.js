@@ -96,7 +96,7 @@ export default {
     async writeConfig({ state, commit, getters }, config) {
       try {
         await this.$axios.$put(getters.resourceUrl + '/configuration', config)
-        commit('setAny', { config })
+        commit('setAny', { config: { ...config } })
       } catch (error) {
         eventBus.$emit('notification', { error, msg: `Erreur pendant l'écriture de la configuration d'application:` })
       }
