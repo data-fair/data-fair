@@ -1,7 +1,5 @@
 Cette application expose des services Web et interopère avec d'autres applications du même type. Pour comprendre comment ce *DataFair* fonctionne, vous pouvez aller voir la [description technique](https://koumoul-dev.github.io/data-fair/about/technical-overview).
 
-La procédure d'installation décrite ici est une procédure simplifiée, qui ne couvre pas toutes les étapes de configuration d'un environnement de production comme le *reverse proxy* avec certificat SSL, le DNS ou l'équilibrage de charge.
-
 Nous proposons une installation simple grâce à l'utilisation de conteneurs [Docker](https://docker.com) basés sur [l'image](https://hub.docker.com/r/koumoul/data-fair/) que nous mettons à disposition. Le service peut être installé hors Docker, nous vous conseillons dans ce cas de regarder la documentation pour les développeurs directement dans le [répertoire du projet](https://github.com/koumoul-dev/data-fair).
 
 
@@ -42,7 +40,7 @@ Le service nécessite [Simple Directory](https://koumoul-dev.github.io/simple-di
 
 ## Installation recommandée
 
-Pour une installation avec docker-compose vous devez créer un fichier `docker-compose.yml`. Ci-dessous un exemple qui lance non seulement le service data-fair, mais aussi toutes ses dépendances et un proxy HTTP en frontal. Cet exemple est assez complet pour une mise en production, nous allons détailler son paramétrage dans les sections suivantes:
+Pour une installation avec docker-compose vous devez créer un fichier `docker-compose.yml`. Ci-dessous un exemple qui lance non seulement le service data-fair, mais aussi toutes ses dépendances et un proxy HTTP en frontal. Cet exemple peut être assez complet pour une mise en production simple sur une machine, nous allons détailler son paramétrage dans les sections suivantes:
 
 ```yaml
 version: '3'
