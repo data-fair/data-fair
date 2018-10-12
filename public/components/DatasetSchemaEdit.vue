@@ -10,7 +10,7 @@
         </div>
       </v-layout>
 
-      <v-container v-for="extension in extensions" :key="extension.key" fluid grid-list-md>
+      <v-container v-for="extension in extensions" :key="extension.key" fluid pa-0 grid-list-md>
         <br v-if="extension.key">
         <v-subheader v-if="extension.key && remoteServicesMap[extension.remoteService]">
           Extension: {{ remoteServicesMap[extension.remoteService].actions[extension.action].summary }} (service {{ remoteServicesMap[extension.remoteService].title }})

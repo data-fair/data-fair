@@ -1,10 +1,10 @@
 <template>
   <v-layout row>
     <!-- User: show stats -->
-    <div v-if="user" style="width:100vw">
+    <v-layout v-if="user" column>
       <v-subheader>{{ $t('pages.root.description') }}</v-subheader>
-      <h2 class="display-1">Statistiques</h2>
-      <v-flex md8 offset-md2>
+      <v-container fluid>
+        <h2 class="display-1">Statistiques</h2>
         <v-data-table v-if="stats" :headers="headers" :items="items" hide-actions class="elevation-1 mt-4">
           <template slot="items" slot-scope="props">
             <td>{{ props.item.name }}</td>
@@ -12,9 +12,9 @@
             <td>{{ (props.item.storage / 1000).toFixed(2) }} ko</td>
             <td>{{ props.item.applications }}</td>
           </template>
-        </v-data-table>
+      </v-data-table></v-container>
       </v-flex>
-    </div>
+    </v-layout>
     <!-- Anonymous: show jumbotron -->
     <v-flex v-else md6 offset-md3>
       <v-responsive>

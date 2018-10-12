@@ -1,5 +1,7 @@
 <template lang="html">
-  <search-files />
+  <v-container fluid>
+    <search-files />
+  </v-container>
 </template>
 
 <script>
