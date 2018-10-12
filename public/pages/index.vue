@@ -12,11 +12,11 @@
             <td>{{ (props.item.storage / 1000).toFixed(2) }} ko</td>
             <td>{{ props.item.applications }}</td>
           </template>
-      </v-data-table></v-container>
-      </v-flex>
+        </v-data-table>
+      </v-container>
     </v-layout>
     <!-- Anonymous: show jumbotron -->
-    <v-flex v-else md6 offset-md3>
+    <v-flex v-else-if="initialized" md6 offset-md3>
       <v-responsive>
         <v-container fill-height>
           <v-layout align-center>
@@ -48,7 +48,7 @@ export default {
     ]
   }),
   computed: {
-    ...mapState('session', ['user']),
+    ...mapState('session', ['user', 'initialized']),
     ...mapState(['env']),
     items() {
       if (!this.stats) return []
@@ -58,9 +58,12 @@ export default {
       return [{ name: 'Espace personnel', ...this.stats.user }].concat(orgasItems)
     }
   },
-  async mounted() {
-    if (this.user) {
-      this.stats = await this.$axios.$get(this.env.publicUrl + '/api/v1/stats')
+  watch: {
+    user: {
+      async handler(user) {
+        if (user) this.stats = await this.$axios.$get(this.env.publicUrl + '/api/v1/stats')
+      },
+      immediate: true
     }
   },
   methods: {
