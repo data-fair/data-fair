@@ -1,37 +1,49 @@
 <template lang="html">
   <v-container fluid grid-list-lg>
-    <v-layout row wrap>
-      <v-flex xs12 sm4>
-        <h2 class="title my-4" >Configuration</h2>
-        <iframe v-if="showConfigIframe" :src="applicationLink + '/config?embed=true'" :height="Math.max(height, 1000)" width="100%"/>
-        <v-form v-if="showForm" v-model="formValid">
-          <v-jsonschema-form :schema="schema" :model="editConfig" :options="{disableAll: !can('writeConfig')}" @error="error => eventBus.$emit('notification', {error})" />
-          <v-layout row>
-            <v-spacer/>
-            <v-btn color="primary" @click="writeConfig(editConfig)">Enregistrer</v-btn>
-          </v-layout>
-        </v-form>
-      </v-flex>
-      <v-flex xs12 md8>
-        <h2 class="title my-4" >
-          Aperçu
-          <v-btn flat icon color="primary" @click="refreshPreview">
-            <v-icon>refresh</v-icon>
-          </v-btn>
-        </h2>
-        <v-card v-if="showPreview">
-          <iframe :src="applicationLink + '?embed=true'" :height="Math.min(height - 100, 500)" width="100%"/>
-        </v-card>
-      </v-flex>
-    </v-layout>
+    <no-ssr>
+      <v-layout row wrap>
+        <v-flex xs12 sm4>
+          {{ editConfig }}
+          <h2 class="title my-4" >Configuration</h2>
+          <iframe v-if="showConfigIframe" :src="applicationLink + '/config?embed=true'" :height="Math.max(height, 1000)" width="100%"/>
+          <v-form v-if="showForm" v-model="formValid">
+            <v-jsonschema-form :schema="schema" :model="editConfig" :options="{disableAll: !can('writeConfig')}" @error="error => eventBus.$emit('notification', {error})" />
+            <v-layout row>
+              <v-spacer/>
+              <v-btn color="primary" @click="writeConfig(editConfig)">Enregistrer</v-btn>
+            </v-layout>
+          </v-form>
+        </v-flex>
+        <v-flex xs12 md8>
+          <h2 class="title my-4" >
+            Aperçu
+            <v-btn flat icon color="primary" @click="refreshPreview">
+              <v-icon>refresh</v-icon>
+            </v-btn>
+          </h2>
+          <v-card v-if="showPreview">
+            <iframe :src="applicationLink + '?embed=true'" :height="Math.min(height - 100, 500)" width="100%"/>
+          </v-card>
+        </v-flex>
+      </v-layout>
+    </no-ssr>
   </v-container>
 </template>
 
 <script>
+import Vue from 'vue'
 import { mapState, mapActions, mapGetters } from 'vuex'
 import VJsonschemaForm from '@koumoul/vuetify-jsonschema-form'
 import '@koumoul/vuetify-jsonschema-form/dist/main.css'
 import eventBus from '../../../event-bus.js'
+
+if (process.browser) {
+  const Swatches = require('vue-swatches').default
+  Vue.component('swatches', Swatches)
+  require('vue-swatches/dist/vue-swatches.min.css')
+  const Draggable = require('vuedraggable')
+  Vue.component('draggable', Draggable)
+}
 
 export default {
   components: { VJsonschemaForm },

@@ -88,7 +88,7 @@ export default {
         .map(field => ({
           text: field.title || field['x-originalName'],
           value: field.key,
-          sortable: (field.type === 'string' && field.format) || field.type === 'number' || field.type === 'integer',
+          sortable: field.type === 'string' || field.type === 'number' || field.type === 'integer',
           tooltip: field.description || (field['x-refersTo'] && this.vocabulary && this.vocabulary[field['x-refersTo']] && this.vocabulary[field['x-refersTo']].description)
         }))
     },
