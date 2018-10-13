@@ -32,17 +32,17 @@ exports.process = async function(app, dataset) {
     bboxPromise = esUtils.bboxAgg(es, dataset)
   }
 
-  // Try to calculate enum values for non-text strings
-  const nonTextProps = dataset.schema.filter(prop => prop.type === 'string' && prop.format === 'uri-reference')
+  // Try to calculate enum values
+  const nonTextProps = dataset.schema.filter(prop => prop['x-refersTo'] !== 'https://purl.org/geojson/vocab#geometry')
   if (nonTextProps.length) {
     result.schema = dataset.schema
-    const responses = await Promise.all(nonTextProps.map(p => esUtils.valuesAgg(es, dataset, { field: p.key, agg_size: 10 })))
+    const responses = await Promise.all(nonTextProps.map(p => esUtils.valuesAgg(es, dataset, { field: p.key, agg_size: '50' })))
     nonTextProps.forEach((prop, i) => {
       const aggResult = responses[i]
       prop['x-cardinality'] = aggResult.total_values
       const firstValue = aggResult.aggs[0]
       if (firstValue && firstValue.total === 1) prop['x-cardinality'] = dataset.count
-      if (aggResult.total_values <= 10) {
+      if (aggResult.total_values <= 50) {
         prop.enum = aggResult.aggs.map(a => a.value)
       }
     })

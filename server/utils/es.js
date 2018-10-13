@@ -139,55 +139,94 @@ exports.metricAgg = async (client, dataset, query) => {
 }
 
 exports.valuesAgg = async (client, dataset, query) => {
-  const aggSize = query.agg_size ? Number(query.agg_size) : 20
-  if (aggSize > 1000) throw createError(400, '"agg_size" cannot be more than 1000')
+  // nested grouping by a serie of fields
+  if (!query.field) throw createError(400, '"field" parameter is required')
+  const fields = query.field.split(';')
+  // matching properties from the schema
+  const props = fields.map(f => dataset.schema.find(p => p.key === f))
+  // sorting for each level
+  const sorts = query.sort ? query.sort.split(';') : ''
+  // number of agg results for each level
+  const aggSizes = query.agg_size ? query.agg_size.split(';').map(s => Number(s)) : []
+  for (let i = 0; i < fields.length; i++) {
+    if (!props[i]) throw createError(400, `"field" parameter references an unknown field ${fields[i]}`)
+    if (aggSizes[i] === undefined) aggSizes[i] = 20
+    if (aggSizes[i] > 1000) throw createError(400, '"agg_size" cannot be more than 1000')
+    if (sorts[i] === fields[i]) sorts[i] = '_key'
+    if (sorts[i] === '-' + fields[i]) sorts[i] = '-_key'
+    if (sorts[i] === 'count') sorts[i] = '_count'
+    if (sorts[i] === '-count') sorts[i] = '-_count'
+  }
+
+  // number of hit results inside the last level of aggregation
   const size = query.size ? Number(query.size) : 0
   if (size > 100) throw createError(400, '"size" cannot be more than 100')
-  if (!query.field) throw createError(400, '"field" parameter is required')
-  const prop = dataset.schema.find(p => p.key === query.field)
-  if (!prop) throw createError(400, '"field" parameter references an unknown field')
-  const esType = exports.esProperty(prop).type
-  if (esType === 'text') throw createError(400, 'values aggregation is not permitted on a full text field')
 
+  // Get a ES query to filter the aggregation results
   query.size = '0'
+  delete query.sort
   const esQuery = prepareQuery(dataset, query)
-  esQuery.aggs = {
-    card: {
+  let currentAggLevel = esQuery.aggs = {}
+  for (let i = 0; i < fields.length; i++) {
+    currentAggLevel.card = {
       cardinality: {
-        field: query.field,
+        field: fields[i],
         precision_threshold: 40000
       }
-    },
-    values: {
+    }
+    currentAggLevel.values = {
       terms: {
-        field: query.field,
-        size: aggSize
+        field: fields[i],
+        size: aggSizes[i]
       }
     }
+
+    currentAggLevel.values.terms.order = parseSort(sorts[i])
+    if (query.metric && query.metric_field) {
+      currentAggLevel.values.terms.order.push({ metric: 'desc' })
+      if (sorts[i] === undefined) sorts[i] = (query.metric && query.metricFields) ? '-metric,-count' : '-count'
+      currentAggLevel.values.aggs = {}
+      currentAggLevel.values.aggs.metric = {
+        [query.metric]: { field: query.metric_field }
+      }
+    }
+    currentAggLevel.values.terms.order.push({ _count: 'desc' })
+
+    // Prepare next nested level
+    if (fields[i + 1]) {
+      currentAggLevel.values.aggs = currentAggLevel.values.aggs || {}
+      currentAggLevel = currentAggLevel.values.aggs
+    }
   }
+
+  // Only include hits in the last aggregation level
   if (size) {
-    esQuery.aggs.values.aggs = {
-      topHits: { top_hits: { size, _source: esQuery._source } }
-    }
+    currentAggLevel.values.aggs = currentAggLevel.values.aggs || {}
+    // the sort instruction after sort for aggregation results is used to sort inner hits
+    const hitsSort = parseSort(sorts[fields.length])
+    // Also implicitly sort by score
+    hitsSort.push('_score')
+    // And lastly random order for natural distribution (mostly important for geo results)
+    hitsSort.push('_rand')
+    currentAggLevel.values.aggs.topHits = { top_hits: { size, _source: esQuery._source, sort: hitsSort } }
   }
-  if (query.metric && query.metric_field) {
-    esQuery.aggs.values.terms.order = { metric: 'desc' }
-    esQuery.aggs.values.aggs = esQuery.aggs.values.aggs || {}
-    esQuery.aggs.values.aggs.metric = {
-      [query.metric]: { field: query.metric_field }
-    }
-  }
+
   const esResponse = await client.search({ index: aliasName(dataset), body: esQuery })
-  return prepareValuesAggResponse(esResponse)
+  return prepareValuesAggResponse(esResponse, fields)
 }
 
-const prepareValuesAggResponse = (esResponse) => {
+const prepareValuesAggResponse = (esResponse, fields) => {
   const response = {
-    total: esResponse.hits.total,
-    total_values: esResponse.aggregations.card.value,
-    total_other: esResponse.aggregations.values.sum_other_doc_count
+    total: esResponse.hits.total
   }
-  response.aggs = esResponse.aggregations.values.buckets.map(b => {
+  recurseAggResponse(response, esResponse.aggregations)
+  return response
+}
+
+const recurseAggResponse = (response, aggRes) => {
+  response.total_values = aggRes.card.value
+  response.total_other = aggRes.values.sum_other_doc_count
+  response.aggs = aggRes.values.buckets.map(b => {
     const aggItem = {
       total: b.doc_count,
       value: b.key,
@@ -196,9 +235,11 @@ const prepareValuesAggResponse = (esResponse) => {
     if (b.metric) {
       aggItem.metric = b.metric.value
     }
+    if (b.values) {
+      recurseAggResponse(aggItem, b)
+    }
     return aggItem
   })
-  return response
 }
 
 exports.geoAgg = async (client, dataset, query) => {
@@ -225,7 +266,7 @@ exports.geoAgg = async (client, dataset, query) => {
     }
   }
   if (size) {
-    esQuery.aggs.geo.aggs.topHits = { top_hits: { size, _source: esQuery._source } }
+    esQuery.aggs.geo.aggs.topHits = { top_hits: { size, _source: esQuery._source, sort: esQuery.sort } }
   }
   if (query.metric && query.metric_field) {
     esQuery.aggs.geo.aggs.metric = {
@@ -255,6 +296,14 @@ const prepareGeoAggResponse = (esResponse) => {
   return response
 }
 
+const parseSort = (sortStr) => {
+  if (!sortStr) return []
+  return sortStr.split(',').map(s => {
+    if (s.indexOf('-') === 0) return { [s.slice(1)]: 'desc' }
+    else return { [s]: 'asc' }
+  })
+}
+
 const prepareQuery = (dataset, query) => {
   const esQuery = {}
 
@@ -272,14 +321,7 @@ const prepareQuery = (dataset, query) => {
   })
 
   // Sort by list of fields (prefixed by - for descending sort)
-  if (query.sort) {
-    esQuery.sort = query.sort.split(',').map(s => {
-      if (s.indexOf('-') === 0) return { [s.slice(1)]: 'desc' }
-      else return { [s]: 'asc' }
-    })
-  } else {
-    esQuery.sort = []
-  }
+  esQuery.sort = parseSort(query.sort)
   // Also implicitly sort by score
   esQuery.sort.push('_score')
   // And lastly random order for natural distribution (mostly important for geo results)
