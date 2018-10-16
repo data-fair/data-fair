@@ -29,7 +29,7 @@
       <v-spacer/><v-pagination :length="Math.ceil(datasets.count / size)" v-model="page" @input="$vuetify.goTo('.resourcesList', {offset: -20});refresh()"/>
     </v-layout>
 
-    <v-jumbotron v-if="!hasDatasets" height="auto">
+    <v-responsive v-if="!hasDatasets" height="auto">
       <v-container fill-height>
         <v-layout align-center>
           <v-flex text-xs-center>
@@ -38,7 +38,7 @@
           </v-flex>
         </v-layout>
       </v-container>
-    </v-jumbotron>
+    </v-responsive>
   </v-container>
 </template>
 

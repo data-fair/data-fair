@@ -19,7 +19,7 @@
     </v-layout>
     <!-- Anonymous: show jumbotron -->
     <v-flex v-else-if="initialized" md6 offset-xs3>
-      <v-jumbotron>
+      <v-responsive>
         <v-container fill-height>
           <v-layout align-center>
             <v-flex text-xs-center>
@@ -30,7 +30,7 @@
             </v-flex>
           </v-layout>
         </v-container>
-      </v-jumbotron>
+      </v-responsive>
     </v-flex>
   </v-layout>
 </template>

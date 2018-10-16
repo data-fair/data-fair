@@ -33,7 +33,7 @@
         <h3 class="headline mt-3 mb-3">Webhooks</h3>
         <settings-webhooks v-if="settings" :settings="settings" @webhook-updated="save"/>
       </v-container>
-      <v-jumbotron v-else height="auto">
+      <v-responsive v-else height="auto">
         <v-container fill-height>
           <v-layout align-center>
             <v-flex text-xs-center>
@@ -41,7 +41,7 @@
             </v-flex>
           </v-layout>
         </v-container>
-      </v-jumbotron>
+      </v-responsive>
     </v-layout>
   </v-container>
 </template>
