@@ -1,11 +1,11 @@
 module.exports = {
-  port: 5600,
-  publicUrl: 'http://localhost:5600',
-  wsPublicUrl: 'ws://localhost:5600',
+  port: 8080,
+  publicUrl: 'http://localhost:8080',
+  wsPublicUrl: 'ws://localhost:8080',
+  dataDir: '/data',
   directoryUrl: 'http://localhost:8080',
   privateDirectoryUrl: '',
   openapiViewerUrl: 'https://koumoul.com/openapi-viewer/',
-  dataDir: './data/' + (process.env.NODE_ENV || 'development'),
   pluginsDir: './plugins',
   mongoUrl: 'mongodb://localhost:27017/data-fair-' + (process.env.NODE_ENV || 'development'),
   map: {
@@ -74,7 +74,7 @@ module.exports = {
   analytics: {}, // a "modules" definition for @koumoul/vue-multianalytics
   i18n: {
     defaultLocale: 'fr',
-    locales: ['fr', 'en']
+    locales: [{ code: 'fr', iso: 'fr-FR' }, { code: 'en', iso: 'es-US' }]
   },
   theme: {
     logo: null,

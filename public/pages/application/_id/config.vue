@@ -3,7 +3,6 @@
     <no-ssr>
       <v-layout row wrap>
         <v-flex xs12 sm4>
-          {{ editConfig }}
           <h2 class="title my-4" >Configuration</h2>
           <iframe v-if="showConfigIframe" :src="applicationLink + '/config?embed=true'" :height="Math.max(height, 1000)" width="100%"/>
           <v-form v-if="showForm" v-model="formValid">

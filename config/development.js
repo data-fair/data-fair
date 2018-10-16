@@ -1,4 +1,8 @@
 module.exports = {
+  port: 5600,
+  publicUrl: 'http://localhost:5600',
+  wsPublicUrl: 'ws://localhost:5600',
+  dataDir: './data/development',
   openapiViewerUrl: 'http://localhost:5600/openapi-viewer/',
   defaultLimits: {
     totalStorage: 1024 * 1024 * 1024,

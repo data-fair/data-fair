@@ -17,7 +17,6 @@ module.exports = {
       }]]
     },
     publicPath: config.publicUrl + '/_nuxt/',
-    minimal: true,
     extend (config, { isServer, isDev, isClient }) {
       // Ignore all locale files of moment.js, those we want are loaded in plugins/moment.js
       config.plugins.push(new webpack.IgnorePlugin(/^\.\/locale$/, /moment$/))

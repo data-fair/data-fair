@@ -4,13 +4,16 @@ const unflatten = flatten.unflatten
 const acceptLangParser = require('accept-language-parser')
 const flatOpts = { delimiter: '_' }
 
-exports.locales = config.i18n.locales.map(l => ({ code: l }))
+exports.locales = config.i18n.locales.map(l => {
+  if (typeof l === 'string') return { code: l }
+  else return l
+})
 
 // Build a map of messages of this form
 // {fr: {msg1: 'libellé 1'}, en: {msg1: 'label 1'}}
 const messages = {}
-config.i18n.locales.forEach(l => {
-  messages[l] = require('./' + l)
+exports.locales.forEach(l => {
+  messages[l.code] = require('./' + l.code)
 })
 
 const flatMessages = flatten(messages, flatOpts)
