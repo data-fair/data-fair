@@ -31,7 +31,11 @@ const expectedKeys = new Set([
   'harvestDataset'
 ])
 exports.connectors.forEach(c => {
-  assert.deepStrictEqual(new Set(Object.keys(c)), expectedKeys, `The catalog connector ${c.key} does not have the expected exported properties (${[...expectedKeys].join(', ')}).`)
+  try {
+    assert.deepStrictEqual(new Set(Object.keys(c)), expectedKeys, `The catalog connector ${c.key} does not have the expected exported properties (${[...expectedKeys].join(', ')}).`)
+  } catch (err) {
+    console.error(err.message)
+  }
 })
 
 exports.init = async (catalogUrl) => {
