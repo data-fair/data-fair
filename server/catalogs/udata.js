@@ -18,7 +18,7 @@ exports.listDatasets = async (catalog, p) => {
   const params = {}
   if (catalog.organization) params.organization = catalog.organization.id
   const res = await axios.get(url.resolve(catalog.url, 'api/1/datasets'), { params, headers: { 'X-API-KEY': catalog.apiKey } })
-  return { count: res.data.total, results: res.data.data.map(d => ({ id: d.id, title: d.title, page: d.page, url: d.uri, resources: d.resources.map(r => ({id: r.id, format: r.format, mime: r.mime, title: r.title, url: r.url})), private: d.private })) }
+  return { count: res.data.total, results: res.data.data.map(d => ({ id: d.id, title: d.title, page: d.page, url: d.uri, resources: d.resources.map(r => ({ id: r.id, format: r.format, mime: r.mime, title: r.title, url: r.url })), private: d.private })) }
 }
 
 exports.harvestDataset = async (catalog, datasetId, req) => {
@@ -28,7 +28,7 @@ exports.harvestDataset = async (catalog, datasetId, req) => {
   for (const resource of resources) {
     await importResourceAsDataset(dataset, resource, catalog, req)
   }
-  return resources.map(r => ({id: r.id, format: r.format, mime: r.mime, title: r.title, url: r.url}))
+  return resources.map(r => ({ id: r.id, format: r.format, mime: r.mime, title: r.title, url: r.url }))
 }
 
 exports.suggestOrganizations = async (catalogUrl, q) => {
