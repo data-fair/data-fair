@@ -154,6 +154,8 @@ exports.valuesAgg = async (client, dataset, query) => {
     if (aggSizes[i] > 1000) throw createError(400, '"agg_size" cannot be more than 1000')
     if (sorts[i] === fields[i]) sorts[i] = '_key'
     if (sorts[i] === '-' + fields[i]) sorts[i] = '-_key'
+    if (sorts[i] === 'key') sorts[i] = '_key'
+    if (sorts[i] === '-key') sorts[i] = '-_key'
     if (sorts[i] === 'count') sorts[i] = '_count'
     if (sorts[i] === '-count') sorts[i] = '-_count'
   }

@@ -66,7 +66,7 @@
           Intégration de l'application dans un site
         </v-card-title>
         <v-card-text v-if="showIntegrationDialog">
-          Pour intégrer cette application dans un site pour pouvez copier le code suivant ou un code similaire dans le contenu HTML de votre site.
+          Pour intégrer cette application dans un site vous pouvez copier le code suivant ou un code similaire dans le contenu HTML de votre site.
           <br>
           <pre>
 &lt;iframe :src="{{ applicationLink }}?embed=true" width="100%" height="500px" style="background-color: transparent; border: none;"/&gt;
