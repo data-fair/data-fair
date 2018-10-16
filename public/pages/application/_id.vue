@@ -43,6 +43,13 @@
             <v-list-tile-title>Accéder à l'application</v-list-tile-title>
           </v-list-tile>
 
+          <v-list-tile v-if="can('writeConfig')" @click="showIntegrationDialog = true">
+            <v-list-tile-avatar>
+              <v-icon color="primary">code</v-icon>
+            </v-list-tile-avatar>
+            <v-list-tile-title>Intégrer dans un site</v-list-tile-title>
+          </v-list-tile>
+
           <v-list-tile v-if="can('delete')" @click="showDeleteDialog = true">
             <v-list-tile-avatar>
               <v-icon color="warning">delete</v-icon>
@@ -52,6 +59,28 @@
         </v-list>
       </v-menu>
     </div>
+
+    <v-dialog v-model="showIntegrationDialog">
+      <v-card>
+        <v-card-title primary-title>
+          Intégration de l'application dans un site
+        </v-card-title>
+        <v-card-text v-if="showIntegrationDialog">
+          Pour intégrer cette application dans un site pour pouvez copier le code suivant ou un code similaire dans le contenu HTML de votre site.
+          <br>
+          <pre>
+&lt;iframe :src="{{ applicationLink }}?embed=true" width="100%" height="500px" style="background-color: transparent; border: none;"/&gt;
+          </pre>
+          <br>
+          Résultat:
+          <iframe :src="applicationLink + '?embed=true'" width="100%" height="500px" style="background-color: transparent; border: none;"/>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer/>
+          <v-btn flat @click="showIntegrationDialog = false">Ok</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
 
     <v-dialog v-model="showDeleteDialog" max-width="500">
       <v-card>
@@ -76,7 +105,8 @@ import { mapState, mapActions, mapGetters } from 'vuex'
 
 export default {
   data: () => ({
-    showDeleteDialog: false
+    showDeleteDialog: false,
+    showIntegrationDialog: false
   }),
   computed: {
     ...mapState(['env']),
