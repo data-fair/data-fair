@@ -157,3 +157,15 @@ router.delete('/:catalogId', permissions.middleware('delete', 'admin'), asyncWra
 router.get('/:catalogId/api-docs.json', permissions.middleware('readApiDoc', 'read'), (req, res) => {
   res.send(req.resourceApiDoc)
 })
+
+// retrieve a catalog by its id
+router.get('/:catalogId/datasets', permissions.middleware('readDatasets', 'read'), async(req, res, next) => {
+  const datasets = await catalogs.listDatasets(req.catalog, null)
+  res.status(200).json(datasets)
+})
+
+// retrieve a catalog by its id
+router.post('/:catalogId/datasets/:datasetId', permissions.middleware('harvestDataset', 'write'), async(req, res, next) => {
+  const resources = await catalogs.harvestDataset(req.catalog, req.params.datasetId, req)
+  res.status(200).json(resources)
+})

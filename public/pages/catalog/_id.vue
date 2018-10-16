@@ -5,6 +5,10 @@
         Description
         <v-icon>toc</v-icon>
       </v-tab>
+      <v-tab :nuxt="true" :to="`/catalog/${catalog.id}/datasets`">
+        Jeux de données
+        <v-icon>toc</v-icon>
+      </v-tab>
       <!-- <v-tab v-if="can('getPermissions')" :nuxt="true" :to="`/catalog/${catalog.id}/permissions`">
         Permissions
         <v-icon>security</v-icon>

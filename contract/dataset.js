@@ -110,6 +110,17 @@ module.exports = {
         }
       }
     },
+    'remoteFile': {
+      'type': 'object',
+      'additionalProperties': true, // for properties such as catalogId or resourceId that are specific to kind of remote resources
+      'required': ['url'],
+      'properties': {
+        'url': {
+          'type': 'string',
+          'description': 'Url from where the file can be fetched'
+        }
+      }
+    },
     'createdBy': eventBy,
     'updatedBy': eventBy,
     'createdAt': {
@@ -130,7 +141,7 @@ module.exports = {
     owner,
     'status': {
       'type': 'string',
-      'enum': ['uploaded', 'loaded', 'analyzed', 'schematized', 'indexed', 'extended', 'finalized', 'error'],
+      'enum': ['remote', 'uploaded', 'loaded', 'analyzed', 'schematized', 'indexed', 'extended', 'finalized', 'error'],
       'description': 'The processing steps of a dataset.'
     },
     'schema': {

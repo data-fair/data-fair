@@ -26,7 +26,9 @@ const expectedKeys = new Set([
   'publishDataset',
   'publishApplication',
   'deleteDataset',
-  'deleteApplication'
+  'deleteApplication',
+  'listDatasets',
+  'harvestDataset'
 ])
 exports.connectors.forEach(c => {
   assert.deepStrictEqual(new Set(Object.keys(c)), expectedKeys, `The catalog connector ${c.key} does not have the expected exported properties (${[...expectedKeys].join(', ')}).`)
@@ -46,15 +48,31 @@ exports.init = async (catalogUrl) => {
   }
 }
 
+exports.listDatasets = async (catalog, params) => {
+  const connector = exports.connectors.find(c => c.key === catalog.type)
+  if (!connector) throw createError(404, 'No connector found for catalog type ' + catalog.type)
+  if (!connector.listDatasets) throw createError(501, `The connector for the catalog type ${catalog.type} cannot do this action`)
+  return connector.listDatasets(catalog, params)
+}
+
+exports.harvestDataset = async (catalog, datasetId, req) => {
+  const connector = exports.connectors.find(c => c.key === catalog.type)
+  if (!connector) throw createError(404, 'No connector found for catalog type ' + catalog.type)
+  if (!connector.listDatasets) throw createError(501, `The connector for the catalog type ${catalog.type} cannot do this action`)
+  return connector.harvestDataset(catalog, datasetId, req)
+}
+
 exports.suggestOrganizations = async (type, url, q) => {
   const connector = exports.connectors.find(c => c.key === type)
   if (!connector) throw createError(404, 'No connector found for catalog type ' + type)
+  if (!connector.suggestOrganizations) throw createError(501, `The connector for the catalog type ${type} cannot do this action`)
   return connector.suggestOrganizations(url, q)
 }
 
 exports.suggestDatasets = async (type, url, q) => {
   const connector = exports.connectors.find(c => c.key === type)
   if (!connector) throw createError(404, 'No connector found for catalog type ' + type)
+  if (!connector.suggestDatasets) throw createError(501, `The connector for the catalog type ${type} cannot do this action`)
   return connector.suggestDatasets(url, q)
 }
 
@@ -118,6 +136,7 @@ exports.processPublications = async function(app, type, resource) {
   try {
     const connector = exports.connectors.find(c => c.key === catalog.type)
     if (!connector) throw createError(404, 'No connector found for catalog type ' + catalog.type)
+    if (!connector.publishApplication) throw createError(501, `The connector for the catalog type ${type} cannot do this action`)
     let res
     if (type === 'dataset' && processedPublication.status === 'waiting') res = await connector.publishDataset(catalog, resource, processedPublication)
     if (type === 'application' && processedPublication.status === 'waiting') {

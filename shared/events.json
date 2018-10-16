@@ -63,6 +63,14 @@
     "publication": {
       "icon": "publish",
       "text": "Publication du jeu de données vers un catalogue effectuée"
+    },
+    "download-start": {
+      "icon": "file_download",
+      "text": "Début du chargement des données depuis une adresse distante"
+    },
+    "download-end": {
+      "icon": "file_download",
+      "text": "Le fichier de données est chargé et est prêt à être indexé"
     }
   },
   "application": {
