@@ -121,6 +121,10 @@ module.exports = {
     url: 'https://koumoul.com/s/observatoire-entreprises/',
     public: true,
     servicesFilters: [{ 'api-id': ['geocoder-koumoul'] }, { 'api-id': ['tileserver'] }, { 'api-id': ['sirene-koumoul'] }]
+  }, {
+    title: 'Graphiques simples (bêta)',
+    url: 'https://koumoul-dev.github.io/data-fair-charts/0.x/',
+    public: true
   }],
   remoteServices: [{
     title: 'Données Entreprises',
