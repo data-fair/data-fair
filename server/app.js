@@ -22,6 +22,11 @@ const session = require('@koumoul/sd-express')({
 
 const app = express()
 
+app.use((req, res, next) => {
+  if (!req.app.get('api-ready')) res.status(503).send('Service indisponible pour cause de maintenance.')
+  else next()
+})
+
 if (process.env.NODE_ENV === 'development') {
   app.set('json spaces', 2)
 
@@ -63,11 +68,10 @@ const wss = new WebSocket.Server({ server })
 
 // Run app and return it in a promise
 exports.run = async () => {
+  server.listen(config.port)
+  await eventToPromise(server, 'listening')
+
   await upgrade()
-  app.use(session.decode)
-  app.use(session.loginCallback)
-  const nuxt = await require('./nuxt')()
-  app.use(nuxt)
   const { db, client } = await dbUtils.init()
   app.set('db', db)
   app.set('mongoClient', client)
@@ -77,8 +81,18 @@ exports.run = async () => {
   app.publish = await wsUtils.init(wss, db)
   await locksUtils.init(db)
   workers.start(app)
-  server.listen(config.port)
-  await eventToPromise(server, 'listening')
+  app.set('api-ready', true)
+
+  app.use((req, res, next) => {
+    if (!req.app.get('ui-ready')) res.status(503).send('Service indisponible pour cause de maintenance.')
+    else next()
+  })
+  app.use(session.decode)
+  app.use(session.loginCallback)
+  const nuxt = await require('./nuxt')()
+  app.use(nuxt)
+  app.set('ui-ready', true)
+
   return app
 }
 
