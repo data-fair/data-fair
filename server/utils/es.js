@@ -93,9 +93,7 @@ exports.initDatasetIndex = async (client, dataset) => {
 exports.updateDatasetMapping = async (client, dataset) => {
   const index = aliasName(dataset)
   const body = exports.indexDefinition(dataset).mappings.line
-  // console.log('update mapping', body)
-  const res = await client.indices.putMapping({ index, type: 'line', body })
-  console.log(res)
+  await client.indices.putMapping({ index, type: 'line', body })
 }
 
 exports.delete = async (client, dataset) => {
