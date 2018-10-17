@@ -23,7 +23,7 @@ class IndexStream extends Writable {
     } else {
       this.body.push({ index: { _index: this.options.indexName, _type: 'line' } })
       // Add a pseudo-random number for random sorting (more natural distribution)
-      item._rand = randomSeed.create(item._i)(10000000)
+      item._rand = randomSeed.create(item._i)(1000000)
       this.body.push(item)
       this.bulkChars += JSON.stringify(item).length
     }
