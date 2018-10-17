@@ -8,6 +8,7 @@ module.exports = async () => {
     return require('http-proxy-middleware')({ target: 'http://localhost:3000' })
   } else {
     // Prepare nuxt for rendering and serving UI
+    nuxtConfig.dev = false
     const nuxt = new Nuxt(nuxtConfig)
     await new Builder(nuxt).build()
     return async (req, res, next) => {
