@@ -193,7 +193,7 @@ class PrepareOutputStream extends Transform {
     this.extensionKey = options.extensionKey
     const action = options.action
     this.selectFields = options.selectFields || []
-    // The field in the output that containes the line identifier of the bulk request
+    // The field in the output that contains the line identifier of the bulk request
     // same as input if not present
     this.idOutput = action.output.find(output => output.concept === 'http://schema.org/identifier') ||
      action.input.find(input => input.concept === 'http://schema.org/identifier')
