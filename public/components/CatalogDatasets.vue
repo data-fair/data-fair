@@ -62,10 +62,10 @@ export default {
       this.loading = true
       try {
         const resources = await this.$axios.$post(this.env.publicUrl + '/api/v1/catalogs/' + this.$route.params.id + '/datasets/' + dataset.id)
+        this.$set(dataset, 'harvestableResources', resources)
       } catch (error) {
         eventBus.$emit('notification', { error, msg: `Erreur pendant l'import du jeu de données` })
       }
-      this.$set(dataset, 'harvestableResources', resources)
       this.loading = false
     }
   }
