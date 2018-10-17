@@ -27,7 +27,8 @@ function prepareMapping(action, schema, extensionKey, selectFields) {
     )
     if (field) return [field.key, input.name]
   }).filter(i => i)
-  const idInput = action.input.find(input => input.concept === 'http://schema.org/identifier').name
+  const idInput = (action.input.find(input => input.concept === 'http://schema.org/identifier'))
+  if (!idInput) throw new Error('A field with concept "http://schema.org/identifier" is required and missing in the remote service action', action)
   return (item) => {
     const mappedItem = {}
     mapping.forEach(m => {
@@ -37,7 +38,7 @@ function prepareMapping(action, schema, extensionKey, selectFields) {
     // remember a hash of the input.. so that we can store it alongside the result and use this to reapply
     // extension to a new version of the index without using the remote service
     const h = hash(mappedItem)
-    mappedItem[idInput] = item.id
+    mappedItem[idInput.name] = item.id
     return [mappedItem, h]
   }
 }
@@ -192,7 +193,10 @@ class PrepareOutputStream extends Transform {
     this.extensionKey = options.extensionKey
     const action = options.action
     this.selectFields = options.selectFields || []
-    this.idOutput = action.output.find(output => output.concept === 'http://schema.org/identifier').name
+    // The field in the output that containes the line identifier of the bulk request
+    // same as input if not present
+    this.idOutput = action.output.find(output => output.concept === 'http://schema.org/identifier') ||
+     action.input.find(input => input.concept === 'http://schema.org/identifier')
   }
   _transform(chunk, encoding, callback) {
     let item
@@ -206,7 +210,7 @@ class PrepareOutputStream extends Transform {
       .reduce((a, itemKey) => { a[itemKey] = item[itemKey]; return a }, {})
 
     const mappedItem = { doc: { [this.extensionKey]: selectedItem } }
-    mappedItem.id = item[this.idOutput]
+    mappedItem.id = item[this.idOutput.name]
     selectedItem._hash = this.hashes[mappedItem.id]
     delete this.hashes[mappedItem.id]
     callback(null, mappedItem)
