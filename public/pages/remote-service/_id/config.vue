@@ -74,7 +74,7 @@ export default {
     }
   },
   created() {
-    this.remoteService.apiKey = this.remoteService.apiKey || {}
+    this.remoteService.apiKey = this.remoteService.apiKey || { in: 'header' }
     this.setRestrictions()
   },
   methods: {

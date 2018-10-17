@@ -53,7 +53,7 @@ module.exports = {
     apiKey: {
       type: 'object',
       additionalProperties: false,
-      required: ['in', 'name'],
+      required: ['in'],
       properties: {
         in: {
           type: 'string',
