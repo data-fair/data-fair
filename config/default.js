@@ -1,5 +1,6 @@
 module.exports = {
   port: 8080,
+  listenWhenReady: false,
   publicUrl: 'http://localhost:8080',
   wsPublicUrl: 'ws://localhost:8080',
   dataDir: '/data',
@@ -44,7 +45,7 @@ module.exports = {
   },
   workers: {
     concurrency: 2,
-    pollingInterval: 1000
+    pollingInterval: 100
   },
   headers: {
     storedBytesLimit: 'X-TaxMan-RateLimit-Limit-StoreBytes',

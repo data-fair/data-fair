@@ -43,5 +43,9 @@ module.exports = {
       __format: 'json'
     }
   },
-  browserLogLevel: 'BROWER_LOG_LEVEL'
+  browserLogLevel: 'BROWSER_LOG_LEVEL',
+  listenWhenReady: {
+    __name: 'LISTEN_WHEN_READY',
+    __format: 'json'
+  }
 }

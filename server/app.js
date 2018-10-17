@@ -68,8 +68,10 @@ const wss = new WebSocket.Server({ server })
 
 // Run app and return it in a promise
 exports.run = async () => {
-  server.listen(config.port)
-  await eventToPromise(server, 'listening')
+  if (!config.listenWhenReady) {
+    server.listen(config.port)
+    await eventToPromise(server, 'listening')
+  }
 
   await upgrade()
   const { db, client } = await dbUtils.init()
@@ -93,6 +95,10 @@ exports.run = async () => {
   app.use(nuxt)
   app.set('ui-ready', true)
 
+  if (config.listenWhenReady) {
+    server.listen(config.port)
+    await eventToPromise(server, 'listening')
+  }
   return app
 }
 
