@@ -433,7 +433,7 @@ router.get('/:datasetId/full', permissions.middleware('downloadFullData', 'read'
   res.setHeader('Content-type', 'text/csv')
   await pump(
     datasetUtils.readStream(req.dataset),
-    extensions.extendStream({ db: req.app.get('db'), esClient: req.app.get('es'), dataset: req.dataset }),
+    extensions.preserveExtensionStream({ db: req.app.get('db'), esClient: req.app.get('es'), dataset: req.dataset }),
     new Transform({ transform(chunk, encoding, callback) {
       const flatChunk = flatten(chunk)
       callback(null, req.dataset.schema.map(field => flatChunk[field.key]))

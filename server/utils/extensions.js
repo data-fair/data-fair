@@ -11,7 +11,6 @@ const hash = require('object-hash')
 const pump = util.promisify(require('pump'))
 const flatten = require('flat')
 const turf = require('turf')
-const randomSeed = require('random-seed')
 const es = require('./es')
 const esStreams = require('./es-streams')
 const geoUtils = require('./geo')
@@ -65,7 +64,7 @@ class PrepareInputStream extends Transform {
 
 // Transform stream fetching extensions data from previous index
 // used when re-indexing
-class ExtendStream extends Transform {
+class PreserveExtensionStream extends Transform {
   constructor(options) {
     super({ objectMode: true })
     this.options = options
@@ -122,7 +121,7 @@ class ExtendStream extends Transform {
   }
 }
 
-exports.extendStream = (options) => new ExtendStream(options)
+exports.preserveExtensionStream = (options) => new PreserveExtensionStream(options)
 
 // Input stream scanning a full ES index using the scroll api
 class ESInputStream extends Readable {
@@ -318,16 +317,15 @@ class CalculatedExtension extends Transform {
       return callback(err)
     }
 
-    // Add a pseudo-random number for random sorting (more natural distribution)
-    doc._rand = randomSeed.create(item.id)(1000000)
-    doc._i = item.doc._i
-
+    // Remove unchanged properties (we only generate a patch)
     const unflattenedItem = flatten.unflatten(item.doc)
     Object.keys(doc).forEach(key => {
       if (JSON.stringify(doc[key]) === JSON.stringify(unflattenedItem[key]) && key !== '_i') {
         delete doc[key]
       }
     })
+
+    doc._i = item.doc._i
 
     callback(null, { id: item.id, doc })
   }

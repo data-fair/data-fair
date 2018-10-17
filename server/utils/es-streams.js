@@ -1,5 +1,6 @@
 const Writable = require('stream').Writable
 const config = require('config')
+const randomSeed = require('random-seed')
 
 class IndexStream extends Writable {
   constructor(options) {
@@ -14,12 +15,15 @@ class IndexStream extends Writable {
     if (this.options.stats) this.options.stats.count += 1
 
     if (this.options.updateMode) {
-      if (Object.keys(item.doc).length === 0) return callback()
+      const keys = Object.keys(item.doc)
+      if (keys.length === 0 || (keys.length === 1 && keys[0] === '_i')) return callback()
       this.body.push({ update: { _index: this.options.indexName, _type: 'line', _id: item.id, retry_on_conflict: 3 } })
       this.body.push({ doc: item.doc })
       this.bulkChars += JSON.stringify(item.doc).length
     } else {
       this.body.push({ index: { _index: this.options.indexName, _type: 'line' } })
+      // Add a pseudo-random number for random sorting (more natural distribution)
+      item._rand = randomSeed.create(item._i)(10000000)
       this.body.push(item)
       this.bulkChars += JSON.stringify(item).length
     }

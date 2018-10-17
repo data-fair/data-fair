@@ -16,6 +16,8 @@ exports.filter = { $or: [
 ] }
 
 exports.process = async function(app, dataset) {
+  const debug = require('debug')(`worker:finalizer:${dataset.id}`)
+
   const db = app.get('db')
   const es = app.get('es')
   const collection = db.collection('datasets')
@@ -23,33 +25,33 @@ exports.process = async function(app, dataset) {
   const geometry = geoUtils.schemaHasGeometry(dataset.schema)
 
   // Calculate fields after indexing and extension as we might depend on all fields
+  debug(`Call extendCalculated() with geopoint ${geopoint} and geometry ${geometry}`)
   await extensionsUtils.extendCalculated(app, dataset, geopoint, geometry)
+  debug('extendCalculated ok')
 
   const result = { status: 'finalized' }
 
-  let bboxPromise
-  if (geopoint || geometry) {
-    bboxPromise = esUtils.bboxAgg(es, dataset)
-  }
-
   // Try to calculate enum values
-  const nonTextProps = dataset.schema.filter(prop => prop['x-refersTo'] !== 'https://purl.org/geojson/vocab#geometry')
-  if (nonTextProps.length) {
-    result.schema = dataset.schema
-    const responses = await Promise.all(nonTextProps.map(p => esUtils.valuesAgg(es, dataset, { field: p.key, agg_size: '50' })))
-    nonTextProps.forEach((prop, i) => {
-      const aggResult = responses[i]
-      prop['x-cardinality'] = aggResult.total_values
-      const firstValue = aggResult.aggs[0]
-      if (firstValue && firstValue.total === 1) prop['x-cardinality'] = dataset.count
-      if (aggResult.total_values <= 50) {
-        prop.enum = aggResult.aggs.map(a => a.value)
-      }
-    })
+  const nonGeometryProps = dataset.schema.filter(prop => prop['x-refersTo'] !== 'https://purl.org/geojson/vocab#geometry')
+  if (nonGeometryProps.length) result.schema = dataset.schema
+  for (let prop of nonGeometryProps) {
+    debug(`Calculate cardinality of field ${prop.key}`)
+    const aggResult = await esUtils.valuesAgg(es, dataset, { field: prop.key, agg_size: '50' })
+    prop['x-cardinality'] = aggResult.total_values
+    debug(`Cardinality of field ${prop.key} is ${prop['x-cardinality']}`)
+
+    const firstValue = aggResult.aggs[0]
+    if (firstValue && firstValue.total === 1) prop['x-cardinality'] = dataset.count
+    if (aggResult.total_values <= 50) {
+      debug(`Set enum of field ${prop.key}`)
+      prop.enum = aggResult.aggs.map(a => a.value)
+    }
   }
 
-  if (bboxPromise) {
-    result.bbox = dataset.bbox = (await bboxPromise).bbox
+  if (geopoint || geometry) {
+    debug('calculate bounding ok')
+    result.bbox = dataset.bbox = (await esUtils.bboxAgg(es, dataset)).bbox
+    debug('bounding box ok', result.bbox)
   } else {
     result.bbox = null
   }
@@ -57,4 +59,5 @@ exports.process = async function(app, dataset) {
   result.finalizedAt = (new Date()).toISOString()
   Object.assign(dataset, result)
   await collection.updateOne({ id: dataset.id }, { $set: result })
+  debug('done')
 }
