@@ -31,9 +31,7 @@
 </template>
 
 <script>
-// import SearchProgress from './SearchProgress.vue'
-// import SearchFilters from './SearchFilters.vue'
-// const marked = require('marked')
+import eventBus from '../event-bus'
 const { mapState } = require('vuex')
 
 export default {
@@ -53,12 +51,20 @@ export default {
   methods: {
     async refresh() {
       this.loading = true
-      this.datasets = await this.$axios.$get(this.env.publicUrl + '/api/v1/catalogs/' + this.$route.params.id + '/datasets')
+      try {
+        this.datasets = await this.$axios.$get(this.env.publicUrl + '/api/v1/catalogs/' + this.$route.params.id + '/datasets')
+      } catch (error) {
+        eventBus.$emit('notification', { error, msg: `Erreur pendant la récupération des jeux de données du catalogue` })
+      }
       this.loading = false
     },
     async harvest(dataset) {
       this.loading = true
-      const resources = await this.$axios.$post(this.env.publicUrl + '/api/v1/catalogs/' + this.$route.params.id + '/datasets/' + dataset.id)
+      try {
+        const resources = await this.$axios.$post(this.env.publicUrl + '/api/v1/catalogs/' + this.$route.params.id + '/datasets/' + dataset.id)
+      } catch (error) {
+        eventBus.$emit('notification', { error, msg: `Erreur pendant l'import du jeu de données` })
+      }
       this.$set(dataset, 'harvestableResources', resources)
       this.loading = false
     }
