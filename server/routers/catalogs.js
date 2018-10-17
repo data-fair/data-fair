@@ -159,13 +159,13 @@ router.get('/:catalogId/api-docs.json', permissions.middleware('readApiDoc', 're
 })
 
 // retrieve a catalog by its id
-router.get('/:catalogId/datasets', permissions.middleware('readDatasets', 'read'), async(req, res, next) => {
+router.get('/:catalogId/datasets', permissions.middleware('readDatasets', 'read'), asyncWrap(async(req, res, next) => {
   const datasets = await catalogs.listDatasets(req.catalog, null)
   res.status(200).json(datasets)
-})
+}))
 
 // retrieve a catalog by its id
-router.post('/:catalogId/datasets/:datasetId', permissions.middleware('harvestDataset', 'write'), async(req, res, next) => {
+router.post('/:catalogId/datasets/:datasetId', permissions.middleware('harvestDataset', 'write'), asyncWrap(async(req, res, next) => {
   const resources = await catalogs.harvestDataset(req.catalog, req.params.datasetId, req)
   res.status(200).json(resources)
-})
+}))
