@@ -139,6 +139,7 @@ router.patch('/:datasetId', permissions.middleware('writeDescription', 'write'),
     else patch.status = 'loaded'
   }
 
+  // Retry failed publications
   if (!patch.publications) {
     const failedPublications = (req.dataset.publications || []).filter(p => p.status === 'error')
     if (failedPublications.length) {
@@ -148,12 +149,18 @@ router.patch('/:datasetId', permissions.middleware('writeDescription', 'write'),
   }
 
   if (patch.schema) {
-    if (JSON.stringify(esUtils.indexDefinition(patch)) !== JSON.stringify(esUtils.indexDefinition(req.dataset))) {
-      // Back to schematized state if schema changed in a manner significant for ES indexing
+    try {
+      await esUtils.updateDatasetMapping(req.app.get('es'), { id: req.dataset.id, schema: patch.schema })
+      if (patch.extensions) {
+        // Back to indexed state if schema did not change in significant manner, but extensions did
+        patch.status = 'indexed'
+      } else {
+        // Extended otherwise, to re-calculate geometries and stuff
+        patch.status = 'extended'
+      }
+    } catch (err) {
+      console.log(`Updating the mapping for dataset ${req.dataset.id} failed. We have to trigger full re-indexation.`, err)
       patch.status = 'schematized'
-    } else if (patch.extensions && patch.extensions.find(e => e.forceNext)) {
-      // Back to indexed state if schema did not change in significant manner, but one extension is forced
-      patch.status = 'indexed'
     }
   }
 

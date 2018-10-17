@@ -87,6 +87,17 @@ exports.initDatasetIndex = async (client, dataset) => {
   return tempId
 }
 
+// this method will routinely throw errors
+// we just try in case elasticsearch considers the new mapping compatible
+// so that we might optimize and reindex only when necessary
+exports.updateDatasetMapping = async (client, dataset) => {
+  const index = aliasName(dataset)
+  const body = exports.indexDefinition(dataset).mappings.line
+  // console.log('update mapping', body)
+  const res = await client.indices.putMapping({ index, type: 'line', body })
+  console.log(res)
+}
+
 exports.delete = async (client, dataset) => {
   await client.indices.deleteAlias({ name: aliasName(dataset), index: '_all' })
   await client.indices.delete({ index: `${indexPrefix(dataset)}-*` })

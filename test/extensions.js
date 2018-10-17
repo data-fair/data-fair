@@ -113,6 +113,11 @@ other,unknown address
   res = await ax.patch('/api/v1/datasets/dataset', { extensions: [{ active: true, remoteService: remoteServiceId, action: 'postCoords', select: ['lat'] }] })
   t.is(res.status, 200)
   await workers.hook('finalizer')
+
+  // DEPRECATED TEST
+  // The logic is changed to optimize re-indexations
+  // Removing a select does not break putMapping compatibility, so the indexing is not run again
+  /*
   // A search to check that only lat is present now
   res = await ax.get(`/api/v1/datasets/dataset/lines`)
   t.is(res.data.total, 3)
@@ -141,7 +146,8 @@ other,unknown address
   t.falsy(existingResult[extensionKey + '.lon'])
   dataset = (await ax.get('/api/v1/datasets/dataset')).data
   t.truthy(dataset.schema.find(field => field.key === extensionKey + '.lat'))
-  t.falsy(dataset.schema.find(field => field.key === extensionKey + '.lon'))
+  // putMapping was not broken so we don't expect field to disappear in ES
+  // t.falsy(dataset.schema.find(field => field.key === extensionKey + '.lon')) */
 
   // Download extended file
   res = await ax.get(`/api/v1/datasets/dataset/full`)
