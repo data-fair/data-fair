@@ -108,5 +108,10 @@ router.all('/:applicationId*', setResource, permissions.middleware('readDescript
     },
     transform: () => replaceStream('%APPLICATION%', JSON.stringify(req.application))
   }]
+
+  // We never transmit authentication
+  delete req.headers.authorization
+  delete req.headers.cookie
+
   requestProxy(options)(req, res, next)
 }))

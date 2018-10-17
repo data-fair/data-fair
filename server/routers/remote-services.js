@@ -9,7 +9,6 @@ const remoteServiceAPIDocs = require('../../contract/remote-service-api-docs')
 const matchstick = require('matchstick')
 const mongoEscape = require('mongo-escape')
 const config = require('config')
-const { URL } = require('url')
 
 const ajv = require('ajv')()
 const remoteServiceSchema = require('../../contract/remote-service')
@@ -233,7 +232,6 @@ router.post('/:remoteServiceId/_update', permissions.middleware('updateApiDoc', 
   res.status(200).json(req.remoteService)
 }))
 
-const publicOrigin = new URL(config.publicUrl).origin
 router.use('/:remoteServiceId/proxy*', (req, res, next) => {
   // Match the path with an operation from the doc
   const operationPath = Object.keys(req.remoteService.apiDoc.paths).filter(path => {
@@ -276,17 +274,10 @@ router.use('/:remoteServiceId/proxy*', (req, res, next) => {
     options.headers['x-userId'] = req.remoteService.owner.id
     options.headers['x-userName'] = req.remoteService.owner.name
   }
-  // Only transmit Authorization header if the current service and the remoteService are from the same domain
-  // Not sure this is the right policy. But always sending Authorization header results in 401 errors
-  // and could be considered a security breach
-  // TODO: same for cookies ?
-  if (req.headers.authorization) {
-    const remoteOrigin = new URL(req.remoteService.server).origin
-    if (remoteOrigin !== publicOrigin) {
-      delete req.headers.authorization
-      delete req.headers.cookie
-    }
-  }
+
+  // We never transmit authentication
+  delete req.headers.authorization
+  delete req.headers.cookie
 
   requestProxy(options)(req, res, next)
 })
