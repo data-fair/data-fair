@@ -168,6 +168,8 @@ exports.valuesAgg = async (client, dataset, query) => {
     if (sorts[i] === 'count') sorts[i] = '_count'
     if (sorts[i] === '-count') sorts[i] = '-_count'
   }
+  // number after which we accept that cardinality is approximative
+  const precisionThreshold = Number(query.precision_threshold || '40000')
 
   // number of hit results inside the last level of aggregation
   const size = query.size ? Number(query.size) : 0
@@ -182,7 +184,7 @@ exports.valuesAgg = async (client, dataset, query) => {
     currentAggLevel.card = {
       cardinality: {
         field: fields[i],
-        precision_threshold: 40000
+        precision_threshold: precisionThreshold
       }
     }
     currentAggLevel.values = {

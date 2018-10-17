@@ -25,9 +25,13 @@ exports.process = async function(app, dataset) {
   const geometry = geoUtils.schemaHasGeometry(dataset.schema)
 
   // Calculate fields after indexing and extension as we might depend on all fields
-  debug(`Call extendCalculated() with geopoint ${geopoint} and geometry ${geometry}`)
-  await extensionsUtils.extendCalculated(app, dataset, geopoint, geometry)
-  debug('extendCalculated ok')
+  if (geometry || geopoint) {
+    debug(`Call extendCalculated() with geopoint ${geopoint} and geometry ${geometry}`)
+    await extensionsUtils.extendCalculated(app, dataset, geopoint, geometry)
+    debug('extendCalculated ok')
+  } else {
+    debug('No need for extendCalculated on this dataset')
+  }
 
   const result = { status: 'finalized' }
 
@@ -36,7 +40,7 @@ exports.process = async function(app, dataset) {
   if (nonGeometryProps.length) result.schema = dataset.schema
   for (let prop of nonGeometryProps) {
     debug(`Calculate cardinality of field ${prop.key}`)
-    const aggResult = await esUtils.valuesAgg(es, dataset, { field: prop.key, agg_size: '50' })
+    const aggResult = await esUtils.valuesAgg(es, dataset, { field: prop.key, agg_size: '50', precision_threshold: 3000 })
     prop['x-cardinality'] = aggResult.total_values
     debug(`Cardinality of field ${prop.key} is ${prop['x-cardinality']}`)
 
