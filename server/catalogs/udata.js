@@ -25,6 +25,7 @@ exports.listDatasets = async (catalog, p) => {
   let datasets
   if (catalog.organization) {
     datasets = (await axios.get(url.resolve(catalog.url, 'api/1/me/org_datasets'), { params, headers: { 'X-API-KEY': catalog.apiKey } })).data
+      .filter(d => d.organization && d.organization.id === catalog.organization.id)
   } else {
     datasets = (await axios.get(url.resolve(catalog.url, 'api/1/me/datasets'), { headers: { 'X-API-KEY': catalog.apiKey } })).data
   }
