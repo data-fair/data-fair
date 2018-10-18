@@ -14,19 +14,21 @@ const router = exports.router = express.Router()
 
 // Fill the collection using the default base applications from config
 exports.init = async (db) => {
-  for (let app of config.applications) {
-    try {
-      await initBaseApp(db, app)
-    } catch (err) {
-      console.error(`Failure to initialize base application ${app.url}`, err.message)
-    }
-  }
+  return Promise.all(config.applications.map(app => failSafeInitBaseApp(db, app)))
 }
 
 function prepareQuery(query) {
   return Object.keys(query)
     .filter(key => !['skip', 'size', 'q', 'status'].includes(key))
     .reduce((a, key) => { a[key] = query[key].split(','); return a }, {})
+}
+
+async function failSafeInitBaseApp(db, app) {
+  try {
+    await initBaseApp(db, app)
+  } catch (err) {
+    console.error(`Failure to initialize base application ${app.url}`, err.message)
+  }
 }
 
 // Attempts to init an application's description from a URL

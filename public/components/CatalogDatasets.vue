@@ -12,11 +12,16 @@
 
             <v-list-tile-content>
               <v-list-tile-title><a :href="dataset.page" target="_blank">{{ dataset.title }}</a></v-list-tile-title>
-              <v-list-tile-sub-title>{{ dataset.resources.length }} {{ dataset.resources.length > 1 ? 'ressources' : 'ressource' }} {{ (dataset.harvestableResources && dataset.harvestableResources.length) ? `dont ${dataset.harvestableResources.length} ${dataset.harvestableResources.length > 1 ? "importables" : "importable"}` : '' }}</v-list-tile-sub-title>
+              <v-list-tile-sub-title>
+                Ressources :
+                {{ dataset.resources.length }} dans le catalogue |
+                {{ dataset.nbHarvestable }} {{ dataset.nbHarvestable > 1 ? 'importables' : 'importable' }} |
+                {{ dataset.nbHarvested }} {{ dataset.nbHarvested > 1 ? 'déjà importées' : 'déjà importée' }}
+              </v-list-tile-sub-title>
             </v-list-tile-content>
 
             <v-list-tile-action>
-              <v-btn :disabled="!(dataset.harvestableResources && dataset.harvestableResources.length)" color="primary" class="mr-3" flat icon ripple title="Importer les ressources comme jeux de données indexés" @click="harvest(dataset)">
+              <v-btn :disabled="dataset.nbHarvestable === dataset.nbHarvested" color="primary" class="mr-3" flat icon ripple title="Importer les ressources comme jeux de données indexés" @click="harvest(dataset)">
                 <v-icon>file_download</v-icon>
               </v-btn>
             </v-list-tile-action>
@@ -38,10 +43,7 @@ export default {
     loading: false
   }),
   computed: {
-    ...mapState(['env']),
-    plural() {
-      return this.datasets.count > 1 ? 's' : ''
-    }
+    ...mapState(['env'])
   },
   mounted() {
     this.refresh()
@@ -51,6 +53,10 @@ export default {
       this.loading = true
       try {
         this.datasets = await this.$axios.$get(this.env.publicUrl + '/api/v1/catalogs/' + this.$route.params.id + '/datasets')
+        this.datasets.results.forEach(d => {
+          d.nbHarvestable = (d.resources || []).filter(r => r.harvestable).length
+          d.nbHarvested = (d.resources || []).filter(r => !!r.harvestedDataset).length
+        })
       } catch (error) {
         eventBus.$emit('notification', { error, msg: `Erreur pendant la récupération des jeux de données du catalogue` })
       }

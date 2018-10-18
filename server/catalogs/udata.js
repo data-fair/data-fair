@@ -45,10 +45,7 @@ exports.suggestDatasets = async (catalogUrl, q) => {
 }
 
 exports.publishDataset = async (catalog, dataset, publication) => {
-  if (publication.targetUrl) {
-    console.log('Publication was already done !')
-    return {}
-  }
+  // if (publication.targetUrl) throw new Error('Publication was already done !')
   if (publication.addToDataset && publication.addToDataset.id) return addResourceToDataset(catalog, dataset, publication)
   else return createNewDataset(catalog, dataset, publication)
 }
@@ -140,10 +137,12 @@ function appPageDesc(app) {
 
 async function addResourceToDataset(catalog, dataset, publication) {
   // TODO: no equivalent of "private" on a resource
+  const title = dataset.remoteFile ? dataset.remoteFile.name : dataset.title
   const resources = [{
-    title: `${dataset.title} - Page sur ${config.publicUrl}`,
+    title: `${title} - Page sur ${config.publicUrl}`,
     description: datasetPageDesc(dataset),
     url: datasetPageUrl(dataset),
+    type: 'documentation',
     filetype: 'remote',
     format: 'Page Web',
     mime: 'text/html',
@@ -152,22 +151,59 @@ async function addResourceToDataset(catalog, dataset, publication) {
       datafairDatasetId: dataset.id
     }
   }, {
-    title: `Fichier ${dataset.originalFile.mimetype.split('/').pop()}`,
-    description: `Téléchargez le fichier complet au format ${dataset.originalFile.mimetype.split('/').pop()}.`,
-    url: `${config.publicUrl}/api/v1/datasets/${dataset.id}/raw`,
+    title: `${title} - Documentation de l'API`,
+    description: `Documentation interactive de l'API à destination des développeurs. La description de l'API utilise la spécification [OpenAPI 3.0.1](https://github.com/OAI/OpenAPI-Specification)`,
+    url: `${config.publicUrl}/dataset/${dataset.id}/api`,
+    type: 'documentation',
+    filetype: 'remote',
+    format: 'Page Web',
+    mime: 'text/html',
+    extras: {
+      apidocUrl: `${config.publicUrl}/api/v1/datasets/${dataset.id}/api-docs.json`,
+      datafairOrigin: config.publicUrl,
+      datafairDatasetId: dataset.id
+    }
+  }, {
+    title: `${title} - Consultez les données`,
+    description: `Consultez directement les données dans ${dataset.bbox ? 'une carte interactive' : 'un tableau'}.`,
+    url: `${config.publicUrl}/dataset/${dataset.id}/${dataset.bbox ? 'map' : 'tabular'}`,
     type: 'main',
     filetype: 'remote',
-    format: 'fichier',
-    filesize: dataset.file.size,
-    mime: dataset.file.mimetype,
+    format: 'Page Web',
+    mime: 'text/html',
     extras: {
+      datafairEmbed: dataset.bbox ? 'map' : 'table',
       datafairOrigin: config.publicUrl,
       datafairDatasetId: dataset.id
     }
   }]
+  const catalogDataset = (await axios.get(url.resolve(catalog.url, `api/1/datasets/${publication.addToDataset.id}`),
+    { params: { page_size: 1000 }, headers: { 'X-API-KEY': catalog.apiKey } })).data
+  if (!catalogDataset) throw new Error(`Le jeu de données ${publication.addToDataset.id} n'existe pas dans le catalogue ${catalog.url}`)
+  // matchingResource will be defined if the dataset in data-fair was originally created from a ressource of the catalog's dataset
+  // we use it to prevent create a duplicate
+  const matchingResource = dataset.remoteFile ? catalogDataset.resources.find(r => r.url === dataset.remoteFile.url) : null
+  if (!matchingResource) {
+    resources.push({
+      title: `${title}`,
+      description: `Téléchargez le fichier complet au format ${dataset.originalFile.name.split('.').pop()}.`,
+      url: `${config.publicUrl}/api/v1/datasets/${dataset.id}/raw`,
+      type: 'main',
+      filetype: 'remote',
+      filesize: dataset.originalFile.size,
+      mime: dataset.originalFile.mimetype,
+      extras: {
+        datafairOrigin: config.publicUrl,
+        datafairDatasetId: dataset.id
+      }
+    })
+  }
+
+  // Create new resources
   try {
     for (let resource of resources) {
-      await axios.post(url.resolve(catalog.url, `api/1/datasets/${publication.addToDataset.id}/resources/`), resource, { headers: { 'X-API-KEY': catalog.apiKey } })
+      await axios.post(url.resolve(catalog.url, `api/1/datasets/${publication.addToDataset.id}/resources/`),
+        resource, { headers: { 'X-API-KEY': catalog.apiKey } })
     }
     const udataDataset = (await axios.get(url.resolve(catalog.url, `api/1/datasets/${publication.addToDataset.id}`))).data
     publication.targetUrl = udataDataset.page
@@ -175,6 +211,15 @@ async function addResourceToDataset(catalog, dataset, publication) {
   } catch (err) {
     if (err.response) throw new Error(`Erreur lors de l'envoi à ${catalog.url} : ${JSON.stringify(err.response.data, null, 2)}`)
     else throw err
+  }
+
+  // Cleanup previous ones
+  for (let existingResource of catalogDataset.resources) {
+    existingResource.extras = existingResource.extras || {}
+    if (existingResource.extras.datafairOrigin === config.publicUrl && existingResource.extras.datafairDatasetId === dataset.id) {
+      await axios.delete(url.resolve(catalog.url, `api/1/datasets/${publication.addToDataset.id}/resources/`),
+        { headers: { 'X-API-KEY': catalog.apiKey } })
+    }
   }
 }
 
@@ -215,6 +260,8 @@ async function createNewDataset(catalog, dataset, publication) {
       url: `${config.publicUrl}/dataset/${dataset.id}/${dataset.bbox ? 'map' : 'tabular'}`,
       type: 'main',
       filetype: 'remote',
+      format: 'Page Web',
+      mime: 'text/html',
       extras: {
         datafairEmbed: dataset.bbox ? 'map' : 'table'
       }

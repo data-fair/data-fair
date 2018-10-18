@@ -64,14 +64,20 @@ exports.httpParams = async (catalog) => {
   return connector.httpParams(catalog)
 }
 
-exports.listDatasets = async (catalog, params) => {
+exports.listDatasets = async (db, catalog, params) => {
   const connector = exports.connectors.find(c => c.key === catalog.type)
   if (!connector) throw createError(404, 'No connector found for catalog type ' + catalog.type)
   if (!connector.listDatasets) throw createError(501, `The connector for the catalog type ${catalog.type} cannot do this action`)
   const datasets = await connector.listDatasets(catalog, params)
   for (let dataset of datasets.results) {
-    // TODO: check in our db the ones that were already imported
-    dataset.harvestableResources = (dataset.resources || []).filter(r => files.allowedTypes.has(r.mime))
+    for (let resource of dataset.resources) {
+      resource.harvestable = files.allowedTypes.has(resource.mime)
+      const harvestedDataset = await db.collection('datasets').findOne({
+        'remoteFile.url': resource.url,
+        'remoteFile.catalog': catalog.id
+      }, { id: 1 })
+      if (harvestedDataset) resource.harvestedDataset = harvestedDataset.id
+    }
   }
   return datasets
 }
@@ -208,6 +214,7 @@ exports.processPublications = async function(app, type, resource) {
     }
     await setResult(null, res)
   } catch (err) {
+    console.error('Error while processing publication', err)
     await journals.log(app, resource, { type: 'error', data: err.message || err }, type)
     await setResult(err.message || err)
   }

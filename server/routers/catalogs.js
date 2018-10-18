@@ -162,7 +162,7 @@ router.get('/:catalogId/api-docs.json', permissions.middleware('readApiDoc', 're
 
 // retrieve a catalog by its id
 router.get('/:catalogId/datasets', permissions.middleware('readDatasets', 'read'), asyncWrap(async(req, res, next) => {
-  const datasets = await catalogs.listDatasets(req.catalog, null)
+  const datasets = await catalogs.listDatasets(req.app.get('db'), req.catalog, null)
   res.status(200).json(datasets)
 }))
 
