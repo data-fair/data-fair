@@ -115,6 +115,10 @@ router.get('/:datasetId/schema', permissions.middleware('readDescription', 'read
     const types = req.query.type.split(',')
     schema = schema.filter(field => types.includes(field.type))
   }
+  if (req.query.format) {
+    const formats = req.query.format.split(',')
+    schema = schema.filter(field => formats.includes(field.format))
+  }
   res.status(200).send(schema)
 })
 
