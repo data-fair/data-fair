@@ -8,7 +8,8 @@ export default {
     catalogId: null,
     catalog: null,
     api: null,
-    nbApplications: null
+    // TODO: fetch nbPublications so we can display a warning when deleting
+    nbPublications: null
   },
   getters: {
     resourceUrl: (state, getters, rootState) => state.catalogId ? rootState.env.publicUrl + '/api/v1/catalogs/' + state.catalogId : null,

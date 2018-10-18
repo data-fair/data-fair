@@ -134,8 +134,10 @@ router.patch('/:datasetId', permissions.middleware('writeDescription', 'write'),
   if (patch.extensions) patch.schema = await extensions.prepareSchema(req.app.get('db'), patch.schema || req.dataset.schema, patch.extensions)
 
   // Changed a previously failed dataset, retry everything.
+  // Except download.. We only try it again if the fetch failed.
   if (req.dataset.status === 'error') {
-    if (!baseTypes.has(req.dataset.originalFile.mimetype)) patch.status = 'uploaded'
+    if (req.dataset.remoteFile && !req.dataset.originalFile) patch.status = 'imported'
+    else if (!baseTypes.has(req.dataset.originalFile.mimetype)) patch.status = 'uploaded'
     else patch.status = 'loaded'
   }
 

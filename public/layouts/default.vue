@@ -98,7 +98,7 @@
       <nuxt/>
 
       <v-snackbar v-if="notification" ref="notificationSnackbar" v-model="showSnackbar" :color="notification.type" :timeout="notification.type === 'error' ? 0 : 6000" class="notification" bottom>
-        <div>
+        <div style="max-width: 85%;">
           <p>{{ notification.msg }}</p>
           <p v-if="notification.errorMsg" class="ml-3">{{ notification.errorMsg }}</p>
         </div>

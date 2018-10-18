@@ -21,9 +21,9 @@ function uploadDir(req) {
 }
 
 const storage = multer.diskStorage({
-  destination: function(req, file, cb) {
+  destination: async function(req, file, cb) {
     const dir = uploadDir(req)
-    fs.ensureDirSync(dir)
+    await fs.ensureDir(dir)
     cb(null, dir)
   },
   filename: async function(req, file, cb) {

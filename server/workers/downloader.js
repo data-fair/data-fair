@@ -1,43 +1,50 @@
 const datasetFileSample = require('../utils/dataset-file-sample')
 const chardet = require('chardet')
-const journals = require('../utils/journals')
 const baseTypes = new Set(['text/csv', 'application/geo+json'])
 const config = require('config')
-const axios = require('axios')
+const request = require('request')
 const fs = require('fs-extra')
 const path = require('path')
 const util = require('util')
-const writeFile = util.promisify(fs.writeFile)
-const mime = require('mime-types')
-const fallbackMimeTypes = {
-  dbf: 'application/dbase',
-  dif: 'text/plain',
-  fods: 'application/vnd.oasis.opendocument.spreadsheet'
-}
+const pump = util.promisify(require('pump'))
+const catalogs = require('../catalogs')
+const datasetUtils = require('../utils/dataset')
 
 exports.type = 'dataset'
 exports.eventsPrefix = 'download'
-exports.filter = { status: 'remote' }
+exports.filter = { status: 'imported' }
 
 exports.process = async function(app, dataset) {
-  await journals.log(app, dataset, { type: 'download-start' }, 'dataset')
-  const uploadDir = path.join(config.dataDir, dataset.owner.type, dataset.owner.id)
-  fs.ensureDirSync(uploadDir)
-  const file = {
-    name: dataset.id + '.' + dataset.remoteFile.url.split('.').pop()
-  }
-  file.mimetype = mime.lookup(file.name) || fallbackMimeTypes[file.name.split('.').pop()] || file.name.split('.').pop()
-  await axios({
-    method: 'get',
-    url: dataset.remoteFile.url,
-    responseType: 'arraybuffer'
-  }).then(function(response) {
-    file.size = response.data.length
-    return writeFile(path.join(uploadDir, file.name), response.data)
-  })
+  const debug = require('debug')(`worker:downloader:${dataset.id}`)
 
-  dataset.originalFile = file
-  if (!baseTypes.has(file.mimetype)) {
+  const uploadDir = path.join(config.dataDir, dataset.owner.type, dataset.owner.id)
+  await fs.ensureDir(uploadDir)
+
+  debug(`Will attempt to download ${dataset.remoteFile.url} into ${uploadDir}`)
+
+  dataset.originalFile = {
+    name: dataset.remoteFile.name,
+    mimetype: dataset.remoteFile.mimetype,
+    size: dataset.remoteFile.size
+  }
+
+  let catalogHttpParams = {}
+  if (dataset.remoteFile.catalog) {
+    const catalog = await app.get('db').collection('catalogs')
+      .findOne({ id: dataset.remoteFile.catalog }, { _id: 0 })
+    if (!catalog) throw new Error('Le fichier distant référence un catalogue inexistant. Il a probablement été supprimé.')
+    catalogHttpParams = await catalogs.httpParams(catalog)
+    debug(`Use HTTP params ${JSON.stringify(catalogHttpParams)}`)
+  }
+
+  const fileName = datasetUtils.originalFileName(dataset)
+  await pump(
+    request({ ...catalogHttpParams, method: 'GET', url: dataset.remoteFile.url }),
+    fs.createWriteStream(fileName)
+  )
+  debug(`Successfully downloaded file ${fileName}`)
+
+  if (!baseTypes.has(dataset.originalFile.mimetype)) {
     // we first need to convert the file in a textual format easy to index
     dataset.status = 'uploaded'
   } else {
@@ -47,10 +54,7 @@ exports.process = async function(app, dataset) {
     const fileSample = await datasetFileSample(dataset)
     dataset.file.encoding = chardet.detect(fileSample)
   }
-  await journals.log(app, dataset, { type: 'download-end' }, 'dataset')
-  await app.get('db').collection('datasets').replaceOne({
-    id: dataset.id
-  }, dataset)
+  await app.get('db').collection('datasets').replaceOne({ id: dataset.id }, dataset)
   // const storageRemaining = await datasetUtils.storageRemaining(req.app.get('db'), owner, req)
   // if (storageRemaining !== -1) res.set(config.headers.storedBytesRemaining, storageRemaining)
 }

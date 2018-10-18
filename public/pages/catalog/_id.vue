@@ -40,16 +40,16 @@
         <v-card-title primary-title>
           Suppression de la configuration du catalogue
         </v-card-title>
-        <v-card-text v-if="nbApplications > 0">
-          <v-alert :value="nbApplications === 1" type="error" outline>
-            Attention ! Ce service est utilisé par une application. Si vous le supprimez cette application ne sera plus fonctionnelle.
+        <v-card-text v-if="nbPublications > 0">
+          <v-alert :value="nbPublications === 1" type="error" outline>
+            Attention ! Ce catalogue est référencé dans un lien de publication. Si vous le supprimez ce lien sera invalide.
           </v-alert>
-          <v-alert :value="nbApplications > 1" type="error" outline>
-            Attention ! Ce service est utilisé par {{ nbApplications }} applications. Si vous le supprimez ces applications ne seront plus fonctionnelles.
+          <v-alert :value="nbPublications > 1" type="error" outline>
+            Attention ! Ce catalogue est référencé dans ${nbPublications} liens de publication. Si vous le supprimez ces liens seront invalides.
           </v-alert>
         </v-card-text>
         <v-card-text>
-          Voulez vous vraiment supprimer la configuration du service "{{ catalog.title }}" ? La suppression est définitive et le paramétrage ne pourra pas être récupéré.
+          Voulez vous vraiment supprimer la configuration du catalogue "{{ catalog.title }}" ? La suppression est définitive et le paramétrage ne pourra pas être récupéré.
         </v-card-text>
         <v-card-actions>
           <v-spacer/>
@@ -69,7 +69,7 @@ export default {
     showDeleteDialog: false
   }),
   computed: {
-    ...mapState('catalog', ['catalog', 'api', 'nbApplications']),
+    ...mapState('catalog', ['catalog', 'api', 'nbPublications']),
     ...mapGetters('catalog', ['resourceUrl', 'can'])
   },
   mounted() {

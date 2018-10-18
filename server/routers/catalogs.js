@@ -1,3 +1,4 @@
+const config = require('config')
 const express = require('express')
 const normalise = require('ajv-error-messages')
 const moment = require('moment')
@@ -17,6 +18,7 @@ const permissions = require('../utils/permissions')
 const usersUtils = require('../utils/users')
 const findUtils = require('../utils/find')
 const asyncWrap = require('../utils/async-wrap')
+const datasetUtils = require('../utils/dataset')
 const clone = require('fast-clone')
 
 const router = module.exports = express.Router()
@@ -83,7 +85,7 @@ router.get('', asyncWrap(async(req, res) => {
 // Create a catalog
 router.post('', asyncWrap(async(req, res) => {
   const catalog = req.body
-  const baseId = catalog.id || slug(catalog.url, { lower: true })
+  const baseId = catalog.id || slug(catalog.url.replace('https://', '').replace('http://', ''), { lower: true })
   catalog.id = baseId
   let i = 1
   do {
@@ -166,6 +168,8 @@ router.get('/:catalogId/datasets', permissions.middleware('readDatasets', 'read'
 
 // retrieve a catalog by its id
 router.post('/:catalogId/datasets/:datasetId', permissions.middleware('harvestDataset', 'write'), asyncWrap(async(req, res, next) => {
-  const resources = await catalogs.harvestDataset(req.catalog, req.params.datasetId, req)
-  res.status(200).json(resources)
+  await catalogs.harvestDataset(req.catalog, req.params.datasetId, req.app)
+  const storageRemaining = await datasetUtils.storageRemaining(req.app.get('db'), req.catalog.owner, req)
+  if (storageRemaining !== -1) res.set(config.headers.storedBytesRemaining, storageRemaining)
+  res.status(201).send()
 }))

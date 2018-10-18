@@ -1,9 +1,6 @@
 const config = require('config')
 const url = require('url')
 const axios = require('axios')
-const filesUtils = require('../utils/files')
-const moment = require('moment')
-const journals = require('../utils/journals')
 
 exports.title = 'uData'
 exports.description = 'Customizable and skinnable social platform dedicated to (open)data.'
@@ -14,6 +11,15 @@ exports.init = async (catalogUrl) => {
   return { url: catalogUrl, title: siteInfo.title }
 }
 
+exports.httpParams = async (catalog) => {
+  return { headers: { 'X-API-KEY': catalog.apiKey } }
+}
+
+exports.getDataset = async (catalog, datasetId) => {
+  const dataset = (await axios.get(url.resolve(catalog.url, 'api/1/datasets/' + datasetId), { headers: { 'X-API-KEY': catalog.apiKey } })).data
+  return prepareDatasetFromCatalog(dataset)
+}
+
 exports.listDatasets = async (catalog, p) => {
   const params = { page_size: 1000 }
   let datasets
@@ -22,17 +28,10 @@ exports.listDatasets = async (catalog, p) => {
   } else {
     datasets = (await axios.get(url.resolve(catalog.url, 'api/1/me/datasets'), { headers: { 'X-API-KEY': catalog.apiKey } })).data
   }
-  return { count: datasets.length, results: datasets.map(d => ({ id: d.id, title: d.title, page: d.page, url: d.uri, resources: d.resources.map(r => ({ id: r.id, format: r.format, mime: r.mime, title: r.title, url: r.url })), private: d.private })) }
-}
-
-exports.harvestDataset = async (catalog, datasetId, req) => {
-  const res = await axios.get(url.resolve(catalog.url, 'api/1/datasets/' + datasetId), { headers: { 'X-API-KEY': catalog.apiKey } })
-  const dataset = res.data
-  const resources = dataset.resources.filter(r => filesUtils.allowedTypes.has(r.mime))
-  for (const resource of resources) {
-    await importResourceAsDataset(dataset, resource, catalog, req)
+  return {
+    count: datasets.length,
+    results: datasets.map(prepareDatasetFromCatalog)
   }
-  return resources.map(r => ({ id: r.id, format: r.format, mime: r.mime, title: r.title, url: r.url }))
 }
 
 exports.suggestOrganizations = async (catalogUrl, q) => {
@@ -46,6 +45,10 @@ exports.suggestDatasets = async (catalogUrl, q) => {
 }
 
 exports.publishDataset = async (catalog, dataset, publication) => {
+  if (publication.targetUrl) {
+    console.log('Publication was already done !')
+    return {}
+  }
   if (publication.addToDataset && publication.addToDataset.id) return addResourceToDataset(catalog, dataset, publication)
   else return createNewDataset(catalog, dataset, publication)
 }
@@ -98,6 +101,24 @@ exports.deleteApplication = async (catalog, application, publication) => {
   } catch (err) {
     // The reuse was already deleted ?
     if (!err.response || ![404, 410].includes(err.response.status)) throw err
+  }
+}
+
+function prepareDatasetFromCatalog(d) {
+  return {
+    id: d.id,
+    title: d.title,
+    page: d.page,
+    url: d.uri,
+    private: d.private,
+    resources: d.resources.map(r => ({
+      id: r.id,
+      format: r.format,
+      mime: r.mime,
+      title: r.title,
+      url: r.url,
+      size: r.fileSize
+    }))
   }
 }
 
@@ -261,38 +282,4 @@ async function deleteDataset(catalog, dataset, publication) {
     // The dataset was already deleted ?
     if (!err.response || ![404, 410].includes(err.response.status)) throw err
   }
-}
-
-async function importResourceAsDataset(dataset, resource, catalog, req) {
-  const date = moment().toISOString()
-  const newDataset = {
-    id: dataset.slug + '-' + resource.title.split('.').shift(),
-    title: dataset.title + '-' + resource.title.split('.').shift(),
-    owner: catalog.owner,
-    permissions: [],
-    remoteFile: {
-      url: resource.url,
-      catalogId: catalog.id
-    },
-    createdBy: { id: catalog.owner.id, name: catalog.owner.name },
-    createdAt: date,
-    updatedBy: { id: catalog.owner.id, name: catalog.owner.name },
-    updatedAt: date,
-    status: 'remote'
-  }
-  // if (!baseTypes.has(req.file.mimetype)) {
-  //   // we first need to convert the file in a textual format easy to index
-  //   dataset.status = 'uploaded'
-  // } else {
-  //   // The format of the original file is already well suited to workers
-  //   dataset.status = 'loaded'
-  //   dataset.file = dataset.originalFile
-  //   const fileSample = await datasetFileSample(dataset)
-  //   dataset.file.encoding = chardet.detect(fileSample)
-  // }
-
-  await req.app.get('db').collection('datasets').insertOne(newDataset)
-  // const storageRemaining = await datasetUtils.storageRemaining(req.app.get('db'), owner, req)
-  // if (storageRemaining !== -1) res.set(config.headers.storedBytesRemaining, storageRemaining)
-  await journals.log(req.app, newDataset, { type: 'dataset-created', href: config.publicUrl + '/dataset/' + newDataset.id }, 'dataset')
 }

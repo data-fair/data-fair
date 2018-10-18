@@ -1,32 +1,30 @@
 <template>
-  <v-container v-if="datasets" fluid grid-list-lg style="width:100vw">
-    <h3 v-if="datasets" class="display-1">{{ datasets.count }} dataset{{ plural }} dans le catalogue distant</h3>
-    <v-list three-line>
-      <v-list-tile v-for="dataset in datasets.results" :key="dataset.id">
-        <v-list-tile-avatar>
-          <v-icon>{{ dataset.private ? 'lock' : 'public' }}</v-icon>
-        </v-list-tile-avatar>
+  <v-container fluid grid-list-lg>
+    <v-progress-linear v-if="loading" :indeterminate="true" height="2"/>
+    <v-layout v-if="datasets && !loading" column>
+      <h3 class="display-1 mb-4">{{ datasets.count }} {{ datasets.count > 1 ? 'jeux de données' : 'jeu de données' }} dans le catalogue</h3>
+      <v-card>
+        <v-list three-line>
+          <v-list-tile v-for="dataset in datasets.results" :key="dataset.id">
+            <v-list-tile-avatar>
+              <v-icon>{{ dataset.private ? 'lock' : 'public' }}</v-icon>
+            </v-list-tile-avatar>
 
-        <v-list-tile-content>
-          <v-list-tile-title>{{ dataset.title }}</v-list-tile-title>
-          <v-list-tile-sub-title>{{ dataset.resources.length }} resources {{ dataset.harvestableResources ? `dont ${dataset.harvestableResources.length} indexables` : '' }}</v-list-tile-sub-title>
-        </v-list-tile-content>
+            <v-list-tile-content>
+              <v-list-tile-title><a :href="dataset.page" target="_blank">{{ dataset.title }}</a></v-list-tile-title>
+              <v-list-tile-sub-title>{{ dataset.resources.length }} {{ dataset.resources.length > 1 ? 'ressources' : 'ressource' }} {{ (dataset.harvestableResources && dataset.harvestableResources.length) ? `dont ${dataset.harvestableResources.length} ${dataset.harvestableResources.length > 1 ? "importables" : "importable"}` : '' }}</v-list-tile-sub-title>
+            </v-list-tile-content>
 
-        <v-list-tile-action>
-          <v-layout row>
-            <v-btn :href="dataset.page" color="grey--text lighten-1" class="px-4" icon ripple>
-              <v-icon>file_copy</v-icon>
-            </v-btn>
-            <v-btn :href="dataset.url" color="grey--text lighten-1" class="px-4" icon ripple>
-              <v-icon>cloud</v-icon>
-            </v-btn>
-            <v-btn color="grey--text lighten-1" class="px-4" icon ripple @click="harvest(dataset)">
-              <v-icon>file_download</v-icon>
-            </v-btn>
-          </v-layout>
-        </v-list-tile-action>
-      </v-list-tile>
-    </v-list>
+            <v-list-tile-action>
+              <v-btn :disabled="!(dataset.harvestableResources && dataset.harvestableResources.length)" color="primary" class="mr-3" flat icon ripple title="Importer les ressources comme jeux de données indexés" @click="harvest(dataset)">
+                <v-icon>file_download</v-icon>
+              </v-btn>
+            </v-list-tile-action>
+          </v-list-tile>
+        </v-list>
+      </v-card>
+    </v-layout>
+
   </v-container>
 </template>
 
@@ -61,12 +59,12 @@ export default {
     async harvest(dataset) {
       this.loading = true
       try {
-        const resources = await this.$axios.$post(this.env.publicUrl + '/api/v1/catalogs/' + this.$route.params.id + '/datasets/' + dataset.id)
-        this.$set(dataset, 'harvestableResources', resources)
+        await this.$axios.$post(this.env.publicUrl + '/api/v1/catalogs/' + this.$route.params.id + '/datasets/' + dataset.id)
+        await this.refresh()
       } catch (error) {
         eventBus.$emit('notification', { error, msg: `Erreur pendant l'import du jeu de données` })
+        this.loading = false
       }
-      this.loading = false
     }
   }
 }

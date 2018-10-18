@@ -11,7 +11,7 @@
     <v-list v-else two-line>
       <v-list-tile v-for="(publication, i) in dataset.publications" :key="publication.id">
         <v-list-tile-content v-if="catalogsById[publication.catalog]">
-          <v-list-tile-title v-if="publication.addToDataset && publication.addToDataset.id">Ressource ajoutée au jeu de données "{{ publication.addToDataset.title }}" sur le catalogue "{{ catalogsById[publication.catalog].title }}"</v-list-tile-title>
+          <v-list-tile-title v-if="publication.addToDataset && publication.addToDataset.id">Ressource associée au jeu de données "{{ publication.addToDataset.title }}" sur le catalogue "{{ catalogsById[publication.catalog].title }}"</v-list-tile-title>
           <v-list-tile-title v-else>Jeu de données publié sur le catalogue "{{ catalogsById[publication.catalog].title }}"</v-list-tile-title>
           <v-list-tile-sub-title v-if="publication.status==='published'"><a :href="publication.targetUrl" target="_blank">{{ publication.targetUrl }}</a></v-list-tile-sub-title>
           <v-list-tile-sub-title v-else-if="publication.status==='error'" style="color:red;">{{ publication.error }}</v-list-tile-sub-title>

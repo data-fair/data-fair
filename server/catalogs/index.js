@@ -2,9 +2,12 @@ const fs = require('fs-extra')
 const assert = require('assert')
 const createError = require('http-errors')
 const shortid = require('shortid')
-const journals = require('../utils/journals')
 const config = require('config')
 const path = require('path')
+const moment = require('moment')
+const slug = require('slugify')
+const journals = require('../utils/journals')
+const files = require('../utils/files')
 
 // Dynamic loading of all modules in the current directory
 fs.ensureDirSync(path.resolve(config.pluginsDir, 'catalogs'))
@@ -52,18 +55,66 @@ exports.init = async (catalogUrl) => {
   }
 }
 
+// Used the downloader worker to get credentials (probably API key in a header)
+// to fetch resources
+exports.httpParams = async (catalog) => {
+  const connector = exports.connectors.find(c => c.key === catalog.type)
+  if (!connector) throw createError(404, 'No connector found for catalog type ' + catalog.type)
+  if (!connector.httpParams) throw createError(501, `The connector for the catalog type ${catalog.type} cannot do this action`)
+  return connector.httpParams(catalog)
+}
+
 exports.listDatasets = async (catalog, params) => {
   const connector = exports.connectors.find(c => c.key === catalog.type)
   if (!connector) throw createError(404, 'No connector found for catalog type ' + catalog.type)
   if (!connector.listDatasets) throw createError(501, `The connector for the catalog type ${catalog.type} cannot do this action`)
-  return connector.listDatasets(catalog, params)
+  const datasets = await connector.listDatasets(catalog, params)
+  for (let dataset of datasets.results) {
+    // TODO: check in our db the ones that were already imported
+    dataset.harvestableResources = (dataset.resources || []).filter(r => files.allowedTypes.has(r.mime))
+  }
+  return datasets
 }
 
-exports.harvestDataset = async (catalog, datasetId, req) => {
+exports.harvestDataset = async (catalog, datasetId, app) => {
   const connector = exports.connectors.find(c => c.key === catalog.type)
   if (!connector) throw createError(404, 'No connector found for catalog type ' + catalog.type)
   if (!connector.listDatasets) throw createError(501, `The connector for the catalog type ${catalog.type} cannot do this action`)
-  return connector.harvestDataset(catalog, datasetId, req)
+  const dataset = await connector.getDataset(catalog, datasetId)
+  const harvestableResources = (dataset.resources || []).filter(r => files.allowedTypes.has(r.mime))
+  const newDatasets = []
+  for (const resource of harvestableResources) {
+    const date = moment().toISOString()
+    const newDataset = {
+      id: `${catalog.id}-${slug(dataset.title, { lower: true })}-${slug(resource.title.split('.').shift(), { lower: true })}`,
+      title: dataset.title + '-' + resource.title.split('.').shift(),
+      owner: catalog.owner,
+      permissions: [],
+      remoteFile: {
+        name: resource.title,
+        url: resource.url,
+        catalog: catalog.id,
+        size: resource.size,
+        mimetype: resource.mime
+      },
+      publications: [{
+        catalog: catalog.id,
+        status: 'waiting',
+        targetUrl: dataset.page,
+        addToDataset: { id: dataset.id, title: dataset.title }
+      }],
+      createdBy: { id: catalog.owner.id, name: catalog.owner.name },
+      createdAt: date,
+      updatedBy: { id: catalog.owner.id, name: catalog.owner.name },
+      updatedAt: date,
+      status: 'imported'
+    }
+    console.log(newDataset)
+    await app.get('db').collection('datasets').insertOne(newDataset)
+    await journals.log(app, newDataset, { type: 'dataset-created', href: config.publicUrl + '/dataset/' + newDataset.id }, 'dataset')
+    newDatasets.push(newDataset)
+  }
+  return newDatasets
 }
 
 exports.suggestOrganizations = async (type, url, q) => {

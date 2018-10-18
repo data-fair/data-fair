@@ -115,9 +115,26 @@ module.exports = {
       'additionalProperties': true, // for properties such as catalogId or resourceId that are specific to kind of remote resources
       'required': ['url'],
       'properties': {
+        'name': {
+          'type': 'string',
+          'description': 'Name of the remote file that was used to create or update this dataset'
+        },
         'url': {
           'type': 'string',
           'description': 'Url from where the file can be fetched'
+        },
+        catalog: {
+          'type': 'string',
+          'description': `Identifiant du catalogue d'origine`
+        },
+        'size': {
+          'type': 'number',
+          'description': 'Size of the file on disk'
+        },
+        'mimetype': {
+          'type': 'string',
+          'enum': ['text/csv'],
+          'description': 'Mime type of the file'
         }
       }
     },
