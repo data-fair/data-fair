@@ -301,7 +301,8 @@ function managePublicCache(req, res) {
 
 // Error from ES backend should be stored in the journal
 async function manageESError(req, err) {
-  if (req.dataset.status === 'finalized' && err.statusCode >= 404) {
+  const errBody = (err.body && err.body.error) || {}
+  if (req.dataset.status === 'finalized' && err.statusCode >= 404 && errBody.type !== 'search_phase_execution_exception') {
     await req.app.get('db').collection('datasets').updateOne({ id: req.params.datasetId }, { '$set': { status: 'error' } })
     await journals.log(req.app, req.dataset, { type: 'error', data: err.message })
   }

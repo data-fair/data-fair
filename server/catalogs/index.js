@@ -32,7 +32,8 @@ const expectedKeys = new Set([
   'deleteDataset',
   'deleteApplication',
   'listDatasets',
-  'harvestDataset'
+  'harvestDataset',
+  'httpParams'
 ])
 exports.connectors.forEach(c => {
   try {
