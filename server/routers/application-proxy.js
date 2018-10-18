@@ -22,6 +22,7 @@ const setResource = asyncWrap(async(req, res, next) => {
 // Proxy for applications
 router.all('/:applicationId*', setResource, permissions.middleware('readDescription', 'read'), asyncWrap(async(req, res, next) => {
   delete req.application.permissions
+  req.application.apiUrl = config.publicUrl + '/api/v1'
 
   const ifModifiedSince = new Date(req.get('If-Modified-Since'))
   // go through UTC transformation to lose milliseconds just as last-modified and if-modified-since headers do
@@ -93,6 +94,8 @@ router.all('/:applicationId*', setResource, permissions.middleware('readDescript
       if (resp.statusCode === 302) {
         resp.headers.location = resp.headers.location.replace(cleanApplicationUrl, req.application.exposedUrl)
         resp.headers.location = resp.headers.location.replace(cleanApplicationUrl.replace('https://', 'http://'), req.application.exposedUrl)
+        // for gitlab pages
+        resp.headers.location = resp.headers.location.replace(cleanApplicationUrl.replace('https:', ''), req.application.exposedUrl)
       }
 
       // Do not attempt to transform errors or redirects
