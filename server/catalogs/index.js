@@ -92,6 +92,12 @@ exports.harvestDataset = async (catalog, datasetId, app) => {
   const harvestableResources = (dataset.resources || []).filter(r => files.allowedTypes.has(r.mime))
   const newDatasets = []
   for (const resource of harvestableResources) {
+    const harvestedDataset = await app.get('db').collection('datasets').findOne({
+      'remoteFile.url': resource.url,
+      'remoteFile.catalog': catalog.id
+    }, { id: 1 })
+    if (harvestedDataset) continue
+
     const date = moment().toISOString()
     const fileName = path.basename(url.parse(resource.url).pathname)
     const newDataset = {
