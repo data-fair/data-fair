@@ -1,5 +1,5 @@
 <template lang="html">
-  <iframe :src="src" :height="height" width="100%"/>
+  <iframe :src="src" :height="height" width="100%" class="pt-2"/>
 </template>
 
 <script>
@@ -11,7 +11,7 @@ export default {
     ...mapState(['env']),
     ...mapGetters('dataset', ['resourceUrl']),
     height() {
-      return Math.max((process.browser && window.innerHeight) || 0, 1000)
+      return ((process.browser && window.innerHeight) || 3000) - 200
     },
     src() {
       let url = this.env.openapiViewerUrl + '?proxy=false&hide-toolbar=true'

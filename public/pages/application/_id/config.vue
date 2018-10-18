@@ -4,7 +4,7 @@
       <v-layout row wrap>
         <v-flex xs12 md4>
           <h2 class="title my-4" >Configuration</h2>
-          <iframe v-if="showConfigIframe" :src="applicationLink + '/config?embed=true'" :height="Math.max(height, 1000)" width="100%"/>
+          <iframe v-if="showConfigIframe" :src="applicationLink + '/config?embed=true'" :height="Math.min(height - 100, 600)" width="100%"/>
           <v-form v-if="showForm" v-model="formValid" @submit="e => {writeConfig(editConfig); e.preventDefault()}">
             <v-jsonschema-form :schema="schema" :model="editConfig" :options="{disableAll: !can('writeConfig')}" @error="error => eventBus.$emit('notification', {error})" />
             <v-layout row>
@@ -16,9 +16,10 @@
         <v-flex xs12 md8>
           <h2 class="title my-4" >
             Aperçu
+            <!-- Only useful in development
             <v-btn flat icon color="primary" @click="refreshPreview">
               <v-icon>refresh</v-icon>
-            </v-btn>
+            </v-btn>-->
           </h2>
           <v-card v-if="showPreview">
             <iframe :src="applicationLink + '?embed=true'" :height="Math.min(height - 100, 600)" width="100%"/>
