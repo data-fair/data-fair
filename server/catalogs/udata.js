@@ -137,16 +137,17 @@ function appPageDesc(app) {
 
 async function addResourceToDataset(catalog, dataset, publication) {
   // TODO: no equivalent of "private" on a resource
-  const title = dataset.remoteFile ? dataset.remoteFile.name : dataset.title
+  const title = dataset.title
   const resources = [{
-    title: `${title} - Page sur ${config.publicUrl}`,
-    description: datasetPageDesc(dataset),
-    url: datasetPageUrl(dataset),
+    title: `${title} - Description des champs`,
+    description: `Description détaillée et types sémantiques des champs`,
+    url: `${config.publicUrl}/dataset/${dataset.id}/description`,
     type: 'documentation',
     filetype: 'remote',
     format: 'Page Web',
     mime: 'text/html',
     extras: {
+      datafairEmbed: 'fields',
       datafairOrigin: config.publicUrl,
       datafairDatasetId: dataset.id
     }
@@ -217,7 +218,7 @@ async function addResourceToDataset(catalog, dataset, publication) {
   for (let existingResource of catalogDataset.resources) {
     existingResource.extras = existingResource.extras || {}
     if (existingResource.extras.datafairOrigin === config.publicUrl && existingResource.extras.datafairDatasetId === dataset.id) {
-      await axios.delete(url.resolve(catalog.url, `api/1/datasets/${publication.addToDataset.id}/resources/`),
+      await axios.delete(url.resolve(catalog.url, `api/1/datasets/${publication.addToDataset.id}/resources/${existingResource.id}`),
         { headers: { 'X-API-KEY': catalog.apiKey } })
     }
   }

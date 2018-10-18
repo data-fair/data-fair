@@ -4,6 +4,7 @@ const createError = require('http-errors')
 const shortid = require('shortid')
 const config = require('config')
 const path = require('path')
+const url = require('url')
 const moment = require('moment')
 const slug = require('slugify')
 const journals = require('../utils/journals')
@@ -91,13 +92,14 @@ exports.harvestDataset = async (catalog, datasetId, app) => {
   const newDatasets = []
   for (const resource of harvestableResources) {
     const date = moment().toISOString()
+    const fileName = path.basename(url.parse(resource.url).pathname)
     const newDataset = {
       id: `${catalog.id}-${slug(dataset.title, { lower: true })}-${slug(resource.title.split('.').shift(), { lower: true })}`,
-      title: dataset.title + '-' + resource.title.split('.').shift(),
+      title: resource.title.split('.').shift(),
       owner: catalog.owner,
       permissions: [],
       remoteFile: {
-        name: resource.title,
+        name: fileName,
         url: resource.url,
         catalog: catalog.id,
         size: resource.size,
@@ -115,7 +117,6 @@ exports.harvestDataset = async (catalog, datasetId, app) => {
       updatedAt: date,
       status: 'imported'
     }
-    console.log(newDataset)
     await app.get('db').collection('datasets').insertOne(newDataset)
     await journals.log(app, newDataset, { type: 'dataset-created', href: config.publicUrl + '/dataset/' + newDataset.id }, 'dataset')
     newDatasets.push(newDataset)
