@@ -52,4 +52,14 @@ test('Get lines in dataset', async t => {
   t.is(res.data.aggs[0].aggs[0].value, 'bureau')
   t.is(res.data.aggs[0].aggs[0].total, 2)
   t.is(res.data.aggs[0].aggs[0].metric, 0)
+
+  // data histogram aggregation
+  res = await ax.get('/api/v1/datasets/dataset/values_agg?field=somedate&interval=month&metric_field=employees&metric=sum')
+  t.is(res.data.aggs.length, 3)
+  t.is(res.data.aggs[0].total, 2)
+  t.is(res.data.aggs[1].total, 0)
+  t.is(res.data.aggs[2].total, 3)
+
+  t.is(res.data.aggs[0].value, '2017-10-01T00:00:00.000Z')
+  t.is(res.data.aggs[0].metric, 13)
 })

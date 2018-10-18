@@ -311,6 +311,7 @@ module.exports = (dataset) => {
               enum: properties
             }
           }, metricParam, metricFieldParam, aggSizeParam].concat(queryParams),
+          // TODO: document sort param and interval
           responses: {
             200: {
               description: 'Les informations du jeu de données agrégées par valeurs d\'un champ.',
