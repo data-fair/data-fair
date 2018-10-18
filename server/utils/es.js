@@ -186,7 +186,7 @@ exports.valuesAgg = async (client, dataset, query) => {
     if (sorts[i] === '-count') sorts[i] = '-_count'
     if (aggTypes[i] === 'date_histogram') {
       sorts[i] = sorts[i] || '_time'
-      sorts[i] = sorts[i].replace('_key')
+      sorts[i] = sorts[i].replace('_key', '_time')
     }
     // TODO: also accept ranges expressed in the interval parameter to use range aggregations instead of histogram
   }
@@ -253,14 +253,16 @@ exports.valuesAgg = async (client, dataset, query) => {
     hitsSort.push('_rand')
     currentAggLevel.values.aggs.topHits = { top_hits: { size, _source: esQuery._source, sort: hitsSort } }
   }
-
-  const esResponse = await client.search({ index: aliasName(dataset), body: esQuery })
+  // Bound complexity with a timeout
+  const esResponse = await client.search({ index: aliasName(dataset), body: esQuery, timeout: '2s' })
   return prepareValuesAggResponse(esResponse, fields)
 }
 
 const prepareValuesAggResponse = (esResponse, fields) => {
   const response = {
-    total: esResponse.hits.total
+    total: esResponse.hits.total,
+    took: esResponse.took,
+    timed_out: esResponse.timed_out
   }
   recurseAggResponse(response, esResponse.aggregations)
   return response
@@ -269,6 +271,9 @@ const prepareValuesAggResponse = (esResponse, fields) => {
 const recurseAggResponse = (response, aggRes) => {
   if (aggRes.card) response.total_values = aggRes.card.value
   response.total_other = aggRes.values.sum_other_doc_count
+  if (aggRes.values.buckets.length > 10000) {
+    throw createError(400, `Résultats d'aggrégation trop nombreux. Abandon.`)
+  }
   response.aggs = aggRes.values.buckets.map(b => {
     const aggItem = {
       total: b.doc_count,
