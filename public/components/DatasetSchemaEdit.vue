@@ -19,13 +19,13 @@
           <v-flex xs2>
             <v-text-field v-model="field.key" :disabled="true" label="Clé"/>
           </v-flex>
-          <v-flex xs1>
-            <v-text-field v-model="field.type" :disabled="true" label="Type"/>
+          <v-flex xs2>
+            <v-text-field :disabled="true" :value="`${field.type}${field.format ? ' - ' + field.format : ''}`" label="Type"/>
           </v-flex>
           <v-flex xs3>
             <v-text-field v-model="field.title" :placeholder="field['x-originalName']" label="Libellé"/>
           </v-flex>
-          <v-flex xs4>
+          <v-flex xs3>
             <v-textarea v-model="field.description" :id="'description-' + field.key" label="Description" rows="1"/>
           </v-flex>
           <v-flex xs2>
