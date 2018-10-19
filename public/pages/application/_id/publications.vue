@@ -21,9 +21,14 @@
           Cette publication référence une configuration de catalogue inconnue ({{ publication.catalog }}).
         </v-list-tile-content>
         <v-list-tile-action>
-          <v-btn v-if="can('writeDescription')" color="warning" icon flat title="Supprimer cette publication" @click="deletePublicationInd = i; showDeleteDialog = true;">
-            <v-icon>delete</v-icon>
-          </v-btn>
+          <v-layout row wrap>
+            <v-btn v-if="can('writeDescription') && ['error', 'published'].includes(publication.status)" color="warning" icon flat title="Re-publier" class="mr-4" @click="rePublishInd = i; showRepublishDialog = true;">
+              <v-icon>play_arrow</v-icon>
+            </v-btn>
+            <v-btn v-if="can('writeDescription')" color="warning" icon flat title="Supprimer cette publication" @click="deletePublicationInd = i; showDeleteDialog = true;">
+              <v-icon>delete</v-icon>
+            </v-btn>
+          </v-layout>
         </v-list-tile-action>
       </v-list-tile>
     </v-list>
@@ -78,6 +83,25 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
+
+    <v-dialog v-model="showRepublishDialog" max-width="500">
+      <v-card v-if="showRepublishDialog">
+        <v-card-title primary-title>
+          Re-publication
+        </v-card-title>
+        <v-card-text>
+          Voulez vous vraiment effectuer de nouveau la publication ?
+          <br>
+          <br>
+          <b>Attention</b> si vous avez effectué des modifications sur le catalogue depuis la dernière publication elles seront perdues.
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer/>
+          <v-btn flat @click="showRepublishDialog = false">Non</v-btn>
+          <v-btn color="warning" @click="showRepublishDialog = false; rePublish(rePublishInd)">Oui</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </v-container>
 </template>
 
@@ -96,6 +120,8 @@ export default {
       },
       deletePublicationInd: null,
       showDeleteDialog: false,
+      rePublishInd: null,
+      showRepublishDialog: false,
       catalogs: []
     }
   },
@@ -127,6 +153,11 @@ export default {
     deletePublication(publicationInd) {
       const publication = this.application.publications[publicationInd]
       publication.status = 'deleted'
+      this.patch({ publications: this.application.publications })
+    },
+    rePublish(publicationInd) {
+      const publication = this.application.publications[publicationInd]
+      publication.status = 'waiting'
       this.patch({ publications: this.application.publications })
     },
     catalogLabel(catalog) {

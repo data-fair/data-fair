@@ -22,9 +22,15 @@
           Cette publication référence une configuration de catalogue inconnue ({{ publication.catalog }}).
         </v-list-tile-content>
         <v-list-tile-action>
-          <v-btn v-if="can('writeDescription')" color="warning" icon flat title="Supprimer cette publication" @click="deletePublicationInd = i; showDeleteDialog = true;">
-            <v-icon>delete</v-icon>
-          </v-btn>
+          <v-layout row wrap>
+            <v-btn v-if="can('writeDescription') && ['error', 'published'].includes(publication.status)" color="warning" icon flat title="Re-publier" class="mr-4" @click="rePublishInd = i; showRepublishDialog = true;">
+              <v-icon>play_arrow</v-icon>
+            </v-btn>
+            <v-btn v-if="can('writeDescription')" color="warning" icon flat title="Supprimer cette publication" @click="deletePublicationInd = i; showDeleteDialog = true;">
+              <v-icon>delete</v-icon>
+            </v-btn>
+          </v-layout>
+
         </v-list-tile-action>
       </v-list-tile>
     </v-list>
@@ -96,6 +102,25 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
+
+    <v-dialog v-model="showRepublishDialog" max-width="500">
+      <v-card v-if="showRepublishDialog">
+        <v-card-title primary-title>
+          Re-publication
+        </v-card-title>
+        <v-card-text>
+          Voulez vous vraiment effectuer de nouveau la publication ?
+          <br>
+          <br>
+          <b>Attention</b> si vous avez effectué des modifications sur le catalogue depuis la dernière publication elles seront perdues.
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer/>
+          <v-btn flat @click="showRepublishDialog = false">Non</v-btn>
+          <v-btn color="warning" @click="showRepublishDialog = false; rePublish(rePublishInd)">Oui</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </v-container>
 </template>
 
@@ -113,7 +138,9 @@ export default {
         status: 'waiting'
       },
       deletePublicationInd: null,
+      rePublishInd: null,
       showDeleteDialog: false,
+      showRepublishDialog: false,
       catalogs: [],
       catalogDatasets: [],
       catalogDatasetsLoading: false,
@@ -133,7 +160,9 @@ export default {
       if (!this.searchCatalogDatasets || this.searchCatalogDatasets === (this.newPublication.addToDataset && this.newPublication.addToDataset.title)) return
       this.catalogDatasetsLoading = true
       const catalog = this.catalogsById[this.newPublication.catalog]
-      this.catalogDatasets = (await this.$axios.$get('api/v1/catalogs/_datasets', { params: { type: catalog.type, url: catalog.url, q: this.searchCatalogDatasets } })).results
+      this.catalogDatasets = (await this.$axios.$get(`api/v1/catalogs/${catalog.id}/datasets`, { params: { q: this.searchCatalogDatasets } }))
+        .results
+        .map(r => ({ id: r.id, title: r.title }))
       this.catalogDatasetsLoading = false
     }
   },
@@ -156,6 +185,10 @@ export default {
     },
     deletePublication(publicationInd) {
       this.dataset.publications[publicationInd].status = 'deleted'
+      this.patch({ publications: this.dataset.publications })
+    },
+    rePublish(publicationInd) {
+      this.dataset.publications[publicationInd].status = 'waiting'
       this.patch({ publications: this.dataset.publications })
     },
     catalogLabel(catalog) {

@@ -20,8 +20,8 @@ exports.getDataset = async (catalog, datasetId) => {
   return prepareDatasetFromCatalog(dataset)
 }
 
-exports.listDatasets = async (catalog, p) => {
-  const params = { page_size: 1000 }
+exports.listDatasets = async (catalog, params = {}) => {
+  params.page_size = params.page_size || 1000
   let datasets
   if (catalog.organization) {
     datasets = (await axios.get(url.resolve(catalog.url, 'api/1/me/org_datasets'), { params, headers: { 'X-API-KEY': catalog.apiKey } })).data
@@ -40,15 +40,10 @@ exports.suggestOrganizations = async (catalogUrl, q) => {
   return { results: res.data.map(o => ({ id: o.id, name: o.name })) }
 }
 
-exports.suggestDatasets = async (catalogUrl, q) => {
-  const res = await axios.get(url.resolve(catalogUrl, 'api/1/datasets/suggest/'), { params: { q } })
-  return { results: res.data.map(o => ({ id: o.id, title: o.title })) }
-}
-
 exports.publishDataset = async (catalog, dataset, publication) => {
   // if (publication.targetUrl) throw new Error('Publication was already done !')
   if (publication.addToDataset && publication.addToDataset.id) return addResourceToDataset(catalog, dataset, publication)
-  else return createNewDataset(catalog, dataset, publication)
+  else return createOrUpdateDataset(catalog, dataset, publication)
 }
 
 exports.deleteDataset = async (catalog, dataset, publication) => {
@@ -67,7 +62,7 @@ exports.publishApplication = async (catalog, application, publication, datasets)
   })
   const udataReuse = {
     title: application.title,
-    description: application.description,
+    description: application.description || application.title,
     private: true,
     type: 'application',
     url: `${config.publicUrl}/app/${application.id}`,
@@ -80,8 +75,26 @@ exports.publishApplication = async (catalog, application, publication, datasets)
   if (catalog.organization && catalog.organization.id) {
     udataReuse.organization = { id: catalog.organization.id }
   }
+
+  const updateReuseId = publication.result && publication.result.id
+  let existingReuse
+  if (updateReuseId) {
+    try {
+      existingReuse = (await axios.get(url.resolve(catalog.url, 'api/1/reuses/' + updateReuseId + '/'), { headers: { 'X-API-KEY': catalog.apiKey } })).data
+      if (existingReuse.deleted) existingReuse = null
+    } catch (err) {
+      console.error('Failed to fetch existing reuse', err)
+    }
+  }
+
   try {
-    const res = await axios.post(url.resolve(catalog.url, 'api/1/reuses/'), udataReuse, { headers: { 'X-API-KEY': catalog.apiKey } })
+    let res
+    if (existingReuse) {
+      Object.assign(existingReuse, udataReuse)
+      res = await axios.put(url.resolve(catalog.url, 'api/1/reuses/' + updateReuseId + '/'), existingReuse, { headers: { 'X-API-KEY': catalog.apiKey } })
+    } else {
+      res = await axios.post(url.resolve(catalog.url, 'api/1/reuses/'), udataReuse, { headers: { 'X-API-KEY': catalog.apiKey } })
+    }
     publication.targetUrl = res.data.page
     publication.result = res.data
   } catch (err) {
@@ -203,16 +216,16 @@ async function addResourceToDataset(catalog, dataset, publication) {
   for (let existingResource of catalogDataset.resources) {
     existingResource.extras = existingResource.extras || {}
     if (existingResource.extras.datafairOrigin === config.publicUrl && existingResource.extras.datafairDatasetId === dataset.id) {
-      await axios.delete(url.resolve(catalog.url, `api/1/datasets/${publication.addToDataset.id}/resources/${existingResource.id}`),
+      await axios.delete(url.resolve(catalog.url, `api/1/datasets/${publication.addToDataset.id}/resources/${existingResource.id}/`),
         { headers: { 'X-API-KEY': catalog.apiKey } })
     }
   }
 }
 
-async function createNewDataset(catalog, dataset, publication) {
+async function createOrUpdateDataset(catalog, dataset, publication) {
   const udataDataset = {
     title: dataset.title,
-    description: dataset.description,
+    description: dataset.description || dataset.title,
     private: true,
     extras: {
       datafairOrigin: config.publicUrl,
@@ -275,8 +288,27 @@ async function createNewDataset(catalog, dataset, publication) {
   if (catalog.organization && catalog.organization.id) {
     udataDataset.organization = { id: catalog.organization.id }
   }
+
+  const updateDatasetId = publication.result && publication.result.id
+  let existingDataset
+  if (updateDatasetId) {
+    try {
+      existingDataset = (await axios.get(url.resolve(catalog.url, 'api/1/datasets/' + updateDatasetId + '/'), { headers: { 'X-API-KEY': catalog.apiKey } })).data
+      if (existingDataset.deleted) existingDataset = null
+    } catch (err) {
+      console.error('Failed to fetch existing dataset', err)
+    }
+  }
+
   try {
-    const res = await axios.post(url.resolve(catalog.url, 'api/1/datasets/'), udataDataset, { headers: { 'X-API-KEY': catalog.apiKey } })
+    let res
+    if (existingDataset) {
+      Object.assign(existingDataset, udataDataset)
+      res = await axios.put(url.resolve(catalog.url, 'api/1/datasets/' + updateDatasetId + '/'), existingDataset, { headers: { 'X-API-KEY': catalog.apiKey } })
+    } else {
+      res = await axios.post(url.resolve(catalog.url, 'api/1/datasets/'), udataDataset, { headers: { 'X-API-KEY': catalog.apiKey } })
+    }
+
     if (!res.data.page || typeof res.data.page !== 'string') {
       throw new Error(`Erreur lors de l'envoi à ${catalog.url} : le format de retour n'est pas correct.`)
     }
