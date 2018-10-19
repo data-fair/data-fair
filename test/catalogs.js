@@ -40,27 +40,10 @@ test('Search organizations in a udata catalog', async t => {
   t.is(res.data.results[0].name, 'Koumoul')
 })
 
-test('Search datasets in a udata catalog', async t => {
-  const ax = await axiosBuilder()
-  const res = await ax.get('/api/v1/catalogs/_datasets', { params: { type: 'udata', url: 'http://test-catalog.com', q: 'test' } })
-  t.truthy(res.data.results)
-  t.is(res.data.results[0].title, 'Test dataset')
-})
-
 test('Search organizations in a unknown catalog type', async t => {
   const ax = await axiosBuilder()
   try {
     await ax.get('/api/v1/catalogs/_organizations', { params: { type: 'unknown', url: 'http://test-catalog.com', q: 'koumoul' } })
-    t.fail()
-  } catch (err) {
-    t.is(err.status, 404)
-  }
-})
-
-test('Search datasets in a unknown catalog type', async t => {
-  const ax = await axiosBuilder()
-  try {
-    await ax.get('/api/v1/catalogs/_datasets', { params: { type: 'unknown', url: 'http://test-catalog.com', q: 'test' } })
     t.fail()
   } catch (err) {
     t.is(err.status, 404)
