@@ -67,7 +67,7 @@ exports.publishApplication = async (catalog, application, publication, datasets)
   })
   const udataReuse = {
     title: application.title,
-    description: appPageDesc(application),
+    description: application.description,
     private: true,
     type: 'application',
     url: `${config.publicUrl}/app/${application.id}`,
@@ -118,22 +118,6 @@ function prepareDatasetFromCatalog(d) {
       size: r.fileSize
     }))
   }
-}
-
-function datasetPageUrl(dataset) {
-  return `${config.publicUrl}/dataset/${dataset.id}/description`
-}
-
-function datasetPageDesc(dataset) {
-  const desc = dataset.description ? dataset.description + '\n\n' : ''
-  const url = datasetPageUrl(dataset)
-  return desc + `Ce jeu de données a été publié depuis [${config.publicUrl}](${config.publicUrl}). Consultez [sa page](${url}) pour accéder à sa description détaillée, prévisualisation, documentation d'API, etc.`
-}
-
-function appPageDesc(app) {
-  const desc = app.description ? app.description + '\n\n' : ''
-  const url = `${config.publicUrl}/application/${app.id}/description`
-  return desc + `Cette application a été publiée depuis [${config.publicUrl}](${config.publicUrl}). Consultez [sa page](${url}) pour accéder à sa description détaillée, documentation d'API, etc.`
 }
 
 async function addResourceToDataset(catalog, dataset, publication) {
@@ -228,7 +212,7 @@ async function addResourceToDataset(catalog, dataset, publication) {
 async function createNewDataset(catalog, dataset, publication) {
   const udataDataset = {
     title: dataset.title,
-    description: datasetPageDesc(dataset),
+    description: dataset.description,
     private: true,
     extras: {
       datafairOrigin: config.publicUrl,
