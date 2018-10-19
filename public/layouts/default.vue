@@ -208,8 +208,16 @@ body .application {
   color: green !important;
 }
 
-.event-error * {
-  color: red !important;
+.event-error {
+  * {
+    color: red !important;
+  }
+  .v-list__tile {
+    height: auto;
+  }
+  p {
+    margin-bottom: 0;
+  }
 }
 
 iframe {
