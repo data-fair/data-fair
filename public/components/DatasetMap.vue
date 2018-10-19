@@ -120,7 +120,8 @@ export default {
     await new Promise(resolve => setTimeout(resolve, 0))
     this.map = new mapboxgl.Map({ container: 'map', style: this.env.map.style })
     this.map.on('error', (error) => {
-      eventBus.$emit('notification', { error, msg: 'Erreur pendant le rendu de la carte:' })
+      if (error.sourceId) eventBus.$emit('notification', { error: `Échec d'accès aux tuiles ${error.sourceId}`, msg: 'Erreur pendant le rendu de la carte:' })
+      else eventBus.$emit('notification', { error, msg: 'Erreur pendant le rendu de la carte:' })
     })
     const bbox = await this.getBBox()
     this.map.fitBounds(bbox, { duration: 0 })
