@@ -1,8 +1,7 @@
 // Index tabular datasets with elasticsearch using available information on dataset schema
 const util = require('util')
 const pump = util.promisify(require('pump'))
-const esUtils = require('../utils/es')
-const esStreams = require('../utils/es-streams')
+const es = require('../utils/es')
 const datasetUtils = require('../utils/dataset')
 const extensionsUtils = require('../utils/extensions')
 const journals = require('../utils/journals')
@@ -18,9 +17,9 @@ exports.process = async function(app, dataset) {
   const esClient = app.get('es')
   const collection = db.collection('datasets')
 
-  const tempId = await esUtils.initDatasetIndex(esClient, dataset)
+  const tempId = await es.initDatasetIndex(esClient, dataset)
   debug(`Initialied new dataset index ${tempId}`)
-  const indexStream = esStreams.indexStream({ esClient, indexName: tempId, dataset, attachments: !!dataset.hasFiles })
+  const indexStream = es.indexStream({ esClient, indexName: tempId, dataset, attachments: !!dataset.hasFiles })
   // reindex and preserve previous extensions
   debug('Run index stream')
   await pump(datasetUtils.readStream(dataset), extensionsUtils.preserveExtensionStream({ db, esClient, dataset, attachments: !!dataset.hasFiles }), indexStream)
@@ -30,7 +29,7 @@ exports.process = async function(app, dataset) {
   if (errorsSummary) await journals.log(app, dataset, { type: 'error', data: errorsSummary })
 
   debug('Switch alias to point to new datasets index')
-  await esUtils.switchAlias(esClient, dataset, tempId)
+  await es.switchAlias(esClient, dataset, tempId)
 
   const result = { status: 'indexed', count }
   Object.assign(dataset, result)

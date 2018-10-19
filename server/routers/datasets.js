@@ -42,7 +42,7 @@ const acceptedStatuses = ['finalized', 'error']
 
 const operationsClasses = {
   list: ['list'],
-  read: ['readDescription', 'readLines', 'getGeoAgg', 'getValuesAgg', 'getMetricAgg', 'downloadOriginalData', 'downloadFullData', 'readJournal', 'readApiDoc'],
+  read: ['readDescription', 'readLines', 'getGeoAgg', 'getValuesAgg', 'getMetricAgg', 'getWordsAgg', 'downloadOriginalData', 'downloadFullData', 'readJournal', 'readApiDoc'],
   write: ['writeDescription', 'writeData'],
   admin: ['delete', 'getPermissions', 'setPermissions']
 }
@@ -345,7 +345,7 @@ router.get('/:datasetId/lines', permissions.middleware('readLines', 'read'), asy
 
   let esResponse
   try {
-    esResponse = await esUtils.searchInDataset(req.app.get('es'), req.dataset, req.query)
+    esResponse = await esUtils.search(req.app.get('es'), req.dataset, req.query)
   } catch (err) {
     await manageESError(req, err)
   }
@@ -402,7 +402,7 @@ router.get('/:datasetId/values_agg', permissions.middleware('getValuesAgg', 'rea
   if (!req.user && managePublicCache(req, res)) return res.status(304).send()
   let result
   try {
-    result = await esUtils.valuesAgg(req.app.get('es'), req.dataset, req.query)
+    result = await esUtils.wordsAgg(req.app.get('es'), req.dataset, req.query)
   } catch (err) {
     await manageESError(req, err)
   }
@@ -411,6 +411,18 @@ router.get('/:datasetId/values_agg', permissions.middleware('getValuesAgg', 'rea
 
 // Simple metric aggregation to calculate some value (sum, avg, etc.)
 router.get('/:datasetId/metric_agg', permissions.middleware('getMetricAgg', 'read'), asyncWrap(async(req, res) => {
+  if (!req.user && managePublicCache(req, res)) return res.status(304).send()
+  let result
+  try {
+    result = await esUtils.metricAgg(req.app.get('es'), req.dataset, req.query)
+  } catch (err) {
+    await manageESError(req, err)
+  }
+  res.status(200).send(result)
+}))
+
+// Simple words aggregation for significant terms extraction
+router.get('/:datasetId/words_agg', permissions.middleware('getWordsAgg', 'read'), asyncWrap(async(req, res) => {
   if (!req.user && managePublicCache(req, res)) return res.status(304).send()
   let result
   try {

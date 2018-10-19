@@ -82,4 +82,4 @@ class IndexStream extends Writable {
   }
 }
 
-exports.indexStream = (options) => new IndexStream(options)
+module.exports = (options) => new IndexStream(options)

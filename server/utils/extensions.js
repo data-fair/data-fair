@@ -12,7 +12,6 @@ const pump = util.promisify(require('pump'))
 const flatten = require('flat')
 const turf = require('turf')
 const es = require('./es')
-const esStreams = require('./es-streams')
 const geoUtils = require('./geo')
 const journals = require('./journals')
 const datasetUtils = require('./dataset')
@@ -278,7 +277,7 @@ exports.extend = async(app, dataset, extension, remoteService, action) => {
     await setProgress()
     progressInterval = setInterval(setProgress, 600)
     if (stats.missing !== 0) {
-      const indexStream = esStreams.indexStream({ esClient, indexName, stats, updateMode: true })
+      const indexStream = es.indexStream({ esClient, indexName, stats, updateMode: true })
       await pump(
         inputStream,
         new PrepareInputStream({ action, dataset, hashes, extensionKey, selectFields: extension.select, stats }),
@@ -338,7 +337,7 @@ class CalculatedExtension extends Transform {
 exports.extendCalculated = async (app, dataset, geopoint, geometry) => {
   const indexName = es.aliasName(dataset)
   const esClient = app.get('es')
-  const indexStream = esStreams.indexStream({ esClient, indexName, updateMode: true })
+  const indexStream = es.indexStream({ esClient, indexName, updateMode: true })
   await pump(
     new ESInputStream({ esClient, indexName }),
     new CalculatedExtension({ indexName, geopoint, geometry, dataset }),
