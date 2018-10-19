@@ -22,8 +22,9 @@ exports.process = async function(app, dataset) {
   // Try to manage csv sniffing failures
   if (sniffResult.delimiter === null && sniffResult.labels && sniffResult.labels && sniffResult.labels[0]) {
     const hasDelimiter = possibleDelimiters.reduce((a, delim) => { return a || sniffResult.labels[0].indexOf(delim) !== -1 }, false)
-    if (hasDelimiter) throw new Error('Échec de l\'analyse du fichier, le CSV est probablement mal formé.')
+    if (hasDelimiter) throw new Error('Échec de l\'analyse du fichier tabulaire, il est probablement mal formé.')
   }
+  if (!sniffResult.labels) throw new Error('Échec de l\'analyse du fichier tabulaire, pas de colonne détectée.')
 
   const schema = dataset.file.schema = sniffResult.labels
     .map((field, i) => ({
@@ -36,7 +37,7 @@ exports.process = async function(app, dataset) {
 
   const keys = new Set([])
   schema.forEach(field => {
-    if (keys.has(field.key)) throw new Error(`Échec de l'analyse du fichier, le CSV contient plusieurs fois la colonne "${field.key}".`)
+    if (keys.has(field.key)) throw new Error(`Échec de l'analyse du fichier tabulaire, il contient plusieurs fois la colonne "${field.key}".`)
     keys.add(field.key)
   })
 
