@@ -53,9 +53,9 @@ module.exports = async (client, dataset, query) => {
   if (size > 100) throw createError(400, '"size" cannot be more than 100')
 
   // Get a ES query to filter the aggregation results
-  query.size = '0'
   delete query.sort
   const esQuery = prepareQuery(dataset, query)
+  esQuery.size = 0
   let currentAggLevel = esQuery.aggs = {}
   for (let i = 0; i < fields.length; i++) {
     currentAggLevel.values = {

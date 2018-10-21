@@ -9,6 +9,7 @@ module.exports = {
   metricAgg: require('./metric-agg'),
   geoAgg: require('./geo-agg'),
   bboxAgg: require('./bbox-agg'),
+  wordsAgg: require('./words-agg'),
   indexStream: require('./index-stream')
 }
 

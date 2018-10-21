@@ -19,7 +19,7 @@ exports.prepareQuery = (dataset, query) => {
 
   // Pagination
   esQuery.size = query.size ? Number(query.size) : 20
-  if (query.size > 10000) throw createError(400, '"size" cannot be more than 10000')
+  if (esQuery.size > 10000) throw createError(400, '"size" cannot be more than 10000')
   esQuery.from = (query.page ? Number(query.page) - 1 : 0) * esQuery.size
 
   // Select fields to return

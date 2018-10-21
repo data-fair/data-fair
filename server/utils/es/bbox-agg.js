@@ -1,8 +1,8 @@
 const { prepareQuery, aliasName } = require('./commons')
 
 module.exports = async (client, dataset, query = {}) => {
-  query.size = '0'
   const esQuery = prepareQuery(dataset, query)
+  esQuery.size = 0
   // Use corners, not centroid in order to get truly surrounding box
   // and to function even with a single document
   esQuery.aggs = { bbox: { geo_bounds: { field: '_geocorners' } } }

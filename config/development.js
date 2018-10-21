@@ -59,6 +59,10 @@ module.exports = {
     url: 'http://localhost:3001/',
     public: true
   }, {
+    title: 'Nuages de mots (dev)',
+    url: 'http://localhost:3003/',
+    public: true
+  }, {
     title: 'Observatoire des entreprises (bêta)',
     url: 'https://koumoul.com/s/observatoire-entreprises/',
     public: true,

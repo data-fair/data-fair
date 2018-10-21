@@ -304,7 +304,7 @@ module.exports = (dataset) => {
           parameters: [{
             in: 'query',
             name: 'field',
-            description: 'Le champ en fonction des valeurs duquel grouper les lignes du jeu de donénes',
+            description: 'Le champ en fonction des valeurs duquel grouper les lignes du jeu de données',
             required: true,
             schema: {
               type: 'string',
@@ -341,6 +341,38 @@ module.exports = (dataset) => {
           responses: {
             200: {
               description: 'Le résultat du calcul.',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object'
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      '/words_agg': {
+        get: {
+          summary: 'Récupérer des mots significatifs dans un jeu de données.',
+          operationId: 'getWordsAgg',
+          'x-permissionClass': 'read',
+          security: (publicOperations.indexOf('getWordsAgg') || publicClasses.indexOf('read')) ? [] : [{ jwt: [] }],
+          tags: ['Données'],
+          parameters: [{
+            in: 'query',
+            name: 'field',
+            description: `Le champ sur lequel effectuer l'analyse`,
+            required: true,
+            schema: {
+              type: 'string',
+              enum: properties
+            }
+          }].concat(queryParams),
+          // TODO: document sort param and interval
+          responses: {
+            200: {
+              description: 'Le résultat de l\'analyse.',
               content: {
                 'application/json': {
                   schema: {

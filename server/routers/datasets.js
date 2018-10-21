@@ -426,7 +426,7 @@ router.get('/:datasetId/words_agg', permissions.middleware('getWordsAgg', 'read'
   if (!req.user && managePublicCache(req, res)) return res.status(304).send()
   let result
   try {
-    result = await esUtils.metricAgg(req.app.get('es'), req.dataset, req.query)
+    result = await esUtils.wordsAgg(req.app.get('es'), req.dataset, req.query)
   } catch (err) {
     await manageESError(req, err)
   }

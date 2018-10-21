@@ -13,8 +13,8 @@ exports.geoAgg = async (client, dataset, query) => {
   if (size > 100) throw createError(400, '"size" cannot be more than 100')
   const precision = geohash.bbox2precision(bbox, aggSize)
 
-  query.size = 0
   const esQuery = prepareQuery(dataset, query)
+  esQuery.size = 0
   esQuery.aggs = {
     geo: {
       geohash_grid: {

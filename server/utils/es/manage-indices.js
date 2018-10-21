@@ -1,4 +1,5 @@
 const config = require('config')
+const crypto = require('crypto')
 const geoUtils = require('../geo')
 const { aliasName } = require('./commons')
 
@@ -11,7 +12,7 @@ exports.esProperty = prop => {
   if (prop.type === 'string' && prop.format === 'date') return { type: 'date' }
   // uri-reference and full text fields are managed in the same way from now on, because we want to be able to aggregate on small full text fields
   // TODO: maybe ignore_above should be only for uri-reference fields
-  const textField = { type: 'keyword', ignore_above: 200, fields: { text: { type: 'text', analyzer: config.elasticsearch.defaultAnalyzer } } }
+  const textField = { type: 'keyword', ignore_above: 200, fields: { text: { type: 'text', analyzer: config.elasticsearch.defaultAnalyzer, fielddata: true } } }
   if (prop.type === 'string' && prop.format === 'uri-reference') return textField
   return textField
 }
@@ -87,6 +88,9 @@ const indexBase = {
 exports.datasetInfos = async (client, dataset) => {
   // const indices = await client.indices.get({index: `${indexPrefix(dataset)}-*`})
   const indices = await client.cat.indices({ index: `${indexPrefix(dataset)}-*`, format: 'json' })
+  for (let index of indices) {
+    index.definition = await client.indices.get({ index: index.index })
+  }
   const alias = await client.indices.getAlias({ index: aliasName(dataset) })
   return {
     aliasName: aliasName(dataset),
