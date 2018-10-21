@@ -119,12 +119,16 @@ module.exports = {
     public: true
   }, {
     title: 'Observatoire des entreprises (bêta)',
-    url: 'https://koumoul.com/s/observatoire-entreprises/',
+    url: 'https://koumoul.com/apps/observatoire-entreprises/0/',
     public: true,
     servicesFilters: [{ 'api-id': ['geocoder-koumoul'] }, { 'api-id': ['tileserver'] }, { 'api-id': ['sirene-koumoul'] }]
   }, {
     title: 'Graphiques simples (bêta)',
     url: 'https://koumoul-dev.github.io/data-fair-charts/0.x/',
+    public: true
+  }, {
+    title: 'Nuages de mots (bêta)',
+    url: 'https://koumoul.com/apps/word-cloud/0/',
     public: true
   }],
   remoteServices: [{
