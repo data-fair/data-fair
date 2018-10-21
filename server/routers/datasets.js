@@ -402,7 +402,7 @@ router.get('/:datasetId/values_agg', permissions.middleware('getValuesAgg', 'rea
   if (!req.user && managePublicCache(req, res)) return res.status(304).send()
   let result
   try {
-    result = await esUtils.wordsAgg(req.app.get('es'), req.dataset, req.query)
+    result = await esUtils.valuesAgg(req.app.get('es'), req.dataset, req.query)
   } catch (err) {
     await manageESError(req, err)
   }

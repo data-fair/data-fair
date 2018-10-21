@@ -4,7 +4,7 @@ const flatten = require('flat')
 
 const { prepareQuery, getQueryBBOX, aliasName } = require('./commons')
 
-exports.geoAgg = async (client, dataset, query) => {
+module.exports = async (client, dataset, query) => {
   if (!dataset.bbox) throw createError(400, 'geo aggregation cannot be used on this dataset. It is not geolocalized.')
   const bbox = getQueryBBOX(query) || dataset.bbox
   const aggSize = query.agg_size ? Number(query.agg_size) : 20
