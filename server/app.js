@@ -78,7 +78,7 @@ exports.run = async () => {
   app.set('db', db)
   app.set('mongoClient', client)
   await cache.init(db)
-  await baseApplications.init(db)
+  baseApplications.init(db)
   app.set('es', await esUtils.init())
   app.publish = await wsUtils.init(wss, db)
   await locksUtils.init(db)

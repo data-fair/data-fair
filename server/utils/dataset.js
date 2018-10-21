@@ -1,11 +1,13 @@
 const fs = require('fs')
 const path = require('path')
+const util = require('util')
 const Combine = require('stream-combiner')
 const { Transform } = require('stream')
 const iconv = require('iconv-lite')
 const config = require('config')
 const csv = require('csv-parser')
 const JSONStream = require('JSONStream')
+const glob = util.promisify(require('glob'))
 const fieldsSniffer = require('./fields-sniffer')
 
 exports.fileName = (dataset) => {
@@ -18,6 +20,29 @@ exports.originalFileName = (dataset) => {
 
 exports.extractedFilesDirname = (dataset) => {
   return path.join(config.dataDir, dataset.owner.type, dataset.owner.id, dataset.id + '.files')
+}
+
+exports.lsFiles = async (dataset) => {
+  const infos = {}
+  if (dataset.file) {
+    const filePath = exports.fileName(dataset)
+    infos.file = { filePath, size: (await fs.promises.stat(filePath)).size }
+  }
+  if (dataset.originalFile) {
+    const filePath = exports.originalFileName(dataset)
+    infos.originalFile = { filePath, size: (await fs.promises.stat(filePath)).size }
+  }
+  if (dataset.hasFiles) {
+    const dirPath = exports.extractedFilesDirname(dataset)
+    const paths = await glob(`**/*`, { nodir: true, cwd: dirPath })
+    const files = []
+    for (let p of paths) {
+      const filePath = path.join(dirPath, p)
+      files.push({ filePath, size: (await fs.promises.stat(filePath)).size })
+    }
+    infos.extractedFiles = { nb: files.length, files }
+  }
+  return infos
 }
 
 // Read the dataset file and get a stream of line items

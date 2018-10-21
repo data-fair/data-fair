@@ -42,7 +42,7 @@
               <v-list-tile-avatar><v-icon>add_circle_outline</v-icon></v-list-tile-avatar>
               <span>{{ dataset.createdBy.name }} {{ dataset.createdAt | moment("DD/MM/YYYY, HH:mm") }}</span>
             </v-list-tile>
-            <v-list-tile>
+            <v-list-tile v-if="dataset.count !== undefined">
               <v-list-tile-avatar><v-icon>view_headline</v-icon></v-list-tile-avatar>
               <span>{{ dataset.count }} enregistrements</span>
             </v-list-tile>
