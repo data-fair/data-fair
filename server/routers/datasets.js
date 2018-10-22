@@ -89,7 +89,7 @@ router.get('', asyncWrap(async(req, res) => {
 // Middlewares
 router.use('/:datasetId', asyncWrap(async(req, res, next) => {
   req.dataset = req.resource = await req.app.get('db').collection('datasets')
-    .findOne({ id: req.params.datasetId }, { _id: 0 })
+    .findOne({ id: req.params.datasetId }, { projection: { _id: 0 } })
   if (!req.dataset) return res.status(404).send('Dataset not found')
   findUtils.setResourceLinks(req.dataset, 'dataset')
   req.resourceApiDoc = datasetAPIDocs(req.dataset)

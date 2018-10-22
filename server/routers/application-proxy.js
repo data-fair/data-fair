@@ -12,7 +12,7 @@ const router = module.exports = express.Router()
 
 const setResource = asyncWrap(async(req, res, next) => {
   req.application = req.resource = await req.app.get('db').collection('applications')
-    .findOne({ id: req.params.applicationId }, { _id: 0 })
+    .findOne({ id: req.params.applicationId }, { projection: { _id: 0 } })
   if (!req.application) return res.status(404).send('Application configuration not found')
   findUtils.setResourceLinks(req.application, 'application')
   req.resourceApiDoc = applicationAPIDocs(req.application)

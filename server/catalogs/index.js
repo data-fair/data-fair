@@ -76,7 +76,7 @@ exports.listDatasets = async (db, catalog, params) => {
       const harvestedDataset = await db.collection('datasets').findOne({
         'remoteFile.url': resource.url,
         'remoteFile.catalog': catalog.id
-      }, { id: 1 })
+      }, { projection: { id: 1 } })
       if (harvestedDataset) resource.harvestedDataset = harvestedDataset.id
     }
   }
@@ -94,7 +94,7 @@ exports.harvestDataset = async (catalog, datasetId, app) => {
     const harvestedDataset = await app.get('db').collection('datasets').findOne({
       'remoteFile.url': resource.url,
       'remoteFile.catalog': catalog.id
-    }, { id: 1 })
+    }, { projection: { id: 1 } })
     if (harvestedDataset) continue
 
     const date = moment().toISOString()

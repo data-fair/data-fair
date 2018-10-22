@@ -31,7 +31,7 @@ exports.process = async function(app, dataset) {
   let catalogHttpParams = {}
   if (dataset.remoteFile.catalog) {
     const catalog = await app.get('db').collection('catalogs')
-      .findOne({ id: dataset.remoteFile.catalog }, { _id: 0 })
+      .findOne({ id: dataset.remoteFile.catalog }, { projection: { _id: 0 } })
     if (!catalog) throw new Error('Le fichier distant référence un catalogue inexistant. Il a probablement été supprimé.')
     catalogHttpParams = await catalogs.httpParams(catalog)
     debug(`Use HTTP params ${JSON.stringify(catalogHttpParams)}`)

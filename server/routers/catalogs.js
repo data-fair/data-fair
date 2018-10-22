@@ -103,7 +103,7 @@ router.post('', asyncWrap(async(req, res) => {
 // Middlewares
 router.use('/:catalogId', asyncWrap(async(req, res, next) => {
   const catalog = await req.app.get('db').collection('catalogs')
-    .findOne({ id: req.params.catalogId }, { _id: 0 })
+    .findOne({ id: req.params.catalogId }, { projection: { _id: 0 } })
   if (!catalog) return res.status(404).send('Catalog not found')
   findUtils.setResourceLinks(catalog, 'catalog')
   req.catalog = req.resource = mongoEscape.unescape(catalog, true)

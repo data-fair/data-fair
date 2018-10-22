@@ -169,7 +169,8 @@ router.post('/_default_services', asyncWrap(async(req, res) => {
 
 // Middlewares
 router.use('/:remoteServiceId', asyncWrap(async(req, res, next) => {
-  const service = await req.app.get('db').collection('remote-services').findOne({ id: req.params.remoteServiceId }, { _id: 0 })
+  const service = await req.app.get('db').collection('remote-services')
+    .findOne({ id: req.params.remoteServiceId }, { projection: { _id: 0 } })
   if (!service) return res.status(404).send('Remote Api not found')
   findUtils.setResourceLinks(service, 'remote-service')
   req.remoteService = req.resource = mongoEscape.unescape(service, true)
