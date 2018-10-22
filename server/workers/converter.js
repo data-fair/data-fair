@@ -11,7 +11,6 @@ const statsFile = util.promisify(fs.stat)
 const exec = require('child-process-promise').exec
 const datasetUtils = require('../utils/dataset')
 const pump = util.promisify(require('pump'))
-const glob = util.promisify(require('glob'))
 
 exports.type = 'dataset'
 exports.eventsPrefix = 'convert'
@@ -41,7 +40,6 @@ const geographicalTypes = exports.geographicalTypes = new Set([
 
 async function decompress(mimetype, filePath, dirPath) {
   if (mimetype === 'application/zip') await exec(`unzip -o -q ${filePath} -d ${dirPath}`)
-  return glob(`**/*`, { nodir: true, cwd: dirPath })
 }
 
 exports.process = async function(app, dataset) {
@@ -52,7 +50,8 @@ exports.process = async function(app, dataset) {
   dataset.hasFiles = false
   if (archiveTypes.has(dataset.originalFile.mimetype)) {
     const dirName = datasetUtils.extractedFilesDirname(dataset)
-    const files = await decompress(dataset.originalFile.mimetype, originalFilePath, dirName)
+    await decompress(dataset.originalFile.mimetype, originalFilePath, dirName)
+    const files = await datasetUtils.lsExtractedFiles(dataset)
     const fileNames = files.map(f => path.parse(f).base)
     const baseName = path.parse(dataset.originalFile.name).name
     // Check if this archive is actually a shapefile source
@@ -65,8 +64,7 @@ exports.process = async function(app, dataset) {
         await renameFile(path.join(dirName, 'data.csv'), csvFilePath)
       } else {
         // console.log(files)
-        const paths = files.filter(p => path.basename(p).toLowerCase() !== 'thumbs.db')
-        const csvContent = 'file\n' + paths.map(p => `"${p}"`).join('\n') + '\n'
+        const csvContent = 'file\n' + files.map(f => `"${f}"`).join('\n') + '\n'
         await writeFile(csvFilePath, csvContent)
       }
       dataset.file = {

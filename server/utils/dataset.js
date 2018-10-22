@@ -7,7 +7,7 @@ const iconv = require('iconv-lite')
 const config = require('config')
 const csv = require('csv-parser')
 const JSONStream = require('JSONStream')
-const glob = util.promisify(require('glob'))
+const dir = require('node-dir')
 const fieldsSniffer = require('./fields-sniffer')
 
 exports.fileName = (dataset) => {
@@ -22,6 +22,13 @@ exports.extractedFilesDirname = (dataset) => {
   return path.join(config.dataDir, dataset.owner.type, dataset.owner.id, dataset.id + '.files')
 }
 
+exports.lsExtractedFiles = async (dataset) => {
+  const dirName = exports.extractedFilesDirname(dataset)
+  const files = (await dir.promiseFiles(dirName))
+    .map(f => path.relative(dirName, f))
+  return files.filter(p => path.basename(p).toLowerCase() !== 'thumbs.db')
+}
+
 exports.lsFiles = async (dataset) => {
   const infos = {}
   if (dataset.file) {
@@ -34,7 +41,7 @@ exports.lsFiles = async (dataset) => {
   }
   if (dataset.hasFiles) {
     const dirPath = exports.extractedFilesDirname(dataset)
-    const paths = await glob(`**/*`, { nodir: true, cwd: dirPath })
+    const paths = await exports.lsExtractedFiles(dataset)
     const files = []
     for (let p of paths) {
       const filePath = path.join(dirPath, p)
