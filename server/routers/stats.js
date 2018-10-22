@@ -6,9 +6,9 @@ const router = module.exports = express.Router()
 
 router.get('', asyncWrap(async(req, res) => {
   if (!req.user) return res.status(401).send()
-  const stats = {
-    user: await ownerStats(req.app.get('db'), { id: req.user.id, type: 'user' }),
-    organizations: {}
+  const stats = { organizations: {} }
+  if (!(req.user.isApiKey && req.user.organization)) {
+    stats.user = await ownerStats(req.app.get('db'), { id: req.user.id, type: 'user' })
   }
   for (let orga of req.user.organizations) {
     stats.organizations[orga.id] = await ownerStats(req.app.get('db'), { id: orga.id, type: 'organization' })

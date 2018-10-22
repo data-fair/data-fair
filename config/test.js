@@ -1,5 +1,4 @@
 module.exports = {
-  port: 5800,
   defaultLimits: {
     totalStorage: 20000,
     datasetStorage: 15000

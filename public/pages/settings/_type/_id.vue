@@ -1,10 +1,10 @@
 <template lang="html">
   <v-container fluid>
-    <v-layout column>
+    <v-layout v-if="initialized" column>
       <!--<v-subheader>{{ $t('pages.settings.description') }}</v-subheader>-->
-      <h2 class="display-1 mb-4">Paramètres de l'{{ $route.params.type ==='organization' ? ('organisation ' + organization.name): ('utilisateur ' + user.name) }}</h2>
-      <p v-if="$route.params.type ==='organization'">Vous êtes <strong>{{ user.organizations.find(o => o.id===$route.params.id).role }}</strong> dans cette organisation.</p>
-      <v-container v-if="$route.params.type === 'user' || isAdmin">
+      <v-container v-if="authorized">
+        <h2 class="display-1 mb-4">Paramètres de l'{{ $route.params.type ==='organization' ? ('organisation ' + organization.name): ('utilisateur ' + user.name) }}</h2>
+        <p v-if="$route.params.type ==='organization'">Vous êtes <strong>{{ user.organizations.find(o => o.id===$route.params.id).role }}</strong> dans cette organisation.</p>
         <div v-if="$route.params.type ==='organization'">
           <h3 class="headline mb-3">Permissions générales par rôle</h3>
           <p>Le rôle <strong>{{ env.adminRole }}</strong> peut tout faire</p>
@@ -32,12 +32,14 @@
         <settings-licenses v-if="settings" :settings="settings" @license-updated="save"/>
         <h3 class="headline mt-3 mb-3">Webhooks</h3>
         <settings-webhooks v-if="settings" :settings="settings" @webhook-updated="save"/>
+        <h3 v-if="env.clientApiKeys" class="headline mt-3 mb-3">Clés d'API</h3>
+        <settings-api-keys v-if="env.clientApiKeys && settings" :settings="settings" @updated="save"/>
       </v-container>
       <v-responsive v-else height="auto">
         <v-container fill-height>
           <v-layout align-center>
             <v-flex text-xs-center>
-              <div class="headline">Vous n'êtes pas authorisé à voir ou modifier le contenu de cette page. Si vous voulez changer les paramètres de votre organisation, veuillez contacter un administrateur de celle ci.</div>
+              <div class="headline">Vous n'êtes pas autorisé à voir ou modifier le contenu de cette page. Si vous voulez changer les paramètres de votre organisation, veuillez contacter un administrateur de celle ci.</div>
             </v-flex>
           </v-layout>
         </v-container>
@@ -50,19 +52,21 @@
 import { mapState } from 'vuex'
 import SettingsWebhooks from '../../../components/SettingsWebhooks.vue'
 import SettingsLicenses from '../../../components/SettingsLicenses.vue'
+import SettingsApiKeys from '../../../components/SettingsApiKeys.vue'
 import eventBus from '../../../event-bus'
 
 export default {
   // middleware: 'auth',
-  components: { SettingsWebhooks, SettingsLicenses },
+  components: { SettingsWebhooks, SettingsLicenses, SettingsApiKeys },
   data: () => ({
     api: null,
     organizationRoles: [],
     organization: {},
-    settings: null
+    settings: null,
+    ready: false
   }),
   computed: {
-    ...mapState('session', ['user']),
+    ...mapState('session', ['user', 'initialized']),
     ...mapState(['env']),
     operations() {
       return (this.api && [].concat(...Object.keys(this.api.paths).map(path => Object.keys(this.api.paths[path]).map(method => ({
@@ -71,12 +75,27 @@ export default {
         public: !this.api.paths[path][method].security || this.api.paths[path][method].security.find(sr => !Object.keys(sr).length)
       })))).filter(o => !o.public)) || []
     },
-    isAdmin() {
-      return this.user.organizations.find(o => o.id === this.$route.params.id).role === this.env.adminRole
+    authorized() {
+      if (!this.user) return false
+      if (this.$route.params.type === 'user' && this.$route.params.id !== this.user.id) return false
+      if (this.$route.params.type === 'organization') {
+        const organization = this.user.organizations.find(o => o.id === this.$route.params.id)
+        if (!organization) return false
+        if (organization.role !== this.env.adminRole) return false
+      }
+      return true
     }
   },
-  async mounted() {
-    if (this.$route.params.type === 'user' || this.isAdmin) {
+  watch: {
+    authorized: {
+      handler() {
+        if (this.authorized) this.init()
+      },
+      immediate: true
+    }
+  },
+  methods: {
+    async init() {
       if (this.$route.params.type === 'organization') {
         let roles = []
         try {
@@ -90,17 +109,16 @@ export default {
       this.settings = await this.$axios.$get('api/v1/settings/' + this.$route.params.type + '/' + this.$route.params.id)
       this.$set(this.settings, 'operationsPermissions', this.settings.operationsPermissions || {})
       this.$set(this.settings, 'webhooks', this.settings.webhooks || [])
+      this.$set(this.settings, 'apiKeys', this.settings.apiKeys || [])
       this.$set(this.settings, 'licenses', this.settings.licenses || [])
       this.api = await this.$axios.$get('api/v1/api-docs.json')
       this.operations.forEach(operation => {
         this.$set(this.settings.operationsPermissions, operation.id, this.settings.operationsPermissions[operation.id] || [])
       })
-    }
-  },
-  methods: {
+    },
     async save() {
       try {
-        await this.$axios.$put('api/v1/settings/' + this.$route.params.type + '/' + this.$route.params.id, this.settings)
+        this.settings = await this.$axios.$put('api/v1/settings/' + this.$route.params.type + '/' + this.$route.params.id, this.settings)
         eventBus.$emit('notification', `Les paramètres ont bien été mis à jour`)
       } catch (error) {
         eventBus.$emit('notification', { error, msg: `Erreur pendant la mise à jour des paramètres` })

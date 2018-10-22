@@ -35,6 +35,10 @@ router.post('/update-name', asyncWrap(async (req, res) => {
       await collection.updateMany({ 'updatedBy.id': req.body.id }, { $set: { 'updatedBy': { id: req.body.id, name: req.body.name } } })
     }
   }
+
+  // personal settings
+  await req.app.get('db').collection('settings').updateOne({ type: req.body.type, id: req.body.id }, { $set: { name: req.body.name } })
+
   res.send()
 }))
 

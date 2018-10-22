@@ -13,6 +13,10 @@
       "enum": ["user", "organization"],
       "description": "If the owner is a user or an organization"
     },
+    "name": {
+      "type": "string",
+      "description": "The name of the owner"
+    },
     "webhooks": {
       "type": "array",
       "description": "List of webhooks",
@@ -59,6 +63,29 @@
           "href":{
             "type": "string",
             "description": "The URL where the license can be read"
+          }
+        }
+      }
+    },
+    "apiKeys": {
+      "type": "array",
+      "description": "Lis of API keys",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["title"],
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "key": {
+            "type": "string"
+          },
+          "scopes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           }
         }
       }

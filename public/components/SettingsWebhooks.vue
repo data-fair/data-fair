@@ -5,7 +5,7 @@
       Il s'agit d'une configuration technique pour personne avertie.
     </p>
     <v-btn color="primary" class="mb-3" @click="showDialog = true">Ajouter un webhook</v-btn>
-    <v-container grid-list-md>
+    <v-container v-if="settings.webhooks && settings.webhooks.length" grid-list-md>
       <v-layout row wrap>
         <v-flex v-for="(webhook, rowIndex) in settings.webhooks" :key="rowIndex" xs12 lg6>
           <v-card>

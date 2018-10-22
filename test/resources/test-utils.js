@@ -2,7 +2,9 @@ const test = require('ava')
 const axios = require('axios')
 const fs = require('fs-extra')
 const path = require('path')
+const FormData = require('form-data')
 const axiosAuth = require('@koumoul/sd-express').axiosAuth
+const workers = require('../../server/workers')
 
 const testDir = path.join(__dirname, '../')
 const testFiles = fs.readdirSync(testDir).map(f => path.join(testDir, f))
@@ -24,14 +26,15 @@ exports.prepare = (testFile) => {
   const port = 5800 + testFiles.indexOf(testFile)
   const dataDir = './data/test-' + key
   const indicesPrefix = 'dataset-test-' + key
-  process.env.NODE_CONFIG = JSON.stringify({
+  const config = require('config')
+  Object.assign(config, {
     port,
     publicUrl: 'http://localhost:' + port,
     dataDir,
     mongoUrl: 'mongodb://localhost:27017/data-fair-test-' + key,
     indicesPrefix
   })
-  const config = require('config')
+
   const app = require('../../server/app.js')
 
   test.serial.before('clean and run app', async t => {
@@ -53,8 +56,8 @@ exports.prepare = (testFile) => {
     }
   })
 
-  const axiosBuilder = async (email) => {
-    const opts = { baseURL: config.publicUrl }
+  const axiosBuilder = async (email, opts = {}) => {
+    opts.baseURL = config.publicUrl
 
     let ax
     if (email) ax = await axiosAuth(email, null, opts)
@@ -76,4 +79,12 @@ exports.formHeaders = (form, organizationId) => {
   const headers = { 'Content-Length': form.getLengthSync(), ...form.getHeaders() }
   if (organizationId) headers['x-organizationId'] = organizationId
   return headers
+}
+
+exports.sendDataset = async(fileName, ax) => {
+  const datasetFd = fs.readFileSync('./test/resources/' + fileName)
+  const form = new FormData()
+  form.append('file', datasetFd, fileName)
+  await ax.post('/api/v1/datasets', form, { headers: exports.formHeaders(form) })
+  return workers.hook('finalizer')
 }

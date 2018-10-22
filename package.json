@@ -126,6 +126,7 @@
     "terraformer-wkt-parser": "^1.2.0",
     "tmp-promise": "^1.0.4",
     "turf": "^3.0.14",
+    "uuid": "^3.3.2",
     "vt-pbf": "2.1.4",
     "vue-match-heights": "^0.1.1",
     "vue-moment": "^4.0.0",

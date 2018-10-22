@@ -1,5 +1,6 @@
 const express = require('express')
 const ajv = require('ajv')()
+const uuidv4 = require('uuid/v4')
 const settingSchema = require('../../contract/settings.json')
 const validate = ajv.compile(settingSchema)
 const permissions = require('../utils/permissions')
@@ -20,7 +21,7 @@ router.use('/:type/:id', (req, res, next) => {
 
 function isOwner(req, res, next) {
   if (!req.user) return res.status(401).send()
-  if (!permissions.isOwner({ type: req.params.type, id: req.params.id }, req.user)) {
+  if (!permissions.isOwner({ type: req.params.type, id: req.params.id, role: config.adminRole }, req.user)) {
     return res.sendStatus(403)
   }
   next()
@@ -31,7 +32,7 @@ router.get('/:type/:id', isOwner, asyncWrap(async(req, res) => {
   const settings = req.app.get('db').collection('settings')
 
   const result = await settings
-    .findOne({ type: req.params.type, id: req.params.id }, { _id: 0, id: 0, type: 0 })
+    .findOne({ type: req.params.type, id: req.params.id }, { projection: { _id: 0, id: 0, type: 0 } })
   res.status(200).send(result || {})
 }))
 
@@ -39,9 +40,16 @@ router.get('/:type/:id', isOwner, asyncWrap(async(req, res) => {
 router.put('/:type/:id', isOwner, asyncWrap(async(req, res) => {
   req.body.type = req.params.type
   req.body.id = req.params.id
+  req.body.name = req.params.type === 'user' ? req.user.name : req.user.organizations.find(o => o.id === req.params.id).name
   const valid = validate(req.body)
   if (!valid) return res.status(400).send(validate.errors)
   const settings = req.app.get('db').collection('settings')
+
+  if (req.body.apiKeys) {
+    req.body.apiKeys.forEach(apiKey => {
+      apiKey.key = apiKey.key || uuidv4()
+    })
+  }
 
   await settings.replaceOne({
     type: req.params.type,

@@ -44,6 +44,8 @@ exports.init = async () => {
   await ensureIndex(db, 'catalogs', { id: 1 }, { unique: true })
   await ensureIndex(db, 'catalogs', { 'owner.type': 1, 'owner.id': 1 })
   await ensureIndex(db, 'catalogs', { title: 'text', description: 'text', 'owner.name': 'text' }, { name: 'fulltext' })
-
+  // settings
+  await ensureIndex(db, 'settings', { type: 1, id: 1 }, { unique: true })
+  await ensureIndex(db, 'settings', { 'apiKeys.key': 1 }, { sparse: true })
   return { db, client }
 }

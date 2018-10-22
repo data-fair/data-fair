@@ -20,7 +20,7 @@ services:
     environment:
       - ADMINS=["alban.mouton@koumoul.com"]
       - NAMES_WEBHOOKS=["http://localhost:5600/api/v1/owner-names?key=dev_secret"]
-      - PUBLIC_URL=http://localhost:8080
+      - PUBLIC_URL=http://localhost:5600/simple-directory
       - MAILDEV_ACTIVE=true
       - STORAGE_TYPE=file
       - NUXT_BUILD_BLOCKING=false

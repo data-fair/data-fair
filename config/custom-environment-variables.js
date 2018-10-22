@@ -24,6 +24,10 @@ module.exports = {
   defaultRemoteKey: {
     value: 'DEFAULT_REMOTE_KEY'
   },
+  clientApiKeys: {
+    __name: 'CLIENT_API_KEYS',
+    __format: 'json'
+  },
   secretKeys: {
     ownerNames: 'SECRET_OWNERNAMES'
   },
