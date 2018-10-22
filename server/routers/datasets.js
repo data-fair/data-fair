@@ -493,4 +493,14 @@ router.get('/:datasetId/_diagnose', asyncWrap(async(req, res) => {
   res.json({ filesInfos, esInfos })
 }))
 
+// Special admin route to firce reindexing a dataset
+router.post('/:datasetId/_reindex', asyncWrap(async(req, res) => {
+  if (!req.user) return res.status(401).send()
+  if (!req.user.isAdmin) return res.status(403).send()
+  const patch = { status: 'loaded' }
+  if (!baseTypes.has(req.dataset.originalFile.mimetype)) patch.status = 'uploaded'
+  await req.app.get('db').collection('datasets').updateOne({ id: req.params.datasetId }, { '$set': patch })
+  res.status(200).send(patch)
+}))
+
 module.exports = router

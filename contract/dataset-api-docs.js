@@ -479,6 +479,12 @@ module.exports = (dataset) => {
           }
         }
       },
+      '/_reindex': {
+        post: {
+          summary: 'Forcer la reindexation',
+          tags: ['Administration']
+        }
+      },
       '/permissions': permissionsDoc
     },
     externalDocs: {
