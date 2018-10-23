@@ -3,9 +3,6 @@ const remoteServiceSchema = require('./remote-service')
 const permissionsDoc = require('../server/utils/permissions').apiDoc
 
 module.exports = (remoteService) => {
-  const publicPermissions = (remoteService.permissions || []).find(p => !p.type && !p.id)
-  const publicOperations = (publicPermissions && publicPermissions.operations) || []
-  const publicClasses = (publicPermissions && publicPermissions.classes) || []
   const api = {
     openapi: '3.0.0',
     info: Object.assign({}, remoteService.apiDoc.info, {
@@ -14,13 +11,27 @@ module.exports = (remoteService) => {
     servers: [{
       url: `${config.publicUrl}/api/v1/remote-services/${remoteService.id}`
     }],
+    components: {
+      securitySchemes: {
+        apiKey: {
+          type: 'apiKey',
+          in: 'header',
+          name: 'x-apiKey'
+        },
+        sdCookie: {
+          type: 'apiKey',
+          in: 'cookie',
+          name: 'id_token'
+        }
+      }
+    },
+    security: [{ apiKey: [] }, { sdCookie: [] }],
     paths: {
       '/': {
         get: {
           summary: 'Récupérer les informations de configuration du service distant.',
           operationId: 'readDescription',
           'x-permissionClass': 'read',
-          security: (publicOperations.indexOf('readDescription') || publicClasses.indexOf('read')) ? [] : [{ jwt: [] }],
           tags: ['Configuration'],
           responses: {
             200: {
@@ -37,7 +48,6 @@ module.exports = (remoteService) => {
           summary: 'Mettre à jour les informations de configuration du service distant.',
           operationId: 'writeDescription',
           'x-permissionClass': 'write',
-          security: (publicOperations.indexOf('writeDescription') || publicClasses.indexOf('write')) ? [] : [{ jwt: [] }],
           tags: ['Configuration'],
           requestBody: {
             description: 'Les informations de configuration du service distant.',
@@ -63,7 +73,6 @@ module.exports = (remoteService) => {
           summary: 'Pour supprimer cette configuration du service distant',
           operationId: 'delete',
           'x-permissionClass': 'admin',
-          security: [{ jwt: [] }],
           tags: ['Configuration'],
           responses: {
             204: {
@@ -77,7 +86,6 @@ module.exports = (remoteService) => {
           summary: 'Se resynchroniser avec l\'API du service distant',
           operationId: 'updateApiDoc',
           'x-permissionClass': 'write',
-          security: (publicOperations.indexOf('updateApiDoc') || publicClasses.indexOf('write')) ? [] : [{ jwt: [] }],
           tags: ['Configuration'],
           responses: {
             200: {
@@ -96,7 +104,6 @@ module.exports = (remoteService) => {
           summary: 'Accéder à la documentation de l\'API',
           operationId: 'readApiDoc',
           'x-permissionClass': 'read',
-          security: (publicOperations.indexOf('readApiDoc') || publicClasses.indexOf('read')) ? [] : [{ jwt: [] }],
           tags: ['Informations'],
           responses: {
             200: {

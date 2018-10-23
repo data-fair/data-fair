@@ -3,9 +3,6 @@ const catalogSchema = require('./catalog')
 const permissionsDoc = require('../server/utils/permissions').apiDoc
 
 module.exports = (catalog) => {
-  const publicPermissions = (catalog.permissions || []).find(p => !p.type && !p.id)
-  const publicOperations = (publicPermissions && publicPermissions.operations) || []
-  const publicClasses = (publicPermissions && publicPermissions.classes) || []
   const api = {
     openapi: '3.0.0',
     info: {
@@ -14,13 +11,27 @@ module.exports = (catalog) => {
     servers: [{
       url: `${config.publicUrl}/api/v1/catalogs/${catalog.id}`
     }],
+    components: {
+      securitySchemes: {
+        apiKey: {
+          type: 'apiKey',
+          in: 'header',
+          name: 'x-apiKey'
+        },
+        sdCookie: {
+          type: 'apiKey',
+          in: 'cookie',
+          name: 'id_token'
+        }
+      }
+    },
+    security: [{ apiKey: [] }, { sdCookie: [] }],
     paths: {
       '/': {
         get: {
           summary: 'Récupérer les informations de configuration du catalogue.',
           operationId: 'readDescription',
           'x-permissionClass': 'read',
-          security: (publicOperations.indexOf('readDescription') || publicClasses.indexOf('read')) ? [] : [{ jwt: [] }],
           tags: ['Configuration'],
           responses: {
             200: {
@@ -37,7 +48,6 @@ module.exports = (catalog) => {
           summary: 'Mettre à jour les informations de configuration du catalogue.',
           operationId: 'writeDescription',
           'x-permissionClass': 'write',
-          security: (publicOperations.indexOf('writeDescription') || publicClasses.indexOf('write')) ? [] : [{ jwt: [] }],
           tags: ['Configuration'],
           requestBody: {
             description: 'Les informations de configuration du catalogue.',
@@ -63,7 +73,6 @@ module.exports = (catalog) => {
           summary: 'Pour supprimer cette configuration du catalogue',
           operationId: 'delete',
           'x-permissionClass': 'admin',
-          security: [{ jwt: [] }],
           tags: ['Configuration'],
           responses: {
             204: {

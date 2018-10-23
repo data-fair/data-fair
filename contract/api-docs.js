@@ -26,18 +26,25 @@ module.exports = {
       catalog
     },
     securitySchemes: {
-      jwt: {
-        type: 'http',
-        scheme: 'bearer',
-        bearerFormat: 'JWT'
+      apiKey: {
+        type: 'apiKey',
+        in: 'header',
+        name: 'x-apiKey'
+      },
+      sdCookie: {
+        type: 'apiKey',
+        in: 'cookie',
+        name: 'id_token'
       }
     }
   },
+  security: [{ apiKey: [] }, { sdCookie: [] }],
   paths: {
     '/status': {
       get: {
         summary: 'Etat de santé du service.',
         description: 'Pour connaitre l\'état de santé du service.',
+        tags: ['Administration'],
         operationId: 'getStatus',
         'x-operationType': 'http://schema.org/CheckAction',
         responses: {
@@ -61,7 +68,7 @@ module.exports = {
       get: {
         summary: 'Récupérer la liste des jeux de données.',
         operationId: 'listDatasets',
-        security: [{}, { jwt: [] }],
+        tags: ['Jeux de données'],
         responses: {
           200: {
             description: 'Liste des jeux de données que l\'utilisateur est autorisé à voir',
@@ -90,7 +97,7 @@ module.exports = {
       post: {
         summary: 'Importer un jeu de données.',
         operationId: 'postDataset',
-        security: [{ jwt: [] }],
+        tags: ['Jeux de données'],
         requestBody: {
           description: 'Fichier à charger et informations de propriété',
           required: true,
@@ -114,7 +121,7 @@ module.exports = {
       get: {
         summary: 'Récupérer la liste des services distants.',
         operationId: 'listRemoteServices',
-        security: [{}, { jwt: [] }],
+        tags: ['Services distants'],
         responses: {
           200: {
             description: 'Liste des services distants que l\'utilisateur est autorisé à voir',
@@ -143,7 +150,7 @@ module.exports = {
       post: {
         summary: 'Configurer un service distant.',
         operationId: 'postRemoteService',
-        security: [{ jwt: [] }],
+        tags: ['Services distants'],
         requestBody: {
           description: 'Les informations de configuration du service distant.',
           required: true,
@@ -173,7 +180,7 @@ module.exports = {
       get: {
         summary: 'Récupérer la liste des catalogues.',
         operationId: 'listCatalogs',
-        security: [{}, { jwt: [] }],
+        tags: ['Catalogues'],
         responses: {
           200: {
             description: 'Liste des catalogues que l\'utilisateur est autorisé à voir',
@@ -202,7 +209,7 @@ module.exports = {
       post: {
         summary: 'Configurer un catalogue.',
         operationId: 'postCatalog',
-        security: [{ jwt: [] }],
+        tags: ['Catalogues'],
         requestBody: {
           description: 'Les informations de configuration du catalogue.',
           required: true,
@@ -232,7 +239,7 @@ module.exports = {
       get: {
         summary: 'Récupérer la liste des applications.',
         operationId: 'listApplications',
-        security: [{}, { jwt: [] }],
+        tags: ['Applications'],
         responses: {
           200: {
             description: 'Liste des applications que l\'utilisateur est autorisé à voir',
@@ -261,7 +268,7 @@ module.exports = {
       post: {
         summary: 'Configurer une application.',
         operationId: 'postApplication',
-        security: [{ jwt: [] }],
+        tags: ['Applications'],
         requestBody: {
           description: 'Les informations de configuration de l\'application',
           required: true,

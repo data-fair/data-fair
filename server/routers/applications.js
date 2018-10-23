@@ -74,8 +74,7 @@ router.get('', asyncWrap(async(req, res) => {
 router.post('', asyncWrap(async(req, res) => {
   if (!req.user) return res.status(401).send()
   const application = req.body
-  // This id is temporary, we should have an human understandable id, or perhaps manage it UI side ?
-  if (!application.url) return res.sendStatus(400)
+  if (!application.url) return res.status(400).send('"url" is required')
   const toks = application.url.split('/')
   const lastUrlPart = toks[toks.length - 1]
   const baseId = application.id || slug(application.title || application.applicationName || lastUrlPart, { lower: true })

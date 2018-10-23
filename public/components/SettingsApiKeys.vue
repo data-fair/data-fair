@@ -1,7 +1,7 @@
 <template>
   <div>
     <p>
-      Les <i>clés d'API</i> sont un moyen d'utiliser l'API de data-fair de manière programmatique.
+      Les <i>clés d'API</i> sont un moyen d'utiliser l'API de data-fair de manière sécurisée.
       Il s'agit d'une configuration technique pour personne avertie.
     </p>
     <v-btn color="primary" class="mb-3" @click="showDialog = true">Ajouter une clé d'API</v-btn>
