@@ -36,7 +36,6 @@ module.exports = {
     },
     about: {
       title: 'A propos',
-      description: 'Cette section donne un aperçu rapide de ce que fait le service.',
       overview: {
         title: 'Aperçu fonctionnel'
       },
@@ -49,7 +48,6 @@ module.exports = {
     },
     install: {
       title: 'Installation',
-      description: 'Cette section, à destination des techniciens, donne toutes les informations nécessaires pour installer et configurer le service sur ses propres serveurs.',
       install: {
         title: `Procédure d'installation`
       },
@@ -102,18 +100,19 @@ module.exports = {
       }
     },
     interoperate: {
-      title: 'Créer des applications et services',
-      description: 'Cette section, à destination des développeurs, donne toutes les informations nécessaires pour créer ses propres applications ou APIs compatibles avec ce service.',
+      title: 'Interopérer',
       applications: {
         title: 'Créer des applications'
       },
       services: {
         title: 'Créer des services'
+      },
+      api: {
+        title: `Publier des données par l'API`
       }
     },
     'user-guide': {
       title: 'Manuel utilisateur',
-      description: `Ceci est la documentation de notre service de publication de données`,
       introduction: {
         title: 'Introduction à la plateforme'
       },

@@ -23,7 +23,10 @@ module.exports = {
   loading: { color: '#1e88e5' }, // Customize the progress bar color
   plugins: [{ src: '~plugins/vuetify' }],
   router: { base: '/data-fair/' },
-  env: { theme: config.theme },
+  env: {
+    theme: config.theme,
+    publicUrl: config.publicUrl
+  },
   modules: ['@digibytes/markdownit', ['nuxt-i18n', {
     seo: false,
     locales: [

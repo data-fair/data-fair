@@ -10,7 +10,7 @@ const context = require.context('.', true, /\.md$/)
 export default {
   components: { DocPage },
   data: () => ({
-    pages: ['applications', 'services']
+    pages: ['applications', 'services', 'api']
   }),
   computed: {
     content() {

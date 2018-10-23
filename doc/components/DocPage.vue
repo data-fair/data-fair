@@ -10,17 +10,25 @@
     </v-navigation-drawer>
     <v-layout column>
       <h2 class="display1 my-4">{{ $t(`pages.${prefix}.${page}.title`) }}</h2>
-      <v-flex v-show="ready" xs12 v-html="content"/>
+      <v-flex v-show="ready" xs12 v-html="filledContent"/>
     </v-layout>
   </v-container>
 </template>
 
 <script>
+import { mapState } from 'vuex'
+const escape = require('escape-string-regexp')
 require('highlight.js/styles/github.css')
 
 export default {
   props: ['prefix', 'pages', 'page', 'content'],
   data: () => ({ ready: false }),
+  computed: {
+    ...mapState(['env']),
+    filledContent() {
+      return this.content.replace(new RegExp(escape('<span>{{</span>publicUrl<span>}}</span>', 'g')), this.env.publicUrl)
+    }
+  },
   mounted() {
     // Apply classes from vuetify to markdown generated HTML
     const elemClasses = {
