@@ -1,8 +1,6 @@
 <template lang="html">
-  <v-container fluid>
-    <v-card>
-      <open-api v-if="resourceUrl" :url="resourceUrl"/>
-    </v-card>
+  <v-container fluid class="pa-0">
+    <open-api v-if="resourceUrl" :url="resourceUrl"/>
   </v-container>
 </template>
 
