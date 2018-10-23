@@ -47,6 +47,9 @@ const operationsClasses = {
   admin: ['delete', 'getPermissions', 'setPermissions']
 }
 
+const patchKeys = ['schema', 'description', 'title', 'license', 'origin', 'extensions', 'publications']
+const parseKeys = ['schema', 'license', 'extensions', 'publications']
+
 // Get the list of datasets
 router.get('', asyncWrap(async(req, res) => {
   const datasets = req.app.get('db').collection('datasets')
@@ -123,7 +126,6 @@ router.get('/:datasetId/schema', permissions.middleware('readDescription', 'read
 })
 
 // Update a dataset's metadata
-const patchKeys = ['schema', 'description', 'title', 'license', 'origin', 'extensions', 'publications']
 router.patch('/:datasetId', permissions.middleware('writeDescription', 'write'), asyncWrap(async(req, res) => {
   const patch = req.body
   if (!acceptedStatuses.includes(req.dataset.status) && (patch.schema || patch.extensions)) return res.status(409).send('Dataset is not in proper state to be updated')
@@ -215,10 +217,20 @@ router.post('', filesUtils.uploadFile(), asyncWrap(async(req, res) => {
   if (!req.user) return res.status(401).send()
   const owner = usersUtils.owner(req)
   if (!permissions.canDoForOwner(owner, 'postDataset', req.user, req.app.get('db'))) return res.sendStatus(403)
-  if (!req.file) return res.sendStatus(400)
+
+  // After uploadFile, req.file contains the metadata of an uploaded file, and req.body the content of additional text fields
+  if (!req.file) return res.status(400).send('Expected a file multipart/form-data')
+
+  parseKeys.forEach(key => {
+    if (req.body[key]) req.body[key] = JSON.parse(req.body[key])
+  })
+  const valid = validate(req.body)
+  if (!valid) return res.status(400).send(validate.errors)
+  const forbiddenKey = Object.keys(req.body).find(key => !patchKeys.includes(key))
+  if (forbiddenKey) return res.status(400).send('Only some parts of the dataset can be defined through this route')
 
   const date = moment().toISOString()
-  const dataset = {
+  const dataset = Object.assign({
     id: req.file.id,
     title: req.file.title,
     owner,
@@ -232,7 +244,8 @@ router.post('', filesUtils.uploadFile(), asyncWrap(async(req, res) => {
     createdAt: date,
     updatedBy: { id: req.user.id, name: req.user.name },
     updatedAt: date
-  }
+  }, req.body)
+
   if (!baseTypes.has(req.file.mimetype)) {
     // we first need to convert the file in a textual format easy to index
     dataset.status = 'uploaded'
@@ -243,11 +256,13 @@ router.post('', filesUtils.uploadFile(), asyncWrap(async(req, res) => {
     const fileSample = await datasetFileSample(dataset)
     dataset.file.encoding = chardet.detect(fileSample)
   }
-
   await req.app.get('db').collection('datasets').insertOne(dataset)
+  delete dataset._id
+
   const storageRemaining = await datasetUtils.storageRemaining(req.app.get('db'), owner, req)
   if (storageRemaining !== -1) res.set(config.headers.storedBytesRemaining, storageRemaining)
   await journals.log(req.app, dataset, { type: 'dataset-created', href: config.publicUrl + '/dataset/' + dataset.id }, 'dataset')
+  findUtils.setResourceLinks(dataset, 'dataset')
   res.status(201).send(dataset)
 }))
 

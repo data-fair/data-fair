@@ -88,6 +88,28 @@ test('Uploading same file twice should increment id', async t => {
   }
 })
 
+test('Upload new dataset with pre-filled attributes', async t => {
+  const ax = await axiosBuilder('dmeadus0@answers.com')
+  const form = new FormData()
+  form.append('title', 'A dataset with pre-filled title')
+  form.append('publications', '[{"catalog": "test", "status": "waiting"}]')
+  form.append('file', datasetFd, 'yet-a-dataset.csv')
+  const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form, 'KWqAGZ4mG') })
+  t.is(res.data.title, 'A dataset with pre-filled title')
+})
+
+test('Reject some other pre-filled attributes', async t => {
+  const ax = await axiosBuilder('dmeadus0@answers.com')
+  const form = new FormData()
+  form.append('id', 'pre-filling ig is not possible')
+  form.append('file', datasetFd, 'yet-a-dataset.csv')
+  try {
+    await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form, 'KWqAGZ4mG') })
+  } catch (err) {
+    t.is(err.status, 400)
+  }
+})
+
 test('Fail to upload new dataset when not authenticated', async t => {
   const ax = await axiosBuilder()
   const form = new FormData()
