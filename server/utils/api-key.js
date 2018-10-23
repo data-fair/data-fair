@@ -4,7 +4,6 @@ const asyncWrap = require('../utils/async-wrap')
 
 module.exports = (scope) => {
   return asyncWrap(async (req, res, next) => {
-    if (req.user) return next()
     const apiKey = req.get('x-apiKey')
     if (!apiKey) return next()
     const settings = await req.app.get('db').collection('settings')
