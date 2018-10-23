@@ -94,6 +94,7 @@ router.post('', asyncWrap(async(req, res) => {
   catalog.permissions = []
 
   await req.app.get('db').collection('catalogs').insertOne(mongoEscape.escape(catalog, true))
+  findUtils.setResourceLinks(catalog, 'catalog')
   res.status(201).json(catalog)
 }))
 

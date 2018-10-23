@@ -111,6 +111,7 @@ router.post('', asyncWrap(async(req, res) => {
   service.permissions = []
 
   await req.app.get('db').collection('remote-services').insertOne(mongoEscape.escape(service, true))
+  findUtils.setResourceLinks(service, 'remote-service')
   res.status(201).json(service)
 }))
 

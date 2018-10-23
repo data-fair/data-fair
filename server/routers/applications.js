@@ -97,6 +97,7 @@ router.post('', asyncWrap(async(req, res) => {
 
   await req.app.get('db').collection('applications').insertOne(application)
   await journals.log(req.app, application, { type: 'application-created', href: config.publicUrl + '/application/' + application.id }, 'application')
+  findUtils.setResourceLinks(application, 'application')
   res.status(201).json(application)
 }))
 
