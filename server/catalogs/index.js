@@ -1,5 +1,4 @@
 const fs = require('fs-extra')
-const assert = require('assert')
 const createError = require('http-errors')
 const shortid = require('shortid')
 const config = require('config')
@@ -17,30 +16,6 @@ exports.connectors = fs.readdirSync(__dirname)
   .map(f => ({ key: f.replace('.js', ''), ...require('./' + f) }))
   .concat(fs.readdirSync(path.resolve(config.pluginsDir, 'catalogs'))
     .map(f => ({ key: f.replace('.js', ''), ...require(path.resolve(config.pluginsDir, 'catalogs', f)) })))
-
-// Loosely validate connectors
-const expectedKeys = new Set([
-  'key',
-  'title',
-  'description',
-  'docUrl',
-  'init',
-  'suggestOrganizations',
-  'publishDataset',
-  'publishApplication',
-  'deleteDataset',
-  'deleteApplication',
-  'listDatasets',
-  'harvestDataset',
-  'httpParams'
-])
-exports.connectors.forEach(c => {
-  try {
-    assert.deepStrictEqual(new Set(Object.keys(c)), expectedKeys, `The catalog connector ${c.key} does not have the expected exported properties (${[...expectedKeys].join(', ')}).`)
-  } catch (err) {
-    console.error(err.message)
-  }
-})
 
 exports.init = async (catalogUrl) => {
   for (let connector of exports.connectors) {
