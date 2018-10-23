@@ -19,7 +19,7 @@ exports.init = async (db) => {
 
 function prepareQuery(query) {
   return Object.keys(query)
-    .filter(key => !['skip', 'size', 'q', 'status'].includes(key))
+    .filter(key => !['skip', 'size', 'q', 'status', 'select'].includes(key))
     .reduce((a, key) => { a[key] = query[key].split(','); return a }, {})
 }
 
