@@ -67,8 +67,8 @@ async function initBaseApp(db, app) {
     throw new Error(`La page à l'adresse ${app.url} ne semble pas héberger une application compatible avec ce service.`)
   }
 
-  patch.servicesFilters = patch.servicesFilters || {}
-  patch.datasetsFilters = patch.datasetsFilters || {}
+  patch.servicesFilters = patch.servicesFilters || []
+  patch.datasetsFilters = patch.datasetsFilters || []
 
   const storedBaseApp = (await db.collection('base-applications')
     .findOneAndUpdate({ id: patch.id }, { $set: patch }, { upsert: true, returnOriginal: false })).value
