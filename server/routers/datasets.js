@@ -10,6 +10,11 @@ const pump = util.promisify(require('pump'))
 const csvStringify = require('csv-stringify')
 const flatten = require('flat')
 const mongodb = require('mongodb')
+const config = require('config')
+const clone = require('fast-clone')
+const chardet = require('chardet')
+const createError = require('http-errors')
+const rimraf = util.promisify(require('rimraf'))
 const journals = require('../utils/journals')
 const esUtils = require('../utils/es')
 const filesUtils = require('../utils/files')
@@ -23,16 +28,9 @@ const extensions = require('../utils/extensions')
 const geo = require('../utils/geo')
 const tiles = require('../utils/tiles')
 const cache = require('../utils/cache')
-const config = require('config')
-const clone = require('fast-clone')
-const chardet = require('chardet')
-const rimraf = util.promisify(require('rimraf'))
-
 const converter = require('../workers/converter')
-const datasetSchema = require('../../contract/dataset')
-const datasetSchemaNoRequired = Object.assign(datasetSchema)
-delete datasetSchemaNoRequired.required
-const validate = ajv.compile(datasetSchemaNoRequired)
+const datasetPatchSchema = require('../../contract/dataset-patch')
+const validatePatch = ajv.compile(datasetPatchSchema)
 
 let router = express.Router()
 
@@ -46,9 +44,6 @@ const operationsClasses = {
   write: ['writeDescription', 'writeData'],
   admin: ['delete', 'getPermissions', 'setPermissions']
 }
-
-const patchKeys = ['schema', 'description', 'title', 'license', 'origin', 'extensions', 'publications']
-const parseKeys = ['schema', 'license', 'extensions', 'publications']
 
 // Get the list of datasets
 router.get('', asyncWrap(async(req, res) => {
@@ -129,11 +124,8 @@ router.get('/:datasetId/schema', permissions.middleware('readDescription', 'read
 router.patch('/:datasetId', permissions.middleware('writeDescription', 'write'), asyncWrap(async(req, res) => {
   const patch = req.body
   if (!acceptedStatuses.includes(req.dataset.status) && (patch.schema || patch.extensions)) return res.status(409).send('Dataset is not in proper state to be updated')
-  var valid = validate(patch)
-  if (!valid) return res.status(400).send(validate.errors)
-
-  const forbiddenKey = Object.keys(patch).find(key => !patchKeys.includes(key))
-  if (forbiddenKey) return res.status(400).send('Only some parts of the dataset can be modified through this route')
+  var valid = validatePatch(patch)
+  if (!valid) return res.status(400).send(validatePatch.errors)
 
   patch.updatedAt = moment().toISOString()
   patch.updatedBy = { id: req.user.id, name: req.user.name }
@@ -221,13 +213,25 @@ router.post('', filesUtils.uploadFile(), asyncWrap(async(req, res) => {
   // After uploadFile, req.file contains the metadata of an uploaded file, and req.body the content of additional text fields
   if (!req.file) return res.status(400).send('Expected a file multipart/form-data')
 
-  parseKeys.forEach(key => {
-    if (req.body[key]) req.body[key] = JSON.parse(req.body[key])
-  })
-  const valid = validate(req.body)
-  if (!valid) return res.status(400).send(validate.errors)
-  const forbiddenKey = Object.keys(req.body).find(key => !patchKeys.includes(key))
-  if (forbiddenKey) return res.status(400).send('Only some parts of the dataset can be defined through this route')
+  // Form data fields are sent as strings
+  // console.log(req.body)
+
+  Object.keys(datasetPatchSchema.properties)
+    .filter(key => req.body[key] !== undefined)
+    .filter(key => ['object', 'array'].includes(datasetPatchSchema.properties[key].type))
+    .forEach(key => {
+      if (req.body[key].trim() === '') {
+        delete req.body[key]
+      } else {
+        try {
+          req.body[key] = JSON.parse(req.body[key])
+        } catch (err) {
+          throw createError('400', `Invalid JSON in part "${key}", ${err.message}`)
+        }
+      }
+    })
+  const valid = validatePatch(req.body)
+  if (!valid) return res.status(400).send(validatePatch.errors)
 
   const date = moment().toISOString()
   const dataset = Object.assign({

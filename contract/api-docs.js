@@ -2,7 +2,10 @@ const config = require('config')
 const status = require('./status')
 const version = require('../package.json').version
 const dataset = require('./dataset')
-const remoteService = require('./remote-service')
+const datasetPatch = require('./dataset-patch')
+const remoteService = { ...require('./remote-service') }
+const definitions = remoteService.definitions
+delete remoteService.definitions
 const catalog = require('./catalog')
 const application = require('./application')
 
@@ -21,7 +24,7 @@ module.exports = {
   components: {
     schemas: {
       dataset,
-      remoteService: { ...remoteService, definitions: {} },
+      remoteService,
       application,
       catalog
     },
@@ -101,7 +104,20 @@ module.exports = {
         requestBody: {
           description: 'Fichier à charger et informations de propriété',
           required: true,
-          content: {}
+          content: {
+            'multipart/form-data': {
+              schema: {
+                type: 'object',
+                properties: {
+                  ...datasetPatch.properties,
+                  file: {
+                    type: 'string',
+                    format: 'binary'
+                  }
+                }
+              }
+            }
+          }
         },
         responses: {
           200: {
@@ -297,5 +313,5 @@ module.exports = {
     description: 'Documentation sur Github',
     url: 'https://koumoul-dev.github.io/data-fair/'
   },
-  definitions: remoteService.definitions
+  definitions
 }

@@ -1,5 +1,9 @@
 const config = require('config')
-const remoteServiceSchema = require('./remote-service')
+const remoteServiceSchema = { ...require('./remote-service') }
+const remoteServicePatchSchema = { ...require('./remote-service-patch') }
+const definitions = remoteServiceSchema.definitions
+delete remoteServiceSchema.definitions
+delete remoteServicePatchSchema.definitions
 const permissionsDoc = require('../server/utils/permissions').apiDoc
 
 module.exports = (remoteService) => {
@@ -38,7 +42,7 @@ module.exports = (remoteService) => {
               description: 'Les informations de configuration du service distant.',
               content: {
                 'application/json': {
-                  schema: { ...remoteServiceSchema, definitions: {} }
+                  schema: remoteServiceSchema
                 }
               }
             }
@@ -54,7 +58,7 @@ module.exports = (remoteService) => {
             required: true,
             content: {
               'application/json': {
-                schema: remoteServiceSchema
+                schema: remoteServicePatchSchema
               }
             }
           },
@@ -125,7 +129,7 @@ module.exports = (remoteService) => {
       description: 'Documentation sur Github',
       url: 'https://koumoul-dev.github.io/data-fair/'
     },
-    definitions: remoteServiceSchema.definitions
+    definitions
   }
   const apiPaths = Object.keys(remoteService.apiDoc.paths).map(path => ({ ['/proxy' + path]: remoteService.apiDoc.paths[path] }))
   apiPaths.forEach(path => Object.values(path).forEach(operations => Object.values(operations).forEach(operation => { operation['x-permissionClass'] = 'use' })))

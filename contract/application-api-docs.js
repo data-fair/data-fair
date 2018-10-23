@@ -12,6 +12,7 @@ module.exports = (application) => {
       version: version
     }, config.info),
     components: {
+      schemas: { applicationSchema, journalSchema },
       securitySchemes: {
         apiKey: {
           type: 'apiKey',
@@ -41,7 +42,7 @@ module.exports = (application) => {
               description: 'Les informations de configuration de l\'application.',
               content: {
                 'application/json': {
-                  schema: applicationSchema
+                  schema: { $ref: '#/components/schemas/applicationSchema' }
                 }
               }
             }
@@ -57,7 +58,7 @@ module.exports = (application) => {
             required: true,
             content: {
               'application/json': {
-                schema: applicationSchema
+                schema: { $ref: '#/components/schemas/applicationSchema' }
               }
             }
           },
@@ -66,7 +67,7 @@ module.exports = (application) => {
               description: 'Les informations de configuration de l\'application',
               content: {
                 'application/json': {
-                  schema: applicationSchema
+                  schema: { $ref: '#/components/schemas/applicationSchema' }
                 }
               }
             }
@@ -164,7 +165,7 @@ module.exports = (application) => {
               description: 'Le journal.',
               content: {
                 'application/json': {
-                  schema: journalSchema
+                  schema: { $ref: '#/components/schemas/journalSchema' }
                 }
               }
             }

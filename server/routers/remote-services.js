@@ -11,11 +11,8 @@ const mongoEscape = require('mongo-escape')
 const config = require('config')
 
 const ajv = require('ajv')()
-const remoteServiceSchema = require('../../contract/remote-service')
-const validateRemoteService = ajv.compile(remoteServiceSchema)
-const remoteServiceSchemaNoRequired = Object.assign(remoteServiceSchema)
-delete remoteServiceSchemaNoRequired.required
-const validateRemoteServiceNoRequired = ajv.compile(remoteServiceSchemaNoRequired)
+const validate = ajv.compile(require('../../contract/remote-service'))
+const validatePatch = ajv.compile(require('../../contract/remote-service-patch'))
 const openApiSchema = require('../../contract/openapi-3.0.json')
 openApiSchema.$id = openApiSchema.$id + '-2' // dirty hack to handle ajv error
 const validateOpenApi = ajv.compile(openApiSchema)
@@ -97,8 +94,8 @@ router.post('', asyncWrap(async(req, res) => {
   } while (dbExists)
   service.owner = usersUtils.owner(req)
   if (!permissions.canDoForOwner(service.owner, 'postRemoteService', req.user, req.app.get('db'))) return res.sendStatus(403)
-  var valid = validateRemoteService(service)
-  if (!valid) return res.status(400).send(normalise(validateRemoteService.errors))
+  var valid = validate(service)
+  if (!valid) return res.status(400).send(normalise(validate.errors))
   const date = moment().toISOString()
   service.createdAt = date
   service.createdBy = { id: req.user.id, name: req.user.name }
@@ -190,13 +187,8 @@ router.get('/:remoteServiceId', permissions.middleware('readDescription', 'read'
 // Update a remote service configuration
 router.patch('/:remoteServiceId', permissions.middleware('writeDescription', 'write'), asyncWrap(async(req, res) => {
   const patch = req.body
-  var valid = validateRemoteServiceNoRequired(patch)
-  if (!valid) return res.status(400).send(validateRemoteServiceNoRequired.errors)
-
-  const forbiddenKey = Object.keys(patch).find(key => {
-    return ['apiDoc', 'apiKey', 'server', 'description', 'title', 'parameters'].indexOf(key) === -1
-  })
-  if (forbiddenKey) return res.status(400).send('Only some parts of the remote service configuration can be modified through this route')
+  var valid = validatePatch(patch)
+  if (!valid) return res.status(400).send(validatePatch.errors)
 
   patch.updatedAt = moment().toISOString()
   patch.updatedBy = { id: req.user.id, name: req.user.name }

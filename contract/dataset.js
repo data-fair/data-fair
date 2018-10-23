@@ -14,6 +14,21 @@ publicationSchema.properties.addToDataset = {
   }
 }
 
+const schema = {
+  'type': 'array',
+  'description': 'JSON schema properties of the fields in the file',
+  items: {
+    type: 'object',
+    required: ['key', 'type'],
+    properties: {
+      key: { type: 'string' },
+      type: { type: 'string' },
+      format: { type: 'string' },
+      'x-originalName': { type: 'string' }
+    }
+  }
+}
+
 module.exports = {
   'title': 'Dataset',
   'type': 'object',
@@ -62,10 +77,7 @@ module.exports = {
           'enum': ['text/csv'],
           'description': 'Mime type of the file'
         },
-        'schema': {
-          'type': 'array',
-          'description': 'JSON schema of the fields in the file'
-        },
+        schema,
         'props': {
           'type': 'object',
           'additionalProperties': false,
@@ -161,10 +173,7 @@ module.exports = {
       'enum': ['remote', 'uploaded', 'loaded', 'analyzed', 'schematized', 'indexed', 'extended', 'finalized', 'error'],
       'description': 'The processing steps of a dataset.'
     },
-    'schema': {
-      'type': 'array',
-      'description': 'JSON schema of the dataset'
-    },
+    schema,
     'count': {
       'type': 'number',
       'description': 'The number of indexed documents of a dataset'

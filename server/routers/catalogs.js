@@ -8,11 +8,8 @@ const mongoEscape = require('mongo-escape')
 const catalogs = require('../catalogs')
 
 const ajv = require('ajv')()
-const catalogSchema = require('../../contract/catalog')
-const validateCatalog = ajv.compile(catalogSchema)
-const catalogSchemaNoRequired = Object.assign(catalogSchema)
-delete catalogSchemaNoRequired.required
-const validateCatalogNoRequired = ajv.compile(catalogSchemaNoRequired)
+const validate = ajv.compile(require('../../contract/catalog'))
+const validatePatch = ajv.compile(require('../../contract/catalog-patch'))
 
 const permissions = require('../utils/permissions')
 const usersUtils = require('../utils/users')
@@ -87,8 +84,8 @@ router.post('', asyncWrap(async(req, res) => {
   } while (dbExists)
   catalog.owner = usersUtils.owner(req)
   if (!permissions.canDoForOwner(catalog.owner, 'postCatalog', req.user, req.app.get('db'))) return res.sendStatus(403)
-  var valid = validateCatalog(catalog)
-  if (!valid) return res.status(400).send(normalise(validateCatalog.errors))
+  var valid = validate(catalog)
+  if (!valid) return res.status(400).send(normalise(validate.errors))
   const date = moment().toISOString()
   catalog.createdAt = date
   catalog.createdBy = { id: req.user.id, name: req.user.name }
@@ -124,13 +121,8 @@ router.get('/:catalogId', permissions.middleware('readDescription', 'read'), (re
 // Update a catalog configuration
 router.patch('/:catalogId', permissions.middleware('writeDescription', 'write'), asyncWrap(async(req, res) => {
   const patch = req.body
-  var valid = validateCatalogNoRequired(patch)
-  if (!valid) return res.status(400).send(validateCatalogNoRequired.errors)
-
-  const forbiddenKey = Object.keys(patch).find(key => {
-    return ['apiKey', 'description', 'title', 'organization'].indexOf(key) === -1
-  })
-  if (forbiddenKey) return res.status(400).send('Only some parts of the catalog configuration can be modified through this route')
+  var valid = validatePatch(patch)
+  if (!valid) return res.status(400).send(validatePatch.errors)
 
   patch.updatedAt = moment().toISOString()
   patch.updatedBy = { id: req.user.id, name: req.user.name }

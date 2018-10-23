@@ -12,6 +12,7 @@ module.exports = (catalog) => {
       url: `${config.publicUrl}/api/v1/catalogs/${catalog.id}`
     }],
     components: {
+      schemas: { catalogSchema },
       securitySchemes: {
         apiKey: {
           type: 'apiKey',
@@ -38,7 +39,7 @@ module.exports = (catalog) => {
               description: 'Les informations de configuration du catalogue.',
               content: {
                 'application/json': {
-                  schema: catalogSchema
+                  schema: { $ref: '#/components/schemas/catalogSchema' }
                 }
               }
             }
@@ -54,7 +55,7 @@ module.exports = (catalog) => {
             required: true,
             content: {
               'application/json': {
-                schema: catalogSchema
+                schema: { $ref: '#/components/schemas/catalogSchema' }
               }
             }
           },
@@ -63,7 +64,7 @@ module.exports = (catalog) => {
               description: 'Les informations de configuration du catalogue',
               content: {
                 'application/json': {
-                  schema: catalogSchema
+                  schema: { $ref: '#/components/schemas/catalogSchema' }
                 }
               }
             }

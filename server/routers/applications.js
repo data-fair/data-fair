@@ -6,11 +6,9 @@ const applicationAPIDocs = require('../../contract/application-api-docs')
 
 const ajv = require('ajv')()
 const applicationSchema = require('../../contract/application')
-const applicationSchemaNoRequired = Object.assign(applicationSchema)
-delete applicationSchemaNoRequired.required
 const validate = ajv.compile(applicationSchema)
-const validateNoRequired = ajv.compile(applicationSchemaNoRequired)
 const validateConfiguration = ajv.compile(applicationSchema.properties.configuration)
+const validatePatch = ajv.compile(require('../../contract/application-patch'))
 
 const permissions = require('../utils/permissions')
 const usersUtils = require('../utils/users')
@@ -123,14 +121,10 @@ router.get('/:applicationId', permissions.middleware('readDescription', 'read'),
 })
 
 // Update an application configuration
-const patchKeys = ['configuration', 'url', 'description', 'title', 'publications']
 router.patch('/:applicationId', permissions.middleware('writeDescription', 'write'), asyncWrap(async(req, res) => {
   const patch = req.body
-  var valid = validateNoRequired(patch)
-  if (!valid) return res.status(400).send(validateNoRequired.errors)
-
-  const forbiddenKey = Object.keys(req.body).find(key => !patchKeys.includes(key))
-  if (forbiddenKey) return res.status(400).send('Only some parts of the application configuration can be modified through this route')
+  var valid = validatePatch(patch)
+  if (!valid) return res.status(400).send(validatePatch.errors)
 
   // Retry previously failed publications
   if (!patch.publications) {

@@ -1,5 +1,6 @@
 const config = require('config')
 const datasetSchema = require('./dataset')
+const datasetPatchSchema = require('./dataset-patch')
 const journalSchema = require('./journal')
 const version = require('../package.json').version
 const permissionsDoc = require('../server/utils/permissions').apiDoc
@@ -161,7 +162,8 @@ module.exports = (dataset) => {
           in: 'cookie',
           name: 'id_token'
         }
-      }
+      },
+      schemas: { datasetSchema }
     },
     security: [{ apiKey: [] }, { sdCookie: [] }],
     servers: [{
@@ -179,7 +181,7 @@ module.exports = (dataset) => {
               description: 'Les informations du jeu de données.',
               content: {
                 'application/json': {
-                  schema: datasetSchema
+                  schema: { $ref: '#/components/schemas/datasetSchema' }
                 }
               }
             }
@@ -195,7 +197,7 @@ module.exports = (dataset) => {
             required: true,
             content: {
               'application/json': {
-                schema: datasetSchema
+                schema: datasetPatchSchema
               }
             }
           },
@@ -204,7 +206,7 @@ module.exports = (dataset) => {
               description: 'Les informations du jeu de données.',
               content: {
                 'application/json': {
-                  schema: datasetSchema
+                  schema: { $ref: '#/components/schemas/datasetSchema' }
                 }
               }
             }
@@ -216,16 +218,26 @@ module.exports = (dataset) => {
           'x-permissionClass': 'write',
           tags: ['Données'],
           requestBody: {
-            description: 'Fichier à charger',
+            description: 'Fichier à charger et autres informations',
             required: true,
-            content: {}
+            content: {
+              'multipart/form-data': {
+                schema: {
+                  ...datasetPatchSchema,
+                  file: {
+                    type: 'string',
+                    format: 'binary'
+                  }
+                }
+              }
+            }
           },
           responses: {
             200: {
               description: 'Métadonnées sur le dataset modifié',
               content: {
                 'application/json': {
-                  schema: dataset
+                  schema: { $ref: '#/components/schemas/datasetSchema' }
                 }
               }
             }
