@@ -125,7 +125,7 @@ router.patch('/:datasetId', readDataset, permissions.middleware('writeDescriptio
   const patch = req.body
   if (!acceptedStatuses.includes(req.dataset.status) && (patch.schema || patch.extensions)) return res.status(409).send('Dataset is not in proper state to be updated')
   var valid = validatePatch(patch)
-  if (!valid) return res.status(400).send(validatePatch.errors)
+  if (!valid) return res.status(400).send(ajvErrorMessages(validatePatch.errors))
 
   patch.updatedAt = moment().toISOString()
   patch.updatedBy = { id: req.user.id, name: req.user.name }
