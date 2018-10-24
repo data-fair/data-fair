@@ -8,7 +8,7 @@ const permissions = require('./permissions')
 
 module.exports = {
   title: 'Remote service',
-  description: 'An remote service must be described with the openAPI 3.0 specification. If the API is secured, there must be at least one api-key based security scheme available.',
+  description: 'A remote service must be described with the openAPI 3.0 specification. If the API is secured, there must be at least one api-key based security scheme available.',
   type: 'object',
   additionalProperties: false,
   required: ['apiDoc'],

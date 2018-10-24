@@ -4,9 +4,9 @@ const version = require('../package.json').version
 const dataset = require('./dataset')
 const datasetPatch = require('./dataset-patch')
 const remoteService = { ...require('./remote-service') }
-const definitions = remoteService.definitions
 delete remoteService.definitions
 const remoteServicePatch = { ...require('./remote-service-patch') }
+delete remoteServicePatch.definitions
 const catalog = require('./catalog')
 const catalogPatch = require('./catalog-patch')
 const application = require('./application')
@@ -820,5 +820,10 @@ Pour des exemples simples de publication de données vous pouvez consulter la [d
     description: 'Documentation sur Github',
     url: 'https://koumoul-dev.github.io/data-fair/'
   },
-  definitions
+  definitions: {
+    API: {
+      type: 'object',
+      description: 'Open API v3 compliant documentation'
+    }
+  }
 }
