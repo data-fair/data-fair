@@ -3,6 +3,7 @@ const FormData = require('form-data')
 const eventToPromise = require('event-to-promise')
 const WebSocket = require('ws')
 const testUtils = require('./resources/test-utils')
+const workers = require('../server/workers')
 
 const { test, config, axiosBuilder } = testUtils.prepare(__filename)
 
@@ -28,7 +29,7 @@ test('Get datasets when authenticated', async t => {
 
 const datasetFd = fs.readFileSync('./test/resources/dataset1.csv')
 
-test('Failure to upload dataset exceeding limit', async t => {
+test.serial('Failure to upload dataset exceeding limit', async t => {
   const ax = await axiosBuilder('dmeadus0@answers.com')
   const form = new FormData()
   form.append('file', Buffer.alloc(16000), 'largedataset.csv')
@@ -40,7 +41,7 @@ test('Failure to upload dataset exceeding limit', async t => {
   }
 })
 
-test('Failure to upload multiple datasets exceeding limit', async t => {
+test.serial('Failure to upload multiple datasets exceeding limit', async t => {
   const ax = await axiosBuilder('dmeadus0@answers.com')
   let form = new FormData()
   form.append('file', Buffer.alloc(11000), 'largedataset1.csv')
@@ -56,7 +57,7 @@ test('Failure to upload multiple datasets exceeding limit', async t => {
   }
 })
 
-test('Upload new dataset in user zone', async t => {
+test.serial('Upload new dataset in user zone', async t => {
   const ax = await axiosBuilder('dmeadus0@answers.com')
   const form = new FormData()
   form.append('file', datasetFd, 'dataset1.csv')
@@ -67,7 +68,7 @@ test('Upload new dataset in user zone', async t => {
   t.is(res.data.file.encoding, 'UTF-8')
 })
 
-test('Upload new dataset in organization zone', async t => {
+test.serial('Upload new dataset in organization zone', async t => {
   const ax = await axiosBuilder('dmeadus0@answers.com')
   const form = new FormData()
   form.append('file', datasetFd, 'dataset2.csv')
@@ -77,7 +78,7 @@ test('Upload new dataset in organization zone', async t => {
   t.is(res.data.owner.id, 'KWqAGZ4mG')
 })
 
-test('Uploading same file twice should increment id', async t => {
+test.serial('Uploading same file twice should increment id', async t => {
   const ax = await axiosBuilder('dmeadus0@answers.com')
   for (let i of [1, 2, 3]) {
     const form = new FormData()
@@ -88,7 +89,7 @@ test('Uploading same file twice should increment id', async t => {
   }
 })
 
-test('Upload new dataset with pre-filled attributes', async t => {
+test.serial('Upload new dataset with pre-filled attributes', async t => {
   const ax = await axiosBuilder('dmeadus0@answers.com')
   const form = new FormData()
   form.append('title', 'A dataset with pre-filled title')
@@ -96,6 +97,23 @@ test('Upload new dataset with pre-filled attributes', async t => {
   form.append('file', datasetFd, 'yet-a-dataset.csv')
   const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form, 'KWqAGZ4mG') })
   t.is(res.data.title, 'A dataset with pre-filled title')
+})
+
+test.serial('Upload new dataset with defined id', async t => {
+  const ax = await axiosBuilder('dmeadus0@answers.com')
+  let form = new FormData()
+  form.append('title', 'my title')
+  form.append('file', datasetFd, 'yet-a-dataset.csv')
+  let res = await ax.post('/api/v1/datasets/my-dataset-id', form, { headers: testUtils.formHeaders(form) })
+  t.is(res.status, 201)
+  t.is(res.data.title, 'my title')
+  t.is(res.data.id, 'my-dataset-id')
+  await workers.hook('finalizer/my-dataset-id')
+  form = new FormData()
+  form.append('title', 'my other title')
+  form.append('file', datasetFd, 'yet-a-dataset.csv')
+  res = await ax.post('/api/v1/datasets/my-dataset-id', form, { headers: testUtils.formHeaders(form) })
+  t.is(res.status, 200)
 })
 
 test('Reject some other pre-filled attributes', async t => {
@@ -121,7 +139,7 @@ test('Fail to upload new dataset when not authenticated', async t => {
   }
 })
 
-test('Upload dataset - full test with webhooks', async t => {
+test.serial('Upload dataset - full test with webhooks', async t => {
   const wsCli = new WebSocket(config.publicUrl)
   const ax = await axiosBuilder('cdurning2@desdev.cn')
   await ax.put('/api/v1/settings/user/cdurning2', { webhooks: [{ type: 'dataset', title: 'test', events: ['finalize-end'], url: 'http://localhost:5900' }] })
@@ -129,6 +147,7 @@ test('Upload dataset - full test with webhooks', async t => {
   form.append('file', fs.readFileSync('./test/resources/Antennes du CD22.csv'), 'Antennes du CD22.csv')
   let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
   t.is(res.status, 201)
+
   const webhook = await eventToPromise(notifier, 'webhook')
   res = await ax.get(webhook.href + '/api-docs.json')
   t.is(res.status, 200)
@@ -137,16 +156,21 @@ test('Upload dataset - full test with webhooks', async t => {
   // testing journal, updating data and then journal length again
   wsCli.send(JSON.stringify({ type: 'subscribe', channel: 'datasets/' + datasetId + '/journal' }))
   res = await ax.get('/api/v1/datasets/' + datasetId + '/journal')
+
+  // Send again the data to the same dataset
   t.is(res.status, 200)
   t.is(res.data.length, 9)
   form = new FormData()
   form.append('file', fs.readFileSync('./test/resources/Antennes du CD22.csv'), 'Antennes du CD22.csv')
   res = await ax.post(webhook.href, form, { headers: testUtils.formHeaders(form) })
+
   t.is(res.status, 200)
   const wsRes = await eventToPromise(wsCli, 'message')
+
   t.is(JSON.parse(wsRes.data).channel, 'datasets/' + datasetId + '/journal')
   await eventToPromise(notifier, 'webhook')
   res = await ax.get('/api/v1/datasets/' + datasetId + '/journal')
+
   t.is(res.data.length, 18)
   // testing permissions
   const ax1 = await axiosBuilder('dmeadus0@answers.com')
@@ -163,6 +187,7 @@ test('Upload dataset - full test with webhooks', async t => {
   } catch (err) {
     t.is(err.status, 403)
   }
+
   // Updating schema
   res = await ax.get(webhook.href)
   const schema = res.data.schema
@@ -170,6 +195,7 @@ test('Upload dataset - full test with webhooks', async t => {
   schema.find(field => field.key === 'lon')['x-refersTo'] = 'http://schema.org/longitude'
   await ax.patch(webhook.href, { schema: schema })
   await eventToPromise(notifier, 'webhook')
+
   // Delete the dataset
   res = await ax.delete('/api/v1/datasets/' + datasetId)
   t.is(res.status, 204)

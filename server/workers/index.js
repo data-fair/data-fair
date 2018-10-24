@@ -54,6 +54,7 @@ async function iter(app, key) {
     if (worker.eventsPrefix) await journals.log(app, resource, { type: worker.eventsPrefix + '-start' }, worker.type)
     await worker.process(app, resource)
     if (hooks[key]) hooks[key].resolve(resource)
+    if (hooks[key + '/' + resource.id]) hooks[key + '/' + resource.id].resolve(resource)
     if (worker.eventsPrefix) await journals.log(app, resource, { type: worker.eventsPrefix + '-end' }, worker.type)
   } catch (err) {
     console.error('Failure in worker ' + key, err)
@@ -63,6 +64,7 @@ async function iter(app, key) {
       resource.status = 'error'
     }
     if (hooks[key]) hooks[key].reject({ resource, message: err.message })
+    if (hooks[key + '/' + resource.id]) hooks[key + '/' + resource.id].reject({ resource, message: err.message })
   } finally {
     if (resource) await locks.release(app.get('db'), `${worker.type}:${resource.id}`)
     // console.log(`Worker "${worker.eventsPrefix}" released dataset "${dataset.id}"`)

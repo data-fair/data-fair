@@ -1,6 +1,7 @@
 const { Transform } = require('stream')
 const express = require('express')
 const ajv = require('ajv')()
+const ajvErrorMessages = require('ajv-error-messages')
 const util = require('util')
 const fs = require('fs-extra')
 const unlink = util.promisify(fs.unlink)
@@ -13,7 +14,6 @@ const mongodb = require('mongodb')
 const config = require('config')
 const clone = require('fast-clone')
 const chardet = require('chardet')
-const createError = require('http-errors')
 const rimraf = util.promisify(require('rimraf'))
 const journals = require('../utils/journals')
 const esUtils = require('../utils/es')
@@ -84,27 +84,27 @@ router.get('', asyncWrap(async(req, res) => {
   res.json({ results, count, facets })
 }))
 
-// Middlewares
-router.use('/:datasetId', asyncWrap(async(req, res, next) => {
+// Shared middleware to read dataset in db
+const readDataset = asyncWrap(async(req, res, next) => {
   req.dataset = req.resource = await req.app.get('db').collection('datasets')
     .findOne({ id: req.params.datasetId }, { projection: { _id: 0 } })
   if (!req.dataset) return res.status(404).send('Dataset not found')
   findUtils.setResourceLinks(req.dataset, 'dataset')
   req.resourceApiDoc = datasetAPIDocs(req.dataset)
   next()
-}))
+})
 
-router.use('/:datasetId/permissions', permissions.router('datasets', 'dataset'))
+router.use('/:datasetId/permissions', readDataset, permissions.router('datasets', 'dataset'))
 
 // retrieve a dataset by its id
-router.get('/:datasetId', permissions.middleware('readDescription', 'read'), (req, res, next) => {
+router.get('/:datasetId', readDataset, permissions.middleware('readDescription', 'read'), (req, res, next) => {
   req.dataset.userPermissions = permissions.list(req.dataset, operationsClasses, req.user)
   delete req.dataset.permissions
   res.status(200).send(req.dataset)
 })
 
 // retrieve only the schema.. Mostly useful for easy select fields
-router.get('/:datasetId/schema', permissions.middleware('readDescription', 'read'), (req, res, next) => {
+router.get('/:datasetId/schema', readDataset, permissions.middleware('readDescription', 'read'), (req, res, next) => {
   let schema = req.dataset.schema
   schema.forEach(field => {
     field.label = field.title || field['x-originalName']
@@ -121,7 +121,7 @@ router.get('/:datasetId/schema', permissions.middleware('readDescription', 'read
 })
 
 // Update a dataset's metadata
-router.patch('/:datasetId', permissions.middleware('writeDescription', 'write'), asyncWrap(async(req, res) => {
+router.patch('/:datasetId', readDataset, permissions.middleware('writeDescription', 'write'), asyncWrap(async(req, res) => {
   const patch = req.body
   if (!acceptedStatuses.includes(req.dataset.status) && (patch.schema || patch.extensions)) return res.status(409).send('Dataset is not in proper state to be updated')
   var valid = validatePatch(patch)
@@ -169,7 +169,7 @@ router.patch('/:datasetId', permissions.middleware('writeDescription', 'write'),
 }))
 
 // Delete a dataset
-router.delete('/:datasetId', permissions.middleware('delete', 'admin'), asyncWrap(async(req, res) => {
+router.delete('/:datasetId', readDataset, permissions.middleware('delete', 'admin'), asyncWrap(async(req, res) => {
   const owner = usersUtils.owner(req)
 
   try {
@@ -204,53 +204,25 @@ router.delete('/:datasetId', permissions.middleware('delete', 'admin'), asyncWra
   res.sendStatus(204)
 }))
 
-// Create a dataset by uploading data
-router.post('', filesUtils.uploadFile(), asyncWrap(async(req, res) => {
-  if (!req.user) return res.status(401).send()
-  const owner = usersUtils.owner(req)
-  if (!permissions.canDoForOwner(owner, 'postDataset', req.user, req.app.get('db'))) return res.sendStatus(403)
-
-  // After uploadFile, req.file contains the metadata of an uploaded file, and req.body the content of additional text fields
-  if (!req.file) return res.status(400).send('Expected a file multipart/form-data')
-
-  // Form data fields are sent as strings
-  // console.log(req.body)
-
-  Object.keys(datasetPatchSchema.properties)
-    .filter(key => req.body[key] !== undefined)
-    .filter(key => ['object', 'array'].includes(datasetPatchSchema.properties[key].type))
-    .forEach(key => {
-      if (req.body[key].trim() === '') {
-        delete req.body[key]
-      } else {
-        try {
-          req.body[key] = JSON.parse(req.body[key])
-        } catch (err) {
-          throw createError('400', `Invalid JSON in part "${key}", ${err.message}`)
-        }
-      }
-    })
-  const valid = validatePatch(req.body)
-  if (!valid) return res.status(400).send(validatePatch.errors)
-
+const initNew = (req) => {
+  const dataset = { ...req.body }
+  dataset.owner = usersUtils.owner(req)
   const date = moment().toISOString()
-  const dataset = Object.assign({
-    id: req.file.id,
-    title: req.file.title,
-    owner,
-    permissions: [],
-    originalFile: {
-      name: req.file.originalname,
-      size: req.file.size,
-      mimetype: req.file.mimetype
-    },
-    createdBy: { id: req.user.id, name: req.user.name },
-    createdAt: date,
-    updatedBy: { id: req.user.id, name: req.user.name },
-    updatedAt: date
-  }, req.body)
+  dataset.createdAt = dataset.updatedAt = date
+  dataset.createdBy = dataset.updatedBy = { id: req.user.id, name: req.user.name }
+  dataset.permissions = []
+  return dataset
+}
 
-  if (!baseTypes.has(req.file.mimetype)) {
+const setFileInfo = async (file, dataset) => {
+  dataset.id = file.id
+  dataset.title = dataset.title || file.title
+  dataset.originalFile = {
+    name: file.originalname,
+    size: file.size,
+    mimetype: file.mimetype
+  }
+  if (!baseTypes.has(file.mimetype)) {
     // we first need to convert the file in a textual format easy to index
     dataset.status = 'uploaded'
   } else {
@@ -260,49 +232,66 @@ router.post('', filesUtils.uploadFile(), asyncWrap(async(req, res) => {
     const fileSample = await datasetFileSample(dataset)
     dataset.file.encoding = chardet.detect(fileSample)
   }
+  return dataset
+}
+
+// Create a dataset by uploading data
+const beforeUpload = asyncWrap(async(req, res, next) => {
+  if (!req.user) return res.status(401).send()
+  if (!permissions.canDoForOwner(usersUtils.owner(req), 'postDataset', req.user, req.app.get('db'))) return res.sendStatus(403)
+  next()
+})
+router.post('', beforeUpload, filesUtils.uploadFile(), asyncWrap(async(req, res) => {
+  // After uploadFile, req.file contains the metadata of an uploaded file, and req.body the content of additional text fields
+  if (!req.file) return res.status(400).send('Expected a file multipart/form-data')
+
+  const dataset = await setFileInfo(req.file, initNew(req))
   await req.app.get('db').collection('datasets').insertOne(dataset)
   delete dataset._id
 
-  const storageRemaining = await datasetUtils.storageRemaining(req.app.get('db'), owner, req)
+  const storageRemaining = await datasetUtils.storageRemaining(req.app.get('db'), dataset.owner, req)
   if (storageRemaining !== -1) res.set(config.headers.storedBytesRemaining, storageRemaining)
   await journals.log(req.app, dataset, { type: 'dataset-created', href: config.publicUrl + '/dataset/' + dataset.id }, 'dataset')
   findUtils.setResourceLinks(dataset, 'dataset')
+
   res.status(201).send(dataset)
 }))
 
-// Update an existing dataset data
-router.post('/:datasetId', permissions.middleware('writeData', 'write'), filesUtils.uploadFile(), asyncWrap(async(req, res) => {
-  const owner = usersUtils.owner(req)
-  if (!acceptedStatuses.includes(req.dataset.status)) return res.status(409).send('Dataset is not in proper state to be updated')
-  if (!req.file) return res.sendStatus(400)
+// POST with an id to create or update an existing dataset data
+const attemptInsert = asyncWrap(async(req, res, next) => {
+  const newDataset = initNew(req)
+  newDataset.id = req.params.datasetId
 
-  req.dataset.originalFile = {
-    name: req.file.originalname,
-    size: req.file.size,
-    mimetype: req.file.mimetype
+  // Try insertion if the user is authorized, in case of conflict go on with the update scenario
+  if (permissions.canDoForOwner(newDataset.owner, 'postDataset', req.user, req.app.get('db'))) {
+    try {
+      await req.app.get('db').collection('datasets').insertOne(newDataset, true)
+      req.isNewDataset = true
+    } catch (err) {
+      if (err.code !== 11000) throw err
+    }
   }
-  if (!baseTypes.has(req.file.mimetype)) {
-    // we first need to convert the file in a textual format easy to index
-    req.dataset.status = 'uploaded'
-  } else {
-    // The format of the original file is already well suited to workers
-    req.dataset.status = 'loaded'
-    req.dataset.file = req.dataset.originalFile
-    const fileSample = await datasetFileSample(req.dataset)
-    req.dataset.file.encoding = chardet.detect(fileSample)
-  }
+  next()
+})
+const updateDataset = asyncWrap(async(req, res) => {
+  // After uploadFile, req.file contains the metadata of an uploaded file, and req.body the content of additional text fields
+  if (!req.file) return res.status(400).send('Expected a file multipart/form-data')
+  if (req.dataset.status && !acceptedStatuses.includes(req.dataset.status)) return res.status(409).send('Dataset is not in proper state to be updated')
 
-  req.dataset.updatedBy = { id: req.user.id, name: req.user.name }
-  req.dataset.updatedAt = moment().toISOString()
-  req.dataset.status = 'loaded'
-  await req.app.get('db').collection('datasets').replaceOne({
-    id: req.params.datasetId
-  }, req.dataset)
-  const storageRemaining = await datasetUtils.storageRemaining(req.app.get('db'), owner, req)
+  const newDataset = await setFileInfo(req.file, req.dataset)
+  Object.assign(newDataset, req.body)
+  newDataset.updatedBy = { id: req.user.id, name: req.user.name }
+  newDataset.updatedAt = moment().toISOString()
+  await req.app.get('db').collection('datasets').replaceOne({ id: req.params.datasetId }, newDataset)
+  const storageRemaining = await datasetUtils.storageRemaining(req.app.get('db'), newDataset.owner, req)
   if (storageRemaining !== -1) res.set(config.headers.storedBytesRemaining, storageRemaining)
-  await journals.log(req.app, req.dataset, { type: 'data-updated' }, 'dataset')
-  res.status(200).send(req.dataset)
-}))
+  if (req.isNewDataset) await journals.log(req.app, newDataset, { type: 'data-created' }, 'dataset')
+  else await journals.log(req.app, newDataset, { type: 'data-updated' }, 'dataset')
+  findUtils.setResourceLinks(newDataset, 'dataset')
+  res.status(req.isNewDataset ? 201 : 200).send(newDataset)
+})
+router.post('/:datasetId', attemptInsert, readDataset, permissions.middleware('writeData', 'write'), filesUtils.uploadFile(), updateDataset)
+router.put('/:datasetId', attemptInsert, readDataset, permissions.middleware('writeData', 'write'), filesUtils.uploadFile(), updateDataset)
 
 // Set max-age
 // Also compare last-modified and if-modified-since headers for cache revalidation
@@ -329,7 +318,7 @@ async function manageESError(req, err) {
 }
 
 // Read/search data for a dataset
-router.get('/:datasetId/lines', permissions.middleware('readLines', 'read'), asyncWrap(async(req, res) => {
+router.get('/:datasetId/lines', readDataset, permissions.middleware('readLines', 'read'), asyncWrap(async(req, res) => {
   if (req.query && req.query.page && req.query.size && req.query.page * req.query.size > 10000) {
     return res.status(404).send('You can only access the first 10 000 elements.')
   }
@@ -405,7 +394,7 @@ router.get('/:datasetId/lines', permissions.middleware('readLines', 'read'), asy
 }))
 
 // Special geo aggregation
-router.get('/:datasetId/geo_agg', permissions.middleware('getGeoAgg', 'read'), asyncWrap(async(req, res) => {
+router.get('/:datasetId/geo_agg', readDataset, permissions.middleware('getGeoAgg', 'read'), asyncWrap(async(req, res) => {
   if (!req.user && managePublicCache(req, res)) return res.status(304).send()
   let result
   try {
@@ -417,7 +406,7 @@ router.get('/:datasetId/geo_agg', permissions.middleware('getGeoAgg', 'read'), a
 }))
 
 // Standard aggregation to group items by value and perform an optional metric calculation on each group
-router.get('/:datasetId/values_agg', permissions.middleware('getValuesAgg', 'read'), asyncWrap(async(req, res) => {
+router.get('/:datasetId/values_agg', readDataset, permissions.middleware('getValuesAgg', 'read'), asyncWrap(async(req, res) => {
   if (!req.user && managePublicCache(req, res)) return res.status(304).send()
   let result
   try {
@@ -429,7 +418,7 @@ router.get('/:datasetId/values_agg', permissions.middleware('getValuesAgg', 'rea
 }))
 
 // Simple metric aggregation to calculate some value (sum, avg, etc.)
-router.get('/:datasetId/metric_agg', permissions.middleware('getMetricAgg', 'read'), asyncWrap(async(req, res) => {
+router.get('/:datasetId/metric_agg', readDataset, permissions.middleware('getMetricAgg', 'read'), asyncWrap(async(req, res) => {
   if (!req.user && managePublicCache(req, res)) return res.status(304).send()
   let result
   try {
@@ -441,7 +430,7 @@ router.get('/:datasetId/metric_agg', permissions.middleware('getMetricAgg', 'rea
 }))
 
 // Simple words aggregation for significant terms extraction
-router.get('/:datasetId/words_agg', permissions.middleware('getWordsAgg', 'read'), asyncWrap(async(req, res) => {
+router.get('/:datasetId/words_agg', readDataset, permissions.middleware('getWordsAgg', 'read'), asyncWrap(async(req, res) => {
   if (!req.user && managePublicCache(req, res)) return res.status(304).send()
   let result
   try {
@@ -453,7 +442,7 @@ router.get('/:datasetId/words_agg', permissions.middleware('getWordsAgg', 'read'
 }))
 
 // For datasets with attached files
-router.get('/:datasetId/files/*', permissions.middleware('downloadOriginalData', 'read'), (req, res, next) => {
+router.get('/:datasetId/files/*', readDataset, permissions.middleware('downloadOriginalData', 'read'), (req, res, next) => {
   if (!req.dataset.hasFiles) return res.status(404).send('This datasets does not have attached files')
   const filePath = req.params['0']
   if (filePath.includes('..')) return res.status(400).send()
@@ -461,19 +450,19 @@ router.get('/:datasetId/files/*', permissions.middleware('downloadOriginalData',
 })
 
 // Download the full dataset in its original form
-router.get('/:datasetId/raw', permissions.middleware('downloadOriginalData', 'read'), (req, res, next) => {
+router.get('/:datasetId/raw', readDataset, permissions.middleware('downloadOriginalData', 'read'), (req, res, next) => {
   res.download(datasetUtils.originalFileName(req.dataset), req.dataset.originalFile.name)
 })
 
 // Download the dataset in various formats
-router.get('/:datasetId/convert', permissions.middleware('downloadOriginalData', 'read'), (req, res, next) => {
+router.get('/:datasetId/convert', readDataset, permissions.middleware('downloadOriginalData', 'read'), (req, res, next) => {
   if (!req.query || !req.query.format) res.download(datasetUtils.fileName(req.dataset), req.dataset.file.name)
   // TODO add logic to support other formats
   else res.status(400).send(`Format ${req.query.format} is not supported.`)
 })
 
 // Download the full dataset with extensions
-router.get('/:datasetId/full', permissions.middleware('downloadFullData', 'read'), asyncWrap(async (req, res, next) => {
+router.get('/:datasetId/full', readDataset, permissions.middleware('downloadFullData', 'read'), asyncWrap(async (req, res, next) => {
   res.setHeader('Content-disposition', 'attachment; filename=' + req.dataset.file.name)
   res.setHeader('Content-type', 'text/csv')
   await pump(
@@ -489,11 +478,11 @@ router.get('/:datasetId/full', permissions.middleware('downloadFullData', 'read'
   )
 }))
 
-router.get('/:datasetId/api-docs.json', permissions.middleware('readApiDoc', 'read'), (req, res) => {
+router.get('/:datasetId/api-docs.json', readDataset, permissions.middleware('readApiDoc', 'read'), (req, res) => {
   res.send(req.resourceApiDoc)
 })
 
-router.get('/:datasetId/journal', permissions.middleware('readJournal', 'read'), asyncWrap(async(req, res) => {
+router.get('/:datasetId/journal', readDataset, permissions.middleware('readJournal', 'read'), asyncWrap(async(req, res) => {
   const journal = await req.app.get('db').collection('journals').findOne({
     type: 'dataset',
     id: req.params.datasetId
@@ -504,7 +493,7 @@ router.get('/:datasetId/journal', permissions.middleware('readJournal', 'read'),
 }))
 
 // Special route with very technical informations to help diagnose bugs, broken indices, etc.
-router.get('/:datasetId/_diagnose', asyncWrap(async(req, res) => {
+router.get('/:datasetId/_diagnose', readDataset, asyncWrap(async(req, res) => {
   if (!req.user) return res.status(401).send()
   if (!req.user.isAdmin) return res.status(403).send()
   const esInfos = await esUtils.datasetInfos(req.app.get('es'), req.dataset)
@@ -513,7 +502,7 @@ router.get('/:datasetId/_diagnose', asyncWrap(async(req, res) => {
 }))
 
 // Special admin route to firce reindexing a dataset
-router.post('/:datasetId/_reindex', asyncWrap(async(req, res) => {
+router.post('/:datasetId/_reindex', readDataset, asyncWrap(async(req, res) => {
   if (!req.user) return res.status(401).send()
   if (!req.user.isAdmin) return res.status(403).send()
   const patch = { status: 'loaded' }

@@ -1,6 +1,6 @@
 const config = require('config')
 const express = require('express')
-const normalise = require('ajv-error-messages')
+const ajvErrorMessages = require('ajv-error-messages')
 const moment = require('moment')
 const slug = require('slugify')
 const catalogAPIDocs = require('../../contract/catalog-api-docs')
@@ -9,7 +9,8 @@ const catalogs = require('../catalogs')
 
 const ajv = require('ajv')()
 const validate = ajv.compile(require('../../contract/catalog'))
-const validatePatch = ajv.compile(require('../../contract/catalog-patch'))
+const catalogPatch = require('../../contract/catalog-patch')
+const validatePatch = ajv.compile(catalogPatch)
 
 const permissions = require('../utils/permissions')
 const usersUtils = require('../utils/users')
@@ -71,35 +72,44 @@ router.get('', asyncWrap(async(req, res) => {
   res.json({ results: results.map(result => mongoEscape.unescape(result, true)), count, facets })
 }))
 
+const initNew = (req) => {
+  const catalog = { ...req.body }
+  catalog.owner = usersUtils.owner(req)
+  const date = moment().toISOString()
+  catalog.createdAt = catalog.updatedAt = date
+  catalog.createdBy = catalog.updatedBy = { id: req.user.id, name: req.user.name }
+  catalog.permissions = []
+  return catalog
+}
+
 // Create a catalog
 router.post('', asyncWrap(async(req, res) => {
-  const catalog = req.body
-  const baseId = catalog.id || slug(catalog.url.replace('https://', '').replace('http://', ''), { lower: true })
-  catalog.id = baseId
-  let i = 1
-  do {
-    if (i > 1) catalog.id = baseId + i
-    var dbExists = await req.app.get('db').collection('catalogs').countDocuments({ id: catalog.id })
-    i += 1
-  } while (dbExists)
-  catalog.owner = usersUtils.owner(req)
-  if (!permissions.canDoForOwner(catalog.owner, 'postCatalog', req.user, req.app.get('db'))) return res.sendStatus(403)
-  var valid = validate(catalog)
-  if (!valid) return res.status(400).send(normalise(validate.errors))
-  const date = moment().toISOString()
-  catalog.createdAt = date
-  catalog.createdBy = { id: req.user.id, name: req.user.name }
-  catalog.updatedAt = date
-  catalog.updatedBy = { id: req.user.id, name: req.user.name }
-  catalog.permissions = []
+  const catalog = initNew(req)
+  if (!permissions.canDoForOwner(catalog.owner, 'postCatalog', req.user, req.app.get('db'))) return res.status(403).send()
+  if (!validate(catalog)) return res.status(400).send(ajvErrorMessages(validate.errors))
 
-  await req.app.get('db').collection('catalogs').insertOne(mongoEscape.escape(catalog, true))
+  // Generate ids and try insertion until there is no conflict on id
+  const baseId = slug(catalog.url.replace('https://', '').replace('http://', ''), { lower: true })
+  catalog.id = baseId
+  let insertOk = false
+  let i = 1
+  while (!insertOk) {
+    try {
+      await req.app.get('db').collection('catalogs').insertOne(mongoEscape.escape(catalog, true))
+      insertOk = true
+    } catch (err) {
+      if (err.code !== 11000) throw err
+      i += 1
+      catalog.id = `${baseId}-${i}`
+    }
+  }
+
   findUtils.setResourceLinks(catalog, 'catalog')
   res.status(201).json(catalog)
 }))
 
-// Middlewares
-router.use('/:catalogId', asyncWrap(async(req, res, next) => {
+// Shared middleware
+const readCatalog = asyncWrap(async(req, res, next) => {
   const catalog = await req.app.get('db').collection('catalogs')
     .findOne({ id: req.params.catalogId }, { projection: { _id: 0 } })
   if (!catalog) return res.status(404).send('Catalog not found')
@@ -107,52 +117,77 @@ router.use('/:catalogId', asyncWrap(async(req, res, next) => {
   req.catalog = req.resource = mongoEscape.unescape(catalog, true)
   req.resourceApiDoc = catalogAPIDocs(req.catalog)
   next()
-}))
+})
 
-router.use('/:catalogId/permissions', permissions.router('catalogs', 'catalog'))
+router.use('/:catalogId/permissions', readCatalog, permissions.router('catalogs', 'catalog'))
 
 // retrieve a catalog by its id
-router.get('/:catalogId', permissions.middleware('readDescription', 'read'), (req, res, next) => {
+router.get('/:catalogId', readCatalog, permissions.middleware('readDescription', 'read'), (req, res, next) => {
   req.catalog.userPermissions = permissions.list(req.catalog, operationsClasses, req.user)
   delete req.catalog.permissions
   if (req.catalog.apiKey) req.catalog.apiKey = '**********'
   res.status(200).send(req.catalog)
 })
 
-// Update a catalog configuration
-router.patch('/:catalogId', permissions.middleware('writeDescription', 'write'), asyncWrap(async(req, res) => {
-  const patch = req.body
-  var valid = validatePatch(patch)
-  if (!valid) return res.status(400).send(validatePatch.errors)
+// PUT used to create or update
+const attemptInsert = asyncWrap(async(req, res, next) => {
+  const newCatalog = initNew(req)
+  newCatalog.id = req.params.catalogId
+  if (!validate(newCatalog)) return res.status(400).send(ajvErrorMessages(validate.errors))
 
+  // Try insertion if the user is authorized, in case of conflict go on with the update scenario
+  if (permissions.canDoForOwner(newCatalog.owner, 'postCatalog', req.user, req.app.get('db'))) {
+    try {
+      await req.app.get('db').collection('catalogs').insertOne(mongoEscape.escape(newCatalog, true))
+      findUtils.setResourceLinks(newCatalog, 'catalog')
+      return res.status(201).json(newCatalog)
+    } catch (err) {
+      if (err.code !== 11000) throw err
+    }
+  }
+  next()
+})
+router.put('/:catalogId', attemptInsert, readCatalog, permissions.middleware('writeDescription', 'write'), asyncWrap(async(req, res) => {
+  const newCatalog = req.body
+  // preserve all readonly properties, the rest is overwritten
+  Object.keys(req.catalog).forEach(key => {
+    if (!catalogPatch.properties[key]) {
+      newCatalog[key] = req.catalog[key]
+    }
+  })
+  newCatalog.updatedAt = moment().toISOString()
+  newCatalog.updatedBy = { id: req.user.id, name: req.user.name }
+  await req.app.get('db').collection('catalogs').replaceOne({ id: req.params.catalogId }, mongoEscape.escape(newCatalog, true))
+  findUtils.setResourceLinks(newCatalog, 'catalog')
+  res.status(200).json(newCatalog)
+}))
+
+// Update a catalog configuration
+router.patch('/:catalogId', readCatalog, permissions.middleware('writeDescription', 'write'), asyncWrap(async(req, res) => {
+  const patch = req.body
+  if (!validatePatch(patch)) return res.status(400).send(ajvErrorMessages(validatePatch.errors))
   patch.updatedAt = moment().toISOString()
   patch.updatedBy = { id: req.user.id, name: req.user.name }
-
   await req.app.get('db').collection('catalogs').updateOne({ id: req.params.catalogId }, { '$set': mongoEscape.escape(patch, true) })
   res.status(200).json(patch)
 }))
 
 // Delete a catalog
-router.delete('/:catalogId', permissions.middleware('delete', 'admin'), asyncWrap(async(req, res) => {
-  // TODO : Remove indexes
-  await req.app.get('db').collection('catalogs').deleteOne({
-    id: req.params.catalogId
-  })
+router.delete('/:catalogId', readCatalog, permissions.middleware('delete', 'admin'), asyncWrap(async(req, res) => {
+  await req.app.get('db').collection('catalogs').deleteOne({ id: req.params.catalogId })
   res.sendStatus(204)
 }))
 
-router.get('/:catalogId/api-docs.json', permissions.middleware('readApiDoc', 'read'), (req, res) => {
+router.get('/:catalogId/api-docs.json', readCatalog, permissions.middleware('readApiDoc', 'read'), (req, res) => {
   res.send(req.resourceApiDoc)
 })
 
-// retrieve a catalog by its id
-router.get('/:catalogId/datasets', permissions.middleware('readDatasets', 'read'), asyncWrap(async(req, res, next) => {
+router.get('/:catalogId/datasets', readCatalog, permissions.middleware('readDatasets', 'read'), asyncWrap(async(req, res, next) => {
   const datasets = await catalogs.listDatasets(req.app.get('db'), req.catalog, { q: req.query.q })
   res.status(200).json(datasets)
 }))
 
-// retrieve a catalog by its id
-router.post('/:catalogId/datasets/:datasetId', permissions.middleware('harvestDataset', 'write'), asyncWrap(async(req, res, next) => {
+router.post('/:catalogId/datasets/:datasetId', readCatalog, permissions.middleware('harvestDataset', 'write'), asyncWrap(async(req, res, next) => {
   await catalogs.harvestDataset(req.catalog, req.params.datasetId, req.app)
   const storageRemaining = await datasetUtils.storageRemaining(req.app.get('db'), req.catalog.owner, req)
   if (storageRemaining !== -1) res.set(config.headers.storedBytesRemaining, storageRemaining)

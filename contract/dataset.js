@@ -1,5 +1,6 @@
 const owner = require('./owner')
 const eventBy = require('./event-by')
+const permissions = require('./permissions')
 const publicationSchema = JSON.parse(JSON.stringify(require('./publication')))
 publicationSchema.properties.addToDataset = {
   type: 'object',
@@ -33,7 +34,7 @@ module.exports = {
   'title': 'Dataset',
   'type': 'object',
   'additionalProperties': false,
-  'required': ['id', 'owner', 'file'],
+  'required': ['file'],
   'properties': {
     'id': {
       'type': 'string',
@@ -253,6 +254,7 @@ module.exports = {
       type: 'boolean',
       default: false,
       description: 'true when the dataset has attached files'
-    }
+    },
+    permissions
   }
 }

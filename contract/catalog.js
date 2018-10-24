@@ -1,5 +1,6 @@
 const owner = require('./owner')
 const eventBy = require('./event-by')
+const permissions = require('./permissions')
 const catalogs = require('../server/catalogs')
 
 module.exports = {
@@ -7,7 +8,7 @@ module.exports = {
   description: 'A catalog configuration to publish metadatas from datasets, services and applications.',
   type: 'object',
   additionalProperties: false,
-  required: ['id', 'owner', 'url', 'apiKey', 'type'],
+  required: ['url', 'apiKey', 'type'],
   properties: {
     id: {
       type: 'string',
@@ -66,6 +67,7 @@ module.exports = {
           type: 'string'
         }
       }
-    }
+    },
+    permissions
   }
 }

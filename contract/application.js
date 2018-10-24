@@ -1,12 +1,13 @@
 const owner = require('./owner')
 const eventBy = require('./event-by')
+const permissions = require('./permissions')
 const publicationSchema = require('./publication')
 
 module.exports = {
   'title': 'Application configuration',
   'type': 'object',
   'additionalProperties': false,
-  'required': ['id', 'owner', 'url'],
+  'required': ['url'],
   'properties': {
     'id': {
       'type': 'string',
@@ -98,6 +99,7 @@ module.exports = {
       type: 'array',
       description: 'References to all the catalogs the application metadata is published too',
       items: publicationSchema
-    }
+    },
+    permissions
   }
 }

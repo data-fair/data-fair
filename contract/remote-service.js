@@ -4,13 +4,14 @@ const eventBy = require('./event-by')
 // see https://github.com/OAI/OpenAPI-Specification/issues/1032
 // apiDoc: require('swagger2openapi/schemas/openapi-3.0.json'),
 const apiDoc = require('./openapi-3.0.json')
+const permissions = require('./permissions')
 
 module.exports = {
   title: 'Remote service',
   description: 'An remote service must be described with the openAPI 3.0 specification. If the API is secured, there must be at least one api-key based security scheme available.',
   type: 'object',
   additionalProperties: false,
-  required: ['id', 'owner', 'apiDoc'],
+  required: ['apiDoc'],
   properties: {
     id: {
       type: 'string',
@@ -92,7 +93,8 @@ module.exports = {
           title: { type: 'string' }
         }
       }
-    }
+    },
+    permissions
   },
   definitions: apiDoc.definitions
 }

@@ -50,7 +50,17 @@ test('Search organizations in a unknown catalog type', async t => {
   }
 })
 
-test('Post a minimal catalog definition, read it, update it and delete it', async t => {
+test('Unknown catalog', async t => {
+  const ax = await axiosBuilder()
+  try {
+    await ax.get('/api/v1/catalogs/unknownId')
+    t.fail()
+  } catch (err) {
+    t.is(err.status, 404)
+  }
+})
+
+test.serial('Post a minimal catalog definition, read it, update it and delete it', async t => {
   const ax = await axiosBuilder('dmeadus0@answers.com')
   let res = await ax.post('/api/v1/catalogs', { url: 'http://test-catalog.com', title: 'Test catalog', apiKey: 'apiKey', type: 'udata' })
   t.is(res.status, 201)
@@ -93,12 +103,42 @@ test('Post a minimal catalog definition, read it, update it and delete it', asyn
   t.is(res.data.count, 0)
 })
 
-test('Unknown catalog', async t => {
-  const ax = await axiosBuilder()
+test.serial('Post catalog multiple times', async t => {
+  const ax = await axiosBuilder('dmeadus0@answers.com')
+  const catalog = { url: 'http://test-catalog2.com', title: 'Test catalog', apiKey: 'apiKey', type: 'udata' }
+  let res = await ax.post('/api/v1/catalogs', catalog)
+  t.is(res.status, 201)
+  t.is(res.data.id, 'test-catalog2.com')
+  res = await ax.post('/api/v1/catalogs', catalog)
+  t.is(res.status, 201)
+  t.is(res.data.id, 'test-catalog2.com-2')
+  res = await ax.post('/api/v1/catalogs', catalog)
+  t.is(res.status, 201)
+  t.is(res.data.id, 'test-catalog2.com-3')
+})
+
+test.serial('Use PUT to create', async t => {
+  const ax = await axiosBuilder('dmeadus0@answers.com')
+  const catalog = { url: 'http://test-catalog2.com', title: 'Test catalog', apiKey: 'apiKey', type: 'udata' }
+  let res = await ax.put('/api/v1/catalogs/mycatalog', catalog)
+  t.is(res.status, 201)
+
+  // send same again
+  res = await ax.put('/api/v1/catalogs/mycatalog', catalog)
+  t.is(res.status, 200)
+
+  // send with some change
+  catalog.title = 'overwritten title'
+  res = await ax.put('/api/v1/catalogs/mycatalog', catalog)
+  t.is(res.status, 200)
+  res = await ax.get('/api/v1/catalogs/mycatalog')
+  t.is(res.data.title, 'overwritten title')
+
+  // no permission to send as other user
+  const ax2 = await axiosBuilder('hlalonde3@desdev.cn')
   try {
-    await ax.get('/api/v1/catalogs/unknownId')
-    t.fail()
+    res = await ax2.put('/api/v1/catalogs/mycatalog', catalog)
   } catch (err) {
-    t.is(err.status, 404)
+    t.is(err.status, 403)
   }
 })

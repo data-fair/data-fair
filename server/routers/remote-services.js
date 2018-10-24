@@ -1,5 +1,5 @@
 const express = require('express')
-const normalise = require('ajv-error-messages')
+const ajvErrorMessages = require('ajv-error-messages')
 const moment = require('moment')
 const slug = require('slugify')
 const soasLoader = require('soas')
@@ -12,7 +12,8 @@ const config = require('config')
 
 const ajv = require('ajv')()
 const validate = ajv.compile(require('../../contract/remote-service'))
-const validatePatch = ajv.compile(require('../../contract/remote-service-patch'))
+const servicePatch = require('../../contract/remote-service-patch')
+const validatePatch = ajv.compile(servicePatch)
 const openApiSchema = require('../../contract/openapi-3.0.json')
 openApiSchema.$id = openApiSchema.$id + '-2' // dirty hack to handle ajv error
 const validateOpenApi = ajv.compile(openApiSchema)
@@ -80,27 +81,12 @@ router.get('', asyncWrap(async(req, res) => {
   res.json({ results: results.map(result => mongoEscape.unescape(result, true)), count, facets })
 }))
 
-// Create a remote Api
-router.post('', asyncWrap(async(req, res) => {
-  const service = req.body
-  if (!service.apiDoc || !service.apiDoc.info || !service.apiDoc.info['x-api-id']) return res.sendStatus(400)
-  const baseId = service.id || slug(service.apiDoc.info['x-api-id'], { lower: true })
-  service.id = baseId
-  let i = 1
-  do {
-    if (i > 1) service.id = baseId + i
-    var dbExists = await req.app.get('db').collection('remote-services').countDocuments({ id: service.id })
-    i += 1
-  } while (dbExists)
+const initNew = (req) => {
+  const service = { ...req.body }
   service.owner = usersUtils.owner(req)
-  if (!permissions.canDoForOwner(service.owner, 'postRemoteService', req.user, req.app.get('db'))) return res.sendStatus(403)
-  var valid = validate(service)
-  if (!valid) return res.status(400).send(normalise(validate.errors))
   const date = moment().toISOString()
-  service.createdAt = date
-  service.createdBy = { id: req.user.id, name: req.user.name }
-  service.updatedAt = date
-  service.updatedBy = { id: req.user.id, name: req.user.name }
+  service.createdAt = service.updatedAt = date
+  service.createdBy = service.updatedBy = { id: req.user.id, name: req.user.name }
   if (service.apiDoc) {
     if (service.apiDoc.info) {
       service.title = service.apiDoc.info.title
@@ -109,8 +95,31 @@ router.post('', asyncWrap(async(req, res) => {
     service.actions = computeActions(service.apiDoc)
   }
   service.permissions = []
+  return service
+}
 
-  await req.app.get('db').collection('remote-services').insertOne(mongoEscape.escape(service, true))
+// Create a remote Api
+router.post('', asyncWrap(async(req, res) => {
+  const service = initNew(req)
+  if (!permissions.canDoForOwner(service.owner, 'postRemoteService', req.user, req.app.get('db'))) return res.sendStatus(403)
+  if (!validate(service)) return res.status(400).send(ajvErrorMessages(validate.errors))
+
+  // Generate ids and try insertion until there is no conflict on id
+  const baseId = service.id || slug(service.apiDoc.info['x-api-id'], { lower: true })
+  service.id = baseId
+  let insertOk = false
+  let i = 1
+  while (!insertOk) {
+    try {
+      await req.app.get('db').collection('remote-services').insertOne(mongoEscape.escape(service, true))
+      insertOk = true
+    } catch (err) {
+      if (err.code !== 11000) throw err
+      i += 1
+      service.id = `${baseId}-${i}`
+    }
+  }
+
   findUtils.setResourceLinks(service, 'remote-service')
   res.status(201).json(service)
 }))
@@ -165,8 +174,8 @@ router.post('/_default_services', asyncWrap(async(req, res) => {
   res.status(201).json(`Added ${servicesToInsert.length} services`)
 }))
 
-// Middlewares
-router.use('/:remoteServiceId', asyncWrap(async(req, res, next) => {
+// Shared middleware
+const readService = asyncWrap(async(req, res, next) => {
   const service = await req.app.get('db').collection('remote-services')
     .findOne({ id: req.params.remoteServiceId }, { projection: { _id: 0 } })
   if (!service) return res.status(404).send('Remote Api not found')
@@ -174,19 +183,55 @@ router.use('/:remoteServiceId', asyncWrap(async(req, res, next) => {
   req.remoteService = req.resource = mongoEscape.unescape(service, true)
   req.resourceApiDoc = remoteServiceAPIDocs(req.remoteService)
   next()
-}))
+})
 
-router.use('/:remoteServiceId/permissions', permissions.router('remote-services', 'remoteService'))
+router.use('/:remoteServiceId/permissions', readService, permissions.router('remote-services', 'remoteService'))
 
 // retrieve a remoteService by its id
-router.get('/:remoteServiceId', permissions.middleware('readDescription', 'read'), (req, res, next) => {
+router.get('/:remoteServiceId', readService, permissions.middleware('readDescription', 'read'), (req, res, next) => {
   req.remoteService.userPermissions = permissions.list(req.remoteService, operationsClasses, req.user)
   delete req.remoteService.permissions
   res.status(200).send(req.remoteService)
 })
 
+// PUT used to create or update
+const attemptInsert = asyncWrap(async(req, res, next) => {
+  const newService = initNew(req)
+  newService.id = req.params.remoteServiceId
+  if (!validate(newService)) return res.status(400).send(ajvErrorMessages(validate.errors))
+
+  // Try insertion if the user is authorized, in case of conflict go on with the update scenario
+  if (permissions.canDoForOwner(newService.owner, 'postRemoteService', req.user, req.app.get('db'))) {
+    try {
+      await req.app.get('db').collection('remote-services').insertOne(mongoEscape.escape(newService, true))
+      findUtils.setResourceLinks(newService, 'remote-service')
+      return res.status(201).json(newService)
+    } catch (err) {
+      if (err.code !== 11000) throw err
+    }
+  }
+  next()
+})
+router.put('/:remoteServiceId', attemptInsert, readService, permissions.middleware('writeDescription', 'write'), asyncWrap(async(req, res) => {
+  const newService = req.body
+  // preserve all readonly properties, the rest is overwritten
+  Object.keys(req.remoteService).forEach(key => {
+    if (!servicePatch.properties[key]) {
+      newService[key] = req.remoteService[key]
+    }
+  })
+  newService.updatedAt = moment().toISOString()
+  newService.updatedBy = { id: req.user.id, name: req.user.name }
+  if (newService.apiDoc) {
+    newService.actions = computeActions(newService.apiDoc)
+  }
+  await req.app.get('db').collection('remote-services').replaceOne({ id: req.params.remoteServiceId }, mongoEscape.escape(newService, true))
+  findUtils.setResourceLinks(newService, 'remote-service')
+  res.status(200).json(newService)
+}))
+
 // Update a remote service configuration
-router.patch('/:remoteServiceId', permissions.middleware('writeDescription', 'write'), asyncWrap(async(req, res) => {
+router.patch('/:remoteServiceId', readService, permissions.middleware('writeDescription', 'write'), asyncWrap(async(req, res) => {
   const patch = req.body
   var valid = validatePatch(patch)
   if (!valid) return res.status(400).send(validatePatch.errors)
@@ -202,7 +247,7 @@ router.patch('/:remoteServiceId', permissions.middleware('writeDescription', 'wr
 }))
 
 // Delete a remoteService
-router.delete('/:remoteServiceId', permissions.middleware('delete', 'admin'), asyncWrap(async(req, res) => {
+router.delete('/:remoteServiceId', readService, permissions.middleware('delete', 'admin'), asyncWrap(async(req, res) => {
   // TODO : Remove indexes
   await req.app.get('db').collection('remote-services').deleteOne({
     id: req.params.remoteServiceId
@@ -210,12 +255,12 @@ router.delete('/:remoteServiceId', permissions.middleware('delete', 'admin'), as
   res.sendStatus(204)
 }))
 
-router.post('/:remoteServiceId/_update', permissions.middleware('updateApiDoc', 'write'), asyncWrap(async(req, res) => {
+router.post('/:remoteServiceId/_update', readService, permissions.middleware('updateApiDoc', 'write'), asyncWrap(async(req, res) => {
   if (!req.remoteService.url) return res.sendStatus(204)
 
   const reponse = await axios.get(req.remoteService.url)
   var valid = validateOpenApi(reponse.data)
-  if (!valid) return res.status(400).send(normalise(validateOpenApi.errors))
+  if (!valid) return res.status(400).send(ajvErrorMessages(validateOpenApi.errors))
   req.remoteService.updatedAt = moment().toISOString()
   req.remoteService.updatedBy = { id: req.user.id, name: req.user.name }
   req.remoteService.apiDoc = reponse.data
@@ -226,7 +271,7 @@ router.post('/:remoteServiceId/_update', permissions.middleware('updateApiDoc', 
   res.status(200).json(req.remoteService)
 }))
 
-router.use('/:remoteServiceId/proxy*', (req, res, next) => {
+router.use('/:remoteServiceId/proxy*', readService, (req, res, next) => {
   // Match the path with an operation from the doc
   const operationPath = Object.keys(req.remoteService.apiDoc.paths).filter(path => {
     const ms = matchstick(path, 'template')
@@ -276,6 +321,6 @@ router.use('/:remoteServiceId/proxy*', (req, res, next) => {
   requestProxy(options)(req, res, next)
 })
 
-router.get('/:remoteServiceId/api-docs.json', permissions.middleware('readApiDoc', 'read'), (req, res) => {
+router.get('/:remoteServiceId/api-docs.json', readService, permissions.middleware('readApiDoc', 'read'), (req, res) => {
   res.send(req.resourceApiDoc)
 })
