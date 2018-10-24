@@ -10,7 +10,7 @@ module.exports = (remoteService) => {
   const api = {
     openapi: '3.0.0',
     info: Object.assign({}, remoteService.apiDoc.info, {
-      title: `Utilisation du service distant : ${remoteService.title || remoteService.id}`
+      title: `API du service distant : ${remoteService.title || remoteService.id}`
     }),
     servers: [{
       url: `${config.publicUrl}/api/v1/remote-services/${remoteService.id}`

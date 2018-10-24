@@ -23,7 +23,7 @@ test('Access an unknown applicationId on proxy endpoint', async t => {
   }
 })
 
-test.serial('Post an external application configuration, read it, update it and delete it', async t => {
+test.only('Post an external application configuration, read it, update it and delete it', async t => {
   const ax = await axiosBuilder('dmeadus0@answers.com')
   let res = await ax.post('/api/v1/applications', { url: 'http://monapp.com' })
   t.is(res.status, 201)

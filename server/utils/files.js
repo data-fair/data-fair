@@ -42,7 +42,9 @@ const storage = multer.diskStorage({
         file.id = req.dataset.id
       } else {
         // Create dataset case
-        const baseTitle = path.parse(file.originalname).name
+
+        // better to split, so we create something more firendly for full text search
+        const baseTitle = path.parse(file.originalname).name.replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, ' ').split(/\s+/).join(' ')
         const baseId = slug(baseTitle, { lower: true })
         file.id = baseId
         file.title = baseTitle

@@ -42,7 +42,6 @@
     <nuxt-child />
 
     <div class="actions-buttons">
-      <!--<div style="height:60px;"/>-->
       <v-menu bottom left>
         <v-btn slot="activator" fab small color="accent">
           <v-icon>more_vert</v-icon>

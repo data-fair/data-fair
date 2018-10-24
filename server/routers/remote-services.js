@@ -50,6 +50,15 @@ const operationsClasses = {
   use: []
 }
 
+function clean(remoteService) {
+  remoteService.public = permissions.isPublic(remoteService, operationsClasses)
+  delete remoteService.permissions
+  delete remoteService._id
+  if (remoteService.apiKey && remoteService.apiKey.value) remoteService.apiKey.value = '**********'
+  findUtils.setResourceLinks(remoteService, 'remote-service')
+  return remoteService
+}
+
 // Get the list of remote-services
 router.get('', asyncWrap(async(req, res) => {
   const remoteServices = req.app.get('db').collection('remote-services')
@@ -73,12 +82,10 @@ router.get('', asyncWrap(async(req, res) => {
   let [results, count, facets] = await Promise.all(mongoQueries)
   results.forEach(r => {
     r.userPermissions = permissions.list(r, operationsClasses, req.user)
-    r.public = permissions.isPublic(r, operationsClasses)
-    delete r.permissions
-    findUtils.setResourceLinks(r, 'remote-service')
+    clean(r)
   })
   facets = findUtils.parseFacets(facets)
-  res.json({ results: results.map(result => mongoEscape.unescape(result, true)), count, facets })
+  res.json({ count, results: results.map(result => mongoEscape.unescape(result, true)), facets })
 }))
 
 const initNew = (req) => {
@@ -120,8 +127,7 @@ router.post('', asyncWrap(async(req, res) => {
     }
   }
 
-  findUtils.setResourceLinks(service, 'remote-service')
-  res.status(201).json(service)
+  res.status(201).json(clean(service))
 }))
 
 // Create default services for the user and all his organizations, if necessary
@@ -179,7 +185,6 @@ const readService = asyncWrap(async(req, res, next) => {
   const service = await req.app.get('db').collection('remote-services')
     .findOne({ id: req.params.remoteServiceId }, { projection: { _id: 0 } })
   if (!service) return res.status(404).send('Remote Api not found')
-  findUtils.setResourceLinks(service, 'remote-service')
   req.remoteService = req.resource = mongoEscape.unescape(service, true)
   req.resourceApiDoc = remoteServiceAPIDocs(req.remoteService)
   next()
@@ -190,8 +195,7 @@ router.use('/:remoteServiceId/permissions', readService, permissions.router('rem
 // retrieve a remoteService by its id
 router.get('/:remoteServiceId', readService, permissions.middleware('readDescription', 'read'), (req, res, next) => {
   req.remoteService.userPermissions = permissions.list(req.remoteService, operationsClasses, req.user)
-  delete req.remoteService.permissions
-  res.status(200).send(req.remoteService)
+  res.status(200).send(clean(req.remoteService))
 })
 
 // PUT used to create or update
@@ -204,8 +208,7 @@ const attemptInsert = asyncWrap(async(req, res, next) => {
   if (permissions.canDoForOwner(newService.owner, 'postRemoteService', req.user, req.app.get('db'))) {
     try {
       await req.app.get('db').collection('remote-services').insertOne(mongoEscape.escape(newService, true))
-      findUtils.setResourceLinks(newService, 'remote-service')
-      return res.status(201).json(newService)
+      return res.status(201).json(clean(newService))
     } catch (err) {
       if (err.code !== 11000) throw err
     }
@@ -226,8 +229,7 @@ router.put('/:remoteServiceId', attemptInsert, readService, permissions.middlewa
     newService.actions = computeActions(newService.apiDoc)
   }
   await req.app.get('db').collection('remote-services').replaceOne({ id: req.params.remoteServiceId }, mongoEscape.escape(newService, true))
-  findUtils.setResourceLinks(newService, 'remote-service')
-  res.status(200).json(newService)
+  res.status(200).json(clean(newService))
 }))
 
 // Update a remote service configuration
@@ -242,8 +244,9 @@ router.patch('/:remoteServiceId', readService, permissions.middleware('writeDesc
     patch.actions = computeActions(patch.apiDoc)
   }
 
-  await req.app.get('db').collection('remote-services').updateOne({ id: req.params.remoteServiceId }, { '$set': mongoEscape.escape(patch, true) })
-  res.status(200).json(patch)
+  const patchedService = (await req.app.get('db').collection('remote-services')
+    .findOneAndUpdate({ id: req.params.remoteServiceId }, { '$set': mongoEscape.escape(patch, true) }, { returnOriginal: false })).value
+  res.status(200).json(clean(mongoEscape.unescape(patchedService)))
 }))
 
 // Delete a remoteService
@@ -268,7 +271,7 @@ router.post('/:remoteServiceId/_update', readService, permissions.middleware('up
   await req.app.get('db').collection('remote-services').replaceOne({
     id: req.params.remoteServiceId
   }, mongoEscape.escape(req.remoteService, true))
-  res.status(200).json(req.remoteService)
+  res.status(200).json(clean(req.remoteService))
 }))
 
 router.use('/:remoteServiceId/proxy*', readService, (req, res, next) => {

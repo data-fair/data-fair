@@ -27,6 +27,15 @@ const operationsClasses = {
   admin: ['delete', 'getPermissions', 'setPermissions']
 }
 
+function clean(application) {
+  application.public = permissions.isPublic(application, operationsClasses)
+  delete application.permissions
+  delete application._id
+  delete application.configuration
+  findUtils.setResourceLinks(application, 'application')
+  return application
+}
+
 // Get the list of applications
 router.get('', asyncWrap(async(req, res) => {
   const applications = req.app.get('db').collection('applications')
@@ -61,12 +70,10 @@ router.get('', asyncWrap(async(req, res) => {
   let [results, count, facets] = await Promise.all(mongoQueries)
   results.forEach(r => {
     r.userPermissions = permissions.list(r, operationsClasses, req.user)
-    r.public = permissions.isPublic(r, operationsClasses)
-    delete r.permissions
-    findUtils.setResourceLinks(r, 'application')
+    clean(r)
   })
   facets = findUtils.parseFacets(facets)
-  res.json({ results, count, facets })
+  res.json({ count, results, facets })
 }))
 
 const initNew = (req) => {
@@ -104,8 +111,7 @@ router.post('', asyncWrap(async(req, res) => {
   }
 
   await journals.log(req.app, application, { type: 'application-created', href: config.publicUrl + '/application/' + application.id }, 'application')
-  findUtils.setResourceLinks(application, 'application')
-  res.status(201).json(application)
+  res.status(201).json(clean(application))
 }))
 
 // Shared middleware
@@ -113,7 +119,6 @@ const readApplication = asyncWrap(async(req, res, next) => {
   req.application = req.resource = await req.app.get('db').collection('applications')
     .findOne({ id: req.params.applicationId }, { projection: { _id: 0 } })
   if (!req.application) return res.status(404).send('Application configuration not found')
-  findUtils.setResourceLinks(req.application, 'application')
   req.resourceApiDoc = applicationAPIDocs(req.application)
   next()
 })
@@ -139,8 +144,7 @@ const attemptInsert = asyncWrap(async(req, res, next) => {
     try {
       await req.app.get('db').collection('applications').insertOne(newApplication, true)
       await journals.log(req.app, newApplication, { type: 'application-created', href: config.publicUrl + '/application/' + newApplication.id }, 'application')
-      findUtils.setResourceLinks(newApplication, 'application')
-      return res.status(201).json(newApplication)
+      return res.status(201).json(clean(newApplication))
     } catch (err) {
       if (err.code !== 11000) throw err
     }
@@ -158,8 +162,7 @@ router.put('/:applicationId', attemptInsert, readApplication, permissions.middle
   newApplication.updatedAt = moment().toISOString()
   newApplication.updatedBy = { id: req.user.id, name: req.user.name }
   await req.app.get('db').collection('applications').replaceOne({ id: req.params.applicationId }, newApplication)
-  findUtils.setResourceLinks(newApplication, 'application')
-  res.status(200).json(newApplication)
+  res.status(200).json(clean(newApplication))
 }))
 
 // Update an application configuration
@@ -180,8 +183,9 @@ router.patch('/:applicationId', readApplication, permissions.middleware('writeDe
   patch.updatedAt = moment().toISOString()
   patch.updatedBy = { id: req.user.id, name: req.user.name }
 
-  await req.app.get('db').collection('applications').updateOne({ id: req.params.applicationId }, { '$set': patch })
-  res.status(200).json(patch)
+  const patchedApplication = (await req.app.get('db').collection('applications')
+    .findOneAndUpdate({ id: req.params.applicationId }, { '$set': patch }, { returnOriginal: false })).value
+  res.status(200).json(clean(patchedApplication))
 }))
 
 // Delete an application configuration

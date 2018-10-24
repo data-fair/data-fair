@@ -8,7 +8,7 @@ module.exports = (application) => {
   const api = {
     openapi: '3.0.0',
     info: Object.assign({
-      title: `Utilisation de l'application : ${application.title || application.id}`,
+      title: `Intégration de l'application : ${application.title || application.id}`,
       version: version
     }, config.info),
     components: {

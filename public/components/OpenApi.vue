@@ -1,19 +1,12 @@
 <template lang="html">
   <div>
-    <iframe v-resize id="openapi-iframe" :src="src" width="100%" scrolling="no" height="300px"/>
+    <iframe id="openapi-iframe" :src="src" width="100%" scrolling="no" height="300px"/>
   </div>
 </template>
 
 <script>
 import { mapGetters, mapState } from 'vuex'
-import Vue from 'vue'
 import iFrameResize from 'iframe-resizer/js/iframeResizer'
-
-Vue.directive('resize', {
-  inserted: function (el) {
-    iFrameResize({ minHeight: 300 }, '#' + el.id)
-  }
-})
 
 export default {
   props: ['url'],
@@ -28,6 +21,9 @@ export default {
       if (this.$store.state.jwt) url += '&headers=' + encodeURIComponent(JSON.stringify({ Authorization: 'Bearer ' + this.$store.state.jwt }))
       return url + '&url=' + this.url
     }
+  },
+  mounted() {
+    iFrameResize({ minHeight: 300 }, '#openapi-iframe')
   }
 }
 </script>

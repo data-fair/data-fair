@@ -1,0 +1,94 @@
+exports.idParam = {
+  in: 'path',
+  name: 'id',
+  description: 'identifiant',
+  required: true,
+  schema: {
+    type: 'string'
+  }
+}
+
+exports.qParam = {
+  in: 'query',
+  name: 'q',
+  description: 'Recherche textuelle',
+  required: false,
+  schema: {
+    type: 'string'
+  }
+}
+
+exports.ownerParam = {
+  in: 'query',
+  name: 'owner',
+  description: 'Restreindre sur le propriétaire',
+  required: false,
+  example: ['organization:koumoul', 'user:albanm'],
+  schema: {
+    type: 'array',
+    items: {
+      type: 'string'
+    }
+  },
+  style: 'commaDelimited'
+}
+
+exports.selectParam = (values) => ({
+  in: 'query',
+  name: 'select',
+  description: 'La liste des champs à retourner',
+  required: false,
+  schema: {
+    default: ['title'],
+    type: 'array',
+    items: {
+      type: 'string',
+      enum: values
+    }
+  },
+  style: 'commaDelimited'
+})
+
+exports.filterParam = (name, description) => ({
+  in: 'query',
+  name,
+  description,
+  required: false,
+  schema: {
+    type: 'array',
+    items: {
+      type: 'string'
+    }
+  },
+  style: 'commaDelimited'
+})
+
+exports.booleanParam = (name, description) => ({
+  in: 'query',
+  name,
+  description,
+  required: false,
+  schema: {
+    type: 'boolean'
+  }
+})
+
+exports.paginationParams = [{
+  in: 'query',
+  name: 'page',
+  description: 'Numéro de page (à partir de 1)',
+  required: false,
+  schema: {
+    type: 'integer',
+    default: 1
+  }
+}, {
+  in: 'query',
+  name: 'size',
+  description: 'Taille de la page',
+  required: false,
+  schema: {
+    type: 'integer',
+    default: 10
+  }
+}]

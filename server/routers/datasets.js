@@ -45,6 +45,13 @@ const operationsClasses = {
   admin: ['delete', 'getPermissions', 'setPermissions']
 }
 
+function clean(dataset) {
+  dataset.public = permissions.isPublic(dataset, operationsClasses)
+  delete dataset.permissions
+  findUtils.setResourceLinks(dataset, 'dataset')
+  return dataset
+}
+
 // Get the list of datasets
 router.get('', asyncWrap(async(req, res) => {
   const datasets = req.app.get('db').collection('datasets')
@@ -76,12 +83,10 @@ router.get('', asyncWrap(async(req, res) => {
   let [results, count, facets] = await Promise.all(mongoQueries)
   results.forEach(r => {
     r.userPermissions = permissions.list(r, operationsClasses, req.user)
-    r.public = permissions.isPublic(r, operationsClasses)
-    delete r.permissions
-    findUtils.setResourceLinks(r, 'dataset')
+    clean(r)
   })
   facets = findUtils.parseFacets(facets)
-  res.json({ results, count, facets })
+  res.json({ count, results, facets })
 }))
 
 // Shared middleware to read dataset in db
@@ -89,7 +94,6 @@ const readDataset = asyncWrap(async(req, res, next) => {
   req.dataset = req.resource = await req.app.get('db').collection('datasets')
     .findOne({ id: req.params.datasetId }, { projection: { _id: 0 } })
   if (!req.dataset) return res.status(404).send('Dataset not found')
-  findUtils.setResourceLinks(req.dataset, 'dataset')
   req.resourceApiDoc = datasetAPIDocs(req.dataset)
   next()
 })
@@ -99,8 +103,7 @@ router.use('/:datasetId/permissions', readDataset, permissions.router('datasets'
 // retrieve a dataset by its id
 router.get('/:datasetId', readDataset, permissions.middleware('readDescription', 'read'), (req, res, next) => {
   req.dataset.userPermissions = permissions.list(req.dataset, operationsClasses, req.user)
-  delete req.dataset.permissions
-  res.status(200).send(req.dataset)
+  res.status(200).send(clean(req.dataset))
 })
 
 // retrieve only the schema.. Mostly useful for easy select fields
@@ -164,8 +167,9 @@ router.patch('/:datasetId', readDataset, permissions.middleware('writeDescriptio
     }
   }
 
-  await req.app.get('db').collection('datasets').updateOne({ id: req.params.datasetId }, { '$set': patch })
-  res.status(200).json(patch)
+  const patchedDataset = (await req.app.get('db').collection('datasets')
+    .findOneAndUpdate({ id: req.params.datasetId }, { '$set': patch }, { returnOriginal: false })).value
+  res.status(200).json(clean(patchedDataset))
 }))
 
 // Delete a dataset
@@ -252,9 +256,7 @@ router.post('', beforeUpload, filesUtils.uploadFile(), asyncWrap(async(req, res)
   const storageRemaining = await datasetUtils.storageRemaining(req.app.get('db'), dataset.owner, req)
   if (storageRemaining !== -1) res.set(config.headers.storedBytesRemaining, storageRemaining)
   await journals.log(req.app, dataset, { type: 'dataset-created', href: config.publicUrl + '/dataset/' + dataset.id }, 'dataset')
-  findUtils.setResourceLinks(dataset, 'dataset')
-
-  res.status(201).send(dataset)
+  res.status(201).send(clean(dataset))
 }))
 
 // POST with an id to create or update an existing dataset data
@@ -287,8 +289,7 @@ const updateDataset = asyncWrap(async(req, res) => {
   if (storageRemaining !== -1) res.set(config.headers.storedBytesRemaining, storageRemaining)
   if (req.isNewDataset) await journals.log(req.app, newDataset, { type: 'data-created' }, 'dataset')
   else await journals.log(req.app, newDataset, { type: 'data-updated' }, 'dataset')
-  findUtils.setResourceLinks(newDataset, 'dataset')
-  res.status(req.isNewDataset ? 201 : 200).send(newDataset)
+  res.status(req.isNewDataset ? 201 : 200).send(clean(newDataset))
 })
 router.post('/:datasetId', attemptInsert, readDataset, permissions.middleware('writeData', 'write'), filesUtils.uploadFile(), updateDataset)
 router.put('/:datasetId', attemptInsert, readDataset, permissions.middleware('writeData', 'write'), filesUtils.uploadFile(), updateDataset)

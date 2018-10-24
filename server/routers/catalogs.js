@@ -29,6 +29,14 @@ const operationsClasses = {
   use: []
 }
 
+function clean(catalog) {
+  catalog.public = permissions.isPublic(catalog, operationsClasses)
+  delete catalog.permissions
+  if (catalog.apiKey) catalog.apiKey = '**********'
+  findUtils.setResourceLinks(catalog, 'catalog')
+  return catalog
+}
+
 router.post('/_init', asyncWrap(async(req, res) => {
   if (!req.query.url) return res.status(400).send('"url" query parameter is required')
   const catalog = await catalogs.init(req.query.url)
@@ -63,13 +71,10 @@ router.get('', asyncWrap(async(req, res) => {
   let [results, count, facets] = await Promise.all(mongoQueries)
   results.forEach(r => {
     r.userPermissions = permissions.list(r, operationsClasses, req.user)
-    r.public = permissions.isPublic(r, operationsClasses)
-    delete r.permissions
-    if (r.apiKey) r.apiKey = '**********'
-    findUtils.setResourceLinks(r, 'catalog')
+    clean(r)
   })
   facets = findUtils.parseFacets(facets)
-  res.json({ results: results.map(result => mongoEscape.unescape(result, true)), count, facets })
+  res.json({ count, results: results.map(result => mongoEscape.unescape(result, true)), facets })
 }))
 
 const initNew = (req) => {
@@ -104,8 +109,7 @@ router.post('', asyncWrap(async(req, res) => {
     }
   }
 
-  findUtils.setResourceLinks(catalog, 'catalog')
-  res.status(201).json(catalog)
+  res.status(201).json(clean(catalog))
 }))
 
 // Shared middleware
@@ -113,7 +117,6 @@ const readCatalog = asyncWrap(async(req, res, next) => {
   const catalog = await req.app.get('db').collection('catalogs')
     .findOne({ id: req.params.catalogId }, { projection: { _id: 0 } })
   if (!catalog) return res.status(404).send('Catalog not found')
-  findUtils.setResourceLinks(catalog, 'catalog')
   req.catalog = req.resource = mongoEscape.unescape(catalog, true)
   req.resourceApiDoc = catalogAPIDocs(req.catalog)
   next()
@@ -124,9 +127,7 @@ router.use('/:catalogId/permissions', readCatalog, permissions.router('catalogs'
 // retrieve a catalog by its id
 router.get('/:catalogId', readCatalog, permissions.middleware('readDescription', 'read'), (req, res, next) => {
   req.catalog.userPermissions = permissions.list(req.catalog, operationsClasses, req.user)
-  delete req.catalog.permissions
-  if (req.catalog.apiKey) req.catalog.apiKey = '**********'
-  res.status(200).send(req.catalog)
+  res.status(200).send(clean(req.catalog))
 })
 
 // PUT used to create or update
@@ -139,8 +140,7 @@ const attemptInsert = asyncWrap(async(req, res, next) => {
   if (permissions.canDoForOwner(newCatalog.owner, 'postCatalog', req.user, req.app.get('db'))) {
     try {
       await req.app.get('db').collection('catalogs').insertOne(mongoEscape.escape(newCatalog, true))
-      findUtils.setResourceLinks(newCatalog, 'catalog')
-      return res.status(201).json(newCatalog)
+      return res.status(201).json(clean(newCatalog))
     } catch (err) {
       if (err.code !== 11000) throw err
     }
@@ -158,8 +158,7 @@ router.put('/:catalogId', attemptInsert, readCatalog, permissions.middleware('wr
   newCatalog.updatedAt = moment().toISOString()
   newCatalog.updatedBy = { id: req.user.id, name: req.user.name }
   await req.app.get('db').collection('catalogs').replaceOne({ id: req.params.catalogId }, mongoEscape.escape(newCatalog, true))
-  findUtils.setResourceLinks(newCatalog, 'catalog')
-  res.status(200).json(newCatalog)
+  res.status(200).json(clean(newCatalog))
 }))
 
 // Update a catalog configuration
@@ -168,8 +167,10 @@ router.patch('/:catalogId', readCatalog, permissions.middleware('writeDescriptio
   if (!validatePatch(patch)) return res.status(400).send(ajvErrorMessages(validatePatch.errors))
   patch.updatedAt = moment().toISOString()
   patch.updatedBy = { id: req.user.id, name: req.user.name }
-  await req.app.get('db').collection('catalogs').updateOne({ id: req.params.catalogId }, { '$set': mongoEscape.escape(patch, true) })
-  res.status(200).json(patch)
+
+  const patchedCatalog = (await req.app.get('db').collection('catalogs')
+    .findOneAndUpdate({ id: req.params.catalogId }, { '$set': mongoEscape.escape(patch, true) }, { returnOriginal: false })).value
+  res.status(200).json(clean(mongoEscape.unescape(patchedCatalog)))
 }))
 
 // Delete a catalog
