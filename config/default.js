@@ -61,7 +61,8 @@ module.exports = {
   clientApiKeys: true,
   // secrets that can be used to configure global webhooks for example to update users and organizations
   secretKeys: {
-    ownerNames: null
+    identities: null,
+    quotas: null
   },
   locks: {
     // in seconds

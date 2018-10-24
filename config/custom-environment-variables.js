@@ -29,7 +29,8 @@ module.exports = {
     __format: 'json'
   },
   secretKeys: {
-    ownerNames: 'SECRET_OWNERNAMES'
+    identities: 'SECRET_IDENTITIES',
+    quotas: 'SECRET_QUOTAS'
   },
   brand: {
     logo: 'BRAND_LOGO',

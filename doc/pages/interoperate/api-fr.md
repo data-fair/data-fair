@@ -12,8 +12,6 @@ Définissez une variable contenant votre clé d'API :
 export API_KEY="XXXX"
 ```
 
-
-
 Téléchargez un fichier CSV d'exemple :
 
 ```sh

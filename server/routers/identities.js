@@ -1,81 +1,86 @@
+// Define a few routes to be used to synchronize data with the users/organizations directory
+// Useful both for functionalities and help respect GDPR rules
 const express = require('express')
-
 const asyncWrap = require('../utils/async-wrap')
-
 const config = require('config')
 
 const router = express.Router()
 
-// Used by the users' directory to notify name updates
-router.post('/update-name', asyncWrap(async (req, res) => {
-  const key = req.query.key
-  if (!config.secretKeys.ownerNames || config.secretKeys.ownerNames !== key) {
+router.use((req, res, next) => {
+  if (!config.secretKeys.identities || config.secretKeys.identities !== req.query.key) {
     return res.status(403).send('Bad secret in "key" parameter')
   }
-  const collectionNames = ['remote-services', 'applications', 'datasets']
+  next()
+})
+
+const collectionNames = ['remote-services', 'applications', 'datasets', 'catalogs']
+
+// notify a name change
+router.post('/:type/:id', asyncWrap(async (req, res) => {
+  const identity = { ...req.params, name: req.body.name }
+
   for (let c of collectionNames) {
     const collection = req.app.get('db').collection(c)
-    await collection.updateMany({ 'owner.type': req.body.type, 'owner.id': req.body.id }, { $set: { 'owner.name': req.body.name } })
+    await collection.updateMany({ 'owner.type': identity.type, 'owner.id': identity.id }, { $set: { 'owner.name': identity.name } })
 
     // permissions
-    const cursor = collection.find({ permissions: { $elemMatch: { type: req.body.type, id: req.body.id } } })
+    const cursor = collection.find({ permissions: { $elemMatch: { type: identity.type, id: identity.id } } })
     while (await cursor.hasNext()) {
       const doc = await cursor.next()
       doc.permissions
-        .filter(permission => permission.type === req.body.type && permission.id === req.body.id)
+        .filter(permission => permission.type === identity.type && permission.id === identity.id)
         .forEach(permission => {
-          permission.name = req.body.name
+          permission.name = identity.name
         })
       await collection.updateOne({ id: doc.id }, { $set: { permissions: doc.permissions } })
     }
 
     // created/updated events
-    if (req.body.type === 'user') {
-      await collection.updateMany({ 'createdBy.id': req.body.id }, { $set: { 'createdBy': { id: req.body.id, name: req.body.name } } })
-      await collection.updateMany({ 'updatedBy.id': req.body.id }, { $set: { 'updatedBy': { id: req.body.id, name: req.body.name } } })
+    if (identity.type === 'user') {
+      await collection.updateMany({ 'createdBy.id': identity.id }, { $set: { 'createdBy': { id: identity.id, name: identity.name } } })
+      await collection.updateMany({ 'updatedBy.id': identity.id }, { $set: { 'updatedBy': { id: identity.id, name: identity.name } } })
     }
   }
 
-  // personal settings
-  await req.app.get('db').collection('settings').updateOne({ type: req.body.type, id: req.body.id }, { $set: { name: req.body.name } })
+  // settings and quotas
+  await req.app.get('db').collection('settings').updateOne({ type: identity.type, id: identity.id }, { $set: { name: identity.name } })
+  await req.app.get('db').collection('quotas').updateOne({ type: identity.type, id: identity.id }, { $set: { name: identity.name } })
 
   res.send()
 }))
 
 // Remove resources owned, permissions and anonymize created and updated
-router.post('/delete', asyncWrap(async (req, res) => {
-  const key = req.query.key
-  if (!config.secretKeys.ownerNames || config.secretKeys.ownerNames !== key) {
-    return res.status(403).send('Bad secret in "key" parameter')
-  }
-  const collectionNames = ['remote-services', 'applications', 'datasets']
+router.delete('/:type/:id', asyncWrap(async (req, res) => {
+  const identity = req.params
+
   for (let c of collectionNames) {
     const collection = req.app.get('db').collection(c)
-    await collection.deleteMany({ 'owner.type': req.body.type, 'owner.id': req.body.id })
+    await collection.deleteMany({ 'owner.type': identity.type, 'owner.id': identity.id })
 
     // permissions
-    const cursor = collection.find({ permissions: { $elemMatch: { type: req.body.type, id: req.body.id } } })
+    const cursor = collection.find({ permissions: { $elemMatch: { type: identity.type, id: identity.id } } })
     while (await cursor.hasNext()) {
       const doc = await cursor.next()
-      const permissions = doc.permissions.filter(permission => permission.type !== req.body.type || permission.id !== req.body.id)
+      const permissions = doc.permissions.filter(permission => permission.type !== identity.type || permission.id !== identity.id)
       await collection.updateOne({ id: doc.id }, { $set: { permissions } })
     }
 
     // created/updated events
-    if (req.body.type === 'user') {
-      await collection.updateMany({ 'createdBy.id': req.body.id }, { $set: { 'createdBy': { id: req.body.id, name: null } } })
-      await collection.updateMany({ 'updatedBy.id': req.body.id }, { $set: { 'updatedBy': { id: req.body.id, name: null } } })
+    if (identity.type === 'user') {
+      await collection.updateMany({ 'createdBy.id': identity.id }, { $set: { 'createdBy': { id: identity.id, name: null } } })
+      await collection.updateMany({ 'updatedBy.id': identity.id }, { $set: { 'updatedBy': { id: identity.id, name: null } } })
     }
   }
+
+  // settings and quotas
+  await req.app.get('db').collection('settings').deleteOne({ type: identity.type, id: identity.id })
+  await req.app.get('db').collection('quotas').deleteOne({ type: identity.type, id: identity.id })
+
   res.send()
 }))
 
-router.get('/appear-in', asyncWrap(async (req, res) => {
-  // TODO : check user auth here
-  // TODO : use path parameters instead
-  if (!req.query.type || !req.query.id) {
-    return res.status(400).send('"type" and "id" parameters are mandatory')
-  }
+// Ask for a report of every piece of data in the service related to an identity
+router.get('/:type/:id/report', asyncWrap(async (req, res) => {
   const collections = [{ id: 'remote-services', title: 'Configurations de services' }, { id: 'applications', title: 'Configurations d\'applications' }, { id: 'datasets', title: 'Jeux de données' }]
   const report = {
     owns: [],

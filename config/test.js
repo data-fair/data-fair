@@ -16,6 +16,9 @@ module.exports = {
     name: 'x-apiKey',
     value: 'test_default_key'
   },
+  secretKeys: {
+    identities: 'blabla'
+  },
   nuxtBuild: {
     active: false
   },

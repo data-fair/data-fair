@@ -1,6 +1,5 @@
 const express = require('express')
 
-const asyncWrap = require('../utils/async-wrap')
 const status = require('../routers/status')
 const apiDocs = require('../../contract/api-docs')
 const vocabulary = require('../../contract/vocabulary')
@@ -39,42 +38,5 @@ router.get('/configurable-remote-services', (req, res) => {
 router.get('/configurable-catalogs', (req, res) => {
   res.json(config.catalogs)
 })
-
-// Used by the users' directory to notify name updates
-router.post('/owner-names', asyncWrap(async (req, res) => {
-  const key = req.query.key
-  const owner = req.body
-  if (!config.secretKeys.ownerNames || config.secretKeys.ownerNames !== key) {
-    return res.status(403).send('Bad secret in "key" parameter')
-  }
-  const collectionNames = ['remote-services', 'applications', 'datasets']
-  for (let c of collectionNames) {
-    const collection = req.app.get('db').collection(c)
-
-    // owners
-    await collection.updateMany({ 'owner.type': owner.type, 'owner.id': owner.id }, { $set: { 'owner.name': owner.name } })
-
-    // permissions
-    const cursor = collection.find({ permissions: { $elemMatch: { type: owner.type, id: owner.id } } })
-    while (await cursor.hasNext()) {
-      const doc = await cursor.next()
-      doc.permissions
-        .filter(permission => permission.type === owner.type && permission.id === owner.id)
-        .forEach(permission => {
-          permission.name = owner.name
-        })
-      await collection.updateOne({ id: doc.id }, { $set: { permissions: doc.permissions } })
-    }
-
-    // created/updated events
-    if (owner.type === 'user') {
-      await collection.updateMany({ 'createdBy': owner.id }, { $set: { 'createdBy': { id: owner.id, name: owner.name } } })
-      await collection.updateMany({ 'createdBy.id': owner.id }, { $set: { 'createdBy': { id: owner.id, name: owner.name } } })
-      await collection.updateMany({ 'updatedBy': owner.id }, { $set: { 'updatedBy': { id: owner.id, name: owner.name } } })
-      await collection.updateMany({ 'updatedBy.id': owner.id }, { $set: { 'updatedBy': { id: owner.id, name: owner.name } } })
-    }
-  }
-  res.send()
-}))
 
 module.exports = router
