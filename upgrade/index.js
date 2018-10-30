@@ -1,8 +1,7 @@
 const path = require('path')
 const semver = require('semver')
 const fs = require('fs')
-const config = require('config')
-const mongoClient = require('mongodb').MongoClient
+const dbUtils = require('../server/utils/db')
 const debug = require('debug')('upgrade')
 
 const pjson = require('../package.json')
@@ -20,8 +19,7 @@ if (require.main === module) {
 
 // chose the proper scripts to execute, then run them
 async function main() {
-  const client = await mongoClient.connect(config.mongoUrl)
-  const db = client.db()
+  const { db, client } = await dbUtils.connect()
 
   const services = db.collection('services')
   const service = await services.findOne({ id: pjson.name })

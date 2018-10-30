@@ -11,8 +11,7 @@ async function ensureIndex(db, collection, key, options) {
   }
 }
 
-exports.init = async () => {
-  console.log('Connecting to mongodb ' + config.mongoUrl)
+exports.connect = async () => {
   let client
   try {
     client = await MongoClient.connect(config.mongoUrl)
@@ -23,6 +22,12 @@ exports.init = async () => {
     client = await MongoClient.connect(config.mongoUrl)
   }
   const db = client.db()
+  return { db, client }
+}
+
+exports.init = async () => {
+  console.log('Connecting to mongodb ' + config.mongoUrl)
+  const { db, client } = await exports.connect()
   // datasets indexes
   await ensureIndex(db, 'datasets', { id: 1 }, { unique: true })
   await ensureIndex(db, 'datasets', { 'owner.type': 1, 'owner.id': 1 })
@@ -47,5 +52,7 @@ exports.init = async () => {
   // settings
   await ensureIndex(db, 'settings', { type: 1, id: 1 }, { unique: true })
   await ensureIndex(db, 'settings', { 'apiKeys.key': 1 }, { sparse: true })
+  // quotas
+  await ensureIndex(db, 'quotas', { type: 1, id: 1 }, { unique: true })
   return { db, client }
 }
