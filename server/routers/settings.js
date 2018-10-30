@@ -1,3 +1,4 @@
+const crypto = require('crypto')
 const express = require('express')
 const ajv = require('ajv')()
 const uuidv4 = require('uuid/v4')
@@ -41,15 +42,21 @@ router.put('/:type/:id', isOwner, asyncWrap(async(req, res) => {
   req.body.type = req.params.type
   req.body.id = req.params.id
   req.body.name = req.params.type === 'user' ? req.user.name : req.user.organizations.find(o => o.id === req.params.id).name
+  req.body.apiKeys = req.body.apiKeys || []
+  req.body.apiKeys.forEach(apiKey => delete apiKey.clearKey)
   const valid = validate(req.body)
   if (!valid) return res.status(400).send(validate.errors)
   const settings = req.app.get('db').collection('settings')
 
-  if (req.body.apiKeys) {
-    req.body.apiKeys.forEach(apiKey => {
-      apiKey.key = apiKey.key || uuidv4()
-    })
-  }
+  const fullApiKeys = req.body.apiKeys.map(apiKey => ({ ...apiKey }))
+  req.body.apiKeys.forEach((apiKey, i) => {
+    if (!apiKey.key) {
+      fullApiKeys[i].clearKey = uuidv4()
+      const hash = crypto.createHash('sha512')
+      hash.update(fullApiKeys[i].clearKey)
+      fullApiKeys[i].key = apiKey.key = hash.digest('hex')
+    }
+  })
 
   await settings.replaceOne({
     type: req.params.type,
@@ -57,7 +64,7 @@ router.put('/:type/:id', isOwner, asyncWrap(async(req, res) => {
   }, req.body, { upsert: true })
   delete req.body.type
   delete req.body.id
-  res.status(200).send(req.body)
+  res.status(200).send({ ...req.body, apiKeys: fullApiKeys })
 }))
 
 // Get licenses list as anyone

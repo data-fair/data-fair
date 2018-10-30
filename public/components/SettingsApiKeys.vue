@@ -15,13 +15,14 @@
               <v-btn color="primary" flat class="pa-0 ma-0" @click="currentApiKey = rowIndex; showUseDialog = true">Utiliser</v-btn>
             </v-card-title>
             <v-card-text>
-              <p>{{ apiKey.key }}</p>
+              <v-alert :value="apiKey.clearKey" type="warning">
+                Cette clé secrète apparait en clair car vous venez de la créer. Notez là, elle ne sera pas lisible par la suite.
+              </v-alert>
+              <p v-if="!!apiKey.clearKey">
+                Clé secrète : {{ apiKey.clearKey }}
+              </p>
               <v-subheader>Portée</v-subheader>
-              <v-list dense>
-                <v-list-tile v-for="(scope, i) in apiKey.scopes" :key="i">
-                  {{ scopes.find(s => s.value === scope) && scopes.find(s => s.value === scope).text }}
-                </v-list-tile>
-              </v-list>
+              <p>{{ apiKey.scopes.map(scope => scopes.find(s => s.value === scope).text).join(' - ') }}</p>
             </v-card-text>
             <v-card-actions>
               <v-spacer/>
@@ -80,7 +81,7 @@
           </p><p>
             Il suffit de passer le header "x-apiKey" dans votre client HTTP. Par exemple :
           </p>
-          <pre><code>curl -v -H "x-apiKey: {{ settings.apiKeys[currentApiKey].key }}" {{ env.publicUrl }}/api/v1/{{ settings.apiKeys[currentApiKey].scopes[0] }}</code></pre>
+          <pre><code>curl -v -H "x-apiKey: {{ settings.apiKeys[currentApiKey].clearKey || 'XXX' }}" {{ env.publicUrl }}/api/v1/{{ settings.apiKeys[currentApiKey].scopes[0] }}</code></pre>
         </v-card-text>
         <v-card-actions>
           <v-spacer/>
