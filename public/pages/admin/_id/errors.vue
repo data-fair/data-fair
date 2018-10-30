@@ -1,6 +1,6 @@
 <template lang="html">
   <v-container fluid>
-    <p v-if="errors && errors.total === 0">Aucun jeu de données en erreur</p>
+    <p v-if="errors && errors.count === 0">Aucun jeu de données en erreur</p>
     <v-card v-else-if="errors">
       <v-list two-line>
         <v-list-tile v-for="error in errors.results" :key="error.id">
