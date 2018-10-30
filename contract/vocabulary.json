@@ -79,6 +79,11 @@
   "identifiers": ["http://www.datatourisme.fr/ontology/core/1.0#apeNaf"],
   "type": "text"
 }, {
+  "title"  : "Catégorie juridique (niveau 3)",
+  "description": "La catégorie juridique de niveau 3, parfois appelée nature juridique est un code sur 4 caractères numériques. Elle est issue d'une nomenclature de l'état Français.",
+  "identifiers": ["http://id.insee.fr/concepts/cj/cjNiveauIII"],
+  "type": "integer"
+}, {
   "title": "Date",
   "description": "Correspond à la date de l'évenement",
   "identifiers": ["http://schema.org/Date", "http://purl.org/dc/identifierss/date"],
