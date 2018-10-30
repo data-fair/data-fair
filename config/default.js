@@ -47,10 +47,6 @@ module.exports = {
     concurrency: 2,
     pollingInterval: 100
   },
-  headers: {
-    storedBytesLimit: 'X-TaxMan-RateLimit-Limit-StoreBytes',
-    storedBytesRemaining: 'X-TaxMan-RateLimit-Remaining-StoreBytes'
-  },
   adminRole: 'admin',
   // A global default API key for backend to backend calls to remote services
   defaultRemoteKey: {

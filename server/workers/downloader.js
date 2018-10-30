@@ -37,6 +37,10 @@ exports.process = async function(app, dataset) {
     debug(`Use HTTP params ${JSON.stringify(catalogHttpParams)}`)
   }
 
+  // Manage file size
+  const storageRemaining = await datasetUtils.storageRemaining(app.get('db'), dataset.owner)
+  if (storageRemaining === 0) throw new Error('Vous avez atteint la limite de votre espace de stockage.')
+
   const fileName = datasetUtils.originalFileName(dataset)
   await pump(
     request({ ...catalogHttpParams, method: 'GET', url: dataset.remoteFile.url }),
@@ -55,6 +59,4 @@ exports.process = async function(app, dataset) {
     dataset.file.encoding = chardet.detect(fileSample)
   }
   await app.get('db').collection('datasets').replaceOne({ id: dataset.id }, dataset)
-  // const storageRemaining = await datasetUtils.storageRemaining(req.app.get('db'), owner, req)
-  // if (storageRemaining !== -1) res.set(config.headers.storedBytesRemaining, storageRemaining)
 }

@@ -120,9 +120,10 @@ exports.storageSize = async (db, owner) => {
   return res.length ? res[0].totalSize : 0
 }
 
-exports.storageRemaining = async (db, owner, req) => {
-  const proxyLimit = req.get(config.headers.storedBytesLimit)
-  const limit = proxyLimit ? parseInt(proxyLimit) : config.defaultLimits.totalStorage
+exports.storageRemaining = async (db, owner) => {
+  const quotas = await db.collection('quotas')
+    .findOne({ type: owner.type, id: owner.id })
+  const limit = (quotas && quotas.storage !== undefined) ? quotas.storage : config.defaultLimits.totalStorage
   if (limit === -1) return -1
   const size = await exports.storageSize(db, owner)
   return Math.max(0, limit - size)

@@ -9,7 +9,8 @@
           <template slot="items" slot-scope="props">
             <td>{{ props.item.name }}</td>
             <td>{{ props.item.datasets }}</td>
-            <td>{{ (props.item.storage / 1000).toFixed(2) }} ko</td>
+            <td>{{ parseFloat((props.item.storage / 1000).toFixed(2)).toLocaleString() }} ko</td>
+            <td>{{ parseFloat((props.item.storageLimit / 1000).toFixed(2)).toLocaleString() }} ko</td>
             <td>{{ props.item.applications }}</td>
           </template>
         </v-data-table>
@@ -42,8 +43,9 @@ export default {
     stats: null,
     headers: [
       { text: '', value: 'name', sortable: false },
-      { text: 'Nombre de jeux de données', value: 'storage', sortable: false },
-      { text: 'Espace consommé', value: 'datasets', sortable: false },
+      { text: 'Nombre de jeux de données', value: 'datasets', sortable: false },
+      { text: 'Espace consommé', value: 'storage', sortable: false },
+      { text: 'Espace total disponible', value: 'storageLimit', sortable: false },
       { text: 'Nombre d\'applications', value: 'applications', sortable: false }
     ]
   }),

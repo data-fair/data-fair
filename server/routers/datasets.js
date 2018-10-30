@@ -174,8 +174,6 @@ router.patch('/:datasetId', readDataset, permissions.middleware('writeDescriptio
 
 // Delete a dataset
 router.delete('/:datasetId', readDataset, permissions.middleware('delete', 'admin'), asyncWrap(async(req, res) => {
-  const owner = usersUtils.owner(req)
-
   try {
     await unlink(datasetUtils.originalFileName(req.dataset))
   } catch (err) {
@@ -203,8 +201,6 @@ router.delete('/:datasetId', readDataset, permissions.middleware('delete', 'admi
   } catch (err) {
     console.error('Error while deleting dataset indexes and alias', err)
   }
-  const storageRemaining = await datasetUtils.storageRemaining(req.app.get('db'), owner, req)
-  if (storageRemaining !== -1) res.set(config.headers.storedBytesRemaining, storageRemaining)
   res.sendStatus(204)
 }))
 
@@ -253,8 +249,6 @@ router.post('', beforeUpload, filesUtils.uploadFile(), asyncWrap(async(req, res)
   await req.app.get('db').collection('datasets').insertOne(dataset)
   delete dataset._id
 
-  const storageRemaining = await datasetUtils.storageRemaining(req.app.get('db'), dataset.owner, req)
-  if (storageRemaining !== -1) res.set(config.headers.storedBytesRemaining, storageRemaining)
   await journals.log(req.app, dataset, { type: 'dataset-created', href: config.publicUrl + '/dataset/' + dataset.id }, 'dataset')
   res.status(201).send(clean(dataset))
 }))
@@ -285,8 +279,6 @@ const updateDataset = asyncWrap(async(req, res) => {
   newDataset.updatedBy = { id: req.user.id, name: req.user.name }
   newDataset.updatedAt = moment().toISOString()
   await req.app.get('db').collection('datasets').replaceOne({ id: req.params.datasetId }, newDataset)
-  const storageRemaining = await datasetUtils.storageRemaining(req.app.get('db'), newDataset.owner, req)
-  if (storageRemaining !== -1) res.set(config.headers.storedBytesRemaining, storageRemaining)
   if (req.isNewDataset) await journals.log(req.app, newDataset, { type: 'data-created' }, 'dataset')
   else await journals.log(req.app, newDataset, { type: 'data-updated' }, 'dataset')
   res.status(req.isNewDataset ? 201 : 200).send(clean(newDataset))

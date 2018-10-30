@@ -1,4 +1,5 @@
 const express = require('express')
+const config = require('config')
 const datasetUtils = require('../utils/dataset')
 const asyncWrap = require('../utils/async-wrap')
 
@@ -17,8 +18,11 @@ router.get('', asyncWrap(async(req, res) => {
 }))
 
 async function ownerStats(db, owner) {
+  const quotas = await db.collection('quotas')
+    .findOne({ type: owner.type, id: owner.id })
   return {
     storage: await datasetUtils.storageSize(db, owner),
+    storageLimit: quotas && quotas.storage !== undefined ? quotas.storage : config.defaultLimits.totalStorage,
     datasets: await ownerCount(db, 'datasets', owner),
     applications: await ownerCount(db, 'applications', owner)
   }

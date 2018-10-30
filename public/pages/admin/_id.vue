@@ -5,10 +5,10 @@
         Informations du service
         <v-icon>info</v-icon>
       </v-tab>
-      <!--<v-tab :nuxt="true" :to="`/admin/owners`">
+      <v-tab :nuxt="true" :to="`/admin/owners`">
         Propriétaires
         <v-icon>supervisor_account</v-icon>
-      </v-tab>-->
+      </v-tab>
       <v-tab :nuxt="true" :to="`/admin/errors`">
         Erreurs
         <v-icon>warning</v-icon>

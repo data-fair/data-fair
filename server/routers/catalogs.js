@@ -1,4 +1,3 @@
-const config = require('config')
 const express = require('express')
 const ajvErrorMessages = require('ajv-error-messages')
 const moment = require('moment')
@@ -16,7 +15,6 @@ const permissions = require('../utils/permissions')
 const usersUtils = require('../utils/users')
 const findUtils = require('../utils/find')
 const asyncWrap = require('../utils/async-wrap')
-const datasetUtils = require('../utils/dataset')
 const clone = require('fast-clone')
 
 const router = module.exports = express.Router()
@@ -190,7 +188,5 @@ router.get('/:catalogId/datasets', readCatalog, permissions.middleware('readData
 
 router.post('/:catalogId/datasets/:datasetId', readCatalog, permissions.middleware('harvestDataset', 'write'), asyncWrap(async(req, res, next) => {
   await catalogs.harvestDataset(req.catalog, req.params.datasetId, req.app)
-  const storageRemaining = await datasetUtils.storageRemaining(req.app.get('db'), req.catalog.owner, req)
-  if (storageRemaining !== -1) res.set(config.headers.storedBytesRemaining, storageRemaining)
   res.status(201).send()
 }))

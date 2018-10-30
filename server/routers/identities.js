@@ -1,10 +1,10 @@
 // Define a few routes to be used to synchronize data with the users/organizations directory
 // Useful both for functionalities and help respect GDPR rules
 const express = require('express')
-const asyncWrap = require('../utils/async-wrap')
 const config = require('config')
+const asyncWrap = require('../utils/async-wrap')
 
-const router = express.Router()
+const router = module.exports = express.Router()
 
 router.use((req, res, next) => {
   if (!config.secretKeys.identities || config.secretKeys.identities !== req.query.key) {
@@ -43,8 +43,8 @@ router.post('/:type/:id', asyncWrap(async (req, res) => {
   }
 
   // settings and quotas
-  await req.app.get('db').collection('settings').updateOne({ type: identity.type, id: identity.id }, { $set: { name: identity.name } })
-  await req.app.get('db').collection('quotas').updateOne({ type: identity.type, id: identity.id }, { $set: { name: identity.name } })
+  await req.app.get('db').collection('settings').updateOne({ type: identity.type, id: identity.id }, { $set: { name: identity.name } }, { upsert: true })
+  await req.app.get('db').collection('quotas').updateOne({ type: identity.type, id: identity.id }, { $set: { name: identity.name } }, { upsert: true })
 
   res.send()
 }))
@@ -113,5 +113,3 @@ router.get('/:type/:id/report', asyncWrap(async (req, res) => {
   }
   res.send(report)
 }))
-
-module.exports = router

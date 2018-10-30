@@ -6,7 +6,7 @@ module.exports = {
   directoryUrl: 'http://localhost:5600/simple-directory',
   openapiViewerUrl: 'http://localhost:5600/openapi-viewer/',
   defaultLimits: {
-    totalStorage: 1024 * 1024 * 1024,
+    totalStorage: 1000000000,
     datasetStorage: -1
   },
   locks: {
