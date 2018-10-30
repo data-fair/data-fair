@@ -174,6 +174,7 @@ router.patch('/:datasetId', readDataset, permissions.middleware('writeDescriptio
 
 // Delete a dataset
 router.delete('/:datasetId', readDataset, permissions.middleware('delete', 'admin'), asyncWrap(async(req, res) => {
+  const db = req.app.get('db')
   try {
     await unlink(datasetUtils.originalFileName(req.dataset))
   } catch (err) {
@@ -194,13 +195,15 @@ router.delete('/:datasetId', readDataset, permissions.middleware('delete', 'admi
     console.error('Error while deleting decompressed files', err)
   }
 
-  await req.app.get('db').collection('datasets').deleteOne({ id: req.params.datasetId })
-  await req.app.get('db').collection('journals').deleteOne({ type: 'dataset', id: req.params.datasetId })
+  await db.collection('datasets').deleteOne({ id: req.params.datasetId })
+  await db.collection('journals').deleteOne({ type: 'dataset', id: req.params.datasetId })
   try {
     await esUtils.delete(req.app.get('es'), req.dataset)
   } catch (err) {
     console.error('Error while deleting dataset indexes and alias', err)
   }
+
+  await datasetUtils.updateStorageSize(db, req.dataset.owner)
   res.sendStatus(204)
 }))
 
@@ -242,14 +245,16 @@ const beforeUpload = asyncWrap(async(req, res, next) => {
   next()
 })
 router.post('', beforeUpload, filesUtils.uploadFile(), asyncWrap(async(req, res) => {
+  const db = req.app.get('db')
   // After uploadFile, req.file contains the metadata of an uploaded file, and req.body the content of additional text fields
   if (!req.file) return res.status(400).send('Expected a file multipart/form-data')
 
   const dataset = await setFileInfo(req.file, initNew(req))
-  await req.app.get('db').collection('datasets').insertOne(dataset)
+  await db.collection('datasets').insertOne(dataset)
   delete dataset._id
 
   await journals.log(req.app, dataset, { type: 'dataset-created', href: config.publicUrl + '/dataset/' + dataset.id }, 'dataset')
+  await datasetUtils.updateStorageSize(db, dataset.owner)
   res.status(201).send(clean(dataset))
 }))
 
@@ -270,6 +275,7 @@ const attemptInsert = asyncWrap(async(req, res, next) => {
   next()
 })
 const updateDataset = asyncWrap(async(req, res) => {
+  const db = req.app.get('db')
   // After uploadFile, req.file contains the metadata of an uploaded file, and req.body the content of additional text fields
   if (!req.file) return res.status(400).send('Expected a file multipart/form-data')
   if (req.dataset.status && !acceptedStatuses.includes(req.dataset.status)) return res.status(409).send('Dataset is not in proper state to be updated')
@@ -278,9 +284,10 @@ const updateDataset = asyncWrap(async(req, res) => {
   Object.assign(newDataset, req.body)
   newDataset.updatedBy = { id: req.user.id, name: req.user.name }
   newDataset.updatedAt = moment().toISOString()
-  await req.app.get('db').collection('datasets').replaceOne({ id: req.params.datasetId }, newDataset)
+  await db.collection('datasets').replaceOne({ id: req.params.datasetId }, newDataset)
   if (req.isNewDataset) await journals.log(req.app, newDataset, { type: 'data-created' }, 'dataset')
   else await journals.log(req.app, newDataset, { type: 'data-updated' }, 'dataset')
+  await datasetUtils.updateStorageSize(db, req.dataset.owner)
   res.status(req.isNewDataset ? 201 : 200).send(clean(newDataset))
 })
 router.post('/:datasetId', attemptInsert, readDataset, permissions.middleware('writeData', 'write'), filesUtils.uploadFile(), updateDataset)

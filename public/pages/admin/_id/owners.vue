@@ -8,7 +8,9 @@
             <v-list-tile-title>
               {{ quota.name }} ({{ quota.type }})
             </v-list-tile-title>
-            <v-list-tile-sub-title>Stockage : {{ quota.storage }}</v-list-tile-sub-title>
+            <v-list-tile-sub-title v-if="quota.storage !== undefined">
+              {{ parseFloat(((quota.consumption && quota.consumption.storage || 0) / 1000).toFixed(2)).toLocaleString() }} ko stockés pour une limite à {{ parseFloat((quota.storage / 1000).toFixed(2)).toLocaleString() }} ko
+            </v-list-tile-sub-title>
           </v-list-tile-content>
         </v-list-tile>
       </v-list>

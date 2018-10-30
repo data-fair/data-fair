@@ -35,6 +35,12 @@ test.serial('Manage a user storage quota', async t => {
   } catch (err) {
     t.is(err.status, 429)
   }
+
+  // Get the stored quota and consumption
+  res = await ax.get('/api/v1/quotas/user/dmeadus0')
+  t.is(res.status, 200)
+  t.is(res.data.storage, 30000)
+  t.is(res.data.consumption.storage, 25000)
 })
 
 test.serial('A user cannot change quotas', async t => {

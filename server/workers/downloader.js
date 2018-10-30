@@ -59,4 +59,5 @@ exports.process = async function(app, dataset) {
     dataset.file.encoding = chardet.detect(fileSample)
   }
   await app.get('db').collection('datasets').replaceOne({ id: dataset.id }, dataset)
+  await datasetUtils.updateStorageSize(app.get('db'), dataset.owner)
 }

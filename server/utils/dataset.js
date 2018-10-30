@@ -7,6 +7,7 @@ const config = require('config')
 const csv = require('csv-parser')
 const JSONStream = require('JSONStream')
 const dir = require('node-dir')
+const axios = require('axios')
 const fieldsSniffer = require('./fields-sniffer')
 
 exports.fileName = (dataset) => {
@@ -118,6 +119,22 @@ exports.storageSize = async (db, owner) => {
   ]
   const res = await db.collection('datasets').aggregate(aggQuery).toArray()
   return res.length ? res[0].totalSize : 0
+}
+
+// After a change that might impact consumed storage, we store the value
+// and trigger optional webhooks
+exports.updateStorageSize = async (db, owner) => {
+  const currentSize = await exports.storageSize(db, owner)
+  const consumption = { storage: currentSize }
+  await db.collection('quotas').updateOne({ type: owner.type, id: owner.id }, { $set: { consumption } })
+  for (let webhook of config.globalWebhooks.consumption) {
+    const url = webhook.replace('{type}', owner.type).replace('{id}', owner.id)
+    try {
+      await axios.post(url, consumption)
+    } catch (err) {
+      console.error(`Failure to push consumption webhook ${url} - ${JSON.stringify(consumption)}`, err)
+    }
+  }
 }
 
 exports.storageRemaining = async (db, owner) => {

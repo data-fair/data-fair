@@ -24,13 +24,15 @@ module.exports = {
   defaultRemoteKey: {
     value: 'DEFAULT_REMOTE_KEY'
   },
-  clientApiKeys: {
-    __name: 'CLIENT_API_KEYS',
-    __format: 'json'
-  },
   secretKeys: {
     identities: 'SECRET_IDENTITIES',
     quotas: 'SECRET_QUOTAS'
+  },
+  globalWebhooks: {
+    consumption: {
+      __name: 'WEBHOOKS_CONSUMPTION',
+      __format: 'json'
+    }
   },
   brand: {
     logo: 'BRAND_LOGO',

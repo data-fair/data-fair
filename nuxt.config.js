@@ -57,8 +57,7 @@ module.exports = {
     brand: config.brand,
     openapiViewerUrl: config.openapiViewerUrl,
     browserLogLevel: config.browserLogLevel,
-    analytics: config.analytics,
-    clientApiKeys: config.clientApiKeys
+    analytics: config.analytics
   },
   head: {
     title: config.brand.title,
