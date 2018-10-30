@@ -19,9 +19,9 @@ test.serial('Create and use a User level api key', async t => {
     { title: 'key2', scopes: ['datasets'] }
   ] })
   t.is(res.data.name, 'Danna Meadus')
-  const key1 = res.data.apiKeys[0].key
+  const key1 = res.data.apiKeys[0].clearKey
   t.truthy(key1)
-  const key2 = res.data.apiKeys[1].key
+  const key2 = res.data.apiKeys[1].clearKey
   t.truthy(key2)
 
   // Right scope
@@ -50,7 +50,7 @@ test.serial('Create and use an organization level api key', async t => {
     { title: 'key1', scopes: ['datasets'] }
   ] })
   t.is(res.data.name, 'Ntag')
-  const key1 = res.data.apiKeys[0].key
+  const key1 = res.data.apiKeys[0].clearKey
   t.truthy(key1)
 
   // Set the correct owner
