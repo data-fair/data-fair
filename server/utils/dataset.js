@@ -129,11 +129,9 @@ exports.updateStorageSize = async (db, owner) => {
   await db.collection('quotas').updateOne({ type: owner.type, id: owner.id }, { $set: { consumption } })
   for (let webhook of config.globalWebhooks.consumption) {
     const url = webhook.replace('{type}', owner.type).replace('{id}', owner.id)
-    try {
-      await axios.post(url, consumption)
-    } catch (err) {
+    axios.post(url, consumption).catch(err => {
       console.error(`Failure to push consumption webhook ${url} - ${JSON.stringify(consumption)}`, err)
-    }
+    })
   }
 }
 
