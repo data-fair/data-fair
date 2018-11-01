@@ -142,7 +142,7 @@ router.post('/_default_services', asyncWrap(async(req, res) => {
       'owner.id': { $in: req.user.organizations.map(o => o.id) }
     })
   }
-  const existingServices = await remoteServices.find(query).project({ owner: 1, url: 1 }).toArray()
+  const existingServices = await remoteServices.find(query).project({ owner: 1, url: 1, id: 1 }).toArray()
 
   const owners = [{ type: 'user', id: req.user.id, name: req.user.name }]
     .concat((req.user.organizations || []).map(o => ({ type: 'organization', id: o.id, name: o.name })))
@@ -176,7 +176,7 @@ router.post('/_default_services', asyncWrap(async(req, res) => {
       classes: ['list', 'read', 'use'],
       roles: []
     }] : [])
-  }, true))
+  }, true)).filter(s => !existingServices.find(es => es.id === s.id))
   if (servicesToInsert.length) await remoteServices.insertMany(servicesToInsert)
   res.status(201).json(`Added ${servicesToInsert.length} services`)
 }))
