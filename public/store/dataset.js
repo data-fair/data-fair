@@ -16,7 +16,10 @@ export default {
   getters: {
     resourceUrl: (state, getters, rootState) => state.datasetId ? rootState.env.publicUrl + '/api/v1/datasets/' + state.datasetId : null,
     journalChannel: (state) => 'datasets/' + state.datasetId + '/journal',
-    concepts: state => new Set(state.dataset.schema.map(field => field['x-refersTo']).filter(c => c)),
+    concepts: state => {
+      if (!state.dataset) return new Set()
+      return new Set(state.dataset.schema.map(field => field['x-refersTo']).filter(c => c))
+    },
     remoteServicesMap: (state, getters) => {
       const res = {}
       state.remoteServices.forEach(service => {
@@ -31,6 +34,7 @@ export default {
     },
     can: (state) => (operation) => (state.dataset && state.dataset.userPermissions.includes(operation)) || false,
     isOwner: (state, getters, rootState) => {
+      if (!state.dataset) return
       if (!rootState.session || !rootState.session.user) return false
       if (state.dataset.owner.type === 'user' && state.dataset.owner.id === rootState.session.user.id) return true
       if (state.dataset.owner.type === 'organization') {
