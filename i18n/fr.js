@@ -95,6 +95,10 @@ module.exports = {
           i18n: {
             defaultLocale: 'Locale par défaut',
             locales: 'Liste des locales'
+          },
+          thumbor: {
+            url: 'URL du serveur thumbor utilisé pour créer des vignettes des images liées dans les jeux de données',
+            key: 'Clé secrète utilisée pour signer les URLs de vignettes thumbor'
           }
         }
       }

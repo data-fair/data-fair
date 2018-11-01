@@ -126,6 +126,7 @@
     "stylus-loader": "^3.0.2",
     "swagger2openapi": "^2.11.7",
     "terraformer-wkt-parser": "^1.2.0",
+    "thumbor": "^0.1.5",
     "tmp-promise": "^1.0.4",
     "turf": "^3.0.14",
     "uuid": "^3.3.2",

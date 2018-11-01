@@ -9,6 +9,11 @@
   "identifiers": ["http://schema.org/description"],
   "type": "text"
 }, {
+  "title": "Image",
+  "description": "Un URL vers une image illustration du document courant",
+  "identifiers": ["http://schema.org/image"],
+  "type": "text"
+}, {
   "title": "Numéro de rue",
   "description": "Un numéro de rue, qui peut contenir des mots comme bis ou ter",
   "identifiers": ["http://www.ontotext.com/proton/protonext#StreetNumber"],

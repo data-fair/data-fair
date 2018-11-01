@@ -33,3 +33,10 @@ services:
     image: koumoul/openapi-viewer:1
     ports:
       - 5680:8080
+
+  thumbor:
+    image: apsl/thumbor:6.4.2
+    environment:
+      - SECURITY_KEY=thumborkey
+    ports:
+      - 8000:8000

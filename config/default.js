@@ -95,6 +95,10 @@ module.exports = {
     cssText: ''
   },
   browserLogLevel: 'error',
+  thumbor: {
+    url: 'http://localhost:8000',
+    key: 'thumborkey'
+  },
   licenses: [{
     title: 'Licence Ouverte / Open Licence',
     href: 'https://www.etalab.gouv.fr/licence-ouverte-open-licence'
@@ -104,10 +108,8 @@ module.exports = {
   }],
   applications: [{
     title: 'Infos parcelles (bêta)',
-    url: 'https://koumoul.com/s/infos-parcelles/',
-    public: true,
-    servicesFilters: [{ 'api-id': ['geocoder-koumoul'] }, { 'api-id': ['tileserver'] }],
-    datasetsFilters: [{ bbox: ['true'], concepts: ['http://dbpedia.org/ontology/codeLandRegistry'] }]
+    url: 'https://koumoul.com/apps/infos-parcelles/2.0/',
+    public: true
   }, {
     title: 'Infos localisations (bêta)',
     url: 'https://koumoul.com/s/infos-loc/',
@@ -115,21 +117,16 @@ module.exports = {
     servicesFilters: [{ 'api-id': ['geocoder-koumoul'] }, { 'api-id': ['tileserver'] }],
     datasetsFilters: [{ bbox: ['true'] }]
   }, {
-    title: 'Portail thématique (bêta)',
-    url: 'https://koumoul.com/s/portail-thematique/',
+    title: 'Observatoire des entreprises (bêta)',
+    url: 'https://koumoul.com/apps/observatoire-entreprises/0.6/',
     public: true
   }, {
-    title: 'Observatoire des entreprises (bêta)',
-    url: 'https://koumoul.com/apps/observatoire-entreprises/0/',
-    public: true,
-    servicesFilters: [{ 'api-id': ['geocoder-koumoul'] }, { 'api-id': ['tileserver'] }, { 'api-id': ['sirene-koumoul'] }]
-  }, {
     title: 'Graphiques simples (bêta)',
-    url: 'https://koumoul-dev.github.io/data-fair-charts/0.x/',
+    url: 'https://koumoul-dev.github.io/data-fair-charts/0.5/',
     public: true
   }, {
     title: 'Nuages de mots (bêta)',
-    url: 'https://koumoul.com/apps/word-cloud/0/',
+    url: 'https://koumoul.com/apps/word-cloud/0.1/',
     public: true
   }],
   remoteServices: [{

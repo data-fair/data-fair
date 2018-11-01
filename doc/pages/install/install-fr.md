@@ -88,6 +88,8 @@ services:
       - DIRECTORY_URL=${PROTOCOL}://${DOMAIN}/simple-directory
       - PRIVATE_DIRECTORY_URL=http://simple-directory:8080
       - OPENAPI_VIEWER_URL=${PROTOCOL}://${DOMAIN}/api-doc/
+      - THUMBOR_URL=${PROTOCOL}://${DOMAIN}/thumbor/
+      - THUMBOR_KEY=${SECRET}
       - MONGO_URL=mongodb://mongo:27017/data-fair
       - ES_HOST=elasticsearch:9200
 
@@ -118,6 +120,15 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.frontend.rule=PathPrefixStrip:/api-doc/"
+
+  thumbor:
+    image: apsl/thumbor:6.4.2
+    restart: 'always'
+    environment:
+      - SECURITY_KEY=${SECRET}
+    labels:
+      - "traefik.enable=true"
+      - "traefik.frontend.rule=PathPrefixStrip:/thumbor/"
 
   #########################
   # Dependencies
@@ -155,6 +166,7 @@ Configurez quelques variables d'environnement nécessaires:
 
 ```sh
 export ADMINS='["alban.mouton@koumoul.com"]'
+export SECRET=type some random string here
 ```
 
 ### Variante 1 : HTTP local avec envoi de mail virtuel
