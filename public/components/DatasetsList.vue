@@ -2,7 +2,7 @@
   <v-container fluid grid-list-lg style="width:100vw">
     <h3 v-if="datasets" class="display-1">{{ datasets.count }} {{ plural ? 'jeux' : 'jeu' }} de données</h3>
 
-    <search-filters :filter-labels="{}" :filters="filters" :facets="datasets && datasets.facets" type="datasets" @apply="refresh"/>
+    <search-filters :filter-labels="{}" :filters="filters" :facets="datasets && datasets.facets" type="datasets" @apply="page = 1; refresh()"/>
     <search-progress :loading="loading"/>
 
     <v-layout v-if="datasets" row wrap class="resourcesList">
@@ -26,7 +26,7 @@
     </v-layout>
 
     <v-layout v-if="datasets && datasets.count" row wrap>
-      <v-spacer/><v-pagination :length="Math.ceil(datasets.count / size)" v-model="page" @input="$vuetify.goTo('.resourcesList', {offset: -20});refresh()"/>
+      <v-spacer/><v-pagination :length="Math.ceil(datasets.count / size)" v-model="page" @input="$vuetify.goTo('.resourcesList', {offset});refresh()"/>
     </v-layout>
 
     <v-responsive v-if="!hasDatasets" height="auto">
