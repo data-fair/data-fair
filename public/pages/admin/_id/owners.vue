@@ -1,6 +1,6 @@
 <template lang="html">
   <v-container fluid>
-    <v-layout v-if="quotas" column>
+    <v-layout v-if="owners" column>
       <v-layout row wrap>
         <v-flex xs12 sm6 md4 lg3>
           <v-text-field
@@ -11,16 +11,19 @@
           />
         </v-flex>
       </v-layout>
-      <v-card v-if="quotas.results.length">
-        <v-list two-line>
-          <v-list-tile v-for="quota in quotas.results" :key="quota.id">
+      <v-card v-if="owners.results.length">
+        <v-list three-line>
+          <v-list-tile v-for="owner in owners.results" :key="owner.id">
             <v-list-tile-content>
               <v-list-tile-title>
-                {{ quota.name }} ({{ quota.type }})
+                {{ owner.name }} ({{ owner.type }})
               </v-list-tile-title>
               <v-list-tile-sub-title>
-                <span v-if="quota.consumption && (quota.consumption.storage !== undefined)">{{ parseFloat(((quota.consumption && quota.consumption.storage || 0) / 1000).toFixed(2)).toLocaleString() }} ko stockés</span>
-                <span v-if="quota.storage !== undefined">pour une limite à {{ parseFloat((quota.storage / 1000).toFixed(2)).toLocaleString() }} ko</span>
+                <span v-if="owner.consumption && (owner.consumption.storage !== undefined)">{{ parseFloat(((owner.consumption && owner.consumption.storage || 0) / 1000).toFixed(2)).toLocaleString() }} ko stockés</span>
+                <span v-if="owner.storage !== undefined">pour une limite à {{ parseFloat((owner.storage / 1000).toFixed(2)).toLocaleString() }} ko</span>
+              </v-list-tile-sub-title>
+              <v-list-tile-sub-title>
+                {{ owner.nbDatasets }} jeux de données - {{ owner.nbApplications }} applications
               </v-list-tile-sub-title>
             </v-list-tile-content>
           </v-list-tile>
@@ -33,14 +36,14 @@
 <script>
 export default {
   data() {
-    return { quotas: null, q: null }
+    return { owners: null, q: null }
   },
   async mounted() {
     this.refresh()
   },
   methods: {
     async refresh() {
-      this.quotas = await this.$axios.$get('api/v1/quotas', { params: { size: 1000, q: this.q } })
+      this.owners = await this.$axios.$get('api/v1/admin/owners', { params: { size: 1000, q: this.q } })
     }
   }
 }

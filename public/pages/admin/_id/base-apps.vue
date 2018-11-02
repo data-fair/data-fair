@@ -26,7 +26,7 @@
               </v-list-tile-title>
               <v-list-tile-sub-title>{{ baseApp.description }}</v-list-tile-sub-title>
               <v-list-tile-sub-title>
-                <nuxt-link :to="{path: '/applications', query: {url: baseApp.url}}">{{ baseApp.nbApps }} application{{ baseApp.nbApps > 1 ? 's' : '' }}</nuxt-link>
+                <nuxt-link :to="{path: '/applications', query: {url: baseApp.url}}">{{ baseApp.nbApplications }} application{{ baseApp.nbApplications > 1 ? 's' : '' }}</nuxt-link>
                 - Jeux de données : {{ baseApp.datasetsFilters }} - Services distants: {{ baseApp.servicesFilters }}
               </v-list-tile-sub-title>
             </v-list-tile-content>
@@ -96,7 +96,7 @@ export default {
   },
   methods: {
     async refresh() {
-      this.baseApps = await this.$axios.$get('api/v1/base-applications', { params: { size: 10000, thumbnail: '40x40', count: true, q: this.q } })
+      this.baseApps = await this.$axios.$get('api/v1/admin/base-applications', { params: { size: 10000, thumbnail: '40x40', count: true, q: this.q } })
     },
     newPatch(baseApp) {
       return {

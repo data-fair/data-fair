@@ -124,9 +124,6 @@ router.get('', asyncWrap(async(req, res) => {
     result.description = result.description || result.meta.description
     result.image = result.image || result.url + 'thumbnail.png'
     result.thumbnail = thumbor.thumbnail(result.image, req.query.thumbnail || '300x200')
-    if (req.user && req.user.isAdmin && req.query.count === 'true') {
-      result.nbApps = await db.collection('applications').countDocuments({ url: result.url })
-    }
   }
   res.send({ count, results })
 }))

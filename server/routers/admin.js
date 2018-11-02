@@ -3,6 +3,7 @@ const express = require('express')
 const asyncWrap = require('../utils/async-wrap')
 const pjson = require('../../package.json')
 const findUtils = require('../utils/find')
+const thumbor = require('../utils/thumbor')
 const router = module.exports = express.Router()
 
 // All routes in the router are only for the super admins of the service
@@ -40,4 +41,99 @@ router.get('/errors', asyncWrap(async (req, res, next) => {
   const [total, results] = await Promise.all([ datasets.countDocuments(query), aggregatePromise ])
 
   res.send({ total, results })
+}))
+
+router.get('/owners', asyncWrap(async(req, res) => {
+  const quotas = req.app.get('db').collection('quotas')
+  const [skip, size] = findUtils.pagination(req.query)
+  const query = {}
+  if (req.query.q) query.$text = { $search: req.query.q }
+
+  const agg = [{
+    $match: query
+  }, {
+    $sort: { name: 1 }
+  }, {
+    $skip: skip
+  }, {
+    $limit: size
+  }, {
+    // imperfect.. we should do a lookup on both owner.id and owner.type
+    $lookup: {
+      from: 'datasets',
+      localField: 'id',
+      foreignField: 'owner.id',
+      as: 'datasets'
+    }
+  }, {
+    // imperfect.. we should do a lookup on both owner.id and owner.type
+    $lookup: {
+      from: 'applications',
+      localField: 'id',
+      foreignField: 'owner.id',
+      as: 'applications'
+    }
+  }, {
+    $project: {
+      id: 1,
+      type: 1,
+      name: 1,
+      nbDatasets: { $size: '$datasets' },
+      nbApplications: { $size: '$applications' },
+      consumption: 1,
+      storage: 1
+    }
+  }]
+
+  const aggPromise = quotas.aggregate(agg).toArray()
+  const [count, results] = await Promise.all([ quotas.countDocuments(query), aggPromise ])
+  res.send({ count, results })
+}))
+
+router.get('/base-applications', asyncWrap(async(req, res) => {
+  const baseApps = req.app.get('db').collection('base-applications')
+  const [skip, size] = findUtils.pagination(req.query)
+  const query = {}
+  if (req.query.public) query.public = true
+  if (req.query.q) query.$text = { $search: req.query.q }
+
+  const agg = [{
+    $match: query
+  }, {
+    $sort: { public: -1, title: 1 }
+  }, {
+    $skip: skip
+  }, {
+    $limit: size
+  }, {
+    $lookup: {
+      from: 'applications',
+      localField: 'url',
+      foreignField: 'url',
+      as: 'applications'
+    }
+  }, {
+    $project: {
+      id: 1,
+      title: 1,
+      description: 1,
+      meta: 1,
+      url: 1,
+      image: 1,
+      public: 1,
+      nbApplications: { $size: '$applications' },
+      servicesFilters: 1,
+      datasetsFilters: 1
+    }
+  }]
+
+  const aggPromise = baseApps.aggregate(agg).toArray()
+  const [count, results] = await Promise.all([ baseApps.countDocuments(query), aggPromise ])
+  for (let result of results) {
+    result.title = result.title || result.meta.title
+    result.description = result.description || result.meta.description
+    result.image = result.image || result.url + 'thumbnail.png'
+    result.thumbnail = thumbor.thumbnail(result.image, req.query.thumbnail || '300x200')
+  }
+  res.send({ count, results })
 }))
