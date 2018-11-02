@@ -13,8 +13,18 @@ const thumbor = require('../utils/thumbor')
 const router = exports.router = express.Router()
 
 // Fill the collection using the default base applications from config
+// and cleanup non-public apps that are not used anywhere
 exports.init = async (db) => {
-  return Promise.all(config.applications.map(app => failSafeInitBaseApp(db, app)))
+  await Promise.all(config.applications.map(app => failSafeInitBaseApp(db, app)))
+  await clean(db)
+}
+
+async function clean(db) {
+  const baseApps = await db.collection('base-applications').find({ public: { $ne: true } }).limit(10000).toArray()
+  for (let baseApp of baseApps) {
+    const nbApps = await db.collection('applications').countDocuments({ url: baseApp.url })
+    if (nbApps === 0) await db.collection('base-applications').deleteOne({ id: baseApp.id })
+  }
 }
 
 function prepareQuery(query) {
@@ -92,6 +102,7 @@ router.patch('/:id', asyncWrap(async(req, res) => {
   const storedBaseApp = (await db.collection('base-applications')
     .findOneAndUpdate({ id: req.params.id }, { $set: patch }, { returnOriginal: false })).value
   if (!storedBaseApp) return res.status(404).send()
+  await clean(db)
   res.send(storedBaseApp)
 }))
 
