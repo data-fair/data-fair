@@ -107,27 +107,20 @@ module.exports = {
     href: 'https://spdx.org/licenses/ODbL-1.0.html#licenseText'
   }],
   applications: [{
-    title: 'Infos parcelles (bêta)',
-    url: 'https://koumoul.com/apps/infos-parcelles/2.0/',
-    public: true
+    title: 'Infos parcelles',
+    url: 'https://koumoul.com/apps/infos-parcelles/2.0/'
   }, {
-    title: 'Infos localisations (bêta)',
-    url: 'https://koumoul.com/s/infos-loc/',
-    public: true,
-    servicesFilters: [{ 'api-id': ['geocoder-koumoul'] }, { 'api-id': ['tileserver'] }],
-    datasetsFilters: [{ bbox: ['true'] }]
+    title: 'Infos localisations',
+    url: 'https://koumoul.com/apps/infos-loc/0.5/'
   }, {
-    title: 'Observatoire des entreprises (bêta)',
-    url: 'https://koumoul.com/apps/observatoire-entreprises/0.6/',
-    public: true
+    title: 'Observatoire des entreprises',
+    url: 'https://koumoul.com/apps/observatoire-entreprises/0.6/'
   }, {
-    title: 'Graphiques simples (bêta)',
-    url: 'https://koumoul-dev.github.io/data-fair-charts/0.5/',
-    public: true
+    title: 'Graphiques simples',
+    url: 'https://koumoul-dev.github.io/data-fair-charts/0.5/'
   }, {
-    title: 'Nuages de mots (bêta)',
-    url: 'https://koumoul.com/apps/word-cloud/0.1/',
-    public: true
+    title: 'Nuages de mots',
+    url: 'https://koumoul.com/apps/word-cloud/0.1/'
   }],
   remoteServices: [{
     title: 'Données Entreprises',

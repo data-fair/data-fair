@@ -9,7 +9,7 @@ const htmlExtractor = new Extractor()
 htmlExtractor.extract = util.promisify(htmlExtractor.extract)
 const asyncWrap = require('../utils/async-wrap')
 const findUtils = require('../utils/find')
-
+const thumbor = require('../utils/thumbor')
 const router = exports.router = express.Router()
 
 // Fill the collection using the default base applications from config
@@ -36,9 +36,7 @@ async function initBaseApp(db, app) {
   const html = (await axios.get(app.url)).data
   const data = await htmlExtractor.extract(html)
   const patch = {
-    title: data.meta.title || '',
-    description: data.meta.description || '',
-    applicationName: data.meta['application-name'] || '',
+    meta: data.meta,
     id: slug(app.url, { lower: true }),
     ...app
   }
@@ -73,6 +71,8 @@ async function initBaseApp(db, app) {
   const storedBaseApp = (await db.collection('base-applications')
     .findOneAndUpdate({ id: patch.id }, { $set: patch }, { upsert: true, returnOriginal: false })).value
   delete storedBaseApp._id
+  storedBaseApp.title = storedBaseApp.title || storedBaseApp.title.meta.title
+  storedBaseApp.description = storedBaseApp.description || storedBaseApp.title.meta.description
   return storedBaseApp
 }
 
@@ -85,17 +85,37 @@ router.post('', asyncWrap(async(req, res) => {
   res.send(await initBaseApp(req.app.get('db'), defaultApp || req.body))
 }))
 
+router.patch('/:id', asyncWrap(async(req, res) => {
+  const db = req.app.get('db')
+  if (!req.user || !req.user.isAdmin) return res.status(403).send()
+  const patch = req.body
+  const storedBaseApp = (await db.collection('base-applications')
+    .findOneAndUpdate({ id: req.params.id }, { $set: patch }, { returnOriginal: false })).value
+  if (!storedBaseApp) return res.status(404).send()
+  res.send(storedBaseApp)
+}))
+
 // Get the list. Non admin users can only see the public ones.
 router.get('', asyncWrap(async(req, res) => {
-  const baseApplications = req.app.get('db').collection('base-applications')
+  const db = req.app.get('db')
   if (!(req.user && req.user.isAdmin) && !req.query.public) {
     return res.status(403).send('Non admin users can only see public base applications')
   }
   const query = {}
   if (req.query.public) query.public = true
   const [skip, size] = findUtils.pagination(req.query)
+  const baseApplications = db.collection('base-applications')
   const findPromise = baseApplications.find(query).limit(size).skip(skip).toArray()
   const countPromise = baseApplications.countDocuments(query)
   const [results, count] = await Promise.all([findPromise, countPromise])
+  for (let result of results) {
+    result.title = result.title || result.title.meta.title
+    result.description = result.description || result.title.meta.description
+    result.image = result.image || result.url + 'thumbnail.png'
+    result.thumbnail = thumbor.thumbnail(result.image, req.query.thumbnail || '300x200')
+    if (req.user && req.user.isAdmin && req.query.count === 'true') {
+      result.nbApps = await db.collection('applications').countDocuments({ url: result.url })
+    }
+  }
   res.send({ results, count })
 }))

@@ -52,6 +52,7 @@ router.get('', asyncWrap(async(req, res) => {
   }
   const query = findUtils.query(req, {
     'ids': 'id',
+    'url': 'url',
     'dataset': 'configuration.datasets.href',
     'service': 'configuration.remoteServices.href'
   })
