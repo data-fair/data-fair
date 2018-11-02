@@ -1,30 +1,42 @@
 <template lang="html">
   <v-container fluid>
-    <p v-if="baseApps && baseApps.count === 0">Aucune application de base</p>
-    <v-card v-else-if="baseApps">
-      <v-list three-line>
-        <v-list-tile v-for="baseApp in baseApps.results" :key="baseApp.id" avatar>
-          <v-list-tile-avatar tile>
-            <img :src="baseApp.thumbnail">
-          </v-list-tile-avatar>
-          <v-list-tile-content>
-            <v-list-tile-title>
-              {{ baseApp.title }} (<a :href="baseApp.url">{{ baseApp.url }}</a>)
-              <v-icon v-if="baseApp.public" color="green">lock_open</v-icon>
-              <v-icon v-else color="red">lock</v-icon>
-            </v-list-tile-title>
-            <v-list-tile-sub-title>{{ baseApp.description }}</v-list-tile-sub-title>
-            <v-list-tile-sub-title>
-              <nuxt-link :to="{path: '/applications', query: {url: baseApp.url}}">{{ baseApp.nbApps }} application{{ baseApp.nbApps > 1 ? 's' : '' }}</nuxt-link>
-              - Jeux de données : {{ baseApp.datasetsFilters }} - Services distants: {{ baseApp.servicesFilters }}
-            </v-list-tile-sub-title>
-          </v-list-tile-content>
-          <v-list-tile-action>
-            <v-icon color="primary" @click="currentBaseApp = baseApp; patch = newPatch(baseApp); showEditDialog = true;">edit</v-icon>
-          </v-list-tile-action>
-        </v-list-tile>
-      </v-list>
-    </v-card>
+    <v-layout column>
+      <v-layout row wrap>
+        <v-flex xs12 sm6 md4 lg3>
+          <v-text-field
+            v-model="q"
+            name="q"
+            label="Rechercher"
+            @keypress.enter="refresh"
+          />
+        </v-flex>
+      </v-layout>
+
+      <v-card v-if="baseApps">
+        <v-list three-line>
+          <v-list-tile v-for="baseApp in baseApps.results" :key="baseApp.id" avatar>
+            <v-list-tile-avatar tile>
+              <img :src="baseApp.thumbnail">
+            </v-list-tile-avatar>
+            <v-list-tile-content>
+              <v-list-tile-title>
+                {{ baseApp.title }} (<a :href="baseApp.url">{{ baseApp.url }}</a>)
+                <v-icon v-if="baseApp.public" color="green">lock_open</v-icon>
+                <v-icon v-else color="red">lock</v-icon>
+              </v-list-tile-title>
+              <v-list-tile-sub-title>{{ baseApp.description }}</v-list-tile-sub-title>
+              <v-list-tile-sub-title>
+                <nuxt-link :to="{path: '/applications', query: {url: baseApp.url}}">{{ baseApp.nbApps }} application{{ baseApp.nbApps > 1 ? 's' : '' }}</nuxt-link>
+                - Jeux de données : {{ baseApp.datasetsFilters }} - Services distants: {{ baseApp.servicesFilters }}
+              </v-list-tile-sub-title>
+            </v-list-tile-content>
+            <v-list-tile-action>
+              <v-icon color="primary" @click="currentBaseApp = baseApp; patch = newPatch(baseApp); showEditDialog = true;">edit</v-icon>
+            </v-list-tile-action>
+          </v-list-tile>
+        </v-list>
+      </v-card>
+    </v-layout>
 
     <v-dialog
       v-model="showEditDialog"
@@ -75,13 +87,17 @@ export default {
       baseApps: null,
       patch: {},
       showEditDialog: false,
-      currentBaseApp: null
+      currentBaseApp: null,
+      q: null
     }
   },
   async mounted() {
-    this.baseApps = await this.$axios.$get('api/v1/base-applications', { params: { size: 10000, thumbnail: '40x40', count: true } })
+    this.refresh()
   },
   methods: {
+    async refresh() {
+      this.baseApps = await this.$axios.$get('api/v1/base-applications', { params: { size: 10000, thumbnail: '40x40', count: true, q: this.q } })
+    },
     newPatch(baseApp) {
       return {
         title: baseApp.title,

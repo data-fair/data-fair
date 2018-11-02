@@ -126,7 +126,7 @@ exports.storageSize = async (db, owner) => {
 exports.updateStorageSize = async (db, owner) => {
   const currentSize = await exports.storageSize(db, owner)
   const consumption = { storage: currentSize }
-  await db.collection('quotas').updateOne({ type: owner.type, id: owner.id }, { $set: { consumption } })
+  await db.collection('quotas').updateOne({ type: owner.type, id: owner.id }, { $set: { ...owner, consumption } }, { upsert: true })
   for (let webhook of config.globalWebhooks.consumption) {
     const url = webhook.replace('{type}', owner.type).replace('{id}', owner.id)
     axios.post(url, consumption).catch(err => {

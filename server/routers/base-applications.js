@@ -113,9 +113,10 @@ router.get('', asyncWrap(async(req, res) => {
   }
   const query = {}
   if (req.query.public) query.public = true
+  if (req.query.q) query.$text = { $search: req.query.q }
   const [skip, size] = findUtils.pagination(req.query)
   const baseApplications = db.collection('base-applications')
-  const findPromise = baseApplications.find(query).limit(size).skip(skip).toArray()
+  const findPromise = baseApplications.find(query).sort({ title: 1 }).limit(size).skip(skip).toArray()
   const countPromise = baseApplications.countDocuments(query)
   const [results, count] = await Promise.all([findPromise, countPromise])
   for (let result of results) {
@@ -127,5 +128,5 @@ router.get('', asyncWrap(async(req, res) => {
       result.nbApps = await db.collection('applications').countDocuments({ url: result.url })
     }
   }
-  res.send({ results, count })
+  res.send({ count, results })
 }))

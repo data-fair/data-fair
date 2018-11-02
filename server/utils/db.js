@@ -39,6 +39,7 @@ exports.init = async () => {
   // base applications indexes
   await ensureIndex(db, 'base-applications', { url: 1 }, { unique: true })
   await ensureIndex(db, 'base-applications', { id: 1 }, { unique: true })
+  await ensureIndex(db, 'base-applications', { title: 'text', description: 'text', 'meta.title': 'text', 'meta.description': 'text', 'meta.application-name': 'text' }, { name: 'fulltext' })
   // applications indexes
   await ensureIndex(db, 'applications', { id: 1 }, { unique: true })
   await ensureIndex(db, 'applications', { 'owner.type': 1, 'owner.id': 1 })
@@ -54,5 +55,6 @@ exports.init = async () => {
   await ensureIndex(db, 'settings', { 'apiKeys.key': 1 }, { sparse: true })
   // quotas
   await ensureIndex(db, 'quotas', { type: 1, id: 1 }, { unique: true })
+  await ensureIndex(db, 'quotas', { 'name': 'text' }, { name: 'fulltext' })
   return { db, client }
 }

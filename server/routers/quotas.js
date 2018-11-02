@@ -35,7 +35,9 @@ router.get('', asyncWrap(async(req, res) => {
   if (!req.user.isAdmin) return res.status(403).send()
   const quotas = req.app.get('db').collection('quotas')
   const [skip, size] = findUtils.pagination(req.query)
-  const findPromise = quotas.find({}).limit(size).skip(skip).toArray()
+  const query = {}
+  if (req.query.q) query.$text = { $search: req.query.q }
+  const findPromise = quotas.find(query).sort({ name: 1 }).limit(size).skip(skip).toArray()
   const [count, results] = await Promise.all([ quotas.countDocuments({}), findPromise ])
   res.send({ count, results })
 }))
