@@ -27,11 +27,11 @@
           </v-flex>
           <v-pagination v-if="data.total > pagination.rowsPerPage" v-model="pagination.page" :length="Math.ceil(Math.min(data.total, 10000) / pagination.rowsPerPage)" total-visible="7" class="mx-4"/>
         </v-layout>
-        <v-container fluid grid-list-md class="pa-0">
+        <v-container fluid grid-list-lg class="pa-0">
           <v-layout row wrap>
             <v-flex v-for="(item, i) in data.results" :key="i" lg2 md3 sm6 xs12>
-              <v-card>
-                <v-img :src="item._thumbnail" height="150px"/>
+              <v-card :max-width="maxThumbnailWidth">
+                <v-img :src="item._thumbnail" :height="thumbnailHeight"/>
                 <v-card-title primary-title>
                   <div>
                     <h3 v-if="labelField" class="headline mb-0">{{ item[labelField.key] }}</h3>
@@ -60,7 +60,9 @@ export default {
       rowsPerPage: 12
     },
     notFound: false,
-    loading: false
+    loading: false,
+    maxThumbnailWidth: 300,
+    thumbnailHeight: 200
   }),
   computed: {
     ...mapState('dataset', ['dataset']),
@@ -104,7 +106,7 @@ export default {
         size: this.pagination.rowsPerPage,
         page: this.pagination.page,
         select: select.join(','),
-        thumbnail: '0x150'
+        thumbnail: `${this.maxThumbnailWidth}x${this.thumbnailHeight}`
       }
       if (this.query) params.q = this.query
       this.loading = true
