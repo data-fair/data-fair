@@ -8,18 +8,9 @@ const permissionsDoc = require('../server/utils/permissions').apiDoc
 module.exports = (dataset) => {
   dataset.schema = dataset.schema || []
   const properties = dataset.schema.map(p => p.key)
+  const textProperties = dataset.schema.filter(p => p.type === 'string').map(p => p.key)
   const numberProperties = dataset.schema.filter(p => p.type === 'number').map(p => p.key)
-  const queryParams = [{
-    in: 'query',
-    name: 'size',
-    description: 'Le nombre de résultats à retourner (taille de la pagination). 20 par défaut.',
-    required: false,
-    schema: {
-      default: 20,
-      type: 'integer',
-      max: 10000
-    }
-  }, {
+  const filterParams = [{
     in: 'query',
     name: 'q',
     description: `
@@ -35,46 +26,13 @@ module.exports = (dataset) => {
     }
   }, {
     in: 'query',
-    name: 'select',
-    description: 'La liste des champs à retourner',
-    required: false,
-    schema: {
-      default: ['*'],
-      type: 'array',
-      items: {
-        type: 'string',
-        enum: properties
-      }
-    },
-    style: 'commaDelimited'
-  }, {
-    in: 'query',
-    name: 'sort',
-    description: `
-  Le tri à effectuer sous forme d'une liste de clés de champs séparées par des virgules.
-
-  Par défaut le tri est ascendant, si un nom de champ est préfixé par un "-" alors le tri sera descendant.
-
-  Exemple: ma_colonne,-ma_colonne2`,
-    required: false,
-    default: [],
-    schema: {
-      type: 'array',
-      items: {
-        type: 'string',
-        enum: properties
-      }
-    },
-    style: 'commaDelimited'
-  }, {
-    in: 'query',
     name: 'qs',
     description: `
-  Champ de filtre et recherche textuelle avancé. Ce paramètre permet d'effectuer des requêtes complexes sur la source de données. Vous pouvez spécifier des filtres par champs, créer des combinaisons logiques à volonté, etc.
+Champ de filtre et recherche textuelle avancé. Ce paramètre permet d'effectuer des requêtes complexes sur la source de données. Vous pouvez spécifier des filtres par champs, créer des combinaisons logiques à volonté, etc.
 
-  Exemple: ma_colonne:"du texte" AND ma_colonne2:valeur
+Exemple: ma_colonne:"du texte" AND ma_colonne2:valeur
 
-  Pour plus d'information voir la documentation [ElasticSearch](https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-query-string-query.html) correspondante.
+Pour plus d'information voir la documentation [ElasticSearch](https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-query-string-query.html) correspondante.
   `,
     required: false,
     schema: {
@@ -96,15 +54,87 @@ module.exports = (dataset) => {
     in: 'query',
     name: 'xyz',
     description: `
-  Un filtre pour restreindre les résultats à une zone géographique avec les paramètres standards de tuiles géographiques x,y et z.
+Un filtre pour restreindre les résultats à une zone géographique avec les paramètres standards de tuiles géographiques x,y et z.
 
-  Le format est 'x,y,z'.
+Le format est 'x,y,z'.
   `,
     required: false,
     schema: {
       type: 'array',
       items: {
         type: 'number'
+      }
+    },
+    style: 'commaDelimited'
+  }]
+
+  const hitsParams = [{
+    in: 'query',
+    name: 'sort',
+    description: `
+Le tri à effectuer sous forme d'une liste de clés de champs séparées par des virgules.
+
+Par défaut le tri est ascendant, si un nom de champ est préfixé par un "-" alors le tri sera descendant.
+
+Exemple: ma_colonne,-ma_colonne2`,
+    required: false,
+    default: [],
+    schema: {
+      type: 'array',
+      items: {
+        type: 'string',
+        enum: properties
+      }
+    },
+    style: 'commaDelimited'
+  }, {
+    in: 'query',
+    name: 'size',
+    description: 'Le nombre de résultats à retourner (taille de la pagination). 20 par défaut.',
+    required: false,
+    schema: {
+      default: 20,
+      type: 'integer',
+      max: 10000
+    }
+  }, {
+    in: 'query',
+    name: 'select',
+    description: 'La liste des champs à retourner',
+    required: false,
+    schema: {
+      default: ['*'],
+      type: 'array',
+      items: {
+        type: 'string',
+        enum: properties
+      }
+    },
+    style: 'commaDelimited'
+  }, {
+    in: 'query',
+    name: 'thumbnail',
+    description: `
+Demande à retourner un lien de vignette d'une dimension déterminée à partir d'un champ image.
+
+Pour que ce paramètre soit accepté le concept "Image" doit être associé à un champ du jeu de données.
+
+La valeur du paramètre est la dimension passée sous la form largeurxhauteur (300x200 par exemple) où un 0 sur la largeur ou la hauteur signifie que l'autre valeur est prise en compte et les proportions conservées.
+    `
+  }, {
+    in: 'query',
+    name: 'highlight',
+    description: `
+Demande à retourner des extraits du document qui contiennent les mots utilisés en filtre (paramètres q et qs).
+
+La valeur est une liste de champs séparés par des virgules.
+    `,
+    required: false,
+    schema: {
+      type: 'array',
+      items: {
+        type: 'string',
+        enum: textProperties
       }
     },
     style: 'commaDelimited'
@@ -275,7 +305,7 @@ module.exports = (dataset) => {
               default: 'json',
               enum: ['json'].concat(dataset.bbox && dataset.bbox.length === 4 ? ['pbf', 'geojson'] : [])
             }
-          }].concat(queryParams),
+          }].concat(filterParams).concat(hitsParams),
           responses: {
             200: {
               description: 'Le résultat de la requête.',
@@ -319,7 +349,7 @@ module.exports = (dataset) => {
               type: 'string',
               enum: properties
             }
-          }, metricParam, metricFieldParam, aggSizeParam].concat(queryParams),
+          }, metricParam, metricFieldParam, aggSizeParam].concat(filterParams).concat(hitsParams),
           // TODO: document sort param and interval
           responses: {
             200: {
@@ -345,7 +375,7 @@ module.exports = (dataset) => {
             Object.assign({}, metricParam, { required: true }),
             Object.assign({}, metricFieldParam, { required: true }),
             aggSizeParam
-          ].concat(queryParams),
+          ].concat(filterParams),
           responses: {
             200: {
               description: 'Le résultat du calcul.',
@@ -375,7 +405,7 @@ module.exports = (dataset) => {
               type: 'string',
               enum: properties
             }
-          }].concat(queryParams),
+          }].concat(filterParams),
           // TODO: document sort param and interval
           responses: {
             200: {
@@ -502,7 +532,7 @@ module.exports = (dataset) => {
         operationId: 'getGeoAgg',
         'x-permissionClass': 'read',
         tags: ['Données'],
-        parameters: [aggSizeParam].concat(queryParams),
+        parameters: [aggSizeParam].concat(filterParams).concat(hitsParams),
         responses: {
           200: {
             description: 'Les informations du jeu de données agrégées spatialement.',

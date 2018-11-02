@@ -1,8 +1,7 @@
 const createError = require('http-errors')
 const geohash = require('../geohash')
-const flatten = require('flat')
 
-const { prepareQuery, getQueryBBOX, aliasName } = require('./commons')
+const { prepareQuery, getQueryBBOX, aliasName, prepareResultItem } = require('./commons')
 
 module.exports = async (client, dataset, query) => {
   if (!dataset.bbox) throw createError(400, 'geo aggregation cannot be used on this dataset. It is not geolocalized.')
@@ -36,10 +35,10 @@ module.exports = async (client, dataset, query) => {
     }
   }
   const esResponse = await client.search({ index: aliasName(dataset), body: esQuery })
-  return prepareGeoAggResponse(esResponse)
+  return prepareGeoAggResponse(esResponse, dataset, query)
 }
 
-const prepareGeoAggResponse = (esResponse) => {
+const prepareGeoAggResponse = (esResponse, dataset, query) => {
   const response = { total: esResponse.hits.total }
   response.aggs = esResponse.aggregations.geo.buckets.map(b => {
     const center = geohash.hash2coord(b.key)
@@ -48,7 +47,7 @@ const prepareGeoAggResponse = (esResponse) => {
       centroid: b.centroid.location,
       center: { lat: center[1], lon: center[0] },
       bbox: geohash.hash2bbox(b.key),
-      results: b.topHits ? b.topHits.hits.hits.map(hit => flatten(hit._source)) : []
+      results: b.topHits ? b.topHits.hits.hits.map(hit => prepareResultItem(hit, dataset, query)) : []
     }
     if (b.metric) {
       aggItem.metric = b.metric.value

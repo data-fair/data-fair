@@ -2,6 +2,8 @@
 
 const config = require('config')
 const createError = require('http-errors')
+const flatten = require('flat')
+const thumbor = require('../thumbor')
 const tiles = require('../tiles')
 
 exports.aliasName = dataset => `${config.indicesPrefix}-${dataset.id}`
@@ -29,6 +31,13 @@ exports.prepareQuery = (dataset, query) => {
   ['_geoshape', '_geopoint', '_geocorners', '_rand', '_i', '_file.content'].forEach(f => {
     if (!esQuery._source.includes.includes(f)) esQuery._source.excludes.push(f)
   })
+  // Others are included depending on the context
+  if (query.thumbnail) {
+    const imageField = dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/image')
+    if (imageField && query.select && !esQuery._source.includes.includes(imageField.key)) {
+      esQuery._source.includes.push(imageField.key)
+    }
+  }
 
   // Sort by list of fields (prefixed by - for descending sort)
   esQuery.sort = exports.parseSort(query.sort)
@@ -86,4 +95,23 @@ exports.getQueryBBOX = (query) => {
     bbox = tiles.xyz2bbox(...query.xyz.split(',').map(Number))
   }
   return bbox
+}
+
+exports.prepareResultItem = (hit, dataset, query) => {
+  const res = flatten(hit._source)
+  res._score = hit._score
+  if (query.highlight) {
+    // return hightlight results and remove .text suffix of fields
+    res._highlight = query.highlight.split(',')
+      .reduce((a, key) => {
+        a[key] = (hit.highlight && hit.highlight[key + '.text']) || []
+        return a
+      }, {})
+  }
+  if (query.thumbnail) {
+    const imageField = dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/image')
+    if (!imageField) return res.status(400).send('Thumbnail management is only available if the "image" concept is associated to a field of the dataset.')
+    res._thumbnail = thumbor.thumbnail(res[imageField.key], query.thumbnail)
+  }
+  return res
 }

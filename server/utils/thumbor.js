@@ -4,6 +4,7 @@ const Thumbor = require('thumbor')
 const thumbor = new Thumbor(config.thumbor.key, config.thumbor.url)
 
 exports.thumbnail = (url, size) => {
+  if (!url) return null
   size = size.split('x')
   return thumbor
     .setImagePath(url.replace('http://', '').replace('https://', ''))

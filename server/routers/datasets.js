@@ -28,7 +28,6 @@ const extensions = require('../utils/extensions')
 const geo = require('../utils/geo')
 const tiles = require('../utils/tiles')
 const cache = require('../utils/cache')
-const thumbor = require('../utils/thumbor')
 const converter = require('../workers/converter')
 const datasetPatchSchema = require('../../contract/dataset-patch')
 const validatePatch = ajv.compile(datasetPatchSchema)
@@ -378,22 +377,7 @@ router.get('/:datasetId/lines', readDataset, permissions.middleware('readLines',
   const result = {
     total: esResponse.hits.total,
     results: esResponse.hits.hits.map(hit => {
-      const res = flatten(hit._source)
-      res._score = hit._score
-      if (req.query.highlight) {
-        // return hightlight results and remove .text suffix of fields
-        res._highlight = req.query.highlight.split(',')
-          .reduce((a, key) => {
-            a[key] = (hit.highlight && hit.highlight[key + '.text']) || []
-            return a
-          }, {})
-      }
-      if (req.query.thumbnail) {
-        const imageField = req.dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/image')
-        if (!imageField) return res.status(400).send('Thumbnail management is only available if the "image" concept is associated to a field of the dataset.')
-        res._thumbnail = thumbor.thumbnail(res[imageField.key], req.query.thumbnail)
-      }
-      return res
+      return esUtils.prepareResultItem(hit, req.dataset, req.query)
     })
   }
   res.status(200).send(result)

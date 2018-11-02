@@ -1,6 +1,5 @@
 const createError = require('http-errors')
-const flatten = require('flat')
-const { parseSort, prepareQuery, aliasName } = require('./commons.js')
+const { parseSort, prepareQuery, aliasName, prepareResultItem } = require('./commons.js')
 
 module.exports = async (client, dataset, query) => {
   // nested grouping by a serie of fields
@@ -110,20 +109,20 @@ module.exports = async (client, dataset, query) => {
   }
   // Bound complexity with a timeout
   const esResponse = await client.search({ index: aliasName(dataset), body: esQuery, timeout: '2s' })
-  return prepareValuesAggResponse(esResponse, fields)
+  return prepareValuesAggResponse(esResponse, fields, dataset, query)
 }
 
-const prepareValuesAggResponse = (esResponse, fields) => {
+const prepareValuesAggResponse = (esResponse, fields, dataset, query) => {
   const response = {
     total: esResponse.hits.total,
     took: esResponse.took,
     timed_out: esResponse.timed_out
   }
-  recurseAggResponse(response, esResponse.aggregations)
+  recurseAggResponse(response, esResponse.aggregations, dataset, query)
   return response
 }
 
-const recurseAggResponse = (response, aggRes) => {
+const recurseAggResponse = (response, aggRes, dataset, query) => {
   if (aggRes.card) response.total_values = aggRes.card.value
   response.total_other = aggRes.values.sum_other_doc_count
   if (aggRes.values.buckets.length > 10000) {
@@ -133,7 +132,7 @@ const recurseAggResponse = (response, aggRes) => {
     const aggItem = {
       total: b.doc_count,
       value: b.key_as_string || b.key,
-      results: b.topHits ? b.topHits.hits.hits.map(hit => flatten(hit._source)) : []
+      results: b.topHits ? b.topHits.hits.hits.map(hit => prepareResultItem(hit, dataset, query)) : []
     }
     if (b.metric) {
       aggItem.metric = b.metric.value
