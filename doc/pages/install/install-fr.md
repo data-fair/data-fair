@@ -126,6 +126,8 @@ services:
     restart: 'always'
     environment:
       - SECURITY_KEY=${SECRET}
+      - STORAGE_EXPIRATION_SECONDS=600
+      - MAX_AGE=600
     labels:
       - "traefik.enable=true"
       - "traefik.frontend.rule=PathPrefixStrip:/thumbor/"
