@@ -71,7 +71,7 @@ async function initBaseApp(db, app) {
     console.error(`Failed to fetch a config schema for application ${app.url}`, err.message)
   }
 
-  if (!patch.hasConfigSchema && !patch.applicationName) {
+  if (!patch.hasConfigSchema && !(patch.meta && patch.meta['application-name'])) {
     throw new Error(`La page à l'adresse ${app.url} ne semble pas héberger une application compatible avec ce service.`)
   }
 
@@ -119,8 +119,8 @@ router.get('', asyncWrap(async(req, res) => {
   const countPromise = baseApplications.countDocuments(query)
   const [results, count] = await Promise.all([findPromise, countPromise])
   for (let result of results) {
-    result.title = result.title || result.title.meta.title
-    result.description = result.description || result.title.meta.description
+    result.title = result.title || result.meta.title
+    result.description = result.description || result.meta.description
     result.image = result.image || result.url + 'thumbnail.png'
     result.thumbnail = thumbor.thumbnail(result.image, req.query.thumbnail || '300x200')
     if (req.user && req.user.isAdmin && req.query.count === 'true') {
