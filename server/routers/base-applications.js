@@ -81,8 +81,8 @@ async function initBaseApp(db, app) {
   const storedBaseApp = (await db.collection('base-applications')
     .findOneAndUpdate({ id: patch.id }, { $set: patch }, { upsert: true, returnOriginal: false })).value
   delete storedBaseApp._id
-  storedBaseApp.title = storedBaseApp.title || storedBaseApp.title.meta.title
-  storedBaseApp.description = storedBaseApp.description || storedBaseApp.title.meta.description
+  storedBaseApp.title = storedBaseApp.title || storedBaseApp.meta.title
+  storedBaseApp.description = storedBaseApp.description || storedBaseApp.meta.description
   return storedBaseApp
 }
 
