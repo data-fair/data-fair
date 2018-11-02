@@ -4,8 +4,11 @@ async function main() {
   const { db } = await dbUtils.init()
   const quotas = await db.collection('quotas').find({}).limit(10000).toArray()
   for (let quota of quotas) {
-    await datasetUtils.updateStorageSize(db, quota.owner)
+    await datasetUtils.updateStorageSize(db, quota)
   }
 }
 
-main().then(() => process.exit())
+main().then(() => process.exit(), err => {
+  console.error(err)
+  process.exit(-1)
+})

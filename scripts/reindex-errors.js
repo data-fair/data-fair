@@ -5,4 +5,7 @@ async function main() {
   await db.collection('datasets').updateMany({ status: 'error' }, { $set: { status: 'schematized' } })
 }
 
-main().then(() => process.exit())
+main().then(() => process.exit(), err => {
+  console.error(err)
+  process.exit(-1)
+})
