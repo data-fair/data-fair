@@ -18,7 +18,6 @@ export default {
     ...mapGetters('dataset', ['resourceUrl']),
     src() {
       let url = this.env.openapiViewerUrl + '?proxy=false&hide-toolbar=true'
-      if (this.$store.state.jwt) url += '&headers=' + encodeURIComponent(JSON.stringify({ Authorization: 'Bearer ' + this.$store.state.jwt }))
       return url + '&url=' + this.url
     }
   },
