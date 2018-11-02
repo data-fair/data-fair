@@ -27,7 +27,7 @@ script:
   - npm run lint
   - npm run build
   - docker-compose pull
-  - docker-compose up -d
+  - NO_UI=true docker-compose up -d
   - sleep 15
   - npm test
 
