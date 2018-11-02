@@ -121,6 +121,9 @@ module.exports = {
   }, {
     title: 'Nuages de mots',
     url: 'https://koumoul.com/apps/word-cloud/0.1/'
+  }, {
+    title: 'Diagramme de flux (Sankey)',
+    url: 'https://koumoul.com/apps/sankey/0.1/'
   }],
   remoteServices: [{
     title: 'Données Entreprises',
