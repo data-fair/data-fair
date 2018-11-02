@@ -72,10 +72,11 @@ export default {
   },
   async created() {
     // Only try the deprecated iframe mode, if config schema is not found
+    const schemaUrl = this.application.url + '/config-schema.json'
     try {
-      this.schema = await this.$axios.$get(this.applicationLink + '/config-schema.json')
+      this.schema = await this.$axios.$get(schemaUrl)
       if (typeof this.schema !== 'object') {
-        console.error(`Schema fetched at ${this.applicationLink}/config-schema.json is not a valid JSON`)
+        console.error(`Schema fetched at ${schemaUrl} is not a valid JSON`)
         this.showConfigIframe = true
       } else {
         this.editConfig = { ...await this.readConfig() }
@@ -83,7 +84,7 @@ export default {
       }
     } catch (error) {
       if (error.response && error.response.status === 404) {
-        console.error(`Schema not found at ${this.applicationLink}/config-schema.json`)
+        console.error(`Schema not found at ${schemaUrl}`)
         this.showConfigIframe = true
       } else {
         eventBus.$emit('notification', { error })
