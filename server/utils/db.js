@@ -32,6 +32,7 @@ exports.init = async () => {
   await ensureIndex(db, 'datasets', { id: 1 }, { unique: true })
   await ensureIndex(db, 'datasets', { 'owner.type': 1, 'owner.id': 1 })
   await ensureIndex(db, 'datasets', { title: 'text', description: 'text', 'owner.name': 'text' }, { name: 'fulltext' })
+  await ensureIndex(db, 'datasets', { 'virtual.children': 1 })
   // remote-services indexes
   await ensureIndex(db, 'remote-services', { id: 1 }, { unique: true })
   await ensureIndex(db, 'remote-services', { 'owner.type': 1, 'owner.id': 1 })

@@ -25,7 +25,8 @@ const schema = {
       key: { type: 'string' },
       type: { type: 'string' },
       format: { type: 'string' },
-      'x-originalName': { type: 'string' }
+      'x-originalName': { type: 'string' },
+      'x-refersTo': { type: 'string' }
     }
   }
 }
@@ -254,6 +255,24 @@ module.exports = {
       type: 'boolean',
       default: false,
       description: 'true when the dataset has attached files'
+    },
+    isVirtual: {
+      type: 'boolean',
+      default: false,
+      description: 'Used to identify virtual datasets. A virtual datasets does not have data, only references to other datasets.'
+    },
+    virtual: {
+      type: 'object',
+      description: 'A configuration object dedicated to virtual datasets.',
+      properties: {
+        children: {
+          type: 'array',
+          description: 'Array of ids of the children datasets',
+          items: {
+            type: 'string'
+          }
+        }
+      }
     },
     permissions
   }

@@ -6,7 +6,10 @@ const flatten = require('flat')
 const thumbor = require('../thumbor')
 const tiles = require('../tiles')
 
-exports.aliasName = dataset => `${config.indicesPrefix}-${dataset.id}`
+exports.aliasName = dataset => {
+  const ids = dataset.isVirtual ? dataset.virtual.children : [dataset.id]
+  return ids.map(id => `${config.indicesPrefix}-${id}`).join(',')
+}
 
 exports.parseSort = (sortStr) => {
   if (!sortStr) return []

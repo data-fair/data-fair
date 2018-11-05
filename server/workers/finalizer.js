@@ -21,16 +21,19 @@ exports.process = async function(app, dataset) {
   const db = app.get('db')
   const es = app.get('es')
   const collection = db.collection('datasets')
+
   const geopoint = geoUtils.schemaHasGeopoint(dataset.schema)
   const geometry = geoUtils.schemaHasGeometry(dataset.schema)
 
-  // Calculate fields after indexing and extension as we might depend on all fields
-  if (geometry || geopoint) {
-    debug(`Call extendCalculated() with geopoint ${geopoint} and geometry ${geometry}`)
-    await extensionsUtils.extendCalculated(app, dataset, geopoint, geometry)
-    debug('extendCalculated ok')
-  } else {
-    debug('No need for extendCalculated on this dataset')
+  if (!dataset.isVirtual) {
+    // Calculate fields after indexing and extension as we might depend on all fields
+    if (geometry || geopoint) {
+      debug(`Call extendCalculated() with geopoint ${geopoint} and geometry ${geometry}`)
+      await extensionsUtils.extendCalculated(app, dataset, geopoint, geometry)
+      debug('extendCalculated ok')
+    } else {
+      debug('No need for extendCalculated on this dataset')
+    }
   }
 
   const result = { status: 'finalized' }

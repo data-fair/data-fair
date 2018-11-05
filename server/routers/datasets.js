@@ -14,6 +14,7 @@ const mongodb = require('mongodb')
 const config = require('config')
 const clone = require('fast-clone')
 const chardet = require('chardet')
+const slug = require('slugify')
 const rimraf = util.promisify(require('rimraf'))
 const journals = require('../utils/journals')
 const esUtils = require('../utils/es')
@@ -127,8 +128,7 @@ router.get('/:datasetId/schema', readDataset, permissions.middleware('readDescri
 router.patch('/:datasetId', readDataset, permissions.middleware('writeDescription', 'write'), asyncWrap(async(req, res) => {
   const patch = req.body
   if (!acceptedStatuses.includes(req.dataset.status) && (patch.schema || patch.extensions)) return res.status(409).send('Dataset is not in proper state to be updated')
-  var valid = validatePatch(patch)
-  if (!valid) return res.status(400).send(ajvErrorMessages(validatePatch.errors))
+  if (!validatePatch(patch)) return res.status(400).send(ajvErrorMessages(validatePatch.errors))
 
   patch.updatedAt = moment().toISOString()
   patch.updatedBy = { id: req.user.id, name: req.user.name }
@@ -214,6 +214,7 @@ const initNew = (req) => {
   dataset.createdAt = dataset.updatedAt = date
   dataset.createdBy = dataset.updatedBy = { id: req.user.id, name: req.user.name }
   dataset.permissions = []
+  dataset.schema = dataset.schema || []
   return dataset
 }
 
@@ -246,11 +247,40 @@ const beforeUpload = asyncWrap(async(req, res, next) => {
 })
 router.post('', beforeUpload, filesUtils.uploadFile(), asyncWrap(async(req, res) => {
   const db = req.app.get('db')
+  let dataset
   // After uploadFile, req.file contains the metadata of an uploaded file, and req.body the content of additional text fields
-  if (!req.file) return res.status(400).send('Expected a file multipart/form-data')
+  if (req.file) {
+    if (req.body.isVirtual) return res.status(400).send('Un jeu de données virtuel ne peut pas être initialisé avec un fichier')
+    dataset = await setFileInfo(req.file, initNew(req))
+    await db.collection('datasets').insertOne(dataset)
+  } else {
+    if (!req.body.isVirtual) return res.status(400).send('Un jeu de données doit être initialisé avec un fichier ou déclaré "virtuel"')
+    if (!req.body.title) return res.status(400).send('Un jeu de données virtuel doit être créé avec un titre')
+    const { isVirtual, ...patch } = req.body
+    if (!validatePatch(patch)) {
+      console.log(validatePatch.errors)
+      return res.status(400).send(ajvErrorMessages(validatePatch.errors))
+    }
+    dataset = initNew(req)
+    dataset.virtual = dataset.virtual || { children: [] }
+    dataset.status = 'indexed'
+    // Generate ids and try insertion until there is no conflict on id
+    const baseId = slug(req.body.title)
+    dataset.id = baseId
+    let insertOk = false
+    let i = 1
+    while (!insertOk) {
+      try {
+        await req.app.get('db').collection('datasets').insertOne(dataset)
+        insertOk = true
+      } catch (err) {
+        if (err.code !== 11000) throw err
+        i += 1
+        dataset.id = `${baseId}-${i}`
+      }
+    }
+  }
 
-  const dataset = await setFileInfo(req.file, initNew(req))
-  await db.collection('datasets').insertOne(dataset)
   delete dataset._id
 
   await journals.log(req.app, dataset, { type: 'dataset-created', href: config.publicUrl + '/dataset/' + dataset.id }, 'dataset')
@@ -258,7 +288,7 @@ router.post('', beforeUpload, filesUtils.uploadFile(), asyncWrap(async(req, res)
   res.status(201).send(clean(dataset))
 }))
 
-// POST with an id to create or update an existing dataset data
+// PUT or POST with an id to create or update an existing dataset data
 const attemptInsert = asyncWrap(async(req, res, next) => {
   const newDataset = initNew(req)
   newDataset.id = req.params.datasetId
@@ -277,18 +307,32 @@ const attemptInsert = asyncWrap(async(req, res, next) => {
 const updateDataset = asyncWrap(async(req, res) => {
   const db = req.app.get('db')
   // After uploadFile, req.file contains the metadata of an uploaded file, and req.body the content of additional text fields
-  if (!req.file) return res.status(400).send('Expected a file multipart/form-data')
+  if (!req.file && !req.dataset.isVirtual) return res.status(400).send('Un jeu de données doit être initialisé avec un fichier ou déclaré "virtuel"')
+  if (req.file && req.dataset.isVirtual) return res.status(400).send('Un jeu de données est soit initialisé avec un fichier soit déclaré "virtuel"')
+  if (req.dataset.isVirtual && !req.dataset.title) return res.status(400).send('Un jeu de données virtuel doit être créé avec un titre')
   if (req.dataset.status && !acceptedStatuses.includes(req.dataset.status)) return res.status(409).send('Dataset is not in proper state to be updated')
 
-  const newDataset = await setFileInfo(req.file, req.dataset)
-  Object.assign(newDataset, req.body)
-  newDataset.updatedBy = { id: req.user.id, name: req.user.name }
-  newDataset.updatedAt = moment().toISOString()
-  await db.collection('datasets').replaceOne({ id: req.params.datasetId }, newDataset)
-  if (req.isNewDataset) await journals.log(req.app, newDataset, { type: 'data-created' }, 'dataset')
-  else await journals.log(req.app, newDataset, { type: 'data-updated' }, 'dataset')
+  let dataset = req.dataset
+  if (req.file) {
+    dataset = await setFileInfo(req.file, req.dataset)
+  } else {
+    const { isVirtual, ...patch } = req.body
+    if (!validatePatch(patch)) {
+      console.log(validatePatch.errors)
+      return res.status(400).send(ajvErrorMessages(validatePatch.errors))
+    }
+    req.body.virtual = req.body.virtual || { children: [] }
+    req.body.status = 'indexed'
+  }
+  Object.assign(dataset, req.body)
+
+  dataset.updatedBy = { id: req.user.id, name: req.user.name }
+  dataset.updatedAt = moment().toISOString()
+  await db.collection('datasets').replaceOne({ id: req.params.datasetId }, dataset)
+  if (req.isNewDataset) await journals.log(req.app, dataset, { type: 'data-created' }, 'dataset')
+  else await journals.log(req.app, dataset, { type: 'data-updated' }, 'dataset')
   await datasetUtils.updateStorageSize(db, req.dataset.owner)
-  res.status(req.isNewDataset ? 201 : 200).send(clean(newDataset))
+  res.status(req.isNewDataset ? 201 : 200).send(clean(dataset))
 })
 router.post('/:datasetId', attemptInsert, readDataset, permissions.middleware('writeData', 'write'), filesUtils.uploadFile(), updateDataset)
 router.put('/:datasetId', attemptInsert, readDataset, permissions.middleware('writeData', 'write'), filesUtils.uploadFile(), updateDataset)

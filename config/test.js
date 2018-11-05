@@ -5,7 +5,7 @@ module.exports = {
   },
   workers: {
     concurrency: 1,
-    pollingInterval: 1
+    pollingInterval: 10
   },
   locks: {
     // in seconds
