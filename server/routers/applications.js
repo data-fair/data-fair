@@ -65,7 +65,10 @@ router.get('', asyncWrap(async(req, res) => {
   ]
   if (req.query.facets) {
     const q = clone(query)
-    if (req.query.owner) q.$and.pop()
+    if (req.query.owner) {
+      q.$and.pop()
+      if (!q.$and.length) delete q.$and
+    }
     mongoQueries.push(applications.aggregate(findUtils.facetsQuery(req.query.facets, q)).toArray())
   }
   let [results, count, facets] = await Promise.all(mongoQueries)

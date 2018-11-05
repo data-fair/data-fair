@@ -27,6 +27,19 @@ test('Get datasets when authenticated', async t => {
   t.is(res.data.count, 0)
 })
 
+test('Get datasets with special param as super admin', async t => {
+  const ax = await axiosBuilder('alone@no.org')
+  try {
+    await ax.get('/api/v1/datasets', { params: { showAll: true } })
+  } catch (err) {
+    t.is(err.status, 400)
+  }
+  const axAdmin = await axiosBuilder('alban.mouton@koumoul.com')
+  const res = await axAdmin.get('/api/v1/datasets', { params: { showAll: true } })
+  t.is(res.status, 200)
+  t.true(res.data.count > 0)
+})
+
 const datasetFd = fs.readFileSync('./test/resources/dataset1.csv')
 
 test.serial('Failure to upload dataset exceeding limit', async t => {

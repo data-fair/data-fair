@@ -26,8 +26,9 @@
     <v-spacer/>
     <v-flex xs12>
       <v-layout row wrap>
-        <v-chip v-for="filter in Object.keys(filterLabels)" v-if="filters[filter]" :key="filter" close small color="accent" text-color="white" @input="filters[filter] = null;writeParams(filter)">
-          <strong>{{ filterLabels[filter] }} : {{ filters[filter] }}</strong>
+        <v-chip v-for="filter in Object.keys(fullFilterLabels)" v-if="filters[filter]" :key="filter" close small color="accent" text-color="white" @input="filters[filter] = null;writeParams(filter)">
+          <strong v-if="filter === 'showAll'">Vue administrateur : {{ owners.length ? owners.join(', ') : 'tout voir' }}</strong>
+          <strong v-else>{{ fullFilterLabels[filter] }} : {{ filters[filter] }}</strong>
         </v-chip>
       </v-layout>
     </v-flex>
@@ -35,7 +36,7 @@
 </template>
 
 <script>
-import { mapActions } from 'vuex'
+import { mapActions, mapState } from 'vuex'
 
 export default {
   props: ['filters', 'filterLabels', 'facets', 'type'],
@@ -43,8 +44,12 @@ export default {
     owners: []
   }),
   computed: {
-    user() {
-      return this.$store.state.session && this.$store.state.session.user
+    ...mapState('session', ['user']),
+    fullFilterLabels() {
+      return {
+        ...this.filterLabels,
+        showAll: 'Tout voir'
+      }
     },
     ownerCount() {
       if (!this.facets) return {}
@@ -72,7 +77,7 @@ export default {
   methods: {
     ...mapActions(['searchQuery']),
     readParams() {
-      Object.keys(this.filterLabels).forEach(key => {
+      Object.keys(this.fullFilterLabels).forEach(key => {
         this.$set(this.filters, key, this.$route.query[key])
       })
       this.$set(this.filters, 'q', this.$route.query.q)

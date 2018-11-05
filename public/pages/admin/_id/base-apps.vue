@@ -26,7 +26,7 @@
               </v-list-tile-title>
               <v-list-tile-sub-title>{{ baseApp.description }}</v-list-tile-sub-title>
               <v-list-tile-sub-title>
-                <nuxt-link :to="{path: '/applications', query: {url: baseApp.url}}">{{ baseApp.nbApplications }} application{{ baseApp.nbApplications > 1 ? 's' : '' }}</nuxt-link>
+                <nuxt-link :to="{path: '/applications', query: {url: baseApp.url, showAll: true}}">{{ baseApp.nbApplications }} application{{ baseApp.nbApplications > 1 ? 's' : '' }}</nuxt-link>
                 - Jeux de données : {{ baseApp.datasetsFilters }} - Services distants: {{ baseApp.servicesFilters }}
               </v-list-tile-sub-title>
             </v-list-tile-content>

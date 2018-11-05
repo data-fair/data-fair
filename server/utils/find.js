@@ -1,4 +1,5 @@
 const config = require('config')
+const createError = require('http-errors')
 const permissions = require('./permissions')
 
 // Util functions shared accross the main find (GET on collection) endpoints
@@ -24,7 +25,10 @@ exports.query = (req, fieldsMap) => {
     query[fieldsMap[name]] = { $in: req.query[name].split(',') }
   })
 
-  query.$and = [{ $or: permissions.filter(req.user) }]
+  const showAll = req.query.showAll === 'true'
+  if (showAll && !req.user.isAdmin) throw createError(400, 'Only super admins can override permissions filter with showAll parameter')
+  query.$and = []
+  if (!showAll) query.$and.push({ $or: permissions.filter(req.user) })
   if (req.query.owner) {
     delete query['owner.type']
     delete query['owner.id']
@@ -44,6 +48,7 @@ exports.query = (req, fieldsMap) => {
     }
     query.$and.push({ $or: ownerFilters })
   }
+  if (!query.$and.length) delete query.$and
   return query
 }
 
