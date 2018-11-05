@@ -110,7 +110,7 @@ exports.prepareResultItem = (hit, dataset, query) => {
   }
   if (query.thumbnail) {
     const imageField = dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/image')
-    if (!imageField) return res.status(400).send('Thumbnail management is only available if the "image" concept is associated to a field of the dataset.')
+    if (!imageField) throw createError(400, 'Thumbnail management is only available if the "image" concept is associated to a field of the dataset.')
     res._thumbnail = thumbor.thumbnail(res[imageField.key], query.thumbnail)
   }
   return res
