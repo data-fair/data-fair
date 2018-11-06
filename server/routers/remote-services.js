@@ -100,7 +100,7 @@ const initNew = (req) => {
   service.createdBy = service.updatedBy = { id: req.user.id, name: req.user.name }
   if (service.apiDoc) {
     if (service.apiDoc.info) {
-      service.title = service.apiDoc.info.title
+      service.title = service.title || service.apiDoc.info.title
       service.description = service.apiDoc.info.description
     }
     service.actions = computeActions(service.apiDoc)
@@ -111,6 +111,8 @@ const initNew = (req) => {
 
 // Create a remote Api
 router.post('', asyncWrap(async(req, res) => {
+  // if title is set, we build id from it
+  if (req.body.title && !req.body.id) req.body.id = slug(req.body.title, { lower: true })
   const service = initNew(req)
   if (!permissions.canDoForOwner(service.owner, 'postRemoteService', req.user, req.app.get('db'))) return res.sendStatus(403)
   if (!validate(service)) return res.status(400).send(ajvErrorMessages(validate.errors))

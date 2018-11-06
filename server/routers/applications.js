@@ -48,7 +48,7 @@ router.get('', asyncWrap(async(req, res) => {
   if (req.query.service &&
       !req.query.service.startsWith('http://') &&
       !req.query.service.startsWith('https://')) {
-    req.query.service = config.publicUrl + '/api/v1/remote-services/' + req.query.service + '/proxy'
+    req.query.service = config.publicUrl + '/api/v1/remote-services/' + req.query.service
   }
   const query = findUtils.query(req, {
     'ids': 'id',
