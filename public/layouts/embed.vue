@@ -14,6 +14,8 @@
 </template>
 
 <script>
+import 'iframe-resizer/js/iframeResizer.contentWindow'
+
 import eventBus from '../event-bus'
 export default {
   data() {
