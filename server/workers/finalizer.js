@@ -3,6 +3,7 @@ const esUtils = require('../utils/es')
 const geoUtils = require('../utils/geo')
 const extensionsUtils = require('../utils/extensions')
 const datasetUtils = require('../utils/dataset')
+const virtualDatasetsUtils = require('../utils/virtual-datasets')
 
 exports.type = 'dataset'
 exports.eventsPrefix = 'finalize'
@@ -26,7 +27,10 @@ exports.process = async function(app, dataset) {
   const geopoint = geoUtils.schemaHasGeopoint(dataset.schema)
   const geometry = geoUtils.schemaHasGeometry(dataset.schema)
 
-  if (!dataset.isVirtual) {
+  const queryableDataset = { ...dataset }
+  if (dataset.isVirtual) {
+    queryableDataset.descendants = await virtualDatasetsUtils.descendants(db, dataset)
+  } else {
     // Calculate fields after indexing and extension as we might depend on all fields
     if (geometry || geopoint) {
       debug(`Call extendCalculated() with geopoint ${geopoint} and geometry ${geometry}`)
@@ -45,7 +49,7 @@ exports.process = async function(app, dataset) {
     .filter(prop => prop['x-refersTo'] !== 'https://purl.org/geojson/vocab#geometry')
   for (let prop of cardinalityProps) {
     debug(`Calculate cardinality of field ${prop.key}`)
-    const aggResult = await esUtils.valuesAgg(es, dataset, { field: prop.key, agg_size: '50', precision_threshold: 3000 })
+    const aggResult = await esUtils.valuesAgg(es, queryableDataset, { field: prop.key, agg_size: '50', precision_threshold: 3000 })
     prop['x-cardinality'] = aggResult.total_values
     debug(`Cardinality of field ${prop.key} is ${prop['x-cardinality']}`)
 
@@ -60,7 +64,7 @@ exports.process = async function(app, dataset) {
   if (geopoint || geometry) {
     debug('calculate bounding ok')
     dataset.bbox = []
-    result.bbox = dataset.bbox = (await esUtils.bboxAgg(es, dataset)).bbox
+    result.bbox = dataset.bbox = (await esUtils.bboxAgg(es, queryableDataset)).bbox
     debug('bounding box ok', result.bbox)
   } else {
     result.bbox = null

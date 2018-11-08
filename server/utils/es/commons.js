@@ -33,7 +33,7 @@ exports.esProperty = prop => {
 }
 
 exports.aliasName = dataset => {
-  const ids = dataset.isVirtual ? dataset.virtual.children : [dataset.id]
+  const ids = dataset.isVirtual ? dataset.descendants : [dataset.id]
   return ids.map(id => `${config.indicesPrefix}-${id}`).join(',')
 }
 
@@ -111,6 +111,14 @@ exports.prepareQuery = (dataset, query) => {
 
   const filter = []
   const must = []
+
+  // Enforced static filters from virtual datasets
+  if (dataset.virtual && dataset.virtual.filters) {
+    dataset.virtual.filters.filter(f => f.values && f.values.length).forEach(f => {
+      if (f.values.length === 1) filter.push({ term: { [f.key]: f.values[0] } })
+      else filter.push({ terms: { [f.key]: f.values } })
+    })
+  }
 
   // query and simple query string for a lot of functionalities in a simple exposition (too open ??)
   // const multiFields = [...fields].concat(dataset.schema.filter(f => f.type === 'string').map(f => f.key + '.text'))

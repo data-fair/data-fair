@@ -35,14 +35,48 @@ exports.prepareSchema = async (db, schema, virtual) => {
       throw createError(400, `Le champ "${field.key}" n'est présent dans aucun jeu de données enfant`)
     }
     field.type = field.type || matchingFields[0].type
-    field.format = field.format || matchingFields[0].format
+    field.format = field.format || matchingFields[0].format || null
     matchingFields.forEach(f => {
       if (f.type !== field.type) throw createError(400, `Le champ "${field.key}" a des types contradictoires (${field.type}, ${f.type})`)
-      if (f.format !== field.format) throw createError(400, `Le champ "${field.key}" a des formats contradictoires (${field.format}, ${f.format})`)
+      if ((f.format || null) !== field.format) throw createError(400, `Le champ "${field.key}" a des formats contradictoires (${field.format}, ${f.format})`)
       field.title = field.title || f.title
       field.description = field.title || f.title
       field['x-refersTo'] = field['x-refersTo'] || f['x-refersTo']
     })
   })
   return schema
+}
+
+// Only non virtual descendants on which to perform the actual ES queries
+exports.descendants = async (db, dataset) => {
+  const res = await db.collection('datasets').aggregate([{
+    $match: {
+      id: dataset.id
+    }
+  }, {
+    $graphLookup: {
+      from: 'datasets',
+      startWith: '$virtual.children',
+      connectFromField: 'virtual.children',
+      connectToField: 'id',
+      as: 'descendants',
+      maxDepth: 20
+    }
+  }, {
+    $project: {
+      'descendants.id': 1,
+      'descendants.isVirtual': 1,
+      'descendants.virtual': 1
+    }
+  }]).toArray()
+  const virtualDescendantsWithFilters = res[0].descendants
+    .filter(d => d.isVirtual && d.virtual.filters && d.virtual.filters.length)
+  if (virtualDescendantsWithFilters.length) {
+    throw new Error(`Le jeu de données virtuel ne peut pas être requêté, il agrège un autre jeu de données virtuel avec des filtres dont nous ne pouvons pas garantir l'application.`)
+  }
+  const physicalDescendants = res[0].descendants.filter(d => !d.isVirtual).map(d => d.id)
+  if (physicalDescendants.length === 0) {
+    throw new Error(`Le jeu de données virtuel ne peut pas être requêté, il n'agrège aucun jeu de données physique.`)
+  }
+  return physicalDescendants
 }

@@ -140,7 +140,7 @@ router.patch('/:datasetId', readDataset, permissions.middleware('writeDescriptio
   // Except download.. We only try it again if the fetch failed.
   if (req.dataset.status === 'error') {
     if (req.dataset.isVirtual) patch.status = 'indexed'
-    if (req.dataset.remoteFile && !req.dataset.originalFile) patch.status = 'imported'
+    else if (req.dataset.remoteFile && !req.dataset.originalFile) patch.status = 'imported'
     else if (!baseTypes.has(req.dataset.originalFile.mimetype)) patch.status = 'uploaded'
     else patch.status = 'loaded'
   }
@@ -405,6 +405,8 @@ router.get('/:datasetId/lines', readDataset, permissions.middleware('readLines',
     cacheHash = hash
   }
 
+  if (req.dataset.isVirtual) req.dataset.descendants = await virtualDatasetsUtils.descendants(db, req.dataset)
+
   let esResponse
   try {
     esResponse = await esUtils.search(req.app.get('es'), req.dataset, req.query)
@@ -440,6 +442,7 @@ router.get('/:datasetId/lines', readDataset, permissions.middleware('readLines',
 // Special geo aggregation
 router.get('/:datasetId/geo_agg', readDataset, permissions.middleware('getGeoAgg', 'read'), asyncWrap(async(req, res) => {
   if (!req.user && managePublicCache(req, res)) return res.status(304).send()
+  if (req.dataset.isVirtual) req.dataset.descendants = await virtualDatasetsUtils.descendants(req.app.get('db'), req.dataset)
   let result
   try {
     result = await esUtils.geoAgg(req.app.get('es'), req.dataset, req.query)
@@ -452,6 +455,7 @@ router.get('/:datasetId/geo_agg', readDataset, permissions.middleware('getGeoAgg
 // Standard aggregation to group items by value and perform an optional metric calculation on each group
 router.get('/:datasetId/values_agg', readDataset, permissions.middleware('getValuesAgg', 'read'), asyncWrap(async(req, res) => {
   if (!req.user && managePublicCache(req, res)) return res.status(304).send()
+  if (req.dataset.isVirtual) req.dataset.descendants = await virtualDatasetsUtils.descendants(req.app.get('db'), req.dataset)
   let result
   try {
     result = await esUtils.valuesAgg(req.app.get('es'), req.dataset, req.query)
@@ -464,6 +468,7 @@ router.get('/:datasetId/values_agg', readDataset, permissions.middleware('getVal
 // Simple metric aggregation to calculate some value (sum, avg, etc.)
 router.get('/:datasetId/metric_agg', readDataset, permissions.middleware('getMetricAgg', 'read'), asyncWrap(async(req, res) => {
   if (!req.user && managePublicCache(req, res)) return res.status(304).send()
+  if (req.dataset.isVirtual) req.dataset.descendants = await virtualDatasetsUtils.descendants(req.app.get('db'), req.dataset)
   let result
   try {
     result = await esUtils.metricAgg(req.app.get('es'), req.dataset, req.query)
@@ -476,6 +481,7 @@ router.get('/:datasetId/metric_agg', readDataset, permissions.middleware('getMet
 // Simple words aggregation for significant terms extraction
 router.get('/:datasetId/words_agg', readDataset, permissions.middleware('getWordsAgg', 'read'), asyncWrap(async(req, res) => {
   if (!req.user && managePublicCache(req, res)) return res.status(304).send()
+  if (req.dataset.isVirtual) req.dataset.descendants = await virtualDatasetsUtils.descendants(req.app.get('db'), req.dataset)
   let result
   try {
     result = await esUtils.wordsAgg(req.app.get('es'), req.dataset, req.query)
@@ -507,6 +513,7 @@ router.get('/:datasetId/convert', readDataset, permissions.middleware('downloadO
 
 // Download the full dataset with extensions
 router.get('/:datasetId/full', readDataset, permissions.middleware('downloadFullData', 'read'), asyncWrap(async (req, res, next) => {
+  if (req.dataset.isVirtual) req.dataset.descendants = await virtualDatasetsUtils.descendants(req.app.get('db'), req.dataset)
   res.setHeader('Content-disposition', 'attachment; filename=' + req.dataset.file.name)
   res.setHeader('Content-type', 'text/csv')
   const relevantSchema = req.dataset.schema.filter(f => f.key.startsWith('_ext_') || !f.key.startsWith('_'))
@@ -546,12 +553,13 @@ router.get('/:datasetId/_diagnose', readDataset, asyncWrap(async(req, res) => {
   res.json({ filesInfos, esInfos })
 }))
 
-// Special admin route to firce reindexing a dataset
+// Special admin route to force reindexing a dataset
 router.post('/:datasetId/_reindex', readDataset, asyncWrap(async(req, res) => {
   if (!req.user) return res.status(401).send()
   if (!req.user.isAdmin) return res.status(403).send()
   const patch = { status: 'loaded' }
-  if (!baseTypes.has(req.dataset.originalFile.mimetype)) patch.status = 'uploaded'
+  if (req.dataset.isVirtual) patch.status = 'indexed'
+  else if (!baseTypes.has(req.dataset.originalFile.mimetype)) patch.status = 'uploaded'
   await req.app.get('db').collection('datasets').updateOne({ id: req.params.datasetId }, { '$set': patch })
   res.status(200).send(patch)
 }))

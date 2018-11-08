@@ -271,6 +271,25 @@ module.exports = {
           items: {
             type: 'string'
           }
+        },
+        filters: {
+          type: 'array',
+          description: 'Array of static filters to always apply when querying the dataset',
+          items: {
+            type: 'object',
+            properties: {
+              key: {
+                type: 'string',
+                description: 'Key of the field in the schema'
+              },
+              values: {
+                type: 'array',
+                items: {
+                  type: 'string'
+                }
+              }
+            }
+          }
         }
       }
     },
