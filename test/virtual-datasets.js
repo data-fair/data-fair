@@ -45,8 +45,12 @@ test.serial('Create a virtual dataset, add children and query', async t => {
   await ax.patch('/api/v1/datasets/my-id', {
     virtual: {
       children: [dataset1.id, dataset2.id, dataset3.id]
-    }
+    },
+    schema: [{
+      key: 'id'
+    }]
   })
+  await workers.hook('finalizer/my-id')
   res = await ax.get('/api/v1/datasets/my-id/lines')
   t.is(res.data.total, 6)
   res = await ax.get('/api/v1/datasets/my-id/lines', { params: { q: 'koumoul' } })
@@ -55,26 +59,27 @@ test.serial('Create a virtual dataset, add children and query', async t => {
 
 test.serial('Check compatibility of schema with children', async t => {
   const ax = await axiosBuilder('dmeadus0@answers.com')
-  const dataset1 = await testUtils.sendDataset('dataset1.csv', ax)
+  let dataset = await testUtils.sendDataset('dataset1.csv', ax)
   await ax.put('/api/v1/datasets/my-id', {
     isVirtual: true,
     title: 'a virtual dataset',
     virtual: {
-      children: [dataset1.id]
+      children: [dataset.id]
     },
     schema: [{
-      key: 'id',
-      type: 'string'
+      key: 'id'
     }]
   })
-
+  dataset = await workers.hook('finalizer')
+  t.truthy(dataset.schema.find(f => f.key === 'id'))
+  t.truthy(dataset.schema.find(f => f.key === 'id').type === 'string')
   try {
     await ax.patch('/api/v1/datasets/my-id', {
       schema: [{
-        key: 'badKey',
-        type: 'string'
+        key: 'badKey'
       }]
     })
+    t.fail()
   } catch (err) {
     t.is(err.status, 400)
   }
@@ -93,3 +98,5 @@ test.serial('Check compatibility of schema with children', async t => {
 // t.is(virtualDataset.status, 'finalized')
 
 // Check that it is possible to list the virtual datasets that use a dataset
+
+// Check that updating / deleting a child impacts the parents (and other ancestors)

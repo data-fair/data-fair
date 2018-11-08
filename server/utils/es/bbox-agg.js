@@ -1,6 +1,9 @@
+const createError = require('http-errors')
 const { prepareQuery, aliasName } = require('./commons')
 
 module.exports = async (client, dataset, query = {}) => {
+  if (!dataset.bbox) throw createError(400, 'geo aggregation cannot be used on this dataset. It is not geolocalized.')
+
   const esQuery = prepareQuery(dataset, query)
   esQuery.size = 0
   // Use corners, not centroid in order to get truly surrounding box

@@ -1,43 +1,13 @@
-const config = require('config')
 const crypto = require('crypto')
-const geoUtils = require('../geo')
-const { aliasName } = require('./commons')
-
-exports.esProperty = prop => {
-  if (prop.type === 'object') return { type: 'object' }
-  if (prop.type === 'integer') return { type: 'long' }
-  if (prop.type === 'number') return { type: 'double' }
-  if (prop.type === 'boolean') return { type: 'boolean' }
-  if (prop.type === 'string' && prop.format === 'date-time') return { type: 'date' }
-  if (prop.type === 'string' && prop.format === 'date') return { type: 'date' }
-  // uri-reference and full text fields are managed in the same way from now on, because we want to be able to aggregate on small full text fields
-  // TODO: maybe ignore_above should be only for uri-reference fields
-  const textField = { type: 'keyword', ignore_above: 200, fields: { text: { type: 'text', analyzer: config.elasticsearch.defaultAnalyzer, fielddata: true } } }
-  if (prop.type === 'string' && prop.format === 'uri-reference') return textField
-  return textField
-}
+const datasetUtils = require('../dataset')
+const { aliasName, esProperty } = require('./commons')
 
 exports.indexDefinition = (dataset) => {
   const body = JSON.parse(JSON.stringify(indexBase))
-
   const properties = body.mappings.line.properties = {}
-  dataset.schema.forEach(jsProp => {
-    if (jsProp.key) {
-      properties[jsProp.key] = exports.esProperty(jsProp)
-      // Do not index geometry, it will copied and simplified in _geoshape
-      if (jsProp['x-refersTo'] === 'https://purl.org/geojson/vocab#geometry') properties[jsProp.key].index = false
-    }
+  datasetUtils.extendedSchema(dataset).forEach(jsProp => {
+    properties[jsProp.key] = esProperty(jsProp)
   })
-
-  // "hidden" fields for geo indexing (lat/lon in dataset or geojson data type)
-  if (geoUtils.schemaHasGeopoint(dataset.schema) || geoUtils.schemaHasGeometry(dataset.schema)) {
-    properties['_geopoint'] = { type: 'geo_point' }
-    properties['_geoshape'] = { type: 'geo_shape' }
-    properties['_geocorners'] = { type: 'geo_point' }
-  }
-  // "hidden" handy fields for sorting
-  properties['_rand'] = { type: 'integer' }
-  properties['_i'] = { type: 'integer' }
   return body
 }
 

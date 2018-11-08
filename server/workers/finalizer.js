@@ -2,6 +2,7 @@
 const esUtils = require('../utils/es')
 const geoUtils = require('../utils/geo')
 const extensionsUtils = require('../utils/extensions')
+const datasetUtils = require('../utils/dataset')
 
 exports.type = 'dataset'
 exports.eventsPrefix = 'finalize'
@@ -36,12 +37,13 @@ exports.process = async function(app, dataset) {
     }
   }
 
-  const result = { status: 'finalized' }
+  const result = { status: 'finalized', schema: dataset.schema }
 
   // Try to calculate enum values
-  const nonGeometryProps = dataset.schema.filter(prop => prop['x-refersTo'] !== 'https://purl.org/geojson/vocab#geometry')
-  if (nonGeometryProps.length) result.schema = dataset.schema
-  for (let prop of nonGeometryProps) {
+  const cardinalityProps = dataset.schema
+    .filter(prop => !prop.key.startsWith('_'))
+    .filter(prop => prop['x-refersTo'] !== 'https://purl.org/geojson/vocab#geometry')
+  for (let prop of cardinalityProps) {
     debug(`Calculate cardinality of field ${prop.key}`)
     const aggResult = await esUtils.valuesAgg(es, dataset, { field: prop.key, agg_size: '50', precision_threshold: 3000 })
     prop['x-cardinality'] = aggResult.total_values
@@ -57,11 +59,15 @@ exports.process = async function(app, dataset) {
 
   if (geopoint || geometry) {
     debug('calculate bounding ok')
+    dataset.bbox = []
     result.bbox = dataset.bbox = (await esUtils.bboxAgg(es, dataset)).bbox
     debug('bounding box ok', result.bbox)
   } else {
     result.bbox = null
   }
+
+  // Add the calculated fields to the schema
+  result.schema = datasetUtils.extendedSchema(dataset)
 
   result.finalizedAt = (new Date()).toISOString()
   Object.assign(dataset, result)

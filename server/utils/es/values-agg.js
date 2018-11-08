@@ -2,11 +2,12 @@ const createError = require('http-errors')
 const { parseSort, prepareQuery, aliasName, prepareResultItem } = require('./commons.js')
 
 module.exports = async (client, dataset, query) => {
+  const fields = dataset.schema.map(f => f.key)
   // nested grouping by a serie of fields
   if (!query.field) throw createError(400, '"field" parameter is required')
-  const fields = query.field.split(';')
+  const valuesFields = query.field.split(';')
   // matching properties from the schema
-  const props = fields.map(f => dataset.schema.find(p => p.key === f))
+  const props = valuesFields.map(f => dataset.schema.find(p => p.key === f))
   // sorting for each level
   const sorts = query.sort ? query.sort.split(';') : []
   // interval for each level
@@ -14,8 +15,8 @@ module.exports = async (client, dataset, query) => {
   // number of agg results for each level
   const aggSizes = query.agg_size ? query.agg_size.split(';').map(s => Number(s)) : []
   const aggTypes = []
-  for (let i = 0; i < fields.length; i++) {
-    if (!props[i]) throw createError(400, `"field" parameter references an unknown field ${fields[i]}`)
+  for (let i = 0; i < valuesFields.length; i++) {
+    if (!props[i]) throw createError(400, `"field" parameter references an unknown field ${valuesFields[i]}`)
 
     intervals[i] = intervals[i] || 'value' // default is to group by strict value (simple terms aggregation)
     aggTypes[i] = 'terms'
@@ -32,8 +33,8 @@ module.exports = async (client, dataset, query) => {
 
     if (aggSizes[i] === undefined) aggSizes[i] = 20
     if (aggSizes[i] > 1000) throw createError(400, '"agg_size" cannot be more than 1000')
-    if (sorts[i] === fields[i]) sorts[i] = '_key'
-    if (sorts[i] === '-' + fields[i]) sorts[i] = '-_key'
+    if (sorts[i] === valuesFields[i]) sorts[i] = '_key'
+    if (sorts[i] === '-' + valuesFields[i]) sorts[i] = '-_key'
     if (sorts[i] === 'key') sorts[i] = '_key'
     if (sorts[i] === '-key') sorts[i] = '-_key'
     if (sorts[i] === 'count') sorts[i] = '_count'
@@ -56,10 +57,10 @@ module.exports = async (client, dataset, query) => {
   const esQuery = prepareQuery(dataset, query)
   esQuery.size = 0
   let currentAggLevel = esQuery.aggs = {}
-  for (let i = 0; i < fields.length; i++) {
+  for (let i = 0; i < valuesFields.length; i++) {
     currentAggLevel.values = {
       [aggTypes[i]]: {
-        field: fields[i],
+        field: valuesFields[i],
         size: aggSizes[i]
       }
     }
@@ -72,15 +73,19 @@ module.exports = async (client, dataset, query) => {
     if (aggTypes[i] === 'terms') {
       currentAggLevel.card = {
         cardinality: {
-          field: fields[i],
+          field: valuesFields[i],
           precision_threshold: precisionThreshold
         }
       }
     }
 
     // manage sorting
-    currentAggLevel.values[aggTypes[i]].order = parseSort(sorts[i])
+    currentAggLevel.values[aggTypes[i]].order = parseSort(sorts[i], fields)
     if (query.metric && query.metric_field) {
+      if (!fields.includes(query.metric_field)) {
+        throw createError(400, `Impossible d'agréger sur le champ ${query.metric_field}, il n'existe pas dans le jeu de données.`)
+      }
+
       currentAggLevel.values[aggTypes[i]].order.push({ metric: 'desc' })
       currentAggLevel.values.aggs = {}
       currentAggLevel.values.aggs.metric = {
@@ -90,7 +95,7 @@ module.exports = async (client, dataset, query) => {
     currentAggLevel.values[aggTypes[i]].order.push({ _count: 'desc' })
 
     // Prepare next nested level
-    if (fields[i + 1]) {
+    if (valuesFields[i + 1]) {
       currentAggLevel.values.aggs = currentAggLevel.values.aggs || {}
       currentAggLevel = currentAggLevel.values.aggs
     }
@@ -100,7 +105,7 @@ module.exports = async (client, dataset, query) => {
   if (size) {
     currentAggLevel.values.aggs = currentAggLevel.values.aggs || {}
     // the sort instruction after sort for aggregation results is used to sort inner hits
-    const hitsSort = parseSort(sorts[fields.length])
+    const hitsSort = parseSort(sorts[valuesFields.length], fields)
     // Also implicitly sort by score
     hitsSort.push('_score')
     // And lastly random order for natural distribution (mostly important for geo results)
@@ -109,7 +114,7 @@ module.exports = async (client, dataset, query) => {
   }
   // Bound complexity with a timeout
   const esResponse = await client.search({ index: aliasName(dataset), body: esQuery, timeout: '2s' })
-  return prepareValuesAggResponse(esResponse, fields, dataset, query)
+  return prepareValuesAggResponse(esResponse, valuesFields, dataset, query)
 }
 
 const prepareValuesAggResponse = (esResponse, fields, dataset, query) => {

@@ -23,6 +23,7 @@ const datasetAPIDocs = require('../../contract/dataset-api-docs')
 const permissions = require('../utils/permissions')
 const usersUtils = require('../utils/users')
 const datasetUtils = require('../utils/dataset')
+const virtualDatasetsUtils = require('../utils/virtual-datasets')
 const findUtils = require('../utils/find')
 const asyncWrap = require('../utils/async-wrap')
 const extensions = require('../utils/extensions')
@@ -126,17 +127,19 @@ router.get('/:datasetId/schema', readDataset, permissions.middleware('readDescri
 
 // Update a dataset's metadata
 router.patch('/:datasetId', readDataset, permissions.middleware('writeDescription', 'write'), asyncWrap(async(req, res) => {
+  const db = req.app.get('db')
   const patch = req.body
   if (!acceptedStatuses.includes(req.dataset.status) && (patch.schema || patch.extensions)) return res.status(409).send('Dataset is not in proper state to be updated')
   if (!validatePatch(patch)) return res.status(400).send(ajvErrorMessages(validatePatch.errors))
 
   patch.updatedAt = moment().toISOString()
   patch.updatedBy = { id: req.user.id, name: req.user.name }
-  if (patch.extensions) patch.schema = await extensions.prepareSchema(req.app.get('db'), patch.schema || req.dataset.schema, patch.extensions)
+  if (patch.extensions) patch.schema = await extensions.prepareSchema(db, patch.schema || req.dataset.schema, patch.extensions)
 
   // Changed a previously failed dataset, retry everything.
   // Except download.. We only try it again if the fetch failed.
   if (req.dataset.status === 'error') {
+    if (req.dataset.isVirtual) patch.status = 'indexed'
     if (req.dataset.remoteFile && !req.dataset.originalFile) patch.status = 'imported'
     else if (!baseTypes.has(req.dataset.originalFile.mimetype)) patch.status = 'uploaded'
     else patch.status = 'loaded'
@@ -151,7 +154,12 @@ router.patch('/:datasetId', readDataset, permissions.middleware('writeDescriptio
     }
   }
 
-  if (patch.schema) {
+  if (req.dataset.isVirtual) {
+    if (patch.schema || patch.virtual) {
+      patch.schema = await virtualDatasetsUtils.prepareSchema(db, patch.schema || req.dataset.schema, patch.virtual || req.dataset.virtual)
+      patch.status = 'indexed'
+    }
+  } else if (patch.schema) {
     try {
       await esUtils.updateDatasetMapping(req.app.get('es'), { id: req.dataset.id, schema: patch.schema })
       if (patch.extensions) {
@@ -263,6 +271,7 @@ router.post('', beforeUpload, filesUtils.uploadFile(), asyncWrap(async(req, res)
     }
     dataset = initNew(req)
     dataset.virtual = dataset.virtual || { children: [] }
+    dataset.schema = await virtualDatasetsUtils.prepareSchema(db, dataset.schema || [], dataset.virtual)
     dataset.status = 'indexed'
     // Generate ids and try insertion until there is no conflict on id
     const baseId = slug(req.body.title)
@@ -322,6 +331,7 @@ const updateDataset = asyncWrap(async(req, res) => {
       return res.status(400).send(ajvErrorMessages(validatePatch.errors))
     }
     req.body.virtual = req.body.virtual || { children: [] }
+    req.body.schema = await virtualDatasetsUtils.prepareSchema(db, req.body.schema || [], req.body.virtual)
     req.body.status = 'indexed'
   }
   Object.assign(dataset, req.body)
@@ -499,15 +509,16 @@ router.get('/:datasetId/convert', readDataset, permissions.middleware('downloadO
 router.get('/:datasetId/full', readDataset, permissions.middleware('downloadFullData', 'read'), asyncWrap(async (req, res, next) => {
   res.setHeader('Content-disposition', 'attachment; filename=' + req.dataset.file.name)
   res.setHeader('Content-type', 'text/csv')
+  const relevantSchema = req.dataset.schema.filter(f => f.key.startsWith('_ext_') || !f.key.startsWith('_'))
   await pump(
     datasetUtils.readStream(req.dataset),
     extensions.preserveExtensionStream({ db: req.app.get('db'), esClient: req.app.get('es'), dataset: req.dataset }),
     new Transform({ transform(chunk, encoding, callback) {
       const flatChunk = flatten(chunk)
-      callback(null, req.dataset.schema.map(field => flatChunk[field.key]))
+      callback(null, relevantSchema.map(field => flatChunk[field.key]))
     },
     objectMode: true }),
-    csvStringify({ columns: req.dataset.schema.map(field => field.title || field['x-originalName'] || field.key), header: true }),
+    csvStringify({ columns: relevantSchema.map(field => field.title || field['x-originalName'] || field.key), header: true }),
     res
   )
 }))

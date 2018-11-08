@@ -20,7 +20,7 @@ const schema = {
   'description': 'JSON schema properties of the fields in the file',
   items: {
     type: 'object',
-    required: ['key', 'type'],
+    required: ['key'],
     properties: {
       key: { type: 'string' },
       type: { type: 'string' },
