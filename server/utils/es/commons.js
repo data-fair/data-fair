@@ -3,6 +3,7 @@
 const config = require('config')
 const createError = require('http-errors')
 const flatten = require('flat')
+const queryParser = require('lucene-query-parser')
 const thumbor = require('../thumbor')
 const tiles = require('../tiles')
 
@@ -52,6 +53,21 @@ exports.parseSort = (sortStr, fields) => {
     }
     return { [field]: direction }
   })
+}
+
+// Check that a query_string query (lucene syntax)
+// does not try to use fields outside the current schema
+function checkQuery(query, fields, esFields) {
+  esFields = esFields || fields.concat(fields.map(f => f + '.text')).concat(['<implicit>'])
+  if (query.field === '_exists_') {
+    if (!esFields.includes(query.term)) {
+      throw createError(400, `Impossible de faire une recherche sur le champ ${query.term}, il n'existe pas dans le jeu de donénes.`)
+    }
+  } else if (query.field && !esFields.includes(query.field)) {
+    throw createError(400, `Impossible de faire une recherche sur le champ ${query.field}, il n'existe pas dans le jeu de donénes.`)
+  }
+  if (query.left) checkQuery(query.left, fields, esFields)
+  if (query.right) checkQuery(query.right, fields, esFields)
 }
 
 exports.prepareQuery = (dataset, query) => {
@@ -105,6 +121,7 @@ exports.prepareQuery = (dataset, query) => {
     if (esProp.fields && esProp.fields.text) searchFields.push(f.key + '.text')
   })
   if (query.qs) {
+    checkQuery(queryParser.parse(query.qs), fields)
     must.push({ query_string: { query: query.qs, fields: searchFields } })
   }
   if (query.q) {

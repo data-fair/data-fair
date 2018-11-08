@@ -85,9 +85,67 @@ test.serial('Check compatibility of schema with children', async t => {
   }
 })
 
-// Add another virtual dataset as child
+test.serial('Check that column restriction is enforced (select, search, aggs)', async t => {
+  const ax = await axiosBuilder('dmeadus0@answers.com')
+  let dataset = await testUtils.sendDataset('dataset1.csv', ax)
+  await ax.put('/api/v1/datasets/my-id', {
+    isVirtual: true,
+    title: 'a virtual dataset',
+    virtual: {
+      children: [dataset.id]
+    },
+    schema: [{
+      key: 'adr'
+    }]
+  })
+  dataset = await workers.hook('finalizer/my-id')
+  t.falsy(dataset.schema.find(f => f.key === 'id'))
 
-// Check that column restriction is enforced (select, search, aggs)
+  let res = await ax.get('/api/v1/datasets/my-id/lines', { params: { q: 'koumoul' } })
+  t.is(res.data.total, 0, 'cannot match on a field not from the schema')
+  res = await ax.get('/api/v1/datasets/my-id/lines', { params: { qs: 'koumoul' } })
+  t.is(res.data.total, 0, 'cannot match on a field not from the schema')
+
+  try {
+    await ax.get('/api/v1/datasets/my-id/lines', { params: { qs: 'id:koumoul' } })
+    t.fail('cannot match on a field not from the schema')
+  } catch (err) {
+    t.is(err.status, 400)
+  }
+
+  try {
+    await ax.get('/api/v1/datasets/my-id/lines', { params: { qs: 'test AND (id:koumoul OR test)' } })
+    t.fail('cannot match on a field not from the schema')
+  } catch (err) {
+    t.is(err.status, 400)
+  }
+
+  res = await ax.get('/api/v1/datasets/my-id/lines', { params: { qs: '_exists_:adr' } })
+  t.is(res.status, 200)
+  t.is(res.data.total, 2)
+  try {
+    await ax.get('/api/v1/datasets/my-id/lines', { params: { qs: '_exists_:id' } })
+    t.fail('cannot sort on a field not from the schema')
+  } catch (err) {
+    t.is(err.status, 400)
+  }
+
+  try {
+    await ax.get('/api/v1/datasets/my-id/lines', { params: { sort: 'koumoul' } })
+    t.fail('cannot sort on a field not from the schema')
+  } catch (err) {
+    t.is(err.status, 400)
+  }
+
+  try {
+    await ax.get('/api/v1/datasets/my-id/lines', { params: { select: 'id,adr' } })
+    t.fail('cannot select a field not from the schema')
+  } catch (err) {
+    t.is(err.status, 400)
+  }
+})
+
+// Add another virtual dataset as child
 
 // Check that column restriction from virtual child is enforced
 
