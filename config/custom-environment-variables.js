@@ -58,5 +58,9 @@ module.exports = {
   thumbor: {
     url: 'THUMBOR_URL',
     key: 'THUMBOR_KEY'
+  },
+  prebuilt: {
+    __name: 'PREBUILT',
+    __format: 'json'
   }
 }
