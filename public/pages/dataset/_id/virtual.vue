@@ -32,7 +32,7 @@
               <span class="subheading">{{ childrenById[props.item].title }}</span>
               <v-select
                 :items="childrenById[props.item].schema.filter(f => !hiddenField(f) && !existingFields.includes(f.key))"
-                :item-text="(field) => field.title || field['x-originalName']"
+                :item-text="(field) => field.title || field['x-originalName'] || field.key"
                 hide-no-data
                 item-value="id"
                 label="Ajouter un champ"
@@ -65,7 +65,7 @@
             </v-icon>
           </v-list-tile-avatar>
           <v-list-tile-content>
-            <v-list-tile-title>{{ field.title || field['x-originalName'] }} ({{ field.key }})</v-list-tile-title>
+            <v-list-tile-title>{{ field.title || field['x-originalName'] || field.key }} ({{ field.key }})</v-list-tile-title>
             <v-combobox
               v-if="filtersByKey[field.key]"
               v-model="filtersByKey[field.key].values"

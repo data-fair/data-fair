@@ -2,7 +2,7 @@
   <v-data-table :headers="headers" :items="dataset.schema" :total-items="dataset.schema.length" :disable-initial-sort="true" :hide-actions="true">
     <template slot="items" slot-scope="props">
       <td>{{ props.item.key }}</td>
-      <td>{{ props.item.title || props.item['x-originalName'] }}</td>
+      <td>{{ props.item.title || props.item['x-originalName'] || props.item.key }}</td>
       <td>{{ props.item.format || props.item.type }}</td>
       <td>{{ vocabulary && vocabulary[props.item['x-refersTo']] && vocabulary[props.item['x-refersTo']].title }}</td>
       <td>{{ props.item.description || (vocabulary && vocabulary[props.item['x-refersTo']] && vocabulary[props.item['x-refersTo']].description) }}</td>

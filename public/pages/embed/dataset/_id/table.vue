@@ -74,7 +74,7 @@ export default {
       return this.dataset.schema
         .filter(field => !this.select.length || this.select.includes(field.key))
         .map(field => ({
-          text: field.title || field['x-originalName'],
+          text: field.title || field['x-originalName'] || field.key,
           value: field.key,
           sortable: (field.type === 'string' && field.format) || field.type === 'number' || field.type === 'integer',
           tooltip: field.description || (field['x-refersTo'] && this.vocabulary && this.vocabulary[field['x-refersTo']] && this.vocabulary[field['x-refersTo']].description)

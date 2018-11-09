@@ -15,7 +15,7 @@
 
       <v-select
         v-if="showSelect"
-        :items="dataset.schema.map(f => ({value: f.key, text: f.title || f['x-originalName']}))"
+        :items="dataset.schema.map(f => ({value: f.key, text: f.title || f['x-originalName'] || f.key}))"
         v-model="select"
         style="margin-top: 30px;"
         item-value="value"
@@ -145,7 +145,7 @@ export default {
         .filter(key => key !== '_id')
         .map(key => {
           const field = this.dataset.schema.find(f => f.key === key)
-          return `<li>${field.title || field['x-originalName']}: ${feature.properties[key]}</li>`
+          return `<li>${field.title || field['x-originalName'] || field.key}: ${feature.properties[key]}</li>`
         })
         .join('\n')
       const html = `<ul style="list-style-type: none;padding-left: 0;">${htmlList}</ul>`
