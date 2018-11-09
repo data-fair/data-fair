@@ -56,6 +56,10 @@
                 <nuxt-link v-else :to="`/applications?dataset=${dataset.id}`">{{ nbApplications }} application{{ nbApplications > 1 ? 's' : '' }}</nuxt-link>
               </template>
             </v-list-tile>
+            <v-list-tile v-if="nbVirtualDatasets">
+              <v-list-tile-avatar ><v-icon>picture_in_picture</v-icon></v-list-tile-avatar>
+              <nuxt-link :to="`/datasets?children=${dataset.id}`">{{ nbVirtualDatasets }} jeu{{ nbVirtualDatasets > 1 ? 'x' : '' }} de données virtuel{{ nbVirtualDatasets > 1 ? 's' : '' }}</nuxt-link>
+            </v-list-tile>
           </v-list>
         </v-card>
       </v-flex>
@@ -88,7 +92,7 @@ export default {
     return { events, error: null }
   },
   computed: {
-    ...mapState('dataset', ['dataset', 'journal', 'nbApplications']),
+    ...mapState('dataset', ['dataset', 'journal', 'nbApplications', 'nbVirtualDatasets']),
     ...mapGetters('dataset', ['can', 'resourceUrl']),
     licenses() {
       return this.$store.getters.ownerLicenses(this.dataset.owner)

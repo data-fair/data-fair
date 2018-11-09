@@ -11,7 +11,8 @@ export default {
     api: null,
     journal: [],
     remoteServices: [],
-    nbApplications: null
+    nbApplications: null,
+    nbVirtualDatasets: null
   },
   getters: {
     resourceUrl: (state, getters, rootState) => state.datasetId ? rootState.env.publicUrl + '/api/v1/datasets/' + state.datasetId : null,
@@ -79,6 +80,8 @@ export default {
       commit('setAny', { dataset })
       const apps = await this.$axios.$get(rootState.env.publicUrl + '/api/v1/applications', { params: { dataset: dataset.id, size: 0 } })
       commit('setAny', { nbApplications: apps.count })
+      const virtuals = await this.$axios.$get(rootState.env.publicUrl + '/api/v1/datasets', { params: { children: dataset.id, size: 0 } })
+      commit('setAny', { nbVirtualDatasets: virtuals.count })
       const api = await this.$axios.$get(getters.resourceUrl + '/api-docs.json')
       commit('setAny', { api })
       const journal = await this.$axios.$get(getters.resourceUrl + '/journal')

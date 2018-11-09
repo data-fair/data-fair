@@ -4,10 +4,12 @@ const createError = require('http-errors')
 // blacklisted fields are fields that are present in a grandchild but not re-exposed
 // by the child.. it must not be possible to access those fields in the case
 // of another child having the same key
-async function childrenSchemas(db, children, blackListedFields) {
+async function childrenSchemas(db, owner, children, blackListedFields) {
   let schemas = []
   for (let childId of children) {
-    const child = await db.collection('datasets').findOne({ id: childId }, { fields: { isVirtual: 1, virtual: 1, schema: 1 } })
+    const child = await db.collection('datasets')
+      .findOne({ id: childId, 'owner.id': owner.id, 'owner.type': owner.type }, { fields: { isVirtual: 1, virtual: 1, schema: 1 } })
+    if (!child) continue
     if (child.isVirtual) {
       const grandChildrenSchemas = await childrenSchemas(db, child.virtual.children, blackListedFields)
       grandChildrenSchemas.forEach(s => s.forEach(field => {
@@ -28,7 +30,7 @@ exports.prepareSchema = async (db, dataset) => {
   dataset.schema = dataset.schema || []
   const schema = datasetUtils.extendedSchema(dataset)
   const blackListedFields = new Set([])
-  const schemas = await childrenSchemas(db, dataset.virtual.children, blackListedFields)
+  const schemas = await childrenSchemas(db, dataset.owner, dataset.virtual.children, blackListedFields)
   schema.forEach(field => {
     if (blackListedFields.has(field.key)) {
       throw createError(400, `Le champ "${field.key}" est interdit. Il est présent dans un jeu de données enfant mais est protégé.`)
@@ -68,7 +70,8 @@ exports.descendants = async (db, dataset) => {
       connectFromField: 'virtual.children',
       connectToField: 'id',
       as: 'descendants',
-      maxDepth: 20
+      maxDepth: 20,
+      restrictSearchWithMatch: { 'owner.type': dataset.owner.type, 'owner.id': dataset.owner.id }
     }
   }, {
     $project: {

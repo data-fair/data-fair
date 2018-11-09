@@ -2,7 +2,7 @@
   <v-container fluid grid-list-lg style="width:100vw">
     <h3 v-if="datasets" class="display-1">{{ datasets.count }} {{ plural ? 'jeux' : 'jeu' }} de données</h3>
 
-    <search-filters :filter-labels="{}" :filters="filters" :facets="datasets && datasets.facets" type="datasets" @apply="page = 1; refresh()"/>
+    <search-filters :filter-labels="{children: 'Jeu de données agrégé'}" :filters="filters" :facets="datasets && datasets.facets" type="datasets" @apply="page = 1; refresh()"/>
     <search-progress :loading="loading"/>
 
     <v-layout v-if="datasets" row wrap class="resourcesList">

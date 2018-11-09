@@ -63,7 +63,8 @@ router.get('', asyncWrap(async(req, res) => {
     'field-type': 'schema.type',
     'field-format': 'schema.format',
     'ids': 'id',
-    'id': 'id'
+    'id': 'id',
+    'children': 'virtual.children'
   })
   if (req.query.bbox === 'true') {
     query.bbox = { $ne: null }
@@ -335,7 +336,7 @@ const updateDataset = asyncWrap(async(req, res) => {
       return res.status(400).send(ajvErrorMessages(validatePatch.errors))
     }
     req.body.virtual = req.body.virtual || { children: [] }
-    req.body.schema = await virtualDatasetsUtils.prepareSchema(db, req.body)
+    req.body.schema = await virtualDatasetsUtils.prepareSchema(db, { ...dataset, ...req.body })
     req.body.status = 'indexed'
   }
   Object.assign(dataset, req.body)
@@ -389,6 +390,8 @@ router.get('/:datasetId/lines', readDataset, permissions.middleware('readLines',
     req.query.select = (req.query.select ? req.query.select + ',' : '') + '_geoshape'
   }
 
+  if (req.dataset.isVirtual) req.dataset.descendants = await virtualDatasetsUtils.descendants(db, req.dataset)
+
   // geojson format benefits from bbox info
   let bboxPromise
   if (req.query.format === 'geojson') {
@@ -408,8 +411,6 @@ router.get('/:datasetId/lines', readDataset, permissions.middleware('readLines',
     if (value) return res.status(200).send(value.buffer)
     cacheHash = hash
   }
-
-  if (req.dataset.isVirtual) req.dataset.descendants = await virtualDatasetsUtils.descendants(db, req.dataset)
 
   let esResponse
   try {

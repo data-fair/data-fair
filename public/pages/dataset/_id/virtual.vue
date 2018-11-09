@@ -16,6 +16,9 @@
       @change="addChild"
     />
 
+    <v-progress-linear v-if="loadingChildren" :indeterminate="true" color="primary" height="2" style="margin:0;"/>
+    <div v-else style="height: 2px;"/>
+
     <v-data-table
       :items="dataset.virtual.children"
       hide-headers
@@ -26,21 +29,21 @@
         Aucun jeu de données agrégé pour l'instant.
       </template>
       <template slot="items" slot-scope="props">
-        <tr>
+        <tr v-if="childrenById[props.item]">
           <td class="pt-3">
-            <template v-if="childrenById[props.item]">
-              <span class="subheading">{{ childrenById[props.item].title }}</span>
-              <v-select
-                :items="childrenById[props.item].schema.filter(f => !hiddenField(f) && !existingFields.includes(f.key))"
-                :item-text="(field) => field.title || field['x-originalName'] || field.key"
-                hide-no-data
-                item-value="id"
-                label="Ajouter un champ"
-                return-object
-                style="max-width: 400px;"
-                @change="addField"
-              />
-            </template>
+            <span class="subheading">
+              <nuxt-link :to="`/dataset/${props.item}/description`">{{ childrenById[props.item].title }} ({{ childrenById[props.item].id }})</nuxt-link>
+            </span>
+            <v-select
+              :items="childrenById[props.item].schema.filter(f => !hiddenField(f) && !existingFields.includes(f.key))"
+              :item-text="(field) => field.title || field['x-originalName'] || field.key"
+              hide-no-data
+              item-value="id"
+              label="Ajouter un champ"
+              return-object
+              style="max-width: 400px;"
+              @change="addField"
+            />
           </td>
           <td class="text-xs-right">
             <v-icon color="warning" title="Supprimer" @click="currentChild = props.index; deleteChildDialog = true">
@@ -70,7 +73,7 @@
               v-if="filtersByKey[field.key]"
               v-model="filtersByKey[field.key].values"
               :items="valuesByKey[field.key]"
-              placeholder="Filtrer sur ces valeurs"
+              placeholder="Restreindre à des valeurs"
               chips
               clearable
               multiple
@@ -133,7 +136,8 @@ export default {
       schemasById: {},
       deleteChildDialog: false,
       currentChild: null,
-      valuesByKey: {}
+      valuesByKey: {},
+      loadingChildren: true
     }
   },
   computed: {
@@ -159,6 +163,7 @@ export default {
     'dataset.schema': {
       immediate: true,
       handler() {
+        if (!this.dataset || !this.dataset.virtual) return
         this.dataset.virtual.filters = this.dataset.virtual.filters || []
         this.dataset.schema.forEach(field => {
           if (!this.dataset.virtual.filters.find(filter => filter.key === field.key)) {
@@ -177,10 +182,14 @@ export default {
   methods: {
     ...mapActions('dataset', ['patchAndCommit', 'fetchInfo']),
     async fetchChildren() {
+      this.loadingChildren = true
       const res = await this.$axios.$get('api/v1/datasets', {
-        params: { size: 1000, select: 'id,title,schema', id: this.dataset.virtual.children.join(',') }
+        params: { size: 1000, select: 'id,title,schema', id: this.dataset.virtual.children.join(','), owner: `${this.dataset.owner.type}:${this.dataset.owner.id}` }
       })
+      // remove children that do not exist anymore
+      this.dataset.virtual.children = this.dataset.virtual.children.filter(child => res.results.find(d => d.id === child))
       this.childrenById = res.results.reduce((a, d) => { a[d.id] = d; return a }, {})
+      this.loadingChildren = false
     },
     hiddenField(field) {
       return field.key.startsWith('_') && !field.key.startsWith('_ext_')
