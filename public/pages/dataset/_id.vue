@@ -5,6 +5,10 @@
         Description
         <v-icon>toc</v-icon>
       </v-tab>
+      <v-tab v-if="can('writeDescription') && dataset.isVirtual" :nuxt="true" :to="`/dataset/${dataset.id}/virtual`">
+        Jeu virtuel
+        <v-icon>picture_in_picture</v-icon>
+      </v-tab>
       <v-tab :disabled="!can('readLines')" :nuxt="true" :to="`/dataset/${dataset.id}/tabular`">
         Vue tableau
         <v-icon>view_list</v-icon>
@@ -25,7 +29,7 @@
         Permissions
         <v-icon>security</v-icon>
       </v-tab>
-      <v-tab :disabled="!can('writeDescription')" :nuxt="true" :to="`/dataset/${dataset.id}/extend`">
+      <v-tab v-if="!dataset.isVirtual" :disabled="!can('writeDescription')" :nuxt="true" :to="`/dataset/${dataset.id}/extend`">
         Enrichissement
         <v-icon>merge_type</v-icon>
       </v-tab>

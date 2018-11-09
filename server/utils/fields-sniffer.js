@@ -20,7 +20,12 @@ exports.format = (value, prop) => {
 }
 
 exports.escapeKey = (key) => {
-  return key.replace(/\.|\s|\$/g, '_')
+  key = key.replace(/\.|\s|\$/g, '_')
+  // prefixing by _ is reserved to fields calculated by data-fair
+  while (key.startsWith('_')) {
+    key = key.slice(1)
+  }
+  return key
 }
 
 function checkAll(values, check) {

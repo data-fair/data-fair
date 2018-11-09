@@ -20,12 +20,13 @@ const schema = {
   'description': 'JSON schema properties of the fields in the file',
   items: {
     type: 'object',
-    required: ['key', 'type'],
+    required: ['key'],
     properties: {
       key: { type: 'string' },
       type: { type: 'string' },
-      format: { type: 'string' },
-      'x-originalName': { type: 'string' }
+      format: { type: ['string', 'null'] },
+      'x-originalName': { type: ['string', 'null'] },
+      'x-refersTo': { type: ['string', 'null'] }
     }
   }
 }
@@ -254,6 +255,45 @@ module.exports = {
       type: 'boolean',
       default: false,
       description: 'true when the dataset has attached files'
+    },
+    isVirtual: {
+      type: 'boolean',
+      default: false,
+      description: 'Used to identify virtual datasets. A virtual datasets does not have data, only references to other datasets.'
+    },
+    virtual: {
+      type: 'object',
+      description: 'A configuration object dedicated to virtual datasets.',
+      required: ['children'],
+      properties: {
+        children: {
+          type: 'array',
+          description: 'Array of ids of the children datasets',
+          items: {
+            type: 'string'
+          }
+        },
+        filters: {
+          type: 'array',
+          description: 'Array of static filters to always apply when querying the dataset',
+          items: {
+            type: 'object',
+            required: ['key', 'values'],
+            properties: {
+              key: {
+                type: 'string',
+                description: 'Key of the field in the schema'
+              },
+              values: {
+                type: 'array',
+                items: {
+                  type: 'string'
+                }
+              }
+            }
+          }
+        }
+      }
     },
     permissions
   }

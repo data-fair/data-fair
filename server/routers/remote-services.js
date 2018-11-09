@@ -66,7 +66,8 @@ router.get('', asyncWrap(async(req, res) => {
     'input-concepts': 'actions.input.concept',
     'output-concepts': 'actions.output.concept',
     'api-id': 'apiDoc.info.x-api-id',
-    'ids': 'id'
+    'ids': 'id',
+    'id': 'id'
   })
   const sort = findUtils.sort(req.query.sort)
   const project = findUtils.project(req.query.select, ['apiDoc'])

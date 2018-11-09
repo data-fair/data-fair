@@ -32,13 +32,6 @@ exports.process = async function(app, dataset) {
   // Add fields not yet present in the stored schema
   dataset.schema = dataset.schema.concat(dataset.file.schema.filter(field => !dataset.schema.find(f => f.key === field.key)))
 
-  if (dataset.hasFiles) {
-    dataset.schema.find(field => field.key === 'file').title = `Le chemin du fichier dans l'archive`
-    dataset.schema.push({ key: '_file.content', type: 'string', title: `Le contenu textuel extrait du fichier` })
-    dataset.schema.push({ key: '_file.content_type', type: 'string', title: `Le type mime du fichier` })
-    dataset.schema.push({ key: '_file.content_length', type: 'integer', title: `La taille en octet du fichier` })
-  }
-
   dataset.status = 'schematized'
   await db.collection('datasets').updateOne({ id: dataset.id }, {
     $set: { status: 'schematized', schema: dataset.schema }

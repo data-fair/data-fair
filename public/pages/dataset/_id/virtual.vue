@@ -1,0 +1,226 @@
+<template lang="html">
+  <v-container>
+    <h2 class="headline mt-3 mb-3">Jeux de données agrégés</h2>
+
+    <v-autocomplete
+      :items="datasets"
+      :loading="loadingDatasets"
+      :search-input.sync="search"
+      :filter="() => true"
+      style="max-width: 400px;"
+      hide-no-data
+      item-text="title"
+      item-value="id"
+      label="Ajouter un jeu de données"
+      placeholder="Recherchez"
+      @change="addChild"
+    />
+
+    <v-data-table
+      :items="dataset.virtual.children"
+      hide-headers
+      hide-actions
+      class="elevation-1 mb-3"
+    >
+      <template slot="no-data">
+        Aucun jeu de données agrégé pour l'instant.
+      </template>
+      <template slot="items" slot-scope="props">
+        <tr>
+          <td class="pt-3">
+            <template v-if="childrenById[props.item]">
+              <span class="subheading">{{ childrenById[props.item].title }}</span>
+              <v-select
+                :items="childrenById[props.item].schema.filter(f => !hiddenField(f) && !existingFields.includes(f.key))"
+                :item-text="(field) => field.title || field['x-originalName']"
+                hide-no-data
+                item-value="id"
+                label="Ajouter un champ"
+                return-object
+                style="max-width: 400px;"
+                @change="addField"
+              />
+            </template>
+          </td>
+          <td class="text-xs-right">
+            <v-icon color="warning" title="Supprimer" @click="currentChild = props.index; deleteChildDialog = true">
+              delete
+            </v-icon>
+          </td>
+        </tr>
+      </template>
+    </v-data-table>
+
+    <h2 class="headline mt-4 mb-3">Champs sélectionnés</h2>
+
+    <p v-if="dataset.schema.filter(f => !hiddenField(f)).length === 0">
+      Aucun champ hérité pour l'instant.
+    </p>
+    <v-list v-else class="elevation-1" three-line>
+      <draggable v-model="dataset.schema" :options="{handle: '.handle'}" @end="saveSchema">
+        <v-list-tile v-for="field in dataset.schema" v-show="!hiddenField(field)" :key="field.key">
+          <v-list-tile-avatar>
+            <v-icon title="Réordonner" class="handle">
+              reorder
+            </v-icon>
+          </v-list-tile-avatar>
+          <v-list-tile-content>
+            <v-list-tile-title>{{ field.title || field['x-originalName'] }} ({{ field.key }})</v-list-tile-title>
+            <v-combobox
+              v-if="filtersByKey[field.key]"
+              v-model="filtersByKey[field.key].values"
+              :items="valuesByKey[field.key]"
+              placeholder="Filtrer sur ces valeurs"
+              chips
+              clearable
+              multiple
+              small-chips
+              @change="saveFilters"
+            >
+              <template slot="selection" slot-scope="data">
+                <v-chip close small @input="filtersByKey[field.key].values = filtersByKey[field.key].values.filter(v => v !== data.item); saveFilters()">
+                  {{ data.item }}
+                </v-chip>
+              </template>
+            </v-combobox>
+          </v-list-tile-content>
+          <v-list-tile-action>
+            <v-icon color="warning" title="Supprimer" @click="deleteField(field)">
+              delete
+            </v-icon>
+          </v-list-tile-action>
+        </v-list-tile>
+      </draggable>
+    </v-list>
+
+    <v-dialog v-model="deleteChildDialog" max-width="500px" >
+      <v-card v-if="childrenById[dataset.virtual.children[currentChild]]">
+        <v-card-title primary-title>
+          Suppression du jeu de données enfant
+        </v-card-title>
+        <v-card-text>
+          <v-alert :value="true" type="error" outline>
+            Attention ! Supprimer ce jeu de données de la liste peut impacter le schéma du jeu de données virtuel et les applications qui l'utilisent.
+          </v-alert>
+        </v-card-text>
+        <v-card-text>
+          Voulez vous vraiment supprimer le jeu de données "{{ childrenById[dataset.virtual.children[currentChild]].title }}" de la liste ?
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer/>
+          <v-btn flat @click="deleteChildDialog = false">Non</v-btn>
+          <v-btn color="warning" @click="deleteChild(currentChild); deleteChildDialog = false">Oui</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+  </v-container>
+</template>
+
+<script>
+import { mapState, mapGetters, mapActions } from 'vuex'
+import { VCombobox } from 'vuetify'
+const Draggable = require('vuedraggable')
+
+export default {
+  components: { Draggable, VCombobox },
+  data() {
+    return {
+      datasets: null,
+      loadingDatasets: false,
+      search: '',
+      childrenById: {},
+      schemasById: {},
+      deleteChildDialog: false,
+      currentChild: null,
+      valuesByKey: {}
+    }
+  },
+  computed: {
+    ...mapState('dataset', ['dataset']),
+    ...mapGetters('dataset', ['can']),
+    existingFields() {
+      return this.dataset.schema.map(f => f.key)
+    },
+    filtersByKey() {
+      return this.dataset.virtual.filters.reduce((a, f) => {
+        a[f.key] = f
+        return a
+      }, {})
+    }
+  },
+  watch: {
+    search: {
+      immediate: true,
+      handler() {
+        this.searchDatasets()
+      }
+    },
+    'dataset.schema': {
+      immediate: true,
+      handler() {
+        this.dataset.virtual.filters = this.dataset.virtual.filters || []
+        this.dataset.schema.forEach(field => {
+          if (!this.dataset.virtual.filters.find(filter => filter.key === field.key)) {
+            this.dataset.virtual.filters.push({ key: field.key, values: [] })
+          }
+        })
+        this.dataset.virtual.filters = this.dataset.virtual.filters.filter(f => {
+          return this.dataset.schema.find(field => field.key === f.key)
+        })
+      }
+    }
+  },
+  mounted() {
+    this.fetchChildren()
+  },
+  methods: {
+    ...mapActions('dataset', ['patchAndCommit', 'fetchInfo']),
+    async fetchChildren() {
+      const res = await this.$axios.$get('api/v1/datasets', {
+        params: { size: 1000, select: 'id,title,schema', id: this.dataset.virtual.children.join(',') }
+      })
+      this.childrenById = res.results.reduce((a, d) => { a[d.id] = d; return a }, {})
+    },
+    hiddenField(field) {
+      return field.key.startsWith('_') && !field.key.startsWith('_ext_')
+    },
+    async searchDatasets() {
+      this.loadingDatasets = true
+      const res = await this.$axios.$get('api/v1/datasets', {
+        params: { q: this.search, size: 20, select: 'id,title', status: 'finalized', owner: `${this.dataset.owner.type}:${this.dataset.owner.id}` }
+      })
+      this.datasets = res.results
+        .filter(d => d.id !== this.dataset.id && !this.dataset.virtual.children.includes(d.id))
+      this.loadingDatasets = false
+    },
+    async addChild(child) {
+      await this.patchAndCommit({ virtual: { ...this.dataset.virtual, children: this.dataset.virtual.children.concat([child]) } })
+      this.fetchChildren()
+    },
+    async deleteChild(i) {
+      this.dataset.virtual.children.splice(i, 1)
+      await this.patchAndCommit({ virtual: { ...this.dataset.virtual } })
+      this.fetchInfo()
+    },
+    async saveSchema() {
+      await this.patchAndCommit({ schema: this.dataset.schema })
+    },
+    async saveFilters() {
+      await this.patchAndCommit({ virtual: { ...this.dataset.virtual, filters: this.dataset.virtual.filters } })
+    },
+    async addField(field) {
+      await this.patchAndCommit({ schema: this.dataset.schema.concat({ key: field.key, title: field.title }) })
+    },
+    async deleteField(field) {
+      await this.patchAndCommit({ schema: this.dataset.schema.filter(f => f.key !== field.key) })
+    }
+  }
+}
+</script>
+
+<style lang="css">
+.handle {
+  cursor: grab;
+}
+</style>

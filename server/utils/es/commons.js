@@ -3,17 +3,71 @@
 const config = require('config')
 const createError = require('http-errors')
 const flatten = require('flat')
+const queryParser = require('lucene-query-parser')
 const thumbor = require('../thumbor')
 const tiles = require('../tiles')
 
-exports.aliasName = dataset => `${config.indicesPrefix}-${dataset.id}`
+// From a property in data-fair schema to the property in an elasticsearch mapping
+exports.esProperty = prop => {
+  // Add inner text field to almost everybody so that even dates, numbers, etc can be matched textually as well as exactly
+  const innerTextField = { text: { type: 'text', analyzer: config.elasticsearch.defaultAnalyzer, fielddata: true } }
+  let esProp = {}
+  if (prop.type === 'object') esProp = { type: 'object' }
+  if (prop.type === 'integer') esProp = { type: 'long', fields: innerTextField }
+  if (prop.type === 'number') esProp = { type: 'double', fields: innerTextField }
+  if (prop.type === 'boolean') esProp = { type: 'boolean', fields: innerTextField }
+  if (prop.type === 'string' && prop.format === 'date-time') esProp = { type: 'date', fields: innerTextField }
+  if (prop.type === 'string' && prop.format === 'date') esProp = { type: 'date', fields: innerTextField }
+  // uri-reference and full text fields are managed in the same way from now on, because we want to be able to aggregate on small full text fields
+  // TODO: maybe ignore_above should be only for uri-reference fields
+  if (prop.type === 'string' && (prop.format === 'uri-reference' || !prop.format)) esProp = { type: 'keyword', ignore_above: 200, fields: innerTextField }
+  // Do not index geometry, it will be copied and simplified in _geoshape
+  if (prop['x-refersTo'] === 'https://purl.org/geojson/vocab#geometry') {
+    esProp.index = false
+  }
+  // Hard coded geo properties
+  if (prop.key === '_geopoint') esProp = { type: 'geo_point' }
+  if (prop.key === '_geoshape') esProp = { type: 'geo_shape' }
+  if (prop.key === '_geocorners') esProp = { type: 'geo_point' }
+  return esProp
+}
 
-exports.parseSort = (sortStr) => {
+exports.aliasName = dataset => {
+  const ids = dataset.isVirtual ? dataset.descendants : [dataset.id]
+  return ids.map(id => `${config.indicesPrefix}-${id}`).join(',')
+}
+
+exports.parseSort = (sortStr, fields) => {
   if (!sortStr) return []
   return sortStr.split(',').map(s => {
-    if (s.indexOf('-') === 0) return { [s.slice(1)]: 'desc' }
-    else return { [s]: 'asc' }
+    let field, direction
+    if (s.indexOf('-') === 0) {
+      field = s.slice(1)
+      direction = 'desc'
+    } else {
+      field = s
+      direction = 'asc'
+    }
+    if (!fields.concat(['_key', '_count', '_time']).includes(field)) {
+      throw createError(400, `Impossible de trier sur le champ ${field}, il n'existe pas dans le jeu de données.`)
+    }
+    return { [field]: direction }
   })
+}
+
+// Check that a query_string query (lucene syntax)
+// does not try to use fields outside the current schema
+function checkQuery(query, fields, esFields) {
+  esFields = esFields || fields.concat(fields.map(f => f + '.text')).concat(['<implicit>'])
+  if (query.field === '_exists_') {
+    if (!esFields.includes(query.term)) {
+      throw createError(400, `Impossible de faire une recherche sur le champ ${query.term}, il n'existe pas dans le jeu de donénes.`)
+    }
+  } else if (query.field && !esFields.includes(query.field)) {
+    throw createError(400, `Impossible de faire une recherche sur le champ ${query.field}, il n'existe pas dans le jeu de donénes.`)
+  }
+  if (query.left) checkQuery(query.left, fields, esFields)
+  if (query.right) checkQuery(query.right, fields, esFields)
 }
 
 exports.prepareQuery = (dataset, query) => {
@@ -25,12 +79,11 @@ exports.prepareQuery = (dataset, query) => {
   esQuery.from = (query.page ? Number(query.page) - 1 : 0) * esQuery.size
 
   // Select fields to return
-  esQuery._source = { includes: query.select ? query.select.split(',') : ['*'], excludes: [] };
+  const fields = dataset.schema.map(f => f.key)
+  esQuery._source = (query.select && query.select !== '*') ? query.select.split(',') : fields
+  const unknownField = esQuery._source.find(s => !fields.includes(s))
+  if (unknownField) throw createError(400, `Impossible de sélectionner le champ ${unknownField}, il n'existe pas dans le jeu de données.`)
 
-  // Some fields are excluded, unless explicitly included
-  ['_geoshape', '_geopoint', '_geocorners', '_rand', '_i', '_file.content'].forEach(f => {
-    if (!esQuery._source.includes.includes(f)) esQuery._source.excludes.push(f)
-  })
   // Others are included depending on the context
   if (query.thumbnail) {
     const imageField = dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/image')
@@ -40,7 +93,7 @@ exports.prepareQuery = (dataset, query) => {
   }
 
   // Sort by list of fields (prefixed by - for descending sort)
-  esQuery.sort = exports.parseSort(query.sort)
+  esQuery.sort = exports.parseSort(query.sort, fields)
   // Also implicitly sort by score
   esQuery.sort.push('_score')
   // And lastly random order for natural distribution (mostly important for geo results)
@@ -51,6 +104,7 @@ exports.prepareQuery = (dataset, query) => {
   if (query.highlight) {
     esQuery.highlight = { fields: {}, no_match_size: 300, fragment_size: 100, pre_tags: ['<em class="highlighted">'], post_tags: ['</em>'] }
     query.highlight.split(',').forEach(key => {
+      if (!fields.includes(key)) throw createError(400, `Impossible de demander un "highlight" sur le champ ${key}, il n'existe pas dans le jeu de données.`)
       esQuery.highlight.fields[key + '.text'] = {}
     })
   }
@@ -58,12 +112,28 @@ exports.prepareQuery = (dataset, query) => {
   const filter = []
   const must = []
 
+  // Enforced static filters from virtual datasets
+  if (dataset.virtual && dataset.virtual.filters) {
+    dataset.virtual.filters.filter(f => f.values && f.values.length).forEach(f => {
+      if (f.values.length === 1) filter.push({ term: { [f.key]: f.values[0] } })
+      else filter.push({ terms: { [f.key]: f.values } })
+    })
+  }
+
   // query and simple query string for a lot of functionalities in a simple exposition (too open ??)
+  // const multiFields = [...fields].concat(dataset.schema.filter(f => f.type === 'string').map(f => f.key + '.text'))
+  const searchFields = []
+  dataset.schema.forEach(f => {
+    const esProp = exports.esProperty(f)
+    if (esProp.type === 'keyword') searchFields.push(f.key)
+    if (esProp.fields && esProp.fields.text) searchFields.push(f.key + '.text')
+  })
   if (query.qs) {
-    must.push({ query_string: { query: query.qs } })
+    checkQuery(queryParser.parse(query.qs), fields)
+    must.push({ query_string: { query: query.qs, fields: searchFields } })
   }
   if (query.q) {
-    must.push({ simple_query_string: { query: query.q } })
+    must.push({ simple_query_string: { query: query.q, fields: searchFields } })
   }
 
   // bounding box filter to restrict results on geo zone: left,bottom,right,top

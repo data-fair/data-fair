@@ -3,6 +3,9 @@ const { prepareQuery, aliasName } = require('./commons')
 
 module.exports = async (client, dataset, query) => {
   if (!query.field) throw createError(400, '"field" parameter is required')
+  const fields = dataset.schema.map(f => f.key)
+  if (!fields.includes(query.field)) throw createError(400, `Impossible d'agréger sur le champ ${query.field}, il n'existe pas dans le jeu de données.`)
+
   const field = query.field + '.text'
   const size = Number(query.size || 20)
   if (size > 200) throw createError(400, 'Cette aggrégation ne peut pas retourner plus de 200 mots.')

@@ -14,6 +14,7 @@ const mongodb = require('mongodb')
 const config = require('config')
 const clone = require('fast-clone')
 const chardet = require('chardet')
+const slug = require('slugify')
 const rimraf = util.promisify(require('rimraf'))
 const journals = require('../utils/journals')
 const esUtils = require('../utils/es')
@@ -22,6 +23,7 @@ const datasetAPIDocs = require('../../contract/dataset-api-docs')
 const permissions = require('../utils/permissions')
 const usersUtils = require('../utils/users')
 const datasetUtils = require('../utils/dataset')
+const virtualDatasetsUtils = require('../utils/virtual-datasets')
 const findUtils = require('../utils/find')
 const asyncWrap = require('../utils/async-wrap')
 const extensions = require('../utils/extensions')
@@ -60,7 +62,8 @@ router.get('', asyncWrap(async(req, res) => {
     'concepts': 'schema.x-refersTo',
     'field-type': 'schema.type',
     'field-format': 'schema.format',
-    'ids': 'id'
+    'ids': 'id',
+    'id': 'id'
   })
   if (req.query.bbox === 'true') {
     query.bbox = { $ne: null }
@@ -113,7 +116,7 @@ router.get('/:datasetId', readDataset, permissions.middleware('readDescription',
 router.get('/:datasetId/schema', readDataset, permissions.middleware('readDescription', 'read'), (req, res, next) => {
   let schema = req.dataset.schema
   schema.forEach(field => {
-    field.label = field.title || field['x-originalName']
+    field.label = field.title || field['x-originalName'] || field.key
   })
   if (req.query.type) {
     const types = req.query.type.split(',')
@@ -128,19 +131,20 @@ router.get('/:datasetId/schema', readDataset, permissions.middleware('readDescri
 
 // Update a dataset's metadata
 router.patch('/:datasetId', readDataset, permissions.middleware('writeDescription', 'write'), asyncWrap(async(req, res) => {
+  const db = req.app.get('db')
   const patch = req.body
   if (!acceptedStatuses.includes(req.dataset.status) && (patch.schema || patch.extensions)) return res.status(409).send('Dataset is not in proper state to be updated')
-  var valid = validatePatch(patch)
-  if (!valid) return res.status(400).send(ajvErrorMessages(validatePatch.errors))
+  if (!validatePatch(patch)) return res.status(400).send(ajvErrorMessages(validatePatch.errors))
 
   patch.updatedAt = moment().toISOString()
   patch.updatedBy = { id: req.user.id, name: req.user.name }
-  if (patch.extensions) patch.schema = await extensions.prepareSchema(req.app.get('db'), patch.schema || req.dataset.schema, patch.extensions)
+  if (patch.extensions) patch.schema = await extensions.prepareSchema(db, patch.schema || req.dataset.schema, patch.extensions)
 
   // Changed a previously failed dataset, retry everything.
   // Except download.. We only try it again if the fetch failed.
   if (req.dataset.status === 'error') {
-    if (req.dataset.remoteFile && !req.dataset.originalFile) patch.status = 'imported'
+    if (req.dataset.isVirtual) patch.status = 'indexed'
+    else if (req.dataset.remoteFile && !req.dataset.originalFile) patch.status = 'imported'
     else if (!baseTypes.has(req.dataset.originalFile.mimetype)) patch.status = 'uploaded'
     else patch.status = 'loaded'
   }
@@ -154,7 +158,12 @@ router.patch('/:datasetId', readDataset, permissions.middleware('writeDescriptio
     }
   }
 
-  if (patch.schema) {
+  if (req.dataset.isVirtual) {
+    if (patch.schema || patch.virtual) {
+      patch.schema = await virtualDatasetsUtils.prepareSchema(db, { ...req.dataset, ...patch })
+      patch.status = 'indexed'
+    }
+  } else if (patch.schema) {
     try {
       await esUtils.updateDatasetMapping(req.app.get('es'), { id: req.dataset.id, schema: patch.schema })
       if (patch.extensions) {
@@ -217,6 +226,7 @@ const initNew = (req) => {
   dataset.createdAt = dataset.updatedAt = date
   dataset.createdBy = dataset.updatedBy = { id: req.user.id, name: req.user.name }
   dataset.permissions = []
+  dataset.schema = dataset.schema || []
   return dataset
 }
 
@@ -249,11 +259,41 @@ const beforeUpload = asyncWrap(async(req, res, next) => {
 })
 router.post('', beforeUpload, filesUtils.uploadFile(), asyncWrap(async(req, res) => {
   const db = req.app.get('db')
+  let dataset
   // After uploadFile, req.file contains the metadata of an uploaded file, and req.body the content of additional text fields
-  if (!req.file) return res.status(400).send('Expected a file multipart/form-data')
+  if (req.file) {
+    if (req.body.isVirtual) return res.status(400).send('Un jeu de données virtuel ne peut pas être initialisé avec un fichier')
+    dataset = await setFileInfo(req.file, initNew(req))
+    await db.collection('datasets').insertOne(dataset)
+  } else {
+    if (!req.body.isVirtual) return res.status(400).send('Un jeu de données doit être initialisé avec un fichier ou déclaré "virtuel"')
+    if (!req.body.title) return res.status(400).send('Un jeu de données virtuel doit être créé avec un titre')
+    const { isVirtual, ...patch } = req.body
+    if (!validatePatch(patch)) {
+      console.log(validatePatch.errors)
+      return res.status(400).send(ajvErrorMessages(validatePatch.errors))
+    }
+    dataset = initNew(req)
+    dataset.virtual = dataset.virtual || { children: [] }
+    dataset.schema = await virtualDatasetsUtils.prepareSchema(db, dataset)
+    dataset.status = 'indexed'
+    // Generate ids and try insertion until there is no conflict on id
+    const baseId = slug(req.body.title)
+    dataset.id = baseId
+    let insertOk = false
+    let i = 1
+    while (!insertOk) {
+      try {
+        await req.app.get('db').collection('datasets').insertOne(dataset)
+        insertOk = true
+      } catch (err) {
+        if (err.code !== 11000) throw err
+        i += 1
+        dataset.id = `${baseId}-${i}`
+      }
+    }
+  }
 
-  const dataset = await setFileInfo(req.file, initNew(req))
-  await db.collection('datasets').insertOne(dataset)
   delete dataset._id
 
   await journals.log(req.app, dataset, { type: 'dataset-created', href: config.publicUrl + '/dataset/' + dataset.id }, 'dataset')
@@ -261,7 +301,7 @@ router.post('', beforeUpload, filesUtils.uploadFile(), asyncWrap(async(req, res)
   res.status(201).send(clean(dataset))
 }))
 
-// POST with an id to create or update an existing dataset data
+// PUT or POST with an id to create or update an existing dataset data
 const attemptInsert = asyncWrap(async(req, res, next) => {
   const newDataset = initNew(req)
   newDataset.id = req.params.datasetId
@@ -280,18 +320,33 @@ const attemptInsert = asyncWrap(async(req, res, next) => {
 const updateDataset = asyncWrap(async(req, res) => {
   const db = req.app.get('db')
   // After uploadFile, req.file contains the metadata of an uploaded file, and req.body the content of additional text fields
-  if (!req.file) return res.status(400).send('Expected a file multipart/form-data')
+  if (!req.file && !req.dataset.isVirtual) return res.status(400).send('Un jeu de données doit être initialisé avec un fichier ou déclaré "virtuel"')
+  if (req.file && req.dataset.isVirtual) return res.status(400).send('Un jeu de données est soit initialisé avec un fichier soit déclaré "virtuel"')
+  if (req.dataset.isVirtual && !req.dataset.title) return res.status(400).send('Un jeu de données virtuel doit être créé avec un titre')
   if (req.dataset.status && !acceptedStatuses.includes(req.dataset.status)) return res.status(409).send('Dataset is not in proper state to be updated')
 
-  const newDataset = await setFileInfo(req.file, req.dataset)
-  Object.assign(newDataset, req.body)
-  newDataset.updatedBy = { id: req.user.id, name: req.user.name }
-  newDataset.updatedAt = moment().toISOString()
-  await db.collection('datasets').replaceOne({ id: req.params.datasetId }, newDataset)
-  if (req.isNewDataset) await journals.log(req.app, newDataset, { type: 'data-created' }, 'dataset')
-  else await journals.log(req.app, newDataset, { type: 'data-updated' }, 'dataset')
+  let dataset = req.dataset
+  if (req.file) {
+    dataset = await setFileInfo(req.file, req.dataset)
+  } else {
+    const { isVirtual, ...patch } = req.body
+    if (!validatePatch(patch)) {
+      console.log(validatePatch.errors)
+      return res.status(400).send(ajvErrorMessages(validatePatch.errors))
+    }
+    req.body.virtual = req.body.virtual || { children: [] }
+    req.body.schema = await virtualDatasetsUtils.prepareSchema(db, req.body)
+    req.body.status = 'indexed'
+  }
+  Object.assign(dataset, req.body)
+
+  dataset.updatedBy = { id: req.user.id, name: req.user.name }
+  dataset.updatedAt = moment().toISOString()
+  await db.collection('datasets').replaceOne({ id: req.params.datasetId }, dataset)
+  if (req.isNewDataset) await journals.log(req.app, dataset, { type: 'data-created' }, 'dataset')
+  else await journals.log(req.app, dataset, { type: 'data-updated' }, 'dataset')
   await datasetUtils.updateStorageSize(db, req.dataset.owner)
-  res.status(req.isNewDataset ? 201 : 200).send(clean(newDataset))
+  res.status(req.isNewDataset ? 201 : 200).send(clean(dataset))
 })
 router.post('/:datasetId', attemptInsert, readDataset, permissions.middleware('writeData', 'write'), filesUtils.uploadFile(), updateDataset)
 router.put('/:datasetId', attemptInsert, readDataset, permissions.middleware('writeData', 'write'), filesUtils.uploadFile(), updateDataset)
@@ -354,6 +409,8 @@ router.get('/:datasetId/lines', readDataset, permissions.middleware('readLines',
     cacheHash = hash
   }
 
+  if (req.dataset.isVirtual) req.dataset.descendants = await virtualDatasetsUtils.descendants(db, req.dataset)
+
   let esResponse
   try {
     esResponse = await esUtils.search(req.app.get('es'), req.dataset, req.query)
@@ -389,6 +446,7 @@ router.get('/:datasetId/lines', readDataset, permissions.middleware('readLines',
 // Special geo aggregation
 router.get('/:datasetId/geo_agg', readDataset, permissions.middleware('getGeoAgg', 'read'), asyncWrap(async(req, res) => {
   if (!req.user && managePublicCache(req, res)) return res.status(304).send()
+  if (req.dataset.isVirtual) req.dataset.descendants = await virtualDatasetsUtils.descendants(req.app.get('db'), req.dataset)
   let result
   try {
     result = await esUtils.geoAgg(req.app.get('es'), req.dataset, req.query)
@@ -401,6 +459,7 @@ router.get('/:datasetId/geo_agg', readDataset, permissions.middleware('getGeoAgg
 // Standard aggregation to group items by value and perform an optional metric calculation on each group
 router.get('/:datasetId/values_agg', readDataset, permissions.middleware('getValuesAgg', 'read'), asyncWrap(async(req, res) => {
   if (!req.user && managePublicCache(req, res)) return res.status(304).send()
+  if (req.dataset.isVirtual) req.dataset.descendants = await virtualDatasetsUtils.descendants(req.app.get('db'), req.dataset)
   let result
   try {
     result = await esUtils.valuesAgg(req.app.get('es'), req.dataset, req.query)
@@ -413,6 +472,7 @@ router.get('/:datasetId/values_agg', readDataset, permissions.middleware('getVal
 // Simple metric aggregation to calculate some value (sum, avg, etc.)
 router.get('/:datasetId/metric_agg', readDataset, permissions.middleware('getMetricAgg', 'read'), asyncWrap(async(req, res) => {
   if (!req.user && managePublicCache(req, res)) return res.status(304).send()
+  if (req.dataset.isVirtual) req.dataset.descendants = await virtualDatasetsUtils.descendants(req.app.get('db'), req.dataset)
   let result
   try {
     result = await esUtils.metricAgg(req.app.get('es'), req.dataset, req.query)
@@ -425,6 +485,7 @@ router.get('/:datasetId/metric_agg', readDataset, permissions.middleware('getMet
 // Simple words aggregation for significant terms extraction
 router.get('/:datasetId/words_agg', readDataset, permissions.middleware('getWordsAgg', 'read'), asyncWrap(async(req, res) => {
   if (!req.user && managePublicCache(req, res)) return res.status(304).send()
+  if (req.dataset.isVirtual) req.dataset.descendants = await virtualDatasetsUtils.descendants(req.app.get('db'), req.dataset)
   let result
   try {
     result = await esUtils.wordsAgg(req.app.get('es'), req.dataset, req.query)
@@ -456,17 +517,19 @@ router.get('/:datasetId/convert', readDataset, permissions.middleware('downloadO
 
 // Download the full dataset with extensions
 router.get('/:datasetId/full', readDataset, permissions.middleware('downloadFullData', 'read'), asyncWrap(async (req, res, next) => {
+  if (req.dataset.isVirtual) req.dataset.descendants = await virtualDatasetsUtils.descendants(req.app.get('db'), req.dataset)
   res.setHeader('Content-disposition', 'attachment; filename=' + req.dataset.file.name)
   res.setHeader('Content-type', 'text/csv')
+  const relevantSchema = req.dataset.schema.filter(f => f.key.startsWith('_ext_') || !f.key.startsWith('_'))
   await pump(
     datasetUtils.readStream(req.dataset),
     extensions.preserveExtensionStream({ db: req.app.get('db'), esClient: req.app.get('es'), dataset: req.dataset }),
     new Transform({ transform(chunk, encoding, callback) {
       const flatChunk = flatten(chunk)
-      callback(null, req.dataset.schema.map(field => flatChunk[field.key]))
+      callback(null, relevantSchema.map(field => flatChunk[field.key]))
     },
     objectMode: true }),
-    csvStringify({ columns: req.dataset.schema.map(field => field.title || field['x-originalName'] || field.key), header: true }),
+    csvStringify({ columns: relevantSchema.map(field => field.title || field['x-originalName'] || field.key), header: true }),
     res
   )
 }))
@@ -494,14 +557,12 @@ router.get('/:datasetId/_diagnose', readDataset, asyncWrap(async(req, res) => {
   res.json({ filesInfos, esInfos })
 }))
 
-// Special admin route to firce reindexing a dataset
+// Special admin route to force reindexing a dataset
 router.post('/:datasetId/_reindex', readDataset, asyncWrap(async(req, res) => {
   if (!req.user) return res.status(401).send()
   if (!req.user.isAdmin) return res.status(403).send()
-  const patch = { status: 'loaded' }
-  if (!baseTypes.has(req.dataset.originalFile.mimetype)) patch.status = 'uploaded'
-  await req.app.get('db').collection('datasets').updateOne({ id: req.params.datasetId }, { '$set': patch })
-  res.status(200).send(patch)
+  const patchedDataset = await datasetUtils.reindex(req.app.get('db'), req.dataset)
+  res.status(200).send(patchedDataset)
 }))
 
 module.exports = router
