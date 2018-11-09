@@ -148,6 +148,7 @@ exports.storageRemaining = async (db, owner) => {
 }
 
 exports.extendedSchema = (dataset) => {
+  dataset.schema = dataset.schema || []
   const schema = dataset.schema.filter(f => f.key.startsWith('_ext_') || !f.key.startsWith('_'))
   if (dataset.hasFiles) {
     const fileField = dataset.schema.find(field => field.key === 'file')
