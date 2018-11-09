@@ -86,7 +86,7 @@ export default {
         .filter(field => field.key !== '_file.content')
         .filter(field => !this.select.length || this.select.includes(field.key))
         .map(field => ({
-          text: field.title || field['x-originalName'],
+          text: field.title || field['x-originalName'] || field.key,
           value: field.key,
           sortable: field.type === 'string' || field.type === 'number' || field.type === 'integer',
           tooltip: field.description || (field['x-refersTo'] && this.vocabulary && this.vocabulary[field['x-refersTo']] && this.vocabulary[field['x-refersTo']].description)

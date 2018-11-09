@@ -24,9 +24,9 @@ const schema = {
     properties: {
       key: { type: 'string' },
       type: { type: 'string' },
-      format: { type: 'string' },
-      'x-originalName': { type: 'string' },
-      'x-refersTo': { type: 'string' }
+      format: { type: ['string', 'null'] },
+      'x-originalName': { type: ['string', 'null'] },
+      'x-refersTo': { type: ['string', 'null'] }
     }
   }
 }
@@ -264,6 +264,7 @@ module.exports = {
     virtual: {
       type: 'object',
       description: 'A configuration object dedicated to virtual datasets.',
+      required: ['children'],
       properties: {
         children: {
           type: 'array',
@@ -277,6 +278,7 @@ module.exports = {
           description: 'Array of static filters to always apply when querying the dataset',
           items: {
             type: 'object',
+            required: ['key', 'values'],
             properties: {
               key: {
                 type: 'string',

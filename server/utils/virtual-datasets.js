@@ -1,3 +1,4 @@
+const datasetUtils = require('./dataset')
 const createError = require('http-errors')
 
 // blacklisted fields are fields that are present in a grandchild but not re-exposed
@@ -22,29 +23,36 @@ async function childrenSchemas(db, children, blackListedFields) {
 }
 
 // Validate and fill a virtual dataset schema based on its children
-exports.prepareSchema = async (db, schema, virtual) => {
+exports.prepareSchema = async (db, dataset) => {
+  if (!dataset.virtual.children || !dataset.virtual.children.length) return []
+  dataset.schema = dataset.schema || []
+  const schema = datasetUtils.extendedSchema(dataset)
   const blackListedFields = new Set([])
-  const schemas = await childrenSchemas(db, virtual.children, blackListedFields)
+  const schemas = await childrenSchemas(db, dataset.virtual.children, blackListedFields)
   schema.forEach(field => {
     if (blackListedFields.has(field.key)) {
       throw createError(400, `Le champ "${field.key}" est interdit. Il est présent dans un jeu de données enfant mais est protégé.`)
     }
     const matchingFields = []
-    schemas.forEach(s => s.filter(f => f.key === field.key).forEach(f => matchingFields.push(f)))
+    schemas.filter(s => !!s).forEach(s => s.filter(f => f.key === field.key).forEach(f => matchingFields.push(f)))
     if (!matchingFields.length) {
-      throw createError(400, `Le champ "${field.key}" n'est présent dans aucun jeu de données enfant`)
+      field = null
+      return
     }
     field.type = field.type || matchingFields[0].type
     field.format = field.format || matchingFields[0].format || null
+    field['x-refersTo'] = field['x-refersTo'] || matchingFields[0]['x-refersTo'] || null
     matchingFields.forEach(f => {
+      // Some attributes of a a fields have to be homogeneous accross all children
       if (f.type !== field.type) throw createError(400, `Le champ "${field.key}" a des types contradictoires (${field.type}, ${f.type})`)
-      if ((f.format || null) !== field.format) throw createError(400, `Le champ "${field.key}" a des formats contradictoires (${field.format}, ${f.format})`)
+      if ((f.format || null) !== field.format) throw createError(400, `Le champ "${field.key}" a des formats contradictoires (${field.format || 'non défini'}, ${f.format || 'non défini'})`)
+      if ((f['x-refersTo'] || null) !== field['x-refersTo']) throw createError(400, `Le champ "${field.key}" a des concepts contradictoires (${field['x-refersTo'] || 'non défini'}, ${f['x-refersTo'] || 'non défini'})`)
+      // For others we take the first defined value
       field.title = field.title || f.title
       field.description = field.title || f.title
-      field['x-refersTo'] = field['x-refersTo'] || f['x-refersTo']
     })
   })
-  return schema
+  return schema.filter(f => !!f)
 }
 
 // Only non virtual descendants on which to perform the actual ES queries

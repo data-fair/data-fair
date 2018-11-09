@@ -33,6 +33,7 @@
               v-if="!field['x-extension']"
               :items="fieldsVocabulary[field.key]"
               v-model="field['x-refersTo']"
+              :disabled="field.key.startsWith('_')"
               item-text="title"
               item-value="id"
               label="Concept"

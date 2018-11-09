@@ -62,7 +62,8 @@ router.get('', asyncWrap(async(req, res) => {
     'concepts': 'schema.x-refersTo',
     'field-type': 'schema.type',
     'field-format': 'schema.format',
-    'ids': 'id'
+    'ids': 'id',
+    'id': 'id'
   })
   if (req.query.bbox === 'true') {
     query.bbox = { $ne: null }
@@ -112,7 +113,7 @@ router.get('/:datasetId', readDataset, permissions.middleware('readDescription',
 router.get('/:datasetId/schema', readDataset, permissions.middleware('readDescription', 'read'), (req, res, next) => {
   let schema = req.dataset.schema
   schema.forEach(field => {
-    field.label = field.title || field['x-originalName']
+    field.label = field.title || field['x-originalName'] || field.key
   })
   if (req.query.type) {
     const types = req.query.type.split(',')
@@ -156,7 +157,7 @@ router.patch('/:datasetId', readDataset, permissions.middleware('writeDescriptio
 
   if (req.dataset.isVirtual) {
     if (patch.schema || patch.virtual) {
-      patch.schema = await virtualDatasetsUtils.prepareSchema(db, patch.schema || req.dataset.schema, patch.virtual || req.dataset.virtual)
+      patch.schema = await virtualDatasetsUtils.prepareSchema(db, { ...req.dataset, ...patch })
       patch.status = 'indexed'
     }
   } else if (patch.schema) {
@@ -271,7 +272,7 @@ router.post('', beforeUpload, filesUtils.uploadFile(), asyncWrap(async(req, res)
     }
     dataset = initNew(req)
     dataset.virtual = dataset.virtual || { children: [] }
-    dataset.schema = await virtualDatasetsUtils.prepareSchema(db, dataset.schema || [], dataset.virtual)
+    dataset.schema = await virtualDatasetsUtils.prepareSchema(db, dataset)
     dataset.status = 'indexed'
     // Generate ids and try insertion until there is no conflict on id
     const baseId = slug(req.body.title)
@@ -331,7 +332,7 @@ const updateDataset = asyncWrap(async(req, res) => {
       return res.status(400).send(ajvErrorMessages(validatePatch.errors))
     }
     req.body.virtual = req.body.virtual || { children: [] }
-    req.body.schema = await virtualDatasetsUtils.prepareSchema(db, req.body.schema || [], req.body.virtual)
+    req.body.schema = await virtualDatasetsUtils.prepareSchema(db, req.body)
     req.body.status = 'indexed'
   }
   Object.assign(dataset, req.body)
@@ -557,11 +558,8 @@ router.get('/:datasetId/_diagnose', readDataset, asyncWrap(async(req, res) => {
 router.post('/:datasetId/_reindex', readDataset, asyncWrap(async(req, res) => {
   if (!req.user) return res.status(401).send()
   if (!req.user.isAdmin) return res.status(403).send()
-  const patch = { status: 'loaded' }
-  if (req.dataset.isVirtual) patch.status = 'indexed'
-  else if (!baseTypes.has(req.dataset.originalFile.mimetype)) patch.status = 'uploaded'
-  await req.app.get('db').collection('datasets').updateOne({ id: req.params.datasetId }, { '$set': patch })
-  res.status(200).send(patch)
+  const patchedDataset = await datasetUtils.reindex(req.app.get('db'), req.dataset)
+  res.status(200).send(patchedDataset)
 }))
 
 module.exports = router

@@ -5,14 +5,33 @@
       <datasets-list/>
 
       <div class="actions-buttons">
-        <v-btn v-if="user" color="primary" fab title="Importer un fichier" @click="importFileSheet = true">
-          <v-icon>file_upload</v-icon>
-        </v-btn>
+        <v-menu v-if="user" bottom left>
+          <v-btn slot="activator" fab color="primary" title="Créer un jeu de données">
+            <v-icon>add</v-icon>
+          </v-btn>
+          <v-list>
+            <v-list-tile @click="importFileSheet = true">
+              <v-list-tile-avatar>
+                <v-icon color="primary">file_upload</v-icon>
+              </v-list-tile-avatar>
+              <v-list-tile-title>Importer un fichier</v-list-tile-title>
+            </v-list-tile>
+            <v-list-tile @click="createVirtualSheet = true">
+              <v-list-tile-avatar>
+                <v-icon color="primary">picture_in_picture</v-icon>
+              </v-list-tile-avatar>
+              <v-list-tile-title>Créer un jeu virtuel</v-list-tile-title>
+            </v-list-tile>
+          </v-list>
+        </v-menu>
       </div>
 
       <div class="text-xs-center">
         <v-bottom-sheet v-model="importFileSheet">
           <import-file v-if="importFileSheet" @cancel="importFileSheet = false"/>
+        </v-bottom-sheet>
+        <v-bottom-sheet v-model="createVirtualSheet">
+          <create-virtual v-if="createVirtualSheet" @cancel="createVirtualSheet = false"/>
         </v-bottom-sheet>
       </div>
 
@@ -39,13 +58,14 @@
 import { mapState, mapActions } from 'vuex'
 
 import ImportFile from '../components/ImportFile.vue'
+import CreateVirtual from '../components/CreateVirtual.vue'
 import DatasetsList from '../components/DatasetsList.vue'
 
 export default {
   name: 'Datasets',
-  components: { ImportFile, DatasetsList },
+  components: { ImportFile, CreateVirtual, DatasetsList },
   data() {
-    return { importFileSheet: false }
+    return { importFileSheet: false, createVirtualSheet: false }
   },
   computed: {
     ...mapState('session', ['user', 'initialized'])

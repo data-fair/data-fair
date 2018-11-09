@@ -11,6 +11,8 @@ const axios = require('axios')
 const fieldsSniffer = require('./fields-sniffer')
 const geoUtils = require('./geo')
 
+const baseTypes = new Set(['text/csv', 'application/geo+json'])
+
 exports.fileName = (dataset) => {
   return path.join(config.dataDir, dataset.owner.type, dataset.owner.id, dataset.id + '.' + dataset.file.name.split('.').pop())
 }
@@ -162,4 +164,13 @@ exports.extendedSchema = (dataset) => {
   schema.push({ key: '_i', type: 'integer', title: `Numéro de ligne`, description: `Indice de la ligne dans le fichier d'origine` })
   schema.push({ key: '_rand', type: 'integer', title: `Nombre aléatoire`, description: `Un nombre aléatoire associé à la ligne qui permet d'obtenir un tri aléatoire par exemple` })
   return schema
+}
+
+exports.reindex = async (db, dataset) => {
+  const patch = { status: 'loaded' }
+  if (dataset.isVirtual) patch.status = 'indexed'
+  else if (dataset.originalFile && !baseTypes.has(dataset.originalFile.mimetype)) patch.status = 'uploaded'
+  await db.collection('datasets').updateOne({ id: dataset.id }, { '$set': patch })
+  return (await db.collection('datasets')
+    .findOneAndUpdate({ id: dataset.id }, { '$set': patch }, { returnOriginal: false })).value
 }

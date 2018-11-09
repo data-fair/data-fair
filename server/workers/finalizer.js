@@ -63,7 +63,7 @@ exports.process = async function(app, dataset) {
 
   if (geopoint || geometry) {
     debug('calculate bounding ok')
-    dataset.bbox = []
+    queryableDataset.bbox = []
     result.bbox = dataset.bbox = (await esUtils.bboxAgg(es, queryableDataset)).bbox
     debug('bounding box ok', result.bbox)
   } else {

@@ -80,16 +80,12 @@ test.serial('Check compatibility of schema with children', async t => {
   const virtualDataset = await workers.hook('finalizer/' + res.data.id)
   t.truthy(virtualDataset.schema.find(f => f.key === 'id'))
   t.truthy(virtualDataset.schema.find(f => f.key === 'id').type === 'string')
-  try {
-    await ax.patch('/api/v1/datasets/' + virtualDataset.id, {
-      schema: [{
-        key: 'badKey'
-      }]
-    })
-    t.fail()
-  } catch (err) {
-    t.is(err.status, 400)
-  }
+  res = await ax.patch('/api/v1/datasets/' + virtualDataset.id, {
+    schema: [{
+      key: 'badKey'
+    }]
+  })
+  t.truthy(res.data.schema.find(f => f.key === 'badKey'))
 })
 
 test.serial('Check that column restriction is enforced (select, search, aggs)', async t => {

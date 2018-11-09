@@ -30,7 +30,7 @@
                 </v-btn>
               </v-list-tile-action>
             </v-list-tile>
-            <v-list-tile>
+            <v-list-tile v-if="dataset.file">
               <v-list-tile-avatar><v-icon>insert_drive_file</v-icon></v-list-tile-avatar>
               <span>{{ (dataset.remoteFile || dataset.originalFile || dataset.file).name }} {{ ((dataset.remoteFile || dataset.originalFile || dataset.file).size / 1000).toFixed(2) }} ko</span>
             </v-list-tile>
