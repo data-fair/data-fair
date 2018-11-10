@@ -59,7 +59,7 @@ export default {
     pagination: {
       page: 1,
       rowsPerPage: 5,
-      sortBy: null,
+      sortBy: '_i',
       descending: false
     },
     sort: null,
