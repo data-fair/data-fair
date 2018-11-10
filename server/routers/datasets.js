@@ -333,7 +333,6 @@ const updateDataset = asyncWrap(async(req, res) => {
   } else {
     const { isVirtual, ...patch } = req.body
     if (!validatePatch(patch)) {
-      console.log(validatePatch.errors)
       return res.status(400).send(ajvErrorMessages(validatePatch.errors))
     }
     req.body.virtual = req.body.virtual || { children: [] }
