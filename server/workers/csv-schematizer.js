@@ -31,6 +31,14 @@ exports.process = async function(app, dataset) {
   dataset.schema = dataset.schema.filter(field => field['x-extension'] || dataset.file.schema.find(f => f.key === field.key))
   // Add fields not yet present in the stored schema
   dataset.schema = dataset.schema.concat(dataset.file.schema.filter(field => !dataset.schema.find(f => f.key === field.key)))
+  // Update fields that changed
+  dataset.schema.forEach(field => {
+    const fileField = dataset.file.schema.find(f => f.key === field.key)
+    if (fileField && (fileField.type !== field.type || fileField.format !== field.format)) {
+      field.type = fileField.type
+      field.format = fileField.format
+    }
+  })
 
   dataset.status = 'schematized'
   await db.collection('datasets').updateOne({ id: dataset.id }, {
