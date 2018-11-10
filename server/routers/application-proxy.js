@@ -83,7 +83,7 @@ router.all('/:applicationId*', setResource, permissions.middleware('readDescript
       return false
     },
     // Empty the stream if the content was not modified
-    transform: new Transform({ _transform(chunk, encoding, cb) { cb() } })
+    transform: () => new Transform({ _transform(chunk, encoding, cb) { cb() } })
   }, {
     name: 'config-injector',
     match: (resp) => {
