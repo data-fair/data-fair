@@ -54,6 +54,13 @@ exports.prepareSchema = async (db, dataset) => {
       field.description = field.title || f.title
     })
   })
+
+  const fieldsByConcept = {}
+  schema.filter(f => !!f).filter(f => f['x-refersTo']).forEach(f => {
+    if (fieldsByConcept[f['x-refersTo']]) throw createError(400, `Le concept "${f['x-refersTo']}" est référencé par plusieurs champs (${fieldsByConcept[f['x-refersTo']]}, ${f.key}).`)
+    fieldsByConcept[f['x-refersTo']] = f.key
+  })
+
   return schema.filter(f => !!f)
 }
 
