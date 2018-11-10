@@ -51,7 +51,7 @@ exports.parseSort = (sortStr, fields) => {
       field = s
       direction = 'asc'
     }
-    if (!fields.concat(['_key', '_count', '_time']).includes(field)) {
+    if (!fields.concat(['_key', '_count', '_time', 'metric']).includes(field)) {
       throw createError(400, `Impossible de trier sur le champ ${field}, il n'existe pas dans le jeu de données.`)
     }
     return { [field]: direction }
