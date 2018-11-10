@@ -16,7 +16,7 @@ exports.format = (value, prop) => {
   if (typeof value !== 'string') value = JSON.stringify(value)
   if (prop.type === 'string') return value.trim()
   if (prop.type === 'boolean') return value === '1' || value.toLowerCase() === 'true'
-  if (prop.type === 'integer' || prop.type === 'number') return Number(value.replace(/\s/g, ''))
+  if (prop.type === 'integer' || prop.type === 'number') return Number(value.replace(/\s/g, '').replace(',', '.'))
 }
 
 exports.escapeKey = (key) => {
@@ -39,7 +39,7 @@ function checkAll(values, check) {
 
 const isBoolean = (value) => ['0', '1', '-1', 'true', 'false'].indexOf(value.toLowerCase()) !== -1
 const intRegexp = /^(-|\+)?[0-9\s]+$/
-const floatRegexp = /^(-|\+)?([0-9\s]+(\.[0-9]+)?)$/
+const floatRegexp = /^(-|\+)?([0-9\s]+([.,][0-9]+)?)$/
 const dateTimeSchema = ajv.compile({ 'type': 'string', 'format': 'date-time' })
 const dateSchema = ajv.compile({ 'type': 'string', 'format': 'date' })
 const uriRefSchema = ajv.compile({ 'type': 'string', 'format': 'uri-reference' })
