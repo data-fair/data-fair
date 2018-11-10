@@ -64,7 +64,8 @@ router.get('', asyncWrap(async(req, res) => {
     'field-format': 'schema.format',
     'ids': 'id',
     'id': 'id',
-    'children': 'virtual.children'
+    'children': 'virtual.children',
+    'services': 'extensions.remoteService'
   })
   if (req.query.bbox === 'true') {
     query.bbox = { $ne: null }
