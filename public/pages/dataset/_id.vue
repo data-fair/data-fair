@@ -61,6 +61,12 @@
             </v-list-tile-avatar>
             <v-list-tile-title>Supprimer</v-list-tile-title>
           </v-list-tile>
+          <v-list-tile v-if="can('writeData')" @click="showUploadDialog = true">
+            <v-list-tile-avatar>
+              <v-icon color="warning">upload_file</v-icon>
+            </v-list-tile-avatar>
+            <v-list-tile-title>Remplacer</v-list-tile-title>
+          </v-list-tile>
           <v-list-tile :disabled="!can('downloadOriginalData')" :href="downloadLink">
             <v-list-tile-avatar>
               <v-icon color="primary">file_download</v-icon>
@@ -100,15 +106,45 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
+
+    <v-dialog v-model="showUploadDialog" max-width="500">
+      <v-card>
+        <v-card-title primary-title>
+          Remplacement des données
+        </v-card-title>
+        <v-card-text v-if="nbApplications > 0">
+          <v-alert :value="nbApplications === 1" type="error" outline>
+            Attention ! Ce jeu de données est utilisé par une application. Si vous modifiez sa structure l'application peut ne plus fonctionner.
+          </v-alert>
+          <v-alert :value="nbApplications > 1" type="error" outline>
+            Attention ! Ce jeu de données est utilisé par {{ nbApplications }} applications. Si vous modifiez sa structure ces applications peuvent ne plus fonctionner.
+          </v-alert>
+        </v-card-text>
+        <v-card-text>
+          <input type="file" @change="onFileUpload">
+          <v-progress-linear v-if="uploading" v-model="uploadProgress"/>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer/>
+          <v-btn flat @click="showUploadDialog = false">Annuler</v-btn>
+          <v-btn :disabled="!file || uploading" color="warning" @click="confirmUpload">Charger</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </v-layout>
 </template>
 
 <script>
 import { mapState, mapActions, mapGetters } from 'vuex'
+import eventBus from '../../event-bus'
 
 export default {
   data: () => ({
-    showDeleteDialog: false
+    showDeleteDialog: false,
+    showUploadDialog: false,
+    file: null,
+    uploading: false,
+    uploadProgress: 0
   }),
   computed: {
     ...mapState('dataset', ['dataset', 'api', 'nbApplications']),
@@ -134,6 +170,36 @@ export default {
       this.showDeleteDialog = false
       await this.remove()
       this.$router.push({ path: '/datasets' })
+    },
+    onFileUpload(e) {
+      this.file = e.target.files[0]
+    },
+    async confirmUpload() {
+      const options = {
+        onUploadProgress: (e) => {
+          if (e.lengthComputable) {
+            this.uploadProgress = (e.loaded / e.total) * 100
+          }
+        }
+      }
+      const formData = new FormData()
+      formData.append('file', this.file)
+
+      this.uploading = true
+      try {
+        await this.$axios.$put('api/v1/datasets/' + this.dataset.id, formData, options)
+        this.showUploadDialog = false
+      } catch (error) {
+        const status = error.response && error.response.status
+        if (status === 413) {
+          eventBus.$emit('notification', { type: 'error', msg: `Le fichier est trop volumineux pour être importé` })
+        } else if (status === 429) {
+          eventBus.$emit('notification', { type: 'error', msg: `Le propriétaire sélectionné n'a pas assez d'espace disponible pour ce fichier` })
+        } else {
+          eventBus.$emit('notification', { error, msg: `Erreur pendant l'import du fichier:` })
+        }
+      }
+      this.uploading = false
     }
   }
 }
