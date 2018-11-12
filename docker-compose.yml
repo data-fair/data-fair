@@ -18,7 +18,7 @@ services:
       - 8080
       - 1080
     environment:
-      - ADMINS=["alban.mouton@koumoul.com"]
+      - ADMINS=["alban.mouton@koumoul.com", "superadmin@test.com"]
       - NAMES_WEBHOOKS=["http://localhost:5600/api/v1/owner-names?key=dev_secret"]
       - PUBLIC_URL=http://localhost:5600/simple-directory
       - MAILDEV_ACTIVE=true

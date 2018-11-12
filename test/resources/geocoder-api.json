@@ -13,7 +13,7 @@
     "version": "1.0.0"
   },
   "servers": [{
-    "url": "https://staging.koumoul.com/s/geocoder/api/v1",
+    "url": "http://test.com/geocoder",
     "description": "Serveur de staging"
   }],
   "externalDocs": {

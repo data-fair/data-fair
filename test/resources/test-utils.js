@@ -2,6 +2,7 @@ const test = require('ava')
 const axios = require('axios')
 const fs = require('fs-extra')
 const path = require('path')
+const nock = require('nock')
 const FormData = require('form-data')
 const axiosAuth = require('@koumoul/sd-express').axiosAuth
 const workers = require('../../server/workers')
@@ -32,10 +33,21 @@ exports.prepare = (testFile) => {
     publicUrl: 'http://localhost:' + port,
     dataDir,
     mongoUrl: 'mongodb://localhost:27017/data-fair-test-' + key,
-    indicesPrefix
+    indicesPrefix,
+    defaultRemoteKey: {
+      in: 'header',
+      name: 'x-apiKey',
+      value: 'test_default_key'
+    }
   })
 
   const app = require('../../server/app.js')
+
+  test.serial.before('geocoder mock', async t => {
+    nock('http://test.com')
+      .persist()
+      .get('/geocoder/api-docs.json').reply(200, require('./geocoder-api.json'))
+  })
 
   test.serial.before('clean and run app', async t => {
     await clean(key)

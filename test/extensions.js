@@ -19,18 +19,9 @@ other,unknown address
   t.is(res.status, 201)
   let dataset = await workers.hook('finalizer')
 
-  // A geocoder remote service
-  res = await ax.post('/api/v1/remote-services', {
-    apiDoc: require('./resources/geocoder-api.json'),
-    apiKey: { in: 'header', name: 'x-apiKey' },
-    server: 'http://test.com'
-  })
-  t.is(res.status, 201)
-  const remoteServiceId = res.data.id
-
   // Prepare for extension using created remote service and patch dataset to ask for it
   let nockScope = nock('http://test.com', { reqheaders: { 'x-apiKey': config.defaultRemoteKey.value } })
-    .post('/coords').reply(200, (uri, requestBody) => {
+    .post('/geocoder/coords').reply(200, (uri, requestBody) => {
       const inputs = requestBody.trim().split('\n').map(JSON.parse)
       t.is(inputs.length, 2)
       t.deepEqual(Object.keys(inputs[0]), ['q', 'key'])
@@ -40,12 +31,12 @@ other,unknown address
   dataset.schema.find(field => field.key === 'adr')['x-refersTo'] = 'http://schema.org/address'
   res = await ax.patch('/api/v1/datasets/dataset', {
     schema: dataset.schema,
-    extensions: [{ active: true, remoteService: remoteServiceId, action: 'postCoords' }]
+    extensions: [{ active: true, remoteService: 'geocoder-koumoul', action: 'postCoords' }]
   })
   t.is(res.status, 200)
   dataset = await workers.hook('finalizer')
   nockScope.done()
-  const extensionKey = `_ext_${remoteServiceId}_postCoords`
+  const extensionKey = `_ext_${'geocoder-koumoul'}_postCoords`
   t.truthy(dataset.schema.find(field => field.key === extensionKey + '.lat'))
   t.truthy(dataset.schema.find(field => field.key === extensionKey + '.lon'))
   // A search to check results
@@ -56,7 +47,7 @@ other,unknown address
 
   // Add a line to dataset
   // Re-prepare for extension, it should only process the new line
-  nockScope = nock('http://test.com').post('/coords').reply(200, (uri, requestBody) => {
+  nockScope = nock('http://test.com').post('/geocoder/coords').reply(200, (uri, requestBody) => {
     const inputs = requestBody.trim().split('\n').map(JSON.parse)
     t.is(inputs.length, 1)
     t.deepEqual(Object.keys(inputs[0]), ['q', 'key'])
@@ -83,14 +74,14 @@ other,unknown address
   t.is(newResult._geopoint, '50,50')
 
   // Re process full extension because of forceNext parameter
-  nockScope = nock('http://test.com').post('/coords').reply(200, (uri, requestBody) => {
+  nockScope = nock('http://test.com').post('/geocoder/coords').reply(200, (uri, requestBody) => {
     const inputs = requestBody.trim().split('\n').map(JSON.parse)
     t.is(inputs.length, 3)
     t.deepEqual(Object.keys(inputs[0]), ['q', 'key'])
     return inputs.map(input => ({ key: input.key, lat: 40, lon: 40 }))
       .map(JSON.stringify).join('\n') + '\n'
   })
-  res = await ax.patch('/api/v1/datasets/dataset', { extensions: [{ active: true, forceNext: true, remoteService: remoteServiceId, action: 'postCoords' }] })
+  res = await ax.patch('/api/v1/datasets/dataset', { extensions: [{ active: true, forceNext: true, remoteService: 'geocoder-koumoul', action: 'postCoords' }] })
   t.is(res.status, 200)
   await workers.hook('finalizer')
   nockScope.done()
@@ -109,7 +100,7 @@ other,unknown address
   t.is(dataset.extensions[0].progress, 1)
 
   // Reduce selected output using extension.select
-  res = await ax.patch('/api/v1/datasets/dataset', { extensions: [{ active: true, remoteService: remoteServiceId, action: 'postCoords', select: ['lat'] }] })
+  res = await ax.patch('/api/v1/datasets/dataset', { extensions: [{ active: true, remoteService: 'geocoder-koumoul', action: 'postCoords', select: ['lat'] }] })
   t.is(res.status, 200)
   await workers.hook('finalizer')
 
@@ -133,7 +124,7 @@ other,unknown address
     return inputs.map(input => ({ key: input.key, lat: 40 }))
       .map(JSON.stringify).join('\n') + '\n'
   })
-  res = await ax.patch('/api/v1/datasets/dataset', { extensions: [{ active: true, forceNext: true, remoteService: remoteServiceId, action: 'postCoords', select: ['lat'] }] })
+  res = await ax.patch('/api/v1/datasets/dataset', { extensions: [{ active: true, forceNext: true, remoteService: 'geocoder-koumoul', action: 'postCoords', select: ['lat'] }] })
   t.is(res.status, 200)
   await workers.hook('finalizer')
   nockScope.done()
@@ -169,33 +160,24 @@ other,unknown address
   t.is(res.status, 201)
   await workers.hook('finalizer')
 
-  // A geocoder remote service
-  res = await ax.post('/api/v1/remote-services', {
-    apiDoc: require('./resources/geocoder-api.json'),
-    apiKey: { in: 'header', name: 'x-apiKey' },
-    server: 'http://test.com'
-  })
-  t.is(res.status, 201)
-  const remoteServiceId = res.data.id
-
   // Prepare for extension failure with HTTP error code
-  nock('http://test.com').post('/coords').reply(500, 'some error')
-  res = await ax.patch('/api/v1/datasets/dataset2', { extensions: [{ active: true, remoteService: remoteServiceId, action: 'postCoords' }] })
+  nock('http://test.com').post('/geocoder/coords').reply(500, 'some error')
+  res = await ax.patch('/api/v1/datasets/dataset2', { extensions: [{ active: true, remoteService: 'geocoder-koumoul', action: 'postCoords' }] })
   t.is(res.status, 200)
   await workers.hook('finalizer')
   let dataset = (await ax.get('/api/v1/datasets/dataset2')).data
   t.truthy(dataset.extensions[0].error)
 
   // Prepare for extension failure with bad body in response
-  nock('http://test.com').post('/coords').reply(200, 'some error')
-  res = await ax.patch('/api/v1/datasets/dataset2', { extensions: [{ active: true, forceNext: true, remoteService: remoteServiceId, action: 'postCoords' }] })
+  nock('http://test.com').post('/geocoder/coords').reply(200, 'some error')
+  res = await ax.patch('/api/v1/datasets/dataset2', { extensions: [{ active: true, forceNext: true, remoteService: 'geocoder-koumoul', action: 'postCoords' }] })
   t.is(res.status, 200)
   await workers.hook('finalizer')
   dataset = (await ax.get('/api/v1/datasets/dataset2')).data
   t.truthy(dataset.extensions[0].error)
 })
 
-test('Manage empty queries', async t => {
+test.serial('Manage empty queries', async t => {
   const ax = await axiosBuilder('dmeadus0@answers.com')
 
   // Initial dataset with addresses
@@ -209,18 +191,9 @@ empty,
   t.is(res.status, 201)
   const dataset = await workers.hook('finalizer')
 
-  // A geocoder remote service
-  res = await ax.post('/api/v1/remote-services', {
-    apiDoc: require('./resources/geocoder-api.json'),
-    apiKey: { in: 'header', name: 'x-apiKey' },
-    server: 'http://test.com'
-  })
-  t.is(res.status, 201)
-  const remoteServiceId = res.data.id
-
   // Prepare for extension failure with HTTP error code
   nock('http://test.com', { reqheaders: { 'x-apiKey': 'test_default_key' } })
-    .post('/coords').reply(200, (uri, requestBody) => {
+    .post('/geocoder/coords').reply(200, (uri, requestBody) => {
       const inputs = requestBody.trim().split('\n').map(JSON.parse)
       t.is(inputs.length, 1)
       return inputs.map(input => ({ key: input.key, lat: 10, lon: 10 }))
@@ -230,7 +203,7 @@ empty,
   dataset.schema.find(field => field.key === 'adr')['x-refersTo'] = 'http://schema.org/address'
   res = await ax.patch('/api/v1/datasets/dataset3', {
     schema: dataset.schema,
-    extensions: [{ active: true, remoteService: remoteServiceId, action: 'postCoords' }]
+    extensions: [{ active: true, remoteService: 'geocoder-koumoul', action: 'postCoords' }]
   })
   t.is(res.status, 200)
   await workers.hook('finalizer')

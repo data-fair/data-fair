@@ -30,5 +30,9 @@ module.exports = {
   }, {
     title: 'App test2',
     url: 'http://monapp2.com'
+  }],
+  remoteServices: [{
+    title: 'Geocoder',
+    url: 'http://test.com/geocoder/api-docs.json'
   }]
 }

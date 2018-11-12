@@ -69,5 +69,11 @@
     "firstName": "Alban",
     "lastName": "Mouton",
     "email": "alban.mouton@koumoul.com"
+  },
+  {
+    "id": "superadmin",
+    "firstName": "Super",
+    "lastName": "Admin",
+    "email": "superadmin@test.com"
   }
 ]
