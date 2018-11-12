@@ -16,19 +16,19 @@ module.exports = (remoteService) => {
     }],
     components: {
       securitySchemes: {
-        apiKey: {
-          type: 'apiKey',
-          in: 'header',
-          name: 'x-apiKey'
-        },
         sdCookie: {
           type: 'apiKey',
           in: 'cookie',
           name: 'id_token'
+        },
+        siCookie: {
+          type: 'apiKey',
+          in: 'cookie',
+          name: 'session_id'
         }
       }
     },
-    security: [{ apiKey: [] }, { sdCookie: [] }],
+    security: [{ siCookie: [] }, { sdCookie: [] }],
     paths: {
       '/': {
         get: {

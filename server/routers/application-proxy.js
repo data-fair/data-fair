@@ -3,7 +3,6 @@ const requestProxy = require('express-request-proxy')
 const config = require('config')
 const replaceStream = require('replacestream')
 const url = require('url')
-const { Transform } = require('stream')
 const asyncWrap = require('../utils/async-wrap')
 const findUtils = require('../utils/find')
 const applicationAPIDocs = require('../../contract/application-api-docs')
@@ -20,7 +19,7 @@ const setResource = asyncWrap(async(req, res, next) => {
 })
 
 // Proxy for applications
-router.all('/:applicationId*', setResource, permissions.middleware('readDescription', 'read'), asyncWrap(async(req, res, next) => {
+router.all('/:applicationId*', setResource, permissions.middleware('readDescription', 'read'), (req, res, next) => { req.app.get('anonymSession')(req, res, next) }, asyncWrap(async(req, res, next) => {
   delete req.application.permissions
   req.application.apiUrl = config.publicUrl + '/api/v1'
 
@@ -60,31 +59,38 @@ router.all('/:applicationId*', setResource, permissions.middleware('readDescript
     req.params['0'] += '/'
   }
 
-  // Transform HTML content from response to inject params.
-  // Usefull for client-side only applications that cannot read the headers.
+  // We never transmit authentication
+  delete req.headers.authorization
+  delete req.headers.cookie
+
+  // Remember active sessions
+  req.session.activeApplications = req.session.activeApplications || []
+  if (!req.session.activeApplications.includes(req.application.id)) req.session.activeApplications.push(req.application.id)
+
   options.transforms = [{
+    // fix cache. Remove etag,  calculate last-modified, etc.
     name: 'cache-manager',
     match: (resp) => {
-      // fix cache. Remove etag,  calculate last-modified, etc.
       delete resp.headers.expires
       delete resp.headers.etag
       resp.headers['cache-control'] = 'private'
       const lastModified = new Date(resp.headers['last-modified'] || req.application.updatedAt)
       if (resp.statusCode !== 200) return false
-      if (ifModifiedSince >= updatedAt && ifModifiedSince >= lastModified) {
-        resp.statusCode = 304
-        return true
-      }
       if (updatedAt > lastModified) {
         resp.headers['last-modified'] = updatedAt.toUTCString()
       } else {
         resp.headers['last-modified'] = lastModified.toUTCString()
       }
+      if (ifModifiedSince >= updatedAt && ifModifiedSince >= lastModified) {
+        resp.statusCode = 304
+      }
       return false
     },
-    // Empty the stream if the content was not modified
-    transform: () => new Transform({ _transform(chunk, encoding, cb) { cb() } })
+    // never actually called
+    transform: () => null
   }, {
+    // Transform HTML content from response to inject params.
+    // Usefull for client-side only applications that cannot read the headers.
     name: 'config-injector',
     match: (resp) => {
       // No permanent redirects, they are a pain for developping, debugging, etc.
@@ -111,10 +117,6 @@ router.all('/:applicationId*', setResource, permissions.middleware('readDescript
     },
     transform: () => replaceStream('%APPLICATION%', JSON.stringify(req.application))
   }]
-
-  // We never transmit authentication
-  delete req.headers.authorization
-  delete req.headers.cookie
 
   requestProxy(options)(req, res, next)
 }))

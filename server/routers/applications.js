@@ -243,3 +243,9 @@ router.get('/:applicationId/journal', readApplication, permissions.middleware('r
   journal.events.reverse()
   res.json(journal.events)
 }))
+
+router.get('/:applicationId/active-sessions', readApplication, permissions.middleware('readConfig', 'read'), asyncWrap(async (req, res, next) => {
+  const count = await req.app.get('db').collection('sessions').countDocuments({ 'session.activeApplications': req.application.id })
+  console.log('count', count)
+  return res.send({ count })
+}))

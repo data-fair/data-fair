@@ -30,7 +30,7 @@ exports.query = (req, fieldsMap, forceShowAll) => {
   showAll = showAll || forceShowAll
   query.$and = []
   if (!showAll) query.$and.push({ $or: permissions.filter(req.user) })
-  if (req.query.owner) {
+  if (req.query.owner && !forceShowAll) {
     delete query['owner.type']
     delete query['owner.id']
     const ownerTypes = {}

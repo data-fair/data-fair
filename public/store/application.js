@@ -10,7 +10,8 @@ export default {
     application: null,
     api: null,
     journal: [],
-    config: null
+    config: null,
+    nbSessions: null
   },
   getters: {
     resourceUrl: (state, getters, rootState) => state.applicationId ? rootState.env.publicUrl + '/api/v1/applications/' + state.applicationId : null,
@@ -43,6 +44,8 @@ export default {
         commit('setAny', { api })
         const journal = await this.$axios.$get(getters.resourceUrl + '/journal')
         commit('setAny', { journal })
+        const activeSessions = await this.$axios.$get(getters.resourceUrl + '/active-sessions')
+        commit('setAny', { nbSessions: activeSessions.count })
       } catch (error) {
         eventBus.$emit('notification', { error, msg: `Erreur pendant la récupération des informations de l'application` })
       }

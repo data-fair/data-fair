@@ -237,7 +237,9 @@ router.post('/:remoteServiceId/_update', readService, asyncWrap(async(req, res) 
 }))
 
 // Use the proxy as a user with an active session on an application
-router.use('/:remoteServiceId/proxy*', readService, (req, res, next) => {
+router.use('/:remoteServiceId/proxy*', readService, (req, res, next) => { req.app.get('anonymSession')(req, res, next) }, (req, res, next) => {
+  console.log(req.session)
+  if (!req.user && !req.session.activeApplications) return res.status(401).send('Pas de session active')
   const options = {
     url: req.remoteService.server + '*',
     headers: { 'x-forwarded-url': `${config.publicUrl}/api/v1/remote-services/${req.remoteService.id}/proxy/` },

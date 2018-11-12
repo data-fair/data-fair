@@ -19,6 +19,10 @@
               <v-list-tile-avatar><v-icon>add_circle_outline</v-icon></v-list-tile-avatar>
               <span>{{ application.createdBy.name }} {{ application.createdAt | moment("DD/MM/YYYY, HH:mm") }}</span>
             </v-list-tile>
+            <v-list-tile v-if="nbSessions !== null">
+              <v-list-tile-avatar><v-icon>visibility</v-icon></v-list-tile-avatar>
+              <span>{{ nbSessions }} {{ nbSessions > 1 ? 'sessions actives dans la dernière heure' : 'session active dans la dernière heure' }}</span>
+            </v-list-tile>
           </v-list>
         </v-card>
       </v-flex>
@@ -35,7 +39,7 @@
 import { mapState, mapActions } from 'vuex'
 export default {
   computed: {
-    ...mapState('application', ['application'])
+    ...mapState('application', ['application', 'nbSessions'])
   },
   methods: {
     ...mapActions('application', ['patch'])
