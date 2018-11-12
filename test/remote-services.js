@@ -1,3 +1,4 @@
+const nock = require('nock')
 const testUtils = require('./resources/test-utils')
 
 const { test, axiosBuilder } = testUtils.prepare(__filename)
@@ -56,5 +57,46 @@ test.serial('Unknown external service', async t => {
     t.fail()
   } catch (err) {
     t.is(err.status, 404)
+  }
+})
+
+test.serial('Prevent abusing remote service re-exposition', async t => {
+  const ax = await axiosBuilder('superadmin@test.com')
+
+  let nockScope = nock('http://test.com').get('/geocoder/coord').reply(200, { content: 'ok' })
+  let res = await ax.get('/api/v1/remote-services/geocoder-koumoul/proxy/coord')
+  t.is(res.data.content, 'ok')
+  nockScope.done()
+  try {
+    await ax.post('/api/v1/remote-services/geocoder-koumoul/proxy/coords')
+    t.fail()
+  } catch (err) {
+    t.is(err.status, 405)
+  }
+
+  nock('http://test.com').persist().get('/geocoder/coords').reply(200, { content: Buffer.alloc(500000).toString('hex') })
+  let promises = []
+  for (let i = 0; i < 10; i++) {
+    promises.push(ax.get('/api/v1/remote-services/geocoder-koumoul/proxy/coords'))
+  }
+  try {
+    await Promise.all(promises)
+    t.fail()
+  } catch (err) {
+    t.is(err.status, 429)
+  }
+
+  await new Promise(resolve => setTimeout(resolve, 150))
+
+  nock('http://test.com').persist().get('/geocoder/coord').reply(200, { content: 'ok' })
+  promises = []
+  for (let i = 0; i < 100; i++) {
+    promises.push(ax.get('/api/v1/remote-services/geocoder-koumoul/proxy/coord'))
+  }
+  try {
+    await Promise.all(promises)
+    t.fail()
+  } catch (err) {
+    t.is(err.status, 429)
   }
 })

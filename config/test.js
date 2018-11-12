@@ -1,7 +1,12 @@
 module.exports = {
   defaultLimits: {
     totalStorage: 20000,
-    datasetStorage: 15000
+    datasetStorage: 15000,
+    remoteServiceRate: {
+      duration: 0.1,
+      nb: 50, // 50 req max in this interval
+      kb: 2000 // 2 mb in this interval
+    }
   },
   workers: {
     concurrency: 1,

@@ -1,3 +1,4 @@
+const { Transform } = require('stream')
 const express = require('express')
 const ajvErrorMessages = require('ajv-error-messages')
 const moment = require('moment')
@@ -8,6 +9,8 @@ const requestProxy = require('express-request-proxy')
 const remoteServiceAPIDocs = require('../../contract/remote-service-api-docs')
 const mongoEscape = require('mongo-escape')
 const config = require('config')
+const { RateLimiterMongo } = require('rate-limiter-flexible')
+const requestIp = require('request-ip')
 
 const ajv = require('ajv')()
 const validate = ajv.compile(require('../../contract/remote-service'))
@@ -237,13 +240,48 @@ router.post('/:remoteServiceId/_update', readService, asyncWrap(async(req, res) 
 }))
 
 // Use the proxy as a user with an active session on an application
-router.use('/:remoteServiceId/proxy*', readService, (req, res, next) => { req.app.get('anonymSession')(req, res, next) }, (req, res, next) => {
-  console.log(req.session)
+let nbLimiter, kbLimiter
+router.use('/:remoteServiceId/proxy*', readService, (req, res, next) => { req.app.get('anonymSession')(req, res, next) }, asyncWrap(async (req, res, next) => {
   if (!req.user && !req.session.activeApplications) return res.status(401).send('Pas de session active')
+  // preventing POST is a simple way to prevent exposing bulk methods through this public proxy
+  if (req.method.toUpperCase() !== 'GET') return res.status(405).send('Seules les opérations de type GET sont autorisées sur cette exposition de service')
+  // rate limiting both on number of requests and total size to prevent abuse of this public proxy
+  const ip = requestIp.getClientIp(req)
+  nbLimiter = nbLimiter || new RateLimiterMongo({
+    storeClient: req.app.get('mongoClient'),
+    keyPrefix: 'data-fair-rate-limiter-nb',
+    points: config.defaultLimits.remoteServiceRate.nb,
+    duration: config.defaultLimits.remoteServiceRate.duration
+  })
+  try {
+    await nbLimiter.consume(ip, 1)
+  } catch (err) {
+    return res.status(429).send('Trop de requêtes dans un interval restreint pour cette exposition de service.')
+  }
+  kbLimiter = kbLimiter || new RateLimiterMongo({
+    storeClient: req.app.get('mongoClient'),
+    keyPrefix: 'data-fair-rate-limiter-kb',
+    points: config.defaultLimits.remoteServiceRate.kb * 1000,
+    duration: config.defaultLimits.remoteServiceRate.duration
+  })
+  try {
+    await kbLimiter.consume(ip, 1)
+  } catch (err) {
+    return res.status(429).send('Trop de traffic dans un interval restreint pour cette exposition de service.')
+  }
+
   const options = {
     url: req.remoteService.server + '*',
     headers: { 'x-forwarded-url': `${config.publicUrl}/api/v1/remote-services/${req.remoteService.id}/proxy/` },
-    query: {}
+    query: {},
+    transforms: [{
+      name: 'rate-limiter',
+      match: () => true,
+      transform: () => new Transform({ transform(chunk, encoding, cb) {
+        kbLimiter.consume(ip, chunk.length).catch(() => {})
+        cb(null, chunk)
+      } })
+    }]
   }
   // Add static parameters values from configuration
   if (req.remoteService.parameters) {
@@ -265,7 +303,7 @@ router.use('/:remoteServiceId/proxy*', readService, (req, res, next) => { req.ap
   delete req.headers.cookie
 
   requestProxy(options)(req, res, next)
-})
+}))
 
 // Anybody can read the API doc
 router.get('/:remoteServiceId/api-docs.json', readService, (req, res) => {

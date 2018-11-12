@@ -41,7 +41,12 @@ module.exports = {
     // -1 for unlimited storage
     totalStorage: -1,
     // Maximum storage space for 1 dataset
-    datasetStorage: -1
+    datasetStorage: -1,
+    remoteServiceRate: {
+      duration: 5, // 5 seconds intervals
+      nb: 50, // 50 req max in this interval
+      kb: 2000 // 2 mb in this interval
+    }
   },
   workers: {
     concurrency: 2,
