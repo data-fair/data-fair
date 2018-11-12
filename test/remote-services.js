@@ -74,23 +74,19 @@ test.serial('Prevent abusing remote service re-exposition', async t => {
     t.is(err.status, 405)
   }
 
-  nock('http://test.com').persist().get('/geocoder/coords').reply(200, { content: Buffer.alloc(500000).toString('hex') })
-  let promises = []
-  for (let i = 0; i < 10; i++) {
-    promises.push(ax.get('/api/v1/remote-services/geocoder-koumoul/proxy/coords'))
-  }
+  nock('http://test.com').persist().get('/geocoder/coords').reply(200, { content: Buffer.alloc(50000).toString('hex') })
   try {
-    await Promise.all(promises)
+    for (let i = 0; i < 4; i++) {
+      await ax.get('/api/v1/remote-services/geocoder-koumoul/proxy/coords')
+    }
     t.fail()
   } catch (err) {
     t.is(err.status, 429)
   }
 
-  await new Promise(resolve => setTimeout(resolve, 150))
-
   nock('http://test.com').persist().get('/geocoder/coord').reply(200, { content: 'ok' })
-  promises = []
-  for (let i = 0; i < 100; i++) {
+  const promises = []
+  for (let i = 0; i < 11; i++) {
     promises.push(ax.get('/api/v1/remote-services/geocoder-koumoul/proxy/coord'))
   }
   try {

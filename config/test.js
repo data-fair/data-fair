@@ -3,9 +3,9 @@ module.exports = {
     totalStorage: 20000,
     datasetStorage: 15000,
     remoteServiceRate: {
-      duration: 0.1,
-      nb: 50, // 50 req max in this interval
-      kb: 2000 // 2 mb in this interval
+      duration: 0.5,
+      nb: 10,
+      kb: 50
     }
   },
   workers: {
