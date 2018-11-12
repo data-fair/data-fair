@@ -20,11 +20,6 @@ exports.process = async function(app, dataset) {
     if (!extension.active) continue
     const remoteService = await db.collection('remote-services').findOne({ id: extension.remoteService })
     if (!remoteService) continue
-    // TODO: check that owner can use remoteservice event if not owner ?
-    if (dataset.owner.type !== remoteService.owner.type || dataset.owner.id !== remoteService.owner.id) {
-      console.error(`Try to apply extension on dataset ${dataset.id} from remote service ${remoteService.id} but they do not have the same owner.`)
-      continue
-    }
     const action = remoteService.actions.find(a => a.id === extension.action)
     if (!action) {
       console.error(`Try to apply extension on dataset ${dataset.id} from remote service ${remoteService.id} but action ${extension.action} was not found.`)

@@ -4,7 +4,7 @@ const permissions = require('./permissions')
 
 // Util functions shared accross the main find (GET on collection) endpoints
 
-exports.query = (req, fieldsMap) => {
+exports.query = (req, fieldsMap, forceShowAll) => {
   const query = {}
   if (!req.query) return query
 
@@ -25,8 +25,9 @@ exports.query = (req, fieldsMap) => {
     query[fieldsMap[name]] = { $in: req.query[name].split(',') }
   })
 
-  const showAll = req.query.showAll === 'true'
+  let showAll = req.query.showAll === 'true'
   if (showAll && !req.user.isAdmin) throw createError(400, 'Only super admins can override permissions filter with showAll parameter')
+  showAll = showAll || forceShowAll
   query.$and = []
   if (!showAll) query.$and.push({ $or: permissions.filter(req.user) })
   if (req.query.owner) {

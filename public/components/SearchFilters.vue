@@ -5,7 +5,7 @@
     </v-flex>
     <v-spacer/>
     <div>
-      <v-btn-toggle v-model="owners" multiple @change="writeParams">
+      <v-btn-toggle v-if="!hideOwners" v-model="owners" multiple @change="writeParams">
         <v-btn v-if="user" :value="'user:' + user.id" flat>
           <v-icon>person</v-icon>
           <span>&nbsp;Personnels&nbsp;</span>
@@ -39,7 +39,7 @@
 import { mapActions, mapState } from 'vuex'
 
 export default {
-  props: ['filters', 'filterLabels', 'facets', 'type'],
+  props: ['filters', 'filterLabels', 'facets', 'type', 'hideOwners'],
   data: () => ({
     owners: []
   }),
@@ -53,6 +53,7 @@ export default {
     },
     ownerCount() {
       if (!this.facets) return {}
+      if (this.hideOwners) return {}
       const others = this.facets.owner.filter(o => (o.value.type === 'user' && (!this.user || o.value.id !== this.user.id)) || (o.value.type === 'organization' && (!this.user || !this.user.organizations || !this.user.organizations.map(o => o.id).includes(o.value.id))))
       const counts = { others: others.map(f => f.count).reduce((total, count) => total + count, 0) }
       if (this.user) {

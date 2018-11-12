@@ -7,12 +7,10 @@ export default {
   state: {
     remoteServiceId: null,
     remoteService: null,
-    api: null,
-    nbApplications: null
+    api: null
   },
   getters: {
-    resourceUrl: (state, getters, rootState) => state.remoteServiceId ? rootState.env.publicUrl + '/api/v1/remote-services/' + state.remoteServiceId : null,
-    can: (state) => (operation) => (state.remoteService && state.remoteService.userPermissions.includes(operation)) || false
+    resourceUrl: (state, getters, rootState) => state.remoteServiceId ? rootState.env.publicUrl + '/api/v1/remote-services/' + state.remoteServiceId : null
   },
   mutations: {
     setAny(state, params) {
@@ -30,8 +28,6 @@ export default {
         commit('setAny', { remoteService })
         const api = await this.$axios.$get(getters.resourceUrl + '/api-docs.json')
         commit('setAny', { api })
-        const apps = await this.$axios.$get(rootState.env.publicUrl + '/api/v1/applications', { params: { service: remoteService.id, size: 0 } })
-        commit('setAny', { nbApplications: apps.count })
       } catch (error) {
         eventBus.$emit('notification', { error, msg: `Erreur pendant la récupération de la définition de l'API:` })
       }
@@ -60,8 +56,6 @@ export default {
       if (patched) commit('patch', patch)
     },
     async remove({ state, getters, dispatch }) {
-      const options = { headers: { 'x-organizationId': 'user' } }
-      if (state.remoteService.owner.type === 'organization') options.headers = { 'x-organizationId': state.remoteService.owner.id }
       try {
         await this.$axios.delete(getters.resourceUrl)
         eventBus.$emit('notification', `La configuration du service ${state.remoteService.title} a bien été supprimée`)

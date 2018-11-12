@@ -112,7 +112,6 @@ export default {
     showUseDialog: false,
     scopes: [
       { value: 'datasets', text: 'Gestion des jeux de données' },
-      { value: 'remote-services', text: 'Gestion des services distants' },
       { value: 'applications', text: `Gestion des configurations d'applications` },
       { value: 'catalogs', text: `Gestion des connecteurs aux catalogues` },
       { value: 'stats', text: `Récupération d'informations statistiques` }

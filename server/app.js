@@ -15,6 +15,7 @@ const apiKey = require('./utils/api-key')
 const workers = require('./workers')
 const upgrade = require('../upgrade')
 const baseApplications = require('./routers/base-applications')
+const remoteServices = require('./routers/remote-services')
 const session = require('@koumoul/sd-express')({
   directoryUrl: config.directoryUrl,
   privateDirectoryUrl: config.privateDirectoryUrl || config.directoryUrl,
@@ -44,7 +45,7 @@ if (process.env.NODE_ENV === 'development') app.use(require('cors')())
 
 // Business routers
 app.use('/api/v1', require('./routers/root'))
-app.use('/api/v1/remote-services', session.auth, apiKey('remote-services'), require('./routers/remote-services'))
+app.use('/api/v1/remote-services', session.auth, remoteServices.router)
 app.use('/api/v1/catalogs', session.auth, apiKey('catalogs'), require('./routers/catalogs'))
 app.use('/api/v1/base-applications', session.auth, baseApplications.router)
 app.use('/api/v1/applications', session.auth, apiKey('applications'), require('./routers/applications'))
@@ -83,6 +84,7 @@ exports.run = async () => {
   app.set('mongoClient', client)
   await cache.init(db)
   baseApplications.init(db)
+  await remoteServices.init(db)
   app.set('es', await esUtils.init())
   app.publish = await wsUtils.init(wss, db)
   await locksUtils.init(db)

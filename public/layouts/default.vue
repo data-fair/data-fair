@@ -20,9 +20,9 @@
       <v-toolbar-items class="hidden-md-and-down">
         <v-btn :to="localePath('index')" flat color="primary" exact>Accueil</v-btn>
         <v-btn :to="localePath({name: 'datasets', query: searchQuery('datasets')})" :class="routePrefix === 'dataset' ? 'v-btn--active' : ''" flat color="primary">Jeux de données</v-btn>
-        <v-btn :to="localePath({name: 'remote-services', query: searchQuery('remote-services')})" :class="routePrefix === 'remote' ? 'v-btn--active' : ''" flat color="primary">Services</v-btn>
         <v-btn :to="localePath({name: 'applications', query: searchQuery('applications')})" :class="routePrefix === 'application' ? 'v-btn--active' : ''" flat color="primary">Applications</v-btn>
         <v-btn :to="localePath({name: 'catalogs', query: searchQuery('catalogs')})" :class="routePrefix === 'catalog' ? 'v-btn--active' : ''" flat color="primary">Catalogues</v-btn>
+        <v-btn :to="localePath({name: 'remote-services', query: searchQuery('remote-services')})" :class="routePrefix === 'remote' ? 'v-btn--active' : ''" flat color="primary">Services</v-btn>
         <v-menu>
           <v-btn slot="activator" :class="(routePrefix === 'user' || routePrefix === 'interoperate') ? 'v-btn--active' : ''" flat>Documentation</v-btn>
           <v-list>
@@ -74,14 +74,14 @@
           <v-list-tile :to="localePath({name: 'datasets', query: searchQuery('datasets')})">
             <v-list-tile-title>Jeux de données</v-list-tile-title>
           </v-list-tile>
-          <v-list-tile :to="localePath({name: 'remote-services', query: searchQuery('remote-services')})">
-            <v-list-tile-title>Services</v-list-tile-title>
-          </v-list-tile>
           <v-list-tile :to="localePath({name: 'applications', query: searchQuery('applications')})">
             <v-list-tile-title>Applications</v-list-tile-title>
           </v-list-tile>
           <v-list-tile :to="localePath({name: 'catalogs', query: searchQuery('catalogs')})">
             <v-list-tile-title>Catalogues</v-list-tile-title>
+          </v-list-tile>
+          <v-list-tile :to="localePath({name: 'remote-services', query: searchQuery('remote-services')})">
+            <v-list-tile-title>Services</v-list-tile-title>
           </v-list-tile>
           <v-list-tile v-if="!user" color="primary" @click="login">
             <v-list-tile-title>Se connecter / S'inscrire</v-list-tile-title>

@@ -1,10 +1,7 @@
-const owner = require('./owner')
-const eventBy = require('./event-by')
 // TODO replace this schema with the official one when available
 // see https://github.com/OAI/OpenAPI-Specification/issues/1032
 // apiDoc: require('swagger2openapi/schemas/openapi-3.0.json'),
 const apiDoc = require('./openapi-3.0.json')
-const permissions = require('./permissions')
 
 module.exports = {
   title: 'Remote service',
@@ -33,19 +30,6 @@ module.exports = {
       type: 'string',
       description: 'Detailed description of the configuration for an remote service'
     },
-    createdBy: eventBy,
-    updatedBy: eventBy,
-    createdAt: {
-      type: 'string',
-      description: 'Creation date of this configuration for an remote service',
-      format: 'date-time'
-    },
-    updatedAt: {
-      type: 'string',
-      description: 'Date of the last update for this configuration for an remote service',
-      format: 'date-time'
-    },
-    owner,
     apiDoc: { $ref: '#/definitions/API' },
     url: {
       type: 'string',
@@ -93,8 +77,7 @@ module.exports = {
           title: { type: 'string' }
         }
       }
-    },
-    permissions
+    }
   },
   definitions: apiDoc.definitions
 }

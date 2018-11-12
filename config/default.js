@@ -114,9 +114,6 @@ module.exports = {
     title: 'Infos localisations',
     url: 'https://koumoul.com/apps/infos-loc/0.5/'
   }, {
-    title: 'Observatoire des entreprises',
-    url: 'https://koumoul.com/apps/observatoire-entreprises/0.6/'
-  }, {
     title: 'Graphiques simples',
     url: 'https://koumoul-dev.github.io/data-fair-charts/0.5/'
   }, {
@@ -128,19 +125,19 @@ module.exports = {
   }],
   remoteServices: [{
     title: 'Données Entreprises',
-    href: 'https://koumoul.com/s/sirene/api-docs.json'
+    url: 'https://koumoul.com/s/sirene/api-docs.json'
   }, {
     title: 'Géocoder',
-    href: 'https://koumoul.com/s/geocoder/api/v1/api-docs.json'
+    url: 'https://koumoul.com/s/geocoder/api/v1/api-docs.json'
   }, {
     title: 'Cadastre',
-    href: 'https://koumoul.com/s/cadastre/api-docs.json'
+    url: 'https://koumoul.com/s/cadastre/api-docs.json'
   }, {
     title: 'Divisions administratives',
-    href: 'https://koumoul.com/s/insee-mapping/api/v1/api-docs.json'
+    url: 'https://koumoul.com/s/insee-mapping/api/v1/api-docs.json'
   }, {
     title: 'Service de données cartographiques',
-    href: 'https://koumoul.com/s/tileserver/api/v1/api-docs.json'
+    url: 'https://koumoul.com/s/tileserver/api/v1/api-docs.json'
   }],
   catalogs: [{
     title: 'Data.gouv.fr',
