@@ -55,7 +55,7 @@ ADD scripts scripts
 ADD upgrade upgrade
 ADD README.md .
 
-VOLUME /webapp/data
+VOLUME /data
 EXPOSE 8080
 
 CMD ["node", "server"]

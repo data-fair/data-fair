@@ -25,6 +25,6 @@ exports.init = async (db) => {
     name: 'session_id',
     resave: false,
     saveUninitialized: true,
-    cookie: { maxAge: hour, path: publicPath } }
+    cookie: { maxAge: hour, path: publicPath, sameSite: false } }
   )
 }

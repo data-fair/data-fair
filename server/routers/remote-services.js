@@ -242,7 +242,7 @@ router.post('/:remoteServiceId/_update', readService, asyncWrap(async(req, res) 
 // Use the proxy as a user with an active session on an application
 let nbLimiter, kbLimiter
 router.use('/:remoteServiceId/proxy*', readService, (req, res, next) => { req.app.get('anonymSession')(req, res, next) }, asyncWrap(async (req, res, next) => {
-  if (!req.user && !req.session.activeApplications) return res.status(401).send('Pas de session active')
+  if (!req.user && !(req.session && req.session.activeApplications)) return res.status(401).send('Pas de session active')
   // preventing POST is a simple way to prevent exposing bulk methods through this public proxy
   if (req.method.toUpperCase() !== 'GET') return res.status(405).send('Seules les opérations de type GET sont autorisées sur cette exposition de service')
   // rate limiting both on number of requests and total size to prevent abuse of this public proxy
