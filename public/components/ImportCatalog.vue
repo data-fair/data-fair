@@ -6,8 +6,6 @@
       <v-stepper-step :complete="!!catalog.apiKey" step="2" editable>Configuration</v-stepper-step>
       <v-divider/>
       <v-stepper-step :complete="currentStep > 2" step="3">Choix du propriétaire</v-stepper-step>
-      <v-divider/>
-      <v-stepper-step step="4">Effectuer l'action</v-stepper-step>
     </v-stepper-header>
 
     <v-stepper-items>
@@ -43,13 +41,7 @@
 
       <v-stepper-content step="3">
         <owner-pick v-model="owner"/>
-        <v-btn :disabled="!owner" color="primary" @click.native="currentStep = 4">Continuer</v-btn>
-        <v-btn flat @click.native="$emit('cancel')">Annuler</v-btn>
-      </v-stepper-content>
-
-      <v-stepper-content step="4">
-        <v-progress-linear v-model="uploadProgress"/>
-        <v-btn :disabled="importing" color="primary" @click.native="importCatalog()">Lancer l'import</v-btn>
+        <v-btn :disabled="!owner" color="primary" @click.native="importCatalog()">Enregistrer</v-btn>
         <v-btn flat @click.native="$emit('cancel')">Annuler</v-btn>
       </v-stepper-content>
     </v-stepper-items>
@@ -69,7 +61,6 @@ export default {
   data: () => ({
     currentStep: null,
     owner: null,
-    uploadProgress: 0,
     catalogUrl: null,
     configurableCatalogs: [],
     marked,

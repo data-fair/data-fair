@@ -136,7 +136,7 @@ router.post('', asyncWrap(async(req, res) => {
       await req.app.get('db').collection('remote-services').insertOne(mongoEscape.escape(service, true))
       insertOk = true
     } catch (err) {
-      if (err.code !== 11000) throw err
+      if (err.code !== 11000 || !err.errmsg.includes('x-api-id')) throw err
       i += 1
       service.id = `${baseId}-${i}`
     }

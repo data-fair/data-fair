@@ -2,10 +2,6 @@
   <v-stepper v-model="currentStep">
     <v-stepper-header>
       <v-stepper-step :complete="!!apiDoc" step="1" editable>Sélection du service</v-stepper-step>
-      <v-divider/>
-      <v-stepper-step :complete="currentStep > 2" step="2">Choix du propriétaire</v-stepper-step>
-      <v-divider/>
-      <v-stepper-step step="3">Effectuer l'action</v-stepper-step>
     </v-stepper-header>
 
     <v-stepper-items>
@@ -13,7 +9,7 @@
         <v-select
           :items="configurableRemoteServices"
           v-model="apiDocUrl"
-          item-value="href"
+          item-value="url"
           item-text="title"
           label="Choisissez un service à configurer"
           @input="downloadFromUrl"
@@ -25,17 +21,7 @@
           @keyup.native.enter="downloadFromUrl"
         />
         <p v-if="apiDoc" v-html="marked(apiDoc.info.description)"/>
-        <v-btn :disabled="!apiDoc" color="primary" @click.native="currentStep = 2">Continuer</v-btn>
-        <v-btn flat @click.native="$emit('cancel')">Annuler</v-btn>
-      </v-stepper-content>
-      <v-stepper-content step="2">
-        <owner-pick v-model="owner"/>
-        <v-btn :disabled="!owner" color="primary" @click.native="currentStep = 3">Continuer</v-btn>
-        <v-btn flat @click.native="$emit('cancel')">Annuler</v-btn>
-      </v-stepper-content>
-      <v-stepper-content step="3">
-        <v-progress-linear v-model="uploadProgress"/>
-        <v-btn :disabled="importing" color="primary" @click.native="importApi()">Lancer l'import</v-btn>
+        <v-btn :disabled="!apiDoc" color="primary" @click.native="importApi()">Enregistrer</v-btn>
         <v-btn flat @click.native="$emit('cancel')">Annuler</v-btn>
       </v-stepper-content>
     </v-stepper-items>
@@ -92,16 +78,6 @@ export default {
       }
     },
     async importApi() {
-      const options = {
-        headers: { 'x-organizationId': 'user' },
-        progress: (e) => {
-          if (e.lengthComputable) this.uploadProgress = (e.loaded / e.total) * 100
-        }
-      }
-      if (this.owner.type === 'organization') {
-        options.headers = { 'x-organizationId': this.owner.id }
-        if (this.owner.role) options.headers['x-organizationRole'] = this.owner.role
-      }
       const securities = (this.apiDoc.security || []).map(s => Object.keys(s).pop()).map(s => this.apiDoc.components.securitySchemes[s])
       const apiKeySecurity = securities.find(s => s.type === 'apiKey')
       if (!apiKeySecurity) return eventBus.$emit('notification', { type: 'error', msg: `Erreur, l'API importée n'a pas de schéma de sécurité adapté` })
@@ -113,7 +89,7 @@ export default {
           apiKey: { in: apiKeySecurity.in, name: apiKeySecurity.name },
           url: this.apiDocUrl,
           server: this.apiDoc.servers && this.apiDoc.servers.length && this.apiDoc.servers[0].url
-        }, options)
+        })
         this.$router.push({ path: `/remote-service/${remoteService.id}/description` })
       } catch (error) {
         eventBus.$emit('notification', { error, msg: `Erreur pendant l'import de la description du service` })

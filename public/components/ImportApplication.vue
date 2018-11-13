@@ -4,8 +4,6 @@
       <v-stepper-step :complete="!!baseApp" step="1" editable>Sélection de l'application</v-stepper-step>
       <v-divider/>
       <v-stepper-step :complete="currentStep > 2" step="2">Choix du propriétaire</v-stepper-step>
-      <v-divider/>
-      <v-stepper-step step="3">Effectuer l'action</v-stepper-step>
     </v-stepper-header>
 
     <v-stepper-items>
@@ -35,12 +33,7 @@
       </v-stepper-content>
       <v-stepper-content step="2">
         <owner-pick v-model="owner"/>
-        <v-btn :disabled="!owner" color="primary" @click.native="currentStep = 3">Continuer</v-btn>
-        <v-btn flat @click.native="$emit('cancel')">Annuler</v-btn>
-      </v-stepper-content>
-      <v-stepper-content step="3">
-        <v-progress-linear v-model="uploadProgress"/>
-        <v-btn :disabled="importing" color="primary" @click.native="createApplication()">Enregistrer la configuration</v-btn>
+        <v-btn :disabled="!owner" color="primary" @click.native="createApplication()">Enregistrer</v-btn>
         <v-btn flat @click.native="$emit('cancel')">Annuler</v-btn>
       </v-stepper-content>
     </v-stepper-items>
@@ -57,8 +50,7 @@ export default {
   props: ['initApp'],
   data: () => ({
     currentStep: null,
-    owner: 'user',
-    uploadProgress: 0,
+    owner: null,
     baseApp: null,
     applicationUrl: null,
     configurableApplications: [],
