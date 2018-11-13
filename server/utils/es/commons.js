@@ -4,6 +4,7 @@ const config = require('config')
 const createError = require('http-errors')
 const flatten = require('flat')
 const queryParser = require('lucene-query-parser')
+const sanitizeHtml = require('sanitize-html')
 const thumbor = require('../thumbor')
 const tiles = require('../tiles')
 
@@ -185,6 +186,11 @@ exports.prepareResultItem = (hit, dataset, query) => {
     const imageField = dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/image')
     if (!imageField) throw createError(400, 'Thumbnail management is only available if the "image" concept is associated to a field of the dataset.')
     res._thumbnail = thumbor.thumbnail(res[imageField.key], query.thumbnail)
+  }
+  // Description can be used as html content in some applications, we must sanitize it for XSS prevention
+  const descriptionField = dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/description')
+  if (descriptionField && res[descriptionField.key]) {
+    res[descriptionField.key] = sanitizeHtml(res[descriptionField.key])
   }
   return res
 }

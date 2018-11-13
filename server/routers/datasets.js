@@ -15,6 +15,7 @@ const config = require('config')
 const clone = require('fast-clone')
 const chardet = require('chardet')
 const slug = require('slugify')
+const sanitizeHtml = require('sanitize-html')
 const rimraf = util.promisify(require('rimraf'))
 const journals = require('../utils/journals')
 const esUtils = require('../utils/es')
@@ -50,6 +51,7 @@ const operationsClasses = {
 function clean(dataset) {
   dataset.public = permissions.isPublic(dataset, operationsClasses)
   delete dataset.permissions
+  dataset.description = sanitizeHtml(dataset.description)
   findUtils.setResourceLinks(dataset, 'dataset')
   return dataset
 }

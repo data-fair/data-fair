@@ -2,6 +2,7 @@ const express = require('express')
 const ajvErrorMessages = require('ajv-error-messages')
 const moment = require('moment')
 const slug = require('slugify')
+const sanitizeHtml = require('sanitize-html')
 const catalogAPIDocs = require('../../contract/catalog-api-docs')
 const mongoEscape = require('mongo-escape')
 const catalogs = require('../catalogs')
@@ -31,6 +32,7 @@ function clean(catalog) {
   catalog.public = permissions.isPublic(catalog, operationsClasses)
   delete catalog.permissions
   if (catalog.apiKey) catalog.apiKey = '**********'
+  catalog.description = sanitizeHtml(catalog.description)
   findUtils.setResourceLinks(catalog, 'catalog')
   return catalog
 }

@@ -5,7 +5,7 @@
   "type": "text"
 }, {
   "title": "Description",
-  "description": "Un petit texte descriptif",
+  "description": "Un petit texte descriptif (contenu HTML accepté)",
   "identifiers": ["http://schema.org/description"],
   "type": "text"
 }, {

@@ -3,7 +3,7 @@ module.exports = {
     totalStorage: 20000,
     datasetStorage: 15000,
     remoteServiceRate: {
-      duration: 0.5,
+      duration: 1,
       nb: 10,
       kb: 50
     }

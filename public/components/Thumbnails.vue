@@ -35,7 +35,7 @@
                 <v-card-title primary-title>
                   <div>
                     <h3 v-if="labelField" class="headline mb-0">{{ item[labelField.key] }}</h3>
-                    <div v-if="descriptionField">{{ item[descriptionField.key] }}</div>
+                    <div v-if="descriptionField" v-html="item[descriptionField.key]" />
                   </div>
                 </v-card-title>
               </v-card>

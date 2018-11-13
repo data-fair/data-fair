@@ -2,6 +2,7 @@ const express = require('express')
 const slug = require('slugify')
 const moment = require('moment')
 const config = require('config')
+const sanitizeHtml = require('sanitize-html')
 const applicationAPIDocs = require('../../contract/application-api-docs')
 const ajv = require('ajv')()
 const ajvErrorMessages = require('ajv-error-messages')
@@ -32,6 +33,7 @@ function clean(application) {
   delete application.permissions
   delete application._id
   delete application.configuration
+  application.description = sanitizeHtml(application.description)
   findUtils.setResourceLinks(application, 'application')
   return application
 }
@@ -133,9 +135,7 @@ router.use('/:applicationId/permissions', readApplication, permissions.router('a
 // retrieve a application by its id
 router.get('/:applicationId', readApplication, permissions.middleware('readDescription', 'read'), (req, res, next) => {
   req.application.userPermissions = permissions.list(req.application, operationsClasses, req.user)
-  delete req.application.permissions
-  delete req.application.configuration
-  res.status(200).send(req.application)
+  res.status(200).send(clean(req.application))
 })
 
 // PUT used to create or update
@@ -246,6 +246,5 @@ router.get('/:applicationId/journal', readApplication, permissions.middleware('r
 
 router.get('/:applicationId/active-sessions', readApplication, permissions.middleware('readConfig', 'read'), asyncWrap(async (req, res, next) => {
   const count = await req.app.get('db').collection('sessions').countDocuments({ 'session.activeApplications': req.application.id })
-  console.log('count', count)
   return res.send({ count })
 }))

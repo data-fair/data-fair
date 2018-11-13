@@ -86,7 +86,7 @@ test.serial('Prevent abusing remote service re-exposition', async t => {
 
   nock('http://test.com').persist().get('/geocoder/coord').reply(200, { content: 'ok' })
   const promises = []
-  for (let i = 0; i < 11; i++) {
+  for (let i = 0; i < 15; i++) {
     promises.push(ax.get('/api/v1/remote-services/geocoder-koumoul/proxy/coord'))
   }
   try {
