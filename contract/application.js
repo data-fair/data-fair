@@ -54,7 +54,7 @@ module.exports = {
         datasets: {
           type: 'array',
           items: {
-            type: 'object',
+            type: ['object', 'null'],
             required: ['href'],
             properties: {
               href: {
