@@ -15,7 +15,7 @@
         <v-subheader v-if="extension.key && remoteServicesMap[extension.remoteService]">
           Extension: {{ remoteServicesMap[extension.remoteService].actions[extension.action].summary }} (service {{ remoteServicesMap[extension.remoteService].title }})
         </v-subheader>
-        <v-layout v-for="field in schema.filter(field => field['x-extension'] === extension.key)" :key="field.key" row>
+        <v-layout v-for="field in schema.filter(field => !field['x-calculated'] && field['x-extension'] === extension.key)" :key="field.key" row>
           <v-flex xs2>
             <v-text-field v-model="field.key" :disabled="true" label="Clé"/>
           </v-flex>

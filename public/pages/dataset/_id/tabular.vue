@@ -83,7 +83,7 @@ export default {
     ...mapGetters('dataset', ['resourceUrl']),
     headers() {
       return this.dataset.schema
-        .filter(field => field.key !== '_file.content')
+        .filter(field => !field['x-calculated'])
         .filter(field => !this.select.length || this.select.includes(field.key))
         .map(field => ({
           text: field.title || field['x-originalName'] || field.key,

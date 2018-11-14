@@ -1,5 +1,5 @@
 <template>
-  <v-data-table :headers="headers" :items="dataset.schema" :total-items="dataset.schema.length" :disable-initial-sort="true" :hide-actions="true">
+  <v-data-table :headers="headers" :items="dataset.schema.filter(f => !f['x-calculated'])" :total-items="dataset.schema.filter(f => !f['x-calculated']).length" :disable-initial-sort="true" :hide-actions="true">
     <template slot="items" slot-scope="props">
       <td>{{ props.item.key }}</td>
       <td>{{ props.item.title || props.item['x-originalName'] || props.item.key }}</td>

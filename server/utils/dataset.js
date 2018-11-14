@@ -153,17 +153,17 @@ exports.extendedSchema = (dataset) => {
   if (dataset.hasFiles) {
     const fileField = dataset.schema.find(field => field.key === 'file')
     fileField.title = fileField.title || `Le chemin du fichier`
-    schema.push({ key: '_file.content', type: 'string', title: `Contenu textuel du fichier`, description: `Résultat d'une extraction automatique` })
-    schema.push({ key: '_file.content_type', type: 'string', title: `Type mime du fichier`, description: `Résultat d'une détection automatique.` })
-    schema.push({ key: '_file.content_length', type: 'integer', title: `La taille en octet du fichier` })
+    schema.push({ 'x-calculated': true, key: '_file.content', type: 'string', title: `Contenu textuel du fichier`, description: `Résultat d'une extraction automatique` })
+    schema.push({ 'x-calculated': true, key: '_file.content_type', type: 'string', title: `Type mime du fichier`, description: `Résultat d'une détection automatique.` })
+    schema.push({ 'x-calculated': true, key: '_file.content_length', type: 'integer', title: `La taille en octet du fichier` })
   }
   if (geoUtils.schemaHasGeopoint(dataset.schema) || geoUtils.schemaHasGeometry(dataset.schema)) {
-    schema.push({ key: '_geoshape', type: 'object', title: `Géométrie`, description: `Au format d'une géométrie GeoJSON` })
-    schema.push({ key: '_geopoint', type: 'string', title: `Coordonnée géographique`, description: `Centroïde au format "lat,lon"` })
-    schema.push({ key: '_geocorners', type: 'array', title: `Boite englobante de la géométrie`, description: `Sous forme d'un tableau de coordonnées au format "lat,lon"` })
+    schema.push({ 'x-calculated': true, key: '_geoshape', type: 'object', title: `Géométrie`, description: `Au format d'une géométrie GeoJSON` })
+    schema.push({ 'x-calculated': true, key: '_geopoint', type: 'string', title: `Coordonnée géographique`, description: `Centroïde au format "lat,lon"` })
+    schema.push({ 'x-calculated': true, key: '_geocorners', type: 'array', title: `Boite englobante de la géométrie`, description: `Sous forme d'un tableau de coordonnées au format "lat,lon"` })
   }
-  schema.push({ key: '_i', type: 'integer', title: `Numéro de ligne`, description: `Indice de la ligne dans le fichier d'origine` })
-  schema.push({ key: '_rand', type: 'integer', title: `Nombre aléatoire`, description: `Un nombre aléatoire associé à la ligne qui permet d'obtenir un tri aléatoire par exemple` })
+  schema.push({ 'x-calculated': true, key: '_i', type: 'integer', title: `Numéro de ligne`, description: `Indice de la ligne dans le fichier d'origine` })
+  schema.push({ 'x-calculated': true, key: '_rand', type: 'integer', title: `Nombre aléatoire`, description: `Un nombre aléatoire associé à la ligne qui permet d'obtenir un tri aléatoire par exemple` })
   return schema
 }
 

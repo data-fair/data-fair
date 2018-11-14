@@ -35,7 +35,7 @@
               <nuxt-link :to="`/dataset/${props.item}/description`">{{ childrenById[props.item].title }} ({{ childrenById[props.item].id }})</nuxt-link>
             </span>
             <v-select
-              :items="childrenById[props.item].schema.filter(f => !hiddenField(f) && !existingFields.includes(f.key))"
+              :items="childrenById[props.item].schema.filter(f => !f['x-calculated'] && !existingFields.includes(f.key))"
               :item-text="(field) => field.title || field['x-originalName'] || field.key"
               hide-no-data
               item-value="id"
@@ -56,12 +56,12 @@
 
     <h2 class="headline mt-4 mb-3">Champs sélectionnés</h2>
 
-    <p v-if="dataset.schema.filter(f => !hiddenField(f)).length === 0">
+    <p v-if="dataset.schema.filter(f => !f['x-calculated']).length === 0">
       Aucun champ hérité pour l'instant.
     </p>
     <v-list v-else class="elevation-1" three-line>
       <draggable v-model="dataset.schema" :options="{handle: '.handle'}" @end="saveSchema">
-        <v-list-tile v-for="field in dataset.schema" v-show="!hiddenField(field)" :key="field.key">
+        <v-list-tile v-for="field in dataset.schema" v-show="!field['x-calculated']" :key="field.key">
           <v-list-tile-avatar>
             <v-icon title="Réordonner" class="handle">
               reorder
@@ -190,9 +190,6 @@ export default {
       this.dataset.virtual.children = this.dataset.virtual.children.filter(child => res.results.find(d => d.id === child))
       this.childrenById = res.results.reduce((a, d) => { a[d.id] = d; return a }, {})
       this.loadingChildren = false
-    },
-    hiddenField(field) {
-      return field.key.startsWith('_') && !field.key.startsWith('_ext_')
     },
     async searchDatasets() {
       this.loadingDatasets = true
