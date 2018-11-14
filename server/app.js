@@ -119,7 +119,7 @@ exports.stop = async() => {
   await wsUtils.stop()
   locksUtils.stop()
   await workers.stop()
-  await app.get('browser').close()
+  if (app.get('browser')) await app.get('browser').close()
   await app.get('mongoClient').close()
   await app.get('es').close()
 }
