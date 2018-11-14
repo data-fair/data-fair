@@ -32,11 +32,12 @@ RUN apk add --no-cache --virtual .build-deps cmake linux-headers boost-dev gmp g
     apk del .build-deps .gdal-build-deps
 RUN ln -s /usr/lib/libproj.so.13 /usr/lib/libproj.so
 
+ENV NODE_ENV production
+WORKDIR /webapp
+
 # separate npm install for puppeteer that is very heavy
 RUN npm i puppeteer@^1.10.0 && node-prune
 
-ENV NODE_ENV production
-WORKDIR /webapp
 ADD package.json .
 ADD package-lock.json .
 RUN npm install --production && node-prune
