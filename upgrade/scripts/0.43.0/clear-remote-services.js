@@ -3,7 +3,11 @@ const slug = require('slugify')
 exports.description = `Only one instance of remote service per data-fair install instead of per owner.`
 
 exports.exec = async (db, debug) => {
-  await db.collection('remote-services').dropIndex('fulltext')
+  try {
+    await db.collection('remote-services').dropIndex('fulltext')
+  } catch (err) {
+  // nothing to do
+  }
   const servicesCursor = db.collection('remote-services').find()
   const idsMap = {}
   while (await servicesCursor.hasNext()) {
