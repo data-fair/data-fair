@@ -8,7 +8,6 @@ const expressSession = require('express-session')
 const MongoStore = require('connect-mongo')(expressSession)
 
 const hour = 3600000
-const publicPath = url.parse(config.publicUrl).pathname
 
 exports.init = async (db) => {
   const store = new MongoStore({ db, stringify: false, collection: 'sessions' })
@@ -25,6 +24,6 @@ exports.init = async (db) => {
     name: 'df_session_id',
     resave: false,
     saveUninitialized: true,
-    cookie: { maxAge: hour, path: publicPath, sameSite: false } }
+    cookie: { maxAge: hour, sameSite: false } }
   )
 }
