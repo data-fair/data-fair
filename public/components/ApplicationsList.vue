@@ -1,5 +1,5 @@
 <template>
-  <v-container fluid grid-list-lg style="width:100vw">
+  <v-container fluid grid-list-lg>
     <h3 v-if="applications" class="display-1">{{ applications.count }} configuration{{ plural }} d'application{{ plural }}</h3>
 
     <search-filters :filter-labels="{'dataset': 'Jeu de données', 'service': 'Service', 'url': 'Application de base'}" :filters="filters" :facets="applications && applications.facets" type="applications" @apply="page = 1; refresh()"/>
@@ -9,7 +9,7 @@
 
       <v-flex v-for="application in applications.results" :key="application.id" sm12 md6 lg4 xl3>
         <v-card height="100%">
-          <v-card-title primary-title>
+          <v-card-title primary-title style="padding-top: 0; padding-bottom: 0;">
             <nuxt-link :to="`/application/${application.id}/description`">{{ application.title || application.id }}</nuxt-link>
             <v-spacer/>
             <v-btn :href="`${env.publicUrl}/app/${application.id}`" icon flat color="primary" target="_blank" title="Accéder à l'application">
@@ -19,12 +19,13 @@
           <v-divider/>
           <v-img :src="`${application.href}/capture`" height="200px"/>
           <v-divider/>
-          <v-card-text v-html="marked($options.filters.truncate(application.description || '', 200))"/>
-          <v-card-actions>
+          <v-card-text style="max-height:160px;overflow: hidden; margin-bottom: 40px;" v-html="marked($options.filters.truncate(application.description || '', 200))"/>
+
+          <v-card-actions style="position:absolute; bottom: 0px;width:100%;">
             <span v-if="application.owner.type === 'user'"><v-icon>person</v-icon>&nbsp;{{ application.owner.name }}</span>
             <span v-if="application.owner.type === 'organization'"><v-icon>group</v-icon>&nbsp;{{ application.owner.name }}<span v-if="application.owner.role"> ({{ application.owner.role }})</span></span>
             &nbsp;<v-chip :color="application.public ? 'primary' : 'accent'" text-color="white">{{ application.public ? 'Public' : 'Privé' }}</v-chip>
-            <template v-if="application.status === 'error'">
+            <template v-if="application.status === 'configured'">
               <v-spacer />
               <span><v-icon color="red">warning</v-icon>&nbsp;En erreur</span>
             </template>
