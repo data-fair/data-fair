@@ -36,11 +36,11 @@ ENV NODE_ENV production
 WORKDIR /webapp
 
 # separate npm install for puppeteer that is very heavy
-RUN npm i puppeteer@^1.10.0 && node-prune
+RUN npm i puppeteer@^1.10.0
 
 ADD package.json .
 ADD package-lock.json .
-RUN npm install --production && node-prune
+RUN npm install --production
 
 # Adding UI files
 ADD public public

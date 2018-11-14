@@ -38,8 +38,8 @@ after_success:
   - docker login -u $DOCKER_USER -p $DOCKER_PASS
   - export REPO=koumoul/data-fair
   # Pull before push in order to fill docker cache
-  - docker pull $REPO:latest
-  - docker build -f Dockerfile --cache-from $REPO:latest -t $REPO:$TRAVIS_BRANCH .
+  - docker pull $REPO:master
+  - docker build -f Dockerfile --cache-from $REPO:master -t $REPO:$TRAVIS_BRANCH .
   - docker push $REPO:$TRAVIS_BRANCH
   # Doc build
   - npm run build-doc
