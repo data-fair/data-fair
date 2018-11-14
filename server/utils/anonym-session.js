@@ -1,9 +1,7 @@
 // Manage anonymous sessions for applications' users
 // Distinct from authentication's session
 
-const url = require('url')
 const crypto = require('crypto')
-const config = require('config')
 const expressSession = require('express-session')
 const MongoStore = require('connect-mongo')(expressSession)
 
