@@ -64,8 +64,10 @@ router.all('/:applicationId*', setResource, permissions.middleware('readDescript
   delete req.headers.cookie
 
   // Remember active sessions
-  req.session.activeApplications = req.session.activeApplications || []
-  if (!req.session.activeApplications.includes(req.application.id)) req.session.activeApplications.push(req.application.id)
+  if (req.session) {
+    req.session.activeApplications = req.session.activeApplications || []
+    if (!req.session.activeApplications.includes(req.application.id)) req.session.activeApplications.push(req.application.id)
+  }
 
   options.transforms = [{
     // fix cache. Remove etag,  calculate last-modified, etc.

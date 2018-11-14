@@ -22,7 +22,7 @@ exports.init = async (db) => {
   return expressSession({
     store,
     secret,
-    name: 'session_id',
+    name: 'df_session_id',
     resave: false,
     saveUninitialized: true,
     cookie: { maxAge: hour, path: publicPath, sameSite: false } }
