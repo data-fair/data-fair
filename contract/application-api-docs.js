@@ -172,6 +172,22 @@ module.exports = (application) => {
           }
         }
       },
+      '/capture': {
+        get: {
+          summary: `Une capture d'écran`,
+          operationId: 'readCapture',
+          'x-permissionClass': 'read',
+          tags: ['Informations'],
+          responses: {
+            200: {
+              description: 'La capture',
+              content: {
+                'image/png': {}
+              }
+            }
+          }
+        }
+      },
       '/permissions': permissionsDoc
     },
     externalDocs: {

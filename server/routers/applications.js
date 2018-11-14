@@ -17,6 +17,7 @@ const usersUtils = require('../utils/users')
 const findUtils = require('../utils/find')
 const asyncWrap = require('../utils/async-wrap')
 const journals = require('../utils/journals')
+const capture = require('../utils/capture')
 const clone = require('fast-clone')
 
 const router = module.exports = express.Router()
@@ -227,6 +228,7 @@ const writeConfig = asyncWrap(async(req, res) => {
     } }
   )
   await journals.log(req.app, req.application, { type: 'config-updated' }, 'application')
+  capture.screenshot(req)
   res.status(200).json(req.body)
 })
 // 2 paths kept for compatibility.. but /config is deprecated because not homogeneous with the structure of the object
@@ -261,3 +263,8 @@ router.get('/:applicationId/active-sessions', readApplication, permissions.middl
   const count = await req.app.get('db').collection('sessions').countDocuments({ 'session.activeApplications': req.application.id })
   return res.send({ count })
 }))
+
+router.get('/:applicationId/capture', readApplication, permissions.middleware('readConfig', 'read'), (req, res) => {
+  console.log('path', capture.path(req.application))
+  res.sendFile(capture.path(req.application))
+})

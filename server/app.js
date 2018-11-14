@@ -17,6 +17,7 @@ const upgrade = require('../upgrade')
 const baseApplications = require('./routers/base-applications')
 const remoteServices = require('./routers/remote-services')
 const anonymSession = require('./utils/anonym-session')
+const capture = require('./utils/capture')
 const session = require('@koumoul/sd-express')({
   directoryUrl: config.directoryUrl,
   privateDirectoryUrl: config.privateDirectoryUrl || config.directoryUrl,
@@ -84,6 +85,7 @@ exports.run = async () => {
   app.set('db', db)
   app.set('mongoClient', client)
   app.set('anonymSession', await anonymSession.init(db))
+  app.set('browser', await capture.init())
   await cache.init(db)
   baseApplications.init(db)
   await remoteServices.init(db)
@@ -117,6 +119,7 @@ exports.stop = async() => {
   await wsUtils.stop()
   locksUtils.stop()
   await workers.stop()
+  await app.get('browser').close()
   await app.get('mongoClient').close()
   await app.get('es').close()
 }

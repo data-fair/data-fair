@@ -1,6 +1,9 @@
 FROM koumoul/webapp-base:1.8.0
 MAINTAINER "contact@koumoul.com"
 
+# separate npm install for puppeteer that is very heavy
+RUN npm i puppeteer@^1.10.0 && node-prune
+
 RUN apk add --no-cache --update python make g++ unzip
 
 # Install the prepair command line tool
