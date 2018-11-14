@@ -51,7 +51,7 @@ const operationsClasses = {
 function clean(dataset) {
   dataset.public = permissions.isPublic(dataset, operationsClasses)
   delete dataset.permissions
-  dataset.description = sanitizeHtml(dataset.description)
+  dataset.description = dataset.description ? sanitizeHtml(dataset.description) : ''
   findUtils.setResourceLinks(dataset, 'dataset')
   return dataset
 }

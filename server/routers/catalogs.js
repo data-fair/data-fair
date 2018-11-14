@@ -32,7 +32,7 @@ function clean(catalog) {
   catalog.public = permissions.isPublic(catalog, operationsClasses)
   delete catalog.permissions
   if (catalog.apiKey) catalog.apiKey = '**********'
-  catalog.description = sanitizeHtml(catalog.description)
+  catalog.description = catalog.description ? sanitizeHtml(catalog.description) : ''
   findUtils.setResourceLinks(catalog, 'catalog')
   return catalog
 }

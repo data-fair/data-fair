@@ -33,7 +33,7 @@ function clean(application) {
   delete application.permissions
   delete application._id
   delete application.configuration
-  application.description = sanitizeHtml(application.description)
+  application.description = application.description ? sanitizeHtml(application.description) : ''
   findUtils.setResourceLinks(application, 'application')
   return application
 }
