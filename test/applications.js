@@ -54,8 +54,7 @@ test.serial('Manage the custom configuration part of the object', async t => {
   let res = await ax.post('/api/v1/applications', { url: 'http://monapp.com' })
   const acId = res.data.id
   res = await ax.put('/api/v1/applications/' + acId + '/config', {
-    datasets: [{ 'href': config.publicUrl + '/api/v1/datasets/111' }],
-    remoteServices: [{ 'href': config.publicUrl + '/api/v1/remote-services/aaa' }]
+    datasets: [{ 'href': config.publicUrl + '/api/v1/datasets/111' }]
   })
   t.is(res.status, 200)
   res = await ax.get('/api/v1/applications/' + acId + '/config')
@@ -64,9 +63,5 @@ test.serial('Manage the custom configuration part of the object', async t => {
   res = await ax.get('/api/v1/applications', { params: { dataset: 'nope' } })
   t.is(res.data.count, 0)
   res = await ax.get('/api/v1/applications', { params: { dataset: '111' } })
-  t.is(res.data.count, 1)
-  res = await ax.get('/api/v1/applications', { params: { service: 'nope' } })
-  t.is(res.data.count, 0)
-  res = await ax.get('/api/v1/applications', { params: { service: 'aaa' } })
   t.is(res.data.count, 1)
 })
