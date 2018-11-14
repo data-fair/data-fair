@@ -60,8 +60,7 @@ router.get('', asyncWrap(async(req, res) => {
     'ids': 'id',
     'id': 'id',
     'url': 'url',
-    'dataset': 'configuration.datasets.href',
-    'service': 'configuration.remoteServices.href'
+    'dataset': 'configuration.datasets.href'
   })
   const sort = findUtils.sort(req.query.sort)
   const project = findUtils.project(req.query.select, ['configuration'])
