@@ -2,6 +2,9 @@ const express = require('express')
 const slug = require('slugify')
 const moment = require('moment')
 const config = require('config')
+const fs = require('fs')
+const util = require('util')
+const unlink = util.promisify(fs.unlink)
 const sanitizeHtml = require('sanitize-html')
 const applicationAPIDocs = require('../../contract/application-api-docs')
 const ajv = require('ajv')()
@@ -205,6 +208,11 @@ router.delete('/:applicationId', readApplication, permissions.middleware('delete
     type: 'application',
     id: req.params.applicationId
   })
+  try {
+    await unlink(capture.path(req.application))
+  } catch (err) {
+    console.error('Failure to remove capture file')
+  }
   res.sendStatus(204)
 }))
 
@@ -265,6 +273,5 @@ router.get('/:applicationId/active-sessions', readApplication, permissions.middl
 }))
 
 router.get('/:applicationId/capture', readApplication, permissions.middleware('readConfig', 'read'), (req, res) => {
-  console.log('path', capture.path(req.application))
   res.sendFile(capture.path(req.application))
 })
