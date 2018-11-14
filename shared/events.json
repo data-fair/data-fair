@@ -76,7 +76,7 @@
   "application": {
     "error": {
       "icon": "error",
-      "text": "Le service a rencontré une erreur pendant le traitement de l'application"
+      "text": "L'application a été configurée mais n'est pas fonctionnelle"
     },
     "application-created": {
       "icon": "add_circle_outline",

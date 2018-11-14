@@ -116,6 +116,7 @@ router.post('', asyncWrap(async(req, res) => {
       application.id = `${baseId}-${i}`
     }
   }
+  application.status = 'created'
 
   await journals.log(req.app, application, { type: 'application-created', href: config.publicUrl + '/application/' + application.id }, 'application')
   res.status(201).json(clean(application))
@@ -166,6 +167,7 @@ router.put('/:applicationId', attemptInsert, readApplication, permissions.middle
   })
   newApplication.updatedAt = moment().toISOString()
   newApplication.updatedBy = { id: req.user.id, name: req.user.name }
+  newApplication.created = true
   await req.app.get('db').collection('applications').replaceOne({ id: req.params.applicationId }, newApplication)
   res.status(200).json(clean(newApplication))
 }))
@@ -220,7 +222,8 @@ const writeConfig = asyncWrap(async(req, res) => {
     { $set: {
       configuration: req.body,
       updatedAt: moment().toISOString(),
-      updatedBy: { id: req.user.id, name: req.user.name }
+      updatedBy: { id: req.user.id, name: req.user.name },
+      status: 'configured'
     } }
   )
   await journals.log(req.app, req.application, { type: 'config-updated' }, 'application')
@@ -242,6 +245,16 @@ router.get('/:applicationId/journal', readApplication, permissions.middleware('r
   if (!journal) return res.send([])
   journal.events.reverse()
   res.json(journal.events)
+}))
+
+// Used by applications to declare an error
+router.post('/:applicationId/error', readApplication, permissions.middleware('writeConfig', 'write'), asyncWrap(async(req, res) => {
+  if (!req.body.message) return res.status(400).send('Attribut "message" obligatoire')
+  if (req.application.status === 'configured') {
+    await req.app.get('db').collection('applications').updateOne({ id: req.params.applicationId }, { '$set': { status: 'error' } })
+    await journals.log(req.app, req.application, { type: 'error', data: req.body.message }, 'application')
+  }
+  res.status(204).send()
 }))
 
 router.get('/:applicationId/active-sessions', readApplication, permissions.middleware('readConfig', 'read'), asyncWrap(async (req, res, next) => {

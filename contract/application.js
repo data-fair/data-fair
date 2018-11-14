@@ -45,6 +45,10 @@ module.exports = {
       'description': 'Date of the last update for this application configuration',
       'format': 'date-time'
     },
+    status: {
+      type: 'string',
+      enum: ['created', 'configured', 'error']
+    },
     owner,
     'configuration': {
       type: 'object',

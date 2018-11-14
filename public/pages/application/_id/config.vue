@@ -5,11 +5,11 @@
         <v-flex xs12 md4>
           <h2 class="title my-4" >Configuration</h2>
           <iframe v-if="showConfigIframe" :src="applicationLink + '/config?embed=true'" :height="Math.min(height - 100, 600)" width="100%"/>
-          <v-form v-if="showForm" v-model="formValid" @submit="e => {writeConfig(editConfig); e.preventDefault()}">
+          <v-form v-if="showForm" ref="configForm" v-model="formValid" @submit="submit">
             <v-jsonschema-form :schema="schema" :model="editConfig" :options="{disableAll: !can('writeConfig'), context: {owner: application.owner}, requiredMessage: 'Information obligatoire', noDataMessage: 'Aucune valeur correspondante', 'searchMessage': 'Recherchez...'}" @error="error => eventBus.$emit('notification', {error})" />
             <v-layout row>
               <v-spacer/>
-              <v-btn :disabled="!formValid" color="primary" type="submit">Enregistrer</v-btn>
+              <v-btn color="primary" type="submit">Enregistrer</v-btn>
             </v-layout>
           </v-form>
         </v-flex>
@@ -22,7 +22,7 @@
             </v-btn>-->
           </h2>
           <v-card v-if="showPreview">
-            <iframe :src="applicationLink + '?embed=true'" :height="Math.min(height - 100, 600)" width="100%"/>
+            <iframe v-if="config" :src="applicationLink + '?embed=true'" :height="Math.min(height - 100, 600)" width="100%"/>
           </v-card>
         </v-flex>
       </v-layout>
@@ -96,6 +96,12 @@ export default {
     refreshPreview() {
       this.showPreview = false
       setTimeout(() => { this.showPreview = true }, 1)
+    },
+    submit(e) {
+      e.preventDefault()
+      this.$refs.configForm.validate()
+      if (!this.formValid) return
+      this.writeConfig(this.editConfig)
     }
   }
 }

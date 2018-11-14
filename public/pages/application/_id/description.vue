@@ -11,6 +11,15 @@
               </v-list-tile-avatar>
               <span>{{ application.owner.name }}</span>
             </v-list-tile>
+            <v-list-tile v-if="journal[0]" :class="'event-' + journal[0].type">
+              <v-list-tile-avatar>
+                <v-icon>{{ events[journal[0].type].icon }}</v-icon>
+              </v-list-tile-avatar>
+              <p v-if="journal[0].type === 'error'">
+                {{ events[journal[0].type].text }} <br> {{ journal[0].data }}
+              </p>
+              <span v-else>{{ events[journal[0].type].text }}</span>
+            </v-list-tile>
             <v-list-tile>
               <v-list-tile-avatar><v-icon>update</v-icon></v-list-tile-avatar>
               <span>{{ application.updatedBy.name }} {{ application.updatedAt | moment("DD/MM/YYYY, HH:mm") }}</span>
@@ -37,9 +46,14 @@
 
 <script>
 import { mapState, mapActions } from 'vuex'
+const events = require('../../../../shared/events.json').application
+
 export default {
+  data() {
+    return { events }
+  },
   computed: {
-    ...mapState('application', ['application', 'nbSessions'])
+    ...mapState('application', ['application', 'nbSessions', 'journal'])
   },
   methods: {
     ...mapActions('application', ['patch'])

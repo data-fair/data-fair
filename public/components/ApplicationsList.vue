@@ -21,6 +21,10 @@
             <span v-if="application.owner.type === 'user'"><v-icon>person</v-icon>&nbsp;{{ application.owner.name }}</span>
             <span v-if="application.owner.type === 'organization'"><v-icon>group</v-icon>&nbsp;{{ application.owner.name }}<span v-if="application.owner.role"> ({{ application.owner.role }})</span></span>
             &nbsp;<v-chip :color="application.public ? 'primary' : 'accent'" text-color="white">{{ application.public ? 'Public' : 'Privé' }}</v-chip>
+            <template v-if="application.status === 'error'">
+              <v-spacer />
+              <span><v-icon color="red">warning</v-icon>&nbsp;En erreur</span>
+            </template>
           </v-card-actions>
         </v-card>
       </v-flex>
@@ -76,7 +80,7 @@ export default {
     async refresh() {
       this.loading = true
       this.applications = await this.$axios.$get(this.env.publicUrl + '/api/v1/applications', { params:
-        { size: this.size, page: this.page, select: 'title,description', ...this.filters, facets: 'owner' }
+        { size: this.size, page: this.page, select: 'title,description,status', ...this.filters, facets: 'owner' }
       })
       this.filtered = this.filters.q !== undefined
       this.loading = false

@@ -20,7 +20,7 @@ router.get('/info', asyncWrap(async (req, res, next) => {
   })
 }))
 
-router.get('/errors', asyncWrap(async (req, res, next) => {
+router.get('/datasets-errors', asyncWrap(async (req, res, next) => {
   const datasets = req.app.get('db').collection('datasets')
   const query = { status: 'error' }
   const [skip, size] = findUtils.pagination(req.query)
@@ -38,9 +38,32 @@ router.get('/errors', asyncWrap(async (req, res, next) => {
     { $project: { id: 1, title: 1, description: 1, updatedAt: 1, owner: 1, event: 1 } }
   ]).toArray()
 
-  const [total, results] = await Promise.all([ datasets.countDocuments(query), aggregatePromise ])
+  const [count, results] = await Promise.all([ datasets.countDocuments(query), aggregatePromise ])
 
-  res.send({ total, results })
+  res.send({ count, results })
+}))
+
+router.get('/applications-errors', asyncWrap(async (req, res, next) => {
+  const applications = req.app.get('db').collection('applications')
+  const query = { status: 'error' }
+  const [skip, size] = findUtils.pagination(req.query)
+
+  const aggregatePromise = applications.aggregate([
+    { $match: query },
+    { $project: { _id: 0, id: 1, title: 1, description: 1, updatedAt: 1, owner: 1 } },
+    { $sort: { updatedAt: -1 } },
+    { $skip: skip },
+    { $limit: size },
+    { $lookup: { from: 'journals', localField: 'id', foreignField: 'id', as: 'journal' } },
+    { $unwind: '$journal' },
+    { $match: { 'journal.type': 'application' } },
+    { $addFields: { event: { $arrayElemAt: ['$journal.events', -1] } } },
+    { $project: { id: 1, title: 1, description: 1, updatedAt: 1, owner: 1, event: 1 } }
+  ]).toArray()
+
+  const [count, results] = await Promise.all([ applications.countDocuments(query), aggregatePromise ])
+
+  res.send({ count, results })
 }))
 
 router.get('/owners', asyncWrap(async(req, res) => {
