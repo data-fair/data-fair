@@ -56,12 +56,14 @@ router.get('', asyncWrap(async(req, res) => {
       !req.query.service.startsWith('https://')) {
     req.query.service = config.publicUrl + '/api/v1/remote-services/' + req.query.service
   }
-  const query = findUtils.query(req, {
-    'ids': 'id',
-    'id': 'id',
+  const filterFields = {
     'url': 'url',
     'dataset': 'configuration.datasets.href'
-  })
+  }
+  const query = findUtils.query(req, Object.assign({
+    'ids': 'id',
+    'id': 'id'
+  }, filterFields))
   const sort = findUtils.sort(req.query.sort)
   const project = findUtils.project(req.query.select, ['configuration'])
   const [skip, size] = findUtils.pagination(req.query)
@@ -75,7 +77,7 @@ router.get('', asyncWrap(async(req, res) => {
       q.$and.pop()
       if (!q.$and.length) delete q.$and
     }
-    mongoQueries.push(applications.aggregate(findUtils.facetsQuery(req.query.facets, q)).toArray())
+    mongoQueries.push(applications.aggregate(findUtils.facetsQuery(req.query.facets, filterFields, q)).toArray())
   }
   let [results, count, facets] = await Promise.all(mongoQueries)
   results.forEach(r => {

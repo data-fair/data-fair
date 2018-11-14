@@ -139,7 +139,7 @@ exports.setResourceLinks = (resource, resourceType) => {
   if (resourceType === 'application') resource.exposedUrl = `${config.publicUrl}/app/${resource.id}`
 }
 
-exports.facetsQuery = (facetsQueryParam, query) => {
+exports.facetsQuery = (facetsQueryParam, filterFields, query) => {
   const pipeline = []
   if (query.$text) {
     pipeline.push({
@@ -149,22 +149,30 @@ exports.facetsQuery = (facetsQueryParam, query) => {
     })
     delete query.$text
   }
-  pipeline.push({
-    $facet: {
-      owner: [{
-        $match: query
-      }, {
-        $unwind: '$owner'
-      }, {
-        $sortByCount: '$owner'
-      }]
-    }
-  })
+  const fields = facetsQueryParam && facetsQueryParam.length && facetsQueryParam.split(',').filter(f => filterFields[f] || f === 'owner')
+  if (fields) {
+    pipeline.push({
+      $facet: Object.assign({}, ...fields.map(f => ({
+        [f]: [{
+          $match: query
+        }, {
+          $unwind: '$' + (filterFields[f] || 'owner').split('.').shift()
+        }, {
+          $group: {
+            _id: { [f]: '$' + (filterFields[f] || 'owner'), id: '$id' }
+          }
+        }, { $project: { [f]: '$_id.' + f, _id: 0 }
+        }, {
+          $sortByCount: '$' + f
+        }]
+      })))
+    })
+  }
   return pipeline
 }
 
 exports.parseFacets = (facets) => {
   if (!facets) return
   const ret = facets.pop()
-  return Object.assign({}, ...Object.keys(ret).map(k => ({ [k]: ret[k].map(r => ({ count: r.count, value: r._id })) })))
+  return Object.assign({}, ...Object.keys(ret).map(k => ({ [k]: ret[k].filter(r => r._id).map(r => ({ count: r.count, value: r._id })) })))
 }

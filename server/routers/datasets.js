@@ -59,16 +59,18 @@ function clean(dataset) {
 // Get the list of datasets
 router.get('', asyncWrap(async(req, res) => {
   const datasets = req.app.get('db').collection('datasets')
-  const query = findUtils.query(req, {
-    'filename': 'originalFile.name',
+  const filterFields = {
     'concepts': 'schema.x-refersTo',
     'field-type': 'schema.type',
     'field-format': 'schema.format',
-    'ids': 'id',
-    'id': 'id',
     'children': 'virtual.children',
     'services': 'extensions.remoteService'
-  })
+  }
+  const query = findUtils.query(req, Object.assign({
+    'filename': 'originalFile.name',
+    'ids': 'id',
+    'id': 'id'
+  }, filterFields))
   if (req.query.bbox === 'true') {
     query.bbox = { $ne: null }
   }
@@ -88,7 +90,7 @@ router.get('', asyncWrap(async(req, res) => {
       q.$and.pop()
       if (!q.$and.length) delete q.$and
     }
-    mongoQueries.push(datasets.aggregate(findUtils.facetsQuery(req.query.facets, q)).toArray())
+    mongoQueries.push(datasets.aggregate(findUtils.facetsQuery(req.query.facets, filterFields, q)).toArray())
   }
   let [results, count, facets] = await Promise.all(mongoQueries)
   results.forEach(r => {

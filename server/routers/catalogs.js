@@ -69,7 +69,7 @@ router.get('', asyncWrap(async(req, res) => {
       q.$and.pop()
       if (!q.$and.length) delete q.$and
     }
-    mongoQueries.push(catalogs.aggregate(findUtils.facetsQuery(req.query.facets, q)).toArray())
+    mongoQueries.push(catalogs.aggregate(findUtils.facetsQuery(req.query.facets, {}, q)).toArray())
   }
   let [results, count, facets] = await Promise.all(mongoQueries)
   results.forEach(r => {
