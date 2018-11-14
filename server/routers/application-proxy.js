@@ -75,7 +75,7 @@ router.all('/:applicationId*', setResource, permissions.middleware('readDescript
     match: (resp) => {
       delete resp.headers.expires
       delete resp.headers.etag
-      resp.headers['cache-control'] = 'private'
+      resp.headers['cache-control'] = 'private, max-age=0'
       const lastModified = new Date(resp.headers['last-modified'] || req.application.updatedAt)
       if (resp.statusCode !== 200) return false
       if (updatedAt > lastModified) {
@@ -91,9 +91,7 @@ router.all('/:applicationId*', setResource, permissions.middleware('readDescript
     // never actually called
     transform: () => null
   }, {
-    // Transform HTML content from response to inject params.
-    // Usefull for client-side only applications that cannot read the headers.
-    name: 'config-injector',
+    name: 'redirect-fixer',
     match: (resp) => {
       // No permanent redirects, they are a pain for developping, debugging, etc.
       if (resp.statusCode === 301) resp.statusCode = 302
@@ -106,6 +104,15 @@ router.all('/:applicationId*', setResource, permissions.middleware('readDescript
         resp.headers.location = resp.headers.location.replace(cleanApplicationUrl.replace('https:', ''), req.application.exposedUrl)
       }
 
+      return false
+    },
+    // never actually called
+    transform: () => null
+  }, {
+    // Transform HTML content from response to inject params.
+    // Usefull for client-side only applications that cannot read the headers.
+    name: 'config-injector',
+    match: (resp) => {
       // Do not attempt to transform errors or redirects
       if (resp.statusCode !== 200) return false
 
@@ -115,9 +122,12 @@ router.all('/:applicationId*', setResource, permissions.middleware('readDescript
         return false
       }
 
+      // Only transform HTTP
       return !resp.headers['content-type'] || (resp.headers['content-type'].indexOf('text/html') === 0)
     },
-    transform: () => replaceStream('%APPLICATION%', JSON.stringify(req.application))
+    transform: () => {
+      return replaceStream('%APPLICATION%', JSON.stringify(req.application))
+    }
   }]
 
   requestProxy(options)(req, res, next)
