@@ -2,16 +2,9 @@ const fs = require('fs-extra')
 const config = require('config')
 const path = require('path')
 const debug = require('debug')('capture')
-
-let puppeteer
-try {
-  puppeteer = require('puppeteer')
-} catch (err) {
-  // nothing to do.. normal in tests for example
-}
+const puppeteer = require('puppeteer')
 
 exports.init = async () => {
-  if (!puppeteer) return
   await fs.ensureDir(path.join(config.dataDir, 'captures'))
   return puppeteer.launch()
 }

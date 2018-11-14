@@ -85,7 +85,7 @@ exports.run = async () => {
   app.set('db', db)
   app.set('mongoClient', client)
   app.set('anonymSession', await anonymSession.init(db))
-  app.set('browser', await capture.init())
+  if (process.env.NODE_ENV !== 'test') app.set('browser', await capture.init())
   await cache.init(db)
   baseApplications.init(db)
   await remoteServices.init(db)
@@ -119,7 +119,7 @@ exports.stop = async() => {
   await wsUtils.stop()
   locksUtils.stop()
   await workers.stop()
-  if (app.get('browser')) await app.get('browser').close()
+  if (process.env.NODE_ENV !== 'test') await app.get('browser').close()
   await app.get('mongoClient').close()
   await app.get('es').close()
 }
