@@ -69,6 +69,12 @@ router.all('/:applicationId*', setResource, permissions.middleware('readDescript
     if (!req.session.activeApplications.includes(req.application.id)) req.session.activeApplications.push(req.application.id)
   }
 
+  const injectedApplication = { ...req.application }
+  if (req.query.draft === 'true') {
+    injectedApplication.configuration = injectedApplication.configurationDraft || injectedApplication.configuration || {}
+  }
+  delete injectedApplication.configurationDraft
+
   options.transforms = [{
     // fix cache. Remove etag,  calculate last-modified, etc.
     name: 'cache-manager',
@@ -126,7 +132,7 @@ router.all('/:applicationId*', setResource, permissions.middleware('readDescript
       return !resp.headers['content-type'] || (resp.headers['content-type'].indexOf('text/html') === 0)
     },
     transform: () => {
-      return replaceStream('%APPLICATION%', JSON.stringify(req.application))
+      return replaceStream('%APPLICATION%', JSON.stringify(injectedApplication))
     }
   }]
 

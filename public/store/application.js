@@ -11,6 +11,7 @@ export default {
     api: null,
     journal: [],
     config: null,
+    configDraft: null,
     nbSessions: null
   },
   getters: {
@@ -102,6 +103,19 @@ export default {
         commit('setAny', { config: { ...config } })
       } catch (error) {
         eventBus.$emit('notification', { error, msg: `Erreur pendant l'écriture de la configuration d'application:` })
+      }
+    },
+    async readConfigDraft({ state, commit, getters }) {
+      const configDraft = await this.$axios.$get(getters.resourceUrl + '/configuration-draft')
+      commit('setAny', { configDraft })
+      return configDraft
+    },
+    async writeConfigDraft({ state, commit, getters }, configDraft) {
+      try {
+        await this.$axios.$put(getters.resourceUrl + '/configuration-draft', configDraft)
+        commit('setAny', { configDraft: { ...configDraft } })
+      } catch (error) {
+        eventBus.$emit('notification', { error, msg: `Erreur pendant l'écriture du brouillon de configuration d'application:` })
       }
     }
   }

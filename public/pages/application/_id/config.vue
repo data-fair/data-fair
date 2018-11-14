@@ -9,7 +9,8 @@
             <v-jsonschema-form :schema="schema" :model="editConfig" :options="{disableAll: !can('writeConfig'), context: {owner: application.owner}, requiredMessage: 'Information obligatoire', noDataMessage: 'Aucune valeur correspondante', 'searchMessage': 'Recherchez...'}" @error="error => eventBus.$emit('notification', {error})" />
             <v-layout row>
               <v-spacer/>
-              <v-btn color="primary" type="submit">Enregistrer</v-btn>
+              <v-btn :disabled="!hasModification" color="primary" type="submit">Enregistrer</v-btn>
+              <v-btn :disabled="hasModification || !hasDraft" color="warning" @click="validateDraft">Valider le brouillon</v-btn>
             </v-layout>
           </v-form>
         </v-flex>
@@ -22,7 +23,7 @@
             </v-btn>-->
           </h2>
           <v-card v-if="showPreview">
-            <iframe v-if="config" :src="applicationLink + '?embed=true'" :height="Math.min(height - 100, 600)" width="100%"/>
+            <iframe v-if="config" :src="applicationLink + '?embed=true&draft=true'" :height="Math.min(height - 100, 600)" width="100%"/>
           </v-card>
         </v-flex>
       </v-layout>
@@ -59,14 +60,20 @@ export default {
     }
   },
   computed: {
-    ...mapState('application', ['application', 'config']),
+    ...mapState('application', ['application', 'config', 'configDraft']),
     ...mapGetters('application', ['applicationLink', 'can']),
     height() {
       return window.innerHeight
+    },
+    hasModification() {
+      return JSON.stringify(this.editConfig) !== JSON.stringify(this.configDraft)
+    },
+    hasDraft() {
+      return JSON.stringify(this.config) !== JSON.stringify(this.configDraft)
     }
   },
   watch: {
-    config() {
+    configDraft() {
       this.refreshPreview()
     }
   },
@@ -79,7 +86,8 @@ export default {
         console.error(`Schema fetched at ${schemaUrl} is not a valid JSON`)
         this.showConfigIframe = true
       } else {
-        this.editConfig = { ...await this.readConfig() }
+        this.editConfig = { ...await this.readConfigDraft() }
+        await this.readConfig()
         this.showForm = true
       }
     } catch (error) {
@@ -92,7 +100,7 @@ export default {
     }
   },
   methods: {
-    ...mapActions('application', ['patch', 'readConfig', 'writeConfig']),
+    ...mapActions('application', ['patch', 'readConfig', 'writeConfig', 'readConfigDraft', 'writeConfigDraft']),
     refreshPreview() {
       this.showPreview = false
       setTimeout(() => { this.showPreview = true }, 1)
@@ -101,7 +109,10 @@ export default {
       e.preventDefault()
       this.$refs.configForm.validate()
       if (!this.formValid) return
-      this.writeConfig(this.editConfig)
+      this.writeConfigDraft(this.editConfig)
+    },
+    validateDraft() {
+      this.writeConfig(this.configDraft)
     }
   }
 }

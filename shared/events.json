@@ -89,6 +89,10 @@
     "config-updated": {
       "icon": "update",
       "text": "La configuration a été mise à jour"
+    },
+    "config-draft-updated": {
+      "icon": "update",
+      "text": "Le brouillon de configuration a été mis à jour"
     }
   }
 }

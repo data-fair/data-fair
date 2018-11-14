@@ -238,9 +238,28 @@ const writeConfig = asyncWrap(async(req, res) => {
   capture.screenshot(req)
   res.status(200).json(req.body)
 })
-// 2 paths kept for compatibility.. but /config is deprecated because not homogeneous with the structure of the object
 router.put('/:applicationId/config', readApplication, permissions.middleware('writeConfig', 'write'), writeConfig)
 router.put('/:applicationId/configuration', readApplication, permissions.middleware('writeConfig', 'write'), writeConfig)
+
+// Configuration draft management
+router.get('/:applicationId/configuration-draft', readApplication, permissions.middleware('writeConfig', 'read'), (req, res) => {
+  res.status(200).send(req.application.configurationDraft || req.application.configuration || {})
+})
+router.put('/:applicationId/configuration-draft', readApplication, permissions.middleware('writeConfig', 'write'), asyncWrap(async (req, res, next) => {
+  const valid = validateConfiguration(req.body)
+  if (!valid) return res.status(400).send(validateConfiguration.errors)
+  await req.app.get('db').collection('applications').updateOne(
+    { id: req.params.applicationId },
+    { $set: {
+      configurationDraft: req.body,
+      updatedAt: moment().toISOString(),
+      updatedBy: { id: req.user.id, name: req.user.name },
+      status: 'configured-draft'
+    } }
+  )
+  await journals.log(req.app, req.application, { type: 'config-draft-updated' }, 'application')
+  res.status(200).json(req.body)
+}))
 
 router.get('/:applicationId/api-docs.json', readApplication, permissions.middleware('readApiDoc', 'read'), (req, res) => {
   res.send(applicationAPIDocs(req.application))
@@ -259,7 +278,7 @@ router.get('/:applicationId/journal', readApplication, permissions.middleware('r
 // Used by applications to declare an error
 router.post('/:applicationId/error', readApplication, permissions.middleware('writeConfig', 'write'), asyncWrap(async(req, res) => {
   if (!req.body.message) return res.status(400).send('Attribut "message" obligatoire')
-  if (req.application.status === 'configured') {
+  if (req.application.status.startsWith('configured')) {
     await req.app.get('db').collection('applications').updateOne({ id: req.params.applicationId }, { '$set': { status: 'error' } })
     await journals.log(req.app, req.application, { type: 'error', data: req.body.message }, 'application')
   }
