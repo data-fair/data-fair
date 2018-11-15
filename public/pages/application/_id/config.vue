@@ -86,7 +86,7 @@ export default {
         console.error(`Schema fetched at ${schemaUrl} is not a valid JSON`)
         this.showConfigIframe = true
       } else {
-        this.editConfig = { ...await this.readConfigDraft() }
+        this.editConfig = JSON.parse(JSON.stringify(await this.readConfigDraft()))
         await this.readConfig()
         this.showForm = true
       }

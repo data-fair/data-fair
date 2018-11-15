@@ -11,7 +11,7 @@ exports.path = (application) => {
 exports.screenshot = async (req) => {
   try {
     const cookieText = Object.keys(req.cookies).map(c => `${c}=${req.cookies[c]}`).join('; ')
-    const res = await request({
+    const res = request({
       method: 'GET',
       url: config.captureUrl + '/api/v1/screenshot',
       qs: {

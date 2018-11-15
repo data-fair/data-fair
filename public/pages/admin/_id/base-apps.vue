@@ -12,6 +12,16 @@
         </v-flex>
       </v-layout>
 
+      <v-layout row wrap>
+        <v-flex xs12 sm6 md4 lg3>
+          <v-text-field
+            v-model="urlToAdd"
+            label="Ajouter"
+            @keypress.enter="add"
+          />
+        </v-flex>
+      </v-layout>
+
       <v-card v-if="baseApps">
         <v-list three-line>
           <v-list-tile v-for="baseApp in baseApps.results" :key="baseApp.id" avatar>
@@ -27,7 +37,7 @@
               <v-list-tile-sub-title>{{ baseApp.description }}</v-list-tile-sub-title>
               <v-list-tile-sub-title>
                 <nuxt-link :to="{path: '/applications', query: {url: baseApp.url, showAll: true}}">{{ baseApp.nbApplications }} application{{ baseApp.nbApplications > 1 ? 's' : '' }}</nuxt-link>
-                - Jeux de données : {{ baseApp.datasetsFilters }} - Services distants: {{ baseApp.servicesFilters }}
+                - Jeux de données : {{ baseApp.datasetsFilters }}
               </v-list-tile-sub-title>
             </v-list-tile-content>
             <v-list-tile-action>
@@ -81,6 +91,8 @@
 </template>
 
 <script>
+import eventBus from '../../../event-bus'
+
 export default {
   data() {
     return {
@@ -88,7 +100,8 @@ export default {
       patch: {},
       showEditDialog: false,
       currentBaseApp: null,
-      q: null
+      q: null,
+      urlToAdd: null
     }
   },
   async mounted() {
@@ -111,6 +124,15 @@ export default {
       Object.keys(patch).forEach(key => {
         this.$set(baseApp, key, patch[key])
       })
+    },
+    async add() {
+      try {
+        await this.$axios.$post('api/v1/base-applications', { url: this.urlToAdd })
+        eventBus.$emit('notification', { type: 'success', msg: `Application de base ajoutée` })
+      } catch (error) {
+        eventBus.$emit('notification', { error, msg: `Impossible d'ajouter' l'application de base` })
+      }
+      this.refresh()
     }
   }
 }
