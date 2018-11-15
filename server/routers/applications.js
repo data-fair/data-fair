@@ -2,7 +2,8 @@ const express = require('express')
 const slug = require('slugify')
 const moment = require('moment')
 const config = require('config')
-const fs = require('fs')
+const fs = require('fs-extra')
+const path = require('path')
 const util = require('util')
 const unlink = util.promisify(fs.unlink)
 const sanitizeHtml = require('sanitize-html')
@@ -292,6 +293,11 @@ router.get('/:applicationId/active-sessions', readApplication, permissions.middl
   return res.send({ count })
 }))
 
-router.get('/:applicationId/capture', readApplication, permissions.middleware('readConfig', 'read'), (req, res) => {
-  res.sendFile(capture.path(req.application))
-})
+router.get('/:applicationId/capture', readApplication, permissions.middleware('readConfig', 'read'), asyncWrap(async(req, res) => {
+  const capturePath = capture.path(req.application)
+  if (await fs.pathExists(capturePath)) {
+    res.sendFile(capturePath)
+  } else {
+    res.sendFile(path.join(__dirname, '../resources/no-preview.png'))
+  }
+}))

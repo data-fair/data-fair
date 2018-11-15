@@ -17,7 +17,7 @@
             </v-btn>
           </v-card-title>
           <v-divider/>
-          <v-img :src="`${application.href}/capture`" height="200px"/>
+          <v-img :src="`${application.href}/capture`" height="240px"/>
           <v-divider/>
           <v-card-text style="max-height:160px;overflow: hidden; margin-bottom: 40px;" v-html="marked($options.filters.truncate(application.description || '', 200))"/>
 
