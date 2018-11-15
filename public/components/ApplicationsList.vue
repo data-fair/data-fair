@@ -25,7 +25,7 @@
             <span v-if="application.owner.type === 'user'"><v-icon>person</v-icon>&nbsp;{{ application.owner.name }}</span>
             <span v-if="application.owner.type === 'organization'"><v-icon>group</v-icon>&nbsp;{{ application.owner.name }}<span v-if="application.owner.role"> ({{ application.owner.role }})</span></span>
             &nbsp;<v-chip :color="application.public ? 'primary' : 'accent'" text-color="white">{{ application.public ? 'Public' : 'Privé' }}</v-chip>
-            <template v-if="application.status === 'configured'">
+            <template v-if="application.status === 'error'">
               <v-spacer />
               <span><v-icon color="red">warning</v-icon>&nbsp;En erreur</span>
             </template>
