@@ -22,6 +22,10 @@ const setResource = asyncWrap(async(req, res, next) => {
 router.all('/:applicationId*', setResource, permissions.middleware('readDescription', 'read'), (req, res, next) => { req.app.get('anonymSession')(req, res, next) }, asyncWrap(async(req, res, next) => {
   delete req.application.permissions
   req.application.apiUrl = config.publicUrl + '/api/v1'
+  if (req.query.draft === 'true') {
+    req.application.configuration = req.application.configurationDraft || req.application.configuration
+  }
+  delete req.application.configurationDraft
 
   const ifModifiedSince = new Date(req.get('If-Modified-Since'))
   // go through UTC transformation to lose milliseconds just as last-modified and if-modified-since headers do
@@ -68,12 +72,6 @@ router.all('/:applicationId*', setResource, permissions.middleware('readDescript
     req.session.activeApplications = req.session.activeApplications || []
     if (!req.session.activeApplications.includes(req.application.id)) req.session.activeApplications.push(req.application.id)
   }
-
-  const injectedApplication = { ...req.application }
-  if (req.query.draft === 'true') {
-    injectedApplication.configuration = injectedApplication.configurationDraft || injectedApplication.configuration || {}
-  }
-  delete injectedApplication.configurationDraft
 
   options.transforms = [{
     // fix cache. Remove etag,  calculate last-modified, etc.
@@ -132,7 +130,7 @@ router.all('/:applicationId*', setResource, permissions.middleware('readDescript
       return !resp.headers['content-type'] || (resp.headers['content-type'].indexOf('text/html') === 0)
     },
     transform: () => {
-      return replaceStream('%APPLICATION%', JSON.stringify(injectedApplication))
+      return replaceStream('%APPLICATION%', JSON.stringify(req.application))
     }
   }]
 

@@ -34,10 +34,6 @@ RUN ln -s /usr/lib/libproj.so.13 /usr/lib/libproj.so
 
 ENV NODE_ENV production
 WORKDIR /webapp
-
-# separate npm install for puppeteer that is very heavy
-RUN npm i puppeteer@^1.10.0
-
 ADD package.json .
 ADD package-lock.json .
 RUN npm install --production

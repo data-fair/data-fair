@@ -17,7 +17,6 @@ const upgrade = require('../upgrade')
 const baseApplications = require('./routers/base-applications')
 const remoteServices = require('./routers/remote-services')
 const anonymSession = require('./utils/anonym-session')
-const capture = require('./utils/capture')
 const session = require('@koumoul/sd-express')({
   directoryUrl: config.directoryUrl,
   privateDirectoryUrl: config.privateDirectoryUrl || config.directoryUrl,
@@ -38,6 +37,7 @@ if (process.env.NODE_ENV === 'development') {
   const proxy = require('http-proxy-middleware')
   app.use('/openapi-viewer', proxy({ target: 'http://localhost:5680', pathRewrite: { '^/openapi-viewer': '' } }))
   app.use('/simple-directory', proxy({ target: 'http://localhost:8080', pathRewrite: { '^/simple-directory': '' } }))
+  app.use('/capture', proxy({ target: 'http://localhost:8087', pathRewrite: { '^/capture': '' } }))
 }
 
 app.use(bodyParser.json({ limit: '1000kb' }))
@@ -85,7 +85,6 @@ exports.run = async () => {
   app.set('db', db)
   app.set('mongoClient', client)
   app.set('anonymSession', await anonymSession.init(db))
-  if (process.env.NODE_ENV !== 'test') app.set('browser', await capture.init())
   await cache.init(db)
   baseApplications.init(db)
   await remoteServices.init(db)
@@ -119,7 +118,6 @@ exports.stop = async() => {
   await wsUtils.stop()
   locksUtils.stop()
   await workers.stop()
-  if (process.env.NODE_ENV !== 'test') await app.get('browser').close()
   await app.get('mongoClient').close()
   await app.get('es').close()
 }

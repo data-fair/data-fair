@@ -35,6 +35,14 @@ services:
     ports:
       - 5680:8080
 
+  capture:
+    image: koumoul/capture:master
+    network_mode: host
+    shm_size: '1gb'
+    environment:
+      - PORT=8087
+      - PUBLIC_URL=http://localhost:5600/capture
+
   thumbor:
     image: apsl/thumbor:6.4.2
     environment:

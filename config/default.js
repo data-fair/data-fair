@@ -7,6 +7,7 @@ module.exports = {
   directoryUrl: 'http://localhost:8080',
   privateDirectoryUrl: '',
   openapiViewerUrl: 'https://koumoul.com/openapi-viewer/',
+  captureUrl: 'http://capture:8080',
   pluginsDir: './plugins',
   mongoUrl: 'mongodb://localhost:27017/data-fair-' + (process.env.NODE_ENV || 'development'),
   map: {

@@ -121,6 +121,14 @@ services:
       - "traefik.enable=true"
       - "traefik.frontend.rule=PathPrefixStrip:/api-doc/"
 
+
+  capture:
+    image: koumoul/capture:0
+    restart: 'always'
+    shm_size: '1gb'
+    environment:
+      - PUBLIC_URL=${PROTOCOL}://${DOMAIN}/capture
+
   thumbor:
     image: apsl/thumbor:6.4.2
     restart: 'always'
