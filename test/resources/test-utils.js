@@ -13,7 +13,7 @@ const testFiles = fs.readdirSync(testDir).map(f => path.join(testDir, f))
 async function clean(key) {
   const dataDir = './data/test-' + key
   const indicesPrefix = 'dataset-test-' + key
-  const { db, client } = await require('../../server/utils/db.js').init()
+  const { db, client } = await require('../../server/utils/db.js').connect()
   await db.dropDatabase()
   await client.close()
   const es = await require('../../server/utils/es').init()
@@ -43,10 +43,18 @@ exports.prepare = (testFile) => {
 
   const app = require('../../server/app.js')
 
-  test.serial.before('geocoder mock', async t => {
+  test.serial.before('global mocks', async t => {
     nock('http://test.com')
       .persist()
       .get('/geocoder/api-docs.json').reply(200, require('./geocoder-api.json'))
+
+    const html = '<html><head><meta name="application-name" content="test"></head><body></body></html>'
+    nock('http://monapp1.com').persist()
+      .get('/').reply(200, html)
+      .get('/config-schema.json').reply(200, {})
+    nock('http://monapp2.com').persist()
+      .get('/').reply(200, html)
+      .get('/config-schema.json').reply(200, {})
   })
 
   test.serial.before('clean and run app', async t => {
@@ -81,6 +89,7 @@ exports.prepare = (testFile) => {
       delete error.response.request
       return Promise.reject(error.response)
     })
+
     return ax
   }
 

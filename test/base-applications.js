@@ -1,11 +1,6 @@
 const testUtils = require('./resources/test-utils')
-const nock = require('nock')
 
 const { test, axiosBuilder } = testUtils.prepare(__filename)
-
-const html = '<html><head><meta name="application-name" content="test"></head><body></body></html>'
-nock('http://monapp1.com').persist().get('/').reply(200, html)
-nock('http://monapp2.com').persist().get('/').reply(200, html)
 
 test.serial('Get public base applications', async t => {
   const ax = await axiosBuilder()

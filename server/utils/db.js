@@ -14,12 +14,12 @@ async function ensureIndex(db, collection, key, options) {
 exports.connect = async () => {
   let client
   try {
-    client = await MongoClient.connect(config.mongoUrl)
+    client = await MongoClient.connect(config.mongoUrl, { useNewUrlParser: true })
   } catch (err) {
     // 1 retry after 1s
     // solve the quite common case in docker-compose of the service starting at the same time as the db
     await new Promise(resolve => setTimeout(resolve, 1000))
-    client = await MongoClient.connect(config.mongoUrl)
+    client = await MongoClient.connect(config.mongoUrl, { useNewUrlParser: true })
   }
   const db = client.db()
   return { db, client }
