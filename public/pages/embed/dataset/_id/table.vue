@@ -40,7 +40,7 @@
           </tr>
         </template>
         <template slot="items" slot-scope="props">
-          <td v-for="field in dataset.schema" :key="field.key">{{ ((props.item[field.key] === undefined || props.item[field.key] === null ? '' : props.item[field.key]) + '') | truncate(50) }}</td>
+          <td v-for="header in headers" :key="header.value">{{ ((props.item[header.value] === undefined || props.item[header.value] === null ? '' : props.item[header.value]) + '') | truncate(50) }}</td>
         </template>
       </v-data-table>
     </v-card>
