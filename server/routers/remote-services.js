@@ -88,6 +88,7 @@ router.get('', asyncWrap(async(req, res) => {
     'ids': 'id',
     'id': 'id'
   }, true)
+  query.owner = { $exists: false } // restrict to the newly centralized remote services
   const sort = findUtils.sort(req.query.sort)
   const project = findUtils.project(req.query.select, ['apiDoc'])
   const [skip, size] = findUtils.pagination(req.query)
