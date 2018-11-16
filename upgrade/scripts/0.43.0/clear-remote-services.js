@@ -27,5 +27,6 @@ exports.exec = async (db, debug) => {
     await db.collection('datasets').updateOne({ id: dataset.id }, { $set: { extensions } })
   }
 
-  await db.collection('remote-services').deleteMany()
+  // Actually do not delete right away to preserve previous app configurations
+  // await db.collection('remote-services').deleteMany()
 }
