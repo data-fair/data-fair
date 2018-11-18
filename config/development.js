@@ -5,7 +5,7 @@ module.exports = {
   dataDir: './data/development',
   directoryUrl: 'http://localhost:5600/simple-directory',
   openapiViewerUrl: 'http://localhost:5600/openapi-viewer/',
-  captureUrl: 'http://localhost:5600/capture/',
+  captureUrl: 'http://localhost:5600/capture',
   defaultLimits: {
     totalStorage: 1000000000,
     datasetStorage: -1

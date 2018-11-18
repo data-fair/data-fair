@@ -29,7 +29,7 @@ const router = exports.router = express.Router()
 // Create default services for the data-fair instance
 exports.init = async(db) => {
   const remoteServices = db.collection('remote-services')
-  const existingServices = await remoteServices.find().limit(1000).project({ url: 1, id: 1 }).toArray()
+  const existingServices = await remoteServices.find({ owner: { $exists: false } }).limit(1000).project({ url: 1, id: 1 }).toArray()
 
   const servicesToAdd = config.remoteServices
     .filter(s => !existingServices.find(es => es.url === s.url))
@@ -257,6 +257,7 @@ router.use('/:remoteServiceId/proxy*', readService, (req, res, next) => { req.ap
   try {
     await nbLimiter.consume(ip, 1)
   } catch (err) {
+    console.log('nbLimiter error', err)
     return res.status(429).send('Trop de requêtes dans un interval restreint pour cette exposition de service.')
   }
   kbLimiter = kbLimiter || new RateLimiterMongo({
@@ -268,6 +269,7 @@ router.use('/:remoteServiceId/proxy*', readService, (req, res, next) => { req.ap
   try {
     await kbLimiter.consume(ip, 1)
   } catch (err) {
+    console.log('kbLimiter error', err)
     return res.status(429).send('Trop de traffic dans un interval restreint pour cette exposition de service.')
   }
 
@@ -277,7 +279,16 @@ router.use('/:remoteServiceId/proxy*', readService, (req, res, next) => { req.ap
     query: {},
     transforms: [{
       name: 'rate-limiter',
-      match: () => true,
+      match: (resp) => {
+        // Prevent caches in front of data-fair to cache public expositions of remote-services
+        // otherwise rate limiting is not accurate and we have complicated multi-cache cases
+        if (!resp.headers['cache-control']) {
+          resp.headers['cache-control'] = 'private, max-age=0'
+        } else {
+          resp.headers['cache-control'] = resp.headers['cache-control'].replace('public', 'private')
+        }
+        return true
+      },
       transform: () => new Transform({ transform(chunk, encoding, cb) {
         kbLimiter.consume(ip, chunk.length).catch(() => {})
         cb(null, chunk)

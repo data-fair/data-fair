@@ -45,7 +45,7 @@ module.exports = {
     datasetStorage: -1,
     remoteServiceRate: {
       duration: 5, // 5 seconds intervals
-      nb: 50, // 50 req max in this interval
+      nb: 100, // 100 req max in this interval
       kb: 2000 // 2 mb in this interval
     }
   },
@@ -115,10 +115,10 @@ module.exports = {
   }],
   applications: [{
     title: 'Infos parcelles',
-    url: 'https://koumoul.com/apps/infos-parcelles/2.0/'
+    url: 'https://koumoul.com/apps/infos-parcelles/2.1/'
   }, {
     title: 'Infos localisations',
-    url: 'https://koumoul.com/apps/infos-loc/0.5/'
+    url: 'https://koumoul.com/apps/infos-loc/0.6/'
   }, {
     title: 'Graphiques simples',
     url: 'https://koumoul-dev.github.io/data-fair-charts/0.5/'

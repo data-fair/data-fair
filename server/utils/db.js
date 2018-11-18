@@ -35,7 +35,7 @@ exports.init = async () => {
   await ensureIndex(db, 'datasets', { 'virtual.children': 1 })
   // remote-services indexes
   await ensureIndex(db, 'remote-services', { id: 1 }, { unique: true })
-  await ensureIndex(db, 'remote-services', { 'apiDoc.info.x-api-id': 1 }, { unique: true })
+  // await ensureIndex(db, 'remote-services', { 'apiDoc.info.x-api-id': 1 }, { unique: true })
   await ensureIndex(db, 'remote-services', { title: 'text', description: 'text' }, { name: 'fulltext' })
   // base applications indexes
   await ensureIndex(db, 'base-applications', { url: 1 }, { unique: true })

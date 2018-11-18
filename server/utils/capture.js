@@ -14,7 +14,7 @@ exports.path = (application) => {
 
 exports.screenshot = async (req) => {
   try {
-    const screenShortUrl = (config.captureUrl + '/api/v1/screenshot').replace('//', '/')
+    const screenShortUrl = (config.captureUrl + '/api/v1/screenshot')
     const appUrl = `${config.publicUrl}/app/${req.application.id}`
     const cookieText = Object.keys(req.cookies).map(c => `${c}=${req.cookies[c]}`).join('; ')
     debug(`Screenshot ${screenShortUrl}?target=${appUrl} - ${cookieText}`)
