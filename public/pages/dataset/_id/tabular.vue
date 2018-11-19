@@ -9,24 +9,26 @@
         <v-layout column>
           <h3 v-if="data.total <= 10000">Consultez {{ data.total.toLocaleString() }} {{ plural ? 'enregistrements' : 'enregistrement' }}</h3>
           <h3 v-if="data.total > 10000">Consultez {{ plural ? 'les' : 'le' }} {{ (10000).toLocaleString() }} {{ plural ? 'premiers enregistrements' : 'premier enregistrement' }} ({{ data.total.toLocaleString() }} au total)</h3>
-          <v-layout row>
-            <v-text-field
-              v-model="query"
-              label="Rechercher"
-              append-icon="search"
-              class="mr-3"
-              style="min-width:150px;"
-              @keyup.enter.native="refresh"
-              @click:append="refresh"/>
+          <v-layout row wrap>
+            <v-flex lg3 md4 sm5 xs12>
+              <v-text-field
+                v-model="query"
+                label="Rechercher"
+                append-icon="search"
+                class="mr-3"
+                style="min-width:150px;"
+                @keyup.enter.native="refresh"
+                @click:append="refresh"/>
+            </v-flex>
             <v-spacer/>
-            <v-flex v-if="data.total > pagination.rowsPerPage" sm4 md2 lg1 xl1>
+            <v-flex v-show="$vuetify.breakpoint.mdAndUp" xl1 lg1 md2>
               <v-select
                 :items="[10,20,50]"
                 v-model="pagination.rowsPerPage"
                 label="Nombre de lignes"
               />
             </v-flex>
-            <v-pagination v-if="data.total > pagination.rowsPerPage" v-model="pagination.page" :length="Math.ceil(Math.min(data.total, 10000) / pagination.rowsPerPage)" total-visible="7" class="mx-4"/>
+            <v-pagination v-if="data.total > pagination.rowsPerPage" v-model="pagination.page" :length="Math.ceil(Math.min(data.total, 10000) / pagination.rowsPerPage)" :total-visible="$vuetify.breakpoint.lgAndUp ? 7 : 5" class="mx-4"/>
           </v-layout>
         </v-layout>
       </v-card-title>
