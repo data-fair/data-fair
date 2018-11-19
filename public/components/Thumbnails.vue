@@ -8,7 +8,7 @@
       <v-layout column>
         <h3 v-if="data.total <= 10000">Consultez {{ data.total.toLocaleString() }} {{ plural ? 'enregistrements' : 'enregistrement' }}</h3>
         <h3 v-if="data.total > 10000">Consultez {{ plural ? 'les' : 'le' }} {{ (10000).toLocaleString() }} {{ plural ? 'premiers enregistrements' : 'premier enregistrement' }} ({{ data.total.toLocaleString() }} au total)</h3>
-        <v-layout row>
+        <v-layout row wrap>
           <v-text-field
             v-model="query"
             label="Rechercher"
@@ -25,7 +25,7 @@
               label="Nombre de lignes"
             />
           </v-flex>
-          <v-pagination v-if="data.total > pagination.rowsPerPage" v-model="pagination.page" :length="Math.ceil(Math.min(data.total, 10000) / pagination.rowsPerPage)" total-visible="7" class="mx-4"/>
+          <v-pagination v-if="data.total > pagination.rowsPerPage" v-model="pagination.page" :length="Math.ceil(Math.min(data.total, 10000) / pagination.rowsPerPage)" :total-visible="$vuetify.breakpoint.lgAndUp ? 7 : 5" class="mx-4"/>
         </v-layout>
         <v-container fluid grid-list-lg class="pa-0">
           <v-layout row wrap>
