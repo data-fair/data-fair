@@ -68,6 +68,10 @@ module.exports = {
         }
       }
     },
+    extras: {
+      type: 'object',
+      description: 'An object for extra content from client services of data-fair'
+    },
     permissions
   }
 }
