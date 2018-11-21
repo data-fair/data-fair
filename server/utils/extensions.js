@@ -205,7 +205,7 @@ class PrepareOutputStream extends Transform {
       return callback(new Error('Bad content - ' + chunk))
     }
     const selectedItem = Object.keys(item)
-      .filter(itemKey => this.selectFields.length === 0 || this.selectFields.includes(itemKey))
+      .filter(itemKey => this.selectFields.length === 0 || this.selectFields.includes(itemKey) || itemKey === 'error')
       .reduce((a, itemKey) => { a[itemKey] = item[itemKey]; return a }, {})
 
     const mappedItem = { doc: { [this.extensionKey]: selectedItem } }
@@ -352,7 +352,7 @@ exports.prepareSchema = async (db, schema, extensions) => {
     extensionsFields = extensionsFields.concat(action.output
       .filter(output => !!output)
       .filter(output => !output.concept || output.concept !== 'http://schema.org/identifier')
-      .filter(output => selectFields.length === 0 || selectFields.includes(output.name))
+      .filter(output => selectFields.length === 0 || selectFields.includes(output.name) || output.name === 'error')
       .map(output => {
         const key = extensionKey + '.' + output.name
         const existingField = schema.find(field => field.key === key)
@@ -364,7 +364,8 @@ exports.prepareSchema = async (db, schema, extensions) => {
           'x-refersTo': output.concept,
           title: output.title,
           description: output.description,
-          type: output.type || 'string'
+          type: output.type || 'string',
+          'x-calculated': output.name === 'error'
         }
       }))
   }

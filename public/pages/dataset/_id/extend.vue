@@ -20,6 +20,8 @@
           <td class="pt-2 pb-2">
             <span v-if="remoteServicesMap[props.item.remoteService]">
               {{ remoteServicesMap[props.item.remoteService].actions[props.item.action].summary }} (service {{ remoteServicesMap[props.item.remoteService].title }})
+              &nbsp;
+              <v-btn small outline @click="currentExtension = props.item; extensionDetailsDialog = true;">Voir détails</v-btn>
             </span>
 
             <v-select
@@ -73,18 +75,48 @@
     <v-layout row>
       <v-spacer/><v-btn class="md-raised" color="primary" @click="save">Appliquer</v-btn>
     </v-layout>
+
+    <v-dialog v-model="extensionDetailsDialog" :fullscreen="$vuetify.breakpoint.mdAndDown" :max-width="1200">
+      <v-card v-if="currentExtension">
+        <v-card-title primary-title class="headline">
+          Extension: {{ remoteServicesMap[currentExtension.remoteService].actions[currentExtension.action].summary }} (service {{ remoteServicesMap[currentExtension.remoteService].title }})
+        </v-card-title>
+        <v-card-text>
+          <dataset-extension-details :remote-service="currentExtension.remoteService" :action="currentExtension.action"/>
+        </v-card-text>
+        <v-divider/>
+
+        <v-card-actions>
+          <v-spacer/>
+          <v-btn
+            color="primary"
+            flat
+            @click="extensionDetailsDialog = false"
+          >
+            ok
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </v-container>
 </template>
 
 <script>
 import { mapState, mapActions, mapGetters } from 'vuex'
+import DatasetExtensionDetails from '../../../components/DatasetExtensionDetails.vue'
 import eventBus from '../../../event-bus.js'
 import logger from '../../../logger'
 
 export default {
-  components: {},
+  components: {
+    DatasetExtensionDetails
+  },
   data() {
-    return { ready: false }
+    return {
+      ready: false,
+      extensionDetailsDialog: false,
+      currentExtension: null
+    }
   },
   computed: {
     ...mapState(['vocabulary']),
@@ -98,7 +130,8 @@ export default {
       this.dataset.extensions.forEach(extension => {
         const fields = this.remoteServicesMap[extension.remoteService].actions[extension.action].output
           .map(field => { field['x-tags'] = field['x-tags'] || []; return field })
-          .filter(o => !o.concept || o.concept !== 'http://schema.org/identifier')
+          .filter(f => !f.concept || f.concept !== 'http://schema.org/identifier')
+          .filter(f => f.name !== 'error')
           .sort((a, b) => (a.title || a.name).localeCompare(b.title || b.name))
         const tags = [...new Set([].concat(...fields.map(f => f['x-tags'])))].sort()
         const fieldsAndTags = []
