@@ -17,6 +17,11 @@ module.exports = {
     // The layer before which ou data layers will be inserted (empty to add layer on top of everything)
     beforeLayer: 'poi_label'
   },
+  // By default cross domain requests are accepted for GET routes
+  cors: {
+    active: true,
+    opts: { origin: '*', methods: 'GET,HEAD' }
+  },
   elasticsearch: {
     host: 'localhost:9200',
     defaultAnalyzer: 'french',
