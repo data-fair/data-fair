@@ -141,11 +141,6 @@ exports.setResourceLinks = (resource, resourceType) => {
 }
 
 exports.facetsQuery = (reqQuery, filterFields, query) => {
-  const ownerQuery = clone(query)
-  if (reqQuery.owner) {
-    ownerQuery.$and.pop()
-    if (!ownerQuery.$and.length) delete ownerQuery.$and
-  }
   const facetsQueryParam = reqQuery.facets
   const pipeline = []
   if (query.$text) {
@@ -155,6 +150,11 @@ exports.facetsQuery = (reqQuery, filterFields, query) => {
       }
     })
     delete query.$text
+  }
+  const ownerQuery = clone(query)
+  if (reqQuery.owner) {
+    ownerQuery.$and.pop()
+    if (!ownerQuery.$and.length) delete ownerQuery.$and
   }
   const fields = facetsQueryParam && facetsQueryParam.length && facetsQueryParam.split(',').filter(f => filterFields[f] || f === 'owner')
   if (fields) {
