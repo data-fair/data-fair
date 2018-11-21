@@ -142,8 +142,8 @@ other,unknown address
   // Download extended file
   res = await ax.get(`/api/v1/datasets/dataset/full`)
   const lines = res.data.split('\n')
-  t.is(lines[0], 'label,adr,lat')
-  t.is(lines[1], 'koumoul,19 rue de la voie lactée saint avé,40')
+  t.is(lines[0], 'label,adr,lat,error')
+  t.is(lines[1], 'koumoul,19 rue de la voie lactée saint avé,40,')
 })
 
 test.serial('Manage errors during extension', async t => {
