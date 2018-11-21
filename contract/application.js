@@ -62,6 +62,10 @@ module.exports = {
       description: 'References to all the catalogs the application metadata is published too',
       items: publicationSchema
     },
+    extras: {
+      type: 'object',
+      description: 'An object for extra content from client services of data-fair'
+    },
     permissions
   }
 }
