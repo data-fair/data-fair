@@ -22,7 +22,6 @@ const validateOpenApi = ajv.compile(openApiSchema)
 
 const findUtils = require('../utils/find')
 const asyncWrap = require('../utils/async-wrap')
-const clone = require('fast-clone')
 
 const router = exports.router = express.Router()
 

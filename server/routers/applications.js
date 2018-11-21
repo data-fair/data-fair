@@ -22,7 +22,6 @@ const findUtils = require('../utils/find')
 const asyncWrap = require('../utils/async-wrap')
 const journals = require('../utils/journals')
 const capture = require('../utils/capture')
-const clone = require('fast-clone')
 
 const router = module.exports = express.Router()
 

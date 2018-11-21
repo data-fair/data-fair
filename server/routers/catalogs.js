@@ -16,7 +16,6 @@ const permissions = require('../utils/permissions')
 const usersUtils = require('../utils/users')
 const findUtils = require('../utils/find')
 const asyncWrap = require('../utils/async-wrap')
-const clone = require('fast-clone')
 
 const router = module.exports = express.Router()
 
