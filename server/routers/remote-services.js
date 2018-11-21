@@ -88,6 +88,7 @@ router.get('', asyncWrap(async(req, res) => {
     'ids': 'id',
     'id': 'id'
   }, true)
+  delete req.query.owner
   query.owner = { $exists: false } // restrict to the newly centralized remote services
   const sort = findUtils.sort(req.query.sort)
   const project = findUtils.project(req.query.select, ['apiDoc'])
@@ -97,8 +98,7 @@ router.get('', asyncWrap(async(req, res) => {
     remoteServices.countDocuments(query)
   ]
   if (req.query.facets) {
-    const q = clone(query)
-    mongoQueries.push(remoteServices.aggregate(findUtils.facetsQuery(req.query.facets, {}, q)).toArray())
+    mongoQueries.push(remoteServices.aggregate(findUtils.facetsQuery(req.query, {}, query)).toArray())
   }
   let [results, count, facets] = await Promise.all(mongoQueries)
   results.forEach(r => clean(r))

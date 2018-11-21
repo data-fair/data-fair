@@ -102,10 +102,10 @@ exports.formHeaders = (form, organizationId) => {
   return headers
 }
 
-exports.sendDataset = async(fileName, ax) => {
+exports.sendDataset = async(fileName, ax, organizationId) => {
   const datasetFd = fs.readFileSync('./test/resources/' + fileName)
   const form = new FormData()
   form.append('file', datasetFd, fileName)
-  const res = await ax.post('/api/v1/datasets', form, { headers: exports.formHeaders(form) })
+  const res = await ax.post('/api/v1/datasets', form, { headers: exports.formHeaders(form, organizationId) })
   return workers.hook(`finalizer/${res.data.id}`)
 }

@@ -40,6 +40,39 @@ test('Get datasets with special param as super admin', async t => {
   t.true(res.data.count > 0)
 })
 
+test.serial('Search and apply facets', async t => {
+  const ax = await axiosBuilder('dmeadus0@answers.com')
+
+  // 1 dataset in user zone
+  await testUtils.sendDataset('dataset1.csv', ax)
+  // 2 datasets in organization zone
+  await testUtils.sendDataset('dataset1.csv', ax, 'KWqAGZ4mG')
+  await testUtils.sendDataset('dataset1.csv', ax, 'KWqAGZ4mG')
+
+  let res = await ax.get('/api/v1/datasets', { params: { facets: 'owner,field-type' } })
+  t.is(res.data.count, 3)
+  t.is(res.data.facets.owner.length, 2)
+  t.is(res.data.facets.owner[0].count, 2)
+  t.is(res.data.facets.owner[0].value.id, 'KWqAGZ4mG')
+  t.is(res.data.facets.owner[1].count, 1)
+  t.is(res.data.facets['field-type'].length, 2)
+  t.is(res.data.facets['field-type'][0].count, 3)
+
+  res = await ax.get('/api/v1/datasets', { params: {
+    owner: 'organization:KWqAGZ4mG',
+    facets: 'owner,field-type'
+  } })
+  t.is(res.data.count, 2)
+  t.is(res.data.facets.owner.length, 2)
+  // owner facet is not affected by the owner filter
+  t.is(res.data.facets.owner[0].count, 2)
+  t.is(res.data.facets.owner[0].value.id, 'KWqAGZ4mG')
+  t.is(res.data.facets.owner[1].count, 1)
+  // field-type facet is affected by the owner filter
+  t.is(res.data.facets['field-type'].length, 2)
+  t.is(res.data.facets['field-type'][0].count, 2)
+})
+
 const datasetFd = fs.readFileSync('./test/resources/dataset1.csv')
 
 test.serial('Failure to upload dataset exceeding limit', async t => {
@@ -85,7 +118,7 @@ test.serial('Upload new dataset in organization zone', async t => {
   const ax = await axiosBuilder('dmeadus0@answers.com')
   const form = new FormData()
   form.append('file', datasetFd, 'dataset2.csv')
-  const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form, 'KWqAGZ4mG') })
+  let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form, 'KWqAGZ4mG') })
   t.is(res.status, 201)
   t.is(res.data.owner.type, 'organization')
   t.is(res.data.owner.id, 'KWqAGZ4mG')

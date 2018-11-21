@@ -12,7 +12,6 @@ const csvStringify = require('csv-stringify')
 const flatten = require('flat')
 const mongodb = require('mongodb')
 const config = require('config')
-const clone = require('fast-clone')
 const chardet = require('chardet')
 const slug = require('slugify')
 const sanitizeHtml = require('sanitize-html')
@@ -85,12 +84,7 @@ router.get('', asyncWrap(async(req, res) => {
     datasets.countDocuments(query)
   ]
   if (req.query.facets) {
-    const q = clone(query)
-    if (req.query.owner) {
-      q.$and.pop()
-      if (!q.$and.length) delete q.$and
-    }
-    mongoQueries.push(datasets.aggregate(findUtils.facetsQuery(req.query.facets, filterFields, q)).toArray())
+    mongoQueries.push(datasets.aggregate(findUtils.facetsQuery(req.query, filterFields, query)).toArray())
   }
   let [results, count, facets] = await Promise.all(mongoQueries)
   results.forEach(r => {

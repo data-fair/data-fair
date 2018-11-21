@@ -1,5 +1,6 @@
 const config = require('config')
 const createError = require('http-errors')
+const clone = require('fast-clone')
 const permissions = require('./permissions')
 
 // Util functions shared accross the main find (GET on collection) endpoints
@@ -139,7 +140,13 @@ exports.setResourceLinks = (resource, resourceType) => {
   if (resourceType === 'application') resource.exposedUrl = `${config.publicUrl}/app/${resource.id}`
 }
 
-exports.facetsQuery = (facetsQueryParam, filterFields, query) => {
+exports.facetsQuery = (reqQuery, filterFields, query) => {
+  const ownerQuery = clone(query)
+  if (reqQuery.owner) {
+    ownerQuery.$and.pop()
+    if (!ownerQuery.$and.length) delete ownerQuery.$and
+  }
+  const facetsQueryParam = reqQuery.facets
   const pipeline = []
   if (query.$text) {
     pipeline.push({
@@ -154,7 +161,7 @@ exports.facetsQuery = (facetsQueryParam, filterFields, query) => {
     pipeline.push({
       $facet: Object.assign({}, ...fields.map(f => ({
         [f]: [{
-          $match: query
+          $match: f === 'owner' ? ownerQuery : query
         }, {
           $unwind: '$' + (filterFields[f] || 'owner').split('.').shift()
         }, {
