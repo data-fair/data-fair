@@ -1,7 +1,7 @@
 <template lang="html">
 
   <v-layout column>
-    <h3 v-if="data.total <= 10000">Consultez {{ data.total.toLocaleString() }} {{ plural ? `résultats d'extensions` : `résultat d'extension` }}</h3>
+    <h3 v-if="data.total <= 10000">Consultez {{ data.total.toLocaleString() }} {{ plural ? `résultats d'extension` : `résultat d'extension` }}</h3>
     <h3 v-if="data.total > 10000">Consultez {{ plural ? 'les' : 'le' }} {{ (10000).toLocaleString() }} premiers résultats d'extension ({{ data.total.toLocaleString() }} au total)</h3>
     <v-layout row>
       <p v-if="nbErrors === 0">Il n'y a aucune erreur dans le retour de l'extension.</p>

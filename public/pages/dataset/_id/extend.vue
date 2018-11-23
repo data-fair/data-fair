@@ -21,7 +21,7 @@
             <span v-if="remoteServicesMap[props.item.remoteService]">
               {{ remoteServicesMap[props.item.remoteService].actions[props.item.action].summary }} (service {{ remoteServicesMap[props.item.remoteService].title }})
               &nbsp;
-              <v-btn small outline @click="currentExtension = props.item; extensionDetailsDialog = true;">Voir détails</v-btn>
+              <v-btn v-if="props.item.progress === 1" small outline @click="currentExtension = props.item; extensionDetailsDialog = true;">Voir détails</v-btn>
             </span>
 
             <v-select
