@@ -184,6 +184,15 @@ router.patch('/:datasetId', readDataset, permissions.middleware('writeDescriptio
   res.status(200).json(clean(patchedDataset))
 }))
 
+// Change ownership of a dataset
+router.put('/:datasetId/owner', readDataset, permissions.middleware('delete', 'admin'), asyncWrap(async(req, res) => {
+  // Must be able to delete the current dataset, and to create a new one for the new owner to proceed
+  if (!permissions.canDoForOwner(req.body, 'postDataset', req.user, req.app.get('db'))) return res.sendStatus(403)
+  const patchedDataset = (await req.app.get('db').collection('datasets')
+    .findOneAndUpdate({ id: req.params.datasetId }, { '$set': { owner: req.body } }, { returnOriginal: false })).value
+  res.status(200).json(clean(patchedDataset))
+}))
+
 // Delete a dataset
 router.delete('/:datasetId', readDataset, permissions.middleware('delete', 'admin'), asyncWrap(async(req, res) => {
   const db = req.app.get('db')

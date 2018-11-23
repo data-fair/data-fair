@@ -61,6 +61,12 @@
             </v-list-tile-avatar>
             <v-list-tile-title>Supprimer</v-list-tile-title>
           </v-list-tile>
+          <v-list-tile v-if="can('delete')" @click="showOwnerDialog = true">
+            <v-list-tile-avatar>
+              <v-icon color="warning">person</v-icon>
+            </v-list-tile-avatar>
+            <v-list-tile-title>Changer de propriétaire</v-list-tile-title>
+          </v-list-tile>
           <v-list-tile v-if="can('writeData')" @click="showUploadDialog = true">
             <v-list-tile-avatar>
               <v-icon color="warning">upload_file</v-icon>
@@ -107,6 +113,22 @@
       </v-card>
     </v-dialog>
 
+    <v-dialog v-model="showOwnerDialog" max-width="900">
+      <v-card>
+        <v-card-title primary-title>
+          Changer le propriétaire du jeu de données
+        </v-card-title>
+        <v-card-text>
+          <owner-pick v-model="newOwner"/>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer/>
+          <v-btn flat @click="showOwnerDialog = false">Annuler</v-btn>
+          <v-btn :disabled="!newOwner" color="warning" @click="changeOwner(newOwner); showOwnerDialog = false;">Confirmer</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
     <v-dialog v-model="showUploadDialog" max-width="500">
       <v-card>
         <v-card-title primary-title>
@@ -136,15 +158,19 @@
 
 <script>
 import { mapState, mapActions, mapGetters } from 'vuex'
+import OwnerPick from '../../components/OwnerPick.vue'
 import eventBus from '../../event-bus'
 
 export default {
+  components: { OwnerPick },
   data: () => ({
     showDeleteDialog: false,
     showUploadDialog: false,
+    showOwnerDialog: false,
     file: null,
     uploading: false,
-    uploadProgress: 0
+    uploadProgress: 0,
+    newOwner: null
   }),
   computed: {
     ...mapState('dataset', ['dataset', 'api', 'nbApplications']),
@@ -165,7 +191,7 @@ export default {
   },
   methods: {
     ...mapActions(['fetchVocabulary']),
-    ...mapActions('dataset', ['setId', 'patch', 'remove', 'clear']),
+    ...mapActions('dataset', ['setId', 'patch', 'remove', 'clear', 'changeOwner']),
     async confirmRemove() {
       this.showDeleteDialog = false
       await this.remove()

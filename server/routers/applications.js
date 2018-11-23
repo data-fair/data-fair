@@ -195,6 +195,15 @@ router.patch('/:applicationId', readApplication, permissions.middleware('writeDe
   res.status(200).json(clean(patchedApplication))
 }))
 
+// Change ownership of an application
+router.put('/:applicationId/owner', readApplication, permissions.middleware('delete', 'admin'), asyncWrap(async(req, res) => {
+  // Must be able to delete the current application, and to create a new one for the new owner to proceed
+  if (!permissions.canDoForOwner(req.body, 'postApplication', req.user, req.app.get('db'))) return res.sendStatus(403)
+  const patchedApp = (await req.app.get('db').collection('applications')
+    .findOneAndUpdate({ id: req.params.applicationId }, { '$set': { owner: req.body } }, { returnOriginal: false })).value
+  res.status(200).json(clean(patchedApp))
+}))
+
 // Delete an application configuration
 router.delete('/:applicationId', readApplication, permissions.middleware('delete', 'admin'), asyncWrap(async(req, res) => {
   await req.app.get('db').collection('applications').deleteOne({

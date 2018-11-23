@@ -170,6 +170,15 @@ router.patch('/:catalogId', readCatalog, permissions.middleware('writeDescriptio
   res.status(200).json(clean(mongoEscape.unescape(patchedCatalog)))
 }))
 
+// Change ownership of a catalog
+router.put('/:catalogId/owner', readCatalog, permissions.middleware('delete', 'admin'), asyncWrap(async(req, res) => {
+  // Must be able to delete the current catalog, and to create a new one for the new owner to proceed
+  if (!permissions.canDoForOwner(req.body, 'postCatalog', req.user, req.app.get('db'))) return res.sendStatus(403)
+  const patchedCatalog = (await req.app.get('db').collection('catalogs')
+    .findOneAndUpdate({ id: req.params.catalogId }, { '$set': { owner: req.body } }, { returnOriginal: false })).value
+  res.status(200).json(clean(patchedCatalog))
+}))
+
 // Delete a catalog
 router.delete('/:catalogId', readCatalog, permissions.middleware('delete', 'admin'), asyncWrap(async(req, res) => {
   await req.app.get('db').collection('catalogs').deleteOne({ id: req.params.catalogId })

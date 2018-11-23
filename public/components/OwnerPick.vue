@@ -29,6 +29,7 @@ export default {
     ...mapState('session', ['user']),
     ...mapState(['env']),
     owners() {
+      if (!this.user) return []
       return [
         { type: 'user', id: this.user.id, name: this.user.name },
         ...this.user.organizations.map(o => ({ type: 'organization', id: o.id, name: o.name }))

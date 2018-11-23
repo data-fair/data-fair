@@ -66,6 +66,15 @@ export default {
       } catch (error) {
         eventBus.$emit('notification', { error, msg: `Erreur pendant la suppression de la configuration du catalogue:` })
       }
+    },
+    async changeOwner({ commit, state }, owner) {
+      try {
+        await this.$axios.$put(`api/v1/catalogs/${state.catalog.id}/owner`, owner)
+        commit('patch', { owner })
+        eventBus.$emit('notification', `Le catalogue ${state.catalog.title} a changé de propriétaire`)
+      } catch (error) {
+        eventBus.$emit('notification', { error, msg: `Erreur pendant le changement de propriétaire` })
+      }
     }
   }
 }

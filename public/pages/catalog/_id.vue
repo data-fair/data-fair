@@ -30,6 +30,13 @@
             </v-list-tile-avatar>
             <v-list-tile-title>Supprimer</v-list-tile-title>
           </v-list-tile>
+
+          <v-list-tile v-if="can('delete')" @click="showOwnerDialog = true">
+            <v-list-tile-avatar>
+              <v-icon color="warning">person</v-icon>
+            </v-list-tile-avatar>
+            <v-list-tile-title>Changer de propriétaire</v-list-tile-title>
+          </v-list-tile>
         </v-list>
       </v-menu>
     </div>
@@ -57,15 +64,36 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
+
+    <v-dialog v-model="showOwnerDialog" max-width="900">
+      <v-card>
+        <v-card-title primary-title>
+          Changer le propriétaire du catalogue
+        </v-card-title>
+        <v-card-text>
+          <owner-pick v-model="newOwner"/>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer/>
+          <v-btn flat @click="showOwnerDialog = false">Annuler</v-btn>
+          <v-btn :disabled="!newOwner" color="warning" @click="changeOwner(newOwner); showOwnerDialog = false;">Confirmer</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
   </v-layout>
 </template>
 
 <script>
 import { mapState, mapActions, mapGetters } from 'vuex'
+import OwnerPick from '../../components/OwnerPick.vue'
 
 export default {
+  components: { OwnerPick },
   data: () => ({
-    showDeleteDialog: false
+    showDeleteDialog: false,
+    showOwnerDialog: false,
+    newOwner: null
   }),
   computed: {
     ...mapState('catalog', ['catalog', 'api', 'nbPublications']),
@@ -78,7 +106,7 @@ export default {
     this.clear()
   },
   methods: {
-    ...mapActions('catalog', ['setId', 'patch', 'remove', 'clear']),
+    ...mapActions('catalog', ['setId', 'patch', 'remove', 'clear', 'changeOwner']),
     async confirmRemove() {
       this.showDeleteDialog = false
       await this.remove()

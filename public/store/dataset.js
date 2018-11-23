@@ -147,6 +147,15 @@ export default {
         remoteServices = data.results
       }
       commit('setAny', { remoteServices })
+    },
+    async changeOwner({ commit, state }, owner) {
+      try {
+        await this.$axios.$put(`api/v1/datasets/${state.dataset.id}/owner`, owner)
+        commit('patch', { owner })
+        eventBus.$emit('notification', `Le jeu de données ${state.dataset.title} a changé de propriétaire`)
+      } catch (error) {
+        eventBus.$emit('notification', { error, msg: `Erreur pendant le changement de propriétaire` })
+      }
     }
   }
 }
