@@ -51,7 +51,7 @@ module.exports = {
     remoteServiceRate: {
       duration: 5, // 5 seconds intervals
       nb: 100, // 100 req max in this interval
-      kb: 2000 // 2 mb in this interval
+      kb: 4000 // 4 mb in this interval
     }
   },
   workers: {
