@@ -15,9 +15,7 @@
 </template>
 
 <script>
-import * as VExpansionPanel from 'vuetify/es5/components/VExpansionPanel'
 export default {
-  components: { ...VExpansionPanel },
   data() {
     return { info: null, status: null }
   },

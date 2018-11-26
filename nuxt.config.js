@@ -2,24 +2,18 @@ const config = require('config')
 const URL = require('url').URL
 const webpack = require('webpack')
 const i18n = require('./i18n')
+const VuetifyLoaderPlugin = require('vuetify-loader/lib/plugin')
 
 module.exports = {
   srcDir: 'public/',
   build: {
-    transpile: [/^vuetify/], // Necessary for "à la carte" import of vuetify components
-    babel: {
-      // Necessary for "à la carte" import of vuetify components
-      plugins: [['transform-imports', {
-        vuetify: {
-          transform: 'vuetify/es5/components/${member}',
-          preventFullImport: true
-        }
-      }]]
-    },
+    cache: true,
     publicPath: config.publicUrl + '/_nuxt/',
+    transpile: [/^vuetify/, /vuetify-jsonschema-form/], // Necessary for "à la carte" import of vuetify components
     extend (config, { isServer, isDev, isClient }) {
       // Ignore all locale files of moment.js, those we want are loaded in plugins/moment.js
       config.plugins.push(new webpack.IgnorePlugin(/^\.\/locale$/, /moment$/))
+      config.plugins.push(new VuetifyLoaderPlugin())
     }
   },
   loading: { color: '#1e88e5' }, // Customize the progress bar color
