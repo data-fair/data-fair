@@ -80,7 +80,7 @@ module.exports = {
   },
   cache: {
     // set cache-control max-age for public GET endpoints
-    publicMaxAge: 1000,
+    publicMaxAge: 10,
     // size of cache of vector tiles in mongodb (in mb)
     size: 1000
   },
