@@ -100,7 +100,7 @@ export default {
     async writeConfig({ state, commit, getters }, config) {
       try {
         await this.$axios.$put(getters.resourceUrl + '/configuration', config)
-        commit('setAny', { config: { ...config } })
+        commit('setAny', { config: JSON.parse(JSON.stringify(config)) })
       } catch (error) {
         eventBus.$emit('notification', { error, msg: `Erreur pendant l'écriture de la configuration d'application:` })
       }
@@ -113,7 +113,7 @@ export default {
     async writeConfigDraft({ state, commit, getters }, configDraft) {
       try {
         await this.$axios.$put(getters.resourceUrl + '/configuration-draft', configDraft)
-        commit('setAny', { configDraft: { ...configDraft } })
+        commit('setAny', { configDraft: JSON.parse(JSON.stringify(configDraft)) })
       } catch (error) {
         eventBus.$emit('notification', { error, msg: `Erreur pendant l'écriture du brouillon de configuration d'application:` })
       }
