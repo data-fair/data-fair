@@ -71,7 +71,7 @@ export default {
     async refresh() {
       this.loading = true
       this.catalogs = await this.$axios.$get(this.env.publicUrl + '/api/v1/catalogs', { params:
-        { size: this.size, page: this.page, select: 'title,description', ...this.filters, facets: 'owner' }
+        { size: this.size, page: this.page, select: 'title,description', ...this.filters, facets: 'owner', sort: 'createdAt:-1' }
       })
       this.filtered = this.filters.q !== undefined
       this.loading = false
