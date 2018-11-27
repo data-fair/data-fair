@@ -286,7 +286,10 @@ router.use('/:remoteServiceId/proxy*', readService, (req, res, next) => { req.ap
         } else {
           resp.headers['cache-control'] = resp.headers['cache-control'].replace('public', 'private')
         }
-        return true
+
+        // If we apply to non 200 codes, the code is transformed in 200
+        // so no kb rate limiting on other codes
+        return resp.statusCode === 200
       },
       transform: () => new Transform({ transform(chunk, encoding, cb) {
         kbLimiter.consume(ip, chunk.length).catch(() => {})
@@ -312,7 +315,6 @@ router.use('/:remoteServiceId/proxy*', readService, (req, res, next) => { req.ap
   // We never transmit authentication
   delete req.headers.authorization
   delete req.headers.cookie
-
   requestProxy(options)(req, res, next)
 }))
 
