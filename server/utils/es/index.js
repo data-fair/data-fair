@@ -6,6 +6,7 @@ module.exports = {
   ...require('./manage-indices'),
   search: require('./search'),
   valuesAgg: require('./values-agg'),
+  values: require('./values'),
   metricAgg: require('./metric-agg'),
   geoAgg: require('./geo-agg'),
   bboxAgg: require('./bbox-agg'),

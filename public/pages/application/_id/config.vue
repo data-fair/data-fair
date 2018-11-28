@@ -7,10 +7,11 @@
           <iframe v-if="showConfigIframe" :src="applicationLink + '/config?embed=true'" :height="Math.min(height - 100, 600)" width="100%"/>
           <v-form v-if="showForm" ref="configForm" v-model="formValid" @submit="submit">
             <v-jsonschema-form :schema="schema" :model="editConfig" :options="{disableAll: !can('writeConfig'), autoFoldObjects: can('writeConfig'), context: {owner: application.owner}, requiredMessage: 'Information obligatoire', noDataMessage: 'Aucune valeur correspondante', 'searchMessage': 'Recherchez...'}" @error="error => eventBus.$emit('notification', {error})" />
-            <v-layout row>
+            <v-layout row class="mt-3">
               <v-spacer/>
-              <v-btn :disabled="!hasModification" color="primary" type="submit">Enregistrer</v-btn>
-              <v-btn :disabled="hasModification || !hasDraft" color="warning" @click="validateDraft">Valider le brouillon</v-btn>
+              <v-btn :disabled="!hasModification" color="primary" type="submit">Enregistrer brouillon</v-btn>
+              <v-btn :disabled="hasModification || !hasDraft" color="warning" @click="validateDraft">Valider</v-btn>
+              <v-btn :disabled="!hasDraft" color="error" class="px-0" @click="showCancelDialog = true">Effacer</v-btn>
             </v-layout>
           </v-form>
         </v-flex>
@@ -28,6 +29,24 @@
         </v-flex>
       </v-layout>
     </no-ssr>
+
+    <v-dialog v-model="showCancelDialog" max-width="500px">
+      <v-card>
+        <v-card-title primary-title>
+          Effacer le brouillon
+        </v-card-title>
+        <v-card-text>
+          <v-alert :value="true" type="error">
+            Attention le brouillon sera perdu et l'application reviendra à son état validé précédent.
+          </v-alert>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer/>
+          <v-btn flat @click="showCancelDialog = false">Annuler</v-btn>
+          <v-btn color="warning" @click="cancelDraft(); showOwnerDialog = false;">Confirmer</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </v-container>
 </template>
 
@@ -56,7 +75,8 @@ export default {
       schema: null,
       formValid: false,
       editConfig: null,
-      eventBus
+      eventBus,
+      showCancelDialog: false
     }
   },
   computed: {
@@ -113,6 +133,9 @@ export default {
     },
     validateDraft() {
       this.writeConfig(this.configDraft)
+    },
+    cancelDraft() {
+      this.writeConfigDraft(this.config)
     }
   }
 }

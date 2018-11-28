@@ -365,6 +365,37 @@ La valeur est une liste de champs séparés par des virgules.
           }
         }
       },
+      '/values/{field}': {
+        get: {
+          summary: `Récupérer la liste des valeurs distinctes d'un champ éventuellement filtrée par le paramètre q.`,
+          operationId: 'getValues',
+          'x-permissionClass': 'read',
+          tags: ['Données'],
+          parameters: [{
+            in: 'url',
+            name: 'field',
+            description: 'Le champ duquel lister les valeurs',
+            required: true,
+            schema: {
+              type: 'string',
+              enum: properties
+            }
+          }].concat(filterParams),
+          // TODO: document sort param and interval
+          responses: {
+            200: {
+              description: 'Les informations du jeu de données agrégées par valeurs d\'un champ.',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'array'
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
       '/metric_agg': {
         get: {
           summary: 'Calculer une métrique sur un ensemble de lignes.',

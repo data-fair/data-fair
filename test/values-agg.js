@@ -6,7 +6,7 @@ const { test, axiosBuilder } = testUtils.prepare(__filename)
 
 const workers = require('../server/workers')
 
-test('Get lines in dataset', async t => {
+test('Get values buckets', async t => {
   const datasetData = fs.readFileSync('./test/resources/dataset2.csv')
   const form = new FormData()
   form.append('file', datasetData, 'dataset.csv')
@@ -62,4 +62,19 @@ test('Get lines in dataset', async t => {
 
   t.is(res.data.aggs[0].value, '2017-10-01T00:00:00.000Z')
   t.is(res.data.aggs[0].metric, 13)
+
+  // Other values route for simpler list of values
+  res = await ax.get('/api/v1/datasets/dataset/values/id')
+  t.is(res.data.length, 2)
+  t.is(res.data[0], 'bidule')
+  t.is(res.data[1], 'koumoul')
+  res = await ax.get('/api/v1/datasets/dataset/values/id?q=kou*')
+  t.is(res.data.length, 1)
+  t.is(res.data[0], 'koumoul')
+  res = await ax.get('/api/v1/datasets/dataset/values/somedate')
+  t.is(res.data.length, 2)
+  t.is(res.data[0], '2017-10-10T00:00:00.000Z')
+  res = await ax.get('/api/v1/datasets/dataset/values/somedate?q=2017-10*')
+  t.is(res.data.length, 1)
+  t.is(res.data[0], '2017-10-10T00:00:00.000Z')
 })

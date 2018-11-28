@@ -42,7 +42,7 @@ const acceptedStatuses = ['finalized', 'error']
 
 const operationsClasses = {
   list: ['list'],
-  read: ['readDescription', 'readLines', 'getGeoAgg', 'getValuesAgg', 'getMetricAgg', 'getWordsAgg', 'downloadOriginalData', 'downloadFullData', 'readJournal', 'readApiDoc'],
+  read: ['readDescription', 'readLines', 'getGeoAgg', 'getValuesAgg', 'getValues', 'getMetricAgg', 'getWordsAgg', 'downloadOriginalData', 'downloadFullData', 'readJournal', 'readApiDoc'],
   write: ['writeDescription', 'writeData'],
   admin: ['delete', 'getPermissions', 'setPermissions']
 }
@@ -471,6 +471,20 @@ router.get('/:datasetId/values_agg', readDataset, permissions.middleware('getVal
   let result
   try {
     result = await esUtils.valuesAgg(req.app.get('es'), req.dataset, req.query)
+  } catch (err) {
+    await manageESError(req, err)
+  }
+  res.status(200).send(result)
+}))
+
+// Simpler values list and filter (q is applied only to the selected field, not all fields)
+// mostly useful for selects/autocompletes on values
+router.get('/:datasetId/values/:fieldKey', readDataset, permissions.middleware('getValues', 'read'), asyncWrap(async(req, res) => {
+  if (!req.user && managePublicCache(req, res)) return res.status(304).send()
+  if (req.dataset.isVirtual) req.dataset.descendants = await virtualDatasetsUtils.descendants(req.app.get('db'), req.dataset)
+  let result
+  try {
+    result = await esUtils.values(req.app.get('es'), req.dataset, req.params.fieldKey, req.query)
   } catch (err) {
     await manageESError(req, err)
   }
