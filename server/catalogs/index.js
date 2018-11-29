@@ -14,6 +14,7 @@ fs.ensureDirSync(path.resolve(config.pluginsDir, 'catalogs'))
 exports.connectors = fs.readdirSync(__dirname)
   .filter(f => f !== 'index.js')
   .map(f => ({ key: f.replace('.js', ''), ...require('./' + f) }))
+  // Add all modules from another directory
   .concat(fs.readdirSync(path.resolve(config.pluginsDir, 'catalogs'))
     .map(f => ({ key: f.replace('.js', ''), ...require(path.resolve(config.pluginsDir, 'catalogs', f)) })))
 
