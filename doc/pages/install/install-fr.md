@@ -123,7 +123,7 @@ services:
 
 
   capture:
-    image: koumoul/capture:0
+    image: koumoul/capture:1
     restart: 'always'
     shm_size: '1gb'
     environment:
