@@ -120,7 +120,7 @@ module.exports = {
   }],
   applications: [{
     title: 'Infos parcelles',
-    url: 'https://koumoul.com/apps/infos-parcelles/2.1/'
+    url: 'https://koumoul.com/apps/infos-parcelles/2.2/'
   }, {
     title: 'Infos localisations',
     url: 'https://koumoul.com/apps/infos-loc/0.6/'
@@ -129,7 +129,7 @@ module.exports = {
     url: 'https://koumoul-dev.github.io/data-fair-charts/0.5/'
   }, {
     title: 'Nuages de mots',
-    url: 'https://koumoul.com/apps/word-cloud/0.1/'
+    url: 'https://koumoul.com/apps/word-cloud/0.2/'
   }, {
     title: 'Diagramme de flux (Sankey)',
     url: 'https://koumoul.com/apps/sankey/0.1/'
