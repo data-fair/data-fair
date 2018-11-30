@@ -7,7 +7,7 @@ const VuetifyLoaderPlugin = require('vuetify-loader/lib/plugin')
 module.exports = {
   srcDir: 'public/',
   build: {
-    cache: true,
+    // cache: true,
     publicPath: config.publicUrl + '/_nuxt/',
     transpile: [/^vuetify/, /vuetify-jsonschema-form/], // Necessary for "à la carte" import of vuetify components
     extend (config, { isServer, isDev, isClient }) {
