@@ -27,7 +27,7 @@ module.exports = {
     },
     addToDataset: {
       type: 'object',
-      description: 'Present if the publication shoudb be pushed as a resource in a catalog dataset instead of a separate catalog dataset.'
+      description: 'Present if the publication should be pushed as a resource in a catalog dataset instead of a separate catalog dataset.'
     }
   }
 }
