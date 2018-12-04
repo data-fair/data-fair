@@ -58,7 +58,7 @@ async function createNewDataset(catalog, dataset, publication) {
     dataFairDatasetId: dataset.id
   }
   try {
-    const res = await axios.post(url.resolve(catalog.url, 'api/v1/sources'), mdcDataset, { headers: { 'X-API-KEY': catalog.apiKey } })
+    const res = await axios.post(url.resolve(catalog.url, 'api/v1/sources'), mdcDataset, { headers: { 'x-apiKey': catalog.apiKey } })
     if (!res.data.id || typeof res.data.id !== 'string') {
       throw new Error(`Erreur lors de l'envoi à ${catalog.url} : le format de retour n'est pas correct.`)
     }
