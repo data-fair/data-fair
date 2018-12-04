@@ -1,5 +1,8 @@
 <template>
-<journal :journal="journal" type="application"/></template>
+  <v-container>
+    <journal :journal="journal" type="application"/>
+  </v-container>
+</template>
 
 <script>
 import Journal from '../../../components/Journal.vue'

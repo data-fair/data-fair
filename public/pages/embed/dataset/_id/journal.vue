@@ -1,11 +1,9 @@
 <template>
-  <v-container>
-    <journal :journal="journal" type="dataset"/>
-  </v-container>
+  <journal :journal="journal" type="dataset"/>
 </template>
 
 <script>
-import Journal from '../../../components/Journal.vue'
+import Journal from '../../../../components/Journal.vue'
 const { mapState } = require('vuex')
 
 export default {
