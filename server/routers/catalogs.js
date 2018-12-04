@@ -54,7 +54,13 @@ router.get('/_organizations', asyncWrap(async(req, res) => {
 // Get the list of catalogs
 router.get('', asyncWrap(async(req, res) => {
   const catalogs = req.app.get('db').collection('catalogs')
-  const query = findUtils.query(req, {})
+  const query = findUtils.query(req, {
+    'type': 'type',
+    'url': 'url',
+    'organization': 'organization.id',
+    'ids': 'id',
+    'id': 'id'
+  })
   const sort = findUtils.sort(req.query.sort)
   const project = findUtils.project(req.query.select)
   const [skip, size] = findUtils.pagination(req.query)
