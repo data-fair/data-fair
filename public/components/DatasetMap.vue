@@ -117,7 +117,7 @@ export default {
     // Prevent overloading the tiles with long texts, geometries, etc.
     this.select = this.dataset.schema
       .filter(field => !field['x-calculated'])
-      .filter(field => field.type === 'string' && field.format === 'uri-reference')
+      .filter(field => (field.type === 'string' && field.format === 'uri-reference') || field.type === 'integer' || field.type === 'number')
       .map(field => field.key)
 
     await new Promise(resolve => setTimeout(resolve, 0))

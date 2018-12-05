@@ -148,10 +148,8 @@ export default {
   },
   methods: {
     async refresh() {
-      if (!this.errorField) {
-        eventBus.$emit('notification', { type: 'error', msg: `Le schéma résultat de l'extension n'est pas complet` })
-        return
-      }
+      if (!this.errorField) return
+
       const params = {
         size: this.pagination.rowsPerPage,
         page: this.pagination.page

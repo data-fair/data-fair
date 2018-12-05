@@ -131,6 +131,7 @@ exports.prepareQuery = (dataset, query) => {
   const searchFields = []
   dataset.schema.forEach(f => {
     const esProp = exports.esProperty(f)
+    if (esProp.index === false || esProp.enabled === false) return
     if (esProp.type === 'keyword') searchFields.push(f.key)
     if (esProp.fields && esProp.fields.text) searchFields.push(f.key + '.text')
   })
