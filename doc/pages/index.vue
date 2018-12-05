@@ -42,14 +42,12 @@ export default {
     features: [{
       img: './images/file.png',
       id: 'dataset'
-    },
-    {
-      img: './images/robot.png',
-      id: 'service'
-    },
-    {
+    }, {
       img: './images/smartphone.png',
       id: 'application'
+    }, {
+      img: './images/robot.png',
+      id: 'service'
     }]
   })
 }
