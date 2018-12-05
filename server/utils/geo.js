@@ -48,8 +48,10 @@ exports.latlon2fields = (schema, doc) => {
 
 exports.geometry2fields = async (schema, doc) => {
   const prop = schema.find(p => p['x-refersTo'] === geomUri)
-  if (!prop || !doc[prop.key] || doc[prop.key] === '{}') return {}
-  const feature = { type: 'Feature', geometry: JSON.parse(doc[prop.key]) }
+  if (!prop || !doc[prop.key] || doc[prop.key] === '{}' || doc[prop.key] === {} || doc[prop.key] === 'undefined') return {}
+  // Geometry can be passed serialized in a string, or as an object
+  const geometry = typeof doc[prop.key] === 'string' ? JSON.parse(doc[prop.key]) : doc[prop.key]
+  const feature = { type: 'Feature', geometry }
   // Do the best we can to fix invalid geojson
   try {
     cleanCoords(feature, { mutate: true })

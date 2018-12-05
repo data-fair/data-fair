@@ -24,7 +24,9 @@ exports.esProperty = prop => {
   if (prop.type === 'string' && (prop.format === 'uri-reference' || !prop.format)) esProp = { type: 'keyword', ignore_above: 200, fields: innerTextField }
   // Do not index geometry, it will be copied and simplified in _geoshape
   if (prop['x-refersTo'] === 'https://purl.org/geojson/vocab#geometry') {
-    esProp.index = false
+    // Geometry can be passed serialized in a string, or as an object
+    if (prop.type === 'string') esProp.index = false
+    else esProp.enabled = false
   }
   // Hardcoded calculated properties
   if (prop.key === '_geopoint') esProp = { type: 'geo_point' }

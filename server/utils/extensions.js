@@ -208,6 +208,9 @@ class PrepareOutputStream extends Transform {
       .filter(itemKey => this.selectFields.length === 0 || this.selectFields.includes(itemKey) || itemKey === 'error')
       .reduce((a, itemKey) => { a[itemKey] = item[itemKey]; return a }, {})
 
+    // override potential previous error
+    if (!selectedItem.error) selectedItem.error = null
+
     const mappedItem = { doc: { [this.extensionKey]: selectedItem } }
     mappedItem.id = item[this.idOutput.name]
     selectedItem._hash = this.hashes[mappedItem.id]
@@ -352,7 +355,7 @@ exports.prepareSchema = async (db, schema, extensions) => {
     extensionsFields = extensionsFields.concat(action.output
       .filter(output => !!output)
       .filter(output => !output.concept || output.concept !== 'http://schema.org/identifier')
-      .filter(output => selectFields.length === 0 || selectFields.includes(output.name) || output.name === 'error')
+      .filter(output => selectFields.length === 0 || selectFields.includes(output.name))
       .map(output => {
         const key = extensionKey + '.' + output.name
         const existingField = schema.find(field => field.key === key)
@@ -364,10 +367,20 @@ exports.prepareSchema = async (db, schema, extensions) => {
           'x-refersTo': output.concept,
           title: output.title,
           description: output.description,
-          type: output.type || 'string',
-          'x-calculated': output.name === 'error'
+          type: output.type || 'string'
         }
       }))
+    const errorField = action.output.find(o => o.name === 'error')
+
+    extensionsFields.push({
+      key: extensionKey + '.error',
+      type: 'string',
+      'x-originalName': 'error',
+      'x-extension': extensionId,
+      title: (errorField && errorField.title) || `Erreur d'enrichissement`,
+      description: (errorField && errorField.description) || `Une erreur lors de la récupération des informations depuis un service distant`,
+      'x-calculated': true
+    })
   }
   return schema.filter(field => !field['x-extension']).concat(extensionsFields)
 }

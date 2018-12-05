@@ -18,7 +18,7 @@
             <v-checkbox v-model="props.item.active" primary hide-details/>
           </td>
           <td class="pt-2 pb-2">
-            <span v-if="remoteServicesMap[props.item.remoteService]">
+            <span v-if="remoteServicesMap[props.item.remoteService] && remoteServicesMap[props.item.remoteService].actions[props.item.action]">
               {{ remoteServicesMap[props.item.remoteService].actions[props.item.action].summary }} (service {{ remoteServicesMap[props.item.remoteService].title }})
               &nbsp;
               <v-btn v-if="props.item.progress === 1" small outline @click="currentExtension = props.item; extensionDetailsDialog = true;">Voir détails</v-btn>
