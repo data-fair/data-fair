@@ -59,7 +59,8 @@ module.exports = {
       { charset: 'utf-8' },
       { name: 'viewport', content: 'width=device-width, initial-scale=1' },
       { hid: 'application', name: 'application-name', content: config.brand.title },
-      { hid: 'description', name: 'description', content: config.brand.description }
+      { hid: 'description', name: 'description', content: config.brand.description },
+      { hid: 'robots', name: 'robots', content: 'noindex' }
     ],
     link: [
       { rel: 'stylesheet', href: 'https://fonts.googleapis.com/css?family=Nunito:300,400,500,700,400italic|Material+Icons' }

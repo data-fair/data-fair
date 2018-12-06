@@ -12,6 +12,10 @@ export default {
   data: () => ({
     pages: ['applications', 'services', 'api']
   }),
+  head() {
+    const meta = [{ hid: 'robots', name: 'robots', content: 'index' }]
+    return { meta }
+  },
   computed: {
     content() {
       if (!this.$route) return
