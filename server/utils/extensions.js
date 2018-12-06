@@ -278,7 +278,8 @@ exports.extend = async(app, dataset, extension, remoteService, action) => {
         request(opts),
         byline.createStream(),
         new PrepareOutputStream({ action, hashes, extensionKey, selectFields: extension.select }),
-        indexStream
+        indexStream,
+        new Writable({ objectMode: true, write(chunk, encoding, cb) { cb() } })
       )
       const errorsSummary = indexStream.errorsSummary()
       if (errorsSummary) await journals.log(app, dataset, { type: 'error', data: errorsSummary })
@@ -335,7 +336,8 @@ exports.extendCalculated = async (app, dataset, geopoint, geometry) => {
   await pump(
     new ESInputStream({ esClient, indexName }),
     new CalculatedExtension({ indexName, geopoint, geometry, dataset }),
-    indexStream
+    indexStream,
+    new Writable({ objectMode: true, write(chunk, encoding, cb) { cb() } })
   )
   const errorsSummary = indexStream.errorsSummary()
   if (errorsSummary) await journals.log(app, dataset, { type: 'error', data: errorsSummary })

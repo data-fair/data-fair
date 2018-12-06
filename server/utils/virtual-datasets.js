@@ -90,11 +90,11 @@ exports.descendants = async (db, dataset) => {
   const virtualDescendantsWithFilters = res[0].descendants
     .filter(d => d.isVirtual && d.virtual.filters && d.virtual.filters.length)
   if (virtualDescendantsWithFilters.length) {
-    throw new Error(`Le jeu de données virtuel ne peut pas être requêté, il agrège un autre jeu de données virtuel avec des filtres dont nous ne pouvons pas garantir l'application.`)
+    throw createError(501, `Le jeu de données virtuel ne peut pas être requêté, il agrège un autre jeu de données virtuel avec des filtres dont nous ne pouvons pas garantir l'application.`)
   }
   const physicalDescendants = res[0].descendants.filter(d => !d.isVirtual).map(d => d.id)
   if (physicalDescendants.length === 0) {
-    throw new Error(`Le jeu de données virtuel ne peut pas être requêté, il n'agrège aucun jeu de données physique.`)
+    throw createError(501, `Le jeu de données virtuel ne peut pas être requêté, il n'agrège aucun jeu de données physique.`)
   }
   return physicalDescendants
 }

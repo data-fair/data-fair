@@ -1,5 +1,5 @@
 // TODO add ensureIndex instructions to init logic.
-
+const debug = require('debug')('db')
 const config = require('config')
 const { MongoClient } = require('mongodb')
 
@@ -13,7 +13,7 @@ async function ensureIndex(db, collection, key, options) {
 
 exports.connect = async () => {
   let client
-  console.log('Connecting to mongodb ' + config.mongoUrl)
+  debug('Connecting to mongodb ' + config.mongoUrl)
   try {
     client = await MongoClient.connect(config.mongoUrl, { useNewUrlParser: true })
   } catch (err) {

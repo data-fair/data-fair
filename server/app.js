@@ -2,7 +2,7 @@ const debug = require('debug')('app')
 debug('enter app.js')
 const config = require('config')
 const express = require('express')
-const bodyParser = require('body-parser')
+const bodyParser = require('body-parser').json({ limit: '1000kb' })
 const cookieParser = require('cookie-parser')
 const WebSocket = require('ws')
 const http = require('http')
@@ -45,7 +45,11 @@ if (process.env.NODE_ENV === 'development') {
   app.use('/capture', proxy({ target: 'http://localhost:8087', pathRewrite: { '^/capture': '' } }))
 }
 
-app.use(bodyParser.json({ limit: '1000kb' }))
+app.use((req, res, next) => {
+  // routes with _bulk are streamed, others are parsed as JSON
+  if (req.url.split('/').pop().indexOf('_bulk') === 0) return next()
+  bodyParser(req, res, next)
+})
 app.use(cookieParser())
 // In production CORS is taken care of by the reverse proxy if necessary
 if (config.cors.active) app.use(require('cors')(config.cors.opts))

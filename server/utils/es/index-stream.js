@@ -1,8 +1,8 @@
-const Writable = require('stream').Writable
+const { Transform } = require('stream')
 const config = require('config')
 const randomSeed = require('random-seed')
 
-class IndexStream extends Writable {
+class IndexStream extends Transform {
   constructor(options) {
     super({ objectMode: true })
     this.options = options
@@ -11,31 +11,45 @@ class IndexStream extends Writable {
     this.i = 0
     this.erroredItems = []
   }
-  _write(item, encoding, callback) {
-    if (this.options.stats) this.options.stats.count += 1
+  _transform(item, encoding, callback) {
+    try {
+      if (this.options.stats) this.options.stats.count += 1
 
-    if (this.options.updateMode) {
-      const keys = Object.keys(item.doc)
-      if (keys.length === 0 || (keys.length === 1 && keys[0] === '_i')) return callback()
-      this.body.push({ update: { _index: this.options.indexName, _type: 'line', _id: item.id, retry_on_conflict: 3 } })
-      this.body.push({ doc: item.doc })
-      this.bulkChars += JSON.stringify(item.doc).length
-    } else {
-      this.body.push({ index: { _index: this.options.indexName, _type: 'line' } })
-      // Add a pseudo-random number for random sorting (more natural distribution)
-      item._rand = randomSeed.create(item._i)(1000000)
-      this.body.push(item)
-      this.bulkChars += JSON.stringify(item).length
-    }
-    this.i += 1
+      if (this.options.updateMode) {
+        const keys = Object.keys(item.doc)
+        if (keys.length === 0 || (keys.length === 1 && keys[0] === '_i')) return callback()
+        this.body.push({ update: { _index: this.options.indexName, _type: 'line', _id: item.id, retry_on_conflict: 3 } })
+        this.body.push({ doc: item.doc })
+        this.bulkChars += JSON.stringify(item.doc).length
+      } else if (item._deleted) {
+        const params = { delete: { _index: this.options.indexName, _type: 'line', _id: item._id } }
+        // kinda lame, but pushing the delete query twice keeps parity of the body size that we use in reporting results
+        this.body.push(params)
+        this.body.push(item)
+      } else {
+        const params = { index: { _index: this.options.indexName, _type: 'line' } }
+        if (item._id) {
+          params.index._id = item._id
+          delete item._id
+        }
+        this.body.push(params)
+        // Add a pseudo-random number for random sorting (more natural distribution)
+        item._rand = randomSeed.create(item._i)(1000000)
+        this.body.push(item)
+        this.bulkChars += JSON.stringify(item).length
+      }
+      this.i += 1
 
-    if (
-      this.body.length / 2 >= config.elasticsearch.maxBulkLines ||
+      if (
+        this.body.length / 2 >= config.elasticsearch.maxBulkLines ||
       this.bulkChars >= config.elasticsearch.maxBulkChars
-    ) {
-      this._sendBulk(callback)
-    } else {
-      callback()
+      ) {
+        this._sendBulk(callback)
+      } else {
+        callback()
+      }
+    } catch (err) {
+      return callback(err)
     }
   }
   _final(callback) {
@@ -47,11 +61,22 @@ class IndexStream extends Writable {
   _sendBulk(callback) {
     if (this.body.length === 0) return callback()
     const bodyClone = [].concat(this.body)
-    const bulkOpts = { body: this.body, timeout: '4m', requestTimeout: 300000 }
+    const bulkOpts = {
+      // ES does not want the doc along with a delete instruction,
+      // but we put it in body anyway for our outgoing/reporting logic
+      body: this.body.filter(line => !line._deleted),
+      timeout: '4m',
+      requestTimeout: 300000
+    }
     // Use the ingest plugin to parse attached files
     if (this.options.attachments) bulkOpts.pipeline = 'attachment'
     this.options.esClient.bulk(bulkOpts, (err, res) => {
       if (err) return callback(err)
+      res.items.forEach((item, i) => {
+        const _id = (item.index && item.index._id) || (item.update && item.update._id) || (item.delete && item.delete._id)
+        const line = this.options.updateMode ? bodyClone[(i * 2) + 1].doc : bodyClone[(i * 2) + 1]
+        this.push({ _id, ...line })
+      })
       if (res.errors) {
         res.items
           .map((item, i) => ({

@@ -21,6 +21,7 @@ module.exports = {
     'no-debugger': process.env.NODE_ENV === 'production' ? 2 : 0,
     // This rule is required because atom vue-format package remove the space
     'space-before-function-paren': 0,
+    'no-new': 'off',
     // Turn off vuejs rules, not because ther are not good, but mostly because
     // they are very present in initial code base.. Maybe we should clean that up someday..
     'vue/max-attributes-per-line': 'off',

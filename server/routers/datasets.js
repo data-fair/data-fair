@@ -24,6 +24,7 @@ const permissions = require('../utils/permissions')
 const usersUtils = require('../utils/users')
 const datasetUtils = require('../utils/dataset')
 const virtualDatasetsUtils = require('../utils/virtual-datasets')
+const restDatasetsUtils = require('../utils/rest-datasets')
 const findUtils = require('../utils/find')
 const asyncWrap = require('../utils/async-wrap')
 const extensions = require('../utils/extensions')
@@ -144,6 +145,7 @@ router.patch('/:datasetId', readDataset, permissions.middleware('writeDescriptio
   // Except download.. We only try it again if the fetch failed.
   if (req.dataset.status === 'error') {
     if (req.dataset.isVirtual) patch.status = 'indexed'
+    else if (req.dataset.isRest) patch.status = 'schematized'
     else if (req.dataset.remoteFile && !req.dataset.originalFile) patch.status = 'imported'
     else if (!baseTypes.has(req.dataset.originalFile.mimetype)) patch.status = 'uploaded'
     else patch.status = 'loaded'
@@ -268,39 +270,41 @@ const beforeUpload = asyncWrap(async(req, res, next) => {
 })
 router.post('', beforeUpload, filesUtils.uploadFile(), asyncWrap(async(req, res) => {
   const db = req.app.get('db')
+
   let dataset
   // After uploadFile, req.file contains the metadata of an uploaded file, and req.body the content of additional text fields
   if (req.file) {
     if (req.body.isVirtual) return res.status(400).send('Un jeu de données virtuel ne peut pas être initialisé avec un fichier')
     dataset = await setFileInfo(req.file, initNew(req))
     await db.collection('datasets').insertOne(dataset)
-  } else {
-    if (!req.body.isVirtual) return res.status(400).send('Un jeu de données doit être initialisé avec un fichier ou déclaré "virtuel"')
+  } else if (req.body.isVirtual) {
     if (!req.body.title) return res.status(400).send('Un jeu de données virtuel doit être créé avec un titre')
     const { isVirtual, ...patch } = req.body
     if (!validatePatch(patch)) {
-      console.log(validatePatch.errors)
       return res.status(400).send(ajvErrorMessages(validatePatch.errors))
     }
     dataset = initNew(req)
     dataset.virtual = dataset.virtual || { children: [] }
     dataset.schema = await virtualDatasetsUtils.prepareSchema(db, dataset)
     dataset.status = 'indexed'
-    // Generate ids and try insertion until there is no conflict on id
     const baseId = slug(req.body.title)
-    dataset.id = baseId
-    let insertOk = false
-    let i = 1
-    while (!insertOk) {
-      try {
-        await req.app.get('db').collection('datasets').insertOne(dataset)
-        insertOk = true
-      } catch (err) {
-        if (err.code !== 11000) throw err
-        i += 1
-        dataset.id = `${baseId}-${i}`
-      }
+    await datasetUtils.insertWithBaseId(db, dataset, baseId)
+  } else if (req.body.isRest) {
+    if (!req.body.title) return res.status(400).send('Un jeu de données REST doit être créé avec un titre')
+    const { isRest, ...patch } = req.body
+    if (!validatePatch(patch)) {
+      return res.status(400).send(ajvErrorMessages(validatePatch.errors))
     }
+    dataset = initNew(req)
+    dataset.rest = dataset.rest || {}
+    dataset.schema = dataset.schema || []
+    restDatasetsUtils.prepareSchema(dataset.schema)
+    dataset.status = 'schematized'
+    const baseId = slug(req.body.title)
+    await datasetUtils.insertWithBaseId(db, dataset, baseId)
+    await restDatasetsUtils.initDataset(db, dataset)
+  } else {
+    return res.status(400).send('Un jeu de données doit être initialisé avec un fichier ou déclaré "virtuel" ou "REST"')
   }
 
   delete dataset._id
@@ -329,22 +333,33 @@ const attemptInsert = asyncWrap(async(req, res, next) => {
 const updateDataset = asyncWrap(async(req, res) => {
   const db = req.app.get('db')
   // After uploadFile, req.file contains the metadata of an uploaded file, and req.body the content of additional text fields
-  if (!req.file && !req.dataset.isVirtual) return res.status(400).send('Un jeu de données doit être initialisé avec un fichier ou déclaré "virtuel"')
-  if (req.file && req.dataset.isVirtual) return res.status(400).send('Un jeu de données est soit initialisé avec un fichier soit déclaré "virtuel"')
+  if (!req.file && !req.dataset.isVirtual && !req.dataset.isRest) return res.status(400).send('Un jeu de données doit être initialisé avec un fichier ou déclaré "virtuel"')
+  if (req.file && (req.dataset.isVirtual || req.dataset.isRest)) return res.status(400).send('Un jeu de données est soit initialisé avec un fichier soit déclaré "virtuel"')
   if (req.dataset.isVirtual && !req.dataset.title) return res.status(400).send('Un jeu de données virtuel doit être créé avec un titre')
+  if (req.dataset.isRest && !req.dataset.title) return res.status(400).send('Un jeu de données REST doit être créé avec un titre')
   if (req.dataset.status && !acceptedStatuses.includes(req.dataset.status)) return res.status(409).send('Dataset is not in proper state to be updated')
 
   let dataset = req.dataset
   if (req.file) {
     dataset = await setFileInfo(req.file, req.dataset)
-  } else {
+  } else if (dataset.isVirtual) {
     const { isVirtual, ...patch } = req.body
     if (!validatePatch(patch)) {
-      return res.status(400).send(ajvErrorMessages(validatePatch.errors))
+      return res.status(400).send(validatePatch.errors)
     }
     req.body.virtual = req.body.virtual || { children: [] }
     req.body.schema = await virtualDatasetsUtils.prepareSchema(db, { ...dataset, ...req.body })
     req.body.status = 'indexed'
+  } else if (dataset.isRest) {
+    const { isRest, ...patch } = req.body
+    if (!validatePatch(patch)) {
+      return res.status(400).send(validatePatch.errors)
+    }
+    req.body.rest = req.body.rest || {}
+    dataset.schema = dataset.schema || []
+    restDatasetsUtils.prepareSchema(dataset.schema)
+    await restDatasetsUtils.initDataset(db, dataset)
+    dataset.status = 'schematized'
   }
   Object.assign(dataset, req.body)
 
@@ -358,6 +373,21 @@ const updateDataset = asyncWrap(async(req, res) => {
 })
 router.post('/:datasetId', attemptInsert, readDataset, permissions.middleware('writeData', 'write'), filesUtils.uploadFile(), updateDataset)
 router.put('/:datasetId', attemptInsert, readDataset, permissions.middleware('writeData', 'write'), filesUtils.uploadFile(), updateDataset)
+
+// CRUD operations for REST datasets
+function isRest(req, res, next) {
+  if (!req.dataset.isRest) {
+    return res.status(501)
+      .send('Les opérations de modifications sur les lignes sont uniquement accessibles pour les jeux de données de type REST.')
+  }
+  next()
+}
+router.post('/:datasetId/lines', readDataset, isRest, permissions.middleware('createLine', 'write'), asyncWrap(restDatasetsUtils.createLine))
+router.get('/:datasetId/lines/:lineId', readDataset, isRest, permissions.middleware('readLine', 'read'), asyncWrap(restDatasetsUtils.readLine))
+router.put('/:datasetId/lines/:lineId', readDataset, isRest, permissions.middleware('updateLine', 'write'), asyncWrap(restDatasetsUtils.updateLine))
+router.delete('/:datasetId/lines/:lineId', readDataset, isRest, permissions.middleware('deleteLine', 'write'), asyncWrap(restDatasetsUtils.deleteLine))
+router.patch('/:datasetId/lines/:lineId', readDataset, isRest, permissions.middleware('patchLine', 'write'), asyncWrap(restDatasetsUtils.patchLine))
+router.post('/:datasetId/_bulk_lines', readDataset, isRest, permissions.middleware('bulkLines', 'write'), asyncWrap(restDatasetsUtils.bulkLines))
 
 // Set max-age
 // Also compare last-modified and if-modified-since headers for cache revalidation
@@ -539,13 +569,17 @@ router.get('/:datasetId/convert', readDataset, permissions.middleware('downloadO
 
 // Download the full dataset with extensions
 router.get('/:datasetId/full', readDataset, permissions.middleware('downloadFullData', 'read'), asyncWrap(async (req, res, next) => {
+  const db = req.app.get('db')
   if (req.dataset.isVirtual) req.dataset.descendants = await virtualDatasetsUtils.descendants(req.app.get('db'), req.dataset)
   res.setHeader('Content-disposition', 'attachment; filename=' + req.dataset.file.name)
   res.setHeader('Content-type', 'text/csv')
   const relevantSchema = req.dataset.schema.filter(f => f.key.startsWith('_ext_') || !f.key.startsWith('_'))
+  let readStream
+  if (req.dataset.isRest) readStream = restDatasetsUtils.readStream(db, req.dataset)
+  else readStream = datasetUtils.readStream(req.dataset)
   await pump(
-    datasetUtils.readStream(req.dataset),
-    extensions.preserveExtensionStream({ db: req.app.get('db'), esClient: req.app.get('es'), dataset: req.dataset }),
+    readStream,
+    extensions.preserveExtensionStream({ db, esClient: req.app.get('es'), dataset: req.dataset }),
     new Transform({ transform(chunk, encoding, callback) {
       const flatChunk = flatten(chunk)
       callback(null, relevantSchema.map(field => flatChunk[field.key]))

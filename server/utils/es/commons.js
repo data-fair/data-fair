@@ -32,7 +32,7 @@ exports.esProperty = prop => {
   if (prop.key === '_geopoint') esProp = { type: 'geo_point' }
   if (prop.key === '_geoshape') esProp = { type: 'geo_shape' }
   if (prop.key === '_geocorners') esProp = { type: 'geo_point' }
-  if (prop.key === '_i') esProp = { type: 'integer' }
+  if (prop.key === '_i') esProp = { type: 'long' }
   if (prop.key === '_rand') esProp = { type: 'integer' }
 
   return esProp

@@ -102,7 +102,8 @@
   },
   "/home/alban/github/data-fair/server/utils/db.js": {
     "config": "/home/alban/github/data-fair/node_modules/config/lib/config.js",
-    "mongodb": "/home/alban/github/data-fair/node_modules/mongodb/index.js"
+    "mongodb": "/home/alban/github/data-fair/node_modules/mongodb/index.js",
+    "debug": "/home/alban/github/data-fair/node_modules/debug/src/index.js"
   },
   "/home/alban/github/data-fair/node_modules/mongodb/index.js": {
     "mongodb-core": "/home/alban/github/data-fair/node_modules/mongodb-core/index.js",
@@ -6110,7 +6111,8 @@
     "../utils/cache": "/home/alban/github/data-fair/server/utils/cache.js",
     "../workers/converter": "/home/alban/github/data-fair/server/workers/converter.js",
     "../../contract/dataset-patch": "/home/alban/github/data-fair/contract/dataset-patch.js",
-    "../utils/dataset-file-sample": "/home/alban/github/data-fair/server/utils/dataset-file-sample.js"
+    "../utils/dataset-file-sample": "/home/alban/github/data-fair/server/utils/dataset-file-sample.js",
+    "../utils/rest-datasets": "/home/alban/github/data-fair/server/utils/rest-datasets.js"
   },
   "/home/alban/github/data-fair/contract/dataset-api-docs.js": {
     "config": "/home/alban/github/data-fair/node_modules/config/lib/config.js",
@@ -7374,7 +7376,8 @@
     "node-dir": "/home/alban/github/data-fair/node_modules/node-dir/index.js",
     "axios": "/home/alban/github/data-fair/node_modules/axios/index.js",
     "./fields-sniffer": "/home/alban/github/data-fair/server/utils/fields-sniffer.js",
-    "./geo": "/home/alban/github/data-fair/server/utils/geo.js"
+    "./geo": "/home/alban/github/data-fair/server/utils/geo.js",
+    "./rest-datasets": "/home/alban/github/data-fair/server/utils/rest-datasets.js"
   },
   "/home/alban/github/data-fair/node_modules/stream-combiner/index.js": {
     "duplexer": "/home/alban/github/data-fair/node_modules/duplexer/index.js",
@@ -8135,7 +8138,8 @@
     "inherits": "/home/alban/github/data-fair/node_modules/inherits/inherits.js",
     "util": "util",
     "./internal/streams/BufferList": "/home/alban/github/data-fair/node_modules/readable-stream/lib/internal/streams/BufferList.js",
-    "./internal/streams/destroy": "/home/alban/github/data-fair/node_modules/readable-stream/lib/internal/streams/destroy.js"
+    "./internal/streams/destroy": "/home/alban/github/data-fair/node_modules/readable-stream/lib/internal/streams/destroy.js",
+    "./_stream_duplex": "/home/alban/github/data-fair/node_modules/readable-stream/lib/_stream_duplex.js"
   },
   "/home/alban/github/data-fair/node_modules/readable-stream/lib/internal/streams/stream.js": {
     "stream": "stream"
@@ -8154,7 +8158,8 @@
     "util-deprecate": "/home/alban/github/data-fair/node_modules/util-deprecate/node.js",
     "./internal/streams/stream": "/home/alban/github/data-fair/node_modules/readable-stream/lib/internal/streams/stream.js",
     "safe-buffer": "/home/alban/github/data-fair/node_modules/safe-buffer/index.js",
-    "./internal/streams/destroy": "/home/alban/github/data-fair/node_modules/readable-stream/lib/internal/streams/destroy.js"
+    "./internal/streams/destroy": "/home/alban/github/data-fair/node_modules/readable-stream/lib/internal/streams/destroy.js",
+    "./_stream_duplex": "/home/alban/github/data-fair/node_modules/readable-stream/lib/_stream_duplex.js"
   },
   "/home/alban/github/data-fair/node_modules/util-deprecate/node.js": {
     "util": "util"
@@ -8659,7 +8664,9 @@
     "../utils/dataset": "/home/alban/github/data-fair/server/utils/dataset.js",
     "../utils/extensions": "/home/alban/github/data-fair/server/utils/extensions.js",
     "../utils/journals": "/home/alban/github/data-fair/server/utils/journals.js",
-    "debug": "/home/alban/github/data-fair/node_modules/debug/src/index.js"
+    "debug": "/home/alban/github/data-fair/node_modules/debug/src/index.js",
+    "../utils/rest-datasets": "/home/alban/github/data-fair/server/utils/rest-datasets.js",
+    "stream": "stream"
   },
   "/home/alban/github/data-fair/server/utils/es/index.js": {
     "config": "/home/alban/github/data-fair/node_modules/config/lib/config.js",
@@ -10021,5 +10028,24 @@
   },
   "/home/alban/github/data-fair/node_modules/iconv-lite/encodings/dbcs-codec.js": {
     "safer-buffer": "/home/alban/github/data-fair/node_modules/safer-buffer/safer.js"
+  },
+  "/home/alban/github/data-fair/test/datasets.js": {
+    "../server/workers": "/home/alban/github/data-fair/server/workers/index.js",
+    "./resources/app-notifier.js": "/home/alban/github/data-fair/test/resources/app-notifier.js"
+  },
+  "/home/alban/github/data-fair/test/applications.js": {
+    "nock": "/home/alban/github/data-fair/node_modules/nock/index.js"
+  },
+  "/home/alban/github/data-fair/server/utils/rest-datasets.js": {
+    "http-errors": "/home/alban/github/data-fair/node_modules/http-errors/index.js",
+    "shortid": "/home/alban/github/data-fair/node_modules/shortid/index.js",
+    "util": "util",
+    "pump": "/home/alban/github/data-fair/node_modules/pump/index.js",
+    "stream": "stream",
+    "mime-type-stream": "/home/alban/github/data-fair/node_modules/mime-type-stream/index.js",
+    "stream-combiner": "/home/alban/github/data-fair/node_modules/stream-combiner/index.js"
+  },
+  "/home/alban/github/data-fair/test/rest-datasets.js": {
+    "../server/workers": "/home/alban/github/data-fair/server/workers/index.js"
   }
 }

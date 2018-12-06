@@ -256,7 +256,7 @@ router.use('/:remoteServiceId/proxy*', readService, (req, res, next) => { req.ap
   try {
     await nbLimiter.consume(ip, 1)
   } catch (err) {
-    console.log('nbLimiter error', err)
+    // console.log('nbLimiter error', err)
     return res.status(429).send('Trop de requêtes dans un interval restreint pour cette exposition de service.')
   }
   kbLimiter = kbLimiter || new RateLimiterMongo({
@@ -268,7 +268,7 @@ router.use('/:remoteServiceId/proxy*', readService, (req, res, next) => { req.ap
   try {
     await kbLimiter.consume(ip, 1)
   } catch (err) {
-    console.log('kbLimiter error', err)
+    // console.log('kbLimiter error', err)
     return res.status(429).send('Trop de traffic dans un interval restreint pour cette exposition de service.')
   }
 

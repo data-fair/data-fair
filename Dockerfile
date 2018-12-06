@@ -33,6 +33,7 @@ RUN apk add --no-cache --virtual .build-deps cmake linux-headers boost-dev gmp g
 RUN ln -s /usr/lib/libproj.so.13 /usr/lib/libproj.so
 
 ENV NODE_ENV production
+ENV DEBUG db,upgrade*
 WORKDIR /webapp
 ADD package.json .
 ADD package-lock.json .

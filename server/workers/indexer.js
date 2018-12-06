@@ -1,14 +1,24 @@
 // Index tabular datasets with elasticsearch using available information on dataset schema
 const util = require('util')
 const pump = util.promisify(require('pump'))
+const { Writable } = require('stream')
 const es = require('../utils/es')
 const datasetUtils = require('../utils/dataset')
+const restDatasetsUtils = require('../utils/rest-datasets')
 const extensionsUtils = require('../utils/extensions')
 const journals = require('../utils/journals')
 
 exports.type = 'dataset'
 exports.eventsPrefix = 'index'
 exports.filter = { status: 'schematized' }
+// either just schematized or an updated REST dataset
+exports.filter = { $or: [
+  { status: 'schematized' },
+  { $and: [
+    { status: 'updated' },
+    { isRest: true }
+  ] }
+] }
 
 exports.process = async function(app, dataset) {
   const debug = require('debug')(`worker:indexer:${dataset.id}`)
@@ -17,21 +27,47 @@ exports.process = async function(app, dataset) {
   const esClient = app.get('es')
   const collection = db.collection('datasets')
 
-  const tempId = await es.initDatasetIndex(esClient, dataset)
-  debug(`Initialied new dataset index ${tempId}`)
-  const indexStream = es.indexStream({ esClient, indexName: tempId, dataset, attachments: !!dataset.hasFiles })
+  let indexName
+  if (dataset.status === 'updated') {
+    indexName = es.aliasName(dataset)
+    debug(`Update index ${indexName}`)
+  } else {
+    indexName = await es.initDatasetIndex(esClient, dataset)
+    debug(`Initialize new dataset index ${indexName}`)
+  }
+
+  const indexStream = es.indexStream({ esClient, indexName, dataset, attachments: !!dataset.hasFiles })
   // reindex and preserve previous extensions
   debug('Run index stream')
-  await pump(datasetUtils.readStream(dataset), extensionsUtils.preserveExtensionStream({ db, esClient, dataset, attachments: !!dataset.hasFiles }), indexStream)
+  let readStream, writeStream
+  if (dataset.isRest) {
+    readStream = restDatasetsUtils.readStream(db, dataset, dataset.status === 'updated')
+    writeStream = restDatasetsUtils.markIndexedStream(db, dataset)
+  } else {
+    readStream = datasetUtils.readStream(dataset)
+    writeStream = new Writable({ objectMode: true, write(chunk, encoding, cb) { cb() } })
+  }
+  await pump(readStream, extensionsUtils.preserveExtensionStream({ db, esClient, dataset, attachments: !!dataset.hasFiles }), indexStream, writeStream)
   debug('index stream ok')
-  const count = dataset.count = indexStream.i
   const errorsSummary = indexStream.errorsSummary()
   if (errorsSummary) await journals.log(app, dataset, { type: 'error', data: errorsSummary })
 
-  debug('Switch alias to point to new datasets index')
-  await es.switchAlias(esClient, dataset, tempId)
+  const result = { status: 'indexed' }
+  if (dataset.status === 'updated') {
+    result.count = await restDatasetsUtils.count(db, dataset)
+  } else {
+    debug('Switch alias to point to new datasets index')
+    await es.switchAlias(esClient, dataset, indexName)
+    result.count = indexStream.i
+  }
 
-  const result = { status: 'indexed', count }
+  // Some data was updated in the interval during which we performed indexation
+  // keep dataset as "updated" so that this worker keeps going
+  if (dataset.status === 'updated' && await restDatasetsUtils.count(db, dataset, { _needsIndexing: true })) {
+    debug('REST dataset indexed, but some data is still fresh, stay in "updated" status')
+    result.status = 'updated'
+  }
+
   Object.assign(dataset, result)
   await collection.updateOne({ id: dataset.id }, { $set: result })
 }

@@ -296,6 +296,15 @@ module.exports = {
         }
       }
     },
+    isRest: {
+      type: 'boolean',
+      default: false,
+      description: 'Used to identify REST datasets. A REST dataset is not created from a data file, but instead is based on a dynamic collection in a database.'
+    },
+    rest: {
+      type: 'object',
+      description: 'A configuration object dedicated to REST datasets.'
+    },
     extras: {
       type: 'object',
       description: 'An object for extra content from client services of data-fair'

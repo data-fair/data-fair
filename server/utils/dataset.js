@@ -10,6 +10,7 @@ const dir = require('node-dir')
 const axios = require('axios')
 const fieldsSniffer = require('./fields-sniffer')
 const geoUtils = require('./geo')
+const restDatasetsUtils = require('./rest-datasets')
 
 const baseTypes = new Set(['text/csv', 'application/geo+json'])
 
@@ -57,6 +58,8 @@ exports.lsFiles = async (dataset) => {
 
 // Read the dataset file and get a stream of line items
 exports.readStream = (dataset) => {
+  if (dataset.isRest) return restDatasetsUtils.readStream(dataset)
+
   let parser, transformer
   if (dataset.file.mimetype === 'text/csv') {
     // use result from csv-sniffer to configure parser
@@ -170,8 +173,26 @@ exports.extendedSchema = (dataset) => {
 exports.reindex = async (db, dataset) => {
   const patch = { status: 'loaded' }
   if (dataset.isVirtual) patch.status = 'indexed'
+  else if (dataset.isRest) patch.status = 'schematized'
   else if (dataset.originalFile && !baseTypes.has(dataset.originalFile.mimetype)) patch.status = 'uploaded'
   await db.collection('datasets').updateOne({ id: dataset.id }, { '$set': patch })
   return (await db.collection('datasets')
     .findOneAndUpdate({ id: dataset.id }, { '$set': patch }, { returnOriginal: false })).value
+}
+
+// Generate ids and try insertion until there is no conflict on id
+exports.insertWithBaseId = async (db, dataset, baseId) => {
+  dataset.id = baseId
+  let insertOk = false
+  let i = 1
+  while (!insertOk) {
+    try {
+      await db.collection('datasets').insertOne(dataset)
+      insertOk = true
+    } catch (err) {
+      if (err.code !== 11000) throw err
+      i += 1
+      dataset.id = `${baseId}-${i}`
+    }
+  }
 }

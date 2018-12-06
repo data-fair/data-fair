@@ -244,7 +244,7 @@ test.serial('A virtual dataset without physical children cannot be queried', asy
     await ax.get(`/api/v1/datasets/${res.data.id}/lines`)
     t.fail('no physical children should fail')
   } catch (err) {
-    t.is(err.status, 500)
+    t.is(err.status, 501)
   }
 })
 
@@ -278,7 +278,7 @@ test.serial('A virtual dataset cannot have a child virtual dataset with filters 
     await ax.get(`/api/v1/datasets/${res.data.id}/lines`)
     t.fail('filter in child should fail')
   } catch (err) {
-    t.is(err.status, 500)
+    t.is(err.status, 501)
   }
 })
 
