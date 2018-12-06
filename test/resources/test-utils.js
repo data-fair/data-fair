@@ -1,3 +1,4 @@
+require('cache-require-paths')
 const test = require('ava')
 const axios = require('axios')
 const fs = require('fs-extra')
@@ -6,11 +7,13 @@ const nock = require('nock')
 const FormData = require('form-data')
 const axiosAuth = require('@koumoul/sd-express').axiosAuth
 const workers = require('../../server/workers')
+const debug = require('debug')('test')
 
 const testDir = path.join(__dirname, '../')
 const testFiles = fs.readdirSync(testDir).map(f => path.join(testDir, f))
 
 async function clean(key) {
+  debug('clean')
   const dataDir = './data/test-' + key
   const indicesPrefix = 'dataset-test-' + key
   const { db, client } = await require('../../server/utils/db.js').connect()
@@ -20,9 +23,11 @@ async function clean(key) {
   await es.indices.delete({ index: `${indicesPrefix}-*`, ignore: [404] })
   await es.close()
   await fs.remove(dataDir)
+  debug('clean ok')
 }
 
 exports.prepare = (testFile) => {
+  debug('prepare test suite', testFile)
   const key = path.basename(testFile, '.js')
   const port = 5800 + testFiles.indexOf(testFile)
   const dataDir = './data/test-' + key
@@ -42,8 +47,10 @@ exports.prepare = (testFile) => {
   })
 
   const app = require('../../server/app.js')
+  debug('test suite ready')
 
   test.serial.before('global mocks', async t => {
+    debug('preparing mocks')
     nock('http://test.com')
       .persist()
       .get('/geocoder/api-docs.json').reply(200, require('./geocoder-api.json'))
@@ -55,28 +62,34 @@ exports.prepare = (testFile) => {
     nock('http://monapp2.com').persist()
       .get('/').reply(200, html)
       .get('/config-schema.json').reply(200, {})
+    debug('mocks ok')
   })
 
   test.serial.before('clean and run app', async t => {
     await clean(key)
     try {
+      debug('run app')
       test.app = await app.run()
     } catch (err) {
       console.error('Failed to run the application', err)
       throw err
     }
+    debug('app ok')
   })
 
   test.serial.after.always('stop app and clean', async t => {
     try {
+      debug('stop app')
       await app.stop()
     } catch (err) {
       console.error('Failed to stop the application', err)
       throw err
     }
+    debug('app stopped')
   })
 
   const axiosBuilder = async (email, opts = {}) => {
+    debug('prepare axios instance', email)
     opts.baseURL = config.publicUrl
 
     let ax
@@ -89,11 +102,11 @@ exports.prepare = (testFile) => {
       delete error.response.request
       return Promise.reject(error.response)
     })
-
+    debug('axios instance ok')
     return ax
   }
 
-  return { test, config, axiosBuilder }
+  return { test, config, axiosBuilder, debug }
 }
 
 exports.formHeaders = (form, organizationId) => {

@@ -2,7 +2,10 @@
     "id": "dmeadus0",
     "firstName": "Danna",
     "lastName": "Meadus",
-    "email": "dmeadus0@answers.com"
+    "email": "dmeadus0@answers.com",
+    "password": {
+      "clear": "passwd"
+    }
   },
   {
     "id": "ccherryholme1",
@@ -14,7 +17,10 @@
     "id": "cdurning2",
     "firstName": "Christen",
     "lastName": "Durning",
-    "email": "cdurning2@desdev.cn"
+    "email": "cdurning2@desdev.cn",
+    "password": {
+      "clear": "passwd"
+    }
   },
   {
     "id": "hlalonde3",
@@ -74,6 +80,9 @@
     "id": "superadmin",
     "firstName": "Super",
     "lastName": "Admin",
-    "email": "superadmin@test.com"
+    "email": "superadmin@test.com",
+    "password": {
+      "clear": "superpasswd"
+    }
   }
 ]

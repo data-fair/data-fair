@@ -41,7 +41,7 @@ test('Get datasets with special param as super admin', async t => {
 })
 
 test.serial('Search and apply facets', async t => {
-  const ax = await axiosBuilder('dmeadus0@answers.com')
+  const ax = await axiosBuilder('dmeadus0@answers.com:passwd')
 
   // 1 dataset in user zone
   await testUtils.sendDataset('dataset1.csv', ax)
@@ -76,7 +76,7 @@ test.serial('Search and apply facets', async t => {
 const datasetFd = fs.readFileSync('./test/resources/dataset1.csv')
 
 test.serial('Failure to upload dataset exceeding limit', async t => {
-  const ax = await axiosBuilder('dmeadus0@answers.com')
+  const ax = await axiosBuilder('dmeadus0@answers.com:passwd')
   const form = new FormData()
   form.append('file', Buffer.alloc(16000), 'largedataset.csv')
   try {
@@ -88,7 +88,7 @@ test.serial('Failure to upload dataset exceeding limit', async t => {
 })
 
 test.serial('Failure to upload multiple datasets exceeding limit', async t => {
-  const ax = await axiosBuilder('dmeadus0@answers.com')
+  const ax = await axiosBuilder('dmeadus0@answers.com:passwd')
   let form = new FormData()
   form.append('file', Buffer.alloc(11000), 'largedataset1.csv')
   await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
@@ -104,7 +104,7 @@ test.serial('Failure to upload multiple datasets exceeding limit', async t => {
 })
 
 test.serial('Upload new dataset in user zone', async t => {
-  const ax = await axiosBuilder('dmeadus0@answers.com')
+  const ax = await axiosBuilder('dmeadus0@answers.com:passwd')
   const form = new FormData()
   form.append('file', datasetFd, 'dataset1.csv')
   let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
@@ -115,7 +115,7 @@ test.serial('Upload new dataset in user zone', async t => {
 })
 
 test.serial('Upload new dataset in organization zone', async t => {
-  const ax = await axiosBuilder('dmeadus0@answers.com')
+  const ax = await axiosBuilder('dmeadus0@answers.com:passwd')
   const form = new FormData()
   form.append('file', datasetFd, 'dataset2.csv')
   let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form, 'KWqAGZ4mG') })
@@ -125,7 +125,7 @@ test.serial('Upload new dataset in organization zone', async t => {
 })
 
 test.serial('Uploading same file twice should increment id', async t => {
-  const ax = await axiosBuilder('dmeadus0@answers.com')
+  const ax = await axiosBuilder('dmeadus0@answers.com:passwd')
   for (let i of [1, 2, 3]) {
     const form = new FormData()
     form.append('file', datasetFd, 'my-dataset.csv')
@@ -136,7 +136,7 @@ test.serial('Uploading same file twice should increment id', async t => {
 })
 
 test.serial('Upload new dataset with pre-filled attributes', async t => {
-  const ax = await axiosBuilder('dmeadus0@answers.com')
+  const ax = await axiosBuilder('dmeadus0@answers.com:passwd')
   const form = new FormData()
   form.append('title', 'A dataset with pre-filled title')
   form.append('publications', '[{"catalog": "test", "status": "waiting"}]')
@@ -146,7 +146,7 @@ test.serial('Upload new dataset with pre-filled attributes', async t => {
 })
 
 test.serial('Upload new dataset with defined id', async t => {
-  const ax = await axiosBuilder('dmeadus0@answers.com')
+  const ax = await axiosBuilder('dmeadus0@answers.com:passwd')
   let form = new FormData()
   form.append('title', 'my title')
   form.append('file', datasetFd, 'yet-a-dataset.csv')
@@ -163,7 +163,7 @@ test.serial('Upload new dataset with defined id', async t => {
 })
 
 test('Reject some other pre-filled attributes', async t => {
-  const ax = await axiosBuilder('dmeadus0@answers.com')
+  const ax = await axiosBuilder('dmeadus0@answers.com:passwd')
   const form = new FormData()
   form.append('id', 'pre-filling ig is not possible')
   form.append('file', datasetFd, 'yet-a-dataset.csv')
@@ -187,7 +187,7 @@ test('Fail to upload new dataset when not authenticated', async t => {
 
 test.serial('Upload dataset - full test with webhooks', async t => {
   const wsCli = new WebSocket(config.publicUrl)
-  const ax = await axiosBuilder('cdurning2@desdev.cn')
+  const ax = await axiosBuilder('cdurning2@desdev.cn:passwd')
   await ax.put('/api/v1/settings/user/cdurning2', { webhooks: [{ type: 'dataset', title: 'test', events: ['finalize-end'], url: 'http://localhost:5900' }] })
   let form = new FormData()
   form.append('file', fs.readFileSync('./test/resources/Antennes du CD22.csv'), 'Antennes du CD22.csv')
@@ -219,7 +219,7 @@ test.serial('Upload dataset - full test with webhooks', async t => {
 
   t.is(res.data.length, 18)
   // testing permissions
-  const ax1 = await axiosBuilder('dmeadus0@answers.com')
+  const ax1 = await axiosBuilder('dmeadus0@answers.com:passwd')
   try {
     await ax1.get(webhook.href)
     t.fail()

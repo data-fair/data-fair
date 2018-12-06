@@ -61,7 +61,7 @@ test('Unknown catalog', async t => {
 })
 
 test.serial('Post a minimal catalog definition, read it, update it and delete it', async t => {
-  const ax = await axiosBuilder('dmeadus0@answers.com')
+  const ax = await axiosBuilder('dmeadus0@answers.com:passwd')
   let res = await ax.post('/api/v1/catalogs', { url: 'http://test-catalog.com', title: 'Test catalog', apiKey: 'apiKey', type: 'udata' })
   t.is(res.status, 201)
   const eaId = res.data.id
@@ -76,7 +76,7 @@ test.serial('Post a minimal catalog definition, read it, update it and delete it
   t.is(res.status, 200)
   t.is(res.data.title, 'Test catalog')
   // Permissions
-  const ax1 = await axiosBuilder('cdurning2@desdev.cn')
+  const ax1 = await axiosBuilder('cdurning2@desdev.cn:passwd')
   try {
     await ax1.get('/api/v1/catalogs/' + eaId)
     t.fail()
@@ -104,7 +104,7 @@ test.serial('Post a minimal catalog definition, read it, update it and delete it
 })
 
 test.serial('Post catalog multiple times', async t => {
-  const ax = await axiosBuilder('dmeadus0@answers.com')
+  const ax = await axiosBuilder('dmeadus0@answers.com:passwd')
   const catalog = { url: 'http://test-catalog2.com', title: 'Test catalog', apiKey: 'apiKey', type: 'udata' }
   let res = await ax.post('/api/v1/catalogs', catalog)
   t.is(res.status, 201)
@@ -118,7 +118,7 @@ test.serial('Post catalog multiple times', async t => {
 })
 
 test.serial('Use PUT to create', async t => {
-  const ax = await axiosBuilder('dmeadus0@answers.com')
+  const ax = await axiosBuilder('dmeadus0@answers.com:passwd')
   const catalog = { url: 'http://test-catalog2.com', title: 'Test catalog', apiKey: 'apiKey', type: 'udata' }
   let res = await ax.put('/api/v1/catalogs/mycatalog', catalog)
   t.is(res.status, 201)

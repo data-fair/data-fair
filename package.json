@@ -45,7 +45,7 @@
   },
   "dependencies": {
     "@digibytes/markdownit": "^1.2.1",
-    "@koumoul/sd-express": "^0.11.1",
+    "@koumoul/sd-express": "^0.12.0",
     "@koumoul/sd-vue": "^0.10.2",
     "@koumoul/vue-multianalytics": "^1.10.1",
     "@koumoul/vuetify-jsonschema-form": "^0.16.0",
@@ -61,6 +61,7 @@
     "babel-plugin-transform-imports": "^1.5.1",
     "body-parser": "^1.18.2",
     "byline": "^5.0.0",
+    "cache-require-paths": "^0.3.0",
     "chardet": "^0.5.0",
     "child-process-promise": "^2.2.1",
     "config": "^1.31.0",

@@ -3,7 +3,7 @@ const testUtils = require('./resources/test-utils')
 const { test, axiosBuilder } = testUtils.prepare(__filename)
 
 test('Wrong type', async t => {
-  const ax = await axiosBuilder('dmeadus0@answers.com')
+  const ax = await axiosBuilder('dmeadus0@answers.com:passwd')
   try {
     await ax.get('/api/v1/settings/unknown/dmeadus0')
     t.fail()
@@ -13,7 +13,7 @@ test('Wrong type', async t => {
 })
 
 test('No permissions', async t => {
-  const ax = await axiosBuilder('dmeadus0@answers.com')
+  const ax = await axiosBuilder('dmeadus0@answers.com:passwd')
   try {
     await ax.get('/api/v1/settings/user/hlalonde3')
     t.fail()
@@ -23,14 +23,14 @@ test('No permissions', async t => {
 })
 
 test('Read my empty settings', async t => {
-  const ax = await axiosBuilder('dmeadus0@answers.com')
+  const ax = await axiosBuilder('dmeadus0@answers.com:passwd')
   const res = await ax.get('/api/v1/settings/user/dmeadus0')
   t.is(res.status, 200)
   t.deepEqual(res.data, {})
 })
 
 test('Update with wrong format', async t => {
-  const ax = await axiosBuilder('dmeadus0@answers.com')
+  const ax = await axiosBuilder('dmeadus0@answers.com:passwd')
   try {
     await ax.put('/api/v1/settings/user/dmeadus0', { forbiddenKey: 'not allowed' })
     t.fail()

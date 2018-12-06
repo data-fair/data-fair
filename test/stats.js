@@ -5,7 +5,7 @@ const testUtils = require('./resources/test-utils')
 const { test, axiosBuilder } = testUtils.prepare(__filename)
 
 test('Get lines in dataset', async t => {
-  const ax = await axiosBuilder('dmeadus0@answers.com')
+  const ax = await axiosBuilder('dmeadus0@answers.com:passwd')
   const datasetData = fs.readFileSync('./test/resources/dataset1.csv')
   const form = new FormData()
   form.append('file', datasetData, 'dataset.csv')

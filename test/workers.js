@@ -18,7 +18,7 @@ test.serial('Process newly uploaded CSV dataset', async t => {
   const datasetFd = fs.readFileSync('./test/resources/dataset1.csv')
   const form = new FormData()
   form.append('file', datasetFd, 'dataset.csv')
-  const ax = await axiosBuilder('dmeadus0@answers.com')
+  const ax = await axiosBuilder('dmeadus0@answers.com:passwd')
   let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
   t.is(res.status, 201)
 
@@ -84,7 +84,7 @@ test.serial('Process newly uploaded CSV dataset', async t => {
 })
 
 test.serial('Publish a dataset after finalization', async t => {
-  const ax = await axiosBuilder('dmeadus0@answers.com')
+  const ax = await axiosBuilder('dmeadus0@answers.com:passwd')
 
   // Prepare a catalog
   const catalog = (await ax.post('/api/v1/catalogs', { url: 'http://test-catalog.com', title: 'Test catalog', apiKey: 'apiKey', type: 'udata' })).data
@@ -114,7 +114,7 @@ test.serial('Process newly uploaded geojson dataset', async t => {
   const datasetFd = fs.readFileSync('./test/resources/geojson-example.geojson')
   const form = new FormData()
   form.append('file', datasetFd, 'geojson-example.geojson')
-  const ax = await axiosBuilder('dmeadus0@answers.com')
+  const ax = await axiosBuilder('dmeadus0@answers.com:passwd')
   let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
   t.is(res.status, 201)
 
@@ -141,7 +141,7 @@ test.serial('Log error for geojson with broken feature', async t => {
   const datasetFd = fs.readFileSync('./test/resources/geojson-broken.geojson')
   const form = new FormData()
   form.append('file', datasetFd, 'geojson-example.geojson')
-  const ax = await axiosBuilder('dmeadus0@answers.com')
+  const ax = await axiosBuilder('dmeadus0@answers.com:passwd')
   let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
   t.is(res.status, 201)
 
@@ -163,7 +163,7 @@ test.skip('Process newly uploaded shapefile dataset', async t => {
   const datasetFd = fs.readFileSync('./test/resources/stations.zip')
   const form = new FormData()
   form.append('file', datasetFd, 'stations.zip')
-  const ax = await axiosBuilder('dmeadus0@answers.com')
+  const ax = await axiosBuilder('dmeadus0@answers.com:passwd')
   let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
   t.is(res.status, 201)
 
@@ -178,7 +178,7 @@ test.serial('Process newly uploaded zip archive', async t => {
   const datasetFd = fs.readFileSync('./test/resources/files.zip')
   const form = new FormData()
   form.append('file', datasetFd, 'files.zip')
-  const ax = await axiosBuilder('dmeadus0@answers.com')
+  const ax = await axiosBuilder('dmeadus0@answers.com:passwd')
   let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
   t.is(res.status, 201)
 

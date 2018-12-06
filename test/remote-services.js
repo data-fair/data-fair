@@ -11,7 +11,7 @@ test.serial('Get external APIs when not authenticated', async t => {
 })
 
 test.serial('Post a minimal external API, read it, update it and delete it', async t => {
-  const ax = await axiosBuilder('superadmin@test.com')
+  const ax = await axiosBuilder('superadmin@test.com:superpasswd')
   const apiDoc = require('./resources/geocoder-api.json')
   apiDoc.info['x-api-id'] = 'geocoder2'
   let res = await ax.post('/api/v1/remote-services', { apiDoc, apiKey: { in: 'header', name: 'x-apiKey' } })
@@ -29,7 +29,7 @@ test.serial('Post a minimal external API, read it, update it and delete it', asy
   t.is(res.status, 200)
   t.is(res.data.title, 'Test external api')
   // Permissions
-  const ax1 = await axiosBuilder('cdurning2@desdev.cn')
+  const ax1 = await axiosBuilder('cdurning2@desdev.cn:passwd')
   try {
     await ax1.patch('/api/v1/remote-services/' + eaId, { title: 'Test external api' })
     t.fail()
@@ -61,7 +61,7 @@ test.serial('Unknown external service', async t => {
 })
 
 test.serial('Prevent abusing remote service re-exposition', async t => {
-  const ax = await axiosBuilder('superadmin@test.com')
+  const ax = await axiosBuilder('superadmin@test.com:superpasswd')
 
   let nockScope = nock('http://test.com').get('/geocoder/coord').reply(200, { content: 'ok' })
   let res = await ax.get('/api/v1/remote-services/geocoder-koumoul/proxy/coord')

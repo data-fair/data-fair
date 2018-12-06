@@ -13,7 +13,7 @@ test.serial('Reject wrong api key', async t => {
 })
 
 test.serial('Create and use a User level api key', async t => {
-  const ax = await axiosBuilder('dmeadus0@answers.com')
+  const ax = await axiosBuilder('dmeadus0@answers.com:passwd')
   const res = await ax.put(`/api/v1/settings/user/dmeadus0`, { apiKeys: [
     { title: 'key1', scopes: ['stats'] },
     { title: 'key2', scopes: ['datasets'] }
@@ -45,7 +45,7 @@ test.serial('Create and use a User level api key', async t => {
 })
 
 test.serial('Create and use an organization level api key', async t => {
-  const ax = await axiosBuilder('cdurning2@desdev.cn')
+  const ax = await axiosBuilder('cdurning2@desdev.cn:passwd')
   const res = await ax.put(`/api/v1/settings/organization/3sSi7xDIK`, { apiKeys: [
     { title: 'key1', scopes: ['datasets'] }
   ] })

@@ -10,7 +10,7 @@ test('Get values buckets', async t => {
   const datasetData = fs.readFileSync('./test/resources/dataset2.csv')
   const form = new FormData()
   form.append('file', datasetData, 'dataset.csv')
-  const ax = await axiosBuilder('dmeadus0@answers.com')
+  const ax = await axiosBuilder('dmeadus0@answers.com:passwd')
   let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
   t.is(res.status, 201)
   await workers.hook('finalizer')

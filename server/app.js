@@ -1,3 +1,5 @@
+const debug = require('debug')('app')
+debug('enter app.js')
 const config = require('config')
 const express = require('express')
 const bodyParser = require('body-parser')
@@ -18,11 +20,13 @@ const upgrade = require('../upgrade')
 const baseApplications = require('./routers/base-applications')
 const remoteServices = require('./routers/remote-services')
 const anonymSession = require('./utils/anonym-session')
+const nuxt = require('./nuxt')
 const session = require('@koumoul/sd-express')({
   directoryUrl: config.directoryUrl,
   privateDirectoryUrl: config.privateDirectoryUrl || config.directoryUrl,
   publicUrl: config.publicUrl
 })
+debug('requires are done')
 
 const app = express()
 
@@ -74,25 +78,38 @@ app.use((err, req, res, next) => {
 const server = http.createServer(app)
 const wss = new WebSocket.Server({ server })
 
+debug('app is initialized, ready to be run')
+
 // Run app and return it in a promise
 exports.run = async () => {
   if (!config.listenWhenReady) {
+    debug('listen on port', config.port)
     server.listen(config.port)
     await eventToPromise(server, 'listening')
+    debug('server is litening')
   }
-
-  await upgrade()
-  const { db, client } = await dbUtils.init()
+  debug('upgrade')
+  const { db, client } = await upgrade()
+  debug('upgrade ok, init db')
+  await dbUtils.init(db)
+  debug('db ok')
   app.set('db', db)
   app.set('mongoClient', client)
   app.set('anonymSession', await anonymSession.init(db))
+  debug('init capture')
   await capture.init()
+  debug('capture initialized, init cache')
   await cache.init(db)
+  debug('cache initialized, init apps and services')
   baseApplications.init(db)
   await remoteServices.init(db)
+  debug('apps and services initialized, init ES')
   app.set('es', await esUtils.init())
+  debug('ES initialized, init websockets')
   app.publish = await wsUtils.init(wss, db)
+  debug('websockets initialized, init locks')
   await locksUtils.init(db)
+  debug('locks initialized')
   workers.start(app)
   app.set('api-ready', true)
 
@@ -102,13 +119,17 @@ exports.run = async () => {
   })
   app.use(session.decode)
   app.use(session.loginCallback)
-  const nuxt = await require('./nuxt')()
-  app.use(nuxt)
+  debug('prepare nuxt')
+  const nuxtMiddleware = await nuxt()
+  debug('nuxt ok')
+  app.use(nuxtMiddleware)
   app.set('ui-ready', true)
 
   if (config.listenWhenReady) {
+    debug('listen on port', config.port)
     server.listen(config.port)
     await eventToPromise(server, 'listening')
+    debug('server is litening')
   }
   return app
 }

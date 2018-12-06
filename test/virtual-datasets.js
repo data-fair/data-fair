@@ -3,14 +3,14 @@ const { test, axiosBuilder } = testUtils.prepare(__filename)
 const workers = require('../server/workers')
 
 test.serial('Create an empty virtual dataset', async t => {
-  const ax = await axiosBuilder('dmeadus0@answers.com')
+  const ax = await axiosBuilder('dmeadus0@answers.com:passwd')
   let res = await ax.post('/api/v1/datasets', { isVirtual: true, title: 'a virtual dataset' })
   t.is(res.status, 201)
   t.is(res.data.id, 'a-virtual-dataset')
 })
 
 test.serial('Create a new virtual dataset with predefined id', async t => {
-  const ax = await axiosBuilder('dmeadus0@answers.com')
+  const ax = await axiosBuilder('dmeadus0@answers.com:passwd')
   let res = await ax.put('/api/v1/datasets/my-id', { isVirtual: true, title: 'a virtual dataset' })
   t.is(res.status, 201)
   t.is(res.data.id, 'my-id')
@@ -18,7 +18,7 @@ test.serial('Create a new virtual dataset with predefined id', async t => {
 
 test.serial('Create a virtual dataset with a child and query', async t => {
   // Send basic dataset
-  const ax = await axiosBuilder('dmeadus0@answers.com')
+  const ax = await axiosBuilder('dmeadus0@answers.com:passwd')
   const dataset = await testUtils.sendDataset('dataset1.csv', ax)
   let res = await ax.post('/api/v1/datasets', {
     isVirtual: true,
@@ -34,7 +34,7 @@ test.serial('Create a virtual dataset with a child and query', async t => {
 })
 
 test.serial('Create a virtual dataset, add children and query', async t => {
-  const ax = await axiosBuilder('dmeadus0@answers.com')
+  const ax = await axiosBuilder('dmeadus0@answers.com:passwd')
   const dataset1 = await testUtils.sendDataset('dataset1.csv', ax)
   const dataset2 = await testUtils.sendDataset('dataset1.csv', ax)
   const dataset3 = await testUtils.sendDataset('dataset1.csv', ax)
@@ -65,7 +65,7 @@ test.serial('Create a virtual dataset, add children and query', async t => {
 })
 
 test.serial('Check compatibility of schema with children', async t => {
-  const ax = await axiosBuilder('dmeadus0@answers.com')
+  const ax = await axiosBuilder('dmeadus0@answers.com:passwd')
   const dataset = await testUtils.sendDataset('dataset1.csv', ax)
   let res = await ax.post('/api/v1/datasets', {
     isVirtual: true,
@@ -89,7 +89,7 @@ test.serial('Check compatibility of schema with children', async t => {
 })
 
 test.serial('Check that column restriction is enforced (select, search, aggs)', async t => {
-  const ax = await axiosBuilder('dmeadus0@answers.com')
+  const ax = await axiosBuilder('dmeadus0@answers.com:passwd')
   const dataset = await testUtils.sendDataset('dataset1.csv', ax)
   let res = await ax.post('/api/v1/datasets', {
     isVirtual: true,
@@ -156,7 +156,7 @@ test.serial('Check that column restriction is enforced (select, search, aggs)', 
 })
 
 test.serial('Apply static filter', async t => {
-  const ax = await axiosBuilder('dmeadus0@answers.com')
+  const ax = await axiosBuilder('dmeadus0@answers.com:passwd')
   const dataset = await testUtils.sendDataset('dataset1.csv', ax)
   let res = await ax.post('/api/v1/datasets', {
     isVirtual: true,
@@ -180,7 +180,7 @@ test.serial('Apply static filter', async t => {
 })
 
 test.serial('Add another virtual dataset as child', async t => {
-  const ax = await axiosBuilder('dmeadus0@answers.com')
+  const ax = await axiosBuilder('dmeadus0@answers.com:passwd')
   const dataset = await testUtils.sendDataset('dataset1.csv', ax)
   let res = await ax.post('/api/v1/datasets', {
     isVirtual: true,
@@ -223,7 +223,7 @@ test.serial('Add another virtual dataset as child', async t => {
 })
 
 test.serial('A virtual dataset without physical children cannot be queried', async t => {
-  const ax = await axiosBuilder('dmeadus0@answers.com')
+  const ax = await axiosBuilder('dmeadus0@answers.com:passwd')
   let res = await ax.post('/api/v1/datasets', {
     isVirtual: true,
     title: 'a virtual dataset',
@@ -249,7 +249,7 @@ test.serial('A virtual dataset without physical children cannot be queried', asy
 })
 
 test.serial('A virtual dataset cannot have a child virtual dataset with filters (no way to enforce them)', async t => {
-  const ax = await axiosBuilder('dmeadus0@answers.com')
+  const ax = await axiosBuilder('dmeadus0@answers.com:passwd')
   const dataset = await testUtils.sendDataset('dataset1.csv', ax)
   let res = await ax.post('/api/v1/datasets', {
     isVirtual: true,

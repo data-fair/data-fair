@@ -7,7 +7,7 @@ const { test, config, axiosBuilder } = testUtils.prepare(__filename)
 const workers = require('../server/workers')
 
 test.serial('Extend dataset using remote service', async t => {
-  const ax = await axiosBuilder('dmeadus0@answers.com')
+  const ax = await axiosBuilder('dmeadus0@answers.com:passwd')
   // Initial dataset with addresses
   let form = new FormData()
   let content = `label,adr
@@ -147,7 +147,7 @@ other,unknown address
 })
 
 test.serial('Manage errors during extension', async t => {
-  const ax = await axiosBuilder('dmeadus0@answers.com')
+  const ax = await axiosBuilder('dmeadus0@answers.com:passwd')
 
   // Initial dataset with addresses
   let form = new FormData()
@@ -178,7 +178,7 @@ other,unknown address
 })
 
 test.serial('Manage empty queries', async t => {
-  const ax = await axiosBuilder('dmeadus0@answers.com')
+  const ax = await axiosBuilder('dmeadus0@answers.com:passwd')
 
   // Initial dataset with addresses
   let form = new FormData()

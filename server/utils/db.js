@@ -13,6 +13,7 @@ async function ensureIndex(db, collection, key, options) {
 
 exports.connect = async () => {
   let client
+  console.log('Connecting to mongodb ' + config.mongoUrl)
   try {
     client = await MongoClient.connect(config.mongoUrl, { useNewUrlParser: true })
   } catch (err) {
@@ -25,38 +26,38 @@ exports.connect = async () => {
   return { db, client }
 }
 
-exports.init = async () => {
-  console.log('Connecting to mongodb ' + config.mongoUrl)
-  const { db, client } = await exports.connect()
-  // datasets indexes
-  await ensureIndex(db, 'datasets', { id: 1 }, { unique: true })
-  await ensureIndex(db, 'datasets', { 'owner.type': 1, 'owner.id': 1 })
-  await ensureIndex(db, 'datasets', { title: 'text', description: 'text', 'owner.name': 'text' }, { name: 'fulltext' })
-  await ensureIndex(db, 'datasets', { 'virtual.children': 1 })
-  // remote-services indexes
-  await ensureIndex(db, 'remote-services', { id: 1 }, { unique: true })
-  // await ensureIndex(db, 'remote-services', { 'apiDoc.info.x-api-id': 1 }, { unique: true })
-  await ensureIndex(db, 'remote-services', { title: 'text', description: 'text' }, { name: 'fulltext' })
-  // base applications indexes
-  await ensureIndex(db, 'base-applications', { url: 1 }, { unique: true })
-  await ensureIndex(db, 'base-applications', { id: 1 }, { unique: true })
-  await ensureIndex(db, 'base-applications', { title: 'text', description: 'text', 'meta.title': 'text', 'meta.description': 'text', 'meta.application-name': 'text' }, { name: 'fulltext' })
-  // applications indexes
-  await ensureIndex(db, 'applications', { id: 1 }, { unique: true })
-  await ensureIndex(db, 'applications', { 'owner.type': 1, 'owner.id': 1 })
-  await ensureIndex(db, 'applications', { 'configuration.datasets.href': 1 })
-  await ensureIndex(db, 'applications', { title: 'text', description: 'text', 'owner.name': 'text' }, { name: 'fulltext' })
-  // catalogs indexes
-  await ensureIndex(db, 'catalogs', { id: 1 }, { unique: true })
-  await ensureIndex(db, 'catalogs', { 'owner.type': 1, 'owner.id': 1 })
-  await ensureIndex(db, 'catalogs', { title: 'text', description: 'text', 'owner.name': 'text' }, { name: 'fulltext' })
-  // settings
-  await ensureIndex(db, 'settings', { type: 1, id: 1 }, { unique: true })
-  await ensureIndex(db, 'settings', { 'apiKeys.key': 1 }, { sparse: true })
-  // quotas
-  await ensureIndex(db, 'quotas', { type: 1, id: 1 }, { unique: true })
-  await ensureIndex(db, 'quotas', { 'name': 'text' }, { name: 'fulltext' })
-  // Sessions managed by express-session, but we add our custom indices
-  await ensureIndex(db, 'sessions', { 'session.activeApplications': 1 })
-  return { db, client }
+exports.init = async (db) => {
+  const promises = [
+    // datasets indexes
+    ensureIndex(db, 'datasets', { id: 1 }, { unique: true }),
+    ensureIndex(db, 'datasets', { 'owner.type': 1, 'owner.id': 1 }),
+    ensureIndex(db, 'datasets', { title: 'text', description: 'text', 'owner.name': 'text' }, { name: 'fulltext' }),
+    ensureIndex(db, 'datasets', { 'virtual.children': 1 }),
+    // remote-services indexes
+    ensureIndex(db, 'remote-services', { id: 1 }, { unique: true }),
+    // ensureIndex(db, 'remote-services', { 'apiDoc.info.x-api-id': 1 }, { unique: true })
+    ensureIndex(db, 'remote-services', { title: 'text', description: 'text' }, { name: 'fulltext' }),
+    // base applications indexes
+    ensureIndex(db, 'base-applications', { url: 1 }, { unique: true }),
+    ensureIndex(db, 'base-applications', { id: 1 }, { unique: true }),
+    ensureIndex(db, 'base-applications', { title: 'text', description: 'text', 'meta.title': 'text', 'meta.description': 'text', 'meta.application-name': 'text' }, { name: 'fulltext' }),
+    // applications indexes
+    ensureIndex(db, 'applications', { id: 1 }, { unique: true }),
+    ensureIndex(db, 'applications', { 'owner.type': 1, 'owner.id': 1 }),
+    ensureIndex(db, 'applications', { 'configuration.datasets.href': 1 }),
+    ensureIndex(db, 'applications', { title: 'text', description: 'text', 'owner.name': 'text' }, { name: 'fulltext' }),
+    // catalogs indexes
+    ensureIndex(db, 'catalogs', { id: 1 }, { unique: true }),
+    ensureIndex(db, 'catalogs', { 'owner.type': 1, 'owner.id': 1 }),
+    ensureIndex(db, 'catalogs', { title: 'text', description: 'text', 'owner.name': 'text' }, { name: 'fulltext' }),
+    // settings
+    ensureIndex(db, 'settings', { type: 1, id: 1 }, { unique: true }),
+    ensureIndex(db, 'settings', { 'apiKeys.key': 1 }, { sparse: true }),
+    // quotas
+    ensureIndex(db, 'quotas', { type: 1, id: 1 }, { unique: true }),
+    ensureIndex(db, 'quotas', { 'name': 'text' }, { name: 'fulltext' }),
+    // Sessions managed by express-session, but we add our custom indices
+    ensureIndex(db, 'sessions', { 'session.activeApplications': 1 })
+  ]
+  await Promise.all(promises)
 }

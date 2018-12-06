@@ -20,7 +20,7 @@ test.serial(`Can't get non public base applications`, async t => {
 })
 
 test.serial('Get base applications as admin', async t => {
-  const ax = await axiosBuilder('superadmin@test.com')
+  const ax = await axiosBuilder('superadmin@test.com:superpasswd')
   const res = await ax.get('/api/v1/base-applications')
   t.is(res.status, 200)
   t.is(res.data.count, 2)

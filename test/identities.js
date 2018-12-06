@@ -16,7 +16,7 @@ test('Check secret key', async t => {
 })
 
 test.serial('Upload new dataset in user zone', async t => {
-  const ax = await axiosBuilder('dmeadus0@answers.com')
+  const ax = await axiosBuilder('dmeadus0@answers.com:passwd')
   const form = new FormData()
   form.append('file', datasetFd, 'dataset1.csv')
   let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })

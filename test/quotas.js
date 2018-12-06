@@ -3,7 +3,7 @@ const testUtils = require('./resources/test-utils')
 const { test, axiosBuilder, config } = testUtils.prepare(__filename)
 
 test.serial('Manage a user storage quota', async t => {
-  const ax = await axiosBuilder('dmeadus0@answers.com')
+  const ax = await axiosBuilder('dmeadus0@answers.com:passwd')
 
   // Just fill up al little
   let form = new FormData()
@@ -44,7 +44,7 @@ test.serial('Manage a user storage quota', async t => {
 })
 
 test.serial('A user cannot change quotas', async t => {
-  const ax = await axiosBuilder('dmeadus0@answers.com')
+  const ax = await axiosBuilder('dmeadus0@answers.com:passwd')
   try {
     await ax.post('/api/v1/quotas/user/dmeadus0', { storage: 30000 })
     t.fail()
@@ -54,7 +54,7 @@ test.serial('A user cannot change quotas', async t => {
 })
 
 test.serial('A user can read his quotas', async t => {
-  const ax = await axiosBuilder('dmeadus0@answers.com')
+  const ax = await axiosBuilder('dmeadus0@answers.com:passwd')
   await ax.post('/api/v1/quotas/user/dmeadus0', { storage: 30000 }, { params: { key: config.secretKeys.quotas } })
   const res = await ax.get('/api/v1/quotas/user/dmeadus0')
   t.is(res.status, 200)
@@ -62,7 +62,7 @@ test.serial('A user can read his quotas', async t => {
 })
 
 test.serial('A user cannot read the list of quotas', async t => {
-  const ax = await axiosBuilder('dmeadus0@answers.com')
+  const ax = await axiosBuilder('dmeadus0@answers.com:passwd')
   try {
     await ax.get('/api/v1/quotas')
     t.fail()

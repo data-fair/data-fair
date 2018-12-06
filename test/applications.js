@@ -24,7 +24,7 @@ test('Access an unknown applicationId on proxy endpoint', async t => {
 })
 
 test.serial('Post an external application configuration, read it, update it and delete it', async t => {
-  const ax = await axiosBuilder('dmeadus0@answers.com')
+  const ax = await axiosBuilder('dmeadus0@answers.com:passwd')
   let res = await ax.post('/api/v1/applications', { url: 'http://monapp.com' })
   t.is(res.status, 201)
   const acId = res.data.id
@@ -50,7 +50,7 @@ test.serial('Post an external application configuration, read it, update it and 
 })
 
 test.serial('Manage the custom configuration part of the object', async t => {
-  const ax = await axiosBuilder('dmeadus0@answers.com')
+  const ax = await axiosBuilder('dmeadus0@answers.com:passwd')
   let res = await ax.post('/api/v1/applications', { url: 'http://monapp.com' })
   const acId = res.data.id
   res = await ax.put('/api/v1/applications/' + acId + '/config', {
