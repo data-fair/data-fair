@@ -6,7 +6,8 @@ exports.indexDefinition = (dataset) => {
   const body = JSON.parse(JSON.stringify(indexBase))
   const properties = body.mappings.line.properties = {}
   datasetUtils.extendedSchema(dataset).forEach(jsProp => {
-    properties[jsProp.key] = esProperty(jsProp)
+    const esProp = esProperty(jsProp)
+    if (esProp) properties[jsProp.key] = esProp
   })
   return body
 }

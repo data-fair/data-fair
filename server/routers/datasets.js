@@ -298,7 +298,6 @@ router.post('', beforeUpload, filesUtils.uploadFile(), asyncWrap(async(req, res)
     dataset = initNew(req)
     dataset.rest = dataset.rest || {}
     dataset.schema = dataset.schema || []
-    restDatasetsUtils.prepareSchema(dataset.schema)
     dataset.status = 'schematized'
     const baseId = slug(req.body.title)
     await datasetUtils.insertWithBaseId(db, dataset, baseId)
@@ -357,7 +356,6 @@ const updateDataset = asyncWrap(async(req, res) => {
     }
     req.body.rest = req.body.rest || {}
     dataset.schema = dataset.schema || []
-    restDatasetsUtils.prepareSchema(dataset.schema)
     await restDatasetsUtils.initDataset(db, dataset)
     dataset.status = 'schematized'
   }

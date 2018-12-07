@@ -55,7 +55,8 @@ exports.process = async function(app, dataset) {
 
     const firstValue = aggResult.aggs[0]
     if (firstValue && firstValue.total === 1) prop['x-cardinality'] = dataset.count
-    if (aggResult.total_values <= 50) {
+    if (!dataset.isRest && aggResult.total_values <= 50) {
+      // Set enum based on actual value, except for REST datasets, we don't want to prevent writing new values
       debug(`Set enum of field ${prop.key}`)
       prop.enum = aggResult.aggs.map(a => a.value)
     }
@@ -74,6 +75,10 @@ exports.process = async function(app, dataset) {
   result.schema = datasetUtils.extendedSchema(dataset)
 
   result.finalizedAt = (new Date()).toISOString()
+  if (dataset.isRest && (await collection.findOne({ id: dataset.id })).status === 'updated') {
+    // dataset was updated while we were finalizing.. keep it as such
+    delete result.status
+  }
   Object.assign(dataset, result)
   await collection.updateOne({ id: dataset.id }, { $set: result })
   debug('done')

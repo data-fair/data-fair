@@ -34,7 +34,7 @@ exports.esProperty = prop => {
   if (prop.key === '_geocorners') esProp = { type: 'geo_point' }
   if (prop.key === '_i') esProp = { type: 'long' }
   if (prop.key === '_rand') esProp = { type: 'integer' }
-
+  if (prop.key === '_id') return null
   return esProp
 }
 
@@ -130,6 +130,10 @@ exports.prepareQuery = (dataset, query) => {
   // const multiFields = [...fields].concat(dataset.schema.filter(f => f.type === 'string').map(f => f.key + '.text'))
   const searchFields = []
   dataset.schema.forEach(f => {
+    if (f.key === '_id') {
+      searchFields.push('_id')
+      return
+    }
     const esProp = exports.esProperty(f)
     if (esProp.index === false || esProp.enabled === false) return
     if (esProp.type === 'keyword') searchFields.push(f.key)
@@ -177,6 +181,11 @@ exports.getQueryBBOX = (query) => {
 exports.prepareResultItem = (hit, dataset, query) => {
   const res = flatten(hit._source)
   res._score = hit._score
+  if (dataset.schema.find(f => f.key === '_id')) {
+    if (!query.select || query.select === '*' || query.select.split(',').includes('_id')) {
+      res._id = hit._id
+    }
+  }
   if (query.highlight) {
     // return hightlight results and remove .text suffix of fields
     res._highlight = query.highlight.split(',')
