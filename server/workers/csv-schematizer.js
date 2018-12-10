@@ -3,9 +3,7 @@ const dataSample = require('../utils/data-sample')
 const datasetUtils = require('../utils/dataset')
 const fieldsSniffer = require('../utils/fields-sniffer')
 
-exports.type = 'dataset'
 exports.eventsPrefix = 'schematize'
-exports.filter = { status: 'analyzed', 'file.mimetype': 'text/csv' }
 
 exports.process = async function(app, dataset) {
   const db = app.get('db')

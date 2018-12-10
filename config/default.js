@@ -54,9 +54,9 @@ module.exports = {
       kb: 4000 // 4 mb in this interval
     }
   },
-  workers: {
-    concurrency: 2,
-    pollingInterval: 100
+  worker: {
+    interval: 200,
+    concurrency: 8
   },
   adminRole: 'admin',
   // A global default API key for backend to backend calls to remote services

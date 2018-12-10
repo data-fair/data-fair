@@ -10,9 +10,7 @@ const pump = util.promisify(require('pump'))
 const catalogs = require('../catalogs')
 const datasetUtils = require('../utils/dataset')
 
-exports.type = 'dataset'
 exports.eventsPrefix = 'download'
-exports.filter = { status: 'imported' }
 
 exports.process = async function(app, dataset) {
   const debug = require('debug')(`worker:downloader:${dataset.id}`)

@@ -41,8 +41,9 @@ module.exports = {
     description: 'BRAND_DESCRIPTION',
     url: 'BRAND_URL'
   },
-  workers: {
-    concurrency: 'WORKERS_CONCURRENCY'
+  worker: {
+    interval: 'WORKER_INTERVAL',
+    concurrency: 'WORKER_CONCURRENCY'
   },
   i18n: {
     defaultLocale: 'I18N_DEFAULT_LOCALE',

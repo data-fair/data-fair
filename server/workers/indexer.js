@@ -8,17 +8,7 @@ const restDatasetsUtils = require('../utils/rest-datasets')
 const extensionsUtils = require('../utils/extensions')
 const journals = require('../utils/journals')
 
-exports.type = 'dataset'
 exports.eventsPrefix = 'index'
-exports.filter = { status: 'schematized' }
-// either just schematized or an updated REST dataset
-exports.filter = { $or: [
-  { status: 'schematized' },
-  { $and: [
-    { status: 'updated' },
-    { isRest: true }
-  ] }
-] }
 
 exports.process = async function(app, dataset) {
   const debug = require('debug')(`worker:indexer:${dataset.id}`)

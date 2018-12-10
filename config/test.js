@@ -8,9 +8,9 @@ module.exports = {
       kb: 50
     }
   },
-  workers: {
-    concurrency: 1,
-    pollingInterval: 20
+  worker: {
+    interval: 40,
+    concurrency: 2
   },
   locks: {
     // in seconds

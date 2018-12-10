@@ -2,7 +2,7 @@ const config = require('config')
 const locks = require('../utils/locks')
 const journals = require('../utils/journals')
 
-const workers = {
+const tasks = {
   downloader: require('./downloader'),
   converter: require('./converter'),
   csvAnalyzer: require('./csv-analyzer'),
@@ -16,7 +16,9 @@ const workers = {
 }
 
 // resolve functions that will be filled when we will be asked to stop the workers
-const stopResolves = {}
+// const stopResolves = {}
+let stopped = false
+const currentIters = []
 
 // Hooks for testing
 const hooks = {}
@@ -24,49 +26,101 @@ exports.hook = (key) => new Promise((resolve, reject) => {
   hooks[key] = { resolve, reject }
 })
 
-// Run all !
-exports.start = (app) => {
-  Object.keys(workers).forEach(key => {
-    async function loop() {
-      if (stopResolves[key]) return stopResolves[key]()
-      await iter(app, key)
-      setTimeout(loop, config.workers.pollingInterval)
+/* eslint no-unmodified-loop-condition: 0 */
+// Run main loop !
+exports.start = async (app) => {
+  while (!stopped) {
+    // Maintain max concurrency by checking if there is a free spot in an array of promises
+    for (let i = 0; i < config.worker.concurrency; i++) {
+      if (currentIters[i]) continue
+      currentIters[i] = Promise.all([iter(app, 'dataset'), iter(app, 'application')])
+      currentIters[i].finally(() => {
+        currentIters[i] = null
+      })
     }
 
-    for (let i = 0; i < config.workers.concurrency; i++) {
-      loop()
-    }
-  })
+    await new Promise(resolve => setTimeout(resolve, config.worker.interval))
+  }
 }
 
 // Stop and wait for all workers to finish their current task
 exports.stop = async () => {
-  return Promise.all(Object.keys(workers).map(key => new Promise(resolve => { stopResolves[key] = resolve })))
+  stopped = true
+  return Promise.all(currentIters.filter(p => !!p))
 }
 
-async function iter(app, key) {
-  const worker = workers[key]
-  let resource
+// Filters to select eligible datasets or applications for processing
+const typesFilters = {
+  application: { 'publications.status': { $in: ['waiting', 'deleted'] } },
+  dataset: {
+    $or: [
+      { status: { $nin: ['finalized', 'error'] } },
+      { status: 'finalized', 'publications.status': { $in: ['waiting', 'deleted'] } }
+    ]
+  }
+}
+
+async function iter(app, type) {
+  let resource, taskKey
   try {
-    resource = await acquireNext(app.get('db'), worker.type, worker.filter)
-    // console.log(`Worker "${worker.eventsPrefix}" acquired dataset "${dataset.id}"`)
+    resource = await acquireNext(app.get('db'), type, typesFilters[type])
     if (!resource) return
-    if (worker.eventsPrefix) await journals.log(app, resource, { type: worker.eventsPrefix + '-start' }, worker.type)
-    await worker.process(app, resource)
-    if (hooks[key]) hooks[key].resolve(resource)
-    if (hooks[key + '/' + resource.id]) hooks[key + '/' + resource.id].resolve(resource)
-    if (worker.eventsPrefix) await journals.log(app, resource, { type: worker.eventsPrefix + '-end' }, worker.type)
+
+    if (type === 'application') {
+      // Not much to do on applications.. Just catalog publication
+      taskKey = 'applicationPublisher'
+    } else if (type === 'dataset') {
+      if (resource.status === 'imported') {
+        // Load a dataset from a catalog
+        taskKey = 'downloader'
+      } else if (resource.status === 'uploaded') {
+        // XLS to csv of other transformations
+        taskKey = 'converter'
+      } else if (resource.status === 'loaded' && resource.file && resource.file.mimetype === 'text/csv') {
+        // Quickly parse a CSV file
+        taskKey = 'csvAnalyzer'
+      } else if (resource.status === 'analyzed' && resource.file && resource.file.mimetype === 'text/csv') {
+        // Deduce a schema from CSV structure
+        taskKey = 'csvSchematizer'
+      } else if (resource.status === 'loaded' && resource.file && resource.file.mimetype === 'application/geo+json') {
+        // Deduce a schema from geojson properties
+        taskKey = 'geojsonAnalyzer'
+      } else if (resource.status === 'schematized' || (resource.isRest && resource.status === 'updated')) {
+        // index the content of the dataset in ES
+        // either just schematized or an updated REST dataset
+        taskKey = 'indexer'
+      } else if (resource.status === 'indexed' && resource.extensions && resource.extensions.find(e => e.active)) {
+        // Perform extensions from remote services for dataset that are
+        // indexed and have at least one active extension
+        taskKey = 'extender'
+      } else if (resource.status === 'indexed' || resource.status === 'extended') {
+        // finalization covers some metadata enrichment, schema cleanup, etc.
+        // either extended or there are no extensions to perform
+        taskKey = 'finalizer'
+      } else if (resource.status === 'finalized' && resource.publications && resource.publications.find(p => ['waiting', 'deleted'].includes(p.status))) {
+        // dataset that are finalized can be published if requested
+        taskKey = 'datasetPublisher'
+      }
+    }
+    if (!taskKey) return
+    const task = tasks[taskKey]
+
+    if (task.eventsPrefix) await journals.log(app, resource, { type: task.eventsPrefix + '-start' }, type)
+    await task.process(app, resource)
+    if (hooks[taskKey]) hooks[taskKey].resolve(resource)
+    if (hooks[taskKey + '/' + resource.id]) hooks[taskKey + '/' + resource.id].resolve(resource)
+    if (task.eventsPrefix) await journals.log(app, resource, { type: task.eventsPrefix + '-end' }, type)
   } catch (err) {
-    console.error('Failure in worker ' + key, err)
+    console.error('Failure in worker ' + taskKey, err)
     if (resource) {
-      await journals.log(app, resource, { type: 'error', data: err.message }, worker.type)
-      await app.get('db').collection(worker.type + 's').updateOne({ id: resource.id }, { $set: { status: 'error' } })
+      await journals.log(app, resource, { type: 'error', data: err.message }, type)
+      await app.get('db').collection(type + 's').updateOne({ id: resource.id }, { $set: { status: 'error' } })
       resource.status = 'error'
     }
-    if (hooks[key]) hooks[key].reject({ resource, message: err.message })
-    if (hooks[key + '/' + resource.id]) hooks[key + '/' + resource.id].reject({ resource, message: err.message })
+    if (hooks[taskKey]) hooks[taskKey].reject({ resource, message: err.message })
+    if (hooks[taskKey + '/' + resource.id]) hooks[taskKey + '/' + resource.id].reject({ resource, message: err.message })
   } finally {
-    if (resource) await locks.release(app.get('db'), `${worker.type}:${resource.id}`)
+    if (resource) await locks.release(app.get('db'), `${type}:${resource.id}`)
     // console.log(`Worker "${worker.eventsPrefix}" released dataset "${dataset.id}"`)
   }
 }

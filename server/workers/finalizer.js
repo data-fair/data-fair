@@ -5,17 +5,7 @@ const extensionsUtils = require('../utils/extensions')
 const datasetUtils = require('../utils/dataset')
 const virtualDatasetsUtils = require('../utils/virtual-datasets')
 
-exports.type = 'dataset'
 exports.eventsPrefix = 'finalize'
-
-// either extended or there are no extensions to perform
-exports.filter = { $or: [
-  { status: 'extended' },
-  { $and: [
-    { status: 'indexed' },
-    { extensions: { $not: { $elemMatch: { active: true } } } }
-  ] }
-] }
 
 exports.process = async function(app, dataset) {
   const debug = require('debug')(`worker:finalizer:${dataset.id}`)

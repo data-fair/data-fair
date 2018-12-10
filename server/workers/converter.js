@@ -13,9 +13,7 @@ const datasetUtils = require('../utils/dataset')
 const pump = util.promisify(require('pump'))
 const vocabulary = require('../../contract/vocabulary')
 
-exports.type = 'dataset'
 exports.eventsPrefix = 'convert'
-exports.filter = { status: 'uploaded' }
 
 const archiveTypes = exports.archiveTypes = new Set([
   'application/zip' // .zip
