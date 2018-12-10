@@ -17,7 +17,7 @@
         Carte
         <v-icon>map</v-icon>
       </v-tab>
-      <v-tab v-if="dataset.hasFiles" :disabled="!can('readLines')" :nuxt="true" :to="`/dataset/${dataset.id}/search-files`">
+      <v-tab v-if="fileProperty" :disabled="!can('readLines')" :nuxt="true" :to="`/dataset/${dataset.id}/search-files`">
         Fichiers
         <v-icon>file_copy</v-icon>
       </v-tab>
@@ -175,6 +175,9 @@ export default {
   computed: {
     ...mapState('dataset', ['dataset', 'api', 'nbApplications']),
     ...mapGetters('dataset', ['resourceUrl', 'can']),
+    fileProperty() {
+      return this.dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')
+    },
     downloadLink() {
       if (this.dataset) return this.resourceUrl + '/raw'
     },

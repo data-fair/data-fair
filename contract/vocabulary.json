@@ -10,7 +10,7 @@
   "type": "text"
 }, {
   "title": "Image",
-  "description": "Un URL vers une image illustration du document courant",
+  "description": "Une URL vers une image illustration du document courant",
   "identifiers": ["http://schema.org/image"],
   "type": "text"
 }, {
@@ -107,5 +107,10 @@
   "title": "Géometrie GeoJSON",
   "description": "Une géométrie (point, polygone, ligne, etc.) au format GeoJSON.",
   "identifiers": ["https://purl.org/geojson/vocab#geometry"],
+  "type": "object"
+}, {
+  "title": "Document numérique attaché",
+  "description": "Chemin relatif vers un fichier rattaché au jeu de données ou URL vers un fichier hébergé à l'extérieur",
+  "identifiers": ["http://schema.org/DigitalDocument"],
   "type": "object"
 }]

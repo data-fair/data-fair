@@ -93,9 +93,11 @@ class PreserveExtensionStream extends Transform {
     try {
       if (!this.mappings) await this.init()
       if (this.options.attachments) {
-        // TODO fetch the file path in other field ? based on concept ?
-        item._file_raw = (await readFile(path.join(datasetUtils.extractedFilesDirname(this.options.dataset), item.file)))
-          .toString('base64')
+        const attachmentKey = this.options.dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument').key
+        if (item[attachmentKey]) {
+          item._file_raw = (await readFile(path.join(datasetUtils.attachmentsDir(this.options.dataset), item[attachmentKey])))
+            .toString('base64')
+        }
       }
       const esClient = this.options.esClient
       for (let extensionKey in this.mappings) {

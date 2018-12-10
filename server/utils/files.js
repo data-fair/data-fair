@@ -4,6 +4,7 @@ const path = require('path')
 const multer = require('multer')
 const createError = require('http-errors')
 const slug = require('slugify')
+const shortid = require('shortid')
 const mime = require('mime-types')
 const ajv = require('ajv')()
 const ajvErrorMessages = require('ajv-error-messages')
@@ -36,6 +37,9 @@ const storage = multer.diskStorage({
   },
   filename: async function(req, file, cb) {
     try {
+      if (file.fieldname === 'attachments') {
+        return cb(null, shortid.generate())
+      }
       const ext = path.parse(file.originalname).ext
       if (req.dataset) {
         // Update dataset case
@@ -94,39 +98,49 @@ const fixFormBody = (body) => {
 }
 
 const upload = multer({
+  limits: {
+    files: 2 // no more than the dataset file + attachments archive
+  },
   storage: storage,
   fileFilter: async function fileFilter(req, file, cb) {
     try {
-      if (!req.user) throw createError(401)
-      if (!req.body) throw createError(400, 'Missing body')
-      fixFormBody(req.body)
-      const valid = validatePatch(req.body)
-      if (!valid) throw createError(400, JSON.stringify(ajvErrorMessages(validatePatch.errors)))
+      // Input verification, only performed once, not for attachments and dataset both
+      if (!req.inputChecked) {
+        if (!req.user) throw createError(401)
+        if (!req.body) throw createError(400, 'Missing body')
+        fixFormBody(req.body)
+        const valid = validatePatch(req.body)
+        if (!valid) throw createError(400, JSON.stringify(ajvErrorMessages(validatePatch.errors)))
 
-      let owner = usersUtils.owner(req)
-      if (req.dataset) owner = req.dataset.owner
-      // manage disk storage quota
-      if (!req.get('Content-Length')) throw createError(411, 'Content-Length is mandatory')
-      const contentLength = Number(req.get('Content-Length'))
-      if (Number.isNaN(contentLength)) throw createError(400, 'Content-Length is not a number')
-      // Approximate size of multi-part overhead and owner metadata
-      const estimatedFileSize = contentLength - 210
-      const datasetLimit = config.defaultLimits.datasetStorage
-      if (datasetLimit !== -1 && datasetLimit < estimatedFileSize) throw createError(413, 'Dataset size exceeds the authorized limit')
-      let storageRemaining = await datasetUtils.storageRemaining(req.app.get('db'), owner)
-      if (storageRemaining !== -1) {
+        let owner = usersUtils.owner(req)
+        if (req.dataset) owner = req.dataset.owner
+        // manage disk storage quota
+        if (!req.get('Content-Length')) throw createError(411, 'Content-Length is mandatory')
+        const contentLength = Number(req.get('Content-Length'))
+        if (Number.isNaN(contentLength)) throw createError(400, 'Content-Length is not a number')
+        // Approximate size of multi-part overhead and owner metadata
+        const estimatedFileSize = contentLength - 210
+        const datasetLimit = config.defaultLimits.datasetStorage
+        if (datasetLimit !== -1 && datasetLimit < estimatedFileSize) throw createError(413, 'Dataset size exceeds the authorized limit')
+        let storageRemaining = await datasetUtils.storageRemaining(req.app.get('db'), owner)
+        if (storageRemaining !== -1) {
         // Ignore the size of the dataset we are overwriting
-        if (req.dataset && req.dataset.file) storageRemaining += req.dataset.file.size
-        storageRemaining = Math.max(0, storageRemaining - estimatedFileSize)
-        if (storageRemaining === 0) throw createError(429, 'Vous avez atteint la limite de votre espace de stockage.')
+          if (req.dataset && req.dataset.file) storageRemaining += req.dataset.file.size
+          storageRemaining = Math.max(0, storageRemaining - estimatedFileSize)
+          if (storageRemaining === 0) throw createError(429, 'Vous avez atteint la limite de votre espace de stockage.')
+        }
+        req.inputChecked = true
       }
 
-      // mime type is broken on windows it seems.. detect based on extension instead
-      file.mimetype = mime.lookup(file.originalname) || fallbackMimeTypes[file.originalname.split('.').pop()] || file.originalname.split('.').pop()
-      if (!allowedTypes.has(file.mimetype)) throw createError(400, file.mimetype + ' type is not supported')
-      // TODO : store these file size limits in config file ?
-      if (tabularTypes.has(file.mimetype) && estimatedFileSize > 10 * 1000 * 1000) throw createError(400, 'File size of this format must not exceed 10 MB. You can however convert your file to CSV with an external tool and reupload it.')
-      if (geographicalTypes.has(file.mimetype) && estimatedFileSize > 100 * 1000 * 1000) throw createError(400, 'File size of this format must not exceed 10 MB. You can however convert your file to geoJSON with an external tool and reupload it.')
+      if (file.fieldname === 'file' || file.fieldname === 'dataset') {
+        // mime type is broken on windows it seems.. detect based on extension instead
+        file.mimetype = mime.lookup(file.originalname) || fallbackMimeTypes[file.originalname.split('.').pop()] || file.originalname.split('.').pop()
+        if (!allowedTypes.has(file.mimetype)) throw createError(400, file.mimetype + ' type is not supported')
+      } else if (file.fieldname === 'attachments') {
+        if (file.mimetype !== 'application/zip') throw createError(400, 'Les fichiers joints doivent être embarqués dans une archive zip')
+      } else {
+        throw createError(400, `Fichier dans un champ non supporté: "${file.fieldname}"`)
+      }
       cb(null, true)
     } catch (err) {
       cb(err)
@@ -134,4 +148,11 @@ const upload = multer({
   }
 })
 
-exports.uploadFile = () => upload.single('file')
+/*
+exports.uploadFile = () => upload.fields([
+  { name: 'file', maxCount: 1 }, // deprecated, kept for compatibility, use 'dataset'
+  { name: 'dataset', maxCount: 1 },
+  { name: 'attachments', maxCount: 1 }
+])
+*/
+exports.uploadFile = () => upload.any()

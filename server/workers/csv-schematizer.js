@@ -1,5 +1,6 @@
 // schematize dataset data and try to guess the schém
 const dataSample = require('../utils/data-sample')
+const datasetUtils = require('../utils/dataset')
 const fieldsSniffer = require('../utils/fields-sniffer')
 
 exports.type = 'dataset'
@@ -22,8 +23,9 @@ exports.process = async function(app, dataset) {
     [k]: new Set([firstLine[k]])
   }))))
   // Now we can extract infos for each field
+  const attachments = await datasetUtils.lsAttachments(dataset)
   Object.keys(myCSVObject).forEach(field => {
-    Object.assign(dataset.file.schema.find(f => f.key === fieldsSniffer.escapeKey(field)), fieldsSniffer.sniff(myCSVObject[field]))
+    Object.assign(dataset.file.schema.find(f => f.key === fieldsSniffer.escapeKey(field)), fieldsSniffer.sniff(myCSVObject[field], attachments))
   })
 
   dataset.schema = dataset.schema || []

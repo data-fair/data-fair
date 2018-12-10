@@ -3,10 +3,11 @@ const express = require('express')
 const ajv = require('ajv')()
 const ajvErrorMessages = require('ajv-error-messages')
 const util = require('util')
+const path = require('path')
 const fs = require('fs-extra')
 const unlink = util.promisify(fs.unlink)
-const path = require('path')
 const moment = require('moment')
+const createError = require('http-errors')
 const pump = util.promisify(require('pump'))
 const csvStringify = require('csv-stringify')
 const flatten = require('flat')
@@ -28,6 +29,7 @@ const restDatasetsUtils = require('../utils/rest-datasets')
 const findUtils = require('../utils/find')
 const asyncWrap = require('../utils/async-wrap')
 const extensions = require('../utils/extensions')
+const attachments = require('../utils/attachments')
 const geo = require('../utils/geo')
 const tiles = require('../utils/tiles')
 const cache = require('../utils/cache')
@@ -73,9 +75,6 @@ router.get('', asyncWrap(async(req, res) => {
   }, filterFields))
   if (req.query.bbox === 'true') {
     query.bbox = { $ne: null }
-  }
-  if (req.query.files === 'true') {
-    query.hasFiles = true
   }
   const sort = findUtils.sort(req.query.sort)
   const project = findUtils.project(req.query.select)
@@ -212,7 +211,7 @@ router.delete('/:datasetId', readDataset, permissions.middleware('delete', 'admi
   }
   try {
     if (converter.archiveTypes.has(req.dataset.originalFile.mimetype)) {
-      await rimraf(datasetUtils.extractedFilesDirname(req.dataset))
+      await rimraf(datasetUtils.attachmentsDir(req.dataset))
     }
   } catch (err) {
     console.error('Error while deleting decompressed files', err)
@@ -241,7 +240,7 @@ const initNew = (req) => {
   return dataset
 }
 
-const setFileInfo = async (file, dataset) => {
+const setFileInfo = async (file, attachmentsFile, dataset) => {
   dataset.id = file.id
   dataset.title = dataset.title || file.title
   dataset.originalFile = {
@@ -259,6 +258,11 @@ const setFileInfo = async (file, dataset) => {
     const fileSample = await datasetFileSample(dataset)
     dataset.file.encoding = chardet.detect(fileSample)
   }
+
+  if (attachmentsFile) {
+    await attachments.replaceAllAttachments(dataset, attachmentsFile)
+  }
+
   return dataset
 }
 
@@ -269,48 +273,60 @@ const beforeUpload = asyncWrap(async(req, res, next) => {
   next()
 })
 router.post('', beforeUpload, filesUtils.uploadFile(), asyncWrap(async(req, res) => {
-  const db = req.app.get('db')
+  try {
+    const db = req.app.get('db')
 
-  let dataset
-  // After uploadFile, req.file contains the metadata of an uploaded file, and req.body the content of additional text fields
-  if (req.file) {
-    if (req.body.isVirtual) return res.status(400).send('Un jeu de données virtuel ne peut pas être initialisé avec un fichier')
-    dataset = await setFileInfo(req.file, initNew(req))
-    await db.collection('datasets').insertOne(dataset)
-  } else if (req.body.isVirtual) {
-    if (!req.body.title) return res.status(400).send('Un jeu de données virtuel doit être créé avec un titre')
-    const { isVirtual, ...patch } = req.body
-    if (!validatePatch(patch)) {
-      return res.status(400).send(ajvErrorMessages(validatePatch.errors))
+    let dataset
+    // After uploadFile, req.files contains the metadata of an uploaded file, and req.body the content of additional text fields
+    const datasetFile = req.files.find(f => f.fieldname === 'file' || f.fieldname === 'dataset')
+    const attachmentsFile = req.files.find(f => f.fieldname === 'attachments')
+    if (datasetFile) {
+      if (req.body.isVirtual) throw createError(400, 'Un jeu de données virtuel ne peut pas être initialisé avec un fichier')
+      dataset = await setFileInfo(datasetFile, attachmentsFile, initNew(req))
+      await db.collection('datasets').insertOne(dataset)
+    } else if (req.body.isVirtual) {
+      if (!req.body.title) throw createError(400, 'Un jeu de données virtuel doit être créé avec un titre')
+      if (attachmentsFile) throw createError(400, 'Un jeu de données virtuel ne peut pas avoir de pièces jointes')
+      const { isVirtual, ...patch } = req.body
+      if (!validatePatch(patch)) {
+        throw createError(400, ajvErrorMessages(validatePatch.errors))
+      }
+      dataset = initNew(req)
+      dataset.virtual = dataset.virtual || { children: [] }
+      dataset.schema = await virtualDatasetsUtils.prepareSchema(db, dataset)
+      dataset.status = 'indexed'
+      const baseId = slug(req.body.title)
+      await datasetUtils.insertWithBaseId(db, dataset, baseId)
+    } else if (req.body.isRest) {
+      if (!req.body.title) throw createError(400, 'Un jeu de données REST doit être créé avec un titre')
+      if (attachmentsFile) throw createError(400, 'Un jeu de données REST ne peut pas être créé avec des pièces jointes')
+      const { isRest, ...patch } = req.body
+      if (!validatePatch(patch)) {
+        throw createError(400, ajvErrorMessages(validatePatch.errors))
+      }
+      dataset = initNew(req)
+      dataset.rest = dataset.rest || {}
+      dataset.schema = dataset.schema || []
+      dataset.status = 'schematized'
+      const baseId = slug(req.body.title)
+      await datasetUtils.insertWithBaseId(db, dataset, baseId)
+      await restDatasetsUtils.initDataset(db, dataset)
+    } else {
+      throw createError(400, 'Un jeu de données doit être initialisé avec un fichier ou déclaré "virtuel" ou "REST"')
     }
-    dataset = initNew(req)
-    dataset.virtual = dataset.virtual || { children: [] }
-    dataset.schema = await virtualDatasetsUtils.prepareSchema(db, dataset)
-    dataset.status = 'indexed'
-    const baseId = slug(req.body.title)
-    await datasetUtils.insertWithBaseId(db, dataset, baseId)
-  } else if (req.body.isRest) {
-    if (!req.body.title) return res.status(400).send('Un jeu de données REST doit être créé avec un titre')
-    const { isRest, ...patch } = req.body
-    if (!validatePatch(patch)) {
-      return res.status(400).send(ajvErrorMessages(validatePatch.errors))
+
+    delete dataset._id
+
+    await journals.log(req.app, dataset, { type: 'dataset-created', href: config.publicUrl + '/dataset/' + dataset.id }, 'dataset')
+    await datasetUtils.updateStorageSize(db, dataset.owner)
+    res.status(201).send(clean(dataset))
+  } catch (err) {
+  // Wrapped the whole thing in a try/catch to remove files in case of failure
+    for (let file of req.files) {
+      await fs.remove(file.path)
     }
-    dataset = initNew(req)
-    dataset.rest = dataset.rest || {}
-    dataset.schema = dataset.schema || []
-    dataset.status = 'schematized'
-    const baseId = slug(req.body.title)
-    await datasetUtils.insertWithBaseId(db, dataset, baseId)
-    await restDatasetsUtils.initDataset(db, dataset)
-  } else {
-    return res.status(400).send('Un jeu de données doit être initialisé avec un fichier ou déclaré "virtuel" ou "REST"')
+    throw err
   }
-
-  delete dataset._id
-
-  await journals.log(req.app, dataset, { type: 'dataset-created', href: config.publicUrl + '/dataset/' + dataset.id }, 'dataset')
-  await datasetUtils.updateStorageSize(db, dataset.owner)
-  res.status(201).send(clean(dataset))
 }))
 
 // PUT or POST with an id to create or update an existing dataset data
@@ -330,44 +346,56 @@ const attemptInsert = asyncWrap(async(req, res, next) => {
   next()
 })
 const updateDataset = asyncWrap(async(req, res) => {
-  const db = req.app.get('db')
-  // After uploadFile, req.file contains the metadata of an uploaded file, and req.body the content of additional text fields
-  if (!req.file && !req.dataset.isVirtual && !req.dataset.isRest) return res.status(400).send('Un jeu de données doit être initialisé avec un fichier ou déclaré "virtuel"')
-  if (req.file && (req.dataset.isVirtual || req.dataset.isRest)) return res.status(400).send('Un jeu de données est soit initialisé avec un fichier soit déclaré "virtuel"')
-  if (req.dataset.isVirtual && !req.dataset.title) return res.status(400).send('Un jeu de données virtuel doit être créé avec un titre')
-  if (req.dataset.isRest && !req.dataset.title) return res.status(400).send('Un jeu de données REST doit être créé avec un titre')
-  if (req.dataset.status && !acceptedStatuses.includes(req.dataset.status)) return res.status(409).send('Dataset is not in proper state to be updated')
+  try {
+    const db = req.app.get('db')
+    // After uploadFile, req.files contains the metadata of an uploaded file, and req.body the content of additional text fields
+    const datasetFile = req.files.find(f => f.fieldname === 'file' || f.fieldname === 'dataset')
+    const attachmentsFile = req.files.find(f => f.fieldname === 'attachments')
+    if (!datasetFile && !req.dataset.isVirtual && !req.dataset.isRest) throw createError(400, 'Un jeu de données doit être initialisé avec un fichier ou déclaré "virtuel"')
+    if (datasetFile && (req.dataset.isVirtual || req.dataset.isRest)) throw createError(400, 'Un jeu de données est soit initialisé avec un fichier soit déclaré "virtuel"')
+    if (req.dataset.isVirtual && !req.dataset.title) throw createError(400, 'Un jeu de données virtuel doit être créé avec un titre')
+    if (req.dataset.isRest && !req.dataset.title) throw createError(400, 'Un jeu de données REST doit être créé avec un titre')
+    if (req.dataset.isVirtual && attachmentsFile) throw createError(400, 'Un jeu de données virtuel ne peut pas avoir des pièces jointes')
+    if (req.dataset.isRest && attachmentsFile) throw createError(400, 'Un jeu de données REST ne peut pas être créé avec des pièces jointes')
+    if (req.dataset.status && !acceptedStatuses.includes(req.dataset.status)) throw createError(409, 'Dataset is not in proper state to be updated')
 
-  let dataset = req.dataset
-  if (req.file) {
-    dataset = await setFileInfo(req.file, req.dataset)
-  } else if (dataset.isVirtual) {
-    const { isVirtual, ...patch } = req.body
-    if (!validatePatch(patch)) {
-      return res.status(400).send(validatePatch.errors)
+    let dataset = req.dataset
+    if (datasetFile) {
+      dataset = await setFileInfo(datasetFile, attachmentsFile, req.dataset)
+    } else if (dataset.isVirtual) {
+      const { isVirtual, ...patch } = req.body
+      if (!validatePatch(patch)) {
+        throw createError(400, validatePatch.errors)
+      }
+      req.body.virtual = req.body.virtual || { children: [] }
+      req.body.schema = await virtualDatasetsUtils.prepareSchema(db, { ...dataset, ...req.body })
+      req.body.status = 'indexed'
+    } else if (dataset.isRest) {
+      const { isRest, ...patch } = req.body
+      if (!validatePatch(patch)) {
+        throw createError(400, validatePatch.errors)
+      }
+      req.body.rest = req.body.rest || {}
+      dataset.schema = dataset.schema || []
+      await restDatasetsUtils.initDataset(db, dataset)
+      dataset.status = 'schematized'
     }
-    req.body.virtual = req.body.virtual || { children: [] }
-    req.body.schema = await virtualDatasetsUtils.prepareSchema(db, { ...dataset, ...req.body })
-    req.body.status = 'indexed'
-  } else if (dataset.isRest) {
-    const { isRest, ...patch } = req.body
-    if (!validatePatch(patch)) {
-      return res.status(400).send(validatePatch.errors)
+    Object.assign(dataset, req.body)
+
+    dataset.updatedBy = { id: req.user.id, name: req.user.name }
+    dataset.updatedAt = moment().toISOString()
+    await db.collection('datasets').replaceOne({ id: req.params.datasetId }, dataset)
+    if (req.isNewDataset) await journals.log(req.app, dataset, { type: 'data-created' }, 'dataset')
+    else await journals.log(req.app, dataset, { type: 'data-updated' }, 'dataset')
+    await datasetUtils.updateStorageSize(db, req.dataset.owner)
+    res.status(req.isNewDataset ? 201 : 200).send(clean(dataset))
+  } catch (err) {
+    // Wrapped the whole thing in a try/catch to remove files in case of failure
+    for (let file of req.files) {
+      await fs.remove(file.path)
     }
-    req.body.rest = req.body.rest || {}
-    dataset.schema = dataset.schema || []
-    await restDatasetsUtils.initDataset(db, dataset)
-    dataset.status = 'schematized'
+    throw err
   }
-  Object.assign(dataset, req.body)
-
-  dataset.updatedBy = { id: req.user.id, name: req.user.name }
-  dataset.updatedAt = moment().toISOString()
-  await db.collection('datasets').replaceOne({ id: req.params.datasetId }, dataset)
-  if (req.isNewDataset) await journals.log(req.app, dataset, { type: 'data-created' }, 'dataset')
-  else await journals.log(req.app, dataset, { type: 'data-updated' }, 'dataset')
-  await datasetUtils.updateStorageSize(db, req.dataset.owner)
-  res.status(req.isNewDataset ? 201 : 200).send(clean(dataset))
 })
 router.post('/:datasetId', attemptInsert, readDataset, permissions.middleware('writeData', 'write'), filesUtils.uploadFile(), updateDataset)
 router.put('/:datasetId', attemptInsert, readDataset, permissions.middleware('writeData', 'write'), filesUtils.uploadFile(), updateDataset)
@@ -546,11 +574,10 @@ router.get('/:datasetId/words_agg', readDataset, permissions.middleware('getWord
 }))
 
 // For datasets with attached files
-router.get('/:datasetId/files/*', readDataset, permissions.middleware('downloadOriginalData', 'read'), (req, res, next) => {
-  if (!req.dataset.hasFiles) return res.status(404).send('This datasets does not have attached files')
+router.get('/:datasetId/attachments/*', readDataset, permissions.middleware('downloadOriginalData', 'read'), (req, res, next) => {
   const filePath = req.params['0']
   if (filePath.includes('..')) return res.status(400).send()
-  res.download(path.resolve(datasetUtils.extractedFilesDirname(req.dataset), filePath))
+  res.download(path.resolve(datasetUtils.attachmentsDir(req.dataset), filePath))
 })
 
 // Download the full dataset in its original form

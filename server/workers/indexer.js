@@ -35,8 +35,7 @@ exports.process = async function(app, dataset) {
     indexName = await es.initDatasetIndex(esClient, dataset)
     debug(`Initialize new dataset index ${indexName}`)
   }
-
-  const indexStream = es.indexStream({ esClient, indexName, dataset, attachments: !!dataset.hasFiles })
+  const indexStream = es.indexStream({ esClient, indexName, dataset, attachments: !!dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument') })
   // reindex and preserve previous extensions
   debug('Run index stream')
   let readStream, writeStream
@@ -47,7 +46,8 @@ exports.process = async function(app, dataset) {
     readStream = datasetUtils.readStream(dataset)
     writeStream = new Writable({ objectMode: true, write(chunk, encoding, cb) { cb() } })
   }
-  await pump(readStream, extensionsUtils.preserveExtensionStream({ db, esClient, dataset, attachments: !!dataset.hasFiles }), indexStream, writeStream)
+  const hasAttachments = dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')
+  await pump(readStream, extensionsUtils.preserveExtensionStream({ db, esClient, dataset, attachments: hasAttachments }), indexStream, writeStream)
   debug('index stream ok')
   const errorsSummary = indexStream.errorsSummary()
   if (errorsSummary) await journals.log(app, dataset, { type: 'error', data: errorsSummary })

@@ -3,14 +3,15 @@ const path = require('path')
 const fs = require('fs')
 const config = require('config')
 const XLSX = require('xlsx')
+const createError = require('http-errors')
 const ogr2ogr = require('ogr2ogr')
 const util = require('util')
 const writeFile = util.promisify(fs.writeFile)
-const renameFile = util.promisify(fs.rename)
 const statsFile = util.promisify(fs.stat)
 const exec = require('child-process-promise').exec
 const datasetUtils = require('../utils/dataset')
 const pump = util.promisify(require('pump'))
+const vocabulary = require('../../contract/vocabulary')
 
 exports.type = 'dataset'
 exports.eventsPrefix = 'convert'
@@ -47,11 +48,10 @@ exports.process = async function(app, dataset) {
   const originalFilePath = datasetUtils.originalFileName(dataset)
 
   let isShapefile = false
-  dataset.hasFiles = false
   if (archiveTypes.has(dataset.originalFile.mimetype)) {
-    const dirName = datasetUtils.extractedFilesDirname(dataset)
+    const dirName = datasetUtils.attachmentsDir(dataset)
     await decompress(dataset.originalFile.mimetype, originalFilePath, dirName)
-    const files = await datasetUtils.lsExtractedFiles(dataset)
+    const files = await datasetUtils.lsAttachments(dataset)
     const fileNames = files.map(f => path.parse(f).base)
     const baseName = path.parse(dataset.originalFile.name).name
     // Check if this archive is actually a shapefile source
@@ -60,24 +60,31 @@ exports.process = async function(app, dataset) {
     } else {
       const csvFilePath = path.join(config.dataDir, dataset.owner.type, dataset.owner.id, dataset.id + '.csv')
       // Either there is a data.csv in this archive and we use it as the main source for data related to the files, or we create it
-      if (files.find(f => f === 'data.csv')) {
-        await renameFile(path.join(dirName, 'data.csv'), csvFilePath)
-      } else {
-        // console.log(files)
-        const csvContent = 'file\n' + files.map(f => `"${f}"`).join('\n') + '\n'
-        await writeFile(csvFilePath, csvContent)
-      }
+      const csvContent = 'file\n' + files.map(f => `"${f}"`).join('\n') + '\n'
+      await writeFile(csvFilePath, csvContent)
       dataset.file = {
         name: path.parse(dataset.originalFile.name).name + '.csv',
         size: await statsFile(csvFilePath).size,
         mimetype: 'text/csv',
         encoding: 'utf-8'
       }
-      dataset.hasFiles = true
+      if (!dataset.schema.find(f => f.key === 'file')) {
+        const concept = vocabulary.find(c => c.identifiers.includes('http://schema.org/DigitalDocument'))
+        dataset.schema.push({
+          key: 'file',
+          'x-originalName': 'file',
+          type: 'string',
+          title: concept.title,
+          description: concept.description,
+          'x-refersTo': 'http://schema.org/DigitalDocument'
+        })
+      }
     }
   }
 
   if (tabularTypes.has(dataset.originalFile.mimetype)) {
+    // TODO : store these file size limits in config file ?
+    if (dataset.originalFile.size > 10 * 1000 * 1000) throw createError(400, 'File size of this format must not exceed 10 MB. You can however convert your file to CSV with an external tool and reupload it.')
     const workbook = XLSX.readFile(originalFilePath)
     const worksheet = workbook.Sheets[workbook.SheetNames[0]]
     const data = XLSX.utils.sheet_to_csv(worksheet)
@@ -90,6 +97,7 @@ exports.process = async function(app, dataset) {
       encoding: 'utf-8'
     }
   } else if (isShapefile || geographicalTypes.has(dataset.originalFile.mimetype)) {
+    if (dataset.originalFile.size > 100 * 1000 * 1000) throw createError(400, 'File size of this format must not exceed 10 MB. You can however convert your file to geoJSON with an external tool and reupload it.')
     const geoJsonStream = ogr2ogr(originalFilePath)
       .format('GeoJSON')
       .options(['-lco', 'RFC7946=YES', '-t_srs', 'EPSG:4326'])
@@ -110,6 +118,6 @@ exports.process = async function(app, dataset) {
   dataset.status = 'loaded'
 
   await db.collection('datasets').updateOne({ id: dataset.id }, {
-    $set: { status: 'loaded', file: dataset.file, hasFiles: dataset.hasFiles }
+    $set: { status: 'loaded', file: dataset.file, schema: dataset.schema }
   })
 }

@@ -1,7 +1,7 @@
 module.exports = {
   defaultLimits: {
     totalStorage: 20000,
-    datasetStorage: 15000,
+    datasetStorage: 16000,
     remoteServiceRate: {
       duration: 1,
       nb: 10,

@@ -45,7 +45,7 @@ class AnalyzerWritable extends Writable {
       this.schema.push({
         key,
         'x-originalName': property,
-        ...fieldsSniffer.sniff(this.samples[property])
+        ...fieldsSniffer.sniff(this.samples[property], this.options.attachments)
       })
     }
     callback()
@@ -54,8 +54,8 @@ class AnalyzerWritable extends Writable {
 
 exports.process = async function(app, dataset) {
   const db = app.get('db')
-
-  const analyzer = new AnalyzerWritable()
+  const attachments = await datasetUtils.lsAttachments(dataset)
+  const analyzer = new AnalyzerWritable({ attachments })
   await pump(
     fs.createReadStream(datasetUtils.fileName(dataset)),
     iconv.decodeStream(dataset.file.encoding),

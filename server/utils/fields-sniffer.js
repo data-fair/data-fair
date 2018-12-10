@@ -1,7 +1,8 @@
 const Ajv = require('ajv')
 const ajv = new Ajv()
 
-exports.sniff = (values) => {
+exports.sniff = (values, attachmentsPaths) => {
+  if (checkAll(values, isOneOf, attachmentsPaths)) return { type: 'string', 'x-refersTo': 'http://schema.org/DigitalDocument' }
   if (checkAll(values, isBoolean)) return { type: 'boolean' }
   if (checkAll(values, val => intRegexp.test(val))) return { type: 'integer' }
   if (checkAll(values, val => floatRegexp.test(val))) return { type: 'number' }
@@ -28,15 +29,16 @@ exports.escapeKey = (key) => {
   return key
 }
 
-function checkAll(values, check) {
+function checkAll(values, check, param) {
   for (let value of values) {
-    if (value && !check(value)) {
+    if (value && !check(value, param)) {
       return false
     }
   }
   return true
 }
 
+const isOneOf = (value, values) => values.includes(value)
 const isBoolean = (value) => ['0', '1', '-1', 'true', 'false'].indexOf(value.toLowerCase()) !== -1
 const intRegexp = /^(-|\+)?[0-9\s]+$/
 const floatRegexp = /^(-|\+)?([0-9\s]+([.,][0-9]+)?)$/

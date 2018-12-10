@@ -1,4 +1,4 @@
-const fs = require('fs')
+const fs = require('fs-extra')
 const path = require('path')
 const Combine = require('stream-combiner')
 const { Transform } = require('stream')
@@ -22,12 +22,13 @@ exports.originalFileName = (dataset) => {
   return path.join(config.dataDir, dataset.owner.type, dataset.owner.id, dataset.id + '.' + dataset.originalFile.name.split('.').pop())
 }
 
-exports.extractedFilesDirname = (dataset) => {
-  return path.join(config.dataDir, dataset.owner.type, dataset.owner.id, dataset.id + '.files')
+exports.attachmentsDir = (dataset) => {
+  return path.join(config.dataDir, dataset.owner.type, dataset.owner.id, dataset.id + '.attachments')
 }
 
-exports.lsExtractedFiles = async (dataset) => {
-  const dirName = exports.extractedFilesDirname(dataset)
+exports.lsAttachments = async (dataset) => {
+  const dirName = exports.attachmentsDir(dataset)
+  if (!await fs.pathExists(dirName)) return []
   const files = (await dir.promiseFiles(dirName))
     .map(f => path.relative(dirName, f))
   return files.filter(p => path.basename(p).toLowerCase() !== 'thumbs.db')
@@ -43,9 +44,9 @@ exports.lsFiles = async (dataset) => {
     const filePath = exports.originalFileName(dataset)
     infos.originalFile = { filePath, size: (await fs.promises.stat(filePath)).size }
   }
-  if (dataset.hasFiles) {
-    const dirPath = exports.extractedFilesDirname(dataset)
-    const paths = await exports.lsExtractedFiles(dataset)
+  if (dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')) {
+    const dirPath = exports.attachmentsDir(dataset)
+    const paths = await exports.lsAttachments(dataset)
     const files = []
     for (let p of paths) {
       const filePath = path.join(dirPath, p)
@@ -105,8 +106,6 @@ exports.readStream = (dataset) => {
       transform(chunk, encoding, callback) {
         const line = {}
         dataset.schema.forEach(prop => {
-          // console.log(chunk[prop['x-originalName']])
-          // console.log(fieldsSniffer.format(chunk[prop['x-originalName']], prop))
           const value = fieldsSniffer.format(chunk[prop['x-originalName']], prop)
           if (value !== null) line[prop.key] = value
         })
@@ -153,9 +152,7 @@ exports.storageRemaining = async (db, owner) => {
 exports.extendedSchema = (dataset) => {
   dataset.schema = dataset.schema || []
   const schema = dataset.schema.filter(f => f.key.startsWith('_ext_') || !f.key.startsWith('_'))
-  if (dataset.hasFiles) {
-    const fileField = dataset.schema.find(field => field.key === 'file')
-    fileField.title = fileField.title || `Le chemin du fichier`
+  if (dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')) {
     schema.push({ 'x-calculated': true, key: '_file.content', type: 'string', title: `Contenu textuel du fichier`, description: `Résultat d'une extraction automatique` })
     schema.push({ 'x-calculated': true, key: '_file.content_type', type: 'string', title: `Type mime du fichier`, description: `Résultat d'une détection automatique.` })
     schema.push({ 'x-calculated': true, key: '_file.content_length', type: 'integer', title: `La taille en octet du fichier` })
