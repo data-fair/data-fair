@@ -9,3 +9,4 @@
 /public/pages/interoperate
 /public/pages/user-guide
 /doc-dist
+.cache-require-paths.json
