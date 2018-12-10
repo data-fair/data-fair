@@ -1,5 +1,3 @@
-const debug = require('debug')('app')
-debug('enter app.js')
 const config = require('config')
 const express = require('express')
 const bodyParser = require('body-parser').json({ limit: '1000kb' })
@@ -26,7 +24,6 @@ const session = require('@koumoul/sd-express')({
   privateDirectoryUrl: config.privateDirectoryUrl || config.directoryUrl,
   publicUrl: config.publicUrl
 })
-debug('requires are done')
 
 const app = express()
 
@@ -35,7 +32,7 @@ app.use((req, res, next) => {
   else next()
 })
 
-if (process.env.NODE_ENV === 'development') {
+if (process.env.NODE_ENV === 'development' && config.mode.includes('server')) {
   app.set('json spaces', 2)
 
   // Create a mono-domain environment with other services in dev
@@ -82,69 +79,66 @@ app.use((err, req, res, next) => {
 const server = http.createServer(app)
 const wss = new WebSocket.Server({ server })
 
-debug('app is initialized, ready to be run')
-
 // Run app and return it in a promise
 exports.run = async () => {
-  if (!config.listenWhenReady) {
-    debug('listen on port', config.port)
+  if (!config.listenWhenReady && config.mode.includes('server')) {
     server.listen(config.port)
     await eventToPromise(server, 'listening')
-    debug('server is litening')
   }
-  debug('upgrade')
+
   const { db, client } = await upgrade()
-  debug('upgrade ok, init db')
   await dbUtils.init(db)
-  debug('db ok')
   app.set('db', db)
   app.set('mongoClient', client)
-  app.set('anonymSession', await anonymSession.init(db))
-  debug('init capture')
-  await capture.init()
-  debug('capture initialized, init cache')
-  await cache.init(db)
-  debug('cache initialized, init apps and services')
-  baseApplications.init(db)
-  await remoteServices.init(db)
-  debug('apps and services initialized, init ES')
   app.set('es', await esUtils.init())
-  debug('ES initialized, init websockets')
-  app.publish = await wsUtils.init(wss, db)
-  debug('websockets initialized, init locks')
-  await locksUtils.init(db)
-  debug('locks initialized')
-  workers.start(app)
-  app.set('api-ready', true)
 
-  app.use((req, res, next) => {
-    if (!req.app.get('ui-ready')) res.status(503).send('Service indisponible pour cause de maintenance.')
-    else next()
-  })
-  app.use(session.decode)
-  app.use(session.loginCallback)
-  debug('prepare nuxt')
-  const nuxtMiddleware = await nuxt()
-  debug('nuxt ok')
-  app.use(nuxtMiddleware)
-  app.set('ui-ready', true)
+  if (config.mode.includes('server')) {
+    app.set('anonymSession', await anonymSession.init(db))
+    await capture.init()
+    await cache.init(db)
+    baseApplications.init(db)
+    await remoteServices.init(db)
+    app.publish = await wsUtils.init(wss, db)
+    // At this stage the server is ready to respond to API requests
+    app.set('api-ready', true)
 
-  if (config.listenWhenReady) {
-    debug('listen on port', config.port)
-    server.listen(config.port)
-    await eventToPromise(server, 'listening')
-    debug('server is litening')
+    app.use((req, res, next) => {
+      if (!req.app.get('ui-ready')) res.status(503).send('Service indisponible pour cause de maintenance.')
+      else next()
+    })
+    app.use(session.decode)
+    app.use(session.loginCallback)
+    const nuxtMiddleware = await nuxt()
+    app.use(nuxtMiddleware)
+    app.set('ui-ready', true)
+
+    if (config.listenWhenReady) {
+      server.listen(config.port)
+      await eventToPromise(server, 'listening')
+    }
   }
+
+  if (config.mode.includes('worker')) {
+    await locksUtils.init(db)
+    workers.start(app)
+  }
+
   return app
 }
 
 exports.stop = async() => {
-  await util.promisify((cb) => wss.close(cb))()
-  server.close()
-  await eventToPromise(server, 'close')
-  await wsUtils.stop()
-  locksUtils.stop()
-  await workers.stop()
+  if (config.mode.includes('server')) {
+    await util.promisify((cb) => wss.close(cb))()
+    server.close()
+    await eventToPromise(server, 'close')
+    await wsUtils.stop()
+  }
+
+  if (config.mode.includes('worker')) {
+    locksUtils.stop()
+    await workers.stop()
+  }
+
   await app.get('mongoClient').close()
   await app.get('es').close()
 }

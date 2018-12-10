@@ -62,6 +62,7 @@ module.exports = {
         varDesc: 'Description',
         varDefault: 'Valeur par défaut',
         varDescriptions: {
+          mode: 'Utilisez ce paramètre pour lancer à la fois le serveur Web et la boucle de traitements des tâches asynchrones ou pour les lancer dans individuellement. Valeurs possibles: "server_worker", "server", "worker".',
           publicUrl: `<b>IMPORTANT.</b> L'URL à laquelle le service sera exposé. Par exemple https://koumoul.com/s/data-fair`,
           wsPublicUrl: `<b>IMPORTANT.</b> L'URL à laquelle la connection socket sera exposée. Par exemple wss://koumoul.com/s/data-fair`,
           directoryUrl: `<b>IMPORTANT.</b> L'URL à laquelle le service de gestion des utilisateurs est exposé. Par exemple https://koumoul.com/s/simple-directory`,
@@ -85,8 +86,8 @@ module.exports = {
             description: 'La description de votre organisation.',
             url: 'Un lien vers le site web principal de votre organisation.'
           },
-          workers: {
-            concurrency: 'Le nombre de workers pouvant travailler en parallèle. Ce nombre ne devrait jamais dépasser le nombre de coeurs disponibles sur la machine ou est installé le service.'
+          worker: {
+            concurrency: 'Le nombre de tâches pouvant être traitées en parallèle. Les tâches sont tous les traitements asynchrones des jeux de données (analyse des formats de fichiers, indexation, extensions, publications dans les catalogues, etc.)'
           },
           nuxtBuild: {
             active: 'Build Nuxt actif',

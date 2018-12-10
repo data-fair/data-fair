@@ -1,4 +1,5 @@
 module.exports = {
+  mode: 'server_worker', // can be server_worker, server or worker
   port: 8080,
   listenWhenReady: false,
   publicUrl: 'http://localhost:8080',

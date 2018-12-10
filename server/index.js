@@ -3,7 +3,12 @@ const config = require('config')
 const app = require('./app')
 
 app.run().then(app => {
-  console.log('Web socket and HTTP server listening on http://localhost:%s', config.port)
+  if (config.mode.includes('worker')) {
+    console.log('Worker loop is running')
+  }
+  if (config.mode.includes('server')) {
+    console.log('Web socket and HTTP server listening on http://localhost:%s', config.port)
+  }
 }, err => {
   console.error('Failure while starting server', err)
   process.exit(-1)
