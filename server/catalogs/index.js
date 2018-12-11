@@ -167,7 +167,7 @@ exports.processPublications = async function(app, type, resource) {
       type: 'error',
       data: `Une publication fait référence à un catalogue qui n'appartient pas au propriétaire de la resource à publier (${processedPublication.id})`
     }, type)
-    return setResult(`Le catalogue n'appartient pas au propriétaire de la resource à publier`)
+    return setResult(`Le catalogue n'appartient pas au propriétaire de la resource à publier`, true)
   }
 
   try {
