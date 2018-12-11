@@ -33,7 +33,7 @@
       <v-container fluid class="search-results">
         <v-layout v-for="(item, i) in data.results" :key="i" row wrap>
           <v-flex xs12>
-            <h4><a :href="resourceUrl + '/attachments/' + item[fileProperty.key]">{{ item.file }}</a></h4>
+            <h4><a :href="resourceUrl + '/attachments/' + item[fileProperty.key]">{{ item[fileProperty.key] }}</a></h4>
             <p class="body-1" v-html="item._highlight['_file.content'].join('... ')" />
           </v-flex>
         </v-layout>
@@ -89,7 +89,7 @@ export default {
       const params = {
         size: this.pagination.rowsPerPage,
         page: this.pagination.page,
-        select: ['file', '_file.content_type', '_file.content_length'].join(','),
+        select: [this.fileProperty.key, '_file.content_type', '_file.content_length'].join(','),
         highlight: '_file.content'
       }
       if (this.query) params.q = this.query
