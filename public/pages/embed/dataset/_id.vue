@@ -18,8 +18,7 @@ export default {
     this.clear()
   },
   methods: {
-    ...mapActions(['fetchVocabulary']),
-    ...mapActions('dataset', ['setId', 'clear'])
+    ...mapActions('dataset', ['clear'])
   }
 }
 </script>

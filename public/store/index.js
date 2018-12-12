@@ -66,7 +66,7 @@ export default () => {
       },
       nuxtServerInit({ commit, dispatch }, { req, env, app }) {
         commit('setAny', { env: { ...env }, user: req.user })
-        dispatch('session/init', { user: req.user, baseUrl: env.publicUrl + '/api/v1/session' })
+        dispatch('session/init', { cookies: this.$cookies, baseUrl: env.publicUrl + '/api/v1/session' })
       },
       searchQuery({ commit }, params) {
         commit('setSearchQuery', params)

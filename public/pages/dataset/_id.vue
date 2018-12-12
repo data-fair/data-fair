@@ -185,16 +185,15 @@ export default {
       if (this.dataset) return this.resourceUrl + '/full'
     }
   },
-  created() {
-    this.setId(this.$route.params.id)
-    this.fetchVocabulary()
+  async fetch({ store, params, route }) {
+    await store.dispatch('dataset/setId', route.params.id)
+    await store.dispatch('fetchVocabulary', route.params.id)
   },
   destroyed() {
     this.clear()
   },
   methods: {
-    ...mapActions(['fetchVocabulary']),
-    ...mapActions('dataset', ['setId', 'patch', 'remove', 'clear', 'changeOwner']),
+    ...mapActions('dataset', ['patch', 'remove', 'clear', 'changeOwner']),
     async confirmRemove() {
       this.showDeleteDialog = false
       await this.remove()

@@ -1,3 +1,3 @@
-export default ({ store }) => {
-  store.dispatch('session/loop')
+export default ({ store, app }) => {
+  store.dispatch('session/loop', app.$cookies)
 }

@@ -46,7 +46,7 @@
   "dependencies": {
     "@digibytes/markdownit": "^1.2.1",
     "@koumoul/sd-express": "^0.12.0",
-    "@koumoul/sd-vue": "^0.10.4",
+    "@koumoul/sd-vue": "^0.11.0",
     "@koumoul/vue-multianalytics": "^1.10.1",
     "@koumoul/vuetify-jsonschema-form": "^0.16.0",
     "@nuxtjs/axios": "^5.3.6",
@@ -67,6 +67,7 @@
     "config": "^1.31.0",
     "connect-mongo": "^2.0.1",
     "cookie-parser": "^1.4.3",
+    "cookie-universal-nuxt": "^2.0.11",
     "cookieparser": "^0.1.0",
     "cors": "^2.8.4",
     "csv-parser": "^1.12.0",
