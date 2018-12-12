@@ -179,7 +179,7 @@ test.serial('Use dataset schema to validate inputs', async t => {
   t.truthy(res.data[1]._error)
 })
 
-test.only('Send attachment with multipart request', async t => {
+test.serial('Send attachment with multipart request', async t => {
   const ax = await axiosBuilder('dmeadus0@answers.com:passwd')
   let res = await ax.post('/api/v1/datasets', {
     isRest: true,
@@ -206,6 +206,41 @@ test.only('Send attachment with multipart request', async t => {
 
   await workers.hook(`finalizer/rest5`)
   res = await ax.get('/api/v1/datasets/rest5/lines')
+  t.is(res.data.total, 1)
+  t.is(res.data.results[0]['_file.content'], 'This is a test pdf file.')
+})
+
+test.serial('Send attachments with bulk request', async t => {
+  const ax = await axiosBuilder('dmeadus0@answers.com:passwd')
+  let res = await ax.post('/api/v1/datasets', {
+    isRest: true,
+    title: 'rest6',
+    schema: [
+      { key: 'attr1', type: 'string' },
+      { key: 'attachmentPath', type: 'string', 'x-refersTo': 'http://schema.org/DigitalDocument' }
+    ]
+  })
+  let dataset = res.data
+
+  // Create a line with an attached file
+  const form = new FormData()
+  const attachmentsContent = fs.readFileSync('./test/resources/files.zip')
+  form.append('attachments', attachmentsContent, 'files.zip')
+  form.append('actions', Buffer.from(JSON.stringify([
+    { _id: 'line1', attr1: 'test1', attachmentPath: 'test.odt' },
+    { _id: 'line2', attr1: 'test1', attachmentPath: 'dir1/test.pdf' }
+  ]), 'utf8'), 'actions.json')
+  res = await ax.post('/api/v1/datasets/rest6/_bulk_lines', form, { headers: testUtils.formHeaders(form) })
+  t.is(res.status, 200)
+  t.is(res.data.length, 2)
+  const ls = await datasetUtils.lsAttachments(dataset)
+  t.is(ls.length, 2)
+  t.is(ls[0], res.data[0].attachmentPath)
+
+  await workers.hook(`finalizer/rest6`)
+  res = await ax.get('/api/v1/datasets/rest6/lines')
+  t.is(res.data.total, 2)
+  t.is(res.data.results.find(l => l._id === 'line1')['_file.content'], 'This is a test libreoffice file.')
 })
 
 // TODO: extensions (only updated lines)

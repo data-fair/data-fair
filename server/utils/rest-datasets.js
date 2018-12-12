@@ -7,9 +7,11 @@ const pump = util.promisify(require('pump'))
 const ajv = require('ajv')()
 const Combine = require('stream-combiner')
 const multer = require('multer')
+const JSONStream = require('JSONStream')
 const { Transform, Writable } = require('stream')
 const mimeTypeStream = require('mime-type-stream')
 const datasetUtils = require('./dataset')
+const attachmentsUtils = require('./attachments')
 
 const actions = ['create', 'update', 'patch', 'delete']
 
@@ -24,6 +26,10 @@ function cleanLine(line) {
 exports.uploadAttachment = multer({
   storage: multer.diskStorage({})
 }).single('attachment')
+
+exports.uploadBulk = multer({
+  storage: multer.diskStorage({})
+}).fields([{ name: 'attachments', maxCount: 1 }, { name: 'actions', maxCount: 1 }])
 
 exports.collection = (db, dataset) => {
   return db.collection('dataset-data-' + dataset.id)
@@ -119,7 +125,6 @@ exports.createLine = async (req, res, next) => {
 exports.deleteLine = async (req, res, next) => {
   const db = req.app.get('db')
   const collection = exports.collection(db, req.dataset)
-  if (req.dataset.status === 'schematized') return res.status(409).send(`Le jeu de données n'est pas près à recevoir des écritures`)
   await manageAttachment(req, false)
   const line = await applyTransaction(collection, req.user, { _action: 'delete', _id: req.params.lineId }, compileSchema(req.dataset))
   if (line._error) return res.status(400).send(line._error)
@@ -130,7 +135,6 @@ exports.deleteLine = async (req, res, next) => {
 exports.updateLine = async (req, res, next) => {
   const db = req.app.get('db')
   const collection = exports.collection(db, req.dataset)
-  if (req.dataset.status === 'schematized') return res.status(409).send(`Le jeu de données n'est pas près à recevoir des écritures`)
   await manageAttachment(req, false)
   const line = await applyTransaction(collection, req.user, { _action: 'update', _id: req.params.lineId, ...req.body }, compileSchema(req.dataset))
   if (line._error) return res.status(400).send(line._error)
@@ -141,7 +145,6 @@ exports.updateLine = async (req, res, next) => {
 exports.patchLine = async (req, res, next) => {
   const db = req.app.get('db')
   const collection = exports.collection(db, req.dataset)
-  if (req.dataset.status === 'schematized') return res.status(409).send(`Le jeu de données n'est pas près à recevoir des écritures`)
   await manageAttachment(req, true)
   const line = await applyTransaction(collection, req.user, { _action: 'patch', _id: req.params.lineId, ...req.body }, compileSchema(req.dataset))
   if (line._error) return res.status(400).send(line._error)
@@ -152,9 +155,24 @@ exports.patchLine = async (req, res, next) => {
 exports.bulkLines = async (req, res, next) => {
   const db = req.app.get('db')
   const collection = exports.collection(db, req.dataset)
-  if (req.dataset.status === 'schematized') return res.status(409).send(`Le jeu de données n'est pas près à recevoir des écritures`)
   const validate = compileSchema(req.dataset)
-  const ioStream = mimeTypeStream(req.get('Content-Type')) || mimeTypeStream('application/json')
+
+  // If attachments are sent, add them to the existing ones
+  if (req.files && req.files.attachments && req.files.attachments[0]) {
+    await attachmentsUtils.addAttachments(req.dataset, req.files.attachments[0])
+  }
+
+  // The list of actions/operations/transactions is either in a "actions" file
+  // or directly in the body
+  let inputStream, parseStream
+  if (req.files && req.files.actions && req.files.actions.length) {
+    inputStream = fs.createReadStream(req.files.actions[0].path)
+    parseStream = mimeTypeStream(req.files.actions[0].mimetype).parser()
+  } else {
+    inputStream = req
+    const ioStream = mimeTypeStream(req.get('Content-Type')) || mimeTypeStream('application/json')
+    parseStream = ioStream.parser()
+  }
   const transactionStream = new Transform({
     objectMode: true,
     async transform(chunk, encoding, cb) {
@@ -169,10 +187,10 @@ exports.bulkLines = async (req, res, next) => {
   })
 
   await pump(
-    req,
-    ioStream.parser(),
+    inputStream,
+    parseStream,
     transactionStream,
-    ioStream.serializer(),
+    JSONStream.stringify(),
     res
   )
   await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { status: 'updated' } })

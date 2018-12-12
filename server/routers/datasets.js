@@ -420,7 +420,7 @@ router.get('/:datasetId/lines/:lineId', readDataset(), isRest, permissions.middl
 router.post('/:datasetId/lines', readDataset(['finalized', 'updated', 'indexed']), isRest, permissions.middleware('createLine', 'write'), restDatasetsUtils.uploadAttachment, asyncWrap(restDatasetsUtils.createLine))
 router.put('/:datasetId/lines/:lineId', readDataset(['finalized', 'updated', 'indexed']), isRest, permissions.middleware('updateLine', 'write'), restDatasetsUtils.uploadAttachment, asyncWrap(restDatasetsUtils.updateLine))
 router.patch('/:datasetId/lines/:lineId', readDataset(['finalized', 'updated', 'indexed']), isRest, permissions.middleware('patchLine', 'write'), restDatasetsUtils.uploadAttachment, asyncWrap(restDatasetsUtils.patchLine))
-router.post('/:datasetId/_bulk_lines', readDataset(['finalized', 'updated', 'indexed']), isRest, permissions.middleware('bulkLines', 'write'), asyncWrap(restDatasetsUtils.bulkLines))
+router.post('/:datasetId/_bulk_lines', readDataset(['finalized', 'updated', 'indexed']), isRest, permissions.middleware('bulkLines', 'write'), restDatasetsUtils.uploadBulk, asyncWrap(restDatasetsUtils.bulkLines))
 router.delete('/:datasetId/lines/:lineId', readDataset(['finalized', 'updated', 'indexed']), isRest, permissions.middleware('deleteLine', 'write'), asyncWrap(restDatasetsUtils.deleteLine))
 
 // Set max-age
