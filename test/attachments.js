@@ -35,7 +35,7 @@ test.serial('Process newly uploaded attachments alone', async t => {
   t.is(odtItem['_file.content'], 'This is a test libreoffice file.')
 })
 
-test.only('Process newly uploaded attachments along with data file', async t => {
+test.serial('Process newly uploaded attachments along with data file', async t => {
   const ax = await axiosBuilder('dmeadus0@answers.com:passwd')
 
   // Send dataset with a CSV and attachments in an archive

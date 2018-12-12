@@ -69,8 +69,8 @@ exports.process = async function(app, dataset) {
       if (!dataset.schema.find(f => f.key === 'file')) {
         const concept = vocabulary.find(c => c.identifiers.includes('http://schema.org/DigitalDocument'))
         dataset.schema.push({
-          key: 'file',
-          'x-originalName': 'file',
+          key: 'attachment',
+          'x-originalName': 'attachment',
           type: 'string',
           title: concept.title,
           description: concept.description,

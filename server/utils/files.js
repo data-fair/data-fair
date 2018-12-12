@@ -101,7 +101,7 @@ const upload = multer({
   limits: {
     files: 2 // no more than the dataset file + attachments archive
   },
-  storage: storage,
+  storage,
   fileFilter: async function fileFilter(req, file, cb) {
     try {
       // Input verification, only performed once, not for attachments and dataset both

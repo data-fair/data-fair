@@ -1,5 +1,8 @@
+const fs = require('fs')
+const FormData = require('form-data')
 const testUtils = require('./resources/test-utils')
 const restDatasetsUtils = require('../server/utils/rest-datasets')
+const datasetUtils = require('../server/utils/dataset')
 const { test, axiosBuilder } = testUtils.prepare(__filename)
 const workers = require('../server/workers')
 
@@ -176,9 +179,36 @@ test.serial('Use dataset schema to validate inputs', async t => {
   t.truthy(res.data[1]._error)
 })
 
-// TODO: extensions (only updated lines)
+test.only('Send attachment with multipart request', async t => {
+  const ax = await axiosBuilder('dmeadus0@answers.com:passwd')
+  let res = await ax.post('/api/v1/datasets', {
+    isRest: true,
+    title: 'rest5',
+    schema: [
+      { key: 'attr1', type: 'string' },
+      { key: 'attachmentPath', type: 'string', 'x-refersTo': 'http://schema.org/DigitalDocument' }
+    ]
+  })
+  let dataset = res.data
 
-// TODO: attachments with multipart requests
+  // Create a line with an attached file
+  const form = new FormData()
+  const attachmentContent = fs.readFileSync('./test/resources/files/dir1/test.pdf')
+  form.append('attachment', attachmentContent, 'dir1/test.pdf')
+  form.append('attr1', 'test1')
+  res = await ax.post('/api/v1/datasets/rest5/lines', form, { headers: testUtils.formHeaders(form) })
+  t.is(res.status, 201)
+  t.truthy(res.data._id)
+  t.is(res.data.attachmentPath, `${res.data._id}/test.pdf`)
+  const ls = await datasetUtils.lsAttachments(dataset)
+  t.is(ls.length, 1)
+  t.is(ls[0], res.data.attachmentPath)
+
+  await workers.hook(`finalizer/rest5`)
+  res = await ax.get('/api/v1/datasets/rest5/lines')
+})
+
+// TODO: extensions (only updated lines)
 
 // TODO: storage consumption
 

@@ -1,11 +1,16 @@
+const fs = require('fs-extra')
+const path = require('path')
 const createError = require('http-errors')
 const shortid = require('shortid')
 const util = require('util')
 const pump = util.promisify(require('pump'))
 const ajv = require('ajv')()
 const Combine = require('stream-combiner')
+const multer = require('multer')
 const { Transform, Writable } = require('stream')
 const mimeTypeStream = require('mime-type-stream')
+const datasetUtils = require('./dataset')
+
 const actions = ['create', 'update', 'patch', 'delete']
 
 function cleanLine(line) {
@@ -15,6 +20,10 @@ function cleanLine(line) {
   delete line._error
   return line
 }
+
+exports.uploadAttachment = multer({
+  storage: multer.diskStorage({})
+}).single('attachment')
 
 exports.collection = (db, dataset) => {
   return db.collection('dataset-data-' + dataset.id)
@@ -63,6 +72,25 @@ const compileSchema = (dataset) => {
   })
 }
 
+async function manageAttachment(req, keepExisting) {
+  const dir = path.join(datasetUtils.attachmentsDir(req.dataset), req.body._id || req.params.lineId)
+
+  if (req.file) {
+    // An attachment was uploaded
+    await fs.ensureDir(dir)
+    await fs.emptyDir(dir)
+    await fs.rename(req.file.path, path.join(dir, req.file.originalname))
+    const relativePath = path.join(req.body._id, req.file.originalname)
+    let pathField = req.dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')
+    if (!pathField) {
+      throw createError(400, `Le schéma ne prévoit pas d'associer une pièce jointe`)
+    }
+    req.body[pathField.key] = relativePath
+  } else if (!keepExisting) {
+    await fs.remove(dir)
+  }
+}
+
 exports.readLine = async (req, res, next) => {
   const db = req.app.get('db')
   const collection = exports.collection(db, req.dataset)
@@ -79,6 +107,8 @@ exports.readLine = async (req, res, next) => {
 
 exports.createLine = async (req, res, next) => {
   const db = req.app.get('db')
+  req.body._id = req.body._id || shortid.generate()
+  await manageAttachment(req, false)
   const collection = exports.collection(db, req.dataset)
   const line = await applyTransaction(collection, req.user, { _action: 'create', ...req.body }, compileSchema(req.dataset))
   if (line._error) return res.status(400).send(line._error)
@@ -90,6 +120,7 @@ exports.deleteLine = async (req, res, next) => {
   const db = req.app.get('db')
   const collection = exports.collection(db, req.dataset)
   if (req.dataset.status === 'schematized') return res.status(409).send(`Le jeu de données n'est pas près à recevoir des écritures`)
+  await manageAttachment(req, false)
   const line = await applyTransaction(collection, req.user, { _action: 'delete', _id: req.params.lineId }, compileSchema(req.dataset))
   if (line._error) return res.status(400).send(line._error)
   await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { status: 'updated' } })
@@ -100,6 +131,7 @@ exports.updateLine = async (req, res, next) => {
   const db = req.app.get('db')
   const collection = exports.collection(db, req.dataset)
   if (req.dataset.status === 'schematized') return res.status(409).send(`Le jeu de données n'est pas près à recevoir des écritures`)
+  await manageAttachment(req, false)
   const line = await applyTransaction(collection, req.user, { _action: 'update', _id: req.params.lineId, ...req.body }, compileSchema(req.dataset))
   if (line._error) return res.status(400).send(line._error)
   await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { status: 'updated' } })
@@ -110,6 +142,7 @@ exports.patchLine = async (req, res, next) => {
   const db = req.app.get('db')
   const collection = exports.collection(db, req.dataset)
   if (req.dataset.status === 'schematized') return res.status(409).send(`Le jeu de données n'est pas près à recevoir des écritures`)
+  await manageAttachment(req, true)
   const line = await applyTransaction(collection, req.user, { _action: 'patch', _id: req.params.lineId, ...req.body }, compileSchema(req.dataset))
   if (line._error) return res.status(400).send(line._error)
   await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { status: 'updated' } })
