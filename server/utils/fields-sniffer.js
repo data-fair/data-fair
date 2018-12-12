@@ -1,7 +1,7 @@
 const Ajv = require('ajv')
 const ajv = new Ajv()
 
-exports.sniff = (values, attachmentsPaths) => {
+exports.sniff = (values, attachmentsPaths = []) => {
   if (checkAll(values, isOneOf, attachmentsPaths)) return { type: 'string', 'x-refersTo': 'http://schema.org/DigitalDocument' }
   if (checkAll(values, isBoolean)) return { type: 'boolean' }
   if (checkAll(values, val => intRegexp.test(val))) return { type: 'integer' }

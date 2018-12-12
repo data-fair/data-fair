@@ -104,7 +104,7 @@ const readDataset = (acceptedStatuses) => asyncWrap(async(req, res, next) => {
     if (!req.dataset) return res.status(404).send('Dataset not found')
     req.resourceApiDoc = datasetAPIDocs(req.dataset)
 
-    if (!acceptedStatuses || acceptedStatuses.includes(req.dataset.status)) return next()
+    if (req.isNewDataset || !acceptedStatuses || acceptedStatuses.includes(req.dataset.status)) return next()
 
     // dataset found but not in proper state.. wait a little while
     await new Promise(resolve => setTimeout(resolve, 100))

@@ -5,7 +5,7 @@
 
       <v-text-field
         v-model="query"
-        style="margin-top: 8px;margin-bottom: 8px;"
+        style="margin-top: 0;margin-bottom: 8px;"
         label="Rechercher"
         append-icon="search"
         hide-details
