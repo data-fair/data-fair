@@ -2,7 +2,7 @@
 // Used in the catalog vue and all its tabs and their components
 import eventBus from '../event-bus.js'
 
-export default {
+export default () => ({
   namespaced: true,
   state: {
     catalogId: null,
@@ -77,4 +77,4 @@ export default {
       }
     }
   }
-}
+})

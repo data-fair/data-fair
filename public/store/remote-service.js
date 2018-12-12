@@ -2,7 +2,7 @@
 // Used in the remoteService vue and all its tabs and their components
 import eventBus from '../event-bus.js'
 
-export default {
+export default () => ({
   namespaced: true,
   state: {
     remoteServiceId: null,
@@ -73,4 +73,4 @@ export default {
       }
     }
   }
-}
+})

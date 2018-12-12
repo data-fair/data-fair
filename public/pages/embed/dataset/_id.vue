@@ -7,15 +7,17 @@ import { mapState, mapActions } from 'vuex'
 
 export default {
   layout: 'embed',
-  created() {
-    this.setId(this.$route.params.id)
-    this.fetchVocabulary()
+  computed: {
+    ...mapState('dataset', ['dataset'])
+  },
+  async fetch({ store, params, route }) {
+    await store.dispatch('dataset/setId', route.params.id)
+    await store.dispatch('fetchVocabulary', route.params.id)
   },
   destroyed() {
     this.clear()
   },
   methods: {
-    ...mapState('dataset', ['dataset']),
     ...mapActions(['fetchVocabulary']),
     ...mapActions('dataset', ['setId', 'clear'])
   }

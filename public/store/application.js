@@ -3,7 +3,7 @@
 import Vue from 'vue'
 import eventBus from '../event-bus.js'
 
-export default {
+export default () => ({
   namespaced: true,
   state: {
     applicationId: null,
@@ -128,4 +128,4 @@ export default {
       }
     }
   }
-}
+})

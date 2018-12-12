@@ -1,6 +1,6 @@
 import Vue from 'vue'
 import Vuex from 'vuex'
-import { sessionStore } from '@koumoul/sd-vue'
+import { sessionStoreBuilder } from '@koumoul/sd-vue'
 import dataset from './dataset'
 import remoteService from './remote-service'
 import application from './application'
@@ -10,7 +10,13 @@ Vue.use(Vuex)
 
 export default () => {
   return new Vuex.Store({
-    modules: { dataset, remoteService, application, catalog, session: sessionStore },
+    modules: {
+      dataset: dataset(),
+      remoteService: remoteService(),
+      application: application(),
+      catalog: catalog(),
+      session: sessionStoreBuilder()
+    },
     state: {
       user: null,
       vocabulary: null,
