@@ -117,13 +117,27 @@ exports.readStream = (dataset) => {
 }
 
 exports.storageSize = async (db, owner) => {
+  let size = 0
+  // Sum of the sizes of the files for file-based datasets
+  const filter = { 'owner.type': owner.type, 'owner.id': owner.id }
   const aggQuery = [
-    { $match: { 'owner.type': owner.type, 'owner.id': owner.id } },
+    { $match: filter },
     { $project: { 'file.size': 1 } },
     { $group: { _id: null, totalSize: { $sum: '$file.size' } } }
   ]
   const res = await db.collection('datasets').aggregate(aggQuery).toArray()
-  return res.length ? res[0].totalSize : 0
+  if (res.length) size += res[0].totalSize
+
+  // Add sum of sizes of collections for REST datasets
+  const cursor = db.collection('datasets').find({ ...filter, isRest: true }).project({ id: 1 })
+  while (await cursor.hasNext()) {
+    const dataset = await cursor.next()
+    const collection = await restDatasetsUtils.collection(db, dataset)
+    const stats = await collection.stats()
+    size += stats.storageSize
+  }
+
+  return size
 }
 
 // After a change that might impact consumed storage, we store the value

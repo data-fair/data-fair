@@ -11,7 +11,10 @@
     "id": "ccherryholme1",
     "firstName": "Cecily",
     "lastName": "Cherry Holme",
-    "email": "ccherryholme1@icio.us"
+    "email": "ccherryholme1@icio.us",
+    "password": {
+      "clear": "passwd"
+    }
   },
   {
     "id": "cdurning2",

@@ -243,8 +243,24 @@ test.serial('Send attachments with bulk request', async t => {
   t.is(res.data.results.find(l => l._id === 'line1')['_file.content'], 'This is a test libreoffice file.')
 })
 
-// TODO: extensions (only updated lines)
+test.serial('The size of the mongodb collection is poart of storage consumption', async t => {
+  // Load a few lines
+  const ax = await axiosBuilder('ccherryholme1@icio.us:passwd')
+  await ax.post('/api/v1/datasets', {
+    isRest: true,
+    title: 'rest7',
+    schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }]
+  })
+  await ax.post('/api/v1/datasets/rest7/_bulk_lines', [
+    { _id: 'line1', attr1: 'test1', attr2: 'test1' },
+    { _id: 'line2', attr1: 'test1', attr2: 'test1' },
+    { _id: 'line3', attr1: 'test1', attr2: 'test1' },
+    { _id: 'line4', attr1: 'test1', attr2: 'test1' }
+  ])
+  await workers.hook(`finalizer/rest7`)
 
-// TODO: storage consumption
-
-// TODO: document routes in API doc
+  // Get the stored quota and consumption
+  let res = await ax.get('/api/v1/quotas/user/ccherryholme1')
+  t.is(res.status, 200)
+  t.is(res.data.consumption.storage, 4096)
+})

@@ -129,6 +129,7 @@ exports.deleteLine = async (req, res, next) => {
   const line = await applyTransaction(collection, req.user, { _action: 'delete', _id: req.params.lineId }, compileSchema(req.dataset))
   if (line._error) return res.status(400).send(line._error)
   await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { status: 'updated' } })
+  await datasetUtils.updateStorageSize(db, req.dataset.owner)
   res.status(204).send()
 }
 
@@ -139,6 +140,7 @@ exports.updateLine = async (req, res, next) => {
   const line = await applyTransaction(collection, req.user, { _action: 'update', _id: req.params.lineId, ...req.body }, compileSchema(req.dataset))
   if (line._error) return res.status(400).send(line._error)
   await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { status: 'updated' } })
+  await datasetUtils.updateStorageSize(db, req.dataset.owner)
   res.status(200).send(cleanLine(line))
 }
 
@@ -149,6 +151,7 @@ exports.patchLine = async (req, res, next) => {
   const line = await applyTransaction(collection, req.user, { _action: 'patch', _id: req.params.lineId, ...req.body }, compileSchema(req.dataset))
   if (line._error) return res.status(400).send(line._error)
   await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { status: 'updated' } })
+  await datasetUtils.updateStorageSize(db, req.dataset.owner)
   res.status(200).send(cleanLine(line))
 }
 
@@ -194,6 +197,7 @@ exports.bulkLines = async (req, res, next) => {
     res
   )
   await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { status: 'updated' } })
+  await datasetUtils.updateStorageSize(db, req.dataset.owner)
 }
 
 exports.readStream = (db, dataset, onlyUpdated) => {
