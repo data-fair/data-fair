@@ -5,6 +5,7 @@ module.exports = {
   publicUrl: 'http://localhost:8080',
   wsPublicUrl: 'ws://localhost:8080',
   dataDir: '/data',
+  sessionDomain: null,
   directoryUrl: 'http://localhost:8080',
   privateDirectoryUrl: '',
   openapiViewerUrl: 'https://koumoul.com/openapi-viewer/',

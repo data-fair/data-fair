@@ -2,6 +2,7 @@ module.exports = {
   mode: 'MODE',
   publicUrl: 'PUBLIC_URL',
   wsPublicUrl: 'WS_PUBLIC_URL',
+  sessionDomain: 'SESSION_DOMAIN',
   directoryUrl: 'DIRECTORY_URL',
   privateDirectoryUrl: 'PRIVATE_DIRECTORY_URL',
   openapiViewerUrl: 'OPENAPI_VIEWER_URL',

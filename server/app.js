@@ -22,7 +22,8 @@ const nuxt = require('./nuxt')
 const session = require('@koumoul/sd-express')({
   directoryUrl: config.directoryUrl,
   privateDirectoryUrl: config.privateDirectoryUrl || config.directoryUrl,
-  publicUrl: config.publicUrl
+  publicUrl: config.publicUrl,
+  cookieDomain: config.sessionDomain
 })
 
 const app = express()

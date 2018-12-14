@@ -45,7 +45,7 @@
   },
   "dependencies": {
     "@digibytes/markdownit": "^1.2.1",
-    "@koumoul/sd-express": "^0.12.0",
+    "@koumoul/sd-express": "^0.13.0",
     "@koumoul/sd-vue": "^0.11.0",
     "@koumoul/vue-multianalytics": "^1.10.1",
     "@koumoul/vuetify-jsonschema-form": "^0.16.0",
