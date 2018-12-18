@@ -1,15 +1,18 @@
 // Prepare dynamic service workers configurations for data-fair applications
-const config = require('config')
 const escapeStringRegexp = require('escape-string-regexp')
 
 exports.sw = (application) => {
   const cleanApplicationUrl = application.url.replace(/\/$/, '')
-  return `
-importScripts('https://storage.googleapis.com/workbox-cdn/releases/3.6.1/workbox-sw.js');
+  const debug = process.env.NODE_ENV === 'development' ? `
 workbox.setConfig({
   debug: true
 });
 workbox.core.setLogLevel(workbox.core.LOG_LEVELS.debug);
+return ` : ''
+
+  return `
+importScripts('https://storage.googleapis.com/workbox-cdn/releases/3.6.1/workbox-sw.js');
+${debug}
 workbox.clientsClaim();
 workbox.skipWaiting();
 // Cache first for application's source code
