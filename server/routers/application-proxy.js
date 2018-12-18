@@ -9,6 +9,7 @@ const findUtils = require('../utils/find')
 const applicationAPIDocs = require('../../contract/application-api-docs')
 const permissions = require('../utils/permissions')
 const thumbor = require('../utils/thumbor')
+const serviceWorkers = require('../utils/service-workers')
 const router = module.exports = express.Router()
 
 const setResource = asyncWrap(async(req, res, next) => {
@@ -21,6 +22,7 @@ const setResource = asyncWrap(async(req, res, next) => {
 })
 
 router.get('/:applicationId/manifest.json', setResource, permissions.middleware('readConfig', 'read'), asyncWrap(async(req, res) => {
+  const cleanApplicationUrl = req.application.url.replace(/\/$/, '')
   res.setHeader('Content-Type', 'application/manifest+json')
   res.send({
     name: req.application.title,
@@ -36,10 +38,15 @@ router.get('/:applicationId/manifest.json', setResource, permissions.middleware(
       return {
         sizes,
         type: 'image/png',
-        src: thumbor.thumbnail(req.application.url + '/icon.png', sizes)
+        src: thumbor.thumbnail(cleanApplicationUrl + '/icon.png', sizes)
       }
     })
   })
+}))
+
+router.get('/:applicationId-sw.js', setResource, permissions.middleware('readConfig', 'read'), asyncWrap(async(req, res) => {
+  res.setHeader('Content-Type', 'application/javascript')
+  res.send(serviceWorkers.sw(req.application))
 }))
 
 // Proxy for applications
@@ -184,7 +191,18 @@ router.all('/:applicationId*', setResource, permissions.middleware('readDescript
               ]
             })
           }
-          console.log(parse5.serialize(document))
+
+          // Data-fair also generates a basic service-workers configuration per app
+          head.childNodes.push({
+            nodeName: 'script',
+            tagName: 'script',
+            attrs: [{ name: 'type', value: 'text/javascript' }],
+            childNodes: [{
+              nodeName: '#text',
+              value: serviceWorkers.register(req.application)
+            }]
+          })
+
           callback(null, parse5.serialize(document))
         }
       })
