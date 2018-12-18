@@ -1,12 +1,14 @@
 const express = require('express')
 const requestProxy = require('express-request-proxy')
 const config = require('config')
-const replaceStream = require('replacestream')
+const parse5 = require('parse5')
+const { Transform } = require('stream')
 const url = require('url')
 const asyncWrap = require('../utils/async-wrap')
 const findUtils = require('../utils/find')
 const applicationAPIDocs = require('../../contract/application-api-docs')
 const permissions = require('../utils/permissions')
+const thumbor = require('../utils/thumbor')
 const router = module.exports = express.Router()
 
 const setResource = asyncWrap(async(req, res, next) => {
@@ -17,6 +19,28 @@ const setResource = asyncWrap(async(req, res, next) => {
   req.resourceApiDoc = applicationAPIDocs(req.application)
   next()
 })
+
+router.get('/:applicationId/manifest.json', setResource, permissions.middleware('readConfig', 'read'), asyncWrap(async(req, res) => {
+  res.setHeader('Content-Type', 'application/manifest+json')
+  res.send({
+    name: req.application.title,
+    short_name: req.application.title,
+    description: req.application.description,
+    start_url: '/',
+    scope: new URL(req.application.exposedUrl).pathname + '/',
+    display: 'standalone',
+    background_color: '#ffffff',
+    theme_color: '#1e88e5',
+    lang: 'fr',
+    icons: ['64x64', '120x120', '144x144', '152x152', '192x192', '384x384', '512x512'].map(sizes => {
+      return {
+        sizes,
+        type: 'image/png',
+        src: thumbor.thumbnail(req.application.url + '/icon.png', sizes)
+      }
+    })
+  })
+}))
 
 // Proxy for applications
 router.all('/:applicationId*', setResource, permissions.middleware('readDescription', 'read'), (req, res, next) => { req.app.get('anonymSession')(req, res, next) }, asyncWrap(async(req, res, next) => {
@@ -130,7 +154,40 @@ router.all('/:applicationId*', setResource, permissions.middleware('readDescript
       return !resp.headers['content-type'] || (resp.headers['content-type'].indexOf('text/html') === 0)
     },
     transform: () => {
-      return replaceStream('%APPLICATION%', JSON.stringify(req.application))
+      return new Transform({
+        transform(chunk, encoding, callback) {
+          this.str = (this.str || '') + chunk
+          callback()
+        },
+        flush(callback) {
+          let document
+          try {
+            document = parse5.parse(this.str.replace(/%APPLICATION%/, JSON.stringify(req.application)))
+          } catch (err) {
+            return callback(err)
+          }
+          const head = document.childNodes.find(c => c.tagName === 'html').childNodes.find(c => c.tagName === 'head')
+          if (!head) return callback(new Error('HTML structure is broken, expect html and head elements'))
+
+          // Data-fair generates a manifest per app
+          const manifestUrl = new URL(req.application.exposedUrl).pathname + '/manifest.json'
+          const manifest = head.childNodes.find(c => c.attrs && c.attrs.find(a => a.name === 'rel' && a.value === 'manifest'))
+          if (manifest) {
+            manifest.attrs.find(a => a.name === 'href').value = manifestUrl
+          } else {
+            head.childNodes.push({
+              nodeName: 'link',
+              tagName: 'link',
+              attrs: [
+                { name: 'rel', value: 'manifest' },
+                { name: 'href', value: manifestUrl }
+              ]
+            })
+          }
+          console.log(parse5.serialize(document))
+          callback(null, parse5.serialize(document))
+        }
+      })
     }
   }]
 
