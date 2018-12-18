@@ -3,7 +3,7 @@ const nock = require('nock')
 
 const { test, config, axiosBuilder } = testUtils.prepare(__filename)
 
-const html = '<html><head></head><body></body></html>'
+const html = '<html><head></head><body>A body</body></html>'
 nock('http://monapp.com').persist().get('/').reply(200, html)
 
 test('Get applications when not authenticated', async t => {
@@ -41,7 +41,7 @@ test.serial('Post an external application configuration, read it, update it and 
   t.is(res.status, 200)
   t.is(res.data.title, 'Test application config')
   res = await ax.get('/app/' + acId)
-  t.is(res.data, html)
+  t.true(res.data.includes('A body'))
   res = await ax.delete('/api/v1/applications/' + acId)
   t.is(res.status, 204)
   res = await ax.get('/api/v1/applications')
