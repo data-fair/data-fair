@@ -30,7 +30,7 @@ workbox.skipWaiting();
   sw += `
 workbox.routing.registerRoute(
   new RegExp('^${escapeStringRegexp(cleanApplicationUrl)}'),
-  workbox.strategies.cacheFirst({})
+  workbox.strategies.cacheFirst({cacheName: 'data-fair'})
 );
 `
 
@@ -39,7 +39,7 @@ workbox.routing.registerRoute(
   sw += `
 workbox.routing.registerRoute(
   new RegExp('${escapeStringRegexp(new URL(config.publicUrl).pathname)}api/v1/remote-services/.*/proxy/.*'),
-  workbox.strategies.staleWhileRevalidate({})
+  workbox.strategies.staleWhileRevalidate({cacheName: 'data-fair'})
 );
 `
 
@@ -48,7 +48,7 @@ workbox.routing.registerRoute(
   sw += `
 workbox.routing.registerRoute(
   new RegExp('/.*'),
-  workbox.strategies.networkFirst({})
+  workbox.strategies.networkFirst({cacheName: 'data-fair'})
 );
 `
 
