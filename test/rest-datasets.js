@@ -190,6 +190,7 @@ test.serial('Send attachment with multipart request', async t => {
     ]
   })
   let dataset = res.data
+  await workers.hook(`finalizer/rest5`)
 
   // Create a line with an attached file
   const form = new FormData()
