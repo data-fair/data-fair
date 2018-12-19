@@ -187,6 +187,7 @@ router.all('/:applicationId*', setResource, permissions.middleware('readDescript
               tagName: 'link',
               attrs: [
                 { name: 'rel', value: 'manifest' },
+                { name: 'crossorigin', value: 'use-credentials' },
                 { name: 'href', value: manifestUrl }
               ]
             })

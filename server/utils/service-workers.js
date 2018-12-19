@@ -11,7 +11,7 @@ importScripts('https://storage.googleapis.com/workbox-cdn/releases/3.6.1/workbox
 `
 
   // Use workbox debug version only in development
-  if (process.env.NODE_ENV === 'development') {
+  if (process.env.DEBUG && process.env.DEBUG.includes('service-workers')) {
     sw += `
 workbox.setConfig({
   debug: true
