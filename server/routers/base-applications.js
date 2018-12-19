@@ -121,7 +121,6 @@ router.get('', asyncWrap(async(req, res) => {
     })
   }
   query.$and.push({ $or: accessFilter })
-
   if (req.query.q) query.$and.push({ $text: { $search: req.query.q } })
 
   const [skip, size] = findUtils.pagination(req.query)
