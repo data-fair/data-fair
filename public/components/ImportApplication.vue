@@ -32,7 +32,7 @@
         <v-btn flat @click.native="$emit('cancel')">Annuler</v-btn>
       </v-stepper-content>
       <v-stepper-content step="2">
-        <owner-pick v-model="owner"/>
+        <owner-pick v-if="baseApp" v-model="owner" :restriction="baseApp.public ? null : baseApp.privateAccess"/>
         <v-btn :disabled="!owner" color="primary" @click.native="createApplication()">Enregistrer</v-btn>
         <v-btn flat @click.native="$emit('cancel')">Annuler</v-btn>
       </v-stepper-content>
@@ -61,7 +61,14 @@ export default {
     ...mapState(['env'])
   },
   async mounted() {
-    this.configurableApplications = (await this.$axios.$get('api/v1/base-applications', { params: { public: true, size: 10000 } })).results
+    let privateAccess = `user:${this.user.id}`
+    this.user.organizations.forEach(o => {
+      privateAccess += `,organization:${o.id}`
+    })
+    this.configurableApplications = (await this.$axios.$get('api/v1/base-applications', { params: {
+      privateAccess,
+      size: 10000
+    } })).results
     if (this.initApp) {
       this.applicationUrl = this.initApp
       this.downloadFromUrl()

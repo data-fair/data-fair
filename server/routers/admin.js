@@ -144,6 +144,7 @@ router.get('/base-applications', asyncWrap(async(req, res) => {
       url: 1,
       image: 1,
       public: 1,
+      privateAccess: 1,
       nbApplications: { $size: '$applications' },
       servicesFilters: 1,
       datasetsFilters: 1
@@ -153,6 +154,7 @@ router.get('/base-applications', asyncWrap(async(req, res) => {
   const aggPromise = baseApps.aggregate(agg).toArray()
   const [count, results] = await Promise.all([ baseApps.countDocuments(query), aggPromise ])
   for (let result of results) {
+    result.privateAccess = result.privateAccess || []
     result.title = result.title || result.meta.title
     result.description = result.description || result.meta.description
     result.image = result.image || result.url + 'thumbnail.png'

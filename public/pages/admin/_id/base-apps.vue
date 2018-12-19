@@ -32,7 +32,10 @@
               <v-list-tile-title>
                 {{ baseApp.title }} (<a :href="baseApp.url">{{ baseApp.url }}</a>)
                 <v-icon v-if="baseApp.public" color="green">lock_open</v-icon>
-                <v-icon v-else color="red">lock</v-icon>
+                <template v-else>
+                  <v-icon color="red">lock</v-icon>
+                  <span>{{ (baseApp.privateAccess || []).map(p => p.name).join(', ') }}</span>
+                </template>
               </v-list-tile-title>
               <v-list-tile-sub-title>{{ baseApp.description }}</v-list-tile-sub-title>
               <v-list-tile-sub-title>
@@ -78,6 +81,22 @@
               label="Image"
             />
             <v-checkbox v-model="patch.public" label="Public"/>
+            <v-autocomplete
+              v-if="!patch.public"
+              v-model="patch.privateAccess"
+              :items="organizations"
+              :loading="loadingOrganizations"
+              :search-input.sync="searchOrganizations"
+              :filter="() => true"
+              :multiple="true"
+              :clearable="true"
+              item-text="name"
+              item-value="id"
+              label="Vue restreinte à des organisations"
+              placeholder="Saisissez le nom d'organisation"
+              return-object
+            />
+
           </v-form>
         </v-card-text>
         <v-card-actions>
@@ -91,6 +110,7 @@
 </template>
 
 <script>
+import { mapState } from 'vuex'
 import eventBus from '../../../event-bus'
 
 export default {
@@ -101,7 +121,18 @@ export default {
       showEditDialog: false,
       currentBaseApp: null,
       q: null,
-      urlToAdd: null
+      urlToAdd: null,
+      loadingOrganizations: false,
+      searchOrganizations: '',
+      organizations: []
+    }
+  },
+  computed: {
+    ...mapState(['env'])
+  },
+  watch: {
+    searchOrganizations() {
+      this.listOrganizations()
     }
   },
   async mounted() {
@@ -116,13 +147,16 @@ export default {
         title: baseApp.title,
         description: baseApp.description,
         public: baseApp.public,
-        image: baseApp.image
+        image: baseApp.image,
+        privateAccess: baseApp.privateAccess || []
       }
     },
     async applyPatch(baseApp, patch) {
-      await this.$axios.$patch(`api/v1/base-applications/${baseApp.id}`, patch)
-      Object.keys(patch).forEach(key => {
-        this.$set(baseApp, key, patch[key])
+      const actualPatch = { ...patch }
+      if (actualPatch.public) actualPatch.privateAccess = []
+      await this.$axios.$patch(`api/v1/base-applications/${baseApp.id}`, actualPatch)
+      Object.keys(actualPatch).forEach(key => {
+        this.$set(baseApp, key, actualPatch[key])
       })
     },
     async add() {
@@ -133,6 +167,19 @@ export default {
         eventBus.$emit('notification', { error, msg: `Impossible d'ajouter' l'application de base` })
       }
       this.refresh()
+    },
+    listOrganizations: async function() {
+      if (this.search && this.search === this.currentEntity.name) return
+
+      this.loadingOrganizations = true
+      if (!this.searchOrganizations || this.searchOrganizations.length < 3) {
+        this.organizations = this.patch.privateAccess
+      } else {
+        this.organizations = this.patch.privateAccess.concat((await this.$axios.$get(this.env.directoryUrl + '/api/organizations', { params: { q: this.searchOrganizations } }))
+          .results.map(r => ({ ...r, type: 'organization' }))
+        )
+      }
+      this.loadingOrganizations = false
     }
   }
 }

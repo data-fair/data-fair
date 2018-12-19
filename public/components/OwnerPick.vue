@@ -3,7 +3,7 @@
     <v-layout column>
       <p>Le propriétaire est le seul à pouvoir modifier la ressource.</p>
       <v-radio-group v-model="selectedOwner" class="mt-3 mb-3">
-        <v-radio v-for="(owner, $index) in owners" :label="owner.type === 'user' ? 'Vous-même' : 'Organisation ' + owner.name" :value="owner" :key="$index"/>
+        <v-radio v-for="(owner, $index) in owners.filter(o => !restriction || restriction.find(r => r.type === o.type && r.id === o.id))" :label="owner.type === 'user' ? 'Vous-même' : 'Organisation ' + owner.name" :value="owner" :key="$index"/>
       </v-radio-group>
     </v-layout>
     <v-layout v-if="selectedOwner && selectedOwner.type === 'organization'" column>
@@ -20,7 +20,7 @@
 import { mapState } from 'vuex'
 
 export default {
-  props: ['value'],
+  props: ['value', 'restriction'],
   data: () => ({
     selectedOwner: null,
     selectedRole: null

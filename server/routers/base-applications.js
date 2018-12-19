@@ -4,6 +4,7 @@ const config = require('config')
 const express = require('express')
 const axios = require('axios')
 const slug = require('slugify')
+const createError = require('http-errors')
 const Extractor = require('html-extractor')
 const htmlExtractor = new Extractor()
 htmlExtractor.extract = util.promisify(htmlExtractor.extract)
@@ -102,15 +103,33 @@ router.patch('/:id', asyncWrap(async(req, res) => {
 // Get the list. Non admin users can only see the public ones.
 router.get('', asyncWrap(async(req, res) => {
   const db = req.app.get('db')
-  if (!(req.user && req.user.isAdmin) && !req.query.public) {
-    return res.status(403).send('Non admin users can only see public base applications')
+  const query = { $and: [] }
+  const accessFilter = []
+
+  accessFilter.push({ public: true })
+  // Private access to applications is managed in a similar way as owner filter for
+  // other resources (datasets, etc)
+  // You can use ?privateAccess=user:alban,organization:koumoul
+  const privateAccess = []
+  if (req.query.privateAccess) {
+    req.query.privateAccess.split(',').forEach(p => {
+      const [type, id] = p.split(':')
+      if (type === 'user' && id !== req.user.id) throw createError(403)
+      if (type === 'organization' && !req.user.organizations.find(o => o.id === id)) throw createError(403)
+      privateAccess.push({ type, id })
+      accessFilter.push({ privateAccess: { $elemMatch: { type, id } } })
+    })
   }
-  const query = {}
-  if (req.query.public) query.public = true
-  if (req.query.q) query.$text = { $search: req.query.q }
+  query.$and.push({ $or: accessFilter })
+
+  if (req.query.q) query.$and.push({ $text: { $search: req.query.q } })
+
   const [skip, size] = findUtils.pagination(req.query)
   const baseApplications = db.collection('base-applications')
-  const findPromise = baseApplications.find(query).sort({ title: 1 }).limit(size).skip(skip).toArray()
+  const findPromise = baseApplications
+    .find(query).project({ title: 1, description: 1, image: 1, meta: 1, url: 1, public: 1, privateAccess: 1 })
+    .sort({ title: 1 }).limit(size).skip(skip)
+    .toArray()
   const countPromise = baseApplications.countDocuments(query)
   const [results, count] = await Promise.all([findPromise, countPromise])
   for (let result of results) {
@@ -118,6 +137,8 @@ router.get('', asyncWrap(async(req, res) => {
     result.description = result.description || result.meta.description
     result.image = result.image || result.url + 'thumbnail.png'
     result.thumbnail = thumbor.thumbnail(result.image, req.query.thumbnail || '300x200')
+    // keep only the private access that concerns the current request
+    result.privateAccess = (result.privateAccess || []).filter(p => privateAccess.find(p2 => p2.type === p.type && p2.id === p.id))
   }
   res.send({ count, results })
 }))
