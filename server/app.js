@@ -92,6 +92,7 @@ exports.run = async () => {
   app.set('db', db)
   app.set('mongoClient', client)
   app.set('es', await esUtils.init())
+  app.publish = await wsUtils.initPublisher(db)
 
   if (config.mode.includes('server')) {
     app.set('anonymSession', await anonymSession.init(db))
@@ -99,7 +100,7 @@ exports.run = async () => {
     await cache.init(db)
     baseApplications.init(db)
     await remoteServices.init(db)
-    app.publish = await wsUtils.init(wss, db)
+    await wsUtils.initServer(wss, db)
     // At this stage the server is ready to respond to API requests
     app.set('api-ready', true)
 

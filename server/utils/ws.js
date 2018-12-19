@@ -24,7 +24,11 @@ exports.stop = async () => {
   await cursor.close()
 }
 
-exports.init = async (wss, db) => {
+async function channel(db) {
+  return db.createCollection('messages', { capped: true, size: 100000, max: 1000 })
+}
+
+exports.initServer = async (wss, db) => {
   wss.on('connection', ws => {
     // Associate ws connections to ids for subscriptions
     const clientId = shortid.generate()
@@ -81,8 +85,8 @@ exports.init = async (wss, db) => {
     })
   }, 30000)
 
-  // A pubsub channel based on mongodb to support scaling on multiple processes
-  const mongoChannel = await db.createCollection('messages', { capped: true, size: 100000, max: 1000 })
+  // Listen to pubsub channel based on mongodb to support scaling on multiple processes
+  const mongoChannel = await channel(db)
   await mongoChannel.insertOne({ type: 'init' })
   cursor = mongoChannel.find({}, { tailable: true, awaitdata: true, numberOfRetries: -1 })
   cursor.forEach(doc => {
@@ -94,6 +98,11 @@ exports.init = async (wss, db) => {
       })
     }
   })
+}
 
+exports.initPublisher = async (db) => {
+  // Write to pubsub channel
+  const mongoChannel = await channel(db)
+  await mongoChannel.insertOne({ type: 'init' })
   return (channel, data) => mongoChannel.insertOne({ type: 'message', channel, data })
 }
