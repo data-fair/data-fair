@@ -126,7 +126,7 @@ router.get('', asyncWrap(async(req, res) => {
   const [skip, size] = findUtils.pagination(req.query)
   const baseApplications = db.collection('base-applications')
   const findPromise = baseApplications
-    .find(query).project({ title: 1, description: 1, image: 1, meta: 1, url: 1, public: 1, privateAccess: 1 })
+    .find(query)
     .sort({ title: 1 }).limit(size).skip(skip)
     .toArray()
   const countPromise = baseApplications.countDocuments(query)
