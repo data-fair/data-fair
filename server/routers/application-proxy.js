@@ -28,7 +28,7 @@ router.get('/:applicationId/manifest.json', setResource, permissions.middleware(
     name: req.application.title,
     short_name: req.application.title,
     description: req.application.description,
-    start_url: '/',
+    start_url: new URL(req.application.exposedUrl).pathname + '/',
     scope: new URL(req.application.exposedUrl).pathname + '/',
     display: 'standalone',
     background_color: '#ffffff',
