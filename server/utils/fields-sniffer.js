@@ -30,10 +30,10 @@ exports.escapeKey = (key) => {
 }
 
 function checkAll(values, check, param) {
-  const definedValues = [...values].filter(v => v !== undefined)
+  const definedValues = [...values].filter(v => !!v)
   if (!definedValues.length) return false
-  for (let value of values) {
-    if (value && !check(value, param)) {
+  for (let value of definedValues) {
+    if (!check(value, param)) {
       return false
     }
   }
