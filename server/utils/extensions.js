@@ -1,8 +1,7 @@
 const { Readable, Transform, Writable } = require('stream')
 const util = require('util')
-const fs = require('fs')
+const fs = require('fs-extra')
 const path = require('path')
-const readFile = util.promisify(fs.readFile)
 const config = require('config')
 const eventToPromise = require('event-to-promise')
 const request = require('request')
@@ -95,8 +94,11 @@ class PreserveExtensionStream extends Transform {
       if (this.options.attachments) {
         const attachmentKey = this.options.dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument').key
         if (item[attachmentKey]) {
-          item._file_raw = (await readFile(path.join(datasetUtils.attachmentsDir(this.options.dataset), item[attachmentKey])))
-            .toString('base64')
+          const filePath = path.join(datasetUtils.attachmentsDir(this.options.dataset), item[attachmentKey])
+          if (await fs.pathExists(filePath)) {
+            item._file_raw = (await fs.readFile(filePath))
+              .toString('base64')
+          }
         }
       }
       const esClient = this.options.esClient

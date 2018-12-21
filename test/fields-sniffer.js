@@ -37,3 +37,7 @@ test('Work with keywords and texts', t => {
   t.deepEqual(sniffer.sniff(['id1', 'id2']), { type: 'string', format: 'uri-reference' })
   t.deepEqual(sniffer.sniff(['id1', 'a text with whitespaces']), { type: 'string' })
 })
+
+test('Default type is string', t => {
+  t.deepEqual(sniffer.sniff([]), { type: 'string' })
+})

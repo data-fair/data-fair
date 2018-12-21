@@ -18,7 +18,6 @@ export default () => {
       session: sessionStoreBuilder()
     },
     state: {
-      user: null,
       vocabulary: null,
       vocabularyArray: [],
       licenses: {},
@@ -65,7 +64,7 @@ export default () => {
         commit('ownerLicenses', { owner, licenses })
       },
       nuxtServerInit({ commit, dispatch }, { req, env, app }) {
-        commit('setAny', { env: { ...env }, user: req.user })
+        commit('setAny', { env: { ...env } })
         dispatch('session/init', { cookies: this.$cookies, baseUrl: env.publicUrl + '/api/v1/session' })
       },
       searchQuery({ commit }, params) {

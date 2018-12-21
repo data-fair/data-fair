@@ -25,7 +25,7 @@ module.exports.init = async () => {
         attachment: {
           field: '_file_raw',
           target_field: '_file',
-          // ignore_missing: true,
+          ignore_missing: true,
           properties: ['content', 'content_type', 'content_length']
         },
         remove: {
