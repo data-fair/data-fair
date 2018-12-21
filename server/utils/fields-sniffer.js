@@ -30,7 +30,7 @@ exports.escapeKey = (key) => {
 }
 
 function checkAll(values, check, param) {
-  if (!values.length) return false
+  if (!values.size) return false
   for (let value of values) {
     if (value && !check(value, param)) {
       return false
