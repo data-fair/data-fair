@@ -1,6 +1,8 @@
 const express = require('express')
 const requestProxy = require('express-request-proxy')
 const config = require('config')
+const fs = require('fs')
+const path = require('path')
 const parse5 = require('parse5')
 const { Transform } = require('stream')
 const url = require('url')
@@ -11,6 +13,8 @@ const permissions = require('../utils/permissions')
 const thumbor = require('../utils/thumbor')
 const serviceWorkers = require('../utils/service-workers')
 const router = module.exports = express.Router()
+
+const loginHtml = fs.readFileSync(path.join(__dirname, '../resources/login.html'), 'utf8')
 
 const setResource = asyncWrap(async(req, res, next) => {
   req.application = req.resource = await req.app.get('db').collection('applications')
@@ -44,13 +48,28 @@ router.get('/:applicationId/manifest.json', setResource, permissions.middleware(
   })
 }))
 
+// Login is a special small UI page on /app/appId/login
+// this is so that we expose a minimalist password based auth in the scope of the current application
+// prevents opening a browser if the app is installed standalone
+router.get('/:applicationId/login', (req, res) => {
+  res.setHeader('Content-Type', 'text/html')
+  const redirect = encodeURIComponent(`${config.publicUrl}/app/${req.params.applicationId}?id_token=`)
+  res.send(loginHtml
+    .replace('{AUTH_ROUTE}', `${config.directoryUrl}/api/auth/password?redirect=${redirect}`)
+    .replace('{LOGO}', config.brand.logo || `${config.publicUrl}/logo.svg`)
+  )
+})
+
 router.get('/:applicationId-sw.js', setResource, permissions.middleware('readConfig', 'read'), asyncWrap(async(req, res) => {
   res.setHeader('Content-Type', 'application/javascript')
   res.send(serviceWorkers.sw(req.application))
 }))
 
 // Proxy for applications
-router.all('/:applicationId*', setResource, permissions.middleware('readDescription', 'read'), (req, res, next) => { req.app.get('anonymSession')(req, res, next) }, asyncWrap(async(req, res, next) => {
+router.all('/:applicationId*', setResource, (req, res, next) => { req.app.get('anonymSession')(req, res, next) }, asyncWrap(async(req, res, next) => {
+  if (!permissions.can(req.application, 'readConfig', 'read', req.user)) {
+    return res.redirect(`${config.publicUrl}/app/${req.application.id}/login`)
+  }
   delete req.application.permissions
   req.application.apiUrl = config.publicUrl + '/api/v1'
   if (req.query.draft === 'true') {

@@ -1,0 +1,19 @@
+<svg viewBox="-5 0 110 100" width="200" height="200" class="logo" version="1.1" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <filter id="dropshadow">
+        <feGaussianBlur in="SourceAlpha" stdDeviation="2"></feGaussianBlur>
+        <feOffset dx="2" dy="2" result="offsetblur"></feOffset>
+        <feMerge>
+            <feMergeNode></feMergeNode>
+            <feMergeNode in="SourceGraphic"></feMergeNode>
+        </feMerge>
+    </filter>
+   </defs>
+    <g>
+        <!--<path d="M35,5 L65,5 L31,92 A4,4 0 0 1 28,95 L2,95 A3,3 0 0 1 1,92 Z" fill="#90caf9" filter="url(#dropshadow)"></path>
+        <path d="M65,5 L35,5 L69,92 A4,4 0 0 0 72,95 L98,95 A3,3 0 0 0 99,92 Z" fill="#0288d1" filter="url(#dropshadow)"></path>-->
+
+        <path d="M48,4 L71,52 L0,100 Z" fill="#0288d1" filter="url(#dropshadow)"></path>
+        <path d="M50,0 L25,50 L100,100 Z" fill="#90caf9" filter="url(#dropshadow)"></path>
+    </g>
+</svg>

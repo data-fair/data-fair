@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="utf-8">
+    <title>login</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/vuetify@1.3.6/dist/vuetify.min.css" rel="stylesheet">
+    <link res="stylesheet" href="https://fonts.googleapis.com/css?family=Nunito:300,400,500,700,400italic|Material+Icons">
+
+    <style>
+body {
+  font-family: 'Nunito', sans-serif;
+}
+    </style>
+  </head>
+  <body>
+    <div class="application theme--light">
+      <div class="application--wrap">
+        <main class="v-content" data-booted="true" style="padding: 0px;">
+          <div class="v-content__wrap">
+            <div class="container fluid fill-height">
+              <div class="layout column align-center justify-center">
+
+                <img src="{LOGO}" style="height: 56px;" class="mb-4">
+                <p>Cette application est protégée.</p>
+                <form action="{AUTH_ROUTE}" method="post" enctype="application/x-www-form-urlencoded">
+                  <div class="layout column" style="width:250px;">
+                    <div class="v-input v-text-field v-text-field--placeholder">
+                      <div class="v-input__control">
+                        <div class="v-input__slot">
+                          <div class="v-text-field__slot">
+                            <label aria-hidden="true" class="v-label v-label--active" style="left: 0px; right: auto; position: absolute;">Email</label>
+                            <input aria-label="Email" type="text" name="email">
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="v-input v-text-field v-text-field--placeholder">
+                      <div class="v-input__control">
+                        <div class="v-input__slot">
+                          <div class="v-text-field__slot">
+                            <label aria-hidden="true" class="v-label v-label--active" style="left: 0px; right: auto; position: absolute;">Mot de passe</label>
+                            <input aria-label="Mot de passe" type="password" name="password">
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="layout row align-center justify-center">
+                      <input type="submit" value="Se connecter" class="v-btn theme--light blue darken-1 white--text mt-4">
+                    </div>
+                  </div>
+                </form>
+
+              </div>
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
+  </body>
+</html>
