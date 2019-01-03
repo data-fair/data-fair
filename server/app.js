@@ -33,9 +33,9 @@ app.use((req, res, next) => {
   else next()
 })
 
-if (process.env.NODE_ENV === 'development' && config.mode.includes('server')) {
-  app.set('json spaces', 2)
+app.set('json spaces', 2)
 
+if (process.env.NODE_ENV === 'development' && config.mode.includes('server')) {
   // Create a mono-domain environment with other services in dev
   const proxy = require('http-proxy-middleware')
   app.use('/openapi-viewer', proxy({ target: 'http://localhost:5680', pathRewrite: { '^/openapi-viewer': '' } }))
