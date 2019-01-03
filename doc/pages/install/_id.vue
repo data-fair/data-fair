@@ -35,7 +35,7 @@ function escapeHtml(unsafe) {
 export default {
   components: { DocPage },
   data: () => ({
-    pages: ['install', 'config']
+    pages: ['install', 'config', 'i18n']
   }),
   computed: {
     content() {
@@ -54,7 +54,7 @@ export default {
     },
     i18nVars() {
       const flatMessages = flatten(this.$i18n.messages[this.$i18n.locale], { delimiter: '_' })
-      let table = `<table><thead><tr><th>${this.$t('pages.install.config.i18nKey')}</th><th>${this.$t('pages.install.config.i18nVar')}</th><th>${this.$t('pages.install.config.i18nVal')}</th></tr></thead><tbody>\n`
+      let table = `<table><thead><tr><th>${this.$t('pages.install.i18n.i18nKey')}</th><th>${this.$t('pages.install.i18n.i18nVar')}</th><th>${this.$t('pages.install.i18n.i18nVal')}</th></tr></thead><tbody>\n`
       table += Object.keys(flatMessages)
         .filter(k => k.indexOf('doc_') !== 0)
         .map(k => `<tr><td>${k.replace(/_/g, '.')}</td><td>I18N_${this.$i18n.locale}_${k}</td><td><pre>${escapeHtml((typeof flatMessages[k] === 'string') ? flatMessages[k] : 'MISSING')}</pre></td></tr>`)

@@ -18,11 +18,13 @@ module.exports = {
     },
     install: {
       title: 'Installation',
-      config: {
-        link: 'Configuration',
+      i18n: {
         i18nKey: 'Clé dans le fichier I18N',
         i18nVar: `Variable d'environnement`,
-        i18nVal: 'Valeur',
+        i18nVal: 'Valeur'
+      },
+      config: {
+        link: 'Configuration',
         varKey: 'Clé dans le fichier de configuration',
         varName: `Variable d'environnement`,
         varDesc: 'Description',

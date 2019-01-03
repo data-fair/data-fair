@@ -51,12 +51,15 @@ module.exports = {
       install: {
         title: `Procédure d'installation`
       },
-      config: {
-        title: `Configuration avec variables d'environnement`,
-        link: 'Configuration',
+      i18n: {
+        title: `Internationalisation`,
         i18nKey: 'Clé dans le fichier I18N',
         i18nVar: `Variable d'environnement`,
-        i18nVal: 'Valeur',
+        i18nVal: 'Valeur'
+      },
+      config: {
+        title: `Configuration`,
+        link: 'Configuration',
         varKey: 'Clé dans le fichier de configuration',
         varName: `Variable d'environnement`,
         varDesc: 'Description',

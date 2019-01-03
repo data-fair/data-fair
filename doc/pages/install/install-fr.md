@@ -1,4 +1,4 @@
-Cette application expose des services Web et interopère avec d'autres applications du même type. Pour comprendre comment ce *DataFair* fonctionne, vous pouvez aller voir la [description technique](https://koumoul-dev.github.io/data-fair/about/technical-overview).
+Cette application expose des services Web et interopère avec d'autres applications du même type. Pour comprendre comment *DataFair* fonctionne, vous pouvez aller voir la [description technique](https://koumoul-dev.github.io/data-fair/about/technical-overview).
 
 Nous proposons une installation simple grâce à l'utilisation de conteneurs [Docker](https://docker.com) basés sur [l'image](https://hub.docker.com/r/koumoul/data-fair/) que nous mettons à disposition. Le service peut être installé hors Docker, nous vous conseillons dans ce cas de regarder la documentation pour les développeurs directement dans le [répertoire du projet](https://github.com/koumoul-dev/data-fair).
 
@@ -84,7 +84,9 @@ services:
       - "traefik.enable=true"
       - "traefik.frontend.rule=PathPrefixStrip:/data-fair/"
     environment:
+      - DEBUG=upgrade*
       - PUBLIC_URL=${PROTOCOL}://${DOMAIN}/data-fair
+      - WS_PUBLIC_URL=wss://${DOMAIN}/data-fair
       - DIRECTORY_URL=${PROTOCOL}://${DOMAIN}/simple-directory
       - PRIVATE_DIRECTORY_URL=http://simple-directory:8080
       - OPENAPI_VIEWER_URL=${PROTOCOL}://${DOMAIN}/api-doc/
