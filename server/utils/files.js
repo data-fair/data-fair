@@ -132,9 +132,10 @@ const upload = multer({
         req.inputChecked = true
       }
 
+      // mime type is broken on windows it seems.. detect based on extension instead
+      file.mimetype = mime.lookup(file.originalname) || fallbackMimeTypes[file.originalname.split('.').pop()] || file.originalname.split('.').pop()
+
       if (file.fieldname === 'file' || file.fieldname === 'dataset') {
-        // mime type is broken on windows it seems.. detect based on extension instead
-        file.mimetype = mime.lookup(file.originalname) || fallbackMimeTypes[file.originalname.split('.').pop()] || file.originalname.split('.').pop()
         if (!allowedTypes.has(file.mimetype)) throw createError(400, file.mimetype + ' type is not supported')
       } else if (file.fieldname === 'attachments') {
         if (file.mimetype !== 'application/zip') throw createError(400, 'Les fichiers joints doivent être embarqués dans une archive zip')
