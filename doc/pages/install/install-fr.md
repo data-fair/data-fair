@@ -211,7 +211,7 @@ Vérifiez l'état des services:
 docker-compose ps
 ```
 
-Quand tous les services sont "Up" vous pouvez accéder à [http://localhost](http://localhost).
+Quand tous les services sont "Up" et "healthy" vous pouvez accéder à [http://localhost](http://localhost).
 Pour créer des comptes vous aurez besoin d'accéder à la boite mail virtuelle [http://localhost/mails](http://localhost/mails) protégée par identifiant = user et mot de passe = passwd.
 
 ### Variante 2 : HTTP sur une machine privée et envoi de mails
