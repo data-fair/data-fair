@@ -84,7 +84,7 @@ export default {
 
       this.importing = true
       try {
-        const remoteService = await this.$axios.$post(this.env.publicUrl + '/api/v1/remote-services', {
+        const remoteService = await this.$axios.$post('api/v1/remote-services', {
           apiDoc: this.apiDoc,
           apiKey: { in: apiKeySecurity.in, name: apiKeySecurity.name },
           url: this.apiDocUrl,

@@ -63,7 +63,7 @@ export default {
   watch: {
     user: {
       async handler(user) {
-        if (user) this.stats = await this.$axios.$get(this.env.publicUrl + '/api/v1/stats')
+        if (user) this.stats = await this.$axios.$get('api/v1/stats')
       },
       immediate: true
     }

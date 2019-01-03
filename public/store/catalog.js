@@ -24,11 +24,11 @@ export default () => ({
     }
   },
   actions: {
-    async fetchInfo({ commit, dispatch, getters, rootState }) {
+    async fetchInfo({ commit, dispatch, getters, state }) {
       try {
-        const catalog = await this.$axios.$get(getters.resourceUrl)
+        const catalog = await this.$axios.$get(`api/v1/catalogs/${state.catalogId}`)
         commit('setAny', { catalog })
-        const api = await this.$axios.$get(getters.resourceUrl + '/api-docs.json')
+        const api = await this.$axios.$get(`api/v1/catalogs/${state.catalogId}/api-docs.json`)
         commit('setAny', { api })
       } catch (error) {
         eventBus.$emit('notification', { error, msg: `Erreur pendant la récupération des informations du catalogue:` })

@@ -36,16 +36,16 @@ export default () => ({
     }
   },
   actions: {
-    async fetchInfo({ commit, dispatch, getters }) {
+    async fetchInfo({ commit, dispatch, getters, state }) {
       try {
-        const application = await this.$axios.$get(getters.resourceUrl)
+        const application = await this.$axios.$get(`api/v1/applications/${state.applicationId}`)
         Vue.set(application, 'publications', application.publications || [])
         commit('setAny', { application })
-        const api = await this.$axios.$get(getters.resourceUrl + '/api-docs.json')
+        const api = await this.$axios.$get(`api/v1/applications/${state.applicationId}/api-docs.json`)
         commit('setAny', { api })
-        const journal = await this.$axios.$get(getters.resourceUrl + '/journal')
+        const journal = await this.$axios.$get(`api/v1/applications/${state.applicationId}/journal`)
         commit('setAny', { journal })
-        const activeSessions = await this.$axios.$get(getters.resourceUrl + '/active-sessions')
+        const activeSessions = await this.$axios.$get(`api/v1/applications/${state.applicationId}/active-sessions`)
         commit('setAny', { nbSessions: activeSessions.count })
       } catch (error) {
         eventBus.$emit('notification', { error, msg: `Erreur pendant la récupération des informations de l'application` })

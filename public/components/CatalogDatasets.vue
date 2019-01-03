@@ -52,7 +52,7 @@ export default {
     async refresh() {
       this.loading = true
       try {
-        this.datasets = await this.$axios.$get(this.env.publicUrl + '/api/v1/catalogs/' + this.$route.params.id + '/datasets')
+        this.datasets = await this.$axios.$get('api/v1/catalogs/' + this.$route.params.id + '/datasets')
         this.datasets.results.forEach(d => {
           d.nbHarvestable = (d.resources || []).filter(r => r.harvestable).length
           d.nbHarvested = (d.resources || []).filter(r => !!r.harvestedDataset).length
@@ -65,7 +65,7 @@ export default {
     async harvest(dataset) {
       this.loading = true
       try {
-        await this.$axios.$post(this.env.publicUrl + '/api/v1/catalogs/' + this.$route.params.id + '/datasets/' + dataset.id)
+        await this.$axios.$post('api/v1/catalogs/' + this.$route.params.id + '/datasets/' + dataset.id)
         await this.refresh()
       } catch (error) {
         eventBus.$emit('notification', { error, msg: `Erreur pendant l'import du jeu de données` })

@@ -93,7 +93,7 @@ export default {
       }
       this.importing = true
       try {
-        const application = await this.$axios.$post(this.env.publicUrl + '/api/v1/applications', {
+        const application = await this.$axios.$post('api/v1/applications', {
           url: this.baseApp.url,
           title: this.baseApp.title,
           description: this.baseApp.description,

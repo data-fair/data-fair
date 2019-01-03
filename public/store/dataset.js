@@ -59,33 +59,33 @@ export default () => ({
     }
   },
   actions: {
-    async fetchInfo({ commit, getters, rootState }) {
+    async fetchInfo({ commit, getters, state }) {
       let dataset
       try {
-        dataset = await this.$axios.$get(getters.resourceUrl)
+        dataset = await this.$axios.$get(`api/v1/datasets/${state.datasetId}`)
+
+        const extensions = (dataset.extensions || []).map(ext => {
+          ext.error = ext.error || ''
+          ext.progress = ext.progress || 0
+          ext.select = ext.select || []
+          return ext
+        })
+        Vue.set(dataset, 'extensions', extensions)
+        Vue.set(dataset, 'schema', dataset.schema || [])
+        Vue.set(dataset, 'publications', dataset.publications || [])
+
+        commit('setAny', { dataset })
+        const apps = await this.$axios.$get('api/v1/applications', { params: { dataset: dataset.id, size: 0 } })
+        commit('setAny', { nbApplications: apps.count })
+        const virtuals = await this.$axios.$get('api/v1/datasets', { params: { children: dataset.id, size: 0 } })
+        commit('setAny', { nbVirtualDatasets: virtuals.count })
+        const api = await this.$axios.$get(`api/v1/datasets/${state.datasetId}/api-docs.json`)
+        commit('setAny', { api })
+        const journal = await this.$axios.$get(`api/v1/datasets/${state.datasetId}/journal`)
+        commit('setAny', { journal })
       } catch (error) {
         eventBus.$emit('notification', { error, msg: `Erreur pendant la récupération des informations du jeu de données:` })
-        return
       }
-      const extensions = (dataset.extensions || []).map(ext => {
-        ext.error = ext.error || ''
-        ext.progress = ext.progress || 0
-        ext.select = ext.select || []
-        return ext
-      })
-      Vue.set(dataset, 'extensions', extensions)
-      Vue.set(dataset, 'schema', dataset.schema || [])
-      Vue.set(dataset, 'publications', dataset.publications || [])
-
-      commit('setAny', { dataset })
-      const apps = await this.$axios.$get(rootState.env.publicUrl + '/api/v1/applications', { params: { dataset: dataset.id, size: 0 } })
-      commit('setAny', { nbApplications: apps.count })
-      const virtuals = await this.$axios.$get(rootState.env.publicUrl + '/api/v1/datasets', { params: { children: dataset.id, size: 0 } })
-      commit('setAny', { nbVirtualDatasets: virtuals.count })
-      const api = await this.$axios.$get(getters.resourceUrl + '/api-docs.json')
-      commit('setAny', { api })
-      const journal = await this.$axios.$get(getters.resourceUrl + '/journal')
-      commit('setAny', { journal })
     },
     async setId({ commit, getters, dispatch, state }, datasetId) {
       commit('setAny', { datasetId })
