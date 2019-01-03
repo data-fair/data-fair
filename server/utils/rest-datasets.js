@@ -7,6 +7,7 @@ const pump = util.promisify(require('pump'))
 const ajv = require('ajv')()
 const Combine = require('stream-combiner')
 const multer = require('multer')
+const mime = require('mime-types')
 const JSONStream = require('JSONStream')
 const { Transform, Writable } = require('stream')
 const mimeTypeStream = require('mime-type-stream')
@@ -170,7 +171,8 @@ exports.bulkLines = async (req, res, next) => {
   let inputStream, parseStream
   if (req.files && req.files.actions && req.files.actions.length) {
     inputStream = fs.createReadStream(req.files.actions[0].path)
-    parseStream = mimeTypeStream(req.files.actions[0].mimetype).parser()
+    const mimetype = mime.lookup(req.files.actions[0].originalname)
+    parseStream = mimeTypeStream(mimetype).parser()
   } else {
     inputStream = req
     const ioStream = mimeTypeStream(req.get('Content-Type')) || mimeTypeStream('application/json')
