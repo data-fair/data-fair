@@ -3,6 +3,7 @@ const status = require('./status')
 const version = require('../package.json').version
 const dataset = require('./dataset')
 const datasetPatch = require('./dataset-patch')
+const datasetPost = require('./dataset-post')
 const remoteService = { ...require('./remote-service') }
 delete remoteService.definitions
 const remoteServicePatch = { ...require('./remote-service-patch') }
@@ -37,6 +38,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la [d
     schemas: {
       dataset,
       datasetPatch,
+      datasetPost,
       remoteService,
       remoteServicePatch,
       application,
@@ -199,14 +201,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la [d
           content: {
             'multipart/form-data': {
               schema: {
-                type: 'object',
-                properties: {
-                  ...datasetPatch.properties,
-                  file: {
-                    type: 'string',
-                    format: 'binary'
-                  }
-                }
+                $ref: '#/components/schemas/datasetPost'
               }
             }
           }
@@ -254,14 +249,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la [d
           content: {
             'multipart/form-data': {
               schema: {
-                type: 'object',
-                properties: {
-                  ...datasetPatch.properties,
-                  file: {
-                    type: 'string',
-                    format: 'binary'
-                  }
-                }
+                $ref: '#/components/schemas/datasetPost'
               }
             }
           }
