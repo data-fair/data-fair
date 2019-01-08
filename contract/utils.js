@@ -23,7 +23,7 @@ exports.ownerParam = {
   name: 'owner',
   description: 'Restreindre sur le propriétaire',
   required: false,
-  example: ['organization:koumoul', 'user:albanm'],
+  example: ['organization:myorg', 'user:myuser'],
   schema: {
     type: 'array',
     items: {
