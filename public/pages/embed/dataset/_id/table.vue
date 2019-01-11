@@ -16,7 +16,7 @@
           @click:append="refresh"/>
         <v-spacer/>
         <div class="datatable__actions">
-          <v-pagination v-if="data.total" v-model="pagination.page" :length="Math.ceil(data.total / pagination.rowsPerPage)" :total-visible="$vuetify.breakpoint.lgAndUp ? 7 : 5"/>
+          <v-pagination v-if="data.total" v-model="pagination.page" :length="Math.ceil(Math.min(data.total, 10000) / pagination.rowsPerPage)" :total-visible="$vuetify.breakpoint.lgAndUp ? 7 : 5"/>
         </div>
       </v-card-title>
 
