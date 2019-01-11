@@ -1,5 +1,5 @@
 <template>
-  <v-app>
+  <v-app class="embed">
     <v-content>
       <nuxt/>
       <v-snackbar v-if="notification" ref="notificationSnackbar" v-model="showSnackbar" :color="notification.type" :timeout="notification.type === 'error' ? 30000 : 6000" class="notification" bottom>
@@ -46,6 +46,6 @@ body .application {
   font-family: 'Nunito', sans-serif;
 }
 html {
-  overflow-y: auto;
+  overflow-y: auto !important;
 }
 </style>

@@ -6,18 +6,23 @@
     </div>
     <v-card>
       <v-card-title style="padding-bottom: 0;">
-        <v-text-field
-          v-model="query"
-          label="Rechercher"
-          append-icon="search"
-          class="mr-3"
-          style="min-width:150px;"
-          @keyup.enter.native="refresh"
-          @click:append="refresh"/>
-        <v-spacer/>
-        <div class="datatable__actions">
-          <v-pagination v-if="data.total" v-model="pagination.page" :length="Math.ceil(Math.min(data.total, 10000) / pagination.rowsPerPage)" :total-visible="$vuetify.breakpoint.lgAndUp ? 7 : 5"/>
-        </div>
+        <v-layout row wrap>
+          <v-flex lg4 md5 sm6 xs12>
+            <v-text-field
+              v-model="query"
+              label="Rechercher"
+              append-icon="search"
+              class="mr-3"
+              style="min-width:150px;"
+              @keyup.enter.native="refresh"
+              @click:append="refresh"/>
+            <v-spacer/>
+          </v-flex>
+          <v-spacer/>
+          <v-flex lg4 md5 sm6 xs12>
+            <v-pagination v-if="data.total" v-model="pagination.page" :length="Math.ceil(Math.min(data.total, 10000) / pagination.rowsPerPage)" :total-visible="$vuetify.breakpoint.lgAndUp ? 7 : 5" style="float:right;"/>
+          </v-flex>
+        </v-layout>
       </v-card-title>
 
       <v-data-table :headers="headers" :items="data.results" :total-items="data.total" :loading="loading" :pagination.sync="pagination" hide-actions>
@@ -40,7 +45,9 @@
           </tr>
         </template>
         <template slot="items" slot-scope="props">
-          <td v-for="header in headers" :key="header.value">{{ ((props.item[header.value] === undefined || props.item[header.value] === null ? '' : props.item[header.value]) + '') | truncate(50) }}</td>
+          <td v-for="header in headers" :key="header.value" :style="`height: ${lineHeight}px;`">
+            {{ ((props.item[header.value] === undefined || props.item[header.value] === null ? '' : props.item[header.value]) + '') | truncate(50) }}
+          </td>
         </template>
       </v-data-table>
     </v-card>
@@ -64,7 +71,8 @@ export default {
     },
     sort: null,
     notFound: false,
-    loading: false
+    loading: false,
+    lineHeight: 40
   }),
   computed: {
     ...mapState(['vocabulary']),
@@ -94,6 +102,11 @@ export default {
     }
   },
   mounted() {
+    // adapt number of lines to window height
+    const height = window.innerHeight
+    const top = this.$vuetify.breakpoint.xs ? 225 : 185
+    const nbRows = Math.ceil(Math.max(height - top, 120) / (this.lineHeight + 1))
+    this.pagination.rowsPerPage = Math.min(Math.max(nbRows, 4), 50)
     this.refresh()
   },
   methods: {
@@ -128,3 +141,9 @@ export default {
   }
 }
 </script>
+
+<style>
+.embed .v-datatable td {
+  white-space: nowrap;
+}
+</style>
