@@ -44,6 +44,7 @@ const prepareGeoAggResponse = (esResponse, dataset, query) => {
     const center = geohash.hash2coord(b.key)
     const aggItem = {
       total: b.doc_count,
+      value: b.key,
       centroid: b.centroid.location,
       center: { lat: center[1], lon: center[0] },
       bbox: geohash.hash2bbox(b.key),

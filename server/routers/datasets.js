@@ -456,7 +456,7 @@ router.get('/:datasetId/lines', readDataset(), permissions.middleware('readLines
   const db = req.app.get('db')
   if (!req.user && managePublicCache(req, res)) return res.status(304).send()
 
-  // if the output format is geo default is empty select and make sure geoshape is present
+  // if the output format is geo make sure geoshape is present
   if (['geojson', 'mvt', 'vt', 'pbf'].includes(req.query.format)) {
     req.query.select = (req.query.select ? req.query.select + ',' : '') + '_geoshape'
   }
@@ -519,12 +519,45 @@ router.get('/:datasetId/lines', readDataset(), permissions.middleware('readLines
 router.get('/:datasetId/geo_agg', readDataset(), permissions.middleware('getGeoAgg', 'read'), asyncWrap(async(req, res) => {
   if (!req.user && managePublicCache(req, res)) return res.status(304).send()
   if (req.dataset.isVirtual) req.dataset.descendants = await virtualDatasetsUtils.descendants(req.app.get('db'), req.dataset)
+  const db = req.app.get('db')
+
+  const vectorTileRequested = ['mvt', 'vt', 'pbf'].includes(req.query.format)
+  // Is the tile cached ?
+  let cacheHash
+  if (vectorTileRequested && !config.cache.disabled) {
+    const { hash, value } = await cache.get(db, {
+      type: 'tile-geoagg',
+      datasetId: req.dataset.id,
+      finalizedAt: req.dataset.finalizedAt,
+      query: req.query
+    })
+    if (value) return res.status(200).send(value.buffer)
+    cacheHash = hash
+  }
   let result
   try {
     result = await esUtils.geoAgg(req.app.get('es'), req.dataset, req.query)
   } catch (err) {
     await manageESError(req, err)
   }
+
+  if (req.query.format === 'geojson') {
+    const geojson = geo.aggs2geojson(result)
+    geojson.bbox = (await esUtils.bboxAgg(req.app.get('es'), req.dataset, { ...req.query })).bbox
+    return res.status(200).send(geojson)
+  }
+
+  if (vectorTileRequested) {
+    if (!req.query.xyz) return res.status(400).send('xyz parameter is required for vector tile format.')
+    const tile = tiles.geojson2pbf(geo.aggs2geojson(result), req.query.xyz.split(',').map(Number))
+    // 204 = no-content, better than 404
+    if (!tile) return res.status(204).send()
+    res.type('application/x-protobuf')
+    // write in cache without await on purpose for minimal latency, a cache failure must be detected in the logs
+    if (!config.cache.disabled) cache.set(db, cacheHash, new mongodb.Binary(tile))
+    return res.status(200).send(tile)
+  }
+
   res.status(200).send(result)
 }))
 
@@ -532,12 +565,46 @@ router.get('/:datasetId/geo_agg', readDataset(), permissions.middleware('getGeoA
 router.get('/:datasetId/values_agg', readDataset(), permissions.middleware('getValuesAgg', 'read'), asyncWrap(async(req, res) => {
   if (!req.user && managePublicCache(req, res)) return res.status(304).send()
   if (req.dataset.isVirtual) req.dataset.descendants = await virtualDatasetsUtils.descendants(req.app.get('db'), req.dataset)
+  const db = req.app.get('db')
+
+  const vectorTileRequested = ['mvt', 'vt', 'pbf'].includes(req.query.format)
+  // Is the tile cached ?
+  let cacheHash
+  if (vectorTileRequested && !config.cache.disabled) {
+    const { hash, value } = await cache.get(db, {
+      type: 'tile-valuesagg',
+      datasetId: req.dataset.id,
+      finalizedAt: req.dataset.finalizedAt,
+      query: req.query
+    })
+    if (value) return res.status(200).send(value.buffer)
+    cacheHash = hash
+  }
+
   let result
   try {
-    result = await esUtils.valuesAgg(req.app.get('es'), req.dataset, req.query)
+    result = await esUtils.valuesAgg(req.app.get('es'), req.dataset, req.query, vectorTileRequested || req.query.format === 'geojson')
   } catch (err) {
     await manageESError(req, err)
   }
+
+  if (req.query.format === 'geojson') {
+    const geojson = geo.aggs2geojson(result)
+    geojson.bbox = (await esUtils.bboxAgg(req.app.get('es'), req.dataset, { ...req.query })).bbox
+    return res.status(200).send(geojson)
+  }
+
+  if (vectorTileRequested) {
+    if (!req.query.xyz) return res.status(400).send('xyz parameter is required for vector tile format.')
+    const tile = tiles.geojson2pbf(geo.aggs2geojson(result), req.query.xyz.split(',').map(Number))
+    // 204 = no-content, better than 404
+    if (!tile) return res.status(204).send()
+    res.type('application/x-protobuf')
+    // write in cache without await on purpose for minimal latency, a cache failure must be detected in the logs
+    if (!config.cache.disabled) cache.set(db, cacheHash, new mongodb.Binary(tile))
+    return res.status(200).send(tile)
+  }
+
   res.status(200).send(result)
 }))
 

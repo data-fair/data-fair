@@ -174,6 +174,17 @@ La valeur est une liste de champs séparés par des virgules.
     }
   }
 
+  const formatParam = {
+    in: 'query',
+    name: 'format',
+    description: 'Le format de la donnée. json par défaut, geojson et pbf pour tuiles vectorielles.',
+    required: false,
+    schema: {
+      default: 'json',
+      enum: ['json'].concat(dataset.bbox && dataset.bbox.length === 4 ? ['pbf', 'geojson'] : [])
+    }
+  }
+
   const api = {
     openapi: '3.0.0',
     info: Object.assign({
@@ -296,16 +307,7 @@ La valeur est une liste de champs séparés par des virgules.
               default: 1,
               type: 'integer'
             }
-          }, {
-            in: 'query',
-            name: 'format',
-            description: 'Le format de la donnée. json par défaut, geojson et pbf pour tuiles vectorielles.',
-            required: false,
-            schema: {
-              default: 'json',
-              enum: ['json'].concat(dataset.bbox && dataset.bbox.length === 4 ? ['pbf', 'geojson'] : [])
-            }
-          }].concat(filterParams).concat(hitsParams),
+          }, formatParam].concat(filterParams).concat(hitsParams),
           responses: {
             200: {
               description: 'Le résultat de la requête.',
@@ -349,7 +351,7 @@ La valeur est une liste de champs séparés par des virgules.
               type: 'string',
               enum: properties
             }
-          }, metricParam, metricFieldParam, aggSizeParam].concat(filterParams).concat(hitsParams),
+          }, formatParam, metricParam, metricFieldParam, aggSizeParam].concat(filterParams).concat(hitsParams),
           // TODO: document sort param and interval
           responses: {
             200: {
@@ -563,7 +565,7 @@ La valeur est une liste de champs séparés par des virgules.
         operationId: 'getGeoAgg',
         'x-permissionClass': 'read',
         tags: ['Données'],
-        parameters: [aggSizeParam].concat(filterParams).concat(hitsParams),
+        parameters: [aggSizeParam].concat(filterParams).concat(hitsParams).concat([formatParam]),
         responses: {
           200: {
             description: 'Les informations du jeu de données agrégées spatialement.',

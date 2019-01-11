@@ -102,6 +102,26 @@ exports.result2geojson = esResponse => {
   }
 }
 
+exports.aggs2geojson = aggsResult => {
+  return {
+    type: 'FeatureCollection',
+    total: aggsResult.total,
+    features: aggsResult.aggs.map(agg => {
+      const { centroid, bbox, ...properties } = agg
+      return {
+        type: 'Feature',
+        id: agg.value,
+        geometry: {
+          type: 'Point',
+          coordinates: [centroid.lon, centroid.lat]
+        },
+        bbox,
+        properties
+      }
+    })
+  }
+}
+
 // Simple wrapping of the command line prepair https://github.com/tudelft3d/prepair
 // help fixing some polygons
 const customUnkink = async (feature) => {

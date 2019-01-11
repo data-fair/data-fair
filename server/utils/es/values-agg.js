@@ -1,7 +1,7 @@
 const createError = require('http-errors')
 const { parseSort, prepareQuery, aliasName, prepareResultItem } = require('./commons.js')
 
-module.exports = async (client, dataset, query) => {
+module.exports = async (client, dataset, query, addGeoData) => {
   const fields = dataset.schema.map(f => f.key)
   // nested grouping by a serie of fields
   if (!query.field) throw createError(400, '"field" parameter is required')
@@ -95,8 +95,13 @@ module.exports = async (client, dataset, query) => {
     currentAggLevel.values[aggTypes[i]].order.push({ _count: 'desc' })
 
     // Prepare next nested level
-    if (valuesFields[i + 1]) {
+    if (valuesFields[i + 1] || addGeoData) {
       currentAggLevel.values.aggs = currentAggLevel.values.aggs || {}
+      // Add centroid and bounding box children aggs if requested
+      if (addGeoData) {
+        currentAggLevel.values.aggs.centroid = { geo_centroid: { field: '_geopoint' } }
+        currentAggLevel.values.aggs.bbox = { geo_bounds: { field: '_geocorners' } }
+      }
       currentAggLevel = currentAggLevel.values.aggs
     }
   }
@@ -145,6 +150,14 @@ const recurseAggResponse = (response, aggRes, dataset, query) => {
     if (b.values) {
       recurseAggResponse(aggItem, b)
     }
+    if (b.centroid) {
+      aggItem.centroid = b.centroid.location
+    }
+    if (b.bbox) {
+      const bounds = b.bbox.bounds
+      aggItem.bbox = [bounds.top_left.lon, bounds.bottom_right.lat, bounds.bottom_right.lon, bounds.top_left.lat]
+    }
+
     return aggItem
   })
 }
