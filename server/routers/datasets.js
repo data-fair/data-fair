@@ -1,7 +1,6 @@
 const { Transform } = require('stream')
 const express = require('express')
 const ajv = require('ajv')()
-const ajvErrorMessages = require('ajv-error-messages')
 const util = require('util')
 const path = require('path')
 const fs = require('fs-extra')
@@ -141,7 +140,7 @@ router.get('/:datasetId/schema', readDataset(), permissions.middleware('readDesc
 router.patch('/:datasetId', readDataset(['finalized', 'error']), permissions.middleware('writeDescription', 'write'), asyncWrap(async(req, res) => {
   const db = req.app.get('db')
   const patch = req.body
-  if (!validatePatch(patch)) return res.status(400).send(ajvErrorMessages(validatePatch.errors))
+  if (!validatePatch(patch)) return res.status(400).send(validatePatch.errors)
 
   patch.updatedAt = moment().toISOString()
   patch.updatedBy = { id: req.user.id, name: req.user.name }
@@ -297,7 +296,7 @@ router.post('', beforeUpload, filesUtils.uploadFile(), asyncWrap(async(req, res)
       if (attachmentsFile) throw createError(400, 'Un jeu de données virtuel ne peut pas avoir de pièces jointes')
       const { isVirtual, ...patch } = req.body
       if (!validatePatch(patch)) {
-        throw createError(400, ajvErrorMessages(validatePatch.errors))
+        throw createError(400, JSON.stringify(validatePatch.errors))
       }
       dataset = initNew(req)
       dataset.virtual = dataset.virtual || { children: [] }
@@ -310,7 +309,7 @@ router.post('', beforeUpload, filesUtils.uploadFile(), asyncWrap(async(req, res)
       if (attachmentsFile) throw createError(400, 'Un jeu de données REST ne peut pas être créé avec des pièces jointes')
       const { isRest, ...patch } = req.body
       if (!validatePatch(patch)) {
-        throw createError(400, ajvErrorMessages(validatePatch.errors))
+        throw createError(400, JSON.stringify(validatePatch.errors))
       }
       dataset = initNew(req)
       dataset.rest = dataset.rest || {}

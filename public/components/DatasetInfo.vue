@@ -60,6 +60,10 @@
               <v-list-tile-avatar ><v-icon>picture_in_picture</v-icon></v-list-tile-avatar>
               <nuxt-link :to="`/datasets?children=${dataset.id}`">{{ nbVirtualDatasets }} jeu{{ nbVirtualDatasets > 1 ? 'x' : '' }} de données virtuel{{ nbVirtualDatasets > 1 ? 's' : '' }}</nuxt-link>
             </v-list-tile>
+            <v-list-tile v-if="dataset.isRest">
+              <v-list-tile-avatar ><v-icon>all_inclusive</v-icon></v-list-tile-avatar>
+              <span>Jeu de données incrémental</span>
+            </v-list-tile>
           </v-list>
         </v-card>
       </v-flex>

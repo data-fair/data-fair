@@ -1,6 +1,5 @@
 const { Transform } = require('stream')
 const express = require('express')
-const ajvErrorMessages = require('ajv-error-messages')
 const moment = require('moment')
 const slug = require('slugify')
 const soasLoader = require('soas')
@@ -124,7 +123,7 @@ router.post('', asyncWrap(async(req, res) => {
   // if title is set, we build id from it
   if (req.body.title && !req.body.id) req.body.id = slug(req.body.title, { lower: true })
   const service = initNew(req)
-  if (!validate(service)) return res.status(400).send(ajvErrorMessages(validate.errors))
+  if (!validate(service)) return res.status(400).send(validate.errors)
 
   // Generate ids and try insertion until there is no conflict on id
   const baseId = service.id || slug(service.apiDoc.info['x-api-id'], { lower: true })
@@ -167,7 +166,7 @@ const attemptInsert = asyncWrap(async(req, res, next) => {
 
   const newService = initNew(req)
   newService.id = req.params.remoteServiceId
-  if (!validate(newService)) return res.status(400).send(ajvErrorMessages(validate.errors))
+  if (!validate(newService)) return res.status(400).send(validate.errors)
 
   next()
 })
@@ -228,7 +227,7 @@ router.post('/:remoteServiceId/_update', readService, asyncWrap(async(req, res) 
 
   const reponse = await axios.get(req.remoteService.url)
   var valid = validateOpenApi(reponse.data)
-  if (!valid) return res.status(400).send(ajvErrorMessages(validateOpenApi.errors))
+  if (!valid) return res.status(400).send(validateOpenApi.errors)
   req.remoteService.updatedAt = moment().toISOString()
   req.remoteService.updatedBy = { id: req.user.id, name: req.user.name }
   req.remoteService.apiDoc = reponse.data

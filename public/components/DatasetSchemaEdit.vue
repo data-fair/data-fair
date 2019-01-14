@@ -10,12 +10,26 @@
         </div>
       </v-layout>
 
+      <v-layout row class="py-2">
+        <v-btn v-if="dataset.isRest" color="primary" @click="newPropertyKey = null; newPropertyType = null; $refs.addPropertyForm.resetValidation(); addPropertyDialog = true">
+          Ajouter une propriété
+        </v-btn>
+        <v-btn v-if="dataset.isRest" :disabled="dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')" @click="addAttachmentProperty">
+          Accepter des pièces jointes
+        </v-btn>
+      </v-layout>
+
       <v-container v-for="extension in extensions" :key="extension.key" fluid pa-0 grid-list-md>
         <br v-if="extension.key">
         <v-subheader v-if="extension.key && remoteServicesMap[extension.remoteService]">
           Extension: {{ remoteServicesMap[extension.remoteService].actions[extension.action].summary }} (service {{ remoteServicesMap[extension.remoteService].title }})
         </v-subheader>
         <v-layout v-for="field in schema.filter(field => !field['x-calculated'] && field['x-extension'] === extension.key)" :key="field.key" row>
+          <div>
+            <v-btn v-if="dataset.isRest" flat icon color="warning" title="Supprimer cette propriété" @click="schema = schema.filter(f => f.key !== field.key)">
+              <v-icon>delete</v-icon>
+            </v-btn>
+          </div>
           <v-flex xs2>
             <v-text-field v-model="field.key" :disabled="true" label="Clé"/>
           </v-flex>
@@ -46,6 +60,32 @@
       <p>Le fichier de métadonnées doit respecter <a href="https://frictionlessdata.io/specs/table-schema/" target="_blank">ce format</a></p>
       <input ref="schemaInput" type="file" @change="onMetadataUpload">
     </form>
+
+    <v-dialog v-model="addPropertyDialog" max-width="500px">
+      <v-card>
+        <v-card-title primary-title>
+          Ajouter une propriété
+        </v-card-title>
+        <v-card-text>
+          <v-form ref="addPropertyForm" :lazy-validation="true">
+            <v-text-field v-model="newPropertyKey" :rules="[v => !!v || '', v => !schema.find(f => f.key === v) || '']" name="key" label="Clé"/>
+            <v-select
+              :items="propertyTypes"
+              v-model="newPropertyType"
+              :item-text="item => item.title"
+              :item-value="item => `${item.type}${item.format}${item.maxLength}`"
+              :rules="[v => !!v || '']"
+              return-object
+              label="Type" />
+          </v-form>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer/>
+          <v-btn flat @click="addPropertyDialog = false">Annuler</v-btn>
+          <v-btn color="primary" @click="addProperty">Valider</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </v-layout>
 </template>
 
@@ -57,7 +97,19 @@ export default {
   data: () => ({
     schema: [],
     editField: null,
-    originalSchema: null
+    originalSchema: null,
+    addPropertyDialog: false,
+    newPropertyKey: null,
+    newPropertyType: null,
+    propertyTypes: [
+      { type: 'string', title: 'Texte' },
+      { type: 'string', maxLength: 100000, title: 'Texte long' },
+      { type: 'string', format: 'date', title: 'Date' },
+      { type: 'string', format: 'date-time', title: 'Date et heure' },
+      { type: 'integer', title: 'Nombre entier' },
+      { type: 'number', title: 'Nombre' },
+      { type: 'boolean', title: 'Booléen' }
+    ]
   }),
   computed: {
     ...mapState(['vocabularyArray', 'vocabulary']),
@@ -109,6 +161,15 @@ export default {
       this.editField = key
       // cf https://learn.jquery.com/using-jquery-core/faq/how-do-i-select-an-element-by-an-id-that-has-characters-used-in-css-notation/
       this.$nextTick(() => document.querySelector('#description-' + key.replace(/(:|\.|\[|\]|,|=|@)/g, '\\$1')).focus())
+    },
+    addProperty() {
+      if (this.$refs.addPropertyForm.validate()) {
+        this.schema.push({ key: this.newPropertyKey, ...this.newPropertyType })
+        this.addPropertyDialog = false
+      }
+    },
+    addAttachmentProperty() {
+      this.schema.push({ key: 'attachmentPath', type: 'string', title: 'Pièce jointe', 'x-refersTo': 'http://schema.org/DigitalDocument' })
     },
     save() {
       this.patchAndCommit({ schema: this.schema.map(field => Object.assign({}, field)) })

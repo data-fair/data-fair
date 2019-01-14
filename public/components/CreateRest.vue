@@ -9,9 +9,7 @@
     <v-stepper-items>
       <v-stepper-content step="1">
         <p class="mt-3">
-          Un jeu de données virtuel est une représentation alternative de un ou plusieurs autres jeux de données.
-          Vous pouvez les utiliser pour créer des vues limitées d'un jeu de données en appliquant des filtres ou en choisissant une partie seulement des colonnes.
-          Vous pouvez également agréger plusieurs jeux de données en une seule représentation.
+          Un jeu de données incrémental est créé vide sans fichier de données et sans schéma. C'est vous qui allez éditer son schéma et éditer ses lignes de données par la suite.
         </p>
         <owner-pick v-model="owner"/>
         <v-btn :disabled="!owner" color="primary" @click.native="currentStep = 2">Continuer</v-btn>
@@ -25,18 +23,6 @@
             :required="true"
             name="title"
             label="Titre"
-          />
-          <v-autocomplete
-            :items="datasets"
-            :loading="loadingDatasets"
-            :search-input.sync="search"
-            v-model="children"
-            hide-no-data
-            item-text="title"
-            item-value="id"
-            label="Jeux enfants"
-            placeholder="Recherchez"
-            multiple
           />
         </div>
         <v-btn :disabled="!title" color="primary" @click.native="createDataset()">Créer</v-btn>
@@ -56,33 +42,13 @@ export default {
   data: () => ({
     currentStep: null,
     owner: null,
-    title: '',
-    children: [],
-    loadingDatasets: false,
-    search: '',
-    datasets: []
+    title: ''
   }),
   computed: {
     ...mapState('session', ['user']),
     ...mapState(['env'])
   },
-  watch: {
-    search() {
-      this.searchDatasets()
-    },
-    'owner.id'() {
-      this.searchDatasets()
-    }
-  },
   methods: {
-    async searchDatasets() {
-      this.loadingDatasets = true
-      const res = await this.$axios.$get('api/v1/datasets', {
-        params: { q: this.search, size: 20, select: 'id,title', status: 'finalized', owner: `${this.owner.type}:${this.owner.id}` }
-      })
-      this.datasets = res.results
-      this.loadingDatasets = false
-    },
     async createDataset() {
       const options = {
         headers: { 'x-organizationId': 'user' }
@@ -92,10 +58,10 @@ export default {
         if (this.owner.role) options.headers['x-organizationRole'] = this.owner.role
       }
       try {
-        const dataset = await this.$axios.$post('api/v1/datasets', { isVirtual: true, title: this.title, virtual: { children: this.children } }, options)
+        const dataset = await this.$axios.$post('api/v1/datasets', { isRest: true, title: this.title }, options)
         this.$router.push({ path: `/dataset/${dataset.id}/description` })
       } catch (error) {
-        eventBus.$emit('notification', { error, msg: `Erreur pendant la création du jeu de données virtual :` })
+        eventBus.$emit('notification', { error, msg: `Erreur pendant la création du jeu de données incrémental :` })
       }
     }
   }

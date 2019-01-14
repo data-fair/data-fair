@@ -7,7 +7,6 @@ const slug = require('slugify')
 const shortid = require('shortid')
 const mime = require('mime-types')
 const ajv = require('ajv')()
-const ajvErrorMessages = require('ajv-error-messages')
 const usersUtils = require('./users')
 const datasetUtils = require('./dataset')
 const datasetPatchSchema = require('../../contract/dataset-patch')
@@ -110,7 +109,7 @@ const upload = multer({
         if (!req.body) throw createError(400, 'Missing body')
         fixFormBody(req.body)
         const valid = validatePatch(req.body)
-        if (!valid) throw createError(400, JSON.stringify(ajvErrorMessages(validatePatch.errors)))
+        if (!valid) throw createError(400, JSON.stringify(validatePatch.errors))
 
         let owner = usersUtils.owner(req)
         if (req.dataset) owner = req.dataset.owner

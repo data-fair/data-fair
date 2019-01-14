@@ -9,6 +9,11 @@
         <v-layout column>
           <h3 v-if="data.total <= 10000">Consultez {{ data.total.toLocaleString() }} {{ plural ? 'enregistrements' : 'enregistrement' }}</h3>
           <h3 v-if="data.total > 10000">Consultez {{ plural ? 'les' : 'le' }} {{ (10000).toLocaleString() }} {{ plural ? 'premiers enregistrements' : 'premier enregistrement' }} ({{ data.total.toLocaleString() }} au total)</h3>
+          <div>
+            <v-btn v-if="dataset.isRest && can('writeData')" color="primary" @click="editedLine = null; showEditLineDialog();">
+              Ajouter une ligne
+            </v-btn>
+          </div>
           <v-layout row wrap>
             <v-flex lg3 md4 sm5 xs12>
               <v-text-field
@@ -53,18 +58,76 @@
           </tr>
         </template>
         <template slot="items" slot-scope="props">
-          <td v-for="header in headers" :key="header.value">{{ ((props.item[header.value] === undefined || props.item[header.value] === null ? '' : props.item[header.value]) + '') | truncate(50) }}</td>
+          <td v-for="header in headers" :key="header.value">
+            <template v-if="header.value === '_actions'">
+              <v-btn flat icon color="warning" title="Supprimer cette ligne" @click="editedLine = Object.assign({}, props.item); deleteLineDialog = true;">
+                <v-icon>delete</v-icon>
+              </v-btn>
+              <v-btn flat icon color="primary" title="Éditer cette ligne" @click="editedLine = Object.assign({}, props.item); showEditLineDialog();">
+                <v-icon>edit</v-icon>
+              </v-btn>
+            </template>
+            <template v-else>
+              {{ ((props.item[header.value] === undefined || props.item[header.value] === null ? '' : props.item[header.value]) + '') | truncate(50) }}
+            </template>
+          </td>
         </template>
       </v-data-table>
     </v-card>
+
+    <v-dialog v-model="editLineDialog" max-width="500px">
+      <v-card>
+        <v-card-title primary-title>
+          Éditer une ligne
+        </v-card-title>
+        <v-card-text>
+          <v-form ref="editLineForm" :lazy-validation="true">
+            <v-jsonschema-form v-if="editLineDialog && editedLine" :schema="jsonSchema" :model="editedLine" :options="{requiredMessage: 'Information obligatoire', noDataMessage: 'Aucune valeur correspondante', 'searchMessage': 'Recherchez...'}" @error="error => eventBus.$emit('notification', {error})" />
+
+            <template v-if="dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')">
+              <p>Chargez un fichier en pièce jointe.</p>
+              <div class="mt-3 mb-3"><input type="file" @change="onFileUpload"></div>
+              <v-progress-linear v-model="uploadProgress"/>
+            </template>
+
+          </v-form>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer/>
+          <v-btn flat @click="editLineDialog = false">Annuler</v-btn>
+          <v-btn color="primary" @click="saveLine">Enregistrer</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <v-dialog v-model="deleteLineDialog" max-width="500px">
+      <v-card>
+        <v-card-title primary-title>
+          Supprimer une ligne
+        </v-card-title>
+        <v-card-text>
+          <v-alert :value="true" type="error">
+            Attention la donnée de cette ligne sera perdue définitivement.
+          </v-alert>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer/>
+          <v-btn flat @click="deleteLineDialog = false">Annuler</v-btn>
+          <v-btn color="warning" @click="deleteLine">Supprimer</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </v-container>
 </template>
 
 <script>
 import { mapState, mapGetters } from 'vuex'
 import eventBus from '../../../event-bus'
+import VJsonschemaForm from '@koumoul/vuetify-jsonschema-form/lib/index.vue'
+import '@koumoul/vuetify-jsonschema-form/dist/main.css'
 
 export default {
+  components: { VJsonschemaForm },
   data: () => ({
     data: {},
     query: null,
@@ -77,14 +140,20 @@ export default {
     },
     sort: null,
     notFound: false,
-    loading: false
+    loading: false,
+    editLineDialog: false,
+    editedLine: null,
+    editedId: null,
+    deleteLineDialog: false,
+    file: null,
+    uploadProgress: 0
   }),
   computed: {
     ...mapState(['vocabulary']),
     ...mapState('dataset', ['dataset']),
-    ...mapGetters('dataset', ['resourceUrl']),
+    ...mapGetters('dataset', ['resourceUrl', 'can']),
     headers() {
-      return this.dataset.schema
+      const fieldsHeaders = this.dataset.schema
         .filter(field => !field['x-calculated'])
         .filter(field => !this.select.length || this.select.includes(field.key))
         .map(field => ({
@@ -93,9 +162,25 @@ export default {
           sortable: field.type === 'string' || field.type === 'number' || field.type === 'integer',
           tooltip: field.description || (field['x-refersTo'] && this.vocabulary && this.vocabulary[field['x-refersTo']] && this.vocabulary[field['x-refersTo']].description)
         }))
+
+      if (this.dataset.isRest && this.can('writeData')) {
+        return [{ text: '', value: '_actions' }].concat(fieldsHeaders)
+      } else {
+        return fieldsHeaders
+      }
     },
     plural() {
       return this.data.total > 1
+    },
+    jsonSchema() {
+      return {
+        type: 'object',
+        properties: this.dataset.schema
+          .filter(f => !f['x-calculated'])
+          .filter(f => f['x-refersTo'] !== 'http://schema.org/DigitalDocument')
+          // .map(f => ({ ...f, maxLength: 10000 }))
+          .reduce((a, f) => { a[f.key] = f; return a }, {})
+      }
     }
   },
   watch: {
@@ -139,6 +224,62 @@ export default {
       } else {
         this.pagination.sortBy = header.value
         this.pagination.descending = true
+      }
+    },
+    showEditLineDialog() {
+      this.$refs.editLineForm.resetValidation()
+      if (!this.editedLine) {
+        this.editedId = null
+        this.file = null
+        this.editedLine = {}
+        this.dataset.schema.filter(f => !f['x-calculated']).forEach(f => {
+          this.$set(this.editedLine, f.key, null)
+        })
+      } else {
+        this.editedId = this.editedLine._id
+      }
+      this.uploadProgress = 0
+      this.editLineDialog = true
+    },
+    onFileUpload(e) {
+      this.file = e.target.files[0]
+    },
+    async saveLine() {
+      const options = {
+        onUploadProgress: (e) => {
+          if (e.lengthComputable) {
+            console.log('LOADED', e.loaded)
+            this.uploadProgress = (e.loaded / e.total) * 100
+          }
+        }
+      }
+      const formData = new FormData()
+      if (this.file) formData.append('attachment', this.file)
+
+      this.dataset.schema.filter(f => !f['x-calculated']).forEach(f => {
+        if (this.editedLine[f.key] !== null) formData.append([f.key], this.editedLine[f.key])
+      })
+      if (this.editedId) formData.append('_id', this.editedId)
+      this.editLineDialog = false
+      try {
+        await this.$axios.$post(this.resourceUrl + '/lines', formData, options)
+        console.log('POST OK')
+        await new Promise(resolve => setTimeout(resolve, 1000))
+        this.refresh()
+      } catch (error) {
+        if (error.response && error.response.status === 404) this.notFound = true
+        else eventBus.$emit('notification', { error, msg: `Erreur pendant l'enregistrement de la ligne'` })
+      }
+    },
+    async deleteLine() {
+      try {
+        await this.$axios.$delete(this.resourceUrl + '/lines/' + this.editedLine._id)
+        this.deleteLineDialog = false
+        await new Promise(resolve => setTimeout(resolve, 1000))
+        this.refresh()
+      } catch (error) {
+        if (error.response && error.response.status === 404) this.notFound = true
+        else eventBus.$emit('notification', { error, msg: `Erreur pendant la suppression de la ligne'` })
       }
     }
   }

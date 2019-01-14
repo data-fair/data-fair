@@ -122,7 +122,7 @@ export default {
         } else if (status === 429) {
           eventBus.$emit('notification', { type: 'error', msg: `Le propriétaire sélectionné n'a pas assez d'espace disponible pour ce fichier` })
         } else {
-          eventBus.$emit('notification', { error, msg: `Erreur pendant l'import du fichier:` })
+          eventBus.$emit('notification', { error, msg: `Erreur pendant l'import du fichier :` })
         }
         this.importing = false
       }

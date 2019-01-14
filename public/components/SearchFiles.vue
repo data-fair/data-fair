@@ -4,22 +4,24 @@
       <p>Les données ne sont pas accessibles. Soit le jeu de données n'a pas encore été entièrement traité, soit il y a eu une erreur dans le traitement.</p>
       <p>Vous pouvez consulter <nuxt-link :to="`/dataset/${dataset.id}/journal`">le journal</nuxt-link> pour en savoir plus.</p>
     </div>
-    <v-card>
+    <v-card v-if="data">
       <v-card-title style="padding-bottom: 0;">
         <v-layout column>
           <h3 v-if="data.total <= 10000">Consultez {{ data.total.toLocaleString() }} {{ plural ? 'enregistrements' : 'enregistrement' }}</h3>
           <h3 v-if="data.total > 10000">Consultez {{ plural ? 'les' : 'le' }} {{ (10000).toLocaleString() }} {{ plural ? 'premiers enregistrements' : 'premier enregistrement' }} ({{ data.total.toLocaleString() }} au total)</h3>
           <v-layout row wrap>
-            <v-text-field
-              v-model="query"
-              label="Rechercher"
-              append-icon="search"
-              class="mr-3"
-              style="min-width:150px;"
-              @keyup.enter.native="refresh"
-              @click:append="refresh"/>
+            <v-flex lg3 md4 sm5 xs12>
+              <v-text-field
+                v-model="query"
+                label="Rechercher"
+                append-icon="search"
+                class="mr-3"
+                style="min-width:150px;"
+                @keyup.enter.native="refresh"
+                @click:append="refresh"/>
+            </v-flex>
             <v-spacer/>
-            <v-flex v-if="!hideRowsPerPage && data.total > pagination.rowsPerPage" sm4 md2 lg1 xl1>
+            <v-flex v-show="$vuetify.breakpoint.mdAndUp" xl1 lg1 md2>
               <v-select
                 :items="[10,20,50]"
                 v-model="pagination.rowsPerPage"
@@ -49,7 +51,7 @@ import eventBus from '../event-bus'
 export default {
   props: ['initRowsPerPage', 'hideRowsPerPage'],
   data: () => ({
-    data: {},
+    data: null,
     query: null,
     pagination: {
       page: 1,
@@ -90,7 +92,8 @@ export default {
         size: this.pagination.rowsPerPage,
         page: this.pagination.page,
         select: [this.fileProperty.key, '_file.content_type', '_file.content_length'].join(','),
-        highlight: '_file.content'
+        highlight: '_file.content',
+        qs: `_exists_:${this.fileProperty.key}`
       }
       if (this.query) params.q = this.query
       this.loading = true

@@ -179,13 +179,13 @@ test.serial('Use dataset schema to validate inputs', async t => {
   t.truthy(res.data[1]._error)
 })
 
-test.serial('Send attachment with multipart request', async t => {
+test.only('Send attachment with multipart request', async t => {
   const ax = await axiosBuilder('dmeadus0@answers.com:passwd')
   let res = await ax.post('/api/v1/datasets', {
     isRest: true,
     title: 'rest5',
     schema: [
-      { key: 'attr1', type: 'string' },
+      { key: 'attr1', type: 'integer' },
       { key: 'attachmentPath', type: 'string', 'x-refersTo': 'http://schema.org/DigitalDocument' }
     ]
   })
@@ -196,7 +196,7 @@ test.serial('Send attachment with multipart request', async t => {
   const form = new FormData()
   const attachmentContent = fs.readFileSync('./test/resources/files/dir1/test.pdf')
   form.append('attachment', attachmentContent, 'dir1/test.pdf')
-  form.append('attr1', 'test1')
+  form.append('attr1', 10)
   res = await ax.post('/api/v1/datasets/rest5/lines', form, { headers: testUtils.formHeaders(form) })
   t.is(res.status, 201)
   t.truthy(res.data._id)

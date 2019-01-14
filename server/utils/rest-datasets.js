@@ -13,6 +13,7 @@ const { Transform, Writable } = require('stream')
 const mimeTypeStream = require('mime-type-stream')
 const datasetUtils = require('./dataset')
 const attachmentsUtils = require('./attachments')
+const fieldsSniffer = require('./fields-sniffer')
 
 const actions = ['create', 'update', 'patch', 'delete']
 
@@ -80,6 +81,14 @@ const compileSchema = (dataset) => {
 }
 
 async function manageAttachment(req, keepExisting) {
+  if (req.is('multipart/form-data')) {
+    // When taken from form-data everything is string.. converto to actual types
+    req.dataset.schema
+      .filter(f => !f['x-calculated'])
+      .forEach(f => {
+        if (req.body[f.key] !== undefined) req.body[f.key] = fieldsSniffer.format(req.body[f.key], f)
+      })
+  }
   const dir = path.join(datasetUtils.attachmentsDir(req.dataset), req.body._id || req.params.lineId)
 
   if (req.file) {

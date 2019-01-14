@@ -22,6 +22,12 @@
               </v-list-tile-avatar>
               <v-list-tile-title>Créer un jeu virtuel</v-list-tile-title>
             </v-list-tile>
+            <v-list-tile @click="createRestSheet = true">
+              <v-list-tile-avatar>
+                <v-icon color="primary">all_inclusive</v-icon>
+              </v-list-tile-avatar>
+              <v-list-tile-title>Créer un jeu incrémental</v-list-tile-title>
+            </v-list-tile>
           </v-list>
         </v-menu>
       </div>
@@ -32,6 +38,9 @@
         </v-bottom-sheet>
         <v-bottom-sheet v-model="createVirtualSheet">
           <create-virtual v-if="createVirtualSheet" @cancel="createVirtualSheet = false"/>
+        </v-bottom-sheet>
+        <v-bottom-sheet v-model="createRestSheet">
+          <create-rest v-if="createRestSheet" @cancel="createRestSheet = false"/>
         </v-bottom-sheet>
       </div>
 
@@ -59,13 +68,14 @@ import { mapState, mapActions } from 'vuex'
 
 import ImportFile from '../components/ImportFile.vue'
 import CreateVirtual from '../components/CreateVirtual.vue'
+import CreateRest from '../components/CreateRest.vue'
 import DatasetsList from '../components/DatasetsList.vue'
 
 export default {
   name: 'Datasets',
-  components: { ImportFile, CreateVirtual, DatasetsList },
+  components: { ImportFile, CreateVirtual, CreateRest, DatasetsList },
   data() {
-    return { importFileSheet: false, createVirtualSheet: false }
+    return { importFileSheet: false, createVirtualSheet: false, createRestSheet: false }
   },
   computed: {
     ...mapState('session', ['user', 'initialized'])

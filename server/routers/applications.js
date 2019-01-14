@@ -9,7 +9,6 @@ const unlink = util.promisify(fs.unlink)
 const sanitizeHtml = require('sanitize-html')
 const applicationAPIDocs = require('../../contract/application-api-docs')
 const ajv = require('ajv')()
-const ajvErrorMessages = require('ajv-error-messages')
 const applicationSchema = require('../../contract/application')
 const validate = ajv.compile(applicationSchema)
 const validateConfiguration = ajv.compile(applicationSchema.properties.configuration)
@@ -97,7 +96,7 @@ const initNew = (req) => {
 router.post('', asyncWrap(async(req, res) => {
   const application = initNew(req)
   if (!permissions.canDoForOwner(application.owner, 'postApplication', req.user, req.app.get('db'))) return res.status(403).send()
-  if (!validate(application)) return res.status(400).send(ajvErrorMessages(validate.errors))
+  if (!validate(application)) return res.status(400).send(validate.errors)
 
   // Generate ids and try insertion until there is no conflict on id
   const toks = application.url.split('/')
@@ -143,7 +142,7 @@ router.get('/:applicationId', readApplication, permissions.middleware('readDescr
 const attemptInsert = asyncWrap(async(req, res, next) => {
   const newApplication = initNew(req)
   newApplication.id = req.params.applicationId
-  if (!validate(newApplication)) return res.status(400).send(ajvErrorMessages(validate.errors))
+  if (!validate(newApplication)) return res.status(400).send(validate.errors)
 
   // Try insertion if the user is authorized, in case of conflict go on with the update scenario
   if (permissions.canDoForOwner(newApplication.owner, 'postApplication', req.user, req.app.get('db'))) {

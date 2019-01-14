@@ -1,5 +1,4 @@
 const express = require('express')
-const ajvErrorMessages = require('ajv-error-messages')
 const moment = require('moment')
 const slug = require('slugify')
 const sanitizeHtml = require('sanitize-html')
@@ -94,7 +93,7 @@ const initNew = (req) => {
 router.post('', asyncWrap(async(req, res) => {
   const catalog = initNew(req)
   if (!permissions.canDoForOwner(catalog.owner, 'postCatalog', req.user, req.app.get('db'))) return res.status(403).send()
-  if (!validate(catalog)) return res.status(400).send(ajvErrorMessages(validate.errors))
+  if (!validate(catalog)) return res.status(400).send(validate.errors)
 
   // Generate ids and try insertion until there is no conflict on id
   const baseId = slug(catalog.url.replace('https://', '').replace('http://', ''), { lower: true })
@@ -137,7 +136,7 @@ router.get('/:catalogId', readCatalog, permissions.middleware('readDescription',
 const attemptInsert = asyncWrap(async(req, res, next) => {
   const newCatalog = initNew(req)
   newCatalog.id = req.params.catalogId
-  if (!validate(newCatalog)) return res.status(400).send(ajvErrorMessages(validate.errors))
+  if (!validate(newCatalog)) return res.status(400).send(validate.errors)
 
   // Try insertion if the user is authorized, in case of conflict go on with the update scenario
   if (permissions.canDoForOwner(newCatalog.owner, 'postCatalog', req.user, req.app.get('db'))) {
@@ -167,7 +166,7 @@ router.put('/:catalogId', attemptInsert, readCatalog, permissions.middleware('wr
 // Update a catalog configuration
 router.patch('/:catalogId', readCatalog, permissions.middleware('writeDescription', 'write'), asyncWrap(async(req, res) => {
   const patch = req.body
-  if (!validatePatch(patch)) return res.status(400).send(ajvErrorMessages(validatePatch.errors))
+  if (!validatePatch(patch)) return res.status(400).send(validatePatch.errors)
   patch.updatedAt = moment().toISOString()
   patch.updatedBy = { id: req.user.id, name: req.user.name }
 
