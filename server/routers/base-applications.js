@@ -44,7 +44,7 @@ async function failSafeInitBaseApp(db, app) {
 
 // Attempts to init an application's description from a URL
 async function initBaseApp(db, app) {
-  const html = (await axios.get(app.url)).data
+  const html = (await axios.get(app.url + 'index.html')).data
   const data = await htmlExtractor.extract(html)
   const patch = {
     meta: data.meta,

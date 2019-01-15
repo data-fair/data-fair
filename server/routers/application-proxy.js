@@ -104,13 +104,13 @@ router.all('/:applicationId*', setResource, (req, res, next) => { req.app.get('a
 
   // Prevent infinite redirect loops
   // it seems that express routing does not catch a single '/' after /:applicationId*
-  if (req.params['0'] === '') {
-    req.params['0'] = '/'
+  if (req.params['0'] === '' || req.params['0'] === '/') {
+    req.params['0'] = '/index.html'
   }
   const originalUrl = url.parse(req.originalUrl)
   // Trailing / are removed by express... we want them or else we enter infinite redirect loops with gh-pages
   if (originalUrl.pathname[originalUrl.pathname.length - 1] === '/' && req.params['0'][req.params['0'].length - 1] !== '/') {
-    req.params['0'] += '/'
+    req.params['0'] += '/index.html'
   }
 
   // We never transmit authentication
@@ -176,7 +176,12 @@ router.all('/:applicationId*', setResource, (req, res, next) => { req.app.get('a
         return false
       }
 
-      // Only transform HTTP
+      // force HTML content type as CDN might not respect it
+      if (req.params['0'].endsWith('.html')) {
+        resp.headers['content-type'] = 'text/html; charset=utf-8'
+      }
+
+      // Only transform HTML
       return !resp.headers['content-type'] || (resp.headers['content-type'].indexOf('text/html') === 0)
     },
     transform: () => {
