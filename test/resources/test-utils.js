@@ -57,10 +57,10 @@ exports.prepare = (testFile) => {
 
     const html = '<html><head><meta name="application-name" content="test"></head><body></body></html>'
     nock('http://monapp1.com').persist()
-      .get('/').reply(200, html)
+      .get('/index.html').reply(200, html)
       .get('/config-schema.json').reply(200, {})
     nock('http://monapp2.com').persist()
-      .get('/').reply(200, html)
+      .get('/index.html').reply(200, html)
       .get('/config-schema.json').reply(200, {})
     debug('mocks ok')
   })

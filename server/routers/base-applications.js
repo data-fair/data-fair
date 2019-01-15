@@ -44,6 +44,7 @@ async function failSafeInitBaseApp(db, app) {
 
 // Attempts to init an application's description from a URL
 async function initBaseApp(db, app) {
+  if (app.url[app.url.length - 1] !== '/') app.url += '/'
   const html = (await axios.get(app.url + 'index.html')).data
   const data = await htmlExtractor.extract(html)
   const patch = {
@@ -53,7 +54,7 @@ async function initBaseApp(db, app) {
   }
 
   try {
-    const configSchema = (await axios.get(app.url + '/config-schema.json')).data
+    const configSchema = (await axios.get(app.url + 'config-schema.json')).data
     if (typeof configSchema !== 'object') throw new Error('Invalid json')
     patch.hasConfigSchema = true
 
@@ -85,9 +86,8 @@ router.post('', asyncWrap(async(req, res) => {
   if (!req.body.url || Object.keys(req.body).length !== 1) {
     return res.status(400).send('Initializing a base application only accepts the "url" part.')
   }
-  if (req.body.url[req.body.url.length - 1] !== '/') req.body.url += '/'
-  const defaultApp = config.applications.find(a => a.url === req.body.url)
-  res.send(await initBaseApp(req.app.get('db'), defaultApp || req.body))
+  const baseApp = config.applications.find(a => a.url === req.body.url) || req.body
+  res.send(await initBaseApp(req.app.get('db'), baseApp))
 }))
 
 router.patch('/:id', asyncWrap(async(req, res) => {

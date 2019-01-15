@@ -30,6 +30,6 @@ test.serial('Get privately readable base app', async t => {
   res = await ax.get('/api/v1/base-applications?privateAccess=user:dmeadus0')
   t.is(res.status, 200)
   t.is(res.data.count, 2)
-  const baseApp = res.data.results.find(a => a.url === 'http://monapp2.com')
+  const baseApp = res.data.results.find(a => a.url === 'http://monapp2.com/')
   t.is(baseApp.privateAccess.length, 1)
 })
