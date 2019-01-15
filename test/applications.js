@@ -4,7 +4,7 @@ const nock = require('nock')
 const { test, config, axiosBuilder } = testUtils.prepare(__filename)
 
 const html = '<html><head></head><body>A body</body></html>'
-nock('http://monapp.com').persist().get('/').reply(200, html)
+nock('http://monapp.com').persist().get('/index.html').reply(200, html)
 
 test('Get applications when not authenticated', async t => {
   const ax = await axiosBuilder()
