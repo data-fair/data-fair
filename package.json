@@ -48,7 +48,7 @@
     "@koumoul/sd-express": "^0.13.3",
     "@koumoul/sd-vue": "^0.11.0",
     "@koumoul/vue-multianalytics": "^1.10.1",
-    "@koumoul/vuetify-jsonschema-form": "^0.17.10",
+    "@koumoul/vuetify-jsonschema-form": "^0.18.1",
     "@nuxtjs/axios": "^5.3.6",
     "@turf/clean-coords": "^6.0.1",
     "@turf/kinks": "^6.0.0",
