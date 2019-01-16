@@ -93,8 +93,8 @@ exports.prepareQuery = (dataset, query) => {
   // Others are included depending on the context
   if (query.thumbnail) {
     const imageField = dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/image')
-    if (imageField && query.select && !esQuery._source.includes.includes(imageField.key)) {
-      esQuery._source.includes.push(imageField.key)
+    if (imageField && query.select && !esQuery._source.includes(imageField.key)) {
+      esQuery._source.push(imageField.key)
     }
   }
 
