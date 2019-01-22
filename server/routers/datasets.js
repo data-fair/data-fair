@@ -133,6 +133,9 @@ router.get('/:datasetId/schema', readDataset(), permissions.middleware('readDesc
     const formats = req.query.format.split(',')
     schema = schema.filter(field => formats.includes(field.format))
   }
+  if (req.query.enum === 'true') {
+    schema = schema.filter(field => !!field.enum)
+  }
   res.status(200).send(schema)
 })
 

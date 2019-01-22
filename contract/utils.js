@@ -49,19 +49,23 @@ exports.selectParam = (values) => ({
   style: 'commaDelimited'
 })
 
-exports.filterParam = (name, description) => ({
-  in: 'query',
-  name,
-  description,
-  required: false,
-  schema: {
-    type: 'array',
-    items: {
-      type: 'string'
-    }
-  },
-  style: 'commaDelimited'
-})
+exports.filterParam = (name, description, values) => {
+  const p = {
+    in: 'query',
+    name,
+    description,
+    required: false,
+    schema: {
+      type: 'array',
+      items: {
+        type: 'string'
+      }
+    },
+    style: 'commaDelimited'
+  }
+  if (values) p.schema.items.enum = values
+  return p
+}
 
 exports.booleanParam = (name, description) => ({
   in: 'query',

@@ -4,6 +4,7 @@ const datasetPatchSchema = require('./dataset-patch')
 const journalSchema = require('./journal')
 const version = require('../package.json').version
 const permissionsDoc = require('../server/utils/permissions').apiDoc
+const utils = require('./utils')
 
 module.exports = (dataset) => {
   dataset.schema = dataset.schema || []
@@ -216,7 +217,7 @@ La valeur est une liste de champs séparés par des virgules.
           summary: 'Récupérer les informations du jeu de données.',
           operationId: 'readDescription',
           'x-permissionClass': 'read',
-          tags: ['Description'],
+          tags: ['Métadonnées'],
           responses: {
             200: {
               description: 'Les informations du jeu de données.',
@@ -232,7 +233,7 @@ La valeur est une liste de champs séparés par des virgules.
           summary: 'Mettre à jour les informations du jeu de données.',
           operationId: 'writeDescription',
           'x-permissionClass': 'write',
-          tags: ['Description'],
+          tags: ['Métadonnées'],
           requestBody: {
             description: 'Fichier à charger et informations de propriété',
             required: true,
@@ -288,7 +289,7 @@ La valeur est une liste de champs séparés par des virgules.
           summary: 'Supprimer le jeu de données.',
           operationId: 'delete',
           'x-permissionClass': 'admin',
-          tags: ['Description'],
+          tags: ['Métadonnées'],
           responses: {}
         }
       },
@@ -499,7 +500,7 @@ La valeur est une liste de champs séparés par des virgules.
           summary: 'Accéder à la documentation de l\'API',
           operationId: 'readApiDoc',
           'x-permissionClass': 'read',
-          tags: ['Informations'],
+          tags: ['Métadonnées'],
           responses: {
             200: {
               description: 'La documentation de l\'API',
@@ -519,13 +520,49 @@ La valeur est une liste de champs séparés par des virgules.
           summary: 'Accéder au journal',
           operationId: 'readJournal',
           'x-permissionClass': 'read',
-          tags: ['Informations'],
+          tags: ['Métadonnées'],
           responses: {
             200: {
               description: 'Le journal.',
               content: {
                 'application/json': {
                   schema: journalSchema
+                }
+              }
+            }
+          }
+        }
+      },
+      '/schema': {
+        get: {
+          summary: 'Récupérer la liste des champs filtrable',
+          operationId: 'readSchema',
+          'x-permissionClass': 'read',
+          tags: ['Métadonnées'],
+          parameters: [
+            utils.filterParam('type', 'Filtre sur le type de champ', ['string', 'boolean', 'integer', 'number']),
+            utils.filterParam('format', `Filtre sur de format d'un champ de type chaine de caractère`, ['uri-reference', 'date', 'date-time']),
+            {
+              in: 'query',
+              name: 'enum',
+              description: 'Restreindre aux champs ayant une énumération de valeurs (moins de 50 valeurs distinctes)',
+              required: false,
+              schema: {
+                type: 'boolean'
+              }
+            }
+          ],
+          responses: {
+            200: {
+              description: 'La liste des champs.',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'array',
+                    items: {
+                      type: 'object'
+                    }
+                  }
                 }
               }
             }
