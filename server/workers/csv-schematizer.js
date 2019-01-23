@@ -23,7 +23,9 @@ exports.process = async function(app, dataset) {
   // Now we can extract infos for each field
   const attachments = await datasetUtils.lsAttachments(dataset)
   Object.keys(myCSVObject).forEach(field => {
-    Object.assign(dataset.file.schema.find(f => f.key === fieldsSniffer.escapeKey(field)), fieldsSniffer.sniff(myCSVObject[field], attachments))
+    const existingField = dataset.file.schema.find(f => f.key === fieldsSniffer.escapeKey(field))
+    if (!existingField) throw new Error(`Field ${field} found in data sample but absent from previous schema analysis`)
+    Object.assign(existingField, fieldsSniffer.sniff(myCSVObject[field], attachments))
   })
 
   dataset.schema = dataset.schema || []

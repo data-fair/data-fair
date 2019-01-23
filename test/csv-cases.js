@@ -9,3 +9,13 @@ test.serial('Process newly uploaded CSV dataset', async t => {
   const res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
   t.is(res.data.total, 3)
 })
+
+test.serial('A CSV with weird keys', async t => {
+  const ax = await axiosBuilder('dmeadus0@answers.com:passwd')
+  const dataset = await testUtils.sendDataset('weird-keys.csv', ax)
+  t.is(dataset.status, 'finalized')
+  t.is(dataset.schema[0].key, 'This_key_has_escaped_quotes_in_it')
+  t.is(dataset.schema[0]['x-originalName'], 'This key has "escaped quotes" in it')
+  const res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
+  t.is(res.data.total, 1)
+})

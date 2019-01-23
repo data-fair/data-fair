@@ -28,7 +28,7 @@ exports.process = async function(app, dataset) {
     .map((field, i) => ({
       key: fieldsSniffer.escapeKey(field),
       type: sniffResult.types[i],
-      'x-originalName': field
+      'x-originalName': field.replace(/""/g, '"').replace(/^"/, '').replace(/"$/, '')
     }))
     // do not keep columns with empty string as header
     .filter(field => !!field.key)
