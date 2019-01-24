@@ -102,14 +102,12 @@ router.all('/:applicationId*', setResource, (req, res, next) => { req.app.get('a
   }
   const options = { url: cleanApplicationUrl + '/*', headers }
 
-  // Prevent infinite redirect loops
-  // it seems that express routing does not catch a single '/' after /:applicationId*
-  if (req.params['0'] === '' || req.params['0'] === '/') {
-    req.params['0'] = '/index.html'
-  }
   const originalUrl = url.parse(req.originalUrl)
-  // Trailing / are removed by express... we want them or else we enter infinite redirect loops with gh-pages
-  if (originalUrl.pathname[originalUrl.pathname.length - 1] === '/' && req.params['0'][req.params['0'].length - 1] !== '/') {
+  // Trailing / are removed by express...
+  // we want them with added index.html
+  if (req.params['0'] === '') {
+    req.params['0'] = '/index.html'
+  } else if (originalUrl.pathname.endsWith('/')) {
     req.params['0'] += '/index.html'
   }
 

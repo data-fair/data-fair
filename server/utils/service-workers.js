@@ -57,6 +57,9 @@ workbox.routing.registerRoute(
 
 exports.register = (application) => {
   const base = new URL(application.exposedUrl).pathname
+  // The base is the url without a trailing slash
+  // and the service worker is not exposed behind a slash
+  // so that we can accept accessing the application without a trailing slash
   return `
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('${base}-sw.js', { scope: '${base}' }).then(function(reg) {
