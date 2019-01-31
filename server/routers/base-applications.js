@@ -124,6 +124,7 @@ router.get('', asyncWrap(async(req, res) => {
     })
   }
   query.$and.push({ $or: accessFilter })
+  if (req.query.applicationName) query.$and.push({ $or: [{ applicationName: req.query.applicationName }, { 'meta.application-name': req.query.applicationName }] })
   if (req.query.q) query.$and.push({ $text: { $search: req.query.q } })
 
   const [skip, size] = findUtils.pagination(req.query)

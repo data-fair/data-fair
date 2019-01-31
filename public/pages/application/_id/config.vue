@@ -173,6 +173,9 @@ export default {
         size: 10000,
         applicationName: this.prodBaseApp.applicationName
       } })).results
+      if (!this.baseApps.find(b => b.url === this.prodBaseApp.url)) {
+        this.baseApps = [this.prodBaseApp].concat(this.baseApps)
+      }
     },
     async fetchConfigs() {
       this.editUrl = this.application.urlDraft || this.application.url
