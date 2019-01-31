@@ -27,7 +27,7 @@
           <v-card>
             <v-card-text class="grey lighten-3">
               <v-layout row wrap class="mt-0">
-                <v-flex xs12 md4>
+                <v-flex xs12 sm6 md4>
                   <v-select
                     v-if="baseApps"
                     :items="baseApps"
@@ -46,7 +46,7 @@
                     </v-layout>
                   </v-form>
                 </v-flex>
-                <v-flex xs12 md8>
+                <v-flex xs12 sm6 md8>
                   <div :style="`height:${iframeHeight}px;width:100%;`">
                     <iframe v-if="showDraftPreview" :src="applicationLink + '?embed=true&draft=true'" height="100%" width="100%"/>
                   </div>
@@ -212,7 +212,7 @@ export default {
       setTimeout(() => { this.showProdPreview = true }, 1)
     },
     saveDraft(e) {
-      this.patchAndCommit({ urlDraft: this.editUrl })
+      this.patchAndCommit({ urlDraft: this.editUrl, silent: true })
       this.$refs.configForm && this.$refs.configForm.validate()
       if (!this.formValid) return
       this.writeConfigDraft(this.editConfig)
@@ -223,7 +223,7 @@ export default {
       this.writeConfig(this.configDraft)
     },
     async cancelDraft() {
-      this.patchAndCommit({ urlDraft: this.application.url })
+      this.patchAndCommit({ urlDraft: this.application.url, silent: true })
       await this.writeConfigDraft(this.config)
       this.fetchConfigs()
     }
