@@ -1,34 +1,61 @@
 <template lang="html">
   <v-container fluid grid-list-lg>
     <no-ssr>
-      <v-layout row wrap>
-        <v-flex xs12 md4>
-          <h2 class="title my-4" >Configuration</h2>
-          <iframe v-if="showConfigIframe" :src="applicationLink + '/config?embed=true'" :height="Math.min(height - 100, 600)" width="100%"/>
-          <v-form v-if="showForm" ref="configForm" v-model="formValid" @submit="submit">
-            <!--{{ editConfig }}-->
-            <v-jsonschema-form :schema="schema" :model="editConfig" :options="{disableAll: !can('writeConfig'), autoFoldObjects: can('writeConfig'), context: {owner: application.owner}, requiredMessage: 'Information obligatoire', noDataMessage: 'Aucune valeur correspondante', 'searchMessage': 'Recherchez...'}" @error="error => eventBus.$emit('notification', {error})" />
-            <v-layout row class="mt-3">
-              <v-spacer/>
-              <v-btn :disabled="!hasModification" color="primary" type="submit">Enregistrer brouillon</v-btn>
-              <v-btn :disabled="hasModification || !hasDraft" color="warning" @click="validateDraft">Valider</v-btn>
-              <v-btn :disabled="!hasDraft" color="error" class="px-0" @click="showCancelDialog = true">Effacer</v-btn>
-            </v-layout>
-          </v-form>
-        </v-flex>
-        <v-flex xs12 md8>
-          <h2 class="title my-4" >
-            Aperçu
-            <!-- Only useful in development
-            <v-btn flat icon color="primary" @click="refreshPreview">
-              <v-icon>refresh</v-icon>
-            </v-btn>-->
-          </h2>
-          <v-card v-if="showPreview">
-            <iframe v-if="config" :src="applicationLink + '?embed=true&draft=true'" :height="Math.min(height - 100, 600)" width="100%"/>
+      <v-expansion-panel :popout="false" :value="1" expand>
+        <v-expansion-panel-content>
+          <div slot="header" style="font-weight:bold">Dernière configuration validée (lecture seule)</div>
+          <v-card>
+            <v-card-text class="grey lighten-3">
+              <v-layout v-if="config" row wrap>
+                <v-flex xs12 md4>
+                  <p v-if="prodBaseApp">Version : {{ `${prodBaseApp.title} (${prodBaseApp.version})` }}</p>
+                  <v-form ref="prodConfigForm">
+                    <v-jsonschema-form v-if="prodSchema" :schema="prodSchema" :model="configClone" :options="{disableAll: true, autoFoldObjects: can('writeConfig'), context: {owner: application.owner}, requiredMessage: 'Information obligatoire', noDataMessage: 'Aucune valeur correspondante', 'searchMessage': 'Recherchez...'}" @error="error => eventBus.$emit('notification', {error})" />
+                  </v-form>
+                </v-flex>
+                <v-flex xs12 md8>
+                  <div :style="`height:${iframeHeight}px;width:100%;`">
+                    <iframe v-if="showProdPreview" :src="applicationLink + '?embed=true'" height="100%" width="100%"/>
+                  </div>
+                </v-flex>
+              </v-layout>
+            </v-card-text>
           </v-card>
-        </v-flex>
-      </v-layout>
+        </v-expansion-panel-content>
+        <v-expansion-panel-content>
+          <div slot="header" style="font-weight:bold">Brouillon (écriture)</div>
+          <v-card>
+            <v-card-text class="grey lighten-3">
+              <v-layout row wrap class="mt-0">
+                <v-flex xs12 md4>
+                  <v-select
+                    v-if="baseApps"
+                    :items="baseApps"
+                    :item-text="(baseApp => `${baseApp.title} (${baseApp.version})`)"
+                    v-model="editUrl"
+                    item-value="url"
+                    label="Changer de version"
+                  />
+                  <v-form ref="configForm" v-model="formValid" @submit="validateDraft">
+                    <!--{{ editConfig }}-->
+                    <v-jsonschema-form v-if="draftSchema && editConfig" :schema="draftSchema" :model="editConfig" :options="{disableAll: !can('writeConfig'), autoFoldObjects: can('writeConfig'), context: {owner: application.owner}, requiredMessage: 'Information obligatoire', noDataMessage: 'Aucune valeur correspondante', 'searchMessage': 'Recherchez...'}" @error="error => eventBus.$emit('notification', {error})" />
+                    <v-layout row class="mt-3">
+                      <v-spacer/>
+                      <v-btn :disabled="hasModification || !hasDraft" color="warning" type="submit">Valider</v-btn>
+                      <v-btn :disabled="!hasDraft" color="error" class="px-0" @click="showCancelDialog = true">Annuler</v-btn>
+                    </v-layout>
+                  </v-form>
+                </v-flex>
+                <v-flex xs12 md8>
+                  <div :style="`height:${iframeHeight}px;width:100%;`">
+                    <iframe v-if="showDraftPreview" :src="applicationLink + '?embed=true&draft=true'" height="100%" width="100%"/>
+                  </div>
+                </v-flex>
+              </v-layout>
+            </v-card-text>
+          </v-card>
+        </v-expansion-panel-content>
+      </v-expansion-panel>
     </no-ssr>
 
     <v-dialog v-model="showCancelDialog" max-width="500px">
@@ -44,7 +71,7 @@
         <v-card-actions>
           <v-spacer/>
           <v-btn flat @click="showCancelDialog = false">Annuler</v-btn>
-          <v-btn color="warning" @click="cancelDraft(); showOwnerDialog = false;">Confirmer</v-btn>
+          <v-btn color="warning" @click="cancelDraft(); showCancelDialog = false;">Confirmer</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -53,6 +80,7 @@
 
 <script>
 import Vue from 'vue'
+import debounce from 'debounce'
 import { mapState, mapActions, mapGetters } from 'vuex'
 import VJsonschemaForm from '@koumoul/vuetify-jsonschema-form/lib/index.vue'
 import '@koumoul/vuetify-jsonschema-form/dist/main.css'
@@ -72,12 +100,17 @@ export default {
     return {
       showConfigIframe: false,
       showForm: false,
-      showPreview: true,
-      schema: null,
+      prodBaseApp: null,
+      showDraftPreview: true,
+      showProdPreview: true,
+      draftSchema: null,
+      prodSchema: null,
       formValid: false,
       editConfig: null,
+      editUrl: null,
       eventBus,
-      showCancelDialog: false
+      showCancelDialog: false,
+      baseApps: null
     }
   },
   computed: {
@@ -87,56 +120,112 @@ export default {
       return window.innerHeight
     },
     hasModification() {
-      return JSON.stringify(this.editConfig) !== JSON.stringify(this.configDraft)
+      return JSON.stringify(this.editConfig) !== JSON.stringify(this.configDraft) || this.editUrl !== this.application.urlDraft
     },
     hasDraft() {
-      return JSON.stringify(this.config) !== JSON.stringify(this.configDraft)
+      return JSON.stringify(this.config) !== JSON.stringify(this.configDraft) || (this.application.urlDraft && this.application.urlDraft !== this.application.url)
+    },
+    configClone() {
+      return JSON.parse(JSON.stringify(this.config))
+    },
+    iframeHeight() {
+      return Math.min(this.height - 100, 350)
     }
   },
   watch: {
     configDraft() {
-      this.refreshPreview()
+      this.refreshDraftPreview()
+    },
+    config() {
+      this.refreshProdPreview()
+    },
+    editConfig: {
+      handler: debounce(function() {
+        this.saveDraft()
+      }, 200),
+      deep: true
+    },
+    editUrl() {
+      this.saveDraft()
+    },
+    async 'application.urlDraft'() {
+      await this.fetchSchemas()
+      this.refreshDraftPreview()
     }
   },
   async created() {
-    // Only try the deprecated iframe mode, if config schema is not found
-    const schemaUrl = this.application.url + '/config-schema.json'
-    try {
-      this.schema = await this.$axios.$get(schemaUrl)
-      if (typeof this.schema !== 'object') {
-        console.error(`Schema fetched at ${schemaUrl} is not a valid JSON`)
-        this.showConfigIframe = true
-      } else {
-        this.editConfig = JSON.parse(JSON.stringify(await this.readConfigDraft()))
-        await this.readConfig()
-        this.showForm = true
-      }
-    } catch (error) {
-      if (error.response && error.response.status === 404) {
-        console.error(`Schema not found at ${schemaUrl}`)
-        this.showConfigIframe = true
-      } else {
-        eventBus.$emit('notification', { error })
-      }
-    }
+    this.fetchSchemas()
+    this.fetchConfigs()
+    this.fetchBaseApps()
   },
   methods: {
-    ...mapActions('application', ['patch', 'readConfig', 'writeConfig', 'readConfigDraft', 'writeConfigDraft']),
-    refreshPreview() {
-      this.showPreview = false
-      setTimeout(() => { this.showPreview = true }, 1)
+    ...mapActions('application', ['readConfig', 'writeConfig', 'readConfigDraft', 'writeConfigDraft', 'patchAndCommit']),
+    async fetchBaseApps() {
+      // get base apps that share the same application name (meaning different version of same app)
+      try {
+        this.prodBaseApp = await this.$axios.$get(`api/v1/applications/${this.application.id}/base-application`)
+      } catch (error) {
+        return eventBus.$emit('notification', { error })
+      }
+      let privateAccess = `${this.application.owner.type}:${this.application.owner.id}`
+      this.baseApps = (await this.$axios.$get('api/v1/base-applications', { params: {
+        privateAccess,
+        size: 10000,
+        applicationName: this.prodBaseApp.applicationName
+      } })).results
     },
-    submit(e) {
-      e.preventDefault()
-      this.$refs.configForm.validate()
+    async fetchConfigs() {
+      this.editUrl = this.application.urlDraft || this.application.url
+      this.editConfig = JSON.parse(JSON.stringify(await this.readConfigDraft()))
+      await this.readConfig()
+    },
+    async fetchSchemas() {
+      this.draftSchema = null
+      this.prodSchema = null
+
+      // Only try the deprecated iframe mode, if config schema is not found
+      const draftSchemaUrl = (this.application.urlDraft || this.application.url) + '/config-schema.json'
+      try {
+        this.draftSchema = await this.$axios.$get(draftSchemaUrl)
+        if (typeof this.draftSchema !== 'object') {
+          console.error(`Schema fetched at ${draftSchemaUrl} is not a valid JSON`)
+          this.showConfigIframe = true
+        } else {
+          this.showForm = true
+        }
+      } catch (error) {
+        if (error.response && error.response.status === 404) {
+          console.error(`Schema not found at ${draftSchemaUrl}`)
+          this.showConfigIframe = true
+        } else {
+          eventBus.$emit('notification', { error })
+        }
+      }
+      this.prodSchema = await this.$axios.$get(this.application.url + '/config-schema.json')
+    },
+    refreshDraftPreview() {
+      this.showDraftPreview = false
+      setTimeout(() => { this.showDraftPreview = true }, 1)
+    },
+    refreshProdPreview() {
+      this.showProdPreview = false
+      setTimeout(() => { this.showProdPreview = true }, 1)
+    },
+    saveDraft(e) {
+      this.patchAndCommit({ urlDraft: this.editUrl })
+      this.$refs.configForm && this.$refs.configForm.validate()
       if (!this.formValid) return
       this.writeConfigDraft(this.editConfig)
     },
-    validateDraft() {
+    validateDraft(e) {
+      e.preventDefault()
+      this.patchAndCommit({ url: this.application.urlDraft })
       this.writeConfig(this.configDraft)
     },
-    cancelDraft() {
-      this.writeConfigDraft(this.config)
+    async cancelDraft() {
+      this.patchAndCommit({ urlDraft: this.application.url })
+      await this.writeConfigDraft(this.config)
+      this.fetchConfigs()
     }
   }
 }

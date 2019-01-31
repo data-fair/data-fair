@@ -15,6 +15,7 @@ const validateConfiguration = ajv.compile(applicationSchema.properties.configura
 const applicationPatch = require('../../contract/application-patch')
 const validatePatch = ajv.compile(applicationPatch)
 
+const baseAppsUtils = require('../utils/base-apps')
 const permissions = require('../utils/permissions')
 const usersUtils = require('../utils/users')
 const findUtils = require('../utils/find')
@@ -264,6 +265,14 @@ router.put('/:applicationId/configuration-draft', readApplication, permissions.m
   )
   await journals.log(req.app, req.application, { type: 'config-draft-updated' }, 'application')
   res.status(200).json(req.body)
+}))
+
+router.get('/:applicationId/base-application', readApplication, permissions.middleware('readBaseApp', 'read'), asyncWrap(async (req, res) => {
+  const db = req.app.get('db')
+  const baseApplications = db.collection('base-applications')
+  const baseApp = await baseApplications.findOne({ url: req.application.url })
+  if (!baseApp) return res.status(404).send('No base application matching ' + req.application.url)
+  res.send(baseAppsUtils.clean(baseApp))
 }))
 
 router.get('/:applicationId/api-docs.json', readApplication, permissions.middleware('readApiDoc', 'read'), (req, res) => {

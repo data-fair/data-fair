@@ -97,7 +97,7 @@ export default () => ({
       commit('setAny', { config })
       return config
     },
-    async writeConfig({ state, commit, getters }, config) {
+    async writeConfig({ state, commit, getters, dispatch }, config) {
       try {
         await this.$axios.$put(getters.resourceUrl + '/configuration', config)
         commit('setAny', { config: JSON.parse(JSON.stringify(config)) })
@@ -110,7 +110,7 @@ export default () => ({
       commit('setAny', { configDraft })
       return configDraft
     },
-    async writeConfigDraft({ state, commit, getters }, configDraft) {
+    async writeConfigDraft({ state, commit, getters, dispatch }, configDraft) {
       try {
         await this.$axios.$put(getters.resourceUrl + '/configuration-draft', configDraft)
         commit('setAny', { configDraft: JSON.parse(JSON.stringify(configDraft)) })

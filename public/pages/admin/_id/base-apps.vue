@@ -29,8 +29,9 @@
               <img :src="baseApp.thumbnail">
             </v-list-tile-avatar>
             <v-list-tile-content>
+
               <v-list-tile-title>
-                {{ baseApp.title }} (<a :href="baseApp.url">{{ baseApp.url }}</a>)
+                {{ baseApp.title }} - {{ baseApp.applicationName }} ({{ baseApp.version }}) - <a :href="baseApp.url">{{ baseApp.url }}</a>
                 <v-icon v-if="baseApp.public" color="green">lock_open</v-icon>
                 <template v-else>
                   <v-icon color="red">lock</v-icon>
@@ -59,12 +60,21 @@
     >
       <v-card v-if="currentBaseApp">
         <v-card-title primary-title>
-          <div>
-            <h3 class="headline mb-0">Édition de {{ currentBaseApp.title }} ({{ currentBaseApp.url }})</h3>
-          </div>
+          <h3 class="headline mb-0">Édition de {{ currentBaseApp.title }}</h3>
         </v-card-title>
         <v-card-text>
+          <p>URL : {{ currentBaseApp.url }}</p>
           <v-form>
+            <v-text-field
+              v-model="patch.applicationName"
+              name="applicationName"
+              label="Identifiant d'application"
+            />
+            <v-text-field
+              v-model="patch.version"
+              name="version"
+              label="Version d'application"
+            />
             <v-text-field
               v-model="patch.title"
               name="title"
@@ -145,6 +155,8 @@ export default {
     newPatch(baseApp) {
       return {
         title: baseApp.title,
+        applicationName: baseApp.applicationName,
+        version: baseApp.version,
         description: baseApp.description,
         public: baseApp.public,
         image: baseApp.image,

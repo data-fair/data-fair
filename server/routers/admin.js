@@ -3,7 +3,7 @@ const express = require('express')
 const asyncWrap = require('../utils/async-wrap')
 const pjson = require('../../package.json')
 const findUtils = require('../utils/find')
-const thumbor = require('../utils/thumbor')
+const baseAppsUtils = require('../utils/base-apps')
 const router = module.exports = express.Router()
 
 // All routes in the router are only for the super admins of the service
@@ -139,6 +139,8 @@ router.get('/base-applications', asyncWrap(async(req, res) => {
     $project: {
       id: 1,
       title: 1,
+      applicationName: 1,
+      version: 1,
       description: 1,
       meta: 1,
       url: 1,
@@ -154,11 +156,8 @@ router.get('/base-applications', asyncWrap(async(req, res) => {
   const aggPromise = baseApps.aggregate(agg).toArray()
   const [count, results] = await Promise.all([ baseApps.countDocuments(query), aggPromise ])
   for (let result of results) {
+    baseAppsUtils.clean(result, req.query.thumbnail)
     result.privateAccess = result.privateAccess || []
-    result.title = result.title || result.meta.title
-    result.description = result.description || result.meta.description
-    result.image = result.image || result.url + 'thumbnail.png'
-    result.thumbnail = thumbor.thumbnail(result.image, req.query.thumbnail || '300x200')
   }
   res.send({ count, results })
 }))

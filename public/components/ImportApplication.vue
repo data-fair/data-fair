@@ -16,12 +16,12 @@
           label="Choisissez une application à configurer"
           @input="downloadFromUrl"
         />
-        <v-text-field
+        <!--<v-text-field
           v-model="applicationUrl"
           label="Ou saisissez une URL"
           @blur="downloadFromUrl"
           @keyup.native.enter="downloadFromUrl"
-        />
+        />-->
         <v-text-field
           v-if="baseApp"
           v-model="baseApp.title"

@@ -10,7 +10,7 @@ const htmlExtractor = new Extractor()
 htmlExtractor.extract = util.promisify(htmlExtractor.extract)
 const asyncWrap = require('../utils/async-wrap')
 const findUtils = require('../utils/find')
-const thumbor = require('../utils/thumbor')
+const baseAppsUtils = require('../utils/base-apps')
 const router = exports.router = express.Router()
 
 // Fill the collection using the default base applications from config
@@ -59,7 +59,10 @@ async function initBaseApp(db, app) {
     patch.hasConfigSchema = true
 
     // Read the config schema to deduce filters on datasets
-    const datasetsItems = (configSchema.properties && configSchema.properties.datasets && configSchema.properties.datasets.items) || []
+    const datasetsItems = (configSchema.properties && configSchema.properties.datasets && configSchema.properties.datasets.items) ||
+      (configSchema.allOf && configSchema.allOf[0].properties && configSchema.allOf[0].properties.datasets && configSchema.allOf[0].properties.datasets.items) ||
+      []
+
     const datasetsUrls = Array.isArray(datasetsItems) ? datasetsItems.map(item => item['x-fromUrl']) : [datasetsItems['x-fromUrl']]
     const datasetsQueries = datasetsUrls.map(datasetsUrl => url.parse(datasetsUrl, { parseQueryString: true }).query)
     patch.datasetsFilters = datasetsQueries.map(prepareQuery)
@@ -132,10 +135,7 @@ router.get('', asyncWrap(async(req, res) => {
   const countPromise = baseApplications.countDocuments(query)
   const [results, count] = await Promise.all([findPromise, countPromise])
   for (let result of results) {
-    result.title = result.title || result.meta.title
-    result.description = result.description || result.meta.description
-    result.image = result.image || result.url + 'thumbnail.png'
-    result.thumbnail = thumbor.thumbnail(result.image, req.query.thumbnail || '300x200')
+    baseAppsUtils.clean(result, req.query.thumbnail)
     // keep only the private access that concerns the current request
     result.privateAccess = (result.privateAccess || []).filter(p => privateAccess.find(p2 => p2.type === p.type && p2.id === p.id))
   }

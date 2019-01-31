@@ -55,7 +55,11 @@ module.exports = {
     configurationDraft: configurationSchema,
     'url': {
       'type': 'string',
-      'description': 'The URL the application is located to'
+      'description': 'The URL the base application is located to'
+    },
+    'urlDraft': {
+      'type': 'string',
+      'description': 'The URL the base application for the draft configuration is located to'
     },
     publications: {
       type: 'array',

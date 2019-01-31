@@ -135,6 +135,8 @@ module.exports = {
   }, {
     title: 'Diagramme de flux (Sankey)',
     url: 'https://koumoul.com/apps/sankey/0.1/'
+  }, {
+    url: 'https://koumoul.com/apps/sunburst/0.1/'
   }],
   remoteServices: [{
     title: 'Données Entreprises',

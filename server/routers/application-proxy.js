@@ -90,7 +90,9 @@ router.all('/:applicationId*', setResource, (req, res, next) => { req.app.get('a
 
   findUtils.setResourceLinks(req.application, 'application')
   // Remove trailing slash for more homogeneous rules afterward
-  const cleanApplicationUrl = req.application.url.replace(/\/$/, '')
+  console.log('URL DRAFT', req.application.urlDraft, req.query.draft)
+  const cleanApplicationUrl = (req.query.draft === 'true' ? (req.application.urlDraft || req.application.url) : req.application.url).replace(/\/$/, '')
+  console.log(cleanApplicationUrl)
   const headers = {
     'X-Exposed-Url': req.application.exposedUrl,
     'X-Application-Url': config.publicUrl + '/api/v1/applications/' + req.params.applicationId,
