@@ -7,13 +7,13 @@
           <v-card>
             <v-card-text class="grey lighten-3">
               <v-layout v-if="config" row wrap>
-                <v-flex xs12 md4>
+                <v-flex xs12 sm6 md4>
                   <p v-if="prodBaseApp">Version : {{ `${prodBaseApp.title} (${prodBaseApp.version})` }}</p>
                   <v-form ref="prodConfigForm">
                     <v-jsonschema-form v-if="prodSchema" :schema="prodSchema" :model="configClone" :options="{disableAll: true, autoFoldObjects: can('writeConfig'), context: {owner: application.owner}, requiredMessage: 'Information obligatoire', noDataMessage: 'Aucune valeur correspondante', 'searchMessage': 'Recherchez...'}" @error="error => eventBus.$emit('notification', {error})" />
                   </v-form>
                 </v-flex>
-                <v-flex xs12 md8>
+                <v-flex xs12 sm6 md8 class="pa-0">
                   <div :style="`height:${iframeHeight}px;width:100%;`">
                     <iframe v-if="showProdPreview" :src="applicationLink + '?embed=true'" height="100%" width="100%"/>
                   </div>
@@ -26,7 +26,7 @@
           <div slot="header" style="font-weight:bold">Brouillon (écriture)</div>
           <v-card>
             <v-card-text class="grey lighten-3">
-              <v-layout row wrap class="mt-0">
+              <v-layout row wrap>
                 <v-flex xs12 sm6 md4>
                   <v-select
                     v-if="baseApps"
@@ -46,7 +46,7 @@
                     </v-layout>
                   </v-form>
                 </v-flex>
-                <v-flex xs12 sm6 md8>
+                <v-flex xs12 sm6 md8 class="pa-0">
                   <div :style="`height:${iframeHeight}px;width:100%;`">
                     <iframe v-if="showDraftPreview" :src="applicationLink + '?embed=true&draft=true'" height="100%" width="100%"/>
                   </div>
@@ -129,7 +129,7 @@ export default {
       return JSON.parse(JSON.stringify(this.config))
     },
     iframeHeight() {
-      return Math.min(this.height - 100, 350)
+      return Math.max(300, Math.min(this.height - 100, 450))
     }
   },
   watch: {
