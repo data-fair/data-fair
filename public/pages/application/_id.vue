@@ -49,6 +49,13 @@
             <v-list-tile-title>Intégrer dans un site</v-list-tile-title>
           </v-list-tile>
 
+          <v-list-tile v-if="can('writeConfig')" @click="showCaptureDialog = true">
+            <v-list-tile-avatar>
+              <v-icon color="primary">photo</v-icon>
+            </v-list-tile-avatar>
+            <v-list-tile-title>Effectuer une capture</v-list-tile-title>
+          </v-list-tile>
+
           <v-list-tile v-if="can('delete')" @click="showDeleteDialog = true">
             <v-list-tile-avatar>
               <v-icon color="warning">delete</v-icon>
@@ -68,9 +75,13 @@
 
     <v-dialog v-model="showIntegrationDialog">
       <v-card>
-        <v-card-title primary-title>
-          Intégration de l'application dans un site
-        </v-card-title>
+        <v-toolbar dense flat>
+          <v-toolbar-title>Intégrer dans un site</v-toolbar-title>
+          <v-spacer/>
+          <v-btn icon @click.native="showIntegrationDialog = false">
+            <v-icon>close</v-icon>
+          </v-btn>
+        </v-toolbar>
         <v-card-text v-if="showIntegrationDialog">
           Pour intégrer cette application dans un site vous pouvez copier le code suivant ou un code similaire dans le contenu HTML de votre site.
           <br>
@@ -81,10 +92,25 @@
           Résultat:
           <iframe :src="applicationLink + '?embed=true'" width="100%" height="500px" style="background-color: transparent; border: none;"/>
         </v-card-text>
-        <v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <v-dialog v-model="showCaptureDialog" max-width="500">
+      <v-card>
+        <v-toolbar dense flat>
+          <v-toolbar-title>Effectuer une capture</v-toolbar-title>
           <v-spacer/>
-          <v-btn flat @click="showIntegrationDialog = false">Ok</v-btn>
-        </v-card-actions>
+          <v-btn icon @click.native="showCaptureDialog = false">
+            <v-icon>close</v-icon>
+          </v-btn>
+        </v-toolbar>
+        <v-card-text v-if="showCaptureDialog">
+          <p>Une image statique au format PNG va être créée à partir de cette configuration d'application.</p>
+          <v-text-field v-model="captureWidth" label="Largeur" type="number" />
+          <v-text-field v-model="captureHeight" label="Hauteur" type="number" />
+          <br>
+          <a :href="`${env.captureUrl}/api/v1/screenshot?target=${encodeURIComponent(applicationLink)}&width=${captureWidth}&height=${captureHeight}`" download>Télécharger la capture</a>
+        </v-card-text>
       </v-card>
     </v-dialog>
 
@@ -132,8 +158,11 @@ export default {
   data: () => ({
     showDeleteDialog: false,
     showIntegrationDialog: false,
+    showCaptureDialog: false,
     showOwnerDialog: false,
-    newOwner: null
+    newOwner: null,
+    captureWidth: 800,
+    captureHeight: 450
   }),
   computed: {
     ...mapState(['env']),

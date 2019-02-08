@@ -187,7 +187,7 @@ export default {
       this.prodSchema = null
 
       // Only try the deprecated iframe mode, if config schema is not found
-      const draftSchemaUrl = (this.application.urlDraft || this.application.url) + '/config-schema.json'
+      const draftSchemaUrl = (this.application.urlDraft || this.application.url) + 'config-schema.json'
       try {
         this.draftSchema = await this.$axios.$get(draftSchemaUrl)
         if (typeof this.draftSchema !== 'object') {
@@ -204,7 +204,7 @@ export default {
           eventBus.$emit('notification', { error })
         }
       }
-      this.prodSchema = await this.$axios.$get(this.application.url + '/config-schema.json')
+      this.prodSchema = await this.$axios.$get(this.application.url + 'config-schema.json')
     },
     refreshDraftPreview() {
       this.showDraftPreview = false
