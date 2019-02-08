@@ -121,22 +121,17 @@ module.exports = {
     href: 'https://spdx.org/licenses/ODbL-1.0.html#licenseText'
   }],
   applications: [{
-    title: 'Infos parcelles',
     url: 'https://koumoul.com/apps/infos-parcelles/2.2/'
   }, {
-    title: 'Infos localisations',
-    url: 'https://koumoul.com/apps/infos-loc/0.6/'
+    url: 'https://koumoul.com/apps/infos-loc/0.7/'
   }, {
-    title: 'Graphiques simples',
-    url: 'https://koumoul-dev.github.io/data-fair-charts/0.5/'
+    url: 'https://cdn.jsdelivr.net/npm/@koumoul/data-fair-charts@0.8/dist/'
   }, {
-    title: 'Nuages de mots',
     url: 'https://koumoul.com/apps/word-cloud/0.2/'
   }, {
-    title: 'Diagramme de flux (Sankey)',
-    url: 'https://koumoul.com/apps/sankey/0.1/'
+    url: 'https://koumoul.com/apps/sankey/0.5/'
   }, {
-    url: 'https://koumoul.com/apps/sunburst/0.1/'
+    url: 'https://koumoul.com/apps/sunburst/0.2/'
   }],
   remoteServices: [{
     title: 'Données Entreprises',
