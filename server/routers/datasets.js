@@ -305,7 +305,7 @@ router.post('', beforeUpload, filesUtils.uploadFile(), asyncWrap(async(req, res)
       dataset.virtual = dataset.virtual || { children: [] }
       dataset.schema = await virtualDatasetsUtils.prepareSchema(db, dataset)
       dataset.status = 'indexed'
-      const baseId = slug(req.body.title)
+      const baseId = slug(req.body.title).toLowerCase()
       await datasetUtils.insertWithBaseId(db, dataset, baseId)
     } else if (req.body.isRest) {
       if (!req.body.title) throw createError(400, 'Un jeu de données REST doit être créé avec un titre')
@@ -318,7 +318,7 @@ router.post('', beforeUpload, filesUtils.uploadFile(), asyncWrap(async(req, res)
       dataset.rest = dataset.rest || {}
       dataset.schema = dataset.schema || []
       dataset.status = 'schematized'
-      const baseId = slug(req.body.title)
+      const baseId = slug(req.body.title).toLowerCase()
       await datasetUtils.insertWithBaseId(db, dataset, baseId)
       await restDatasetsUtils.initDataset(db, dataset)
     } else {
