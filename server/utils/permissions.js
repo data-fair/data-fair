@@ -1,5 +1,6 @@
 const config = require('config')
 const express = require('express')
+const createError = require('http-errors')
 const permissionsSchema = require('../../contract/permissions.json')
 const apiDocsUtil = require('./api-docs')
 const ajv = require('ajv')()
@@ -87,58 +88,72 @@ exports.isPublic = function(resource, operationsClasses) {
 }
 
 // Manage filters for datasets, applications and remote services
-exports.filter = function(user) {
+exports.filter = function(user, onlyPublic, onlyPrivate) {
+  // this check is important, or we can end up with an empty permission filter
+  // which would be a huge leak
+  if (onlyPublic && onlyPrivate) throw createError(400, `You can't set both "public", and "private" filters`)
+
   const operationFilter = [{ operations: 'list' }, { classes: 'list' }]
+  const publicFilter = {
+    permissions: {
+      $elemMatch: { $or: operationFilter, type: null, id: null }
+    }
+  }
 
-  const or = [{ permissions: {
-    $elemMatch: { $or: operationFilter, type: null, id: null }
-  } }]
+  const or = []
 
-  if (user) {
-    // user is owner
-    or.push({
-      'owner.type': 'user',
-      'owner.id': user.id
-    })
-    // user is admin of owner organization
-    or.push({
-      'owner.type': 'organization',
-      'owner.id': { $in: user.organizations.filter(o => o.role === config.adminRole).map(o => o.id) }
-    })
-    // organizations where user does not have admin role
-    user.organizations.filter(o => o.role !== config.adminRole).forEach(o => {
+  if (!user) {
+    or.push(publicFilter)
+  } else {
+    if (!onlyPrivate) {
+      or.push(publicFilter)
+    }
+    if (!onlyPublic) {
+      // user is owner
+      or.push({
+        'owner.type': 'user',
+        'owner.id': user.id
+      })
+      // user is admin of owner organization
       or.push({
         'owner.type': 'organization',
-        'owner.id': o.id,
-        'owner.role': o.role
+        'owner.id': { $in: user.organizations.filter(o => o.role === config.adminRole).map(o => o.id) }
       })
-      or.push({
-        'owner.type': 'organization',
-        'owner.id': o.id,
-        'owner.role': null
+      // organizations where user does not have admin role
+      user.organizations.filter(o => o.role !== config.adminRole).forEach(o => {
+        or.push({
+          'owner.type': 'organization',
+          'owner.id': o.id,
+          'owner.role': o.role
+        })
+        or.push({
+          'owner.type': 'organization',
+          'owner.id': o.id,
+          'owner.role': null
+        })
       })
-    })
 
-    // user has specific permission to read
-    or.push({
-      permissions: {
-        $elemMatch: { $or: operationFilter, type: 'user', id: user.id }
-      }
-    })
-    user.organizations.forEach(o => {
+      // user has specific permission to read
       or.push({
         permissions: {
-          $elemMatch: {
-            $and: [
-              { $or: operationFilter },
-              { $or: [{ roles: o.role }, { roles: { $size: 0 } }] }
-            ],
-            type: 'organization',
-            id: o.id
-          }
+          $elemMatch: { $or: operationFilter, type: 'user', id: user.id }
         }
       })
-    })
+      user.organizations.forEach(o => {
+        or.push({
+          permissions: {
+            $elemMatch: {
+              $and: [
+                { $or: operationFilter },
+                { $or: [{ roles: o.role }, { roles: { $size: 0 } }] }
+              ],
+              type: 'organization',
+              id: o.id
+            }
+          }
+        })
+      })
+    }
   }
   return or
 }

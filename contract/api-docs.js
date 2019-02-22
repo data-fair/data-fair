@@ -164,7 +164,8 @@ Pour des exemples simples de publication de données vous pouvez consulter la [d
           utils.filterParam('field-format', `Restreindre sur les formats des champs textes`),
           utils.booleanParam('files', 'Restrieindre aux jeux avec fichiers attachés'),
           utils.booleanParam('bbox', 'Restreindre aux jeux géographiques'),
-          ...utils.paginationParams
+          ...utils.paginationParams,
+          ...utils.visibilityParams
         ],
         responses: {
           200: {
@@ -328,7 +329,8 @@ Pour des exemples simples de publication de données vous pouvez consulter la [d
           utils.filterParam('ids', `Restreindre sur les identifiants`),
           utils.filterParam('dataset', `Restreindre sur les jeux de données utilisés`),
           utils.filterParam('service', `Restreindre sur les services distants utilisés`),
-          ...utils.paginationParams
+          ...utils.paginationParams,
+          ...utils.visibilityParams
         ],
         responses: {
           200: {
@@ -485,7 +487,6 @@ Pour des exemples simples de publication de données vous pouvez consulter la [d
         tags: ['Services distants'],
         parameters: [
           utils.qParam,
-          utils.ownerParam,
           utils.selectParam(Object.keys(remoteService.properties)),
           utils.filterParam('api-id', `Restreindre sur l'identifiant de l'API d'origine`),
           utils.filterParam('input-concepts', `Restreindre sur les concepts en entrée des routes de l'API`),
@@ -651,7 +652,8 @@ Pour des exemples simples de publication de données vous pouvez consulter la [d
           utils.qParam,
           utils.ownerParam,
           utils.selectParam(Object.keys(application.properties)),
-          ...utils.paginationParams
+          ...utils.paginationParams,
+          ...utils.visibilityParams
         ],
         responses: {
           200: {

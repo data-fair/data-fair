@@ -30,7 +30,9 @@ exports.query = (req, fieldsMap, forceShowAll) => {
   if (showAll && !req.user.isAdmin) throw createError(400, 'Only super admins can override permissions filter with showAll parameter')
   showAll = showAll || forceShowAll
   query.$and = []
-  if (!showAll) query.$and.push({ $or: permissions.filter(req.user) })
+  if (!showAll) {
+    query.$and.push({ $or: permissions.filter(req.user, req.query.public === 'true', req.query.private === 'true') })
+  }
   if (req.query.owner && !forceShowAll) {
     delete query['owner.type']
     delete query['owner.id']

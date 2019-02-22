@@ -33,6 +33,24 @@ exports.ownerParam = {
   style: 'commaDelimited'
 }
 
+exports.visibilityParams = [{
+  in: 'query',
+  name: 'public',
+  description: 'Voir uniquement les ressources publiques.',
+  required: false,
+  schema: {
+    type: 'boolean'
+  }
+}, {
+  in: 'query',
+  name: 'public',
+  description: `Voir uniquement les ressources privées. Celles auxquelles vous avez accès du fait d'une permission particulière.`,
+  required: false,
+  schema: {
+    type: 'boolean'
+  }
+}]
+
 exports.selectParam = (values) => ({
   in: 'query',
   name: 'select',
