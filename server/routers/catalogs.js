@@ -50,6 +50,10 @@ router.get('/_organizations', asyncWrap(async(req, res) => {
   res.status(200).json(organizations)
 }))
 
+router.get('/_types', asyncWrap(async(req, res) => {
+  res.send(catalogs.connectors.map(c => ({ key: c.key, title: c.title, searchOrganization: c.searchOrganization })))
+}))
+
 // Get the list of catalogs
 router.get('', asyncWrap(async(req, res) => {
   const catalogs = req.app.get('db').collection('catalogs')

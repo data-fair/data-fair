@@ -31,6 +31,6 @@ module.exports = {
     href: 'https://www.data.gouv.fr'
   }, {
     title: 'Mydatacatalogue',
-    href: 'https://mydatacatalogue.fr'
+    href: 'https://app.dawizz.fr/mydatacatalogue/'
   }]
 }

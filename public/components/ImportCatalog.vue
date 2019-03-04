@@ -34,7 +34,7 @@
       </v-stepper-content>
 
       <v-stepper-content step="2">
-        <catalog-config-form :catalog="catalog"/>
+        <catalog-config-form :catalog="catalog" :catalog-type="catalogTypes.find(t => t.key === catalog.type)"/>
         <v-btn :disabled="!catalog.apiKey" color="primary" @click.native="currentStep = 3">Continuer</v-btn>
         <v-btn flat @click.native="$emit('cancel')">Annuler</v-btn>
       </v-stepper-content>
@@ -65,7 +65,8 @@ export default {
     configurableCatalogs: [],
     marked,
     catalog: {},
-    importing: false
+    importing: false,
+    catalogTypes: []
   }),
   computed: {
     ...mapState('session', ['user']),
@@ -73,6 +74,7 @@ export default {
   },
   async mounted() {
     this.configurableCatalogs = await this.$axios.$get('api/v1/configurable-catalogs')
+    this.catalogTypes = await this.$axios.$get('api/v1/catalogs/_types')
     if (this.initCatalog) {
       this.catalogUrl = this.initCatalog
       this.initFromUrl()

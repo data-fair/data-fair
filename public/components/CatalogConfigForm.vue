@@ -11,6 +11,7 @@
       @blur="changeApiKey"
     />
     <v-autocomplete
+      v-if="catalogType && catalogType.searchOrganization"
       v-model="catalog.organization"
       :items="organizations"
       :loading="organizationsLoading"
@@ -31,7 +32,7 @@
 
 <script>
 export default {
-  props: ['catalog'],
+  props: ['catalog', 'catalogType'],
   data() {
     return {
       orgHint: `Laissez vide pour travailler sur un compte personnel. Sinon utilisez l'identifiant d'une organisation dans laquelle vous avez le droit d'écriture.`,

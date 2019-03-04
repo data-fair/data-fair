@@ -5,6 +5,7 @@ const axios = require('axios')
 exports.title = 'uData'
 exports.description = 'Customizable and skinnable social platform dedicated to (open)data.'
 exports.docUrl = 'https://udata.readthedocs.io/en/latest/'
+exports.searchOrganization = true
 
 exports.init = async (catalogUrl) => {
   const siteInfo = (await axios.get(url.resolve(catalogUrl, 'api/1/site/'))).data
