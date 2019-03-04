@@ -164,7 +164,7 @@ export default {
     },
     addProperty() {
       if (this.$refs.addPropertyForm.validate()) {
-        this.schema.push({ key: this.newPropertyKey, ...this.newPropertyType })
+        this.schema.push({ key: this.newPropertyKey, ...this.newPropertyType, title: '' })
         this.addPropertyDialog = false
       }
     },
