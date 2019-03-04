@@ -1,3 +1,4 @@
+const config = require('config')
 const fs = require('fs-extra')
 const path = require('path')
 const createError = require('http-errors')
@@ -17,6 +18,9 @@ const fieldsSniffer = require('./fields-sniffer')
 
 const actions = ['create', 'update', 'patch', 'delete']
 
+const tmpDir = path.join(config.dataDir, 'tmp')
+fs.ensureDirSync(tmpDir)
+
 function cleanLine(line) {
   delete line._needsIndexing
   delete line._deleted
@@ -26,11 +30,15 @@ function cleanLine(line) {
 }
 
 exports.uploadAttachment = multer({
-  storage: multer.diskStorage({})
+  storage: multer.diskStorage({
+    destination: (req, file, cb) => cb(null, tmpDir)
+  })
 }).single('attachment')
 
 exports.uploadBulk = multer({
-  storage: multer.diskStorage({})
+  storage: multer.diskStorage({
+    destination: (req, file, cb) => cb(null, tmpDir)
+  })
 }).fields([{ name: 'attachments', maxCount: 1 }, { name: 'actions', maxCount: 1 }])
 
 exports.collection = (db, dataset) => {
@@ -82,7 +90,7 @@ const compileSchema = (dataset) => {
 
 async function manageAttachment(req, keepExisting) {
   if (req.is('multipart/form-data')) {
-    // When taken from form-data everything is string.. converto to actual types
+    // When taken from form-data everything is string.. convert to actual types
     req.dataset.schema
       .filter(f => !f['x-calculated'])
       .forEach(f => {
