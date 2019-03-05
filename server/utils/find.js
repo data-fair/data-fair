@@ -1,6 +1,5 @@
 const config = require('config')
 const createError = require('http-errors')
-const clone = require('fast-clone')
 const permissions = require('./permissions')
 
 // Util functions shared accross the main find (GET on collection) endpoints
@@ -31,29 +30,35 @@ exports.query = (req, fieldsMap, forceShowAll) => {
   showAll = showAll || forceShowAll
   query.$and = []
   if (!showAll) {
-    query.$and.push({ $or: permissions.filter(req.user, req.query.public === 'true', req.query.private === 'true') })
+    const onlyPublic = req.query.public === 'true' || (req.query.visibility && req.query.visibility.includes('public'))
+    const onlyPrivate = req.query.private === 'true' || (req.query.visibility && req.query.visibility.includes('private'))
+    query.$and.push({ $or: permissions.filter(req.user, onlyPublic, onlyPrivate) })
   }
   if (req.query.owner && !forceShowAll) {
     delete query['owner.type']
     delete query['owner.id']
-    const ownerTypes = {}
-    req.query.owner.split(',').forEach(owner => {
-      const [t, id] = owner.split(':')
-      ownerTypes[t] = ownerTypes[t] || []
-      ownerTypes[t].push(id)
-    })
-    let ownerFilters = ['user', 'organization'].filter(t => ownerTypes[t]).map(t => ({ 'owner.type': t, 'owner.id': { $in: ownerTypes[t] } }))
-    if (ownerTypes['-user'] || ownerTypes['-organization']) {
-      ownerFilters = ownerFilters.concat(['-user', '-organization'].map(t => {
-        const f = { 'owner.type': t.substring(1) }
-        if (ownerTypes[t]) f['owner.id'] = { $nin: ownerTypes[t] }
-        return f
-      }))
-    }
-    query.$and.push({ $or: ownerFilters })
+    query.$and.push({ $or: exports.ownerFilters(req.query) })
   }
   if (!query.$and.length) delete query.$and
   return query
+}
+
+exports.ownerFilters = (reqQuery) => {
+  const ownerTypes = {}
+  reqQuery.owner.split(',').forEach(owner => {
+    const [t, id] = owner.split(':')
+    ownerTypes[t] = ownerTypes[t] || []
+    ownerTypes[t].push(id)
+  })
+  let ownerFilters = ['user', 'organization'].filter(t => ownerTypes[t]).map(t => ({ 'owner.type': t, 'owner.id': { $in: ownerTypes[t] } }))
+  if (ownerTypes['-user'] || ownerTypes['-organization']) {
+    ownerFilters = ownerFilters.concat(['-user', '-organization'].map(t => {
+      const f = { 'owner.type': t.substring(1) }
+      if (ownerTypes[t]) f['owner.id'] = { $nin: ownerTypes[t] }
+      return f
+    }))
+  }
+  return ownerFilters
 }
 
 exports.sort = (sortStr) => {
@@ -142,25 +147,59 @@ exports.setResourceLinks = (resource, resourceType) => {
   if (resourceType === 'application') resource.exposedUrl = `${config.publicUrl}/app/${resource.id}`
 }
 
-exports.facetsQuery = (reqQuery, filterFields, query) => {
-  const facetsQueryParam = reqQuery.facets
+exports.facetsQuery = (req, filterFields) => {
+  const facetsQueryParam = req.query.facets
   const pipeline = []
-  if (query.$text) {
+
+  if (req.query.q) {
     pipeline.push({
       $match: {
-        $text: query.$text
+        $text: {
+          $search: req.query.q
+        }
       }
     })
-    delete query.$text
   }
-  const ownerQuery = clone(query)
-  if (reqQuery.owner) {
-    ownerQuery.$and.pop()
-    if (!ownerQuery.$and.length) delete ownerQuery.$and
-  }
-  const fields = facetsQueryParam && facetsQueryParam.length && facetsQueryParam.split(',').filter(f => filterFields[f] || f === 'owner')
+
+  // Apply as early as possible the permissions filter
+  pipeline.push({
+    $match: {
+      $or: permissions.filter(req.user, req.query.public === 'true', req.query.private === 'true')
+    }
+  })
+
+  const fields = facetsQueryParam && facetsQueryParam.length && facetsQueryParam.split(',').filter(f => filterFields[f] || f === 'owner' || f === 'visibility')
   if (fields) {
-    pipeline.push({
+    const facets = {}
+    fields.forEach(f => {
+      if (f === 'visibility') {
+        // visibility is a special case.. we do a match and count for public and another one for private
+        facets['visibility-public'] = [{ $match: { permissions: {
+          $elemMatch: { $or: [{ operations: 'list' }, { classes: 'list' }], type: null, id: null }
+        } } }, { $count: 'count' }]
+        facets['visibility-private'] = [{ $match: { permissions: { $not: {
+          $elemMatch: { $or: [{ operations: 'list' }, { classes: 'list' }], type: null, id: null }
+        } } } }, { $count: 'count' }]
+
+        return
+      }
+
+      const facet = facets[f] = []
+      // Apply all the filters from the current query to the facet, except the one concerning current field
+      Object.keys(filterFields).filter(name => req.query[name] !== undefined && name !== f).forEach(name => {
+        facet.push({ $match: { [filterFields[name]]: { $in: req.query[name].split(',') } } })
+      })
+      if (f !== 'owner' && req.query.owner) {
+        facet.push({ $match: { $or: exports.ownerFilters(req.query) } })
+      }
+
+      facet.push({ $unwind: '$' + (filterFields[f] || 'owner').split('.').shift() })
+      facet.push({ $group: { _id: { [f]: '$' + (filterFields[f] || 'owner'), id: '$id' } } })
+      facet.push({ $project: { [f]: '$_id.' + f, _id: 0 } })
+      facet.push({ $sortByCount: '$' + f })
+    })
+    pipeline.push({ $facet: facets })
+    /* pipeline.push({
       $facet: Object.assign({}, ...fields.map(f => ({
         [f]: [{
           $match: f === 'owner' ? ownerQuery : query
@@ -176,12 +215,22 @@ exports.facetsQuery = (reqQuery, filterFields, query) => {
         }]
       })))
     })
+    */
   }
   return pipeline
 }
 
 exports.parseFacets = (facets) => {
   if (!facets) return
-  const ret = facets.pop()
-  return Object.assign({}, ...Object.keys(ret).map(k => ({ [k]: ret[k].filter(r => r._id).map(r => ({ count: r.count, value: r._id })) })))
+  const res = {}
+  Object.entries(facets.pop()).forEach(([k, values]) => {
+    if (k.startsWith('visibility-')) {
+      res.visibility = res.visibility || []
+      res.visibility.push({ count: values[0] ? values[0].count : 0, value: k.replace('visibility-', '') })
+      res.visibility.sort((a, b) => a.count < b.count ? 1 : -1)
+    } else {
+      res[k] = values.filter(r => r._id).map(r => ({ count: r.count, value: r._id }))
+    }
+  })
+  return res
 }

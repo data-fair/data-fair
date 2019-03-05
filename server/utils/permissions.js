@@ -1,6 +1,5 @@
 const config = require('config')
 const express = require('express')
-const createError = require('http-errors')
 const permissionsSchema = require('../../contract/permissions.json')
 const apiDocsUtil = require('./api-docs')
 const ajv = require('ajv')()
@@ -89,9 +88,12 @@ exports.isPublic = function(resource, operationsClasses) {
 
 // Manage filters for datasets, applications and remote services
 exports.filter = function(user, onlyPublic, onlyPrivate) {
-  // this check is important, or we can end up with an empty permission filter
-  // which would be a huge leak
-  if (onlyPublic && onlyPrivate) throw createError(400, `You can't set both "public", and "private" filters`)
+  // the 2 visibility params cancel each other
+  // this check is important, or we can end up with an empty permission filter which would be a huge leak
+  if (onlyPublic && onlyPrivate) {
+    onlyPublic = false
+    onlyPrivate = false
+  }
 
   const operationFilter = [{ operations: 'list' }, { classes: 'list' }]
   const publicFilter = {

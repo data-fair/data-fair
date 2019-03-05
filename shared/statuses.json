@@ -1,0 +1,30 @@
+{
+  "dataset": {
+    "uploaded": {
+      "title": "Chargé (à convertir)"
+    },
+    "loaded": {
+      "title": "Chargé"
+    },
+    "analyzed": {
+      "title": "Analyse initiale ok"
+    },
+    "schematized": {
+      "title": "Schéma ok"
+    },
+    "indexed": {
+      "title": "Indexé"
+    },
+    "extended": {
+      "title": "Extension ok"
+    },
+    "finalized": {
+      "title": "Finalisé",
+      "icon": "check"
+    },
+    "error": {
+      "title": "Erreur",
+      "icon": "error"
+    }
+  }
+}

@@ -4,7 +4,7 @@
       <v-text-field v-model="filters.q" label="Rechercher" append-icon="search" @keyup.enter.native="writeParams" @click:append="writeParams"/>
     </v-flex>
     <v-spacer/>
-    <div>
+    <!--<div>
       <v-btn-toggle v-if="!hideOwners" v-model="owners" multiple @change="writeParams">
         <v-btn v-if="user" :value="'user:' + user.id" flat>
           <v-icon>person</v-icon>
@@ -23,7 +23,7 @@
         </v-btn>
       </v-btn-toggle>
     </div>
-    <v-spacer/>
+    <v-spacer/>-->
     <v-flex xs12>
       <v-layout row wrap>
         <v-chip v-for="filter in Object.keys(fullFilterLabels)" v-if="filters[filter]" :key="filter" close small color="accent" text-color="white" @input="filters[filter] = null;writeParams(filter)">

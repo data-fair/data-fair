@@ -64,7 +64,8 @@ router.get('', asyncWrap(async(req, res) => {
     'field-type': 'schema.type',
     'field-format': 'schema.format',
     'children': 'virtual.children',
-    'services': 'extensions.remoteService'
+    'services': 'extensions.remoteService',
+    'status': 'status'
   }
   const query = findUtils.query(req, Object.assign({
     'filename': 'originalFile.name',
@@ -82,7 +83,7 @@ router.get('', asyncWrap(async(req, res) => {
     datasets.countDocuments(query)
   ]
   if (req.query.facets) {
-    mongoQueries.push(datasets.aggregate(findUtils.facetsQuery(req.query, filterFields, query)).toArray())
+    mongoQueries.push(datasets.aggregate(findUtils.facetsQuery(req, filterFields)).toArray())
   }
   let [results, count, facets] = await Promise.all(mongoQueries)
   results.forEach(r => {

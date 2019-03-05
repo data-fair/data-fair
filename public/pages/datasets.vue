@@ -80,8 +80,12 @@ export default {
   computed: {
     ...mapState('session', ['user', 'initialized'])
   },
+  created() {
+    this.fetchVocabulary()
+  },
   methods: {
-    ...mapActions('session', ['login'])
+    ...mapActions('session', ['login']),
+    ...mapActions(['fetchVocabulary'])
   }
 }
 </script>

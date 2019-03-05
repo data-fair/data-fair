@@ -96,7 +96,7 @@ router.get('', asyncWrap(async(req, res) => {
     remoteServices.countDocuments(query)
   ]
   if (req.query.facets) {
-    mongoQueries.push(remoteServices.aggregate(findUtils.facetsQuery(req.query, {}, query)).toArray())
+    mongoQueries.push(remoteServices.aggregate(findUtils.facetsQuery(req, {})).toArray())
   }
   let [results, count, facets] = await Promise.all(mongoQueries)
   results.forEach(r => clean(r))
