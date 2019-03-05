@@ -18,9 +18,6 @@ const fieldsSniffer = require('./fields-sniffer')
 
 const actions = ['create', 'update', 'patch', 'delete']
 
-const tmpDir = path.join(config.dataDir, 'tmp')
-fs.ensureDirSync(tmpDir)
-
 function cleanLine(line) {
   delete line._needsIndexing
   delete line._deleted
@@ -29,16 +26,22 @@ function cleanLine(line) {
   return line
 }
 
+const destination = async (req, file, cb) => {
+  try {
+    const tmpDir = path.join(config.dataDir, 'tmp')
+    await fs.ensureDir(tmpDir)
+    cb(null, tmpDir)
+  } catch (err) {
+    cb(err)
+  }
+}
+
 exports.uploadAttachment = multer({
-  storage: multer.diskStorage({
-    destination: (req, file, cb) => cb(null, tmpDir)
-  })
+  storage: multer.diskStorage({ destination })
 }).single('attachment')
 
 exports.uploadBulk = multer({
-  storage: multer.diskStorage({
-    destination: (req, file, cb) => cb(null, tmpDir)
-  })
+  storage: multer.diskStorage({ destination })
 }).fields([{ name: 'attachments', maxCount: 1 }, { name: 'actions', maxCount: 1 }])
 
 exports.collection = (db, dataset) => {
