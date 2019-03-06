@@ -170,7 +170,8 @@ exports.facetsQuery = (req, filterFields) => {
     }
   })
 
-  const fields = facetsQueryParam && facetsQueryParam.length && facetsQueryParam.split(',').filter(f => filterFields[f] || f === 'owner' || f === 'visibility')
+  const fields = facetsQueryParam && facetsQueryParam.length && facetsQueryParam.split(',')
+    .filter(f => filterFields[f] || f === 'owner' || f === 'visibility')
   if (fields) {
     const facets = {}
     fields.forEach(f => {
@@ -195,8 +196,18 @@ exports.facetsQuery = (req, filterFields) => {
         return
       }
 
-      facet.push({ $unwind: '$' + (filterFields[f] || 'owner').split('.').shift() })
-      facet.push({ $group: { _id: { [f]: '$' + (filterFields[f] || 'owner'), id: '$id' } } })
+      // another special case for base-application.. we perform a join
+      if (f === 'base-application') {
+        facet.push({ $lookup: {
+          from: 'base-applications', localField: 'url', foreignField: 'url', as: 'base-application'
+        } })
+        facet.push({ $unwind: '$base-application' })
+        facet.push({ $group: { _id: { [f]: '$base-application', id: '$id' } } })
+      } else {
+        facet.push({ $unwind: '$' + (filterFields[f] || f).split('.').shift() })
+        facet.push({ $group: { _id: { [f]: '$' + (filterFields[f] || f), id: '$id' } } })
+      }
+
       facet.push({ $project: { [f]: '$_id.' + f, _id: 0 } })
       facet.push({ $sortByCount: '$' + f })
       facets[f] = facet
@@ -231,6 +242,14 @@ exports.parseFacets = (facets) => {
       res.visibility = res.visibility || []
       res.visibility.push({ count: values[0] ? values[0].count : 0, value: k.replace('visibility-', '') })
       res.visibility.sort((a, b) => a.count < b.count ? 1 : -1)
+    } else if (k === 'base-application') {
+      res[k] = values.filter(r => r._id)
+        .map(r => ({ count: r.count,
+          value: {
+            url: r._id.url,
+            version: r._id.version || (r._id.meta && r._id.meta.version),
+            title: r._id.title || (r._id.meta && r._id.meta.title)
+          } }))
     } else {
       res[k] = values.filter(r => r._id).map(r => ({ count: r.count, value: r._id }))
     }

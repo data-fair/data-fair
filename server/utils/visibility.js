@@ -19,14 +19,9 @@ exports.protectedFilter = { permissions: {
   $not: { $elemMatch: { $or: operationFilter, type: null, id: null } }
 } }
 
-function isListPerm(p) {
-  console.log('P', p)
-  return p.operations.includes('list') || p.classes.includes('list')
-}
-
 exports.visibility = (resource) => {
   resource.permissions = resource.permissions || []
-  if (resource.permissions.find(p => isListPerm(p) && !p.type && !p.id)) {
+  if (resource.permissions.find(p => (p.operations.includes('list') || p.classes.includes('list')) && !p.type && !p.id)) {
     return 'public'
   }
   if (resource.permissions.length === 0) {

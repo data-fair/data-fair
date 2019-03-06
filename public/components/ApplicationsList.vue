@@ -76,7 +76,8 @@ export default {
     filtered: false,
     facetsValues: {
       owner: {},
-      visibility: {}
+      visibility: {},
+      'base-application': {}
     }
   }),
   computed: {
@@ -116,7 +117,7 @@ export default {
         page: this.page,
         select: 'title,description,status',
         ...fullFilters,
-        facets: 'owner,visibility',
+        facets: 'owner,visibility,base-application',
         sort: 'createdAt:-1'
       } })
       this.filtered = this.filters.q !== undefined

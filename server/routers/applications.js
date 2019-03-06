@@ -61,6 +61,7 @@ router.get('', asyncWrap(async(req, res) => {
   }
   const filterFields = {
     'url': 'url',
+    'base-application': 'url',
     'dataset': 'configuration.datasets.href'
   }
   const query = findUtils.query(req, Object.assign({
