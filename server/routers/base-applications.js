@@ -4,6 +4,7 @@ const config = require('config')
 const express = require('express')
 const axios = require('axios')
 const slug = require('slugify')
+const jsonRefs = require('json-refs')
 const createError = require('http-errors')
 const Extractor = require('html-extractor')
 const htmlExtractor = new Extractor()
@@ -54,8 +55,10 @@ async function initBaseApp(db, app) {
   }
 
   try {
-    const configSchema = (await axios.get(app.url + 'config-schema.json')).data
-    if (typeof configSchema !== 'object') throw new Error('Invalid json')
+    const res = (await axios.get(app.url + 'config-schema.json'))
+    if (typeof res.data !== 'object') throw new Error('Invalid json')
+    const configSchema = (await jsonRefs.resolveRefs(res.data, { filter: ['local'] })).resolved
+
     patch.hasConfigSchema = true
 
     // Read the config schema to deduce filters on datasets
