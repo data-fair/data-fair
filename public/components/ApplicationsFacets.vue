@@ -36,7 +36,7 @@
       <v-subheader>Type d'application</v-subheader>
       <v-checkbox
         v-for="facetItem in facets['base-application']" :key="`${facetItem.value}`"
-        :label="`${facetItem.value.title} ${facetItem.value.version || '' } (${facetItem.count})`" :value="true"
+        :label="`${facetItem.value.title} ${facetItem.value.version || ''} (${facetItem.count})`" :value="true"
         v-model="facetsValues['base-application'][facetItem.value.url]"
         :hide-details="true"
         class="mt-0"
