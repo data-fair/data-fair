@@ -43,7 +43,7 @@ test('User has permissions on classe', async t => {
   t.is(res.status, 200)
 })
 
-test.only('Read with public and private filters', async t => {
+test('Read with public and private filters', async t => {
   const axAnonym = await axiosBuilder()
   let res = await axAnonym.get('/api/v1/datasets')
   t.is(res.data.count, 1)
@@ -52,7 +52,7 @@ test.only('Read with public and private filters', async t => {
   res = await ax.get('/api/v1/datasets')
   t.is(res.data.count, 2)
 
-  res = await ax.get('/api/v1/datasets?private=true')
+  res = await ax.get('/api/v1/datasets?protected=true')
   t.is(res.data.count, 1)
   t.is(res.data.results[0].id, datasetId)
 

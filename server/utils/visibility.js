@@ -21,7 +21,7 @@ exports.protectedFilter = { permissions: {
 
 exports.visibility = (resource) => {
   resource.permissions = resource.permissions || []
-  if (resource.permissions.find(p => (p.operations.includes('list') || p.classes.includes('list')) && !p.type && !p.id)) {
+  if (resource.permissions.find(p => ((p.operations && p.operations.includes('list')) || (p.classes && p.classes.includes('list'))) && !p.type && !p.id)) {
     return 'public'
   }
   if (resource.permissions.length === 0) {
