@@ -26,7 +26,7 @@
               <v-card-actions style="position:absolute; bottom: 0px;width:100%;">
                 <span v-if="application.owner.type === 'user'"><v-icon>person</v-icon>&nbsp;{{ application.owner.name }}</span>
                 <span v-if="application.owner.type === 'organization'"><v-icon>group</v-icon>&nbsp;{{ application.owner.name }}<span v-if="application.owner.role"> ({{ application.owner.role }})</span></span>
-                &nbsp;<v-chip :color="application.public ? 'primary' : 'accent'" text-color="white">{{ application.public ? 'Public' : 'Privé' }}</v-chip>
+                &nbsp;<v-chip :color="application.visibility === 'public' ? 'primary' : 'accent'" text-color="white">{{ {public: 'Public', private: 'Privé', protected: 'Protégé'}[application.visibility] }}</v-chip>
                 <template v-if="application.status === 'error'">
                   <v-spacer />
                   <span><v-icon color="red">warning</v-icon>&nbsp;En erreur</span>

@@ -44,11 +44,29 @@ exports.visibilityParams = [{
 }, {
   in: 'query',
   name: 'public',
-  description: `Voir uniquement les ressources privées. Celles auxquelles vous avez accès du fait d'une permission particulière.`,
+  description: `Voir uniquement les ressources privées. Celles sur lesquelles aucune permission particulière n'a été appliquée.`,
   required: false,
   schema: {
     type: 'boolean'
   }
+}, {
+  in: 'query',
+  name: 'protected',
+  description: `Voir uniquement les ressources protégées. Celles sur lesquelles une permission particulière non publique été appliquée.`,
+  required: false,
+  schema: {
+    type: 'boolean'
+  }
+}, {
+  in: 'query',
+  name: 'visibility',
+  description: 'Filtrer dans le même paramètre sur public/private/protected',
+  require: 'false',
+  schema: {
+    type: 'array',
+    enum: ['public', 'private', 'protected']
+  },
+  style: 'commaDelimited'
 }]
 
 exports.selectParam = (values) => ({

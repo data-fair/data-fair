@@ -25,6 +25,7 @@ const usersUtils = require('../utils/users')
 const datasetUtils = require('../utils/dataset')
 const virtualDatasetsUtils = require('../utils/virtual-datasets')
 const restDatasetsUtils = require('../utils/rest-datasets')
+const visibilityUtils = require('../utils/visibility')
 const findUtils = require('../utils/find')
 const asyncWrap = require('../utils/async-wrap')
 const extensions = require('../utils/extensions')
@@ -50,6 +51,7 @@ const operationsClasses = {
 
 function clean(dataset) {
   dataset.public = permissions.isPublic(dataset, operationsClasses)
+  dataset.visibility = visibilityUtils.visibility(dataset)
   delete dataset.permissions
   dataset.description = dataset.description ? sanitizeHtml(dataset.description) : ''
   findUtils.setResourceLinks(dataset, 'dataset')

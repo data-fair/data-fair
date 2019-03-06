@@ -1,6 +1,7 @@
 const config = require('config')
 const createError = require('http-errors')
 const permissions = require('./permissions')
+const visibility = require('./visibility')
 
 // Util functions shared accross the main find (GET on collection) endpoints
 
@@ -30,9 +31,10 @@ exports.query = (req, fieldsMap, forceShowAll) => {
   showAll = showAll || forceShowAll
   query.$and = []
   if (!showAll) {
-    const onlyPublic = req.query.public === 'true' || (req.query.visibility && req.query.visibility.includes('public'))
-    const onlyPrivate = req.query.private === 'true' || (req.query.visibility && req.query.visibility.includes('private'))
-    query.$and.push({ $or: permissions.filter(req.user, onlyPublic, onlyPrivate) })
+    query.$and.push({ $or: permissions.filter(req.user) })
+  }
+  if (visibility.filters(req.query)) {
+    query.$and.push({ $or: visibility.filters(req.query) })
   }
   if (req.query.owner && !forceShowAll) {
     delete query['owner.type']
@@ -172,19 +174,7 @@ exports.facetsQuery = (req, filterFields) => {
   if (fields) {
     const facets = {}
     fields.forEach(f => {
-      if (f === 'visibility') {
-        // visibility is a special case.. we do a match and count for public and another one for private
-        facets['visibility-public'] = [{ $match: { permissions: {
-          $elemMatch: { $or: [{ operations: 'list' }, { classes: 'list' }], type: null, id: null }
-        } } }, { $count: 'count' }]
-        facets['visibility-private'] = [{ $match: { permissions: { $not: {
-          $elemMatch: { $or: [{ operations: 'list' }, { classes: 'list' }], type: null, id: null }
-        } } } }, { $count: 'count' }]
-
-        return
-      }
-
-      const facet = facets[f] = []
+      const facet = []
       // Apply all the filters from the current query to the facet, except the one concerning current field
       Object.keys(filterFields).filter(name => req.query[name] !== undefined && name !== f).forEach(name => {
         facet.push({ $match: { [filterFields[name]]: { $in: req.query[name].split(',') } } })
@@ -192,11 +182,24 @@ exports.facetsQuery = (req, filterFields) => {
       if (f !== 'owner' && req.query.owner) {
         facet.push({ $match: { $or: exports.ownerFilters(req.query) } })
       }
+      if (f !== 'visibility' && visibility.filters(req.query)) {
+        facet.push({ $match: { $or: visibility.filters(req.query) } })
+      }
+
+      // visibility is a special case.. we do a match and count
+      // for each public/private/protected instead of a $group
+      if (f === 'visibility') {
+        facets['visibility-public'] = [...facet, { $match: visibility.publicFilter }, { $count: 'count' }]
+        facets['visibility-private'] = [...facet, { $match: visibility.privateFilter }, { $count: 'count' }]
+        facets['visibility-protected'] = [...facet, { $match: visibility.protectedFilter }, { $count: 'count' }]
+        return
+      }
 
       facet.push({ $unwind: '$' + (filterFields[f] || 'owner').split('.').shift() })
       facet.push({ $group: { _id: { [f]: '$' + (filterFields[f] || 'owner'), id: '$id' } } })
       facet.push({ $project: { [f]: '$_id.' + f, _id: 0 } })
       facet.push({ $sortByCount: '$' + f })
+      facets[f] = facet
     })
     pipeline.push({ $facet: facets })
     /* pipeline.push({

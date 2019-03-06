@@ -22,6 +22,7 @@ const findUtils = require('../utils/find')
 const asyncWrap = require('../utils/async-wrap')
 const journals = require('../utils/journals')
 const capture = require('../utils/capture')
+const visibilityUtils = require('../utils/visibility')
 
 const router = module.exports = express.Router()
 
@@ -34,6 +35,8 @@ const operationsClasses = {
 
 function clean(application) {
   application.public = permissions.isPublic(application, operationsClasses)
+  application.visibility = visibilityUtils.visibility(application)
+
   delete application.permissions
   delete application._id
   delete application.configuration

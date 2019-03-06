@@ -18,7 +18,7 @@
               <v-card-actions style="width:100%;height:25%">
                 <span v-if="dataset.owner.type === 'user'"><v-icon>person</v-icon>&nbsp;{{ dataset.owner.name }}</span>
                 <span v-if="dataset.owner.type === 'organization'"><v-icon>group</v-icon>&nbsp;{{ dataset.owner.name }}<span v-if="dataset.owner.role"> ({{ dataset.owner.role }})</span></span>
-                &nbsp;<v-chip :color="dataset.public ? 'primary' : 'accent'" text-color="white">{{ dataset.public ? 'Public' : 'Privé' }}</v-chip>
+                &nbsp;<v-chip :color="dataset.visibility === 'public' ? 'primary' : 'accent'" text-color="white">{{ {public: 'Public', private: 'Privé', protected: 'Protégé'}[dataset.visibility] }}</v-chip>
                 <template v-if="dataset.status === 'error'">
                   <v-spacer />
                   <span><v-icon color="red">warning</v-icon>&nbsp;Erreurs pendant la publication</span>
