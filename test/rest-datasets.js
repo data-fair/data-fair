@@ -1,9 +1,9 @@
 const fs = require('fs')
 const FormData = require('form-data')
 const testUtils = require('./resources/test-utils')
+const { test, axiosBuilder } = testUtils.prepare(__filename)
 const restDatasetsUtils = require('../server/utils/rest-datasets')
 const datasetUtils = require('../server/utils/dataset')
-const { test, axiosBuilder } = testUtils.prepare(__filename)
 const workers = require('../server/workers')
 
 test.serial('Create empty REST datasets', async t => {

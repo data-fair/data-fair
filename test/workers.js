@@ -4,7 +4,7 @@ const FormData = require('form-data')
 
 const testUtils = require('./resources/test-utils')
 
-const { test, axiosBuilder } = testUtils.prepare(__filename)
+const { test, axiosBuilder, config } = testUtils.prepare(__filename)
 
 const workers = require('../server/workers')
 const esUtils = require('../server/utils/es')
@@ -171,4 +171,21 @@ test.skip('Process newly uploaded shapefile dataset', async t => {
   let dataset = await workers.hook('converter')
   t.is(dataset.status, 'loaded')
   t.is(dataset.file.name, 'stations.geojson')
+})
+
+test.serial('Run tasks in children processes', async t => {
+  config.worker.spawnTask = true
+  const datasetFd = fs.readFileSync('./test/resources/dataset1.csv')
+  const form = new FormData()
+  form.append('file', datasetFd, 'dataset.csv')
+  const ax = await axiosBuilder('dmeadus0@answers.com:passwd')
+  let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
+  t.is(res.status, 201)
+  let dataset = await workers.hook('csvAnalyzer')
+  t.is(dataset.status, 'analyzed')
+  dataset = await workers.hook('csvSchematizer')
+  t.is(dataset.status, 'schematized')
+  dataset = await workers.hook('finalizer')
+  t.is(dataset.status, 'finalized')
+  t.is(dataset.count, 2)
 })

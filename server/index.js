@@ -9,8 +9,17 @@ app.run().then(app => {
   if (config.mode.includes('server')) {
     console.log('Web socket and HTTP server listening on http://localhost:%s', config.port)
   }
+  if (config.mode === 'task') {
+    console.log(`Ran task ${process.argv[2]} / ${process.argv[3]} / ${process.argv[4]}`)
+    process.exit()
+  }
 }, err => {
-  console.error('Failure while starting server', err)
+  if (config.mode === 'task') {
+    console.debug(`Failure in data-fair task ${process.argv[2]} / ${process.argv[3]} / ${process.argv[4]}`, err)
+    console.error(err.message)
+  } else {
+    console.error('Failure in data-fair process', err)
+  }
   process.exit(-1)
 })
 

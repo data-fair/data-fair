@@ -1,4 +1,4 @@
-require('cache-require-paths')
+// require('cache-require-paths')
 const test = require('ava')
 const axios = require('axios')
 const fs = require('fs-extra')
@@ -6,7 +6,6 @@ const path = require('path')
 const nock = require('nock')
 const FormData = require('form-data')
 const axiosAuth = require('@koumoul/sd-express').axiosAuth
-const workers = require('../../server/workers')
 const debug = require('debug')('test')
 
 const testDir = path.join(__dirname, '../')
@@ -32,8 +31,7 @@ exports.prepare = (testFile) => {
   const port = 5800 + testFiles.indexOf(testFile)
   const dataDir = './data/test-' + key
   const indicesPrefix = 'dataset-test-' + key
-  const config = require('config')
-  Object.assign(config, {
+  process.env.NODE_CONFIG = JSON.stringify({
     port,
     publicUrl: 'http://localhost:' + port,
     dataDir,
@@ -45,7 +43,7 @@ exports.prepare = (testFile) => {
       value: 'test_default_key'
     }
   })
-
+  const config = require('config')
   const app = require('../../server/app.js')
   debug('test suite ready')
 
@@ -120,5 +118,6 @@ exports.sendDataset = async(fileName, ax, organizationId) => {
   const form = new FormData()
   form.append('file', datasetFd, fileName)
   const res = await ax.post('/api/v1/datasets', form, { headers: exports.formHeaders(form, organizationId) })
+  const workers = require('../../server/workers')
   return workers.hook(`finalizer/${res.data.id}`)
 }

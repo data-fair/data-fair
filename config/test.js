@@ -10,7 +10,8 @@ module.exports = {
   },
   worker: {
     interval: 40,
-    concurrency: 2
+    concurrency: 2,
+    spawnTask: false
   },
   locks: {
     // in seconds

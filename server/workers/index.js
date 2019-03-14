@@ -1,8 +1,9 @@
 const config = require('config')
+const exec = require('util').promisify(require('child_process').exec)
 const locks = require('../utils/locks')
 const journals = require('../utils/journals')
 
-const tasks = {
+const tasks = exports.tasks = {
   downloader: require('./downloader'),
   converter: require('./converter'),
   csvAnalyzer: require('./csv-analyzer'),
@@ -106,19 +107,40 @@ async function iter(app, type) {
     const task = tasks[taskKey]
 
     if (task.eventsPrefix) await journals.log(app, resource, { type: task.eventsPrefix + '-start' }, type)
-    await task.process(app, resource)
-    if (hooks[taskKey]) hooks[taskKey].resolve(resource)
-    if (hooks[taskKey + '/' + resource.id]) hooks[taskKey + '/' + resource.id].resolve(resource)
-    if (task.eventsPrefix) await journals.log(app, resource, { type: task.eventsPrefix + '-end' }, type)
+
+    if (config.worker.spawnTask) {
+      // Run a task in a dedicated child process for  extra resiliency to fatal memory exceptions
+      let { stdout, stderr } = await exec(`node server ${taskKey} ${type} ${resource.id}`, { env: { ...process.env, MODE: 'task' } })
+      stdout.split('\n').filter(line => !!line).forEach(line => console.log)
+      stderr.split('\n').filter(line => !!line).forEach(line => console.error)
+    } else {
+      await task.process(app, resource)
+    }
+
+    const newResource = await app.get('db').collection(type + 's').findOne({ id: resource.id })
+    if (hooks[taskKey]) hooks[taskKey].resolve(newResource)
+    if (hooks[taskKey + '/' + resource.id]) hooks[taskKey + '/' + resource.id].resolve(newResource)
+    if (task.eventsPrefix) await journals.log(app, newResource, { type: task.eventsPrefix + '-end' }, type)
   } catch (err) {
+    // Build back the original error message from the stderr of the child process
+    const errorMessage = []
+    if (err.stderr) {
+      err.stderr.split('\n').filter(line => !!line).forEach(line => {
+        if (line.startsWith('worker:')) console.error(line)
+        else errorMessage.push(line)
+      })
+    } else {
+      errorMessage.push(err.message)
+    }
+
     console.error('Failure in worker ' + taskKey, err)
     if (resource) {
-      await journals.log(app, resource, { type: 'error', data: err.message }, type)
+      await journals.log(app, resource, { type: 'error', data: errorMessage.join('\n') }, type)
       await app.get('db').collection(type + 's').updateOne({ id: resource.id }, { $set: { status: 'error' } })
       resource.status = 'error'
     }
-    if (hooks[taskKey]) hooks[taskKey].reject({ resource, message: err.message })
-    if (hooks[taskKey + '/' + resource.id]) hooks[taskKey + '/' + resource.id].reject({ resource, message: err.message })
+    if (hooks[taskKey]) hooks[taskKey].reject({ resource, message: errorMessage.join('\n') })
+    if (hooks[taskKey + '/' + resource.id]) hooks[taskKey + '/' + resource.id].reject({ resource, message: errorMessage.join('\n') })
   } finally {
     if (resource) await locks.release(app.get('db'), `${type}:${resource.id}`)
     // console.log(`Worker "${worker.eventsPrefix}" released dataset "${dataset.id}"`)

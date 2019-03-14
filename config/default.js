@@ -58,7 +58,8 @@ module.exports = {
   },
   worker: {
     interval: 200,
-    concurrency: 8
+    concurrency: 4,
+    spawnTask: true
   },
   adminRole: 'admin',
   // A global default API key for backend to backend calls to remote services

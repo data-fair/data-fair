@@ -1,7 +1,6 @@
 const testUtils = require('./resources/test-utils')
-const workers = require('../server/workers')
-
 const { test, axiosBuilder } = testUtils.prepare(__filename)
+const workers = require('../server/workers')
 
 test.serial('Create thumbnails for datasets with illustrations', async t => {
   const ax = await axiosBuilder('dmeadus0@answers.com:passwd')

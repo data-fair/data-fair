@@ -3,9 +3,8 @@ const FormData = require('form-data')
 const eventToPromise = require('event-to-promise')
 const WebSocket = require('ws')
 const testUtils = require('./resources/test-utils')
-const workers = require('../server/workers')
-
 const { test, config, axiosBuilder } = testUtils.prepare(__filename)
+const workers = require('../server/workers')
 
 let notifier
 test.before('prepare notifier', async t => {
