@@ -1,6 +1,8 @@
 <template lang="html">
   <v-container>
-    <h2 class="headline mt-3 mb-3">Jeux de données agrégés</h2>
+    <h2 class="headline mt-3 mb-3">
+      Jeux de données agrégés
+    </h2>
 
     <v-autocomplete
       :items="datasets"
@@ -16,8 +18,8 @@
       @change="addChild"
     />
 
-    <v-progress-linear v-if="loadingChildren" :indeterminate="true" color="primary" height="2" style="margin:0;"/>
-    <div v-else style="height: 2px;"/>
+    <v-progress-linear v-if="loadingChildren" :indeterminate="true" color="primary" height="2" style="margin:0;" />
+    <div v-else style="height: 2px;" />
 
     <v-data-table
       :items="dataset.virtual.children"
@@ -54,7 +56,9 @@
       </template>
     </v-data-table>
 
-    <h2 class="headline mt-4 mb-3">Champs sélectionnés</h2>
+    <h2 class="headline mt-4 mb-3">
+      Champs sélectionnés
+    </h2>
 
     <p v-if="dataset.schema.filter(f => !f['x-calculated']).length === 0">
       Aucun champ hérité pour l'instant.
@@ -96,7 +100,7 @@
       </draggable>
     </v-list>
 
-    <v-dialog v-model="deleteChildDialog" max-width="500px" >
+    <v-dialog v-model="deleteChildDialog" max-width="500px">
       <v-card v-if="childrenById[dataset.virtual.children[currentChild]]">
         <v-card-title primary-title>
           Suppression du jeu de données enfant
@@ -110,13 +114,16 @@
           Voulez vous vraiment supprimer le jeu de données "{{ childrenById[dataset.virtual.children[currentChild]].title }}" de la liste ?
         </v-card-text>
         <v-card-actions>
-          <v-spacer/>
-          <v-btn flat @click="deleteChildDialog = false">Non</v-btn>
-          <v-btn color="warning" @click="deleteChild(currentChild); deleteChildDialog = false">Oui</v-btn>
+          <v-spacer />
+          <v-btn flat @click="deleteChildDialog = false">
+            Non
+          </v-btn>
+          <v-btn color="warning" @click="deleteChild(currentChild); deleteChildDialog = false">
+            Oui
+          </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
-
   </v-container>
 </template>
 

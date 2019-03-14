@@ -3,19 +3,23 @@
     <no-ssr>
       <v-expansion-panel :popout="false" :value="1" expand>
         <v-expansion-panel-content>
-          <div slot="header" style="font-weight:bold">Dernière configuration validée (lecture seule)</div>
+          <div slot="header" style="font-weight:bold">
+            Dernière configuration validée (lecture seule)
+          </div>
           <v-card>
             <v-card-text class="grey lighten-3">
               <v-layout v-if="config" row wrap>
                 <v-flex xs12 sm6 md4>
-                  <p v-if="prodBaseApp">Version : {{ `${prodBaseApp.title} (${prodBaseApp.version})` }}</p>
+                  <p v-if="prodBaseApp">
+                    Version : {{ `${prodBaseApp.title} (${prodBaseApp.version})` }}
+                  </p>
                   <v-form ref="prodConfigForm">
                     <v-jsonschema-form v-if="prodSchema" :schema="prodSchema" :model="configClone" :options="{disableAll: true, autoFoldObjects: can('writeConfig'), context: {owner: application.owner}, requiredMessage: 'Information obligatoire', noDataMessage: 'Aucune valeur correspondante', 'searchMessage': 'Recherchez...'}" @error="error => eventBus.$emit('notification', {error})" />
                   </v-form>
                 </v-flex>
                 <v-flex xs12 sm6 md8 class="pa-0">
                   <div :style="`height:${iframeHeight}px;width:100%;`">
-                    <iframe v-if="showProdPreview" :src="applicationLink + '?embed=true'" height="100%" width="100%"/>
+                    <iframe v-if="showProdPreview" :src="applicationLink + '?embed=true'" height="100%" width="100%" />
                   </div>
                 </v-flex>
               </v-layout>
@@ -23,16 +27,18 @@
           </v-card>
         </v-expansion-panel-content>
         <v-expansion-panel-content>
-          <div slot="header" style="font-weight:bold">Brouillon (écriture)</div>
+          <div slot="header" style="font-weight:bold">
+            Brouillon (écriture)
+          </div>
           <v-card>
             <v-card-text class="grey lighten-3">
               <v-layout row wrap>
                 <v-flex xs12 sm6 md4>
                   <v-select
                     v-if="baseApps"
+                    v-model="editUrl"
                     :items="baseApps"
                     :item-text="(baseApp => `${baseApp.title} (${baseApp.version})`)"
-                    v-model="editUrl"
                     item-value="url"
                     label="Changer de version"
                   />
@@ -40,15 +46,19 @@
                     <!--{{ editConfig }}-->
                     <v-jsonschema-form v-if="draftSchema && editConfig" :schema="draftSchema" :model="editConfig" :options="{disableAll: !can('writeConfig'), autoFoldObjects: can('writeConfig'), context: {owner: application.owner}, requiredMessage: 'Information obligatoire', noDataMessage: 'Aucune valeur correspondante', 'searchMessage': 'Recherchez...'}" @error="error => eventBus.$emit('notification', {error})" />
                     <v-layout row class="mt-3">
-                      <v-spacer/>
-                      <v-btn :disabled="hasModification || !hasDraft" color="warning" type="submit">Valider</v-btn>
-                      <v-btn :disabled="!hasDraft" color="error" class="px-0" @click="showCancelDialog = true">Annuler</v-btn>
+                      <v-spacer />
+                      <v-btn :disabled="hasModification || !hasDraft" color="warning" type="submit">
+                        Valider
+                      </v-btn>
+                      <v-btn :disabled="!hasDraft" color="error" class="px-0" @click="showCancelDialog = true">
+                        Annuler
+                      </v-btn>
                     </v-layout>
                   </v-form>
                 </v-flex>
                 <v-flex xs12 sm6 md8 class="pa-0">
                   <div :style="`height:${iframeHeight}px;width:100%;`">
-                    <iframe v-if="showDraftPreview" :src="applicationLink + '?embed=true&draft=true'" height="100%" width="100%"/>
+                    <iframe v-if="showDraftPreview" :src="applicationLink + '?embed=true&draft=true'" height="100%" width="100%" />
                   </div>
                 </v-flex>
               </v-layout>
@@ -69,9 +79,13 @@
           </v-alert>
         </v-card-text>
         <v-card-actions>
-          <v-spacer/>
-          <v-btn flat @click="showCancelDialog = false">Annuler</v-btn>
-          <v-btn color="warning" @click="cancelDraft(); showCancelDialog = false;">Confirmer</v-btn>
+          <v-spacer />
+          <v-btn flat @click="showCancelDialog = false">
+            Annuler
+          </v-btn>
+          <v-btn color="warning" @click="cancelDraft(); showCancelDialog = false;">
+            Confirmer
+          </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>

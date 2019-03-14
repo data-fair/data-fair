@@ -1,42 +1,74 @@
 <template>
   <v-stepper v-model="currentStep">
     <v-stepper-header>
-      <v-stepper-step :complete="!!file" step="1" editable>Sélection du fichier</v-stepper-step>
-      <v-divider/>
-      <v-stepper-step :complete="currentStep > 2 && !!attachment" step="2" editable>Pièces jointes</v-stepper-step>
-      <v-divider/>
-      <v-stepper-step :complete="currentStep > 3" step="3" editable>Choix du propriétaire</v-stepper-step>
-      <v-divider/>
-      <v-stepper-step step="4">Effectuer l'action</v-stepper-step>
+      <v-stepper-step :complete="!!file" step="1" editable>
+        Sélection du fichier
+      </v-stepper-step>
+      <v-divider />
+      <v-stepper-step :complete="currentStep > 2 && !!attachment" step="2" editable>
+        Pièces jointes
+      </v-stepper-step>
+      <v-divider />
+      <v-stepper-step :complete="currentStep > 3" step="3" editable>
+        Choix du propriétaire
+      </v-stepper-step>
+      <v-divider />
+      <v-stepper-step step="4">
+        Effectuer l'action
+      </v-stepper-step>
     </v-stepper-header>
 
     <v-stepper-items>
       <v-stepper-content step="1">
         <p>Chargez un fichier de données principal.</p>
-        <p>La liste des formats supportés est accessible dans <nuxt-link :to="localePath({name: 'user-guide-id', params: {id: 'dataset'}})" target="_blank">la documentation</nuxt-link>.</p>
-        <div class="mt-3 mb-3"><input type="file" @change="onFileUpload"></div>
-        <v-btn :disabled="!file" color="primary" @click.native="currentStep = 2">Continuer</v-btn>
-        <v-btn flat @click.native="$emit('cancel')">Annuler</v-btn>
+        <p>
+          La liste des formats supportés est accessible dans <nuxt-link :to="localePath({name: 'user-guide-id', params: {id: 'dataset'}})" target="_blank">
+            la documentation
+          </nuxt-link>.
+        </p>
+        <div class="mt-3 mb-3">
+          <input type="file" @change="onFileUpload">
+        </div>
+        <v-btn :disabled="!file" color="primary" @click.native="currentStep = 2">
+          Continuer
+        </v-btn>
+        <v-btn flat @click.native="$emit('cancel')">
+          Annuler
+        </v-btn>
       </v-stepper-content>
       <v-stepper-content step="2">
         <p>Optionnellement vous pouvez charger une archive zip contenant des fichiers à utiliser comme pièces à joindre aux lignes du fichier principal.</p>
         <p>Le fichier principal doit avoir un champ qui contient les chemins des pièces jointes dans l'archive.</p>
-        <div class="mt-3 mb-3"><input type="file" @change="onAttachmentUpload"></div>
-        <v-btn color="primary" @click.native="currentStep = 3">Continuer</v-btn>
-        <v-btn flat @click.native="$emit('cancel')">Annuler</v-btn>
+        <div class="mt-3 mb-3">
+          <input type="file" @change="onAttachmentUpload">
+        </div>
+        <v-btn color="primary" @click.native="currentStep = 3">
+          Continuer
+        </v-btn>
+        <v-btn flat @click.native="$emit('cancel')">
+          Annuler
+        </v-btn>
       </v-stepper-content>
       <v-stepper-content step="3">
-        <owner-pick v-model="owner"/>
-        <v-btn :disabled="!owner" color="primary" @click.native="currentStep = 4">Continuer</v-btn>
-        <v-btn flat @click.native="$emit('cancel')">Annuler</v-btn>
+        <owner-pick v-model="owner" />
+        <v-btn :disabled="!owner" color="primary" @click.native="currentStep = 4">
+          Continuer
+        </v-btn>
+        <v-btn flat @click.native="$emit('cancel')">
+          Annuler
+        </v-btn>
       </v-stepper-content>
       <v-stepper-content step="4">
         <v-radio-group v-model="action" class="mt-3 mb-3">
-          <v-radio v-for="a in actions" :label="a.title" :value="a" :key="a.id"/>
+          <v-radio v-for="a in actions" :key="a.id" :label="a.title" :value="a" />
         </v-radio-group>
-        <v-progress-linear v-model="uploadProgress"/>
-        <v-btn :disabled="!action || importing" color="primary" @click.native="importData()">Lancer l'import</v-btn>
-        <v-btn flat @click.native="$emit('cancel')">Annuler</v-btn>
+        <v-progress-linear v-model="uploadProgress" />
+        <v-btn :disabled="!action || importing" color="primary" @click.native="importData()">
+          Lancer l'import
+        </v-btn>
+        <v-btn flat @click.native="$emit('cancel')">
+          Annuler
+        </v-btn>
       </v-stepper-content>
     </v-stepper-items>
   </v-stepper>

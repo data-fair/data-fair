@@ -23,17 +23,20 @@
           <v-icon>more_vert</v-icon>
         </v-btn>
         <v-list>
-
           <v-list-tile v-if="can('delete')" @click="showDeleteDialog = true">
             <v-list-tile-avatar>
-              <v-icon color="warning">delete</v-icon>
+              <v-icon color="warning">
+                delete
+              </v-icon>
             </v-list-tile-avatar>
             <v-list-tile-title>Supprimer</v-list-tile-title>
           </v-list-tile>
 
           <v-list-tile v-if="can('delete')" @click="showOwnerDialog = true">
             <v-list-tile-avatar>
-              <v-icon color="warning">person</v-icon>
+              <v-icon color="warning">
+                person
+              </v-icon>
             </v-list-tile-avatar>
             <v-list-tile-title>Changer de propriétaire</v-list-tile-title>
           </v-list-tile>
@@ -58,9 +61,13 @@
           Voulez vous vraiment supprimer la configuration du catalogue "{{ catalog.title }}" ? La suppression est définitive et le paramétrage ne pourra pas être récupéré.
         </v-card-text>
         <v-card-actions>
-          <v-spacer/>
-          <v-btn flat @click="showDeleteDialog = false">Non</v-btn>
-          <v-btn color="warning" @click="confirmRemove">Oui</v-btn>
+          <v-spacer />
+          <v-btn flat @click="showDeleteDialog = false">
+            Non
+          </v-btn>
+          <v-btn color="warning" @click="confirmRemove">
+            Oui
+          </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -71,16 +78,19 @@
           Changer le propriétaire du catalogue
         </v-card-title>
         <v-card-text>
-          <owner-pick v-model="newOwner"/>
+          <owner-pick v-model="newOwner" />
         </v-card-text>
         <v-card-actions>
-          <v-spacer/>
-          <v-btn flat @click="showOwnerDialog = false">Annuler</v-btn>
-          <v-btn :disabled="!newOwner" color="warning" @click="changeOwner(newOwner); showOwnerDialog = false;">Confirmer</v-btn>
+          <v-spacer />
+          <v-btn flat @click="showOwnerDialog = false">
+            Annuler
+          </v-btn>
+          <v-btn :disabled="!newOwner" color="warning" @click="changeOwner(newOwner); showOwnerDialog = false;">
+            Confirmer
+          </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
-
   </v-layout>
 </template>
 

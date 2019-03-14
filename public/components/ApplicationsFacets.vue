@@ -8,7 +8,7 @@
       <v-subheader>Propriétaire</v-subheader>
       <v-checkbox
         v-for="facetItem in facets.owner" :key="`${facetItem.value.type}:${facetItem.value.id}`"
-        :value="true" v-model="facetsValues.owner[`${facetItem.value.type}:${facetItem.value.id}`]"
+        v-model="facetsValues.owner[`${facetItem.value.type}:${facetItem.value.id}`]" :value="true"
         :hide-details="true"
         class="mt-0"
       >
@@ -25,8 +25,8 @@
       <v-subheader>Visibilité</v-subheader>
       <v-checkbox
         v-for="facetItem in facets.visibility" :key="`${facetItem.value}`"
-        :label="`${{public: 'Public', private: 'Privé', protected: 'Protégé'}[facetItem.value]} (${facetItem.count})`" :value="true"
-        v-model="facetsValues.visibility[facetItem.value]"
+        v-model="facetsValues.visibility[facetItem.value]" :label="`${{public: 'Public', private: 'Privé', protected: 'Protégé'}[facetItem.value]} (${facetItem.count})`"
+        :value="true"
         :hide-details="true"
         class="mt-0"
       />
@@ -36,8 +36,8 @@
       <v-subheader>Type d'application</v-subheader>
       <v-checkbox
         v-for="facetItem in facets['base-application']" :key="`${facetItem.value}`"
-        :label="`${facetItem.value.title} ${facetItem.value.version || ''} (${facetItem.count})`" :value="true"
-        v-model="facetsValues['base-application'][facetItem.value.url]"
+        v-model="facetsValues['base-application'][facetItem.value.url]" :label="`${facetItem.value.title} ${facetItem.value.version || ''} (${facetItem.count})`"
+        :value="true"
         :hide-details="true"
         class="mt-0"
       />

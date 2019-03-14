@@ -2,13 +2,21 @@
   <div>
     <div v-if="notFound">
       <p>Les données ne sont pas accessibles. Soit le jeu de données n'a pas encore été entièrement traité, soit il y a eu une erreur dans le traitement.</p>
-      <p>Vous pouvez consulter <nuxt-link :to="`/dataset/${dataset.id}/journal`">le journal</nuxt-link> pour en savoir plus.</p>
+      <p>
+        Vous pouvez consulter <nuxt-link :to="`/dataset/${dataset.id}/journal`">
+          le journal
+        </nuxt-link> pour en savoir plus.
+      </p>
     </div>
     <v-card v-if="data">
       <v-card-title style="padding-bottom: 0;">
         <v-layout column>
-          <h3 v-if="data.total <= 10000">Consultez {{ data.total.toLocaleString() }} {{ plural ? 'enregistrements' : 'enregistrement' }}</h3>
-          <h3 v-if="data.total > 10000">Consultez {{ plural ? 'les' : 'le' }} {{ (10000).toLocaleString() }} {{ plural ? 'premiers enregistrements' : 'premier enregistrement' }} ({{ data.total.toLocaleString() }} au total)</h3>
+          <h3 v-if="data.total <= 10000">
+            Consultez {{ data.total.toLocaleString() }} {{ plural ? 'enregistrements' : 'enregistrement' }}
+          </h3>
+          <h3 v-if="data.total > 10000">
+            Consultez {{ plural ? 'les' : 'le' }} {{ (10000).toLocaleString() }} {{ plural ? 'premiers enregistrements' : 'premier enregistrement' }} ({{ data.total.toLocaleString() }} au total)
+          </h3>
           <v-layout row wrap>
             <v-flex lg3 md4 sm5 xs12>
               <v-text-field
@@ -18,17 +26,18 @@
                 class="mr-3"
                 style="min-width:150px;"
                 @keyup.enter.native="refresh"
-                @click:append="refresh"/>
+                @click:append="refresh"
+              />
             </v-flex>
-            <v-spacer/>
+            <v-spacer />
             <v-flex v-show="$vuetify.breakpoint.mdAndUp" xl1 lg1 md2>
               <v-select
-                :items="[10,20,50]"
                 v-model="pagination.rowsPerPage"
+                :items="[10,20,50]"
                 label="Nombre de lignes"
               />
             </v-flex>
-            <v-pagination v-if="data.total > pagination.rowsPerPage" v-model="pagination.page" :length="Math.ceil(Math.min(data.total, 10000) / pagination.rowsPerPage)" :total-visible="$vuetify.breakpoint.lgAndUp ? 7 : 5" class="mx-4"/>
+            <v-pagination v-if="data.total > pagination.rowsPerPage" v-model="pagination.page" :length="Math.ceil(Math.min(data.total, 10000) / pagination.rowsPerPage)" :total-visible="$vuetify.breakpoint.lgAndUp ? 7 : 5" class="mx-4" />
           </v-layout>
         </v-layout>
       </v-card-title>

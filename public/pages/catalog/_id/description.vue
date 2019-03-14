@@ -6,8 +6,12 @@
           <v-list>
             <v-list-tile>
               <v-list-tile-avatar>
-                <v-icon v-if="catalog.owner.type === 'user'">person</v-icon>
-                <v-icon v-else>group</v-icon>
+                <v-icon v-if="catalog.owner.type === 'user'">
+                  person
+                </v-icon>
+                <v-icon v-else>
+                  group
+                </v-icon>
               </v-list-tile-avatar>
               <span>{{ catalog.owner.name }}</span>
             </v-list-tile>
@@ -27,9 +31,9 @@
         </v-card>
       </v-flex>
       <v-flex xs12 md6 order-md1>
-        <v-text-field v-model="catalog.title" label="Titre" @blur="patch({title: catalog.title})"/>
-        <v-textarea v-model="catalog.description" label="Description" box rows="4" @blur="patch({description: catalog.description})"/>
-        <catalog-config-form :catalog="catalog" @change="changes => patch(changes)"/>
+        <v-text-field v-model="catalog.title" label="Titre" @blur="patch({title: catalog.title})" />
+        <v-textarea v-model="catalog.description" label="Description" box rows="4" @blur="patch({description: catalog.description})" />
+        <catalog-config-form :catalog="catalog" @change="changes => patch(changes)" />
       </v-flex>
     </v-layout>
   </v-container>

@@ -2,7 +2,7 @@
   <v-layout row>
     <v-layout v-if="user" column>
       <v-subheader>{{ $t('pages.datasets.description') }}</v-subheader>
-      <datasets-list/>
+      <datasets-list />
 
       <div class="actions-buttons">
         <v-menu v-if="user" bottom left>
@@ -12,19 +12,25 @@
           <v-list>
             <v-list-tile @click="importFileSheet = true">
               <v-list-tile-avatar>
-                <v-icon color="primary">file_upload</v-icon>
+                <v-icon color="primary">
+                  file_upload
+                </v-icon>
               </v-list-tile-avatar>
               <v-list-tile-title>Importer un fichier</v-list-tile-title>
             </v-list-tile>
             <v-list-tile @click="createVirtualSheet = true">
               <v-list-tile-avatar>
-                <v-icon color="primary">picture_in_picture</v-icon>
+                <v-icon color="primary">
+                  picture_in_picture
+                </v-icon>
               </v-list-tile-avatar>
               <v-list-tile-title>Créer un jeu virtuel</v-list-tile-title>
             </v-list-tile>
             <v-list-tile @click="createRestSheet = true">
               <v-list-tile-avatar>
-                <v-icon color="primary">all_inclusive</v-icon>
+                <v-icon color="primary">
+                  all_inclusive
+                </v-icon>
               </v-list-tile-avatar>
               <v-list-tile-title>Créer un jeu incrémental</v-list-tile-title>
             </v-list-tile>
@@ -34,16 +40,15 @@
 
       <div class="text-xs-center">
         <v-bottom-sheet v-model="importFileSheet">
-          <import-file v-if="importFileSheet" @cancel="importFileSheet = false"/>
+          <import-file v-if="importFileSheet" @cancel="importFileSheet = false" />
         </v-bottom-sheet>
         <v-bottom-sheet v-model="createVirtualSheet">
-          <create-virtual v-if="createVirtualSheet" @cancel="createVirtualSheet = false"/>
+          <create-virtual v-if="createVirtualSheet" @cancel="createVirtualSheet = false" />
         </v-bottom-sheet>
         <v-bottom-sheet v-model="createRestSheet">
-          <create-rest v-if="createRestSheet" @cancel="createRestSheet = false"/>
+          <create-rest v-if="createRestSheet" @cancel="createRestSheet = false" />
         </v-bottom-sheet>
       </div>
-
     </v-layout>
     <!-- Anonymous: show jumbotron -->
     <v-flex v-else-if="initialized" md6 offset-xs3>
@@ -51,10 +56,18 @@
         <v-container fill-height>
           <v-layout align-center>
             <v-flex text-xs-center>
-              <h3 class="display-1 mb-3 mt-5">{{ $t('pages.datasets.title') }}</h3>
-              <div class="headline">{{ $t('pages.datasets.description') }}</div>
-              <p class="title mt-5">{{ $t('common.authrequired') }}</p>
-              <v-btn color="primary" @click="login">{{ $t('common.login') }}</v-btn>
+              <h3 class="display-1 mb-3 mt-5">
+                {{ $t('pages.datasets.title') }}
+              </h3>
+              <div class="headline">
+                {{ $t('pages.datasets.description') }}
+              </div>
+              <p class="title mt-5">
+                {{ $t('common.authrequired') }}
+              </p>
+              <v-btn color="primary" @click="login">
+                {{ $t('common.login') }}
+              </v-btn>
             </v-flex>
           </v-layout>
         </v-container>

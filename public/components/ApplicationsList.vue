@@ -1,32 +1,37 @@
 <template>
   <v-container fluid grid-list-lg>
-    <h3 v-if="applications" class="display-1">{{ applications.count }} configuration{{ plural }} d'application{{ plural }}</h3>
+    <h3 v-if="applications" class="display-1">
+      {{ applications.count }} configuration{{ plural }} d'application{{ plural }}
+    </h3>
 
-    <search-filters :filter-labels="{'dataset': 'Jeu de données', 'service': 'Service', 'url': 'Application de base'}" :filters="filters" :facets="applications && applications.facets" type="applications" @apply="page = 1; refresh()"/>
-    <search-progress :loading="loading"/>
+    <search-filters :filter-labels="{'dataset': 'Jeu de données', 'service': 'Service', 'url': 'Application de base'}" :filters="filters" :facets="applications && applications.facets" type="applications" @apply="page = 1; refresh()" />
+    <search-progress :loading="loading" />
 
     <v-layout row>
       <v-flex xs12 sm6 md8 lg10 xl10>
         <v-layout v-if="applications" row wrap class="resourcesList">
-
           <v-flex v-for="application in applications.results" :key="application.id" sm12 md6 lg4 xl3>
             <v-card height="100%">
               <v-card-title primary-title style="padding-top: 0; padding-bottom: 0;">
-                <nuxt-link :to="`/application/${application.id}/description`">{{ application.title || application.id }}</nuxt-link>
-                <v-spacer/>
+                <nuxt-link :to="`/application/${application.id}/description`">
+                  {{ application.title || application.id }}
+                </nuxt-link>
+                <v-spacer />
                 <v-btn :href="`${env.publicUrl}/app/${application.id}`" icon flat color="primary" target="_blank" title="Accéder à l'application">
                   <v-icon>exit_to_app</v-icon>
                 </v-btn>
               </v-card-title>
-              <v-divider/>
-              <v-img :src="`${application.href}/capture`" height="240px"/>
-              <v-divider/>
-              <v-card-text style="max-height:160px;overflow: hidden; margin-bottom: 40px;" v-html="marked($options.filters.truncate(application.description || '', 200))"/>
+              <v-divider />
+              <v-img :src="`${application.href}/capture`" height="240px" />
+              <v-divider />
+              <v-card-text style="max-height:160px;overflow: hidden; margin-bottom: 40px;" v-html="marked($options.filters.truncate(application.description || '', 200))" />
 
               <v-card-actions style="position:absolute; bottom: 0px;width:100%;">
                 <span v-if="application.owner.type === 'user'"><v-icon>person</v-icon>&nbsp;{{ application.owner.name }}</span>
                 <span v-if="application.owner.type === 'organization'"><v-icon>group</v-icon>&nbsp;{{ application.owner.name }}<span v-if="application.owner.role"> ({{ application.owner.role }})</span></span>
-                &nbsp;<v-chip :color="application.visibility === 'public' ? 'primary' : 'accent'" text-color="white">{{ {public: 'Public', private: 'Privé', protected: 'Protégé'}[application.visibility] }}</v-chip>
+                &nbsp;<v-chip :color="application.visibility === 'public' ? 'primary' : 'accent'" text-color="white">
+                  {{ {public: 'Public', private: 'Privé', protected: 'Protégé'}[application.visibility] }}
+                </v-chip>
                 <template v-if="application.status === 'error'">
                   <v-spacer />
                   <span><v-icon color="red">warning</v-icon>&nbsp;En erreur</span>
@@ -42,15 +47,21 @@
     </v-layout>
 
     <v-layout v-if="applications && applications.count" row wrap>
-      <v-spacer/><v-pagination :length="Math.ceil(applications.count / size)" v-model="page" @input="$vuetify.goTo('.resourcesList', {offset});refresh()"/>
+      <v-spacer /><v-pagination v-model="page" :length="Math.ceil(applications.count / size)" @input="$vuetify.goTo('.resourcesList', {offset});refresh()" />
     </v-layout>
 
     <v-responsive v-if="!hasApplications" height="auto">
       <v-container fill-height>
         <v-layout align-center>
           <v-flex text-xs-center>
-            <div v-if="!filtered" class="headline">Vous n'avez pas encore configuré d'applications.<br>Vous pouvez <nuxt-link :to="localePath('user-guide')">consulter la documentation</nuxt-link> pour en savoir plus.</div>
-            <div v-else class="headline">Aucun résultat ne correspond aux critères de recherche</div>
+            <div v-if="!filtered" class="headline">
+              Vous n'avez pas encore configuré d'applications.<br>Vous pouvez <nuxt-link :to="localePath('user-guide')">
+                consulter la documentation
+              </nuxt-link> pour en savoir plus.
+            </div>
+            <div v-else class="headline">
+              Aucun résultat ne correspond aux critères de recherche
+            </div>
           </v-flex>
         </v-layout>
       </v-container>

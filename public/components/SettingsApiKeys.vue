@@ -4,15 +4,21 @@
       Les <i>clés d'API</i> sont un moyen d'utiliser l'API de data-fair de manière sécurisée.
       Il s'agit d'une configuration technique pour personne avertie.
     </p>
-    <v-btn color="primary" class="mb-3" @click="showDialog = true">Ajouter une clé d'API</v-btn>
+    <v-btn color="primary" class="mb-3" @click="showDialog = true">
+      Ajouter une clé d'API
+    </v-btn>
     <v-container grid-list-md>
       <v-layout row wrap>
         <v-flex v-for="(apiKey, rowIndex) in settings.apiKeys" :key="rowIndex" xs12 lg6>
           <v-card>
             <v-card-title primary-title>
-              <h4 class="title">{{ apiKey.title }}</h4>
-              <v-spacer/>
-              <v-btn color="primary" flat class="pa-0 ma-0" @click="currentApiKey = rowIndex; showUseDialog = true">Utiliser</v-btn>
+              <h4 class="title">
+                {{ apiKey.title }}
+              </h4>
+              <v-spacer />
+              <v-btn color="primary" flat class="pa-0 ma-0" @click="currentApiKey = rowIndex; showUseDialog = true">
+                Utiliser
+              </v-btn>
             </v-card-title>
             <v-card-text>
               <v-alert :value="apiKey.clearKey" type="warning">
@@ -25,7 +31,7 @@
               <p>{{ apiKey.scopes.map(scope => scopes.find(s => s.value === scope).text).join(' - ') }}</p>
             </v-card-text>
             <v-card-actions>
-              <v-spacer/>
+              <v-spacer />
               <v-btn flat icon color="warning" title="Supprimer cette clé d'API" @click="currentApiKey = rowIndex; showDeleteDialog = true">
                 <v-icon>delete</v-icon>
               </v-btn>
@@ -42,14 +48,18 @@
         </v-card-title>
         <v-card-text>
           <v-form v-model="newApiKeyValid">
-            <v-text-field v-model="newApiKey.title" :rules="[v => !!v || '']" label="Titre" required/>
-            <v-checkbox v-for="scope of scopes" :label="scope.text" v-model="newApiKey.scopes" :value="scope.value" :key="scope.value" :rules="[v => !!v.length || '']"/>
+            <v-text-field v-model="newApiKey.title" :rules="[v => !!v || '']" label="Titre" required />
+            <v-checkbox v-for="scope of scopes" :key="scope.value" v-model="newApiKey.scopes" :label="scope.text" :value="scope.value" :rules="[v => !!v.length || '']" />
           </v-form>
         </v-card-text>
         <v-card-actions>
-          <v-spacer/>
-          <v-btn flat @click="showDialog = false">Annuler</v-btn>
-          <v-btn :disabled="!newApiKeyValid" color="primary" @click="addApiKey">Ajouter</v-btn>
+          <v-spacer />
+          <v-btn flat @click="showDialog = false">
+            Annuler
+          </v-btn>
+          <v-btn :disabled="!newApiKeyValid" color="primary" @click="addApiKey">
+            Ajouter
+          </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -63,9 +73,13 @@
           Voulez vous vraiment supprimer la clé d'API "{{ settings.apiKeys[currentApiKey].title }}" ? La suppression est définitive, si des programmes l'utilisent ils cesseront de fonctionner.
         </v-card-text>
         <v-card-actions>
-          <v-spacer/>
-          <v-btn flat @click="showDeleteDialog = false">Non</v-btn>
-          <v-btn color="warning" @click="showDeleteDialog = false; removeApiKey(currentApiKey)">Oui</v-btn>
+          <v-spacer />
+          <v-btn flat @click="showDeleteDialog = false">
+            Non
+          </v-btn>
+          <v-btn color="warning" @click="showDeleteDialog = false; removeApiKey(currentApiKey)">
+            Oui
+          </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -84,8 +98,10 @@
           <pre><code>curl -v -H "x-apiKey: {{ settings.apiKeys[currentApiKey].clearKey || 'XXX' }}" {{ env.publicUrl }}/api/v1/{{ settings.apiKeys[currentApiKey].scopes[0] }}</code></pre>
         </v-card-text>
         <v-card-actions>
-          <v-spacer/>
-          <v-btn flat color="primary" @click="showUseDialog = false">Ok</v-btn>
+          <v-spacer />
+          <v-btn flat color="primary" @click="showUseDialog = false">
+            Ok
+          </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>

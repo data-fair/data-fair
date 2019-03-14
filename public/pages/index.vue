@@ -4,7 +4,9 @@
     <v-layout v-if="user" column>
       <v-subheader>{{ $t('pages.root.description') }}</v-subheader>
       <v-container fluid>
-        <h2 class="display-1">Statistiques</h2>
+        <h2 class="display-1">
+          Statistiques
+        </h2>
         <v-data-table v-if="stats" :headers="headers" :items="items" hide-actions class="elevation-1 mt-4">
           <template slot="items" slot-scope="props">
             <td>{{ props.item.name }}</td>
@@ -22,10 +24,18 @@
         <v-container fill-height>
           <v-layout align-center>
             <v-flex text-xs-center>
-              <h3 class="display-1 mb-3 mt-5">{{ $t('common.title') }}</h3>
-              <div class="headline">{{ $t('pages.root.description') }}</div>
-              <p class="title mt-5">{{ $t('common.authrequired') }}</p>
-              <v-btn color="primary" @click="login">{{ $t('common.login') }}</v-btn>
+              <h3 class="display-1 mb-3 mt-5">
+                {{ $t('common.title') }}
+              </h3>
+              <div class="headline">
+                {{ $t('pages.root.description') }}
+              </div>
+              <p class="title mt-5">
+                {{ $t('common.authrequired') }}
+              </p>
+              <v-btn color="primary" @click="login">
+                {{ $t('common.login') }}
+              </v-btn>
             </v-flex>
           </v-layout>
         </v-container>

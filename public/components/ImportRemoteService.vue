@@ -1,14 +1,16 @@
 <template>
   <v-stepper v-model="currentStep">
     <v-stepper-header>
-      <v-stepper-step :complete="!!apiDoc" step="1" editable>Sélection du service</v-stepper-step>
+      <v-stepper-step :complete="!!apiDoc" step="1" editable>
+        Sélection du service
+      </v-stepper-step>
     </v-stepper-header>
 
     <v-stepper-items>
       <v-stepper-content step="1">
         <v-select
-          :items="configurableRemoteServices"
           v-model="apiDocUrl"
+          :items="configurableRemoteServices"
           item-value="url"
           item-text="title"
           label="Choisissez un service à configurer"
@@ -20,9 +22,13 @@
           @blur="downloadFromUrl"
           @keyup.native.enter="downloadFromUrl"
         />
-        <p v-if="apiDoc" v-html="marked(apiDoc.info.description)"/>
-        <v-btn :disabled="!apiDoc" color="primary" @click.native="importApi()">Enregistrer</v-btn>
-        <v-btn flat @click.native="$emit('cancel')">Annuler</v-btn>
+        <p v-if="apiDoc" v-html="marked(apiDoc.info.description)" />
+        <v-btn :disabled="!apiDoc" color="primary" @click.native="importApi()">
+          Enregistrer
+        </v-btn>
+        <v-btn flat @click.native="$emit('cancel')">
+          Annuler
+        </v-btn>
       </v-stepper-content>
     </v-stepper-items>
   </v-stepper>
@@ -32,10 +38,9 @@
 import marked from 'marked'
 import { mapState } from 'vuex'
 import eventBus from '../event-bus'
-import OwnerPick from './OwnerPick.vue'
 
 export default {
-  components: { OwnerPick },
+  components: { },
   props: ['initService'],
   data: () => ({
     currentStep: null,

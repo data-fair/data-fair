@@ -1,5 +1,5 @@
 <template>
-  <journal :journal="journal" type="dataset"/>
+  <journal :journal="journal" type="dataset" />
 </template>
 
 <script>

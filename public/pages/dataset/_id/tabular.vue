@@ -2,13 +2,21 @@
   <v-container fluid>
     <div v-if="notFound">
       <p>Les données ne sont pas accessibles. Soit le jeu de données n'a pas encore été entièrement traité, soit il y a eu une erreur dans le traitement.</p>
-      <p>Vous pouvez consulter <nuxt-link :to="`/dataset/${dataset.id}/journal`">le journal</nuxt-link> pour en savoir plus.</p>
+      <p>
+        Vous pouvez consulter <nuxt-link :to="`/dataset/${dataset.id}/journal`">
+          le journal
+        </nuxt-link> pour en savoir plus.
+      </p>
     </div>
     <v-card>
       <v-card-title>
         <v-layout column>
-          <h3 v-if="data.total <= 10000">Consultez {{ data.total.toLocaleString() }} {{ plural ? 'enregistrements' : 'enregistrement' }}</h3>
-          <h3 v-if="data.total > 10000">Consultez {{ plural ? 'les' : 'le' }} {{ (10000).toLocaleString() }} {{ plural ? 'premiers enregistrements' : 'premier enregistrement' }} ({{ data.total.toLocaleString() }} au total)</h3>
+          <h3 v-if="data.total <= 10000">
+            Consultez {{ data.total.toLocaleString() }} {{ plural ? 'enregistrements' : 'enregistrement' }}
+          </h3>
+          <h3 v-if="data.total > 10000">
+            Consultez {{ plural ? 'les' : 'le' }} {{ (10000).toLocaleString() }} {{ plural ? 'premiers enregistrements' : 'premier enregistrement' }} ({{ data.total.toLocaleString() }} au total)
+          </h3>
           <div>
             <v-btn v-if="dataset.isRest && can('writeData')" color="primary" @click="editedLine = null; showEditLineDialog();">
               Ajouter une ligne
@@ -23,23 +31,24 @@
                 class="mr-3"
                 style="min-width:150px;"
                 @keyup.enter.native="refresh"
-                @click:append="refresh"/>
+                @click:append="refresh"
+              />
             </v-flex>
-            <v-spacer/>
+            <v-spacer />
             <v-flex v-show="$vuetify.breakpoint.mdAndUp" xl1 lg1 md2>
               <v-select
-                :items="[10,20,50]"
                 v-model="pagination.rowsPerPage"
+                :items="[10,20,50]"
                 label="Nombre de lignes"
               />
             </v-flex>
-            <v-pagination v-if="data.total > pagination.rowsPerPage" v-model="pagination.page" :length="Math.ceil(Math.min(data.total, 10000) / pagination.rowsPerPage)" :total-visible="$vuetify.breakpoint.lgAndUp ? 7 : 5" class="mx-4"/>
+            <v-pagination v-if="data.total > pagination.rowsPerPage" v-model="pagination.page" :length="Math.ceil(Math.min(data.total, 10000) / pagination.rowsPerPage)" :total-visible="$vuetify.breakpoint.lgAndUp ? 7 : 5" class="mx-4" />
           </v-layout>
         </v-layout>
       </v-card-title>
 
       <v-data-table :headers="headers" :items="data.results" :total-items="data.total" :loading="loading" :pagination.sync="pagination" hide-actions>
-        <template slot="headers" slot-scope="props">
+        <template slot="headers">
           <tr>
             <th
               v-for="header in headers"
@@ -86,16 +95,21 @@
 
             <template v-if="dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')">
               <p>Chargez un fichier en pièce jointe.</p>
-              <div class="mt-3 mb-3"><input type="file" @change="onFileUpload"></div>
-              <v-progress-linear v-model="uploadProgress"/>
+              <div class="mt-3 mb-3">
+                <input type="file" @change="onFileUpload">
+              </div>
+              <v-progress-linear v-model="uploadProgress" />
             </template>
-
           </v-form>
         </v-card-text>
         <v-card-actions>
-          <v-spacer/>
-          <v-btn flat @click="editLineDialog = false">Annuler</v-btn>
-          <v-btn color="primary" @click="saveLine">Enregistrer</v-btn>
+          <v-spacer />
+          <v-btn flat @click="editLineDialog = false">
+            Annuler
+          </v-btn>
+          <v-btn color="primary" @click="saveLine">
+            Enregistrer
+          </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -111,9 +125,13 @@
           </v-alert>
         </v-card-text>
         <v-card-actions>
-          <v-spacer/>
-          <v-btn flat @click="deleteLineDialog = false">Annuler</v-btn>
-          <v-btn color="warning" @click="deleteLine">Supprimer</v-btn>
+          <v-spacer />
+          <v-btn flat @click="deleteLineDialog = false">
+            Annuler
+          </v-btn>
+          <v-btn color="warning" @click="deleteLine">
+            Supprimer
+          </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>

@@ -1,8 +1,6 @@
 <template lang="html">
-
   <v-card>
     <v-card v-if="dataset" class="mt-2 ml-2 px-2" style="position: absolute;z-index:2;max-width:400px;">
-
       <v-text-field
         v-model="query"
         style="margin-top: 0;margin-bottom: 8px;"
@@ -11,12 +9,13 @@
         hide-details
         single-line
         @keyup.enter.native="refresh"
-        @click:append="refresh"/>
+        @click:append="refresh"
+      />
 
       <v-select
         v-if="showSelect"
-        :items="dataset.schema.map(f => ({value: f.key, text: f.title || f['x-originalName'] || f.key}))"
         v-model="select"
+        :items="dataset.schema.map(f => ({value: f.key, text: f.title || f['x-originalName'] || f.key}))"
         style="margin-top: 30px;"
         item-value="value"
         item-text="text"
@@ -25,9 +24,8 @@
         @input="refresh"
       />
     </v-card>
-    <div id="map" :style="'height:' + mapHeight + 'px'"/>
+    <div id="map" :style="'height:' + mapHeight + 'px'" />
   </v-card>
-
 </template>
 
 <script>

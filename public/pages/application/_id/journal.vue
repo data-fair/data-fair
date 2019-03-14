@@ -1,6 +1,6 @@
 <template>
   <v-container>
-    <journal :journal="journal" type="application"/>
+    <journal :journal="journal" type="application" />
   </v-container>
 </template>
 

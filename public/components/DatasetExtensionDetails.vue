@@ -1,11 +1,16 @@
 <template lang="html">
-
   <v-layout column>
-    <h3 v-if="data.total <= 10000">Consultez {{ data.total.toLocaleString() }} {{ plural ? `résultats d'extension` : `résultat d'extension` }}</h3>
-    <h3 v-if="data.total > 10000">Consultez {{ plural ? 'les' : 'le' }} {{ (10000).toLocaleString() }} premiers résultats d'extension ({{ data.total.toLocaleString() }} au total)</h3>
+    <h3 v-if="data.total <= 10000">
+      Consultez {{ data.total.toLocaleString() }} {{ plural ? `résultats d'extension` : `résultat d'extension` }}
+    </h3>
+    <h3 v-if="data.total > 10000">
+      Consultez {{ plural ? 'les' : 'le' }} {{ (10000).toLocaleString() }} premiers résultats d'extension ({{ data.total.toLocaleString() }} au total)
+    </h3>
     <v-layout row>
-      <p v-if="nbErrors === 0">Il n'y a aucune erreur dans le retour de l'extension.</p>
-      <v-checkbox v-if="nbErrors !== null && nbErrors > 0" :label="`Voir uniquement les ${nbErrors} erreurs`" v-model="onlyErrors"/>
+      <p v-if="nbErrors === 0">
+        Il n'y a aucune erreur dans le retour de l'extension.
+      </p>
+      <v-checkbox v-if="nbErrors !== null && nbErrors > 0" v-model="onlyErrors" :label="`Voir uniquement les ${nbErrors} erreurs`" />
     </v-layout>
     <v-layout row wrap>
       <v-flex lg3 md4 sm5 xs12>
@@ -16,21 +21,22 @@
           class="mr-3"
           style="min-width:150px;"
           @keyup.enter.native="refresh"
-          @click:append="refresh"/>
+          @click:append="refresh"
+        />
       </v-flex>
-      <v-spacer/>
+      <v-spacer />
       <v-flex v-show="$vuetify.breakpoint.mdAndUp" xl1 lg1 md2>
         <v-select
-          :items="[5,10,20,50]"
           v-model="pagination.rowsPerPage"
+          :items="[5,10,20,50]"
           label="Nombre de lignes"
         />
       </v-flex>
-      <v-pagination v-if="data.total > pagination.rowsPerPage" v-model="pagination.page" :length="Math.ceil(Math.min(data.total, 10000) / pagination.rowsPerPage)" :total-visible="$vuetify.breakpoint.lgAndUp ? 7 : 5" class="mx-4"/>
+      <v-pagination v-if="data.total > pagination.rowsPerPage" v-model="pagination.page" :length="Math.ceil(Math.min(data.total, 10000) / pagination.rowsPerPage)" :total-visible="$vuetify.breakpoint.lgAndUp ? 7 : 5" class="mx-4" />
     </v-layout>
 
     <v-data-table v-if="headers" :headers="headers" :items="data.results" :total-items="data.total" :loading="loading" :pagination.sync="pagination" hide-actions class="elevation-1">
-      <template slot="headers" slot-scope="props">
+      <template slot="headers">
         <tr style="height: 30px;border-bottom: 2px solid rgba(0,0,0,0.24);">
           <th :colspan="inputFields.length" class="column text-xs-left" style="border-right: 2px solid rgba(0,0,0,0.24);">
             <span style="font-weight: bold;">Entrées</span>
@@ -62,7 +68,8 @@
           <td
             v-for="(header, i) in headers"
             :key="header.value"
-            :style="i === inputFields.length - 1 ? 'border-right: 2px solid rgba(0,0,0,0.24);' : ''">
+            :style="i === inputFields.length - 1 ? 'border-right: 2px solid rgba(0,0,0,0.24);' : ''"
+          >
             {{ ((props.item[header.value] === undefined || props.item[header.value] === null ? '' : props.item[header.value]) + '') | truncate(50) }}
           </td>
         </tr>

@@ -1,5 +1,5 @@
 <template>
-  <dataset-extension-details :remote-service="$route.params.service" :action="$route.params.action"/>
+  <dataset-extension-details :remote-service="$route.params.service" :action="$route.params.action" />
 </template>
 
 <script>

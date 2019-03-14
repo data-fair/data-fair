@@ -3,10 +3,16 @@
     <v-layout v-if="initialized" column>
       <!--<v-subheader>{{ $t('pages.settings.description') }}</v-subheader>-->
       <v-container v-if="authorized">
-        <h2 class="display-1 mb-4">Paramètres de l'{{ $route.params.type ==='organization' ? ('organisation ' + organization.name): ('utilisateur ' + user.name) }}</h2>
-        <p v-if="$route.params.type ==='organization'">Vous êtes <strong>{{ user.organizations.find(o => o.id===$route.params.id).role }}</strong> dans cette organisation.</p>
+        <h2 class="display-1 mb-4">
+          Paramètres de l'{{ $route.params.type ==='organization' ? ('organisation ' + organization.name): ('utilisateur ' + user.name) }}
+        </h2>
+        <p v-if="$route.params.type ==='organization'">
+          Vous êtes <strong>{{ user.organizations.find(o => o.id===$route.params.id).role }}</strong> dans cette organisation.
+        </p>
         <div v-if="$route.params.type ==='organization'">
-          <h3 class="headline mb-3">Permissions générales par rôle</h3>
+          <h3 class="headline mb-3">
+            Permissions générales par rôle
+          </h3>
           <p>Le rôle <strong>{{ env.adminRole }}</strong> peut tout faire</p>
 
           <v-data-table
@@ -21,25 +27,33 @@
                   {{ props.item.title }}
                 </td>
                 <td v-for="role in organizationRoles" :key="role">
-                  <v-checkbox v-model="settings.operationsPermissions[props.item.id]" :value="role" label="" @change="save"/>
+                  <v-checkbox v-model="settings.operationsPermissions[props.item.id]" :value="role" label="" @change="save" />
                 </td>
               </tr>
             </template>
           </v-data-table>
         </div>
 
-        <h3 class="headline mt-3 mb-3">Licenses</h3>
-        <settings-licenses v-if="settings" :settings="settings" @license-updated="save"/>
-        <h3 class="headline mt-3 mb-3">Webhooks</h3>
-        <settings-webhooks v-if="settings" :settings="settings" @webhook-updated="save"/>
-        <h3 class="headline mt-3 mb-3">Clés d'API</h3>
-        <settings-api-keys v-if="settings" :settings="settings" @updated="save"/>
+        <h3 class="headline mt-3 mb-3">
+          Licenses
+        </h3>
+        <settings-licenses v-if="settings" :settings="settings" @license-updated="save" />
+        <h3 class="headline mt-3 mb-3">
+          Webhooks
+        </h3>
+        <settings-webhooks v-if="settings" :settings="settings" @webhook-updated="save" />
+        <h3 class="headline mt-3 mb-3">
+          Clés d'API
+        </h3>
+        <settings-api-keys v-if="settings" :settings="settings" @updated="save" />
       </v-container>
       <v-responsive v-else height="auto">
         <v-container fill-height>
           <v-layout align-center>
             <v-flex text-xs-center>
-              <div class="headline">Vous n'êtes pas autorisé à voir ou modifier le contenu de cette page. Si vous voulez changer les paramètres de votre organisation, veuillez contacter un administrateur de celle ci.</div>
+              <div class="headline">
+                Vous n'êtes pas autorisé à voir ou modifier le contenu de cette page. Si vous voulez changer les paramètres de votre organisation, veuillez contacter un administrateur de celle ci.
+              </div>
             </v-flex>
           </v-layout>
         </v-container>

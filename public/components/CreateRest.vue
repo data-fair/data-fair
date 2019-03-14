@@ -1,9 +1,13 @@
 <template>
   <v-stepper v-model="currentStep">
     <v-stepper-header>
-      <v-stepper-step :complete="currentStep > 1" step="1">Choix du propriétaire</v-stepper-step>
-      <v-divider/>
-      <v-stepper-step :complete="!!title" step="2" editable>Paramètres</v-stepper-step>
+      <v-stepper-step :complete="currentStep > 1" step="1">
+        Choix du propriétaire
+      </v-stepper-step>
+      <v-divider />
+      <v-stepper-step :complete="!!title" step="2" editable>
+        Paramètres
+      </v-stepper-step>
     </v-stepper-header>
 
     <v-stepper-items>
@@ -11,12 +15,15 @@
         <p class="mt-3">
           Un jeu de données incrémental est créé vide sans fichier de données et sans schéma. C'est vous qui allez éditer son schéma et éditer ses lignes de données par la suite.
         </p>
-        <owner-pick v-model="owner"/>
-        <v-btn :disabled="!owner" color="primary" @click.native="currentStep = 2">Continuer</v-btn>
-        <v-btn flat @click.native="$emit('cancel')">Annuler</v-btn>
+        <owner-pick v-model="owner" />
+        <v-btn :disabled="!owner" color="primary" @click.native="currentStep = 2">
+          Continuer
+        </v-btn>
+        <v-btn flat @click.native="$emit('cancel')">
+          Annuler
+        </v-btn>
       </v-stepper-content>
       <v-stepper-content step="2">
-
         <div class="mt-3 mb-3">
           <v-text-field
             v-model="title"
@@ -25,8 +32,12 @@
             label="Titre"
           />
         </div>
-        <v-btn :disabled="!title" color="primary" @click.native="createDataset()">Créer</v-btn>
-        <v-btn flat @click.native="$emit('cancel')">Annuler</v-btn>
+        <v-btn :disabled="!title" color="primary" @click.native="createDataset()">
+          Créer
+        </v-btn>
+        <v-btn flat @click.native="$emit('cancel')">
+          Annuler
+        </v-btn>
       </v-stepper-content>
     </v-stepper-items>
   </v-stepper>

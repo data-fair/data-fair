@@ -1,5 +1,5 @@
 <template lang="html">
-  <doc-page :page="$route.params.id" :pages="pages" :content="content" prefix="interoperate"/>
+  <doc-page :page="$route.params.id" :pages="pages" :content="content" prefix="interoperate" />
 </template>
 
 <script>

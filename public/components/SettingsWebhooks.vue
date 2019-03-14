@@ -4,13 +4,17 @@
       Les <i>webhooks</i> sont un moyen de lier vos propres services à des événements internes à ce service de diffusion de données (créations, mises à jour, etc.).
       Il s'agit d'une configuration technique pour personne avertie.
     </p>
-    <v-btn color="primary" class="mb-3" @click="showDialog = true">Ajouter un webhook</v-btn>
+    <v-btn color="primary" class="mb-3" @click="showDialog = true">
+      Ajouter un webhook
+    </v-btn>
     <v-container v-if="settings.webhooks && settings.webhooks.length" grid-list-md>
       <v-layout row wrap>
         <v-flex v-for="(webhook, rowIndex) in settings.webhooks" :key="rowIndex" xs12 lg6>
           <v-card>
             <v-card-title primary-title>
-              <h4 class="title"><span v-if="webhook.title">{{ webhook.title }} - </span>{{ webhook.url }}</h4>
+              <h4 class="title">
+                <span v-if="webhook.title">{{ webhook.title }} - </span>{{ webhook.url }}
+              </h4>
             </v-card-title>
 
             <v-subheader>Événéments déclencheurs</v-subheader>
@@ -21,7 +25,7 @@
             </v-list>
 
             <v-card-actions>
-              <v-spacer/>
+              <v-spacer />
               <v-btn flat icon color="warning" title="Supprimer ce webhook" @click="removeWebhook(rowIndex)">
                 <v-icon>delete</v-icon>
               </v-btn>
@@ -38,15 +42,19 @@
         </v-card-title>
         <v-card-text>
           <v-form v-model="newWebhookValid">
-            <v-text-field v-model="newWebhook.title" :rules="[v => !!v || '']" label="Titre" required/>
-            <v-text-field v-model="newWebhook.url" :rules="[v => !!v || '']" label="URL" required/>
-            <v-checkbox v-for="(event, eventId) in events" :label="event.text" v-model="newWebhook.events" :value="eventId" :key="eventId"/>
+            <v-text-field v-model="newWebhook.title" :rules="[v => !!v || '']" label="Titre" required />
+            <v-text-field v-model="newWebhook.url" :rules="[v => !!v || '']" label="URL" required />
+            <v-checkbox v-for="(event, eventId) in events" :key="eventId" v-model="newWebhook.events" :label="event.text" :value="eventId" />
           </v-form>
         </v-card-text>
         <v-card-actions>
-          <v-spacer/>
-          <v-btn flat @click="showDialog = false">Annuler</v-btn>
-          <v-btn :disabled="!newWebhookValid" color="primary" @click="addWebhook">Ajouter</v-btn>
+          <v-spacer />
+          <v-btn flat @click="showDialog = false">
+            Annuler
+          </v-btn>
+          <v-btn :disabled="!newWebhookValid" color="primary" @click="addWebhook">
+            Ajouter
+          </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>

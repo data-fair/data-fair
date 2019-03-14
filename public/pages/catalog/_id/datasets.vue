@@ -1,6 +1,6 @@
 <template lang="html">
   <v-container>
-    <catalog-datasets/>
+    <catalog-datasets />
   </v-container>
 </template>
 

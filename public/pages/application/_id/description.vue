@@ -6,8 +6,12 @@
           <v-list>
             <v-list-tile>
               <v-list-tile-avatar>
-                <v-icon v-if="application.owner.type === 'user'">person</v-icon>
-                <v-icon v-else>group</v-icon>
+                <v-icon v-if="application.owner.type === 'user'">
+                  person
+                </v-icon>
+                <v-icon v-else>
+                  group
+                </v-icon>
               </v-list-tile-avatar>
               <span>{{ application.owner.name }}</span>
             </v-list-tile>
@@ -36,8 +40,8 @@
         </v-card>
       </v-flex>
       <v-flex xs12 md6 order-md1>
-        <v-text-field v-model="application.title" label="Titre" @blur="patch({title: application.title})"/>
-        <v-textarea v-model="application.description" label="Description" box rows="4" @blur="patch({description: application.description})"/>
+        <v-text-field v-model="application.title" label="Titre" @blur="patch({title: application.title})" />
+        <v-textarea v-model="application.description" label="Description" box rows="4" @blur="patch({description: application.description})" />
       </v-flex>
     </v-layout>
   </v-container>

@@ -3,11 +3,15 @@
     <p>Version : {{ info.version }}</p>
     <v-expansion-panel expand focusable>
       <v-expansion-panel-content>
-        <div slot="header">Statut : {{ status.status }}</div>
+        <div slot="header">
+          Statut : {{ status.status }}
+        </div>
         <pre v-if="status">{{ JSON.stringify(status, null, 2) }}</pre>
       </v-expansion-panel-content>
       <v-expansion-panel-content>
-        <div slot="header">Configuration</div>
+        <div slot="header">
+          Configuration
+        </div>
         <pre v-if="status">{{ JSON.stringify(info.config, null, 2) }}</pre>
       </v-expansion-panel-content>
     </v-expansion-panel>

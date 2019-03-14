@@ -2,11 +2,17 @@
   <v-layout column>
     <form @submit.prevent="save()">
       <v-layout row>
-        <h3 class="headline">Schéma</h3>
-        <v-spacer/>
+        <h3 class="headline">
+          Schéma
+        </h3>
+        <v-spacer />
         <div>
-          <v-btn v-if="updated" type="submit" color="primary">Appliquer</v-btn>
-          <v-btn v-if="updated" flat @click="resetSchema">Annuler les modifications</v-btn>
+          <v-btn v-if="updated" type="submit" color="primary">
+            Appliquer
+          </v-btn>
+          <v-btn v-if="updated" flat @click="resetSchema">
+            Annuler les modifications
+          </v-btn>
         </div>
       </v-layout>
 
@@ -31,28 +37,28 @@
             </v-btn>
           </div>
           <v-flex xs2>
-            <v-text-field v-model="field.key" :disabled="true" label="Clé"/>
+            <v-text-field v-model="field.key" :disabled="true" label="Clé" />
           </v-flex>
           <v-flex xs2>
-            <v-text-field :disabled="true" :value="`${field.type}${field.format ? ' - ' + field.format : ''}`" label="Type"/>
+            <v-text-field :disabled="true" :value="`${field.type}${field.format ? ' - ' + field.format : ''}`" label="Type" />
           </v-flex>
           <v-flex xs3>
-            <v-text-field v-model="field.title" :placeholder="field['x-originalName']" label="Libellé"/>
+            <v-text-field v-model="field.title" :placeholder="field['x-originalName']" label="Libellé" />
           </v-flex>
           <v-flex xs3>
-            <v-textarea v-model="field.description" :id="'description-' + field.key" label="Description" rows="1"/>
+            <v-textarea :id="'description-' + field.key" v-model="field.description" label="Description" rows="1" />
           </v-flex>
           <v-flex xs2>
             <v-select
               v-if="!field['x-extension']"
-              :items="fieldsVocabulary[field.key]"
               v-model="field['x-refersTo']"
+              :items="fieldsVocabulary[field.key]"
               :disabled="field.key.startsWith('_')"
               item-text="title"
               item-value="id"
               label="Concept"
             />
-            <v-text-field v-else-if="field['x-refersTo'] && vocabulary[field['x-refersTo']]" v-model="vocabulary[field['x-refersTo']].title" label="Concept" disabled/>
+            <v-text-field v-else-if="field['x-refersTo'] && vocabulary[field['x-refersTo']]" v-model="vocabulary[field['x-refersTo']].title" label="Concept" disabled />
           </v-flex>
         </v-layout>
       </v-container>
@@ -68,21 +74,26 @@
         </v-card-title>
         <v-card-text>
           <v-form ref="addPropertyForm" :lazy-validation="true">
-            <v-text-field v-model="newPropertyKey" :rules="[v => !!v || '', v => !schema.find(f => f.key === v) || '']" name="key" label="Clé"/>
+            <v-text-field v-model="newPropertyKey" :rules="[v => !!v || '', v => !schema.find(f => f.key === v) || '']" name="key" label="Clé" />
             <v-select
-              :items="propertyTypes"
               v-model="newPropertyType"
+              :items="propertyTypes"
               :item-text="item => item.title"
               :item-value="item => `${item.type}${item.format}${item.maxLength}`"
               :rules="[v => !!v || '']"
               return-object
-              label="Type" />
+              label="Type"
+            />
           </v-form>
         </v-card-text>
         <v-card-actions>
-          <v-spacer/>
-          <v-btn flat @click="addPropertyDialog = false">Annuler</v-btn>
-          <v-btn color="primary" @click="addProperty">Valider</v-btn>
+          <v-spacer />
+          <v-btn flat @click="addPropertyDialog = false">
+            Annuler
+          </v-btn>
+          <v-btn color="primary" @click="addProperty">
+            Valider
+          </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>

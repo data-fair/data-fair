@@ -20,7 +20,6 @@
     </v-tabs>
 
     <nuxt-child />
-
   </v-layout>
 </template>
 

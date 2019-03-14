@@ -15,7 +15,7 @@
       <template slot="items" slot-scope="props">
         <tr>
           <td>
-            <v-checkbox v-model="props.item.active" primary hide-details/>
+            <v-checkbox v-model="props.item.active" primary hide-details />
           </td>
           <td class="pt-2 pb-2">
             <span v-if="remoteServicesMap[props.item.remoteService] && remoteServicesMap[props.item.remoteService].actions[props.item.action]">
@@ -26,8 +26,8 @@
 
             <v-select
               v-if="props.item.active && remoteServicesMap[props.item.remoteService] && selectFields[props.item.remoteService + '_' + props.item.action].fieldsAndTags"
-              :items="selectFields[props.item.remoteService + '_' + props.item.action].fieldsAndTags"
               v-model="props.item.select"
+              :items="selectFields[props.item.remoteService + '_' + props.item.action].fieldsAndTags"
               item-value="name"
               item-text="title"
               label=""
@@ -66,14 +66,14 @@
                 </v-btn>
               </span>
             </v-progress-circular>
-
           </td>
-
         </tr>
       </template>
     </v-data-table>
     <v-layout row>
-      <v-spacer/><v-btn class="md-raised" color="primary" @click="save">Appliquer</v-btn>
+      <v-spacer /><v-btn class="md-raised" color="primary" @click="save">
+        Appliquer
+      </v-btn>
     </v-layout>
 
     <v-dialog v-model="extensionDetailsDialog" :fullscreen="$vuetify.breakpoint.mdAndDown" :max-width="1200">
@@ -82,12 +82,12 @@
           Extension: {{ remoteServicesMap[currentExtension.remoteService].actions[currentExtension.action].summary }} (service {{ remoteServicesMap[currentExtension.remoteService].title }})
         </v-card-title>
         <v-card-text>
-          <dataset-extension-details :remote-service="currentExtension.remoteService" :action="currentExtension.action"/>
+          <dataset-extension-details :remote-service="currentExtension.remoteService" :action="currentExtension.action" />
         </v-card-text>
-        <v-divider/>
+        <v-divider />
 
         <v-card-actions>
-          <v-spacer/>
+          <v-spacer />
           <v-btn
             color="primary"
             flat

@@ -37,35 +37,45 @@
         <v-list>
           <v-list-tile :disabled="!can('readConfig')" :href="applicationLink" target="_blank">
             <v-list-tile-avatar>
-              <v-icon color="accent">exit_to_app</v-icon>
+              <v-icon color="accent">
+                exit_to_app
+              </v-icon>
             </v-list-tile-avatar>
             <v-list-tile-title>Accéder à l'application</v-list-tile-title>
           </v-list-tile>
 
           <v-list-tile v-if="can('writeConfig')" @click="showIntegrationDialog = true">
             <v-list-tile-avatar>
-              <v-icon color="primary">code</v-icon>
+              <v-icon color="primary">
+                code
+              </v-icon>
             </v-list-tile-avatar>
             <v-list-tile-title>Intégrer dans un site</v-list-tile-title>
           </v-list-tile>
 
           <v-list-tile v-if="can('writeConfig')" @click="showCaptureDialog = true">
             <v-list-tile-avatar>
-              <v-icon color="primary">photo</v-icon>
+              <v-icon color="primary">
+                photo
+              </v-icon>
             </v-list-tile-avatar>
             <v-list-tile-title>Effectuer une capture</v-list-tile-title>
           </v-list-tile>
 
           <v-list-tile v-if="can('delete')" @click="showDeleteDialog = true">
             <v-list-tile-avatar>
-              <v-icon color="warning">delete</v-icon>
+              <v-icon color="warning">
+                delete
+              </v-icon>
             </v-list-tile-avatar>
             <v-list-tile-title>Supprimer</v-list-tile-title>
           </v-list-tile>
 
           <v-list-tile v-if="can('delete')" @click="showOwnerDialog = true">
             <v-list-tile-avatar>
-              <v-icon color="warning">person</v-icon>
+              <v-icon color="warning">
+                person
+              </v-icon>
             </v-list-tile-avatar>
             <v-list-tile-title>Changer de propriétaire</v-list-tile-title>
           </v-list-tile>
@@ -77,7 +87,7 @@
       <v-card>
         <v-toolbar dense flat>
           <v-toolbar-title>Intégrer dans un site</v-toolbar-title>
-          <v-spacer/>
+          <v-spacer />
           <v-btn icon @click.native="showIntegrationDialog = false">
             <v-icon>close</v-icon>
           </v-btn>
@@ -90,7 +100,7 @@
           </pre>
           <br>
           Résultat:
-          <iframe :src="applicationLink + '?embed=true'" width="100%" height="500px" style="background-color: transparent; border: none;"/>
+          <iframe :src="applicationLink + '?embed=true'" width="100%" height="500px" style="background-color: transparent; border: none;" />
         </v-card-text>
       </v-card>
     </v-dialog>
@@ -99,7 +109,7 @@
       <v-card>
         <v-toolbar dense flat>
           <v-toolbar-title>Effectuer une capture</v-toolbar-title>
-          <v-spacer/>
+          <v-spacer />
           <v-btn icon @click.native="showCaptureDialog = false">
             <v-icon>close</v-icon>
           </v-btn>
@@ -123,9 +133,13 @@
           Voulez vous vraiment supprimer la configuration de l'application "{{ application.title }}" ? La suppression est définitive et le paramétrage ne pourra pas être récupéré.
         </v-card-text>
         <v-card-actions>
-          <v-spacer/>
-          <v-btn flat @click="showDeleteDialog = false">Non</v-btn>
-          <v-btn color="warning" @click="confirmRemove">Oui</v-btn>
+          <v-spacer />
+          <v-btn flat @click="showDeleteDialog = false">
+            Non
+          </v-btn>
+          <v-btn color="warning" @click="confirmRemove">
+            Oui
+          </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -136,16 +150,19 @@
           Changer le propriétaire de l'application
         </v-card-title>
         <v-card-text>
-          <owner-pick v-model="newOwner"/>
+          <owner-pick v-model="newOwner" />
         </v-card-text>
         <v-card-actions>
-          <v-spacer/>
-          <v-btn flat @click="showOwnerDialog = false">Annuler</v-btn>
-          <v-btn :disabled="!newOwner" color="warning" @click="changeOwner(newOwner); showOwnerDialog = false;">Confirmer</v-btn>
+          <v-spacer />
+          <v-btn flat @click="showOwnerDialog = false">
+            Annuler
+          </v-btn>
+          <v-btn :disabled="!newOwner" color="warning" @click="changeOwner(newOwner); showOwnerDialog = false;">
+            Confirmer
+          </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
-
   </v-layout>
 </template>
 

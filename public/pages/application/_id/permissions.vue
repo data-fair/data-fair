@@ -1,6 +1,6 @@
 <template lang="html">
   <v-container>
-    <permissions :resource="application" :resource-url="resourceUrl" :api="api"/>
+    <permissions :resource="application" :resource-url="resourceUrl" :api="api" />
   </v-container>
 </template>
 

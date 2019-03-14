@@ -1,6 +1,6 @@
 <template lang="html">
   <div>
-    <dataset-schema-view/>
+    <dataset-schema-view />
   </div>
 </template>
 

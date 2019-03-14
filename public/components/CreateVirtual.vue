@@ -1,9 +1,13 @@
 <template>
   <v-stepper v-model="currentStep">
     <v-stepper-header>
-      <v-stepper-step :complete="currentStep > 1" step="1">Choix du propriétaire</v-stepper-step>
-      <v-divider/>
-      <v-stepper-step :complete="!!title" step="2" editable>Paramètres</v-stepper-step>
+      <v-stepper-step :complete="currentStep > 1" step="1">
+        Choix du propriétaire
+      </v-stepper-step>
+      <v-divider />
+      <v-stepper-step :complete="!!title" step="2" editable>
+        Paramètres
+      </v-stepper-step>
     </v-stepper-header>
 
     <v-stepper-items>
@@ -13,12 +17,15 @@
           Vous pouvez les utiliser pour créer des vues limitées d'un jeu de données en appliquant des filtres ou en choisissant une partie seulement des colonnes.
           Vous pouvez également agréger plusieurs jeux de données en une seule représentation.
         </p>
-        <owner-pick v-model="owner"/>
-        <v-btn :disabled="!owner" color="primary" @click.native="currentStep = 2">Continuer</v-btn>
-        <v-btn flat @click.native="$emit('cancel')">Annuler</v-btn>
+        <owner-pick v-model="owner" />
+        <v-btn :disabled="!owner" color="primary" @click.native="currentStep = 2">
+          Continuer
+        </v-btn>
+        <v-btn flat @click.native="$emit('cancel')">
+          Annuler
+        </v-btn>
       </v-stepper-content>
       <v-stepper-content step="2">
-
         <div class="mt-3 mb-3">
           <v-text-field
             v-model="title"
@@ -27,10 +34,10 @@
             label="Titre"
           />
           <v-autocomplete
+            v-model="children"
             :items="datasets"
             :loading="loadingDatasets"
             :search-input.sync="search"
-            v-model="children"
             hide-no-data
             item-text="title"
             item-value="id"
@@ -39,8 +46,12 @@
             multiple
           />
         </div>
-        <v-btn :disabled="!title" color="primary" @click.native="createDataset()">Créer</v-btn>
-        <v-btn flat @click.native="$emit('cancel')">Annuler</v-btn>
+        <v-btn :disabled="!title" color="primary" @click.native="createDataset()">
+          Créer
+        </v-btn>
+        <v-btn flat @click.native="$emit('cancel')">
+          Annuler
+        </v-btn>
       </v-stepper-content>
     </v-stepper-items>
   </v-stepper>

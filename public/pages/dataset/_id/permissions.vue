@@ -1,6 +1,6 @@
 <template lang="html">
   <v-container>
-    <permissions v-if="can('getPermissions')" :resource="dataset" :resource-url="resourceUrl" :api="api"/>
+    <permissions v-if="can('getPermissions')" :resource="dataset" :resource-url="resourceUrl" :api="api" />
   </v-container>
 </template>
 

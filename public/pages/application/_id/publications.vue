@@ -12,10 +12,18 @@
       <v-list-tile v-for="(publication, i) in application.publications" :key="publication.id">
         <v-list-tile-content v-if="catalogsById[publication.catalog]">
           <v-list-tile-title>Application publiée sur le catalogue "{{ catalogsById[publication.catalog].title }}"</v-list-tile-title>
-          <v-list-tile-sub-title v-if="publication.status==='published'"><a :href="publication.targetUrl" target="_blank">{{ publication.targetUrl }}</a></v-list-tile-sub-title>
-          <v-list-tile-sub-title v-else-if="publication.status==='error'" style="color:red;">{{ publication.error }}</v-list-tile-sub-title>
-          <v-list-tile-sub-title v-else-if="publication.status==='deleted'">En attente de suppression</v-list-tile-sub-title>
-          <v-list-tile-sub-title v-else>En attente de publication</v-list-tile-sub-title>
+          <v-list-tile-sub-title v-if="publication.status==='published'">
+            <a :href="publication.targetUrl" target="_blank">{{ publication.targetUrl }}</a>
+          </v-list-tile-sub-title>
+          <v-list-tile-sub-title v-else-if="publication.status==='error'" style="color:red;">
+            {{ publication.error }}
+          </v-list-tile-sub-title>
+          <v-list-tile-sub-title v-else-if="publication.status==='deleted'">
+            En attente de suppression
+          </v-list-tile-sub-title>
+          <v-list-tile-sub-title v-else>
+            En attente de publication
+          </v-list-tile-sub-title>
         </v-list-tile-content>
         <v-list-tile-content v-else>
           Cette publication référence une configuration de catalogue inconnue ({{ publication.catalog }}).
@@ -34,8 +42,10 @@
     </v-list>
 
     <v-layout v-if="can('writeDescription')" row wrap>
-      <v-spacer/>
-      <v-btn color="primary" @click="addPublicationDialog = true">Ajouter une publication</v-btn>
+      <v-spacer />
+      <v-btn color="primary" @click="addPublicationDialog = true">
+        Ajouter une publication
+      </v-btn>
     </v-layout>
 
     <v-dialog v-model="addPublicationDialog" max-width="700px">
@@ -46,9 +56,9 @@
         <v-card-text v-if="catalogs">
           <v-form v-model="newPublicationValid">
             <v-select
+              v-model="newPublication.catalog"
               :items="catalogs"
               :item-text="catalogLabel"
-              v-model="newPublication.catalog"
               :rules="[() => !!newPublication.catalog]"
               item-value="id"
               label="Catalogue"
@@ -58,9 +68,13 @@
         </v-card-text>
 
         <v-card-actions>
-          <v-spacer/>
-          <v-btn flat @click="addPublicationDialog = false">Annuler</v-btn>
-          <v-btn :disabled="!newPublicationValid" color="primary" @click="addPublicationDialog = false; addPublication(newPublication)">Ajouter</v-btn>
+          <v-spacer />
+          <v-btn flat @click="addPublicationDialog = false">
+            Annuler
+          </v-btn>
+          <v-btn :disabled="!newPublicationValid" color="primary" @click="addPublicationDialog = false; addPublication(newPublication)">
+            Ajouter
+          </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -77,9 +91,13 @@
           <b>Attention</b> les données seront également supprimées dans le catalogue destinataire de la publication.
         </v-card-text>
         <v-card-actions>
-          <v-spacer/>
-          <v-btn flat @click="showDeleteDialog = false">Non</v-btn>
-          <v-btn color="warning" @click="showDeleteDialog = false; deletePublication(deletePublicationInd)">Oui</v-btn>
+          <v-spacer />
+          <v-btn flat @click="showDeleteDialog = false">
+            Non
+          </v-btn>
+          <v-btn color="warning" @click="showDeleteDialog = false; deletePublication(deletePublicationInd)">
+            Oui
+          </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -96,9 +114,13 @@
           <b>Attention</b> si vous avez effectué des modifications sur le catalogue depuis la dernière publication elles seront perdues.
         </v-card-text>
         <v-card-actions>
-          <v-spacer/>
-          <v-btn flat @click="showRepublishDialog = false">Non</v-btn>
-          <v-btn color="warning" @click="showRepublishDialog = false; rePublish(rePublishInd)">Oui</v-btn>
+          <v-spacer />
+          <v-btn flat @click="showRepublishDialog = false">
+            Non
+          </v-btn>
+          <v-btn color="warning" @click="showRepublishDialog = false; rePublish(rePublishInd)">
+            Oui
+          </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>

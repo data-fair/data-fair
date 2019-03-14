@@ -8,7 +8,7 @@
       <v-subheader>Propriétaire</v-subheader>
       <v-checkbox
         v-for="facetItem in facets.owner" :key="`${facetItem.value.type}:${facetItem.value.id}`"
-        :value="true" v-model="facetsValues.owner[`${facetItem.value.type}:${facetItem.value.id}`]"
+        v-model="facetsValues.owner[`${facetItem.value.type}:${facetItem.value.id}`]" :value="true"
         :hide-details="true"
         class="mt-0"
       >
@@ -25,8 +25,8 @@
       <v-subheader>Visibilité</v-subheader>
       <v-checkbox
         v-for="facetItem in facets.visibility" :key="`${facetItem.value}`"
-        :label="`${{public: 'Public', private: 'Privé', protected: 'Protégé'}[facetItem.value]} (${facetItem.count})`" :value="true"
-        v-model="facetsValues.visibility[facetItem.value]"
+        v-model="facetsValues.visibility[facetItem.value]" :label="`${{public: 'Public', private: 'Privé', protected: 'Protégé'}[facetItem.value]} (${facetItem.count})`"
+        :value="true"
         :hide-details="true"
         class="mt-0"
       />
@@ -36,8 +36,8 @@
       <v-subheader>État</v-subheader>
       <v-checkbox
         v-for="facetItem in facets.status" :key="facetItem.value"
-        :label="`${statuses.dataset[facetItem.value] ? statuses.dataset[facetItem.value].title : facetItem.value} (${facetItem.count})`" :value="true"
-        v-model="facetsValues.status[facetItem.value]"
+        v-model="facetsValues.status[facetItem.value]" :label="`${statuses.dataset[facetItem.value] ? statuses.dataset[facetItem.value].title : facetItem.value} (${facetItem.count})`"
+        :value="true"
         :hide-details="true"
         class="mt-0"
       />
@@ -47,8 +47,8 @@
       <v-subheader>Enrichissement</v-subheader>
       <v-checkbox
         v-for="facetItem in facets.services" :key="facetItem.value"
-        :label="`${facetItem.value.replace('koumoul-', '').replace('-koumoul', '')} (${facetItem.count})`" :value="true"
-        v-model="facetsValues.services[facetItem.value]"
+        v-model="facetsValues.services[facetItem.value]" :label="`${facetItem.value.replace('koumoul-', '').replace('-koumoul', '')} (${facetItem.count})`"
+        :value="true"
         :hide-details="true"
         class="mt-0"
       />
@@ -58,8 +58,8 @@
       <v-subheader>Concepts</v-subheader>
       <v-checkbox
         v-for="facetItem in facets.concepts" :key="facetItem.value"
-        :label="`${vocabulary && vocabulary[facetItem.value].title} (${facetItem.count})`" :value="true"
-        v-model="facetsValues.concepts[facetItem.value]"
+        v-model="facetsValues.concepts[facetItem.value]" :label="`${vocabulary && vocabulary[facetItem.value].title} (${facetItem.count})`"
+        :value="true"
         :hide-details="true"
         class="mt-0"
       />

@@ -1,5 +1,5 @@
 <template>
-  <nuxt-child v-if="dataset"/>
+  <nuxt-child v-if="dataset" />
 </template>
 
 <script>

@@ -26,6 +26,8 @@ module.exports = {
     // they are very present in initial code base.. Maybe we should clean that up someday..
     'vue/max-attributes-per-line': 'off',
     'vue/require-prop-types': 'off',
-    'no-template-curly-in-string': 'off'
+    'vue/no-v-html': 'off',
+    'no-template-curly-in-string': 'off',
+    'node/no-deprecated-api': 'off'
   }
 }

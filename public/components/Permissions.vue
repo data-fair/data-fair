@@ -1,14 +1,24 @@
 <template>
   <div>
-    <h3 class="headline mt-3 mb-3">Propriétaire{{ resource.owner.type === 'organization' ? 's' : '' }}</h3>
-    <div v-if="resource.owner.type === 'user'">Utilisateur <nuxt-link :to="localePath({name: 'settings-type-id', params: resource.owner})">{{ resource.owner.name }}</nuxt-link></div>
+    <h3 class="headline mt-3 mb-3">
+      Propriétaire{{ resource.owner.type === 'organization' ? 's' : '' }}
+    </h3>
+    <div v-if="resource.owner.type === 'user'">
+      Utilisateur <nuxt-link :to="localePath({name: 'settings-type-id', params: resource.owner})">
+        {{ resource.owner.name }}
+      </nuxt-link>
+    </div>
     <div v-else>
       <span>Membres de l'organisation <nuxt-link :to="localePath({name: 'settings-type-id', params: resource.owner})">{{ resource.owner.name }}</nuxt-link></span>
       <span v-if="resource.owner.role"> ayant le rôle <strong>{{ resource.owner.role }}</strong><span v-if="resource.owner.role !== env.adminRole"> ou <strong>{{ env.adminRole }}</strong></span></span>
     </div>
 
-    <h3 class="headline mt-3 mb-3">Permissions</h3>
-    <v-btn id="new-permissions" color="primary" @click="currentPermission = initPermission();addPermissions = true;showDialog = true">Ajouter des permissions</v-btn>
+    <h3 class="headline mt-3 mb-3">
+      Permissions
+    </h3>
+    <v-btn id="new-permissions" color="primary" @click="currentPermission = initPermission();addPermissions = true;showDialog = true">
+      Ajouter des permissions
+    </v-btn>
     <v-data-table
       v-if="permissions && permissions.length"
       :headers="[{text: 'Portée', sortable: false}, {text: 'Actions', sortable: false}, { text: '', sortable: false }]"
@@ -19,26 +29,40 @@
       <template slot="items" slot-scope="props">
         <tr>
           <td>
-            <div v-if="!props.item.type">Public</div>
-            <div v-else>{{ (props.item.type === 'user' ? 'Utilisateur ' : 'Organisation ') + props.item.name }}</div>
-            <div v-if="props.item.type === 'organization' && (!props.item.roles || !props.item.roles.length)">Tout le monde</div>
-            <div v-if="props.item.type === 'organization' && (props.item.roles && props.item.roles.length)">Restreint aux rôles : {{ props.item.roles.join(', ') }}</div>
+            <div v-if="!props.item.type">
+              Public
+            </div>
+            <div v-else>
+              {{ (props.item.type === 'user' ? 'Utilisateur ' : 'Organisation ') + props.item.name }}
+            </div>
+            <div v-if="props.item.type === 'organization' && (!props.item.roles || !props.item.roles.length)">
+              Tout le monde
+            </div>
+            <div v-if="props.item.type === 'organization' && (props.item.roles && props.item.roles.length)">
+              Restreint aux rôles : {{ props.item.roles.join(', ') }}
+            </div>
           </td>
           <td>
             <v-list dense>
-              <v-list-tile v-for="(classOperations, permClass) in permissionClasses" v-if="((props.item.classes || []).includes(permClass)) || classOperations.filter(o => (props.item.operations || []).includes(o.id)).length" :key="permClass">
-                <v-list-tile-content>
-                  <v-layout row style="width:100%">
-                    <v-flex xs3>{{ classNames[permClass] }}</v-flex>
-                    <v-flex xs9>
-                      <span v-if="(props.item.classes || []).includes(permClass)">Toutes</span>
-                      <ul v-else>
-                        <li v-for="operation in classOperations.filter(o => (props.item.operations || []).find(oid => o.id && o.id === oid))" :key="operation.id">{{ operation.title }}</li>
-                      </ul>
-                    </v-flex>
-                  </v-layout>
-                </v-list-tile-content>
-              </v-list-tile>
+              <template v-for="(classOperations, permClass) in permissionClasses">
+                <v-list-tile v-if="((props.item.classes || []).includes(permClass)) || classOperations.filter(o => (props.item.operations || []).includes(o.id)).length" :key="permClass">
+                  <v-list-tile-content>
+                    <v-layout row style="width:100%">
+                      <v-flex xs3>
+                        {{ classNames[permClass] }}
+                      </v-flex>
+                      <v-flex xs9>
+                        <span v-if="(props.item.classes || []).includes(permClass)">Toutes</span>
+                        <ul v-else>
+                          <li v-for="operation in classOperations.filter(o => (props.item.operations || []).find(oid => o.id && o.id === oid))" :key="operation.id">
+                            {{ operation.title }}
+                          </li>
+                        </ul>
+                      </v-flex>
+                    </v-layout>
+                  </v-list-tile-content>
+                </v-list-tile>
+              </template>
             </v-list>
           </td>
           <td class="text-xs-right">
@@ -58,8 +82,8 @@
         <v-card-title>Editer un ensemble de permissions</v-card-title>
         <v-card-text>
           <v-select
-            :items="[{value: null, label: 'Public'}, {value: 'organization', label: 'Organisation'}, {value: 'user', label: 'Utilisateur'}]"
             v-model="currentPermission.type"
+            :items="[{value: null, label: 'Public'}, {value: 'organization', label: 'Organisation'}, {value: 'user', label: 'Utilisateur'}]"
             item-text="label"
             item-value="value"
             label="Portée"
@@ -68,8 +92,8 @@
 
           <v-autocomplete
             v-if="currentPermission.type"
-            :items="currentPermission.type === 'organization' ? organizations : users"
             v-model="currentEntity"
+            :items="currentPermission.type === 'organization' ? organizations : users"
             :search-input.sync="search"
             :loading="loading"
             item-text="name"
@@ -83,16 +107,16 @@
 
           <v-select
             v-if="currentPermission.type === 'organization' && currentPermissionOrganizationRoles.length"
-            :items="currentPermissionOrganizationRoles"
             v-model="currentPermission.roles"
+            :items="currentPermissionOrganizationRoles"
             label="Rôles (tous si aucun coché)"
             multiple
           />
 
           <v-select
             v-if="!expertMode"
-            :items="Object.keys(permissionClasses).filter(c => classNames[c]).map(c => ({class: c, title: classNames[c]}))"
             v-model="currentPermission.classes"
+            :items="Object.keys(permissionClasses).filter(c => classNames[c]).map(c => ({class: c, title: classNames[c]}))"
             item-text="title"
             item-value="class"
             label="Actions"
@@ -101,17 +125,17 @@
             <template slot="item" slot-scope="data">
               <template>
                 <v-list-tile-action>
-                  <v-checkbox v-model="currentPermission.classes" :value="data.item.class" :off-icon="permissionClasses[data.item.class].filter(o => !(currentPermission.operations || []).includes(o.id)).length === 0 ? '$vuetify.icons.checkboxOn' : '$vuetify.icons.checkboxOff'"/>
+                  <v-checkbox v-model="currentPermission.classes" :value="data.item.class" :off-icon="permissionClasses[data.item.class].filter(o => !(currentPermission.operations || []).includes(o.id)).length === 0 ? '$vuetify.icons.checkboxOn' : '$vuetify.icons.checkboxOff'" />
                 </v-list-tile-action>
-                <v-list-tile-content v-html="data.item.title"/>
+                <v-list-tile-content v-html="data.item.title" />
               </template>
             </template>
           </v-select>
 
           <v-select
             v-if="expertMode"
-            :items="operations"
             v-model="currentPermission.operations"
+            :items="operations"
             item-text="title"
             item-value="id"
             label="Actions"
@@ -119,13 +143,13 @@
           >
             <template slot="item" slot-scope="data">
               <template v-if="typeof data.item !== 'object'">
-                <v-list-tile-content v-text="data.item"/>
+                <v-list-tile-content v-text="data.item" />
               </template>
               <template v-else>
                 <v-list-tile-action>
-                  <v-checkbox v-model="currentPermission.operations" :value="data.item.id" :off-icon="currentPermission.classes.includes(data.item.class) ? '$vuetify.icons.checkboxOn' : '$vuetify.icons.checkboxOff'"/>
+                  <v-checkbox v-model="currentPermission.operations" :value="data.item.id" :off-icon="currentPermission.classes.includes(data.item.class) ? '$vuetify.icons.checkboxOn' : '$vuetify.icons.checkboxOff'" />
                 </v-list-tile-action>
-                <v-list-tile-content v-html="data.item.title"/>
+                <v-list-tile-content v-html="data.item.title" />
               </template>
             </template>
           </v-select>
@@ -138,13 +162,16 @@
         </v-card-text>
 
         <v-card-actions>
-          <v-spacer/>
-          <v-btn flat @click="showDialog = false">Annuler</v-btn>
-          <v-btn :disabled="(currentPermission.type && !currentPermission.id) || ((!currentPermission.operations || !currentPermission.operations.length) && (!currentPermission.classes ||!currentPermission.classes.length))" color="primary" @click="showDialog = false;save()">Valider</v-btn>
+          <v-spacer />
+          <v-btn flat @click="showDialog = false">
+            Annuler
+          </v-btn>
+          <v-btn :disabled="(currentPermission.type && !currentPermission.id) || ((!currentPermission.operations || !currentPermission.operations.length) && (!currentPermission.classes ||!currentPermission.classes.length))" color="primary" @click="showDialog = false;save()">
+            Valider
+          </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
-
   </div>
 </template>
 

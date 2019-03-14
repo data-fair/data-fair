@@ -1,6 +1,6 @@
 <template lang="html">
   <div>
-    <iframe id="openapi-iframe" :src="src" width="100%" scrolling="no" height="300px"/>
+    <iframe id="openapi-iframe" :src="src" width="100%" scrolling="no" height="300px" />
   </div>
 </template>
 

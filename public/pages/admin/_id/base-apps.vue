@@ -29,23 +29,30 @@
               <img :src="baseApp.thumbnail">
             </v-list-tile-avatar>
             <v-list-tile-content>
-
               <v-list-tile-title>
                 {{ baseApp.title }} - {{ baseApp.applicationName }} ({{ baseApp.version }}) - <a :href="baseApp.url">{{ baseApp.url }}</a>
-                <v-icon v-if="baseApp.public" color="green">lock_open</v-icon>
+                <v-icon v-if="baseApp.public" color="green">
+                  lock_open
+                </v-icon>
                 <template v-else>
-                  <v-icon color="red">lock</v-icon>
+                  <v-icon color="red">
+                    lock
+                  </v-icon>
                   <span>{{ (baseApp.privateAccess || []).map(p => p.name).join(', ') }}</span>
                 </template>
               </v-list-tile-title>
               <v-list-tile-sub-title>{{ baseApp.description }}</v-list-tile-sub-title>
               <v-list-tile-sub-title>
-                <nuxt-link :to="{path: '/applications', query: {url: baseApp.url, showAll: true}}">{{ baseApp.nbApplications }} application{{ baseApp.nbApplications > 1 ? 's' : '' }}</nuxt-link>
+                <nuxt-link :to="{path: '/applications', query: {url: baseApp.url, showAll: true}}">
+                  {{ baseApp.nbApplications }} application{{ baseApp.nbApplications > 1 ? 's' : '' }}
+                </nuxt-link>
                 - Jeux de données : {{ baseApp.datasetsFilters }}
               </v-list-tile-sub-title>
             </v-list-tile-content>
             <v-list-tile-action>
-              <v-icon color="primary" @click="currentBaseApp = baseApp; patch = newPatch(baseApp); showEditDialog = true;">edit</v-icon>
+              <v-icon color="primary" @click="currentBaseApp = baseApp; patch = newPatch(baseApp); showEditDialog = true;">
+                edit
+              </v-icon>
             </v-list-tile-action>
           </v-list-tile>
         </v-list>
@@ -60,7 +67,9 @@
     >
       <v-card v-if="currentBaseApp">
         <v-card-title primary-title>
-          <h3 class="headline mb-0">Édition de {{ currentBaseApp.title }}</h3>
+          <h3 class="headline mb-0">
+            Édition de {{ currentBaseApp.title }}
+          </h3>
         </v-card-title>
         <v-card-text>
           <p>URL : {{ currentBaseApp.url }}</p>
@@ -90,7 +99,7 @@
               name="image"
               label="Image"
             />
-            <v-checkbox v-model="patch.public" label="Public"/>
+            <v-checkbox v-model="patch.public" label="Public" />
             <v-autocomplete
               v-if="!patch.public"
               v-model="patch.privateAccess"
@@ -106,13 +115,16 @@
               placeholder="Saisissez le nom d'organisation"
               return-object
             />
-
           </v-form>
         </v-card-text>
         <v-card-actions>
-          <v-spacer/>
-          <v-btn @click="showEditDialog = false">Annuler</v-btn>
-          <v-btn color="primary" @click="applyPatch(currentBaseApp, patch); showEditDialog = false">Enregistrer</v-btn>
+          <v-spacer />
+          <v-btn @click="showEditDialog = false">
+            Annuler
+          </v-btn>
+          <v-btn color="primary" @click="applyPatch(currentBaseApp, patch); showEditDialog = false">
+            Enregistrer
+          </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>

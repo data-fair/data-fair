@@ -3,14 +3,16 @@
     <v-navigation-drawer app fixed style="padding-top: 64px;">
       <v-subheader>{{ $t(`pages.${prefix}.title`) }}</v-subheader>
       <v-list>
-        <v-list-tile v-for="page in pages" :key="page" :to="localePath({name: prefix + '-id', params: {id: page}})">
-          <v-list-tile-title>{{ $t(`pages.${prefix}.${page}.title`) }}</v-list-tile-title>
+        <v-list-tile v-for="pageId in pages" :key="pageId" :to="localePath({name: prefix + '-id', params: {id: pageId}})">
+          <v-list-tile-title>{{ $t(`pages.${prefix}.${pageId}.title`) }}</v-list-tile-title>
         </v-list-tile>
       </v-list>
     </v-navigation-drawer>
     <v-layout column>
-      <h2 class="display1 my-4">{{ $t(`pages.${prefix}.${page}.title`) }}</h2>
-      <v-flex v-show="ready" xs12 v-html="filledContent"/>
+      <h2 class="display1 my-4">
+        {{ $t(`pages.${prefix}.${page}.title`) }}
+      </h2>
+      <v-flex v-show="ready" xs12 v-html="filledContent" />
     </v-layout>
   </v-container>
 </template>

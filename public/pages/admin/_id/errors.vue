@@ -1,14 +1,20 @@
 <template lang="html">
   <v-container fluid>
-    <p v-if="datasetsErrors && datasetsErrors.count === 0">Aucun jeu de données en erreur</p>
+    <p v-if="datasetsErrors && datasetsErrors.count === 0">
+      Aucun jeu de données en erreur
+    </p>
     <template v-else-if="datasetsErrors">
-      <h3 class="title">Jeux de données en erreur</h3>
+      <h3 class="title">
+        Jeux de données en erreur
+      </h3>
       <v-card>
         <v-list two-line>
           <v-list-tile v-for="error in datasetsErrors.results" :key="error.id">
             <v-list-tile-content>
               <v-list-tile-title>
-                <nuxt-link :to="`/dataset/${error.id}/description`">{{ error.title }} ({{ error.owner.name }})</nuxt-link>
+                <nuxt-link :to="`/dataset/${error.id}/description`">
+                  {{ error.title }} ({{ error.owner.name }})
+                </nuxt-link>
               </v-list-tile-title>
               <v-list-tile-sub-title>{{ error.event.data }} ({{ error.event.date | moment("DD/MM/YYYY, HH:mm") }})</v-list-tile-sub-title>
             </v-list-tile-content>
@@ -17,15 +23,21 @@
       </v-card>
     </template>
 
-    <p v-if="applicationsErrors && applicationsErrors.count === 0">Aucune application en erreur</p>
+    <p v-if="applicationsErrors && applicationsErrors.count === 0">
+      Aucune application en erreur
+    </p>
     <template v-else-if="applicationsErrors">
-      <h3 class="title">Applications en erreur</h3>
+      <h3 class="title">
+        Applications en erreur
+      </h3>
       <v-card>
         <v-list two-line>
           <v-list-tile v-for="error in applicationsErrors.results" :key="error.id">
             <v-list-tile-content>
               <v-list-tile-title>
-                <nuxt-link :to="`/application/${error.id}/description`">{{ error.title }} ({{ error.owner.name }})</nuxt-link>
+                <nuxt-link :to="`/application/${error.id}/description`">
+                  {{ error.title }} ({{ error.owner.name }})
+                </nuxt-link>
               </v-list-tile-title>
               <v-list-tile-sub-title>{{ error.event.data }} ({{ error.event.date | moment("DD/MM/YYYY, HH:mm") }})</v-list-tile-sub-title>
             </v-list-tile-content>

@@ -2,7 +2,11 @@
   <div>
     <div v-if="notFound">
       <p>Les données ne sont pas accessibles. Soit le jeu de données n'a pas encore été entièrement traité, soit il y a eu une erreur dans le traitement.</p>
-      <p>Vous pouvez consulter <nuxt-link :to="`/dataset/${dataset.id}/journal`">le journal</nuxt-link> pour en savoir plus.</p>
+      <p>
+        Vous pouvez consulter <nuxt-link :to="`/dataset/${dataset.id}/journal`">
+          le journal
+        </nuxt-link> pour en savoir plus.
+      </p>
     </div>
     <v-card>
       <v-card-title style="padding-bottom: 0;">
@@ -15,12 +19,13 @@
               class="mr-3"
               style="min-width:150px;"
               @keyup.enter.native="refresh"
-              @click:append="refresh"/>
-            <v-spacer/>
+              @click:append="refresh"
+            />
+            <v-spacer />
           </v-flex>
-          <v-spacer/>
+          <v-spacer />
           <v-flex lg4 md5 sm6 xs12>
-            <v-pagination v-if="data.total" v-model="pagination.page" :length="Math.ceil(Math.min(data.total, 10000) / pagination.rowsPerPage)" :total-visible="$vuetify.breakpoint.lgAndUp ? 7 : 5" style="float:right;"/>
+            <v-pagination v-if="data.total" v-model="pagination.page" :length="Math.ceil(Math.min(data.total, 10000) / pagination.rowsPerPage)" :total-visible="$vuetify.breakpoint.lgAndUp ? 7 : 5" style="float:right;" />
           </v-flex>
         </v-layout>
       </v-card-title>

@@ -57,31 +57,41 @@
         <v-list>
           <v-list-tile v-if="can('delete')" @click="showDeleteDialog = true">
             <v-list-tile-avatar>
-              <v-icon color="warning">delete</v-icon>
+              <v-icon color="warning">
+                delete
+              </v-icon>
             </v-list-tile-avatar>
             <v-list-tile-title>Supprimer</v-list-tile-title>
           </v-list-tile>
           <v-list-tile v-if="can('delete')" @click="showOwnerDialog = true">
             <v-list-tile-avatar>
-              <v-icon color="warning">person</v-icon>
+              <v-icon color="warning">
+                person
+              </v-icon>
             </v-list-tile-avatar>
             <v-list-tile-title>Changer de propriétaire</v-list-tile-title>
           </v-list-tile>
           <v-list-tile v-if="can('writeData')" @click="showUploadDialog = true">
             <v-list-tile-avatar>
-              <v-icon color="warning">upload_file</v-icon>
+              <v-icon color="warning">
+                upload_file
+              </v-icon>
             </v-list-tile-avatar>
             <v-list-tile-title>Remplacer</v-list-tile-title>
           </v-list-tile>
           <v-list-tile :disabled="!can('downloadOriginalData')" :href="downloadLink">
             <v-list-tile-avatar>
-              <v-icon color="primary">file_download</v-icon>
+              <v-icon color="primary">
+                file_download
+              </v-icon>
             </v-list-tile-avatar>
             <v-list-tile-title>Fichier d'origine</v-list-tile-title>
           </v-list-tile>
           <v-list-tile :href="downloadFullLink" :disabled="!can('downloadFullData') || !dataset.extensions || !dataset.extensions.find(e => e.active)">
             <v-list-tile-avatar>
-              <v-icon color="primary">file_download</v-icon>
+              <v-icon color="primary">
+                file_download
+              </v-icon>
             </v-list-tile-avatar>
             <v-list-tile-title>Fichier enrichi</v-list-tile-title>
           </v-list-tile>
@@ -106,9 +116,13 @@
           Voulez vous vraiment supprimer le jeu de données "{{ dataset.title }}" ? La suppression est définitive et les données ne pourront pas être récupérées.
         </v-card-text>
         <v-card-actions>
-          <v-spacer/>
-          <v-btn flat @click="showDeleteDialog = false">Non</v-btn>
-          <v-btn color="warning" @click="confirmRemove">Oui</v-btn>
+          <v-spacer />
+          <v-btn flat @click="showDeleteDialog = false">
+            Non
+          </v-btn>
+          <v-btn color="warning" @click="confirmRemove">
+            Oui
+          </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -119,12 +133,16 @@
           Changer le propriétaire du jeu de données
         </v-card-title>
         <v-card-text>
-          <owner-pick v-model="newOwner"/>
+          <owner-pick v-model="newOwner" />
         </v-card-text>
         <v-card-actions>
-          <v-spacer/>
-          <v-btn flat @click="showOwnerDialog = false">Annuler</v-btn>
-          <v-btn :disabled="!newOwner" color="warning" @click="changeOwner(newOwner); showOwnerDialog = false;">Confirmer</v-btn>
+          <v-spacer />
+          <v-btn flat @click="showOwnerDialog = false">
+            Annuler
+          </v-btn>
+          <v-btn :disabled="!newOwner" color="warning" @click="changeOwner(newOwner); showOwnerDialog = false;">
+            Confirmer
+          </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -144,12 +162,16 @@
         </v-card-text>
         <v-card-text>
           <input type="file" @change="onFileUpload">
-          <v-progress-linear v-if="uploading" v-model="uploadProgress"/>
+          <v-progress-linear v-if="uploading" v-model="uploadProgress" />
         </v-card-text>
         <v-card-actions>
-          <v-spacer/>
-          <v-btn flat @click="showUploadDialog = false">Annuler</v-btn>
-          <v-btn :disabled="!file || uploading" color="warning" @click="confirmUpload">Charger</v-btn>
+          <v-spacer />
+          <v-btn flat @click="showUploadDialog = false">
+            Annuler
+          </v-btn>
+          <v-btn :disabled="!file || uploading" color="warning" @click="confirmUpload">
+            Charger
+          </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -179,10 +201,10 @@ export default {
       return this.dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')
     },
     downloadLink() {
-      if (this.dataset) return this.resourceUrl + '/raw'
+      return this.dataset ? this.resourceUrl + '/raw' : null
     },
     downloadFullLink() {
-      if (this.dataset) return this.resourceUrl + '/full'
+      return this.dataset ? this.resourceUrl + '/full' : null
     }
   },
   async fetch({ store, params, route }) {

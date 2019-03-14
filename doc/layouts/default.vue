@@ -6,38 +6,44 @@
           <img src="../../public/assets/logo.svg" style="max-width: 150px;">
         </nuxt-link>
       </div>
-      <v-toolbar-title><h1 class="headline">DataFair</h1></v-toolbar-title>
+      <v-toolbar-title>
+        <h1 class="headline">
+          DataFair
+        </h1>
+      </v-toolbar-title>
 
-      <v-spacer/>
+      <v-spacer />
 
       <v-toolbar-items>
         <v-btn v-for="page in pages" :key="page.prefix"
                :to="localePath({name: page.prefix + '-id', params: {id: page.id}})"
-               :class="($route.name && $route.name.startsWith(page.prefix)) ? 'v-btn--active' : ''" flat color="primary">
+               :class="($route.name && $route.name.startsWith(page.prefix)) ? 'v-btn--active' : ''" flat color="primary"
+        >
           {{ $t(`pages.${page.prefix}.title`) }}
         </v-btn>
       </v-toolbar-items>
 
-      <v-spacer/>
+      <v-spacer />
 
       <v-speed-dial
         direction="bottom"
         transition="fade-transition"
       >
-        <v-btn slot="activator" fab flat small>{{ $i18n.locale }}</v-btn>
+        <v-btn slot="activator" fab flat small>
+          {{ $i18n.locale }}
+        </v-btn>
         <v-btn v-for="locale in $i18n.locales.filter(l => l.code !== $i18n.locale)" :key="locale.code" :to="switchLocalePath(locale.code)" fab small nuxt>
           {{ locale.code }}
         </v-btn>
       </v-speed-dial>
-
     </v-toolbar>
 
     <v-content>
-      <nuxt/>
+      <nuxt />
     </v-content>
 
     <v-footer class="pa-3">
-      <v-spacer/>
+      <v-spacer />
       <div>Powered by <a href="https://koumoul.com">Koumoul</a></div>
     </v-footer>
   </v-app>

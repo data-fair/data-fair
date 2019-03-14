@@ -6,8 +6,12 @@
           <v-list>
             <v-list-tile>
               <v-list-tile-avatar>
-                <v-icon v-if="dataset.owner.type === 'user'">person</v-icon>
-                <v-icon v-else>group</v-icon>
+                <v-icon v-if="dataset.owner.type === 'user'">
+                  person
+                </v-icon>
+                <v-icon v-else>
+                  group
+                </v-icon>
               </v-list-tile-avatar>
               <span>{{ dataset.owner.name }}</span>
               <span v-if="dataset.owner.role">&nbsp;(rôle {{ dataset.owner.role }})</span>
@@ -17,13 +21,13 @@
                 <v-icon>{{ events[journal[0].type].icon }}</v-icon>
               </v-list-tile-avatar>
               <v-list-tile-avatar v-else>
-                <v-progress-circular :size="20" :width="3" small indeterminate color="primary"/>
+                <v-progress-circular :size="20" :width="3" small indeterminate color="primary" />
               </v-list-tile-avatar>
               <p v-if="journal[0].type === 'error'">
                 {{ events[journal[0].type].text }} <br> {{ journal[0].data }}
               </p>
               <span v-else>{{ events[journal[0].type].text }}</span>
-              <v-spacer/>
+              <v-spacer />
               <v-list-tile-action v-if="journal[0].type === 'error' && can('writeDescription')">
                 <v-btn icon title="Relancer" @click="patch({})">
                   <v-icon>play_arrow</v-icon>
@@ -48,31 +52,35 @@
             </v-list-tile>
             <v-list-tile>
               <v-list-tile-avatar v-if="nbApplications === null">
-                <v-progress-circular :size="20" :width="3" small indeterminate color="primary"/>
+                <v-progress-circular :size="20" :width="3" small indeterminate color="primary" />
               </v-list-tile-avatar>
               <template v-else>
-                <v-list-tile-avatar ><v-icon>touch_app</v-icon></v-list-tile-avatar>
+                <v-list-tile-avatar><v-icon>touch_app</v-icon></v-list-tile-avatar>
                 <span v-if="nbApplications === 0">0 application</span>
-                <nuxt-link v-else :to="`/applications?dataset=${dataset.id}`">{{ nbApplications }} application{{ nbApplications > 1 ? 's' : '' }}</nuxt-link>
+                <nuxt-link v-else :to="`/applications?dataset=${dataset.id}`">
+                  {{ nbApplications }} application{{ nbApplications > 1 ? 's' : '' }}
+                </nuxt-link>
               </template>
             </v-list-tile>
             <v-list-tile v-if="nbVirtualDatasets">
-              <v-list-tile-avatar ><v-icon>picture_in_picture</v-icon></v-list-tile-avatar>
-              <nuxt-link :to="`/datasets?children=${dataset.id}`">{{ nbVirtualDatasets }} jeu{{ nbVirtualDatasets > 1 ? 'x' : '' }} de données virtuel{{ nbVirtualDatasets > 1 ? 's' : '' }}</nuxt-link>
+              <v-list-tile-avatar><v-icon>picture_in_picture</v-icon></v-list-tile-avatar>
+              <nuxt-link :to="`/datasets?children=${dataset.id}`">
+                {{ nbVirtualDatasets }} jeu{{ nbVirtualDatasets > 1 ? 'x' : '' }} de données virtuel{{ nbVirtualDatasets > 1 ? 's' : '' }}
+              </nuxt-link>
             </v-list-tile>
             <v-list-tile v-if="dataset.isRest">
-              <v-list-tile-avatar ><v-icon>all_inclusive</v-icon></v-list-tile-avatar>
+              <v-list-tile-avatar><v-icon>all_inclusive</v-icon></v-list-tile-avatar>
               <span>Jeu de données incrémental</span>
             </v-list-tile>
           </v-list>
         </v-card>
       </v-flex>
       <v-flex xs12 md6 order-md1>
-        <v-text-field v-model="dataset.title" :disabled="!can('writeDescription')" label="Titre" @blur="patch({title: dataset.title})"/>
-        <v-textarea v-model="dataset.description" :disabled="!can('writeDescription')" label="Description" box rows="4" @blur="patch({description: dataset.description})"/>
+        <v-text-field v-model="dataset.title" :disabled="!can('writeDescription')" label="Titre" @blur="patch({title: dataset.title})" />
+        <v-textarea v-model="dataset.description" :disabled="!can('writeDescription')" label="Description" box rows="4" @blur="patch({description: dataset.description})" />
         <v-select
-          :items="licenses"
           v-model="dataset.license"
+          :items="licenses"
           :disabled="!can('writeDescription')"
           item-text="title"
           item-key="href"
@@ -80,9 +88,8 @@
           return-object
           @input="patch({license: dataset.license})"
         />
-        <v-text-field v-model="dataset.origin" :disabled="!can('writeDescription')" label="Provenance" @blur="patch({origin: dataset.origin})"/>
+        <v-text-field v-model="dataset.origin" :disabled="!can('writeDescription')" label="Provenance" @blur="patch({origin: dataset.origin})" />
       </v-flex>
-
     </v-layout>
   </v-container>
 </template>

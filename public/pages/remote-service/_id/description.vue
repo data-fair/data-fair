@@ -1,7 +1,7 @@
 <template lang="html">
   <div>
-    <remote-service-info/>
-    <remote-service-schema/>
+    <remote-service-info />
+    <remote-service-schema />
   </div>
 </template>
 

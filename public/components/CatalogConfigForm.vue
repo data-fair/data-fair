@@ -1,8 +1,8 @@
 <template lang="html">
   <div>
     <v-text-field
-      :hint="apiKeyHint"
       v-model="catalog.apiKey"
+      :hint="apiKeyHint"
       :rules="[() => !!catalog.apiKey || `La clé d'API est obligatoire`]"
       class="mb-4"
       label="Clé d'API"

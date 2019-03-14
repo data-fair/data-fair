@@ -1,9 +1,9 @@
 <template lang="html">
   <v-layout row wrap>
     <v-flex xs12 sm5 md4 lg3 class="pb-0">
-      <v-text-field v-model="filters.q" label="Rechercher" append-icon="search" @keyup.enter.native="writeParams" @click:append="writeParams"/>
+      <v-text-field v-model="filters.q" label="Rechercher" append-icon="search" @keyup.enter.native="writeParams" @click:append="writeParams" />
     </v-flex>
-    <v-spacer/>
+    <v-spacer />
     <!--<div>
       <v-btn-toggle v-if="!hideOwners" v-model="owners" multiple @change="writeParams">
         <v-btn v-if="user" :value="'user:' + user.id" flat>
@@ -26,10 +26,12 @@
     <v-spacer/>-->
     <v-flex xs12>
       <v-layout row wrap>
-        <v-chip v-for="filter in Object.keys(fullFilterLabels)" v-if="filters[filter]" :key="filter" close small color="accent" text-color="white" @input="filters[filter] = null;writeParams(filter)">
-          <strong v-if="filter === 'showAll'">Vue administrateur : {{ owners.length ? owners.join(', ') : 'tout voir' }}</strong>
-          <strong v-else>{{ fullFilterLabels[filter] }} : {{ filters[filter] }}</strong>
-        </v-chip>
+        <template v-for="filter in Object.keys(fullFilterLabels)">
+          <v-chip v-if="filters[filter]" :key="filter" close small color="accent" text-color="white" @input="filters[filter] = null;writeParams(filter)">
+            <strong v-if="filter === 'showAll'">Vue administrateur : {{ owners.length ? owners.join(', ') : 'tout voir' }}</strong>
+            <strong v-else>{{ fullFilterLabels[filter] }} : {{ filters[filter] }}</strong>
+          </v-chip>
+        </template>
       </v-layout>
     </v-flex>
   </v-layout>

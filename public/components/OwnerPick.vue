@@ -3,14 +3,14 @@
     <v-layout column>
       <p>Le propriétaire est le seul à pouvoir modifier la ressource.</p>
       <v-radio-group v-model="selectedOwner" class="mt-3 mb-3">
-        <v-radio v-for="(owner, $index) in owners.filter(o => !restriction || restriction.find(r => r.type === o.type && r.id === o.id))" :label="owner.type === 'user' ? 'Vous-même' : 'Organisation ' + owner.name" :value="owner" :key="$index"/>
+        <v-radio v-for="(owner, $index) in owners.filter(o => !restriction || restriction.find(r => r.type === o.type && r.id === o.id))" :key="$index" :label="owner.type === 'user' ? 'Vous-même' : 'Organisation ' + owner.name" :value="owner" />
       </v-radio-group>
     </v-layout>
     <v-layout v-if="selectedOwner && selectedOwner.type === 'organization'" column>
       <p>Dans une organisation, vous pouvez restreindre la propriété à un rôle (les administrateurs de l'organisation seront quand même considérés comme propriétaires).</p>
       <v-radio-group v-model="selectedRole" class="mt-3 mb-3">
-        <v-radio :value="null" label="Organisation entière"/>
-        <v-radio :label="`Restreinte au rôle ${user.organizations.find(o => o.id === selectedOwner.id).role}`" :value="user.organizations.find(o => o.id === selectedOwner.id).role"/>
+        <v-radio :value="null" label="Organisation entière" />
+        <v-radio :label="`Restreinte au rôle ${user.organizations.find(o => o.id === selectedOwner.id).role}`" :value="user.organizations.find(o => o.id === selectedOwner.id).role" />
       </v-radio-group>
     </v-layout>
   </v-layout>

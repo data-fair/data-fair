@@ -1,18 +1,24 @@
 <template>
   <v-stepper v-model="currentStep">
     <v-stepper-header>
-      <v-stepper-step :complete="!!catalog.type" step="1" editable>Sélection du catalogue</v-stepper-step>
-      <v-divider/>
-      <v-stepper-step :complete="!!catalog.apiKey" step="2" editable>Configuration</v-stepper-step>
-      <v-divider/>
-      <v-stepper-step :complete="currentStep > 2" step="3">Choix du propriétaire</v-stepper-step>
+      <v-stepper-step :complete="!!catalog.type" step="1" editable>
+        Sélection du catalogue
+      </v-stepper-step>
+      <v-divider />
+      <v-stepper-step :complete="!!catalog.apiKey" step="2" editable>
+        Configuration
+      </v-stepper-step>
+      <v-divider />
+      <v-stepper-step :complete="currentStep > 2" step="3">
+        Choix du propriétaire
+      </v-stepper-step>
     </v-stepper-header>
 
     <v-stepper-items>
       <v-stepper-content step="1">
         <v-select
-          :items="configurableCatalogs"
           v-model="catalogUrl"
+          :items="configurableCatalogs"
           item-value="href"
           item-text="title"
           label="Choisissez un catalogue à configurer"
@@ -25,24 +31,36 @@
           @keyup.native.enter="initFromUrl"
         />
         <v-text-field
-          :disabled="!catalog.type"
           v-model="catalog.title"
+          :disabled="!catalog.type"
           label="Titre"
         />
-        <v-btn :disabled="!catalog.type" color="primary" @click.native="currentStep = 2">Continuer</v-btn>
-        <v-btn flat @click.native="$emit('cancel')">Annuler</v-btn>
+        <v-btn :disabled="!catalog.type" color="primary" @click.native="currentStep = 2">
+          Continuer
+        </v-btn>
+        <v-btn flat @click.native="$emit('cancel')">
+          Annuler
+        </v-btn>
       </v-stepper-content>
 
       <v-stepper-content step="2">
-        <catalog-config-form :catalog="catalog" :catalog-type="catalogTypes.find(t => t.key === catalog.type)"/>
-        <v-btn :disabled="!catalog.apiKey" color="primary" @click.native="currentStep = 3">Continuer</v-btn>
-        <v-btn flat @click.native="$emit('cancel')">Annuler</v-btn>
+        <catalog-config-form :catalog="catalog" :catalog-type="catalogTypes.find(t => t.key === catalog.type)" />
+        <v-btn :disabled="!catalog.apiKey" color="primary" @click.native="currentStep = 3">
+          Continuer
+        </v-btn>
+        <v-btn flat @click.native="$emit('cancel')">
+          Annuler
+        </v-btn>
       </v-stepper-content>
 
       <v-stepper-content step="3">
-        <owner-pick v-model="owner"/>
-        <v-btn :disabled="!owner" color="primary" @click.native="importCatalog()">Enregistrer</v-btn>
-        <v-btn flat @click.native="$emit('cancel')">Annuler</v-btn>
+        <owner-pick v-model="owner" />
+        <v-btn :disabled="!owner" color="primary" @click.native="importCatalog()">
+          Enregistrer
+        </v-btn>
+        <v-btn flat @click.native="$emit('cancel')">
+          Annuler
+        </v-btn>
       </v-stepper-content>
     </v-stepper-items>
   </v-stepper>

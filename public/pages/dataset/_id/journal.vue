@@ -1,6 +1,6 @@
 <template>
   <v-container>
-    <journal :journal="journal" type="dataset"/>
+    <journal :journal="journal" type="dataset" />
   </v-container>
 </template>
 
