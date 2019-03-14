@@ -36,8 +36,8 @@ ENV NODE_ENV production
 ENV DEBUG db,upgrade*
 WORKDIR /webapp
 ADD package.json .
-ADD package-lock.json .
-RUN npm install --production
+ADD yarn.lock .
+RUN yarn --production
 
 # Adding UI files
 ADD public public

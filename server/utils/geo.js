@@ -1,6 +1,6 @@
 const util = require('util')
 const fs = require('fs')
-const turf = require('turf')
+const turf = require('@turf/turf')
 const rewind = require('@turf/rewind').default
 const cleanCoords = require('@turf/clean-coords').default
 const kinks = require('@turf/kinks').default
