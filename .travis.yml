@@ -21,7 +21,8 @@ services:
   - docker
 
 install:
-  - npm install
+  - npm i -g yarn
+  - yarn
 
 script:
   - npm run lint

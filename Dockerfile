@@ -35,6 +35,7 @@ RUN ln -s /usr/lib/libproj.so.13 /usr/lib/libproj.so
 ENV NODE_ENV production
 ENV DEBUG db,upgrade*
 WORKDIR /webapp
+RUN npm i -g yarn
 ADD package.json .
 ADD yarn.lock .
 RUN yarn --production
