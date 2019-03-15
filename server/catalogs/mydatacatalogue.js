@@ -52,6 +52,8 @@ function datasetPageDesc(dataset) {
 async function createNewDataset(catalog, dataset, publication) {
   const mdcDataset = {
     title: dataset.title,
+    type: 'tabular-dataset',
+    format: 'data-fair',
     description: datasetPageDesc(dataset),
     attributes: dataset.schema.map(a => ({ id: a.key })),
     recordCount: dataset.count || 0,
