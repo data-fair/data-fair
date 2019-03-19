@@ -1,6 +1,6 @@
 // Caches some data in mongodb
 // Do not use this too mush as elasticsearch is a performant backend already,
-// only for specific cases, vector tiles
+// only for specific cases like vector tiles
 
 const config = require('config')
 const objectHash = require('object-hash')

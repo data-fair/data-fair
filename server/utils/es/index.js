@@ -5,6 +5,7 @@ module.exports = {
   ...require('./commons'),
   ...require('./manage-indices'),
   search: require('./search'),
+  count: require('./count'),
   valuesAgg: require('./values-agg'),
   values: require('./values'),
   metricAgg: require('./metric-agg'),

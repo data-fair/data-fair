@@ -488,9 +488,34 @@ router.get('/:datasetId/lines', readDataset(), permissions.middleware('readLines
     cacheHash = hash
   }
 
+  let xyz
+  const t0 = new Date().getTime()
+  if (vectorTileRequested) {
+    if (!req.query.xyz) return res.status(400).send('xyz parameter is required for vector tile format.')
+    xyz = req.query.xyz.split(',').map(Number)
+
+    const requestedSize = req.query.size ? Number(req.query.size) : 20
+    if (requestedSize > 10000) throw createError(400, '"size" cannot be more than 10000')
+
+    // count docs in neighboring tiles to perform intelligent sampling
+    const counts = await Promise.all([
+      esUtils.count(req.app.get('es'), req.dataset, req.query),
+      // TODO: only the 4 that share an edge or also the 4 corners ?
+      esUtils.count(req.app.get('es'), req.dataset, { ...req.query, xyz: [xyz[0] - 1, xyz[1], xyz[2]].join(',') }),
+      esUtils.count(req.app.get('es'), req.dataset, { ...req.query, xyz: [xyz[0] + 1, xyz[1], xyz[2]].join(',') }),
+      esUtils.count(req.app.get('es'), req.dataset, { ...req.query, xyz: [xyz[0], xyz[1] - 1, xyz[2]].join(',') }),
+      esUtils.count(req.app.get('es'), req.dataset, { ...req.query, xyz: [xyz[0], xyz[1] + 1, xyz[2]].join(',') })
+    ])
+    const maxCount = Math.max(...counts)
+    const sampleRate = requestedSize / Math.max(requestedSize, maxCount)
+    const sizeFilter = counts[0] * sampleRate
+    req.query.size = Math.max(sizeFilter, requestedSize)
+  }
+
   let esResponse
   try {
     esResponse = await esUtils.search(req.app.get('es'), req.dataset, req.query)
+    console.log('t2', new Date().getTime() - t0)
   } catch (err) {
     await manageESError(req, err)
   }
@@ -501,8 +526,7 @@ router.get('/:datasetId/lines', readDataset(), permissions.middleware('readLines
   }
 
   if (vectorTileRequested) {
-    if (!req.query.xyz) return res.status(400).send('xyz parameter is required for vector tile format.')
-    const tile = tiles.geojson2pbf(geo.result2geojson(esResponse), req.query.xyz.split(',').map(Number))
+    const tile = tiles.geojson2pbf(geo.result2geojson(esResponse), xyz)
     // 204 = no-content, better than 404
     if (!tile) return res.status(204).send()
     res.type('application/x-protobuf')
