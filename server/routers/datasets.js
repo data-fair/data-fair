@@ -489,7 +489,6 @@ router.get('/:datasetId/lines', readDataset(), permissions.middleware('readLines
   }
 
   let xyz
-  const t0 = new Date().getTime()
   if (vectorTileRequested) {
     if (!req.query.xyz) return res.status(400).send('xyz parameter is required for vector tile format.')
     xyz = req.query.xyz.split(',').map(Number)
@@ -515,7 +514,6 @@ router.get('/:datasetId/lines', readDataset(), permissions.middleware('readLines
   let esResponse
   try {
     esResponse = await esUtils.search(req.app.get('es'), req.dataset, req.query)
-    console.log('t2', new Date().getTime() - t0)
   } catch (err) {
     await manageESError(req, err)
   }
