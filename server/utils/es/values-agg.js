@@ -27,7 +27,7 @@ module.exports = async (client, dataset, query, addGeoData) => {
         aggTypes[i] = 'histogram'
         intervals[i] = Number(intervals[i])
       } else {
-        throw createError(400, 'non empty "interval" is only compatible with numbers and date fields')
+        throw createError(400, `Grouper pas interval est seulement compatible avec les nombres et dates. ${props[i].key} n'est pas du bon type.`)
       }
     }
 
