@@ -1,14 +1,14 @@
 <template lang="html">
   <v-container fluid grid-list-lg>
     <no-ssr>
-      <v-expansion-panel :popout="false" :value="1" expand>
+      <v-expansion-panel v-model="expansion" :popout="false" :value="1" expand>
         <v-expansion-panel-content>
           <div slot="header" style="font-weight:bold">
             Dernière configuration validée (lecture seule)
           </div>
-          <v-card>
+          <v-card v-if="config && Object.keys(config).length">
             <v-card-text class="grey lighten-3">
-              <v-layout v-if="config" row wrap>
+              <v-layout row wrap>
                 <v-flex xs12 sm6 md4>
                   <p v-if="prodBaseApp">
                     Version : {{ `${prodBaseApp.title} (${prodBaseApp.version})` }}
@@ -19,7 +19,7 @@
                 </v-flex>
                 <v-flex xs12 sm6 md8 class="pa-0">
                   <div :style="`height:${iframeHeight}px;width:100%;`">
-                    <iframe v-if="showProdPreview" :src="applicationLink + '?embed=true'" height="100%" width="100%" />
+                    <iframe v-if="showProdPreview && expansion[0]" :src="applicationLink + '?embed=true'" height="100%" width="100%" />
                   </div>
                 </v-flex>
               </v-layout>
@@ -54,11 +54,12 @@
                         Annuler
                       </v-btn>
                     </v-layout>
+                    <pre>{{ JSON.stringify(editConfig, null, 2) }}</pre>
                   </v-form>
                 </v-flex>
                 <v-flex xs12 sm6 md8 class="pa-0">
                   <div :style="`height:${iframeHeight}px;width:100%;`">
-                    <iframe v-if="showDraftPreview" :src="applicationLink + '?embed=true&draft=true'" height="100%" width="100%" />
+                    <iframe v-if="showDraftPreview && expansion[1]" :src="applicationLink + '?embed=true&draft=true'" height="100%" width="100%" />
                   </div>
                 </v-flex>
               </v-layout>
@@ -124,7 +125,8 @@ export default {
       editUrl: null,
       eventBus,
       showCancelDialog: false,
-      baseApps: null
+      baseApps: null,
+      expansion: [false, true]
     }
   },
   computed: {
