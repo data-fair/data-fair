@@ -480,6 +480,7 @@ router.get('/:datasetId/lines', readDataset(), permissions.middleware('readLines
   if (vectorTileRequested && !config.cache.disabled) {
     const { hash, value } = await cache.get(db, {
       type: 'tile',
+      sampling: '9neighbors',
       datasetId: req.dataset.id,
       finalizedAt: req.dataset.finalizedAt,
       query: req.query
@@ -503,12 +504,17 @@ router.get('/:datasetId/lines', readDataset(), permissions.middleware('readLines
       esUtils.count(req.app.get('es'), req.dataset, { ...req.query, xyz: [xyz[0] - 1, xyz[1], xyz[2]].join(',') }),
       esUtils.count(req.app.get('es'), req.dataset, { ...req.query, xyz: [xyz[0] + 1, xyz[1], xyz[2]].join(',') }),
       esUtils.count(req.app.get('es'), req.dataset, { ...req.query, xyz: [xyz[0], xyz[1] - 1, xyz[2]].join(',') }),
-      esUtils.count(req.app.get('es'), req.dataset, { ...req.query, xyz: [xyz[0], xyz[1] + 1, xyz[2]].join(',') })
+      esUtils.count(req.app.get('es'), req.dataset, { ...req.query, xyz: [xyz[0], xyz[1] + 1, xyz[2]].join(',') }),
+      // Using corners also yields better results
+      esUtils.count(req.app.get('es'), req.dataset, { ...req.query, xyz: [xyz[0] - 1, xyz[1] - 1, xyz[2]].join(',') }),
+      esUtils.count(req.app.get('es'), req.dataset, { ...req.query, xyz: [xyz[0] + 1, xyz[1] - 1, xyz[2]].join(',') }),
+      esUtils.count(req.app.get('es'), req.dataset, { ...req.query, xyz: [xyz[0] - 1, xyz[1] + 1, xyz[2]].join(',') }),
+      esUtils.count(req.app.get('es'), req.dataset, { ...req.query, xyz: [xyz[0] + 1, xyz[1] + 1, xyz[2]].join(',') })
     ])
     const maxCount = Math.max(...counts)
     const sampleRate = requestedSize / Math.max(requestedSize, maxCount)
     const sizeFilter = counts[0] * sampleRate
-    req.query.size = Math.max(sizeFilter, requestedSize)
+    req.query.size = Math.min(sizeFilter, requestedSize)
   }
 
   let esResponse
