@@ -444,7 +444,6 @@ function managePublicCache(req, res) {
     if (qFinalizedAt > finalizedAt) {
       throw createError(400, '"finalizedAt" query parameter has a value higher than the finalizedAt attribute of the dataset.')
     }
-    console.log('USE TS CACHE')
     res.setHeader('Cache-Control', 'public, max-age=' + config.cache.timestampedPublicMaxAge)
   } else {
     res.setHeader('Cache-Control', 'public, max-age=' + config.cache.publicMaxAge)
