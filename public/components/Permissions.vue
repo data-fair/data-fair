@@ -53,11 +53,7 @@
                       </v-flex>
                       <v-flex xs9>
                         <span v-if="(props.item.classes || []).includes(permClass)">Toutes</span>
-                        <ul v-else>
-                          <li v-for="operation in classOperations.filter(o => (props.item.operations || []).find(oid => o.id && o.id === oid))" :key="operation.id">
-                            {{ operation.title }}
-                          </li>
-                        </ul>
+                        <span v-else>{{ classOperations.filter(o => (props.item.operations || []).find(oid => o.id && o.id === oid)).map(o => o.title).join(' - ') }}</span>
                       </v-flex>
                     </v-layout>
                   </v-list-tile-content>
@@ -121,16 +117,7 @@
             item-value="class"
             label="Actions"
             multiple
-          >
-            <template slot="item" slot-scope="data">
-              <template>
-                <v-list-tile-action>
-                  <v-checkbox v-model="currentPermission.classes" :value="data.item.class" :off-icon="permissionClasses[data.item.class].filter(o => !(currentPermission.operations || []).includes(o.id)).length === 0 ? '$vuetify.icons.checkboxOn' : '$vuetify.icons.checkboxOff'" />
-                </v-list-tile-action>
-                <v-list-tile-content v-html="data.item.title" />
-              </template>
-            </template>
-          </v-select>
+          />
 
           <v-select
             v-if="expertMode"
@@ -138,10 +125,10 @@
             :items="operations"
             item-text="title"
             item-value="id"
-            label="Actions"
+            label="Actions détaillées"
             multiple
           >
-            <template slot="item" slot-scope="data">
+            <!--<template slot="item" slot-scope="data">
               <template v-if="typeof data.item !== 'object'">
                 <v-list-tile-content v-text="data.item" />
               </template>
@@ -151,7 +138,7 @@
                 </v-list-tile-action>
                 <v-list-tile-content v-html="data.item.title" />
               </template>
-            </template>
+            </template>-->
           </v-select>
 
           <v-switch
