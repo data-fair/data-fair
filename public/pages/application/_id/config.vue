@@ -106,6 +106,8 @@ if (process.browser) {
   require('vue-swatches/dist/vue-swatches.min.css')
   const Draggable = require('vuedraggable')
   Vue.component('draggable', Draggable)
+  const Sketch = require('vue-color').Sketch
+  Vue.component('color-picker', Sketch)
 }
 
 export default {
