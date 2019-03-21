@@ -42,6 +42,14 @@ workbox.routing.registerRoute(
   workbox.strategies.staleWhileRevalidate({cacheName: 'data-fair'})
 );
 `
+  // Cache first for datasets queries that are performed with explicit
+  // cache invalidation using finalizedAt=... query param
+  sw += `
+workbox.routing.registerRoute(
+  new RegExp('${escapeStringRegexp(new URL(config.publicUrl).pathname)}api/v1/datasets/.*finalizedAt=.*'),
+  workbox.strategies.cacheFirst({cacheName: 'data-fair'})
+);
+`
 
   // Network first for all other calls from data-fair domain
   // freshness of data from datasets is the priority

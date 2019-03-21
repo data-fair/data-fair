@@ -54,7 +54,6 @@
                         Annuler
                       </v-btn>
                     </v-layout>
-                    <pre>{{ JSON.stringify(editConfig, null, 2) }}</pre>
                   </v-form>
                 </v-flex>
                 <v-flex xs12 sm6 md8 class="pa-0">

@@ -435,8 +435,21 @@ router.delete('/:datasetId/lines/:lineId', readDataset(['finalized', 'updated', 
 // also set last finalized date into last-modified header
 function managePublicCache(req, res) {
   if (!req.dataset.finalizedAt) return
-  res.setHeader('Cache-Control', 'public, max-age=' + config.cache.publicMaxAge)
+
   const finalizedAt = (new Date(req.dataset.finalizedAt)).toUTCString()
+  // finalizedAt passed as query parameter is used to timestamp the query and
+  // make it compatible with a longer caching
+  if (req.query.finalizedAt) {
+    const qFinalizedAt = (new Date(req.query.finalizedAt)).toUTCString()
+    if (qFinalizedAt > finalizedAt) {
+      throw createError(400, '"finalizedAt" query parameter has a value higher than the finalizedAt attribute of the dataset.')
+    }
+    console.log('USE TS CACHE')
+    res.setHeader('Cache-Control', 'public, max-age=' + config.cache.timestampedPublicMaxAge)
+  } else {
+    res.setHeader('Cache-Control', 'public, max-age=' + config.cache.publicMaxAge)
+  }
+
   const ifModifiedSince = req.get('If-Modified-Since')
   if (ifModifiedSince && finalizedAt === ifModifiedSince) return true
   res.setHeader('Last-Modified', finalizedAt)

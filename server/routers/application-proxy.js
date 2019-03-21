@@ -77,11 +77,28 @@ router.all('/:applicationId*', setResource, (req, res, next) => { req.app.get('a
   }
   delete req.application.configurationDraft
 
+  // the dates of last modification / finalization of both the app and the datasets it uses
+  const updateDates = [new Date(req.application.updatedAt)]
+
+  // Update the config with dates of last finalization of the used datasets
+  // this info can then be used to add ?finalizedAt=... to any queries
+  // and so benefit from better caching
+  if (req.application.configuration && req.application.configuration.datasets && req.application.configuration.datasets.length) {
+    const freshDatasets = await req.app.get('db').collection('datasets')
+      .find({ $or: req.application.configuration.datasets.map(d => ({ id: d.id })) })
+      .project({ _id: 0, id: 1, finalizedAt: 1 })
+      .toArray()
+    freshDatasets.forEach(fd => {
+      updateDates.push(new Date(fd.finalizedAt))
+      req.application.configuration.datasets.find(d => fd.id === d.id).finalizedAt = fd.finalizedAt
+    })
+  }
+
   const ifModifiedSince = new Date(req.get('If-Modified-Since'))
   // go through UTC transformation to lose milliseconds just as last-modified and if-modified-since headers do
-  const updatedAt = new Date(new Date(req.application.updatedAt).toUTCString())
+  const updatedAt = new Date(new Date(Math.max(...updateDates)).toUTCString())
 
-  // The configuration was updated since last read of the html file,
+  // The configuration (or datasets) was updated since last read of the html file,
   // we need to re-fetch it from backend to be able to re-inject the new configuration
   // so we remove if-modified-since so that the backend will not respond with a 304
   if (ifModifiedSince && (updatedAt > ifModifiedSince)) {

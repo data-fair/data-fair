@@ -127,19 +127,7 @@
             item-value="id"
             label="Actions détaillées"
             multiple
-          >
-            <!--<template slot="item" slot-scope="data">
-              <template v-if="typeof data.item !== 'object'">
-                <v-list-tile-content v-text="data.item" />
-              </template>
-              <template v-else>
-                <v-list-tile-action>
-                  <v-checkbox v-model="currentPermission.operations" :value="data.item.id" :off-icon="currentPermission.classes.includes(data.item.class) ? '$vuetify.icons.checkboxOn' : '$vuetify.icons.checkboxOff'" />
-                </v-list-tile-action>
-                <v-list-tile-content v-html="data.item.title" />
-              </template>
-            </template>-->
-          </v-select>
+          />
 
           <v-switch
             v-model="expertMode"
