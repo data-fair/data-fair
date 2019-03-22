@@ -56,7 +56,13 @@ if (config.mode.includes('server')) {
   app.use('/api/v1/identities', require('./routers/identities'))
   app.use('/api/v1/quotas', session.auth, require('./routers/quotas'))
   app.use('/api/v1/session', session.router)
+
   // External applications proxy
+  const serviceWorkers = require('./utils/service-workers')
+  app.get('/app-sw.js', (req, res) => {
+    res.setHeader('Content-Type', 'application/javascript')
+    res.send(serviceWorkers.sw(req.application))
+  })
   app.use('/app', session.loginCallback, session.auth, require('./routers/application-proxy'))
 
   // Error management

@@ -2,9 +2,10 @@
 const config = require('config')
 const escapeStringRegexp = require('escape-string-regexp')
 
-exports.sw = (application) => {
-  const cleanApplicationUrl = application.url.replace(/\/$/, '')
+let basePath = escapeStringRegexp(new URL(config.publicUrl).pathname)
+if (!basePath.endsWith('/')) basePath += '/'
 
+exports.sw = () => {
   // Use workbox for powerful and easy service workers management
   let sw = `
 importScripts('https://storage.googleapis.com/workbox-cdn/releases/3.6.1/workbox-sw.js');
@@ -25,20 +26,22 @@ workbox.core.setLogLevel(workbox.core.LOG_LEVELS.debug);
 workbox.clientsClaim();
 workbox.skipWaiting();
 `
-  // Cache first for application's source code
+  // Cache first for base applications source code
   // applications should use hashes in resource names
-  sw += `
+  for (let dir of config.applicationsDirectories) {
+    sw += `
 workbox.routing.registerRoute(
-  new RegExp('^${escapeStringRegexp(cleanApplicationUrl)}'),
+  new RegExp('^${escapeStringRegexp(dir)}.*'),
   workbox.strategies.cacheFirst({cacheName: 'data-fair'})
 );
 `
+  }
 
   // Content from proxied remote services is not refreshed as often
   // fast loading using stale version should not be a problem
   sw += `
 workbox.routing.registerRoute(
-  new RegExp('${escapeStringRegexp(new URL(config.publicUrl).pathname)}api/v1/remote-services/.*/proxy/.*'),
+  new RegExp('${basePath}api/v1/remote-services/.*/proxy/.*'),
   workbox.strategies.staleWhileRevalidate({cacheName: 'data-fair'})
 );
 `
@@ -46,13 +49,12 @@ workbox.routing.registerRoute(
   // cache invalidation using finalizedAt=... query param
   sw += `
 workbox.routing.registerRoute(
-  new RegExp('${escapeStringRegexp(new URL(config.publicUrl).pathname)}api/v1/datasets/.*finalizedAt=.*'),
+  new RegExp('${basePath}api/v1/datasets/.*finalizedAt=.*'),
   workbox.strategies.cacheFirst({cacheName: 'data-fair'})
 );
 `
 
-  // Network first for all other calls from data-fair domain
-  // freshness of data from datasets is the priority
+  // Network first by default for all other calls from data-fair domain
   sw += `
 workbox.routing.registerRoute(
   new RegExp('/.*'),
@@ -64,13 +66,23 @@ workbox.routing.registerRoute(
 }
 
 exports.register = (application) => {
-  const base = new URL(application.exposedUrl).pathname
+  const oldBase = config.publicUrl.endsWith('/') ? config.publicUrl + 'app' : config.publicUrl + '/app/'
+
   // The base is the url without a trailing slash
   // and the service worker is not exposed behind a slash
   // so that we can accept accessing the application without a trailing slash
   return `
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('${base}-sw.js', { scope: '${base}' }).then(function(reg) {
+
+  // unregister the deprecated service workers
+  navigator.serviceWorker.getRegistrations().then(function(regs) {
+    regs
+      .filter(function(reg) { return reg.scope.indexOf('${oldBase}') === 0; })
+      .filter(function(reg) { return reg.scope !== '${oldBase}'; })
+      .forEach(function(reg) { reg.unregister(); })
+  });
+
+  navigator.serviceWorker.register('${basePath}app-sw.js', { scope: '${basePath}app/' }).then(function(reg) {
     // registration worked
     console.log('Service worker registration succeeded. Scope is ' + reg.scope);
   }).catch(function(error) {

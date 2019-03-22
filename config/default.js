@@ -122,6 +122,11 @@ module.exports = {
     title: 'Open Database License (ODbL)',
     href: 'https://spdx.org/licenses/ODbL-1.0.html#licenseText'
   }],
+  // used to configure service workers in cacheFirst mode for common directories of base applications
+  applicationsDirectories: [
+    'https://koumoul.com/apps/',
+    'https://cdn.jsdelivr.net/npm/@koumoul/'
+  ],
   applications: [{
     url: 'https://koumoul.com/apps/infos-parcelles/2.2/'
   }, {

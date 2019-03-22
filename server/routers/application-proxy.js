@@ -60,11 +60,6 @@ router.get('/:applicationId/login', (req, res) => {
   )
 })
 
-router.get('/:applicationId-sw.js', setResource, permissions.middleware('readConfig', 'read'), asyncWrap(async(req, res) => {
-  res.setHeader('Content-Type', 'application/javascript')
-  res.send(serviceWorkers.sw(req.application))
-}))
-
 // Proxy for applications
 router.all('/:applicationId*', setResource, (req, res, next) => { req.app.get('anonymSession')(req, res, next) }, asyncWrap(async(req, res, next) => {
   if (!permissions.can(req.application, 'readConfig', 'read', req.user)) {
