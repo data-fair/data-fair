@@ -89,6 +89,6 @@ test.serial('Use an application through the application proxy', async t => {
   t.true(res.data.includes('window.APPLICATION={'))
   // A link to the manifest is injected
   t.true(res.data.includes(`<link rel="manifest" crossorigin="use-credentials" href="/app/${appId}/manifest.json">`))
-  // An app specific service worker is registered
-  t.true(res.data.includes(`/app/${appId}-sw.js`))
+  // The app reference a service worker
+  t.true(res.data.includes(`/app-sw.js`))
 })
