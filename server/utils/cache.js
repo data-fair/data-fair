@@ -16,5 +16,9 @@ exports.get = async(db, params) => {
 }
 
 exports.set = async(db, hash, value) => {
-  await db.collection('cache').insertOne({ value, _id: hash })
+  try {
+    await db.collection('cache').insertOne({ value, _id: hash })
+  } catch (err) {
+    if (err.code !== 11000) throw err
+  }
 }

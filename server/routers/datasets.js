@@ -473,6 +473,20 @@ router.get('/:datasetId/lines', readDataset(), permissions.middleware('readLines
   const db = req.app.get('db')
   if (!req.user && managePublicCache(req, res)) return res.status(304).send()
 
+  // used later to count items in a tile or tile's neighbor
+  async function countWithCache(query) {
+    const { hash, value } = await cache.get(db, {
+      type: 'tile-count',
+      datasetId: req.dataset.id,
+      finalizedAt: req.dataset.finalizedAt,
+      query
+    })
+    if (value !== null) return value
+    const newValue = await esUtils.count(req.app.get('es'), req.dataset, query)
+    cache.set(db, hash, newValue)
+    return newValue
+  }
+
   // if the output format is geo make sure geoshape is present
   if (['geojson', 'mvt', 'vt', 'pbf'].includes(req.query.format)) {
     req.query.select = (req.query.select ? req.query.select + ',' : '') + '_geoshape'
@@ -511,17 +525,17 @@ router.get('/:datasetId/lines', readDataset(), permissions.middleware('readLines
 
     // count docs in neighboring tiles to perform intelligent sampling
     const counts = await Promise.all([
-      esUtils.count(req.app.get('es'), req.dataset, req.query),
+      countWithCache(req.query),
       // TODO: only the 4 that share an edge or also the 4 corners ?
-      esUtils.count(req.app.get('es'), req.dataset, { ...req.query, xyz: [xyz[0] - 1, xyz[1], xyz[2]].join(',') }),
-      esUtils.count(req.app.get('es'), req.dataset, { ...req.query, xyz: [xyz[0] + 1, xyz[1], xyz[2]].join(',') }),
-      esUtils.count(req.app.get('es'), req.dataset, { ...req.query, xyz: [xyz[0], xyz[1] - 1, xyz[2]].join(',') }),
-      esUtils.count(req.app.get('es'), req.dataset, { ...req.query, xyz: [xyz[0], xyz[1] + 1, xyz[2]].join(',') }),
+      countWithCache({ ...req.query, xyz: [xyz[0] - 1, xyz[1], xyz[2]].join(',') }),
+      countWithCache({ ...req.query, xyz: [xyz[0] + 1, xyz[1], xyz[2]].join(',') }),
+      countWithCache({ ...req.query, xyz: [xyz[0], xyz[1] - 1, xyz[2]].join(',') }),
+      countWithCache({ ...req.query, xyz: [xyz[0], xyz[1] + 1, xyz[2]].join(',') }),
       // Using corners also yields better results
-      esUtils.count(req.app.get('es'), req.dataset, { ...req.query, xyz: [xyz[0] - 1, xyz[1] - 1, xyz[2]].join(',') }),
-      esUtils.count(req.app.get('es'), req.dataset, { ...req.query, xyz: [xyz[0] + 1, xyz[1] - 1, xyz[2]].join(',') }),
-      esUtils.count(req.app.get('es'), req.dataset, { ...req.query, xyz: [xyz[0] - 1, xyz[1] + 1, xyz[2]].join(',') }),
-      esUtils.count(req.app.get('es'), req.dataset, { ...req.query, xyz: [xyz[0] + 1, xyz[1] + 1, xyz[2]].join(',') })
+      countWithCache({ ...req.query, xyz: [xyz[0] - 1, xyz[1] - 1, xyz[2]].join(',') }),
+      countWithCache({ ...req.query, xyz: [xyz[0] + 1, xyz[1] - 1, xyz[2]].join(',') }),
+      countWithCache({ ...req.query, xyz: [xyz[0] - 1, xyz[1] + 1, xyz[2]].join(',') }),
+      countWithCache({ ...req.query, xyz: [xyz[0] + 1, xyz[1] + 1, xyz[2]].join(',') })
     ])
     const maxCount = Math.max(...counts)
     const sampleRate = requestedSize / Math.max(requestedSize, maxCount)
