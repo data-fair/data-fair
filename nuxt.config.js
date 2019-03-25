@@ -9,7 +9,7 @@ module.exports = {
   build: {
     // cache: true,
     publicPath: config.publicUrl + '/_nuxt/',
-    transpile: [/^vuetify/, /vuetify-jsonschema-form/], // Necessary for "à la carte" import of vuetify components
+    transpile: [/^vuetify/, /vuetify-jsonschema-form/, /vue-multianalytics/], // Necessary for "à la carte" import of vuetify components
     extend (config, { isServer, isDev, isClient }) {
       // Ignore all locale files of moment.js, those we want are loaded in plugins/moment.js
       config.plugins.push(new webpack.IgnorePlugin(/^\.\/locale$/, /moment$/))
