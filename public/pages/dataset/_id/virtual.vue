@@ -129,11 +129,10 @@
 
 <script>
 import { mapState, mapGetters, mapActions } from 'vuex'
-import { VCombobox } from 'vuetify'
 const Draggable = require('vuedraggable')
 
 export default {
-  components: { Draggable, VCombobox },
+  components: { Draggable },
   data() {
     return {
       datasets: null,
