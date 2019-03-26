@@ -1,5 +1,5 @@
 import Vue from 'vue'
-import colors from 'vuetify/es5/util/colors'
+import colors from 'vuetify/lib/util/colors'
 
 import Vuetify from 'vuetify/lib'
 require('../stylus/main.styl')

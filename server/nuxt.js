@@ -14,6 +14,7 @@ module.exports = async () => {
     // Prepare nuxt for rendering and serving UI
     nuxtConfig.dev = false
     const nuxt = new Nuxt(nuxtConfig)
+    await nuxt.ready()
     if (!config.prebuilt) await new Builder(nuxt).build()
     return async (req, res, next) => {
       // re-apply the prefix that was removed by our reverse proxy in prod configs
