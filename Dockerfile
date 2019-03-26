@@ -1,4 +1,4 @@
-FROM koumoul/webapp-base:1.8.0
+FROM koumoul/webapp-base:1.9.0
 MAINTAINER "contact@koumoul.com"
 
 RUN apk add --no-cache --update python make g++ unzip
@@ -35,7 +35,6 @@ RUN ln -s /usr/lib/libproj.so.13 /usr/lib/libproj.so
 ENV NODE_ENV production
 ENV DEBUG db,upgrade*
 WORKDIR /webapp
-RUN npm i -g yarn
 ADD package.json .
 ADD yarn.lock .
 RUN yarn --production
