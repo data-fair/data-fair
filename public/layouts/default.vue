@@ -1,6 +1,6 @@
 <template>
   <v-app>
-    <v-toolbar app scroll-off-screen class="main-toolbar">
+    <v-toolbar app scroll-off-screen class="main-toolbar" height="64">
       <div class="logo-container">
         <a v-if="env.brand.url" :href="env.brand.url" :title="env.brand.title || env.brand.url">
           <img v-if="env.brand.logo" :src="env.brand.logo">
@@ -71,9 +71,27 @@
               <v-list-tile v-for="orga in user.organizations || []" :key="orga.id" :to="`/settings/organization/${orga.id}`">
                 <v-list-tile-title>Paramètres {{ orga.name || orga.id }}</v-list-tile-title>
               </v-list-tile>
-              <v-list-tile v-if="user.isAdmin" to="/admin/info">
-                <v-list-tile-title>Administration</v-list-tile-title>
-              </v-list-tile>
+              <template v-if="user.isAdmin">
+                <v-divider />
+                <v-subheader>Administration</v-subheader>
+                <v-list-tile to="/admin/info">
+                  <v-list-tile-avatar><v-icon>info</v-icon></v-list-tile-avatar>
+                  <v-list-tile-title>Informations du service</v-list-tile-title>
+                </v-list-tile>
+                <v-list-tile to="/admin/owners">
+                  <v-list-tile-avatar><v-icon>supervisor_account</v-icon></v-list-tile-avatar>
+                  <v-list-tile-title>Propriétaires</v-list-tile-title>
+                </v-list-tile>
+                <v-list-tile to="/admin/errors">
+                  <v-list-tile-avatar><v-icon>warning</v-icon></v-list-tile-avatar>
+                  <v-list-tile-title>Erreurs</v-list-tile-title>
+                </v-list-tile>
+                <v-list-tile to="/admin/base-apps">
+                  <v-list-tile-avatar><v-icon>apps</v-icon></v-list-tile-avatar>
+                  <v-list-tile-title>Applications de base</v-list-tile-title>
+                </v-list-tile>
+                <v-divider />
+              </template>
               <v-list-tile @click="logout">
                 <v-list-tile-title>Se déconnecter</v-list-tile-title>
               </v-list-tile>
@@ -204,7 +222,7 @@ body .application {
 
   .actions-buttons {
     position: absolute;
-    top: 76px;
+    top: 8px;
     right: 8px;
     margin: 0;
 

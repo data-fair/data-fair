@@ -7,7 +7,7 @@
       <h3 class="title">
         Jeux de données en erreur
       </h3>
-      <v-card>
+      <v-card class="my-4">
         <v-list two-line>
           <v-list-tile v-for="error in datasetsErrors.results" :key="error.id">
             <v-list-tile-content>
@@ -30,7 +30,7 @@
       <h3 class="title">
         Applications en erreur
       </h3>
-      <v-card>
+      <v-card class="my-4">
         <v-list two-line>
           <v-list-tile v-for="error in applicationsErrors.results" :key="error.id">
             <v-list-tile-content>

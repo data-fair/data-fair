@@ -1,55 +1,57 @@
 <template>
   <v-container>
-    <v-select
-      v-model="remoteService.server"
-      :items="remoteService.apiDoc.servers"
-      item-value="url"
-      item-text="description"
-      label="Serveur"
-      @input="patch({server: remoteService.server})"
-    />
+    <div>
+      <v-select
+        v-model="remoteService.server"
+        :items="remoteService.apiDoc.servers"
+        item-value="url"
+        item-text="description"
+        label="Serveur"
+        @input="patch({server: remoteService.server})"
+      />
 
-    <v-text-field
-      v-model="remoteService.apiKey.value"
-      label="Clé d'API"
-      @blur="patch({apiKey: remoteService.apiKey})"
-      @keyup.native.enter="patch({apiKey: remoteService.apiKey})"
-    />
+      <v-text-field
+        v-model="remoteService.apiKey.value"
+        label="Clé d'API"
+        @blur="patch({apiKey: remoteService.apiKey})"
+        @keyup.native.enter="patch({apiKey: remoteService.apiKey})"
+      />
 
-    <!-- Read only, updating can cause problems and confusion.
+      <!-- Read only, updating can cause problems and confusion.
     For example the POST _default_services will crash because it will create duplicates -->
-    <v-text-field
-      v-model="remoteService.url"
-      :disabled="true"
-      label="URL de mise à jour"
-    />
+      <v-text-field
+        v-model="remoteService.url"
+        :disabled="true"
+        label="URL de mise à jour"
+      />
 
-    <div v-if="remoteService.parameters.length">
-      <h2 class="headline mt-3 mb-3">
-        Paramètres statiques
-      </h2>
+      <div v-if="remoteService.parameters.length">
+        <h2 class="headline mt-3 mb-3">
+          Paramètres statiques
+        </h2>
 
-      <p>
-        Ces paramètres seront associés à toutes les requêtes émises vers le service au travers de cette exposition.
-        Ils vous permettent par exemple de filtrer la source pour obtenir une spécialisation du service sur un secteur.
-      </p>
+        <p>
+          Ces paramètres seront associés à toutes les requêtes émises vers le service au travers de cette exposition.
+          Ils vous permettent par exemple de filtrer la source pour obtenir une spécialisation du service sur un secteur.
+        </p>
 
-      <p>Les filtres peuvent contenir plusieurs valeurs séparées par des virgules.</p>
-      <template v-for="operation in operations">
-        <div v-if="remoteService.parameters.filter(p => p.operationId === operation.id).length" :key="operation.id">
-          <h3 class="title mt-4 mb-2">
-            {{ operation.title }}
-          </h3>
-          <v-text-field
-            v-for="(param, i) in remoteService.parameters.filter(p => p.operationId === operation.id)"
-            :key="i"
-            v-model="param.value"
-            :label="param.title"
-            @blur="patch({parameters: remoteService.parameters})"
-            @keyup.native.enter="patch({parameters: remoteService.parameters})"
-          />
-        </div>
-      </template>
+        <p>Les filtres peuvent contenir plusieurs valeurs séparées par des virgules.</p>
+        <template v-for="operation in operations">
+          <div v-if="remoteService.parameters.filter(p => p.operationId === operation.id).length" :key="operation.id">
+            <h3 class="title mt-4 mb-2">
+              {{ operation.title }}
+            </h3>
+            <v-text-field
+              v-for="(param, i) in remoteService.parameters.filter(p => p.operationId === operation.id)"
+              :key="i"
+              v-model="param.value"
+              :label="param.title"
+              @blur="patch({parameters: remoteService.parameters})"
+              @keyup.native.enter="patch({parameters: remoteService.parameters})"
+            />
+          </div>
+        </template>
+      </div>
     </div>
   </v-container>
 </template>

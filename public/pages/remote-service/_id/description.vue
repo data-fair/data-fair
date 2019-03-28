@@ -1,8 +1,8 @@
 <template lang="html">
-  <div>
+  <v-container fluid>
     <remote-service-info />
     <remote-service-schema />
-  </div>
+  </v-container>
 </template>
 
 <script>

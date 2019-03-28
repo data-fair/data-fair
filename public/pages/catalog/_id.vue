@@ -1,21 +1,39 @@
 <template>
   <v-layout v-if="catalog" column class="catalog">
-    <v-tabs icons-and-text grow color="transparent" slider-color="primary" class="mb-3">
-      <v-tab :disabled="!can('readDescription')" :nuxt="true" :to="`/catalog/${catalog.id}/description`">
-        Description
-        <v-icon>toc</v-icon>
-      </v-tab>
-      <v-tab :nuxt="true" :to="`/catalog/${catalog.id}/datasets`">
-        Jeux de données
-        <v-icon>toc</v-icon>
-      </v-tab>
-      <!-- <v-tab v-if="can('getPermissions')" :nuxt="true" :to="`/catalog/${catalog.id}/permissions`">
-        Permissions
-        <v-icon>security</v-icon>
-      </v-tab>-->
-    </v-tabs>
+    <v-navigation-drawer app fixed stateless :permanent="mini || $vuetify.breakpoint.lgAndUp" :temporary="!mini && !$vuetify.breakpoint.lgAndUp" :mini-variant="mini" :value="true">
+      <v-list dense>
+        <v-list-tile v-if="mini" @click.stop="mini = false">
+          <v-list-tile-action>
+            <v-icon>chevron_right</v-icon>
+          </v-list-tile-action>
+        </v-list-tile>
+        <v-list-tile v-else avatar>
+          <v-list-tile-title>{{ catalog.title || catalog.id }}</v-list-tile-title>
+          <v-list-tile-action style="min-width: 0;">
+            <v-btn icon @click.stop="mini = true">
+              <v-icon>chevron_left</v-icon>
+            </v-btn>
+          </v-list-tile-action>
+        </v-list-tile>
 
-    <nuxt-child />
+        <v-list-tile :disabled="!can('readDescription')" :nuxt="true" :to="`/catalog/${catalog.id}/description`">
+          <v-list-tile-action><v-icon>info</v-icon></v-list-tile-action>
+          <v-list-tile-title>Description</v-list-tile-title>
+        </v-list-tile>
+        <v-list-tile :nuxt="true" :to="`/catalog/${catalog.id}/datasets`">
+          <v-list-tile-action><v-icon>toc</v-icon></v-list-tile-action>
+          <v-list-tile-title>Jeux de données</v-list-tile-title>
+        </v-list-tile>
+        <!-- <v-tab v-if="can('getPermissions')" :nuxt="true" :to="`/catalog/${catalog.id}/permissions`">
+          Permissions
+          <v-icon>security</v-icon>
+        </v-tab>-->
+      </v-list>
+    </v-navigation-drawer>
+
+    <v-layout row>
+      <nuxt-child />
+    </v-layout>
 
     <div class="actions-buttons">
       <v-menu bottom left>
@@ -103,7 +121,8 @@ export default {
   data: () => ({
     showDeleteDialog: false,
     showOwnerDialog: false,
-    newOwner: null
+    newOwner: null,
+    mini: false
   }),
   computed: {
     ...mapState('catalog', ['catalog', 'api', 'nbPublications']),

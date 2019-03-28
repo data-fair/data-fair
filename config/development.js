@@ -1,11 +1,17 @@
+// use this host when debugging a data-fair inside a virtualbox vm
+// in this case docker-compose.yml also needs a few modifications
+// const host = '10.0.2.2'
+const host = 'localhost'
+
 module.exports = {
   port: 5600,
-  publicUrl: 'http://localhost:5600',
-  wsPublicUrl: 'ws://localhost:5600',
   dataDir: './data/development',
-  directoryUrl: 'http://localhost:5600/simple-directory',
-  openapiViewerUrl: 'http://localhost:5600/openapi-viewer/',
-  captureUrl: 'http://localhost:5600/capture',
+  publicUrl: `http://${host}:5600`,
+  wsPublicUrl: `ws://${host}:5600`,
+  directoryUrl: `http://${host}:5600/simple-directory`,
+  privateDirectoryUrl: 'http://localhost:5600/simple-directory',
+  openapiViewerUrl: `http://${host}:5600/openapi-viewer/`,
+  captureUrl: `http://${host}:5600/capture`,
   defaultLimits: {
     totalStorage: 1000000000,
     datasetStorage: -1

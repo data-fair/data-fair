@@ -1,5 +1,5 @@
 <template>
-  <v-container fluid grid-list-lg>
+  <div>
     <h3 v-if="applications" class="display-1">
       {{ applications.count }} configuration{{ plural }} d'application{{ plural }}
     </h3>
@@ -9,39 +9,41 @@
 
     <v-layout row>
       <v-flex xs12 sm6 md8 lg10 xl10>
-        <v-layout v-if="applications" row wrap class="resourcesList">
-          <v-flex v-for="application in applications.results" :key="application.id" sm12 md6 lg4 xl3>
-            <v-card height="100%">
-              <v-card-title primary-title style="padding-top: 0; padding-bottom: 0;">
-                <nuxt-link :to="`/application/${application.id}/description`">
-                  {{ application.title || application.id }}
-                </nuxt-link>
-                <v-spacer />
-                <v-btn :href="`${env.publicUrl}/app/${application.id}`" icon flat color="primary" target="_blank" title="Accéder à l'application">
-                  <v-icon>exit_to_app</v-icon>
-                </v-btn>
-              </v-card-title>
-              <v-divider />
-              <v-img :src="`${application.href}/capture`" height="240px" />
-              <v-divider />
-              <v-card-text style="max-height:160px;overflow: hidden; margin-bottom: 40px;" v-html="marked($options.filters.truncate(application.description || '', 200))" />
-
-              <v-card-actions style="position:absolute; bottom: 0px;width:100%;">
-                <span v-if="application.owner.type === 'user'"><v-icon>person</v-icon>&nbsp;{{ application.owner.name }}</span>
-                <span v-if="application.owner.type === 'organization'"><v-icon>group</v-icon>&nbsp;{{ application.owner.name }}<span v-if="application.owner.role"> ({{ application.owner.role }})</span></span>
-                &nbsp;<v-chip :color="application.visibility === 'public' ? 'primary' : 'accent'" text-color="white">
-                  {{ {public: 'Public', private: 'Privé', protected: 'Protégé'}[application.visibility] }}
-                </v-chip>
-                <template v-if="application.status === 'error'">
+        <v-container fluid grid-list-lg pa-0>
+          <v-layout v-if="applications" row wrap class="resourcesList">
+            <v-flex v-for="application in applications.results" :key="application.id" sm12 md6 lg4 xl3>
+              <v-card height="100%">
+                <v-card-title primary-title style="padding-top: 0; padding-bottom: 0;">
+                  <nuxt-link :to="`/application/${application.id}/description`">
+                    {{ application.title || application.id }}
+                  </nuxt-link>
                   <v-spacer />
-                  <span><v-icon color="red">warning</v-icon>&nbsp;En erreur</span>
-                </template>
-              </v-card-actions>
-            </v-card>
-          </v-flex>
-        </v-layout>
+                  <v-btn :href="`${env.publicUrl}/app/${application.id}`" icon flat color="primary" target="_blank" title="Accéder à l'application">
+                    <v-icon>exit_to_app</v-icon>
+                  </v-btn>
+                </v-card-title>
+                <v-divider />
+                <v-img :src="`${application.href}/capture`" height="240px" />
+                <v-divider />
+                <v-card-text style="max-height:160px;overflow: hidden; margin-bottom: 40px;" v-html="marked($options.filters.truncate(application.description || '', 200))" />
+
+                <v-card-actions style="position:absolute; bottom: 0px;width:100%;">
+                  <span v-if="application.owner.type === 'user'"><v-icon>person</v-icon>&nbsp;{{ application.owner.name }}</span>
+                  <span v-if="application.owner.type === 'organization'"><v-icon>group</v-icon>&nbsp;{{ application.owner.name }}<span v-if="application.owner.role"> ({{ application.owner.role }})</span></span>
+                  &nbsp;<v-chip :color="application.visibility === 'public' ? 'primary' : 'accent'" text-color="white">
+                    {{ {public: 'Public', private: 'Privé', protected: 'Protégé'}[application.visibility] }}
+                  </v-chip>
+                  <template v-if="application.status === 'error'">
+                    <v-spacer />
+                    <span><v-icon color="red">warning</v-icon>&nbsp;En erreur</span>
+                  </template>
+                </v-card-actions>
+              </v-card>
+            </v-flex>
+          </v-layout>
+        </v-container>
       </v-flex>
-      <v-flex v-if="applications" hidden-xs-only sm6 md4 lg2 xl2 class="py-0">
+      <v-flex v-if="applications" hidden-xs-only sm6 md4 lg2 xl2 pl-2>
         <applications-facets :facets="applications.facets" :facets-values="facetsValues" />
       </v-flex>
     </v-layout>
@@ -66,7 +68,7 @@
         </v-layout>
       </v-container>
     </v-responsive>
-  </v-container>
+  </div>
 </template>
 
 <script>

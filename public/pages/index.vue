@@ -1,22 +1,23 @@
 <template>
-  <v-layout row>
+  <v-container fluid pt-0>
     <!-- User: show stats -->
     <v-layout v-if="user" column>
-      <v-subheader>{{ $t('pages.root.description') }}</v-subheader>
-      <v-container fluid>
-        <h2 class="display-1">
-          Statistiques
-        </h2>
-        <v-data-table v-if="stats" :headers="headers" :items="items" hide-actions class="elevation-1 mt-4">
-          <template slot="items" slot-scope="props">
-            <td>{{ props.item.name }}</td>
-            <td>{{ props.item.datasets }}</td>
-            <td>{{ parseFloat((props.item.storage / 1000).toFixed(2)).toLocaleString() }} ko</td>
-            <td>{{ parseFloat((props.item.storageLimit / 1000).toFixed(2)).toLocaleString() }} ko</td>
-            <td>{{ props.item.applications }}</td>
-          </template>
-        </v-data-table>
-      </v-container>
+      <v-subheader class="px-0">
+        {{ $t('pages.root.description') }}
+      </v-subheader>
+
+      <h2 class="display-1">
+        Statistiques
+      </h2>
+      <v-data-table v-if="stats" :headers="headers" :items="items" hide-actions class="elevation-1 mt-4">
+        <template slot="items" slot-scope="props">
+          <td>{{ props.item.name }}</td>
+          <td>{{ props.item.datasets }}</td>
+          <td>{{ parseFloat((props.item.storage / 1000).toFixed(2)).toLocaleString() }} ko</td>
+          <td>{{ parseFloat((props.item.storageLimit / 1000).toFixed(2)).toLocaleString() }} ko</td>
+          <td>{{ props.item.applications }}</td>
+        </template>
+      </v-data-table>
     </v-layout>
     <!-- Anonymous: show jumbotron -->
     <v-flex v-else-if="initialized" md6 offset-md3>
@@ -41,7 +42,7 @@
         </v-container>
       </v-responsive>
     </v-flex>
-  </v-layout>
+  </v-container>
 </template>
 
 <script>

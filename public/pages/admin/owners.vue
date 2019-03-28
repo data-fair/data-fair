@@ -1,5 +1,9 @@
 <template lang="html">
   <v-container fluid>
+    <h2 class="title">
+      Propriétaires
+    </h2>
+
     <v-layout v-if="owners" column>
       <v-layout row wrap>
         <v-flex xs12 sm6 md4 lg3>

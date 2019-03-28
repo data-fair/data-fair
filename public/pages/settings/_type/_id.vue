@@ -1,8 +1,8 @@
 <template lang="html">
-  <v-container fluid>
+  <v-container>
     <v-layout v-if="initialized" column>
       <!--<v-subheader>{{ $t('pages.settings.description') }}</v-subheader>-->
-      <v-container v-if="authorized">
+      <template v-if="authorized">
         <h2 class="display-1 mb-4">
           Paramètres de l'{{ $route.params.type ==='organization' ? ('organisation ' + organization.name): ('utilisateur ' + user.name) }}
         </h2>
@@ -46,7 +46,7 @@
           Clés d'API
         </h3>
         <settings-api-keys v-if="settings" :settings="settings" @updated="save" />
-      </v-container>
+      </template>
       <v-responsive v-else height="auto">
         <v-container fill-height>
           <v-layout align-center>

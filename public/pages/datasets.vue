@@ -1,7 +1,9 @@
 <template>
-  <v-layout row>
+  <v-container fluid pt-0>
     <v-layout v-if="user" column>
-      <v-subheader>{{ $t('pages.datasets.description') }}</v-subheader>
+      <v-subheader class="px-0">
+        {{ $t('pages.datasets.description') }}
+      </v-subheader>
       <datasets-list />
 
       <div class="actions-buttons">
@@ -73,7 +75,7 @@
         </v-container>
       </v-responsive>
     </v-flex>
-  </v-layout>
+  </v-container>
 </template>
 
 <script>

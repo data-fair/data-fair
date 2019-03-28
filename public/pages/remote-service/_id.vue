@@ -1,21 +1,39 @@
 <template>
   <v-layout v-if="remoteService" column class="remoteService">
-    <v-tabs icons-and-text grow color="transparent" slider-color="primary" class="mb-3">
-      <v-tab :nuxt="true" :to="`/remote-service/${remoteService.id}/description`">
-        Description
-        <v-icon>toc</v-icon>
-      </v-tab>
-      <v-tab v-id="user.isAdmin" :nuxt="true" :to="`/remote-service/${remoteService.id}/config`">
-        Configuration
-        <v-icon>build</v-icon>
-      </v-tab>
-      <v-tab :nuxt="true" :to="`/remote-service/${remoteService.id}/api`">
-        API
-        <v-icon>cloud</v-icon>
-      </v-tab>
-    </v-tabs>
+    <v-navigation-drawer app fixed stateless :permanent="mini || $vuetify.breakpoint.lgAndUp" :temporary="!mini && !$vuetify.breakpoint.lgAndUp" :mini-variant="mini" :value="true">
+      <v-list dense>
+        <v-list-tile v-if="mini" @click.stop="mini = false">
+          <v-list-tile-action>
+            <v-icon>chevron_right</v-icon>
+          </v-list-tile-action>
+        </v-list-tile>
+        <v-list-tile v-else avatar>
+          <v-list-tile-title>{{ remoteService.title || remoteService.id }}</v-list-tile-title>
+          <v-list-tile-action style="min-width: 0;">
+            <v-btn icon @click.stop="mini = true">
+              <v-icon>chevron_left</v-icon>
+            </v-btn>
+          </v-list-tile-action>
+        </v-list-tile>
 
-    <nuxt-child />
+        <v-list-tile :nuxt="true" :to="`/remote-service/${remoteService.id}/description`">
+          <v-list-tile-action><v-icon>info</v-icon></v-list-tile-action>
+          <v-list-tile-title>Description</v-list-tile-title>
+        </v-list-tile>
+        <v-list-tile v-id="user.isAdmin" :nuxt="true" :to="`/remote-service/${remoteService.id}/config`">
+          <v-list-tile-action><v-icon>build</v-icon></v-list-tile-action>
+          <v-list-tile-title>Configuration</v-list-tile-title>
+        </v-list-tile>
+        <v-list-tile :nuxt="true" :to="`/remote-service/${remoteService.id}/api`">
+          <v-list-tile-action><v-icon>cloud</v-icon></v-list-tile-action>
+          <v-list-tile-title>API</v-list-tile-title>
+        </v-list-tile>
+      </v-list>
+    </v-navigation-drawer>
+
+    <v-layout row>
+      <nuxt-child />
+    </v-layout>
 
     <div class="actions-buttons">
       <v-menu bottom left>

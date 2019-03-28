@@ -1,6 +1,9 @@
 <template lang="html">
   <v-container fluid>
     <v-layout column>
+      <h2 class="title">
+        Applications de base
+      </h2>
       <v-layout row wrap>
         <v-flex xs12 sm6 md4 lg3>
           <v-text-field
@@ -133,7 +136,7 @@
 
 <script>
 import { mapState } from 'vuex'
-import eventBus from '../../../event-bus'
+import eventBus from '../../event-bus'
 
 export default {
   data() {

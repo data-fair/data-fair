@@ -1,53 +1,71 @@
 <template>
   <v-layout v-if="dataset" column class="dataset">
-    <v-tabs icons-and-text grow color="transparent" slider-color="primary" class="mb-3">
-      <v-tab :disabled="!can('readDescription')" :nuxt="true" :to="`/dataset/${dataset.id}/description`">
-        Description
-        <v-icon>toc</v-icon>
-      </v-tab>
-      <v-tab v-if="can('writeDescription') && dataset.isVirtual" :nuxt="true" :to="`/dataset/${dataset.id}/virtual`">
-        Jeu virtuel
-        <v-icon>picture_in_picture</v-icon>
-      </v-tab>
-      <v-tab :disabled="!can('readLines')" :nuxt="true" :to="`/dataset/${dataset.id}/tabular`">
-        Vue tableau
-        <v-icon>view_list</v-icon>
-      </v-tab>
-      <v-tab v-if="dataset.bbox" :disabled="!can('readLines')" :nuxt="true" :to="`/dataset/${dataset.id}/map`">
-        Carte
-        <v-icon>map</v-icon>
-      </v-tab>
-      <v-tab v-if="fileProperty" :disabled="!can('readLines')" :nuxt="true" :to="`/dataset/${dataset.id}/search-files`">
-        Fichiers
-        <v-icon>file_copy</v-icon>
-      </v-tab>
-      <v-tab v-if="!!dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/image')" :disabled="!can('readLines')" :nuxt="true" :to="`/dataset/${dataset.id}/thumbnails`">
-        Vignettes
-        <v-icon>image</v-icon>
-      </v-tab>
-      <v-tab v-if="can('getPermissions')" :nuxt="true" :to="`/dataset/${dataset.id}/permissions`">
-        Permissions
-        <v-icon>security</v-icon>
-      </v-tab>
-      <v-tab v-if="!dataset.isVirtual" :disabled="!can('writeDescription')" :nuxt="true" :to="`/dataset/${dataset.id}/extend`">
-        Enrichissement
-        <v-icon>merge_type</v-icon>
-      </v-tab>
-      <v-tab v-if="can('getPermissions')" :nuxt="true" :to="`/dataset/${dataset.id}/publications`">
-        Publications
-        <v-icon>publish</v-icon>
-      </v-tab>
-      <v-tab :disabled="!can('readJournal')" :nuxt="true" :to="`/dataset/${dataset.id}/journal`">
-        Journal
-        <v-icon>event_note</v-icon>
-      </v-tab>
-      <v-tab :disabled="!can('readApiDoc')" :nuxt="true" :to="`/dataset/${dataset.id}/api`">
-        API
-        <v-icon>cloud</v-icon>
-      </v-tab>
-    </v-tabs>
+    <v-navigation-drawer app fixed stateless :permanent="mini || $vuetify.breakpoint.lgAndUp" :temporary="!mini && !$vuetify.breakpoint.lgAndUp" :mini-variant="mini" :value="true">
+      <v-list dense>
+        <v-list-tile v-if="mini" @click.stop="mini = false">
+          <v-list-tile-action>
+            <v-icon>chevron_right</v-icon>
+          </v-list-tile-action>
+        </v-list-tile>
+        <v-list-tile v-else avatar>
+          <v-list-tile-title>{{ dataset.title || dataset.id }}</v-list-tile-title>
+          <v-list-tile-action style="min-width: 0;">
+            <v-btn icon @click.stop="mini = true">
+              <v-icon>chevron_left</v-icon>
+            </v-btn>
+          </v-list-tile-action>
+        </v-list-tile>
 
-    <nuxt-child />
+        <v-list-tile :disabled="!can('readDescription')" :nuxt="true" :to="`/dataset/${dataset.id}/description`">
+          <v-list-tile-action><v-icon>info</v-icon></v-list-tile-action>
+          <v-list-tile-title>Description</v-list-tile-title>
+        </v-list-tile>
+        <v-list-tile v-if="can('writeDescription') && dataset.isVirtual" :nuxt="true" :to="`/dataset/${dataset.id}/virtual`">
+          <v-list-tile-action><v-icon>picture_in_picture</v-icon></v-list-tile-action>
+          <v-list-tile-title>Jeu virtuel</v-list-tile-title>
+        </v-list-tile>
+        <v-list-tile :disabled="!can('readLines')" :nuxt="true" :to="`/dataset/${dataset.id}/tabular`">
+          <v-list-tile-action><v-icon>view_list</v-icon></v-list-tile-action>
+          <v-list-tile-title>Vue tableau</v-list-tile-title>
+        </v-list-tile>
+        <v-list-tile v-if="dataset.bbox" :disabled="!can('readLines')" :nuxt="true" :to="`/dataset/${dataset.id}/map`">
+          <v-list-tile-action><v-icon>map</v-icon></v-list-tile-action>
+          <v-list-tile-title>Carte</v-list-tile-title>
+        </v-list-tile>
+        <v-list-tile v-if="fileProperty" :disabled="!can('readLines')" :nuxt="true" :to="`/dataset/${dataset.id}/search-files`">
+          <v-list-tile-action><v-icon>file_copy</v-icon></v-list-tile-action>
+          <v-list-tile-title>Fichiers</v-list-tile-title>
+        </v-list-tile>
+        <v-list-tile v-if="!!dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/image')" :disabled="!can('readLines')" :nuxt="true" :to="`/dataset/${dataset.id}/thumbnails`">
+          <v-list-tile-action><v-icon>image</v-icon></v-list-tile-action>
+          <v-list-tile-title>Vignettes</v-list-tile-title>
+        </v-list-tile>
+        <v-list-tile v-if="can('getPermissions')" :nuxt="true" :to="`/dataset/${dataset.id}/permissions`">
+          <v-list-tile-action><v-icon>security</v-icon></v-list-tile-action>
+          <v-list-tile-title>Permissions</v-list-tile-title>
+        </v-list-tile>
+        <v-list-tile v-if="!dataset.isVirtual" :disabled="!can('writeDescription')" :nuxt="true" :to="`/dataset/${dataset.id}/extend`">
+          <v-list-tile-action><v-icon>merge_type</v-icon></v-list-tile-action>
+          <v-list-tile-title>Enrichissement</v-list-tile-title>
+        </v-list-tile>
+        <v-list-tile v-if="can('getPermissions')" :nuxt="true" :to="`/dataset/${dataset.id}/publications`">
+          <v-list-tile-action><v-icon>publish</v-icon></v-list-tile-action>
+          <v-list-tile-title>Publications</v-list-tile-title>
+        </v-list-tile>
+        <v-list-tile :disabled="!can('readJournal')" :nuxt="true" :to="`/dataset/${dataset.id}/journal`">
+          <v-list-tile-action><v-icon>event_note</v-icon></v-list-tile-action>
+          <v-list-tile-title>Journal</v-list-tile-title>
+        </v-list-tile>
+        <v-list-tile :disabled="!can('readApiDoc')" :nuxt="true" :to="`/dataset/${dataset.id}/api`">
+          <v-list-tile-action><v-icon>cloud</v-icon></v-list-tile-action>
+          <v-list-tile-title>API</v-list-tile-title>
+        </v-list-tile>
+      </v-list>
+    </v-navigation-drawer>
+
+    <v-layout row>
+      <nuxt-child />
+    </v-layout>
 
     <div class="actions-buttons">
       <v-menu bottom left>
@@ -192,7 +210,8 @@ export default {
     file: null,
     uploading: false,
     uploadProgress: 0,
-    newOwner: null
+    newOwner: null,
+    mini: false
   }),
   computed: {
     ...mapState('dataset', ['dataset', 'api', 'nbApplications']),

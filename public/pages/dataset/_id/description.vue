@@ -1,11 +1,9 @@
 <template lang="html">
-  <div>
+  <v-container fluid>
     <dataset-info />
-    <v-container fluid>
-      <dataset-schema-edit v-if="can('writeDescription')" />
-      <dataset-schema-view v-else />
-    </v-container>
-  </div>
+    <dataset-schema-edit v-if="can('writeDescription')" />
+    <dataset-schema-view v-else />
+  </v-container>
 </template>
 
 <script>

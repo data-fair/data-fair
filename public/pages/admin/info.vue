@@ -1,5 +1,8 @@
 <template lang="html">
   <v-container v-if="info && status" fluid>
+    <h2 class="title">
+      Informations du service
+    </h2>
     <p>Version : {{ info.version }}</p>
     <v-expansion-panel expand focusable>
       <v-expansion-panel-content>
