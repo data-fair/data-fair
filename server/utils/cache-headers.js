@@ -9,7 +9,7 @@ const createError = require('http-errors')
 // also set last finalized date into last-modified header
 exports.resourceBased = (req, res, next) => {
   const dateKey = req.resource.finalizedAt ? 'finalizedAt' : 'updatedAt'
-  const date = (new Date(req[dateKey])).toUTCString()
+  const date = (new Date(req.resource[dateKey])).toUTCString()
   const cacheVisibility = req.user ? 'private' : 'public'
 
   const ifModifiedSince = req.get('If-Modified-Since')
