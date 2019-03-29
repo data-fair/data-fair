@@ -1,4 +1,4 @@
-FROM koumoul/webapp-base:1.9.0
+FROM koumoul/webapp-base:1.9.1
 MAINTAINER "contact@koumoul.com"
 
 RUN apk add --no-cache --update python make g++ unzip
