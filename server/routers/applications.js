@@ -23,6 +23,7 @@ const asyncWrap = require('../utils/async-wrap')
 const journals = require('../utils/journals')
 const capture = require('../utils/capture')
 const visibilityUtils = require('../utils/visibility')
+const cacheHeaders = require('../utils/cache-headers')
 
 const router = module.exports = express.Router()
 
@@ -46,7 +47,7 @@ function clean(application) {
 }
 
 // Get the list of applications
-router.get('', asyncWrap(async(req, res) => {
+router.get('', cacheHeaders.noCache, asyncWrap(async(req, res) => {
   const applications = req.app.get('db').collection('applications')
 
   if (req.query.dataset &&
@@ -138,7 +139,7 @@ const readApplication = asyncWrap(async(req, res, next) => {
 router.use('/:applicationId/permissions', readApplication, permissions.router('applications', 'application'))
 
 // retrieve a application by its id
-router.get('/:applicationId', readApplication, permissions.middleware('readDescription', 'read'), (req, res, next) => {
+router.get('/:applicationId', readApplication, permissions.middleware('readDescription', 'read'), cacheHeaders.resourceBased, (req, res, next) => {
   req.application.userPermissions = permissions.list(req.application, operationsClasses, req.user)
   res.status(200).send(clean(req.application))
 })
@@ -228,8 +229,8 @@ router.delete('/:applicationId', readApplication, permissions.middleware('delete
 // Get only the configuration part of the application
 const getConfig = (req, res, next) => res.status(200).send(req.application.configuration || {})
 // 2 paths kept for compatibility.. but /config is deprecated because not homogeneous with the structure of the object
-router.get('/:applicationId/config', readApplication, permissions.middleware('readConfig', 'read'), getConfig)
-router.get('/:applicationId/configuration', readApplication, permissions.middleware('readConfig', 'read'), getConfig)
+router.get('/:applicationId/config', readApplication, permissions.middleware('readConfig', 'read'), cacheHeaders.resourceBased, getConfig)
+router.get('/:applicationId/configuration', readApplication, permissions.middleware('readConfig', 'read'), cacheHeaders.resourceBased, getConfig)
 
 // Update only the configuration part of the application
 const writeConfig = asyncWrap(async(req, res) => {
@@ -252,7 +253,7 @@ router.put('/:applicationId/config', readApplication, permissions.middleware('wr
 router.put('/:applicationId/configuration', readApplication, permissions.middleware('writeConfig', 'write'), writeConfig)
 
 // Configuration draft management
-router.get('/:applicationId/configuration-draft', readApplication, permissions.middleware('writeConfig', 'read'), (req, res) => {
+router.get('/:applicationId/configuration-draft', readApplication, permissions.middleware('writeConfig', 'read'), cacheHeaders.resourceBased, (req, res) => {
   res.status(200).send(req.application.configurationDraft || req.application.configuration || {})
 })
 router.put('/:applicationId/configuration-draft', readApplication, permissions.middleware('writeConfig', 'write'), asyncWrap(async (req, res, next) => {
@@ -271,7 +272,7 @@ router.put('/:applicationId/configuration-draft', readApplication, permissions.m
   res.status(200).json(req.body)
 }))
 
-router.get('/:applicationId/base-application', readApplication, permissions.middleware('readBaseApp', 'read'), asyncWrap(async (req, res) => {
+router.get('/:applicationId/base-application', readApplication, permissions.middleware('readBaseApp', 'read'), cacheHeaders.noCache, asyncWrap(async (req, res) => {
   const db = req.app.get('db')
   const baseApplications = db.collection('base-applications')
   const baseApp = await baseApplications.findOne({ url: req.application.url })
@@ -279,11 +280,11 @@ router.get('/:applicationId/base-application', readApplication, permissions.midd
   res.send(baseAppsUtils.clean(baseApp))
 }))
 
-router.get('/:applicationId/api-docs.json', readApplication, permissions.middleware('readApiDoc', 'read'), (req, res) => {
+router.get('/:applicationId/api-docs.json', readApplication, permissions.middleware('readApiDoc', 'read'), cacheHeaders.resourceBased, (req, res) => {
   res.send(applicationAPIDocs(req.application))
 })
 
-router.get('/:applicationId/journal', readApplication, permissions.middleware('readJournal', 'read'), asyncWrap(async(req, res) => {
+router.get('/:applicationId/journal', readApplication, permissions.middleware('readJournal', 'read'), cacheHeaders.noCache, asyncWrap(async(req, res) => {
   const journal = await req.app.get('db').collection('journals').findOne({
     type: 'application',
     id: req.params.applicationId
@@ -294,7 +295,7 @@ router.get('/:applicationId/journal', readApplication, permissions.middleware('r
 }))
 
 // Used by applications to declare an error
-router.post('/:applicationId/error', readApplication, permissions.middleware('writeConfig', 'write'), asyncWrap(async(req, res) => {
+router.post('/:applicationId/error', readApplication, permissions.middleware('writeConfig', 'write'), cacheHeaders.noCache, asyncWrap(async(req, res) => {
   if (!req.body.message) return res.status(400).send('Attribut "message" obligatoire')
   if (req.application.status.startsWith('configured')) {
     await req.app.get('db').collection('applications').updateOne({ id: req.params.applicationId }, { '$set': { status: 'error' } })
@@ -303,12 +304,12 @@ router.post('/:applicationId/error', readApplication, permissions.middleware('wr
   res.status(204).send()
 }))
 
-router.get('/:applicationId/active-sessions', readApplication, permissions.middleware('readConfig', 'read'), asyncWrap(async (req, res, next) => {
+router.get('/:applicationId/active-sessions', readApplication, permissions.middleware('readConfig', 'read'), cacheHeaders.noCache, asyncWrap(async (req, res, next) => {
   const count = await req.app.get('db').collection('sessions').countDocuments({ 'session.activeApplications': req.application.id })
   return res.send({ count })
 }))
 
-router.get('/:applicationId/capture', readApplication, permissions.middleware('readConfig', 'read'), asyncWrap(async(req, res) => {
+router.get('/:applicationId/capture', readApplication, permissions.middleware('readConfig', 'read'), cacheHeaders.resourceBased, asyncWrap(async(req, res) => {
   const capturePath = capture.path(req.application)
   if (await fs.pathExists(capturePath)) {
     res.sendFile(capturePath)

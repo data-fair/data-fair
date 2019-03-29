@@ -33,6 +33,7 @@ const attachments = require('../utils/attachments')
 const geo = require('../utils/geo')
 const tiles = require('../utils/tiles')
 const cache = require('../utils/cache')
+const cacheHeaders = require('../utils/cache-headers')
 const converter = require('../workers/converter')
 const datasetPatchSchema = require('../../contract/dataset-patch')
 const validatePatch = ajv.compile(datasetPatchSchema)
@@ -59,7 +60,7 @@ function clean(dataset) {
 }
 
 // Get the list of datasets
-router.get('', asyncWrap(async(req, res) => {
+router.get('', cacheHeaders.noCache, asyncWrap(async(req, res) => {
   const datasets = req.app.get('db').collection('datasets')
   const filterFields = {
     'concepts': 'schema.x-refersTo',
@@ -117,13 +118,13 @@ const readDataset = (acceptedStatuses) => asyncWrap(async(req, res, next) => {
 router.use('/:datasetId/permissions', readDataset(), permissions.router('datasets', 'dataset'))
 
 // retrieve a dataset by its id
-router.get('/:datasetId', readDataset(), permissions.middleware('readDescription', 'read'), (req, res, next) => {
+router.get('/:datasetId', readDataset(), permissions.middleware('readDescription', 'read'), cacheHeaders.noCache, (req, res, next) => {
   req.dataset.userPermissions = permissions.list(req.dataset, operationsClasses, req.user)
   res.status(200).send(clean(req.dataset))
 })
 
 // retrieve only the schema.. Mostly useful for easy select fields
-router.get('/:datasetId/schema', readDataset(), permissions.middleware('readDescription', 'read'), (req, res, next) => {
+router.get('/:datasetId/schema', readDataset(), permissions.middleware('readDescription', 'read'), cacheHeaders.noCache, (req, res, next) => {
   let schema = req.dataset.schema
   schema.forEach(field => {
     field.label = field.title || field['x-originalName'] || field.key
@@ -421,38 +422,12 @@ function isRest(req, res, next) {
   }
   next()
 }
-router.get('/:datasetId/lines/:lineId', readDataset(), isRest, permissions.middleware('readLine', 'read'), asyncWrap(restDatasetsUtils.readLine))
+router.get('/:datasetId/lines/:lineId', readDataset(), isRest, permissions.middleware('readLine', 'read'), cacheHeaders.noCache, asyncWrap(restDatasetsUtils.readLine))
 router.post('/:datasetId/lines', readDataset(['finalized', 'updated', 'indexed']), isRest, permissions.middleware('createLine', 'write'), restDatasetsUtils.uploadAttachment, asyncWrap(restDatasetsUtils.createLine))
 router.put('/:datasetId/lines/:lineId', readDataset(['finalized', 'updated', 'indexed']), isRest, permissions.middleware('updateLine', 'write'), restDatasetsUtils.uploadAttachment, asyncWrap(restDatasetsUtils.updateLine))
 router.patch('/:datasetId/lines/:lineId', readDataset(['finalized', 'updated', 'indexed']), isRest, permissions.middleware('patchLine', 'write'), restDatasetsUtils.uploadAttachment, asyncWrap(restDatasetsUtils.patchLine))
 router.post('/:datasetId/_bulk_lines', readDataset(['finalized', 'updated', 'indexed']), isRest, permissions.middleware('bulkLines', 'write'), restDatasetsUtils.uploadBulk, asyncWrap(restDatasetsUtils.bulkLines))
 router.delete('/:datasetId/lines/:lineId', readDataset(['finalized', 'updated', 'indexed']), isRest, permissions.middleware('deleteLine', 'write'), asyncWrap(restDatasetsUtils.deleteLine))
-
-// Set max-age
-// Also compare last-modified and if-modified-since headers for cache revalidation
-// only send data if the dataset was finalized since then
-// prevent running expensive queries while always presenting fresh data
-// also set last finalized date into last-modified header
-function managePublicCache(req, res) {
-  if (!req.dataset.finalizedAt) return
-
-  const finalizedAt = (new Date(req.dataset.finalizedAt)).toUTCString()
-  // finalizedAt passed as query parameter is used to timestamp the query and
-  // make it compatible with a longer caching
-  if (req.query.finalizedAt) {
-    const qFinalizedAt = (new Date(req.query.finalizedAt)).toUTCString()
-    if (qFinalizedAt > finalizedAt) {
-      throw createError(400, '"finalizedAt" query parameter has a value higher than the finalizedAt attribute of the dataset.')
-    }
-    res.setHeader('Cache-Control', 'public, max-age=' + config.cache.timestampedPublicMaxAge)
-  } else {
-    res.setHeader('Cache-Control', 'public, max-age=' + config.cache.publicMaxAge)
-  }
-
-  const ifModifiedSince = req.get('If-Modified-Since')
-  if (ifModifiedSince && finalizedAt === ifModifiedSince) return true
-  res.setHeader('Last-Modified', finalizedAt)
-}
 
 // Error from ES backend should be stored in the journal
 async function manageESError(req, err) {
@@ -465,13 +440,12 @@ async function manageESError(req, err) {
 }
 
 // Read/search data for a dataset
-router.get('/:datasetId/lines', readDataset(), permissions.middleware('readLines', 'read'), asyncWrap(async(req, res) => {
+router.get('/:datasetId/lines', readDataset(), permissions.middleware('readLines', 'read'), cacheHeaders.resourceBased, asyncWrap(async(req, res) => {
   if (req.query && req.query.page && req.query.size && req.query.page * req.query.size > 10000) {
     return res.status(404).send('You can only access the first 10 000 elements.')
   }
 
   const db = req.app.get('db')
-  if (!req.user && managePublicCache(req, res)) return res.status(304).send()
 
   // used later to count items in a tile or tile's neighbor
   async function countWithCache(query) {
@@ -580,8 +554,7 @@ router.get('/:datasetId/lines', readDataset(), permissions.middleware('readLines
 }))
 
 // Special geo aggregation
-router.get('/:datasetId/geo_agg', readDataset(), permissions.middleware('getGeoAgg', 'read'), asyncWrap(async(req, res) => {
-  if (!req.user && managePublicCache(req, res)) return res.status(304).send()
+router.get('/:datasetId/geo_agg', readDataset(), permissions.middleware('getGeoAgg', 'read'), cacheHeaders.resourceBased, asyncWrap(async(req, res) => {
   if (req.dataset.isVirtual) req.dataset.descendants = await virtualDatasetsUtils.descendants(req.app.get('db'), req.dataset)
   const db = req.app.get('db')
 
@@ -626,8 +599,7 @@ router.get('/:datasetId/geo_agg', readDataset(), permissions.middleware('getGeoA
 }))
 
 // Standard aggregation to group items by value and perform an optional metric calculation on each group
-router.get('/:datasetId/values_agg', readDataset(), permissions.middleware('getValuesAgg', 'read'), asyncWrap(async(req, res) => {
-  if (!req.user && managePublicCache(req, res)) return res.status(304).send()
+router.get('/:datasetId/values_agg', readDataset(), permissions.middleware('getValuesAgg', 'read'), cacheHeaders.resourceBased, asyncWrap(async(req, res) => {
   if (req.dataset.isVirtual) req.dataset.descendants = await virtualDatasetsUtils.descendants(req.app.get('db'), req.dataset)
   const db = req.app.get('db')
 
@@ -674,8 +646,7 @@ router.get('/:datasetId/values_agg', readDataset(), permissions.middleware('getV
 
 // Simpler values list and filter (q is applied only to the selected field, not all fields)
 // mostly useful for selects/autocompletes on values
-router.get('/:datasetId/values/:fieldKey', readDataset(), permissions.middleware('getValues', 'read'), asyncWrap(async(req, res) => {
-  if (!req.user && managePublicCache(req, res)) return res.status(304).send()
+router.get('/:datasetId/values/:fieldKey', readDataset(), permissions.middleware('getValues', 'read'), cacheHeaders.resourceBased, asyncWrap(async(req, res) => {
   if (req.dataset.isVirtual) req.dataset.descendants = await virtualDatasetsUtils.descendants(req.app.get('db'), req.dataset)
   let result
   try {
@@ -687,8 +658,7 @@ router.get('/:datasetId/values/:fieldKey', readDataset(), permissions.middleware
 }))
 
 // Simple metric aggregation to calculate some value (sum, avg, etc.)
-router.get('/:datasetId/metric_agg', readDataset(), permissions.middleware('getMetricAgg', 'read'), asyncWrap(async(req, res) => {
-  if (!req.user && managePublicCache(req, res)) return res.status(304).send()
+router.get('/:datasetId/metric_agg', readDataset(), permissions.middleware('getMetricAgg', 'read'), cacheHeaders.resourceBased, asyncWrap(async(req, res) => {
   if (req.dataset.isVirtual) req.dataset.descendants = await virtualDatasetsUtils.descendants(req.app.get('db'), req.dataset)
   let result
   try {
@@ -700,8 +670,7 @@ router.get('/:datasetId/metric_agg', readDataset(), permissions.middleware('getM
 }))
 
 // Simple words aggregation for significant terms extraction
-router.get('/:datasetId/words_agg', readDataset(), permissions.middleware('getWordsAgg', 'read'), asyncWrap(async(req, res) => {
-  if (!req.user && managePublicCache(req, res)) return res.status(304).send()
+router.get('/:datasetId/words_agg', readDataset(), permissions.middleware('getWordsAgg', 'read'), cacheHeaders.resourceBased, asyncWrap(async(req, res) => {
   if (req.dataset.isVirtual) req.dataset.descendants = await virtualDatasetsUtils.descendants(req.app.get('db'), req.dataset)
   let result
   try {
@@ -713,26 +682,26 @@ router.get('/:datasetId/words_agg', readDataset(), permissions.middleware('getWo
 }))
 
 // For datasets with attached files
-router.get('/:datasetId/attachments/*', readDataset(), permissions.middleware('downloadOriginalData', 'read'), (req, res, next) => {
+router.get('/:datasetId/attachments/*', readDataset(), permissions.middleware('downloadOriginalData', 'read'), cacheHeaders.noCache, (req, res, next) => {
   const filePath = req.params['0']
   if (filePath.includes('..')) return res.status(400).send()
   res.download(path.resolve(datasetUtils.attachmentsDir(req.dataset), filePath))
 })
 
 // Download the full dataset in its original form
-router.get('/:datasetId/raw', readDataset(), permissions.middleware('downloadOriginalData', 'read'), (req, res, next) => {
+router.get('/:datasetId/raw', readDataset(), permissions.middleware('downloadOriginalData', 'read'), cacheHeaders.noCache, (req, res, next) => {
   res.download(datasetUtils.originalFileName(req.dataset), req.dataset.originalFile.name)
 })
 
 // Download the dataset in various formats
-router.get('/:datasetId/convert', readDataset(), permissions.middleware('downloadOriginalData', 'read'), (req, res, next) => {
+router.get('/:datasetId/convert', readDataset(), permissions.middleware('downloadOriginalData', 'read'), cacheHeaders.noCache, (req, res, next) => {
   if (!req.query || !req.query.format) res.download(datasetUtils.fileName(req.dataset), req.dataset.file.name)
   // TODO add logic to support other formats
   else res.status(400).send(`Format ${req.query.format} is not supported.`)
 })
 
 // Download the full dataset with extensions
-router.get('/:datasetId/full', readDataset(), permissions.middleware('downloadFullData', 'read'), asyncWrap(async (req, res, next) => {
+router.get('/:datasetId/full', readDataset(), permissions.middleware('downloadFullData', 'read'), cacheHeaders.noCache, asyncWrap(async (req, res, next) => {
   const db = req.app.get('db')
   if (req.dataset.isVirtual) req.dataset.descendants = await virtualDatasetsUtils.descendants(req.app.get('db'), req.dataset)
   res.setHeader('Content-disposition', 'attachment; filename=' + req.dataset.file.name)
@@ -754,11 +723,11 @@ router.get('/:datasetId/full', readDataset(), permissions.middleware('downloadFu
   )
 }))
 
-router.get('/:datasetId/api-docs.json', readDataset(), permissions.middleware('readApiDoc', 'read'), (req, res) => {
+router.get('/:datasetId/api-docs.json', readDataset(), permissions.middleware('readApiDoc', 'read'), cacheHeaders.resourceBased, (req, res) => {
   res.send(req.resourceApiDoc)
 })
 
-router.get('/:datasetId/journal', readDataset(), permissions.middleware('readJournal', 'read'), asyncWrap(async(req, res) => {
+router.get('/:datasetId/journal', readDataset(), permissions.middleware('readJournal', 'read'), cacheHeaders.noCache, asyncWrap(async(req, res) => {
   const journal = await req.app.get('db').collection('journals').findOne({
     type: 'dataset',
     id: req.params.datasetId
@@ -769,7 +738,7 @@ router.get('/:datasetId/journal', readDataset(), permissions.middleware('readJou
 }))
 
 // Special route with very technical informations to help diagnose bugs, broken indices, etc.
-router.get('/:datasetId/_diagnose', readDataset(), asyncWrap(async(req, res) => {
+router.get('/:datasetId/_diagnose', readDataset(), cacheHeaders.noCache, asyncWrap(async(req, res) => {
   if (!req.user) return res.status(401).send()
   if (!req.user.isAdmin) return res.status(403).send()
   const esInfos = await esUtils.datasetInfos(req.app.get('es'), req.dataset)

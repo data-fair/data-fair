@@ -6,6 +6,8 @@ const settingSchema = require('../../contract/settings.json')
 const validate = ajv.compile(settingSchema)
 const permissions = require('../utils/permissions')
 const asyncWrap = require('../utils/async-wrap')
+const cacheHeaders = require('../utils/cache-headers')
+
 const config = require('config')
 
 let router = express.Router()
@@ -29,7 +31,7 @@ function isOwner(req, res, next) {
 }
 
 // read settings as owner
-router.get('/:type/:id', isOwner, asyncWrap(async(req, res) => {
+router.get('/:type/:id', isOwner, cacheHeaders.noCache, asyncWrap(async(req, res) => {
   const settings = req.app.get('db').collection('settings')
 
   const result = await settings
@@ -68,7 +70,7 @@ router.put('/:type/:id', isOwner, asyncWrap(async(req, res) => {
 }))
 
 // Get licenses list as anyone
-router.get('/:type/:id/licenses', asyncWrap(async(req, res) => {
+router.get('/:type/:id/licenses', cacheHeaders.noCache, asyncWrap(async(req, res) => {
   const settings = req.app.get('db').collection('settings')
   const result = await settings.findOne({
     type: req.params.type,

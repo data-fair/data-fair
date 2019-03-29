@@ -15,6 +15,7 @@ const permissions = require('../utils/permissions')
 const usersUtils = require('../utils/users')
 const findUtils = require('../utils/find')
 const asyncWrap = require('../utils/async-wrap')
+const cacheHeaders = require('../utils/cache-headers')
 
 const router = module.exports = express.Router()
 
@@ -42,7 +43,7 @@ router.post('/_init', asyncWrap(async(req, res) => {
   res.status(200).json(catalog)
 }))
 
-router.get('/_organizations', asyncWrap(async(req, res) => {
+router.get('/_organizations', cacheHeaders.noCache, asyncWrap(async(req, res) => {
   if (!req.query.url) return res.status(400).send('"url" query parameter is required')
   if (!req.query.type) return res.status(400).send('"type" query parameter is required')
   if (!req.query.q) return res.status(400).send('"q" query parameter is required')
@@ -50,12 +51,12 @@ router.get('/_organizations', asyncWrap(async(req, res) => {
   res.status(200).json(organizations)
 }))
 
-router.get('/_types', asyncWrap(async(req, res) => {
+router.get('/_types', cacheHeaders.noCache, asyncWrap(async(req, res) => {
   res.send(catalogs.connectors.map(c => ({ key: c.key, title: c.title, searchOrganization: c.searchOrganization })))
 }))
 
 // Get the list of catalogs
-router.get('', asyncWrap(async(req, res) => {
+router.get('', cacheHeaders.noCache, asyncWrap(async(req, res) => {
   const catalogs = req.app.get('db').collection('catalogs')
   const query = findUtils.query(req, {
     'type': 'type',
@@ -131,7 +132,7 @@ const readCatalog = asyncWrap(async(req, res, next) => {
 router.use('/:catalogId/permissions', readCatalog, permissions.router('catalogs', 'catalog'))
 
 // retrieve a catalog by its id
-router.get('/:catalogId', readCatalog, permissions.middleware('readDescription', 'read'), (req, res, next) => {
+router.get('/:catalogId', readCatalog, permissions.middleware('readDescription', 'read'), cacheHeaders.resourceBased, (req, res, next) => {
   req.catalog.userPermissions = permissions.list(req.catalog, operationsClasses, req.user)
   res.status(200).send(clean(req.catalog))
 })
@@ -194,11 +195,11 @@ router.delete('/:catalogId', readCatalog, permissions.middleware('delete', 'admi
   res.sendStatus(204)
 }))
 
-router.get('/:catalogId/api-docs.json', readCatalog, permissions.middleware('readApiDoc', 'read'), (req, res) => {
+router.get('/:catalogId/api-docs.json', readCatalog, permissions.middleware('readApiDoc', 'read'), cacheHeaders.resourceBased, (req, res) => {
   res.send(req.resourceApiDoc)
 })
 
-router.get('/:catalogId/datasets', readCatalog, permissions.middleware('readDatasets', 'read'), asyncWrap(async(req, res, next) => {
+router.get('/:catalogId/datasets', readCatalog, permissions.middleware('readDatasets', 'read'), cacheHeaders.noCache, asyncWrap(async(req, res, next) => {
   const datasets = await catalogs.listDatasets(req.app.get('db'), req.catalog, { q: req.query.q })
   res.status(200).json(datasets)
 }))

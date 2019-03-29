@@ -12,6 +12,7 @@ htmlExtractor.extract = util.promisify(htmlExtractor.extract)
 const asyncWrap = require('../utils/async-wrap')
 const findUtils = require('../utils/find')
 const baseAppsUtils = require('../utils/base-apps')
+const cacheHeaders = require('../utils/cache-headers')
 const router = exports.router = express.Router()
 
 // Fill the collection using the default base applications from config
@@ -107,7 +108,7 @@ router.patch('/:id', asyncWrap(async(req, res) => {
 }))
 
 // Get the list. Non admin users can only see the public ones.
-router.get('', asyncWrap(async(req, res) => {
+router.get('', cacheHeaders.noCache, asyncWrap(async(req, res) => {
   const db = req.app.get('db')
   const query = { $and: [] }
   const accessFilter = []

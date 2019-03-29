@@ -3,6 +3,7 @@ const express = require('express')
 const config = require('config')
 const asyncWrap = require('../utils/async-wrap')
 const findUtils = require('../utils/find')
+const cacheHeaders = require('../utils/cache-headers')
 
 const router = module.exports = express.Router()
 
@@ -17,7 +18,7 @@ router.post('/:type/:id', asyncWrap(async (req, res) => {
 }))
 
 // user can read his quota
-router.get('/:type/:id', asyncWrap(async (req, res) => {
+router.get('/:type/:id', cacheHeaders.noCache, asyncWrap(async (req, res) => {
   if (!req.user) return res.status(401).send()
   if (req.params.type === 'user' && req.params.id !== req.user.id) return res.status(403).send()
   if (req.params.type === 'organization') {
@@ -30,7 +31,7 @@ router.get('/:type/:id', asyncWrap(async (req, res) => {
 }))
 
 // admin only overall list of quotas
-router.get('', asyncWrap(async(req, res) => {
+router.get('', cacheHeaders.noCache, asyncWrap(async(req, res) => {
   if (!req.user) return res.status(401).send()
   if (!req.user.isAdmin) return res.status(403).send()
   const quotas = req.app.get('db').collection('quotas')

@@ -2,10 +2,11 @@ const express = require('express')
 const config = require('config')
 const datasetUtils = require('../utils/dataset')
 const asyncWrap = require('../utils/async-wrap')
+const cacheHeaders = require('../utils/cache-headers')
 
 const router = module.exports = express.Router()
 
-router.get('', asyncWrap(async(req, res) => {
+router.get('', cacheHeaders.noCache, asyncWrap(async(req, res) => {
   if (!req.user) return res.status(401).send()
   const stats = { organizations: {} }
   if (!(req.user.isApiKey && req.user.organization)) {

@@ -4,6 +4,7 @@ const asyncWrap = require('../utils/async-wrap')
 const pjson = require('../../package.json')
 const findUtils = require('../utils/find')
 const baseAppsUtils = require('../utils/base-apps')
+const cacheHeaders = require('../utils/cache-headers')
 const router = module.exports = express.Router()
 
 // All routes in the router are only for the super admins of the service
@@ -12,6 +13,8 @@ router.use(asyncWrap(async (req, res, next) => {
   if (!req.user.isAdmin) return res.status(403).send()
   next()
 }))
+
+router.use(cacheHeaders.noCache)
 
 router.get('/info', asyncWrap(async (req, res, next) => {
   res.send({

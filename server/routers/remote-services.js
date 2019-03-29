@@ -21,6 +21,7 @@ const validateOpenApi = ajv.compile(openApiSchema)
 
 const findUtils = require('../utils/find')
 const asyncWrap = require('../utils/async-wrap')
+const cacheHeaders = require('../utils/cache-headers')
 
 const router = exports.router = express.Router()
 
@@ -77,7 +78,7 @@ function clean(remoteService) {
 
 // Get the list of remote-services
 // Accessible to anybody
-router.get('', asyncWrap(async(req, res) => {
+router.get('', cacheHeaders.noCache, asyncWrap(async(req, res) => {
   const remoteServices = req.app.get('db').collection('remote-services')
   const query = findUtils.query(req, {
     'input-concepts': 'actions.input.concept',
@@ -155,7 +156,7 @@ const readService = asyncWrap(async(req, res, next) => {
 })
 
 // retrieve a remoteService by its id as anybody
-router.get('/:remoteServiceId', readService, (req, res, next) => {
+router.get('/:remoteServiceId', readService, cacheHeaders.resourceBased, (req, res, next) => {
   res.status(200).send(clean(req.remoteService))
 })
 
@@ -318,6 +319,6 @@ router.use('/:remoteServiceId/proxy*', readService, (req, res, next) => { req.ap
 }))
 
 // Anybody can read the API doc
-router.get('/:remoteServiceId/api-docs.json', readService, (req, res) => {
+router.get('/:remoteServiceId/api-docs.json', readService, cacheHeaders.resourceBased, (req, res) => {
   res.send(req.resourceApiDoc)
 })
