@@ -12,6 +12,10 @@ exports.resourceBased = (req, res, next) => {
   const date = (new Date(req[dateKey])).toUTCString()
   const cacheVisibility = req.user ? 'private' : 'public'
 
+  const ifModifiedSince = req.get('If-Modified-Since')
+  if (ifModifiedSince && date === ifModifiedSince) return res.status(304).send()
+  res.setHeader('Last-Modified', date)
+
   // finalizedAt passed as query parameter is used to timestamp the query and
   // make it compatible with a longer caching, only for datasets
   if (req.query.finalizedAt) {
@@ -19,14 +23,16 @@ exports.resourceBased = (req, res, next) => {
     if (qFinalizedAt > date) {
       throw createError(400, '"finalizedAt" query parameter has a value higher than the finalizedAt attribute of the dataset.')
     }
-    res.setHeader('Cache-Control', `${cacheVisibility}, max-age=${config.cache.timestampedPublicMaxAge}`)
+    res.setHeader('Cache-Control', `must-revalidate, ${cacheVisibility}, max-age=${config.cache.timestampedPublicMaxAge}`)
   } else {
-    res.setHeader('Cache-Control', `${cacheVisibility}, max-age=${config.cache.publicMaxAge}`)
+    if (cacheVisibility === 'public') {
+      res.setHeader('Cache-Control', `must-revalidate, public, max-age=${config.cache.publicMaxAge}`)
+    } else {
+      res.setHeader('Expires', '-1')
+      res.setHeader('Cache-Control', 'must-revalidate, private')
+    }
   }
 
-  const ifModifiedSince = req.get('If-Modified-Since')
-  if (ifModifiedSince && date === ifModifiedSince) return res.status(304).send()
-  res.setHeader('Last-Modified', date)
   next()
 }
 
