@@ -500,13 +500,16 @@ router.get('/:datasetId/lines', readDataset(), permissions.middleware('readLines
     bboxPromise = esUtils.bboxAgg(req.app.get('es'), req.dataset, { ...req.query })
   }
 
+  const sampling = req.query.sampling || 'neighbors'
+  if (!['max', 'neighbors'].includes(sampling)) return res.status(400).send('Sampling can be "max" or "neighbors"')
+
   const vectorTileRequested = ['mvt', 'vt', 'pbf'].includes(req.query.format)
   // Is the tile cached ?
   let cacheHash
   if (vectorTileRequested && !config.cache.disabled) {
     const { hash, value } = await cache.get(db, {
       type: 'tile',
-      sampling: '9neighbors',
+      sampling,
       datasetId: req.dataset.id,
       finalizedAt: req.dataset.finalizedAt,
       query: req.query
@@ -523,24 +526,26 @@ router.get('/:datasetId/lines', readDataset(), permissions.middleware('readLines
     const requestedSize = req.query.size ? Number(req.query.size) : 20
     if (requestedSize > 10000) throw createError(400, '"size" cannot be more than 10000')
 
+    if (sampling === 'neighbors') {
     // count docs in neighboring tiles to perform intelligent sampling
-    const counts = await Promise.all([
-      countWithCache(req.query),
-      // TODO: only the 4 that share an edge or also the 4 corners ?
-      countWithCache({ ...req.query, xyz: [xyz[0] - 1, xyz[1], xyz[2]].join(',') }),
-      countWithCache({ ...req.query, xyz: [xyz[0] + 1, xyz[1], xyz[2]].join(',') }),
-      countWithCache({ ...req.query, xyz: [xyz[0], xyz[1] - 1, xyz[2]].join(',') }),
-      countWithCache({ ...req.query, xyz: [xyz[0], xyz[1] + 1, xyz[2]].join(',') }),
-      // Using corners also yields better results
-      countWithCache({ ...req.query, xyz: [xyz[0] - 1, xyz[1] - 1, xyz[2]].join(',') }),
-      countWithCache({ ...req.query, xyz: [xyz[0] + 1, xyz[1] - 1, xyz[2]].join(',') }),
-      countWithCache({ ...req.query, xyz: [xyz[0] - 1, xyz[1] + 1, xyz[2]].join(',') }),
-      countWithCache({ ...req.query, xyz: [xyz[0] + 1, xyz[1] + 1, xyz[2]].join(',') })
-    ])
-    const maxCount = Math.max(...counts)
-    const sampleRate = requestedSize / Math.max(requestedSize, maxCount)
-    const sizeFilter = counts[0] * sampleRate
-    req.query.size = Math.min(sizeFilter, requestedSize)
+      const counts = await Promise.all([
+        countWithCache(req.query),
+        // TODO: only the 4 that share an edge or also the 4 corners ?
+        countWithCache({ ...req.query, xyz: [xyz[0] - 1, xyz[1], xyz[2]].join(',') }),
+        countWithCache({ ...req.query, xyz: [xyz[0] + 1, xyz[1], xyz[2]].join(',') }),
+        countWithCache({ ...req.query, xyz: [xyz[0], xyz[1] - 1, xyz[2]].join(',') }),
+        countWithCache({ ...req.query, xyz: [xyz[0], xyz[1] + 1, xyz[2]].join(',') }),
+        // Using corners also yields better results
+        countWithCache({ ...req.query, xyz: [xyz[0] - 1, xyz[1] - 1, xyz[2]].join(',') }),
+        countWithCache({ ...req.query, xyz: [xyz[0] + 1, xyz[1] - 1, xyz[2]].join(',') }),
+        countWithCache({ ...req.query, xyz: [xyz[0] - 1, xyz[1] + 1, xyz[2]].join(',') }),
+        countWithCache({ ...req.query, xyz: [xyz[0] + 1, xyz[1] + 1, xyz[2]].join(',') })
+      ])
+      const maxCount = Math.max(...counts)
+      const sampleRate = requestedSize / Math.max(requestedSize, maxCount)
+      const sizeFilter = counts[0] * sampleRate
+      req.query.size = Math.min(sizeFilter, requestedSize)
+    }
   }
 
   let esResponse

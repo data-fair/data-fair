@@ -139,6 +139,18 @@ La valeur est une liste de champs séparés par des virgules.
       }
     },
     style: 'commaDelimited'
+  }, {
+    in: 'query',
+    name: 'sampling',
+    description: `
+**Uniquement avec le paramètre de tuilage xyx**. Configure le mode d'échantillonage des resultats pour privilégier soit l'exhaustivité des données soit une densité plus homogène sur la carte.
+
+  - **neighbors** (défaut) : utilise la densité maximale parmi les tuiles voisines pour réduire la densité de la tuile courante au même niveau d'échantillonage (couteux en performance).
+  - **max** : retourne le maximum (limité par le paramètre size) de résultat pour chaque tuile.
+    `,
+    required: false,
+    enum: ['neighbors', 'max'],
+    default: 'neighbors'
   }]
 
   const aggSizeParam = {
