@@ -110,7 +110,7 @@ export default {
   async mounted() {
     if (!mapboxgl) return
 
-    this.mapHeight = Math.max(window.innerHeight - this.$el.getBoundingClientRect().y - this.heightMargin, 300)
+    this.mapHeight = Math.max(window.innerHeight - this.$el.getBoundingClientRect().top - this.heightMargin, 300)
 
     // Prevent overloading the tiles with long texts, geometries, etc.
     this.select = this.dataset.schema

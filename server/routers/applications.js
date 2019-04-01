@@ -70,7 +70,7 @@ router.get('', cacheHeaders.noCache, asyncWrap(async(req, res) => {
     'id': 'id'
   }, filterFields))
   const sort = findUtils.sort(req.query.sort)
-  const project = findUtils.project(req.query.select, ['configuration'])
+  const project = findUtils.project(req.query.select, ['configuration', 'configurationDraft'])
   const [skip, size] = findUtils.pagination(req.query)
   const mongoQueries = [
     size > 0 ? applications.find(query).limit(size).skip(skip).sort(sort).project(project).toArray() : Promise.resolve([]),
