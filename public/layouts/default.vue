@@ -71,6 +71,9 @@
               <v-list-tile v-for="orga in user.organizations || []" :key="orga.id" :to="`/settings/organization/${orga.id}`">
                 <v-list-tile-title>Paramètres {{ orga.name || orga.id }}</v-list-tile-title>
               </v-list-tile>
+              <v-list-tile :href="env.directoryUrl + '/me'">
+                <v-list-tile-title>Mon compte</v-list-tile-title>
+              </v-list-tile>
               <template v-if="user.isAdmin">
                 <v-divider />
                 <v-subheader>Administration</v-subheader>
@@ -79,7 +82,7 @@
                   <v-list-tile-title>Informations du service</v-list-tile-title>
                 </v-list-tile>
                 <v-list-tile to="/admin/owners">
-                  <v-list-tile-avatar><v-icon>supervisor_account</v-icon></v-list-tile-avatar>
+                  <v-list-tile-avatar><v-icon>work</v-icon></v-list-tile-avatar>
                   <v-list-tile-title>Propriétaires</v-list-tile-title>
                 </v-list-tile>
                 <v-list-tile to="/admin/errors">
@@ -89,6 +92,10 @@
                 <v-list-tile to="/admin/base-apps">
                   <v-list-tile-avatar><v-icon>apps</v-icon></v-list-tile-avatar>
                   <v-list-tile-title>Applications de base</v-list-tile-title>
+                </v-list-tile>
+                <v-list-tile :href="env.directoryUrl + '/admin/users'">
+                  <v-list-tile-avatar><v-icon>supervisor_account</v-icon></v-list-tile-avatar>
+                  <v-list-tile-title>Gestion des comptes</v-list-tile-title>
                 </v-list-tile>
                 <v-divider />
               </template>
