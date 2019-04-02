@@ -71,6 +71,17 @@ router.all('/:applicationId*', setResource, (req, res, next) => { req.app.get('a
     req.application.configuration = req.application.configurationDraft || req.application.configuration
   }
   delete req.application.configurationDraft
+  const applicationUrl = (req.query.draft === 'true' ? (req.application.urlDraft || req.application.url) : req.application.url)
+
+  // check that the user can access the base appli
+  const accessFilter = [{ public: true }]
+  if (req.user) accessFilter.push({ type: 'user', id: req.user.id })
+  if (req.user && req.user.organizations) {
+    req.user.organizations.forEach(org => {
+      accessFilter.push({ privateAccess: { $elemMatch: { type: 'organization', id: org.id } } })
+    })
+  }
+  const baseAppPromise = req.app.get('db').collection('base-applications').findOne({ url: applicationUrl, $or: accessFilter }, { projection: { id: 1 } })
 
   // the dates of last modification / finalization of both the app and the datasets it uses
   const updateDates = [new Date(req.application.updatedAt)]
@@ -78,16 +89,23 @@ router.all('/:applicationId*', setResource, (req, res, next) => { req.app.get('a
   // Update the config with dates of last finalization of the used datasets
   // this info can then be used to add ?finalizedAt=... to any queries
   // and so benefit from better caching
+  let freshDatasetsPromise
   if (req.application.configuration && req.application.configuration.datasets && req.application.configuration.datasets.length) {
-    const freshDatasets = await req.app.get('db').collection('datasets')
+    freshDatasetsPromise = req.app.get('db').collection('datasets')
       .find({ $or: req.application.configuration.datasets.map(d => ({ id: d.id })) })
       .project({ _id: 0, id: 1, finalizedAt: 1 })
       .toArray()
+  }
+  if (freshDatasetsPromise) {
+    const freshDatasets = await freshDatasetsPromise
     freshDatasets.forEach(fd => {
       updateDates.push(new Date(fd.finalizedAt))
       req.application.configuration.datasets.find(d => fd.id === d.id).finalizedAt = fd.finalizedAt
     })
   }
+
+  const baseApp = await baseAppPromise
+  if (!baseApp) return res.status(404).send('Application de base inconnue ou à accès restreint.')
 
   const ifModifiedSince = new Date(req.get('If-Modified-Since'))
   // go through UTC transformation to lose milliseconds just as last-modified and if-modified-since headers do
@@ -102,7 +120,7 @@ router.all('/:applicationId*', setResource, (req, res, next) => { req.app.get('a
 
   findUtils.setResourceLinks(req.application, 'application')
   // Remove trailing slash for more homogeneous rules afterward
-  const cleanApplicationUrl = (req.query.draft === 'true' ? (req.application.urlDraft || req.application.url) : req.application.url).replace(/\/$/, '')
+  const cleanApplicationUrl = applicationUrl.replace(/\/$/, '')
   const headers = {
     'X-Exposed-Url': req.application.exposedUrl,
     'X-Application-Url': config.publicUrl + '/api/v1/applications/' + req.params.applicationId,

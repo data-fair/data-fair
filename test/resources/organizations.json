@@ -89,6 +89,9 @@
       "id": "albanm",
       "role": "admin"
     }, {
+      "id": "superadmin",
+      "role": "admin"
+    }, {
       "id": "dhannan8",
       "role": "user"
     }]
