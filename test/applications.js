@@ -11,7 +11,7 @@ const html = `
   <body>My app body</body>
 </html>
 `
-nock('http://monapp.com').persist().get('/index.html').reply(200, html)
+nock('http://monapp1.com/').persist().get('/index.html').reply(200, html)
 
 test('Get applications when not authenticated', async t => {
   const ax = await axiosBuilder()
@@ -32,14 +32,15 @@ test('Access an unknown applicationId on proxy endpoint', async t => {
 
 test.serial('Post an external application configuration, read it, update it and delete it', async t => {
   const ax = await axiosBuilder('dmeadus0@answers.com:passwd')
-  let res = await ax.post('/api/v1/applications', { url: 'http://monapp.com' })
+  let res = await ax.post('/api/v1/applications', { url: 'http://monapp1.com/' })
   t.is(res.status, 201)
+
   const appId = res.data.id
   res = await ax.get('/api/v1/applications')
   t.is(res.status, 200)
   t.true(res.data.count >= 1)
   res = await ax.get('/api/v1/applications/' + appId)
-  t.is(res.data.url, 'http://monapp.com')
+  t.is(res.data.url, 'http://monapp1.com/')
   res = await ax.get('/api/v1/applications/' + appId + '/api-docs.json')
   t.truthy(res.data.openapi)
   res = await ax.get('/api/v1/applications/' + appId + '/config')
@@ -56,7 +57,7 @@ test.serial('Post an external application configuration, read it, update it and 
 
 test.serial('Manage the custom configuration part of the object', async t => {
   const ax = await axiosBuilder('dmeadus0@answers.com:passwd')
-  let res = await ax.post('/api/v1/applications', { url: 'http://monapp.com' })
+  let res = await ax.post('/api/v1/applications', { url: 'http://monapp1.com/' })
   const appId = res.data.id
   res = await ax.put('/api/v1/applications/' + appId + '/config', {
     datasets: [{ 'href': config.publicUrl + '/api/v1/datasets/111' }]
@@ -73,7 +74,7 @@ test.serial('Manage the custom configuration part of the object', async t => {
 
 test.serial('Use an application through the application proxy', async t => {
   const ax = await axiosBuilder('dmeadus0@answers.com:passwd')
-  let res = await ax.post('/api/v1/applications', { url: 'http://monapp.com' })
+  let res = await ax.post('/api/v1/applications', { url: 'http://monapp1.com/' })
   const appId = res.data.id
 
   // The same content is returned with or without a trailing slash
