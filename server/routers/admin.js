@@ -148,6 +148,7 @@ router.get('/base-applications', asyncWrap(async(req, res) => {
       meta: 1,
       url: 1,
       image: 1,
+      deprecated: 1,
       public: 1,
       privateAccess: 1,
       nbApplications: { $size: '$applications' },

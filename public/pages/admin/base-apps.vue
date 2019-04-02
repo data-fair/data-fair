@@ -43,6 +43,9 @@
                   </v-icon>
                   <span>{{ (baseApp.privateAccess || []).map(p => p.name).join(', ') }}</span>
                 </template>
+                <v-icon v-if="baseApp.deprecated">
+                  visibility_off
+                </v-icon>
               </v-list-tile-title>
               <v-list-tile-sub-title>{{ baseApp.description }}</v-list-tile-sub-title>
               <v-list-tile-sub-title>
@@ -76,6 +79,7 @@
         </v-card-title>
         <v-card-text>
           <p>URL : {{ currentBaseApp.url }}</p>
+          <v-checkbox v-model="patch.deprecated" label="Dépréciée" />
           <v-form>
             <v-text-field
               v-model="patch.applicationName"
@@ -174,6 +178,7 @@ export default {
         version: baseApp.version,
         description: baseApp.description,
         public: baseApp.public,
+        deprecated: baseApp.deprecated,
         image: baseApp.image,
         privateAccess: baseApp.privateAccess || []
       }
