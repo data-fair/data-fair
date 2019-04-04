@@ -74,13 +74,10 @@ router.all('/:applicationId*', setResource, (req, res, next) => { req.app.get('a
   const applicationUrl = (req.query.draft === 'true' ? (req.application.urlDraft || req.application.url) : req.application.url)
 
   // check that the user can access the base appli
-  const accessFilter = [{ public: true }]
-  if (req.user) accessFilter.push({ type: 'user', id: req.user.id })
-  if (req.user && req.user.organizations) {
-    req.user.organizations.forEach(org => {
-      accessFilter.push({ privateAccess: { $elemMatch: { type: 'organization', id: org.id } } })
-    })
-  }
+  const accessFilter = [
+    { public: true },
+    { privateAccess: { $elemMatch: { type: req.application.owner.type, id: req.application.owner.id } } }
+  ]
   const baseAppPromise = req.app.get('db').collection('base-applications').findOne({ url: applicationUrl, $or: accessFilter }, { projection: { id: 1 } })
 
   // the dates of last modification / finalization of both the app and the datasets it uses
@@ -89,21 +86,20 @@ router.all('/:applicationId*', setResource, (req, res, next) => { req.app.get('a
   // Update the config with dates of last finalization of the used datasets
   // this info can then be used to add ?finalizedAt=... to any queries
   // and so benefit from better caching
-  let freshDatasetsPromise
-  if (req.application.configuration && req.application.configuration.datasets && req.application.configuration.datasets.length) {
-    freshDatasetsPromise = req.app.get('db').collection('datasets')
-      .find({ $or: req.application.configuration.datasets.map(d => ({ id: d.id })) })
+  const datasets = req.application.configuration && req.application.configuration.datasets && req.application.configuration.datasets.filter(d => !!d)
+  if (datasets && datasets.length) {
+    const freshDatasets = await req.app.get('db').collection('datasets')
+      .find({ $or: datasets.map(d => ({ id: d.id })) })
       .project({ _id: 0, id: 1, finalizedAt: 1 })
       .toArray()
-  }
-  if (freshDatasetsPromise) {
-    const freshDatasets = await freshDatasetsPromise
+
     freshDatasets.forEach(fd => {
       updateDates.push(new Date(fd.finalizedAt))
       req.application.configuration.datasets.find(d => fd.id === d.id).finalizedAt = fd.finalizedAt
     })
   }
 
+  // we await the promise afterwards so that the datasets and baseApp promises were resolved in parallel
   const baseApp = await baseAppPromise
   if (!baseApp) return res.status(404).send('Application de base inconnue ou à accès restreint.')
 
