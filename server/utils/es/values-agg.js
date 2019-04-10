@@ -4,7 +4,7 @@ const { parseSort, prepareQuery, aliasName, prepareResultItem } = require('./com
 module.exports = async (client, dataset, query, addGeoData) => {
   const fields = dataset.schema.map(f => f.key)
   // nested grouping by a serie of fields
-  if (!query.field) throw createError(400, '"field" parameter is required')
+  if (!query.field) throw createError(400, 'La paramètre "field" est obligatoire')
   const valuesFields = query.field.split(';')
   // matching properties from the schema
   const props = valuesFields.map(f => dataset.schema.find(p => p.key === f))
@@ -16,7 +16,7 @@ module.exports = async (client, dataset, query, addGeoData) => {
   const aggSizes = query.agg_size ? query.agg_size.split(';').map(s => Number(s)) : []
   const aggTypes = []
   for (let i = 0; i < valuesFields.length; i++) {
-    if (!props[i]) throw createError(400, `"field" parameter references an unknown field ${valuesFields[i]}`)
+    if (!props[i]) throw createError(400, `Le paramètre "field" référence un champ inconnu ${valuesFields[i]}`)
 
     intervals[i] = intervals[i] || 'value' // default is to group by strict value (simple terms aggregation)
     aggTypes[i] = 'terms'
