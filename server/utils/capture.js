@@ -18,7 +18,8 @@ exports.screenshot = async (req) => {
     const appUrl = `${config.publicUrl}/app/${req.application.id}`
     const cookieText = Object.keys(req.cookies).map(c => `${c}=${req.cookies[c]}`).join('; ')
     debug(`Screenshot ${screenShortUrl}?target=${appUrl} - ${cookieText}`)
-    const res = request({
+    let res
+    const reqOpts = {
       method: 'GET',
       url: screenShortUrl,
       qs: {
@@ -27,8 +28,17 @@ exports.screenshot = async (req) => {
       headers: {
         Cookie: cookieText
       }
-    })
-    await pump(res, fs.createWriteStream(exports.path(req.application)))
+    }
+
+    try {
+      res = request(reqOpts)
+      await pump(res, fs.createWriteStream(exports.path(req.application)))
+    } catch (err) {
+      // we try twice as capture can have some stability issues
+      await new Promise(resolve => setTimeout(resolve, 4000))
+      res = request(reqOpts)
+      await pump(res, fs.createWriteStream(exports.path(req.application)))
+    }
   } catch (err) {
     // catch err locally as this method is called without waiting for result
     console.error(`Failed to capture screenshot for application ${req.application.id}`, err)

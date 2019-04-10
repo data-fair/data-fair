@@ -297,7 +297,7 @@ router.get('/:applicationId/journal', readApplication, permissions.middleware('r
 // Used by applications to declare an error
 router.post('/:applicationId/error', readApplication, permissions.middleware('writeConfig', 'write'), cacheHeaders.noCache, asyncWrap(async(req, res) => {
   if (!req.body.message) return res.status(400).send('Attribut "message" obligatoire')
-  if (req.application.status.startsWith('configured')) {
+  if (req.application.status && req.application.status.startsWith('configured')) {
     await req.app.get('db').collection('applications').updateOne({ id: req.params.applicationId }, { '$set': { status: 'error' } })
     await journals.log(req.app, req.application, { type: 'error', data: req.body.message }, 'application')
   }
