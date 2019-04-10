@@ -41,6 +41,7 @@ services:
     shm_size: '1gb'
     environment:
       - PORT=8087
+      - DEBUG=capture
       - PUBLIC_URL=http://localhost:5600/capture
 
   thumbor:
