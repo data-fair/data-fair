@@ -13,6 +13,8 @@ exports.path = (application) => {
 }
 
 exports.screenshot = async (req) => {
+  const capturePath = exports.path(req.application)
+
   try {
     const screenShortUrl = (config.captureUrl + '/api/v1/screenshot')
     const appUrl = `${config.publicUrl}/app/${req.application.id}`
@@ -32,15 +34,18 @@ exports.screenshot = async (req) => {
 
     try {
       res = request(reqOpts)
-      await pump(res, fs.createWriteStream(exports.path(req.application)))
+      await pump(res, fs.createWriteStream(capturePath))
     } catch (err) {
       // we try twice as capture can have some stability issues
       await new Promise(resolve => setTimeout(resolve, 4000))
       res = request(reqOpts)
-      await pump(res, fs.createWriteStream(exports.path(req.application)))
+      await pump(res, fs.createWriteStream(capturePath))
     }
   } catch (err) {
     // catch err locally as this method is called without waiting for result
     console.error(`Failed to capture screenshot for application ${req.application.id}`, err)
+
+    // In case of error do not keep corrupted or empty file
+    await fs.remove(capturePath)
   }
 }
