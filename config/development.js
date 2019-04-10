@@ -31,6 +31,9 @@ module.exports = {
   cache: {
     disabled: true
   },
+  worker: {
+    spawnTask: false
+  },
   browserLogLevel: 'debug',
   catalogs: [{
     title: 'Data.gouv.fr',

@@ -8,7 +8,7 @@ const iconv = require('iconv-lite')
 const countLines = (dataset, callback) => {
   const linesNumber = [...Array(dataset.file.props.numLines - 1).keys()]
   shuffle(linesNumber)
-  const sampleLineNumbers = new Set(linesNumber.slice(0, Math.min(dataset.file.props.numLines - 1, 1000)))
+  const sampleLineNumbers = new Set(linesNumber.slice(0, Math.min(dataset.file.props.numLines - 1, 4000)))
   const sample = []
   let readError
   let currentLine = 0
