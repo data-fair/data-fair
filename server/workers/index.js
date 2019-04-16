@@ -1,5 +1,5 @@
 const config = require('config')
-const exec = require('util').promisify(require('child_process').exec)
+const spawn = require('child-process-promise').spawn
 const locks = require('../utils/locks')
 const journals = require('../utils/journals')
 
@@ -110,9 +110,10 @@ async function iter(app, type) {
 
     if (config.worker.spawnTask) {
       // Run a task in a dedicated child process for  extra resiliency to fatal memory exceptions
-      let { stdout, stderr } = await exec(`node server ${taskKey} ${type} ${resource.id}`, { env: { ...process.env, MODE: 'task' } })
-      stdout.split('\n').filter(line => !!line).forEach(line => console.log)
-      stderr.split('\n').filter(line => !!line).forEach(line => console.error)
+      const spawnPromise = spawn('node', ['server', taskKey, type, resource.id], { env: { ...process.env, MODE: 'task' } })
+      spawnPromise.childProcess.stdout.on('data', data => process.stdout.write(data))
+      spawnPromise.childProcess.stderr.on('data', data => process.stderr.write(data))
+      await spawnPromise
     } else {
       await task.process(app, resource)
     }
