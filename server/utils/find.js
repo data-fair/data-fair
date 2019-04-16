@@ -205,6 +205,7 @@ exports.facetsQuery = (req, filterFields) => {
         facet.push({ $group: { _id: { [f]: '$base-application', id: '$id' } } })
       } else {
         facet.push({ $unwind: '$' + (filterFields[f] || f).split('.').shift() })
+        if (f === 'owner') facet.push({ $project: { 'owner.role': 0 } })
         facet.push({ $group: { _id: { [f]: '$' + (filterFields[f] || f), id: '$id' } } })
       }
 
