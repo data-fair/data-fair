@@ -117,7 +117,7 @@ export default {
     }
   },
   async mounted() {
-    this.$store.dispatch('fetchLicenses', this.dataset.owner)
+    if (this.dataset) this.$store.dispatch('fetchLicenses', this.dataset.owner)
     // Ping the data endpoint to check that index is available
     try {
       this.data = await this.$axios.$get(this.resourceUrl + '/lines', { size: 0 })
