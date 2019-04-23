@@ -26,7 +26,7 @@ module.exports = {
   directoryUrl: 'https://staging.koumoul.com',
   */
   secretKeys: {
-    ownerNames: 'dev_secret'
+    identities: 'dev_secret'
   },
   cache: {
     disabled: true

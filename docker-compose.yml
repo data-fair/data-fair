@@ -18,11 +18,14 @@ services:
       - 8080
       - 1080
     environment:
+      - DEBUG=webhooks
       - ADMINS=["alban.mouton@koumoul.com", "superadmin@test.com"]
-      - NAMES_WEBHOOKS=["http://localhost:5600/api/v1/owner-names?key=dev_secret"]
+      - 'IDENTITIES_WEBHOOKS=[{"base": "http://localhost:5600/api/v1/identities", "key": "dev_secret"}]'
       - PUBLIC_URL=http://localhost:5600/simple-directory
       - MAILDEV_ACTIVE=true
       - STORAGE_TYPE=file
+      #- STORAGE_TYPE=mongo
+      - STORAGE_MONGO_URL=mongodb://localhost:27017/simple-directory
       - NUXT_BUILD_BLOCKING=false
       - LIST_ENTITIES_MODE=anonymous
       - NO_UI=${NO_UI}
