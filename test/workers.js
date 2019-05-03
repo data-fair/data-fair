@@ -190,7 +190,7 @@ test.serial('Run tasks in children processes', async t => {
   t.is(dataset.count, 2)
 })
 
-test.only('Manage failure in children processes', async t => {
+test.serial('Manage failure in children processes', async t => {
   config.worker.spawnTask = true
   const datasetFd = fs.readFileSync('./test/resources/geojson-broken.geojson')
   const form = new FormData()
