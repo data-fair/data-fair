@@ -63,6 +63,7 @@ const typesFilters = {
 
 async function iter(app, type) {
   let resource, taskKey
+  let stderr = ''
   try {
     resource = await acquireNext(app.get('db'), type, typesFilters[type])
     if (!resource) return
@@ -112,7 +113,10 @@ async function iter(app, type) {
       // Run a task in a dedicated child process for  extra resiliency to fatal memory exceptions
       const spawnPromise = spawn('node', ['server', taskKey, type, resource.id], { env: { ...process.env, MODE: 'task' } })
       spawnPromise.childProcess.stdout.on('data', data => process.stdout.write(data))
-      spawnPromise.childProcess.stderr.on('data', data => process.stderr.write(data))
+      spawnPromise.childProcess.stderr.on('data', data => {
+        process.stderr.write(data)
+        stderr += data
+      })
       await spawnPromise
     } else {
       await task.process(app, resource)
@@ -125,10 +129,9 @@ async function iter(app, type) {
   } catch (err) {
     // Build back the original error message from the stderr of the child process
     const errorMessage = []
-    if (err.stderr) {
-      err.stderr.split('\n').filter(line => !!line).forEach(line => {
-        if (line.startsWith('worker:')) console.error(line)
-        else errorMessage.push(line)
+    if (stderr) {
+      stderr.split('\n').filter(line => !!line && !line.startsWith('worker:')).forEach(line => {
+        errorMessage.push(line)
       })
     } else {
       errorMessage.push(err.message)

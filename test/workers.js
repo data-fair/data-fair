@@ -189,3 +189,19 @@ test.serial('Run tasks in children processes', async t => {
   t.is(dataset.status, 'finalized')
   t.is(dataset.count, 2)
 })
+
+test.only('Manage failure in children processes', async t => {
+  config.worker.spawnTask = true
+  const datasetFd = fs.readFileSync('./test/resources/geojson-broken.geojson')
+  const form = new FormData()
+  form.append('file', datasetFd, 'geojson-broken2.geojson')
+  const ax = await axiosBuilder('dmeadus0@answers.com:passwd')
+  let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
+  t.is(res.status, 201)
+  const dataset = await workers.hook('finalizer')
+  // Check that there is an error message in the journal
+  res = await ax.get('/api/v1/datasets/' + dataset.id + '/journal')
+  t.is(res.status, 200)
+  t.is(res.data[1].type, 'error')
+  t.is(res.data[1].data.slice(0, 36), 'Élément 1 du jeu de données - failed')
+})
