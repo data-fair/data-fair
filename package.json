@@ -104,6 +104,7 @@
     "mapbox-gl": "^0.53.1",
     "marked": "^0.3.12",
     "matchstick": "^1.2.1",
+    "material-design-icons-iconfont": "^5.0.1",
     "moment": "^2.20.1",
     "mongo-escape": "^2.0.6",
     "mongodb": "^3.2.2",
