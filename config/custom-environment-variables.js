@@ -66,5 +66,12 @@ module.exports = {
   prebuilt: {
     __name: 'PREBUILT',
     __format: 'json'
+  },
+  info: {
+    termsOfService: 'INFO_TOS',
+    contact: {
+      __name: 'INFO_CONTACT',
+      __format: 'json'
+    }
   }
 }
