@@ -54,6 +54,11 @@ exports.initDataset = async (db, dataset) => {
   await collection.createIndex({ _deleted: 1 })
 }
 
+exports.deleteDataset = async (db, dataset) => {
+  const collection = exports.collection(db, dataset)
+  await collection.drop()
+}
+
 const applyTransaction = async (collection, user, transac, validate) => {
   let { _action, ...body } = transac
   _action = _action || 'create'
@@ -100,14 +105,15 @@ async function manageAttachment(req, keepExisting) {
         if (req.body[f.key] !== undefined) req.body[f.key] = fieldsSniffer.format(req.body[f.key], f)
       })
   }
-  const dir = path.join(datasetUtils.attachmentsDir(req.dataset), req.body._id || req.params.lineId)
+  const lineId = req.params.lineId || req.body._id
+  const dir = path.join(datasetUtils.attachmentsDir(req.dataset), lineId)
 
   if (req.file) {
     // An attachment was uploaded
     await fs.ensureDir(dir)
     await fs.emptyDir(dir)
     await fs.rename(req.file.path, path.join(dir, req.file.originalname))
-    const relativePath = path.join(req.body._id, req.file.originalname)
+    const relativePath = path.join(lineId, req.file.originalname)
     let pathField = req.dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')
     if (!pathField) {
       throw createError(400, `Le schéma ne prévoit pas d'associer une pièce jointe`)
