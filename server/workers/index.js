@@ -146,7 +146,13 @@ async function iter(app, type) {
     if (hooks[taskKey]) hooks[taskKey].reject({ resource, message: errorMessage.join('\n') })
     if (hooks[taskKey + '/' + resource.id]) hooks[taskKey + '/' + resource.id].reject({ resource, message: errorMessage.join('\n') })
   } finally {
-    if (resource) await locks.release(app.get('db'), `${type}:${resource.id}`)
+    if (resource) {
+      // we release the worker right away, but we do not release the lock on the dataset
+      // this is to prevent working very fast on the same resource in series
+      setTimeout(() => {
+        locks.release(app.get('db'), `${type}:${resource.id}`)
+      }, config.worker.releaseInterval)
+    }
     // console.log(`Worker "${worker.eventsPrefix}" released dataset "${dataset.id}"`)
   }
 }

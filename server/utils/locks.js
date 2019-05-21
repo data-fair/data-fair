@@ -27,7 +27,12 @@ exports.acquire = async (db, _id) => {
   const locks = db.collection('locks')
   try {
     await locks.insertOne({ _id, pid })
-    await locks.updateOne({ _id }, { '$currentDate': { updatedAt: true } })
+    try {
+      await locks.updateOne({ _id }, { '$currentDate': { updatedAt: true } })
+    } catch (err) {
+      await locks.deleteOne({ _id, pid })
+      throw err
+    }
     return true
   } catch (err) {
     if (err.code !== 11000) throw err
