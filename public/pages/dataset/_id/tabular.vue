@@ -52,7 +52,7 @@
           <tr>
             <th
               v-for="header in headers"
-              :key="header.text"
+              :key="header.value"
               :class="['column text-xs-left', header.sortable ? 'sortable' : '', pagination.descending ? 'desc' : 'asc', header.value === pagination.sortBy ? 'active' : '']"
             >
               <v-tooltip v-if="header.tooltip" bottom style="margin-right: 8px;">
@@ -67,14 +67,22 @@
           </tr>
         </template>
         <template slot="items" slot-scope="props">
-          <td v-for="header in headers" :key="header.value">
-            <template v-if="header.value === '_actions'">
+          <td v-for="header in headers" :key="header.value" class="pr-0 pl-4">
+            <v-layout v-if="header.value === '_actions'" row>
               <v-btn flat icon color="warning" title="Supprimer cette ligne" @click="editedLine = Object.assign({}, props.item); deleteLineDialog = true;">
                 <v-icon>delete</v-icon>
               </v-btn>
               <v-btn flat icon color="primary" title="Éditer cette ligne" @click="editedLine = Object.assign({}, props.item); showEditLineDialog();">
                 <v-icon>edit</v-icon>
               </v-btn>
+            </v-layout>
+            <template v-else-if="header.value === '_thumbnail'">
+              <v-avatar v-if="props.item._thumbnail" tile :size="40">
+                <img :src="props.item._thumbnail">
+              </v-avatar>
+            </template>
+            <template v-else-if="digitalDocumentField && digitalDocumentField.key === header.value">
+              <a :href="props.item._attachment_url">{{ props.item[header.value] }}</a>
             </template>
             <template v-else>
               {{ ((props.item[header.value] === undefined || props.item[header.value] === null ? '' : props.item[header.value]) + '') | truncate(50) }}
@@ -181,14 +189,22 @@ export default {
           tooltip: field.description || (field['x-refersTo'] && this.vocabulary && this.vocabulary[field['x-refersTo']] && this.vocabulary[field['x-refersTo']].description)
         }))
 
-      if (this.dataset.isRest && this.can('writeData')) {
-        return [{ text: '', value: '_actions' }].concat(fieldsHeaders)
-      } else {
-        return fieldsHeaders
+      if (this.imageField) {
+        fieldsHeaders.unshift({ text: '', value: '_thumbnail' })
       }
+      if (this.dataset.isRest && this.can('writeData')) {
+        fieldsHeaders.unshift({ text: '', value: '_actions' })
+      }
+      return fieldsHeaders
     },
     plural() {
       return this.data.total > 1
+    },
+    imageField() {
+      return this.dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/image')
+    },
+    digitalDocumentField() {
+      return this.dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')
     },
     jsonSchema() {
       return {
@@ -222,6 +238,7 @@ export default {
         size: this.pagination.rowsPerPage,
         page: this.pagination.page
       }
+      if (this.imageField) params.thumbnail = `40x40`
       if (this.pagination.sortBy) params.sort = (this.pagination.descending ? '-' : '') + this.pagination.sortBy
       if (this.query) params.q = this.query
       if (this.select.length) params.select = this.select.join(',')

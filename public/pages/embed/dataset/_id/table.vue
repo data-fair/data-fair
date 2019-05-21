@@ -50,8 +50,18 @@
           </tr>
         </template>
         <template slot="items" slot-scope="props">
-          <td v-for="header in headers" :key="header.value" :style="`height: ${lineHeight}px;`">
-            {{ ((props.item[header.value] === undefined || props.item[header.value] === null ? '' : props.item[header.value]) + '') | truncate(50) }}
+          <td v-for="header in headers" :key="header.value" :style="`height: ${lineHeight}px;`" class="pr-0 pl-4">
+            <template v-if="header.value === '_thumbnail'">
+              <v-avatar v-if="props.item._thumbnail" tile :size="40">
+                <img :src="props.item._thumbnail">
+              </v-avatar>
+            </template>
+            <template v-else-if="digitalDocumentField && digitalDocumentField.key === header.value">
+              <a :href="props.item._attachment_url">{{ props.item[header.value] }}</a>
+            </template>
+            <template v-else>
+              {{ ((props.item[header.value] === undefined || props.item[header.value] === null ? '' : props.item[header.value]) + '') | truncate(50) }}
+            </template>
           </td>
         </template>
       </v-data-table>
@@ -84,7 +94,7 @@ export default {
     ...mapState('dataset', ['dataset']),
     ...mapGetters('dataset', ['resourceUrl']),
     headers() {
-      return this.dataset.schema
+      const fieldsHeaders = this.dataset.schema
         .filter(field => !field['x-calculated'])
         .filter(field => !this.select.length || this.select.includes(field.key))
         .map(field => ({
@@ -93,6 +103,17 @@ export default {
           sortable: (field.type === 'string' && field.format) || field.type === 'number' || field.type === 'integer',
           tooltip: field.description || (field['x-refersTo'] && this.vocabulary && this.vocabulary[field['x-refersTo']] && this.vocabulary[field['x-refersTo']].description)
         }))
+
+      if (this.imageField) {
+        fieldsHeaders.unshift({ text: '', value: '_thumbnail' })
+      }
+      return fieldsHeaders
+    },
+    imageField() {
+      return this.dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/image')
+    },
+    digitalDocumentField() {
+      return this.dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')
     }
   },
   watch: {
@@ -121,6 +142,7 @@ export default {
         size: this.pagination.rowsPerPage,
         page: this.pagination.page
       }
+      if (this.imageField) params.thumbnail = `40x40`
       if (this.pagination.sortBy) params.sort = (this.pagination.descending ? '-' : '') + this.pagination.sortBy
       if (this.query) params.q = this.query
       if (this.select.length) params.select = this.select.join(',')
