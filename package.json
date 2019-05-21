@@ -1,6 +1,6 @@
 {
   "name": "data-fair",
-  "version": "0.58.9",
+  "version": "0.59.0",
   "description": "",
   "main": "server",
   "scripts": {
