@@ -47,7 +47,8 @@ exports.start = async (app) => {
 // Stop and wait for all workers to finish their current task
 exports.stop = async () => {
   stopped = true
-  return Promise.all(currentIters.filter(p => !!p))
+  await Promise.all(currentIters.filter(p => !!p))
+  await new Promise(resolve => setTimeout(resolve, config.worker.releaseInterval))
 }
 
 // Filters to select eligible datasets or applications for processing
