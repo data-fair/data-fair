@@ -216,19 +216,19 @@ router.delete('/:datasetId', readDataset(), permissions.middleware('delete', 'ad
     } catch (err) {
       console.error('Error while deleting original file', err)
     }
-    try {
-      if (!baseTypes.has(req.dataset.originalFile.mimetype)) {
+    if (!baseTypes.has(req.dataset.originalFile.mimetype)) {
+      try {
         await unlink(datasetUtils.fileName(req.dataset))
+      } catch (err) {
+        console.error('Error while deleting converted file', err)
       }
-    } catch (err) {
-      console.error('Error while deleting converted file', err)
     }
-    try {
-      if (converter.archiveTypes.has(req.dataset.originalFile.mimetype)) {
+    if (converter.archiveTypes.has(req.dataset.originalFile.mimetype)) {
+      try {
         await rimraf(datasetUtils.attachmentsDir(req.dataset))
+      } catch (err) {
+        console.error('Error while deleting decompressed files', err)
       }
-    } catch (err) {
-      console.error('Error while deleting decompressed files', err)
     }
   }
 
@@ -242,13 +242,15 @@ router.delete('/:datasetId', readDataset(), permissions.middleware('delete', 'ad
 
   await db.collection('datasets').deleteOne({ id: req.params.datasetId })
   await db.collection('journals').deleteOne({ type: 'dataset', id: req.params.datasetId })
-  try {
-    await esUtils.delete(req.app.get('es'), req.dataset)
-  } catch (err) {
-    console.error('Error while deleting dataset indexes and alias', err)
+  if (!req.dataset.isVirtual) {
+    try {
+      await esUtils.delete(req.app.get('es'), req.dataset)
+    } catch (err) {
+      console.error('Error while deleting dataset indexes and alias', err)
+    }
+    await datasetUtils.updateStorageSize(db, req.dataset.owner)
   }
 
-  await datasetUtils.updateStorageSize(db, req.dataset.owner)
   res.sendStatus(204)
 }))
 
