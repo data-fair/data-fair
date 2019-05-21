@@ -210,24 +210,26 @@ router.put('/:datasetId/owner', readDataset(), permissions.middleware('delete', 
 // Delete a dataset
 router.delete('/:datasetId', readDataset(), permissions.middleware('delete', 'admin'), asyncWrap(async(req, res) => {
   const db = req.app.get('db')
-  try {
-    await unlink(datasetUtils.originalFileName(req.dataset))
-  } catch (err) {
-    console.error('Error while deleting original file', err)
-  }
-  try {
-    if (!baseTypes.has(req.dataset.originalFile.mimetype)) {
-      await unlink(datasetUtils.fileName(req.dataset))
+  if (req.dataset.originalFile) {
+    try {
+      await unlink(datasetUtils.originalFileName(req.dataset))
+    } catch (err) {
+      console.error('Error while deleting original file', err)
     }
-  } catch (err) {
-    console.error('Error while deleting converted file', err)
-  }
-  try {
-    if (converter.archiveTypes.has(req.dataset.originalFile.mimetype)) {
-      await rimraf(datasetUtils.attachmentsDir(req.dataset))
+    try {
+      if (!baseTypes.has(req.dataset.originalFile.mimetype)) {
+        await unlink(datasetUtils.fileName(req.dataset))
+      }
+    } catch (err) {
+      console.error('Error while deleting converted file', err)
     }
-  } catch (err) {
-    console.error('Error while deleting decompressed files', err)
+    try {
+      if (converter.archiveTypes.has(req.dataset.originalFile.mimetype)) {
+        await rimraf(datasetUtils.attachmentsDir(req.dataset))
+      }
+    } catch (err) {
+      console.error('Error while deleting decompressed files', err)
+    }
   }
 
   if (req.dataset.isRest) {
