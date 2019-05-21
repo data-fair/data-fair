@@ -20,7 +20,7 @@
         <v-btn v-if="dataset.isRest" color="primary" @click="newPropertyKey = null; newPropertyType = null; $refs.addPropertyForm.resetValidation(); addPropertyDialog = true">
           Ajouter une propriété
         </v-btn>
-        <v-btn v-if="dataset.isRest" :disabled="dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')" @click="addAttachmentProperty">
+        <v-btn v-if="dataset.isRest" :disabled="!!dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')" @click="addAttachmentProperty">
           Accepter des pièces jointes
         </v-btn>
       </v-layout>

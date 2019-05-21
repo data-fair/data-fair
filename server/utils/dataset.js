@@ -169,7 +169,12 @@ exports.extendedSchema = (dataset) => {
   if (dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')) {
     schema.push({ 'x-calculated': true, key: '_file.content', type: 'string', title: `Contenu textuel du fichier`, description: `Résultat d'une extraction automatique` })
     schema.push({ 'x-calculated': true, key: '_file.content_type', type: 'string', title: `Type mime du fichier`, description: `Résultat d'une détection automatique.` })
-    schema.push({ 'x-calculated': true, key: '_file.content_length', type: 'integer', title: `La taille en octet du fichier` })
+    schema.push({ 'x-calculated': true, key: '_file.content_length', type: 'integer', title: `La taille en octet du fichier`, description: `Résultat d'une détection automatique.` })
+    if (dataset.attachmentsAsImage) {
+      schema.push({ 'x-calculated': true, key: '_attachment_url', type: 'string', title: `URL de téléchargement unitaire de l'image jointe`, 'x-refersTo': 'http://schema.org/image' })
+    } else {
+      schema.push({ 'x-calculated': true, key: '_attachment_url', type: 'string', title: `URL de téléchargement unitaire du fichier joint` })
+    }
   }
   if (geoUtils.schemaHasGeopoint(dataset.schema) || geoUtils.schemaHasGeometry(dataset.schema)) {
     schema.push({ 'x-calculated': true, key: '_geoshape', type: 'object', title: `Géométrie`, description: `Au format d'une géométrie GeoJSON` })

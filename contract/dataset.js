@@ -257,6 +257,11 @@ module.exports = {
       default: false,
       description: 'true when the dataset has attached files'
     },
+    attachmentsAsImage: {
+      type: 'boolean',
+      default: false,
+      description: 'Set to true to use attached files as illustrations of the line'
+    },
     isVirtual: {
       type: 'boolean',
       default: false,

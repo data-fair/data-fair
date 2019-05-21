@@ -49,9 +49,8 @@ services:
 
   thumbor:
     image: apsl/thumbor:6.4.2
+    network_mode: host
     environment:
       - SECURITY_KEY=thumborkey
       - STORAGE_EXPIRATION_SECONDS=600
       - MAX_AGE=600
-    ports:
-      - 8000:8000

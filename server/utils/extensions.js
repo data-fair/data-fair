@@ -96,6 +96,7 @@ class PreserveExtensionStream extends Transform {
         if (item[attachmentKey]) {
           const filePath = path.join(datasetUtils.attachmentsDir(this.options.dataset), item[attachmentKey])
           if (await fs.pathExists(filePath)) {
+            item._attachment_url = `${config.publicUrl}/api/v1/datasets/${this.options.dataset.id}/attachments/${item[attachmentKey]}`
             item._file_raw = (await fs.readFile(filePath))
               .toString('base64')
           }
