@@ -110,9 +110,9 @@ const readDataset = (acceptedStatuses) => asyncWrap(async(req, res, next) => {
     if (req.isNewDataset || !acceptedStatuses || acceptedStatuses.includes(req.dataset.status)) return next()
 
     // dataset found but not in proper state.. wait a little while
-    await new Promise(resolve => setTimeout(resolve, 100))
+    await new Promise(resolve => setTimeout(resolve, 400))
   }
-  throw createError(409, 'Dataset is not in proper state to be updated')
+  throw createError(409, `Le jeu de données n'est pas dans un état permettant l'opération demandée'. État courant : ${req.dataset.status}.`)
 })
 
 router.use('/:datasetId/permissions', readDataset(), permissions.router('datasets', 'dataset'))
@@ -230,6 +230,14 @@ router.delete('/:datasetId', readDataset(), permissions.middleware('delete', 'ad
     console.error('Error while deleting decompressed files', err)
   }
 
+  if (req.dataset.isRest) {
+    try {
+      await restDatasetsUtils.deleteDataset(db, req.dataset)
+    } catch (err) {
+      console.error('Error while removing mongodb collection for REST dataset', err)
+    }
+  }
+
   await db.collection('datasets').deleteOne({ id: req.params.datasetId })
   await db.collection('journals').deleteOne({ type: 'dataset', id: req.params.datasetId })
   try {
@@ -345,6 +353,8 @@ router.post('', beforeUpload, filesUtils.uploadFile(), asyncWrap(async(req, res)
 
 // PUT or POST with an id to create or update an existing dataset data
 const attemptInsert = asyncWrap(async(req, res, next) => {
+  if (!req.user) return res.status(401).send()
+
   const newDataset = initNew(req)
   newDataset.id = req.params.datasetId
 
@@ -399,8 +409,8 @@ const updateDataset = asyncWrap(async(req, res) => {
     dataset.updatedBy = { id: req.user.id, name: req.user.name }
     dataset.updatedAt = moment().toISOString()
     await db.collection('datasets').replaceOne({ id: req.params.datasetId }, dataset)
-    if (req.isNewDataset) await journals.log(req.app, dataset, { type: 'data-created' }, 'dataset')
-    else await journals.log(req.app, dataset, { type: 'data-updated' }, 'dataset')
+    if (req.isNewDataset) await journals.log(req.app, dataset, { type: 'dataset-created' }, 'dataset')
+    else await journals.log(req.app, dataset, { type: 'dataset-updated' }, 'dataset')
     await datasetUtils.updateStorageSize(db, req.dataset.owner)
     res.status(req.isNewDataset ? 201 : 200).send(clean(dataset))
   } catch (err) {
