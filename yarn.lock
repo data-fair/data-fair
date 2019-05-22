@@ -838,17 +838,17 @@
   resolved "https://registry.yarnpkg.com/@koumoul/vue-multianalytics/-/vue-multianalytics-1.10.1.tgz#4fc68d6568ceef3164c7ae82a26798c8ce951147"
   integrity sha512-HboEYs94OQyi+RFINUQCcr41IN3OWzfFcvgIaDbMnWGXKwGcLgt2Us3ECCm1VyvSrLq0+A0oEvgc3idVpY3opA==
 
-"@koumoul/vuetify-jsonschema-form@^0.25.0":
-  version "0.25.0"
-  resolved "https://registry.yarnpkg.com/@koumoul/vuetify-jsonschema-form/-/vuetify-jsonschema-form-0.25.0.tgz#54c27307549ad8fcf20e77ff738be866e28720ae"
-  integrity sha512-H2nPTReZKob13WGuzLkwhng5nJvQvZkl1wFujNGK41jdLhztDuN60GknB6D6HJI9XKvRwknEmdmbEyFQa86LnQ==
+"@koumoul/vuetify-jsonschema-form@^0.27.1":
+  version "0.27.1"
+  resolved "https://registry.yarnpkg.com/@koumoul/vuetify-jsonschema-form/-/vuetify-jsonschema-form-0.27.1.tgz#b4000c3e40909851f71d3db334d86c1bc709dffa"
+  integrity sha512-dk0GqFOQLUvhhbMoVqsrxiB4dtjWzP6OXmXw57xxaCQhG+Y4KnNudqu7+paBwzY8bIjaJ3tdOFRL5Y2wlokMNw==
   dependencies:
     markdown-it "^8.4.2"
-    match-all "^1.2.4"
+    match-all "^1.2.5"
     property-expr "^1.5.1"
     vue-color "^2.7.0"
-    vue-swatches "^1.0.2"
-    vuedraggable "^2.16.0"
+    vue-swatches "^1.0.3"
+    vuedraggable "^2.20.0"
 
 "@mapbox/geojson-area@0.2.2":
   version "0.2.2"
@@ -8129,7 +8129,7 @@ marked@^0.3.12:
   resolved "https://registry.yarnpkg.com/marked/-/marked-0.3.19.tgz#5d47f709c4c9fc3c216b6d46127280f40b39d790"
   integrity sha512-ea2eGWOqNxPcXv8dyERdSr/6FmzvWwzjMxpfGB/sbMccXoct+xY+YukPD+QTUZwyvK7BZwcr4m21WBOW41pAkg==
 
-match-all@^1.2.4:
+match-all@^1.2.5:
   version "1.2.5"
   resolved "https://registry.yarnpkg.com/match-all/-/match-all-1.2.5.tgz#f709af311a7cb9ae464d9107a4f0fe08d3326eff"
   integrity sha512-KW4trRDMYbVkAKZ1J655vh0931mk3XM1lIJ480TXUL3KBrOsZ6WpryYJELonvtXC1O4erLYB069uHidLkswbjQ==
@@ -12729,7 +12729,7 @@ vue-style-loader@^4.1.0:
     hash-sum "^1.0.2"
     loader-utils "^1.0.2"
 
-vue-swatches@^1.0.2:
+vue-swatches@^1.0.3:
   version "1.0.3"
   resolved "https://registry.yarnpkg.com/vue-swatches/-/vue-swatches-1.0.3.tgz#84eb23ba99bbbb0d56698f3a8bdb1b340203d33b"
   integrity sha512-3J+Nc3bisvhhp0BW0pfTbQvdl3i+dhwoPjoM+2D6R6hW65KNpXOA+sJwcSg2j1Xd6fLcOV7LMb2sz6s4vKSWRg==
@@ -12756,13 +12756,6 @@ vue@^2.6.10:
   version "2.6.10"
   resolved "https://registry.yarnpkg.com/vue/-/vue-2.6.10.tgz#a72b1a42a4d82a721ea438d1b6bf55e66195c637"
   integrity sha512-ImThpeNU9HbdZL3utgMCq0oiMzAkt1mcgy3/E6zWC/G6AaQoeuFdsl9nDhTDU3X1R6FK7nsIUuRACVcjI+A2GQ==
-
-vuedraggable@^2.16.0:
-  version "2.19.2"
-  resolved "https://registry.yarnpkg.com/vuedraggable/-/vuedraggable-2.19.2.tgz#a82a35e081eb63272c53c71b51b7e4e4f906e394"
-  integrity sha512-O9xmztFDrs/bjWFBOHxQHm8cbvdMP6pPl5KwTewy+F8B89MtC3+dOrs0CUcsfRVQpq7vLSk890jndJJykODIgA==
-  dependencies:
-    sortablejs "^1.8.4"
 
 vuedraggable@^2.20.0:
   version "2.20.0"
