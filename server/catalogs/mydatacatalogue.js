@@ -46,21 +46,25 @@ exports.harvestDataset = async (catalog, datasetId, req) => {
 function datasetPageDesc(dataset) {
   const desc = dataset.description ? dataset.description + '\n\n' : ''
   const url = `${config.publicUrl}/dataset/${dataset.id}/description`
-  return desc + `Ce jeu de données a été publié depuis ${config.publicUrl}. Consultez la page ${url} pour accéder à sa description détaillée, prévisualisation, documentation d'API, etc.`
+  return desc + `Ce jeu de données a été publié depuis <a href="${config.publicUrl}">Data Fair</a>.<br>Consultez <a href="${url}">sa page</a> pour accéder à sa description détaillée, prévisualisation, documentation d'API, etc.`
 }
 
 async function createNewDataset(catalog, dataset, publication) {
-  const mdcDataset = {
+  const source = {
+    id: dataset.id, // not very good to impose an id, but MDC is not very good with undefined ids
     title: dataset.title,
     type: 'tabular-dataset',
     format: 'data-fair',
     description: datasetPageDesc(dataset),
     attributes: dataset.schema.map(a => ({ id: a.key })),
     recordCount: dataset.count || 0,
-    dataFairDatasetId: dataset.id
+    dataFairDatasetId: dataset.id,
+    tags: {
+      keyword: [{ id: 'data-fair', title: 'Données Data Fair', type: 'keyword' }]
+    }
   }
   try {
-    const res = await axios.post(url.resolve(catalog.url, 'api/v1/sources'), mdcDataset, { headers: { 'x-apiKey': catalog.apiKey } })
+    const res = await axios.post(url.resolve(catalog.url, 'api/v1/sources'), source, { headers: { 'x-apiKey': catalog.apiKey } })
     if (!res.data.id || typeof res.data.id !== 'string') {
       throw new Error(`Erreur lors de l'envoi à ${catalog.url} : le format de retour n'est pas correct.`)
     }

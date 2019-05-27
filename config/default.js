@@ -116,6 +116,7 @@ module.exports = {
     key: 'thumborkey'
   },
   prebuilt: false,
+  nuxtDev: false,
   licenses: [{
     title: 'Licence Ouverte / Open Licence',
     href: 'https://www.etalab.gouv.fr/licence-ouverte-open-licence'

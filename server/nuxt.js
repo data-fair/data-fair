@@ -12,7 +12,7 @@ module.exports = async () => {
     return (req, res, next) => next()
   } else {
     // Prepare nuxt for rendering and serving UI
-    nuxtConfig.dev = false
+    nuxtConfig.dev = config.nuxtDev
     const nuxt = new Nuxt(nuxtConfig)
     await nuxt.ready()
     if (!config.prebuilt) await new Builder(nuxt).build()
