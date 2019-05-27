@@ -51,8 +51,8 @@ function datasetPageDesc(dataset) {
 
 async function createNewDataset(catalog, dataset, publication) {
   const source = {
-    id: dataset.id, // not very good to impose an id, but MDC is not very good with undefined ids
-    title: dataset.title,
+    id: `df-${dataset.id}`, // maybe weird to impose an id, but MDC is not very good with undefined ids
+    title: dataset.title || (dataset.file && dataset.file.name),
     type: 'tabular-dataset',
     format: 'data-fair',
     description: datasetPageDesc(dataset),
