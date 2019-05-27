@@ -54,6 +54,8 @@ export default () => ({
     async setId({ commit, getters, dispatch, state }, applicationId) {
       commit('setAny', { applicationId })
       dispatch('fetchInfo')
+    },
+    subscribe({ getters, dispatch }) {
       eventBus.$emit('subscribe', getters.journalChannel)
       eventBus.$on(getters.journalChannel, event => {
         if (event.type === 'error') eventBus.$emit('notification', { error: event.data, msg: `Le service a rencontré une erreur pendant le traitement de l'application:` })

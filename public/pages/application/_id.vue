@@ -207,13 +207,14 @@ export default {
   },
   mounted() {
     this.setId(this.$route.params.id)
+    this.subscribe()
   },
   destroyed() {
     this.clear()
   },
   methods: {
     ...mapActions(['fetchVocabulary']),
-    ...mapActions('application', ['setId', 'patch', 'remove', 'clear', 'changeOwner']),
+    ...mapActions('application', ['setId', 'patch', 'remove', 'clear', 'changeOwner', 'subscribe']),
     async confirmRemove() {
       this.showDeleteDialog = false
       await this.remove()

@@ -230,11 +230,14 @@ export default {
     await store.dispatch('dataset/setId', route.params.id)
     await store.dispatch('fetchVocabulary', route.params.id)
   },
+  mounted() {
+    this.subscribe()
+  },
   destroyed() {
     this.clear()
   },
   methods: {
-    ...mapActions('dataset', ['patch', 'remove', 'clear', 'changeOwner']),
+    ...mapActions('dataset', ['patch', 'remove', 'clear', 'changeOwner', 'subscribe']),
     async confirmRemove() {
       this.showDeleteDialog = false
       await this.remove()

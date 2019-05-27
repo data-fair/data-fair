@@ -90,6 +90,8 @@ export default () => ({
     async setId({ commit, getters, dispatch, state }, datasetId) {
       commit('setAny', { datasetId })
       await dispatch('fetchInfo')
+    },
+    subscribe({ getters, dispatch }) {
       eventBus.$emit('subscribe', getters.journalChannel)
       eventBus.$on(getters.journalChannel, event => {
         if (event.type === 'finalize-end') {

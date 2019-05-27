@@ -10,6 +10,9 @@ export default {
   components: { Journal },
   computed: {
     ...mapState('dataset', ['journal'])
+  },
+  mounted() {
+    this.$store.dispatch('dataset/subscribe')
   }
 }
 </script>
