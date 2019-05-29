@@ -1,7 +1,7 @@
 version: '3'
 services:
   es:
-    image: koumoul/data-fair-elasticsearch:6.3.2
+    image: koumoul/data-fair-elasticsearch:7.0.0
     ports:
       - 9200:9200
       - 9300:9300

@@ -110,7 +110,7 @@ class PreserveExtensionStream extends Transform {
           index: this.indexName,
           body: { query: { constant_score: { filter: { term: { [extensionKey + '._hash']: h } } } } }
         })
-        if (res.hits.total > 0) {
+        if (res.hits.total.value > 0) {
           const extensionResult = res.hits.hits[0]._source[extensionKey]
           const selectFields = this.extensionsMap[extensionKey].select || []
           const selectedExtensionResult = Object.keys(extensionResult)
@@ -174,7 +174,7 @@ class ESInputStream extends Readable {
         this.i += 1
       }
 
-      if (res.hits.total > this.i) {
+      if (res.hits.total.value > this.i) {
         if (this.reading) {
           this.reading = false
           await this._read()

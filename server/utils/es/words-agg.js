@@ -43,7 +43,7 @@ module.exports = async (client, dataset, query) => {
   const words = await Promise.all(buckets.map(bucket => unstem(client, dataset, field, bucket.key)))
 
   return {
-    total: esResponse.hits.total,
+    total: esResponse.hits.total.value,
     sample: esResponse.aggregations.sample.doc_count,
     results: buckets.map((bucket, i) => ({
       word: words[i],

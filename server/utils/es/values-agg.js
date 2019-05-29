@@ -124,7 +124,7 @@ module.exports = async (client, dataset, query, addGeoData) => {
 
 const prepareValuesAggResponse = (esResponse, fields, dataset, query) => {
   const response = {
-    total: esResponse.hits.total,
+    total: esResponse.hits.total.value,
     took: esResponse.took,
     timed_out: esResponse.timed_out
   }

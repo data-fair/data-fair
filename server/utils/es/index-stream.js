@@ -18,16 +18,16 @@ class IndexStream extends Transform {
       if (this.options.updateMode) {
         const keys = Object.keys(item.doc)
         if (keys.length === 0 || (keys.length === 1 && keys[0] === '_i')) return callback()
-        this.body.push({ update: { _index: this.options.indexName, _type: 'line', _id: item.id, retry_on_conflict: 3 } })
+        this.body.push({ update: { _index: this.options.indexName, _id: item.id, retry_on_conflict: 3 } })
         this.body.push({ doc: item.doc })
         this.bulkChars += JSON.stringify(item.doc).length
       } else if (item._deleted) {
-        const params = { delete: { _index: this.options.indexName, _type: 'line', _id: item._id } }
+        const params = { delete: { _index: this.options.indexName, _id: item._id } }
         // kinda lame, but pushing the delete query twice keeps parity of the body size that we use in reporting results
         this.body.push(params)
         this.body.push(item)
       } else {
-        const params = { index: { _index: this.options.indexName, _type: 'line' } }
+        const params = { index: { _index: this.options.indexName } }
         if (item._id) {
           params.index._id = item._id
           delete item._id

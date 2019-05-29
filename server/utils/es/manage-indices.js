@@ -4,7 +4,7 @@ const { aliasName, esProperty } = require('./commons')
 
 exports.indexDefinition = (dataset) => {
   const body = JSON.parse(JSON.stringify(indexBase))
-  const properties = body.mappings.line.properties = {}
+  const properties = body.mappings.properties = {}
   datasetUtils.extendedSchema(dataset).forEach(jsProp => {
     const esProp = esProperty(jsProp)
     if (esProp) properties[jsProp.key] = esProp
@@ -28,8 +28,8 @@ exports.initDatasetIndex = async (client, dataset) => {
 // so that we might optimize and reindex only when necessary
 exports.updateDatasetMapping = async (client, dataset) => {
   const index = aliasName(dataset)
-  const body = exports.indexDefinition(dataset).mappings.line
-  await client.indices.putMapping({ index, type: 'line', body })
+  const body = exports.indexDefinition(dataset).mappings
+  await client.indices.putMapping({ index, body })
 }
 
 exports.delete = async (client, dataset) => {
@@ -53,7 +53,7 @@ const indexBase = {
   // Minimal overhead by default as we might deal with a lot of small indices.
   // TODO: a way to override this ? Maybe intelligently based on size of the file ?
   settings: { index: { number_of_shards: 1, number_of_replicas: 1 } },
-  mappings: { line: {} }
+  mappings: { }
 }
 
 exports.datasetInfos = async (client, dataset) => {

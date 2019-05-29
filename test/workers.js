@@ -45,7 +45,7 @@ test.serial('Process newly uploaded CSV dataset', async t => {
   t.not(idProp.enum.indexOf('koumoul'), -1)
   const esIndices = await test.app.get('es').indices.get({ index: esUtils.aliasName(dataset) })
   const esIndex = Object.values(esIndices)[0]
-  const mapping = esIndex.mappings.line
+  const mapping = esIndex.mappings
   t.is(mapping.properties.id.type, 'keyword')
   t.is(mapping.properties.adr.type, 'keyword')
   t.is(mapping.properties.adr.fields.text.type, 'text')
@@ -63,7 +63,7 @@ test.serial('Process newly uploaded CSV dataset', async t => {
   t.is(dataset.count, 2)
   const esIndices2 = await test.app.get('es').indices.get({ index: esUtils.aliasName(dataset) })
   const esIndex2 = Object.values(esIndices2)[0]
-  const mapping2 = esIndex2.mappings.line
+  const mapping2 = esIndex2.mappings
   t.is(mapping2.properties.id.type, 'keyword')
   t.is(mapping2.properties.adr.type, 'keyword')
   t.is(mapping2.properties.some_date.type, 'date')

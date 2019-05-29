@@ -39,7 +39,7 @@ module.exports = async (client, dataset, query) => {
 }
 
 const prepareGeoAggResponse = (esResponse, dataset, query) => {
-  const response = { total: esResponse.hits.total }
+  const response = { total: esResponse.hits.total.value }
   response.aggs = esResponse.aggregations.geo.buckets.map(b => {
     const center = geohash.hash2coord(b.key)
     const aggItem = {

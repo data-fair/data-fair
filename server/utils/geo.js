@@ -89,7 +89,7 @@ exports.geometry2fields = async (schema, doc) => {
 exports.result2geojson = esResponse => {
   return {
     type: 'FeatureCollection',
-    total: esResponse.hits.total,
+    total: esResponse.hits.total.value,
     features: esResponse.hits.hits.map(hit => {
       const { _geoshape, ...properties } = hit._source
       return {

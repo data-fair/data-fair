@@ -559,7 +559,7 @@ router.get('/:datasetId/lines', readDataset(), permissions.middleware('readLines
   }
 
   const result = {
-    total: esResponse.hits.total,
+    total: esResponse.hits.total.value,
     results: esResponse.hits.hits.map(hit => {
       return esUtils.prepareResultItem(hit, req.dataset, req.query)
     })
