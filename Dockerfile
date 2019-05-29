@@ -32,6 +32,8 @@ RUN apk add --no-cache --virtual .build-deps cmake linux-headers boost-dev gmp g
     apk del .build-deps .gdal-build-deps
 RUN ln -s /usr/lib/libproj.so.13 /usr/lib/libproj.so
 
+ARG VERSION
+ENV VERSION=$VERSION
 ENV NODE_ENV production
 ENV DEBUG db,upgrade*
 WORKDIR /webapp
@@ -57,6 +59,7 @@ ADD upgrade upgrade
 ADD README.md .
 
 VOLUME /data
+VOLUME /webapp/.nuxt
 EXPOSE 8080
 
 CMD ["node", "server"]

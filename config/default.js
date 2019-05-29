@@ -115,7 +115,6 @@ module.exports = {
     url: 'http://localhost:8000',
     key: 'thumborkey'
   },
-  prebuilt: false,
   nuxtDev: false,
   licenses: [{
     title: 'Licence Ouverte / Open Licence',

@@ -63,10 +63,6 @@ module.exports = {
     url: 'THUMBOR_URL',
     key: 'THUMBOR_KEY'
   },
-  prebuilt: {
-    __name: 'PREBUILT',
-    __format: 'json'
-  },
   info: {
     termsOfService: 'INFO_TOS',
     contact: {
