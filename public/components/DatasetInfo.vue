@@ -29,7 +29,10 @@
               <span v-else>{{ events[journal[0].type].text }}</span>
               <v-spacer />
               <v-list-tile-action v-if="journal[0].type === 'error' && can('writeDescription')">
-                <v-btn icon title="Relancer" @click="patch({})">
+                <v-btn v-if="user.adminMode" icon title="Reindexer en tant que super admin" @click="reindex({})">
+                  <v-icon>play_arrow</v-icon>
+                </v-btn>
+                <v-btn v-else icon title="Relancer" @click="patch({})">
                   <v-icon>play_arrow</v-icon>
                 </v-btn>
               </v-list-tile-action>
@@ -104,6 +107,7 @@ export default {
   },
   computed: {
     ...mapState('dataset', ['dataset', 'journal', 'nbApplications', 'nbVirtualDatasets']),
+    ...mapState('session', ['user']),
     ...mapGetters('dataset', ['can', 'resourceUrl']),
     licenses() {
       return this.$store.getters.ownerLicenses(this.dataset.owner)
@@ -126,7 +130,7 @@ export default {
     }
   },
   methods: {
-    ...mapActions('dataset', ['patch'])
+    ...mapActions('dataset', ['patch', 'reindex'])
   }
 }
 </script>

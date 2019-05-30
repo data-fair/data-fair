@@ -129,6 +129,9 @@ export default () => ({
       const patched = await dispatch('patch', patch)
       if (patched) commit('patch', patch)
     },
+    async reindex({ state, dispatch }) {
+      await this.$axios.$post(`api/v1/datasets/${state.dataset.id}/_reindex`)
+    },
     async remove({ state, getters, dispatch }) {
       const options = { headers: { 'x-organizationId': 'user' } }
       if (state.dataset.owner.type === 'organization') options.headers = { 'x-organizationId': state.dataset.owner.id }
