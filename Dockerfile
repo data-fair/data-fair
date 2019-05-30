@@ -1,4 +1,4 @@
-FROM koumoul/webapp-base:1.9.1
+FROM koumoul/webapp-base:1.10.1
 MAINTAINER "contact@koumoul.com"
 
 RUN apk add --no-cache --update python make g++ unzip
@@ -62,4 +62,4 @@ VOLUME /data
 VOLUME /webapp/.nuxt
 EXPOSE 8080
 
-CMD ["node", "--max-http-header-size=64000", "server"]
+CMD ["node", "--max-http-header-size", "64000", "server"]
