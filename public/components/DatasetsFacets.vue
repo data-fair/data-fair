@@ -57,7 +57,7 @@
     <template v-if="facets.concepts && facets.concepts.length">
       <v-subheader>Concepts</v-subheader>
       <v-checkbox
-        v-for="facetItem in facets.concepts" :key="facetItem.value"
+        v-for="facetItem in facets.concepts.filter(facetItem => vocabulary && vocabulary[facetItem.value])" :key="facetItem.value"
         v-model="facetsValues.concepts[facetItem.value]" :label="`${vocabulary && vocabulary[facetItem.value].title} (${facetItem.count})`"
         :value="true"
         :hide-details="true"
