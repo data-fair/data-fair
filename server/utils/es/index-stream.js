@@ -61,6 +61,7 @@ class IndexStream extends Transform {
   _sendBulk(callback) {
     if (this.body.length === 0) return callback()
     const bodyClone = [].concat(this.body)
+    const sentBulkChars = this.bulkChars
     const bulkOpts = {
       // ES does not want the doc along with a delete instruction,
       // but we put it in body anyway for our outgoing/reporting logic
@@ -71,7 +72,10 @@ class IndexStream extends Transform {
     // Use the ingest plugin to parse attached files
     if (this.options.attachments) bulkOpts.pipeline = 'attachment'
     this.options.esClient.bulk(bulkOpts, (err, res) => {
-      if (err) return callback(err)
+      if (err) {
+        console.error(`Failure while sending bulk request for indexing: index=${this.options.indexName}, bulkChars=${sentBulkChars}, nbLines=${bodyClone.length / 2}`, err.message)
+        return callback(new Error(`Échec pendant l'indexation d'un paquet de données.`))
+      }
       res.items.forEach((item, i) => {
         const _id = (item.index && item.index._id) || (item.update && item.update._id) || (item.delete && item.delete._id)
         const line = this.options.updateMode ? bodyClone[(i * 2) + 1].doc : bodyClone[(i * 2) + 1]
