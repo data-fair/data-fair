@@ -54,8 +54,8 @@ export default {
     return { datasetsErrors: null, applicationsErrors: null }
   },
   async mounted() {
-    this.datasetsErrors = await this.$axios.$get('api/v1/admin/datasets-errors')
-    this.applicationsErrors = await this.$axios.$get('api/v1/admin/applications-errors')
+    this.datasetsErrors = await this.$axios.$get('api/v1/admin/datasets-errors', { params: { size: 1000 } })
+    this.applicationsErrors = await this.$axios.$get('api/v1/admin/applications-errors', { params: { size: 1000 } })
   }
 }
 </script>
