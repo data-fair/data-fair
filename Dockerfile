@@ -62,4 +62,4 @@ VOLUME /data
 VOLUME /webapp/.nuxt
 EXPOSE 8080
 
-CMD ["node", "server"]
+CMD ["node", "--max-http-header-size=64000", "server"]
