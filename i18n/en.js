@@ -4,7 +4,9 @@
 module.exports = {
   common: {
     title: 'DataFair',
-    description: 'Données facilement Trouvables, Accessibles, Interopérables et Réutilisables'
+    description: 'Données facilement Trouvables, Accessibles, Interopérables et Réutilisables',
+    activateAdminMode: 'Activate admin mode',
+    deactivateAdminMode: 'Deactivate admin mode'
   },
   pages: {
     root: {

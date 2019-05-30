@@ -33,7 +33,10 @@ export default () => ({
       })
       return res
     },
-    can: (state) => (operation) => (state.dataset && state.dataset.userPermissions.includes(operation)) || false,
+    can: (state, getters, rootState) => (operation) => {
+      if (rootState.session && rootState.session.user && rootState.session.user.adminMode) return true
+      return (state.dataset && state.dataset.userPermissions.includes(operation)) || false
+    },
     isOwner: (state, getters, rootState) => {
       if (!state.dataset) return
       if (!rootState.session || !rootState.session.user) return false

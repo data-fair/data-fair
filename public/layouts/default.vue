@@ -1,6 +1,6 @@
 <template>
   <v-app>
-    <v-toolbar app scroll-off-screen class="main-toolbar" height="64">
+    <v-toolbar app scroll-off-screen :color="(user && user.adminMode) ? 'admin' : 'default'" :dark="user && user.adminMode" class="main-toolbar" height="64">
       <div class="logo-container">
         <a v-if="env.brand.url" :href="env.brand.url" :title="env.brand.title || env.brand.url">
           <img v-if="env.brand.logo" :src="env.brand.logo">
@@ -74,31 +74,69 @@
               <v-list-tile :href="env.directoryUrl + '/me'">
                 <v-list-tile-title>Mon compte</v-list-tile-title>
               </v-list-tile>
+
+              <!-- toggle admin mode -->
               <template v-if="user.isAdmin">
-                <v-divider />
-                <v-subheader>Administration</v-subheader>
-                <v-list-tile to="/admin/info">
-                  <v-list-tile-avatar><v-icon>info</v-icon></v-list-tile-avatar>
+                <v-list-tile v-if="!user.adminMode" color="admin" @click="setAdminMode(true)">
+                  <v-list-tile-title>{{ $t('common.activateAdminMode') }}</v-list-tile-title>
+                </v-list-tile>
+                <v-list-tile v-if="user.adminMode" color="admin" @click="setAdminMode(false)">
+                  <v-list-tile-title>{{ $t('common.deactivateAdminMode') }}</v-list-tile-title>
+                </v-list-tile>
+              </template>
+
+              <!-- Administration pages -->
+              <v-list-group v-if="user.adminMode" value="true">
+                <v-list-tile slot="activator" color="admin">
+                  <v-list-tile-action>
+                    <v-icon color="admin">
+                      verified_user
+                    </v-icon>
+                  </v-list-tile-action>
+                  <v-list-tile-title>Administration</v-list-tile-title>
+                </v-list-tile>
+                <v-list-tile to="/admin/info" color="admin">
+                  <v-list-tile-avatar>
+                    <v-icon color="admin">
+                      info
+                    </v-icon>
+                  </v-list-tile-avatar>
                   <v-list-tile-title>Informations du service</v-list-tile-title>
                 </v-list-tile>
-                <v-list-tile to="/admin/owners">
-                  <v-list-tile-avatar><v-icon>work</v-icon></v-list-tile-avatar>
+                <v-list-tile to="/admin/owners" color="admin">
+                  <v-list-tile-avatar>
+                    <v-icon color="admin">
+                      work
+                    </v-icon>
+                  </v-list-tile-avatar>
                   <v-list-tile-title>Propriétaires</v-list-tile-title>
                 </v-list-tile>
-                <v-list-tile to="/admin/errors">
-                  <v-list-tile-avatar><v-icon>warning</v-icon></v-list-tile-avatar>
+                <v-list-tile to="/admin/errors" color="admin">
+                  <v-list-tile-avatar>
+                    <v-icon color="admin">
+                      warning
+                    </v-icon>
+                  </v-list-tile-avatar>
                   <v-list-tile-title>Erreurs</v-list-tile-title>
                 </v-list-tile>
-                <v-list-tile to="/admin/base-apps">
-                  <v-list-tile-avatar><v-icon>apps</v-icon></v-list-tile-avatar>
+                <v-list-tile to="/admin/base-apps" color="admin">
+                  <v-list-tile-avatar>
+                    <v-icon color="admin">
+                      apps
+                    </v-icon>
+                  </v-list-tile-avatar>
                   <v-list-tile-title>Applications de base</v-list-tile-title>
                 </v-list-tile>
-                <v-list-tile :href="env.directoryUrl + '/admin/users'">
-                  <v-list-tile-avatar><v-icon>supervisor_account</v-icon></v-list-tile-avatar>
+                <v-list-tile :href="env.directoryUrl + '/admin/users'" color="admin">
+                  <v-list-tile-avatar>
+                    <v-icon color="admin">
+                      supervisor_account
+                    </v-icon>
+                  </v-list-tile-avatar>
                   <v-list-tile-title>Gestion des comptes</v-list-tile-title>
                 </v-list-tile>
-                <v-divider />
-              </template>
+              </v-list-group>
+
               <v-list-tile @click="logout">
                 <v-list-tile-title>Se déconnecter</v-list-tile-title>
               </v-list-tile>
@@ -196,7 +234,7 @@ export default {
       this.showSnackbar = true
     })
   },
-  methods: mapActions('session', ['logout', 'login'])
+  methods: mapActions('session', ['logout', 'login', 'setAdminMode'])
 }
 
 </script>

@@ -47,8 +47,8 @@
   "dependencies": {
     "@digibytes/markdownit": "^1.2.2",
     "@koumoul/nuxt-build-cache": "^0.3.0",
-    "@koumoul/sd-express": "^0.14.1",
-    "@koumoul/sd-vue": "^0.11.3",
+    "@koumoul/sd-express": "^0.15.0",
+    "@koumoul/sd-vue": "^0.12.1",
     "@koumoul/vue-multianalytics": "^1.10.1",
     "@koumoul/vuetify-jsonschema-form": "^0.27.1",
     "@nuxtjs/axios": "^5.4.1",

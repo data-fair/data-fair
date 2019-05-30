@@ -13,7 +13,10 @@ export default () => ({
   },
   getters: {
     resourceUrl: (state, getters, rootState) => state.catalogId ? rootState.env.publicUrl + '/api/v1/catalogs/' + state.catalogId : null,
-    can: (state) => (operation) => (state.catalog && state.catalog.userPermissions.includes(operation)) || false
+    can: (state, getters, rootState) => (operation) => {
+      if (rootState.session && rootState.session.user && rootState.session.user.adminMode) return true
+      return (state.catalog && state.catalog.userPermissions.includes(operation)) || false
+    }
   },
   mutations: {
     setAny(state, params) {

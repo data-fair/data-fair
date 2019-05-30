@@ -39,6 +39,8 @@ exports.can = function(resource, operationId, permissionClass, user) {
   if (!user) {
     return false
   } else {
+    // User is in super admin mode
+    if (user.adminMode) return true
     // Check if the user is the owner of the resource
     if (isOwner(resource.owner, user)) return true
     // Check if user have permissions
@@ -53,7 +55,7 @@ exports.can = function(resource, operationId, permissionClass, user) {
 
 // list operations a user can do with a resource
 exports.list = function(resource, operationsClasses, user) {
-  if (isOwner(resource.owner, user)) {
+  if (isOwner(resource.owner, user) || (user && user.adminMode)) {
     return [].concat(...Object.values(operationsClasses))
   } else {
     const permissionOperations = p => (p.operations || []).concat(...(p.classes || []).map(c => operationsClasses[c]))
@@ -94,50 +96,55 @@ exports.filter = function(user) {
   const or = [visibilityUtils.publicFilter]
 
   if (user) {
+    // user is in super admin mode, show all
+    if (user.adminMode) {
+      or.push({ 'owner.type': { $exists: true } })
+    } else {
     // user is owner
-    or.push({
-      'owner.type': 'user',
-      'owner.id': user.id
-    })
-    // user is admin of owner organization
-    or.push({
-      'owner.type': 'organization',
-      'owner.id': { $in: user.organizations.filter(o => o.role === config.adminRole).map(o => o.id) }
-    })
-    // organizations where user does not have admin role
-    user.organizations.filter(o => o.role !== config.adminRole).forEach(o => {
+      or.push({
+        'owner.type': 'user',
+        'owner.id': user.id
+      })
+      // user is admin of owner organization
       or.push({
         'owner.type': 'organization',
-        'owner.id': o.id,
-        'owner.role': o.role
+        'owner.id': { $in: user.organizations.filter(o => o.role === config.adminRole).map(o => o.id) }
       })
-      or.push({
-        'owner.type': 'organization',
-        'owner.id': o.id,
-        'owner.role': null
+      // organizations where user does not have admin role
+      user.organizations.filter(o => o.role !== config.adminRole).forEach(o => {
+        or.push({
+          'owner.type': 'organization',
+          'owner.id': o.id,
+          'owner.role': o.role
+        })
+        or.push({
+          'owner.type': 'organization',
+          'owner.id': o.id,
+          'owner.role': null
+        })
       })
-    })
 
-    // user has specific permission to read
-    or.push({
-      permissions: {
-        $elemMatch: { $or: operationFilter, type: 'user', id: user.id }
-      }
-    })
-    user.organizations.forEach(o => {
+      // user has specific permission to read
       or.push({
         permissions: {
-          $elemMatch: {
-            $and: [
-              { $or: operationFilter },
-              { $or: [{ roles: o.role }, { roles: { $size: 0 } }] }
-            ],
-            type: 'organization',
-            id: o.id
-          }
+          $elemMatch: { $or: operationFilter, type: 'user', id: user.id }
         }
       })
-    })
+      user.organizations.forEach(o => {
+        or.push({
+          permissions: {
+            $elemMatch: {
+              $and: [
+                { $or: operationFilter },
+                { $or: [{ roles: o.role }, { roles: { $size: 0 } }] }
+              ],
+              type: 'organization',
+              id: o.id
+            }
+          }
+        })
+      })
+    }
   }
   return or
 }

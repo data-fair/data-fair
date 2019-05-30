@@ -16,7 +16,10 @@ export default () => ({
   },
   getters: {
     resourceUrl: (state, getters, rootState) => state.applicationId ? rootState.env.publicUrl + '/api/v1/applications/' + state.applicationId : null,
-    can: (state) => (operation) => (state.application && state.application.userPermissions.includes(operation)) || false,
+    can: (state, getters, rootState) => (operation) => {
+      if (rootState.session && rootState.session.user && rootState.session.user.adminMode) return true
+      return (state.application && state.application.userPermissions.includes(operation))
+    },
     journalChannel: (state) => 'applications/' + state.applicationId + '/journal',
     applicationLink: (state, getters, rootState) => {
       if (state.application) return rootState.env.publicUrl + '/app/' + state.application.id

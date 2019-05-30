@@ -8,6 +8,7 @@ require('../stylus/main.styl')
 Vue.use(Vuetify, {
   theme: {
     primary: colors.blue.darken1,
-    accent: colors.orange.base
+    accent: colors.orange.base,
+    admin: colors.red.darken1
   }
 })

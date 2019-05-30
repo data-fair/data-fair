@@ -20,7 +20,7 @@
           <v-list-tile-action><v-icon>info</v-icon></v-list-tile-action>
           <v-list-tile-title>Description</v-list-tile-title>
         </v-list-tile>
-        <v-list-tile v-id="user.isAdmin" :nuxt="true" :to="`/remote-service/${remoteService.id}/config`">
+        <v-list-tile v-if="user.adminMode" color="admin" :nuxt="true" :to="`/remote-service/${remoteService.id}/config`">
           <v-list-tile-action><v-icon>build</v-icon></v-list-tile-action>
           <v-list-tile-title>Configuration</v-list-tile-title>
         </v-list-tile>
@@ -48,18 +48,18 @@
             <v-list-tile-title>Documentation externe</v-list-tile-title>
           </v-list-tile>
 
-          <v-list-tile v-if="user.isAdmin" @click="refresh">
+          <v-list-tile v-if="user.adminMode" color="admin" @click="refresh">
             <v-list-tile-avatar>
-              <v-icon color="accent">
+              <v-icon color="admin">
                 refresh
               </v-icon>
             </v-list-tile-avatar>
             <v-list-tile-title>Mettre a jour la description de l'API</v-list-tile-title>
           </v-list-tile>
 
-          <v-list-tile v-if="user.isAdmin" @click="showDeleteDialog = true">
+          <v-list-tile v-if="user.adminMode" color="admin" @click="showDeleteDialog = true">
             <v-list-tile-avatar>
-              <v-icon color="warning">
+              <v-icon color="admin">
                 delete
               </v-icon>
             </v-list-tile-avatar>
