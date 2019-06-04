@@ -147,11 +147,13 @@ router.post('', asyncWrap(async(req, res) => {
 
 // Shared middleware
 const readService = asyncWrap(async(req, res, next) => {
+  req.t0 = new Date().getTime()
   const service = await req.app.get('db').collection('remote-services')
     .findOne({ id: req.params.remoteServiceId }, { projection: { _id: 0 } })
   if (!service) return res.status(404).send('Remote Api not found')
   req.remoteService = req.resource = mongoEscape.unescape(service, true)
   req.resourceApiDoc = remoteServiceAPIDocs(req.remoteService)
+  // console.log('read service', new Date().getTime() - req.t0)
   next()
 })
 
@@ -242,6 +244,7 @@ router.post('/:remoteServiceId/_update', readService, asyncWrap(async(req, res) 
 // Use the proxy as a user with an active session on an application
 let nbLimiter, kbLimiter
 router.use('/:remoteServiceId/proxy*', readService, (req, res, next) => { req.app.get('anonymSession')(req, res, next) }, asyncWrap(async (req, res, next) => {
+  // console.log('anonymous session ok', new Date().getTime() - req.t0)
   if (!req.user && !(req.session && req.session.activeApplications)) return res.status(401).send('Pas de session active')
   // preventing POST is a simple way to prevent exposing bulk methods through this public proxy
   if (req.method.toUpperCase() !== 'GET') return res.status(405).send('Seules les opérations de type GET sont autorisées sur cette exposition de service')
@@ -253,12 +256,6 @@ router.use('/:remoteServiceId/proxy*', readService, (req, res, next) => { req.ap
     points: config.defaultLimits.remoteServiceRate.nb,
     duration: config.defaultLimits.remoteServiceRate.duration
   })
-  try {
-    await nbLimiter.consume(ip, 1)
-  } catch (err) {
-    // console.log('nbLimiter error', err)
-    return res.status(429).send('Trop de requêtes dans un interval restreint pour cette exposition de service.')
-  }
   kbLimiter = kbLimiter || new RateLimiterMongo({
     storeClient: req.app.get('mongoClient'),
     keyPrefix: 'data-fair-rate-limiter-kb',
@@ -266,11 +263,13 @@ router.use('/:remoteServiceId/proxy*', readService, (req, res, next) => { req.ap
     duration: config.defaultLimits.remoteServiceRate.duration
   })
   try {
-    await kbLimiter.consume(ip, 1)
+    await Promise.all([nbLimiter.consume(ip, 1), kbLimiter.consume(ip, 1)])
   } catch (err) {
-    // console.log('kbLimiter error', err)
+    // console.log('nbLimiter error', err)
     return res.status(429).send('Trop de traffic dans un interval restreint pour cette exposition de service.')
   }
+
+  // console.log('rate limiter ok', new Date().getTime() - req.t0)
 
   const options = {
     url: req.remoteService.server + '*',
@@ -291,10 +290,21 @@ router.use('/:remoteServiceId/proxy*', readService, (req, res, next) => { req.ap
         // so no kb rate limiting on other codes
         return resp.statusCode === 200
       },
-      transform: () => new Transform({ transform(chunk, encoding, cb) {
-        kbLimiter.consume(ip, chunk.length).catch(() => {})
-        cb(null, chunk)
-      } })
+      transform: () => new Transform({
+        transform(chunk, encoding, cb) {
+          cb(null, chunk)
+          this.consumed = (this.consumed || 0) + chunk.length
+          // for perf do not update rate limiter at every chunk, but only every 100kb
+          if (this.consumed > 100000) {
+            kbLimiter.consume(ip, this.consumed).catch(() => {})
+            this.consumed = 0
+          }
+        },
+        flush(cb) {
+          cb()
+          kbLimiter.consume(ip, this.consumed).catch(() => {})
+        }
+      })
     }]
   }
   // Add static parameters values from configuration
