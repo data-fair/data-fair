@@ -447,23 +447,22 @@ router.delete('/:datasetId/lines/:lineId', readDataset(['finalized', 'updated', 
 async function manageESError(req, err) {
   // console.error('Elasticsearch error', err)
   const errBody = (err.body && err.body.error) || {}
-  let bestMessage = err.message
-  if (errBody.root_cause && errBody.root_cause.reason) bestMessage = errBody.root_cause.reason
+  let message = err.message
+  if (errBody.root_cause && errBody.root_cause.reason) message = errBody.root_cause.reason
   if (errBody.failed_shards && errBody.failed_shards[0] && errBody.failed_shards[0].reason) {
     const shardReason = errBody.failed_shards[0].reason
     if (shardReason.caused_by && shardReason.caused_by.reason) {
-      bestMessage = shardReason.caused_by.reason
+      message = shardReason.caused_by.reason
     } else {
-      bestMessage = shardReason
+      message = shardReason
     }
   }
-  const message = 'Requête générée invalide : ' + bestMessage
 
   if (req.dataset.status === 'finalized' && err.statusCode >= 404 && errBody.type !== 'search_phase_execution_exception') {
     await req.app.get('db').collection('datasets').updateOne({ id: req.params.datasetId }, { '$set': { status: 'error' } })
     await journals.log(req.app, req.dataset, { type: 'error', data: message })
   }
-  throw new Error(message)
+  throw createError(err.status, message)
 }
 
 // Read/search data for a dataset
