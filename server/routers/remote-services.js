@@ -243,11 +243,12 @@ router.post('/:remoteServiceId/_update', readService, asyncWrap(async(req, res) 
 
 // Use the proxy as a user with an active session on an application
 let nbLimiter, kbLimiter
-router.use('/:remoteServiceId/proxy*', readService, (req, res, next) => { req.app.get('anonymSession')(req, res, next) }, asyncWrap(async (req, res, next) => {
-  // console.log('anonymous session ok', new Date().getTime() - req.t0)
+router.use('/:remoteServiceId/proxy*', (req, res, next) => { req.app.get('anonymSession')(req, res, next) }, asyncWrap(async (req, res, next) => {
   if (!req.user && !(req.session && req.session.activeApplications)) return res.status(401).send('Pas de session active')
+
   // preventing POST is a simple way to prevent exposing bulk methods through this public proxy
   if (req.method.toUpperCase() !== 'GET') return res.status(405).send('Seules les opérations de type GET sont autorisées sur cette exposition de service')
+
   // rate limiting both on number of requests and total size to prevent abuse of this public proxy
   const ip = requestIp.getClientIp(req)
   nbLimiter = nbLimiter || new RateLimiterMongo({
@@ -265,15 +266,16 @@ router.use('/:remoteServiceId/proxy*', readService, (req, res, next) => { req.ap
   try {
     await Promise.all([nbLimiter.consume(ip, 1), kbLimiter.consume(ip, 1)])
   } catch (err) {
-    // console.log('nbLimiter error', err)
     return res.status(429).send('Trop de traffic dans un interval restreint pour cette exposition de service.')
   }
 
-  // console.log('rate limiter ok', new Date().getTime() - req.t0)
+  // for perf, do not use the middleware readService, we want to read only absolutely necessary info
+  const remoteService = await req.app.get('db').collection('remote-services')
+    .findOne({ id: req.params.remoteServiceId }, { projection: { _id: 0, id: 1, server: 1, apiKey: 1 } })
 
   const options = {
-    url: req.remoteService.server + '*',
-    headers: { 'x-forwarded-url': `${config.publicUrl}/api/v1/remote-services/${req.remoteService.id}/proxy/` },
+    url: remoteService.server + '*',
+    headers: { 'x-forwarded-url': `${config.publicUrl}/api/v1/remote-services/${remoteService.id}/proxy/` },
     query: {},
     transforms: [{
       name: 'rate-limiter',
@@ -307,17 +309,9 @@ router.use('/:remoteServiceId/proxy*', readService, (req, res, next) => { req.ap
       })
     }]
   }
-  // Add static parameters values from configuration
-  if (req.remoteService.parameters) {
-    req.remoteService.parameters
-      .filter(param => !!param.value)
-      .forEach(param => {
-        options.query[param.name] = param.value
-      })
-  }
   // TODO handle query & cookie header types
-  if (req.remoteService.apiKey && req.remoteService.apiKey.in === 'header' && req.remoteService.apiKey.value) {
-    options.headers[req.remoteService.apiKey.name] = req.remoteService.apiKey.value
+  if (remoteService.apiKey && remoteService.apiKey.in === 'header' && remoteService.apiKey.value) {
+    options.headers[remoteService.apiKey.name] = remoteService.apiKey.value
   } else if (config.defaultRemoteKey.in === 'header' && config.defaultRemoteKey.value) {
     options.headers[config.defaultRemoteKey.name] = config.defaultRemoteKey.value
   }

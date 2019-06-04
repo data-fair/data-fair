@@ -64,7 +64,7 @@ module.exports = {
     },
     parameters: {
       type: 'array',
-      description: 'Some parameters name/values associations to send to all operations of the reverse proxy',
+      description: 'DEPRECATED. Some parameters name/values associations to send to all operations of the reverse proxy',
       items: {
         type: 'object',
         additionalProperties: false,
