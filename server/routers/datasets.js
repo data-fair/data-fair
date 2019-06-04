@@ -445,12 +445,25 @@ router.delete('/:datasetId/lines/:lineId', readDataset(['finalized', 'updated', 
 
 // Error from ES backend should be stored in the journal
 async function manageESError(req, err) {
+  // console.error('Elasticsearch error', err)
   const errBody = (err.body && err.body.error) || {}
+  let bestMessage = err.message
+  if (errBody.root_cause && errBody.root_cause.reason) bestMessage = errBody.root_cause.reason
+  if (errBody.failed_shards && errBody.failed_shards[0] && errBody.failed_shards[0].reason) {
+    const shardReason = errBody.failed_shards[0].reason
+    if (shardReason.caused_by && shardReason.caused_by.reason) {
+      bestMessage = shardReason.caused_by.reason
+    } else {
+      bestMessage = shardReason
+    }
+  }
+  const message = 'Requête générée invalide : ' + bestMessage
+
   if (req.dataset.status === 'finalized' && err.statusCode >= 404 && errBody.type !== 'search_phase_execution_exception') {
     await req.app.get('db').collection('datasets').updateOne({ id: req.params.datasetId }, { '$set': { status: 'error' } })
-    await journals.log(req.app, req.dataset, { type: 'error', data: err.message })
+    await journals.log(req.app, req.dataset, { type: 'error', data: message })
   }
-  throw err
+  throw new Error(message)
 }
 
 // Read/search data for a dataset
@@ -515,24 +528,28 @@ router.get('/:datasetId/lines', readDataset(), permissions.middleware('readLines
     if (requestedSize > 10000) throw createError(400, '"size" cannot be more than 10000')
 
     if (sampling === 'neighbors') {
-    // count docs in neighboring tiles to perform intelligent sampling
-      const counts = await Promise.all([
-        countWithCache(req.query),
-        // TODO: only the 4 that share an edge or also the 4 corners ?
-        countWithCache({ ...req.query, xyz: [xyz[0] - 1, xyz[1], xyz[2]].join(',') }),
-        countWithCache({ ...req.query, xyz: [xyz[0] + 1, xyz[1], xyz[2]].join(',') }),
-        countWithCache({ ...req.query, xyz: [xyz[0], xyz[1] - 1, xyz[2]].join(',') }),
-        countWithCache({ ...req.query, xyz: [xyz[0], xyz[1] + 1, xyz[2]].join(',') }),
-        // Using corners also yields better results
-        countWithCache({ ...req.query, xyz: [xyz[0] - 1, xyz[1] - 1, xyz[2]].join(',') }),
-        countWithCache({ ...req.query, xyz: [xyz[0] + 1, xyz[1] - 1, xyz[2]].join(',') }),
-        countWithCache({ ...req.query, xyz: [xyz[0] - 1, xyz[1] + 1, xyz[2]].join(',') }),
-        countWithCache({ ...req.query, xyz: [xyz[0] + 1, xyz[1] + 1, xyz[2]].join(',') })
-      ])
-      const maxCount = Math.max(...counts)
-      const sampleRate = requestedSize / Math.max(requestedSize, maxCount)
-      const sizeFilter = counts[0] * sampleRate
-      req.query.size = Math.min(sizeFilter, requestedSize)
+      // count docs in neighboring tiles to perform intelligent sampling
+      try {
+        const counts = await Promise.all([
+          countWithCache(req.query),
+          // TODO: only the 4 that share an edge or also the 4 corners ?
+          countWithCache({ ...req.query, xyz: [xyz[0] - 1, xyz[1], xyz[2]].join(',') }),
+          countWithCache({ ...req.query, xyz: [xyz[0] + 1, xyz[1], xyz[2]].join(',') }),
+          countWithCache({ ...req.query, xyz: [xyz[0], xyz[1] - 1, xyz[2]].join(',') }),
+          countWithCache({ ...req.query, xyz: [xyz[0], xyz[1] + 1, xyz[2]].join(',') }),
+          // Using corners also yields better results
+          countWithCache({ ...req.query, xyz: [xyz[0] - 1, xyz[1] - 1, xyz[2]].join(',') }),
+          countWithCache({ ...req.query, xyz: [xyz[0] + 1, xyz[1] - 1, xyz[2]].join(',') }),
+          countWithCache({ ...req.query, xyz: [xyz[0] - 1, xyz[1] + 1, xyz[2]].join(',') }),
+          countWithCache({ ...req.query, xyz: [xyz[0] + 1, xyz[1] + 1, xyz[2]].join(',') })
+        ])
+        const maxCount = Math.max(...counts)
+        const sampleRate = requestedSize / Math.max(requestedSize, maxCount)
+        const sizeFilter = counts[0] * sampleRate
+        req.query.size = Math.min(sizeFilter, requestedSize)
+      } catch (err) {
+        await manageESError(req, err)
+      }
     }
   }
 
