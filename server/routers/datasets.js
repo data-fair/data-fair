@@ -530,23 +530,29 @@ router.get('/:datasetId/lines', readDataset(), permissions.middleware('readLines
     if (sampling === 'neighbors') {
       // count docs in neighboring tiles to perform intelligent sampling
       try {
-        const counts = await Promise.all([
-          countWithCache(req.query),
-          // TODO: only the 4 that share an edge or also the 4 corners ?
-          countWithCache({ ...req.query, xyz: [xyz[0] - 1, xyz[1], xyz[2]].join(',') }),
-          countWithCache({ ...req.query, xyz: [xyz[0] + 1, xyz[1], xyz[2]].join(',') }),
-          countWithCache({ ...req.query, xyz: [xyz[0], xyz[1] - 1, xyz[2]].join(',') }),
-          countWithCache({ ...req.query, xyz: [xyz[0], xyz[1] + 1, xyz[2]].join(',') }),
-          // Using corners also yields better results
-          countWithCache({ ...req.query, xyz: [xyz[0] - 1, xyz[1] - 1, xyz[2]].join(',') }),
-          countWithCache({ ...req.query, xyz: [xyz[0] + 1, xyz[1] - 1, xyz[2]].join(',') }),
-          countWithCache({ ...req.query, xyz: [xyz[0] - 1, xyz[1] + 1, xyz[2]].join(',') }),
-          countWithCache({ ...req.query, xyz: [xyz[0] + 1, xyz[1] + 1, xyz[2]].join(',') })
-        ])
-        const maxCount = Math.max(...counts)
-        const sampleRate = requestedSize / Math.max(requestedSize, maxCount)
-        const sizeFilter = counts[0] * sampleRate
-        req.query.size = Math.min(sizeFilter, requestedSize)
+        const mainCount = await countWithCache(req.query)
+        if (mainCount <= requestedSize / 20) {
+          // no sampling on low density tiles
+          req.query.size = requestedSize
+        } else {
+          console.log('Count neighbors', mainCount)
+          const neighborsCounts = await Promise.all([
+          // the 4 that share an edge
+            countWithCache({ ...req.query, xyz: [xyz[0] - 1, xyz[1], xyz[2]].join(',') }),
+            countWithCache({ ...req.query, xyz: [xyz[0] + 1, xyz[1], xyz[2]].join(',') }),
+            countWithCache({ ...req.query, xyz: [xyz[0], xyz[1] - 1, xyz[2]].join(',') }),
+            countWithCache({ ...req.query, xyz: [xyz[0], xyz[1] + 1, xyz[2]].join(',') }),
+            // Using corners also yields better results
+            countWithCache({ ...req.query, xyz: [xyz[0] - 1, xyz[1] - 1, xyz[2]].join(',') }),
+            countWithCache({ ...req.query, xyz: [xyz[0] + 1, xyz[1] - 1, xyz[2]].join(',') }),
+            countWithCache({ ...req.query, xyz: [xyz[0] - 1, xyz[1] + 1, xyz[2]].join(',') }),
+            countWithCache({ ...req.query, xyz: [xyz[0] + 1, xyz[1] + 1, xyz[2]].join(',') })
+          ])
+          const maxCount = Math.max(mainCount, ...neighborsCounts)
+          const sampleRate = requestedSize / Math.max(requestedSize, maxCount)
+          const sizeFilter = mainCount * sampleRate
+          req.query.size = Math.min(sizeFilter, requestedSize)
+        }
       } catch (err) {
         await manageESError(req, err)
       }
