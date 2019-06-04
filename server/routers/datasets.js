@@ -526,18 +526,17 @@ router.get('/:datasetId/lines', readDataset(), permissions.middleware('readLines
 
     const requestedSize = req.query.size ? Number(req.query.size) : 20
     if (requestedSize > 10000) throw createError(400, '"size" cannot be more than 10000')
-
     if (sampling === 'neighbors') {
       // count docs in neighboring tiles to perform intelligent sampling
       try {
         const mainCount = await countWithCache(req.query)
+        if (mainCount === 0) return res.status(204).send()
         if (mainCount <= requestedSize / 20) {
           // no sampling on low density tiles
           req.query.size = requestedSize
         } else {
-          console.log('Count neighbors', mainCount)
           const neighborsCounts = await Promise.all([
-          // the 4 that share an edge
+            // the 4 that share an edge
             countWithCache({ ...req.query, xyz: [xyz[0] - 1, xyz[1], xyz[2]].join(',') }),
             countWithCache({ ...req.query, xyz: [xyz[0] + 1, xyz[1], xyz[2]].join(',') }),
             countWithCache({ ...req.query, xyz: [xyz[0], xyz[1] - 1, xyz[2]].join(',') }),
