@@ -26,6 +26,12 @@ exports.schemaHasGeometry = (schema) => {
   return !!schema.find(p => p['x-refersTo'] === geomUri)
 }
 
+exports.fixLon = (val) => {
+  while (val < -180) val += 360
+  while (val > 180) val -= 360
+  return val
+}
+
 exports.latlon2fields = (schema, doc) => {
   let lat, lon
   const latlonProp = schema.find(p => p['x-refersTo'] === latlonUri)

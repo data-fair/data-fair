@@ -7,6 +7,7 @@ const queryParser = require('lucene-query-parser')
 const sanitizeHtml = require('sanitize-html')
 const thumbor = require('../thumbor')
 const tiles = require('../tiles')
+const geo = require('../geo')
 
 // From a property in data-fair schema to the property in an elasticsearch mapping
 exports.esProperty = prop => {
@@ -175,6 +176,9 @@ exports.getQueryBBOX = (query) => {
   } else if (query.xyz) {
     bbox = tiles.xyz2bbox(...query.xyz.split(',').map(Number))
   }
+
+  bbox[0] = geo.fixLon(bbox[0])
+  bbox[2] = geo.fixLon(bbox[2])
   return bbox
 }
 
