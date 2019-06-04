@@ -10,7 +10,7 @@ const createError = require('http-errors')
 exports.resourceBased = (req, res, next) => {
   const dateKey = req.resource.finalizedAt ? 'finalizedAt' : 'updatedAt'
   const date = (new Date(req.resource[dateKey])).toUTCString()
-  const cacheVisibility = req.user ? 'private' : 'public'
+  const cacheVisibility = req.publicOperation ? 'public' : 'private'
 
   const ifModifiedSince = req.get('If-Modified-Since')
   if (ifModifiedSince && date === ifModifiedSince) return res.status(304).send()

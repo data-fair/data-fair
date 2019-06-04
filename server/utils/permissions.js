@@ -15,6 +15,10 @@ exports.middleware = function(operationId, permissionClass) {
       else res.send(`Permission manquante pour cette opération ou la catégorie "${permissionClass}"`)
       return
     }
+
+    // this is stored here to be used by cache headers utils to manage public cache
+    req.publicOperation = exports.can(req.resource, operationId, permissionClass, null)
+
     next()
   }
 }

@@ -1,4 +1,3 @@
-// Some edge cases with CSV files
 const testUtils = require('./resources/test-utils')
 const { test, axiosBuilder } = testUtils.prepare(__filename)
 
