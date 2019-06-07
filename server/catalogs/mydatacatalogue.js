@@ -56,7 +56,7 @@ async function createNewDataset(catalog, dataset, publication) {
     type: 'tabular-dataset',
     format: 'data-fair',
     description: datasetPageDesc(dataset),
-    attributes: dataset.schema.map(a => ({ id: a.key })),
+    attributes: dataset.schema.filter(f => !f['x-calculated']).map(a => ({ id: a.key })),
     recordCount: dataset.count || 0,
     dataFairDatasetId: dataset.id,
     tags: {
