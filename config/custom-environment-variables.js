@@ -43,6 +43,23 @@ module.exports = {
     description: 'BRAND_DESCRIPTION',
     url: 'BRAND_URL'
   },
+  theme: {
+    dark: {
+      __name: 'THEME_DARK',
+      __format: 'json'
+    },
+    colors: {
+      primary: 'THEME_PRIMARY',
+      secondary: 'THEME_SECONDARY',
+      accent: 'THEME_ACCENT',
+      error: 'THEME_ERROR',
+      info: 'THEME_INFO',
+      success: 'THEME_SUCCESS',
+      warning: 'THEME_WARNING'
+    },
+    cssUrl: 'THEME_CSS_URL',
+    cssText: 'THEME_CSS_TEXT'
+  },
   worker: {
     interval: 'WORKER_INTERVAL',
     concurrency: 'WORKER_CONCURRENCY'

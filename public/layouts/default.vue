@@ -1,6 +1,6 @@
 <template>
-  <v-app>
-    <v-toolbar app scroll-off-screen :color="(user && user.adminMode) ? 'admin' : 'default'" :dark="user && user.adminMode" class="main-toolbar" height="64">
+  <v-app :dark="env.theme.dark">
+    <v-toolbar app scroll-off-screen :color="(user && user.adminMode) ? 'admin' : 'default'" :dark="env.theme.dark || (user && user.adminMode)" :class="env.theme.dark || (user && user.adminMode) ? 'main-toolbar' : 'main-toolbar main-toolbar-light'" height="64">
       <div class="logo-container">
         <a v-if="env.brand.url" :href="env.brand.url" :title="env.brand.title || env.brand.url">
           <img v-if="env.brand.logo" :src="env.brand.logo">
@@ -258,8 +258,11 @@ body .application {
     // background-color: white;
   }
 
-  .main-toolbar {
+  .main-toolbar-light {
     background-color: white;
+  }
+
+  .main-toolbar {
     .v-toolbar__content {
       padding-left: 0;
     }

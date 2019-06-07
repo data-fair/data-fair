@@ -1,14 +1,10 @@
 import 'material-design-icons-iconfont/dist/material-design-icons.css'
 import Vue from 'vue'
-import colors from 'vuetify/lib/util/colors'
-
 import Vuetify from 'vuetify/lib'
 require('../stylus/main.styl')
 
-Vue.use(Vuetify, {
-  theme: {
-    primary: colors.blue.darken1,
-    accent: colors.orange.base,
-    admin: colors.red.darken1
-  }
-})
+export default ({ env }) => {
+  Vue.use(Vuetify, {
+    theme: env.theme.colors
+  })
+}

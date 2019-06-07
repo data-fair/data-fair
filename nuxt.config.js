@@ -52,7 +52,8 @@ module.exports = {
     openapiViewerUrl: config.openapiViewerUrl,
     browserLogLevel: config.browserLogLevel,
     analytics: config.analytics,
-    captureUrl: config.captureUrl
+    captureUrl: config.captureUrl,
+    theme: config.theme
   },
   head: {
     title: config.brand.title,
@@ -67,4 +68,12 @@ module.exports = {
       { rel: 'stylesheet', href: 'https://fonts.googleapis.com/css?family=Nunito:300,400,500,700,400italic' }
     ]
   }
+}
+
+if (config.theme.cssUrl) {
+  module.exports.head.link.push({ rel: 'stylesheet', href: config.theme.cssUrl })
+}
+
+if (config.theme.cssText) {
+  module.exports.head.style.push({ type: 'text/css', cssText: config.theme.cssText })
 }

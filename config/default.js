@@ -45,6 +45,22 @@ module.exports = {
     title: 'DataFair',
     description: 'Find, Access, Interoperate, Reuse data on the Web'
   },
+  theme: {
+    dark: false,
+    colors: {
+      // standard vuetify colors
+      primary: '#1E88E5', // blue.darken1
+      secondary: '#42A5F5', // blue.lighten1,
+      accent: '#FF9800', // orange.base
+      error: 'FF5252', // red.accent2
+      info: '#2196F3', // blue.base
+      success: '#4CAF50', // green.base
+      warning: '#E91E63', // pink.base
+      admin: '#E53935' // red.darken1
+    },
+    cssUrl: null,
+    cssText: ''
+  },
   defaultLimits: {
     // Maximum storage space per user or organization
     // -1 for unlimited storage
@@ -94,22 +110,6 @@ module.exports = {
   i18n: {
     defaultLocale: 'fr',
     locales: [{ code: 'fr', iso: 'fr-FR' }, { code: 'en', iso: 'es-US' }]
-  },
-  theme: {
-    logo: null,
-    dark: false,
-    colors: {
-      // standard vuetify colors
-      primary: '#1E88E5', // blue.darken1
-      secondary: '#42A5F5', // blue.lighten1,
-      accent: '#FF9800', // orange.base
-      error: 'FF5252', // red.accent2
-      info: '#2196F3', // blue.base
-      success: '#4CAF50', // green.base
-      warning: '#E91E63' // pink.base
-    },
-    cssUrl: null,
-    cssText: ''
   },
   browserLogLevel: 'error',
   thumbor: {
