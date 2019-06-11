@@ -1266,6 +1266,7 @@
           "type": "string",
           "enum": [
             "form",
+            "commaDelimited",
             "spaceDelimited",
             "pipeDelimited",
             "deepObject"
@@ -1555,6 +1556,7 @@
           "type": "string",
           "enum": [
             "form",
+            "commaDelimited",
             "spaceDelimited",
             "pipeDelimited",
             "deepObject"
