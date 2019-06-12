@@ -30,7 +30,8 @@ RUN apk add --no-cache --virtual .build-deps cmake linux-headers boost-dev gmp g
     cd .. && \
     rm -rf prepair-0.7.1 && \
     apk del .build-deps .gdal-build-deps
-RUN ln -s /usr/lib/libproj.so.13 /usr/lib/libproj.so
+RUN test -f /usr/lib/libproj.so.15
+RUN ln -s /usr/lib/libproj.so.15 /usr/lib/libproj.so
 
 ARG VERSION
 ENV VERSION=$VERSION
