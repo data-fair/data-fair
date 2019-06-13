@@ -91,6 +91,17 @@
           return-object
           @input="patch({license: dataset.license})"
         />
+        <v-select
+          v-if="editProjection && projections"
+          v-model="dataset.projection"
+          :items="projections"
+          :disabled="!can('writeDescription')"
+          item-text="title"
+          item-key="code"
+          label="Projection cartographique"
+          return-object
+          @input="patch({projection: dataset.projection})"
+        />
         <v-text-field v-model="dataset.origin" :disabled="!can('writeDescription')" label="Provenance" @blur="patch({origin: dataset.origin})" />
       </v-flex>
     </v-layout>
@@ -100,17 +111,25 @@
 <script>
 const { mapState, mapActions, mapGetters } = require('vuex')
 const events = require('../../shared/events.json').dataset
+const coordXUri = 'http://data.ign.fr/def/geometrie#coordX'
+const coordYUri = 'http://data.ign.fr/def/geometrie#coordY'
 
 export default {
   data() {
     return { events, error: null }
   },
   computed: {
+    ...mapState(['projections']),
     ...mapState('dataset', ['dataset', 'journal', 'nbApplications', 'nbVirtualDatasets']),
     ...mapState('session', ['user']),
     ...mapGetters('dataset', ['can', 'resourceUrl']),
     licenses() {
       return this.$store.getters.ownerLicenses(this.dataset.owner)
+    },
+    editProjection() {
+      return !!(this.dataset && this.dataset.schema &&
+        this.dataset.schema.find(p => p['x-refersTo'] === coordXUri) &&
+        this.dataset.schema.find(p => p['x-refersTo'] === coordYUri))
     }
   },
   watch: {
@@ -118,10 +137,17 @@ export default {
       if (!this.dataset.license) return
       // Matching object reference, so that the select components works
       this.dataset.license = this.licenses.find(l => l.href === this.dataset.license.href)
+    },
+    projections() {
+      if (!this.dataset.projection) return
+      // Matching object reference, so that the select components works
+      this.dataset.projection = this.projections.find(l => l.code === this.dataset.projection.code)
     }
   },
   async mounted() {
     if (this.dataset) this.$store.dispatch('fetchLicenses', this.dataset.owner)
+    if (this.editProjection) this.$store.dispatch('fetchProjections')
+
     // Ping the data endpoint to check that index is available
     try {
       this.data = await this.$axios.$get(this.resourceUrl + '/lines', { size: 0 })

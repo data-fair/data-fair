@@ -88,7 +88,7 @@ const dataLayers = [{
   'type': 'circle',
   'paint': {
     'circle-color': 'rgba(233, 30, 99, 0.5)',
-    'circle-radius': { 'stops': [[6, 1.5], [24, 16]] }
+    'circle-radius': { 'stops': [[0, 1], [24, 16]] }
   },
   'filter': ['==', '$type', 'Point']
 }]
@@ -109,76 +109,79 @@ export default {
   },
   async mounted() {
     if (!mapboxgl) return
+    try {
+      this.mapHeight = Math.max(window.innerHeight - this.$el.getBoundingClientRect().top - this.heightMargin, 300)
 
-    this.mapHeight = Math.max(window.innerHeight - this.$el.getBoundingClientRect().top - this.heightMargin, 300)
+      // Prevent overloading the tiles with long texts, geometries, etc.
+      this.select = this.dataset.schema
+        .filter(field => !field['x-calculated'])
+        .filter(field => (field.type === 'string' && field.format === 'uri-reference') || field.type === 'integer' || field.type === 'number')
+        .map(field => field.key)
 
-    // Prevent overloading the tiles with long texts, geometries, etc.
-    this.select = this.dataset.schema
-      .filter(field => !field['x-calculated'])
-      .filter(field => (field.type === 'string' && field.format === 'uri-reference') || field.type === 'integer' || field.type === 'number')
-      .map(field => field.key)
+      await new Promise(resolve => setTimeout(resolve, 0))
+      const style = this.env.map.style.replace('./', this.env.publicUrl + '/')
+      this.map = new mapboxgl.Map({ container: 'map', style })
+      this.map.on('error', (error) => {
+        if (error.sourceId) eventBus.$emit('notification', { error: `Échec d'accès aux tuiles ${error.sourceId}`, msg: 'Erreur pendant le rendu de la carte:' })
+        else eventBus.$emit('notification', { error, msg: 'Erreur pendant le rendu de la carte:' })
+      })
+      const bbox = await this.getBBox()
+      this.map.fitBounds(bbox, { duration: 0 })
+      this.map.addControl(new mapboxgl.NavigationControl(), 'top-right')
+      // Disable map rotation using right click + drag
+      this.map.dragRotate.disable()
+      // Disable map rotation using touch rotation gesture
+      this.map.touchZoomRotate.disableRotation()
 
-    await new Promise(resolve => setTimeout(resolve, 0))
-    const style = this.env.map.style.replace('./', this.env.publicUrl + '/')
-    this.map = new mapboxgl.Map({ container: 'map', style })
-    this.map.on('error', (error) => {
-      if (error.sourceId) eventBus.$emit('notification', { error: `Échec d'accès aux tuiles ${error.sourceId}`, msg: 'Erreur pendant le rendu de la carte:' })
-      else eventBus.$emit('notification', { error, msg: 'Erreur pendant le rendu de la carte:' })
-    })
-    const bbox = await this.getBBox()
-    this.map.fitBounds(bbox, { duration: 0 })
-    this.map.addControl(new mapboxgl.NavigationControl(), 'top-right')
-    // Disable map rotation using right click + drag
-    this.map.dragRotate.disable()
-    // Disable map rotation using touch rotation gesture
-    this.map.touchZoomRotate.disableRotation()
+      // Create a popup, but don't add it to the map yet.
+      const popup = new mapboxgl.Popup({ closeButton: true, closeOnClick: true })
 
-    // Create a popup, but don't add it to the map yet.
-    const popup = new mapboxgl.Popup({ closeButton: true, closeOnClick: true })
+      const moveCallback = (e) => {
+        if (!this.select.length) return
+        const feature = this.map.queryRenderedFeatures(e.point).find(f => f.source === 'data-fair')
+        if (!feature) return
+        this.map.setFilter('results_hover', ['==', '_id', feature.properties._id])
+        // Change the cursor style as a UI indicator.
+        this.map.getCanvas().style.cursor = 'pointer'
+        const htmlList = Object.keys(feature.properties || {})
+          .filter(key => key !== '_id')
+          .map(key => {
+            const field = this.dataset.schema.find(f => f.key === key)
+            return `<li>${field.title || field['x-originalName'] || field.key}: ${feature.properties[key]}</li>`
+          })
+          .join('\n')
+        const html = `<ul style="list-style-type: none;padding-left: 0;">${htmlList}</ul>`
 
-    const moveCallback = (e) => {
-      if (!this.select.length) return
-      const feature = this.map.queryRenderedFeatures(e.point).find(f => f.source === 'data-fair')
-      if (!feature) return
-      this.map.setFilter('results_hover', ['==', '_id', feature.properties._id])
-      // Change the cursor style as a UI indicator.
-      this.map.getCanvas().style.cursor = 'pointer'
-      const htmlList = Object.keys(feature.properties || {})
-        .filter(key => key !== '_id')
-        .map(key => {
-          const field = this.dataset.schema.find(f => f.key === key)
-          return `<li>${field.title || field['x-originalName'] || field.key}: ${feature.properties[key]}</li>`
-        })
-        .join('\n')
-      const html = `<ul style="list-style-type: none;padding-left: 0;">${htmlList}</ul>`
+        // Populate the popup and set its coordinates
+        // based on the feature found.
+        popup.setLngLat(e.lngLat)
+          .setHTML(html)
+          .addTo(this.map)
+      }
 
-      // Populate the popup and set its coordinates
-      // based on the feature found.
-      popup.setLngLat(e.lngLat)
-        .setHTML(html)
-        .addTo(this.map)
+      const leaveCallback = () => {
+        this.map.getCanvas().style.cursor = ''
+        popup.remove()
+      }
+
+      dataLayers.forEach(layer => {
+        this.map.on('mousemove', layer.id, debounce(moveCallback, 30))
+        this.map.on('mouseleave', layer.id, leaveCallback)
+      })
+
+      // Add custom source and layers
+      this.map.once('load', () => {
+        this.initCustomSource()
+      })
+    } catch (error) {
+      eventBus.$emit('notification', { error })
     }
-
-    const leaveCallback = () => {
-      this.map.getCanvas().style.cursor = ''
-      popup.remove()
-    }
-
-    dataLayers.forEach(layer => {
-      this.map.on('mousemove', layer.id, debounce(moveCallback, 30))
-      this.map.on('mouseleave', layer.id, leaveCallback)
-    })
-
-    // Add custom source and layers
-    this.map.once('load', () => {
-      this.initCustomSource()
-    })
   },
   methods: {
     async getBBox() {
       const bbox = (await this.$axios.$get(this.resourceUrl + '/lines', { params: { format: 'geojson', size: 0, qs: this.query } })).bbox
       if (!bbox || !bbox.length) {
-        return eventBus.$emit('notification', 'Aucune donnée correspondante.')
+        throw new Error('Aucune donnée géographique valide.')
       }
       return resizeBBOX(bbox, 1.1)
     },

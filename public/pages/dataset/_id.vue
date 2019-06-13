@@ -228,7 +228,7 @@ export default {
   },
   async fetch({ store, params, route }) {
     await store.dispatch('dataset/setId', route.params.id)
-    await store.dispatch('fetchVocabulary', route.params.id)
+    await store.dispatch('fetchVocabulary')
   },
   mounted() {
     this.subscribe()

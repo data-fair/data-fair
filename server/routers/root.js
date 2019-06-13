@@ -3,6 +3,7 @@ const express = require('express')
 const status = require('../routers/status')
 const apiDocs = require('../../contract/api-docs')
 const vocabulary = require('../../contract/vocabulary')
+const projections = require('../../contract/projections')
 
 const ajv = require('ajv')()
 const openApiSchema = require('../../contract/openapi-3.0.json')
@@ -22,6 +23,10 @@ router.get('/api-docs.json', (req, res) => {
 
 router.get('/vocabulary', (req, res) => {
   res.json(vocabulary)
+})
+
+router.get('/projections', (req, res) => {
+  res.json(projections.map(p => ({ title: p.title, code: p.code })))
 })
 
 // Check an Api documentation format

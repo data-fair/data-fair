@@ -188,6 +188,18 @@ module.exports = {
         'type': 'number'
       }
     },
+    'projection': {
+      type: 'object',
+      description: 'The cartographic projection of this dataset. Refers to the list of supported projections in contract/projections.json',
+      properties: {
+        title: {
+          type: 'string'
+        },
+        code: {
+          type: 'string'
+        }
+      }
+    },
     'license': {
       'type': 'object',
       'additionalProperties': false,

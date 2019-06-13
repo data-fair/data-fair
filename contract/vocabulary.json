@@ -113,4 +113,14 @@
   "description": "Chemin relatif vers un fichier rattaché au jeu de données ou URL vers un fichier hébergé à l'extérieur",
   "identifiers": ["http://schema.org/DigitalDocument"],
   "type": "object"
+}, {
+  "title": "Coordonnée X",
+  "description": "Coordonné géographique X (Easting) selon une projection à définir sur le jeu de données. Ce champ sera utilisé pour calculer les attributs latitude/longitude.",
+  "identifiers": ["http://data.ign.fr/def/geometrie#coordX"],
+  "type": "float"
+}, {
+  "title": "Coordonnée Y",
+  "description": "Coordonné géographique Y (Northing) selon une projection à définir sur le jeu de données. Ce champ sera utilisé pour calculer les attributs latitude/longitude.",
+  "identifiers": ["http://data.ign.fr/def/geometrie#coordY"],
+  "type": "float"
 }]

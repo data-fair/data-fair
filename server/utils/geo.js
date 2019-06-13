@@ -10,15 +10,20 @@ const exec = require('child-process-promise').exec
 const wktParser = require('terraformer-wkt-parser')
 const tmp = require('tmp-promise')
 const writeFile = util.promisify(fs.writeFile)
+const proj4 = require('proj4')
 
+const projections = require('../../contract/projections')
 const geomUri = 'https://purl.org/geojson/vocab#geometry'
 const latlonUri = 'http://www.w3.org/2003/01/geo/wgs84_pos#lat_long'
 const latUri = ['http://schema.org/latitude', 'http://www.w3.org/2003/01/geo/wgs84_pos#lat']
 const lonUri = ['http://schema.org/longitude', 'http://www.w3.org/2003/01/geo/wgs84_pos#long']
+const coordXUri = 'http://data.ign.fr/def/geometrie#coordX'
+const coordYUri = 'http://data.ign.fr/def/geometrie#coordY'
 
 exports.schemaHasGeopoint = (schema) => {
   if (schema.find(p => p['x-refersTo'] === latlonUri)) return true
   if (schema.find(p => latUri.indexOf(p['x-refersTo']) !== -1) && schema.find(p => lonUri.indexOf(p['x-refersTo']) !== -1)) return true
+  if (schema.find(p => p['x-refersTo'] === coordXUri) && schema.find(p => p['x-refersTo'] === coordYUri)) return true
   return false
 }
 
@@ -32,8 +37,23 @@ exports.fixLon = (val) => {
   return val
 }
 
-exports.latlon2fields = (schema, doc) => {
+exports.latlon2fields = (dataset, doc) => {
+  const schema = dataset.schema
   let lat, lon
+
+  const coordXProp = schema.find(p => p['x-refersTo'] === coordXUri)
+  const coordYProp = schema.find(p => p['x-refersTo'] === coordYUri)
+  if (coordXProp && coordYProp && doc[coordXProp.key] !== undefined && doc[coordYProp.key] !== undefined) {
+    const projection = dataset.projection && dataset.projection.code && projections.find(p => p.code === dataset.projection.code)
+    if (dataset.projection && !projection) throw new Error(`La projection ${dataset.projection.code} n'est pas supportée.`)
+    if (!projection) {
+      lon = doc[coordXProp.key]
+      lat = doc[coordYProp.key]
+    } else {
+      [lon, lat] = proj4(projection.proj4, 'WGS84', [doc[coordXProp.key], doc[coordYProp.key]])
+    }
+  }
+
   const latlonProp = schema.find(p => p['x-refersTo'] === latlonUri)
   if (latlonProp && doc[latlonProp.key]) [lat, lon] = doc[latlonProp.key].split(',')
 

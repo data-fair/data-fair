@@ -314,7 +314,7 @@ class CalculatedExtension extends Transform {
       if (this.options.geometry) {
         Object.assign(doc, await geoUtils.geometry2fields(this.options.dataset.schema, item.doc))
       } else if (this.options.geopoint) {
-        Object.assign(doc, geoUtils.latlon2fields(this.options.dataset.schema, item.doc))
+        Object.assign(doc, geoUtils.latlon2fields(this.options.dataset, item.doc))
       }
     } catch (err) {
       return callback(err)

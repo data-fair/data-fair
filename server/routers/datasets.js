@@ -177,6 +177,8 @@ router.patch('/:datasetId', readDataset(['finalized', 'error']), permissions.mid
       patch.schema = await virtualDatasetsUtils.prepareSchema(db, { ...req.dataset, ...patch })
       patch.status = 'indexed'
     }
+  } if (patch.projection) {
+    patch.status = 'schematized'
   } else if (patch.schema) {
     try {
       await esUtils.updateDatasetMapping(req.app.get('es'), { id: req.dataset.id, schema: patch.schema })

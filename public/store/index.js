@@ -22,7 +22,8 @@ export default () => {
       vocabularyArray: [],
       licenses: {},
       env: {},
-      searchQueries: {}
+      searchQueries: {},
+      projections: null
     },
     getters: {
       ownerLicenses: (state) => (owner) => {
@@ -57,6 +58,11 @@ export default () => {
           })
         })
         commit('setAny', { vocabulary })
+      },
+      async fetchProjections({ state, commit }) {
+        if (state.projections) return
+        const projections = await this.$axios.$get('api/v1/projections')
+        commit('setAny', { projections })
       },
       async fetchLicenses({ getters, state, commit }, owner) {
         if (getters.ownerLicenses(owner)) return
