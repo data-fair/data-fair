@@ -13,6 +13,8 @@ exports.eventsPrefix = 'index'
 exports.process = async function(app, dataset) {
   const debug = require('debug')(`worker:indexer:${dataset.id}`)
 
+  if (dataset.isVirtual) throw new Error('Un jeu de données virtuel ne devrait pas passer par l\'étape indexation.')
+
   const db = app.get('db')
   const esClient = app.get('es')
   const collection = db.collection('datasets')

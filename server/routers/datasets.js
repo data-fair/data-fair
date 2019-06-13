@@ -177,7 +177,7 @@ router.patch('/:datasetId', readDataset(['finalized', 'error']), permissions.mid
       patch.schema = await virtualDatasetsUtils.prepareSchema(db, { ...req.dataset, ...patch })
       patch.status = 'indexed'
     }
-  } if (patch.projection) {
+  } else if (patch.projection && (!req.dataset.projection || patch.projection.code !== req.dataset.projection.code)) {
     patch.status = 'schematized'
   } else if (patch.schema) {
     try {
