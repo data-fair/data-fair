@@ -143,8 +143,11 @@ router.all('/:applicationId*', setResource, (req, res, next) => { req.app.get('a
 
   // Remember active sessions
   if (req.session) {
-    req.session.activeApplications = req.session.activeApplications || []
-    if (!req.session.activeApplications.includes(req.application.id)) req.session.activeApplications.push(req.application.id)
+    // temporarily empty previous sessions where applications were stored as strings
+    req.session.activeApplications = (req.session.activeApplications || []).filter(a => typeof a === 'object')
+    if (!req.session.activeApplications.find(a => a.id === req.application.id)) {
+      req.session.activeApplications.push({ id: req.application.id, owner: req.application.owner })
+    }
   }
 
   options.transforms = [{

@@ -57,7 +57,7 @@ exports.init = async (db) => {
     ensureIndex(db, 'quotas', { type: 1, id: 1 }, { unique: true }),
     ensureIndex(db, 'quotas', { 'name': 'text' }, { name: 'fulltext' }),
     // Sessions managed by express-session, but we add our custom indices
-    ensureIndex(db, 'sessions', { 'session.activeApplications': 1 })
+    ensureIndex(db, 'sessions', { 'session.activeApplications.id': 1 })
   ]
   await Promise.all(promises)
 }

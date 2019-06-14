@@ -305,7 +305,7 @@ router.post('/:applicationId/error', readApplication, permissions.middleware('wr
 }))
 
 router.get('/:applicationId/active-sessions', readApplication, permissions.middleware('readConfig', 'read'), cacheHeaders.noCache, asyncWrap(async (req, res, next) => {
-  const count = await req.app.get('db').collection('sessions').countDocuments({ 'session.activeApplications': req.application.id })
+  const count = await req.app.get('db').collection('sessions').countDocuments({ 'session.activeApplications.id': req.application.id })
   return res.send({ count })
 }))
 

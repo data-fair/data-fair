@@ -1,6 +1,7 @@
 const { Transform } = require('stream')
 const express = require('express')
 const moment = require('moment')
+const url = require('url')
 const slug = require('slugify')
 const soasLoader = require('soas')
 const axios = require('axios')
@@ -22,6 +23,8 @@ const validateOpenApi = ajv.compile(openApiSchema)
 const findUtils = require('../utils/find')
 const asyncWrap = require('../utils/async-wrap')
 const cacheHeaders = require('../utils/cache-headers')
+
+const debug = require('debug')('remote-services')
 
 const router = exports.router = express.Router()
 
@@ -246,6 +249,18 @@ let nbLimiter, kbLimiter
 router.use('/:remoteServiceId/proxy*', (req, res, next) => { req.app.get('anonymSession')(req, res, next) }, asyncWrap(async (req, res, next) => {
   if (!req.user && !(req.session && req.session.activeApplications)) return res.status(401).send('Pas de session active')
 
+  // Use the anonymous session and the current referer url to determine the application.
+  // that was used to call this remote service. We will consume the quota of the owner of the application.
+  let appOwner
+  if (req.session && req.headers.referer) {
+    debug('Anonymous session with active applications', req.session.activeApplications)
+    debug('Referer URL', req.headers.referer)
+    const refererAppId = url.parse(req.headers.referer.replace(config.publicUrl + '/app/', '')).pathname.split('/')[0]
+    const refererApp = req.session.activeApplications.find(a => a.id === refererAppId)
+    if (refererApp) appOwner = refererApp.owner
+    debug('Referer application owner', appOwner)
+  }
+
   // preventing POST is a simple way to prevent exposing bulk methods through this public proxy
   if (req.method.toUpperCase() !== 'GET') return res.status(405).send('Seules les opérations de type GET sont autorisées sur cette exposition de service')
 
@@ -273,9 +288,12 @@ router.use('/:remoteServiceId/proxy*', (req, res, next) => { req.app.get('anonym
   const remoteService = await req.app.get('db').collection('remote-services')
     .findOne({ id: req.params.remoteServiceId }, { projection: { _id: 0, id: 1, server: 1, apiKey: 1 } })
 
+  const headers = { 'x-forwarded-url': `${config.publicUrl}/api/v1/remote-services/${remoteService.id}/proxy/` }
+  if (appOwner) headers['x-consumer'] = JSON.stringify(appOwner)
+
   const options = {
     url: remoteService.server + '*',
-    headers: { 'x-forwarded-url': `${config.publicUrl}/api/v1/remote-services/${remoteService.id}/proxy/` },
+    headers,
     query: {},
     transforms: [{
       name: 'rate-limiter',
