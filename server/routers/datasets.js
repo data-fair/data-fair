@@ -282,8 +282,9 @@ const setFileInfo = async (file, attachmentsFile, dataset) => {
     // The format of the original file is already well suited to workers
     dataset.status = 'loaded'
     dataset.file = dataset.originalFile
-    const fileSample = await datasetFileSample(dataset)
     const fileName = datasetUtils.fileName(dataset)
+    await fs.fsync(fileName)
+    const fileSample = await datasetFileSample(dataset)
     debugFiles(`Attempt to detect encoding from ${fileSample.length} first bytes of file ${fileName}`)
     dataset.file.encoding = chardet.detect(fileSample)
     debugFiles(`Detected encoding ${dataset.file.encoding} for file ${fileName}`)
