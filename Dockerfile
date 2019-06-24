@@ -41,6 +41,7 @@ WORKDIR /webapp
 ADD package.json .
 ADD yarn.lock .
 RUN yarn --production
+ADD nodemon.json .
 
 # Adding UI files
 ADD public public
