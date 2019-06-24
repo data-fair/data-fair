@@ -61,8 +61,18 @@ module.exports = {
     cssText: 'THEME_CSS_TEXT'
   },
   worker: {
-    interval: 'WORKER_INTERVAL',
-    concurrency: 'WORKER_CONCURRENCY'
+    interval: {
+      __name: 'WORKER_INTERVAL',
+      __format: 'json'
+    },
+    concurrency: {
+      __name: 'WORKER_CONCURRENCY',
+      __format: 'json'
+    },
+    spawnTask: {
+      __name: 'WORKER_SPAWN_TASK',
+      __format: 'json'
+    }
   },
   i18n: {
     defaultLocale: 'I18N_DEFAULT_LOCALE',
