@@ -13,7 +13,14 @@ exports.eventsPrefix = 'analyze'
 exports.process = async function(app, dataset) {
   const db = app.get('db')
   const fileSample = await datasetFileSample(dataset)
-  const sniffResult = sniffer.sniff(iconv.decode(fileSample, dataset.file.encoding), {
+  if (!fileSample) throw new Error(`Échec d'échantillonage du fichier tabulaire, il est vide`)
+  let decodedSample
+  try {
+    decodedSample = iconv.decode(fileSample, dataset.file.encoding)
+  } catch (err) {
+    throw new Error(`Échec de décodage du fichier selon l'encodage détecté ${dataset.file.encoding}`)
+  }
+  const sniffResult = sniffer.sniff(decodedSample, {
     hasHeader: true
   })
 

@@ -16,6 +16,7 @@ const fallbackMimeTypes = {
   dif: 'text/plain',
   fods: 'application/vnd.oasis.opendocument.spreadsheet'
 }
+const debug = require('debug')('files')
 
 const { tabularTypes, geographicalTypes, archiveTypes } = require('../workers/converter')
 
@@ -28,6 +29,7 @@ const storage = multer.diskStorage({
   destination: async function(req, file, cb) {
     try {
       const dir = uploadDir(req)
+      debug('Create destination directory', dir)
       await fs.ensureDir(dir)
       cb(null, dir)
     } catch (err) {
@@ -51,24 +53,20 @@ const storage = multer.diskStorage({
         const baseId = slug(baseTitle, { lower: true })
         file.id = baseId
         file.title = baseTitle
-        let i = 1
+        let i = 1; let dbExists = false; let fileExists = false
         do {
           if (i > 1) {
             file.id = baseId + i
             file.title = baseTitle + ' ' + i
           }
-          // better to check file than db entry in case of file currently uploading
-          var dbExists = await req.app.get('db').collection('datasets').countDocuments({ id: file.id })
-          var fileExists = true
-          try {
-            await fs.stat(path.join(uploadDir(req), file.id + ext))
-          } catch (err) {
-            fileExists = false
-          }
+          // better to check file as well as db entry in case of file currently uploading
+          dbExists = await req.app.get('db').collection('datasets').countDocuments({ id: file.id })
+          fileExists = await fs.exists(path.join(uploadDir(req), file.id + ext))
           i += 1
         } while (dbExists || fileExists)
       }
       file.path = path.join(uploadDir(req), file.id + ext)
+      debug(`Use path ${file.path} as full destination`)
       cb(null, file.id + ext)
     } catch (err) {
       cb(err)
@@ -103,6 +101,7 @@ const upload = multer({
   storage,
   fileFilter: async function fileFilter(req, file, cb) {
     try {
+      debug('Accept file ?', file.originalname)
       // Input verification, only performed once, not for attachments and dataset both
       if (!req.inputChecked) {
         if (!req.user) throw createError(401)
@@ -141,8 +140,10 @@ const upload = multer({
       } else {
         throw createError(400, `Fichier dans un champ non supporté: "${file.fieldname}"`)
       }
+      debug('File accepted', file.originalname)
       cb(null, true)
     } catch (err) {
+      debug('File rejected', err)
       cb(err)
     }
   }

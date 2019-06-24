@@ -37,7 +37,7 @@ const cacheHeaders = require('../utils/cache-headers')
 const converter = require('../workers/converter')
 const datasetPatchSchema = require('../../contract/dataset-patch')
 const validatePatch = ajv.compile(datasetPatchSchema)
-
+const debugFiles = require('debug')('files')
 let router = express.Router()
 
 const datasetFileSample = require('../utils/dataset-file-sample')
@@ -283,7 +283,10 @@ const setFileInfo = async (file, attachmentsFile, dataset) => {
     dataset.status = 'loaded'
     dataset.file = dataset.originalFile
     const fileSample = await datasetFileSample(dataset)
+    const fileName = datasetUtils.fileName(dataset)
+    debugFiles(`Attempt to detect encoding from ${fileSample.length} first bytes of file ${fileName}`)
     dataset.file.encoding = chardet.detect(fileSample)
+    debugFiles(`Detected encoding ${dataset.file.encoding} for file ${fileName}`)
   }
 
   if (attachmentsFile) {
@@ -301,6 +304,7 @@ const beforeUpload = asyncWrap(async(req, res, next) => {
 })
 router.post('', beforeUpload, filesUtils.uploadFile(), asyncWrap(async(req, res) => {
   req.files = req.files || []
+  debugFiles('POST datasets uploaded some files', req.files)
   try {
     const db = req.app.get('db')
 
@@ -377,6 +381,7 @@ const attemptInsert = asyncWrap(async(req, res, next) => {
 })
 const updateDataset = asyncWrap(async(req, res) => {
   req.files = req.files || []
+  debugFiles('PUT datasets uploaded some files', req.files)
   try {
     const db = req.app.get('db')
     // After uploadFile, req.files contains the metadata of an uploaded file, and req.body the content of additional text fields
