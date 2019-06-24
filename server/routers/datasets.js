@@ -283,7 +283,10 @@ const setFileInfo = async (file, attachmentsFile, dataset) => {
     dataset.status = 'loaded'
     dataset.file = dataset.originalFile
     const fileName = datasetUtils.fileName(dataset)
-    await fs.fsync(fileName)
+    // Try to prevent weird bug with NFS by forcing syncing file before sampling
+    const fd = await fs.open(fileName, 'r')
+    await fs.fsync(fd)
+    await fs.close(fd)
     const fileSample = await datasetFileSample(dataset)
     debugFiles(`Attempt to detect encoding from ${fileSample.length} first bytes of file ${fileName}`)
     dataset.file.encoding = chardet.detect(fileSample)
