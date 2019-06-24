@@ -67,6 +67,10 @@ const storage = multer.diskStorage({
       }
       file.path = path.join(uploadDir(req), file.id + ext)
       debug(`Use path ${file.path} as full destination`)
+
+      // creating empty file before streaming seems to fix some weird bugs with NFS
+      await fs.ensureFile(file.path)
+
       cb(null, file.id + ext)
     } catch (err) {
       cb(err)
