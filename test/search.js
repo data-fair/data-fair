@@ -35,6 +35,15 @@ test('Get lines in dataset', async t => {
   // Filter on text field with default french stemming
   res = await ax.get('/api/v1/datasets/dataset/lines?q=lacté')
   t.is(res.data.total, 1)
+  // filter on exact values with query params suffixed with _in
+  res = await ax.get('/api/v1/datasets/dataset/lines?id_in=koumoul')
+  t.is(res.status, 200)
+  t.is(res.data.total, 1)
+  try {
+    res = await ax.get('/api/v1/datasets/dataset/lines?BADFIELD_in=koumoul')
+  } catch (err) {
+    t.is(err.status, 400)
+  }
   res = await ax.get('/api/v1/datasets/dataset/lines?bbox=-2.5,40,3,47')
   t.is(res.data.total, 1)
   res = await ax.get('/api/v1/datasets/dataset/geo_agg?bbox=-3,47,-2,48')
