@@ -10,6 +10,7 @@ module.exports = (dataset) => {
   dataset.schema = dataset.schema || []
   const properties = dataset.schema.map(p => p.key)
   const textProperties = dataset.schema.filter(p => p.type === 'string').map(p => p.key)
+  const uriRefProperties = dataset.schema.filter(p => !p['x-calculated'] && p.type === 'string' && p.format === 'uri-reference')
   const numberProperties = dataset.schema.filter(p => p.type === 'number').map(p => p.key)
   const filterParams = [{
     in: 'query',
@@ -68,6 +69,24 @@ Le format est 'x,y,z'.
     },
     style: 'commaDelimited'
   }]
+  uriRefProperties.forEach(prop => {
+    filterParams.push({
+      in: 'query',
+      name: `${prop.key}_in`,
+      description: `
+Un filtre pour restreindre les résultats en fonction d'une liste de valeurs acceptées sur la propriété ${prop.key}.
+    `,
+      required: false,
+      schema: {
+        type: 'array',
+        items: {
+          type: 'string',
+          enum: prop.enum
+        }
+      },
+      style: 'commaDelimited'
+    })
+  })
 
   const hitsParams = [{
     in: 'query',

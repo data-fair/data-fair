@@ -68,10 +68,10 @@ function checkQuery(query, fields, esFields) {
   esFields = esFields || fields.concat(fields.map(f => f + '.text')).concat(['<implicit>'])
   if (query.field === '_exists_') {
     if (!esFields.includes(query.term)) {
-      throw createError(400, `Impossible de faire une recherche sur le champ ${query.term}, il n'existe pas dans le jeu de donénes.`)
+      throw createError(400, `Impossible de faire une recherche sur le champ ${query.term}, il n'existe pas dans le jeu de données.`)
     }
   } else if (query.field && !esFields.includes(query.field)) {
-    throw createError(400, `Impossible de faire une recherche sur le champ ${query.field}, il n'existe pas dans le jeu de donénes.`)
+    throw createError(400, `Impossible de faire une recherche sur le champ ${query.field}, il n'existe pas dans le jeu de données.`)
   }
   if (query.left) checkQuery(query.left, fields, esFields)
   if (query.right) checkQuery(query.right, fields, esFields)
@@ -147,6 +147,18 @@ exports.prepareQuery = (dataset, query) => {
   if (query.q) {
     must.push({ simple_query_string: { query: query.q, fields: searchFields } })
   }
+  Object.keys(query)
+    .filter(k => k.endsWith('_in'))
+    .map(key => ({
+      key: key.slice(0, key.length - 3),
+      values: query[key].split(',')
+    }))
+    .forEach(inFilter => {
+      if (!fields.includes(inFilter.key)) throw createError(400, `Impossible de faire une recherche sur le champ ${inFilter.key}, il n'existe pas dans le jeu de données.`)
+      filter.push({ terms: {
+        [inFilter.key]: inFilter.values
+      } })
+    })
 
   // bounding box filter to restrict results on geo zone: left,bottom,right,top
   if (query.bbox || query.xyz) {
