@@ -113,6 +113,17 @@ test.serial('Upload new dataset in user zone', async t => {
   t.is(res.data.file.encoding, 'UTF-8')
 })
 
+test.serial('Upload new dataset in user zone with title', async t => {
+  const ax = await axiosBuilder('dmeadus0@answers.com:passwd')
+  const form = new FormData()
+  form.append('file', datasetFd, 'dataset1.csv')
+  form.append('title', 'My title')
+  let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
+  t.is(res.status, 201)
+  t.is(res.data.id, 'my-title')
+  t.is(res.data.title, 'My title')
+})
+
 test.serial('Upload new dataset in organization zone', async t => {
   const ax = await axiosBuilder('dmeadus0@answers.com:passwd')
   const form = new FormData()

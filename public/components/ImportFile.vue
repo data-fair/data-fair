@@ -29,6 +29,14 @@
         <div class="mt-3 mb-3">
           <input type="file" @change="onFileUpload">
         </div>
+        <div v-if="file" class="mt-3 mb-3">
+          <v-text-field
+            v-model="title"
+            name="title"
+            label="Titre du jeu de données"
+            placeholder="Laissez vide pour utiliser le nom de fichier"
+          />
+        </div>
         <v-btn :disabled="!file" color="primary" @click.native="currentStep = 2">
           Continuer
         </v-btn>
@@ -89,22 +97,32 @@ export default {
     uploadProgress: 0,
     actions: [],
     action: null,
-    importing: false
+    importing: false,
+    title: ''
   }),
   computed: {
     ...mapState('session', ['user']),
-    ...mapState(['env'])
+    ...mapState(['env']),
+    cleanTitle() {
+      const trimmed = this.title.trim()
+      return trimmed.length > 3 ? trimmed : null
+    }
   },
   watch: {
     async currentStep() {
       if (this.currentStep === 4) {
-        const datasets = await this.$axios.$get('api/v1/datasets', {
-          params: {
-            owner: this.owner.type + ':' + this.owner.id,
-            'filename': this.file.name
-          }
-        })
-        this.actions = [{ type: 'create', title: 'Créer un nouveau jeu de données' }, ...datasets.results.map(d => ({
+        let existingDatasets
+        if (this.cleanTitle) {
+          existingDatasets = { results: [] }
+        } else {
+          existingDatasets = await this.$axios.$get('api/v1/datasets', {
+            params: {
+              owner: this.owner.type + ':' + this.owner.id,
+              'filename': this.file.name
+            }
+          })
+        }
+        this.actions = [{ type: 'create', title: 'Créer un nouveau jeu de données' }, ...existingDatasets.results.map(d => ({
           type: 'update',
           id: d.id,
           title: 'Mettre à jour les données du jeu ' + d.title
@@ -130,8 +148,10 @@ export default {
         }
       }
       const formData = new FormData()
+
       formData.append('dataset', this.file)
       if (this.attachment) formData.append('attachments', this.attachment)
+      if (this.cleanTitle) formData.append('title', this.title)
 
       if (this.owner.type === 'organization') {
         options.headers = { 'x-organizationId': this.owner.id }
