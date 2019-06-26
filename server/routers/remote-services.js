@@ -252,7 +252,7 @@ router.use('/:remoteServiceId/proxy*', (req, res, next) => { req.app.get('anonym
   // Use the anonymous session and the current referer url to determine the application.
   // that was used to call this remote service. We will consume the quota of the owner of the application.
   let appOwner
-  if (req.session && req.headers.referer) {
+  if (req.session && req.session.activeApplications && req.headers.referer) {
     debug('Anonymous session with active applications', req.session.activeApplications)
     debug('Referer URL', req.headers.referer)
     const refererAppId = url.parse(req.headers.referer.replace(config.publicUrl + '/app/', '')).pathname.split('/')[0]
