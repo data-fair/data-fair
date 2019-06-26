@@ -39,7 +39,11 @@ const storage = multer.diskStorage({
   filename: async function(req, file, cb) {
     try {
       if (file.fieldname === 'attachments') {
-        return cb(null, shortid.generate())
+        const attachmentsTmp = shortid.generate()
+        const attachmentsPath = path.join(uploadDir(req), attachmentsTmp)
+        // creating empty file before streaming seems to fix some weird bugs with NFS
+        await fs.ensureFile(attachmentsPath)
+        return cb(null, attachmentsTmp)
       }
       const ext = path.parse(file.originalname).ext
       if (req.dataset) {
