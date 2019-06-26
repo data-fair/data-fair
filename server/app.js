@@ -100,7 +100,8 @@ exports.run = async () => {
   app.publish = await wsUtils.initPublisher(db)
 
   if (config.mode.includes('server')) {
-    app.set('anonymSession', await require('./utils/anonym-session').init(db))
+    const anonymSession = await require('./utils/anonym-session').init(db)
+    app.set('anonymSession', anonymSession)
     await require('./utils/capture').init()
     await require('./utils/cache').init(db)
     require('./routers/base-applications').init(db)
@@ -116,6 +117,13 @@ exports.run = async () => {
     app.use(session.decode)
     app.use(session.loginCallback)
     const nuxtMiddleware = await require('./nuxt')()
+    // init anonym session on data-fair UI to support using remote services from outside application
+    // for example map embeds
+    app.use(anonymSession)
+    app.use((req, res, next) => {
+      req.session.activeApplications = req.session.activeApplications || []
+      next()
+    })
     app.use(nuxtMiddleware)
     app.set('ui-ready', true)
 

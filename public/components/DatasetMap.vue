@@ -122,8 +122,19 @@ export default {
       const style = this.env.map.style.replace('./', this.env.publicUrl + '/')
       this.map = new mapboxgl.Map({ container: 'map', style })
       this.map.on('error', (error) => {
-        if (error.sourceId) eventBus.$emit('notification', { error: `Échec d'accès aux tuiles ${error.sourceId}`, msg: 'Erreur pendant le rendu de la carte:' })
-        else eventBus.$emit('notification', { error, msg: 'Erreur pendant le rendu de la carte:' })
+        console.log('ERROR', error)
+        if (error.sourceId) {
+          eventBus.$emit('notification', { error: `Échec d'accès aux tuiles ${error.sourceId}`, msg: 'Erreur pendant le rendu de la carte:' })
+        } else if (error.error && error.error.status === 401) {
+          eventBus.$emit('notification', { error: `
+      Pas de session active. Cette erreur peut subvenir si vous utilisez une extension qui bloque les cookies.
+
+      Les cookies de session sont utilisés par cette application pour protéger notre infrastructure contre les abus.
+      `,
+          msg: 'Erreur pendant le rendu de la carte:' })
+        } else {
+          eventBus.$emit('notification', { error: (error.error && error.error.message) || error, msg: 'Erreur pendant le rendu de la carte:' })
+        }
       })
       const bbox = await this.getBBox()
       this.map.fitBounds(bbox, { duration: 0 })

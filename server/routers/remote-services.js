@@ -247,7 +247,13 @@ router.post('/:remoteServiceId/_update', readService, asyncWrap(async(req, res) 
 // Use the proxy as a user with an active session on an application
 let nbLimiter, kbLimiter
 router.use('/:remoteServiceId/proxy*', (req, res, next) => { req.app.get('anonymSession')(req, res, next) }, asyncWrap(async (req, res, next) => {
-  if (!req.user && !(req.session && req.session.activeApplications)) return res.status(401).send('Pas de session active')
+  if (!req.user && !(req.session && req.session.activeApplications)) {
+    return res.status(401).send(`
+Pas de session active. Cette erreur peut subvenir si vous utilisez une extension qui bloque les cookies.
+
+Les cookies de session sont utilisés par cette application pour protéger notre infrastructure contre les abus.
+    `)
+  }
 
   // Use the anonymous session and the current referer url to determine the application.
   // that was used to call this remote service. We will consume the quota of the owner of the application.
