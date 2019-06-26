@@ -151,7 +151,7 @@ export default {
 
       formData.append('dataset', this.file)
       if (this.attachment) formData.append('attachments', this.attachment)
-      if (this.cleanTitle) formData.append('title', this.title)
+      if (this.cleanTitle) formData.append('title', this.cleanTitle)
 
       if (this.owner.type === 'organization') {
         options.headers = { 'x-organizationId': this.owner.id }
