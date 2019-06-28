@@ -4,7 +4,6 @@ const ajv = require('ajv')()
 const util = require('util')
 const path = require('path')
 const fs = require('fs-extra')
-const unlink = util.promisify(fs.unlink)
 const moment = require('moment')
 const createError = require('http-errors')
 const pump = util.promisify(require('pump'))
@@ -15,7 +14,6 @@ const config = require('config')
 const chardet = require('chardet')
 const slug = require('slugify')
 const sanitizeHtml = require('sanitize-html')
-const rimraf = util.promisify(require('rimraf'))
 const journals = require('../utils/journals')
 const esUtils = require('../utils/es')
 const filesUtils = require('../utils/files')
@@ -34,7 +32,6 @@ const geo = require('../utils/geo')
 const tiles = require('../utils/tiles')
 const cache = require('../utils/cache')
 const cacheHeaders = require('../utils/cache-headers')
-const converter = require('../workers/converter')
 const datasetPatchSchema = require('../../contract/dataset-patch')
 const validatePatch = ajv.compile(datasetPatchSchema)
 const debugFiles = require('debug')('files')
@@ -206,32 +203,47 @@ router.put('/:datasetId/owner', readDataset(), permissions.middleware('delete', 
   if (!permissions.canDoForOwner(req.body, 'postDataset', req.user, req.app.get('db'))) return res.sendStatus(403)
   const patchedDataset = (await req.app.get('db').collection('datasets')
     .findOneAndUpdate({ id: req.params.datasetId }, { '$set': { owner: req.body } }, { returnOriginal: false })).value
+
+  // Move all files
+  try {
+    const originalFileName = datasetUtils.originalFileName(req.dataset)
+    if (await fs.exists(originalFileName)) await fs.move(originalFileName, datasetUtils.originalFileName(patchedDataset))
+  } catch (err) {
+    console.error('Error while moving original file', err)
+  }
+  try {
+    const fileName = datasetUtils.fileName(req.dataset)
+    if (await fs.exists()) await fs.move(fileName, datasetUtils.fileName(patchedDataset))
+  } catch (err) {
+    console.error('Error while moving converted file', err)
+  }
+  try {
+    const attachmentsDir = datasetUtils.attachmentsDir(req.dataset)
+    if (await fs.exists(attachmentsDir)) await fs.move(attachmentsDir, datasetUtils.attachmentsDir(patchedDataset))
+  } catch (err) {
+    console.error('Error while moving decompressed files', err)
+  }
+
   res.status(200).json(clean(patchedDataset))
 }))
 
 // Delete a dataset
 router.delete('/:datasetId', readDataset(), permissions.middleware('delete', 'admin'), asyncWrap(async(req, res) => {
   const db = req.app.get('db')
-  if (req.dataset.originalFile) {
-    try {
-      await unlink(datasetUtils.originalFileName(req.dataset))
-    } catch (err) {
-      console.error('Error while deleting original file', err)
-    }
-    if (!baseTypes.has(req.dataset.originalFile.mimetype)) {
-      try {
-        await unlink(datasetUtils.fileName(req.dataset))
-      } catch (err) {
-        console.error('Error while deleting converted file', err)
-      }
-    }
-    if (converter.archiveTypes.has(req.dataset.originalFile.mimetype)) {
-      try {
-        await rimraf(datasetUtils.attachmentsDir(req.dataset))
-      } catch (err) {
-        console.error('Error while deleting decompressed files', err)
-      }
-    }
+  try {
+    await fs.remove(datasetUtils.originalFileName(req.dataset))
+  } catch (err) {
+    console.error('Error while deleting original file', err)
+  }
+  try {
+    await fs.remove(datasetUtils.fileName(req.dataset))
+  } catch (err) {
+    console.error('Error while deleting converted file', err)
+  }
+  try {
+    await fs.remove(datasetUtils.attachmentsDir(req.dataset))
+  } catch (err) {
+    console.error('Error while deleting decompressed files', err)
   }
 
   if (req.dataset.isRest) {
