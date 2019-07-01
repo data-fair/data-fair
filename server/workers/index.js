@@ -69,6 +69,9 @@ async function iter(app, type) {
     resource = await acquireNext(app.get('db'), type, typesFilters[type])
     if (!resource) return
 
+    // REST datasets trigger too many events
+    const noStoreEvent = type === 'dataset' && resource.isRest && resource.finalizedAt
+
     if (type === 'application') {
       // Not much to do on applications.. Just catalog publication
       taskKey = 'applicationPublisher'
@@ -108,7 +111,7 @@ async function iter(app, type) {
     if (!taskKey) return
     const task = tasks[taskKey]
 
-    if (task.eventsPrefix) await journals.log(app, resource, { type: task.eventsPrefix + '-start' }, type)
+    if (task.eventsPrefix) await journals.log(app, resource, { type: task.eventsPrefix + '-start' }, type, noStoreEvent)
 
     if (config.worker.spawnTask) {
       // Run a task in a dedicated child process for  extra resiliency to fatal memory exceptions
@@ -126,7 +129,7 @@ async function iter(app, type) {
     const newResource = await app.get('db').collection(type + 's').findOne({ id: resource.id })
     if (hooks[taskKey]) hooks[taskKey].resolve(newResource)
     if (hooks[taskKey + '/' + resource.id]) hooks[taskKey + '/' + resource.id].resolve(newResource)
-    if (task.eventsPrefix) await journals.log(app, newResource, { type: task.eventsPrefix + '-end' }, type)
+    if (task.eventsPrefix) await journals.log(app, newResource, { type: task.eventsPrefix + '-end' }, type, noStoreEvent)
   } catch (err) {
     // Build back the original error message from the stderr of the child process
     const errorMessage = []
