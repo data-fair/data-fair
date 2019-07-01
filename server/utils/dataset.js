@@ -129,12 +129,18 @@ exports.storageSize = async (db, owner) => {
   if (res.length) size += res[0].totalSize
 
   // Add sum of sizes of collections for REST datasets
-  const cursor = db.collection('datasets').find({ ...filter, isRest: true }).project({ id: 1 })
+  const cursor = db.collection('datasets').find({ ...filter, isRest: true }).project({ id: 1, rest: 1 })
   while (await cursor.hasNext()) {
     const dataset = await cursor.next()
     const collection = await restDatasetsUtils.collection(db, dataset)
     const stats = await collection.stats()
     size += stats.storageSize
+
+    if (dataset.rest && dataset.rest.history) {
+      const revisionsCollection = await restDatasetsUtils.revisionsCollection(db, dataset)
+      const revisionsStats = await revisionsCollection.stats()
+      size += revisionsStats.storageSize
+    }
   }
 
   return size

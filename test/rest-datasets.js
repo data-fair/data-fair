@@ -267,7 +267,7 @@ test.serial('The size of the mongodb collection is poart of storage consumption'
 })
 
 test.serial('Activate the history mode', async t => {
-  const ax = await axiosBuilder('dmeadus0@answers.com:passwd')
+  const ax = await axiosBuilder('hlalonde3@desdev.cn')
   let res = await ax.post('/api/v1/datasets', {
     isRest: true,
     title: 'resthist',
@@ -282,4 +282,8 @@ test.serial('Activate the history mode', async t => {
   t.is(res.data.results[0].attr1, 'test2')
   t.is(res.data.results[1]._id, 'id1')
   t.is(res.data.results[1].attr1, 'test1')
+
+  // Get the stored quota and consumption
+  res = await ax.get('/api/v1/quotas/user/hlalonde3')
+  t.is(res.data.consumption.storage, 8192)
 })
