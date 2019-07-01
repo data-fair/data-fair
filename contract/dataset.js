@@ -320,7 +320,14 @@ module.exports = {
     },
     rest: {
       type: 'object',
-      description: 'A configuration object dedicated to REST datasets.'
+      description: 'A configuration object dedicated to REST datasets.',
+      properties: {
+        history: {
+          type: 'boolean',
+          default: false,
+          description: 'Set to true to let data-fair store revisions of the lines in the dataset.'
+        }
+      }
     },
     extras: {
       type: 'object',

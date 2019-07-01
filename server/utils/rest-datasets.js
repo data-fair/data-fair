@@ -14,6 +14,7 @@ const { Transform, Writable } = require('stream')
 const mimeTypeStream = require('mime-type-stream')
 const datasetUtils = require('./dataset')
 const attachmentsUtils = require('./attachments')
+const findUtils = require('./find')
 const fieldsSniffer = require('./fields-sniffer')
 
 const actions = ['create', 'update', 'patch', 'delete']
@@ -48,18 +49,27 @@ exports.collection = (db, dataset) => {
   return db.collection('dataset-data-' + dataset.id)
 }
 
+exports.revisionsCollection = (db, dataset) => {
+  return db.collection('dataset-revisions-' + dataset.id)
+}
+
 exports.initDataset = async (db, dataset) => {
   const collection = exports.collection(db, dataset)
   await collection.createIndex({ _updatedAt: 1 })
   await collection.createIndex({ _deleted: 1 })
+  const revisionsCollection = exports.revisionsCollection(db, dataset)
+  await revisionsCollection.createIndex({ _lineId: 1, _updatedAt: -1 }, { unique: true })
 }
 
 exports.deleteDataset = async (db, dataset) => {
   const collection = exports.collection(db, dataset)
   await collection.drop()
+  const revisionsCollection = exports.revisionsCollection(db, dataset)
+  await revisionsCollection.drop()
 }
 
-const applyTransaction = async (collection, user, transac, validate) => {
+const applyTransaction = async (db, dataset, user, transac, validate) => {
+  const collection = exports.collection(db, dataset)
   let { _action, ...body } = transac
   _action = _action || 'create'
   if (!actions.includes(_action)) throw createError(400, `action "${_action}" is unknown, use one of ${JSON.stringify(actions)}`)
@@ -82,6 +92,17 @@ const applyTransaction = async (collection, user, transac, validate) => {
     extendedBody._deleted = true
     doc = (await collection.findOneAndReplace({ _id: body._id }, extendedBody, { returnOriginal: false })).value
   }
+
+  if (dataset.rest && dataset.rest.history && !doc._error) {
+    const revisionsCollection = exports.revisionsCollection(db, dataset)
+    const revision = { ...doc }
+    delete revision._needsIndexing
+    revision._lineId = revision._id
+    delete revision._id
+    if (!revision._deleted) delete revision._deleted
+    await revisionsCollection.insertOne(revision)
+  }
+
   return { _id: body._id, _action, _status: doc._error ? 400 : 200, ...doc }
 }
 
@@ -142,8 +163,7 @@ exports.createLine = async (req, res, next) => {
   const db = req.app.get('db')
   req.body._id = req.body._id || shortid.generate()
   await manageAttachment(req, false)
-  const collection = exports.collection(db, req.dataset)
-  const line = await applyTransaction(collection, req.user, { _action: 'create', ...req.body }, compileSchema(req.dataset))
+  const line = await applyTransaction(db, req.dataset, req.user, { _action: 'create', ...req.body }, compileSchema(req.dataset))
   if (line._error) return res.status(400).send(line._error)
   await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { status: 'updated' } })
   res.status(201).send(cleanLine(line))
@@ -151,9 +171,8 @@ exports.createLine = async (req, res, next) => {
 
 exports.deleteLine = async (req, res, next) => {
   const db = req.app.get('db')
-  const collection = exports.collection(db, req.dataset)
   await manageAttachment(req, false)
-  const line = await applyTransaction(collection, req.user, { _action: 'delete', _id: req.params.lineId }, compileSchema(req.dataset))
+  const line = await applyTransaction(db, req.dataset, req.user, { _action: 'delete', _id: req.params.lineId }, compileSchema(req.dataset))
   if (line._error) return res.status(400).send(line._error)
   await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { status: 'updated' } })
   await datasetUtils.updateStorageSize(db, req.dataset.owner)
@@ -162,9 +181,8 @@ exports.deleteLine = async (req, res, next) => {
 
 exports.updateLine = async (req, res, next) => {
   const db = req.app.get('db')
-  const collection = exports.collection(db, req.dataset)
   await manageAttachment(req, false)
-  const line = await applyTransaction(collection, req.user, { _action: 'update', _id: req.params.lineId, ...req.body }, compileSchema(req.dataset))
+  const line = await applyTransaction(db, req.dataset, req.user, { _action: 'update', _id: req.params.lineId, ...req.body }, compileSchema(req.dataset))
   if (line._error) return res.status(400).send(line._error)
   await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { status: 'updated' } })
   await datasetUtils.updateStorageSize(db, req.dataset.owner)
@@ -173,9 +191,8 @@ exports.updateLine = async (req, res, next) => {
 
 exports.patchLine = async (req, res, next) => {
   const db = req.app.get('db')
-  const collection = exports.collection(db, req.dataset)
   await manageAttachment(req, true)
-  const line = await applyTransaction(collection, req.user, { _action: 'patch', _id: req.params.lineId, ...req.body }, compileSchema(req.dataset))
+  const line = await applyTransaction(db, req.dataset, req.user, { _action: 'patch', _id: req.params.lineId, ...req.body }, compileSchema(req.dataset))
   if (line._error) return res.status(400).send(line._error)
   await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { status: 'updated' } })
   await datasetUtils.updateStorageSize(db, req.dataset.owner)
@@ -184,7 +201,6 @@ exports.patchLine = async (req, res, next) => {
 
 exports.bulkLines = async (req, res, next) => {
   const db = req.app.get('db')
-  const collection = exports.collection(db, req.dataset)
   const validate = compileSchema(req.dataset)
 
   // If attachments are sent, add them to the existing ones
@@ -207,7 +223,7 @@ exports.bulkLines = async (req, res, next) => {
   const transactionStream = new Transform({
     objectMode: true,
     async transform(chunk, encoding, cb) {
-      applyTransaction(collection, req.user, chunk, validate)
+      applyTransaction(db, req.dataset, req.user, chunk, validate)
         .then(line => {
           cb(null, line)
         }, error => {
@@ -226,6 +242,24 @@ exports.bulkLines = async (req, res, next) => {
   )
   await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { status: 'updated' } })
   await datasetUtils.updateStorageSize(db, req.dataset.owner)
+}
+
+exports.readLineRevisions = async (req, res, next) => {
+  if (!req.dataset.rest || !req.dataset.rest.history) {
+    return res.status(400).send(`L'historisation des lignes n'est pas activée pour ce jeu de données.`)
+  }
+  const revisionsCollection = exports.revisionsCollection(req.app.get('db'), req.dataset)
+  const filter = { _lineId: req.params.lineId }
+  const [skip, size] = findUtils.pagination(req.query)
+  const [total, results] = await Promise.all([
+    revisionsCollection.countDocuments(filter),
+    revisionsCollection.find(filter).sort({ _updatedAt: -1 }).skip(skip).limit(size).toArray()
+  ])
+  results.forEach(r => {
+    r._id = r._lineId
+    delete r._lineId
+  })
+  res.send({ total, results })
 }
 
 exports.readStream = (db, dataset, onlyUpdated) => {

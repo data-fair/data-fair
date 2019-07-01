@@ -179,7 +179,7 @@ test.serial('Use dataset schema to validate inputs', async t => {
   t.truthy(res.data[1]._error)
 })
 
-test.only('Send attachment with multipart request', async t => {
+test.serial('Send attachment with multipart request', async t => {
   const ax = await axiosBuilder('dmeadus0@answers.com:passwd')
   let res = await ax.post('/api/v1/datasets', {
     isRest: true,
@@ -264,4 +264,22 @@ test.serial('The size of the mongodb collection is poart of storage consumption'
   let res = await ax.get('/api/v1/quotas/user/ccherryholme1')
   t.is(res.status, 200)
   t.is(res.data.consumption.storage, 4096)
+})
+
+test.serial('Activate the history mode', async t => {
+  const ax = await axiosBuilder('dmeadus0@answers.com:passwd')
+  let res = await ax.post('/api/v1/datasets', {
+    isRest: true,
+    title: 'resthist',
+    rest: { history: true },
+    schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }]
+  })
+  res = await ax.post('/api/v1/datasets/resthist/lines', { _id: 'id1', attr1: 'test1', attr2: 'test1' })
+  t.is(res.data._id, 'id1')
+  res = await ax.patch('/api/v1/datasets/resthist/lines/id1', { attr1: 'test2' })
+  res = await ax.get('/api/v1/datasets/resthist/lines/id1/revisions')
+  t.is(res.data.results[0]._id, 'id1')
+  t.is(res.data.results[0].attr1, 'test2')
+  t.is(res.data.results[1]._id, 'id1')
+  t.is(res.data.results[1].attr1, 'test1')
 })

@@ -75,6 +75,9 @@
               <v-btn flat icon color="primary" title="Éditer cette ligne" @click="editedLine = Object.assign({}, props.item); showEditLineDialog();">
                 <v-icon>edit</v-icon>
               </v-btn>
+              <v-btn v-if="dataset.rest && dataset.rest.history" flat icon color="primary" title="Voir l'historique des révisions de cette ligne" @click="showHistoryDialog(props.item)">
+                <v-icon>history</v-icon>
+              </v-btn>
             </v-layout>
             <template v-else-if="header.value === '_thumbnail'">
               <v-avatar v-if="props.item._thumbnail" tile :size="40">
@@ -143,6 +146,32 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
+
+    <v-dialog v-model="historyDialog" max-width="800px">
+      <v-card>
+        <v-toolbar dense flat>
+          <v-toolbar-title>Historique des révisions</v-toolbar-title>
+          <v-spacer />
+          <v-btn icon @click.native="historyDialog = false">
+            <v-icon>close</v-icon>
+          </v-btn>
+        </v-toolbar>
+        <v-card-text v-if="history" class="pa-0">
+          <v-data-table :headers="historyHeaders" :items="history.results" :total-items="history.total" rows-per-page-text="Nombre de révisions" :loading="historyLoading" :pagination.sync="historyPagination">
+            <template slot="items" slot-scope="props">
+              <td v-for="header in historyHeaders" :key="header.value" class="pr-0 pl-4">
+                <template v-if="header.value === '_updatedAt'">
+                  {{ new Date(props.item._updatedAt).toLocaleString() }}
+                </template>
+                <template v-else>
+                  {{ ((props.item[header.value] === undefined || props.item[header.value] === null ? '' : props.item[header.value]) + '') | truncate(50) }}
+                </template>
+              </td>
+            </template>
+          </v-data-table>
+        </v-card-text>
+      </v-card>
+    </v-dialog>
   </v-container>
 </template>
 
@@ -172,7 +201,15 @@ export default {
     editedId: null,
     deleteLineDialog: false,
     file: null,
-    uploadProgress: 0
+    uploadProgress: 0,
+    historyLine: null,
+    historyDialog: false,
+    history: null,
+    historyLoading: false,
+    historyPagination: {
+      page: 1,
+      rowsPerPage: 10
+    }
   }),
   computed: {
     ...mapState(['vocabulary']),
@@ -196,6 +233,13 @@ export default {
         fieldsHeaders.unshift({ text: '', value: '_actions' })
       }
       return fieldsHeaders
+    },
+    historyHeaders() {
+      const historyHeaders = this.headers
+        .map(h => ({ ...h, sortable: false }))
+        .filter(h => !h.value.startsWith('_'))
+      historyHeaders.unshift({ text: 'Date de la révision', value: '_updatedAt', sortable: false })
+      return historyHeaders
     },
     plural() {
       return this.data.total > 1
@@ -224,6 +268,12 @@ export default {
     pagination: {
       handler () {
         this.refresh()
+      },
+      deep: true
+    },
+    historyPagination: {
+      handler () {
+        if (this.historyLine) this.refreshHistory()
       },
       deep: true
     }
@@ -276,6 +326,26 @@ export default {
       this.uploadProgress = 0
       this.editLineDialog = true
     },
+    showHistoryDialog(line) {
+      this.historyLine = line
+      this.history = null
+      this.historyDialog = true
+      this.historyPagination.page = 1
+
+      this.refreshHistory()
+    },
+    async refreshHistory() {
+      this.historyLoading = true
+      try {
+        this.history = await this.$axios.$get(`${this.resourceUrl}/lines/${this.historyLine._id}/revisions`, { params: {
+          page: this.historyPagination.page,
+          size: this.historyPagination.rowsPerPage
+        } })
+      } catch (error) {
+        eventBus.$emit('notification', { error, msg: `Erreur pendant la récupération de l'historique de la ligne'` })
+      }
+      this.historyLoading = false
+    },
     onFileUpload(e) {
       this.file = e.target.files[0]
     },
@@ -298,9 +368,6 @@ export default {
       this.editLineDialog = false
       try {
         await this.$axios.$post(this.resourceUrl + '/lines', formData, options)
-        console.log('POST OK')
-        await new Promise(resolve => setTimeout(resolve, 1000))
-        this.refresh()
       } catch (error) {
         if (error.response && error.response.status === 404) this.notFound = true
         else eventBus.$emit('notification', { error, msg: `Erreur pendant l'enregistrement de la ligne'` })

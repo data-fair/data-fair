@@ -31,6 +31,10 @@
             name="title"
             label="Titre"
           />
+          <v-checkbox
+            v-model="rest.history"
+            :label="`Conserver un historique complet des révisions des lignes du jeu de données`"
+          />
         </div>
         <v-btn :disabled="!title" color="primary" @click.native="createDataset()">
           Créer
@@ -53,7 +57,10 @@ export default {
   data: () => ({
     currentStep: null,
     owner: null,
-    title: ''
+    title: '',
+    rest: {
+      history: false
+    }
   }),
   computed: {
     ...mapState('session', ['user']),
@@ -69,7 +76,7 @@ export default {
         if (this.owner.role) options.headers['x-organizationRole'] = this.owner.role
       }
       try {
-        const dataset = await this.$axios.$post('api/v1/datasets', { isRest: true, title: this.title }, options)
+        const dataset = await this.$axios.$post('api/v1/datasets', { isRest: true, title: this.title, rest: this.rest }, options)
         this.$router.push({ path: `/dataset/${dataset.id}/description` })
       } catch (error) {
         eventBus.$emit('notification', { error, msg: `Erreur pendant la création du jeu de données incrémental :` })
