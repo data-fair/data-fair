@@ -24,15 +24,11 @@ const journals = require('../utils/journals')
 const capture = require('../utils/capture')
 const visibilityUtils = require('../utils/visibility')
 const cacheHeaders = require('../utils/cache-headers')
+const apiDocsUtil = require('../utils/api-docs')
 
 const router = module.exports = express.Router()
 
-const operationsClasses = {
-  list: ['list'],
-  read: ['readDescription', 'readConfig', 'readApiDoc', 'readJournal'],
-  write: ['writeDescription', 'writeConfig'],
-  admin: ['delete', 'getPermissions', 'setPermissions']
-}
+const operationsClasses = apiDocsUtil.operationsClasses.applications
 
 function clean(application) {
   application.public = permissions.isPublic(application, operationsClasses)

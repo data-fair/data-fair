@@ -177,7 +177,6 @@ module.exports.router = (collectionName, resourceName) => {
     res.status(200).send(req[resourceName].permissions || [])
   })
 
-  // update settings
   router.put('', exports.middleware('setPermissions', 'admin'), async (req, res, next) => {
     let valid = validate(req.body)
     if (!valid) return res.status(400).send(validate.errors)
@@ -191,6 +190,12 @@ module.exports.router = (collectionName, resourceName) => {
       await resources.updateOne({
         id: req[resourceName].id
       }, { $set: { permissions: req.body } })
+      if (collectionName === 'datasets') {
+        await resources.updateOne({
+          id: req[resourceName].id,
+          'publications.status': 'published'
+        }, { $set: { 'publications.$.status': 'waiting' } })
+      }
       res.status(200).send(req.body)
     } catch (err) {
       next(err)

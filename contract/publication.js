@@ -15,6 +15,11 @@ module.exports = {
       description: 'A simple flag to clearly identify the publications that were successful. If "published" then the targetUrl key should be defined, If "error" then the error key should be defined.',
       enum: ['waiting', 'published', 'error', 'deleted']
     },
+    'publishedAt': {
+      'type': 'string',
+      'description': 'Date of the last update for this publication',
+      'format': 'date-time'
+    },
     error: {
       type: 'string'
     },

@@ -15,7 +15,7 @@
             Ressource associée au jeu de données "{{ publication.addToDataset.title }}" sur le catalogue "{{ catalogsById[publication.catalog].title }}"
           </v-list-tile-title>
           <v-list-tile-title v-else>
-            Jeu de données publié sur le catalogue "{{ catalogsById[publication.catalog].title }}"
+            Jeu de données publié sur le catalogue "{{ catalogsById[publication.catalog].title }}" <span v-if="publication.publishedAt">({{ publication.publishedAt | moment("DD/MM/YYYY, HH:mm") }})</span>
           </v-list-tile-title>
           <v-list-tile-sub-title v-if="publication.status==='published'">
             <a :href="publication.targetUrl" target="_blank">{{ publication.targetUrl }}</a>

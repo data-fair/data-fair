@@ -1,7 +1,7 @@
 const config = require('config')
 const url = require('url')
 const axios = require('axios')
-
+const debug = require('debug')('catalogs:udata')
 exports.title = 'uData'
 exports.description = 'Customizable and skinnable social platform dedicated to (open)data.'
 exports.docUrl = 'https://udata.readthedocs.io/en/latest/'
@@ -64,7 +64,7 @@ exports.publishApplication = async (catalog, application, publication, datasets)
   const udataReuse = {
     title: application.title,
     description: application.description || application.title,
-    private: true,
+    private: !application.public,
     type: 'application',
     url: `${config.publicUrl}/app/${application.id}`,
     extras: {
@@ -224,10 +224,11 @@ async function addResourceToDataset(catalog, dataset, publication) {
 }
 
 async function createOrUpdateDataset(catalog, dataset, publication) {
+  debug('Create or update dataset', dataset)
   const udataDataset = {
     title: dataset.title,
     description: dataset.description || dataset.title,
-    private: true,
+    private: !dataset.public,
     extras: {
       datafairOrigin: config.publicUrl,
       datafairDatasetId: dataset.id

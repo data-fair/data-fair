@@ -32,6 +32,7 @@ const geo = require('../utils/geo')
 const tiles = require('../utils/tiles')
 const cache = require('../utils/cache')
 const cacheHeaders = require('../utils/cache-headers')
+const apiDocsUtil = require('../utils/api-docs')
 const datasetPatchSchema = require('../../contract/dataset-patch')
 const validatePatch = ajv.compile(datasetPatchSchema)
 const debugFiles = require('debug')('files')
@@ -40,12 +41,7 @@ let router = express.Router()
 const datasetFileSample = require('../utils/dataset-file-sample')
 const baseTypes = new Set(['text/csv', 'application/geo+json'])
 
-const operationsClasses = {
-  list: ['list'],
-  read: ['readDescription', 'readLines', 'getGeoAgg', 'getValuesAgg', 'getValues', 'getMetricAgg', 'getWordsAgg', 'downloadOriginalData', 'downloadFullData', 'readJournal', 'readApiDoc'],
-  write: ['writeDescription', 'writeData'],
-  admin: ['delete', 'getPermissions', 'setPermissions']
-}
+const operationsClasses = apiDocsUtil.operationsClasses.datasets
 
 function clean(dataset) {
   dataset.public = permissions.isPublic(dataset, operationsClasses)
@@ -160,13 +156,10 @@ router.patch('/:datasetId', readDataset(['finalized', 'error']), permissions.mid
     else patch.status = 'loaded'
   }
 
-  // Retry failed publications
-  if (!patch.publications) {
-    const failedPublications = (req.dataset.publications || []).filter(p => p.status === 'error')
-    if (failedPublications.length) {
-      failedPublications.forEach(p => { p.status = 'waiting' })
-      patch.publications = req.dataset.publications
-    }
+  // Re-publish publications
+  if (!patch.publications && req.dataset.publications && req.dataset.publications.length) {
+    req.dataset.publications.filter(p => p.status !== 'deleted').forEach(p => { p.status = 'waiting' })
+    patch.publications = req.dataset.publications
   }
 
   if (req.dataset.isVirtual) {

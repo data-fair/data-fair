@@ -52,6 +52,10 @@ module.exports = {
       description: 'The type of catalog',
       enum: catalogs.connectors.map(i => i.key)
     },
+    logo: {
+      type: 'string',
+      description: 'A link to the logo of the catalog'
+    },
     apiKey: {
       type: 'string',
       description: 'The value of the required api key'

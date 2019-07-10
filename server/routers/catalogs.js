@@ -16,16 +16,11 @@ const usersUtils = require('../utils/users')
 const findUtils = require('../utils/find')
 const asyncWrap = require('../utils/async-wrap')
 const cacheHeaders = require('../utils/cache-headers')
+const apiDocsUtil = require('../utils/api-docs')
 
 const router = module.exports = express.Router()
 
-const operationsClasses = {
-  list: ['list'],
-  read: ['readDescription'],
-  write: ['writeDescription'],
-  admin: ['delete', 'getPermissions', 'setPermissions'],
-  use: []
-}
+const operationsClasses = apiDocsUtil.operationsClasses.catalogs
 
 function clean(catalog) {
   catalog.public = permissions.isPublic(catalog, operationsClasses)

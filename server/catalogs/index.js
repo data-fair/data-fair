@@ -8,6 +8,10 @@ const moment = require('moment')
 const slug = require('slugify')
 const journals = require('../utils/journals')
 const files = require('../utils/files')
+const permissionsUtil = require('../utils/permissions')
+const apiDocsUtil = require('../utils/api-docs')
+
+const debug = require('debug')('catalogs')
 
 // Dynamic loading of all modules in the current directory
 fs.ensureDirSync(path.resolve(config.pluginsDir, 'catalogs'))
@@ -19,6 +23,7 @@ exports.connectors = fs.readdirSync(__dirname)
     .map(f => ({ key: f.replace('.js', ''), ...require(path.resolve(config.pluginsDir, 'catalogs', f)) })))
 
 exports.init = async (catalogUrl) => {
+  debug('Attempt to init catalog from URL', catalogUrl)
   for (let connector of exports.connectors) {
     try {
       const catalog = await connector.init(catalogUrl)
@@ -117,7 +122,7 @@ exports.processPublications = async function(app, type, resource) {
   const db = app.get('db')
   const resourcesCollection = db.collection(type + 's')
   const catalogsCollection = db.collection('catalogs')
-
+  resource.public = permissionsUtil.isPublic(resource, apiDocsUtil.operationsClasses[type + 's'])
   resource.publications.filter(p => !p.id).forEach(p => { p.id = shortid.generate() })
   await resourcesCollection.updateOne({ id: resource.id }, { $set: { publications: resource.publications } })
 
@@ -141,6 +146,7 @@ exports.processPublications = async function(app, type, resource) {
     } else if (processedPublication.status === 'waiting') {
       // Publishing worked
       processedPublication.status = patch['publications.$.status'] = 'published'
+      patch['publications.$.publishedAt'] = new Date().toISOString()
       patch['publications.$.result'] = processedPublication.result
       patch['publications.$.targetUrl'] = processedPublication.targetUrl
     }
@@ -175,18 +181,19 @@ exports.processPublications = async function(app, type, resource) {
     if (!connector) throw createError(404, 'No connector found for catalog type ' + catalog.type)
     if (!connector.publishApplication) throw createError(501, `The connector for the catalog type ${type} cannot do this action`)
     let res
-    if (type === 'dataset' && processedPublication.status === 'waiting') res = await connector.publishDataset(catalog, resource, processedPublication)
-    if (type === 'application' && processedPublication.status === 'waiting') {
-      const datasets = await getApplicationDatasets(db, resource)
-      // Next line is only here for compatibility.. in next generation of apps, all datasets references should be in .datasets"
-      res = await connector.publishApplication(catalog, resource, processedPublication, datasets)
-    }
-    if (type === 'dataset' && processedPublication.status === 'deleted') res = await connector.deleteDataset(catalog, resource, processedPublication)
-    if (type === 'application' && processedPublication.status === 'deleted') res = await connector.deleteApplication(catalog, resource, processedPublication)
-    if (processedPublication.status === 'waiting') {
-      await journals.log(app, resource, { type: 'publication', data: `Publication OK vers ${catalog.title || catalog.url}` }, type)
-    } else {
+
+    if (processedPublication.status === 'deleted') {
+      if (type === 'dataset') res = await connector.deleteDataset(catalog, resource, processedPublication)
+      if (type === 'application') res = await connector.deleteApplication(catalog, resource, processedPublication)
       await journals.log(app, resource, { type: 'publication', data: `Suppression de la publication OK vers ${catalog.title || catalog.url}` }, type)
+    } else if (processedPublication.status === 'waiting') {
+      if (type === 'dataset') res = await connector.publishDataset(catalog, resource, processedPublication)
+      if (type === 'application') {
+        const datasets = await getApplicationDatasets(db, resource)
+        // Next line is only here for compatibility.. in next generation of apps, all datasets references should be in .datasets"
+        res = await connector.publishApplication(catalog, resource, processedPublication, datasets)
+      }
+      await journals.log(app, resource, { type: 'publication', data: `Publication OK vers ${catalog.title || catalog.url}` }, type)
     }
     await setResult(null, res)
   } catch (err) {
