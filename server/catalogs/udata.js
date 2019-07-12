@@ -117,21 +117,33 @@ exports.deleteApplication = async (catalog, application, publication) => {
 }
 
 function prepareDatasetFromCatalog(d) {
-  return {
+  const dataset = {
     id: d.id,
+    createdAt: d.created_at,
+    deleted: d.deleted,
     title: d.title,
     page: d.page,
     url: d.uri,
     private: d.private,
-    resources: d.resources.map(r => ({
-      id: r.id,
-      format: r.format,
-      mime: r.mime,
-      title: r.title,
-      url: r.url,
-      size: r.fileSize
-    }))
+    resources: d.resources.map(r => {
+      const resource = {
+        id: r.id,
+        format: r.format,
+        mime: r.mime,
+        title: r.title,
+        url: r.url,
+        size: r.fileSize
+      }
+      if (r.extras && r.extras.datafairOrigin === config.publicUrl) {
+        resource.datafairDatasetId = r.extras.datafairDatasetId
+      }
+      return resource
+    })
   }
+  if (d.extras && d.extras.datafairOrigin === config.publicUrl) {
+    dataset.datafairDatasetId = d.extras.datafairDatasetId
+  }
+  return dataset
 }
 
 async function addResourceToDataset(catalog, dataset, publication) {
