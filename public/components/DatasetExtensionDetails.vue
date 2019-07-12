@@ -111,7 +111,9 @@ export default {
     },
     inputFields() {
       if (!this.actionObj) return
-      return this.dataset.schema.filter(f => f['x-refersTo'] && this.actionObj.input.find(i => i.concept === f['x-refersTo']))
+      return this.dataset.schema
+        .filter(f => f['x-extension'] !== `${this.remoteService}/${this.action}`)
+        .filter(f => f['x-refersTo'] && this.actionObj.input.find(i => i.concept === f['x-refersTo']))
     },
     outputFields() {
       if (!this.actionObj) return
