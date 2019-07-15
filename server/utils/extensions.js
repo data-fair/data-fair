@@ -257,7 +257,8 @@ exports.extend = async(app, dataset, extension, remoteService, action) => {
       url: remoteService.server + action.operation.path,
       headers: {
         Accept: 'application/x-ndjson',
-        'Content-Type': 'application/x-ndjson'
+        'Content-Type': 'application/x-ndjson',
+        'x-consumer': JSON.stringify(dataset.owner)
       },
       qs: {}
     }
