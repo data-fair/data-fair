@@ -10,6 +10,22 @@
       required
       @blur="changeApiKey"
     />
+    <v-text-field
+      v-model="catalog.datasetUrlTemplate"
+      hint="Laissez vide pour créer automatiquement un lien vers la page du jeu de données dans cette instance data-fair. Renseignez pour pointer vers une autre page publique. Par exemple 'https://koumoul.com/datasets/{id}'."
+      class="mb-4"
+      label="Format du lien vers la page d'un jeu de données"
+      persistent-hint
+      @change="$emit('change', {datasetUrlTemplate: catalog.datasetUrlTemplate})"
+    />
+    <v-text-field
+      v-model="catalog.applicationUrlTemplate"
+      hint="Laissez vide pour créer automatiquement un lien vers l'application dans cette instance data-fair. Renseignez pour pointer vers une autre page publique. Par exemple 'https://koumoul.com/reuses/{id}'."
+      class="mb-4"
+      label="Format du lien vers la page d'un jeu de données"
+      persistent-hint
+      @change="$emit('change', {applicationUrlTemplate: catalog.applicationUrlTemplate})"
+    />
     <v-autocomplete
       v-if="catalogType && catalogType.searchOrganization"
       v-model="catalog.organization"

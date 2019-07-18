@@ -61,12 +61,14 @@ exports.publishApplication = async (catalog, application, publication, datasets)
       }
     })
   })
+  const appUrl = catalog.applicationUrlTemplate && catalog.applicationUrlTemplate.replace('{id}', application.id)
+
   const udataReuse = {
     title: application.title,
     description: application.description || application.title,
     private: !application.public,
     type: 'application',
-    url: `${config.publicUrl}/app/${application.id}`,
+    url: appUrl || `${config.publicUrl}/app/${application.id}`,
     extras: {
       datafairOrigin: config.publicUrl,
       datafairApplicationId: application.id
@@ -149,10 +151,11 @@ function prepareDatasetFromCatalog(d) {
 async function addResourceToDataset(catalog, dataset, publication) {
   // TODO: no equivalent of "private" on a resource
   const title = dataset.title
+  const datasetUrl = catalog.datasetUrlTemplate && catalog.datasetUrlTemplate.replace('{id}', dataset.id)
   const resources = [{
     title: `${title} - Description des champs`,
     description: `Description détaillée et types sémantiques des champs`,
-    url: `${config.publicUrl}/dataset/${dataset.id}/description`,
+    url: datasetUrl || `${config.publicUrl}/dataset/${dataset.id}/description`,
     type: 'documentation',
     filetype: 'remote',
     format: 'Page Web',
@@ -165,7 +168,7 @@ async function addResourceToDataset(catalog, dataset, publication) {
   }, {
     title: `${title} - Documentation de l'API`,
     description: `Documentation interactive de l'API à destination des développeurs. La description de l'API utilise la spécification [OpenAPI 3.0.1](https://github.com/OAI/OpenAPI-Specification)`,
-    url: `${config.publicUrl}/dataset/${dataset.id}/api`,
+    url: datasetUrl || `${config.publicUrl}/dataset/${dataset.id}/api`,
     type: 'documentation',
     filetype: 'remote',
     format: 'Page Web',
@@ -178,7 +181,7 @@ async function addResourceToDataset(catalog, dataset, publication) {
   }, {
     title: `${title} - Consultez les données`,
     description: `Consultez directement les données dans ${dataset.bbox ? 'une carte interactive' : 'un tableau'}.`,
-    url: `${config.publicUrl}/dataset/${dataset.id}/${dataset.bbox ? 'map' : 'tabular'}`,
+    url: datasetUrl || `${config.publicUrl}/dataset/${dataset.id}/${dataset.bbox ? 'map' : 'tabular'}`,
     type: 'main',
     filetype: 'remote',
     format: 'Page Web',
@@ -237,6 +240,7 @@ async function addResourceToDataset(catalog, dataset, publication) {
 
 async function createOrUpdateDataset(catalog, dataset, publication) {
   debug('Create or update dataset', dataset)
+  const datasetUrl = catalog.datasetUrlTemplate && catalog.datasetUrlTemplate.replace('{id}', dataset.id)
   const udataDataset = {
     title: dataset.title,
     description: dataset.description || dataset.title,
@@ -248,7 +252,7 @@ async function createOrUpdateDataset(catalog, dataset, publication) {
     resources: [{
       title: `Description des champs`,
       description: `Description détaillée et types sémantiques des champs`,
-      url: `${config.publicUrl}/dataset/${dataset.id}/description`,
+      url: datasetUrl || `${config.publicUrl}/dataset/${dataset.id}/description`,
       type: 'documentation',
       filetype: 'remote',
       format: 'Page Web',
@@ -259,7 +263,7 @@ async function createOrUpdateDataset(catalog, dataset, publication) {
     }, {
       title: `Documentation de l'API`,
       description: `Documentation interactive de l'API à destination des développeurs. La description de l'API utilise la spécification [OpenAPI 3.0.1](https://github.com/OAI/OpenAPI-Specification)`,
-      url: `${config.publicUrl}/dataset/${dataset.id}/api`,
+      url: datasetUrl || `${config.publicUrl}/dataset/${dataset.id}/api`,
       type: 'documentation',
       filetype: 'remote',
       format: 'Page Web',
@@ -270,7 +274,7 @@ async function createOrUpdateDataset(catalog, dataset, publication) {
     }, {
       title: 'Consultez les données',
       description: `Consultez directement les données dans ${dataset.bbox ? 'une carte interactive' : 'un tableau'}.`,
-      url: `${config.publicUrl}/dataset/${dataset.id}/${dataset.bbox ? 'map' : 'tabular'}`,
+      url: datasetUrl || `${config.publicUrl}/dataset/${dataset.id}/${dataset.bbox ? 'map' : 'tabular'}`,
       type: 'main',
       filetype: 'remote',
       format: 'Page Web',

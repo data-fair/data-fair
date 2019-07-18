@@ -3,7 +3,7 @@
 // the rest is read only fields
 
 const catalog = require('./catalog')
-const patchKeys = ['apiKey', 'description', 'title', 'organization', 'extras']
+const patchKeys = ['apiKey', 'description', 'title', 'organization', 'extras', 'datasetUrlTemplate', 'applicationUrlTemplate']
 module.exports = {
   title: 'Catalog patch',
   type: 'object',

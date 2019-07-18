@@ -72,6 +72,12 @@ module.exports = {
         }
       }
     },
+    datasetUrlTemplate: {
+      type: 'string'
+    },
+    applicationUrlTemplate: {
+      type: 'string'
+    },
     extras: {
       type: 'object',
       description: 'An object for extra content from client services of data-fair'
