@@ -28,10 +28,10 @@
           <v-list-tile-action><v-icon>view_list</v-icon></v-list-tile-action>
           <v-list-tile-title>Vue tableau</v-list-tile-title>
         </v-list-tile>
-        <!--<v-list-tile v-if="!!dataset.schema.find(f => f['x-refersTo'] === 'https://schema.org/startDate')" :disabled="!can('readLines')" :nuxt="true" :to="`/dataset/${dataset.id}/calendar`">
+        <v-list-tile v-if="!!dataset.schema.find(f => f['x-refersTo'] === 'https://schema.org/startDate')" :disabled="!can('readLines')" :nuxt="true" :to="`/dataset/${dataset.id}/calendar`">
           <v-list-tile-action><v-icon>date_range</v-icon></v-list-tile-action>
           <v-list-tile-title>Calendrier</v-list-tile-title>
-        </v-list-tile>-->
+        </v-list-tile>
         <v-list-tile v-if="dataset.bbox" :disabled="!can('readLines')" :nuxt="true" :to="`/dataset/${dataset.id}/map`">
           <v-list-tile-action><v-icon>map</v-icon></v-list-tile-action>
           <v-list-tile-title>Carte</v-list-tile-title>

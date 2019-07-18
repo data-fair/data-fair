@@ -1,6 +1,6 @@
 <template lang="html">
-  <v-container fluid>
-    <dataset-calendar />
+  <v-container fluid class="mt-2">
+    <dataset-calendar :height-margin="60" />
   </v-container>
 </template>
 
