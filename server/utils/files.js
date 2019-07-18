@@ -18,7 +18,7 @@ const fallbackMimeTypes = {
 }
 const debug = require('debug')('files')
 
-const { tabularTypes, geographicalTypes, archiveTypes } = require('../workers/converter')
+const { tabularTypes, geographicalTypes, archiveTypes, calendarTypes } = require('../workers/converter')
 
 function uploadDir(req) {
   const owner = usersUtils.owner(req)
@@ -82,7 +82,7 @@ const storage = multer.diskStorage({
   }
 })
 
-const allowedTypes = exports.allowedTypes = new Set(['text/csv', 'application/geo+json', ...tabularTypes, ...geographicalTypes, ...archiveTypes])
+const allowedTypes = exports.allowedTypes = new Set(['text/csv', 'application/geo+json', ...tabularTypes, ...geographicalTypes, ...archiveTypes, ...calendarTypes])
 
 // Form data fields are sent as strings, some have to be parsed as objects or arrays
 const fixFormBody = (body) => {

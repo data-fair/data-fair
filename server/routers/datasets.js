@@ -733,6 +733,30 @@ router.get('/:datasetId/words_agg', readDataset(), permissions.middleware('getWo
   res.status(200).send(result)
 }))
 
+// Get max value of a field
+router.get('/:datasetId/max/:fieldKey', readDataset(), permissions.middleware('getWordsAgg', 'read'), cacheHeaders.resourceBased, asyncWrap(async(req, res) => {
+  if (req.dataset.isVirtual) req.dataset.descendants = await virtualDatasetsUtils.descendants(req.app.get('db'), req.dataset)
+  let result
+  try {
+    result = await esUtils.maxAgg(req.app.get('es'), req.dataset, req.params.fieldKey, req.query)
+  } catch (err) {
+    await manageESError(req, err)
+  }
+  res.status(200).send(result)
+}))
+
+// Get min value of a field
+router.get('/:datasetId/min/:fieldKey', readDataset(), permissions.middleware('getWordsAgg', 'read'), cacheHeaders.resourceBased, asyncWrap(async(req, res) => {
+  if (req.dataset.isVirtual) req.dataset.descendants = await virtualDatasetsUtils.descendants(req.app.get('db'), req.dataset)
+  let result
+  try {
+    result = await esUtils.minAgg(req.app.get('es'), req.dataset, req.params.fieldKey, req.query)
+  } catch (err) {
+    await manageESError(req, err)
+  }
+  res.status(200).send(result)
+}))
+
 // For datasets with attached files
 router.get('/:datasetId/attachments/*', readDataset(), permissions.middleware('downloadOriginalData', 'read'), cacheHeaders.noCache, (req, res, next) => {
   const filePath = req.params['0']

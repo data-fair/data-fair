@@ -188,6 +188,20 @@ module.exports = {
         'type': 'number'
       }
     },
+    timePeriod: {
+      type: 'object',
+      description: 'The temporal coverage of this dataset',
+      properties: {
+        startDate: {
+          type: 'string',
+          format: 'date-time'
+        },
+        endDate: {
+          type: 'string',
+          format: 'date-time'
+        }
+      }
+    },
     'projection': {
       type: 'object',
       description: 'The cartographic projection of this dataset. Refers to the list of supported projections in contract/projections.json',

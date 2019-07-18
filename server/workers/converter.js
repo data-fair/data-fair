@@ -1,16 +1,16 @@
 // convert from tabular data to csv or geographical data to geojson
 const path = require('path')
-const fs = require('fs')
+const fs = require('fs-extra')
 const config = require('config')
 const XLSX = require('xlsx')
 const createError = require('http-errors')
 const ogr2ogr = require('ogr2ogr')
 const util = require('util')
-const writeFile = util.promisify(fs.writeFile)
-const statsFile = util.promisify(fs.stat)
 const exec = require('child-process-promise').exec
-const datasetUtils = require('../utils/dataset')
 const pump = util.promisify(require('pump'))
+const csvStringify = require('csv-stringify')
+const datasetUtils = require('../utils/dataset')
+const icalendar = require('../utils/icalendar')
 const vocabulary = require('../../contract/vocabulary')
 
 exports.eventsPrefix = 'convert'
@@ -36,6 +36,7 @@ const geographicalTypes = exports.geographicalTypes = new Set([
   'application/vnd.google-earth.kmz', // kmz
   'application/gpx+xml' // gpx or xml ?
 ])
+const calendarTypes = exports.calendarTypes = new Set(['text/calendar'])
 
 async function decompress(mimetype, filePath, dirPath) {
   if (mimetype === 'application/zip') await exec(`unzip -o -q ${filePath} -d ${dirPath}`)
@@ -59,10 +60,10 @@ exports.process = async function(app, dataset) {
       const csvFilePath = path.join(config.dataDir, dataset.owner.type, dataset.owner.id, dataset.id + '.csv')
       // Either there is a data.csv in this archive and we use it as the main source for data related to the files, or we create it
       const csvContent = 'file\n' + files.map(f => `"${f}"`).join('\n') + '\n'
-      await writeFile(csvFilePath, csvContent)
+      await fs.writeFile(csvFilePath, csvContent)
       dataset.file = {
         name: path.parse(dataset.originalFile.name).name + '.csv',
-        size: await statsFile(csvFilePath).size,
+        size: await fs.stat(csvFilePath).size,
         mimetype: 'text/csv',
         encoding: 'utf-8'
       }
@@ -80,17 +81,34 @@ exports.process = async function(app, dataset) {
     }
   }
 
-  if (tabularTypes.has(dataset.originalFile.mimetype)) {
+  if (calendarTypes.has(dataset.originalFile.mimetype)) {
+    // TODO : store these file size limits in config file ?
+    if (dataset.originalFile.size > 10 * 1000 * 1000) throw createError(400, 'File size of this format must not exceed 10 MB. You can however convert your file to CSV with an external tool and reupload it.')
+    const eventsStream = await icalendar.eventsStream(originalFilePath)
+    const filePath = path.join(config.dataDir, dataset.owner.type, dataset.owner.id, dataset.id + '.csv')
+    await pump(
+      eventsStream,
+      csvStringify({ columns: ['DTSTART', 'DTEND', 'SUMMARY', 'LOCATION', 'CATEGORIES', 'STATUS', 'DESCRIPTION', 'TRANSP', 'SEQUENCE', 'GEO', 'URL'], header: true }),
+      fs.createWriteStream(filePath)
+    )
+    dataset.file = {
+      name: path.parse(dataset.originalFile.name).name + '.csv',
+      size: await fs.stat(filePath).size,
+      mimetype: 'text/csv',
+      encoding: 'utf-8'
+    }
+    icalendar.prepareSchema(dataset)
+  } else if (tabularTypes.has(dataset.originalFile.mimetype)) {
     // TODO : store these file size limits in config file ?
     if (dataset.originalFile.size > 10 * 1000 * 1000) throw createError(400, 'File size of this format must not exceed 10 MB. You can however convert your file to CSV with an external tool and reupload it.')
     const workbook = XLSX.readFile(originalFilePath)
     const worksheet = workbook.Sheets[workbook.SheetNames[0]]
     const data = XLSX.utils.sheet_to_csv(worksheet)
     const filePath = path.join(config.dataDir, dataset.owner.type, dataset.owner.id, dataset.id + '.csv')
-    await writeFile(filePath, data)
+    await fs.writeFile(filePath, data)
     dataset.file = {
       name: path.parse(dataset.originalFile.name).name + '.csv',
-      size: await statsFile(filePath).size,
+      size: await fs.stat(filePath).size,
       mimetype: 'text/csv',
       encoding: 'utf-8'
     }
@@ -105,12 +123,12 @@ exports.process = async function(app, dataset) {
     await pump(geoJsonStream, fs.createWriteStream(filePath))
     dataset.file = {
       name: path.parse(dataset.originalFile.name).name + '.geojson',
-      size: await statsFile(filePath).size,
+      size: await fs.stat(filePath).size,
       mimetype: 'application/geo+json',
       encoding: 'utf-8'
     }
   } else {
-    // TODO: throw error
+    // TODO: throw error ?
   }
 
   dataset.status = 'loaded'

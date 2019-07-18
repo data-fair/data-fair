@@ -90,6 +90,7 @@
     "geolib": "^2.0.24",
     "html-extractor": "^0.2.2",
     "http-errors": "^1.6.2",
+    "icalendar": "^0.7.1",
     "iconv-lite": "^0.4.19",
     "iframe-resizer": "^3.6.2",
     "js-cookie": "^2.2.0",

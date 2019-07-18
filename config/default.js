@@ -89,7 +89,8 @@ module.exports = {
   // secrets that can be used to configure global webhooks for example to update users and organizations
   secretKeys: {
     identities: null,
-    quotas: null
+    quotas: null,
+    limits: null
   },
   // Configure outgoing http calls
   globalWebhooks: {

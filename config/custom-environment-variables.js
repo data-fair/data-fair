@@ -29,7 +29,8 @@ module.exports = {
   },
   secretKeys: {
     identities: 'SECRET_IDENTITIES',
-    quotas: 'SECRET_QUOTAS'
+    quotas: 'SECRET_QUOTAS',
+    limits: 'SECRET_LIMITS'
   },
   globalWebhooks: {
     consumption: {

@@ -1,6 +1,7 @@
 const config = require('config')
 const elasticsearch = require('elasticsearch')
 
+const smallAggs = require('./small-aggs')
 module.exports = {
   ...require('./commons'),
   ...require('./manage-indices'),
@@ -12,6 +13,8 @@ module.exports = {
   geoAgg: require('./geo-agg'),
   bboxAgg: require('./bbox-agg'),
   wordsAgg: require('./words-agg'),
+  maxAgg: smallAggs.max,
+  minAgg: smallAggs.min,
   indexStream: require('./index-stream')
 }
 

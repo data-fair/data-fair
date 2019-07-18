@@ -1,4 +1,4 @@
-// Analyze dataset data, check validity and detect schema
+// Analyze geojson dataset data, check validity and detect schema
 // Perform the equivalent of csv-analyzer + csv-schematizer but for geojson and
 // in a single worker
 const util = require('util')

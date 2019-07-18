@@ -52,6 +52,7 @@ exports.process = async function(app, dataset) {
     }
   }
 
+  // calculate geographical coverage
   if (geopoint || geometry) {
     debug('calculate bounding ok')
     queryableDataset.bbox = []
@@ -59,6 +60,31 @@ exports.process = async function(app, dataset) {
     debug('bounding box ok', result.bbox)
   } else {
     result.bbox = null
+  }
+
+  // calculate temporal coverage
+  const startDateField = dataset.schema.find(f => f['x-refersTo'] === 'https://schema.org/startDate')
+  const endDateField = dataset.schema.find(f => f['x-refersTo'] === 'https://schema.org/endDate')
+  if (startDateField || endDateField) {
+    const promises = []
+    if (startDateField) {
+      promises.push(esUtils.minAgg(es, queryableDataset, startDateField.key, {}))
+      promises.push(esUtils.maxAgg(es, queryableDataset, startDateField.key, {}))
+    }
+    if (endDateField) {
+      promises.push(esUtils.minAgg(es, queryableDataset, endDateField.key, {}))
+      promises.push(esUtils.maxAgg(es, queryableDataset, endDateField.key, {}))
+    }
+    const limitValues = await Promise.all(promises)
+    const timePeriod = limitValues.reduce((a, value) => {
+      a.startDate = value > a.startDate ? a.startDate : value
+      a.endDate = value > a.endDate ? value : a.endDate
+      return a
+    }, { startDate: limitValues[0], endDate: limitValues[0] })
+    result.timePeriod = {
+      startDate: new Date(timePeriod.startDate).toISOString(),
+      endDate: new Date(timePeriod.endDate).toISOString()
+    }
   }
 
   // Add the calculated fields to the schema
