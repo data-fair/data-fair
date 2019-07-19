@@ -115,7 +115,7 @@ async function iter(app, type) {
 
     if (config.worker.spawnTask) {
       // Run a task in a dedicated child process for  extra resiliency to fatal memory exceptions
-      const spawnPromise = spawn('node', ['server', taskKey, type, resource.id], { env: { ...process.env, MODE: 'task' } })
+      const spawnPromise = spawn('node', ['server', taskKey, type, resource.id], { env: { ...process.env, DEBUG: '', MODE: 'task' } })
       spawnPromise.childProcess.stdout.on('data', data => process.stdout.write(data))
       spawnPromise.childProcess.stderr.on('data', data => {
         process.stderr.write(data)
