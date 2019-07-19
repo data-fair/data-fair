@@ -1,94 +1,54 @@
 <template>
   <div>
     <p>
-      Les <i>webhooks</i> sont un moyen de lier vos propres services à des événements internes à ce service de diffusion de données (créations, mises à jour, etc.).
+      Les <i>webhooks</i> sont un moyen de lier d'autres services Web à des événements internes à ce service de diffusion de données (créations, mises à jour, etc.).
       Il s'agit d'une configuration technique pour personne avertie.
     </p>
-    <v-btn color="primary" class="mb-3" @click="showDialog = true">
-      Ajouter un webhook
-    </v-btn>
-    <v-container v-if="settings.webhooks && settings.webhooks.length" grid-list-md>
-      <v-layout row wrap>
-        <v-flex v-for="(webhook, rowIndex) in settings.webhooks" :key="rowIndex" xs12 lg6>
-          <v-card>
-            <v-card-title primary-title>
-              <h4 class="title">
-                <span v-if="webhook.title">{{ webhook.title }} - </span>{{ webhook.url }}
-              </h4>
-            </v-card-title>
-
-            <v-subheader>Événéments déclencheurs</v-subheader>
-            <v-list dense>
-              <v-list-tile v-for="(event, i) in webhook.events" :key="i">
-                {{ events[event].text }}
-              </v-list-tile>
-            </v-list>
-
-            <v-card-actions>
-              <v-spacer />
-              <v-btn flat icon color="warning" title="Supprimer ce webhook" @click="removeWebhook(rowIndex)">
-                <v-icon>delete</v-icon>
-              </v-btn>
-            </v-card-actions>
-          </v-card>
-        </v-flex>
-      </v-layout>
-    </v-container>
-
-    <v-dialog v-model="showDialog" max-width="700px">
-      <v-card>
-        <v-card-title primary-title>
-          Ajout d'un nouveau webhook
-        </v-card-title>
-        <v-card-text>
-          <v-form v-model="newWebhookValid">
-            <v-text-field v-model="newWebhook.title" :rules="[v => !!v || '']" label="Titre" required />
-            <v-text-field v-model="newWebhook.url" :rules="[v => !!v || '']" label="URL" required />
-            <v-checkbox v-for="(event, eventId) in events" :key="eventId" v-model="newWebhook.events" :label="event.text" :value="eventId" />
-          </v-form>
-        </v-card-text>
-        <v-card-actions>
-          <v-spacer />
-          <v-btn flat @click="showDialog = false">
-            Annuler
-          </v-btn>
-          <v-btn :disabled="!newWebhookValid" color="primary" @click="addWebhook">
-            Ajouter
-          </v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
+    <v-form v-model="formValid">
+      <v-jsonschema-form :schema="wrapperSchema" :model="wrapper" @error="error => eventBus.$emit('notification', {error})" @change="change" />
+    </v-form>
   </div>
 </template>
 
 <script>
-// TODO: manage webhooks for other types of resources
+import VJsonschemaForm from '@koumoul/vuetify-jsonschema-form/lib/index.vue'
+import '@koumoul/vuetify-jsonschema-form/dist/main.css'
+import eventBus from '../event-bus.js'
 const events = require('../../shared/events.json').dataset
+const webhooksSchema = require('../../contract/settings.json').properties.webhooks
+const wrapperSchema = {
+  type: 'object',
+  properties: {
+    webhooks: webhooksSchema
+  }
+}
 
 export default {
   name: 'Webhooks',
+  components: { VJsonschemaForm },
   props: ['settings'],
   data: () => ({
     events,
-    newWebhook: {
-      title: null,
-      events: [],
-      url: null,
-      type: 'dataset'
-    },
-    newWebhookValid: false,
-    showDialog: false
+    eventBus,
+    wrapperSchema,
+    formValid: true,
+    wrapper: {
+      webhooks: []
+    }
   }),
+  created() {
+    this.wrapper.webhooks = JSON.parse(JSON.stringify(this.settings.webhooks))
+  },
   methods: {
-    addWebhook() {
-      const webhook = Object.assign({}, this.newWebhook)
-      this.settings.webhooks.push(webhook)
-      this.showDialog = false
-      this.$emit('webhook-updated')
-    },
-    removeWebhook(rowIndex) {
-      this.settings.webhooks.splice(rowIndex, 1)
-      this.$emit('webhook-updated')
+    async change() {
+      await new Promise(resolve => setTimeout(resolve, 10))
+      if (this.formValid) {
+        this.settings.webhooks = JSON.parse(JSON.stringify(this.wrapper.webhooks))
+        const missingInfo = !!this.settings.webhooks.find(w => {
+          return Object.keys(w.target).length === 0 || w.events.length === 0
+        })
+        if (!missingInfo) this.$emit('webhook-updated')
+      }
     }
   }
 }

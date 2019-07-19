@@ -1,7 +1,5 @@
 const moment = require('moment')
-const axios = require('axios')
-const config = require('config')
-const events = require('../../shared/events.json')
+const webhooks = require('./webhooks')
 
 module.exports.log = async function(app, resource, event, type = 'dataset', noStoreEvent) {
   const db = app.get('db')
@@ -15,15 +13,5 @@ module.exports.log = async function(app, resource, event, type = 'dataset', noSt
   // websockets notifications
   await app.publish(`${type}s/${resource.id}/journal`, event)
 
-  // webhooks notifications
-  const settings = await db.collection('settings').findOne({ id: resource.owner.id, type: resource.owner.type }) || {}
-  settings.webhooks = settings.webhooks || []
-  settings.webhooks.forEach(webhook => {
-    if (webhook.events && webhook.events.length && !webhook.events.includes(event.type)) return
-    axios.post(webhook.url, {
-      text: (resource.title || resource.id) + ' - ' + events[webhook.type][event.type].text + (event.href ? ' - ' + event.href : ''),
-      href: `${config.publicUrl}/api/v1/${type}s/${resource.id}`,
-      event: event.type
-    })
-  })
+  webhooks.trigger(db, type, resource, event)
 }

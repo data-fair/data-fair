@@ -101,7 +101,7 @@
             </v-list-tile-avatar>
             <v-list-tile-title>Remplacer</v-list-tile-title>
           </v-list-tile>
-          <v-list-tile :disabled="!can('downloadOriginalData')" :href="downloadLink">
+          <v-list-tile v-if="!dataset.isRest && !dataset.isVirtual" :disabled="!can('downloadOriginalData')" :href="downloadLink">
             <v-list-tile-avatar>
               <v-icon color="primary">
                 file_download

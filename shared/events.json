@@ -71,6 +71,9 @@
     "download-end": {
       "icon": "file_download",
       "text": "Le fichier de données est chargé et est prêt à être indexé"
+    },
+    "downloaded": {
+      "text": "Un jeu de données a été téléchargé dans un format fichier"
     }
   },
   "application": {

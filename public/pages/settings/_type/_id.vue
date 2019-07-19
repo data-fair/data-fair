@@ -39,7 +39,7 @@
         </h3>
         <settings-licenses v-if="settings" :settings="settings" @license-updated="save" />
         <h3 class="headline mt-3 mb-3">
-          Webhooks
+          Appels extérieurs (Webhooks)
         </h3>
         <settings-webhooks v-if="settings" :settings="settings" @webhook-updated="save" />
         <h3 class="headline mt-3 mb-3">

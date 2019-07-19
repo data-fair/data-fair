@@ -33,6 +33,7 @@ const tiles = require('../utils/tiles')
 const cache = require('../utils/cache')
 const cacheHeaders = require('../utils/cache-headers')
 const apiDocsUtil = require('../utils/api-docs')
+const webhooks = require('../utils/webhooks')
 const datasetPatchSchema = require('../../contract/dataset-patch')
 const validatePatch = ajv.compile(datasetPatchSchema)
 const debugFiles = require('debug')('files')
@@ -767,13 +768,17 @@ router.get('/:datasetId/attachments/*', readDataset(), permissions.middleware('d
 // Download the full dataset in its original form
 router.get('/:datasetId/raw', readDataset(), permissions.middleware('downloadOriginalData', 'read'), cacheHeaders.noCache, (req, res, next) => {
   res.download(datasetUtils.originalFileName(req.dataset), req.dataset.originalFile.name)
+  webhooks.trigger(req.app.get('db'), 'dataset', req.dataset, { type: 'downloaded' })
 })
 
 // Download the dataset in various formats
 router.get('/:datasetId/convert', readDataset(), permissions.middleware('downloadOriginalData', 'read'), cacheHeaders.noCache, (req, res, next) => {
-  if (!req.query || !req.query.format) res.download(datasetUtils.fileName(req.dataset), req.dataset.file.name)
-  // TODO add logic to support other formats
-  else res.status(400).send(`Format ${req.query.format} is not supported.`)
+  if (!req.query || !req.query.format) {
+    res.download(datasetUtils.fileName(req.dataset), req.dataset.file.name)
+    webhooks.trigger(req.app.get('db'), 'dataset', req.dataset, { type: 'downloaded' })
+  } else {
+    res.status(400).send(`Format ${req.query.format} is not supported.`)
+  }
 })
 
 // Download the full dataset with extensions
@@ -797,6 +802,7 @@ router.get('/:datasetId/full', readDataset(), permissions.middleware('downloadFu
     csvStringify({ columns: relevantSchema.map(field => field.title || field['x-originalName'] || field.key), header: true }),
     res
   )
+  webhooks.trigger(req.app.get('db'), 'dataset', req.dataset, { type: 'downloaded' })
 }))
 
 router.get('/:datasetId/api-docs.json', readDataset(), permissions.middleware('readApiDoc', 'read'), cacheHeaders.resourceBased, (req, res) => {
