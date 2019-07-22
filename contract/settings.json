@@ -92,7 +92,7 @@
                 },
                 "params": {
                   "type": "object",
-                  "required": ["trackingId", "appName", "appVersion"],
+                  "required": ["trackingId"],
                   "properties": {
                     "trackingId": {
                       "type": "string",
@@ -100,10 +100,12 @@
                     },
                     "appName": {
                       "type": "string",
+                      "default": "",
                       "title": "(GA) Nom de l'application"
                     },
                     "appVersion": {
                       "type": "string",
+                      "default": "",
                       "title": "(GA) Version de l'application"
                     }
                   }

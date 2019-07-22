@@ -5,7 +5,7 @@
       Il s'agit d'une configuration technique pour personne avertie.
     </p>
     <v-form v-model="formValid">
-      <v-jsonschema-form :schema="wrapperSchema" :model="wrapper" @error="error => eventBus.$emit('notification', {error})" @change="change" />
+      <v-jsonschema-form :schema="wrapperSchema" :model="wrapper" :options="{requiredMessage: 'Information obligatoire'}" @error="error => eventBus.$emit('notification', {error})" @change="change" />
     </v-form>
   </div>
 </template>
