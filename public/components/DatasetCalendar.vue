@@ -1,5 +1,7 @@
 <template lang="html">
   <v-layout column>
+    tz: {{ dataset.timeZone }}
+    data: {{ data }}
     <v-layout row>
       <v-flex xs6 lg3>
         <v-select
@@ -76,6 +78,8 @@
 import { mapState, mapGetters } from 'vuex'
 import eventBus from '../event-bus'
 const moment = require('moment')
+require('moment-timezone')
+
 export default {
   props: ['heightMargin'],
   data: () => ({
@@ -108,16 +112,33 @@ export default {
       this.data.forEach(item => {
         const startDate = moment(item[this.startDateProp])
         const endDate = moment(item[this.endDateProp])
+
+        // check if the event is made of round days in original calendar timezone
+        let wholeDay = false
+        if (this.dataset.timeZone) {
+          const startTZ = startDate.clone().tz(this.dataset.timeZone).format('HH:mm')
+          const endTZ = endDate.clone().tz(this.dataset.timeZone).format('HH:mm')
+          if (item[this.endDateProp] !== item[this.startDateProp] && startTZ === '00:00' && endTZ === '00:00') {
+            console.log('WHOLE DAYS!')
+            wholeDay = true
+          }
+        }
+
         let date = startDate
         while (date < endDate) {
           const day = date.format('YYYY-MM-DD')
           eventsPerDays[day] = eventsPerDays[day] || []
-          const event = { data: item }
-          const todayStart = day === startDate.format('YYYY-MM-DD') ? startDate : moment(date).startOf('day')
-          const todayEnd = day === endDate.format('YYYY-MM-DD') ? endDate : moment(date).endOf('day')
-          event.time = todayStart.format('HH:mm')
-          event.duration = Math.round(moment.duration(todayEnd.diff(todayStart)).asMinutes())
-          if (event.time === '00:00' && event.duration === 1440) event.wholeDay = true
+          const event = { data: item, wholeDay }
+
+          if (!wholeDay) {
+            const todayStart = day === startDate.format('YYYY-MM-DD') ? startDate : moment(date).startOf('day')
+            const todayEnd = day === endDate.format('YYYY-MM-DD') ? endDate : moment(date).endOf('day')
+            event.time = todayStart.format('HH:mm')
+            event.duration = Math.round(moment.duration(todayEnd.diff(todayStart)).asMinutes())
+            // check if the event covers the full day in current time zone
+            if (event.time === '00:00' && event.duration === 1440) event.wholeDay = true
+          }
+
           eventsPerDays[day].push(event)
           date = date.add(1, 'days')
         }

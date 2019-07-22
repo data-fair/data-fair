@@ -84,7 +84,7 @@ exports.process = async function(app, dataset) {
   if (calendarTypes.has(dataset.originalFile.mimetype)) {
     // TODO : store these file size limits in config file ?
     if (dataset.originalFile.size > 10 * 1000 * 1000) throw createError(400, 'File size of this format must not exceed 10 MB. You can however convert your file to CSV with an external tool and reupload it.')
-    const eventsStream = await icalendar.eventsStream(originalFilePath)
+    const { eventsStream, infos } = await icalendar.parse(originalFilePath)
     const filePath = path.join(config.dataDir, dataset.owner.type, dataset.owner.id, dataset.id + '.csv')
     await pump(
       eventsStream,
@@ -97,7 +97,7 @@ exports.process = async function(app, dataset) {
       mimetype: 'text/csv',
       encoding: 'utf-8'
     }
-    icalendar.prepareSchema(dataset)
+    icalendar.prepareSchema(dataset, infos)
   } else if (tabularTypes.has(dataset.originalFile.mimetype)) {
     // TODO : store these file size limits in config file ?
     if (dataset.originalFile.size > 10 * 1000 * 1000) throw createError(400, 'File size of this format must not exceed 10 MB. You can however convert your file to CSV with an external tool and reupload it.')
@@ -133,7 +133,10 @@ exports.process = async function(app, dataset) {
 
   dataset.status = 'loaded'
 
+  const patch = { status: dataset.status, file: dataset.file, schema: dataset.schema }
+  if (dataset.timeZone) patch.timeZone = dataset.timeZone
+
   await db.collection('datasets').updateOne({ id: dataset.id }, {
-    $set: { status: 'loaded', file: dataset.file, schema: dataset.schema }
+    $set: patch
   })
 }

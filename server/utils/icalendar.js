@@ -3,38 +3,72 @@ const { Readable } = require('stream')
 const vocabulary = require('../../contract/vocabulary')
 const icalendar = require('icalendar')
 const moment = require('moment')
+require('moment-timezone')
 
-exports.eventsStream = async (filePath) => {
-  const cal = icalendar.parse_calendar(await fs.readFile(filePath, 'utf8'))
-  const events = cal.events()
-  return new Readable({
-    objectMode: true,
-    read() {
-      this.i = this.i || 0
-      let line
-      do {
-        const event = events[this.i]
-        if (!event) return this.push(null)
-        line = {}
-        Object.keys(event.properties).forEach(p => {
-          let value = event.properties[p][0].value
-          if (Array.isArray(value)) value = value.join(', ')
-          if (p.startsWith('DT')) value = moment(value).toISOString()
-          line[p] = value
-        })
-        // No DTEND means eaither a full day event, or a single point in time event
-        // it depends on if only the date part of the data should be used (no date-time)
-        // we do not distinguish date and a date-time in data-fair yet, so we make this explicit
-        if (!line.DTEND && event.properties.DTSTART[0].value.date_only) {
-          line.DTEND = moment(line.DTSTART).add(1, 'days').toISOString()
-        }
-        this.i += 1
-      } while (this.push(line))
-    }
-  })
+const localeTimeZone = moment.tz.guess()
+
+// We want date_only dates to at time 00:00 in the most relevant timezone
+function parseDate(prop, calendarTimeZone) {
+  if (!prop.value.date_only) return moment(prop.value).toISOString()
+  if (localeTimeZone === calendarTimeZone) return moment(prop.value).toISOString()
+  const valueDay = moment(prop.value).format('YYYY-MM-DD')
+  return moment.tz(valueDay, calendarTimeZone).toISOString()
 }
 
-exports.prepareSchema = (dataset) => {
+exports.parse = async (filePath) => {
+  const cal = icalendar.parse_calendar(await fs.readFile(filePath, 'utf8'))
+  const infos = {}
+  Object.keys(cal.properties).forEach(p => {
+    let value = cal.properties[p][0].value
+    if (Array.isArray(value)) value = value.join(', ')
+    if (p.startsWith('DT')) value = moment(value).toISOString()
+    infos[p] = value
+  })
+
+  // Do our best to capture main timezone of the whole calendar
+  // console.log(cal.timezone('America/Los_Angeles'))
+  try {
+    infos.timeZone = cal.components.VTIMEZONE[0].properties.TZID[0].value
+  } catch (err) {
+    infos.timeZone = infos['X-WR-TIMEZONE'] || localeTimeZone
+  }
+
+  const events = cal.events()
+  return { infos,
+    eventsStream: new Readable({
+      objectMode: true,
+      read() {
+        this.i = this.i || 0
+        let line
+        do {
+          const event = events[this.i]
+          if (!event) return this.push(null)
+          line = {}
+          Object.keys(event.properties).forEach(p => {
+            let value = event.properties[p][0].value
+            if (Array.isArray(value)) value = value.join(', ')
+            if (p.startsWith('DT')) value = parseDate(event.properties[p][0], infos.timeZone)
+            line[p] = value
+          })
+          // No DTEND means eaither a full day event, or a single point in time event
+          // it depends on if only the date part of the data should be used (no date-time)
+          // we do not distinguish date and a date-time in data-fair yet, so we make this explicit
+          // console.log(JSON.stringify(event.properties, null, 2))
+          if (!line.DTEND && event.properties.DTSTART[0].value.date_only) {
+            line.DTEND = moment(line.DTSTART).add(1, 'days').toISOString()
+          }
+          this.i += 1
+        } while (this.push(line))
+      }
+    }) }
+}
+
+exports.prepareSchema = (dataset, icalInfos) => {
+  dataset.extras = dataset.extras || {}
+  dataset.extras.iCalendar = icalInfos
+  dataset.timeZone = icalInfos.timeZone
+  delete icalInfos.timeZone
+
   if (!dataset.schema.find(f => f.key === 'GEO')) {
     const concept = vocabulary.find(c => c.identifiers.includes('http://www.w3.org/2003/01/geo/wgs84_pos#lat_long'))
     dataset.schema.push({
