@@ -27,8 +27,7 @@
         <v-text-field
           v-model="catalogUrl"
           label="Ou saisissez une URL d'un autre catalogue"
-          @blur="initFromUrl"
-          @keyup.native.enter="initFromUrl"
+          @change="initFromUrl"
         />
         <v-text-field
           v-model="catalog.title"

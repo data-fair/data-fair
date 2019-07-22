@@ -11,9 +11,16 @@
 </template>
 
 <script>
+import Vue from 'vue'
 import VJsonschemaForm from '@koumoul/vuetify-jsonschema-form/lib/index.vue'
 import '@koumoul/vuetify-jsonschema-form/dist/main.css'
 import eventBus from '../event-bus.js'
+
+if (process.browser) {
+  const Draggable = require('vuedraggable')
+  Vue.component('draggable', Draggable)
+}
+
 const events = require('../../shared/events.json').dataset
 const webhooksSchema = require('../../contract/settings.json').properties.webhooks
 const wrapperSchema = {

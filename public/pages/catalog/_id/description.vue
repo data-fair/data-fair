@@ -31,8 +31,8 @@
         </v-card>
       </v-flex>
       <v-flex xs12 md6 order-md1>
-        <v-text-field v-model="catalog.title" label="Titre" @blur="patch({title: catalog.title})" />
-        <v-textarea v-model="catalog.description" label="Description" box rows="4" @blur="patch({description: catalog.description})" />
+        <v-text-field v-model="catalog.title" label="Titre" @change="patch({title: catalog.title})" />
+        <v-textarea v-model="catalog.description" label="Description" box rows="4" @change="patch({description: catalog.description})" />
         <catalog-config-form :catalog="catalog" @change="changes => patch(changes)" />
       </v-flex>
     </v-layout>

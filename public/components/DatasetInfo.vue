@@ -79,8 +79,8 @@
         </v-card>
       </v-flex>
       <v-flex xs12 md6 order-md1>
-        <v-text-field v-model="dataset.title" :disabled="!can('writeDescription')" label="Titre" @blur="patch({title: dataset.title})" />
-        <v-textarea v-model="dataset.description" :disabled="!can('writeDescription')" label="Description" box rows="4" @blur="patch({description: dataset.description})" />
+        <v-text-field v-model="dataset.title" :disabled="!can('writeDescription')" label="Titre" @change="patch({title: dataset.title})" />
+        <v-textarea v-model="dataset.description" :disabled="!can('writeDescription')" label="Description" box rows="4" @change="patch({description: dataset.description})" />
         <v-select
           v-model="dataset.license"
           :items="licenses"
@@ -102,7 +102,7 @@
           return-object
           @input="patch({projection: dataset.projection})"
         />
-        <v-text-field v-model="dataset.origin" :disabled="!can('writeDescription')" label="Provenance" @blur="patch({origin: dataset.origin})" />
+        <v-text-field v-model="dataset.origin" :disabled="!can('writeDescription')" label="Provenance" @change="patch({origin: dataset.origin})" />
       </v-flex>
     </v-layout>
   </v-container>

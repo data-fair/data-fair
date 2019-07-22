@@ -19,8 +19,7 @@
         <v-text-field
           v-model="apiDocUrl"
           label="Ou saisissez une URL de documentation"
-          @blur="downloadFromUrl"
-          @keyup.native.enter="downloadFromUrl"
+          @change="downloadFromUrl"
         />
         <p v-if="apiDoc" v-html="marked(apiDoc.info.description)" />
         <v-btn :disabled="!apiDoc" color="primary" @click.native="importApi()">

@@ -24,8 +24,8 @@
         </v-card>
       </v-flex>
       <v-flex xs12 md6 order-md1>
-        <v-text-field v-model="remoteService.title" :disabled="!user.adminMode" label="Titre" color="admin" @blur="patch({title: remoteService.title})" />
-        <v-textarea v-model="remoteService.description" :disabled="!user.adminMode" label="Description" box rows="5" color="admin" @blur="patch({description: remoteService.description})" />
+        <v-text-field v-model="remoteService.title" :disabled="!user.adminMode" label="Titre" color="admin" @change="patch({title: remoteService.title})" />
+        <v-textarea v-model="remoteService.description" :disabled="!user.adminMode" label="Description" box rows="5" color="admin" @change="patch({description: remoteService.description})" />
       </v-flex>
     </v-layout>
   </v-container>

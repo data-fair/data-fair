@@ -8,7 +8,7 @@
       label="Clé d'API"
       persistent-hint
       required
-      @blur="changeApiKey"
+      @change="changeApiKey"
     />
     <v-text-field
       v-model="catalog.datasetUrlTemplate"

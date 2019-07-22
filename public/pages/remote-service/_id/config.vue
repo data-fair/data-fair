@@ -7,14 +7,13 @@
         item-value="url"
         item-text="description"
         label="Serveur"
-        @input="patch({server: remoteService.server})"
+        @change="patch({server: remoteService.server})"
       />
 
       <v-text-field
         v-model="remoteService.apiKey.value"
         label="Clé d'API"
-        @blur="patch({apiKey: remoteService.apiKey})"
-        @keyup.native.enter="patch({apiKey: remoteService.apiKey})"
+        @change="patch({apiKey: remoteService.apiKey})"
       />
 
       <!-- Read only, updating can cause problems and confusion.
@@ -46,8 +45,7 @@
               :key="i"
               v-model="param.value"
               :label="param.title"
-              @blur="patch({parameters: remoteService.parameters})"
-              @keyup.native.enter="patch({parameters: remoteService.parameters})"
+              @change="patch({parameters: remoteService.parameters})"
             />
           </div>
         </template>

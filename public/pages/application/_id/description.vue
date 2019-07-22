@@ -40,8 +40,8 @@
         </v-card>
       </v-flex>
       <v-flex xs12 md6 order-md1>
-        <v-text-field v-model="application.title" label="Titre" @blur="patch({title: application.title})" />
-        <v-textarea v-model="application.description" label="Description" box rows="4" @blur="patch({description: application.description})" />
+        <v-text-field v-model="application.title" label="Titre" @change="patch({title: application.title})" />
+        <v-textarea v-model="application.description" label="Description" box rows="4" @change="patch({description: application.description})" />
       </v-flex>
     </v-layout>
   </v-container>
