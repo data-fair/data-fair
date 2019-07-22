@@ -207,7 +207,7 @@ exports.processPublications = async function(app, type, resource) {
 
 async function getApplicationDatasets(db, app) {
   app.configuration = app.configuration || {}
-  const datasetReferences = (app.configuration.datasets || []).map(d => d.href);
+  const datasetReferences = (app.configuration.datasets || []).filter(d => !!d).map(d => d.href);
   ['datasetUrl', 'networksDatasetUrl', 'networksMembersDatasetUrl'].forEach(k => {
     if (app.configuration[k]) datasetReferences.push(app.configuration[k])
   })
