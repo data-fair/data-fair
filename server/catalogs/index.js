@@ -185,15 +185,17 @@ exports.processPublications = async function(app, type, resource) {
     if (processedPublication.status === 'deleted') {
       if (type === 'dataset') res = await connector.deleteDataset(catalog, resource, processedPublication)
       if (type === 'application') res = await connector.deleteApplication(catalog, resource, processedPublication)
-      await journals.log(app, resource, { type: 'publication', data: `Suppression de la publication OK vers ${catalog.title || catalog.url}` }, type)
+      await journals.log(app, resource, { type: 'publication', data: `Suppression de la publication vers ${catalog.title || catalog.url}` }, type)
     } else if (processedPublication.status === 'waiting') {
+      const firstPublication = !processedPublication.result
       if (type === 'dataset') res = await connector.publishDataset(catalog, resource, processedPublication)
       if (type === 'application') {
         const datasets = await getApplicationDatasets(db, resource)
         // Next line is only here for compatibility.. in next generation of apps, all datasets references should be in .datasets"
         res = await connector.publishApplication(catalog, resource, processedPublication, datasets)
       }
-      await journals.log(app, resource, { type: 'publication', data: `Publication OK vers ${catalog.title || catalog.url}` }, type)
+      if (firstPublication) await journals.log(app, resource, { type: 'publication', data: `Nouvelle publication vers ${catalog.title || catalog.url}` }, type)
+      else await journals.log(app, resource, { type: 'publication', data: `Publication mise à jour vers ${catalog.title || catalog.url}` }, type)
     }
     await setResult(null, res)
   } catch (err) {
