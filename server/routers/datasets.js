@@ -143,10 +143,6 @@ router.patch('/:datasetId', readDataset(['finalized', 'error']), permissions.mid
   const patch = req.body
   if (!validatePatch(patch)) return res.status(400).send(validatePatch.errors)
 
-  patch.updatedAt = moment().toISOString()
-  patch.updatedBy = { id: req.user.id, name: req.user.name }
-  if (patch.extensions) patch.schema = await extensions.prepareSchema(db, patch.schema || req.dataset.schema, patch.extensions)
-
   // Changed a previously failed dataset, retry everything.
   // Except download.. We only try it again if the fetch failed.
   if (req.dataset.status === 'error') {
@@ -156,6 +152,16 @@ router.patch('/:datasetId', readDataset(['finalized', 'error']), permissions.mid
     else if (!baseTypes.has(req.dataset.originalFile.mimetype)) patch.status = 'uploaded'
     else patch.status = 'loaded'
   }
+
+  // Ignore patch that doesn't bring actual change
+  Object.keys(patch).forEach(patchKey => {
+    if (JSON.stringify(patch[patchKey]) === JSON.stringify(req.dataset[patchKey])) { delete patch[patchKey] }
+  })
+  if (Object.keys(patch).length === 0) return res.status(200).send(clean(req.dataset))
+
+  patch.updatedAt = moment().toISOString()
+  patch.updatedBy = { id: req.user.id, name: req.user.name }
+  if (patch.extensions) patch.schema = await extensions.prepareSchema(db, patch.schema || req.dataset.schema, patch.extensions)
 
   // Re-publish publications
   if (!patch.publications && req.dataset.publications && req.dataset.publications.length) {
