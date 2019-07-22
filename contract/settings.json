@@ -20,6 +20,8 @@
     "webhooks": {
       "type": "array",
       "title": "Liste d'appels extérieurs",
+      "x-sortable": false,
+      "x-itemTitle": "none",
       "items": {
         "type": "object",
         "additionalProperties": false,
@@ -63,6 +65,7 @@
           },
           "target": {
             "type": "object",
+            "required": ["type"],
             "oneOf": [{
               "title": "Appel HTTP simple (compatible avec Slack et Mattermost)",
               "properties": {
@@ -93,15 +96,15 @@
                   "properties": {
                     "trackingId": {
                       "type": "string",
-                      "title": "Identifiant du tracker"
+                      "title": "(GA) Identifiant du tracker"
                     },
                     "appName": {
                       "type": "string",
-                      "title": "Nom de l'application"
+                      "title": "(GA) Nom de l'application"
                     },
                     "appVersion": {
                       "type": "string",
-                      "title": "Version de l'application"
+                      "title": "(GA) Version de l'application"
                     }
                   }
                 }

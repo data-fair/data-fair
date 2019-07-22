@@ -39,13 +39,13 @@
         </h3>
         <settings-licenses v-if="settings" :settings="settings" @license-updated="save" />
         <h3 class="headline mt-3 mb-3">
-          Appels extérieurs (Webhooks)
-        </h3>
-        <settings-webhooks v-if="settings" :settings="settings" @webhook-updated="save" />
-        <h3 class="headline mt-3 mb-3">
           Clés d'API
         </h3>
         <settings-api-keys v-if="settings" :settings="settings" @updated="save" />
+        <h3 class="headline mt-3 mb-3">
+          Appels extérieurs (Webhooks)
+        </h3>
+        <settings-webhooks v-if="settings" :settings="settings" @webhook-updated="save" />
       </template>
       <v-responsive v-else height="auto">
         <v-container fill-height>
