@@ -4,7 +4,7 @@ const vocabulary = require('../../contract/vocabulary')
 const icalendar = require('icalendar')
 const moment = require('moment')
 require('moment-timezone')
-
+const rrule = require('rrule')
 const localeTimeZone = moment.tz.guess()
 
 // We want date_only dates to at time 00:00 in the most relevant timezone
@@ -40,6 +40,7 @@ exports.parse = async (filePath) => {
       read() {
         this.i = this.i || 0
         let line
+        let pushOk = true
         do {
           const event = events[this.i]
           if (!event) return this.push(null)
@@ -57,8 +58,36 @@ exports.parse = async (filePath) => {
           if (!line.DTEND && event.properties.DTSTART[0].value.date_only) {
             line.DTEND = moment(line.DTSTART).add(1, 'days').toISOString()
           }
+
+          // pre-resolve recurring events, to prioritize ease of reading
+          if (line.RRULE) {
+            const opts = {
+              dtstart: new Date(line.DTSTART)
+            }
+            Object.keys(line.RRULE).forEach(k => {
+              opts[k.toLowerCase()] = isNaN(line.RRULE[k]) ? line.RRULE[k] : Number(line.RRULE[k])
+            })
+            if (opts.freq) opts.freq = rrule.RRule[opts.freq.toUpperCase()]
+            if (!opts.until) opts.until = new Date(Date.UTC(2099, 12, 31))
+            if (!opts.tzid) opts.tzid = infos.timeZone
+            const rule = new rrule.RRule(opts)
+            const startDates = rule.all().slice(0, 1000)
+            const duration = moment(line.DTEND).diff(line.DTSTART)
+            startDates.forEach(startDate => {
+              const duplicateLine = {
+                ...line,
+                DTSTART: startDate.toISOString(),
+                DTEND: moment(startDate).add(duration).toISOString()
+              }
+              delete duplicateLine.RRULE
+              pushOk = this.push(duplicateLine)
+            })
+          } else {
+            pushOk = this.push(line)
+          }
+
           this.i += 1
-        } while (this.push(line))
+        } while (pushOk)
       }
     }) }
 }

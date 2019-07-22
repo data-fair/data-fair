@@ -46,3 +46,13 @@ test.serial('Upload dataset in iCalendar format with VTIMEZONE param', async t =
   const res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
   t.is(moment(res.data.results[0].DTSTART).tz('America/Los_Angeles').format('YYYY-MM-DD-HH:mm'), '2008-02-12-00:00')
 })
+
+test.serial('Upload dataset with recurring event', async t => {
+  const ax = await axiosBuilder('dmeadus0@answers.com:passwd')
+  const dataset = await testUtils.sendDataset('calendar/calendar-rrule.ics', ax)
+  t.is(dataset.count, 92)
+  const res = await ax.get(`/api/v1/datasets/${dataset.id}/lines?sort=DTSTART`)
+  t.true(res.data.results[0].DTSTART.startsWith('2008-'))
+  t.true(res.data.results[1].DTSTART.startsWith('2009-'))
+  t.true(res.data.results[2].DTSTART.startsWith('2010-'))
+})
