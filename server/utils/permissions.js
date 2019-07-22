@@ -187,15 +187,24 @@ module.exports.router = (collectionName, resourceName) => {
     if (!valid) return res.status(400).send('Error in permissions format')
     const resources = req.app.get('db').collection(collectionName)
     try {
+      // re-publish to catalogs if public/private was switched
+      if (['datasets', 'applications'].includes(collectionName)) {
+        const resource = await resources.findOne({ id: req[resourceName].id })
+        const ops = apiDocsUtil.operationsClasses[collectionName]
+        const wasPublic = exports.isPublic(resource, ops)
+        const willBePublic = exports.isPublic({ permissions: req.body }, ops)
+        if (wasPublic !== willBePublic) {
+          await resources.updateOne({
+            id: req[resourceName].id,
+            'publications.status': 'published'
+          }, { $set: { 'publications.$.status': 'waiting' } })
+        }
+      }
+
       await resources.updateOne({
         id: req[resourceName].id
       }, { $set: { permissions: req.body } })
-      if (collectionName === 'datasets') {
-        await resources.updateOne({
-          id: req[resourceName].id,
-          'publications.status': 'published'
-        }, { $set: { 'publications.$.status': 'waiting' } })
-      }
+
       res.status(200).send(req.body)
     } catch (err) {
       next(err)
