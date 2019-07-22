@@ -17,7 +17,7 @@
             </v-icon>
           </v-btn>
           <v-spacer />
-          <div class="py-3">
+          <div v-if="currentDate" class="py-3">
             <span v-if="type === 'month'">{{ currentDate | moment('MMMM YYYY') }}</span>
             <span v-else>{{ currentDate | moment('LL') }}</span>
           </div>
@@ -34,7 +34,7 @@
     <v-layout row>
       <v-flex xs12>
         <v-card :height="calendarHeight">
-          <v-calendar v-if="eventsPerDays" ref="calendar" v-model="currentDate" locale="fr-fr" color="primary" :type="type" @click:date="setDay">
+          <v-calendar v-if="currentDate && eventsPerDays" ref="calendar" v-model="currentDate" locale="fr-fr" color="primary" :type="type" @click:date="setDay">
             <!-- Week/Day only slots -->
             <template v-slot:dayHeader="{ date }">
               <div
@@ -129,9 +129,9 @@ export default {
     this.refresh()
     this.calendarHeight = Math.max(window.innerHeight - this.$el.getBoundingClientRect().top - this.heightMargin - 76, 300)
     if (this.today > this.dataset.timePeriod.startDate && this.today < this.dataset.timePeriod.endDate) {
-      this.currentDate = this.today
+      this.currentDate = moment(this.today).format('YYYY-MM-DD')
     } else {
-      this.currentDate = this.dataset.timePeriod.startDate
+      this.currentDate = moment(this.dataset.timePeriod.startDate).format('YYYY-MM-DD')
     }
   },
   methods: {
