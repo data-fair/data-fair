@@ -69,7 +69,6 @@ exports.parse = async (filePath) => {
             })
             if (opts.freq) opts.freq = rrule.RRule[opts.freq.toUpperCase()]
             if (!opts.until) opts.until = new Date(Date.UTC(2099, 12, 31))
-            if (!opts.tzid) opts.tzid = infos.timeZone
             const rule = new rrule.RRule(opts)
             const startDates = rule.all().slice(0, 1000)
             const duration = moment(line.DTEND).diff(line.DTSTART)

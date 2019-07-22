@@ -1,7 +1,5 @@
 <template lang="html">
   <v-layout column>
-    tz: {{ dataset.timeZone }}
-    data: {{ data }}
     <v-layout row>
       <v-flex xs6 lg3>
         <v-select
@@ -119,7 +117,6 @@ export default {
           const startTZ = startDate.clone().tz(this.dataset.timeZone).format('HH:mm')
           const endTZ = endDate.clone().tz(this.dataset.timeZone).format('HH:mm')
           if (item[this.endDateProp] !== item[this.startDateProp] && startTZ === '00:00' && endTZ === '00:00') {
-            console.log('WHOLE DAYS!')
             wholeDay = true
           }
         }
@@ -158,7 +155,7 @@ export default {
   methods: {
     async refresh() {
       try {
-        this.data = (await this.$axios.$get(this.resourceUrl + '/lines', { size: 10000 })).results
+        this.data = (await this.$axios.$get(this.resourceUrl + '/lines', { params: { size: 10000, sort: this.startDateProp } })).results
       } catch (error) {
         eventBus.$emit('notification', { error })
       }
