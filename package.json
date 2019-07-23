@@ -44,6 +44,7 @@
     "semver-extract": "^1.1.1"
   },
   "dependencies": {
+    "@koumoul/icalendar": "^0.7.3",
     "@digibytes/markdownit": "^1.2.2",
     "@koumoul/nuxt-build-cache": "^0.3.0",
     "@koumoul/sd-express": "^0.15.0",
@@ -90,7 +91,6 @@
     "geolib": "^2.0.24",
     "html-extractor": "^0.2.2",
     "http-errors": "^1.6.2",
-    "icalendar": "^0.7.1",
     "iconv-lite": "^0.4.19",
     "iframe-resizer": "^3.6.2",
     "js-cookie": "^2.2.0",

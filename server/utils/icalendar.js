@@ -1,7 +1,7 @@
 const fs = require('fs-extra')
 const { Readable } = require('stream')
 const vocabulary = require('../../contract/vocabulary')
-const icalendar = require('icalendar')
+const icalendar = require('@koumoul/icalendar')
 const moment = require('moment')
 require('moment-timezone')
 const rrule = require('rrule')
