@@ -16,7 +16,12 @@ function parseDate(prop, calendarTimeZone) {
 }
 
 exports.parse = async (filePath) => {
-  const cal = icalendar.parse_calendar(await fs.readFile(filePath, 'utf8'))
+  let content = (await fs.readFile(filePath, 'utf8')).trim()
+  // fix badly closed openagenda exports
+  if (content.endsWith('END:VEVENT')) {
+    content += '\nEND:VCALENDAR'
+  }
+  const cal = icalendar.parse_calendar(content)
   const infos = {}
   Object.keys(cal.properties).forEach(p => {
     let value = cal.properties[p][0].value
