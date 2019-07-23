@@ -38,55 +38,63 @@ exports.parse = async (filePath) => {
     eventsStream: new Readable({
       objectMode: true,
       read() {
-        this.i = this.i || 0
-        let line
-        let pushOk = true
-        do {
-          const event = events[this.i]
-          if (!event) return this.push(null)
-          line = {}
-          Object.keys(event.properties).forEach(p => {
-            let value = event.properties[p][0].value
-            if (Array.isArray(value)) value = value.join(', ')
-            if (p.startsWith('DT')) value = parseDate(event.properties[p][0], infos.timeZone)
-            line[p] = value
-          })
-          // No DTEND means eaither a full day event, or a single point in time event
-          // it depends on if only the date part of the data should be used (no date-time)
-          // we do not distinguish date and a date-time in data-fair yet, so we make this explicit
-          // console.log(JSON.stringify(event.properties, null, 2))
-          if (!line.DTEND && event.properties.DTSTART[0].value.date_only) {
-            line.DTEND = moment(line.DTSTART).add(1, 'days').toISOString()
-          }
-
-          // pre-resolve recurring events, to prioritize ease of reading
-          if (line.RRULE) {
-            const opts = {
-              dtstart: new Date(line.DTSTART)
+        try {
+          this.i = this.i || 0
+          let line
+          let pushOk = true
+          do {
+            const event = events[this.i]
+            if (!event) return this.push(null)
+            line = {}
+            Object.keys(event.properties).forEach(p => {
+              let value = event.properties[p][0].value
+              if (Array.isArray(value)) value = value.join(', ')
+              if (p.startsWith('DT')) value = parseDate(event.properties[p][0], infos.timeZone)
+              line[p] = value
+            })
+            // No DTEND means eaither a full day event, or a single point in time event
+            // it depends on if only the date part of the data should be used (no date-time)
+            // we do not distinguish date and a date-time in data-fair yet, so we make this explicit
+            // console.log(JSON.stringify(event.properties, null, 2))
+            if (!line.DTEND && event.properties.DTSTART[0].value.date_only) {
+              line.DTEND = moment(line.DTSTART).add(1, 'days').toISOString()
             }
-            Object.keys(line.RRULE).forEach(k => {
-              opts[k.toLowerCase()] = isNaN(line.RRULE[k]) ? line.RRULE[k] : Number(line.RRULE[k])
-            })
-            if (opts.freq) opts.freq = rrule.RRule[opts.freq.toUpperCase()]
-            if (!opts.until) opts.until = new Date(Date.UTC(2099, 12, 31))
-            const rule = new rrule.RRule(opts)
-            const startDates = rule.all().slice(0, 1000)
-            const duration = moment(line.DTEND).diff(line.DTSTART)
-            startDates.forEach(startDate => {
-              const duplicateLine = {
-                ...line,
-                DTSTART: startDate.toISOString(),
-                DTEND: moment(startDate).add(duration).toISOString()
-              }
-              delete duplicateLine.RRULE
-              pushOk = this.push(duplicateLine)
-            })
-          } else {
-            pushOk = this.push(line)
-          }
 
-          this.i += 1
-        } while (pushOk)
+            // pre-resolve recurring events, to prioritize ease of reading
+            if (line.RRULE) {
+              const opts = {
+                dtstart: new Date(line.DTSTART)
+              }
+              Object.keys(line.RRULE).forEach(k => {
+                opts[k.toLowerCase()] = isNaN(line.RRULE[k]) ? line.RRULE[k] : Number(line.RRULE[k])
+              })
+              if (opts.freq) opts.freq = rrule.RRule[opts.freq.toUpperCase()]
+              if (!opts.until) opts.until = new Date(Date.UTC(2099, 12, 31))
+              if (opts.byday) {
+                opts.byweekday = opts.byday
+                delete opts.byday
+              }
+              const rule = new rrule.RRule(opts)
+              const startDates = rule.all().slice(0, 1000)
+              const duration = moment(line.DTEND).diff(line.DTSTART)
+              startDates.forEach(startDate => {
+                const duplicateLine = {
+                  ...line,
+                  DTSTART: startDate.toISOString(),
+                  DTEND: moment(startDate).add(duration).toISOString()
+                }
+                delete duplicateLine.RRULE
+                pushOk = this.push(duplicateLine)
+              })
+            } else {
+              pushOk = this.push(line)
+            }
+
+            this.i += 1
+          } while (pushOk)
+        } catch (err) {
+          this.destroy(err)
+        }
       }
     }) }
 }
