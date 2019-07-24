@@ -281,7 +281,7 @@ Les cookies de session sont utilisés par cette application pour protéger notre
   if (req.method.toUpperCase() !== 'GET') return res.status(405).send('Seules les opérations de type GET sont autorisées sur cette exposition de service')
 
   // rate limiting both on number of requests and total size to prevent abuse of this public proxy
-  const limiterId = req.session ? req.session.id : requestIp.getClientIp(req)
+  const limiterId = appOwner ? req.session.id : requestIp.getClientIp(req)
   nbLimiter = nbLimiter || new RateLimiterMongo({
     storeClient: req.app.get('mongoClient'),
     keyPrefix: 'data-fair-rate-limiter-nb',
