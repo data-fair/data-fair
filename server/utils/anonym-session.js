@@ -1,11 +1,10 @@
 // Manage anonymous sessions for applications' users
 // Distinct from authentication's session
 
+const config = require('config')
 const crypto = require('crypto')
 const expressSession = require('express-session')
 const MongoStore = require('connect-mongo')(expressSession)
-
-const hour = 3600000
 
 exports.init = async (db) => {
   const store = new MongoStore({ db, stringify: false, collection: 'sessions' })
@@ -22,6 +21,9 @@ exports.init = async (db) => {
     name: 'df_session_id',
     resave: false,
     saveUninitialized: true,
-    cookie: { maxAge: hour, sameSite: false } }
-  )
+    cookie: {
+      sameSite: 'lax',
+      secure: config.publicUrl.startsWith('https')
+    }
+  })
 }

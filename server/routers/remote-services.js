@@ -244,10 +244,27 @@ router.post('/:remoteServiceId/_update', readService, asyncWrap(async(req, res) 
   res.status(200).json(clean(req.remoteService))
 }))
 
+function getAppOwner(req) {
+  if (!req.session || !req.session.activeApplications) return null
+  debug('Anonymous session with active applications', req.session.activeApplications)
+  const referer = req.headers.referer || req.headers.referrer
+  debug('Referer URL', referer)
+  if (!referer) return null
+  const pathname = url.parse(req.headers.referer.replace(config.publicUrl + '/app/', '')).pathname
+  if (!pathname) {
+    console.error('Failure to parse referer URL', referer)
+    return null
+  }
+  const refererAppId = pathname.split('/')[0]
+  const refererApp = req.session.activeApplications.find(a => a.id === refererAppId)
+  if (refererApp) return refererApp.owner
+}
+
 // Use the proxy as a user with an active session on an application
 let nbLimiter, kbLimiter
 router.use('/:remoteServiceId/proxy*', (req, res, next) => { req.app.get('anonymSession')(req, res, next) }, asyncWrap(async (req, res, next) => {
   if (!req.user && !(req.session && req.session.activeApplications)) {
+    console.error('Access remote-service without anonymous session', req.headers)
     return res.status(401).send(`
 Pas de session active. Cette erreur peut subvenir si vous utilisez une extension qui bloque les cookies.
 
@@ -257,15 +274,8 @@ Les cookies de session sont utilisés par cette application pour protéger notre
 
   // Use the anonymous session and the current referer url to determine the application.
   // that was used to call this remote service. We will consume the quota of the owner of the application.
-  let appOwner
-  if (req.session && req.session.activeApplications && req.headers.referer) {
-    debug('Anonymous session with active applications', req.session.activeApplications)
-    debug('Referer URL', req.headers.referer)
-    const refererAppId = url.parse(req.headers.referer.replace(config.publicUrl + '/app/', '')).pathname.split('/')[0]
-    const refererApp = req.session.activeApplications.find(a => a.id === refererAppId)
-    if (refererApp) appOwner = refererApp.owner
-    debug('Referer application owner', appOwner)
-  }
+  const appOwner = getAppOwner(req)
+  debug('Referer application owner', appOwner)
 
   // preventing POST is a simple way to prevent exposing bulk methods through this public proxy
   if (req.method.toUpperCase() !== 'GET') return res.status(405).send('Seules les opérations de type GET sont autorisées sur cette exposition de service')

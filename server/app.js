@@ -22,6 +22,7 @@ if (config.mode.includes('server')) {
     else next()
   })
 
+  app.set('trust proxy', 1)
   app.set('json spaces', 2)
 
   if (process.env.NODE_ENV === 'development') {

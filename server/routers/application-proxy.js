@@ -255,6 +255,15 @@ router.all('/:applicationId*', setResource, (req, res, next) => { req.app.get('a
             }]
           })
 
+          head.childNodes.push({
+            nodeName: 'meta',
+            tagName: 'meta',
+            attrs: [
+              { name: 'name', value: 'referrer' },
+              { name: 'content', value: 'same-origin' }
+            ]
+          })
+
           callback(null, parse5.serialize(document))
         }
       })
