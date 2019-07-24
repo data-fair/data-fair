@@ -271,7 +271,7 @@ Les cookies de session sont utilisés par cette application pour protéger notre
   if (req.method.toUpperCase() !== 'GET') return res.status(405).send('Seules les opérations de type GET sont autorisées sur cette exposition de service')
 
   // rate limiting both on number of requests and total size to prevent abuse of this public proxy
-  const ip = requestIp.getClientIp(req)
+  const limiterId = req.session ? req.session.id : requestIp.getClientIp(req)
   nbLimiter = nbLimiter || new RateLimiterMongo({
     storeClient: req.app.get('mongoClient'),
     keyPrefix: 'data-fair-rate-limiter-nb',
@@ -285,7 +285,7 @@ Les cookies de session sont utilisés par cette application pour protéger notre
     duration: config.defaultLimits.remoteServiceRate.duration
   })
   try {
-    await Promise.all([nbLimiter.consume(ip, 1), kbLimiter.consume(ip, 1)])
+    await Promise.all([nbLimiter.consume(limiterId, 1), kbLimiter.consume(limiterId, 1)])
   } catch (err) {
     return res.status(429).send('Trop de traffic dans un interval restreint pour cette exposition de service.')
   }
@@ -322,13 +322,13 @@ Les cookies de session sont utilisés par cette application pour protéger notre
           this.consumed = (this.consumed || 0) + chunk.length
           // for perf do not update rate limiter at every chunk, but only every 100kb
           if (this.consumed > 100000) {
-            kbLimiter.consume(ip, this.consumed).catch(() => {})
+            kbLimiter.consume(limiterId, this.consumed).catch(() => {})
             this.consumed = 0
           }
         },
         flush(cb) {
           cb()
-          kbLimiter.consume(ip, this.consumed).catch(() => {})
+          kbLimiter.consume(limiterId, this.consumed).catch(() => {})
         }
       })
     }]
