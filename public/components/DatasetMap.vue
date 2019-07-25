@@ -120,9 +120,18 @@ export default {
 
       await new Promise(resolve => setTimeout(resolve, 0))
       const style = this.env.map.style.replace('./', this.env.publicUrl + '/')
-      this.map = new mapboxgl.Map({ container: 'map', style })
+      this.map = new mapboxgl.Map({
+        container: 'map',
+        style,
+        transformRequest: (url, resourceType) => {
+          return {
+            url,
+            credentials: 'include' // include cookies
+          }
+        }
+      })
       this.map.on('error', (error) => {
-        console.log('ERROR', error)
+        console.log('Map error', error)
         if (error.sourceId) {
           eventBus.$emit('notification', { error: `Échec d'accès aux tuiles ${error.sourceId}`, msg: 'Erreur pendant le rendu de la carte:' })
         } else if (error.error && error.error.status === 401) {
