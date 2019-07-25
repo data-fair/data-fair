@@ -193,6 +193,7 @@ class ESInputStream extends Readable {
 class PrepareOutputStream extends Transform {
   constructor(options) {
     super({ objectMode: true })
+    this.response = options.response
     this.hashes = options.hashes
     this.extensionKey = options.extensionKey
     const action = options.action
@@ -203,11 +204,14 @@ class PrepareOutputStream extends Transform {
      action.input.find(input => input.concept === 'http://schema.org/identifier')
   }
   _transform(chunk, encoding, callback) {
+    if (this.response.statusCode && this.response.statusCode > 400) {
+      return callback(new Error(`Échec lors de l'appel au service distant ${this.response.statusCode} - ${this.response.statusMessage}`))
+    }
     let item
     try {
       item = JSON.parse(chunk)
     } catch (err) {
-      return callback(new Error('Bad content - ' + chunk))
+      return callback(new Error('Contenu invalide - ' + chunk))
     }
     const selectedItem = Object.keys(item)
       .filter(itemKey => this.selectFields.length === 0 || this.selectFields.includes(itemKey) || itemKey === 'error')
@@ -276,14 +280,22 @@ exports.extend = async(app, dataset, extension, remoteService, action) => {
     stats.count = dataset.count - stats.missing
     await setProgress()
     progressInterval = setInterval(setProgress, 600)
+    const req = request(opts)
+    req.on('error', error => {
+      console.log('Error in request', error)
+    })
+    const response = {}
+    req.on('response', _response => {
+      Object.assign(response, _response)
+    })
     if (stats.missing !== 0) {
       const indexStream = es.indexStream({ esClient, indexName, stats, updateMode: true })
       await pump(
         inputStream,
         new PrepareInputStream({ action, dataset, hashes, extensionKey, selectFields: extension.select, stats }),
-        request(opts),
+        req,
         byline.createStream(),
-        new PrepareOutputStream({ action, hashes, extensionKey, selectFields: extension.select }),
+        new PrepareOutputStream({ response, action, hashes, extensionKey, selectFields: extension.select }),
         indexStream,
         new Writable({ objectMode: true, write(chunk, encoding, cb) { cb() } })
       )
