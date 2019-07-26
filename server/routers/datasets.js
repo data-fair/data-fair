@@ -106,7 +106,7 @@ const readDataset = (acceptedStatuses) => asyncWrap(async(req, res, next) => {
     // dataset found but not in proper state.. wait a little while
     await new Promise(resolve => setTimeout(resolve, 400))
   }
-  throw createError(409, `Le jeu de données n'est pas dans un état permettant l'opération demandée'. État courant : ${req.dataset.status}.`)
+  throw createError(409, `Le jeu de données n'est pas dans un état permettant l'opération demandée. État courant : ${req.dataset.status}.`)
 })
 
 router.use('/:datasetId/permissions', readDataset(), permissions.router('datasets', 'dataset'))

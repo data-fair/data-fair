@@ -104,41 +104,6 @@ other,unknown address
   t.is(res.status, 200)
   await workers.hook('finalizer')
 
-  // DEPRECATED TEST
-  // The logic is changed to optimize re-indexations
-  // Removing a select does not break putMapping compatibility, so the indexing is not run again
-  /*
-  // A search to check that only lat is present now
-  res = await ax.get(`/api/v1/datasets/dataset/lines`)
-  t.is(res.data.total, 3)
-  existingResult = res.data.results.find(l => l.label === 'koumoul')
-  t.is(existingResult[extensionKey + '.lat'], 40)
-  t.falsy(existingResult[extensionKey + '.lon'])
-  dataset = (await ax.get('/api/v1/datasets/dataset')).data
-  t.truthy(dataset.schema.find(field => field.key === extensionKey + '.lat'))
-  t.falsy(dataset.schema.find(field => field.key === extensionKey + '.lon'))
-
-  // Re process full extension with reduced output using extension.select
-  nockScope = nock('http://test.com').post('/coords').query({ select: 'lat' }).reply(200, (uri, requestBody) => {
-    const inputs = requestBody.trim().split('\n').map(JSON.parse)
-    return inputs.map(input => ({ key: input.key, lat: 40 }))
-      .map(JSON.stringify).join('\n') + '\n'
-  })
-  res = await ax.patch('/api/v1/datasets/dataset', { extensions: [{ active: true, forceNext: true, remoteService: 'geocoder-koumoul', action: 'postCoords', select: ['lat'] }] })
-  t.is(res.status, 200)
-  await workers.hook('finalizer')
-  nockScope.done()
-  // A search to check re-indexed results with overwritten extensions
-  res = await ax.get(`/api/v1/datasets/dataset/lines`)
-  t.is(res.data.total, 3)
-  existingResult = res.data.results.find(l => l.label === 'koumoul')
-  t.is(existingResult[extensionKey + '.lat'], 40)
-  t.falsy(existingResult[extensionKey + '.lon'])
-  dataset = (await ax.get('/api/v1/datasets/dataset')).data
-  t.truthy(dataset.schema.find(field => field.key === extensionKey + '.lat'))
-  // putMapping was not broken so we don't expect field to disappear in ES
-  // t.falsy(dataset.schema.find(field => field.key === extensionKey + '.lon')) */
-
   // Download extended file
   res = await ax.get(`/api/v1/datasets/dataset/full`)
   const lines = res.data.split('\n')
@@ -158,14 +123,17 @@ other,unknown address
   form.append('file', content, 'dataset2.csv')
   let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
   t.is(res.status, 201)
-  await workers.hook('finalizer')
-
+  let dataset = await workers.hook('finalizer')
+  dataset.schema.find(field => field.key === 'adr')['x-refersTo'] = 'http://schema.org/address'
   // Prepare for extension failure with HTTP error code
   nock('http://test.com').post('/geocoder/coords').reply(500, 'some error')
-  res = await ax.patch('/api/v1/datasets/dataset2', { extensions: [{ active: true, remoteService: 'geocoder-koumoul', action: 'postCoords' }] })
+  res = await ax.patch('/api/v1/datasets/dataset2', {
+    schema: dataset.schema,
+    extensions: [{ active: true, remoteService: 'geocoder-koumoul', action: 'postCoords' }]
+  })
   t.is(res.status, 200)
   await workers.hook('finalizer')
-  let dataset = (await ax.get('/api/v1/datasets/dataset2')).data
+  dataset = (await ax.get('/api/v1/datasets/dataset2')).data
   t.truthy(dataset.extensions[0].error)
 
   // Prepare for extension failure with bad body in response

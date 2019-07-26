@@ -1,7 +1,7 @@
 const { Transform } = require('stream')
 const config = require('config')
 const randomSeed = require('random-seed')
-
+const debug = require('debug')('index-stream')
 class IndexStream extends Transform {
   constructor(options) {
     super({ objectMode: true })
@@ -13,8 +13,6 @@ class IndexStream extends Transform {
   }
   async _transform(item, encoding, callback) {
     try {
-      if (this.options.stats) this.options.stats.count += 1
-
       if (this.options.updateMode) {
         const keys = Object.keys(item.doc)
         if (keys.length === 0 || (keys.length === 1 && keys[0] === '_i')) return callback()
@@ -74,6 +72,7 @@ class IndexStream extends Transform {
   }
   async _sendBulk() {
     if (this.body.length === 0) return
+    debug(`Send ${this.body.length} lines to bulk indexing`)
     const bodyClone = [].concat(this.body)
     const sentBulkChars = this.bulkChars
     const bulkOpts = {
@@ -86,7 +85,7 @@ class IndexStream extends Transform {
       // Use the ingest plugin to parse attached files
       if (this.options.attachments) bulkOpts.pipeline = 'attachment'
       const res = await this.options.esClient.bulk(bulkOpts)
-
+      debug('Bulk sent OK ')
       res.items.forEach((item, i) => {
         const _id = (item.index && item.index._id) || (item.update && item.update._id) || (item.delete && item.delete._id)
         const line = this.options.updateMode ? bodyClone[(i * 2) + 1].doc : bodyClone[(i * 2) + 1]

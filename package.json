@@ -44,8 +44,8 @@
     "semver-extract": "^1.1.1"
   },
   "dependencies": {
-    "@koumoul/icalendar": "^0.7.3",
     "@digibytes/markdownit": "^1.2.2",
+    "@koumoul/icalendar": "^0.7.3",
     "@koumoul/nuxt-build-cache": "^0.3.0",
     "@koumoul/sd-express": "^0.15.0",
     "@koumoul/sd-vue": "^0.12.1",

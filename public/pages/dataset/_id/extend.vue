@@ -60,7 +60,7 @@
               color="primary"
               class="mt-2"
             >
-              <span v-if="props.item.active && (props.item.progress === 1 || props.item.error)">
+              <span v-if="props.item.active && (props.item.progress >= 1 || props.item.error)">
                 <v-btn icon flat color="accent" title="Recommencer et écraser les valeurs enrichies précédemment" @click="save(props.item)">
                   <v-icon>play_circle_filled</v-icon>
                 </v-btn>
