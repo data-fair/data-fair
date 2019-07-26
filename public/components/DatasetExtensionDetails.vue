@@ -131,6 +131,7 @@ export default {
       return this.selectFields && this.selectFields
         .map(field => ({
           text: field.title || field['x-originalName'] || field.key,
+          sortable: field.type === 'string' || field.type === 'number' || field.type === 'integer',
           value: field.key
         }))
     },
@@ -156,6 +157,15 @@ export default {
     }
   },
   methods: {
+    orderBy(header) {
+      if (!header.sortable) return
+      if (this.pagination.sortBy === header.value) {
+        this.pagination.descending = !this.pagination.descending
+      } else {
+        this.pagination.sortBy = header.value
+        this.pagination.descending = true
+      }
+    },
     async refresh() {
       if (!this.errorField) return
 
