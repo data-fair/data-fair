@@ -126,7 +126,7 @@ export default {
         transformRequest: (url, resourceType) => {
           return {
             url,
-            credentials: 'include' // include cookies
+            credentials: 'include' // include cookies, for data-fair sessions
           }
         }
       })
