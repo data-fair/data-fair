@@ -13,6 +13,7 @@ const permissions = require('../utils/permissions')
 const thumbor = require('../utils/thumbor')
 const serviceWorkers = require('../utils/service-workers')
 const router = module.exports = express.Router()
+const debug = require('debug')('application-proxy')
 
 const loginHtml = fs.readFileSync(path.join(__dirname, '../resources/login.html'), 'utf8')
 
@@ -103,7 +104,7 @@ router.all('/:applicationId*', setResource, (req, res, next) => { req.app.get('a
   const baseApp = await baseAppPromise
   if (!baseApp) return res.status(404).send('Application de base inconnue ou à accès restreint.')
 
-  const ifModifiedSince = new Date(req.get('If-Modified-Since'))
+  const ifModifiedSince = req.headers['if-modified-since'] && new Date(req.headers['if-modified-since'])
   // go through UTC transformation to lose milliseconds just as last-modified and if-modified-since headers do
   const updatedAt = new Date(new Date(Math.max(...updateDates)).toUTCString())
 
@@ -154,19 +155,19 @@ router.all('/:applicationId*', setResource, (req, res, next) => { req.app.get('a
     // fix cache. Remove etag,  calculate last-modified, etc.
     name: 'cache-manager',
     match: (resp) => {
+      debug(`Incoming response ${req.originalUrl} - ${resp.statusCode}`)
       delete resp.headers.expires
       delete resp.headers.etag
-      resp.headers['cache-control'] = 'private, max-age=0'
-      const lastModified = new Date(resp.headers['last-modified'] || req.application.updatedAt)
+      resp.headers['cache-control'] = 'private, max-age=0, must-revalidate'
+      resp.headers['pragma'] = 'no-cache'
       if (resp.statusCode !== 200) return false
-      if (updatedAt > lastModified) {
-        resp.headers['last-modified'] = updatedAt.toUTCString()
-      } else {
-        resp.headers['last-modified'] = lastModified.toUTCString()
-      }
-      if (ifModifiedSince >= updatedAt && ifModifiedSince >= lastModified) {
+      const lastModified = resp.headers['last-modified'] && new Date(resp.headers['last-modified'])
+      const comparisonDate = lastModified && lastModified > updatedAt ? lastModified : updatedAt
+      resp.headers['last-modified'] = comparisonDate.toUTCString()
+      if (ifModifiedSince && ifModifiedSince >= comparisonDate) {
         resp.statusCode = 304
       }
+      debug(`Cache headers processed: if-modified-since=${ifModifiedSince} - updatedAt=${updatedAt} - last-modified=${lastModified} - statusCode=${resp.statusCode}`)
       return false
     },
     // never actually called
