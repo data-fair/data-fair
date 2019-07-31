@@ -6,7 +6,7 @@
       "http://www.w3.org/2000/01/rdf-schema#label",
       "http://www.bbc.co.uk/ontologies/coreconcepts/label"
     ],
-    "type": "text"
+    "type": "string"
   },
   {
     "title": "Description",
@@ -14,7 +14,7 @@
     "identifiers": [
       "http://schema.org/description"
     ],
-    "type": "text"
+    "type": "string"
   },
   {
     "title": "Image",
@@ -22,7 +22,7 @@
     "identifiers": [
       "http://schema.org/image"
     ],
-    "type": "text"
+    "type": "string"
   },
   {
     "title": "Numéro de rue",
@@ -30,7 +30,7 @@
     "identifiers": [
       "http://www.ontotext.com/proton/protonext#StreetNumber"
     ],
-    "type": "text"
+    "type": "string"
   },
   {
     "title": "Rue ou lieu-dit",
@@ -38,7 +38,7 @@
     "identifiers": [
       "http://schema.org/streetAddress"
     ],
-    "type": "text"
+    "type": "string"
   },
   {
     "title": "Adresse",
@@ -46,7 +46,7 @@
     "identifiers": [
       "http://schema.org/address"
     ],
-    "type": "text"
+    "type": "string"
   },
   {
     "title": "Commune",
@@ -54,7 +54,7 @@
     "identifiers": [
       "http://schema.org/City"
     ],
-    "type": "text"
+    "type": "string"
   },
   {
     "title": "Code postal",
@@ -70,7 +70,7 @@
     "identifiers": [
       "http://rdf.insee.fr/def/geo#codeCommune"
     ],
-    "type": "text"
+    "type": "string"
   },
   {
     "title": "Code département",
@@ -78,7 +78,7 @@
     "identifiers": [
       "http://rdf.insee.fr/def/geo#codeDepartement"
     ],
-    "type": "text"
+    "type": "string"
   },
   {
     "title": "Code région",
@@ -95,7 +95,7 @@
       "http://schema.org/latitude",
       "http://www.w3.org/2003/01/geo/wgs84_pos#lat"
     ],
-    "type": "float"
+    "type": "number"
   },
   {
     "title": "Longitude",
@@ -104,7 +104,7 @@
       "http://schema.org/longitude",
       "http://www.w3.org/2003/01/geo/wgs84_pos#long"
     ],
-    "type": "float"
+    "type": "number"
   },
   {
     "title": "Latitude / Longitude",
@@ -112,7 +112,7 @@
     "identifiers": [
       "http://www.w3.org/2003/01/geo/wgs84_pos#lat_long"
     ],
-    "type": "text"
+    "type": "string"
   },
   {
     "title": "SIRET",
@@ -136,7 +136,7 @@
     "identifiers": [
       "http://www.datatourisme.fr/ontology/core/1.0#apeNaf"
     ],
-    "type": "text"
+    "type": "string"
   },
   {
     "title": "Catégorie juridique (niveau 3)",
@@ -153,7 +153,8 @@
       "http://schema.org/Date",
       "http://purl.org/dc/identifierss/date"
     ],
-    "type": "date"
+    "type": "string",
+    "format": "date-time"
   },
   {
     "title": "Date de création",
@@ -162,7 +163,8 @@
       "http://schema.org/dateCreated",
       "http://purl.org/dc/identifierss/created"
     ],
-    "type": "date"
+    "type": "string",
+    "format": "date-time"
   },
   {
     "title": "Code parcelle",
@@ -170,7 +172,7 @@
     "identifiers": [
       "http://dbpedia.org/ontology/codeLandRegistry"
     ],
-    "type": "text"
+    "type": "string"
   },
   {
     "title": "Géometrie GeoJSON",
@@ -200,7 +202,7 @@
     "identifiers": [
       "http://data.ign.fr/def/geometrie#coordX"
     ],
-    "type": "float"
+    "type": "number"
   },
   {
     "title": "Coordonnée Y",
@@ -208,7 +210,7 @@
     "identifiers": [
       "http://data.ign.fr/def/geometrie#coordY"
     ],
-    "type": "float"
+    "type": "number"
   },
   {
     "title": "Date de début",
@@ -216,7 +218,8 @@
     "identifiers": [
       "https://schema.org/startDate"
     ],
-    "type": "date-time"
+    "type": "string",
+    "format": "date-time"
   },
   {
     "title": "Date de fin",

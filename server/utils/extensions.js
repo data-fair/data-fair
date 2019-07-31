@@ -183,7 +183,6 @@ class ESInputStream extends Readable {
     } else {
       // only consider lines with at least one input field
       this.query = { bool: { should: options.inputMapping.fields.map(f => {
-        console.log('F', f[2])
         const notEmpty = {
           bool: { must: { exists: { field: f[0] } } }
         }
