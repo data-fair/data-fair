@@ -146,7 +146,7 @@ function prepareInputMapping(action, schema, extensionKey, selectFields) {
       f['x-refersTo'] !== 'http://schema.org/identifier' &&
       f.key.indexOf(extensionKey) !== 0
     )
-    if (field) return [field.key, input.name]
+    if (field) return [field.key, input.name, field]
   }).filter(i => i)
   const idInput = (action.input.find(input => input.concept === 'http://schema.org/identifier'))
   if (!idInput) throw new Error('A field with concept "http://schema.org/identifier" is required and missing in the remote service action', action)
@@ -182,12 +182,16 @@ class ESInputStream extends Readable {
       this.query = { match_all: {} }
     } else {
       // only consider lines with at least one input field
-      this.query = { bool: { should: options.inputMapping.fields.map(f => ({
-        bool: {
-          must: { exists: { field: f[0] } },
-          must_not: { term: { [f[0]]: '' } }
+      this.query = { bool: { should: options.inputMapping.fields.map(f => {
+        console.log('F', f[2])
+        const notEmpty = {
+          bool: { must: { exists: { field: f[0] } } }
         }
-      })) } }
+        if (f[2].type === 'string') {
+          notEmpty.bool.must_not = { term: { [f[0]]: '' } }
+        }
+        return notEmpty
+      }) } }
       if (!this.forceNext) {
         this.countQuery = JSON.parse(JSON.stringify(this.query))
         this.countQuery.bool.must = { exists: { field: this.extensionKey + '._hash' } }
