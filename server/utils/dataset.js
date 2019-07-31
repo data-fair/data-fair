@@ -11,6 +11,7 @@ const axios = require('axios')
 const fieldsSniffer = require('./fields-sniffer')
 const geoUtils = require('./geo')
 const restDatasetsUtils = require('./rest-datasets')
+const vocabulary = require('../../contract/vocabulary')
 
 const baseTypes = new Set(['text/csv', 'application/geo+json'])
 
@@ -169,9 +170,24 @@ exports.storageRemaining = async (db, owner) => {
   return Math.max(0, limit - size)
 }
 
+exports.applyConcepts = (schema) => {
+  // apply type from concepts to the actual field (for example SIRET might be parsed a interger, but should be returned a string)
+  schema.forEach(f => {
+    if (f['x-refersTo']) {
+      const concept = vocabulary.find(c => c.identifiers.includes(f['x-refersTo']))
+      // forcing other types than string is more dangerous, for now lets do just that
+      if (concept && concept.type === 'string') {
+        f.type = concept.type
+        if (concept.format) f.format = concept.format
+      }
+    }
+  })
+}
+
 exports.extendedSchema = (dataset) => {
   dataset.schema = dataset.schema || []
   const schema = dataset.schema.filter(f => f.key.startsWith('_ext_') || !f.key.startsWith('_'))
+
   if (dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')) {
     schema.push({ 'x-calculated': true, key: '_file.content', type: 'string', title: `Contenu textuel du fichier`, description: `Résultat d'une extraction automatique` })
     schema.push({ 'x-calculated': true, key: '_file.content_type', type: 'string', title: `Type mime du fichier`, description: `Résultat d'une détection automatique.` })

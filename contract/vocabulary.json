@@ -120,7 +120,7 @@
     "identifiers": [
       "http://www.datatourisme.fr/ontology/core/1.0/#siret"
     ],
-    "type": "integer"
+    "type": "string"
   },
   {
     "title": "SIREN",
@@ -128,7 +128,7 @@
     "identifiers": [
       "http://dbpedia.org/ontology/siren"
     ],
-    "type": "integer"
+    "type": "string"
   },
   {
     "title": "Code APE",
@@ -188,13 +188,14 @@
     "identifiers": [
       "http://schema.org/DigitalDocument"
     ],
-    "type": "object"
+    "type": "string"
   }, {
     "title": "Page Web",
     "description": "URL vers une page Web externe",
     "identifiers": [
       "https://schema.org/WebPage"
-    ]
+    ],
+    "type": "string"
   },
   {
     "title": "Coordonnée X",
