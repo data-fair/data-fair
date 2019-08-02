@@ -40,8 +40,7 @@ if (config.mode.includes('server')) {
     bodyParser(req, res, next)
   })
   app.use(require('cookie-parser')())
-  // In production CORS is taken care of by the reverse proxy if necessary
-  if (config.cors.active) app.use(require('cors')(config.cors.opts))
+  app.use(session.cors({ acceptAllOrigins: true }))
 
   // Business routers
   const apiKey = require('./utils/api-key')
