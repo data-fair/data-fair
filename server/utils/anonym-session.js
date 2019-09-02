@@ -22,7 +22,8 @@ exports.init = async (db) => {
     resave: false,
     saveUninitialized: true,
     cookie: {
-      sameSite: 'lax',
+      // if we set this option cookies are not sent by older versions of firefox from inside iframes in an outside domain
+      // sameSite: 'lax',
       secure: config.publicUrl.startsWith('https')
     }
   })
