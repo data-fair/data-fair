@@ -95,7 +95,8 @@ class IndexStream extends Transform {
         res.items
           .map((item, i) => ({
             _i: (this.options.updateMode ? bodyClone[(i * 2) + 1].doc : bodyClone[(i * 2) + 1])._i,
-            error: (item.index && item.index.error) || (item.update && item.update.error)
+            error: (item.index && item.index.error) || (item.update && item.update.error),
+            input: this.body[(i * 2) + 1]
           }))
           .filter(item => !!item.error)
           .forEach(item => this.erroredItems.push(item))
@@ -110,15 +111,18 @@ class IndexStream extends Transform {
   errorsSummary() {
     if (!this.erroredItems.length) return null
     const leftOutErrors = this.erroredItems.length - 3
-    let msg = this.erroredItems.slice(0, 3).map(item => {
-      let itemMsg = ''
-      if (item._i !== undefined) itemMsg += `Élément ${item._i} du jeu de données - `
-      itemMsg += item.error.reason
-      if (item.error.caused_by) itemMsg += ' - ' + item.error.caused_by.reason
-      itemMsg += '\n' + JSON.stringify(item.input)
+    let msg = `${Math.round(100 * (this.erroredItems.length / this.i))}% des lignes sont en erreur.\n<br>`
+    msg += this.erroredItems.slice(0, 3).map(item => {
+      let itemMsg = ' - '
+      if (item._i !== undefined) itemMsg += `Ligne ${item._i}: `
+      if (item.error.caused_by) itemMsg += item.error.caused_by.reason
+      else itemMsg += item.error.reason
       return itemMsg
-    }).join('\n')
-    if (leftOutErrors > 0) msg += `\n${leftOutErrors} autres erreurs...`
+    }).join('\n<br>')
+
+    if (leftOutErrors > 0) msg += `\n<br>${leftOutErrors} autres erreurs...`
+    // blocking if more than 50% lines are broken in a way
+    if (this.erroredItems.length > this.i / 2) throw new Error(msg)
     return msg
   }
 }

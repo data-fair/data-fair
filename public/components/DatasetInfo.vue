@@ -23,9 +23,10 @@
               <v-list-tile-avatar v-else>
                 <v-progress-circular :size="20" :width="3" small indeterminate color="primary" />
               </v-list-tile-avatar>
-              <p v-if="journal[0].type === 'error'">
-                {{ events[journal[0].type] && events[journal[0].type].text }} <br> {{ journal[0].data }}
-              </p>
+              <div v-if="journal[0].type === 'error'">
+                <p>{{ events[journal[0].type] && events[journal[0].type].text }}</p>
+                <p v-html="journal[0].data" />
+              </div>
               <span v-else>{{ events[journal[0].type] && events[journal[0].type].text }}</span>
               <v-spacer />
               <v-list-tile-action v-if="journal[0].type === 'error' && can('writeDescription')">
