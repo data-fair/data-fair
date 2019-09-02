@@ -81,7 +81,7 @@ exports.initServer = async (wss, db) => {
       if (ws.isAlive === false) return ws.terminate()
 
       ws.isAlive = false
-      ws.ping('', false, true)
+      ws.ping('', false, () => {})
     })
   }, 30000)
 

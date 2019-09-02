@@ -317,7 +317,7 @@ Les cookies de session sont utilisés par cette application pour protéger notre
         // Prevent caches in front of data-fair to cache public expositions of remote-services
         // otherwise rate limiting is not accurate and we have complicated multi-cache cases
         if (!resp.headers['cache-control']) {
-          resp.headers['cache-control'] = 'private, max-age=0'
+          resp.headers['cache-control'] = 'private, max-age=0, must-revalidate'
         } else {
           resp.headers['cache-control'] = resp.headers['cache-control'].replace('public', 'private')
         }
