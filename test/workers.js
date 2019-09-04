@@ -75,12 +75,16 @@ test.serial('Process newly uploaded CSV dataset', async t => {
   const form2 = new FormData()
   form2.append('file', datasetFd2, 'dataset.csv')
   await ax.post('/api/v1/datasets/' + dataset.id, form2, { headers: testUtils.formHeaders(form2) })
-  dataset = await workers.hook('finalizer')
-  // Check that there is an error message in the journal
-  res = await ax.get('/api/v1/datasets/' + dataset.id + '/journal')
-  t.is(res.status, 200)
-  t.is(res.data[1].type, 'error')
-  t.is(res.data[1].data.slice(0, 36), 'Élément 1 du jeu de données - failed')
+  try {
+    dataset = await workers.hook('finalizer')
+    t.fail()
+  } catch (err) {
+    res = await ax.get('/api/v1/datasets/' + dataset.id + '/journal')
+    t.is(res.status, 200)
+    t.is(res.data[0].type, 'error')
+    // Check that there is an error message in the journal
+    t.true(res.data[0].data.startsWith('100% des lignes sont en erreur'))
+  }
 })
 
 test.serial('Publish a dataset after finalization', async t => {
@@ -143,18 +147,21 @@ test.serial('Log error for geojson with broken feature', async t => {
   form.append('file', datasetFd, 'geojson-example.geojson')
   const ax = await axiosBuilder('dmeadus0@answers.com:passwd')
   let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
+  const dataset = res.data
   t.is(res.status, 201)
 
   // ES indexation and finalization
-  let dataset = await workers.hook('finalizer')
-  t.is(dataset.status, 'finalized')
-
-  // Check that there is an error message in the journal
-  res = await ax.get('/api/v1/datasets/' + dataset.id + '/journal')
-  t.is(res.status, 200)
-  t.is(res.data.length, 8)
-  t.is(res.data[1].type, 'error')
-  t.is(res.data[1].data.slice(0, 36), 'Élément 1 du jeu de données - failed')
+  try {
+    await workers.hook('finalizer')
+    t.fail()
+  } catch (err) {
+    // Check that there is an error message in the journal
+    res = await ax.get('/api/v1/datasets/' + dataset.id + '/journal')
+    t.is(res.status, 200)
+    t.is(res.data.length, 7)
+    t.is(res.data[0].type, 'error')
+    t.true(res.data[0].data.startsWith('100% des lignes sont en erreur'))
+  }
 })
 
 // skipped, because requires ogr2ogr in the build env
@@ -198,10 +205,17 @@ test.serial('Manage failure in children processes', async t => {
   const ax = await axiosBuilder('dmeadus0@answers.com:passwd')
   let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
   t.is(res.status, 201)
-  const dataset = await workers.hook('finalizer')
-  // Check that there is an error message in the journal
-  res = await ax.get('/api/v1/datasets/' + dataset.id + '/journal')
-  t.is(res.status, 200)
-  t.is(res.data[1].type, 'error')
-  t.is(res.data[1].data.slice(0, 36), 'Élément 1 du jeu de données - failed')
+  const dataset = res.data
+  try {
+    await workers.hook('finalizer')
+    t.fail()
+  } catch (err) {
+    // Check that there is an error message in the journal
+    res = await ax.get('/api/v1/datasets/' + dataset.id + '/journal')
+    t.is(res.status, 200)
+    t.is(res.data[0].type, 'error')
+    console.log('data', res.data[0].data)
+    // TODO: should be startsWith, not includes
+    t.true(res.data[0].data.includes('100% des lignes sont en erreur'))
+  }
 })
