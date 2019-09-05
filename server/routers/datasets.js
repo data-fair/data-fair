@@ -177,7 +177,6 @@ router.patch('/:datasetId', readDataset(['finalized', 'error']), permissions.mid
   } else if (patch.projection && (!req.dataset.projection || patch.projection.code !== req.dataset.projection.code)) {
     patch.status = 'schematized'
   } else if (patch.schema) {
-    datasetUtils.applyConcepts(patch.schema)
     try {
       await esUtils.updateDatasetMapping(req.app.get('es'), { id: req.dataset.id, schema: patch.schema })
       if (patch.extensions) {

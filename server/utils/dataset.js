@@ -170,9 +170,20 @@ exports.storageRemaining = async (db, owner) => {
   return Math.max(0, limit - size)
 }
 
-exports.applyConcepts = (schema) => {
-  // apply type from concepts to the actual field (for example SIRET might be parsed a interger, but should be returned a string)
+exports.extendedSchema = (dataset) => {
+  dataset.schema = dataset.schema || []
+  const schema = dataset.schema.filter(f => f.key.startsWith('_ext_') || !f.key.startsWith('_'))
+
+  const fileSchema = dataset.file && dataset.file.schema
   schema.forEach(f => {
+    // restore original type and format, in case of removal of a concept
+    const fileField = fileSchema && fileSchema.find(ff => ff.key === f.key)
+    if (fileField) {
+      f.type = fileField.type
+      f.format = fileField.format
+    }
+
+    // apply type from concepts to the actual field (for example SIRET might be parsed a interger, but should be returned a string)
     if (f['x-refersTo']) {
       const concept = vocabulary.find(c => c.identifiers.includes(f['x-refersTo']))
       // forcing other types than string is more dangerous, for now lets do just that
@@ -182,11 +193,6 @@ exports.applyConcepts = (schema) => {
       }
     }
   })
-}
-
-exports.extendedSchema = (dataset) => {
-  dataset.schema = dataset.schema || []
-  const schema = dataset.schema.filter(f => f.key.startsWith('_ext_') || !f.key.startsWith('_'))
 
   if (dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')) {
     schema.push({ 'x-calculated': true, key: '_file.content', type: 'string', title: `Contenu textuel du fichier`, description: `Résultat d'une extraction automatique` })
