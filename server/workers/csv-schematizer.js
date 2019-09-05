@@ -44,6 +44,6 @@ exports.process = async function(app, dataset) {
 
   dataset.status = 'schematized'
   await db.collection('datasets').updateOne({ id: dataset.id }, {
-    $set: { status: 'schematized', schema: dataset.schema }
+    $set: { status: 'schematized', schema: dataset.schema, file: dataset.file }
   })
 }
