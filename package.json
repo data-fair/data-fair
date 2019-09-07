@@ -108,7 +108,7 @@
     "moment": "^2.20.1",
     "moment-timezone": "^0.5.26",
     "mongo-escape": "^2.0.6",
-    "mongodb": "^3.2.2",
+    "mongodb": "^3.3.2",
     "multer": "^1.4.1",
     "ngeohash": "^0.6.0",
     "node-dir": "^0.1.17",
