@@ -146,9 +146,9 @@ async function iter(app, type) {
       await journals.log(app, resource, { type: 'error', data: errorMessage.join('\n') }, type)
       await app.get('db').collection(type + 's').updateOne({ id: resource.id }, { $set: { status: 'error' } })
       resource.status = 'error'
+      if (hooks[taskKey]) hooks[taskKey].reject({ resource, message: errorMessage.join('\n') })
+      if (hooks[taskKey + '/' + resource.id]) hooks[taskKey + '/' + resource.id].reject({ resource, message: errorMessage.join('\n') })
     }
-    if (hooks[taskKey]) hooks[taskKey].reject({ resource, message: errorMessage.join('\n') })
-    if (hooks[taskKey + '/' + resource.id]) hooks[taskKey + '/' + resource.id].reject({ resource, message: errorMessage.join('\n') })
   } finally {
     if (resource) {
       // we release the worker right away, but we do not release the lock on the dataset

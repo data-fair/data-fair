@@ -21,7 +21,7 @@ const clients = {}
 let stopped = false
 exports.stop = async () => {
   stopped = true
-  await cursor.close()
+  if (cursor) await cursor.close()
 }
 
 async function channel(db) {
@@ -85,9 +85,18 @@ exports.initServer = async (wss, db) => {
     })
   }, 30000)
 
-  // Listen to pubsub channel based on mongodb to support scaling on multiple processes
   const mongoChannel = await channel(db)
   await mongoChannel.insertOne({ type: 'init' })
+  initCursor(db, mongoChannel)
+  db.on('reconnect', () => {
+    console.log('RECONNECT !!!')
+    if (cursor) cursor.close()
+    initCursor(db, mongoChannel)
+  })
+}
+
+// Listen to pubsub channel based on mongodb to support scaling on multiple processes
+const initCursor = (db, mongoChannel) => {
   cursor = mongoChannel.find({}, { tailable: true, awaitdata: true, numberOfRetries: -1 })
   cursor.forEach(doc => {
     if (stopped) return

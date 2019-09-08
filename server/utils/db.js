@@ -15,7 +15,7 @@ exports.connect = async () => {
   let client
   debug('Connecting to mongodb ' + config.mongoUrl)
   try {
-    client = await MongoClient.connect(config.mongoUrl, { useNewUrlParser: true })
+    client = await MongoClient.connect(config.mongoUrl, { useNewUrlParser: true, reconnectTries: Number.MAX_VALUE })
   } catch (err) {
     // 1 retry after 1s
     // solve the quite common case in docker-compose of the service starting at the same time as the db
