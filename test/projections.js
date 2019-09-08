@@ -19,7 +19,6 @@ test.serial('Create REST dataset and define specific projection', async t => {
   t.is(res.status, 201)
   try {
     await workers.hook(`finalizer/${dataset.id}`)
-    t.fail()
   } catch (err) { }
   await ax.patch(`/api/v1/datasets/${dataset.id}`, { projection: {
     title: 'NTF (Paris) / Lambert zone II',
