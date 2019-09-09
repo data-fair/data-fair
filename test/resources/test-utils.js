@@ -75,7 +75,8 @@ exports.prepare = (testFile) => {
     debug('app ok')
   })
 
-  test.serial.after.always('stop app and clean', async t => {
+  /* TODO: stopping the app breaks tests, with some mongodb interrupted operations errors
+  test.serial.after.always('stop app', async t => {
     try {
       debug('stop app')
       await app.stop()
@@ -85,6 +86,7 @@ exports.prepare = (testFile) => {
     }
     debug('app stopped')
   })
+  */
 
   const axiosBuilder = async (email, opts = {}) => {
     debug('prepare axios instance', email)
