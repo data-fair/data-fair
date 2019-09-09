@@ -80,6 +80,10 @@ function checkQuery(query, fields, esFields) {
 exports.prepareQuery = (dataset, query) => {
   const esQuery = {}
 
+  // Valid "total" value
+  // TODO: make it optional for perf on large queries ?
+  esQuery.track_total_hits = true
+
   // Pagination
   esQuery.size = query.size ? Number(query.size) : 20
   if (esQuery.size > 10000) throw createError(400, '"size" cannot be more than 10000')
