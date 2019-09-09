@@ -10,7 +10,7 @@ app.run().then(app => {
     console.log('Web socket and HTTP server listening on http://localhost:%s', config.port)
   }
   if (config.mode === 'task') {
-    console.log(`Ran task ${process.argv[2]} / ${process.argv[3]} / ${process.argv[4]}`)
+    // console.log(`Ran task ${process.argv[2]} / ${process.argv[3]} / ${process.argv[4]}`)
     process.exit()
   }
 }, err => {

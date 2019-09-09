@@ -11,6 +11,7 @@ const wktParser = require('terraformer-wkt-parser')
 const tmp = require('tmp-promise')
 const writeFile = util.promisify(fs.writeFile)
 const proj4 = require('proj4')
+const debug = require('debug')('geo')
 
 const projections = require('../../contract/projections')
 const geomUri = 'https://purl.org/geojson/vocab#geometry'
@@ -82,12 +83,12 @@ exports.geometry2fields = async (schema, doc) => {
   try {
     cleanCoords(feature, { mutate: true })
   } catch (err) {
-    console.error('Failure while applying cleanCoords to geojson', err)
+    debug('Failure while applying cleanCoords to geojson', err)
   }
   try {
     rewind(feature, { mutate: true })
   } catch (err) {
-    console.error('Failure while applying rewind to geojson', err)
+    debug('Failure while applying rewind to geojson', err)
   }
   try {
     if (['Polygon', 'MultiPolygon'].includes(feature.geometry.type)) {
@@ -97,7 +98,7 @@ exports.geometry2fields = async (schema, doc) => {
       }
     }
   } catch (err) {
-    console.error('Failure while removing self intersections from geojson polygons', err)
+    debug('Failure while removing self intersections from geojson polygons', err)
   }
 
   // check if simplify is a good idea ? too CPU intensive for our backend ?
@@ -166,7 +167,7 @@ const customUnkink = async (feature) => {
       await prepair(feature)
     }
   } catch (err) {
-    console.error('Failed to use the prepair command line tool', err)
+    debug('Failed to use the prepair command line tool', err)
     const unkinked = unkink(feature)
     feature.geometry = { type: 'MultiPolygon', coordinates: unkinked.features.map(f => f.geometry.coordinates) }
   }

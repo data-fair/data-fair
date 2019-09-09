@@ -2,6 +2,7 @@ const config = require('config')
 const spawn = require('child-process-promise').spawn
 const locks = require('../utils/locks')
 const journals = require('../utils/journals')
+const debug = require('debug')('workers')
 
 const tasks = exports.tasks = {
   downloader: require('./downloader'),
@@ -116,9 +117,9 @@ async function iter(app, type) {
     if (config.worker.spawnTask) {
       // Run a task in a dedicated child process for  extra resiliency to fatal memory exceptions
       const spawnPromise = spawn('node', ['server', taskKey, type, resource.id], { env: { ...process.env, DEBUG: '', MODE: 'task' } })
-      spawnPromise.childProcess.stdout.on('data', data => process.stdout.write('[spawned task stdout] ' + data))
+      spawnPromise.childProcess.stdout.on('data', data => debug('[spawned task stdout] ' + data))
       spawnPromise.childProcess.stderr.on('data', data => {
-        process.stderr.write('[spawned task stderr] ' + data)
+        debug('[spawned task stderr] ' + data)
         stderr += data
       })
       await spawnPromise
@@ -141,7 +142,7 @@ async function iter(app, type) {
       errorMessage.push(err.message)
     }
 
-    console.error('Failure in worker ' + taskKey, err)
+    debug('Failure in worker ' + taskKey, err)
     if (resource) {
       await journals.log(app, resource, { type: 'error', data: errorMessage.join('\n') }, type)
       await app.get('db').collection(type + 's').updateOne({ id: resource.id }, { $set: { status: 'error' } })
