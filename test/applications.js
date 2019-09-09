@@ -60,7 +60,7 @@ test.serial('Manage the custom configuration part of the object', async t => {
   let res = await ax.post('/api/v1/applications', { url: 'http://monapp1.com/' })
   const appId = res.data.id
   res = await ax.put('/api/v1/applications/' + appId + '/config', {
-    datasets: [{ 'href': config.publicUrl + '/api/v1/datasets/111' }]
+    datasets: [{ href: config.publicUrl + '/api/v1/datasets/111' }]
   })
   t.is(res.status, 200)
   res = await ax.get('/api/v1/applications/' + appId + '/config')
@@ -91,5 +91,5 @@ test.serial('Use an application through the application proxy', async t => {
   // A link to the manifest is injected
   t.true(res.data.includes(`<link rel="manifest" crossorigin="use-credentials" href="/app/${appId}/manifest.json">`))
   // The app reference a service worker
-  t.true(res.data.includes(`/app-sw.js`))
+  t.true(res.data.includes('/app-sw.js'))
 })

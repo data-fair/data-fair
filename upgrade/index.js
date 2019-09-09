@@ -27,9 +27,9 @@ async function main() {
   debug(`Current service version from database : ${version}`)
 
   const scripts = await listScripts()
-  for (let scriptDef of scripts) {
+  for (const scriptDef of scripts) {
     if (semver.gte(scriptDef.version, version)) {
-      for (let scriptName of scriptDef.names) {
+      for (const scriptName of scriptDef.names) {
         const script = require(path.join(scriptsRoot, scriptDef.version, scriptName))
         debug('Apply script %s/%s : %s', scriptDef.version, scriptName, script.description)
         await script.exec(db, require('debug')(`upgrade:${scriptDef.version}:${scriptName}`))

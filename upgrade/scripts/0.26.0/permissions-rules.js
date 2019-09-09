@@ -1,4 +1,4 @@
-exports.description = `There is now more rules on how to set permissions in the UI. This update bring permissions as if they were set with the new UI.`
+exports.description = 'There is now more rules on how to set permissions in the UI. This update bring permissions as if they were set with the new UI.'
 
 exports.exec = async (db, debug) => {
   for (const resourceName of ['datasets', 'remote-services', 'applications', 'catalogs']) {

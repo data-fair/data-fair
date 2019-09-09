@@ -62,7 +62,7 @@ test.serial('Perform CRUD operations in bulks', async t => {
     title: 'rest2',
     schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }]
   })
-  await workers.hook(`indexer/rest2`)
+  await workers.hook('indexer/rest2')
   let res = await ax.post('/api/v1/datasets/rest2/_bulk_lines', [
     { attr1: 'test1', attr2: 'test1' },
     { _id: 'line2', attr1: 'test1', attr2: 'test1' },
@@ -95,15 +95,15 @@ test.serial('Index and finalize dataset after write', async t => {
     title: 'rest3',
     schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }]
   })
-  let dataset = await workers.hook(`indexer/rest3`)
+  let dataset = await workers.hook('indexer/rest3')
   let res = await ax.post('/api/v1/datasets/rest3/_bulk_lines', [
     { _id: 'line1', attr1: 'test1', attr2: 'test1' },
     { _id: 'line2', attr1: 'test1', attr2: 'test1' },
     { _id: 'line3', attr1: 'test1', attr2: 'test1' },
     { _id: 'line4', attr1: 'test1', attr2: 'test1' }
   ])
-  await workers.hook(`indexer/rest3`)
-  dataset = await workers.hook(`finalizer/rest3`)
+  await workers.hook('indexer/rest3')
+  dataset = await workers.hook('finalizer/rest3')
   t.truthy(dataset.schema.find(f => f.key === '_id'))
   t.truthy(dataset.schema.find(f => f.key === '_updatedAt'))
   res = await ax.get('/api/v1/datasets/rest3/lines')
@@ -121,7 +121,7 @@ test.serial('Index and finalize dataset after write', async t => {
   ])
   t.is(await collection.countDocuments({ _needsIndexing: true }), 2)
 
-  dataset = await workers.hook(`finalizer/rest3`)
+  dataset = await workers.hook('finalizer/rest3')
   t.is(await collection.countDocuments({ _needsIndexing: true }), 0)
   t.is(dataset.count, 3)
   res = await ax.get('/api/v1/datasets/rest3/lines')
@@ -137,7 +137,7 @@ test.serial('Use dataset schema to validate inputs', async t => {
     title: 'rest4',
     schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }]
   })
-  await workers.hook(`indexer/rest4`)
+  await workers.hook('indexer/rest4')
   try {
     await ax.post('/api/v1/datasets/rest4/lines', { attr3: 'test1' })
     t.fail()
@@ -166,7 +166,7 @@ test.serial('Use dataset schema to validate inputs', async t => {
     t.is(err.status, 400)
   }
 
-  let res = await ax.post('/api/v1/datasets/rest4/_bulk_lines', [
+  const res = await ax.post('/api/v1/datasets/rest4/_bulk_lines', [
     { _id: 'line1', attr1: 'test' },
     { _id: 'line1', attr1: 111 }
   ])
@@ -189,8 +189,8 @@ test.serial('Send attachment with multipart request', async t => {
       { key: 'attachmentPath', type: 'string', 'x-refersTo': 'http://schema.org/DigitalDocument' }
     ]
   })
-  let dataset = res.data
-  await workers.hook(`finalizer/rest5`)
+  const dataset = res.data
+  await workers.hook('finalizer/rest5')
 
   // Create a line with an attached file
   const form = new FormData()
@@ -205,7 +205,7 @@ test.serial('Send attachment with multipart request', async t => {
   t.is(ls.length, 1)
   t.is(ls[0], res.data.attachmentPath)
 
-  await workers.hook(`finalizer/rest5`)
+  await workers.hook('finalizer/rest5')
   res = await ax.get('/api/v1/datasets/rest5/lines')
   t.is(res.data.total, 1)
   t.is(res.data.results[0]['_file.content'], 'This is a test pdf file.')
@@ -221,7 +221,7 @@ test.serial('Send attachments with bulk request', async t => {
       { key: 'attachmentPath', type: 'string', 'x-refersTo': 'http://schema.org/DigitalDocument' }
     ]
   })
-  let dataset = res.data
+  const dataset = res.data
 
   // Create a line with an attached file
   const form = new FormData()
@@ -238,7 +238,7 @@ test.serial('Send attachments with bulk request', async t => {
   t.is(ls.length, 2)
   t.is(ls[0], res.data[0].attachmentPath)
 
-  await workers.hook(`finalizer/rest6`)
+  await workers.hook('finalizer/rest6')
   res = await ax.get('/api/v1/datasets/rest6/lines')
   t.is(res.data.total, 2)
   t.is(res.data.results.find(l => l._id === 'line1')['_file.content'], 'This is a test libreoffice file.')
@@ -258,10 +258,10 @@ test.serial('The size of the mongodb collection is poart of storage consumption'
     { _id: 'line3', attr1: 'test1', attr2: 'test1' },
     { _id: 'line4', attr1: 'test1', attr2: 'test1' }
   ])
-  await workers.hook(`finalizer/rest7`)
+  await workers.hook('finalizer/rest7')
 
   // Get the stored quota and consumption
-  let res = await ax.get('/api/v1/quotas/user/ccherryholme1')
+  const res = await ax.get('/api/v1/quotas/user/ccherryholme1')
   t.is(res.status, 200)
   t.is(res.data.consumption.storage, 4096)
 })

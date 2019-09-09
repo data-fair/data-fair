@@ -1,6 +1,6 @@
 const esUtils = require('../../../server/utils/es')
 
-exports.description = `ES indices structure changed since previous version and everything has to be upgraded.`
+exports.description = 'ES indices structure changed since previous version and everything has to be upgraded.'
 
 exports.exec = async (db, debug) => {
   const esClient = await esUtils.init()

@@ -41,7 +41,7 @@ exports.switchAlias = async (client, dataset, tempId) => {
   const name = aliasName(dataset)
   // Delete all other indices from this dataset
   const previousIndices = await client.indices.get({ index: `${indexPrefix(dataset)}-*` })
-  for (let key in previousIndices) {
+  for (const key in previousIndices) {
     if (key !== tempId) await client.indices.delete({ index: key })
   }
   await client.indices.deleteAlias({ name, index: '_all', ignore: [404] })
@@ -59,7 +59,7 @@ const indexBase = {
 exports.datasetInfos = async (client, dataset) => {
   // const indices = await client.indices.get({index: `${indexPrefix(dataset)}-*`})
   const indices = await client.cat.indices({ index: `${indexPrefix(dataset)}-*`, format: 'json' })
-  for (let index of indices) {
+  for (const index of indices) {
     index.definition = await client.indices.get({ index: index.index })
   }
   const alias = await client.indices.getAlias({ index: aliasName(dataset) })

@@ -70,7 +70,7 @@ export default {
         const api = await this.$axios.$get(this.apiDocUrl)
         this.checkApi(api)
       } catch (error) {
-        eventBus.$emit('notification', { error, msg: `Erreur pendant la récupération du fichier` })
+        eventBus.$emit('notification', { error, msg: 'Erreur pendant la récupération du fichier' })
       }
     },
     async checkApi(api) {
@@ -78,13 +78,13 @@ export default {
         await this.$axios.$post('api/v1/_check-api', api)
         this.apiDoc = api
       } catch (error) {
-        eventBus.$emit('notification', { type: 'error', msg: `Le format de la description de l'API est incorrect` })
+        eventBus.$emit('notification', { type: 'error', msg: 'Le format de la description de l\'API est incorrect' })
       }
     },
     async importApi() {
       const securities = (this.apiDoc.security || []).map(s => Object.keys(s).pop()).map(s => this.apiDoc.components.securitySchemes[s])
       const apiKeySecurity = securities.find(s => s.type === 'apiKey')
-      if (!apiKeySecurity) return eventBus.$emit('notification', { type: 'error', msg: `Erreur, l'API importée n'a pas de schéma de sécurité adapté` })
+      if (!apiKeySecurity) return eventBus.$emit('notification', { type: 'error', msg: 'Erreur, l\'API importée n\'a pas de schéma de sécurité adapté' })
 
       this.importing = true
       try {
@@ -96,7 +96,7 @@ export default {
         })
         this.$router.push({ path: `/remote-service/${remoteService.id}/description` })
       } catch (error) {
-        eventBus.$emit('notification', { error, msg: `Erreur pendant l'import de la description du service` })
+        eventBus.$emit('notification', { error, msg: 'Erreur pendant l\'import de la description du service' })
         this.importing = false
       }
     }

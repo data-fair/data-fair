@@ -25,7 +25,7 @@ exports.init = async (db) => {
 // Auto removal of deprecated apps used in 0 configs
 async function clean(db) {
   const baseApps = await db.collection('base-applications').find({ deprecated: true }).limit(10000).toArray()
-  for (let baseApp of baseApps) {
+  for (const baseApp of baseApps) {
     const nbApps = await db.collection('applications').countDocuments({ url: baseApp.url })
     if (nbApps === 0) await db.collection('base-applications').deleteOne({ id: baseApp.id })
   }
@@ -141,7 +141,7 @@ router.get('', cacheHeaders.noCache, asyncWrap(async(req, res) => {
     .toArray()
   const countPromise = baseApplications.countDocuments(query)
   const [results, count] = await Promise.all([findPromise, countPromise])
-  for (let result of results) {
+  for (const result of results) {
     baseAppsUtils.clean(result, req.query.thumbnail)
     // keep only the private access that concerns the current request
     result.privateAccess = (result.privateAccess || []).filter(p => privateAccess.find(p2 => p2.type === p.type && p2.id === p.id))

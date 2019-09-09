@@ -159,7 +159,7 @@ router.all('/:applicationId*', setResource, (req, res, next) => { req.app.get('a
       delete resp.headers.expires
       delete resp.headers.etag
       resp.headers['cache-control'] = 'private, max-age=0, must-revalidate'
-      resp.headers['pragma'] = 'no-cache'
+      resp.headers.pragma = 'no-cache'
       if (resp.statusCode !== 200) return false
       const lastModified = resp.headers['last-modified'] && new Date(resp.headers['last-modified'])
       const comparisonDate = lastModified && lastModified > updatedAt ? lastModified : updatedAt

@@ -51,7 +51,7 @@ export default () => ({
         const activeSessions = await this.$axios.$get(`api/v1/applications/${state.applicationId}/active-sessions`)
         commit('setAny', { nbSessions: activeSessions.count })
       } catch (error) {
-        eventBus.$emit('notification', { error, msg: `Erreur pendant la récupération des informations de l'application` })
+        eventBus.$emit('notification', { error, msg: 'Erreur pendant la récupération des informations de l\'application' })
       }
     },
     async setId({ commit, getters, dispatch, state }, applicationId) {
@@ -61,7 +61,7 @@ export default () => ({
     subscribe({ getters, dispatch }) {
       eventBus.$emit('subscribe', getters.journalChannel)
       eventBus.$on(getters.journalChannel, event => {
-        if (event.type === 'error') eventBus.$emit('notification', { error: event.data, msg: `Le service a rencontré une erreur pendant le traitement de l'application:` })
+        if (event.type === 'error') eventBus.$emit('notification', { error: event.data, msg: 'Le service a rencontré une erreur pendant le traitement de l\'application:' })
         dispatch('addJournalEvent', event)
       })
     },
@@ -73,10 +73,10 @@ export default () => ({
         const silent = patch.silent
         delete patch.silent
         await this.$axios.patch(getters.resourceUrl, patch)
-        if (!silent) eventBus.$emit('notification', `La configuration d'application a bien été mise à jour.`)
+        if (!silent) eventBus.$emit('notification', 'La configuration d\'application a bien été mise à jour.')
         return true
       } catch (error) {
-        eventBus.$emit('notification', { error, msg: `Erreur pendant la mise à jour de la configuration d'application:` })
+        eventBus.$emit('notification', { error, msg: 'Erreur pendant la mise à jour de la configuration d\'application:' })
         return false
       }
     },
@@ -91,7 +91,7 @@ export default () => ({
         await this.$axios.delete(getters.resourceUrl)
         eventBus.$emit('notification', `La configuration d'application ${state.application.title} a bien été supprimée.`)
       } catch (error) {
-        eventBus.$emit('notification', { error, msg: `Erreur pendant la suppression de la configuration d'application:` })
+        eventBus.$emit('notification', { error, msg: 'Erreur pendant la suppression de la configuration d\'application:' })
       }
     },
     addJournalEvent({ commit }, event) {
@@ -107,7 +107,7 @@ export default () => ({
         await this.$axios.$put(getters.resourceUrl + '/configuration', config)
         commit('setAny', { config: JSON.parse(JSON.stringify(config)) })
       } catch (error) {
-        eventBus.$emit('notification', { error, msg: `Erreur pendant l'écriture de la configuration d'application:` })
+        eventBus.$emit('notification', { error, msg: 'Erreur pendant l\'écriture de la configuration d\'application:' })
       }
     },
     async readConfigDraft({ state, commit, getters }) {
@@ -120,7 +120,7 @@ export default () => ({
         await this.$axios.$put(getters.resourceUrl + '/configuration-draft', configDraft)
         commit('setAny', { configDraft: JSON.parse(JSON.stringify(configDraft)) })
       } catch (error) {
-        eventBus.$emit('notification', { error, msg: `Erreur pendant l'écriture du brouillon de configuration d'application:` })
+        eventBus.$emit('notification', { error, msg: 'Erreur pendant l\'écriture du brouillon de configuration d\'application:' })
       }
     },
     async changeOwner({ commit, state }, owner) {
@@ -129,7 +129,7 @@ export default () => ({
         commit('patch', { owner })
         eventBus.$emit('notification', `L'application ${state.application.title} a changé de propriétaire`)
       } catch (error) {
-        eventBus.$emit('notification', { error, msg: `Erreur pendant le changement de propriétaire` })
+        eventBus.$emit('notification', { error, msg: 'Erreur pendant le changement de propriétaire' })
       }
     }
   }

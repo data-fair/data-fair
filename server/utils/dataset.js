@@ -49,7 +49,7 @@ exports.lsFiles = async (dataset) => {
     const dirPath = exports.attachmentsDir(dataset)
     const paths = await exports.lsAttachments(dataset)
     const files = []
-    for (let p of paths) {
+    for (const p of paths) {
       const filePath = path.join(dirPath, p)
       files.push({ filePath, size: (await fs.promises.stat(filePath)).size })
     }
@@ -153,7 +153,7 @@ exports.updateStorageSize = async (db, owner) => {
   const currentSize = await exports.storageSize(db, owner)
   const consumption = { storage: currentSize }
   await db.collection('quotas').updateOne({ type: owner.type, id: owner.id }, { $set: { ...owner, consumption } }, { upsert: true })
-  for (let webhook of config.globalWebhooks.consumption) {
+  for (const webhook of config.globalWebhooks.consumption) {
     const url = webhook.replace('{type}', owner.type).replace('{id}', owner.id)
     axios.post(url, consumption).catch(err => {
       console.error(`Failure to push consumption webhook ${url} - ${JSON.stringify(consumption)}`, err)
@@ -195,27 +195,27 @@ exports.extendedSchema = (dataset) => {
   })
 
   if (dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')) {
-    schema.push({ 'x-calculated': true, key: '_file.content', type: 'string', title: `Contenu textuel du fichier`, description: `Résultat d'une extraction automatique` })
-    schema.push({ 'x-calculated': true, key: '_file.content_type', type: 'string', title: `Type mime du fichier`, description: `Résultat d'une détection automatique.` })
-    schema.push({ 'x-calculated': true, key: '_file.content_length', type: 'integer', title: `La taille en octet du fichier`, description: `Résultat d'une détection automatique.` })
+    schema.push({ 'x-calculated': true, key: '_file.content', type: 'string', title: 'Contenu textuel du fichier', description: 'Résultat d\'une extraction automatique' })
+    schema.push({ 'x-calculated': true, key: '_file.content_type', type: 'string', title: 'Type mime du fichier', description: 'Résultat d\'une détection automatique.' })
+    schema.push({ 'x-calculated': true, key: '_file.content_length', type: 'integer', title: 'La taille en octet du fichier', description: 'Résultat d\'une détection automatique.' })
     if (dataset.attachmentsAsImage) {
-      schema.push({ 'x-calculated': true, key: '_attachment_url', type: 'string', title: `URL de téléchargement unitaire de l'image jointe`, 'x-refersTo': 'http://schema.org/image' })
+      schema.push({ 'x-calculated': true, key: '_attachment_url', type: 'string', title: 'URL de téléchargement unitaire de l\'image jointe', 'x-refersTo': 'http://schema.org/image' })
     } else {
-      schema.push({ 'x-calculated': true, key: '_attachment_url', type: 'string', title: `URL de téléchargement unitaire du fichier joint` })
+      schema.push({ 'x-calculated': true, key: '_attachment_url', type: 'string', title: 'URL de téléchargement unitaire du fichier joint' })
     }
   }
   if (geoUtils.schemaHasGeopoint(dataset.schema) || geoUtils.schemaHasGeometry(dataset.schema)) {
-    schema.push({ 'x-calculated': true, key: '_geoshape', type: 'object', title: `Géométrie`, description: `Au format d'une géométrie GeoJSON` })
-    schema.push({ 'x-calculated': true, key: '_geopoint', type: 'string', title: `Coordonnée géographique`, description: `Centroïde au format "lat,lon"` })
-    schema.push({ 'x-calculated': true, key: '_geocorners', type: 'array', title: `Boite englobante de la géométrie`, description: `Sous forme d'un tableau de coordonnées au format "lat,lon"` })
+    schema.push({ 'x-calculated': true, key: '_geoshape', type: 'object', title: 'Géométrie', description: 'Au format d\'une géométrie GeoJSON' })
+    schema.push({ 'x-calculated': true, key: '_geopoint', type: 'string', title: 'Coordonnée géographique', description: 'Centroïde au format "lat,lon"' })
+    schema.push({ 'x-calculated': true, key: '_geocorners', type: 'array', title: 'Boite englobante de la géométrie', description: 'Sous forme d\'un tableau de coordonnées au format "lat,lon"' })
   }
   if (dataset.isRest) {
     schema.push({ 'x-calculated': true, key: '_updatedAt', type: 'string', format: 'date-time', title: 'Date de mise à jour', description: 'Date de dernière mise à jour de la ligne du jeu de données' })
     // schema.push({ 'x-calculated': true, key: '_updatedBy', type: 'object', title: 'Utilisateur de mise à jour', description: 'Utilisateur qui a effectué la e dernière mise à jour de la ligne du jeu de données' })
   }
   schema.push({ 'x-calculated': true, key: '_id', type: 'string', format: 'uri-reference', title: 'Identifiant', description: 'Identifiant unique parmi toutes les lignes du jeu de données' })
-  schema.push({ 'x-calculated': true, key: '_i', type: 'integer', title: `Numéro de ligne`, description: `Indice de la ligne dans le fichier d'origine` })
-  schema.push({ 'x-calculated': true, key: '_rand', type: 'integer', title: `Nombre aléatoire`, description: `Un nombre aléatoire associé à la ligne qui permet d'obtenir un tri aléatoire par exemple` })
+  schema.push({ 'x-calculated': true, key: '_i', type: 'integer', title: 'Numéro de ligne', description: 'Indice de la ligne dans le fichier d\'origine' })
+  schema.push({ 'x-calculated': true, key: '_rand', type: 'integer', title: 'Nombre aléatoire', description: 'Un nombre aléatoire associé à la ligne qui permet d\'obtenir un tri aléatoire par exemple' })
 
   return schema
 }
@@ -225,9 +225,9 @@ exports.reindex = async (db, dataset) => {
   if (dataset.isVirtual) patch.status = 'indexed'
   else if (dataset.isRest) patch.status = 'schematized'
   else if (dataset.originalFile && !baseTypes.has(dataset.originalFile.mimetype)) patch.status = 'uploaded'
-  await db.collection('datasets').updateOne({ id: dataset.id }, { '$set': patch })
+  await db.collection('datasets').updateOne({ id: dataset.id }, { $set: patch })
   return (await db.collection('datasets')
-    .findOneAndUpdate({ id: dataset.id }, { '$set': patch }, { returnOriginal: false })).value
+    .findOneAndUpdate({ id: dataset.id }, { $set: patch }, { returnOriginal: false })).value
 }
 
 // Generate ids and try insertion until there is no conflict on id

@@ -288,7 +288,7 @@ export default {
         size: this.pagination.rowsPerPage,
         page: this.pagination.page
       }
-      if (this.imageField) params.thumbnail = `40x40`
+      if (this.imageField) params.thumbnail = '40x40'
       if (this.pagination.sortBy) params.sort = (this.pagination.descending ? '-' : '') + this.pagination.sortBy
       if (this.query) params.q = this.query
       if (this.select.length) params.select = this.select.join(',')
@@ -298,7 +298,7 @@ export default {
         this.notFound = false
       } catch (error) {
         if (error.response && error.response.status === 404) this.notFound = true
-        else eventBus.$emit('notification', { error, msg: `Erreur pendant la récupération des données` })
+        else eventBus.$emit('notification', { error, msg: 'Erreur pendant la récupération des données' })
       }
       this.loading = false
     },
@@ -337,12 +337,14 @@ export default {
     async refreshHistory() {
       this.historyLoading = true
       try {
-        this.history = await this.$axios.$get(`${this.resourceUrl}/lines/${this.historyLine._id}/revisions`, { params: {
-          page: this.historyPagination.page,
-          size: this.historyPagination.rowsPerPage
-        } })
+        this.history = await this.$axios.$get(`${this.resourceUrl}/lines/${this.historyLine._id}/revisions`, {
+          params: {
+            page: this.historyPagination.page,
+            size: this.historyPagination.rowsPerPage
+          }
+        })
       } catch (error) {
-        eventBus.$emit('notification', { error, msg: `Erreur pendant la récupération de l'historique de la ligne'` })
+        eventBus.$emit('notification', { error, msg: 'Erreur pendant la récupération de l\'historique de la ligne\'' })
       }
       this.historyLoading = false
     },
@@ -370,7 +372,7 @@ export default {
         await this.$axios.$post(this.resourceUrl + '/lines', formData, options)
       } catch (error) {
         if (error.response && error.response.status === 404) this.notFound = true
-        else eventBus.$emit('notification', { error, msg: `Erreur pendant l'enregistrement de la ligne'` })
+        else eventBus.$emit('notification', { error, msg: 'Erreur pendant l\'enregistrement de la ligne\'' })
       }
     },
     async deleteLine() {
@@ -381,7 +383,7 @@ export default {
         this.refresh()
       } catch (error) {
         if (error.response && error.response.status === 404) this.notFound = true
-        else eventBus.$emit('notification', { error, msg: `Erreur pendant la suppression de la ligne'` })
+        else eventBus.$emit('notification', { error, msg: 'Erreur pendant la suppression de la ligne\'' })
       }
     }
   }

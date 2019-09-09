@@ -11,6 +11,7 @@ class IndexStream extends Transform {
     this.i = 0
     this.erroredItems = []
   }
+
   async _transform(item, encoding, callback) {
     try {
       if (this.options.updateMode) {
@@ -49,6 +50,7 @@ class IndexStream extends Transform {
     }
     callback()
   }
+
   async _final(callback) {
     try {
       await this._sendBulk()
@@ -70,6 +72,7 @@ class IndexStream extends Transform {
     }
     callback()
   }
+
   async _sendBulk() {
     if (this.body.length === 0) return
     debug(`Send ${this.body.length} lines to bulk indexing`)
@@ -105,9 +108,10 @@ class IndexStream extends Transform {
       this.bulkChars = 0
     } catch (err) {
       console.error(`Failure while sending bulk request for indexing: index=${this.options.indexName}, bulkChars=${sentBulkChars}, nbLines=${bodyClone.length / 2}`, err)
-      throw new Error(`Échec pendant l'indexation d'un paquet de données.`)
+      throw new Error('Échec pendant l\'indexation d\'un paquet de données.')
     }
   }
+
   errorsSummary() {
     if (!this.erroredItems.length) return null
     const leftOutErrors = this.erroredItems.length - 3

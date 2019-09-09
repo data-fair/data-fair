@@ -44,7 +44,7 @@ exports.visibilityParams = [{
 }, {
   in: 'query',
   name: 'public',
-  description: `Voir uniquement les ressources privées. Celles sur lesquelles aucune permission particulière n'a été appliquée.`,
+  description: 'Voir uniquement les ressources privées. Celles sur lesquelles aucune permission particulière n\'a été appliquée.',
   required: false,
   schema: {
     type: 'boolean'
@@ -52,7 +52,7 @@ exports.visibilityParams = [{
 }, {
   in: 'query',
   name: 'protected',
-  description: `Voir uniquement les ressources protégées. Celles sur lesquelles une permission particulière non publique été appliquée.`,
+  description: 'Voir uniquement les ressources protégées. Celles sur lesquelles une permission particulière non publique été appliquée.',
   required: false,
   schema: {
     type: 'boolean'

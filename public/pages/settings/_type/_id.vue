@@ -116,7 +116,7 @@ export default {
           this.organization = await this.$axios.$get(this.env.directoryUrl + '/api/organizations/' + this.$route.params.id)
           roles = await this.$axios.$get(this.env.directoryUrl + '/api/organizations/' + this.$route.params.id + '/roles')
         } catch (err) {
-          eventBus.$emit('notification', { type: 'error', msg: `Erreur pendant la récupération de la liste des rôles de l'organisation` })
+          eventBus.$emit('notification', { type: 'error', msg: 'Erreur pendant la récupération de la liste des rôles de l\'organisation' })
         }
         this.organizationRoles = roles.filter(role => role !== this.env.adminRole)
       }
@@ -133,9 +133,9 @@ export default {
     async save() {
       try {
         this.settings = await this.$axios.$put('api/v1/settings/' + this.$route.params.type + '/' + this.$route.params.id, this.settings)
-        eventBus.$emit('notification', `Les paramètres ont bien été mis à jour`)
+        eventBus.$emit('notification', 'Les paramètres ont bien été mis à jour')
       } catch (error) {
-        eventBus.$emit('notification', { error, msg: `Erreur pendant la mise à jour des paramètres` })
+        eventBus.$emit('notification', { error, msg: 'Erreur pendant la mise à jour des paramètres' })
       }
     }
   }

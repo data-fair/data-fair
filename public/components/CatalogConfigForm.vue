@@ -51,7 +51,7 @@ export default {
   props: ['catalog', 'catalogType'],
   data() {
     return {
-      orgHint: `Laissez vide pour travailler sur un compte personnel. Sinon utilisez l'identifiant d'une organisation dans laquelle vous avez le droit d'écriture.`,
+      orgHint: 'Laissez vide pour travailler sur un compte personnel. Sinon utilisez l\'identifiant d\'une organisation dans laquelle vous avez le droit d\'écriture.',
       organizations: [],
       searchOrganizations: '',
       organizationsLoading: false

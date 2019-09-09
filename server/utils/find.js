@@ -108,7 +108,8 @@ exports.project = (selectStr, exclude = []) => {
 }
 
 exports.parametersDoc = (filterFields) => [
-  { in: 'query',
+  {
+    in: 'query',
     name: 'size',
     description: 'Le nombre de résultats à retourner (taille de la pagination)',
     required: false,
@@ -117,7 +118,8 @@ exports.parametersDoc = (filterFields) => [
       type: 'integer'
     }
   },
-  { in: 'query',
+  {
+    in: 'query',
     name: 'skip',
     description: 'Nombre de résultats à ignorer. Permet par exemple de lire la prochaine page de données',
     required: false,
@@ -126,9 +128,10 @@ exports.parametersDoc = (filterFields) => [
       type: 'integer'
     }
   },
-  { in: 'query',
+  {
+    in: 'query',
     name: 'sort',
-    description: `Permet de trier les résultat. Utiliser la syntaxte suivante : id_champ:1 ou idchamp:-1 suivant pour avoir un tri par ordre croissant ou décroissant respectivement`,
+    description: 'Permet de trier les résultat. Utiliser la syntaxte suivante : id_champ:1 ou idchamp:-1 suivant pour avoir un tri par ordre croissant ou décroissant respectivement',
     required: false,
     schema: {
       default: 1,
@@ -198,9 +201,11 @@ exports.facetsQuery = (req, filterFields) => {
 
       // another special case for base-application.. we perform a join
       if (f === 'base-application') {
-        facet.push({ $lookup: {
-          from: 'base-applications', localField: 'url', foreignField: 'url', as: 'base-application'
-        } })
+        facet.push({
+          $lookup: {
+            from: 'base-applications', localField: 'url', foreignField: 'url', as: 'base-application'
+          }
+        })
         facet.push({ $unwind: '$base-application' })
         facet.push({ $group: { _id: { [f]: '$base-application', id: '$id' } } })
       } else {
@@ -245,12 +250,14 @@ exports.parseFacets = (facets) => {
       res.visibility.sort((a, b) => a.count < b.count ? 1 : -1)
     } else if (k === 'base-application') {
       res[k] = values.filter(r => r._id)
-        .map(r => ({ count: r.count,
+        .map(r => ({
+          count: r.count,
           value: {
             url: r._id.url,
             version: r._id.version || (r._id.meta && r._id.meta.version),
             title: r._id.title || (r._id.meta && r._id.meta.title)
-          } }))
+          }
+        }))
     } else {
       res[k] = values.filter(r => r._id).map(r => ({ count: r.count, value: r._id }))
     }

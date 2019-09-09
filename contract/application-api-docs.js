@@ -174,7 +174,7 @@ module.exports = (application) => {
       },
       '/capture': {
         get: {
-          summary: `Une capture d'écran`,
+          summary: 'Une capture d\'écran',
           operationId: 'readCapture',
           'x-permissionClass': 'read',
           tags: ['Informations'],

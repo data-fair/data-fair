@@ -87,8 +87,8 @@ router.get('', cacheHeaders.noCache, asyncWrap(async(req, res) => {
     'input-concepts': 'actions.input.concept',
     'output-concepts': 'actions.output.concept',
     'api-id': 'apiDoc.info.x-api-id',
-    'ids': 'id',
-    'id': 'id'
+    ids: 'id',
+    id: 'id'
   }, true)
   delete req.query.owner
   query.owner = { $exists: false } // restrict to the newly centralized remote services
@@ -209,7 +209,7 @@ router.patch('/:remoteServiceId', readService, asyncWrap(async(req, res) => {
   }
 
   const patchedService = (await req.app.get('db').collection('remote-services')
-    .findOneAndUpdate({ id: req.params.remoteServiceId }, { '$set': mongoEscape.escape(patch, true) }, { returnOriginal: false })).value
+    .findOneAndUpdate({ id: req.params.remoteServiceId }, { $set: mongoEscape.escape(patch, true) }, { returnOriginal: false })).value
   res.status(200).json(clean(mongoEscape.unescape(patchedService)))
 }))
 

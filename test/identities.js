@@ -9,7 +9,7 @@ const datasetFd = fs.readFileSync('./test/resources/dataset1.csv')
 test('Check secret key', async t => {
   const ax = await axiosBuilder()
   try {
-    await ax.post(`/api/v1/identities/user/test`, { name: 'Another Name' }, { params: { key: 'bad key' } })
+    await ax.post('/api/v1/identities/user/test', { name: 'Another Name' }, { params: { key: 'bad key' } })
   } catch (err) {
     t.is(err.status, 403)
   }

@@ -85,7 +85,7 @@ exports.isPublic = function(resource, operationsClasses) {
   const permissionOperations = p => (p.operations || []).concat(...(p.classes || []).map(c => operationsClasses[c]))
   const publicOperations = new Set([].concat(operationsClasses.read || [], operationsClasses.use || []))
   const resourcePublicOperations = new Set([].concat(...(resource.permissions || []).filter(p => !p.type && !p.id).map(permissionOperations)))
-  for (let op of publicOperations) {
+  for (const op of publicOperations) {
     if (!resourcePublicOperations.has(op)) {
       return false
     }

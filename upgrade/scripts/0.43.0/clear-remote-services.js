@@ -1,6 +1,6 @@
 const slug = require('slugify')
 
-exports.description = `Only one instance of remote service per data-fair install instead of per owner.`
+exports.description = 'Only one instance of remote service per data-fair install instead of per owner.'
 
 exports.exec = async (db, debug) => {
   try {

@@ -184,12 +184,14 @@ export default {
       } catch (error) {
         return eventBus.$emit('notification', { error })
       }
-      let privateAccess = `${this.application.owner.type}:${this.application.owner.id}`
-      this.baseApps = (await this.$axios.$get('api/v1/base-applications', { params: {
-        privateAccess,
-        size: 10000,
-        applicationName: this.prodBaseApp.applicationName
-      } })).results
+      const privateAccess = `${this.application.owner.type}:${this.application.owner.id}`
+      this.baseApps = (await this.$axios.$get('api/v1/base-applications', {
+        params: {
+          privateAccess,
+          size: 10000,
+          applicationName: this.prodBaseApp.applicationName
+        }
+      })).results
       if (!this.baseApps.find(b => b.url === this.prodBaseApp.url)) {
         this.baseApps = [this.prodBaseApp].concat(this.baseApps)
       }

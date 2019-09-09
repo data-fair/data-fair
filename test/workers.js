@@ -119,7 +119,7 @@ test.serial('Process newly uploaded geojson dataset', async t => {
   const form = new FormData()
   form.append('file', datasetFd, 'geojson-example.geojson')
   const ax = await axiosBuilder('dmeadus0@answers.com:passwd')
-  let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
+  const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
   t.is(res.status, 201)
 
   // Dataset received and parsed
@@ -171,11 +171,11 @@ test.skip('Process newly uploaded shapefile dataset', async t => {
   const form = new FormData()
   form.append('file', datasetFd, 'stations.zip')
   const ax = await axiosBuilder('dmeadus0@answers.com:passwd')
-  let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
+  const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
   t.is(res.status, 201)
 
   // dataset converted
-  let dataset = await workers.hook('converter')
+  const dataset = await workers.hook('converter')
   t.is(dataset.status, 'loaded')
   t.is(dataset.file.name, 'stations.geojson')
 })
@@ -186,7 +186,7 @@ test.serial('Run tasks in children processes', async t => {
   const form = new FormData()
   form.append('file', datasetFd, 'dataset.csv')
   const ax = await axiosBuilder('dmeadus0@answers.com:passwd')
-  let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
+  const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
   t.is(res.status, 201)
   let dataset = await workers.hook('csvAnalyzer')
   t.is(dataset.status, 'analyzed')

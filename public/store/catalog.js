@@ -34,7 +34,7 @@ export default () => ({
         const api = await this.$axios.$get(`api/v1/catalogs/${state.catalogId}/api-docs.json`)
         commit('setAny', { api })
       } catch (error) {
-        eventBus.$emit('notification', { error, msg: `Erreur pendant la récupération des informations du catalogue:` })
+        eventBus.$emit('notification', { error, msg: 'Erreur pendant la récupération des informations du catalogue:' })
       }
     },
     async setId({ commit, getters, dispatch, state }, catalogId) {
@@ -52,7 +52,7 @@ export default () => ({
         if (!silent) eventBus.$emit('notification', 'La configuration du catalogue a bien été mise à jour.')
         return true
       } catch (error) {
-        eventBus.$emit('notification', { error, msg: `Erreur pendant la mise à jour de la configuration du catalogue:` })
+        eventBus.$emit('notification', { error, msg: 'Erreur pendant la mise à jour de la configuration du catalogue:' })
         return false
       }
     },
@@ -67,7 +67,7 @@ export default () => ({
         await this.$axios.delete(getters.resourceUrl)
         eventBus.$emit('notification', `La configuration du catalogue ${state.catalog.title} a bien été supprimée`)
       } catch (error) {
-        eventBus.$emit('notification', { error, msg: `Erreur pendant la suppression de la configuration du catalogue:` })
+        eventBus.$emit('notification', { error, msg: 'Erreur pendant la suppression de la configuration du catalogue:' })
       }
     },
     async changeOwner({ commit, state }, owner) {
@@ -76,7 +76,7 @@ export default () => ({
         commit('patch', { owner })
         eventBus.$emit('notification', `Le catalogue ${state.catalog.title} a changé de propriétaire`)
       } catch (error) {
-        eventBus.$emit('notification', { error, msg: `Erreur pendant le changement de propriétaire` })
+        eventBus.$emit('notification', { error, msg: 'Erreur pendant le changement de propriétaire' })
       }
     }
   }

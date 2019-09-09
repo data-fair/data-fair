@@ -12,7 +12,7 @@ exports.process = async function(app, dataset) {
   // Perform all extensions with remote services.
   debug('extensions', dataset.extensions)
   const extensions = dataset.extensions || []
-  for (let extension of extensions) {
+  for (const extension of extensions) {
     if (!extension.active) continue
     const remoteService = await db.collection('remote-services').findOne({ id: extension.remoteService })
     if (!remoteService) continue

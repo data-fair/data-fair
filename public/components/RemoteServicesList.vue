@@ -57,7 +57,8 @@ export default {
   methods: {
     async refresh() {
       this.loading = true
-      this.remoteServices = await this.$axios.$get('api/v1/remote-services', { params:
+      this.remoteServices = await this.$axios.$get('api/v1/remote-services', {
+        params:
         { size: this.size, page: this.page, select: 'title,description', ...this.filters }
       })
       this.filtered = this.filters.q !== undefined

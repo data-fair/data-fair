@@ -24,7 +24,7 @@ exports.connectors = fs.readdirSync(__dirname)
 
 exports.init = async (catalogUrl) => {
   debug('Attempt to init catalog from URL', catalogUrl)
-  for (let connector of exports.connectors) {
+  for (const connector of exports.connectors) {
     try {
       const catalog = await connector.init(catalogUrl)
       if (catalog.title) {
@@ -51,8 +51,8 @@ exports.listDatasets = async (db, catalog, params) => {
   if (!connector) throw createError(404, 'No connector found for catalog type ' + catalog.type)
   if (!connector.listDatasets) throw createError(501, `The connector for the catalog type ${catalog.type} cannot do this action`)
   const datasets = await connector.listDatasets(catalog, params)
-  for (let dataset of datasets.results) {
-    for (let resource of dataset.resources) {
+  for (const dataset of datasets.results) {
+    for (const resource of dataset.resources) {
       resource.harvestable = files.allowedTypes.has(resource.mime)
       const harvestedDataset = await db.collection('datasets').findOne({
         'remoteFile.url': resource.url,
@@ -129,7 +129,7 @@ exports.processPublications = async function(app, type, resource) {
   const processedPublication = resource.publications.find(p => ['waiting', 'deleted'].includes(p.status))
 
   async function setResult(error, nonBlocking) {
-    let patch = {}
+    const patch = {}
 
     if ((!error || nonBlocking) && processedPublication.status === 'deleted') {
       // Deletion worked
@@ -173,7 +173,7 @@ exports.processPublications = async function(app, type, resource) {
       type: 'error',
       data: `Une publication fait référence à un catalogue qui n'appartient pas au propriétaire de la resource à publier (${processedPublication.id})`
     }, type)
-    return setResult(`Le catalogue n'appartient pas au propriétaire de la resource à publier`, true)
+    return setResult('Le catalogue n\'appartient pas au propriétaire de la resource à publier', true)
   }
 
   try {

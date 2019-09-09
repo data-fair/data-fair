@@ -20,7 +20,7 @@ async function jwksStatus(req) {
 }
 
 async function singleStatus(req, fn, name) {
-  let time = moment()
+  const time = moment()
   try {
     await fn(req)
     return { status: 'ok', name, timeInMs: moment().diff(time) }
@@ -30,13 +30,12 @@ async function singleStatus(req, fn, name) {
 }
 
 async function getStatus(req) {
-  let results
-  results = await Promise.all([
+  const results = await Promise.all([
     singleStatus(req, mongoStatus, 'mongodb'),
     singleStatus(req, esStatus, 'elasticsearch'),
     singleStatus(req, jwksStatus, 'auth-directory')
   ])
-  let errors = results.filter(r => r.status === 'error')
+  const errors = results.filter(r => r.status === 'error')
   return {
     status: errors.length ? 'error' : 'ok',
     message: errors.length ? ('Problem with : ' + errors.map(s => s.name).join(', ')) : 'Service is ok',

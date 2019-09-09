@@ -106,7 +106,7 @@ export default {
         const dataset = await this.$axios.$post('api/v1/datasets', { isVirtual: true, title: this.title, virtual: { children: this.children } }, options)
         this.$router.push({ path: `/dataset/${dataset.id}/description` })
       } catch (error) {
-        eventBus.$emit('notification', { error, msg: `Erreur pendant la création du jeu de données virtual :` })
+        eventBus.$emit('notification', { error, msg: 'Erreur pendant la création du jeu de données virtual :' })
       }
     }
   }

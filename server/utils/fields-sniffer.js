@@ -33,7 +33,7 @@ exports.escapeKey = (key) => {
 function checkAll(values, check, param) {
   const definedValues = [...values].filter(v => !!v)
   if (!definedValues.length) return false
-  for (let value of definedValues) {
+  for (const value of definedValues) {
     if (!check(value.trim(), param)) {
       return false
     }
@@ -49,7 +49,7 @@ const isOneOf = (value, values) => values.includes(value)
 const booleanRegexp = new RegExp(`^${trimablePrefix}(0|1|-1|true|false|vrai|faux|oui|non|yes|no)${trimablePrefix}$`, 'i')
 const intRegexp = new RegExp(`^${trimablePrefix}(-|\\+)?[0-9\\s]+${trimablePrefix}$`)
 const floatRegexp = new RegExp(`^${trimablePrefix}(-|\\+)?([0-9\\s]+([.,][0-9]+)?)${trimablePrefix}$`)
-const dateTimeSchema = ajv.compile({ 'type': 'string', 'format': 'date-time' })
-const dateSchema = ajv.compile({ 'type': 'string', 'format': 'date' })
-const uriRefSchema = ajv.compile({ 'type': 'string', 'format': 'uri-reference' })
+const dateTimeSchema = ajv.compile({ type: 'string', format: 'date-time' })
+const dateSchema = ajv.compile({ type: 'string', format: 'date' })
+const uriRefSchema = ajv.compile({ type: 'string', format: 'uri-reference' })
 const isUriRef = (value) => value.length < 500 && uriRefSchema(value)

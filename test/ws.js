@@ -45,7 +45,7 @@ test.skip('Send lots of events', async t => {
   const cli = new WebSocket(config.publicUrl)
   await eventToPromise(cli, 'open')
   cli.send(JSON.stringify({ type: 'subscribe', channel: 'test_channel' }))
-  let msg = await receive(cli)
+  const msg = await receive(cli)
   t.is(msg.type, 'subscribe-confirm')
   t.is(msg.channel, 'test_channel')
   const nbMessages = 10000
@@ -60,7 +60,7 @@ test.skip('Send lots of events', async t => {
       if (i === nbMessages) resolve()
     })
   })
-  for (let i of Array(nbMessages).keys()) {
+  for (const i of Array(nbMessages).keys()) {
     await test.app.publish('test_channel', 'test_data' + i)
     await new Promise(resolve => setTimeout(resolve, interval))
   }

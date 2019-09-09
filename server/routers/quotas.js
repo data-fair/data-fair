@@ -39,6 +39,6 @@ router.get('', cacheHeaders.noCache, asyncWrap(async(req, res) => {
   const query = {}
   if (req.query.q) query.$text = { $search: req.query.q }
   const findPromise = quotas.find(query).sort({ name: 1 }).limit(size).skip(skip).toArray()
-  const [count, results] = await Promise.all([ quotas.countDocuments({}), findPromise ])
+  const [count, results] = await Promise.all([quotas.countDocuments({}), findPromise])
   res.send({ count, results })
 }))

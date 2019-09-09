@@ -28,7 +28,7 @@ workbox.skipWaiting();
 `
   // Cache first for base applications source code
   // applications should use hashes in resource names
-  for (let dir of config.applicationsDirectories) {
+  for (const dir of config.applicationsDirectories) {
     sw += `
 workbox.routing.registerRoute(
   new RegExp('^${escapeStringRegexp(dir)}.*'),

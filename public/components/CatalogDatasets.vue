@@ -59,7 +59,7 @@ export default {
           d.nbHarvested = (d.resources || []).filter(r => !!r.harvestedDataset).length
         })
       } catch (error) {
-        eventBus.$emit('notification', { error, msg: `Erreur pendant la récupération des jeux de données du catalogue` })
+        eventBus.$emit('notification', { error, msg: 'Erreur pendant la récupération des jeux de données du catalogue' })
       }
       this.loading = false
     },
@@ -69,7 +69,7 @@ export default {
         await this.$axios.$post('api/v1/catalogs/' + this.$route.params.id + '/datasets/' + dataset.id)
         await this.refresh()
       } catch (error) {
-        eventBus.$emit('notification', { error, msg: `Erreur pendant l'import du jeu de données` })
+        eventBus.$emit('notification', { error, msg: 'Erreur pendant l\'import du jeu de données' })
         this.loading = false
       }
     }

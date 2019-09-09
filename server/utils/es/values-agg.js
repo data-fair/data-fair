@@ -136,7 +136,7 @@ const recurseAggResponse = (response, aggRes, dataset, query) => {
   if (aggRes.card) response.total_values = aggRes.card.value
   response.total_other = aggRes.values.sum_other_doc_count
   if (aggRes.values.buckets.length > 10000) {
-    throw createError(400, `Résultats d'aggrégation trop nombreux. Abandon.`)
+    throw createError(400, 'Résultats d\'aggrégation trop nombreux. Abandon.')
   }
   response.aggs = aggRes.values.buckets.map(b => {
     const aggItem = {

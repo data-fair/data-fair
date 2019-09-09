@@ -1,4 +1,4 @@
-exports.description = `Dataset should have a originalFile property defined by the converter worker on new datasets.`
+exports.description = 'Dataset should have a originalFile property defined by the converter worker on new datasets.'
 
 exports.exec = async (db, debug) => {
   const cursor = db.collection('datasets').find({})

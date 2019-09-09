@@ -1,4 +1,4 @@
-exports.description = `Add 'datasets' and 'remoteServices' arrays in application.configuration based on previous, more loose conventions`
+exports.description = 'Add \'datasets\' and \'remoteServices\' arrays in application.configuration based on previous, more loose conventions'
 
 exports.exec = async (db, debug) => {
   const appCursor = db.collection('applications').find({})
@@ -15,10 +15,12 @@ exports.exec = async (db, debug) => {
     if (conf.datasets.length || conf.remoteServices.length) {
       await db.collection('applications').updateOne(
         { _id: app._id },
-        { $set: {
-          'configuration.datasets': conf.datasets,
-          'configuration.remoteServices': conf.remoteServices
-        } }
+        {
+          $set: {
+            'configuration.datasets': conf.datasets,
+            'configuration.remoteServices': conf.remoteServices
+          }
+        }
       )
     }
   }

@@ -1,4 +1,4 @@
-exports.description = `Journal events are not restricted to datasets anymore. Add the type=dataset attribute to existing journals and webhooks.`
+exports.description = 'Journal events are not restricted to datasets anymore. Add the type=dataset attribute to existing journals and webhooks.'
 
 exports.exec = async (db, debug) => {
   // First journals

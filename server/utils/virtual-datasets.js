@@ -6,7 +6,7 @@ const createError = require('http-errors')
 // of another child having the same key
 async function childrenSchemas(db, owner, children, blackListedFields) {
   let schemas = []
-  for (let childId of children) {
+  for (const childId of children) {
     const child = await db.collection('datasets')
       .findOne({ id: childId, 'owner.id': owner.id, 'owner.type': owner.type }, { fields: { isVirtual: 1, virtual: 1, schema: 1 } })
     if (!child) continue
@@ -90,11 +90,11 @@ exports.descendants = async (db, dataset) => {
   const virtualDescendantsWithFilters = res[0].descendants
     .filter(d => d.isVirtual && d.virtual.filters && d.virtual.filters.length)
   if (virtualDescendantsWithFilters.length) {
-    throw createError(501, `Le jeu de données virtuel ne peut pas être requêté, il agrège un autre jeu de données virtuel avec des filtres dont nous ne pouvons pas garantir l'application.`)
+    throw createError(501, 'Le jeu de données virtuel ne peut pas être requêté, il agrège un autre jeu de données virtuel avec des filtres dont nous ne pouvons pas garantir l\'application.')
   }
   const physicalDescendants = res[0].descendants.filter(d => !d.isVirtual).map(d => d.id)
   if (physicalDescendants.length === 0) {
-    throw createError(501, `Le jeu de données virtuel ne peut pas être requêté, il n'agrège aucun jeu de données physique.`)
+    throw createError(501, 'Le jeu de données virtuel ne peut pas être requêté, il n\'agrège aucun jeu de données physique.')
   }
   return physicalDescendants
 }

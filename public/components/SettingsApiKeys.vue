@@ -128,9 +128,9 @@ export default {
     showUseDialog: false,
     scopes: [
       { value: 'datasets', text: 'Gestion des jeux de données' },
-      { value: 'applications', text: `Gestion des configurations d'applications` },
-      { value: 'catalogs', text: `Gestion des connecteurs aux catalogues` },
-      { value: 'stats', text: `Récupération d'informations statistiques` }
+      { value: 'applications', text: 'Gestion des configurations d\'applications' },
+      { value: 'catalogs', text: 'Gestion des connecteurs aux catalogues' },
+      { value: 'stats', text: 'Récupération d\'informations statistiques' }
     ]
   }),
   computed: {

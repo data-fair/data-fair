@@ -13,7 +13,7 @@ exports.eventsPrefix = 'analyze'
 exports.process = async function(app, dataset) {
   const db = app.get('db')
   const fileSample = await datasetFileSample(dataset)
-  if (!fileSample) throw new Error(`Échec d'échantillonage du fichier tabulaire, il est vide`)
+  if (!fileSample) throw new Error('Échec d\'échantillonage du fichier tabulaire, il est vide')
   let decodedSample
   try {
     decodedSample = iconv.decode(fileSample, dataset.file.encoding)

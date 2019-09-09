@@ -6,18 +6,24 @@
 
 const operationFilter = [{ operations: 'list' }, { classes: 'list' }]
 
-exports.publicFilter = { permissions: {
-  $elemMatch: { $or: operationFilter, type: null, id: null }
-} }
+exports.publicFilter = {
+  permissions: {
+    $elemMatch: { $or: operationFilter, type: null, id: null }
+  }
+}
 
-exports.privateFilter = { permissions: {
-  $not: { $elemMatch: { $or: operationFilter } }
-} }
+exports.privateFilter = {
+  permissions: {
+    $not: { $elemMatch: { $or: operationFilter } }
+  }
+}
 
-exports.protectedFilter = { permissions: {
-  $elemMatch: { $or: operationFilter },
-  $not: { $elemMatch: { $or: operationFilter, type: null, id: null } }
-} }
+exports.protectedFilter = {
+  permissions: {
+    $elemMatch: { $or: operationFilter },
+    $not: { $elemMatch: { $or: operationFilter, type: null, id: null } }
+  }
+}
 
 exports.visibility = (resource) => {
   resource.permissions = resource.permissions || []

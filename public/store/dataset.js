@@ -87,7 +87,7 @@ export default () => ({
         const journal = await this.$axios.$get(`api/v1/datasets/${state.datasetId}/journal`)
         commit('setAny', { journal })
       } catch (error) {
-        eventBus.$emit('notification', { error, msg: `Erreur pendant la récupération des informations du jeu de données:` })
+        eventBus.$emit('notification', { error, msg: 'Erreur pendant la récupération des informations du jeu de données:' })
       }
     },
     async setId({ commit, getters, dispatch, state }, datasetId) {
@@ -118,7 +118,7 @@ export default () => ({
         return true
       } catch (error) {
         if (error.status === 409) {
-          eventBus.$emit('notification', `Le jeu de données est en cours de traitement et votre modification n'a pas pu être appliquée. Veuillez essayer de nouveau un peu plus tard.`)
+          eventBus.$emit('notification', 'Le jeu de données est en cours de traitement et votre modification n\'a pas pu être appliquée. Veuillez essayer de nouveau un peu plus tard.')
         } else {
           eventBus.$emit('notification', { error, msg: 'Erreur pendant la mise à jour du jeu de données' })
         }
@@ -149,9 +149,12 @@ export default () => ({
       let remoteServices = []
       if (getters.concepts.size) {
         const inputConcepts = [...getters.concepts].filter(c => c !== 'http://schema.org/identifier').join(',')
-        const data = await this.$axios.$get('api/v1/remote-services', { params: {
-          'input-concepts': inputConcepts,
-          size: 100 } })
+        const data = await this.$axios.$get('api/v1/remote-services', {
+          params: {
+            'input-concepts': inputConcepts,
+            size: 100
+          }
+        })
         remoteServices = data.results
       }
       commit('setAny', { remoteServices })
@@ -162,7 +165,7 @@ export default () => ({
         commit('patch', { owner })
         eventBus.$emit('notification', `Le jeu de données ${state.dataset.title} a changé de propriétaire`)
       } catch (error) {
-        eventBus.$emit('notification', { error, msg: `Erreur pendant le changement de propriétaire` })
+        eventBus.$emit('notification', { error, msg: 'Erreur pendant le changement de propriétaire' })
       }
     }
   }

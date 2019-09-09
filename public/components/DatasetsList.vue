@@ -120,14 +120,16 @@ export default {
           .map(([facetValue]) => facetValue).join(',')
         if (facetFilter) fullFilters[facetKey] = facetFilter
       })
-      this.datasets = await this.$axios.$get('api/v1/datasets', { params: {
-        size: this.size,
-        page: this.page,
-        select: 'title,description,status',
-        facets: 'owner,status,visibility,services,concepts',
-        sort: 'createdAt:-1',
-        ...fullFilters
-      } })
+      this.datasets = await this.$axios.$get('api/v1/datasets', {
+        params: {
+          size: this.size,
+          page: this.page,
+          select: 'title,description,status',
+          facets: 'owner,status,visibility,services,concepts',
+          sort: 'createdAt:-1',
+          ...fullFilters
+        }
+      })
       this.filtered = this.filters.q !== undefined
       this.loading = false
     }

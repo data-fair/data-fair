@@ -118,7 +118,7 @@ export default {
           existingDatasets = await this.$axios.$get('api/v1/datasets', {
             params: {
               owner: this.owner.type + ':' + this.owner.id,
-              'filename': this.file.name
+              filename: this.file.name
             }
           })
         }
@@ -170,11 +170,11 @@ export default {
       } catch (error) {
         const status = error.response && error.response.status
         if (status === 413) {
-          eventBus.$emit('notification', { type: 'error', msg: `Le fichier est trop volumineux pour être importé` })
+          eventBus.$emit('notification', { type: 'error', msg: 'Le fichier est trop volumineux pour être importé' })
         } else if (status === 429) {
-          eventBus.$emit('notification', { type: 'error', msg: `Le propriétaire sélectionné n'a pas assez d'espace disponible pour ce fichier` })
+          eventBus.$emit('notification', { type: 'error', msg: 'Le propriétaire sélectionné n\'a pas assez d\'espace disponible pour ce fichier' })
         } else {
-          eventBus.$emit('notification', { error, msg: `Erreur pendant l'import du fichier :` })
+          eventBus.$emit('notification', { error, msg: 'Erreur pendant l\'import du fichier :' })
         }
         this.importing = false
       }

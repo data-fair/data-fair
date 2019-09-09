@@ -111,7 +111,7 @@ export default {
         this.notFound = false
       } catch (error) {
         if (error.response && error.response.status === 404) this.notFound = true
-        else eventBus.$emit('notification', { error, msg: `Erreur pendant la récupération des données` })
+        else eventBus.$emit('notification', { error, msg: 'Erreur pendant la récupération des données' })
       }
       this.loading = false
     }

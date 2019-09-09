@@ -40,7 +40,7 @@ other,unknown address
   t.truthy(dataset.schema.find(field => field.key === extensionKey + '.lat'))
   t.truthy(dataset.schema.find(field => field.key === extensionKey + '.lon'))
   // A search to check results
-  res = await ax.get(`/api/v1/datasets/dataset/lines`)
+  res = await ax.get('/api/v1/datasets/dataset/lines')
   t.is(res.data.total, 2)
   t.is(res.data.results[0][extensionKey + '.lat'], 10)
   t.is(res.data.results[0][extensionKey + '.lon'], 10)
@@ -63,7 +63,7 @@ other,unknown address
   nockScope.done()
   // A search to check re-indexed results with preserved extensions
   // and new result with new extension
-  res = await ax.get(`/api/v1/datasets/dataset/lines?select=*`)
+  res = await ax.get('/api/v1/datasets/dataset/lines?select=*')
   t.is(res.data.total, 3)
   let existingResult = res.data.results.find(l => l.label === 'koumoul')
   t.is(existingResult[extensionKey + '.lat'], 10)
@@ -86,7 +86,7 @@ other,unknown address
   await workers.hook('finalizer')
   nockScope.done()
   // A search to check re-indexed results with overwritten extensions
-  res = await ax.get(`/api/v1/datasets/dataset/lines?select=*`)
+  res = await ax.get('/api/v1/datasets/dataset/lines?select=*')
   t.is(res.data.total, 3)
   existingResult = res.data.results.find(l => l.label === 'koumoul')
   t.is(existingResult[extensionKey + '.lat'], 40)
@@ -105,9 +105,9 @@ other,unknown address
   await workers.hook('finalizer')
 
   // Download extended file
-  res = await ax.get(`/api/v1/datasets/dataset/full`)
+  res = await ax.get('/api/v1/datasets/dataset/full')
   const lines = res.data.split('\n')
-  t.is(lines[0], `label,adr,lat,Erreur d'enrichissement`)
+  t.is(lines[0], 'label,adr,lat,Erreur d\'enrichissement')
   t.is(lines[1], 'koumoul,19 rue de la voie lactée saint avé,40,')
 })
 
@@ -115,8 +115,8 @@ test.serial('Manage errors during extension', async t => {
   const ax = await axiosBuilder('dmeadus0@answers.com:passwd')
 
   // Initial dataset with addresses
-  let form = new FormData()
-  let content = `label,adr
+  const form = new FormData()
+  const content = `label,adr
 koumoul,19 rue de la voie lactée saint avé
 other,unknown address
 `
@@ -149,8 +149,8 @@ test.serial('Manage empty queries', async t => {
   const ax = await axiosBuilder('dmeadus0@answers.com:passwd')
 
   // Initial dataset with addresses
-  let form = new FormData()
-  let content = `label,adr
+  const form = new FormData()
+  const content = `label,adr
 koumoul,19 rue de la voie lactée saint avé
 empty,
 `

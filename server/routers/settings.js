@@ -10,7 +10,7 @@ const cacheHeaders = require('../utils/cache-headers')
 
 const config = require('config')
 
-let router = express.Router()
+const router = express.Router()
 
 const allowedTypes = new Set(['user', 'organization'])
 

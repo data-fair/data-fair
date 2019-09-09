@@ -19,7 +19,7 @@ test('Get vocabulary', async t => {
 test('Check API format', async t => {
   const ax = await axiosBuilder()
   const api = require('./resources/geocoder-api.json')
-  let res = await ax.post('/api/v1/_check-api', api)
+  const res = await ax.post('/api/v1/_check-api', api)
   t.is(res.status, 200)
   delete api.openapi
   try {

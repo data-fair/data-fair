@@ -29,7 +29,7 @@ export default () => ({
         const api = await this.$axios.$get(getters.resourceUrl + '/api-docs.json')
         commit('setAny', { api })
       } catch (error) {
-        eventBus.$emit('notification', { error, msg: `Erreur pendant la récupération de la définition de l'API:` })
+        eventBus.$emit('notification', { error, msg: 'Erreur pendant la récupération de la définition de l\'API:' })
       }
     },
     async setId({ commit, getters, dispatch, state }, remoteServiceId) {
@@ -47,7 +47,7 @@ export default () => ({
         if (!silent) eventBus.$emit('notification', 'La configuration du service a bien été mise à jour.')
         return true
       } catch (error) {
-        eventBus.$emit('notification', { error, msg: `Erreur pendant la mise à jour de la configuration du service:` })
+        eventBus.$emit('notification', { error, msg: 'Erreur pendant la mise à jour de la configuration du service:' })
         return false
       }
     },
@@ -60,16 +60,16 @@ export default () => ({
         await this.$axios.delete(getters.resourceUrl)
         eventBus.$emit('notification', `La configuration du service ${state.remoteService.title} a bien été supprimée`)
       } catch (error) {
-        eventBus.$emit('notification', { error, msg: `Erreur pendant la suppression de la configuration du service:` })
+        eventBus.$emit('notification', { error, msg: 'Erreur pendant la suppression de la configuration du service:' })
       }
     },
     async refresh({ commit, getters, dispatch }) {
       try {
         await this.$axios.$post(getters.resourceUrl + '/_update')
-        eventBus.$emit('notification', `La définition de l'API a bien été mise à jour`)
+        eventBus.$emit('notification', 'La définition de l\'API a bien été mise à jour')
         dispatch('fetchInfo')
       } catch (error) {
-        eventBus.$emit('notification', { error, msg: `Erreur pendant la mise à jour de la définition de l'API:` })
+        eventBus.$emit('notification', { error, msg: 'Erreur pendant la mise à jour de la définition de l\'API:' })
       }
     }
   }

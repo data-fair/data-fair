@@ -183,13 +183,13 @@ export default {
         this.notFound = false
       } catch (error) {
         if (error.response && error.response.status === 404) this.notFound = true
-        else eventBus.$emit('notification', { error, msg: `Erreur pendant la récupération des données` })
+        else eventBus.$emit('notification', { error, msg: 'Erreur pendant la récupération des données' })
       }
       try {
         this.nbErrors = (await this.$axios.$get(this.resourceUrl + '/lines', { params: { size: 0, q: params.q, qs: `_exists_:${this.errorField.key}` } })).total
       } catch (error) {
         if (error.response && error.response.status === 404) this.notFound = true
-        else eventBus.$emit('notification', { error, msg: `Erreur pendant le comptage des erreurs` })
+        else eventBus.$emit('notification', { error, msg: 'Erreur pendant le comptage des erreurs' })
       }
       this.loading = false
     }

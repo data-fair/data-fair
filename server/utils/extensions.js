@@ -35,7 +35,7 @@ exports.extend = async(app, dataset, extension, remoteService, action) => {
       await app.publish('datasets/' + dataset.id + '/extend-progress', { remoteService: remoteService.id, action: action.id, progress, error })
       await db.collection('datasets').updateOne({
         id: dataset.id,
-        extensions: { $elemMatch: { 'remoteService': remoteService.id, 'action': action.id } }
+        extensions: { $elemMatch: { remoteService: remoteService.id, action: action.id } }
       }, {
         $set: { 'extensions.$.progress': progress, 'extensions.$.error': error, 'extensions.$.forceNext': false }
       })
@@ -92,7 +92,7 @@ exports.extendCalculated = async (app, dataset, geopoint, geometry) => {
 
 exports.prepareSchema = async (db, schema, extensions) => {
   let extensionsFields = []
-  for (let extension of extensions) {
+  for (const extension of extensions) {
     if (!extension.active) continue
     const remoteService = await db.collection('remote-services').findOne({ id: extension.remoteService })
     if (!remoteService) continue
@@ -126,8 +126,8 @@ exports.prepareSchema = async (db, schema, extensions) => {
       type: 'string',
       'x-originalName': 'error',
       'x-extension': extensionId,
-      title: (errorField && errorField.title) || `Erreur d'enrichissement`,
-      description: (errorField && errorField.description) || `Une erreur lors de la récupération des informations depuis un service distant`,
+      title: (errorField && errorField.title) || 'Erreur d\'enrichissement',
+      description: (errorField && errorField.description) || 'Une erreur lors de la récupération des informations depuis un service distant',
       'x-calculated': true
     })
   }
@@ -182,15 +182,19 @@ class ESInputStream extends Readable {
       this.query = { match_all: {} }
     } else {
       // only consider lines with at least one input field
-      this.query = { bool: { should: options.inputMapping.fields.map(f => {
-        const notEmpty = {
-          bool: { must: { exists: { field: f[0] } } }
+      this.query = {
+        bool: {
+          should: options.inputMapping.fields.map(f => {
+            const notEmpty = {
+              bool: { must: { exists: { field: f[0] } } }
+            }
+            if (f[2].type === 'string') {
+              notEmpty.bool.must_not = { term: { [f[0]]: '' } }
+            }
+            return notEmpty
+          })
         }
-        if (f[2].type === 'string') {
-          notEmpty.bool.must_not = { term: { [f[0]]: '' } }
-        }
-        return notEmpty
-      }) } }
+      }
       if (!this.forceNext) {
         this.countQuery = JSON.parse(JSON.stringify(this.query))
         this.countQuery.bool.must = { exists: { field: this.extensionKey + '._hash' } }
@@ -198,6 +202,7 @@ class ESInputStream extends Readable {
       }
     }
   }
+
   async init() {
     if (!this.stats) return
     debug('Count missing query', JSON.stringify(this.query))
@@ -219,6 +224,7 @@ class ESInputStream extends Readable {
     this.stats.target = this.stats.missing + this.stats.count
     debug('Initial stats', this.stats)
   }
+
   async _read() {
     if (this.reading) return
     this.reading = true
@@ -236,7 +242,7 @@ class ESInputStream extends Readable {
         res = await this.esClient.scroll({ scroll_id: this.scrollId, scroll: '15m' })
       }
       this.scrollId = res._scroll_id
-      for (let hit of res.hits.hits) {
+      for (const hit of res.hits.hits) {
         this.reading = this.push({ id: hit._id, doc: flatten(hit._source) })
         this.i += 1
       }
@@ -296,6 +302,7 @@ class RemoteExtensionStream extends Transform {
     this.hashes = {}
     this.buffer = []
   }
+
   async _transform(item, encoding, callback) {
     try {
       this.i += 1
@@ -320,6 +327,7 @@ class RemoteExtensionStream extends Transform {
       callback(err)
     }
   }
+
   async _final(callback) {
     try {
       await this._sendBuffer()
@@ -328,6 +336,7 @@ class RemoteExtensionStream extends Transform {
       callback(err)
     }
   }
+
   async _sendBuffer() {
     if (!this.buffer.length) return
     debug(`Send REQ with ${this.buffer.length} items`, this.reqOpts)
@@ -344,7 +353,8 @@ class RemoteExtensionStream extends Transform {
     await pump(
       req,
       byline.createStream(),
-      new Writable({ objectMode: true,
+      new Writable({
+        objectMode: true,
         write(chunk, encoding, cb) {
           try {
             let item
@@ -372,7 +382,8 @@ class RemoteExtensionStream extends Transform {
           } catch (err) {
             cb(err)
           }
-        } })
+        }
+      })
     )
   }
 }
@@ -384,6 +395,7 @@ class PreserveExtensionStream extends Transform {
     super({ objectMode: true })
     this.options = options
   }
+
   async init() {
     const db = this.options.db
     const esClient = this.options.esClient
@@ -393,7 +405,7 @@ class PreserveExtensionStream extends Transform {
     this.extensionsMap = {}
     // The ES index was not yet created, we will not try to extract previous extensions
     if (!await esClient.indices.exists({ index: this.indexName })) return
-    for (let extension of extensions) {
+    for (const extension of extensions) {
       if (!extension.active) return
       const remoteService = await db.collection('remote-services').findOne({ id: extension.remoteService })
       if (!remoteService) continue
@@ -404,6 +416,7 @@ class PreserveExtensionStream extends Transform {
       this.extensionsMap[extensionKey] = extension
     }
   }
+
   async _transform(item, encoding, callback) {
     try {
       if (!this.mappings) await this.init()
@@ -419,7 +432,7 @@ class PreserveExtensionStream extends Transform {
         }
       }
       const esClient = this.options.esClient
-      for (let extensionKey in this.mappings) {
+      for (const extensionKey in this.mappings) {
       /* eslint no-unused-vars: off */
         const [mappedItem, h] = this.mappings[extensionKey]({ doc: item })
         const res = await esClient.search({
@@ -449,6 +462,7 @@ class CalculatedExtensionStream extends Transform {
     super({ objectMode: true })
     this.options = options
   }
+
   async _transform(item, encoding, callback) {
     const doc = {}
     // "hidden" fields for geo indexing

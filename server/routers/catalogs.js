@@ -54,11 +54,11 @@ router.get('/_types', cacheHeaders.noCache, asyncWrap(async(req, res) => {
 router.get('', cacheHeaders.noCache, asyncWrap(async(req, res) => {
   const catalogs = req.app.get('db').collection('catalogs')
   const query = findUtils.query(req, {
-    'type': 'type',
-    'url': 'url',
-    'organization': 'organization.id',
-    'ids': 'id',
-    'id': 'id'
+    type: 'type',
+    url: 'url',
+    organization: 'organization.id',
+    ids: 'id',
+    id: 'id'
   })
   const sort = findUtils.sort(req.query.sort)
   const project = findUtils.project(req.query.select)
@@ -171,7 +171,7 @@ router.patch('/:catalogId', readCatalog, permissions.middleware('writeDescriptio
   patch.updatedBy = { id: req.user.id, name: req.user.name }
 
   const patchedCatalog = (await req.app.get('db').collection('catalogs')
-    .findOneAndUpdate({ id: req.params.catalogId }, { '$set': mongoEscape.escape(patch, true) }, { returnOriginal: false })).value
+    .findOneAndUpdate({ id: req.params.catalogId }, { $set: mongoEscape.escape(patch, true) }, { returnOriginal: false })).value
   res.status(200).json(clean(mongoEscape.unescape(patchedCatalog)))
 }))
 
@@ -180,7 +180,7 @@ router.put('/:catalogId/owner', readCatalog, permissions.middleware('delete', 'a
   // Must be able to delete the current catalog, and to create a new one for the new owner to proceed
   if (!permissions.canDoForOwner(req.body, 'postCatalog', req.user, req.app.get('db'))) return res.sendStatus(403)
   const patchedCatalog = (await req.app.get('db').collection('catalogs')
-    .findOneAndUpdate({ id: req.params.catalogId }, { '$set': { owner: req.body } }, { returnOriginal: false })).value
+    .findOneAndUpdate({ id: req.params.catalogId }, { $set: { owner: req.body } }, { returnOriginal: false })).value
   res.status(200).json(clean(patchedCatalog))
 }))
 

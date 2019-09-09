@@ -159,9 +159,11 @@ exports.prepareQuery = (dataset, query) => {
     }))
     .forEach(inFilter => {
       if (!fields.includes(inFilter.key)) throw createError(400, `Impossible de faire une recherche sur le champ ${inFilter.key}, il n'existe pas dans le jeu de données.`)
-      filter.push({ terms: {
-        [inFilter.key]: inFilter.values
-      } })
+      filter.push({
+        terms: {
+          [inFilter.key]: inFilter.values
+        }
+      })
     })
 
   // bounding box filter to restrict results on geo zone: left,bottom,right,top
@@ -171,13 +173,17 @@ exports.prepareQuery = (dataset, query) => {
     const esBoundingBox = { left: bbox[0], bottom: bbox[1], right: bbox[2], top: bbox[3] }
     // use geo_shape intersection instead geo_bounding_box in order to get even
     // partial geometries in tiles
-    filter.push({ geo_shape: { _geoshape: {
-      relation: 'intersects',
-      shape: {
-        type: 'envelope',
-        coordinates: [[esBoundingBox.left, esBoundingBox.top], [esBoundingBox.right, esBoundingBox.bottom]]
+    filter.push({
+      geo_shape: {
+        _geoshape: {
+          relation: 'intersects',
+          shape: {
+            type: 'envelope',
+            coordinates: [[esBoundingBox.left, esBoundingBox.top], [esBoundingBox.right, esBoundingBox.bottom]]
+          }
+        }
       }
-    } } })
+    })
   }
 
   esQuery.query = { bool: { filter, must } }

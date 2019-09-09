@@ -19,7 +19,7 @@ const collectionNames = ['remote-services', 'applications', 'datasets', 'catalog
 router.post('/:type/:id', asyncWrap(async (req, res) => {
   const identity = { ...req.params, name: req.body.name }
 
-  for (let c of collectionNames) {
+  for (const c of collectionNames) {
     const collection = req.app.get('db').collection(c)
     await collection.updateMany({ 'owner.type': identity.type, 'owner.id': identity.id }, { $set: { 'owner.name': identity.name } })
 
@@ -37,8 +37,8 @@ router.post('/:type/:id', asyncWrap(async (req, res) => {
 
     // created/updated events
     if (identity.type === 'user') {
-      await collection.updateMany({ 'createdBy.id': identity.id }, { $set: { 'createdBy': { id: identity.id, name: identity.name } } })
-      await collection.updateMany({ 'updatedBy.id': identity.id }, { $set: { 'updatedBy': { id: identity.id, name: identity.name } } })
+      await collection.updateMany({ 'createdBy.id': identity.id }, { $set: { createdBy: { id: identity.id, name: identity.name } } })
+      await collection.updateMany({ 'updatedBy.id': identity.id }, { $set: { updatedBy: { id: identity.id, name: identity.name } } })
     }
   }
 
@@ -53,7 +53,7 @@ router.post('/:type/:id', asyncWrap(async (req, res) => {
 router.delete('/:type/:id', asyncWrap(async (req, res) => {
   const identity = req.params
 
-  for (let c of collectionNames) {
+  for (const c of collectionNames) {
     const collection = req.app.get('db').collection(c)
     await collection.deleteMany({ 'owner.type': identity.type, 'owner.id': identity.id })
 
@@ -67,8 +67,8 @@ router.delete('/:type/:id', asyncWrap(async (req, res) => {
 
     // created/updated events
     if (identity.type === 'user') {
-      await collection.updateMany({ 'createdBy.id': identity.id }, { $set: { 'createdBy': { id: identity.id, name: null } } })
-      await collection.updateMany({ 'updatedBy.id': identity.id }, { $set: { 'updatedBy': { id: identity.id, name: null } } })
+      await collection.updateMany({ 'createdBy.id': identity.id }, { $set: { createdBy: { id: identity.id, name: null } } })
+      await collection.updateMany({ 'updatedBy.id': identity.id }, { $set: { updatedBy: { id: identity.id, name: null } } })
     }
   }
 
@@ -86,7 +86,7 @@ router.get('/:type/:id/report', asyncWrap(async (req, res) => {
     owns: [],
     hasPermissions: []
   }
-  for (let c of collections) {
+  for (const c of collections) {
     const collection = req.app.get('db').collection(c.id)
     const results = (await collection.find({ 'owner.type': req.query.type, 'owner.id': req.query.id }).toArray())
     report.owns.push({ collection: c.title, items: results.map(item => ({ title: item.title || item.id, href: config.publicUrl + '/' + c.id.substring(0, c.id.length - 1) + '/' + item.id + '/description' })) })

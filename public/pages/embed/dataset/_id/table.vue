@@ -142,7 +142,7 @@ export default {
         size: this.pagination.rowsPerPage,
         page: this.pagination.page
       }
-      if (this.imageField) params.thumbnail = `40x40`
+      if (this.imageField) params.thumbnail = '40x40'
       if (this.pagination.sortBy) params.sort = (this.pagination.descending ? '-' : '') + this.pagination.sortBy
       if (this.query) params.q = this.query
       if (this.select.length) params.select = this.select.join(',')
@@ -152,7 +152,7 @@ export default {
         this.notFound = false
       } catch (error) {
         if (error.status === 404) this.notFound = true
-        else eventBus.$emit('notification', { error, msg: `Erreur pendant la récupération des données` })
+        else eventBus.$emit('notification', { error, msg: 'Erreur pendant la récupération des données' })
       }
       this.loading = false
     },

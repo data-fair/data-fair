@@ -74,7 +74,7 @@ const applyTransaction = async (db, dataset, user, transac, validate) => {
   _action = _action || 'create'
   if (!actions.includes(_action)) throw createError(400, `action "${_action}" is unknown, use one of ${JSON.stringify(actions)}`)
   if (_action === 'create' && !body._id) body._id = shortid.generate()
-  if (!body._id) throw createError(400, `"_id" attribute is required`)
+  if (!body._id) throw createError(400, '"_id" attribute is required')
 
   const extendedBody = { ...body }
   extendedBody._needsIndexing = true
@@ -135,9 +135,9 @@ async function manageAttachment(req, keepExisting) {
     await fs.emptyDir(dir)
     await fs.rename(req.file.path, path.join(dir, req.file.originalname))
     const relativePath = path.join(lineId, req.file.originalname)
-    let pathField = req.dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')
+    const pathField = req.dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')
     if (!pathField) {
-      throw createError(400, `Le schéma ne prévoit pas d'associer une pièce jointe`)
+      throw createError(400, 'Le schéma ne prévoit pas d\'associer une pièce jointe')
     }
     req.body[pathField.key] = relativePath
   } else if (!keepExisting) {
@@ -246,7 +246,7 @@ exports.bulkLines = async (req, res, next) => {
 
 exports.readLineRevisions = async (req, res, next) => {
   if (!req.dataset.rest || !req.dataset.rest.history) {
-    return res.status(400).send(`L'historisation des lignes n'est pas activée pour ce jeu de données.`)
+    return res.status(400).send('L\'historisation des lignes n\'est pas activée pour ce jeu de données.')
   }
   const revisionsCollection = exports.revisionsCollection(req.app.get('db'), req.dataset)
   const filter = { _lineId: req.params.lineId }

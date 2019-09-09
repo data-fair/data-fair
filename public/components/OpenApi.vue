@@ -17,7 +17,7 @@ export default {
     ...mapState(['env']),
     ...mapGetters('dataset', ['resourceUrl']),
     src() {
-      let url = this.env.openapiViewerUrl + '?proxy=false&hide-toolbar=true'
+      const url = this.env.openapiViewerUrl + '?proxy=false&hide-toolbar=true'
       return url + '&url=' + this.url
     }
   },

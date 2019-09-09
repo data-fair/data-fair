@@ -57,10 +57,12 @@ test.serial('Search and apply facets', async t => {
   t.is(res.data.facets['field-type'].length, 2)
   t.is(res.data.facets['field-type'][0].count, 3)
 
-  res = await ax.get('/api/v1/datasets', { params: {
-    owner: 'organization:KWqAGZ4mG',
-    facets: 'owner,field-type'
-  } })
+  res = await ax.get('/api/v1/datasets', {
+    params: {
+      owner: 'organization:KWqAGZ4mG',
+      facets: 'owner,field-type'
+    }
+  })
   t.is(res.data.count, 2)
   t.is(res.data.facets.owner.length, 2)
   // owner facet is not affected by the owner filter
@@ -106,7 +108,7 @@ test.serial('Upload new dataset in user zone', async t => {
   const ax = await axiosBuilder('dmeadus0@answers.com:passwd')
   const form = new FormData()
   form.append('file', datasetFd, 'dataset1.csv')
-  let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
+  const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
   t.is(res.status, 201)
   t.is(res.data.owner.type, 'user')
   t.is(res.data.owner.id, 'dmeadus0')
@@ -118,7 +120,7 @@ test.serial('Upload new dataset in user zone with title', async t => {
   const form = new FormData()
   form.append('file', datasetFd, 'dataset1.csv')
   form.append('title', 'My title')
-  let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
+  const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
   t.is(res.status, 201)
   t.is(res.data.id, 'my-title')
   t.is(res.data.title, 'My title')
@@ -128,7 +130,7 @@ test.serial('Upload new dataset in organization zone', async t => {
   const ax = await axiosBuilder('dmeadus0@answers.com:passwd')
   const form = new FormData()
   form.append('file', datasetFd, 'dataset2.csv')
-  let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form, 'KWqAGZ4mG') })
+  const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form, 'KWqAGZ4mG') })
   t.is(res.status, 201)
   t.is(res.data.owner.type, 'organization')
   t.is(res.data.owner.id, 'KWqAGZ4mG')
@@ -136,7 +138,7 @@ test.serial('Upload new dataset in organization zone', async t => {
 
 test.serial('Uploading same file twice should increment id', async t => {
   const ax = await axiosBuilder('dmeadus0@answers.com:passwd')
-  for (let i of [1, 2, 3]) {
+  for (const i of [1, 2, 3]) {
     const form = new FormData()
     form.append('file', datasetFd, 'my-dataset.csv')
     const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form, 'KWqAGZ4mG') })

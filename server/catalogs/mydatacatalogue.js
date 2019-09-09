@@ -28,19 +28,19 @@ exports.deleteDataset = async (catalog, dataset, publication) => {
 }
 
 exports.publishApplication = async (catalog, application, publication, datasets) => {
-  throw new Error(`La publication d'applications vers Mydatacatalogue n'est pas disponible`)
+  throw new Error('La publication d\'applications vers Mydatacatalogue n\'est pas disponible')
 }
 
 exports.deleteApplication = async (catalog, application, publication) => {
-  throw new Error(`La dépublication d'applications vers Mydatacatalogue n'est pas disponible`)
+  throw new Error('La dépublication d\'applications vers Mydatacatalogue n\'est pas disponible')
 }
 
 exports.listDatasets = async (catalog, p) => {
-  throw new Error(`La récupération d'une liste de jeux de données depuis Mydacatalogue n'est pas disponible`)
+  throw new Error('La récupération d\'une liste de jeux de données depuis Mydacatalogue n\'est pas disponible')
 }
 
 exports.harvestDataset = async (catalog, datasetId, req) => {
-  throw new Error(`La récupération d'une définition de jeu de données depuis Mydacatalogue n'est pas disponible`)
+  throw new Error('La récupération d\'une définition de jeu de données depuis Mydacatalogue n\'est pas disponible')
 }
 
 function datasetPageDesc(dataset) {

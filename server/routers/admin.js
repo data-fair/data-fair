@@ -41,7 +41,7 @@ router.get('/datasets-errors', asyncWrap(async (req, res, next) => {
     { $project: { id: 1, title: 1, description: 1, updatedAt: 1, owner: 1, event: 1 } }
   ]).toArray()
 
-  const [count, results] = await Promise.all([ datasets.countDocuments(query), aggregatePromise ])
+  const [count, results] = await Promise.all([datasets.countDocuments(query), aggregatePromise])
 
   res.send({ count, results })
 }))
@@ -64,7 +64,7 @@ router.get('/applications-errors', asyncWrap(async (req, res, next) => {
     { $project: { id: 1, title: 1, description: 1, updatedAt: 1, owner: 1, event: 1 } }
   ]).toArray()
 
-  const [count, results] = await Promise.all([ applications.countDocuments(query), aggregatePromise ])
+  const [count, results] = await Promise.all([applications.countDocuments(query), aggregatePromise])
 
   res.send({ count, results })
 }))
@@ -112,7 +112,7 @@ router.get('/owners', asyncWrap(async(req, res) => {
   }]
 
   const aggPromise = quotas.aggregate(agg).toArray()
-  const [count, results] = await Promise.all([ quotas.countDocuments(query), aggPromise ])
+  const [count, results] = await Promise.all([quotas.countDocuments(query), aggPromise])
   res.send({ count, results })
 }))
 
@@ -158,8 +158,8 @@ router.get('/base-applications', asyncWrap(async(req, res) => {
   }]
 
   const aggPromise = baseApps.aggregate(agg).toArray()
-  const [count, results] = await Promise.all([ baseApps.countDocuments(query), aggPromise ])
-  for (let result of results) {
+  const [count, results] = await Promise.all([baseApps.countDocuments(query), aggPromise])
+  for (const result of results) {
     baseAppsUtils.clean(result, req.query.thumbnail)
     result.privateAccess = result.privateAccess || []
   }

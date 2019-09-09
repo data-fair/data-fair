@@ -48,49 +48,49 @@ function resizeBBOX(bbox, ratio) {
 }
 
 const dataLayers = [{
-  'id': 'results_polygon',
-  'source': 'data-fair',
+  id: 'results_polygon',
+  source: 'data-fair',
   'source-layer': 'results',
-  'type': 'fill',
-  'paint': {
+  type: 'fill',
+  paint: {
     'fill-color': 'rgba(255, 152, 0, 0.2)',
     'fill-outline-color': 'rgba(255, 152, 0, 0.5)'
   },
-  'filter': ['==', '$type', 'Polygon']
+  filter: ['==', '$type', 'Polygon']
 }, {
-  'id': 'results_hover',
-  'source': 'data-fair',
+  id: 'results_hover',
+  source: 'data-fair',
   'source-layer': 'results',
-  'type': 'line',
-  'paint': {
+  type: 'line',
+  paint: {
     'line-color': '#E91E63',
-    'line-width': { 'stops': [[4, 1.5], [24, 9]] }
+    'line-width': { stops: [[4, 1.5], [24, 9]] }
   },
-  'filter': ['==', '_id', '']
+  filter: ['==', '_id', '']
 }, {
-  'id': 'results_line',
-  'source': 'data-fair',
+  id: 'results_line',
+  source: 'data-fair',
   'source-layer': 'results',
-  'type': 'line',
-  'paint': {
+  type: 'line',
+  paint: {
     'line-color': 'rgba(156, 39, 176, 0.5)',
-    'line-width': { 'stops': [[4, 1], [24, 6]] }
+    'line-width': { stops: [[4, 1], [24, 6]] }
   },
   layout: {
     'line-cap': 'round',
     'line-join': 'round'
   },
-  'filter': ['==', '$type', 'LineString']
+  filter: ['==', '$type', 'LineString']
 }, {
-  'id': 'results_point',
-  'source': 'data-fair',
+  id: 'results_point',
+  source: 'data-fair',
   'source-layer': 'results',
-  'type': 'circle',
-  'paint': {
+  type: 'circle',
+  paint: {
     'circle-color': 'rgba(233, 30, 99, 0.5)',
-    'circle-radius': { 'stops': [[0, 1], [24, 16]] }
+    'circle-radius': { stops: [[0, 1], [24, 16]] }
   },
-  'filter': ['==', '$type', 'Point']
+  filter: ['==', '$type', 'Point']
 }]
 
 export default {
@@ -135,12 +135,14 @@ export default {
         if (error.sourceId) {
           eventBus.$emit('notification', { error: `Échec d'accès aux tuiles ${error.sourceId}`, msg: 'Erreur pendant le rendu de la carte:' })
         } else if (error.error && error.error.status === 401) {
-          eventBus.$emit('notification', { error: `
+          eventBus.$emit('notification', {
+            error: `
       Pas de session active. Cette erreur peut subvenir si vous utilisez une extension qui bloque les cookies.
 
       Les cookies de session sont utilisés par cette application pour protéger notre infrastructure contre les abus.
       `,
-          msg: 'Erreur pendant le rendu de la carte:' })
+            msg: 'Erreur pendant le rendu de la carte:'
+          })
         } else {
           eventBus.$emit('notification', { error: (error.error && error.error.message) || error, msg: 'Erreur pendant le rendu de la carte:' })
         }

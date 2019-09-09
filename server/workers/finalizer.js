@@ -37,7 +37,7 @@ exports.process = async function(app, dataset) {
   const cardinalityProps = dataset.schema
     .filter(prop => !prop.key.startsWith('_'))
     .filter(prop => prop['x-refersTo'] !== 'https://purl.org/geojson/vocab#geometry')
-  for (let prop of cardinalityProps) {
+  for (const prop of cardinalityProps) {
     debug(`Calculate cardinality of field ${prop.key}`)
     const aggResult = await esUtils.valuesAgg(es, queryableDataset, { field: prop.key, agg_size: '50', precision_threshold: 3000 })
     prop['x-cardinality'] = aggResult.total_values

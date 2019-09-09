@@ -12,7 +12,7 @@ router.get('', cacheHeaders.noCache, asyncWrap(async(req, res) => {
   if (!(req.user.isApiKey && req.user.organization)) {
     stats.user = await ownerStats(req.app.get('db'), { id: req.user.id, type: 'user' })
   }
-  for (let orga of req.user.organizations) {
+  for (const orga of req.user.organizations) {
     stats.organizations[orga.id] = await ownerStats(req.app.get('db'), { id: orga.id, type: 'organization' })
   }
   res.send(stats)

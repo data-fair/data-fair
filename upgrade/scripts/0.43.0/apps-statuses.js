@@ -1,4 +1,4 @@
-exports.description = `Application configurations now have a status.`
+exports.description = 'Application configurations now have a status.'
 
 exports.exec = async (db, debug) => {
   const appsCursor = db.collection('applications').find()

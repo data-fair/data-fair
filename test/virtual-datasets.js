@@ -4,14 +4,14 @@ const workers = require('../server/workers')
 
 test.serial('Create an empty virtual dataset', async t => {
   const ax = await axiosBuilder('dmeadus0@answers.com:passwd')
-  let res = await ax.post('/api/v1/datasets', { isVirtual: true, title: 'a virtual dataset' })
+  const res = await ax.post('/api/v1/datasets', { isVirtual: true, title: 'a virtual dataset' })
   t.is(res.status, 201)
   t.is(res.data.id, 'a-virtual-dataset')
 })
 
 test.serial('Create a new virtual dataset with predefined id', async t => {
   const ax = await axiosBuilder('dmeadus0@answers.com:passwd')
-  let res = await ax.put('/api/v1/datasets/my-id', { isVirtual: true, title: 'a virtual dataset' })
+  const res = await ax.put('/api/v1/datasets/my-id', { isVirtual: true, title: 'a virtual dataset' })
   t.is(res.status, 201)
   t.is(res.data.id, 'my-id')
 })

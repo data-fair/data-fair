@@ -194,9 +194,9 @@ export default {
     async add() {
       try {
         await this.$axios.$post('api/v1/base-applications', { url: this.urlToAdd })
-        eventBus.$emit('notification', { type: 'success', msg: `Application de base ajoutée` })
+        eventBus.$emit('notification', { type: 'success', msg: 'Application de base ajoutée' })
       } catch (error) {
-        eventBus.$emit('notification', { error, msg: `Impossible d'ajouter' l'application de base` })
+        eventBus.$emit('notification', { error, msg: 'Impossible d\'ajouter\' l\'application de base' })
       }
       this.refresh()
     },

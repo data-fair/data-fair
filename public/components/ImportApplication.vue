@@ -71,10 +71,12 @@ export default {
     this.user.organizations.forEach(o => {
       privateAccess += `,organization:${o.id}`
     })
-    this.configurableApplications = (await this.$axios.$get('api/v1/base-applications', { params: {
-      privateAccess,
-      size: 10000
-    } })).results
+    this.configurableApplications = (await this.$axios.$get('api/v1/base-applications', {
+      params: {
+        privateAccess,
+        size: 10000
+      }
+    })).results
     if (this.initApp) {
       this.applicationUrl = this.initApp
       this.downloadFromUrl()
@@ -88,7 +90,7 @@ export default {
         this.baseApp = await this.$axios.$post('api/v1/base-applications', { url: this.applicationUrl })
         delete this.baseApp.id
       } catch (error) {
-        eventBus.$emit('notification', { error, msg: `Erreur pendant la récupération de la description de l'application` })
+        eventBus.$emit('notification', { error, msg: 'Erreur pendant la récupération de la description de l\'application' })
       }
     },
     async createApplication() {
@@ -107,7 +109,7 @@ export default {
         }, options)
         this.$router.push({ path: `/application/${application.id}/description` })
       } catch (error) {
-        eventBus.$emit('notification', { error, msg: `Erreur pendant la création de la configuration d'application` })
+        eventBus.$emit('notification', { error, msg: 'Erreur pendant la création de la configuration d\'application' })
         this.importing = false
       }
     }

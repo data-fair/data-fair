@@ -7,7 +7,7 @@ const debug = require('debug')('webhooks')
 exports.trigger = async (db, type, resource, event) => {
   const settings = await db.collection('settings').findOne({ id: resource.owner.id, type: resource.owner.type }) || {}
   settings.webhooks = settings.webhooks || []
-  for (let webhook of settings.webhooks) {
+  for (const webhook of settings.webhooks) {
     if (webhook.events && webhook.events.length && !webhook.events.includes(`${type}-${event.type}`)) return
     debug(`Trigger webhook for event ${event.type}`, webhook)
     const eventType = events[type][event.type]

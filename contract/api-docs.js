@@ -102,7 +102,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la [d
     },
     '/api-docs.json': {
       get: {
-        summary: `Cette documentation d'API au format Open API v3`,
+        summary: 'Cette documentation d\'API au format Open API v3',
         tags: ['Administration'],
         operationId: 'getApiDoc',
         responses: {
@@ -157,11 +157,11 @@ Pour des exemples simples de publication de données vous pouvez consulter la [d
           utils.qParam,
           utils.ownerParam,
           utils.selectParam(Object.keys(dataset.properties)),
-          utils.filterParam('ids', `Restreindre sur les identifiants`),
-          utils.filterParam('filename', `Restreindre sur les noms de fichier`),
-          utils.filterParam('concepts', `Restreindre sur les concepts annotés`),
-          utils.filterParam('field-type', `Restreindre sur les types de champs`),
-          utils.filterParam('field-format', `Restreindre sur les formats des champs textes`),
+          utils.filterParam('ids', 'Restreindre sur les identifiants'),
+          utils.filterParam('filename', 'Restreindre sur les noms de fichier'),
+          utils.filterParam('concepts', 'Restreindre sur les concepts annotés'),
+          utils.filterParam('field-type', 'Restreindre sur les types de champs'),
+          utils.filterParam('field-format', 'Restreindre sur les formats des champs textes'),
           utils.booleanParam('files', 'Restrieindre aux jeux avec fichiers attachés'),
           utils.booleanParam('bbox', 'Restreindre aux jeux géographiques'),
           ...utils.paginationParams,
@@ -224,12 +224,12 @@ Pour des exemples simples de publication de données vous pouvez consulter la [d
     '/datasets/{id}': {
       parameters: [utils.idParam],
       get: {
-        summary: `Récupérer les informations d'un jeu de données.`,
+        summary: 'Récupérer les informations d\'un jeu de données.',
         operationId: 'getDataset',
         tags: ['Jeux de données'],
         responses: {
           200: {
-            description: `Informations d'un jeu de données`,
+            description: 'Informations d\'un jeu de données',
             content: {
               'application/json': {
                 schema: {
@@ -257,7 +257,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la [d
         },
         responses: {
           201: {
-            description: `Jeu de données créé`,
+            description: 'Jeu de données créé',
             content: {
               'application/json': {
                 schema: {
@@ -267,7 +267,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la [d
             }
           },
           200: {
-            description: `Jeu de données modifié`,
+            description: 'Jeu de données modifié',
             content: {
               'application/json': {
                 schema: {
@@ -279,7 +279,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la [d
         }
       },
       patch: {
-        summary: `Modifier seulement certaines informations.`,
+        summary: 'Modifier seulement certaines informations.',
         operationId: 'patchDataset',
         tags: ['Jeux de données'],
         requestBody: {
@@ -295,7 +295,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la [d
         },
         responses: {
           200: {
-            description: `Informations du jeu de données modifié`,
+            description: 'Informations du jeu de données modifié',
             content: {
               'application/json': {
                 schema: {
@@ -307,12 +307,12 @@ Pour des exemples simples de publication de données vous pouvez consulter la [d
         }
       },
       delete: {
-        summary: `Supprimer un jeu de données.`,
+        summary: 'Supprimer un jeu de données.',
         operationId: 'deleteDataset',
         tags: ['Jeux de données'],
         responses: {
           204: {
-            description: `Jeu de données supprimé`
+            description: 'Jeu de données supprimé'
           }
         }
       }
@@ -326,9 +326,9 @@ Pour des exemples simples de publication de données vous pouvez consulter la [d
           utils.qParam,
           utils.ownerParam,
           utils.selectParam(Object.keys(application.properties)),
-          utils.filterParam('ids', `Restreindre sur les identifiants`),
-          utils.filterParam('dataset', `Restreindre sur les jeux de données utilisés`),
-          utils.filterParam('service', `Restreindre sur les services distants utilisés`),
+          utils.filterParam('ids', 'Restreindre sur les identifiants'),
+          utils.filterParam('dataset', 'Restreindre sur les jeux de données utilisés'),
+          utils.filterParam('service', 'Restreindre sur les services distants utilisés'),
           ...utils.paginationParams,
           ...utils.visibilityParams
         ],
@@ -387,12 +387,12 @@ Pour des exemples simples de publication de données vous pouvez consulter la [d
     '/applications/{id}': {
       parameters: [utils.idParam],
       get: {
-        summary: `Récupérer les informations d'une application.`,
+        summary: 'Récupérer les informations d\'une application.',
         operationId: 'getApplication',
         tags: ['Applications'],
         responses: {
           200: {
-            description: `Informations d'une application`,
+            description: 'Informations d\'une application',
             content: {
               'application/json': {
                 schema: {
@@ -408,7 +408,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la [d
         operationId: 'putApplication',
         tags: ['Applications'],
         requestBody: {
-          description: `Informations de l'application`,
+          description: 'Informations de l\'application',
           required: true,
           content: {
             'application/json': {
@@ -420,7 +420,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la [d
         },
         responses: {
           201: {
-            description: `Application créée`,
+            description: 'Application créée',
             content: {
               'application/json': {
                 schema: {
@@ -430,7 +430,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la [d
             }
           },
           200: {
-            description: `Application modifiée`,
+            description: 'Application modifiée',
             content: {
               'application/json': {
                 schema: {
@@ -442,7 +442,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la [d
         }
       },
       patch: {
-        summary: `Modifier seulement certaines informations.`,
+        summary: 'Modifier seulement certaines informations.',
         operationId: 'patchApplication',
         tags: ['Applications'],
         requestBody: {
@@ -458,7 +458,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la [d
         },
         responses: {
           200: {
-            description: `Informations de l'application modifiée`,
+            description: 'Informations de l\'application modifiée',
             content: {
               'application/json': {
                 schema: {
@@ -470,12 +470,12 @@ Pour des exemples simples de publication de données vous pouvez consulter la [d
         }
       },
       delete: {
-        summary: `Supprimer une application.`,
+        summary: 'Supprimer une application.',
         operationId: 'deleteApplication',
         tags: ['Applications'],
         responses: {
           204: {
-            description: `Application supprimée`
+            description: 'Application supprimée'
           }
         }
       }
@@ -488,9 +488,9 @@ Pour des exemples simples de publication de données vous pouvez consulter la [d
         parameters: [
           utils.qParam,
           utils.selectParam(Object.keys(remoteService.properties)),
-          utils.filterParam('api-id', `Restreindre sur l'identifiant de l'API d'origine`),
-          utils.filterParam('input-concepts', `Restreindre sur les concepts en entrée des routes de l'API`),
-          utils.filterParam('output-concepts', `Restreindre sur les concepts en sortie des routes de l'API`),
+          utils.filterParam('api-id', 'Restreindre sur l\'identifiant de l\'API d\'origine'),
+          utils.filterParam('input-concepts', 'Restreindre sur les concepts en entrée des routes de l\'API'),
+          utils.filterParam('output-concepts', 'Restreindre sur les concepts en sortie des routes de l\'API'),
           ...utils.paginationParams
         ],
         responses: {
@@ -550,12 +550,12 @@ Pour des exemples simples de publication de données vous pouvez consulter la [d
     '/remote-services/{id}': {
       parameters: [utils.idParam],
       get: {
-        summary: `Récupérer les informations d'un service distant.`,
+        summary: 'Récupérer les informations d\'un service distant.',
         operationId: 'getRemoteService',
         tags: ['Services distants'],
         responses: {
           200: {
-            description: `Informations d'un service distant`,
+            description: 'Informations d\'un service distant',
             content: {
               'application/json': {
                 schema: {
@@ -583,7 +583,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la [d
         },
         responses: {
           201: {
-            description: `Service distant créé`,
+            description: 'Service distant créé',
             content: {
               'application/json': {
                 schema: {
@@ -593,7 +593,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la [d
             }
           },
           200: {
-            description: `Service distant modifié`,
+            description: 'Service distant modifié',
             content: {
               'application/json': {
                 schema: {
@@ -605,7 +605,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la [d
         }
       },
       patch: {
-        summary: `Modifier seulement certaines informations.`,
+        summary: 'Modifier seulement certaines informations.',
         operationId: 'patchRemoteService',
         tags: ['Services distants'],
         requestBody: {
@@ -621,7 +621,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la [d
         },
         responses: {
           200: {
-            description: `Informations du service distant modifié`,
+            description: 'Informations du service distant modifié',
             content: {
               'application/json': {
                 schema: {
@@ -633,12 +633,12 @@ Pour des exemples simples de publication de données vous pouvez consulter la [d
         }
       },
       delete: {
-        summary: `Supprimer un service distant.`,
+        summary: 'Supprimer un service distant.',
         operationId: 'deleteRemoteService',
         tags: ['Services distants'],
         responses: {
           204: {
-            description: `Service distant supprimé`
+            description: 'Service distant supprimé'
           }
         }
       }
@@ -712,12 +712,12 @@ Pour des exemples simples de publication de données vous pouvez consulter la [d
     '/catalogs/{id}': {
       parameters: [utils.idParam],
       get: {
-        summary: `Récupérer les informations d'un catalogue.`,
+        summary: 'Récupérer les informations d\'un catalogue.',
         operationId: 'getCatalog',
         tags: ['Catalogues'],
         responses: {
           200: {
-            description: `Informations d'un catalogue`,
+            description: 'Informations d\'un catalogue',
             content: {
               'application/json': {
                 schema: {
@@ -745,7 +745,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la [d
         },
         responses: {
           201: {
-            description: `Catalogue créé`,
+            description: 'Catalogue créé',
             content: {
               'application/json': {
                 schema: {
@@ -755,7 +755,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la [d
             }
           },
           200: {
-            description: `Catalogue modifié`,
+            description: 'Catalogue modifié',
             content: {
               'application/json': {
                 schema: {
@@ -767,7 +767,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la [d
         }
       },
       patch: {
-        summary: `Modifier seulement certaines informations.`,
+        summary: 'Modifier seulement certaines informations.',
         operationId: 'patchCatalog',
         tags: ['Catalogues'],
         requestBody: {
@@ -783,7 +783,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la [d
         },
         responses: {
           200: {
-            description: `Informations du catalogue modifié`,
+            description: 'Informations du catalogue modifié',
             content: {
               'application/json': {
                 schema: {
@@ -795,12 +795,12 @@ Pour des exemples simples de publication de données vous pouvez consulter la [d
         }
       },
       delete: {
-        summary: `Supprimer un catalogue.`,
+        summary: 'Supprimer un catalogue.',
         operationId: 'deleteCatalog',
         tags: ['Catalogues'],
         responses: {
           204: {
-            description: `Catalogue supprimé`
+            description: 'Catalogue supprimé'
           }
         }
       }

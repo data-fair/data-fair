@@ -104,7 +104,7 @@ export default {
       try {
         this.catalog = await this.$axios.$post('api/v1/catalogs/_init', null, { params: { url: this.catalogUrl } })
       } catch (error) {
-        eventBus.$emit('notification', { error, msg: `Erreur pendant la récupération des informations du catalogue` })
+        eventBus.$emit('notification', { error, msg: 'Erreur pendant la récupération des informations du catalogue' })
       }
     },
     async importCatalog() {
@@ -118,7 +118,7 @@ export default {
         const catalog = await this.$axios.$post('api/v1/catalogs', this.catalog, options)
         this.$router.push({ path: `/catalog/${catalog.id}/description` })
       } catch (error) {
-        eventBus.$emit('notification', { error, msg: `Erreur pendant l'import de la description du catalogue` })
+        eventBus.$emit('notification', { error, msg: 'Erreur pendant l\'import de la description du catalogue' })
         this.importing = false
       }
     }

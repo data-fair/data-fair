@@ -79,7 +79,7 @@ export default {
         const dataset = await this.$axios.$post('api/v1/datasets', { isRest: true, title: this.title, rest: this.rest }, options)
         this.$router.push({ path: `/dataset/${dataset.id}/description` })
       } catch (error) {
-        eventBus.$emit('notification', { error, msg: `Erreur pendant la création du jeu de données incrémental :` })
+        eventBus.$emit('notification', { error, msg: 'Erreur pendant la création du jeu de données incrémental :' })
       }
     }
   }

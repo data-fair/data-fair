@@ -37,7 +37,7 @@ const webhooks = require('../utils/webhooks')
 const datasetPatchSchema = require('../../contract/dataset-patch')
 const validatePatch = ajv.compile(datasetPatchSchema)
 const debugFiles = require('debug')('files')
-let router = express.Router()
+const router = express.Router()
 
 const datasetFileSample = require('../utils/dataset-file-sample')
 const baseTypes = new Set(['text/csv', 'application/geo+json'])
@@ -57,17 +57,17 @@ function clean(dataset) {
 router.get('', cacheHeaders.noCache, asyncWrap(async(req, res) => {
   const datasets = req.app.get('db').collection('datasets')
   const filterFields = {
-    'concepts': 'schema.x-refersTo',
+    concepts: 'schema.x-refersTo',
     'field-type': 'schema.type',
     'field-format': 'schema.format',
-    'children': 'virtual.children',
-    'services': 'extensions.remoteService',
-    'status': 'status'
+    children: 'virtual.children',
+    services: 'extensions.remoteService',
+    status: 'status'
   }
   const query = findUtils.query(req, Object.assign({
-    'filename': 'originalFile.name',
-    'ids': 'id',
-    'id': 'id'
+    filename: 'originalFile.name',
+    ids: 'id',
+    id: 'id'
   }, filterFields))
   if (req.query.bbox === 'true') {
     query.bbox = { $ne: null }
@@ -193,7 +193,7 @@ router.patch('/:datasetId', readDataset(['finalized', 'error']), permissions.mid
   }
 
   const patchedDataset = (await req.app.get('db').collection('datasets')
-    .findOneAndUpdate({ id: req.params.datasetId }, { '$set': patch }, { returnOriginal: false })).value
+    .findOneAndUpdate({ id: req.params.datasetId }, { $set: patch }, { returnOriginal: false })).value
   res.status(200).json(clean(patchedDataset))
 }))
 
@@ -202,7 +202,7 @@ router.put('/:datasetId/owner', readDataset(), permissions.middleware('delete', 
   // Must be able to delete the current dataset, and to create a new one for the new owner to proceed
   if (!permissions.canDoForOwner(req.body, 'postDataset', req.user, req.app.get('db'))) return res.sendStatus(403)
   const patchedDataset = (await req.app.get('db').collection('datasets')
-    .findOneAndUpdate({ id: req.params.datasetId }, { '$set': { owner: req.body } }, { returnOriginal: false })).value
+    .findOneAndUpdate({ id: req.params.datasetId }, { $set: { owner: req.body } }, { returnOriginal: false })).value
 
   // Move all files
   try {
@@ -370,7 +370,7 @@ router.post('', beforeUpload, filesUtils.uploadFile(), asyncWrap(async(req, res)
     res.status(201).send(clean(dataset))
   } catch (err) {
   // Wrapped the whole thing in a try/catch to remove files in case of failure
-    for (let file of req.files) {
+    for (const file of req.files) {
       await fs.remove(file.path)
     }
     throw err
@@ -442,7 +442,7 @@ const updateDataset = asyncWrap(async(req, res) => {
     res.status(req.isNewDataset ? 201 : 200).send(clean(dataset))
   } catch (err) {
     // Wrapped the whole thing in a try/catch to remove files in case of failure
-    for (let file of req.files) {
+    for (const file of req.files) {
       await fs.remove(file.path)
     }
     throw err
@@ -483,7 +483,7 @@ async function manageESError(req, err) {
   }
 
   if (req.dataset.status === 'finalized' && err.statusCode >= 404 && errBody.type !== 'search_phase_execution_exception') {
-    await req.app.get('db').collection('datasets').updateOne({ id: req.params.datasetId }, { '$set': { status: 'error' } })
+    await req.app.get('db').collection('datasets').updateOne({ id: req.params.datasetId }, { $set: { status: 'error' } })
     await journals.log(req.app, req.dataset, { type: 'error', data: message })
   }
   throw createError(err.status, message)
@@ -800,11 +800,13 @@ router.get('/:datasetId/full', readDataset(), permissions.middleware('downloadFu
   await pump(
     readStream,
     extensions.preserveExtensionStream({ db, esClient: req.app.get('es'), dataset: req.dataset }),
-    new Transform({ transform(chunk, encoding, callback) {
-      const flatChunk = flatten(chunk)
-      callback(null, relevantSchema.map(field => flatChunk[field.key]))
-    },
-    objectMode: true }),
+    new Transform({
+      transform(chunk, encoding, callback) {
+        const flatChunk = flatten(chunk)
+        callback(null, relevantSchema.map(field => flatChunk[field.key]))
+      },
+      objectMode: true
+    }),
     csvStringify({ columns: relevantSchema.map(field => field.title || field['x-originalName'] || field.key), header: true }),
     res
   )

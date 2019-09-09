@@ -63,8 +63,8 @@ test.serial('Unknown external service', async t => {
 test.serial('Prevent abusing remote service re-exposition', async t => {
   const ax = await axiosBuilder('superadmin@test.com:superpasswd')
 
-  let nockScope = nock('http://test.com').get('/geocoder/coord').reply(200, { content: 'ok' })
-  let res = await ax.get('/api/v1/remote-services/geocoder-koumoul/proxy/coord')
+  const nockScope = nock('http://test.com').get('/geocoder/coord').reply(200, { content: 'ok' })
+  const res = await ax.get('/api/v1/remote-services/geocoder-koumoul/proxy/coord')
   t.is(res.data.content, 'ok')
   nockScope.done()
   try {

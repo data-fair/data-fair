@@ -57,13 +57,13 @@ router.get('', cacheHeaders.noCache, asyncWrap(async(req, res) => {
     req.query.service = config.publicUrl + '/api/v1/remote-services/' + req.query.service
   }
   const filterFields = {
-    'url': 'url',
+    url: 'url',
     'base-application': 'url',
-    'dataset': 'configuration.datasets.href'
+    dataset: 'configuration.datasets.href'
   }
   const query = findUtils.query(req, Object.assign({
-    'ids': 'id',
-    'id': 'id'
+    ids: 'id',
+    id: 'id'
   }, filterFields))
   const sort = findUtils.sort(req.query.sort)
   const project = findUtils.project(req.query.select, ['configuration', 'configurationDraft'])
@@ -192,7 +192,7 @@ router.patch('/:applicationId', readApplication, permissions.middleware('writeDe
   patch.updatedBy = { id: req.user.id, name: req.user.name }
 
   const patchedApplication = (await req.app.get('db').collection('applications')
-    .findOneAndUpdate({ id: req.params.applicationId }, { '$set': patch }, { returnOriginal: false })).value
+    .findOneAndUpdate({ id: req.params.applicationId }, { $set: patch }, { returnOriginal: false })).value
   res.status(200).json(clean(patchedApplication))
 }))
 
@@ -201,7 +201,7 @@ router.put('/:applicationId/owner', readApplication, permissions.middleware('del
   // Must be able to delete the current application, and to create a new one for the new owner to proceed
   if (!permissions.canDoForOwner(req.body, 'postApplication', req.user, req.app.get('db'))) return res.sendStatus(403)
   const patchedApp = (await req.app.get('db').collection('applications')
-    .findOneAndUpdate({ id: req.params.applicationId }, { '$set': { owner: req.body } }, { returnOriginal: false })).value
+    .findOneAndUpdate({ id: req.params.applicationId }, { $set: { owner: req.body } }, { returnOriginal: false })).value
   res.status(200).json(clean(patchedApp))
 }))
 
@@ -234,12 +234,14 @@ const writeConfig = asyncWrap(async(req, res) => {
   if (!valid) return res.status(400).send(validateConfiguration.errors)
   await req.app.get('db').collection('applications').updateOne(
     { id: req.params.applicationId },
-    { $set: {
-      configuration: req.body,
-      updatedAt: moment().toISOString(),
-      updatedBy: { id: req.user.id, name: req.user.name },
-      status: 'configured'
-    } }
+    {
+      $set: {
+        configuration: req.body,
+        updatedAt: moment().toISOString(),
+        updatedBy: { id: req.user.id, name: req.user.name },
+        status: 'configured'
+      }
+    }
   )
   await journals.log(req.app, req.application, { type: 'config-updated' }, 'application')
   capture.screenshot(req)
@@ -257,12 +259,14 @@ router.put('/:applicationId/configuration-draft', readApplication, permissions.m
   if (!valid) return res.status(400).send(validateConfiguration.errors)
   await req.app.get('db').collection('applications').updateOne(
     { id: req.params.applicationId },
-    { $set: {
-      configurationDraft: req.body,
-      updatedAt: moment().toISOString(),
-      updatedBy: { id: req.user.id, name: req.user.name },
-      status: 'configured-draft'
-    } }
+    {
+      $set: {
+        configurationDraft: req.body,
+        updatedAt: moment().toISOString(),
+        updatedBy: { id: req.user.id, name: req.user.name },
+        status: 'configured-draft'
+      }
+    }
   )
   await journals.log(req.app, req.application, { type: 'config-draft-updated' }, 'application')
   res.status(200).json(req.body)
@@ -294,7 +298,7 @@ router.get('/:applicationId/journal', readApplication, permissions.middleware('r
 router.post('/:applicationId/error', readApplication, permissions.middleware('writeConfig', 'write'), cacheHeaders.noCache, asyncWrap(async(req, res) => {
   if (!req.body.message) return res.status(400).send('Attribut "message" obligatoire')
   if (req.application.status && req.application.status.startsWith('configured')) {
-    await req.app.get('db').collection('applications').updateOne({ id: req.params.applicationId }, { '$set': { status: 'error' } })
+    await req.app.get('db').collection('applications').updateOne({ id: req.params.applicationId }, { $set: { status: 'error' } })
     await journals.log(req.app, req.application, { type: 'error', data: req.body.message }, 'application')
   }
   res.status(204).send()

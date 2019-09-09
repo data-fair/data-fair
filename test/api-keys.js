@@ -4,7 +4,7 @@ const { test, axiosBuilder } = testUtils.prepare(__filename)
 test.serial('Reject wrong api key', async t => {
   const ax = await axiosBuilder(null, { headers: { 'x-apiKey': 'wrong' } })
   try {
-    await ax.get(`/api/v1/stats`)
+    await ax.get('/api/v1/stats')
     t.fail()
   } catch (err) {
     t.is(err.status, 401)
@@ -13,10 +13,12 @@ test.serial('Reject wrong api key', async t => {
 
 test.serial('Create and use a User level api key', async t => {
   const ax = await axiosBuilder('dmeadus0@answers.com:passwd')
-  const res = await ax.put(`/api/v1/settings/user/dmeadus0`, { apiKeys: [
-    { title: 'key1', scopes: ['stats'] },
-    { title: 'key2', scopes: ['datasets'] }
-  ] })
+  const res = await ax.put('/api/v1/settings/user/dmeadus0', {
+    apiKeys: [
+      { title: 'key1', scopes: ['stats'] },
+      { title: 'key2', scopes: ['datasets'] }
+    ]
+  })
   t.is(res.data.name, 'Danna Meadus')
   const key1 = res.data.apiKeys[0].clearKey
   t.truthy(key1)
@@ -25,12 +27,12 @@ test.serial('Create and use a User level api key', async t => {
 
   // Right scope
   const axKey1 = await axiosBuilder(null, { headers: { 'x-apiKey': key1 } })
-  await axKey1.get(`/api/v1/stats`)
+  await axKey1.get('/api/v1/stats')
 
   // Wrong scope
   const axKey2 = await axiosBuilder(null, { headers: { 'x-apiKey': key2 } })
   try {
-    await axKey2.get(`/api/v1/stats`)
+    await axKey2.get('/api/v1/stats')
     t.fail()
   } catch (err) {
     t.is(err.status, 403)
@@ -45,9 +47,11 @@ test.serial('Create and use a User level api key', async t => {
 
 test.serial('Create and use an organization level api key', async t => {
   const ax = await axiosBuilder('cdurning2@desdev.cn:passwd')
-  const res = await ax.put(`/api/v1/settings/organization/3sSi7xDIK`, { apiKeys: [
-    { title: 'key1', scopes: ['datasets'] }
-  ] })
+  const res = await ax.put('/api/v1/settings/organization/3sSi7xDIK', {
+    apiKeys: [
+      { title: 'key1', scopes: ['datasets'] }
+    ]
+  })
   t.is(res.data.name, 'Ntag')
   const key1 = res.data.apiKeys[0].clearKey
   t.truthy(key1)

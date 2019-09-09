@@ -125,14 +125,16 @@ export default {
           .map(([facetValue]) => facetValue).join(',')
         if (facetFilter) fullFilters[facetKey] = facetFilter
       })
-      this.applications = await this.$axios.$get('api/v1/applications', { params: {
-        size: this.size,
-        page: this.page,
-        select: 'title,description,status',
-        ...fullFilters,
-        facets: 'owner,visibility,base-application',
-        sort: 'createdAt:-1'
-      } })
+      this.applications = await this.$axios.$get('api/v1/applications', {
+        params: {
+          size: this.size,
+          page: this.page,
+          select: 'title,description,status',
+          ...fullFilters,
+          facets: 'owner,visibility,base-application',
+          sort: 'createdAt:-1'
+        }
+      })
       this.filtered = this.filters.q !== undefined
       this.loading = false
     }

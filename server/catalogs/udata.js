@@ -154,7 +154,7 @@ async function addResourceToDataset(catalog, dataset, publication) {
   const datasetUrl = catalog.datasetUrlTemplate && catalog.datasetUrlTemplate.replace('{id}', dataset.id)
   const resources = [{
     title: `${title} - Description des champs`,
-    description: `Description détaillée et types sémantiques des champs`,
+    description: 'Description détaillée et types sémantiques des champs',
     url: datasetUrl || `${config.publicUrl}/dataset/${dataset.id}/description`,
     type: 'documentation',
     filetype: 'remote',
@@ -167,7 +167,7 @@ async function addResourceToDataset(catalog, dataset, publication) {
     }
   }, {
     title: `${title} - Documentation de l'API`,
-    description: `Documentation interactive de l'API à destination des développeurs. La description de l'API utilise la spécification [OpenAPI 3.0.1](https://github.com/OAI/OpenAPI-Specification)`,
+    description: 'Documentation interactive de l\'API à destination des développeurs. La description de l\'API utilise la spécification [OpenAPI 3.0.1](https://github.com/OAI/OpenAPI-Specification)',
     url: datasetUrl || `${config.publicUrl}/dataset/${dataset.id}/api`,
     type: 'documentation',
     filetype: 'remote',
@@ -216,7 +216,7 @@ async function addResourceToDataset(catalog, dataset, publication) {
 
   // Create new resources
   try {
-    for (let resource of resources) {
+    for (const resource of resources) {
       await axios.post(url.resolve(catalog.url, `api/1/datasets/${publication.addToDataset.id}/resources/`),
         resource, { headers: { 'X-API-KEY': catalog.apiKey } })
     }
@@ -229,7 +229,7 @@ async function addResourceToDataset(catalog, dataset, publication) {
   }
 
   // Cleanup previous ones
-  for (let existingResource of catalogDataset.resources) {
+  for (const existingResource of catalogDataset.resources) {
     existingResource.extras = existingResource.extras || {}
     if (existingResource.extras.datafairOrigin === config.publicUrl && existingResource.extras.datafairDatasetId === dataset.id) {
       await axios.delete(url.resolve(catalog.url, `api/1/datasets/${publication.addToDataset.id}/resources/${existingResource.id}/`),
@@ -250,8 +250,8 @@ async function createOrUpdateDataset(catalog, dataset, publication) {
       datafairDatasetId: dataset.id
     },
     resources: [{
-      title: `Description des champs`,
-      description: `Description détaillée et types sémantiques des champs`,
+      title: 'Description des champs',
+      description: 'Description détaillée et types sémantiques des champs',
       url: datasetUrl || `${config.publicUrl}/dataset/${dataset.id}/description`,
       type: 'documentation',
       filetype: 'remote',
@@ -261,8 +261,8 @@ async function createOrUpdateDataset(catalog, dataset, publication) {
         datafairEmbed: 'fields'
       }
     }, {
-      title: `Documentation de l'API`,
-      description: `Documentation interactive de l'API à destination des développeurs. La description de l'API utilise la spécification [OpenAPI 3.0.1](https://github.com/OAI/OpenAPI-Specification)`,
+      title: 'Documentation de l\'API',
+      description: 'Documentation interactive de l\'API à destination des développeurs. La description de l\'API utilise la spécification [OpenAPI 3.0.1](https://github.com/OAI/OpenAPI-Specification)',
       url: datasetUrl || `${config.publicUrl}/dataset/${dataset.id}/api`,
       type: 'documentation',
       filetype: 'remote',
@@ -345,7 +345,7 @@ async function deleteResourceFromDataset(catalog, dataset, publication) {
   const resources = (udataDataset.resources || []).filter(resource => {
     return resource.extras && resource.extras.datafairDatasetId === dataset.id
   })
-  for (let resource of resources) {
+  for (const resource of resources) {
     try {
       await axios.delete(url.resolve(catalog.url, `api/1/datasets/${udataDataset.id}/resources/${resource.id}/`), { headers: { 'X-API-KEY': catalog.apiKey } })
     } catch (err) {

@@ -20,10 +20,12 @@ test.serial('Create REST dataset and define specific projection', async t => {
   try {
     await workers.hook(`finalizer/${dataset.id}`)
   } catch (err) { }
-  await ax.patch(`/api/v1/datasets/${dataset.id}`, { projection: {
-    title: 'NTF (Paris) / Lambert zone II',
-    code: 'EPSG:27572'
-  } })
+  await ax.patch(`/api/v1/datasets/${dataset.id}`, {
+    projection: {
+      title: 'NTF (Paris) / Lambert zone II',
+      code: 'EPSG:27572'
+    }
+  })
   await workers.hook(`finalizer/${dataset.id}`)
   res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { select: 'x,y,_geopoint' } })
   t.truthy(res.data.results[0]._geopoint)

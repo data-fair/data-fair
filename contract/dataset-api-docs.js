@@ -401,7 +401,7 @@ La valeur est une liste de champs séparés par des virgules.
       },
       '/values/{field}': {
         get: {
-          summary: `Récupérer la liste des valeurs distinctes d'un champ éventuellement filtrée par le paramètre q.`,
+          summary: 'Récupérer la liste des valeurs distinctes d\'un champ éventuellement filtrée par le paramètre q.',
           operationId: 'getValues',
           'x-permissionClass': 'read',
           tags: ['Données'],
@@ -464,7 +464,7 @@ La valeur est une liste de champs séparés par des virgules.
           parameters: [{
             in: 'query',
             name: 'field',
-            description: `Le champ sur lequel effectuer l'analyse`,
+            description: 'Le champ sur lequel effectuer l\'analyse',
             required: true,
             schema: {
               type: 'string',
@@ -572,7 +572,7 @@ La valeur est une liste de champs séparés par des virgules.
           tags: ['Métadonnées'],
           parameters: [
             utils.filterParam('type', 'Filtre sur le type de champ', ['string', 'boolean', 'integer', 'number']),
-            utils.filterParam('format', `Filtre sur de format d'un champ de type chaine de caractère`, ['uri-reference', 'date', 'date-time']),
+            utils.filterParam('format', 'Filtre sur de format d\'un champ de type chaine de caractère', ['uri-reference', 'date', 'date-time']),
             {
               in: 'query',
               name: 'enum',

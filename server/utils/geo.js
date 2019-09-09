@@ -156,7 +156,7 @@ const customUnkink = async (feature) => {
   try {
     if (feature.geometry.type === 'MultiPolygon') {
       const newCoordinates = []
-      for (let coordinates of feature.geometry.coordinates) {
+      for (const coordinates of feature.geometry.coordinates) {
         const childPolygon = { type: 'Feature', geometry: { type: 'Polygon', coordinates } }
         await prepair(childPolygon)
         if (childPolygon.geometry.type === 'Polygon') newCoordinates.push(childPolygon.geometry.coordinates)

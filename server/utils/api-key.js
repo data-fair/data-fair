@@ -12,8 +12,8 @@ module.exports = (scope) => {
     const hashedApiKey = hash.digest('hex')
     const settings = await req.app.get('db').collection('settings')
       .findOne({ 'apiKeys.key': hashedApiKey }, { projection: { _id: 0, id: 1, type: 1, name: 1, 'apiKeys.$': 1 } })
-    if (!settings) return res.status(401).send(`Cette clé d'API est inconnue.`)
-    if (!settings.apiKeys[0].scopes.includes(scope)) return res.status(403).send(`Cette clé d'API n'a pas la portée nécessaire.`)
+    if (!settings) return res.status(401).send('Cette clé d\'API est inconnue.')
+    if (!settings.apiKeys[0].scopes.includes(scope)) return res.status(403).send('Cette clé d\'API n\'a pas la portée nécessaire.')
     if (settings.type === 'user') {
       req.user = { id: settings.id, name: settings.name, organizations: [], isApiKey: true }
     } else {

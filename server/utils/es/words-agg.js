@@ -57,7 +57,8 @@ module.exports = async (client, dataset, query) => {
 // it is suggested that the highlight logic is the closest there is to satisfying this need
 // so we search for the analyzed term in the documents, get highlights and get the most frequest highlighted piece of text
 async function unstem(client, dataset, field, key) {
-  const res = await client.search({ index: aliasName(dataset),
+  const res = await client.search({
+    index: aliasName(dataset),
     body: {
       size: 20,
       query: { term: { [field]: key } },
@@ -68,7 +69,8 @@ async function unstem(client, dataset, field, key) {
         pre_tags: '<>',
         post_tags: '<>'
       }
-    } })
+    }
+  })
 
   const words = {}
   res.hits.hits.forEach(hit => {

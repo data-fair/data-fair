@@ -39,7 +39,8 @@ exports.parse = async (filePath) => {
   }
 
   const events = cal.events()
-  return { infos,
+  return {
+    infos,
     eventsStream: new Readable({
       objectMode: true,
       read() {
@@ -101,7 +102,8 @@ exports.parse = async (filePath) => {
           this.destroy(err)
         }
       }
-    }) }
+    })
+  }
 }
 
 exports.prepareSchema = (dataset, icalInfos) => {

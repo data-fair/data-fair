@@ -25,10 +25,11 @@ class AnalyzerWritable extends Writable {
       'x-refersTo': 'https://purl.org/geojson/vocab#geometry'
     }]
   }
+
   _write(feature, encoding, callback) {
     const properties = feature.properties || {}
     if (feature.id) properties.id = feature.id
-    for (let property in properties) {
+    for (const property in properties) {
       this.samples[property] = this.samples[property] || new Set([])
       // Use 100 first values, then 1 in ten until 200
       const size = this.samples[property].size
@@ -38,8 +39,9 @@ class AnalyzerWritable extends Writable {
     }
     callback()
   }
+
   _final(callback) {
-    for (let property in this.samples) {
+    for (const property in this.samples) {
       const key = fieldsSniffer.escapeKey(property)
       this.schema.push({
         key,
@@ -67,7 +69,7 @@ exports.process = async function(app, dataset) {
   await db.collection('datasets').updateOne({ id: dataset.id }, {
     $set: {
       status: 'schematized',
-      'schema': analyzer.schema
+      schema: analyzer.schema
     }
   })
 }
