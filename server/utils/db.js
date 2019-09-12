@@ -15,8 +15,7 @@ exports.connect = async () => {
   let client
   const opts = {
     useNewUrlParser: true,
-    reconnectTries: Number.MAX_VALUE,
-    useUnifiedTopology: true
+    reconnectTries: Number.MAX_VALUE
   }
   debug('Connecting to mongodb ' + config.mongoUrl)
   try {

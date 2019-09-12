@@ -88,16 +88,11 @@ exports.initServer = async (wss, db) => {
   const mongoChannel = await channel(db)
   await mongoChannel.insertOne({ type: 'init' })
   initCursor(db, mongoChannel)
-  db.on('reconnect', () => {
-    console.log('RECONNECT !!!')
-    if (cursor) cursor.close()
-    initCursor(db, mongoChannel)
-  })
 }
 
 // Listen to pubsub channel based on mongodb to support scaling on multiple processes
 const initCursor = (db, mongoChannel) => {
-  cursor = mongoChannel.find({}, { tailable: true, awaitdata: true, numberOfRetries: -1 })
+  cursor = mongoChannel.find({}, { tailable: true, awaitdata: true })
   cursor.forEach(doc => {
     if (stopped) return
     if (doc && doc.type === 'message') {
@@ -106,6 +101,11 @@ const initCursor = (db, mongoChannel) => {
         if (clients[sub]) clients[sub].send(JSON.stringify(doc))
       })
     }
+  }, async () => {
+    if (stopped) return
+    await new Promise(resolve => setTimeout(resolve, 1000))
+    console.log('WS tailable cursor was interrupted, reinit it')
+    initCursor(db, mongoChannel)
   })
 }
 
