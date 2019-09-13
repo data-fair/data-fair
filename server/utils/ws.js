@@ -91,13 +91,13 @@ exports.initServer = async (wss, db) => {
 }
 
 // Listen to pubsub channel based on mongodb to support scaling on multiple processes
+let startDate = new Date().toISOString()
 const initCursor = (db, mongoChannel) => {
   cursor = mongoChannel.find({}, { tailable: true, awaitdata: true })
-  const initDate = new Date().toISOString()
   cursor.forEach(doc => {
     if (stopped) return
     if (doc && doc.type === 'message') {
-      if (doc.data.date && doc.data.date < initDate) return
+      if (doc.data.date && doc.data.date < startDate) return
       const subs = subscribers[doc.channel] || {}
       Object.keys(subs).forEach(sub => {
         if (clients[sub]) clients[sub].send(JSON.stringify(doc))
@@ -105,6 +105,7 @@ const initCursor = (db, mongoChannel) => {
     }
   }, async () => {
     if (stopped) return
+    startDate = new Date().toISOString()
     await new Promise(resolve => setTimeout(resolve, 1000))
     console.log('WS tailable cursor was interrupted, reinit it')
     initCursor(db, mongoChannel)
