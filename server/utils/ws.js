@@ -103,11 +103,11 @@ const initCursor = (db, mongoChannel) => {
         if (clients[sub]) clients[sub].send(JSON.stringify(doc))
       })
     }
-  }, async () => {
+  }, async (err) => {
     if (stopped) return
     startDate = new Date().toISOString()
     await new Promise(resolve => setTimeout(resolve, 1000))
-    console.log('WS tailable cursor was interrupted, reinit it')
+    console.log('WS tailable cursor was interrupted, reinit it', err && err.message)
     initCursor(db, mongoChannel)
   })
 }
