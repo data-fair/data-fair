@@ -138,7 +138,7 @@ exports.run = async () => {
     workers.start(app)
   }
 
-  // special mode: runn the process to execute a single worker tasks
+  // special mode: run the process to execute a single worker tasks
   // for  extra resiliency to fatal memory exceptions
   if (config.mode === 'task') {
     const resource = await app.get('db').collection(process.argv[3] + 's').findOne({ id: process.argv[4] })
