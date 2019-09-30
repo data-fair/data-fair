@@ -25,6 +25,7 @@ const schema = {
       key: { type: 'string' },
       type: { type: 'string' },
       format: { type: ['string', 'null'] },
+      separator: { type: ['string', 'null'] },
       'x-originalName': { type: ['string', 'null'] },
       'x-refersTo': { type: ['string', 'null'] },
       'x-calculated': { type: 'boolean' }

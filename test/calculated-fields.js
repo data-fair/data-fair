@@ -2,7 +2,9 @@ const testUtils = require('./resources/test-utils')
 
 const { test, axiosBuilder } = testUtils.prepare(__filename)
 
-test.serial('Search and apply facets', async t => {
+const workers = require('../server/workers')
+
+test.serial('Should add special calculated fields', async t => {
   const ax = await axiosBuilder('dmeadus0@answers.com:passwd')
 
   // 1 dataset in user zone
@@ -17,4 +19,29 @@ test.serial('Search and apply facets', async t => {
   t.is(res.data.results[1]._i, 2)
   t.truthy(res.data.results[0]._rand)
   t.truthy(res.data.results[0]._id)
+})
+
+test.serial('Should split by separator if specified', async t => {
+  const ax = await axiosBuilder('dmeadus0@answers.com:passwd')
+
+  // 1 dataset in user zone
+  const dataset = await testUtils.sendDataset('dataset-split.csv', ax)
+  // keywords columns is not splitted, so only searchable through full text subfield
+  let res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { select: 'keywords', qs: 'keywords:opendata' } })
+  t.is(res.data.total, 0)
+  res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { select: 'keywords', qs: 'keywords.text:opendata' } })
+  t.is(res.data.total, 1)
+
+  // Update schema to specify separator for keywords col
+  const keywordsProp = dataset.schema.find(p => p.key === 'keywords')
+  keywordsProp.separator = ' ; '
+  await ax.patch('/api/v1/datasets/' + dataset.id, { schema: dataset.schema })
+  await workers.hook('finalizer')
+  res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { select: 'keywords', qs: 'keywords:opendata' } })
+  t.is(res.data.total, 1)
+  // result is rejoined
+  t.is(res.data.results[0].keywords, 'informatique ; opendata ; sas')
+  // agregations work with the splitted values
+  res = await ax.get(`/api/v1/datasets/${dataset.id}/values_agg?field=keywords`)
+  t.is(res.data.aggs.find(agg => agg.value === 'opendata').total, 1)
 })

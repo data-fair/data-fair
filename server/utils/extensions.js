@@ -432,6 +432,7 @@ class PreserveExtensionStream extends Transform {
 }
 
 exports.applyCalculations = async (dataset, item) => {
+  // Add base64 content of attachments
   const attachmentField = dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')
   if (attachmentField && item[attachmentField.key]) {
     const filePath = path.join(datasetUtils.attachmentsDir(dataset), item[attachmentField.key])
@@ -442,11 +443,18 @@ exports.applyCalculations = async (dataset, item) => {
     }
   }
 
+  // calculate geopoint and geometry fields depending on concepts
   if (geoUtils.schemaHasGeopoint(dataset.schema)) {
     Object.assign(item, geoUtils.latlon2fields(dataset, item))
   } else if (geoUtils.schemaHasGeometry(dataset.schema)) {
     Object.assign(item, await geoUtils.geometry2fields(dataset.schema, item))
   }
+
   // Add a pseudo-random number for random sorting (more natural distribution)
   item._rand = randomSeed.create(item._i)(1000000)
+
+  // split the fields that have a separator in their schema
+  dataset.schema.filter(field => field.separator && item[field.key]).forEach(field => {
+    item[field.key] = item[field.key].split(field.separator.trim()).map(part => part.trim())
+  })
 }

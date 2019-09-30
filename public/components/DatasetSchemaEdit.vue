@@ -40,13 +40,27 @@
             <v-text-field v-model="field.key" :disabled="true" label="Clé" />
           </v-flex>
           <v-flex xs2>
-            <v-text-field :disabled="true" :value="`${field.type}${field.format ? ' - ' + field.format : ''}`" label="Type" />
+            <v-layout v-if="field.type === 'string'" row>
+              <v-flex xs8>
+                <v-text-field :disabled="true" :value="`${field.type}${field.format ? ' - ' + field.format : ''}`" label="Type" />
+              </v-flex>
+              <v-flex xs4>
+                <v-select
+                  v-model="field.separator"
+                  :items="[', ', '; ', ' - ', ' / ']"
+                  :disabled="field['x-extension'] || field.key.startsWith('_')"
+                  label="Split"
+                  placeholder=" "
+                />
+              </v-flex>
+            </v-layout>
+            <v-text-field v-else :disabled="true" :value="`${field.type}${field.format ? ' - ' + field.format : ''}`" label="Type" />
           </v-flex>
           <v-flex xs3>
             <v-text-field v-model="field.title" :placeholder="field['x-originalName']" label="Libellé" />
           </v-flex>
           <v-flex xs3>
-            <v-textarea :id="'description-' + field.key" v-model="field.description" label="Description" rows="1" />
+            <v-textarea :id="'description-' + field.key" v-model="field.description" label="Description" rows="1" placeholder=" " />
           </v-flex>
           <v-flex xs2>
             <v-select
@@ -57,6 +71,7 @@
               item-text="title"
               item-value="id"
               label="Concept"
+              placeholder=" "
             />
             <v-text-field v-else-if="field['x-refersTo'] && vocabulary[field['x-refersTo']]" v-model="vocabulary[field['x-refersTo']].title" label="Concept" disabled />
           </v-flex>

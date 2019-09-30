@@ -205,6 +205,11 @@ exports.getQueryBBOX = (query) => {
 }
 
 exports.prepareResultItem = (hit, dataset, query) => {
+  // re-join splitted items
+  dataset.schema.filter(field => field.separator && hit._source[field.key] && Array.isArray(hit._source[field.key])).forEach(field => {
+    hit._source[field.key] = hit._source[field.key].join(field.separator)
+  })
+
   const res = flatten(hit._source)
   res._score = hit._score
   if (dataset.schema.find(f => f.key === '_id')) {
@@ -230,5 +235,6 @@ exports.prepareResultItem = (hit, dataset, query) => {
   if (descriptionField && res[descriptionField.key]) {
     res[descriptionField.key] = sanitizeHtml(res[descriptionField.key])
   }
+
   return res
 }
