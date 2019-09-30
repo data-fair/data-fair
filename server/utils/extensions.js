@@ -10,6 +10,7 @@ const hash = require('object-hash')
 const pump = util.promisify(require('pump'))
 const flatten = require('flat')
 const turf = require('@turf/turf')
+const randomSeed = require('random-seed')
 const es = require('./es')
 const geoUtils = require('./geo')
 const journals = require('./journals')
@@ -75,20 +76,6 @@ exports.extend = async(app, dataset, extension, remoteService, action) => {
 }
 
 exports.preserveExtensionStream = (options) => new PreserveExtensionStream(options)
-
-exports.extendCalculated = async (app, dataset, geopoint, geometry) => {
-  const indexName = es.aliasName(dataset)
-  const esClient = app.get('es')
-  const indexStream = es.indexStream({ esClient, indexName, updateMode: true })
-  await pump(
-    new ESInputStream({ esClient, indexName }),
-    new CalculatedExtensionStream({ indexName, geopoint, geometry, dataset }),
-    indexStream,
-    new Writable({ objectMode: true, write(chunk, encoding, cb) { cb() } })
-  )
-  const errorsSummary = indexStream.errorsSummary()
-  if (errorsSummary) await journals.log(app, dataset, { type: 'error', data: errorsSummary })
-}
 
 exports.prepareSchema = async (db, schema, extensions) => {
   let extensionsFields = []
@@ -399,7 +386,7 @@ class PreserveExtensionStream extends Transform {
   async init() {
     const db = this.options.db
     const esClient = this.options.esClient
-    this.indexName = es.aliasName(this.options.dataset)
+    this.indexName = this.options.indexName
     const extensions = this.options.dataset.extensions || []
     this.mappings = {}
     this.extensionsMap = {}
@@ -420,17 +407,6 @@ class PreserveExtensionStream extends Transform {
   async _transform(item, encoding, callback) {
     try {
       if (!this.mappings) await this.init()
-      if (this.options.attachments) {
-        const attachmentKey = this.options.dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument').key
-        if (item[attachmentKey]) {
-          const filePath = path.join(datasetUtils.attachmentsDir(this.options.dataset), item[attachmentKey])
-          if (await fs.pathExists(filePath)) {
-            item._attachment_url = `${config.publicUrl}/api/v1/datasets/${this.options.dataset.id}/attachments/${item[attachmentKey]}`
-            item._file_raw = (await fs.readFile(filePath))
-              .toString('base64')
-          }
-        }
-      }
       const esClient = this.options.esClient
       for (const extensionKey in this.mappings) {
       /* eslint no-unused-vars: off */
@@ -455,37 +431,22 @@ class PreserveExtensionStream extends Transform {
   }
 }
 
-// A stream that takes documents from a dataset (read from ES), applies some calculations
-// And returns a doc to apply to the document
-class CalculatedExtensionStream extends Transform {
-  constructor(options) {
-    super({ objectMode: true })
-    this.options = options
-  }
-
-  async _transform(item, encoding, callback) {
-    const doc = {}
-    // "hidden" fields for geo indexing
-    try {
-      if (this.options.geometry) {
-        Object.assign(doc, await geoUtils.geometry2fields(this.options.dataset.schema, item.doc))
-      } else if (this.options.geopoint) {
-        Object.assign(doc, geoUtils.latlon2fields(this.options.dataset, item.doc))
-      }
-    } catch (err) {
-      return callback(err)
+exports.applyCalculations = async (dataset, item) => {
+  const attachmentField = dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')
+  if (attachmentField && item[attachmentField.key]) {
+    const filePath = path.join(datasetUtils.attachmentsDir(dataset), item[attachmentField.key])
+    if (await fs.pathExists(filePath)) {
+      item._attachment_url = `${config.publicUrl}/api/v1/datasets/${dataset.id}/attachments/${item[attachmentField.key]}`
+      item._file_raw = (await fs.readFile(filePath))
+        .toString('base64')
     }
-
-    // Remove unchanged properties (we only generate a patch)
-    const unflattenedItem = flatten.unflatten(item.doc)
-    Object.keys(doc).forEach(key => {
-      if (JSON.stringify(doc[key]) === JSON.stringify(unflattenedItem[key]) && key !== '_i') {
-        delete doc[key]
-      }
-    })
-
-    doc._i = item.doc._i
-
-    callback(null, { id: item.id, doc })
   }
+
+  if (geoUtils.schemaHasGeopoint(dataset.schema)) {
+    Object.assign(item, geoUtils.latlon2fields(dataset, item))
+  } else if (geoUtils.schemaHasGeometry(dataset.schema)) {
+    Object.assign(item, await geoUtils.geometry2fields(dataset.schema, item))
+  }
+  // Add a pseudo-random number for random sorting (more natural distribution)
+  item._rand = randomSeed.create(item._i)(1000000)
 }

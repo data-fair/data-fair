@@ -1,7 +1,6 @@
 // Finalize dataset for publication
 const esUtils = require('../utils/es')
 const geoUtils = require('../utils/geo')
-const extensionsUtils = require('../utils/extensions')
 const datasetUtils = require('../utils/dataset')
 const virtualDatasetsUtils = require('../utils/virtual-datasets')
 
@@ -20,15 +19,6 @@ exports.process = async function(app, dataset) {
   const queryableDataset = { ...dataset }
   if (dataset.isVirtual) {
     queryableDataset.descendants = await virtualDatasetsUtils.descendants(db, dataset)
-  } else {
-    // Calculate fields after indexing and extension as we might depend on all fields
-    if (geometry || geopoint) {
-      debug(`Call extendCalculated() with geopoint ${geopoint} and geometry ${geometry}`)
-      await extensionsUtils.extendCalculated(app, dataset, geopoint, geometry)
-      debug('extendCalculated ok')
-    } else {
-      debug('No need for extendCalculated on this dataset')
-    }
   }
 
   const result = { status: 'finalized', schema: dataset.schema }

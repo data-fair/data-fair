@@ -176,6 +176,9 @@ router.patch('/:datasetId', readDataset(['finalized', 'error']), permissions.mid
     }
   } else if (patch.projection && (!req.dataset.projection || patch.projection.code !== req.dataset.projection.code)) {
     patch.status = 'schematized'
+  } else if (patch.schema && patch.schema.find(f => req.dataset.schema.find(df => df.key === f.key && df.separator !== f.separator))) {
+    console.log('Some separator was changed on a field, trigger full re-indexation')
+    patch.status = 'schematized'
   } else if (patch.schema) {
     try {
       await esUtils.updateDatasetMapping(req.app.get('es'), { id: req.dataset.id, schema: patch.schema })
@@ -797,9 +800,10 @@ router.get('/:datasetId/full', readDataset(), permissions.middleware('downloadFu
   let readStream
   if (req.dataset.isRest) readStream = restDatasetsUtils.readStream(db, req.dataset)
   else readStream = datasetUtils.readStream(req.dataset)
+  const indexName = esUtils.aliasName(req.dataset)
   await pump(
     readStream,
-    extensions.preserveExtensionStream({ db, esClient: req.app.get('es'), dataset: req.dataset }),
+    extensions.preserveExtensionStream({ db, esClient: req.app.get('es'), dataset: req.dataset, indexName }),
     new Transform({
       transform(chunk, encoding, callback) {
         const flatChunk = flatten(chunk)

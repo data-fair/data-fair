@@ -1,7 +1,9 @@
 const { Transform } = require('stream')
 const config = require('config')
-const randomSeed = require('random-seed')
+const extensions = require('../extensions')
+
 const debug = require('debug')('index-stream')
+
 class IndexStream extends Transform {
   constructor(options) {
     super({ objectMode: true })
@@ -15,6 +17,7 @@ class IndexStream extends Transform {
   async _transform(item, encoding, callback) {
     try {
       if (this.options.updateMode) {
+        await extensions.applyCalculations(this.options.dataset, item.doc)
         const keys = Object.keys(item.doc)
         if (keys.length === 0 || (keys.length === 1 && keys[0] === '_i')) return callback()
         this.body.push({ update: { _index: this.options.indexName, _id: item.id, retry_on_conflict: 3 } })
@@ -32,8 +35,7 @@ class IndexStream extends Transform {
           delete item._id
         }
         this.body.push(params)
-        // Add a pseudo-random number for random sorting (more natural distribution)
-        item._rand = randomSeed.create(item._i)(1000000)
+        await extensions.applyCalculations(this.options.dataset, item)
         this.body.push(item)
         this.bulkChars += JSON.stringify(item).length
       }

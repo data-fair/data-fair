@@ -39,7 +39,7 @@ exports.process = async function(app, dataset) {
     readStream = datasetUtils.readStream(dataset)
     writeStream = new Writable({ objectMode: true, write(chunk, encoding, cb) { cb() } })
   }
-  await pump(readStream, extensionsUtils.preserveExtensionStream({ db, esClient, dataset, attachments }), indexStream, writeStream)
+  await pump(readStream, extensionsUtils.preserveExtensionStream({ db, esClient, dataset, attachments, indexName }), indexStream, writeStream)
   debug('index stream ok')
   const errorsSummary = indexStream.errorsSummary()
   if (errorsSummary) await journals.log(app, dataset, { type: 'error', data: errorsSummary })
