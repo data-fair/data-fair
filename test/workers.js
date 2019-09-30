@@ -76,7 +76,7 @@ test.serial('Process newly uploaded CSV dataset', async t => {
   form2.append('file', datasetFd2, 'dataset.csv')
   await ax.post('/api/v1/datasets/' + dataset.id, form2, { headers: testUtils.formHeaders(form2) })
   try {
-    dataset = await workers.hook('finalizer')
+    dataset = await workers.hook('indexer')
     t.fail()
   } catch (err) {
     res = await ax.get('/api/v1/datasets/' + dataset.id + '/journal')
@@ -152,13 +152,12 @@ test.serial('Log error for geojson with broken feature', async t => {
 
   // ES indexation and finalization
   try {
-    await workers.hook('finalizer')
+    await workers.hook('indexer')
     t.fail()
   } catch (err) {
     // Check that there is an error message in the journal
     res = await ax.get('/api/v1/datasets/' + dataset.id + '/journal')
     t.is(res.status, 200)
-    t.is(res.data.length, 7)
     t.is(res.data[0].type, 'error')
     t.true(res.data[0].data.startsWith('100% des lignes sont en erreur'))
   }
@@ -207,14 +206,13 @@ test.serial('Manage failure in children processes', async t => {
   t.is(res.status, 201)
   const dataset = res.data
   try {
-    await workers.hook('finalizer')
+    await workers.hook('indexer')
     t.fail()
   } catch (err) {
     // Check that there is an error message in the journal
     res = await ax.get('/api/v1/datasets/' + dataset.id + '/journal')
     t.is(res.status, 200)
     t.is(res.data[0].type, 'error')
-    console.log('data', res.data[0].data)
     // TODO: should be startsWith, not includes
     t.true(res.data[0].data.includes('100% des lignes sont en erreur'))
   }
