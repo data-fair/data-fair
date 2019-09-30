@@ -72,7 +72,8 @@ test.serial('Perform CRUD operations in bulks', async t => {
     { _action: 'patch', _id: 'line3', attr1: 'test2' },
     { _action: 'update', _id: 'line4', attr1: 'test2', attr2: 'test2' }
   ])
-  t.is(res.data.length, 7)
+  t.is(res.data.nbOk, 7)
+
   try {
     await ax.get('/api/v1/datasets/rest2/lines/line2')
     t.fail()
@@ -171,12 +172,11 @@ test.serial('Use dataset schema to validate inputs', async t => {
     { _id: 'line1', attr1: 111 }
   ])
 
-  t.is(res.data.length, 2)
-  t.is(res.data[0]._action, 'create')
-  t.is(res.data[0]._status, 200)
-  t.is(res.data[1]._action, 'create')
-  t.is(res.data[1]._status, 400)
-  t.truthy(res.data[1]._error)
+  t.is(res.data.nbOk, 1)
+  t.is(res.data.nbErrors, 1)
+  t.is(res.data.errors.length, 1)
+  t.is(res.data.errors[0].line, 1)
+  t.truthy(res.data.errors[0].error)
 })
 
 test.serial('Send attachment with multipart request', async t => {
@@ -233,10 +233,9 @@ test.serial('Send attachments with bulk request', async t => {
   ]), 'utf8'), 'actions.json')
   res = await ax.post('/api/v1/datasets/rest6/_bulk_lines', form, { headers: testUtils.formHeaders(form) })
   t.is(res.status, 200)
-  t.is(res.data.length, 2)
+  t.is(res.data.nbOk, 2)
   const ls = await datasetUtils.lsAttachments(dataset)
   t.is(ls.length, 2)
-  t.is(ls[0], res.data[0].attachmentPath)
 
   await workers.hook('finalizer/rest6')
   res = await ax.get('/api/v1/datasets/rest6/lines')

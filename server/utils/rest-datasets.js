@@ -9,7 +9,6 @@ const ajv = require('ajv')()
 const Combine = require('stream-combiner')
 const multer = require('multer')
 const mime = require('mime-types')
-const JSONStream = require('JSONStream')
 const { Transform, Writable } = require('stream')
 const mimeTypeStream = require('mime-type-stream')
 const datasetUtils = require('./dataset')
@@ -68,42 +67,97 @@ exports.deleteDataset = async (db, dataset) => {
   await revisionsCollection.drop()
 }
 
-const applyTransaction = async (db, dataset, user, transac, validate) => {
+const applyTransactions = async (db, dataset, user, transacs, validate) => {
   const collection = exports.collection(db, dataset)
-  let { _action, ...body } = transac
-  _action = _action || 'create'
-  if (!actions.includes(_action)) throw createError(400, `action "${_action}" is unknown, use one of ${JSON.stringify(actions)}`)
-  if (_action === 'create' && !body._id) body._id = shortid.generate()
-  if (!body._id) throw createError(400, '"_id" attribute is required')
+  const history = dataset.rest && dataset.rest.history
+  const results = []
+  // in non history or single action mode, better to not use bulk op
+  const bulkOp = !history && transacs.length > 1 ? collection.initializeOrderedBulkOp() : null
 
-  const extendedBody = { ...body }
-  extendedBody._needsIndexing = true
-  extendedBody._updatedAt = new Date()
-  extendedBody._updatedBy = { id: user.id, name: user.name }
-  extendedBody._deleted = false
-  let doc
-  if (_action === 'create' || _action === 'update') {
-    if (!validate(body)) doc = { _error: validate.errors }
-    else doc = (await collection.findOneAndReplace({ _id: body._id }, extendedBody, { upsert: true, returnOriginal: false })).value
-  } else if (_action === 'patch') {
-    if (!validate(body)) doc = { _error: validate.errors }
-    else doc = (await collection.findOneAndUpdate({ _id: body._id }, { $set: extendedBody }, { upsert: true, returnOriginal: false })).value
-  } else if (_action === 'delete') {
-    extendedBody._deleted = true
-    doc = (await collection.findOneAndReplace({ _id: body._id }, extendedBody, { returnOriginal: false })).value
+  for (const transac of transacs) {
+    let { _action, ...body } = transac
+    _action = _action || 'create'
+    if (!actions.includes(_action)) throw createError(400, `action "${_action}" is unknown, use one of ${JSON.stringify(actions)}`)
+    if (_action === 'create' && !body._id) body._id = shortid.generate()
+    if (!body._id) throw createError(400, '"_id" attribute is required')
+
+    const extendedBody = { ...body }
+    extendedBody._needsIndexing = true
+    extendedBody._updatedAt = new Date()
+    extendedBody._updatedBy = { id: user.id, name: user.name }
+    extendedBody._deleted = false
+    let doc = {}
+    const filter = { _id: body._id }
+    if (_action === 'create' || _action === 'update') {
+      if (!validate(body)) doc = { _error: validate.errors }
+      else if (bulkOp) bulkOp.find(filter).upsert().replaceOne(extendedBody)
+      else doc = (await collection.findOneAndReplace(filter, extendedBody, { upsert: true, returnOriginal: false })).value
+    } else if (_action === 'patch') {
+      if (!validate(body)) doc = { _error: validate.errors }
+      else if (bulkOp) bulkOp.find(filter).upsert().updateOne({ $set: extendedBody })
+      else doc = (await collection.findOneAndUpdate(filter, { $set: extendedBody }, { upsert: true, returnOriginal: false })).value
+    } else if (_action === 'delete') {
+      extendedBody._deleted = true
+      if (bulkOp) bulkOp.find(filter).replaceOne(extendedBody)
+      else doc = (await collection.findOneAndReplace(filter, extendedBody, { returnOriginal: false })).value
+    }
+
+    if (history && !doc._error) {
+      const revisionsCollection = exports.revisionsCollection(db, dataset)
+      const revision = { ...doc }
+      delete revision._needsIndexing
+      revision._lineId = revision._id
+      delete revision._id
+      if (!revision._deleted) delete revision._deleted
+      await revisionsCollection.insertOne(revision)
+    }
+
+    results.push({ _id: body._id, _action, _status: doc._error ? 400 : 200, ...doc })
+  }
+  if (bulkOp) await bulkOp.execute()
+  return results
+}
+
+class TransactionStream extends Writable {
+  constructor(options) {
+    super({ objectMode: true })
+    this.options = options
+    this.i = 0
+    this.transactions = []
   }
 
-  if (dataset.rest && dataset.rest.history && !doc._error) {
-    const revisionsCollection = exports.revisionsCollection(db, dataset)
-    const revision = { ...doc }
-    delete revision._needsIndexing
-    revision._lineId = revision._id
-    delete revision._id
-    if (!revision._deleted) delete revision._deleted
-    await revisionsCollection.insertOne(revision)
+  async _applyTransactions() {
+    const results = await applyTransactions(this.options.db, this.options.dataset, this.options.user, this.transactions, this.options.validate)
+    this.transactions = []
+    results.forEach(res => {
+      if (res._error) {
+        this.options.summary.nbErrors += 1
+        if (this.options.summary.errors.length < 10) this.options.summary.errors.push({ line: this.i, error: res._error })
+      } else {
+        this.options.summary.nbOk += 1
+      }
+      this.i += 1
+    })
   }
 
-  return { _id: body._id, _action, _status: doc._error ? 400 : 200, ...doc }
+  async _write(chunk, encoding, cb) {
+    try {
+      this.transactions.push(chunk)
+      if (this.transactions.length > 100) await this._applyTransactions()
+    } catch (err) {
+      return cb(err)
+    }
+    cb()
+  }
+
+  async _final(cb) {
+    try {
+      await this._applyTransactions()
+    } catch (err) {
+      return cb(err)
+    }
+    cb()
+  }
 }
 
 const compileSchema = (dataset) => {
@@ -163,7 +217,7 @@ exports.createLine = async (req, res, next) => {
   const db = req.app.get('db')
   req.body._id = req.body._id || shortid.generate()
   await manageAttachment(req, false)
-  const line = await applyTransaction(db, req.dataset, req.user, { _action: 'create', ...req.body }, compileSchema(req.dataset))
+  const line = (await applyTransactions(db, req.dataset, req.user, [{ _action: 'create', ...req.body }], compileSchema(req.dataset)))[0]
   if (line._error) return res.status(400).send(line._error)
   await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { status: 'updated' } })
   res.status(201).send(cleanLine(line))
@@ -172,7 +226,7 @@ exports.createLine = async (req, res, next) => {
 exports.deleteLine = async (req, res, next) => {
   const db = req.app.get('db')
   await manageAttachment(req, false)
-  const line = await applyTransaction(db, req.dataset, req.user, { _action: 'delete', _id: req.params.lineId }, compileSchema(req.dataset))
+  const line = (await applyTransactions(db, req.dataset, req.user, [{ _action: 'delete', _id: req.params.lineId }], compileSchema(req.dataset)))[0]
   if (line._error) return res.status(400).send(line._error)
   await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { status: 'updated' } })
   await datasetUtils.updateStorageSize(db, req.dataset.owner)
@@ -182,7 +236,7 @@ exports.deleteLine = async (req, res, next) => {
 exports.updateLine = async (req, res, next) => {
   const db = req.app.get('db')
   await manageAttachment(req, false)
-  const line = await applyTransaction(db, req.dataset, req.user, { _action: 'update', _id: req.params.lineId, ...req.body }, compileSchema(req.dataset))
+  const line = (await applyTransactions(db, req.dataset, req.user, [{ _action: 'update', _id: req.params.lineId, ...req.body }], compileSchema(req.dataset)))[0]
   if (line._error) return res.status(400).send(line._error)
   await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { status: 'updated' } })
   await datasetUtils.updateStorageSize(db, req.dataset.owner)
@@ -192,7 +246,7 @@ exports.updateLine = async (req, res, next) => {
 exports.patchLine = async (req, res, next) => {
   const db = req.app.get('db')
   await manageAttachment(req, true)
-  const line = await applyTransaction(db, req.dataset, req.user, { _action: 'patch', _id: req.params.lineId, ...req.body }, compileSchema(req.dataset))
+  const line = (await applyTransactions(db, req.dataset, req.user, [{ _action: 'patch', _id: req.params.lineId, ...req.body }], compileSchema(req.dataset)))[0]
   if (line._error) return res.status(400).send(line._error)
   await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { status: 'updated' } })
   await datasetUtils.updateStorageSize(db, req.dataset.owner)
@@ -220,28 +274,21 @@ exports.bulkLines = async (req, res, next) => {
     const ioStream = mimeTypeStream(req.get('Content-Type')) || mimeTypeStream('application/json')
     parseStream = ioStream.parser()
   }
-  const transactionStream = new Transform({
-    objectMode: true,
-    async transform(chunk, encoding, cb) {
-      applyTransaction(db, req.dataset, req.user, chunk, validate)
-        .then(line => {
-          cb(null, line)
-        }, error => {
-          if (error.status === 400) cb(null, { error })
-          else cb(error)
-        })
-    }
-  })
+  const summary = {
+    nbOk: 0,
+    nbErrors: 0,
+    errors: []
+  }
+  const transactionStream = new TransactionStream({ db, dataset: req.dataset, user: req.user, validate, summary })
 
   await pump(
     inputStream,
     parseStream,
-    transactionStream,
-    JSONStream.stringify(),
-    res
+    transactionStream
   )
   await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { status: 'updated' } })
-  await datasetUtils.updateStorageSize(db, req.dataset.owner)
+  res.send(summary)
+  datasetUtils.updateStorageSize(db, req.dataset.owner)
 }
 
 exports.readLineRevisions = async (req, res, next) => {
@@ -281,16 +328,32 @@ exports.markIndexedStream = (db, dataset) => {
     objectMode: true,
     async write(chunk, encoding, cb) {
       try {
+        this.i = this.i || 0
+        this.bulkOp = this.bulkOp || collection.initializeUnorderedBulkOp()
         const line = await collection.findOne({ _id: chunk._id })
         // if the line was updated in the interval since reading for indexing
         // do not mark it as properly indexed
         if (chunk._updatedAt.getTime() === line._updatedAt.getTime()) {
+          this.i += 1
           if (chunk._deleted) {
-            await collection.deleteOne({ _id: chunk._id })
+            this.bulkOp.find({ _id: chunk._id }).deleteOne()
           } else {
-            await collection.updateOne({ _id: chunk._id }, { $set: { _needsIndexing: false } })
+            this.bulkOp.find({ _id: chunk._id }).updateOne({ $set: { _needsIndexing: false } })
           }
         }
+        if (this.i === 100) {
+          await this.bulkOp.execute()
+          this.i = 0
+          this.bulkOp = null
+        }
+        cb()
+      } catch (err) {
+        cb(err)
+      }
+    },
+    async final(cb) {
+      try {
+        if (this.i) await this.bulkOp.execute()
         cb()
       } catch (err) {
         cb(err)
