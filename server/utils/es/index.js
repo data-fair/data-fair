@@ -2,23 +2,20 @@ const config = require('config')
 const elasticsearch = require('elasticsearch')
 
 const smallAggs = require('./small-aggs')
-module.exports = {
-  ...require('./commons'),
-  ...require('./manage-indices'),
-  search: require('./search'),
-  count: require('./count'),
-  valuesAgg: require('./values-agg'),
-  values: require('./values'),
-  metricAgg: require('./metric-agg'),
-  geoAgg: require('./geo-agg'),
-  bboxAgg: require('./bbox-agg'),
-  wordsAgg: require('./words-agg'),
-  maxAgg: smallAggs.max,
-  minAgg: smallAggs.min,
-  indexStream: require('./index-stream')
-}
-
-module.exports.init = async () => {
+Object.assign(exports, require('./commons'))
+Object.assign(exports, require('./manage-indices'))
+exports.search = require('./search')
+exports.count = require('./count')
+exports.valuesAgg = require('./values-agg')
+exports.values = require('./values')
+exports.metricAgg = require('./metric-agg')
+exports.geoAgg = require('./geo-agg')
+exports.bboxAgg = require('./bbox-agg')
+exports.wordsAgg = require('./words-agg')
+exports.maxAgg = smallAggs.max
+exports.minAgg = smallAggs.min
+exports.indexStream = require('./index-stream')
+exports.init = async () => {
   const client = elasticsearch.Client(Object.assign({}, config.elasticsearch))
   await client.ping()
   await client.ingest.putPipeline({

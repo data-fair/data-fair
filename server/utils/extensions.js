@@ -15,6 +15,7 @@ const es = require('./es')
 const geoUtils = require('./geo')
 const journals = require('./journals')
 const datasetUtils = require('./dataset')
+
 const debug = require('debug')('extensions')
 
 // Apply an extension to a dataset: meaning, query a remote service in streaming manner
@@ -53,7 +54,7 @@ exports.extend = async(app, dataset, extension, remoteService, action) => {
     progressInterval = setInterval(setProgress, 600)
 
     if (stats.missing !== 0) {
-      const indexStream = es.indexStream({ esClient, indexName, stats, updateMode: true })
+      const indexStream = es.indexStream({ esClient, indexName, dataset, stats, updateMode: true })
       await pump(
         inputStream,
         new RemoteExtensionStream({ action, remoteService, extension, dataset, stats, inputMapping, extensionKey }),
@@ -386,7 +387,7 @@ class PreserveExtensionStream extends Transform {
   async init() {
     const db = this.options.db
     const esClient = this.options.esClient
-    this.indexName = this.options.indexName
+    this.indexName = es.aliasName(this.options.dataset)
     const extensions = this.options.dataset.extensions || []
     this.mappings = {}
     this.extensionsMap = {}
@@ -432,12 +433,14 @@ class PreserveExtensionStream extends Transform {
 }
 
 exports.applyCalculations = async (dataset, item) => {
+  const flatItem = flatten(item)
+
   // Add base64 content of attachments
   const attachmentField = dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')
-  if (attachmentField && item[attachmentField.key]) {
-    const filePath = path.join(datasetUtils.attachmentsDir(dataset), item[attachmentField.key])
+  if (attachmentField && flatItem[attachmentField.key]) {
+    const filePath = path.join(datasetUtils.attachmentsDir(dataset), flatItem[attachmentField.key])
     if (await fs.pathExists(filePath)) {
-      item._attachment_url = `${config.publicUrl}/api/v1/datasets/${dataset.id}/attachments/${item[attachmentField.key]}`
+      item._attachment_url = `${config.publicUrl}/api/v1/datasets/${dataset.id}/attachments/${flatItem[attachmentField.key]}`
       item._file_raw = (await fs.readFile(filePath))
         .toString('base64')
     }
@@ -445,9 +448,9 @@ exports.applyCalculations = async (dataset, item) => {
 
   // calculate geopoint and geometry fields depending on concepts
   if (geoUtils.schemaHasGeopoint(dataset.schema)) {
-    Object.assign(item, geoUtils.latlon2fields(dataset, item))
+    Object.assign(item, geoUtils.latlon2fields(dataset, flatItem))
   } else if (geoUtils.schemaHasGeometry(dataset.schema)) {
-    Object.assign(item, await geoUtils.geometry2fields(dataset.schema, item))
+    Object.assign(item, await geoUtils.geometry2fields(dataset.schema, flatItem))
   }
 
   // Add a pseudo-random number for random sorting (more natural distribution)

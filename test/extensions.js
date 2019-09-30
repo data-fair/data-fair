@@ -68,6 +68,7 @@ other,unknown address
   let existingResult = res.data.results.find(l => l.label === 'koumoul')
   t.is(existingResult[extensionKey + '.lat'], 10)
   t.is(existingResult[extensionKey + '.lon'], 10)
+  t.is(existingResult._geopoint, '10,10')
   let newResult = res.data.results.find(l => l.label === 'me')
   t.is(newResult[extensionKey + '.lat'], 50)
   t.is(newResult[extensionKey + '.lon'], 50)

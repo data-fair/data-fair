@@ -804,10 +804,9 @@ router.get('/:datasetId/full', readDataset(), permissions.middleware('downloadFu
   let readStream
   if (req.dataset.isRest) readStream = restDatasetsUtils.readStream(db, req.dataset)
   else readStream = datasetUtils.readStream(req.dataset)
-  const indexName = esUtils.aliasName(req.dataset)
   await pump(
     readStream,
-    extensions.preserveExtensionStream({ db, esClient: req.app.get('es'), dataset: req.dataset, indexName }),
+    extensions.preserveExtensionStream({ db, esClient: req.app.get('es'), dataset: req.dataset }),
     new Transform({
       transform(chunk, encoding, callback) {
         const flatChunk = flatten(chunk)
