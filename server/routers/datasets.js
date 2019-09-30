@@ -175,9 +175,13 @@ router.patch('/:datasetId', readDataset(['finalized', 'error']), permissions.mid
       patch.status = 'indexed'
     }
   } else if (patch.projection && (!req.dataset.projection || patch.projection.code !== req.dataset.projection.code)) {
+    // geo projection has changed, trigger full re-indexing
+    patch.status = 'schematized'
+  } else if (patch.schema && geo.geoFieldsKey(patch.schema) !== geo.schemaHasGeopoint(req.dataset.schema)) {
+    // geo concepts haved changed, trigger full re-indexing
     patch.status = 'schematized'
   } else if (patch.schema && patch.schema.find(f => req.dataset.schema.find(df => df.key === f.key && df.separator !== f.separator))) {
-    console.log('Some separator was changed on a field, trigger full re-indexation')
+    // some separator has changed on a field, trigger full re-indexing
     patch.status = 'schematized'
   } else if (patch.schema) {
     try {
@@ -190,7 +194,7 @@ router.patch('/:datasetId', readDataset(['finalized', 'error']), permissions.mid
         patch.status = 'extended'
       }
     } catch (err) {
-      console.log(`Updating the mapping for dataset ${req.dataset.id} failed. We have to trigger full re-indexation.`, err)
+      // generated ES mappings are not compatible, trigger full re-indexing
       patch.status = 'schematized'
     }
   }

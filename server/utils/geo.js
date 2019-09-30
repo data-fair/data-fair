@@ -22,14 +22,24 @@ const coordXUri = 'http://data.ign.fr/def/geometrie#coordX'
 const coordYUri = 'http://data.ign.fr/def/geometrie#coordY'
 
 exports.schemaHasGeopoint = (schema) => {
-  if (schema.find(p => p['x-refersTo'] === latlonUri)) return true
-  if (schema.find(p => latUri.indexOf(p['x-refersTo']) !== -1) && schema.find(p => lonUri.indexOf(p['x-refersTo']) !== -1)) return true
-  if (schema.find(p => p['x-refersTo'] === coordXUri) && schema.find(p => p['x-refersTo'] === coordYUri)) return true
+  const latlon = schema.find(p => p['x-refersTo'] === latlonUri)
+  if (latlon) return latlon.key
+  const lat = schema.find(p => latUri.indexOf(p['x-refersTo']) !== -1)
+  const lon = schema.find(p => lonUri.indexOf(p['x-refersTo']) !== -1)
+  if (lat && lon) return `${lat.key}/${lon.key}`
+  const x = schema.find(p => p['x-refersTo'] === coordXUri)
+  const y = schema.find(p => p['x-refersTo'] === coordYUri)
+  if (x && y) return `${x.key}/${y.key}`
   return false
 }
 
 exports.schemaHasGeometry = (schema) => {
-  return !!schema.find(p => p['x-refersTo'] === geomUri)
+  const field = schema.find(p => p['x-refersTo'] === geomUri)
+  return (field && field.key) || false
+}
+
+exports.geoFieldsKey = (schema) => {
+  return exports.schemaHasGeometry(schema) + '/' + exports.schemaHasGeopoint(schema)
 }
 
 exports.fixLon = (val) => {
