@@ -31,9 +31,17 @@
             name="title"
             label="Titre"
           />
-          <v-checkbox
-            v-model="rest.history"
-            :label="`Conserver un historique complet des révisions des lignes du jeu de données`"
+          <v-checkbox v-model="rest.history"
+                      hide-details
+                      :label="`Conserver un historique complet des révisions des lignes du jeu de données`"
+          />
+          <v-checkbox v-model="attachments"
+                      hide-details
+                      :label="`Accepter des pièces jointes`"
+          />
+          <v-checkbox v-model="attachmentsAsImage"
+                      hide-details
+                      :label="`Traiter les pièces jointes comme des images`"
           />
         </div>
         <v-btn :disabled="!title" color="primary" @click.native="createDataset()">
@@ -60,7 +68,9 @@ export default {
     title: '',
     rest: {
       history: false
-    }
+    },
+    attachments: false,
+    attachmentsAsImage: false
   }),
   computed: {
     ...mapState('session', ['user']),
@@ -76,7 +86,9 @@ export default {
         if (this.owner.role) options.headers['x-organizationRole'] = this.owner.role
       }
       try {
-        const dataset = await this.$axios.$post('api/v1/datasets', { isRest: true, title: this.title, rest: this.rest }, options)
+        const schema = []
+        if (this.attachments) schema.push({ key: 'attachmentPath', type: 'string', title: 'Pièce jointe', 'x-refersTo': 'http://schema.org/DigitalDocument' })
+        const dataset = await this.$axios.$post('api/v1/datasets', { isRest: true, title: this.title, rest: this.rest, schema, attachmentsAsImage: this.attachmentsAsImage }, options)
         this.$router.push({ path: `/dataset/${dataset.id}/description` })
       } catch (error) {
         eventBus.$emit('notification', { error, msg: 'Erreur pendant la création du jeu de données incrémental :' })

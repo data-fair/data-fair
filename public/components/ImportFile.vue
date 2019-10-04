@@ -49,6 +49,10 @@
         <p>Le fichier principal doit avoir un champ qui contient les chemins des pièces jointes dans l'archive.</p>
         <div class="mt-3 mb-3">
           <input type="file" @change="onAttachmentUpload">
+          <v-checkbox v-if="attachment" v-model="attachmentsAsImage"
+                      hide-details
+                      :label="`Traiter les pièces jointes comme des images`"
+          />
         </div>
         <v-btn color="primary" @click.native="currentStep = 3">
           Continuer
@@ -92,6 +96,7 @@ export default {
   data: () => ({
     file: null,
     attachment: null,
+    attachmentsAsImage: false,
     currentStep: null,
     owner: null,
     uploadProgress: 0,
@@ -150,7 +155,10 @@ export default {
       const formData = new FormData()
 
       formData.append('dataset', this.file)
-      if (this.attachment) formData.append('attachments', this.attachment)
+      if (this.attachment) {
+        formData.append('attachments', this.attachment)
+        if (this.attachmentsAsImage) formData.append('attachmentsAsImage', true)
+      }
       if (this.cleanTitle) formData.append('title', this.cleanTitle)
 
       if (this.owner.type === 'organization') {

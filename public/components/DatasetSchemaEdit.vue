@@ -20,9 +20,6 @@
         <v-btn v-if="dataset.isRest" color="primary" @click="newPropertyKey = null; newPropertyType = null; $refs.addPropertyForm.resetValidation(); addPropertyDialog = true">
           Ajouter une propriété
         </v-btn>
-        <v-btn v-if="dataset.isRest" :disabled="!!dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')" @click="addAttachmentProperty">
-          Accepter des pièces jointes
-        </v-btn>
       </v-layout>
 
       <v-container v-for="extension in extensions" :key="extension.key" fluid pa-0 grid-list-md>
@@ -193,9 +190,6 @@ export default {
         this.schema.push({ key: this.newPropertyKey, ...this.newPropertyType, title: '' })
         this.addPropertyDialog = false
       }
-    },
-    addAttachmentProperty() {
-      this.schema.push({ key: 'attachmentPath', type: 'string', title: 'Pièce jointe', 'x-refersTo': 'http://schema.org/DigitalDocument' })
     },
     save() {
       this.patchAndCommit({ schema: this.schema.map(field => Object.assign({}, field)) })
