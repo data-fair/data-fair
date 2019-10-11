@@ -32,7 +32,6 @@ async function channel(db) {
 exports.initServer = async (wss, db, session) => {
   wss.on('connection', (ws, req) => {
     session.auth(req, null, () => {
-      console.log(req.user)
       // Associate ws connections to ids for subscriptions
       const clientId = shortid.generate()
       clients[clientId] = ws

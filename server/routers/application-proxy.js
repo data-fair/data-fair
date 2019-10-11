@@ -68,6 +68,7 @@ router.all('/:applicationId*', setResource, (req, res, next) => { req.app.get('a
   }
   delete req.application.permissions
   req.application.apiUrl = config.publicUrl + '/api/v1'
+  req.application.wsUrl = config.wsPublicUrl
   if (req.query.draft === 'true') {
     req.application.configuration = req.application.configurationDraft || req.application.configuration
   }
