@@ -230,5 +230,13 @@
     ],
     "type": "string",
     "format": "date-time"
+  },
+  {
+    "title": "Horaires d'ouverture",
+    "description": "Permet de préciser les horaires d'ouverture hebdomadaires d'un établissement.",
+    "identifiers": [
+      "https://schema.org/openingHours"
+    ],
+    "type": "string"
   }
 ]
