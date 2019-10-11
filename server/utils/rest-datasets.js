@@ -135,7 +135,7 @@ class TransactionStream extends Writable {
   }
 
   async _applyTransactions() {
-    const results = await applyTransactions(this.options.db, this.options.dataset, this.options.user, this.transactions, this.options.validate)
+    const results = await applyTransactions(this.options.req, this.transactions, this.options.validate)
     this.transactions = []
     results.forEach(res => {
       if (res._error) {
@@ -235,7 +235,7 @@ exports.createLine = async (req, res, next) => {
 exports.deleteLine = async (req, res, next) => {
   const db = req.app.get('db')
   await manageAttachment(req, false)
-  const line = (await applyTransactions(db, req.dataset, req.user, [{ _action: 'delete', _id: req.params.lineId }], compileSchema(req.dataset)))[0]
+  const line = (await applyTransactions(req, [{ _action: 'delete', _id: req.params.lineId }], compileSchema(req.dataset)))[0]
   if (line._error) return res.status(400).send(line._error)
   await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { status: 'updated' } })
   await datasetUtils.updateStorageSize(db, req.dataset.owner)
@@ -245,7 +245,7 @@ exports.deleteLine = async (req, res, next) => {
 exports.updateLine = async (req, res, next) => {
   const db = req.app.get('db')
   await manageAttachment(req, false)
-  const line = (await applyTransactions(db, req.dataset, req.user, [{ _action: 'update', _id: req.params.lineId, ...req.body }], compileSchema(req.dataset)))[0]
+  const line = (await applyTransactions(req, [{ _action: 'update', _id: req.params.lineId, ...req.body }], compileSchema(req.dataset)))[0]
   if (line._error) return res.status(400).send(line._error)
   await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { status: 'updated' } })
   await datasetUtils.updateStorageSize(db, req.dataset.owner)
@@ -255,7 +255,7 @@ exports.updateLine = async (req, res, next) => {
 exports.patchLine = async (req, res, next) => {
   const db = req.app.get('db')
   await manageAttachment(req, true)
-  const line = (await applyTransactions(db, req.dataset, req.user, [{ _action: 'patch', _id: req.params.lineId, ...req.body }], compileSchema(req.dataset)))[0]
+  const line = (await applyTransactions(req, [{ _action: 'patch', _id: req.params.lineId, ...req.body }], compileSchema(req.dataset)))[0]
   if (line._error) return res.status(400).send(line._error)
   await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { status: 'updated' } })
   await datasetUtils.updateStorageSize(db, req.dataset.owner)
@@ -288,7 +288,7 @@ exports.bulkLines = async (req, res, next) => {
     nbErrors: 0,
     errors: []
   }
-  const transactionStream = new TransactionStream({ db, dataset: req.dataset, user: req.user, validate, summary })
+  const transactionStream = new TransactionStream({ req, validate, summary })
 
   await pump(
     inputStream,
