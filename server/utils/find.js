@@ -5,6 +5,12 @@ const visibility = require('./visibility')
 
 // Util functions shared accross the main find (GET on collection) endpoints
 
+function queryVal(val) {
+  if (val === 'true') return true
+  if (val === 'false') return false
+  return val
+}
+
 exports.query = (req, fieldsMap, forceShowAll) => {
   const query = {}
   if (!req.query) return query
@@ -23,7 +29,7 @@ exports.query = (req, fieldsMap, forceShowAll) => {
     status: 'status'
   })
   Object.keys(fieldsMap).filter(name => req.query[name] !== undefined).forEach(name => {
-    query[fieldsMap[name]] = { $in: req.query[name].split(',') }
+    query[fieldsMap[name]] = { $in: req.query[name].split(',').map(queryVal) }
   })
 
   let showAll = req.query.showAll === 'true'

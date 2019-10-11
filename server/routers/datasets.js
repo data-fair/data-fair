@@ -67,7 +67,8 @@ router.get('', cacheHeaders.noCache, asyncWrap(async(req, res) => {
   const query = findUtils.query(req, Object.assign({
     filename: 'originalFile.name',
     ids: 'id',
-    id: 'id'
+    id: 'id',
+    rest: 'isRest'
   }, filterFields))
   if (req.query.bbox === 'true') {
     query.bbox = { $ne: null }
