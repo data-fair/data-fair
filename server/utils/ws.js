@@ -48,7 +48,7 @@ exports.initServer = async (wss, db, session) => {
             return ws.send(JSON.stringify({ type: 'error', data: '"channel" is required' }))
           }
           if (message.type === 'subscribe') {
-            if (!message.channel.startsWith('test_')) {
+            if (process.env.NODE_ENV !== 'test') {
               const [type, id, subject] = message.channel.split('/')
               const resource = await db.collection(type).findOne({ id })
               if (!resource) return ws.send(JSON.stringify({ type: 'error', status: 404, data: `Ressource ${type}/${id} inconnue.` }))
