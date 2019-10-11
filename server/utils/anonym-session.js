@@ -7,7 +7,12 @@ const expressSession = require('express-session')
 const MongoStore = require('connect-mongo')(expressSession)
 
 exports.init = async (db) => {
-  const store = new MongoStore({ db, stringify: false, collection: 'sessions' })
+  const store = new MongoStore({
+    db,
+    stringify: false,
+    collection: 'sessions',
+    ttl: 60 * 60 // = 1h
+  })
 
   try {
     await db.collection('secrets').insertOne({ _id: 'anonym-session', secret: crypto.randomBytes(50).toString('hex') })

@@ -54,7 +54,7 @@
             <v-text-field v-else :disabled="true" :value="`${field.type}${field.format ? ' - ' + field.format : ''}`" label="Type" />
           </v-flex>
           <v-flex xs3>
-            <v-text-field v-model="field.title" :placeholder="field['x-originalName']" label="Libellé" />
+            <v-text-field v-model="field.title" :placeholder="field['x-originalName'] || ' '" label="Libellé" />
           </v-flex>
           <v-flex xs3>
             <v-textarea :id="'description-' + field.key" v-model="field.description" label="Description" rows="1" placeholder=" " />
