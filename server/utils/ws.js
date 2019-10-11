@@ -13,6 +13,7 @@ Downstream examples:
 {type: 'error', data: {...}}
 */
 const shortid = require('shortid')
+const permissions = require('./permissions')
 
 let cursor
 const subscribers = {}
@@ -28,50 +29,61 @@ async function channel(db) {
   return db.createCollection('messages', { capped: true, size: 100000, max: 1000 })
 }
 
-exports.initServer = async (wss, db) => {
-  wss.on('connection', ws => {
-    // Associate ws connections to ids for subscriptions
-    const clientId = shortid.generate()
-    clients[clientId] = ws
+exports.initServer = async (wss, db, session) => {
+  wss.on('connection', (ws, req) => {
+    session.auth(req, null, () => {
+      console.log(req.user)
+      // Associate ws connections to ids for subscriptions
+      const clientId = shortid.generate()
+      clients[clientId] = ws
 
-    // Manage subscribe/unsubscribe demands
-    ws.on('message', str => {
-      if (stopped) return
-      let message
-      try {
-        message = JSON.parse(str)
-      } catch (err) {
-        return ws.send(JSON.stringify({ type: 'error', data: err.message }))
-      }
-      if (!message.type || ['subscribe', 'unsubscribe'].indexOf(message.type) === -1) {
-        return ws.send(JSON.stringify({ type: 'error', data: 'type should be "subscribe" or "unsubscribe"' }))
-      }
-      if (!message.channel) {
-        return ws.send(JSON.stringify({ type: 'error', data: '"channel" is required' }))
-      }
-      if (message.type === 'subscribe') {
-        subscribers[message.channel] = subscribers[message.channel] || {}
-        subscribers[message.channel][clientId] = 1
-        return ws.send(JSON.stringify({ type: 'subscribe-confirm', channel: message.channel }))
-      }
-      if (message.type === 'unsubscribe') {
-        subscribers[message.channel] = subscribers[message.channel] || {}
-        delete subscribers[message.channel][clientId]
-        return ws.send(JSON.stringify({ type: 'unsubscribe-confirm', channel: message.channel }))
-      }
-    })
+      // Manage subscribe/unsubscribe demands
+      ws.on('message', async str => {
+        try {
+          if (stopped) return
+          const message = JSON.parse(str)
+          if (!message.type || ['subscribe', 'unsubscribe'].indexOf(message.type) === -1) {
+            return ws.send(JSON.stringify({ type: 'error', data: 'type should be "subscribe" or "unsubscribe"' }))
+          }
+          if (!message.channel) {
+            return ws.send(JSON.stringify({ type: 'error', data: '"channel" is required' }))
+          }
+          if (message.type === 'subscribe') {
+            if (!message.channel.startsWith('test_')) {
+              const [type, id, subject] = message.channel.split('/')
+              const resource = await db.collection(type).findOne({ id })
+              if (!resource) return ws.send(JSON.stringify({ type: 'error', status: 404, data: `Ressource ${type}/${id} inconnue.` }))
+              if (!permissions.can(resource, `realtime-${subject}`, 'read', req.user)) {
+                return ws.send(JSON.stringify({ type: 'error', status: 403, data: 'Permission manquante.' }))
+              }
+            }
 
-    ws.on('close', () => {
-      Object.keys(subscribers).forEach(sub => {
-        delete sub[clientId]
+            subscribers[message.channel] = subscribers[message.channel] || {}
+            subscribers[message.channel][clientId] = 1
+            return ws.send(JSON.stringify({ type: 'subscribe-confirm', channel: message.channel }))
+          }
+          if (message.type === 'unsubscribe') {
+            subscribers[message.channel] = subscribers[message.channel] || {}
+            delete subscribers[message.channel][clientId]
+            return ws.send(JSON.stringify({ type: 'unsubscribe-confirm', channel: message.channel }))
+          }
+        } catch (err) {
+          return ws.send(JSON.stringify({ type: 'error', data: err.message }))
+        }
       })
-      delete clients[clientId]
+
+      ws.on('close', () => {
+        Object.keys(subscribers).forEach(sub => {
+          delete sub[clientId]
+        })
+        delete clients[clientId]
+      })
+
+      ws.on('error', () => ws.terminate())
+
+      ws.isAlive = true
+      ws.on('pong', () => { ws.isAlive = true })
     })
-
-    ws.on('error', () => ws.terminate())
-
-    ws.isAlive = true
-    ws.on('pong', () => { ws.isAlive = true })
   })
 
   // standard ping/pong used to detect lost connections

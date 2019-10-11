@@ -106,7 +106,7 @@ exports.run = async () => {
     await require('./utils/cache').init(db)
     require('./routers/base-applications').init(db)
     await require('./routers/remote-services').init(db)
-    await wsUtils.initServer(wss, db)
+    await wsUtils.initServer(wss, db, session)
     // At this stage the server is ready to respond to API requests
     app.set('api-ready', true)
 

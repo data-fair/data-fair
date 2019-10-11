@@ -67,7 +67,9 @@ exports.deleteDataset = async (db, dataset) => {
   await revisionsCollection.drop()
 }
 
-const applyTransactions = async (db, dataset, user, transacs, validate) => {
+const applyTransactions = async (req, transacs, validate) => {
+  const db = req.app.get('db')
+  const dataset = req.dataset
   const collection = exports.collection(db, dataset)
   const history = dataset.rest && dataset.rest.history
   const results = []
@@ -84,7 +86,7 @@ const applyTransactions = async (db, dataset, user, transacs, validate) => {
     const extendedBody = { ...body }
     extendedBody._needsIndexing = true
     extendedBody._updatedAt = new Date()
-    extendedBody._updatedBy = { id: user.id, name: user.name }
+    extendedBody._updatedBy = { id: req.user.id, name: req.user.name }
     extendedBody._deleted = false
     let doc = {}
     const filter = { _id: body._id }
@@ -112,9 +114,15 @@ const applyTransactions = async (db, dataset, user, transacs, validate) => {
       await revisionsCollection.insertOne(revision)
     }
 
+    if (!bulkOp && !doc._error) await req.app.publish('datasets/' + dataset.id + '/transactions', transac)
     results.push({ _id: body._id, _action, _status: doc._error ? 400 : 200, ...doc })
   }
-  if (bulkOp) await bulkOp.execute()
+  if (bulkOp) {
+    await bulkOp.execute()
+    for (const transac of transacs) {
+      await req.app.publish('datasets/' + dataset.id + '/transactions', transac)
+    }
+  }
   return results
 }
 
@@ -215,9 +223,10 @@ exports.readLine = async (req, res, next) => {
 
 exports.createLine = async (req, res, next) => {
   const db = req.app.get('db')
+  const _action = req.body._id ? 'update' : 'create'
   req.body._id = req.body._id || shortid.generate()
   await manageAttachment(req, false)
-  const line = (await applyTransactions(db, req.dataset, req.user, [{ _action: 'create', ...req.body }], compileSchema(req.dataset)))[0]
+  const line = (await applyTransactions(req, [{ _action, ...req.body }], compileSchema(req.dataset)))[0]
   if (line._error) return res.status(400).send(line._error)
   await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { status: 'updated' } })
   res.status(201).send(cleanLine(line))

@@ -2,7 +2,7 @@
 exports.operationsClasses = {
   datasets: {
     list: ['list'],
-    read: ['readDescription', 'readLines', 'getGeoAgg', 'getValuesAgg', 'getValues', 'getMetricAgg', 'getWordsAgg', 'downloadOriginalData', 'downloadFullData', 'readJournal', 'readApiDoc'],
+    read: ['readDescription', 'readLines', 'getGeoAgg', 'getValuesAgg', 'getValues', 'getMetricAgg', 'getWordsAgg', 'downloadOriginalData', 'downloadFullData', 'readJournal', 'readApiDoc', 'realtime-journal', 'realtime-extend-progress', 'realtime-transactions'],
     write: ['writeDescription', 'writeData'],
     admin: ['delete', 'getPermissions', 'setPermissions']
   },
