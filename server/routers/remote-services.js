@@ -268,6 +268,9 @@ async function getAppOwner(req) {
 // Use the proxy as a user with an active session on an application
 let nbLimiter, kbLimiter
 router.use('/:remoteServiceId/proxy*', (req, res, next) => { req.app.get('anonymSession')(req, res, next) }, asyncWrap(async (req, res, next) => {
+  // only consider a session that truly comes from an application
+  const session = req.session && req.session.activeApplications ? req.session : null
+
   // Use the anonymous session and the current referer url to determine the application.
   // that was used to call this remote service. We will consume the quota of the owner of the application.
   const appOwner = await getAppOwner(req)
@@ -277,7 +280,7 @@ router.use('/:remoteServiceId/proxy*', (req, res, next) => { req.app.get('anonym
   if (req.method.toUpperCase() !== 'GET') return res.status(405).send('Seules les opérations de type GET sont autorisées sur cette exposition de service')
 
   // rate limiting both on number of requests and total size to prevent abuse of this public proxy
-  const limiterId = (req.session && req.session.id) || (req.user && req.user.id) || requestIp.getClientIp(req)
+  const limiterId = (session && session.id) || (req.user && req.user.id) || requestIp.getClientIp(req)
   nbLimiter = nbLimiter || new RateLimiterMongo({
     storeClient: req.app.get('mongoClient'),
     keyPrefix: 'data-fair-rate-limiter-nb',
