@@ -244,9 +244,7 @@ router.post('/:remoteServiceId/_update', readService, asyncWrap(async(req, res) 
   res.status(200).json(clean(req.remoteService))
 }))
 
-function getAppOwner(req) {
-  if (!req.session || !req.session.activeApplications) return null
-  debug('Anonymous session with active applications', req.session.activeApplications)
+async function getAppOwner(req) {
   const referer = req.headers.referer || req.headers.referrer
   debug('Referer URL', referer)
   if (!referer) return null
@@ -256,32 +254,30 @@ function getAppOwner(req) {
     return null
   }
   const refererAppId = pathname.split('/')[0]
-  const refererApp = req.session.activeApplications.find(a => a.id === refererAppId)
+
+  if (req.session && req.session.activeApplications) {
+    debug('Anonymous session with active applications', req.session.activeApplications)
+    const refererApp = req.session.activeApplications.find(a => a.id === refererAppId)
+    if (refererApp) return refererApp.owner
+  }
+
+  const refererApp = await req.app.get('db').collection('applications').findOne({ id: refererAppId }, { projection: { owner: 1 } })
   if (refererApp) return refererApp.owner
 }
 
 // Use the proxy as a user with an active session on an application
 let nbLimiter, kbLimiter
 router.use('/:remoteServiceId/proxy*', (req, res, next) => { req.app.get('anonymSession')(req, res, next) }, asyncWrap(async (req, res, next) => {
-  if (!req.user && !(req.session && req.session.activeApplications)) {
-    console.error('Access remote-service without anonymous session', req.headers)
-    return res.status(401).send(`
-Pas de session active. Cette erreur peut subvenir si vous utilisez une extension qui bloque les cookies.
-
-Les cookies de session sont utilisés par cette application pour protéger notre infrastructure contre les abus.
-    `)
-  }
-
   // Use the anonymous session and the current referer url to determine the application.
   // that was used to call this remote service. We will consume the quota of the owner of the application.
-  const appOwner = getAppOwner(req)
+  const appOwner = await getAppOwner(req)
   debug('Referer application owner', appOwner)
 
   // preventing POST is a simple way to prevent exposing bulk methods through this public proxy
   if (req.method.toUpperCase() !== 'GET') return res.status(405).send('Seules les opérations de type GET sont autorisées sur cette exposition de service')
 
   // rate limiting both on number of requests and total size to prevent abuse of this public proxy
-  const limiterId = appOwner ? req.session.id : requestIp.getClientIp(req)
+  const limiterId = (req.session && req.session.id) || (req.user && req.user.id) || requestIp.getClientIp(req)
   nbLimiter = nbLimiter || new RateLimiterMongo({
     storeClient: req.app.get('mongoClient'),
     keyPrefix: 'data-fair-rate-limiter-nb',
