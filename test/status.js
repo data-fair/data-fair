@@ -7,7 +7,7 @@ test('Get status', async t => {
   const res = await ax.get('/api/v1/status')
   t.is(res.status, 200)
   t.is(res.data.status, 'ok')
-  t.is(res.data.details.length, 3)
+  t.is(res.data.details.length, 5)
 })
 
 test('Ping service', async t => {
