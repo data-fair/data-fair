@@ -1,6 +1,7 @@
 const config = require('config')
 const moment = require('moment')
 const rp = require('request-promise-native')
+const fs = require('fs-extra')
 const asyncWrap = require('../utils/async-wrap')
 
 async function mongoStatus(req) {
@@ -19,6 +20,17 @@ async function jwksStatus(req) {
   if (!jwksRes || !jwksRes.keys || !jwksRes.keys.length) throw new Error('Incomplete JWKS response')
 }
 
+async function nuxtStatus(req) {
+  const nuxtConfig = require('../../nuxt.config.js')
+  const dir = nuxtConfig.buildDir || '.nuxt'
+  await fs.writeFile(`${dir}/check-access.txt`, 'ok')
+}
+
+async function dataDirStatus(req) {
+  const dir = config.dataDir
+  await fs.writeFile(`${dir}/check-access.txt`, 'ok')
+}
+
 async function singleStatus(req, fn, name) {
   const time = moment()
   try {
@@ -33,7 +45,9 @@ async function getStatus(req) {
   const results = await Promise.all([
     singleStatus(req, mongoStatus, 'mongodb'),
     singleStatus(req, esStatus, 'elasticsearch'),
-    singleStatus(req, jwksStatus, 'auth-directory')
+    singleStatus(req, jwksStatus, 'auth-directory'),
+    singleStatus(req, nuxtStatus, 'nuxt'),
+    singleStatus(req, dataDirStatus, 'data-dir')
   ])
   const errors = results.filter(r => r.status === 'error')
   return {
