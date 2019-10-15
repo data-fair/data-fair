@@ -77,8 +77,7 @@ const applyTransactions = async (req, transacs, validate) => {
   const bulkOp = !history && transacs.length > 1 ? collection.initializeOrderedBulkOp() : null
 
   for (const transac of transacs) {
-    let { _action, ...body } = transac
-    _action = _action || 'create'
+    const { _action, ...body } = transac
     if (!actions.includes(_action)) throw createError(400, `action "${_action}" is unknown, use one of ${JSON.stringify(actions)}`)
     if (_action === 'create' && !body._id) body._id = shortid.generate()
     if (!body._id) throw createError(400, '"_id" attribute is required')
@@ -150,6 +149,7 @@ class TransactionStream extends Writable {
 
   async _write(chunk, encoding, cb) {
     try {
+      chunk._action = chunk._action || (chunk._id ? 'update' : 'create')
       this.transactions.push(chunk)
       if (this.transactions.length > 100) await this._applyTransactions()
     } catch (err) {
