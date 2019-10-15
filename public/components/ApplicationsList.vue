@@ -91,7 +91,8 @@ export default {
       owner: {},
       visibility: {},
       'base-application': {}
-    }
+    },
+    lastParams: null
   }),
   computed: {
     ...mapState('session', ['user']),
@@ -115,9 +116,13 @@ export default {
       }
     }
   },
+  created() {
+    if (!this.user) return
+    if (this.user.organization) this.$set(this.facetsValues.owner, `organization:${this.user.organization.id}`, true)
+    else this.$set(this.facetsValues.owner, `user:${this.user.id}`, true)
+  },
   methods: {
     async refresh() {
-      this.loading = true
       const fullFilters = { ...this.filters }
       Object.entries(this.facetsValues).forEach(([facetKey, facetValues]) => {
         const facetFilter = Object.entries(facetValues)
@@ -125,18 +130,21 @@ export default {
           .map(([facetValue]) => facetValue).join(',')
         if (facetFilter) fullFilters[facetKey] = facetFilter
       })
-      this.applications = await this.$axios.$get('api/v1/applications', {
-        params: {
-          size: this.size,
-          page: this.page,
-          select: 'title,description,status',
-          ...fullFilters,
-          facets: 'owner,visibility,base-application',
-          sort: 'createdAt:-1'
-        }
-      })
-      this.filtered = this.filters.q !== undefined
-      this.loading = false
+      const params = {
+        size: this.size,
+        page: this.page,
+        select: 'title,description,status',
+        ...fullFilters,
+        facets: 'owner,visibility,base-application',
+        sort: 'createdAt:-1'
+      }
+      if (JSON.stringify(params) !== JSON.stringify(this.lastParams)) {
+        this.lastParams = params
+        this.loading = true
+        this.applications = await this.$axios.$get('api/v1/applications', { params })
+        this.filtered = this.filters.q !== undefined
+        this.loading = false
+      }
     }
   }
 }
