@@ -1,28 +1,28 @@
 <template lang="html">
   <div>
-    <iframe id="openapi-iframe" :src="src" width="100%" scrolling="no" height="300px" />
+    <v-iframe :src="src" />
   </div>
 </template>
 
 <script>
-import { mapGetters, mapState } from 'vuex'
-import iFrameResize from 'iframe-resizer/js/iframeResizer'
+import { mapState } from 'vuex'
+import 'iframe-resizer/js/iframeResizer'
+import VIframe from '@koumoul/v-iframe'
 
 export default {
+  components: {
+    VIframe
+  },
   props: ['url'],
   data() {
     return { height: null }
   },
   computed: {
     ...mapState(['env']),
-    ...mapGetters('dataset', ['resourceUrl']),
     src() {
       const url = this.env.openapiViewerUrl + '?proxy=false&hide-toolbar=true'
       return url + '&url=' + this.url
     }
-  },
-  mounted() {
-    iFrameResize({ minHeight: 300 }, '#openapi-iframe')
   }
 }
 </script>

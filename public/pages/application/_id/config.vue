@@ -18,9 +18,7 @@
                   </v-form>
                 </v-flex>
                 <v-flex xs12 sm6 md8 class="pa-0">
-                  <div :style="`height:${iframeHeight}px;width:100%;`">
-                    <iframe v-if="showProdPreview && expansion[0]" :src="applicationLink + '?embed=true'" height="100%" width="100%" />
-                  </div>
+                  <v-iframe v-if="showProdPreview && expansion[0]" :src="applicationLink + '?embed=true'" />
                 </v-flex>
               </v-layout>
             </v-card-text>
@@ -57,9 +55,7 @@
                   </v-form>
                 </v-flex>
                 <v-flex xs12 sm6 md8 class="pa-0">
-                  <div :style="`height:${iframeHeight}px;width:100%;`">
-                    <iframe v-if="showDraftPreview && expansion[1]" :src="applicationLink + '?embed=true&draft=true'" height="100%" width="100%" />
-                  </div>
+                  <v-iframe v-if="showDraftPreview && expansion[1]" :src="applicationLink + '?embed=true&draft=true'" />
                 </v-flex>
               </v-layout>
             </v-card-text>
@@ -98,6 +94,8 @@ import debounce from 'debounce'
 import { mapState, mapActions, mapGetters } from 'vuex'
 import VJsonschemaForm from '@koumoul/vuetify-jsonschema-form/lib/index.vue'
 import '@koumoul/vuetify-jsonschema-form/dist/main.css'
+import 'iframe-resizer/js/iframeResizer'
+import VIframe from '@koumoul/v-iframe'
 import eventBus from '../../../event-bus.js'
 
 if (process.browser) {
@@ -111,7 +109,7 @@ if (process.browser) {
 }
 
 export default {
-  components: { VJsonschemaForm },
+  components: { VJsonschemaForm, VIframe },
   data() {
     return {
       showConfigIframe: false,
