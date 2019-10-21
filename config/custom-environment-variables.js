@@ -1,4 +1,5 @@
 module.exports = {
+  port: 'PORT',
   mode: 'MODE',
   publicUrl: 'PUBLIC_URL',
   wsPublicUrl: 'WS_PUBLIC_URL',
