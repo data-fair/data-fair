@@ -54,7 +54,7 @@ if (config.mode.includes('server')) {
   app.use('/api/v1/settings', session.auth, require('./routers/settings'))
   app.use('/api/v1/admin', session.auth, require('./routers/admin'))
   app.use('/api/v1/identities', require('./routers/identities'))
-  app.use('/api/v1/quotas', session.auth, require('./routers/quotas'))
+  app.use('/api/v1/limits', session.auth, require('./routers/limits'))
   app.use('/api/v1/session', session.router)
 
   // External applications proxy
