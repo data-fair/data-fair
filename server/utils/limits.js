@@ -49,11 +49,13 @@ exports.get = async (db, consumer, type) => {
 }
 
 exports.incrementConsumption = async (db, consumer, type, inc) => {
-  return (await db.collection('limits').findOneAndUpdate({ type: consumer.type, id: consumer.id }, { $inc: { [`${type}.consumption`]: inc } }, { returnOriginal: false })).value
+  return (await db.collection('limits')
+    .findOneAndUpdate({ type: consumer.type, id: consumer.id }, { $inc: { [`${type}.consumption`]: inc } }, { returnOriginal: false })).value
 }
 
 exports.setConsumption = async (db, consumer, type, value) => {
-  return (await db.collection('limits').findOneAndUpdate({ type: consumer.type, id: consumer.id }, { $set: { [`${type}.consumption`]: value } }, { returnOriginal: false })).value
+  return (await db.collection('limits')
+    .findOneAndUpdate({ type: consumer.type, id: consumer.id }, { $set: { [`${type}.consumption`]: value } }, { returnOriginal: false })).value
 }
 
 exports.updateName = async (db, identity) => {
@@ -65,6 +67,7 @@ const router = exports.router = express.Router()
 
 const isSuperAdmin = (req, res, next) => {
   if (req.user && req.user.isAdmin) return next()
+  console.log('KEY', req.query.key)
   if (req.query.key === config.secretKeys.limits) return next()
   res.status(401).send()
 }
@@ -98,7 +101,7 @@ router.post('/:type/:id', isSuperAdmin, asyncWrap(async (req, res, next) => {
 // A user can get limits information for himself only
 router.get('/:type/:id', isAccountAdmin, asyncWrap(async (req, res, next) => {
   const limit = await req.app.get('db').collection('limits')
-    .findOne({ type: req.params.type, 'consumer.id': req.params.id })
+    .findOne({ type: req.params.type, id: req.params.id })
   if (!limit) return res.status(404).send()
   res.send(limit)
 }))
@@ -112,5 +115,5 @@ router.get('/', isSuperAdmin, asyncWrap(async (req, res, next) => {
     .sort({ lastUpdate: -1 })
     .limit(10000)
     .toArray()
-  res.send({ results })
+  res.send({ results, count: results.length })
 }))

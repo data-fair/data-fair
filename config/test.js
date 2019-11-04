@@ -25,7 +25,7 @@ module.exports = {
   },
   secretKeys: {
     identities: 'identities-test-key',
-    quotas: 'quotas-test-key'
+    limits: 'limits-test-key'
   },
   nuxtBuild: {
     active: false
