@@ -14,8 +14,7 @@ const schema = {
     id: { type: 'string' },
     name: { type: 'string' },
     lastUpdate: { type: 'string', format: 'date-time' },
-    sd_bytes: limitTypeSchema,
-    map_bytes: limitTypeSchema
+    store_bytes: limitTypeSchema
   }
 }
 const validate = ajv.compile(schema)
