@@ -3,11 +3,17 @@ const debug = require('debug')('db')
 const config = require('config')
 const { MongoClient } = require('mongodb')
 
-async function ensureIndex(db, collection, key, options) {
+exports.ensureIndex = async (db, collection, key, options = {}) => {
   try {
-    await db.collection(collection).createIndex(key, options || {})
-  } catch (error) {
-    console.error('Init mongodb index creation failure for', collection, key, error)
+    await db.collection(collection).createIndex(key, options)
+  } catch (err) {
+    if ((err.code !== 85 && err.code !== 86) || !options.name) throw err
+
+    // if the error is a conflict on keys or params of the index we automatically
+    // delete then recreate the index
+    console.log(`Drop then recreate index ${collection}/${options.name}`)
+    await db.collection(collection).dropIndex(options.name)
+    await db.collection(collection).createIndex(key, options)
   }
 }
 
@@ -35,35 +41,32 @@ exports.connect = async () => {
 exports.init = async (db) => {
   const promises = [
     // datasets indexes
-    ensureIndex(db, 'datasets', { id: 1 }, { unique: true }),
-    ensureIndex(db, 'datasets', { 'owner.type': 1, 'owner.id': 1 }),
-    ensureIndex(db, 'datasets', { title: 'text', description: 'text', 'owner.name': 'text' }, { name: 'fulltext' }),
-    ensureIndex(db, 'datasets', { 'virtual.children': 1 }),
+    exports.ensureIndex(db, 'datasets', { id: 1 }, { unique: true }),
+    exports.ensureIndex(db, 'datasets', { 'owner.type': 1, 'owner.id': 1 }),
+    exports.ensureIndex(db, 'datasets', { title: 'text', description: 'text', 'owner.name': 'text' }, { name: 'fulltext' }),
+    exports.ensureIndex(db, 'datasets', { 'virtual.children': 1 }),
     // remote-services indexes
-    ensureIndex(db, 'remote-services', { id: 1 }, { unique: true }),
-    // ensureIndex(db, 'remote-services', { 'apiDoc.info.x-api-id': 1 }, { unique: true })
-    ensureIndex(db, 'remote-services', { title: 'text', description: 'text' }, { name: 'fulltext' }),
+    exports.ensureIndex(db, 'remote-services', { id: 1 }, { unique: true }),
+    // exports.ensureIndex(db, 'remote-services', { 'apiDoc.info.x-api-id': 1 }, { unique: true })
+    exports.ensureIndex(db, 'remote-services', { title: 'text', description: 'text' }, { name: 'fulltext' }),
     // base applications indexes
-    ensureIndex(db, 'base-applications', { url: 1 }, { unique: true }),
-    ensureIndex(db, 'base-applications', { id: 1 }, { unique: true }),
-    ensureIndex(db, 'base-applications', { title: 'text', description: 'text', 'meta.title': 'text', 'meta.description': 'text', 'meta.application-name': 'text' }, { name: 'fulltext' }),
+    exports.ensureIndex(db, 'base-applications', { url: 1 }, { unique: true }),
+    exports.ensureIndex(db, 'base-applications', { id: 1 }, { unique: true }),
+    exports.ensureIndex(db, 'base-applications', { title: 'text', description: 'text', 'meta.title': 'text', 'meta.description': 'text', 'meta.application-name': 'text' }, { name: 'fulltext' }),
     // applications indexes
-    ensureIndex(db, 'applications', { id: 1 }, { unique: true }),
-    ensureIndex(db, 'applications', { 'owner.type': 1, 'owner.id': 1 }),
-    ensureIndex(db, 'applications', { 'configuration.datasets.href': 1 }),
-    ensureIndex(db, 'applications', { title: 'text', description: 'text', 'owner.name': 'text' }, { name: 'fulltext' }),
+    exports.ensureIndex(db, 'applications', { id: 1 }, { unique: true }),
+    exports.ensureIndex(db, 'applications', { 'owner.type': 1, 'owner.id': 1 }),
+    exports.ensureIndex(db, 'applications', { 'configuration.datasets.href': 1 }),
+    exports.ensureIndex(db, 'applications', { title: 'text', description: 'text', 'owner.name': 'text' }, { name: 'fulltext' }),
     // catalogs indexes
-    ensureIndex(db, 'catalogs', { id: 1 }, { unique: true }),
-    ensureIndex(db, 'catalogs', { 'owner.type': 1, 'owner.id': 1 }),
-    ensureIndex(db, 'catalogs', { title: 'text', description: 'text', 'owner.name': 'text' }, { name: 'fulltext' }),
+    exports.ensureIndex(db, 'catalogs', { id: 1 }, { unique: true }),
+    exports.ensureIndex(db, 'catalogs', { 'owner.type': 1, 'owner.id': 1 }),
+    exports.ensureIndex(db, 'catalogs', { title: 'text', description: 'text', 'owner.name': 'text' }, { name: 'fulltext' }),
     // settings
-    ensureIndex(db, 'settings', { type: 1, id: 1 }, { unique: true }),
-    ensureIndex(db, 'settings', { 'apiKeys.key': 1 }, { sparse: true }),
-    // quotas
-    ensureIndex(db, 'quotas', { type: 1, id: 1 }, { unique: true }),
-    ensureIndex(db, 'quotas', { name: 'text' }, { name: 'fulltext' }),
+    exports.ensureIndex(db, 'settings', { type: 1, id: 1 }, { unique: true }),
+    exports.ensureIndex(db, 'settings', { 'apiKeys.key': 1 }, { sparse: true }),
     // Sessions managed by express-session, but we add our custom indices
-    ensureIndex(db, 'sessions', { 'session.activeApplications.id': 1 })
+    exports.ensureIndex(db, 'sessions', { 'session.activeApplications.id': 1 })
   ]
   await Promise.all(promises)
 }

@@ -70,7 +70,7 @@ router.get('/applications-errors', asyncWrap(async (req, res, next) => {
 }))
 
 router.get('/owners', asyncWrap(async(req, res) => {
-  const quotas = req.app.get('db').collection('quotas')
+  const limits = req.app.get('db').collection('limits')
   const [skip, size] = findUtils.pagination(req.query)
   const query = {}
   if (req.query.q) query.$text = { $search: req.query.q }
@@ -111,8 +111,8 @@ router.get('/owners', asyncWrap(async(req, res) => {
     }
   }]
 
-  const aggPromise = quotas.aggregate(agg).toArray()
-  const [count, results] = await Promise.all([quotas.countDocuments(query), aggPromise])
+  const aggPromise = limits.aggregate(agg).toArray()
+  const [count, results] = await Promise.all([limits.countDocuments(query), aggPromise])
   res.send({ count, results })
 }))
 

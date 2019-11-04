@@ -42,9 +42,9 @@ router.post('/:type/:id', asyncWrap(async (req, res) => {
     }
   }
 
-  // settings and quotas
+  // settings and limits
   await req.app.get('db').collection('settings').updateOne({ type: identity.type, id: identity.id }, { $set: { name: identity.name } }, { upsert: true })
-  await req.app.get('db').collection('quotas').updateOne({ type: identity.type, id: identity.id }, { $set: { name: identity.name } }, { upsert: true })
+  await req.app.get('db').collection('limits').updateOne({ type: identity.type, id: identity.id }, { $set: { name: identity.name } })
 
   res.send()
 }))
@@ -72,9 +72,9 @@ router.delete('/:type/:id', asyncWrap(async (req, res) => {
     }
   }
 
-  // settings and quotas
+  // settings and limits
   await req.app.get('db').collection('settings').deleteOne({ type: identity.type, id: identity.id })
-  await req.app.get('db').collection('quotas').deleteOne({ type: identity.type, id: identity.id })
+  await req.app.get('db').collection('limits').deleteOne({ type: identity.type, id: identity.id })
 
   res.send()
 }))

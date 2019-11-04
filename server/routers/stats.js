@@ -19,11 +19,11 @@ router.get('', cacheHeaders.noCache, asyncWrap(async(req, res) => {
 }))
 
 async function ownerStats(db, owner) {
-  const quotas = await db.collection('quotas')
+  const limits = await db.collection('limits')
     .findOne({ type: owner.type, id: owner.id })
   return {
     storage: await datasetUtils.storageSize(db, owner),
-    storageLimit: quotas && quotas.storage !== undefined ? quotas.storage : config.defaultLimits.totalStorage,
+    storageLimit: limits && limits.store_bytes ? limits.store_bytes.limit : config.defaultLimits.totalStorage,
     datasets: await ownerCount(db, 'datasets', owner),
     applications: await ownerCount(db, 'applications', owner)
   }

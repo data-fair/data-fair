@@ -40,7 +40,7 @@ test.serial('Manage a user storage limit', async t => {
   res = await ax.get('/api/v1/limits/user/dmeadus0')
   t.is(res.status, 200)
   t.is(res.data.storage, 30000)
-  t.is(res.data.consumption.storage, 25000)
+  t.is(res.data.store_bytes.consumption, 25000)
 })
 
 test.serial('A user cannot change limits', async t => {

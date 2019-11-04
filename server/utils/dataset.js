@@ -7,11 +7,11 @@ const config = require('config')
 const csv = require('csv-parser')
 const JSONStream = require('JSONStream')
 const dir = require('node-dir')
-const axios = require('axios')
 const fieldsSniffer = require('./fields-sniffer')
 const geoUtils = require('./geo')
 const restDatasetsUtils = require('./rest-datasets')
 const vocabulary = require('../../contract/vocabulary')
+const limits = require('./limits')
 
 const baseTypes = new Set(['text/csv', 'application/geo+json'])
 
@@ -150,21 +150,13 @@ exports.storageSize = async (db, owner) => {
 // After a change that might impact consumed storage, we store the value
 // and trigger optional webhooks
 exports.updateStorageSize = async (db, owner) => {
-  const currentSize = await exports.storageSize(db, owner)
-  const consumption = { storage: currentSize }
-  await db.collection('quotas').updateOne({ type: owner.type, id: owner.id }, { $set: { ...owner, consumption } }, { upsert: true })
-  for (const webhook of config.globalWebhooks.consumption) {
-    const url = webhook.replace('{type}', owner.type).replace('{id}', owner.id)
-    axios.post(url, consumption).catch(err => {
-      console.error(`Failure to push consumption webhook ${url} - ${JSON.stringify(consumption)}`, err)
-    })
-  }
+  await limits.setConsumption(db, owner, 'store_bytes', await exports.storageSize(db, owner))
 }
 
 exports.storageRemaining = async (db, owner) => {
-  const quotas = await db.collection('quotas')
+  const limits = await db.collection('limits')
     .findOne({ type: owner.type, id: owner.id })
-  const limit = (quotas && quotas.storage !== undefined) ? quotas.storage : config.defaultLimits.totalStorage
+  const limit = (limits && limits.store_bytes) ? limits.store_bytes.limit : config.defaultLimits.totalStorage
   if (limit === -1) return -1
   const size = await exports.storageSize(db, owner)
   return Math.max(0, limit - size)

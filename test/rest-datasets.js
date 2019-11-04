@@ -243,7 +243,7 @@ test.serial('Send attachments with bulk request', async t => {
   t.is(res.data.results.find(l => l._id === 'line1')['_file.content'], 'This is a test libreoffice file.')
 })
 
-test.serial('The size of the mongodb collection is poart of storage consumption', async t => {
+test.serial('The size of the mongodb collection is part of storage consumption', async t => {
   // Load a few lines
   const ax = await axiosBuilder('ccherryholme1@icio.us:passwd')
   await ax.post('/api/v1/datasets', {
@@ -259,10 +259,9 @@ test.serial('The size of the mongodb collection is poart of storage consumption'
   ])
   await workers.hook('finalizer/rest7')
 
-  // Get the stored quota and consumption
-  const res = await ax.get('/api/v1/quotas/user/ccherryholme1')
+  const res = await ax.get('/api/v1/stats')
   t.is(res.status, 200)
-  t.is(res.data.consumption.storage, 4096)
+  t.is(res.data.user.storage, 4096)
 })
 
 test.serial('Activate the history mode', async t => {
@@ -282,7 +281,6 @@ test.serial('Activate the history mode', async t => {
   t.is(res.data.results[1]._id, 'id1')
   t.is(res.data.results[1].attr1, 'test1')
 
-  // Get the stored quota and consumption
-  res = await ax.get('/api/v1/quotas/user/hlalonde3')
-  t.is(res.data.consumption.storage, 8192)
+  res = await ax.get('/api/v1/stats')
+  t.is(res.data.user.storage, 8192)
 })
