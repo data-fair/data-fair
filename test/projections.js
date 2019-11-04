@@ -18,7 +18,7 @@ test.serial('Create REST dataset and define specific projection', async t => {
   res = await ax.post(`/api/v1/datasets/${dataset.id}/lines`, { x: 610336, y: 2132685 })
   t.is(res.status, 201)
   try {
-    await workers.hook(`finalizer/${dataset.id}`)
+    await workers.hook(`indexer/${dataset.id}`)
   } catch (err) { }
   await ax.patch(`/api/v1/datasets/${dataset.id}`, {
     projection: {
