@@ -7,33 +7,43 @@ const cacheHeaders = require('../utils/cache-headers')
 
 const router = module.exports = express.Router()
 
-// notify a limit change with secret key or as admin
-router.post('/:type/:id', asyncWrap(async (req, res) => {
-  if (!((req.user && req.user.isAdmin) || (config.secretKeys.limits && config.secretKeys.limits === req.query.key))) {
-    return res.status(403).send('Bad secret in "key" parameter')
+const isSuperAdmin = (req, res, next) => {
+  if (req.user && req.user.isAdmin) return next()
+  if (req.query.key === config.secretKeys.limits) return next()
+  res.status(401).send()
+}
+
+const isAccountAdmin = (req, res, next) => {
+  if (!req.user) return res.status(401).send()
+  if (req.user.isAdmin) return next()
+  if (req.query.key === config.secretKeys.limits) return next()
+  if (!['organization', 'user'].includes(req.params.type)) return res.status(400).send('Wrong consumer type')
+  if (req.params.type === 'user') {
+    if (req.user.id !== req.params.id) return res.status(403).send()
   }
+  if (req.params.type === 'organization') {
+    const org = req.user.organizations.find(o => o.id === req.params.id && o.role === 'admin')
+    if (!org) return res.status(403).send()
+  }
+  next()
+}
+
+// notify a limit change with secret key or as admin
+router.post('/:type/:id', isSuperAdmin, asyncWrap(async (req, res) => {
   await req.app.get('db').collection('limits')
     .updateOne({ type: req.params.type, id: req.params.id }, { $set: { ...req.body, ...req.params } }, { upsert: true })
   res.send()
 }))
 
 // user can read his limit
-router.get('/:type/:id', cacheHeaders.noCache, asyncWrap(async (req, res) => {
-  if (!req.user) return res.status(401).send()
-  if (req.params.type === 'user' && req.params.id !== req.user.id) return res.status(403).send()
-  if (req.params.type === 'organization') {
-    const orga = req.user.organizations.find(o => o.id === req.params.id)
-    if (!orga || orga.role !== config.adminRole) return res.status(403).send()
-  }
+router.get('/:type/:id', cacheHeaders.noCache, isAccountAdmin, asyncWrap(async (req, res) => {
   const limits = await req.app.get('db').collection('limits')
     .findOne({ type: req.params.type, id: req.params.id })
   res.send(limits)
 }))
 
 // admin only overall list of limits
-router.get('', cacheHeaders.noCache, asyncWrap(async(req, res) => {
-  if (!req.user) return res.status(401).send()
-  if (!req.user.isAdmin) return res.status(403).send()
+router.get('', cacheHeaders.noCache, isSuperAdmin, asyncWrap(async(req, res) => {
   const limits = req.app.get('db').collection('limits')
   const [skip, size] = findUtils.pagination(req.query)
   const query = {}
