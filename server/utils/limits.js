@@ -102,6 +102,7 @@ router.get('/:type/:id', isAccountAdmin, asyncWrap(async (req, res, next) => {
   const limit = await req.app.get('db').collection('limits')
     .findOne({ type: req.params.type, id: req.params.id })
   if (!limit) return res.status(404).send()
+  delete limit._id
   res.send(limit)
 }))
 
@@ -112,6 +113,7 @@ router.get('/', isSuperAdmin, asyncWrap(async (req, res, next) => {
   const results = await req.app.get('db').collection('limits')
     .find(filter)
     .sort({ lastUpdate: -1 })
+    .project({ _id: 0 })
     .limit(10000)
     .toArray()
   res.send({ results, count: results.length })
