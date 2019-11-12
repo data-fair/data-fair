@@ -44,7 +44,7 @@ exports.init = async(db) => {
   })
   const apis = (await Promise.all(apisPromises)).filter(a => a && a.api)
   const apisDict = Object.assign({}, ...apis.map(a => ({ [a.url]: a.api })))
-  const servicesToInsert = servicesToAdd.filter(s => apisDict[s.url]).map(s => mongoEscape.escape({
+  const servicesToInsert = servicesToAdd.filter(s => apisDict[s.url] && apisDict[s.url].info).map(s => mongoEscape.escape({
     id: slug(apisDict[s.url].info['x-api-id']),
     title: apisDict[s.url].info.title,
     description: apisDict[s.url].info.description,
