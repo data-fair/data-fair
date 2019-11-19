@@ -1,5 +1,5 @@
 const express = require('express')
-const requestProxy = require('express-request-proxy')
+const requestProxy = require('@koumoul/express-request-proxy')
 const config = require('config')
 const fs = require('fs')
 const path = require('path')
@@ -128,7 +128,11 @@ router.all('/:applicationId*', setResource, (req, res, next) => { req.app.get('a
     'X-Config-Url': config.publicUrl + '/api/v1/applications/' + req.params.applicationId + '/config',
     'accept-encoding': 'identity'
   }
-  const options = { url: cleanApplicationUrl + '/*', headers }
+  const options = {
+    url: cleanApplicationUrl + '/*',
+    headers,
+    timeout: config.remoteTimeout
+  }
 
   const originalUrl = url.parse(req.originalUrl)
   // Trailing / are removed by express...
@@ -272,5 +276,8 @@ router.all('/:applicationId*', setResource, (req, res, next) => { req.app.get('a
     }
   }]
 
-  requestProxy(options)(req, res, next)
+  requestProxy(options)(req, res, err => {
+    if (err) console.error('Error while proxying application', err)
+    next(err)
+  })
 }))

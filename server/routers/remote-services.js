@@ -5,7 +5,7 @@ const url = require('url')
 const slug = require('slugify')
 const soasLoader = require('soas')
 const axios = require('axios')
-const requestProxy = require('express-request-proxy')
+const requestProxy = require('@koumoul/express-request-proxy')
 const remoteServiceAPIDocs = require('../../contract/remote-service-api-docs')
 const mongoEscape = require('mongo-escape')
 const config = require('config')
@@ -310,6 +310,7 @@ router.use('/:remoteServiceId/proxy*', (req, res, next) => { req.app.get('anonym
     url: remoteService.server + '*',
     headers,
     query: {},
+    timeout: config.remoteTimeout,
     transforms: [{
       name: 'rate-limiter',
       match: (resp) => {
@@ -352,7 +353,10 @@ router.use('/:remoteServiceId/proxy*', (req, res, next) => { req.app.get('anonym
   // We never transmit authentication
   delete req.headers.authorization
   delete req.headers.cookie
-  requestProxy(options)(req, res, next)
+  requestProxy(options)(req, res, err => {
+    if (err) console.error('Error while proxying remote service', err)
+    next(err)
+  })
 }))
 
 // Anybody can read the API doc

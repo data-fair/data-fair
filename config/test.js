@@ -23,6 +23,7 @@ module.exports = {
     name: 'x-apiKey',
     value: 'test_default_key'
   },
+  remoteTimeout: 500,
   secretKeys: {
     identities: 'identities-test-key',
     limits: 'limits-test-key'

@@ -70,8 +70,9 @@ if (config.mode.includes('server')) {
     if (err.name === 'UnauthorizedError') {
       return res.status(401).send('invalid token...')
     }
-    if (err.statusCode === 500 || !err.statusCode) console.error('Error in express route', err)
-    if (!res.headersSent) res.status(err.statusCode || 500).send(err.message)
+    const status = err.statusCode || err.status || 500
+    if (status === 500) console.error('Error in express route', err)
+    if (!res.headersSent) res.status(status).send(err.message)
   })
 
   const WebSocket = require('ws')

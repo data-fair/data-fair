@@ -81,6 +81,7 @@ module.exports = {
     name: 'x-apiKey',
     value: null
   },
+  remoteTimeout: 5000,
   // secrets that can be used to configure global webhooks for example to update users and organizations
   secretKeys: {
     identities: null,

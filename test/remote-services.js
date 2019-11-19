@@ -60,6 +60,16 @@ test.serial('Unknown external service', async t => {
   }
 })
 
+test.serial('Handle timeout errors from proxied service', async t => {
+  const ax = await axiosBuilder('superadmin@test.com:superpasswd')
+  nock('http://test.com').get('/geocoder/coord').delay(60000).reply(200, { content: 'ok' })
+  try {
+    await ax.get('/api/v1/remote-services/geocoder-koumoul/proxy/coord')
+  } catch (err) {
+    t.is(err.status, 504)
+  }
+})
+
 test.serial('Prevent abusing remote service re-exposition', async t => {
   const ax = await axiosBuilder('superadmin@test.com:superpasswd')
 
