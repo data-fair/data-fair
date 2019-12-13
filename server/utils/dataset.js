@@ -156,7 +156,7 @@ exports.updateStorageSize = async (db, owner) => {
 exports.storageRemaining = async (db, owner) => {
   const limits = await db.collection('limits')
     .findOne({ type: owner.type, id: owner.id })
-  const limit = (limits && limits.store_bytes) ? limits.store_bytes.limit : config.defaultLimits.totalStorage
+  const limit = (limits && limits.store_bytes && ![undefined, null].includes(limits.store_bytes.limit)) ? limits.store_bytes.limit : config.defaultLimits.totalStorage
   if (limit === -1) return -1
   const size = await exports.storageSize(db, owner)
   return Math.max(0, limit - size)
