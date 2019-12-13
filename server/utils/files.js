@@ -130,7 +130,7 @@ const upload = multer({
         if (datasetLimit !== -1 && datasetLimit < estimatedFileSize) throw createError(413, 'Dataset size exceeds the authorized limit')
         let storageRemaining = await datasetUtils.storageRemaining(req.app.get('db'), owner)
         if (storageRemaining !== -1) {
-        // Ignore the size of the dataset we are overwriting
+          // Ignore the size of the dataset we are overwriting
           if (req.dataset && req.dataset.file) storageRemaining += req.dataset.file.size
           storageRemaining = Math.max(0, storageRemaining - estimatedFileSize)
           if (storageRemaining === 0) throw createError(429, 'Vous avez atteint la limite de votre espace de stockage.')

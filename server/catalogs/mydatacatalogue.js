@@ -45,8 +45,7 @@ exports.harvestDataset = async (catalog, datasetId, req) => {
 
 function datasetPageDesc(dataset) {
   const desc = dataset.description ? dataset.description + '\n\n' : ''
-  const url = `${config.publicUrl}/dataset/${dataset.id}/description`
-  return desc + `Ce jeu de données a été publié depuis <a href="${config.publicUrl}">Data Fair</a>.<br>Consultez <a href="${url}">sa page</a> pour accéder à sa description détaillée, prévisualisation, documentation d'API, etc.`
+  return desc + 'Cette source possède un jeu de données consultable dans l\'onglet "Données".'
 }
 
 async function createNewDataset(catalog, dataset, publication) {
