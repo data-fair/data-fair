@@ -1,4 +1,3 @@
-const config = require('config')
 const url = require('url')
 const axios = require('axios')
 
