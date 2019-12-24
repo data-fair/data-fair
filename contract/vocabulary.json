@@ -196,6 +196,20 @@
       "https://schema.org/WebPage"
     ],
     "type": "string"
+  }, {
+    "title": "Adresse E-mail",
+    "description": "URI de type mailto pour renseigner une adresse de contact",
+    "identifiers": [
+      "https://www.w3.org/2006/vcard/ns#email"
+    ],
+    "type": "string"
+  }, {
+    "title": "N° de téléphone",
+    "description": "Un numéro de téléphone",
+    "identifiers": [
+      "https://www.w3.org/2006/vcard/ns#tel"
+    ],
+    "type": "string"
   },
   {
     "title": "Coordonnée X",
