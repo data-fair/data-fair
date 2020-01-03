@@ -61,6 +61,12 @@ module.exports = {
     cssUrl: 'THEME_CSS_URL',
     cssText: 'THEME_CSS_TEXT'
   },
+  defaultLimits: {
+    totalStorage: {
+      __name: 'DEFAULT_LIMITS_TOTAL_STORAGE',
+      __format: 'json'
+    }
+  },
   worker: {
     interval: {
       __name: 'WORKER_INTERVAL',
