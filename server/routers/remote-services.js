@@ -1,7 +1,6 @@
 const { Transform } = require('stream')
 const express = require('express')
 const moment = require('moment')
-const url = require('url')
 const slug = require('slugify')
 const soasLoader = require('soas')
 const axios = require('axios')
