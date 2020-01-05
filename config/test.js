@@ -1,4 +1,7 @@
 module.exports = {
+  brand: {
+    embed: '<div>application embed</div>'
+  },
   defaultLimits: {
     totalStorage: 20000,
     datasetStorage: 16000,

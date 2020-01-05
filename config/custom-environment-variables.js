@@ -42,7 +42,8 @@ module.exports = {
     logo: 'BRAND_LOGO',
     title: 'BRAND_TITLE',
     description: 'BRAND_DESCRIPTION',
-    url: 'BRAND_URL'
+    url: 'BRAND_URL',
+    embed: 'BRAND_EMBED'
   },
   theme: {
     dark: {

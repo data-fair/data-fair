@@ -74,6 +74,7 @@ test.serial('Manage the custom configuration part of the object', async t => {
 
 test.serial('Use an application through the application proxy', async t => {
   const ax = await axiosBuilder('dmeadus0@answers.com:passwd')
+  const adminAx = await axiosBuilder('alban.mouton@koumoul.com')
   let res = await ax.post('/api/v1/applications', { url: 'http://monapp1.com/' })
   const appId = res.data.id
 
@@ -92,4 +93,11 @@ test.serial('Use an application through the application proxy', async t => {
   t.true(res.data.includes(`<link rel="manifest" crossorigin="use-credentials" href="/app/${appId}/manifest.json">`))
   // The app reference a service worker
   t.true(res.data.includes('/app-sw.js'))
+  // the app contains the brand embed (cf config.brand.embed)
+  t.true(res.data.includes('<div>application embed</div>'))
+
+  // no brand embed if the specific limit is defined
+  await adminAx.post('/api/v1/limits/user/dmeadus0', { hide_brand: { limit: 1 }, lastUpdate: new Date().toISOString() }, { params: { key: config.secretKeys.limits } })
+  res = await ax.get('/app/' + appId)
+  t.false(res.data.includes('<div>application embed</div>'))
 })

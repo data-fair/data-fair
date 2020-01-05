@@ -17,6 +17,8 @@ const debug = require('debug')('application-proxy')
 
 const loginHtml = fs.readFileSync(path.join(__dirname, '../resources/login.html'), 'utf8')
 
+const brandEmbed = config.brand.embed && parse5.parseFragment(config.brand.embed)
+
 const setResource = asyncWrap(async(req, res, next) => {
   req.application = req.resource = await req.app.get('db').collection('applications')
     .findOne({ id: req.params.applicationId }, { projection: { _id: 0 } })
@@ -66,6 +68,11 @@ router.all('/:applicationId*', setResource, (req, res, next) => { req.app.get('a
   if (!permissions.can(req.application, 'readConfig', 'read', req.user)) {
     return res.redirect(`${config.publicUrl}/app/${req.application.id}/login`)
   }
+  const db = req.app.get('db')
+
+  // check owner limits
+  const limitsPromise = db.collection('limits').findOne({ type: req.application.owner.type, id: req.application.owner.id })
+
   delete req.application.permissions
   req.application.apiUrl = config.publicUrl + '/api/v1'
   req.application.wsUrl = config.wsPublicUrl
@@ -80,7 +87,8 @@ router.all('/:applicationId*', setResource, (req, res, next) => { req.app.get('a
     { public: true },
     { privateAccess: { $elemMatch: { type: req.application.owner.type, id: req.application.owner.id } } }
   ]
-  const baseAppPromise = req.app.get('db').collection('base-applications').findOne({ url: applicationUrl, $or: accessFilter }, { projection: { id: 1 } })
+  const baseAppPromise = db.collection('base-applications')
+    .findOne({ url: applicationUrl, $or: accessFilter }, { projection: { id: 1 } })
 
   // the dates of last modification / finalization of both the app and the datasets it uses
   const updateDates = [new Date(req.application.updatedAt)]
@@ -90,7 +98,7 @@ router.all('/:applicationId*', setResource, (req, res, next) => { req.app.get('a
   // and so benefit from better caching
   const datasets = req.application.configuration && req.application.configuration.datasets && req.application.configuration.datasets.filter(d => !!d)
   if (datasets && datasets.length) {
-    const freshDatasets = await req.app.get('db').collection('datasets')
+    const freshDatasets = await db.collection('datasets')
       .find({ $or: datasets.map(d => ({ id: d.id })) })
       .project({ _id: 0, id: 1, finalizedAt: 1 })
       .toArray()
@@ -101,7 +109,8 @@ router.all('/:applicationId*', setResource, (req, res, next) => { req.app.get('a
     })
   }
 
-  // we await the promise afterwards so that the datasets and baseApp promises were resolved in parallel
+  // we await the promises afterwards so that the datasets and baseApp promises were resolved in parallel
+  const limits = await limitsPromise
   const baseApp = await baseAppPromise
   if (!baseApp) return res.status(404).send('Application de base inconnue ou à accès restreint.')
 
@@ -230,8 +239,11 @@ router.all('/:applicationId*', setResource, (req, res, next) => { req.app.get('a
           } catch (err) {
             return callback(err)
           }
-          const head = document.childNodes.find(c => c.tagName === 'html').childNodes.find(c => c.tagName === 'head')
-          if (!head) return callback(new Error('HTML structure is broken, expect html and head elements'))
+          const html = document.childNodes.find(c => c.tagName === 'html')
+          if (!html) return callback(new Error('HTML structure is broken, expect html, head and body elements'))
+          const head = html.childNodes.find(c => c.tagName === 'head')
+          const body = html.childNodes.find(c => c.tagName === 'body')
+          if (!head || !body) return callback(new Error('HTML structure is broken, expect html, head and body elements'))
 
           // Data-fair generates a manifest per app
           const manifestUrl = new URL(req.application.exposedUrl).pathname + '/manifest.json'
@@ -269,6 +281,12 @@ router.all('/:applicationId*', setResource, (req, res, next) => { req.app.get('a
               { name: 'content', value: 'same-origin' }
             ]
           })
+
+          // add a brand logo somewhere over the applications
+          const hideBrand = (limits && limits.hide_brand && limits.hide_brand.limit) || config.defaultLimits.hideBrand
+          if (brandEmbed && !hideBrand) {
+            brandEmbed.childNodes.forEach(childNode => body.childNodes.push(childNode))
+          }
 
           callback(null, parse5.serialize(document))
         }

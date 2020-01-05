@@ -14,7 +14,8 @@ const schema = {
     id: { type: 'string' },
     name: { type: 'string' },
     lastUpdate: { type: 'string', format: 'date-time' },
-    store_bytes: limitTypeSchema
+    store_bytes: limitTypeSchema,
+    hide_brand: limitTypeSchema
   }
 }
 const validate = ajv.compile(schema)
