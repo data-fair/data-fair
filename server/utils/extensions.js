@@ -378,6 +378,7 @@ class RemoteExtensionStream extends Transform {
 
 // Transform stream fetching extensions data from previous index
 // used when re-indexing
+// TODO: use multi-search for performance
 class PreserveExtensionStream extends Transform {
   constructor(options) {
     super({ objectMode: true })

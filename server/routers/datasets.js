@@ -796,6 +796,8 @@ router.get('/:datasetId/convert', readDataset(), permissions.middleware('downloa
 })
 
 // Download the full dataset with extensions
+// TODO use ES scroll functionality instead of file read + extensions
+// TODO check absence of unused query params to prevent attacks with cache invalidation ?
 router.get('/:datasetId/full', readDataset(), permissions.middleware('downloadFullData', 'read'), cacheHeaders.noCache, asyncWrap(async (req, res, next) => {
   const db = req.app.get('db')
   if (req.dataset.isVirtual) req.dataset.descendants = await virtualDatasetsUtils.descendants(req.app.get('db'), req.dataset)

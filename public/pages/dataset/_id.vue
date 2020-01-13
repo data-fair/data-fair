@@ -109,7 +109,7 @@
             </v-list-tile-avatar>
             <v-list-tile-title>Fichier d'origine</v-list-tile-title>
           </v-list-tile>
-          <v-list-tile :href="downloadFullLink" :disabled="!can('downloadFullData') || !dataset.extensions || !dataset.extensions.find(e => e.active)">
+          <v-list-tile :href="downloadFullLink" :disabled="!can('downloadFullData')">
             <v-list-tile-avatar>
               <v-icon color="primary">
                 file_download
