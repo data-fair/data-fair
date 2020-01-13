@@ -805,6 +805,10 @@ router.get('/:datasetId/full', readDataset(), permissions.middleware('downloadFu
   let readStream
   if (req.dataset.isRest) readStream = restDatasetsUtils.readStream(db, req.dataset)
   else readStream = datasetUtils.readStream(req.dataset)
+
+  // add BOM for excel, cf https://stackoverflow.com/a/17879474
+  res.write('\ufeff')
+
   await pump(
     readStream,
     extensions.preserveExtensionStream({ db, esClient: req.app.get('es'), dataset: req.dataset }),
