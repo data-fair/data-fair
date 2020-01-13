@@ -120,6 +120,7 @@ exports.readStream = (dataset) => {
 exports.storageSize = async (db, owner) => {
   let size = 0
   // Sum of the sizes of the files for file-based datasets
+  // TODO: use originalFile when available instead of file ? but not both that's sure
   const filter = { 'owner.type': owner.type, 'owner.id': owner.id }
   const aggQuery = [
     { $match: filter },
@@ -129,10 +130,19 @@ exports.storageSize = async (db, owner) => {
   const res = await db.collection('datasets').aggregate(aggQuery).toArray()
   if (res.length) size += res[0].totalSize
 
+  // Add sizes of all attachments
+  const attachmentDirs = (await fs.readdir(path.join(config.dataDir, owner.type, owner.id))).filter(f => f.endsWith('.attachments'))
+  for (const attachmentDir of attachmentDirs) {
+    const files = await dir.promiseFiles(path.join(config.dataDir, owner.type, owner.id, attachmentDir))
+    for (const file of files) {
+      size += (await fs.promises.stat(file)).size
+    }
+  }
+
   // Add sum of sizes of collections for REST datasets
-  const cursor = db.collection('datasets').find({ ...filter, isRest: true }).project({ id: 1, rest: 1 })
-  while (await cursor.hasNext()) {
-    const dataset = await cursor.next()
+  const restCursor = db.collection('datasets').find({ ...filter, isRest: true }).project({ id: 1, rest: 1 })
+  while (await restCursor.hasNext()) {
+    const dataset = await restCursor.next()
     const collection = await restDatasetsUtils.collection(db, dataset)
     const stats = await collection.stats()
     size += stats.storageSize
