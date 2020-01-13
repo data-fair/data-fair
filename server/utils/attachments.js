@@ -1,7 +1,7 @@
 const fs = require('fs-extra')
 const path = require('path')
-const exec = require('child-process-promise').exec
 const datasetUtils = require('./dataset')
+const exec = require('./exec')
 
 exports.downloadAttachment = (req, res, next) => {
   const filePath = req.params['0']
@@ -12,7 +12,7 @@ exports.downloadAttachment = (req, res, next) => {
 exports.addAttachments = async (dataset, attachmentsFile) => {
   const dir = datasetUtils.attachmentsDir(dataset)
   await fs.ensureDir(dir)
-  await exec(`unzip -o -q ${attachmentsFile.path} -d ${dir}`)
+  await exec('unzip', ['-o', '-q', attachmentsFile.path, '-d', dir])
   await fs.remove(attachmentsFile.path)
 }
 
@@ -20,6 +20,6 @@ exports.replaceAllAttachments = async (dataset, attachmentsFile) => {
   const dir = datasetUtils.attachmentsDir(dataset)
   await fs.ensureDir(dir)
   await fs.emptyDir(dir)
-  await exec(`unzip -o -q ${attachmentsFile.path} -d ${dir}`)
+  await exec('unzip', ['-o', '-q', attachmentsFile.path, '-d', dir])
   await fs.remove(attachmentsFile.path)
 }

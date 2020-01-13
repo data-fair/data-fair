@@ -6,11 +6,11 @@ const XLSX = require('xlsx')
 const createError = require('http-errors')
 const ogr2ogr = require('ogr2ogr')
 const util = require('util')
-const exec = require('child-process-promise').exec
 const pump = util.promisify(require('pump'))
 const csvStringify = require('csv-stringify')
 const datasetUtils = require('../utils/dataset')
 const icalendar = require('../utils/icalendar')
+const exec = require('../utils/exec')
 const vocabulary = require('../../contract/vocabulary')
 
 exports.eventsPrefix = 'convert'
@@ -39,7 +39,7 @@ const geographicalTypes = exports.geographicalTypes = new Set([
 const calendarTypes = exports.calendarTypes = new Set(['text/calendar'])
 
 async function decompress(mimetype, filePath, dirPath) {
-  if (mimetype === 'application/zip') await exec(`unzip -o -q ${filePath} -d ${dirPath}`)
+  if (mimetype === 'application/zip') await exec('unzip', ['-o', '-q', filePath, '-d', dirPath])
 }
 
 exports.process = async function(app, dataset) {
