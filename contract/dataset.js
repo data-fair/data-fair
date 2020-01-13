@@ -126,6 +126,38 @@ module.exports = {
         }
       }
     },
+    attachments: {
+      type: 'array',
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['name'],
+        properties: {
+          name: {
+            type: 'string',
+            description: 'Name of the file that was used to create or update this attachment'
+          },
+          description: {
+            type: 'string',
+            description: 'Short description of this attachment'
+          },
+          size: {
+            type: 'number',
+            description: 'Size of the file on disk'
+          },
+          mimetype: {
+            type: 'string',
+            enum: ['text/csv'],
+            description: 'Mime type of the file'
+          },
+          updatedAt: {
+            type: 'string',
+            description: 'Date of the last update for this attachment',
+            format: 'date-time'
+          }
+        }
+      }
+    },
     remoteFile: {
       type: 'object',
       additionalProperties: true, // for properties such as catalogId or resourceId that are specific to kind of remote resources

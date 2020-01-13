@@ -20,6 +20,10 @@
           <v-list-tile-action><v-icon>info</v-icon></v-list-tile-action>
           <v-list-tile-title>Description</v-list-tile-title>
         </v-list-tile>
+        <v-list-tile :disabled="!can('readDescription')" :nuxt="true" :to="`/dataset/${dataset.id}/attachments`">
+          <v-list-tile-action><v-icon>attachment</v-icon></v-list-tile-action>
+          <v-list-tile-title>Pièces jointes</v-list-tile-title>
+        </v-list-tile>
         <v-list-tile v-if="can('writeDescription') && dataset.isVirtual" :nuxt="true" :to="`/dataset/${dataset.id}/virtual`">
           <v-list-tile-action><v-icon>picture_in_picture</v-icon></v-list-tile-action>
           <v-list-tile-title>Jeu virtuel</v-list-tile-title>

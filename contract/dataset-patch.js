@@ -3,7 +3,7 @@
 // the rest is read only fields
 
 const dataset = require('./dataset')
-const patchKeys = ['schema', 'description', 'title', 'license', 'origin', 'extensions', 'publications', 'virtual', 'rest', 'extras', 'attachmentsAsImage', 'projection']
+const patchKeys = ['schema', 'description', 'title', 'license', 'origin', 'extensions', 'publications', 'virtual', 'rest', 'extras', 'attachmentsAsImage', 'projection', 'attachments']
 module.exports = {
   title: 'Dataset patch',
   type: 'object',

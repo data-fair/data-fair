@@ -778,6 +778,18 @@ router.get('/:datasetId/attachments/*', readDataset(), permissions.middleware('d
   if (filePath.includes('..')) return res.status(400).send()
   res.download(path.resolve(datasetUtils.attachmentsDir(req.dataset), filePath))
 })
+router.delete('/:datasetId/attachments/*', readDataset(), permissions.middleware('writeData', 'write'), cacheHeaders.noCache, asyncWrap(async(req, res, next) => {
+  const filePath = req.params['0']
+  if (filePath.includes('..')) return res.status(400).send()
+  await fs.remove(path.join(datasetUtils.attachmentsDir, filePath))
+  res.status(204).send()
+}))
+// upload a single attachment (alternative to posting a zip with all attachments in the main POST endpoint)
+router.post('/:datasetId/attachments', readDataset(), permissions.middleware('writeData', 'write'), attachments.upload(), asyncWrap(async(req, res, next) => {
+  req.body.size = (await fs.promises.stat(req.file.path)).size
+  req.body.updatedAt = moment().toISOString()
+  res.status(200).send(req.body)
+}))
 
 // Download the full dataset in its original form
 router.get('/:datasetId/raw', readDataset(), permissions.middleware('downloadOriginalData', 'read'), cacheHeaders.noCache, (req, res, next) => {
