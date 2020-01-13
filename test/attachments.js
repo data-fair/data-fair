@@ -50,6 +50,9 @@ test.serial('Process newly uploaded attachments along with data file', async t =
   dataset = await workers.hook(`finalizer/${dataset.id}`)
   t.is(dataset.status, 'finalized')
 
+  res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
+  t.is(res.data.total, 3)
+
   res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`, {
     params: { select: 'attachment,_file.content', highlight: '_file.content', q: 'test' }
   })

@@ -30,7 +30,8 @@ exports.init = async () => {
           properties: ['content', 'content_type', 'content_length']
         },
         remove: {
-          field: '_file_raw'
+          field: '_file_raw',
+          ignore_missing: true
         }
       }]
     }
