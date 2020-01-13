@@ -131,7 +131,9 @@ exports.storageSize = async (db, owner) => {
   if (res.length) size += res[0].totalSize
 
   // Add sizes of all attachments
-  const attachmentDirs = (await fs.readdir(path.join(config.dataDir, owner.type, owner.id))).filter(f => f.endsWith('.attachments'))
+  const ownerDir = path.join(config.dataDir, owner.type, owner.id)
+  await fs.ensureDir(ownerDir)
+  const attachmentDirs = (await fs.readdir(ownerDir)).filter(f => f.endsWith('.attachments'))
   for (const attachmentDir of attachmentDirs) {
     const files = await dir.promiseFiles(path.join(config.dataDir, owner.type, owner.id, attachmentDir))
     for (const file of files) {
