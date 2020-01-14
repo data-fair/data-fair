@@ -108,7 +108,7 @@ other,unknown address
   // Download extended file
   res = await ax.get('/api/v1/datasets/dataset/full')
   const lines = res.data.split('\n')
-  t.is(lines[0], 'label,adr,lat,Erreur d\'enrichissement')
+  t.is(lines[0], '\ufefflabel,adr,lat,Erreur d\'enrichissement')
   t.is(lines[1], 'koumoul,19 rue de la voie lactée saint avé,40,')
 })
 
