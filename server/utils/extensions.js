@@ -412,8 +412,9 @@ class PreserveExtensionStream extends Transform {
     if (!this.buffer.length) return
     const tasks = []
     const searches = []
-
-    this.buffer.forEach(item => {
+    const items = this.buffer
+    this.buffer = []
+    items.forEach(item => {
       Object.keys(this.mappings).forEach(extensionKey => {
         const [mappedItem, h] = this.mappings[extensionKey]({ doc: item })
         tasks.push({ item, mappedItem, h, extensionKey })
@@ -425,23 +426,24 @@ class PreserveExtensionStream extends Transform {
         })
       })
     })
-    this.buffer = []
 
-    if (!searches.length) return
-    const esClient = this.options.esClient
-    const { responses } = await esClient.msearch({ body: searches })
-    responses.forEach((res, i) => {
-      const { item, extensionKey } = tasks[i]
-      if (res.hits.total.value > 0) {
-        const extensionResult = res.hits.hits[0]._source[extensionKey]
-        const selectFields = this.extensionsMap[extensionKey].select || []
-        const selectedExtensionResult = Object.keys(extensionResult)
-          .filter(key => key === '_hash' || selectFields.length === 0 || selectFields.includes(key))
-          .reduce((a, key) => { a[key] = extensionResult[key]; return a }, {})
-        item[extensionKey] = selectedExtensionResult
-      }
-      this.push(item)
-    })
+    if (searches.length) {
+      const esClient = this.options.esClient
+      const { responses } = await esClient.msearch({ body: searches })
+      responses.forEach((res, i) => {
+        const { item, extensionKey } = tasks[i]
+        if (res.hits.total.value > 0) {
+          const extensionResult = res.hits.hits[0]._source[extensionKey]
+          const selectFields = this.extensionsMap[extensionKey].select || []
+          const selectedExtensionResult = Object.keys(extensionResult)
+            .filter(key => key === '_hash' || selectFields.length === 0 || selectFields.includes(key))
+            .reduce((a, key) => { a[key] = extensionResult[key]; return a }, {})
+          item[extensionKey] = selectedExtensionResult
+        }
+      })
+    }
+
+    items.forEach(item => this.push(item))
   }
 
   async _transform(item, encoding, callback) {
