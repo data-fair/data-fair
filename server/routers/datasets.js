@@ -775,12 +775,12 @@ router.get('/:datasetId/min/:fieldKey', readDataset(), permissions.middleware('g
 }))
 
 // For datasets with attached files
-router.get('/:datasetId/attachments/*', readDataset(), permissions.middleware('downloadOriginalData', 'read'), cacheHeaders.noCache, (req, res, next) => {
+router.get('/:datasetId/attachments/*', readDataset(), permissions.middleware('downloadOriginalData', 'read'), (req, res, next) => {
   const filePath = req.params['0']
   if (filePath.includes('..')) return res.status(400).send()
   res.download(path.resolve(datasetUtils.attachmentsDir(req.dataset), filePath))
 })
-router.delete('/:datasetId/attachments/*', readDataset(), permissions.middleware('writeData', 'write'), cacheHeaders.noCache, asyncWrap(async(req, res, next) => {
+router.delete('/:datasetId/attachments/*', readDataset(), permissions.middleware('writeData', 'write'), asyncWrap(async(req, res, next) => {
   const filePath = req.params['0']
   if (filePath.includes('..')) return res.status(400).send()
   await fs.remove(path.join(datasetUtils.attachmentsDir, filePath))
@@ -794,7 +794,7 @@ router.post('/:datasetId/attachments', readDataset(), permissions.middleware('wr
 }))
 
 // Download the full dataset in its original form
-router.get('/:datasetId/raw', readDataset(), permissions.middleware('downloadOriginalData', 'read'), cacheHeaders.noCache, (req, res, next) => {
+router.get('/:datasetId/raw', readDataset(), permissions.middleware('downloadOriginalData', 'read'), (req, res, next) => {
   res.download(datasetUtils.originalFileName(req.dataset), req.dataset.originalFile.name)
   webhooks.trigger(req.app.get('db'), 'dataset', req.dataset, { type: 'downloaded' })
 })
@@ -811,9 +811,9 @@ router.get('/:datasetId/convert', readDataset(), permissions.middleware('downloa
 
 // Download the full dataset with extensions
 // TODO use ES scroll functionality instead of file read + extensions
-// TODO check absence of unused query params to prevent attacks with cache invalidation ?
-router.get('/:datasetId/full', readDataset(), permissions.middleware('downloadFullData', 'read'), cacheHeaders.noCache, asyncWrap(async (req, res, next) => {
+router.get('/:datasetId/full', readDataset(), permissions.middleware('downloadFullData', 'read'), cacheHeaders.resourceBased, asyncWrap(async (req, res, next) => {
   const db = req.app.get('db')
+  if (Object.keys(req.query).length) return res.status(400).send('Le téléchargement du fichier étendu ne supporte pas de paramètres de query')
   if (req.dataset.isVirtual) req.dataset.descendants = await virtualDatasetsUtils.descendants(req.app.get('db'), req.dataset)
   res.setHeader('Content-disposition', 'attachment; filename=' + req.dataset.file.name)
   res.setHeader('Content-type', 'text/csv')
