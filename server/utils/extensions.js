@@ -316,7 +316,7 @@ class RemoteExtensionStream extends Transform {
     }
   }
 
-  async _final(callback) {
+  async _flush(callback) {
     try {
       await this._sendBuffer()
       callback()
@@ -392,6 +392,8 @@ class PreserveExtensionStream extends Transform {
     const extensions = this.options.dataset.extensions || []
     this.mappings = {}
     this.extensionsMap = {}
+    this.buffer = []
+
     // The ES index was not yet created, we will not try to extract previous extensions
     if (!await esClient.indices.exists({ index: this.indexName })) return
     for (const extension of extensions) {
@@ -406,30 +408,62 @@ class PreserveExtensionStream extends Transform {
     }
   }
 
+  async _sendBuffer() {
+    if (!this.buffer.length) return
+    const tasks = []
+    const searches = []
+
+    this.buffer.forEach(item => {
+      Object.keys(this.mappings).forEach(extensionKey => {
+        const [mappedItem, h] = this.mappings[extensionKey]({ doc: item })
+        tasks.push({ item, mappedItem, h, extensionKey })
+        searches.push({ index: this.indexName })
+        searches.push({
+          size: 1,
+          _source: `${extensionKey}.*`,
+          query: { constant_score: { filter: { term: { [extensionKey + '._hash']: h } } } }
+        })
+      })
+    })
+    this.buffer = []
+
+    if (!searches.length) return
+    const esClient = this.options.esClient
+    const { responses } = await esClient.msearch({ body: searches })
+    responses.forEach((res, i) => {
+      const { item, extensionKey } = tasks[i]
+      if (res.hits.total.value > 0) {
+        const extensionResult = res.hits.hits[0]._source[extensionKey]
+        const selectFields = this.extensionsMap[extensionKey].select || []
+        const selectedExtensionResult = Object.keys(extensionResult)
+          .filter(key => key === '_hash' || selectFields.length === 0 || selectFields.includes(key))
+          .reduce((a, key) => { a[key] = extensionResult[key]; return a }, {})
+        item[extensionKey] = selectedExtensionResult
+      }
+      this.push(item)
+    })
+  }
+
   async _transform(item, encoding, callback) {
     try {
       if (!this.mappings) await this.init()
-      const esClient = this.options.esClient
-      for (const extensionKey in this.mappings) {
-      /* eslint no-unused-vars: off */
-        const [mappedItem, h] = this.mappings[extensionKey]({ doc: item })
-        const res = await esClient.search({
-          index: this.indexName,
-          body: { query: { constant_score: { filter: { term: { [extensionKey + '._hash']: h } } } } }
-        })
-        if (res.hits.total.value > 0) {
-          const extensionResult = res.hits.hits[0]._source[extensionKey]
-          const selectFields = this.extensionsMap[extensionKey].select || []
-          const selectedExtensionResult = Object.keys(extensionResult)
-            .filter(key => key === '_hash' || selectFields.length === 0 || selectFields.includes(key))
-            .reduce((a, key) => { a[key] = extensionResult[key]; return a }, {})
-          item[extensionKey] = selectedExtensionResult
-        }
+      this.buffer.push(item)
+      if (this.i % 1000 === 0) {
+        await this._sendBuffer()
       }
+      callback()
     } catch (err) {
-      return callback(err)
+      callback(err)
     }
-    callback(null, item)
+  }
+
+  async _flush(callback) {
+    try {
+      await this._sendBuffer()
+      callback()
+    } catch (err) {
+      callback(err)
+    }
   }
 }
 
