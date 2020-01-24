@@ -23,9 +23,6 @@ const validate = ajv.compile(schema)
 exports.init = async (db) => {
   await dbUtils.ensureIndex(db, 'limits', { id: 'text', name: 'text' }, { name: 'fulltext' })
   await dbUtils.ensureIndex(db, 'limits', { type: 1, id: 1 }, { name: 'limits-find-current', unique: true })
-
-  // TODO ? delete limits after a delay on lastUpdate ?
-  // await dbUtils.ensureIndex(db, 'limits', { lastUpdate: 1 }, { expireAfterSeconds: 60 * 60 * 24 * 100, name: 'limits-ttl' })
 }
 
 exports.get = async (db, consumer, type) => {

@@ -1,4 +1,3 @@
-// TODO add ensureIndex instructions to init logic.
 const debug = require('debug')('db')
 const config = require('config')
 const { MongoClient } = require('mongodb')

@@ -216,7 +216,6 @@ router.patch('/:remoteServiceId', readService, asyncWrap(async(req, res) => {
 router.delete('/:remoteServiceId', readService, asyncWrap(async(req, res) => {
   if (!req.user) return res.status(401).send()
   if (!req.user.isAdmin) return res.status(403).send()
-  // TODO : Remove indexes
   await req.app.get('db').collection('remote-services').deleteOne({
     id: req.params.remoteServiceId
   })

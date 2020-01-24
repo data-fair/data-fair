@@ -213,7 +213,6 @@ test.serial('Manage failure in children processes', async t => {
     res = await ax.get('/api/v1/datasets/' + dataset.id + '/journal')
     t.is(res.status, 200)
     t.is(res.data[0].type, 'error')
-    // TODO: should be startsWith, not includes
     t.true(res.data[0].data.includes('100% des lignes sont en erreur'))
   }
 })

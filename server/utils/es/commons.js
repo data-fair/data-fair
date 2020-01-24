@@ -21,7 +21,6 @@ exports.esProperty = prop => {
   if (prop.type === 'string' && prop.format === 'date-time') esProp = { type: 'date', fields: innerTextField }
   if (prop.type === 'string' && prop.format === 'date') esProp = { type: 'date', fields: innerTextField }
   // uri-reference and full text fields are managed in the same way from now on, because we want to be able to aggregate on small full text fields
-  // TODO: maybe ignore_above should be only for uri-reference fields
   if (prop.type === 'string' && (prop.format === 'uri-reference' || !prop.format)) esProp = { type: 'keyword', ignore_above: 200, fields: innerTextField }
   // Do not index geometry, it will be copied and simplified in _geoshape
   if (prop['x-refersTo'] === 'https://purl.org/geojson/vocab#geometry') {
