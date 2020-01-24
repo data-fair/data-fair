@@ -409,7 +409,7 @@ class PreserveExtensionStream extends Transform {
   }
 
   async _sendBuffer() {
-    if (!this.buffer.length) return
+    if (!this.buffer || !this.buffer.length) return
     const tasks = []
     const searches = []
     const items = this.buffer
@@ -442,7 +442,6 @@ class PreserveExtensionStream extends Transform {
         }
       })
     }
-
     items.forEach(item => this.push(item))
   }
 
