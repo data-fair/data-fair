@@ -65,6 +65,8 @@ module.exports = {
     datasetStorage: -1,
     // Maximum storage space for 1 attachment
     attachmentStorage: 100 * 1000 * 1000,
+    // Maximum size for attachment to be indexed
+    attachmentIndexed: 5 * 1000 * 1000,
     remoteServiceRate: {
       duration: 5, // 5 seconds intervals
       nb: 100, // 100 req max in this interval

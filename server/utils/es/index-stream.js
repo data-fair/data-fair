@@ -16,8 +16,9 @@ class IndexStream extends Transform {
 
   async _transform(item, encoding, callback) {
     try {
+      let warning
       if (this.options.updateMode) {
-        await extensions.applyCalculations(this.options.dataset, item.doc)
+        warning = await extensions.applyCalculations(this.options.dataset, item.doc)
         const keys = Object.keys(item.doc)
         if (keys.length === 0 || (keys.length === 1 && keys[0] === '_i')) return callback()
         this.body.push({ update: { _index: this.options.indexName, _id: item.id, retry_on_conflict: 3 } })
@@ -35,10 +36,12 @@ class IndexStream extends Transform {
           delete item._id
         }
         this.body.push(params)
-        await extensions.applyCalculations(this.options.dataset, item)
+        warning = await extensions.applyCalculations(this.options.dataset, item)
         this.body.push(item)
         this.bulkChars += JSON.stringify(item).length
       }
+      if (warning) this.erroredItems.push({ customMessage: warning })
+
       this.i += 1
 
       if (
@@ -121,7 +124,8 @@ class IndexStream extends Transform {
     msg += this.erroredItems.slice(0, 3).map(item => {
       let itemMsg = ' - '
       if (item._i !== undefined) itemMsg += `Ligne ${item._i}: `
-      if (item.error.caused_by) itemMsg += item.error.caused_by.reason
+      if (item.customMessage) itemMsg += item.customMessage
+      else if (item.error.caused_by) itemMsg += item.error.caused_by.reason
       else itemMsg += item.error.reason
       return itemMsg
     }).join('\n<br>')

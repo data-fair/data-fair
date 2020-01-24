@@ -467,6 +467,7 @@ class PreserveExtensionStream extends Transform {
 }
 
 exports.applyCalculations = async (dataset, item) => {
+  let warning = null
   const flatItem = flatten(item)
 
   // Add base64 content of attachments
@@ -474,9 +475,14 @@ exports.applyCalculations = async (dataset, item) => {
   if (attachmentField && flatItem[attachmentField.key]) {
     const filePath = path.join(datasetUtils.attachmentsDir(dataset), flatItem[attachmentField.key])
     if (await fs.pathExists(filePath)) {
-      item._attachment_url = `${config.publicUrl}/api/v1/datasets/${dataset.id}/attachments/${flatItem[attachmentField.key]}`
-      item._file_raw = (await fs.readFile(filePath))
-        .toString('base64')
+      const stats = await fs.stat(filePath)
+      if (stats.size > config.defaultLimits.attachmentIndexed) {
+        warning = 'Pièce jointe trop volumineuse pour être analysée'
+      } else {
+        item._attachment_url = `${config.publicUrl}/api/v1/datasets/${dataset.id}/attachments/${flatItem[attachmentField.key]}`
+        item._file_raw = (await fs.readFile(filePath))
+          .toString('base64')
+      }
     }
   }
 
@@ -494,4 +500,5 @@ exports.applyCalculations = async (dataset, item) => {
   dataset.schema.filter(field => field.separator && item[field.key]).forEach(field => {
     item[field.key] = item[field.key].split(field.separator.trim()).map(part => part.trim())
   })
+  return warning
 }
