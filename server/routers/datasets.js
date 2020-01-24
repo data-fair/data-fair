@@ -373,8 +373,10 @@ router.post('', beforeUpload, filesUtils.uploadFile(), asyncWrap(async(req, res)
 
     delete dataset._id
 
-    await journals.log(req.app, dataset, { type: 'dataset-created', href: config.publicUrl + '/dataset/' + dataset.id }, 'dataset')
-    await datasetUtils.updateStorageSize(db, dataset.owner)
+    await Promise.all([
+      journals.log(req.app, dataset, { type: 'dataset-created', href: config.publicUrl + '/dataset/' + dataset.id }, 'dataset'),
+      datasetUtils.updateStorageSize(db, dataset.owner)
+    ])
     res.status(201).send(clean(dataset))
   } catch (err) {
   // Wrapped the whole thing in a try/catch to remove files in case of failure

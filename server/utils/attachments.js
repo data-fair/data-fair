@@ -58,7 +58,7 @@ const upload = multer({
       if (attachmentLimit !== -1 && attachmentLimit < estimatedFileSize) throw createError(413, 'Attachment size exceeds the authorized limit')
       let storageRemaining = await datasetUtils.storageRemaining(req.app.get('db'), req.dataset.owner)
       if (storageRemaining !== -1) {
-      // Ignore the size of the attachment we are overwriting
+        // Ignore the size of the attachment we are overwriting
         const existingAttachment = (req.dataset.attachments || []).find(a => a.name === file.originalname)
         if (existingAttachment) storageRemaining += existingAttachment.size
         storageRemaining = Math.max(0, storageRemaining - estimatedFileSize)
