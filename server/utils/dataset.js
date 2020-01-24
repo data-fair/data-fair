@@ -7,6 +7,9 @@ const config = require('config')
 const csv = require('csv-parser')
 const JSONStream = require('JSONStream')
 const dir = require('node-dir')
+const { Writable } = require('stream')
+const shuffle = require('shuffle-array')
+const pump = require('util').promisify(require('pump'))
 const fieldsSniffer = require('./fields-sniffer')
 const geoUtils = require('./geo')
 const restDatasetsUtils = require('./rest-datasets')
@@ -59,7 +62,7 @@ exports.lsFiles = async (dataset) => {
 }
 
 // Read the dataset file and get a stream of line items
-exports.readStream = (dataset) => {
+exports.readStream = (dataset, raw = false) => {
   if (dataset.isRest) return restDatasetsUtils.readStream(dataset)
 
   let parser, transformer
@@ -105,6 +108,10 @@ exports.readStream = (dataset) => {
     new Transform({
       objectMode: true,
       transform(chunk, encoding, callback) {
+        if (raw) {
+          delete chunk._i
+          return callback(null, chunk)
+        }
         const line = {}
         dataset.schema.forEach(prop => {
           const value = fieldsSniffer.format(chunk[prop['x-originalName']], prop)
@@ -115,6 +122,35 @@ exports.readStream = (dataset) => {
       }
     })
   )
+}
+
+exports.sample = async (dataset) => {
+  let currentLine = 0
+  const linesNumber = [...Array(dataset.file.props.numLines).keys()]
+  shuffle(linesNumber)
+  const sampleLineNumbers = new Set(linesNumber.slice(0, Math.min(dataset.file.props.numLines, 4000)))
+  const sample = []
+  await pump(exports.readStream(dataset, true), new Writable({
+    objectMode: true,
+    write(chunk, encoding, callback) {
+      if (sampleLineNumbers.has(currentLine)) sample.push(chunk)
+      currentLine += 1
+      callback()
+    }
+  }))
+  return sample
+}
+
+exports.countLines = async (dataset) => {
+  let nbLines = 0
+  await pump(exports.readStream(dataset, true), new Writable({
+    objectMode: true,
+    write(chunk, encoding, callback) {
+      nbLines += 1
+      callback()
+    }
+  }))
+  return nbLines
 }
 
 exports.storageSize = async (db, owner) => {

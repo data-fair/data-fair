@@ -4,7 +4,6 @@ const CSVSniffer = require('csv-sniffer')()
 const possibleDelimiters = [',', ';', '\t', '|']
 const sniffer = new CSVSniffer(possibleDelimiters)
 const iconv = require('iconv-lite')
-const countLines = require('../utils/count-lines')
 const datasetUtils = require('../utils/dataset')
 const fieldsSniffer = require('../utils/fields-sniffer')
 
@@ -51,7 +50,7 @@ exports.process = async function(app, dataset) {
     fieldsDelimiter: sniffResult.delimiter,
     escapeChar: sniffResult.quoteChar || '"'
   }
-  props.numLines = await countLines(datasetUtils.fileName(dataset), sniffResult.newlineStr)
+  props.numLines = await datasetUtils.countLines(dataset)
 
   dataset.status = 'analyzed'
   await db.collection('datasets').updateOne({ id: dataset.id }, {

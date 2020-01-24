@@ -19,3 +19,11 @@ test.serial('A CSV with weird keys', async t => {
   const res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
   t.is(res.data.total, 1)
 })
+
+test.serial('A CSV with splitting errors', async t => {
+  const ax = await axiosBuilder('dmeadus0@answers.com:passwd')
+  const dataset = await testUtils.sendDataset('dataset-split-fail.csv', ax)
+  t.is(dataset.status, 'finalized')
+  const res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
+  t.is(res.data.total, 20)
+})

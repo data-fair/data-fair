@@ -1,5 +1,4 @@
 // schematize dataset data and try to guess the schém
-const dataSample = require('../utils/data-sample')
 const datasetUtils = require('../utils/dataset')
 const fieldsSniffer = require('../utils/fields-sniffer')
 
@@ -9,8 +8,10 @@ exports.process = async function(app, dataset) {
   const db = app.get('db')
 
   // get a random sampling to test values type on fewer elements
-  const sample = await dataSample(dataset)
+  const sample = await datasetUtils.sample(dataset)
   const firstLine = sample.pop()
+  if (!firstLine) throw new Error('Èchec de l\'échantillonage des données')
+
   // Convert an array of objects to an object of sets
   // Each set will hold the differents values for each field
   const myCSVObject = sample.reduce((acc, current) => {
