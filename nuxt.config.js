@@ -1,5 +1,13 @@
-const config = require('config')
 const URL = require('url').URL
+let config = require('config')
+config.basePath = new URL(config.publicUrl + '/').pathname
+const nuxtConfigInject = require('./nuxt-config-inject')
+
+if (process.env.NODE_ENV === 'production') {
+  if (process.argv.slice(-1)[0] === 'build') config = nuxtConfigInject.prepare(config)
+  else nuxtConfigInject.replace(config)
+}
+
 const webpack = require('webpack')
 const i18n = require('./i18n')
 const VuetifyLoaderPlugin = require('vuetify-loader/lib/plugin')
@@ -27,7 +35,7 @@ module.exports = {
     { src: '~plugins/analytics', ssr: false }
   ],
   router: {
-    base: new URL(config.publicUrl + '/').pathname
+    base: config.basePath
   },
   modules: ['@digibytes/markdownit', '@nuxtjs/axios', 'cookie-universal-nuxt', ['nuxt-i18n', {
     seo: false,
@@ -66,7 +74,8 @@ module.exports = {
     ],
     link: [
       { rel: 'stylesheet', href: 'https://fonts.googleapis.com/css?family=Nunito:300,400,500,700,400italic' }
-    ]
+    ],
+    style: []
   }
 }
 
