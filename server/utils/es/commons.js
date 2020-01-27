@@ -8,6 +8,9 @@ const sanitizeHtml = require('sanitize-html')
 const thumbor = require('../thumbor')
 const tiles = require('../tiles')
 const geo = require('../geo')
+const permissions = require('../permissions')
+const apiDocsUtil = require('../api-docs')
+const operationsClasses = apiDocsUtil.operationsClasses.datasets
 
 // From a property in data-fair schema to the property in an elasticsearch mapping
 exports.esProperty = prop => {
@@ -227,7 +230,10 @@ exports.prepareResultItem = (hit, dataset, query) => {
   if (query.thumbnail) {
     const imageField = dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/image')
     if (!imageField) throw createError(400, 'Thumbnail management is only available if the "image" concept is associated to a field of the dataset.')
-    res._thumbnail = thumbor.thumbnail(res[imageField.key], query.thumbnail)
+    if (res[imageField.key]) {
+      const ignoreThumbor = dataset.attachmentsAsImage && !permissions.isPublic(dataset, operationsClasses)
+      res._thumbnail = ignoreThumbor ? res[imageField.key] : thumbor.thumbnail(res[imageField.key], query.thumbnail)
+    }
   }
   // Description can be used as html content in some applications, we must sanitize it for XSS prevention
   const descriptionField = dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/description')
