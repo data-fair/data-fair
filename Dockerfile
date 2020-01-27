@@ -46,7 +46,7 @@ ADD nodemon.json .
 # Adding UI files
 ADD public public
 ADD nuxt.config.js .
-ADD nuxt-config-inject.js
+ADD nuxt-config-inject.js .
 ADD i18n i18n
 ADD doc/components/DocPage.vue public/components/DocPage.vue
 ADD doc/pages/user-guide public/pages/user-guide
@@ -63,7 +63,6 @@ ADD upgrade upgrade
 ADD README.md .
 
 VOLUME /data
-VOLUME /webapp/.nuxt
 EXPOSE 8080
 
 CMD ["node", "--max-http-header-size", "64000", "server"]
