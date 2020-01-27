@@ -51,13 +51,13 @@ ADD i18n i18n
 ADD doc/components/DocPage.vue public/components/DocPage.vue
 ADD doc/pages/user-guide public/pages/user-guide
 ADD doc/pages/interoperate public/pages/interoperate
-RUN nuxt build
+ADD config config
+ADD shared shared
+ADD contract contract
+RUN npm run build
 
 # Adding server files
 ADD server server
-ADD shared shared
-ADD contract contract
-ADD config config
 ADD scripts scripts
 ADD upgrade upgrade
 ADD README.md .
