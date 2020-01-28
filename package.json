@@ -47,7 +47,7 @@
     "@digibytes/markdownit": "^1.2.2",
     "@koumoul/express-request-proxy": "^2.3.0",
     "@koumoul/icalendar": "^0.7.3",
-    "@koumoul/nuxt-config-inject": "^0.2.7",
+    "@koumoul/nuxt-config-inject": "^0.2.8",
     "@koumoul/sd-express": "^0.15.0",
     "@koumoul/sd-vue": "^0.12.1",
     "@koumoul/v-iframe": "^0.2.3",
