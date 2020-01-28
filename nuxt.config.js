@@ -1,18 +1,20 @@
 const URL = require('url').URL
+const i18n = require('./i18n')
 let config = require('config')
 config.basePath = new URL(config.publicUrl + '/').pathname
-const nuxtConfigInject = require('./nuxt-config-inject')
+config.i18n.messages = i18n.messages
 
 if (process.env.NODE_ENV === 'production') {
+  const nuxtConfigInject = require('@koumoul/nuxt-config-inject')
   if (process.argv.slice(-1)[0] === 'build') config = nuxtConfigInject.prepare(config)
   else nuxtConfigInject.replace(config)
 }
 
 const webpack = require('webpack')
-const i18n = require('./i18n')
 const VuetifyLoaderPlugin = require('vuetify-loader/lib/plugin')
 
 module.exports = {
+  mode: 'spa',
   srcDir: 'public/',
   build: {
     // cache: true,
@@ -27,7 +29,7 @@ module.exports = {
   loading: { color: '#1e88e5' }, // Customize the progress bar color
   plugins: [
     { src: '~plugins/ws', ssr: false },
-    { src: '~plugins/session', ssr: false },
+    { src: '~plugins/session' },
     { src: '~plugins/vuetify' },
     { src: '~plugins/moment' },
     { src: '~plugins/truncate' },
@@ -43,7 +45,7 @@ module.exports = {
     defaultLocale: config.i18n.defaultLocale,
     vueI18n: {
       fallbackLocale: config.i18n.defaultLocale,
-      messages: i18n.messages
+      messages: config.i18n.messages
     }
   }]],
   axios: {

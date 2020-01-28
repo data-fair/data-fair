@@ -69,10 +69,6 @@ export default () => {
         const licenses = await this.$axios.$get('api/v1/settings/' + owner.type + '/' + owner.id + '/licenses')
         commit('ownerLicenses', { owner, licenses })
       },
-      nuxtServerInit({ commit, dispatch }, { req, env, app }) {
-        commit('setAny', { env: { ...env } })
-        dispatch('session/init', { cookies: this.$cookies, baseUrl: env.publicUrl + '/api/v1/session' })
-      },
       searchQuery({ commit }, params) {
         commit('setSearchQuery', params)
       }
