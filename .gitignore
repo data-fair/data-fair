@@ -10,3 +10,4 @@
 /public/pages/user-guide
 /doc-dist
 .cache-require-paths.json
+/dist/
