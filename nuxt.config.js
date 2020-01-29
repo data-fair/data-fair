@@ -2,7 +2,7 @@ const URL = require('url').URL
 const i18n = require('./i18n')
 let config = require('config')
 config.basePath = new URL(config.publicUrl + '/').pathname
-config.i18n.messages = i18n.messages
+config.i18nMessages = i18n.messages
 
 if (process.env.NODE_ENV === 'production') {
   const nuxtConfigInject = require('@koumoul/nuxt-config-inject')
@@ -41,11 +41,11 @@ module.exports = {
   },
   modules: ['@digibytes/markdownit', '@nuxtjs/axios', 'cookie-universal-nuxt', ['nuxt-i18n', {
     seo: false,
-    locales: i18n.locales,
-    defaultLocale: config.i18n.defaultLocale,
+    locales: [{ code: 'fr', iso: 'fr-FR' }, { code: 'en', iso: 'es-US' }],
+    defaultLocale: 'fr',
     vueI18n: {
-      fallbackLocale: config.i18n.defaultLocale,
-      messages: config.i18n.messages
+      fallbackLocale: 'fr',
+      messages: config.i18nMessages
     }
   }]],
   axios: {

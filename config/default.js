@@ -109,10 +109,6 @@ module.exports = {
     size: 1000
   },
   analytics: {}, // a "modules" definition for @koumoul/vue-multianalytics
-  i18n: {
-    defaultLocale: 'fr',
-    locales: [{ code: 'fr', iso: 'fr-FR' }, { code: 'en', iso: 'es-US' }]
-  },
   browserLogLevel: 'error',
   thumbor: {
     url: 'http://localhost:8000',
