@@ -3,6 +3,7 @@ const unflatten = flatten.unflatten
 const acceptLangParser = require('accept-language-parser')
 const flatOpts = { delimiter: '_' }
 
+exports.defaultLocale = 'fr'
 exports.locales = [{ code: 'fr', iso: 'fr-FR' }, { code: 'en', iso: 'es-US' }]
 
 // Build a map of messages of this form

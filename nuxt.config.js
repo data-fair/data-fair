@@ -7,7 +7,7 @@ config.i18nMessages = i18n.messages
 if (process.env.NODE_ENV === 'production') {
   const nuxtConfigInject = require('@koumoul/nuxt-config-inject')
   if (process.argv.slice(-1)[0] === 'build') config = nuxtConfigInject.prepare(config)
-  else nuxtConfigInject.replace(config)
+  else nuxtConfigInject.replace(config, ['nuxt-dist/**/*', 'public/static/**/*'])
 }
 
 const webpack = require('webpack')
@@ -16,6 +16,7 @@ const VuetifyLoaderPlugin = require('vuetify-loader/lib/plugin')
 module.exports = {
   mode: 'spa',
   srcDir: 'public/',
+  buildDir: 'nuxt-dist',
   build: {
     // cache: true,
     publicPath: config.publicUrl + '/_nuxt/',
