@@ -34,6 +34,7 @@ module.exports = {
     { src: '~plugins/vuetify' },
     { src: '~plugins/moment' },
     { src: '~plugins/truncate' },
+    { src: '~plugins/display-bytes' },
     { src: '~plugins/logger', ssr: false },
     { src: '~plugins/analytics', ssr: false }
   ],

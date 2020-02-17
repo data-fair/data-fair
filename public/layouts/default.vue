@@ -71,6 +71,14 @@
               <v-list-tile v-for="orga in user.organizations || []" :key="orga.id" :to="`/settings/organization/${orga.id}`">
                 <v-list-tile-title>Paramètres {{ orga.name || orga.id }}</v-list-tile-title>
               </v-list-tile>
+
+              <v-list-tile :to="`/storage/user/${user.id}`">
+                <v-list-tile-title>Mon stockage</v-list-tile-title>
+              </v-list-tile>
+              <v-list-tile v-for="orga in user.organizations || []" :key="`storage-${orga.id}`" :to="`/storage/organization/${orga.id}`">
+                <v-list-tile-title>Stockage {{ orga.name || orga.id }}</v-list-tile-title>
+              </v-list-tile>
+
               <v-list-tile :href="env.directoryUrl + '/me'">
                 <v-list-tile-title>Mon compte</v-list-tile-title>
               </v-list-tile>

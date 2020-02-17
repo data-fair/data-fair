@@ -53,6 +53,28 @@ function clean(dataset) {
   return dataset
 }
 
+const checkStorage = (overwrite) => asyncWrap(async (req, res, next) => {
+  if (!req.get('Content-Length')) throw createError(411, 'Content-Length is mandatory')
+  const contentLength = Number(req.get('Content-Length'))
+  if (Number.isNaN(contentLength)) throw createError(400, 'Content-Length is not a number')
+  const estimatedContentSize = contentLength - 210
+
+  const owner = req.dataset ? req.dataset.owner : usersUtils.owner(req)
+  const datasetLimit = config.defaultLimits.datasetStorage
+  if (datasetLimit !== -1 && datasetLimit < estimatedContentSize) throw createError(413, 'Dataset size exceeds the authorized limit')
+  let remainingStorage = await datasetUtils.remainingStorage(req.app.get('db'), owner)
+  if (remainingStorage !== -1) {
+    if (overwrite && req.dataset && req.dataset.storage) {
+      // ignore the size of the dataset we are overwriting
+      remainingStorage += req.dataset.storage.size
+    }
+    if ((remainingStorage - estimatedContentSize) <= 0) {
+      throw createError(429, 'Vous avez atteint la limite de votre espace de stockage.')
+    }
+  }
+  next()
+})
+
 // Get the list of datasets
 router.get('', cacheHeaders.noCache, asyncWrap(async(req, res) => {
   const datasets = req.app.get('db').collection('datasets')
@@ -275,7 +297,7 @@ router.delete('/:datasetId', readDataset(), permissions.middleware('delete', 'ad
     } catch (err) {
       console.error('Error while deleting dataset indexes and alias', err)
     }
-    await datasetUtils.updateStorageSize(db, req.dataset.owner)
+    await datasetUtils.updateStorage(db, req.dataset, true)
   }
 
   res.sendStatus(204)
@@ -331,7 +353,7 @@ const beforeUpload = asyncWrap(async(req, res, next) => {
   if (!permissions.canDoForOwner(usersUtils.owner(req), 'postDataset', req.user, req.app.get('db'))) return res.sendStatus(403)
   next()
 })
-router.post('', beforeUpload, filesUtils.uploadFile(), asyncWrap(async(req, res) => {
+router.post('', beforeUpload, checkStorage(true), filesUtils.uploadFile(), asyncWrap(async(req, res) => {
   req.files = req.files || []
   debugFiles('POST datasets uploaded some files', req.files)
   try {
@@ -380,7 +402,7 @@ router.post('', beforeUpload, filesUtils.uploadFile(), asyncWrap(async(req, res)
 
     await Promise.all([
       journals.log(req.app, dataset, { type: 'dataset-created', href: config.publicUrl + '/dataset/' + dataset.id }, 'dataset'),
-      datasetUtils.updateStorageSize(db, dataset.owner)
+      datasetUtils.updateStorage(db, dataset)
     ])
     res.status(201).send(clean(dataset))
   } catch (err) {
@@ -453,7 +475,7 @@ const updateDataset = asyncWrap(async(req, res) => {
     await db.collection('datasets').replaceOne({ id: req.params.datasetId }, dataset)
     if (req.isNewDataset) await journals.log(req.app, dataset, { type: 'dataset-created' }, 'dataset')
     else await journals.log(req.app, dataset, { type: 'dataset-updated' }, 'dataset')
-    await datasetUtils.updateStorageSize(db, req.dataset.owner)
+    await datasetUtils.updateStorage(db, req.dataset)
     res.status(req.isNewDataset ? 201 : 200).send(clean(dataset))
   } catch (err) {
     // Wrapped the whole thing in a try/catch to remove files in case of failure
@@ -463,8 +485,8 @@ const updateDataset = asyncWrap(async(req, res) => {
     throw err
   }
 })
-router.post('/:datasetId', attemptInsert, readDataset(['finalized', 'error']), permissions.middleware('writeData', 'write'), filesUtils.uploadFile(), updateDataset)
-router.put('/:datasetId', attemptInsert, readDataset(['finalized', 'error']), permissions.middleware('writeData', 'write'), filesUtils.uploadFile(), updateDataset)
+router.post('/:datasetId', attemptInsert, readDataset(['finalized', 'error']), permissions.middleware('writeData', 'write'), checkStorage(true), filesUtils.uploadFile(), updateDataset)
+router.put('/:datasetId', attemptInsert, readDataset(['finalized', 'error']), permissions.middleware('writeData', 'write'), checkStorage(true), filesUtils.uploadFile(), updateDataset)
 
 // CRUD operations for REST datasets
 function isRest(req, res, next) {
@@ -475,10 +497,10 @@ function isRest(req, res, next) {
   next()
 }
 router.get('/:datasetId/lines/:lineId', readDataset(), isRest, permissions.middleware('readLine', 'read'), cacheHeaders.noCache, asyncWrap(restDatasetsUtils.readLine))
-router.post('/:datasetId/lines', readDataset(['finalized', 'updated', 'indexed']), isRest, permissions.middleware('createLine', 'write'), restDatasetsUtils.uploadAttachment, asyncWrap(restDatasetsUtils.createLine))
-router.put('/:datasetId/lines/:lineId', readDataset(['finalized', 'updated', 'indexed']), isRest, permissions.middleware('updateLine', 'write'), restDatasetsUtils.uploadAttachment, asyncWrap(restDatasetsUtils.updateLine))
-router.patch('/:datasetId/lines/:lineId', readDataset(['finalized', 'updated', 'indexed']), isRest, permissions.middleware('patchLine', 'write'), restDatasetsUtils.uploadAttachment, asyncWrap(restDatasetsUtils.patchLine))
-router.post('/:datasetId/_bulk_lines', readDataset(['finalized', 'updated', 'indexed']), isRest, permissions.middleware('bulkLines', 'write'), restDatasetsUtils.uploadBulk, asyncWrap(restDatasetsUtils.bulkLines))
+router.post('/:datasetId/lines', readDataset(['finalized', 'updated', 'indexed']), isRest, permissions.middleware('createLine', 'write'), checkStorage(false), restDatasetsUtils.uploadAttachment, asyncWrap(restDatasetsUtils.createLine))
+router.put('/:datasetId/lines/:lineId', readDataset(['finalized', 'updated', 'indexed']), isRest, permissions.middleware('updateLine', 'write'), checkStorage(false), restDatasetsUtils.uploadAttachment, asyncWrap(restDatasetsUtils.updateLine))
+router.patch('/:datasetId/lines/:lineId', readDataset(['finalized', 'updated', 'indexed']), isRest, permissions.middleware('patchLine', 'write'), checkStorage(false), restDatasetsUtils.uploadAttachment, asyncWrap(restDatasetsUtils.patchLine))
+router.post('/:datasetId/_bulk_lines', readDataset(['finalized', 'updated', 'indexed']), isRest, permissions.middleware('bulkLines', 'write'), checkStorage(false), restDatasetsUtils.uploadBulk, asyncWrap(restDatasetsUtils.bulkLines))
 router.delete('/:datasetId/lines/:lineId', readDataset(['finalized', 'updated', 'indexed']), isRest, permissions.middleware('deleteLine', 'write'), asyncWrap(restDatasetsUtils.deleteLine))
 router.get('/:datasetId/lines/:lineId/revisions', readDataset(['finalized', 'updated', 'indexed']), isRest, permissions.middleware('readLineRevisions', 'read'), asyncWrap(restDatasetsUtils.readLineRevisions))
 
@@ -789,12 +811,14 @@ router.delete('/:datasetId/attachments/*', readDataset(), permissions.middleware
   const filePath = req.params['0']
   if (filePath.includes('..')) return res.status(400).send()
   await fs.remove(path.join(datasetUtils.attachmentsDir, filePath))
+  await datasetUtils.updateStorage(req.app.get('db'), req.dataset)
   res.status(204).send()
 }))
 // upload a single attachment (alternative to posting a zip with all attachments in the main POST endpoint)
-router.post('/:datasetId/attachments', readDataset(), permissions.middleware('writeData', 'write'), attachments.upload(), asyncWrap(async(req, res, next) => {
+router.post('/:datasetId/attachments', readDataset(), permissions.middleware('writeData', 'write'), checkStorage(false), attachments.upload(), asyncWrap(async(req, res, next) => {
   req.body.size = (await fs.promises.stat(req.file.path)).size
   req.body.updatedAt = moment().toISOString()
+  await datasetUtils.updateStorage(req.app.get('db'), req.dataset)
   res.status(200).send(req.body)
 }))
 

@@ -186,6 +186,16 @@ module.exports = {
         }
       }
     },
+    storage: {
+      type: 'object',
+      description: 'All storage space info of this dataset',
+      properties: {
+        fileSize: { type: 'integer' },
+        attachmentsSize: { type: 'integer' },
+        collectionSize: { type: 'integer' },
+        revisionSize: { type: 'integer' }
+      }
+    },
     createdBy: eventBy,
     updatedBy: eventBy,
     createdAt: {

@@ -8,7 +8,6 @@ const shortid = require('shortid')
 const mime = require('mime-types')
 const ajv = require('ajv')()
 const usersUtils = require('./users')
-const datasetUtils = require('./dataset')
 const datasetPatchSchema = require('../../contract/dataset-patch')
 const validatePatch = ajv.compile(datasetPatchSchema)
 const fallbackMimeTypes = {
@@ -117,24 +116,6 @@ const upload = multer({
         fixFormBody(req.body)
         const valid = validatePatch(req.body)
         if (!valid) throw createError(400, JSON.stringify(validatePatch.errors))
-
-        let owner = usersUtils.owner(req)
-        if (req.dataset) owner = req.dataset.owner
-        // manage disk storage quota
-        if (!req.get('Content-Length')) throw createError(411, 'Content-Length is mandatory')
-        const contentLength = Number(req.get('Content-Length'))
-        if (Number.isNaN(contentLength)) throw createError(400, 'Content-Length is not a number')
-        // Approximate size of multi-part overhead and owner metadata
-        const estimatedFileSize = contentLength - 210
-        const datasetLimit = config.defaultLimits.datasetStorage
-        if (datasetLimit !== -1 && datasetLimit < estimatedFileSize) throw createError(413, 'Dataset size exceeds the authorized limit')
-        let storageRemaining = await datasetUtils.storageRemaining(req.app.get('db'), owner)
-        if (storageRemaining !== -1) {
-          // Ignore the size of the dataset we are overwriting
-          if (req.dataset && req.dataset.file) storageRemaining += req.dataset.file.size
-          storageRemaining = Math.max(0, storageRemaining - estimatedFileSize)
-          if (storageRemaining === 0) throw createError(429, 'Vous avez atteint la limite de votre espace de stockage.')
-        }
         req.inputChecked = true
       }
 

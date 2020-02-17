@@ -212,7 +212,7 @@ test.serial('Send attachment with multipart request', async t => {
 })
 
 test.serial('Send attachments with bulk request', async t => {
-  const ax = await axiosBuilder('dmeadus0@answers.com:passwd')
+  const ax = await axiosBuilder('ngernier4@usa.gov:passwd')
   let res = await ax.post('/api/v1/datasets', {
     isRest: true,
     title: 'rest6',
@@ -222,6 +222,7 @@ test.serial('Send attachments with bulk request', async t => {
     ]
   })
   const dataset = res.data
+  await workers.hook('finalizer/rest6')
 
   // Create a line with an attached file
   const form = new FormData()
@@ -259,13 +260,16 @@ test.serial('The size of the mongodb collection is part of storage consumption',
   ])
   await workers.hook('finalizer/rest7')
 
-  const res = await ax.get('/api/v1/stats')
+  let res = await ax.get('/api/v1/stats')
   t.is(res.status, 200)
-  t.is(res.data.user.storage, 4096)
+  t.is(res.data.user.storage, 684)
+  res = await ax.get('/api/v1/datasets/rest7')
+  t.is(res.data.storage.size, 684)
+  t.is(res.data.storage.collectionSize, 684)
 })
 
 test.serial('Activate the history mode', async t => {
-  const ax = await axiosBuilder('hlalonde3@desdev.cn')
+  const ax = await axiosBuilder('hlalonde3@desdev.cn:passwd')
   let res = await ax.post('/api/v1/datasets', {
     isRest: true,
     title: 'resthist',
@@ -282,5 +286,9 @@ test.serial('Activate the history mode', async t => {
   t.is(res.data.results[1].attr1, 'test1')
 
   res = await ax.get('/api/v1/stats')
-  t.is(res.data.user.storage, 8192)
+  t.is(res.data.user.storage, 478)
+  res = await ax.get('/api/v1/datasets/resthist')
+  t.is(res.data.storage.size, 478)
+  t.is(res.data.storage.collectionSize, 164)
+  t.is(res.data.storage.revisionsSize, 314)
 })

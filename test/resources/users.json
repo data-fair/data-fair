@@ -29,13 +29,19 @@
     "id": "hlalonde3",
     "firstName": "Huntington",
     "lastName": "Lalonde",
-    "email": "hlalonde3@desdev.cn"
+    "email": "hlalonde3@desdev.cn",
+    "password": {
+      "clear": "passwd"
+    }
   },
   {
     "id": "ngernier4",
     "firstName": "Nappy",
     "lastName": "Gernier",
-    "email": "ngernier4@usa.gov"
+    "email": "ngernier4@usa.gov",
+    "password": {
+      "clear": "passwd"
+    }
   },
   {
     "id": "ddecruce5",

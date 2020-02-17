@@ -56,13 +56,13 @@ const upload = multer({
       const estimatedFileSize = contentLength - 210
       const attachmentLimit = config.defaultLimits.attachmentStorage
       if (attachmentLimit !== -1 && attachmentLimit < estimatedFileSize) throw createError(413, 'Attachment size exceeds the authorized limit')
-      let storageRemaining = await datasetUtils.storageRemaining(req.app.get('db'), req.dataset.owner)
-      if (storageRemaining !== -1) {
+      let remainingStorage = await datasetUtils.remainingStorage(req.app.get('db'), req.dataset.owner)
+      if (remainingStorage !== -1) {
         // Ignore the size of the attachment we are overwriting
         const existingAttachment = (req.dataset.attachments || []).find(a => a.name === file.originalname)
-        if (existingAttachment) storageRemaining += existingAttachment.size
-        storageRemaining = Math.max(0, storageRemaining - estimatedFileSize)
-        if (storageRemaining === 0) throw createError(429, 'Vous avez atteint la limite de votre espace de stockage.')
+        if (existingAttachment) remainingStorage += existingAttachment.size
+        remainingStorage = Math.max(0, remainingStorage - estimatedFileSize)
+        if (remainingStorage === 0) throw createError(429, 'Vous avez atteint la limite de votre espace de stockage.')
       }
       // mime type is broken on windows it seems.. detect based on extension instead
       req.body.mimetype = mime.lookup(file.originalname)

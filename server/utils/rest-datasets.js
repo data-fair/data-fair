@@ -230,6 +230,7 @@ exports.createLine = async (req, res, next) => {
   if (line._error) return res.status(400).send(line._error)
   await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { status: 'updated' } })
   res.status(201).send(cleanLine(line))
+  datasetUtils.updateStorage(db, req.dataset)
 }
 
 exports.deleteLine = async (req, res, next) => {
@@ -238,8 +239,8 @@ exports.deleteLine = async (req, res, next) => {
   const line = (await applyTransactions(req, [{ _action: 'delete', _id: req.params.lineId }], compileSchema(req.dataset)))[0]
   if (line._error) return res.status(400).send(line._error)
   await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { status: 'updated' } })
-  await datasetUtils.updateStorageSize(db, req.dataset.owner)
   res.status(204).send()
+  datasetUtils.updateStorage(db, req.dataset)
 }
 
 exports.updateLine = async (req, res, next) => {
@@ -248,8 +249,8 @@ exports.updateLine = async (req, res, next) => {
   const line = (await applyTransactions(req, [{ _action: 'update', _id: req.params.lineId, ...req.body }], compileSchema(req.dataset)))[0]
   if (line._error) return res.status(400).send(line._error)
   await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { status: 'updated' } })
-  await datasetUtils.updateStorageSize(db, req.dataset.owner)
   res.status(200).send(cleanLine(line))
+  datasetUtils.updateStorage(db, req.dataset)
 }
 
 exports.patchLine = async (req, res, next) => {
@@ -258,8 +259,8 @@ exports.patchLine = async (req, res, next) => {
   const line = (await applyTransactions(req, [{ _action: 'patch', _id: req.params.lineId, ...req.body }], compileSchema(req.dataset)))[0]
   if (line._error) return res.status(400).send(line._error)
   await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { status: 'updated' } })
-  await datasetUtils.updateStorageSize(db, req.dataset.owner)
   res.status(200).send(cleanLine(line))
+  datasetUtils.updateStorage(db, req.dataset)
 }
 
 exports.bulkLines = async (req, res, next) => {
@@ -297,7 +298,7 @@ exports.bulkLines = async (req, res, next) => {
   )
   await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { status: 'updated' } })
   res.send(summary)
-  datasetUtils.updateStorageSize(db, req.dataset.owner)
+  datasetUtils.updateStorage(db, req.dataset)
 }
 
 exports.readLineRevisions = async (req, res, next) => {

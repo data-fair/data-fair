@@ -153,62 +153,62 @@ exports.countLines = async (dataset) => {
   return nbLines
 }
 
-exports.storageSize = async (db, owner) => {
-  let size = 0
-  // Sum of the sizes of the files for file-based datasets
-  // TODO: use originalFile when available instead of file ? but not both that's sure
-  const filter = { 'owner.type': owner.type, 'owner.id': owner.id }
-  const aggQuery = [
-    { $match: filter },
-    { $project: { 'file.size': 1 } },
-    { $group: { _id: null, totalSize: { $sum: '$file.size' } } }
-  ]
-  const res = await db.collection('datasets').aggregate(aggQuery).toArray()
-  if (res.length) size += res[0].totalSize
-
-  // Add sizes of all attachments
-  const ownerDir = path.join(config.dataDir, owner.type, owner.id)
-  await fs.ensureDir(ownerDir)
-  const attachmentDirs = (await fs.readdir(ownerDir)).filter(f => f.endsWith('.attachments'))
-  for (const attachmentDir of attachmentDirs) {
-    const files = await dir.promiseFiles(path.join(config.dataDir, owner.type, owner.id, attachmentDir))
-    for (const file of files) {
-      size += (await fs.promises.stat(file)).size
-    }
+exports.storage = async (db, dataset) => {
+  const storage = {
+    size: 0
   }
-
-  // Add sum of sizes of collections for REST datasets
-  const restCursor = db.collection('datasets').find({ ...filter, isRest: true }).project({ id: 1, rest: 1 })
-  while (await restCursor.hasNext()) {
-    const dataset = await restCursor.next()
+  if (dataset.originalFile && dataset.originalFile.size) {
+    storage.size += dataset.originalFile.size
+    storage.fileSize = dataset.originalFile.size
+  } else if (dataset.file && dataset.file.size) {
+    storage.size += dataset.file.size
+    storage.fileSize = dataset.file.size
+  }
+  const attachments = await exports.lsAttachments(dataset)
+  for (const attachment of attachments) {
+    const attachmentSize = (await fs.promises.stat(path.join(exports.attachmentsDir(dataset), attachment))).size
+    storage.size += attachmentSize
+    storage.attachmentsSize = (storage.attachmentsSize || 0) + attachmentSize
+  }
+  if (dataset.isRest) {
     const collection = await restDatasetsUtils.collection(db, dataset)
     const stats = await collection.stats()
-    size += stats.storageSize
-
+    storage.size += stats.size
+    storage.collectionSize = stats.size
     if (dataset.rest && dataset.rest.history) {
       const revisionsCollection = await restDatasetsUtils.revisionsCollection(db, dataset)
       const revisionsStats = await revisionsCollection.stats()
-      size += revisionsStats.storageSize
+      storage.size += revisionsStats.size
+      storage.revisionsSize = revisionsStats.size
     }
   }
+  return storage
+}
 
-  await limits.setConsumption(db, owner, 'store_bytes', size)
-  return size
+exports.totalStorage = async (db, owner) => {
+  const aggQuery = [
+    { $match: { 'owner.type': owner.type, 'owner.id': owner.id } },
+    { $project: { 'storage.size': 1 } },
+    { $group: { _id: null, totalSize: { $sum: '$storage.size' } } }
+  ]
+  const res = await db.collection('datasets').aggregate(aggQuery).toArray()
+  return (res[0] && res[0].totalSize) || 0
 }
 
 // After a change that might impact consumed storage, we store the value
 // and trigger optional webhooks
-exports.updateStorageSize = async (db, owner) => {
-  await exports.storageSize(db, owner)
+exports.updateStorage = async (db, dataset, deleted = false) => {
+  if (!deleted) await db.collection('datasets').updateOne({ id: dataset.id }, { $set: { storage: await exports.storage(db, dataset) } })
+  await limits.setConsumption(db, dataset.owner, 'store_bytes', await exports.totalStorage(db, dataset.owner))
 }
 
-exports.storageRemaining = async (db, owner) => {
+exports.remainingStorage = async (db, owner) => {
   const limits = await db.collection('limits')
     .findOne({ type: owner.type, id: owner.id })
   const limit = (limits && limits.store_bytes && ![undefined, null].includes(limits.store_bytes.limit)) ? limits.store_bytes.limit : config.defaultLimits.totalStorage
   if (limit === -1) return -1
-  const size = await exports.storageSize(db, owner)
-  return Math.max(0, limit - size)
+  const consumption = (limits && limits.store_bytes && limits.store_bytes.consumption) || 0
+  return Math.max(0, limit - consumption)
 }
 
 exports.extendedSchema = (dataset) => {

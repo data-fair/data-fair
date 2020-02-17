@@ -22,7 +22,7 @@ async function ownerStats(db, owner) {
   const limits = await db.collection('limits')
     .findOne({ type: owner.type, id: owner.id })
   return {
-    storage: await datasetUtils.storageSize(db, owner),
+    storage: await datasetUtils.totalStorage(db, owner),
     storageLimit: limits && limits.store_bytes ? limits.store_bytes.limit : config.defaultLimits.totalStorage,
     datasets: await ownerCount(db, 'datasets', owner),
     applications: await ownerCount(db, 'applications', owner)

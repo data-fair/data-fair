@@ -36,8 +36,8 @@ exports.process = async function(app, dataset) {
   }
 
   // Manage file size
-  const storageRemaining = await datasetUtils.storageRemaining(app.get('db'), dataset.owner)
-  if (storageRemaining === 0) throw new Error('Vous avez atteint la limite de votre espace de stockage.')
+  const remainingStorage = await datasetUtils.remainingStorage(app.get('db'), dataset.owner)
+  if (remainingStorage === 0) throw new Error('Vous avez atteint la limite de votre espace de stockage.')
 
   const fileName = datasetUtils.originalFileName(dataset)
   await pump(
@@ -57,5 +57,5 @@ exports.process = async function(app, dataset) {
     dataset.file.encoding = chardet.detect(fileSample)
   }
   await app.get('db').collection('datasets').replaceOne({ id: dataset.id }, dataset)
-  await datasetUtils.updateStorageSize(app.get('db'), dataset.owner)
+  await datasetUtils.updateStorage(app.get('db'), dataset)
 }
