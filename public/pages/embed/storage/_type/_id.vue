@@ -1,5 +1,5 @@
 <template lang="html">
-  <v-container fluid>
+  <v-container v-if="initialized" fluid>
     <v-layout column>
       <template v-if="authorized">
         <storage-details :datasets="datasets" :url-template="$route.query.urlTemplate" />
@@ -31,14 +31,21 @@ export default {
     datasets: null
   }),
   computed: {
+    ...mapState(['env']),
     ...mapState('session', ['user', 'initialized']),
+    organization() {
+      if (this.$route.params.type === 'organization') {
+        return this.user.organizations.find(o => o.id === this.$route.params.id)
+      } else {
+        return null
+      }
+    },
     authorized() {
       if (!this.user) return false
       if (this.$route.params.type === 'user' && this.$route.params.id !== this.user.id) return false
       if (this.$route.params.type === 'organization') {
-        const organization = this.user.organizations.find(o => o.id === this.$route.params.id)
-        if (!organization) return false
-        if (organization.role !== this.env.adminRole) return false
+        if (!this.organization) return false
+        if (this.organization.role !== this.env.adminRole) return false
       }
       return true
     }
