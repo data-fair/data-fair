@@ -192,13 +192,14 @@ exports.storageSize = async (db, owner) => {
     }
   }
 
+  await limits.setConsumption(db, owner, 'store_bytes', size)
   return size
 }
 
 // After a change that might impact consumed storage, we store the value
 // and trigger optional webhooks
 exports.updateStorageSize = async (db, owner) => {
-  await limits.setConsumption(db, owner, 'store_bytes', await exports.storageSize(db, owner))
+  await exports.storageSize(db, owner)
 }
 
 exports.storageRemaining = async (db, owner) => {

@@ -11,3 +11,4 @@
 /doc-dist
 .cache-require-paths.json
 /dist/
+/nuxt-dist
