@@ -42,6 +42,7 @@ export default {
     },
     authorized() {
       if (!this.user) return false
+      if (this.user.adminMode) return true
       if (this.$route.params.type === 'user' && this.$route.params.id !== this.user.id) return false
       if (this.$route.params.type === 'organization') {
         if (!this.organization) return false
