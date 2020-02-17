@@ -3,7 +3,7 @@
     <v-layout column>
       <template v-if="authorized">
         <h2 class="display-1 mb-4">
-          Détail du stockage de l'{{ $route.params.type ==='organization' ? ('organisation ' + organization.name): ('utilisateur ' + user.name) }}
+          Détail du stockage de l'{{ $route.params.type ==='organization' ? ('organisation ' + ((organization && organization.name) || $route.params.id)): ('utilisateur ' + user.name) }}
         </h2>
         <storage-details :datasets="datasets" />
       </template>
