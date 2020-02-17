@@ -5,7 +5,7 @@
         <v-list-tile :key="`tile-${dataset.id}`">
           <v-list-tile-content>
             <v-list-tile-title>
-              <a :href="dataset.link">{{ dataset.title || dataset.id }}</a> ({{ dataset.storage.size | displayBytes }})
+              <a :href="dataset.link" target="_top">{{ dataset.title || dataset.id }}</a> ({{ dataset.storage.size | displayBytes }})
             </v-list-tile-title>
             <v-list-tile-sub-title v-if="dataset.storage.fileSize">
               {{ dataset.storage.fileSize | displayBytes }} de fichier de données
