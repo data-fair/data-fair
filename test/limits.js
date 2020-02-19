@@ -73,7 +73,7 @@ test.serial('A user cannot read the list of limits', async t => {
 })
 
 test.serial('A super admin can read the list of limits', async t => {
-  const ax = await axiosBuilder('alban.mouton@koumoul.com')
+  const ax = await axiosBuilder('alban.mouton@koumoul.com:passwd:adminMode')
   await ax.post('/api/v1/limits/user/dmeadus0', baseLimit, { params: { key: config.secretKeys.limits } })
   const res = await ax.get('/api/v1/limits')
   t.is(res.status, 200)
