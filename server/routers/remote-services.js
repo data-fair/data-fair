@@ -122,7 +122,7 @@ const initNew = (req) => {
 // Create a remote Api as super admin
 router.post('', asyncWrap(async(req, res) => {
   if (!req.user) return res.status(401).send()
-  if (!req.user.isAdmin) return res.status(403).send()
+  if (!req.user.adminMode) return res.status(403).send()
   // if title is set, we build id from it
   if (req.body.title && !req.body.id) req.body.id = slug(req.body.title, { lower: true })
   const service = initNew(req)
@@ -167,7 +167,7 @@ router.get('/:remoteServiceId', readService, cacheHeaders.resourceBased, (req, r
 // PUT used to create or update as super admin
 const attemptInsert = asyncWrap(async(req, res, next) => {
   if (!req.user) return res.status(401).send()
-  if (!req.user.isAdmin) return res.status(403).send()
+  if (!req.user.adminMode) return res.status(403).send()
 
   const newService = initNew(req)
   newService.id = req.params.remoteServiceId
@@ -195,7 +195,7 @@ router.put('/:remoteServiceId', attemptInsert, readService, asyncWrap(async(req,
 // Update a remote service configuration as super admin
 router.patch('/:remoteServiceId', readService, asyncWrap(async(req, res) => {
   if (!req.user) return res.status(401).send()
-  if (!req.user.isAdmin) return res.status(403).send()
+  if (!req.user.adminMode) return res.status(403).send()
 
   const patch = req.body
   var valid = validatePatch(patch)
@@ -215,7 +215,7 @@ router.patch('/:remoteServiceId', readService, asyncWrap(async(req, res) => {
 // Delete a remoteService as super admin
 router.delete('/:remoteServiceId', readService, asyncWrap(async(req, res) => {
   if (!req.user) return res.status(401).send()
-  if (!req.user.isAdmin) return res.status(403).send()
+  if (!req.user.adminMode) return res.status(403).send()
   await req.app.get('db').collection('remote-services').deleteOne({
     id: req.params.remoteServiceId
   })
@@ -225,7 +225,7 @@ router.delete('/:remoteServiceId', readService, asyncWrap(async(req, res) => {
 // Force update of API definition as super admin
 router.post('/:remoteServiceId/_update', readService, asyncWrap(async(req, res) => {
   if (!req.user) return res.status(401).send()
-  if (!req.user.isAdmin) return res.status(403).send()
+  if (!req.user.adminMode) return res.status(403).send()
 
   if (!req.remoteService.url) return res.sendStatus(204)
 

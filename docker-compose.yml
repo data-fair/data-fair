@@ -12,7 +12,7 @@ services:
     ports:
       - 27017:27017
   sd:
-    image: koumoul/simple-directory:1
+    image: koumoul/simple-directory:master
     network_mode: host
     ports:
       - 8080

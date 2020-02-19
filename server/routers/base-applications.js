@@ -100,7 +100,7 @@ router.post('', asyncWrap(async(req, res) => {
 
 router.patch('/:id', asyncWrap(async(req, res) => {
   const db = req.app.get('db')
-  if (!req.user || !req.user.isAdmin) return res.status(403).send()
+  if (!req.user || !req.user.adminMode) return res.status(403).send()
   const patch = req.body
   const storedBaseApp = (await db.collection('base-applications')
     .findOneAndUpdate({ id: req.params.id }, { $set: patch }, { returnOriginal: false })).value

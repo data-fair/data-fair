@@ -64,7 +64,7 @@ exports.updateName = async (db, identity) => {
 const router = exports.router = express.Router()
 
 const isSuperAdmin = (req, res, next) => {
-  if (req.user && req.user.isAdmin) return next()
+  if (req.user && req.user.adminMode) return next()
   if (req.query.key === config.secretKeys.limits) return next()
   res.status(401).send()
 }
@@ -72,7 +72,7 @@ const isSuperAdmin = (req, res, next) => {
 const isAccountAdmin = (req, res, next) => {
   if (req.query.key === config.secretKeys.limits) return next()
   if (!req.user) return res.status(401).send()
-  if (req.user.isAdmin) return next()
+  if (req.user.adminMode) return next()
   if (!['organization', 'user'].includes(req.params.type)) return res.status(400).send('Wrong consumer type')
   if (req.params.type === 'user') {
     if (req.user.id !== req.params.id) return res.status(403).send()

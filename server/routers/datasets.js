@@ -887,7 +887,7 @@ router.get('/:datasetId/journal', readDataset(), permissions.middleware('readJou
 // Special route with very technical informations to help diagnose bugs, broken indices, etc.
 router.get('/:datasetId/_diagnose', readDataset(), cacheHeaders.noCache, asyncWrap(async(req, res) => {
   if (!req.user) return res.status(401).send()
-  if (!req.user.isAdmin) return res.status(403).send()
+  if (!req.user.adminMode) return res.status(403).send()
   const esInfos = await esUtils.datasetInfos(req.app.get('es'), req.dataset)
   const filesInfos = await datasetUtils.lsFiles(req.dataset)
   res.json({ filesInfos, esInfos })
@@ -896,7 +896,7 @@ router.get('/:datasetId/_diagnose', readDataset(), cacheHeaders.noCache, asyncWr
 // Special admin route to force reindexing a dataset
 router.post('/:datasetId/_reindex', readDataset(), asyncWrap(async(req, res) => {
   if (!req.user) return res.status(401).send()
-  if (!req.user.isAdmin) return res.status(403).send()
+  if (!req.user.adminMode) return res.status(403).send()
   const patchedDataset = await datasetUtils.reindex(req.app.get('db'), req.dataset)
   res.status(200).send(patchedDataset)
 }))
