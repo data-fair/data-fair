@@ -11,7 +11,7 @@ test.serial('Get external APIs when not authenticated', async t => {
 })
 
 test.serial('Post a minimal external API, read it, update it and delete it', async t => {
-  const ax = await axiosBuilder('superadmin@test.com:superpasswd')
+  const ax = await axiosBuilder('superadmin@test.com:superpasswd:adminMode')
   const apiDoc = require('./resources/geocoder-api.json')
   apiDoc.info['x-api-id'] = 'geocoder2'
   let res = await ax.post('/api/v1/remote-services', { apiDoc, apiKey: { in: 'header', name: 'x-apiKey' } })
@@ -61,7 +61,7 @@ test.serial('Unknown external service', async t => {
 })
 
 test.serial('Handle timeout errors from proxied service', async t => {
-  const ax = await axiosBuilder('superadmin@test.com:superpasswd')
+  const ax = await axiosBuilder('superadmin@test.com:superpasswd:adminMode')
   nock('http://test.com').get('/geocoder/coord').delay(60000).reply(200, { content: 'ok' })
   try {
     await ax.get('/api/v1/remote-services/geocoder-koumoul/proxy/coord')
@@ -71,7 +71,7 @@ test.serial('Handle timeout errors from proxied service', async t => {
 })
 
 test.serial('Prevent abusing remote service re-exposition', async t => {
-  const ax = await axiosBuilder('superadmin@test.com:superpasswd')
+  const ax = await axiosBuilder('superadmin@test.com:superpasswd:adminMode')
 
   const nockScope = nock('http://test.com').get('/geocoder/coord').reply(200, { content: 'ok' })
   const res = await ax.get('/api/v1/remote-services/geocoder-koumoul/proxy/coord')

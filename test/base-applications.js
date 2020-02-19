@@ -17,7 +17,7 @@ test.serial('Get privately readable base app', async t => {
   t.is(res.data.count, 1)
 
   // super admin patchs the private one
-  const adminAx = await axiosBuilder('superadmin@test.com:superpasswd')
+  const adminAx = await axiosBuilder('superadmin@test.com:superpasswd:adminMode')
   res = await adminAx.get('/api/v1/admin/base-applications')
   t.is(res.status, 200)
   t.is(res.data.count, 2)
