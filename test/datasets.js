@@ -33,7 +33,7 @@ test('Get datasets with special param as super admin', async t => {
   } catch (err) {
     t.is(err.status, 400)
   }
-  const axAdmin = await axiosBuilder('alban.mouton@koumoul.com')
+  const axAdmin = await axiosBuilder('alban.mouton@koumoul.com:passwd:adminMode')
   const res = await axAdmin.get('/api/v1/datasets', { params: { showAll: true } })
   t.is(res.status, 200)
   t.true(res.data.count > 0)

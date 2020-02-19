@@ -74,7 +74,7 @@ test.serial('Manage the custom configuration part of the object', async t => {
 
 test.serial('Use an application through the application proxy', async t => {
   const ax = await axiosBuilder('dmeadus0@answers.com:passwd')
-  const adminAx = await axiosBuilder('alban.mouton@koumoul.com')
+  const adminAx = await axiosBuilder('alban.mouton@koumoul.com:passwd:adminMode')
   let res = await ax.post('/api/v1/applications', { url: 'http://monapp1.com/' })
   const appId = res.data.id
 
