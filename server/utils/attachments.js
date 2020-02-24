@@ -29,10 +29,14 @@ exports.replaceAllAttachments = async (dataset, attachmentsArchive) => {
   await fs.remove(attachmentsArchive.path)
 }
 
-const storage = multer.diskStorage({
+exports.removeAll = async (dataset) => {
+  await fs.remove(datasetUtils.attachmentsDir(dataset))
+}
+
+const metadataStorage = multer.diskStorage({
   destination: async function(req, file, cb) {
     try {
-      const dir = datasetUtils.attachmentsDir(req.dataset)
+      const dir = datasetUtils.metadataAttachmentsDir(req.dataset)
       await fs.ensureDir(dir)
       cb(null, dir)
     } catch (err) {
@@ -44,8 +48,8 @@ const storage = multer.diskStorage({
   }
 })
 
-const upload = multer({
-  storage,
+const metadataUpload = multer({
+  storage: metadataStorage,
   fileFilter: async function fileFilter(req, file, cb) {
     try {
       // manage disk storage quota
@@ -76,4 +80,4 @@ const upload = multer({
   }
 })
 
-exports.upload = () => upload.single('attachment')
+exports.metadataUpload = () => metadataUpload.single('attachment')

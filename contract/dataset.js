@@ -147,7 +147,6 @@ module.exports = {
           },
           mimetype: {
             type: 'string',
-            enum: ['text/csv'],
             description: 'Mime type of the file'
           },
           updatedAt: {

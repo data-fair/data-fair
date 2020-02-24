@@ -12,11 +12,17 @@
         <v-flex v-for="(attachment, i) in dataset.attachments" :key="i" xs12 sm12 md6 lg4>
           <v-card>
             <v-card-title primary-title>
-              <a :href="resourceUrl + '/attachments/' + attachment.name">{{ attachment.name }} ({{ (attachment.size / 1000).toFixed(2) }} ko)</a>
+              <a :href="resourceUrl + '/metadata-attachments/' + attachment.name">{{ attachment.name }} ({{ (attachment.size / 1000).toFixed(2) }} ko)</a>
             </v-card-title>
             <v-card-text>
               <span>{{ attachment.updatedAt | moment("DD/MM/YYYY, HH:mm") }}</span>
             </v-card-text>
+            <v-card-actions>
+              <v-spacer />
+              <v-btn flat icon color="warning" @click="deleteAttachment(attachment)">
+                <v-icon>delete</v-icon>
+              </v-btn>
+            </v-card-actions>
           </v-card>
         </v-flex>
       </v-layout>
@@ -56,7 +62,7 @@ export default {
 
       this.uploading = true
       try {
-        const newAttachment = await this.$axios.$post('api/v1/datasets/' + this.dataset.id + '/attachments', formData, options)
+        const newAttachment = await this.$axios.$post('api/v1/datasets/' + this.dataset.id + '/metadata-attachments', formData, options)
         const attachments = this.dataset.attachments || []
         const existingAttachment = attachments.find(a => a.name === newAttachment.name)
         if (existingAttachment) {
@@ -76,6 +82,11 @@ export default {
         }
       }
       this.uploading = false
+    },
+    async deleteAttachment(attachment) {
+      await this.$axios.$delete('api/v1/datasets/' + this.dataset.id + '/metadata-attachments/' + attachment.name)
+      const attachments = (this.dataset.attachments || []).filter(a => a.name !== attachment.name)
+      await this.patchAndCommit({ attachments })
     }
   }
 }

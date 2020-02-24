@@ -807,19 +807,26 @@ router.get('/:datasetId/attachments/*', readDataset(), permissions.middleware('d
   if (filePath.includes('..')) return res.status(400).send()
   res.download(path.resolve(datasetUtils.attachmentsDir(req.dataset), filePath))
 })
-router.delete('/:datasetId/attachments/*', readDataset(), permissions.middleware('writeData', 'write'), asyncWrap(async(req, res, next) => {
-  const filePath = req.params['0']
-  if (filePath.includes('..')) return res.status(400).send()
-  await fs.remove(path.join(datasetUtils.attachmentsDir, filePath))
-  await datasetUtils.updateStorage(req.app.get('db'), req.dataset)
-  res.status(204).send()
-}))
-// upload a single attachment (alternative to posting a zip with all attachments in the main POST endpoint)
-router.post('/:datasetId/attachments', readDataset(), permissions.middleware('writeData', 'write'), checkStorage(false), attachments.upload(), asyncWrap(async(req, res, next) => {
+
+// Special attachments referenced in dataset metadatas
+router.post('/:datasetId/metadata-attachments', readDataset(), permissions.middleware('writeData', 'write'), checkStorage(false), attachments.metadataUpload(), asyncWrap(async(req, res, next) => {
+  console.log(req.file)
   req.body.size = (await fs.promises.stat(req.file.path)).size
   req.body.updatedAt = moment().toISOString()
   await datasetUtils.updateStorage(req.app.get('db'), req.dataset)
   res.status(200).send(req.body)
+}))
+router.get('/:datasetId/metadata-attachments/*', readDataset(), permissions.middleware('downloadOriginalData', 'read'), (req, res, next) => {
+  const filePath = req.params['0']
+  if (filePath.includes('..')) return res.status(400).send()
+  res.download(path.resolve(datasetUtils.metadataAttachmentsDir(req.dataset), filePath))
+})
+router.delete('/:datasetId/metadata-attachments/*', readDataset(), permissions.middleware('writeData', 'write'), asyncWrap(async(req, res, next) => {
+  const filePath = req.params['0']
+  if (filePath.includes('..')) return res.status(400).send()
+  await fs.remove(path.join(datasetUtils.metadataAttachmentsDir(req.dataset), filePath))
+  await datasetUtils.updateStorage(req.app.get('db'), req.dataset)
+  res.status(204).send()
 }))
 
 // Download the full dataset in its original form

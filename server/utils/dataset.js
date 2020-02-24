@@ -30,12 +30,24 @@ exports.attachmentsDir = (dataset) => {
   return path.join(config.dataDir, dataset.owner.type, dataset.owner.id, dataset.id + '.attachments')
 }
 
+exports.metadataAttachmentsDir = (dataset) => {
+  return path.join(config.dataDir, dataset.owner.type, dataset.owner.id, dataset.id + '.metadata-attachments')
+}
+
 exports.lsAttachments = async (dataset) => {
   const dirName = exports.attachmentsDir(dataset)
   if (!await fs.pathExists(dirName)) return []
   const files = (await dir.promiseFiles(dirName))
     .map(f => path.relative(dirName, f))
   return files.filter(p => path.basename(p).toLowerCase() !== 'thumbs.db')
+}
+
+exports.lsMetadataAttachments = async (dataset) => {
+  const dirName = exports.metadataAttachmentsDir(dataset)
+  if (!await fs.pathExists(dirName)) return []
+  const files = (await dir.promiseFiles(dirName))
+    .map(f => path.relative(dirName, f))
+  return files
 }
 
 exports.lsFiles = async (dataset) => {
@@ -166,6 +178,12 @@ exports.storage = async (db, dataset) => {
   }
   const attachments = await exports.lsAttachments(dataset)
   for (const attachment of attachments) {
+    const attachmentSize = (await fs.promises.stat(path.join(exports.attachmentsDir(dataset), attachment))).size
+    storage.size += attachmentSize
+    storage.attachmentsSize = (storage.attachmentsSize || 0) + attachmentSize
+  }
+  const metaAttachments = await exports.lsMetadataAttachments(dataset)
+  for (const attachment of metaAttachments) {
     const attachmentSize = (await fs.promises.stat(path.join(exports.attachmentsDir(dataset), attachment))).size
     storage.size += attachmentSize
     storage.attachmentsSize = (storage.attachmentsSize || 0) + attachmentSize

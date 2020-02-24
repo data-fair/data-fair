@@ -2,6 +2,7 @@
 const esUtils = require('../utils/es')
 const geoUtils = require('../utils/geo')
 const datasetUtils = require('../utils/dataset')
+const attachmentsUtils = require('../utils/attachments')
 const virtualDatasetsUtils = require('../utils/virtual-datasets')
 
 exports.eventsPrefix = 'finalize'
@@ -79,6 +80,11 @@ exports.process = async function(app, dataset) {
 
   // Add the calculated fields to the schema
   result.schema = datasetUtils.extendedSchema(dataset)
+
+  // Remove attachments if the schema does not refer to their existence
+  if (!dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')) {
+    await attachmentsUtils.removeAll(dataset)
+  }
 
   result.finalizedAt = (new Date()).toISOString()
   if (dataset.isRest && (await collection.findOne({ id: dataset.id })).status === 'updated') {
