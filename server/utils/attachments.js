@@ -69,7 +69,8 @@ const metadataUpload = multer({
         if (remainingStorage === 0) throw createError(429, 'Vous avez atteint la limite de votre espace de stockage.')
       }
       // mime type is broken on windows it seems.. detect based on extension instead
-      req.body.mimetype = mime.lookup(file.originalname)
+      const mimeType = mime.lookup(file.originalname)
+      if (mimeType) req.body.mimetype = mimeType
       req.body.name = file.originalname
       debug('File accepted', file.originalname)
       cb(null, true)

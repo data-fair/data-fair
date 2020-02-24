@@ -184,7 +184,7 @@ exports.storage = async (db, dataset) => {
   }
   const metaAttachments = await exports.lsMetadataAttachments(dataset)
   for (const attachment of metaAttachments) {
-    const attachmentSize = (await fs.promises.stat(path.join(exports.attachmentsDir(dataset), attachment))).size
+    const attachmentSize = (await fs.promises.stat(path.join(exports.metadataAttachmentsDir(dataset), attachment))).size
     storage.size += attachmentSize
     storage.attachmentsSize = (storage.attachmentsSize || 0) + attachmentSize
   }

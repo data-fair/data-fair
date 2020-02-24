@@ -281,6 +281,12 @@ router.delete('/:datasetId', readDataset(), permissions.middleware('delete', 'ad
     console.error('Error while deleting decompressed files', err)
   }
 
+  try {
+    await fs.remove(datasetUtils.metadataAttachmentsDir(req.dataset))
+  } catch (err) {
+    console.error('Error while deleting metadata attachments', err)
+  }
+
   if (req.dataset.isRest) {
     try {
       await restDatasetsUtils.deleteDataset(db, req.dataset)
@@ -810,7 +816,6 @@ router.get('/:datasetId/attachments/*', readDataset(), permissions.middleware('d
 
 // Special attachments referenced in dataset metadatas
 router.post('/:datasetId/metadata-attachments', readDataset(), permissions.middleware('writeData', 'write'), checkStorage(false), attachments.metadataUpload(), asyncWrap(async(req, res, next) => {
-  console.log(req.file)
   req.body.size = (await fs.promises.stat(req.file.path)).size
   req.body.updatedAt = moment().toISOString()
   await datasetUtils.updateStorage(req.app.get('db'), req.dataset)
