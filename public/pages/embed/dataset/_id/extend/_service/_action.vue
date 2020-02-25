@@ -3,6 +3,7 @@
 </template>
 
 <script>
+import 'iframe-resizer/js/iframeResizer.contentWindow'
 import { mapActions, mapState } from 'vuex'
 import DatasetExtensionDetails from '../../../../../../components/DatasetExtensionDetails.vue'
 

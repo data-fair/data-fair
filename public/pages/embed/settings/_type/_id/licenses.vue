@@ -5,6 +5,7 @@
 </template>
 
 <script>
+import 'iframe-resizer/js/iframeResizer.contentWindow'
 import SettingsLicenses from '../../../../../components/SettingsLicenses.vue'
 import eventBus from '../../../../../event-bus'
 

@@ -3,6 +3,7 @@
 </template>
 
 <script>
+import 'iframe-resizer/js/iframeResizer.contentWindow'
 import DatasetMap from '../../../../components/DatasetMap.vue'
 
 export default {

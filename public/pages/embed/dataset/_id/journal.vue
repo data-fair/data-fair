@@ -3,6 +3,7 @@
 </template>
 
 <script>
+import 'iframe-resizer/js/iframeResizer.contentWindow'
 import Journal from '../../../../components/Journal.vue'
 const { mapState } = require('vuex')
 

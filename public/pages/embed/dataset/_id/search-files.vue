@@ -3,6 +3,7 @@
 </template>
 
 <script>
+import 'iframe-resizer/js/iframeResizer.contentWindow'
 import SearchFiles from '../../../../components/SearchFiles.vue'
 export default {
   components: { SearchFiles }

@@ -5,6 +5,7 @@
 </template>
 
 <script>
+import 'iframe-resizer/js/iframeResizer.contentWindow'
 import SettingsWebhooks from '../../../../../components/SettingsWebhooks.vue'
 import eventBus from '../../../../../event-bus'
 

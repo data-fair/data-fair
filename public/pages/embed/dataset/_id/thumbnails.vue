@@ -3,6 +3,7 @@
 </template>
 
 <script>
+import 'iframe-resizer/js/iframeResizer.contentWindow'
 import Thumbnails from '../../../../components/Thumbnails.vue'
 export default {
   components: { Thumbnails }

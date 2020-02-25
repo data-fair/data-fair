@@ -21,6 +21,7 @@
 </template>
 
 <script>
+import 'iframe-resizer/js/iframeResizer.contentWindow'
 import StorageDetails from '../../../../components/StorageDetails.vue'
 import { mapState } from 'vuex'
 
