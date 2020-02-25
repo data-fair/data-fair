@@ -45,6 +45,11 @@ export default {
       this.update()
     }
   },
+  created() {
+    if (this.user) {
+      this.selectedOwner = this.owners[0]
+    }
+  },
   methods: {
     update () {
       this.$emit('input', Object.assign({ role: this.selectedRole }, this.selectedOwner))
