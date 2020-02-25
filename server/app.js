@@ -4,6 +4,7 @@ const eventToPromise = require('event-to-promise')
 const dbUtils = require('./utils/db')
 const esUtils = require('./utils/es')
 const wsUtils = require('./utils/ws')
+const limits = require('./utils/limits')
 const locksUtils = require('./utils/locks')
 const workers = require('./workers')
 const session = require('@koumoul/sd-express')({
@@ -54,7 +55,7 @@ if (config.mode.includes('server')) {
   app.use('/api/v1/settings', session.auth, require('./routers/settings'))
   app.use('/api/v1/admin', session.auth, require('./routers/admin'))
   app.use('/api/v1/identities', require('./routers/identities'))
-  app.use('/api/v1/limits', session.auth, require('./utils/limits').router)
+  app.use('/api/v1/limits', session.auth, limits.router)
   app.use('/api/v1/session', session.router)
 
   // External applications proxy
@@ -108,6 +109,7 @@ exports.run = async () => {
     require('./routers/base-applications').init(db)
     await require('./routers/remote-services').init(db)
     await wsUtils.initServer(wss, db, session)
+    await limits.init(db)
     // At this stage the server is ready to respond to API requests
     app.set('api-ready', true)
 
