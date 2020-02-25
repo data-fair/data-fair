@@ -80,7 +80,7 @@ const checkStorage = (overwrite) => asyncWrap(async (req, res, next) => {
           })
         )
       } catch (err) {
-        console.error('Failure to drain request tat was rejected for exceeding storage limit', err)
+        console.error('Failure to drain request that was rejected for exceeding storage limit', err)
       }
       throw createError(429, 'Vous avez atteint la limite de votre espace de stockage.')
     }
