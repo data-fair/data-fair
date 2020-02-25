@@ -25,7 +25,7 @@
           </v-flex>
           <v-spacer />
           <v-flex lg4 md5 sm6 xs12>
-            <v-pagination v-if="data.total" v-model="pagination.page" :length="Math.floor(Math.min(data.total, 10000) / pagination.rowsPerPage)" :total-visible="$vuetify.breakpoint.lgAndUp ? 7 : 5" style="float:right;" />
+            <v-pagination v-if="data.total" v-model="pagination.page" :length="Math.ceil(Math.min(data.total, 10000) / pagination.rowsPerPage)" :total-visible="$vuetify.breakpoint.lgAndUp ? 7 : 5" style="float:right;" />
           </v-flex>
         </v-layout>
       </v-card-title>
