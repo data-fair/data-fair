@@ -1,4 +1,4 @@
-const { Transform } = require('stream')
+const { Transform, Writable } = require('stream')
 const express = require('express')
 const ajv = require('ajv')()
 const util = require('util')
@@ -69,6 +69,19 @@ const checkStorage = (overwrite) => asyncWrap(async (req, res, next) => {
       remainingStorage += req.dataset.storage.size
     }
     if ((remainingStorage - estimatedContentSize) <= 0) {
+      try {
+        await pump(
+          req,
+          new Writable({
+            write(chunk, encoding, callback) {
+            // do nothing wa just want to drain the request
+              callback()
+            }
+          })
+        )
+      } catch (err) {
+        console.error('Failure to drain request tat was rejected for exceeding storage limit', err)
+      }
       throw createError(429, 'Vous avez atteint la limite de votre espace de stockage.')
     }
   }
