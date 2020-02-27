@@ -117,6 +117,7 @@ exports.process = async function(app, dataset) {
     const geoJsonStream = ogr2ogr(originalFilePath)
       .format('GeoJSON')
       .options(['-lco', 'RFC7946=YES', '-t_srs', 'EPSG:4326'])
+      .timeout(120000)
       // .skipfailures()
       .stream()
     const filePath = path.join(config.dataDir, dataset.owner.type, dataset.owner.id, dataset.id + '.geojson')
