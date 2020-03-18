@@ -29,6 +29,7 @@ services:
       - NUXT_BUILD_BLOCKING=false
       - LIST_ENTITIES_MODE=anonymous
       - NO_UI=${NO_UI}
+      - AUTHRATELIMIT_ATTEMPTS=200
     volumes:
       - ./test/resources/users.json:/webapp/data/users.json
       - ./test/resources/organizations.json:/webapp/data/organizations.json
