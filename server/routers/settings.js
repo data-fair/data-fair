@@ -2,6 +2,7 @@ const crypto = require('crypto')
 const express = require('express')
 const ajv = require('ajv')()
 const uuidv4 = require('uuid/v4')
+const createError = require('http-errors')
 const settingSchema = require('../../contract/settings.json')
 const validate = ajv.compile(settingSchema)
 const permissions = require('../utils/permissions')
@@ -52,6 +53,9 @@ router.put('/:type/:id', isOwner, asyncWrap(async(req, res) => {
 
   const fullApiKeys = req.body.apiKeys.map(apiKey => ({ ...apiKey }))
   req.body.apiKeys.forEach((apiKey, i) => {
+    if (apiKey.adminMode && !req.user.adminMode) {
+      throw createError(403, 'Only superadmin can manage api keys with adminMode=true')
+    }
     if (!apiKey.key) {
       fullApiKeys[i].clearKey = uuidv4()
       const hash = crypto.createHash('sha512')

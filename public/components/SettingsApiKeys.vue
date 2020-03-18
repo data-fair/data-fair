@@ -24,6 +24,9 @@
               <v-alert :value="apiKey.clearKey" type="warning">
                 Cette clé secrète apparait en clair car vous venez de la créer. Notez là, elle ne sera pas lisible par la suite.
               </v-alert>
+              <v-alert :value="apiKey.adminMode" type="admin">
+                Cette clé est de type super-administrateur
+              </v-alert>
               <p v-if="!!apiKey.clearKey">
                 Clé secrète : {{ apiKey.clearKey }}
               </p>
@@ -49,6 +52,7 @@
         <v-card-text>
           <v-form v-model="newApiKeyValid">
             <v-text-field v-model="newApiKey.title" :rules="[v => !!v || '']" label="Titre" required />
+            <v-checkbox v-if="user.adminMode" v-model="newApiKey.adminMode" background-color="admin" color="white" dark label="Clé de type super-administrateur " />
             <v-checkbox v-for="scope of scopes" :key="scope.value" v-model="newApiKey.scopes" :label="scope.text" :value="scope.value" :rules="[v => !!v.length || '']" />
           </v-form>
         </v-card-text>
@@ -134,6 +138,7 @@ export default {
     ]
   }),
   computed: {
+    ...mapState('session', ['user']),
     ...mapState(['env'])
   },
   methods: {

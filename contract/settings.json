@@ -154,6 +154,10 @@
             "items": {
               "type": "string"
             }
+          },
+          "adminMode": {
+            "type": "boolean",
+            "default": false
           }
         }
       }

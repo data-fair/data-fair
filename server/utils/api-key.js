@@ -14,11 +14,17 @@ module.exports = (scope) => {
       .findOne({ 'apiKeys.key': hashedApiKey }, { projection: { _id: 0, id: 1, type: 1, name: 1, 'apiKeys.$': 1 } })
     if (!settings) return res.status(401).send('Cette clé d\'API est inconnue.')
     if (!settings.apiKeys[0].scopes.includes(scope)) return res.status(403).send('Cette clé d\'API n\'a pas la portée nécessaire.')
+    req.user = {
+      id: settings.id,
+      name: settings.apiKeys[0].title,
+      adminMode: !!settings.apiKeys[0].adminMode,
+      isApiKey: true
+    }
     if (settings.type === 'user') {
-      req.user = { id: settings.id, name: settings.name, organizations: [], isApiKey: true }
+      req.user.organizations = []
     } else {
-      const organization = { id: settings.id, name: settings.name, role: 'admin' }
-      req.user = { id: settings.id, name: settings.apiKeys[0].title, organization, organizations: [organization], isApiKey: true }
+      req.user.organization = { id: settings.id, name: settings.name, role: 'admin' }
+      req.user.organizations = [req.user.organization]
       req.headers['x-organizationid'] = settings.id
     }
     next()
