@@ -2,7 +2,7 @@
 
 const dataset = require('./dataset')
 const datasetPatch = require('./dataset-patch')
-const postKeys = ['isVirtual', 'isRest']
+const postKeys = ['isVirtual', 'isRest', 'owner']
 module.exports = {
   title: 'Dataset post',
   type: 'object',
