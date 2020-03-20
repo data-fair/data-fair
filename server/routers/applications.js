@@ -86,7 +86,7 @@ router.get('', cacheHeaders.noCache, asyncWrap(async(req, res) => {
 
 const initNew = (req) => {
   const application = { ...req.body }
-  application.owner = usersUtils.owner(req)
+  if (!req.user.adminMode || !application.owner) application.owner = usersUtils.owner(req)
   const date = moment().toISOString()
   application.createdAt = application.updatedAt = date
   application.createdBy = application.updatedBy = { id: req.user.id, name: req.user.name }

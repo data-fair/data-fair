@@ -5,7 +5,7 @@ const asyncWrap = require('../utils/async-wrap')
 
 module.exports = (scope) => {
   return asyncWrap(async (req, res, next) => {
-    const apiKey = req.get('x-apiKey')
+    const apiKey = req.get('x-apiKey') || req.get('x-api-key') || req.query.apiKey
     if (!apiKey) return next()
     const hash = crypto.createHash('sha512')
     hash.update(apiKey)

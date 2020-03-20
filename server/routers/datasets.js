@@ -59,7 +59,7 @@ const checkStorage = (overwrite) => asyncWrap(async (req, res, next) => {
   if (Number.isNaN(contentLength)) throw createError(400, 'Content-Length is not a number')
   const estimatedContentSize = contentLength - 210
 
-  const owner = req.dataset ? req.dataset.owner : usersUtils.owner(req)
+  const owner = req.dataset ? req.dataset.owner : (req.user.adminMode && req.body.owner ? req.body.owner : usersUtils.owner(req))
   const datasetLimit = config.defaultLimits.datasetStorage
   if (datasetLimit !== -1 && datasetLimit < estimatedContentSize) throw createError(413, 'Dataset size exceeds the authorized limit')
   let remainingStorage = await datasetUtils.remainingStorage(req.app.get('db'), owner)
@@ -324,7 +324,7 @@ router.delete('/:datasetId', readDataset(), permissions.middleware('delete', 'ad
 
 const initNew = (req) => {
   const dataset = { ...req.body }
-  dataset.owner = usersUtils.owner(req)
+  if (!req.user.adminMode || !dataset.owner) dataset.owner = usersUtils.owner(req)
   const date = moment().toISOString()
   dataset.createdAt = dataset.updatedAt = date
   dataset.createdBy = dataset.updatedBy = { id: req.user.id, name: req.user.name }
