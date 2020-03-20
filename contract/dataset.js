@@ -137,6 +137,10 @@ module.exports = {
             type: 'string',
             description: 'Name of the file that was used to create or update this attachment'
           },
+          title: {
+            type: 'string',
+            description: 'Short title of the attachment'
+          },
           description: {
             type: 'string',
             description: 'Short description of this attachment'
