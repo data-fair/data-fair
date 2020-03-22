@@ -389,7 +389,7 @@ router.post('', beforeUpload, checkStorage(true), filesUtils.uploadFile(), async
     } else if (req.body.isVirtual) {
       if (!req.body.title) throw createError(400, 'Un jeu de données virtuel doit être créé avec un titre')
       if (attachmentsFile) throw createError(400, 'Un jeu de données virtuel ne peut pas avoir de pièces jointes')
-      const { isVirtual, ...patch } = req.body
+      const { isVirtual, owner, ...patch } = req.body
       if (!validatePatch(patch)) {
         throw createError(400, JSON.stringify(validatePatch.errors))
       }
@@ -402,7 +402,7 @@ router.post('', beforeUpload, checkStorage(true), filesUtils.uploadFile(), async
     } else if (req.body.isRest) {
       if (!req.body.title) throw createError(400, 'Un jeu de données REST doit être créé avec un titre')
       if (attachmentsFile) throw createError(400, 'Un jeu de données REST ne peut pas être créé avec des pièces jointes')
-      const { isRest, ...patch } = req.body
+      const { isRest, owner, ...patch } = req.body
       if (!validatePatch(patch)) {
         throw createError(400, JSON.stringify(validatePatch.errors))
       }
