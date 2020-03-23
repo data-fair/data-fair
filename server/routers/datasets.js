@@ -823,7 +823,7 @@ router.get('/:datasetId/min/:fieldKey', readDataset(), permissions.middleware('g
 // For datasets with attached files
 router.get('/:datasetId/attachments/*', readDataset(), permissions.middleware('downloadOriginalData', 'read'), (req, res, next) => {
   const filePath = req.params['0']
-  if (filePath.includes('..')) return res.status(400).send()
+  if (filePath.includes('..')) return res.status(400).send('Unacceptable attachment path')
   res.download(path.resolve(datasetUtils.attachmentsDir(req.dataset), filePath))
 })
 
@@ -836,12 +836,12 @@ router.post('/:datasetId/metadata-attachments', readDataset(), permissions.middl
 }))
 router.get('/:datasetId/metadata-attachments/*', readDataset(), permissions.middleware('downloadOriginalData', 'read'), (req, res, next) => {
   const filePath = req.params['0']
-  if (filePath.includes('..')) return res.status(400).send()
+  if (filePath.includes('..')) return res.status(400).send('Unacceptable attachment path')
   res.download(path.resolve(datasetUtils.metadataAttachmentsDir(req.dataset), filePath))
 })
 router.delete('/:datasetId/metadata-attachments/*', readDataset(), permissions.middleware('writeData', 'write'), asyncWrap(async(req, res, next) => {
   const filePath = req.params['0']
-  if (filePath.includes('..')) return res.status(400).send()
+  if (filePath.includes('..')) return res.status(400).send('Unacceptable attachment path')
   await fs.remove(path.join(datasetUtils.metadataAttachmentsDir(req.dataset), filePath))
   await datasetUtils.updateStorage(req.app.get('db'), req.dataset)
   res.status(204).send()

@@ -10,7 +10,7 @@ const debug = require('debug')('attachments')
 
 exports.downloadAttachment = (req, res, next) => {
   const filePath = req.params['0']
-  if (filePath.includes('..')) return res.status(400).send()
+  if (filePath.includes('..')) return res.status(400).send('Unacceptable attachment path')
   res.download(path.resolve(datasetUtils.attachmentsDir(req.dataset), filePath))
 }
 
