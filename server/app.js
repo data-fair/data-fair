@@ -119,7 +119,6 @@ exports.run = async () => {
     })
     app.use(session.decode)
     app.use(session.loginCallback)
-    const nuxtMiddleware = await require('./nuxt')()
     // init anonym session on data-fair UI to support using remote services from outside application
     // for example map embeds
     app.use(anonymSession)
@@ -127,7 +126,9 @@ exports.run = async () => {
       req.session.activeApplications = req.session.activeApplications || []
       next()
     })
-    app.use(nuxtMiddleware)
+    const nuxt = await require('./nuxt')()
+    app.set('nuxt', nuxt.instance)
+    app.use(nuxt.render)
     app.set('ui-ready', true)
 
     if (config.listenWhenReady) {

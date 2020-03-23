@@ -160,5 +160,6 @@ module.exports = {
     title: 'Data.gouv.fr',
     href: 'https://www.data.gouv.fr',
     logo: 'https://static.data.gouv.fr/_themes/gouvfr/img/logo-header.svg'
-  }]
+  }],
+  proxyNuxt: false
 }
