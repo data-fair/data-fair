@@ -24,7 +24,7 @@ async function nuxtStatus(req) {
   const nuxtConfig = require('../../nuxt.config.js')
   const dir = nuxtConfig.buildDir || '.nuxt'
   await fs.writeFile(`${dir}/check-access.txt`, 'ok')
-  await req.app.get('nuxt').renderRoute('/')
+  if (req.app.get('nuxt')) await req.app.get('nuxt').renderRoute('/')
 }
 
 async function dataDirStatus(req) {
