@@ -85,7 +85,7 @@ const allowedTypes = exports.allowedTypes = new Set(['text/csv', 'application/ge
 const fixFormBody = (body) => {
   Object.keys(datasetSchema.properties)
     .filter(key => body[key] !== undefined)
-    .filter(key => ['object', 'array'].includes(datasetPatchSchema.properties[key].type))
+    .filter(key => ['object', 'array'].includes(datasetSchema.properties[key].type))
     .forEach(key => {
       if (body[key].trim() === '') {
         delete body[key]
