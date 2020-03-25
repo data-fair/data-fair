@@ -36,6 +36,8 @@ const apiDocsUtil = require('../utils/api-docs')
 const webhooks = require('../utils/webhooks')
 const datasetPatchSchema = require('../../contract/dataset-patch')
 const validatePatch = ajv.compile(datasetPatchSchema)
+const datasetPostSchema = require('../../contract/dataset-post')
+const validatePost = ajv.compile(datasetPostSchema)
 const debugFiles = require('debug')('files')
 const router = express.Router()
 
@@ -372,7 +374,7 @@ const beforeUpload = asyncWrap(async(req, res, next) => {
   if (!permissions.canDoForOwner(usersUtils.owner(req), 'postDataset', req.user, req.app.get('db'))) return res.sendStatus(403)
   next()
 })
-router.post('', beforeUpload, checkStorage(true), filesUtils.uploadFile(), asyncWrap(async(req, res) => {
+router.post('', beforeUpload, checkStorage(true), filesUtils.uploadFile(validatePost), asyncWrap(async(req, res) => {
   req.files = req.files || []
   debugFiles('POST datasets uploaded some files', req.files)
   try {
@@ -389,9 +391,8 @@ router.post('', beforeUpload, checkStorage(true), filesUtils.uploadFile(), async
     } else if (req.body.isVirtual) {
       if (!req.body.title) throw createError(400, 'Un jeu de données virtuel doit être créé avec un titre')
       if (attachmentsFile) throw createError(400, 'Un jeu de données virtuel ne peut pas avoir de pièces jointes')
-      const { isVirtual, owner, ...patch } = req.body
-      if (!validatePatch(patch)) {
-        throw createError(400, JSON.stringify(validatePatch.errors))
+      if (!validatePost(req.body)) {
+        throw createError(400, JSON.stringify(validatePost.errors))
       }
       dataset = initNew(req)
       dataset.virtual = dataset.virtual || { children: [] }
@@ -402,9 +403,8 @@ router.post('', beforeUpload, checkStorage(true), filesUtils.uploadFile(), async
     } else if (req.body.isRest) {
       if (!req.body.title) throw createError(400, 'Un jeu de données REST doit être créé avec un titre')
       if (attachmentsFile) throw createError(400, 'Un jeu de données REST ne peut pas être créé avec des pièces jointes')
-      const { isRest, owner, ...patch } = req.body
-      if (!validatePatch(patch)) {
-        throw createError(400, JSON.stringify(validatePatch.errors))
+      if (!validatePost(req.body)) {
+        throw createError(400, JSON.stringify(validatePost.errors))
       }
       dataset = initNew(req)
       dataset.rest = dataset.rest || {}
@@ -504,8 +504,8 @@ const updateDataset = asyncWrap(async(req, res) => {
     throw err
   }
 })
-router.post('/:datasetId', attemptInsert, readDataset(['finalized', 'error']), permissions.middleware('writeData', 'write'), checkStorage(true), filesUtils.uploadFile(), updateDataset)
-router.put('/:datasetId', attemptInsert, readDataset(['finalized', 'error']), permissions.middleware('writeData', 'write'), checkStorage(true), filesUtils.uploadFile(), updateDataset)
+router.post('/:datasetId', attemptInsert, readDataset(['finalized', 'error']), permissions.middleware('writeData', 'write'), checkStorage(true), filesUtils.uploadFile(validatePatch), updateDataset)
+router.put('/:datasetId', attemptInsert, readDataset(['finalized', 'error']), permissions.middleware('writeData', 'write'), checkStorage(true), filesUtils.uploadFile(validatePatch), updateDataset)
 
 // CRUD operations for REST datasets
 function isRest(req, res, next) {

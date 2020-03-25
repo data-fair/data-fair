@@ -14,8 +14,3 @@ module.exports = {
 postKeys.forEach(k => {
   module.exports.properties[k] = dataset.properties[k]
 })
-
-module.exports.properties.file = {
-  type: 'string',
-  format: 'binary'
-}

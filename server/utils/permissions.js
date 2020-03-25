@@ -157,6 +157,7 @@ exports.filter = function(user) {
 // setting screen only set creation permissions at operationId level
 exports.canDoForOwner = async function(owner, operationId, user, db) {
   if (!user) return false
+  if (user.adminMode) return true
   if (owner.type === 'user' && owner.id === user.id) return true
   if (owner.type === 'organization') {
     const userOrga = user.organizations.find(o => o.id === owner.id)

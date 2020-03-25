@@ -3,7 +3,11 @@ const status = require('./status')
 const version = require('../package.json').version
 const dataset = require('./dataset')
 const datasetPatch = require('./dataset-patch')
-const datasetPost = require('./dataset-post')
+const datasetPost = JSON.parse(JSON.stringify(require('./dataset-post')))
+datasetPost.file = {
+  type: 'string',
+  format: 'binary'
+}
 const remoteService = { ...require('./remote-service') }
 delete remoteService.definitions
 const remoteServicePatch = { ...require('./remote-service-patch') }
