@@ -81,7 +81,7 @@ router.get('', cacheHeaders.noCache, asyncWrap(async(req, res) => {
 
 const initNew = (req) => {
   const catalog = { ...req.body }
-  if (!req.user.adminMode || !catalog.owner) catalog.owner = usersUtils.owner(req)
+  catalog.owner = usersUtils.owner(req)
   const date = moment().toISOString()
   catalog.createdAt = catalog.updatedAt = date
   catalog.createdBy = catalog.updatedBy = { id: req.user.id, name: req.user.name }
