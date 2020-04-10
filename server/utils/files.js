@@ -18,7 +18,7 @@ const debug = require('debug')('files')
 const { tabularTypes, geographicalTypes, archiveTypes, calendarTypes } = require('../workers/converter')
 
 function uploadDir(req) {
-  const owner = usersUtils.owner(req)
+  const owner = req.dataset ? req.dataset.owner : usersUtils.owner(req)
   return path.join(config.dataDir, owner.type, owner.id)
 }
 
