@@ -15,8 +15,7 @@ exports.sniff = async (sample) => {
     .reduce((a, item) => a && a.count >= item.count ? a : item, null)
     .d
 
-  const lines = sample.split(result.linesDelimiter)
-  lines.pop() // last line is probably incomplete
+  const lines = sample.split(result.linesDelimiter).filter(l => !!l).slice(0, 10)
 
   // the parameters combination with the most successfully extracted values is probably the best one
   const combinations = []
@@ -38,7 +37,7 @@ exports.sniff = async (sample) => {
           callback()
         }
       }))
-      parser.write(sample)
+      parser.write(lines.join(result.linesDelimiter))
       parser.end()
       await parsePromise
       combinations.push({ props: { fieldsDelimiter: fd, escapeChar: ec, labels }, score })
