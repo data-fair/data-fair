@@ -1,8 +1,7 @@
 // Analyze dataset data, check validity and extract a few metadata for next workers
 const datasetFileSample = require('../utils/dataset-file-sample')
-const CSVSniffer = require('csv-sniffer')()
-const possibleDelimiters = [',', ';', '\t', '|']
-const sniffer = new CSVSniffer(possibleDelimiters)
+const csvSniffer = require('../utils/csv-sniffer')
+
 const iconv = require('iconv-lite')
 const datasetUtils = require('../utils/dataset')
 const fieldsSniffer = require('../utils/fields-sniffer')
@@ -19,21 +18,11 @@ exports.process = async function(app, dataset) {
   } catch (err) {
     throw new Error(`Échec de décodage du fichier selon l'encodage détecté ${dataset.file.encoding}`)
   }
-  const sniffResult = sniffer.sniff(decodedSample, {
-    hasHeader: true
-  })
-
-  // Try to manage csv sniffing failures
-  if (sniffResult.delimiter === null && sniffResult.labels && sniffResult.labels && sniffResult.labels[0]) {
-    const hasDelimiter = possibleDelimiters.reduce((a, delim) => { return a || sniffResult.labels[0].indexOf(delim) !== -1 }, false)
-    if (hasDelimiter) throw new Error('Échec de l\'analyse du fichier tabulaire, il est probablement mal formé.')
-  }
-  if (!sniffResult.labels) throw new Error('Échec de l\'analyse du fichier tabulaire, pas de colonne détectée.')
+  const sniffResult = await csvSniffer.sniff(decodedSample)
 
   const schema = dataset.file.schema = sniffResult.labels
     .map((field, i) => ({
       key: fieldsSniffer.escapeKey(field),
-      type: sniffResult.types[i],
       'x-originalName': field.replace(/""/g, '"').replace(/^"/, '').replace(/"$/, '')
     }))
     // do not keep columns with empty string as header
@@ -46,9 +35,9 @@ exports.process = async function(app, dataset) {
   })
 
   const props = dataset.file.props = {
-    linesDelimiter: sniffResult.newlineStr,
-    fieldsDelimiter: sniffResult.delimiter,
-    escapeChar: sniffResult.quoteChar || '"'
+    linesDelimiter: sniffResult.linesDelimiter,
+    fieldsDelimiter: sniffResult.fieldsDelimiter,
+    escapeChar: sniffResult.escapeChar
   }
   props.numLines = await datasetUtils.countLines(dataset)
 
