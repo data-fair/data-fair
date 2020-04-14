@@ -22,26 +22,32 @@ exports.sniff = async (sample) => {
   const combinations = []
   for (const fd of possibleFieldsDelimiters) {
     for (const ec of possibleEscapeChars) {
-      let nbValues = 0
+      let score = 0
+      let labels
       const parser = csv({ separator: fd, quote: ec, newline: result.linesDelimiter })
+      parser.on('headers', headers => {
+        labels = headers
+      })
       const parsePromise = pump(parser, new Writable({
         objectMode: true,
         write(chunk, encoding, callback) {
-          if (!result.labels) result.labels = Object.keys(chunk)
-          nbValues += Object.keys(chunk).filter(key => !!chunk[key]).length
+          Object.keys(chunk).forEach(key => {
+            if (chunk[key]) score += 1
+            else if (chunk[key] === undefined) score -= 1
+          })
           callback()
         }
       }))
       parser.write(sample)
       parser.end()
       await parsePromise
-      combinations.push({ props: { fieldsDelimiter: fd, escapeChar: ec }, nbValues })
+      combinations.push({ props: { fieldsDelimiter: fd, escapeChar: ec, labels }, score })
     }
   }
 
-  const bestCombination = combinations.sort((a, b) => b.nbValues - a.nbValues)[0]
-
+  const bestCombination = combinations.sort((a, b) => b.score - a.score)[0]
+  Object.assign(result, bestCombination.props)
   if (!result.labels || !result.labels.length) throw new Error('Échec de l\'analyse du fichier tabulaire, pas de colonne détectée.')
 
-  return { ...result, ...bestCombination.props }
+  return result
 }
