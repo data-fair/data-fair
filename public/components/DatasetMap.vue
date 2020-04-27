@@ -30,7 +30,7 @@
 
 <script>
 import { mapState, mapGetters } from 'vuex'
-import debounce from 'lodash.debounce'
+import debounce from 'debounce'
 import eventBus from '../event-bus'
 
 let mapboxgl = null

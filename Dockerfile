@@ -1,4 +1,4 @@
-FROM koumoul/webapp-base:1.10.1
+FROM koumoul/webapp-base:1.12.1
 MAINTAINER "contact@koumoul.com"
 
 RUN apk add --no-cache --update python make g++ unzip
@@ -39,8 +39,8 @@ ENV NODE_ENV production
 ENV DEBUG db,upgrade*
 WORKDIR /webapp
 ADD package.json .
-ADD yarn.lock .
-RUN yarn --production
+ADD package-lock.json .
+RUN npm install --production && node-prune
 ADD nodemon.json .
 
 # Adding UI files

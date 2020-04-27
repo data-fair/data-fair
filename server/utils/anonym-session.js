@@ -6,9 +6,9 @@ const crypto = require('crypto')
 const expressSession = require('express-session')
 const MongoStore = require('connect-mongo')(expressSession)
 
-exports.init = async (db) => {
+exports.init = async (client, db) => {
   const store = new MongoStore({
-    db,
+    client,
     stringify: false,
     collection: 'sessions',
     ttl: 60 * 60 // = 1h

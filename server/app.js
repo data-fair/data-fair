@@ -102,7 +102,7 @@ exports.run = async () => {
   app.publish = await wsUtils.initPublisher(db)
 
   if (config.mode.includes('server')) {
-    const anonymSession = await require('./utils/anonym-session').init(db)
+    const anonymSession = await require('./utils/anonym-session').init(client, db)
     app.set('anonymSession', anonymSession)
     await require('./utils/capture').init()
     await require('./utils/cache').init(db)

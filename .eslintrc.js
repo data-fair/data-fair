@@ -10,7 +10,9 @@ module.exports = {
     // https://github.com/vuejs/eslint-plugin-vue,
      'plugin:vue/recommended'
   ],
-  plugins: [],
+  plugins: [
+    "no-only-tests"
+  ],
   // add your custom rules here
   rules: {
     // allow paren-less arrow functions

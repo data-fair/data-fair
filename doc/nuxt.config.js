@@ -1,12 +1,12 @@
 const config = require('config')
-const readdir = require('fs-readdir-recursive')
+const dir = require('node-dir')
 const messages = require('../i18n').messages
 
 // Additional dynamic routes for generate
-const routes = readdir('doc/pages/')
+const routes = dir.files('doc/pages/', { sync: true })
   .filter(f => f.endsWith('.md'))
   .map(f => {
-    f = f.replace('.md', '')
+    f = f.replace('.md', '').replace('doc/pages/', '')
     const dashInd = f.lastIndexOf('-')
     const key = f.slice(0, dashInd)
     const lang = f.slice(dashInd + 1, f.length)
