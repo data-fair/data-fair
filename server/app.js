@@ -1,6 +1,7 @@
 const config = require('config')
 const express = require('express')
 const eventToPromise = require('event-to-promise')
+const promisify = require('util').promisify
 const dbUtils = require('./utils/db')
 const esUtils = require('./utils/es')
 const wsUtils = require('./utils/ws')
@@ -28,10 +29,10 @@ if (config.mode.includes('server')) {
 
   if (process.env.NODE_ENV === 'development') {
   // Create a mono-domain environment with other services in dev
-    const proxy = require('http-proxy-middleware')
-    app.use('/openapi-viewer', proxy({ target: 'http://localhost:5680', pathRewrite: { '^/openapi-viewer': '' } }))
-    app.use('/simple-directory', proxy({ target: 'http://localhost:8080', pathRewrite: { '^/simple-directory': '' } }))
-    app.use('/capture', proxy({ target: 'http://localhost:8087', pathRewrite: { '^/capture': '' } }))
+    const { createProxyMiddleware } = require('http-proxy-middleware')
+    app.use('/openapi-viewer', createProxyMiddleware({ target: 'http://localhost:5680', pathRewrite: { '^/openapi-viewer': '' } }))
+    app.use('/simple-directory', createProxyMiddleware({ target: 'http://localhost:8080', pathRewrite: { '^/simple-directory': '' } }))
+    app.use('/capture', createProxyMiddleware({ target: 'http://localhost:8087', pathRewrite: { '^/capture': '' } }))
   }
 
   const bodyParser = require('body-parser').json({ limit: '1000kb' })
@@ -95,21 +96,31 @@ exports.run = async () => {
     ({ db, client } = await dbUtils.connect())
   }
 
-  await dbUtils.init(db)
+  await Promise.all([
+    dbUtils.init(db),
+    esUtils.init().then(es => app.set('es', es))
+  ])
   app.set('db', db)
   app.set('mongoClient', client)
-  app.set('es', await esUtils.init())
+
   app.publish = await wsUtils.initPublisher(db)
 
   if (config.mode.includes('server')) {
-    const anonymSession = await require('./utils/anonym-session').init(client, db)
-    app.set('anonymSession', anonymSession)
-    await require('./utils/capture').init()
-    await require('./utils/cache').init(db)
-    require('./routers/base-applications').init(db)
-    await require('./routers/remote-services').init(db)
-    await wsUtils.initServer(wss, db, session)
-    await limits.init(db)
+    await Promise.all([
+      require('./utils/anonym-session').init(client, db)
+        .then(anonymSession => {
+          // init anonym session on data-fair UI to support using remote services from outside application
+          // for example map embeds
+          app.set('anonymSession', anonymSession)
+          app.use(anonymSession)
+        }),
+      require('./utils/capture').init(),
+      require('./utils/cache').init(db),
+      require('./routers/remote-services').init(db),
+      require('./routers/base-applications').init(db),
+      limits.init(db),
+      wsUtils.initServer(wss, db, session)
+    ])
     // At this stage the server is ready to respond to API requests
     app.set('api-ready', true)
 
@@ -119,9 +130,7 @@ exports.run = async () => {
     })
     app.use(session.decode)
     app.use(session.loginCallback)
-    // init anonym session on data-fair UI to support using remote services from outside application
-    // for example map embeds
-    app.use(anonymSession)
+
     app.use((req, res, next) => {
       req.session.activeApplications = req.session.activeApplications || []
       next()
@@ -154,10 +163,11 @@ exports.run = async () => {
 
 exports.stop = async() => {
   if (config.mode.includes('server')) {
-    await require('util').promisify((cb) => wss.close(cb))()
     server.close()
-    await eventToPromise(server, 'close')
-    await wsUtils.stop()
+    await Promise.all([
+      promisify((cb) => wss.close(cb))(),
+      wsUtils.stop()
+    ])
   }
 
   if (config.mode.includes('worker')) {
@@ -165,6 +175,8 @@ exports.stop = async() => {
     await workers.stop()
   }
 
-  await app.get('mongoClient').close()
-  await app.get('es').close()
+  await Promise.all([
+    app.get('mongoClient').close(),
+    app.get('es').close()
+  ])
 }

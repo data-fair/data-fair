@@ -1,31 +1,31 @@
 const testUtils = require('./resources/test-utils')
 
-const { test, axiosBuilder } = testUtils.prepare(__filename)
 
-test('Get API documentation', async t => {
-  const ax = await axiosBuilder()
+
+it('Get API documentation', async () => {
+  const ax = await global.ax.builder()
   const res = await ax.get('/api/v1/api-docs.json')
-  t.is(res.status, 200)
-  t.is(res.data.openapi, '3.0.0')
+  assert.equal(res.status, 200)
+  assert.equal(res.data.openapi, '3.0.0')
 })
 
-test('Get vocabulary', async t => {
-  const ax = await axiosBuilder()
+it('Get vocabulary', async () => {
+  const ax = await global.ax.builder()
   const res = await ax.get('/api/v1/vocabulary')
-  t.is(res.status, 200)
+  assert.equal(res.status, 200)
   t.deepEqual(res.data, require('../contract/vocabulary.json'))
 })
 
-test('Check API format', async t => {
-  const ax = await axiosBuilder()
+it('Check API format', async () => {
+  const ax = await global.ax.builder()
   const api = require('./resources/geocoder-api.json')
   const res = await ax.post('/api/v1/_check-api', api)
-  t.is(res.status, 200)
+  assert.equal(res.status, 200)
   delete api.openapi
   try {
     await ax.post('/api/v1/_check-api', api)
-    t.fail()
+    assert.fail()
   } catch (err) {
-    t.is(err.status, 400)
+    assert.equal(err.status, 400)
   }
 })

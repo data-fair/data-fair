@@ -1,10 +1,11 @@
+const assert = require('assert').strict
 const fs = require('fs')
 const nock = require('nock')
 const FormData = require('form-data')
 
 const testUtils = require('./resources/test-utils')
 
-const { test, axiosBuilder, config } = testUtils.prepare(__filename)
+const config = require('config')
 
 const workers = require('../server/workers')
 const esUtils = require('../server/utils/es')
@@ -13,62 +14,62 @@ const esUtils = require('../server/utils/es')
 nock('http://test-catalog.com').persist()
   .post('/api/1/datasets/').reply(201, { slug: 'my-dataset', page: 'http://test-catalog.com/datasets/my-dataset' })
 
-test.serial('Process newly uploaded CSV dataset', async t => {
+it('Process newly uploaded CSV dataset', async () => {
   // Send dataset
   const datasetFd = fs.readFileSync('./test/resources/dataset1.csv')
   const form = new FormData()
   form.append('file', datasetFd, 'dataset.csv')
-  const ax = await axiosBuilder('dmeadus0@answers.com:passwd')
+  const ax = await global.ax.builder('dmeadus0@answers.com:passwd')
   let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
-  t.is(res.status, 201)
+  assert.equal(res.status, 201)
 
   // Dataset received and parsed
   let dataset = await workers.hook('csvAnalyzer')
-  t.is(dataset.status, 'analyzed')
+  assert.equal(dataset.status, 'analyzed')
 
   // Auto schema proposal
   dataset = await workers.hook('csvSchematizer')
-  t.is(dataset.status, 'schematized')
+  assert.equal(dataset.status, 'schematized')
   const idField = dataset.schema.find(f => f.key === 'id')
   const dateField = dataset.schema.find(f => f.key === 'some_date')
-  t.is(idField.type, 'string')
-  t.is(idField.format, 'uri-reference')
-  t.is(dateField.type, 'string')
-  t.is(dateField.format, 'date')
+  assert.equal(idField.type, 'string')
+  assert.equal(idField.format, 'uri-reference')
+  assert.equal(dateField.type, 'string')
+  assert.equal(dateField.format, 'date')
 
   // ES indexation and finalization
   dataset = await workers.hook('finalizer')
-  t.is(dataset.status, 'finalized')
-  t.is(dataset.count, 2)
+  assert.equal(dataset.status, 'finalized')
+  assert.equal(dataset.count, 2)
   const idProp = dataset.schema.find(p => p.key === 'id')
-  t.is(idProp['x-cardinality'], 2)
-  t.not(idProp.enum.indexOf('koumoul'), -1)
+  assert.equal(idProp['x-cardinality'], 2)
+  assert.notEqual(idProp.enum.indexOf('koumoul'), -1)
   const esIndices = await test.app.get('es').indices.get({ index: esUtils.aliasName(dataset) })
   const esIndex = Object.values(esIndices)[0]
   const mapping = esIndex.mappings
-  t.is(mapping.properties.id.type, 'keyword')
-  t.is(mapping.properties.adr.type, 'keyword')
-  t.is(mapping.properties.adr.fields.text.type, 'text')
-  t.is(mapping.properties.some_date.type, 'date')
+  assert.equal(mapping.properties.id.type, 'keyword')
+  assert.equal(mapping.properties.adr.type, 'keyword')
+  assert.equal(mapping.properties.adr.fields.text.type, 'text')
+  assert.equal(mapping.properties.some_date.type, 'date')
 
   // Update schema to specify geo point
   const locProp = dataset.schema.find(p => p.key === 'loc')
   locProp['x-refersTo'] = 'http://www.w3.org/2003/01/geo/wgs84_pos#lat_long'
   res = await ax.patch('/api/v1/datasets/' + dataset.id, { schema: dataset.schema })
-  t.is(res.status, 200)
+  assert.equal(res.status, 200)
 
   // Second ES indexation
   dataset = await workers.hook('finalizer')
-  t.is(dataset.status, 'finalized')
-  t.is(dataset.count, 2)
+  assert.equal(dataset.status, 'finalized')
+  assert.equal(dataset.count, 2)
   const esIndices2 = await test.app.get('es').indices.get({ index: esUtils.aliasName(dataset) })
   const esIndex2 = Object.values(esIndices2)[0]
   const mapping2 = esIndex2.mappings
-  t.is(mapping2.properties.id.type, 'keyword')
-  t.is(mapping2.properties.adr.type, 'keyword')
-  t.is(mapping2.properties.some_date.type, 'date')
-  t.is(mapping2.properties.loc.type, 'keyword')
-  t.is(mapping2.properties._geopoint.type, 'geo_point')
+  assert.equal(mapping2.properties.id.type, 'keyword')
+  assert.equal(mapping2.properties.adr.type, 'keyword')
+  assert.equal(mapping2.properties.some_date.type, 'date')
+  assert.equal(mapping2.properties.loc.type, 'keyword')
+  assert.equal(mapping2.properties._geopoint.type, 'geo_point')
 
   // Reupload data with bad localization
   const datasetFd2 = fs.readFileSync('./test/resources/dataset-bad-format.csv')
@@ -77,18 +78,18 @@ test.serial('Process newly uploaded CSV dataset', async t => {
   await ax.post('/api/v1/datasets/' + dataset.id, form2, { headers: testUtils.formHeaders(form2) })
   try {
     dataset = await workers.hook('indexer')
-    t.fail()
+    assert.fail()
   } catch (err) {
     res = await ax.get('/api/v1/datasets/' + dataset.id + '/journal')
-    t.is(res.status, 200)
-    t.is(res.data[0].type, 'error')
+    assert.equal(res.status, 200)
+    assert.equal(res.data[0].type, 'error')
     // Check that there is an error message in the journal
-    t.true(res.data[0].data.startsWith('100% des lignes sont en erreur'))
+    assert.ok(res.data[0].data.startsWith('100% des lignes sont en erreur'))
   }
 })
 
-test.serial('Publish a dataset after finalization', async t => {
-  const ax = await axiosBuilder('dmeadus0@answers.com:passwd')
+it('Publish a dataset after finalization', async () => {
+  const ax = await global.ax.builder('dmeadus0@answers.com:passwd')
 
   // Prepare a catalog
   const catalog = (await ax.post('/api/v1/catalogs', { url: 'http://test-catalog.com', title: 'Test catalog', apiKey: 'apiKey', type: 'udata' })).data
@@ -98,121 +99,121 @@ test.serial('Publish a dataset after finalization', async t => {
   const form = new FormData()
   form.append('file', datasetFd, 'dataset.csv')
   let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
-  t.is(res.status, 201)
+  assert.equal(res.status, 201)
   let dataset = await workers.hook('finalizer')
-  t.is(dataset.status, 'finalized')
+  assert.equal(dataset.status, 'finalized')
 
   // Update dataset to ask for a publication
   res = await ax.patch('/api/v1/datasets/' + dataset.id, { publications: [{ catalog: catalog.id, status: 'waiting' }] })
-  t.is(res.status, 200)
+  assert.equal(res.status, 200)
 
   // Go through the publisher worker
   dataset = await workers.hook('datasetPublisher')
-  t.is(dataset.status, 'finalized')
-  t.is(dataset.publications[0].status, 'published')
-  t.is(dataset.publications[0].targetUrl, 'http://test-catalog.com/datasets/my-dataset')
+  assert.equal(dataset.status, 'finalized')
+  assert.equal(dataset.publications[0].status, 'published')
+  assert.equal(dataset.publications[0].targetUrl, 'http://test-catalog.com/datasets/my-dataset')
 })
 
-test.serial('Process newly uploaded geojson dataset', async t => {
+it('Process newly uploaded geojson dataset', async () => {
   // Send dataset
   const datasetFd = fs.readFileSync('./test/resources/geojson-example.geojson')
   const form = new FormData()
   form.append('file', datasetFd, 'geojson-example.geojson')
-  const ax = await axiosBuilder('dmeadus0@answers.com:passwd')
+  const ax = await global.ax.builder('dmeadus0@answers.com:passwd')
   const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
-  t.is(res.status, 201)
+  assert.equal(res.status, 201)
 
   // Dataset received and parsed
   let dataset = await workers.hook('geojsonAnalyzer')
-  t.is(dataset.status, 'schematized')
-  t.is(dataset.schema.length, 5)
+  assert.equal(dataset.status, 'schematized')
+  assert.equal(dataset.schema.length, 5)
   const idField = dataset.schema.find(field => field.key === 'id')
-  t.is(idField.type, 'string')
-  t.is(idField.format, 'uri-reference')
+  assert.equal(idField.type, 'string')
+  assert.equal(idField.format, 'uri-reference')
   const descField = dataset.schema.find(field => field.key === 'desc')
-  t.is(descField.type, 'string')
-  t.falsy(descField.format)
+  assert.equal(descField.type, 'string')
+  assert.false(descField.format)
   const boolField = dataset.schema.find(field => field.key === 'bool')
-  t.is(boolField.type, 'boolean')
+  assert.equal(boolField.type, 'boolean')
 
   // ES indexation and finalization
   dataset = await workers.hook('finalizer')
-  t.is(dataset.status, 'finalized')
+  assert.equal(dataset.status, 'finalized')
 })
 
-test.serial('Log error for geojson with broken feature', async t => {
+it('Log error for geojson with broken feature', async () => {
   // Send dataset
   const datasetFd = fs.readFileSync('./test/resources/geojson-broken.geojson')
   const form = new FormData()
   form.append('file', datasetFd, 'geojson-example.geojson')
-  const ax = await axiosBuilder('dmeadus0@answers.com:passwd')
+  const ax = await global.ax.builder('dmeadus0@answers.com:passwd')
   let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
   const dataset = res.data
-  t.is(res.status, 201)
+  assert.equal(res.status, 201)
 
   // ES indexation and finalization
   try {
     await workers.hook('indexer')
-    t.fail()
+    assert.fail()
   } catch (err) {
     // Check that there is an error message in the journal
     res = await ax.get('/api/v1/datasets/' + dataset.id + '/journal')
-    t.is(res.status, 200)
-    t.is(res.data[0].type, 'error')
-    t.true(res.data[0].data.startsWith('100% des lignes sont en erreur'))
+    assert.equal(res.status, 200)
+    assert.equal(res.data[0].type, 'error')
+    assert.ok(res.data[0].data.startsWith('100% des lignes sont en erreur'))
   }
 })
 
 // skipped, because requires ogr2ogr in the build env
-test.skip('Process newly uploaded shapefile dataset', async t => {
+it.skip('Process newly uploaded shapefile dataset', async () => {
   // Send dataset
   const datasetFd = fs.readFileSync('./test/resources/stations.zip')
   const form = new FormData()
   form.append('file', datasetFd, 'stations.zip')
-  const ax = await axiosBuilder('dmeadus0@answers.com:passwd')
+  const ax = await global.ax.builder('dmeadus0@answers.com:passwd')
   const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
-  t.is(res.status, 201)
+  assert.equal(res.status, 201)
 
   // dataset converted
   const dataset = await workers.hook('converter')
-  t.is(dataset.status, 'loaded')
-  t.is(dataset.file.name, 'stations.geojson')
+  assert.equal(dataset.status, 'loaded')
+  assert.equal(dataset.file.name, 'stations.geojson')
 })
 
-test.serial('Run tasks in children processes', async t => {
+it('Run tasks in children processes', async () => {
   config.worker.spawnTask = true
   const datasetFd = fs.readFileSync('./test/resources/dataset1.csv')
   const form = new FormData()
   form.append('file', datasetFd, 'dataset.csv')
-  const ax = await axiosBuilder('dmeadus0@answers.com:passwd')
+  const ax = await global.ax.builder('dmeadus0@answers.com:passwd')
   const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
-  t.is(res.status, 201)
+  assert.equal(res.status, 201)
   let dataset = await workers.hook('csvAnalyzer')
-  t.is(dataset.status, 'analyzed')
+  assert.equal(dataset.status, 'analyzed')
   dataset = await workers.hook('csvSchematizer')
-  t.is(dataset.status, 'schematized')
+  assert.equal(dataset.status, 'schematized')
   dataset = await workers.hook('finalizer')
-  t.is(dataset.status, 'finalized')
-  t.is(dataset.count, 2)
+  assert.equal(dataset.status, 'finalized')
+  assert.equal(dataset.count, 2)
 })
 
-test.serial('Manage failure in children processes', async t => {
+it('Manage failure in children processes', async () => {
   config.worker.spawnTask = true
   const datasetFd = fs.readFileSync('./test/resources/geojson-broken.geojson')
   const form = new FormData()
   form.append('file', datasetFd, 'geojson-broken2.geojson')
-  const ax = await axiosBuilder('dmeadus0@answers.com:passwd')
+  const ax = await global.ax.builder('dmeadus0@answers.com:passwd')
   let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
-  t.is(res.status, 201)
+  assert.equal(res.status, 201)
   const dataset = res.data
   try {
     await workers.hook('indexer')
-    t.fail()
+    assert.fail()
   } catch (err) {
     // Check that there is an error message in the journal
     res = await ax.get('/api/v1/datasets/' + dataset.id + '/journal')
-    t.is(res.status, 200)
-    t.is(res.data[0].type, 'error')
-    t.true(res.data[0].data.includes('100% des lignes sont en erreur'))
+    assert.equal(res.status, 200)
+    assert.equal(res.data[0].type, 'error')
+    assert.ok(res.data[0].data.includes('100% des lignes sont en erreur'))
   }
 })

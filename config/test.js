@@ -1,4 +1,8 @@
 module.exports = {
+  port: 4657,
+  publicUrl: 'http://localhost:4657',
+  wsPublicUrl: 'ws://localhost:4657',
+  dataDir: './data/test',
   brand: {
     embed: '<div>application embed</div>'
   },

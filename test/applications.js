@@ -1,7 +1,6 @@
-const testUtils = require('./resources/test-utils')
+const assert = require('assert').strict
+const config = require('config')
 const nock = require('nock')
-
-const { test, config, axiosBuilder } = testUtils.prepare(__filename)
 
 const html = `
 <html>
@@ -13,88 +12,88 @@ const html = `
 `
 nock('http://monapp1.com/').persist().get('/index.html').reply(200, html)
 
-test('Get applications when not authenticated', async t => {
-  const ax = await axiosBuilder()
+it('Get applications when not authenticated', async () => {
+  const ax = await global.ax.builder()
   const res = await ax.get('/api/v1/applications')
-  t.is(res.status, 200)
-  t.is(res.data.count, 0)
+  assert.equal(res.status, 200)
+  assert.equal(res.data.count, 0)
 })
 
-test('Access an unknown applicationId on proxy endpoint', async t => {
-  const ax = await axiosBuilder()
+it('Access an unknown applicationId on proxy endpoint', async () => {
+  const ax = await global.ax.builder()
   try {
     await ax.get('/app/unknownId')
-    t.fail()
+    assert.fail()
   } catch (err) {
-    t.is(err.status, 404)
+    assert.equal(err.status, 404)
   }
 })
 
-test.serial('Post an external application configuration, read it, update it and delete it', async t => {
-  const ax = await axiosBuilder('dmeadus0@answers.com:passwd')
+it('Post an external application configuration, read it, update it and delete it', async () => {
+  const ax = await global.ax.builder('dmeadus0@answers.com:passwd')
   let res = await ax.post('/api/v1/applications', { url: 'http://monapp1.com/' })
-  t.is(res.status, 201)
+  assert.equal(res.status, 201)
 
   const appId = res.data.id
   res = await ax.get('/api/v1/applications')
-  t.is(res.status, 200)
-  t.true(res.data.count >= 1)
+  assert.equal(res.status, 200)
+  assert.ok(res.data.count >= 1)
   res = await ax.get('/api/v1/applications/' + appId)
-  t.is(res.data.url, 'http://monapp1.com/')
+  assert.equal(res.data.url, 'http://monapp1.com/')
   res = await ax.get('/api/v1/applications/' + appId + '/api-docs.json')
-  t.truthy(res.data.openapi)
+  assert.ok(res.data.openapi)
   res = await ax.get('/api/v1/applications/' + appId + '/config')
-  t.is(res.status, 200)
+  assert.equal(res.status, 200)
   res = await ax.patch('/api/v1/applications/' + appId, { title: 'Test application config' })
-  t.is(res.status, 200)
-  t.is(res.data.title, 'Test application config')
+  assert.equal(res.status, 200)
+  assert.equal(res.data.title, 'Test application config')
   res = await ax.delete('/api/v1/applications/' + appId)
-  t.is(res.status, 204)
+  assert.equal(res.status, 204)
   res = await ax.get('/api/v1/applications')
-  t.is(res.status, 200)
-  t.is(res.data.count, 0)
+  assert.equal(res.status, 200)
+  assert.equal(res.data.count, 0)
 })
 
-test.serial('Manage the custom configuration part of the object', async t => {
-  const ax = await axiosBuilder('dmeadus0@answers.com:passwd')
+it('Manage the custom configuration part of the object', async () => {
+  const ax = await global.ax.builder('dmeadus0@answers.com:passwd')
   let res = await ax.post('/api/v1/applications', { url: 'http://monapp1.com/' })
   const appId = res.data.id
   res = await ax.put('/api/v1/applications/' + appId + '/config', {
     datasets: [{ href: config.publicUrl + '/api/v1/datasets/111' }]
   })
-  t.is(res.status, 200)
+  assert.equal(res.status, 200)
   res = await ax.get('/api/v1/applications/' + appId + '/config')
-  t.is(res.status, 200)
-  t.is(res.data.datasets.length, 1)
+  assert.equal(res.status, 200)
+  assert.equal(res.data.datasets.length, 1)
   res = await ax.get('/api/v1/applications', { params: { dataset: 'nope' } })
-  t.is(res.data.count, 0)
+  assert.equal(res.data.count, 0)
   res = await ax.get('/api/v1/applications', { params: { dataset: '111' } })
-  t.is(res.data.count, 1)
+  assert.equal(res.data.count, 1)
 })
 
-test.serial('Use an application through the application proxy', async t => {
-  const ax = await axiosBuilder('dmeadus0@answers.com:passwd')
-  const adminAx = await axiosBuilder('alban.mouton@koumoul.com:passwd:adminMode')
+it('Use an application through the application proxy', async () => {
+  const ax = await global.ax.builder('dmeadus0@answers.com:passwd')
+  const adminAx = await global.ax.builder('alban.mouton@koumoul.com:passwd:adminMode')
   let res = await ax.post('/api/v1/applications', { url: 'http://monapp1.com/' })
   const appId = res.data.id
 
   // The same content is returned with or without a trailing slash
   res = await ax.get(`/app/${appId}/`)
-  t.is(res.status, 200)
+  assert.equal(res.status, 200)
   res = await ax.get('/app/' + appId)
-  t.is(res.status, 200)
+  assert.equal(res.status, 200)
 
   // The HTML content is returned
-  t.true(res.headers['content-type'].startsWith('text/html'))
-  t.true(res.data.includes('My app body'))
+  assert.ok(res.headers['content-type'].startsWith('text/html'))
+  assert.ok(res.data.includes('My app body'))
   // The configuration is injected
-  t.true(res.data.includes('window.APPLICATION={'))
+  assert.ok(res.data.includes('window.APPLICATION={'))
   // A link to the manifest is injected
-  t.true(res.data.includes(`<link rel="manifest" crossorigin="use-credentials" href="/app/${appId}/manifest.json">`))
+  assert.ok(res.data.includes(`<link rel="manifest" crossorigin="use-credentials" href="/app/${appId}/manifest.json">`))
   // The app reference a service worker
-  t.true(res.data.includes('/app-sw.js'))
+  assert.ok(res.data.includes('/app-sw.js'))
   // the app contains the brand embed (cf config.brand.embed)
-  t.true(res.data.includes('<div>application embed</div>'))
+  assert.ok(res.data.includes('<div>application embed</div>'))
 
   // no brand embed if the specific limit is defined
   await adminAx.post('/api/v1/limits/user/dmeadus0', { hide_brand: { limit: 1 }, lastUpdate: new Date().toISOString() }, { params: { key: config.secretKeys.limits } })

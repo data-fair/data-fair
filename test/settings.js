@@ -1,40 +1,40 @@
 const testUtils = require('./resources/test-utils')
 
-const { test, axiosBuilder } = testUtils.prepare(__filename)
 
-test('Wrong type', async t => {
-  const ax = await axiosBuilder('dmeadus0@answers.com:passwd')
+
+it('Wrong type', async () => {
+  const ax = await global.ax.builder('dmeadus0@answers.com:passwd')
   try {
     await ax.get('/api/v1/settings/unknown/dmeadus0')
-    t.fail()
+    assert.fail()
   } catch (err) {
-    t.is(err.status, 400)
+    assert.equal(err.status, 400)
   }
 })
 
-test('No permissions', async t => {
-  const ax = await axiosBuilder('dmeadus0@answers.com:passwd')
+it('No permissions', async () => {
+  const ax = await global.ax.builder('dmeadus0@answers.com:passwd')
   try {
     await ax.get('/api/v1/settings/user/hlalonde3')
-    t.fail()
+    assert.fail()
   } catch (err) {
-    t.is(err.status, 403)
+    assert.equal(err.status, 403)
   }
 })
 
-test('Read my empty settings', async t => {
-  const ax = await axiosBuilder('dmeadus0@answers.com:passwd')
+it('Read my empty settings', async () => {
+  const ax = await global.ax.builder('dmeadus0@answers.com:passwd')
   const res = await ax.get('/api/v1/settings/user/dmeadus0')
-  t.is(res.status, 200)
+  assert.equal(res.status, 200)
   t.deepEqual(res.data, {})
 })
 
-test('Update with wrong format', async t => {
-  const ax = await axiosBuilder('dmeadus0@answers.com:passwd')
+it('Update with wrong format', async () => {
+  const ax = await global.ax.builder('dmeadus0@answers.com:passwd')
   try {
     await ax.put('/api/v1/settings/user/dmeadus0', { forbiddenKey: 'not allowed' })
-    t.fail()
+    assert.fail()
   } catch (err) {
-    t.is(err.status, 400)
+    assert.equal(err.status, 400)
   }
 })

@@ -1,62 +1,62 @@
 const fs = require('fs')
 const FormData = require('form-data')
 const testUtils = require('./resources/test-utils')
-const { test, axiosBuilder } = testUtils.prepare(__filename)
+
 const restDatasetsUtils = require('../server/utils/rest-datasets')
 const datasetUtils = require('../server/utils/dataset')
 const workers = require('../server/workers')
 
-test.serial('Create empty REST datasets', async t => {
-  const ax = await axiosBuilder('dmeadus0@answers.com:passwd')
+it('Create empty REST datasets', async () => {
+  const ax = await global.ax.builder('dmeadus0@answers.com:passwd')
   let res = await ax.post('/api/v1/datasets', { isRest: true, title: 'a rest dataset' })
-  t.is(res.status, 201)
-  t.is(res.data.id, 'a-rest-dataset')
+  assert.equal(res.status, 201)
+  assert.equal(res.data.id, 'a-rest-dataset')
 
   res = await ax.post('/api/v1/datasets', { isRest: true, title: 'a rest dataset' })
-  t.is(res.status, 201)
-  t.is(res.data.id, 'a-rest-dataset-2')
+  assert.equal(res.status, 201)
+  assert.equal(res.data.id, 'a-rest-dataset-2')
 
   res = await ax.put('/api/v1/datasets/restdataset3', { isRest: true, title: 'a rest dataset' })
-  t.is(res.status, 201)
-  t.is(res.data.id, 'restdataset3')
+  assert.equal(res.status, 201)
+  assert.equal(res.data.id, 'restdataset3')
 })
 
-test.serial('Perform CRUD operations on REST datasets', async t => {
-  const ax = await axiosBuilder('dmeadus0@answers.com:passwd')
+it('Perform CRUD operations on REST datasets', async () => {
+  const ax = await global.ax.builder('dmeadus0@answers.com:passwd')
   let res = await ax.post('/api/v1/datasets', {
     isRest: true,
     title: 'rest1',
     schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }]
   })
   res = await ax.post('/api/v1/datasets/rest1/lines', { attr1: 'test1', attr2: 'test1' })
-  t.is(res.status, 201)
-  t.truthy(res.data._id)
-  t.is(res.data.attr1, 'test1')
+  assert.equal(res.status, 201)
+  assert.ok(res.data._id)
+  assert.equal(res.data.attr1, 'test1')
   res = await ax.post('/api/v1/datasets/rest1/lines', { _id: 'id1', attr1: 'test1', attr2: 'test1' })
-  t.is(res.data._id, 'id1')
+  assert.equal(res.data._id, 'id1')
   res = await ax.get('/api/v1/datasets/rest1/lines/id1')
-  t.is(res.data._id, 'id1')
-  t.is(res.data.attr1, 'test1')
+  assert.equal(res.data._id, 'id1')
+  assert.equal(res.data.attr1, 'test1')
   await ax.put('/api/v1/datasets/rest1/lines/id1', { attr1: 'test2', attr2: 'test2' })
   res = await ax.get('/api/v1/datasets/rest1/lines/id1')
-  t.is(res.data._id, 'id1')
-  t.is(res.data.attr1, 'test2')
+  assert.equal(res.data._id, 'id1')
+  assert.equal(res.data.attr1, 'test2')
   await ax.patch('/api/v1/datasets/rest1/lines/id1', { attr1: 'test3' })
   res = await ax.get('/api/v1/datasets/rest1/lines/id1')
-  t.is(res.data._id, 'id1')
-  t.is(res.data.attr1, 'test3')
-  t.is(res.data.attr2, 'test2')
+  assert.equal(res.data._id, 'id1')
+  assert.equal(res.data.attr1, 'test3')
+  assert.equal(res.data.attr2, 'test2')
   await ax.delete('/api/v1/datasets/rest1/lines/id1')
   try {
     await ax.get('/api/v1/datasets/rest1/lines/id1')
-    t.fail()
+    assert.fail()
   } catch (err) {
-    t.is(err.status, 404)
+    assert.equal(err.status, 404)
   }
 })
 
-test.serial('Perform CRUD operations in bulks', async t => {
-  const ax = await axiosBuilder('dmeadus0@answers.com:passwd')
+it('Perform CRUD operations in bulks', async () => {
+  const ax = await global.ax.builder('dmeadus0@answers.com:passwd')
   await ax.put('/api/v1/datasets/rest2', {
     isRest: true,
     title: 'rest2',
@@ -72,25 +72,25 @@ test.serial('Perform CRUD operations in bulks', async t => {
     { _action: 'patch', _id: 'line3', attr1: 'test2' },
     { _action: 'update', _id: 'line4', attr1: 'test2', attr2: 'test2' }
   ])
-  t.is(res.data.nbOk, 7)
+  assert.equal(res.data.nbOk, 7)
 
   try {
     await ax.get('/api/v1/datasets/rest2/lines/line2')
-    t.fail()
+    assert.fail()
   } catch (err) {
-    t.is(err.status, 404)
+    assert.equal(err.status, 404)
   }
   res = await ax.get('/api/v1/datasets/rest2/lines/line3')
-  t.is(res.data.attr1, 'test2')
-  t.is(res.data.attr2, 'test1')
+  assert.equal(res.data.attr1, 'test2')
+  assert.equal(res.data.attr2, 'test1')
   res = await ax.get('/api/v1/datasets/rest2/lines/line4')
-  t.is(res.data.attr1, 'test2')
-  t.is(res.data.attr2, 'test2')
+  assert.equal(res.data.attr1, 'test2')
+  assert.equal(res.data.attr2, 'test2')
 })
 
-test.serial('Index and finalize dataset after write', async t => {
+it('Index and finalize dataset after write', async () => {
   // Load a few lines
-  const ax = await axiosBuilder('dmeadus0@answers.com:passwd')
+  const ax = await global.ax.builder('dmeadus0@answers.com:passwd')
   await ax.put('/api/v1/datasets/rest3', {
     isRest: true,
     title: 'rest3',
@@ -105,34 +105,34 @@ test.serial('Index and finalize dataset after write', async t => {
   ])
   await workers.hook('indexer/rest3')
   dataset = await workers.hook('finalizer/rest3')
-  t.truthy(dataset.schema.find(f => f.key === '_id'))
-  t.truthy(dataset.schema.find(f => f.key === '_updatedAt'))
+  assert.ok(dataset.schema.find(f => f.key === '_id'))
+  assert.ok(dataset.schema.find(f => f.key === '_updatedAt'))
   res = await ax.get('/api/v1/datasets/rest3/lines')
-  t.is(res.data.total, 4)
+  assert.equal(res.data.total, 4)
 
   // Patch one through db query to check that it won't processed
   // we must be sure that the whole dataset is not reindexed each time, only the diffs
   const collection = restDatasetsUtils.collection(test.app.get('db'), dataset)
   await collection.updateOne({ _id: 'line4' }, { $set: { attr2: 'altered' } })
-  t.is((await collection.findOne({ _id: 'line4' })).attr2, 'altered')
+  assert.equal((await collection.findOne({ _id: 'line4' })).attr2, 'altered')
 
   res = await ax.post('/api/v1/datasets/rest3/_bulk_lines', [
     { _action: 'delete', _id: 'line1' },
     { _action: 'patch', _id: 'line2', attr1: 'test2' }
   ])
-  t.is(await collection.countDocuments({ _needsIndexing: true }), 2)
+  assert.equal(await collection.countDocuments({ _needsIndexing: true }), 2)
 
   dataset = await workers.hook('finalizer/rest3')
-  t.is(await collection.countDocuments({ _needsIndexing: true }), 0)
-  t.is(dataset.count, 3)
+  assert.equal(await collection.countDocuments({ _needsIndexing: true }), 0)
+  assert.equal(dataset.count, 3)
   res = await ax.get('/api/v1/datasets/rest3/lines')
-  t.is(res.data.total, 3)
+  assert.equal(res.data.total, 3)
   const line4 = res.data.results.find(r => r._id === 'line4')
-  t.is(line4.attr2, 'test1')
+  assert.equal(line4.attr2, 'test1')
 })
 
-test.serial('Use dataset schema to validate inputs', async t => {
-  const ax = await axiosBuilder('dmeadus0@answers.com:passwd')
+it('Use dataset schema to validate inputs', async () => {
+  const ax = await global.ax.builder('dmeadus0@answers.com:passwd')
   await ax.put('/api/v1/datasets/rest4', {
     isRest: true,
     title: 'rest4',
@@ -141,30 +141,30 @@ test.serial('Use dataset schema to validate inputs', async t => {
   await workers.hook('indexer/rest4')
   try {
     await ax.post('/api/v1/datasets/rest4/lines', { attr3: 'test1' })
-    t.fail()
+    assert.fail()
   } catch (err) {
-    t.is(err.status, 400)
+    assert.equal(err.status, 400)
   }
 
   try {
     await ax.post('/api/v1/datasets/rest4/lines', { attr1: 111 })
-    t.fail()
+    assert.fail()
   } catch (err) {
-    t.is(err.status, 400)
+    assert.equal(err.status, 400)
   }
 
   try {
     await ax.put('/api/v1/datasets/rest4/lines/line1', { attr1: 111 })
-    t.fail()
+    assert.fail()
   } catch (err) {
-    t.is(err.status, 400)
+    assert.equal(err.status, 400)
   }
 
   try {
     await ax.patch('/api/v1/datasets/rest4/lines/line1', { attr1: 111 })
-    t.fail()
+    assert.fail()
   } catch (err) {
-    t.is(err.status, 400)
+    assert.equal(err.status, 400)
   }
 
   const res = await ax.post('/api/v1/datasets/rest4/_bulk_lines', [
@@ -172,15 +172,15 @@ test.serial('Use dataset schema to validate inputs', async t => {
     { _id: 'line1', attr1: 111 }
   ])
 
-  t.is(res.data.nbOk, 1)
-  t.is(res.data.nbErrors, 1)
-  t.is(res.data.errors.length, 1)
-  t.is(res.data.errors[0].line, 1)
-  t.truthy(res.data.errors[0].error)
+  assert.equal(res.data.nbOk, 1)
+  assert.equal(res.data.nbErrors, 1)
+  assert.equal(res.data.errors.length, 1)
+  assert.equal(res.data.errors[0].line, 1)
+  assert.ok(res.data.errors[0].error)
 })
 
-test.serial('Send attachment with multipart request', async t => {
-  const ax = await axiosBuilder('dmeadus0@answers.com:passwd')
+it('Send attachment with multipart request', async () => {
+  const ax = await global.ax.builder('dmeadus0@answers.com:passwd')
   let res = await ax.post('/api/v1/datasets', {
     isRest: true,
     title: 'rest5',
@@ -198,21 +198,21 @@ test.serial('Send attachment with multipart request', async t => {
   form.append('attachment', attachmentContent, 'dir1/test.pdf')
   form.append('attr1', 10)
   res = await ax.post('/api/v1/datasets/rest5/lines', form, { headers: testUtils.formHeaders(form) })
-  t.is(res.status, 201)
-  t.truthy(res.data._id)
-  t.is(res.data.attachmentPath, `${res.data._id}/test.pdf`)
+  assert.equal(res.status, 201)
+  assert.ok(res.data._id)
+  assert.equal(res.data.attachmentPath, `${res.data._id}/test.pdf`)
   const ls = await datasetUtils.lsAttachments(dataset)
-  t.is(ls.length, 1)
-  t.is(ls[0], res.data.attachmentPath)
+  assert.equal(ls.length, 1)
+  assert.equal(ls[0], res.data.attachmentPath)
 
   await workers.hook('finalizer/rest5')
   res = await ax.get('/api/v1/datasets/rest5/lines')
-  t.is(res.data.total, 1)
-  t.is(res.data.results[0]['_file.content'], 'This is a test pdf file.')
+  assert.equal(res.data.total, 1)
+  assert.equal(res.data.results[0]['_file.content'], 'This is a test pdf file.')
 })
 
-test.serial('Send attachments with bulk request', async t => {
-  const ax = await axiosBuilder('ngernier4@usa.gov:passwd')
+it('Send attachments with bulk request', async () => {
+  const ax = await global.ax.builder('ngernier4@usa.gov:passwd')
   let res = await ax.post('/api/v1/datasets', {
     isRest: true,
     title: 'rest6',
@@ -233,20 +233,20 @@ test.serial('Send attachments with bulk request', async t => {
     { _id: 'line2', attr1: 'test1', attachmentPath: 'dir1/test.pdf' }
   ]), 'utf8'), 'actions.json')
   res = await ax.post('/api/v1/datasets/rest6/_bulk_lines', form, { headers: testUtils.formHeaders(form) })
-  t.is(res.status, 200)
-  t.is(res.data.nbOk, 2)
+  assert.equal(res.status, 200)
+  assert.equal(res.data.nbOk, 2)
   const ls = await datasetUtils.lsAttachments(dataset)
-  t.is(ls.length, 2)
+  assert.equal(ls.length, 2)
 
   await workers.hook('finalizer/rest6')
   res = await ax.get('/api/v1/datasets/rest6/lines')
-  t.is(res.data.total, 2)
-  t.is(res.data.results.find(l => l._id === 'line1')['_file.content'], 'This is a test libreoffice file.')
+  assert.equal(res.data.total, 2)
+  assert.equal(res.data.results.find(l => l._id === 'line1')['_file.content'], 'This is a test libreoffice file.')
 })
 
-test.serial('The size of the mongodb collection is part of storage consumption', async t => {
+it('The size of the mongodb collection is part of storage consumption', async () => {
   // Load a few lines
-  const ax = await axiosBuilder('ccherryholme1@icio.us:passwd')
+  const ax = await global.ax.builder('ccherryholme1@icio.us:passwd')
   await ax.post('/api/v1/datasets', {
     isRest: true,
     title: 'rest7',
@@ -261,15 +261,15 @@ test.serial('The size of the mongodb collection is part of storage consumption',
   await workers.hook('finalizer/rest7')
 
   let res = await ax.get('/api/v1/stats')
-  t.is(res.status, 200)
-  t.is(res.data.user.storage, 684)
+  assert.equal(res.status, 200)
+  assert.equal(res.data.user.storage, 684)
   res = await ax.get('/api/v1/datasets/rest7')
-  t.is(res.data.storage.size, 684)
-  t.is(res.data.storage.collectionSize, 684)
+  assert.equal(res.data.storage.size, 684)
+  assert.equal(res.data.storage.collectionSize, 684)
 })
 
-test.serial('Activate the history mode', async t => {
-  const ax = await axiosBuilder('hlalonde3@desdev.cn:passwd')
+it('Activate the history mode', async () => {
+  const ax = await global.ax.builder('hlalonde3@desdev.cn:passwd')
   let res = await ax.post('/api/v1/datasets', {
     isRest: true,
     title: 'resthist',
@@ -277,18 +277,18 @@ test.serial('Activate the history mode', async t => {
     schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }]
   })
   res = await ax.post('/api/v1/datasets/resthist/lines', { _id: 'id1', attr1: 'test1', attr2: 'test1' })
-  t.is(res.data._id, 'id1')
+  assert.equal(res.data._id, 'id1')
   res = await ax.patch('/api/v1/datasets/resthist/lines/id1', { attr1: 'test2' })
   res = await ax.get('/api/v1/datasets/resthist/lines/id1/revisions')
-  t.is(res.data.results[0]._id, 'id1')
-  t.is(res.data.results[0].attr1, 'test2')
-  t.is(res.data.results[1]._id, 'id1')
-  t.is(res.data.results[1].attr1, 'test1')
+  assert.equal(res.data.results[0]._id, 'id1')
+  assert.equal(res.data.results[0].attr1, 'test2')
+  assert.equal(res.data.results[1]._id, 'id1')
+  assert.equal(res.data.results[1].attr1, 'test1')
 
   res = await ax.get('/api/v1/stats')
-  t.is(res.data.user.storage, 478)
+  assert.equal(res.data.user.storage, 478)
   res = await ax.get('/api/v1/datasets/resthist')
-  t.is(res.data.storage.size, 478)
-  t.is(res.data.storage.collectionSize, 164)
-  t.is(res.data.storage.revisionsSize, 314)
+  assert.equal(res.data.storage.size, 478)
+  assert.equal(res.data.storage.collectionSize, 164)
+  assert.equal(res.data.storage.revisionsSize, 314)
 })

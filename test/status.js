@@ -1,18 +1,18 @@
 const testUtils = require('./resources/test-utils')
 
-const { test, axiosBuilder } = testUtils.prepare(__filename)
 
-test('Get status', async t => {
-  const ax = await axiosBuilder()
+
+it('Get status', async () => {
+  const ax = await global.ax.builder()
   const res = await ax.get('/api/v1/status')
-  t.is(res.status, 200)
-  t.is(res.data.status, 'ok')
-  t.is(res.data.details.length, 5)
+  assert.equal(res.status, 200)
+  assert.equal(res.data.status, 'ok')
+  assert.equal(res.data.details.length, 5)
 })
 
-test('Ping service', async t => {
-  const ax = await axiosBuilder()
+it('Ping service', async () => {
+  const ax = await global.ax.builder()
   const res = await ax.get('/api/v1/ping')
-  t.is(res.status, 200)
-  t.is(res.data, 'ok')
+  assert.equal(res.status, 200)
+  assert.equal(res.data, 'ok')
 })
