@@ -391,6 +391,7 @@ class PreserveExtensionStream extends Transform {
     this.mappings = {}
     this.extensionsMap = {}
     this.buffer = []
+    this.bufferChars = 0
 
     // The ES index was not yet created, we will not try to extract previous extensions
     if (!await esClient.indices.exists({ index: this.indexName })) return
@@ -412,6 +413,7 @@ class PreserveExtensionStream extends Transform {
     const searches = []
     const items = this.buffer
     this.buffer = []
+    this.bufferChars = 0
     items.forEach(item => {
       Object.keys(this.mappings).forEach(extensionKey => {
         const [mappedItem, h] = this.mappings[extensionKey]({ doc: item })
@@ -447,7 +449,12 @@ class PreserveExtensionStream extends Transform {
     try {
       if (!this.mappings) await this.init()
       this.buffer.push(item)
-      if (this.i % 1000 === 0) {
+      this.bufferChars += JSON.stringify(item).length
+      if (
+        this.buffer.length >= config.elasticsearch.maxBulkLines ||
+        this.bufferChars >= config.elasticsearch.maxBulkChars
+      ) {
+        debug(`preserve extension stream send buffer of ${this.buffer.length} items totalling ${this.bufferChars} chars`)
         await this._sendBuffer()
       }
       callback()
