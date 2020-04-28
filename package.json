@@ -4,7 +4,7 @@
   "description": "",
   "main": "server",
   "scripts": {
-    "test": "NODE_ENV=test mocha --exit test/",
+    "test": "NODE_ENV=test mocha --exit --bail test/",
     "coveralls": "nyc report --reporter=text-lcov | coveralls",
     "report": "nyc report --reporter=html",
     "lint": "eslint --ext js,vue --ignore-path .gitignore .",

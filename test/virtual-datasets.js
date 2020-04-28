@@ -1,295 +1,298 @@
+const assert = require('assert').strict
 const testUtils = require('./resources/test-utils')
 
 const workers = require('../server/workers')
 
-it('Create an empty virtual dataset', async () => {
-  const ax = await global.ax.builder('dmeadus0@answers.com:passwd')
-  const res = await ax.post('/api/v1/datasets', { isVirtual: true, title: 'a virtual dataset' })
-  assert.equal(res.status, 201)
-  assert.equal(res.data.id, 'a-virtual-dataset')
-})
+describe('virtual datasets', () => {
+  it('Create an empty virtual dataset', async () => {
+    const ax = global.ax.dmeadus
+    const res = await ax.post('/api/v1/datasets', { isVirtual: true, title: 'a virtual dataset' })
+    assert.equal(res.status, 201)
+    assert.equal(res.data.id, 'a-virtual-dataset')
+  })
 
-it('Create a new virtual dataset with predefined id', async () => {
-  const ax = await global.ax.builder('dmeadus0@answers.com:passwd')
-  const res = await ax.put('/api/v1/datasets/my-id', { isVirtual: true, title: 'a virtual dataset' })
-  assert.equal(res.status, 201)
-  assert.equal(res.data.id, 'my-id')
-})
+  it('Create a new virtual dataset with predefined id', async () => {
+    const ax = global.ax.dmeadus
+    const res = await ax.put('/api/v1/datasets/my-id', { isVirtual: true, title: 'a virtual dataset' })
+    assert.equal(res.status, 201)
+    assert.equal(res.data.id, 'my-id')
+  })
 
-it('Create a virtual dataset with a child and query', async () => {
+  it('Create a virtual dataset with a child and query', async () => {
   // Send basic dataset
-  const ax = await global.ax.builder('dmeadus0@answers.com:passwd')
-  const dataset = await testUtils.sendDataset('dataset1.csv', ax)
-  let res = await ax.post('/api/v1/datasets', {
-    isVirtual: true,
-    virtual: {
-      children: [dataset.id]
-    },
-    title: 'a virtual dataset'
+    const ax = global.ax.dmeadus
+    const dataset = await testUtils.sendDataset('dataset1.csv', ax)
+    let res = await ax.post('/api/v1/datasets', {
+      isVirtual: true,
+      virtual: {
+        children: [dataset.id]
+      },
+      title: 'a virtual dataset'
+    })
+    const virtualDataset = res.data
+    res = await ax.get(`/api/v1/datasets/${virtualDataset.id}/lines`)
+    assert.equal(res.status, 200)
+    assert.equal(res.data.total, 2)
   })
-  const virtualDataset = res.data
-  res = await ax.get(`/api/v1/datasets/${virtualDataset.id}/lines`)
-  assert.equal(res.status, 200)
-  assert.equal(res.data.total, 2)
-})
 
-it('Create a virtual dataset, add children and query', async () => {
-  const ax = await global.ax.builder('dmeadus0@answers.com:passwd')
-  const dataset1 = await testUtils.sendDataset('dataset1.csv', ax)
-  const dataset2 = await testUtils.sendDataset('dataset1.csv', ax)
-  const dataset3 = await testUtils.sendDataset('dataset1.csv', ax)
-  // last one is not a child, it should not be used
-  await testUtils.sendDataset('dataset1.csv', ax)
-  let res = await ax.post('/api/v1/datasets', {
-    isVirtual: true,
-    title: 'a virtual dataset'
-  })
-  const virtualDataset = res.data
-  try {
+  it('Create a virtual dataset, add children and query', async () => {
+    const ax = global.ax.dmeadus
+    const dataset1 = await testUtils.sendDataset('dataset1.csv', ax)
+    const dataset2 = await testUtils.sendDataset('dataset1.csv', ax)
+    const dataset3 = await testUtils.sendDataset('dataset1.csv', ax)
+    // last one is not a child, it should not be used
+    await testUtils.sendDataset('dataset1.csv', ax)
+    let res = await ax.post('/api/v1/datasets', {
+      isVirtual: true,
+      title: 'a virtual dataset'
+    })
+    const virtualDataset = res.data
+    try {
+      await workers.hook('finalizer/' + virtualDataset.id)
+      assert.fail('finalization without children should fail')
+    } catch (err) {}
+    await ax.patch('/api/v1/datasets/' + virtualDataset.id, {
+      virtual: {
+        children: [dataset1.id, dataset2.id, dataset3.id]
+      },
+      schema: [{
+        key: 'id'
+      }]
+    })
     await workers.hook('finalizer/' + virtualDataset.id)
-    assert.fail('finalization without children should fail')
-  } catch (err) {}
-  await ax.patch('/api/v1/datasets/' + virtualDataset.id, {
-    virtual: {
-      children: [dataset1.id, dataset2.id, dataset3.id]
-    },
-    schema: [{
-      key: 'id'
-    }]
+    res = await ax.get(`/api/v1/datasets/${virtualDataset.id}/lines`)
+    assert.equal(res.data.total, 6)
+    res = await ax.get(`/api/v1/datasets/${virtualDataset.id}/lines`, { params: { q: 'koumoul' } })
+    assert.equal(res.data.total, 3)
   })
-  await workers.hook('finalizer/' + virtualDataset.id)
-  res = await ax.get(`/api/v1/datasets/${virtualDataset.id}/lines`)
-  assert.equal(res.data.total, 6)
-  res = await ax.get(`/api/v1/datasets/${virtualDataset.id}/lines`, { params: { q: 'koumoul' } })
-  assert.equal(res.data.total, 3)
-})
 
-it('Check compatibility of schema with children', async () => {
-  const ax = await global.ax.builder('dmeadus0@answers.com:passwd')
-  const dataset = await testUtils.sendDataset('dataset1.csv', ax)
-  let res = await ax.post('/api/v1/datasets', {
-    isVirtual: true,
-    title: 'a virtual dataset',
-    virtual: {
-      children: [dataset.id]
-    },
-    schema: [{
-      key: 'id'
-    }]
-  })
-  const virtualDataset = await workers.hook('finalizer/' + res.data.id)
-  assert.ok(virtualDataset.schema.find(f => f.key === 'id'))
-  assert.ok(virtualDataset.schema.find(f => f.key === 'id').type === 'string')
-  res = await ax.patch('/api/v1/datasets/' + virtualDataset.id, {
-    schema: [{
-      key: 'badKey'
-    }]
-  })
-  assert.ok(res.data.schema.find(f => f.key === 'badKey'))
-})
-
-it('Check that column restriction is enforced (select, search, aggs)', async () => {
-  const ax = await global.ax.builder('dmeadus0@answers.com:passwd')
-  const dataset = await testUtils.sendDataset('dataset1.csv', ax)
-  let res = await ax.post('/api/v1/datasets', {
-    isVirtual: true,
-    title: 'a virtual dataset',
-    virtual: {
-      children: [dataset.id]
-    },
-    schema: [{
-      key: 'adr'
-    }]
-  })
-  const virtualDataset = await workers.hook('finalizer/' + res.data.id)
-  t.falsy(virtualDataset.schema.find(f => f.key === 'id'))
-
-  res = await ax.get(`/api/v1/datasets/${virtualDataset.id}/lines`, { params: { q: 'koumoul' } })
-  assert.equal(res.data.total, 0, 'cannot match on a field not from the schema')
-  res = await ax.get(`/api/v1/datasets/${virtualDataset.id}/lines`, { params: { qs: 'koumoul' } })
-  assert.equal(res.data.total, 0, 'cannot match on a field not from the schema')
-
-  try {
-    await ax.get(`/api/v1/datasets/${virtualDataset.id}/lines`, { params: { qs: 'id:koumoul' } })
-    assert.fail('cannot match on a field not from the schema')
-  } catch (err) {
-    assert.equal(err.status, 400)
-  }
-
-  try {
-    await ax.get(`/api/v1/datasets/${virtualDataset.id}/lines`, { params: { qs: 'test AND (id:koumoul OR test)' } })
-    assert.fail('cannot match on a field not from the schema')
-  } catch (err) {
-    assert.equal(err.status, 400)
-  }
-
-  res = await ax.get(`/api/v1/datasets/${virtualDataset.id}/lines`, { params: { qs: '_exists_:adr' } })
-  assert.equal(res.status, 200)
-  assert.equal(res.data.total, 2)
-  try {
-    await ax.get(`/api/v1/datasets/${virtualDataset.id}/lines`, { params: { qs: '_exists_:id' } })
-    assert.fail('cannot sort on a field not from the schema')
-  } catch (err) {
-    assert.equal(err.status, 400)
-  }
-
-  try {
-    await ax.get(`/api/v1/datasets/${virtualDataset.id}/lines`, { params: { sort: 'koumoul' } })
-    assert.fail('cannot sort on a field not from the schema')
-  } catch (err) {
-    assert.equal(err.status, 400)
-  }
-
-  try {
-    await ax.get(`/api/v1/datasets/${virtualDataset.id}/lines`, { params: { select: 'id,adr' } })
-    assert.fail('cannot select a field not from the schema')
-  } catch (err) {
-    assert.equal(err.status, 400)
-  }
-
-  try {
-    await ax.get(`/api/v1/datasets/${virtualDataset.id}/values_agg`, { params: { field: 'id' } })
-    assert.fail('cannot aggregate on a field not from the schema')
-  } catch (err) {
-    assert.equal(err.status, 400)
-  }
-})
-
-it('Apply static filter', async () => {
-  const ax = await global.ax.builder('dmeadus0@answers.com:passwd')
-  const dataset = await testUtils.sendDataset('dataset1.csv', ax)
-  let res = await ax.post('/api/v1/datasets', {
-    isVirtual: true,
-    title: 'a virtual dataset',
-    virtual: {
-      children: [dataset.id],
-      filters: [{
-        key: 'id',
-        values: ['koumoul']
+  it('Check compatibility of schema with children', async () => {
+    const ax = global.ax.dmeadus
+    const dataset = await testUtils.sendDataset('dataset1.csv', ax)
+    let res = await ax.post('/api/v1/datasets', {
+      isVirtual: true,
+      title: 'a virtual dataset',
+      virtual: {
+        children: [dataset.id]
+      },
+      schema: [{
+        key: 'id'
       }]
-    },
-    schema: [{
-      key: 'adr'
-    }]
-  })
-  const virtualDataset = await workers.hook('finalizer/' + res.data.id)
-  t.falsy(virtualDataset.schema.find(f => f.key === 'id'))
-
-  res = await ax.get(`/api/v1/datasets/${virtualDataset.id}/lines`)
-  assert.equal(res.data.total, 1, 'return matching line')
-})
-
-it('Add another virtual dataset as child', async () => {
-  const ax = await global.ax.builder('dmeadus0@answers.com:passwd')
-  const dataset = await testUtils.sendDataset('dataset1.csv', ax)
-  let res = await ax.post('/api/v1/datasets', {
-    isVirtual: true,
-    title: 'a virtual dataset',
-    virtual: {
-      children: [dataset.id]
-    },
-    schema: [{
-      key: 'adr'
-    }]
-  })
-  const virtualDataset = await workers.hook('finalizer/' + res.data.id)
-
-  res = await ax.post('/api/v1/datasets', {
-    isVirtual: true,
-    title: 'a virtual dataset',
-    virtual: {
-      children: [virtualDataset.id]
-    },
-    schema: [{
-      key: 'adr'
-    }]
-  })
-  const virtualDataset2 = await workers.hook('finalizer/' + res.data.id)
-
-  res = await ax.put('/api/v1/datasets/my-id3', {
-    isVirtual: true,
-    title: 'a virtual dataset',
-    virtual: {
-      children: [virtualDataset2.id]
-    },
-    schema: [{
-      key: 'adr'
-    }]
-  })
-  const virtualDataset3 = await workers.hook('finalizer/' + res.data.id)
-
-  res = await ax.get(`/api/v1/datasets/${virtualDataset3.id}/lines`)
-  assert.equal(res.data.total, 2, 'return matching line')
-})
-
-it('A virtual dataset without physical children cannot be queried', async () => {
-  const ax = await global.ax.builder('dmeadus0@answers.com:passwd')
-  let res = await ax.post('/api/v1/datasets', {
-    isVirtual: true,
-    title: 'a virtual dataset',
-    virtual: {
-      children: []
-    }
-  })
-
-  res = await ax.post('/api/v1/datasets', {
-    isVirtual: true,
-    title: 'a virtual dataset',
-    virtual: {
-      children: [res.data.id]
-    }
-  })
-
-  try {
-    await ax.get(`/api/v1/datasets/${res.data.id}/lines`)
-    assert.fail('no physical children should fail')
-  } catch (err) {
-    assert.equal(err.status, 501)
-  }
-})
-
-it('A virtual dataset cannot have a child virtual dataset with filters (no way to enforce them)', async () => {
-  const ax = await global.ax.builder('dmeadus0@answers.com:passwd')
-  const dataset = await testUtils.sendDataset('dataset1.csv', ax)
-  let res = await ax.post('/api/v1/datasets', {
-    isVirtual: true,
-    title: 'a virtual dataset',
-    virtual: {
-      children: [dataset.id],
-      filters: [{
-        key: 'id',
-        values: ['koumoul']
+    })
+    const virtualDataset = await workers.hook('finalizer/' + res.data.id)
+    assert.ok(virtualDataset.schema.find(f => f.key === 'id'))
+    assert.ok(virtualDataset.schema.find(f => f.key === 'id').type === 'string')
+    res = await ax.patch('/api/v1/datasets/' + virtualDataset.id, {
+      schema: [{
+        key: 'badKey'
       }]
-    },
-    schema: [{
-      key: 'adr'
-    }]
+    })
+    assert.ok(res.data.schema.find(f => f.key === 'badKey'))
   })
 
-  res = await ax.post('/api/v1/datasets', {
-    isVirtual: true,
-    title: 'a virtual dataset',
-    virtual: {
-      children: [res.data.id]
+  it('Check that column restriction is enforced (select, search, aggs)', async () => {
+    const ax = global.ax.dmeadus
+    const dataset = await testUtils.sendDataset('dataset1.csv', ax)
+    let res = await ax.post('/api/v1/datasets', {
+      isVirtual: true,
+      title: 'a virtual dataset',
+      virtual: {
+        children: [dataset.id]
+      },
+      schema: [{
+        key: 'adr'
+      }]
+    })
+    const virtualDataset = await workers.hook('finalizer/' + res.data.id)
+    assert.ok(!virtualDataset.schema.find(f => f.key === 'id'))
+
+    res = await ax.get(`/api/v1/datasets/${virtualDataset.id}/lines`, { params: { q: 'koumoul' } })
+    assert.equal(res.data.total, 0, 'cannot match on a field not from the schema')
+    res = await ax.get(`/api/v1/datasets/${virtualDataset.id}/lines`, { params: { qs: 'koumoul' } })
+    assert.equal(res.data.total, 0, 'cannot match on a field not from the schema')
+
+    try {
+      await ax.get(`/api/v1/datasets/${virtualDataset.id}/lines`, { params: { qs: 'id:koumoul' } })
+      assert.fail('cannot match on a field not from the schema')
+    } catch (err) {
+      assert.equal(err.status, 400)
+    }
+
+    try {
+      await ax.get(`/api/v1/datasets/${virtualDataset.id}/lines`, { params: { qs: 'test AND (id:koumoul OR test)' } })
+      assert.fail('cannot match on a field not from the schema')
+    } catch (err) {
+      assert.equal(err.status, 400)
+    }
+
+    res = await ax.get(`/api/v1/datasets/${virtualDataset.id}/lines`, { params: { qs: '_exists_:adr' } })
+    assert.equal(res.status, 200)
+    assert.equal(res.data.total, 2)
+    try {
+      await ax.get(`/api/v1/datasets/${virtualDataset.id}/lines`, { params: { qs: '_exists_:id' } })
+      assert.fail('cannot sort on a field not from the schema')
+    } catch (err) {
+      assert.equal(err.status, 400)
+    }
+
+    try {
+      await ax.get(`/api/v1/datasets/${virtualDataset.id}/lines`, { params: { sort: 'koumoul' } })
+      assert.fail('cannot sort on a field not from the schema')
+    } catch (err) {
+      assert.equal(err.status, 400)
+    }
+
+    try {
+      await ax.get(`/api/v1/datasets/${virtualDataset.id}/lines`, { params: { select: 'id,adr' } })
+      assert.fail('cannot select a field not from the schema')
+    } catch (err) {
+      assert.equal(err.status, 400)
+    }
+
+    try {
+      await ax.get(`/api/v1/datasets/${virtualDataset.id}/values_agg`, { params: { field: 'id' } })
+      assert.fail('cannot aggregate on a field not from the schema')
+    } catch (err) {
+      assert.equal(err.status, 400)
     }
   })
 
-  try {
-    await ax.get(`/api/v1/datasets/${res.data.id}/lines`)
-    assert.fail('filter in child should fail')
-  } catch (err) {
-    assert.equal(err.status, 501)
-  }
-})
+  it('Apply static filter', async () => {
+    const ax = global.ax.dmeadus
+    const dataset = await testUtils.sendDataset('dataset1.csv', ax)
+    let res = await ax.post('/api/v1/datasets', {
+      isVirtual: true,
+      title: 'a virtual dataset',
+      virtual: {
+        children: [dataset.id],
+        filters: [{
+          key: 'id',
+          values: ['koumoul']
+        }]
+      },
+      schema: [{
+        key: 'adr'
+      }]
+    })
+    const virtualDataset = await workers.hook('finalizer/' + res.data.id)
+    assert.ok(!virtualDataset.schema.find(f => f.key === 'id'))
 
-//
+    res = await ax.get(`/api/v1/datasets/${virtualDataset.id}/lines`)
+    assert.equal(res.data.total, 1, 'return matching line')
+  })
 
-// Check that column restriction from virtual child is enforced
+  it('Add another virtual dataset as child', async () => {
+    const ax = global.ax.dmeadus
+    const dataset = await testUtils.sendDataset('dataset1.csv', ax)
+    let res = await ax.post('/api/v1/datasets', {
+      isVirtual: true,
+      title: 'a virtual dataset',
+      virtual: {
+        children: [dataset.id]
+      },
+      schema: [{
+        key: 'adr'
+      }]
+    })
+    const virtualDataset = await workers.hook('finalizer/' + res.data.id)
 
-// Check presence of calculated fields (bbox, cardinality, etc.)
-// let virtualDataset = await workers.hook('finalizer/' + res.data.id)
-// assert.equal(virtualDataset.status, 'finalized')
+    res = await ax.post('/api/v1/datasets', {
+      isVirtual: true,
+      title: 'a virtual dataset',
+      virtual: {
+        children: [virtualDataset.id]
+      },
+      schema: [{
+        key: 'adr'
+      }]
+    })
+    const virtualDataset2 = await workers.hook('finalizer/' + res.data.id)
 
-// Check that it is possible to list the virtual datasets that use a dataset
+    res = await ax.put('/api/v1/datasets/my-id3', {
+      isVirtual: true,
+      title: 'a virtual dataset',
+      virtual: {
+        children: [virtualDataset2.id]
+      },
+      schema: [{
+        key: 'adr'
+      }]
+    })
+    const virtualDataset3 = await workers.hook('finalizer/' + res.data.id)
+
+    res = await ax.get(`/api/v1/datasets/${virtualDataset3.id}/lines`)
+    assert.equal(res.data.total, 2, 'return matching line')
+  })
+
+  it('A virtual dataset without physical children cannot be queried', async () => {
+    const ax = global.ax.dmeadus
+    let res = await ax.post('/api/v1/datasets', {
+      isVirtual: true,
+      title: 'a virtual dataset',
+      virtual: {
+        children: []
+      }
+    })
+
+    res = await ax.post('/api/v1/datasets', {
+      isVirtual: true,
+      title: 'a virtual dataset',
+      virtual: {
+        children: [res.data.id]
+      }
+    })
+
+    try {
+      await ax.get(`/api/v1/datasets/${res.data.id}/lines`)
+      assert.fail('no physical children should fail')
+    } catch (err) {
+      assert.equal(err.status, 501)
+    }
+  })
+
+  it('A virtual dataset cannot have a child virtual dataset with filters (no way to enforce them)', async () => {
+    const ax = global.ax.dmeadus
+    const dataset = await testUtils.sendDataset('dataset1.csv', ax)
+    let res = await ax.post('/api/v1/datasets', {
+      isVirtual: true,
+      title: 'a virtual dataset',
+      virtual: {
+        children: [dataset.id],
+        filters: [{
+          key: 'id',
+          values: ['koumoul']
+        }]
+      },
+      schema: [{
+        key: 'adr'
+      }]
+    })
+
+    res = await ax.post('/api/v1/datasets', {
+      isVirtual: true,
+      title: 'a virtual dataset',
+      virtual: {
+        children: [res.data.id]
+      }
+    })
+
+    try {
+      await ax.get(`/api/v1/datasets/${res.data.id}/lines`)
+      assert.fail('filter in child should fail')
+    } catch (err) {
+      assert.equal(err.status, 501)
+    }
+  })
+
+  //
+
+  // Check that column restriction from virtual child is enforced
+
+  // Check presence of calculated fields (bbox, cardinality, etc.)
+  // let virtualDataset = await workers.hook('finalizer/' + res.data.id)
+  // assert.equal(virtualDataset.status, 'finalized')
+
+  // Check that it is possible to list the virtual datasets that use a dataset
 
 // Check that updating / deleting a child impacts the parents (and other ancestors)
+})

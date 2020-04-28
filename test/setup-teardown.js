@@ -48,8 +48,16 @@ before('init globals', async () => {
     return ax
   }
   await Promise.all([
+    global.ax.builder().then(ax => global.ax.anonymous = ax),
     global.ax.builder('dmeadus0@answers.com:passwd').then(ax => global.ax.dmeadus = ax),
     global.ax.builder('cdurning2@desdev.cn:passwd').then(ax => global.ax.cdurning2 = ax),
+    global.ax.builder('alone@no.org').then(ax => global.ax.alone = ax),
+    global.ax.builder('superadmin@test.com:superpasswd:adminMode').then(ax => global.ax.superadmin = ax),
+    global.ax.builder('alban.mouton@koumoul.com:passwd:adminMode').then(ax => global.ax.alban = ax),
+    global.ax.builder('hlalonde3@desdev.cn').then(ax => global.ax.hlalonde3 = ax),
+    global.ax.builder('ngernier4@usa.gov').then(ax => global.ax.ngernier4 = ax),
+    global.ax.builder('ddecruce5@phpbb.com').then(ax => global.ax.ddecruce5 = ax),
+    global.ax.builder('bhazeldean7@cnbc.com').then(ax => global.ax.bhazeldean7 = ax)
   ])
   debug('init globals ok')
 })
@@ -65,7 +73,7 @@ before('start app', async function () {
   this.timeout(5000)
   debug('run app')
   try {
-    await app.run()
+    global.app = await app.run()
   } catch (err) {
     console.error('Failed to run the application', err)
     throw err
@@ -75,12 +83,15 @@ before('start app', async function () {
 
 beforeEach('scratch data', async () => {
   debug('scratch data')
-  const indicesPrefix = 'dataset-test'
-  await global.es.indices.delete({ index: `${indicesPrefix}-*`, ignore: [404] })
-  await global.db.collection('datasets').deleteMany({})
-  await global.db.collection('applications').deleteMany({})
-  await global.db.collection('remote-services').deleteMany({})
-  await fs.emptyDir('./data/test')
+  await Promise.all([
+    global.es.indices.delete({ index: `dataset-test-*`, ignore: [404] }),
+    global.db.collection('datasets').deleteMany({}),
+    global.db.collection('applications').deleteMany({}),
+    global.db.collection('limits').deleteMany({}),
+    global.db.collection('settings').deleteMany({}),
+    // global.db.collection('remote-services').deleteMany({}),
+    fs.emptyDir('./data/test')
+  ])
   debug('scratch data ok')
 })
 

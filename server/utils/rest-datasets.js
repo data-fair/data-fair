@@ -54,10 +54,12 @@ exports.revisionsCollection = (db, dataset) => {
 
 exports.initDataset = async (db, dataset) => {
   const collection = exports.collection(db, dataset)
-  await collection.createIndex({ _updatedAt: 1 })
-  await collection.createIndex({ _deleted: 1 })
   const revisionsCollection = exports.revisionsCollection(db, dataset)
-  await revisionsCollection.createIndex({ _lineId: 1, _updatedAt: -1 }, { unique: true })
+  await Promise.all([
+    collection.createIndex({ _updatedAt: 1 }),
+    collection.createIndex({ _deleted: 1 }),
+    revisionsCollection.createIndex({ _lineId: 1, _updatedAt: -1 }, { unique: true })
+  ])
 }
 
 exports.deleteDataset = async (db, dataset) => {

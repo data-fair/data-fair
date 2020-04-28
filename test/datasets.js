@@ -16,34 +16,34 @@ describe('datasets', () => {
   })
 
   it('Get datasets when not authenticated', async () => {
-    const ax = await global.ax.builder()
+    const ax = global.ax.anonymous
     const res = await ax.get('/api/v1/datasets')
     assert.equal(res.status, 200)
     assert.equal(res.data.count, 0)
   })
 
   it('Get datasets when authenticated', async () => {
-    const ax = await global.ax.builder('alone@no.org')
+    const ax = await global.ax.alone
     const res = await ax.get('/api/v1/datasets')
     assert.equal(res.status, 200)
     assert.equal(res.data.count, 0)
   })
 
   it('Get datasets with special param as super admin', async () => {
-    const ax = await global.ax.builder('alone@no.org')
+    const ax = await global.ax.alone
     try {
       await ax.get('/api/v1/datasets', { params: { showAll: true } })
     } catch (err) {
       assert.equal(err.status, 400)
     }
-    const axAdmin = await global.ax.builder('alban.mouton@koumoul.com:passwd:adminMode')
+    const axAdmin = global.ax.alban
     const res = await axAdmin.get('/api/v1/datasets', { params: { showAll: true } })
     assert.equal(res.status, 200)
-    assert.ok(res.data.count > 0)
+    assert.equal(res.data.count, 0)
   })
 
   it('Search and apply facets', async () => {
-    const ax = await global.ax.builder('dmeadus0@answers.com:passwd')
+    const ax = global.ax.dmeadus
 
     // 1 dataset in user zone
     await testUtils.sendDataset('dataset1.csv', ax)
@@ -80,7 +80,7 @@ describe('datasets', () => {
   const datasetFd = fs.readFileSync('./test/resources/dataset1.csv')
 
   it('Failure to upload dataset exceeding limit', async () => {
-    const ax = await global.ax.builder('dmeadus0@answers.com:passwd')
+    const ax = global.ax.dmeadus
     const form = new FormData()
     form.append('file', Buffer.alloc(16000), 'largedataset.csv')
     try {
@@ -92,7 +92,7 @@ describe('datasets', () => {
   })
 
   it('Failure to upload multiple datasets exceeding limit', async () => {
-    const ax = await global.ax.builder('dmeadus0@answers.com:passwd')
+    const ax = global.ax.dmeadus
     let form = new FormData()
     form.append('file', Buffer.alloc(11000), 'largedataset1.csv')
     await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
@@ -108,7 +108,7 @@ describe('datasets', () => {
   })
 
   it('Upload new dataset in user zone', async () => {
-    const ax = await global.ax.builder('dmeadus0@answers.com:passwd')
+    const ax = global.ax.dmeadus
     const form = new FormData()
     form.append('file', datasetFd, 'dataset1.csv')
     const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
@@ -119,7 +119,7 @@ describe('datasets', () => {
   })
 
   it('Upload new dataset in user zone with title', async () => {
-    const ax = await global.ax.builder('dmeadus0@answers.com:passwd')
+    const ax = global.ax.dmeadus
     const form = new FormData()
     form.append('file', datasetFd, 'dataset1.csv')
     form.append('title', 'My title')
@@ -130,7 +130,7 @@ describe('datasets', () => {
   })
 
   it('Upload new dataset in organization zone', async () => {
-    const ax = await global.ax.builder('dmeadus0@answers.com:passwd')
+    const ax = global.ax.dmeadus
     const form = new FormData()
     form.append('file', datasetFd, 'dataset2.csv')
     const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form, 'KWqAGZ4mG') })
@@ -140,7 +140,7 @@ describe('datasets', () => {
   })
 
   it('Uploading same file twice should increment id', async () => {
-    const ax = await global.ax.builder('dmeadus0@answers.com:passwd')
+    const ax = global.ax.dmeadus
     for (const i of [1, 2, 3]) {
       const form = new FormData()
       form.append('file', datasetFd, 'my-dataset.csv')
@@ -151,7 +151,7 @@ describe('datasets', () => {
   })
 
   it('Upload new dataset with pre-filled attributes', async () => {
-    const ax = await global.ax.builder('dmeadus0@answers.com:passwd')
+    const ax = global.ax.dmeadus
     const form = new FormData()
     form.append('title', 'A dataset with pre-filled title')
     form.append('publications', '[{"catalog": "test", "status": "waiting"}]')
@@ -161,7 +161,7 @@ describe('datasets', () => {
   })
 
   it('Upload new dataset with defined id', async () => {
-    const ax = await global.ax.builder('dmeadus0@answers.com:passwd')
+    const ax = global.ax.dmeadus
     let form = new FormData()
     form.append('title', 'my title')
     form.append('file', datasetFd, 'yet-a-dataset.csv')
@@ -178,7 +178,7 @@ describe('datasets', () => {
   })
 
   it('Reject some other pre-filled attributes', async () => {
-    const ax = await global.ax.builder('dmeadus0@answers.com:passwd')
+    const ax = global.ax.dmeadus
     const form = new FormData()
     form.append('id', 'pre-filling ig is not possible')
     form.append('file', datasetFd, 'yet-a-dataset.csv')
@@ -190,7 +190,7 @@ describe('datasets', () => {
   })
 
   it('Fail to upload new dataset when not authenticated', async () => {
-    const ax = await global.ax.builder()
+    const ax = global.ax.anonymous
     const form = new FormData()
     try {
       await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
@@ -202,7 +202,7 @@ describe('datasets', () => {
 
   it('Upload dataset - full test with webhooks', async () => {
     const wsCli = new WebSocket(config.publicUrl)
-    const ax = await global.ax.builder('cdurning2@desdev.cn:passwd')
+    const ax = global.ax.cdurning2
     await ax.put('/api/v1/settings/user/cdurning2', { webhooks: [{ title: 'test', events: ['dataset-finalize-end'], target: { type: 'http', params: { url: 'http://localhost:5900' } } }] })
     let form = new FormData()
     form.append('file', fs.readFileSync('./test/resources/Antennes du CD22.csv'), 'Antennes du CD22.csv')
@@ -234,14 +234,14 @@ describe('datasets', () => {
 
     assert.equal(res.data.length, 18)
     // testing permissions
-    const ax1 = await global.ax.builder('dmeadus0@answers.com:passwd')
+    const ax1 = global.ax.dmeadus
     try {
       await ax1.get(webhook.href)
       assert.fail()
     } catch (err) {
       assert.equal(err.status, 403)
     }
-    const ax2 = await global.ax.builder()
+    const ax2 = global.ax.anonymous
     try {
       await ax2.get(webhook.href)
       assert.fail()

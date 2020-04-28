@@ -4,7 +4,7 @@ const extensionsUtils = require('../utils/extensions')
 exports.eventsPrefix = 'extend'
 
 exports.process = async function(app, dataset) {
-  const debug = require('debug')(`worker:finalizer:${dataset.id}`)
+  const debug = require('debug')(`worker:extender:${dataset.id}`)
 
   const db = app.get('db')
   const collection = db.collection('datasets')
@@ -15,7 +15,10 @@ exports.process = async function(app, dataset) {
   for (const extension of extensions) {
     if (!extension.active) continue
     const remoteService = await db.collection('remote-services').findOne({ id: extension.remoteService })
-    if (!remoteService) continue
+    if (!remoteService) {
+      console.error(`Try to apply extension on dataset ${dataset.id} from remote service ${remoteService.id} but remote service ${extension.action} was not found.`)
+      continue
+    }
     const action = remoteService.actions.find(a => a.id === extension.action)
     if (!action) {
       console.error(`Try to apply extension on dataset ${dataset.id} from remote service ${remoteService.id} but action ${extension.action} was not found.`)
