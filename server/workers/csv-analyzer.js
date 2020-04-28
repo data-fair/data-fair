@@ -9,6 +9,8 @@ const fieldsSniffer = require('../utils/fields-sniffer')
 exports.eventsPrefix = 'analyze'
 
 exports.process = async function(app, dataset) {
+  const debug = require('debug')(`worker:csv-analyzerr:${dataset.id}`)
+  debug('extract file sample')
   const db = app.get('db')
   const fileSample = await datasetFileSample(dataset)
   if (!fileSample) throw new Error('Échec d\'échantillonage du fichier tabulaire, il est vide')
@@ -18,6 +20,7 @@ exports.process = async function(app, dataset) {
   } catch (err) {
     throw new Error(`Échec de décodage du fichier selon l'encodage détecté ${dataset.file.encoding}`)
   }
+  debug('sniff csv sample')
   const sniffResult = await csvSniffer.sniff(decodedSample)
 
   const schema = dataset.file.schema = sniffResult.labels
@@ -39,8 +42,10 @@ exports.process = async function(app, dataset) {
     fieldsDelimiter: sniffResult.fieldsDelimiter,
     escapeChar: sniffResult.escapeChar
   }
+  debug('count lines')
   props.numLines = await datasetUtils.countLines(dataset)
 
+  debug('store status as analyzed')
   dataset.status = 'analyzed'
   await db.collection('datasets').updateOne({ id: dataset.id }, {
     $set: {

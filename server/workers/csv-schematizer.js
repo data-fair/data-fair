@@ -5,9 +5,11 @@ const fieldsSniffer = require('../utils/fields-sniffer')
 exports.eventsPrefix = 'schematize'
 
 exports.process = async function(app, dataset) {
+  const debug = require('debug')(`worker:csv-schematizer:${dataset.id}`)
   const db = app.get('db')
 
   // get a random sampling to test values type on fewer elements
+  debug('extract dataset sample')
   const sample = await datasetUtils.sample(dataset)
   const firstLine = sample.pop()
   if (!firstLine) throw new Error('Èchec de l\'échantillonage des données')
@@ -21,6 +23,7 @@ exports.process = async function(app, dataset) {
   }, Object.assign({}, ...Object.keys(firstLine).map(k => ({
     [k]: new Set([firstLine[k]])
   }))))
+  debug('list attachments')
   // Now we can extract infos for each field
   const attachments = await datasetUtils.lsAttachments(dataset)
   Object.keys(myCSVObject).forEach(field => {
@@ -43,6 +46,7 @@ exports.process = async function(app, dataset) {
     }
   })
 
+  debug('store status as schematized')
   dataset.status = 'schematized'
   await db.collection('datasets').updateOne({ id: dataset.id }, {
     $set: { status: 'schematized', schema: dataset.schema, file: dataset.file }
