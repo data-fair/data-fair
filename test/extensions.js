@@ -8,7 +8,6 @@ const workers = require('../server/workers')
 
 describe('Extensions', () => {
   it('Extend dataset using remote service', async function() {
-    this.timeout(5000)
     const ax = global.ax.dmeadus
     // Initial dataset with addresses
     let form = new FormData()

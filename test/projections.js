@@ -4,7 +4,6 @@ const workers = require('../server/workers')
 
 describe('projections', () => {
   it('Create REST dataset and define specific projection', async function () {
-    this.timeout(4000)
     const ax = global.ax.dmeadus
     let res = await ax.post('/api/v1/datasets', {
       isRest: true,

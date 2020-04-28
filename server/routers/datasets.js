@@ -409,10 +409,12 @@ router.post('', beforeUpload, checkStorage(true), filesUtils.uploadFile(validate
       dataset = initNew(req)
       dataset.rest = dataset.rest || {}
       dataset.schema = dataset.schema || []
-      dataset.status = 'schematized'
+      // create it with finalized status to prevent worker from acquiring it before collection is fully created
+      dataset.status = 'finalized'
       const baseId = slug(req.body.title).toLowerCase()
       await datasetUtils.insertWithBaseId(db, dataset, baseId)
       await restDatasetsUtils.initDataset(db, dataset)
+      await db.collection('datasets').updateOne({ id: dataset.id }, { $set: { status: 'schematized' } })
     } else {
       throw createError(400, 'Un jeu de données doit être initialisé avec un fichier ou déclaré "virtuel" ou "REST"')
     }
@@ -425,7 +427,7 @@ router.post('', beforeUpload, checkStorage(true), filesUtils.uploadFile(validate
     ])
     res.status(201).send(clean(dataset))
   } catch (err) {
-  // Wrapped the whole thing in a try/catch to remove files in case of failure
+    // Wrapped the whole thing in a try/catch to remove files in case of failure
     for (const file of req.files) {
       await fs.remove(file.path)
     }
@@ -484,7 +486,7 @@ const updateDataset = asyncWrap(async(req, res) => {
       }
       req.body.rest = req.body.rest || {}
       dataset.schema = dataset.schema || []
-      await restDatasetsUtils.initDataset(db, dataset)
+      if (req.isNewDataset) await restDatasetsUtils.initDataset(db, dataset)
       dataset.status = 'schematized'
     }
     Object.assign(dataset, req.body)

@@ -27,6 +27,15 @@ const hooks = {}
 exports.hook = (key) => new Promise((resolve, reject) => {
   hooks[key] = { resolve, reject }
 })
+// clear also for testing
+exports.clear = () => {
+  for (let i = 0; i < config.worker.concurrency; i++) {
+    if (currentIters[i]) {
+      currentIters[i].catch(() => {})
+      delete currentIters[i]
+    }
+  }
+}
 
 /* eslint no-unmodified-loop-condition: 0 */
 // Run main loop !
@@ -49,7 +58,7 @@ exports.start = async (app) => {
 exports.stop = async () => {
   stopped = true
   await Promise.all(currentIters.filter(p => !!p))
-  await new Promise(resolve => setTimeout(resolve, config.worker.releaseInterval))
+  if (config.worker.releaseInterval) await new Promise(resolve => setTimeout(resolve, config.worker.releaseInterval))
 }
 
 // Filters to select eligible datasets or applications for processing
@@ -57,7 +66,7 @@ const typesFilters = {
   application: { 'publications.status': { $in: ['waiting', 'deleted'] } },
   dataset: {
     $or: [
-      { status: { $nin: ['finalized', 'error'] } },
+      { status: { $nin: ['finalized', 'error', 'draft'] } },
       { status: 'finalized', 'publications.status': { $in: ['waiting', 'deleted'] } }
     ]
   }
@@ -167,6 +176,7 @@ async function acquireNext(db, type, filter) {
   const cursor = db.collection(type + 's').aggregate([{ $match: filter }, { $sample: { size: 100 } }])
   while (await cursor.hasNext()) {
     const resource = await cursor.next()
+    // console.log('resource', resource)
     const ack = await locks.acquire(db, `${type}:${resource.id}`)
     if (ack) return resource
   }

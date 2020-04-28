@@ -16,8 +16,8 @@ module.exports = {
     }
   },
   worker: {
-    interval: 20,
-    releaseInterval: 1,
+    interval: 40,
+    releaseInterval: 0,
     concurrency: 1,
     spawnTask: false
   },

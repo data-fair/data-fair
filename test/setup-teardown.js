@@ -4,6 +4,7 @@ const nock = require('nock')
 const axios = require('axios')
 const debug = require('debug')('test')
 const app = require('../server/app')
+const workers = require('../server/workers')
 const axiosAuth = require('@koumoul/sd-express').axiosAuth
 
 before('global mocks', () => {
@@ -70,7 +71,6 @@ before('scratch all', async() => {
 })
 
 before('start app', async function () {
-  this.timeout(5000)
   debug('run app')
   try {
     global.app = await app.run()
@@ -83,12 +83,14 @@ before('start app', async function () {
 
 beforeEach('scratch data', async () => {
   debug('scratch data')
+  workers.clear()
   await Promise.all([
     global.es.indices.delete({ index: `dataset-test-*`, ignore: [404] }),
     global.db.collection('datasets').deleteMany({}),
     global.db.collection('applications').deleteMany({}),
     global.db.collection('limits').deleteMany({}),
     global.db.collection('settings').deleteMany({}),
+    global.db.collection('locks').deleteMany({}),
     // global.db.collection('remote-services').deleteMany({}),
     fs.emptyDir('./data/test')
   ])

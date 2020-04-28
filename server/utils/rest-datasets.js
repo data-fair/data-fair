@@ -53,6 +53,12 @@ exports.revisionsCollection = (db, dataset) => {
 }
 
 exports.initDataset = async (db, dataset) => {
+  // just in cas of badly cleaner data from previous dataset with same if
+  try {
+    await exports.deleteDataset(db, dataset)
+  } catch (err) {
+    // nothing
+  }
   const collection = exports.collection(db, dataset)
   const revisionsCollection = exports.revisionsCollection(db, dataset)
   await Promise.all([
@@ -63,10 +69,10 @@ exports.initDataset = async (db, dataset) => {
 }
 
 exports.deleteDataset = async (db, dataset) => {
-  const collection = exports.collection(db, dataset)
-  await collection.drop()
-  const revisionsCollection = exports.revisionsCollection(db, dataset)
-  await revisionsCollection.drop()
+  await Promise.all([
+    exports.collection(db, dataset).drop(),
+    exports.revisionsCollection(db, dataset).drop()
+  ])
 }
 
 const applyTransactions = async (req, transacs, validate) => {

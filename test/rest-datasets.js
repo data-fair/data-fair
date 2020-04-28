@@ -182,7 +182,6 @@ describe('REST datasets', () => {
   })
 
   it('Send attachment with multipart request', async function() {
-    this.timeout(4000)
     const ax = global.ax.dmeadus
     let res = await ax.post('/api/v1/datasets', {
       isRest: true,

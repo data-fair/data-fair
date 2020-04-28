@@ -7,10 +7,14 @@ services:
       - 9300:9300
     environment:
       - discovery.type=single-node
+    volumes:
+      - elasticsearch-data:/usr/share/elasticsearch/data
   mongo:
     image: mongo:4.2
     ports:
       - 27017:27017
+    volumes:
+      - mongo-data:/data/db
   sd:
     image: koumoul/simple-directory:master
     network_mode: host
@@ -55,3 +59,7 @@ services:
       - SECURITY_KEY=thumborkey
       - STORAGE_EXPIRATION_SECONDS=600
       - MAX_AGE=600
+
+volumes:
+  elasticsearch-data:
+  mongo-data:

@@ -182,7 +182,6 @@ describe('workers', () => {
   })
 
   it('Run tasks in children processes', async function() {
-    this.timeout(10000)
     config.worker.spawnTask = true
     const datasetFd = fs.readFileSync('./test/resources/dataset1.csv')
     const form = new FormData()
@@ -201,7 +200,6 @@ describe('workers', () => {
   })
 
   it('Manage failure in children processes', async function() {
-    this.timeout(4000)
     config.worker.spawnTask = true
     const datasetFd = fs.readFileSync('./test/resources/geojson-broken.geojson')
     const form = new FormData()
