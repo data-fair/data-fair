@@ -69,7 +69,7 @@ exports.parse = async (filePath) => {
             // pre-resolve recurring events, to prioritize ease of reading
             if (line.RRULE) {
               const opts = {
-                dtstart: new Date(line.DTSTART)
+                dtstart: new Date(line.DTSTART),
               }
               Object.keys(line.RRULE).forEach(k => {
                 opts[k.toLowerCase()] = isNaN(line.RRULE[k]) ? line.RRULE[k] : Number(line.RRULE[k])
@@ -87,7 +87,7 @@ exports.parse = async (filePath) => {
                 const duplicateLine = {
                   ...line,
                   DTSTART: startDate.toISOString(),
-                  DTEND: moment(startDate).add(duration).toISOString()
+                  DTEND: moment(startDate).add(duration).toISOString(),
                 }
                 delete duplicateLine.RRULE
                 pushOk = this.push(duplicateLine)
@@ -101,8 +101,8 @@ exports.parse = async (filePath) => {
         } catch (err) {
           this.destroy(err)
         }
-      }
-    })
+      },
+    }),
   }
 }
 
@@ -120,7 +120,7 @@ exports.prepareSchema = (dataset, icalInfos) => {
       type: 'string',
       title: concept.title,
       description: concept.description,
-      'x-refersTo': 'http://www.w3.org/2003/01/geo/wgs84_pos#lat_long'
+      'x-refersTo': 'http://www.w3.org/2003/01/geo/wgs84_pos#lat_long',
     })
   }
   if (!dataset.schema.find(f => f.key === 'URL')) {
@@ -131,7 +131,7 @@ exports.prepareSchema = (dataset, icalInfos) => {
       type: 'string',
       title: concept.title,
       description: concept.description,
-      'x-refersTo': 'https://schema.org/WebPage'
+      'x-refersTo': 'https://schema.org/WebPage',
     })
   }
   if (!dataset.schema.find(f => f.key === 'DTSTART')) {
@@ -142,7 +142,7 @@ exports.prepareSchema = (dataset, icalInfos) => {
       type: 'string',
       title: concept.title,
       description: concept.description,
-      'x-refersTo': 'https://schema.org/startDate'
+      'x-refersTo': 'https://schema.org/startDate',
     })
   }
   if (!dataset.schema.find(f => f.key === 'DTEND')) {
@@ -153,7 +153,7 @@ exports.prepareSchema = (dataset, icalInfos) => {
       type: 'string',
       title: concept.title,
       description: concept.description,
-      'x-refersTo': 'https://schema.org/endDate'
+      'x-refersTo': 'https://schema.org/endDate',
     })
   }
   if (!dataset.schema.find(f => f.key === 'SUMMARY')) {
@@ -164,7 +164,7 @@ exports.prepareSchema = (dataset, icalInfos) => {
       type: 'string',
       title: concept.title,
       description: concept.description,
-      'x-refersTo': 'http://www.w3.org/2000/01/rdf-schema#label'
+      'x-refersTo': 'http://www.w3.org/2000/01/rdf-schema#label',
     })
   }
   if (!dataset.schema.find(f => f.key === 'DESCRIPTION')) {
@@ -175,7 +175,7 @@ exports.prepareSchema = (dataset, icalInfos) => {
       type: 'string',
       title: concept.title,
       description: concept.description,
-      'x-refersTo': 'http://schema.org/description'
+      'x-refersTo': 'http://schema.org/description',
     })
   }
 }

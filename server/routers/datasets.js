@@ -78,8 +78,8 @@ const checkStorage = (overwrite) => asyncWrap(async (req, res, next) => {
             write(chunk, encoding, callback) {
             // do nothing wa just want to drain the request
               callback()
-            }
-          })
+            },
+          }),
         )
       } catch (err) {
         console.error('Failure to drain request that was rejected for exceeding storage limit', err)
@@ -99,13 +99,13 @@ router.get('', cacheHeaders.noCache, asyncWrap(async(req, res) => {
     'field-format': 'schema.format',
     children: 'virtual.children',
     services: 'extensions.remoteService',
-    status: 'status'
+    status: 'status',
   }
   const query = findUtils.query(req, Object.assign({
     filename: 'originalFile.name',
     ids: 'id',
     id: 'id',
-    rest: 'isRest'
+    rest: 'isRest',
   }, filterFields))
   if (req.query.bbox === 'true') {
     query.bbox = { $ne: null }
@@ -115,7 +115,7 @@ router.get('', cacheHeaders.noCache, asyncWrap(async(req, res) => {
   const [skip, size] = findUtils.pagination(req.query)
   const mongoQueries = [
     size > 0 ? datasets.find(query).limit(size).skip(skip).sort(sort).project(project).toArray() : Promise.resolve([]),
-    datasets.countDocuments(query)
+    datasets.countDocuments(query),
   ]
   if (req.query.facets) {
     mongoQueries.push(datasets.aggregate(findUtils.facetsQuery(req, filterFields)).toArray())
@@ -249,7 +249,7 @@ router.put('/:datasetId/owner', readDataset(), permissions.middleware('delete', 
   const patch = {
     owner: req.body,
     updatedBy: { id: req.user.id, name: req.user.name },
-    updatedAt: moment().toISOString()
+    updatedAt: moment().toISOString(),
   }
   const patchedDataset = (await req.app.get('db').collection('datasets')
     .findOneAndUpdate({ id: req.params.datasetId }, { $set: patch }, { returnOriginal: false })).value
@@ -341,7 +341,7 @@ const setFileInfo = async (file, attachmentsFile, dataset) => {
   dataset.originalFile = {
     name: file.originalname,
     size: file.size,
-    mimetype: file.mimetype
+    mimetype: file.mimetype,
   }
   if (!baseTypes.has(file.mimetype)) {
     // we first need to convert the file in a textual format easy to index
@@ -423,7 +423,7 @@ router.post('', beforeUpload, checkStorage(true), filesUtils.uploadFile(validate
 
     await Promise.all([
       journals.log(req.app, dataset, { type: 'dataset-created', href: config.publicUrl + '/dataset/' + dataset.id }, 'dataset'),
-      datasetUtils.updateStorage(db, dataset)
+      datasetUtils.updateStorage(db, dataset),
     ])
     res.status(201).send(clean(dataset))
   } catch (err) {
@@ -561,7 +561,7 @@ router.get('/:datasetId/lines', readDataset(), permissions.middleware('readLines
       type: 'tile-count',
       datasetId: req.dataset.id,
       finalizedAt: req.dataset.finalizedAt,
-      query
+      query,
     })
     if (value !== null) return value
     const newValue = await esUtils.count(req.app.get('es'), req.dataset, query)
@@ -594,7 +594,7 @@ router.get('/:datasetId/lines', readDataset(), permissions.middleware('readLines
       sampling,
       datasetId: req.dataset.id,
       finalizedAt: req.dataset.finalizedAt,
-      query: req.query
+      query: req.query,
     })
     if (value) return res.status(200).send(value.buffer)
     cacheHash = hash
@@ -626,7 +626,7 @@ router.get('/:datasetId/lines', readDataset(), permissions.middleware('readLines
             countWithCache({ ...req.query, xyz: [xyz[0] - 1, xyz[1] - 1, xyz[2]].join(',') }),
             countWithCache({ ...req.query, xyz: [xyz[0] + 1, xyz[1] - 1, xyz[2]].join(',') }),
             countWithCache({ ...req.query, xyz: [xyz[0] - 1, xyz[1] + 1, xyz[2]].join(',') }),
-            countWithCache({ ...req.query, xyz: [xyz[0] + 1, xyz[1] + 1, xyz[2]].join(',') })
+            countWithCache({ ...req.query, xyz: [xyz[0] + 1, xyz[1] + 1, xyz[2]].join(',') }),
           ])
           const maxCount = Math.max(mainCount, ...neighborsCounts)
           const sampleRate = requestedSize / Math.max(requestedSize, maxCount)
@@ -665,7 +665,7 @@ router.get('/:datasetId/lines', readDataset(), permissions.middleware('readLines
     total: esResponse.hits.total.value,
     results: esResponse.hits.hits.map(hit => {
       return esUtils.prepareResultItem(hit, req.dataset, req.query)
-    })
+    }),
   }
   res.status(200).send(result)
 }))
@@ -683,7 +683,7 @@ router.get('/:datasetId/geo_agg', readDataset(), permissions.middleware('getGeoA
       type: 'tile-geoagg',
       datasetId: req.dataset.id,
       finalizedAt: req.dataset.finalizedAt,
-      query: req.query
+      query: req.query,
     })
     if (value) return res.status(200).send(value.buffer)
     cacheHash = hash
@@ -728,7 +728,7 @@ router.get('/:datasetId/values_agg', readDataset(), permissions.middleware('getV
       type: 'tile-valuesagg',
       datasetId: req.dataset.id,
       finalizedAt: req.dataset.finalizedAt,
-      query: req.query
+      query: req.query,
     })
     if (value) return res.status(200).send(value.buffer)
     cacheHash = hash
@@ -889,10 +889,10 @@ router.get('/:datasetId/full', readDataset(), permissions.middleware('downloadFu
         const flatChunk = flatten(chunk)
         callback(null, relevantSchema.map(field => flatChunk[field.key]))
       },
-      objectMode: true
+      objectMode: true,
     }),
     csvStringify({ columns: relevantSchema.map(field => field.title || field['x-originalName'] || field.key), header: true }),
-    res
+    res,
   )
   webhooks.trigger(req.app.get('db'), 'dataset', req.dataset, { type: 'downloaded' })
 }))
@@ -904,7 +904,7 @@ router.get('/:datasetId/api-docs.json', readDataset(), permissions.middleware('r
 router.get('/:datasetId/journal', readDataset(), permissions.middleware('readJournal', 'read'), cacheHeaders.noCache, asyncWrap(async(req, res) => {
   const journal = await req.app.get('db').collection('journals').findOne({
     type: 'dataset',
-    id: req.params.datasetId
+    id: req.params.datasetId,
   })
   if (!journal) return res.send([])
   journal.events.reverse()

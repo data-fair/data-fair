@@ -79,7 +79,7 @@ exports.latlon2fields = (dataset, doc) => {
   return {
     _geopoint: lat + ',' + lon,
     _geoshape: { type: 'Point', coordinates: [Number(lon), Number(lat)] },
-    _geocorners: [lat + ',' + lon]
+    _geocorners: [lat + ',' + lon],
   }
 }
 
@@ -119,7 +119,7 @@ exports.geometry2fields = async (schema, doc) => {
   return {
     _geopoint: centroid.geometry.coordinates[1] + ',' + centroid.geometry.coordinates[0],
     _geoshape: feature.geometry,
-    _geocorners: bboxPolygon.geometry.coordinates[0].map(c => c[1] + ',' + c[0])
+    _geocorners: bboxPolygon.geometry.coordinates[0].map(c => c[1] + ',' + c[0]),
   }
 }
 
@@ -133,9 +133,9 @@ exports.result2geojson = esResponse => {
         type: 'Feature',
         id: hit._id,
         geometry: hit._source._geoshape,
-        properties: flatten({ ...properties, _id: hit._id })
+        properties: flatten({ ...properties, _id: hit._id }),
       }
-    })
+    }),
   }
 }
 
@@ -150,12 +150,12 @@ exports.aggs2geojson = aggsResult => {
         id: agg.value,
         geometry: {
           type: 'Point',
-          coordinates: [centroid.lon, centroid.lat]
+          coordinates: [centroid.lon, centroid.lat],
         },
         bbox,
-        properties
+        properties,
       }
-    })
+    }),
   }
 }
 

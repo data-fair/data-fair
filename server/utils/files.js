@@ -11,7 +11,7 @@ const datasetSchema = require('../../contract/dataset')
 const fallbackMimeTypes = {
   dbf: 'application/dbase',
   dif: 'text/plain',
-  fods: 'application/vnd.oasis.opendocument.spreadsheet'
+  fods: 'application/vnd.oasis.opendocument.spreadsheet',
 }
 const debug = require('debug')('files')
 
@@ -76,7 +76,7 @@ const storage = multer.diskStorage({
     } catch (err) {
       cb(err)
     }
-  }
+  },
 })
 
 const allowedTypes = exports.allowedTypes = new Set(['text/csv', 'application/geo+json', ...tabularTypes, ...geographicalTypes, ...archiveTypes, ...calendarTypes])
@@ -102,7 +102,7 @@ const fixFormBody = (body) => {
 exports.uploadFile = (validate) => {
   return multer({
     limits: {
-      files: 2 // no more than the dataset file + attachments archive
+      files: 2, // no more than the dataset file + attachments archive
     },
     storage,
     fileFilter: async function fileFilter(req, file, cb) {
@@ -134,6 +134,6 @@ exports.uploadFile = (validate) => {
         debug('File rejected', err)
         cb(err)
       }
-    }
+    },
   }).any()
 }

@@ -6,17 +6,17 @@ Vue.use(Vuex)
 export default () => {
   return new Vuex.Store({
     state: {
-      env: {}
+      env: {},
     },
     mutations: {
       setAny(state, params) {
         Object.assign(state, params)
-      }
+      },
     },
     actions: {
       nuxtServerInit({ commit, dispatch }, { req, env, app }) {
         commit('setAny', { env: { ...env } })
-      }
-    }
+      },
+    },
   })
 }

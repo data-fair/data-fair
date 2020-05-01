@@ -27,7 +27,7 @@ describe('Attachments', () => {
     assert.equal(dataset.status, 'finalized')
 
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`, {
-      params: { select: 'file,_file.content', highlight: '_file.content', q: 'test' }
+      params: { select: 'file,_file.content', highlight: '_file.content', q: 'test' },
     })
     assert.equal(res.data.total, 2)
     const odtItem = res.data.results.find(item => item.file === 'test.odt')
@@ -54,7 +54,7 @@ describe('Attachments', () => {
     assert.equal(res.data.total, 3)
 
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`, {
-      params: { select: 'attachment,_file.content', highlight: '_file.content', q: 'test' }
+      params: { select: 'attachment,_file.content', highlight: '_file.content', q: 'test' },
     })
     assert.equal(res.data.total, 2)
     const odtItem = res.data.results.find(item => item.attachment === 'test.odt')

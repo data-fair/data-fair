@@ -28,4 +28,13 @@ describe('CSV cases', () => {
     const res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
     assert.equal(res.data.total, 20)
   })
+
+  it('A CSV with quotes on data line, but not on header line', async () => {
+    const ax = global.ax.dmeadus
+    const dataset = await testUtils.sendDataset('some-quotes.csv', ax)
+    assert.equal(dataset.status, 'finalized')
+    const res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
+    assert.equal(res.data.total, 1)
+    assert.equal(res.data.results[0].Code_departement, 56)
+  })
 })

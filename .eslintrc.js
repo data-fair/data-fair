@@ -1,35 +1,19 @@
 module.exports = {
   root: true,
-  parserOptions: {
-    parser: 'babel-eslint',
-    sourceType: 'module'
-  },
-  extends: [
-    // https://github.com/feross/standard/blob/master/RULES.md#javascript-standard-style
-    'standard',
-    // https://github.com/vuejs/eslint-plugin-vue,
-     'plugin:vue/recommended'
-  ],
-  plugins: [
-    "no-only-tests"
-  ],
-  // add your custom rules here
+  extends: 'vuetify',
+  plugins: ['no-only-tests'],
   rules: {
-    // allow paren-less arrow functions
-    'arrow-parens': 0,
-    // allow async-await
-    'generator-star-spacing': 0,
-    // allow debugger during development
-    'no-debugger': process.env.NODE_ENV === 'production' ? 2 : 0,
     // This rule is required because atom vue-format package remove the space
     'space-before-function-paren': 0,
-    'no-new': 'off',
-    // Turn off vuejs rules, not because ther are not good, but mostly because
-    // they are very present in initial code base.. Maybe we should clean that up someday..
-    'vue/max-attributes-per-line': 'off',
+    // TODO: we need to remove the following rules and fix the resulting errors on of these days
+    'node/no-deprecated-api': 'off',
     'vue/require-prop-types': 'off',
-    'vue/no-v-html': 'off',
-    'no-template-curly-in-string': 'off',
-    'node/no-deprecated-api': 'off'
+    'vue/max-attributes-per-line': ['error', {
+      'singleline': 2,
+      'multiline': {
+        'max': 1,
+        'allowFirstLine': false
+      }
+    }]
   }
 }

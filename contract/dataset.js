@@ -7,12 +7,12 @@ publicationSchema.properties.addToDataset = {
   description: 'Fill this object to create a new resource (or community resource) to an existing dataset. If empty a new dataset will be created.',
   properties: {
     id: {
-      type: 'string'
+      type: 'string',
     },
     title: {
-      type: 'string'
-    }
-  }
+      type: 'string',
+    },
+  },
 }
 
 const schema = {
@@ -22,15 +22,15 @@ const schema = {
     type: 'object',
     required: ['key'],
     properties: {
-      key: { type: 'string' },
+      key: { type: 'string', readOnly: true, 'x-display': 'hidden' },
       type: { type: 'string' },
       format: { type: ['string', 'null'] },
       separator: { type: ['string', 'null'] },
       'x-originalName': { type: ['string', 'null'] },
       'x-refersTo': { type: ['string', 'null'] },
-      'x-calculated': { type: 'boolean' }
-    }
-  }
+      'x-calculated': { type: 'boolean' },
+    },
+  },
 }
 
 module.exports = {
@@ -41,23 +41,23 @@ module.exports = {
   properties: {
     id: {
       type: 'string',
-      description: 'Identifier of the dataset'
+      description: 'Identifier of the dataset',
     },
     href: {
       type: 'string',
-      description: 'Readonly field. The URL where this resource can be fetched'
+      description: 'Readonly field. The URL where this resource can be fetched',
     },
     page: {
       type: 'string',
-      description: 'Readonly field. The URL where this resource can be viewed in the UI'
+      description: 'Readonly field. The URL where this resource can be viewed in the UI',
     },
     title: {
       type: 'string',
-      description: 'Short title of the dataset'
+      description: 'Short title of the dataset',
     },
     description: {
       type: 'string',
-      description: 'Detailed description of the dataset'
+      description: 'Detailed description of the dataset',
     },
     file: {
       type: 'object',
@@ -66,20 +66,20 @@ module.exports = {
       properties: {
         name: {
           type: 'string',
-          description: 'Name of the file that was used to create or update this dataset'
+          description: 'Name of the file that was used to create or update this dataset',
         },
         size: {
           type: 'number',
-          description: 'Size of the file on disk'
+          description: 'Size of the file on disk',
         },
         encoding: {
           type: 'string',
-          description: 'Encoding of the file'
+          description: 'Encoding of the file',
         },
         mimetype: {
           type: 'string',
           enum: ['text/csv'],
-          description: 'Mime type of the file'
+          description: 'Mime type of the file',
         },
         schema,
         props: {
@@ -88,23 +88,23 @@ module.exports = {
           properties: {
             numLines: {
               type: 'number',
-              description: 'Number of lines this file has.'
+              description: 'Number of lines this file has.',
             },
             linesDelimiter: {
               type: 'string',
-              description: 'New line character or characters (can be \r\n))'
+              description: 'New line character or characters (can be \r\n))',
             },
             fieldsDelimiter: {
               type: 'string',
-              description: 'Fields delimiter'
+              description: 'Fields delimiter',
             },
             escapeChar: {
               type: 'string',
-              description: 'Character used to escape string'
-            }
-          }
-        }
-      }
+              description: 'Character used to escape string',
+            },
+          },
+        },
+      },
     },
     originalFile: {
       type: 'object',
@@ -113,18 +113,18 @@ module.exports = {
       properties: {
         name: {
           type: 'string',
-          description: 'Name of the file that was used to create or update this dataset'
+          description: 'Name of the file that was used to create or update this dataset',
         },
         size: {
           type: 'number',
-          description: 'Size of the file on disk'
+          description: 'Size of the file on disk',
         },
         mimetype: {
           type: 'string',
           enum: ['text/csv'],
-          description: 'Mime type of the file'
-        }
-      }
+          description: 'Mime type of the file',
+        },
+      },
     },
     attachments: {
       type: 'array',
@@ -135,31 +135,31 @@ module.exports = {
         properties: {
           name: {
             type: 'string',
-            description: 'Name of the file that was used to create or update this attachment'
+            description: 'Name of the file that was used to create or update this attachment',
           },
           title: {
             type: 'string',
-            description: 'Short title of the attachment'
+            description: 'Short title of the attachment',
           },
           description: {
             type: 'string',
-            description: 'Short description of this attachment'
+            description: 'Short description of this attachment',
           },
           size: {
             type: 'number',
-            description: 'Size of the file on disk'
+            description: 'Size of the file on disk',
           },
           mimetype: {
             type: 'string',
-            description: 'Mime type of the file'
+            description: 'Mime type of the file',
           },
           updatedAt: {
             type: 'string',
             description: 'Date of the last update for this attachment',
-            format: 'date-time'
-          }
-        }
-      }
+            format: 'date-time',
+          },
+        },
+      },
     },
     remoteFile: {
       type: 'object',
@@ -168,26 +168,26 @@ module.exports = {
       properties: {
         name: {
           type: 'string',
-          description: 'Name of the remote file that was used to create or update this dataset'
+          description: 'Name of the remote file that was used to create or update this dataset',
         },
         url: {
           type: 'string',
-          description: 'Url from where the file can be fetched'
+          description: 'Url from where the file can be fetched',
         },
         catalog: {
           type: 'string',
-          description: 'Identifiant du catalogue d\'origine'
+          description: 'Identifiant du catalogue d\'origine',
         },
         size: {
           type: 'number',
-          description: 'Size of the file on disk'
+          description: 'Size of the file on disk',
         },
         mimetype: {
           type: 'string',
           enum: ['text/csv'],
-          description: 'Mime type of the file'
-        }
-      }
+          description: 'Mime type of the file',
+        },
+      },
     },
     storage: {
       type: 'object',
@@ -196,43 +196,43 @@ module.exports = {
         fileSize: { type: 'integer' },
         attachmentsSize: { type: 'integer' },
         collectionSize: { type: 'integer' },
-        revisionSize: { type: 'integer' }
-      }
+        revisionSize: { type: 'integer' },
+      },
     },
     createdBy: eventBy,
     updatedBy: eventBy,
     createdAt: {
       type: 'string',
       description: 'Creation date of this dataset',
-      format: 'date-time'
+      format: 'date-time',
     },
     updatedAt: {
       type: 'string',
       description: 'Date of the last update for this dataset',
-      format: 'date-time'
+      format: 'date-time',
     },
     finalizedAt: {
       type: 'string',
       description: 'Date of the last finalization for this dataset',
-      format: 'date-time'
+      format: 'date-time',
     },
     owner,
     status: {
       type: 'string',
       enum: ['remote', 'uploaded', 'loaded', 'analyzed', 'schematized', 'indexed', 'extended', 'finalized', 'error'],
-      description: 'The processing steps of a dataset.'
+      description: 'The processing steps of a dataset.',
     },
     schema,
     count: {
       type: 'number',
-      description: 'The number of indexed documents of a dataset'
+      description: 'The number of indexed documents of a dataset',
     },
     bbox: {
       type: 'array',
       description: 'The spatial coverage of this dataset, in bounding box format.',
       items: {
-        type: 'number'
-      }
+        type: 'number',
+      },
     },
     timePeriod: {
       type: 'object',
@@ -240,29 +240,29 @@ module.exports = {
       properties: {
         startDate: {
           type: 'string',
-          format: 'date-time'
+          format: 'date-time',
         },
         endDate: {
           type: 'string',
-          format: 'date-time'
-        }
-      }
+          format: 'date-time',
+        },
+      },
     },
     timeZone: {
       type: 'string',
-      description: 'The original time zone of the calendar.'
+      description: 'The original time zone of the calendar.',
     },
     projection: {
       type: 'object',
       description: 'The cartographic projection of this dataset. Refers to the list of supported projections in contract/projections.json',
       properties: {
         title: {
-          type: 'string'
+          type: 'string',
         },
         code: {
-          type: 'string'
-        }
-      }
+          type: 'string',
+        },
+      },
     },
     license: {
       type: 'object',
@@ -271,17 +271,17 @@ module.exports = {
       properties: {
         title: {
           type: 'string',
-          description: 'Short title for the license'
+          description: 'Short title for the license',
         },
         href: {
           type: 'string',
-          description: 'The URL where the license can be read'
-        }
-      }
+          description: 'The URL where the license can be read',
+        },
+      },
     },
     origin: {
       type: 'string',
-      description: 'The URL where the original data can be found'
+      description: 'The URL where the original data can be found',
     },
     extensions: {
       type: 'array',
@@ -291,57 +291,57 @@ module.exports = {
         properties: {
           active: {
             type: 'boolean',
-            description: 'Toggle on and off the extension'
+            description: 'Toggle on and off the extension',
           },
           forceNext: {
             type: 'boolean',
-            description: 'Set to true to force overwriting extension results on next indexing.'
+            description: 'Set to true to force overwriting extension results on next indexing.',
           },
           progress: {
             type: 'number',
-            description: 'From 0 to 1 based on progress of the extension.'
+            description: 'From 0 to 1 based on progress of the extension.',
           },
           error: {
             type: 'string',
-            description: 'An error that occured during the last time the extension was run'
+            description: 'An error that occured during the last time the extension was run',
           },
           remoteService: {
             type: 'string',
-            description: "L'identifiant du service distant utilisé pour l'enrichissement"
+            description: "L'identifiant du service distant utilisé pour l'enrichissement",
           },
           action: {
             type: 'string',
-            description: "L'identifiant de l'action du service distant à utiliser pour l'enrichissement"
+            description: "L'identifiant de l'action du service distant à utiliser pour l'enrichissement",
           },
           select: {
             type: 'array',
             description: 'La liste des champs à sélectionner dans le retour du service distant. Tous les champs si absent ou vide.',
             items: {
-              type: 'string'
-            }
-          }
-        }
-      }
+              type: 'string',
+            },
+          },
+        },
+      },
     },
     publications: {
       type: 'array',
       description: 'References to all the catalogs the dataset metadata is published too',
-      items: publicationSchema
+      items: publicationSchema,
     },
     hasFiles: {
       type: 'boolean',
       default: false,
-      description: 'true when the dataset has attached files'
+      description: 'true when the dataset has attached files',
     },
     attachmentsAsImage: {
       type: 'boolean',
       default: false,
-      description: 'Set to true to use attached files as illustrations of the line'
+      description: 'Set to true to use attached files as illustrations of the line',
     },
     isVirtual: {
       type: 'boolean',
       default: false,
-      description: 'Used to identify virtual datasets. A virtual datasets does not have data, only references to other datasets.'
+      description: 'Used to identify virtual datasets. A virtual datasets does not have data, only references to other datasets.',
     },
     virtual: {
       type: 'object',
@@ -352,8 +352,8 @@ module.exports = {
           type: 'array',
           description: 'Array of ids of the children datasets',
           items: {
-            type: 'string'
-          }
+            type: 'string',
+          },
         },
         filters: {
           type: 'array',
@@ -364,23 +364,23 @@ module.exports = {
             properties: {
               key: {
                 type: 'string',
-                description: 'Key of the field in the schema'
+                description: 'Key of the field in the schema',
               },
               values: {
                 type: 'array',
                 items: {
-                  type: 'string'
-                }
-              }
-            }
-          }
-        }
-      }
+                  type: 'string',
+                },
+              },
+            },
+          },
+        },
+      },
     },
     isRest: {
       type: 'boolean',
       default: false,
-      description: 'Used to identify REST datasets. A REST dataset is not created from a data file, but instead is based on a dynamic collection in a database.'
+      description: 'Used to identify REST datasets. A REST dataset is not created from a data file, but instead is based on a dynamic collection in a database.',
     },
     rest: {
       type: 'object',
@@ -389,14 +389,14 @@ module.exports = {
         history: {
           type: 'boolean',
           default: false,
-          description: 'Set to true to let data-fair store revisions of the lines in the dataset.'
-        }
-      }
+          description: 'Set to true to let data-fair store revisions of the lines in the dataset.',
+        },
+      },
     },
     extras: {
       type: 'object',
-      description: 'An object for extra content from client services of data-fair'
+      description: 'An object for extra content from client services of data-fair',
     },
-    permissions
-  }
+    permissions,
+  },
 }

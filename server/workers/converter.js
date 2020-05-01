@@ -16,7 +16,7 @@ const vocabulary = require('../../contract/vocabulary')
 exports.eventsPrefix = 'convert'
 
 const archiveTypes = exports.archiveTypes = new Set([
-  'application/zip' // .zip
+  'application/zip', // .zip
   /* 'application/x-7z-compressed', // .7z
   'application/x-bzip', // .bzip
   'application/x-bzip2', // .bzip2
@@ -29,12 +29,12 @@ const tabularTypes = exports.tabularTypes = new Set([
   'application/vnd.ms-excel', // xls
   'application/dbase', // dbf
   'text/plain', // txt, dif
-  'text/tab-separated-values' // tsv
+  'text/tab-separated-values', // tsv
 ])
 const geographicalTypes = exports.geographicalTypes = new Set([
   'application/vnd.google-earth.kml+xml', // kml
   'application/vnd.google-earth.kmz', // kmz
-  'application/gpx+xml' // gpx or xml ?
+  'application/gpx+xml', // gpx or xml ?
 ])
 const calendarTypes = exports.calendarTypes = new Set(['text/calendar'])
 
@@ -65,7 +65,7 @@ exports.process = async function(app, dataset) {
         name: path.parse(dataset.originalFile.name).name + '.csv',
         size: await fs.stat(csvFilePath).size,
         mimetype: 'text/csv',
-        encoding: 'utf-8'
+        encoding: 'utf-8',
       }
       if (!dataset.schema.find(f => f.key === 'file')) {
         const concept = vocabulary.find(c => c.identifiers.includes('http://schema.org/DigitalDocument'))
@@ -75,7 +75,7 @@ exports.process = async function(app, dataset) {
           type: 'string',
           title: concept.title,
           description: concept.description,
-          'x-refersTo': 'http://schema.org/DigitalDocument'
+          'x-refersTo': 'http://schema.org/DigitalDocument',
         })
       }
     }
@@ -89,13 +89,13 @@ exports.process = async function(app, dataset) {
     await pump(
       eventsStream,
       csvStringify({ columns: ['DTSTART', 'DTEND', 'SUMMARY', 'LOCATION', 'CATEGORIES', 'STATUS', 'DESCRIPTION', 'TRANSP', 'SEQUENCE', 'GEO', 'URL'], header: true }),
-      fs.createWriteStream(filePath)
+      fs.createWriteStream(filePath),
     )
     dataset.file = {
       name: path.parse(dataset.originalFile.name).name + '.csv',
       size: await fs.stat(filePath).size,
       mimetype: 'text/csv',
-      encoding: 'utf-8'
+      encoding: 'utf-8',
     }
     icalendar.prepareSchema(dataset, infos)
   } else if (tabularTypes.has(dataset.originalFile.mimetype)) {
@@ -110,7 +110,7 @@ exports.process = async function(app, dataset) {
       name: path.parse(dataset.originalFile.name).name + '.csv',
       size: await fs.stat(filePath).size,
       mimetype: 'text/csv',
-      encoding: 'utf-8'
+      encoding: 'utf-8',
     }
   } else if (isShapefile || geographicalTypes.has(dataset.originalFile.mimetype)) {
     if (dataset.originalFile.size > 100 * 1000 * 1000) throw createError(400, 'File size of this format must not exceed 10 MB. You can however convert your file to geoJSON with an external tool and reupload it.')
@@ -126,7 +126,7 @@ exports.process = async function(app, dataset) {
       name: path.parse(dataset.originalFile.name).name + '.geojson',
       size: await fs.stat(filePath).size,
       mimetype: 'application/geo+json',
-      encoding: 'utf-8'
+      encoding: 'utf-8',
     }
   } else {
     // TODO: throw error ?
@@ -138,6 +138,6 @@ exports.process = async function(app, dataset) {
   if (dataset.timeZone) patch.timeZone = dataset.timeZone
 
   await db.collection('datasets').updateOne({ id: dataset.id }, {
-    $set: patch
+    $set: patch,
   })
 }

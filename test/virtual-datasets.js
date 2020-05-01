@@ -25,9 +25,9 @@ describe('virtual datasets', () => {
     let res = await ax.post('/api/v1/datasets', {
       isVirtual: true,
       virtual: {
-        children: [dataset.id]
+        children: [dataset.id],
       },
-      title: 'a virtual dataset'
+      title: 'a virtual dataset',
     })
     const virtualDataset = res.data
     res = await ax.get(`/api/v1/datasets/${virtualDataset.id}/lines`)
@@ -44,7 +44,7 @@ describe('virtual datasets', () => {
     await testUtils.sendDataset('dataset1.csv', ax)
     let res = await ax.post('/api/v1/datasets', {
       isVirtual: true,
-      title: 'a virtual dataset'
+      title: 'a virtual dataset',
     })
     const virtualDataset = res.data
     try {
@@ -53,11 +53,11 @@ describe('virtual datasets', () => {
     } catch (err) {}
     await ax.patch('/api/v1/datasets/' + virtualDataset.id, {
       virtual: {
-        children: [dataset1.id, dataset2.id, dataset3.id]
+        children: [dataset1.id, dataset2.id, dataset3.id],
       },
       schema: [{
-        key: 'id'
-      }]
+        key: 'id',
+      }],
     })
     await workers.hook('finalizer/' + virtualDataset.id)
     res = await ax.get(`/api/v1/datasets/${virtualDataset.id}/lines`)
@@ -73,19 +73,19 @@ describe('virtual datasets', () => {
       isVirtual: true,
       title: 'a virtual dataset',
       virtual: {
-        children: [dataset.id]
+        children: [dataset.id],
       },
       schema: [{
-        key: 'id'
-      }]
+        key: 'id',
+      }],
     })
     const virtualDataset = await workers.hook('finalizer/' + res.data.id)
     assert.ok(virtualDataset.schema.find(f => f.key === 'id'))
     assert.ok(virtualDataset.schema.find(f => f.key === 'id').type === 'string')
     res = await ax.patch('/api/v1/datasets/' + virtualDataset.id, {
       schema: [{
-        key: 'badKey'
-      }]
+        key: 'badKey',
+      }],
     })
     assert.ok(res.data.schema.find(f => f.key === 'badKey'))
   })
@@ -97,11 +97,11 @@ describe('virtual datasets', () => {
       isVirtual: true,
       title: 'a virtual dataset',
       virtual: {
-        children: [dataset.id]
+        children: [dataset.id],
       },
       schema: [{
-        key: 'adr'
-      }]
+        key: 'adr',
+      }],
     })
     const virtualDataset = await workers.hook('finalizer/' + res.data.id)
     assert.ok(!virtualDataset.schema.find(f => f.key === 'id'))
@@ -167,12 +167,12 @@ describe('virtual datasets', () => {
         children: [dataset.id],
         filters: [{
           key: 'id',
-          values: ['koumoul']
-        }]
+          values: ['koumoul'],
+        }],
       },
       schema: [{
-        key: 'adr'
-      }]
+        key: 'adr',
+      }],
     })
     const virtualDataset = await workers.hook('finalizer/' + res.data.id)
     assert.ok(!virtualDataset.schema.find(f => f.key === 'id'))
@@ -188,11 +188,11 @@ describe('virtual datasets', () => {
       isVirtual: true,
       title: 'a virtual dataset',
       virtual: {
-        children: [dataset.id]
+        children: [dataset.id],
       },
       schema: [{
-        key: 'adr'
-      }]
+        key: 'adr',
+      }],
     })
     const virtualDataset = await workers.hook('finalizer/' + res.data.id)
 
@@ -200,11 +200,11 @@ describe('virtual datasets', () => {
       isVirtual: true,
       title: 'a virtual dataset',
       virtual: {
-        children: [virtualDataset.id]
+        children: [virtualDataset.id],
       },
       schema: [{
-        key: 'adr'
-      }]
+        key: 'adr',
+      }],
     })
     const virtualDataset2 = await workers.hook('finalizer/' + res.data.id)
 
@@ -212,11 +212,11 @@ describe('virtual datasets', () => {
       isVirtual: true,
       title: 'a virtual dataset',
       virtual: {
-        children: [virtualDataset2.id]
+        children: [virtualDataset2.id],
       },
       schema: [{
-        key: 'adr'
-      }]
+        key: 'adr',
+      }],
     })
     const virtualDataset3 = await workers.hook('finalizer/' + res.data.id)
 
@@ -230,16 +230,16 @@ describe('virtual datasets', () => {
       isVirtual: true,
       title: 'a virtual dataset',
       virtual: {
-        children: []
-      }
+        children: [],
+      },
     })
 
     res = await ax.post('/api/v1/datasets', {
       isVirtual: true,
       title: 'a virtual dataset',
       virtual: {
-        children: [res.data.id]
-      }
+        children: [res.data.id],
+      },
     })
 
     try {
@@ -260,20 +260,20 @@ describe('virtual datasets', () => {
         children: [dataset.id],
         filters: [{
           key: 'id',
-          values: ['koumoul']
-        }]
+          values: ['koumoul'],
+        }],
       },
       schema: [{
-        key: 'adr'
-      }]
+        key: 'adr',
+      }],
     })
 
     res = await ax.post('/api/v1/datasets', {
       isVirtual: true,
       title: 'a virtual dataset',
       virtual: {
-        children: [res.data.id]
-      }
+        children: [res.data.id],
+      },
     })
 
     try {

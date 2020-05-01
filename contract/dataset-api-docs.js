@@ -24,8 +24,8 @@ module.exports = (dataset) => {
     `,
     required: false,
     schema: {
-      type: 'string'
-    }
+      type: 'string',
+    },
   }, {
     in: 'query',
     name: 'qs',
@@ -38,8 +38,8 @@ Pour plus d'information voir la documentation [ElasticSearch](https://www.elasti
   `,
     required: false,
     schema: {
-      type: 'string'
-    }
+      type: 'string',
+    },
   }, {
     in: 'query',
     name: 'bbox',
@@ -48,10 +48,10 @@ Pour plus d'information voir la documentation [ElasticSearch](https://www.elasti
     schema: {
       type: 'array',
       items: {
-        type: 'number'
-      }
+        type: 'number',
+      },
     },
-    style: 'commaDelimited'
+    style: 'commaDelimited',
   }, {
     in: 'query',
     name: 'xyz',
@@ -64,10 +64,10 @@ Le format est 'x,y,z'.
     schema: {
       type: 'array',
       items: {
-        type: 'number'
-      }
+        type: 'number',
+      },
     },
-    style: 'commaDelimited'
+    style: 'commaDelimited',
   }]
   uriRefProperties.forEach(prop => {
     filterParams.push({
@@ -81,10 +81,10 @@ Un filtre pour restreindre les résultats en fonction d'une liste de valeurs acc
         type: 'array',
         items: {
           type: 'string',
-          enum: prop.enum
-        }
+          enum: prop.enum,
+        },
       },
-      style: 'commaDelimited'
+      style: 'commaDelimited',
     })
   })
 
@@ -103,10 +103,10 @@ Exemple: ma_colonne,-ma_colonne2`,
       type: 'array',
       items: {
         type: 'string',
-        enum: properties
-      }
+        enum: properties,
+      },
     },
-    style: 'commaDelimited'
+    style: 'commaDelimited',
   }, {
     in: 'query',
     name: 'size',
@@ -115,8 +115,8 @@ Exemple: ma_colonne,-ma_colonne2`,
     schema: {
       default: 20,
       type: 'integer',
-      max: 10000
-    }
+      max: 10000,
+    },
   }, {
     in: 'query',
     name: 'select',
@@ -127,10 +127,10 @@ Exemple: ma_colonne,-ma_colonne2`,
       type: 'array',
       items: {
         type: 'string',
-        enum: properties
-      }
+        enum: properties,
+      },
     },
-    style: 'commaDelimited'
+    style: 'commaDelimited',
   }, {
     in: 'query',
     name: 'thumbnail',
@@ -140,7 +140,7 @@ Demande à retourner un lien de vignette d'une dimension déterminée à partir 
 Pour que ce paramètre soit accepté le concept "Image" doit être associé à un champ du jeu de données.
 
 La valeur du paramètre est la dimension passée sous la form largeurxhauteur (300x200 par exemple) où un 0 sur la largeur ou la hauteur signifie que l'autre valeur est prise en compte et les proportions conservées.
-    `
+    `,
   }, {
     in: 'query',
     name: 'highlight',
@@ -154,10 +154,10 @@ La valeur est une liste de champs séparés par des virgules.
       type: 'array',
       items: {
         type: 'string',
-        enum: textProperties
-      }
+        enum: textProperties,
+      },
     },
-    style: 'commaDelimited'
+    style: 'commaDelimited',
   }, {
     in: 'query',
     name: 'sampling',
@@ -169,7 +169,7 @@ La valeur est une liste de champs séparés par des virgules.
     `,
     required: false,
     enum: ['neighbors', 'max'],
-    default: 'neighbors'
+    default: 'neighbors',
   }]
 
   const aggSizeParam = {
@@ -180,8 +180,8 @@ La valeur est une liste de champs séparés par des virgules.
     schema: {
       default: 20,
       type: 'integer',
-      max: 10000
-    }
+      max: 10000,
+    },
   }
 
   const metricParam = {
@@ -191,8 +191,8 @@ La valeur est une liste de champs séparés par des virgules.
     required: false,
     schema: {
       type: 'string',
-      enum: ['avg', 'sum', 'min', 'max']
-    }
+      enum: ['avg', 'sum', 'min', 'max'],
+    },
   }
 
   const metricFieldParam = {
@@ -202,8 +202,8 @@ La valeur est une liste de champs séparés par des virgules.
     required: false,
     schema: {
       type: 'string',
-      enum: numberProperties
-    }
+      enum: numberProperties,
+    },
   }
 
   const formatParam = {
@@ -213,34 +213,34 @@ La valeur est une liste de champs séparés par des virgules.
     required: false,
     schema: {
       default: 'json',
-      enum: ['json'].concat(dataset.bbox && dataset.bbox.length === 4 ? ['pbf', 'geojson'] : [])
-    }
+      enum: ['json'].concat(dataset.bbox && dataset.bbox.length === 4 ? ['pbf', 'geojson'] : []),
+    },
   }
 
   const api = {
     openapi: '3.0.0',
     info: Object.assign({
       title: `API du jeu de données : ${dataset.title || dataset.id}`,
-      version: version
+      version: version,
     }, config.info),
     components: {
       securitySchemes: {
         apiKey: {
           type: 'apiKey',
           in: 'header',
-          name: 'x-apiKey'
+          name: 'x-apiKey',
         },
         sdCookie: {
           type: 'apiKey',
           in: 'cookie',
-          name: 'id_token'
-        }
+          name: 'id_token',
+        },
       },
-      schemas: { datasetSchema }
+      schemas: { datasetSchema },
     },
     security: [{ apiKey: [] }, { sdCookie: [] }],
     servers: [{
-      url: `${config.publicUrl}/api/v1/datasets/${dataset.id}`
+      url: `${config.publicUrl}/api/v1/datasets/${dataset.id}`,
     }],
     paths: {
       '/': {
@@ -254,11 +254,11 @@ La valeur est une liste de champs séparés par des virgules.
               description: 'Les informations du jeu de données.',
               content: {
                 'application/json': {
-                  schema: { $ref: '#/components/schemas/datasetSchema' }
-                }
-              }
-            }
-          }
+                  schema: { $ref: '#/components/schemas/datasetSchema' },
+                },
+              },
+            },
+          },
         },
         patch: {
           summary: 'Mettre à jour les informations du jeu de données.',
@@ -270,20 +270,20 @@ La valeur est une liste de champs séparés par des virgules.
             required: true,
             content: {
               'application/json': {
-                schema: datasetPatchSchema
-              }
-            }
+                schema: datasetPatchSchema,
+              },
+            },
           },
           responses: {
             200: {
               description: 'Les informations du jeu de données.',
               content: {
                 'application/json': {
-                  schema: { $ref: '#/components/schemas/datasetSchema' }
-                }
-              }
-            }
-          }
+                  schema: { $ref: '#/components/schemas/datasetSchema' },
+                },
+              },
+            },
+          },
         },
         post: {
           summary: 'Mettre à jour les données du jeu de données.',
@@ -299,30 +299,30 @@ La valeur est une liste de champs séparés par des virgules.
                   ...datasetPatchSchema,
                   file: {
                     type: 'string',
-                    format: 'binary'
-                  }
-                }
-              }
-            }
+                    format: 'binary',
+                  },
+                },
+              },
+            },
           },
           responses: {
             200: {
               description: 'Métadonnées sur le dataset modifié',
               content: {
                 'application/json': {
-                  schema: { $ref: '#/components/schemas/datasetSchema' }
-                }
-              }
-            }
-          }
+                  schema: { $ref: '#/components/schemas/datasetSchema' },
+                },
+              },
+            },
+          },
         },
         delete: {
           summary: 'Supprimer le jeu de données.',
           operationId: 'delete',
           'x-permissionClass': 'admin',
           tags: ['Métadonnées'],
-          responses: {}
-        }
+          responses: {},
+        },
       },
       '/lines': {
         get: {
@@ -337,8 +337,8 @@ La valeur est une liste de champs séparés par des virgules.
             required: false,
             schema: {
               default: 1,
-              type: 'integer'
-            }
+              type: 'integer',
+            },
           }, formatParam].concat(filterParams).concat(hitsParams),
           responses: {
             200: {
@@ -350,23 +350,23 @@ La valeur est une liste de champs séparés par des virgules.
                     properties: {
                       total: {
                         type: 'integer',
-                        description: 'Le nombre total de résultat si on ignore la pagination'
+                        description: 'Le nombre total de résultat si on ignore la pagination',
                       },
                       results: {
                         type: 'array',
                         description: 'Le tableau de résultats.',
                         items: {
                           type: 'object',
-                          properties: dataset.schema
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
+                          properties: dataset.schema,
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
       },
       '/values_agg': {
         get: {
@@ -381,8 +381,8 @@ La valeur est une liste de champs séparés par des virgules.
             required: true,
             schema: {
               type: 'string',
-              enum: properties
-            }
+              enum: properties,
+            },
           }, formatParam, metricParam, metricFieldParam, aggSizeParam].concat(filterParams).concat(hitsParams),
           // TODO: document sort param and interval
           responses: {
@@ -391,13 +391,13 @@ La valeur est une liste de champs séparés par des virgules.
               content: {
                 'application/json': {
                   schema: {
-                    type: 'object'
-                  }
-                }
-              }
-            }
-          }
-        }
+                    type: 'object',
+                  },
+                },
+              },
+            },
+          },
+        },
       },
       '/values/{field}': {
         get: {
@@ -412,8 +412,8 @@ La valeur est une liste de champs séparés par des virgules.
             required: true,
             schema: {
               type: 'string',
-              enum: properties
-            }
+              enum: properties,
+            },
           }].concat(filterParams),
           // TODO: document sort param and interval
           responses: {
@@ -422,13 +422,13 @@ La valeur est une liste de champs séparés par des virgules.
               content: {
                 'application/json': {
                   schema: {
-                    type: 'array'
-                  }
-                }
-              }
-            }
-          }
-        }
+                    type: 'array',
+                  },
+                },
+              },
+            },
+          },
+        },
       },
       '/metric_agg': {
         get: {
@@ -439,7 +439,7 @@ La valeur est une liste de champs séparés par des virgules.
           parameters: [
             Object.assign({}, metricParam, { required: true }),
             Object.assign({}, metricFieldParam, { required: true }),
-            aggSizeParam
+            aggSizeParam,
           ].concat(filterParams),
           responses: {
             200: {
@@ -447,13 +447,13 @@ La valeur est une liste de champs séparés par des virgules.
               content: {
                 'application/json': {
                   schema: {
-                    type: 'object'
-                  }
-                }
-              }
-            }
-          }
-        }
+                    type: 'object',
+                  },
+                },
+              },
+            },
+          },
+        },
       },
       '/words_agg': {
         get: {
@@ -468,8 +468,8 @@ La valeur est une liste de champs séparés par des virgules.
             required: true,
             schema: {
               type: 'string',
-              enum: properties
-            }
+              enum: properties,
+            },
           }].concat(filterParams),
           // TODO: document sort param and interval
           responses: {
@@ -478,13 +478,13 @@ La valeur est une liste de champs séparés par des virgules.
               content: {
                 'application/json': {
                   schema: {
-                    type: 'object'
-                  }
-                }
-              }
-            }
-          }
-        }
+                    type: 'object',
+                  },
+                },
+              },
+            },
+          },
+        },
       },
       '/raw': {
         get: {
@@ -498,13 +498,13 @@ La valeur est une liste de champs séparés par des virgules.
               content: {
                 'text/csv': {
                   schema: {
-                    type: 'string'
-                  }
-                }
-              }
-            }
-          }
-        }
+                    type: 'string',
+                  },
+                },
+              },
+            },
+          },
+        },
       },
       '/full': {
         get: {
@@ -518,13 +518,13 @@ La valeur est une liste de champs séparés par des virgules.
               content: {
                 'text/csv': {
                   schema: {
-                    type: 'string'
-                  }
-                }
-              }
-            }
-          }
-        }
+                    type: 'string',
+                  },
+                },
+              },
+            },
+          },
+        },
       },
       '/api-docs.json': {
         get: {
@@ -538,13 +538,13 @@ La valeur est une liste de champs séparés par des virgules.
               content: {
                 'application/json': {
                   schema: {
-                    type: 'object'
-                  }
-                }
-              }
-            }
-          }
-        }
+                    type: 'object',
+                  },
+                },
+              },
+            },
+          },
+        },
       },
       '/journal': {
         get: {
@@ -557,12 +557,12 @@ La valeur est une liste de champs séparés par des virgules.
               description: 'Le journal.',
               content: {
                 'application/json': {
-                  schema: journalSchema
-                }
-              }
-            }
-          }
-        }
+                  schema: journalSchema,
+                },
+              },
+            },
+          },
+        },
       },
       '/schema': {
         get: {
@@ -579,9 +579,9 @@ La valeur est une liste de champs séparés par des virgules.
               description: 'Restreindre aux champs ayant une énumération de valeurs (moins de 50 valeurs distinctes)',
               required: false,
               schema: {
-                type: 'boolean'
-              }
-            }
+                type: 'boolean',
+              },
+            },
           ],
           responses: {
             200: {
@@ -591,14 +591,14 @@ La valeur est une liste de champs séparés par des virgules.
                   schema: {
                     type: 'array',
                     items: {
-                      type: 'object'
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
+                      type: 'object',
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
       },
       '/_diagnose': {
         get: {
@@ -607,24 +607,24 @@ La valeur est une liste de champs séparés par des virgules.
           responses: {
             200: {
               content: {
-                'application/json': {}
-              }
-            }
-          }
-        }
+                'application/json': {},
+              },
+            },
+          },
+        },
       },
       '/_reindex': {
         post: {
           summary: 'Forcer la reindexation',
-          tags: ['Administration']
-        }
+          tags: ['Administration'],
+        },
       },
-      '/permissions': permissionsDoc
+      '/permissions': permissionsDoc,
     },
     externalDocs: {
       description: 'Documentation sur Github',
-      url: 'https://koumoul-dev.github.io/data-fair/'
-    }
+      url: 'https://koumoul-dev.github.io/data-fair/',
+    },
   }
   if (dataset.bbox && dataset.bbox.length === 4) {
     api.paths['/geo_agg'] = {
@@ -640,13 +640,13 @@ La valeur est une liste de champs séparés par des virgules.
             content: {
               'application/json': {
                 schema: {
-                  type: 'object'
-                }
-              }
-            }
-          }
-        }
-      }
+                  type: 'object',
+                },
+              },
+            },
+          },
+        },
+      },
     }
   }
   return api

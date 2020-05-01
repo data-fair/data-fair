@@ -6,35 +6,35 @@ module.exports = {
     title: 'DataFair',
     description: 'Données facilement Trouvables, Accessibles, Interopérables et Réutilisables',
     activateAdminMode: 'Activate admin mode',
-    deactivateAdminMode: 'Deactivate admin mode'
+    deactivateAdminMode: 'Deactivate admin mode',
   },
   pages: {
     root: {
-      title: 'Accueil'
+      title: 'Accueil',
     },
     datasets: {
-      title: 'Jeux de données'
+      title: 'Jeux de données',
     },
     about: {
-      title: 'A propos'
+      title: 'A propos',
     },
     install: {
       title: 'Installation',
       i18n: {
         i18nKey: 'Clé dans le fichier I18N',
         i18nVar: 'Variable d\'environnement',
-        i18nVal: 'Valeur'
+        i18nVal: 'Valeur',
       },
       config: {
         link: 'Configuration',
         varKey: 'Clé dans le fichier de configuration',
         varName: 'Variable d\'environnement',
         varDesc: 'Description',
-        varDefault: 'Valeur par défaut'
-      }
+        varDefault: 'Valeur par défaut',
+      },
     },
     interoperate: {},
-    'user-guide': {}
+    'user-guide': {},
   },
   notifications: {
     successes: {
@@ -42,6 +42,6 @@ module.exports = {
     },
     errors: {
 
-    }
-  }
+    },
+  },
 }

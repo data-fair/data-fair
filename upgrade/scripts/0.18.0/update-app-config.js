@@ -18,9 +18,9 @@ exports.exec = async (db, debug) => {
         {
           $set: {
             'configuration.datasets': conf.datasets,
-            'configuration.remoteServices': conf.remoteServices
-          }
-        }
+            'configuration.remoteServices': conf.remoteServices,
+          },
+        },
       )
     }
   }

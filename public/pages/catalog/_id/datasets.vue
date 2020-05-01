@@ -5,9 +5,9 @@
 </template>
 
 <script>
-import CatalogDatasets from '../../../components/CatalogDatasets.vue'
+  import CatalogDatasets from '../../../components/CatalogDatasets.vue'
 
-export default {
-  components: { CatalogDatasets }
-}
+  export default {
+    components: { CatalogDatasets },
+  }
 </script>

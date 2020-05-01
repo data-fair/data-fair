@@ -32,7 +32,7 @@ other,unknown address
     dataset.schema.find(field => field.key === 'adr')['x-refersTo'] = 'http://schema.org/address'
     res = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
       schema: dataset.schema,
-      extensions: [{ active: true, remoteService: 'geocoder-koumoul', action: 'postCoords' }]
+      extensions: [{ active: true, remoteService: 'geocoder-koumoul', action: 'postCoords' }],
     })
     assert.equal(res.status, 200)
     dataset = await workers.hook(`finalizer/${dataset.id}`)
@@ -131,7 +131,7 @@ other,unknown address
     nock('http://test.com').post('/geocoder/coords').reply(500, 'some error')
     res = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
       schema: dataset.schema,
-      extensions: [{ active: true, remoteService: 'geocoder-koumoul', action: 'postCoords' }]
+      extensions: [{ active: true, remoteService: 'geocoder-koumoul', action: 'postCoords' }],
     })
     assert.equal(res.status, 200)
     await workers.hook('finalizer')
@@ -173,7 +173,7 @@ empty,
     dataset.schema.find(field => field.key === 'adr')['x-refersTo'] = 'http://schema.org/address'
     res = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
       schema: dataset.schema,
-      extensions: [{ active: true, remoteService: 'geocoder-koumoul', action: 'postCoords' }]
+      extensions: [{ active: true, remoteService: 'geocoder-koumoul', action: 'postCoords' }],
     })
     assert.equal(res.status, 200)
     await workers.hook('finalizer')

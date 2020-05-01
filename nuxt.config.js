@@ -11,7 +11,6 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 const webpack = require('webpack')
-const VuetifyLoaderPlugin = require('vuetify-loader/lib/plugin')
 
 module.exports = {
   mode: 'spa',
@@ -20,26 +19,24 @@ module.exports = {
   build: {
     // cache: true,
     publicPath: config.publicUrl + '/_nuxt/',
-    transpile: ['vuetify', /@koumoul/], // Necessary for "à la carte" import of vuetify components
+    transpile: [/@koumoul/], // Necessary for "à la carte" import of vuetify components
     extend (config, { isServer, isDev, isClient }) {
       // Ignore all locale files of moment.js, those we want are loaded in plugins/moment.js
       config.plugins.push(new webpack.IgnorePlugin(/^\.\/locale$/, /moment$/))
-      config.plugins.push(new VuetifyLoaderPlugin())
-    }
+    },
   },
   loading: { color: '#1e88e5' }, // Customize the progress bar color
   plugins: [
     { src: '~plugins/ws', ssr: false },
     { src: '~plugins/session' },
-    { src: '~plugins/vuetify' },
     { src: '~plugins/moment' },
     { src: '~plugins/truncate' },
     { src: '~plugins/display-bytes' },
     { src: '~plugins/logger', ssr: false },
-    { src: '~plugins/analytics', ssr: false }
+    { src: '~plugins/analytics', ssr: false },
   ],
   router: {
-    base: config.basePath
+    base: config.basePath,
   },
   modules: ['@digibytes/markdownit', '@nuxtjs/axios', 'cookie-universal-nuxt', ['nuxt-i18n', {
     seo: false,
@@ -47,12 +44,26 @@ module.exports = {
     defaultLocale: 'fr',
     vueI18n: {
       fallbackLocale: 'fr',
-      messages: config.i18nMessages
-    }
+      messages: config.i18nMessages,
+    },
   }]],
   axios: {
     browserBaseURL: config.publicUrl + '/',
-    baseURL: `http://localhost:${config.port}/`
+    baseURL: `http://localhost:${config.port}/`,
+  },
+  buildModules: ['@nuxtjs/vuetify'],
+  vuetify: {
+    theme: {
+      dark: config.theme.dark,
+      themes: {
+        light: config.theme.colors,
+      },
+    },
+    defaultAssets: {
+      font: {
+        family: 'Nunito',
+      },
+    },
   },
   env: {
     publicUrl: config.publicUrl,
@@ -65,7 +76,7 @@ module.exports = {
     browserLogLevel: config.browserLogLevel,
     analytics: config.analytics,
     captureUrl: config.captureUrl,
-    theme: config.theme
+    theme: config.theme,
   },
   head: {
     title: config.brand.title,
@@ -74,13 +85,13 @@ module.exports = {
       { name: 'viewport', content: 'width=device-width, initial-scale=1' },
       { hid: 'application', name: 'application-name', content: config.brand.title },
       { hid: 'description', name: 'description', content: config.brand.description },
-      { hid: 'robots', name: 'robots', content: 'noindex' }
+      { hid: 'robots', name: 'robots', content: 'noindex' },
     ],
     link: [
-      { rel: 'stylesheet', href: 'https://fonts.googleapis.com/css?family=Nunito:300,400,500,700,400italic' }
+      { rel: 'stylesheet', href: 'https://fonts.googleapis.com/css?family=Nunito:300,400,500,700,400italic' },
     ],
-    style: []
-  }
+    style: [],
+  },
 }
 
 if (config.theme.cssUrl) {

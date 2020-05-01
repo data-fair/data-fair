@@ -4,8 +4,8 @@ exports.idParam = {
   description: 'identifiant',
   required: true,
   schema: {
-    type: 'string'
-  }
+    type: 'string',
+  },
 }
 
 exports.qParam = {
@@ -14,8 +14,8 @@ exports.qParam = {
   description: 'Recherche textuelle',
   required: false,
   schema: {
-    type: 'string'
-  }
+    type: 'string',
+  },
 }
 
 exports.ownerParam = {
@@ -27,10 +27,10 @@ exports.ownerParam = {
   schema: {
     type: 'array',
     items: {
-      type: 'string'
-    }
+      type: 'string',
+    },
   },
-  style: 'commaDelimited'
+  style: 'commaDelimited',
 }
 
 exports.visibilityParams = [{
@@ -39,24 +39,24 @@ exports.visibilityParams = [{
   description: 'Voir uniquement les ressources publiques.',
   required: false,
   schema: {
-    type: 'boolean'
-  }
+    type: 'boolean',
+  },
 }, {
   in: 'query',
   name: 'public',
   description: 'Voir uniquement les ressources privées. Celles sur lesquelles aucune permission particulière n\'a été appliquée.',
   required: false,
   schema: {
-    type: 'boolean'
-  }
+    type: 'boolean',
+  },
 }, {
   in: 'query',
   name: 'protected',
   description: 'Voir uniquement les ressources protégées. Celles sur lesquelles une permission particulière non publique été appliquée.',
   required: false,
   schema: {
-    type: 'boolean'
-  }
+    type: 'boolean',
+  },
 }, {
   in: 'query',
   name: 'visibility',
@@ -64,9 +64,9 @@ exports.visibilityParams = [{
   require: 'false',
   schema: {
     type: 'array',
-    enum: ['public', 'private', 'protected']
+    enum: ['public', 'private', 'protected'],
   },
-  style: 'commaDelimited'
+  style: 'commaDelimited',
 }]
 
 exports.selectParam = (values) => ({
@@ -79,10 +79,10 @@ exports.selectParam = (values) => ({
     type: 'array',
     items: {
       type: 'string',
-      enum: values
-    }
+      enum: values,
+    },
   },
-  style: 'commaDelimited'
+  style: 'commaDelimited',
 })
 
 exports.filterParam = (name, description, values) => {
@@ -94,10 +94,10 @@ exports.filterParam = (name, description, values) => {
     schema: {
       type: 'array',
       items: {
-        type: 'string'
-      }
+        type: 'string',
+      },
     },
-    style: 'commaDelimited'
+    style: 'commaDelimited',
   }
   if (values) p.schema.items.enum = values
   return p
@@ -109,8 +109,8 @@ exports.booleanParam = (name, description) => ({
   description,
   required: false,
   schema: {
-    type: 'boolean'
-  }
+    type: 'boolean',
+  },
 })
 
 exports.paginationParams = [{
@@ -120,8 +120,8 @@ exports.paginationParams = [{
   required: false,
   schema: {
     type: 'integer',
-    default: 1
-  }
+    default: 1,
+  },
 }, {
   in: 'query',
   name: 'size',
@@ -129,6 +129,6 @@ exports.paginationParams = [{
   required: false,
   schema: {
     type: 'integer',
-    default: 10
-  }
+    default: 10,
+  },
 }]

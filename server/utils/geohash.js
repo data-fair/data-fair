@@ -10,18 +10,18 @@ geohash.precision2area = errorsPerPrecision.map(error => (error * 2) * (error * 
 geohash.bbox2area = function(bbox) {
   const width = geolib.getDistance({
     longitude: bbox[0], // left
-    latitude: bbox[1] // bottom
+    latitude: bbox[1], // bottom
   }, {
     longitude: bbox[2], // right
-    latitude: bbox[1] // bottom
+    latitude: bbox[1], // bottom
   }) / 1000
 
   const height = geolib.getDistance({
     longitude: bbox[0], // left
-    latitude: bbox[1] // bottom
+    latitude: bbox[1], // bottom
   }, {
     longitude: bbox[2], // left
-    latitude: bbox[1] // top
+    latitude: bbox[1], // top
   }) / 1000
 
   return width * height

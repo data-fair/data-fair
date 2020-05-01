@@ -74,7 +74,7 @@ exports.process = async function(app, dataset) {
     }, { startDate: limitValues[0], endDate: limitValues[0] })
     result.timePeriod = {
       startDate: new Date(timePeriod.startDate).toISOString(),
-      endDate: new Date(timePeriod.endDate).toISOString()
+      endDate: new Date(timePeriod.endDate).toISOString(),
     }
   }
 

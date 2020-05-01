@@ -63,8 +63,8 @@ describe('datasets', () => {
     res = await ax.get('/api/v1/datasets', {
       params: {
         owner: 'organization:KWqAGZ4mG',
-        facets: 'owner,field-type'
-      }
+        facets: 'owner,field-type',
+      },
     })
     assert.equal(res.data.count, 2)
     assert.equal(res.data.facets.owner.length, 2)

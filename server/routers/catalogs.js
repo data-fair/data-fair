@@ -58,14 +58,14 @@ router.get('', cacheHeaders.noCache, asyncWrap(async(req, res) => {
     url: 'url',
     organization: 'organization.id',
     ids: 'id',
-    id: 'id'
+    id: 'id',
   })
   const sort = findUtils.sort(req.query.sort)
   const project = findUtils.project(req.query.select)
   const [skip, size] = findUtils.pagination(req.query)
   const mongoQueries = [
     size > 0 ? catalogs.find(query).limit(size).skip(skip).sort(sort).project(project).toArray() : Promise.resolve([]),
-    catalogs.countDocuments(query)
+    catalogs.countDocuments(query),
   ]
   if (req.query.facets) {
     mongoQueries.push(catalogs.aggregate(findUtils.facetsQuery(req, {})).toArray())

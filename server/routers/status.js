@@ -48,13 +48,13 @@ async function getStatus(req) {
     singleStatus(req, esStatus, 'elasticsearch'),
     singleStatus(req, jwksStatus, 'auth-directory'),
     singleStatus(req, nuxtStatus, 'nuxt'),
-    singleStatus(req, dataDirStatus, 'data-dir')
+    singleStatus(req, dataDirStatus, 'data-dir'),
   ])
   const errors = results.filter(r => r.status === 'error')
   return {
     status: errors.length ? 'error' : 'ok',
     message: errors.length ? ('Problem with : ' + errors.map(s => s.name).join(', ')) : 'Service is ok',
-    details: results
+    details: results,
   }
 }
 

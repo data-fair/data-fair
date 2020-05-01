@@ -45,9 +45,9 @@ router.get('/:applicationId/manifest.json', setResource, permissions.middleware(
       return {
         sizes,
         type: 'image/png',
-        src: thumbor.thumbnail(cleanApplicationUrl + '/icon.png', sizes)
+        src: thumbor.thumbnail(cleanApplicationUrl + '/icon.png', sizes),
       }
-    })
+    }),
   })
 }))
 
@@ -59,7 +59,7 @@ router.get('/:applicationId/login', (req, res) => {
   const redirect = encodeURIComponent(`${config.publicUrl}/app/${req.params.applicationId}?id_token=`)
   res.send(loginHtml
     .replace('{AUTH_ROUTE}', `${config.directoryUrl}/api/auth/password?redirect=${redirect}`)
-    .replace('{LOGO}', config.brand.logo || `${config.publicUrl}/logo.svg`)
+    .replace('{LOGO}', config.brand.logo || `${config.publicUrl}/logo.svg`),
   )
 })
 
@@ -85,7 +85,7 @@ router.all('/:applicationId*', setResource, (req, res, next) => { req.app.get('a
   // check that the user can access the base appli
   const accessFilter = [
     { public: true },
-    { privateAccess: { $elemMatch: { type: req.application.owner.type, id: req.application.owner.id } } }
+    { privateAccess: { $elemMatch: { type: req.application.owner.type, id: req.application.owner.id } } },
   ]
   const baseAppPromise = db.collection('base-applications')
     .findOne({ url: applicationUrl, $or: accessFilter }, { projection: { id: 1 } })
@@ -135,12 +135,12 @@ router.all('/:applicationId*', setResource, (req, res, next) => { req.app.get('a
     'X-API-Url': config.publicUrl + '/api/v1',
     // This header is deprecated, use X-Application-Url instead and concatenate /config to it
     'X-Config-Url': config.publicUrl + '/api/v1/applications/' + req.params.applicationId + '/config',
-    'accept-encoding': 'identity'
+    'accept-encoding': 'identity',
   }
   const options = {
     url: cleanApplicationUrl + '/*',
     headers,
-    timeout: config.remoteTimeout
+    timeout: config.remoteTimeout,
   }
 
   const originalUrl = url.parse(req.originalUrl)
@@ -185,7 +185,7 @@ router.all('/:applicationId*', setResource, (req, res, next) => { req.app.get('a
       return false
     },
     // never actually called
-    transform: () => null
+    transform: () => null,
   }, {
     name: 'redirect-fixer',
     match: (resp) => {
@@ -203,7 +203,7 @@ router.all('/:applicationId*', setResource, (req, res, next) => { req.app.get('a
       return false
     },
     // never actually called
-    transform: () => null
+    transform: () => null,
   }, {
     // Transform HTML content from response to inject params.
     // Usefull for client-side only applications that cannot read the headers.
@@ -257,8 +257,8 @@ router.all('/:applicationId*', setResource, (req, res, next) => { req.app.get('a
               attrs: [
                 { name: 'rel', value: 'manifest' },
                 { name: 'crossorigin', value: 'use-credentials' },
-                { name: 'href', value: manifestUrl }
-              ]
+                { name: 'href', value: manifestUrl },
+              ],
             })
           }
 
@@ -269,8 +269,8 @@ router.all('/:applicationId*', setResource, (req, res, next) => { req.app.get('a
             attrs: [{ name: 'type', value: 'text/javascript' }],
             childNodes: [{
               nodeName: '#text',
-              value: serviceWorkers.register(req.application)
-            }]
+              value: serviceWorkers.register(req.application),
+            }],
           })
 
           head.childNodes.push({
@@ -278,8 +278,8 @@ router.all('/:applicationId*', setResource, (req, res, next) => { req.app.get('a
             tagName: 'meta',
             attrs: [
               { name: 'name', value: 'referrer' },
-              { name: 'content', value: 'same-origin' }
-            ]
+              { name: 'content', value: 'same-origin' },
+            ],
           })
 
           // add a brand logo somewhere over the applications
@@ -289,9 +289,9 @@ router.all('/:applicationId*', setResource, (req, res, next) => { req.app.get('a
           }
 
           callback(null, parse5.serialize(document))
-        }
+        },
       })
-    }
+    },
   }]
 
   requestProxy(options)(req, res, err => {

@@ -1,16 +1,16 @@
 // A module of the store for the currently worked on remoteService
 // Used in the remoteService vue and all its tabs and their components
-import eventBus from '../event-bus.js'
+import eventBus from '~/event-bus'
 
 export default () => ({
   namespaced: true,
   state: {
     remoteServiceId: null,
     remoteService: null,
-    api: null
+    api: null,
   },
   getters: {
-    resourceUrl: (state, getters, rootState) => state.remoteServiceId ? rootState.env.publicUrl + '/api/v1/remote-services/' + state.remoteServiceId : null
+    resourceUrl: (state, getters, rootState) => state.remoteServiceId ? rootState.env.publicUrl + '/api/v1/remote-services/' + state.remoteServiceId : null,
   },
   mutations: {
     setAny(state, params) {
@@ -18,7 +18,7 @@ export default () => ({
     },
     patch(state, patch) {
       Object.assign(state.remoteService, patch)
-    }
+    },
   },
   actions: {
     async fetchInfo({ commit, dispatch, getters, rootState }) {
@@ -71,6 +71,6 @@ export default () => ({
       } catch (error) {
         eventBus.$emit('notification', { error, msg: 'Erreur pendant la mise à jour de la définition de l\'API:' })
       }
-    }
-  }
+    },
+  },
 })

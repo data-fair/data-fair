@@ -4,10 +4,10 @@ module.exports = {
   required: ['id'],
   properties: {
     id: {
-      type: 'string'
+      type: 'string',
     },
     name: {
-      type: 'string'
-    }
-  }
+      type: 'string',
+    },
+  },
 }

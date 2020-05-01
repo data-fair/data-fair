@@ -4,7 +4,7 @@ module.exports = {
   wsPublicUrl: 'ws://localhost:4657',
   dataDir: './data/test',
   brand: {
-    embed: '<div>application embed</div>'
+    embed: '<div>application embed</div>',
   },
   defaultLimits: {
     totalStorage: 20000,
@@ -12,42 +12,42 @@ module.exports = {
     remoteServiceRate: {
       duration: 1,
       nb: 10,
-      kb: 50
-    }
+      kb: 50,
+    },
   },
   worker: {
     interval: 40,
     releaseInterval: 0,
     concurrency: 1,
-    spawnTask: false
+    spawnTask: false,
   },
   locks: {
     // in seconds
-    ttl: 0.1
+    ttl: 0.1,
   },
   defaultRemoteKey: {
     in: 'header',
     name: 'x-apiKey',
-    value: 'test_default_key'
+    value: 'test_default_key',
   },
   remoteTimeout: 500,
   secretKeys: {
     identities: 'identities-test-key',
-    limits: 'limits-test-key'
+    limits: 'limits-test-key',
   },
   nuxtBuild: {
-    active: false
+    active: false,
   },
   applications: [{
     title: 'App test1',
     url: 'http://monapp1.com',
-    public: true
+    public: true,
   }, {
     title: 'App test2',
-    url: 'http://monapp2.com'
+    url: 'http://monapp2.com',
   }],
   remoteServices: [{
     title: 'Geocoder',
-    url: 'http://test.com/geocoder/api-docs.json'
-  }]
+    url: 'http://test.com/geocoder/api-docs.json',
+  }],
 }

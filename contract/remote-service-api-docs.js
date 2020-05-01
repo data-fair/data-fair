@@ -9,24 +9,24 @@ module.exports = (remoteService) => {
   const api = {
     openapi: '3.0.0',
     info: Object.assign({}, remoteService.apiDoc.info, {
-      title: `API du service distant : ${remoteService.title || remoteService.id}`
+      title: `API du service distant : ${remoteService.title || remoteService.id}`,
     }),
     servers: [{
-      url: `${config.publicUrl}/api/v1/remote-services/${remoteService.id}`
+      url: `${config.publicUrl}/api/v1/remote-services/${remoteService.id}`,
     }],
     components: {
       securitySchemes: {
         sdCookie: {
           type: 'apiKey',
           in: 'cookie',
-          name: 'id_token'
+          name: 'id_token',
         },
         siCookie: {
           type: 'apiKey',
           in: 'cookie',
-          name: 'session_id'
-        }
-      }
+          name: 'session_id',
+        },
+      },
     },
     security: [{ siCookie: [] }, { sdCookie: [] }],
     paths: {
@@ -41,11 +41,11 @@ module.exports = (remoteService) => {
               description: 'Les informations de configuration du service distant.',
               content: {
                 'application/json': {
-                  schema: remoteServiceSchema
-                }
-              }
-            }
-          }
+                  schema: remoteServiceSchema,
+                },
+              },
+            },
+          },
         },
         patch: {
           summary: 'Mettre à jour les informations de configuration du service distant.',
@@ -57,20 +57,20 @@ module.exports = (remoteService) => {
             required: true,
             content: {
               'application/json': {
-                schema: remoteServicePatchSchema
-              }
-            }
+                schema: remoteServicePatchSchema,
+              },
+            },
           },
           responses: {
             200: {
               description: 'Les informations de configuration du service distant',
               content: {
                 'application/json': {
-                  schema: remoteServiceSchema
-                }
-              }
-            }
-          }
+                  schema: remoteServiceSchema,
+                },
+              },
+            },
+          },
         },
         delete: {
           summary: 'Pour supprimer cette configuration du service distant',
@@ -79,10 +79,10 @@ module.exports = (remoteService) => {
           tags: ['Configuration'],
           responses: {
             204: {
-              description: 'Aucun contenu'
-            }
-          }
-        }
+              description: 'Aucun contenu',
+            },
+          },
+        },
       },
       '/_update': {
         get: {
@@ -95,12 +95,12 @@ module.exports = (remoteService) => {
               description: 'Les informations de configuration du service distant',
               content: {
                 'application/json': {
-                  schema: remoteServiceSchema
-                }
-              }
-            }
-          }
-        }
+                  schema: remoteServiceSchema,
+                },
+              },
+            },
+          },
+        },
       },
       '/api-docs.json': {
         get: {
@@ -114,26 +114,26 @@ module.exports = (remoteService) => {
               content: {
                 'application/json': {
                   schema: {
-                    type: 'object'
-                  }
-                }
-              }
-            }
-          }
-        }
+                    type: 'object',
+                  },
+                },
+              },
+            },
+          },
+        },
       },
-      '/permissions': permissionsDoc
+      '/permissions': permissionsDoc,
     },
     externalDocs: {
       description: 'Documentation sur Github',
-      url: 'https://koumoul-dev.github.io/data-fair/'
+      url: 'https://koumoul-dev.github.io/data-fair/',
     },
     definitions: {
       API: {
         type: 'object',
-        description: 'Open API v3 compliant documentation'
-      }
-    }
+        description: 'Open API v3 compliant documentation',
+      },
+    },
   }
   const apiPaths = Object.keys(remoteService.apiDoc.paths).map(path => ({ ['/proxy' + path]: remoteService.apiDoc.paths[path] }))
   apiPaths.forEach(path => Object.values(path).forEach(operations => Object.values(operations).forEach(operation => { operation['x-permissionClass'] = 'use' })))

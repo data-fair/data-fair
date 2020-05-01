@@ -5,10 +5,10 @@
 </template>
 
 <script>
-import 'iframe-resizer/js/iframeResizer.contentWindow'
-import DatasetSchemaView from '../../../../components/DatasetSchemaView.vue'
+  import 'iframe-resizer/js/iframeResizer.contentWindow'
+  import DatasetSchemaView from '../../../../components/datasets/schema-view.vue'
 
-export default {
-  components: { DatasetSchemaView }
-}
+  export default {
+    components: { DatasetSchemaView },
+  }
 </script>

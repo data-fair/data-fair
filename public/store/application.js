@@ -1,7 +1,7 @@
 // A module of the store for the currently worked on application
 // Used in the application vue and all its tabs and their components
 import Vue from 'vue'
-import eventBus from '../event-bus.js'
+import eventBus from '~/event-bus'
 
 export default () => ({
   namespaced: true,
@@ -12,7 +12,7 @@ export default () => ({
     journal: [],
     config: null,
     configDraft: null,
-    nbSessions: null
+    nbSessions: null,
   },
   getters: {
     resourceUrl: (state, getters, rootState) => state.applicationId ? rootState.env.publicUrl + '/api/v1/applications/' + state.applicationId : null,
@@ -23,7 +23,7 @@ export default () => ({
     journalChannel: (state) => 'applications/' + state.applicationId + '/journal',
     applicationLink: (state, getters, rootState) => {
       if (state.application) return rootState.env.publicUrl + '/app/' + state.application.id
-    }
+    },
   },
   mutations: {
     setAny(state, params) {
@@ -36,7 +36,7 @@ export default () => ({
       if (!state.journal.find(e => e.date === event.date)) {
         state.journal.unshift(event)
       }
-    }
+    },
   },
   actions: {
     async fetchInfo({ commit, dispatch, getters, state }) {
@@ -131,6 +131,6 @@ export default () => ({
       } catch (error) {
         eventBus.$emit('notification', { error, msg: 'Erreur pendant le changement de propriétaire' })
       }
-    }
-  }
+    },
+  },
 })

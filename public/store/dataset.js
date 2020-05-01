@@ -1,7 +1,7 @@
 // A module of the store for the currently worked on dataset
 // Used in the dataset vue and all its tabs and their components
 import Vue from 'vue'
-import eventBus from '../event-bus.js'
+import eventBus from '~/event-bus'
 
 export default () => ({
   namespaced: true,
@@ -12,7 +12,7 @@ export default () => ({
     journal: [],
     remoteServices: [],
     nbApplications: null,
-    nbVirtualDatasets: null
+    nbVirtualDatasets: null,
   },
   getters: {
     resourceUrl: (state, getters, rootState) => state.datasetId ? rootState.env.publicUrl + '/api/v1/datasets/' + state.datasetId : null,
@@ -46,7 +46,7 @@ export default () => ({
         return userOrga && userOrga.role === 'admin'
       }
       return false
-    }
+    },
   },
   mutations: {
     setAny(state, params) {
@@ -59,7 +59,7 @@ export default () => ({
       if (!state.journal.find(e => e.date === event.date)) {
         state.journal.unshift(event)
       }
-    }
+    },
   },
   actions: {
     async fetchInfo({ commit, getters, state }) {
@@ -152,8 +152,8 @@ export default () => ({
         const data = await this.$axios.$get('api/v1/remote-services', {
           params: {
             'input-concepts': inputConcepts,
-            size: 100
-          }
+            size: 100,
+          },
         })
         remoteServices = data.results
       }
@@ -167,6 +167,6 @@ export default () => ({
       } catch (error) {
         eventBus.$emit('notification', { error, msg: 'Erreur pendant le changement de propriétaire' })
       }
-    }
-  }
+    },
+  },
 })

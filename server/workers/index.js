@@ -14,7 +14,7 @@ const tasks = exports.tasks = {
   extender: require('./extender'),
   finalizer: require('./finalizer'),
   datasetPublisher: require('./dataset-publisher'),
-  applicationPublisher: require('./application-publisher')
+  applicationPublisher: require('./application-publisher'),
 }
 
 // resolve functions that will be filled when we will be asked to stop the workers
@@ -67,9 +67,9 @@ const typesFilters = {
   dataset: {
     $or: [
       { status: { $nin: ['finalized', 'error', 'draft'] } },
-      { status: 'finalized', 'publications.status': { $in: ['waiting', 'deleted'] } }
-    ]
-  }
+      { status: 'finalized', 'publications.status': { $in: ['waiting', 'deleted'] } },
+    ],
+  },
 }
 
 async function iter(app, type) {

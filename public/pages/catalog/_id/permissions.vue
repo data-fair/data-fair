@@ -1,20 +1,24 @@
 <template lang="html">
   <v-container>
-    <permissions :resource="catalog" :resource-url="resourceUrl" :api="api" />
+    <permissions
+      :resource="catalog"
+      :resource-url="resourceUrl"
+      :api="api"
+    />
   </v-container>
 </template>
 
 <script>
-import { mapState, mapGetters } from 'vuex'
-import Permissions from '../../../components/Permissions.vue'
+  import { mapState, mapGetters } from 'vuex'
+  import Permissions from '../../../components/permissions.vue'
 
-export default {
-  components: { Permissions },
-  computed: {
-    ...mapState('catalog', ['catalog', 'api']),
-    ...mapGetters('catalog', ['resourceUrl'])
+  export default {
+    components: { Permissions },
+    computed: {
+      ...mapState('catalog', ['catalog', 'api']),
+      ...mapGetters('catalog', ['resourceUrl']),
+    },
   }
-}
 </script>
 
 <style lang="css">

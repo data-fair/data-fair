@@ -1,5 +1,5 @@
 import ReconnectingWebSocket from 'reconnecting-websocket'
-import eventBus from './event-bus.js'
+import eventBus from './event-bus'
 
 if (window.WebSocket) {
   const ws = new ReconnectingWebSocket(this.env.wsPublicUrl)

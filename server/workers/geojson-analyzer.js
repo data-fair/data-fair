@@ -22,7 +22,7 @@ class AnalyzerWritable extends Writable {
       type: 'string',
       key: 'geometry',
       'x-originalName': 'geometry',
-      'x-refersTo': 'https://purl.org/geojson/vocab#geometry'
+      'x-refersTo': 'https://purl.org/geojson/vocab#geometry',
     }]
   }
 
@@ -46,7 +46,7 @@ class AnalyzerWritable extends Writable {
       this.schema.push({
         key,
         'x-originalName': property,
-        ...fieldsSniffer.sniff(this.samples[property], this.options.attachments)
+        ...fieldsSniffer.sniff(this.samples[property], this.options.attachments),
       })
     }
     callback()
@@ -61,7 +61,7 @@ exports.process = async function(app, dataset) {
     fs.createReadStream(datasetUtils.fileName(dataset)),
     iconv.decodeStream(dataset.file.encoding),
     JSONStream.parse('features.*'),
-    analyzer
+    analyzer,
   )
 
   dataset.status = 'schematized'
@@ -69,7 +69,7 @@ exports.process = async function(app, dataset) {
   await db.collection('datasets').updateOne({ id: dataset.id }, {
     $set: {
       status: 'schematized',
-      schema: analyzer.schema
-    }
+      schema: analyzer.schema,
+    },
   })
 }

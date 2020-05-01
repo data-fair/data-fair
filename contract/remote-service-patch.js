@@ -9,7 +9,7 @@ module.exports = {
   type: 'object',
   additionalProperties: false,
   properties: {},
-  definitions: remoteService.definitions
+  definitions: remoteService.definitions,
 }
 
 patchKeys.forEach(k => {

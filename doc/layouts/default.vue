@@ -1,9 +1,19 @@
 <template>
   <v-app>
-    <v-toolbar app scroll-off-screen color="white">
+    <v-toolbar
+      app
+      scroll-off-screen
+      color="white"
+    >
       <div class="logo-container">
-        <nuxt-link :title="$t('pages.root.title')" :to="localePath('index')">
-          <img src="../../public/assets/logo.svg" style="max-width: 150px;">
+        <nuxt-link
+          :title="$t('pages.root.title')"
+          :to="localePath('index')"
+        >
+          <img
+            src="../../public/assets/logo.svg"
+            style="max-width: 150px;"
+          >
         </nuxt-link>
       </div>
       <v-toolbar-title>
@@ -15,9 +25,13 @@
       <v-spacer />
 
       <v-toolbar-items>
-        <v-btn v-for="page in pages" :key="page.prefix"
-               :to="localePath({name: page.prefix + '-id', params: {id: page.id}})"
-               :class="($route.name && $route.name.startsWith(page.prefix)) ? 'v-btn--active' : ''" flat color="primary"
+        <v-btn
+          v-for="page in pages"
+          :key="page.prefix"
+          :to="localePath({name: page.prefix + '-id', params: {id: page.id}})"
+          :class="($route.name && $route.name.startsWith(page.prefix)) ? 'v-btn--active' : ''"
+          flat
+          color="primary"
         >
           {{ $t(`pages.${page.prefix}.title`) }}
         </v-btn>
@@ -29,10 +43,22 @@
         direction="bottom"
         transition="fade-transition"
       >
-        <v-btn slot="activator" fab flat small>
+        <v-btn
+          slot="activator"
+          fab
+          flat
+          small
+        >
           {{ $i18n.locale }}
         </v-btn>
-        <v-btn v-for="locale in $i18n.locales.filter(l => l.code !== $i18n.locale)" :key="locale.code" :to="switchLocalePath(locale.code)" fab small nuxt>
+        <v-btn
+          v-for="locale in $i18n.locales.filter(l => l.code !== $i18n.locale)"
+          :key="locale.code"
+          :to="switchLocalePath(locale.code)"
+          fab
+          small
+          nuxt
+        >
           {{ locale.code }}
         </v-btn>
       </v-speed-dial>
@@ -51,17 +77,17 @@
 
 <script>
 
-export default {
-  data: () => ({
-    drawer: true,
-    pages: [
-      { prefix: 'about', id: 'overview' },
-      { prefix: 'install', id: 'install' },
-      { prefix: 'interoperate', id: 'applications' },
-      { prefix: 'user-guide', id: 'introduction' }
-    ]
-  })
-}
+  export default {
+    data: () => ({
+      drawer: true,
+      pages: [
+        { prefix: 'about', id: 'overview' },
+        { prefix: 'install', id: 'install' },
+        { prefix: 'interoperate', id: 'applications' },
+        { prefix: 'user-guide', id: 'introduction' },
+      ],
+    }),
+  }
 
 </script>
 

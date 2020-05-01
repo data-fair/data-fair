@@ -19,7 +19,7 @@ module.exports = async () => {
         req.url = (nuxtConfig.router.base + req.url).replace('//', '/')
         nuxt.render(req, res)
       },
-      instance: nuxt
+      instance: nuxt,
     }
   }
 }

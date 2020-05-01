@@ -1,75 +1,130 @@
 <template>
-  <v-layout v-if="remoteService" column class="remoteService">
-    <v-navigation-drawer app fixed stateless :permanent="mini || $vuetify.breakpoint.lgAndUp" :temporary="!mini && !$vuetify.breakpoint.lgAndUp" :mini-variant="mini" :value="true">
+  <v-row
+    v-if="remoteService"
+    column
+    class="remoteService"
+  >
+    <v-navigation-drawer
+      app
+      fixed
+      stateless
+      :permanent="mini || $vuetify.breakpoint.lgAndUp"
+      :temporary="!mini && !$vuetify.breakpoint.lgAndUp"
+      :mini-variant="mini"
+      :value="true"
+    >
       <v-list dense>
-        <v-list-tile v-if="mini" @click.stop="mini = false">
-          <v-list-tile-action>
-            <v-icon>chevron_right</v-icon>
-          </v-list-tile-action>
-        </v-list-tile>
-        <v-list-tile v-else avatar>
-          <v-list-tile-title>{{ remoteService.title || remoteService.id }}</v-list-tile-title>
-          <v-list-tile-action style="min-width: 0;">
-            <v-btn icon @click.stop="mini = true">
-              <v-icon>chevron_left</v-icon>
+        <v-list-item
+          v-if="mini"
+          @click.stop="mini = false"
+        >
+          <v-list-item-action>
+            <v-icon>mdi-chevron-right</v-icon>
+          </v-list-item-action>
+        </v-list-item>
+        <v-list-item
+          v-else
+          avatar
+        >
+          <v-list-item-title>{{ remoteService.title || remoteService.id }}</v-list-item-title>
+          <v-list-item-action style="min-width: 0;">
+            <v-btn
+              icon
+              @click.stop="mini = true"
+            >
+              <v-icon>mdi-chevron-left</v-icon>
             </v-btn>
-          </v-list-tile-action>
-        </v-list-tile>
+          </v-list-item-action>
+        </v-list-item>
 
-        <v-list-tile :nuxt="true" :to="`/remote-service/${remoteService.id}/description`">
-          <v-list-tile-action><v-icon>info</v-icon></v-list-tile-action>
-          <v-list-tile-title>Description</v-list-tile-title>
-        </v-list-tile>
-        <v-list-tile v-if="user.adminMode" color="admin" :nuxt="true" :to="`/remote-service/${remoteService.id}/config`">
-          <v-list-tile-action><v-icon>build</v-icon></v-list-tile-action>
-          <v-list-tile-title>Configuration</v-list-tile-title>
-        </v-list-tile>
-        <v-list-tile :nuxt="true" :to="`/remote-service/${remoteService.id}/api`">
-          <v-list-tile-action><v-icon>cloud</v-icon></v-list-tile-action>
-          <v-list-tile-title>API</v-list-tile-title>
-        </v-list-tile>
+        <v-list-item
+          :nuxt="true"
+          :to="`/remote-service/${remoteService.id}/description`"
+        >
+          <v-list-item-action><v-icon>mdi-information</v-icon></v-list-item-action>
+          <v-list-item-title>Description</v-list-item-title>
+        </v-list-item>
+        <v-list-item
+          v-if="user.adminMode"
+          color="admin"
+          :nuxt="true"
+          :to="`/remote-service/${remoteService.id}/config`"
+        >
+          <v-list-item-action><v-icon>build</v-icon></v-list-item-action>
+          <v-list-item-title>Configuration</v-list-item-title>
+        </v-list-item>
+        <v-list-item
+          :nuxt="true"
+          :to="`/remote-service/${remoteService.id}/api`"
+        >
+          <v-list-item-action><v-icon>mdi-cloud</v-icon></v-list-item-action>
+          <v-list-item-title>API</v-list-item-title>
+        </v-list-item>
       </v-list>
     </v-navigation-drawer>
 
-    <v-layout row>
+    <v-row>
       <nuxt-child />
-    </v-layout>
+    </v-row>
 
     <div class="actions-buttons">
-      <v-menu bottom left>
-        <v-btn slot="activator" fab small color="accent">
-          <v-icon>more_vert</v-icon>
+      <v-menu
+        bottom
+        left
+      >
+        <v-btn
+          slot="activator"
+          fab
+          small
+          color="accent"
+        >
+          <v-icon>mdi-dots-vertical</v-icon>
         </v-btn>
         <v-list>
-          <v-list-tile v-if="remoteService.apiDoc.externalDocs" :href="remoteService.apiDoc.externalDocs.url" target="_blank">
-            <v-list-tile-avatar>
+          <v-list-item
+            v-if="remoteService.apiDoc.externalDocs"
+            :href="remoteService.apiDoc.externalDocs.url"
+            target="_blank"
+          >
+            <v-list-item-avatar>
               <v-icon>description</v-icon>
-            </v-list-tile-avatar>
-            <v-list-tile-title>Documentation externe</v-list-tile-title>
-          </v-list-tile>
+            </v-list-item-avatar>
+            <v-list-item-title>Documentation externe</v-list-item-title>
+          </v-list-item>
 
-          <v-list-tile v-if="user.adminMode" color="admin" @click="refresh">
-            <v-list-tile-avatar>
+          <v-list-item
+            v-if="user.adminMode"
+            color="admin"
+            @click="refresh"
+          >
+            <v-list-item-avatar>
               <v-icon color="admin">
                 refresh
               </v-icon>
-            </v-list-tile-avatar>
-            <v-list-tile-title>Mettre a jour la description de l'API</v-list-tile-title>
-          </v-list-tile>
+            </v-list-item-avatar>
+            <v-list-item-title>Mettre a jour la description de l'API</v-list-item-title>
+          </v-list-item>
 
-          <v-list-tile v-if="user.adminMode" color="admin" @click="showDeleteDialog = true">
-            <v-list-tile-avatar>
+          <v-list-item
+            v-if="user.adminMode"
+            color="admin"
+            @click="showDeleteDialog = true"
+          >
+            <v-list-item-avatar>
               <v-icon color="admin">
                 delete
               </v-icon>
-            </v-list-tile-avatar>
-            <v-list-tile-title>Supprimer</v-list-tile-title>
-          </v-list-tile>
+            </v-list-item-avatar>
+            <v-list-item-title>Supprimer</v-list-item-title>
+          </v-list-item>
         </v-list>
       </v-menu>
     </div>
 
-    <v-dialog v-model="showDeleteDialog" max-width="500">
+    <v-dialog
+      v-model="showDeleteDialog"
+      max-width="500"
+    >
       <v-card>
         <v-card-title primary-title>
           Suppression de la configuration du service
@@ -79,47 +134,53 @@
         </v-card-text>
         <v-card-actions>
           <v-spacer />
-          <v-btn flat @click="showDeleteDialog = false">
+          <v-btn
+            flat
+            @click="showDeleteDialog = false"
+          >
             Non
           </v-btn>
-          <v-btn color="warning" @click="confirmRemove">
+          <v-btn
+            color="warning"
+            @click="confirmRemove"
+          >
             Oui
           </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
-  </v-layout>
+  </v-row>
 </template>
 
 <script>
-import { mapState, mapActions, mapGetters } from 'vuex'
+  import { mapState, mapActions, mapGetters } from 'vuex'
 
-export default {
-  data: () => ({
-    showDeleteDialog: false
-  }),
-  computed: {
-    ...mapState('session', ['user']),
-    ...mapState('remoteService', ['remoteService', 'api']),
-    ...mapGetters('remoteService', ['resourceUrl'])
-  },
-  mounted() {
-    this.setId(this.$route.params.id)
-    this.fetchVocabulary()
-  },
-  destroyed() {
-    this.clear()
-  },
-  methods: {
-    ...mapActions(['fetchVocabulary']),
-    ...mapActions('remoteService', ['setId', 'patch', 'remove', 'clear', 'refresh']),
-    async confirmRemove() {
-      this.showDeleteDialog = false
-      await this.remove()
-      this.$router.push({ path: '/remote-services' })
-    }
+  export default {
+    data: () => ({
+      showDeleteDialog: false,
+    }),
+    computed: {
+      ...mapState('session', ['user']),
+      ...mapState('remoteService', ['remoteService', 'api']),
+      ...mapGetters('remoteService', ['resourceUrl']),
+    },
+    mounted() {
+      this.setId(this.$route.params.id)
+      this.fetchVocabulary()
+    },
+    destroyed() {
+      this.clear()
+    },
+    methods: {
+      ...mapActions(['fetchVocabulary']),
+      ...mapActions('remoteService', ['setId', 'patch', 'remove', 'clear', 'refresh']),
+      async confirmRemove() {
+        this.showDeleteDialog = false
+        await this.remove()
+        this.$router.push({ path: '/remote-services' })
+      },
+    },
   }
-}
 </script>
 
 <style>

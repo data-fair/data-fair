@@ -1,5 +1,5 @@
 import ReconnectingWebSocket from 'reconnecting-websocket'
-import eventBus from '../event-bus.js'
+import eventBus from '~/event-bus'
 
 export default ({ store }) => {
   if (window.WebSocket) {

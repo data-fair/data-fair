@@ -1,13 +1,16 @@
 <template lang="html">
-  <search-files :init-rows-per-page="4" :hide-rows-per-page="true" />
+  <search-files
+    :init-rows-per-page="4"
+    :hide-rows-per-page="true"
+  />
 </template>
 
 <script>
-import 'iframe-resizer/js/iframeResizer.contentWindow'
-import SearchFiles from '../../../../components/SearchFiles.vue'
-export default {
-  components: { SearchFiles }
-}
+  import 'iframe-resizer/js/iframeResizer.contentWindow'
+  import SearchFiles from '../../../../components/datasets/search-files.vue'
+  export default {
+    components: { SearchFiles },
+  }
 </script>
 
 <style lang="css">

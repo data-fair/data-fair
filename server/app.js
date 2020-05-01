@@ -12,7 +12,7 @@ const session = require('@koumoul/sd-express')({
   directoryUrl: config.directoryUrl,
   privateDirectoryUrl: config.privateDirectoryUrl || config.directoryUrl,
   publicUrl: config.publicUrl,
-  cookieDomain: config.sessionDomain
+  cookieDomain: config.sessionDomain,
 })
 
 const app = express()
@@ -98,7 +98,7 @@ exports.run = async () => {
 
   await Promise.all([
     dbUtils.init(db),
-    esUtils.init().then(es => app.set('es', es))
+    esUtils.init().then(es => app.set('es', es)),
   ])
   app.set('db', db)
   app.set('mongoClient', client)
@@ -119,7 +119,7 @@ exports.run = async () => {
       require('./routers/remote-services').init(db),
       require('./routers/base-applications').init(db),
       limits.init(db),
-      wsUtils.initServer(wss, db, session)
+      wsUtils.initServer(wss, db, session),
     ])
     // At this stage the server is ready to respond to API requests
     app.set('api-ready', true)
@@ -166,7 +166,7 @@ exports.stop = async() => {
     server.close()
     await Promise.all([
       promisify((cb) => wss.close(cb))(),
-      wsUtils.stop()
+      wsUtils.stop(),
     ])
   }
 
@@ -177,6 +177,6 @@ exports.stop = async() => {
 
   await Promise.all([
     app.get('mongoClient').close(),
-    app.get('es').close()
+    app.get('es').close(),
   ])
 }

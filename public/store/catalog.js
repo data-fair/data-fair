@@ -1,6 +1,6 @@
 // A module of the store for the currently worked on catalog
 // Used in the catalog vue and all its tabs and their components
-import eventBus from '../event-bus.js'
+import eventBus from '~/event-bus'
 
 export default () => ({
   namespaced: true,
@@ -9,14 +9,14 @@ export default () => ({
     catalog: null,
     api: null,
     // TODO: fetch nbPublications so we can display a warning when deleting
-    nbPublications: null
+    nbPublications: null,
   },
   getters: {
     resourceUrl: (state, getters, rootState) => state.catalogId ? rootState.env.publicUrl + '/api/v1/catalogs/' + state.catalogId : null,
     can: (state, getters, rootState) => (operation) => {
       if (rootState.session && rootState.session.user && rootState.session.user.adminMode) return true
       return (state.catalog && state.catalog.userPermissions.includes(operation)) || false
-    }
+    },
   },
   mutations: {
     setAny(state, params) {
@@ -24,7 +24,7 @@ export default () => ({
     },
     patch(state, patch) {
       Object.assign(state.catalog, patch)
-    }
+    },
   },
   actions: {
     async fetchInfo({ commit, dispatch, getters, state }) {
@@ -78,6 +78,6 @@ export default () => ({
       } catch (error) {
         eventBus.$emit('notification', { error, msg: 'Erreur pendant le changement de propriétaire' })
       }
-    }
-  }
+    },
+  },
 })

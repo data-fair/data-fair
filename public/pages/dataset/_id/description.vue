@@ -7,17 +7,17 @@
 </template>
 
 <script>
-import DatasetInfo from '../../../components/DatasetInfo.vue'
-import DatasetSchemaEdit from '../../../components/DatasetSchemaEdit.vue'
-import DatasetSchemaView from '../../../components/DatasetSchemaView.vue'
-import { mapGetters } from 'vuex'
+  import DatasetInfo from '../../../components/datasets/info.vue'
+  import DatasetSchemaEdit from '../../../components/datasets/schema-edit.vue'
+  import DatasetSchemaView from '../../../components/datasets/schema-view.vue'
+  import { mapGetters } from 'vuex'
 
-export default {
-  components: { DatasetInfo, DatasetSchemaView, DatasetSchemaEdit },
-  computed: {
-    ...mapGetters('dataset', ['can'])
+  export default {
+    components: { DatasetInfo, DatasetSchemaView, DatasetSchemaEdit },
+    computed: {
+      ...mapGetters('dataset', ['can']),
+    },
   }
-}
 </script>
 
 <style lang="css">

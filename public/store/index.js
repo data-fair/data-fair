@@ -15,7 +15,7 @@ export default () => {
       remoteService: remoteService(),
       application: application(),
       catalog: catalog(),
-      session: sessionStoreBuilder()
+      session: sessionStoreBuilder(),
     },
     state: {
       vocabulary: null,
@@ -23,7 +23,7 @@ export default () => {
       licenses: {},
       env: {},
       searchQueries: {},
-      projections: null
+      projections: null,
     },
     getters: {
       ownerLicenses: (state) => (owner) => {
@@ -33,7 +33,7 @@ export default () => {
         const searchQuery = Object.assign({}, state.searchQueries[type])
         if (searchQuery.owner === undefined && state.user) searchQuery.owner = `user:${state.user.id}`
         return searchQuery
-      }
+      },
     },
     mutations: {
       setAny(state, params) {
@@ -44,7 +44,7 @@ export default () => {
       },
       setSearchQuery(state, { type, query }) {
         Vue.set(state.searchQueries, type, query)
-      }
+      },
     },
     actions: {
       async fetchVocabulary({ state, commit }) {
@@ -71,7 +71,7 @@ export default () => {
       },
       searchQuery({ commit }, params) {
         commit('setSearchQuery', params)
-      }
-    }
+      },
+    },
   })
 }

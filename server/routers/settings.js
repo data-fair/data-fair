@@ -66,7 +66,7 @@ router.put('/:type/:id', isOwner, asyncWrap(async(req, res) => {
 
   await settings.replaceOne({
     type: req.params.type,
-    id: req.params.id
+    id: req.params.id,
   }, req.body, { upsert: true })
   delete req.body.type
   delete req.body.id
@@ -78,7 +78,7 @@ router.get('/:type/:id/licenses', cacheHeaders.noCache, asyncWrap(async(req, res
   const settings = req.app.get('db').collection('settings')
   const result = await settings.findOne({
     type: req.params.type,
-    id: req.params.id
+    id: req.params.id,
   })
   res.status(200).send([].concat(config.licenses, (result && result.licenses) || []))
 }))

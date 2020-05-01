@@ -21,7 +21,7 @@ describe('Cache headers', () => {
 
     // make the dataset public
     await ax.put('/api/v1/datasets/dataset1/permissions', [
-      { classes: ['read'] }
+      { classes: ['read'] },
     ])
 
     res = await ax.get('/api/v1/datasets/dataset1/lines')

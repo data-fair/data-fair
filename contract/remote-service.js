@@ -12,28 +12,28 @@ module.exports = {
   properties: {
     id: {
       type: 'string',
-      description: 'Identifier of the configuration for an remote service'
+      description: 'Identifier of the configuration for an remote service',
     },
     href: {
       type: 'string',
-      description: 'Readonly field. The URL where this resource can be fetched'
+      description: 'Readonly field. The URL where this resource can be fetched',
     },
     page: {
       type: 'string',
-      description: 'Readonly field. The URL where this resource can be viewed in the UI'
+      description: 'Readonly field. The URL where this resource can be viewed in the UI',
     },
     title: {
       type: 'string',
-      description: 'Short title of the configuration for an remote service'
+      description: 'Short title of the configuration for an remote service',
     },
     description: {
       type: 'string',
-      description: 'Detailed description of the configuration for an remote service'
+      description: 'Detailed description of the configuration for an remote service',
     },
     apiDoc: { $ref: '#/definitions/API' },
     url: {
       type: 'string',
-      description: 'The url to fetch the apiDoc. Can be used for refresh purpose'
+      description: 'The url to fetch the apiDoc. Can be used for refresh purpose',
     },
     apiKey: {
       type: 'object',
@@ -43,24 +43,24 @@ module.exports = {
         in: {
           type: 'string',
           enum: ['query', 'header', 'cookie'],
-          description: 'Where the api key is located'
+          description: 'Where the api key is located',
         },
         name: {
           type: 'string',
-          description: 'Identifier of the owner of this configuration for an remote service'
+          description: 'Identifier of the owner of this configuration for an remote service',
         },
         value: {
           type: 'string',
-          description: 'The value of the required api key'
-        }
-      }
+          description: 'The value of the required api key',
+        },
+      },
     },
     server: {
       type: 'string',
-      description: 'URL of the selected server in the apiDoc servers property'
+      description: 'URL of the selected server in the apiDoc servers property',
     },
     actions: {
-      type: 'array'
+      type: 'array',
     },
     parameters: {
       type: 'array',
@@ -74,10 +74,10 @@ module.exports = {
           operationId: { type: 'string' },
           value: { type: 'string' },
           'x-refersTo': { type: 'string' },
-          title: { type: 'string' }
-        }
-      }
-    }
+          title: { type: 'string' },
+        },
+      },
+    },
   },
-  definitions: apiDoc.definitions
+  definitions: apiDoc.definitions,
 }

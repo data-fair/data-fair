@@ -45,7 +45,7 @@ const metadataStorage = multer.diskStorage({
   },
   filename: function (req, file, cb) {
     cb(null, file.originalname)
-  }
+  },
 })
 
 const metadataUpload = multer({
@@ -78,7 +78,7 @@ const metadataUpload = multer({
       debug('File rejected', err)
       cb(err)
     }
-  }
+  },
 })
 
 exports.metadataUpload = () => metadataUpload.single('attachment')

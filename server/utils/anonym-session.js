@@ -11,7 +11,7 @@ exports.init = async (client, db) => {
     client,
     stringify: false,
     collection: 'sessions',
-    ttl: 60 * 60 // = 1h
+    ttl: 60 * 60, // = 1h
   })
 
   try {
@@ -29,7 +29,7 @@ exports.init = async (client, db) => {
     cookie: {
       // if we set this option cookies are not sent by older versions of firefox from inside iframes in an outside domain
       // sameSite: 'lax',
-      secure: config.publicUrl.startsWith('https')
-    }
+      secure: config.publicUrl.startsWith('https'),
+    },
   })
 }

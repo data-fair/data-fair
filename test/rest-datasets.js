@@ -28,7 +28,7 @@ describe('REST datasets', () => {
     let res = await ax.post('/api/v1/datasets', {
       isRest: true,
       title: 'rest1',
-      schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }]
+      schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }],
     })
     res = await ax.post('/api/v1/datasets/rest1/lines', { attr1: 'test1', attr2: 'test1' })
     assert.equal(res.status, 201)
@@ -62,7 +62,7 @@ describe('REST datasets', () => {
     await ax.put('/api/v1/datasets/rest2', {
       isRest: true,
       title: 'rest2',
-      schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }]
+      schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }],
     })
     await workers.hook('indexer/rest2')
     let res = await ax.post('/api/v1/datasets/rest2/_bulk_lines', [
@@ -72,7 +72,7 @@ describe('REST datasets', () => {
       { _id: 'line4', attr1: 'test1', attr2: 'test1' },
       { _action: 'delete', _id: 'line2' },
       { _action: 'patch', _id: 'line3', attr1: 'test2' },
-      { _action: 'update', _id: 'line4', attr1: 'test2', attr2: 'test2' }
+      { _action: 'update', _id: 'line4', attr1: 'test2', attr2: 'test2' },
     ])
     assert.equal(res.data.nbOk, 7)
 
@@ -96,14 +96,14 @@ describe('REST datasets', () => {
     await ax.put('/api/v1/datasets/rest3', {
       isRest: true,
       title: 'rest3',
-      schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }]
+      schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }],
     })
     let dataset = await workers.hook('indexer/rest3')
     let res = await ax.post('/api/v1/datasets/rest3/_bulk_lines', [
       { _id: 'line1', attr1: 'test1', attr2: 'test1' },
       { _id: 'line2', attr1: 'test1', attr2: 'test1' },
       { _id: 'line3', attr1: 'test1', attr2: 'test1' },
-      { _id: 'line4', attr1: 'test1', attr2: 'test1' }
+      { _id: 'line4', attr1: 'test1', attr2: 'test1' },
     ])
     await workers.hook('indexer/rest3')
     dataset = await workers.hook('finalizer/rest3')
@@ -120,7 +120,7 @@ describe('REST datasets', () => {
 
     res = await ax.post('/api/v1/datasets/rest3/_bulk_lines', [
       { _action: 'delete', _id: 'line1' },
-      { _action: 'patch', _id: 'line2', attr1: 'test2' }
+      { _action: 'patch', _id: 'line2', attr1: 'test2' },
     ])
     assert.equal(await collection.countDocuments({ _needsIndexing: true }), 2)
 
@@ -138,7 +138,7 @@ describe('REST datasets', () => {
     await ax.put('/api/v1/datasets/rest4', {
       isRest: true,
       title: 'rest4',
-      schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }]
+      schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }],
     })
     await workers.hook('indexer/rest4')
     try {
@@ -171,7 +171,7 @@ describe('REST datasets', () => {
 
     const res = await ax.post('/api/v1/datasets/rest4/_bulk_lines', [
       { _id: 'line1', attr1: 'test' },
-      { _id: 'line1', attr1: 111 }
+      { _id: 'line1', attr1: 111 },
     ])
 
     assert.equal(res.data.nbOk, 1)
@@ -188,8 +188,8 @@ describe('REST datasets', () => {
       title: 'rest5',
       schema: [
         { key: 'attr1', type: 'integer' },
-        { key: 'attachmentPath', type: 'string', 'x-refersTo': 'http://schema.org/DigitalDocument' }
-      ]
+        { key: 'attachmentPath', type: 'string', 'x-refersTo': 'http://schema.org/DigitalDocument' },
+      ],
     })
     const dataset = res.data
     await workers.hook('finalizer/rest5')
@@ -220,8 +220,8 @@ describe('REST datasets', () => {
       title: 'rest6',
       schema: [
         { key: 'attr1', type: 'string' },
-        { key: 'attachmentPath', type: 'string', 'x-refersTo': 'http://schema.org/DigitalDocument' }
-      ]
+        { key: 'attachmentPath', type: 'string', 'x-refersTo': 'http://schema.org/DigitalDocument' },
+      ],
     })
     const dataset = res.data
     await workers.hook('finalizer/rest6')
@@ -232,7 +232,7 @@ describe('REST datasets', () => {
     form.append('attachments', attachmentsContent, 'files.zip')
     form.append('actions', Buffer.from(JSON.stringify([
       { _id: 'line1', attr1: 'test1', attachmentPath: 'test.odt' },
-      { _id: 'line2', attr1: 'test1', attachmentPath: 'dir1/test.pdf' }
+      { _id: 'line2', attr1: 'test1', attachmentPath: 'dir1/test.pdf' },
     ]), 'utf8'), 'actions.json')
     res = await ax.post('/api/v1/datasets/rest6/_bulk_lines', form, { headers: testUtils.formHeaders(form) })
     assert.equal(res.status, 200)
@@ -252,13 +252,13 @@ describe('REST datasets', () => {
     await ax.post('/api/v1/datasets', {
       isRest: true,
       title: 'rest7',
-      schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }]
+      schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }],
     })
     await ax.post('/api/v1/datasets/rest7/_bulk_lines', [
       { _id: 'line1', attr1: 'test1', attr2: 'test1' },
       { _id: 'line2', attr1: 'test1', attr2: 'test1' },
       { _id: 'line3', attr1: 'test1', attr2: 'test1' },
-      { _id: 'line4', attr1: 'test1', attr2: 'test1' }
+      { _id: 'line4', attr1: 'test1', attr2: 'test1' },
     ])
     await workers.hook('finalizer/rest7')
 
@@ -276,7 +276,7 @@ describe('REST datasets', () => {
       isRest: true,
       title: 'resthist',
       rest: { history: true },
-      schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }]
+      schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }],
     })
     res = await ax.post('/api/v1/datasets/resthist/lines', { _id: 'id1', attr1: 'test1', attr2: 'test1' })
     assert.equal(res.data._id, 'id1')

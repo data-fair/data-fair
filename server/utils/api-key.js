@@ -18,7 +18,7 @@ module.exports = (scope) => {
       id: settings.id,
       name: settings.apiKeys[0].title,
       adminMode: !!settings.apiKeys[0].adminMode,
-      isApiKey: true
+      isApiKey: true,
     }
     if (settings.type === 'user') {
       req.user.organizations = []

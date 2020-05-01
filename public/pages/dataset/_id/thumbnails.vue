@@ -5,10 +5,10 @@
 </template>
 
 <script>
-import Thumbnails from '../../../components/Thumbnails.vue'
-export default {
-  components: { Thumbnails }
-}
+  import Thumbnails from '../../../components/datasets/thumbnails.vue'
+  export default {
+    components: { Thumbnails },
+  }
 </script>
 
 <style lang="css">

@@ -1,15 +1,36 @@
 <template lang="html">
   <v-container>
     <p>Charger un fichier pour créer/modifier une pièce jointe. Le nom de fichier est la clé.</p>
-    <input type="file" @change="onFileUpload">
-    <v-btn :disabled="!file || uploading" color="primary" @click="confirmUpload()">
+    <input
+      type="file"
+      @change="onFileUpload"
+    >
+    <v-btn
+      :disabled="!file || uploading"
+      color="primary"
+      @click="confirmUpload()"
+    >
       Charger
     </v-btn>
-    <v-progress-linear v-if="uploading" v-model="uploadProgress" />
+    <v-progress-linear
+      v-if="uploading"
+      v-model="uploadProgress"
+    />
 
-    <v-container fluid grid-list-lg pa-0 mt-2>
-      <v-layout row wrap>
-        <v-flex v-for="(attachment, i) in dataset.attachments" :key="i" xs12 sm12 md6 lg4>
+    <v-container
+      class="pa-0 mt-2"
+      fluid
+      grid-list-lg
+    >
+      <v-row>
+        <v-col
+          v-for="(attachment, i) in dataset.attachments"
+          :key="i"
+          cols="12"
+          sm="12"
+          md="6"
+          lg="4"
+        >
           <v-card>
             <v-card-title primary-title>
               <a :href="resourceUrl + '/metadata-attachments/' + attachment.name">{{ attachment.name }} ({{ (attachment.size / 1000).toFixed(2) }} ko)</a>
@@ -19,77 +40,82 @@
             </v-card-text>
             <v-card-actions>
               <v-spacer />
-              <v-btn flat icon color="warning" @click="deleteAttachment(attachment)">
+              <v-btn
+                flat
+                icon
+                color="warning"
+                @click="deleteAttachment(attachment)"
+              >
                 <v-icon>delete</v-icon>
               </v-btn>
             </v-card-actions>
           </v-card>
-        </v-flex>
-      </v-layout>
+        </v-col>
+      </v-row>
     </v-container>
   </v-container>
 </template>
 
 <script>
-import { mapGetters, mapState, mapActions } from 'vuex'
-import eventBus from '../../../event-bus'
+  import { mapGetters, mapState, mapActions } from 'vuex'
+  import eventBus from '~/event-bus'
 
-export default {
-  data: () => ({
-    file: null,
-    uploading: false,
-    uploadProgress: 0
-  }),
-  computed: {
-    ...mapGetters('dataset', ['resourceUrl']),
-    ...mapState('dataset', ['dataset'])
-  },
-  methods: {
-    ...mapActions('dataset', ['patchAndCommit']),
-    onFileUpload(e) {
-      this.file = e.target.files[0]
+  export default {
+    data: () => ({
+      file: null,
+      uploading: false,
+      uploadProgress: 0,
+    }),
+    computed: {
+      ...mapGetters('dataset', ['resourceUrl']),
+      ...mapState('dataset', ['dataset']),
     },
-    async confirmUpload() {
-      const options = {
-        onUploadProgress: (e) => {
-          if (e.lengthComputable) {
-            this.uploadProgress = (e.loaded / e.total) * 100
+    methods: {
+      ...mapActions('dataset', ['patchAndCommit']),
+      onFileUpload(e) {
+        this.file = e.target.files[0]
+      },
+      async confirmUpload() {
+        const options = {
+          onUploadProgress: (e) => {
+            if (e.lengthComputable) {
+              this.uploadProgress = (e.loaded / e.total) * 100
+            }
+          },
+        }
+        const formData = new FormData()
+        formData.append('attachment', this.file)
+
+        this.uploading = true
+        try {
+          const newAttachment = await this.$axios.$post('api/v1/datasets/' + this.dataset.id + '/metadata-attachments', formData, options)
+          const attachments = this.dataset.attachments || []
+          const existingAttachment = attachments.find(a => a.name === newAttachment.name)
+          if (existingAttachment) {
+            Object.assign(existingAttachment, newAttachment)
+          } else {
+            attachments.push(newAttachment)
+          }
+          await this.patchAndCommit({ attachments })
+        } catch (error) {
+          const status = error.response && error.response.status
+          if (status === 413) {
+            eventBus.$emit('notification', { type: 'error', msg: 'Le fichier est trop volumineux pour être importé' })
+          } else if (status === 429) {
+            eventBus.$emit('notification', { type: 'error', msg: 'Le propriétaire n\'a pas assez d\'espace disponible pour ce fichier' })
+          } else {
+            eventBus.$emit('notification', { error, msg: 'Erreur pendant l\'import du fichier:' })
           }
         }
-      }
-      const formData = new FormData()
-      formData.append('attachment', this.file)
-
-      this.uploading = true
-      try {
-        const newAttachment = await this.$axios.$post('api/v1/datasets/' + this.dataset.id + '/metadata-attachments', formData, options)
-        const attachments = this.dataset.attachments || []
-        const existingAttachment = attachments.find(a => a.name === newAttachment.name)
-        if (existingAttachment) {
-          Object.assign(existingAttachment, newAttachment)
-        } else {
-          attachments.push(newAttachment)
-        }
+        this.uploading = false
+      },
+      async deleteAttachment(attachment) {
+        await this.$axios.$delete('api/v1/datasets/' + this.dataset.id + '/metadata-attachments/' + attachment.name)
+        const attachments = (this.dataset.attachments || []).filter(a => a.name !== attachment.name)
         await this.patchAndCommit({ attachments })
-      } catch (error) {
-        const status = error.response && error.response.status
-        if (status === 413) {
-          eventBus.$emit('notification', { type: 'error', msg: 'Le fichier est trop volumineux pour être importé' })
-        } else if (status === 429) {
-          eventBus.$emit('notification', { type: 'error', msg: 'Le propriétaire n\'a pas assez d\'espace disponible pour ce fichier' })
-        } else {
-          eventBus.$emit('notification', { error, msg: 'Erreur pendant l\'import du fichier:' })
-        }
-      }
-      this.uploading = false
+      },
     },
-    async deleteAttachment(attachment) {
-      await this.$axios.$delete('api/v1/datasets/' + this.dataset.id + '/metadata-attachments/' + attachment.name)
-      const attachments = (this.dataset.attachments || []).filter(a => a.name !== attachment.name)
-      await this.patchAndCommit({ attachments })
-    }
   }
-}
 </script>
 
 <style lang="css">

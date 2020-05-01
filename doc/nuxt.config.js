@@ -18,38 +18,50 @@ module.exports = {
   build: { extractCSS: true },
   generate: {
     dir: 'doc-dist',
-    routes
+    routes,
   },
   loading: { color: '#1e88e5' }, // Customize the progress bar color
-  plugins: [{ src: '~plugins/vuetify' }],
   router: { base: '/data-fair/' },
   env: {
     theme: config.theme,
-    publicUrl: config.publicUrl
+    publicUrl: config.publicUrl,
   },
   modules: ['@digibytes/markdownit', ['nuxt-i18n', {
     seo: false,
     locales: [
       { code: 'fr' },
-      { code: 'en' }
+      { code: 'en' },
     ],
     defaultLocale: 'fr',
     vueI18n: {
       fallbackLocale: 'fr',
-      messages
-    }
+      messages,
+    },
   }]],
+  buildModules: ['@nuxtjs/vuetify'],
+  vuetify: {
+    theme: {
+      themes: {
+        light: config.theme.colors,
+      },
+    },
+    defaultAssets: {
+      font: {
+        family: 'Nunito',
+      },
+    },
+  },
   head: {
     title: 'DataFair',
     meta: [
       { charset: 'utf-8' },
       { name: 'viewport', content: 'width=device-width, initial-scale=1' },
       { hid: 'application', name: 'application-name', content: 'DataFair' },
-      { hid: 'description', name: 'description', content: 'DataFair - Documentation' }
+      { hid: 'description', name: 'description', content: 'DataFair - Documentation' },
     ],
     link: [
       { rel: 'stylesheet', href: 'https://fonts.googleapis.com/css?family=Nunito:300,400,500,700,400italic|Material+Icons' },
-      { rel: 'icon', type: 'image/x-icon', href: 'favicon.ico' }
-    ]
-  }
+      { rel: 'icon', type: 'image/x-icon', href: 'favicon.ico' },
+    ],
+  },
 }

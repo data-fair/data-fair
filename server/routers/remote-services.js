@@ -50,7 +50,7 @@ exports.init = async(db) => {
     url: s.url,
     apiDoc: apisDict[s.url],
     server: apisDict[s.url].servers && apisDict[s.url].servers.length && apisDict[s.url].servers[0].url,
-    actions: computeActions(apisDict[s.url])
+    actions: computeActions(apisDict[s.url]),
   }, true)).filter(s => !existingServices.find(es => es.id === s.id))
   if (servicesToInsert.length) await remoteServices.insertMany(servicesToInsert)
 }
@@ -87,7 +87,7 @@ router.get('', cacheHeaders.noCache, asyncWrap(async(req, res) => {
     'output-concepts': 'actions.output.concept',
     'api-id': 'apiDoc.info.x-api-id',
     ids: 'id',
-    id: 'id'
+    id: 'id',
   }, true)
   delete req.query.owner
   query.owner = { $exists: false } // restrict to the newly centralized remote services
@@ -96,7 +96,7 @@ router.get('', cacheHeaders.noCache, asyncWrap(async(req, res) => {
   const [skip, size] = findUtils.pagination(req.query)
   const mongoQueries = [
     size > 0 ? remoteServices.find(query).limit(size).skip(skip).sort(sort).project(project).toArray() : Promise.resolve([]),
-    remoteServices.countDocuments(query)
+    remoteServices.countDocuments(query),
   ]
   if (req.query.facets) {
     mongoQueries.push(remoteServices.aggregate(findUtils.facetsQuery(req, {})).toArray())
@@ -217,7 +217,7 @@ router.delete('/:remoteServiceId', readService, asyncWrap(async(req, res) => {
   if (!req.user) return res.status(401).send()
   if (!req.user.adminMode) return res.status(403).send()
   await req.app.get('db').collection('remote-services').deleteOne({
-    id: req.params.remoteServiceId
+    id: req.params.remoteServiceId,
   })
   res.sendStatus(204)
 }))
@@ -237,7 +237,7 @@ router.post('/:remoteServiceId/_update', readService, asyncWrap(async(req, res) 
   req.remoteService.apiDoc = reponse.data
   req.remoteService.actions = computeActions(req.remoteService.apiDoc)
   await req.app.get('db').collection('remote-services').replaceOne({
-    id: req.params.remoteServiceId
+    id: req.params.remoteServiceId,
   }, mongoEscape.escape(req.remoteService, true))
   res.status(200).json(clean(req.remoteService))
 }))
@@ -280,13 +280,13 @@ router.use('/:remoteServiceId/proxy*', (req, res, next) => { req.app.get('anonym
     storeClient: req.app.get('mongoClient'),
     keyPrefix: 'data-fair-rate-limiter-nb',
     points: config.defaultLimits.remoteServiceRate.nb,
-    duration: config.defaultLimits.remoteServiceRate.duration
+    duration: config.defaultLimits.remoteServiceRate.duration,
   })
   kbLimiter = kbLimiter || new RateLimiterMongo({
     storeClient: req.app.get('mongoClient'),
     keyPrefix: 'data-fair-rate-limiter-kb',
     points: config.defaultLimits.remoteServiceRate.kb * 1000,
-    duration: config.defaultLimits.remoteServiceRate.duration
+    duration: config.defaultLimits.remoteServiceRate.duration,
   })
   try {
     await Promise.all([nbLimiter.consume(limiterId, 1), kbLimiter.consume(limiterId, 1)])
@@ -334,9 +334,9 @@ router.use('/:remoteServiceId/proxy*', (req, res, next) => { req.app.get('anonym
         flush(cb) {
           cb()
           kbLimiter.consume(limiterId, this.consumed).catch(() => {})
-        }
-      })
-    }]
+        },
+      }),
+    }],
   }
   // TODO handle query & cookie header types
   if (remoteService.apiKey && remoteService.apiKey.in === 'header' && remoteService.apiKey.value) {

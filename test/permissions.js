@@ -7,13 +7,13 @@ describe('permissions', () => {
     const datasetId = res.data.id
     await global.ax.dmeadus.put('/api/v1/datasets/' + datasetId + '/permissions', [
       { type: 'user', id: 'ngernier4', operations: ['readDescription', 'list'] },
-      { type: 'user', id: 'ddecruce5', classes: ['read'] }
+      { type: 'user', id: 'ddecruce5', classes: ['read'] },
     ])
 
     // Another one that can be read by all
     res = await global.ax.dmeadus.post('/api/v1/datasets', { isRest: true, title: 'Another dataset' })
     await global.ax.dmeadus.put('/api/v1/datasets/' + res.data.id + '/permissions', [
-      { operations: ['readDescription', 'list'] }
+      { operations: ['readDescription', 'list'] },
     ])
 
     // No permissions

@@ -1,63 +1,90 @@
 <template>
-  <v-container fluid pt-0>
-    <v-layout v-if="user" column>
-      <v-subheader class="px-0">
-        {{ $t('pages.datasets.description') }}
-      </v-subheader>
-      <datasets-list />
+  <v-container class="pt-0" fluid>
+    <v-row v-if="user">
+      <v-col>
+        <v-subheader class="px-0">
+          {{ $t('pages.datasets.description') }}
+        </v-subheader>
+        <datasets-list />
 
-      <div class="actions-buttons">
-        <v-menu v-if="user" bottom left>
-          <v-btn slot="activator" fab color="primary" title="Créer un jeu de données">
-            <v-icon>add</v-icon>
-          </v-btn>
-          <v-list>
-            <v-list-tile @click="importFileSheet = true">
-              <v-list-tile-avatar>
-                <v-icon color="primary">
-                  file_upload
-                </v-icon>
-              </v-list-tile-avatar>
-              <v-list-tile-title>Importer un fichier</v-list-tile-title>
-            </v-list-tile>
-            <v-list-tile @click="createVirtualSheet = true">
-              <v-list-tile-avatar>
-                <v-icon color="primary">
-                  picture_in_picture
-                </v-icon>
-              </v-list-tile-avatar>
-              <v-list-tile-title>Créer un jeu virtuel</v-list-tile-title>
-            </v-list-tile>
-            <v-list-tile @click="createRestSheet = true">
-              <v-list-tile-avatar>
-                <v-icon color="primary">
-                  all_inclusive
-                </v-icon>
-              </v-list-tile-avatar>
-              <v-list-tile-title>Créer un jeu incrémental</v-list-tile-title>
-            </v-list-tile>
-          </v-list>
-        </v-menu>
-      </div>
+        <div class="actions-buttons">
+          <v-menu
+            v-if="user"
+            bottom
+            left
+          >
+            <template v-slot:activator="{on}">
+              <v-btn
+                slot="activator"
+                fab
+                color="primary"
+                title="Créer un jeu de données"
+                v-on="on"
+              >
+                <v-icon>mdi-plus</v-icon>
+              </v-btn>
+            </template>
+            <v-list>
+              <v-list-item @click="importFileSheet = true">
+                <v-list-item-avatar>
+                  <v-icon color="primary">
+                    mdi-file-upload
+                  </v-icon>
+                </v-list-item-avatar>
+                <v-list-item-title>Importer un fichier</v-list-item-title>
+              </v-list-item>
+              <v-list-item @click="createVirtualSheet = true">
+                <v-list-item-avatar>
+                  <v-icon color="primary">
+                    mdi-picture-in-picture-bottom-right-outline
+                  </v-icon>
+                </v-list-item-avatar>
+                <v-list-item-title>Créer un jeu virtuel</v-list-item-title>
+              </v-list-item>
+              <v-list-item @click="createRestSheet = true">
+                <v-list-item-avatar>
+                  <v-icon color="primary">
+                    mdi-all-inclusive
+                  </v-icon>
+                </v-list-item-avatar>
+                <v-list-item-title>Créer un jeu incrémental</v-list-item-title>
+              </v-list-item>
+            </v-list>
+          </v-menu>
+        </div>
 
-      <div class="text-xs-center">
-        <v-bottom-sheet v-model="importFileSheet">
-          <import-file v-if="importFileSheet" @cancel="importFileSheet = false" />
-        </v-bottom-sheet>
-        <v-bottom-sheet v-model="createVirtualSheet">
-          <create-virtual v-if="createVirtualSheet" @cancel="createVirtualSheet = false" />
-        </v-bottom-sheet>
-        <v-bottom-sheet v-model="createRestSheet">
-          <create-rest v-if="createRestSheet" @cancel="createRestSheet = false" />
-        </v-bottom-sheet>
-      </div>
-    </v-layout>
+        <div class="text-center">
+          <v-bottom-sheet v-model="importFileSheet">
+            <import-file
+              v-if="importFileSheet"
+              @cancel="importFileSheet = false"
+            />
+          </v-bottom-sheet>
+          <v-bottom-sheet v-model="createVirtualSheet">
+            <create-virtual
+              v-if="createVirtualSheet"
+              @cancel="createVirtualSheet = false"
+            />
+          </v-bottom-sheet>
+          <v-bottom-sheet v-model="createRestSheet">
+            <create-rest
+              v-if="createRestSheet"
+              @cancel="createRestSheet = false"
+            />
+          </v-bottom-sheet>
+        </div>
+      </v-col>
+    </v-row>
     <!-- Anonymous: show jumbotron -->
-    <v-flex v-else-if="initialized" md6 offset-xs3>
+    <v-col
+      v-else-if="initialized"
+      md="6"
+      offset="3"
+    >
       <v-responsive>
-        <v-container fill-height>
-          <v-layout align-center>
-            <v-flex text-xs-center>
+        <v-container class="fill-height">
+          <v-row align="center">
+            <v-col class="text-center">
               <h3 class="display-1 mb-3 mt-5">
                 {{ $t('pages.datasets.title') }}
               </h3>
@@ -67,40 +94,43 @@
               <p class="title mt-5">
                 {{ $t('common.authrequired') }}
               </p>
-              <v-btn color="primary" @click="login">
+              <v-btn
+                color="primary"
+                @click="login"
+              >
                 {{ $t('common.login') }}
               </v-btn>
-            </v-flex>
-          </v-layout>
+            </v-col>
+          </v-row>
         </v-container>
       </v-responsive>
-    </v-flex>
+    </v-col>
   </v-container>
 </template>
 
 <script>
-import { mapState, mapActions } from 'vuex'
+  import { mapState, mapActions } from 'vuex'
 
-import ImportFile from '../components/ImportFile.vue'
-import CreateVirtual from '../components/CreateVirtual.vue'
-import CreateRest from '../components/CreateRest.vue'
-import DatasetsList from '../components/DatasetsList.vue'
+  import ImportFile from '../components/ImportFile.vue'
+  import CreateVirtual from '../components/CreateVirtual.vue'
+  import CreateRest from '../components/CreateRest.vue'
+  import DatasetsList from '../components/datasets/list.vue'
 
-export default {
-  name: 'Datasets',
-  components: { ImportFile, CreateVirtual, CreateRest, DatasetsList },
-  data() {
-    return { importFileSheet: false, createVirtualSheet: false, createRestSheet: false }
-  },
-  computed: {
-    ...mapState('session', ['user', 'initialized'])
-  },
-  created() {
-    this.fetchVocabulary()
-  },
-  methods: {
-    ...mapActions('session', ['login']),
-    ...mapActions(['fetchVocabulary'])
+  export default {
+    name: 'Datasets',
+    components: { ImportFile, CreateVirtual, CreateRest, DatasetsList },
+    data() {
+      return { importFileSheet: false, createVirtualSheet: false, createRestSheet: false }
+    },
+    computed: {
+      ...mapState('session', ['user', 'initialized']),
+    },
+    created() {
+      this.fetchVocabulary()
+    },
+    methods: {
+      ...mapActions('session', ['login']),
+      ...mapActions(['fetchVocabulary']),
+    },
   }
-}
 </script>

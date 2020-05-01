@@ -21,7 +21,7 @@ describe('Base applications', () => {
     assert.equal(res.status, 200)
     assert.equal(res.data.count, 2)
     await adminAx.patch('/api/v1/base-applications/http:monapp2.com', {
-      privateAccess: [{ type: 'user', id: 'dmeadus0' }, { type: 'user', id: 'another' }]
+      privateAccess: [{ type: 'user', id: 'dmeadus0' }, { type: 'user', id: 'another' }],
     })
     assert.equal(res.status, 200)
 

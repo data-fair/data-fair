@@ -82,8 +82,9 @@ exports.readStream = (dataset, raw = false) => {
     // use result from csv-sniffer to configure parser
     parser = csv({
       separator: dataset.file.props.fieldsDelimiter,
-      quote: dataset.file.props.escapeChar,
-      newline: dataset.file.props.linesDelimiter
+      escape: dataset.file.props.escapeChar,
+      quote: dataset.file.props.escapeChar || dataset.file.props.quote,
+      newline: dataset.file.props.linesDelimiter,
     })
     // reject empty lines (parsing failures from csv-parser)
     transformer = new Transform({
@@ -93,7 +94,7 @@ exports.readStream = (dataset, raw = false) => {
         item._i = this.i = (this.i || 0) + 1
         if (hasContent) callback(null, item)
         else callback()
-      }
+      },
     })
   } else if (dataset.file.mimetype === 'application/geo+json') {
     parser = JSONStream.parse('features.*')
@@ -106,7 +107,7 @@ exports.readStream = (dataset, raw = false) => {
         item.geometry = feature.geometry
         item._i = this.i = (this.i || 0) + 1
         callback(null, item)
-      }
+      },
     })
   } else {
     throw new Error('Dataset type is not supported ' + dataset.file.mimetype)
@@ -131,8 +132,8 @@ exports.readStream = (dataset, raw = false) => {
         })
         line._i = chunk._i
         callback(null, line)
-      }
-    })
+      },
+    }),
   )
 }
 
@@ -148,7 +149,7 @@ exports.sample = async (dataset) => {
       if (sampleLineNumbers.has(currentLine)) sample.push(chunk)
       currentLine += 1
       callback()
-    }
+    },
   }))
   return sample
 }
@@ -160,14 +161,14 @@ exports.countLines = async (dataset) => {
     write(chunk, encoding, callback) {
       nbLines += 1
       callback()
-    }
+    },
   }))
   return nbLines
 }
 
 exports.storage = async (db, dataset) => {
   const storage = {
-    size: 0
+    size: 0,
   }
   if (dataset.originalFile && dataset.originalFile.size) {
     storage.size += dataset.originalFile.size
@@ -207,7 +208,7 @@ exports.totalStorage = async (db, owner) => {
   const aggQuery = [
     { $match: { 'owner.type': owner.type, 'owner.id': owner.id } },
     { $project: { 'storage.size': 1 } },
-    { $group: { _id: null, totalSize: { $sum: '$storage.size' } } }
+    { $group: { _id: null, totalSize: { $sum: '$storage.size' } } },
   ]
   const res = await db.collection('datasets').aggregate(aggQuery).toArray()
   return (res[0] && res[0].totalSize) || 0

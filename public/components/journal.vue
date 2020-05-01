@@ -5,7 +5,10 @@
     hide-headers
     class="elevation-1 journal"
   >
-    <template slot="items" slot-scope="props">
+    <template
+      slot="items"
+      slot-scope="props"
+    >
       <tr :class="'event-' + props.item.type">
         <td><v-icon>{{ eventTypes[props.item.type].icon }}</v-icon></td>
         <td>
@@ -15,7 +18,7 @@
             <p v-html="props.item.data" />
           </template>
         </td>
-        <td class="text-xs-right">
+        <td class="text-right">
           {{ props.item.date | moment("DD/MM/YYYY, HH:mm") }}
         </td>
       </tr>
@@ -24,14 +27,14 @@
 </template>
 
 <script>
-const events = require('../../shared/events.json')
+  const events = require('../../shared/events.json')
 
-export default {
-  props: ['journal', 'type'],
-  data() {
-    return { eventTypes: events[this.type] }
+  export default {
+    props: ['journal', 'type'],
+    data() {
+      return { eventTypes: events[this.type] }
+    },
   }
-}
 </script>
 
 <style lang="css">
