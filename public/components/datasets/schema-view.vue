@@ -4,7 +4,7 @@
     :items="dataset.schema.filter(f => !f['x-calculated'])"
     :total-items="dataset.schema.filter(f => !f['x-calculated']).length"
     :disable-initial-sort="true"
-    :hide-actions="true"
+    :hide-default-footer="true"
   >
     <template
       slot="items"

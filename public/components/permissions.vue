@@ -27,7 +27,7 @@
       v-if="permissions && permissions.length"
       :headers="[{text: 'Portée', sortable: false}, {text: 'Actions', sortable: false}, { text: '', sortable: false }]"
       :items="permissions"
-      hide-actions
+      hide-default-footer
       class="elevation-1 mt-3"
     >
       <template

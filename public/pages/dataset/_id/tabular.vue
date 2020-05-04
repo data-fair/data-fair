@@ -73,7 +73,7 @@
         :total-items="data.total"
         :loading="loading"
         :pagination.sync="pagination"
-        hide-actions
+        hide-default-footer
       >
         <template slot="headers">
           <tr>

@@ -21,7 +21,7 @@
           <v-data-table
             :headers="[{text: 'Opération', sortable: false}].concat(organizationRoles.map(role => ({text: role, sortable: false, align: 'center'})))"
             :items="Object.values(operations)"
-            hide-actions
+            hide-default-footer
             class="elevation-1"
           >
             <template

@@ -32,8 +32,8 @@
 
     <v-data-table
       :items="dataset.virtual.children"
-      hide-headers
-      hide-actions
+      hide-default-header
+      hide-default-footer
       class="elevation-1 mb-3"
     >
       <template slot="no-data">

@@ -1,8 +1,8 @@
 <template lang="html">
   <v-data-table
     :items="journal.filter(event => !!eventTypes[event.type])"
-    hide-actions
-    hide-headers
+    hide-default-footer
+    hide-default-header
     class="elevation-1 journal"
   >
     <template

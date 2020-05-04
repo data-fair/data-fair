@@ -1,8 +1,8 @@
 <template lang="html">
   <v-data-table
     :items="remoteService.actions"
-    hide-headers
-    hide-actions
+    hide-default-header
+    hide-default-footer
     class="elevation-1"
   >
     <template
