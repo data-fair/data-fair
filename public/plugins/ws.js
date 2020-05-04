@@ -1,9 +1,9 @@
 import ReconnectingWebSocket from 'reconnecting-websocket'
 import eventBus from '~/event-bus'
 
-export default ({ store }) => {
+export default ({ env }) => {
   if (window.WebSocket) {
-    const ws = new ReconnectingWebSocket(store.state.env.wsPublicUrl)
+    const ws = new ReconnectingWebSocket(env.wsPublicUrl)
     const subscriptions = {}
     let ready = false
     ws.addEventListener('open', () => {
