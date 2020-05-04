@@ -17,15 +17,12 @@
             :items="items"
             hide-default-footer
           >
-            <template
-              slot="items"
-              slot-scope="props"
-            >
-              <td>{{ props.item.name }}</td>
-              <td>{{ props.item.datasets }}</td>
-              <td>{{ parseFloat((props.item.storage / 1000).toFixed(2)).toLocaleString() }} ko</td>
-              <td>{{ parseFloat((props.item.storageLimit / 1000).toFixed(2)).toLocaleString() }} ko</td>
-              <td>{{ props.item.applications }}</td>
+            <template v-slot:item="{item}">
+              <td>{{ item.name }}</td>
+              <td>{{ item.datasets }}</td>
+              <td>{{ parseFloat((item.storage / 1000).toFixed(2)).toLocaleString() }} ko</td>
+              <td>{{ parseFloat((item.storageLimit / 1000).toFixed(2)).toLocaleString() }} ko</td>
+              <td>{{ item.applications }}</td>
             </template>
           </v-data-table>
         </v-sheet>

@@ -6,15 +6,12 @@
     :disable-initial-sort="true"
     :hide-default-footer="true"
   >
-    <template
-      slot="items"
-      slot-scope="props"
-    >
-      <td>{{ props.item.key }}</td>
-      <td>{{ props.item.title || props.item['x-originalName'] || props.item.key }}</td>
-      <td>{{ props.item.format || props.item.type }}</td>
-      <td>{{ vocabulary && vocabulary[props.item['x-refersTo']] && vocabulary[props.item['x-refersTo']].title }}</td>
-      <td>{{ props.item.description || (vocabulary && vocabulary[props.item['x-refersTo']] && vocabulary[props.item['x-refersTo']].description) }}</td>
+    <template v-slot:item="{item}">
+      <td>{{ item.key }}</td>
+      <td>{{ item.title || item['x-originalName'] || item.key }}</td>
+      <td>{{ item.format || item.type }}</td>
+      <td>{{ vocabulary && vocabulary[item['x-refersTo']] && vocabulary[item['x-refersTo']].title }}</td>
+      <td>{{ item.description || (vocabulary && vocabulary[item['x-refersTo']] && vocabulary[item['x-refersTo']].description) }}</td>
     </template>
   </v-data-table>
 </template>

@@ -5,29 +5,26 @@
     hide-default-footer
     class="elevation-1"
   >
-    <template
-      slot="items"
-      slot-scope="props"
-    >
+    <template v-slot:item="{item}">
       <tr v-if="vocabulary">
         <td>
           <v-icon
-            v-if="!props.item.inputCollection || !props.item.outputCollection"
+            v-if="!item.inputCollection || !item.outputCollection"
             title="Opération unitaire"
           >
             description
           </v-icon>
           <v-icon
-            v-if="props.item.inputCollection && props.item.outputCollection"
+            v-if="item.inputCollection && item.outputCollection"
             title="Opération de masse"
           >
             mdi-view-list
           </v-icon>
         </td>
-        <td>{{ props.item.summary }}</td>
+        <td>{{ item.summary }}</td>
         <td>
-          <span v-if="!Object.keys(props.item.input).length">Pas de données en entrée</span>
-          <template v-for="input in props.item.input">
+          <span v-if="!Object.keys(item.input).length">Pas de données en entrée</span>
+          <template v-for="input in item.input">
             <v-chip
               v-if="vocabulary[input.concept]"
               :key="input.concept"
@@ -47,7 +44,7 @@
           </v-icon>
         </td>
         <td>
-          <template v-for="output in props.item.output">
+          <template v-for="output in item.output">
             <v-chip
               v-if="vocabulary[output.concept]"
               :key="output.concept"

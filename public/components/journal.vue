@@ -1,29 +1,28 @@
 <template lang="html">
-  <v-data-table
-    :items="journal.filter(event => !!eventTypes[event.type])"
-    hide-default-footer
-    hide-default-header
-    class="elevation-1 journal"
-  >
-    <template
-      slot="items"
-      slot-scope="props"
+  <v-sheet :elevation="1" tile>
+    <v-data-table
+      :items="journal.filter(event => !!eventTypes[event.type])"
+      hide-default-footer
+      hide-default-header
+      class="journal"
     >
-      <tr :class="'event-' + props.item.type">
-        <td><v-icon>{{ eventTypes[props.item.type].icon }}</v-icon></td>
-        <td>
-          {{ eventTypes[props.item.type].text }}
-          <template v-if="props.item.data">
-            <br>
-            <p v-html="props.item.data" />
-          </template>
-        </td>
-        <td class="text-right">
-          {{ props.item.date | moment("DD/MM/YYYY, HH:mm") }}
-        </td>
-      </tr>
-    </template>
-  </v-data-table>
+      <template v-slot:item="{item}">
+        <tr :class="'event-' + item.type">
+          <td><v-icon>{{ eventTypes[item.type].icon }}</v-icon></td>
+          <td>
+            {{ eventTypes[item.type].text }}
+            <template v-if="item.data">
+              <br>
+              <p v-html="item.data" />
+            </template>
+          </td>
+          <td class="text-right">
+            {{ item.date | moment("DD/MM/YYYY, HH:mm") }}
+          </td>
+        </tr>
+      </template>
+    </v-data-table>
+  </v-sheet>
 </template>
 
 <script>

@@ -54,13 +54,10 @@
         :pagination.sync="pagination"
         hide-default-footer
       >
-        <template
-          slot="headers"
-          slot-scope="props"
-        >
+        <template v-slot:header="{ props: { headers } }">
           <tr>
             <th
-              v-for="header in props.headers"
+              v-for="header in headers"
               :key="header.text"
               :class="['column text-xs-left', header.sortable ? 'sortable' : '', pagination.descending ? 'desc' : 'asc', header.value === pagination.sortBy ? 'active' : '']"
             >
@@ -82,10 +79,7 @@
             </th>
           </tr>
         </template>
-        <template
-          slot="items"
-          slot-scope="props"
-        >
+        <template v-slot:item="{item}">
           <td
             v-for="header in headers"
             :key="header.value"
@@ -94,18 +88,18 @@
           >
             <template v-if="header.value === '_thumbnail'">
               <v-avatar
-                v-if="props.item._thumbnail"
+                v-if="item._thumbnail"
                 tile
                 :size="40"
               >
-                <img :src="props.item._thumbnail">
+                <img :src="item._thumbnail">
               </v-avatar>
             </template>
             <template v-else-if="digitalDocumentField && digitalDocumentField.key === header.value">
-              <a :href="props.item._attachment_url">{{ props.item[header.value] }}</a>
+              <a :href="item._attachment_url">{{ item[header.value] }}</a>
             </template>
             <template v-else>
-              {{ ((props.item[header.value] === undefined || props.item[header.value] === null ? '' : props.item[header.value]) + '') | truncate(50) }}
+              {{ ((item[header.value] === undefined || item[header.value] === null ? '' : item[header.value]) + '') | truncate(50) }}
             </template>
           </td>
         </template>

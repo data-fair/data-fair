@@ -66,7 +66,7 @@
         hide-default-footer
         class="elevation-1"
       >
-        <template slot="headers">
+        <template v-slot:header>
           <tr style="height: 30px;border-bottom: 2px solid rgba(0,0,0,0.24);">
             <th
               :colspan="inputFields.length"
@@ -107,17 +107,14 @@
             </th>
           </tr>
         </template>
-        <template
-          slot="items"
-          slot-scope="props"
-        >
-          <tr :style="!!props.item[errorField.key] ? 'background-color: #FFCDD2' : ''">
+        <template v-slot:item="{item}">
+          <tr :style="!!item[errorField.key] ? 'background-color: #FFCDD2' : ''">
             <td
               v-for="(header, i) in headers"
               :key="header.value"
               :style="i === inputFields.length - 1 ? 'border-right: 2px solid rgba(0,0,0,0.24);' : ''"
             >
-              {{ ((props.item[header.value] === undefined || props.item[header.value] === null ? '' : props.item[header.value]) + '') | truncate(50) }}
+              {{ ((item[header.value] === undefined || item[header.value] === null ? '' : item[header.value]) + '') | truncate(50) }}
             </td>
           </tr>
         </template>

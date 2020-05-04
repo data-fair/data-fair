@@ -12,34 +12,31 @@
       <template slot="no-data">
         Aucun enrichissement possible.
       </template>
-      <template
-        slot="items"
-        slot-scope="props"
-      >
+      <template v-slot:item="{item}">
         <tr>
           <td>
             <v-checkbox
-              v-model="props.item.active"
+              v-model="item.active"
               primary
               hide-details
             />
           </td>
           <td class="pt-2 pb-2">
-            <span v-if="remoteServicesMap[props.item.remoteService] && remoteServicesMap[props.item.remoteService].actions[props.item.action]">
-              {{ remoteServicesMap[props.item.remoteService].actions[props.item.action].summary }} (service {{ remoteServicesMap[props.item.remoteService].title }})
+            <span v-if="remoteServicesMap[item.remoteService] && remoteServicesMap[item.remoteService].actions[item.action]">
+              {{ remoteServicesMap[item.remoteService].actions[item.action].summary }} (service {{ remoteServicesMap[item.remoteService].title }})
               &nbsp;
               <v-btn
-                v-if="props.item.progress === 1"
+                v-if="item.progress === 1"
                 small
                 outline
-                @click="currentExtension = props.item; extensionDetailsDialog = true;"
+                @click="currentExtension = item; extensionDetailsDialog = true;"
               >Voir détails</v-btn>
             </span>
 
             <v-select
-              v-if="props.item.active && remoteServicesMap[props.item.remoteService] && selectFields[props.item.remoteService + '_' + props.item.action].fieldsAndTags"
-              v-model="props.item.select"
-              :items="selectFields[props.item.remoteService + '_' + props.item.action].fieldsAndTags"
+              v-if="item.active && remoteServicesMap[item.remoteService] && selectFields[item.remoteService + '_' + item.action].fieldsAndTags"
+              v-model="item.select"
+              :items="selectFields[item.remoteService + '_' + item.action].fieldsAndTags"
               item-value="name"
               item-text="title"
               label=""
@@ -47,10 +44,7 @@
               placeholder="Tous les champs en sortie"
               persistent-hint
             >
-              <template
-                slot="item"
-                slot-scope="data"
-              >
+              <template v-slot:item="data">
                 <template v-if="typeof data.item !== 'object'">
                   <v-list-item-content>{{ data.item }}</v-list-item-content>
                 </template>
@@ -62,29 +56,29 @@
               </template>
             </v-select>
             <v-alert
-              :value="props.item.active && props.item.error"
+              :value="item.active && item.error"
               type="error"
             >
-              {{ props.item.error }}
+              {{ item.error }}
             </v-alert>
           </td>
           <td class="text-right">
             <v-progress-circular
-              v-if="props.item.active"
+              v-if="item.active"
               :size="40"
               :width="6"
               :rotate="360"
-              :value="100 * (props.item.progress || 0)"
+              :value="100 * (item.progress || 0)"
               color="primary"
               class="mt-2"
             >
-              <span v-if="props.item.active && (props.item.progress >= 1 || props.item.error)">
+              <span v-if="item.active && (item.progress >= 1 || item.error)">
                 <v-btn
                   icon
                   flat
                   color="accent"
                   title="Recommencer et écraser les valeurs enrichies précédemment"
-                  @click="save(props.item)"
+                  @click="save(item)"
                 >
                   <v-icon>play_circle_filled</v-icon>
                 </v-btn>

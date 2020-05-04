@@ -75,7 +75,7 @@
         :pagination.sync="pagination"
         hide-default-footer
       >
-        <template slot="headers">
+        <template v-slot:header>
           <tr>
             <th
               v-for="header in headers"
@@ -100,10 +100,7 @@
             </th>
           </tr>
         </template>
-        <template
-          slot="items"
-          slot-scope="props"
-        >
+        <template v-slot:item="{item}">
           <td
             v-for="header in headers"
             :key="header.value"
@@ -117,7 +114,7 @@
                 icon
                 color="warning"
                 title="Supprimer cette ligne"
-                @click="editedLine = Object.assign({}, props.item); deleteLineDialog = true;"
+                @click="editedLine = Object.assign({}, item); deleteLineDialog = true;"
               >
                 <v-icon>delete</v-icon>
               </v-btn>
@@ -126,7 +123,7 @@
                 icon
                 color="primary"
                 title="Éditer cette ligne"
-                @click="editedLine = Object.assign({}, props.item); showEditLineDialog();"
+                @click="editedLine = Object.assign({}, item); showEditLineDialog();"
               >
                 <v-icon>edit</v-icon>
               </v-btn>
@@ -136,25 +133,25 @@
                 icon
                 color="primary"
                 title="Voir l'historique des révisions de cette ligne"
-                @click="showHistoryDialog(props.item)"
+                @click="showHistoryDialog(item)"
               >
                 <v-icon>history</v-icon>
               </v-btn>
             </v-row>
             <template v-else-if="header.value === '_thumbnail'">
               <v-avatar
-                v-if="props.item._thumbnail"
+                v-if="item._thumbnail"
                 tile
                 :size="40"
               >
-                <img :src="props.item._thumbnail">
+                <img :src="item._thumbnail">
               </v-avatar>
             </template>
             <template v-else-if="digitalDocumentField && digitalDocumentField.key === header.value">
-              <a :href="props.item._attachment_url">{{ props.item[header.value] }}</a>
+              <a :href="item._attachment_url">{{ item[header.value] }}</a>
             </template>
             <template v-else>
-              {{ ((props.item[header.value] === undefined || props.item[header.value] === null ? '' : props.item[header.value]) + '') | truncate(50) }}
+              {{ ((item[header.value] === undefined || item[header.value] === null ? '' : item[header.value]) + '') | truncate(50) }}
             </template>
           </td>
         </template>
@@ -276,20 +273,17 @@
             :loading="historyLoading"
             :pagination.sync="historyPagination"
           >
-            <template
-              slot="items"
-              slot-scope="props"
-            >
+            <template v-slot:item="{item}">
               <td
                 v-for="header in historyHeaders"
                 :key="header.value"
                 class="pr-0 pl-4"
               >
                 <template v-if="header.value === '_updatedAt'">
-                  {{ new Date(props.item._updatedAt).toLocaleString() }}
+                  {{ new Date(item._updatedAt).toLocaleString() }}
                 </template>
                 <template v-else>
-                  {{ ((props.item[header.value] === undefined || props.item[header.value] === null ? '' : props.item[header.value]) + '') | truncate(50) }}
+                  {{ ((item[header.value] === undefined || item[header.value] === null ? '' : item[header.value]) + '') | truncate(50) }}
                 </template>
               </td>
             </template>

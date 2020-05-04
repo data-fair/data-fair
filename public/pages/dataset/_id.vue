@@ -22,7 +22,9 @@
           </v-list-item-action>
         </v-list-item>
         <v-list-item v-else>
-          <v-list-item-title>{{ dataset.title || dataset.id }}</v-list-item-title>
+          <v-list-item-title class="title">
+            {{ dataset.title || dataset.id }}
+          </v-list-item-title>
           <v-list-item-action style="min-width: 0;">
             <v-btn icon @click.stop="mini = true">
               <v-icon>mdi-chevron-left</v-icon>

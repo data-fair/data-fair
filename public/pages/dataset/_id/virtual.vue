@@ -39,17 +39,14 @@
       <template slot="no-data">
         Aucun jeu de données agrégé pour l'instant.
       </template>
-      <template
-        slot="items"
-        slot-scope="props"
-      >
-        <tr v-if="childrenById[props.item]">
+      <template v-slot:item="{item, index}">
+        <tr v-if="childrenById[item]">
           <td class="pt-3">
             <span class="subheading">
-              <nuxt-link :to="`/dataset/${props.item}/description`">{{ childrenById[props.item].title }} ({{ childrenById[props.item].id }})</nuxt-link>
+              <nuxt-link :to="`/dataset/${item}/description`">{{ childrenById[item].title }} ({{ childrenById[item].id }})</nuxt-link>
             </span>
             <v-select
-              :items="childrenById[props.item].schema.filter(f => !f['x-calculated'] && !existingFields.includes(f.key))"
+              :items="childrenById[item].schema.filter(f => !f['x-calculated'] && !existingFields.includes(f.key))"
               :item-text="(field) => field.title || field['x-originalName'] || field.key"
               hide-no-data
               item-value="id"
@@ -63,7 +60,7 @@
             <v-icon
               color="warning"
               title="Supprimer"
-              @click="currentChild = props.index; deleteChildDialog = true"
+              @click="currentChild = index; deleteChildDialog = true"
             >
               delete
             </v-icon>
@@ -115,10 +112,7 @@
               small-chips
               @change="saveFilters"
             >
-              <template
-                slot="selection"
-                slot-scope="data"
-              >
+              <template v-slot:selection="data">
                 <v-chip
                   close
                   small

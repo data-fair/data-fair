@@ -30,30 +30,27 @@
       hide-default-footer
       class="elevation-1 mt-3"
     >
-      <template
-        slot="items"
-        slot-scope="props"
-      >
+      <template v-slot:item="{item, index}">
         <tr>
           <td>
-            <div v-if="!props.item.type">
+            <div v-if="!item.type">
               Public
             </div>
             <div v-else>
-              {{ (props.item.type === 'user' ? 'Utilisateur ' : 'Organisation ') + props.item.name }}
+              {{ (item.type === 'user' ? 'Utilisateur ' : 'Organisation ') + item.name }}
             </div>
-            <div v-if="props.item.type === 'organization' && (!props.item.roles || !props.item.roles.length)">
+            <div v-if="item.type === 'organization' && (!item.roles || !item.roles.length)">
               Tout le monde
             </div>
-            <div v-if="props.item.type === 'organization' && (props.item.roles && props.item.roles.length)">
-              Restreint aux rôles : {{ props.item.roles.join(', ') }}
+            <div v-if="item.type === 'organization' && (item.roles && item.roles.length)">
+              Restreint aux rôles : {{ item.roles.join(', ') }}
             </div>
           </td>
           <td>
             <v-list dense>
               <template v-for="(classOperations, permClass) in permissionClasses">
                 <v-list-item
-                  v-if="((props.item.classes || []).includes(permClass)) || classOperations.filter(o => (props.item.operations || []).includes(o.id)).length"
+                  v-if="((item.classes || []).includes(permClass)) || classOperations.filter(o => (item.operations || []).includes(o.id)).length"
                   :key="permClass"
                 >
                   <v-list-item-content>
@@ -62,8 +59,8 @@
                         {{ classNames[permClass] }}
                       </v-col>
                       <v-col cols="9">
-                        <span v-if="(props.item.classes || []).includes(permClass)">Toutes</span>
-                        <span v-else>{{ classOperations.filter(o => (props.item.operations || []).find(oid => o.id && o.id === oid)).map(o => o.title).join(' - ') }}</span>
+                        <span v-if="(item.classes || []).includes(permClass)">Toutes</span>
+                        <span v-else>{{ classOperations.filter(o => (item.operations || []).find(oid => o.id && o.id === oid)).map(o => o.title).join(' - ') }}</span>
                       </v-col>
                     </v-row>
                   </v-list-item-content>
@@ -76,7 +73,7 @@
               flat
               icon
               color="warning"
-              @click="editPermission(props.item);showDialog = true"
+              @click="editPermission(item);showDialog = true"
             >
               <v-icon>edit</v-icon>
             </v-btn>
@@ -84,7 +81,7 @@
               flat
               icon
               color="warning"
-              @click="removePermission(props.index)"
+              @click="removePermission(index)"
             >
               <v-icon>delete</v-icon>
             </v-btn>

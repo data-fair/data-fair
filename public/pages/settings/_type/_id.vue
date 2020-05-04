@@ -24,20 +24,17 @@
             hide-default-footer
             class="elevation-1"
           >
-            <template
-              slot="items"
-              slot-scope="props"
-            >
+            <template v-slot:item="{item}">
               <tr>
                 <td>
-                  {{ props.item.title }}
+                  {{ item.title }}
                 </td>
                 <td
                   v-for="role in organizationRoles"
                   :key="role"
                 >
                   <v-checkbox
-                    v-model="settings.operationsPermissions[props.item.id]"
+                    v-model="settings.operationsPermissions[item.id]"
                     :value="role"
                     label=""
                     @change="save"
