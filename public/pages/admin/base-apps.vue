@@ -1,88 +1,90 @@
 <template lang="html">
   <v-container fluid>
-    <v-row column>
-      <h2 class="title">
-        Applications de base
-      </h2>
-      <v-row>
-        <v-col
-          cols="12"
-          sm="6"
-          md="4"
-          lg="3"
-        >
-          <v-text-field
-            v-model="q"
-            name="q"
-            label="Rechercher"
-            @keypress.enter="refresh"
-          />
-        </v-col>
-      </v-row>
-
-      <v-row>
-        <v-col
-          cols="12"
-          sm="6"
-          md="4"
-          lg="3"
-        >
-          <v-text-field
-            v-model="urlToAdd"
-            label="Ajouter"
-            @keypress.enter="add"
-          />
-        </v-col>
-      </v-row>
-
-      <v-card v-if="baseApps">
-        <v-list three-line>
-          <v-list-item
-            v-for="baseApp in baseApps.results"
-            :key="baseApp.id"
-            avatar
+    <v-row>
+      <v-col>
+        <h2 class="title">
+          Applications de base
+        </h2>
+        <v-row>
+          <v-col
+            cols="12"
+            sm="6"
+            md="4"
+            lg="3"
           >
-            <v-list-item-avatar tile>
-              <img :src="baseApp.thumbnail">
-            </v-list-item-avatar>
-            <v-list-item-content>
-              <v-list-item-title>
-                {{ baseApp.title }} - {{ baseApp.applicationName }} ({{ baseApp.version }}) - <a :href="baseApp.url">{{ baseApp.url }}</a>
-                <v-icon
-                  v-if="baseApp.public"
-                  color="green"
-                >
-                  lock_open
-                </v-icon>
-                <template v-else>
-                  <v-icon color="red">
-                    lock
+            <v-text-field
+              v-model="q"
+              name="q"
+              label="Rechercher"
+              @keypress.enter="refresh"
+            />
+          </v-col>
+        </v-row>
+
+        <v-row>
+          <v-col
+            cols="12"
+            sm="6"
+            md="4"
+            lg="3"
+          >
+            <v-text-field
+              v-model="urlToAdd"
+              label="Ajouter"
+              @keypress.enter="add"
+            />
+          </v-col>
+        </v-row>
+
+        <v-card v-if="baseApps">
+          <v-list three-line>
+            <v-list-item
+              v-for="baseApp in baseApps.results"
+              :key="baseApp.id"
+              avatar
+            >
+              <v-list-item-avatar tile>
+                <img :src="baseApp.thumbnail">
+              </v-list-item-avatar>
+              <v-list-item-content>
+                <v-list-item-title>
+                  {{ baseApp.title }} - {{ baseApp.applicationName }} ({{ baseApp.version }}) - <a :href="baseApp.url">{{ baseApp.url }}</a>
+                  <v-icon
+                    v-if="baseApp.public"
+                    color="green"
+                  >
+                    lock_open
                   </v-icon>
-                  <span>{{ (baseApp.privateAccess || []).map(p => p.name).join(', ') }}</span>
-                </template>
-                <v-icon v-if="baseApp.deprecated">
-                  visibility_off
+                  <template v-else>
+                    <v-icon color="red">
+                      lock
+                    </v-icon>
+                    <span>{{ (baseApp.privateAccess || []).map(p => p.name).join(', ') }}</span>
+                  </template>
+                  <v-icon v-if="baseApp.deprecated">
+                    visibility_off
+                  </v-icon>
+                </v-list-item-title>
+                <v-list-item-sub-title>{{ baseApp.description }}</v-list-item-sub-title>
+                <v-list-item-sub-title>
+                  <nuxt-link :to="{path: '/applications', query: {url: baseApp.url, showAll: true}}">
+                    {{ baseApp.nbApplications }} application{{ baseApp.nbApplications > 1 ? 's' : '' }}
+                  </nuxt-link>
+                  - Jeux de données : {{ baseApp.datasetsFilters }}
+                </v-list-item-sub-title>
+              </v-list-item-content>
+              <v-list-item-action>
+                <v-icon
+                  color="primary"
+                  @click="currentBaseApp = baseApp; patch = newPatch(baseApp); showEditDialog = true;"
+                >
+                  edit
                 </v-icon>
-              </v-list-item-title>
-              <v-list-item-sub-title>{{ baseApp.description }}</v-list-item-sub-title>
-              <v-list-item-sub-title>
-                <nuxt-link :to="{path: '/applications', query: {url: baseApp.url, showAll: true}}">
-                  {{ baseApp.nbApplications }} application{{ baseApp.nbApplications > 1 ? 's' : '' }}
-                </nuxt-link>
-                - Jeux de données : {{ baseApp.datasetsFilters }}
-              </v-list-item-sub-title>
-            </v-list-item-content>
-            <v-list-item-action>
-              <v-icon
-                color="primary"
-                @click="currentBaseApp = baseApp; patch = newPatch(baseApp); showEditDialog = true;"
-              >
-                edit
-              </v-icon>
-            </v-list-item-action>
-          </v-list-item>
-        </v-list>
-      </v-card>
+              </v-list-item-action>
+            </v-list-item>
+          </v-list>
+        </v-card>
+      </v-col>
     </v-row>
 
     <v-dialog

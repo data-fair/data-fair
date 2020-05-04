@@ -1,27 +1,29 @@
 <template lang="html">
   <v-container v-if="initialized">
-    <v-row column>
-      <template v-if="authorized">
-        <h2 class="display-1 mb-4">
-          Détail du stockage de l'{{ $route.params.type ==='organization' ? ('organisation ' + ((organization && organization.name) || $route.params.id)): ('utilisateur ' + user.name) }}
-        </h2>
-        <storage-details :datasets="datasets" />
-      </template>
+    <v-row>
+      <v-col>
+        <template v-if="authorized">
+          <h2 class="display-1 mb-4">
+            Détail du stockage de l'{{ $route.params.type ==='organization' ? ('organisation ' + ((organization && organization.name) || $route.params.id)): ('utilisateur ' + user.name) }}
+          </h2>
+          <storage-details :datasets="datasets" />
+        </template>
 
-      <v-responsive
-        v-else
-        height="auto"
-      >
-        <v-container class="fill-height">
-          <v-row align="center">
-            <v-col class="text-center">
-              <div class="headline">
-                Vous n'êtes pas autorisé à voir ou modifier le contenu de cette page. Si vous avez besoin de connaitres ces informations, veuillez contacter un administrateur de celle ci.
-              </div>
-            </v-col>
-          </v-row>
-        </v-container>
-      </v-responsive>
+        <v-responsive
+          v-else
+          height="auto"
+        >
+          <v-container class="fill-height">
+            <v-row align="center">
+              <v-col class="text-center">
+                <div class="headline">
+                  Vous n'êtes pas autorisé à voir ou modifier le contenu de cette page. Si vous avez besoin de connaitres ces informations, veuillez contacter un administrateur de celle ci.
+                </div>
+              </v-col>
+            </v-row>
+          </v-container>
+        </v-responsive>
+      </v-col>
     </v-row>
   </v-container>
 </template>

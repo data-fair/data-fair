@@ -6,74 +6,74 @@
           {{ $t('pages.datasets.description') }}
         </v-subheader>
         <datasets-list />
-
-        <div class="actions-buttons">
-          <v-menu
-            v-if="user"
-            bottom
-            left
-          >
-            <template v-slot:activator="{on}">
-              <v-btn
-                slot="activator"
-                fab
-                color="primary"
-                title="Créer un jeu de données"
-                v-on="on"
-              >
-                <v-icon>mdi-plus</v-icon>
-              </v-btn>
-            </template>
-            <v-list>
-              <v-list-item @click="importFileSheet = true">
-                <v-list-item-avatar>
-                  <v-icon color="primary">
-                    mdi-file-upload
-                  </v-icon>
-                </v-list-item-avatar>
-                <v-list-item-title>Importer un fichier</v-list-item-title>
-              </v-list-item>
-              <v-list-item @click="createVirtualSheet = true">
-                <v-list-item-avatar>
-                  <v-icon color="primary">
-                    mdi-picture-in-picture-bottom-right-outline
-                  </v-icon>
-                </v-list-item-avatar>
-                <v-list-item-title>Créer un jeu virtuel</v-list-item-title>
-              </v-list-item>
-              <v-list-item @click="createRestSheet = true">
-                <v-list-item-avatar>
-                  <v-icon color="primary">
-                    mdi-all-inclusive
-                  </v-icon>
-                </v-list-item-avatar>
-                <v-list-item-title>Créer un jeu incrémental</v-list-item-title>
-              </v-list-item>
-            </v-list>
-          </v-menu>
-        </div>
-
-        <div class="text-center">
-          <v-bottom-sheet v-model="importFileSheet">
-            <import-file
-              v-if="importFileSheet"
-              @cancel="importFileSheet = false"
-            />
-          </v-bottom-sheet>
-          <v-bottom-sheet v-model="createVirtualSheet">
-            <create-virtual
-              v-if="createVirtualSheet"
-              @cancel="createVirtualSheet = false"
-            />
-          </v-bottom-sheet>
-          <v-bottom-sheet v-model="createRestSheet">
-            <create-rest
-              v-if="createRestSheet"
-              @cancel="createRestSheet = false"
-            />
-          </v-bottom-sheet>
-        </div>
       </v-col>
+
+      <div class="actions-buttons">
+        <v-menu
+          v-if="user"
+          bottom
+          left
+        >
+          <template v-slot:activator="{on}">
+            <v-btn
+              slot="activator"
+              fab
+              color="primary"
+              title="Créer un jeu de données"
+              v-on="on"
+            >
+              <v-icon>mdi-plus</v-icon>
+            </v-btn>
+          </template>
+          <v-list>
+            <v-list-item @click="importFileSheet = true">
+              <v-list-item-avatar>
+                <v-icon color="primary">
+                  mdi-file-upload
+                </v-icon>
+              </v-list-item-avatar>
+              <v-list-item-title>Importer un fichier</v-list-item-title>
+            </v-list-item>
+            <v-list-item @click="createVirtualSheet = true">
+              <v-list-item-avatar>
+                <v-icon color="primary">
+                  mdi-picture-in-picture-bottom-right-outline
+                </v-icon>
+              </v-list-item-avatar>
+              <v-list-item-title>Créer un jeu virtuel</v-list-item-title>
+            </v-list-item>
+            <v-list-item @click="createRestSheet = true">
+              <v-list-item-avatar>
+                <v-icon color="primary">
+                  mdi-all-inclusive
+                </v-icon>
+              </v-list-item-avatar>
+              <v-list-item-title>Créer un jeu incrémental</v-list-item-title>
+            </v-list-item>
+          </v-list>
+        </v-menu>
+      </div>
+
+      <div class="text-center">
+        <v-bottom-sheet v-model="importFileSheet">
+          <import-file
+            v-if="importFileSheet"
+            @cancel="importFileSheet = false"
+          />
+        </v-bottom-sheet>
+        <v-bottom-sheet v-model="createVirtualSheet">
+          <create-virtual
+            v-if="createVirtualSheet"
+            @cancel="createVirtualSheet = false"
+          />
+        </v-bottom-sheet>
+        <v-bottom-sheet v-model="createRestSheet">
+          <create-rest
+            v-if="createRestSheet"
+            @cancel="createRestSheet = false"
+          />
+        </v-bottom-sheet>
+      </div>
     </v-row>
     <!-- Anonymous: show jumbotron -->
     <v-col

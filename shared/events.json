@@ -29,11 +29,11 @@
       "text": "Fin de l'analyse du fichier"
     },
     "schematize-start": {
-      "icon": "mdi-toc",
+      "icon": "mdi-table-of-contents",
       "text": "Début de la détection automatique du schéma des données"
     },
     "schematize-end": {
-      "icon": "mdi-toc",
+      "icon": "mdi-table-of-contents",
       "text": "Fin de la détection automatique du schéma des données"
     },
     "index-start": {

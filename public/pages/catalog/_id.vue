@@ -1,9 +1,5 @@
 <template>
-  <v-row
-    v-if="catalog"
-    column
-    class="catalog"
-  >
+  <v-row v-if="catalog" class="catalog">
     <v-navigation-drawer
       app
       fixed
@@ -59,9 +55,9 @@
       </v-list>
     </v-navigation-drawer>
 
-    <v-row>
+    <v-col>
       <nuxt-child />
-    </v-row>
+    </v-col>
 
     <div class="actions-buttons">
       <v-menu

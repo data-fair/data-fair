@@ -1,16 +1,12 @@
 <template>
-  <v-container
-    class="pt-0"
-    fluid
-  >
-    <v-row
-      v-if="user"
-      column
-    >
-      <v-subheader class="px-0">
-        {{ $t('pages.catalogs.description') }}
-      </v-subheader>
-      <catalogs-list />
+  <v-container class="pt-0" fluid>
+    <v-row v-if="user">
+      <v-col>
+        <v-subheader class="px-0">
+          {{ $t('pages.catalogs.description') }}
+        </v-subheader>
+        <catalogs-list />
+      </v-col>
 
       <div class="actions-buttons">
         <v-btn

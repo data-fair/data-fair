@@ -40,7 +40,7 @@
             large
             color="primary"
           >
-            arrow_forward
+            mdi-arrow-right
           </v-icon>
         </td>
         <td>

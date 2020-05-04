@@ -3,28 +3,30 @@
     v-if="initialized"
     fluid
   >
-    <v-row column>
-      <template v-if="authorized">
-        <storage-details
-          :datasets="datasets"
-          :url-template="$route.query.urlTemplate"
-        />
-      </template>
+    <v-row>
+      <v-col>
+        <template v-if="authorized">
+          <storage-details
+            :datasets="datasets"
+            :url-template="$route.query.urlTemplate"
+          />
+        </template>
 
-      <v-responsive
-        v-else
-        height="auto"
-      >
-        <v-container class="fill-height">
-          <v-row align="center">
-            <v-col class="text-center">
-              <div class="headline">
-                Vous n'êtes pas autorisé à voir ou modifier le contenu de cette page. Si vous avez besoin de connaitres ces informations, veuillez contacter un administrateur de celle ci.
-              </div>
-            </v-col>
-          </v-row>
-        </v-container>
-      </v-responsive>
+        <v-responsive
+          v-else
+          height="auto"
+        >
+          <v-container class="fill-height">
+            <v-row align="center">
+              <v-col class="text-center">
+                <div class="headline">
+                  Vous n'êtes pas autorisé à voir ou modifier le contenu de cette page. Si vous avez besoin de connaitres ces informations, veuillez contacter un administrateur de celle ci.
+                </div>
+              </v-col>
+            </v-row>
+          </v-container>
+        </v-responsive>
+      </v-col>
     </v-row>
   </v-container>
 </template>

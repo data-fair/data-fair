@@ -10,60 +10,62 @@
     </div>
     <v-card>
       <v-card-title>
-        <v-row column>
-          <h3 v-if="data.total <= 10000">
-            Consultez {{ data.total.toLocaleString() }} {{ plural ? 'enregistrements' : 'enregistrement' }}
-          </h3>
-          <h3 v-if="data.total > 10000">
-            Consultez {{ plural ? 'les' : 'le' }} {{ (10000).toLocaleString() }} {{ plural ? 'premiers enregistrements' : 'premier enregistrement' }} ({{ data.total.toLocaleString() }} au total)
-          </h3>
-          <div>
-            <v-btn
-              v-if="dataset.isRest && can('writeData')"
-              color="primary"
-              @click="editedLine = null; showEditLineDialog();"
-            >
-              Ajouter une ligne
-            </v-btn>
-          </div>
-          <v-row>
-            <v-col
-              lg="3"
-              md="4"
-              sm="5"
-              cols="12"
-            >
-              <v-text-field
-                v-model="query"
-                label="Rechercher"
-                append-icon="mdi-magnify"
-                class="mr-3"
-                style="min-width:150px;"
-                @keyup.enter.native="refresh"
-                @click:append="refresh"
+        <v-row>
+          <v-col>
+            <h3 v-if="data.total <= 10000">
+              Consultez {{ data.total.toLocaleString() }} {{ plural ? 'enregistrements' : 'enregistrement' }}
+            </h3>
+            <h3 v-if="data.total > 10000">
+              Consultez {{ plural ? 'les' : 'le' }} {{ (10000).toLocaleString() }} {{ plural ? 'premiers enregistrements' : 'premier enregistrement' }} ({{ data.total.toLocaleString() }} au total)
+            </h3>
+            <div>
+              <v-btn
+                v-if="dataset.isRest && can('writeData')"
+                color="primary"
+                @click="editedLine = null; showEditLineDialog();"
+              >
+                Ajouter une ligne
+              </v-btn>
+            </div>
+            <v-row>
+              <v-col
+                lg="3"
+                md="4"
+                sm="5"
+                cols="12"
+              >
+                <v-text-field
+                  v-model="query"
+                  label="Rechercher"
+                  append-icon="mdi-magnify"
+                  class="mr-3"
+                  style="min-width:150px;"
+                  @keyup.enter.native="refresh"
+                  @click:append="refresh"
+                />
+              </v-col>
+              <v-spacer />
+              <v-col
+                v-show="$vuetify.breakpoint.mdAndUp"
+                xl="1"
+                lg="1"
+                md="2"
+              >
+                <v-select
+                  v-model="pagination.rowsPerPage"
+                  :items="[10,20,50]"
+                  label="Nombre de lignes"
+                />
+              </v-col>
+              <v-pagination
+                v-if="data.total > pagination.rowsPerPage"
+                v-model="pagination.page"
+                :length="Math.ceil(Math.min(data.total, 10000) / pagination.rowsPerPage)"
+                :total-visible="$vuetify.breakpoint.lgAndUp ? 7 : 5"
+                class="mx-4"
               />
-            </v-col>
-            <v-spacer />
-            <v-col
-              v-show="$vuetify.breakpoint.mdAndUp"
-              xl="1"
-              lg="1"
-              md="2"
-            >
-              <v-select
-                v-model="pagination.rowsPerPage"
-                :items="[10,20,50]"
-                label="Nombre de lignes"
-              />
-            </v-col>
-            <v-pagination
-              v-if="data.total > pagination.rowsPerPage"
-              v-model="pagination.page"
-              :length="Math.ceil(Math.min(data.total, 10000) / pagination.rowsPerPage)"
-              :total-visible="$vuetify.breakpoint.lgAndUp ? 7 : 5"
-              class="mx-4"
-            />
-          </v-row>
+            </v-row>
+          </v-col>
         </v-row>
       </v-card-title>
 
@@ -74,6 +76,7 @@
         :loading="loading"
         :pagination.sync="pagination"
         hide-default-footer
+        hide-default-header
       >
         <template v-slot:header>
           <tr>
@@ -92,68 +95,67 @@
               </v-tooltip>
               <span @click="orderBy(header)">
                 {{ header.text }}
-                <v-icon
-                  v-if="header.sortable"
-                  small
-                >arrow_upward</v-icon>
+                <v-icon v-if="header.sortable" small>mdi-arrow-up</v-icon>
               </span>
             </th>
           </tr>
         </template>
         <template v-slot:item="{item}">
-          <td
-            v-for="header in headers"
-            :key="header.value"
-            class="pr-0 pl-4"
-          >
-            <v-row
-              v-if="header.value === '_actions'"
+          <tr>
+            <td
+              v-for="header in headers"
+              :key="header.value"
+              class="pr-0 pl-4"
             >
-              <v-btn
-                flat
-                icon
-                color="warning"
-                title="Supprimer cette ligne"
-                @click="editedLine = Object.assign({}, item); deleteLineDialog = true;"
+              <v-row
+                v-if="header.value === '_actions'"
               >
-                <v-icon>delete</v-icon>
-              </v-btn>
-              <v-btn
-                flat
-                icon
-                color="primary"
-                title="Éditer cette ligne"
-                @click="editedLine = Object.assign({}, item); showEditLineDialog();"
-              >
-                <v-icon>edit</v-icon>
-              </v-btn>
-              <v-btn
-                v-if="dataset.rest && dataset.rest.history"
-                flat
-                icon
-                color="primary"
-                title="Voir l'historique des révisions de cette ligne"
-                @click="showHistoryDialog(item)"
-              >
-                <v-icon>history</v-icon>
-              </v-btn>
-            </v-row>
-            <template v-else-if="header.value === '_thumbnail'">
-              <v-avatar
-                v-if="item._thumbnail"
-                tile
-                :size="40"
-              >
-                <img :src="item._thumbnail">
-              </v-avatar>
-            </template>
-            <template v-else-if="digitalDocumentField && digitalDocumentField.key === header.value">
-              <a :href="item._attachment_url">{{ item[header.value] }}</a>
-            </template>
-            <template v-else>
-              {{ ((item[header.value] === undefined || item[header.value] === null ? '' : item[header.value]) + '') | truncate(50) }}
-            </template>
-          </td>
+                <v-btn
+                  flat
+                  icon
+                  color="warning"
+                  title="Supprimer cette ligne"
+                  @click="editedLine = Object.assign({}, item); deleteLineDialog = true;"
+                >
+                  <v-icon>delete</v-icon>
+                </v-btn>
+                <v-btn
+                  flat
+                  icon
+                  color="primary"
+                  title="Éditer cette ligne"
+                  @click="editedLine = Object.assign({}, item); showEditLineDialog();"
+                >
+                  <v-icon>edit</v-icon>
+                </v-btn>
+                <v-btn
+                  v-if="dataset.rest && dataset.rest.history"
+                  flat
+                  icon
+                  color="primary"
+                  title="Voir l'historique des révisions de cette ligne"
+                  @click="showHistoryDialog(item)"
+                >
+                  <v-icon>history</v-icon>
+                </v-btn>
+              </v-row>
+              <template v-else-if="header.value === '_thumbnail'">
+                <v-avatar
+                  v-if="item._thumbnail"
+                  tile
+                  :size="40"
+                >
+                  <img :src="item._thumbnail">
+                </v-avatar>
+              </template>
+              <template v-else-if="digitalDocumentField && digitalDocumentField.key === header.value">
+                <a :href="item._attachment_url">{{ item[header.value] }}</a>
+              </template>
+              <template v-else>
+                {{ ((item[header.value] === undefined || item[header.value] === null ? '' : item[header.value]) + '') | truncate(50) }}
+              </template>
+            </td>
+          </tr>
         </template>
       </v-data-table>
     </v-card>

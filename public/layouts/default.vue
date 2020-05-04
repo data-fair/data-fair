@@ -175,28 +175,14 @@
               </template>
 
               <!-- Administration pages -->
-              <v-list-group
-                v-if="user.adminMode"
-                value="true"
-              >
-                <v-list-item
-                  slot="activator"
-                  color="admin"
-                >
-                  <v-list-item-action>
-                    <v-icon color="admin">
-                      verified_user
-                    </v-icon>
-                  </v-list-item-action>
-                  <v-list-item-title>Administration</v-list-item-title>
-                </v-list-item>
+              <template v-if="user.adminMode">
                 <v-list-item
                   to="/admin/info"
                   color="admin"
                 >
                   <v-list-item-avatar>
                     <v-icon color="admin">
-                      info
+                      mdi-information
                     </v-icon>
                   </v-list-item-avatar>
                   <v-list-item-title>Informations du service</v-list-item-title>
@@ -207,7 +193,7 @@
                 >
                   <v-list-item-avatar>
                     <v-icon color="admin">
-                      work
+                      mdi-briefcase
                     </v-icon>
                   </v-list-item-avatar>
                   <v-list-item-title>Propriétaires</v-list-item-title>
@@ -218,7 +204,7 @@
                 >
                   <v-list-item-avatar>
                     <v-icon color="admin">
-                      warning
+                      mdi-alert
                     </v-icon>
                   </v-list-item-avatar>
                   <v-list-item-title>Erreurs</v-list-item-title>
@@ -229,7 +215,7 @@
                 >
                   <v-list-item-avatar>
                     <v-icon color="admin">
-                      apps
+                      mdi-apps
                     </v-icon>
                   </v-list-item-avatar>
                   <v-list-item-title>Applications de base</v-list-item-title>
@@ -240,12 +226,12 @@
                 >
                   <v-list-item-avatar>
                     <v-icon color="admin">
-                      supervisor_account
+                      mdi-account-supervisor
                     </v-icon>
                   </v-list-item-avatar>
                   <v-list-item-title>Gestion des comptes</v-list-item-title>
                 </v-list-item>
-              </v-list-group>
+              </template>
 
               <v-list-item @click="logout">
                 <v-list-item-title>Se déconnecter</v-list-item-title>

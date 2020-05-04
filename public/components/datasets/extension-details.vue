@@ -102,7 +102,7 @@
                 <v-icon
                   v-if="header.sortable"
                   small
-                >arrow_upward</v-icon>
+                >mdi-arrow-up</v-icon>
               </span>
             </th>
           </tr>

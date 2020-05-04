@@ -26,7 +26,7 @@
               @click="$refs.calendar.prev()"
             >
               <v-icon dark>
-                keyboard_arrow_left
+                mdi-chevron-left
               </v-icon>
             </v-btn>
             <v-spacer />
@@ -45,7 +45,7 @@
               @click="$refs.calendar.next()"
             >
               <v-icon dark>
-                keyboard_arrow_right
+                mdi-chevron-right
               </v-icon>
             </v-btn>
           </v-row>

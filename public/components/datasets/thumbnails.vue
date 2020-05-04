@@ -8,8 +8,8 @@
         </nuxt-link> pour en savoir plus.
       </p>
     </div>
-    <v-row column>
-      <v-row column>
+    <v-row>
+      <v-col>
         <h3 v-if="data.total <= 10000">
           Consultez {{ data.total.toLocaleString() }} {{ plural ? 'enregistrements' : 'enregistrement' }}
         </h3>
@@ -48,44 +48,38 @@
             class="mx-4"
           />
         </v-row>
-        <v-container
-          fluid
-          grid-list-lg
-          class="pa-0"
-        >
-          <v-row>
-            <v-col
-              v-for="(item, i) in data.results"
-              :key="i"
-              lg="2"
-              md="3"
-              sm="6"
-              cols="12"
-            >
-              <v-card :max-width="maxThumbnailWidth">
-                <v-img
-                  :src="item._thumbnail"
-                  :height="thumbnailHeight"
-                />
-                <v-card-title primary-title>
-                  <div>
-                    <h3
-                      v-if="labelField"
-                      class="headline mb-0"
-                    >
-                      {{ item[labelField.key] }}
-                    </h3>
-                    <div
-                      v-if="descriptionField"
-                      v-html="item[descriptionField.key]"
-                    />
-                  </div>
-                </v-card-title>
-              </v-card>
-            </v-col>
-          </v-row>
-        </v-container>
-      </v-row>
+        <v-row>
+          <v-col
+            v-for="(item, i) in data.results"
+            :key="i"
+            lg="2"
+            md="3"
+            sm="6"
+            cols="12"
+          >
+            <v-card :max-width="maxThumbnailWidth">
+              <v-img
+                :src="item._thumbnail"
+                :height="thumbnailHeight"
+              />
+              <v-card-title primary-title>
+                <div>
+                  <h3
+                    v-if="labelField"
+                    class="headline mb-0"
+                  >
+                    {{ item[labelField.key] }}
+                  </h3>
+                  <div
+                    v-if="descriptionField"
+                    v-html="item[descriptionField.key]"
+                  />
+                </div>
+              </v-card-title>
+            </v-card>
+          </v-col>
+        </v-row>
+      </v-col>
     </v-row>
   </div>
 </template>

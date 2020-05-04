@@ -1,89 +1,80 @@
 <template lang="html">
   <v-container>
-    <v-row
-      v-if="initialized"
-      column
-    >
-      <!--<v-subheader>{{ $t('pages.settings.description') }}</v-subheader>-->
-      <template v-if="authorized">
-        <h2 class="display-1 mb-4">
-          Paramètres de l'{{ $route.params.type ==='organization' ? ('organisation ' + organization.name): ('utilisateur ' + user.name) }}
-        </h2>
-        <p v-if="$route.params.type ==='organization'">
-          Vous êtes <strong>{{ user.organizations.find(o => o.id===$route.params.id).role }}</strong> dans cette organisation.
-        </p>
-        <div v-if="$route.params.type ==='organization'">
-          <h3 class="headline mb-3">
-            Permissions générales par rôle
+    <v-row v-if="initialized">
+      <v-col>
+        <!--<v-subheader>{{ $t('pages.settings.description') }}</v-subheader>-->
+        <template v-if="authorized">
+          <h2 class="display-1 mb-4">
+            Paramètres de l'{{ $route.params.type ==='organization' ? ('organisation ' + organization.name): ('utilisateur ' + user.name) }}
+          </h2>
+          <p v-if="$route.params.type ==='organization'">
+            Vous êtes <strong>{{ user.organizations.find(o => o.id===$route.params.id).role }}</strong> dans cette organisation.
+          </p>
+          <div v-if="$route.params.type ==='organization'">
+            <h3 class="headline mb-3">
+              Permissions générales par rôle
+            </h3>
+            <p>Le rôle <strong>{{ env.adminRole }}</strong> peut tout faire</p>
+
+            <v-data-table
+              :headers="[{text: 'Opération', sortable: false}].concat(organizationRoles.map(role => ({text: role, sortable: false, align: 'center'})))"
+              :items="Object.values(operations)"
+              hide-default-footer
+              class="elevation-1"
+            >
+              <template v-slot:item="{item}">
+                <tr>
+                  <td>{{ item.title }}</td>
+                  <td v-for="role in organizationRoles" :key="role">
+                    <v-checkbox
+                      v-model="settings.operationsPermissions[item.id]"
+                      :value="role"
+                      label=""
+                      @change="save"
+                    />
+                  </td>
+                </tr>
+              </template>
+            </v-data-table>
+          </div>
+
+          <h3 class="headline mt-3 mb-3">
+            Licenses
           </h3>
-          <p>Le rôle <strong>{{ env.adminRole }}</strong> peut tout faire</p>
-
-          <v-data-table
-            :headers="[{text: 'Opération', sortable: false}].concat(organizationRoles.map(role => ({text: role, sortable: false, align: 'center'})))"
-            :items="Object.values(operations)"
-            hide-default-footer
-            class="elevation-1"
-          >
-            <template v-slot:item="{item}">
-              <tr>
-                <td>
-                  {{ item.title }}
-                </td>
-                <td
-                  v-for="role in organizationRoles"
-                  :key="role"
-                >
-                  <v-checkbox
-                    v-model="settings.operationsPermissions[item.id]"
-                    :value="role"
-                    label=""
-                    @change="save"
-                  />
-                </td>
-              </tr>
-            </template>
-          </v-data-table>
-        </div>
-
-        <h3 class="headline mt-3 mb-3">
-          Licenses
-        </h3>
-        <settings-licenses
-          v-if="settings"
-          :settings="settings"
-          @license-updated="save"
-        />
-        <h3 class="headline mt-3 mb-3">
-          Clés d'API
-        </h3>
-        <settings-api-keys
-          v-if="settings"
-          :settings="settings"
-          @updated="save"
-        />
-        <h3 class="headline mt-3 mb-3">
-          Appels extérieurs (Webhooks)
-        </h3>
-        <settings-webhooks
-          v-if="settings"
-          :settings="settings"
-          @webhook-updated="save"
-        />
-      </template>
-      <v-responsive
-        v-else
-        height="auto"
-      >
-        <v-container class="fill-height">
-          <v-row align="center">
-            <v-col class="text-center">
-              <div class="headline">
-                Vous n'êtes pas autorisé à voir ou modifier le contenu de cette page. Si vous voulez changer les paramètres de votre organisation, veuillez contacter un administrateur de celle ci.
-              </div>
-            </v-col>
-          </v-row>
-        </v-container>
-      </v-responsive>
+          <settings-licenses
+            v-if="settings"
+            :settings="settings"
+            @license-updated="save"
+          />
+          <h3 class="headline mt-3 mb-3">
+            Clés d'API
+          </h3>
+          <settings-api-keys
+            v-if="settings"
+            :settings="settings"
+            @updated="save"
+          />
+          <h3 class="headline mt-3 mb-3">
+            Appels extérieurs (Webhooks)
+          </h3>
+          <settings-webhooks
+            v-if="settings"
+            :settings="settings"
+            @webhook-updated="save"
+          />
+        </template>
+        <v-responsive v-else height="auto">
+          <v-container class="fill-height">
+            <v-row align="center">
+              <v-col class="text-center">
+                <div class="headline">
+                  Vous n'êtes pas autorisé à voir ou modifier le contenu de cette page. Si vous voulez changer les paramètres de votre organisation, veuillez contacter un administrateur de celle ci.
+                </div>
+              </v-col>
+            </v-row>
+          </v-container>
+        </v-responsive>
+      </v-col>
     </v-row>
   </v-container>
 </template>

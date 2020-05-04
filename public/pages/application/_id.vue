@@ -1,8 +1,7 @@
 <template>
   <v-row
     v-if="application"
-    column
-    class="application"
+    class="xlass"
   >
     <v-navigation-drawer
       app
@@ -88,9 +87,9 @@
       </v-list>
     </v-navigation-drawer>
 
-    <v-row>
+    <v-col>
       <nuxt-child />
-    </v-row>
+    </v-col>
 
     <div class="actions-buttons">
       <v-menu
