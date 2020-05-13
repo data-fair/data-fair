@@ -8,6 +8,16 @@ import catalog from './catalog'
 
 Vue.use(Vuex)
 
+const propertyTypes = [
+  { type: 'string', title: 'Texte' },
+  { type: 'string', maxLength: 100000, title: 'Texte long' },
+  { type: 'string', format: 'date', title: 'Date' },
+  { type: 'string', format: 'date-time', title: 'Date et heure' },
+  { type: 'integer', title: 'Nombre entier' },
+  { type: 'number', title: 'Nombre' },
+  { type: 'boolean', title: 'Booléen' },
+]
+
 export default () => {
   return new Vuex.Store({
     modules: {
@@ -24,6 +34,7 @@ export default () => {
       env: {},
       searchQueries: {},
       projections: null,
+      propertyTypes,
     },
     getters: {
       ownerLicenses: (state) => (owner) => {

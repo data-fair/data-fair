@@ -16,6 +16,7 @@
       <v-list dense>
         <v-list-item
           v-if="mini"
+          style="height: 64px"
           @click.stop="mini = false"
         >
           <v-list-item-action>
@@ -24,7 +25,7 @@
         </v-list-item>
         <v-list-item
           v-else
-          avatar
+          style="height: 64px"
         >
           <v-list-item-title>{{ remoteService.title || remoteService.id }}</v-list-item-title>
           <v-list-item-action style="min-width: 0;">

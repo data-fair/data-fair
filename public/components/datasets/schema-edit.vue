@@ -1,47 +1,104 @@
 <template>
-  <form @submit.prevent="save()">
-    <v-row>
-      <v-col class="px-0">
-        <h3 class="headline px-3">
+  <v-row>
+    <v-col>
+      <v-row class="px-3">
+        <h3 class="headline">
           Champs principaux
         </h3>
-        <properties-slide v-if="schema && schema.length" :properties="schema" />
-      </v-col>
-    </v-row>
-
-    <!--
-    <v-row class="pl-3">
-      <h3 class="headline">
-        Schéma
-      </h3>
-      <v-spacer />
-      <div>
         <v-btn
-          v-if="updated"
-          text
-          @click="resetSchema"
-        >
-          Annuler les modifications
-        </v-btn>
-        <v-btn
-          v-if="updated"
-          type="submit"
+          v-if="dataset.isRest"
           color="primary"
+          fab
+          small
+          class="mx-2"
+          @click="newPropertyKey = null; newPropertyType = null; addPropertyDialog = true"
         >
-          Appliquer
+          <v-icon>mdi-plus</v-icon>
         </v-btn>
-      </div>
-    </v-row>
+        <v-spacer />
+        <div>
+          <v-btn
+            v-if="updated"
+            text
+            @click="resetSchema"
+          >
+            Annuler les modifications
+          </v-btn>
+          <v-btn
+            v-if="updated"
+            color="primary"
+            @click="save"
+          >
+            Appliquer
+          </v-btn>
+        </div>
+      </v-row>
 
-    <v-row class="py-2 pl-3">
-      <v-btn
-        v-if="dataset.isRest"
-        color="primary"
-        @click="newPropertyKey = null; newPropertyType = null; $refs.addPropertyForm.resetValidation(); addPropertyDialog = true"
-      >
-        Ajouter une propriété
-      </v-btn>
-    </v-row>
+      <properties-slide
+        v-if="schema && schema.length"
+        :properties="schema.filter(p => !p['x-calculated'])"
+        :original-properties="JSON.parse(originalSchema).filter(p => !p['x-calculated'])"
+        :editable="true"
+      />
+
+      <v-row class="px-3 pt-6">
+        <h3 class="headline">
+          Champs calculés
+        </h3>
+      </v-row>
+
+      <properties-slide
+        v-if="schema && schema.length"
+        :properties="schema.filter(p => p['x-calculated'])"
+        :original-properties="JSON.parse(originalSchema).filter(p => p['x-calculated'])"
+        :editable="false"
+      />
+    </v-col>
+
+    <v-dialog
+      v-model="addPropertyDialog"
+      max-width="500px"
+    >
+      <v-card>
+        <v-card-title primary-title>
+          Ajouter une propriété
+        </v-card-title>
+        <v-card-text>
+          <v-form
+            ref="addPropertyForm"
+            :lazy-validation="true"
+          >
+            <v-text-field
+              v-model="newPropertyKey"
+              :rules="[v => !!v || '', v => !schema.find(f => f.key === v) || '']"
+              name="key"
+              label="Clé"
+            />
+            <v-select
+              v-model="newPropertyType"
+              :items="propertyTypes"
+              :item-text="item => item.title"
+              :item-value="item => `${item.type}${item.format}${item.maxLength}`"
+              :rules="[v => !!v || '']"
+              return-object
+              label="Type"
+            />
+          </v-form>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn text @click="addPropertyDialog = false">
+            Annuler
+          </v-btn>
+          <v-btn color="primary" @click="addProperty">
+            Valider
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+  </v-row>
+
+  <!--
 
     <v-container
       v-for="extension in extensions"
@@ -152,51 +209,7 @@
       ref="schemaInput"
       type="file"
       @change="onMetadataUpload"
-    >->
-
-    <v-dialog
-      v-model="addPropertyDialog"
-      max-width="500px"
-    >
-      <v-card>
-        <v-card-title primary-title>
-          Ajouter une propriété
-        </v-card-title>
-        <v-card-text>
-          <v-form
-            ref="addPropertyForm"
-            :lazy-validation="true"
-          >
-            <v-text-field
-              v-model="newPropertyKey"
-              :rules="[v => !!v || '', v => !schema.find(f => f.key === v) || '']"
-              name="key"
-              label="Clé"
-            />
-            <v-select
-              v-model="newPropertyType"
-              :items="propertyTypes"
-              :item-text="item => item.title"
-              :item-value="item => `${item.type}${item.format}${item.maxLength}`"
-              :rules="[v => !!v || '']"
-              return-object
-              label="Type"
-            />
-          </v-form>
-        </v-card-text>
-        <v-card-actions>
-          <v-spacer />
-          <v-btn test @click="addPropertyDialog = false">
-            Annuler
-          </v-btn>
-          <v-btn color="primary" @click="addProperty">
-            Valider
-          </v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
-    -->
-  </form>
+    >-->
 </template>
 
 <script>
@@ -212,18 +225,9 @@
       addPropertyDialog: false,
       newPropertyKey: null,
       newPropertyType: null,
-      propertyTypes: [
-        { type: 'string', title: 'Texte' },
-        { type: 'string', maxLength: 100000, title: 'Texte long' },
-        { type: 'string', format: 'date', title: 'Date' },
-        { type: 'string', format: 'date-time', title: 'Date et heure' },
-        { type: 'integer', title: 'Nombre entier' },
-        { type: 'number', title: 'Nombre' },
-        { type: 'boolean', title: 'Booléen' },
-      ],
     }),
     computed: {
-      ...mapState(['vocabularyArray', 'vocabulary']),
+      ...mapState(['vocabulary', 'propertyTypes']),
       ...mapState('dataset', ['dataset']),
       ...mapGetters('dataset', ['remoteServicesMap']),
       updated() {
@@ -234,15 +238,6 @@
           .filter(ext => ext.active)
           .filter(ext => this.remoteServicesMap[ext.remoteService] && this.remoteServicesMap[ext.remoteService].actions[ext.action])
           .map(ext => ({ key: ext.remoteService + '/' + ext.action, ...ext })))
-      },
-      fieldsVocabulary() {
-        return this.schema.reduce((a, field) => {
-          if (field['x-extension']) return a
-          a[field.key] = [{ title: 'Aucun concept', id: null }].concat(this.vocabularyArray
-            .map(term => ({ title: term.title, id: term.identifiers[0] }))
-            .filter(term => !this.schema.find(f => (f['x-refersTo'] === term.id) && (f.key !== field.key))))
-          return a
-        }, {})
       },
     },
     watch: {

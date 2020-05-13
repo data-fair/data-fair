@@ -125,7 +125,7 @@
 
           <v-list-item v-if="dataset.isRest">
             <v-list-item-avatar class="ml-0 my-0">
-              <v-icon>all_inclusive</v-icon>
+              <v-icon>mdi-all-inclusive</v-icon>
             </v-list-item-avatar>
             <span>Jeu de données incrémental</span>
           </v-list-item>
