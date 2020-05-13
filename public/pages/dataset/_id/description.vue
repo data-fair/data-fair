@@ -7,9 +7,9 @@
 </template>
 
 <script>
-  import DatasetInfo from '../../../components/datasets/info.vue'
-  import DatasetSchemaEdit from '../../../components/datasets/schema-edit.vue'
-  import DatasetSchemaView from '../../../components/datasets/schema-view.vue'
+  import DatasetInfo from '~/components/datasets/info.vue'
+  import DatasetSchemaEdit from '~/components/datasets/schema-edit.vue'
+  import DatasetSchemaView from '~/components/datasets/schema-view.vue'
   import { mapGetters } from 'vuex'
 
   export default {

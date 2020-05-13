@@ -135,7 +135,7 @@
 
 <script>
   import { mapState, mapActions, mapGetters } from 'vuex'
-  import DatasetExtensionDetails from '../../../components/datasets/extension-details.vue'
+  import DatasetExtensionDetails from '~/components/datasets/extension-details.vue'
   import eventBus from '~/event-bus'
   import logger from '../../../logger'
 

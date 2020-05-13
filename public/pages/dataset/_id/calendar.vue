@@ -8,7 +8,7 @@
 </template>
 
 <script>
-  import DatasetCalendar from '../../../components/datasets/calendar.vue'
+  import DatasetCalendar from '~/components/datasets/calendar.vue'
 
   export default {
     components: { DatasetCalendar },

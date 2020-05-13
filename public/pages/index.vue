@@ -18,11 +18,13 @@
             hide-default-footer
           >
             <template v-slot:item="{item}">
-              <td>{{ item.name }}</td>
-              <td>{{ item.datasets }}</td>
-              <td>{{ parseFloat((item.storage / 1000).toFixed(2)).toLocaleString() }} ko</td>
-              <td>{{ parseFloat((item.storageLimit / 1000).toFixed(2)).toLocaleString() }} ko</td>
-              <td>{{ item.applications }}</td>
+              <tr>
+                <td>{{ item.name }}</td>
+                <td>{{ item.datasets }}</td>
+                <td>{{ parseFloat((item.storage / 1000).toFixed(2)).toLocaleString() }} ko</td>
+                <td>{{ parseFloat((item.storageLimit / 1000).toFixed(2)).toLocaleString() }} ko</td>
+                <td>{{ item.applications }}</td>
+              </tr>
             </template>
           </v-data-table>
         </v-sheet>

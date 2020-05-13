@@ -8,7 +8,7 @@
 </template>
 
 <script>
-  import DatasetMap from '../../../components/datasets/map.vue'
+  import DatasetMap from '~/components/datasets/map.vue'
 
   export default {
     components: { DatasetMap },

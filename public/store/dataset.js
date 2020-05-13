@@ -62,7 +62,7 @@ export default () => ({
     },
   },
   actions: {
-    async fetchInfo({ commit, getters, state }) {
+    async fetchInfo({ commit, dispatch, getters, state }) {
       let dataset
       try {
         dataset = await this.$axios.$get(`api/v1/datasets/${state.datasetId}`)
@@ -78,17 +78,31 @@ export default () => ({
         Vue.set(dataset, 'publications', dataset.publications || [])
 
         commit('setAny', { dataset })
-        const apps = await this.$axios.$get('api/v1/applications', { params: { dataset: dataset.id, size: 0 } })
-        commit('setAny', { nbApplications: apps.count })
-        const virtuals = await this.$axios.$get('api/v1/datasets', { params: { children: dataset.id, size: 0 } })
-        commit('setAny', { nbVirtualDatasets: virtuals.count })
-        const api = await this.$axios.$get(`api/v1/datasets/${state.datasetId}/api-docs.json`)
-        commit('setAny', { api })
-        const journal = await this.$axios.$get(`api/v1/datasets/${state.datasetId}/journal`)
-        commit('setAny', { journal })
+        await Promise.all([
+          dispatch('fetchApplications'),
+          dispatch('fetchVirtuals'),
+          dispatch('fetchApiDoc'),
+          dispatch('fetchJournal'),
+        ])
       } catch (error) {
         eventBus.$emit('notification', { error, msg: 'Erreur pendant la récupération des informations du jeu de données:' })
       }
+    },
+    async fetchApplications({ commit, state }) {
+      const apps = await this.$axios.$get('api/v1/applications', { params: { dataset: state.dataset.id, size: 0 } })
+      commit('setAny', { nbApplications: apps.count })
+    },
+    async fetchVirtuals({ commit, state }) {
+      const virtuals = await this.$axios.$get('api/v1/datasets', { params: { children: state.dataset.id, size: 0 } })
+      commit('setAny', { nbVirtualDatasets: virtuals.count })
+    },
+    async fetchApiDoc({ commit, state }) {
+      const api = await this.$axios.$get(`api/v1/datasets/${state.datasetId}/api-docs.json`)
+      commit('setAny', { api })
+    },
+    async fetchJournal({ commit, state }) {
+      const journal = await this.$axios.$get(`api/v1/datasets/${state.datasetId}/journal`)
+      commit('setAny', { journal })
     },
     async setId({ commit, getters, dispatch, state }, datasetId) {
       commit('setAny', { datasetId })

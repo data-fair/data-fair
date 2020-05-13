@@ -80,7 +80,7 @@
         >
           Services
         </v-btn>
-        <v-menu>
+        <v-menu offset-y>
           <template v-slot:activator="{on}">
             <v-btn
               :class="(routePrefix === 'user' || routePrefix === 'interoperate') ? 'v-btn--active' : ''"
@@ -122,39 +122,43 @@
             left
           >
             <template v-slot:activator="{on}">
-              <v-btn
-                text
-                v-on="on"
-              >
-                {{ user.name }}
+              <v-btn text v-on="on">
+                <v-avatar :size="40">
+                  <img :src="`${env.directoryUrl}/api/avatars/${activeAccount.type}/${activeAccount.id}/avatar.png`">
+                </v-avatar>
               </v-btn>
             </template>
             <v-list>
-              <v-list-item :to="`/settings/user/${user.id}`">
-                <v-list-item-title>Mes paramètres</v-list-item-title>
-              </v-list-item>
-              <v-list-item
-                v-for="orga in user.organizations || []"
-                :key="orga.id"
-                :to="`/settings/organization/${orga.id}`"
-              >
-                <v-list-item-title>Paramètres {{ orga.name || orga.id }}</v-list-item-title>
+              <template v-if="user && user.organizations.length">
+                <v-subheader>Changer de compte</v-subheader>
+                <v-list-item
+                  v-if="activeAccount.type !== 'user'"
+                  id="toolbar-menu-switch-user"
+                  @click="switchOrganization()"
+                >
+                  <v-list-item-title>Compte personnel</v-list-item-title>
+                </v-list-item>
+                <v-list-item
+                  v-for="organization in user.organizations.filter(o => activeAccount.type === 'user' || activeAccount.id !== o.id)"
+                  :id="'toolbar-menu-switch-orga-' + organization.id"
+                  :key="organization.id"
+                  @click="switchOrganization(organization.id)"
+                >
+                  <v-list-item-title>Organisation {{ organization.name }}</v-list-item-title>
+                </v-list-item>
+                <v-divider />
+              </template>
+              <v-list-item to="/settings">
+                <v-list-item-title>Paramètres</v-list-item-title>
               </v-list-item>
 
-              <v-list-item :to="`/storage/user/${user.id}`">
-                <v-list-item-title>Mon stockage</v-list-item-title>
+              <v-list-item to="/storage">
+                <v-list-item-title>Stockage</v-list-item-title>
               </v-list-item>
-              <v-list-item
-                v-for="orga in user.organizations || []"
-                :key="`storage-${orga.id}`"
-                :to="`/storage/organization/${orga.id}`"
-              >
-                <v-list-item-title>Stockage {{ orga.name || orga.id }}</v-list-item-title>
-              </v-list-item>
-
               <v-list-item :href="env.directoryUrl + '/me'">
                 <v-list-item-title>Mon compte</v-list-item-title>
               </v-list-item>
+              <v-divider />
 
               <!-- toggle admin mode -->
               <template v-if="user.isAdmin">
@@ -231,6 +235,7 @@
                   </v-list-item-avatar>
                   <v-list-item-title>Gestion des comptes</v-list-item-title>
                 </v-list-item>
+                <v-divider />
               </template>
 
               <v-list-item @click="logout">
@@ -248,11 +253,7 @@
         left
       >
         <template v-slot:activator="{on}">
-          <v-btn
-            slot="activator"
-            icon
-            v-on="on"
-          >
+          <v-btn icon v-on="on">
             <v-icon>mdi-menu</v-icon>
           </v-btn>
         </template>
@@ -341,6 +342,7 @@
     computed: {
       ...mapState(['env']),
       ...mapGetters(['searchQuery']),
+      ...mapGetters('session', ['activeAccount']),
       session() {
         return this.$store.state.session
       },
@@ -364,7 +366,7 @@
         this.showSnackbar = true
       })
     },
-    methods: mapActions('session', ['logout', 'login', 'setAdminMode']),
+    methods: mapActions('session', ['logout', 'login', 'setAdminMode', 'switchOrganization']),
   }
 
 </script>

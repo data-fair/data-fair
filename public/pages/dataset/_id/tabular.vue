@@ -8,97 +8,109 @@
         </nuxt-link> pour en savoir plus.
       </p>
     </div>
-    <v-card>
-      <v-card-title>
-        <v-row>
-          <v-col>
-            <h3 v-if="data.total <= 10000">
-              Consultez {{ data.total.toLocaleString() }} {{ plural ? 'enregistrements' : 'enregistrement' }}
-            </h3>
-            <h3 v-if="data.total > 10000">
-              Consultez {{ plural ? 'les' : 'le' }} {{ (10000).toLocaleString() }} {{ plural ? 'premiers enregistrements' : 'premier enregistrement' }} ({{ data.total.toLocaleString() }} au total)
-            </h3>
-            <div>
-              <v-btn
-                v-if="dataset.isRest && can('writeData')"
-                color="primary"
-                @click="editedLine = null; showEditLineDialog();"
-              >
-                Ajouter une ligne
-              </v-btn>
-            </div>
-            <v-row>
-              <v-col
-                lg="3"
-                md="4"
-                sm="5"
-                cols="12"
-              >
-                <v-text-field
-                  v-model="query"
-                  label="Rechercher"
-                  append-icon="mdi-magnify"
-                  class="mr-3"
-                  style="min-width:150px;"
-                  @keyup.enter.native="refresh"
-                  @click:append="refresh"
-                />
-              </v-col>
-              <v-spacer />
-              <v-col
-                v-show="$vuetify.breakpoint.mdAndUp"
-                xl="1"
-                lg="1"
-                md="2"
-              >
-                <v-select
-                  v-model="pagination.rowsPerPage"
-                  :items="[10,20,50]"
-                  label="Nombre de lignes"
-                />
-              </v-col>
-              <v-pagination
-                v-if="data.total > pagination.rowsPerPage"
-                v-model="pagination.page"
-                :length="Math.ceil(Math.min(data.total, 10000) / pagination.rowsPerPage)"
-                :total-visible="$vuetify.breakpoint.lgAndUp ? 7 : 5"
-                class="mx-4"
+    <v-sheet>
+      <v-row>
+        <v-col>
+          <h3 v-if="data.total <= 10000">
+            Consultez {{ data.total.toLocaleString() }} {{ plural ? 'enregistrements' : 'enregistrement' }}
+          </h3>
+          <h3 v-if="data.total > 10000">
+            Consultez {{ plural ? 'les' : 'le' }} {{ (10000).toLocaleString() }} {{ plural ? 'premiers enregistrements' : 'premier enregistrement' }} ({{ data.total.toLocaleString() }} au total)
+          </h3>
+          <div>
+            <v-btn
+              v-if="dataset.isRest && can('writeData')"
+              color="primary"
+              @click="editedLine = null; showEditLineDialog();"
+            >
+              Ajouter une ligne
+            </v-btn>
+          </div>
+          <v-row>
+            <v-col
+              lg="3"
+              md="4"
+              sm="5"
+              cols="12"
+            >
+              <v-text-field
+                v-model="query"
+                label="Rechercher"
+                append-icon="mdi-magnify"
+                class="mr-3"
+                style="min-width:150px;"
+                @keyup.enter.native="refresh"
+                @click:append="refresh"
               />
-            </v-row>
-          </v-col>
-        </v-row>
-      </v-card-title>
+            </v-col>
+            <v-spacer />
+            <v-col
+              v-show="$vuetify.breakpoint.mdAndUp"
+              xl="1"
+              lg="1"
+              md="2"
+            >
+              <v-select
+                v-model="pagination.rowsPerPage"
+                :items="[10,20,50]"
+                label="Nombre de lignes"
+              />
+            </v-col>
+            <v-pagination
+              v-if="data.total > pagination.rowsPerPage"
+              v-model="pagination.page"
+              :length="Math.ceil(Math.min(data.total, 10000) / pagination.rowsPerPage)"
+              :total-visible="$vuetify.breakpoint.lgAndUp ? 7 : 5"
+              class="mx-4"
+            />
+          </v-row>
+        </v-col>
+      </v-row>
 
       <v-data-table
         :headers="headers"
         :items="data.results"
-        :total-items="data.total"
+        :server-items-length="data.total"
         :loading="loading"
-        :pagination.sync="pagination"
+        :options.sync="pagination"
         hide-default-footer
         hide-default-header
       >
         <template v-slot:header>
-          <tr>
-            <th
-              v-for="header in headers"
-              :key="header.value"
-              :class="['column text-xs-left', header.sortable ? 'sortable' : '', pagination.descending ? 'desc' : 'asc', header.value === pagination.sortBy ? 'active' : '']"
-            >
-              <v-tooltip
-                v-if="header.tooltip"
-                bottom
-                style="margin-right: 8px;"
+          <thead class="v-data-table-header">
+            <tr>
+              <th
+                v-for="header in headers"
+                :key="header.value"
+                :class="{'text-start': true, sortable: header.sortable, active : header.value === pagination.sortBy, asc: !pagination.descending, desc: !pagination.descending}"
+                nowrap
+                @click="orderBy(header)"
               >
-                <span slot="activator"><v-icon small>info</v-icon></span>
-                <span>{{ header.tooltip }}</span>
-              </v-tooltip>
-              <span @click="orderBy(header)">
-                {{ header.text }}
-                <v-icon v-if="header.sortable" small>mdi-arrow-up</v-icon>
-              </span>
-            </th>
-          </tr>
+                <v-tooltip
+                  v-if="header.tooltip"
+                  bottom
+                  style="margin-right: 8px;"
+                >
+                  <template v-slot:activator="{ on }">
+                    <v-icon small v-on="on">
+                      mdi-information
+                    </v-icon>
+                  </template>
+                  <span>{{ header.tooltip }}</span>
+                </v-tooltip>
+                <span>
+                  {{ header.text }}
+                </span>
+                <v-icon
+                  v-if="header.sortable"
+                  class="v-data-table-header__icon"
+                  small
+                >
+                  mdi-arrow-up
+                </v-icon>
+              </th>
+            </tr>
+          </thead>
         </template>
         <template v-slot:item="{item}">
           <tr>
@@ -158,7 +170,7 @@
           </tr>
         </template>
       </v-data-table>
-    </v-card>
+    </v-sheet>
 
     <v-dialog
       v-model="editLineDialog"
@@ -270,24 +282,26 @@
           <v-data-table
             :headers="historyHeaders"
             :items="history.results"
-            :total-items="history.total"
+            :server-items-length="history.total"
             rows-per-page-text="Nombre de révisions"
             :loading="historyLoading"
-            :pagination.sync="historyPagination"
+            :options.sync="historyPagination"
           >
             <template v-slot:item="{item}">
-              <td
-                v-for="header in historyHeaders"
-                :key="header.value"
-                class="pr-0 pl-4"
-              >
-                <template v-if="header.value === '_updatedAt'">
-                  {{ new Date(item._updatedAt).toLocaleString() }}
-                </template>
-                <template v-else>
-                  {{ ((item[header.value] === undefined || item[header.value] === null ? '' : item[header.value]) + '') | truncate(50) }}
-                </template>
-              </td>
+              <tr>
+                <td
+                  v-for="header in historyHeaders"
+                  :key="header.value"
+                  class="pr-0 pl-4"
+                >
+                  <template v-if="header.value === '_updatedAt'">
+                    {{ new Date(item._updatedAt).toLocaleString() }}
+                  </template>
+                  <template v-else>
+                    {{ ((item[header.value] === undefined || item[header.value] === null ? '' : item[header.value]) + '') | truncate(50) }}
+                  </template>
+                </td>
+              </tr>
             </template>
           </v-data-table>
         </v-card-text>

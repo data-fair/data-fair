@@ -66,8 +66,8 @@
 <script>
   import { mapState, mapActions } from 'vuex'
 
-  import ImportApplication from '../components/ImportApplication.vue'
-  import ApplicationsList from '../components/ApplicationsList.vue'
+  import ImportApplication from '~/components/ImportApplication.vue'
+  import ApplicationsList from '~/components/ApplicationsList.vue'
 
   export default {
     name: 'Datasets',

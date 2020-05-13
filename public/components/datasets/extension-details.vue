@@ -62,7 +62,7 @@
         :items="data.results"
         :total-items="data.total"
         :loading="loading"
-        :pagination.sync="pagination"
+        :options.sync="pagination"
         hide-default-footer
         class="elevation-1"
       >
@@ -94,7 +94,11 @@
                 bottom
                 style="margin-right: 8px;"
               >
-                <span slot="activator"><v-icon small>info</v-icon></span>
+                <template v-slot:activator="{ on }">
+                  <v-icon small v-on="on">
+                    mdi-information
+                  </v-icon>
+                </template>
                 <span>{{ header.tooltip }}</span>
               </v-tooltip>
               <span @click="orderBy(header)">

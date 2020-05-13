@@ -11,7 +11,7 @@
     >
       Ajouter une clé d'API
     </v-btn>
-    <v-container grid-list-md>
+    <v-container>
       <v-row>
         <v-col
           v-for="(apiKey, rowIndex) in settings.apiKeys"
@@ -27,7 +27,7 @@
               <v-spacer />
               <v-btn
                 color="primary"
-                flat
+                text
                 class="pa-0 ma-0"
                 @click="currentApiKey = rowIndex; showUseDialog = true"
               >
@@ -186,7 +186,7 @@
 <script>
 
   import { mapState } from 'vuex'
-  const events = require('../../shared/events.json').dataset
+  const events = require('~/../shared/events.json').dataset
 
   export default {
     props: ['settings'],

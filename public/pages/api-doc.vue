@@ -11,7 +11,7 @@
 </template>
 
 <script>
-  import OpenApi from '../components/open-api.vue'
+  import OpenApi from '~/components/open-api.vue'
 
   export default {
     components: { OpenApi },

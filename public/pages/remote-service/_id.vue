@@ -72,14 +72,16 @@
         bottom
         left
       >
-        <v-btn
-          slot="activator"
-          fab
-          small
-          color="accent"
-        >
-          <v-icon>mdi-dots-vertical</v-icon>
-        </v-btn>
+        <template v-slot:activator="{on}">
+          <v-btn
+            fab
+            small
+            color="accent"
+            v-on="on"
+          >
+            <v-icon>mdi-dots-vertical</v-icon>
+          </v-btn>
+        </template>
         <v-list>
           <v-list-item
             v-if="remoteService.apiDoc.externalDocs"

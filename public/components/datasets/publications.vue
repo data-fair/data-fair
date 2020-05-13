@@ -23,24 +23,24 @@
           <v-list-item-title v-else>
             Jeu de données publié sur le catalogue "{{ catalogsById[publication.catalog].title }}" <span v-if="publication.publishedAt">({{ publication.publishedAt | moment("DD/MM/YYYY, HH:mm") }})</span>
           </v-list-item-title>
-          <v-list-item-sub-title v-if="publication.status==='published'">
+          <v-list-item-subtitle v-if="publication.status==='published'">
             <a
               :href="publication.targetUrl"
               target="_blank"
             >{{ publication.targetUrl }}</a>
-          </v-list-item-sub-title>
-          <v-list-item-sub-title
+          </v-list-item-subtitle>
+          <v-list-item-subtitle
             v-else-if="publication.status==='error'"
             style="color:red;"
           >
             {{ publication.error }}
-          </v-list-item-sub-title>
-          <v-list-item-sub-title v-else-if="publication.status==='deleted'">
+          </v-list-item-subtitle>
+          <v-list-item-subtitle v-else-if="publication.status==='deleted'">
             En attente de suppression
-          </v-list-item-sub-title>
-          <v-list-item-sub-title v-else>
+          </v-list-item-subtitle>
+          <v-list-item-subtitle v-else>
             En attente de publication
-          </v-list-item-sub-title>
+          </v-list-item-subtitle>
         </v-list-item-content>
         <v-list-item-content v-else>
           Cette publication référence une configuration de catalogue inconnue ({{ publication.catalog }}).

@@ -65,7 +65,7 @@
 
 <script>
   import { mapState, mapActions } from 'vuex'
-  import CatalogConfigForm from '../../../components/CatalogConfigForm.vue'
+  import CatalogConfigForm from '~/components/CatalogConfigForm.vue'
 
   export default {
     components: { CatalogConfigForm },

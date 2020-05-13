@@ -33,7 +33,7 @@
 
 <script>
   import 'iframe-resizer/js/iframeResizer.contentWindow'
-  import StorageDetails from '../../../../components/StorageDetails.vue'
+  import StorageDetails from '~/components/storage-details.vue'
   import { mapState } from 'vuex'
 
   export default {

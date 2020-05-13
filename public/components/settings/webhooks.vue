@@ -5,11 +5,10 @@
       Il s'agit d'une configuration technique pour personne avertie.
     </p>
     <v-form v-model="formValid">
-      <v-jsonschema-form
+      <v-jsf
+        v-model="wrapper"
         :schema="wrapperSchema"
-        :model="wrapper"
         :options="{requiredMessage: 'Information obligatoire'}"
-        @error="error => eventBus.$emit('notification', {error})"
         @change="change"
       />
     </v-form>
@@ -18,8 +17,8 @@
 
 <script>
   import Vue from 'vue'
-  import VJsonschemaForm from '@koumoul/vuetify-jsonschema-form/lib/index.vue'
-  import '@koumoul/vuetify-jsonschema-form/dist/main.css'
+  import VJsf from '@koumoul/vjsf/lib/VJsf.js'
+  import '@koumoul/vjsf/dist/main.css'
   import eventBus from '~/event-bus'
 
   if (process.browser) {
@@ -27,8 +26,8 @@
     Vue.component('draggable', Draggable)
   }
 
-  const events = require('../../shared/events.json').dataset
-  const webhooksSchema = require('../../contract/settings.json').properties.webhooks
+  const events = require('~/../shared/events.json').dataset
+  const webhooksSchema = require('~/../contract/settings.json').properties.webhooks
   const wrapperSchema = {
     type: 'object',
     properties: {
@@ -38,7 +37,7 @@
 
   export default {
     name: 'Webhooks',
-    components: { VJsonschemaForm },
+    components: { VJsf },
     props: ['settings'],
     data: () => ({
       events,

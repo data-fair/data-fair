@@ -13,18 +13,18 @@
                 target="_top"
               >{{ dataset.title || dataset.id }}</a> ({{ dataset.storage.size | displayBytes }})
             </v-list-item-title>
-            <v-list-item-sub-title v-if="dataset.storage.fileSize">
+            <v-list-item-subtitle v-if="dataset.storage.fileSize">
               {{ dataset.storage.fileSize | displayBytes }} de fichier de données
-            </v-list-item-sub-title>
-            <v-list-item-sub-title v-if="dataset.storage.attachmentsSize">
+            </v-list-item-subtitle>
+            <v-list-item-subtitle v-if="dataset.storage.attachmentsSize">
               {{ dataset.storage.attachmentsSize | displayBytes }} de pièces jointes
-            </v-list-item-sub-title>
-            <v-list-item-sub-title v-if="dataset.storage.collectionSize">
+            </v-list-item-subtitle>
+            <v-list-item-subtitle v-if="dataset.storage.collectionSize">
               {{ dataset.storage.collectionSize | displayBytes }} de lignes en base de données
-            </v-list-item-sub-title>
-            <v-list-item-sub-title v-if="dataset.storage.revisionsSize">
+            </v-list-item-subtitle>
+            <v-list-item-subtitle v-if="dataset.storage.revisionsSize">
               {{ dataset.storage.revisionsSize | displayBytes }} de révisions historisées
-            </v-list-item-sub-title>
+            </v-list-item-subtitle>
           </v-list-item-content>
         </v-list-item>
         <v-divider

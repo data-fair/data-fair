@@ -30,12 +30,12 @@
                     target="_blank"
                   >{{ dataset.title }}</a>
                 </v-list-item-title>
-                <v-list-item-sub-title>
+                <v-list-item-subtitle>
                   Ressources :
                   {{ dataset.resources.length }} dans le catalogue |
                   {{ dataset.nbHarvestable }} {{ dataset.nbHarvestable > 1 ? 'importables' : 'importable' }} |
                   {{ dataset.nbHarvested }} {{ dataset.nbHarvested > 1 ? 'déjà importées' : 'déjà importée' }}
-                </v-list-item-sub-title>
+                </v-list-item-subtitle>
               </v-list-item-content>
 
               <v-list-item-action>

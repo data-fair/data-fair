@@ -12,7 +12,7 @@
 
 <script>
   import { mapGetters } from 'vuex'
-  import OpenApi from '../../../components/open-api.vue'
+  import OpenApi from '~/components/open-api.vue'
 
   export default {
     components: { OpenApi },

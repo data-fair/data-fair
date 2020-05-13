@@ -3,7 +3,7 @@
 </template>
 
 <script>
-  import DatasetPublications from '../../../components/datasets/publications.vue'
+  import DatasetPublications from '~/components/datasets/publications.vue'
 
   export default {
     components: {

@@ -20,7 +20,7 @@
       >
         <v-list-item-content>
           <v-list-item-title>{{ license.title }}</v-list-item-title>
-          <v-list-item-sub-title>{{ license.href }}</v-list-item-sub-title>
+          <v-list-item-subtitle>{{ license.href }}</v-list-item-subtitle>
         </v-list-item-content>
         <v-list-item-action>
           <v-btn

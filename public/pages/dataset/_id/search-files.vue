@@ -5,7 +5,7 @@
 </template>
 
 <script>
-  import SearchFiles from '../../../components/datasets/search-files.vue'
+  import SearchFiles from '~/components/datasets/search-files.vue'
   export default {
     components: { SearchFiles },
   }

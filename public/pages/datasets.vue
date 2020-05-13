@@ -16,7 +16,6 @@
         >
           <template v-slot:activator="{on}">
             <v-btn
-              slot="activator"
               fab
               color="primary"
               title="Créer un jeu de données"
@@ -111,10 +110,10 @@
 <script>
   import { mapState, mapActions } from 'vuex'
 
-  import ImportFile from '../components/ImportFile.vue'
-  import CreateVirtual from '../components/CreateVirtual.vue'
-  import CreateRest from '../components/CreateRest.vue'
-  import DatasetsList from '../components/datasets/list.vue'
+  import ImportFile from '~/components/ImportFile.vue'
+  import CreateVirtual from '~/components/CreateVirtual.vue'
+  import CreateRest from '~/components/CreateRest.vue'
+  import DatasetsList from '~/components/datasets/list.vue'
 
   export default {
     name: 'Datasets',

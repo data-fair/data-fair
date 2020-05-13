@@ -65,13 +65,13 @@
                     visibility_off
                   </v-icon>
                 </v-list-item-title>
-                <v-list-item-sub-title>{{ baseApp.description }}</v-list-item-sub-title>
-                <v-list-item-sub-title>
+                <v-list-item-subtitle>{{ baseApp.description }}</v-list-item-subtitle>
+                <v-list-item-subtitle>
                   <nuxt-link :to="{path: '/applications', query: {url: baseApp.url, showAll: true}}">
                     {{ baseApp.nbApplications }} application{{ baseApp.nbApplications > 1 ? 's' : '' }}
                   </nuxt-link>
                   - Jeux de données : {{ baseApp.datasetsFilters }}
-                </v-list-item-sub-title>
+                </v-list-item-subtitle>
               </v-list-item-content>
               <v-list-item-action>
                 <v-icon

@@ -10,7 +10,7 @@
 
 <script>
   import 'iframe-resizer/js/iframeResizer.contentWindow'
-  import SettingsLicenses from '../../../../../components/SettingsLicenses.vue'
+  import SettingsLicenses from '~/components/settings/licenses.vue'
   import eventBus from '~/event-bus'
 
   export default {

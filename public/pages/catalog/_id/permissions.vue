@@ -10,7 +10,7 @@
 
 <script>
   import { mapState, mapGetters } from 'vuex'
-  import Permissions from '../../../components/permissions.vue'
+  import Permissions from '~/components/permissions.vue'
 
   export default {
     components: { Permissions },

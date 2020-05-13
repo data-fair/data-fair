@@ -31,11 +31,11 @@
                 <v-list-item-title>
                   {{ owner.name }} ({{ owner.type }})
                 </v-list-item-title>
-                <v-list-item-sub-title>
+                <v-list-item-subtitle>
                   <span v-if="owner.consumption && (owner.consumption.storage !== undefined)">{{ parseFloat(((owner.consumption && owner.consumption.storage || 0) / 1000).toFixed(2)).toLocaleString() }} ko stockés</span>
                   <span v-if="owner.storage !== undefined">pour une limite à {{ parseFloat((owner.storage / 1000).toFixed(2)).toLocaleString() }} ko</span>
-                </v-list-item-sub-title>
-                <v-list-item-sub-title>
+                </v-list-item-subtitle>
+                <v-list-item-subtitle>
                   <nuxt-link :to="{path: '/datasets', query: {owner: `${owner.type}:${owner.id}`, showAll: true}}">
                     {{ owner.nbDatasets }} jeux de données
                   </nuxt-link>
@@ -43,7 +43,7 @@
                   <nuxt-link :to="{path: '/applications', query: {owner: `${owner.type}:${owner.id}`, showAll: true}}">
                     {{ owner.nbApplications }} applications
                   </nuxt-link>
-                </v-list-item-sub-title>
+                </v-list-item-subtitle>
               </v-list-item-content>
             </v-list-item>
           </v-list>

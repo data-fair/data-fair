@@ -7,7 +7,7 @@
 
 <script>
   import 'iframe-resizer/js/iframeResizer.contentWindow'
-  import Thumbnails from '../../../../components/datasets/thumbnails.vue'
+  import Thumbnails from '~/components/datasets/thumbnails.vue'
   export default {
     components: { Thumbnails },
   }

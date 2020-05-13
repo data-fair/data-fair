@@ -4,7 +4,7 @@
       <v-col>
         <template v-if="authorized">
           <h2 class="display-1 mb-4">
-            Détail du stockage de l'{{ $route.params.type ==='organization' ? ('organisation ' + ((organization && organization.name) || $route.params.id)): ('utilisateur ' + user.name) }}
+            Détail du stockage de l'{{ activeAccount.type ==='organization' ? ('organisation ' + ((organization && organization.name) || activeAccount.id)): ('utilisateur ' + user.name) }}
           </h2>
           <storage-details :datasets="datasets" />
         </template>
@@ -29,8 +29,8 @@
 </template>
 
 <script>
-  import StorageDetails from '../../../components/StorageDetails.vue'
-  import { mapState } from 'vuex'
+  import StorageDetails from '~/components/storage-details.vue'
+  import { mapState, mapGetters } from 'vuex'
 
   export default {
     components: { StorageDetails },
@@ -40,9 +40,10 @@
     computed: {
       ...mapState(['env']),
       ...mapState('session', ['user', 'initialized']),
+      ...mapGetters('session', ['activeAccount']),
       organization() {
-        if (this.$route.params.type === 'organization') {
-          return this.user.organizations.find(o => o.id === this.$route.params.id)
+        if (this.activeAccount.type === 'organization') {
+          return this.user.organizations.find(o => o.id === this.activeAccount.id)
         } else {
           return null
         }
@@ -50,8 +51,8 @@
       authorized() {
         if (!this.user) return false
         if (this.user.adminMode) return true
-        if (this.$route.params.type === 'user' && this.$route.params.id !== this.user.id) return false
-        if (this.$route.params.type === 'organization') {
+        if (this.activeAccount.type === 'user' && this.activeAccount.id !== this.user.id) return false
+        if (this.activeAccount.type === 'organization') {
           if (!this.organization) return false
           if (this.organization.role !== this.env.adminRole) return false
         }
@@ -60,7 +61,7 @@
     },
     async created() {
       if (!this.authorized) return
-      this.datasets = (await this.$axios.$get('api/v1/datasets', { params: { size: 10000, owner: `${this.$route.params.type}:${this.$route.params.id}`, select: 'id,title,storage', sort: 'storage.size:-1' } })).results
+      this.datasets = (await this.$axios.$get('api/v1/datasets', { params: { size: 10000, owner: `${this.activeAccount.type}:${this.activeAccount.id}`, select: 'id,title,storage', sort: 'storage.size:-1' } })).results
     },
   }
 </script>

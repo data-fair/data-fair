@@ -5,12 +5,12 @@
         <!--<v-subheader>{{ $t('pages.settings.description') }}</v-subheader>-->
         <template v-if="authorized">
           <h2 class="display-1 mb-4">
-            Paramètres de l'{{ $route.params.type ==='organization' ? ('organisation ' + organization.name): ('utilisateur ' + user.name) }}
+            Paramètres de l'{{ activeAccount.type ==='organization' ? ('organisation ' + organization.name): ('utilisateur ' + user.name) }}
           </h2>
-          <p v-if="$route.params.type ==='organization'">
-            Vous êtes <strong>{{ user.organizations.find(o => o.id===$route.params.id).role }}</strong> dans cette organisation.
+          <p v-if="activeAccount.type ==='organization'">
+            Vous êtes <strong>{{ user.organizations.find(o => o.id===activeAccount.id).role }}</strong> dans cette organisation.
           </p>
-          <div v-if="$route.params.type ==='organization'">
+          <div v-if="activeAccount.type ==='organization'">
             <h3 class="headline mb-3">
               Permissions générales par rôle
             </h3>
@@ -80,10 +80,10 @@
 </template>
 
 <script>
-  import { mapState } from 'vuex'
-  import SettingsWebhooks from '../../../components/SettingsWebhooks.vue'
-  import SettingsLicenses from '../../../components/SettingsLicenses.vue'
-  import SettingsApiKeys from '../../../components/SettingsApiKeys.vue'
+  import { mapState, mapGetters } from 'vuex'
+  import SettingsWebhooks from '~/components/settings/webhooks.vue'
+  import SettingsLicenses from '~/components/settings/licenses.vue'
+  import SettingsApiKeys from '~/components/settings/api-keys.vue'
   import eventBus from '~/event-bus'
 
   export default {
@@ -98,6 +98,7 @@
     }),
     computed: {
       ...mapState('session', ['user', 'initialized']),
+      ...mapGetters('session', ['activeAccount']),
       ...mapState(['env']),
       operations() {
         return (this.api && [].concat(...Object.keys(this.api.paths).map(path => Object.keys(this.api.paths[path]).map(method => ({
@@ -108,9 +109,9 @@
       },
       authorized() {
         if (!this.user) return false
-        if (this.$route.params.type === 'user' && this.$route.params.id !== this.user.id) return false
-        if (this.$route.params.type === 'organization') {
-          const organization = this.user.organizations.find(o => o.id === this.$route.params.id)
+        if (this.activeAccount.type === 'user' && this.activeAccount.id !== this.user.id) return false
+        if (this.activeAccount.type === 'organization') {
+          const organization = this.user.organizations.find(o => o.id === this.activeAccount.id)
           if (!organization) return false
           if (organization.role !== this.env.adminRole) return false
         }
@@ -127,17 +128,17 @@
     },
     methods: {
       async init() {
-        if (this.$route.params.type === 'organization') {
+        if (this.activeAccount.type === 'organization') {
           let roles = []
           try {
-            this.organization = await this.$axios.$get(this.env.directoryUrl + '/api/organizations/' + this.$route.params.id)
-            roles = await this.$axios.$get(this.env.directoryUrl + '/api/organizations/' + this.$route.params.id + '/roles')
+            this.organization = await this.$axios.$get(this.env.directoryUrl + '/api/organizations/' + this.activeAccount.id)
+            roles = await this.$axios.$get(this.env.directoryUrl + '/api/organizations/' + this.activeAccount.id + '/roles')
           } catch (err) {
             eventBus.$emit('notification', { type: 'error', msg: 'Erreur pendant la récupération de la liste des rôles de l\'organisation' })
           }
           this.organizationRoles = roles.filter(role => role !== this.env.adminRole)
         }
-        this.settings = await this.$axios.$get('api/v1/settings/' + this.$route.params.type + '/' + this.$route.params.id)
+        this.settings = await this.$axios.$get('api/v1/settings/' + this.activeAccount.type + '/' + this.activeAccount.id)
         this.$set(this.settings, 'operationsPermissions', this.settings.operationsPermissions || {})
         this.$set(this.settings, 'webhooks', this.settings.webhooks || [])
         this.$set(this.settings, 'apiKeys', this.settings.apiKeys || [])
@@ -149,7 +150,7 @@
       },
       async save() {
         try {
-          this.settings = await this.$axios.$put('api/v1/settings/' + this.$route.params.type + '/' + this.$route.params.id, this.settings)
+          this.settings = await this.$axios.$put('api/v1/settings/' + this.activeAccount.type + '/' + this.activeAccount.id, this.settings)
           eventBus.$emit('notification', 'Les paramètres ont bien été mis à jour')
         } catch (error) {
           eventBus.$emit('notification', { error, msg: 'Erreur pendant la mise à jour des paramètres' })

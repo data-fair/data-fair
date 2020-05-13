@@ -8,7 +8,7 @@
 </template>
 
 <script>
-  import Journal from '../../../components/journal.vue'
+  import Journal from '~/components/journal.vue'
   const { mapState } = require('vuex')
 
   export default {

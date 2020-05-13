@@ -96,14 +96,17 @@
         bottom
         left
       >
-        <v-btn
-          slot="activator"
-          fab
-          small
-          color="accent"
-        >
-          <v-icon>mdi-dots-vertical</v-icon>
-        </v-btn>
+        <template v-slot:activator="{on}">
+          <v-btn
+            fab
+            small
+            color="accent"
+            v-on="on"
+          >
+            <v-icon>mdi-dots-vertical</v-icon>
+          </v-btn>
+        </template>
+
         <v-list>
           <v-list-item
             :disabled="!can('readConfig')"
@@ -304,7 +307,7 @@
 
 <script>
   import { mapState, mapActions, mapGetters } from 'vuex'
-  import OwnerPick from '../../components/OwnerPick.vue'
+  import OwnerPick from '~/components/OwnerPick.vue'
 
   export default {
     components: { OwnerPick },

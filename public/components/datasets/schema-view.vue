@@ -7,11 +7,13 @@
     :hide-default-footer="true"
   >
     <template v-slot:item="{item}">
-      <td>{{ item.key }}</td>
-      <td>{{ item.title || item['x-originalName'] || item.key }}</td>
-      <td>{{ item.format || item.type }}</td>
-      <td>{{ vocabulary && vocabulary[item['x-refersTo']] && vocabulary[item['x-refersTo']].title }}</td>
-      <td>{{ item.description || (vocabulary && vocabulary[item['x-refersTo']] && vocabulary[item['x-refersTo']].description) }}</td>
+      <tr>
+        <td>{{ item.key }}</td>
+        <td>{{ item.title || item['x-originalName'] || item.key }}</td>
+        <td>{{ item.format || item.type }}</td>
+        <td>{{ vocabulary && vocabulary[item['x-refersTo']] && vocabulary[item['x-refersTo']].title }}</td>
+        <td>{{ item.description || (vocabulary && vocabulary[item['x-refersTo']] && vocabulary[item['x-refersTo']].description) }}</td>
+      </tr>
     </template>
   </v-data-table>
 </template>
