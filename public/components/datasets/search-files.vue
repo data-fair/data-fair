@@ -8,14 +8,14 @@
         </nuxt-link> pour en savoir plus.
       </p>
     </div>
-    <v-card v-if="data">
+    <v-card v-if="data" elevation="0">
       <v-card-title style="padding-bottom: 0;">
         <v-row>
           <v-col>
-            <h3 v-if="data.total <= 10000">
+            <h3 v-if="data.total <= 10000" class="headline">
               Consultez {{ data.total.toLocaleString() }} {{ plural ? 'enregistrements' : 'enregistrement' }}
             </h3>
-            <h3 v-if="data.total > 10000">
+            <h3 v-if="data.total > 10000" class="headline">
               Consultez {{ plural ? 'les' : 'le' }} {{ (10000).toLocaleString() }} {{ plural ? 'premiers enregistrements' : 'premier enregistrement' }} ({{ data.total.toLocaleString() }} au total)
             </h3>
             <v-row>

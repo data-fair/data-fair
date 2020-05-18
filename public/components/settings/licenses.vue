@@ -30,7 +30,7 @@
             title="Supprimer cette license"
             @click="removeLicense(rowIndex)"
           >
-            <v-icon>delete</v-icon>
+            <v-icon>mdi-delete</v-icon>
           </v-btn>
         </v-list-item-action>
       </v-list-item>

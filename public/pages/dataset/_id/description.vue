@@ -1,19 +1,17 @@
 <template lang="html">
   <v-container fluid>
     <dataset-info />
-    <dataset-schema-edit v-if="can('writeDescription')" />
-    <dataset-schema-view v-else />
+    <dataset-schema />
   </v-container>
 </template>
 
 <script>
   import DatasetInfo from '~/components/datasets/info.vue'
-  import DatasetSchemaEdit from '~/components/datasets/schema-edit.vue'
-  import DatasetSchemaView from '~/components/datasets/schema-view.vue'
+  import DatasetSchema from '~/components/datasets/schema.vue'
   import { mapGetters } from 'vuex'
 
   export default {
-    components: { DatasetInfo, DatasetSchemaView, DatasetSchemaEdit },
+    components: { DatasetInfo, DatasetSchema },
     computed: {
       ...mapGetters('dataset', ['can']),
     },

@@ -11,21 +11,24 @@
     <v-sheet>
       <v-row>
         <v-col>
-          <h3 v-if="data.total <= 10000">
-            Consultez {{ data.total.toLocaleString() }} {{ plural ? 'enregistrements' : 'enregistrement' }}
-          </h3>
-          <h3 v-if="data.total > 10000">
-            Consultez {{ plural ? 'les' : 'le' }} {{ (10000).toLocaleString() }} {{ plural ? 'premiers enregistrements' : 'premier enregistrement' }} ({{ data.total.toLocaleString() }} au total)
-          </h3>
-          <div>
+          <v-row class="px-3">
+            <h3 v-if="data.total <= 10000" class="headline">
+              Consultez {{ data.total.toLocaleString() }} {{ plural ? 'enregistrements' : 'enregistrement' }}
+            </h3>
+            <h3 v-if="data.total > 10000" class="headline">
+              Consultez {{ plural ? 'les' : 'le' }} {{ (10000).toLocaleString() }} {{ plural ? 'premiers enregistrements' : 'premier enregistrement' }} ({{ data.total.toLocaleString() }} au total)
+            </h3>
             <v-btn
               v-if="dataset.isRest && can('writeData')"
               color="primary"
+              fab
+              x-small
+              class="mx-2"
               @click="editedLine = null; showEditLineDialog();"
             >
-              Ajouter une ligne
+              <v-icon>                mdi-plus              </v-icon>
             </v-btn>
-          </div>
+          </v-row>
           <v-row>
             <v-col
               lg="3"
@@ -119,9 +122,7 @@
               :key="header.value"
               class="pr-0 pl-4"
             >
-              <v-row
-                v-if="header.value === '_actions'"
-              >
+              <div v-if="header.value === '_actions'" style="min-width:120px;">
                 <v-btn
                   flat
                   icon
@@ -129,7 +130,7 @@
                   title="Supprimer cette ligne"
                   @click="editedLine = Object.assign({}, item); deleteLineDialog = true;"
                 >
-                  <v-icon>delete</v-icon>
+                  <v-icon>mdi-delete</v-icon>
                 </v-btn>
                 <v-btn
                   flat
@@ -138,7 +139,7 @@
                   title="Éditer cette ligne"
                   @click="editedLine = Object.assign({}, item); showEditLineDialog();"
                 >
-                  <v-icon>edit</v-icon>
+                  <v-icon>mdi-pencil</v-icon>
                 </v-btn>
                 <v-btn
                   v-if="dataset.rest && dataset.rest.history"
@@ -148,9 +149,9 @@
                   title="Voir l'historique des révisions de cette ligne"
                   @click="showHistoryDialog(item)"
                 >
-                  <v-icon>history</v-icon>
+                  <v-icon>mdi-history</v-icon>
                 </v-btn>
-              </v-row>
+              </div>
               <template v-else-if="header.value === '_thumbnail'">
                 <v-avatar
                   v-if="item._thumbnail"
@@ -161,7 +162,7 @@
                 </v-avatar>
               </template>
               <template v-else-if="digitalDocumentField && digitalDocumentField.key === header.value">
-                <a :href="item._attachment_url">{{ item[header.value] }}</a>
+                <a v-if="item._attachment_url" :href="item._attachment_url">{{ item[header.value] }}</a>
               </template>
               <template v-else>
                 {{ ((item[header.value] === undefined || item[header.value] === null ? '' : item[header.value]) + '') | truncate(50) }}
@@ -185,12 +186,11 @@
             ref="editLineForm"
             :lazy-validation="true"
           >
-            <v-jsonschema-form
+            <v-jsf
               v-if="editLineDialog && editedLine"
+              v-model="editedLine"
               :schema="jsonSchema"
-              :model="editedLine"
-              :options="{requiredMessage: 'Information obligatoire', noDataMessage: 'Aucune valeur correspondante', 'searchMessage': 'Recherchez...'}"
-              @error="error => eventBus.$emit('notification', {error})"
+              :options="{removeAdditionalProperties: true}"
             />
 
             <template v-if="dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')">
@@ -207,78 +207,48 @@
         </v-card-text>
         <v-card-actions>
           <v-spacer />
-          <v-btn
-            flat
-            @click="editLineDialog = false"
-          >
+          <v-btn text @click="editLineDialog = false">
             Annuler
           </v-btn>
-          <v-btn
-            color="primary"
-            @click="saveLine"
-          >
+          <v-btn color="primary" @click="saveLine">
             Enregistrer
           </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
 
-    <v-dialog
-      v-model="deleteLineDialog"
-      max-width="500px"
-    >
+    <v-dialog v-model="deleteLineDialog" max-width="500px">
       <v-card>
         <v-card-title primary-title>
           Supprimer une ligne
         </v-card-title>
         <v-card-text>
-          <v-alert
-            :value="true"
-            type="error"
-          >
+          <v-alert :value="true" type="error">
             Attention la donnée de cette ligne sera perdue définitivement.
           </v-alert>
         </v-card-text>
         <v-card-actions>
           <v-spacer />
-          <v-btn
-            flat
-            @click="deleteLineDialog = false"
-          >
+          <v-btn text @click="deleteLineDialog = false">
             Annuler
           </v-btn>
-          <v-btn
-            color="warning"
-            @click="deleteLine"
-          >
+          <v-btn color="warning" @click="deleteLine">
             Supprimer
           </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
 
-    <v-dialog
-      v-model="historyDialog"
-      max-width="800px"
-    >
+    <v-dialog v-model="historyDialog" max-width="800px">
       <v-card>
-        <v-toolbar
-          dense
-          flat
-        >
+        <v-toolbar dense flat>
           <v-toolbar-title>Historique des révisions</v-toolbar-title>
           <v-spacer />
-          <v-btn
-            icon
-            @click.native="historyDialog = false"
-          >
+          <v-btn icon @click.native="historyDialog = false">
             <v-icon>mdi-close</v-icon>
           </v-btn>
         </v-toolbar>
-        <v-card-text
-          v-if="history"
-          class="pa-0"
-        >
+        <v-card-text v-if="history" class="pa-0">
           <v-data-table
             :headers="historyHeaders"
             :items="history.results"
@@ -313,11 +283,11 @@
 <script>
   import { mapState, mapGetters } from 'vuex'
   import eventBus from '~/event-bus'
-  import VJsonschemaForm from '@koumoul/vuetify-jsonschema-form/lib/index.vue'
-  import '@koumoul/vuetify-jsonschema-form/dist/main.css'
+  import VJsf from '@koumoul/vjsf/lib/VJsf.js'
+  import '@koumoul/vjsf/dist/main.css'
 
   export default {
-    components: { VJsonschemaForm },
+    components: { VJsf },
     data: () => ({
       data: {},
       query: null,
@@ -390,6 +360,7 @@
           type: 'object',
           properties: this.dataset.schema
             .filter(f => !f['x-calculated'])
+            .filter(f => !f['x-extension'])
             .filter(f => f['x-refersTo'] !== 'http://schema.org/DigitalDocument')
             // .map(f => ({ ...f, maxLength: 10000 }))
             .reduce((a, f) => { a[f.key] = f; return a }, {}),
@@ -447,7 +418,6 @@
         }
       },
       showEditLineDialog() {
-        this.$refs.editLineForm.resetValidation()
         if (!this.editedLine) {
           this.editedId = null
           this.file = null
@@ -498,8 +468,8 @@
         const formData = new FormData()
         if (this.file) formData.append('attachment', this.file)
 
-        this.dataset.schema.filter(f => !f['x-calculated']).forEach(f => {
-          if (this.editedLine[f.key] !== null) formData.append([f.key], this.editedLine[f.key])
+        this.dataset.schema.filter(f => !f['x-calculated'] && !f['x-extension']).forEach(f => {
+          if (this.editedLine[f.key] !== null && this.editedLine[f.key] !== undefined) formData.append([f.key], this.editedLine[f.key])
         })
         if (this.editedId) formData.append('_id', this.editedId)
         this.editLineDialog = false

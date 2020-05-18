@@ -1,8 +1,5 @@
 <template>
-  <v-row
-    v-if="dataset"
-    class="dataset"
-  >
+  <v-row v-if="dataset" class="dataset">
     <v-navigation-drawer
       app
       fixed
@@ -15,14 +12,14 @@
       <v-list dense class="pt-0">
         <v-list-item
           v-if="mini"
-          style="height: 64px"
+          style="min-height: 64px"
           @click.stop="mini = false"
         >
           <v-list-item-action>
             <v-icon>mdi-chevron-right</v-icon>
           </v-list-item-action>
         </v-list-item>
-        <v-list-item v-else style="height: 64px">
+        <v-list-item v-else style="min-height: 64px">
           <v-list-item-title class="title">
             {{ dataset.title || dataset.id }}
           </v-list-item-title>

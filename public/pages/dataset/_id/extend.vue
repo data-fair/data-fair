@@ -1,6 +1,8 @@
 <template lang="html">
   <v-container>
-    <p>Les actions d'enrichissement proposées ci-dessous dépendent des concepts associés à ce jeu de données et des services configurés.</p>
+    <v-row>
+      <p>Les actions d'enrichissement proposées ci-dessous dépendent des concepts associés à ce jeu de données et des services configurés.</p>
+    </v-row>
 
     <v-data-table
       v-if="ready"
@@ -19,6 +21,7 @@
               v-model="item.active"
               primary
               hide-details
+              class="mt-0"
             />
           </td>
           <td class="pt-2 pb-2">
@@ -56,7 +59,8 @@
               </template>
             </v-select>
             <v-alert
-              :value="item.active && item.error"
+              v-if="item.active && item.error"
+              :value="true"
               type="error"
             >
               {{ item.error }}
@@ -80,7 +84,7 @@
                   title="Recommencer et écraser les valeurs enrichies précédemment"
                   @click="save(item)"
                 >
-                  <v-icon>play_circle_filled</v-icon>
+                  <v-icon>mdi-play-circle</v-icon>
                 </v-btn>
               </span>
             </v-progress-circular>
@@ -88,8 +92,9 @@
         </tr>
       </template>
     </v-data-table>
-    <v-row>
-      <v-spacer /><v-btn
+    <v-row class="px-3">
+      <v-spacer />
+      <v-btn
         class="md-raised"
         color="primary"
         @click="save"

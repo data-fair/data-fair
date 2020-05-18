@@ -9,7 +9,7 @@
           v-if="dataset.isRest"
           color="primary"
           fab
-          small
+          x-small
           class="mx-2"
           @click="newPropertyKey = null; newPropertyType = null; addPropertyDialog = true"
         >
@@ -36,9 +36,9 @@
 
       <properties-slide
         v-if="schema && schema.length"
-        :properties="schema.filter(p => !p['x-calculated'])"
-        :original-properties="JSON.parse(originalSchema).filter(p => !p['x-calculated'])"
-        :editable="true"
+        :properties="schema.filter(p => !p['x-calculated'] && !p['x-extension'])"
+        :original-properties="JSON.parse(originalSchema).filter(p => !p['x-calculated'] && !p['x-extension'])"
+        :editable="can('writeDescription')"
       />
 
       <v-row class="px-3 pt-6">
@@ -53,6 +53,22 @@
         :original-properties="JSON.parse(originalSchema).filter(p => p['x-calculated'])"
         :editable="false"
       />
+
+      <template v-for="extension in extensions">
+        <v-row :key="`${extension.key}-title`" class="px-3 pt-6">
+          <h3 class="headline">
+            Extension: {{ remoteServicesMap[extension.remoteService].actions[extension.action].summary }} (service {{ remoteServicesMap[extension.remoteService].title }})
+          </h3>
+        </v-row>
+
+        <properties-slide
+          v-if="schema && schema.length"
+          :key="`${extension.key}-properties`"
+          :properties="schema.filter(p => p['x-extension'] === extension.key)"
+          :original-properties="JSON.parse(originalSchema).filter(p => p['x-extension'] === extension.key)"
+          :editable="false"
+        />
+      </template>
     </v-col>
 
     <v-dialog
@@ -123,7 +139,7 @@
             title="Supprimer cette propriété"
             @click="schema = schema.filter(f => f.key !== field.key)"
           >
-            <v-icon>delete</v-icon>
+            <v-icon>mdi-delete</v-icon>
           </v-btn>
         </div>
         <v-col cols="2">
@@ -196,8 +212,8 @@
           />
         </v-col>
       </v-row>
-    </v-container>
-    <!--
+    </v-container>-->
+  <!--
     <h4>Renseigner le schéma avec un fichier de métadonnées</h4>
     <p>
       Le fichier de métadonnées doit respecter <a
@@ -229,15 +245,15 @@
     computed: {
       ...mapState(['vocabulary', 'propertyTypes']),
       ...mapState('dataset', ['dataset']),
-      ...mapGetters('dataset', ['remoteServicesMap']),
+      ...mapGetters('dataset', ['remoteServicesMap', 'can']),
       updated() {
         return JSON.stringify(this.schema) !== this.originalSchema
       },
       extensions() {
-        return [{ key: undefined }].concat((this.dataset.extensions || [])
+        return (this.dataset.extensions || [])
           .filter(ext => ext.active)
           .filter(ext => this.remoteServicesMap[ext.remoteService] && this.remoteServicesMap[ext.remoteService].actions[ext.action])
-          .map(ext => ({ key: ext.remoteService + '/' + ext.action, ...ext })))
+          .map(ext => ({ key: ext.remoteService + '/' + ext.action, ...ext }))
       },
     },
     watch: {

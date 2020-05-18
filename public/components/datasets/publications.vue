@@ -66,7 +66,7 @@
               title="Supprimer cette publication"
               @click="deletePublicationInd = i; showDeleteDialog = true;"
             >
-              <v-icon>delete</v-icon>
+              <v-icon>mdi-delete</v-icon>
             </v-btn>
           </v-row>
         </v-list-item-action>

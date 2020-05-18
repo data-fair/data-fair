@@ -75,7 +75,7 @@
               color="warning"
               @click="editPermission(item);showDialog = true"
             >
-              <v-icon>edit</v-icon>
+              <v-icon>mdi-pencil</v-icon>
             </v-btn>
             <v-btn
               flat
@@ -83,7 +83,7 @@
               color="warning"
               @click="removePermission(index)"
             >
-              <v-icon>delete</v-icon>
+              <v-icon>mdi-delete</v-icon>
             </v-btn>
           </td>
         </tr>

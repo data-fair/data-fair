@@ -61,7 +61,9 @@
           </v-col>
           <v-col>
             <p>Clé normalisée : {{ properties[currentProperty].key }}</p>
-            <p>Clé dans le fichier d'origine : {{ properties[currentProperty]['x-originalName'] }}</p>
+            <p v-if="properties[currentProperty]['x-originalName']">
+              Clé dans le fichier d'origine : {{ properties[currentProperty]['x-originalName'] }}
+            </p>
             <p>Type : {{ propertyTypes.find(p => p.type === properties[currentProperty].type).title }}</p>
             <p v-if="properties[currentProperty].format">
               Format : {{ properties[currentProperty].format }}

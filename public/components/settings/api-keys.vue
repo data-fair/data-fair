@@ -62,7 +62,7 @@
                 title="Supprimer cette clé d'API"
                 @click="currentApiKey = rowIndex; showDeleteDialog = true"
               >
-                <v-icon>delete</v-icon>
+                <v-icon>mdi-delete</v-icon>
               </v-btn>
             </v-card-actions>
           </v-card>

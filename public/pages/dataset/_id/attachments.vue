@@ -46,7 +46,7 @@
                 color="warning"
                 @click="deleteAttachment(attachment)"
               >
-                <v-icon>delete</v-icon>
+                <v-icon>mdi-delete</v-icon>
               </v-btn>
             </v-card-actions>
           </v-card>
