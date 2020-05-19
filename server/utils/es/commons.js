@@ -47,7 +47,7 @@ exports.aliasName = dataset => {
 }
 
 exports.parseSort = (sortStr, fields) => {
-  if (!sortStr) return [{ _i: 'asc' }]
+  if (!sortStr) return []
   return sortStr.split(',').map(s => {
     let field, direction
     if (s.indexOf('-') === 0) {
@@ -106,7 +106,7 @@ exports.prepareQuery = (dataset, query) => {
   }
 
   // Sort by list of fields (prefixed by - for descending sort)
-  esQuery.sort = exports.parseSort(query.sort, fields)
+  esQuery.sort = exports.parseSort(query.sort || '_i', fields)
   // Also implicitly sort by score
   esQuery.sort.push('_score')
   // And lastly random order for natural distribution (mostly important for geo results)

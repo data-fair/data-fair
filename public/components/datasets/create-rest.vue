@@ -76,7 +76,7 @@
 <script>
   import { mapState } from 'vuex'
   import eventBus from '~/event-bus'
-  import OwnerPick from '~/components/OwnerPick.vue'
+  import OwnerPick from '~/components/owners/pick.vue'
 
   export default {
     components: { OwnerPick },

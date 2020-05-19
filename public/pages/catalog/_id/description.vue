@@ -6,8 +6,8 @@
         md="6"
         order-md="2"
       >
-        <v-card class="mb-3">
-          <v-list>
+        <v-sheet>
+          <v-list dense>
             <v-list-item>
               <v-list-item-avatar>
                 <v-icon v-if="catalog.owner.type === 'user'">
@@ -20,7 +20,7 @@
               <span>{{ catalog.owner.name }}</span>
             </v-list-item>
             <v-list-item>
-              <v-list-item-avatar><v-icon>link</v-icon></v-list-item-avatar>
+              <v-list-item-avatar><v-icon>mdi-link</v-icon></v-list-item-avatar>
               <span><a :href="catalog.url">{{ catalog.url }}</a></span>
             </v-list-item>
             <v-list-item>
@@ -32,7 +32,7 @@
               <span>{{ catalog.createdBy.name }} {{ catalog.createdAt | moment("DD/MM/YYYY, HH:mm") }}</span>
             </v-list-item>
           </v-list>
-        </v-card>
+        </v-sheet>
       </v-col>
       <v-col
         cols="12"

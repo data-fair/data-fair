@@ -10,24 +10,26 @@
     >
       <v-subheader>{{ $t(`pages.${prefix}.title`) }}</v-subheader>
       <v-list>
-        <v-list-tile
+        <v-list-item
           v-for="pageId in pages"
           :key="pageId"
           :to="localePath({name: prefix + '-id', params: {id: pageId}})"
         >
-          <v-list-tile-title>{{ $t(`pages.${prefix}.${pageId}.title`) }}</v-list-tile-title>
-        </v-list-tile>
+          <v-list-item-title>{{ $t(`pages.${prefix}.${pageId}.title`) }}</v-list-item-title>
+        </v-list-item>
       </v-list>
     </v-navigation-drawer>
-    <v-row column>
-      <h2 class="display1 my-4">
-        {{ $t(`pages.${prefix}.${page}.title`) }}
-      </h2>
-      <v-col
-        v-show="ready"
-        cols="12"
-        v-html="filledContent"
-      />
+    <v-row>
+      <v-col>
+        <h2 class="display1 my-4">
+          {{ $t(`pages.${prefix}.${page}.title`) }}
+        </h2>
+        <div
+          v-show="ready"
+          cols="12"
+          v-html="filledContent"
+        />
+      </v-col>
     </v-row>
   </v-container>
 </template>

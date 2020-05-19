@@ -7,18 +7,7 @@
     >
       <v-sheet>
         <v-list dense>
-          <v-list-item>
-            <v-list-item-avatar class="ml-0 my-0">
-              <v-icon v-if="dataset.owner.type === 'user'">
-                mdi-account
-              </v-icon>
-              <v-icon v-else>
-                mdi-account-group
-              </v-icon>
-            </v-list-item-avatar>
-            <span>{{ dataset.owner.name }}</span>
-            <span v-if="dataset.owner.role">&nbsp;(rôle {{ dataset.owner.role }})</span>
-          </v-list-item>
+          <owner-list-item :owner="dataset.owner" />
 
           <v-list-item
             v-if="journal[0]"
@@ -188,12 +177,16 @@
 </template>
 
 <script>
+  import OwnerListItem from '~/components/owners/list-item.vue'
   const { mapState, mapActions, mapGetters } = require('vuex')
   const events = require('~/../shared/events.json').dataset
   const coordXUri = 'http://data.ign.fr/def/geometrie#coordX'
   const coordYUri = 'http://data.ign.fr/def/geometrie#coordY'
 
   export default {
+    components: {
+      OwnerListItem,
+    },
     data() {
       return { events, error: null }
     },

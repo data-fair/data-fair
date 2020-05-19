@@ -50,9 +50,9 @@
                 />
 
                 <v-card-actions style="position:absolute; bottom: 0px;width:100%;">
-                  <span v-if="application.owner.type === 'user'"><v-icon>mdi-account</v-icon>&nbsp;{{ application.owner.name }}</span>
-                  <span v-if="application.owner.type === 'organization'"><v-icon>mdi-account-group</v-icon>&nbsp;{{ application.owner.name }}<span v-if="application.owner.role"> ({{ application.owner.role }})</span></span>
+                  <owner-short :owner="application.owner" />
                   &nbsp;<v-chip
+                    small
                     :color="application.visibility === 'public' ? 'primary' : 'accent'"
                     text-color="white"
                   >
@@ -121,11 +121,12 @@
   import SearchProgress from '~/components/search/progress.vue'
   import SearchFilters from '~/components/search/filters.vue'
   import ApplicationsFacets from './facets.vue'
+  import OwnerShort from '~/components/owners/short.vue'
   const marked = require('marked')
   const { mapState } = require('vuex')
 
   export default {
-    components: { SearchProgress, SearchFilters, ApplicationsFacets },
+    components: { SearchProgress, SearchFilters, ApplicationsFacets, OwnerShort },
     data: () => ({
       applications: null,
       page: 1,

@@ -25,7 +25,6 @@ module.exports = (scope) => {
     } else {
       req.user.organization = { id: settings.id, name: settings.name, role: 'admin' }
       req.user.organizations = [req.user.organization]
-      req.headers['x-organizationid'] = settings.id
     }
     next()
   })

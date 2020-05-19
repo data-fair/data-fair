@@ -17,16 +17,8 @@
     />
     <search-progress :loading="loading" />
 
-    <v-container
-      class="pa-0"
-      fluid
-      grid-list-lg
-    >
-      <v-row
-        v-if="remoteServices"
-
-        class="resourcesList"
-      >
+    <v-container class="pa-0" fluid>
+      <v-row v-if="remoteServices" class="resourcesList">
         <v-col
           v-for="remoteService in remoteServices.results"
           :key="remoteService.id"
@@ -35,17 +27,12 @@
           lg="4"
           xl="3"
         >
-          <v-card height="100%">
-            <v-card-title
-              primary-title
-              style="height:25%"
-            >
-              <nuxt-link :to="`/remote-service/${remoteService.id}/description`">
-                {{ remoteService.title || remoteService.id }}
-              </nuxt-link>
+          <v-card height="100%" :to="`/remote-service/${remoteService.id}/description`">
+            <v-card-title>
+              {{ remoteService.title || remoteService.id }}
             </v-card-title>
             <v-card-text
-              style="height:50%;min-height:80px"
+              style="min-height:60px"
               v-html="marked($options.filters.truncate(remoteService.description || '', 200))"
             />
           </v-card>
@@ -53,10 +40,9 @@
       </v-row>
     </v-container>
 
-    <v-row
-      v-if="remoteServices && remoteServices.count"
-    >
-      <v-spacer /><v-pagination
+    <v-row v-if="remoteServices && remoteServices.count > size">
+      <v-spacer />
+      <v-pagination
         v-model="page"
         :length="Math.ceil(remoteServices.count / size)"
         @input="$vuetify.goTo('.resourcesList', {offset});refresh()"
@@ -66,8 +52,8 @@
 </template>
 
 <script>
-  import SearchProgress from './search/progress.vue'
-  import SearchFilters from './search/filters.vue'
+  import SearchProgress from '~/components/search/progress.vue'
+  import SearchFilters from '~/components/search/filters.vue'
   const marked = require('marked')
   const { mapState } = require('vuex')
 

@@ -26,20 +26,18 @@
           lg="4"
           xl="3"
         >
-          <v-card height="100%">
-            <v-card-title primary-title style="height:25%">
-              <nuxt-link :to="`/catalog/${catalog.id}/description`">
-                {{ catalog.title || catalog.id }}
-              </nuxt-link>
+          <v-card height="100%" :to="`/catalog/${catalog.id}/description`">
+            <v-card-title>
+              {{ catalog.title || catalog.id }}
             </v-card-title>
             <v-card-text
-              style="height:50%;min-height:80px"
+              style="min-height:60px;max-height:160px;overflow:hidden;margin-bottom:40px;"
               v-html="marked($options.filters.truncate(catalog.description || '', 200))"
             />
-            <v-card-actions style="height:25%">
-              <span v-if="catalog.owner.type === 'user'">&nbsp;<v-icon>mdi-account</v-icon>{{ catalog.owner.name }}</span>
-              <span v-if="catalog.owner.type === 'organization'">&nbsp;<v-icon>mdi-account-group</v-icon>{{ catalog.owner.name }}<span v-if="catalog.owner.role"> ({{ catalog.owner.role }})</span></span>
+            <v-card-actions style="position:absolute; bottom: 0px;width:100%;">
+              <owner-short :owner="catalog.owner" />
               &nbsp;<v-chip
+                small
                 :color="catalog.public ? 'primary' : 'accent'"
                 text-color="white"
               >
@@ -51,8 +49,9 @@
       </v-row>
     </v-container>
 
-    <v-row v-if="catalogs && catalogs.count">
-      <v-spacer /><v-pagination
+    <v-row v-if="catalogs && catalogs.count > size">
+      <v-spacer />
+      <v-pagination
         v-model="page"
         :length="Math.ceil(catalogs.count / size)"
         @input="$vuetify.goTo('.resourcesList', {offset});refresh()"
@@ -81,11 +80,12 @@
 <script>
   import SearchProgress from '~/components/search/progress.vue'
   import SearchFilters from '~/components/search/filters.vue'
+  import OwnerShort from '~/components/owners/short.vue'
   const marked = require('marked')
   const { mapState } = require('vuex')
 
   export default {
-    components: { SearchProgress, SearchFilters },
+    components: { SearchProgress, SearchFilters, OwnerShort },
     data: () => ({
       catalogs: null,
       page: 1,

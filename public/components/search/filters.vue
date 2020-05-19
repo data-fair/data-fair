@@ -9,8 +9,10 @@
     >
       <v-text-field
         v-model="filters.q"
-        label="Rechercher"
+        placeholder="Rechercher"
+        solo
         append-icon="mdi-magnify"
+        hide-details
         @keyup.enter.native="writeParams"
         @click:append="writeParams"
       />
@@ -36,8 +38,8 @@
       </v-btn-toggle>
     </div>
     <v-spacer/>-->
-    <v-col cols="12">
-      <v-row>
+    <v-col cols="12" class="pb-0">
+      <v-row class="px-3">
         <template v-for="filter in Object.keys(fullFilterLabels)">
           <v-chip
             v-if="filters[filter]"
@@ -46,7 +48,7 @@
             small
             color="accent"
             text-color="white"
-            @input="filters[filter] = null;writeParams(filter)"
+            @click:close="filters[filter] = null;writeParams(filter)"
           >
             <strong v-if="filter === 'showAll'">Vue administrateur : {{ owners.length ? owners.join(', ') : 'tout voir' }}</strong>
             <strong v-else>{{ fullFilterLabels[filter] }} : {{ filters[filter] }}</strong>

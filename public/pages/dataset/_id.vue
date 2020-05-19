@@ -336,7 +336,7 @@
 
 <script>
   import { mapState, mapActions, mapGetters } from 'vuex'
-  import OwnerPick from '~/components/OwnerPick.vue'
+  import OwnerPick from '~/components/owners/pick.vue'
   import eventBus from '~/event-bus'
 
   export default {

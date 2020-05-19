@@ -92,6 +92,7 @@
           <v-radio-group
             v-model="action"
             class="mt-3 mb-3"
+            hide-details
           >
             <v-radio
               v-for="a in actions"
@@ -100,7 +101,7 @@
               :value="a"
             />
           </v-radio-group>
-          <v-progress-linear v-model="uploadProgress" />
+          <v-progress-linear v-model="uploadProgress" class="mb-2" />
         </v-sheet>
         <v-btn
           :disabled="!action || importing"

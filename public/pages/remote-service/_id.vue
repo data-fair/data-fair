@@ -47,7 +47,7 @@
           :nuxt="true"
           :to="`/remote-service/${remoteService.id}/config`"
         >
-          <v-list-item-action><v-icon>build</v-icon></v-list-item-action>
+          <v-list-item-action><v-icon>mdi-wrench</v-icon></v-list-item-action>
           <v-list-item-title>Configuration</v-list-item-title>
         </v-list-item>
         <v-list-item
@@ -60,9 +60,9 @@
       </v-list>
     </v-navigation-drawer>
 
-    <v-row>
+    <v-col>
       <nuxt-child />
-    </v-row>
+    </v-col>
 
     <div class="actions-buttons">
       <v-menu
@@ -86,7 +86,7 @@
             target="_blank"
           >
             <v-list-item-avatar>
-              <v-icon>description</v-icon>
+              <v-icon>mdi-information</v-icon>
             </v-list-item-avatar>
             <v-list-item-title>Documentation externe</v-list-item-title>
           </v-list-item>
@@ -98,7 +98,7 @@
           >
             <v-list-item-avatar>
               <v-icon color="admin">
-                refresh
+                mdi-refresh
               </v-icon>
             </v-list-item-avatar>
             <v-list-item-title>Mettre a jour la description de l'API</v-list-item-title>
@@ -111,7 +111,7 @@
           >
             <v-list-item-avatar>
               <v-icon color="admin">
-                delete
+                mdi-delete
               </v-icon>
             </v-list-item-avatar>
             <v-list-item-title>Supprimer</v-list-item-title>
@@ -154,6 +154,7 @@
   export default {
     data: () => ({
       showDeleteDialog: false,
+      mini: false,
     }),
     computed: {
       ...mapState('session', ['user']),

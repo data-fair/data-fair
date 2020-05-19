@@ -38,13 +38,14 @@
                 {{ dataset.title || dataset.id }}
               </v-card-title>
               <v-card-text
-                style="min-height:80px"
+                style="min-height:60px;max-height:160px;overflow:hidden;margin-bottom:40px;"
+                class="flex"
                 v-html="marked($options.filters.truncate(dataset.description || '', 200))"
               />
-              <v-card-actions style="width:100%">
-                <span v-if="dataset.owner.type === 'user'"><v-icon>mdi-account</v-icon>&nbsp;{{ dataset.owner.name }}</span>
-                <span v-if="dataset.owner.type === 'organization'"><v-icon>mdi-account-group</v-icon>&nbsp;{{ dataset.owner.name }}<span v-if="dataset.owner.role"> ({{ dataset.owner.role }})</span></span>
+              <v-card-actions style="position:absolute; bottom: 0px;width:100%;">
+                <owner-short :owner="dataset.owner" />
                 &nbsp;<v-chip
+                  small
                   :color="dataset.visibility === 'public' ? 'primary' : 'accent'"
                   text-color="white"
                 >
@@ -113,14 +114,15 @@
 </template>
 
 <script>
-  import SearchProgress from '../search/progress.vue'
-  import SearchFilters from '../search/filters.vue'
+  import SearchProgress from '~/components/search/progress.vue'
+  import SearchFilters from '~/components/search/filters.vue'
   import DatasetsFacets from './facets.vue'
+  import OwnerShort from '~/components/owners/short.vue'
   const marked = require('marked')
   const { mapState } = require('vuex')
 
   export default {
-    components: { SearchProgress, SearchFilters, DatasetsFacets },
+    components: { SearchProgress, SearchFilters, DatasetsFacets, OwnerShort },
     data: () => ({
       datasets: null,
       page: 1,

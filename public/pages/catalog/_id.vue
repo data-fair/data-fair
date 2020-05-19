@@ -46,7 +46,7 @@
           :nuxt="true"
           :to="`/catalog/${catalog.id}/datasets`"
         >
-          <v-list-item-action><v-icon>toc</v-icon></v-list-item-action>
+          <v-list-item-action><v-icon>mdi-table-of-contents</v-icon></v-list-item-action>
           <v-list-item-title>Jeux de données</v-list-item-title>
         </v-list-item>
         <!-- <v-tab v-if="can('getPermissions')" :nuxt="true" :to="`/catalog/${catalog.id}/permissions`">
@@ -170,7 +170,7 @@
 
 <script>
   import { mapState, mapActions, mapGetters } from 'vuex'
-  import OwnerPick from '~/components/OwnerPick.vue'
+  import OwnerPick from '~/components/owners/pick.vue'
 
   export default {
     components: { OwnerPick },

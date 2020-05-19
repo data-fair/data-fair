@@ -151,7 +151,7 @@ async function iter(app, type) {
       errorMessage.push(err.message)
     }
 
-    debug('Failure in worker ' + taskKey, err)
+    console.warn('Failure in worker ' + taskKey, err)
     if (resource) {
       await journals.log(app, resource, { type: 'error', data: errorMessage.join('\n') }, type)
       await app.get('db').collection(type + 's').updateOne({ id: resource.id }, { $set: { status: 'error' } })

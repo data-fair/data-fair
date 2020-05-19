@@ -66,8 +66,8 @@
 <script>
   import { mapState, mapActions } from 'vuex'
 
-  import ImportRemoteService from '~/components/ImportRemoteService.vue'
-  import RemoteServicesList from '~/components/RemoteServicesList.vue'
+  import ImportRemoteService from '~/components/remote-services/import.vue'
+  import RemoteServicesList from '~/components/remote-services/list.vue'
 
   export default {
     name: 'Datasets',
