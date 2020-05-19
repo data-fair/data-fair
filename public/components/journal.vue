@@ -1,5 +1,5 @@
 <template lang="html">
-  <v-sheet :elevation="1" tile>
+  <v-sheet>
     <v-data-table
       :items="journal.filter(event => !!eventTypes[event.type])"
       hide-default-footer

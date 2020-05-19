@@ -34,7 +34,11 @@
               lg="4"
               xl="3"
             >
-              <v-card height="100%" :to="`/application/${application.id}/description`">
+              <v-card
+                height="100%"
+                :to="`/application/${application.id}/description`"
+                outlined
+              >
                 <v-card-title>
                   {{ application.title || application.id }}
                 </v-card-title>

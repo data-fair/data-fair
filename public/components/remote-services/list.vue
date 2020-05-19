@@ -28,7 +28,11 @@
           lg="3"
           xl="2"
         >
-          <v-card height="100%" :to="`/remote-service/${remoteService.id}/description`">
+          <v-card
+            height="100%"
+            :to="`/remote-service/${remoteService.id}/description`"
+            outlined
+          >
             <v-card-title>
               {{ remoteService.title || remoteService.id }}
             </v-card-title>

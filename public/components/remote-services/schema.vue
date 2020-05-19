@@ -3,7 +3,6 @@
     :items="remoteService.actions"
     hide-default-header
     hide-default-footer
-    class="elevation-1"
   >
     <template v-slot:item="{item}">
       <tr v-if="vocabulary">

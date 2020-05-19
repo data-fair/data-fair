@@ -104,50 +104,57 @@ exports.filter = function(user) {
     if (user.adminMode) {
       or.push({ 'owner.type': { $exists: true } })
     } else {
-    // user is owner
-      or.push({
-        'owner.type': 'user',
-        'owner.id': user.id,
-      })
-      // user is admin of owner organization
-      or.push({
-        'owner.type': 'organization',
-        'owner.id': { $in: user.organizations.filter(o => o.role === config.adminRole).map(o => o.id) },
-      })
-      // organizations where user does not have admin role
-      user.organizations.filter(o => o.role !== config.adminRole).forEach(o => {
+      if (!user.organization) {
+        // user is owner
+        or.push({
+          'owner.type': 'user',
+          'owner.id': user.id,
+        })
+      }
+      if (user.organization && user.organization.role === config.adminRole) {
+        // user is admin of owner organization
         or.push({
           'owner.type': 'organization',
-          'owner.id': o.id,
-          'owner.role': o.role,
+          'owner.id': user.organization.id,
+        })
+      }
+      if (user.organization && user.organization.role !== config.adminRole) {
+        // organizations where user does not have admin role
+        or.push({
+          'owner.type': 'organization',
+          'owner.id': user.organization.id,
+          'owner.role': user.organization.role,
         })
         or.push({
           'owner.type': 'organization',
-          'owner.id': o.id,
+          'owner.id': user.organization.id,
           'owner.role': null,
         })
-      })
+      }
 
-      // user has specific permission to read
-      or.push({
-        permissions: {
-          $elemMatch: { $or: operationFilter, type: 'user', id: user.id },
-        },
-      })
-      user.organizations.forEach(o => {
+      if (!user.organization) {
+        // user has specific permission to read
+        or.push({
+          permissions: {
+            $elemMatch: { $or: operationFilter, type: 'user', id: user.id },
+          },
+        })
+      }
+      if (user.organization) {
+        // user's orga has specific permission to read
         or.push({
           permissions: {
             $elemMatch: {
               $and: [
                 { $or: operationFilter },
-                { $or: [{ roles: o.role }, { roles: { $size: 0 } }] },
+                { $or: [{ roles: user.organization.role }, { roles: { $size: 0 } }] },
               ],
               type: 'organization',
-              id: o.id,
+              id: user.organization.id,
             },
           },
         })
-      })
+      }
     }
   }
   return or

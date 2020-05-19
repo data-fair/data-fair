@@ -9,19 +9,27 @@
         <v-sheet>
           <v-list dense>
             <v-list-item v-if="remoteService.apiDoc.info.contact && remoteService.apiDoc.info.contact.url">
-              <v-list-item-avatar><v-icon>mdi-home</v-icon></v-list-item-avatar>
+              <v-list-item-avatar class="ml-0 my-0">
+                <v-icon>mdi-home</v-icon>
+              </v-list-item-avatar>
               <span><a :href="remoteService.apiDoc.info.contact.url">{{ remoteService.apiDoc.info.contact.name || remoteService.apiDoc.info.contact.url }}</a></span>
             </v-list-item>
             <v-list-item v-if="remoteService.apiDoc.info.contact && remoteService.apiDoc.info.contact.email">
-              <v-list-item-avatar><v-icon>mdi-email</v-icon></v-list-item-avatar>
+              <v-list-item-avatar class="ml-0 my-0">
+                <v-icon>mdi-email</v-icon>
+              </v-list-item-avatar>
               <span><a :href="'mailto:'+remoteService.apiDoc.info.contact.email">{{ remoteService.apiDoc.info.contact.email }}</a></span>
             </v-list-item>
             <v-list-item v-if="remoteService.apiDoc.info.version">
-              <v-list-item-avatar><v-icon>mdi-label</v-icon></v-list-item-avatar>
+              <v-list-item-avatar class="ml-0 my-0">
+                <v-icon>mdi-label</v-icon>
+              </v-list-item-avatar>
               <span>{{ remoteService.apiDoc.info.version }}</span>
             </v-list-item>
             <v-list-item v-if="remoteService.apiDoc.info.termsOfService">
-              <v-list-item-avatar><v-icon>mdi-information-variant</v-icon></v-list-item-avatar>
+              <v-list-item-avatar class="ml-0 my-0">
+                <v-icon>mdi-information-variant</v-icon>
+              </v-list-item-avatar>
               <span><a :href="remoteService.apiDoc.info.termsOfService">Terms of Service</a></span>
             </v-list-item>
           </v-list>

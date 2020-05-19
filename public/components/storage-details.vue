@@ -1,8 +1,5 @@
 <template>
-  <v-card
-    :loading="!datasets"
-    tile
-  >
+  <v-sheet :loading="!datasets">
     <v-list two-line>
       <template v-for="(dataset, i) in datasets">
         <v-list-item :key="`tile-${dataset.id}`">
@@ -33,7 +30,7 @@
         />
       </template>
     </v-list>
-  </v-card>
+  </v-sheet>
 </template>
 
 <script>

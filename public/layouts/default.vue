@@ -3,6 +3,7 @@
     <v-app-bar
       app
       scroll-off-screen
+      elevation="2"
       :color="(user && user.adminMode) ? 'admin' : 'default'"
       :dark="env.theme.dark || (user && user.adminMode)"
       :class="env.theme.dark || (user && user.adminMode) ? 'main-toolbar' : 'main-toolbar main-toolbar-light'"
@@ -22,7 +23,7 @@
         <h1 class="headline pt-2" style="line-height:1.3rem;">
           {{ env.brand.title || 'DataFair' }}
         </h1>
-        <small>{{ env.brand.description }}</small>
+        <span class="body-2">{{ env.brand.description }}</span>
       </v-toolbar-title>
 
       <v-spacer />

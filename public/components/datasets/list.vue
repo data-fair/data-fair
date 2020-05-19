@@ -33,7 +33,11 @@
             lg="4"
             xl="3"
           >
-            <v-card height="100%" :to="`/dataset/${dataset.id}/description`">
+            <v-card
+              height="100%"
+              :to="`/dataset/${dataset.id}/description`"
+              outlined
+            >
               <v-card-title>
                 {{ dataset.title || dataset.id }}
               </v-card-title>

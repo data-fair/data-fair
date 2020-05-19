@@ -27,7 +27,11 @@
           lg="3"
           xl="2"
         >
-          <v-card height="100%" :to="`/catalog/${catalog.id}/description`">
+          <v-card
+            height="100%"
+            :to="`/catalog/${catalog.id}/description`"
+            outlined
+          >
             <v-card-title>
               {{ catalog.title || catalog.id }}
             </v-card-title>

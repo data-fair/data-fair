@@ -8,27 +8,23 @@
       >
         <v-sheet>
           <v-list dense>
+            <owner-list-item :owner="catalog.owner" />
             <v-list-item>
-              <v-list-item-avatar>
-                <v-icon v-if="catalog.owner.type === 'user'">
-                  mdi-account
-                </v-icon>
-                <v-icon v-else>
-                  mdi-account-group
-                </v-icon>
+              <v-list-item-avatar class="ml-0 my-0">
+                <v-icon>mdi-link</v-icon>
               </v-list-item-avatar>
-              <span>{{ catalog.owner.name }}</span>
-            </v-list-item>
-            <v-list-item>
-              <v-list-item-avatar><v-icon>mdi-link</v-icon></v-list-item-avatar>
               <span><a :href="catalog.url">{{ catalog.url }}</a></span>
             </v-list-item>
             <v-list-item>
-              <v-list-item-avatar><v-icon>mdi-pencil</v-icon></v-list-item-avatar>
+              <v-list-item-avatar class="ml-0 my-0">
+                <v-icon>mdi-pencil</v-icon>
+              </v-list-item-avatar>
               <span>{{ catalog.updatedBy.name }} {{ catalog.updatedAt | moment("DD/MM/YYYY, HH:mm") }}</span>
             </v-list-item>
             <v-list-item>
-              <v-list-item-avatar><v-icon>mdi-plus-circle-outline</v-icon></v-list-item-avatar>
+              <v-list-item-avatar class="ml-0 my-0">
+                <v-icon>mdi-plus-circle-outline</v-icon>
+              </v-list-item-avatar>
               <span>{{ catalog.createdBy.name }} {{ catalog.createdAt | moment("DD/MM/YYYY, HH:mm") }}</span>
             </v-list-item>
           </v-list>
@@ -58,11 +54,12 @@
 </template>
 
 <script>
+  import OwnerListItem from '~/components/owners/list-item.vue'
   import { mapState, mapActions } from 'vuex'
   import CatalogConfigForm from '~/components/catalogs/config-form.vue'
 
   export default {
-    components: { CatalogConfigForm },
+    components: { CatalogConfigForm, OwnerListItem },
     computed: {
       ...mapState('catalog', ['catalog']),
     },
