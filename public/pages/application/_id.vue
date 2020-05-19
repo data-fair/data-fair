@@ -47,7 +47,7 @@
           :nuxt="true"
           :to="`/application/${application.id}/config`"
         >
-          <v-list-item-action><v-icon>build</v-icon></v-list-item-action>
+          <v-list-item-action><v-icon>mdi-wrench</v-icon></v-list-item-action>
           <v-list-item-title>Configuration</v-list-item-title>
         </v-list-item>
         <v-list-item
@@ -55,7 +55,7 @@
           :nuxt="true"
           :to="`/application/${application.id}/permissions`"
         >
-          <v-list-item-action><v-icon>security</v-icon></v-list-item-action>
+          <v-list-item-action><v-icon>mdi-security</v-icon></v-list-item-action>
           <v-list-item-title>Permissions</v-list-item-title>
         </v-list-item>
         <v-list-item
@@ -63,7 +63,7 @@
           :nuxt="true"
           :to="`/application/${application.id}/publications`"
         >
-          <v-list-item-action><v-icon>publish</v-icon></v-list-item-action>
+          <v-list-item-action><v-icon>mdi-publish</v-icon></v-list-item-action>
           <v-list-item-title>Publications</v-list-item-title>
         </v-list-item>
         <v-list-item
@@ -112,8 +112,8 @@
             target="_blank"
           >
             <v-list-item-avatar>
-              <v-icon color="accent">
-                exit_to_app
+              <v-icon color="primary">
+                mdi-exit-to-app
               </v-icon>
             </v-list-item-avatar>
             <v-list-item-title>Accéder à l'application</v-list-item-title>
@@ -125,7 +125,7 @@
           >
             <v-list-item-avatar>
               <v-icon color="primary">
-                code
+                mdi-code-tags
               </v-icon>
             </v-list-item-avatar>
             <v-list-item-title>Intégrer dans un site</v-list-item-title>
@@ -137,7 +137,7 @@
           >
             <v-list-item-avatar>
               <v-icon color="primary">
-                photo
+                mdi-camera
               </v-icon>
             </v-list-item-avatar>
             <v-list-item-title>Effectuer une capture</v-list-item-title>
@@ -149,7 +149,7 @@
           >
             <v-list-item-avatar>
               <v-icon color="warning">
-                delete
+                mdi-delete
               </v-icon>
             </v-list-item-avatar>
             <v-list-item-title>Supprimer</v-list-item-title>
@@ -161,7 +161,7 @@
           >
             <v-list-item-avatar>
               <v-icon color="warning">
-                person
+                mdi-account
               </v-icon>
             </v-list-item-avatar>
             <v-list-item-title>Changer de propriétaire</v-list-item-title>
@@ -255,10 +255,7 @@
         </v-card-text>
         <v-card-actions>
           <v-spacer />
-          <v-btn
-            flat
-            @click="showDeleteDialog = false"
-          >
+          <v-btn text @click="showDeleteDialog = false">
             Non
           </v-btn>
           <v-btn
@@ -284,10 +281,7 @@
         </v-card-text>
         <v-card-actions>
           <v-spacer />
-          <v-btn
-            flat
-            @click="showOwnerDialog = false"
-          >
+          <v-btn text @click="showOwnerDialog = false">
             Annuler
           </v-btn>
           <v-btn

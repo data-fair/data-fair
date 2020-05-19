@@ -159,33 +159,6 @@
           </v-btn>
         </template>
         <v-list>
-          <v-list-item v-if="can('delete')" @click="showDeleteDialog = true">
-            <v-list-item-avatar>
-              <v-icon color="warning">
-                mdi-delete
-              </v-icon>
-            </v-list-item-avatar>
-            <v-list-item-title>Supprimer</v-list-item-title>
-          </v-list-item>
-          <v-list-item v-if="can('delete')" @click="showOwnerDialog = true">
-            <v-list-item-avatar>
-              <v-icon color="warning">
-                mdi-account
-              </v-icon>
-            </v-list-item-avatar>
-            <v-list-item-title>Changer de propriétaire</v-list-item-title>
-          </v-list-item>
-          <v-list-item
-            v-if="can('writeData')"
-            @click="showUploadDialog = true"
-          >
-            <v-list-item-avatar>
-              <v-icon color="warning">
-                mdi-file-upload
-              </v-icon>
-            </v-list-item-avatar>
-            <v-list-item-title>Remplacer</v-list-item-title>
-          </v-list-item>
           <v-list-item
             v-if="!dataset.isRest && !dataset.isVirtual"
             :disabled="!can('downloadOriginalData')"
@@ -208,6 +181,33 @@
               </v-icon>
             </v-list-item-avatar>
             <v-list-item-title>Fichier enrichi</v-list-item-title>
+          </v-list-item>
+          <v-list-item
+            v-if="can('writeData')"
+            @click="showUploadDialog = true"
+          >
+            <v-list-item-avatar>
+              <v-icon color="warning">
+                mdi-file-upload
+              </v-icon>
+            </v-list-item-avatar>
+            <v-list-item-title>Remplacer</v-list-item-title>
+          </v-list-item>
+          <v-list-item v-if="can('delete')" @click="showDeleteDialog = true">
+            <v-list-item-avatar>
+              <v-icon color="warning">
+                mdi-delete
+              </v-icon>
+            </v-list-item-avatar>
+            <v-list-item-title>Supprimer</v-list-item-title>
+          </v-list-item>
+          <v-list-item v-if="can('delete')" @click="showOwnerDialog = true">
+            <v-list-item-avatar>
+              <v-icon color="warning">
+                mdi-account
+              </v-icon>
+            </v-list-item-avatar>
+            <v-list-item-title>Changer de propriétaire</v-list-item-title>
           </v-list-item>
         </v-list>
       </v-menu>
@@ -242,10 +242,7 @@
         </v-card-text>
         <v-card-actions>
           <v-spacer />
-          <v-btn
-            flat
-            @click="showDeleteDialog = false"
-          >
+          <v-btn text @click="showDeleteDialog = false">
             Non
           </v-btn>
           <v-btn
@@ -271,10 +268,7 @@
         </v-card-text>
         <v-card-actions>
           <v-spacer />
-          <v-btn
-            flat
-            @click="showOwnerDialog = false"
-          >
+          <v-btn text @click="showOwnerDialog = false">
             Annuler
           </v-btn>
           <v-btn
@@ -324,10 +318,7 @@
         </v-card-text>
         <v-card-actions>
           <v-spacer />
-          <v-btn
-            flat
-            @click="showUploadDialog = false"
-          >
+          <v-btn text @click="showUploadDialog = false">
             Annuler
           </v-btn>
           <v-btn

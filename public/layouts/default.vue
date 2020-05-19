@@ -10,23 +10,12 @@
     >
       <div class="logo-container">
         <a
-          v-if="env.brand.url"
-          :href="env.brand.url"
+          :href="env.brand.url || env.publicUrl"
           :title="env.brand.title || env.brand.url"
         >
           <img v-if="env.brand.logo" :src="env.brand.logo">
           <img v-else src="../assets/logo.svg">
         </a>
-        <template v-else>
-          <img
-            v-if="env.brand.logo"
-            :src="env.brand.logo"
-          >
-          <img
-            v-else
-            src="../assets/logo.svg"
-          >
-        </template>
       </div>
 
       <v-toolbar-title>
@@ -41,18 +30,10 @@
       <!-- larger screens: navigation in toolbar -->
       <v-toolbar-items v-if="$vuetify.breakpoint.lgAndUp">
         <v-btn
-          :to="localePath('index')"
-          text
-          color="primary"
-          exact
-        >
-          Accueil
-        </v-btn>
-        <v-btn
           :to="localePath({name: 'datasets', query: searchQuery('datasets')})"
           :class="routePrefix === 'dataset' ? 'v-btn--active' : ''"
           text
-          color="primary"
+          :color="user && user.adminMode ? 'default' : 'primary'"
         >
           Jeux de données
         </v-btn>
@@ -60,7 +41,7 @@
           :to="localePath({name: 'applications', query: searchQuery('applications')})"
           :class="routePrefix === 'application' ? 'v-btn--active' : ''"
           text
-          color="primary"
+          :color="user && user.adminMode ? 'default' : 'primary'"
         >
           Applications
         </v-btn>
@@ -68,7 +49,7 @@
           :to="localePath({name: 'catalogs', query: searchQuery('catalogs')})"
           :class="routePrefix === 'catalog' ? 'v-btn--active' : ''"
           text
-          color="primary"
+          :color="user && user.adminMode ? 'default' : 'primary'"
         >
           Catalogues
         </v-btn>
@@ -76,7 +57,7 @@
           :to="localePath({name: 'remote-services', query: searchQuery('remote-services')})"
           :class="routePrefix === 'remote' ? 'v-btn--active' : ''"
           text
-          color="primary"
+          :color="user && user.adminMode ? 'default' : 'primary'"
         >
           Services
         </v-btn>
@@ -134,7 +115,7 @@
                 <v-list-item
                   v-if="activeAccount.type !== 'user'"
                   id="toolbar-menu-switch-user"
-                  @click="switchOrganization()"
+                  @click="switchOrganization(); reload()"
                 >
                   <v-list-item-title>Compte personnel</v-list-item-title>
                 </v-list-item>
@@ -142,16 +123,18 @@
                   v-for="organization in user.organizations.filter(o => activeAccount.type === 'user' || activeAccount.id !== o.id)"
                   :id="'toolbar-menu-switch-orga-' + organization.id"
                   :key="organization.id"
-                  @click="switchOrganization(organization.id)"
+                  @click="switchOrganization(organization.id); reload()"
                 >
                   <v-list-item-title>Organisation {{ organization.name }}</v-list-item-title>
                 </v-list-item>
                 <v-divider />
               </template>
+              <v-list-item to="/stats">
+                <v-list-item-title>Statistiques</v-list-item-title>
+              </v-list-item>
               <v-list-item to="/settings">
                 <v-list-item-title>Paramètres</v-list-item-title>
               </v-list-item>
-
               <v-list-item to="/storage">
                 <v-list-item-title>Stockage</v-list-item-title>
               </v-list-item>
@@ -180,10 +163,7 @@
 
               <!-- Administration pages -->
               <template v-if="user.adminMode">
-                <v-list-item
-                  to="/admin/info"
-                  color="admin"
-                >
+                <v-list-item to="/admin/info" color="admin">
                   <v-list-item-avatar>
                     <v-icon color="admin">
                       mdi-information
@@ -191,10 +171,7 @@
                   </v-list-item-avatar>
                   <v-list-item-title>Informations du service</v-list-item-title>
                 </v-list-item>
-                <v-list-item
-                  to="/admin/owners"
-                  color="admin"
-                >
+                <v-list-item to="/admin/owners" color="admin">
                   <v-list-item-avatar>
                     <v-icon color="admin">
                       mdi-briefcase
@@ -202,10 +179,7 @@
                   </v-list-item-avatar>
                   <v-list-item-title>Propriétaires</v-list-item-title>
                 </v-list-item>
-                <v-list-item
-                  to="/admin/errors"
-                  color="admin"
-                >
+                <v-list-item to="/admin/errors" color="admin">
                   <v-list-item-avatar>
                     <v-icon color="admin">
                       mdi-alert
@@ -213,10 +187,7 @@
                   </v-list-item-avatar>
                   <v-list-item-title>Erreurs</v-list-item-title>
                 </v-list-item>
-                <v-list-item
-                  to="/admin/base-apps"
-                  color="admin"
-                >
+                <v-list-item to="/admin/base-apps" color="admin">
                   <v-list-item-avatar>
                     <v-icon color="admin">
                       mdi-apps
@@ -224,10 +195,7 @@
                   </v-list-item-avatar>
                   <v-list-item-title>Applications de base</v-list-item-title>
                 </v-list-item>
-                <v-list-item
-                  :href="env.directoryUrl + '/admin/users'"
-                  color="admin"
-                >
+                <v-list-item :href="env.directoryUrl + '/admin/users'" color="admin">
                   <v-list-item-avatar>
                     <v-icon color="admin">
                       mdi-account-supervisor
@@ -258,12 +226,6 @@
           </v-btn>
         </template>
         <v-list>
-          <v-list-item
-            :to="localePath('index')"
-            exact
-          >
-            <v-list-item-title>Accueil</v-list-item-title>
-          </v-list-item>
           <v-list-item :to="localePath({name: 'datasets', query: searchQuery('datasets')})">
             <v-list-item-title>Jeux de données</v-list-item-title>
           </v-list-item>
@@ -313,8 +275,8 @@
           />
         </div>
         <v-btn
-          text
           icon
+          color="white"
           @click.native="showSnackbar = false"
         >
           <v-icon>mdi-close</v-icon>
@@ -366,7 +328,12 @@
         this.showSnackbar = true
       })
     },
-    methods: mapActions('session', ['logout', 'login', 'setAdminMode', 'switchOrganization']),
+    methods: {
+      ...mapActions('session', ['logout', 'login', 'setAdminMode', 'switchOrganization']),
+      reload() {
+        window.location.reload()
+      },
+    },
   }
 
 </script>

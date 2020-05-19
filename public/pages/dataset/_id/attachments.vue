@@ -17,11 +17,7 @@
       v-model="uploadProgress"
     />
 
-    <v-container
-      class="pa-0 mt-2"
-      fluid
-      grid-list-lg
-    >
+    <v-container class="pa-0 mt-2" fluid>
       <v-row>
         <v-col
           v-for="(attachment, i) in dataset.attachments"
@@ -41,7 +37,6 @@
             <v-card-actions>
               <v-spacer />
               <v-btn
-                flat
                 icon
                 color="warning"
                 @click="deleteAttachment(attachment)"

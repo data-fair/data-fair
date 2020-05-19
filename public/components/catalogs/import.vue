@@ -16,35 +16,30 @@
       >
         Configuration
       </v-stepper-step>
-      <v-divider />
-      <v-stepper-step
-        :complete="currentStep > 2"
-        step="3"
-      >
-        Choix du propriétaire
-      </v-stepper-step>
     </v-stepper-header>
 
     <v-stepper-items>
       <v-stepper-content step="1">
-        <v-select
-          v-model="catalogUrl"
-          :items="configurableCatalogs"
-          item-value="href"
-          item-text="title"
-          label="Choisissez un catalogue à configurer"
-          @input="initFromUrl"
-        />
-        <v-text-field
-          v-model="catalogUrl"
-          label="Ou saisissez une URL d'un autre catalogue"
-          @change="initFromUrl"
-        />
-        <v-text-field
-          v-model="catalog.title"
-          :disabled="!catalog.type"
-          label="Titre"
-        />
+        <v-sheet min-height="200">
+          <v-select
+            v-model="catalogUrl"
+            :items="configurableCatalogs"
+            item-value="href"
+            item-text="title"
+            label="Choisissez un catalogue à configurer"
+            @input="initFromUrl"
+          />
+          <v-text-field
+            v-model="catalogUrl"
+            label="Ou saisissez une URL d'un autre catalogue"
+            @change="initFromUrl"
+          />
+          <v-text-field
+            v-model="catalog.title"
+            :disabled="!catalog.type"
+            label="Titre"
+          />
+        </v-sheet>
         <v-btn
           :disabled="!catalog.type"
           color="primary"
@@ -52,47 +47,26 @@
         >
           Continuer
         </v-btn>
-        <v-btn
-          flat
-          @click.native="$emit('cancel')"
-        >
+        <v-btn text @click.native="$emit('cancel')">
           Annuler
         </v-btn>
       </v-stepper-content>
 
       <v-stepper-content step="2">
-        <catalog-config-form
-          :catalog="catalog"
-          :catalog-type="catalogTypes.find(t => t.key === catalog.type)"
-        />
+        <v-sheet min-height="200">
+          <catalog-config-form
+            :catalog="catalog"
+            :catalog-type="catalogTypes.find(t => t.key === catalog.type)"
+          />
+        </v-sheet>
         <v-btn
-          :disabled="!catalog.apiKey"
-          color="primary"
-          @click.native="currentStep = 3"
-        >
-          Continuer
-        </v-btn>
-        <v-btn
-          flat
-          @click.native="$emit('cancel')"
-        >
-          Annuler
-        </v-btn>
-      </v-stepper-content>
-
-      <v-stepper-content step="3">
-        <owner-pick v-model="owner" />
-        <v-btn
-          :disabled="!owner"
+          :disabled="!catalog"
           color="primary"
           @click.native="importCatalog()"
         >
           Enregistrer
         </v-btn>
-        <v-btn
-          flat
-          @click.native="$emit('cancel')"
-        >
+        <v-btn text @click.native="$emit('cancel')">
           Annuler
         </v-btn>
       </v-stepper-content>
@@ -104,11 +78,10 @@
   import marked from 'marked'
   import { mapState } from 'vuex'
   import eventBus from '~/event-bus'
-  import CatalogConfigForm from './CatalogConfigForm.vue'
-  import OwnerPick from './OwnerPick.vue'
+  import CatalogConfigForm from './config-form.vue'
 
   export default {
-    components: { CatalogConfigForm, OwnerPick },
+    components: { CatalogConfigForm },
     props: ['initCatalog'],
     data: () => ({
       currentStep: null,
@@ -143,14 +116,9 @@
         }
       },
       async importCatalog() {
-        const options = { headers: { 'x-organizationId': 'user' } }
-        if (this.owner.type === 'organization') {
-          options.headers = { 'x-organizationId': this.owner.id }
-          if (this.owner.role) options.headers['x-organizationRole'] = this.owner.role
-        }
         this.importing = true
         try {
-          const catalog = await this.$axios.$post('api/v1/catalogs', this.catalog, options)
+          const catalog = await this.$axios.$post('api/v1/catalogs', this.catalog)
           this.$router.push({ path: `/catalog/${catalog.id}/description` })
         } catch (error) {
           eventBus.$emit('notification', { error, msg: 'Erreur pendant l\'import de la description du catalogue' })

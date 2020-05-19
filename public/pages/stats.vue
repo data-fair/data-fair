@@ -1,27 +1,48 @@
 <template>
   <v-container class="pt-0">
-    <v-col md="6" offset-md="3">
+    <!-- User: show stats -->
+    <v-row v-if="user">
+      <v-col>
+        <v-subheader class="px-0">
+          {{ $t('pages.root.description') }}
+        </v-subheader>
+
+        <h3 class="headline mt-2">
+          Statistiques
+        </h3>
+        <v-sheet class="mt-2">
+          <v-data-table
+            v-if="stats"
+            :headers="headers"
+            :items="items"
+            hide-default-footer
+          >
+            <template v-slot:item="{item}">
+              <tr>
+                <td>{{ item.name }}</td>
+                <td>{{ item.datasets }}</td>
+                <td>{{ parseFloat((item.storage / 1000).toFixed(2)).toLocaleString() }} ko</td>
+                <td>{{ parseFloat((item.storageLimit / 1000).toFixed(2)).toLocaleString() }} ko</td>
+                <td>{{ item.applications }}</td>
+              </tr>
+            </template>
+          </v-data-table>
+        </v-sheet>
+      </v-col>
+    </v-row>
+    <!-- Anonymous: show jumbotron -->
+    <v-col
+      v-else-if="initialized"
+      md="6"
+      offset-md="3"
+    >
       <v-responsive>
         <v-container class="fill-height">
           <v-row align="center">
             <v-col class="text-center">
-              <h3 class="display-1 mb-3 mt-5">
-                {{ $t('common.title') }}
-              </h3>
               <div class="headline">
-                {{ $t('pages.root.description') }}
+                Vous n'êtes pas autorisé à voir ou modifier le contenu de cette page.
               </div>
-              <template v-if="initialized && !user">
-                <p class="title mt-5">
-                  {{ $t('common.authrequired') }}
-                </p>
-                <v-btn
-                  color="primary"
-                  @click="login"
-                >
-                  {{ $t('common.login') }}
-                </v-btn>
-              </template>
             </v-col>
           </v-row>
         </v-container>

@@ -297,8 +297,15 @@ router.get('/:applicationId/journal', readApplication, permissions.middleware('r
 // Used by applications to declare an error
 router.post('/:applicationId/error', readApplication, permissions.middleware('writeConfig', 'write'), cacheHeaders.noCache, asyncWrap(async(req, res) => {
   if (!req.body.message) return res.status(400).send('Attribut "message" obligatoire')
-  if (req.application.status && req.application.status.startsWith('configured')) {
-    await req.app.get('db').collection('applications').updateOne({ id: req.params.applicationId }, { $set: { status: 'error' } })
+
+  const referer = req.headers.referer || req.headers.referrer
+  const draftMode = referer && referer.includes('draft=true')
+
+  if (draftMode) {
+    // websocket notifications of draft mode errors
+    await req.app.publish(`applications/${req.params.applicationId}/draft-error`, req.body)
+  } else {
+    await req.app.get('db').collection('applications').updateOne({ id: req.params.applicationId }, { $set: { status: 'error', errorMessage: req.body.message } })
     await journals.log(req.app, req.application, { type: 'error', data: req.body.message }, 'application')
   }
   res.status(204).send()

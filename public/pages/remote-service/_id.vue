@@ -133,10 +133,7 @@
         </v-card-text>
         <v-card-actions>
           <v-spacer />
-          <v-btn
-            flat
-            @click="showDeleteDialog = false"
-          >
+          <v-btn text @click="showDeleteDialog = false">
             Non
           </v-btn>
           <v-btn

@@ -46,7 +46,6 @@
               v-if="can('writeDescription') && ['error', 'published'].includes(publication.status)"
               color="warning"
               icon
-              flat
               title="Re-publier"
               class="mr-4"
               @click="rePublishInd = i; showRepublishDialog = true;"
@@ -57,7 +56,6 @@
               v-if="can('writeDescription')"
               color="warning"
               icon
-              flat
               title="Supprimer cette publication"
               @click="deletePublicationInd = i; showDeleteDialog = true;"
             >
@@ -104,10 +102,7 @@
 
         <v-card-actions>
           <v-spacer />
-          <v-btn
-            flat
-            @click="addPublicationDialog = false"
-          >
+          <v-btn text @click="addPublicationDialog = false">
             Annuler
           </v-btn>
           <v-btn
@@ -137,10 +132,7 @@
         </v-card-text>
         <v-card-actions>
           <v-spacer />
-          <v-btn
-            flat
-            @click="showDeleteDialog = false"
-          >
+          <v-btn text @click="showDeleteDialog = false">
             Non
           </v-btn>
           <v-btn
@@ -153,10 +145,7 @@
       </v-card>
     </v-dialog>
 
-    <v-dialog
-      v-model="showRepublishDialog"
-      max-width="500"
-    >
+    <v-dialog v-model="showRepublishDialog" max-width="500">
       <v-card v-if="showRepublishDialog">
         <v-card-title primary-title>
           Re-publication
@@ -169,10 +158,7 @@
         </v-card-text>
         <v-card-actions>
           <v-spacer />
-          <v-btn
-            flat
-            @click="showRepublishDialog = false"
-          >
+          <v-btn text @click="showRepublishDialog = false">
             Non
           </v-btn>
           <v-btn

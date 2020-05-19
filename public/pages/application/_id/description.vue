@@ -1,23 +1,20 @@
 <template lang="html">
-  <v-container
-    fluid
-    grid-list-lg
-  >
+  <v-container fluid>
     <v-row>
       <v-col
         cols="12"
         md="6"
         order-md="2"
       >
-        <v-card class="mb-3">
-          <v-list>
+        <v-sheet>
+          <v-list dense>
             <v-list-item>
               <v-list-item-avatar>
                 <v-icon v-if="application.owner.type === 'user'">
-                  person
+                  mdi-account
                 </v-icon>
                 <v-icon v-else>
-                  group
+                  mdi-account-group
                 </v-icon>
               </v-list-item-avatar>
               <span>{{ application.owner.name }}</span>
@@ -43,11 +40,11 @@
               <span>{{ application.createdBy.name }} {{ application.createdAt | moment("DD/MM/YYYY, HH:mm") }}</span>
             </v-list-item>
             <v-list-item v-if="nbSessions !== null">
-              <v-list-item-avatar><v-icon>visibility</v-icon></v-list-item-avatar>
+              <v-list-item-avatar><v-icon>mdi-eye</v-icon></v-list-item-avatar>
               <span>{{ nbSessions }} {{ nbSessions > 1 ? 'sessions actives dans la dernière heure' : 'session active dans la dernière heure' }}</span>
             </v-list-item>
           </v-list>
-        </v-card>
+        </v-sheet>
       </v-col>
       <v-col
         cols="12"
@@ -62,7 +59,7 @@
         <v-textarea
           v-model="application.description"
           label="Description"
-          box
+          filled
           rows="4"
           @change="patch({description: application.description})"
         />

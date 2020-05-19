@@ -32,10 +32,7 @@
         >
           Continuer
         </v-btn>
-        <v-btn
-          flat
-          @click.native="$emit('cancel')"
-        >
+        <v-btn text @click.native="$emit('cancel')">
           Annuler
         </v-btn>
       </v-stepper-content>
@@ -67,10 +64,7 @@
         >
           Créer
         </v-btn>
-        <v-btn
-          flat
-          @click.native="$emit('cancel')"
-        >
+        <v-btn text @click.native="$emit('cancel')">
           Annuler
         </v-btn>
       </v-stepper-content>
@@ -81,7 +75,7 @@
 <script>
   import { mapState } from 'vuex'
   import eventBus from '~/event-bus'
-  import OwnerPick from './OwnerPick.vue'
+  import OwnerPick from '~/components/OwnerPick.vue'
 
   export default {
     components: { OwnerPick },
@@ -116,15 +110,8 @@
         this.loadingDatasets = false
       },
       async createDataset() {
-        const options = {
-          headers: { 'x-organizationId': 'user' },
-        }
-        if (this.owner.type === 'organization') {
-          options.headers = { 'x-organizationId': this.owner.id }
-          if (this.owner.role) options.headers['x-organizationRole'] = this.owner.role
-        }
         try {
-          const dataset = await this.$axios.$post('api/v1/datasets', { isVirtual: true, title: this.title, virtual: { children: this.children } }, options)
+          const dataset = await this.$axios.$post('api/v1/datasets', { isVirtual: true, title: this.title, virtual: { children: this.children } })
           this.$router.push({ path: `/dataset/${dataset.id}/description` })
         } catch (error) {
           eventBus.$emit('notification', { error, msg: 'Erreur pendant la création du jeu de données virtual :' })

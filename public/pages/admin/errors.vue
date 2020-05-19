@@ -26,7 +26,6 @@
             </v-list-item-content>
             <v-list-item-action>
               <v-btn
-                flat
                 icon
                 color="primary"
                 target="blank"

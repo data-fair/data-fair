@@ -47,7 +47,7 @@
           v-model="remoteService.description"
           :disabled="!user.adminMode"
           label="Description"
-          box
+          filled
           rows="5"
           color="admin"
           @change="patch({description: remoteService.description})"

@@ -110,9 +110,9 @@
 <script>
   import { mapState, mapActions } from 'vuex'
 
-  import ImportFile from '~/components/ImportFile.vue'
-  import CreateVirtual from '~/components/CreateVirtual.vue'
-  import CreateRest from '~/components/CreateRest.vue'
+  import ImportFile from '~/components/datasets/import-file.vue'
+  import CreateVirtual from '~/components/datasets/create-virtual.vue'
+  import CreateRest from '~/components/datasets/create-rest.vue'
   import DatasetsList from '~/components/datasets/list.vue'
 
   export default {

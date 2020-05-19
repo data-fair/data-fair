@@ -66,8 +66,8 @@
 <script>
   import { mapState, mapActions } from 'vuex'
 
-  import ImportCatalog from '~/components/ImportCatalog.vue'
-  import CatalogsList from '~/components/CatalogsList.vue'
+  import ImportCatalog from '~/components/catalogs/import.vue'
+  import CatalogsList from '~/components/catalogs/list.vue'
 
   export default {
     components: { ImportCatalog, CatalogsList },

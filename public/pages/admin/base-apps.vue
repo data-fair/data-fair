@@ -16,6 +16,9 @@
               v-model="q"
               name="q"
               label="Rechercher"
+              hide-details
+              solo
+              append-icon="mdi-magnify"
               @keypress.enter="refresh"
             />
           </v-col>
@@ -31,6 +34,7 @@
             <v-text-field
               v-model="urlToAdd"
               label="Ajouter"
+              placeholder="Saisissez l'URL d'une nouvelle application de base"
               @keypress.enter="add"
             />
           </v-col>
@@ -53,16 +57,16 @@
                     v-if="baseApp.public"
                     color="green"
                   >
-                    lock_open
+                    mdi-lock-open
                   </v-icon>
                   <template v-else>
                     <v-icon color="red">
-                      lock
+                      mdi-lock
                     </v-icon>
                     <span>{{ (baseApp.privateAccess || []).map(p => p.name).join(', ') }}</span>
                   </template>
                   <v-icon v-if="baseApp.deprecated">
-                    visibility_off
+                    mdi-eye-off
                   </v-icon>
                 </v-list-item-title>
                 <v-list-item-subtitle>{{ baseApp.description }}</v-list-item-subtitle>
@@ -78,7 +82,7 @@
                   color="primary"
                   @click="currentBaseApp = baseApp; patch = newPatch(baseApp); showEditDialog = true;"
                 >
-                  edit
+                  mdi-pencil
                 </v-icon>
               </v-list-item-action>
             </v-list-item>
@@ -154,7 +158,7 @@
         </v-card-text>
         <v-card-actions>
           <v-spacer />
-          <v-btn @click="showEditDialog = false">
+          <v-btn text @click="showEditDialog = false">
             Annuler
           </v-btn>
           <v-btn

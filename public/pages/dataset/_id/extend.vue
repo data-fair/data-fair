@@ -79,7 +79,6 @@
               <span v-if="item.active && (item.progress >= 1 || item.error)">
                 <v-btn
                   icon
-                  flat
                   color="accent"
                   title="Recommencer et écraser les valeurs enrichies précédemment"
                   @click="save(item)"

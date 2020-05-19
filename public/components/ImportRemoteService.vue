@@ -36,10 +36,7 @@
         >
           Enregistrer
         </v-btn>
-        <v-btn
-          flat
-          @click.native="$emit('cancel')"
-        >
+        <v-btn text @click.native="$emit('cancel')">
           Annuler
         </v-btn>
       </v-stepper-content>

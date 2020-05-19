@@ -124,7 +124,6 @@
             >
               <div v-if="header.value === '_actions'" style="min-width:120px;">
                 <v-btn
-                  flat
                   icon
                   color="warning"
                   title="Supprimer cette ligne"
@@ -133,7 +132,6 @@
                   <v-icon>mdi-delete</v-icon>
                 </v-btn>
                 <v-btn
-                  flat
                   icon
                   color="primary"
                   title="Éditer cette ligne"
@@ -143,7 +141,6 @@
                 </v-btn>
                 <v-btn
                   v-if="dataset.rest && dataset.rest.history"
-                  flat
                   icon
                   color="primary"
                   title="Voir l'historique des révisions de cette ligne"
@@ -295,7 +292,7 @@
       pagination: {
         page: 1,
         rowsPerPage: 10,
-        sortBy: '_i',
+        sortBy: null,
         descending: false,
       },
       sort: null,
@@ -395,7 +392,9 @@
           page: this.pagination.page,
         }
         if (this.imageField) params.thumbnail = '40x40'
-        if (this.pagination.sortBy) params.sort = (this.pagination.descending ? '-' : '') + this.pagination.sortBy
+        if (this.pagination.sortBy) {
+          params.sort = (this.pagination.descending ? '-' : '') + this.pagination.sortBy
+        }
         if (this.query) params.q = this.query
         if (this.select.length) params.select = this.select.join(',')
         this.loading = true

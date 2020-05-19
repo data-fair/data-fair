@@ -94,7 +94,7 @@
           >
             <v-list-item-avatar>
               <v-icon color="warning">
-                person
+                mdi-account
               </v-icon>
             </v-list-item-avatar>
             <v-list-item-title>Changer de propriétaire</v-list-item-title>
@@ -132,26 +132,17 @@
         </v-card-text>
         <v-card-actions>
           <v-spacer />
-          <v-btn
-            flat
-            @click="showDeleteDialog = false"
-          >
+          <v-btn text @click="showDeleteDialog = false">
             Non
           </v-btn>
-          <v-btn
-            color="warning"
-            @click="confirmRemove"
-          >
+          <v-btn color="warning" @click="confirmRemove">
             Oui
           </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
 
-    <v-dialog
-      v-model="showOwnerDialog"
-      max-width="900"
-    >
+    <v-dialog v-model="showOwnerDialog" max-width="900">
       <v-card>
         <v-card-title primary-title>
           Changer le propriétaire du catalogue
@@ -161,10 +152,7 @@
         </v-card-text>
         <v-card-actions>
           <v-spacer />
-          <v-btn
-            flat
-            @click="showOwnerDialog = false"
-          >
+          <v-btn text @click="showOwnerDialog = false">
             Annuler
           </v-btn>
           <v-btn

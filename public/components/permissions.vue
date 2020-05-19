@@ -70,7 +70,6 @@
           </td>
           <td class="text-right">
             <v-btn
-              flat
               icon
               color="warning"
               @click="editPermission(item);showDialog = true"
@@ -78,7 +77,6 @@
               <v-icon>mdi-pencil</v-icon>
             </v-btn>
             <v-btn
-              flat
               icon
               color="warning"
               @click="removePermission(index)"
@@ -159,10 +157,7 @@
 
         <v-card-actions>
           <v-spacer />
-          <v-btn
-            flat
-            @click="showDialog = false"
-          >
+          <v-btn text @click="showDialog = false">
             Annuler
           </v-btn>
           <v-btn

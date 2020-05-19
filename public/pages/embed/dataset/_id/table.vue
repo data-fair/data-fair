@@ -136,7 +136,7 @@
       pagination: {
         page: 1,
         rowsPerPage: 5,
-        sortBy: '_i',
+        sortBy: null,
         descending: false,
       },
       sort: null,

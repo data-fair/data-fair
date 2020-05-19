@@ -1,8 +1,5 @@
 <template lang="html">
-  <v-container
-    fluid
-    grid-list-lg
-  >
+  <v-container fluid>
     <v-row>
       <v-col
         cols="12"
@@ -14,10 +11,10 @@
             <v-list-item>
               <v-list-item-avatar>
                 <v-icon v-if="catalog.owner.type === 'user'">
-                  person
+                  mdi-account
                 </v-icon>
                 <v-icon v-else>
-                  group
+                  mdi-account-group
                 </v-icon>
               </v-list-item-avatar>
               <span>{{ catalog.owner.name }}</span>
@@ -50,14 +47,11 @@
         <v-textarea
           v-model="catalog.description"
           label="Description"
-          box
+          filled
           rows="4"
           @change="patch({description: catalog.description})"
         />
-        <catalog-config-form
-          :catalog="catalog"
-          @change="changes => patch(changes)"
-        />
+        <catalog-config-form :catalog="catalog" @change="changes => patch(changes)" />
       </v-col>
     </v-row>
   </v-container>
@@ -65,7 +59,7 @@
 
 <script>
   import { mapState, mapActions } from 'vuex'
-  import CatalogConfigForm from '~/components/CatalogConfigForm.vue'
+  import CatalogConfigForm from '~/components/catalogs/config-form.vue'
 
   export default {
     components: { CatalogConfigForm },

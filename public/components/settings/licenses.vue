@@ -26,7 +26,6 @@
           <v-btn
             color="warning"
             icon
-            flat
             title="Supprimer cette license"
             @click="removeLicense(rowIndex)"
           >
@@ -62,10 +61,7 @@
         </v-card-text>
         <v-card-actions>
           <v-spacer />
-          <v-btn
-            flat
-            @click="showDialog = false"
-          >
+          <v-btn text @click="showDialog = false">
             Annuler
           </v-btn>
           <v-btn

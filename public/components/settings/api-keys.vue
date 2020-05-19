@@ -56,7 +56,6 @@
             <v-card-actions>
               <v-spacer />
               <v-btn
-                flat
                 icon
                 color="warning"
                 title="Supprimer cette clé d'API"
@@ -106,10 +105,7 @@
         </v-card-text>
         <v-card-actions>
           <v-spacer />
-          <v-btn
-            flat
-            @click="showDialog = false"
-          >
+          <v-btn text @click="showDialog = false">
             Annuler
           </v-btn>
           <v-btn
@@ -136,10 +132,7 @@
         </v-card-text>
         <v-card-actions>
           <v-spacer />
-          <v-btn
-            flat
-            @click="showDeleteDialog = false"
-          >
+          <v-btn text @click="showDeleteDialog = false">
             Non
           </v-btn>
           <v-btn
@@ -171,7 +164,7 @@
         <v-card-actions>
           <v-spacer />
           <v-btn
-            flat
+            text
             color="primary"
             @click="showUseDialog = false"
           >

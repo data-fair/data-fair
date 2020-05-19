@@ -61,8 +61,6 @@ export default () => ({
       if (patched) commit('patch', patch)
     },
     async remove({ state, getters, dispatch }) {
-      const options = { headers: { 'x-organizationId': 'user' } }
-      if (state.catalog.owner.type === 'organization') options.headers = { 'x-organizationId': state.catalog.owner.id }
       try {
         await this.$axios.delete(getters.resourceUrl)
         eventBus.$emit('notification', `La configuration du catalogue ${state.catalog.title} a bien été supprimée`)

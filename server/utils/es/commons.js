@@ -47,7 +47,7 @@ exports.aliasName = dataset => {
 }
 
 exports.parseSort = (sortStr, fields) => {
-  if (!sortStr) return []
+  if (!sortStr) return [{ _i: 'asc' }]
   return sortStr.split(',').map(s => {
     let field, direction
     if (s.indexOf('-') === 0) {

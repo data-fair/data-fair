@@ -24,16 +24,8 @@
         lg="10"
         xl="10"
       >
-        <v-container
-          class="pa-0"
-          fluid
-          grid-list-lg
-        >
-          <v-row
-            v-if="applications"
-
-            class="resourcesList"
-          >
+        <v-container class="pa-0" fluid>
+          <v-row v-if="applications" class="resourcesList">
             <v-col
               v-for="application in applications.results"
               :key="application.id"
@@ -42,25 +34,9 @@
               lg="4"
               xl="3"
             >
-              <v-card height="100%">
-                <v-card-title
-                  primary-title
-                  style="padding-top: 0; padding-bottom: 0;"
-                >
-                  <nuxt-link :to="`/application/${application.id}/description`">
-                    {{ application.title || application.id }}
-                  </nuxt-link>
-                  <v-spacer />
-                  <v-btn
-                    :href="`${env.publicUrl}/app/${application.id}`"
-                    icon
-                    flat
-                    color="primary"
-                    target="_blank"
-                    title="Accéder à l'application"
-                  >
-                    <v-icon>exit_to_app</v-icon>
-                  </v-btn>
+              <v-card height="100%" :to="`/application/${application.id}/description`">
+                <v-card-title>
+                  {{ application.title || application.id }}
                 </v-card-title>
                 <v-divider />
                 <v-img
@@ -100,17 +76,13 @@
         lg="2"
         xl="2"
       >
-        <applications-facets
-          :facets="applications.facets"
-          :facets-values="facetsValues"
-        />
+        <applications-facets :facets="applications.facets" :facets-values="facetsValues" />
       </v-col>
     </v-row>
 
-    <v-row
-      v-if="applications && applications.count"
-    >
-      <v-spacer /><v-pagination
+    <v-row v-if="applications && applications.count && applications.count > size">
+      <v-spacer />
+      <v-pagination
         v-model="page"
         :length="Math.ceil(applications.count / size)"
         @input="$vuetify.goTo('.resourcesList', {offset});refresh()"
@@ -146,9 +118,9 @@
 </template>
 
 <script>
-  import SearchProgress from './search/progress.vue'
-  import SearchFilters from './search/filters.vue'
-  import ApplicationsFacets from './ApplicationsFacets.vue'
+  import SearchProgress from '~/components/search/progress.vue'
+  import SearchFilters from '~/components/search/filters.vue'
+  import ApplicationsFacets from './facets.vue'
   const marked = require('marked')
   const { mapState } = require('vuex')
 

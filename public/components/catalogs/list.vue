@@ -16,16 +16,8 @@
     />
     <search-progress :loading="loading" />
 
-    <v-container
-      class="pa-0"
-      fluid
-      grid-list-lg
-    >
-      <v-row
-        v-if="catalogs"
-
-        class="resourcesList"
-      >
+    <v-container class="pa-0" fluid>
+      <v-row v-if="catalogs" class="resourcesList">
         <v-col
           v-for="catalog in catalogs.results"
           :key="catalog.id"
@@ -35,10 +27,7 @@
           xl="3"
         >
           <v-card height="100%">
-            <v-card-title
-              primary-title
-              style="height:25%"
-            >
+            <v-card-title primary-title style="height:25%">
               <nuxt-link :to="`/catalog/${catalog.id}/description`">
                 {{ catalog.title || catalog.id }}
               </nuxt-link>
@@ -62,9 +51,7 @@
       </v-row>
     </v-container>
 
-    <v-row
-      v-if="catalogs && catalogs.count"
-    >
+    <v-row v-if="catalogs && catalogs.count">
       <v-spacer /><v-pagination
         v-model="page"
         :length="Math.ceil(catalogs.count / size)"
@@ -72,25 +59,16 @@
       />
     </v-row>
 
-    <v-responsive
-      v-if="!hasCatalogs"
-      height="auto"
-    >
+    <v-responsive v-if="!hasCatalogs" height="auto">
       <v-container class="fill-height">
         <v-row align="center">
           <v-col class="text-center">
-            <div
-              v-if="!filtered"
-              class="headline"
-            >
+            <div v-if="!filtered" class="headline">
               Vous n'avez pas encore ajouté de catalogues externes.<br>Vous pouvez <nuxt-link :to="localePath('user-guide')">
                 consulter la documentation
               </nuxt-link> pour en savoir plus.
             </div>
-            <div
-              v-else
-              class="headline"
-            >
+            <div v-else class="headline">
               Aucun résultat ne correspond aux critères de recherche
             </div>
           </v-col>
@@ -101,8 +79,8 @@
 </template>
 
 <script>
-  import SearchProgress from './search/progress.vue'
-  import SearchFilters from './search/filters.vue'
+  import SearchProgress from '~/components/search/progress.vue'
+  import SearchFilters from '~/components/search/filters.vue'
   const marked = require('marked')
   const { mapState } = require('vuex')
 

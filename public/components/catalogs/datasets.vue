@@ -1,8 +1,5 @@
 <template>
-  <v-container
-    fluid
-    grid-list-lg
-  >
+  <v-container fluid>
     <v-progress-linear
       v-if="loading"
       :indeterminate="true"
@@ -43,7 +40,6 @@
                   :disabled="dataset.nbHarvestable === dataset.nbHarvested"
                   color="primary"
                   class="mr-3"
-                  flat
                   icon
                   ripple
                   title="Importer les ressources comme jeux de données indexés"

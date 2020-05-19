@@ -75,10 +75,9 @@
       </v-col>
     </v-row>
 
-    <v-row
-      v-if="datasets && datasets.count && datasets.count > size"
-    >
-      <v-spacer /><v-pagination
+    <v-row v-if="datasets && datasets.count && datasets.count > size">
+      <v-spacer />
+      <v-pagination
         v-model="page"
         :length="Math.ceil(datasets.count / size)"
         @input="$vuetify.goTo('.resourcesList', {offset});refresh()"
