@@ -60,7 +60,7 @@
 </template>
 
 <script>
-  import { mapActions, mapState } from 'vuex'
+  import { mapActions, mapState, mapGetters } from 'vuex'
 
   export default {
     props: ['filters', 'filterLabels', 'facets', 'type', 'hideOwners'],
@@ -69,6 +69,7 @@
     }),
     computed: {
       ...mapState('session', ['user']),
+      ...mapGetters('session', ['activeAccount']),
       fullFilterLabels() {
         return {
           ...this.filterLabels,
@@ -110,7 +111,7 @@
           this.owners = this.$route.query.owner.split(',')
           if (this.user) this.$set(this.filters, 'owner', this.$route.query.owner.replace('others', '-user:' + this.user.id + ',' + this.user.organizations.map(o => '-organization:' + o.id).join(',')))
         } else {
-          this.$set(this.filters, 'owner', null)
+          this.$set(this.filters, 'owner', `${this.activeAccount.type}:${this.activeAccount.id}`)
         }
         this.$emit('apply')
       },
@@ -120,7 +121,7 @@
           if (![null, undefined, '', true].includes(this.filters[key])) query[key] = '' + this.filters[key]
           else delete query[key]
         })
-        if (this.owners.length) query.owner = this.owners.join(',').replace()
+        if (this.filters.showAll && this.owners.length) query.owner = this.owners.join(',').replace()
         else query.owner = null
         this.$router.push({ query })
         this.searchQuery({ type: this.type, query })

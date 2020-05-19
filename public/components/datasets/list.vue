@@ -85,10 +85,7 @@
       />
     </v-row>
 
-    <v-responsive
-      v-if="!hasDatasets"
-      height="auto"
-    >
+    <v-responsive v-if="!hasDatasets" height="auto">
       <v-container class="fill-height">
         <v-row align="center">
           <v-col class="text-center">
@@ -119,7 +116,7 @@
   import DatasetsFacets from './facets.vue'
   import OwnerShort from '~/components/owners/short.vue'
   const marked = require('marked')
-  const { mapState } = require('vuex')
+  const { mapState, mapGetters } = require('vuex')
 
   export default {
     components: { SearchProgress, SearchFilters, DatasetsFacets, OwnerShort },
@@ -132,7 +129,6 @@
       filtered: false,
       facetsValues: {
         status: {},
-        owner: {},
         visibility: {},
         services: {},
         concepts: {},
@@ -141,6 +137,7 @@
     }),
     computed: {
       ...mapState('session', ['user']),
+      ...mapGetters('session', ['activeAccount']),
       ...mapState(['env']),
       plural() {
         return this.datasets.count > 1
@@ -149,7 +146,7 @@
         return { xs: 4, sm: 4, md: 8, lg: 12, xl: 16 }[this.$vuetify.breakpoint.name]
       },
       hasDatasets() {
-        return !this.datasets || (this.user && this.datasets.facets.owner.filter(f => (f.value.type === 'user' && f.value.id === this.user.id) || ((f.value.type === 'organization' && (this.user.organizations || []).map(o => o.id).includes(f.value.id)))).length)
+        return !this.datasets || this.datasets.count
       },
     },
     watch: {
@@ -161,25 +158,24 @@
         },
       },
     },
-    created() {
-      if (!this.user) return
-      if (this.user.organization) this.$set(this.facetsValues.owner, `organization:${this.user.organization.id}`, true)
-      else this.$set(this.facetsValues.owner, `user:${this.user.id}`, true)
-    },
     methods: {
       async refresh() {
         const fullFilters = { ...this.filters }
+        let hasFacetFilter = false
         Object.entries(this.facetsValues).forEach(([facetKey, facetValues]) => {
           const facetFilter = Object.entries(facetValues)
             .filter(([facetValue, valueActive]) => valueActive)
             .map(([facetValue]) => facetValue).join(',')
-          if (facetFilter) fullFilters[facetKey] = facetFilter
+          if (facetFilter) {
+            hasFacetFilter = true
+            fullFilters[facetKey] = facetFilter
+          }
         })
         const params = {
           size: this.size,
           page: this.page,
           select: 'title,description,status',
-          facets: 'owner,status,visibility,services,concepts',
+          facets: 'status,visibility,services,concepts',
           sort: 'createdAt:-1',
           ...fullFilters,
         }
@@ -187,7 +183,7 @@
           this.lastParams = params
           this.loading = true
           this.datasets = await this.$axios.$get('api/v1/datasets', { params })
-          this.filtered = this.filters.q !== undefined
+          this.filtered = !!this.filters.q || hasFacetFilter
           this.loading = false
         }
       },

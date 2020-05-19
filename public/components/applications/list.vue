@@ -135,7 +135,6 @@
       filters: {},
       filtered: false,
       facetsValues: {
-        owner: {},
         visibility: {},
         'base-application': {},
       },
@@ -151,7 +150,7 @@
         return { xs: 4, sm: 4, md: 8, lg: 12, xl: 16 }[this.$vuetify.breakpoint.name]
       },
       hasApplications() {
-        return !this.applications || (this.user && this.applications.facets.owner.filter(f => (f.value.type === 'user' && f.value.id === this.user.id) || ((f.value.type === 'organization' && (this.user.organizations || []).map(o => o.id).includes(f.value.id)))).length)
+        return !this.applications || this.applications.count
       },
     },
     watch: {
@@ -163,33 +162,32 @@
         },
       },
     },
-    created() {
-      if (!this.user) return
-      if (this.user.organization) this.$set(this.facetsValues.owner, `organization:${this.user.organization.id}`, true)
-      else this.$set(this.facetsValues.owner, `user:${this.user.id}`, true)
-    },
     methods: {
       async refresh() {
         const fullFilters = { ...this.filters }
+        let hasFacetFilter = false
         Object.entries(this.facetsValues).forEach(([facetKey, facetValues]) => {
           const facetFilter = Object.entries(facetValues)
             .filter(([facetValue, valueActive]) => valueActive)
             .map(([facetValue]) => facetValue).join(',')
-          if (facetFilter) fullFilters[facetKey] = facetFilter
+          if (facetFilter) {
+            hasFacetFilter = true
+            fullFilters[facetKey] = facetFilter
+          }
         })
         const params = {
           size: this.size,
           page: this.page,
           select: 'title,description,status',
           ...fullFilters,
-          facets: 'owner,visibility,base-application',
+          facets: 'visibility,base-application',
           sort: 'createdAt:-1',
         }
         if (JSON.stringify(params) !== JSON.stringify(this.lastParams)) {
           this.lastParams = params
           this.loading = true
           this.applications = await this.$axios.$get('api/v1/applications', { params })
-          this.filtered = this.filters.q !== undefined
+          this.filtered = !!this.filters.q || hasFacetFilter
           this.loading = false
         }
       },

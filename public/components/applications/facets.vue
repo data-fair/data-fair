@@ -4,7 +4,7 @@
     <br>
     valeurs retournées : {{ facets }}-->
 
-    <template v-if="facets.owner && facets.owner.length">
+    <!--<template v-if="facets.owner && facets.owner.length">
       <v-subheader @click="visibleFacet = 'owner'">
         Propriétaire
         <v-icon v-if="visibleFacet !== 'owner'">
@@ -28,46 +28,36 @@
           </span>
         </v-checkbox>
       </template>
-    </template>
+    </template>-->
 
     <template v-if="facets.visibility && facets.visibility.length">
       <v-subheader @click="visibleFacet = 'visibility'">
         Visibilité
-        <v-icon v-if="visibleFacet !== 'visibility'">
-          mdi-menu-down
-        </v-icon>
       </v-subheader>
-      <template v-if="visibleFacet === 'visibility'">
-        <v-checkbox
-          v-for="facetItem in facets.visibility"
-          :key="`${facetItem.value}`"
-          v-model="facetsValues.visibility[facetItem.value]"
-          :label="`${{public: 'Public', private: 'Privé', protected: 'Protégé'}[facetItem.value]} (${facetItem.count})`"
-          :value="true"
-          :hide-details="true"
-          class="mt-0"
-        />
-      </template>
+      <v-checkbox
+        v-for="facetItem in facets.visibility"
+        :key="`${facetItem.value}`"
+        v-model="facetsValues.visibility[facetItem.value]"
+        :label="`${{public: 'Public', private: 'Privé', protected: 'Protégé'}[facetItem.value]} (${facetItem.count})`"
+        :value="true"
+        :hide-details="true"
+        class="mt-0"
+      />
     </template>
 
     <template v-if="facets['base-application'] && facets['base-application'].length">
       <v-subheader @click="visibleFacet = 'base-application'">
         Type d'application
-        <v-icon v-if="visibleFacet !== 'base-application'">
-          mdi-menu-down
-        </v-icon>
       </v-subheader>
-      <template v-if="visibleFacet === 'base-application'">
-        <v-checkbox
-          v-for="facetItem in facets['base-application']"
-          :key="`${facetItem.value}`"
-          v-model="facetsValues['base-application'][facetItem.value.url]"
-          :label="`${facetItem.value.title} ${facetItem.value.version || ''} (${facetItem.count})`"
-          :value="true"
-          :hide-details="true"
-          class="mt-0"
-        />
-      </template>
+      <v-checkbox
+        v-for="facetItem in facets['base-application']"
+        :key="`${facetItem.value}`"
+        v-model="facetsValues['base-application'][facetItem.value.url]"
+        :label="`${facetItem.value.title} ${facetItem.value.version || ''} (${facetItem.count})`"
+        :value="true"
+        :hide-details="true"
+        class="mt-0"
+      />
     </template>
   </div>
 </template>

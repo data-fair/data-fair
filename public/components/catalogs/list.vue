@@ -104,7 +104,7 @@
         return { xs: 4, sm: 4, md: 8, lg: 12, xl: 16 }[this.$vuetify.breakpoint.name]
       },
       hasCatalogs() {
-        return !this.catalogs || (this.user && this.catalogs.facets.owner.filter(f => (f.value.type === 'user' && f.value.id === this.user.id) || ((f.value.type === 'organization' && (this.user.organizations || []).map(o => o.id).includes(f.value.id)))).length)
+        return !this.catalogs || this.catalogs.count
       },
     },
     methods: {

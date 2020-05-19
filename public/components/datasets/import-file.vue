@@ -101,7 +101,11 @@
               :value="a"
             />
           </v-radio-group>
-          <v-progress-linear v-model="uploadProgress" class="mb-2" />
+          <v-progress-linear
+            v-if="importing"
+            v-model="uploadProgress"
+            class="mb-2"
+          />
         </v-sheet>
         <v-btn
           :disabled="!action || importing"
@@ -119,7 +123,7 @@
 </template>
 
 <script>
-  import { mapState } from 'vuex'
+  import { mapState, mapGetters } from 'vuex'
   import eventBus from '~/event-bus'
 
   export default {
@@ -136,6 +140,7 @@
     }),
     computed: {
       ...mapState('session', ['user']),
+      ...mapGetters('session', ['activeAccount']),
       ...mapState(['env']),
       cleanTitle() {
         const trimmed = this.title.trim()
@@ -149,7 +154,7 @@
           if (this.cleanTitle) {
             existingDatasets = { results: [] }
           } else {
-            existingDatasets = await this.$axios.$get('api/v1/datasets', { params: { filename: this.file.name } })
+            existingDatasets = await this.$axios.$get('api/v1/datasets', { params: { filename: this.file.name, owner: `${this.activeAccount.type}:${this.activeAccount.id}` } })
           }
           this.actions = [{ type: 'create', title: 'Créer un nouveau jeu de données' }, ...existingDatasets.results.map(d => ({
             type: 'update',
