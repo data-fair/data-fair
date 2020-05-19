@@ -23,7 +23,6 @@
           v-for="(attachment, i) in dataset.attachments"
           :key="i"
           cols="12"
-          sm="12"
           md="6"
           lg="4"
         >

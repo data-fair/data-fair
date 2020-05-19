@@ -28,7 +28,7 @@
           <v-col
             v-for="dataset in datasets.results"
             :key="dataset.id"
-            sm="12"
+            cols="12"
             md="6"
             lg="4"
             xl="3"
@@ -53,7 +53,7 @@
                 </v-chip>
                 <template v-if="dataset.status === 'error'">
                   <v-spacer />
-                  <span><v-icon color="red">mdi-alert</v-icon>&nbsp;Erreurs pendant la publication</span>
+                  <span><v-icon color="red">mdi-alert</v-icon>&nbsp;erreur</span>
                 </template>
               </v-card-actions>
             </v-card>

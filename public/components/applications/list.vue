@@ -29,7 +29,7 @@
             <v-col
               v-for="application in applications.results"
               :key="application.id"
-              sm="12"
+              cols="12"
               md="6"
               lg="4"
               xl="3"

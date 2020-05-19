@@ -28,64 +28,105 @@
       <v-spacer />
 
       <!-- larger screens: navigation in toolbar -->
-      <v-toolbar-items v-if="$vuetify.breakpoint.lgAndUp">
-        <v-btn
-          :to="localePath({name: 'datasets', query: searchQuery('datasets')})"
-          :class="routePrefix === 'dataset' ? 'v-btn--active' : ''"
-          text
-          :color="user && user.adminMode ? 'default' : 'primary'"
+      <v-toolbar-items>
+        <template v-if="$vuetify.breakpoint.lgAndUp">
+          <v-btn
+            :to="localePath({name: 'datasets', query: searchQuery('datasets')})"
+            :class="routePrefix === 'dataset' ? 'v-btn--active' : ''"
+            text
+            :color="user && user.adminMode ? 'default' : 'primary'"
+          >
+            Jeux de données
+          </v-btn>
+          <v-btn
+            :to="localePath({name: 'applications', query: searchQuery('applications')})"
+            :class="routePrefix === 'application' ? 'v-btn--active' : ''"
+            text
+            :color="user && user.adminMode ? 'default' : 'primary'"
+          >
+            Applications
+          </v-btn>
+          <v-btn
+            :to="localePath({name: 'catalogs', query: searchQuery('catalogs')})"
+            :class="routePrefix === 'catalog' ? 'v-btn--active' : ''"
+            text
+            :color="user && user.adminMode ? 'default' : 'primary'"
+          >
+            Catalogues
+          </v-btn>
+          <v-btn
+            :to="localePath({name: 'remote-services', query: searchQuery('remote-services')})"
+            :class="routePrefix === 'remote' ? 'v-btn--active' : ''"
+            text
+            :color="user && user.adminMode ? 'default' : 'primary'"
+          >
+            Services
+          </v-btn>
+          <v-menu offset-y>
+            <template v-slot:activator="{on}">
+              <v-btn
+                :class="(routePrefix === 'user' || routePrefix === 'interoperate') ? 'v-btn--active' : ''"
+                text
+                v-on="on"
+              >
+                Documentation
+              </v-btn>
+            </template>
+            <v-list>
+              <v-list-item :to="localePath({name: 'user-guide-id', params: {id: 'introduction'}})">
+                <v-list-item-title>{{ $t('pages.user-guide.title') }}</v-list-item-title>
+              </v-list-item>
+              <v-list-item
+                href="https://videos.koumoul.com/"
+                target="_blank"
+              >
+                <v-list-item-title>Tutoriels</v-list-item-title>
+              </v-list-item>
+              <v-list-item :to="localePath('api-doc')">
+                <v-list-item-title>API</v-list-item-title>
+              </v-list-item>
+              <v-list-item :to="localePath({name: 'interoperate-id', params: {id: 'applications'}})">
+                <v-list-item-title>{{ $t('pages.interoperate.title') }}</v-list-item-title>
+              </v-list-item>
+            </v-list>
+          </v-menu>
+        </template>
+        <!-- smaller screens: navigation in menu -->
+        <v-menu
+          v-if="$vuetify.breakpoint.mdAndDown"
+          offset-y
+          left
         >
-          Jeux de données
-        </v-btn>
-        <v-btn
-          :to="localePath({name: 'applications', query: searchQuery('applications')})"
-          :class="routePrefix === 'application' ? 'v-btn--active' : ''"
-          text
-          :color="user && user.adminMode ? 'default' : 'primary'"
-        >
-          Applications
-        </v-btn>
-        <v-btn
-          :to="localePath({name: 'catalogs', query: searchQuery('catalogs')})"
-          :class="routePrefix === 'catalog' ? 'v-btn--active' : ''"
-          text
-          :color="user && user.adminMode ? 'default' : 'primary'"
-        >
-          Catalogues
-        </v-btn>
-        <v-btn
-          :to="localePath({name: 'remote-services', query: searchQuery('remote-services')})"
-          :class="routePrefix === 'remote' ? 'v-btn--active' : ''"
-          text
-          :color="user && user.adminMode ? 'default' : 'primary'"
-        >
-          Services
-        </v-btn>
-        <v-menu offset-y>
           <template v-slot:activator="{on}">
-            <v-btn
-              :class="(routePrefix === 'user' || routePrefix === 'interoperate') ? 'v-btn--active' : ''"
-              text
-              v-on="on"
-            >
-              Documentation
+            <v-btn icon v-on="on">
+              <v-icon>mdi-menu</v-icon>
             </v-btn>
           </template>
           <v-list>
-            <v-list-item :to="localePath({name: 'user-guide-id', params: {id: 'introduction'}})">
-              <v-list-item-title>{{ $t('pages.user-guide.title') }}</v-list-item-title>
+            <v-list-item :to="localePath({name: 'datasets', query: searchQuery('datasets')})">
+              <v-list-item-title>Jeux de données</v-list-item-title>
+            </v-list-item>
+            <v-list-item :to="localePath({name: 'applications', query: searchQuery('applications')})">
+              <v-list-item-title>Applications</v-list-item-title>
+            </v-list-item>
+            <v-list-item :to="localePath({name: 'catalogs', query: searchQuery('catalogs')})">
+              <v-list-item-title>Catalogues</v-list-item-title>
+            </v-list-item>
+            <v-list-item :to="localePath({name: 'remote-services', query: searchQuery('remote-services')})">
+              <v-list-item-title>Services</v-list-item-title>
             </v-list-item>
             <v-list-item
-              href="https://videos.koumoul.com/"
-              target="_blank"
+              v-if="!user"
+              color="primary"
+              @click="login"
             >
-              <v-list-item-title>Tutoriels</v-list-item-title>
+              <v-list-item-title>Se connecter / S'inscrire</v-list-item-title>
             </v-list-item>
-            <v-list-item :to="localePath('api-doc')">
-              <v-list-item-title>API</v-list-item-title>
-            </v-list-item>
-            <v-list-item :to="localePath({name: 'interoperate-id', params: {id: 'applications'}})">
-              <v-list-item-title>{{ $t('pages.interoperate.title') }}</v-list-item-title>
+            <v-list-item
+              v-else
+              @click="logout"
+            >
+              <v-list-item-title>Se déconnecter</v-list-item-title>
             </v-list-item>
           </v-list>
         </v-menu>
@@ -117,6 +158,11 @@
                   id="toolbar-menu-switch-user"
                   @click="switchOrganization(); reload()"
                 >
+                  <v-list-item-avatar class="ml-0 my-0">
+                    <v-avatar :size="28">
+                      <img :src="`${env.directoryUrl}/api/avatars/user/${user.id}/avatar.png`">
+                    </v-avatar>
+                  </v-list-item-avatar>
                   <v-list-item-title>Compte personnel</v-list-item-title>
                 </v-list-item>
                 <v-list-item
@@ -125,7 +171,12 @@
                   :key="organization.id"
                   @click="switchOrganization(organization.id); reload()"
                 >
-                  <v-list-item-title>Organisation {{ organization.name }}</v-list-item-title>
+                  <v-list-item-avatar class="ml-0 my-0">
+                    <v-avatar :size="28">
+                      <img :src="`${env.directoryUrl}/api/avatars/organization/${organization.id}/avatar.png`">
+                    </v-avatar>
+                  </v-list-item-avatar>
+                  <v-list-item-title>{{ organization.name }}</v-list-item-title>
                 </v-list-item>
                 <v-divider />
               </template>
@@ -213,46 +264,6 @@
           </v-menu>
         </template>
       </v-toolbar-items>
-
-      <!-- smaller screens: navigation in menu -->
-      <v-menu
-        v-if="$vuetify.breakpoint.mdAndDown"
-        bottom
-        left
-      >
-        <template v-slot:activator="{on}">
-          <v-btn icon v-on="on">
-            <v-icon>mdi-menu</v-icon>
-          </v-btn>
-        </template>
-        <v-list>
-          <v-list-item :to="localePath({name: 'datasets', query: searchQuery('datasets')})">
-            <v-list-item-title>Jeux de données</v-list-item-title>
-          </v-list-item>
-          <v-list-item :to="localePath({name: 'applications', query: searchQuery('applications')})">
-            <v-list-item-title>Applications</v-list-item-title>
-          </v-list-item>
-          <v-list-item :to="localePath({name: 'catalogs', query: searchQuery('catalogs')})">
-            <v-list-item-title>Catalogues</v-list-item-title>
-          </v-list-item>
-          <v-list-item :to="localePath({name: 'remote-services', query: searchQuery('remote-services')})">
-            <v-list-item-title>Services</v-list-item-title>
-          </v-list-item>
-          <v-list-item
-            v-if="!user"
-            color="primary"
-            @click="login"
-          >
-            <v-list-item-title>Se connecter / S'inscrire</v-list-item-title>
-          </v-list-item>
-          <v-list-item
-            v-else
-            @click="logout"
-          >
-            <v-list-item-title>Se déconnecter</v-list-item-title>
-          </v-list-item>
-        </v-list>
-      </v-menu>
     </v-app-bar>
     <v-content>
       <nuxt />

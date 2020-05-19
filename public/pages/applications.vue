@@ -2,7 +2,7 @@
   <v-container class="pt-0" fluid>
     <v-row v-if="user">
       <v-col>
-        <v-subheader class="px-0">
+        <v-subheader class="px-0 pr-12 mb-2">
           {{ $t('pages.applications.description') }}
         </v-subheader>
         <applications-list />
@@ -13,6 +13,7 @@
           v-if="user"
           color="primary"
           fab
+          small
           title="Configurer une application"
           @click="importApplicationSheet = true"
         >

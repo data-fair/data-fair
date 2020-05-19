@@ -2,7 +2,7 @@
   <v-container class="pt-0" fluid>
     <v-row v-if="user">
       <v-col>
-        <v-subheader class="px-0">
+        <v-subheader class="px-0 pr-12 mb-2">
           {{ $t('pages.datasets.description') }}
         </v-subheader>
         <datasets-list />
@@ -17,6 +17,7 @@
           <template v-slot:activator="{on}">
             <v-btn
               fab
+              small
               color="primary"
               title="Créer un jeu de données"
               v-on="on"

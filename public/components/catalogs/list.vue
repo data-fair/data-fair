@@ -21,10 +21,11 @@
         <v-col
           v-for="catalog in catalogs.results"
           :key="catalog.id"
-          sm="12"
-          md="6"
-          lg="4"
-          xl="3"
+          cols="12"
+          sm="6"
+          md="4"
+          lg="3"
+          xl="2"
         >
           <v-card height="100%" :to="`/catalog/${catalog.id}/description`">
             <v-card-title>
