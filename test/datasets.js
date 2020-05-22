@@ -44,34 +44,30 @@ describe('datasets', () => {
 
   it('Search and apply facets', async () => {
     const ax = global.ax.dmeadus
+    const axOrg = global.ax.dmeadusOrg
 
     // 1 dataset in user zone
     await testUtils.sendDataset('dataset1.csv', ax)
     // 2 datasets in organization zone
-    await testUtils.sendDataset('dataset1.csv', ax, 'KWqAGZ4mG')
-    await testUtils.sendDataset('dataset1.csv', ax, 'KWqAGZ4mG')
+    await testUtils.sendDataset('dataset1.csv', axOrg)
+    await testUtils.sendDataset('dataset1.csv', axOrg)
 
     let res = await ax.get('/api/v1/datasets', { params: { facets: 'owner,field-type' } })
-    assert.equal(res.data.count, 3)
-    assert.equal(res.data.facets.owner.length, 2)
-    assert.equal(res.data.facets.owner[0].count, 2)
-    assert.equal(res.data.facets.owner[0].value.id, 'KWqAGZ4mG')
-    assert.equal(res.data.facets.owner[1].count, 1)
+    assert.equal(res.data.count, 1)
+    assert.equal(res.data.facets.owner.length, 1)
+    assert.equal(res.data.facets.owner[0].count, 1)
+    assert.equal(res.data.facets.owner[0].value.id, 'dmeadus0')
+    assert.equal(res.data.facets.owner[0].value.type, 'user')
     assert.equal(res.data.facets['field-type'].length, 2)
-    assert.equal(res.data.facets['field-type'][0].count, 3)
+    assert.equal(res.data.facets['field-type'][0].count, 1)
 
-    res = await ax.get('/api/v1/datasets', {
-      params: {
-        owner: 'organization:KWqAGZ4mG',
-        facets: 'owner,field-type',
-      },
-    })
+    res = await axOrg.get('/api/v1/datasets', { params: { facets: 'owner,field-type' } })
     assert.equal(res.data.count, 2)
-    assert.equal(res.data.facets.owner.length, 2)
+    assert.equal(res.data.facets.owner.length, 1)
     // owner facet is not affected by the owner filter
     assert.equal(res.data.facets.owner[0].count, 2)
     assert.equal(res.data.facets.owner[0].value.id, 'KWqAGZ4mG')
-    assert.equal(res.data.facets.owner[1].count, 1)
+    assert.equal(res.data.facets.owner[0].value.type, 'organization')
     // field-type facet is affected by the owner filter
     assert.equal(res.data.facets['field-type'].length, 2)
     assert.equal(res.data.facets['field-type'][0].count, 2)
@@ -130,33 +126,33 @@ describe('datasets', () => {
   })
 
   it('Upload new dataset in organization zone', async () => {
-    const ax = global.ax.dmeadus
+    const ax = global.ax.dmeadusOrg
     const form = new FormData()
     form.append('file', datasetFd, 'dataset2.csv')
-    const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form, 'KWqAGZ4mG') })
+    const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
     assert.equal(res.status, 201)
     assert.equal(res.data.owner.type, 'organization')
     assert.equal(res.data.owner.id, 'KWqAGZ4mG')
   })
 
   it('Uploading same file twice should increment id', async () => {
-    const ax = global.ax.dmeadus
+    const ax = global.ax.dmeadusOrg
     for (const i of [1, 2, 3]) {
       const form = new FormData()
       form.append('file', datasetFd, 'my-dataset.csv')
-      const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form, 'KWqAGZ4mG') })
+      const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
       assert.equal(res.status, 201)
       assert.equal(res.data.id, 'my-dataset' + (i === 1 ? '' : i))
     }
   })
 
   it('Upload new dataset with pre-filled attributes', async () => {
-    const ax = global.ax.dmeadus
+    const ax = global.ax.dmeadusOrg
     const form = new FormData()
     form.append('title', 'A dataset with pre-filled title')
     form.append('publications', '[{"catalog": "test", "status": "waiting"}]')
     form.append('file', datasetFd, 'yet-a-dataset.csv')
-    const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form, 'KWqAGZ4mG') })
+    const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
     assert.equal(res.data.title, 'A dataset with pre-filled title')
   })
 
@@ -178,12 +174,12 @@ describe('datasets', () => {
   })
 
   it('Reject some other pre-filled attributes', async () => {
-    const ax = global.ax.dmeadus
+    const ax = global.ax.dmeadusOrg
     const form = new FormData()
     form.append('id', 'pre-filling ig is not possible')
     form.append('file', datasetFd, 'yet-a-dataset.csv')
     try {
-      await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form, 'KWqAGZ4mG') })
+      await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
     } catch (err) {
       assert.equal(err.status, 400)
     }

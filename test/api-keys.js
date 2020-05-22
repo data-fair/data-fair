@@ -3,7 +3,7 @@ const assert = require('assert').strict
 
 describe('API keys', () => {
   it('Reject wrong api key', async () => {
-    const ax = await global.ax.builder(null, { headers: { 'x-apiKey': 'wrong' } })
+    const ax = await global.ax.builder(null, null, { headers: { 'x-apiKey': 'wrong' } })
     try {
       await ax.get('/api/v1/stats')
       assert.fail()
@@ -26,11 +26,11 @@ describe('API keys', () => {
     assert.ok(key2)
 
     // Right scope
-    const axKey1 = await global.ax.builder(null, { headers: { 'x-apiKey': key1 } })
+    const axKey1 = await global.ax.builder(null, null, { headers: { 'x-apiKey': key1 } })
     await axKey1.get('/api/v1/stats')
 
     // Wrong scope
-    const axKey2 = await global.ax.builder(null, { headers: { 'x-apiKey': key2 } })
+    const axKey2 = await global.ax.builder(null, null, { headers: { 'x-apiKey': key2 } })
     try {
       await axKey2.get('/api/v1/stats')
       assert.fail()
@@ -56,7 +56,7 @@ describe('API keys', () => {
     assert.ok(key1)
 
     // Set the correct owner
-    const axKey1 = await global.ax.builder(null, { headers: { 'x-apiKey': key1 } })
+    const axKey1 = await global.ax.builder(null, null, { headers: { 'x-apiKey': key1 } })
     const dataset = await testUtils.sendDataset('dataset1.csv', axKey1)
     assert.equal(dataset.status, 'finalized')
     assert.equal(dataset.owner.type, 'organization')
