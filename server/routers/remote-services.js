@@ -8,7 +8,6 @@ const requestProxy = require('@koumoul/express-request-proxy')
 const remoteServiceAPIDocs = require('../../contract/remote-service-api-docs')
 const mongoEscape = require('mongo-escape')
 const config = require('config')
-const { RateLimiterMongo } = require('rate-limiter-flexible')
 const requestIp = require('request-ip')
 
 const ajv = require('ajv')()
@@ -22,6 +21,7 @@ const validateOpenApi = ajv.compile(openApiSchema)
 const findUtils = require('../utils/find')
 const asyncWrap = require('../utils/async-wrap')
 const cacheHeaders = require('../utils/cache-headers')
+const rateLimiting = require('../utils/rate-limiting')
 
 const debug = require('debug')('remote-services')
 
@@ -261,7 +261,6 @@ async function getAppOwner(req) {
 }
 
 // Use the proxy as a user with an active session on an application
-let nbLimiter, kbLimiter
 router.use('/:remoteServiceId/proxy*', (req, res, next) => { req.app.get('anonymSession')(req, res, next) }, asyncWrap(async (req, res, next) => {
   // only consider a session that truly comes from an application
   const session = req.session && req.session.activeApplications ? req.session : null
@@ -275,21 +274,11 @@ router.use('/:remoteServiceId/proxy*', (req, res, next) => { req.app.get('anonym
   if (req.method.toUpperCase() !== 'GET') return res.status(405).send('Seules les opérations de type GET sont autorisées sur cette exposition de service')
 
   // rate limiting both on number of requests and total size to prevent abuse of this public proxy
+  // it is only meant to be used by applications, not scripts
   const limiterId = (session && session.id) || (req.user && req.user.id) || requestIp.getClientIp(req)
-  nbLimiter = nbLimiter || new RateLimiterMongo({
-    storeClient: req.app.get('mongoClient'),
-    keyPrefix: 'data-fair-rate-limiter-nb',
-    points: config.defaultLimits.remoteServiceRate.nb,
-    duration: config.defaultLimits.remoteServiceRate.duration,
-  })
-  kbLimiter = kbLimiter || new RateLimiterMongo({
-    storeClient: req.app.get('mongoClient'),
-    keyPrefix: 'data-fair-rate-limiter-kb',
-    points: config.defaultLimits.remoteServiceRate.kb * 1000,
-    duration: config.defaultLimits.remoteServiceRate.duration,
-  })
+  const limiters = rateLimiting.remoteServices(req.app.get('mongoClient'))
   try {
-    await Promise.all([nbLimiter.consume(limiterId, 1), kbLimiter.consume(limiterId, 1)])
+    await Promise.all([limiters.nb.consume(limiterId, 1), limiters.kb.consume(limiterId, 1)])
   } catch (err) {
     return res.status(429).send('Trop de traffic dans un interval restreint pour cette exposition de service.')
   }
@@ -327,13 +316,13 @@ router.use('/:remoteServiceId/proxy*', (req, res, next) => { req.app.get('anonym
           this.consumed = (this.consumed || 0) + chunk.length
           // for perf do not update rate limiter at every chunk, but only every 100kb
           if (this.consumed > 100000) {
-            kbLimiter.consume(limiterId, this.consumed).catch(() => {})
+            limiters.kb.consume(limiterId, this.consumed).catch(() => {})
             this.consumed = 0
           }
         },
         flush(cb) {
           cb()
-          kbLimiter.consume(limiterId, this.consumed).catch(() => {})
+          limiters.kb.consume(limiterId, this.consumed).catch(() => {})
         },
       }),
     }],

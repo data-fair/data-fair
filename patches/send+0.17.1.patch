@@ -1,0 +1,18 @@
+diff --git a/node_modules/send/index.js b/node_modules/send/index.js
+index fca2112..ede314d 100644
+--- a/node_modules/send/index.js
++++ b/node_modules/send/index.js
+@@ -795,7 +795,12 @@ SendStream.prototype.stream = function stream (path, options) {
+   // pipe
+   var stream = fs.createReadStream(path, options)
+   this.emit('stream', stream)
+-  stream.pipe(res)
++  if (options.transformStream) {
++    debug('apply transform stream between file and res streams')
++    stream.pipe(options.transformStream).pipe(res)
++  } else {
++    stream.pipe(res)
++  }
+ 
+   // response finished, done with the fd
+   onFinished(res, function onfinished () {

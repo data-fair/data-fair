@@ -3,7 +3,7 @@ const assert = require('assert').strict
 const testUtils = require('./resources/test-utils')
 const config = require('config')
 
-const baseLimit = { store_bytes: { limit: 30000, consumption: 0 }, lastUpdate: new Date().toISOString() }
+const baseLimit = { store_bytes: { limit: 300000, consumption: 0 }, lastUpdate: new Date().toISOString() }
 
 describe('limits', () => {
   it('Manage a user storage limit', async () => {
@@ -11,13 +11,13 @@ describe('limits', () => {
 
     // Just fill up al little
     let form = new FormData()
-    form.append('file', Buffer.alloc(15000), 'dataset.csv')
+    form.append('file', Buffer.alloc(150000), 'dataset.csv')
     let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
     assert.equal(res.status, 201)
 
     // Send dataset applying default limits
     form = new FormData()
-    form.append('file', Buffer.alloc(10000), 'dataset.csv')
+    form.append('file', Buffer.alloc(100000), 'dataset.csv')
     try {
       res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
       assert.fail()
@@ -28,11 +28,11 @@ describe('limits', () => {
     // define a higher limit
     res = await ax.post('/api/v1/limits/user/dmeadus0', baseLimit, { params: { key: config.secretKeys.limits } })
     form = new FormData()
-    form.append('file', Buffer.alloc(10000), 'dataset.csv')
+    form.append('file', Buffer.alloc(100000), 'dataset.csv')
     res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
     assert.equal(res.status, 201)
     form = new FormData()
-    form.append('file', Buffer.alloc(10000), 'dataset.csv')
+    form.append('file', Buffer.alloc(100000), 'dataset.csv')
     try {
       res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
       assert.fail()
@@ -42,8 +42,8 @@ describe('limits', () => {
 
     res = await ax.get('/api/v1/limits/user/dmeadus0')
     assert.equal(res.status, 200)
-    assert.equal(res.data.store_bytes.limit, 30000)
-    assert.equal(res.data.store_bytes.consumption, 25000)
+    assert.equal(res.data.store_bytes.limit, 300000)
+    assert.equal(res.data.store_bytes.consumption, 250000)
   })
 
   it('A user cannot change limits', async () => {
@@ -61,7 +61,7 @@ describe('limits', () => {
     await ax.post('/api/v1/limits/user/dmeadus0', baseLimit, { params: { key: config.secretKeys.limits } })
     const res = await ax.get('/api/v1/limits/user/dmeadus0')
     assert.equal(res.status, 200)
-    assert.equal(res.data.store_bytes.limit, 30000)
+    assert.equal(res.data.store_bytes.limit, 300000)
   })
 
   it('A user cannot read the list of limits', async () => {

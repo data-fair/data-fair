@@ -139,7 +139,7 @@ async function iter(app, type) {
     const newResource = await app.get('db').collection(type + 's').findOne({ id: resource.id })
     if (hooks[taskKey]) hooks[taskKey].resolve(newResource)
     if (hooks[taskKey + '/' + resource.id]) hooks[taskKey + '/' + resource.id].resolve(newResource)
-    if (task.eventsPrefix) await journals.log(app, newResource, { type: task.eventsPrefix + '-end' }, type, noStoreEvent)
+    if (task.eventsPrefix && newResource) await journals.log(app, newResource, { type: task.eventsPrefix + '-end' }, type, noStoreEvent)
   } catch (err) {
     // Build back the original error message from the stderr of the child process
     const errorMessage = []

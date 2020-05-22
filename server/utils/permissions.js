@@ -23,6 +23,7 @@ exports.middleware = function(operationId, permissionClass) {
   }
 }
 
+// TODO: only apply permissions of current active account
 const isOwner = exports.isOwner = function(owner, user) {
   if (!user) return false
   if (owner.type === 'user' && owner.id === user.id) return true
@@ -33,6 +34,7 @@ const isOwner = exports.isOwner = function(owner, user) {
   return false
 }
 
+// TODO: simplify by only applying permissions of current active account
 // resource can be an application, a dataset or an remote service
 exports.can = function(resource, operationId, permissionClass, user) {
   const operationPermissions = (resource.permissions || []).filter(p => p.operations && p.operations.indexOf(operationId) >= 0)
@@ -57,6 +59,7 @@ exports.can = function(resource, operationId, permissionClass, user) {
   }
 }
 
+// TODO: simplify by only applying permissions of current active account
 // list operations a user can do with a resource
 exports.list = function(resource, operationsClasses, user) {
   if (isOwner(resource.owner, user) || (user && user.adminMode)) {

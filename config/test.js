@@ -7,12 +7,30 @@ module.exports = {
     embed: '<div>application embed</div>',
   },
   defaultLimits: {
-    totalStorage: 20000,
-    datasetStorage: 16000,
+    totalStorage: 200000,
+    datasetStorage: 160000,
     remoteServiceRate: {
       duration: 1,
       nb: 10,
       kb: 50,
+    },
+    apiRate: {
+      anonymous: {
+        duration: 1,
+        nb: 100,
+        bandwidth: {
+          dynamic: 100000,
+          static: 200000,
+        },
+      },
+      user: {
+        duration: 1,
+        nb: 100,
+        bandwidth: {
+          dynamic: 200000,
+          static: 400000,
+        },
+      },
     },
   },
   worker: {

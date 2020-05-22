@@ -7,6 +7,7 @@ const esUtils = require('./utils/es')
 const wsUtils = require('./utils/ws')
 const limits = require('./utils/limits')
 const locksUtils = require('./utils/locks')
+const rateLimiting = require('./utils/rate-limiting')
 const workers = require('./workers')
 const session = require('@koumoul/sd-express')({
   directoryUrl: config.directoryUrl,
@@ -43,20 +44,22 @@ if (config.mode.includes('server')) {
   })
   app.use(require('cookie-parser')())
   app.use(session.cors({ acceptAllOrigins: true }))
+  app.use(session.auth)
+  app.use(rateLimiting.middleware)
 
   // Business routers
   const apiKey = require('./utils/api-key')
   app.use('/api/v1', require('./routers/root'))
-  app.use('/api/v1/remote-services', session.auth, require('./routers/remote-services').router)
-  app.use('/api/v1/catalogs', session.auth, apiKey('catalogs'), require('./routers/catalogs'))
-  app.use('/api/v1/base-applications', session.auth, require('./routers/base-applications').router)
-  app.use('/api/v1/applications', session.auth, apiKey('applications'), require('./routers/applications'))
-  app.use('/api/v1/datasets', session.auth, apiKey('datasets'), require('./routers/datasets'))
-  app.use('/api/v1/stats', session.auth, apiKey('stats'), require('./routers/stats'))
-  app.use('/api/v1/settings', session.auth, require('./routers/settings'))
-  app.use('/api/v1/admin', session.auth, require('./routers/admin'))
+  app.use('/api/v1/remote-services', require('./routers/remote-services').router)
+  app.use('/api/v1/catalogs', apiKey('catalogs'), require('./routers/catalogs'))
+  app.use('/api/v1/base-applications', require('./routers/base-applications').router)
+  app.use('/api/v1/applications', apiKey('applications'), require('./routers/applications'))
+  app.use('/api/v1/datasets', apiKey('datasets'), require('./routers/datasets'))
+  app.use('/api/v1/stats', apiKey('stats'), require('./routers/stats'))
+  app.use('/api/v1/settings', require('./routers/settings'))
+  app.use('/api/v1/admin', require('./routers/admin'))
   app.use('/api/v1/identities', require('./routers/identities'))
-  app.use('/api/v1/limits', session.auth, limits.router)
+  app.use('/api/v1/limits', limits.router)
   app.use('/api/v1/session', session.router)
 
   // External applications proxy
@@ -65,7 +68,7 @@ if (config.mode.includes('server')) {
     res.setHeader('Content-Type', 'application/javascript')
     res.send(serviceWorkers.sw(req.application))
   })
-  app.use('/app', session.loginCallback, session.auth, require('./routers/application-proxy'))
+  app.use('/app', session.loginCallback, require('./routers/application-proxy'))
 
   // Error management
   app.use((err, req, res, next) => {

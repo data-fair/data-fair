@@ -78,7 +78,7 @@ describe('datasets', () => {
   it('Failure to upload dataset exceeding limit', async () => {
     const ax = global.ax.dmeadus
     const form = new FormData()
-    form.append('file', Buffer.alloc(16000), 'largedataset.csv')
+    form.append('file', Buffer.alloc(160000), 'largedataset.csv')
     try {
       await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
       assert.fail()
@@ -90,11 +90,11 @@ describe('datasets', () => {
   it('Failure to upload multiple datasets exceeding limit', async () => {
     const ax = global.ax.dmeadus
     let form = new FormData()
-    form.append('file', Buffer.alloc(11000), 'largedataset1.csv')
+    form.append('file', Buffer.alloc(110000), 'largedataset1.csv')
     await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
 
     form = new FormData()
-    form.append('file', Buffer.alloc(11000), 'largedataset2.csv')
+    form.append('file', Buffer.alloc(110000), 'largedataset2.csv')
     try {
       await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
       assert.fail()

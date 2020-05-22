@@ -59,7 +59,7 @@ describe('remote-services', () => {
     }
   })
 
-  it.only('Handle timeout errors from proxied service', async () => {
+  it('Handle timeout errors from proxied service', async () => {
     const ax = global.ax.superadmin
     nock('http://test.com').get('/geocoder/coord').delay(60000).reply(200, { content: 'ok' })
     try {

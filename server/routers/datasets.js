@@ -552,6 +552,7 @@ router.get('/:datasetId/lines', readDataset(), permissions.middleware('readLines
   if (req.query && req.query.page && req.query.size && req.query.page * req.query.size > 10000) {
     return res.status(404).send('You can only access the first 10 000 elements.')
   }
+  res.throttleEnd()
 
   const db = req.app.get('db')
 
@@ -672,6 +673,7 @@ router.get('/:datasetId/lines', readDataset(), permissions.middleware('readLines
 
 // Special geo aggregation
 router.get('/:datasetId/geo_agg', readDataset(), permissions.middleware('getGeoAgg', 'read'), cacheHeaders.resourceBased, asyncWrap(async(req, res) => {
+  res.throttleEnd()
   if (req.dataset.isVirtual) req.dataset.descendants = await virtualDatasetsUtils.descendants(req.app.get('db'), req.dataset)
   const db = req.app.get('db')
 
@@ -717,6 +719,7 @@ router.get('/:datasetId/geo_agg', readDataset(), permissions.middleware('getGeoA
 
 // Standard aggregation to group items by value and perform an optional metric calculation on each group
 router.get('/:datasetId/values_agg', readDataset(), permissions.middleware('getValuesAgg', 'read'), cacheHeaders.resourceBased, asyncWrap(async(req, res) => {
+  res.throttleEnd()
   if (req.dataset.isVirtual) req.dataset.descendants = await virtualDatasetsUtils.descendants(req.app.get('db'), req.dataset)
   const db = req.app.get('db')
 
@@ -764,6 +767,7 @@ router.get('/:datasetId/values_agg', readDataset(), permissions.middleware('getV
 // Simpler values list and filter (q is applied only to the selected field, not all fields)
 // mostly useful for selects/autocompletes on values
 router.get('/:datasetId/values/:fieldKey', readDataset(), permissions.middleware('getValues', 'read'), cacheHeaders.resourceBased, asyncWrap(async(req, res) => {
+  res.throttleEnd()
   if (req.dataset.isVirtual) req.dataset.descendants = await virtualDatasetsUtils.descendants(req.app.get('db'), req.dataset)
   let result
   try {
@@ -776,6 +780,7 @@ router.get('/:datasetId/values/:fieldKey', readDataset(), permissions.middleware
 
 // Simple metric aggregation to calculate some value (sum, avg, etc.)
 router.get('/:datasetId/metric_agg', readDataset(), permissions.middleware('getMetricAgg', 'read'), cacheHeaders.resourceBased, asyncWrap(async(req, res) => {
+  res.throttleEnd()
   if (req.dataset.isVirtual) req.dataset.descendants = await virtualDatasetsUtils.descendants(req.app.get('db'), req.dataset)
   let result
   try {
@@ -788,6 +793,7 @@ router.get('/:datasetId/metric_agg', readDataset(), permissions.middleware('getM
 
 // Simple words aggregation for significant terms extraction
 router.get('/:datasetId/words_agg', readDataset(), permissions.middleware('getWordsAgg', 'read'), cacheHeaders.resourceBased, asyncWrap(async(req, res) => {
+  res.throttleEnd()
   if (req.dataset.isVirtual) req.dataset.descendants = await virtualDatasetsUtils.descendants(req.app.get('db'), req.dataset)
   let result
   try {
@@ -826,7 +832,8 @@ router.get('/:datasetId/min/:fieldKey', readDataset(), permissions.middleware('g
 router.get('/:datasetId/attachments/*', readDataset(), permissions.middleware('downloadOriginalData', 'read'), (req, res, next) => {
   const filePath = req.params['0']
   if (filePath.includes('..')) return res.status(400).send('Unacceptable attachment path')
-  res.download(path.resolve(datasetUtils.attachmentsDir(req.dataset), filePath))
+  // the transform stream option was patched into "send" module using patch-package
+  res.download(path.resolve(datasetUtils.attachmentsDir(req.dataset), filePath), null, { transformStream: res.throttle('static') })
 })
 
 // Special attachments referenced in dataset metadatas
@@ -839,7 +846,8 @@ router.post('/:datasetId/metadata-attachments', readDataset(), permissions.middl
 router.get('/:datasetId/metadata-attachments/*', readDataset(), permissions.middleware('downloadOriginalData', 'read'), (req, res, next) => {
   const filePath = req.params['0']
   if (filePath.includes('..')) return res.status(400).send('Unacceptable attachment path')
-  res.download(path.resolve(datasetUtils.metadataAttachmentsDir(req.dataset), filePath))
+  // the transform stream option was patched into "send" module using patch-package
+  res.download(path.resolve(datasetUtils.metadataAttachmentsDir(req.dataset), filePath), null, { transformStream: res.throttle('static') })
 })
 router.delete('/:datasetId/metadata-attachments/*', readDataset(), permissions.middleware('writeData', 'write'), asyncWrap(async(req, res, next) => {
   const filePath = req.params['0']
@@ -850,15 +858,17 @@ router.delete('/:datasetId/metadata-attachments/*', readDataset(), permissions.m
 }))
 
 // Download the full dataset in its original form
-router.get('/:datasetId/raw', readDataset(), permissions.middleware('downloadOriginalData', 'read'), (req, res, next) => {
-  res.download(datasetUtils.originalFileName(req.dataset), req.dataset.originalFile.name)
+router.get('/:datasetId/raw', readDataset(), permissions.middleware('downloadOriginalData', 'read'), cacheHeaders.resourceBased, (req, res, next) => {
+  // the transform stream option was patched into "send" module using patch-package
+  res.download(datasetUtils.originalFileName(req.dataset), req.dataset.originalFile.name, { transformStream: res.throttle('static') })
   webhooks.trigger(req.app.get('db'), 'dataset', req.dataset, { type: 'downloaded' })
 })
 
 // Download the dataset in various formats
-router.get('/:datasetId/convert', readDataset(), permissions.middleware('downloadOriginalData', 'read'), cacheHeaders.noCache, (req, res, next) => {
+router.get('/:datasetId/convert', readDataset(), permissions.middleware('downloadOriginalData', 'read'), cacheHeaders.resourceBased, (req, res, next) => {
   if (!req.query || !req.query.format) {
-    res.download(datasetUtils.fileName(req.dataset), req.dataset.file.name)
+    // the transform stream option was patched into "send" module using patch-package
+    res.download(datasetUtils.fileName(req.dataset), req.dataset.file.name, { transformStream: res.throttle('static') })
     webhooks.trigger(req.app.get('db'), 'dataset', req.dataset, { type: 'downloaded' })
   } else {
     res.status(400).send(`Format ${req.query.format} is not supported.`)
@@ -892,6 +902,7 @@ router.get('/:datasetId/full', readDataset(), permissions.middleware('downloadFu
       objectMode: true,
     }),
     csvStringify({ columns: relevantSchema.map(field => field.title || field['x-originalName'] || field.key), header: true }),
+    res.throttle('dynamic'),
     res,
   )
   webhooks.trigger(req.app.get('db'), 'dataset', req.dataset, { type: 'downloaded' })
