@@ -3,10 +3,8 @@ const config = require('config')
 const path = require('path')
 const multer = require('multer')
 const createError = require('http-errors')
-const slug = require('slugify')
 const shortid = require('shortid')
 const mime = require('mime-types')
-const usersUtils = require('./users')
 const datasetSchema = require('../../contract/dataset')
 const fallbackMimeTypes = {
   dbf: 'application/dbase',
@@ -17,18 +15,20 @@ const debug = require('debug')('files')
 
 const { tabularTypes, geographicalTypes, archiveTypes, calendarTypes } = require('../workers/converter')
 
-function uploadDir(req) {
-  const owner = req.dataset ? req.dataset.owner : usersUtils.owner(req)
-  return path.join(config.dataDir, owner.type, owner.id)
-}
-
 const storage = multer.diskStorage({
   destination: async function(req, file, cb) {
     try {
-      const dir = uploadDir(req)
-      debug('Create destination directory', dir)
-      await fs.ensureDir(dir)
-      cb(null, dir)
+      if (req.dataset) {
+        req.uploadDir = path.join(config.dataDir, req.dataset.owner.type, req.dataset.owner.id, 'datasets', req.dataset.id)
+      } else {
+        // a tmp dir in case of new dataset, it will be moved into the actual dataset directory after upload completion and final id atttribution
+        req.uploadDir = path.join(config.dataDir, 'tmp', shortid.generate())
+        // const owner = req.dataset ? req.dataset.owner : usersUtils.owner(req)
+        // return path.join(config.dataDir, owner.type, owner.id, 'datasets', req.dataset.id)
+      }
+      debug('Create destination directory', req.uploadDir)
+      await fs.ensureDir(req.uploadDir)
+      cb(null, req.uploadDir)
     } catch (err) {
       cb(err)
     }
@@ -36,43 +36,18 @@ const storage = multer.diskStorage({
   filename: async function(req, file, cb) {
     try {
       if (file.fieldname === 'attachments') {
-        const attachmentsTmp = shortid.generate()
-        const attachmentsPath = path.join(uploadDir(req), attachmentsTmp)
         // creating empty file before streaming seems to fix some weird bugs with NFS
-        await fs.ensureFile(attachmentsPath)
-        return cb(null, attachmentsTmp)
+        await fs.ensureFile(path.join(req.uploadDir, 'attachments.zip'))
+        return cb(null, 'attachments.zip')
       }
-      const ext = path.parse(file.originalname).ext
-      if (req.dataset) {
-        // Update dataset case
-        file.id = req.dataset.id
-      } else {
-        // Create dataset case
 
-        // better to split, so we create something more firendly for full text search
-        const baseTitle = req.body.title || path.parse(file.originalname).name.replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, ' ').split(/\s+/).join(' ')
-        const baseId = slug(baseTitle, { lower: true })
-        file.id = baseId
-        file.title = baseTitle
-        let i = 1; let dbExists = false; let fileExists = false
-        do {
-          if (i > 1) {
-            file.id = baseId + i
-            file.title = baseTitle + ' ' + i
-          }
-          // better to check file as well as db entry in case of file currently uploading
-          dbExists = await req.app.get('db').collection('datasets').countDocuments({ id: file.id })
-          fileExists = await fs.exists(path.join(uploadDir(req), file.id + ext))
-          i += 1
-        } while (dbExists || fileExists)
+      if (req.dataset && req.dataset.originalFile && req.dataset.originalFile.name !== file.originalname) {
+        throw new Error(`Pour mettre à jour le jeu de donnée vous devez charger un fichier avec le même nom ${req.dataset.originalFile.name}`)
       }
-      file.path = path.join(uploadDir(req), file.id + ext)
-      debug(`Use path ${file.path} as full destination`)
 
       // creating empty file before streaming seems to fix some weird bugs with NFS
-      await fs.ensureFile(file.path)
-
-      cb(null, file.id + ext)
+      await fs.ensureFile(path.join(req.uploadDir, file.originalname))
+      cb(null, file.originalname)
     } catch (err) {
       cb(err)
     }

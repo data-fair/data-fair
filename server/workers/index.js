@@ -120,6 +120,7 @@ async function iter(app, type) {
     }
     if (!taskKey) return
     const task = tasks[taskKey]
+    debug(`run task ${taskKey} - ${type} / ${resource.id}`)
 
     if (task.eventsPrefix) await journals.log(app, resource, { type: task.eventsPrefix + '-start' }, type, noStoreEvent)
 

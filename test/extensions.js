@@ -57,7 +57,7 @@ other,unknown address
     })
     form = new FormData()
     content += 'me,3 les noés la chapelle caro\n'
-    form.append('file', content, 'dataset1.csv')
+    form.append('file', content, 'dataset.csv')
     res = await ax.post(`/api/v1/datasets/${dataset.id}`, form, { headers: testUtils.formHeaders(form) })
     assert.equal(res.status, 200)
     await workers.hook(`finalizer/${dataset.id}`)

@@ -256,24 +256,10 @@ router.put('/:datasetId/owner', readDataset(), permissions.middleware('delete', 
 
   // Move all files
   try {
-    const originalFileName = datasetUtils.originalFileName(req.dataset)
-    if (await fs.exists(originalFileName)) await fs.move(originalFileName, datasetUtils.originalFileName(patchedDataset))
+    await fs.move(datasetUtils.dir(req.dataset), datasetUtils.dir(patchedDataset))
   } catch (err) {
-    console.error('Error while moving original file', err)
+    console.error('Error while moving dataset directory', err)
   }
-  try {
-    const fileName = datasetUtils.fileName(req.dataset)
-    if (await fs.exists()) await fs.move(fileName, datasetUtils.fileName(patchedDataset))
-  } catch (err) {
-    console.error('Error while moving converted file', err)
-  }
-  try {
-    const attachmentsDir = datasetUtils.attachmentsDir(req.dataset)
-    if (await fs.exists(attachmentsDir)) await fs.move(attachmentsDir, datasetUtils.attachmentsDir(patchedDataset))
-  } catch (err) {
-    console.error('Error while moving decompressed files', err)
-  }
-
   res.status(200).json(clean(patchedDataset))
 }))
 
@@ -281,27 +267,10 @@ router.put('/:datasetId/owner', readDataset(), permissions.middleware('delete', 
 router.delete('/:datasetId', readDataset(), permissions.middleware('delete', 'admin'), asyncWrap(async(req, res) => {
   const db = req.app.get('db')
   try {
-    await fs.remove(datasetUtils.originalFileName(req.dataset))
+    await fs.remove(datasetUtils.dir(req.dataset))
   } catch (err) {
-    console.error('Error while deleting original file', err)
+    console.error('Error while deleting dataset directory', err)
   }
-  try {
-    await fs.remove(datasetUtils.fileName(req.dataset))
-  } catch (err) {
-    console.error('Error while deleting converted file', err)
-  }
-  try {
-    await fs.remove(datasetUtils.attachmentsDir(req.dataset))
-  } catch (err) {
-    console.error('Error while deleting decompressed files', err)
-  }
-
-  try {
-    await fs.remove(datasetUtils.metadataAttachmentsDir(req.dataset))
-  } catch (err) {
-    console.error('Error while deleting metadata attachments', err)
-  }
-
   if (req.dataset.isRest) {
     try {
       await restDatasetsUtils.deleteDataset(db, req.dataset)
@@ -335,8 +304,27 @@ const initNew = (req) => {
   return dataset
 }
 
-const setFileInfo = async (file, attachmentsFile, dataset) => {
-  dataset.id = file.id
+const setFileInfo = async (db, file, attachmentsFile, dataset) => {
+  if (!dataset.id) {
+    const baseTitle = dataset.title || path.parse(file.originalname).name.replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, ' ').split(/\s+/).join(' ')
+    const baseId = slug(baseTitle, { lower: true })
+    dataset.id = baseId
+    dataset.title = baseTitle
+    let i = 1; let dbExists = false; let fileExists = false
+    do {
+      if (i > 1) {
+        dataset.id = baseId + i
+        dataset.title = baseTitle + ' ' + i
+      }
+      // better to check file as well as db entry in case of file currently uploading
+      dbExists = await db.collection('datasets').countDocuments({ id: dataset.id })
+      fileExists = await fs.exists(datasetUtils.dir(dataset))
+      i += 1
+    } while (dbExists || fileExists)
+
+    await fs.ensureDir(datasetUtils.dir(dataset))
+    await fs.move(file.path, path.join(datasetUtils.dir(dataset), file.originalname))
+  }
   dataset.title = dataset.title || file.title
   dataset.originalFile = {
     name: file.originalname,
@@ -364,7 +352,6 @@ const setFileInfo = async (file, attachmentsFile, dataset) => {
   if (attachmentsFile) {
     await attachments.replaceAllAttachments(dataset, attachmentsFile)
   }
-
   return dataset
 }
 
@@ -386,7 +373,7 @@ router.post('', beforeUpload, checkStorage(true), filesUtils.uploadFile(validate
     const attachmentsFile = req.files.find(f => f.fieldname === 'attachments')
     if (datasetFile) {
       if (req.body.isVirtual) throw createError(400, 'Un jeu de données virtuel ne peut pas être initialisé avec un fichier')
-      dataset = await setFileInfo(datasetFile, attachmentsFile, initNew(req))
+      dataset = await setFileInfo(db, datasetFile, attachmentsFile, initNew(req))
       await db.collection('datasets').insertOne(dataset)
     } else if (req.body.isVirtual) {
       if (!req.body.title) throw createError(400, 'Un jeu de données virtuel doit être créé avec un titre')
@@ -470,7 +457,7 @@ const updateDataset = asyncWrap(async(req, res) => {
 
     let dataset = req.dataset
     if (datasetFile) {
-      dataset = await setFileInfo(datasetFile, attachmentsFile, req.dataset)
+      dataset = await setFileInfo(db, datasetFile, attachmentsFile, req.dataset)
     } else if (dataset.isVirtual) {
       const { isVirtual, ...patch } = req.body
       if (!validatePatch(patch)) {

@@ -18,20 +18,24 @@ const limits = require('./limits')
 
 const baseTypes = new Set(['text/csv', 'application/geo+json'])
 
+exports.dir = (dataset) => {
+  return path.join(config.dataDir, dataset.owner.type, dataset.owner.id, 'datasets', dataset.id)
+}
+
 exports.fileName = (dataset) => {
-  return path.join(config.dataDir, dataset.owner.type, dataset.owner.id, dataset.id + '.' + dataset.file.name.split('.').pop())
+  return path.join(exports.dir(dataset), dataset.file.name)
 }
 
 exports.originalFileName = (dataset) => {
-  return path.join(config.dataDir, dataset.owner.type, dataset.owner.id, dataset.id + '.' + dataset.originalFile.name.split('.').pop())
+  return path.join(exports.dir(dataset), dataset.originalFile.name)
 }
 
 exports.attachmentsDir = (dataset) => {
-  return path.join(config.dataDir, dataset.owner.type, dataset.owner.id, dataset.id + '.attachments')
+  return path.join(exports.dir(dataset), 'attachments')
 }
 
 exports.metadataAttachmentsDir = (dataset) => {
-  return path.join(config.dataDir, dataset.owner.type, dataset.owner.id, dataset.id + '.metadata-attachments')
+  return path.join(exports.dir(dataset), 'metadata-attachments')
 }
 
 exports.lsAttachments = async (dataset) => {

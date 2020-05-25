@@ -8,7 +8,7 @@ const workers = require('../server/workers')
 
 describe('Attachments', () => {
   it('Process newly uploaded attachments alone', async () => {
-  // Send dataset
+    // Send dataset
     const datasetFd = fs.readFileSync('./test/resources/files.zip')
     const form = new FormData()
     form.append('dataset', datasetFd, 'files.zip')
@@ -16,6 +16,7 @@ describe('Attachments', () => {
     let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
     let dataset = res.data
     assert.equal(res.status, 201)
+    assert.equal(dataset.status, 'uploaded')
 
     // dataset converted
     dataset = await workers.hook(`converter/${dataset.id}`)
