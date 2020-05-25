@@ -29,6 +29,11 @@ exports.process = async function(app, dataset) {
     debug('extension ok')
   }
 
+  if (!dataset.isRest) {
+    debug('write full version of the file')
+    await extensionsUtils.writeFullFile(app, dataset)
+  }
+
   const result = { status: 'extended' }
   Object.assign(dataset, result)
   await collection.updateOne({ id: dataset.id }, { $set: result })

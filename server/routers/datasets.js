@@ -1,4 +1,4 @@
-const { Transform, Writable } = require('stream')
+const { Writable } = require('stream')
 const express = require('express')
 const ajv = require('ajv')()
 const util = require('util')
@@ -7,8 +7,6 @@ const fs = require('fs-extra')
 const moment = require('moment')
 const createError = require('http-errors')
 const pump = util.promisify(require('pump'))
-const csvStringify = require('csv-stringify')
-const flatten = require('flat')
 const mongodb = require('mongodb')
 const config = require('config')
 const chardet = require('chardet')
@@ -847,7 +845,7 @@ router.delete('/:datasetId/metadata-attachments/*', readDataset(), permissions.m
 // Download the full dataset in its original form
 router.get('/:datasetId/raw', readDataset(), permissions.middleware('downloadOriginalData', 'read'), cacheHeaders.resourceBased, (req, res, next) => {
   // the transform stream option was patched into "send" module using patch-package
-  res.download(datasetUtils.originalFileName(req.dataset), req.dataset.originalFile.name, { transformStream: res.throttle('static') })
+  res.download(datasetUtils.originalFileName(req.dataset), null, { transformStream: res.throttle('static') })
   webhooks.trigger(req.app.get('db'), 'dataset', req.dataset, { type: 'downloaded' })
 })
 
@@ -855,7 +853,7 @@ router.get('/:datasetId/raw', readDataset(), permissions.middleware('downloadOri
 router.get('/:datasetId/convert', readDataset(), permissions.middleware('downloadOriginalData', 'read'), cacheHeaders.resourceBased, (req, res, next) => {
   if (!req.query || !req.query.format) {
     // the transform stream option was patched into "send" module using patch-package
-    res.download(datasetUtils.fileName(req.dataset), req.dataset.file.name, { transformStream: res.throttle('static') })
+    res.download(datasetUtils.fileName(req.dataset), null, { transformStream: res.throttle('static') })
     webhooks.trigger(req.app.get('db'), 'dataset', req.dataset, { type: 'downloaded' })
   } else {
     res.status(400).send(`Format ${req.query.format} is not supported.`)
@@ -865,33 +863,12 @@ router.get('/:datasetId/convert', readDataset(), permissions.middleware('downloa
 // Download the full dataset with extensions
 // TODO use ES scroll functionality instead of file read + extensions
 router.get('/:datasetId/full', readDataset(), permissions.middleware('downloadFullData', 'read'), cacheHeaders.resourceBased, asyncWrap(async (req, res, next) => {
-  const db = req.app.get('db')
-  if (Object.keys(req.query).length) return res.status(400).send('Le téléchargement du fichier étendu ne supporte pas de paramètres de query')
-  if (req.dataset.isVirtual) req.dataset.descendants = await virtualDatasetsUtils.descendants(req.app.get('db'), req.dataset)
-  res.setHeader('Content-disposition', 'attachment; filename=' + req.dataset.file.name)
-  res.setHeader('Content-type', 'text/csv')
-  const relevantSchema = req.dataset.schema.filter(f => f.key.startsWith('_ext_') || !f.key.startsWith('_'))
-  let readStream
-  if (req.dataset.isRest) readStream = restDatasetsUtils.readStream(db, req.dataset)
-  else readStream = datasetUtils.readStream(req.dataset)
-
-  // add BOM for excel, cf https://stackoverflow.com/a/17879474
-  res.write('\ufeff')
-
-  await pump(
-    readStream,
-    extensions.preserveExtensionStream({ db, esClient: req.app.get('es'), dataset: req.dataset }),
-    new Transform({
-      transform(chunk, encoding, callback) {
-        const flatChunk = flatten(chunk)
-        callback(null, relevantSchema.map(field => flatChunk[field.key]))
-      },
-      objectMode: true,
-    }),
-    csvStringify({ columns: relevantSchema.map(field => field.title || field['x-originalName'] || field.key), header: true }),
-    res.throttle('dynamic'),
-    res,
-  )
+  // the transform stream option was patched into "send" module using patch-package
+  if (await fs.exists(datasetUtils.fullFileName(req.dataset))) {
+    res.download(datasetUtils.fullFileName(req.dataset), null, { transformStream: res.throttle('static') })
+  } else {
+    res.download(datasetUtils.fileName(req.dataset), null, { transformStream: res.throttle('static') })
+  }
   webhooks.trigger(req.app.get('db'), 'dataset', req.dataset, { type: 'downloaded' })
 }))
 

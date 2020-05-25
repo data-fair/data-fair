@@ -1,18 +1,26 @@
 const fs = require('fs-extra')
 const config = require('config')
 const path = require('path')
+const extensionsUtils = require('../../server/utils/extensions')
+const esUtils = require('../../../server/utils/es')
 
 exports.description = 'Dataset files are now stored in separate folders.'
 
-const getPaths = (dataset) => ({
-  file: dataset.file && path.join(config.dataDir, dataset.owner.type, dataset.owner.id, dataset.id + '.' + dataset.file.name.split('.').pop()),
-  originalFile: dataset.originalFile && path.join(config.dataDir, dataset.owner.type, dataset.owner.id, dataset.id + '.' + dataset.originalFile.name.split('.').pop()),
-  attachmentsDir: path.join(config.dataDir, dataset.owner.type, dataset.owner.id, dataset.id + '.attachments'),
-  metadataAttachmentsDir: path.join(config.dataDir, dataset.owner.type, dataset.owner.id, dataset.id + '.metadata-attachments'),
-  newDir: path.join(config.dataDir, dataset.owner.type, dataset.owner.id, 'datasets', dataset.id),
-})
+const getPaths = (dataset) => {
+  const parsedOriginalFile = dataset.originalFile && path.parse(dataset.originalFile.name)
+  const ownerDir = path.join(config.dataDir, dataset.owner.type, dataset.owner.id)
+  return {
+    file: dataset.file && path.join(ownerDir, dataset.id + '.' + dataset.file.name.split('.').pop()),
+    originalFile: dataset.originalFile && path.join(ownerDir, dataset.id + '.' + dataset.originalFile.name.split('.').pop()),
+    attachmentsDir: path.join(ownerDir, dataset.id + '.attachments'),
+    metadataAttachmentsDir: path.join(ownerDir, dataset.id + '.metadata-attachments'),
+    newDir: path.join(ownerDir, 'datasets', dataset.id),
+    newFullFile: parsedOriginalFile && path.join(ownerDir, 'datasets', dataset.id, `${parsedOriginalFile.name}-full${parsedOriginalFile.ext}`),
+  }
+}
 
 exports.exec = async (db, debug) => {
+  const es = await esUtils.init()
   const cursor = db.collection('datasets').find({})
   while (await cursor.hasNext()) {
     const dataset = await cursor.next()
@@ -31,5 +39,10 @@ exports.exec = async (db, debug) => {
     if (await fs.exists(paths.metadataAttachmentsDir)) {
       await fs.move(paths.metadataAttachmentsDir, path.join(paths.newDir, 'metadata-attachments'), { overwrite: true })
     }
+
+    if (dataset.extensions && dataset.extensions.find(e => e.active) && paths.newFullFile && !(await fs.exists(paths.newFullFile))) {
+      await extensionsUtils.writeFullFile({ db, es }, dataset)
+    }
   }
+  await es.close()
 }

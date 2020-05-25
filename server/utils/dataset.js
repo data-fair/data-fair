@@ -9,6 +9,8 @@ const JSONStream = require('JSONStream')
 const dir = require('node-dir')
 const { Writable } = require('stream')
 const shuffle = require('shuffle-array')
+const csvStringify = require('csv-stringify')
+const flatten = require('flat')
 const pump = require('util').promisify(require('pump'))
 const fieldsSniffer = require('./fields-sniffer')
 const geoUtils = require('./geo')
@@ -28,6 +30,11 @@ exports.fileName = (dataset) => {
 
 exports.originalFileName = (dataset) => {
   return path.join(exports.dir(dataset), dataset.originalFile.name)
+}
+
+exports.fullFileName = (dataset) => {
+  const parsed = path.parse(dataset.originalFile.name)
+  return path.join(exports.dir(dataset), `${parsed.name}-full${parsed.ext}`)
 }
 
 exports.attachmentsDir = (dataset) => {
@@ -139,6 +146,40 @@ exports.readStream = (dataset, raw = false) => {
       },
     }),
   )
+}
+
+// Used by extender worker to produce the "full" version of the file
+exports.writeFullStreams = (dataset) => {
+  const relevantSchema = dataset.schema.filter(f => f.key.startsWith('_ext_') || !f.key.startsWith('_'))
+  const writeStream = fs.createWriteStream(exports.fullFileName(dataset))
+
+  // add BOM for excel, cf https://stackoverflow.com/a/17879474
+  writeStream.write('\ufeff')
+
+  const transforms = [new Transform({
+    transform(chunk, encoding, callback) {
+      const flatChunk = flatten(chunk)
+      callback(null, relevantSchema.map(field => flatChunk[field.key]))
+    },
+    objectMode: true,
+  })]
+
+  if (dataset.file.mimetype === 'text/csv') {
+    transforms.push(csvStringify({ columns: relevantSchema.map(field => field.title || field['x-originalName'] || field.key), header: true }))
+  } else if (dataset.file.mimetype === 'application/geo+json') {
+    transforms.push(JSONStream.stringify(`{
+  "type": "FeatureCollection",
+  "features": [
+`, `,
+  `, `
+]}`))
+  } else {
+    throw new Error('Dataset type is not supported ' + dataset.file.mimetype)
+  }
+  return [
+    ...transforms,
+    writeStream,
+  ]
 }
 
 exports.sample = async (dataset) => {

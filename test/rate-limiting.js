@@ -42,7 +42,7 @@ describe('rate limiting', () => {
     t0 = new Date().getTime()
     await ax.get(`/api/v1/datasets/${dataset.id}/full`)
     t1 = new Date().getTime()
-    assert.ok((t1 - t0 > 500) && (t1 - t0 < 600), 'throttled download should be slightly more than 500ms, got ' + (t1 - t0))
+    assert.ok((t1 - t0 > 250) && (t1 - t0 < 350), 'throttled download should be slightly more than 500ms, got ' + (t1 - t0))
 
     // queried data access by authenticated user
     t0 = new Date().getTime()

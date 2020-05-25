@@ -76,6 +76,14 @@ exports.extend = async(app, dataset, extension, remoteService, action) => {
 
 exports.preserveExtensionStream = (options) => new PreserveExtensionStream(options)
 
+exports.writeFullFile = async (app, dataset) => {
+  await pump(
+    datasetUtils.readStream(dataset),
+    new PreserveExtensionStream({ db: app.get('db'), esClient: app.get('es'), dataset }),
+    ...datasetUtils.writeFullStreams(dataset),
+  )
+}
+
 exports.prepareSchema = async (db, schema, extensions) => {
   let extensionsFields = []
   for (const extension of extensions) {
