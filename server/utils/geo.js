@@ -21,6 +21,8 @@ const lonUri = ['http://schema.org/longitude', 'http://www.w3.org/2003/01/geo/wg
 const coordXUri = 'http://data.ign.fr/def/geometrie#coordX'
 const coordYUri = 'http://data.ign.fr/def/geometrie#coordY'
 
+exports.allGeoConcepts = [geomUri, latlonUri, ...latUri, ...lonUri, coordXUri, coordYUri]
+
 exports.schemaHasGeopoint = (schema) => {
   const latlon = schema.find(p => p['x-refersTo'] === latlonUri)
   if (latlon) return latlon.key

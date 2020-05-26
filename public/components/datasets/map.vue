@@ -1,37 +1,19 @@
 <template lang="html">
   <v-card>
-    <v-card
+    <v-text-field
       v-if="dataset"
-      class="mt-2 ml-2 px-2"
+      v-model="query"
+      class="mt-2 ml-2 mx-2"
+      solo
       style="position: absolute;z-index:2;max-width:400px;"
-    >
-      <v-text-field
-        v-model="query"
-        style="margin-top: 0;margin-bottom: 8px;"
-        label="Rechercher"
-        append-icon="mdi-magnify"
-        hide-details
-        single-line
-        @keyup.enter.native="refresh"
-        @click:append="refresh"
-      />
-
-      <v-select
-        v-if="showSelect"
-        v-model="select"
-        :items="dataset.schema.map(f => ({value: f.key, text: f.title || f['x-originalName'] || f.key}))"
-        style="margin-top: 30px;"
-        item-value="value"
-        item-text="text"
-        label="Choisir les champs"
-        multiple
-        @input="refresh"
-      />
-    </v-card>
-    <div
-      id="map"
-      :style="'height:' + mapHeight + 'px'"
+      label="Rechercher"
+      append-icon="mdi-magnify"
+      hide-details
+      single-line
+      @keyup.enter.native="refresh"
+      @click:append="refresh"
     />
+    <div id="map" :style="'height:' + mapHeight + 'px'" />
   </v-card>
 </template>
 
@@ -101,8 +83,8 @@
   }]
 
   export default {
-    props: ['heightMargin', 'showSelect'],
-    data: () => ({ mapHeight: 0, query: '', select: [] }),
+    props: ['heightMargin'],
+    data: () => ({ mapHeight: 0, query: '' }),
     computed: {
       ...mapState(['env']),
       ...mapState('dataset', ['dataset']),
@@ -110,7 +92,6 @@
       tileUrl() {
         let url = this.resourceUrl + '/lines?format=pbf&size=10000&xyz={x},{y},{z}'
         if (this.query) url += '&qs=' + encodeURIComponent(this.query)
-        if (this.select.length) url += '&select=' + encodeURIComponent(this.select.join(','))
         return url
       },
     },
@@ -118,12 +99,6 @@
       if (!mapboxgl) return
       try {
         this.mapHeight = Math.max(window.innerHeight - this.$el.getBoundingClientRect().top - this.heightMargin, 300)
-
-        // Prevent overloading the tiles with long texts, geometries, etc.
-        this.select = this.dataset.schema
-          .filter(field => !field['x-calculated'])
-          .filter(field => (field.type === 'string' && field.format === 'uri-reference') || field.type === 'integer' || field.type === 'number')
-          .map(field => field.key)
 
         await new Promise(resolve => setTimeout(resolve, 0))
         const style = this.env.map.style.replace('./', this.env.publicUrl + '/')
@@ -140,7 +115,7 @@
         this.map.on('error', (error) => {
           console.log('Map error', error)
           if (error.sourceId) {
-            eventBus.$emit('notification', { error: `Échec d'accès aux tuiles ${error.sourceId}`, msg: 'Erreur pendant le rendu de la carte:' })
+            // eventBus.$emit('notification', { error: `Échec d'accès aux tuiles ${error.sourceId}`, msg: 'Erreur pendant le rendu de la carte:' })
           } else if (error.error && error.error.status === 401) {
             eventBus.$emit('notification', {
               error: `
@@ -151,7 +126,7 @@
               msg: 'Erreur pendant le rendu de la carte:',
             })
           } else {
-            eventBus.$emit('notification', { error: (error.error && error.error.message) || error, msg: 'Erreur pendant le rendu de la carte:' })
+            // eventBus.$emit('notification', { error: (error.error && error.error.message) || error, msg: 'Erreur pendant le rendu de la carte:' })
           }
         })
         const bbox = await this.getBBox()
@@ -166,7 +141,6 @@
         const popup = new mapboxgl.Popup({ closeButton: true, closeOnClick: true })
 
         const moveCallback = (e) => {
-          if (!this.select.length) return
           const feature = this.map.queryRenderedFeatures(e.point).find(f => f.source === 'data-fair')
           if (!feature) return
           this.map.setFilter('results_hover', ['==', '_id', feature.properties._id])

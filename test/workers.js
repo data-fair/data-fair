@@ -115,8 +115,8 @@ describe('workers', () => {
     assert.equal(dataset.publications[0].targetUrl, 'http://test-catalog.com/datasets/my-dataset')
   })
 
-  it('Process newly uploaded geojson dataset', async () => {
-  // Send dataset
+  it.only('Process newly uploaded geojson dataset', async () => {
+    // Send dataset
     const datasetFd = fs.readFileSync('./test/resources/geojson-example.geojson')
     const form = new FormData()
     form.append('file', datasetFd, 'geojson-example.geojson')

@@ -12,16 +12,20 @@ const shuffle = require('shuffle-array')
 const csvStringify = require('csv-stringify')
 const flatten = require('flat')
 const pump = require('util').promisify(require('pump'))
+const tmp = require('tmp-promise')
 const fieldsSniffer = require('./fields-sniffer')
 const geoUtils = require('./geo')
 const restDatasetsUtils = require('./rest-datasets')
 const vocabulary = require('../../contract/vocabulary')
 const limits = require('./limits')
+const exec = require('./exec')
+const extensionsUtils = require('./extensions')
 
 const baseTypes = new Set(['text/csv', 'application/geo+json'])
+const dataDir = path.resolve(config.dataDir)
 
 exports.dir = (dataset) => {
-  return path.join(config.dataDir, dataset.owner.type, dataset.owner.id, 'datasets', dataset.id)
+  return path.join(dataDir, dataset.owner.type, dataset.owner.id, 'datasets', dataset.id)
 }
 
 exports.fileName = (dataset) => {
@@ -35,6 +39,11 @@ exports.originalFileName = (dataset) => {
 exports.fullFileName = (dataset) => {
   const parsed = path.parse(dataset.originalFile.name)
   return path.join(exports.dir(dataset), `${parsed.name}-full${parsed.ext}`)
+}
+
+exports.extFileName = (dataset, ext) => {
+  const parsed = path.parse(dataset.originalFile.name)
+  return path.join(exports.dir(dataset), `${parsed.name}.${ext}`)
 }
 
 exports.attachmentsDir = (dataset) => {
@@ -84,8 +93,86 @@ exports.lsFiles = async (dataset) => {
   return infos
 }
 
+exports.dataFiles = async (dataset) => {
+  if (dataset.isVirtual || dataset.isRest) return []
+  const dir = exports.dir(dataset)
+  const files = await fs.readdir(dir)
+  const results = []
+  if (!files.includes(dataset.originalFile.name)) {
+    console.error('Original data file not found', dir, dataset.originalFile.name)
+  } else {
+    results.push({
+      name: dataset.originalFile.name,
+      key: 'original',
+      title: 'Fichier original',
+      mimetype: dataset.originalFile.mimetype,
+    })
+  }
+  if (dataset.file.name !== dataset.originalFile.name) {
+    if (!files.includes(dataset.file.name)) {
+      console.error('Normalized data file not found', dir, dataset.file.name)
+    } else {
+      results.push({
+        name: dataset.file.name,
+        key: 'normalized',
+        title: `Fichier normalisé (format ${dataset.file.mimetype.split('/').pop()})`,
+        mimetype: dataset.file.mimetype,
+      })
+    }
+  }
+  const parsed = path.parse(dataset.originalFile.name)
+  if (dataset.extensions && !!dataset.extensions.find(e => e.active)) {
+    const name = `${parsed.name}-full${parsed.ext}`
+    if (!files.includes(name)) {
+      console.error('Full data file not found', dir, name)
+    } else {
+      results.push({
+        name,
+        key: 'full',
+        title: `Fichier étendu (format ${dataset.file.mimetype.split('/').pop()})`,
+        mimetype: dataset.file.mimetype,
+      })
+    }
+  }
+
+  if (dataset.bbox) {
+    const geojsonName = `${parsed.name}.geojson`
+    if (dataset.file.name !== geojsonName) {
+      if (!files.includes(geojsonName)) {
+        console.error('Geojson data file not found', dir, geojsonName)
+      } else {
+        results.push({
+          name: geojsonName,
+          key: 'geojson',
+          title: 'Fichier géographique (format geojson)',
+          mimetype: 'application/geo+json',
+        })
+      }
+    }
+    const mbtilesName = `${parsed.name}.mbtiles`
+    if (!files.includes(mbtilesName)) {
+      console.error('Mbtiles data file not found', dir, mbtilesName)
+    } else {
+      results.push({
+        name: mbtilesName,
+        key: 'mbtiles',
+        title: 'Tuiles cartographiques (format mbtiles)',
+        mimetype: 'application/vnd.sqlite3',
+      })
+    }
+  }
+
+  for (const result of results) {
+    const stats = await fs.stat(path.join(exports.dir(dataset), result.name))
+    result.size = stats.size
+    result.updatedAt = stats.mtime
+    result.url = `${config.publicUrl}/api/v1/datasets/${dataset.id}/data-files/${result.name}`
+  }
+  return results
+}
+
 // Read the dataset file and get a stream of line items
-exports.readStream = (dataset, raw = false) => {
+exports.readStream = (dataset, raw = false, full = false) => {
   if (dataset.isRest) return restDatasetsUtils.readStream(dataset)
 
   let parser, transformer
@@ -124,7 +211,7 @@ exports.readStream = (dataset, raw = false) => {
     throw new Error('Dataset type is not supported ' + dataset.file.mimetype)
   }
   return Combine(
-    fs.createReadStream(exports.fileName(dataset)),
+    fs.createReadStream(full ? exports.fullFileName(dataset) : exports.fileName(dataset)),
     iconv.decodeStream(dataset.file.encoding),
     parser,
     transformer,
@@ -149,13 +236,14 @@ exports.readStream = (dataset, raw = false) => {
 }
 
 // Used by extender worker to produce the "full" version of the file
-exports.writeFullStreams = (dataset) => {
-  const relevantSchema = dataset.schema.filter(f => f.key.startsWith('_ext_') || !f.key.startsWith('_'))
-  const writeStream = fs.createWriteStream(exports.fullFileName(dataset))
+exports.writeFullFile = async (app, dataset) => {
+  const tmpFullFile = await tmp.tmpName({ dir: path.join(dataDir, 'tmp') })
+  const writeStream = fs.createWriteStream(tmpFullFile)
 
   // add BOM for excel, cf https://stackoverflow.com/a/17879474
   writeStream.write('\ufeff')
 
+  const relevantSchema = dataset.schema.filter(f => f.key.startsWith('_ext_') || !f.key.startsWith('_'))
   const transforms = [new Transform({
     transform(chunk, encoding, callback) {
       const flatChunk = flatten(chunk)
@@ -167,6 +255,14 @@ exports.writeFullStreams = (dataset) => {
   if (dataset.file.mimetype === 'text/csv') {
     transforms.push(csvStringify({ columns: relevantSchema.map(field => field.title || field['x-originalName'] || field.key), header: true }))
   } else if (dataset.file.mimetype === 'application/geo+json') {
+    transforms.push(new Transform({
+      transform(chunk, encoding, callback) {
+        const { geometry, ...properties } = chunk
+        const feature = { properties, geometry }
+        callback(null, feature)
+      },
+      objectMode: true,
+    }))
     transforms.push(JSONStream.stringify(`{
   "type": "FeatureCollection",
   "features": [
@@ -176,10 +272,14 @@ exports.writeFullStreams = (dataset) => {
   } else {
     throw new Error('Dataset type is not supported ' + dataset.file.mimetype)
   }
-  return [
+
+  await pump(
+    exports.readStream(dataset),
+    extensionsUtils.preserveExtensionStream({ db: app.get('db'), esClient: app.get('es'), dataset }),
     ...transforms,
     writeStream,
-  ]
+  )
+  await fs.move(tmpFullFile, exports.fullFileName(dataset), { overwrite: true })
 }
 
 exports.sample = async (dataset) => {
@@ -350,4 +450,90 @@ exports.insertWithBaseId = async (db, dataset, baseId) => {
       dataset.id = `${baseId}-${i}`
     }
   }
+}
+
+exports.prepareGeoFiles = async (dataset) => {
+  const dir = exports.dir(dataset)
+
+  const fullExists = await fs.exists(exports.fullFileName(dataset))
+  const parsed = path.parse(dataset.file.name)
+  const geojsonFile = path.join(dir, `${parsed.name}.geojson`)
+  const mbtilesFile = path.join(dir, `${parsed.name}.mbtiles`)
+  const geopoints = geoUtils.schemaHasGeopoint(dataset.schema)
+  const geoshapes = geoUtils.schemaHasGeometry(dataset.schema)
+  const removeProps = dataset.schema.filter(p => geoUtils.allGeoConcepts.includes(p['x-refersTo']))
+
+  // csv to geojson
+  if (parsed.ext === '.csv') {
+    const streams = [exports.readStream(dataset, true, fullExists)]
+
+    streams.push(new Transform({
+      async transform(properties, encoding, callback) {
+        try {
+          let geometry
+          if (geopoints) {
+            geometry = geoUtils.latlon2fields(dataset, properties)._geoshape
+          } else if (geoshapes) {
+            geometry = (await geoUtils.geometry2fields(dataset.schema, properties))._geoshape
+          }
+          if (geometry) {
+            for (const prop of removeProps) {
+              delete properties[prop.key]
+            }
+            const feature = { properties, geometry }
+            console.log(feature)
+            callback(null, feature)
+          }
+        } catch (err) {
+          callback(err)
+        }
+      },
+      objectMode: true,
+    }))
+
+    streams.push(JSONStream.stringify(`{
+  "type": "FeatureCollection",
+  "features": [
+`, `,
+  `, `
+]}`))
+
+    const tmpGeojsonFile = await tmp.tmpName({ dir: path.join(dataDir, 'tmp') })
+    streams.push(fs.createWriteStream(tmpGeojsonFile))
+    // more atomic file write to prevent read during a long write
+    await fs.move(tmpGeojsonFile, geojsonFile, { overwrite: true })
+    await pump(...streams)
+  }
+
+  const args = [...config.tippecanoe.args]
+  dataset.schema.filter(prop => {
+    if (prop.type === 'integer') return true
+    if (prop.type === 'number') return true
+    if (prop.type === 'boolean') return true
+    if (prop.type === 'string' && prop.format === 'date-time') return true
+    if (prop.type === 'string' && prop.format === 'date') return true
+    if (prop.type === 'string' && prop.enum) return true
+    if (prop.type === 'string' && prop['x-refersTo'] === 'http://www.w3.org/2000/01/rdf-schema#label') return true
+    return false
+  }).forEach(prop => {
+    args.push('--include')
+    args.push(prop.key)
+  })
+
+  const tmpMbtilesFile = await tmp.tmpName({ dir: path.join(dataDir, 'tmp') })
+  if (config.tippecanoe.docker) {
+    await exec('docker', ['run', '--rm', '-v', `${dataDir}:/data`, 'klokantech/tippecanoe:latest', 'tippecanoe', ...config.tippecanoe.args, '--layer', 'results', '-o', tmpMbtilesFile.replace(dataDir, '/data'), geojsonFile.replace(dataDir, '/data')])
+  } else {
+    await exec('tippecanoe', [...config.tippecanoe.args, '--layer', 'results', '-o', mbtilesFile, geojsonFile])
+  }
+  // more atomic file write to prevent read during a long write
+  await fs.move(tmpMbtilesFile, mbtilesFile, { overwrite: true })
+}
+
+exports.deleteGeoFiles = async (dataset) => {
+  const parsed = path.parse(dataset.file.name)
+  const geojsonFile = path.join(exports.dir(dataset), `${parsed.name}.geojson`)
+  const mbtilesFile = path.join(exports.dir(dataset), `${parsed.name}.mbtiles`)
+  await fs.remove(geojsonFile)
+  await fs.remove(mbtilesFile)
 }

@@ -4,6 +4,7 @@ const geoUtils = require('../utils/geo')
 const datasetUtils = require('../utils/dataset')
 const attachmentsUtils = require('../utils/attachments')
 const virtualDatasetsUtils = require('../utils/virtual-datasets')
+const tiles = require('../utils/tiles')
 
 exports.eventsPrefix = 'finalize'
 
@@ -49,8 +50,15 @@ exports.process = async function(app, dataset) {
     queryableDataset.bbox = []
     result.bbox = dataset.bbox = (await esUtils.bboxAgg(es, queryableDataset)).bbox
     debug('bounding box ok', result.bbox)
+
+    if (!dataset.isRest && !dataset.isVirtual) {
+      await datasetUtils.prepareGeoFiles(dataset)
+    }
   } else {
     result.bbox = null
+    if (!dataset.isRest && !dataset.isVirtual) {
+      await datasetUtils.deleteGeoFiles(dataset)
+    }
   }
 
   // calculate temporal coverage

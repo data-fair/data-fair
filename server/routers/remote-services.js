@@ -246,7 +246,11 @@ async function getAppOwner(req) {
   const referer = req.headers.referer || req.headers.referrer
   debug('Referer URL', referer)
   if (!referer) return null
-  const refererAppId = referer.replace(config.publicUrl + '/app/', '').split('?')[0].split('/')[0]
+  const refererAppId = referer.startsWith(config.publicUrl + '/app/') && referer.replace(config.publicUrl + '/app/', '').split('?')[0].split('/')[0]
+  if (!refererAppId) {
+    console.error(`No application id found for referer=${referer}`)
+    return
+  }
   debug('Referer application id', refererAppId)
 
   if (req.session && req.session.activeApplications) {
@@ -257,7 +261,7 @@ async function getAppOwner(req) {
 
   const refererApp = await req.app.get('db').collection('applications').findOne({ id: refererAppId }, { projection: { owner: 1 } })
   if (refererApp) return refererApp.owner
-  else console.error(`No application found for referer:${referer} id:${refererAppId}`)
+  else console.error(`No application found for referer=${referer} id=${refererAppId}`)
 }
 
 // Use the proxy as a user with an active session on an application

@@ -1,5 +1,6 @@
 // Index tabular datasets with elasticsearch using available information on dataset schema
 const extensionsUtils = require('../utils/extensions')
+const datasetUtils = require('../utils/dataset')
 
 exports.eventsPrefix = 'extend'
 
@@ -31,7 +32,7 @@ exports.process = async function(app, dataset) {
 
   if (!dataset.isRest) {
     debug('write full version of the file')
-    await extensionsUtils.writeFullFile(app, dataset)
+    await datasetUtils.writeFullFile(app, dataset)
   }
 
   const result = { status: 'extended' }

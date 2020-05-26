@@ -59,4 +59,7 @@ module.exports = {
     href: 'https://app.dawizz.fr/mydatacatalogue/',
   }],
   proxyNuxt: true,
+  tippecanoe: {
+    docker: true,
+  },
 }

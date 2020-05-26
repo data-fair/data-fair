@@ -213,7 +213,7 @@ router.patch('/:datasetId', readDataset(['finalized', 'error']), permissions.mid
   } else if (patch.projection && (!req.dataset.projection || patch.projection.code !== req.dataset.projection.code)) {
     // geo projection has changed, trigger full re-indexing
     patch.status = 'schematized'
-  } else if (patch.schema && geo.geoFieldsKey(patch.schema) !== geo.schemaHasGeopoint(req.dataset.schema)) {
+  } else if (patch.schema && geo.geoFieldsKey(patch.schema) !== geo.geoFieldsKey(req.dataset.schema)) {
     // geo concepts haved changed, trigger full re-indexing
     patch.status = 'schematized'
   } else if (patch.schema && patch.schema.find(f => req.dataset.schema.find(df => df.key === f.key && df.separator !== f.separator))) {
@@ -572,6 +572,24 @@ router.get('/:datasetId/lines', readDataset(), permissions.middleware('readLines
   if (!['max', 'neighbors'].includes(sampling)) return res.status(400).send('Sampling can be "max" or "neighbors"')
 
   const vectorTileRequested = ['mvt', 'vt', 'pbf'].includes(req.query.format)
+
+  let xyz
+  if (vectorTileRequested) {
+    if (!req.query.xyz) return res.status(400).send('xyz parameter is required for vector tile format.')
+    xyz = req.query.xyz.split(',').map(Number)
+  }
+
+  // if vector tile is requested and we dispose of a prerendered mbtiles file, use it
+  // otherwise (older dataset, or rest/virtual datasets) we use tile generation from ES results
+  const mbtilesPath = datasetUtils.extFileName(req.dataset, 'mbtiles')
+  if (vectorTileRequested && !req.query.q && !req.query.qs && await fs.exists(mbtilesPath)) {
+    const tile = await tiles.getTile(mbtilesPath, ...xyz)
+    // 204 = no-content, better than 404
+    if (!tile) return res.status(204).send()
+    res.type('application/x-protobuf')
+    return res.status(200).send(tile)
+  }
+
   // Is the tile cached ?
   let cacheHash
   if (vectorTileRequested && !config.cache.disabled) {
@@ -586,11 +604,7 @@ router.get('/:datasetId/lines', readDataset(), permissions.middleware('readLines
     cacheHash = hash
   }
 
-  let xyz
   if (vectorTileRequested) {
-    if (!req.query.xyz) return res.status(400).send('xyz parameter is required for vector tile format.')
-    xyz = req.query.xyz.split(',').map(Number)
-
     const requestedSize = req.query.size ? Number(req.query.size) : 20
     if (requestedSize > 10000) throw createError(400, '"size" cannot be more than 10000')
     if (sampling === 'neighbors') {
@@ -820,6 +834,17 @@ router.get('/:datasetId/attachments/*', readDataset(), permissions.middleware('d
   // the transform stream option was patched into "send" module using patch-package
   res.download(path.resolve(datasetUtils.attachmentsDir(req.dataset), filePath), null, { transformStream: res.throttle('static') })
 })
+
+// Direct access to data files
+router.get('/:datasetId/data-files', readDataset(), permissions.middleware('downloadFullData', 'read'), asyncWrap(async(req, res, next) => {
+  res.send(await datasetUtils.dataFiles(req.dataset))
+}))
+router.get('/:datasetId/data-files/*', readDataset(), permissions.middleware('downloadFullData', 'read'), asyncWrap(async(req, res, next) => {
+  const filePath = req.params['0']
+  if (filePath.includes('..')) return res.status(400).send('Unacceptable data file path')
+  // the transform stream option was patched into "send" module using patch-package
+  res.download(path.resolve(datasetUtils.dir(req.dataset), filePath), null, { transformStream: res.throttle('static') })
+}))
 
 // Special attachments referenced in dataset metadatas
 router.post('/:datasetId/metadata-attachments', readDataset(), permissions.middleware('writeData', 'write'), checkStorage(false), attachments.metadataUpload(), asyncWrap(async(req, res, next) => {

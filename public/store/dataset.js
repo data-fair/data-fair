@@ -13,6 +13,7 @@ export default () => ({
     remoteServices: [],
     nbApplications: null,
     nbVirtualDatasets: null,
+    dataFiles: null,
   },
   getters: {
     resourceUrl: (state, getters, rootState) => state.datasetId ? rootState.env.publicUrl + '/api/v1/datasets/' + state.datasetId : null,
@@ -82,6 +83,7 @@ export default () => ({
           dispatch('fetchApplications'),
           dispatch('fetchVirtuals'),
           dispatch('fetchApiDoc'),
+          dispatch('fetchDataFiles'),
           dispatch('fetchJournal'),
         ])
       } catch (error) {
@@ -103,6 +105,10 @@ export default () => ({
     async fetchJournal({ commit, state }) {
       const journal = await this.$axios.$get(`api/v1/datasets/${state.datasetId}/journal`)
       commit('setAny', { journal })
+    },
+    async fetchDataFiles({ commit, state }) {
+      const dataFiles = await this.$axios.$get(`api/v1/datasets/${state.datasetId}/data-files`)
+      commit('setAny', { dataFiles })
     },
     async setId({ commit, getters, dispatch, state }, datasetId) {
       commit('setAny', { datasetId })

@@ -1,5 +1,6 @@
 const { Transform } = require('stream')
 const config = require('config')
+const truncateMiddle = require('truncate-middle')
 const extensions = require('../extensions')
 
 const debug = require('debug')('index-stream')
@@ -127,7 +128,7 @@ class IndexStream extends Transform {
       if (item.customMessage) itemMsg += item.customMessage
       else if (item.error.caused_by) itemMsg += item.error.caused_by.reason
       else itemMsg += item.error.reason
-      return itemMsg
+      return truncateMiddle(itemMsg, 80, 60, '...')
     }).join('\n<br>')
 
     if (leftOutErrors > 0) msg += `\n<br>${leftOutErrors} autres erreurs...`

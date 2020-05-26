@@ -15,7 +15,7 @@ const operationsClasses = apiDocsUtil.operationsClasses.datasets
 // From a property in data-fair schema to the property in an elasticsearch mapping
 exports.esProperty = prop => {
   // Add inner text field to almost everybody so that even dates, numbers, etc can be matched textually as well as exactly
-  const innerTextField = { text: { type: 'text', analyzer: config.elasticsearch.defaultAnalyzer, fielddata: true } }
+  const innerTextField = { text: { type: 'text', analyzer: config.elasticsearch.defaultAnalyzer } }
   let esProp = {}
   if (prop.type === 'object') esProp = { type: 'object' }
   if (prop.type === 'integer') esProp = { type: 'long', fields: innerTextField }

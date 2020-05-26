@@ -191,4 +191,8 @@ module.exports = {
     logo: 'https://static.data.gouv.fr/_themes/gouvfr/img/logo-header.svg',
   }],
   proxyNuxt: false,
+  tippecanoe: {
+    docker: false,
+    args: ['-zg', '--extend-zooms-if-still-dropping', '--drop-fraction-as-needed', '--maximum-tile-bytes', '1000000'],
+  },
 }

@@ -160,27 +160,17 @@
         </template>
         <v-list>
           <v-list-item
-            v-if="!dataset.isRest && !dataset.isVirtual"
-            :disabled="!can('downloadOriginalData')"
-            :href="downloadLink"
+            v-for="dataFile in (dataFiles || [])"
+            :key="dataFile.key"
+            :disabled="!can('downloadFullData')"
+            :href="dataFile.url"
           >
             <v-list-item-avatar>
               <v-icon color="primary">
                 mdi-file-download
               </v-icon>
             </v-list-item-avatar>
-            <v-list-item-title>Fichier d'origine</v-list-item-title>
-          </v-list-item>
-          <v-list-item
-            :href="downloadFullLink"
-            :disabled="!can('downloadFullData') || (!dataset.isRest && (!dataset.extensions || !dataset.extensions.find(e => e.active)))"
-          >
-            <v-list-item-avatar>
-              <v-icon color="primary">
-                mdi-download-multiple
-              </v-icon>
-            </v-list-item-avatar>
-            <v-list-item-title>Fichier enrichi</v-list-item-title>
+            <v-list-item-title>{{ dataFile.title }}</v-list-item-title>
           </v-list-item>
           <v-list-item
             v-if="can('writeData')"
@@ -356,7 +346,7 @@
       mini: false,
     }),
     computed: {
-      ...mapState('dataset', ['dataset', 'api', 'nbApplications']),
+      ...mapState('dataset', ['dataset', 'api', 'nbApplications', 'dataFiles']),
       ...mapGetters('dataset', ['resourceUrl', 'can']),
       fileProperty() {
         return this.dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')
