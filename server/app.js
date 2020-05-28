@@ -1,6 +1,6 @@
 const config = require('config')
 const express = require('express')
-const fs = require('fs')
+const fs = require('fs-extra')
 const path = require('path')
 const eventToPromise = require('event-to-promise')
 const promisify = require('util').promisify
