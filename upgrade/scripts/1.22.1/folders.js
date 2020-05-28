@@ -1,7 +1,6 @@
 const fs = require('fs-extra')
 const config = require('config')
 const path = require('path')
-const extensionsUtils = require('../../../server/utils/extensions')
 const datasetUtils = require('../../../server/utils/dataset')
 const esUtils = require('../../../server/utils/es')
 
@@ -47,7 +46,7 @@ exports.exec = async (db, debug) => {
 
     if (dataset.extensions && dataset.extensions.find(e => e.active) && paths.newFullFile && !(await fs.exists(paths.newFullFile))) {
       debug('prepare full extended file')
-      await extensionsUtils.writeFullFile({ db, es }, dataset)
+      await datasetUtils.writeFullFile({ db, es }, dataset)
     }
 
     if (dataset.bbox && !dataset.isRest && !dataset.isVirtual && !(await fs.exists(paths.newMbtilesFile))) {
