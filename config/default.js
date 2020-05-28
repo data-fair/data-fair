@@ -84,7 +84,7 @@ module.exports = {
           // used by routes with streamed dynamic contents (search mostly)
           dynamic: 100000, // 100 kb/s
           // used by routes with streamed static files content
-          staticBandwidth: 500000, // 500 kb/s
+          static: 500000, // 500 kb/s
         },
       },
       user: {
