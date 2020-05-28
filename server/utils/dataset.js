@@ -237,7 +237,7 @@ exports.readStream = (dataset, raw = false, full = false) => {
 }
 
 // Used by extender worker to produce the "full" version of the file
-exports.writeFullFile = async (app, dataset) => {
+exports.writeFullFile = async (db, es, dataset) => {
   const tmpFullFile = await tmp.tmpName({ dir: path.join(dataDir, 'tmp') })
   const writeStream = fs.createWriteStream(tmpFullFile)
 
@@ -277,7 +277,7 @@ exports.writeFullFile = async (app, dataset) => {
 
   await pump(
     exports.readStream(dataset),
-    extensionsUtils.preserveExtensionStream({ db: app.get('db'), esClient: app.get('es'), dataset }),
+    extensionsUtils.preserveExtensionStream({ db, esClient: es, dataset }),
     ...transforms,
     writeStream,
   )

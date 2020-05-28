@@ -32,7 +32,7 @@ exports.process = async function(app, dataset) {
 
   if (!dataset.isRest) {
     debug('write full version of the file')
-    await datasetUtils.writeFullFile(app, dataset)
+    await datasetUtils.writeFullFile(app.get('db'), app.get('es'), dataset)
   }
 
   const result = { status: 'extended' }
