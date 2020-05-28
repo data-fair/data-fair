@@ -33,6 +33,14 @@ RUN apk add --no-cache --virtual .build-deps cmake linux-headers boost-dev gmp g
 RUN test -f /usr/lib/libproj.so.15
 RUN ln -s /usr/lib/libproj.so.15 /usr/lib/libproj.so
 
+# install tippecanoe to generate mbtiles files
+RUN git clone https://github.com/mapbox/tippecanoe.git &&\
+    cd tippecanoe &&\
+    make -j &&\
+    make install &&\
+    cd .. &&\
+    rm -rf tippecanoe
+
 ARG VERSION
 ENV VERSION=$VERSION
 ENV NODE_ENV production
