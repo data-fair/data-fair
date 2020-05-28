@@ -25,9 +25,10 @@ exports.exec = async (db, debug) => {
   const cursor = db.collection('datasets').find({})
   while (await cursor.hasNext()) {
     const dataset = await cursor.next()
+    debug('work on dataset', dataset.id)
 
     const paths = getPaths(dataset)
-    debug(`move all files of dataset ${dataset.id} to ${paths.newDir}`)
+    debug(`move all files to ${paths.newDir}`)
 
     // if (await fs.exists(paths.newDir)) continue
     await fs.ensureDir(paths.newDir)
