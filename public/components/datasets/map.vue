@@ -130,6 +130,9 @@
           }
         })
         const bbox = await this.getBBox()
+        if (!bbox) {
+          throw new Error('Aucune donnée géographique valide.')
+        }
         this.map.fitBounds(bbox, { duration: 0 })
         this.map.addControl(new mapboxgl.NavigationControl(), 'top-right')
         // Disable map rotation using right click + drag
@@ -143,7 +146,10 @@
         const moveCallback = (e) => {
           const feature = this.map.queryRenderedFeatures(e.point).find(f => f.source === 'data-fair')
           if (!feature) return
-          this.map.setFilter('results_hover', ['==', '_id', feature.properties._id])
+
+          if (feature.properties._id !== undefined) {
+            this.map.setFilter('results_hover', ['==', '_id', feature.properties._id])
+          }
           // Change the cursor style as a UI indicator.
           this.map.getCanvas().style.cursor = 'pointer'
           const htmlList = Object.keys(feature.properties || {})
@@ -184,7 +190,7 @@
       async getBBox() {
         const bbox = (await this.$axios.$get(this.resourceUrl + '/lines', { params: { format: 'geojson', size: 0, qs: this.query } })).bbox
         if (!bbox || !bbox.length) {
-          throw new Error('Aucune donnée géographique valide.')
+          return null
         }
         return resizeBBOX(bbox, 1.1)
       },
@@ -200,7 +206,7 @@
 
         // And fit box to results
         const bbox = await this.getBBox()
-        this.map.fitBounds(bbox)
+        if (bbox) this.map.fitBounds(bbox)
       },
       initCustomSource() {
         this.map.addSource('data-fair', { type: 'vector', tiles: [this.tileUrl] })

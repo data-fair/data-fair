@@ -213,10 +213,10 @@ describe('datasets', () => {
     // testing journal, updating data and then journal length again
     wsCli.send(JSON.stringify({ type: 'subscribe', channel: 'datasets/' + datasetId + '/journal' }))
     res = await ax.get('/api/v1/datasets/' + datasetId + '/journal')
-
-    // Send again the data to the same dataset
     assert.equal(res.status, 200)
     assert.equal(res.data.length, 9)
+
+    // Send again the data to the same dataset
     form = new FormData()
     form.append('file', fs.readFileSync('./test/resources/Antennes du CD22.csv'), 'Antennes du CD22.csv')
     res = await ax.post(webhook.href, form, { headers: testUtils.formHeaders(form) })
@@ -247,10 +247,12 @@ describe('datasets', () => {
 
     // Updating schema
     res = await ax.get(webhook.href)
+
     const schema = res.data.schema
     schema.find(field => field.key === 'lat')['x-refersTo'] = 'http://schema.org/latitude'
     schema.find(field => field.key === 'lon')['x-refersTo'] = 'http://schema.org/longitude'
     await ax.patch(webhook.href, { schema: schema })
+
     await eventToPromise(notifier, 'webhook')
 
     // Delete the dataset

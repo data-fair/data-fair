@@ -57,7 +57,7 @@ describe('search', () => {
     assert.equal(res.data.total, 1)
     assert.equal(res.data.features.length, 1)
     assert.ok(res.data.features[0].geometry)
-    res = await ax.get('/api/v1/datasets/dataset/lines?xyz=63,44,7&format=pbf')
+    res = await ax.get('/api/v1/datasets/dataset/lines?xyz=63,44,7&format=pbf&q=koumoul')
     assert.equal(res.status, 200)
     assert.equal(res.headers['content-type'], 'application/x-protobuf')
     res = await ax.get('/api/v1/datasets/dataset/lines?xyz=3,4,7&format=pbf')

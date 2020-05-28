@@ -4,7 +4,6 @@ const geoUtils = require('../utils/geo')
 const datasetUtils = require('../utils/dataset')
 const attachmentsUtils = require('../utils/attachments')
 const virtualDatasetsUtils = require('../utils/virtual-datasets')
-const tiles = require('../utils/tiles')
 
 exports.eventsPrefix = 'finalize'
 
@@ -52,11 +51,13 @@ exports.process = async function(app, dataset) {
     debug('bounding box ok', result.bbox)
 
     if (!dataset.isRest && !dataset.isVirtual) {
+      debug('prepare geo files')
       await datasetUtils.prepareGeoFiles(dataset)
     }
   } else {
     result.bbox = null
     if (!dataset.isRest && !dataset.isVirtual) {
+      debug('delete geo files')
       await datasetUtils.deleteGeoFiles(dataset)
     }
   }
@@ -87,6 +88,7 @@ exports.process = async function(app, dataset) {
   }
 
   // Add the calculated fields to the schema
+  debug('prepare extended schema')
   result.schema = datasetUtils.extendedSchema(dataset)
 
   // Remove attachments if the schema does not refer to their existence

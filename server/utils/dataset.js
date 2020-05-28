@@ -19,6 +19,7 @@ const restDatasetsUtils = require('./rest-datasets')
 const vocabulary = require('../../contract/vocabulary')
 const limits = require('./limits')
 const exec = require('./exec')
+const tiles = require('./tiles')
 const extensionsUtils = require('./extensions')
 
 const baseTypes = new Set(['text/csv', 'application/geo+json'])
@@ -258,7 +259,7 @@ exports.writeFullFile = async (app, dataset) => {
     transforms.push(new Transform({
       transform(chunk, encoding, callback) {
         const { geometry, ...properties } = chunk
-        const feature = { properties, geometry }
+        const feature = { type: 'Feature', properties, geometry }
         callback(null, feature)
       },
       objectMode: true,
@@ -266,9 +267,10 @@ exports.writeFullFile = async (app, dataset) => {
     transforms.push(JSONStream.stringify(`{
   "type": "FeatureCollection",
   "features": [
-`, `,
-  `, `
-]}`))
+    `, `,
+    `, `
+  ]
+}`))
   } else {
     throw new Error('Dataset type is not supported ' + dataset.file.mimetype)
   }
@@ -462,11 +464,11 @@ exports.prepareGeoFiles = async (dataset) => {
   const geopoints = geoUtils.schemaHasGeopoint(dataset.schema)
   const geoshapes = geoUtils.schemaHasGeometry(dataset.schema)
   const removeProps = dataset.schema.filter(p => geoUtils.allGeoConcepts.includes(p['x-refersTo']))
-
   // csv to geojson
+
   if (parsed.ext === '.csv') {
     const streams = [exports.readStream(dataset, true, fullExists)]
-
+    let i = 0
     streams.push(new Transform({
       async transform(properties, encoding, callback) {
         try {
@@ -480,9 +482,12 @@ exports.prepareGeoFiles = async (dataset) => {
             for (const prop of removeProps) {
               delete properties[prop.key]
             }
-            const feature = { properties, geometry }
-            console.log(feature)
+            properties._id = i
+            const feature = { type: 'Feature', properties, geometry, id: i }
+            i++
             callback(null, feature)
+          } else {
+            callback(null, null)
           }
         } catch (err) {
           callback(err)
@@ -494,38 +499,35 @@ exports.prepareGeoFiles = async (dataset) => {
     streams.push(JSONStream.stringify(`{
   "type": "FeatureCollection",
   "features": [
-`, `,
-  `, `
-]}`))
+    `, `,
+    `, `
+  ]
+}`))
 
     const tmpGeojsonFile = await tmp.tmpName({ dir: path.join(dataDir, 'tmp') })
     streams.push(fs.createWriteStream(tmpGeojsonFile))
+    await pump(...streams)
     // more atomic file write to prevent read during a long write
     await fs.move(tmpGeojsonFile, geojsonFile, { overwrite: true })
-    await pump(...streams)
   }
 
   const args = [...config.tippecanoe.args]
-  dataset.schema.filter(prop => {
-    if (prop.type === 'integer') return true
-    if (prop.type === 'number') return true
-    if (prop.type === 'boolean') return true
-    if (prop.type === 'string' && prop.format === 'date-time') return true
-    if (prop.type === 'string' && prop.format === 'date') return true
-    if (prop.type === 'string' && prop.enum) return true
-    if (prop.type === 'string' && prop['x-refersTo'] === 'http://www.w3.org/2000/01/rdf-schema#label') return true
-    return false
-  }).forEach(prop => {
+  tiles.defaultSelect(dataset).forEach(prop => {
     args.push('--include')
-    args.push(prop.key)
+    args.push(prop)
   })
 
   const tmpMbtilesFile = await tmp.tmpName({ dir: path.join(dataDir, 'tmp') })
-  if (config.tippecanoe.docker) {
-    await exec('docker', ['run', '--rm', '-v', `${dataDir}:/data`, 'klokantech/tippecanoe:latest', 'tippecanoe', ...config.tippecanoe.args, '--layer', 'results', '-o', tmpMbtilesFile.replace(dataDir, '/data'), geojsonFile.replace(dataDir, '/data')])
-  } else {
-    await exec('tippecanoe', [...config.tippecanoe.args, '--layer', 'results', '-o', mbtilesFile, geojsonFile])
+  try {
+    if (config.tippecanoe.docker) {
+      await exec('docker', ['run', '--rm', '-v', `${dataDir}:/data`, 'klokantech/tippecanoe:latest', 'tippecanoe', ...config.tippecanoe.args, '--layer', 'results', '-o', tmpMbtilesFile.replace(dataDir, '/data'), geojsonFile.replace(dataDir, '/data')])
+    } else {
+      await exec('tippecanoe', [...config.tippecanoe.args, '--layer', 'results', '-o', mbtilesFile, geojsonFile])
+    }
+  } catch (err) {
+    console.error('failed to create mbtiles file', mbtilesFile, err)
   }
+
   // more atomic file write to prevent read during a long write
   await fs.move(tmpMbtilesFile, mbtilesFile, { overwrite: true })
 }

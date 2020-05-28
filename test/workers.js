@@ -115,7 +115,7 @@ describe('workers', () => {
     assert.equal(dataset.publications[0].targetUrl, 'http://test-catalog.com/datasets/my-dataset')
   })
 
-  it.only('Process newly uploaded geojson dataset', async () => {
+  it('Process newly uploaded geojson dataset', async () => {
     // Send dataset
     const datasetFd = fs.readFileSync('./test/resources/geojson-example.geojson')
     const form = new FormData()
@@ -157,7 +157,7 @@ describe('workers', () => {
       await workers.hook('indexer')
       assert.fail()
     } catch (err) {
-    // Check that there is an error message in the journal
+      // Check that there is an error message in the journal
       res = await ax.get('/api/v1/datasets/' + dataset.id + '/journal')
       assert.equal(res.status, 200)
       assert.equal(res.data[0].type, 'error')

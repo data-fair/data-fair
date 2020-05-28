@@ -1,9 +1,9 @@
 const geojsonvt = require('geojson-vt')
 const vtpbf = require('vt-pbf')
-const Pbf = require('pbf')
+// const Pbf = require('pbf')
 const { gunzip } = require('zlib')
 const MBTiles = require('@mapbox/mbtiles')
-const VectorTile = require('@mapbox/vector-tile').VectorTile
+// const VectorTile = require('@mapbox/vector-tile').VectorTile
 
 function tile2long(x, z) {
   return (x / Math.pow(2, z) * 360 - 180)
@@ -32,6 +32,8 @@ exports.geojson2pbf = (geojson, xyz) => {
   return Buffer.from(vtpbf.fromGeojsonVt(layers, { version: 2 }))
 }
 
+/*
+TODO: select fields inside a tile from mbtiles ?
 const selectInVT = (data, select) => {
   var tile = new VectorTile(new Pbf(data))
   for (var layerName in tile.layers) {
@@ -49,27 +51,50 @@ const selectInVT = (data, select) => {
   }
   data = Buffer.from(vtpbf(tile))
 }
+*/
 
 exports.getTile = async(mbtilesPath, x, y, z) => {
   return new Promise((resolve, reject) => {
     // eslint-disable-next-line no-new
     new MBTiles(`${mbtilesPath}?mode=ro`, (err, mbtiles) => {
       if (err) return reject(err)
-      mbtiles.getTile(z, x, y, (err, data, headers) => {
-        if (err) {
-          if (/does not exist/.test(err.message)) return resolve(null)
-          return reject(err)
+      mbtiles.getInfo((err, info) => {
+        if (err) return reject(err)
+        if (z > info.maxzoom || z < info.minzoom) {
+          // false means that the tile is out the range of what the mbtiles serves
+          return resolve(false)
         }
-        gunzip(data, (err, unzipped) => {
-          if (err) return reject(err)
-          resolve(unzipped)
+        mbtiles.getTile(z, x, y, (err, data, headers) => {
+          if (err) {
+            if (/does not exist/.test(err.message)) return resolve(null)
+            return reject(err)
+          }
+
+          gunzip(data, (err, unzipped) => {
+            if (err) return reject(err)
+            resolve(unzipped)
+          })
+          /* if (headers['Content-Encoding'] === 'gzip') {
+            data = await gunzip(data)
+          } */
+          // resolve({ data, headers })
         })
-        console.log(headers)
-        /* if (headers['Content-Encoding'] === 'gzip') {
-          data = await gunzip(data)
-        } */
-        // resolve({ data, headers })
       })
     })
   })
+}
+
+exports.defaultSelect = (dataset) => {
+  return dataset.schema.filter(prop => {
+    if (prop.key === '_id') return true
+    if (prop.key.startsWith('_')) return false
+    if (prop.type === 'integer') return true
+    if (prop.type === 'number') return true
+    if (prop.type === 'boolean') return true
+    if (prop.type === 'string' && prop.format === 'date-time') return true
+    if (prop.type === 'string' && prop.format === 'date') return true
+    if (prop.type === 'string' && prop.enum) return true
+    if (prop.type === 'string' && prop['x-refersTo'] === 'http://www.w3.org/2000/01/rdf-schema#label') return true
+    return false
+  }).map(prop => prop.key)
 }
