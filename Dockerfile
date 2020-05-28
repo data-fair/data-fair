@@ -8,9 +8,9 @@ RUN mkdir /prepair
 WORKDIR /tmp
 # cf https://github.com/appropriate/docker-postgis/pull/97/commits/9fbb21cf5866be05459a6a7794c329b40bdb1b37
 RUN apk add --no-cache --virtual .build-deps cmake linux-headers boost-dev gmp gmp-dev mpfr-dev && \
-    apk add --no-cache --repository http://dl-cdn.alpinelinux.org/alpine/edge/main libressl2.7-libcrypto && \
+    apk add --no-cache --repository http://dl-cdn.alpinelinux.org/alpine/edge/main libressl3.0-libcrypto && \
     apk add --no-cache --virtual .gdal-build-deps --repository http://dl-cdn.alpinelinux.org/alpine/edge/testing gdal-dev && \
-    apk add --no-cache --repository http://dl-cdn.alpinelinux.org/alpine/edge/testing gdal proj4 && \
+    apk add --no-cache --repository http://dl-cdn.alpinelinux.org/alpine/edge/testing gdal proj && \
     curl -L https://github.com/CGAL/cgal/releases/download/releases%2FCGAL-4.12/CGAL-4.12.tar.xz -o cgal.tar.xz && \
     tar -xf cgal.tar.xz && \
     rm cgal.tar.xz && \
@@ -34,12 +34,14 @@ RUN test -f /usr/lib/libproj.so.15
 RUN ln -s /usr/lib/libproj.so.15 /usr/lib/libproj.so
 
 # install tippecanoe to generate mbtiles files
-RUN git clone https://github.com/mapbox/tippecanoe.git &&\
-    cd tippecanoe &&\
-    make -j &&\
-    make install &&\
-    cd .. &&\
-    rm -rf tippecanoe
+RUN apk add --no-cache --virtual .tippe-deps bash sqlite-dev zlib-dev && \
+    git clone https://github.com/mapbox/tippecanoe.git && \
+    cd tippecanoe && \
+    make -j && \
+    make install && \
+    cd .. && \
+    rm -rf tippecanoe && \
+    apk del .tippe-deps
 
 ARG VERSION
 ENV VERSION=$VERSION
