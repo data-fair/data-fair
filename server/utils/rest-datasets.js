@@ -29,7 +29,6 @@ function cleanLine(line) {
 const destination = async (req, file, cb) => {
   try {
     const tmpDir = path.join(config.dataDir, 'tmp')
-    await fs.ensureDir(tmpDir)
     cb(null, tmpDir)
   } catch (err) {
     cb(err)
