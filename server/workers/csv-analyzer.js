@@ -9,7 +9,7 @@ const fieldsSniffer = require('../utils/fields-sniffer')
 exports.eventsPrefix = 'analyze'
 
 exports.process = async function(app, dataset) {
-  const debug = require('debug')(`worker:csv-analyzerr:${dataset.id}`)
+  const debug = require('debug')(`worker:csv-analyzer:${dataset.id}`)
   debug('extract file sample')
   const db = app.get('db')
   const fileSample = await datasetFileSample(dataset)
