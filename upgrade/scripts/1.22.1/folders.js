@@ -17,6 +17,7 @@ const getPaths = (dataset) => {
     metadataAttachmentsDir: path.join(ownerDir, dataset.id + '.metadata-attachments'),
     newDir: path.join(ownerDir, 'datasets', dataset.id),
     newFullFile: parsedOriginalFile && path.join(ownerDir, 'datasets', dataset.id, `${parsedOriginalFile.name}-full${parsedOriginalFile.ext}`),
+    newMbtilesFile: parsedOriginalFile && path.join(ownerDir, 'datasets', dataset.id, `${parsedOriginalFile.name}.mbtiles`),
   }
 }
 
@@ -49,7 +50,7 @@ exports.exec = async (db, debug) => {
       await extensionsUtils.writeFullFile({ db, es }, dataset)
     }
 
-    if (dataset.bbox && !dataset.isRest && !dataset.isVirtual) {
+    if (dataset.bbox && !dataset.isRest && !dataset.isVirtual && !(await fs.exists(paths.newMbtilesFile))) {
       debug('prepare geo files')
       await datasetUtils.prepareGeoFiles(dataset)
     }
