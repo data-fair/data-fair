@@ -26,7 +26,7 @@ exports.process = async function(app, dataset) {
   const schema = dataset.file.schema = sniffResult.labels
     .map((field, i) => ({
       key: fieldsSniffer.escapeKey(field),
-      'x-originalName': field.replace(/""/g, '"').replace(/^"/, '').replace(/"$/, '')
+      'x-originalName': field.replace(/""/g, '"').replace(/^"/, '').replace(/"$/, ''),
     }))
     // do not keep columns with empty string as header
     .filter(field => !!field.key)
@@ -40,7 +40,7 @@ exports.process = async function(app, dataset) {
   const props = dataset.file.props = {
     linesDelimiter: sniffResult.linesDelimiter,
     fieldsDelimiter: sniffResult.fieldsDelimiter,
-    escapeChar: sniffResult.escapeChar
+    escapeChar: sniffResult.escapeChar,
   }
   debug('count lines')
   props.numLines = await datasetUtils.countLines(dataset)
@@ -51,7 +51,7 @@ exports.process = async function(app, dataset) {
     $set: {
       'file.props': props,
       status: 'analyzed',
-      'file.schema': schema
-    }
+      'file.schema': schema,
+    },
   })
 }

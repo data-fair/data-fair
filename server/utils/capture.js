@@ -25,11 +25,11 @@ exports.screenshot = async (req) => {
       method: 'GET',
       url: screenShortUrl,
       qs: {
-        target: appUrl
+        target: appUrl,
       },
       headers: {
-        Cookie: cookieText
-      }
+        Cookie: cookieText,
+      },
     }
 
     try {

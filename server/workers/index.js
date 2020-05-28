@@ -14,7 +14,7 @@ const tasks = exports.tasks = {
   extender: require('./extender'),
   finalizer: require('./finalizer'),
   datasetPublisher: require('./dataset-publisher'),
-  applicationPublisher: require('./application-publisher')
+  applicationPublisher: require('./application-publisher'),
 }
 
 // resolve functions that will be filled when we will be asked to stop the workers
@@ -27,6 +27,15 @@ const hooks = {}
 exports.hook = (key) => new Promise((resolve, reject) => {
   hooks[key] = { resolve, reject }
 })
+// clear also for testing
+exports.clear = () => {
+  for (let i = 0; i < config.worker.concurrency; i++) {
+    if (currentIters[i]) {
+      currentIters[i].catch(() => {})
+      delete currentIters[i]
+    }
+  }
+}
 
 /* eslint no-unmodified-loop-condition: 0 */
 // Run main loop !
@@ -49,7 +58,7 @@ exports.start = async (app) => {
 exports.stop = async () => {
   stopped = true
   await Promise.all(currentIters.filter(p => !!p))
-  await new Promise(resolve => setTimeout(resolve, config.worker.releaseInterval))
+  if (config.worker.releaseInterval) await new Promise(resolve => setTimeout(resolve, config.worker.releaseInterval))
 }
 
 // Filters to select eligible datasets or applications for processing
@@ -57,10 +66,10 @@ const typesFilters = {
   application: { 'publications.status': { $in: ['waiting', 'deleted'] } },
   dataset: {
     $or: [
-      { status: { $nin: ['finalized', 'error'] } },
-      { status: 'finalized', 'publications.status': { $in: ['waiting', 'deleted'] } }
-    ]
-  }
+      { status: { $nin: ['finalized', 'error', 'draft'] } },
+      { status: 'finalized', 'publications.status': { $in: ['waiting', 'deleted'] } },
+    ],
+  },
 }
 
 async function iter(app, type) {
@@ -111,6 +120,7 @@ async function iter(app, type) {
     }
     if (!taskKey) return
     const task = tasks[taskKey]
+    debug(`run task ${taskKey} - ${type} / ${resource.id}`)
 
     if (task.eventsPrefix) await journals.log(app, resource, { type: task.eventsPrefix + '-start' }, type, noStoreEvent)
 
@@ -130,7 +140,7 @@ async function iter(app, type) {
     const newResource = await app.get('db').collection(type + 's').findOne({ id: resource.id })
     if (hooks[taskKey]) hooks[taskKey].resolve(newResource)
     if (hooks[taskKey + '/' + resource.id]) hooks[taskKey + '/' + resource.id].resolve(newResource)
-    if (task.eventsPrefix) await journals.log(app, newResource, { type: task.eventsPrefix + '-end' }, type, noStoreEvent)
+    if (task.eventsPrefix && newResource) await journals.log(app, newResource, { type: task.eventsPrefix + '-end' }, type, noStoreEvent)
   } catch (err) {
     // Build back the original error message from the stderr of the child process
     const errorMessage = []
@@ -142,7 +152,7 @@ async function iter(app, type) {
       errorMessage.push(err.message)
     }
 
-    debug('Failure in worker ' + taskKey, err)
+    console.warn('Failure in worker ' + taskKey, err)
     if (resource) {
       await journals.log(app, resource, { type: 'error', data: errorMessage.join('\n') }, type)
       await app.get('db').collection(type + 's').updateOne({ id: resource.id }, { $set: { status: 'error' } })
@@ -167,6 +177,7 @@ async function acquireNext(db, type, filter) {
   const cursor = db.collection(type + 's').aggregate([{ $match: filter }, { $sample: { size: 100 } }])
   while (await cursor.hasNext()) {
     const resource = await cursor.next()
+    // console.log('resource', resource)
     const ack = await locks.acquire(db, `${type}:${resource.id}`)
     if (ack) return resource
   }

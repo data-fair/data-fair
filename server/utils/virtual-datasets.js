@@ -68,8 +68,8 @@ exports.prepareSchema = async (db, dataset) => {
 exports.descendants = async (db, dataset) => {
   const res = await db.collection('datasets').aggregate([{
     $match: {
-      id: dataset.id
-    }
+      id: dataset.id,
+    },
   }, {
     $graphLookup: {
       from: 'datasets',
@@ -78,14 +78,14 @@ exports.descendants = async (db, dataset) => {
       connectToField: 'id',
       as: 'descendants',
       maxDepth: 20,
-      restrictSearchWithMatch: { 'owner.type': dataset.owner.type, 'owner.id': dataset.owner.id }
-    }
+      restrictSearchWithMatch: { 'owner.type': dataset.owner.type, 'owner.id': dataset.owner.id },
+    },
   }, {
     $project: {
       'descendants.id': 1,
       'descendants.isVirtual': 1,
-      'descendants.virtual': 1
-    }
+      'descendants.virtual': 1,
+    },
   }]).toArray()
   const virtualDescendantsWithFilters = res[0].descendants
     .filter(d => d.isVirtual && d.virtual.filters && d.virtual.filters.length)

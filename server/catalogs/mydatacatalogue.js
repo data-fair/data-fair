@@ -58,8 +58,8 @@ async function createNewDataset(catalog, dataset, publication) {
     recordCount: dataset.count || 0,
     dataFairDatasetId: dataset.id,
     tags: {
-      keyword: [{ id: 'data-fair', title: 'Données Data Fair', type: 'keyword' }]
-    }
+      keyword: [{ id: 'data-fair', title: 'Données Data Fair', type: 'keyword' }],
+    },
   }
   try {
     const res = await axios.post(url.resolve(catalog.url, 'api/v1/sources'), source, { headers: { 'x-apiKey': catalog.apiKey } })

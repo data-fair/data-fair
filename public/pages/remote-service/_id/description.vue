@@ -6,12 +6,12 @@
 </template>
 
 <script>
-import RemoteServiceInfo from '../../../components/RemoteServiceInfo.vue'
-import RemoteServiceSchema from '../../../components/RemoteServiceSchema.vue'
+  import RemoteServiceInfo from '~/components/remote-services/info.vue'
+  import RemoteServiceSchema from '~/components/remote-services/schema.vue'
 
-export default {
-  components: { RemoteServiceInfo, RemoteServiceSchema }
-}
+  export default {
+    components: { RemoteServiceInfo, RemoteServiceSchema },
+  }
 </script>
 
 <style lang="css">

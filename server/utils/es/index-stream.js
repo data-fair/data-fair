@@ -1,5 +1,6 @@
 const { Transform } = require('stream')
 const config = require('config')
+const truncateMiddle = require('truncate-middle')
 const extensions = require('../extensions')
 
 const debug = require('debug')('index-stream')
@@ -87,7 +88,7 @@ class IndexStream extends Transform {
       // ES does not want the doc along with a delete instruction,
       // but we put it in body anyway for our outgoing/reporting logic
       body: this.body.filter(line => !line._deleted),
-      timeout: '4m'
+      timeout: '4m',
     }
     try {
       // Use the ingest plugin to parse attached files
@@ -104,7 +105,7 @@ class IndexStream extends Transform {
           .map((item, i) => ({
             _i: (this.options.updateMode ? bodyClone[(i * 2) + 1].doc : bodyClone[(i * 2) + 1])._i,
             error: (item.index && item.index.error) || (item.update && item.update.error),
-            input: this.body[(i * 2) + 1]
+            input: this.body[(i * 2) + 1],
           }))
           .filter(item => !!item.error)
           .forEach(item => this.erroredItems.push(item))
@@ -127,7 +128,7 @@ class IndexStream extends Transform {
       if (item.customMessage) itemMsg += item.customMessage
       else if (item.error.caused_by) itemMsg += item.error.caused_by.reason
       else itemMsg += item.error.reason
-      return itemMsg
+      return truncateMiddle(itemMsg, 80, 60, '...')
     }).join('\n<br>')
 
     if (leftOutErrors > 0) msg += `\n<br>${leftOutErrors} autres erreurs...`

@@ -20,7 +20,7 @@ exports.trigger = async (db, type, resource, event) => {
         await axios.post(webhook.target.params.url, {
           text,
           href,
-          event: event.type
+          event: event.type,
         })
       }
 

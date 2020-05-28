@@ -11,44 +11,44 @@ module.exports = {
   mongoUrl: 'MONGO_URL',
   analytics: {
     __name: 'ANALYTICS',
-    __format: 'json'
+    __format: 'json',
   },
   elasticsearch: {
     host: 'ES_HOST',
     defaultAnalyzer: 'ES_DEFAULT_ANALYZER',
     maxBulkLines: {
       __name: 'ES_MAX_BULK_LINES',
-      __format: 'json'
+      __format: 'json',
     },
     maxBulkChars: {
       __name: 'ES_MAX_BULK_CHARS',
-      __format: 'json'
-    }
+      __format: 'json',
+    },
   },
   defaultRemoteKey: {
-    value: 'DEFAULT_REMOTE_KEY'
+    value: 'DEFAULT_REMOTE_KEY',
   },
   secretKeys: {
     identities: 'SECRET_IDENTITIES',
-    limits: 'SECRET_LIMITS'
+    limits: 'SECRET_LIMITS',
   },
   globalWebhooks: {
     consumption: {
       __name: 'WEBHOOKS_CONSUMPTION',
-      __format: 'json'
-    }
+      __format: 'json',
+    },
   },
   brand: {
     logo: 'BRAND_LOGO',
     title: 'BRAND_TITLE',
     description: 'BRAND_DESCRIPTION',
     url: 'BRAND_URL',
-    embed: 'BRAND_EMBED'
+    embed: 'BRAND_EMBED',
   },
   theme: {
     dark: {
       __name: 'THEME_DARK',
-      __format: 'json'
+      __format: 'json',
     },
     colors: {
       primary: 'THEME_PRIMARY',
@@ -57,45 +57,45 @@ module.exports = {
       error: 'THEME_ERROR',
       info: 'THEME_INFO',
       success: 'THEME_SUCCESS',
-      warning: 'THEME_WARNING'
+      warning: 'THEME_WARNING',
     },
     cssUrl: 'THEME_CSS_URL',
-    cssText: 'THEME_CSS_TEXT'
+    cssText: 'THEME_CSS_TEXT',
   },
   defaultLimits: {
     totalStorage: {
       __name: 'DEFAULT_LIMITS_TOTAL_STORAGE',
-      __format: 'json'
-    }
+      __format: 'json',
+    },
   },
   worker: {
     interval: {
       __name: 'WORKER_INTERVAL',
-      __format: 'json'
+      __format: 'json',
     },
     concurrency: {
       __name: 'WORKER_CONCURRENCY',
-      __format: 'json'
+      __format: 'json',
     },
     spawnTask: {
       __name: 'WORKER_SPAWN_TASK',
-      __format: 'json'
-    }
+      __format: 'json',
+    },
   },
   browserLogLevel: 'BROWSER_LOG_LEVEL',
   listenWhenReady: {
     __name: 'LISTEN_WHEN_READY',
-    __format: 'json'
+    __format: 'json',
   },
   thumbor: {
     url: 'THUMBOR_URL',
-    key: 'THUMBOR_KEY'
+    key: 'THUMBOR_KEY',
   },
   info: {
     termsOfService: 'INFO_TOS',
     contact: {
       __name: 'INFO_CONTACT',
-      __format: 'json'
-    }
-  }
+      __format: 'json',
+    },
+  },
 }

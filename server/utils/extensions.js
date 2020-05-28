@@ -35,9 +35,9 @@ exports.extend = async(app, dataset, extension, remoteService, action) => {
       await app.publish('datasets/' + dataset.id + '/extend-progress', { remoteService: remoteService.id, action: action.id, progress, error })
       await db.collection('datasets').updateOne({
         id: dataset.id,
-        extensions: { $elemMatch: { remoteService: remoteService.id, action: action.id } }
+        extensions: { $elemMatch: { remoteService: remoteService.id, action: action.id } },
       }, {
-        $set: { 'extensions.$.progress': progress, 'extensions.$.error': error, 'extensions.$.forceNext': false }
+        $set: { 'extensions.$.progress': progress, 'extensions.$.error': error, 'extensions.$.forceNext': false },
       })
     } catch (err) {
       console.error('Failure to update progress of an extension', err)
@@ -57,7 +57,7 @@ exports.extend = async(app, dataset, extension, remoteService, action) => {
         inputStream,
         new RemoteExtensionStream({ action, remoteService, extension, dataset, stats, inputMapping, extensionKey }),
         indexStream,
-        new Writable({ objectMode: true, write(chunk, encoding, cb) { cb() } })
+        new Writable({ objectMode: true, write(chunk, encoding, cb) { cb() } }),
       )
       debug('Extension is over')
       const errorsSummary = indexStream.errorsSummary()
@@ -102,7 +102,7 @@ exports.prepareSchema = async (db, schema, extensions) => {
           'x-refersTo': output.concept,
           title: output.title,
           description: output.description,
-          type: output.type || 'string'
+          type: output.type || 'string',
         }
       }))
     const errorField = action.output.find(o => o.name === 'error')
@@ -114,7 +114,7 @@ exports.prepareSchema = async (db, schema, extensions) => {
       'x-extension': extensionId,
       title: (errorField && errorField.title) || 'Erreur d\'enrichissement',
       description: (errorField && errorField.description) || 'Une erreur lors de la récupération des informations depuis un service distant',
-      'x-calculated': true
+      'x-calculated': true,
     })
   }
   return schema.filter(field => !field['x-extension']).concat(extensionsFields)
@@ -130,7 +130,7 @@ function prepareInputMapping(action, schema, extensionKey, selectFields) {
     const field = schema.find(f =>
       f['x-refersTo'] === input.concept &&
       f['x-refersTo'] !== 'http://schema.org/identifier' &&
-      f.key.indexOf(extensionKey) !== 0
+      f.key.indexOf(extensionKey) !== 0,
     )
     if (field) return [field.key, input.name, field]
   }).filter(i => i)
@@ -149,7 +149,7 @@ function prepareInputMapping(action, schema, extensionKey, selectFields) {
       const h = hash(mappedItem)
       mappedItem[idInput.name] = item.id
       return [mappedItem, h]
-    }
+    },
   }
 }
 
@@ -172,14 +172,14 @@ class ESInputStream extends Readable {
         bool: {
           should: options.inputMapping.fields.map(f => {
             const notEmpty = {
-              bool: { must: { exists: { field: f[0] } } }
+              bool: { must: { exists: { field: f[0] } } },
             }
             if (f[2].type === 'string') {
               notEmpty.bool.must_not = { term: { [f[0]]: '' } }
             }
             return notEmpty
-          })
-        }
+          }),
+        },
       }
       if (!this.forceNext) {
         this.countQuery = JSON.parse(JSON.stringify(this.query))
@@ -194,14 +194,14 @@ class ESInputStream extends Readable {
     debug('Count missing query', JSON.stringify(this.query))
     const res = await this.esClient.count({
       index: this.indexName,
-      body: { query: this.query }
+      body: { query: this.query },
     })
     this.stats.missing = res.count
     if (this.countQuery) {
       debug('Count already done query', JSON.stringify(this.countQuery))
       const res = await this.esClient.count({
         index: this.indexName,
-        body: { query: this.countQuery }
+        body: { query: this.countQuery },
       })
       this.stats.count = res.count
     } else {
@@ -222,7 +222,7 @@ class ESInputStream extends Readable {
           index: this.indexName,
           scroll: '15m',
           size: 1000,
-          body: { query: this.query }
+          body: { query: this.query },
         })
       } else {
         res = await this.esClient.scroll({ scroll_id: this.scrollId, scroll: '15m' })
@@ -270,9 +270,9 @@ class RemoteExtensionStream extends Transform {
       headers: {
         Accept: 'application/x-ndjson',
         'Content-Type': 'application/x-ndjson',
-        'x-consumer': JSON.stringify(options.dataset.owner)
+        'x-consumer': JSON.stringify(options.dataset.owner),
       },
-      qs: {}
+      qs: {},
     }
     // TODO handle query & cookie header types
     if (options.remoteService.apiKey && options.remoteService.apiKey.in === 'header' && options.remoteService.apiKey.value) {
@@ -368,8 +368,8 @@ class RemoteExtensionStream extends Transform {
           } catch (err) {
             cb(err)
           }
-        }
-      })
+        },
+      }),
     )
   }
 }
@@ -422,7 +422,7 @@ class PreserveExtensionStream extends Transform {
         searches.push({
           size: 1,
           _source: `${extensionKey}.*`,
-          query: { constant_score: { filter: { term: { [extensionKey + '._hash']: h } } } }
+          query: { constant_score: { filter: { term: { [extensionKey + '._hash']: h } } } },
         })
       })
     })

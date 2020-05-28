@@ -6,7 +6,7 @@ const datasetPatch = require('./dataset-patch')
 const datasetPost = JSON.parse(JSON.stringify(require('./dataset-post')))
 datasetPost.file = {
   type: 'string',
-  format: 'binary'
+  format: 'binary',
 }
 const remoteService = { ...require('./remote-service') }
 delete remoteService.definitions
@@ -32,11 +32,11 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
 Pour des exemples simples de publication de données vous pouvez consulter la [documentation sur ce sujet](${config.publicUrl}/interoperate/api).
 `,
     version: version,
-    'x-api-id': 'data-fair'
+    'x-api-id': 'data-fair',
   }, config.info),
   servers: [{
     url: config.publicUrl + '/api/v1',
-    description: 'Serveur de ' + process.env.NODE_ENV || 'development'
+    description: 'Serveur de ' + process.env.NODE_ENV || 'development',
   }],
   components: {
     schemas: {
@@ -48,20 +48,20 @@ Pour des exemples simples de publication de données vous pouvez consulter la [d
       application,
       applicationPatch,
       catalog,
-      catalogPatch
+      catalogPatch,
     },
     securitySchemes: {
       apiKey: {
         type: 'apiKey',
         in: 'header',
-        name: 'x-apiKey'
+        name: 'x-apiKey',
       },
       sdCookie: {
         type: 'apiKey',
         in: 'cookie',
-        name: 'id_token'
-      }
-    }
+        name: 'id_token',
+      },
+    },
   },
   security: [{ apiKey: [] }, { sdCookie: [] }],
   paths: {
@@ -80,13 +80,13 @@ Pour des exemples simples de publication de données vous pouvez consulter la [d
                 examples: [{
                   status: 'ok',
                   message: 'Service is ok',
-                  details: 'Service is ok'
-                }]
-              }
-            }
-          }
-        }
-      }
+                  details: 'Service is ok',
+                }],
+              },
+            },
+          },
+        },
+      },
     },
     '/ping': {
       get: {
@@ -96,13 +96,13 @@ Pour des exemples simples de publication de données vous pouvez consulter la [d
         'x-operationType': 'http://schema.org/CheckAction',
         responses: {
           200: {
-            description: 'Service ok'
+            description: 'Service ok',
           },
           500: {
-            description: 'Service ko'
-          }
-        }
-      }
+            description: 'Service ko',
+          },
+        },
+      },
     },
     '/api-docs.json': {
       get: {
@@ -114,12 +114,12 @@ Pour des exemples simples de publication de données vous pouvez consulter la [d
             description: 'Etat de santé du service',
             content: {
               'application/json': {
-                schema: { type: 'object' }
-              }
-            }
-          }
-        }
-      }
+                schema: { type: 'object' },
+              },
+            },
+          },
+        },
+      },
     },
     '/vocabulary': {
       get: {
@@ -140,17 +140,17 @@ Pour des exemples simples de publication de données vous pouvez consulter la [d
                       description: { type: 'string' },
                       identifiers: {
                         type: 'array',
-                        items: { type: 'string' }
+                        items: { type: 'string' },
                       },
-                      type: { type: 'string' }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
+                      type: { type: 'string' },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
     },
     '/datasets': {
       get: {
@@ -169,7 +169,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la [d
           utils.booleanParam('files', 'Restrieindre aux jeux avec fichiers attachés'),
           utils.booleanParam('bbox', 'Restreindre aux jeux géographiques'),
           ...utils.paginationParams,
-          ...utils.visibilityParams
+          ...utils.visibilityParams,
         ],
         responses: {
           200: {
@@ -181,20 +181,20 @@ Pour des exemples simples de publication de données vous pouvez consulter la [d
                   properties: {
                     count: {
                       type: 'number',
-                      description: 'Nombre total de jeux de données'
+                      description: 'Nombre total de jeux de données',
                     },
                     results: {
                       type: 'array',
                       items: {
-                        $ref: '#/components/schemas/dataset'
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
+                        $ref: '#/components/schemas/dataset',
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
       },
       post: {
         summary: 'Importer un jeu de données.',
@@ -206,10 +206,10 @@ Pour des exemples simples de publication de données vous pouvez consulter la [d
           content: {
             'multipart/form-data': {
               schema: {
-                $ref: '#/components/schemas/datasetPost'
-              }
-            }
-          }
+                $ref: '#/components/schemas/datasetPost',
+              },
+            },
+          },
         },
         responses: {
           200: {
@@ -217,13 +217,13 @@ Pour des exemples simples de publication de données vous pouvez consulter la [d
             content: {
               'application/json': {
                 schema: {
-                  $ref: '#/components/schemas/dataset'
-                }
-              }
-            }
-          }
-        }
-      }
+                  $ref: '#/components/schemas/dataset',
+                },
+              },
+            },
+          },
+        },
+      },
     },
     '/datasets/{id}': {
       parameters: [utils.idParam],
@@ -237,12 +237,12 @@ Pour des exemples simples de publication de données vous pouvez consulter la [d
             content: {
               'application/json': {
                 schema: {
-                  $ref: '#/components/schemas/dataset'
-                }
-              }
-            }
-          }
-        }
+                  $ref: '#/components/schemas/dataset',
+                },
+              },
+            },
+          },
+        },
       },
       put: {
         summary: 'Créer ou mettre à jour un jeu de données.',
@@ -254,10 +254,10 @@ Pour des exemples simples de publication de données vous pouvez consulter la [d
           content: {
             'multipart/form-data': {
               schema: {
-                $ref: '#/components/schemas/datasetPost'
-              }
-            }
-          }
+                $ref: '#/components/schemas/datasetPost',
+              },
+            },
+          },
         },
         responses: {
           201: {
@@ -265,22 +265,22 @@ Pour des exemples simples de publication de données vous pouvez consulter la [d
             content: {
               'application/json': {
                 schema: {
-                  $ref: '#/components/schemas/dataset'
-                }
-              }
-            }
+                  $ref: '#/components/schemas/dataset',
+                },
+              },
+            },
           },
           200: {
             description: 'Jeu de données modifié',
             content: {
               'application/json': {
                 schema: {
-                  $ref: '#/components/schemas/dataset'
-                }
-              }
-            }
-          }
-        }
+                  $ref: '#/components/schemas/dataset',
+                },
+              },
+            },
+          },
+        },
       },
       patch: {
         summary: 'Modifier seulement certaines informations.',
@@ -292,10 +292,10 @@ Pour des exemples simples de publication de données vous pouvez consulter la [d
           content: {
             'application/json': {
               schema: {
-                $ref: '#/components/schemas/datasetPatch'
-              }
-            }
-          }
+                $ref: '#/components/schemas/datasetPatch',
+              },
+            },
+          },
         },
         responses: {
           200: {
@@ -303,12 +303,12 @@ Pour des exemples simples de publication de données vous pouvez consulter la [d
             content: {
               'application/json': {
                 schema: {
-                  $ref: '#/components/schemas/dataset'
-                }
-              }
-            }
-          }
-        }
+                  $ref: '#/components/schemas/dataset',
+                },
+              },
+            },
+          },
+        },
       },
       delete: {
         summary: 'Supprimer un jeu de données.',
@@ -316,10 +316,10 @@ Pour des exemples simples de publication de données vous pouvez consulter la [d
         tags: ['Jeux de données'],
         responses: {
           204: {
-            description: 'Jeu de données supprimé'
-          }
-        }
-      }
+            description: 'Jeu de données supprimé',
+          },
+        },
+      },
     },
     '/applications': {
       get: {
@@ -334,7 +334,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la [d
           utils.filterParam('dataset', 'Restreindre sur les jeux de données utilisés'),
           utils.filterParam('service', 'Restreindre sur les services distants utilisés'),
           ...utils.paginationParams,
-          ...utils.visibilityParams
+          ...utils.visibilityParams,
         ],
         responses: {
           200: {
@@ -346,20 +346,20 @@ Pour des exemples simples de publication de données vous pouvez consulter la [d
                   properties: {
                     count: {
                       type: 'number',
-                      description: 'Nombre total d\'applications'
+                      description: 'Nombre total d\'applications',
                     },
                     results: {
                       type: 'array',
                       items: {
-                        $ref: '#/components/schemas/application'
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
+                        $ref: '#/components/schemas/application',
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
       },
       post: {
         summary: 'Configurer une application.',
@@ -370,9 +370,9 @@ Pour des exemples simples de publication de données vous pouvez consulter la [d
           required: true,
           content: {
             schema: {
-              $ref: '#/components/schemas/application'
-            }
-          }
+              $ref: '#/components/schemas/application',
+            },
+          },
         },
         responses: {
           201: {
@@ -380,13 +380,13 @@ Pour des exemples simples de publication de données vous pouvez consulter la [d
             content: {
               'application/json': {
                 schema: {
-                  $ref: '#/components/schemas/application'
-                }
-              }
-            }
-          }
-        }
-      }
+                  $ref: '#/components/schemas/application',
+                },
+              },
+            },
+          },
+        },
+      },
     },
     '/applications/{id}': {
       parameters: [utils.idParam],
@@ -400,12 +400,12 @@ Pour des exemples simples de publication de données vous pouvez consulter la [d
             content: {
               'application/json': {
                 schema: {
-                  $ref: '#/components/schemas/application'
-                }
-              }
-            }
-          }
-        }
+                  $ref: '#/components/schemas/application',
+                },
+              },
+            },
+          },
+        },
       },
       put: {
         summary: 'Créer ou mettre à jour une application.',
@@ -417,10 +417,10 @@ Pour des exemples simples de publication de données vous pouvez consulter la [d
           content: {
             'application/json': {
               schema: {
-                $ref: '#/components/schemas/application'
-              }
-            }
-          }
+                $ref: '#/components/schemas/application',
+              },
+            },
+          },
         },
         responses: {
           201: {
@@ -428,22 +428,22 @@ Pour des exemples simples de publication de données vous pouvez consulter la [d
             content: {
               'application/json': {
                 schema: {
-                  $ref: '#/components/schemas/application'
-                }
-              }
-            }
+                  $ref: '#/components/schemas/application',
+                },
+              },
+            },
           },
           200: {
             description: 'Application modifiée',
             content: {
               'application/json': {
                 schema: {
-                  $ref: '#/components/schemas/application'
-                }
-              }
-            }
-          }
-        }
+                  $ref: '#/components/schemas/application',
+                },
+              },
+            },
+          },
+        },
       },
       patch: {
         summary: 'Modifier seulement certaines informations.',
@@ -455,10 +455,10 @@ Pour des exemples simples de publication de données vous pouvez consulter la [d
           content: {
             'application/json': {
               schema: {
-                $ref: '#/components/schemas/applicationPatch'
-              }
-            }
-          }
+                $ref: '#/components/schemas/applicationPatch',
+              },
+            },
+          },
         },
         responses: {
           200: {
@@ -466,12 +466,12 @@ Pour des exemples simples de publication de données vous pouvez consulter la [d
             content: {
               'application/json': {
                 schema: {
-                  $ref: '#/components/schemas/application'
-                }
-              }
-            }
-          }
-        }
+                  $ref: '#/components/schemas/application',
+                },
+              },
+            },
+          },
+        },
       },
       delete: {
         summary: 'Supprimer une application.',
@@ -479,10 +479,10 @@ Pour des exemples simples de publication de données vous pouvez consulter la [d
         tags: ['Applications'],
         responses: {
           204: {
-            description: 'Application supprimée'
-          }
-        }
-      }
+            description: 'Application supprimée',
+          },
+        },
+      },
     },
     '/remote-services': {
       get: {
@@ -495,7 +495,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la [d
           utils.filterParam('api-id', 'Restreindre sur l\'identifiant de l\'API d\'origine'),
           utils.filterParam('input-concepts', 'Restreindre sur les concepts en entrée des routes de l\'API'),
           utils.filterParam('output-concepts', 'Restreindre sur les concepts en sortie des routes de l\'API'),
-          ...utils.paginationParams
+          ...utils.paginationParams,
         ],
         responses: {
           200: {
@@ -507,20 +507,20 @@ Pour des exemples simples de publication de données vous pouvez consulter la [d
                   properties: {
                     count: {
                       type: 'number',
-                      description: 'Nombre total de services distants'
+                      description: 'Nombre total de services distants',
                     },
                     results: {
                       type: 'array',
                       items: {
-                        $ref: '#/components/schemas/remoteService'
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
+                        $ref: '#/components/schemas/remoteService',
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
       },
       post: {
         summary: 'Configurer un service distant.',
@@ -532,10 +532,10 @@ Pour des exemples simples de publication de données vous pouvez consulter la [d
           content: {
             'application/json': {
               schema: {
-                $ref: '#/components/schemas/remoteService'
-              }
-            }
-          }
+                $ref: '#/components/schemas/remoteService',
+              },
+            },
+          },
         },
         responses: {
           201: {
@@ -543,13 +543,13 @@ Pour des exemples simples de publication de données vous pouvez consulter la [d
             content: {
               'application/json': {
                 schema: {
-                  $ref: '#/components/schemas/remoteService'
-                }
-              }
-            }
-          }
-        }
-      }
+                  $ref: '#/components/schemas/remoteService',
+                },
+              },
+            },
+          },
+        },
+      },
     },
     '/remote-services/{id}': {
       parameters: [utils.idParam],
@@ -563,12 +563,12 @@ Pour des exemples simples de publication de données vous pouvez consulter la [d
             content: {
               'application/json': {
                 schema: {
-                  $ref: '#/components/schemas/remoteService'
-                }
-              }
-            }
-          }
-        }
+                  $ref: '#/components/schemas/remoteService',
+                },
+              },
+            },
+          },
+        },
       },
       put: {
         summary: 'Créer ou mettre à jour un service distant.',
@@ -580,10 +580,10 @@ Pour des exemples simples de publication de données vous pouvez consulter la [d
           content: {
             'application/json': {
               schema: {
-                $ref: '#/components/schemas/remoteService'
-              }
-            }
-          }
+                $ref: '#/components/schemas/remoteService',
+              },
+            },
+          },
         },
         responses: {
           201: {
@@ -591,22 +591,22 @@ Pour des exemples simples de publication de données vous pouvez consulter la [d
             content: {
               'application/json': {
                 schema: {
-                  $ref: '#/components/schemas/remoteService'
-                }
-              }
-            }
+                  $ref: '#/components/schemas/remoteService',
+                },
+              },
+            },
           },
           200: {
             description: 'Service distant modifié',
             content: {
               'application/json': {
                 schema: {
-                  $ref: '#/components/schemas/remoteService'
-                }
-              }
-            }
-          }
-        }
+                  $ref: '#/components/schemas/remoteService',
+                },
+              },
+            },
+          },
+        },
       },
       patch: {
         summary: 'Modifier seulement certaines informations.',
@@ -618,10 +618,10 @@ Pour des exemples simples de publication de données vous pouvez consulter la [d
           content: {
             'application/json': {
               schema: {
-                $ref: '#/components/schemas/remoteServicePatch'
-              }
-            }
-          }
+                $ref: '#/components/schemas/remoteServicePatch',
+              },
+            },
+          },
         },
         responses: {
           200: {
@@ -629,12 +629,12 @@ Pour des exemples simples de publication de données vous pouvez consulter la [d
             content: {
               'application/json': {
                 schema: {
-                  $ref: '#/components/schemas/remoteService'
-                }
-              }
-            }
-          }
-        }
+                  $ref: '#/components/schemas/remoteService',
+                },
+              },
+            },
+          },
+        },
       },
       delete: {
         summary: 'Supprimer un service distant.',
@@ -642,10 +642,10 @@ Pour des exemples simples de publication de données vous pouvez consulter la [d
         tags: ['Services distants'],
         responses: {
           204: {
-            description: 'Service distant supprimé'
-          }
-        }
-      }
+            description: 'Service distant supprimé',
+          },
+        },
+      },
     },
     '/catalogs': {
       get: {
@@ -657,7 +657,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la [d
           utils.ownerParam,
           utils.selectParam(Object.keys(application.properties)),
           ...utils.paginationParams,
-          ...utils.visibilityParams
+          ...utils.visibilityParams,
         ],
         responses: {
           200: {
@@ -669,20 +669,20 @@ Pour des exemples simples de publication de données vous pouvez consulter la [d
                   properties: {
                     count: {
                       type: 'number',
-                      description: 'Nombre total de catalogues'
+                      description: 'Nombre total de catalogues',
                     },
                     results: {
                       type: 'array',
                       items: {
-                        $ref: '#/components/schemas/catalog'
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
+                        $ref: '#/components/schemas/catalog',
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
       },
       post: {
         summary: 'Configurer un catalogue.',
@@ -694,10 +694,10 @@ Pour des exemples simples de publication de données vous pouvez consulter la [d
           content: {
             'application/json': {
               schema: {
-                $ref: '#/components/schemas/catalog'
-              }
-            }
-          }
+                $ref: '#/components/schemas/catalog',
+              },
+            },
+          },
         },
         responses: {
           201: {
@@ -705,13 +705,13 @@ Pour des exemples simples de publication de données vous pouvez consulter la [d
             content: {
               'application/json': {
                 schema: {
-                  $ref: '#/components/schemas/catalog'
-                }
-              }
-            }
-          }
-        }
-      }
+                  $ref: '#/components/schemas/catalog',
+                },
+              },
+            },
+          },
+        },
+      },
     },
     '/catalogs/{id}': {
       parameters: [utils.idParam],
@@ -725,12 +725,12 @@ Pour des exemples simples de publication de données vous pouvez consulter la [d
             content: {
               'application/json': {
                 schema: {
-                  $ref: '#/components/schemas/catalog'
-                }
-              }
-            }
-          }
-        }
+                  $ref: '#/components/schemas/catalog',
+                },
+              },
+            },
+          },
+        },
       },
       put: {
         summary: 'Créer ou mettre à jour un catalogue.',
@@ -742,10 +742,10 @@ Pour des exemples simples de publication de données vous pouvez consulter la [d
           content: {
             'application/json': {
               schema: {
-                $ref: '#/components/schemas/catalog'
-              }
-            }
-          }
+                $ref: '#/components/schemas/catalog',
+              },
+            },
+          },
         },
         responses: {
           201: {
@@ -753,22 +753,22 @@ Pour des exemples simples de publication de données vous pouvez consulter la [d
             content: {
               'application/json': {
                 schema: {
-                  $ref: '#/components/schemas/catalog'
-                }
-              }
-            }
+                  $ref: '#/components/schemas/catalog',
+                },
+              },
+            },
           },
           200: {
             description: 'Catalogue modifié',
             content: {
               'application/json': {
                 schema: {
-                  $ref: '#/components/schemas/catalog'
-                }
-              }
-            }
-          }
-        }
+                  $ref: '#/components/schemas/catalog',
+                },
+              },
+            },
+          },
+        },
       },
       patch: {
         summary: 'Modifier seulement certaines informations.',
@@ -780,10 +780,10 @@ Pour des exemples simples de publication de données vous pouvez consulter la [d
           content: {
             'application/json': {
               schema: {
-                $ref: '#/components/schemas/catalogPatch'
-              }
-            }
-          }
+                $ref: '#/components/schemas/catalogPatch',
+              },
+            },
+          },
         },
         responses: {
           200: {
@@ -791,12 +791,12 @@ Pour des exemples simples de publication de données vous pouvez consulter la [d
             content: {
               'application/json': {
                 schema: {
-                  $ref: '#/components/schemas/catalog'
-                }
-              }
-            }
-          }
-        }
+                  $ref: '#/components/schemas/catalog',
+                },
+              },
+            },
+          },
+        },
       },
       delete: {
         summary: 'Supprimer un catalogue.',
@@ -804,20 +804,20 @@ Pour des exemples simples de publication de données vous pouvez consulter la [d
         tags: ['Catalogues'],
         responses: {
           204: {
-            description: 'Catalogue supprimé'
-          }
-        }
-      }
-    }
+            description: 'Catalogue supprimé',
+          },
+        },
+      },
+    },
   },
   externalDocs: {
     description: 'Documentation sur Github',
-    url: 'https://koumoul-dev.github.io/data-fair/'
+    url: 'https://koumoul-dev.github.io/data-fair/',
   },
   definitions: {
     API: {
       type: 'object',
-      description: 'Open API v3 compliant documentation'
-    }
-  }
+      description: 'Open API v3 compliant documentation',
+    },
+  },
 }

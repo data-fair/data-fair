@@ -36,7 +36,10 @@
 
         <p>Les filtres peuvent contenir plusieurs valeurs séparées par des virgules.</p>
         <template v-for="operation in operations">
-          <div v-if="remoteService.parameters.filter(p => p.operationId === operation.id).length" :key="operation.id">
+          <div
+            v-if="remoteService.parameters.filter(p => p.operationId === operation.id).length"
+            :key="operation.id"
+          >
             <h3 class="title mt-4 mb-2">
               {{ operation.title }}
             </h3>
@@ -55,49 +58,49 @@
 </template>
 
 <script>
-import { mapState, mapActions } from 'vuex'
+  import { mapState, mapActions } from 'vuex'
 
-export default {
-  data: () => ({
-    restrictions: []
-  }),
-  computed: {
-    ...mapState('remoteService', ['remoteService']),
-    api() {
-      return this.remoteService.apiDoc
+  export default {
+    data: () => ({
+      restrictions: [],
+    }),
+    computed: {
+      ...mapState('remoteService', ['remoteService']),
+      api() {
+        return this.remoteService.apiDoc
+      },
+      operations() {
+        return (this.api && [].concat(...Object.keys(this.api.paths).map(path => Object.keys(this.api.paths[path]).map(method => ({
+          id: this.api.paths[path][method].operationId,
+          title: this.api.paths[path][method].summary,
+          parameters: this.api.paths[path][method].parameters || [],
+        }))))) || []
+      },
     },
-    operations() {
-      return (this.api && [].concat(...Object.keys(this.api.paths).map(path => Object.keys(this.api.paths[path]).map(method => ({
-        id: this.api.paths[path][method].operationId,
-        title: this.api.paths[path][method].summary,
-        parameters: this.api.paths[path][method].parameters || []
-      }))))) || []
-    }
-  },
-  watch: {
-    operations() {
+    watch: {
+      operations() {
+        this.setRestrictions()
+      },
+    },
+    created() {
+      this.remoteService.apiKey = this.remoteService.apiKey || { in: 'header' }
       this.setRestrictions()
-    }
-  },
-  created() {
-    this.remoteService.apiKey = this.remoteService.apiKey || { in: 'header' }
-    this.setRestrictions()
-  },
-  methods: {
-    ...mapActions('remoteService', ['patch']),
-    setRestrictions() {
-      this.operations.forEach(operation => {
-        operation.parameters.filter(p => !!p['x-refersTo'] && p.in === 'query').forEach(param => {
-          let staticParam = this.remoteService.parameters.find(p => p.operationId === operation.id && p.name === param.name)
-          if (!staticParam) {
-            staticParam = { operationId: operation.id, name: param.name, value: '' }
-            this.remoteService.parameters.push(staticParam)
-          }
-          staticParam['x-refersTo'] = param['x-refersTo']
-          staticParam.title = param.title || param.description
+    },
+    methods: {
+      ...mapActions('remoteService', ['patch']),
+      setRestrictions() {
+        this.operations.forEach(operation => {
+          operation.parameters.filter(p => !!p['x-refersTo'] && p.in === 'query').forEach(param => {
+            let staticParam = this.remoteService.parameters.find(p => p.operationId === operation.id && p.name === param.name)
+            if (!staticParam) {
+              staticParam = { operationId: operation.id, name: param.name, value: '' }
+              this.remoteService.parameters.push(staticParam)
+            }
+            staticParam['x-refersTo'] = param['x-refersTo']
+            staticParam.title = param.title || param.description
+          })
         })
-      })
-    }
+      },
+    },
   }
-}
 </script>

@@ -1,7 +1,7 @@
 // A module of the store for the currently worked on dataset
 // Used in the dataset vue and all its tabs and their components
 import Vue from 'vue'
-import eventBus from '../event-bus.js'
+import eventBus from '~/event-bus'
 
 export default () => ({
   namespaced: true,
@@ -12,7 +12,8 @@ export default () => ({
     journal: [],
     remoteServices: [],
     nbApplications: null,
-    nbVirtualDatasets: null
+    nbVirtualDatasets: null,
+    dataFiles: null,
   },
   getters: {
     resourceUrl: (state, getters, rootState) => state.datasetId ? rootState.env.publicUrl + '/api/v1/datasets/' + state.datasetId : null,
@@ -46,7 +47,7 @@ export default () => ({
         return userOrga && userOrga.role === 'admin'
       }
       return false
-    }
+    },
   },
   mutations: {
     setAny(state, params) {
@@ -59,10 +60,10 @@ export default () => ({
       if (!state.journal.find(e => e.date === event.date)) {
         state.journal.unshift(event)
       }
-    }
+    },
   },
   actions: {
-    async fetchInfo({ commit, getters, state }) {
+    async fetchInfo({ commit, dispatch, getters, state }) {
       let dataset
       try {
         dataset = await this.$axios.$get(`api/v1/datasets/${state.datasetId}`)
@@ -78,17 +79,36 @@ export default () => ({
         Vue.set(dataset, 'publications', dataset.publications || [])
 
         commit('setAny', { dataset })
-        const apps = await this.$axios.$get('api/v1/applications', { params: { dataset: dataset.id, size: 0 } })
-        commit('setAny', { nbApplications: apps.count })
-        const virtuals = await this.$axios.$get('api/v1/datasets', { params: { children: dataset.id, size: 0 } })
-        commit('setAny', { nbVirtualDatasets: virtuals.count })
-        const api = await this.$axios.$get(`api/v1/datasets/${state.datasetId}/api-docs.json`)
-        commit('setAny', { api })
-        const journal = await this.$axios.$get(`api/v1/datasets/${state.datasetId}/journal`)
-        commit('setAny', { journal })
+        await Promise.all([
+          dispatch('fetchApplications'),
+          dispatch('fetchVirtuals'),
+          dispatch('fetchApiDoc'),
+          dispatch('fetchDataFiles'),
+          dispatch('fetchJournal'),
+        ])
       } catch (error) {
         eventBus.$emit('notification', { error, msg: 'Erreur pendant la récupération des informations du jeu de données:' })
       }
+    },
+    async fetchApplications({ commit, state }) {
+      const apps = await this.$axios.$get('api/v1/applications', { params: { dataset: state.dataset.id, size: 0 } })
+      commit('setAny', { nbApplications: apps.count })
+    },
+    async fetchVirtuals({ commit, state }) {
+      const virtuals = await this.$axios.$get('api/v1/datasets', { params: { children: state.dataset.id, size: 0 } })
+      commit('setAny', { nbVirtualDatasets: virtuals.count })
+    },
+    async fetchApiDoc({ commit, state }) {
+      const api = await this.$axios.$get(`api/v1/datasets/${state.datasetId}/api-docs.json`)
+      commit('setAny', { api })
+    },
+    async fetchJournal({ commit, state }) {
+      const journal = await this.$axios.$get(`api/v1/datasets/${state.datasetId}/journal`)
+      commit('setAny', { journal })
+    },
+    async fetchDataFiles({ commit, state }) {
+      const dataFiles = await this.$axios.$get(`api/v1/datasets/${state.datasetId}/data-files`)
+      commit('setAny', { dataFiles })
     },
     async setId({ commit, getters, dispatch, state }, datasetId) {
       commit('setAny', { datasetId })
@@ -133,10 +153,8 @@ export default () => ({
       await this.$axios.$post(`api/v1/datasets/${state.dataset.id}/_reindex`)
     },
     async remove({ state, getters, dispatch }) {
-      const options = { headers: { 'x-organizationId': 'user' } }
-      if (state.dataset.owner.type === 'organization') options.headers = { 'x-organizationId': state.dataset.owner.id }
       try {
-        await this.$axios.delete(getters.resourceUrl, options)
+        await this.$axios.delete(getters.resourceUrl)
         eventBus.$emit('notification', `Le jeu de données ${state.dataset.title} a bien été supprimé`)
       } catch (error) {
         eventBus.$emit('notification', { error, msg: 'Erreur pendant la suppression du jeu de données' })
@@ -152,8 +170,8 @@ export default () => ({
         const data = await this.$axios.$get('api/v1/remote-services', {
           params: {
             'input-concepts': inputConcepts,
-            size: 100
-          }
+            size: 100,
+          },
         })
         remoteServices = data.results
       }
@@ -167,6 +185,6 @@ export default () => ({
       } catch (error) {
         eventBus.$emit('notification', { error, msg: 'Erreur pendant le changement de propriétaire' })
       }
-    }
-  }
+    },
+  },
 })

@@ -1,7 +1,6 @@
 // convert from tabular data to csv or geographical data to geojson
 const path = require('path')
 const fs = require('fs-extra')
-const config = require('config')
 const XLSX = require('xlsx')
 const createError = require('http-errors')
 const ogr2ogr = require('ogr2ogr')
@@ -16,7 +15,7 @@ const vocabulary = require('../../contract/vocabulary')
 exports.eventsPrefix = 'convert'
 
 const archiveTypes = exports.archiveTypes = new Set([
-  'application/zip' // .zip
+  'application/zip', // .zip
   /* 'application/x-7z-compressed', // .7z
   'application/x-bzip', // .bzip
   'application/x-bzip2', // .bzip2
@@ -29,12 +28,12 @@ const tabularTypes = exports.tabularTypes = new Set([
   'application/vnd.ms-excel', // xls
   'application/dbase', // dbf
   'text/plain', // txt, dif
-  'text/tab-separated-values' // tsv
+  'text/tab-separated-values', // tsv
 ])
 const geographicalTypes = exports.geographicalTypes = new Set([
   'application/vnd.google-earth.kml+xml', // kml
   'application/vnd.google-earth.kmz', // kmz
-  'application/gpx+xml' // gpx or xml ?
+  'application/gpx+xml', // gpx or xml ?
 ])
 const calendarTypes = exports.calendarTypes = new Set(['text/calendar'])
 
@@ -43,21 +42,23 @@ async function decompress(mimetype, filePath, dirPath) {
 }
 
 exports.process = async function(app, dataset) {
+  const debug = require('debug')(`worker:converter:${dataset.id}`)
   const db = app.get('db')
   const originalFilePath = datasetUtils.originalFileName(dataset)
+  const baseName = path.parse(dataset.originalFile.name).name
 
   let isShapefile = false
   if (archiveTypes.has(dataset.originalFile.mimetype)) {
     const dirName = datasetUtils.attachmentsDir(dataset)
+    debug('decompress', dataset.originalFile.mimetype, originalFilePath, dirName)
     await decompress(dataset.originalFile.mimetype, originalFilePath, dirName)
     const files = await datasetUtils.lsAttachments(dataset)
     const fileNames = files.map(f => path.parse(f).base)
-    const baseName = path.parse(dataset.originalFile.name).name
     // Check if this archive is actually a shapefile source
     if (fileNames.find(f => f === baseName + '.shp') && fileNames.find(f => f === baseName + '.shx') && fileNames.find(f => f === baseName + '.dbf')) {
       isShapefile = true
     } else {
-      const csvFilePath = path.join(config.dataDir, dataset.owner.type, dataset.owner.id, dataset.id + '.csv')
+      const csvFilePath = path.join(datasetUtils.dir(dataset), baseName + '.csv')
       // Either there is a data.csv in this archive and we use it as the main source for data related to the files, or we create it
       const csvContent = 'file\n' + files.map(f => `"${f}"`).join('\n') + '\n'
       await fs.writeFile(csvFilePath, csvContent)
@@ -65,7 +66,7 @@ exports.process = async function(app, dataset) {
         name: path.parse(dataset.originalFile.name).name + '.csv',
         size: await fs.stat(csvFilePath).size,
         mimetype: 'text/csv',
-        encoding: 'utf-8'
+        encoding: 'utf-8',
       }
       if (!dataset.schema.find(f => f.key === 'file')) {
         const concept = vocabulary.find(c => c.identifiers.includes('http://schema.org/DigitalDocument'))
@@ -75,7 +76,7 @@ exports.process = async function(app, dataset) {
           type: 'string',
           title: concept.title,
           description: concept.description,
-          'x-refersTo': 'http://schema.org/DigitalDocument'
+          'x-refersTo': 'http://schema.org/DigitalDocument',
         })
       }
     }
@@ -85,17 +86,17 @@ exports.process = async function(app, dataset) {
     // TODO : store these file size limits in config file ?
     if (dataset.originalFile.size > 10 * 1000 * 1000) throw createError(400, 'File size of this format must not exceed 10 MB. You can however convert your file to CSV with an external tool and reupload it.')
     const { eventsStream, infos } = await icalendar.parse(originalFilePath)
-    const filePath = path.join(config.dataDir, dataset.owner.type, dataset.owner.id, dataset.id + '.csv')
+    const filePath = path.join(datasetUtils.dir(dataset), baseName + '.csv')
     await pump(
       eventsStream,
       csvStringify({ columns: ['DTSTART', 'DTEND', 'SUMMARY', 'LOCATION', 'CATEGORIES', 'STATUS', 'DESCRIPTION', 'TRANSP', 'SEQUENCE', 'GEO', 'URL'], header: true }),
-      fs.createWriteStream(filePath)
+      fs.createWriteStream(filePath),
     )
     dataset.file = {
       name: path.parse(dataset.originalFile.name).name + '.csv',
       size: await fs.stat(filePath).size,
       mimetype: 'text/csv',
-      encoding: 'utf-8'
+      encoding: 'utf-8',
     }
     icalendar.prepareSchema(dataset, infos)
   } else if (tabularTypes.has(dataset.originalFile.mimetype)) {
@@ -104,13 +105,13 @@ exports.process = async function(app, dataset) {
     const workbook = XLSX.readFile(originalFilePath)
     const worksheet = workbook.Sheets[workbook.SheetNames[0]]
     const data = XLSX.utils.sheet_to_csv(worksheet)
-    const filePath = path.join(config.dataDir, dataset.owner.type, dataset.owner.id, dataset.id + '.csv')
+    const filePath = path.join(datasetUtils.dir(dataset), baseName + '.csv')
     await fs.writeFile(filePath, data)
     dataset.file = {
       name: path.parse(dataset.originalFile.name).name + '.csv',
       size: await fs.stat(filePath).size,
       mimetype: 'text/csv',
-      encoding: 'utf-8'
+      encoding: 'utf-8',
     }
   } else if (isShapefile || geographicalTypes.has(dataset.originalFile.mimetype)) {
     if (dataset.originalFile.size > 100 * 1000 * 1000) throw createError(400, 'File size of this format must not exceed 10 MB. You can however convert your file to geoJSON with an external tool and reupload it.')
@@ -120,13 +121,13 @@ exports.process = async function(app, dataset) {
       .timeout(120000)
       // .skipfailures()
       .stream()
-    const filePath = path.join(config.dataDir, dataset.owner.type, dataset.owner.id, dataset.id + '.geojson')
+    const filePath = path.join(datasetUtils.dir(dataset), baseName + '.geojson')
     await pump(geoJsonStream, fs.createWriteStream(filePath))
     dataset.file = {
       name: path.parse(dataset.originalFile.name).name + '.geojson',
       size: await fs.stat(filePath).size,
       mimetype: 'application/geo+json',
-      encoding: 'utf-8'
+      encoding: 'utf-8',
     }
   } else {
     // TODO: throw error ?
@@ -138,6 +139,6 @@ exports.process = async function(app, dataset) {
   if (dataset.timeZone) patch.timeZone = dataset.timeZone
 
   await db.collection('datasets').updateOne({ id: dataset.id }, {
-    $set: patch
+    $set: patch,
   })
 }

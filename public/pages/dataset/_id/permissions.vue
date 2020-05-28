@@ -1,20 +1,25 @@
 <template lang="html">
   <v-container>
-    <permissions v-if="can('getPermissions')" :resource="dataset" :resource-url="resourceUrl" :api="api" />
+    <permissions
+      v-if="can('getPermissions')"
+      :resource="dataset"
+      :resource-url="resourceUrl"
+      :api="api"
+    />
   </v-container>
 </template>
 
 <script>
-import { mapState, mapGetters } from 'vuex'
-import Permissions from '../../../components/Permissions.vue'
+  import { mapState, mapGetters } from 'vuex'
+  import Permissions from '~/components/permissions.vue'
 
-export default {
-  components: { Permissions },
-  computed: {
-    ...mapState('dataset', ['dataset', 'api']),
-    ...mapGetters('dataset', ['resourceUrl', 'can'])
+  export default {
+    components: { Permissions },
+    computed: {
+      ...mapState('dataset', ['dataset', 'api']),
+      ...mapGetters('dataset', ['resourceUrl', 'can']),
+    },
   }
-}
 </script>
 
 <style lang="css">

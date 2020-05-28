@@ -37,11 +37,11 @@ const destination = async (req, file, cb) => {
 }
 
 exports.uploadAttachment = multer({
-  storage: multer.diskStorage({ destination })
+  storage: multer.diskStorage({ destination }),
 }).single('attachment')
 
 exports.uploadBulk = multer({
-  storage: multer.diskStorage({ destination })
+  storage: multer.diskStorage({ destination }),
 }).fields([{ name: 'attachments', maxCount: 1 }, { name: 'actions', maxCount: 1 }])
 
 exports.collection = (db, dataset) => {
@@ -53,18 +53,26 @@ exports.revisionsCollection = (db, dataset) => {
 }
 
 exports.initDataset = async (db, dataset) => {
+  // just in cas of badly cleaner data from previous dataset with same if
+  try {
+    await exports.deleteDataset(db, dataset)
+  } catch (err) {
+    // nothing
+  }
   const collection = exports.collection(db, dataset)
-  await collection.createIndex({ _updatedAt: 1 })
-  await collection.createIndex({ _deleted: 1 })
   const revisionsCollection = exports.revisionsCollection(db, dataset)
-  await revisionsCollection.createIndex({ _lineId: 1, _updatedAt: -1 }, { unique: true })
+  await Promise.all([
+    collection.createIndex({ _updatedAt: 1 }),
+    collection.createIndex({ _deleted: 1 }),
+    revisionsCollection.createIndex({ _lineId: 1, _updatedAt: -1 }, { unique: true }),
+  ])
 }
 
 exports.deleteDataset = async (db, dataset) => {
-  const collection = exports.collection(db, dataset)
-  await collection.drop()
-  const revisionsCollection = exports.revisionsCollection(db, dataset)
-  await revisionsCollection.drop()
+  await Promise.all([
+    exports.collection(db, dataset).drop(),
+    exports.revisionsCollection(db, dataset).drop(),
+  ])
 }
 
 const applyTransactions = async (req, transacs, validate) => {
@@ -175,7 +183,7 @@ const compileSchema = (dataset) => {
     properties: dataset.schema
       .filter(f => f.key[0] !== '_')
       .concat([{ key: '_id', type: 'string' }])
-      .reduce((a, b) => { a[b.key] = b; return a }, {})
+      .reduce((a, b) => { a[b.key] = b; return a }, {}),
   })
 }
 
@@ -287,14 +295,14 @@ exports.bulkLines = async (req, res, next) => {
   const summary = {
     nbOk: 0,
     nbErrors: 0,
-    errors: []
+    errors: [],
   }
   const transactionStream = new TransactionStream({ req, validate, summary })
 
   await pump(
     inputStream,
     parseStream,
-    transactionStream
+    transactionStream,
   )
   await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { status: 'updated' } })
   res.send(summary)
@@ -310,7 +318,7 @@ exports.readLineRevisions = async (req, res, next) => {
   const [skip, size] = findUtils.pagination(req.query)
   const [total, results] = await Promise.all([
     revisionsCollection.countDocuments(filter),
-    revisionsCollection.find(filter).sort({ _updatedAt: -1 }).skip(skip).limit(size).toArray()
+    revisionsCollection.find(filter).sort({ _updatedAt: -1 }).skip(skip).limit(size).toArray(),
   ])
   results.forEach(r => {
     r._id = r._lineId
@@ -328,7 +336,7 @@ exports.readStream = (db, dataset, onlyUpdated) => {
     async transform(chunk, encoding, cb) {
       chunk._i = chunk._updatedAt.getTime()
       cb(null, chunk)
-    }
+    },
   }))
 }
 
@@ -368,7 +376,7 @@ exports.markIndexedStream = (db, dataset) => {
       } catch (err) {
         cb(err)
       }
-    }
+    },
   })
 }
 

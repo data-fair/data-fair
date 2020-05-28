@@ -23,6 +23,7 @@ exports.middleware = function(operationId, permissionClass) {
   }
 }
 
+// TODO: only apply permissions of current active account
 const isOwner = exports.isOwner = function(owner, user) {
   if (!user) return false
   if (owner.type === 'user' && owner.id === user.id) return true
@@ -33,6 +34,7 @@ const isOwner = exports.isOwner = function(owner, user) {
   return false
 }
 
+// TODO: simplify by only applying permissions of current active account
 // resource can be an application, a dataset or an remote service
 exports.can = function(resource, operationId, permissionClass, user) {
   const operationPermissions = (resource.permissions || []).filter(p => p.operations && p.operations.indexOf(operationId) >= 0)
@@ -57,6 +59,7 @@ exports.can = function(resource, operationId, permissionClass, user) {
   }
 }
 
+// TODO: simplify by only applying permissions of current active account
 // list operations a user can do with a resource
 exports.list = function(resource, operationsClasses, user) {
   if (isOwner(resource.owner, user) || (user && user.adminMode)) {
@@ -66,7 +69,7 @@ exports.list = function(resource, operationsClasses, user) {
     const permissions = {
       public: [].concat(...(resource.permissions || []).filter(p => !p.type && !p.id).map(permissionOperations)),
       user: (user && [].concat(...(user && (resource.permissions || []).filter(p => p.type === 'user' && p.id === user.id).map(permissionOperations)))) || [],
-      organizations: {}
+      organizations: {},
     };
 
     (resource.permissions || []).filter(p => p.type === 'organization').forEach(p => {
@@ -104,50 +107,57 @@ exports.filter = function(user) {
     if (user.adminMode) {
       or.push({ 'owner.type': { $exists: true } })
     } else {
-    // user is owner
-      or.push({
-        'owner.type': 'user',
-        'owner.id': user.id
-      })
-      // user is admin of owner organization
-      or.push({
-        'owner.type': 'organization',
-        'owner.id': { $in: user.organizations.filter(o => o.role === config.adminRole).map(o => o.id) }
-      })
-      // organizations where user does not have admin role
-      user.organizations.filter(o => o.role !== config.adminRole).forEach(o => {
+      if (!user.organization) {
+        // user is owner
+        or.push({
+          'owner.type': 'user',
+          'owner.id': user.id,
+        })
+      }
+      if (user.organization && user.organization.role === config.adminRole) {
+        // user is admin of owner organization
         or.push({
           'owner.type': 'organization',
-          'owner.id': o.id,
-          'owner.role': o.role
+          'owner.id': user.organization.id,
+        })
+      }
+      if (user.organization && user.organization.role !== config.adminRole) {
+        // organizations where user does not have admin role
+        or.push({
+          'owner.type': 'organization',
+          'owner.id': user.organization.id,
+          'owner.role': user.organization.role,
         })
         or.push({
           'owner.type': 'organization',
-          'owner.id': o.id,
-          'owner.role': null
+          'owner.id': user.organization.id,
+          'owner.role': null,
         })
-      })
+      }
 
-      // user has specific permission to read
-      or.push({
-        permissions: {
-          $elemMatch: { $or: operationFilter, type: 'user', id: user.id }
-        }
-      })
-      user.organizations.forEach(o => {
+      if (!user.organization) {
+        // user has specific permission to read
+        or.push({
+          permissions: {
+            $elemMatch: { $or: operationFilter, type: 'user', id: user.id },
+          },
+        })
+      }
+      if (user.organization) {
+        // user's orga has specific permission to read
         or.push({
           permissions: {
             $elemMatch: {
               $and: [
                 { $or: operationFilter },
-                { $or: [{ roles: o.role }, { roles: { $size: 0 } }] }
+                { $or: [{ roles: user.organization.role }, { roles: { $size: 0 } }] },
               ],
               type: 'organization',
-              id: o.id
-            }
-          }
+              id: user.organization.id,
+            },
+          },
         })
-      })
+      }
     }
   }
   return or
@@ -197,13 +207,13 @@ module.exports.router = (collectionName, resourceName) => {
         if (wasPublic !== willBePublic) {
           await resources.updateOne({
             id: req[resourceName].id,
-            'publications.status': 'published'
+            'publications.status': 'published',
           }, { $set: { 'publications.$.status': 'waiting' } })
         }
       }
 
       await resources.updateOne({
-        id: req[resourceName].id
+        id: req[resourceName].id,
       }, { $set: { permissions: req.body } })
 
       res.status(200).send(req.body)
@@ -227,11 +237,11 @@ module.exports.apiDoc = {
         description: 'Liste des permissions',
         content: {
           'application/json': {
-            schema: permissionsSchema
-          }
-        }
-      }
-    }
+            schema: permissionsSchema,
+          },
+        },
+      },
+    },
   },
   put: {
     summary: 'Définir la liste des permissions.',
@@ -244,19 +254,19 @@ module.exports.apiDoc = {
       required: true,
       content: {
         'application/json': {
-          schema: permissionsSchema
-        }
-      }
+          schema: permissionsSchema,
+        },
+      },
     },
     responses: {
       200: {
         description: 'Liste des permissions',
         content: {
           'application/json': {
-            schema: permissionsSchema
-          }
-        }
-      }
-    }
-  }
+            schema: permissionsSchema,
+          },
+        },
+      },
+    },
+  },
 }

@@ -59,18 +59,18 @@ router.get('', cacheHeaders.noCache, asyncWrap(async(req, res) => {
   const filterFields = {
     url: 'url',
     'base-application': 'url',
-    dataset: 'configuration.datasets.href'
+    dataset: 'configuration.datasets.href',
   }
   const query = findUtils.query(req, Object.assign({
     ids: 'id',
-    id: 'id'
+    id: 'id',
   }, filterFields))
   const sort = findUtils.sort(req.query.sort)
   const project = findUtils.project(req.query.select, ['configuration', 'configurationDraft'])
   const [skip, size] = findUtils.pagination(req.query)
   const mongoQueries = [
     size > 0 ? applications.find(query).limit(size).skip(skip).sort(sort).project(project).toArray() : Promise.resolve([]),
-    applications.countDocuments(query)
+    applications.countDocuments(query),
   ]
   if (req.query.facets) {
     mongoQueries.push(applications.aggregate(findUtils.facetsQuery(req, filterFields)).toArray())
@@ -208,11 +208,11 @@ router.put('/:applicationId/owner', readApplication, permissions.middleware('del
 // Delete an application configuration
 router.delete('/:applicationId', readApplication, permissions.middleware('delete', 'admin'), asyncWrap(async(req, res) => {
   await req.app.get('db').collection('applications').deleteOne({
-    id: req.params.applicationId
+    id: req.params.applicationId,
   })
   await req.app.get('db').collection('journals').deleteOne({
     type: 'application',
-    id: req.params.applicationId
+    id: req.params.applicationId,
   })
   try {
     await unlink(capture.path(req.application))
@@ -239,9 +239,9 @@ const writeConfig = asyncWrap(async(req, res) => {
         configuration: req.body,
         updatedAt: moment().toISOString(),
         updatedBy: { id: req.user.id, name: req.user.name },
-        status: 'configured'
-      }
-    }
+        status: 'configured',
+      },
+    },
   )
   await journals.log(req.app, req.application, { type: 'config-updated' }, 'application')
   capture.screenshot(req)
@@ -264,9 +264,9 @@ router.put('/:applicationId/configuration-draft', readApplication, permissions.m
         configurationDraft: req.body,
         updatedAt: moment().toISOString(),
         updatedBy: { id: req.user.id, name: req.user.name },
-        status: 'configured-draft'
-      }
-    }
+        status: 'configured-draft',
+      },
+    },
   )
   await journals.log(req.app, req.application, { type: 'config-draft-updated' }, 'application')
   res.status(200).json(req.body)
@@ -287,7 +287,7 @@ router.get('/:applicationId/api-docs.json', readApplication, permissions.middlew
 router.get('/:applicationId/journal', readApplication, permissions.middleware('readJournal', 'read'), cacheHeaders.noCache, asyncWrap(async(req, res) => {
   const journal = await req.app.get('db').collection('journals').findOne({
     type: 'application',
-    id: req.params.applicationId
+    id: req.params.applicationId,
   })
   if (!journal) return res.send([])
   journal.events.reverse()
@@ -297,8 +297,15 @@ router.get('/:applicationId/journal', readApplication, permissions.middleware('r
 // Used by applications to declare an error
 router.post('/:applicationId/error', readApplication, permissions.middleware('writeConfig', 'write'), cacheHeaders.noCache, asyncWrap(async(req, res) => {
   if (!req.body.message) return res.status(400).send('Attribut "message" obligatoire')
-  if (req.application.status && req.application.status.startsWith('configured')) {
-    await req.app.get('db').collection('applications').updateOne({ id: req.params.applicationId }, { $set: { status: 'error' } })
+
+  const referer = req.headers.referer || req.headers.referrer
+  const draftMode = referer && referer.includes('draft=true')
+
+  if (draftMode) {
+    // websocket notifications of draft mode errors
+    await req.app.publish(`applications/${req.params.applicationId}/draft-error`, req.body)
+  } else {
+    await req.app.get('db').collection('applications').updateOne({ id: req.params.applicationId }, { $set: { status: 'error', errorMessage: req.body.message } })
     await journals.log(req.app, req.application, { type: 'error', data: req.body.message }, 'application')
   }
   res.status(204).send()

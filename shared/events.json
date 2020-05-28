@@ -1,75 +1,75 @@
 {
   "dataset": {
     "error": {
-      "icon": "error",
+      "icon": "mdi-alert",
       "text": "Le service a rencontré une erreur pendant le traitement du jeu de données"
     },
     "dataset-created": {
-      "icon": "add_circle_outline",
+      "icon": "mdi-plus-circle-outline",
       "text": "Le jeu de données a été créé"
     },
     "data-updated": {
-      "icon": "update",
+      "icon": "mdi-pencil",
       "text": "Les données ont été mises à jour"
     },
     "convert-start": {
-      "icon": "swap_horiz",
+      "icon": "mdi-file-swap",
       "text": "Début de la conversion du fichier"
     },
     "convert-end": {
-      "icon": "swap_horiz",
+      "icon": "mdi-file-swap",
       "text": "Fin de la conversion du fichier"
     },
     "analyze-start": {
-      "icon": "search",
+      "icon": "mdi-file-search",
       "text": "Début de l'analyse du fichier"
     },
     "analyze-end": {
-      "icon": "search",
+      "icon": "mdi-file-search",
       "text": "Fin de l'analyse du fichier"
     },
     "schematize-start": {
-      "icon": "toc",
+      "icon": "mdi-table-of-contents",
       "text": "Début de la détection automatique du schéma des données"
     },
     "schematize-end": {
-      "icon": "toc",
+      "icon": "mdi-table-of-contents",
       "text": "Fin de la détection automatique du schéma des données"
     },
     "index-start": {
-      "icon": "assignment",
+      "icon": "mdi-clipboard-text",
       "text": "Début de l'indexation des données"
     },
     "index-end": {
-      "icon": "assignment_turned_in",
+      "icon": "mdi-clipboard-text",
       "text": "Les données sont indexées"
     },
     "extend-start": {
-      "icon": "extension",
+      "icon": "mdi-merge",
       "text": "Début de l'enrichissement des données"
     },
     "extend-end": {
-      "icon": "extension",
+      "icon": "mdi-merge",
       "text": "Les données sont enrichies, le jeu de données est maintenant disponible"
     },
     "finalize-start": {
-      "icon": "build",
+      "icon": "mdi-wrench",
       "text": "Finalisation du jeu de données"
     },
     "finalize-end": {
-      "icon": "check",
+      "icon": "mdi-check",
       "text": "Les données et meta-données sont à jour, le jeu de données est disponible"
     },
     "publication": {
-      "icon": "publish",
+      "icon": "mdi-publish",
       "text": "Publication du jeu de données vers un catalogue effectuée"
     },
     "download-start": {
-      "icon": "file_download",
+      "icon": "mdi-file-download",
       "text": "Début du chargement des données depuis une adresse distante"
     },
     "download-end": {
-      "icon": "file_download",
+      "icon": "mdi-file-download",
       "text": "Le fichier de données est chargé et est prêt à être indexé"
     },
     "downloaded": {
@@ -78,23 +78,23 @@
   },
   "application": {
     "error": {
-      "icon": "error",
+      "icon": "mdi-alert",
       "text": "L'application a été configurée mais n'est pas fonctionnelle"
     },
     "application-created": {
-      "icon": "add_circle_outline",
+      "icon": "mdi-plus-circle-outline",
       "text": "L'application a été créée"
     },
     "publication": {
-      "icon": "publish",
+      "icon": "mdi-publish",
       "text": "Publication de l'application vers un catalogue effectuée"
     },
     "config-updated": {
-      "icon": "update",
+      "icon": "mdi-pencil",
       "text": "La configuration a été mise à jour"
     },
     "config-draft-updated": {
-      "icon": "update",
+      "icon": "mdi-pencil",
       "text": "Le brouillon de configuration a été mis à jour"
     }
   }

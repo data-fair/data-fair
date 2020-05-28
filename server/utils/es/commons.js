@@ -15,7 +15,7 @@ const operationsClasses = apiDocsUtil.operationsClasses.datasets
 // From a property in data-fair schema to the property in an elasticsearch mapping
 exports.esProperty = prop => {
   // Add inner text field to almost everybody so that even dates, numbers, etc can be matched textually as well as exactly
-  const innerTextField = { text: { type: 'text', analyzer: config.elasticsearch.defaultAnalyzer, fielddata: true } }
+  const innerTextField = { text: { type: 'text', analyzer: config.elasticsearch.defaultAnalyzer } }
   let esProp = {}
   if (prop.type === 'object') esProp = { type: 'object' }
   if (prop.type === 'integer') esProp = { type: 'long', fields: innerTextField }
@@ -106,7 +106,7 @@ exports.prepareQuery = (dataset, query) => {
   }
 
   // Sort by list of fields (prefixed by - for descending sort)
-  esQuery.sort = exports.parseSort(query.sort, fields)
+  esQuery.sort = exports.parseSort(query.sort || '_i', fields)
   // Also implicitly sort by score
   esQuery.sort.push('_score')
   // And lastly random order for natural distribution (mostly important for geo results)
@@ -157,14 +157,14 @@ exports.prepareQuery = (dataset, query) => {
     .filter(k => k.endsWith('_in'))
     .map(key => ({
       key: key.slice(0, key.length - 3),
-      values: query[key].split(',')
+      values: query[key].split(','),
     }))
     .forEach(inFilter => {
       if (!fields.includes(inFilter.key)) throw createError(400, `Impossible de faire une recherche sur le champ ${inFilter.key}, il n'existe pas dans le jeu de données.`)
       filter.push({
         terms: {
-          [inFilter.key]: inFilter.values
-        }
+          [inFilter.key]: inFilter.values,
+        },
       })
     })
 
@@ -181,10 +181,10 @@ exports.prepareQuery = (dataset, query) => {
           relation: 'intersects',
           shape: {
             type: 'envelope',
-            coordinates: [[esBoundingBox.left, esBoundingBox.top], [esBoundingBox.right, esBoundingBox.bottom]]
-          }
-        }
-      }
+            coordinates: [[esBoundingBox.left, esBoundingBox.top], [esBoundingBox.right, esBoundingBox.bottom]],
+          },
+        },
+      },
     })
   }
 

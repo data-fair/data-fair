@@ -53,7 +53,7 @@ const indexBase = {
   // Minimal overhead by default as we might deal with a lot of small indices.
   // TODO: a way to override this ? Maybe intelligently based on size of the file ?
   settings: { index: { number_of_shards: 1, number_of_replicas: 1 } },
-  mappings: { }
+  mappings: { },
 }
 
 exports.datasetInfos = async (client, dataset) => {
@@ -67,6 +67,6 @@ exports.datasetInfos = async (client, dataset) => {
     aliasName: aliasName(dataset),
     indexPrefix: indexPrefix(dataset),
     indices,
-    alias
+    alias,
   }
 }

@@ -6,19 +6,19 @@ module.exports = {
     type: {
       type: 'string',
       enum: ['user', 'organization'],
-      description: 'If the owner is a user or an organization'
+      description: 'If the owner is a user or an organization',
     },
     id: {
       type: 'string',
-      description: 'The unique id of the user or organization'
+      description: 'The unique id of the user or organization',
     },
     name: {
       type: 'string',
-      description: 'The display name of the user or organization'
+      description: 'The display name of the user or organization',
     },
     role: {
       type: 'string',
-      description: 'If this is set and owner is an organization, this restrict ownership to users of this organization having this role or admin role'
-    }
-  }
+      description: 'If this is set and owner is an organization, this restrict ownership to users of this organization having this role or admin role',
+    },
+  },
 }

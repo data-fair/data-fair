@@ -50,7 +50,7 @@ async function listScripts() {
   return dirs.map(dir => {
     return {
       version: dir,
-      names: fs.readdirSync(path.join(scriptsRoot, dir))
+      names: fs.readdirSync(path.join(scriptsRoot, dir)),
     }
   })
 }

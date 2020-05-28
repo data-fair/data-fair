@@ -5,6 +5,7 @@ const pump = require('util').promisify(require('pump'))
 const possibleLinesDelimiters = ['\r\n', '\n\r', '\n', '\r']
 const possibleFieldsDelimiters = [',', ';', '\t', '|']
 const possibleEscapeChars = ['"', "'"]
+const possibleQuoteChars = ['"', "'"]
 
 exports.sniff = async (sample) => {
   const result = {}
@@ -21,26 +22,28 @@ exports.sniff = async (sample) => {
   const combinations = []
   for (const fd of possibleFieldsDelimiters) {
     for (const ec of possibleEscapeChars) {
-      let score = 0
-      let labels
-      const parser = csv({ separator: fd, quote: ec, newline: result.linesDelimiter })
-      parser.on('headers', headers => {
-        labels = headers
-      })
-      const parsePromise = pump(parser, new Writable({
-        objectMode: true,
-        write(chunk, encoding, callback) {
-          Object.keys(chunk).forEach(key => {
-            if (chunk[key]) score += 1
-            else if (chunk[key] === undefined) score -= 1
-          })
-          callback()
-        }
-      }))
-      parser.write(lines.join(result.linesDelimiter))
-      parser.end()
-      await parsePromise
-      combinations.push({ props: { fieldsDelimiter: fd, escapeChar: ec, labels }, score })
+      for (const qc of possibleQuoteChars) {
+        let score = 0
+        let labels
+        const parser = csv({ separator: fd, quote: qc, escape: ec, newline: result.linesDelimiter })
+        parser.on('headers', headers => {
+          labels = headers
+        })
+        const parsePromise = pump(parser, new Writable({
+          objectMode: true,
+          write(chunk, encoding, callback) {
+            Object.keys(chunk).forEach(key => {
+              if (chunk[key]) score += 1
+              else if (chunk[key] === undefined) score -= 1
+            })
+            callback()
+          },
+        }))
+        parser.write(lines.join(result.linesDelimiter))
+        parser.end()
+        await parsePromise
+        combinations.push({ props: { fieldsDelimiter: fd, quote: qc, escapeChar: ec, labels }, score })
+      }
     }
   }
 

@@ -3,13 +3,13 @@
 </template>
 
 <script>
-import DatasetPublications from '../../../components/DatasetPublications.vue'
+  import DatasetPublications from '~/components/datasets/publications.vue'
 
-export default {
-  components: {
-    DatasetPublications
+  export default {
+    components: {
+      DatasetPublications,
+    },
   }
-}
 
 </script>
 

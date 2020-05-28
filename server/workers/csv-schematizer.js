@@ -21,7 +21,7 @@ exports.process = async function(app, dataset) {
     Object.keys(acc).forEach(k => acc[k].add(current[k]))
     return acc
   }, Object.assign({}, ...Object.keys(firstLine).map(k => ({
-    [k]: new Set([firstLine[k]])
+    [k]: new Set([firstLine[k]]),
   }))))
   debug('list attachments')
   // Now we can extract infos for each field
@@ -49,6 +49,6 @@ exports.process = async function(app, dataset) {
   debug('store status as schematized')
   dataset.status = 'schematized'
   await db.collection('datasets').updateOne({ id: dataset.id }, {
-    $set: { status: 'schematized', schema: dataset.schema, file: dataset.file }
+    $set: { status: 'schematized', schema: dataset.schema, file: dataset.file },
   })
 }

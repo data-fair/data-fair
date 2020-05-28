@@ -14,11 +14,11 @@ module.exports = {
   captureUrl: `http://${host}:5600/capture`,
   defaultLimits: {
     totalStorage: 1000000000,
-    datasetStorage: -1
+    datasetStorage: -1,
   },
   locks: {
     // in seconds
-    ttl: 4
+    ttl: 4,
   },
   /* For virtual box debugging
   publicUrl: 'http://10.0.2.2:5600',
@@ -26,37 +26,40 @@ module.exports = {
   directoryUrl: 'https://staging.koumoul.com',
   */
   secretKeys: {
-    identities: 'dev_secret'
+    identities: 'dev_secret',
   },
   cache: {
-    disabled: true
+    disabled: true,
   },
   worker: {
-    spawnTask: false
+    spawnTask: false,
   },
   browserLogLevel: 'debug',
   remoteServices: [{
     title: 'Données Entreprises',
-    url: 'https://staging-koumoul.com/s/sirene/api-docs.json'
+    url: 'https://staging-koumoul.com/s/sirene/api-docs.json',
   }, {
     title: 'Géocoder',
-    url: 'https://staging-koumoul.com/s/geocoder/api/v1/api-docs.json'
+    url: 'https://staging-koumoul.com/s/geocoder/api/v1/api-docs.json',
   }, {
     title: 'Cadastre',
-    url: 'https://staging-koumoul.com/s/cadastre/api-docs.json'
+    url: 'https://staging-koumoul.com/s/cadastre/api-docs.json',
   }, {
     title: 'Divisions administratives',
-    url: 'https://staging-koumoul.com/s/insee-mapping/api/v1/api-docs.json'
+    url: 'https://staging-koumoul.com/s/insee-mapping/api/v1/api-docs.json',
   }, {
     title: 'Service de données cartographiques',
-    url: 'https://staging-koumoul.com/s/tileserver/api/v1/api-docs.json'
+    url: 'https://staging-koumoul.com/s/tileserver/api/v1/api-docs.json',
   }],
   catalogs: [{
     title: 'Data.gouv.fr',
-    href: 'https://www.data.gouv.fr'
+    href: 'https://www.data.gouv.fr',
   }, {
     title: 'Mydatacatalogue',
-    href: 'https://app.dawizz.fr/mydatacatalogue/'
+    href: 'https://app.dawizz.fr/mydatacatalogue/',
   }],
-  proxyNuxt: true
+  proxyNuxt: true,
+  tippecanoe: {
+    docker: true,
+  },
 }

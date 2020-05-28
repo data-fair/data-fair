@@ -21,14 +21,14 @@ module.exports = async (client, dataset, query) => {
     // not for exhaustivity. So using a sample is alright
     sample: {
       sampler: {
-        shard_size: 1000
+        shard_size: 1000,
       },
       aggregations: {
         words: {
-          [aggType]: { field, size }
-        }
-      }
-    }
+          [aggType]: { field, size },
+        },
+      },
+    },
   }
 
   if (aggType === 'signifant_text') {
@@ -48,8 +48,8 @@ module.exports = async (client, dataset, query) => {
     results: buckets.map((bucket, i) => ({
       word: words[i],
       total: bucket.doc_count,
-      score: bucket.score
-    }))
+      score: bucket.score,
+    })),
   }
 }
 
@@ -67,9 +67,9 @@ async function unstem(client, dataset, field, key) {
         fields: { [field]: {} },
         fragment_size: 1,
         pre_tags: '<>',
-        post_tags: '<>'
-      }
-    }
+        post_tags: '<>',
+      },
+    },
   })
 
   const words = {}

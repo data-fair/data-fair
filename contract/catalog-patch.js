@@ -8,7 +8,7 @@ module.exports = {
   title: 'Catalog patch',
   type: 'object',
   additionalProperties: false,
-  properties: {}
+  properties: {},
 }
 patchKeys.forEach(k => {
   module.exports.properties[k] = catalog.properties[k]

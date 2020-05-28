@@ -25,7 +25,7 @@ async function ownerStats(db, owner) {
     storage: await datasetUtils.totalStorage(db, owner),
     storageLimit: limits && limits.store_bytes ? limits.store_bytes.limit : config.defaultLimits.totalStorage,
     datasets: await ownerCount(db, 'datasets', owner),
-    applications: await ownerCount(db, 'applications', owner)
+    applications: await ownerCount(db, 'applications', owner),
   }
 }
 

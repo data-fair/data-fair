@@ -27,14 +27,14 @@ exports.init = async () => {
           field: '_file_raw',
           target_field: '_file',
           ignore_missing: true,
-          properties: ['content', 'content_type', 'content_length']
+          properties: ['content', 'content_type', 'content_length'],
         },
         remove: {
           field: '_file_raw',
-          ignore_missing: true
-        }
-      }]
-    }
+          ignore_missing: true,
+        },
+      }],
+    },
   })
   return client
 }

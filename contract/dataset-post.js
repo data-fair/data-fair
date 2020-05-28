@@ -8,8 +8,8 @@ module.exports = {
   type: 'object',
   additionalProperties: false,
   properties: {
-    ...datasetPatch.properties
-  }
+    ...datasetPatch.properties,
+  },
 }
 postKeys.forEach(k => {
   module.exports.properties[k] = dataset.properties[k]

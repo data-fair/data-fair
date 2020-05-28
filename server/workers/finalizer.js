@@ -49,8 +49,17 @@ exports.process = async function(app, dataset) {
     queryableDataset.bbox = []
     result.bbox = dataset.bbox = (await esUtils.bboxAgg(es, queryableDataset)).bbox
     debug('bounding box ok', result.bbox)
+
+    if (!dataset.isRest && !dataset.isVirtual) {
+      debug('prepare geo files')
+      await datasetUtils.prepareGeoFiles(dataset)
+    }
   } else {
     result.bbox = null
+    if (!dataset.isRest && !dataset.isVirtual) {
+      debug('delete geo files')
+      await datasetUtils.deleteGeoFiles(dataset)
+    }
   }
 
   // calculate temporal coverage
@@ -74,11 +83,12 @@ exports.process = async function(app, dataset) {
     }, { startDate: limitValues[0], endDate: limitValues[0] })
     result.timePeriod = {
       startDate: new Date(timePeriod.startDate).toISOString(),
-      endDate: new Date(timePeriod.endDate).toISOString()
+      endDate: new Date(timePeriod.endDate).toISOString(),
     }
   }
 
   // Add the calculated fields to the schema
+  debug('prepare extended schema')
   result.schema = datasetUtils.extendedSchema(dataset)
 
   // Remove attachments if the schema does not refer to their existence

@@ -1,4 +1,4 @@
-const { Transform, Writable } = require('stream')
+const { Writable } = require('stream')
 const express = require('express')
 const ajv = require('ajv')()
 const util = require('util')
@@ -7,8 +7,6 @@ const fs = require('fs-extra')
 const moment = require('moment')
 const createError = require('http-errors')
 const pump = util.promisify(require('pump'))
-const csvStringify = require('csv-stringify')
-const flatten = require('flat')
 const mongodb = require('mongodb')
 const config = require('config')
 const chardet = require('chardet')
@@ -78,8 +76,8 @@ const checkStorage = (overwrite) => asyncWrap(async (req, res, next) => {
             write(chunk, encoding, callback) {
             // do nothing wa just want to drain the request
               callback()
-            }
-          })
+            },
+          }),
         )
       } catch (err) {
         console.error('Failure to drain request that was rejected for exceeding storage limit', err)
@@ -99,13 +97,13 @@ router.get('', cacheHeaders.noCache, asyncWrap(async(req, res) => {
     'field-format': 'schema.format',
     children: 'virtual.children',
     services: 'extensions.remoteService',
-    status: 'status'
+    status: 'status',
   }
   const query = findUtils.query(req, Object.assign({
     filename: 'originalFile.name',
     ids: 'id',
     id: 'id',
-    rest: 'isRest'
+    rest: 'isRest',
   }, filterFields))
   if (req.query.bbox === 'true') {
     query.bbox = { $ne: null }
@@ -115,7 +113,7 @@ router.get('', cacheHeaders.noCache, asyncWrap(async(req, res) => {
   const [skip, size] = findUtils.pagination(req.query)
   const mongoQueries = [
     size > 0 ? datasets.find(query).limit(size).skip(skip).sort(sort).project(project).toArray() : Promise.resolve([]),
-    datasets.countDocuments(query)
+    datasets.countDocuments(query),
   ]
   if (req.query.facets) {
     mongoQueries.push(datasets.aggregate(findUtils.facetsQuery(req, filterFields)).toArray())
@@ -215,7 +213,7 @@ router.patch('/:datasetId', readDataset(['finalized', 'error']), permissions.mid
   } else if (patch.projection && (!req.dataset.projection || patch.projection.code !== req.dataset.projection.code)) {
     // geo projection has changed, trigger full re-indexing
     patch.status = 'schematized'
-  } else if (patch.schema && geo.geoFieldsKey(patch.schema) !== geo.schemaHasGeopoint(req.dataset.schema)) {
+  } else if (patch.schema && geo.geoFieldsKey(patch.schema) !== geo.geoFieldsKey(req.dataset.schema)) {
     // geo concepts haved changed, trigger full re-indexing
     patch.status = 'schematized'
   } else if (patch.schema && patch.schema.find(f => req.dataset.schema.find(df => df.key === f.key && df.separator !== f.separator))) {
@@ -249,31 +247,17 @@ router.put('/:datasetId/owner', readDataset(), permissions.middleware('delete', 
   const patch = {
     owner: req.body,
     updatedBy: { id: req.user.id, name: req.user.name },
-    updatedAt: moment().toISOString()
+    updatedAt: moment().toISOString(),
   }
   const patchedDataset = (await req.app.get('db').collection('datasets')
     .findOneAndUpdate({ id: req.params.datasetId }, { $set: patch }, { returnOriginal: false })).value
 
   // Move all files
   try {
-    const originalFileName = datasetUtils.originalFileName(req.dataset)
-    if (await fs.exists(originalFileName)) await fs.move(originalFileName, datasetUtils.originalFileName(patchedDataset))
+    await fs.move(datasetUtils.dir(req.dataset), datasetUtils.dir(patchedDataset))
   } catch (err) {
-    console.error('Error while moving original file', err)
+    console.error('Error while moving dataset directory', err)
   }
-  try {
-    const fileName = datasetUtils.fileName(req.dataset)
-    if (await fs.exists()) await fs.move(fileName, datasetUtils.fileName(patchedDataset))
-  } catch (err) {
-    console.error('Error while moving converted file', err)
-  }
-  try {
-    const attachmentsDir = datasetUtils.attachmentsDir(req.dataset)
-    if (await fs.exists(attachmentsDir)) await fs.move(attachmentsDir, datasetUtils.attachmentsDir(patchedDataset))
-  } catch (err) {
-    console.error('Error while moving decompressed files', err)
-  }
-
   res.status(200).json(clean(patchedDataset))
 }))
 
@@ -281,27 +265,10 @@ router.put('/:datasetId/owner', readDataset(), permissions.middleware('delete', 
 router.delete('/:datasetId', readDataset(), permissions.middleware('delete', 'admin'), asyncWrap(async(req, res) => {
   const db = req.app.get('db')
   try {
-    await fs.remove(datasetUtils.originalFileName(req.dataset))
+    await fs.remove(datasetUtils.dir(req.dataset))
   } catch (err) {
-    console.error('Error while deleting original file', err)
+    console.error('Error while deleting dataset directory', err)
   }
-  try {
-    await fs.remove(datasetUtils.fileName(req.dataset))
-  } catch (err) {
-    console.error('Error while deleting converted file', err)
-  }
-  try {
-    await fs.remove(datasetUtils.attachmentsDir(req.dataset))
-  } catch (err) {
-    console.error('Error while deleting decompressed files', err)
-  }
-
-  try {
-    await fs.remove(datasetUtils.metadataAttachmentsDir(req.dataset))
-  } catch (err) {
-    console.error('Error while deleting metadata attachments', err)
-  }
-
   if (req.dataset.isRest) {
     try {
       await restDatasetsUtils.deleteDataset(db, req.dataset)
@@ -335,13 +302,32 @@ const initNew = (req) => {
   return dataset
 }
 
-const setFileInfo = async (file, attachmentsFile, dataset) => {
-  dataset.id = file.id
+const setFileInfo = async (db, file, attachmentsFile, dataset) => {
+  if (!dataset.id) {
+    const baseTitle = dataset.title || path.parse(file.originalname).name.replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, ' ').split(/\s+/).join(' ')
+    const baseId = slug(baseTitle, { lower: true })
+    dataset.id = baseId
+    dataset.title = baseTitle
+    let i = 1; let dbExists = false; let fileExists = false
+    do {
+      if (i > 1) {
+        dataset.id = baseId + i
+        dataset.title = baseTitle + ' ' + i
+      }
+      // better to check file as well as db entry in case of file currently uploading
+      dbExists = await db.collection('datasets').countDocuments({ id: dataset.id })
+      fileExists = await fs.exists(datasetUtils.dir(dataset))
+      i += 1
+    } while (dbExists || fileExists)
+
+    await fs.ensureDir(datasetUtils.dir(dataset))
+    await fs.move(file.path, path.join(datasetUtils.dir(dataset), file.originalname))
+  }
   dataset.title = dataset.title || file.title
   dataset.originalFile = {
     name: file.originalname,
     size: file.size,
-    mimetype: file.mimetype
+    mimetype: file.mimetype,
   }
   if (!baseTypes.has(file.mimetype)) {
     // we first need to convert the file in a textual format easy to index
@@ -364,7 +350,6 @@ const setFileInfo = async (file, attachmentsFile, dataset) => {
   if (attachmentsFile) {
     await attachments.replaceAllAttachments(dataset, attachmentsFile)
   }
-
   return dataset
 }
 
@@ -386,7 +371,7 @@ router.post('', beforeUpload, checkStorage(true), filesUtils.uploadFile(validate
     const attachmentsFile = req.files.find(f => f.fieldname === 'attachments')
     if (datasetFile) {
       if (req.body.isVirtual) throw createError(400, 'Un jeu de données virtuel ne peut pas être initialisé avec un fichier')
-      dataset = await setFileInfo(datasetFile, attachmentsFile, initNew(req))
+      dataset = await setFileInfo(db, datasetFile, attachmentsFile, initNew(req))
       await db.collection('datasets').insertOne(dataset)
     } else if (req.body.isVirtual) {
       if (!req.body.title) throw createError(400, 'Un jeu de données virtuel doit être créé avec un titre')
@@ -409,10 +394,12 @@ router.post('', beforeUpload, checkStorage(true), filesUtils.uploadFile(validate
       dataset = initNew(req)
       dataset.rest = dataset.rest || {}
       dataset.schema = dataset.schema || []
-      dataset.status = 'schematized'
+      // create it with finalized status to prevent worker from acquiring it before collection is fully created
+      dataset.status = 'finalized'
       const baseId = slug(req.body.title).toLowerCase()
       await datasetUtils.insertWithBaseId(db, dataset, baseId)
       await restDatasetsUtils.initDataset(db, dataset)
+      await db.collection('datasets').updateOne({ id: dataset.id }, { $set: { status: 'schematized' } })
     } else {
       throw createError(400, 'Un jeu de données doit être initialisé avec un fichier ou déclaré "virtuel" ou "REST"')
     }
@@ -421,11 +408,11 @@ router.post('', beforeUpload, checkStorage(true), filesUtils.uploadFile(validate
 
     await Promise.all([
       journals.log(req.app, dataset, { type: 'dataset-created', href: config.publicUrl + '/dataset/' + dataset.id }, 'dataset'),
-      datasetUtils.updateStorage(db, dataset)
+      datasetUtils.updateStorage(db, dataset),
     ])
     res.status(201).send(clean(dataset))
   } catch (err) {
-  // Wrapped the whole thing in a try/catch to remove files in case of failure
+    // Wrapped the whole thing in a try/catch to remove files in case of failure
     for (const file of req.files) {
       await fs.remove(file.path)
     }
@@ -468,7 +455,7 @@ const updateDataset = asyncWrap(async(req, res) => {
 
     let dataset = req.dataset
     if (datasetFile) {
-      dataset = await setFileInfo(datasetFile, attachmentsFile, req.dataset)
+      dataset = await setFileInfo(db, datasetFile, attachmentsFile, req.dataset)
     } else if (dataset.isVirtual) {
       const { isVirtual, ...patch } = req.body
       if (!validatePatch(patch)) {
@@ -484,7 +471,7 @@ const updateDataset = asyncWrap(async(req, res) => {
       }
       req.body.rest = req.body.rest || {}
       dataset.schema = dataset.schema || []
-      await restDatasetsUtils.initDataset(db, dataset)
+      if (req.isNewDataset) await restDatasetsUtils.initDataset(db, dataset)
       dataset.status = 'schematized'
     }
     Object.assign(dataset, req.body)
@@ -550,6 +537,7 @@ router.get('/:datasetId/lines', readDataset(), permissions.middleware('readLines
   if (req.query && req.query.page && req.query.size && req.query.page * req.query.size > 10000) {
     return res.status(404).send('You can only access the first 10 000 elements.')
   }
+  res.throttleEnd()
 
   const db = req.app.get('db')
 
@@ -559,7 +547,7 @@ router.get('/:datasetId/lines', readDataset(), permissions.middleware('readLines
       type: 'tile-count',
       datasetId: req.dataset.id,
       finalizedAt: req.dataset.finalizedAt,
-      query
+      query,
     })
     if (value !== null) return value
     const newValue = await esUtils.count(req.app.get('es'), req.dataset, query)
@@ -568,8 +556,9 @@ router.get('/:datasetId/lines', readDataset(), permissions.middleware('readLines
   }
 
   // if the output format is geo make sure geoshape is present
+  // also manage a default content for geo tiles that is the same as the one used to build mbtiles when possible
   if (['geojson', 'mvt', 'vt', 'pbf'].includes(req.query.format)) {
-    req.query.select = (req.query.select ? req.query.select + ',' : '') + '_geoshape'
+    req.query.select = (req.query.select ? req.query.select : tiles.defaultSelect(req.dataset).join(',')) + ',_geoshape'
   }
 
   if (req.dataset.isVirtual) req.dataset.descendants = await virtualDatasetsUtils.descendants(db, req.dataset)
@@ -584,6 +573,29 @@ router.get('/:datasetId/lines', readDataset(), permissions.middleware('readLines
   if (!['max', 'neighbors'].includes(sampling)) return res.status(400).send('Sampling can be "max" or "neighbors"')
 
   const vectorTileRequested = ['mvt', 'vt', 'pbf'].includes(req.query.format)
+
+  let xyz
+  if (vectorTileRequested) {
+    if (!req.query.xyz) return res.status(400).send('xyz parameter is required for vector tile format.')
+    xyz = req.query.xyz.split(',').map(Number)
+  }
+
+  // if vector tile is requested and we dispose of a prerendered mbtiles file, use it
+  // otherwise (older dataset, or rest/virtual datasets) we use tile generation from ES results
+  if (!req.dataset.isVirtual && !req.dataset.isRest) {
+    const mbtilesPath = datasetUtils.extFileName(req.dataset, 'mbtiles')
+    if (vectorTileRequested && !req.query.q && !req.query.qs && await fs.exists(mbtilesPath)) {
+      const tile = await tiles.getTile(mbtilesPath, ...xyz)
+      if (tile) {
+        res.type('application/x-protobuf')
+        return res.status(200).send(tile)
+      } else if (tile === null) {
+        // 204 = no-content, better than 404
+        return res.status(204).send()
+      }
+    }
+  }
+
   // Is the tile cached ?
   let cacheHash
   if (vectorTileRequested && !config.cache.disabled) {
@@ -592,17 +604,13 @@ router.get('/:datasetId/lines', readDataset(), permissions.middleware('readLines
       sampling,
       datasetId: req.dataset.id,
       finalizedAt: req.dataset.finalizedAt,
-      query: req.query
+      query: req.query,
     })
     if (value) return res.status(200).send(value.buffer)
     cacheHash = hash
   }
 
-  let xyz
   if (vectorTileRequested) {
-    if (!req.query.xyz) return res.status(400).send('xyz parameter is required for vector tile format.')
-    xyz = req.query.xyz.split(',').map(Number)
-
     const requestedSize = req.query.size ? Number(req.query.size) : 20
     if (requestedSize > 10000) throw createError(400, '"size" cannot be more than 10000')
     if (sampling === 'neighbors') {
@@ -624,7 +632,7 @@ router.get('/:datasetId/lines', readDataset(), permissions.middleware('readLines
             countWithCache({ ...req.query, xyz: [xyz[0] - 1, xyz[1] - 1, xyz[2]].join(',') }),
             countWithCache({ ...req.query, xyz: [xyz[0] + 1, xyz[1] - 1, xyz[2]].join(',') }),
             countWithCache({ ...req.query, xyz: [xyz[0] - 1, xyz[1] + 1, xyz[2]].join(',') }),
-            countWithCache({ ...req.query, xyz: [xyz[0] + 1, xyz[1] + 1, xyz[2]].join(',') })
+            countWithCache({ ...req.query, xyz: [xyz[0] + 1, xyz[1] + 1, xyz[2]].join(',') }),
           ])
           const maxCount = Math.max(mainCount, ...neighborsCounts)
           const sampleRate = requestedSize / Math.max(requestedSize, maxCount)
@@ -663,13 +671,14 @@ router.get('/:datasetId/lines', readDataset(), permissions.middleware('readLines
     total: esResponse.hits.total.value,
     results: esResponse.hits.hits.map(hit => {
       return esUtils.prepareResultItem(hit, req.dataset, req.query)
-    })
+    }),
   }
   res.status(200).send(result)
 }))
 
 // Special geo aggregation
 router.get('/:datasetId/geo_agg', readDataset(), permissions.middleware('getGeoAgg', 'read'), cacheHeaders.resourceBased, asyncWrap(async(req, res) => {
+  res.throttleEnd()
   if (req.dataset.isVirtual) req.dataset.descendants = await virtualDatasetsUtils.descendants(req.app.get('db'), req.dataset)
   const db = req.app.get('db')
 
@@ -681,7 +690,7 @@ router.get('/:datasetId/geo_agg', readDataset(), permissions.middleware('getGeoA
       type: 'tile-geoagg',
       datasetId: req.dataset.id,
       finalizedAt: req.dataset.finalizedAt,
-      query: req.query
+      query: req.query,
     })
     if (value) return res.status(200).send(value.buffer)
     cacheHash = hash
@@ -715,6 +724,7 @@ router.get('/:datasetId/geo_agg', readDataset(), permissions.middleware('getGeoA
 
 // Standard aggregation to group items by value and perform an optional metric calculation on each group
 router.get('/:datasetId/values_agg', readDataset(), permissions.middleware('getValuesAgg', 'read'), cacheHeaders.resourceBased, asyncWrap(async(req, res) => {
+  res.throttleEnd()
   if (req.dataset.isVirtual) req.dataset.descendants = await virtualDatasetsUtils.descendants(req.app.get('db'), req.dataset)
   const db = req.app.get('db')
 
@@ -726,7 +736,7 @@ router.get('/:datasetId/values_agg', readDataset(), permissions.middleware('getV
       type: 'tile-valuesagg',
       datasetId: req.dataset.id,
       finalizedAt: req.dataset.finalizedAt,
-      query: req.query
+      query: req.query,
     })
     if (value) return res.status(200).send(value.buffer)
     cacheHash = hash
@@ -762,6 +772,7 @@ router.get('/:datasetId/values_agg', readDataset(), permissions.middleware('getV
 // Simpler values list and filter (q is applied only to the selected field, not all fields)
 // mostly useful for selects/autocompletes on values
 router.get('/:datasetId/values/:fieldKey', readDataset(), permissions.middleware('getValues', 'read'), cacheHeaders.resourceBased, asyncWrap(async(req, res) => {
+  res.throttleEnd()
   if (req.dataset.isVirtual) req.dataset.descendants = await virtualDatasetsUtils.descendants(req.app.get('db'), req.dataset)
   let result
   try {
@@ -774,6 +785,7 @@ router.get('/:datasetId/values/:fieldKey', readDataset(), permissions.middleware
 
 // Simple metric aggregation to calculate some value (sum, avg, etc.)
 router.get('/:datasetId/metric_agg', readDataset(), permissions.middleware('getMetricAgg', 'read'), cacheHeaders.resourceBased, asyncWrap(async(req, res) => {
+  res.throttleEnd()
   if (req.dataset.isVirtual) req.dataset.descendants = await virtualDatasetsUtils.descendants(req.app.get('db'), req.dataset)
   let result
   try {
@@ -786,6 +798,7 @@ router.get('/:datasetId/metric_agg', readDataset(), permissions.middleware('getM
 
 // Simple words aggregation for significant terms extraction
 router.get('/:datasetId/words_agg', readDataset(), permissions.middleware('getWordsAgg', 'read'), cacheHeaders.resourceBased, asyncWrap(async(req, res) => {
+  res.throttleEnd()
   if (req.dataset.isVirtual) req.dataset.descendants = await virtualDatasetsUtils.descendants(req.app.get('db'), req.dataset)
   let result
   try {
@@ -824,8 +837,20 @@ router.get('/:datasetId/min/:fieldKey', readDataset(), permissions.middleware('g
 router.get('/:datasetId/attachments/*', readDataset(), permissions.middleware('downloadOriginalData', 'read'), (req, res, next) => {
   const filePath = req.params['0']
   if (filePath.includes('..')) return res.status(400).send('Unacceptable attachment path')
-  res.download(path.resolve(datasetUtils.attachmentsDir(req.dataset), filePath))
+  // the transform stream option was patched into "send" module using patch-package
+  res.download(path.resolve(datasetUtils.attachmentsDir(req.dataset), filePath), null, { transformStream: res.throttle('static') })
 })
+
+// Direct access to data files
+router.get('/:datasetId/data-files', readDataset(), permissions.middleware('downloadFullData', 'read'), asyncWrap(async(req, res, next) => {
+  res.send(await datasetUtils.dataFiles(req.dataset))
+}))
+router.get('/:datasetId/data-files/*', readDataset(), permissions.middleware('downloadFullData', 'read'), asyncWrap(async(req, res, next) => {
+  const filePath = req.params['0']
+  if (filePath.includes('..')) return res.status(400).send('Unacceptable data file path')
+  // the transform stream option was patched into "send" module using patch-package
+  res.download(path.resolve(datasetUtils.dir(req.dataset), filePath), null, { transformStream: res.throttle('static') })
+}))
 
 // Special attachments referenced in dataset metadatas
 router.post('/:datasetId/metadata-attachments', readDataset(), permissions.middleware('writeData', 'write'), checkStorage(false), attachments.metadataUpload(), asyncWrap(async(req, res, next) => {
@@ -837,7 +862,8 @@ router.post('/:datasetId/metadata-attachments', readDataset(), permissions.middl
 router.get('/:datasetId/metadata-attachments/*', readDataset(), permissions.middleware('downloadOriginalData', 'read'), (req, res, next) => {
   const filePath = req.params['0']
   if (filePath.includes('..')) return res.status(400).send('Unacceptable attachment path')
-  res.download(path.resolve(datasetUtils.metadataAttachmentsDir(req.dataset), filePath))
+  // the transform stream option was patched into "send" module using patch-package
+  res.download(path.resolve(datasetUtils.metadataAttachmentsDir(req.dataset), filePath), null, { transformStream: res.throttle('static') })
 })
 router.delete('/:datasetId/metadata-attachments/*', readDataset(), permissions.middleware('writeData', 'write'), asyncWrap(async(req, res, next) => {
   const filePath = req.params['0']
@@ -848,15 +874,17 @@ router.delete('/:datasetId/metadata-attachments/*', readDataset(), permissions.m
 }))
 
 // Download the full dataset in its original form
-router.get('/:datasetId/raw', readDataset(), permissions.middleware('downloadOriginalData', 'read'), (req, res, next) => {
-  res.download(datasetUtils.originalFileName(req.dataset), req.dataset.originalFile.name)
+router.get('/:datasetId/raw', readDataset(), permissions.middleware('downloadOriginalData', 'read'), cacheHeaders.resourceBased, (req, res, next) => {
+  // the transform stream option was patched into "send" module using patch-package
+  res.download(datasetUtils.originalFileName(req.dataset), null, { transformStream: res.throttle('static') })
   webhooks.trigger(req.app.get('db'), 'dataset', req.dataset, { type: 'downloaded' })
 })
 
 // Download the dataset in various formats
-router.get('/:datasetId/convert', readDataset(), permissions.middleware('downloadOriginalData', 'read'), cacheHeaders.noCache, (req, res, next) => {
+router.get('/:datasetId/convert', readDataset(), permissions.middleware('downloadOriginalData', 'read'), cacheHeaders.resourceBased, (req, res, next) => {
   if (!req.query || !req.query.format) {
-    res.download(datasetUtils.fileName(req.dataset), req.dataset.file.name)
+    // the transform stream option was patched into "send" module using patch-package
+    res.download(datasetUtils.fileName(req.dataset), null, { transformStream: res.throttle('static') })
     webhooks.trigger(req.app.get('db'), 'dataset', req.dataset, { type: 'downloaded' })
   } else {
     res.status(400).send(`Format ${req.query.format} is not supported.`)
@@ -866,32 +894,12 @@ router.get('/:datasetId/convert', readDataset(), permissions.middleware('downloa
 // Download the full dataset with extensions
 // TODO use ES scroll functionality instead of file read + extensions
 router.get('/:datasetId/full', readDataset(), permissions.middleware('downloadFullData', 'read'), cacheHeaders.resourceBased, asyncWrap(async (req, res, next) => {
-  const db = req.app.get('db')
-  if (Object.keys(req.query).length) return res.status(400).send('Le téléchargement du fichier étendu ne supporte pas de paramètres de query')
-  if (req.dataset.isVirtual) req.dataset.descendants = await virtualDatasetsUtils.descendants(req.app.get('db'), req.dataset)
-  res.setHeader('Content-disposition', 'attachment; filename=' + req.dataset.file.name)
-  res.setHeader('Content-type', 'text/csv')
-  const relevantSchema = req.dataset.schema.filter(f => f.key.startsWith('_ext_') || !f.key.startsWith('_'))
-  let readStream
-  if (req.dataset.isRest) readStream = restDatasetsUtils.readStream(db, req.dataset)
-  else readStream = datasetUtils.readStream(req.dataset)
-
-  // add BOM for excel, cf https://stackoverflow.com/a/17879474
-  res.write('\ufeff')
-
-  await pump(
-    readStream,
-    extensions.preserveExtensionStream({ db, esClient: req.app.get('es'), dataset: req.dataset }),
-    new Transform({
-      transform(chunk, encoding, callback) {
-        const flatChunk = flatten(chunk)
-        callback(null, relevantSchema.map(field => flatChunk[field.key]))
-      },
-      objectMode: true
-    }),
-    csvStringify({ columns: relevantSchema.map(field => field.title || field['x-originalName'] || field.key), header: true }),
-    res
-  )
+  // the transform stream option was patched into "send" module using patch-package
+  if (await fs.exists(datasetUtils.fullFileName(req.dataset))) {
+    res.download(datasetUtils.fullFileName(req.dataset), null, { transformStream: res.throttle('static') })
+  } else {
+    res.download(datasetUtils.fileName(req.dataset), null, { transformStream: res.throttle('static') })
+  }
   webhooks.trigger(req.app.get('db'), 'dataset', req.dataset, { type: 'downloaded' })
 }))
 
@@ -902,7 +910,7 @@ router.get('/:datasetId/api-docs.json', readDataset(), permissions.middleware('r
 router.get('/:datasetId/journal', readDataset(), permissions.middleware('readJournal', 'read'), cacheHeaders.noCache, asyncWrap(async(req, res) => {
   const journal = await req.app.get('db').collection('journals').findOne({
     type: 'dataset',
-    id: req.params.datasetId
+    id: req.params.datasetId,
   })
   if (!journal) return res.send([])
   journal.events.reverse()

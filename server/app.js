@@ -1,17 +1,19 @@
 const config = require('config')
 const express = require('express')
 const eventToPromise = require('event-to-promise')
+const promisify = require('util').promisify
 const dbUtils = require('./utils/db')
 const esUtils = require('./utils/es')
 const wsUtils = require('./utils/ws')
 const limits = require('./utils/limits')
 const locksUtils = require('./utils/locks')
+const rateLimiting = require('./utils/rate-limiting')
 const workers = require('./workers')
 const session = require('@koumoul/sd-express')({
   directoryUrl: config.directoryUrl,
   privateDirectoryUrl: config.privateDirectoryUrl || config.directoryUrl,
   publicUrl: config.publicUrl,
-  cookieDomain: config.sessionDomain
+  cookieDomain: config.sessionDomain,
 })
 
 const app = express()
@@ -28,10 +30,10 @@ if (config.mode.includes('server')) {
 
   if (process.env.NODE_ENV === 'development') {
   // Create a mono-domain environment with other services in dev
-    const proxy = require('http-proxy-middleware')
-    app.use('/openapi-viewer', proxy({ target: 'http://localhost:5680', pathRewrite: { '^/openapi-viewer': '' } }))
-    app.use('/simple-directory', proxy({ target: 'http://localhost:8080', pathRewrite: { '^/simple-directory': '' } }))
-    app.use('/capture', proxy({ target: 'http://localhost:8087', pathRewrite: { '^/capture': '' } }))
+    const { createProxyMiddleware } = require('http-proxy-middleware')
+    app.use('/openapi-viewer', createProxyMiddleware({ target: 'http://localhost:5680', pathRewrite: { '^/openapi-viewer': '' } }))
+    app.use('/simple-directory', createProxyMiddleware({ target: 'http://localhost:8080', pathRewrite: { '^/simple-directory': '' } }))
+    app.use('/capture', createProxyMiddleware({ target: 'http://localhost:8087', pathRewrite: { '^/capture': '' } }))
   }
 
   const bodyParser = require('body-parser').json({ limit: '1000kb' })
@@ -42,20 +44,22 @@ if (config.mode.includes('server')) {
   })
   app.use(require('cookie-parser')())
   app.use(session.cors({ acceptAllOrigins: true }))
+  app.use(session.auth)
+  app.use(rateLimiting.middleware)
 
   // Business routers
   const apiKey = require('./utils/api-key')
   app.use('/api/v1', require('./routers/root'))
-  app.use('/api/v1/remote-services', session.auth, require('./routers/remote-services').router)
-  app.use('/api/v1/catalogs', session.auth, apiKey('catalogs'), require('./routers/catalogs'))
-  app.use('/api/v1/base-applications', session.auth, require('./routers/base-applications').router)
-  app.use('/api/v1/applications', session.auth, apiKey('applications'), require('./routers/applications'))
-  app.use('/api/v1/datasets', session.auth, apiKey('datasets'), require('./routers/datasets'))
-  app.use('/api/v1/stats', session.auth, apiKey('stats'), require('./routers/stats'))
-  app.use('/api/v1/settings', session.auth, require('./routers/settings'))
-  app.use('/api/v1/admin', session.auth, require('./routers/admin'))
+  app.use('/api/v1/remote-services', require('./routers/remote-services').router)
+  app.use('/api/v1/catalogs', apiKey('catalogs'), require('./routers/catalogs'))
+  app.use('/api/v1/base-applications', require('./routers/base-applications').router)
+  app.use('/api/v1/applications', apiKey('applications'), require('./routers/applications'))
+  app.use('/api/v1/datasets', apiKey('datasets'), require('./routers/datasets'))
+  app.use('/api/v1/stats', apiKey('stats'), require('./routers/stats'))
+  app.use('/api/v1/settings', require('./routers/settings'))
+  app.use('/api/v1/admin', require('./routers/admin'))
   app.use('/api/v1/identities', require('./routers/identities'))
-  app.use('/api/v1/limits', session.auth, limits.router)
+  app.use('/api/v1/limits', limits.router)
   app.use('/api/v1/session', session.router)
 
   // External applications proxy
@@ -64,7 +68,7 @@ if (config.mode.includes('server')) {
     res.setHeader('Content-Type', 'application/javascript')
     res.send(serviceWorkers.sw(req.application))
   })
-  app.use('/app', session.loginCallback, session.auth, require('./routers/application-proxy'))
+  app.use('/app', session.loginCallback, require('./routers/application-proxy'))
 
   // Error management
   app.use((err, req, res, next) => {
@@ -95,21 +99,31 @@ exports.run = async () => {
     ({ db, client } = await dbUtils.connect())
   }
 
-  await dbUtils.init(db)
+  await Promise.all([
+    dbUtils.init(db),
+    esUtils.init().then(es => app.set('es', es)),
+  ])
   app.set('db', db)
   app.set('mongoClient', client)
-  app.set('es', await esUtils.init())
+
   app.publish = await wsUtils.initPublisher(db)
 
   if (config.mode.includes('server')) {
-    const anonymSession = await require('./utils/anonym-session').init(db)
-    app.set('anonymSession', anonymSession)
-    await require('./utils/capture').init()
-    await require('./utils/cache').init(db)
-    require('./routers/base-applications').init(db)
-    await require('./routers/remote-services').init(db)
-    await wsUtils.initServer(wss, db, session)
-    await limits.init(db)
+    await Promise.all([
+      require('./utils/anonym-session').init(client, db)
+        .then(anonymSession => {
+          // init anonym session on data-fair UI to support using remote services from outside application
+          // for example map embeds
+          app.set('anonymSession', anonymSession)
+          app.use(anonymSession)
+        }),
+      require('./utils/capture').init(),
+      require('./utils/cache').init(db),
+      require('./routers/remote-services').init(db),
+      require('./routers/base-applications').init(db),
+      limits.init(db),
+      wsUtils.initServer(wss, db, session),
+    ])
     // At this stage the server is ready to respond to API requests
     app.set('api-ready', true)
 
@@ -119,9 +133,7 @@ exports.run = async () => {
     })
     app.use(session.decode)
     app.use(session.loginCallback)
-    // init anonym session on data-fair UI to support using remote services from outside application
-    // for example map embeds
-    app.use(anonymSession)
+
     app.use((req, res, next) => {
       req.session.activeApplications = req.session.activeApplications || []
       next()
@@ -154,10 +166,11 @@ exports.run = async () => {
 
 exports.stop = async() => {
   if (config.mode.includes('server')) {
-    await require('util').promisify((cb) => wss.close(cb))()
     server.close()
-    await eventToPromise(server, 'close')
-    await wsUtils.stop()
+    await Promise.all([
+      promisify((cb) => wss.close(cb))(),
+      wsUtils.stop(),
+    ])
   }
 
   if (config.mode.includes('worker')) {
@@ -165,6 +178,8 @@ exports.stop = async() => {
     await workers.stop()
   }
 
-  await app.get('mongoClient').close()
-  await app.get('es').close()
+  await Promise.all([
+    app.get('mongoClient').close(),
+    app.get('es').close(),
+  ])
 }

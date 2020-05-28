@@ -1,10 +1,16 @@
 <template lang="html">
-  <v-container v-if="info && status" fluid>
+  <v-container
+    v-if="info && status"
+    fluid
+  >
     <h2 class="title">
       Informations du service
     </h2>
     <p>Version : {{ info.version }}</p>
-    <v-expansion-panel expand focusable>
+    <v-expansion-panel
+      expand
+      focusable
+    >
       <v-expansion-panel-content>
         <div slot="header">
           Statut : {{ status.status }}
@@ -22,15 +28,15 @@
 </template>
 
 <script>
-export default {
-  data() {
-    return { info: null, status: null }
-  },
-  async mounted() {
-    this.info = await this.$axios.$get('api/v1/admin/info')
-    this.status = await this.$axios.$get('api/v1/status')
+  export default {
+    data() {
+      return { info: null, status: null }
+    },
+    async mounted() {
+      this.info = await this.$axios.$get('api/v1/admin/info')
+      this.status = await this.$axios.$get('api/v1/status')
+    },
   }
-}
 </script>
 
 <style lang="css">

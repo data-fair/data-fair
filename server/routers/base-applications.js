@@ -53,7 +53,7 @@ async function initBaseApp(db, app) {
   const patch = {
     meta: data.meta,
     id: slug(app.url, { lower: true }),
-    ...app
+    ...app,
   }
 
   try {

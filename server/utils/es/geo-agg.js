@@ -19,19 +19,19 @@ module.exports = async (client, dataset, query) => {
       geohash_grid: {
         field: '_geopoint',
         precision,
-        size: aggSize
+        size: aggSize,
       },
       aggs: {
-        centroid: { geo_centroid: { field: '_geopoint' } }
-      }
-    }
+        centroid: { geo_centroid: { field: '_geopoint' } },
+      },
+    },
   }
   if (size) {
     esQuery.aggs.geo.aggs.topHits = { top_hits: { size, _source: esQuery._source, sort: esQuery.sort } }
   }
   if (query.metric && query.metric_field) {
     esQuery.aggs.geo.aggs.metric = {
-      [query.metric]: { field: query.metric_field }
+      [query.metric]: { field: query.metric_field },
     }
   }
   const esResponse = await client.search({ index: aliasName(dataset), body: esQuery })
@@ -48,7 +48,7 @@ const prepareGeoAggResponse = (esResponse, dataset, query) => {
       centroid: b.centroid.location,
       center: { lat: center[1], lon: center[0] },
       bbox: geohash.hash2bbox(b.key),
-      results: b.topHits ? b.topHits.hits.hits.map(hit => prepareResultItem(hit, dataset, query)) : []
+      results: b.topHits ? b.topHits.hits.hits.map(hit => prepareResultItem(hit, dataset, query)) : [],
     }
     if (b.metric) {
       aggItem.metric = b.metric.value

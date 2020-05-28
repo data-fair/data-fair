@@ -1,18 +1,18 @@
-const testUtils = require('./resources/test-utils')
+const assert = require('assert').strict
 
-const { test, axiosBuilder } = testUtils.prepare(__filename)
+describe('status', () => {
+  it('Get status', async () => {
+    const ax = global.ax.anonymous
+    const res = await ax.get('/api/v1/status')
+    assert.equal(res.status, 200)
+    assert.equal(res.data.status, 'ok')
+    assert.equal(res.data.details.length, 5)
+  })
 
-test('Get status', async t => {
-  const ax = await axiosBuilder()
-  const res = await ax.get('/api/v1/status')
-  t.is(res.status, 200)
-  t.is(res.data.status, 'ok')
-  t.is(res.data.details.length, 5)
-})
-
-test('Ping service', async t => {
-  const ax = await axiosBuilder()
-  const res = await ax.get('/api/v1/ping')
-  t.is(res.status, 200)
-  t.is(res.data, 'ok')
+  it('Ping service', async () => {
+    const ax = global.ax.anonymous
+    const res = await ax.get('/api/v1/ping')
+    assert.equal(res.status, 200)
+    assert.equal(res.data, 'ok')
+  })
 })

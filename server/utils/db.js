@@ -22,7 +22,7 @@ exports.connect = async () => {
     useNewUrlParser: true,
     reconnectTries: Number.MAX_VALUE,
     // workers generate a lot of opened sockets if we do not change this setting
-    poolSize: config.mode === 'task' ? 1 : 5
+    poolSize: config.mode === 'task' ? 1 : 5,
   }
   debug('Connecting to mongodb ' + config.mongoUrl)
   try {
@@ -65,7 +65,7 @@ exports.init = async (db) => {
     exports.ensureIndex(db, 'settings', { type: 1, id: 1 }, { unique: true }),
     exports.ensureIndex(db, 'settings', { 'apiKeys.key': 1 }, { sparse: true }),
     // Sessions managed by express-session, but we add our custom indices
-    exports.ensureIndex(db, 'sessions', { 'session.activeApplications.id': 1 })
+    exports.ensureIndex(db, 'sessions', { 'session.activeApplications.id': 1 }),
   ]
   await Promise.all(promises)
 }

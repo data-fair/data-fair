@@ -15,8 +15,8 @@ const schema = {
     name: { type: 'string' },
     lastUpdate: { type: 'string', format: 'date-time' },
     store_bytes: limitTypeSchema,
-    hide_brand: limitTypeSchema
-  }
+    hide_brand: limitTypeSchema,
+  },
 }
 const validate = ajv.compile(schema)
 
@@ -35,7 +35,7 @@ exports.get = async (db, consumer, type) => {
       id: consumer.id,
       name: consumer.name || consumer.id,
       lastUpdate: now.toISOString(),
-      ...config.anonymousLimits
+      ...config.anonymousLimits,
     }
     await coll.insertOne(limit)
   }

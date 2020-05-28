@@ -1,40 +1,40 @@
-const testUtils = require('./resources/test-utils')
+const assert = require('assert').strict
 
-const { test, axiosBuilder } = testUtils.prepare(__filename)
+describe('settings', () => {
+  it('Wrong type', async () => {
+    const ax = global.ax.dmeadus
+    try {
+      await ax.get('/api/v1/settings/unknown/dmeadus0')
+      assert.fail()
+    } catch (err) {
+      assert.equal(err.status, 400)
+    }
+  })
 
-test('Wrong type', async t => {
-  const ax = await axiosBuilder('dmeadus0@answers.com:passwd')
-  try {
-    await ax.get('/api/v1/settings/unknown/dmeadus0')
-    t.fail()
-  } catch (err) {
-    t.is(err.status, 400)
-  }
-})
+  it('No permissions', async () => {
+    const ax = global.ax.dmeadus
+    try {
+      await ax.get('/api/v1/settings/user/hlalonde3')
+      assert.fail()
+    } catch (err) {
+      assert.equal(err.status, 403)
+    }
+  })
 
-test('No permissions', async t => {
-  const ax = await axiosBuilder('dmeadus0@answers.com:passwd')
-  try {
-    await ax.get('/api/v1/settings/user/hlalonde3')
-    t.fail()
-  } catch (err) {
-    t.is(err.status, 403)
-  }
-})
+  it('Read my empty settings', async () => {
+    const ax = global.ax.dmeadus
+    const res = await ax.get('/api/v1/settings/user/dmeadus0')
+    assert.equal(res.status, 200)
+    assert.deepEqual(res.data, {})
+  })
 
-test('Read my empty settings', async t => {
-  const ax = await axiosBuilder('dmeadus0@answers.com:passwd')
-  const res = await ax.get('/api/v1/settings/user/dmeadus0')
-  t.is(res.status, 200)
-  t.deepEqual(res.data, {})
-})
-
-test('Update with wrong format', async t => {
-  const ax = await axiosBuilder('dmeadus0@answers.com:passwd')
-  try {
-    await ax.put('/api/v1/settings/user/dmeadus0', { forbiddenKey: 'not allowed' })
-    t.fail()
-  } catch (err) {
-    t.is(err.status, 400)
-  }
+  it('Update with wrong format', async () => {
+    const ax = global.ax.dmeadus
+    try {
+      await ax.put('/api/v1/settings/user/dmeadus0', { forbiddenKey: 'not allowed' })
+      assert.fail()
+    } catch (err) {
+      assert.equal(err.status, 400)
+    }
+  })
 })

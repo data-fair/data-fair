@@ -24,5 +24,5 @@ export default {
   },
   error() {
     console.error.apply(console, arguments)
-  }
+  },
 }

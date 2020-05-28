@@ -32,7 +32,7 @@ exports.listDatasets = async (catalog, params = {}) => {
   }
   return {
     count: datasets.length,
-    results: datasets.map(prepareDatasetFromCatalog)
+    results: datasets.map(prepareDatasetFromCatalog),
   }
 }
 
@@ -71,9 +71,9 @@ exports.publishApplication = async (catalog, application, publication, datasets)
     url: appUrl || `${config.publicUrl}/app/${application.id}`,
     extras: {
       datafairOrigin: config.publicUrl,
-      datafairApplicationId: application.id
+      datafairApplicationId: application.id,
     },
-    datasets: udataDatasets.map(d => ({ id: d.id }))
+    datasets: udataDatasets.map(d => ({ id: d.id })),
   }
   if (catalog.organization && catalog.organization.id) {
     udataReuse.organization = { id: catalog.organization.id }
@@ -134,13 +134,13 @@ function prepareDatasetFromCatalog(d) {
         mime: r.mime,
         title: r.title,
         url: r.url,
-        size: r.fileSize
+        size: r.fileSize,
       }
       if (r.extras && r.extras.datafairOrigin === config.publicUrl) {
         resource.datafairDatasetId = r.extras.datafairDatasetId
       }
       return resource
-    })
+    }),
   }
   if (d.extras && d.extras.datafairOrigin === config.publicUrl) {
     dataset.datafairDatasetId = d.extras.datafairDatasetId
@@ -163,8 +163,8 @@ async function addResourceToDataset(catalog, dataset, publication) {
     extras: {
       datafairEmbed: 'fields',
       datafairOrigin: config.publicUrl,
-      datafairDatasetId: dataset.id
-    }
+      datafairDatasetId: dataset.id,
+    },
   }, {
     title: `${title} - Documentation de l'API`,
     description: 'Documentation interactive de l\'API à destination des développeurs. La description de l\'API utilise la spécification [OpenAPI 3.0.1](https://github.com/OAI/OpenAPI-Specification)',
@@ -176,8 +176,8 @@ async function addResourceToDataset(catalog, dataset, publication) {
     extras: {
       apidocUrl: `${config.publicUrl}/api/v1/datasets/${dataset.id}/api-docs.json`,
       datafairOrigin: config.publicUrl,
-      datafairDatasetId: dataset.id
-    }
+      datafairDatasetId: dataset.id,
+    },
   }, {
     title: `${title} - Consultez les données`,
     description: `Consultez directement les données dans ${dataset.bbox ? 'une carte interactive' : 'un tableau'}.`,
@@ -189,8 +189,8 @@ async function addResourceToDataset(catalog, dataset, publication) {
     extras: {
       datafairEmbed: dataset.bbox ? 'map' : 'table',
       datafairOrigin: config.publicUrl,
-      datafairDatasetId: dataset.id
-    }
+      datafairDatasetId: dataset.id,
+    },
   }]
   const catalogDataset = (await axios.get(url.resolve(catalog.url, `api/1/datasets/${publication.addToDataset.id}`),
     { params: { page_size: 1000 }, headers: { 'X-API-KEY': catalog.apiKey } })).data
@@ -209,8 +209,8 @@ async function addResourceToDataset(catalog, dataset, publication) {
       mime: dataset.originalFile.mimetype,
       extras: {
         datafairOrigin: config.publicUrl,
-        datafairDatasetId: dataset.id
-      }
+        datafairDatasetId: dataset.id,
+      },
     })
   }
 
@@ -247,7 +247,7 @@ async function createOrUpdateDataset(catalog, dataset, publication) {
     private: !dataset.public,
     extras: {
       datafairOrigin: config.publicUrl,
-      datafairDatasetId: dataset.id
+      datafairDatasetId: dataset.id,
     },
     resources: [{
       title: 'Description des champs',
@@ -258,8 +258,8 @@ async function createOrUpdateDataset(catalog, dataset, publication) {
       format: 'Page Web',
       mime: 'text/html',
       extras: {
-        datafairEmbed: 'fields'
-      }
+        datafairEmbed: 'fields',
+      },
     }, {
       title: 'Documentation de l\'API',
       description: 'Documentation interactive de l\'API à destination des développeurs. La description de l\'API utilise la spécification [OpenAPI 3.0.1](https://github.com/OAI/OpenAPI-Specification)',
@@ -269,8 +269,8 @@ async function createOrUpdateDataset(catalog, dataset, publication) {
       format: 'Page Web',
       mime: 'text/html',
       extras: {
-        apidocUrl: `${config.publicUrl}/api/v1/datasets/${dataset.id}/api-docs.json`
-      }
+        apidocUrl: `${config.publicUrl}/api/v1/datasets/${dataset.id}/api-docs.json`,
+      },
     }, {
       title: 'Consultez les données',
       description: `Consultez directement les données dans ${dataset.bbox ? 'une carte interactive' : 'un tableau'}.`,
@@ -280,8 +280,8 @@ async function createOrUpdateDataset(catalog, dataset, publication) {
       format: 'Page Web',
       mime: 'text/html',
       extras: {
-        datafairEmbed: dataset.bbox ? 'map' : 'table'
-      }
+        datafairEmbed: dataset.bbox ? 'map' : 'table',
+      },
     }, {
       title: `Fichier ${dataset.originalFile.name.split('.').pop()}`,
       description: `Téléchargez le fichier complet au format ${dataset.originalFile.name.split('.').pop()}.`,
@@ -289,8 +289,8 @@ async function createOrUpdateDataset(catalog, dataset, publication) {
       type: 'main',
       filetype: 'remote',
       filesize: dataset.originalFile.size,
-      mime: dataset.originalFile.mimetype
-    }]
+      mime: dataset.originalFile.mimetype,
+    }],
   }
   if (dataset.file.mimetype !== dataset.originalFile.mimetype) {
     udataDataset.resources.push({
@@ -300,7 +300,7 @@ async function createOrUpdateDataset(catalog, dataset, publication) {
       type: 'main',
       filetype: 'remote',
       filesize: dataset.file.size,
-      mime: dataset.file.mimetype
+      mime: dataset.file.mimetype,
     })
   }
   if (catalog.organization && catalog.organization.id) {
