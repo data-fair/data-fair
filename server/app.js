@@ -1,7 +1,5 @@
 const config = require('config')
 const express = require('express')
-const fs = require('fs-extra')
-const path = require('path')
 const eventToPromise = require('event-to-promise')
 const promisify = require('util').promisify
 const dbUtils = require('./utils/db')
@@ -89,8 +87,6 @@ if (config.mode.includes('server')) {
 
 // Run app and return it in a promise
 exports.run = async () => {
-  await fs.ensureDir(path.join(config.dataDir, 'tmp'))
-
   if (!config.listenWhenReady && config.mode.includes('server')) {
     server.listen(config.port)
     await eventToPromise(server, 'listening')

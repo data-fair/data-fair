@@ -456,7 +456,8 @@ exports.insertWithBaseId = async (db, dataset, baseId) => {
 
 exports.prepareGeoFiles = async (dataset) => {
   const dir = exports.dir(dataset)
-
+  const tmpDir = path.join(dataDir, 'tmp')
+  await fs.ensureDir(tmpDir)
   const fullExists = await fs.exists(exports.fullFileName(dataset))
   const parsed = path.parse(dataset.file.name)
   const geojsonFile = path.join(dir, `${parsed.name}.geojson`)
@@ -504,7 +505,7 @@ exports.prepareGeoFiles = async (dataset) => {
   ]
 }`))
 
-    const tmpGeojsonFile = await tmp.tmpName({ dir: path.join(dataDir, 'tmp') })
+    const tmpGeojsonFile = await tmp.tmpName({ dir: tmpDir })
     streams.push(fs.createWriteStream(tmpGeojsonFile))
     await pump(...streams)
     // more atomic file write to prevent read during a long write
@@ -518,7 +519,7 @@ exports.prepareGeoFiles = async (dataset) => {
       args.push(prop)
     })
 
-    const tmpMbtilesFile = await tmp.tmpName({ dir: path.join(dataDir, 'tmp') })
+    const tmpMbtilesFile = await tmp.tmpName({ dir: tmpDir })
     try {
       if (config.tippecanoe.docker) {
         await exec('docker', ['run', '--rm', '-v', `${dataDir}:/data`, 'klokantech/tippecanoe:latest', 'tippecanoe', ...config.tippecanoe.args, '--layer', 'results', '-o', tmpMbtilesFile.replace(dataDir, '/data'), geojsonFile.replace(dataDir, '/data')])
