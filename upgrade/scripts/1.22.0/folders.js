@@ -2,6 +2,7 @@ const fs = require('fs-extra')
 const config = require('config')
 const path = require('path')
 const extensionsUtils = require('../../../server/utils/extensions')
+const datasetUtils = require('../../../server/utils/dataset')
 const esUtils = require('../../../server/utils/es')
 
 exports.description = 'Dataset files are now stored in separate folders.'
@@ -24,7 +25,10 @@ exports.exec = async (db, debug) => {
   const cursor = db.collection('datasets').find({})
   while (await cursor.hasNext()) {
     const dataset = await cursor.next()
+
     const paths = getPaths(dataset)
+    debug(`move all files of dataset ${dataset.id} to ${paths.newDir}`)
+
     // if (await fs.exists(paths.newDir)) continue
     await fs.ensureDir(paths.newDir)
     if (paths.file && await fs.exists(paths.file)) {
@@ -41,7 +45,13 @@ exports.exec = async (db, debug) => {
     }
 
     if (dataset.extensions && dataset.extensions.find(e => e.active) && paths.newFullFile && !(await fs.exists(paths.newFullFile))) {
+      debug('prepare full extended file')
       await extensionsUtils.writeFullFile({ db, es }, dataset)
+    }
+
+    if (dataset.bbox && !dataset.isRest && !dataset.isVirtual) {
+      debug('prepare geo files')
+      await datasetUtils.prepareGeoFiles(dataset)
     }
   }
   await es.close()
