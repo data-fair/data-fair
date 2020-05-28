@@ -69,6 +69,6 @@ module.exports = {
     url: 'http://test.com/geocoder/api-docs.json',
   }],
   tippecanoe: {
-    docker: true,
+    skip: true,
   },
 }

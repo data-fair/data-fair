@@ -511,25 +511,27 @@ exports.prepareGeoFiles = async (dataset) => {
     await fs.move(tmpGeojsonFile, geojsonFile, { overwrite: true })
   }
 
-  const args = [...config.tippecanoe.args]
-  tiles.defaultSelect(dataset).forEach(prop => {
-    args.push('--include')
-    args.push(prop)
-  })
+  if (!config.tippecanoe.skip) {
+    const args = [...config.tippecanoe.args]
+    tiles.defaultSelect(dataset).forEach(prop => {
+      args.push('--include')
+      args.push(prop)
+    })
 
-  const tmpMbtilesFile = await tmp.tmpName({ dir: path.join(dataDir, 'tmp') })
-  try {
-    if (config.tippecanoe.docker) {
-      await exec('docker', ['run', '--rm', '-v', `${dataDir}:/data`, 'klokantech/tippecanoe:latest', 'tippecanoe', ...config.tippecanoe.args, '--layer', 'results', '-o', tmpMbtilesFile.replace(dataDir, '/data'), geojsonFile.replace(dataDir, '/data')])
-    } else {
-      await exec('tippecanoe', [...config.tippecanoe.args, '--layer', 'results', '-o', mbtilesFile, geojsonFile])
+    const tmpMbtilesFile = await tmp.tmpName({ dir: path.join(dataDir, 'tmp') })
+    try {
+      if (config.tippecanoe.docker) {
+        await exec('docker', ['run', '--rm', '-v', `${dataDir}:/data`, 'klokantech/tippecanoe:latest', 'tippecanoe', ...config.tippecanoe.args, '--layer', 'results', '-o', tmpMbtilesFile.replace(dataDir, '/data'), geojsonFile.replace(dataDir, '/data')])
+      } else {
+        await exec('tippecanoe', [...config.tippecanoe.args, '--layer', 'results', '-o', mbtilesFile, geojsonFile])
+      }
+    } catch (err) {
+      console.error('failed to create mbtiles file', mbtilesFile, err)
     }
-  } catch (err) {
-    console.error('failed to create mbtiles file', mbtilesFile, err)
-  }
 
-  // more atomic file write to prevent read during a long write
-  await fs.move(tmpMbtilesFile, mbtilesFile, { overwrite: true })
+    // more atomic file write to prevent read during a long write
+    await fs.move(tmpMbtilesFile, mbtilesFile, { overwrite: true })
+  }
 }
 
 exports.deleteGeoFiles = async (dataset) => {

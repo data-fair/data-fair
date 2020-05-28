@@ -16,9 +16,10 @@ describe('Generated geo files', () => {
 
     res = await ax.get(`/api/v1/datasets/${dataset.id}/data-files`)
     assert.equal(res.status, 200)
-    assert.equal(res.data.length, 3)
+    assert.equal(res.data.length, 2)
     assert.ok(res.data.find(f => f.key === 'original'))
-    assert.ok(res.data.find(f => f.key === 'mbtiles'))
+    // disabled in test env for now
+    // assert.ok(res.data.find(f => f.key === 'mbtiles'))
     assert.ok(res.data.find(f => f.key === 'geojson'))
     res = await ax.get(res.data.find(f => f.key === 'geojson').url)
     assert.equal(res.data.features[0].id, 0)
