@@ -2,6 +2,7 @@ const geojsonvt = require('geojson-vt')
 const vtpbf = require('vt-pbf')
 // const Pbf = require('pbf')
 const { gunzip } = require('zlib')
+const memoize = require('memoizee')
 const MBTiles = require('@mapbox/mbtiles')
 // const VectorTile = require('@mapbox/vector-tile').VectorTile
 
@@ -53,33 +54,52 @@ const selectInVT = (data, select) => {
 }
 */
 
-exports.getTile = async(mbtilesPath, x, y, z) => {
+async function getMbtiles(mbtilesPath) {
   return new Promise((resolve, reject) => {
     // eslint-disable-next-line no-new
     new MBTiles(`${mbtilesPath}?mode=ro`, (err, mbtiles) => {
       if (err) return reject(err)
       mbtiles.getInfo((err, info) => {
         if (err) return reject(err)
-        if (z > info.maxzoom || z < info.minzoom) {
-          // false means that the tile is out the range of what the mbtiles serves
-          return resolve(false)
-        }
-        mbtiles.getTile(z, x, y, (err, data, headers) => {
-          if (err) {
-            if (/does not exist/.test(err.message)) return resolve(null)
-            return reject(err)
-          }
-
-          gunzip(data, (err, unzipped) => {
-            if (err) return reject(err)
-            resolve(unzipped)
-          })
-          /* if (headers['Content-Encoding'] === 'gzip') {
-            data = await gunzip(data)
-          } */
-          // resolve({ data, headers })
-        })
+        resolve({ mbtiles, info })
       })
+    })
+  })
+}
+
+// manage a few active connections to prevent both always reopening connections to mbtiles
+// and keeping connections opended indefinitely
+const memoizedGetMbtiles = memoize(getMbtiles, {
+  promise: true,
+  max: 100,
+  maxAge: 10000,
+  preFetch: true,
+  dispose(res) {
+    res.mbtiles.close()
+  },
+})
+
+exports.getTile = async (mbtilesPath, x, y, z) => {
+  const { mbtiles, info } = await memoizedGetMbtiles(mbtilesPath)
+  if (z > info.maxzoom || z < info.minzoom) {
+    // false means that the tile is out the range of what the mbtiles serves
+    return false
+  }
+  return new Promise((resolve, reject) => {
+    mbtiles.getTile(z, x, y, (err, data, headers) => {
+      if (err) {
+        if (/does not exist/.test(err.message)) return resolve(null)
+        return reject(err)
+      }
+
+      gunzip(data, (err, unzipped) => {
+        if (err) return reject(err)
+        resolve(unzipped)
+      })
+      /* if (headers['Content-Encoding'] === 'gzip') {
+        data = await gunzip(data)
+      } */
+      // resolve({ data, headers })
     })
   })
 }

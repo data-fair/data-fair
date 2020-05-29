@@ -522,9 +522,9 @@ exports.prepareGeoFiles = async (dataset) => {
     const tmpMbtilesFile = await tmp.tmpName({ dir: tmpDir })
     try {
       if (config.tippecanoe.docker) {
-        await exec('docker', ['run', '--rm', '-v', `${dataDir}:/data`, 'klokantech/tippecanoe:latest', 'tippecanoe', ...config.tippecanoe.args, '--layer', 'results', '-o', tmpMbtilesFile.replace(dataDir, '/data'), geojsonFile.replace(dataDir, '/data')])
+        await exec('docker', ['run', '--rm', '-e', 'TIPPECANOE_MAX_THREADS=1', '-v', `${dataDir}:/data`, 'klokantech/tippecanoe:latest', 'tippecanoe', ...config.tippecanoe.args, '--layer', 'results', '-o', tmpMbtilesFile.replace(dataDir, '/data'), geojsonFile.replace(dataDir, '/data')])
       } else {
-        await exec('tippecanoe', [...config.tippecanoe.args, '--layer', 'results', '-o', tmpMbtilesFile, geojsonFile])
+        await exec('tippecanoe', [...config.tippecanoe.args, '--layer', 'results', '-o', tmpMbtilesFile, geojsonFile], { env: { TIPPECANOE_MAX_THREADS: '1' } })
       }
     } catch (err) {
       console.error('failed to create mbtiles file', mbtilesFile, err)
