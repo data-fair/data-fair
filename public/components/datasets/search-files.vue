@@ -43,15 +43,15 @@
                 md="2"
               >
                 <v-select
-                  v-model="pagination.rowsPerPage"
+                  v-model="pagination.itemsPerPage"
                   :items="[10,20,50]"
                   label="Nombre de lignes"
                 />
               </v-col>
               <v-pagination
-                v-if="data.total > pagination.rowsPerPage"
+                v-if="data.total > pagination.itemsPerPage"
                 v-model="pagination.page"
-                :length="Math.ceil(Math.min(data.total, 10000) / pagination.rowsPerPage)"
+                :length="Math.ceil(Math.min(data.total, 10000) / pagination.itemsPerPage)"
                 :total-visible="$vuetify.breakpoint.lgAndUp ? 7 : 5"
                 class="mx-4"
               />
@@ -85,13 +85,13 @@
   import eventBus from '~/event-bus'
 
   export default {
-    props: ['initRowsPerPage', 'hideRowsPerPage'],
+    props: ['inititemsPerPage', 'hideitemsPerPage'],
     data: () => ({
       data: null,
       query: null,
       pagination: {
         page: 1,
-        rowsPerPage: 10,
+        itemsPerPage: 10,
       },
       notFound: false,
       loading: false,
@@ -118,14 +118,14 @@
       },
     },
     mounted() {
-      if (this.initRowsPerPage) this.pagination.rowsPerPage = this.initRowsPerPage
+      if (this.inititemsPerPage) this.pagination.itemsPerPage = this.inititemsPerPage
       this.refresh()
     },
     methods: {
       async refresh() {
         // this.data = {}
         const params = {
-          size: this.pagination.rowsPerPage,
+          size: this.pagination.itemsPerPage,
           page: this.pagination.page,
           select: [this.fileProperty.key, '_file.content_type', '_file.content_length'].join(','),
           highlight: '_file.content',

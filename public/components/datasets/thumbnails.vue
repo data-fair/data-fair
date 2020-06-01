@@ -28,22 +28,22 @@
           />
           <v-spacer />
           <v-col
-            v-if="!hideRowsPerPage && data.total > pagination.rowsPerPage"
+            v-if="!hideitemsPerPage && data.total > pagination.itemsPerPage"
             sm="4"
             md="2"
             lg="1"
             xl="1"
           >
             <v-select
-              v-model="pagination.rowsPerPage"
+              v-model="pagination.itemsPerPage"
               :items="[10,20,50]"
               label="Nombre de lignes"
             />
           </v-col>
           <v-pagination
-            v-if="data.total > pagination.rowsPerPage"
+            v-if="data.total > pagination.itemsPerPage"
             v-model="pagination.page"
-            :length="Math.ceil(Math.min(data.total, 10000) / pagination.rowsPerPage)"
+            :length="Math.ceil(Math.min(data.total, 10000) / pagination.itemsPerPage)"
             :total-visible="$vuetify.breakpoint.lgAndUp ? 7 : 5"
             class="mx-4"
           />
@@ -89,13 +89,13 @@
   import eventBus from '~/event-bus'
 
   export default {
-    props: ['initRowsPerPage', 'hideRowsPerPage'],
+    props: ['inititemsPerPage', 'hideitemsPerPage'],
     data: () => ({
       data: {},
       query: null,
       pagination: {
         page: 1,
-        rowsPerPage: 12,
+        itemsPerPage: 12,
       },
       notFound: false,
       loading: false,
@@ -130,7 +130,7 @@
       },
     },
     mounted() {
-      if (this.initRowsPerPage) this.pagination.rowsPerPage = this.initRowsPerPage
+      if (this.inititemsPerPage) this.pagination.itemsPerPage = this.inititemsPerPage
       this.refresh()
     },
     methods: {
@@ -141,7 +141,7 @@
         if (this.descriptionField) select.push(this.descriptionField.key)
 
         const params = {
-          size: this.pagination.rowsPerPage,
+          size: this.pagination.itemsPerPage,
           page: this.pagination.page,
           select: select.join(','),
           thumbnail: `${this.maxThumbnailWidth}x${this.thumbnailHeight}`,

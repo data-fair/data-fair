@@ -9,7 +9,7 @@
           class="pb-0"
           lg="4"
           md="5"
-          sm="6"
+          sm="5"
           cols="12"
         >
           <v-text-field
@@ -28,17 +28,17 @@
         <v-col
           lg="8"
           md="7"
-          sm="6"
+          sm="7"
           cols="12"
           class="pb-0"
         >
-          <v-row justify="end" class="px-3">
+          <v-row justify="end" class="pr-3">
             <v-spacer v-if="$vuetify.breakpoint.xs" />
             <v-pagination
               v-if="data.total"
               v-model="pagination.page"
               circle
-              :length="Math.floor(Math.min(data.total, 10000) / pagination.rowsPerPage)"
+              :length="Math.ceil(Math.min(data.total, 10000 - pagination.itemsPerPage) / pagination.itemsPerPage)"
               :total-visible="$vuetify.breakpoint.lgAndUp ? 6 : 4"
               style="width: auto"
             />
@@ -47,6 +47,8 @@
           </v-row>
         </v-col>
       </v-row>
+
+      <dataset-filters v-model="filters" />
 
       <v-data-table
         :headers="headers"
@@ -98,8 +100,8 @@
             <td
               v-for="header in headers"
               :key="header.value"
-              :class="`pl-4 ${filters[header.value] ? 'pr-4' : 'pr-0'}`"
-              :style="`max-height: ${lineHeight}px`"
+              :class="`pl-4 pr-0'}`"
+              :style="`height: ${lineHeight}px`"
             >
               <template v-if="header.value === '_thumbnail'">
                 <v-avatar
@@ -115,31 +117,20 @@
               </template>
               <template v-else>
                 <v-hover v-slot:default="{ hover }">
-                  <div :style="`position: relative; min-width: ${Math.min((item[header.value] + '').length, 50) * 4}px`">
-                    <span style="vertical-align: middle;">
+                  <div :style="`position: relative; max-height: ${lineHeight}px; min-width: ${Math.min((item[header.value] + '').length, 50) * 4}px`">
+                    <span>
                       {{ ((item[header.value] === undefined || item[header.value] === null ? '' : item[header.value]) + '') | truncate(50) }}
                     </span>
                     <v-btn
-                      v-if="hover && !filters[header.value] && isFilterable(item[header.value])"
+                      v-if="hover && !filters.find(f => f.field.key === header.value) && isFilterable(item[header.value])"
                       fab
                       x-small
                       color="primary"
-                      style="top: -4px;right: -8px;"
+                      style="top: -5px;right: -8px;"
                       absolute
-                      @click="toggleFilter(header.value, item[header.value])"
+                      @click="addFilter(header.value, item[header.value])"
                     >
                       <v-icon>mdi-filter-variant</v-icon>
-                    </v-btn>
-                    <v-btn
-                      v-if="filters[header.value]"
-                      icon
-                      small
-                      color="primary"
-                      style="top: -4px;right: -28px;"
-                      absolute
-                      @click="toggleFilter(header.value, item[header.value])"
-                    >
-                      <v-icon>mdi-filter-variant-remove</v-icon>
                     </v-btn>
                   </div>
                 </v-hover>
@@ -156,18 +147,20 @@
   import { mapState, mapGetters } from 'vuex'
   import eventBus from '~/event-bus'
   import DownloadResults from '~/components/datasets/download-results'
+  import DatasetFilters from '~/components/datasets/filters'
   const filtersUtils = require('~/assets/filters-utils')
 
   export default {
     components: {
       DownloadResults,
+      DatasetFilters,
     },
     data: () => ({
       data: {},
       query: null,
       pagination: {
         page: 1,
-        rowsPerPage: 5,
+        itemsPerPage: 5,
         sortBy: null,
         descending: false,
       },
@@ -175,7 +168,7 @@
       notFound: false,
       loading: false,
       lineHeight: 40,
-      filters: {},
+      filters: [],
     }),
     computed: {
       ...mapState(['vocabulary']),
@@ -207,15 +200,15 @@
       },
       params() {
         const params = {
-          size: this.pagination.rowsPerPage,
+          size: this.pagination.itemsPerPage,
           page: this.pagination.page,
         }
         if (this.imageField) params.thumbnail = '40x40'
         if (this.pagination.sortBy) params.sort = (this.pagination.descending ? '-' : '') + this.pagination.sortBy
         if (this.query) params.q = this.query
         if (this.select.length) params.select = this.select.join(',')
-        if (Object.keys(this.filters).length) {
-          params.qs = filtersUtils.filters2qs(Object.keys(this.filters).map(key => ({ type: 'in', field: { key }, values: [this.filters[key]] })))
+        if (this.filters.length) {
+          params.qs = filtersUtils.filters2qs(this.filters)
         }
         return params
       },
@@ -232,20 +225,25 @@
       },
       filters: {
         handler () {
+          this.setItemsPerPage()
           this.refresh(true)
         },
         deep: true,
       },
     },
     mounted() {
-      // adapt number of lines to window height
-      const height = window.innerHeight
-      const top = this.$vuetify.breakpoint.xs ? 245 : 185
-      const nbRows = Math.ceil(Math.max(height - top, 120) / (this.lineHeight + 1))
-      this.pagination.rowsPerPage = Math.min(Math.max(nbRows, 4), 50)
+      this.setItemsPerPage()
       this.refresh()
     },
     methods: {
+      setItemsPerPage() {
+        // adapt number of lines to window height
+        const height = window.innerHeight
+        let top = this.$vuetify.breakpoint.xs ? 154 : 104
+        if (this.filters.length) top += 32.5
+        const nbRows = Math.floor(Math.max(height - top, 120) / (this.lineHeight + 2))
+        this.pagination.itemsPerPage = Math.min(Math.max(nbRows, 4), 50)
+      },
       async refresh(resetPagination) {
         if (resetPagination) this.pagination.page = 1
 
@@ -271,12 +269,9 @@
           this.pagination.descending = true
         }
       },
-      toggleFilter(key, value) {
-        if (this.filters[key]) {
-          this.$delete(this.filters, key)
-        } else {
-          this.$set(this.filters, key, value)
-        }
+      addFilter(key, value) {
+        const field = this.dataset.schema.find(f => f.key === key)
+        this.filters.push({ type: 'in', field, values: [value] })
       },
       isFilterable(value) {
         if (value === undefined || value === null || value === '') return false

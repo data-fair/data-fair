@@ -54,15 +54,15 @@
               md="2"
             >
               <v-select
-                v-model="pagination.rowsPerPage"
+                v-model="pagination.itemsPerPage"
                 :items="[10,20,50]"
                 label="Nombre de lignes"
               />
             </v-col>
             <v-pagination
-              v-if="data.total > pagination.rowsPerPage"
+              v-if="data.total > pagination.itemsPerPage"
               v-model="pagination.page"
-              :length="Math.floor(Math.min(data.total, 10000) / pagination.rowsPerPage)"
+              :length="Math.floor(Math.min(data.total, 10000 - pagination.itemsPerPage) / pagination.itemsPerPage)"
               :total-visible="$vuetify.breakpoint.lgAndUp ? 7 : 5"
               class="mx-4"
             />
@@ -291,7 +291,7 @@
       select: [],
       pagination: {
         page: 1,
-        rowsPerPage: 10,
+        itemsPerPage: 10,
         sortBy: null,
         descending: false,
       },
@@ -310,7 +310,7 @@
       historyLoading: false,
       historyPagination: {
         page: 1,
-        rowsPerPage: 10,
+        itemsPerPage: 10,
       },
     }),
     computed: {
@@ -389,7 +389,7 @@
         if (resetPagination) this.pagination.page = 1
         // this.data = {}
         const params = {
-          size: this.pagination.rowsPerPage,
+          size: this.pagination.itemsPerPage,
           page: this.pagination.page,
         }
         if (this.imageField) params.thumbnail = '40x40'
@@ -445,7 +445,7 @@
           this.history = await this.$axios.$get(`${this.resourceUrl}/lines/${this.historyLine._id}/revisions`, {
             params: {
               page: this.historyPagination.page,
-              size: this.historyPagination.rowsPerPage,
+              size: this.historyPagination.itemsPerPage,
             },
           })
         } catch (error) {
