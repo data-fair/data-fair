@@ -11,7 +11,10 @@
             class="ml-3"
             close
             small
+            :input-value="true"
             color="primary"
+            outlined
+            style="font-weight: bold;"
             @click:close="removeFilter(i)"
           >
             {{ filter.field.title || filter.field['x-originalName'] || filter.key }} = {{ filter.values.join(', ') }}

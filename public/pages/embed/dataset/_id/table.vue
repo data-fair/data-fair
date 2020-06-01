@@ -117,7 +117,7 @@
               </template>
               <template v-else>
                 <v-hover v-slot:default="{ hover }">
-                  <div :style="`position: relative; max-height: ${lineHeight}px; min-width: ${Math.min((item[header.value] + '').length, 50) * 6}px;overflow: hidden;`">
+                  <div :style="`position: relative; max-height: ${lineHeight}px; min-width: ${Math.min((item[header.value] + '').length, 50) * 6}px;`">
                     <span>
                       {{ ((item[header.value] === undefined || item[header.value] === null ? '' : item[header.value]) + '') | truncate(50) }}
                     </span>
