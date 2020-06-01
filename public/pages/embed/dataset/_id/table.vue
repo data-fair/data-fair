@@ -20,8 +20,8 @@
             solo
             dense
             hide-details
-            @keyup.enter.native="refresh"
-            @click:append="refresh"
+            @keyup.enter.native="refresh(true)"
+            @click:append="refresh(true)"
           />
         </v-col>
 
@@ -38,7 +38,7 @@
               v-if="data.total"
               v-model="pagination.page"
               circle
-              :length="Math.ceil(Math.min(data.total, 10000) / pagination.rowsPerPage)"
+              :length="Math.floor(Math.min(data.total, 10000) / pagination.rowsPerPage)"
               :total-visible="$vuetify.breakpoint.lgAndUp ? 6 : 4"
               style="width: auto"
             />
@@ -98,14 +98,14 @@
             <td
               v-for="header in headers"
               :key="header.value"
-              :style="`height: ${lineHeight}px;`"
-              class="pr-0 pl-4"
+              :class="`pl-4 ${filters[header.value] ? 'pr-4' : 'pr-0'}`"
+              :style="`max-height: ${lineHeight}px`"
             >
               <template v-if="header.value === '_thumbnail'">
                 <v-avatar
                   v-if="item._thumbnail"
                   tile
-                  :size="40"
+                  :size="lineHeight"
                 >
                   <img :src="item._thumbnail">
                 </v-avatar>
@@ -115,15 +115,17 @@
               </template>
               <template v-else>
                 <v-hover v-slot:default="{ hover }">
-                  <div style="position: relative">
-                    {{ ((item[header.value] === undefined || item[header.value] === null ? '' : item[header.value]) + '') | truncate(50) }}
+                  <div :style="`position: relative; min-width: ${Math.min((item[header.value] + '').length, 50) * 4}px`">
+                    <span style="vertical-align: middle;">
+                      {{ ((item[header.value] === undefined || item[header.value] === null ? '' : item[header.value]) + '') | truncate(50) }}
+                    </span>
                     <v-btn
                       v-if="hover && !filters[header.value] && isFilterable(item[header.value])"
-                      icon
-                      small
+                      fab
+                      x-small
                       color="primary"
+                      style="top: -4px;right: -8px;"
                       absolute
-                      style="top: -4px;"
                       @click="toggleFilter(header.value, item[header.value])"
                     >
                       <v-icon>mdi-filter-variant</v-icon>
@@ -133,8 +135,8 @@
                       icon
                       small
                       color="primary"
+                      style="top: -4px;right: -28px;"
                       absolute
-                      style="top: -4px;"
                       @click="toggleFilter(header.value, item[header.value])"
                     >
                       <v-icon>mdi-filter-variant-remove</v-icon>
@@ -220,7 +222,7 @@
     },
     watch: {
       'dataset.schema'() {
-        this.refresh()
+        this.refresh(true)
       },
       pagination: {
         handler () {
@@ -230,7 +232,7 @@
       },
       filters: {
         handler () {
-          this.refresh()
+          this.refresh(true)
         },
         deep: true,
       },
@@ -244,7 +246,9 @@
       this.refresh()
     },
     methods: {
-      async refresh() {
+      async refresh(resetPagination) {
+        if (resetPagination) this.pagination.page = 1
+
         // this.data = {}
         this.loading = true
         try {

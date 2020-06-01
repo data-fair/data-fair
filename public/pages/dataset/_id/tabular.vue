@@ -42,8 +42,8 @@
                 append-icon="mdi-magnify"
                 class="mr-3"
                 style="min-width:150px;"
-                @keyup.enter.native="refresh"
-                @click:append="refresh"
+                @keyup.enter.native="refresh(true)"
+                @click:append="refresh(true)"
               />
             </v-col>
             <v-spacer />
@@ -62,7 +62,7 @@
             <v-pagination
               v-if="data.total > pagination.rowsPerPage"
               v-model="pagination.page"
-              :length="Math.ceil(Math.min(data.total, 10000) / pagination.rowsPerPage)"
+              :length="Math.floor(Math.min(data.total, 10000) / pagination.rowsPerPage)"
               :total-visible="$vuetify.breakpoint.lgAndUp ? 7 : 5"
               class="mx-4"
             />
@@ -366,7 +366,7 @@
     },
     watch: {
       'dataset.schema'() {
-        this.refresh()
+        this.refresh(true)
       },
       pagination: {
         handler () {
@@ -385,7 +385,8 @@
       this.refresh()
     },
     methods: {
-      async refresh() {
+      async refresh(resetPagination) {
+        if (resetPagination) this.pagination.page = 1
         // this.data = {}
         const params = {
           size: this.pagination.rowsPerPage,
