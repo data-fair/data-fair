@@ -62,5 +62,10 @@ describe('search', () => {
     assert.equal(res.headers['content-type'], 'application/x-protobuf')
     res = await ax.get('/api/v1/datasets/dataset/lines?xyz=3,4,7&format=pbf')
     assert.equal(res.status, 204)
+
+    res = await ax.get('/api/v1/datasets/dataset/lines?format=csv')
+    const lines = res.data.split('\n')
+    assert.equal(lines[0], '\ufeffid,adr,some date,loc')
+    assert.equal(lines[1], 'koumoul,19 rue de la voie lactée saint avé,,"47.687375,-2.748526"')
   })
 })

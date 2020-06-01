@@ -32,6 +32,7 @@ const cache = require('../utils/cache')
 const cacheHeaders = require('../utils/cache-headers')
 const apiDocsUtil = require('../utils/api-docs')
 const webhooks = require('../utils/webhooks')
+const outputs = require('../utils/outputs')
 const datasetPatchSchema = require('../../contract/dataset-patch')
 const validatePatch = ajv.compile(datasetPatchSchema)
 const datasetPostSchema = require('../../contract/dataset-post')
@@ -537,7 +538,6 @@ router.get('/:datasetId/lines', readDataset(), permissions.middleware('readLines
   if (req.query && req.query.page && req.query.size && req.query.page * req.query.size > 10000) {
     return res.status(404).send('You can only access the first 10 000 elements.')
   }
-  res.throttleEnd()
 
   const db = req.app.get('db')
 
@@ -588,6 +588,7 @@ router.get('/:datasetId/lines', readDataset(), permissions.middleware('readLines
       const tile = await tiles.getTile(mbtilesPath, ...xyz)
       if (tile) {
         res.type('application/x-protobuf')
+        res.throttleEnd()
         return res.status(200).send(tile)
       } else if (tile === null) {
         // 204 = no-content, better than 404
@@ -654,6 +655,8 @@ router.get('/:datasetId/lines', readDataset(), permissions.middleware('readLines
   if (req.query.format === 'geojson') {
     const geojson = geo.result2geojson(esResponse)
     geojson.bbox = (await bboxPromise).bbox
+    res.setHeader('content-disposition', `attachment; filename="${req.dataset.id}.geojson"`)
+    res.throttleEnd()
     return res.status(200).send(geojson)
   }
 
@@ -664,6 +667,7 @@ router.get('/:datasetId/lines', readDataset(), permissions.middleware('readLines
     res.type('application/x-protobuf')
     // write in cache without await on purpose for minimal latency, a cache failure must be detected in the logs
     if (!config.cache.disabled) cache.set(db, cacheHash, new mongodb.Binary(tile))
+    res.throttleEnd()
     return res.status(200).send(tile)
   }
 
@@ -673,6 +677,31 @@ router.get('/:datasetId/lines', readDataset(), permissions.middleware('readLines
       return esUtils.prepareResultItem(hit, req.dataset, req.query)
     }),
   }
+
+  if (req.query.format === 'csv') {
+    res.setHeader('content-disposition', `attachment; filename="${req.dataset.id}.csv"`)
+    // add BOM for excel, cf https://stackoverflow.com/a/17879474
+    res.write('\ufeff')
+    const csvStream = outputs.result2csv(req.dataset, req.query, result)
+    const streamPromise = pump(
+      csvStream,
+      res.throttle('dynamic'),
+      res,
+    )
+    for (const line of result.results) {
+      await new Promise((resolve, reject) => {
+        csvStream.write(line, (err) => {
+          if (err) reject(err)
+          resolve(err)
+        })
+      })
+    }
+    csvStream.end()
+    await streamPromise
+    return
+  }
+
+  res.throttleEnd()
   res.status(200).send(result)
 }))
 

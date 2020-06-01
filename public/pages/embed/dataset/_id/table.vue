@@ -43,7 +43,7 @@
               style="width: auto"
             />
             <v-spacer v-if="$vuetify.breakpoint.xs" />
-            <v-icon>mdi-download</v-icon>
+            <download-results :params="params" :total="data.total" />
           </v-row>
         </v-col>
       </v-row>
@@ -114,7 +114,33 @@
                 <a :href="item._attachment_url">{{ item[header.value] }}</a>
               </template>
               <template v-else>
-                {{ ((item[header.value] === undefined || item[header.value] === null ? '' : item[header.value]) + '') | truncate(50) }}
+                <v-hover v-slot:default="{ hover }">
+                  <div style="position: relative">
+                    {{ ((item[header.value] === undefined || item[header.value] === null ? '' : item[header.value]) + '') | truncate(50) }}
+                    <v-btn
+                      v-if="hover && !filters[header.value] && isFilterable(item[header.value])"
+                      icon
+                      small
+                      color="primary"
+                      absolute
+                      style="top: -4px;"
+                      @click="toggleFilter(header.value, item[header.value])"
+                    >
+                      <v-icon>mdi-filter-variant</v-icon>
+                    </v-btn>
+                    <v-btn
+                      v-if="filters[header.value]"
+                      icon
+                      small
+                      color="primary"
+                      absolute
+                      style="top: -4px;"
+                      @click="toggleFilter(header.value, item[header.value])"
+                    >
+                      <v-icon>mdi-filter-variant-remove</v-icon>
+                    </v-btn>
+                  </div>
+                </v-hover>
               </template>
             </td>
           </tr>
@@ -127,12 +153,16 @@
 <script>
   import { mapState, mapGetters } from 'vuex'
   import eventBus from '~/event-bus'
+  import DownloadResults from '~/components/datasets/download-results'
+  const filtersUtils = require('~/assets/filters-utils')
 
   export default {
+    components: {
+      DownloadResults,
+    },
     data: () => ({
       data: {},
       query: null,
-      select: [],
       pagination: {
         page: 1,
         rowsPerPage: 5,
@@ -143,15 +173,18 @@
       notFound: false,
       loading: false,
       lineHeight: 40,
+      filters: {},
     }),
     computed: {
       ...mapState(['vocabulary']),
       ...mapState('dataset', ['dataset']),
       ...mapGetters('dataset', ['resourceUrl']),
+      select() {
+        return this.dataset.schema.filter(field => !field['x-calculated']).map(field => field.key)
+      },
       headers() {
         const fieldsHeaders = this.dataset.schema
-          .filter(field => !field['x-calculated'])
-          .filter(field => !this.select.length || this.select.includes(field.key))
+          .filter(field => this.select.includes(field.key))
           .map(field => ({
             text: field.title || field['x-originalName'] || field.key,
             value: field.key,
@@ -170,12 +203,32 @@
       digitalDocumentField() {
         return this.dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')
       },
+      params() {
+        const params = {
+          size: this.pagination.rowsPerPage,
+          page: this.pagination.page,
+        }
+        if (this.imageField) params.thumbnail = '40x40'
+        if (this.pagination.sortBy) params.sort = (this.pagination.descending ? '-' : '') + this.pagination.sortBy
+        if (this.query) params.q = this.query
+        if (this.select.length) params.select = this.select.join(',')
+        if (Object.keys(this.filters).length) {
+          params.qs = filtersUtils.filters2qs(Object.keys(this.filters).map(key => ({ type: 'in', field: { key }, values: [this.filters[key]] })))
+        }
+        return params
+      },
     },
     watch: {
       'dataset.schema'() {
         this.refresh()
       },
       pagination: {
+        handler () {
+          this.refresh()
+        },
+        deep: true,
+      },
+      filters: {
         handler () {
           this.refresh()
         },
@@ -193,18 +246,10 @@
     methods: {
       async refresh() {
         // this.data = {}
-        const params = {
-          size: this.pagination.rowsPerPage,
-          page: this.pagination.page,
-        }
-        if (this.imageField) params.thumbnail = '40x40'
-        if (this.pagination.sortBy) params.sort = (this.pagination.descending ? '-' : '') + this.pagination.sortBy
-        if (this.query) params.q = this.query
-        if (this.select.length) params.select = this.select.join(',')
         this.loading = true
         try {
-          this.data = await this.$axios.$get(this.resourceUrl + '/lines', { params })
-          console.log('data', this.data)
+          this.data = await this.$axios.$get(this.resourceUrl + '/lines', { params: this.params })
+          // console.log('data', this.data)
           this.notFound = false
         } catch (error) {
           console.log('ERROR', error)
@@ -221,6 +266,18 @@
           this.pagination.sortBy = header.value
           this.pagination.descending = true
         }
+      },
+      toggleFilter(key, value) {
+        if (this.filters[key]) {
+          this.$delete(this.filters, key)
+        } else {
+          this.$set(this.filters, key, value)
+        }
+      },
+      isFilterable(value) {
+        if (value === undefined || value === null || value === '') return false
+        if (typeof value === 'string' && (value.length > 200 || value.startsWith('{'))) return false
+        return true
       },
     },
   }

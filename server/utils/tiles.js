@@ -71,7 +71,7 @@ async function getMbtiles(mbtilesPath) {
 // and keeping connections opended indefinitely
 const memoizedGetMbtiles = memoize(getMbtiles, {
   promise: true,
-  max: 100,
+  max: 200,
   maxAge: 10000,
   preFetch: true,
   dispose(res) {
