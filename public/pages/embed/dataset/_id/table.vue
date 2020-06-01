@@ -117,7 +117,7 @@
               </template>
               <template v-else>
                 <v-hover v-slot:default="{ hover }">
-                  <div :style="`position: relative; max-height: ${lineHeight}px; min-width: ${Math.min((item[header.value] + '').length, 50) * 4}px`">
+                  <div :style="`position: relative; max-height: ${lineHeight}px; min-width: ${Math.min((item[header.value] + '').length, 50) * 5}px;overflow: hidden;`">
                     <span>
                       {{ ((item[header.value] === undefined || item[header.value] === null ? '' : item[header.value]) + '') | truncate(50) }}
                     </span>
@@ -240,7 +240,7 @@
         // adapt number of lines to window height
         const height = window.innerHeight
         let top = this.$vuetify.breakpoint.xs ? 154 : 104
-        if (this.filters.length) top += 32.5
+        if (this.filters.length) top += 28
         const nbRows = Math.floor(Math.max(height - top, 120) / (this.lineHeight + 2))
         this.pagination.itemsPerPage = Math.min(Math.max(nbRows, 4), 50)
       },
