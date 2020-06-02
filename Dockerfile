@@ -52,6 +52,7 @@ ADD package.json .
 ADD package-lock.json .
 ADD patches patches
 RUN npm install --production && node-prune
+RUN ./node_modules/.bin/patch-package
 ADD nodemon.json .
 
 # Adding UI files
