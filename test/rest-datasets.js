@@ -281,6 +281,7 @@ describe('REST datasets', () => {
     res = await ax.post('/api/v1/datasets/resthist/lines', { _id: 'id1', attr1: 'test1', attr2: 'test1' })
     assert.equal(res.data._id, 'id1')
     res = await ax.patch('/api/v1/datasets/resthist/lines/id1', { attr1: 'test2' })
+    await workers.hook('finalizer/resthist')
     res = await ax.get('/api/v1/datasets/resthist/lines/id1/revisions')
     assert.equal(res.data.results[0]._id, 'id1')
     assert.equal(res.data.results[0].attr1, 'test2')
