@@ -63,6 +63,7 @@ ADD doc/pages/interoperate public/pages/interoperate
 ADD config config
 ADD shared shared
 ADD contract contract
+ADD patches patches
 RUN npm run build
 
 # Adding server files
