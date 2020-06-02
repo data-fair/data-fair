@@ -50,6 +50,7 @@ ENV DEBUG db,upgrade*
 WORKDIR /webapp
 ADD package.json .
 ADD package-lock.json .
+ADD patches patches
 RUN npm install --production && node-prune
 ADD nodemon.json .
 
@@ -63,7 +64,6 @@ ADD doc/pages/interoperate public/pages/interoperate
 ADD config config
 ADD shared shared
 ADD contract contract
-ADD patches patches
 RUN npm run build
 
 # Adding server files
