@@ -107,6 +107,7 @@ exports.getTile = async (mbtilesPath, x, y, z) => {
 exports.defaultSelect = (dataset) => {
   return dataset.schema.filter(prop => {
     if (prop.key === '_id') return true
+    if (prop.key === '_i') return true
     if (prop.key.startsWith('_')) return false
     if (prop.type === 'integer') return true
     if (prop.type === 'number') return true
