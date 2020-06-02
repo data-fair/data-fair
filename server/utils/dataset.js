@@ -254,7 +254,9 @@ exports.writeFullFile = async (db, es, dataset) => {
   })]
 
   if (dataset.file.mimetype === 'text/csv') {
-    transforms.push(csvStringify({ columns: relevantSchema.map(field => field.title || field['x-originalName'] || field.key), header: true }))
+    // if we don't use the original name, readStream will not match the keys
+    // transforms.push(csvStringify({ columns: relevantSchema.map(field => field.title || field['x-originalName'] || field.key), header: true }))
+    transforms.push(csvStringify({ columns: relevantSchema.map(field => field['x-originalName'] || field.key), header: true }))
   } else if (dataset.file.mimetype === 'application/geo+json') {
     transforms.push(new Transform({
       transform(chunk, encoding, callback) {
@@ -432,7 +434,12 @@ exports.reindex = async (db, dataset) => {
   if (dataset.isVirtual) patch.status = 'indexed'
   else if (dataset.isRest) patch.status = 'schematized'
   else if (dataset.originalFile && !baseTypes.has(dataset.originalFile.mimetype)) patch.status = 'uploaded'
-  await db.collection('datasets').updateOne({ id: dataset.id }, { $set: patch })
+  return (await db.collection('datasets')
+    .findOneAndUpdate({ id: dataset.id }, { $set: patch }, { returnOriginal: false })).value
+}
+
+exports.refinalize = async (db, dataset) => {
+  const patch = { status: 'extended' }
   return (await db.collection('datasets')
     .findOneAndUpdate({ id: dataset.id }, { $set: patch }, { returnOriginal: false })).value
 }
@@ -479,6 +486,7 @@ exports.prepareGeoFiles = async (dataset) => {
           } else if (geoshapes) {
             geometry = (await geoUtils.geometry2fields(dataset.schema, properties))._geoshape
           }
+
           if (geometry) {
             for (const prop of removeProps) {
               delete properties[prop.key]

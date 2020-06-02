@@ -667,6 +667,12 @@ La valeur est une liste de champs séparés par des virgules.
           tags: ['Administration'],
         },
       },
+      '/_refinalize': {
+        post: {
+          summary: 'Forcer la re-finalisation',
+          tags: ['Administration'],
+        },
+      },
       '/permissions': permissionsDoc,
     },
     externalDocs: {

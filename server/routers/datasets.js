@@ -964,4 +964,12 @@ router.post('/:datasetId/_reindex', readDataset(), asyncWrap(async(req, res) => 
   res.status(200).send(patchedDataset)
 }))
 
+// Special admin route to force refinalizing a dataset
+router.post('/:datasetId/_refinalize', readDataset(), asyncWrap(async(req, res) => {
+  if (!req.user) return res.status(401).send()
+  if (!req.user.adminMode) return res.status(403).send()
+  const patchedDataset = await datasetUtils.refinalize(req.app.get('db'), req.dataset)
+  res.status(200).send(patchedDataset)
+}))
+
 module.exports = router

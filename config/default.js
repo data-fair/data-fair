@@ -193,6 +193,6 @@ module.exports = {
   proxyNuxt: false,
   tippecanoe: {
     docker: false,
-    args: ['-zg', '--extend-zooms-if-still-dropping', '--drop-fraction-as-needed', '--maximum-tile-bytes', '1000000'],
+    args: ['-zg', '--extend-zooms-if-still-dropping', '--drop-fraction-as-needed'],
   },
 }
