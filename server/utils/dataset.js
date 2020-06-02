@@ -468,7 +468,7 @@ exports.prepareGeoFiles = async (dataset) => {
   // csv to geojson
 
   if (parsed.ext === '.csv') {
-    const streams = [exports.readStream(dataset, true, fullExists)]
+    const streams = [exports.readStream(dataset, false, fullExists)]
     let i = 0
     streams.push(new Transform({
       async transform(properties, encoding, callback) {

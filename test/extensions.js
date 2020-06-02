@@ -102,15 +102,23 @@ other,unknown address
     assert.equal(dataset.extensions[0].progress, 1)
 
     // Reduce selected output using extension.select
-    res = await ax.patch(`/api/v1/datasets/${dataset.id}`, { extensions: [{ active: true, remoteService: 'geocoder-koumoul', action: 'postCoords', select: ['lat'] }] })
+    res = await ax.patch(`/api/v1/datasets/${dataset.id}`, { extensions: [{ active: true, remoteService: 'geocoder-koumoul', action: 'postCoords', select: ['lat', 'lon'] }] })
     assert.equal(res.status, 200)
     await workers.hook(`finalizer/${dataset.id}`)
 
     // Download extended file
     res = await ax.get(`/api/v1/datasets/${dataset.id}/full`)
     const lines = res.data.split('\n')
-    assert.equal(lines[0], '\ufefflabel,adr,lat,Erreur d\'enrichissement')
-    assert.equal(lines[1], 'koumoul,19 rue de la voie lactée saint avé,40,')
+    assert.equal(lines[0], '\ufefflabel,adr,lat,lon,Erreur d\'enrichissement')
+    assert.equal(lines[1], 'koumoul,19 rue de la voie lactée saint avé,40,40,')
+
+    // list generated geo files
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/data-files`)
+    assert.equal(res.status, 200)
+    assert.equal(res.data.length, 3)
+    assert.ok(res.data.find(f => f.key === 'geojson'))
+    res = await ax.get(res.data.find(f => f.key === 'geojson').url)
+    assert.equal(res.data.features.length, 3)
   })
 
   it('Manage errors during extension', async () => {
