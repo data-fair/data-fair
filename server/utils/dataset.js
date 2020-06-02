@@ -38,7 +38,7 @@ exports.originalFileName = (dataset) => {
 }
 
 exports.fullFileName = (dataset) => {
-  const parsed = path.parse(dataset.originalFile.name)
+  const parsed = path.parse(dataset.file.name)
   return path.join(exports.dir(dataset), `${parsed.name}-full${parsed.ext}`)
 }
 
