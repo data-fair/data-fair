@@ -6,6 +6,7 @@
   import { mapState, mapActions } from 'vuex'
 
   export default {
+    middleware: 'dynamic-theme',
     layout: 'embed',
     async fetch({ store, params, route }) {
       await store.dispatch('dataset/setId', route.params.id)

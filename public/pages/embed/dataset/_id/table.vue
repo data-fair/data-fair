@@ -54,7 +54,7 @@
         </v-col>
       </v-row>
       <v-row>
-        <v-col class="pb-0 pt-1">
+        <v-col class="pb-1 pt-0">
           <nb-results :total="data.total" class="ml-3" />
         </v-col>
       </v-row>
