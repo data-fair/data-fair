@@ -121,7 +121,7 @@ describe('workers', () => {
     const form = new FormData()
     form.append('file', datasetFd, 'geojson-example.geojson')
     const ax = global.ax.dmeadus
-    const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
+    let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
     assert.equal(res.status, 201)
 
     // Dataset received and parsed
@@ -140,6 +140,11 @@ describe('workers', () => {
     // ES indexation and finalization
     dataset = await workers.hook('finalizer')
     assert.equal(dataset.status, 'finalized')
+
+    // Download extended file
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/full`)
+    assert.equal(res.data.features[0].properties._i, 1)
+    assert.equal(res.data.features[1].properties._i, 2)
   })
 
   it('Log error for geojson with broken feature', async () => {

@@ -109,7 +109,7 @@ exports.dataFiles = async (dataset) => {
       mimetype: dataset.originalFile.mimetype,
     })
   }
-  if (dataset.file.name !== dataset.originalFile.name) {
+  if (dataset.file && dataset.file.name !== dataset.originalFile.name) {
     if (!files.includes(dataset.file.name)) {
       console.error('Normalized data file not found', dir, dataset.file.name)
     } else {
@@ -241,21 +241,22 @@ exports.writeFullFile = async (db, es, dataset) => {
   const tmpFullFile = await tmp.tmpName({ dir: path.join(dataDir, 'tmp') })
   const writeStream = fs.createWriteStream(tmpFullFile)
 
-  // add BOM for excel, cf https://stackoverflow.com/a/17879474
-  writeStream.write('\ufeff')
-
   const relevantSchema = dataset.schema.filter(f => f.key.startsWith('_ext_') || !f.key.startsWith('_'))
-  const transforms = [new Transform({
-    transform(chunk, encoding, callback) {
-      const flatChunk = flatten(chunk)
-      callback(null, relevantSchema.map(field => flatChunk[field.key]))
-    },
-    objectMode: true,
-  })]
+  const transforms = []
 
   if (dataset.file.mimetype === 'text/csv') {
+    // add BOM for excel, cf https://stackoverflow.com/a/17879474
+    writeStream.write('\ufeff')
+
     // if we don't use the original name, readStream will not match the keys
     // transforms.push(csvStringify({ columns: relevantSchema.map(field => field.title || field['x-originalName'] || field.key), header: true }))
+    transforms.push(new Transform({
+      transform(chunk, encoding, callback) {
+        const flatChunk = flatten(chunk)
+        callback(null, relevantSchema.map(field => flatChunk[field.key]))
+      },
+      objectMode: true,
+    }))
     transforms.push(csvStringify({ columns: relevantSchema.map(field => field['x-originalName'] || field.key), header: true }))
   } else if (dataset.file.mimetype === 'application/geo+json') {
     transforms.push(new Transform({
@@ -467,14 +468,15 @@ exports.prepareGeoFiles = async (dataset) => {
   await fs.ensureDir(tmpDir)
   const fullExists = await fs.exists(exports.fullFileName(dataset))
   const parsed = path.parse(dataset.file.name)
-  const geojsonFile = path.join(dir, `${parsed.name}.geojson`)
+  let geojsonFile
   const mbtilesFile = path.join(dir, `${parsed.name}.mbtiles`)
   const geopoints = geoUtils.schemaHasGeopoint(dataset.schema)
   const geoshapes = geoUtils.schemaHasGeometry(dataset.schema)
   const removeProps = dataset.schema.filter(p => geoUtils.allGeoConcepts.includes(p['x-refersTo']))
   // csv to geojson
 
-  if (parsed.ext === '.csv') {
+  if (dataset.file.mimetype === 'text/csv') {
+    geojsonFile = path.join(dir, `${parsed.name}.geojson`)
     const streams = [exports.readStream(dataset, false, fullExists)]
     let i = 0
     streams.push(new Transform({
@@ -520,7 +522,12 @@ exports.prepareGeoFiles = async (dataset) => {
     await fs.move(tmpGeojsonFile, geojsonFile, { overwrite: true })
   }
 
-  if (!config.tippecanoe.skip) {
+  if (dataset.file.mimetype === 'application/geo+json') {
+    if (fullExists) geojsonFile = exports.fullFileName(dataset)
+    else geojsonFile = exports.fileName(dataset)
+  }
+
+  if (geojsonFile && !config.tippecanoe.skip) {
     const args = [...config.tippecanoe.args]
     tiles.defaultSelect(dataset).forEach(prop => {
       args.push('--include')
