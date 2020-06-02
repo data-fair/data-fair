@@ -69,6 +69,7 @@ module.exports = {
     publicUrl: config.publicUrl,
     wsPublicUrl: config.wsPublicUrl,
     directoryUrl: config.directoryUrl,
+    sessionDomain: config.sessionDomain,
     adminRole: config.adminRole,
     map: config.map,
     brand: config.brand,
