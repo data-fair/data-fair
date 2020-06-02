@@ -148,7 +148,7 @@
           <v-alert
             :value="true"
             type="error"
-            outline
+            outlined
           >
             Attention ! Supprimer ce jeu de données de la liste peut impacter le schéma du jeu de données virtuel et les applications qui l'utilisent.
           </v-alert>

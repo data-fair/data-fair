@@ -21,7 +21,7 @@
           <v-row>
             <v-btn
               fab
-              outline
+              outlined
               small
               @click="$refs.calendar.prev()"
             >
@@ -40,7 +40,7 @@
             <v-spacer />
             <v-btn
               fab
-              outline
+              outlined
               small
               @click="$refs.calendar.next()"
             >

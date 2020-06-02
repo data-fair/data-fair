@@ -115,14 +115,14 @@
           <v-alert
             :value="nbPublications === 1"
             type="error"
-            outline
+            outlined
           >
             Attention ! Ce catalogue est référencé dans un lien de publication. Si vous le supprimez ce lien sera invalide.
           </v-alert>
           <v-alert
             :value="nbPublications > 1"
             type="error"
-            outline
+            outlined
           >
             Attention ! Ce catalogue est référencé dans ${nbPublications} liens de publication. Si vous le supprimez ces liens seront invalides.
           </v-alert>

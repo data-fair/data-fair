@@ -215,14 +215,14 @@
           <v-alert
             :value="nbApplications === 1"
             type="error"
-            outline
+            outlined
           >
             Attention ! Ce jeu de données est utilisé par une application. Si vous le supprimez cette application ne sera plus fonctionnelle.
           </v-alert>
           <v-alert
             :value="nbApplications > 1"
             type="error"
-            outline
+            outlined
           >
             Attention ! Ce jeu de données est utilisé par {{ nbApplications }} applications. Si vous le supprimez ces applications ne seront plus fonctionnelles.
           </v-alert>
@@ -284,14 +284,14 @@
           <v-alert
             :value="nbApplications === 1"
             type="error"
-            outline
+            outlined
           >
             Attention ! Ce jeu de données est utilisé par une application. Si vous modifiez sa structure l'application peut ne plus fonctionner.
           </v-alert>
           <v-alert
             :value="nbApplications > 1"
             type="error"
-            outline
+            outlined
           >
             Attention ! Ce jeu de données est utilisé par {{ nbApplications }} applications. Si vous modifiez sa structure ces applications peuvent ne plus fonctionner.
           </v-alert>

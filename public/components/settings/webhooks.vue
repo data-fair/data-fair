@@ -8,7 +8,7 @@
       <v-jsf
         v-model="wrapper"
         :schema="wrapperSchema"
-        :options="{requiredMessage: 'Information obligatoire'}"
+        :options="{locale: 'fr'}"
         @change="change"
       />
     </v-form>

@@ -182,7 +182,7 @@
               v-if="editLineDialog && editedLine"
               v-model="editedLine"
               :schema="jsonSchema"
-              :options="{removeAdditionalProperties: true}"
+              :options="{locale: 'fr', removeAdditionalProperties: true}"
             />
 
             <template v-if="dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')">

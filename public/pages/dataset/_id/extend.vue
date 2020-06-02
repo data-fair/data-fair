@@ -31,7 +31,7 @@
               <v-btn
                 v-if="item.progress === 1"
                 small
-                outline
+                outlined
                 @click="currentExtension = item; extensionDetailsDialog = true;"
               >Voir détails</v-btn>
             </span>
@@ -126,7 +126,7 @@
           <v-spacer />
           <v-btn
             color="primary"
-            flat
+            text
             @click="extensionDetailsDialog = false"
           >
             ok

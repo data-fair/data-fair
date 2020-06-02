@@ -11,11 +11,19 @@
         <p v-if="nbErrors === 0">
           Il n'y a aucune erreur dans le retour de l'extension.
         </p>
-        <v-checkbox
-          v-if="nbErrors !== null && nbErrors > 0"
-          v-model="onlyErrors"
-          :label="`Voir uniquement les ${nbErrors} erreurs`"
-        />
+        <v-col
+          lg="3"
+          md="4"
+          sm="5"
+          cols="12"
+        >
+          <v-select
+            v-if="nbErrors !== null && nbErrors > 0"
+            v-model="errorMode"
+            :items="errorModes"
+            hide-details
+          />
+        </v-col>
       </v-row>
       <v-row>
         <v-col
@@ -60,11 +68,11 @@
         v-if="headers"
         :headers="headers"
         :items="data.results"
-        :total-items="data.total"
+        :server-items-length="data.total"
         :loading="loading"
         :options.sync="pagination"
+        hide-default-header
         hide-default-footer
-        class="elevation-1"
       >
         <template v-slot:header>
           <tr style="height: 30px;border-bottom: 2px solid rgba(0,0,0,0.24);">
@@ -86,8 +94,10 @@
             <th
               v-for="(header, i) in headers"
               :key="header.text"
-              :class="['column text-xs-left', header.sortable ? 'sortable' : '', pagination.descending ? 'desc' : 'asc', header.value === pagination.sortBy ? 'active' : '']"
+              :class="{'text-start': true, sortable: header.sortable, active : header.value === pagination.sortBy, asc: !pagination.descending, desc: !pagination.descending}"
+              nowrap
               :style="i === inputFields.length - 1 ? 'border-right: 2px solid rgba(0,0,0,0.24);' : ''"
+              @click="orderBy(header)"
             >
               <v-tooltip
                 v-if="header.tooltip"
@@ -101,13 +111,16 @@
                 </template>
                 <span>{{ header.tooltip }}</span>
               </v-tooltip>
-              <span @click="orderBy(header)">
+              <span>
                 {{ header.text }}
-                <v-icon
-                  v-if="header.sortable"
-                  small
-                >mdi-arrow-up</v-icon>
               </span>
+              <v-icon
+                v-if="header.sortable"
+                class="v-data-table-header__icon"
+                small
+              >
+                mdi-arrow-up
+              </v-icon>
             </th>
           </tr>
         </template>
@@ -139,16 +152,22 @@
       pagination: {
         page: 1,
         itemsPerPage: 5,
-        sortBy: null,
+        sortBy: '',
         descending: false,
       },
       loading: false,
-      onlyErrors: false,
+      errorMode: 'all',
       nbErrors: null,
     }),
     computed: {
       ...mapState('dataset', ['dataset']),
       ...mapGetters('dataset', ['resourceUrl', 'remoteServicesMap']),
+      errorModes() {
+        return [
+          { value: 'all', text: 'Voir tout' },
+          { value: 'only', text: `Voir uniquement les ${this.nbErrors} lignes en erreur` },
+          { value: 'hide', text: `Voir uniquement les ${this.nbTotal - this.nbErrors} lignes sans erreur` }]
+      },
       extension() {
         return this.dataset && this.dataset.extensions.find(e => e.remoteService === this.remoteService && e.action === this.action)
       },
@@ -191,7 +210,10 @@
     watch: {
       selectFields: {
         handler() {
-          if (this.selectFields) this.refresh()
+          if (this.selectFields) {
+            this.init()
+            this.refresh()
+          }
         },
         immediate: true,
       },
@@ -201,7 +223,7 @@
         },
         deep: true,
       },
-      onlyErrors() {
+      errorMode() {
         this.refresh()
       },
     },
@@ -217,14 +239,14 @@
       },
       async refresh() {
         if (!this.errorField) return
-
         const params = {
           size: this.pagination.itemsPerPage,
           page: this.pagination.page,
         }
         if (this.pagination.sortBy) params.sort = (this.pagination.descending ? '-' : '') + this.pagination.sortBy
         if (this.query) params.q = this.query
-        if (this.onlyErrors) params.qs = `_exists_:${this.errorField.key}`
+        if (this.errorMode === 'only') params.qs = `_exists_:${this.errorField.key}`
+        if (this.errorMode === 'hide') params.qs = `!(_exists_:${this.errorField.key})`
         params.select = this.selectFields.map(f => f.key).join(',')
         this.loading = true
         try {
@@ -234,13 +256,16 @@
           if (error.response && error.response.status === 404) this.notFound = true
           else eventBus.$emit('notification', { error, msg: 'Erreur pendant la récupération des données' })
         }
+        this.loading = false
+      },
+      async init() {
         try {
-          this.nbErrors = (await this.$axios.$get(this.resourceUrl + '/lines', { params: { size: 0, q: params.q, qs: `_exists_:${this.errorField.key}` } })).total
+          this.nbTotal = (await this.$axios.$get(this.resourceUrl + '/lines', { params: { size: 0 } })).total
+          this.nbErrors = (await this.$axios.$get(this.resourceUrl + '/lines', { params: { size: 0, qs: `_exists_:${this.errorField.key}` } })).total
         } catch (error) {
           if (error.response && error.response.status === 404) this.notFound = true
           else eventBus.$emit('notification', { error, msg: 'Erreur pendant le comptage des erreurs' })
         }
-        this.loading = false
       },
     },
   }
