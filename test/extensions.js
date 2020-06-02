@@ -109,7 +109,7 @@ other,unknown address
     // Download extended file
     res = await ax.get(`/api/v1/datasets/${dataset.id}/full`)
     const lines = res.data.split('\n')
-    assert.equal(lines[0], '\ufefflabel,adr,lat,lon,Erreur d\'enrichissement')
+    assert.equal(lines[0], '\ufefflabel,adr,lat,lon,error')
     assert.equal(lines[1], 'koumoul,19 rue de la voie lactée saint avé,40,40,')
 
     // list generated geo files

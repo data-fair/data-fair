@@ -48,7 +48,7 @@ describe('rate limiting', () => {
     t0 = new Date().getTime()
     await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { size: 500 } })
     t1 = new Date().getTime()
-    assert.ok((t1 - t0 > 500) && (t1 - t0 < 700), 'throttled download should be slightly more than 500ms, got ' + (t1 - t0))
+    assert.ok((t1 - t0 > 500) && (t1 - t0 < 800), 'throttled download should be slightly more than 500ms, got ' + (t1 - t0))
   })
 
   it('should block requests when there are too many', async () => {
