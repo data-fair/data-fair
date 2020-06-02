@@ -145,6 +145,7 @@ describe('workers', () => {
     res = await ax.get(`/api/v1/datasets/${dataset.id}/full`)
     assert.equal(res.data.features[0].properties._i, 1)
     assert.equal(res.data.features[1].properties._i, 2)
+    assert.equal(res.data.features[1].geometry.type, 'Polygon')
   })
 
   it('Log error for geojson with broken feature', async () => {

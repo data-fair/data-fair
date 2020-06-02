@@ -262,7 +262,7 @@ exports.writeFullFile = async (db, es, dataset) => {
     transforms.push(new Transform({
       transform(chunk, encoding, callback) {
         const { geometry, ...properties } = chunk
-        const feature = { type: 'Feature', properties, geometry }
+        const feature = { type: 'Feature', properties, geometry: JSON.parse(geometry) }
         callback(null, feature)
       },
       objectMode: true,
