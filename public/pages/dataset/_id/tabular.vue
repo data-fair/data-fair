@@ -12,12 +12,7 @@
       <v-row>
         <v-col>
           <v-row class="px-3">
-            <h3 v-if="data.total <= 10000" class="headline">
-              Consultez {{ data.total.toLocaleString() }} {{ plural ? 'enregistrements' : 'enregistrement' }}
-            </h3>
-            <h3 v-if="data.total > 10000" class="headline">
-              Consultez {{ plural ? 'les' : 'le' }} {{ (10000).toLocaleString() }} {{ plural ? 'premiers enregistrements' : 'premier enregistrement' }} ({{ data.total.toLocaleString() }} au total)
-            </h3>
+            <nb-results :total="data.total" />
             <v-btn
               v-if="dataset.isRest && can('writeData')"
               color="primary"
@@ -62,7 +57,7 @@
             <v-pagination
               v-if="data.total > pagination.itemsPerPage"
               v-model="pagination.page"
-              :length="Math.floor(Math.min(data.total, 10000 - pagination.itemsPerPage) / pagination.itemsPerPage)"
+              :length="Math.ceil(Math.min(data.total, 10000 - pagination.itemsPerPage) / pagination.itemsPerPage)"
               :total-visible="$vuetify.breakpoint.lgAndUp ? 7 : 5"
               class="mx-4"
             />
@@ -282,9 +277,10 @@
   import eventBus from '~/event-bus'
   import VJsf from '@koumoul/vjsf/lib/VJsf.js'
   import '@koumoul/vjsf/dist/main.css'
+  import NbResults from '~/components/datasets/nb-results'
 
   export default {
-    components: { VJsf },
+    components: { VJsf, NbResults },
     data: () => ({
       data: {},
       query: null,
@@ -342,9 +338,6 @@
           .filter(h => !h.value.startsWith('_'))
         historyHeaders.unshift({ text: 'Date de la révision', value: '_updatedAt', sortable: false })
         return historyHeaders
-      },
-      plural() {
-        return this.data.total > 1
       },
       imageField() {
         return this.dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/image')

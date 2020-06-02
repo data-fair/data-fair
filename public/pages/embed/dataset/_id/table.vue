@@ -48,8 +48,16 @@
         </v-col>
       </v-row>
 
-      <dataset-filters v-model="filters" />
-
+      <v-row v-if="filters.length">
+        <v-col class="pb-1 pt-1">
+          <dataset-filters v-model="filters" />
+        </v-col>
+      </v-row>
+      <v-row>
+        <v-col class="pb-0 pt-1">
+          <nb-results :total="data.total" class="ml-3" />
+        </v-col>
+      </v-row>
       <v-data-table
         :headers="headers"
         :items="data.results"
@@ -148,12 +156,14 @@
   import eventBus from '~/event-bus'
   import DownloadResults from '~/components/datasets/download-results'
   import DatasetFilters from '~/components/datasets/filters'
+  import NbResults from '~/components/datasets/nb-results'
   const filtersUtils = require('~/assets/filters-utils')
 
   export default {
     components: {
       DownloadResults,
       DatasetFilters,
+      NbResults,
     },
     data: () => ({
       data: {},
@@ -239,7 +249,7 @@
       setItemsPerPage() {
         // adapt number of lines to window height
         const height = window.innerHeight
-        let top = this.$vuetify.breakpoint.xs ? 154 : 104
+        let top = this.$vuetify.breakpoint.xs ? 170 : 120
         if (this.filters.length) top += 28
         const nbRows = Math.floor(Math.max(height - top, 120) / (this.lineHeight + 2))
         this.pagination.itemsPerPage = Math.min(Math.max(nbRows, 4), 50)
