@@ -82,9 +82,9 @@ module.exports = {
         // in bytes per second, no 429, instead the stream is throttled
         bandwidth: {
           // used by routes with streamed dynamic contents (search mostly)
-          dynamic: 100000, // 100 kb/s
+          dynamic: 200000, // 200 kb/s
           // used by routes with streamed static files content
-          static: 500000, // 500 kb/s
+          static: 1000000, // 1 mb/s
         },
       },
       user: {
@@ -93,10 +93,10 @@ module.exports = {
         // in bytes per second, no 429, instead the stream is throttled
         bandwidth: {
           // used by routes with streamed dynamic contents (search mostly)
-          dynamic: 200000, // 200 kb/s
+          dynamic: 400000, // 400 kb/s
           // in bytes per second, no 429, instead the stream is throttled
           // used by routes with streamed static files content
-          static: 1000000, // 1mb/s
+          static: 2000000, // 2mb/s
         },
       },
     },
