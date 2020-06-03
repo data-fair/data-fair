@@ -1,14 +1,13 @@
 <template>
   <div>
     <p>
-      Les <i>webhooks</i> sont un moyen de lier d'autres services Web à des événements internes à ce service de diffusion de données (créations, mises à jour, etc.).
-      Il s'agit d'une configuration technique pour personne avertie.
+      Les thématiques sont une manière simple d'organiser vos jeux de données et vos applications.
     </p>
     <v-form v-model="formValid">
       <v-jsf
         v-model="wrapper"
         :schema="wrapperSchema"
-        :options="{locale: 'fr'}"
+        :options="{locale: 'fr', hideReadOnly: true, colorPickerProps: {showSwatches: true}}"
         @change="change"
       />
     </v-form>
@@ -27,16 +26,16 @@
   }
 
   const events = require('~/../shared/events.json').dataset
-  const webhooksSchema = require('~/../contract/settings').properties.webhooks
+  const topicsSchema = require('~/../contract/settings').properties.topics
   const wrapperSchema = {
     type: 'object',
     properties: {
-      webhooks: webhooksSchema,
+      topics: topicsSchema,
     },
   }
 
   export default {
-    name: 'Webhooks',
+    name: 'Topics',
     components: { VJsf },
     props: ['settings'],
     data: () => ({
@@ -45,21 +44,18 @@
       wrapperSchema,
       formValid: true,
       wrapper: {
-        webhooks: [],
+        topics: [],
       },
     }),
     created() {
-      this.wrapper.webhooks = JSON.parse(JSON.stringify(this.settings.webhooks))
+      this.wrapper.topics = JSON.parse(JSON.stringify(this.settings.topics || []))
     },
     methods: {
       async change() {
         await new Promise(resolve => setTimeout(resolve, 10))
         if (this.formValid) {
-          this.settings.webhooks = JSON.parse(JSON.stringify(this.wrapper.webhooks))
-          const missingInfo = !!this.settings.webhooks.find(w => {
-            return Object.keys(w.target).length === 0 || w.events.length === 0
-          })
-          if (!missingInfo) this.$emit('webhook-updated')
+          this.settings.topics = JSON.parse(JSON.stringify(this.wrapper.topics))
+          this.$emit('updated')
         }
       },
     },

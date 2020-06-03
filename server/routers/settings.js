@@ -2,12 +2,14 @@ const crypto = require('crypto')
 const express = require('express')
 const ajv = require('ajv')()
 const uuidv4 = require('uuid/v4')
+const shortid = require('shortid')
 const createError = require('http-errors')
-const settingSchema = require('../../contract/settings.json')
+const settingSchema = require('../../contract/settings')
 const validate = ajv.compile(settingSchema)
 const permissions = require('../utils/permissions')
 const asyncWrap = require('../utils/async-wrap')
 const cacheHeaders = require('../utils/cache-headers')
+const topicsUtils = require('../utils/topics')
 
 const config = require('config')
 
@@ -42,14 +44,17 @@ router.get('/:type/:id', isOwner, cacheHeaders.noCache, asyncWrap(async(req, res
 
 // update settings as owner
 router.put('/:type/:id', isOwner, asyncWrap(async(req, res) => {
+  const db = req.app.get('db')
   req.body.type = req.params.type
   req.body.id = req.params.id
   req.body.name = req.params.type === 'user' ? req.user.name : req.user.organizations.find(o => o.id === req.params.id).name
   req.body.apiKeys = req.body.apiKeys || []
   req.body.apiKeys.forEach(apiKey => delete apiKey.clearKey)
+  req.body.topics = req.body.topics || []
+
   const valid = validate(req.body)
   if (!valid) return res.status(400).send(validate.errors)
-  const settings = req.app.get('db').collection('settings')
+  const settings = db.collection('settings')
 
   const fullApiKeys = req.body.apiKeys.map(apiKey => ({ ...apiKey }))
   req.body.apiKeys.forEach((apiKey, i) => {
@@ -64,13 +69,28 @@ router.put('/:type/:id', isOwner, asyncWrap(async(req, res) => {
     }
   })
 
-  await settings.replaceOne({
-    type: req.params.type,
-    id: req.params.id,
-  }, req.body, { upsert: true })
+  req.body.topics.forEach((topic) => {
+    if (!topic.id) topic.id = shortid.generate()
+  })
+
+  const owner = { type: req.params.type, id: req.params.id }
+  const oldSettings = (await settings.findOneAndReplace(owner, req.body, { upsert: true })).value
+
+  await topicsUtils.updateTopics(db, owner, (oldSettings && oldSettings.topics) || [], req.body.topics)
+
   delete req.body.type
   delete req.body.id
   res.status(200).send({ ...req.body, apiKeys: fullApiKeys })
+}))
+
+// Get topics list as owner
+router.get('/:type/:id/topics', isOwner, asyncWrap(async(req, res) => {
+  const settings = req.app.get('db').collection('settings')
+  const result = await settings.findOne({
+    type: req.params.type,
+    id: req.params.id,
+  })
+  res.status(200).send((result && result.topics) || [])
 }))
 
 // Get licenses list as anyone

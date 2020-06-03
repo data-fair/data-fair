@@ -99,6 +99,11 @@ router.get('', cacheHeaders.noCache, asyncWrap(async(req, res) => {
     children: 'virtual.children',
     services: 'extensions.remoteService',
     status: 'status',
+    topics: 'topics.id',
+  }
+  const facetFields = {
+    ...filterFields,
+    topics: 'topics',
   }
   const query = findUtils.query(req, Object.assign({
     filename: 'originalFile.name',
@@ -117,7 +122,7 @@ router.get('', cacheHeaders.noCache, asyncWrap(async(req, res) => {
     datasets.countDocuments(query),
   ]
   if (req.query.facets) {
-    mongoQueries.push(datasets.aggregate(findUtils.facetsQuery(req, filterFields)).toArray())
+    mongoQueries.push(datasets.aggregate(findUtils.facetsQuery(req, facetFields)).toArray())
   }
   let [results, count, facets] = await Promise.all(mongoQueries)
   results.forEach(r => {

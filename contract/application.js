@@ -3,6 +3,7 @@ const eventBy = require('./event-by')
 const permissions = require('./permissions')
 const publicationSchema = require('./publication')
 const configurationSchema = require('./app-configuration')
+const topic = require('./topic')
 
 module.exports = {
   title: 'Application configuration',
@@ -65,6 +66,12 @@ module.exports = {
       type: 'array',
       description: 'References to all the catalogs the application metadata is published too',
       items: publicationSchema,
+    },
+    topics: {
+      type: 'array',
+      title: 'Liste de thématiques',
+      'x-itemTitle': 'title',
+      items: topic,
     },
     extras: {
       type: 'object',

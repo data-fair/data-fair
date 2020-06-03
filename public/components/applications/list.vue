@@ -40,7 +40,19 @@
                 outlined
               >
                 <v-card-title>
-                  {{ application.title || application.id }}
+                  <span>{{ application.title || application.id }}
+                    <v-chip
+                      v-for="topic of application.topics"
+                      :key="topic.id"
+                      small
+                      outlined
+                      :color="topic.color || 'default'"
+                      class="ml-3"
+                      style="font-weight: bold"
+                    >
+                      {{ topic.title }}
+                    </v-chip>
+                  </span>
                 </v-card-title>
                 <v-divider />
                 <v-img
@@ -141,6 +153,7 @@
       facetsValues: {
         visibility: {},
         'base-application': {},
+        topics: {},
       },
       lastParams: null,
     }),
@@ -182,9 +195,9 @@
         const params = {
           size: this.size,
           page: this.page,
-          select: 'title,description,status',
+          select: 'title,description,status,topics',
           ...fullFilters,
-          facets: 'visibility,base-application',
+          facets: 'visibility,base-application,topics',
           sort: 'createdAt:-1',
         }
         if (JSON.stringify(params) !== JSON.stringify(this.lastParams)) {

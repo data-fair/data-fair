@@ -154,6 +154,19 @@
         @input="patch({license: dataset.license})"
       />
       <v-select
+        v-if="topics && topics.length"
+        v-model="dataset.topics"
+        :items="topics"
+        :disabled="!can('writeDescription')"
+        item-text="title"
+        item-key="id"
+        label="Thématiques"
+        multiple
+        dense
+        return-object
+        @input="patch({topics: dataset.topics})"
+      />
+      <v-select
         v-if="editProjection && projections"
         v-model="dataset.projection"
         :items="projections"
@@ -198,6 +211,9 @@
       licenses() {
         return this.$store.getters.ownerLicenses(this.dataset.owner)
       },
+      topics() {
+        return this.$store.getters.ownerTopics(this.dataset.owner)
+      },
       editProjection() {
         return !!(this.dataset && this.dataset.schema &&
           this.dataset.schema.find(p => p['x-refersTo'] === coordXUri) &&
@@ -217,7 +233,10 @@
       },
     },
     async mounted() {
-      if (this.dataset) this.$store.dispatch('fetchLicenses', this.dataset.owner)
+      if (this.dataset) {
+        this.$store.dispatch('fetchLicenses', this.dataset.owner)
+        this.$store.dispatch('fetchTopics', this.dataset.owner)
+      }
       if (this.editProjection) this.$store.dispatch('fetchProjections')
 
       // Ping the data endpoint to check that index is available

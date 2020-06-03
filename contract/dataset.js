@@ -1,6 +1,7 @@
 const owner = require('./owner')
 const eventBy = require('./event-by')
 const permissions = require('./permissions')
+const topic = require('./topic')
 const publicationSchema = JSON.parse(JSON.stringify(require('./publication')))
 publicationSchema.properties.addToDataset = {
   type: 'object',
@@ -392,6 +393,12 @@ module.exports = {
           description: 'Set to true to let data-fair store revisions of the lines in the dataset.',
         },
       },
+    },
+    topics: {
+      type: 'array',
+      title: 'Liste de thématiques',
+      'x-itemTitle': 'title',
+      items: topic,
     },
     extras: {
       type: 'object',

@@ -31,6 +31,7 @@ export default () => {
       vocabulary: null,
       vocabularyArray: [],
       licenses: {},
+      topics: {},
       env: {},
       searchQueries: {},
       projections: null,
@@ -39,6 +40,9 @@ export default () => {
     getters: {
       ownerLicenses: (state) => (owner) => {
         return state.licenses[owner.type + '/' + owner.id]
+      },
+      ownerTopics: (state) => (owner) => {
+        return state.topics[owner.type + '/' + owner.id]
       },
       searchQuery: (state) => (type) => {
         const searchQuery = Object.assign({}, state.searchQueries[type])
@@ -52,6 +56,9 @@ export default () => {
       },
       ownerLicenses(state, payload) {
         Vue.set(state.licenses, payload.owner.type + '/' + payload.owner.id, payload.licenses)
+      },
+      ownerTopics(state, payload) {
+        Vue.set(state.topics, payload.owner.type + '/' + payload.owner.id, payload.topics)
       },
       setSearchQuery(state, { type, query }) {
         Vue.set(state.searchQueries, type, query)
@@ -79,6 +86,11 @@ export default () => {
         if (getters.ownerLicenses(owner)) return
         const licenses = await this.$axios.$get('api/v1/settings/' + owner.type + '/' + owner.id + '/licenses')
         commit('ownerLicenses', { owner, licenses })
+      },
+      async fetchTopics({ getters, state, commit }, owner) {
+        if (getters.ownerTopics(owner)) return
+        const topics = await this.$axios.$get('api/v1/settings/' + owner.type + '/' + owner.id + '/topics')
+        commit('ownerTopics', { owner, topics })
       },
       searchQuery({ commit }, params) {
         commit('setSearchQuery', params)

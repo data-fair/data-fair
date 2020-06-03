@@ -59,6 +59,21 @@
         class="mt-0"
       />
     </template>
+
+    <template v-if="facets.topics && facets.topics.length">
+      <v-subheader @click="visibleFacet = 'topics'">
+        Thématiques
+      </v-subheader>
+      <v-checkbox
+        v-for="facetItem in facets.topics"
+        :key="facetItem.value.id"
+        v-model="facetsValues.topics[facetItem.value.id]"
+        :label="`${facetItem.value.title} (${facetItem.count})`"
+        :value="true"
+        :hide-details="true"
+        class="mt-0"
+      />
+    </template>
   </div>
 </template>
 

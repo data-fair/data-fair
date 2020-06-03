@@ -29,7 +29,6 @@
         </v-checkbox>
       </template>
     </template>-->
-
     <template v-if="facets.visibility && facets.visibility.length">
       <v-subheader @click="visibleFacet = 'visibility'">
         Visibilité
@@ -54,6 +53,21 @@
         :key="facetItem.value"
         v-model="facetsValues.status[facetItem.value]"
         :label="`${statuses.dataset[facetItem.value] ? statuses.dataset[facetItem.value].title : facetItem.value} (${facetItem.count})`"
+        :value="true"
+        :hide-details="true"
+        class="mt-0"
+      />
+    </template>
+
+    <template v-if="facets.topics && facets.topics.length">
+      <v-subheader @click="visibleFacet = 'topics'">
+        Thématiques
+      </v-subheader>
+      <v-checkbox
+        v-for="facetItem in facets.topics"
+        :key="facetItem.value.id"
+        v-model="facetsValues.topics[facetItem.value.id]"
+        :label="`${facetItem.value.title} (${facetItem.count})`"
         :value="true"
         :hide-details="true"
         class="mt-0"

@@ -47,6 +47,14 @@
             @license-updated="save"
           />
           <h3 class="headline mt-3 mb-3">
+            Thématiques
+          </h3>
+          <settings-topics
+            v-if="settings"
+            :settings="settings"
+            @updated="save"
+          />
+          <h3 class="headline mt-3 mb-3">
             Clés d'API
           </h3>
           <settings-api-keys
@@ -84,11 +92,12 @@
   import SettingsWebhooks from '~/components/settings/webhooks.vue'
   import SettingsLicenses from '~/components/settings/licenses.vue'
   import SettingsApiKeys from '~/components/settings/api-keys.vue'
+  import SettingsTopics from '~/components/settings/topics.vue'
   import eventBus from '~/event-bus'
 
   export default {
     // middleware: 'auth',
-    components: { SettingsWebhooks, SettingsLicenses, SettingsApiKeys },
+    components: { SettingsWebhooks, SettingsLicenses, SettingsApiKeys, SettingsTopics },
     data: () => ({
       api: null,
       organizationRoles: [],

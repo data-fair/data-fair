@@ -60,6 +60,11 @@ router.get('', cacheHeaders.noCache, asyncWrap(async(req, res) => {
     url: 'url',
     'base-application': 'url',
     dataset: 'configuration.datasets.href',
+    topics: 'topics.id',
+  }
+  const facetFields = {
+    ...filterFields,
+    topics: 'topics',
   }
   const query = findUtils.query(req, Object.assign({
     ids: 'id',
@@ -73,7 +78,7 @@ router.get('', cacheHeaders.noCache, asyncWrap(async(req, res) => {
     applications.countDocuments(query),
   ]
   if (req.query.facets) {
-    mongoQueries.push(applications.aggregate(findUtils.facetsQuery(req, filterFields)).toArray())
+    mongoQueries.push(applications.aggregate(findUtils.facetsQuery(req, facetFields)).toArray())
   }
   let [results, count, facets] = await Promise.all(mongoQueries)
   results.forEach(r => {

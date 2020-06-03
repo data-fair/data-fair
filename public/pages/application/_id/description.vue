@@ -50,14 +50,28 @@
         <v-text-field
           v-model="application.title"
           label="Titre"
+          dense
           @change="patch({title: application.title})"
         />
         <v-textarea
           v-model="application.description"
           label="Description"
           filled
+          dense
           rows="4"
           @change="patch({description: application.description})"
+        />
+        <v-select
+          v-if="topics && topics.length"
+          v-model="application.topics"
+          :items="topics"
+          item-text="title"
+          item-key="id"
+          label="Thématiques"
+          multiple
+          dense
+          return-object
+          @input="patch({topics: application.topics})"
         />
       </v-col>
     </v-row>
@@ -76,6 +90,12 @@
     },
     computed: {
       ...mapState('application', ['application', 'nbSessions', 'journal']),
+      topics() {
+        return this.$store.getters.ownerTopics(this.application.owner)
+      },
+    },
+    mounted() {
+      this.$store.dispatch('fetchTopics', this.application.owner)
     },
     methods: {
       ...mapActions('application', ['patch']),

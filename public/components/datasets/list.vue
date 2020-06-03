@@ -39,8 +39,21 @@
               outlined
             >
               <v-card-title>
-                {{ dataset.title || dataset.id }}
+                <span>{{ dataset.title || dataset.id }}
+                  <v-chip
+                    v-for="topic of dataset.topics"
+                    :key="topic.id"
+                    small
+                    outlined
+                    :color="topic.color || 'default'"
+                    class="ml-3"
+                    style="font-weight: bold"
+                  >
+                    {{ topic.title }}
+                  </v-chip>
+                </span>
               </v-card-title>
+
               <v-card-text
                 style="min-height:60px;max-height:160px;overflow:hidden;margin-bottom:40px;"
                 class="flex"
@@ -136,6 +149,7 @@
         visibility: {},
         services: {},
         concepts: {},
+        topics: {},
       },
       lastParams: null,
     }),
@@ -178,8 +192,8 @@
         const params = {
           size: this.size,
           page: this.page,
-          select: 'title,description,status',
-          facets: 'status,visibility,services,concepts',
+          select: 'title,description,status,topics',
+          facets: 'status,visibility,services,concepts,topics',
           sort: 'createdAt:-1',
           ...fullFilters,
         }
