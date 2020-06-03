@@ -220,6 +220,7 @@
         if (this.filters.length) {
           params.qs = filtersUtils.filters2qs(this.filters)
         }
+        if (this.dataset.finalizedAt) params.finalizedAt = this.dataset.finalizedAt
         return params
       },
     },

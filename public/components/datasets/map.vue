@@ -92,6 +92,7 @@
       tileUrl() {
         let url = this.resourceUrl + '/lines?format=pbf&size=10000&xyz={x},{y},{z}'
         if (this.query) url += '&qs=' + encodeURIComponent(this.query)
+        if (this.dataset.finalizedAt) url += '&finalizedAt=' + encodeURIComponent(this.dataset.finalizedAt)
         return url
       },
     },

@@ -12,8 +12,10 @@ exports.resourceBased = (req, res, next) => {
   const date = (new Date(req.resource[dateKey])).toUTCString()
   const cacheVisibility = req.publicOperation ? 'public' : 'private'
 
-  const ifModifiedSince = req.get('If-Modified-Since')
-  if (ifModifiedSince && date === ifModifiedSince) return res.status(304).send()
+  const ifModifiedSince = req.get('if-modified-since')
+  if (ifModifiedSince && date === ifModifiedSince) {
+    return res.status(304).send()
+  }
   res.setHeader('Last-Modified', date)
 
   // finalizedAt passed as query parameter is used to timestamp the query and
