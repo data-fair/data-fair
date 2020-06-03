@@ -56,8 +56,8 @@ exports.middleware = asyncWrap(async (req, res, next) => {
       })
       return throttle
     }
-    res.throttleEnd = () => {
-      const throttle = res.throttle('dynamic')
+    res.throttleEnd = (bandwidthType = 'dynamic') => {
+      const throttle = res.throttle()
       res._originalEnd = res.end
       res.end = function() {
         if (!arguments[0]) return res._originalEnd(...arguments)

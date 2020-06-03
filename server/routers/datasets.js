@@ -594,7 +594,7 @@ router.get('/:datasetId/lines', readDataset(), permissions.middleware('readLines
       const tile = await tiles.getTile(mbtilesPath, ...xyz)
       if (tile) {
         res.type('application/x-protobuf')
-        res.throttleEnd()
+        res.throttleEnd('static')
         return res.status(200).send(tile)
       } else if (tile === null) {
         // 204 = no-content, better than 404
