@@ -91,7 +91,10 @@
       ...mapGetters('dataset', ['resourceUrl']),
       tileUrl() {
         let url = this.resourceUrl + '/lines?format=pbf&size=10000&xyz={x},{y},{z}'
-        if (this.query) url += '&qs=' + encodeURIComponent(this.query)
+        // select only the prop necessary to fetch a specific line
+        if (this.dataset.schema.find(p => p.key === '_i')) url += '&select=_i'
+        if (this.dataset.schema.find(p => p.key === '_id')) url += '&select=_id'
+        if (this.query) url += '&q=' + encodeURIComponent(this.query)
         if (this.dataset.finalizedAt) url += '&finalizedAt=' + encodeURIComponent(this.dataset.finalizedAt)
         return url
       },
@@ -148,16 +151,32 @@
           const feature = this.map.queryRenderedFeatures(e.point).find(f => f.source === 'data-fair')
           if (!feature) return
 
+          if (feature.properties._i !== undefined) {
+            this.map.setFilter('results_hover', ['==', '_i', feature.properties._i])
+          }
           if (feature.properties._id !== undefined) {
             this.map.setFilter('results_hover', ['==', '_id', feature.properties._id])
           }
           // Change the cursor style as a UI indicator.
           this.map.getCanvas().style.cursor = 'pointer'
-          const htmlList = Object.keys(feature.properties || {})
-            .filter(key => key !== '_id')
-            .map(key => {
-              const field = this.dataset.schema.find(f => f.key === key)
-              return `<li>${field.title || field['x-originalName'] || field.key}: ${feature.properties[key]}</li>`
+        }
+
+        const clickCallback = async (e) => {
+          console.log('CLICK')
+          const feature = this.map.queryRenderedFeatures(e.point).find(f => f.source === 'data-fair')
+          if (!feature) return
+
+          let qs
+          if (feature.properties._i !== undefined) qs = `_i:"${feature.properties._i}"`
+          if (feature.properties._id !== undefined) qs = `_id:"${feature.properties._id}"`
+          if (!qs) return console.error('needs either _i or _id property to be able to fetch item', feature.properties)
+          const item = (await this.$axios.$get(this.resourceUrl + '/lines', { params: { qs, size: 1 } })).results[0]
+          if (!item) return console.error('item not found with filter', qs)
+
+          const htmlList = this.dataset.schema
+            .filter(field => !field['x-calculated'] && field['x-refersTo'] !== 'https://purl.org/geojson/vocab#geometry')
+            .map(field => {
+              return `<li>${field.title || field['x-originalName'] || field.key}: ${item[field.key]}</li>`
             })
             .join('\n')
           const html = `<ul style="list-style-type: none;padding-left: 0;">${htmlList}</ul>`
@@ -171,12 +190,12 @@
 
         const leaveCallback = () => {
           this.map.getCanvas().style.cursor = ''
-          popup.remove()
         }
 
         dataLayers.forEach(layer => {
           this.map.on('mousemove', layer.id, debounce(moveCallback, 30))
           this.map.on('mouseleave', layer.id, leaveCallback)
+          this.map.on('click', layer.id, clickCallback)
         })
 
         // Add custom source and layers
@@ -189,7 +208,7 @@
     },
     methods: {
       async getBBox() {
-        const bbox = (await this.$axios.$get(this.resourceUrl + '/lines', { params: { format: 'geojson', size: 0, qs: this.query } })).bbox
+        const bbox = (await this.$axios.$get(this.resourceUrl + '/lines', { params: { format: 'geojson', size: 0, q: this.query } })).bbox
         if (!bbox || !bbox.length) {
           return null
         }
@@ -219,6 +238,10 @@
 
 <style lang="css">
 .mapboxgl-popup-close-button {
-  width: 16px;
+  width: 24px;
+}
+.mapboxgl-popup-content {
+  max-height: 300px;
+  overflow-y: scroll;
 }
 </style>
