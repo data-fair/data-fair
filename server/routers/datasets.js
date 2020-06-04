@@ -562,6 +562,7 @@ router.get('/:datasetId/lines', readDataset(), permissions.middleware('readLines
 
   // if the output format is geo make sure geoshape is present
   // also manage a default content for geo tiles that is the same as the one used to build mbtiles when possible
+  const emptySelect = !req.query.select
   if (['geojson', 'mvt', 'vt', 'pbf'].includes(req.query.format)) {
     req.query.select = (req.query.select ? req.query.select : tiles.defaultSelect(req.dataset).join(','))
     if (!req.query.select.includes('_geoshape')) req.query.select += ',_geoshape'
@@ -586,23 +587,6 @@ router.get('/:datasetId/lines', readDataset(), permissions.middleware('readLines
     xyz = req.query.xyz.split(',').map(Number)
   }
 
-  // if vector tile is requested and we dispose of a prerendered mbtiles file, use it
-  // otherwise (older dataset, or rest/virtual datasets) we use tile generation from ES results
-  if (!req.dataset.isVirtual && !req.dataset.isRest) {
-    const mbtilesPath = datasetUtils.extFileName(req.dataset, 'mbtiles')
-    if (vectorTileRequested && !req.query.q && !req.query.qs && await fs.exists(mbtilesPath)) {
-      const tile = await tiles.getTile(mbtilesPath, ...xyz)
-      if (tile) {
-        res.type('application/x-protobuf')
-        res.throttleEnd('static')
-        return res.status(200).send(tile)
-      } else if (tile === null) {
-        // 204 = no-content, better than 404
-        return res.status(204).send()
-      }
-    }
-  }
-
   // Is the tile cached ?
   let cacheHash
   if (vectorTileRequested && !config.cache.disabled) {
@@ -613,8 +597,30 @@ router.get('/:datasetId/lines', readDataset(), permissions.middleware('readLines
       finalizedAt: req.dataset.finalizedAt,
       query: req.query,
     })
-    if (value) return res.status(200).send(value.buffer)
+    if (value) {
+      res.type('application/x-protobuf')
+      res.throttleEnd('static')
+      return res.status(200).send(value.buffer)
+    }
     cacheHash = hash
+  }
+
+  // if vector tile is requested and we dispose of a prerendered mbtiles file, use it
+  // otherwise (older dataset, or rest/virtual datasets) we use tile generation from ES results
+  if (!req.dataset.isVirtual && !req.dataset.isRest) {
+    const mbtilesPath = datasetUtils.extFileName(req.dataset, 'mbtiles')
+    if (vectorTileRequested && !req.query.q && !req.query.qs && await fs.exists(mbtilesPath)) {
+      const tile = await tiles.getTile(mbtilesPath, !emptySelect && req.query.select.split(','), ...xyz)
+      if (tile) {
+        res.type('application/x-protobuf')
+        res.throttleEnd('static')
+        if (!config.cache.disabled) cache.set(db, cacheHash, new mongodb.Binary(tile))
+        return res.status(200).send(tile)
+      } else if (tile === null) {
+        // 204 = no-content, better than 404
+        return res.status(204).send()
+      }
+    }
   }
 
   if (vectorTileRequested) {

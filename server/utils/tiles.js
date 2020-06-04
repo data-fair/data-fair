@@ -1,11 +1,11 @@
 const geojsonvt = require('geojson-vt')
 const vtpbf = require('vt-pbf')
-// const Pbf = require('pbf')
+const Pbf = require('pbf')
 const { gunzip } = require('zlib')
 const memoize = require('memoizee')
 const MBTiles = require('@mapbox/mbtiles')
-// const VectorTile = require('@mapbox/vector-tile').VectorTile
-
+const VectorTile = require('@mapbox/vector-tile').VectorTile
+// const debug = require('debug')('tiles')
 function tile2long(x, z) {
   return (x / Math.pow(2, z) * 360 - 180)
 }
@@ -33,8 +33,6 @@ exports.geojson2pbf = (geojson, xyz) => {
   return Buffer.from(vtpbf.fromGeojsonVt(layers, { version: 2 }))
 }
 
-/*
-TODO: select fields inside a tile from mbtiles ?
 const selectInVT = (data, select) => {
   var tile = new VectorTile(new Pbf(data))
   for (var layerName in tile.layers) {
@@ -50,9 +48,8 @@ const selectInVT = (data, select) => {
     // monkey patch layer.feature() so that it doesn't reprocess the pbf on next call
     layer.feature = (i) => updatedFeatures[i]
   }
-  data = Buffer.from(vtpbf(tile))
+  return Buffer.from(vtpbf(tile))
 }
-*/
 
 async function getMbtiles(mbtilesPath) {
   return new Promise((resolve, reject) => {
@@ -79,7 +76,7 @@ const memoizedGetMbtiles = memoize(getMbtiles, {
   },
 })
 
-exports.getTile = async (mbtilesPath, x, y, z) => {
+exports.getTile = async (mbtilesPath, select, x, y, z) => {
   const { mbtiles, info } = await memoizedGetMbtiles(mbtilesPath)
   if (z > info.maxzoom || z < info.minzoom) {
     // false means that the tile is out the range of what the mbtiles serves
@@ -94,7 +91,11 @@ exports.getTile = async (mbtilesPath, x, y, z) => {
 
       gunzip(data, (err, unzipped) => {
         if (err) return reject(err)
-        resolve(unzipped)
+        if (select) {
+          resolve(selectInVT(unzipped, select))
+        } else {
+          resolve(unzipped)
+        }
       })
       /* if (headers['Content-Encoding'] === 'gzip') {
         data = await gunzip(data)
