@@ -2,6 +2,7 @@ const fs = require('fs-extra')
 const config = require('config')
 const path = require('path')
 const datasetUtils = require('../../../server/utils/dataset')
+const tilesUtils = require('../../../server/utils/tiles')
 const esUtils = require('../../../server/utils/es')
 
 exports.description = 'Dataset files are now stored in separate folders.'
@@ -52,7 +53,7 @@ exports.exec = async (db, debug) => {
 
     if (dataset.bbox && !dataset.isRest && !dataset.isVirtual && !(await fs.exists(paths.newMbtilesFile))) {
       debug('prepare geo files')
-      await datasetUtils.prepareGeoFiles(dataset)
+      await tilesUtils.prepareMbtiles(dataset)
     }
   }
   await es.close()

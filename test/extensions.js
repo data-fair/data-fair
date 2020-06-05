@@ -109,16 +109,13 @@ other,unknown address
     // Download extended file
     res = await ax.get(`/api/v1/datasets/${dataset.id}/full`)
     const lines = res.data.split('\n')
-    assert.equal(lines[0], '\ufefflabel,adr,lat,lon,error')
-    assert.equal(lines[1], 'koumoul,19 rue de la voie lactée saint avé,40,40,')
+    assert.equal(lines[0], '\ufefflabel,adr,lat,lon')
+    assert.equal(lines[1], 'koumoul,19 rue de la voie lactée saint avé,40,40')
 
     // list generated geo files
     res = await ax.get(`/api/v1/datasets/${dataset.id}/data-files`)
     assert.equal(res.status, 200)
-    assert.equal(res.data.length, 3)
-    assert.ok(res.data.find(f => f.key === 'geojson'))
-    res = await ax.get(res.data.find(f => f.key === 'geojson').url)
-    assert.equal(res.data.features.length, 3)
+    assert.equal(res.data.length, 2)
   })
 
   it('Manage errors during extension', async () => {

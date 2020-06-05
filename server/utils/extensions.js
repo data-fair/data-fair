@@ -415,6 +415,18 @@ class PreserveExtensionStream extends Transform {
     this.buffer = []
     this.bufferChars = 0
     items.forEach(item => {
+      // preserve _id other calculated fields
+      // this allows to have the same properties when writing full file compared to indexation
+      if (!this.options.dataset.isRest && this.options.calculated) {
+        tasks.push({ item, extensionKey: 'calculated' })
+        searches.push({ index: this.indexName })
+        searches.push({
+          size: 1,
+          _source: '_rand',
+          query: { constant_score: { filter: { term: { _i: item._i } } } },
+        })
+      }
+
       Object.keys(this.mappings).forEach(extensionKey => {
         const [mappedItem, h] = this.mappings[extensionKey]({ doc: item })
         tasks.push({ item, mappedItem, h, extensionKey })
@@ -433,12 +445,17 @@ class PreserveExtensionStream extends Transform {
       responses.forEach((res, i) => {
         const { item, extensionKey } = tasks[i]
         if (res.hits.total.value > 0) {
-          const extensionResult = res.hits.hits[0]._source[extensionKey]
-          const selectFields = this.extensionsMap[extensionKey].select || []
-          const selectedExtensionResult = Object.keys(extensionResult)
-            .filter(key => key === '_hash' || selectFields.length === 0 || selectFields.includes(key))
-            .reduce((a, key) => { a[key] = extensionResult[key]; return a }, {})
-          item[extensionKey] = selectedExtensionResult
+          if (extensionKey === 'calculated') {
+            item._id = res.hits.hits[0]._id
+            Object.assign(item, res.hits.hits[0]._source)
+          } else {
+            const extensionResult = res.hits.hits[0]._source[extensionKey]
+            const selectFields = this.extensionsMap[extensionKey].select || []
+            const selectedExtensionResult = Object.keys(extensionResult)
+              .filter(key => key === '_hash' || selectFields.length === 0 || selectFields.includes(key))
+              .reduce((a, key) => { a[key] = extensionResult[key]; return a }, {})
+            item[extensionKey] = selectedExtensionResult
+          }
         }
       })
     }

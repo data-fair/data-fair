@@ -599,6 +599,7 @@ router.get('/:datasetId/lines', readDataset(), permissions.middleware('readLines
     })
     if (value) {
       res.type('application/x-protobuf')
+      res.setHeader('x-tilesmode', 'cache')
       res.throttleEnd('static')
       return res.status(200).send(value.buffer)
     }
@@ -613,10 +614,12 @@ router.get('/:datasetId/lines', readDataset(), permissions.middleware('readLines
       const tile = await tiles.getTile(mbtilesPath, !emptySelect && req.query.select.split(','), ...xyz)
       if (tile) {
         res.type('application/x-protobuf')
+        res.setHeader('x-tilesmode', 'mbtiles')
         res.throttleEnd('static')
         if (!config.cache.disabled) cache.set(db, cacheHash, new mongodb.Binary(tile))
         return res.status(200).send(tile)
       } else if (tile === null) {
+        res.setHeader('x-tilesmode', 'mbtiles')
         // 204 = no-content, better than 404
         return res.status(204).send()
       }
@@ -624,6 +627,8 @@ router.get('/:datasetId/lines', readDataset(), permissions.middleware('readLines
   }
 
   if (vectorTileRequested) {
+    res.setHeader('x-tilesmode', 'es')
+
     const requestedSize = req.query.size ? Number(req.query.size) : 20
     if (requestedSize > 10000) throw createError(400, '"size" cannot be more than 10000')
     if (sampling === 'neighbors') {

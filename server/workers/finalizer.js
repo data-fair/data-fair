@@ -1,6 +1,7 @@
 // Finalize dataset for publication
 const esUtils = require('../utils/es')
 const geoUtils = require('../utils/geo')
+const tilesUtils = require('../utils/tiles')
 const datasetUtils = require('../utils/dataset')
 const attachmentsUtils = require('../utils/attachments')
 const virtualDatasetsUtils = require('../utils/virtual-datasets')
@@ -52,13 +53,13 @@ exports.process = async function(app, dataset) {
 
     if (!dataset.isRest && !dataset.isVirtual) {
       debug('prepare geo files')
-      await datasetUtils.prepareGeoFiles(dataset)
+      await tilesUtils.prepareMbtiles(dataset, db, es)
     }
   } else {
     result.bbox = null
     if (!dataset.isRest && !dataset.isVirtual) {
       debug('delete geo files')
-      await datasetUtils.deleteGeoFiles(dataset)
+      await tilesUtils.deleteMbtiles(dataset)
     }
   }
 

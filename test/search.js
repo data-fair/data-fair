@@ -23,6 +23,7 @@ describe('search', () => {
     await workers.hook('finalizer')
     res = await ax.get('/api/v1/datasets/dataset/lines')
     assert.equal(res.data.total, 2)
+    console.log(res.data.results)
     // Filter on keyword field
     res = await ax.get('/api/v1/datasets/dataset/lines?q=koumoul')
     assert.equal(res.data.total, 1)

@@ -29,7 +29,7 @@ script:
   - docker-compose pull
   - NO_UI=true docker-compose up -d
   - sleep 15
-  - npm test
+  - TIPPECANOE_SKIP=true npm test
 
 after_success:
   - npm run coveralls

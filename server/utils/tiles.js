@@ -1,11 +1,25 @@
+const config = require('config')
 const geojsonvt = require('geojson-vt')
+const path = require('path')
+const fs = require('fs-extra')
 const vtpbf = require('vt-pbf')
 const Pbf = require('pbf')
 const { gunzip } = require('zlib')
 const memoize = require('memoizee')
 const MBTiles = require('@mapbox/mbtiles')
+const { Transform } = require('stream')
 const VectorTile = require('@mapbox/vector-tile').VectorTile
+const pump = require('util').promisify(require('pump'))
+const tmp = require('tmp-promise')
+const JSONStream = require('JSONStream')
+const datasetUtils = require('./dataset')
+const geoUtils = require('./geo')
+const extensionsUtils = require('./extensions')
 // const debug = require('debug')('tiles')
+
+const dataDir = path.resolve(config.dataDir)
+const exec = require('./exec')
+
 function tile2long(x, z) {
   return (x / Math.pow(2, z) * 360 - 180)
 }
@@ -78,6 +92,12 @@ const memoizedGetMbtiles = memoize(getMbtiles, {
 
 exports.getTile = async (mbtilesPath, select, x, y, z) => {
   const { mbtiles, info } = await memoizedGetMbtiles(mbtilesPath)
+
+  /* decomment in dev to inspect content of mbtiles
+  console.log('info', info)
+  for await (const tilesPacket of mbtiles.createZXYStream()) {
+    console.log(tilesPacket.toString())
+  } */
   if (z > info.maxzoom || z < info.minzoom) {
     // false means that the tile is out the range of what the mbtiles serves
     return false
@@ -119,4 +139,90 @@ exports.defaultSelect = (dataset) => {
     if (prop.type === 'string' && prop['x-refersTo'] === 'http://www.w3.org/2000/01/rdf-schema#label') return true
     return false
   }).map(prop => prop.key)
+}
+
+exports.prepareMbtiles = async (dataset, db, es) => {
+  if (config.tippecanoe.skip) return
+  const dir = datasetUtils.dir(dataset)
+  const tmpDir = path.join(dataDir, 'tmp')
+  await fs.ensureDir(tmpDir)
+  const parsed = path.parse(dataset.file.name)
+  const mbtilesFile = path.join(dir, `${parsed.name}.mbtiles`)
+  const geopoints = geoUtils.schemaHasGeopoint(dataset.schema)
+  const geoshapes = geoUtils.schemaHasGeometry(dataset.schema)
+  const removeProps = dataset.schema.filter(p => geoUtils.allGeoConcepts.includes(p['x-refersTo']))
+
+  // first write a temporary geojson file with all content + extensions + same calculated fields as indexed
+  const streams = [
+    datasetUtils.readStream(dataset, false),
+    extensionsUtils.preserveExtensionStream({ db, esClient: es, dataset, calculated: true }),
+  ]
+  let i = 0
+  streams.push(new Transform({
+    async transform(properties, encoding, callback) {
+      try {
+        let geometry
+        if (geopoints) {
+          geometry = geoUtils.latlon2fields(dataset, properties)._geoshape
+        } else if (geoshapes) {
+          geometry = (await geoUtils.geometry2fields(dataset.schema, properties))._geoshape
+        }
+          if (geometry) {
+          for (const prop of removeProps) {
+            delete properties[prop.key]
+          }
+          const feature = { type: 'Feature', properties, geometry, id: properties._id || i }
+          i++
+          callback(null, feature)
+        } else {
+          callback(null, null)
+        }
+      } catch (err) {
+        callback(err)
+      }
+    },
+    objectMode: true,
+  }))
+
+  streams.push(JSONStream.stringify(`{
+  "type": "FeatureCollection",
+  "features": [
+    `, `,
+    `, `
+  ]
+}`))
+
+  const tmpGeojsonFile = await tmp.tmpName({ dir: tmpDir, postfix: '.geojson' })
+  streams.push(fs.createWriteStream(tmpGeojsonFile))
+  await pump(...streams)
+
+  const tippecanoeArgs = [...config.tippecanoe.args, '-n', dataset.title, '-N', dataset.title, '--layer', 'results']
+  exports.defaultSelect(dataset).forEach(prop => {
+    tippecanoeArgs.push('--include')
+    tippecanoeArgs.push(prop)
+  })
+
+  const tmpMbtilesFile = await tmp.tmpName({ dir: tmpDir, postfix: '.mbtiles' })
+  try {
+    if (config.tippecanoe.docker) {
+      await exec('docker', ['run', '--rm', '-e', 'TIPPECANOE_MAX_THREADS=1', '-v', `${dataDir}:/data`, 'klokantech/tippecanoe:latest', 'tippecanoe', ...tippecanoeArgs, '-o', tmpMbtilesFile.replace(dataDir, '/data'), tmpGeojsonFile.replace(dataDir, '/data')])
+    } else {
+      await exec('tippecanoe', [...tippecanoeArgs, '-o', tmpMbtilesFile, tmpGeojsonFile], { env: { TIPPECANOE_MAX_THREADS: '1' } })
+    }
+  } catch (err) {
+    console.error('failed to create mbtiles file', mbtilesFile, err)
+    await fs.remove(tmpGeojsonFile)
+    await fs.remove(tmpMbtilesFile)
+    return
+  }
+
+  // more atomic file write to prevent read during a long write
+  await fs.move(tmpMbtilesFile, mbtilesFile, { overwrite: true })
+  await fs.remove(tmpGeojsonFile)
+}
+
+exports.deleteMbtiles = async (dataset) => {
+  const parsed = path.parse(dataset.file.name)
+  const mbtilesFile = path.join(datasetUtils.dir(dataset), `${parsed.name}.mbtiles`)
+  await fs.remove(mbtilesFile)
 }

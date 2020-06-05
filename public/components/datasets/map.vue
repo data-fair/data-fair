@@ -92,7 +92,6 @@
       tileUrl() {
         let url = this.resourceUrl + '/lines?format=pbf&size=10000&xyz={x},{y},{z}'
         // select only the prop necessary to fetch a specific line
-        if (this.dataset.schema.find(p => p.key === '_i')) url += '&select=_i'
         if (this.dataset.schema.find(p => p.key === '_id')) url += '&select=_id'
         if (this.query) url += '&q=' + encodeURIComponent(this.query)
         if (this.dataset.finalizedAt) url += '&finalizedAt=' + encodeURIComponent(this.dataset.finalizedAt)
@@ -151,9 +150,6 @@
           const feature = this.map.queryRenderedFeatures(e.point).find(f => f.source === 'data-fair')
           if (!feature) return
 
-          if (feature.properties._i !== undefined) {
-            this.map.setFilter('results_hover', ['==', '_i', feature.properties._i])
-          }
           if (feature.properties._id !== undefined) {
             this.map.setFilter('results_hover', ['==', '_id', feature.properties._id])
           }
@@ -167,7 +163,6 @@
           if (!feature) return
 
           let qs
-          if (feature.properties._i !== undefined) qs = `_i:"${feature.properties._i}"`
           if (feature.properties._id !== undefined) qs = `_id:"${feature.properties._id}"`
           if (!qs) return console.error('needs either _i or _id property to be able to fetch item', feature.properties)
           const item = (await this.$axios.$get(this.resourceUrl + '/lines', { params: { qs, size: 1 } })).results[0]
