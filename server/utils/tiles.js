@@ -65,7 +65,8 @@ const selectInVT = (data, select) => {
   return Buffer.from(vtpbf(tile))
 }
 
-async function getMbtiles(mbtilesPath) {
+// finalizedAt is only here to invalidate memoize cache
+async function getMbtiles(mbtilesPath, finalizedAt) {
   return new Promise((resolve, reject) => {
     // eslint-disable-next-line no-new
     new MBTiles(`${mbtilesPath}?mode=ro`, (err, mbtiles) => {
@@ -90,8 +91,8 @@ const memoizedGetMbtiles = memoize(getMbtiles, {
   },
 })
 
-exports.getTile = async (mbtilesPath, select, x, y, z) => {
-  const { mbtiles, info } = await memoizedGetMbtiles(mbtilesPath)
+exports.getTile = async (dataset, mbtilesPath, select, x, y, z) => {
+  const { mbtiles, info } = await memoizedGetMbtiles(mbtilesPath, dataset.finalizedAt)
 
   /* decomment in dev to inspect content of mbtiles
   console.log('info', info)

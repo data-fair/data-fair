@@ -611,7 +611,7 @@ router.get('/:datasetId/lines', readDataset(), permissions.middleware('readLines
   if (!req.dataset.isVirtual && !req.dataset.isRest) {
     const mbtilesPath = datasetUtils.extFileName(req.dataset, 'mbtiles')
     if (vectorTileRequested && !req.query.q && !req.query.qs && await fs.exists(mbtilesPath)) {
-      const tile = await tiles.getTile(mbtilesPath, !emptySelect && req.query.select.split(','), ...xyz)
+      const tile = await tiles.getTile(req.dataset, mbtilesPath, !emptySelect && req.query.select.split(','), ...xyz)
       if (tile) {
         res.type('application/x-protobuf')
         res.setHeader('x-tilesmode', 'mbtiles')

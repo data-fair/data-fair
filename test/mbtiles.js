@@ -26,18 +26,33 @@ describe('Generated mbtiles file', () => {
     assert.ok(res.data.find(f => f.key === 'original'))
     // disabled in test env for now
     assert.ok(res.data.find(f => f.key === 'mbtiles'))
-    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines?xyz=3,4,7&format=geojson`)
+
+    // fetch results as geojson
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines?xyz=0,0,0&format=geojson`)
+    assert.equal(res.data.type, 'FeatureCollection')
+    assert.equal(res.data.features.length, 2)
+
+    // empty vector tile outside the box
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines?xyz=3,4,7&format=pbf`)
     assert.equal(res.status, 204)
     assert.equal(res.headers['x-tilesmode'], 'es')
+
+    // filled vector tile from mbtiles
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines?xyz=0,0,0&format=pbf&select=id,_id`, { responseType: 'arraybuffer' })
     assert.equal(res.status, 200)
     assert.equal(res.headers['x-tilesmode'], 'mbtiles')
-    const tile = new VectorTile(new Pbf(res.data))
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines?xyz=0,0,0&format=pbf&select=id,_id`, { responseType: 'arraybuffer' })
+    assert.equal(res.status, 200)
+    assert.equal(res.headers['x-tilesmode'], 'cache')
+    let tile = new VectorTile(new Pbf(res.data))
 
+    // the feature from the vector tile are filled based on select
+    assert.equal(tile.layers.results.length, 2)
     let feature = tile.layers.results.feature(0)
+    assert.ok(feature.properties._id)
     assert.equal(feature.properties.id, 'koumoul')
     assert.equal(feature.properties.adr, undefined)
+    // using _id it is possible to fetch all the data from this feature
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines?qs=_id:"${feature.properties._id}"`)
     assert.equal(res.data.total, 1)
     let fullFeature = res.data.results[0]
@@ -45,14 +60,20 @@ describe('Generated mbtiles file', () => {
     assert.equal(fullFeature.id, 'koumoul')
     assert.equal(fullFeature.adr, '19 rue de la voie lactée saint avé')
 
-    feature = tile.layers.results.feature(1)
-    assert.equal(feature.properties.id, 'bidule')
-    assert.equal(feature.properties.adr, undefined)
+    // re-check after a reindex,, to prevent regression on a previous bug
+    res = await global.ax.superadmin.post(`/api/v1/datasets/${dataset.id}/_reindex`)
+    await workers.hook('finalizer')
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines?xyz=0,0,0&format=pbf&select=id,_id`, { responseType: 'arraybuffer' })
+    assert.equal(res.status, 200)
+    assert.equal(res.headers['x-tilesmode'], 'mbtiles')
+    tile = new VectorTile(new Pbf(res.data))
+    assert.equal(tile.layers.results.length, 2)
+    feature = tile.layers.results.feature(0)
+    assert.ok(feature.properties._id)
+    assert.equal(feature.properties.id, 'koumoul')
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines?qs=_id:"${feature.properties._id}"`)
     assert.equal(res.data.total, 1)
     fullFeature = res.data.results[0]
     assert.equal(fullFeature._id, feature.properties._id)
-    assert.equal(fullFeature.id, 'bidule')
-    assert.equal(fullFeature.adr, 'adresse inconnue')
   })
 })
