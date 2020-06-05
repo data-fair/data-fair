@@ -161,7 +161,7 @@
           const feature = this.map.queryRenderedFeatures(e.point).find(f => f.source === 'data-fair')
           if (!feature) return
 
-          if (feature.properties._id === undefined) return console.error('needs either _id property to be able to fetch item', feature.properties)
+          if (feature.properties._id === undefined) return console.error('needs _id property to be able to fetch item', feature.properties)
           const qs = `_id:"${feature.properties._id}"`
           const item = (await this.$axios.$get(this.resourceUrl + '/lines', { params: { qs, size: 1 } })).results[0]
           if (!item) return console.error('item not found with filter', qs)

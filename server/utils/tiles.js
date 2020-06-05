@@ -153,6 +153,10 @@ exports.prepareMbtiles = async (dataset, db, es) => {
   const geoshapes = geoUtils.schemaHasGeometry(dataset.schema)
   const removeProps = dataset.schema.filter(p => geoUtils.allGeoConcepts.includes(p['x-refersTo']))
 
+  const tmpGeojsonFile = await tmp.tmpName({ dir: tmpDir, postfix: '.geojson' })
+  // creating empty file before streaming seems to fix some weird bugs with NFS
+  await fs.ensureFile(tmpGeojsonFile)
+
   // first write a temporary geojson file with all content + extensions + same calculated fields as indexed
   const streams = [
     datasetUtils.readStream(dataset, false),
@@ -168,7 +172,7 @@ exports.prepareMbtiles = async (dataset, db, es) => {
         } else if (geoshapes) {
           geometry = (await geoUtils.geometry2fields(dataset.schema, properties))._geoshape
         }
-          if (geometry) {
+        if (geometry) {
           for (const prop of removeProps) {
             delete properties[prop.key]
           }
@@ -193,9 +197,13 @@ exports.prepareMbtiles = async (dataset, db, es) => {
   ]
 }`))
 
-  const tmpGeojsonFile = await tmp.tmpName({ dir: tmpDir, postfix: '.geojson' })
   streams.push(fs.createWriteStream(tmpGeojsonFile))
   await pump(...streams)
+
+  // Try to prevent weird bug with NFS by forcing syncing file before reading it
+  const fd = await fs.open(tmpGeojsonFile, 'r')
+  await fs.fsync(fd)
+  await fs.close(fd)
 
   const tippecanoeArgs = [...config.tippecanoe.args, '-n', dataset.title, '-N', dataset.title, '--layer', 'results']
   exports.defaultSelect(dataset).forEach(prop => {

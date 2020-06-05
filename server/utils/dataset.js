@@ -224,6 +224,9 @@ exports.readStream = (dataset, raw = false) => {
 // Used by extender worker to produce the "full" version of the file
 exports.writeFullFile = async (db, es, dataset) => {
   const tmpFullFile = await tmp.tmpName({ dir: path.join(dataDir, 'tmp') })
+  // creating empty file before streaming seems to fix some weird bugs with NFS
+  await fs.ensureFile(tmpFullFile)
+
   const writeStream = fs.createWriteStream(tmpFullFile)
 
   const relevantSchema = dataset.schema.filter(f => !f['x-calculated'])
