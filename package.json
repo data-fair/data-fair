@@ -143,6 +143,7 @@
     "stylus-loader": "^3.0.2",
     "terraformer-wkt-parser": "^1.2.1",
     "thumbor": "^0.1.5",
+    "tinycolor2": "^1.4.1",
     "tmp-promise": "^2.0.2",
     "truncate-middle": "^1.0.6",
     "universal-analytics": "^0.4.20",

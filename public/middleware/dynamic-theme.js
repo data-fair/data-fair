@@ -1,7 +1,15 @@
-export default async function ({ $vuetify, query }) {
+import tinycolor from 'tinycolor2'
+
+export default async function ({ $vuetify, query, store }) {
   if (query.dark === 'true') $vuetify.theme.dark = true
   if (query.primary) {
-    $vuetify.theme.themes.dark.primary = query.primary
-    $vuetify.theme.themes.light.primary = query.primary
+    // ensure the color will provide a readable contrast with white text in buttons
+    const c = tinycolor(query.primary)
+    while (!tinycolor.isReadable('#FFFFFF', c)) {
+      c.darken(2)
+    }
+    // force a somewhat dark color so that contrast if ok for buttons, etc
+    $vuetify.theme.themes.dark.primary = c.toHexString()
+    $vuetify.theme.themes.light.primary = c.toHexString()
   }
 }
