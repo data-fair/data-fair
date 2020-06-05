@@ -583,6 +583,10 @@ router.get('/:datasetId/lines', readDataset(), permissions.middleware('readLines
 
   let xyz
   if (vectorTileRequested) {
+    // default is 20 for other format, but we want filled tiles by default
+    req.query.size = req.query.size || '10000'
+    // sorting by rand provides more homogeneous distribution in tiles
+    req.query.sort = req.query.sort || '_rand'
     if (!req.query.xyz) return res.status(400).send('xyz parameter is required for vector tile format.')
     xyz = req.query.xyz.split(',').map(Number)
   }

@@ -109,8 +109,6 @@ exports.prepareQuery = (dataset, query) => {
   esQuery.sort = exports.parseSort(query.sort || '_i', fields)
   // Also implicitly sort by score
   esQuery.sort.push('_score')
-  // And lastly random order for natural distribution (mostly important for geo results)
-  esQuery.sort.push('_rand')
 
   // Simple highlight management
   // https://www.elastic.co/guide/en/elasticsearch/reference/current/search-request-highlighting.html

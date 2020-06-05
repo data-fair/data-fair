@@ -90,7 +90,7 @@
       ...mapState('dataset', ['dataset']),
       ...mapGetters('dataset', ['resourceUrl']),
       tileUrl() {
-        let url = this.resourceUrl + '/lines?format=pbf&size=10000&xyz={x},{y},{z}'
+        let url = this.resourceUrl + '/lines?format=pbf&xyz={x},{y},{z}'
         // select only the prop necessary to fetch a specific line
         if (this.dataset.schema.find(p => p.key === '_id')) url += '&select=_id'
         if (this.query) url += '&q=' + encodeURIComponent(this.query)
