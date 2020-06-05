@@ -50,17 +50,8 @@ exports.process = async function(app, dataset) {
     queryableDataset.bbox = []
     result.bbox = dataset.bbox = (await esUtils.bboxAgg(es, queryableDataset)).bbox
     debug('bounding box ok', result.bbox)
-
-    if (!dataset.isRest && !dataset.isVirtual) {
-      debug('prepare mbtiles')
-      await tilesUtils.prepareMbtiles(dataset, db, es)
-    }
   } else {
     result.bbox = null
-    if (!dataset.isRest && !dataset.isVirtual) {
-      debug('delete geo files')
-      await tilesUtils.deleteMbtiles(dataset)
-    }
   }
 
   // calculate temporal coverage
@@ -92,17 +83,31 @@ exports.process = async function(app, dataset) {
   debug('prepare extended schema')
   result.schema = datasetUtils.extendedSchema(dataset)
 
-  // Remove attachments if the schema does not refer to their existence
-  if (!dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')) {
-    await attachmentsUtils.removeAll(dataset)
-  }
-
   result.finalizedAt = (new Date()).toISOString()
   if (dataset.isRest && (await collection.findOne({ id: dataset.id })).status === 'updated') {
     // dataset was updated while we were finalizing.. keep it as such
     delete result.status
   }
   Object.assign(dataset, result)
+
+  // manage mbtiles
+  if (!dataset.isRest && !dataset.isVirtual) {
+    if (dataset.bbox) {
+        debug('prepare mbtiles')
+        await tilesUtils.prepareMbtiles(dataset, db, es)
+    } else {
+      if (!dataset.isRest && !dataset.isVirtual) {
+        debug('delete geo files')
+        await tilesUtils.deleteMbtiles(dataset)
+      }
+    }
+  }
+
+  // Remove attachments if the schema does not refer to their existence
+  if (!dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')) {
+    await attachmentsUtils.removeAll(dataset)
+  }
+
   await collection.updateOne({ id: dataset.id }, { $set: result })
   debug('done')
 }
