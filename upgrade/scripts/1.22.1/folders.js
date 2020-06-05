@@ -53,7 +53,7 @@ exports.exec = async (db, debug) => {
 
     if (dataset.bbox && !dataset.isRest && !dataset.isVirtual && !(await fs.exists(paths.newMbtilesFile))) {
       debug('prepare geo files')
-      await tilesUtils.prepareMbtiles(dataset)
+      await tilesUtils.prepareMbtiles(dataset, db, es)
     }
   }
   await es.close()

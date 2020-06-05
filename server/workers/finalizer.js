@@ -52,7 +52,7 @@ exports.process = async function(app, dataset) {
     debug('bounding box ok', result.bbox)
 
     if (!dataset.isRest && !dataset.isVirtual) {
-      debug('prepare geo files')
+      debug('prepare mbtiles')
       await tilesUtils.prepareMbtiles(dataset, db, es)
     }
   } else {
