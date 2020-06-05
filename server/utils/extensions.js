@@ -518,7 +518,7 @@ exports.applyCalculations = async (dataset, item) => {
   }
 
   // Add a pseudo-random number for random sorting (more natural distribution)
-  item._rand = randomSeed.create(item._i)(1000000)
+  item._rand = randomSeed.create(dataset.id + item._i)(1000000)
 
   // split the fields that have a separator in their schema
   dataset.schema.filter(field => field.separator && item[field.key]).forEach(field => {
