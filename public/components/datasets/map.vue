@@ -158,7 +158,6 @@
         }
 
         const clickCallback = async (e) => {
-          console.log('CLICK')
           const feature = this.map.queryRenderedFeatures(e.point).find(f => f.source === 'data-fair')
           if (!feature) return
 
@@ -170,6 +169,7 @@
 
           const htmlList = this.dataset.schema
             .filter(field => !field['x-calculated'] && field['x-refersTo'] !== 'https://purl.org/geojson/vocab#geometry')
+            .filter(field => item[field.key] !== undefined)
             .map(field => {
               return `<li>${field.title || field['x-originalName'] || field.key}: ${item[field.key]}</li>`
             })
