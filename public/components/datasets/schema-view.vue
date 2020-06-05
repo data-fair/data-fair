@@ -2,9 +2,9 @@
   <v-data-table
     :headers="headers"
     :items="dataset.schema.filter(f => !f['x-calculated'])"
-    :total-items="dataset.schema.filter(f => !f['x-calculated']).length"
-    :disable-initial-sort="true"
+    :server-items-length="dataset.schema.filter(f => !f['x-calculated']).length"
     :hide-default-footer="true"
+    disable-sort
   >
     <template v-slot:item="{item}">
       <tr>
@@ -23,7 +23,13 @@
 
   export default {
     data: () => ({
-      headers: [{ value: 'key', text: 'Clé' }, { value: 'name', text: 'Nom' }, { value: 'type', text: 'Type' }, { value: 'x-refersTo', text: 'Concept' }, { value: 'description', text: 'Description' }],
+      headers: [
+        { value: 'key', text: 'Clé' },
+        { value: 'name', text: 'Nom' },
+        { value: 'type', text: 'Type' },
+        { value: 'x-refersTo', text: 'Concept' },
+        { value: 'description', text: 'Description' },
+      ],
     }),
     computed: {
       ...mapState(['vocabulary']),
