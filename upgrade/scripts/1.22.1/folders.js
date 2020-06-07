@@ -18,6 +18,7 @@ const getPaths = (dataset) => {
     newDir: path.join(ownerDir, 'datasets', dataset.id),
     newFullFile: parsedOriginalFile && path.join(ownerDir, 'datasets', dataset.id, `${parsedOriginalFile.name}-full${parsedOriginalFile.ext}`),
     newMbtilesFile: parsedOriginalFile && path.join(ownerDir, 'datasets', dataset.id, `${parsedOriginalFile.name}.mbtiles`),
+    markerFile: path.join(config.dataDir, 'tmp', `upgrade-marker-${dataset.id}.txt`),
   }
 }
 
@@ -53,6 +54,10 @@ exports.exec = async (db, debug) => {
   while (await cursor.hasNext()) {
     const dataset = await cursor.next()
     const paths = getPaths(dataset)
+    if (await fs.exists(paths.markerFile)) {
+      debug('files already produced for dataset', dataset.id)
+      continue
+    }
 
     if (dataset.extensions && dataset.extensions.find(e => e.active) && paths.newFullFile && !(await fs.exists(paths.newFullFile))) {
       debug('prepare full extended file', paths.newFullFile)
@@ -71,6 +76,8 @@ exports.exec = async (db, debug) => {
         console.error('Failure to create mbtiles file', paths.newFullFile, err)
       }
     }
+
+    await fs.ensureFile(paths.markerFile)
   }
   await es.close()
 }
