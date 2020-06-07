@@ -7,10 +7,11 @@ const testUtils = require('./resources/test-utils')
 const workers = require('../server/workers')
 
 describe('Generated mbtiles file', () => {
-  it('Process newly uploaded CSV dataset', async () => {
-    if (config.tippecanoe.skip) {
-      return console.log('Skip mbtiles test in this environment')
-    }
+  if (config.tippecanoe.skip) {
+    return console.log('Skip mbtiles test in this environment')
+  }
+
+  it('Process uploaded CSV dataset', async () => {
     const ax = global.ax.dmeadus
     const dataset = await testUtils.sendDataset('dataset1.csv', ax)
     // Update schema to specify geo point
@@ -75,5 +76,28 @@ describe('Generated mbtiles file', () => {
     assert.equal(res.data.total, 1)
     fullFeature = res.data.results[0]
     assert.equal(fullFeature._id, feature.properties._id)
+  })
+
+  it('process uploaded geojson file', async () => {
+    const ax = global.ax.dmeadus
+    const dataset = await testUtils.sendDataset('geojson-example.geojson', ax)
+
+    // fetch results as geojson
+    let res = await ax.get(`/api/v1/datasets/${dataset.id}/lines?xyz=0,0,0&format=geojson`)
+    assert.equal(res.data.type, 'FeatureCollection')
+    assert.equal(res.data.features.length, 3)
+
+    // empty vector tile outside the box
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines?xyz=3,4,7&format=pbf`)
+    assert.equal(res.status, 204)
+    assert.equal(res.headers['x-tilesmode'], 'es')
+
+    // filled vector tile from mbtiles
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines?xyz=0,0,0&format=pbf&select=id,_id`, { responseType: 'arraybuffer' })
+    assert.equal(res.status, 200)
+    assert.equal(res.headers['x-tilesmode'], 'mbtiles')
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines?xyz=0,0,0&format=pbf&select=id,_id`, { responseType: 'arraybuffer' })
+    assert.equal(res.status, 200)
+    assert.equal(res.headers['x-tilesmode'], 'cache')
   })
 })
