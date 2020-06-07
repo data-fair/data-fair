@@ -444,6 +444,7 @@ class PreserveExtensionStream extends Transform {
       const { responses } = await esClient.msearch({ body: searches })
       responses.forEach((res, i) => {
         const { item, extensionKey } = tasks[i]
+        if (!res.hits) console.error('Missing response.hits in ES extension response', this.options.dataset.id, extensionKey, item, JSON.stringify(res))
         if (res.hits.total.value > 0) {
           if (extensionKey === 'calculated') {
             item._id = res.hits.hits[0]._id
