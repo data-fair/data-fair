@@ -105,7 +105,7 @@ async function iter(app, type) {
         // index the content of the dataset in ES
         // either just schematized or an updated REST dataset
         taskKey = 'indexer'
-      } else if (resource.status === 'indexed' && ((resource.extensions && resource.extensions.find(e => e.active)) || (resource.file && resource.file.mimetype === 'application/geo+json'))) {
+      } else if (resource.status === 'indexed' && (resource.extensions && resource.extensions.find(e => e.active))) {
         // Perform extensions from remote services for dataset that are
         // indexed and have at least one active extension
         taskKey = 'extender'
