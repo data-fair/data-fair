@@ -56,7 +56,11 @@ exports.exec = async (db, debug) => {
 
     if (dataset.extensions && dataset.extensions.find(e => e.active) && paths.newFullFile && !(await fs.exists(paths.newFullFile))) {
       debug('prepare full extended file', paths.newFullFile)
-      await datasetUtils.writeFullFile(db, es, dataset)
+      try {
+        await datasetUtils.writeFullFile(db, es, dataset)
+      } catch (err) {
+        console.error('Failure to create extended file', paths.newFullFile, err)
+      }
     }
 
     if (dataset.bbox && !dataset.isRest && !dataset.isVirtual && !(await fs.exists(paths.newMbtilesFile))) {
