@@ -161,24 +161,14 @@
 </template>
 
 <script>
-  import Vue from 'vue'
   import debounce from 'debounce'
   import { mapState, mapActions, mapGetters } from 'vuex'
   import VJsf from '@koumoul/vjsf/lib/VJsf.js'
+  import '@koumoul/vjsf/lib/deps/third-party.js'
   import '@koumoul/vjsf/dist/main.css'
   import 'iframe-resizer/js/iframeResizer'
   import VIframe from '@koumoul/v-iframe'
   import eventBus from '~/event-bus'
-
-  if (process.browser) {
-    const Swatches = require('vue-swatches').default
-    Vue.component('swatches', Swatches)
-    require('vue-swatches/dist/vue-swatches.min.css')
-    const Draggable = require('vuedraggable')
-    Vue.component('draggable', Draggable)
-    const Sketch = require('vue-color').Sketch
-    Vue.component('color-picker', Sketch)
-  }
 
   export default {
     components: { VJsf, VIframe },
@@ -285,6 +275,24 @@
         this.editConfig = JSON.parse(JSON.stringify(await this.readConfigDraft()))
         await this.readConfig()
       },
+      // make at least 1 dataset required
+      // this should be done by each application, but for easier compatibility we do it globally here
+      completeSchema(schema) {
+        let datasetsProp
+        if (schema.definitions && schema.definitions.datasets) {
+          datasetsProp = schema.definitions.datasets
+        } else if (schema.properties && schema.properties.datasets) {
+          datasetsProp = schema.properties && schema.properties.datasets
+        } else if (schema.allOf) {
+          const datasetsAllOf = schema.allOf.find(a => a.properties && a.properties.datasets)
+          if (datasetsAllOf) datasetsProp = datasetsAllOf.properties.datasets
+        }
+        if (!datasetsProp) {
+          console.error('dit not find a "datasets" property in schema')
+        } else {
+          datasetsProp.minItems = 1
+        }
+      },
       async fetchSchemas() {
         this.draftSchema = null
         this.prodSchema = null
@@ -293,10 +301,13 @@
         const draftSchemaUrl = (this.application.urlDraft || this.application.url) + 'config-schema.json'
         try {
           this.draftSchema = await this.$axios.$get(draftSchemaUrl)
+
           if (typeof this.draftSchema !== 'object') {
             console.error(`Schema fetched at ${draftSchemaUrl} is not a valid JSON`)
             this.showConfigIframe = true
           } else {
+            this.completeSchema(this.draftSchema)
+            // console.log(JSON.stringify(this.draftSchema, null, 1))
             this.showForm = true
           }
         } catch (error) {
