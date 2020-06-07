@@ -65,7 +65,11 @@ exports.exec = async (db, debug) => {
 
     if (dataset.bbox && !dataset.isRest && !dataset.isVirtual && !(await fs.exists(paths.newMbtilesFile))) {
       debug('prepare geo files', paths.newMbtilesFile)
-      await tilesUtils.prepareMbtiles(dataset, db, es)
+      try {
+        await tilesUtils.prepareMbtiles(dataset, db, es)
+      } catch (err) {
+        console.error('Failure to create mbtiles file', paths.newFullFile, err)
+      }
     }
   }
   await es.close()
