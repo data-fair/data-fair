@@ -23,7 +23,8 @@ const getPaths = (dataset) => {
 
 exports.exec = async (db, debug) => {
   const es = await esUtils.init()
-  const cursor = db.collection('datasets').find({})
+  let cursor = db.collection('datasets').find({})
+  debug('loop on datasets to move all files')
   while (await cursor.hasNext()) {
     const dataset = await cursor.next()
     debug('work on dataset', dataset.id)
@@ -45,14 +46,21 @@ exports.exec = async (db, debug) => {
     if (await fs.exists(paths.metadataAttachmentsDir)) {
       await fs.move(paths.metadataAttachmentsDir, path.join(paths.newDir, 'metadata-attachments'), { overwrite: true })
     }
+  }
+
+  debug('loop on datasets to create extended and vector tile files')
+  cursor = db.collection('datasets').find({})
+  while (await cursor.hasNext()) {
+    const dataset = await cursor.next()
+    const paths = getPaths(dataset)
 
     if (dataset.extensions && dataset.extensions.find(e => e.active) && paths.newFullFile && !(await fs.exists(paths.newFullFile))) {
-      debug('prepare full extended file')
+      debug('prepare full extended file', paths.newFullFile)
       await datasetUtils.writeFullFile(db, es, dataset)
     }
 
     if (dataset.bbox && !dataset.isRest && !dataset.isVirtual && !(await fs.exists(paths.newMbtilesFile))) {
-      debug('prepare geo files')
+      debug('prepare geo files', paths.newMbtilesFile)
       await tilesUtils.prepareMbtiles(dataset, db, es)
     }
   }
