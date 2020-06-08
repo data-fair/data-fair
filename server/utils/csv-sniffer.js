@@ -2,7 +2,7 @@ const { Writable } = require('stream')
 const csv = require('csv-parser')
 const pump = require('util').promisify(require('pump'))
 
-const possibleLinesDelimiters = ['\r\n', '\n\r', '\n', '\r']
+const possibleLinesDelimiters = [{ d: '\r\n', regexp: /\r\n/g }, { d: '\n', regexp: /[^\r]\n/g }]
 const possibleFieldsDelimiters = [',', ';', '\t', '|']
 const possibleEscapeChars = ['"', "'"]
 const possibleQuoteChars = ['"', "'"]
@@ -12,7 +12,7 @@ exports.sniff = async (sample) => {
 
   // best line delimiter is simply the most frequent one, longer ones in priority
   result.linesDelimiter = possibleLinesDelimiters
-    .map(d => ({ d, count: (sample.match(new RegExp(d, 'g')) || []).length }))
+    .map(sep => ({ d: sep.d, count: (sample.match(sep.regexp) || []).length }))
     .reduce((a, item) => a && a.count >= item.count ? a : item, null)
     .d
 
