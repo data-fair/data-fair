@@ -24,9 +24,7 @@
           Vous pouvez les utiliser pour créer des vues limitées d'un jeu de données en appliquant des filtres ou en choisissant une partie seulement des colonnes.
           Vous pouvez également agréger plusieurs jeux de données en une seule représentation.
         </p>
-        <owner-pick v-model="owner" />
         <v-btn
-          :disabled="!owner"
           color="primary"
           @click.native="currentStep = 2"
         >
@@ -73,15 +71,12 @@
 </template>
 
 <script>
-  import { mapState } from 'vuex'
+  import { mapState, mapGetters } from 'vuex'
   import eventBus from '~/event-bus'
-  import OwnerPick from '~/components/owners/pick.vue'
 
   export default {
-    components: { OwnerPick },
     data: () => ({
       currentStep: null,
-      owner: null,
       title: '',
       children: [],
       loadingDatasets: false,
@@ -91,12 +86,10 @@
     computed: {
       ...mapState('session', ['user']),
       ...mapState(['env']),
+      ...mapGetters('session', ['activeAccount']),
     },
     watch: {
       search() {
-        this.searchDatasets()
-      },
-      'owner.id'() {
         this.searchDatasets()
       },
     },
@@ -104,7 +97,7 @@
       async searchDatasets() {
         this.loadingDatasets = true
         const res = await this.$axios.$get('api/v1/datasets', {
-          params: { q: this.search, size: 20, select: 'id,title', status: 'finalized', owner: `${this.owner.type}:${this.owner.id}` },
+          params: { q: this.search, size: 20, select: 'id,title', status: 'finalized', owner: `${this.activeAccount.type}:${this.activeAccount.id}` },
         })
         this.datasets = res.results
         this.loadingDatasets = false

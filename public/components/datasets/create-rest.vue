@@ -22,9 +22,7 @@
         <p class="mt-3">
           Un jeu de données incrémental est créé vide sans fichier de données et sans schéma. C'est vous qui allez éditer son schéma et éditer ses lignes de données par la suite.
         </p>
-        <owner-pick v-model="owner" />
         <v-btn
-          :disabled="!owner"
           color="primary"
           @click.native="currentStep = 2"
         >
@@ -76,13 +74,10 @@
 <script>
   import { mapState } from 'vuex'
   import eventBus from '~/event-bus'
-  import OwnerPick from '~/components/owners/pick.vue'
 
   export default {
-    components: { OwnerPick },
     data: () => ({
       currentStep: null,
-      owner: null,
       title: '',
       rest: {
         history: false,
