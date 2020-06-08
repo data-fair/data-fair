@@ -4,7 +4,7 @@
     class="caption"
     style="line-height: 1;"
   >
-    <template v-if="total <= 100">
+    <template v-if="total <= 10000">
       {{ total.toLocaleString() }} {{ plural ? 'enregistrements' : 'enregistrement' }}
     </template>
     <template v-else>

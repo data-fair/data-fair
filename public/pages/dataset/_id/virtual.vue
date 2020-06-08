@@ -62,7 +62,7 @@
               title="Supprimer"
               @click="currentChild = index; deleteChildDialog = true"
             >
-              delete
+              mdi-delete
             </v-icon>
           </td>
         </tr>
@@ -96,7 +96,7 @@
               title="Réordonner"
               class="handle"
             >
-              reorder
+              mdi-sort
             </v-icon>
           </v-list-item-avatar>
           <v-list-item-content>
@@ -116,7 +116,7 @@
                 <v-chip
                   close
                   small
-                  @input="filtersByKey[field.key].values = filtersByKey[field.key].values.filter(v => v !== data.item); saveFilters()"
+                  @click:close="filtersByKey[field.key].values = filtersByKey[field.key].values.filter(v => v !== data.item); saveFilters()"
                 >
                   {{ data.item }}
                 </v-chip>
@@ -129,7 +129,7 @@
               title="Supprimer"
               @click="deleteField(field)"
             >
-              delete
+              mdi-delete
             </v-icon>
           </v-list-item-action>
         </v-list-item>
