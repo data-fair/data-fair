@@ -23,7 +23,7 @@
     }),
     async mounted() {
       this.settings = await this.$axios.$get('api/v1/settings/' + this.$route.params.type + '/' + this.$route.params.id)
-      this.$set(this.settings, 'topics', this.settings.apiKeys || [])
+      this.$set(this.settings, 'topics', this.settings.topics || [])
     },
     methods: {
       async save() {
