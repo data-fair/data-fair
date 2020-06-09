@@ -29,6 +29,9 @@ describe('Cache headers', () => {
     res = await axAnonymous.get('/api/v1/datasets/dataset1/lines')
     assert.equal(res.headers['cache-control'], 'must-revalidate, public, max-age=' + config.cache.publicMaxAge)
 
+    // static files are not put in a public web cache, better for download webhooks and to prevent filling the cache with content that is inexpensive to manage ourself
+    res = await ax.get('/api/v1/datasets/dataset1/full')
+    assert.equal(res.headers['cache-control'], 'must-revalidate, private')
   // console.log(res.headers)
   })
 })

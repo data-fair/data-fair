@@ -678,6 +678,7 @@ router.get('/:datasetId/lines', readDataset(), permissions.middleware('readLines
     geojson.bbox = (await bboxPromise).bbox
     res.setHeader('content-disposition', `attachment; filename="${req.dataset.id}.geojson"`)
     res.throttleEnd()
+    webhooks.trigger(req.app.get('db'), 'dataset', req.dataset, { type: 'downloaded-filter' })
     return res.status(200).send(geojson)
   }
 
@@ -719,6 +720,7 @@ router.get('/:datasetId/lines', readDataset(), permissions.middleware('readLines
     }
     csvStream.end()
     await streamPromise
+    webhooks.trigger(req.app.get('db'), 'dataset', req.dataset, { type: 'downloaded-filter' })
     return
   }
 
@@ -884,7 +886,7 @@ router.get('/:datasetId/min/:fieldKey', readDataset(), permissions.middleware('g
 }))
 
 // For datasets with attached files
-router.get('/:datasetId/attachments/*', readDataset(), permissions.middleware('downloadOriginalData', 'read'), (req, res, next) => {
+router.get('/:datasetId/attachments/*', readDataset(), permissions.middleware('downloadOriginalData', 'read'), cacheHeaders.noCache, (req, res, next) => {
   const filePath = req.params['0']
   if (filePath.includes('..')) return res.status(400).send('Unacceptable attachment path')
   // the transform stream option was patched into "send" module using patch-package
@@ -895,7 +897,7 @@ router.get('/:datasetId/attachments/*', readDataset(), permissions.middleware('d
 router.get('/:datasetId/data-files', readDataset(), permissions.middleware('downloadFullData', 'read'), asyncWrap(async(req, res, next) => {
   res.send(await datasetUtils.dataFiles(req.dataset))
 }))
-router.get('/:datasetId/data-files/*', readDataset(), permissions.middleware('downloadFullData', 'read'), asyncWrap(async(req, res, next) => {
+router.get('/:datasetId/data-files/*', readDataset(), permissions.middleware('downloadFullData', 'read'), cacheHeaders.noCache, asyncWrap(async(req, res, next) => {
   const filePath = req.params['0']
   if (filePath.includes('..')) return res.status(400).send('Unacceptable data file path')
   // the transform stream option was patched into "send" module using patch-package
@@ -909,7 +911,7 @@ router.post('/:datasetId/metadata-attachments', readDataset(), permissions.middl
   await datasetUtils.updateStorage(req.app.get('db'), req.dataset)
   res.status(200).send(req.body)
 }))
-router.get('/:datasetId/metadata-attachments/*', readDataset(), permissions.middleware('downloadOriginalData', 'read'), (req, res, next) => {
+router.get('/:datasetId/metadata-attachments/*', readDataset(), permissions.middleware('downloadOriginalData', 'read'), cacheHeaders.noCache, (req, res, next) => {
   const filePath = req.params['0']
   if (filePath.includes('..')) return res.status(400).send('Unacceptable attachment path')
   // the transform stream option was patched into "send" module using patch-package
@@ -924,14 +926,14 @@ router.delete('/:datasetId/metadata-attachments/*', readDataset(), permissions.m
 }))
 
 // Download the full dataset in its original form
-router.get('/:datasetId/raw', readDataset(), permissions.middleware('downloadOriginalData', 'read'), cacheHeaders.resourceBased, (req, res, next) => {
+router.get('/:datasetId/raw', readDataset(), permissions.middleware('downloadOriginalData', 'read'), cacheHeaders.noCache, (req, res, next) => {
   // the transform stream option was patched into "send" module using patch-package
   res.download(datasetUtils.originalFileName(req.dataset), null, { transformStream: res.throttle('static') })
   webhooks.trigger(req.app.get('db'), 'dataset', req.dataset, { type: 'downloaded' })
 })
 
 // Download the dataset in various formats
-router.get('/:datasetId/convert', readDataset(), permissions.middleware('downloadOriginalData', 'read'), cacheHeaders.resourceBased, (req, res, next) => {
+router.get('/:datasetId/convert', readDataset(), permissions.middleware('downloadOriginalData', 'read'), cacheHeaders.noCache, (req, res, next) => {
   if (!req.query || !req.query.format) {
     // the transform stream option was patched into "send" module using patch-package
     res.download(datasetUtils.fileName(req.dataset), null, { transformStream: res.throttle('static') })
@@ -943,7 +945,7 @@ router.get('/:datasetId/convert', readDataset(), permissions.middleware('downloa
 
 // Download the full dataset with extensions
 // TODO use ES scroll functionality instead of file read + extensions
-router.get('/:datasetId/full', readDataset(), permissions.middleware('downloadFullData', 'read'), cacheHeaders.resourceBased, asyncWrap(async (req, res, next) => {
+router.get('/:datasetId/full', readDataset(), permissions.middleware('downloadFullData', 'read'), cacheHeaders.noCache, asyncWrap(async (req, res, next) => {
   // the transform stream option was patched into "send" module using patch-package
   if (await fs.exists(datasetUtils.fullFileName(req.dataset))) {
     res.download(datasetUtils.fullFileName(req.dataset), null, { transformStream: res.throttle('static') })
