@@ -54,6 +54,9 @@ module.exports = {
                 const: 'dataset-downloaded',
                 title: 'Un jeu de données a été téléchargé dans un format fichier',
               }, {
+                const: 'dataset-downloaded-filter',
+                title: 'Un extrait filtré d\'un jeu de données a été téléchargé dans un format fichier',
+              }, {
                 const: 'application-application-created',
                 title: 'Une nouvelle réutilisation a été créée',
               }, {
