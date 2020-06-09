@@ -23,7 +23,7 @@ describe('search', () => {
     await workers.hook('finalizer')
     res = await ax.get('/api/v1/datasets/dataset/lines')
     assert.equal(res.data.total, 2)
-    console.log(res.data.results)
+
     // Filter on keyword field
     res = await ax.get('/api/v1/datasets/dataset/lines?q=koumoul')
     assert.equal(res.data.total, 1)
@@ -66,7 +66,7 @@ describe('search', () => {
 
     res = await ax.get('/api/v1/datasets/dataset/lines?format=csv')
     const lines = res.data.split('\n')
-    assert.equal(lines[0], '\ufeffid,adr,some date,loc')
-    assert.equal(lines[1], 'koumoul,19 rue de la voie lactée saint avé,,"47.687375,-2.748526"')
+    assert.equal(lines[0], '\ufeff"id","adr","some date","loc"')
+    assert.equal(lines[1], '"koumoul","19 rue de la voie lactée saint avé",,"47.687375,-2.748526"')
   })
 })
