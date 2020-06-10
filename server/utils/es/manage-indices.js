@@ -20,19 +20,6 @@ exports.initDatasetIndex = async (client, dataset) => {
   const tempId = `${indexPrefix(dataset)}-${Date.now()}`
   const body = exports.indexDefinition(dataset)
   await client.indices.create({ index: tempId, body })
-  // try to prevent weird cases where it seems that we write in the index before it is fully initialized
-  let stats = await client.indices.stats({ index: tempId })
-  if (body.settings.index.number_of_shards !== stats._shards.successful) {
-    console.error('Created index with wrong number of shards', tempId, body.settings.index, stats._shards)
-  }
-  if (stats._shards.total !== stats._shards.successful) {
-    console.error('Not all shards are ok for new index, wait a few seconds', tempId, stats._shards)
-    await new Promise(resolve => setTimeout(resolve, 10000))
-    stats = await client.indices.stats({ index: tempId })
-    if (stats._shards.total !== stats._shards.successful) {
-      throw new Error('Initialisation de l\'index erronée')
-    }
-  }
   return tempId
 }
 
