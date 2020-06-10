@@ -36,13 +36,13 @@
             </v-card-title>
             <v-card-text>
               <v-alert
-                :value="apiKey.clearKey"
+                :value="!!apiKey.clearKey"
                 type="warning"
               >
                 Cette clé secrète apparait en clair car vous venez de la créer. Notez là, elle ne sera pas lisible par la suite.
               </v-alert>
               <v-alert
-                :value="apiKey.adminMode"
+                :value="!!apiKey.adminMode"
                 type="admin"
               >
                 Cette clé est de type super-administrateur
