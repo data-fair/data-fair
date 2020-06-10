@@ -9,7 +9,7 @@ describe('limits', () => {
   it('Manage a user storage limit', async () => {
     const ax = global.ax.dmeadus
 
-    // Just fill up al little
+    // Just fill up a little
     let form = new FormData()
     form.append('file', Buffer.alloc(150000), 'dataset.csv')
     let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })

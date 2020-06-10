@@ -40,6 +40,7 @@ exports.clear = () => {
 /* eslint no-unmodified-loop-condition: 0 */
 // Run main loop !
 exports.start = async (app) => {
+  debug('start workers with config', config.worker)
   while (!stopped) {
     // Maintain max concurrency by checking if there is a free spot in an array of promises
     for (let i = 0; i < config.worker.concurrency; i++) {
