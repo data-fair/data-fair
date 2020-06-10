@@ -704,21 +704,21 @@ router.get('/:datasetId/lines', readDataset(), permissions.middleware('readLines
     res.setHeader('content-disposition', `attachment; filename="${req.dataset.id}.csv"`)
     // add BOM for excel, cf https://stackoverflow.com/a/17879474
     res.write('\ufeff')
-    const csvStream = outputs.result2csv(req.dataset, req.query, result)
+    const csvStreams = outputs.result2csv(req.dataset, req.query, result)
     const streamPromise = pump(
-      csvStream,
+      ...csvStreams,
       res.throttle('dynamic'),
       res,
     )
     for (const line of result.results) {
       await new Promise((resolve, reject) => {
-        csvStream.write(line, (err) => {
+        csvStreams[0].write(line, (err) => {
           if (err) reject(err)
           resolve(err)
         })
       })
     }
-    csvStream.end()
+    csvStreams[0].end()
     await streamPromise
     webhooks.trigger(req.app.get('db'), 'dataset', req.dataset, { type: 'downloaded-filter' })
     return

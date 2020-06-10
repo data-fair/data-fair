@@ -65,8 +65,14 @@ describe('search', () => {
     assert.equal(res.status, 204)
 
     res = await ax.get('/api/v1/datasets/dataset/lines?format=csv')
-    const lines = res.data.split('\n')
+    let lines = res.data.split('\n')
     assert.equal(lines[0], '\ufeff"id","adr","some date","loc"')
-    assert.equal(lines[1], '"koumoul","19 rue de la voie lactée saint avé",,"47.687375,-2.748526"')
+    assert.equal(lines[1], '"koumoul","19 rue de la voie lactée saint avé","2017-12-12","47.687375,-2.748526"')
+    locProp.title = 'Localisation'
+    await ax.patch('/api/v1/datasets/' + dataset.id, { schema: dataset.schema })
+    res = await ax.get('/api/v1/datasets/dataset/lines?format=csv')
+    lines = res.data.split('\n')
+    assert.equal(lines[0], '\ufeff"id","adr","some date","loc"')
+    assert.equal(lines[1], '"koumoul","19 rue de la voie lactée saint avé","2017-12-12","47.687375,-2.748526"')
   })
 })
