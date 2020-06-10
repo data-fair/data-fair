@@ -15,7 +15,7 @@ exports.init = async db => {
 
   // prolongate lock acquired by this process while it is still active
   interval = setInterval(() => {
-    locks.updateOne({ pid }, { $currentDate: { updatedAt: true } })
+    locks.updateMany({ pid }, { $currentDate: { updatedAt: true } })
   }, (config.locks.ttl / 2) * 1000)
 }
 
