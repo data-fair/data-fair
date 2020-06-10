@@ -15,7 +15,7 @@ const JSONStream = require('JSONStream')
 const datasetUtils = require('./dataset')
 const geoUtils = require('./geo')
 const extensionsUtils = require('./extensions')
-// const debug = require('debug')('tiles')
+const debug = require('debug')('tiles')
 
 const dataDir = path.resolve(config.dataDir)
 const exec = require('./exec')
@@ -143,7 +143,13 @@ exports.defaultSelect = (dataset) => {
 }
 
 exports.prepareMbtiles = async (dataset, db, es) => {
-  if (config.tippecanoe.skip) return
+  if (config.tippecanoe.skip) {
+    return debug('mbtiles creation is entirely skipped')
+  }
+  if (dataset.count < config.tippecanoe.minFeatures) {
+    return debug(`no need to create mbtiles file for less than ${config.tippecanoe.minFeatures} features for dataset ${dataset.id}`)
+  }
+
   const dir = datasetUtils.dir(dataset)
   const tmpDir = path.join(dataDir, 'tmp')
   await fs.ensureDir(tmpDir)
@@ -162,7 +168,6 @@ exports.prepareMbtiles = async (dataset, db, es) => {
     datasetUtils.readStream(dataset, false),
     extensionsUtils.preserveExtensionStream({ db, esClient: es, dataset, calculated: true }),
   ]
-  let i = 0
   streams.push(new Transform({
     async transform(properties, encoding, callback) {
       try {
@@ -176,8 +181,7 @@ exports.prepareMbtiles = async (dataset, db, es) => {
           for (const prop of removeProps) {
             delete properties[prop.key]
           }
-          const feature = { type: 'Feature', properties, geometry, id: properties._id || i }
-          i++
+          const feature = { type: 'Feature', properties, geometry }
           callback(null, feature)
         } else {
           callback(null, null)

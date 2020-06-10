@@ -70,6 +70,7 @@ module.exports = {
   }],
   tippecanoe: {
     skip: false,
+    minFeatures: 2,
     docker: true,
   },
 }
