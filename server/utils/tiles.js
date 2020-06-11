@@ -247,11 +247,12 @@ exports.prepareMbtiles = async (dataset, db, es) => {
 
   const sizeAfter = (await fs.stat(tmpMbtilesFile)).size
   if (sizeAfter === sizeBefore) {
-    debug('mbtiles seems to be empty', sizeAfter, tippecanoeRes.stderr, tippecanoeRes.stdout)
+    debug('mbtiles seems to be empty', mbtilesFile, sizeAfter, tippecanoeRes.stderr, tippecanoeRes.stdout)
     await fs.remove(tmpMbtilesFile)
     // delete previous one even if we failed, it is deprecated
     await fs.remove(mbtilesFile)
   } else {
+    debug(`move ${tmpMbtilesFile} => ${mbtilesFile}`)
     // more atomic file write to prevent read during a long write
     await fs.move(tmpMbtilesFile, mbtilesFile, { overwrite: true })
   }
