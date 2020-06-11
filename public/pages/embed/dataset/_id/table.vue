@@ -6,10 +6,8 @@
     <template v-else>
       <v-row class="px-3">
         <v-col
-          class="pb-0"
-          lg="4"
-          md="5"
-          sm="5"
+          class="pb-0 pr-0"
+          sm="4"
           cols="12"
         >
           <v-text-field
@@ -26,9 +24,7 @@
         </v-col>
 
         <v-col
-          lg="8"
-          md="7"
-          sm="7"
+          sm="8"
           cols="12"
           class="pb-0"
         >
@@ -39,7 +35,7 @@
               v-model="pagination.page"
               circle
               :length="Math.ceil(Math.min(data.total, 10000 - pagination.itemsPerPage) / pagination.itemsPerPage)"
-              :total-visible="$vuetify.breakpoint.lgAndUp ? 6 : 4"
+              :total-visible="$vuetify.breakpoint.mdAndUp ? 6 : 5"
               style="width: auto"
             />
             <v-spacer v-if="$vuetify.breakpoint.xs" />
