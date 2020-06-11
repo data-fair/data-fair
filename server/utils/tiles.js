@@ -216,22 +216,45 @@ exports.prepareMbtiles = async (dataset, db, es) => {
   })
 
   const tmpMbtilesFile = await tmp.tmpName({ dir: tmpDir, postfix: '.mbtiles' })
+
+  // creating empty file before streaming seems to fix some weird bugs with NFS
+  await fs.ensureFile(tmpMbtilesFile)
+  const sizeBefore = (await fs.stat(tmpMbtilesFile)).size
+
+  let tippecanoeRes
   try {
     if (config.tippecanoe.docker) {
-      await exec('docker', ['run', '--rm', '-e', 'TIPPECANOE_MAX_THREADS=1', '-v', `${dataDir}:/data`, 'klokantech/tippecanoe:latest', 'tippecanoe', ...tippecanoeArgs, '-o', tmpMbtilesFile.replace(dataDir, '/data'), tmpGeojsonFile.replace(dataDir, '/data')])
+      tippecanoeRes = await exec('docker', ['run', '--rm', '-e', 'TIPPECANOE_MAX_THREADS=1', '-v', `${dataDir}:/data`, 'klokantech/tippecanoe:latest', 'tippecanoe', ...tippecanoeArgs, '-o', tmpMbtilesFile.replace(dataDir, '/data'), tmpGeojsonFile.replace(dataDir, '/data')])
     } else {
-      await exec('tippecanoe', [...tippecanoeArgs, '-o', tmpMbtilesFile, tmpGeojsonFile], { env: { TIPPECANOE_MAX_THREADS: '1' } })
+      tippecanoeRes = await exec('tippecanoe', [...tippecanoeArgs, '-o', tmpMbtilesFile, tmpGeojsonFile], { env: { TIPPECANOE_MAX_THREADS: '1' } })
     }
   } catch (err) {
     console.error('failed to create mbtiles file', mbtilesFile, err)
     await fs.remove(tmpGeojsonFile)
     await fs.remove(tmpMbtilesFile)
+
+    // delete last one even if we failed, it is deprecated
+    await fs.remove(mbtilesFile)
     return
   }
-
-  // more atomic file write to prevent read during a long write
-  await fs.move(tmpMbtilesFile, mbtilesFile, { overwrite: true })
+  // this one as only create to run tippecanoe on
   await fs.remove(tmpGeojsonFile)
+
+  // Try to prevent weird bug with NFS by forcing syncing file before using
+  const fd2 = await fs.open(tmpMbtilesFile, 'r')
+  await fs.fsync(fd2)
+  await fs.close(fd2)
+
+  const sizeAfter = (await fs.stat(tmpMbtilesFile)).size
+  if (sizeAfter === sizeBefore) {
+    debug('mbtiles seems to be empty', sizeAfter, tippecanoeRes.stderr, tippecanoeRes.stdout)
+    await fs.remove(tmpMbtilesFile)
+    // delete previous one even if we failed, it is deprecated
+    await fs.remove(mbtilesFile)
+  } else {
+    // more atomic file write to prevent read during a long write
+    await fs.move(tmpMbtilesFile, mbtilesFile, { overwrite: true })
+  }
 }
 
 exports.deleteMbtiles = async (dataset) => {

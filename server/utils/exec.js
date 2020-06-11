@@ -7,6 +7,7 @@ module.exports = async (cmd, args, options) => {
     const res = await spawn(cmd, args, { capture: ['stdout', 'stderr'], ...options })
     debug('stdout', res.stdout)
     debug('stderr', res.stderr)
+    return res
   } catch (err) {
     throw new Error(err.stderr || err.message)
   }
