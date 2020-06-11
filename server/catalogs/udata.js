@@ -198,7 +198,7 @@ async function addResourceToDataset(catalog, dataset, publication) {
   // matchingResource will be defined if the dataset in data-fair was originally created from a ressource of the catalog's dataset
   // we use it to prevent create a duplicate
   const matchingResource = dataset.remoteFile ? catalogDataset.resources.find(r => r.url === dataset.remoteFile.url) : null
-  if (!matchingResource) {
+  if (!matchingResource && dataset.file) {
     resources.push({
       title: `${title}`,
       description: `Téléchargez le fichier complet au format ${dataset.originalFile.name.split('.').pop()}.`,
@@ -282,7 +282,10 @@ async function createOrUpdateDataset(catalog, dataset, publication) {
       extras: {
         datafairEmbed: dataset.bbox ? 'map' : 'table',
       },
-    }, {
+    }],
+  }
+  if (dataset.file) {
+    udataDataset.resources.push({
       title: `Fichier ${dataset.originalFile.name.split('.').pop()}`,
       description: `Téléchargez le fichier complet au format ${dataset.originalFile.name.split('.').pop()}.`,
       url: `${config.publicUrl}/api/v1/datasets/${dataset.id}/raw`,
@@ -290,19 +293,20 @@ async function createOrUpdateDataset(catalog, dataset, publication) {
       filetype: 'remote',
       filesize: dataset.originalFile.size,
       mime: dataset.originalFile.mimetype,
-    }],
-  }
-  if (dataset.file.mimetype !== dataset.originalFile.mimetype) {
-    udataDataset.resources.push({
-      title: `Fichier ${dataset.file.name.split('.').pop()}`,
-      description: `Téléchargez le fichier complet au format ${dataset.file.name.split('.').pop()}.`,
-      url: `${config.publicUrl}/api/v1/datasets/${dataset.id}/convert`,
-      type: 'main',
-      filetype: 'remote',
-      filesize: dataset.file.size,
-      mime: dataset.file.mimetype,
     })
+    if (dataset.file.mimetype !== dataset.originalFile.mimetype) {
+      udataDataset.resources.push({
+        title: `Fichier ${dataset.file.name.split('.').pop()}`,
+        description: `Téléchargez le fichier complet au format ${dataset.file.name.split('.').pop()}.`,
+        url: `${config.publicUrl}/api/v1/datasets/${dataset.id}/convert`,
+        type: 'main',
+        filetype: 'remote',
+        filesize: dataset.file.size,
+        mime: dataset.file.mimetype,
+      })
+    }
   }
+
   if (catalog.organization && catalog.organization.id) {
     udataDataset.organization = { id: catalog.organization.id }
   }
