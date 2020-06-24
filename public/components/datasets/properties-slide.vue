@@ -76,19 +76,29 @@
             />
           </v-col>
           <v-col>
-            <p>Clé normalisée : {{ properties[currentProperty].key }}</p>
-            <p v-if="properties[currentProperty]['x-originalName']">
-              Clé dans le fichier d'origine : {{ properties[currentProperty]['x-originalName'] }}
+            <p>
+              <span class="theme--light v-label">Clé normalisée :  </span><br>
+              {{ properties[currentProperty].key }}
             </p>
-            <p>Type : {{ propertyTypes.find(p => p.type === properties[currentProperty].type).title }}</p>
+            <p v-if="properties[currentProperty]['x-originalName']">
+              <span class="theme--light v-label">Clé dans le fichier d'origine : </span><br>
+              {{ properties[currentProperty]['x-originalName'] }}
+            </p>
+            <p>
+              <span class="theme--light v-label">Type : </span><br>
+              {{ propertyTypes.find(p => p.type === properties[currentProperty].type).title }}
+            </p>
             <p v-if="properties[currentProperty].format">
-              Format : {{ properties[currentProperty].format }}
+              <span class="theme--light v-label">Format : </span><br>
+              {{ properties[currentProperty].format }}
             </p>
             <p v-if="properties[currentProperty]['x-cardinality']">
-              Nombre de valeurs distinctes (approximative dans le cas de jeux volumineux) : {{ properties[currentProperty]['x-cardinality'].toLocaleString() }}
+              <span class="theme--light v-label">Nombre de valeurs distinctes (approximative dans le cas de jeux volumineux) : </span><br>
+              {{ properties[currentProperty]['x-cardinality'].toLocaleString() }}
             </p>
             <p v-if="properties[currentProperty].enum">
-              Valeurs : {{ properties[currentProperty].enum.join(' - ') }}
+              <span class="theme--light v-label">Valeurs : </span><br>
+              {{ properties[currentProperty].enum.join(' - ') }}
             </p>
           </v-col>
         </v-row>
