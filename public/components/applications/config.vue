@@ -8,24 +8,24 @@
           md="4"
         >
           <v-select
-            v-if="baseApps"
             v-model="editUrl"
+            :loading="!baseApps"
             :items="baseApps"
             :item-text="(baseApp => `${baseApp.title} (${baseApp.version})`)"
             item-value="url"
             label="Changer de version"
           />
           <v-form
+            v-if="draftSchema && editConfig"
             ref="configForm"
             v-model="formValid"
             @submit="validateDraft"
           >
             <!--{{ editConfig }}-->
             <v-jsf
-              v-if="draftSchema && editConfig && showProdPreview"
               v-model="editConfig"
               :schema="draftSchema"
-              :options="{...vjsfOptions, disableAll: !can('writeConfig')}"
+              :options="vjsfOptions"
               @error="error => eventBus.$emit('notification', {error})"
             />
             <v-row class="mt-3">
@@ -211,14 +211,14 @@
       },
       vjsfOptions() {
         return {
-          disableAll: true,
+          disableAll: !this.can('writeConfig'),
           context: { owner: this.application.owner },
           locale: 'fr',
           rootDisplay: 'expansion-panels',
           // rootDisplay: 'tabs',
           expansionPanelsProps: {
-            tile: true,
-            mandatory: true,
+            value: 0,
+            hover: true,
           },
         }
       },
