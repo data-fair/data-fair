@@ -220,6 +220,10 @@
             value: 0,
             hover: true,
           },
+          dialogProps: {
+            maxWidth: 500,
+            overlayOpacity: 0, // better when inside an iframe
+          },
         }
       },
     },
