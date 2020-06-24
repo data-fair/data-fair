@@ -65,15 +65,27 @@
               persistent-hint
               hint="Ne renseigner que pour les champs multivalués. Ce caractère sera utilisé pour séparer les valeurs."
             />
-            <v-select
+            <v-autocomplete
               v-model="properties[currentProperty]['x-refersTo']"
-              :items="fieldsVocabulary[properties[currentProperty].key]"
+              :items="vocabularyItems.filter(item => item.header || !properties.find(f => (f['x-refersTo'] === item.value) && (f.key !== properties[currentProperty].key)))"
               :disabled="!editable"
-              item-text="title"
-              item-value="id"
               label="Concept"
-              hide-details
-            />
+              :clearable="true"
+              persistent-hint
+              :hint="properties[currentProperty]['x-refersTo'] && vocabulary[properties[currentProperty]['x-refersTo']].description"
+            >
+              <template v-slot:item="data">
+                <template v-if="typeof data.item !== 'object'">
+                  <v-list-item-content>{{ data.item }}</v-list-item-content>
+                </template>
+                <template v-else>
+                  <v-list-item-content>
+                    <v-list-item-title>{{ data.item.text }}</v-list-item-title>
+                    <v-list-item-subtitle>{{ data.item.description }}</v-list-item-subtitle>
+                  </v-list-item-content>
+                </template>
+              </template>
+            </v-autocomplete>
           </v-col>
           <v-col>
             <p>
@@ -121,16 +133,7 @@
       }
     },
     computed: {
-      ...mapState(['vocabulary', 'vocabularyArray', 'propertyTypes']),
-      fieldsVocabulary() {
-        return this.properties.reduce((a, field) => {
-          if (field['x-extension']) return a
-          a[field.key] = [{ title: 'Aucun concept', id: null }].concat(this.vocabularyArray
-            .map(term => ({ title: term.title, id: term.identifiers[0] }))
-            .filter(term => !this.properties.find(f => (f['x-refersTo'] === term.id) && (f.key !== field.key))))
-          return a
-        }, {})
-      },
+      ...mapState(['vocabulary', 'vocabularyArray', 'vocabularyItems', 'propertyTypes']),
     },
     created() {
       this.properties.forEach(p => {

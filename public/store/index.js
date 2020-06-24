@@ -30,6 +30,8 @@ export default () => {
     state: {
       vocabulary: null,
       vocabularyArray: [],
+      vocabularyTags: [],
+      vocabularyItems: [],
       licenses: {},
       topics: {},
       env: {},
@@ -69,13 +71,32 @@ export default () => {
         if (state.vocabulary) return
         const vocabulary = {}
         const vocabularyArray = await this.$axios.$get('api/v1/vocabulary')
+        const vocabularyTags = []
         commit('setAny', { vocabularyArray })
         vocabularyArray.forEach(term => {
+          if (!vocabularyTags.includes(term.tag)) vocabularyTags.push(term.tag)
           term.identifiers.forEach(id => {
             vocabulary[id] = term
           })
         })
+        commit('setAny', { vocabularyTags })
         commit('setAny', { vocabulary })
+        const vocabularyItems = []
+        vocabularyArray
+          .filter(term => !term.tag)
+          .forEach(term => {
+            vocabularyItems.push({ text: term.title, value: term.identifiers[0] })
+          })
+        vocabularyTags.forEach(tag => {
+          vocabularyItems.push({ divider: true })
+          vocabularyItems.push({ header: tag })
+          vocabularyArray
+            .filter(term => term.tag === tag)
+            .forEach(term => {
+              vocabularyItems.push({ text: term.title, value: term.identifiers[0], tag, description: term.description })
+            })
+        })
+        commit('setAny', { vocabularyItems })
       },
       async fetchProjections({ state, commit }) {
         if (state.projections) return

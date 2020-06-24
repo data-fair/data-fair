@@ -6,7 +6,8 @@
       "http://www.w3.org/2000/01/rdf-schema#label",
       "http://www.bbc.co.uk/ontologies/coreconcepts/label"
     ],
-    "type": "string"
+    "type": "string",
+    "tag": "Présentation"
   },
   {
     "title": "Description",
@@ -14,7 +15,8 @@
     "identifiers": [
       "http://schema.org/description"
     ],
-    "type": "string"
+    "type": "string",
+    "tag": "Présentation"
   },
   {
     "title": "Image",
@@ -22,23 +24,8 @@
     "identifiers": [
       "http://schema.org/image"
     ],
-    "type": "string"
-  },
-  {
-    "title": "Numéro de rue",
-    "description": "Un numéro de rue, qui peut contenir des mots comme bis ou ter",
-    "identifiers": [
-      "http://www.ontotext.com/proton/protonext#StreetNumber"
-    ],
-    "type": "string"
-  },
-  {
-    "title": "Rue ou lieu-dit",
-    "description": "Un nom de rue ou de lieu-dit",
-    "identifiers": [
-      "http://schema.org/streetAddress"
-    ],
-    "type": "string"
+    "type": "string",
+    "tag": "Présentation"
   },
   {
     "title": "Adresse",
@@ -46,7 +33,26 @@
     "identifiers": [
       "http://schema.org/address"
     ],
-    "type": "string"
+    "type": "string",
+    "tag": "Adresse"
+  },
+  {
+    "title": "Numéro de rue",
+    "description": "Un numéro de rue, qui peut contenir des mots comme bis ou ter",
+    "identifiers": [
+      "http://www.ontotext.com/proton/protonext#StreetNumber"
+    ],
+    "type": "string",
+    "tag": "Adresse"
+  },
+  {
+    "title": "Rue ou lieu-dit",
+    "description": "Un nom de rue ou de lieu-dit",
+    "identifiers": [
+      "http://schema.org/streetAddress"
+    ],
+    "type": "string",
+    "tag": "Adresse"
   },
   {
     "title": "Commune",
@@ -54,7 +60,8 @@
     "identifiers": [
       "http://schema.org/City"
     ],
-    "type": "string"
+    "type": "string",
+    "tag": "Adresse"
   },
   {
     "title": "Code postal",
@@ -62,7 +69,8 @@
     "identifiers": [
       "http://schema.org/postalCode"
     ],
-    "type": "integer"
+    "type": "integer",
+    "tag": "Adresse"
   },
   {
     "title": "Code commune",
@@ -70,7 +78,8 @@
     "identifiers": [
       "http://rdf.insee.fr/def/geo#codeCommune"
     ],
-    "type": "string"
+    "type": "string",
+    "tag": "Référentiels administratifs français"
   },
   {
     "title": "Code département",
@@ -78,7 +87,8 @@
     "identifiers": [
       "http://rdf.insee.fr/def/geo#codeDepartement"
     ],
-    "type": "string"
+    "type": "string",
+    "tag": "Référentiels administratifs français"
   },
   {
     "title": "Code région",
@@ -86,7 +96,8 @@
     "identifiers": [
       "http://rdf.insee.fr/def/geo#codeRegion"
     ],
-    "type": "integer"
+    "type": "integer",
+    "tag": "Référentiels administratifs français"
   },
   {
     "title": "Latitude",
@@ -95,7 +106,8 @@
       "http://schema.org/latitude",
       "http://www.w3.org/2003/01/geo/wgs84_pos#lat"
     ],
-    "type": "number"
+    "type": "number",
+    "tag": "Géographie"
   },
   {
     "title": "Longitude",
@@ -104,7 +116,8 @@
       "http://schema.org/longitude",
       "http://www.w3.org/2003/01/geo/wgs84_pos#long"
     ],
-    "type": "number"
+    "type": "number",
+    "tag": "Géographie"
   },
   {
     "title": "Latitude / Longitude",
@@ -112,7 +125,8 @@
     "identifiers": [
       "http://www.w3.org/2003/01/geo/wgs84_pos#lat_long"
     ],
-    "type": "string"
+    "type": "string",
+    "tag": "Géographie"
   },
   {
     "title": "SIRET",
@@ -120,7 +134,8 @@
     "identifiers": [
       "http://www.datatourisme.fr/ontology/core/1.0/#siret"
     ],
-    "type": "string"
+    "type": "string",
+    "tag": "Référentiels administratifs français"
   },
   {
     "title": "SIREN",
@@ -128,7 +143,8 @@
     "identifiers": [
       "http://dbpedia.org/ontology/siren"
     ],
-    "type": "string"
+    "type": "string",
+    "tag": "Référentiels administratifs français"
   },
   {
     "title": "Code APE",
@@ -136,7 +152,8 @@
     "identifiers": [
       "http://www.datatourisme.fr/ontology/core/1.0#apeNaf"
     ],
-    "type": "string"
+    "type": "string",
+    "tag": "Référentiels administratifs français"
   },
   {
     "title": "Catégorie juridique (niveau 3)",
@@ -144,7 +161,8 @@
     "identifiers": [
       "http://id.insee.fr/concepts/cj/cjNiveauIII"
     ],
-    "type": "integer"
+    "type": "integer",
+    "tag": "Référentiels administratifs français"
   },
   {
     "title": "Date",
@@ -154,7 +172,8 @@
       "http://purl.org/dc/identifierss/date"
     ],
     "type": "string",
-    "format": "date-time"
+    "format": "date-time",
+    "tag": "Calendrier"
   },
   {
     "title": "Date de création",
@@ -164,7 +183,8 @@
       "http://purl.org/dc/identifierss/created"
     ],
     "type": "string",
-    "format": "date-time"
+    "format": "date-time",
+    "tag": "Calendrier"
   },
   {
     "title": "Code parcelle",
@@ -172,7 +192,8 @@
     "identifiers": [
       "http://dbpedia.org/ontology/codeLandRegistry"
     ],
-    "type": "string"
+    "type": "string",
+    "tag": "Référentiels administratifs français"
   },
   {
     "title": "Géometrie GeoJSON",
@@ -180,7 +201,8 @@
     "identifiers": [
       "https://purl.org/geojson/vocab#geometry"
     ],
-    "type": "object"
+    "type": "object",
+    "tag": "Géographie"
   },
   {
     "title": "Document numérique attaché",
@@ -188,28 +210,32 @@
     "identifiers": [
       "http://schema.org/DigitalDocument"
     ],
-    "type": "string"
+    "type": "string",
+    "tag": "Liens"
   }, {
     "title": "Page Web",
     "description": "URL vers une page Web externe",
     "identifiers": [
       "https://schema.org/WebPage"
     ],
-    "type": "string"
+    "type": "string",
+    "tag": "Liens"
   }, {
     "title": "Adresse E-mail",
     "description": "URI de type mailto pour renseigner une adresse de contact",
     "identifiers": [
       "https://www.w3.org/2006/vcard/ns#email"
     ],
-    "type": "string"
+    "type": "string",
+    "tag": "Informations de contact"
   }, {
     "title": "N° de téléphone",
     "description": "Un numéro de téléphone",
     "identifiers": [
       "https://www.w3.org/2006/vcard/ns#tel"
     ],
-    "type": "string"
+    "type": "string",
+    "tag": "Informations de contact"
   },
   {
     "title": "Coordonnée X",
@@ -217,7 +243,8 @@
     "identifiers": [
       "http://data.ign.fr/def/geometrie#coordX"
     ],
-    "type": "number"
+    "type": "number",
+    "tag": "Géographie"
   },
   {
     "title": "Coordonnée Y",
@@ -225,7 +252,8 @@
     "identifiers": [
       "http://data.ign.fr/def/geometrie#coordY"
     ],
-    "type": "number"
+    "type": "number",
+    "tag": "Géographie"
   },
   {
     "title": "Date de début",
@@ -234,7 +262,8 @@
       "https://schema.org/startDate"
     ],
     "type": "string",
-    "format": "date-time"
+    "format": "date-time",
+    "tag": "Calendrier"
   },
   {
     "title": "Date de fin",
@@ -243,7 +272,8 @@
       "https://schema.org/endDate"
     ],
     "type": "string",
-    "format": "date-time"
+    "format": "date-time",
+    "tag": "Calendrier"
   },
   {
     "title": "Horaires d'ouverture",
@@ -251,6 +281,7 @@
     "identifiers": [
       "https://schema.org/openingHours"
     ],
-    "type": "string"
+    "type": "string",
+    "tag": "Calendrier"
   }
 ]
