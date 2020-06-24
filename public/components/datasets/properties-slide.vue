@@ -1,20 +1,21 @@
 <template>
-  <v-sheet>
+  <v-sheet class="properties-slide">
     <v-slide-group
-      v-model="currentProperty"
       show-arrows
-      center-active
     >
+      <!-- empty slots to prevent rendering arrows, we prefer a horizontal scrollbar for now -->
+      <div slot="prev" />
+      <div slot="next" />
+
       <v-slide-item
         v-for="(prop, i) in properties"
         :key="prop.key"
-        v-slot:default="{ active, toggle }"
       >
         <v-card
           min-width="100"
           class="mx-1 my-2"
-          v-bind="cardProps(prop, i, active)"
-          @click="toggle"
+          v-bind="cardProps(prop, i, currentProperty === i)"
+          @click="currentProperty = i"
         >
           <v-card-title primary-title>
             {{ prop.title || prop['x-originalName'] || prop.key }}
@@ -26,12 +27,12 @@
             <p class="mb-0">
               <span>{{ propertyTypes.find(p => p.type === prop.type).title }}</span>
               <span v-if="prop.format && prop.format !== 'uri-reference'"> - {{ prop.format }}</span>
-              <span v-if="prop['x-refersTo']">
-                - {{ vocabulary[prop['x-refersTo']] && vocabulary[prop['x-refersTo']].title }}
-              </span>
             </p>
             <p v-if="prop['x-cardinality']" class="mb-0">
               {{ prop['x-cardinality'].toLocaleString() }} valeurs distinctes
+            </p>
+            <p v-if="prop['x-refersTo']" class="mb-0 font-weight-bold">
+              {{ vocabulary[prop['x-refersTo']] && vocabulary[prop['x-refersTo']].title }}
             </p>
           </v-card-text>
         </v-card>
@@ -139,5 +140,16 @@
   }
 </script>
 
-<style lang="css" scoped>
+<style lang="css">
+.properties-slide .v-slide-group__wrapper {
+  overflow-x: visible;
+}
+.properties-slide .v-slide-group__prev {
+  width: 0;
+  min-width: 0;
+}
+.properties-slide .v-slide-group__next {
+  width: 0;
+  min-width: 0;
+}
 </style>
