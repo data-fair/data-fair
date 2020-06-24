@@ -46,12 +46,12 @@ describe('API keys', () => {
   })
 
   it('Create and use an organization level api key', async () => {
-    const res = await global.ax.cdurning2.put('/api/v1/settings/organization/3sSi7xDIK', {
+    const res = await global.ax.dmeadusOrg.put('/api/v1/settings/organization/KWqAGZ4mG', {
       apiKeys: [
         { title: 'key1', scopes: ['datasets'] },
       ],
     })
-    assert.equal(res.data.name, 'Ntag')
+    assert.equal(res.data.name, 'Fivechat')
     const key1 = res.data.apiKeys[0].clearKey
     assert.ok(key1)
 
@@ -60,6 +60,6 @@ describe('API keys', () => {
     const dataset = await testUtils.sendDataset('dataset1.csv', axKey1)
     assert.equal(dataset.status, 'finalized')
     assert.equal(dataset.owner.type, 'organization')
-    assert.equal(dataset.owner.id, '3sSi7xDIK')
+    assert.equal(dataset.owner.id, 'KWqAGZ4mG')
   })
 })

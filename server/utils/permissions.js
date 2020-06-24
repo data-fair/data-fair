@@ -24,62 +24,39 @@ exports.middleware = function(operationId, permissionClass) {
 }
 
 // TODO: only apply permissions of current active account
-const isOwner = exports.isOwner = function(owner, user) {
+const isOwner = exports.isOwner = (owner, user) => {
   if (!user) return false
-  if (owner.type === 'user' && owner.id === user.id) return true
-  if (owner.type === 'organization') {
-    const userOrga = user.organizations.find(o => o.id === owner.id)
-    return userOrga && (!owner.role || userOrga.role === config.adminRole || userOrga.role === owner.role)
-  }
-  return false
+  if (user.activeAccount.type !== owner.type || user.activeAccount.id !== owner.id) return false
+  if (owner.type === 'user') return true
+  return !owner.role || user.activeAccount.role === config.adminRole || user.activeAccount.role === owner.role
 }
 
-// TODO: simplify by only applying permissions of current active account
+const matchPermission = (owner, permission, user) => {
+  if (!permission.type && !permission.id) return true // public
+  if (!user) return false
+  if (isOwner(owner, user)) return true
+  if (user.activeAccount.type !== permission.type || user.activeAccount.id !== permission.id) return false
+  if (permission.type === 'user') return true
+  return !permission.role || user.activeAccount.role === config.adminRole || user.activeAccount.role === permission.role
+}
+
 // resource can be an application, a dataset or an remote service
 exports.can = function(resource, operationId, permissionClass, user) {
+  if (user && user.adminMode) return true
+  if (isOwner(resource.owner, user)) return true
   const operationPermissions = (resource.permissions || []).filter(p => p.operations && p.operations.indexOf(operationId) >= 0)
-  const permissionClasses = (resource.permissions || []).filter(p => p.classes && p.classes.indexOf(permissionClass) >= 0)
-  const matchingPermissions = operationPermissions.concat(permissionClasses)
-  // check if the operation is public
-  if (matchingPermissions.find(p => !p.type && !p.id)) return true
-  if (!user) {
-    return false
-  } else {
-    // User is in super admin mode
-    if (user.adminMode) return true
-    // Check if the user is the owner of the resource
-    if (isOwner(resource.owner, user)) return true
-    // Check if user have permissions
-    if (matchingPermissions.find(p => p.type === 'user' && p.id === user.id)) return true
-    if (matchingPermissions.find(p => {
-      const orgaUser = p.type === 'organization' && user.organizations.find(o => o.id === p.id)
-      return orgaUser && ((!p.roles || !p.roles.length) || orgaUser.role === config.adminRole || p.roles.indexOf(orgaUser.role) >= 0)
-    })) return true
-    return false
-  }
+  const classPermissions = (resource.permissions || []).filter(p => p.classes && p.classes.indexOf(permissionClass) >= 0)
+  const permissions = operationPermissions.concat(classPermissions)
+  return !!permissions.find(p => matchPermission(resource.owner, p, user))
 }
 
-// TODO: simplify by only applying permissions of current active account
 // list operations a user can do with a resource
 exports.list = function(resource, operationsClasses, user) {
   if (isOwner(resource.owner, user) || (user && user.adminMode)) {
     return [].concat(...Object.values(operationsClasses))
-  } else {
-    const permissionOperations = p => (p.operations || []).concat(...(p.classes || []).map(c => operationsClasses[c]))
-    const permissions = {
-      public: [].concat(...(resource.permissions || []).filter(p => !p.type && !p.id).map(permissionOperations)),
-      user: (user && [].concat(...(user && (resource.permissions || []).filter(p => p.type === 'user' && p.id === user.id).map(permissionOperations)))) || [],
-      organizations: {},
-    };
-
-    (resource.permissions || []).filter(p => p.type === 'organization').forEach(p => {
-      const orgaUser = user && user.organizations.find(o => o.id === p.id)
-      if (orgaUser && ((orgaUser.role === config.adminRole) || (!p.roles || !p.roles.length) || p.roles.indexOf(orgaUser.role) >= 0)) {
-        permissions.organizations[orgaUser.id] = [].concat(...permissions.organizations[orgaUser.id] || [], permissionOperations(p))
-      }
-    })
-    return [].concat(permissions.public, permissions.user, ...Object.values(permissions.organizations)).filter((o, i, s) => s.indexOf(o) === i)
   }
+  const permissions = (resource.permissions || []).filter(p => matchPermission(resource.owner, p, user))
+  return [].concat(...permissions.map(p => (p.operations || []).concat(...(p.classes || []).map(c => operationsClasses[c]))))
 }
 
 // resource is public if there are public permissions for all operations of the classes 'read' and 'use'
@@ -168,15 +145,11 @@ exports.filter = function(user) {
 exports.canDoForOwner = async function(owner, operationId, user, db) {
   if (!user) return false
   if (user.adminMode) return true
-  if (owner.type === 'user' && owner.id === user.id) return true
-  if (owner.type === 'organization') {
-    const userOrga = user.organizations.find(o => o.id === owner.id)
-    if (userOrga) {
-      if (userOrga.role === config.adminRole) return true
-      const settings = await db.collection('settings').findOne({ id: owner.id, type: owner.type })
-      const operationsPermissions = settings && settings.operationsPermissions && settings.operationsPermissions[operationId]
-      if (operationsPermissions) return operationsPermissions.indexOf(userOrga.role) >= 0
-    }
+  if (isOwner(owner, user)) return true
+  if (owner.type === 'organization' && user.activeAccount.type === 'organization' && user.activeAccount.id === owner.id) {
+    const settings = await db.collection('settings').findOne({ id: owner.id, type: owner.type })
+    const operationsPermissions = settings && settings.operationsPermissions && settings.operationsPermissions[operationId]
+    if (operationsPermissions) return operationsPermissions.indexOf(user.activeAccount.role) >= 0
   }
   return false
 }

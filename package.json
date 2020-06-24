@@ -48,7 +48,7 @@
     "@koumoul/express-request-proxy": "^2.3.0",
     "@koumoul/icalendar": "^0.7.3",
     "@koumoul/nuxt-config-inject": "^0.4.4",
-    "@koumoul/sd-express": "^0.18.1",
+    "@koumoul/sd-express": "^0.19.1",
     "@koumoul/sd-vue": "^0.18.2",
     "@koumoul/v-iframe": "^0.2.3",
     "@koumoul/vjsf": "^1.10.2",

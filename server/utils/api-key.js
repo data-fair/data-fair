@@ -22,9 +22,11 @@ module.exports = (scope) => {
     }
     if (settings.type === 'user') {
       req.user.organizations = []
+      req.user.activeAccount = { type: 'user', id: settings.id, name: req.user.name }
     } else {
       req.user.organization = { id: settings.id, name: settings.name, role: 'admin' }
       req.user.organizations = [req.user.organization]
+      req.user.activeAccount = { ...req.user.organization, type: 'organization' }
     }
     next()
   })
