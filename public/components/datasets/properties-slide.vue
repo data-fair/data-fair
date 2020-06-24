@@ -19,6 +19,21 @@
           <v-card-title primary-title>
             {{ prop.title || prop['x-originalName'] || prop.key }}
           </v-card-title>
+          <v-card-subtitle class="pb-0 caption">
+            {{ prop.title && prop.title !== (prop['x-originalName'] || prop.key) ? (prop['x-originalName'] || prop.key) : '&nbsp;' }}
+          </v-card-subtitle>
+          <v-card-text>
+            <p class="mb-0">
+              <span>{{ propertyTypes.find(p => p.type === prop.type).title }}</span>
+              <span v-if="prop.format && prop.format !== 'uri-reference'"> - {{ prop.format }}</span>
+              <span v-if="prop['x-refersTo']">
+                - {{ vocabulary[prop['x-refersTo']] && vocabulary[prop['x-refersTo']].title }}
+              </span>
+            </p>
+            <p v-if="prop['x-cardinality']" class="mb-0">
+              {{ prop['x-cardinality'].toLocaleString() }} valeurs distinctes
+            </p>
+          </v-card-text>
         </v-card>
       </v-slide-item>
     </v-slide-group>
@@ -69,7 +84,7 @@
               Format : {{ properties[currentProperty].format }}
             </p>
             <p v-if="properties[currentProperty]['x-cardinality']">
-              Nombre de valeurs distinctes (approximative dans le cas de jeux volumineux) : {{ properties[currentProperty]['x-cardinality'] }}
+              Nombre de valeurs distinctes (approximative dans le cas de jeux volumineux) : {{ properties[currentProperty]['x-cardinality'].toLocaleString() }}
             </p>
             <p v-if="properties[currentProperty].enum">
               Valeurs : {{ properties[currentProperty].enum.join(' - ') }}
@@ -95,7 +110,7 @@
       }
     },
     computed: {
-      ...mapState(['vocabularyArray', 'propertyTypes']),
+      ...mapState(['vocabulary', 'vocabularyArray', 'propertyTypes']),
       fieldsVocabulary() {
         return this.properties.reduce((a, field) => {
           if (field['x-extension']) return a
