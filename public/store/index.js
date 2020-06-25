@@ -52,6 +52,7 @@ export default () => {
         return searchQuery
       },
       propTypeTitle: (state) => (prop) => {
+        if (prop.type === 'object') return 'Objet JSON'
         if (prop.format) {
           const type = propertyTypes.find(p => p.type === prop.type && p.format === prop.format)
           if (type) return type.title
