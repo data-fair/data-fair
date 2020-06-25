@@ -51,6 +51,13 @@ export default () => {
         if (searchQuery.owner === undefined && state.user) searchQuery.owner = `user:${state.user.id}`
         return searchQuery
       },
+      propTypeTitle: (state) => (prop) => {
+        if (prop.format) {
+          const type = propertyTypes.find(p => p.type === prop.type && p.format === prop.format)
+          if (type) return type.title
+        }
+        return propertyTypes.find(p => p.type === prop.type).title
+      },
     },
     mutations: {
       setAny(state, params) {

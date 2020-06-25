@@ -25,8 +25,7 @@
           </v-card-subtitle>
           <v-card-text>
             <p class="mb-0">
-              <span>{{ propertyTypes.find(p => p.type === prop.type).title }}</span>
-              <span v-if="prop.format && prop.format !== 'uri-reference'"> - {{ prop.format }}</span>
+              {{ propTypeTitle(prop) }}
             </p>
             <p v-if="prop['x-cardinality']" class="mb-0">
               {{ prop['x-cardinality'].toLocaleString() }} valeurs distinctes
@@ -72,7 +71,7 @@
               label="Concept"
               :clearable="true"
               persistent-hint
-              :hint="properties[currentProperty]['x-refersTo'] && vocabulary[properties[currentProperty]['x-refersTo']].description"
+              :hint="properties[currentProperty]['x-refersTo'] && vocabulary[properties[currentProperty]['x-refersTo']] && vocabulary[properties[currentProperty]['x-refersTo']].description"
             >
               <template v-slot:item="data">
                 <template v-if="typeof data.item !== 'object'">
@@ -98,11 +97,7 @@
             </p>
             <p>
               <span class="theme--light v-label">Type : </span><br>
-              {{ propertyTypes.find(p => p.type === properties[currentProperty].type).title }}
-            </p>
-            <p v-if="properties[currentProperty].format">
-              <span class="theme--light v-label">Format : </span><br>
-              {{ properties[currentProperty].format }}
+              {{ propTypeTitle(properties[currentProperty]) }}
             </p>
             <p v-if="properties[currentProperty]['x-cardinality']">
               <span class="theme--light v-label">Nombre de valeurs distinctes (approximative dans le cas de jeux volumineux) : </span><br>
@@ -120,7 +115,7 @@
 </template>
 
 <script>
-  import { mapState } from 'vuex'
+  import { mapState, mapGetters } from 'vuex'
   const datasetSchema = require('~/../contract/dataset.js')
   export default {
     props: ['properties', 'originalProperties', 'editable'],
@@ -133,7 +128,8 @@
       }
     },
     computed: {
-      ...mapState(['vocabulary', 'vocabularyArray', 'vocabularyItems', 'propertyTypes']),
+      ...mapState(['vocabulary', 'vocabularyArray', 'vocabularyItems']),
+      ...mapGetters(['propTypeTitle']),
     },
     created() {
       this.properties.forEach(p => {
