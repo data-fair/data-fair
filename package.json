@@ -121,6 +121,7 @@
     "ogr2ogr": "^2.0.0",
     "parse5": "^6.0.0",
     "patch-package": "^6.2.2",
+    "pretty-bytes": "^5.3.0",
     "proj4": "^2.6.1",
     "pump": "^3.0.0",
     "random-seed": "^0.3.0",

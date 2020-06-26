@@ -203,7 +203,6 @@ module.exports.apiDoc = {
     summary: 'Récupérer la liste des permissions.',
     operationId: 'getPermissions',
     'x-permissionClass': 'admin',
-    security: [{ jwt: [] }],
     tags: ['Permissions'],
     responses: {
       200: {
@@ -220,7 +219,6 @@ module.exports.apiDoc = {
     summary: 'Définir la liste des permissions.',
     operationId: 'setPermissions',
     'x-permissionClass': 'admin',
-    security: [{ jwt: [] }],
     tags: ['Permissions'],
     requestBody: {
       description: 'Liste des permissions',

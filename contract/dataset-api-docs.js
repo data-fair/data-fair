@@ -1,10 +1,19 @@
 const config = require('config')
+const prettyBytes = require('pretty-bytes')
 const datasetSchema = require('./dataset')
 const datasetPatchSchema = require('./dataset-patch')
 const journalSchema = require('./journal')
 const version = require('../package.json').version
 const permissionsDoc = require('../server/utils/permissions').apiDoc
+const { visibility } = require('../server/utils/visibility')
 const utils = require('./utils')
+
+const apiRate = (key, label) => {
+  return `Un utilisateur ${label} ne peut pas effectuer plus de ${config.defaultLimits.apiRate[key].nb} requêtes par interval de ${config.defaultLimits.apiRate[key].duration} seconde${config.defaultLimits.apiRate[key].duration > 1 ? 's' : ''}.
+  Sa vitesse de téléchargement totale sera limitée à ${prettyBytes(config.defaultLimits.apiRate[key].bandwidth.static)}/s pour les contenus statiques (fichiers de données, pièces jointes, etc.) et à ${prettyBytes(config.defaultLimits.apiRate[key].bandwidth.dynamic)}/s pour les autres appels.`
+}
+const userApiRate = apiRate('user', 'authentifié (session ou clé d\'API)')
+const anonymousApiRate = apiRate('anonymous', 'anonyme')
 
 module.exports = (dataset) => {
   dataset.schema = dataset.schema || []
@@ -217,12 +226,46 @@ La valeur est une liste de champs séparés par des virgules.
     },
   }
 
+  let description = `
+Cette documentation interactive à destination des développeurs permet de gérer et consommer les ressources du jeu de données "${dataset.title || dataset.id}".
+`
+
+  if (dataset.isVirtual) {
+    description += `
+Ce jeu de données est virtuel. C'est à dire qu'il est constitué de redirections vers un ensemble de jeux de données et qu'il n'a pas été créé à partir d'un fichier téléchargeable.
+`
+  }
+
+  if (dataset.isRest) {
+    description += `
+Ce jeu de données est incrémental. C'est à dire qu'il est constitué dynamiquement à partir de lectures / écritures de lignes et qu'il n'a pas été créé à partir d'un fichier téléchargeable.
+`
+  }
+
+  description += `
+Pour protéger l'infrastructure de publication de données, les appels sont limités par quelques règles simples :
+
+  - ${userApiRate}
+  `
+
+  if (visibility(dataset) !== 'public') {
+    description += `
+Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous pouvez créer dans les paramètres d'un compte possédant les permissions nécessaires aux opérations que vous souhaitez effectuer.
+`
+} else {
+  description += `
+  - ${anonymousApiRate}
+  `
+}
+
   const api = {
     openapi: '3.0.0',
-    info: Object.assign({
+    info: {
       title: `API du jeu de données : ${dataset.title || dataset.id}`,
-      version: version,
-    }, config.info),
+      description,
+      version,
+      ...config.info,
+    },
     components: {
       securitySchemes: {
         apiKey: {
@@ -680,6 +723,12 @@ La valeur est une liste de champs séparés par des virgules.
       url: 'https://koumoul-dev.github.io/data-fair/',
     },
   }
+
+  if (dataset.isVirtual || dataset.isRest) {
+    delete api.paths['/raw']
+    delete api.paths['/full']
+  }
+
   if (dataset.bbox && dataset.bbox.length === 4) {
     api.paths['/geo_agg'] = {
       get: {
