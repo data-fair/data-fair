@@ -518,7 +518,7 @@ router.get('/:datasetId/lines/:lineId/revisions', readDataset(['finalized', 'upd
 
 // Error from ES backend should be stored in the journal
 async function manageESError(req, err) {
-  // console.error('Elasticsearch error', err)
+  // console.error('Elasticsearch error', JSON.stringify(err.body || err, null, 2))
   const errBody = (err.body && err.body.error) || {}
   let message = err.message
   if (errBody.root_cause && errBody.root_cause.reason) message = errBody.root_cause.reason
@@ -527,7 +527,7 @@ async function manageESError(req, err) {
     if (shardReason.caused_by && shardReason.caused_by.reason) {
       message = shardReason.caused_by.reason
     } else {
-      message = shardReason
+      message = shardReason.reason || shardReason
     }
   }
 
