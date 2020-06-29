@@ -1,5 +1,5 @@
 <template lang="html">
-  <v-container fluid>
+  <v-container fluid style="min-height: 500px">
     <dataset-extensions />
   </v-container>
 </template>

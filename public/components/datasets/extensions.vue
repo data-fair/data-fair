@@ -1,11 +1,8 @@
 <template lang="html">
   <v-row>
     <v-col>
-      <v-menu
-        v-model="addExtensionDialog"
-        :width="$vuetify.breakpoint.mdAndUp ? $vuetify.breakpoint.width/2 : $vuetify.breakpoint.width-20"
-        style="margin-right:160px"
-      >
+      <!-- 450 matches the size of the container in the embed page, to prevent overflowing iframe -->
+      <v-menu v-model="addExtensionDialog" :max-height="450">
         <template v-slot:activator="{ on }">
           <v-btn color="primary" v-on="on">
             Ajouter une extension
