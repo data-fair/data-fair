@@ -38,6 +38,7 @@
             append-icon="mdi-magnify"
             class="mr-3"
             style="min-width:150px;"
+            solo
             @keyup.enter.native="refresh"
             @click:append="refresh"
           />
@@ -164,7 +165,7 @@
       ...mapGetters('dataset', ['resourceUrl', 'remoteServicesMap']),
       errorModes() {
         return [
-          { value: 'all', text: 'Voir tout' },
+          { value: 'all', text: 'Voir toutes les lignes' },
           { value: 'only', text: `Voir uniquement les ${this.nbErrors} lignes en erreur` },
           { value: 'hide', text: `Voir uniquement les ${this.nbTotal - this.nbErrors} lignes sans erreur` }]
       },

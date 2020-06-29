@@ -1,5 +1,5 @@
-<template>
-  <v-container>
+<template lang="html">
+  <v-container fluid>
     <dataset-extensions />
   </v-container>
 </template>

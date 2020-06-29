@@ -37,19 +37,19 @@ module.exports = {
   browserLogLevel: 'debug',
   remoteServices: [{
     title: 'Données Entreprises',
-    url: 'https://staging-koumoul.com/s/sirene/api-docs.json',
+    url: 'https://koumoul.com/s/sirene/api-docs.json',
   }, {
     title: 'Géocoder',
-    url: 'https://staging-koumoul.com/s/geocoder/api/v1/api-docs.json',
+    url: 'https://koumoul.com/s/geocoder/api/v1/api-docs.json',
   }, {
     title: 'Cadastre',
-    url: 'https://staging-koumoul.com/s/cadastre/api-docs.json',
+    url: 'https://koumoul.com/s/cadastre/api-docs.json',
   }, {
     title: 'Divisions administratives',
-    url: 'https://staging-koumoul.com/s/insee-mapping/api/v1/api-docs.json',
+    url: 'https://koumoul.com/s/insee-mapping/api/v1/api-docs.json',
   }, {
     title: 'Service de données cartographiques',
-    url: 'https://staging-koumoul.com/s/tileserver/api/v1/api-docs.json',
+    url: 'https://koumoul.com/s/tileserver/api/v1/api-docs.json',
   }],
   catalogs: [{
     title: 'Data.gouv.fr',

@@ -166,12 +166,8 @@ export default () => ({
     async fetchRemoteServices({ getters, commit, state }) {
       let remoteServices = []
       if (getters.concepts.size) {
-        const inputConcepts = [...getters.concepts].filter(c => c !== 'http://schema.org/identifier').join(',')
         const data = await this.$axios.$get('api/v1/remote-services', {
-          params: {
-            'input-concepts': inputConcepts,
-            size: 100,
-          },
+          params: { size: 100 },
         })
         remoteServices = data.results
       }

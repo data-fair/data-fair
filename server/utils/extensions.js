@@ -342,6 +342,7 @@ class RemoteExtensionStream extends Transform {
       new Writable({
         objectMode: true,
         write(chunk, encoding, cb) {
+          console.log(chunk.toString())
           try {
             let item
             try {
@@ -356,7 +357,7 @@ class RemoteExtensionStream extends Transform {
               .reduce((a, itemKey) => { a[itemKey] = item[itemKey]; return a }, {})
 
             // override potential previous error
-            if (!selectedItem.error) selectedItem.error = null
+            if (!selectedItem.error) selectedItem.error = ''
 
             const mappedItem = { doc: { [_this.extensionKey]: selectedItem } }
             mappedItem.id = item[_this.idOutput.name]
