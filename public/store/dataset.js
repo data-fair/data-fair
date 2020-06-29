@@ -165,12 +165,10 @@ export default () => ({
     },
     async fetchRemoteServices({ getters, commit, state }) {
       let remoteServices = []
-      if (getters.concepts.size) {
-        const data = await this.$axios.$get('api/v1/remote-services', {
-          params: { size: 100 },
-        })
-        remoteServices = data.results
-      }
+      const data = await this.$axios.$get('api/v1/remote-services', {
+        params: { size: 100 },
+      })
+      remoteServices = data.results
       commit('setAny', { remoteServices })
     },
     async changeOwner({ commit, state }, owner) {
