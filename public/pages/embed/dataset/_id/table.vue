@@ -180,12 +180,9 @@
       ...mapState(['vocabulary']),
       ...mapState('dataset', ['dataset']),
       ...mapGetters('dataset', ['resourceUrl']),
-      select() {
-        return this.dataset.schema.filter(field => !field['x-calculated']).map(field => field.key)
-      },
       headers() {
         const fieldsHeaders = this.dataset.schema
-          .filter(field => this.select.includes(field.key))
+          .filter(field => !field['x-calculated'])
           .map(field => ({
             text: field.title || field['x-originalName'] || field.key,
             value: field.key,
@@ -212,7 +209,6 @@
         if (this.imageField) params.thumbnail = '40x40'
         if (this.pagination.sortBy) params.sort = (this.pagination.descending ? '-' : '') + this.pagination.sortBy
         if (this.query) params.q = this.query
-        if (this.select.length) params.select = this.select.join(',')
         if (this.filters.length) {
           params.qs = filtersUtils.filters2qs(this.filters)
         }
