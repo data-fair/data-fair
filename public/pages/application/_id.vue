@@ -1,9 +1,13 @@
 <template>
-  <v-row v-if="application" class="application">
+  <v-row
+    v-if="application"
+    class="application"
+    :style="!mini && !$vuetify.breakpoint.lgAndUp ? 'padding-left: 64px;' : ''"
+  >
     <v-navigation-drawer
       app
-      fixed
       stateless
+      clipped
       :permanent="mini || $vuetify.breakpoint.lgAndUp"
       :temporary="!mini && !$vuetify.breakpoint.lgAndUp"
       :mini-variant="mini"

@@ -2,7 +2,7 @@
   <v-app :dark="env.theme.dark">
     <v-app-bar
       app
-      scroll-off-screen
+      clipped-left
       elevation="2"
       :color="(user && user.adminMode) ? 'admin' : 'default'"
       :dark="env.theme.dark || (user && user.adminMode)"
@@ -112,9 +112,9 @@
               <v-list-item-title>Applications</v-list-item-title>
             </v-list-item>
             <v-list-item :to="localePath({name: 'catalogs', query: searchQuery('catalogs')})">
-              <v-list-item-title>Catalogues</v-list-item-title>
+              <v-list-item-title>Connecteurs</v-list-item-title>
             </v-list-item>
-            <v-list-item :to="localePath({name: 'remote-services', query: searchQuery('remote-services')})">
+            <v-list-item v-if="user && user.adminMode" :to="localePath({name: 'remote-services', query: searchQuery('remote-services')})">
               <v-list-item-title>Services</v-list-item-title>
             </v-list-item>
             <v-list-item
