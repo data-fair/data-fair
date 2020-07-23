@@ -53,13 +53,14 @@
             text
             :color="user && user.adminMode ? 'default' : 'primary'"
           >
-            Catalogues
+            Connecteurs
           </v-btn>
           <v-btn
+            v-if="user && user.adminMode"
             :to="localePath({name: 'remote-services', query: searchQuery('remote-services')})"
             :class="routePrefix === 'remote' ? 'v-btn--active' : ''"
             text
-            :color="user && user.adminMode ? 'default' : 'primary'"
+            color="default"
           >
             Services
           </v-btn>
@@ -297,7 +298,7 @@
     </v-content>
     <v-footer class="pa-3">
       <v-spacer />
-      <div>Powered by <a href="https://koumoul.com">Koumoul</a></div>
+      <div>Maintained by <a href="https://koumoul.com">Koumoul</a></div>
     </v-footer>
   </v-app>
 </template>

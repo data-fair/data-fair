@@ -68,7 +68,7 @@
         <v-row align="center">
           <v-col class="text-center">
             <div v-if="!filtered" class="headline">
-              Vous n'avez pas encore ajouté de catalogues externes.<br>Vous pouvez <nuxt-link :to="localePath('user-guide')">
+              Vous n'avez pas encore ajouté de connecteur vers des catalogues externes.<br>Vous pouvez <nuxt-link :to="localePath('user-guide')">
                 consulter la documentation
               </nuxt-link> pour en savoir plus.
             </div>
