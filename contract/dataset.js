@@ -26,6 +26,7 @@ const schema = {
       key: { type: 'string', readOnly: true, 'x-display': 'hidden' },
       type: { type: 'string' },
       format: { type: ['string', 'null'] },
+      ignoreDetection: { type: 'boolean', default: false },
       separator: { type: ['string', 'null'] },
       'x-originalName': { type: ['string', 'null'] },
       'x-refersTo': { type: ['string', 'null'] },

@@ -71,7 +71,7 @@
               label="Concept"
               :clearable="true"
               persistent-hint
-              :hint="properties[currentProperty]['x-refersTo'] && vocabulary[properties[currentProperty]['x-refersTo']] && vocabulary[properties[currentProperty]['x-refersTo']].description"
+              :hint="properties[currentProperty]['x-refersTo'] ? vocabulary[properties[currentProperty]['x-refersTo']] && vocabulary[properties[currentProperty]['x-refersTo']].description : 'Les concepts des champs sont utilisés pour améliorer le traitement de la donnée et sa visualisation.'"
             >
               <template v-slot:item="data">
                 <template v-if="typeof data.item !== 'object'">
@@ -85,6 +85,14 @@
                 </template>
               </template>
             </v-autocomplete>
+            <v-checkbox
+              v-if="dataset.file"
+              v-model="properties[currentProperty].ignoreDetection"
+              :disabled="!editable"
+              label="Ignorer la détection de type"
+              persistent-hint
+              hint="Si vous cochez cette case la détection automatique de type sera désactivée et la colonne sera traitée comme une simple chaîne de caractère."
+            />
           </v-col>
           <v-col>
             <p>
@@ -100,7 +108,7 @@
               {{ propTypeTitle(properties[currentProperty]) }}
             </p>
             <p v-if="properties[currentProperty]['x-cardinality']">
-              <span class="theme--light v-label">Nombre de valeurs distinctes (approximative dans le cas de jeux volumineux) : </span><br>
+              <span class="theme--light v-label">Nombre de valeurs distinctes (approximative dans le cas de données volumineuses) : </span><br>
               {{ properties[currentProperty]['x-cardinality'].toLocaleString() }}
             </p>
             <p v-if="properties[currentProperty].enum">
@@ -129,6 +137,7 @@
     },
     computed: {
       ...mapState(['vocabulary', 'vocabularyArray', 'vocabularyItems']),
+      ...mapState('dataset', ['dataset']),
       ...mapGetters(['propTypeTitle']),
     },
     created() {

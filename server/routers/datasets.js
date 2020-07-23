@@ -225,6 +225,9 @@ router.patch('/:datasetId', readDataset(['finalized', 'error']), permissions.mid
   } else if (patch.schema && patch.schema.find(f => req.dataset.schema.find(df => df.key === f.key && df.separator !== f.separator))) {
     // some separator has changed on a field, trigger full re-indexing
     patch.status = 'schematized'
+  } else if (patch.schema && patch.schema.find(f => req.dataset.schema.find(df => df.key === f.key && df.ignoreDetection !== f.ignoreDetection))) {
+    // some ignoreDetection param has changed on a field, trigger full analysis / re-indexing
+    patch.status = 'loaded'
   } else if (patch.schema) {
     try {
       await esUtils.updateDatasetMapping(req.app.get('es'), { id: req.dataset.id, schema: patch.schema })
