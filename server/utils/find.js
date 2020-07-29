@@ -253,7 +253,6 @@ exports.parseFacets = (facets) => {
     if (k.startsWith('visibility-')) {
       res.visibility = res.visibility || []
       res.visibility.push({ count: values[0] ? values[0].count : 0, value: k.replace('visibility-', '') })
-      res.visibility.sort((a, b) => a.count < b.count ? 1 : -1)
     } else if (k === 'base-application') {
       res[k] = values.filter(r => r._id)
         .map(r => ({
@@ -267,6 +266,16 @@ exports.parseFacets = (facets) => {
     } else {
       res[k] = values.filter(r => r._id).map(r => ({ count: r.count, value: r._id }))
     }
+  })
+  Object.keys(res).forEach(facetKey => {
+    res[facetKey].sort((a, b) => {
+      if (a.count < b.count) return 1
+      if (a.count > b.count) return -1
+      const titleA = a.value.title ? a.value.title : a.value
+      const titleB = b.value.title ? b.value.title : b.value
+      if (titleA < titleB) return -1
+      return 1
+    })
   })
   return res
 }

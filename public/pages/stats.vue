@@ -63,7 +63,7 @@
         { text: 'Nombre de jeux de données', value: 'datasets', sortable: false },
         { text: 'Espace consommé', value: 'storage', sortable: false },
         { text: 'Espace total disponible', value: 'storageLimit', sortable: false },
-        { text: 'Nombre d\'applications', value: 'applications', sortable: false },
+        { text: 'Nombre de visualisations', value: 'applications', sortable: false },
       ],
     }),
     computed: {

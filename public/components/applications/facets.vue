@@ -47,7 +47,7 @@
 
     <template v-if="facets['base-application'] && facets['base-application'].length">
       <v-subheader @click="visibleFacet = 'base-application'">
-        Type d'application
+        Application
       </v-subheader>
       <v-checkbox
         v-for="facetItem in facets['base-application']"
