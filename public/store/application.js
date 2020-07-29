@@ -73,10 +73,10 @@ export default () => ({
         const silent = patch.silent
         delete patch.silent
         await this.$axios.patch(getters.resourceUrl, patch)
-        if (!silent) eventBus.$emit('notification', 'La configuration d\'application a bien été mise à jour.')
+        if (!silent) eventBus.$emit('notification', 'La visualisation a bien été mise à jour.')
         return true
       } catch (error) {
-        eventBus.$emit('notification', { error, msg: 'Erreur pendant la mise à jour de la configuration d\'application:' })
+        eventBus.$emit('notification', { error, msg: 'Erreur pendant la mise à jour de la visualisation:' })
         return false
       }
     },
@@ -87,9 +87,9 @@ export default () => ({
     async remove({ state, getters, dispatch }) {
       try {
         await this.$axios.delete(getters.resourceUrl)
-        eventBus.$emit('notification', `La configuration d'application ${state.application.title} a bien été supprimée.`)
+        eventBus.$emit('notification', `La visualisation ${state.application.title} a bien été supprimée.`)
       } catch (error) {
-        eventBus.$emit('notification', { error, msg: 'Erreur pendant la suppression de la configuration d\'application:' })
+        eventBus.$emit('notification', { error, msg: 'Erreur pendant la suppression de la visualisation:' })
       }
     },
     addJournalEvent({ commit }, event) {
@@ -105,7 +105,7 @@ export default () => ({
         await this.$axios.$put(getters.resourceUrl + '/configuration', config)
         commit('setAny', { config: JSON.parse(JSON.stringify(config)) })
       } catch (error) {
-        eventBus.$emit('notification', { error, msg: 'Erreur pendant l\'écriture de la configuration d\'application:' })
+        eventBus.$emit('notification', { error, msg: 'Erreur pendant l\'écriture de la visualisation:' })
       }
     },
     async readConfigDraft({ state, commit, getters }) {
@@ -118,7 +118,7 @@ export default () => ({
         await this.$axios.$put(getters.resourceUrl + '/configuration-draft', configDraft)
         commit('setAny', { configDraft: JSON.parse(JSON.stringify(configDraft)) })
       } catch (error) {
-        eventBus.$emit('notification', { error, msg: 'Erreur pendant l\'écriture du brouillon de configuration d\'application:' })
+        eventBus.$emit('notification', { error, msg: 'Erreur pendant l\'écriture du brouillon de visualisation:' })
       }
     },
     async changeOwner({ commit, state }, owner) {

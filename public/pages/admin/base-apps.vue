@@ -3,7 +3,7 @@
     <v-row>
       <v-col>
         <h2 class="title">
-          Applications de base
+          Applications
         </h2>
         <v-row>
           <v-col
@@ -34,7 +34,7 @@
             <v-text-field
               v-model="urlToAdd"
               label="Ajouter"
-              placeholder="Saisissez l'URL d'une nouvelle application de base"
+              placeholder="Saisissez l'URL d'une nouvelle application"
               @keypress.enter="add"
             />
           </v-col>
@@ -229,9 +229,9 @@
       async add() {
         try {
           await this.$axios.$post('api/v1/base-applications', { url: this.urlToAdd })
-          eventBus.$emit('notification', { type: 'success', msg: 'Application de base ajoutée' })
+          eventBus.$emit('notification', { type: 'success', msg: 'Application ajoutée' })
         } catch (error) {
-          eventBus.$emit('notification', { error, msg: 'Impossible d\'ajouter\' l\'application de base' })
+          eventBus.$emit('notification', { error, msg: 'Impossible d\'ajouter\' l\'application' })
         }
         this.refresh()
       },

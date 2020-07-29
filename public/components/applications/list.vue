@@ -4,11 +4,11 @@
       v-if="applications"
       class="display-1"
     >
-      {{ applications.count }} configuration{{ plural }} d'application{{ plural }}
+      {{ applications.count }} visualisation{{ plural }}
     </h3>
 
     <search-filters
-      :filter-labels="{'dataset': 'Jeu de données', 'service': 'Service', 'url': 'Application de base'}"
+      :filter-labels="{'dataset': 'Jeu de données', 'service': 'Service', 'url': 'Application'}"
       :filters="filters"
       :facets="applications && applications.facets"
       type="applications"

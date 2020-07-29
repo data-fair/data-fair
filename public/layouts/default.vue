@@ -45,7 +45,7 @@
             text
             :color="user && user.adminMode ? 'default' : 'primary'"
           >
-            Applications
+            Visualisations
           </v-btn>
           <v-btn
             :to="localePath({name: 'catalogs', query: searchQuery('catalogs')})"
@@ -109,7 +109,7 @@
               <v-list-item-title>Jeux de données</v-list-item-title>
             </v-list-item>
             <v-list-item :to="localePath({name: 'applications', query: searchQuery('applications')})">
-              <v-list-item-title>Applications</v-list-item-title>
+              <v-list-item-title>Visualisations</v-list-item-title>
             </v-list-item>
             <v-list-item :to="localePath({name: 'catalogs', query: searchQuery('catalogs')})">
               <v-list-item-title>Connecteurs</v-list-item-title>
@@ -246,7 +246,7 @@
                       mdi-apps
                     </v-icon>
                   </v-list-item-avatar>
-                  <v-list-item-title>Applications de base</v-list-item-title>
+                  <v-list-item-title>Applications</v-list-item-title>
                 </v-list-item>
                 <v-list-item :href="env.directoryUrl + '/admin/users'" color="admin">
                   <v-list-item-avatar>

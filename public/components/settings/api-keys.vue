@@ -196,7 +196,7 @@
       showUseDialog: false,
       scopes: [
         { value: 'datasets', text: 'Gestion des jeux de données' },
-        { value: 'applications', text: 'Gestion des configurations d\'applications' },
+        { value: 'applications', text: 'Gestion des visualisations' },
         { value: 'catalogs', text: 'Gestion des connecteurs aux catalogues' },
         { value: 'stats', text: 'Récupération d\'informations statistiques' },
       ],

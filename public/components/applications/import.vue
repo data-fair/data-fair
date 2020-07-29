@@ -98,7 +98,7 @@
           })
           this.$router.push({ path: `/application/${application.id}/description` })
         } catch (error) {
-          eventBus.$emit('notification', { error, msg: 'Erreur pendant la création de la configuration d\'application' })
+          eventBus.$emit('notification', { error, msg: 'Erreur pendant la création de la visualisation' })
           this.importing = false
         }
       },

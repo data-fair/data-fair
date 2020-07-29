@@ -226,7 +226,7 @@
           </v-btn>
         </v-toolbar>
         <v-card-text v-if="showCaptureDialog">
-          <p>Une image statique au format PNG va être créée à partir de cette configuration d'application.</p>
+          <p>Une image statique au format PNG va être créée à partir de cette visualisation.</p>
           <v-text-field
             v-model="captureWidth"
             label="Largeur"
@@ -252,10 +252,10 @@
     >
       <v-card>
         <v-card-title primary-title>
-          Suppression de la configuration de l'application
+          Suppression de la visualisation
         </v-card-title>
         <v-card-text>
-          Voulez vous vraiment supprimer la configuration de l'application "{{ application.title }}" ? La suppression est définitive et le paramétrage ne pourra pas être récupéré.
+          Voulez vous vraiment supprimer la visualisation "{{ application.title }}" ? La suppression est définitive et le paramétrage ne pourra pas être récupéré.
         </v-card-text>
         <v-card-actions>
           <v-spacer />
