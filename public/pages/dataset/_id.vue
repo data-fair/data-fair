@@ -4,7 +4,7 @@
     class="dataset"
     :style="!mini && !$vuetify.breakpoint.lgAndUp ? 'padding-left: 64px;' : ''"
   >
-    <v-navigation-drawer
+    <!--<v-navigation-drawer
       app
       stateless
       clipped
@@ -144,7 +144,7 @@
           <v-list-item-title>API</v-list-item-title>
         </v-list-item>
       </v-list>
-    </v-navigation-drawer>
+    </v-navigation-drawer>-->
 
     <v-col>
       <nuxt-child />
@@ -363,6 +363,7 @@
       },
     },
     mounted() {
+      this.$store.dispatch('breadcrumbs', [{ text: 'Jeux de données', to: '/datasets' }, { text: this.dataset.title || this.dataset.id }])
       this.subscribe()
     },
     destroyed() {

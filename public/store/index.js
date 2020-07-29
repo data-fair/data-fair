@@ -38,6 +38,8 @@ export default () => {
       searchQueries: {},
       projections: null,
       propertyTypes,
+      breadcrumbsRouteName: null,
+      breadcrumbItems: null,
     },
     getters: {
       ownerLicenses: (state) => (owner) => {
@@ -124,6 +126,9 @@ export default () => {
       },
       searchQuery({ commit }, params) {
         commit('setSearchQuery', params)
+      },
+      breadcrumbs({ commit }, breadcrumbItems) {
+        commit('setAny', { breadcrumbItems, breadcrumbsRouteName: this.$router.currentRoute.name })
       },
     },
   })

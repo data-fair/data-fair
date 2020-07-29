@@ -27,6 +27,7 @@ module.exports = {
   },
   loading: { color: '#1e88e5' }, // Customize the progress bar color
   plugins: [
+    { src: '~plugins/global-components' },
     { src: '~plugins/ws', ssr: false },
     { src: '~plugins/session' },
     { src: '~plugins/moment' },
@@ -37,6 +38,7 @@ module.exports = {
   ],
   router: {
     base: config.basePath,
+    // middleware: 'breadcrumb',
   },
   modules: ['@digibytes/markdownit', '@nuxtjs/axios', 'cookie-universal-nuxt', ['nuxt-i18n', {
     seo: false,

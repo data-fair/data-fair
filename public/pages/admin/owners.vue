@@ -21,7 +21,7 @@
             />
           </v-col>
         </v-row>
-        <v-card v-if="owners.results.length">
+        <v-sheet v-if="owners.results.length">
           <v-list three-line>
             <v-list-item
               v-for="owner in owners.results"
@@ -47,7 +47,7 @@
               </v-list-item-content>
             </v-list-item>
           </v-list>
-        </v-card>
+        </v-sheet>
       </v-col>
     </v-row>
   </v-container>

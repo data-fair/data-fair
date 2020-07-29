@@ -58,6 +58,7 @@
       <v-spacer />
       <v-pagination
         v-model="page"
+        circle
         :length="Math.ceil(catalogs.count / size)"
         @input="$vuetify.goTo('.resourcesList', {offset});refresh()"
       />

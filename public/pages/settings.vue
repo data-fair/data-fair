@@ -4,14 +4,14 @@
       <v-col>
         <!--<v-subheader>{{ $t('pages.settings.description') }}</v-subheader>-->
         <template v-if="authorized">
-          <h2 class="display-1 mb-4">
+          <h2 class="mb-4">
             Paramètres de l'{{ activeAccount.type ==='organization' ? ('organisation ' + organization.name): ('utilisateur ' + user.name) }}
           </h2>
           <p v-if="activeAccount.type ==='organization'">
             Vous êtes <strong>{{ user.organizations.find(o => o.id===activeAccount.id).role }}</strong> dans cette organisation.
           </p>
           <div v-if="activeAccount.type ==='organization'">
-            <h3 class="headline mb-3">
+            <h3 class="mb-3">
               Permissions générales par rôle
             </h3>
             <p>Le rôle <strong>{{ env.adminRole }}</strong> peut tout faire</p>
@@ -38,7 +38,7 @@
             </v-data-table>
           </div>
 
-          <h3 class="headline mt-3 mb-3">
+          <h3 class="mt-3 mb-3">
             Licenses
           </h3>
           <settings-licenses
@@ -46,7 +46,7 @@
             :settings="settings"
             @license-updated="save"
           />
-          <h3 class="headline mt-3 mb-3">
+          <h3 class="mt-3 mb-3">
             Thématiques
           </h3>
           <settings-topics
@@ -54,7 +54,7 @@
             :settings="settings"
             @updated="save"
           />
-          <h3 class="headline mt-3 mb-3">
+          <h3 class="mt-3 mb-3">
             Clés d'API
           </h3>
           <settings-api-keys
@@ -62,7 +62,7 @@
             :settings="settings"
             @updated="save"
           />
-          <h3 class="headline mt-3 mb-3">
+          <h3 class="mt-3 mb-3">
             Appels extérieurs (Webhooks)
           </h3>
           <settings-webhooks
@@ -71,17 +71,7 @@
             @webhook-updated="save"
           />
         </template>
-        <v-responsive v-else height="auto">
-          <v-container class="fill-height">
-            <v-row align="center">
-              <v-col class="text-center">
-                <div class="headline">
-                  Vous n'êtes pas autorisé à voir ou modifier le contenu de cette page. Si vous voulez changer les paramètres de votre organisation, veuillez contacter un administrateur de celle ci.
-                </div>
-              </v-col>
-            </v-row>
-          </v-container>
-        </v-responsive>
+        <not-authorized v-else />
       </v-col>
     </v-row>
   </v-container>
@@ -166,6 +156,9 @@
         }
       },
     },
+    head: () => ({
+      title: 'Paramètres',
+    }),
   }
 </script>
 

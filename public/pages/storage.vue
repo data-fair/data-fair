@@ -3,26 +3,40 @@
     <v-row>
       <v-col>
         <template v-if="authorized">
-          <h2 class="display-1 mb-4">
-            Détail du stockage de l'{{ activeAccount.type ==='organization' ? ('organisation ' + ((organization && organization.name) || activeAccount.id)): ('utilisateur ' + user.name) }}
+          <h2 class="mb-2">
+            Statistiques
           </h2>
-          <storage-details :datasets="datasets" />
+          <v-sheet :loading="!stats">
+            <v-data-table
+              :loading="!stats"
+              loading-text="Chargement en cours..."
+              :headers="headers"
+              :items="stats ? [stats] : []"
+              hide-default-footer
+            >
+              <template v-slot:item="{item}">
+                <tr>
+                  <td>{{ item.datasets }}</td>
+                  <td>{{ item.storage | displayBytes }}</td>
+                  <td>{{ item.storageLimit | displayBytes }}</td>
+                  <td>{{ item.applications }}</td>
+                </tr>
+              </template>
+            </v-data-table>
+          </v-sheet>
+
+          <h2 class="my-2">
+            Détail par jeu de données
+          </h2>
+          <storage-details v-if="datasets" :datasets="datasets" />
+          <v-progress-linear
+            v-else
+            :height="2"
+            indeterminate
+          />
         </template>
 
-        <v-responsive
-          v-else
-          height="auto"
-        >
-          <v-container class="fill-height">
-            <v-row align="center">
-              <v-col class="text-center">
-                <div class="headline">
-                  Vous n'êtes pas autorisé à voir ou modifier le contenu de cette page. Si vous avez besoin de connaitres ces informations, veuillez contacter un administrateur de celle ci.
-                </div>
-              </v-col>
-            </v-row>
-          </v-container>
-        </v-responsive>
+        <not-authorized v-else />
       </v-col>
     </v-row>
   </v-container>
@@ -36,32 +50,28 @@
     components: { StorageDetails },
     data: () => ({
       datasets: null,
+      stats: null,
+      headers: [
+        { text: 'Nombre de jeux de données', value: 'datasets', sortable: false },
+        { text: 'Espace consommé', value: 'storage', sortable: false },
+        { text: 'Espace total disponible', value: 'storageLimit', sortable: false },
+        { text: 'Nombre de visualisations', value: 'applications', sortable: false },
+      ],
     }),
     computed: {
       ...mapState(['env']),
       ...mapState('session', ['user', 'initialized']),
       ...mapGetters('session', ['activeAccount']),
-      organization() {
-        if (this.activeAccount.type === 'organization') {
-          return this.user.organizations.find(o => o.id === this.activeAccount.id)
-        } else {
-          return null
-        }
-      },
       authorized() {
-        if (!this.user) return false
-        if (this.user.adminMode) return true
-        if (this.activeAccount.type === 'user' && this.activeAccount.id !== this.user.id) return false
-        if (this.activeAccount.type === 'organization') {
-          if (!this.organization) return false
-          if (this.organization.role !== this.env.adminRole) return false
-        }
-        return true
+        return !!this.user
       },
     },
     async created() {
       if (!this.authorized) return
       this.datasets = (await this.$axios.$get('api/v1/datasets', { params: { size: 10000, owner: `${this.activeAccount.type}:${this.activeAccount.id}`, select: 'id,title,storage', sort: 'storage.size:-1' } })).results
+      const stats = await this.$axios.$get('api/v1/stats')
+      if (this.activeAccount.type === 'user') this.stats = stats.user
+      else this.stats = stats.organizations[this.activeAccount.id]
     },
   }
 </script>

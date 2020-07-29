@@ -1,5 +1,5 @@
 <template lang="html">
-  <v-col>
+  <v-col class="pa-0">
     <v-row>
       <v-col
         cols="12"
@@ -12,6 +12,7 @@
           v-model="filters.q"
           placeholder="Rechercher"
           solo
+          dense
           append-icon="mdi-magnify"
           hide-details
           @keyup.enter.native="writeParams"

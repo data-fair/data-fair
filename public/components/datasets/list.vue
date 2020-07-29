@@ -1,12 +1,5 @@
 <template>
   <div>
-    <h3
-      v-if="datasets"
-      class="display-1"
-    >
-      {{ datasets.count }} {{ plural ? 'jeux' : 'jeu' }} de données
-    </h3>
-
     <search-filters
       :filter-labels="{children: 'Jeu de données agrégé'}"
       :filters="filters"
@@ -97,9 +90,11 @@
       <v-spacer />
       <v-pagination
         v-model="page"
+        circle
         :length="Math.ceil(datasets.count / size)"
         @input="$vuetify.goTo('.resourcesList', {offset});refresh()"
       />
+      <v-spacer />
     </v-row>
 
     <v-responsive v-if="!hasDatasets" height="auto">
@@ -201,6 +196,7 @@
           this.lastParams = params
           this.loading = true
           this.datasets = await this.$axios.$get('api/v1/datasets', { params })
+          this.$store.dispatch('breadcrumbs', [{ text: `${this.datasets.count} ${this.plural ? 'jeux' : 'jeu'} de données` }])
           this.filtered = !!this.filters.q || hasFacetFilter
           this.loading = false
         }

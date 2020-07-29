@@ -51,6 +51,7 @@
               <v-pagination
                 v-if="data.total > pagination.itemsPerPage"
                 v-model="pagination.page"
+                circle
                 :length="Math.ceil(Math.min(data.total, 10000 - pagination.itemsPerPage) / pagination.itemsPerPage)"
                 :total-visible="$vuetify.breakpoint.lgAndUp ? 7 : 5"
                 class="mx-4"

@@ -7,7 +7,7 @@
       <h3 class="title">
         Jeux de données en erreur
       </h3>
-      <v-card
+      <v-sheet
         class="my-4"
         style="max-height:800px; overflow-y: scroll;"
       >
@@ -36,7 +36,7 @@
             </v-list-item-action>
           </v-list-item>
         </v-list>
-      </v-card>
+      </v-sheet>
     </template>
 
     <p v-if="applicationsErrors && applicationsErrors.count === 0">

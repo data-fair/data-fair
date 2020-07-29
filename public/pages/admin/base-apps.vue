@@ -40,7 +40,7 @@
           </v-col>
         </v-row>
 
-        <v-card v-if="baseApps">
+        <v-sheet v-if="baseApps">
           <v-list three-line>
             <v-list-item
               v-for="baseApp in baseApps.results"
@@ -87,7 +87,7 @@
               </v-list-item-action>
             </v-list-item>
           </v-list>
-        </v-card>
+        </v-sheet>
       </v-col>
     </v-row>
 
