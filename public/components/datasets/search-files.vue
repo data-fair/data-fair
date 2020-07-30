@@ -12,12 +12,7 @@
       <v-card-title style="padding-bottom: 0;">
         <v-row>
           <v-col>
-            <h3 v-if="data.total <= 10000" class="headline">
-              Consultez {{ data.total.toLocaleString() }} {{ plural ? 'enregistrements' : 'enregistrement' }}
-            </h3>
-            <h3 v-if="data.total > 10000" class="headline">
-              Consultez {{ plural ? 'les' : 'le' }} {{ (10000).toLocaleString() }} {{ plural ? 'premiers enregistrements' : 'premier enregistrement' }} ({{ data.total.toLocaleString() }} au total)
-            </h3>
+            <nb-results :total="data.total" />
             <v-row>
               <v-col
                 lg="3"
@@ -84,8 +79,10 @@
 <script>
   import { mapState, mapGetters } from 'vuex'
   import eventBus from '~/event-bus'
+  import NbResults from '~/components/datasets/nb-results'
 
   export default {
+    components: { NbResults },
     props: ['inititemsPerPage', 'hideitemsPerPage'],
     data: () => ({
       data: null,

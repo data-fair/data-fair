@@ -1,411 +1,244 @@
 <template>
-  <v-row
-    v-if="dataset"
-    class="dataset"
-    :style="!mini && !$vuetify.breakpoint.lgAndUp ? 'padding-left: 64px;' : ''"
-  >
-    <!--<v-navigation-drawer
-      app
-      stateless
-      clipped
-      :permanent="mini || $vuetify.breakpoint.lgAndUp"
-      :temporary="!mini && !$vuetify.breakpoint.lgAndUp"
-      :mini-variant="mini"
-      :value="true"
-    >
-      <v-list dense class="pt-0">
-        <v-list-item
-          v-if="mini"
-          style="min-height: 64px"
-          @click.stop="mini = false"
-        >
-          <v-list-item-action>
-            <v-icon>mdi-chevron-right</v-icon>
-          </v-list-item-action>
-        </v-list-item>
-        <v-list-item v-else style="min-height: 64px">
-          <v-list-item-title class="title">
-            {{ dataset.title || dataset.id }}
-          </v-list-item-title>
-          <v-list-item-action style="min-width: 0;">
-            <v-btn icon @click.stop="mini = true">
-              <v-icon>mdi-chevron-left</v-icon>
-            </v-btn>
-          </v-list-item-action>
-        </v-list-item>
+  <v-container fluid>
+    <v-row v-if="dataset" class="dataset">
+      <v-col>
+        <v-card outlined>
+          <v-tabs>
+            <v-tab href="#tab-general-info">
+              Informations
+            </v-tab>
+            <v-tab-item value="tab-general-info">
+              <v-container fluid>
+                <dataset-info />
+              </v-container>
+            </v-tab-item>
 
-        <v-list-item
-          :disabled="!can('readDescription')"
-          :nuxt="true"
-          :to="`/dataset/${dataset.id}/description`"
+            <template v-if="can('writeDescription') && dataset.isVirtual">
+              <v-tab href="#tab-general-virtual">
+                Jeu virtuel
+              </v-tab>
+              <v-tab-item value="tab-general-virtual">
+                <v-container fluid>
+                  <dataset-virtual />
+                </v-container>
+              </v-tab-item>
+            </template>
+
+            <v-tab href="#tab-general-schema">
+              Schéma
+            </v-tab>
+            <v-tab-item value="tab-general-schema">
+              <v-container fluid>
+                <dataset-schema />
+              </v-container>
+            </v-tab-item>
+
+            <v-tab href="#tab-general-extensions">
+              Extensions
+            </v-tab>
+            <v-tab-item value="tab-general-extensions">
+              <v-container fluid>
+                <dataset-extensions />
+              </v-container>
+            </v-tab-item>
+
+            <v-tab href="#tab-general-attachments">
+              Pièces jointes
+            </v-tab>
+            <v-tab-item value="tab-general-attachments">
+              <v-container fluid>
+                <dataset-attachments />
+              </v-container>
+            </v-tab-item>
+          </v-tabs>
+        </v-card>
+
+        <v-card
+          v-if="can('readLines')"
+          outlined
+          class="mt-4"
         >
-          <v-list-item-action><v-icon>mdi-information</v-icon></v-list-item-action>
-          <v-list-item-title>Description</v-list-item-title>
-        </v-list-item>
-        <v-list-item
-          :disabled="!can('readDescription')"
-          :nuxt="true"
-          :to="`/dataset/${dataset.id}/attachments`"
-        >
-          <v-list-item-action><v-icon>mdi-attachment</v-icon></v-list-item-action>
-          <v-list-item-title>Pièces jointes</v-list-item-title>
-        </v-list-item>
-        <v-list-item
-          v-if="can('writeDescription') && dataset.isVirtual"
-          :nuxt="true"
-          :to="`/dataset/${dataset.id}/virtual`"
-        >
-          <v-list-item-action><v-icon>mdi-picture-in-picture-bottom-right-outline</v-icon></v-list-item-action>
-          <v-list-item-title>Jeu virtuel</v-list-item-title>
-        </v-list-item>
-        <v-list-item
-          :disabled="!can('readLines')"
-          :nuxt="true"
-          :to="`/dataset/${dataset.id}/tabular`"
-        >
-          <v-list-item-action><v-icon>mdi-view-list</v-icon></v-list-item-action>
-          <v-list-item-title>Vue tableau</v-list-item-title>
-        </v-list-item>
-        <v-list-item
-          v-if="!!dataset.schema.find(f => f['x-refersTo'] === 'https://schema.org/startDate')"
-          :disabled="!can('readLines')"
-          :nuxt="true"
-          :to="`/dataset/${dataset.id}/calendar`"
-        >
-          <v-list-item-action><v-icon>mdi-calendar-range</v-icon></v-list-item-action>
-          <v-list-item-title>Calendrier</v-list-item-title>
-        </v-list-item>
-        <v-list-item
-          v-if="dataset.bbox"
-          :disabled="!can('readLines')"
-          :nuxt="true"
-          :to="`/dataset/${dataset.id}/map`"
-        >
-          <v-list-item-action><v-icon>mdi-map</v-icon></v-list-item-action>
-          <v-list-item-title>Carte</v-list-item-title>
-        </v-list-item>
-        <v-list-item
-          v-if="fileProperty"
-          :disabled="!can('readLines')"
-          :nuxt="true"
-          :to="`/dataset/${dataset.id}/search-files`"
-        >
-          <v-list-item-action><v-icon>mdi-content-copy</v-icon></v-list-item-action>
-          <v-list-item-title>Fichiers</v-list-item-title>
-        </v-list-item>
-        <v-list-item
-          v-if="!!dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/image')"
-          :disabled="!can('readLines')"
-          :nuxt="true"
-          :to="`/dataset/${dataset.id}/thumbnails`"
-        >
-          <v-list-item-action><v-icon>mdi-image</v-icon></v-list-item-action>
-          <v-list-item-title>Vignettes</v-list-item-title>
-        </v-list-item>
-        <v-list-item
+          <v-tabs>
+            <v-tab href="#tab-preview-table">
+              Tableau
+            </v-tab>
+            <v-tab-item value="tab-preview-table">
+              <dataset-table />
+            </v-tab-item>
+
+            <template v-if="!!dataset.schema.find(f => f['x-refersTo'] === 'https://schema.org/startDate') && !!dataset.schema.find(f => f['x-refersTo'] === 'https://schema.org/endDate' && !!dataset.schema.find(f => f['x-refersTo'] === 'http://www.w3.org/2000/01/rdf-schema#label'))">
+              <v-tab href="#tab-preview-calendar">
+                Calendrier
+              </v-tab>
+              <v-tab-item value="tab-preview-calendar">
+                <v-container fluid class="pa-0">
+                  <dataset-calendar />
+                </v-container>
+              </v-tab-item>
+            </template>
+
+            <template v-if="dataset.bbox">
+              <v-tab href="#tab-preview-map">
+                Carte
+              </v-tab>
+              <v-tab-item value="tab-preview-map">
+                <v-container fluid class="pa-0">
+                  <dataset-map fixed-height="400" />
+                </v-container>
+              </v-tab-item>
+            </template>
+
+            <template v-if="fileProperty">
+              <v-tab href="#tab-preview-files">
+                Fichiers
+              </v-tab>
+              <v-tab-item value="tab-preview-files">
+                <v-container fluid class="pa-0">
+                  <dataset-search-files />
+                </v-container>
+              </v-tab-item>
+            </template>
+
+            <template v-if="!!dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/image')">
+              <v-tab href="#tab-preview-thumbnails">
+                Vignettes
+              </v-tab>
+              <v-tab-item value="tab-preview-thumbnails">
+                <v-container fluid>
+                  <dataset-thumbnails />
+                </v-container>
+              </v-tab-item>
+            </template>
+          </v-tabs>
+        </v-card>
+
+        <v-card
           v-if="can('getPermissions')"
-          :nuxt="true"
-          :to="`/dataset/${dataset.id}/permissions`"
+          outlined
+          class="mt-4"
         >
-          <v-list-item-action><v-icon>mdi-security</v-icon></v-list-item-action>
-          <v-list-item-title>Permissions</v-list-item-title>
-        </v-list-item>
-        <v-list-item
-          v-if="!dataset.isVirtual"
-          :disabled="!can('writeDescription')"
-          :nuxt="true"
-          :to="`/dataset/${dataset.id}/extend`"
+          <v-tabs>
+            <v-tab href="#tab-publish-permissions">
+              Permissions
+            </v-tab>
+            <v-tab-item value="tab-publish-permissions">
+              <v-container fluid>
+                <permissions
+                  v-if="can('getPermissions')"
+                  :resource="dataset"
+                  :resource-url="resourceUrl"
+                  :api="api"
+                />
+              </v-container>
+            </v-tab-item>
+
+            <v-tab href="#tab-publish-publications">
+              Publications
+            </v-tab>
+            <v-tab-item value="tab-publish-publications">
+              <dataset-publications />
+            </v-tab-item>
+          </v-tabs>
+        </v-card>
+
+        <v-card
+          v-if="can('readJournal') || can('readApiDoc')"
+          outlined
+          class="mt-4"
         >
-          <v-list-item-action><v-icon>mdi-merge</v-icon></v-list-item-action>
-          <v-list-item-title>Enrichissement</v-list-item-title>
-        </v-list-item>
-        <v-list-item
-          v-if="can('getPermissions')"
-          :nuxt="true"
-          :to="`/dataset/${dataset.id}/publications`"
-        >
-          <v-list-item-action><v-icon>mdi-publish</v-icon></v-list-item-action>
-          <v-list-item-title>Publications</v-list-item-title>
-        </v-list-item>
-        <v-list-item
-          :disabled="!can('readJournal')"
-          :nuxt="true"
-          :to="`/dataset/${dataset.id}/journal`"
-        >
-          <v-list-item-action><v-icon>mdi-calendar-text</v-icon></v-list-item-action>
-          <v-list-item-title>Journal</v-list-item-title>
-        </v-list-item>
-        <v-list-item
-          :disabled="!can('readApiDoc')"
-          :nuxt="true"
-          :to="`/dataset/${dataset.id}/api`"
-        >
-          <v-list-item-action><v-icon>mdi-cloud</v-icon></v-list-item-action>
-          <v-list-item-title>API</v-list-item-title>
-        </v-list-item>
-      </v-list>
-    </v-navigation-drawer>-->
+          <v-tabs>
+            <template v-if="can('readJournal')">
+              <v-tab href="#tab-tech-journal">
+                Journal
+              </v-tab>
+              <v-tab-item value="tab-tech-journal">
+                <v-container fluid>
+                  <journal
+                    :journal="journal"
+                    type="dataset"
+                  />
+                </v-container>
+              </v-tab-item>
+            </template>
 
-    <v-col>
-      <nuxt-child />
-    </v-col>
-
-    <div class="actions-buttons">
-      <v-menu bottom left>
-        <template v-slot:activator="{on}">
-          <v-btn
-            fab
-            small
-            color="accent"
-            v-on="on"
-          >
-            <v-icon>mdi-dots-vertical</v-icon>
-          </v-btn>
-        </template>
-        <v-list>
-          <v-list-item
-            v-for="dataFile in (dataFiles || [])"
-            :key="dataFile.key"
-            :disabled="!can('downloadFullData')"
-            :href="dataFile.url"
-          >
-            <v-list-item-avatar>
-              <v-icon color="primary">
-                mdi-file-download
-              </v-icon>
-            </v-list-item-avatar>
-            <v-list-item-title>{{ dataFile.title }}</v-list-item-title>
-          </v-list-item>
-          <v-list-item
-            v-if="can('writeData')"
-            @click="showUploadDialog = true"
-          >
-            <v-list-item-avatar>
-              <v-icon color="warning">
-                mdi-file-upload
-              </v-icon>
-            </v-list-item-avatar>
-            <v-list-item-title>Remplacer</v-list-item-title>
-          </v-list-item>
-          <v-list-item v-if="can('delete')" @click="showDeleteDialog = true">
-            <v-list-item-avatar>
-              <v-icon color="warning">
-                mdi-delete
-              </v-icon>
-            </v-list-item-avatar>
-            <v-list-item-title>Supprimer</v-list-item-title>
-          </v-list-item>
-          <v-list-item v-if="can('delete')" @click="showOwnerDialog = true">
-            <v-list-item-avatar>
-              <v-icon color="warning">
-                mdi-account
-              </v-icon>
-            </v-list-item-avatar>
-            <v-list-item-title>Changer de propriétaire</v-list-item-title>
-          </v-list-item>
-        </v-list>
-      </v-menu>
-    </div>
-
-    <v-dialog
-      v-model="showDeleteDialog"
-      max-width="500"
-    >
-      <v-card>
-        <v-card-title primary-title>
-          Suppression du jeu de données
-        </v-card-title>
-        <v-card-text v-if="nbApplications > 0">
-          <v-alert
-            :value="nbApplications === 1"
-            type="error"
-            outlined
-          >
-            Attention ! Ce jeu de données est utilisé par une application. Si vous le supprimez cette application ne sera plus fonctionnelle.
-          </v-alert>
-          <v-alert
-            :value="nbApplications > 1"
-            type="error"
-            outlined
-          >
-            Attention ! Ce jeu de données est utilisé par {{ nbApplications }} applications. Si vous le supprimez ces applications ne seront plus fonctionnelles.
-          </v-alert>
-        </v-card-text>
-        <v-card-text>
-          Voulez vous vraiment supprimer le jeu de données "{{ dataset.title }}" ? La suppression est définitive et les données ne pourront pas être récupérées.
-        </v-card-text>
-        <v-card-actions>
-          <v-spacer />
-          <v-btn text @click="showDeleteDialog = false">
-            Non
-          </v-btn>
-          <v-btn
-            color="warning"
-            @click="confirmRemove"
-          >
-            Oui
-          </v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
-
-    <v-dialog
-      v-model="showOwnerDialog"
-      max-width="900"
-    >
-      <v-card>
-        <v-card-title primary-title>
-          Changer le propriétaire du jeu de données
-        </v-card-title>
-        <v-card-text>
-          <owner-pick v-model="newOwner" />
-        </v-card-text>
-        <v-card-actions>
-          <v-spacer />
-          <v-btn text @click="showOwnerDialog = false">
-            Annuler
-          </v-btn>
-          <v-btn
-            :disabled="!newOwner"
-            color="warning"
-            @click="changeOwner(newOwner); showOwnerDialog = false;"
-          >
-            Confirmer
-          </v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
-
-    <v-dialog
-      v-model="showUploadDialog"
-      max-width="500"
-    >
-      <v-card>
-        <v-card-title primary-title>
-          Remplacement des données
-        </v-card-title>
-        <v-card-text v-if="nbApplications > 0">
-          <v-alert
-            :value="nbApplications === 1"
-            type="error"
-            outlined
-          >
-            Attention ! Ce jeu de données est utilisé par une application. Si vous modifiez sa structure l'application peut ne plus fonctionner.
-          </v-alert>
-          <v-alert
-            :value="nbApplications > 1"
-            type="error"
-            outlined
-          >
-            Attention ! Ce jeu de données est utilisé par {{ nbApplications }} applications. Si vous modifiez sa structure ces applications peuvent ne plus fonctionner.
-          </v-alert>
-        </v-card-text>
-        <v-card-text>
-          <input
-            type="file"
-            @change="onFileUpload"
-          >
-          <v-progress-linear
-            v-if="uploading"
-            v-model="uploadProgress"
-          />
-        </v-card-text>
-        <v-card-actions>
-          <v-spacer />
-          <v-btn text @click="showUploadDialog = false">
-            Annuler
-          </v-btn>
-          <v-btn
-            :disabled="!file || uploading"
-            color="warning"
-            @click="confirmUpload"
-          >
-            Charger
-          </v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
-  </v-row>
+            <template v-if="can('readApiDoc')">
+              <v-tab href="#tab-tech-apidoc">
+                API
+              </v-tab>
+              <v-tab-item value="tab-tech-apidoc">
+                <v-container fluid class="pa-0">
+                  <open-api
+                    v-if="resourceUrl"
+                    :url="resourceUrl + '/api-docs.json'"
+                  />
+                </v-container>
+              </v-tab-item>
+            </template>
+          </v-tabs>
+        </v-card>
+      </v-col>
+    </v-row>
+    <dataset-actions />
+  </v-container>
 </template>
 
 <script>
   import { mapState, mapActions, mapGetters } from 'vuex'
-  import OwnerPick from '~/components/owners/pick.vue'
-  import eventBus from '~/event-bus'
+  import DatasetInfo from '~/components/datasets/info.vue'
+  import DatasetSchema from '~/components/datasets/schema.vue'
+  import DatasetActions from '~/components/datasets/actions.vue'
+  import DatasetExtensions from '~/components/datasets/extensions.vue'
+  import DatasetAttachments from '~/components/datasets/attachments.vue'
+  import DatasetTable from '~/components/datasets/table.vue'
+  import DatasetCalendar from '~/components/datasets/calendar.vue'
+  import DatasetMap from '~/components/datasets/map.vue'
+  import DatasetVirtual from '~/components/datasets/virtual.vue'
+  import DatasetSearchFiles from '~/components/datasets/search-files.vue'
+  import DatasetThumbnails from '~/components/datasets/thumbnails.vue'
+  import DatasetPublications from '~/components/datasets/publications.vue'
+  import Permissions from '~/components/permissions.vue'
+  import Journal from '~/components/journal.vue'
+  import OpenApi from '~/components/open-api.vue'
 
   export default {
-    components: { OwnerPick },
+    components: {
+      DatasetActions,
+      DatasetInfo,
+      DatasetSchema,
+      DatasetExtensions,
+      DatasetAttachments,
+      DatasetTable,
+      DatasetCalendar,
+      DatasetMap,
+      DatasetVirtual,
+      DatasetSearchFiles,
+      DatasetThumbnails,
+      DatasetPublications,
+      Permissions,
+      Journal,
+      OpenApi,
+    },
     async fetch({ store, params, route }) {
       await store.dispatch('dataset/setId', route.params.id)
       await store.dispatch('fetchVocabulary')
     },
-    data: () => ({
-      showDeleteDialog: false,
-      showUploadDialog: false,
-      showOwnerDialog: false,
-      file: null,
-      uploading: false,
-      uploadProgress: 0,
-      newOwner: null,
-      mini: false,
-    }),
+    data: () => ({}),
     computed: {
-      ...mapState('dataset', ['dataset', 'api', 'nbApplications', 'dataFiles']),
+      ...mapState('dataset', ['dataset', 'api', 'journal']),
       ...mapGetters('dataset', ['resourceUrl', 'can']),
       fileProperty() {
         return this.dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')
       },
-      downloadLink() {
-        return this.dataset ? this.resourceUrl + '/raw' : null
-      },
-      downloadFullLink() {
-        return this.dataset ? this.resourceUrl + '/full' : null
-      },
     },
     mounted() {
-      this.$store.dispatch('breadcrumbs', [{ text: 'Jeux de données', to: '/datasets' }, { text: this.dataset.title || this.dataset.id }])
+      if (this.dataset) this.$store.dispatch('breadcrumbs', [{ text: 'Jeux de données', to: '/datasets' }, { text: this.dataset.title || this.dataset.id }])
       this.subscribe()
     },
     destroyed() {
       this.clear()
     },
     methods: {
-      ...mapActions('dataset', ['patch', 'remove', 'clear', 'changeOwner', 'subscribe']),
-      async confirmRemove() {
-        this.showDeleteDialog = false
-        await this.remove()
-        this.$router.push({ path: '/datasets' })
-      },
-      onFileUpload(e) {
-        this.file = e.target.files[0]
-      },
-      async confirmUpload() {
-        const options = {
-          onUploadProgress: (e) => {
-            if (e.lengthComputable) {
-              this.uploadProgress = (e.loaded / e.total) * 100
-            }
-          },
-        }
-        const formData = new FormData()
-        formData.append('file', this.file)
-
-        this.uploading = true
-        try {
-          await this.$axios.$put('api/v1/datasets/' + this.dataset.id, formData, options)
-          this.showUploadDialog = false
-        } catch (error) {
-          const status = error.response && error.response.status
-          if (status === 413) {
-            eventBus.$emit('notification', { type: 'error', msg: 'Le fichier est trop volumineux pour être importé' })
-          } else if (status === 429) {
-            eventBus.$emit('notification', { type: 'error', msg: 'Le propriétaire sélectionné n\'a pas assez d\'espace disponible pour ce fichier' })
-          } else {
-            eventBus.$emit('notification', { error, msg: 'Erreur pendant l\'import du fichier:' })
-          }
-        }
-        this.uploading = false
-      },
+      ...mapActions('dataset', ['clear', 'subscribe']),
     },
   }
 </script>

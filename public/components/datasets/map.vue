@@ -83,7 +83,7 @@
   }]
 
   export default {
-    props: ['heightMargin'],
+    props: ['heightMargin', 'fixedHeight'],
     data: () => ({ mapHeight: 0, query: '' }),
     computed: {
       ...mapState(['env']),
@@ -101,7 +101,7 @@
     async mounted() {
       if (!mapboxgl) return
       try {
-        this.mapHeight = Math.max(window.innerHeight - this.$el.getBoundingClientRect().top - this.heightMargin, 300)
+        this.mapHeight = this.fixedHeight ? this.fixedHeight : Math.max(window.innerHeight - this.$el.getBoundingClientRect().top - this.heightMargin, 300)
 
         await new Promise(resolve => setTimeout(resolve, 0))
         const style = this.env.map.style.replace('./', this.env.publicUrl + '/')

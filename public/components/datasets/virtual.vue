@@ -1,5 +1,5 @@
 <template lang="html">
-  <v-container>
+  <v-container fluid>
     <h2 class="headline mt-3 mb-3">
       Jeux de données agrégés
     </h2>
@@ -30,44 +30,45 @@
       style="height: 2px;"
     />
 
-    <v-data-table
-      :items="dataset.virtual.children"
-      hide-default-header
-      hide-default-footer
-      class="elevation-1 mb-3"
-    >
-      <template slot="no-data">
-        Aucun jeu de données agrégé pour l'instant.
-      </template>
-      <template v-slot:item="{item, index}">
-        <tr v-if="childrenById[item]">
-          <td class="pt-3">
-            <span class="subheading">
-              <nuxt-link :to="`/dataset/${item}/description`">{{ childrenById[item].title }} ({{ childrenById[item].id }})</nuxt-link>
-            </span>
-            <v-select
-              :items="childrenById[item].schema.filter(f => !f['x-calculated'] && !existingFields.includes(f.key))"
-              :item-text="(field) => field.title || field['x-originalName'] || field.key"
-              hide-no-data
-              item-value="id"
-              label="Ajouter un champ"
-              return-object
-              style="max-width: 400px;"
-              @change="addField"
-            />
-          </td>
-          <td class="text-right">
-            <v-icon
-              color="warning"
-              title="Supprimer"
-              @click="currentChild = index; deleteChildDialog = true"
-            >
-              mdi-delete
-            </v-icon>
-          </td>
-        </tr>
-      </template>
-    </v-data-table>
+    <v-card outlined>
+      <v-data-table
+        :items="dataset.virtual.children"
+        hide-default-header
+        hide-default-footer
+      >
+        <template slot="no-data">
+          Aucun jeu de données agrégé pour l'instant.
+        </template>
+        <template v-slot:item="{item, index}">
+          <tr v-if="childrenById[item]">
+            <td class="pt-3">
+              <span class="subheading">
+                <nuxt-link :to="`/dataset/${item}/description`">{{ childrenById[item].title }} ({{ childrenById[item].id }})</nuxt-link>
+              </span>
+              <v-select
+                :items="childrenById[item].schema.filter(f => !f['x-calculated'] && !existingFields.includes(f.key))"
+                :item-text="(field) => field.title || field['x-originalName'] || field.key"
+                hide-no-data
+                item-value="id"
+                label="Ajouter un champ"
+                return-object
+                style="max-width: 400px;"
+                @change="addField"
+              />
+            </td>
+            <td class="text-right">
+              <v-icon
+                color="warning"
+                title="Supprimer"
+                @click="currentChild = index; deleteChildDialog = true"
+              >
+                mdi-delete
+              </v-icon>
+            </td>
+          </tr>
+        </template>
+      </v-data-table>
+    </v-card>
 
     <h2 class="headline mt-4 mb-3">
       Champs sélectionnés
@@ -78,8 +79,8 @@
     </p>
     <v-list
       v-else
-      class="elevation-1"
       three-line
+      outlined
     >
       <draggable
         v-model="dataset.schema"
@@ -105,7 +106,7 @@
               v-if="filtersByKey[field.key]"
               v-model="filtersByKey[field.key].values"
               :items="valuesByKey[field.key]"
-              placeholder="Restreindre à des valeurs"
+              label="Restreindre à des valeurs"
               chips
               clearable
               multiple

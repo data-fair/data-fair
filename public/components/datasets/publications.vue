@@ -1,5 +1,5 @@
 <template lang="html">
-  <v-container>
+  <v-container fluid>
     <p>
       Publiez ce jeu de données sur un ou plusieurs catalogues Open Data.
       Cette publication rendra vos données plus faciles à trouver et permettra à la communauté Open Data d'échanger avec vous.
@@ -74,13 +74,14 @@
     <v-row
       v-if="can('writeDescription')"
     >
-      <v-spacer />
-      <v-btn
-        color="primary"
-        @click="addPublicationDialog = true"
-      >
-        Ajouter une publication
-      </v-btn>
+      <v-col>
+        <v-btn
+          color="primary"
+          @click="addPublicationDialog = true"
+        >
+          Ajouter une publication
+        </v-btn>
+      </v-col>
     </v-row>
 
     <v-dialog

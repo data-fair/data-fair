@@ -15,7 +15,7 @@
           min-width="100"
           class="mx-1 my-2"
           v-bind="cardProps(prop, i, currentProperty === i)"
-          @click="currentProperty = i"
+          @click="currentProperty = currentProperty === i ? null : i"
         >
           <v-card-title primary-title>
             {{ prop.title || prop['x-originalName'] || prop.key }}

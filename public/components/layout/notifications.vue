@@ -8,21 +8,22 @@
     class="notification"
     bottom
   >
-    <div style="max-width: 85%;">
-      <p>{{ notification.msg }}</p>
-      <p
-        v-if="notification.errorMsg"
-        class="ml-3"
-        v-html="notification.errorMsg"
-      />
-    </div>
-    <v-btn
-      icon
-      color="white"
-      @click.native="showSnackbar = false"
-    >
-      <v-icon>mdi-close</v-icon>
-    </v-btn>
+    <p>{{ notification.msg }}</p>
+    <p
+      v-if="notification.errorMsg"
+      class="ml-3"
+      v-html="notification.errorMsg"
+    />
+
+    <template v-slot:action="{ }">
+      <v-btn
+        icon
+        color="white"
+        @click.native="showSnackbar = false"
+      >
+        <v-icon>mdi-close</v-icon>
+      </v-btn>
+    </template>
   </v-snackbar>
 </template>
 

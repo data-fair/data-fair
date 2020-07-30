@@ -15,6 +15,7 @@
       <template v-if="initialized">
         <v-btn
           v-if="!user"
+          depressed
           color="primary"
           @click="login"
         >
@@ -31,7 +32,7 @@
               class="px-0"
               v-on="on"
             >
-              <v-avatar :size="40">
+              <v-avatar :size="36">
                 <img :src="`${env.directoryUrl}/api/avatars/${activeAccount.type}/${activeAccount.id}/avatar.png`">
               </v-avatar>
             </v-btn>

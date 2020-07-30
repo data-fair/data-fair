@@ -28,7 +28,7 @@
           >
             <v-card
               height="100%"
-              :to="`/dataset/${dataset.id}/description`"
+              :to="`/dataset/${dataset.id}`"
               outlined
             >
               <v-card-title>

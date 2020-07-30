@@ -10,33 +10,34 @@
     </div>
     <v-row>
       <v-col>
-        <h3 v-if="data.total <= 10000" class="headline">
-          Consultez {{ data.total.toLocaleString() }} {{ plural ? 'enregistrements' : 'enregistrement' }}
-        </h3>
-        <h3 v-if="data.total > 10000" class="headline">
-          Consultez {{ plural ? 'les' : 'le' }} {{ (10000).toLocaleString() }} {{ plural ? 'premiers enregistrements' : 'premier enregistrement' }} ({{ data.total.toLocaleString() }} au total)
-        </h3>
+        <nb-results :total="data.total" />
         <v-row class="px-3">
-          <v-text-field
-            v-model="query"
-            label="Rechercher"
-            append-icon="mdi-magnify"
-            class="mr-3"
-            style="min-width:150px;"
-            @keyup.enter.native="refresh"
-            @click:append="refresh"
-          />
+          <v-col
+            lg="3"
+            md="4"
+            sm="5"
+            cols="12"
+          >
+            <v-text-field
+              v-model="query"
+              label="Rechercher"
+              append-icon="mdi-magnify"
+              class="mr-3"
+              style="min-width:150px;"
+              @keyup.enter.native="refresh(true)"
+              @click:append="refresh(true)"
+            />
+          </v-col>
           <v-spacer />
           <v-col
-            v-if="!hideitemsPerPage && data.total > pagination.itemsPerPage"
-            sm="4"
-            md="2"
-            lg="1"
+            v-show="$vuetify.breakpoint.mdAndUp"
             xl="1"
+            lg="1"
+            md="2"
           >
             <v-select
               v-model="pagination.itemsPerPage"
-              :items="[10,20,50]"
+              :items="[5, 10,20,50]"
               label="Nombre de lignes"
             />
           </v-col>
@@ -88,15 +89,17 @@
 <script>
   import { mapState, mapGetters } from 'vuex'
   import eventBus from '~/event-bus'
+  import NbResults from '~/components/datasets/nb-results'
 
   export default {
+    components: { NbResults },
     props: ['inititemsPerPage', 'hideitemsPerPage'],
     data: () => ({
       data: {},
       query: null,
       pagination: {
         page: 1,
-        itemsPerPage: 12,
+        itemsPerPage: 10,
       },
       notFound: false,
       loading: false,

@@ -1,5 +1,5 @@
 <template lang="html">
-  <v-container>
+  <v-container fluid>
     <p>Charger un fichier pour créer/modifier une pièce jointe. Le nom de fichier est la clé.</p>
     <input
       type="file"

@@ -1,7 +1,7 @@
 <template lang="html">
   <v-row>
     <v-col>
-      <v-row>
+      <v-row class="px-3">
         <v-col
           cols="6"
           lg="3"
@@ -132,7 +132,7 @@
         return this.dataset.schema.find(f => f['x-refersTo'] === 'http://www.w3.org/2000/01/rdf-schema#label').key
       },
       descProp() {
-        return this.dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/description').key
+        return this.dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/description')
       },
       eventsPerDays() {
         if (!this.data) return

@@ -1,170 +1,163 @@
 <template>
-  <v-container fluid>
+  <v-container fluid class="pa-0">
     <div v-if="notFound">
       <p>Les données ne sont pas accessibles. Soit le jeu de données n'a pas encore été entièrement traité, soit il y a eu une erreur dans le traitement.</p>
-      <p>
-        Vous pouvez consulter <nuxt-link :to="`/dataset/${dataset.id}/journal`">
-          le journal
-        </nuxt-link> pour en savoir plus.
-      </p>
     </div>
-    <v-sheet>
-      <v-row>
-        <v-col>
-          <v-row class="px-3">
-            <nb-results :total="data.total" />
-            <v-btn
-              v-if="dataset.isRest && can('writeData')"
-              color="primary"
-              fab
-              x-small
-              class="mx-2"
-              @click="editedLine = null; showEditLineDialog();"
-            >
-              <v-icon>                mdi-plus              </v-icon>
-            </v-btn>
-          </v-row>
-          <v-row>
-            <v-col
-              lg="3"
-              md="4"
-              sm="5"
-              cols="12"
-            >
-              <v-text-field
-                v-model="query"
-                label="Rechercher"
-                append-icon="mdi-magnify"
-                class="mr-3"
-                style="min-width:150px;"
-                @keyup.enter.native="refresh(true)"
-                @click:append="refresh(true)"
-              />
-            </v-col>
-            <v-spacer />
-            <v-col
-              v-show="$vuetify.breakpoint.mdAndUp"
-              xl="1"
-              lg="1"
-              md="2"
-            >
-              <v-select
-                v-model="pagination.itemsPerPage"
-                :items="[10,20,50]"
-                label="Nombre de lignes"
-              />
-            </v-col>
-            <v-pagination
-              v-if="data.total > pagination.itemsPerPage"
-              v-model="pagination.page"
-              circle
-              :length="Math.ceil(Math.min(data.total, 10000 - pagination.itemsPerPage) / pagination.itemsPerPage)"
-              :total-visible="$vuetify.breakpoint.lgAndUp ? 7 : 5"
-              class="mx-4"
+    <v-row class="px-3">
+      <v-col>
+        <v-row class="px-3">
+          <nb-results :total="data.total" />
+          <v-btn
+            v-if="dataset.isRest && can('writeData')"
+            color="primary"
+            fab
+            x-small
+            class="mx-2"
+            @click="editedLine = null; showEditLineDialog();"
+          >
+            <v-icon>mdi-plus</v-icon>
+          </v-btn>
+        </v-row>
+        <v-row>
+          <v-col
+            lg="3"
+            md="4"
+            sm="5"
+            cols="12"
+          >
+            <v-text-field
+              v-model="query"
+              label="Rechercher"
+              append-icon="mdi-magnify"
+              class="mr-3"
+              style="min-width:150px;"
+              @keyup.enter.native="refresh(true)"
+              @click:append="refresh(true)"
             />
-          </v-row>
-        </v-col>
-      </v-row>
-
-      <v-data-table
-        :headers="headers"
-        :items="data.results"
-        :server-items-length="data.total"
-        :loading="loading"
-        :options.sync="pagination"
-        hide-default-footer
-        hide-default-header
-      >
-        <template v-slot:header>
-          <thead class="v-data-table-header">
-            <tr>
-              <th
-                v-for="header in headers"
-                :key="header.value"
-                :class="{'text-start': true, sortable: header.sortable, active : header.value === pagination.sortBy, asc: !pagination.descending, desc: !pagination.descending}"
-                nowrap
-                @click="orderBy(header)"
-              >
-                <v-tooltip
-                  v-if="header.tooltip"
-                  bottom
-                  style="margin-right: 8px;"
-                >
-                  <template v-slot:activator="{ on }">
-                    <v-icon small v-on="on">
-                      mdi-information
-                    </v-icon>
-                  </template>
-                  <span>{{ header.tooltip }}</span>
-                </v-tooltip>
-                <span>
-                  {{ header.text }}
-                </span>
-                <v-icon
-                  v-if="header.sortable"
-                  class="v-data-table-header__icon"
-                  small
-                >
-                  mdi-arrow-up
-                </v-icon>
-              </th>
-            </tr>
-          </thead>
-        </template>
-        <template v-slot:item="{item}">
+          </v-col>
+          <v-spacer />
+          <v-col
+            v-show="$vuetify.breakpoint.mdAndUp"
+            xl="1"
+            lg="1"
+            md="2"
+          >
+            <v-select
+              v-model="pagination.itemsPerPage"
+              :items="[5, 10,20,50]"
+              label="Nombre de lignes"
+            />
+          </v-col>
+          <v-pagination
+            v-if="data.total > pagination.itemsPerPage"
+            v-model="pagination.page"
+            circle
+            :length="Math.ceil(Math.min(data.total, 10000 - pagination.itemsPerPage) / pagination.itemsPerPage)"
+            :total-visible="$vuetify.breakpoint.lgAndUp ? 7 : 5"
+            class="mx-4"
+          />
+        </v-row>
+      </v-col>
+    </v-row>
+    <v-data-table
+      :headers="headers"
+      :items="data.results"
+      :server-items-length="data.total"
+      :loading="loading"
+      :multi-sort="false"
+      :options.sync="pagination"
+      hide-default-footer
+      hide-default-header
+    >
+      <template v-slot:header>
+        <thead class="v-data-table-header">
           <tr>
-            <td
+            <th
               v-for="header in headers"
               :key="header.value"
-              class="pr-0 pl-4"
+              :class="{'text-start': true, sortable: header.sortable, active : header.value === pagination.sortBy[0], asc: !pagination.sortDesc[0], desc: pagination.sortDesc[0]}"
+              nowrap
+              @click="orderBy(header)"
             >
-              <div v-if="header.value === '_actions'" style="min-width:120px;">
-                <v-btn
-                  icon
-                  color="warning"
-                  title="Supprimer cette ligne"
-                  @click="editedLine = Object.assign({}, item); deleteLineDialog = true;"
-                >
-                  <v-icon>mdi-delete</v-icon>
-                </v-btn>
-                <v-btn
-                  icon
-                  color="primary"
-                  title="Éditer cette ligne"
-                  @click="editedLine = Object.assign({}, item); showEditLineDialog();"
-                >
-                  <v-icon>mdi-pencil</v-icon>
-                </v-btn>
-                <v-btn
-                  v-if="dataset.rest && dataset.rest.history"
-                  icon
-                  color="primary"
-                  title="Voir l'historique des révisions de cette ligne"
-                  @click="showHistoryDialog(item)"
-                >
-                  <v-icon>mdi-history</v-icon>
-                </v-btn>
-              </div>
-              <template v-else-if="header.value === '_thumbnail'">
-                <v-avatar
-                  v-if="item._thumbnail"
-                  tile
-                  :size="40"
-                >
-                  <img :src="item._thumbnail">
-                </v-avatar>
-              </template>
-              <template v-else-if="digitalDocumentField && digitalDocumentField.key === header.value">
-                <a v-if="item._attachment_url" :href="item._attachment_url">{{ item[header.value] }}</a>
-              </template>
-              <template v-else>
-                {{ ((item[header.value] === undefined || item[header.value] === null ? '' : item[header.value]) + '') | truncate(50) }}
-              </template>
-            </td>
+              <v-tooltip
+                v-if="header.tooltip"
+                bottom
+                style="margin-right: 8px;"
+              >
+                <template v-slot:activator="{ on }">
+                  <v-icon small v-on="on">
+                    mdi-information
+                  </v-icon>
+                </template>
+                <span>{{ header.tooltip }}</span>
+              </v-tooltip>
+              <span>
+                {{ header.text }}
+              </span>
+              <v-icon
+                v-if="header.sortable"
+                class="v-data-table-header__icon"
+                small
+              >
+                mdi-arrow-up
+              </v-icon>
+            </th>
           </tr>
-        </template>
-      </v-data-table>
-    </v-sheet>
+        </thead>
+      </template>
+      <template v-slot:item="{item}">
+        <tr>
+          <td
+            v-for="header in headers"
+            :key="header.value"
+            class="pr-0 pl-4"
+          >
+            <div v-if="header.value === '_actions'" style="min-width:120px;">
+              <v-btn
+                icon
+                color="warning"
+                title="Supprimer cette ligne"
+                @click="editedLine = Object.assign({}, item); deleteLineDialog = true;"
+              >
+                <v-icon>mdi-delete</v-icon>
+              </v-btn>
+              <v-btn
+                icon
+                color="primary"
+                title="Éditer cette ligne"
+                @click="editedLine = Object.assign({}, item); showEditLineDialog();"
+              >
+                <v-icon>mdi-pencil</v-icon>
+              </v-btn>
+              <v-btn
+                v-if="dataset.rest && dataset.rest.history"
+                icon
+                color="primary"
+                title="Voir l'historique des révisions de cette ligne"
+                @click="showHistoryDialog(item)"
+              >
+                <v-icon>mdi-history</v-icon>
+              </v-btn>
+            </div>
+            <template v-else-if="header.value === '_thumbnail'">
+              <v-avatar
+                v-if="item._thumbnail"
+                tile
+                :size="40"
+              >
+                <img :src="item._thumbnail">
+              </v-avatar>
+            </template>
+            <template v-else-if="digitalDocumentField && digitalDocumentField.key === header.value">
+              <a v-if="item._attachment_url" :href="item._attachment_url">{{ item[header.value] }}</a>
+            </template>
+            <template v-else>
+              {{ ((item[header.value] === undefined || item[header.value] === null ? '' : item[header.value]) + '') | truncate(50) }}
+            </template>
+          </td>
+        </tr>
+      </template>
+    </v-data-table>
 
     <v-dialog
       v-model="editLineDialog"
@@ -288,9 +281,9 @@
       select: [],
       pagination: {
         page: 1,
-        itemsPerPage: 10,
-        sortBy: null,
-        descending: false,
+        itemsPerPage: 5,
+        sortBy: [null],
+        sortDesc: [false],
       },
       sort: null,
       notFound: false,
@@ -387,8 +380,8 @@
           page: this.pagination.page,
         }
         if (this.imageField) params.thumbnail = '40x40'
-        if (this.pagination.sortBy) {
-          params.sort = (this.pagination.descending ? '-' : '') + this.pagination.sortBy
+        if (this.pagination.sortBy[0]) {
+          params.sort = (this.pagination.sortDesc[0] ? '-' : '') + this.pagination.sortBy[0]
         }
         if (this.query) params.q = this.query
         if (this.select.length) params.select = this.select.join(',')
@@ -404,11 +397,11 @@
       },
       orderBy(header) {
         if (!header.sortable) return
-        if (this.pagination.sortBy === header.value) {
-          this.pagination.descending = !this.pagination.descending
+        if (this.pagination.sortBy[0] === header.value) {
+          this.$set(this.pagination.sortDesc, 0, !this.pagination.sortDesc[0])
         } else {
-          this.pagination.sortBy = header.value
-          this.pagination.descending = true
+          this.$set(this.pagination.sortBy, 0, header.value)
+          this.$set(this.pagination.sortDesc, 0, true)
         }
       },
       showEditLineDialog() {
