@@ -104,7 +104,7 @@
             <td
               v-for="header in headers"
               :key="header.value"
-              :class="`pl-4 pr-0'}`"
+              :class="`pl-4 pr-0`"
               :style="`height: ${lineHeight}px`"
             >
               <template v-if="header.value === '_thumbnail'">

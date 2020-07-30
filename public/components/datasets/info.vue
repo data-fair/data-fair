@@ -74,7 +74,7 @@
 
           <v-list-item v-if="dataset.count !== undefined">
             <v-list-item-avatar class="ml-0 my-0">
-              <v-icon>mdi-view-headline</v-icon>
+              <v-icon>mdi-view-text-h6</v-icon>
             </v-list-item-avatar>
             <span>{{ dataset.count }} enregistrements</span>
           </v-list-item>

@@ -1,8 +1,8 @@
 <template>
   <v-row>
-    <v-col>
+    <v-col class="py-0">
       <v-row class="px-3">
-        <h3 class="headline">
+        <h3 class="text-h6">
           Champs principaux
         </h3>
         <v-btn
@@ -41,8 +41,8 @@
         :editable="can('writeDescription')"
       />
 
-      <v-row class="px-3 pt-6">
-        <h3 class="headline">
+      <v-row class="px-3 pt-3">
+        <h3 class="text-h6">
           Champs calculés
         </h3>
       </v-row>
@@ -56,7 +56,7 @@
 
       <template v-for="extension in extensions">
         <v-row :key="`${extension.key}-title`" class="px-3 pt-6">
-          <h3 class="headline">
+          <h3 class="text-h6">
             Extension: {{ remoteServicesMap[extension.remoteService].actions[extension.action].summary }} (service {{ remoteServicesMap[extension.remoteService].title }})
           </h3>
         </v-row>

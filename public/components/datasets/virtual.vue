@@ -1,6 +1,6 @@
 <template lang="html">
   <v-container fluid>
-    <h2 class="headline mt-3 mb-3">
+    <h2 class="text-h6 mt-3 mb-3">
       Jeux de données agrégés
     </h2>
 
@@ -70,7 +70,7 @@
       </v-data-table>
     </v-card>
 
-    <h2 class="headline mt-4 mb-3">
+    <h2 class="text-h6 mt-4 mb-3">
       Champs sélectionnés
     </h2>
 

@@ -25,7 +25,7 @@
       />
 
       <div v-if="remoteService.parameters.length">
-        <h2 class="headline mt-3 mb-3">
+        <h2 class="text-h6 mt-3 mb-3">
           Paramètres statiques
         </h2>
 

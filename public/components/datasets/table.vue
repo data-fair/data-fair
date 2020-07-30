@@ -3,161 +3,191 @@
     <div v-if="notFound">
       <p>Les données ne sont pas accessibles. Soit le jeu de données n'a pas encore été entièrement traité, soit il y a eu une erreur dans le traitement.</p>
     </div>
-    <v-row class="px-3">
-      <v-col>
-        <v-row class="px-3">
-          <nb-results :total="data.total" />
-          <v-btn
-            v-if="dataset.isRest && can('writeData')"
-            color="primary"
-            fab
-            x-small
-            class="mx-2"
-            @click="editedLine = null; showEditLineDialog();"
-          >
-            <v-icon>mdi-plus</v-icon>
-          </v-btn>
-        </v-row>
-        <v-row>
-          <v-col
-            lg="3"
-            md="4"
-            sm="5"
-            cols="12"
-          >
-            <v-text-field
-              v-model="query"
-              label="Rechercher"
-              append-icon="mdi-magnify"
-              class="mr-3"
-              style="min-width:150px;"
-              @keyup.enter.native="refresh(true)"
-              @click:append="refresh(true)"
+    <template v-else>
+      <v-row class="px-3">
+        <v-col class="pb-0">
+          <v-row class="px-3">
+            <nb-results :total="data.total" />
+            <v-btn
+              v-if="dataset.isRest && can('writeData')"
+              color="primary"
+              fab
+              x-small
+              class="mx-2"
+              @click="editedLine = null; showEditLineDialog();"
+            >
+              <v-icon>mdi-plus</v-icon>
+            </v-btn>
+          </v-row>
+          <v-row>
+            <v-col
+              lg="3"
+              md="4"
+              sm="5"
+              cols="12"
+            >
+              <v-text-field
+                v-model="query"
+                placeholder="Rechercher"
+                append-icon="mdi-magnify"
+                class="mr-3"
+                solo
+                dense
+                hide-details
+                style="min-width:150px;"
+                @keyup.enter.native="refresh(true)"
+                @click:append="refresh(true)"
+              />
+            </v-col>
+            <v-spacer />
+            <v-col
+              v-show="$vuetify.breakpoint.mdAndUp"
+              xl="1"
+              lg="1"
+              md="2"
+              class="pt-0"
+            >
+              <v-select
+                v-model="pagination.itemsPerPage"
+                :items="[10,20,50]"
+                hide-details
+                label="Nombre de lignes"
+              />
+            </v-col>
+            <v-pagination
+              v-if="data.total > pagination.itemsPerPage"
+              v-model="pagination.page"
+              circle
+              :length="Math.ceil(Math.min(data.total, 10000 - pagination.itemsPerPage) / pagination.itemsPerPage)"
+              :total-visible="$vuetify.breakpoint.lgAndUp ? 7 : 5"
+              class="mx-4"
             />
-          </v-col>
-          <v-spacer />
-          <v-col
-            v-show="$vuetify.breakpoint.mdAndUp"
-            xl="1"
-            lg="1"
-            md="2"
-          >
-            <v-select
-              v-model="pagination.itemsPerPage"
-              :items="[5, 10,20,50]"
-              label="Nombre de lignes"
-            />
-          </v-col>
-          <v-pagination
-            v-if="data.total > pagination.itemsPerPage"
-            v-model="pagination.page"
-            circle
-            :length="Math.ceil(Math.min(data.total, 10000 - pagination.itemsPerPage) / pagination.itemsPerPage)"
-            :total-visible="$vuetify.breakpoint.lgAndUp ? 7 : 5"
-            class="mx-4"
-          />
-        </v-row>
-      </v-col>
-    </v-row>
-    <v-data-table
-      :headers="headers"
-      :items="data.results"
-      :server-items-length="data.total"
-      :loading="loading"
-      :multi-sort="false"
-      :options.sync="pagination"
-      hide-default-footer
-      hide-default-header
-    >
-      <template v-slot:header>
-        <thead class="v-data-table-header">
+          </v-row>
+        </v-col>
+      </v-row>
+      <v-row v-if="filters.length">
+        <v-col class="pb-1 pt-1">
+          <dataset-filters v-model="filters" />
+        </v-col>
+      </v-row>
+      <v-data-table
+        :headers="headers"
+        :items="data.results"
+        :server-items-length="data.total"
+        :loading="loading"
+        :multi-sort="false"
+        :options.sync="pagination"
+        hide-default-footer
+        hide-default-header
+      >
+        <template v-slot:header>
+          <thead class="v-data-table-header">
+            <tr>
+              <th
+                v-for="header in headers"
+                :key="header.value"
+                :class="{'text-start': true, sortable: header.sortable, active : header.value === pagination.sortBy[0], asc: !pagination.sortDesc[0], desc: pagination.sortDesc[0]}"
+                nowrap
+                @click="orderBy(header)"
+              >
+                <v-tooltip
+                  v-if="header.tooltip"
+                  bottom
+                  style="margin-right: 8px;"
+                >
+                  <template v-slot:activator="{ on }">
+                    <v-icon small v-on="on">
+                      mdi-information
+                    </v-icon>
+                  </template>
+                  <span>{{ header.tooltip }}</span>
+                </v-tooltip>
+                <span>
+                  {{ header.text }}
+                </span>
+                <v-icon
+                  v-if="header.sortable"
+                  class="v-data-table-header__icon"
+                  small
+                >
+                  mdi-arrow-up
+                </v-icon>
+              </th>
+            </tr>
+          </thead>
+        </template>
+        <template v-slot:item="{item}">
           <tr>
-            <th
+            <td
               v-for="header in headers"
               :key="header.value"
-              :class="{'text-start': true, sortable: header.sortable, active : header.value === pagination.sortBy[0], asc: !pagination.sortDesc[0], desc: pagination.sortDesc[0]}"
-              nowrap
-              @click="orderBy(header)"
+              class="pr-0 pl-4"
+              :style="`height: 40px`"
             >
-              <v-tooltip
-                v-if="header.tooltip"
-                bottom
-                style="margin-right: 8px;"
-              >
-                <template v-slot:activator="{ on }">
-                  <v-icon small v-on="on">
-                    mdi-information
-                  </v-icon>
-                </template>
-                <span>{{ header.tooltip }}</span>
-              </v-tooltip>
-              <span>
-                {{ header.text }}
-              </span>
-              <v-icon
-                v-if="header.sortable"
-                class="v-data-table-header__icon"
-                small
-              >
-                mdi-arrow-up
-              </v-icon>
-            </th>
+              <div v-if="header.value === '_actions'" style="min-width:120px;">
+                <v-btn
+                  icon
+                  color="warning"
+                  title="Supprimer cette ligne"
+                  @click="editedLine = Object.assign({}, item); deleteLineDialog = true;"
+                >
+                  <v-icon>mdi-delete</v-icon>
+                </v-btn>
+                <v-btn
+                  icon
+                  color="primary"
+                  title="Éditer cette ligne"
+                  @click="editedLine = Object.assign({}, item); showEditLineDialog();"
+                >
+                  <v-icon>mdi-pencil</v-icon>
+                </v-btn>
+                <v-btn
+                  v-if="dataset.rest && dataset.rest.history"
+                  icon
+                  color="primary"
+                  title="Voir l'historique des révisions de cette ligne"
+                  @click="showHistoryDialog(item)"
+                >
+                  <v-icon>mdi-history</v-icon>
+                </v-btn>
+              </div>
+              <template v-else-if="header.value === '_thumbnail'">
+                <v-avatar
+                  v-if="item._thumbnail"
+                  tile
+                  :size="40"
+                >
+                  <img :src="item._thumbnail">
+                </v-avatar>
+              </template>
+              <template v-else-if="digitalDocumentField && digitalDocumentField.key === header.value">
+                <a :href="item._attachment_url">{{ item[header.value] }}</a>
+              </template>
+              <template v-else>
+                <v-hover v-slot:default="{ hover }">
+                  <div :style="`position: relative; max-height: 40px; min-width: ${Math.min((item[header.value] + '').length, 50) * 6}px;`">
+                    <span>
+                      {{ ((item[header.value] === undefined || item[header.value] === null ? '' : item[header.value]) + '') | truncate(50) }}
+                    </span>
+                    <v-btn
+                      v-if="hover && !filters.find(f => f.field.key === header.value) && isFilterable(item[header.value])"
+                      fab
+                      x-small
+                      color="primary"
+                      style="top: -5px;right: -8px;"
+                      absolute
+                      @click="addFilter(header.value, item[header.value])"
+                    >
+                      <v-icon>mdi-filter-variant</v-icon>
+                    </v-btn>
+                  </div>
+                </v-hover>
+              </template>
+            </td>
           </tr>
-        </thead>
-      </template>
-      <template v-slot:item="{item}">
-        <tr>
-          <td
-            v-for="header in headers"
-            :key="header.value"
-            class="pr-0 pl-4"
-          >
-            <div v-if="header.value === '_actions'" style="min-width:120px;">
-              <v-btn
-                icon
-                color="warning"
-                title="Supprimer cette ligne"
-                @click="editedLine = Object.assign({}, item); deleteLineDialog = true;"
-              >
-                <v-icon>mdi-delete</v-icon>
-              </v-btn>
-              <v-btn
-                icon
-                color="primary"
-                title="Éditer cette ligne"
-                @click="editedLine = Object.assign({}, item); showEditLineDialog();"
-              >
-                <v-icon>mdi-pencil</v-icon>
-              </v-btn>
-              <v-btn
-                v-if="dataset.rest && dataset.rest.history"
-                icon
-                color="primary"
-                title="Voir l'historique des révisions de cette ligne"
-                @click="showHistoryDialog(item)"
-              >
-                <v-icon>mdi-history</v-icon>
-              </v-btn>
-            </div>
-            <template v-else-if="header.value === '_thumbnail'">
-              <v-avatar
-                v-if="item._thumbnail"
-                tile
-                :size="40"
-              >
-                <img :src="item._thumbnail">
-              </v-avatar>
-            </template>
-            <template v-else-if="digitalDocumentField && digitalDocumentField.key === header.value">
-              <a v-if="item._attachment_url" :href="item._attachment_url">{{ item[header.value] }}</a>
-            </template>
-            <template v-else>
-              {{ ((item[header.value] === undefined || item[header.value] === null ? '' : item[header.value]) + '') | truncate(50) }}
-            </template>
-          </td>
-        </tr>
-      </template>
-    </v-data-table>
+        </template>
+      </v-data-table>
+    </template>
 
     <v-dialog
       v-model="editLineDialog"
@@ -272,16 +302,17 @@
   import VJsf from '@koumoul/vjsf/lib/VJsf.js'
   import '@koumoul/vjsf/dist/main.css'
   import NbResults from '~/components/datasets/nb-results'
+  import DatasetFilters from '~/components/datasets/filters'
+  const filtersUtils = require('~/assets/filters-utils')
 
   export default {
-    components: { VJsf, NbResults },
+    components: { VJsf, NbResults, DatasetFilters },
     data: () => ({
       data: {},
       query: null,
-      select: [],
       pagination: {
         page: 1,
-        itemsPerPage: 5,
+        itemsPerPage: 10,
         sortBy: [null],
         sortDesc: [false],
       },
@@ -302,6 +333,7 @@
         page: 1,
         itemsPerPage: 10,
       },
+      filters: [],
     }),
     computed: {
       ...mapState(['vocabulary']),
@@ -310,7 +342,6 @@
       headers() {
         const fieldsHeaders = this.dataset.schema
           .filter(field => !field['x-calculated'])
-          .filter(field => !this.select.length || this.select.includes(field.key))
           .map(field => ({
             text: field.title || field['x-originalName'] || field.key,
             value: field.key,
@@ -367,6 +398,12 @@
         },
         deep: true,
       },
+      filters: {
+        handler () {
+          this.refresh(true)
+        },
+        deep: true,
+      },
     },
     mounted() {
       this.refresh()
@@ -384,7 +421,9 @@
           params.sort = (this.pagination.sortDesc[0] ? '-' : '') + this.pagination.sortBy[0]
         }
         if (this.query) params.q = this.query
-        if (this.select.length) params.select = this.select.join(',')
+        if (this.filters.length) {
+          params.qs = filtersUtils.filters2qs(this.filters)
+        }
         this.loading = true
         try {
           this.data = await this.$axios.$get(this.resourceUrl + '/lines', { params })
@@ -477,6 +516,15 @@
           if (error.response && error.response.status === 404) this.notFound = true
           else eventBus.$emit('notification', { error, msg: 'Erreur pendant la suppression de la ligne\'' })
         }
+      },
+      addFilter(key, value) {
+        const field = this.dataset.schema.find(f => f.key === key)
+        this.filters.push({ type: 'in', field, values: [value] })
+      },
+      isFilterable(value) {
+        if (value === undefined || value === null || value === '') return false
+        if (typeof value === 'string' && (value.length > 200 || value.startsWith('{'))) return false
+        return true
       },
     },
   }

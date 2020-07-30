@@ -8,7 +8,7 @@
               <h3 class="display-1 mb-3 mt-5">
                 {{ $t('common.title') }}
               </h3>
-              <div class="headline">
+              <div class="text-h6">
                 {{ $t('pages.root.description') }}
               </div>
               <template v-if="initialized && !user">

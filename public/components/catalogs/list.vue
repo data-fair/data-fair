@@ -68,12 +68,12 @@
       <v-container class="fill-height">
         <v-row align="center">
           <v-col class="text-center">
-            <div v-if="!filtered" class="headline">
+            <div v-if="!filtered" class="text-h6">
               Vous n'avez pas encore ajouté de connecteur vers des catalogues externes.<br>Vous pouvez <nuxt-link :to="localePath('user-guide')">
                 consulter la documentation
               </nuxt-link> pour en savoir plus.
             </div>
-            <div v-else class="headline">
+            <div v-else class="text-h6">
               Aucun résultat ne correspond aux critères de recherche
             </div>
           </v-col>

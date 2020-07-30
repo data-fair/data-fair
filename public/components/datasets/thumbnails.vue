@@ -68,7 +68,7 @@
                 <div>
                   <h3
                     v-if="labelField"
-                    class="headline mb-0"
+                    class="text-h6 mb-0"
                   >
                     {{ item[labelField.key] }}
                   </h3>

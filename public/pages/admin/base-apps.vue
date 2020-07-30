@@ -99,7 +99,7 @@
     >
       <v-card v-if="currentBaseApp">
         <v-card-title primary-title>
-          <h3 class="headline mb-0">
+          <h3 class="text-h6 mb-0">
             Édition de {{ currentBaseApp.title }}
           </h3>
         </v-card-title>

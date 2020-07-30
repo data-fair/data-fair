@@ -44,7 +44,7 @@
               <h3 class="display-1 mb-3 mt-5">
                 {{ $t('pages.services.title') }}
               </h3>
-              <div class="headline">
+              <div class="text-h6">
                 {{ $t('pages.services.description') }}
               </div>
               <p class="title mt-5">

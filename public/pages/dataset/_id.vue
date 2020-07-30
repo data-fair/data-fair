@@ -2,13 +2,13 @@
   <v-container fluid>
     <v-row v-if="dataset" class="dataset">
       <v-col>
-        <v-card outlined>
+        <v-card outlined style="min-height: 440px;">
           <v-tabs>
             <v-tab href="#tab-general-info">
               Informations
             </v-tab>
             <v-tab-item value="tab-general-info">
-              <v-container fluid>
+              <v-container fluid class="pb-0">
                 <dataset-info />
               </v-container>
             </v-tab-item>
@@ -28,16 +28,16 @@
               Schéma
             </v-tab>
             <v-tab-item value="tab-general-schema">
-              <v-container fluid>
+              <v-container fluid class="pb-0">
                 <dataset-schema />
               </v-container>
             </v-tab-item>
 
             <v-tab href="#tab-general-extensions">
-              Extensions
+              Enrichissement
             </v-tab>
             <v-tab-item value="tab-general-extensions">
-              <v-container fluid>
+              <v-container fluid class="pt-0">
                 <dataset-extensions />
               </v-container>
             </v-tab-item>
@@ -46,9 +46,7 @@
               Pièces jointes
             </v-tab>
             <v-tab-item value="tab-general-attachments">
-              <v-container fluid>
-                <dataset-attachments />
-              </v-container>
+              <dataset-attachments />
             </v-tab-item>
           </v-tabs>
         </v-card>
@@ -83,7 +81,7 @@
               </v-tab>
               <v-tab-item value="tab-preview-map">
                 <v-container fluid class="pa-0">
-                  <dataset-map fixed-height="400" />
+                  <dataset-map fixed-height="600" />
                 </v-container>
               </v-tab-item>
             </template>
@@ -115,6 +113,7 @@
         <v-card
           v-if="can('getPermissions')"
           outlined
+          style="min-height: 240px;"
           class="mt-4"
         >
           <v-tabs>
@@ -122,7 +121,7 @@
               Permissions
             </v-tab>
             <v-tab-item value="tab-publish-permissions">
-              <v-container fluid>
+              <v-container fluid class="pt-0">
                 <permissions
                   v-if="can('getPermissions')"
                   :resource="dataset"
@@ -152,7 +151,7 @@
                 Journal
               </v-tab>
               <v-tab-item value="tab-tech-journal">
-                <v-container fluid>
+                <v-container fluid class="pa-0">
                   <journal
                     :journal="journal"
                     type="dataset"
