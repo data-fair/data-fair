@@ -105,7 +105,7 @@
             url: this.apiDocUrl,
             server: this.apiDoc.servers && this.apiDoc.servers.length && this.apiDoc.servers[0].url,
           })
-          this.$router.push({ path: `/remote-service/${remoteService.id}/description` })
+          this.$router.push({ path: `/remote-service/${remoteService.id}` })
         } catch (error) {
           eventBus.$emit('notification', { error, msg: 'Erreur pendant l\'import de la description du service' })
           this.importing = false

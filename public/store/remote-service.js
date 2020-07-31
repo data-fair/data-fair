@@ -34,7 +34,7 @@ export default () => ({
     },
     async setId({ commit, getters, dispatch, state }, remoteServiceId) {
       commit('setAny', { remoteServiceId })
-      dispatch('fetchInfo')
+      await dispatch('fetchInfo')
     },
     clear({ commit, state }) {
       commit('setAny', { remoteServiceId: null, remoteService: null })

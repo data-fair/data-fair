@@ -18,7 +18,7 @@
           >
             <v-list-item-content>
               <v-list-item-title>
-                <nuxt-link :to="`/dataset/${error.id}/description`">
+                <nuxt-link :to="`/dataset/${error.id}`">
                   {{ error.title }} ({{ error.owner.name }})
                 </nuxt-link>
               </v-list-item-title>
@@ -29,6 +29,7 @@
                 icon
                 color="primary"
                 target="blank"
+                title="reindex"
                 @click="reindex(error.id)"
               >
                 <v-icon>mdi-play</v-icon>
@@ -57,7 +58,7 @@
           >
             <v-list-item-content>
               <v-list-item-title>
-                <nuxt-link :to="`/application/${error.id}/description`">
+                <nuxt-link :to="`/application/${error.id}`">
                   {{ error.title }} ({{ error.owner.name }})
                 </nuxt-link>
               </v-list-item-title>

@@ -1,12 +1,5 @@
 <template>
   <div>
-    <h3
-      v-if="catalogs"
-      class="display-1"
-    >
-      {{ catalogs.count }} catalogue{{ plural }} configuré{{ plural }}
-    </h3>
-
     <search-filters
       :filter-labels="{}"
       :filters="filters"
@@ -29,7 +22,7 @@
         >
           <v-card
             height="100%"
-            :to="`/catalog/${catalog.id}/description`"
+            :to="`/catalog/${catalog.id}`"
             outlined
           >
             <v-card-title>
@@ -120,6 +113,7 @@
           params:
             { size: this.size, page: this.page, select: 'title,description', ...this.filters, facets: 'owner', sort: 'createdAt:-1' },
         })
+        this.$store.dispatch('breadcrumbs', [{ text: `${this.catalogs.count} ${this.plural ? 'connecteurs configurés' : 'connecteur configuré'}` }])
         this.filtered = this.filters.q !== undefined
         this.loading = false
       },

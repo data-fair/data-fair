@@ -56,7 +56,7 @@ export default () => ({
     },
     async setId({ commit, getters, dispatch, state }, applicationId) {
       commit('setAny', { applicationId })
-      dispatch('fetchInfo')
+      await dispatch('fetchInfo')
     },
     subscribe({ getters, dispatch }) {
       eventBus.$emit('subscribe', getters.journalChannel)

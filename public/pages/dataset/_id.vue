@@ -1,6 +1,6 @@
 <template>
-  <v-container fluid>
-    <v-row v-if="dataset" class="dataset">
+  <v-container v-if="dataset" fluid>
+    <v-row class="dataset">
       <v-col>
         <v-card outlined style="min-height: 440px;">
           <v-tabs>
@@ -218,8 +218,10 @@
       OpenApi,
     },
     async fetch({ store, params, route }) {
-      await store.dispatch('dataset/setId', route.params.id)
-      await store.dispatch('fetchVocabulary')
+      await Promise.all([
+        store.dispatch('dataset/setId', route.params.id),
+        store.dispatch('fetchVocabulary'),
+      ])
     },
     data: () => ({}),
     computed: {
@@ -229,7 +231,10 @@
         return this.dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')
       },
     },
-    mounted() {
+    created() {
+      // children pages are deprecated
+      const path = `/dataset/${this.$route.params.id}`
+      if (this.$route.path !== path) return this.$router.push(path)
       if (this.dataset) this.$store.dispatch('breadcrumbs', [{ text: 'Jeux de données', to: '/datasets' }, { text: this.dataset.title || this.dataset.id }])
       this.subscribe()
     },

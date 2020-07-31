@@ -1,51 +1,8 @@
 <template>
-  <v-row
-    v-if="application"
-    class="application"
-    :style="!mini && !$vuetify.breakpoint.lgAndUp ? 'padding-left: 64px;' : ''"
-  >
-    <v-navigation-drawer
-      app
-      stateless
-      clipped
-      :permanent="mini || $vuetify.breakpoint.lgAndUp"
-      :temporary="!mini && !$vuetify.breakpoint.lgAndUp"
-      :mini-variant="mini"
-      :value="true"
-    >
-      <v-list dense>
-        <v-list-item
-          v-if="mini"
-          style="min-height: 64px"
-          @click.stop="mini = false"
-        >
-          <v-list-item-action>
-            <v-icon>mdi-chevron-right</v-icon>
-          </v-list-item-action>
-        </v-list-item>
-        <v-list-item
-          v-else
-          style="min-height: 64px"
-        >
-          <v-list-item-title>{{ application.title || application.id }}</v-list-item-title>
-          <v-list-item-action style="min-width: 0;">
-            <v-btn
-              icon
-              @click.stop="mini = true"
-            >
-              <v-icon>mdi-chevron-left</v-icon>
-            </v-btn>
-          </v-list-item-action>
-        </v-list-item>
+  <v-container v-if="application" fluid>
+    <v-row class="application">
+      <!--
 
-        <v-list-item
-          :disabled="!can('readDescription')"
-          :nuxt="true"
-          :to="`/application/${application.id}/description`"
-        >
-          <v-list-item-action><v-icon>mdi-information</v-icon></v-list-item-action>
-          <v-list-item-title>Description</v-list-item-title>
-        </v-list-item>
         <v-list-item
           :disabled="!can('readConfig')"
           :nuxt="true"
@@ -70,243 +27,108 @@
           <v-list-item-action><v-icon>mdi-publish</v-icon></v-list-item-action>
           <v-list-item-title>Publications</v-list-item-title>
         </v-list-item>
-        <v-list-item
-          :disabled="!can('readJournal')"
-          :nuxt="true"
-          :to="`/application/${application.id}/journal`"
-        >
-          <v-list-item-action><v-icon>mdi-calendar-text</v-icon></v-list-item-action>
-          <v-list-item-title>Journal</v-list-item-title>
-        </v-list-item>
-        <v-list-item
-          :disabled="!can('readApiDoc')"
-          :nuxt="true"
-          :to="`/application/${application.id}/api`"
-        >
-          <v-list-item-action><v-icon>mdi-cloud</v-icon></v-list-item-action>
-          <v-list-item-title>API</v-list-item-title>
-        </v-list-item>
+
       </v-list>
-    </v-navigation-drawer>
+    </v-navigation-drawer>-->
 
-    <v-col>
-      <nuxt-child />
-    </v-col>
-
-    <div class="actions-buttons">
-      <v-menu
-        bottom
-        left
-      >
-        <template v-slot:activator="{on}">
-          <v-btn
-            fab
-            small
-            color="accent"
-            v-on="on"
-          >
-            <v-icon>mdi-dots-vertical</v-icon>
-          </v-btn>
-        </template>
-
-        <v-list>
-          <v-list-item
-            :disabled="!can('readConfig')"
-            :href="applicationLink"
-            target="_blank"
-          >
-            <v-list-item-avatar>
-              <v-icon color="primary">
-                mdi-exit-to-app
-              </v-icon>
-            </v-list-item-avatar>
-            <v-list-item-title>Accéder à l'application</v-list-item-title>
-          </v-list-item>
-
-          <v-list-item
-            v-if="can('writeConfig')"
-            @click="showIntegrationDialog = true"
-          >
-            <v-list-item-avatar>
-              <v-icon color="primary">
-                mdi-code-tags
-              </v-icon>
-            </v-list-item-avatar>
-            <v-list-item-title>Intégrer dans un site</v-list-item-title>
-          </v-list-item>
-
-          <v-list-item
-            v-if="can('writeConfig')"
-            @click="showCaptureDialog = true"
-          >
-            <v-list-item-avatar>
-              <v-icon color="primary">
-                mdi-camera
-              </v-icon>
-            </v-list-item-avatar>
-            <v-list-item-title>Effectuer une capture</v-list-item-title>
-          </v-list-item>
-
-          <v-list-item
-            v-if="can('delete')"
-            @click="showDeleteDialog = true"
-          >
-            <v-list-item-avatar>
-              <v-icon color="warning">
-                mdi-delete
-              </v-icon>
-            </v-list-item-avatar>
-            <v-list-item-title>Supprimer</v-list-item-title>
-          </v-list-item>
-
-          <v-list-item
-            v-if="can('delete')"
-            @click="showOwnerDialog = true"
-          >
-            <v-list-item-avatar>
-              <v-icon color="warning">
-                mdi-account
-              </v-icon>
-            </v-list-item-avatar>
-            <v-list-item-title>Changer de propriétaire</v-list-item-title>
-          </v-list-item>
-        </v-list>
-      </v-menu>
-    </div>
-
-    <v-dialog v-model="showIntegrationDialog">
-      <v-card>
-        <v-toolbar
-          dense
-          flat
+      <v-col>
+        <application-info />
+        <application-config />
+        <v-card
+          v-if="can('getPermissions')"
+          outlined
+          style="min-height: 240px;"
+          class="mt-4"
         >
-          <v-toolbar-title>Intégrer dans un site</v-toolbar-title>
-          <v-spacer />
-          <v-btn
-            icon
-            @click.native="showIntegrationDialog = false"
-          >
-            <v-icon>mdi-close</v-icon>
-          </v-btn>
-        </v-toolbar>
-        <v-card-text v-if="showIntegrationDialog">
-          Pour intégrer cette application dans un site vous pouvez copier le code suivant ou un code similaire dans le contenu HTML de votre site.
-          <br>
-          <pre>
-&lt;iframe src="{{ applicationLink }}?embed=true" width="100%" height="500px" style="background-color: transparent; border: none;"/&gt;
-          </pre>
-          <br>
-          Résultat:
-          <iframe
-            :src="applicationLink + '?embed=true'"
-            width="100%"
-            height="500px"
-            style="background-color: transparent; border: none;"
-          />
-        </v-card-text>
-      </v-card>
-    </v-dialog>
+          <v-tabs>
+            <v-tab href="#tab-publish-permissions">
+              Permissions
+            </v-tab>
+            <v-tab-item value="tab-publish-permissions">
+              <v-container fluid class="pt-0">
+                <permissions
+                  v-if="can('getPermissions')"
+                  :resource="application"
+                  :resource-url="resourceUrl"
+                  :api="api"
+                />
+              </v-container>
+            </v-tab-item>
 
-    <v-dialog
-      v-model="showCaptureDialog"
-      max-width="500"
-    >
-      <v-card>
-        <v-toolbar
-          dense
-          flat
+            <v-tab href="#tab-publish-publications">
+              Publications
+            </v-tab>
+            <v-tab-item value="tab-publish-publications">
+              <application-publications />
+            </v-tab-item>
+          </v-tabs>
+        </v-card>
+
+        <v-card
+          v-if="can('readJournal') || can('readApiDoc')"
+          outlined
+          class="mt-4"
         >
-          <v-toolbar-title>Effectuer une capture</v-toolbar-title>
-          <v-spacer />
-          <v-btn
-            icon
-            @click.native="showCaptureDialog = false"
-          >
-            <v-icon>mdi-close</v-icon>
-          </v-btn>
-        </v-toolbar>
-        <v-card-text v-if="showCaptureDialog">
-          <p>Une image statique au format PNG va être créée à partir de cette visualisation.</p>
-          <v-text-field
-            v-model="captureWidth"
-            label="Largeur"
-            type="number"
-          />
-          <v-text-field
-            v-model="captureHeight"
-            label="Hauteur"
-            type="number"
-          />
-          <br>
-          <a
-            :href="`${env.captureUrl}/api/v1/screenshot?target=${encodeURIComponent(applicationLink)}&width=${captureWidth}&height=${captureHeight}`"
-            download
-          >Télécharger la capture</a>
-        </v-card-text>
-      </v-card>
-    </v-dialog>
+          <v-tabs>
+            <template v-if="can('readJournal')">
+              <v-tab href="#tab-tech-journal">
+                Journal
+              </v-tab>
+              <v-tab-item value="tab-tech-journal">
+                <v-container fluid class="pa-0">
+                  <journal
+                    :journal="journal"
+                    type="application"
+                  />
+                </v-container>
+              </v-tab-item>
+            </template>
 
-    <v-dialog
-      v-model="showDeleteDialog"
-      max-width="500"
-    >
-      <v-card>
-        <v-card-title primary-title>
-          Suppression de la visualisation
-        </v-card-title>
-        <v-card-text>
-          Voulez vous vraiment supprimer la visualisation "{{ application.title }}" ? La suppression est définitive et le paramétrage ne pourra pas être récupéré.
-        </v-card-text>
-        <v-card-actions>
-          <v-spacer />
-          <v-btn text @click="showDeleteDialog = false">
-            Non
-          </v-btn>
-          <v-btn
-            color="warning"
-            @click="confirmRemove"
-          >
-            Oui
-          </v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
+            <template v-if="can('readApiDoc')">
+              <v-tab href="#tab-tech-apidoc">
+                API
+              </v-tab>
+              <v-tab-item value="tab-tech-apidoc">
+                <v-container fluid class="pa-0">
+                  <open-api
+                    v-if="resourceUrl"
+                    :url="resourceUrl + '/api-docs.json'"
+                  />
+                </v-container>
+              </v-tab-item>
+            </template>
+          </v-tabs>
+        </v-card>
+      </v-col>
 
-    <v-dialog
-      v-model="showOwnerDialog"
-      max-width="900"
-    >
-      <v-card>
-        <v-card-title primary-title>
-          Changer le propriétaire de l'application
-        </v-card-title>
-        <v-card-text>
-          <owner-pick v-model="newOwner" />
-        </v-card-text>
-        <v-card-actions>
-          <v-spacer />
-          <v-btn text @click="showOwnerDialog = false">
-            Annuler
-          </v-btn>
-          <v-btn
-            :disabled="!newOwner"
-            color="warning"
-            @click="changeOwner(newOwner); showOwnerDialog = false;"
-          >
-            Confirmer
-          </v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
-  </v-row>
+      <application-actions />
+    </v-row>
+  </v-container>
 </template>
 
 <script>
   import { mapState, mapActions, mapGetters } from 'vuex'
-  import OwnerPick from '~/components/owners/pick.vue'
+  import ApplicationActions from '~/components/applications/actions.vue'
+  import ApplicationInfo from '~/components/applications/info.vue'
+  import ApplicationPublications from '~/components/applications/publications.vue'
+  import ApplicationConfig from '~/components/applications/config.vue'
+  import Permissions from '~/components/permissions.vue'
+  import Journal from '~/components/journal.vue'
+  import OpenApi from '~/components/open-api.vue'
 
   export default {
-    components: { OwnerPick },
+    components: {
+      ApplicationActions,
+      ApplicationInfo,
+      ApplicationPublications,
+      ApplicationConfig,
+      Permissions,
+      Journal,
+      OpenApi,
+    },
+    async fetch({ store, params, route }) {
+      await store.dispatch('application/setId', route.params.id)
+    },
     data: () => ({
       showDeleteDialog: false,
       showIntegrationDialog: false,
@@ -315,28 +137,24 @@
       newOwner: null,
       captureWidth: 800,
       captureHeight: 450,
-      mini: false,
     }),
     computed: {
       ...mapState(['env']),
-      ...mapState('application', ['application', 'api']),
+      ...mapState('application', ['application', 'api', 'journal']),
       ...mapGetters('application', ['resourceUrl', 'can', 'applicationLink']),
     },
-    mounted() {
-      this.setId(this.$route.params.id)
+    created() {
+      // children pages are deprecated
+      const path = `/application/${this.$route.params.id}`
+      if (this.$route.path !== path) return this.$router.push(path)
+      this.$store.dispatch('breadcrumbs', [{ text: 'Visualisations', to: '/applications' }, { text: this.application.title || this.application.id }])
       this.subscribe()
     },
     destroyed() {
       this.clear()
     },
     methods: {
-      ...mapActions(['fetchVocabulary']),
-      ...mapActions('application', ['setId', 'patch', 'remove', 'clear', 'changeOwner', 'subscribe']),
-      async confirmRemove() {
-        this.showDeleteDialog = false
-        await this.remove()
-        this.$router.push({ path: '/applications' })
-      },
+      ...mapActions('application', ['patch', 'clear', 'subscribe']),
     },
   }
 </script>

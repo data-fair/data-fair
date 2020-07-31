@@ -1,180 +1,88 @@
 <template>
-  <v-row
-    v-if="remoteService"
-    class="remoteService"
-    :style="!mini && !$vuetify.breakpoint.lgAndUp ? 'padding-left: 64px;' : ''"
-  >
-    <v-navigation-drawer
-      app
-      stateless
-      clipped
-      :permanent="mini || $vuetify.breakpoint.lgAndUp"
-      :temporary="!mini && !$vuetify.breakpoint.lgAndUp"
-      :mini-variant="mini"
-      :value="true"
-    >
-      <v-list dense>
-        <v-list-item
-          v-if="mini"
-          style="min-height: 64px"
-          @click.stop="mini = false"
-        >
-          <v-list-item-action>
-            <v-icon>mdi-chevron-right</v-icon>
-          </v-list-item-action>
-        </v-list-item>
-        <v-list-item
-          v-else
-          style="min-height: 64px"
-        >
-          <v-list-item-title>{{ remoteService.title || remoteService.id }}</v-list-item-title>
-          <v-list-item-action style="min-width: 0;">
-            <v-btn
-              icon
-              @click.stop="mini = true"
-            >
-              <v-icon>mdi-chevron-left</v-icon>
-            </v-btn>
-          </v-list-item-action>
-        </v-list-item>
+  <v-container v-if="remoteService" fluid>
+    <v-row class="remoteService">
+      <v-col>
+        <v-card outlined style="min-height: 330px;">
+          <v-tabs>
+            <v-tab href="#tab-general-info">
+              Informations
+            </v-tab>
+            <v-tab-item value="tab-general-info">
+              <v-container fluid>
+                <remote-service-info />
+              </v-container>
+            </v-tab-item>
 
-        <v-list-item
-          :nuxt="true"
-          :to="`/remote-service/${remoteService.id}/description`"
-        >
-          <v-list-item-action><v-icon>mdi-information</v-icon></v-list-item-action>
-          <v-list-item-title>Description</v-list-item-title>
-        </v-list-item>
-        <v-list-item
-          v-if="user.adminMode"
-          color="admin"
-          :nuxt="true"
-          :to="`/remote-service/${remoteService.id}/config`"
-        >
-          <v-list-item-action><v-icon>mdi-wrench</v-icon></v-list-item-action>
-          <v-list-item-title>Configuration</v-list-item-title>
-        </v-list-item>
-        <v-list-item
-          :nuxt="true"
-          :to="`/remote-service/${remoteService.id}/api`"
-        >
-          <v-list-item-action><v-icon>mdi-cloud</v-icon></v-list-item-action>
-          <v-list-item-title>API</v-list-item-title>
-        </v-list-item>
-      </v-list>
-    </v-navigation-drawer>
+            <v-tab href="#tab-general-schema">
+              Schéma
+            </v-tab>
+            <v-tab-item value="tab-general-schema">
+              <remote-service-schema />
+            </v-tab-item>
+          </v-tabs>
+        </v-card>
 
-    <v-col>
-      <nuxt-child />
-    </v-col>
+        <v-card outlined class="mt-4">
+          <v-tabs>
+            <v-tab href="#tab-tech-config">
+              Configuration
+            </v-tab>
+            <v-tab-item value="tab-tech-config">
+              <remote-service-config />
+            </v-tab-item>
 
-    <div class="actions-buttons">
-      <v-menu
-        bottom
-        left
-      >
-        <template v-slot:activator="{on}">
-          <v-btn
-            fab
-            small
-            color="accent"
-            v-on="on"
-          >
-            <v-icon>mdi-dots-vertical</v-icon>
-          </v-btn>
-        </template>
-        <v-list>
-          <v-list-item
-            v-if="remoteService.apiDoc.externalDocs"
-            :href="remoteService.apiDoc.externalDocs.url"
-            target="_blank"
-          >
-            <v-list-item-avatar>
-              <v-icon>mdi-information</v-icon>
-            </v-list-item-avatar>
-            <v-list-item-title>Documentation externe</v-list-item-title>
-          </v-list-item>
+            <v-tab href="#tab-tech-apidoc">
+              API
+            </v-tab>
+            <v-tab-item value="tab-tech-apidoc">
+              <v-container fluid class="pa-0">
+                <open-api
+                  v-if="resourceUrl"
+                  :url="resourceUrl + '/api-docs.json'"
+                />
+              </v-container>
+            </v-tab-item>
+          </v-tabs>
+        </v-card>
+      </v-col>
 
-          <v-list-item
-            v-if="user.adminMode"
-            color="admin"
-            @click="refresh"
-          >
-            <v-list-item-avatar>
-              <v-icon color="admin">
-                mdi-refresh
-              </v-icon>
-            </v-list-item-avatar>
-            <v-list-item-title>Mettre a jour la description de l'API</v-list-item-title>
-          </v-list-item>
-
-          <v-list-item
-            v-if="user.adminMode"
-            color="admin"
-            @click="showDeleteDialog = true"
-          >
-            <v-list-item-avatar>
-              <v-icon color="admin">
-                mdi-delete
-              </v-icon>
-            </v-list-item-avatar>
-            <v-list-item-title>Supprimer</v-list-item-title>
-          </v-list-item>
-        </v-list>
-      </v-menu>
-    </div>
-
-    <v-dialog
-      v-model="showDeleteDialog"
-      max-width="500"
-    >
-      <v-card>
-        <v-card-title primary-title>
-          Suppression de la configuration du service
-        </v-card-title>
-        <v-card-text>
-          Voulez vous vraiment supprimer la configuration du service "{{ remoteService.title }}" ? La suppression est définitive et le paramétrage ne pourra pas être récupéré.
-        </v-card-text>
-        <v-card-actions>
-          <v-spacer />
-          <v-btn text @click="showDeleteDialog = false">
-            Non
-          </v-btn>
-          <v-btn
-            color="warning"
-            @click="confirmRemove"
-          >
-            Oui
-          </v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
-  </v-row>
+      <remote-service-actions />
+    </v-row>
+  </v-container>
 </template>
 
 <script>
   import { mapState, mapActions, mapGetters } from 'vuex'
+  import RemoteServiceActions from '~/components/remote-services/actions.vue'
+  import RemoteServiceInfo from '~/components/remote-services/info.vue'
+  import RemoteServiceSchema from '~/components/remote-services/schema.vue'
+  import RemoteServiceConfig from '~/components/remote-services/config.vue'
+  import OpenApi from '~/components/open-api.vue'
 
   export default {
-    data: () => ({
-      showDeleteDialog: false,
-      mini: false,
-    }),
+    components: { RemoteServiceActions, RemoteServiceInfo, RemoteServiceSchema, RemoteServiceConfig, OpenApi },
+    async fetch({ store, params, route }) {
+      await Promise.all([
+        store.dispatch('remoteService/setId', route.params.id),
+        store.dispatch('fetchVocabulary'),
+      ])
+    },
     computed: {
       ...mapState('session', ['user']),
       ...mapState('remoteService', ['remoteService', 'api']),
       ...mapGetters('remoteService', ['resourceUrl']),
     },
-    mounted() {
-      this.setId(this.$route.params.id)
-      this.fetchVocabulary()
+    created() {
+      // children pages are deprecated
+      const path = `/remote-service/${this.$route.params.id}`
+      if (this.$route.path !== path) return this.$router.push(path)
+      this.$store.dispatch('breadcrumbs', [{ text: 'Services', to: '/remote-services' }, { text: this.remoteService.title || this.remoteService.id }])
     },
     destroyed() {
       this.clear()
     },
     methods: {
-      ...mapActions(['fetchVocabulary']),
-      ...mapActions('remoteService', ['setId', 'patch', 'remove', 'clear', 'refresh']),
+      ...mapActions('remoteService', ['patch', 'remove', 'clear', 'refresh']),
       async confirmRemove() {
         this.showDeleteDialog = false
         await this.remove()

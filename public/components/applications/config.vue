@@ -1,5 +1,5 @@
 <template lang="html">
-  <v-container fluid>
+  <v-container fluid class="pa-0">
     <no-ssr>
       <v-row>
         <v-col
@@ -125,38 +125,37 @@
         </v-expansion-panel>
       </v-expansion-panels>
     -->
+      <v-dialog
+        v-model="showCancelDialog"
+        max-width="500px"
+      >
+        <v-card>
+          <v-card-title primary-title>
+            Effacer le brouillon
+          </v-card-title>
+          <v-card-text>
+            <v-alert
+              :value="true"
+              type="error"
+            >
+              Attention le brouillon sera perdu et l'application reviendra à son état validé précédent.
+            </v-alert>
+          </v-card-text>
+          <v-card-actions>
+            <v-spacer />
+            <v-btn text @click="showCancelDialog = false">
+              Annuler
+            </v-btn>
+            <v-btn
+              color="warning"
+              @click="cancelDraft(); showCancelDialog = false;"
+            >
+              Confirmer
+            </v-btn>
+          </v-card-actions>
+        </v-card>
+      </v-dialog>
     </no-ssr>
-
-    <v-dialog
-      v-model="showCancelDialog"
-      max-width="500px"
-    >
-      <v-card>
-        <v-card-title primary-title>
-          Effacer le brouillon
-        </v-card-title>
-        <v-card-text>
-          <v-alert
-            :value="true"
-            type="error"
-          >
-            Attention le brouillon sera perdu et l'application reviendra à son état validé précédent.
-          </v-alert>
-        </v-card-text>
-        <v-card-actions>
-          <v-spacer />
-          <v-btn text @click="showCancelDialog = false">
-            Annuler
-          </v-btn>
-          <v-btn
-            color="warning"
-            @click="cancelDraft(); showCancelDialog = false;"
-          >
-            Confirmer
-          </v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
   </v-container>
 </template>
 

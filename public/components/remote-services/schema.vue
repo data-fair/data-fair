@@ -11,7 +11,7 @@
             v-if="!item.inputCollection || !item.outputCollection"
             title="Opération unitaire"
           >
-            description
+            mdi-description
           </v-icon>
           <v-icon
             v-if="item.inputCollection && item.outputCollection"

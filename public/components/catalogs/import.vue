@@ -119,7 +119,7 @@
         this.importing = true
         try {
           const catalog = await this.$axios.$post('api/v1/catalogs', this.catalog)
-          this.$router.push({ path: `/catalog/${catalog.id}/description` })
+          this.$router.push({ path: `/catalog/${catalog.id}` })
         } catch (error) {
           eventBus.$emit('notification', { error, msg: 'Erreur pendant l\'import de la description du catalogue' })
           this.importing = false

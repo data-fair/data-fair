@@ -29,7 +29,7 @@
             >
               <v-list-item-content>
                 <v-list-item-title>
-                  {{ owner.name }} ({{ owner.type }})
+                  {{ owner.name || owner.id }} ({{ owner.type }})
                 </v-list-item-title>
                 <v-list-item-subtitle>
                   <span v-if="owner.consumption && (owner.consumption.storage !== undefined)">{{ parseFloat(((owner.consumption && owner.consumption.storage || 0) / 1000).toFixed(2)).toLocaleString() }} ko stockés</span>

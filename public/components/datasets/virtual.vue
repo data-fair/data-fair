@@ -43,7 +43,7 @@
           <tr v-if="childrenById[item]">
             <td class="pt-3">
               <span class="subheading">
-                <nuxt-link :to="`/dataset/${item}/description`">{{ childrenById[item].title }} ({{ childrenById[item].id }})</nuxt-link>
+                <nuxt-link :to="`/dataset/${item}`">{{ childrenById[item].title }} ({{ childrenById[item].id }})</nuxt-link>
               </span>
               <v-select
                 :items="childrenById[item].schema.filter(f => !f['x-calculated'] && !existingFields.includes(f.key))"

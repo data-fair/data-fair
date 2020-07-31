@@ -105,7 +105,7 @@
       async createDataset() {
         try {
           const dataset = await this.$axios.$post('api/v1/datasets', { isVirtual: true, title: this.title, virtual: { children: this.children } })
-          this.$router.push({ path: `/dataset/${dataset.id}/description` })
+          this.$router.push({ path: `/dataset/${dataset.id}` })
         } catch (error) {
           eventBus.$emit('notification', { error, msg: 'Erreur pendant la création du jeu de données virtual :' })
         }

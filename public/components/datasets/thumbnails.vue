@@ -119,7 +119,7 @@
         return this.dataset.schema.find(f => f['x-refersTo'] === 'http://www.w3.org/2000/01/rdf-schema#label')
       },
       descriptionField() {
-        return this.dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/description')
+        return this.dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org')
       },
     },
     watch: {

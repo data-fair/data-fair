@@ -196,7 +196,7 @@
           } else {
             dataset = await this.$axios.$post('api/v1/datasets/' + this.action.id, formData, options)
           }
-          this.$router.push({ path: `/dataset/${dataset.id}/description` })
+          this.$router.push({ path: `/dataset/${dataset.id}` })
         } catch (error) {
           const status = error.response && error.response.status
           if (status === 413) {

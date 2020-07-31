@@ -1,12 +1,5 @@
 <template>
   <div>
-    <h3
-      v-if="remoteServices"
-      class="display-1"
-    >
-      {{ remoteServices.count }} service{{ plural }} configuré{{ plural }}
-    </h3>
-
     <search-filters
       :filter-labels="{}"
       :hide-owners="true"
@@ -30,7 +23,7 @@
         >
           <v-card
             height="100%"
-            :to="`/remote-service/${remoteService.id}/description`"
+            :to="`/remote-service/${remoteService.id}`"
             outlined
           >
             <v-card-title>
@@ -90,6 +83,7 @@
           params:
             { size: this.size, page: this.page, select: 'title,description', ...this.filters },
         })
+        this.$store.dispatch('breadcrumbs', [{ text: `${this.remoteServices.count} service${this.plural ? 's' : ''}` }])
         this.filtered = this.filters.q !== undefined
         this.loading = false
       },

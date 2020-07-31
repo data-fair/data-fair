@@ -39,7 +39,7 @@ export default () => ({
     },
     async setId({ commit, getters, dispatch, state }, catalogId) {
       commit('setAny', { catalogId })
-      dispatch('fetchInfo')
+      await dispatch('fetchInfo')
     },
     clear({ commit, state }) {
       commit('setAny', { catalogId: null, catalog: null })

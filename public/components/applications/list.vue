@@ -1,12 +1,5 @@
 <template>
   <div>
-    <h3
-      v-if="applications"
-      class="display-1"
-    >
-      {{ applications.count }} visualisation{{ plural }}
-    </h3>
-
     <search-filters
       :filter-labels="{'dataset': 'Jeu de données', 'service': 'Service', 'url': 'Application'}"
       :filters="filters"
@@ -36,7 +29,7 @@
             >
               <v-card
                 height="100%"
-                :to="`/application/${application.id}/description`"
+                :to="`/application/${application.id}`"
                 outlined
               >
                 <v-card-title>
@@ -205,6 +198,7 @@
           this.lastParams = params
           this.loading = true
           this.applications = await this.$axios.$get('api/v1/applications', { params })
+          this.$store.dispatch('breadcrumbs', [{ text: `${this.applications.count} application${this.plural ? 's' : ''}` }])
           this.filtered = !!this.filters.q || hasFacetFilter
           this.loading = false
         }

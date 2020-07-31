@@ -96,7 +96,7 @@
             description: this.baseApp.description,
             applicationName: this.baseApp.applicationName,
           })
-          this.$router.push({ path: `/application/${application.id}/description` })
+          this.$router.push({ path: `/application/${application.id}` })
         } catch (error) {
           eventBus.$emit('notification', { error, msg: 'Erreur pendant la création de la visualisation' })
           this.importing = false

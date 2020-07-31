@@ -43,7 +43,7 @@
     watch: {
       datasets() {
         this.datasets.forEach(dataset => {
-          dataset.link = (this.urlTemplate || `${this.env.publicUrl}/dataset/{id}/description`).replace('{id}', dataset.id)
+          dataset.link = (this.urlTemplate || `${this.env.publicUrl}/dataset/{id}`).replace('{id}', dataset.id)
         })
       },
     },

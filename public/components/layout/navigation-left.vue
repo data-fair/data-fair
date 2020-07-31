@@ -79,15 +79,6 @@
         <v-list-item-title>Visualisations</v-list-item-title>
       </v-list-item>
 
-      <v-list-item
-        :nuxt="true"
-        :to="`/catalogs`"
-        :class="routePrefix === 'catalog' ? 'v-list-item--active' : ''"
-      >
-        <v-list-item-action><v-icon>mdi-transit-connection</v-icon></v-list-item-action>
-        <v-list-item-title>Connecteurs</v-list-item-title>
-      </v-list-item>
-
       <v-list-item :nuxt="true" to="/settings">
         <v-list-item-action><v-icon>mdi-cog</v-icon></v-list-item-action>
         <v-list-item-title>Paramètres</v-list-item-title>
@@ -96,6 +87,15 @@
       <v-list-item :nuxt="true" to="/storage">
         <v-list-item-action><v-icon>mdi-harddisk</v-icon></v-list-item-action>
         <v-list-item-title>Stockage</v-list-item-title>
+      </v-list-item>
+
+      <v-list-item
+        :nuxt="true"
+        :to="`/catalogs`"
+        :class="routePrefix === 'catalog' ? 'v-list-item--active' : ''"
+      >
+        <v-list-item-action><v-icon>mdi-transit-connection</v-icon></v-list-item-action>
+        <v-list-item-title>Connecteurs</v-list-item-title>
       </v-list-item>
     </v-list>
 

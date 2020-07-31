@@ -95,7 +95,7 @@
           const schema = []
           if (this.attachments) schema.push({ key: 'attachmentPath', type: 'string', title: 'Pièce jointe', 'x-refersTo': 'http://schema.org/DigitalDocument' })
           const dataset = await this.$axios.$post('api/v1/datasets', { isRest: true, title: this.title, rest: this.rest, schema, attachmentsAsImage: this.attachmentsAsImage })
-          this.$router.push({ path: `/dataset/${dataset.id}/description` })
+          this.$router.push({ path: `/dataset/${dataset.id}` })
         } catch (error) {
           eventBus.$emit('notification', { error, msg: 'Erreur pendant la création du jeu de données incrémental :' })
         }
