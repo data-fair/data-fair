@@ -69,7 +69,7 @@
               <th
                 v-for="header in headers"
                 :key="header.text"
-                :class="{'text-start': true, sortable: header.sortable, active : header.value === pagination.sortBy, asc: !pagination.descending, desc: !pagination.descending}"
+                :class="{'text-start': true, sortable: header.sortable, active : header.value === pagination.sortBy, asc: !pagination.sortDesc[0], desc: pagination.sortDesc[0]}"
                 nowrap
                 @click="orderBy(header)"
               >
@@ -167,8 +167,8 @@
       pagination: {
         page: 1,
         itemsPerPage: 5,
-        sortBy: null,
-        descending: false,
+        sortBy: [null],
+        sortDesc: [false],
       },
       sort: null,
       notFound: false,
@@ -207,7 +207,9 @@
           page: this.pagination.page,
         }
         if (this.imageField) params.thumbnail = '40x40'
-        if (this.pagination.sortBy) params.sort = (this.pagination.descending ? '-' : '') + this.pagination.sortBy
+        if (this.pagination.sortBy[0]) {
+          params.sort = (this.pagination.sortDesc[0] ? '-' : '') + this.pagination.sortBy[0]
+        }
         if (this.query) params.q = this.query
         if (this.filters.length) {
           params.qs = filtersUtils.filters2qs(this.filters)
@@ -265,11 +267,11 @@
       },
       orderBy(header) {
         if (!header.sortable) return
-        if (this.pagination.sortBy === header.value) {
-          this.pagination.descending = !this.pagination.descending
+        if (this.pagination.sortBy[0] === header.value) {
+          this.$set(this.pagination.sortDesc, 0, !this.pagination.sortDesc[0])
         } else {
-          this.pagination.sortBy = header.value
-          this.pagination.descending = true
+          this.$set(this.pagination.sortBy, 0, header.value)
+          this.$set(this.pagination.sortDesc, 0, true)
         }
       },
       addFilter(key, value) {

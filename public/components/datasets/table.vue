@@ -62,6 +62,7 @@
               :total-visible="$vuetify.breakpoint.lgAndUp ? 7 : 5"
               class="mx-4"
             />
+            <download-results :params="params" :total="data.total" />
           </v-row>
         </v-col>
       </v-row>
@@ -86,7 +87,7 @@
               <th
                 v-for="header in headers"
                 :key="header.value"
-                :class="{'text-start': true, sortable: header.sortable, active : header.value === pagination.sortBy[0], asc: !pagination.sortDesc[0], desc: pagination.sortDesc[0]}"
+                :class="{'text-start': true, sortable: header.sortable, active : header.value === pagination.sortBy, asc: !pagination.sortDesc[0], desc: pagination.sortDesc[0]}"
                 nowrap
                 @click="orderBy(header)"
               >
@@ -303,10 +304,11 @@
   import '@koumoul/vjsf/dist/main.css'
   import NbResults from '~/components/datasets/nb-results'
   import DatasetFilters from '~/components/datasets/filters'
+  import DownloadResults from '~/components/datasets/download-results'
   const filtersUtils = require('~/assets/filters-utils')
 
   export default {
-    components: { VJsf, NbResults, DatasetFilters },
+    components: { VJsf, NbResults, DatasetFilters, DownloadResults },
     data: () => ({
       data: {},
       query: null,
@@ -381,6 +383,22 @@
             .reduce((a, f) => { a[f.key] = f; return a }, {}),
         }
       },
+      params() {
+        const params = {
+          size: this.pagination.itemsPerPage,
+          page: this.pagination.page,
+        }
+        if (this.imageField) params.thumbnail = '40x40'
+        if (this.pagination.sortBy[0]) {
+          params.sort = (this.pagination.sortDesc[0] ? '-' : '') + this.pagination.sortBy[0]
+        }
+        if (this.query) params.q = this.query
+        if (this.filters.length) {
+          params.qs = filtersUtils.filters2qs(this.filters)
+        }
+        if (this.dataset.finalizedAt) params.finalizedAt = this.dataset.finalizedAt
+        return params
+      },
     },
     watch: {
       'dataset.schema'() {
@@ -412,21 +430,9 @@
       async refresh(resetPagination) {
         if (resetPagination) this.pagination.page = 1
         // this.data = {}
-        const params = {
-          size: this.pagination.itemsPerPage,
-          page: this.pagination.page,
-        }
-        if (this.imageField) params.thumbnail = '40x40'
-        if (this.pagination.sortBy[0]) {
-          params.sort = (this.pagination.sortDesc[0] ? '-' : '') + this.pagination.sortBy[0]
-        }
-        if (this.query) params.q = this.query
-        if (this.filters.length) {
-          params.qs = filtersUtils.filters2qs(this.filters)
-        }
         this.loading = true
         try {
-          this.data = await this.$axios.$get(this.resourceUrl + '/lines', { params })
+          this.data = await this.$axios.$get(this.resourceUrl + '/lines', { params: this.params })
           this.notFound = false
         } catch (error) {
           if (error.response && error.response.status === 404) this.notFound = true
