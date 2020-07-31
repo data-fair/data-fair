@@ -5,7 +5,7 @@
         <v-card outlined style="min-height: 600px;">
           <v-tabs>
             <v-tab href="#tab-general-info">
-              Informations
+              <v-icon>mdi-information</v-icon>&nbsp;&nbsp;Informations
             </v-tab>
             <v-tab-item value="tab-general-info">
               <v-container fluid class="pb-0">
@@ -14,7 +14,7 @@
             </v-tab-item>
 
             <v-tab href="#tab-general-datasets">
-              Jeux de données
+              <v-icon>mdi-database</v-icon>&nbsp;&nbsp;Jeux de données
             </v-tab>
             <v-tab-item value="tab-general-datasets">
               <catalog-datasets />

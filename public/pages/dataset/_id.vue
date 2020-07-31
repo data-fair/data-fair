@@ -5,7 +5,7 @@
         <v-card outlined style="min-height: 440px;">
           <v-tabs>
             <v-tab href="#tab-general-info">
-              Informations
+              <v-icon>mdi-information</v-icon>&nbsp;&nbsp;Informations
             </v-tab>
             <v-tab-item value="tab-general-info">
               <v-container fluid class="pb-0">
@@ -15,7 +15,7 @@
 
             <template v-if="can('writeDescription') && dataset.isVirtual">
               <v-tab href="#tab-general-virtual">
-                Jeu virtuel
+                <v-icon>mdi-picture-in-picture-bottom-right-outline</v-icon>&nbsp;&nbsp;Jeu virtuel
               </v-tab>
               <v-tab-item value="tab-general-virtual">
                 <v-container fluid>
@@ -25,7 +25,7 @@
             </template>
 
             <v-tab href="#tab-general-schema">
-              Schéma
+              <v-icon>mdi-table-cog</v-icon>&nbsp;&nbsp;Schéma
             </v-tab>
             <v-tab-item value="tab-general-schema">
               <v-container fluid class="pb-0">
@@ -34,7 +34,7 @@
             </v-tab-item>
 
             <v-tab href="#tab-general-extensions">
-              Enrichissement
+              <v-icon>mdi-merge</v-icon>&nbsp;&nbsp;Enrichissement
             </v-tab>
             <v-tab-item value="tab-general-extensions">
               <v-container fluid class="pt-0">
@@ -43,7 +43,7 @@
             </v-tab-item>
 
             <v-tab href="#tab-general-attachments">
-              Pièces jointes
+              <v-icon>mdi-attachment</v-icon>&nbsp;&nbsp;Pièces jointes
             </v-tab>
             <v-tab-item value="tab-general-attachments">
               <dataset-attachments />
@@ -58,7 +58,7 @@
         >
           <v-tabs>
             <v-tab href="#tab-preview-table">
-              Tableau
+              <v-icon>mdi-table</v-icon>&nbsp;&nbsp;Tableau
             </v-tab>
             <v-tab-item value="tab-preview-table">
               <dataset-table />
@@ -66,7 +66,7 @@
 
             <template v-if="!!dataset.schema.find(f => f['x-refersTo'] === 'https://schema.org/startDate') && !!dataset.schema.find(f => f['x-refersTo'] === 'https://schema.org/endDate' && !!dataset.schema.find(f => f['x-refersTo'] === 'http://www.w3.org/2000/01/rdf-schema#label'))">
               <v-tab href="#tab-preview-calendar">
-                Calendrier
+                <v-icon>mdi-calendar-range</v-icon>&nbsp;&nbsp;Calendrier
               </v-tab>
               <v-tab-item value="tab-preview-calendar">
                 <v-container fluid class="pa-0">
@@ -77,7 +77,7 @@
 
             <template v-if="dataset.bbox">
               <v-tab href="#tab-preview-map">
-                Carte
+                <v-icon>mdi-map</v-icon>&nbsp;&nbsp;Carte
               </v-tab>
               <v-tab-item value="tab-preview-map">
                 <v-container fluid class="pa-0">
@@ -88,7 +88,7 @@
 
             <template v-if="fileProperty">
               <v-tab href="#tab-preview-files">
-                Fichiers
+                <v-icon>mdi-content-copy</v-icon>&nbsp;&nbsp;Fichiers
               </v-tab>
               <v-tab-item value="tab-preview-files">
                 <v-container fluid class="pa-0">
@@ -99,7 +99,7 @@
 
             <template v-if="!!dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/image')">
               <v-tab href="#tab-preview-thumbnails">
-                Vignettes
+                <v-icon>mdi-image</v-icon>&nbsp;&nbsp;Vignettes
               </v-tab>
               <v-tab-item value="tab-preview-thumbnails">
                 <v-container fluid>
@@ -118,7 +118,7 @@
         >
           <v-tabs>
             <v-tab href="#tab-publish-permissions">
-              Permissions
+              <v-icon>mdi-security</v-icon>&nbsp;&nbsp;Permissions
             </v-tab>
             <v-tab-item value="tab-publish-permissions">
               <v-container fluid class="pt-0">
@@ -132,7 +132,7 @@
             </v-tab-item>
 
             <v-tab href="#tab-publish-publications">
-              Publications
+              <v-icon>mdi-publish</v-icon>&nbsp;&nbsp;Publications
             </v-tab>
             <v-tab-item value="tab-publish-publications">
               <dataset-publications />
@@ -148,7 +148,7 @@
           <v-tabs>
             <template v-if="can('readJournal')">
               <v-tab href="#tab-tech-journal">
-                Journal
+                <v-icon>mdi-calendar-text</v-icon>&nbsp;&nbsp;Journal
               </v-tab>
               <v-tab-item value="tab-tech-journal">
                 <v-container fluid class="pa-0">
@@ -162,7 +162,7 @@
 
             <template v-if="can('readApiDoc')">
               <v-tab href="#tab-tech-apidoc">
-                API
+                <v-icon>mdi-cloud</v-icon>&nbsp;&nbsp;API
               </v-tab>
               <v-tab-item value="tab-tech-apidoc">
                 <v-container fluid class="pa-0">

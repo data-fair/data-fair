@@ -1,36 +1,6 @@
 <template>
   <v-container v-if="application" fluid>
     <v-row class="application">
-      <!--
-
-        <v-list-item
-          :disabled="!can('readConfig')"
-          :nuxt="true"
-          :to="`/application/${application.id}/config`"
-        >
-          <v-list-item-action><v-icon>mdi-wrench</v-icon></v-list-item-action>
-          <v-list-item-title>Configuration</v-list-item-title>
-        </v-list-item>
-        <v-list-item
-          v-if="can('getPermissions')"
-          :nuxt="true"
-          :to="`/application/${application.id}/permissions`"
-        >
-          <v-list-item-action><v-icon>mdi-security</v-icon></v-list-item-action>
-          <v-list-item-title>Permissions</v-list-item-title>
-        </v-list-item>
-        <v-list-item
-          v-if="can('getPermissions')"
-          :nuxt="true"
-          :to="`/application/${application.id}/publications`"
-        >
-          <v-list-item-action><v-icon>mdi-publish</v-icon></v-list-item-action>
-          <v-list-item-title>Publications</v-list-item-title>
-        </v-list-item>
-
-      </v-list>
-    </v-navigation-drawer>-->
-
       <v-col>
         <application-info />
         <application-config />
@@ -42,7 +12,7 @@
         >
           <v-tabs>
             <v-tab href="#tab-publish-permissions">
-              Permissions
+              <v-icon>mdi-security</v-icon>&nbsp;&nbsp;Permissions
             </v-tab>
             <v-tab-item value="tab-publish-permissions">
               <v-container fluid class="pt-0">
@@ -56,7 +26,7 @@
             </v-tab-item>
 
             <v-tab href="#tab-publish-publications">
-              Publications
+              <v-icon>mdi-publish</v-icon>&nbsp;&nbsp;Publications
             </v-tab>
             <v-tab-item value="tab-publish-publications">
               <application-publications />
@@ -72,7 +42,7 @@
           <v-tabs>
             <template v-if="can('readJournal')">
               <v-tab href="#tab-tech-journal">
-                Journal
+                <v-icon>mdi-calendar-text</v-icon>&nbsp;&nbsp;Journal
               </v-tab>
               <v-tab-item value="tab-tech-journal">
                 <v-container fluid class="pa-0">
@@ -86,7 +56,7 @@
 
             <template v-if="can('readApiDoc')">
               <v-tab href="#tab-tech-apidoc">
-                API
+                <v-icon>mdi-cloud</v-icon>&nbsp;&nbsp;API
               </v-tab>
               <v-tab-item value="tab-tech-apidoc">
                 <v-container fluid class="pa-0">
