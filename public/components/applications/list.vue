@@ -27,52 +27,7 @@
               lg="4"
               xl="3"
             >
-              <v-card
-                height="100%"
-                :to="`/application/${application.id}`"
-                outlined
-              >
-                <v-card-title>
-                  <span>{{ application.title || application.id }}
-                    <v-chip
-                      v-for="topic of application.topics"
-                      :key="topic.id"
-                      small
-                      outlined
-                      :color="topic.color || 'default'"
-                      class="ml-3"
-                      style="font-weight: bold"
-                    >
-                      {{ topic.title }}
-                    </v-chip>
-                  </span>
-                </v-card-title>
-                <v-divider />
-                <v-img
-                  :src="`${application.href}/capture`"
-                  height="240px"
-                />
-                <v-divider />
-                <v-card-text
-                  style="max-height:160px;overflow: hidden; margin-bottom: 40px;"
-                  v-html="marked($options.filters.truncate(application.description || '', 200))"
-                />
-
-                <v-card-actions style="position:absolute; bottom: 0px;width:100%;">
-                  <owner-short :owner="application.owner" />
-                  &nbsp;<v-chip
-                    small
-                    :color="application.visibility === 'public' ? 'primary' : 'accent'"
-                    text-color="white"
-                  >
-                    {{ {public: 'Public', private: 'Privé', protected: 'Protégé'}[application.visibility] }}
-                  </v-chip>
-                  <template v-if="application.status === 'error'">
-                    <v-spacer />
-                    <span><v-icon color="red">mdi-alert</v-icon>&nbsp;En erreur</span>
-                  </template>
-                </v-card-actions>
-              </v-card>
+              <application-card :application="application" />
             </v-col>
           </v-row>
         </v-container>
@@ -130,13 +85,13 @@
 <script>
   import SearchProgress from '~/components/search/progress.vue'
   import SearchFilters from '~/components/search/filters.vue'
-  import ApplicationsFacets from './facets.vue'
-  import OwnerShort from '~/components/owners/short.vue'
+  import ApplicationsFacets from '~/components/applications/facets.vue'
+  import ApplicationCard from '~/components/applications/card.vue'
   const marked = require('marked')
   const { mapState } = require('vuex')
 
   export default {
-    components: { SearchProgress, SearchFilters, ApplicationsFacets, OwnerShort },
+    components: { SearchProgress, SearchFilters, ApplicationsFacets, ApplicationCard },
     data: () => ({
       applications: null,
       page: 1,
@@ -198,7 +153,7 @@
           this.lastParams = params
           this.loading = true
           this.applications = await this.$axios.$get('api/v1/applications', { params })
-          this.$store.dispatch('breadcrumbs', [{ text: `${this.applications.count} application${this.plural ? 's' : ''}` }])
+          this.$store.dispatch('breadcrumbs', [{ text: `${this.applications.count} visualisation${this.plural ? 's' : ''}` }])
           this.filtered = !!this.filters.q || hasFacetFilter
           this.loading = false
         }

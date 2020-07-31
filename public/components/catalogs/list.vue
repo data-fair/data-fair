@@ -20,29 +20,7 @@
           lg="3"
           xl="2"
         >
-          <v-card
-            height="100%"
-            :to="`/catalog/${catalog.id}`"
-            outlined
-          >
-            <v-card-title>
-              {{ catalog.title || catalog.id }}
-            </v-card-title>
-            <v-card-text
-              style="min-height:60px;max-height:160px;overflow:hidden;margin-bottom:40px;"
-              v-html="marked($options.filters.truncate(catalog.description || '', 200))"
-            />
-            <v-card-actions style="position:absolute; bottom: 0px;width:100%;">
-              <owner-short :owner="catalog.owner" />
-              &nbsp;<v-chip
-                small
-                :color="catalog.public ? 'primary' : 'accent'"
-                text-color="white"
-              >
-                {{ catalog.public ? 'Public' : 'Privé' }}
-              </v-chip>
-            </v-card-actions>
-          </v-card>
+          <catalog-card :catalog="catalog" />
         </v-col>
       </v-row>
     </v-container>
@@ -79,12 +57,13 @@
 <script>
   import SearchProgress from '~/components/search/progress.vue'
   import SearchFilters from '~/components/search/filters.vue'
-  import OwnerShort from '~/components/owners/short.vue'
+  import CatalogCard from '~/components/catalogs/card.vue'
+
   const marked = require('marked')
   const { mapState } = require('vuex')
 
   export default {
-    components: { SearchProgress, SearchFilters, OwnerShort },
+    components: { SearchProgress, SearchFilters, CatalogCard },
     data: () => ({
       catalogs: null,
       page: 1,

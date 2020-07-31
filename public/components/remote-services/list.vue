@@ -21,19 +21,7 @@
           lg="3"
           xl="2"
         >
-          <v-card
-            height="100%"
-            :to="`/remote-service/${remoteService.id}`"
-            outlined
-          >
-            <v-card-title>
-              {{ remoteService.title || remoteService.id }}
-            </v-card-title>
-            <v-card-text
-              style="min-height:60px"
-              v-html="marked($options.filters.truncate(remoteService.description || '', 200))"
-            />
-          </v-card>
+          <remote-service-card :remote-service="remoteService" />
         </v-col>
       </v-row>
     </v-container>
@@ -53,11 +41,12 @@
 <script>
   import SearchProgress from '~/components/search/progress.vue'
   import SearchFilters from '~/components/search/filters.vue'
+  import RemoteServiceCard from '~/components/remote-services/card.vue'
   const marked = require('marked')
   const { mapState } = require('vuex')
 
   export default {
-    components: { SearchProgress, SearchFilters },
+    components: { SearchProgress, SearchFilters, RemoteServiceCard },
     data: () => ({
       page: 1,
       marked,

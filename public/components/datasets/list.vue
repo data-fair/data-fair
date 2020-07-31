@@ -26,47 +26,7 @@
             lg="4"
             xl="3"
           >
-            <v-card
-              height="100%"
-              :to="`/dataset/${dataset.id}`"
-              outlined
-            >
-              <v-card-title>
-                <span>{{ dataset.title || dataset.id }}
-                  <v-chip
-                    v-for="topic of dataset.topics"
-                    :key="topic.id"
-                    small
-                    outlined
-                    :color="topic.color || 'default'"
-                    class="ml-3"
-                    style="font-weight: bold"
-                  >
-                    {{ topic.title }}
-                  </v-chip>
-                </span>
-              </v-card-title>
-
-              <v-card-text
-                style="min-height:60px;max-height:160px;overflow:hidden;margin-bottom:40px;"
-                class="flex"
-                v-html="marked($options.filters.truncate(dataset.description || '', 200))"
-              />
-              <v-card-actions style="position:absolute; bottom: 0px;width:100%;">
-                <owner-short :owner="dataset.owner" />
-                &nbsp;<v-chip
-                  small
-                  :color="dataset.visibility === 'public' ? 'primary' : 'accent'"
-                  text-color="white"
-                >
-                  {{ {public: 'Public', private: 'Privé', protected: 'Protégé'}[dataset.visibility] }}
-                </v-chip>
-                <template v-if="dataset.status === 'error'">
-                  <v-spacer />
-                  <span><v-icon color="red">mdi-alert</v-icon>&nbsp;erreur</span>
-                </template>
-              </v-card-actions>
-            </v-card>
+            <dataset-card :dataset="dataset" />
           </v-col>
         </v-row>
       </v-col>
@@ -125,17 +85,15 @@
 <script>
   import SearchProgress from '~/components/search/progress.vue'
   import SearchFilters from '~/components/search/filters.vue'
-  import DatasetsFacets from './facets.vue'
-  import OwnerShort from '~/components/owners/short.vue'
-  const marked = require('marked')
+  import DatasetsFacets from '~/components/datasets/facets.vue'
+  import DatasetCard from '~/components/datasets/card.vue'
   const { mapState, mapGetters } = require('vuex')
 
   export default {
-    components: { SearchProgress, SearchFilters, DatasetsFacets, OwnerShort },
+    components: { SearchProgress, SearchFilters, DatasetsFacets, DatasetCard },
     data: () => ({
       datasets: null,
       page: 1,
-      marked,
       loading: true,
       filters: {},
       filtered: false,
