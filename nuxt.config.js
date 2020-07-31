@@ -35,6 +35,7 @@ module.exports = {
     { src: '~plugins/display-bytes' },
     { src: '~plugins/logger', ssr: false },
     { src: '~plugins/analytics', ssr: false },
+    { src: '~plugins/polyfill', ssr: false },
   ],
   router: {
     base: config.basePath,

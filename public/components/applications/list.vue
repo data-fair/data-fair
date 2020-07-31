@@ -5,11 +5,10 @@
       :filters="filters"
       :facets="applications && applications.facets"
       type="applications"
-      @apply="page = 1; refresh()"
+      @apply="refresh()"
     />
-    <search-progress :loading="loading" />
 
-    <v-row>
+    <v-row v-scroll="onScroll">
       <v-col
         cols="12"
         sm="6"
@@ -17,20 +16,19 @@
         lg="10"
         xl="10"
       >
-        <v-container class="pa-0" fluid>
-          <v-row v-if="applications" class="resourcesList">
-            <v-col
-              v-for="application in applications.results"
-              :key="application.id"
-              cols="12"
-              md="6"
-              lg="4"
-              xl="3"
-            >
-              <application-card :application="application" />
-            </v-col>
-          </v-row>
-        </v-container>
+        <v-row v-if="applications" class="resourcesList">
+          <v-col
+            v-for="application in applications.results"
+            :key="application.id"
+            cols="12"
+            md="6"
+            lg="4"
+            xl="3"
+          >
+            <application-card :application="application" />
+          </v-col>
+        </v-row>
+        <search-progress :loading="loading" />
       </v-col>
       <v-col
         v-if="applications && !$vuetify.breakpoint.xsOnly"
@@ -44,20 +42,7 @@
       </v-col>
     </v-row>
 
-    <v-row v-if="applications && applications.count && applications.count > size">
-      <v-spacer />
-      <v-pagination
-        v-model="page"
-        circle
-        :length="Math.ceil(applications.count / size)"
-        @input="$vuetify.goTo('.resourcesList', {offset});refresh()"
-      />
-    </v-row>
-
-    <v-responsive
-      v-if="!hasApplications"
-      height="auto"
-    >
+    <v-responsive v-if="!hasApplications" height="auto">
       <v-container class="fill-height">
         <v-row align="center">
           <v-col class="text-center">
@@ -87,7 +72,6 @@
   import SearchFilters from '~/components/search/filters.vue'
   import ApplicationsFacets from '~/components/applications/facets.vue'
   import ApplicationCard from '~/components/applications/card.vue'
-  const marked = require('marked')
   const { mapState } = require('vuex')
 
   export default {
@@ -95,7 +79,6 @@
     data: () => ({
       applications: null,
       page: 1,
-      marked,
       loading: true,
       filters: {},
       filtered: false,
@@ -110,10 +93,10 @@
       ...mapState('session', ['user']),
       ...mapState(['env']),
       plural() {
-        return this.applications.count > 1 ? 's' : ''
+        return this.applications.count > 1
       },
       size() {
-        return { xs: 4, sm: 4, md: 8, lg: 12, xl: 16 }[this.$vuetify.breakpoint.name]
+        return { xs: 12, sm: 12, md: 12, lg: 15, xl: 24 }[this.$vuetify.breakpoint.name]
       },
       hasApplications() {
         return !this.applications || this.applications.count
@@ -123,13 +106,19 @@
       facetsValues: {
         deep: true,
         handler() {
-          this.page = 1
           this.refresh()
         },
       },
     },
     methods: {
-      async refresh() {
+      onScroll(e) {
+        if (!this.datasets) return
+        const se = e.target.scrollingElement
+        if (se.clientHeight + se.scrollTop > se.scrollHeight - 140 && this.datasets.results.length < this.datasets.count) {
+          this.refresh(true)
+        }
+      },
+      async refresh(append) {
         const fullFilters = { ...this.filters }
         let hasFacetFilter = false
         Object.entries(this.facetsValues).forEach(([facetKey, facetValues]) => {
@@ -141,6 +130,8 @@
             fullFilters[facetKey] = facetFilter
           }
         })
+        if (append) this.page += 1
+        else this.page = 1
         const params = {
           size: this.size,
           page: this.page,
@@ -152,7 +143,9 @@
         if (JSON.stringify(params) !== JSON.stringify(this.lastParams)) {
           this.lastParams = params
           this.loading = true
-          this.applications = await this.$axios.$get('api/v1/applications', { params })
+          const applications = await this.$axios.$get('api/v1/applications', { params })
+          if (append) applications.results.forEach(r => this.applications.results.push(r))
+          else this.applications = applications
           this.$store.dispatch('breadcrumbs', [{ text: `${this.applications.count} visualisation${this.plural ? 's' : ''}` }])
           this.filtered = !!this.filters.q || hasFacetFilter
           this.loading = false

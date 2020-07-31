@@ -5,11 +5,10 @@
       :filters="filters"
       :facets="datasets && datasets.facets"
       type="datasets"
-      @apply="page = 1; refresh()"
+      @apply="refresh()"
     />
-    <search-progress :loading="loading" />
 
-    <v-row>
+    <v-row v-scroll="onScroll">
       <v-col
         cols="12"
         sm="6"
@@ -29,6 +28,7 @@
             <dataset-card :dataset="dataset" />
           </v-col>
         </v-row>
+        <search-progress :loading="loading" />
       </v-col>
 
       <v-col
@@ -44,17 +44,6 @@
           :facets-values="facetsValues"
         />
       </v-col>
-    </v-row>
-
-    <v-row v-if="datasets && datasets.count && datasets.count > size">
-      <v-spacer />
-      <v-pagination
-        v-model="page"
-        circle
-        :length="Math.ceil(datasets.count / size)"
-        @input="$vuetify.goTo('.resourcesList', {offset});refresh()"
-      />
-      <v-spacer />
     </v-row>
 
     <v-responsive v-if="!hasDatasets" height="auto">
@@ -114,7 +103,7 @@
         return this.datasets.count > 1
       },
       size() {
-        return { xs: 4, sm: 4, md: 8, lg: 12, xl: 16 }[this.$vuetify.breakpoint.name]
+        return { xs: 12, sm: 12, md: 12, lg: 15, xl: 24 }[this.$vuetify.breakpoint.name]
       },
       hasDatasets() {
         return !this.datasets || this.datasets.count
@@ -124,13 +113,19 @@
       facetsValues: {
         deep: true,
         handler() {
-          this.page = 1
           this.refresh()
         },
       },
     },
     methods: {
-      async refresh() {
+      onScroll(e) {
+        if (!this.datasets) return
+        const se = e.target.scrollingElement
+        if (se.clientHeight + se.scrollTop > se.scrollHeight - 140 && this.datasets.results.length < this.datasets.count) {
+          this.refresh(true)
+        }
+      },
+      async refresh(append) {
         const fullFilters = { ...this.filters }
         let hasFacetFilter = false
         Object.entries(this.facetsValues).forEach(([facetKey, facetValues]) => {
@@ -142,6 +137,8 @@
             fullFilters[facetKey] = facetFilter
           }
         })
+        if (append) this.page += 1
+        else this.page = 1
         const params = {
           size: this.size,
           page: this.page,
@@ -153,7 +150,9 @@
         if (JSON.stringify(params) !== JSON.stringify(this.lastParams)) {
           this.lastParams = params
           this.loading = true
-          this.datasets = await this.$axios.$get('api/v1/datasets', { params })
+          const datasets = await this.$axios.$get('api/v1/datasets', { params })
+          if (append) datasets.results.forEach(r => this.datasets.results.push(r))
+          else this.datasets = datasets
           this.$store.dispatch('breadcrumbs', [{ text: `${this.datasets.count} ${this.plural ? 'jeux' : 'jeu'} de données` }])
           this.filtered = !!this.filters.q || hasFacetFilter
           this.loading = false
