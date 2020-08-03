@@ -14,6 +14,23 @@ export default () => ({
     nbApplications: null,
     nbVirtualDatasets: null,
     dataFiles: null,
+    eventStates: {
+      'data-updated': 'uploaded',
+      'download-end': 'uploaded',
+      'convert-start': 'uploaded',
+      'convert-end': 'loaded',
+      'analyze-start': 'loaded',
+      'analyze-end': 'analyzed',
+      'schematize-start': 'analyzed',
+      'schematize-end': 'schematized',
+      'index-start': 'schematized',
+      'index-end': 'indexed',
+      'extend-start': 'indexed',
+      'extend-end': 'extended',
+      'finalize-start': 'extended',
+      'finalize-end': 'finalized',
+      error: 'error',
+    },
   },
   getters: {
     resourceUrl: (state, getters, rootState) => state.datasetId ? rootState.env.publicUrl + '/api/v1/datasets/' + state.datasetId : null,
@@ -63,22 +80,9 @@ export default () => ({
     },
   },
   actions: {
-    async fetchInfo({ commit, dispatch, getters, state }) {
-      let dataset
+    async fetchInfo({ commit, dispatch }) {
       try {
-        dataset = await this.$axios.$get(`api/v1/datasets/${state.datasetId}`)
-
-        const extensions = (dataset.extensions || []).map(ext => {
-          ext.error = ext.error || ''
-          ext.progress = ext.progress || 0
-          ext.select = ext.select || []
-          return ext
-        })
-        Vue.set(dataset, 'extensions', extensions)
-        Vue.set(dataset, 'schema', dataset.schema || [])
-        Vue.set(dataset, 'publications', dataset.publications || [])
-
-        commit('setAny', { dataset })
+        await dispatch('fetchDataset')
         await Promise.all([
           dispatch('fetchApplications'),
           dispatch('fetchVirtuals'),
@@ -89,6 +93,19 @@ export default () => ({
       } catch (error) {
         eventBus.$emit('notification', { error, msg: 'Erreur pendant la récupération des informations du jeu de données:' })
       }
+    },
+    async fetchDataset({ commit, state }) {
+      const dataset = await this.$axios.$get(`api/v1/datasets/${state.datasetId}`)
+      const extensions = (dataset.extensions || []).map(ext => {
+        ext.error = ext.error || ''
+        ext.progress = ext.progress || 0
+        ext.select = ext.select || []
+        return ext
+      })
+      Vue.set(dataset, 'extensions', extensions)
+      Vue.set(dataset, 'schema', dataset.schema || [])
+      Vue.set(dataset, 'publications', dataset.publications || [])
+      commit('setAny', { dataset })
     },
     async fetchApplications({ commit, state }) {
       const apps = await this.$axios.$get('api/v1/applications', { params: { dataset: state.dataset.id, size: 0 } })
@@ -114,15 +131,34 @@ export default () => ({
       commit('setAny', { datasetId })
       await dispatch('fetchInfo')
     },
-    subscribe({ getters, dispatch }) {
+    subscribe({ getters, dispatch, state, commit }) {
       eventBus.$emit('subscribe', getters.journalChannel)
-      eventBus.$on(getters.journalChannel, event => {
+      eventBus.$on(getters.journalChannel, async event => {
         if (event.type === 'finalize-end') {
           eventBus.$emit('notification', { type: 'success', msg: 'Le jeu de données a été traité en fonction de vos dernières modifications et est prêt à être utilisé ou édité de nouveau.' })
-          dispatch('fetchInfo')
         }
-        if (event.type === 'error') eventBus.$emit('notification', { error: event.data, msg: 'Le service a rencontré une erreur pendant le traitement du jeu de données:' })
+        if (event.type === 'error') {
+          eventBus.$emit('notification', { error: event.data, msg: 'Le service a rencontré une erreur pendant le traitement du jeu de données:' })
+        }
         dispatch('addJournalEvent', event)
+
+        // refresh dataset with relevant parts when receiving journal event
+        if (state.eventStates[event.type] && state.dataset) {
+          commit('patch', { status: state.eventStates[event.type] })
+        }
+        if (event.type === 'schematize-end' || event.type === 'extend-start') {
+          const dataset = await this.$axios.$get(`api/v1/datasets/${state.datasetId}`, { params: { select: 'schema' } })
+          commit('patch', { schema: dataset.schema })
+        }
+        if (event.type === 'finalize-end') {
+          const dataset = await this.$axios.$get(`api/v1/datasets/${state.datasetId}`, { params: { select: 'schema,bbox' } })
+          commit('patch', { schema: dataset.schema, bbox: dataset.bbox })
+        }
+        if (event.type === 'publication') {
+          const dataset = await this.$axios.$get(`api/v1/datasets/${state.datasetId}`, { params: { select: 'publications' } })
+          commit('patch', { publications: dataset.publications })
+        }
+        dispatch('fetchApiDoc')
       })
     },
     clear({ commit, state }) {
