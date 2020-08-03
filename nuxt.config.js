@@ -81,6 +81,7 @@ module.exports = {
     analytics: config.analytics,
     captureUrl: config.captureUrl,
     theme: config.theme,
+    baseAppsCategories: config.baseAppsCategories,
   },
   head: {
     title: config.brand.title,

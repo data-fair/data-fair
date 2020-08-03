@@ -29,11 +29,12 @@
     />
     <v-divider />
     <v-card-text
+      v-if="!hideDescription"
       style="max-height:160px;overflow: hidden; margin-bottom: 40px;"
       v-html="marked($options.filters.truncate(application.description || '', 200))"
     />
 
-    <v-card-actions style="position:absolute; bottom: 0px;width:100%;">
+    <v-card-actions v-if="!hideOwner" style="position:absolute; bottom: 0px;width:100%;">
       <owner-short :owner="application.owner" />
       &nbsp;<v-chip
         small
@@ -56,7 +57,7 @@
 
   export default {
     components: { OwnerShort },
-    props: ['application'],
+    props: ['application', 'hideOwner', 'hideDescription'],
     data: () => ({
       marked,
       hover: false,

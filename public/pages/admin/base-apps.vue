@@ -45,14 +45,13 @@
             <v-list-item
               v-for="baseApp in baseApps.results"
               :key="baseApp.id"
-              avatar
             >
               <v-list-item-avatar tile>
                 <img :src="baseApp.thumbnail">
               </v-list-item-avatar>
               <v-list-item-content>
                 <v-list-item-title>
-                  {{ baseApp.title }} - {{ baseApp.applicationName }} ({{ baseApp.version }}) - <a :href="baseApp.url">{{ baseApp.url }}</a>
+                  {{ baseApp.category }} - {{ baseApp.title }} - {{ baseApp.applicationName }} ({{ baseApp.version }}) - <a :href="baseApp.url">{{ baseApp.url }}</a>
                   <v-icon
                     v-if="baseApp.public"
                     color="green"
@@ -95,7 +94,6 @@
       v-model="showEditDialog"
       max-width="500px"
       transition="dialog-transition"
-      lazy
     >
       <v-card v-if="currentBaseApp">
         <v-card-title primary-title>
@@ -134,6 +132,17 @@
               v-model="patch.image"
               name="image"
               label="Image"
+            />
+            <v-select
+              v-model="patch.category"
+              name="category"
+              label="Catégorie"
+              :items="env.baseAppsCategories"
+            />
+            <v-text-field
+              v-model="patch.documentation"
+              name="documentation"
+              label="Documentation"
             />
             <v-checkbox
               v-model="patch.public"

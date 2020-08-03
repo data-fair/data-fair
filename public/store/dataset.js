@@ -11,6 +11,7 @@ export default () => ({
     api: null,
     journal: [],
     remoteServices: [],
+    applications: null,
     nbApplications: null,
     nbVirtualDatasets: null,
     dataFiles: null,
@@ -108,8 +109,8 @@ export default () => ({
       commit('setAny', { dataset })
     },
     async fetchApplications({ commit, state }) {
-      const apps = await this.$axios.$get('api/v1/applications', { params: { dataset: state.dataset.id, size: 0 } })
-      commit('setAny', { nbApplications: apps.count })
+      const apps = await this.$axios.$get('api/v1/applications', { params: { dataset: state.dataset.id, size: 10000, select: 'id,title' } })
+      commit('setAny', { nbApplications: apps.count, applications: apps.results })
     },
     async fetchVirtuals({ commit, state }) {
       const virtuals = await this.$axios.$get('api/v1/datasets', { params: { children: state.dataset.id, size: 0 } })

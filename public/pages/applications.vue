@@ -11,21 +11,11 @@
           color="primary"
           fab
           small
-          title="Configurer une application"
-          @click="importApplicationSheet = true"
+          title="Configurer une visualisation"
+          to="/new-application"
         >
           <v-icon>mdi-plus</v-icon>
         </v-btn>
-      </div>
-
-      <div class="text-center">
-        <v-bottom-sheet v-model="importApplicationSheet">
-          <import-application
-            v-if="importApplicationSheet"
-            :init-app="importApp"
-            @cancel="importApplicationSheet = false"
-          />
-        </v-bottom-sheet>
       </div>
     </v-row>
     <!-- Anonymous: show jumbotron -->
@@ -64,12 +54,11 @@
 <script>
   import { mapState, mapActions } from 'vuex'
 
-  import ImportApplication from '~/components/applications/import.vue'
   import ApplicationsList from '~/components/applications/list.vue'
 
   export default {
     name: 'Datasets',
-    components: { ImportApplication, ApplicationsList },
+    components: { ApplicationsList },
     data() {
       return { importApplicationSheet: !!this.$route.query.import }
     },

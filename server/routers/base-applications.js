@@ -87,6 +87,8 @@ async function initBaseApp(db, app) {
   delete storedBaseApp._id
   storedBaseApp.title = storedBaseApp.title || storedBaseApp.meta.title
   storedBaseApp.description = storedBaseApp.description || storedBaseApp.meta.description
+  storedBaseApp.category = storedBaseApp.category || storedBaseApp.meta.category
+  storedBaseApp.documentation = storedBaseApp.documentation || storedBaseApp.meta.documentation
   return storedBaseApp
 }
 

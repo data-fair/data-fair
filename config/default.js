@@ -169,6 +169,7 @@ module.exports = {
   }, {
     url: 'https://koumoul.com/apps/sunburst/0.2/',
   }],
+  baseAppsCategories: ['carte', 'graphique', 'textuelle', 'SCDL'],
   remoteServices: [{
     title: 'Données Entreprises',
     url: 'https://koumoul.com/s/sirene/api-docs.json',

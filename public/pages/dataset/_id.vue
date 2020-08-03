@@ -111,6 +111,22 @@
           </v-tabs>
         </v-card>
 
+        <v-card outlined class="mt-4">
+          <v-tabs>
+            <v-tab href="#tab-reuses-apps">
+              <v-icon>mdi-image-multiple</v-icon>&nbsp;&nbsp;Visualisations
+            </v-tab>
+            <v-tab-item value="tab-reuses-apps">
+              <v-container fluid>
+                <dataset-applications />
+                <v-btn color="primary" :to="{path: '/new-application', query: {dataset: dataset.id}}">
+                  Configurer une visualisation
+                </v-btn>
+              </v-container>
+            </v-tab-item>
+          </v-tabs>
+        </v-card>
+
         <v-card
           v-if="can('getPermissions')"
           outlined
@@ -197,6 +213,7 @@
   import DatasetThumbnails from '~/components/datasets/thumbnails.vue'
   import DatasetPublications from '~/components/datasets/publications.vue'
   import DatasetStatus from '~/components/datasets/status.vue'
+  import DatasetApplications from '~/components/datasets/applications.vue'
   import Permissions from '~/components/permissions.vue'
   import Journal from '~/components/journal.vue'
   import OpenApi from '~/components/open-api.vue'
@@ -216,6 +233,7 @@
       DatasetThumbnails,
       DatasetPublications,
       DatasetStatus,
+      DatasetApplications,
       Permissions,
       Journal,
       OpenApi,
