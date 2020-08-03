@@ -26,13 +26,16 @@ exports.process = async function(app, dataset) {
   debug('list attachments')
   // Now we can extract infos for each field
   const attachments = await datasetUtils.lsAttachments(dataset)
-  Object.keys(myCSVObject).forEach(field => {
-    const escapedKey = fieldsSniffer.escapeKey(field)
-    const fileField = dataset.file.schema.find(f => f.key === escapedKey)
-    if (!fileField) throw new Error(`Field ${field} found in data sample but absent from previous schema analysis`)
-    const existingField = dataset.schema && dataset.schema.find(f => f.key === escapedKey)
-    Object.assign(fileField, fieldsSniffer.sniff(myCSVObject[field], attachments, existingField))
-  })
+  Object.keys(myCSVObject)
+    // do not keep columns with empty string as header
+    .filter(field => !!field)
+    .forEach(field => {
+      const escapedKey = fieldsSniffer.escapeKey(field)
+      const fileField = dataset.file.schema.find(f => f.key === escapedKey)
+      if (!fileField) throw new Error(`Field ${field} found in data sample but absent from previous schema analysis`)
+      const existingField = dataset.schema && dataset.schema.find(f => f.key === escapedKey)
+      Object.assign(fileField, fieldsSniffer.sniff(myCSVObject[field], attachments, existingField))
+    })
 
   dataset.schema = dataset.schema || []
   // Remove fields present in the stored schema, when absent from the raw file schema and not coming from extension

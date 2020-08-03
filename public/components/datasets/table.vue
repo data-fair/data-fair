@@ -1,8 +1,10 @@
 <template>
   <v-container fluid class="pa-0">
-    <div v-if="notFound">
-      <p>Les données ne sont pas accessibles. Soit le jeu de données n'a pas encore été entièrement traité, soit il y a eu une erreur dans le traitement.</p>
-    </div>
+    <v-row v-if="notFound" class="px-3">
+      <v-col>
+        <p>Les données ne sont pas accessibles. Soit le jeu de données n'a pas encore été entièrement traité, soit il y a eu une erreur dans le traitement.</p>
+      </v-col>
+    </v-row>
     <template v-else>
       <v-row class="px-3">
         <v-col class="pb-0">

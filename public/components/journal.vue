@@ -13,7 +13,7 @@
             {{ eventTypes[item.type].text }}
             <template v-if="item.data">
               <br>
-              <p v-html="item.data" />
+              <p class="mb-0" v-html="item.data" />
             </template>
           </td>
           <td class="text-right">

@@ -37,4 +37,13 @@ describe('CSV cases', () => {
     assert.equal(res.data.total, 1)
     assert.equal(res.data.results[0].Code_departement, 56)
   })
+
+  it('A CSV with formatting issues', async () => {
+    const ax = global.ax.dmeadus
+    const dataset = await testUtils.sendDataset('formatting-issues.csv', ax)
+    assert.equal(dataset.status, 'finalized')
+    const res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
+    assert.equal(res.data.total, 12)
+    assert.equal(res.data.results[0].Structure_porteuse, 'Struct1')
+  })
 })
