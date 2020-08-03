@@ -1,5 +1,5 @@
 <template>
-  <v-stepper v-model="currentStep">
+  <v-stepper v-model="currentStep" class="elevation-0">
     <v-stepper-header>
       <v-stepper-step
         :complete="!!file"
@@ -24,7 +24,7 @@
 
     <v-stepper-items>
       <v-stepper-content step="1">
-        <v-sheet min-height="200">
+        <v-sheet>
           <p>Chargez un fichier de données principal.</p>
           <p>
             La liste des formats supportés est accessible dans <nuxt-link
@@ -53,18 +53,21 @@
           </div>
         </v-sheet>
         <v-btn
+          class="mt-2"
           :disabled="!file"
           color="primary"
           @click.native="currentStep = 2"
         >
           Continuer
         </v-btn>
-        <v-btn text @click.native="$emit('cancel')">
-          Annuler
-        </v-btn>
+
+        <h3 class="text-h6 mt-4">
+          Formats supportés
+        </h3>
+        <file-formats />
       </v-stepper-content>
       <v-stepper-content step="2">
-        <v-sheet min-height="200">
+        <v-sheet>
           <p>Optionnellement vous pouvez charger une archive zip contenant des fichiers à utiliser comme pièces à joindre aux lignes du fichier principal.</p>
           <p>Le fichier principal doit avoir un champ qui contient les chemins des pièces jointes dans l'archive.</p>
           <div class="mt-3 mb-3">
@@ -80,15 +83,16 @@
             />
           </div>
         </v-sheet>
-        <v-btn color="primary" @click.native="currentStep = 3">
+        <v-btn
+          color="primary"
+          class="mt-4"
+          @click.native="currentStep = 3"
+        >
           Continuer
-        </v-btn>
-        <v-btn text @click.native="$emit('cancel')">
-          Annuler
         </v-btn>
       </v-stepper-content>
       <v-stepper-content step="3">
-        <v-sheet min-height="200">
+        <v-sheet>
           <v-radio-group
             v-model="action"
             class="mt-3 mb-3"
@@ -114,19 +118,18 @@
         >
           Lancer l'import
         </v-btn>
-        <v-btn text @click.native="$emit('cancel')">
-          Annuler
-        </v-btn>
       </v-stepper-content>
     </v-stepper-items>
   </v-stepper>
 </template>
 
 <script>
+  import FileFormats from '~/components/datasets/file-formats.vue'
   import { mapState, mapGetters } from 'vuex'
   import eventBus from '~/event-bus'
 
   export default {
+    components: { FileFormats },
     data: () => ({
       file: null,
       attachment: null,

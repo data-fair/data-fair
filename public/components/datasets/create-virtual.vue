@@ -1,73 +1,43 @@
 <template>
-  <v-stepper v-model="currentStep">
-    <v-stepper-header>
-      <v-stepper-step
-        :complete="currentStep > 1"
-        step="1"
-      >
-        Choix du propriétaire
-      </v-stepper-step>
-      <v-divider />
-      <v-stepper-step
-        :complete="!!title"
-        step="2"
-        editable
-      >
-        Paramètres
-      </v-stepper-step>
-    </v-stepper-header>
-
-    <v-stepper-items>
-      <v-stepper-content step="1">
-        <p class="mt-3">
-          Un jeu de données virtuel est une représentation alternative de un ou plusieurs autres jeux de données.
-          Vous pouvez les utiliser pour créer des vues limitées d'un jeu de données en appliquant des filtres ou en choisissant une partie seulement des colonnes.
-          Vous pouvez également agréger plusieurs jeux de données en une seule représentation.
-        </p>
-        <v-btn
-          color="primary"
-          @click.native="currentStep = 2"
-        >
-          Continuer
-        </v-btn>
-        <v-btn text @click.native="$emit('cancel')">
-          Annuler
-        </v-btn>
-      </v-stepper-content>
-      <v-stepper-content step="2">
-        <div class="mt-3 mb-3">
-          <v-text-field
-            v-model="title"
-            :required="true"
-            name="title"
-            label="Titre"
-          />
-          <v-autocomplete
-            v-model="children"
-            :items="datasets"
-            :loading="loadingDatasets"
-            :search-input.sync="search"
-            hide-no-data
-            item-text="title"
-            item-value="id"
-            label="Jeux enfants"
-            placeholder="Recherchez"
-            multiple
-          />
-        </div>
-        <v-btn
-          :disabled="!title"
-          color="primary"
-          @click.native="createDataset()"
-        >
-          Créer
-        </v-btn>
-        <v-btn text @click.native="$emit('cancel')">
-          Annuler
-        </v-btn>
-      </v-stepper-content>
-    </v-stepper-items>
-  </v-stepper>
+  <v-col>
+    <p class="mt-3">
+      Un jeu de données virtuel est une représentation alternative de un ou plusieurs autres jeux de données.
+      Vous pouvez les utiliser pour créer des vues limitées d'un jeu de données en appliquant des filtres ou en choisissant une partie seulement des colonnes.
+      Vous pouvez également agréger plusieurs jeux de données en une seule représentation.
+    </p>
+    <v-form
+      ref="form"
+      v-model="valid"
+      style="max-width: 500px;"
+    >
+      <v-text-field
+        v-model="title"
+        :required="true"
+        :rules="[value => !!(value.trim()) || 'le titre est obligatoire, il sea utilisé pour créer un identifiant au nouveau jeu de données']"
+        name="title"
+        label="Titre"
+      />
+      <v-autocomplete
+        v-model="children"
+        :items="datasets"
+        :loading="loadingDatasets"
+        :search-input.sync="search"
+        hide-no-data
+        item-text="title"
+        item-value="id"
+        label="Jeux enfants"
+        placeholder="Recherchez"
+        multiple
+      />
+    </v-form>
+    <v-btn
+      color="primary"
+      class="mt-4"
+      @click.native="validate"
+    >
+      Créer
+    </v-btn>
+  </v-col>
 </template>
 
 <script>
@@ -76,6 +46,7 @@
 
   export default {
     data: () => ({
+      valid: false,
       currentStep: null,
       title: '',
       children: [],
@@ -102,7 +73,8 @@
         this.datasets = res.results
         this.loadingDatasets = false
       },
-      async createDataset() {
+      async validate() {
+        if (!this.$refs.form.validate()) return
         try {
           const dataset = await this.$axios.$post('api/v1/datasets', { isVirtual: true, title: this.title, virtual: { children: this.children } })
           this.$router.push({ path: `/dataset/${dataset.id}` })

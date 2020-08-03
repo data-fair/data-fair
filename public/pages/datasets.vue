@@ -23,7 +23,7 @@
             </v-btn>
           </template>
           <v-list>
-            <v-list-item @click="importFileSheet = true">
+            <v-list-item :to="{path: '/new-dataset', query: {type: 'file'}}">
               <v-list-item-avatar>
                 <v-icon color="primary">
                   mdi-file-upload
@@ -31,7 +31,7 @@
               </v-list-item-avatar>
               <v-list-item-title>Importer un fichier</v-list-item-title>
             </v-list-item>
-            <v-list-item @click="createVirtualSheet = true">
+            <v-list-item :to="{path: '/new-dataset', query: {type: 'virtual'}}">
               <v-list-item-avatar>
                 <v-icon color="primary">
                   mdi-picture-in-picture-bottom-right-outline
@@ -39,7 +39,7 @@
               </v-list-item-avatar>
               <v-list-item-title>Créer un jeu virtuel</v-list-item-title>
             </v-list-item>
-            <v-list-item @click="createRestSheet = true">
+            <v-list-item :to="{path: '/new-dataset', query: {type: 'rest'}}">
               <v-list-item-avatar>
                 <v-icon color="primary">
                   mdi-all-inclusive
@@ -49,27 +49,6 @@
             </v-list-item>
           </v-list>
         </v-menu>
-      </div>
-
-      <div class="text-center">
-        <v-bottom-sheet v-model="importFileSheet">
-          <import-file
-            v-if="importFileSheet"
-            @cancel="importFileSheet = false"
-          />
-        </v-bottom-sheet>
-        <v-bottom-sheet v-model="createVirtualSheet">
-          <create-virtual
-            v-if="createVirtualSheet"
-            @cancel="createVirtualSheet = false"
-          />
-        </v-bottom-sheet>
-        <v-bottom-sheet v-model="createRestSheet">
-          <create-rest
-            v-if="createRestSheet"
-            @cancel="createRestSheet = false"
-          />
-        </v-bottom-sheet>
       </div>
     </v-row>
     <!-- Anonymous: show jumbotron -->
@@ -108,16 +87,13 @@
 <script>
   import { mapState, mapActions } from 'vuex'
 
-  import ImportFile from '~/components/datasets/import-file.vue'
-  import CreateVirtual from '~/components/datasets/create-virtual.vue'
-  import CreateRest from '~/components/datasets/create-rest.vue'
   import DatasetsList from '~/components/datasets/list.vue'
 
   export default {
     name: 'Datasets',
-    components: { ImportFile, CreateVirtual, CreateRest, DatasetsList },
+    components: { DatasetsList },
     data() {
-      return { importFileSheet: false, createVirtualSheet: false, createRestSheet: false }
+      return { }
     },
     computed: {
       ...mapState('session', ['user', 'initialized']),
