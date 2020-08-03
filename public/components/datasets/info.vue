@@ -9,48 +9,6 @@
         <v-list dense>
           <owner-list-item :owner="dataset.owner" />
 
-          <v-list-item
-            v-if="journal[0]"
-            :class="'event-' + journal[0].type"
-          >
-            <v-list-item-avatar v-if="['finalize-end', 'error', 'publication'].includes(journal[0].type)" class="ml-0 my-0">
-              <v-icon>{{ events[journal[0].type].icon }}</v-icon>
-            </v-list-item-avatar>
-            <v-list-item-avatar v-else>
-              <v-progress-circular
-                :size="20"
-                :width="3"
-                small
-                indeterminate
-                color="primary"
-              />
-            </v-list-item-avatar>
-            <div v-if="journal[0].type === 'error'">
-              <p>{{ events[journal[0].type] && events[journal[0].type].text }}</p>
-              <p v-html="journal[0].data" />
-            </div>
-            <span v-else>{{ events[journal[0].type] && events[journal[0].type].text }}</span>
-            <v-spacer />
-            <v-list-item-action v-if="journal[0].type === 'error' && can('writeDescription')">
-              <v-btn
-                v-if="user.adminMode"
-                icon
-                title="Reindexer en tant que super admin"
-                @click="reindex({})"
-              >
-                <v-icon>mdi-play</v-icon>
-              </v-btn>
-              <v-btn
-                v-else
-                icon
-                title="Relancer"
-                @click="patch({})"
-              >
-                <v-icon>mdi-play</v-icon>
-              </v-btn>
-            </v-list-item-action>
-          </v-list-item>
-
           <v-list-item v-if="dataset.file">
             <v-list-item-avatar class="ml-0 my-0">
               <v-icon>mdi-file</v-icon>
@@ -74,7 +32,7 @@
 
           <v-list-item v-if="dataset.count !== undefined">
             <v-list-item-avatar class="ml-0 my-0">
-              <v-icon>mdi-view-text-h6</v-icon>
+              <v-icon>mdi-view-headline</v-icon>
             </v-list-item-avatar>
             <span>{{ dataset.count }} enregistrements</span>
           </v-list-item>

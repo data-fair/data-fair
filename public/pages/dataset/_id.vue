@@ -2,6 +2,7 @@
   <v-container v-if="dataset" fluid>
     <v-row class="dataset">
       <v-col>
+        <dataset-status />
         <v-card outlined style="min-height: 440px;">
           <v-tabs>
             <v-tab href="#tab-general-info">
@@ -195,6 +196,7 @@
   import DatasetSearchFiles from '~/components/datasets/search-files.vue'
   import DatasetThumbnails from '~/components/datasets/thumbnails.vue'
   import DatasetPublications from '~/components/datasets/publications.vue'
+  import DatasetStatus from '~/components/datasets/status.vue'
   import Permissions from '~/components/permissions.vue'
   import Journal from '~/components/journal.vue'
   import OpenApi from '~/components/open-api.vue'
@@ -213,6 +215,7 @@
       DatasetSearchFiles,
       DatasetThumbnails,
       DatasetPublications,
+      DatasetStatus,
       Permissions,
       Journal,
       OpenApi,
