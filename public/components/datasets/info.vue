@@ -3,6 +3,7 @@
     <v-col
       cols="12"
       md="6"
+      lg="5"
       order-md="2"
     >
       <v-sheet>
@@ -37,30 +38,6 @@
             <span>{{ dataset.count }} enregistrements</span>
           </v-list-item>
 
-          <v-list-item>
-            <v-list-item-avatar v-if="nbApplications === null" class="ml-0 my-0">
-              <v-progress-circular
-                :size="20"
-                :width="3"
-                small
-                indeterminate
-                color="primary"
-              />
-            </v-list-item-avatar>
-            <template v-else>
-              <v-list-item-avatar class="ml-0 my-0">
-                <v-icon>mdi-apps</v-icon>
-              </v-list-item-avatar>
-              <span v-if="nbApplications === 0">0 application</span>
-              <nuxt-link
-                v-else
-                :to="`/applications?dataset=${dataset.id}`"
-              >
-                {{ nbApplications }} application{{ nbApplications > 1 ? 's' : '' }}
-              </nuxt-link>
-            </template>
-          </v-list-item>
-
           <v-list-item v-if="nbVirtualDatasets">
             <v-list-item-avatar class="ml-0 my-0">
               <v-icon>mdi-picture-in-picture-bottom-right-outline</v-icon>
@@ -82,6 +59,7 @@
     <v-col
       cols="12"
       md="6"
+      lg="7"
       order-md="1"
     >
       <v-text-field
@@ -163,7 +141,7 @@
     },
     computed: {
       ...mapState(['projections']),
-      ...mapState('dataset', ['dataset', 'journal', 'nbApplications', 'nbVirtualDatasets']),
+      ...mapState('dataset', ['dataset', 'journal', 'nbVirtualDatasets']),
       ...mapState('session', ['user']),
       ...mapGetters('dataset', ['can', 'resourceUrl']),
       licenses() {

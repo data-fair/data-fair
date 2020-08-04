@@ -1,5 +1,6 @@
 <template>
   <v-row>
+    <v-progress-linear v-if="!applications" :indeterminate="true" />
     <v-col
       v-for="app in applications"
       :key="app.id"
@@ -24,7 +25,6 @@
 
   export default {
     components: { ApplicationCard },
-    props: ['applications'],
     computed: {
       ...mapState('dataset', ['applications']),
     },

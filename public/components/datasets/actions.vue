@@ -34,7 +34,7 @@
               mdi-file-upload
             </v-icon>
           </v-list-item-avatar>
-          <v-list-item-title>Remplacer</v-list-item-title>
+          <v-list-item-title>Mise à jour</v-list-item-title>
         </v-list-item>
         <v-list-item v-if="can('delete')" @click="showDeleteDialog = true">
           <v-list-item-avatar>
@@ -68,14 +68,14 @@
             type="error"
             outlined
           >
-            Attention ! Ce jeu de données est utilisé par une application. Si vous le supprimez cette application ne sera plus fonctionnelle.
+            Attention ! Ce jeu de données est utilisé par une visualisation. Si vous le supprimez cette visualisation ne sera plus fonctionnelle.
           </v-alert>
           <v-alert
             :value="nbApplications > 1"
             type="error"
             outlined
           >
-            Attention ! Ce jeu de données est utilisé par {{ nbApplications }} applications. Si vous le supprimez ces applications ne seront plus fonctionnelles.
+            Attention ! Ce jeu de données est utilisé par {{ nbApplications }} visualisations. Si vous le supprimez ces visualisations ne seront plus fonctionnelles.
           </v-alert>
         </v-card-text>
         <v-card-text>
