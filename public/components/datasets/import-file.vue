@@ -12,7 +12,6 @@
       <v-stepper-step
         :complete="currentStep > 2 && !!attachment"
         step="2"
-        editable
       >
         Pièces jointes
       </v-stepper-step>

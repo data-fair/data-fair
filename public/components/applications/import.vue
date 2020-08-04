@@ -2,7 +2,7 @@
   <v-stepper v-model="currentStep" class="elevation-0">
     <v-stepper-header>
       <v-stepper-step
-        :complete="!!dataset"
+        :complete="!!dataset || !!noDataset"
         step="1"
         :editable="!$route.query.dataset"
       >
@@ -12,7 +12,7 @@
       <v-stepper-step
         :complete="!!baseApp"
         step="2"
-        editable
+        :editable="!!baseApp"
       >
         Sélection de l'application
       </v-stepper-step>
@@ -20,7 +20,7 @@
       <v-stepper-step
         :complete="!!title"
         step="3"
-        editable
+        :editable="!!baseApp"
       >
         Informations
       </v-stepper-step>
@@ -29,38 +29,56 @@
     <v-stepper-items>
       <v-stepper-content step="1">
         <v-sheet>
-          <v-form ref="datasetForm" style="max-width: 500px">
+          <p>Sélectionnez un jeu de données sur lequel la visualisation sera basée.</p>
+          <p>Les applications proposées pour configurer la visualisation dépendront des caractéristiques de ce jeu de données : types des colonnes et concepts.</p>
+          <p>Vous pouvez également cocher "Aucun jeu de données" pour configurer les quelques applications particulières qui ne nécessitent pas de jeu de données.</p>
+          <v-form
+            ref="datasetForm"
+            style="max-width: 500px"
+            class="mt-6 pl-3"
+          >
             <v-jsf
               v-model="datasetModel"
               :schema="datasetSchema"
               :options="vjsfOptions"
             />
+            <v-checkbox v-model="noDataset" label="Aucun jeu de données" />
+            <v-btn
+              :disabled="!dataset && !noDataset"
+              color="primary"
+              @click.native="currentStep = 2"
+            >
+              Continuer
+            </v-btn>
           </v-form>
-          <v-btn
-            :disabled="!dataset"
-            color="primary"
-            @click.native="currentStep = 2"
-          >
-            Continuer
-          </v-btn>
         </v-sheet>
       </v-stepper-content>
 
       <v-stepper-content step="2">
         <v-sheet>
+          <p>
+            Nous réalisons aussi des <span class="accent--text">applications personnalisées</span> sur demande.
+            N'hésitez pas à <a href="https://koumoul.com/contact" class="">Nous contacter</a> !
+          </p>
           <base-apps
-            v-if="dataset"
             v-model="baseApp"
             :dataset="dataset"
+            @input="currentStep = 3; title = dataset.title + ' - ' + baseApp.title"
           />
         </v-sheet>
         <v-btn
+          text
+          @click.native="currentStep = 1"
+        >
+          Retour
+        </v-btn>
+        <!--<v-btn
           :disabled="!baseApp"
           color="primary"
           @click.native="currentStep = 3"
         >
           Continuer
-        </v-btn>
+        </v-btn>-->
       </v-stepper-content>
 
       <v-stepper-content step="3">
@@ -78,6 +96,13 @@
           @click.native="createApplication()"
         >
           Enregistrer
+        </v-btn>
+        <v-btn
+          text
+          class="ml-2"
+          @click.native="currentStep = 2"
+        >
+          Retour
         </v-btn>
       </v-stepper-content>
     </v-stepper-items>
@@ -103,6 +128,7 @@
     data: () => ({
       currentStep: null,
       datasetModel: null,
+      noDataset: false,
       dataset: null,
       baseApp: null,
       applicationUrl: null,
@@ -147,13 +173,17 @@
     },
     watch: {
       datasetModel() {
-        this.getDataset(this.datasetModel.id)
+        if (!this.datasetModel) this.dataset = null
+        else {
+          this.getDataset(this.datasetModel.id)
+          this.noDataset = false
+        }
+      },
+      noDataset() {
+        if (this.noDataset) this.datasetModel = null
       },
       dataset() {
         this.baseApp = null
-      },
-      baseApp() {
-        this.title = this.dataset.title + ' - ' + this.baseApp.title
       },
     },
     methods: {
