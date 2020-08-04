@@ -145,6 +145,7 @@ router.get('/base-applications', asyncWrap(async(req, res) => {
       applicationName: 1,
       version: 1,
       description: 1,
+      category: 1,
       meta: 1,
       url: 1,
       image: 1,

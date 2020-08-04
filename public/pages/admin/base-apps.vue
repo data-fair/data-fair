@@ -51,7 +51,7 @@
               </v-list-item-avatar>
               <v-list-item-content>
                 <v-list-item-title>
-                  {{ baseApp.category }} - {{ baseApp.title }} - {{ baseApp.applicationName }} ({{ baseApp.version }}) - <a :href="baseApp.url">{{ baseApp.url }}</a>
+                  {{ baseApp.category || 'autre' }} - {{ baseApp.title }} - {{ baseApp.applicationName }} ({{ baseApp.version }}) - <a :href="baseApp.url">{{ baseApp.url }}</a>
                   <v-icon
                     v-if="baseApp.public"
                     color="green"
@@ -137,6 +137,7 @@
               v-model="patch.category"
               name="category"
               label="Catégorie"
+              clearable
               :items="env.baseAppsCategories"
             />
             <v-text-field
@@ -221,6 +222,7 @@
           applicationName: baseApp.applicationName,
           version: baseApp.version,
           description: baseApp.description,
+          category: baseApp.category,
           public: baseApp.public,
           deprecated: baseApp.deprecated,
           image: baseApp.image,
@@ -230,6 +232,7 @@
       async applyPatch(baseApp, patch) {
         const actualPatch = { ...patch }
         if (actualPatch.public) actualPatch.privateAccess = []
+        actualPatch.category = actualPatch.category || null
         await this.$axios.$patch(`api/v1/base-applications/${baseApp.id}`, actualPatch)
         Object.keys(actualPatch).forEach(key => {
           this.$set(baseApp, key, actualPatch[key])
