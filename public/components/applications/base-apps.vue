@@ -48,7 +48,7 @@
       ...mapGetters('session', ['activeAccount']),
       categories() {
         return this.env.baseAppsCategories.concat('autre')
-          .filter(c => this.baseApps && this.baseApps.filter(b => b.category === c).length)
+          .filter(c => this.configurableApps && this.configurableApps.filter(b => b.category === c).length)
       },
       configurableApps() {
         return (this.baseApps || []).map(app => {
