@@ -32,18 +32,18 @@
         </v-chip>
       </v-col>
     </v-row>
-    <v-card-actions v-if="!hideOwner">
+    <v-card-actions class="pt-1">
       <owner-short :owner="application.owner" />
       &nbsp;&nbsp;
       <visibility :visibility="application.visibility" />
       <v-spacer />
-      <v-tooltip v-if="application.status !== 'configured'" top>
+      <v-tooltip v-if="status !== 'configured'" top>
         <template v-slot:activator="{on}">
-          <v-icon :color="application.status === 'error' ? 'error' : 'warning'" v-on="on">
-            {{ application.status === 'error' ? 'mdi-alert' : 'mdi-reload-alert' }}
+          <v-icon :color="status === 'error' ? 'error' : 'warning'" v-on="on">
+            {{ status === 'error' ? 'mdi-alert' : 'mdi-reload-alert' }}
           </v-icon>
         </template>
-        {{ application.status === 'error' ? 'En erreur' : 'Brouillon non validé' }}
+        {{ status === 'error' ? 'En erreur' : 'Brouillon non validé' }}
       </v-tooltip>
     </v-card-actions>
   </v-card>
@@ -52,13 +52,11 @@
 <script>
   import OwnerShort from '~/components/owners/short.vue'
   import Visibility from '~/components/visibility.vue'
-  const marked = require('marked')
 
   export default {
     components: { OwnerShort, Visibility },
-    props: ['application', 'hideOwner', 'hideDescription'],
+    props: ['application'],
     data: () => ({
-      marked,
       hover: false,
     }),
     computed: {

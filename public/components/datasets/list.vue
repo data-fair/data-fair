@@ -142,7 +142,7 @@
         const params = {
           size: this.size,
           page: this.page,
-          select: 'title,description,status,topics',
+          select: 'title,description,status,topics,isVirtual,isRest,file,count',
           facets: 'status,visibility,services,concepts,topics',
           sort: 'createdAt:-1',
           ...fullFilters,

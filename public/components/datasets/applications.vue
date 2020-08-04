@@ -27,11 +27,7 @@
           lg="3"
           xl="2"
         >
-          <application-card
-            :application="app"
-            :hide-owner="true"
-            :hide-description="true"
-          />
+          <application-card :application="app" />
         </v-col>
       </draggable>
     </template>

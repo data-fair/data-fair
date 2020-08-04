@@ -14,7 +14,7 @@
             <v-list-item-avatar class="ml-0 my-0">
               <v-icon>mdi-file</v-icon>
             </v-list-item-avatar>
-            <span>{{ (dataset.remoteFile || dataset.originalFile || dataset.file).name }} {{ ((dataset.remoteFile || dataset.originalFile || dataset.file).size / 1000).toFixed(2) }} ko</span>
+            <span>{{ (dataset.remoteFile || dataset.originalFile || dataset.file).name }} {{ ((dataset.remoteFile || dataset.originalFile || dataset.file).size / 1000) | displayBytes }}</span>
           </v-list-item>
 
           <v-list-item>
@@ -35,7 +35,7 @@
             <v-list-item-avatar class="ml-0 my-0">
               <v-icon>mdi-view-headline</v-icon>
             </v-list-item-avatar>
-            <span>{{ dataset.count }} enregistrements</span>
+            <span>{{ dataset.count.toLocaleString() }} lignes</span>
           </v-list-item>
 
           <v-list-item v-if="nbVirtualDatasets">
