@@ -1,6 +1,5 @@
 <template>
   <v-card
-    height="100%"
     :to="`/application/${application.id}`"
     outlined
     :elevation="hover ? 2 : 0"
@@ -8,60 +7,67 @@
     @mouseleave="hover = false"
   >
     <v-card-title>
-      <span>{{ application.title || application.id }}
+      <span style="white-space: nowrap;overflow: hidden;text-overflow: ellipsis;">
+        {{ application.title || application.id }}
+      </span>
+    </v-card-title>
+    <v-divider />
+    <v-img
+      :src="`${application.href}/capture`"
+      height="180px"
+    />
+    <v-divider v-if="!hideDescription" />
+    <v-row style="min-height:30px;">
+      <v-col class="pt-1 pb-0">
         <v-chip
           v-for="topic of application.topics"
           :key="topic.id"
           small
           outlined
           :color="topic.color || 'default'"
-          class="ml-3"
+          class="ml-2"
           style="font-weight: bold"
         >
           {{ topic.title }}
         </v-chip>
-      </span>
-    </v-card-title>
-    <v-divider />
-    <v-img
-      :src="`${application.href}/capture`"
-      height="200px"
-    />
-    <v-divider v-if="!hideDescription" />
-    <v-card-text
-      v-if="!hideDescription"
-      style="max-height:160px;overflow: hidden; margin-bottom: 40px;"
-      v-html="marked($options.filters.truncate(application.description || '', 200))"
-    />
-
-    <v-card-actions v-if="!hideOwner" style="position:absolute; bottom: 0px;width:100%;">
+      </v-col>
+    </v-row>
+    <v-card-actions v-if="!hideOwner">
       <owner-short :owner="application.owner" />
-      &nbsp;<v-chip
-        small
-        :color="application.visibility === 'public' ? 'primary' : 'accent'"
-        text-color="white"
-      >
-        {{ {public: 'Public', private: 'Privé', protected: 'Protégé'}[application.visibility] }}
-      </v-chip>
-      <template v-if="application.status === 'error'">
-        <v-spacer />
-        <span><v-icon color="red">mdi-alert</v-icon>&nbsp;En erreur</span>
-      </template>
+      &nbsp;&nbsp;
+      <visibility :visibility="application.visibility" />
+      <v-spacer />
+      <v-tooltip v-if="application.status !== 'configured'" top>
+        <template v-slot:activator="{on}">
+          <v-icon :color="application.status === 'error' ? 'error' : 'warning'" v-on="on">
+            {{ application.status === 'error' ? 'mdi-alert' : 'mdi-reload-alert' }}
+          </v-icon>
+        </template>
+        {{ application.status === 'error' ? 'En erreur' : 'Brouillon non validé' }}
+      </v-tooltip>
     </v-card-actions>
   </v-card>
 </template>
 
 <script>
   import OwnerShort from '~/components/owners/short.vue'
+  import Visibility from '~/components/visibility.vue'
   const marked = require('marked')
 
   export default {
-    components: { OwnerShort },
+    components: { OwnerShort, Visibility },
     props: ['application', 'hideOwner', 'hideDescription'],
     data: () => ({
       marked,
       hover: false,
     }),
+    computed: {
+      status() {
+        if (this.application.status === 'error') return 'error'
+        if (!this.application.configuration) return 'draft'
+        return 'configured'
+      },
+    },
   }
 </script>
 

@@ -45,21 +45,6 @@
       />
     </template>
 
-    <template v-if="facets['base-application'] && facets['base-application'].length">
-      <v-subheader @click="visibleFacet = 'base-application'">
-        Application
-      </v-subheader>
-      <v-checkbox
-        v-for="facetItem in facets['base-application']"
-        :key="`${facetItem.value}`"
-        v-model="facetsValues['base-application'][facetItem.value.url]"
-        :label="`${facetItem.value.title} ${facetItem.value.version || ''} (${facetItem.count})`"
-        :value="true"
-        :hide-details="true"
-        class="mt-0"
-      />
-    </template>
-
     <template v-if="facets.topics && facets.topics.length">
       <v-subheader @click="visibleFacet = 'topics'">
         Thématiques
@@ -69,6 +54,21 @@
         :key="facetItem.value.id"
         v-model="facetsValues.topics[facetItem.value.id]"
         :label="`${facetItem.value.title} (${facetItem.count})`"
+        :value="true"
+        :hide-details="true"
+        class="mt-0"
+      />
+    </template>
+
+    <template v-if="facets['base-application'] && facets['base-application'].length">
+      <v-subheader @click="visibleFacet = 'base-application'">
+        Application
+      </v-subheader>
+      <v-checkbox
+        v-for="facetItem in facets['base-application']"
+        :key="`${facetItem.value}`"
+        v-model="facetsValues['base-application'][facetItem.value.url]"
+        :label="`${facetItem.value.title} ${facetItem.value.version || ''} (${facetItem.count})`"
         :value="true"
         :hide-details="true"
         class="mt-0"
