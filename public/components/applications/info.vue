@@ -3,6 +3,7 @@
     <v-col
       cols="12"
       md="6"
+      lg="5"
       order-md="2"
     >
       <v-sheet>
@@ -32,6 +33,15 @@
             </v-list-item-avatar>
             <span>{{ application.createdBy.name }} {{ application.createdAt | moment("DD/MM/YYYY, HH:mm") }}</span>
           </v-list-item>
+          <v-list-item
+            v-if="dataset"
+            :to="`/dataset/${dataset.id}`"
+          >
+            <v-list-item-avatar class="ml-0 my-0">
+              <v-icon>mdi-database</v-icon>
+            </v-list-item-avatar>
+            <a>{{ dataset.title }}</a>
+          </v-list-item>
           <v-list-item v-if="nbSessions !== null">
             <v-list-item-avatar class="ml-0 my-0">
               <v-icon>mdi-eye</v-icon>
@@ -44,6 +54,7 @@
     <v-col
       cols="12"
       md="6"
+      lg="7"
       order-md="1"
     >
       <v-text-field
@@ -90,6 +101,15 @@
       ...mapState('application', ['application', 'nbSessions', 'journal']),
       topics() {
         return this.$store.getters.ownerTopics(this.application.owner)
+      },
+      dataset() {
+        if (this.application.configuration && this.application.configuration.datasets && this.application.configuration.datasets.length) {
+          return this.application.configuration.datasets[0]
+        }
+        if (this.application.configurationDraft && this.application.configurationDraft.datasets && this.application.configurationDraft.datasets.length) {
+          return this.application.configurationDraft.datasets[0]
+        }
+        return null
       },
     },
     mounted() {

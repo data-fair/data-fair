@@ -25,9 +25,9 @@
     <v-divider />
     <v-img
       :src="`${application.href}/capture`"
-      height="240px"
+      height="200px"
     />
-    <v-divider />
+    <v-divider v-if="!hideDescription" />
     <v-card-text
       v-if="!hideDescription"
       style="max-height:160px;overflow: hidden; margin-bottom: 40px;"

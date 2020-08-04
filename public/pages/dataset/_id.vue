@@ -121,12 +121,7 @@
               <v-icon>mdi-image-multiple</v-icon>&nbsp;&nbsp;Visualisations
             </v-tab>
             <v-tab-item value="tab-reuses-apps">
-              <v-container fluid class="pt-0">
-                <dataset-applications />
-                <v-btn color="primary" :to="{path: '/new-application', query: {dataset: dataset.id}}">
-                  Configurer une visualisation
-                </v-btn>
-              </v-container>
+              <dataset-applications />
             </v-tab-item>
           </v-tabs>
         </v-card>
