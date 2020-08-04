@@ -3,8 +3,12 @@
     <v-row class="dataset">
       <v-col>
         <dataset-status />
-        <v-card outlined style="min-height: 440px;">
-          <v-tabs>
+        <v-card
+          outlined
+          style="min-height: 440px;"
+          class="mt-4"
+        >
+          <v-tabs background-color="grey lighten-3">
             <v-tab href="#tab-general-info">
               <v-icon>mdi-information</v-icon>&nbsp;&nbsp;Informations
             </v-tab>
@@ -55,9 +59,9 @@
         <v-card
           v-if="can('readLines')"
           outlined
-          class="mt-4"
+          class="mt-6"
         >
-          <v-tabs>
+          <v-tabs background-color="grey lighten-3">
             <v-tab href="#tab-preview-table">
               <v-icon>mdi-table</v-icon>&nbsp;&nbsp;Tableau
             </v-tab>
@@ -111,8 +115,8 @@
           </v-tabs>
         </v-card>
 
-        <v-card outlined class="mt-4">
-          <v-tabs>
+        <v-card outlined class="mt-6">
+          <v-tabs background-color="grey lighten-3">
             <v-tab href="#tab-reuses-apps">
               <v-icon>mdi-image-multiple</v-icon>&nbsp;&nbsp;Visualisations
             </v-tab>
@@ -131,9 +135,9 @@
           v-if="can('getPermissions')"
           outlined
           style="min-height: 240px;"
-          class="mt-4"
+          class="mt-6"
         >
-          <v-tabs>
+          <v-tabs background-color="grey lighten-3">
             <v-tab href="#tab-publish-permissions">
               <v-icon>mdi-security</v-icon>&nbsp;&nbsp;Permissions
             </v-tab>
@@ -160,9 +164,9 @@
         <v-card
           v-if="can('readJournal') || can('readApiDoc')"
           outlined
-          class="mt-4"
+          class="mt-6"
         >
-          <v-tabs>
+          <v-tabs background-color="grey lighten-3">
             <template v-if="can('readJournal')">
               <v-tab href="#tab-tech-journal">
                 <v-icon>mdi-calendar-text</v-icon>&nbsp;&nbsp;Journal
@@ -269,4 +273,7 @@
 </script>
 
 <style>
+.dataset .v-tab {
+  font-weight: bold;
+}
 </style>

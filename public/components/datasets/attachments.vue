@@ -1,6 +1,6 @@
 <template lang="html">
   <v-container fluid>
-    <p>Charger un fichier pour créer/modifier une pièce jointe. Le nom de fichier est la clé.</p>
+    <p>Charger un fichier pour créer/modifier une pièce jointe. Le nom de fichier est l'identifiant de la pièce jointe.</p>
     <input
       type="file"
       @change="onFileUpload"

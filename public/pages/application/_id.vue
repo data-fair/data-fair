@@ -10,7 +10,7 @@
           style="min-height: 240px;"
           class="mt-4"
         >
-          <v-tabs>
+          <v-tabs background-color="grey lighten-3">
             <v-tab href="#tab-publish-permissions">
               <v-icon>mdi-security</v-icon>&nbsp;&nbsp;Permissions
             </v-tab>
@@ -37,9 +37,9 @@
         <v-card
           v-if="can('readJournal') || can('readApiDoc')"
           outlined
-          class="mt-4"
+          class="mt-6"
         >
-          <v-tabs>
+          <v-tabs background-color="grey lighten-3">
             <template v-if="can('readJournal')">
               <v-tab href="#tab-tech-journal">
                 <v-icon>mdi-calendar-text</v-icon>&nbsp;&nbsp;Journal
@@ -130,4 +130,7 @@
 </script>
 
 <style>
+.application .v-tab {
+  font-weight: bold;
+}
 </style>
