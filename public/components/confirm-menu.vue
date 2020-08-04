@@ -11,7 +11,7 @@
             <v-icon>mdi-delete</v-icon>
           </v-btn>
         </template>
-        <span>Supprimer l'extension</span>
+        <span>{{ tooltip }}</span>
       </v-tooltip>
     </template>
     <v-card>
@@ -37,6 +37,10 @@
       text: {
         type: String,
         default: 'Souhaitez-vous confirmer cette opération ?',
+      },
+      tooltip: {
+        type: String,
+        default: '',
       },
       yesColor: {
         type: String,

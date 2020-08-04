@@ -83,6 +83,7 @@
               <confirm-menu
                 yes-color="warning"
                 text="Souhaitez-vous confirmer la suppression ?"
+                tooltip="Supprimer l'extension"
                 @confirm="removeExtension(idx)"
               />
               <v-spacer />

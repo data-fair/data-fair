@@ -123,6 +123,13 @@
             <v-tab-item value="tab-reuses-apps">
               <dataset-applications />
             </v-tab-item>
+
+            <v-tab href="#tab-reuses-external">
+              <v-icon>mdi-open-in-new</v-icon>&nbsp;&nbsp;Réutilisations externes
+            </v-tab>
+            <v-tab-item value="tab-reuses-external">
+              <dataset-external-reuses />
+            </v-tab-item>
           </v-tabs>
         </v-card>
 
@@ -213,6 +220,7 @@
   import DatasetPublications from '~/components/datasets/publications.vue'
   import DatasetStatus from '~/components/datasets/status.vue'
   import DatasetApplications from '~/components/datasets/applications.vue'
+  import DatasetExternalReuses from '~/components/datasets/external-reuses.vue'
   import Permissions from '~/components/permissions.vue'
   import Journal from '~/components/journal.vue'
   import OpenApi from '~/components/open-api.vue'
@@ -233,6 +241,7 @@
       DatasetPublications,
       DatasetStatus,
       DatasetApplications,
+      DatasetExternalReuses,
       Permissions,
       Journal,
       OpenApi,
