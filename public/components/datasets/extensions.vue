@@ -1,6 +1,9 @@
 <template lang="html">
   <v-row>
     <v-col>
+      <p v-if="dataset.extensions && !dataset.extensions.length">
+        Étendez votre donnée avec de nouvelles colonnes issues de sources de données externes.
+      </p>
       <!-- 450 matches the size of the container in the embed page, to prevent overflowing iframe -->
       <v-menu v-model="addExtensionDialog" :max-height="450">
         <template v-slot:activator="{ on }">
@@ -194,7 +197,7 @@
       logger.debug('remoteServicesMap after fetchRemoteServices', this.remoteServicesMap)
 
       // we do not use "active" anymore, just ignore inactive extensions
-      this.dataset.extensions = this.dataset.extensions.filter(e => e.active !== false)
+      this.dataset.extensions = (this.dataset.extensions || []).filter(e => e.active !== false)
       // remove deprecated extensions based on available extensions
       this.dataset.extensions = this.dataset.extensions.filter(e => {
         return this.remoteServicesMap[e.remoteService] && this.remoteServicesMap[e.remoteService].actions[e.action]
