@@ -48,23 +48,30 @@ router.get('/datasets-errors', asyncWrap(async (req, res, next) => {
 
 router.get('/applications-errors', asyncWrap(async (req, res, next) => {
   const applications = req.app.get('db').collection('applications')
-  const query = { status: 'error' }
+  const query = { errorMessage: { $exists: true } }
   const [skip, size] = findUtils.pagination(req.query)
+  const resultsPromise = applications
+    .find(query)
+    .skip(skip)
+    .limit(size)
+    .project({ _id: 0, id: 1, title: 1, description: 1, updatedAt: 1, owner: 1, errorMessage: 1, status: 1 })
+    .toArray()
+  const [count, results] = await Promise.all([applications.countDocuments(query), resultsPromise])
 
-  const aggregatePromise = applications.aggregate([
-    { $match: query },
-    { $project: { _id: 0, id: 1, title: 1, description: 1, updatedAt: 1, owner: 1 } },
-    { $sort: { updatedAt: -1 } },
-    { $skip: skip },
-    { $limit: size },
-    { $lookup: { from: 'journals', localField: 'id', foreignField: 'id', as: 'journal' } },
-    { $unwind: '$journal' },
-    { $match: { 'journal.type': 'application' } },
-    { $addFields: { event: { $arrayElemAt: ['$journal.events', -1] } } },
-    { $project: { id: 1, title: 1, description: 1, updatedAt: 1, owner: 1, event: 1 } },
-  ]).toArray()
+  res.send({ count, results })
+}))
 
-  const [count, results] = await Promise.all([applications.countDocuments(query), aggregatePromise])
+router.get('/applications-draft-errors', asyncWrap(async (req, res, next) => {
+  const applications = req.app.get('db').collection('applications')
+  const query = { errorMessageDraft: { $exists: true } }
+  const [skip, size] = findUtils.pagination(req.query)
+  const resultsPromise = applications
+    .find(query)
+    .skip(skip)
+    .limit(size)
+    .project({ _id: 0, id: 1, title: 1, description: 1, updatedAt: 1, owner: 1, errorMessageDraft: 1, status: 1 })
+    .toArray()
+  const [count, results] = await Promise.all([applications.countDocuments(query), resultsPromise])
 
   res.send({ count, results })
 }))
