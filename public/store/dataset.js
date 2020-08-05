@@ -70,10 +70,14 @@ export default () => ({
   },
   mutations: {
     setAny(state, params) {
-      Object.assign(state, params)
+      for (const key in params) {
+        Vue.set(state, key, params[key])
+      }
     },
     patch(state, patch) {
-      Object.assign(state.dataset, patch)
+      for (const key in patch) {
+        Vue.set(state.dataset, key, patch[key])
+      }
     },
     addJournalEvent(state, event) {
       if (!state.journal.find(e => e.date === event.date)) {
