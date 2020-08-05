@@ -368,7 +368,10 @@
         this.$refs.configForm && this.$refs.configForm.validate()
         if (!this.formValid) return
         await this.writeConfigDraft(this.editConfig)
-        this.fetchStatus()
+        await this.fetchStatus()
+        // errors in draft app should be pushed by websocket, but to be extra safe we check after 5 seconds
+        await new Promise(resolve => setTimeout(resolve, 5000))
+        await this.fetchStatus()
       },
       async validateDraft(e) {
         e.preventDefault()
