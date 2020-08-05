@@ -136,7 +136,7 @@
         <v-card
           v-if="can('getPermissions')"
           outlined
-          style="min-height: 240px;"
+          style="min-height: 200px;"
           class="mt-6"
         >
           <v-tabs background-color="grey lighten-3">

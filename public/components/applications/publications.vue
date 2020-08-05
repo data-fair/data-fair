@@ -8,8 +8,17 @@
     <p v-if="!application.publications.length">
       Il n'existe pas encore de publication de cette application.
     </p>
+
+    <v-btn
+      v-if="can('writeDescription')"
+      color="primary"
+      @click="addPublicationDialog = true"
+    >
+      Ajouter une publication
+    </v-btn>
+
     <v-list
-      v-else
+      v-if="application.publications.length"
       two-line
     >
       <v-list-item
@@ -65,18 +74,6 @@
         </v-list-item-action>
       </v-list-item>
     </v-list>
-
-    <v-row
-      v-if="can('writeDescription')"
-    >
-      <v-spacer />
-      <v-btn
-        color="primary"
-        @click="addPublicationDialog = true"
-      >
-        Ajouter une publication
-      </v-btn>
-    </v-row>
 
     <v-dialog
       v-model="addPublicationDialog"

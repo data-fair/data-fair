@@ -8,8 +8,17 @@
     <p v-if="!dataset.publications.length">
       Il n'existe pas encore de publication de ce jeu de données.
     </p>
+
+    <v-btn
+      v-if="can('writeDescription')"
+      color="primary"
+      @click="addPublicationDialog = true"
+    >
+      Ajouter une publication
+    </v-btn>
+
     <v-list
-      v-else
+      v-if="dataset.publications.length"
       two-line
     >
       <v-list-item
@@ -70,19 +79,6 @@
         </v-list-item-action>
       </v-list-item>
     </v-list>
-
-    <v-row
-      v-if="can('writeDescription')"
-    >
-      <v-col>
-        <v-btn
-          color="primary"
-          @click="addPublicationDialog = true"
-        >
-          Ajouter une publication
-        </v-btn>
-      </v-col>
-    </v-row>
 
     <v-dialog
       v-model="addPublicationDialog"
