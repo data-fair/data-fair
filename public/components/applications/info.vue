@@ -28,10 +28,7 @@
             <v-list-item-avatar class="ml-0 my-0">
               <v-icon>{{ events[journal[0].type].icon }}</v-icon>
             </v-list-item-avatar>
-            <p v-if="journal[0].type === 'error'">
-              {{ events[journal[0].type].text }} <br> {{ journal[0].data }}
-            </p>
-            <span v-else>{{ events[journal[0].type].text }}</span>
+            <span>{{ events[journal[0].type].text }}</span>
           </v-list-item>
           <v-list-item>
             <v-list-item-avatar class="ml-0 my-0">

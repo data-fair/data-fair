@@ -96,6 +96,10 @@
     "config-draft-updated": {
       "icon": "mdi-pencil",
       "text": "Le brouillon de configuration a été mis à jour"
+    },
+    "config-draft-cancelled": {
+      "icon": "mdi-delete",
+      "text": "Le brouillon de configuration a été effacé"
     }
   }
 }

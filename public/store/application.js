@@ -22,6 +22,7 @@ export default () => ({
       return (state.application && state.application.userPermissions.includes(operation))
     },
     journalChannel: (state) => 'applications/' + state.applicationId + '/journal',
+    draftErrorChannel: (state) => 'applications/' + state.applicationId + '/draft-error',
     applicationLink: (state, getters, rootState) => {
       if (state.application) return rootState.env.publicUrl + '/app/' + state.application.id
     },
@@ -59,11 +60,18 @@ export default () => ({
       commit('setAny', { applicationId })
       await dispatch('fetchInfo')
     },
-    subscribe({ getters, dispatch }) {
+    subscribe({ commit, getters, dispatch }) {
       eventBus.$emit('subscribe', getters.journalChannel)
       eventBus.$on(getters.journalChannel, event => {
-        if (event.type === 'error') eventBus.$emit('notification', { error: event.data, msg: 'Le service a rencontré une erreur pendant le traitement de l\'application:' })
+        if (event.type === 'error') {
+          commit('patch', { errorMessage: event.data, status: 'error' })
+        }
         dispatch('addJournalEvent', event)
+      })
+
+      eventBus.$emit('subscribe', getters.draftErrorChannel)
+      eventBus.$on(getters.draftErrorChannel, event => {
+        commit('patch', { errorMessageDraft: event.message })
       })
     },
     clear({ commit, state }) {
@@ -118,6 +126,14 @@ export default () => ({
       try {
         await this.$axios.$put(getters.resourceUrl + '/configuration-draft', configDraft)
         commit('setAny', { configDraft: JSON.parse(JSON.stringify(configDraft)) })
+      } catch (error) {
+        eventBus.$emit('notification', { error, msg: 'Erreur pendant l\'écriture du brouillon de visualisation:' })
+      }
+    },
+    async cancelConfigDraft({ state, commit, getters, dispatch }) {
+      try {
+        await this.$axios.$delete(getters.resourceUrl + '/configuration-draft')
+        commit('setAny', { configDraft: state.config })
       } catch (error) {
         eventBus.$emit('notification', { error, msg: 'Erreur pendant l\'écriture du brouillon de visualisation:' })
       }

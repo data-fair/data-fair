@@ -135,7 +135,7 @@
         const params = {
           size: this.size,
           page: this.page,
-          select: 'title,description,status,topics',
+          select: 'title,description,status,topics,errorMessage',
           ...fullFilters,
           facets: 'visibility,base-application,topics',
           sort: 'createdAt:-1',

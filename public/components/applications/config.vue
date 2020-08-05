@@ -1,5 +1,13 @@
 <template lang="html">
   <v-container fluid class="pa-0">
+    <v-alert
+      v-if="!!application.errorMessage"
+      type="error"
+      border="left"
+    >
+      <p>Erreur dans la <b>version validée</b></p>
+      <p class="mb-0" v-html="application.errorMessage" />
+    </v-alert>
     <no-ssr>
       <v-row>
         <v-col
@@ -7,6 +15,14 @@
           sm="6"
           md="4"
         >
+          <v-alert
+            v-if="!!application.errorMessageDraft"
+            type="warning"
+            border="left"
+            outlined
+          >
+            <p class="mb-0" v-html="application.errorMessageDraft" />
+          </v-alert>
           <v-select
             v-model="editUrl"
             :loading="!baseApps"
@@ -31,7 +47,7 @@
             <v-row class="mt-3">
               <v-spacer />
               <v-btn
-                :disabled="hasModification || !hasDraft"
+                :disabled="hasModification || !hasDraft || !!application.errorMessageDraft"
                 color="accent"
                 type="submit"
               >
@@ -54,7 +70,11 @@
           md="8"
           class="pl-0"
         >
-          <v-card class="pa-2" outlined>
+          <v-card
+            class="pa-2"
+            outlined
+            :style="!!application.errorMessageDraft ? `border-color: ${$vuetify.theme.themes.light.warning};` : ''"
+          >
             <v-iframe v-if="showDraftPreview" :src="applicationLink + '?embed=true&draft=true'" />
           </v-card>
         </v-col>
@@ -200,7 +220,8 @@
         return JSON.stringify(this.editConfig) !== JSON.stringify(this.configDraft) || this.editUrl !== this.application.urlDraft
       },
       hasDraft() {
-        return JSON.stringify(this.config) !== JSON.stringify(this.configDraft) || (this.application.urlDraft && this.application.urlDraft !== this.application.url)
+        // (JSON.stringify(this.config) !== JSON.stringify(this.configDraft) || (this.application.urlDraft && this.application.urlDraft !== this.application.url)
+        return this.application.status === 'configured-draft'
       },
       configClone() {
         return JSON.parse(JSON.stringify(this.config))
@@ -240,7 +261,7 @@
         deep: true,
       },
       editUrl() {
-        this.saveDraft()
+        this.saveUrlDraft()
       },
       async 'application.urlDraft'() {
         await this.fetchSchemas()
@@ -253,7 +274,7 @@
       this.fetchBaseApps()
     },
     methods: {
-      ...mapActions('application', ['readConfig', 'writeConfig', 'readConfigDraft', 'writeConfigDraft', 'patchAndCommit']),
+      ...mapActions('application', ['readConfig', 'writeConfig', 'readConfigDraft', 'writeConfigDraft', 'cancelConfigDraft', 'patchAndCommit']),
       async fetchBaseApps() {
         // get base apps that share the same application name (meaning different version of same app)
         try {
@@ -335,22 +356,32 @@
         this.showProdPreview = false
         setTimeout(() => { this.showProdPreview = true }, 1)
       },
-      saveDraft(e) {
+      async fetchStatus() {
+        const application = await this.$axios.$get(`api/v1/applications/${this.application.id}`)
+        this.$store.commit('application/patch', { status: application.status, errorMessage: application.errorMessage, errorMessageDraft: application.errorMessageDraft })
+      },
+      saveUrlDraft() {
         this.patchAndCommit({ urlDraft: this.editUrl, silent: true })
+      },
+      async saveDraft(e) {
+        if (JSON.stringify(this.editConfig) === JSON.stringify(this.application.configurationDraft)) return
         this.$refs.configForm && this.$refs.configForm.validate()
         if (!this.formValid) return
-        this.writeConfigDraft(this.editConfig)
+        await this.writeConfigDraft(this.editConfig)
+        this.fetchStatus()
       },
-      validateDraft(e) {
+      async validateDraft(e) {
         e.preventDefault()
         this.patchAndCommit({ url: this.application.urlDraft })
-        this.writeConfig(this.configDraft)
+        await this.writeConfig(this.configDraft)
+        this.fetchStatus()
       },
       async cancelDraft() {
         this.patchAndCommit({ urlDraft: this.application.url, silent: true })
-        await this.writeConfigDraft(this.config)
+        await this.cancelConfigDraft()
         await this.fetchConfigs()
         this.refreshDraftConfig()
+        this.fetchStatus()
       },
     },
   }

@@ -16,7 +16,7 @@
       :src="`${application.href}/capture`"
       height="180px"
     />
-    <v-divider v-if="!hideDescription" />
+    <v-divider />
     <v-row v-if="showTopics" style="min-height:30px;">
       <v-col class="pt-1 pb-0">
         <v-chip
@@ -37,13 +37,22 @@
       &nbsp;&nbsp;
       <visibility :visibility="application.visibility" />
       <v-spacer />
-      <v-tooltip v-if="status !== 'configured'" top>
+      <v-tooltip v-if="!!application.errorMessage" top>
         <template v-slot:activator="{on}">
-          <v-icon :color="status === 'error' ? 'error' : 'warning'" v-on="on">
-            {{ status === 'error' ? 'mdi-alert' : 'mdi-reload-alert' }}
+          <v-icon color="error" v-on="on">
+            mdi-alert
           </v-icon>
         </template>
-        {{ status === 'error' ? 'En erreur' : 'Brouillon non validé' }}
+        En erreur
+      </v-tooltip>
+      &nbsp;&nbsp;
+      <v-tooltip v-if="application.status !== 'configured' && application.status !== 'error'" top>
+        <template v-slot:activator="{on}">
+          <v-icon color="warning" v-on="on">
+            mdi-reload-alert
+          </v-icon>
+        </template>
+        Brouillon non validé
       </v-tooltip>
     </v-card-actions>
   </v-card>
@@ -59,13 +68,6 @@
     data: () => ({
       hover: false,
     }),
-    computed: {
-      status() {
-        if (this.application.status === 'error') return 'error'
-        if (!this.application.configuration) return 'draft'
-        return 'configured'
-      },
-    },
   }
 </script>
 

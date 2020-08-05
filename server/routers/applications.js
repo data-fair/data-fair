@@ -240,6 +240,9 @@ const writeConfig = asyncWrap(async(req, res) => {
   await req.app.get('db').collection('applications').updateOne(
     { id: req.params.applicationId },
     {
+      $unset: {
+        errorMessage: '',
+      },
       $set: {
         configuration: req.body,
         updatedAt: moment().toISOString(),
@@ -265,6 +268,9 @@ router.put('/:applicationId/configuration-draft', readApplication, permissions.m
   await req.app.get('db').collection('applications').updateOne(
     { id: req.params.applicationId },
     {
+      $unset: {
+        errorMessageDraft: '',
+      },
       $set: {
         configurationDraft: req.body,
         updatedAt: moment().toISOString(),
@@ -274,6 +280,24 @@ router.put('/:applicationId/configuration-draft', readApplication, permissions.m
     },
   )
   await journals.log(req.app, req.application, { type: 'config-draft-updated' }, 'application')
+  res.status(200).json(req.body)
+}))
+router.delete('/:applicationId/configuration-draft', readApplication, permissions.middleware('writeConfig', 'write'), asyncWrap(async (req, res, next) => {
+  await req.app.get('db').collection('applications').updateOne(
+    { id: req.params.applicationId },
+    {
+      $unset: {
+        configurationDraft: '',
+        errorMessageDraft: '',
+      },
+      $set: {
+        updatedAt: moment().toISOString(),
+        updatedBy: { id: req.user.id, name: req.user.name },
+        status: req.application.configuration ? 'configured' : 'created',
+      },
+    },
+  )
+  await journals.log(req.app, req.application, { type: 'config-draft-cancelled' }, 'application')
   res.status(200).json(req.body)
 }))
 
@@ -287,6 +311,10 @@ router.get('/:applicationId/base-application', readApplication, permissions.midd
 
 router.get('/:applicationId/api-docs.json', readApplication, permissions.middleware('readApiDoc', 'read'), cacheHeaders.resourceBased, (req, res) => {
   res.send(applicationAPIDocs(req.application))
+})
+
+router.get('/:applicationId/status', readApplication, permissions.middleware('readConfig', 'read'), cacheHeaders.noCache, (req, res) => {
+  res.send(req.application.status)
 })
 
 router.get('/:applicationId/journal', readApplication, permissions.middleware('readJournal', 'read'), cacheHeaders.noCache, asyncWrap(async(req, res) => {
@@ -308,6 +336,7 @@ router.post('/:applicationId/error', readApplication, permissions.middleware('wr
 
   if (draftMode) {
     // websocket notifications of draft mode errors
+    await req.app.get('db').collection('applications').updateOne({ id: req.params.applicationId }, { $set: { errorMessageDraft: req.body.message } })
     await req.app.publish(`applications/${req.params.applicationId}/draft-error`, req.body)
   } else {
     await req.app.get('db').collection('applications').updateOne({ id: req.params.applicationId }, { $set: { status: 'error', errorMessage: req.body.message } })

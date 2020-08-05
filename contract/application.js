@@ -62,6 +62,12 @@ module.exports = {
       type: 'string',
       description: 'The URL the base application for the draft configuration is located to',
     },
+    errorMessage: {
+      type: 'string',
+    },
+    errorMessageDraft: {
+      type: 'string',
+    },
     publications: {
       type: 'array',
       description: 'References to all the catalogs the application metadata is published too',
