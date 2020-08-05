@@ -25,7 +25,7 @@
             lg="4"
             xl="3"
           >
-            <dataset-card :dataset="dataset" />
+            <dataset-card :dataset="dataset" :show-topics="datasets.facets.topics.length" />
           </v-col>
         </v-row>
         <search-progress :loading="loading" />

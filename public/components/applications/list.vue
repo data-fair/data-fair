@@ -25,7 +25,7 @@
             lg="4"
             xl="3"
           >
-            <application-card :application="application" />
+            <application-card :application="application" :show-topics="applications.facets.topics.length" />
           </v-col>
         </v-row>
         <search-progress :loading="loading" />

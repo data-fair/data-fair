@@ -41,7 +41,7 @@
       </v-list>
     </v-card-text>
     <v-divider />
-    <v-row style="min-height:30px;">
+    <v-row v-if="showTopics" style="min-height:30px;">
       <v-col class="pt-1 pb-0">
         <v-chip
           v-for="topic of dataset.topics"
@@ -56,7 +56,7 @@
         </v-chip>
       </v-col>
     </v-row>
-    <v-card-actions class="pt-1">
+    <v-card-actions>
       <owner-short :owner="dataset.owner" />
       &nbsp;&nbsp;
       <visibility :visibility="dataset.visibility" />
@@ -80,7 +80,7 @@
 
   export default {
     components: { OwnerShort, Visibility },
-    props: ['dataset'],
+    props: ['dataset', 'showTopics'],
     data: () => ({
       marked,
       hover: false,

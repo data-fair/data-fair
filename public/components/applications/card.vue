@@ -17,7 +17,7 @@
       height="180px"
     />
     <v-divider v-if="!hideDescription" />
-    <v-row style="min-height:30px;">
+    <v-row v-if="showTopics" style="min-height:30px;">
       <v-col class="pt-1 pb-0">
         <v-chip
           v-for="topic of application.topics"
@@ -32,7 +32,7 @@
         </v-chip>
       </v-col>
     </v-row>
-    <v-card-actions class="pt-1">
+    <v-card-actions>
       <owner-short :owner="application.owner" />
       &nbsp;&nbsp;
       <visibility :visibility="application.visibility" />
@@ -55,7 +55,7 @@
 
   export default {
     components: { OwnerShort, Visibility },
-    props: ['application'],
+    props: ['application', 'showTopics'],
     data: () => ({
       hover: false,
     }),
