@@ -13,6 +13,7 @@ export default () => ({
     config: null,
     configDraft: null,
     nbSessions: null,
+    datasets: null,
   },
   getters: {
     resourceUrl: (state, getters, rootState) => state.applicationId ? rootState.env.publicUrl + '/api/v1/applications/' + state.applicationId : null,
@@ -25,6 +26,9 @@ export default () => ({
     draftErrorChannel: (state) => 'applications/' + state.applicationId + '/draft-error',
     applicationLink: (state, getters, rootState) => {
       if (state.application) return rootState.env.publicUrl + '/app/' + state.application.id
+    },
+    hasPrivateDatasets: (state) => {
+      return state.datasets && !!state.datasets.find(a => a.visibility === 'private' || a.visibility === 'protected')
     },
   },
   mutations: {
@@ -47,18 +51,34 @@ export default () => ({
   actions: {
     async fetchInfo({ commit, dispatch, getters, state }) {
       try {
-        const application = await this.$axios.$get(`api/v1/applications/${state.applicationId}`)
-        Vue.set(application, 'publications', application.publications || [])
-        commit('setAny', { application })
-        const api = await this.$axios.$get(`api/v1/applications/${state.applicationId}/api-docs.json`)
-        commit('setAny', { api })
-        const journal = await this.$axios.$get(`api/v1/applications/${state.applicationId}/journal`)
-        commit('setAny', { journal })
-        const activeSessions = await this.$axios.$get(`api/v1/applications/${state.applicationId}/active-sessions`)
-        commit('setAny', { nbSessions: activeSessions.count })
+        await dispatch('fetchApplication')
+        await Promise.all([
+          dispatch('fetchAPI'),
+          dispatch('fetchJournal'),
+          dispatch('fetchActiveSessions'),
+          dispatch('readConfig'),
+        ])
+        await dispatch('fetchDatasets')
       } catch (error) {
         eventBus.$emit('notification', { error, msg: 'Erreur pendant la récupération des informations de l\'application' })
       }
+    },
+    async fetchApplication({ commit, state }) {
+      const application = await this.$axios.$get(`api/v1/applications/${state.applicationId}`)
+      Vue.set(application, 'publications', application.publications || [])
+      commit('setAny', { application })
+    },
+    async fetchAPI({ commit, state }) {
+      const api = await this.$axios.$get(`api/v1/applications/${state.applicationId}/api-docs.json`)
+      commit('setAny', { api })
+    },
+    async fetchJournal({ commit, state }) {
+      const journal = await this.$axios.$get(`api/v1/applications/${state.applicationId}/journal`)
+      commit('setAny', { journal })
+    },
+    async fetchActiveSessions({ commit, state }) {
+      const activeSessions = await this.$axios.$get(`api/v1/applications/${state.applicationId}/active-sessions`)
+      commit('setAny', { nbSessions: activeSessions.count })
     },
     async setId({ commit, getters, dispatch, state }, applicationId) {
       commit('setAny', { applicationId })
@@ -112,6 +132,16 @@ export default () => ({
       const config = await this.$axios.$get(getters.resourceUrl + '/configuration')
       commit('setAny', { config })
       return config
+    },
+    async fetchDatasets({ commit, state }) {
+      const datasetsIds = ((state.config && state.config.datasets) || [])
+        .map(d => d.id || d.href.split('/').pop())
+      if (datasetsIds.length) {
+        const res = await this.$axios.$get('api/v1/datasets', { params: { id: datasetsIds.join(','), select: 'id,title,visibility' } })
+        commit('setAny', { datasets: res.results })
+      } else {
+        commit('setAny', { datasets: [] })
+      }
     },
     async writeConfig({ state, commit, getters, dispatch }, config) {
       try {

@@ -297,7 +297,6 @@
       async fetchConfigs() {
         this.editUrl = this.application.urlDraft || this.application.url
         this.editConfig = JSON.parse(JSON.stringify(await this.readConfigDraft()))
-        await this.readConfig()
       },
       // make at least 1 dataset required
       // this should be done by each application, but for easier compatibility we do it globally here

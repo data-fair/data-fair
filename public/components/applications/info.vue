@@ -113,13 +113,16 @@
         return this.$store.getters.ownerTopics(this.application.owner)
       },
       dataset() {
+        let dataset
         if (this.application.configuration && this.application.configuration.datasets && this.application.configuration.datasets.length) {
-          return this.application.configuration.datasets[0]
+          dataset = JSON.parse(JSON.stringify(this.application.configuration.datasets[0]))
+        } else if (this.application.configurationDraft && this.application.configurationDraft.datasets && this.application.configurationDraft.datasets.length) {
+          dataset = JSON.parse(JSON.stringify(this.application.configurationDraft.datasets[0]))
         }
-        if (this.application.configurationDraft && this.application.configurationDraft.datasets && this.application.configurationDraft.datasets.length) {
-          return this.application.configurationDraft.datasets[0]
+        if (dataset && !dataset.id) {
+          dataset.id = dataset.href.split('/').pop()
         }
-        return null
+        return dataset
       },
     },
     mounted() {

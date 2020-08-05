@@ -15,12 +15,13 @@
               <v-icon>mdi-security</v-icon>&nbsp;&nbsp;Permissions
             </v-tab>
             <v-tab-item value="tab-publish-permissions">
-              <v-container fluid class="pt-0">
+              <v-container fluid>
                 <permissions
                   v-if="can('getPermissions')"
                   :resource="application"
                   :resource-url="resourceUrl"
                   :api="api"
+                  :has-private-parents="hasPrivateDatasets"
                 />
               </v-container>
             </v-tab-item>
@@ -111,7 +112,7 @@
     computed: {
       ...mapState(['env']),
       ...mapState('application', ['application', 'api', 'journal']),
-      ...mapGetters('application', ['resourceUrl', 'can', 'applicationLink']),
+      ...mapGetters('application', ['resourceUrl', 'can', 'applicationLink', 'hasPrivateDatasets']),
     },
     created() {
       // children pages are deprecated

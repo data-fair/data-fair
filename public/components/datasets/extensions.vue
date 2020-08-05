@@ -2,7 +2,7 @@
   <v-row>
     <v-col>
       <p v-if="dataset.extensions && !dataset.extensions.length">
-        Étendez votre donnée avec de nouvelles colonnes issues de sources de données externes.
+        Étendez votre jeu de données avec de nouvelles colonnes issues de sources de données de référence.
       </p>
       <!-- 450 matches the size of the container in the embed page, to prevent overflowing iframe -->
       <v-menu v-model="addExtensionDialog" :max-height="450">

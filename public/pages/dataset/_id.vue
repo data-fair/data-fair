@@ -144,12 +144,13 @@
               <v-icon>mdi-security</v-icon>&nbsp;&nbsp;Permissions
             </v-tab>
             <v-tab-item value="tab-publish-permissions">
-              <v-container fluid class="pt-0">
+              <v-container fluid>
                 <permissions
                   v-if="can('getPermissions')"
                   :resource="dataset"
                   :resource-url="resourceUrl"
                   :api="api"
+                  :has-public-deps="hasPublicApplications"
                 />
               </v-container>
             </v-tab-item>
@@ -255,7 +256,7 @@
     data: () => ({}),
     computed: {
       ...mapState('dataset', ['dataset', 'api', 'journal']),
-      ...mapGetters('dataset', ['resourceUrl', 'can']),
+      ...mapGetters('dataset', ['resourceUrl', 'can', 'hasPublicApplications']),
       fileProperty() {
         return this.dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')
       },

@@ -67,6 +67,9 @@ export default () => ({
       }
       return false
     },
+    hasPublicApplications: (state) => {
+      return state.applications && !!state.applications.find(a => a.visibility === 'public')
+    },
   },
   mutations: {
     setAny(state, params) {

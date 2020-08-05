@@ -1,21 +1,32 @@
 <template>
   <div>
-    <h3 class="text-h6 mt-3 mb-3">
-      Propriétaire{{ resource.owner.type === 'organization' ? 's' : '' }}
-    </h3>
-    <div v-if="resource.owner.type === 'user'">
-      Utilisateur <nuxt-link :to="localePath({name: 'settings-type-id', params: resource.owner})">
-        {{ resource.owner.name }}
-      </nuxt-link>
-    </div>
-    <div v-else>
-      <span>Membres de l'organisation <nuxt-link :to="localePath({name: 'settings-type-id', params: resource.owner})">{{ resource.owner.name }}</nuxt-link></span>
-      <span v-if="resource.owner.role"> ayant le rôle <strong>{{ resource.owner.role }}</strong><span v-if="resource.owner.role !== env.adminRole"> ou <strong>{{ env.adminRole }}</strong></span></span>
-    </div>
+    <p>
+      Permettez à d'autres utilisateurs ou aux membres d'autres organisations de consulter et effectuer des actions sur cette ressource.
+    </p>
 
-    <h3 class="text-h6 mt-3 mb-3">
-      Permissions
-    </h3>
+    <div id="dataset-privacy" style="width:400px">
+      <v-switch
+        :value="isPublic"
+        :disabled="(hasPublicDeps && isPublic) || (hasPrivateParents && !isPublic)"
+        label="Accessible publiquement"
+        @change="switchPublic"
+      />
+    </div>
+    <v-tooltip
+      v-if="hasPublicDeps && isPublic"
+      right
+      activator="#dataset-privacy"
+    >
+      <span>Vous ne devriez pas rendre cette source privée tant qu'elle est présente dans des visualisations publiques</span>
+    </v-tooltip>
+    <v-tooltip
+      v-if="hasPrivateParents && !isPublic"
+      right
+      activator="#dataset-privacy"
+    >
+      <span>Vous ne devriez pas rendre cette application publique tant qu'elle utilise des sources de données privées</span>
+    </v-tooltip>
+
     <v-btn
       id="new-permissions"
       color="primary"
@@ -40,14 +51,18 @@
               {{ (item.type === 'user' ? 'Utilisateur ' : 'Organisation ') + item.name }}
             </div>
             <div v-if="item.type === 'organization' && (!item.roles || !item.roles.length)">
-              Tout le monde
+              Tous les rôles
             </div>
             <div v-if="item.type === 'organization' && (item.roles && item.roles.length)">
               Restreint aux rôles : {{ item.roles.join(', ') }}
             </div>
           </td>
           <td>
-            <v-list dense>
+            <v-list
+              dense
+              class="pa-0"
+              style="background: transparent"
+            >
               <template v-for="(classOperations, permClass) in permissionClasses">
                 <v-list-item
                   v-if="((item.classes || []).includes(permClass)) || classOperations.filter(o => (item.operations || []).includes(o.id)).length"
@@ -55,11 +70,11 @@
                 >
                   <v-list-item-content>
                     <v-row style="width:100%">
-                      <v-col cols="3">
+                      <v-col cols="3" class="py-0">
                         {{ classNames[permClass] }}
                       </v-col>
-                      <v-col cols="9">
-                        <span v-if="(item.classes || []).includes(permClass)">Toutes</span>
+                      <v-col cols="9" class="py-0">
+                        <span v-if="(item.classes || []).includes(permClass)" />
                         <span v-else>{{ classOperations.filter(o => (item.operations || []).find(oid => o.id && o.id === oid)).map(o => o.title).join(' - ') }}</span>
                       </v-col>
                     </v-row>
@@ -72,7 +87,7 @@
             <v-btn
               icon
               color="warning"
-              @click="editPermission(item);showDialog = true"
+              @click="editPermission(item, index);showDialog = true"
             >
               <v-icon>mdi-pencil</v-icon>
             </v-btn>
@@ -129,13 +144,18 @@
           />
 
           <v-select
-            v-if="!expertMode"
             v-model="currentPermission.classes"
             :items="Object.keys(permissionClasses).filter(c => classNames[c]).map(c => ({class: c, title: classNames[c]}))"
             item-text="title"
             item-value="class"
             label="Actions"
             multiple
+          />
+
+          <v-switch
+            v-model="expertMode"
+            color="primary"
+            label="Mode expert"
           />
 
           <v-select
@@ -146,12 +166,6 @@
             item-value="id"
             label="Actions détaillées"
             multiple
-          />
-
-          <v-switch
-            v-model="expertMode"
-            color="primary"
-            label="Mode expert"
           />
         </v-card-text>
 
@@ -179,10 +193,11 @@
 
   export default {
     name: 'Permissions',
-    props: ['resource', 'resourceUrl', 'api'],
+    props: ['resource', 'resourceUrl', 'api', 'hasPublicDeps', 'hasPrivateParents'],
     data: () => ({
       permissions: [],
       currentPermission: {},
+      currentPermissionIdx: {},
       currentPermissionOrganizationRoles: [],
       currentEntity: {},
       users: [],
@@ -226,6 +241,9 @@
       operations() {
         return [].concat(...Object.keys(this.permissionClasses).filter(c => this.classNames[c]).map(c => [{ header: this.classNames[c] }].concat(this.permissionClasses[c])))
       },
+      isPublic() {
+        return !!this.permissions.find(p => !p.type && p.classes && p.classes.includes('read') && p.classes.includes('list'))
+      },
     },
     watch: {
       'currentPermission.type'() {
@@ -251,12 +269,12 @@
         }
       },
       'currentPermission.classes'(classes) {
-        if (classes.includes('list') && !classes.includes('read')) {
+        if (classes && classes.includes('list') && !classes.includes('read')) {
           classes.push('read')
         }
       },
       'currentPermission.operations'(operations) {
-        if (operations.includes('list') && !operations.includes('readDescription')) {
+        if (operations && operations.includes('list') && !operations.includes('readDescription')) {
           operations.push('readDescription')
         }
       },
@@ -278,11 +296,27 @@
       },
     },
     async mounted() {
-      this.permissions = await this.$axios.$get(this.resourceUrl + '/permissions')
+      const permissions = await this.$axios.$get(this.resourceUrl + '/permissions')
+      permissions.forEach(p => {
+        if (!p.type) p.type = null
+      })
+      this.permissions = permissions
     },
     methods: {
+      async switchPublic() {
+        if (this.isPublic) {
+          this.addPermissions = false
+          this.currentPermission = {}
+          this.permissions = this.permissions.filter(p => !(!p.type && p.classes && p.classes.includes('read') && p.classes.includes('list')))
+        } else {
+          this.addPermissions = true
+          this.currentPermission = { operations: [], classes: ['read', 'list'] }
+        }
+        this.save()
+      },
       async save() {
         if (this.addPermissions) this.permissions.push((this.currentPermission))
+        else if (this.currentPermission) this.permissions[this.currentPermissionIdx] = this.currentPermission
         try {
           this.permissions.forEach(permission => {
             if (!permission.type) delete permission.type
@@ -309,11 +343,13 @@
           classes: [],
         }
       },
-      editPermission(permission) {
+      editPermission(permission, idx) {
         this.currentEntity = { id: permission.id, name: permission.name }
         if (permission.type === 'organization') this.organizations = [this.currentEntity]
         if (permission.type === 'user') this.users = [this.currentEntity]
-        this.currentPermission = permission
+        this.currentPermissionIdx = idx
+        this.currentPermission = JSON.parse(JSON.stringify(permission))
+        if (this.currentPermission.operations && this.currentPermission.operations.length) this.expertMode = true
       },
     },
   }
