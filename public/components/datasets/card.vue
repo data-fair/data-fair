@@ -26,7 +26,7 @@
           </v-list-item-avatar>
           <span>Jeu de données incrémental</span>
         </v-list-item>
-        <v-list-item v-if="dataset.file">
+        <v-list-item v-if="dataset.file" style="overflow: hidden;">
           <v-list-item-avatar class="ml-0 my-0">
             <v-icon>mdi-file</v-icon>
           </v-list-item-avatar>

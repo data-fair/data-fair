@@ -10,7 +10,7 @@
         <v-list dense>
           <owner-list-item :owner="dataset.owner" />
 
-          <v-list-item v-if="dataset.file">
+          <v-list-item v-if="dataset.file" style="overflow: hidden;">
             <v-list-item-avatar class="ml-0 my-0">
               <v-icon>mdi-file</v-icon>
             </v-list-item-avatar>
