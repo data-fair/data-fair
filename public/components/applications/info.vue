@@ -9,6 +9,18 @@
       <v-sheet>
         <v-list dense>
           <owner-list-item :owner="application.owner" />
+
+          <v-list-item
+            v-if="resourcePublicUrl"
+            :href="resourcePublicUrl"
+            color="primary"
+          >
+            <v-list-item-avatar class="ml-0 my-0">
+              <v-icon>mdi-link</v-icon>
+            </v-list-item-avatar>
+            <a>Page de présentation</a>
+          </v-list-item>
+
           <v-list-item
             v-if="journal[0]"
             :class="'event-' + journal[0].type"
@@ -89,7 +101,7 @@
 
 <script>
   import OwnerListItem from '~/components/owners/list-item.vue'
-  import { mapState, mapActions } from 'vuex'
+  import { mapState, mapActions, mapGetters } from 'vuex'
   const events = require('~/../shared/events.json').application
 
   export default {
@@ -99,6 +111,7 @@
     },
     computed: {
       ...mapState('application', ['application', 'nbSessions', 'journal']),
+      ...mapGetters('application', ['resourcePublicUrl']),
       topics() {
         return this.$store.getters.ownerTopics(this.application.owner)
       },

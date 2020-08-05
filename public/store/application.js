@@ -16,6 +16,7 @@ export default () => ({
   },
   getters: {
     resourceUrl: (state, getters, rootState) => state.applicationId ? rootState.env.publicUrl + '/api/v1/applications/' + state.applicationId : null,
+    resourcePublicUrl: (state, getters, rootState) => rootState.env.applicationUrlTemplate && rootState.env.applicationUrlTemplate.replace('{id}', state.applicationId),
     can: (state, getters, rootState) => (operation) => {
       if (rootState.session && rootState.session.user && rootState.session.user.adminMode) return true
       return (state.application && state.application.userPermissions.includes(operation))

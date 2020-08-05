@@ -199,4 +199,6 @@ module.exports = {
     // args: ['-zg', '--extend-zooms-if-still-dropping', '--drop-fraction-as-needed', '--detect-shared-borders', '-r1'],
      args: ['-zg', '--extend-zooms-if-still-dropping', '--drop-densest-as-needed', '--detect-shared-borders', '-r1'],
   },
+  datasetUrlTemplate: null,
+  applicationUrlTemplate: null,
 }

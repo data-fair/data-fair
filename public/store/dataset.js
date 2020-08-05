@@ -35,6 +35,7 @@ export default () => ({
   },
   getters: {
     resourceUrl: (state, getters, rootState) => state.datasetId ? rootState.env.publicUrl + '/api/v1/datasets/' + state.datasetId : null,
+    resourcePublicUrl: (state, getters, rootState) => rootState.env.datasetUrlTemplate && rootState.env.datasetUrlTemplate.replace('{id}', state.datasetId),
     journalChannel: (state) => 'datasets/' + state.datasetId + '/journal',
     concepts: state => {
       if (!state.dataset) return new Set()

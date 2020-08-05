@@ -148,14 +148,24 @@ function prepareDatasetFromCatalog(d) {
   return dataset
 }
 
+function getDatasetUrl(catalog, dataset) {
+  if (catalog.datasetUrlTemplate) {
+    return catalog.datasetUrlTemplate.replace('{id}', dataset.id)
+  }
+  if (config.datasetUrlTemplate) {
+    return config.datasetUrlTemplate.replace('{id}', dataset.id)
+  }
+  return `${config.publicUrl}/dataset/${dataset.id}`
+}
+
 async function addResourceToDataset(catalog, dataset, publication) {
   // TODO: no equivalent of "private" on a resource
   const title = dataset.title
-  const datasetUrl = catalog.datasetUrlTemplate && catalog.datasetUrlTemplate.replace('{id}', dataset.id)
+  const datasetUrl = getDatasetUrl(catalog, dataset)
   const resources = [{
     title: `${title} - Description des champs`,
     description: 'Description détaillée et types sémantiques des champs',
-    url: datasetUrl || `${config.publicUrl}/dataset/${dataset.id}/description`,
+    url: datasetUrl,
     type: 'documentation',
     filetype: 'remote',
     format: 'Page Web',
@@ -168,7 +178,7 @@ async function addResourceToDataset(catalog, dataset, publication) {
   }, {
     title: `${title} - Documentation de l'API`,
     description: 'Documentation interactive de l\'API à destination des développeurs. La description de l\'API utilise la spécification [OpenAPI 3.0.1](https://github.com/OAI/OpenAPI-Specification)',
-    url: datasetUrl || `${config.publicUrl}/dataset/${dataset.id}/api`,
+    url: datasetUrl,
     type: 'documentation',
     filetype: 'remote',
     format: 'Page Web',
@@ -181,7 +191,7 @@ async function addResourceToDataset(catalog, dataset, publication) {
   }, {
     title: `${title} - Consultez les données`,
     description: `Consultez directement les données dans ${dataset.bbox ? 'une carte interactive' : 'un tableau'}.`,
-    url: datasetUrl || `${config.publicUrl}/dataset/${dataset.id}/${dataset.bbox ? 'map' : 'tabular'}`,
+    url: datasetUrl,
     type: 'main',
     filetype: 'remote',
     format: 'Page Web',
@@ -240,7 +250,7 @@ async function addResourceToDataset(catalog, dataset, publication) {
 
 async function createOrUpdateDataset(catalog, dataset, publication) {
   debug('Create or update dataset', dataset)
-  const datasetUrl = catalog.datasetUrlTemplate && catalog.datasetUrlTemplate.replace('{id}', dataset.id)
+  const datasetUrl = getDatasetUrl(catalog, dataset)
   const udataDataset = {
     title: dataset.title,
     description: dataset.description || dataset.title,
@@ -252,7 +262,7 @@ async function createOrUpdateDataset(catalog, dataset, publication) {
     resources: [{
       title: 'Description des champs',
       description: 'Description détaillée et types sémantiques des champs',
-      url: datasetUrl || `${config.publicUrl}/dataset/${dataset.id}/description`,
+      url: datasetUrl,
       type: 'documentation',
       filetype: 'remote',
       format: 'Page Web',
@@ -263,7 +273,7 @@ async function createOrUpdateDataset(catalog, dataset, publication) {
     }, {
       title: 'Documentation de l\'API',
       description: 'Documentation interactive de l\'API à destination des développeurs. La description de l\'API utilise la spécification [OpenAPI 3.0.1](https://github.com/OAI/OpenAPI-Specification)',
-      url: datasetUrl || `${config.publicUrl}/dataset/${dataset.id}/api`,
+      url: datasetUrl,
       type: 'documentation',
       filetype: 'remote',
       format: 'Page Web',
@@ -274,7 +284,7 @@ async function createOrUpdateDataset(catalog, dataset, publication) {
     }, {
       title: 'Consultez les données',
       description: `Consultez directement les données dans ${dataset.bbox ? 'une carte interactive' : 'un tableau'}.`,
-      url: datasetUrl || `${config.publicUrl}/dataset/${dataset.id}/${dataset.bbox ? 'map' : 'tabular'}`,
+      url: datasetUrl,
       type: 'main',
       filetype: 'remote',
       format: 'Page Web',
