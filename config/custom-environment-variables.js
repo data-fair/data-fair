@@ -108,4 +108,6 @@ module.exports = {
       __format: 'json',
     },
   },
+  datasetUrlTemplate: 'DATASET_URL_TEMPLATE',
+  applicationUrlTemplate: 'APPLICATION_URL_TEMPLATE',
 }
