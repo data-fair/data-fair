@@ -112,9 +112,9 @@
     },
     methods: {
       onScroll(e) {
-        if (!this.datasets) return
+        if (!this.applications) return
         const se = e.target.scrollingElement
-        if (se.clientHeight + se.scrollTop > se.scrollHeight - 140 && this.datasets.results.length < this.datasets.count) {
+        if (se.clientHeight + se.scrollTop > se.scrollHeight - 140 && this.applications.results.length < this.applications.count) {
           this.refresh(true)
         }
       },
