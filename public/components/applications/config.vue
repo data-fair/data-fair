@@ -195,7 +195,6 @@
       return {
         showConfigIframe: false,
         showForm: false,
-        prodBaseApp: null,
         showDraftPreview: true,
         showProdPreview: true,
         showDraftConfig: true,
@@ -211,7 +210,7 @@
       }
     },
     computed: {
-      ...mapState('application', ['application', 'config', 'configDraft']),
+      ...mapState('application', ['application', 'config', 'configDraft', 'prodBaseApp']),
       ...mapGetters('application', ['applicationLink', 'can']),
       height() {
         return window.innerHeight
@@ -277,11 +276,6 @@
       ...mapActions('application', ['readConfig', 'writeConfig', 'readConfigDraft', 'writeConfigDraft', 'cancelConfigDraft', 'patchAndCommit']),
       async fetchBaseApps() {
         // get base apps that share the same application name (meaning different version of same app)
-        try {
-          this.prodBaseApp = await this.$axios.$get(`api/v1/applications/${this.application.id}/base-application`)
-        } catch (error) {
-          return eventBus.$emit('notification', { error })
-        }
         const privateAccess = `${this.application.owner.type}:${this.application.owner.id}`
         this.baseApps = (await this.$axios.$get('api/v1/base-applications', {
           params: {

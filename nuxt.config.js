@@ -84,6 +84,7 @@ module.exports = {
     baseAppsCategories: config.baseAppsCategories,
     datasetUrlTemplate: config.datasetUrlTemplate,
     applicationUrlTemplate: config.applicationUrlTemplate,
+    doc: config.doc,
   },
   head: {
     title: config.brand.title,

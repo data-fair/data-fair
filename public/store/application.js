@@ -14,6 +14,7 @@ export default () => ({
     configDraft: null,
     nbSessions: null,
     datasets: null,
+    prodBaseApp: null,
   },
   getters: {
     resourceUrl: (state, getters, rootState) => state.applicationId ? rootState.env.publicUrl + '/api/v1/applications/' + state.applicationId : null,
@@ -57,6 +58,7 @@ export default () => ({
           dispatch('fetchJournal'),
           dispatch('fetchActiveSessions'),
           dispatch('readConfig'),
+          dispatch('fetchProdBaseApp'),
         ])
         await dispatch('fetchDatasets')
       } catch (error) {
@@ -67,6 +69,10 @@ export default () => ({
       const application = await this.$axios.$get(`api/v1/applications/${state.applicationId}`)
       Vue.set(application, 'publications', application.publications || [])
       commit('setAny', { application })
+    },
+    async fetchProdBaseApp({ commit, state }) {
+      const prodBaseApp = await this.$axios.$get(`api/v1/applications/${state.applicationId}/base-application`)
+      commit('setAny', { prodBaseApp })
     },
     async fetchAPI({ commit, state }) {
       const api = await this.$axios.$get(`api/v1/applications/${state.applicationId}/api-docs.json`)

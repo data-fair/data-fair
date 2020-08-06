@@ -1,5 +1,6 @@
 <template lang="html">
   <v-container>
+    <doc-link tooltip="Consultez la documentation sur les paramètres" doc-key="settings" />
     <v-row v-if="initialized">
       <v-col>
         <!--<v-subheader>{{ $t('pages.settings.description') }}</v-subheader>-->

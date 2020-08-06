@@ -1,5 +1,10 @@
 <template>
   <v-container class="pt-0" fluid>
+    <doc-link
+      tooltip="Consultez la documentation sur les connecteurs"
+      doc-key="catalogs"
+      offset="left"
+    />
     <v-row v-if="user">
       <v-col>
         <v-subheader class="px-0 pr-12 mb-2">

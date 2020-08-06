@@ -13,6 +13,7 @@
               <v-icon>mdi-information</v-icon>&nbsp;&nbsp;Informations
             </v-tab>
             <v-tab-item value="tab-general-info">
+              <doc-link tooltip="Consultez la documentation sur l'édition de jeux de données" doc-key="datasetEdit" />
               <v-container fluid class="pb-0">
                 <dataset-info />
               </v-container>
@@ -42,6 +43,7 @@
               <v-icon>mdi-merge</v-icon>&nbsp;&nbsp;Enrichissement
             </v-tab>
             <v-tab-item value="tab-general-extensions">
+              <doc-link tooltip="Consultez la documentation sur l'extension de jeux de données" doc-key="datasetExtend" />
               <v-container fluid class="pt-0">
                 <dataset-extensions />
               </v-container>
@@ -51,6 +53,7 @@
               <v-icon>mdi-attachment</v-icon>&nbsp;&nbsp;Pièces jointes
             </v-tab>
             <v-tab-item value="tab-general-attachments">
+              <doc-link tooltip="Consultez la documentation sur les pièces jointes des jeux de données" doc-key="datasetAttachments" />
               <dataset-attachments />
             </v-tab-item>
           </v-tabs>

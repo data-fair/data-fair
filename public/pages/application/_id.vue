@@ -1,5 +1,10 @@
 <template>
   <v-container v-if="application" fluid>
+    <doc-link
+      :tooltip="`Consultez la documentation sur l'application ${prodBaseApp.title}`"
+      :doc-href="prodBaseApp.documentation"
+      offset="left"
+    />
     <v-row class="application">
       <v-col>
         <application-info />
@@ -111,7 +116,7 @@
     }),
     computed: {
       ...mapState(['env']),
-      ...mapState('application', ['application', 'api', 'journal']),
+      ...mapState('application', ['application', 'api', 'journal', 'prodBaseApp']),
       ...mapGetters('application', ['resourceUrl', 'can', 'applicationLink', 'hasPrivateDatasets']),
     },
     created() {
