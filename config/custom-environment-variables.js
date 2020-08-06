@@ -114,7 +114,7 @@ module.exports = {
     datasetEdit: 'DOC_DATASET_EDIT',
     datasetExtend: 'DOC_DATASET_EXTEND',
     datasetAttachments: 'DOC_DATASET_ATTACHMENTS',
-    settings: 'DOC_DATASET_SETTINGS',
-    catalogs: 'DOC_DATASET_CATALOGS',
+    settings: 'DOC_SETTINGS',
+    catalogs: 'DOC_CATALOGS',
   },
 }
