@@ -1,9 +1,10 @@
 <template>
   <v-app>
-    <v-toolbar
+    <v-app-bar
       app
       scroll-off-screen
-      color="white"
+      color="primary"
+      dark
     >
       <div class="logo-container">
         <nuxt-link
@@ -12,7 +13,7 @@
         >
           <img
             src="../../public/assets/logo.svg"
-            style="max-width: 150px;"
+            style="max-width: 150px;max-height: 100%;"
           >
         </nuxt-link>
       </div>
@@ -30,8 +31,7 @@
           :key="page.prefix"
           :to="localePath({name: page.prefix + '-id', params: {id: page.id}})"
           :class="($route.name && $route.name.startsWith(page.prefix)) ? 'v-btn--active' : ''"
-          flat
-          color="primary"
+          text
         >
           {{ $t(`pages.${page.prefix}.title`) }}
         </v-btn>
@@ -43,14 +43,11 @@
         direction="bottom"
         transition="fade-transition"
       >
-        <v-btn
-          slot="activator"
-          fab
-          flat
-          small
-        >
-          {{ $i18n.locale }}
-        </v-btn>
+        <template v-slot:activator>
+          <v-btn icon>
+            {{ $i18n.locale }}
+          </v-btn>
+        </template>
         <v-btn
           v-for="locale in $i18n.locales.filter(l => l.code !== $i18n.locale)"
           :key="locale.code"
@@ -62,7 +59,7 @@
           {{ locale.code }}
         </v-btn>
       </v-speed-dial>
-    </v-toolbar>
+    </v-app-bar>
 
     <v-content>
       <nuxt />
@@ -92,7 +89,7 @@
 </script>
 
 <style lang="less">
-body .application {
+body .v-application {
   font-family: 'Nunito', sans-serif;
 
   .logo-container {

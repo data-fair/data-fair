@@ -56,8 +56,8 @@
         h4: ['subheading', 'mb-3', 'mt-4'],
         p: ['body1'],
         table: ['v-datatable', 'v-table', 'theme--light', 'elevation-1'],
-        code: ['theme--light'],
-        'pre code': ['v-card', 'pt-3', 'mb-4'],
+        // code: ['theme--light'],
+        pre: ['pt-3', 'mb-4', 'px-2'],
       }
       Object.keys(elemClasses).forEach(k => {
         this.$el.querySelectorAll(k).forEach(e => {
@@ -75,10 +75,7 @@
       white-space: pre-wrap;
     }
     code {
-      padding-left: 6px;
-    }
-    code:before {
-      content: ''
+
     }
 }
 </style>
