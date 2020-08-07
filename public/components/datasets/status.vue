@@ -7,7 +7,7 @@
             v-if="journal[0] && dataset.status !== 0"
             :class="'pa-2 event-' + journal[0].type"
           >
-            <v-list-item-avatar v-if="['finalize-end', 'publication'].includes(journal[0].type)" class="ml-0 my-0">
+            <v-list-item-avatar v-if="['finalize-end', 'publication', 'error'].includes(journal[0].type)" class="ml-0 my-0">
               <v-icon>{{ events[journal[0].type].icon }}</v-icon>
             </v-list-item-avatar>
             <v-list-item-avatar v-else>
