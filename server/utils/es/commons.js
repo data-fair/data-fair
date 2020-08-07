@@ -68,9 +68,11 @@ exports.parseSort = (sortStr, fields) => {
 // does not try to use fields outside the current schema
 function checkQuery(query, fields, esFields) {
   esFields = esFields || fields.concat(fields.map(f => f + '.text')).concat(['<implicit>'])
+  query.field = query.field && query.field.replace(/\\/g, '')
   if (query.field === '_exists_') {
-    if (!esFields.includes(query.term)) {
-      throw createError(400, `Impossible de faire une recherche sur le champ ${query.term}, il n'existe pas dans le jeu de données.`)
+    const field = query.term.replace(/\\/g, '')
+    if (!esFields.includes(field)) {
+      throw createError(400, `Impossible de faire une recherche sur le champ ${field}, il n'existe pas dans le jeu de données.`)
     }
   } else if (query.field && !esFields.includes(query.field)) {
     throw createError(400, `Impossible de faire une recherche sur le champ ${query.field}, il n'existe pas dans le jeu de données.`)

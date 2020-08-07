@@ -19,7 +19,7 @@
         @click:close="removeFilter(i)"
         @click="toggle"
       >
-        {{ filter.field.title || filter.field['x-originalName'] || filter.key }} = {{ filter.values.join(', ') }}
+        {{ filter.field.title || filter.field['x-originalName'] || filter.field.key }} = {{ filter.values.join(', ') }}
       </v-chip>
     </v-slide-item>
   </v-slide-group>
