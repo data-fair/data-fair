@@ -8,7 +8,7 @@ async function childrenSchemas(db, owner, children, blackListedFields) {
   let schemas = []
   for (const childId of children) {
     const child = await db.collection('datasets')
-      .findOne({ id: childId, 'owner.id': owner.id, 'owner.type': owner.type }, { fields: { isVirtual: 1, virtual: 1, schema: 1 } })
+      .findOne({ id: childId, 'owner.id': owner.id, 'owner.type': owner.type }, { isVirtual: 1, virtual: 1, schema: 1 })
     if (!child) continue
     if (child.isVirtual) {
       const grandChildrenSchemas = await childrenSchemas(db, child.virtual.children, blackListedFields)
