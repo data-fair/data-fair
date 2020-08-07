@@ -59,7 +59,7 @@
             <v-select
               v-model="properties[currentProperty].separator"
               :items="[', ', '; ', ' - ', ' / ']"
-              :disabled="!editable"
+              :disabled="!editable || dataset.isVirtual"
               label="Séparateur"
               persistent-hint
               hint="Ne renseigner que pour les champs multivalués. Ce caractère sera utilisé pour séparer les valeurs."
@@ -67,7 +67,7 @@
             <v-autocomplete
               v-model="properties[currentProperty]['x-refersTo']"
               :items="vocabularyItems.filter(item => item.header || !properties.find(f => (f['x-refersTo'] === item.value) && (f.key !== properties[currentProperty].key)))"
-              :disabled="!editable"
+              :disabled="!editable || dataset.isVirtual"
               label="Concept"
               :clearable="true"
               persistent-hint

@@ -27,6 +27,7 @@
         item-value="id"
         label="Jeux enfants"
         placeholder="Recherchez"
+        return-object
         multiple
       />
     </v-form>
@@ -70,13 +71,13 @@
         const res = await this.$axios.$get('api/v1/datasets', {
           params: { q: this.search, size: 20, select: 'id,title', status: 'finalized', owner: `${this.activeAccount.type}:${this.activeAccount.id}` },
         })
-        this.datasets = res.results
+        this.datasets = this.children.concat(res.results.filter(d => !this.children.find(c => c.id === d.id)))
         this.loadingDatasets = false
       },
       async validate() {
         if (!this.$refs.form.validate()) return
         try {
-          const dataset = await this.$axios.$post('api/v1/datasets', { isVirtual: true, title: this.title, virtual: { children: this.children } })
+          const dataset = await this.$axios.$post('api/v1/datasets', { isVirtual: true, title: this.title, virtual: { children: this.children.map(c => c.id) } })
           this.$router.push({ path: `/dataset/${dataset.id}` })
         } catch (error) {
           eventBus.$emit('notification', { error, msg: 'Erreur pendant la création du jeu de données virtual :' })

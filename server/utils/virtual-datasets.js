@@ -41,21 +41,24 @@ exports.prepareSchema = async (db, dataset) => {
       field = null
       return
     }
-    field.type = field.type || matchingFields[0].type
-    field.format = field.format || matchingFields[0].format || null
+    // we take the first child field as reference
+    field.title = field.title || matchingFields[0].title
+    field.description = field.description || matchingFields[0].description
+    field.type = matchingFields[0].type
+    field.format = matchingFields[0].format || null
     // ignore "uri-reference" format, it is not significant anymore
     if (field.format === 'uri-reference') field.format = null
-    field['x-refersTo'] = field['x-refersTo'] || matchingFields[0]['x-refersTo'] || null
+    field['x-refersTo'] = matchingFields[0]['x-refersTo'] || null
+    field.separator = matchingFields[0].separator || null
+
+    // Some attributes of a a fields have to be homogeneous accross all children
     matchingFields.forEach(f => {
-      // Some attributes of a a fields have to be homogeneous accross all children
       if (f.type !== field.type) throw createError(400, `Le champ "${field.key}" a des types contradictoires (${field.type}, ${f.type})`)
+      if ((f.separator || null) !== field.separator) throw createError(400, `Le champ "${field.key}" a des séparateurs contradictoires  (${field.separator}, ${f.separator})`)
       let format = f.format || null
       if (format === 'uri-reference') format = null
       if (format !== field.format) throw createError(400, `Le champ "${field.key}" a des formats contradictoires (${field.format || 'non défini'}, ${f.format || 'non défini'})`)
       if ((f['x-refersTo'] || null) !== field['x-refersTo']) throw createError(400, `Le champ "${field.key}" a des concepts contradictoires (${field['x-refersTo'] || 'non défini'}, ${f['x-refersTo'] || 'non défini'})`)
-      // For others we take the first defined value
-      field.title = field.title || f.title
-      field.description = field.title || f.title
     })
   })
 

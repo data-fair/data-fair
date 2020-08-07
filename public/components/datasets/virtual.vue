@@ -46,6 +46,7 @@
                 <nuxt-link :to="`/dataset/${item}`">{{ childrenById[item].title }} ({{ childrenById[item].id }})</nuxt-link>
               </span>
               <v-select
+                :value="null"
                 :items="childrenById[item].schema.filter(f => !f['x-calculated'] && !existingFields.includes(f.key))"
                 :item-text="(field) => field.title || field['x-originalName'] || field.key"
                 hide-no-data
@@ -190,7 +191,7 @@
         deleteChildDialog: false,
         currentChild: null,
         valuesByKey: {},
-        loadingChildren: true,
+        loadingChildren: false,
       }
     },
     computed: {

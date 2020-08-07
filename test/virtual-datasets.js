@@ -284,7 +284,97 @@ describe('virtual datasets', () => {
     }
   })
 
-  //
+  it('A virtual dataset is updated after a child schema changes', async () => {
+    // Send basic dataset
+    const ax = global.ax.dmeadus
+    let dataset = await testUtils.sendDataset('dataset1.csv', ax)
+    let res = await ax.post('/api/v1/datasets', {
+      isVirtual: true,
+      virtual: {
+        children: [dataset.id],
+      },
+      schema: [{ key: 'some_date' }],
+      title: 'a virtual dataset',
+    })
+    const virtualDataset = res.data
+
+    let dateField = dataset.schema.find(f => f.key === 'some_date')
+    let virtualDateField = virtualDataset.schema.find(f => f.key === 'some_date')
+    assert.equal(virtualDateField.format, 'date')
+
+    dateField.ignoreDetection = true
+    res = await ax.patch('/api/v1/datasets/' + dataset.id, {
+      schema: dataset.schema,
+    })
+    dataset = await workers.hook('finalizer/' + dataset.id)
+    dateField = dataset.schema.find(f => f.key === 'some_date')
+    assert.equal(dateField.format, null)
+
+    virtualDateField = await workers.hook('finalizer/' + virtualDataset.id)
+    virtualDateField = virtualDataset.schema.find(f => f.key === 'some_date')
+
+    res = await ax.get(`/api/v1/datasets/${virtualDataset.id}/lines`)
+    assert.equal(res.status, 200)
+    assert.equal(res.data.total, 2)
+  })
+
+  it('A virtual dataset is updated after a child schema changes', async () => {
+    const ax = global.ax.dmeadus
+    let dataset = await testUtils.sendDataset('dataset1.csv', ax)
+    let res = await ax.post('/api/v1/datasets', {
+      isVirtual: true,
+      virtual: { children: [dataset.id] },
+      schema: [{ key: 'some_date' }],
+      title: 'a virtual dataset',
+    })
+    let virtualDataset = res.data
+
+    let dateField = dataset.schema.find(f => f.key === 'some_date')
+    let virtualDateField = virtualDataset.schema.find(f => f.key === 'some_date')
+    assert.equal(virtualDateField.format, 'date')
+
+    dateField.ignoreDetection = true
+    res = await ax.patch('/api/v1/datasets/' + dataset.id, { schema: dataset.schema })
+    dataset = await workers.hook('finalizer/' + dataset.id)
+    dateField = dataset.schema.find(f => f.key === 'some_date')
+    assert.equal(dateField.format, null)
+
+    virtualDataset = await workers.hook('finalizer/' + virtualDataset.id)
+    virtualDateField = virtualDataset.schema.find(f => f.key === 'some_date')
+    assert.equal(virtualDateField.format, null)
+
+    res = await ax.get(`/api/v1/datasets/${virtualDataset.id}/lines`)
+    assert.equal(res.status, 200)
+    assert.equal(res.data.total, 2)
+  })
+
+  it.only('A virtual dataset is in error if children become inconsistent', async () => {
+    // Send basic dataset
+    const ax = global.ax.dmeadus
+    const dataset1 = await testUtils.sendDataset('dataset1.csv', ax)
+    const dataset2 = await testUtils.sendDataset('dataset1.csv', ax)
+    let res = await ax.post('/api/v1/datasets', {
+      isVirtual: true,
+      virtual: { children: [dataset1.id, dataset2.id] },
+      schema: [{ key: 'some_date' }],
+      title: 'a virtual dataset',
+    })
+    let virtualDataset = res.data
+
+    const dateField = dataset1.schema.find(f => f.key === 'some_date')
+    dateField.ignoreDetection = true
+    res = await ax.patch('/api/v1/datasets/' + dataset1.id, { schema: dataset1.schema })
+    await workers.hook('finalizer/' + dataset1.id)
+
+    try {
+      virtualDataset = await workers.hook('finalizer/' + virtualDataset.id)
+      assert.fail()
+    } catch (err) {
+      assert.equal(err.message, 'Le champ "some_date" a des formats contradictoires (non défini, date)')
+    }
+    virtualDataset = (await ax.get('/api/v1/datasets/' + virtualDataset.id)).data
+    assert.equal(virtualDataset.status, 'error')
+  })
 
   // Check that column restriction from virtual child is enforced
 

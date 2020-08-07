@@ -14,16 +14,17 @@ exports.process = async function(app, dataset) {
   const db = app.get('db')
   const es = app.get('es')
   const collection = db.collection('datasets')
+  const queryableDataset = { ...dataset }
+
+  const result = { status: 'finalized', schema: dataset.schema }
+
+  if (dataset.isVirtual) {
+    queryableDataset.descendants = await virtualDatasetsUtils.descendants(db, dataset)
+    result.schema = await virtualDatasetsUtils.prepareSchema(db, dataset)
+  }
 
   const geopoint = geoUtils.schemaHasGeopoint(dataset.schema)
   const geometry = geoUtils.schemaHasGeometry(dataset.schema)
-
-  const queryableDataset = { ...dataset }
-  if (dataset.isVirtual) {
-    queryableDataset.descendants = await virtualDatasetsUtils.descendants(db, dataset)
-  }
-
-  const result = { status: 'finalized', schema: dataset.schema }
 
   // Try to calculate enum values
   const cardinalityProps = dataset.schema
@@ -109,5 +110,11 @@ exports.process = async function(app, dataset) {
   }
 
   await collection.updateOne({ id: dataset.id }, { $set: result })
+
+  // parent virtual datasets have to be re-finalized too
+  for await (const virtualDataset of collection.find({ 'virtual.children': dataset.id })) {
+    await collection.updateOne({ id: virtualDataset.id }, { $set: { status: 'indexed' } })
+  }
+
   debug('done')
 }
