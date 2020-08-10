@@ -78,7 +78,7 @@ const isAccountAdmin = (req, res, next) => {
     if (req.user.id !== req.params.id) return res.status(403).send()
   }
   if (req.params.type === 'organization') {
-    const org = req.user.organizations.find(o => o.id === req.params.id && o.role === 'admin')
+    const org = req.user.organizations.find(o => o.id === req.params.id && o.role === config.adminRole)
     if (!org) return res.status(403).send()
   }
   next()

@@ -1,6 +1,7 @@
 // A middleware that accepts an api key from the settings of a user/orga
 // and create a session with a pseudo user
 const crypto = require('crypto')
+const config = require('config')
 const asyncWrap = require('../utils/async-wrap')
 
 module.exports = (scope) => {
@@ -24,7 +25,7 @@ module.exports = (scope) => {
       req.user.organizations = []
       req.user.activeAccount = { type: 'user', id: settings.id, name: req.user.name }
     } else {
-      req.user.organization = { id: settings.id, name: settings.name, role: 'admin' }
+      req.user.organization = { id: settings.id, name: settings.name, role: config.adminRole }
       req.user.organizations = [req.user.organization]
       req.user.activeAccount = { ...req.user.organization, type: 'organization' }
     }

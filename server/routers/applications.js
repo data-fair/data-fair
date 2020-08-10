@@ -24,14 +24,11 @@ const journals = require('../utils/journals')
 const capture = require('../utils/capture')
 const visibilityUtils = require('../utils/visibility')
 const cacheHeaders = require('../utils/cache-headers')
-const apiDocsUtil = require('../utils/api-docs')
 
 const router = module.exports = express.Router()
 
-const operationsClasses = apiDocsUtil.operationsClasses.applications
-
 function clean(application) {
-  application.public = permissions.isPublic(application, operationsClasses)
+  application.public = permissions.isPublic('applications', application)
   application.visibility = visibilityUtils.visibility(application)
 
   delete application.permissions
@@ -82,7 +79,7 @@ router.get('', cacheHeaders.noCache, asyncWrap(async(req, res) => {
   }
   let [results, count, facets] = await Promise.all(mongoQueries)
   results.forEach(r => {
-    r.userPermissions = permissions.list(r, operationsClasses, req.user)
+    r.userPermissions = permissions.list('applications', r, req.user)
     clean(r)
   })
   facets = findUtils.parseFacets(facets)
@@ -133,6 +130,7 @@ const readApplication = asyncWrap(async(req, res, next) => {
   req.application = req.resource = await req.app.get('db').collection('applications')
     .findOne({ id: req.params.applicationId }, { projection: { _id: 0 } })
   if (!req.application) return res.status(404).send('Application configuration not found')
+  req.resourceType = 'applications'
   req.resourceApiDoc = applicationAPIDocs(req.application)
   next()
 })
@@ -141,7 +139,7 @@ router.use('/:applicationId/permissions', readApplication, permissions.router('a
 
 // retrieve a application by its id
 router.get('/:applicationId', readApplication, permissions.middleware('readDescription', 'read'), cacheHeaders.resourceBased, (req, res, next) => {
-  req.application.userPermissions = permissions.list(req.application, operationsClasses, req.user)
+  req.application.userPermissions = permissions.list('applications', req.application, req.user)
   res.status(200).send(clean(req.application))
 })
 

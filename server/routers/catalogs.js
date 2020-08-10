@@ -16,14 +16,11 @@ const usersUtils = require('../utils/users')
 const findUtils = require('../utils/find')
 const asyncWrap = require('../utils/async-wrap')
 const cacheHeaders = require('../utils/cache-headers')
-const apiDocsUtil = require('../utils/api-docs')
 
 const router = module.exports = express.Router()
 
-const operationsClasses = apiDocsUtil.operationsClasses.catalogs
-
 function clean(catalog) {
-  catalog.public = permissions.isPublic(catalog, operationsClasses)
+  catalog.public = permissions.isPublic('catalogs', catalog)
   delete catalog.permissions
   if (catalog.apiKey) catalog.apiKey = '**********'
   catalog.description = catalog.description ? sanitizeHtml(catalog.description) : ''
@@ -72,7 +69,7 @@ router.get('', cacheHeaders.noCache, asyncWrap(async(req, res) => {
   }
   let [results, count, facets] = await Promise.all(mongoQueries)
   results.forEach(r => {
-    r.userPermissions = permissions.list(r, operationsClasses, req.user)
+    r.userPermissions = permissions.list('catalogs', r, req.user)
     clean(r)
   })
   facets = findUtils.parseFacets(facets)
@@ -120,6 +117,7 @@ const readCatalog = asyncWrap(async(req, res, next) => {
     .findOne({ id: req.params.catalogId }, { projection: { _id: 0 } })
   if (!catalog) return res.status(404).send('Catalog not found')
   req.catalog = req.resource = mongoEscape.unescape(catalog, true)
+  req.resourceType = 'catalogs'
   req.resourceApiDoc = catalogAPIDocs(req.catalog)
   next()
 })
@@ -128,7 +126,7 @@ router.use('/:catalogId/permissions', readCatalog, permissions.router('catalogs'
 
 // retrieve a catalog by its id
 router.get('/:catalogId', readCatalog, permissions.middleware('readDescription', 'read'), cacheHeaders.resourceBased, (req, res, next) => {
-  req.catalog.userPermissions = permissions.list(req.catalog, operationsClasses, req.user)
+  req.catalog.userPermissions = permissions.list('catalogs', req.catalog, req.user)
   res.status(200).send(clean(req.catalog))
 })
 

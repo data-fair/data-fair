@@ -30,7 +30,6 @@ const geo = require('../utils/geo')
 const tiles = require('../utils/tiles')
 const cache = require('../utils/cache')
 const cacheHeaders = require('../utils/cache-headers')
-const apiDocsUtil = require('../utils/api-docs')
 const webhooks = require('../utils/webhooks')
 const outputs = require('../utils/outputs')
 const datasetPatchSchema = require('../../contract/dataset-patch')
@@ -43,10 +42,8 @@ const router = express.Router()
 const datasetFileSample = require('../utils/dataset-file-sample')
 const baseTypes = new Set(['text/csv', 'application/geo+json'])
 
-const operationsClasses = apiDocsUtil.operationsClasses.datasets
-
 function clean(dataset) {
-  dataset.public = permissions.isPublic(dataset, operationsClasses)
+  dataset.public = permissions.isPublic('datasets', dataset)
   dataset.visibility = visibilityUtils.visibility(dataset)
   delete dataset.permissions
   dataset.description = dataset.description ? sanitizeHtml(dataset.description) : ''
@@ -126,7 +123,7 @@ router.get('', cacheHeaders.noCache, asyncWrap(async(req, res) => {
   }
   let [results, count, facets] = await Promise.all(mongoQueries)
   results.forEach(r => {
-    r.userPermissions = permissions.list(r, operationsClasses, req.user)
+    r.userPermissions = permissions.list('datasets', r, req.user)
     clean(r)
   })
   facets = findUtils.parseFacets(facets)
@@ -141,6 +138,7 @@ const readDataset = (acceptedStatuses) => asyncWrap(async(req, res, next) => {
     req.dataset = req.resource = await req.app.get('db').collection('datasets')
       .findOne({ id: req.params.datasetId }, { projection: { _id: 0 } })
     if (!req.dataset) return res.status(404).send('Dataset not found')
+    req.resourceType = 'datasets'
     req.resourceApiDoc = datasetAPIDocs(req.dataset)
 
     if (req.isNewDataset || !acceptedStatuses || acceptedStatuses.includes(req.dataset.status)) return next()
@@ -155,7 +153,7 @@ router.use('/:datasetId/permissions', readDataset(), permissions.router('dataset
 
 // retrieve a dataset by its id
 router.get('/:datasetId', readDataset(), permissions.middleware('readDescription', 'read'), cacheHeaders.noCache, (req, res, next) => {
-  req.dataset.userPermissions = permissions.list(req.dataset, operationsClasses, req.user)
+  req.dataset.userPermissions = permissions.list('datasets', req.dataset, req.user)
   res.status(200).send(clean(req.dataset))
 })
 

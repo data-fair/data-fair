@@ -8,7 +8,7 @@ const validate = ajv.compile(permissionsSchema)
 
 exports.middleware = function(operationId, permissionClass) {
   return function(req, res, next) {
-    if (!exports.can(req.resource, operationId, permissionClass, req.user)) {
+    if (!exports.can(req.resourceType, req.resource, operationId, req.user)) {
       res.status(403)
       const operation = apiDocsUtil.operations(req.resourceApiDoc).find(o => o.id === operationId)
       if (operation) res.send(`Permission manquante pour l'opération "${operation.title}" ou la catégorie "${permissionClass}"`)
@@ -17,13 +17,12 @@ exports.middleware = function(operationId, permissionClass) {
     }
 
     // this is stored here to be used by cache headers utils to manage public cache
-    req.publicOperation = exports.can(req.resource, operationId, permissionClass, null)
+    req.publicOperation = exports.can(req.resourceType, req.resource, operationId, null)
 
     next()
   }
 }
 
-// TODO: only apply permissions of current active account
 const isOwner = exports.isOwner = (owner, user) => {
   if (!user) return false
   if (user.activeAccount.type !== owner.type || user.activeAccount.id !== owner.id) return false
@@ -41,17 +40,16 @@ const matchPermission = (owner, permission, user) => {
 }
 
 // resource can be an application, a dataset or an remote service
-exports.can = function(resource, operationId, permissionClass, user) {
+exports.can = function(resourceType, resource, operationId, user) {
   if (user && user.adminMode) return true
   if (isOwner(resource.owner, user)) return true
-  const operationPermissions = (resource.permissions || []).filter(p => p.operations && p.operations.indexOf(operationId) >= 0)
-  const classPermissions = (resource.permissions || []).filter(p => p.classes && p.classes.indexOf(permissionClass) >= 0)
-  const permissions = operationPermissions.concat(classPermissions)
-  return !!permissions.find(p => matchPermission(resource.owner, p, user))
+  const userPermissions = exports.list(resourceType, resource, user)
+  return !!userPermissions.includes(operationId)
 }
 
 // list operations a user can do with a resource
-exports.list = function(resource, operationsClasses, user) {
+exports.list = function(resourceType, resource, user) {
+  const operationsClasses = apiDocsUtil.operationsClasses[resourceType]
   if (isOwner(resource.owner, user) || (user && user.adminMode)) {
     return [].concat(...Object.values(operationsClasses))
   }
@@ -61,7 +59,8 @@ exports.list = function(resource, operationsClasses, user) {
 
 // resource is public if there are public permissions for all operations of the classes 'read' and 'use'
 // list is not here as someone can set a resource publicly usable but not appearing in lists
-exports.isPublic = function(resource, operationsClasses) {
+exports.isPublic = function(resourceType, resource) {
+  const operationsClasses = apiDocsUtil.operationsClasses[resourceType]
   const permissionOperations = p => (p.operations || []).concat(...(p.classes || []).map(c => operationsClasses[c]))
   const publicOperations = new Set([].concat(operationsClasses.read || [], operationsClasses.use || []))
   const resourcePublicOperations = new Set([].concat(...(resource.permissions || []).filter(p => !p.type && !p.id).map(permissionOperations)))
@@ -154,7 +153,7 @@ exports.canDoForOwner = async function(owner, operationId, user, db) {
   return false
 }
 
-module.exports.router = (collectionName, resourceName) => {
+module.exports.router = (resourceType, resourceName) => {
   const router = express.Router()
 
   router.get('', exports.middleware('getPermissions', 'admin'), async (req, res, next) => {
@@ -169,14 +168,14 @@ module.exports.router = (collectionName, resourceName) => {
       if ((!permission.type && permission.id) || (permission.type && !permission.id)) valid = false
     })
     if (!valid) return res.status(400).send('Error in permissions format')
-    const resources = req.app.get('db').collection(collectionName)
+    const resources = req.app.get('db').collection(resourceType)
     try {
       // re-publish to catalogs if public/private was switched
-      if (['datasets', 'applications'].includes(collectionName)) {
+      if (['datasets', 'applications'].includes(resourceType)) {
         const resource = await resources.findOne({ id: req[resourceName].id })
-        const ops = apiDocsUtil.operationsClasses[collectionName]
-        const wasPublic = exports.isPublic(resource, ops)
-        const willBePublic = exports.isPublic({ permissions: req.body }, ops)
+        const ops = apiDocsUtil.operationsClasses[resourceType]
+        const wasPublic = exports.isPublic(resourceType, resource)
+        const willBePublic = exports.isPublic(resourceType, { permissions: req.body })
         if (wasPublic !== willBePublic) {
           await resources.updateOne({
             id: req[resourceName].id,

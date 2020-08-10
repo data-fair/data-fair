@@ -110,6 +110,7 @@ module.exports = {
     spawnTask: true,
   },
   adminRole: 'admin',
+  contribRole: 'contrib',
   // A global default API key for backend to backend calls to remote services
   defaultRemoteKey: {
     in: 'header',

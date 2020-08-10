@@ -154,6 +154,7 @@ const readService = asyncWrap(async(req, res, next) => {
     .findOne({ id: req.params.remoteServiceId }, { projection: { _id: 0 } })
   if (!service) return res.status(404).send('Remote Api not found')
   req.remoteService = req.resource = mongoEscape.unescape(service, true)
+  req.resourceType = 'remote-services'
   req.resourceApiDoc = remoteServiceAPIDocs(req.remoteService)
   // console.log('read service', new Date().getTime() - req.t0)
   next()

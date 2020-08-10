@@ -348,7 +348,7 @@ describe('virtual datasets', () => {
     assert.equal(res.data.total, 2)
   })
 
-  it.only('A virtual dataset is in error if children become inconsistent', async () => {
+  it('A virtual dataset is in error if children become inconsistent', async () => {
     // Send basic dataset
     const ax = global.ax.dmeadus
     const dataset1 = await testUtils.sendDataset('dataset1.csv', ax)

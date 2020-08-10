@@ -8,7 +8,7 @@ exports.operationsClasses = {
   },
   applications: {
     list: ['list'],
-    read: ['readDescription', 'readConfig', 'readApiDoc', 'readJournal'],
+    read: ['readDescription', 'readConfig', 'readApiDoc', 'readJournal', 'realtime-draft-error'],
     write: ['writeDescription', 'writeConfig'],
     admin: ['delete', 'getPermissions', 'setPermissions'],
   },

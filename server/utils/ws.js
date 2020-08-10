@@ -52,7 +52,7 @@ exports.initServer = async (wss, db, session) => {
               const [type, id, subject] = message.channel.split('/')
               const resource = await db.collection(type).findOne({ id })
               if (!resource) return ws.send(JSON.stringify({ type: 'error', status: 404, data: `Ressource ${type}/${id} inconnue.` }))
-              if (!permissions.can(resource, `realtime-${subject}`, 'read', req.user)) {
+              if (!permissions.can(type, resource, `realtime-${subject}`, req.user)) {
                 return ws.send(JSON.stringify({ type: 'error', status: 403, data: 'Permission manquante.' }))
               }
             }

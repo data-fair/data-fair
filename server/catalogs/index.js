@@ -9,7 +9,6 @@ const slug = require('slugify')
 const journals = require('../utils/journals')
 const files = require('../utils/files')
 const permissionsUtil = require('../utils/permissions')
-const apiDocsUtil = require('../utils/api-docs')
 
 const debug = require('debug')('catalogs')
 
@@ -122,7 +121,7 @@ exports.processPublications = async function(app, type, resource) {
   const db = app.get('db')
   const resourcesCollection = db.collection(type + 's')
   const catalogsCollection = db.collection('catalogs')
-  resource.public = permissionsUtil.isPublic(resource, apiDocsUtil.operationsClasses[type + 's'])
+  resource.public = permissionsUtil.isPublic(type + 's', resource)
   resource.publications.filter(p => !p.id).forEach(p => { p.id = shortid.generate() })
   await resourcesCollection.updateOne({ id: resource.id }, { $set: { publications: resource.publications } })
 

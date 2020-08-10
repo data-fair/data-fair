@@ -24,6 +24,7 @@ const setResource = asyncWrap(async(req, res, next) => {
     .findOne({ id: req.params.applicationId }, { projection: { _id: 0 } })
   if (!req.application) return res.status(404).send('Application configuration not found')
   findUtils.setResourceLinks(req.application, 'application')
+  req.resourceType = 'applications'
   req.resourceApiDoc = applicationAPIDocs(req.application)
   next()
 })
@@ -65,7 +66,7 @@ router.get('/:applicationId/login', (req, res) => {
 
 // Proxy for applications
 router.all('/:applicationId*', setResource, (req, res, next) => { req.app.get('anonymSession')(req, res, next) }, asyncWrap(async(req, res, next) => {
-  if (!permissions.can(req.application, 'readConfig', 'read', req.user)) {
+  if (!permissions.can('applications', req.application, 'readConfig', req.user)) {
     return res.redirect(`${config.publicUrl}/app/${req.application.id}/login`)
   }
   const db = req.app.get('db')
