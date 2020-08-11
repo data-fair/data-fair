@@ -160,17 +160,37 @@ module.exports = {
     'https://cdn.jsdelivr.net/npm/@koumoul/',
   ],
   applications: [{
-    url: 'https://koumoul.com/apps/infos-parcelles/2.2/',
+    url: 'https://koumoul.com/apps/infos-parcelles/2.5/',
   }, {
-    url: 'https://koumoul.com/apps/infos-loc/0.7/',
+    url: 'https://koumoul.com/apps/infos-loc/0.9/',
   }, {
     url: 'https://cdn.jsdelivr.net/npm/@koumoul/data-fair-charts@0.8/dist/',
   }, {
-    url: 'https://koumoul.com/apps/word-cloud/0.2/',
+    url: 'https://koumoul.com/apps/word-cloud/0.3/',
   }, {
     url: 'https://koumoul.com/apps/sankey/0.5/',
   }, {
     url: 'https://koumoul.com/apps/sunburst/0.2/',
+  }, {
+    url: 'https://koumoul.com/apps/data-fair-networks/0.1/',
+  }, {
+    url: 'https://koumoul.com/apps/list-details/0.2/',
+  }, {
+    url: 'https://koumoul.com/apps/carto-stats/0.4/',
+  }, {
+    url: 'https://koumoul.com/apps/data-fair-series/0.2/',
+  }, {
+    url: 'https://koumoul.com/apps/data-fair-admin-divs/0.2/',
+  }, {
+    url: 'https://koumoul.com/apps/bar-chart-race/0.1/',
+  }, {
+    url: 'https://koumoul.com/apps/data-fair-geo-shapes/0.1/',
+  }, {
+    url: 'https://koumoul.com/apps/scdl-deliberations/0.1/',
+  }, {
+    url: 'https://koumoul.com/apps/scdl-equipements/0.1/',
+  }, {
+    url: 'https://koumoul.com/apps/data-fair-events/1.0/',
   }],
   baseAppsCategories: ['carte', 'graphique', 'textuelle', 'SCDL'],
   remoteServices: [{
