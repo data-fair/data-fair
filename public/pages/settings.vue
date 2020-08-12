@@ -11,7 +11,8 @@
           <p v-if="activeAccount.type ==='organization'">
             Vous êtes <strong>{{ user.organizations.find(o => o.id===activeAccount.id).role }}</strong> dans cette organisation.
           </p>
-          <div v-if="activeAccount.type ==='organization'">
+
+          <!--<div v-if="activeAccount.type ==='organization'">
             <h3 class="mb-3">
               Permissions générales par rôle
             </h3>
@@ -37,7 +38,7 @@
                 </tr>
               </template>
             </v-data-table>
-          </div>
+          </div>-->
 
           <h3 class="mt-3 mb-3">
             Licenses
@@ -91,6 +92,7 @@
     components: { SettingsWebhooks, SettingsLicenses, SettingsApiKeys, SettingsTopics },
     data: () => ({
       api: null,
+      operations: null,
       organizationRoles: [],
       organization: {},
       settings: null,
@@ -100,13 +102,6 @@
       ...mapState('session', ['user', 'initialized']),
       ...mapGetters('session', ['activeAccount']),
       ...mapState(['env']),
-      operations() {
-        return (this.api && [].concat(...Object.keys(this.api.paths).map(path => Object.keys(this.api.paths[path]).map(method => ({
-          id: this.api.paths[path][method].operationId,
-          title: this.api.paths[path][method].summary,
-          public: !this.api.paths[path][method].security || this.api.paths[path][method].security.find(sr => !Object.keys(sr).length),
-        })))).filter(o => !o.public)) || []
-      },
       authorized() {
         if (!this.user) return false
         if (this.activeAccount.type === 'user' && this.activeAccount.id !== this.user.id) return false
@@ -143,10 +138,17 @@
         this.$set(this.settings, 'webhooks', this.settings.webhooks || [])
         this.$set(this.settings, 'apiKeys', this.settings.apiKeys || [])
         this.$set(this.settings, 'licenses', this.settings.licenses || [])
+        /*
         this.api = await this.$axios.$get('api/v1/api-docs.json')
+        this.operations = (this.api && [].concat(...Object.keys(this.api.paths).map(path => Object.keys(this.api.paths[path]).map(method => ({
+          id: this.api.paths[path][method].operationId,
+          title: this.api.paths[path][method].summary,
+          public: !this.api.paths[path][method].security || this.api.paths[path][method].security.find(sr => !Object.keys(sr).length),
+        })))).filter(o => !o.public)) || []
         this.operations.forEach(operation => {
           this.$set(this.settings.operationsPermissions, operation.id, this.settings.operationsPermissions[operation.id] || [])
         })
+        */
       },
       async save() {
         try {

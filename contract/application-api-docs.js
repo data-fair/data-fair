@@ -158,7 +158,7 @@ module.exports = (application) => {
         get: {
           summary: 'Accéder au journal',
           operationId: 'readJournal',
-          'x-permissionClass': 'read',
+          'x-permissionClass': 'readAdvanced',
           tags: ['Informations'],
           responses: {
             200: {

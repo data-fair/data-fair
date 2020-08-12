@@ -250,7 +250,7 @@ router.patch('/:datasetId', readDataset(['finalized', 'error']), permissions.mid
 // Change ownership of a dataset
 router.put('/:datasetId/owner', readDataset(), permissions.middleware('delete', 'admin'), asyncWrap(async(req, res) => {
   // Must be able to delete the current dataset, and to create a new one for the new owner to proceed
-  if (!permissions.canDoForOwner(req.body, 'postDataset', req.user, req.app.get('db'))) return res.sendStatus(403)
+  if (!permissions.canDoForOwner(req.body, 'datasets', 'post', req.user)) return res.sendStatus(403)
   const patch = {
     owner: req.body,
     updatedBy: { id: req.user.id, name: req.user.name },
@@ -363,7 +363,7 @@ const setFileInfo = async (db, file, attachmentsFile, dataset) => {
 // Create a dataset by uploading data
 const beforeUpload = asyncWrap(async(req, res, next) => {
   if (!req.user) return res.status(401).send()
-  if (!permissions.canDoForOwner(usersUtils.owner(req), 'postDataset', req.user, req.app.get('db'))) return res.sendStatus(403)
+  if (!permissions.canDoForOwner(usersUtils.owner(req), 'datasets', 'post', req.user, req.app.get('db'))) return res.sendStatus(403)
   next()
 })
 router.post('', beforeUpload, checkStorage(true), filesUtils.uploadFile(validatePost), asyncWrap(async(req, res) => {
@@ -435,7 +435,7 @@ const attemptInsert = asyncWrap(async(req, res, next) => {
   newDataset.id = req.params.datasetId
 
   // Try insertion if the user is authorized, in case of conflict go on with the update scenario
-  if (permissions.canDoForOwner(newDataset.owner, 'postDataset', req.user, req.app.get('db'))) {
+  if (permissions.canDoForOwner(newDataset.owner, 'datasets', 'post', req.user, req.app.get('db'))) {
     try {
       await req.app.get('db').collection('datasets').insertOne(newDataset, true)
       req.isNewDataset = true

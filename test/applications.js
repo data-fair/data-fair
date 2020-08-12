@@ -2,16 +2,6 @@ const assert = require('assert').strict
 const config = require('config')
 const nock = require('nock')
 
-const html = `
-<html>
-  <head>
-    <script type="text/javascript">window.APPLICATION=%APPLICATION%;</script>
-  </head>
-  <body>My app body</body>
-</html>
-`
-nock('http://monapp1.com/').persist().get('/index.html').reply(200, html)
-
 describe('Applications', () => {
   it('Get applications when not authenticated', async () => {
     const ax = global.ax.anonymous

@@ -43,7 +43,7 @@
               </v-alert>
               <v-alert
                 :value="!!apiKey.adminMode"
-                type="admin"
+                type="warning"
               >
                 Cette clé est de type super-administrateur
               </v-alert>

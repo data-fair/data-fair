@@ -208,6 +208,7 @@
       classNames: {
         list: 'Lister',
         read: 'Lecture',
+        // readAdvanced: 'Lecture informations détaillées',
         // write: 'Ecriture',
         // admin: 'Administration',
         use: 'Utiliser le service',

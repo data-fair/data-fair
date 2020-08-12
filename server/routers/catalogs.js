@@ -89,7 +89,7 @@ const initNew = (req) => {
 // Create a catalog
 router.post('', asyncWrap(async(req, res) => {
   const catalog = initNew(req)
-  if (!permissions.canDoForOwner(catalog.owner, 'postCatalog', req.user, req.app.get('db'))) return res.status(403).send()
+  if (!permissions.canDoForOwner(catalog.owner, 'catalogs', 'post', req.user)) return res.status(403).send()
   if (!validate(catalog)) return res.status(400).send(validate.errors)
 
   // Generate ids and try insertion until there is no conflict on id
@@ -137,7 +137,7 @@ const attemptInsert = asyncWrap(async(req, res, next) => {
   if (!validate(newCatalog)) return res.status(400).send(validate.errors)
 
   // Try insertion if the user is authorized, in case of conflict go on with the update scenario
-  if (permissions.canDoForOwner(newCatalog.owner, 'postCatalog', req.user, req.app.get('db'))) {
+  if (permissions.canDoForOwner(newCatalog.owner, 'catalogs', 'post', req.user)) {
     try {
       await req.app.get('db').collection('catalogs').insertOne(mongoEscape.escape(newCatalog, true))
       return res.status(201).json(clean(newCatalog))
@@ -176,7 +176,7 @@ router.patch('/:catalogId', readCatalog, permissions.middleware('writeDescriptio
 // Change ownership of a catalog
 router.put('/:catalogId/owner', readCatalog, permissions.middleware('delete', 'admin'), asyncWrap(async(req, res) => {
   // Must be able to delete the current catalog, and to create a new one for the new owner to proceed
-  if (!permissions.canDoForOwner(req.body, 'postCatalog', req.user, req.app.get('db'))) return res.sendStatus(403)
+  if (!permissions.canDoForOwner(req.body, 'catalogs', 'post', req.user)) return res.sendStatus(403)
   const patchedCatalog = (await req.app.get('db').collection('catalogs')
     .findOneAndUpdate({ id: req.params.catalogId }, { $set: { owner: req.body } }, { returnOriginal: false })).value
   res.status(200).json(clean(patchedCatalog))
@@ -192,12 +192,12 @@ router.get('/:catalogId/api-docs.json', readCatalog, permissions.middleware('rea
   res.send(req.resourceApiDoc)
 })
 
-router.get('/:catalogId/datasets', readCatalog, permissions.middleware('readDatasets', 'read'), cacheHeaders.noCache, asyncWrap(async(req, res, next) => {
+router.get('/:catalogId/datasets', readCatalog, permissions.middleware('readDatasets', 'use'), cacheHeaders.noCache, asyncWrap(async(req, res, next) => {
   const datasets = await catalogs.listDatasets(req.app.get('db'), req.catalog, { q: req.query.q })
   res.status(200).json(datasets)
 }))
 
-router.post('/:catalogId/datasets/:datasetId', readCatalog, permissions.middleware('harvestDataset', 'write'), asyncWrap(async(req, res, next) => {
+router.post('/:catalogId/datasets/:datasetId', readCatalog, permissions.middleware('harvestDataset', 'use'), asyncWrap(async(req, res, next) => {
   await catalogs.harvestDataset(req.catalog, req.params.datasetId, req.app)
   res.status(201).send()
 }))

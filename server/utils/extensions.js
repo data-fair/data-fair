@@ -342,7 +342,6 @@ class RemoteExtensionStream extends Transform {
       new Writable({
         objectMode: true,
         write(chunk, encoding, cb) {
-          console.log(chunk.toString())
           try {
             let item
             try {

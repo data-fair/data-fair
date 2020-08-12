@@ -2,23 +2,36 @@
 exports.operationsClasses = {
   datasets: {
     list: ['list'],
-    read: ['readDescription', 'readLines', 'getGeoAgg', 'getValuesAgg', 'getValues', 'getMetricAgg', 'getWordsAgg', 'downloadOriginalData', 'downloadFullData', 'readJournal', 'readApiDoc', 'realtime-journal', 'realtime-extend-progress', 'realtime-transactions'],
-    write: ['writeDescription', 'writeData'],
+    read: ['readDescription', 'readLines', 'getGeoAgg', 'getValuesAgg', 'getValues', 'getMetricAgg', 'getWordsAgg', 'downloadOriginalData', 'downloadFullData', 'readApiDoc', 'realtime-transactions', 'readLine', 'readLineRevisions'],
+    readAdvanced: ['readJournal', 'realtime-journal', 'realtime-extend-progress'],
+    write: ['writeDescription', 'writeData', 'createLine', 'updateLine', 'patchLine', 'bulkLines', 'deleteLine'],
     admin: ['delete', 'getPermissions', 'setPermissions'],
   },
   applications: {
     list: ['list'],
-    read: ['readDescription', 'readConfig', 'readApiDoc', 'readJournal', 'realtime-draft-error'],
+    read: ['readDescription', 'readConfig', 'readApiDoc'],
+    readAdvanced: ['readJournal', 'realtime-draft-error'],
     write: ['writeDescription', 'writeConfig'],
     admin: ['delete', 'getPermissions', 'setPermissions'],
   },
   catalogs: {
     list: ['list'],
-    read: ['readDescription'],
+    read: ['readDescription', 'readApiDoc'],
     write: ['writeDescription'],
     admin: ['delete', 'getPermissions', 'setPermissions'],
-    use: [],
+    use: ['readDatasets'],
   },
+}
+
+exports.userOperationsClasses = {
+  datasets: ['list', 'read'],
+  applications: ['list', 'read'],
+}
+
+exports.contribOperationsClasses = {
+  datasets: ['post', 'list', 'read', 'readAdvanced', 'write'],
+  applications: ['post', 'list', 'read', 'readAdvanced', 'write'],
+  catalogs: ['list', 'read', 'use'],
 }
 
 // WARNING: this util is used both in UI and server

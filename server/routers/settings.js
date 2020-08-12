@@ -27,7 +27,7 @@ router.use('/:type/:id', (req, res, next) => {
 
 function isOwner(req, res, next) {
   if (!req.user) return res.status(401).send()
-  if (!permissions.isOwner({ type: req.params.type, id: req.params.id, role: config.adminRole }, req.user)) {
+  if (permissions.getOwnerRole({ type: req.params.type, id: req.params.id }, req.user) !== 'admin') {
     return res.sendStatus(403)
   }
   next()

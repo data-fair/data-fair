@@ -14,7 +14,7 @@
         />
       </v-radio-group>
     </v-col>
-    <v-col v-if="selectedOwner && selectedOwner.type === 'organization'">
+    <!--<v-col v-if="selectedOwner && selectedOwner.type === 'organization'">
       <p>Dans une organisation, vous pouvez restreindre la propriété à un rôle (les administrateurs de l'organisation seront quand même considérés comme propriétaires).</p>
       <v-radio-group
         v-model="selectedRole"
@@ -29,7 +29,7 @@
           :value="user.organizations.find(o => o.id === selectedOwner.id).role"
         />
       </v-radio-group>
-    </v-col>
+    </v-col>-->
   </v-row>
 </template>
 

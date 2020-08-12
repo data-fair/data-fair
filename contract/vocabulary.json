@@ -111,7 +111,7 @@
   },
   {
     "title": "Longitude",
-    "description": "Coordonné géographique qui permet de se situer par rapport au méridien de Greenwich",
+    "description": "Coordonnée géographique qui permet de se situer par rapport au méridien de Greenwich",
     "identifiers": [
       "http://schema.org/longitude",
       "http://www.w3.org/2003/01/geo/wgs84_pos#long"
@@ -239,7 +239,7 @@
   },
   {
     "title": "Coordonnée X",
-    "description": "Coordonné géographique X (Easting) selon une projection à définir sur le jeu de données. Ce champ sera utilisé pour calculer les attributs latitude/longitude.",
+    "description": "Coordonnée géographique X (Easting) selon une projection à définir sur le jeu de données. Ce champ sera utilisé pour calculer les attributs latitude/longitude.",
     "identifiers": [
       "http://data.ign.fr/def/geometrie#coordX"
     ],
@@ -248,7 +248,7 @@
   },
   {
     "title": "Coordonnée Y",
-    "description": "Coordonné géographique Y (Northing) selon une projection à définir sur le jeu de données. Ce champ sera utilisé pour calculer les attributs latitude/longitude.",
+    "description": "Coordonnée géographique Y (Northing) selon une projection à définir sur le jeu de données. Ce champ sera utilisé pour calculer les attributs latitude/longitude.",
     "identifiers": [
       "http://data.ign.fr/def/geometrie#coordY"
     ],

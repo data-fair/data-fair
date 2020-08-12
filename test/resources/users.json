@@ -47,7 +47,10 @@
     "id": "ddecruce5",
     "firstName": "Duky",
     "lastName": "De Cruce",
-    "email": "ddecruce5@phpbb.com"
+    "email": "ddecruce5@phpbb.com",
+    "password": {
+      "clear": "passwd"
+    }
   },
   {
     "id": "vdulany6",
@@ -59,7 +62,10 @@
     "id": "bhazeldean7",
     "firstName": "Bevin",
     "lastName": "Hazeldean",
-    "email": "bhazeldean7@cnbc.com"
+    "email": "bhazeldean7@cnbc.com",
+    "password": {
+      "clear": "passwd"
+    }
   },
   {
     "id": "dhannan8",
@@ -77,7 +83,10 @@
     "id": "alone",
     "firstName": "I am",
     "lastName": "Alone",
-    "email": "alone@no.org"
+    "email": "alone@no.org",
+    "password": {
+      "clear": "passwd"
+    }
   },
   {
     "id": "albanm",

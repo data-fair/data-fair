@@ -99,7 +99,7 @@ const initNew = (req) => {
 // Create an application configuration
 router.post('', asyncWrap(async(req, res) => {
   const application = initNew(req)
-  if (!permissions.canDoForOwner(application.owner, 'postApplication', req.user, req.app.get('db'))) return res.status(403).send()
+  if (!permissions.canDoForOwner(application.owner, 'applications', 'post', req.user)) return res.status(403).send()
   if (!validate(application)) return res.status(400).send(validate.errors)
 
   // Generate ids and try insertion until there is no conflict on id
@@ -150,7 +150,7 @@ const attemptInsert = asyncWrap(async(req, res, next) => {
   if (!validate(newApplication)) return res.status(400).send(validate.errors)
 
   // Try insertion if the user is authorized, in case of conflict go on with the update scenario
-  if (permissions.canDoForOwner(newApplication.owner, 'postApplication', req.user, req.app.get('db'))) {
+  if (permissions.canDoForOwner(newApplication.owner, 'applications', 'post', req.user)) {
     try {
       await req.app.get('db').collection('applications').insertOne(newApplication, true)
       await journals.log(req.app, newApplication, { type: 'application-created', href: config.publicUrl + '/application/' + newApplication.id }, 'application')
@@ -202,7 +202,7 @@ router.patch('/:applicationId', readApplication, permissions.middleware('writeDe
 // Change ownership of an application
 router.put('/:applicationId/owner', readApplication, permissions.middleware('delete', 'admin'), asyncWrap(async(req, res) => {
   // Must be able to delete the current application, and to create a new one for the new owner to proceed
-  if (!permissions.canDoForOwner(req.body, 'postApplication', req.user, req.app.get('db'))) return res.sendStatus(403)
+  if (!permissions.canDoForOwner(req.body, 'applications', 'post', req.user)) return res.sendStatus(403)
   const patchedApp = (await req.app.get('db').collection('applications')
     .findOneAndUpdate({ id: req.params.applicationId }, { $set: { owner: req.body } }, { returnOriginal: false })).value
   res.status(200).json(clean(patchedApp))

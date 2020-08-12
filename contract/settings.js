@@ -175,6 +175,7 @@ module.exports = {
     },
     operationsPermissions: {
       type: 'object',
+      deprecated: true,
     },
   },
 }

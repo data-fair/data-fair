@@ -23,17 +23,31 @@ exports.middleware = function(operationId, permissionClass) {
   }
 }
 
-const isOwner = exports.isOwner = (owner, user) => {
-  if (!user) return false
-  if (user.activeAccount.type !== owner.type || user.activeAccount.id !== owner.id) return false
-  if (owner.type === 'user') return true
-  return !owner.role || user.activeAccount.role === config.adminRole || user.activeAccount.role === owner.role
+const getOwnerRole = exports.getOwnerRole = (owner, user) => {
+  if (!user) return null
+  if (user.activeAccount.type !== owner.type || user.activeAccount.id !== owner.id) return null
+  if (user.activeAccount.type === 'user') return config.adminRole
+  return user.activeAccount.role
+}
+
+const getOwnerClasses = (owner, user, resourceType) => {
+  const operationsClasses = apiDocsUtil.operationsClasses[resourceType]
+  const ownerRole = getOwnerRole(owner, user)
+  // classes of operations the user can do based on him being member of the resource's owner
+  if (ownerRole === config.adminRole || (user && user.adminMode)) {
+    return Object.keys(operationsClasses).concat(['post'])
+  }
+  if (ownerRole === config.contribRole) {
+    return apiDocsUtil.contribOperationsClasses[resourceType] || []
+  }
+  if (ownerRole === config.userRole) {
+    return apiDocsUtil.userOperationsClasses[resourceType] || []
+  }
 }
 
 const matchPermission = (owner, permission, user) => {
   if (!permission.type && !permission.id) return true // public
   if (!user) return false
-  if (isOwner(owner, user)) return true
   if (user.activeAccount.type !== permission.type || user.activeAccount.id !== permission.id) return false
   if (permission.type === 'user') return true
   return !permission.role || user.activeAccount.role === config.adminRole || user.activeAccount.role === permission.role
@@ -42,7 +56,6 @@ const matchPermission = (owner, permission, user) => {
 // resource can be an application, a dataset or an remote service
 exports.can = function(resourceType, resource, operationId, user) {
   if (user && user.adminMode) return true
-  if (isOwner(resource.owner, user)) return true
   const userPermissions = exports.list(resourceType, resource, user)
   return !!userPermissions.includes(operationId)
 }
@@ -50,9 +63,8 @@ exports.can = function(resourceType, resource, operationId, user) {
 // list operations a user can do with a resource
 exports.list = function(resourceType, resource, user) {
   const operationsClasses = apiDocsUtil.operationsClasses[resourceType]
-  if (isOwner(resource.owner, user) || (user && user.adminMode)) {
-    return [].concat(...Object.values(operationsClasses))
-  }
+  const ownerClasses = getOwnerClasses(resource.owner, user, resourceType)
+  if (ownerClasses) return [].concat(...ownerClasses.map(cl => operationsClasses[cl]))
   const permissions = (resource.permissions || []).filter(p => matchPermission(resource.owner, p, user))
   return [].concat(...permissions.map(p => (p.operations || []).concat(...(p.classes || []).map(c => operationsClasses[c]))))
 }
@@ -90,24 +102,11 @@ exports.filter = function(user) {
           'owner.id': user.id,
         })
       }
-      if (user.organization && user.organization.role === config.adminRole) {
-        // user is admin of owner organization
+      if (user.organization) {
+        // user is member of owner organization
         or.push({
           'owner.type': 'organization',
           'owner.id': user.organization.id,
-        })
-      }
-      if (user.organization && user.organization.role !== config.adminRole) {
-        // organizations where user does not have admin role
-        or.push({
-          'owner.type': 'organization',
-          'owner.id': user.organization.id,
-          'owner.role': user.organization.role,
-        })
-        or.push({
-          'owner.type': 'organization',
-          'owner.id': user.organization.id,
-          'owner.role': null,
         })
       }
 
@@ -141,16 +140,9 @@ exports.filter = function(user) {
 
 // Only operationId level : it is used only for creation of resources and
 // setting screen only set creation permissions at operationId level
-exports.canDoForOwner = async function(owner, operationId, user, db) {
-  if (!user) return false
-  if (user.adminMode) return true
-  if (isOwner(owner, user)) return true
-  if (owner.type === 'organization' && user.activeAccount.type === 'organization' && user.activeAccount.id === owner.id) {
-    const settings = await db.collection('settings').findOne({ id: owner.id, type: owner.type })
-    const operationsPermissions = settings && settings.operationsPermissions && settings.operationsPermissions[operationId]
-    if (operationsPermissions) return operationsPermissions.indexOf(user.activeAccount.role) >= 0
-  }
-  return false
+exports.canDoForOwner = function(owner, resourceType, operationClass, user) {
+  const ownerClasses = getOwnerClasses(owner, user, resourceType)
+  return ownerClasses && ownerClasses.includes(operationClass)
 }
 
 module.exports.router = (resourceType, resourceName) => {
@@ -173,7 +165,6 @@ module.exports.router = (resourceType, resourceName) => {
       // re-publish to catalogs if public/private was switched
       if (['datasets', 'applications'].includes(resourceType)) {
         const resource = await resources.findOne({ id: req[resourceName].id })
-        const ops = apiDocsUtil.operationsClasses[resourceType]
         const wasPublic = exports.isPublic(resourceType, resource)
         const willBePublic = exports.isPublic(resourceType, { permissions: req.body })
         if (wasPublic !== willBePublic) {

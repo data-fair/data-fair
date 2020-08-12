@@ -111,6 +111,7 @@ module.exports = {
   },
   adminRole: 'admin',
   contribRole: 'contrib',
+  userRole: 'user',
   // A global default API key for backend to backend calls to remote services
   defaultRemoteKey: {
     in: 'header',

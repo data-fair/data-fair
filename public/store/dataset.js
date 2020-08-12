@@ -57,16 +57,6 @@ export default () => ({
       if (rootState.session && rootState.session.user && rootState.session.user.adminMode) return true
       return (state.dataset && state.dataset.userPermissions.includes(operation)) || false
     },
-    isOwner: (state, getters, rootState) => {
-      if (!state.dataset) return
-      if (!rootState.session || !rootState.session.user) return false
-      if (state.dataset.owner.type === 'user' && state.dataset.owner.id === rootState.session.user.id) return true
-      if (state.dataset.owner.type === 'organization') {
-        const userOrga = rootState.session.user.organizations.find(o => o.id === state.dataset.owner.id)
-        return userOrga && userOrga.role === 'admin'
-      }
-      return false
-    },
     hasPublicApplications: (state) => {
       return state.applications && !!state.applications.find(a => a.visibility === 'public')
     },

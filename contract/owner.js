@@ -18,7 +18,8 @@ module.exports = {
     },
     role: {
       type: 'string',
-      description: 'If this is set and owner is an organization, this restrict ownership to users of this organization having this role or admin role',
+      deprecated: true,
+      description: 'DEPRECATED - If this is set and owner is an organization, this restrict ownership to users of this organization having this role or admin role',
     },
   },
 }

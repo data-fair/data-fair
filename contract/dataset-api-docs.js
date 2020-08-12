@@ -171,7 +171,7 @@ La valeur est une liste de champs séparés par des virgules.
     in: 'query',
     name: 'sampling',
     description: `
-**Uniquement avec le paramètre de tuilage xyx**. Configure le mode d'échantillonage des resultats pour privilégier soit l'exhaustivité des données soit une densité plus homogène sur la carte.
+**Uniquement avec le paramètre de tuilage xyz**. Configure le mode d'échantillonage des resultats pour privilégier soit l'exhaustivité des données soit une densité plus homogène sur la carte.
 
   - **neighbors** (défaut) : utilise la densité maximale parmi les tuiles voisines pour réduire la densité de la tuile courante au même niveau d'échantillonage (couteux en performance).
   - **max** : retourne le maximum (limité par le paramètre size) de résultat pour chaque tuile.
@@ -641,7 +641,7 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
         get: {
           summary: 'Accéder au journal',
           operationId: 'readJournal',
-          'x-permissionClass': 'read',
+          'x-permissionClass': 'readAdvanced',
           tags: ['Métadonnées'],
           responses: {
             200: {
