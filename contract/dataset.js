@@ -406,5 +406,17 @@ module.exports = {
       description: 'An object for extra content from client services of data-fair',
     },
     permissions,
+    previews: {
+      type: 'array',
+      title: 'Prévisualisations',
+      items: {
+        type: 'object',
+        properties: {
+          id: { type: 'string' },
+          title: { type: 'string' },
+          href: { type: 'string' },
+        },
+      },
+    },
   },
 }

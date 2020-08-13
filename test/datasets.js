@@ -112,6 +112,10 @@ describe('datasets', () => {
     assert.equal(res.data.owner.type, 'user')
     assert.equal(res.data.owner.id, 'dmeadus0')
     assert.equal(res.data.file.encoding, 'UTF-8')
+    assert.equal(res.data.previews.length, 1)
+    assert.equal(res.data.previews[0].id, 'table')
+    assert.equal(res.data.previews[0].title, 'Tableau')
+    assert.ok(res.data.previews[0].href.endsWith('/embed/dataset/dataset1/table'))
   })
 
   it('Upload new dataset in user zone with title', async () => {

@@ -47,6 +47,7 @@ function clean(dataset) {
   dataset.visibility = visibilityUtils.visibility(dataset)
   delete dataset.permissions
   dataset.description = dataset.description ? sanitizeHtml(dataset.description) : ''
+  dataset.previews = datasetUtils.previews(dataset)
   findUtils.setResourceLinks(dataset, 'dataset')
   return dataset
 }

@@ -154,7 +154,7 @@ exports.parametersDoc = (filterFields) => [
 
 exports.setResourceLinks = (resource, resourceType) => {
   resource.href = `${config.publicUrl}/api/v1/${resourceType}s/${resource.id}`
-  resource.page = `${config.publicUrl}/${resourceType}/${resource.id}/description`
+  resource.page = `${config.publicUrl}/${resourceType}/${resource.id}`
   if (resourceType === 'application') resource.exposedUrl = `${config.publicUrl}/app/${resource.id}`
 }
 

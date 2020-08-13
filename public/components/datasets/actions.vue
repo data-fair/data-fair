@@ -36,6 +36,17 @@
           </v-list-item-avatar>
           <v-list-item-title>Mise à jour</v-list-item-title>
         </v-list-item>
+        <v-list-item
+          v-if="can('readLines')"
+          @click="showIntegrationDialog = true; previewId = 'table'"
+        >
+          <v-list-item-avatar>
+            <v-icon color="primary">
+              mdi-code-tags
+            </v-icon>
+          </v-list-item-avatar>
+          <v-list-item-title>Prévisualiser dans un site</v-list-item-title>
+        </v-list-item>
         <v-list-item v-if="can('delete')" @click="showDeleteDialog = true">
           <v-list-item-avatar>
             <v-icon color="warning">
@@ -54,6 +65,51 @@
         </v-list-item>
       </v-list>
     </v-menu>
+
+    <v-dialog v-model="showIntegrationDialog">
+      <v-card>
+        <v-toolbar
+          dense
+          flat
+        >
+          <v-toolbar-title>Prévisualiser dans un site</v-toolbar-title>
+          <v-spacer />
+          <v-btn
+            icon
+            @click.native="showIntegrationDialog = false"
+          >
+            <v-icon>mdi-close</v-icon>
+          </v-btn>
+        </v-toolbar>
+        <v-card-text v-if="showIntegrationDialog">
+          Pour intégrer une prévisualisation de ce jeu de données dans un site vous pouvez copier le code suivant ou un code similaire dans le contenu HTML de votre site.
+          <br>
+          <v-select
+            v-if="dataset.previews && dataset.previews.length"
+            v-model="previewId"
+            :items="dataset.previews"
+            label="Type de prévisualisation"
+            item-text="title"
+            item-value="id"
+            style="max-width: 200px;"
+            hide-details
+          />
+          <br>
+          <pre>
+  &lt;iframe src="{{ previewLink }}" width="100%" height="500px" style="background-color: transparent; border: none;"/&gt;
+            </pre>
+          <br>
+          Résultat:
+          <iframe
+            :src="previewLink"
+            width="100%"
+            height="500px"
+            style="background-color: transparent; border: none;"
+          />
+        </v-card-text>
+      </v-card>
+    </v-dialog>
+
     <v-dialog
       v-model="showDeleteDialog"
       max-width="500"
@@ -190,15 +246,20 @@
       uploading: false,
       uploadProgress: 0,
       newOwner: null,
+      showIntegrationDialog: false,
+      previewId: 'table',
     }),
     computed: {
       ...mapState('dataset', ['dataset', 'nbApplications', 'dataFiles']),
       ...mapGetters('dataset', ['can']),
       downloadLink() {
-        return this.dataset ? this.resourceUrl + '/raw' : null
+        return this.dataset && this.resourceUrl + '/raw'
       },
       downloadFullLink() {
-        return this.dataset ? this.resourceUrl + '/full' : null
+        return this.dataset && this.resourceUrl + '/full'
+      },
+      previewLink() {
+        return this.dataset && this.dataset.previews.find(p => p.id === this.previewId).href
       },
     },
     methods: {
