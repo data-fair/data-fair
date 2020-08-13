@@ -1,4 +1,5 @@
 const assert = require('assert').strict
+const testUtils = require('./resources/test-utils')
 
 describe('Base applications', () => {
   it('Get public base applications', async () => {
@@ -9,7 +10,7 @@ describe('Base applications', () => {
   })
 
   it('Get privately readable base app', async () => {
-  // Only public at first
+    // Only public at first
     const ax = global.ax.dmeadus
     let res = await ax.get('/api/v1/base-applications?privateAccess=user:dmeadus0')
     assert.equal(res.status, 200)
@@ -31,5 +32,17 @@ describe('Base applications', () => {
     assert.equal(res.data.count, 2)
     const baseApp = res.data.results.find(a => a.url === 'http://monapp2.com/')
     assert.equal(baseApp.privateAccess.length, 1)
+  })
+
+  it('Get base apps completed with contextual dataset', async () => {
+    const ax = global.ax.dmeadus
+    const dataset = await testUtils.sendDataset('dataset1.csv', ax)
+    const res = await ax.get('/api/v1/base-applications?dataset=' + dataset.id)
+    assert.equal(res.status, 200)
+    assert.equal(res.data.count, 1)
+    const app = res.data.results[0]
+    assert.equal(app.category, 'autre')
+    assert.equal(app.disabled.length, 1)
+    assert.equal(app.disabled[0], 'Cette application n\'utilise pas de sources de données de type fichier.')
   })
 })

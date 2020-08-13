@@ -86,9 +86,7 @@ export default () => {
         commit('setAny', { vocabularyArray })
         vocabularyArray.forEach(term => {
           if (!vocabularyTags.includes(term.tag)) vocabularyTags.push(term.tag)
-          term.identifiers.forEach(id => {
-            vocabulary[id] = term
-          })
+          term.identifiers.forEach(id => { vocabulary[id] = term })
         })
         commit('setAny', { vocabularyTags })
         commit('setAny', { vocabulary })

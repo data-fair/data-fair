@@ -1,16 +1,21 @@
 <template>
   <v-container
-    v-if="baseApps"
     fluid
-    class="pa-0"
+    class="pa-0 mb-2"
   >
-    <template v-for="category in categories">
+    <v-progress-linear
+      v-if="loading"
+      :indeterminate="true"
+      color="primary"
+      height="2"
+    />
+    <template v-for="category in categories" v-else>
       <h3 :key="category" class="text-h6">
         {{ 'Visualisation de type '+category }}
       </h3>
       <v-row :key="'layout-'+category">
         <v-col
-          v-for="baseApp in configurableApps.filter(a => a.category === category)"
+          v-for="baseApp in baseApps.filter(a => a.category === category)"
           :key="baseApp.id"
           md="3"
           sm="4"
@@ -42,48 +47,35 @@
     props: ['dataset', 'value'],
     data: () => ({
       baseApps: null,
+      loading: true,
     }),
     computed: {
       ...mapState(['env', 'vocabulary']),
       ...mapGetters('session', ['activeAccount']),
       categories() {
         return this.env.baseAppsCategories.concat('autre')
-          .filter(c => this.configurableApps && this.configurableApps.filter(b => b.category === c).length)
+          .filter(c => this.baseApps && this.baseApps.filter(b => b.category === c).length)
       },
-      configurableApps() {
-        return (this.baseApps || []).map(app => {
-          const application = { ...app }
-          application.disabled = []
-          application.category = application.category || 'autre'
-          if (this.dataset && (!application.datasetsFilters || !application.datasetsFilters.length)) {
-            application.disabled.push('Cette application n\'utilise pas de sources de données de type fichier.')
-          } else {
-            if (application.datasetsFilters && application.datasetsFilters.length && !this.dataset) {
-              application.disabled.push('Cette application nécessite une source de données.')
-            } else {
-              (application.datasetsFilters || []).forEach(filter => {
-                if (filter.bbox && !this.dataset.bbox) application.disabled.push('Cette application nécessite une source avec des données géolocalisées.')
-                if (filter.concepts) {
-                  const foundConcepts = []
-                  filter.concepts.forEach(concept => {
-                    if (this.vocabulary[concept]) foundConcepts.push(concept)
-                  })
-                  if (!foundConcepts.length) application.disabled.push(`Cette application nécessite une source avec un champ de concept ${filter.concepts.map(concept => this.concepts.find(c => c.id === concept).title).join(' ou ')}.`)
-                }
-                if (filter['field-type'] && (!this.dataset.schema || !this.dataset.schema.find(p => filter['field-type'].includes(p.type)))) {
-                  application.disabled.push(`Cette application nécessite une source avec un champ de type ${filter['field-type'].join(' ou ')}.`)
-                }
-              })
-            }
-          }
-          return application
-        })
+    },
+    watch: {
+      dataset() {
+        this.refresh()
       },
     },
     async created() {
-      const privateAccess = this.activeAccount.type + ':' + this.activeAccount.id
-      const baseApps = (await this.$axios.get('api/v1/base-applications', { params: { size: 1000, privateAccess } })).data.results
-      this.baseApps = baseApps
+      this.refresh()
+    },
+    methods: {
+      async refresh() {
+        this.loading = true
+        const params = {
+          size: 1000,
+          privateAccess: this.activeAccount.type + ':' + this.activeAccount.id,
+          dataset: this.dataset ? this.dataset.id : 'none',
+        }
+        this.baseApps = (await this.$axios.get('api/v1/base-applications', { params })).data.results
+        this.loading = false
+      },
     },
   }
 </script>

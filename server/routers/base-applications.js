@@ -9,11 +9,15 @@ const createError = require('http-errors')
 const Extractor = require('html-extractor')
 const htmlExtractor = new Extractor()
 htmlExtractor.extract = util.promisify(htmlExtractor.extract)
+const vocabularyArray = require('../../contract/vocabulary')
 const asyncWrap = require('../utils/async-wrap')
 const findUtils = require('../utils/find')
 const baseAppsUtils = require('../utils/base-apps')
 const cacheHeaders = require('../utils/cache-headers')
 const router = exports.router = express.Router()
+
+const vocabulary = {}
+vocabularyArray.forEach(term => { term.identifiers.forEach(id => { vocabulary[id] = term }) })
 
 // Fill the collection using the default base applications from config
 // and cleanup non-public apps that are not used anywhere
@@ -148,5 +152,40 @@ router.get('', cacheHeaders.noCache, asyncWrap(async(req, res) => {
     // keep only the private access that concerns the current request
     result.privateAccess = (result.privateAccess || []).filter(p => privateAccess.find(p2 => p2.type === p.type && p2.id === p.id))
   }
+
+  // optionally complete informations based on a dataset to guide user in selecting suitable application
+  if (req.query.dataset) {
+    let dataset
+    if (req.query.dataset !== 'none') {
+      dataset = await db.collection('datasets').findOne({ id: req.query.dataset, 'owner.type': req.user.activeAccount.type, 'owner.id': req.user.activeAccount.id })
+      if (!dataset) return res.status(404).send(`Jeu de données ${req.query.dataset} est inconnu ou ne vous appartient pas.`)
+    }
+    for (const application of results) {
+      application.disabled = []
+      application.category = application.category || 'autre'
+      if (dataset && (!application.datasetsFilters || !application.datasetsFilters.length)) {
+        application.disabled.push('Cette application n\'utilise pas de sources de données de type fichier.')
+      } else {
+        if (application.datasetsFilters && application.datasetsFilters.length && !dataset) {
+          application.disabled.push('Cette application nécessite une source de données.')
+        } else {
+          (application.datasetsFilters || []).forEach(filter => {
+            if (filter.bbox && !dataset.bbox) application.disabled.push('Cette application nécessite une source avec des données géolocalisées.')
+            if (filter.concepts) {
+              const foundConcepts = []
+              filter.concepts.forEach(concept => {
+                if (vocabulary[concept]) foundConcepts.push(concept)
+              })
+              if (!foundConcepts.length) application.disabled.push(`Cette application nécessite une source avec un champ de concept ${filter.concepts.map(concept => vocabulary[concept].title).join(' ou ')}.`)
+            }
+            if (filter['field-type'] && (!dataset.schema || !dataset.schema.find(p => filter['field-type'].includes(p.type)))) {
+              application.disabled.push(`Cette application nécessite une source avec un champ de type ${filter['field-type'].join(' ou ')}.`)
+            }
+          })
+        }
+      }
+    }
+  }
+
   res.send({ count, results })
 }))

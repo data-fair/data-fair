@@ -67,6 +67,7 @@
           />
         </v-sheet>
         <v-btn
+          v-if="!$route.query.dataset"
           text
           @click.native="currentStep = 1"
         >
