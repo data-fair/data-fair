@@ -9,8 +9,6 @@ const thumbor = require('../thumbor')
 const tiles = require('../tiles')
 const geo = require('../geo')
 const permissions = require('../permissions')
-const apiDocsUtil = require('../api-docs')
-const operationsClasses = apiDocsUtil.operationsClasses.datasets
 
 // From a property in data-fair schema to the property in an elasticsearch mapping
 exports.esProperty = prop => {

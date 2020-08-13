@@ -1,6 +1,5 @@
 const assert = require('assert').strict
 const config = require('config')
-const nock = require('nock')
 
 describe('Applications', () => {
   it('Get applications when not authenticated', async () => {
