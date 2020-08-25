@@ -85,7 +85,7 @@
           Pour intégrer une prévisualisation de ce jeu de données dans un site vous pouvez copier le code suivant ou un code similaire dans le contenu HTML de votre site.
           <br>
           <v-select
-            v-if="dataset.previews && dataset.previews.length"
+            v-if="dataset.previews && dataset.previews.length > 1"
             v-model="previewId"
             :items="dataset.previews"
             label="Type de prévisualisation"

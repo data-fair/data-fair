@@ -218,7 +218,7 @@ router.delete('/:applicationId', readApplication, permissions.middleware('delete
     id: req.params.applicationId,
   })
   try {
-    await unlink(capture.path(req.application))
+    await unlink(await capture.path(req.application))
   } catch (err) {
     console.error('Failure to remove capture file')
   }
@@ -349,7 +349,7 @@ router.get('/:applicationId/active-sessions', readApplication, permissions.middl
 }))
 
 router.get('/:applicationId/capture', readApplication, permissions.middleware('readConfig', 'read'), cacheHeaders.resourceBased, asyncWrap(async(req, res) => {
-  const capturePath = capture.path(req.application)
+  const capturePath = await capture.path(req.application)
   if (await fs.pathExists(capturePath)) {
     res.sendFile(capturePath)
   } else {

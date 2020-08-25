@@ -8,12 +8,14 @@ exports.init = async() => {
   await fs.ensureDir(path.resolve(config.dataDir, 'captures'))
 }
 
-exports.path = (application) => {
+exports.path = async (application) => {
+  const gifPath = path.resolve(config.dataDir, 'captures', application.id + '.gif')
+  if (await fs.exists(gifPath)) return gifPath
   return path.resolve(config.dataDir, 'captures', application.id + '.png')
 }
 
 exports.screenshot = async (req) => {
-  const capturePath = exports.path(req.application)
+  const capturePath = path.resolve(config.dataDir, 'captures', req.application.id + '.png')
 
   try {
     const screenShortUrl = (config.captureUrl + '/api/v1/screenshot')
@@ -26,6 +28,7 @@ exports.screenshot = async (req) => {
       url: screenShortUrl,
       qs: {
         target: appUrl,
+        type: 'gif',
       },
       headers: {
         Cookie: cookieText,
@@ -40,6 +43,10 @@ exports.screenshot = async (req) => {
       await new Promise(resolve => setTimeout(resolve, 4000))
       res = request(reqOpts)
       await pump(res, fs.createWriteStream(capturePath))
+    }
+
+    if (res.headers['content-type'] === 'image/gif') {
+      await fs.move(capturePath, path.resolve(config.dataDir, 'captures', req.application.id + '.gif'))
     }
   } catch (err) {
     // catch err locally as this method is called without waiting for result

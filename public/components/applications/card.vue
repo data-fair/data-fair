@@ -14,7 +14,7 @@
     <v-divider />
     <v-img
       :src="`${application.href}/capture`"
-      height="180px"
+      :aspect-ratio="800 / 450"
     />
     <v-divider />
     <v-row v-if="showTopics" style="min-height:30px;">
