@@ -87,6 +87,29 @@ const checkStorage = (overwrite) => asyncWrap(async (req, res, next) => {
   next()
 })
 
+// check if the endpoint is called from an application with an aunauthenticated readOnly application key
+const applicationKey = asyncWrap(async (req, res, next) => {
+  const referer = req.headers.referer || req.headers.referrer
+  if (referer) {
+    const refererUrl = new URL(referer)
+    const key = refererUrl && refererUrl.searchParams && refererUrl.searchParams.get('key')
+    if (key) {
+      const applicationKeys = await req.app.get('db').collection('applications-keys').findOne({ 'keys.id': key })
+      if (applicationKeys) {
+        const filter = {
+          id: applicationKeys._id,
+          'owner.type': req.dataset.owner.type,
+          'owner.id': req.dataset.owner.id,
+          'configuration.datasets.href': `${config.publicUrl}/api/v1/datasets/${req.dataset.id}`,
+        }
+        const matchingApplication = await req.app.get('db').collection('applications').count(filter)
+        if (matchingApplication) req.bypassPermission = true
+      }
+    }
+  }
+  next()
+})
+
 // Get the list of datasets
 router.get('', cacheHeaders.noCache, asyncWrap(async(req, res) => {
   const datasets = req.app.get('db').collection('datasets')
@@ -153,13 +176,13 @@ const readDataset = (acceptedStatuses) => asyncWrap(async(req, res, next) => {
 router.use('/:datasetId/permissions', readDataset(), permissions.router('datasets', 'dataset'))
 
 // retrieve a dataset by its id
-router.get('/:datasetId', readDataset(), permissions.middleware('readDescription', 'read'), cacheHeaders.noCache, (req, res, next) => {
+router.get('/:datasetId', readDataset(), applicationKey, permissions.middleware('readDescription', 'read'), cacheHeaders.noCache, (req, res, next) => {
   req.dataset.userPermissions = permissions.list('datasets', req.dataset, req.user)
   res.status(200).send(clean(req.dataset))
 })
 
 // retrieve only the schema.. Mostly useful for easy select fields
-router.get('/:datasetId/schema', readDataset(), permissions.middleware('readDescription', 'read'), cacheHeaders.noCache, (req, res, next) => {
+router.get('/:datasetId/schema', readDataset(), applicationKey, permissions.middleware('readDescription', 'read'), cacheHeaders.noCache, (req, res, next) => {
   let schema = req.dataset.schema
   schema.forEach(field => {
     field.label = field.title || field['x-originalName'] || field.key
@@ -541,7 +564,7 @@ async function manageESError(req, err) {
 }
 
 // Read/search data for a dataset
-router.get('/:datasetId/lines', readDataset(), permissions.middleware('readLines', 'read'), cacheHeaders.resourceBased, asyncWrap(async(req, res) => {
+router.get('/:datasetId/lines', readDataset(), applicationKey, permissions.middleware('readLines', 'read'), cacheHeaders.resourceBased, asyncWrap(async(req, res) => {
   if (req.query && req.query.page && req.query.size && req.query.page * req.query.size > 10000) {
     return res.status(404).send('You can only access the first 10 000 elements.')
   }
@@ -731,7 +754,7 @@ router.get('/:datasetId/lines', readDataset(), permissions.middleware('readLines
 }))
 
 // Special geo aggregation
-router.get('/:datasetId/geo_agg', readDataset(), permissions.middleware('getGeoAgg', 'read'), cacheHeaders.resourceBased, asyncWrap(async(req, res) => {
+router.get('/:datasetId/geo_agg', readDataset(), applicationKey, permissions.middleware('getGeoAgg', 'read'), cacheHeaders.resourceBased, asyncWrap(async(req, res) => {
   res.throttleEnd()
   if (req.dataset.isVirtual) req.dataset.descendants = await virtualDatasetsUtils.descendants(req.app.get('db'), req.dataset)
   const db = req.app.get('db')
@@ -777,7 +800,7 @@ router.get('/:datasetId/geo_agg', readDataset(), permissions.middleware('getGeoA
 }))
 
 // Standard aggregation to group items by value and perform an optional metric calculation on each group
-router.get('/:datasetId/values_agg', readDataset(), permissions.middleware('getValuesAgg', 'read'), cacheHeaders.resourceBased, asyncWrap(async(req, res) => {
+router.get('/:datasetId/values_agg', readDataset(), applicationKey, permissions.middleware('getValuesAgg', 'read'), cacheHeaders.resourceBased, asyncWrap(async(req, res) => {
   res.throttleEnd()
   if (req.dataset.isVirtual) req.dataset.descendants = await virtualDatasetsUtils.descendants(req.app.get('db'), req.dataset)
   const db = req.app.get('db')
@@ -825,7 +848,7 @@ router.get('/:datasetId/values_agg', readDataset(), permissions.middleware('getV
 
 // Simpler values list and filter (q is applied only to the selected field, not all fields)
 // mostly useful for selects/autocompletes on values
-router.get('/:datasetId/values/:fieldKey', readDataset(), permissions.middleware('getValues', 'read'), cacheHeaders.resourceBased, asyncWrap(async(req, res) => {
+router.get('/:datasetId/values/:fieldKey', readDataset(), applicationKey, permissions.middleware('getValues', 'read'), cacheHeaders.resourceBased, asyncWrap(async(req, res) => {
   res.throttleEnd()
   if (req.dataset.isVirtual) req.dataset.descendants = await virtualDatasetsUtils.descendants(req.app.get('db'), req.dataset)
   let result
@@ -838,7 +861,7 @@ router.get('/:datasetId/values/:fieldKey', readDataset(), permissions.middleware
 }))
 
 // Simple metric aggregation to calculate some value (sum, avg, etc.)
-router.get('/:datasetId/metric_agg', readDataset(), permissions.middleware('getMetricAgg', 'read'), cacheHeaders.resourceBased, asyncWrap(async(req, res) => {
+router.get('/:datasetId/metric_agg', readDataset(), applicationKey, permissions.middleware('getMetricAgg', 'read'), cacheHeaders.resourceBased, asyncWrap(async(req, res) => {
   res.throttleEnd()
   if (req.dataset.isVirtual) req.dataset.descendants = await virtualDatasetsUtils.descendants(req.app.get('db'), req.dataset)
   let result
@@ -851,7 +874,7 @@ router.get('/:datasetId/metric_agg', readDataset(), permissions.middleware('getM
 }))
 
 // Simple words aggregation for significant terms extraction
-router.get('/:datasetId/words_agg', readDataset(), permissions.middleware('getWordsAgg', 'read'), cacheHeaders.resourceBased, asyncWrap(async(req, res) => {
+router.get('/:datasetId/words_agg', readDataset(), applicationKey, permissions.middleware('getWordsAgg', 'read'), cacheHeaders.resourceBased, asyncWrap(async(req, res) => {
   res.throttleEnd()
   if (req.dataset.isVirtual) req.dataset.descendants = await virtualDatasetsUtils.descendants(req.app.get('db'), req.dataset)
   let result
@@ -864,7 +887,7 @@ router.get('/:datasetId/words_agg', readDataset(), permissions.middleware('getWo
 }))
 
 // Get max value of a field
-router.get('/:datasetId/max/:fieldKey', readDataset(), permissions.middleware('getWordsAgg', 'read'), cacheHeaders.resourceBased, asyncWrap(async(req, res) => {
+router.get('/:datasetId/max/:fieldKey', readDataset(), applicationKey, permissions.middleware('getWordsAgg', 'read'), cacheHeaders.resourceBased, asyncWrap(async(req, res) => {
   if (req.dataset.isVirtual) req.dataset.descendants = await virtualDatasetsUtils.descendants(req.app.get('db'), req.dataset)
   let result
   try {
@@ -876,7 +899,7 @@ router.get('/:datasetId/max/:fieldKey', readDataset(), permissions.middleware('g
 }))
 
 // Get min value of a field
-router.get('/:datasetId/min/:fieldKey', readDataset(), permissions.middleware('getWordsAgg', 'read'), cacheHeaders.resourceBased, asyncWrap(async(req, res) => {
+router.get('/:datasetId/min/:fieldKey', readDataset(), applicationKey, permissions.middleware('getWordsAgg', 'read'), cacheHeaders.resourceBased, asyncWrap(async(req, res) => {
   if (req.dataset.isVirtual) req.dataset.descendants = await virtualDatasetsUtils.descendants(req.app.get('db'), req.dataset)
   let result
   try {
@@ -888,7 +911,7 @@ router.get('/:datasetId/min/:fieldKey', readDataset(), permissions.middleware('g
 }))
 
 // For datasets with attached files
-router.get('/:datasetId/attachments/*', readDataset(), permissions.middleware('downloadOriginalData', 'read'), cacheHeaders.noCache, (req, res, next) => {
+router.get('/:datasetId/attachments/*', readDataset(), applicationKey, permissions.middleware('downloadOriginalData', 'read'), cacheHeaders.noCache, (req, res, next) => {
   const filePath = req.params['0']
   if (filePath.includes('..')) return res.status(400).send('Unacceptable attachment path')
   // the transform stream option was patched into "send" module using patch-package

@@ -34,12 +34,12 @@ before('global mocks', () => {
   `
   nock('http://monapp1.com/')
     .persist()
-    .get('/index.html').reply(200, html)
-    .get('/config-schema.json').reply(200, {})
+    .get('/index.html').query(true).reply(200, html)
+    .get('/config-schema.json').query(true).reply(200, {})
   nock('http://monapp2.com')
     .persist()
-    .get('/index.html').reply(200, html)
-    .get('/config-schema.json').reply(200, {})
+    .get('/index.html').query(true).reply(200, html)
+    .get('/config-schema.json').query(true).reply(200, {})
 
   debug('mocks ok')
 })

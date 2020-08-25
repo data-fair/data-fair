@@ -7,6 +7,7 @@ const path = require('path')
 const util = require('util')
 const unlink = util.promisify(fs.unlink)
 const sanitizeHtml = require('sanitize-html')
+const shortid = require('shortid')
 const applicationAPIDocs = require('../../contract/application-api-docs')
 const ajv = require('ajv')()
 const applicationSchema = require('../../contract/application')
@@ -14,6 +15,8 @@ const validate = ajv.compile(applicationSchema)
 const validateConfiguration = ajv.compile(applicationSchema.properties.configuration)
 const applicationPatch = require('../../contract/application-patch')
 const validatePatch = ajv.compile(applicationPatch)
+const applicationKeys = require('../../contract/application-keys')
+const validateKeys = ajv.compile(applicationKeys)
 
 const baseAppsUtils = require('../utils/base-apps')
 const permissions = require('../utils/permissions')
@@ -355,4 +358,19 @@ router.get('/:applicationId/capture', readApplication, permissions.middleware('r
   } else {
     res.sendFile(path.join(__dirname, '../resources/no-preview.png'))
   }
+}))
+
+// keys for readonly access to application
+router.get('/:applicationId/keys', readApplication, permissions.middleware('getKeys', 'admin'), cacheHeaders.resourceBased, asyncWrap(async(req, res) => {
+  const applicationKeys = await req.app.get('db').collection('applications-keys').findOne({ _id: req.application.id })
+  res.send((applicationKeys && applicationKeys.keys) || [])
+}))
+router.post('/:applicationId/keys', readApplication, permissions.middleware('setKeys', 'admin'), cacheHeaders.resourceBased, asyncWrap(async(req, res) => {
+  const valid = validateKeys(req.body)
+  if (!valid) return res.status(400).send(validateKeys.errors)
+  req.body.forEach((key) => {
+    if (!key.id) key.id = shortid.generate() + shortid.generate()
+  })
+  await req.app.get('db').collection('applications-keys').replaceOne({ _id: req.application.id }, { _id: req.application.id, keys: req.body }, { upsert: true })
+  res.send(req.body)
 }))

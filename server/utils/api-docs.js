@@ -12,7 +12,7 @@ exports.operationsClasses = {
     read: ['readDescription', 'readConfig', 'readApiDoc', 'readBaseApp'],
     readAdvanced: ['readJournal', 'realtime-draft-error'],
     write: ['writeDescription', 'writeConfig'],
-    admin: ['delete', 'getPermissions', 'setPermissions'],
+    admin: ['delete', 'getPermissions', 'setPermissions', 'getKeys', 'setKeys'],
   },
   catalogs: {
     list: ['list'],

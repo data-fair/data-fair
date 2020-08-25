@@ -8,6 +8,7 @@ const validate = ajv.compile(permissionsSchema)
 
 exports.middleware = function(operationId, permissionClass) {
   return function(req, res, next) {
+    if (req.method === 'GET' && req.bypassPermission) return next()
     if (!exports.can(req.resourceType, req.resource, operationId, req.user)) {
       res.status(403)
       const operation = apiDocsUtil.operations(req.resourceApiDoc).find(o => o.id === operationId)

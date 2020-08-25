@@ -83,7 +83,7 @@ router.put('/:type/:id', isOwner, asyncWrap(async(req, res) => {
   res.status(200).send({ ...req.body, apiKeys: fullApiKeys })
 }))
 
-// Get topics list as owner
+// Get topics list as anyone
 router.get('/:type/:id/topics', isOwner, asyncWrap(async(req, res) => {
   const settings = req.app.get('db').collection('settings')
   const result = await settings.findOne({

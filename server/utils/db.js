@@ -57,6 +57,8 @@ exports.init = async (db) => {
     exports.ensureIndex(db, 'applications', { 'owner.type': 1, 'owner.id': 1 }),
     exports.ensureIndex(db, 'applications', { 'configuration.datasets.href': 1 }),
     exports.ensureIndex(db, 'applications', { title: 'text', description: 'text', 'owner.name': 'text' }, { name: 'fulltext' }),
+    // applications keys indexes
+    exports.ensureIndex(db, 'applications-keys', { 'keys.id': 1 }),
     // catalogs indexes
     exports.ensureIndex(db, 'catalogs', { id: 1 }, { unique: true }),
     exports.ensureIndex(db, 'catalogs', { 'owner.type': 1, 'owner.id': 1 }),

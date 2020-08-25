@@ -12,7 +12,7 @@
         <v-card
           v-if="can('getPermissions')"
           outlined
-          style="min-height: 200px;"
+          style="min-height: 270px;"
           class="mt-4"
         >
           <v-tabs background-color="grey lighten-3">
@@ -30,6 +30,17 @@
                 />
               </v-container>
             </v-tab-item>
+
+            <template v-if="can('getKeys')">
+              <v-tab href="#tab-publish-links">
+                <v-icon>mdi-link</v-icon>&nbsp;&nbsp;Lien protégé
+              </v-tab>
+              <v-tab-item value="tab-publish-links">
+                <v-container fluid>
+                  <application-protected-links />
+                </v-container>
+              </v-tab-item>
+            </template>
 
             <v-tab href="#tab-publish-publications">
               <v-icon>mdi-publish</v-icon>&nbsp;&nbsp;Publications
@@ -87,6 +98,7 @@
   import ApplicationActions from '~/components/applications/actions.vue'
   import ApplicationInfo from '~/components/applications/info.vue'
   import ApplicationPublications from '~/components/applications/publications.vue'
+  import ApplicationProtectedLinks from '~/components/applications/protected-links.vue'
   import ApplicationConfig from '~/components/applications/config.vue'
   import Permissions from '~/components/permissions.vue'
   import Journal from '~/components/journal.vue'
@@ -97,6 +109,7 @@
       ApplicationActions,
       ApplicationInfo,
       ApplicationPublications,
+      ApplicationProtectedLinks,
       ApplicationConfig,
       Permissions,
       Journal,

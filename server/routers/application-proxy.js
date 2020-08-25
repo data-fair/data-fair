@@ -66,10 +66,16 @@ router.get('/:applicationId/login', (req, res) => {
 
 // Proxy for applications
 router.all('/:applicationId*', setResource, (req, res, next) => { req.app.get('anonymSession')(req, res, next) }, asyncWrap(async(req, res, next) => {
-  if (!permissions.can('applications', req.application, 'readConfig', req.user)) {
+  const db = req.app.get('db')
+
+  let matchinApplicationKey = false
+  if (req.query.key) {
+    const applicationKeys = await db.collection('applications-keys').findOne({ _id: req.application.id })
+    matchinApplicationKey = applicationKeys && !!applicationKeys.keys.find(k => k.id === req.query.key)
+  }
+  if (!permissions.can('applications', req.application, 'readConfig', req.user) && !matchinApplicationKey) {
     return res.redirect(`${config.publicUrl}/app/${req.application.id}/login`)
   }
-  const db = req.app.get('db')
 
   // check owner limits
   const limitsPromise = db.collection('limits').findOne({ type: req.application.owner.type, id: req.application.owner.id })
