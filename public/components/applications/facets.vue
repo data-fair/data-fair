@@ -66,7 +66,7 @@
       </v-subheader>
       <v-checkbox
         v-for="facetItem in facets['base-application']"
-        :key="`${facetItem.value}`"
+        :key="`${facetItem.value.url}`"
         v-model="facetsValues['base-application'][facetItem.value.url]"
         :label="`${facetItem.value.title} ${facetItem.value.version || ''} (${facetItem.count})`"
         :value="true"
