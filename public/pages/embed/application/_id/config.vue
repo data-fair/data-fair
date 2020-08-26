@@ -1,5 +1,5 @@
 <template lang="html">
-  <application-config />
+  <application-config :ro-dataset="$route.query.roDataset === 'true'" />
 </template>
 
 <script>

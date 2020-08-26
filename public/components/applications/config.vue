@@ -191,6 +191,7 @@
 
   export default {
     components: { VJsf, VIframe },
+    props: ['roDataset'],
     data() {
       return {
         showConfigIframe: false,
@@ -308,6 +309,9 @@
           console.error('dit not find a "datasets" property in schema')
         } else {
           datasetsProp.minItems = 1
+          if (this.roDataset) {
+            datasetsProp.readOnly = true
+          }
         }
       },
       async fetchSchemas() {
