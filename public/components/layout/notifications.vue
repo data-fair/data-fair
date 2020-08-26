@@ -4,7 +4,7 @@
     ref="notificationSnackbar"
     v-model="showSnackbar"
     :color="notification.type"
-    :timeout="notification.type === 'error' ? 0 : 6000"
+    :timeout="notification.type === 'error' ? 0 : 600000"
     class="notification"
     bottom
   >

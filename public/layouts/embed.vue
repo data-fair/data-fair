@@ -2,35 +2,17 @@
   <v-app class="embed">
     <v-content>
       <nuxt />
-      <v-snackbar
-        v-if="notification"
-        ref="notificationSnackbar"
-        v-model="showSnackbar"
-        :color="notification.type"
-        :timeout="notification.type === 'error' ? 30000 : 6000"
-        class="notification"
-        bottom
-      >
-        <div>
-          <p>{{ notification.msg }}</p>
-          <p
-            v-if="notification.errorMsg"
-            class="ml-3"
-          >
-            {{ notification.errorMsg }}
-          </p>
-        </div>
-        <v-btn icon @click.native="showSnackbar = false">
-          <v-icon>mdi-close</v-icon>
-        </v-btn>
-      </v-snackbar>
+      <notifications />
     </v-content>
   </v-app>
 </template>
 
 <script>
   import eventBus from '~/event-bus'
+  import Notifications from '~/components/layout/notifications.vue'
+
   export default {
+    components: { Notifications },
     data() {
       return {
         notification: null,
