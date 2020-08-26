@@ -15,7 +15,7 @@
 
       <div class="actions-buttons">
         <v-btn
-          v-if="user"
+          v-if="user && canAdmin"
           color="primary"
           fab
           small
@@ -70,7 +70,7 @@
 </template>
 
 <script>
-  import { mapState, mapActions } from 'vuex'
+  import { mapState, mapActions, mapGetters } from 'vuex'
 
   import ImportCatalog from '~/components/catalogs/import.vue'
   import CatalogsList from '~/components/catalogs/list.vue'
@@ -82,6 +82,7 @@
     },
     computed: {
       ...mapState('session', ['user', 'initialized']),
+      ...mapGetters(['canAdmin']),
       importCatalog() {
         return this.$route.query.import
       },

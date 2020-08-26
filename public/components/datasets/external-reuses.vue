@@ -3,6 +3,7 @@
     <v-row>
       <v-col>
         <v-dialog
+          v-if="can('writeDescription')"
           v-model="dialog"
           :width="$vuetify.breakpoint.mdAndUp ? $vuetify.breakpoint.width/2 : $vuetify.breakpoint.width-20"
           style="margin-right:160px"
@@ -41,6 +42,9 @@
             </v-card-actions>
           </v-card>
         </v-dialog>
+        <p v-else-if="!(dataset.extras && dataset.extras.externalReuses && dataset.extras.externalReuses.length)">
+          Aucune réutilisation externe déclarée pour l'instant.
+        </p>
       </v-col>
     </v-row>
     <v-list v-if="dataset.extras && dataset.extras.externalReuses && dataset.extras.externalReuses.length">
@@ -56,7 +60,7 @@
           <v-list-item-title>{{ reuse.title }} </v-list-item-title>
           <v-list-item-subtitle>{{ reuse.description }}</v-list-item-subtitle>
         </v-list-item-content>
-        <v-list-item-action>
+        <v-list-item-action v-if="can('writeDescription')">
           <v-row style="width:60px">
             <!-- <v-btn :href="baseUrl+'/'+attachment.name" icon ripple >
               <v-icon color="primary">mdi-download</v-icon>
@@ -120,7 +124,7 @@
   import ConfirmMenu from '~/components/confirm-menu.vue'
   import ExternalReuseForm from '~/components/datasets/external-reuse-form.vue'
 
-  const { mapState } = require('vuex')
+  const { mapState, mapGetters } = require('vuex')
 
   export default {
     components: { ConfirmMenu, ExternalReuseForm },
@@ -135,6 +139,7 @@
     },
     computed: {
       ...mapState('dataset', ['dataset']),
+      ...mapGetters('dataset', ['can']),
     },
     created() {
       this.dataset.extras = this.dataset.extras || {}

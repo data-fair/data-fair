@@ -7,7 +7,7 @@
 
       <div class="actions-buttons">
         <v-menu
-          v-if="user"
+          v-if="user && canContrib"
           bottom
           left
         >
@@ -85,7 +85,7 @@
 </template>
 
 <script>
-  import { mapState, mapActions } from 'vuex'
+  import { mapState, mapActions, mapGetters } from 'vuex'
 
   import DatasetsList from '~/components/datasets/list.vue'
 
@@ -97,6 +97,7 @@
     },
     computed: {
       ...mapState('session', ['user', 'initialized']),
+      ...mapGetters(['canContrib']),
     },
     created() {
       this.fetchVocabulary()

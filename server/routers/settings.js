@@ -25,7 +25,7 @@ router.use('/:type/:id', (req, res, next) => {
   next()
 })
 
-function isOwner(req, res, next) {
+function isOwnerAdmin(req, res, next) {
   if (!req.user) return res.status(401).send()
   if (permissions.getOwnerRole({ type: req.params.type, id: req.params.id }, req.user) !== 'admin') {
     return res.sendStatus(403)
@@ -33,8 +33,16 @@ function isOwner(req, res, next) {
   next()
 }
 
+function isOwnerMember(req, res, next) {
+  if (!req.user) return res.status(401).send()
+  if (!permissions.getOwnerRole({ type: req.params.type, id: req.params.id }, req.user)) {
+    return res.sendStatus(403)
+  }
+  next()
+}
+
 // read settings as owner
-router.get('/:type/:id', isOwner, cacheHeaders.noCache, asyncWrap(async(req, res) => {
+router.get('/:type/:id', isOwnerAdmin, cacheHeaders.noCache, asyncWrap(async(req, res) => {
   const settings = req.app.get('db').collection('settings')
 
   const result = await settings
@@ -43,7 +51,7 @@ router.get('/:type/:id', isOwner, cacheHeaders.noCache, asyncWrap(async(req, res
 }))
 
 // update settings as owner
-router.put('/:type/:id', isOwner, asyncWrap(async(req, res) => {
+router.put('/:type/:id', isOwnerAdmin, asyncWrap(async(req, res) => {
   const db = req.app.get('db')
   req.body.type = req.params.type
   req.body.id = req.params.id
@@ -83,8 +91,8 @@ router.put('/:type/:id', isOwner, asyncWrap(async(req, res) => {
   res.status(200).send({ ...req.body, apiKeys: fullApiKeys })
 }))
 
-// Get topics list as anyone
-router.get('/:type/:id/topics', isOwner, asyncWrap(async(req, res) => {
+// Get topics list as owner
+router.get('/:type/:id/topics', isOwnerMember, asyncWrap(async(req, res) => {
   const settings = req.app.get('db').collection('settings')
   const result = await settings.findOne({
     type: req.params.type,

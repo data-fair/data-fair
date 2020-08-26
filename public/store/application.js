@@ -55,11 +55,11 @@ export default () => ({
         await dispatch('fetchApplication')
         await Promise.all([
           dispatch('fetchAPI'),
-          dispatch('fetchJournal'),
           dispatch('fetchActiveSessions'),
           dispatch('readConfig'),
           dispatch('fetchProdBaseApp'),
         ])
+        if (getters.can('readJournal')) await dispatch('fetchJournal')
         await dispatch('fetchDatasets')
       } catch (error) {
         eventBus.$emit('notification', { error, msg: 'Erreur pendant la récupération des informations de l\'application' })

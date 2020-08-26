@@ -31,7 +31,11 @@
         </v-col>
       </draggable>
     </template>
-    <v-btn color="primary" :to="{path: '/new-application', query: {dataset: dataset.id}}">
+    <v-btn
+      v-if="canContrib"
+      color="primary"
+      :to="{path: '/new-application', query: {dataset: dataset.id}}"
+    >
       Configurer une visualisation
     </v-btn>
   </v-container>
@@ -39,7 +43,7 @@
 
 <script>
 
-  import { mapState } from 'vuex'
+  import { mapState, mapGetters } from 'vuex'
   import ApplicationCard from '~/components/applications/card.vue'
   const Draggable = require('vuedraggable')
 
@@ -47,6 +51,7 @@
     components: { ApplicationCard, Draggable },
     computed: {
       ...mapState('dataset', ['dataset', 'applications']),
+      ...mapGetters(['canContrib']),
       dragOptions() {
         return {
           animation: 0,

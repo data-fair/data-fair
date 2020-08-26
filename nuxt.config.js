@@ -74,6 +74,7 @@ module.exports = {
     directoryUrl: config.directoryUrl,
     sessionDomain: config.sessionDomain,
     adminRole: config.adminRole,
+    contribRole: config.contribRole,
     map: config.map,
     brand: config.brand,
     openapiViewerUrl: config.openapiViewerUrl,

@@ -7,7 +7,11 @@
       <!-- 450 matches the size of the container in the embed page, to prevent overflowing iframe -->
       <v-menu v-model="addExtensionDialog" :max-height="450">
         <template v-slot:activator="{ on }">
-          <v-btn color="primary" v-on="on">
+          <v-btn
+            v-if="can('writeDescription')"
+            color="primary"
+            v-on="on"
+          >
             Ajouter une extension
           </v-btn>
         </template>
@@ -133,7 +137,7 @@
     computed: {
       ...mapState(['vocabulary']),
       ...mapState('dataset', ['dataset', 'datasetClone', 'remoteServices']),
-      ...mapGetters('dataset', ['remoteServicesMap']),
+      ...mapGetters('dataset', ['can', 'remoteServicesMap']),
       channel() {
         return 'datasets/' + this.dataset.id + '/extend-progress'
       },

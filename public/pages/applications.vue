@@ -7,7 +7,7 @@
 
       <div class="actions-buttons">
         <v-btn
-          v-if="user"
+          v-if="user && canContrib"
           color="primary"
           fab
           small
@@ -52,7 +52,7 @@
 </template>
 
 <script>
-  import { mapState, mapActions } from 'vuex'
+  import { mapState, mapActions, mapGetters } from 'vuex'
 
   import ApplicationsList from '~/components/applications/list.vue'
 
@@ -64,6 +64,7 @@
     },
     computed: {
       ...mapState('session', ['user', 'initialized']),
+      ...mapGetters(['canContrib']),
       importApp() {
         return this.$route.query.import
       },

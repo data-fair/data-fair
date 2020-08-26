@@ -68,12 +68,14 @@
     >
       <v-text-field
         v-model="application.title"
+        :disabled="!can('writeDescription')"
         label="Titre"
         dense
         @change="patch({title: application.title})"
       />
       <v-textarea
         v-model="application.description"
+        :disabled="!can('writeDescription')"
         label="Description"
         filled
         dense
@@ -83,6 +85,7 @@
       <v-select
         v-if="topics && topics.length"
         v-model="application.topics"
+        :disabled="!can('writeDescription')"
         :items="topics"
         item-text="title"
         item-key="id"
@@ -108,7 +111,7 @@
     },
     computed: {
       ...mapState('application', ['application', 'nbSessions', 'journal']),
-      ...mapGetters('application', ['resourcePublicUrl']),
+      ...mapGetters('application', ['can', 'resourcePublicUrl']),
       topics() {
         return this.$store.getters.ownerTopics(this.application.owner)
       },

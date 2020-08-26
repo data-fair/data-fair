@@ -1,22 +1,26 @@
 <template lang="html">
   <v-container fluid>
-    <p>Charger un fichier pour créer/modifier une pièce jointe. Le nom de fichier est l'identifiant de la pièce jointe.</p>
-    <input
-      type="file"
-      @change="onFileUpload"
-    >
-    <v-btn
-      :disabled="!file || uploading"
-      color="primary"
-      @click="confirmUpload()"
-    >
-      Charger
-    </v-btn>
-    <v-progress-linear
-      v-if="uploading"
-      v-model="uploadProgress"
-    />
-
+    <template v-if="can('writeData')">
+      <p>Charger un fichier pour créer/modifier une pièce jointe. Le nom de fichier est l'identifiant de la pièce jointe.</p>
+      <input
+        type="file"
+        @change="onFileUpload"
+      >
+      <v-btn
+        :disabled="!file || uploading"
+        color="primary"
+        @click="confirmUpload()"
+      >
+        Charger
+      </v-btn>
+      <v-progress-linear
+        v-if="uploading"
+        v-model="uploadProgress"
+      />
+    </template>
+    <p v-else-if="!dataset.attachments || dataset.attachments.length === 0">
+      Aucune pièce jointe chargée pour l'instant.
+    </p>
     <v-container class="pa-0 mt-2" fluid>
       <v-row>
         <v-col
@@ -33,7 +37,7 @@
             <v-card-text>
               <span>{{ attachment.updatedAt | moment("DD/MM/YYYY, HH:mm") }}</span>
             </v-card-text>
-            <v-card-actions>
+            <v-card-actions v-if="can('writeData')">
               <v-spacer />
               <v-btn
                 icon
@@ -61,7 +65,7 @@
       uploadProgress: 0,
     }),
     computed: {
-      ...mapGetters('dataset', ['resourceUrl']),
+      ...mapGetters('dataset', ['can', 'resourceUrl']),
       ...mapState('dataset', ['dataset']),
     },
     methods: {

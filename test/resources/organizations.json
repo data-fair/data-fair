@@ -97,6 +97,12 @@
     }, {
       "id": "dhannan8",
       "role": "user"
+    }, {
+      "id": "user1",
+      "role": "user"
+    }, {
+      "id": "contrib1",
+      "role": "contrib"
     }]
   }
 ]

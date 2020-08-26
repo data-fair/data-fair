@@ -25,6 +25,7 @@
           </v-alert>
           <v-select
             v-model="editUrl"
+            :disabled="!can('writeConfig')"
             :loading="!baseApps"
             :items="baseApps"
             :item-text="(baseApp => `${baseApp.title} (${baseApp.version})`)"
@@ -358,9 +359,11 @@
         this.$store.commit('application/patch', { status: application.status, errorMessage: application.errorMessage, errorMessageDraft: application.errorMessageDraft })
       },
       saveUrlDraft() {
+        if (!this.can('writeDescription')) return
         this.patchAndCommit({ urlDraft: this.editUrl, silent: true })
       },
       async saveDraft(e) {
+        if (!this.can('writeConfig')) return
         if (JSON.stringify(this.editConfig) === JSON.stringify(this.application.configurationDraft)) return
         this.$refs.configForm && this.$refs.configForm.validate()
         if (!this.formValid) return
@@ -372,11 +375,13 @@
       },
       async validateDraft(e) {
         e.preventDefault()
+        if (!this.can('writeConfig')) return
         this.patchAndCommit({ url: this.application.urlDraft })
         await this.writeConfig(this.configDraft)
         this.fetchStatus()
       },
       async cancelDraft() {
+        if (!this.can('writeConfig')) return
         this.patchAndCommit({ urlDraft: this.application.url, silent: true })
         await this.cancelConfigDraft()
         await this.fetchConfigs()

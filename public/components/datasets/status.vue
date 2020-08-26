@@ -2,7 +2,7 @@
   <v-container fluid class="pa-0">
     <v-row>
       <v-col class="pa-0">
-        <template v-if="dataset.isVirtual || dataset.isRest">
+        <template v-if="(dataset.isVirtual || dataset.isRest) && journal">
           <v-list-item
             v-if="journal[0] && dataset.status !== 0"
             :class="'pa-2 event-' + journal[0].type"
@@ -98,7 +98,7 @@
       stateFromStatus(status) {
         if (status !== 'error') return this.stateSteps[this.states.indexOf(status)]
         else {
-          const idx = this.journal.findIndex(e => e.type === 'error')
+          const idx = (this.journal || []).findIndex(e => e.type === 'error')
           if (idx < 0) return 0
           return this.stateSteps[this.states.indexOf(this.eventStates[this.journal[idx + 1].type])]
         }

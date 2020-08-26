@@ -62,6 +62,18 @@ export default () => {
         }
         return propertyTypes.find(p => p.type === prop.type).title
       },
+      canContrib(state, getters) {
+        const activeAccount = getters['session/activeAccount']
+        if (activeAccount.type === 'user') return true
+        const role = state.session.user.organization.role
+        return role === state.env.adminRole || role === state.env.contribRole
+      },
+      canAdmin(state, getters) {
+        const activeAccount = getters['session/activeAccount']
+        if (activeAccount.type === 'user') return true
+        const role = state.session.user.organization.role
+        return role === state.env.adminRole
+      },
     },
     mutations: {
       setAny(state, params) {

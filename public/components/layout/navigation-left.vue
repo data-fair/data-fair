@@ -79,17 +79,26 @@
         <v-list-item-title>Visualisations</v-list-item-title>
       </v-list-item>
 
-      <v-list-item :nuxt="true" to="/settings">
+      <v-list-item
+        v-if="canAdmin"
+        :nuxt="true"
+        to="/settings"
+      >
         <v-list-item-action><v-icon>mdi-cog</v-icon></v-list-item-action>
         <v-list-item-title>Paramètres</v-list-item-title>
       </v-list-item>
 
-      <v-list-item :nuxt="true" to="/storage">
+      <v-list-item
+        v-if="canContrib"
+        :nuxt="true"
+        to="/storage"
+      >
         <v-list-item-action><v-icon>mdi-harddisk</v-icon></v-list-item-action>
         <v-list-item-title>Stockage</v-list-item-title>
       </v-list-item>
 
       <v-list-item
+        v-if="canContrib"
         :nuxt="true"
         :to="`/catalogs`"
         :class="routePrefix === 'catalog' ? 'v-list-item--active' : ''"
@@ -107,11 +116,12 @@
 </template>
 
 <script>
-  import { mapState } from 'vuex'
+  import { mapState, mapGetters } from 'vuex'
   export default {
     computed: {
       ...mapState(['env']),
       ...mapState('session', ['user']),
+      ...mapGetters(['canAdmin', 'canContrib']),
       routePrefix() {
         return this.$route && this.$route.name && this.$route.name.split('-')[0]
       },

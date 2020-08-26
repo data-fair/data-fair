@@ -152,7 +152,7 @@
     },
     computed: {
       ...mapState(['projections']),
-      ...mapState('dataset', ['dataset', 'journal', 'nbVirtualDatasets']),
+      ...mapState('dataset', ['dataset', 'nbVirtualDatasets']),
       ...mapState('session', ['user']),
       ...mapGetters('dataset', ['can', 'resourceUrl', 'resourcePublicUrl']),
       licenses() {

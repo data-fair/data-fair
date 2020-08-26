@@ -79,7 +79,7 @@ export default () => ({
     },
   },
   actions: {
-    async fetchInfo({ commit, dispatch }) {
+    async fetchInfo({ commit, dispatch, getters }) {
       try {
         await dispatch('fetchDataset')
         await Promise.all([
@@ -87,8 +87,8 @@ export default () => ({
           dispatch('fetchVirtuals'),
           dispatch('fetchApiDoc'),
           dispatch('fetchDataFiles'),
-          dispatch('fetchJournal'),
         ])
+        if (getters.can('readJournal')) await dispatch('fetchJournal')
       } catch (error) {
         eventBus.$emit('notification', { error, msg: 'Erreur pendant la récupération des informations du jeu de données:' })
       }
