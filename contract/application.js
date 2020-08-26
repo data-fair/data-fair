@@ -6,14 +6,14 @@ const configurationSchema = require('./app-configuration')
 const topic = require('./topic')
 
 module.exports = {
-  title: 'Application configuration',
+  title: 'Application',
   type: 'object',
   additionalProperties: false,
   required: ['url'],
   properties: {
     id: {
       type: 'string',
-      description: 'Identifier of the application configuration',
+      description: 'Identifier of the application',
     },
     href: {
       type: 'string',
@@ -25,11 +25,11 @@ module.exports = {
     },
     title: {
       type: 'string',
-      description: 'Short title of the application configuration',
+      description: 'Short title of the application',
     },
     description: {
       type: 'string',
-      description: 'Detailed description of the application configuration',
+      description: 'Detailed description of the application',
     },
     applicationName: {
       type: 'string',
@@ -39,12 +39,17 @@ module.exports = {
     updatedBy: eventBy,
     createdAt: {
       type: 'string',
-      description: 'Creation date of this application configuration',
+      description: 'Creation date of this application',
       format: 'date-time',
     },
     updatedAt: {
       type: 'string',
-      description: 'Date of the last update for this application configuration',
+      description: 'Date of the last update for this application',
+      format: 'date-time',
+    },
+    lastConfigured: {
+      type: 'string',
+      description: 'Date of the last validation of a configuration for this application',
       format: 'date-time',
     },
     status: {

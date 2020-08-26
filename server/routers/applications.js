@@ -248,6 +248,7 @@ const writeConfig = asyncWrap(async(req, res) => {
         configuration: req.body,
         updatedAt: moment().toISOString(),
         updatedBy: { id: req.user.id, name: req.user.name },
+        lastConfigured: moment().toISOString(),
         status: 'configured',
       },
     },
