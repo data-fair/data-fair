@@ -3,6 +3,7 @@
 </template>
 
 <script>
+  import 'iframe-resizer/js/iframeResizer.contentWindow'
   import ApplicationConfig from '~/components/applications/config.vue'
 
   export default {
