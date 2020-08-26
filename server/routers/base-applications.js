@@ -155,10 +155,11 @@ router.get('', cacheHeaders.noCache, asyncWrap(async(req, res) => {
 
   // optionally complete informations based on a dataset to guide user in selecting suitable application
   if (req.query.dataset) {
-    let dataset
+    let dataset, datasetVocabulary
     if (req.query.dataset !== 'none') {
       dataset = await db.collection('datasets').findOne({ id: req.query.dataset, 'owner.type': req.user.activeAccount.type, 'owner.id': req.user.activeAccount.id })
       if (!dataset) return res.status(404).send(`Jeu de données ${req.query.dataset} est inconnu ou ne vous appartient pas.`)
+      datasetVocabulary = (dataset.schema || []).map(field => field['x-refersTo']).filter(c => !!c)
     }
     for (const application of results) {
       application.disabled = []
@@ -174,9 +175,13 @@ router.get('', cacheHeaders.noCache, asyncWrap(async(req, res) => {
             if (filter.concepts) {
               const foundConcepts = []
               filter.concepts.forEach(concept => {
-                if (vocabulary[concept]) foundConcepts.push(concept)
+                if (datasetVocabulary.includes(concept)) {
+                  foundConcepts.push(concept)
+                }
               })
-              if (!foundConcepts.length) application.disabled.push(`Cette application nécessite une source avec un champ de concept ${filter.concepts.map(concept => vocabulary[concept].title).join(' ou ')}.`)
+              if (!foundConcepts.length) {
+                application.disabled.push(`Cette application nécessite une source avec un champ de concept ${filter.concepts.map(concept => vocabulary[concept].title).join(' ou ')}.`)
+              }
             }
             if (filter['field-type'] && (!dataset.schema || !dataset.schema.find(p => filter['field-type'].includes(p.type)))) {
               application.disabled.push(`Cette application nécessite une source avec un champ de type ${filter['field-type'].join(' ou ')}.`)

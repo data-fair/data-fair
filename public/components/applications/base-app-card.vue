@@ -16,7 +16,7 @@
     />
     <v-card-title>
       <h5>
-        <v-icon v-if="!baseApp.public" title="baseApp à accès restreint">
+        <v-icon v-if="!baseApp.public" title="Application à accès restreint">
           mdi-security
         </v-icon>&nbsp;{{ baseApp.title }}
       </h5>

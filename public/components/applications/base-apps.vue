@@ -23,8 +23,10 @@
         >
           <v-tooltip top :activator="`#baseapp-${baseApp._id}`">
             <span v-if="baseApp.description">{{ baseApp.description }}</span>
-            <br v-if="baseApp.description && baseApp.disabled.length">
-            <span v-if="baseApp.disabled.length">{{ baseApp.disabled.join('\n') }}</span>
+            <template v-for="(disabled, i) in baseApp.disabled">
+              <br :key="'br-' + i">
+              <span :key="'span-' + i">{{ disabled }}</span>
+            </template>
           </v-tooltip>
           <base-app-card
             :id="`baseapp-${baseApp._id}`"
