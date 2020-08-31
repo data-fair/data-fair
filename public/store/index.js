@@ -64,12 +64,14 @@ export default () => {
       },
       canContrib(state, getters) {
         const activeAccount = getters['session/activeAccount']
+        if (!activeAccount) return false
         if (activeAccount.type === 'user') return true
         const role = state.session.user.organization.role
         return role === state.env.adminRole || role === state.env.contribRole
       },
       canAdmin(state, getters) {
         const activeAccount = getters['session/activeAccount']
+        if (!activeAccount) return false
         if (activeAccount.type === 'user') return true
         const role = state.session.user.organization.role
         return role === state.env.adminRole
