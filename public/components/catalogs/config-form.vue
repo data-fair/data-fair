@@ -8,6 +8,7 @@
       label="Clé d'API"
       persistent-hint
       required
+      :disabled="!can('writeDescription')"
       @change="changeApiKey"
     />
     <v-text-field
@@ -16,6 +17,7 @@
       class="mb-4"
       label="Format du lien vers la page d'un jeu de données"
       persistent-hint
+      :disabled="!can('writeDescription')"
       @change="$emit('change', {datasetUrlTemplate: catalog.datasetUrlTemplate})"
     />
     <v-text-field
@@ -24,6 +26,7 @@
       class="mb-4"
       label="Format du lien vers la page d'une application"
       persistent-hint
+      :disabled="!can('writeDescription')"
       @change="$emit('change', {applicationUrlTemplate: catalog.applicationUrlTemplate})"
     />
     <v-autocomplete
@@ -41,12 +44,15 @@
       item-value="id"
       persistent-hint
       no-data-text="Aucune organisation ne correspond"
+      :disabled="!can('writeDescription')"
       @change="$emit('change', {organization: catalog.organization})"
     />
   </div>
 </template>
 
 <script>
+  import { mapGetters } from 'vuex'
+
   export default {
     props: ['catalog', 'catalogType'],
     data() {
@@ -61,6 +67,7 @@
       apiKeyHint() {
         return `Cette clé est à configurer dans <a target="_blank" href="${this.catalog.url}/fr/admin/me/#apikey">votre profil</a> sur le catalogue.`
       },
+      ...mapGetters('catalog', ['can']),
     },
     watch: {
       async searchOrganizations() {

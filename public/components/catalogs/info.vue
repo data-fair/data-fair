@@ -37,11 +37,13 @@
       <v-text-field
         v-model="catalog.title"
         label="Titre"
+        :disabled="!can('writeDescription')"
         @change="patch({title: catalog.title})"
       />
       <v-textarea
         v-model="catalog.description"
         label="Description"
+        :disabled="!can('writeDescription')"
         filled
         rows="4"
         @change="patch({description: catalog.description})"
@@ -53,13 +55,14 @@
 
 <script>
   import OwnerListItem from '~/components/owners/list-item.vue'
-  import { mapState, mapActions } from 'vuex'
+  import { mapState, mapActions, mapGetters } from 'vuex'
   import CatalogConfigForm from '~/components/catalogs/config-form.vue'
 
   export default {
     components: { CatalogConfigForm, OwnerListItem },
     computed: {
       ...mapState('catalog', ['catalog']),
+      ...mapGetters('catalog', ['can']),
     },
     methods: {
       ...mapActions('catalog', ['patch']),
