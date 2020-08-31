@@ -37,8 +37,18 @@
               </v-avatar>
             </v-btn>
           </template>
+
           <v-list>
-            <template v-if="user && user.organizations.length">
+            <v-list-item disabled>
+              <v-list-item-avatar class="ml-0 my-0">
+                <v-avatar :size="28">
+                  <img :src="activeAccount.type === 'user' ? `${env.directoryUrl}/api/avatars/user/${user.id}/avatar.png` : `${env.directoryUrl}/api/avatars/organization/${activeAccount.id}/avatar.png`">
+                </v-avatar>
+              </v-list-item-avatar>
+              <v-list-item-title>{{ activeAccount.type === 'user' ? 'Compte personnel' : activeAccount.name }}</v-list-item-title>
+            </v-list-item>
+
+            <template v-if="user.organizations.length">
               <v-subheader>Changer de compte</v-subheader>
               <v-list-item
                 v-if="activeAccount.type !== 'user'"
