@@ -21,7 +21,23 @@
             <a>Page de présentation</a>
           </v-list-item>
 
-          <v-list-item
+          <v-list-item>
+            <v-list-item-avatar class="ml-0 my-0">
+              <v-icon>mdi-file-image</v-icon>
+            </v-list-item-avatar>
+            <span>{{ prodBaseApp ? prodBaseApp.title : application.url.split('/').slice(-3,-2).pop() }}</span>
+          </v-list-item>
+          <v-list-item>
+            <v-list-item-avatar class="ml-0 my-0">
+              <v-icon>mdi-information-outline</v-icon>
+            </v-list-item-avatar>
+            <span>Version {{ version }}</span>
+            <v-spacer />
+            <span v-if="upgradeAvailable" class="accent--text">
+              Version {{ upgradeAvailable.version }} disponible</span>
+          </v-list-item>
+
+          <!--<v-list-item
             v-if="journal[0]"
             :class="'event-' + journal[0].type"
           >
@@ -29,7 +45,7 @@
               <v-icon>{{ events[journal[0].type].icon }}</v-icon>
             </v-list-item-avatar>
             <span>{{ events[journal[0].type].text }}</span>
-          </v-list-item>
+          </v-list-item>-->
           <v-list-item>
             <v-list-item-avatar class="ml-0 my-0">
               <v-icon>mdi-pencil</v-icon>
@@ -110,8 +126,8 @@
       return { events }
     },
     computed: {
-      ...mapState('application', ['application', 'nbSessions', 'journal']),
-      ...mapGetters('application', ['can', 'resourcePublicUrl']),
+      ...mapState('application', ['application', 'nbSessions', 'journal', 'prodBaseApp']),
+      ...mapGetters('application', ['can', 'resourcePublicUrl', 'availableVersions']),
       topics() {
         return this.$store.getters.ownerTopics(this.application.owner)
       },
@@ -126,6 +142,14 @@
           dataset.id = dataset.href.split('/').pop()
         }
         return dataset
+      },
+      version() {
+        if (!this.prodBaseApp || !this.prodBaseApp.version) return 'inconnue'
+        else if (this.prodBaseApp.version === 'master' || this.prodBaseApp.version === 'latest') return 'de test'
+        else return this.prodBaseApp.version
+      },
+      upgradeAvailable() {
+        return this.availableVersions && this.availableVersions.length && this.availableVersions[0].version !== this.prodBaseApp.version && this.availableVersions[0]
       },
     },
     mounted() {

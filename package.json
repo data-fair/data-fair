@@ -69,6 +69,7 @@
     "byline": "^5.0.0",
     "chardet": "^1.0.0",
     "child-process-promise": "^2.2.1",
+    "compare-versions": "^3.6.0",
     "config": "^3.3.1",
     "connect-mongo": "^3.2.0",
     "cookie-parser": "^1.4.5",

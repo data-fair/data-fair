@@ -1,6 +1,7 @@
 <template>
   <v-container v-if="application" fluid>
     <doc-link
+      v-if="prodBaseApp"
       :tooltip="`Consultez la documentation sur l'application ${prodBaseApp.title}`"
       :doc-href="prodBaseApp.documentation"
       offset="left"

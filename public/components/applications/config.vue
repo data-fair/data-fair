@@ -26,8 +26,8 @@
           <v-select
             v-model="editUrl"
             :disabled="!can('writeConfig')"
-            :loading="!baseApps"
-            :items="baseApps"
+            :loading="!availableVersions"
+            :items="availableVersions"
             :item-text="(baseApp => `${baseApp.title} (${baseApp.version})`)"
             item-value="url"
             label="Changer de version"
@@ -207,13 +207,12 @@
         editUrl: null,
         eventBus,
         showCancelDialog: false,
-        baseApps: null,
         expansion: [0],
       }
     },
     computed: {
       ...mapState('application', ['application', 'config', 'configDraft', 'prodBaseApp']),
-      ...mapGetters('application', ['applicationLink', 'can']),
+      ...mapGetters('application', ['applicationLink', 'can', 'availableVersions']),
       height() {
         return window.innerHeight
       },
@@ -262,7 +261,7 @@
         deep: true,
       },
       editUrl() {
-        this.saveUrlDraft()
+        this.saveDraft()
       },
       async 'application.urlDraft'() {
         await this.fetchSchemas()
@@ -272,24 +271,9 @@
     async created() {
       this.fetchSchemas()
       this.fetchConfigs()
-      this.fetchBaseApps()
     },
     methods: {
-      ...mapActions('application', ['readConfig', 'writeConfig', 'readConfigDraft', 'writeConfigDraft', 'cancelConfigDraft', 'patchAndCommit']),
-      async fetchBaseApps() {
-        // get base apps that share the same application name (meaning different version of same app)
-        const privateAccess = `${this.application.owner.type}:${this.application.owner.id}`
-        this.baseApps = (await this.$axios.$get('api/v1/base-applications', {
-          params: {
-            privateAccess,
-            size: 10000,
-            applicationName: this.prodBaseApp.applicationName,
-          },
-        })).results
-        if (!this.baseApps.find(b => b.url === this.prodBaseApp.url)) {
-          this.baseApps = [this.prodBaseApp].concat(this.baseApps)
-        }
-      },
+      ...mapActions('application', ['readConfig', 'writeConfig', 'readConfigDraft', 'writeConfigDraft', 'cancelConfigDraft', 'patchAndCommit', 'fetchProdBaseApp']),
       async fetchConfigs() {
         this.editUrl = this.application.urlDraft || this.application.url
         this.editConfig = JSON.parse(JSON.stringify(await this.readConfigDraft()))
@@ -358,15 +342,12 @@
         const application = await this.$axios.$get(`api/v1/applications/${this.application.id}`)
         this.$store.commit('application/patch', { status: application.status, errorMessage: application.errorMessage, errorMessageDraft: application.errorMessageDraft })
       },
-      saveUrlDraft() {
-        if (!this.can('writeDescription')) return
-        this.patchAndCommit({ urlDraft: this.editUrl, silent: true })
-      },
       async saveDraft(e) {
         if (!this.can('writeConfig')) return
-        if (JSON.stringify(this.editConfig) === JSON.stringify(this.application.configurationDraft)) return
+        if (JSON.stringify(this.editConfig) === JSON.stringify(this.application.configurationDraft) && this.editUrl === this.application.urlDraft) return
         this.$refs.configForm && this.$refs.configForm.validate()
         if (!this.formValid) return
+        this.patchAndCommit({ urlDraft: this.editUrl, silent: true })
         await this.writeConfigDraft(this.editConfig)
         await this.fetchStatus()
         // errors in draft app should be pushed by websocket, but to be extra safe we check after 5 seconds
@@ -379,6 +360,7 @@
         this.patchAndCommit({ url: this.application.urlDraft })
         await this.writeConfig(this.configDraft)
         this.fetchStatus()
+        this.fetchProdBaseApp()
       },
       async cancelDraft() {
         if (!this.can('writeConfig')) return

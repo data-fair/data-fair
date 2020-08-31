@@ -1,6 +1,7 @@
 // A module of the store for the currently worked on application
 // Used in the application vue and all its tabs and their components
 import Vue from 'vue'
+import compareVersions from 'compare-versions'
 import eventBus from '~/event-bus'
 
 export default () => ({
@@ -15,6 +16,7 @@ export default () => ({
     nbSessions: null,
     datasets: null,
     prodBaseApp: null,
+    otherVersions: null,
   },
   getters: {
     resourceUrl: (state, getters, rootState) => state.applicationId ? rootState.env.publicUrl + '/api/v1/applications/' + state.applicationId : null,
@@ -30,6 +32,16 @@ export default () => ({
     },
     hasPrivateDatasets: (state) => {
       return state.datasets && !!state.datasets.find(a => a.visibility === 'private' || a.visibility === 'protected')
+    },
+    availableVersions: (state) => {
+      let availableVersions = [...state.otherVersions]
+      if (compareVersions.validate(state.prodBaseApp.version)) {
+        availableVersions = availableVersions.filter(a => compareVersions.compare(a.version, state.prodBaseApp.version, '>'))
+      }
+      if (!availableVersions.find(b => b.url === state.prodBaseApp.url)) {
+        availableVersions.push(state.prodBaseApp)
+      }
+      return availableVersions
     },
   },
   mutations: {
@@ -59,6 +71,7 @@ export default () => ({
           dispatch('readConfig'),
           dispatch('fetchProdBaseApp'),
         ])
+        await dispatch('fetchOtherVersions')
         if (getters.can('readJournal')) await dispatch('fetchJournal')
         await dispatch('fetchDatasets')
       } catch (error) {
@@ -72,7 +85,28 @@ export default () => ({
     },
     async fetchProdBaseApp({ commit, state }) {
       const prodBaseApp = await this.$axios.$get(`api/v1/applications/${state.applicationId}/base-application`)
+      prodBaseApp.version = prodBaseApp.version || prodBaseApp.url.split('/').slice(-2, -1).pop()
       commit('setAny', { prodBaseApp })
+    },
+    async fetchOtherVersions({ commit, state }) {
+      // get base apps that share the same application name (meaning different version of same app)
+      const privateAccess = `${state.application.owner.type}:${state.application.owner.id}`
+      let otherVersions = (await this.$axios.$get('api/v1/base-applications', {
+        params: {
+          privateAccess,
+          size: 10000,
+          applicationName: state.prodBaseApp.applicationName,
+        },
+      })).results
+      otherVersions = [{ ...otherVersions[0], version: '0.0.0', url: state.application.url + '/' }].concat(otherVersions)
+      otherVersions = [{ ...otherVersions[0], version: '0.4.0', url: state.application.url + '//' }].concat(otherVersions)
+      otherVersions = [{ ...otherVersions[0], version: '0.5.0', url: state.application.url + '///' }].concat(otherVersions)
+      otherVersions.forEach(a => { a.version = a.version || a.url.split('/').slice(-2, -1).pop() })
+
+      otherVersions = otherVersions.filter(a => compareVersions.validate(a.version))
+      otherVersions.sort((a1, a2) => compareVersions(a2.version, a1.version)).reverse()
+
+      commit('setAny', { otherVersions })
     },
     async fetchAPI({ commit, state }) {
       const api = await this.$axios.$get(`api/v1/applications/${state.applicationId}/api-docs.json`)
