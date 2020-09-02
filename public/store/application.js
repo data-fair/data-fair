@@ -98,9 +98,6 @@ export default () => ({
           applicationName: state.prodBaseApp.applicationName,
         },
       })).results
-      otherVersions = [{ ...otherVersions[0], version: '0.0.0', url: state.application.url + '/' }].concat(otherVersions)
-      otherVersions = [{ ...otherVersions[0], version: '0.4.0', url: state.application.url + '//' }].concat(otherVersions)
-      otherVersions = [{ ...otherVersions[0], version: '0.5.0', url: state.application.url + '///' }].concat(otherVersions)
       otherVersions.forEach(a => { a.version = a.version || a.url.split('/').slice(-2, -1).pop() })
 
       otherVersions = otherVersions.filter(a => compareVersions.validate(a.version))
