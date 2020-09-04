@@ -8,16 +8,20 @@
       label="Clé d'API"
       persistent-hint
       required
-      :disabled="!can('writeDescription')"
+      :disabled="!!catalog.createdAt && !can('writeDescription')"
       @change="changeApiKey"
-    />
+    >
+      <template v-slot:message>
+        <span v-html="apiKeyHint" />
+      </template>
+    </v-text-field>
     <v-text-field
       v-model="catalog.datasetUrlTemplate"
       hint="Laissez vide pour créer automatiquement un lien vers la page du jeu de données dans cette instance data-fair. Renseignez pour pointer vers une autre page publique. Par exemple 'https://koumoul.com/datasets/{id}'."
       class="mb-4"
       label="Format du lien vers la page d'un jeu de données"
       persistent-hint
-      :disabled="!can('writeDescription')"
+      :disabled="!!catalog.createdAt && !can('writeDescription')"
       @change="$emit('change', {datasetUrlTemplate: catalog.datasetUrlTemplate})"
     />
     <v-text-field
@@ -26,7 +30,7 @@
       class="mb-4"
       label="Format du lien vers la page d'une application"
       persistent-hint
-      :disabled="!can('writeDescription')"
+      :disabled="!!catalog.createdAt && !can('writeDescription')"
       @change="$emit('change', {applicationUrlTemplate: catalog.applicationUrlTemplate})"
     />
     <v-autocomplete
@@ -44,7 +48,7 @@
       item-value="id"
       persistent-hint
       no-data-text="Aucune organisation ne correspond"
-      :disabled="!can('writeDescription')"
+      :disabled="!!catalog.createdAt && !can('writeDescription')"
       @change="$emit('change', {organization: catalog.organization})"
     />
   </div>
