@@ -129,8 +129,10 @@ router.get('', cacheHeaders.noCache, asyncWrap(async(req, res) => {
     req.query.privateAccess.split(',').forEach(p => {
       const [type, id] = p.split(':')
       if (!req.user) throw createError(401)
-      if (type === 'user' && id !== req.user.id) throw createError(403)
-      if (type === 'organization' && !req.user.organizations.find(o => o.id === id)) throw createError(403)
+      if (!req.user.adminMode) {
+        if (type === 'user' && id !== req.user.id) throw createError(403)
+        if (type === 'organization' && !req.user.organizations.find(o => o.id === id)) throw createError(403)
+      }
       privateAccess.push({ type, id })
       accessFilter.push({ privateAccess: { $elemMatch: { type, id } } })
     })

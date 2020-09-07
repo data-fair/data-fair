@@ -27,7 +27,7 @@ router.use('/:type/:id', (req, res, next) => {
 
 function isOwnerAdmin(req, res, next) {
   if (!req.user) return res.status(401).send()
-  if (permissions.getOwnerRole({ type: req.params.type, id: req.params.id }, req.user) !== 'admin') {
+  if (!req.user.adminMode && permissions.getOwnerRole({ type: req.params.type, id: req.params.id }, req.user) !== 'admin') {
     return res.sendStatus(403)
   }
   next()
@@ -35,7 +35,7 @@ function isOwnerAdmin(req, res, next) {
 
 function isOwnerMember(req, res, next) {
   if (!req.user) return res.status(401).send()
-  if (!permissions.getOwnerRole({ type: req.params.type, id: req.params.id }, req.user)) {
+  if (!req.user.adminMode && !permissions.getOwnerRole({ type: req.params.type, id: req.params.id }, req.user)) {
     return res.sendStatus(403)
   }
   next()
