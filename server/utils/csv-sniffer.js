@@ -26,15 +26,13 @@ exports.sniff = async (sample) => {
         let score = 0
         let labels
         const parser = csv({ separator: fd, quote: qc, escape: ec, newline: result.linesDelimiter })
-        parser.on('headers', headers => {
-          labels = headers
-        })
+        parser.on('headers', headers => { labels = headers })
         const parsePromise = pump(parser, new Writable({
           objectMode: true,
           write(chunk, encoding, callback) {
-            Object.keys(chunk).forEach(key => {
-              if (chunk[key]) score += 1
-              else if (chunk[key] === undefined) score -= 1
+            labels.forEach(key => {
+              if (chunk[key] === undefined || chunk[key] === '""' || chunk[key] === '\'\'') score -= 1
+              else if (chunk[key]) score += 1
             })
             callback()
           },

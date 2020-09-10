@@ -41,6 +41,7 @@ exports.process = async function(app, dataset) {
     linesDelimiter: sniffResult.linesDelimiter,
     fieldsDelimiter: sniffResult.fieldsDelimiter,
     escapeChar: sniffResult.escapeChar,
+    quote: sniffResult.quote,
   }
   debug('count lines')
   props.numLines = await datasetUtils.countLines(dataset)

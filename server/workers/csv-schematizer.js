@@ -32,7 +32,7 @@ exports.process = async function(app, dataset) {
     .forEach(field => {
       const escapedKey = fieldsSniffer.escapeKey(field)
       const fileField = dataset.file.schema.find(f => f.key === escapedKey)
-      if (!fileField) throw new Error(`Field ${field} found in data sample but absent from previous schema analysis`)
+      if (!fileField) throw new Error(`Champ ${field} présent dans la donnée mais absent de l'analyse initiale du fichier`)
       const existingField = dataset.schema && dataset.schema.find(f => f.key === escapedKey)
       Object.assign(fileField, fieldsSniffer.sniff(myCSVObject[field], attachments, existingField))
     })

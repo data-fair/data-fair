@@ -167,7 +167,7 @@ exports.readStream = (dataset, raw = false) => {
     parser = csv({
       separator: dataset.file.props.fieldsDelimiter,
       escape: dataset.file.props.escapeChar,
-      quote: dataset.file.props.escapeChar || dataset.file.props.quote,
+      quote: dataset.file.props.quote || dataset.file.props.escapeChar,
       newline: dataset.file.props.linesDelimiter,
     })
     // reject empty lines (parsing failures from csv-parser)

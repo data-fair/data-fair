@@ -46,4 +46,17 @@ describe('CSV cases', () => {
     assert.equal(res.data.total, 12)
     assert.equal(res.data.results[0].Structure_porteuse, 'Struct1')
   })
+
+  it('A CSV with simple quotes in header', async () => {
+    const ax = global.ax.dmeadus
+    const dataset = await testUtils.sendDataset('Agribalyse_Synthese.csv', ax)
+    assert.equal(dataset.status, 'finalized')
+    assert.equal(dataset.schema[0].key, 'Code_AGB')
+    assert.equal(dataset.schema[0]['x-originalName'], 'Code AGB')
+    assert.equal(dataset.schema[2].key, 'Groupe_d\'aliment')
+    assert.equal(dataset.schema[2]['x-originalName'], 'Groupe d\'aliment')
+    const res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
+    assert.equal(res.data.total, 5)
+    assert.equal(res.data.results[0]['Groupe_d\'aliment'], 'fruits, légumes, légumineuses et oléagineux')
+  })
 })
