@@ -114,7 +114,10 @@
               credentials: 'include', // include cookies, for data-fair sessions
             }
           },
-        })
+          attributionControl: false,
+        }).addControl(new mapboxgl.AttributionControl({
+          compact: false,
+        }))
         this.map.on('error', (error) => {
           console.log('Map error', error)
           if (error.sourceId) {
