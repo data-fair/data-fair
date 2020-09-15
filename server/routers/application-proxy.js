@@ -55,12 +55,14 @@ router.get('/:applicationId/manifest.json', setResource, permissions.middleware(
 // Login is a special small UI page on /app/appId/login
 // this is so that we expose a minimalist password based auth in the scope of the current application
 // prevents opening a browser if the app is installed standalone
-router.get('/:applicationId/login', (req, res) => {
+router.get('/:applicationId/login', setResource, (req, res) => {
   res.setHeader('Content-Type', 'text/html')
-  const redirect = encodeURIComponent(`${config.publicUrl}/app/${req.params.applicationId}?id_token=`)
+  let redirect = encodeURIComponent(`${config.publicUrl}/app/${req.params.applicationId}?`)
+  if (req.application.owner.type === 'organization') redirect += `id_token_org=${encodeURIComponent(req.application.owner.id)}&`
+  redirect += 'id_token='
   res.send(loginHtml
     .replace('{AUTH_ROUTE}', `${config.directoryUrl}/api/auth/password?redirect=${redirect}`)
-    .replace('{LOGO}', config.brand.logo || `${config.publicUrl}/logo.svg`),
+    .replace('{LOGO}', `${config.directoryUrl}/api/avatars/${req.application.owner.type}/${req.application.owner.id}/avatar.png`),
   )
 })
 
