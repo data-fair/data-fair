@@ -63,7 +63,7 @@
           <base-apps
             v-model="baseApp"
             :dataset="dataset"
-            @input="currentStep = 3; title = dataset.title + ' - ' + baseApp.title"
+            @input="currentStep = 3; title = dataset ? dataset.title + ' - ' + baseApp.title : baseApp.title"
           />
         </v-sheet>
         <v-btn
@@ -194,10 +194,14 @@
       async createApplication() {
         this.importing = true
         try {
+          const configurationDraft = {}
+          if (this.dataset) {
+            configurationDraft.datasets = [{ href: this.dataset.href, title: this.dataset.title, id: this.dataset.id }]
+          }
           const application = await this.$axios.$post('api/v1/applications', {
             url: this.baseApp.url,
             title: this.title,
-            configurationDraft: { datasets: [{ href: this.dataset.href, title: this.dataset.title, id: this.dataset.id }] },
+            configurationDraft,
           })
           this.$router.push({ path: `/application/${application.id}` })
         } catch (error) {
