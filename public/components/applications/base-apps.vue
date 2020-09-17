@@ -73,7 +73,7 @@
         const params = {
           size: 1000,
           privateAccess: this.activeAccount.type + ':' + this.activeAccount.id,
-          dataset: this.dataset ? this.dataset.id : 'none',
+          dataset: this.dataset ? this.dataset.id : 'any',
         }
         this.baseApps = (await this.$axios.get('api/v1/base-applications', { params })).data.results
         this.loading = false

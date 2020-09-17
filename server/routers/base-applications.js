@@ -14,6 +14,7 @@ const asyncWrap = require('../utils/async-wrap')
 const findUtils = require('../utils/find')
 const baseAppsUtils = require('../utils/base-apps')
 const cacheHeaders = require('../utils/cache-headers')
+const permissions = require('../utils/permissions')
 const router = exports.router = express.Router()
 
 const vocabulary = {}
@@ -157,23 +158,45 @@ router.get('', cacheHeaders.noCache, asyncWrap(async(req, res) => {
 
   // optionally complete informations based on a dataset to guide user in selecting suitable application
   if (req.query.dataset) {
-    let dataset, datasetVocabulary
-    if (req.query.dataset !== 'none') {
-      dataset = await db.collection('datasets').findOne({ id: req.query.dataset, 'owner.type': req.user.activeAccount.type, 'owner.id': req.user.activeAccount.id })
+    let datasetBBox, datasetVocabulary, datasetTypes, datasetId, datasetCount
+    if (req.query.dataset === 'any') {
+      // match constraints against all datasets of current account
+      const filter = { 'owner.type': req.user.activeAccount.type, 'owner.id': req.user.activeAccount.id }
+      datasetCount = await db.collection('datasets').countDocuments(filter)
+      datasetBBox = !!(await db.collection('datasets').countDocuments({ $and: [{ bbox: { $ne: null } }, filter] }))
+      const facet = {
+                 types: [{ $match: { 'schema.x-calculated': { $ne: true } } }, { $group: { _id: { type: '$schema.type' } } }],
+                 concepts: [{ $group: { _id: { concept: '$schema.x-refersTo' } } }],
+               }
+      const facetResults = await db.collection('datasets').aggregate([
+          { $match: filter },
+          { $project: { 'schema.type': 1, 'schema.x-refersTo': 1, 'schema.x-calculated': 1 } },
+          { $unwind: '$schema' },
+          { $facet: facet }]).toArray()
+
+      datasetTypes = facetResults[0].types.map(t => t._id.type)
+      datasetVocabulary = facetResults[0].concepts.map(t => t._id.concept).filter(c => !!c)
+    } else {
+      // match constraints against a specific dataset
+      datasetCount = 1
+      datasetId = req.query.dataset
+      const dataset = await db.collection('datasets').findOne({ id: datasetId, 'owner.type': req.user.activeAccount.type, 'owner.id': req.user.activeAccount.id })
       if (!dataset) return res.status(404).send(`Jeu de données ${req.query.dataset} est inconnu ou ne vous appartient pas.`)
+      datasetTypes = (dataset.schema || []).filter(field => !field['x-calculated']).map(field => field.type)
       datasetVocabulary = (dataset.schema || []).map(field => field['x-refersTo']).filter(c => !!c)
+      datasetBBox = !!dataset.bbox
     }
     for (const application of results) {
       application.disabled = []
       application.category = application.category || 'autre'
-      if (dataset && (!application.datasetsFilters || !application.datasetsFilters.length)) {
+      if (datasetId && (!application.datasetsFilters || !application.datasetsFilters.length)) {
         application.disabled.push('Cette application n\'utilise pas de sources de données de type fichier.')
       } else {
-        if (application.datasetsFilters && application.datasetsFilters.length && !dataset) {
+        if (application.datasetsFilters && application.datasetsFilters.length && !datasetCount) {
           application.disabled.push('Cette application nécessite une source de données.')
         } else {
           (application.datasetsFilters || []).forEach(filter => {
-            if (filter.bbox && !dataset.bbox) application.disabled.push('Cette application nécessite une source avec des données géolocalisées.')
+            if (filter.bbox && !datasetBBox) application.disabled.push('Cette application nécessite une source avec des données géolocalisées.')
             if (filter.concepts) {
               const foundConcepts = []
               filter.concepts.forEach(concept => {
@@ -185,7 +208,7 @@ router.get('', cacheHeaders.noCache, asyncWrap(async(req, res) => {
                 application.disabled.push(`Cette application nécessite une source avec un champ de concept ${filter.concepts.map(concept => vocabulary[concept].title).join(' ou ')}.`)
               }
             }
-            if (filter['field-type'] && (!dataset.schema || !dataset.schema.find(p => filter['field-type'].includes(p.type)))) {
+            if (filter['field-type'] && !datasetTypes.find(t => filter['field-type'].includes(t))) {
               application.disabled.push(`Cette application nécessite une source avec un champ de type ${filter['field-type'].join(' ou ')}.`)
             }
           })
