@@ -14,7 +14,6 @@ const asyncWrap = require('../utils/async-wrap')
 const findUtils = require('../utils/find')
 const baseAppsUtils = require('../utils/base-apps')
 const cacheHeaders = require('../utils/cache-headers')
-const permissions = require('../utils/permissions')
 const router = exports.router = express.Router()
 
 const vocabulary = {}
