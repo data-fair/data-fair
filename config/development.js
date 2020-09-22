@@ -12,6 +12,7 @@ module.exports = {
   privateDirectoryUrl: 'http://localhost:5600/simple-directory',
   openapiViewerUrl: `http://${host}:5600/openapi-viewer/`,
   captureUrl: `http://${host}:5600/capture`,
+  privateCaptureUrl: 'http://localhost:8087',
   defaultLimits: {
     totalStorage: 1000000000,
     datasetStorage: -1,
