@@ -8,6 +8,7 @@ module.exports = {
   privateDirectoryUrl: 'PRIVATE_DIRECTORY_URL',
   openapiViewerUrl: 'OPENAPI_VIEWER_URL',
   captureUrl: 'CAPTURE_URL',
+  privateCaptureUrl: 'PRIVATE_CAPTURE_URL',
   mongoUrl: 'MONGO_URL',
   analytics: {
     __name: 'ANALYTICS',

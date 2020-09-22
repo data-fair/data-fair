@@ -4,6 +4,9 @@ const path = require('path')
 const request = require('request')
 const pump = require('util').promisify(require('pump'))
 const debug = require('debug')('capture')
+
+const captureUrl = config.privateCaptureUrl || config.captureUrl
+
 exports.init = async() => {
   await fs.ensureDir(path.resolve(config.dataDir, 'captures'))
 }
@@ -18,7 +21,7 @@ exports.screenshot = async (req) => {
   const capturePath = path.resolve(config.dataDir, 'captures', req.application.id + '.png')
 
   try {
-    const screenShortUrl = (config.captureUrl + '/api/v1/screenshot')
+    const screenShortUrl = (captureUrl + '/api/v1/screenshot')
     const appUrl = `${config.publicUrl}/app/${req.application.id}`
     const cookieText = Object.keys(req.cookies).map(c => `${c}=${req.cookies[c]}`).join('; ')
     debug(`Screenshot ${screenShortUrl}?target=${appUrl} - ${cookieText}`)
