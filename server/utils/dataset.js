@@ -164,12 +164,13 @@ exports.readStream = (dataset, raw = false) => {
   let parser, transformer
   if (dataset.file.mimetype === 'text/csv') {
     // use result from csv-sniffer to configure parser
-    parser = csv({
+    const parserOpts = {
       separator: dataset.file.props.fieldsDelimiter,
       escape: dataset.file.props.escapeChar,
       quote: dataset.file.props.quote || dataset.file.props.escapeChar,
       newline: dataset.file.props.linesDelimiter,
-    })
+    }
+    parser = csv(parserOpts)
     // reject empty lines (parsing failures from csv-parser)
     transformer = new Transform({
       objectMode: true,
@@ -206,6 +207,11 @@ exports.readStream = (dataset, raw = false) => {
       objectMode: true,
       transform(chunk, encoding, callback) {
         if (raw) {
+          if (dataset.file.schema) {
+            if (Object.keys(chunk).filter(k => !k.startsWith('_')).find(k => !dataset.file.schema.find(p => p['x-originalName'] === k))) {
+              return callback(new Error(`Échec du traitement de la ligne ${(chunk._i + 1).toLocaleString()} du fichier. Le format est probablement invalide.`))
+            }
+          }
           delete chunk._i
           return callback(null, chunk)
         }

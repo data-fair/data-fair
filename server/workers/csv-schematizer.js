@@ -11,9 +11,8 @@ exports.process = async function(app, dataset) {
   // get a random sampling to test values type on fewer elements
   debug('extract dataset sample')
   const sample = await datasetUtils.sample(dataset)
-  const firstLine = sample.pop()
+  const firstLine = sample[0]
   if (!firstLine) throw new Error('Èchec de l\'échantillonage des données')
-
   // Convert an array of objects to an object of sets
   // Each set will hold the differents values for each field
   const myCSVObject = sample.reduce((acc, current) => {

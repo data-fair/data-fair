@@ -59,4 +59,13 @@ describe('CSV cases', () => {
     assert.equal(res.data.total, 5)
     assert.equal(res.data.results[0]['Groupe_d\'aliment'], 'fruits, légumes, légumineuses et oléagineux')
   })
+
+  it('A CSV with wrong number of separators in a line', async () => {
+    const ax = global.ax.dmeadus
+    try {
+    await testUtils.sendDataset('dataset-bad-separators.csv', ax)
+    } catch (err) {
+      assert.ok(err.message.includes('ligne 18'))
+    }
+  })
 })

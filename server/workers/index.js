@@ -160,6 +160,7 @@ async function iter(app, type) {
       resource.status = 'error'
       if (hooks[taskKey]) hooks[taskKey].reject({ resource, message: errorMessage.join('\n') })
       if (hooks[taskKey + '/' + resource.id]) hooks[taskKey + '/' + resource.id].reject({ resource, message: errorMessage.join('\n') })
+      if (hooks['finalizer/' + resource.id]) hooks['finalizer/' + resource.id].reject({ resource, message: errorMessage.join('\n') })
     }
   } finally {
     if (resource) {
