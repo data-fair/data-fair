@@ -63,9 +63,22 @@ describe('CSV cases', () => {
   it('A CSV with wrong number of separators in a line', async () => {
     const ax = global.ax.dmeadus
     try {
-    await testUtils.sendDataset('dataset-bad-separators.csv', ax)
+      await testUtils.sendDataset('dataset-bad-separators.csv', ax)
     } catch (err) {
       assert.ok(err.message.includes('ligne 18'))
     }
+  })
+
+  it('A CSV with lots of empty values', async () => {
+    const ax = global.ax.dmeadus
+    const dataset = await testUtils.sendDataset('jep-2019-HR.csv', ax)
+    assert.equal(dataset.status, 'finalized')
+    assert.equal(dataset.schema[0].key, 'Identifiant')
+    assert.equal(dataset.schema[0]['x-originalName'], 'Identifiant')
+    assert.equal(dataset.schema[2].key, 'Description_-_FR')
+    assert.equal(dataset.schema[2]['x-originalName'], 'Description - FR')
+    const res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
+    assert.equal(res.data.total, 33)
+    assert.equal(res.data.results[0]['Description_-_FR'], 'Menez l\'enquête à la recherche des objets portés disparus !')
   })
 })

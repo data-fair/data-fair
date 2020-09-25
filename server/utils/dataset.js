@@ -208,7 +208,7 @@ exports.readStream = (dataset, raw = false) => {
       transform(chunk, encoding, callback) {
         if (raw) {
           if (dataset.file.schema) {
-            if (Object.keys(chunk).filter(k => !k.startsWith('_')).find(k => !dataset.file.schema.find(p => p['x-originalName'] === k))) {
+            if (Object.keys(chunk).filter(k => !k.startsWith('_')).find(k => !dataset.file.schema.find(p => p.key === fieldsSniffer.escapeKey(k)))) {
               return callback(new Error(`Échec du traitement de la ligne ${(chunk._i + 1).toLocaleString()} du fichier. Le format est probablement invalide.`))
             }
           }

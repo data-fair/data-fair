@@ -31,8 +31,11 @@ exports.sniff = async (sample) => {
           objectMode: true,
           write(chunk, encoding, callback) {
             labels.forEach(key => {
-              if (chunk[key] === undefined || chunk[key] === '""' || chunk[key] === '\'\'') score -= 1
-              else if (chunk[key]) score += 1
+              if (chunk[key] === undefined || chunk[key] === '""' || chunk[key] === '\'\'') {
+                score -= 0.5
+              } else if (chunk[key]) {
+                score += 1
+              }
             })
             callback()
           },
