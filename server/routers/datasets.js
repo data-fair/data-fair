@@ -53,6 +53,7 @@ function clean(dataset) {
 }
 
 const checkStorage = (overwrite) => asyncWrap(async (req, res, next) => {
+  if (process.env.NO_STORAGE_CHECK === 'true') return next()
   if (!req.get('Content-Length')) throw createError(411, 'Content-Length is mandatory')
   const contentLength = Number(req.get('Content-Length'))
   if (Number.isNaN(contentLength)) throw createError(400, 'Content-Length is not a number')

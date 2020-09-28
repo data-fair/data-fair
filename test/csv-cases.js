@@ -3,6 +3,12 @@ const assert = require('assert').strict
 const testUtils = require('./resources/test-utils')
 
 describe('CSV cases', () => {
+  before(() => {
+    process.env.NO_STORAGE_CHECK = 'true'
+  })
+  after(() => {
+    delete process.env.NO_STORAGE_CHECK
+  })
   it('Process newly uploaded CSV dataset', async () => {
     const ax = global.ax.dmeadus
     const dataset = await testUtils.sendDataset('2018-08-30_Type_qualificatif.csv', ax)
@@ -65,7 +71,7 @@ describe('CSV cases', () => {
     try {
       await testUtils.sendDataset('dataset-bad-separators.csv', ax)
     } catch (err) {
-      assert.ok(err.message.includes('ligne 18'))
+      assert.ok(err.message.includes('format est probablement invalide'))
     }
   })
 
@@ -80,5 +86,16 @@ describe('CSV cases', () => {
     const res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
     assert.equal(res.data.total, 33)
     assert.equal(res.data.results[0]['Description_-_FR'], 'Menez l\'enquête à la recherche des objets portés disparus !')
+  })
+
+  it('A CSV with \\r\\n inside quotes, but simply \\n as value separator', async () => {
+    const ax = global.ax.dmeadus
+    const dataset = await testUtils.sendDataset('Demarches_PCAET_V1_enr.csv', ax)
+    assert.equal(dataset.status, 'finalized')
+    assert.equal(dataset.schema[0].key, 'Id')
+    assert.equal(dataset.file.props.linesDelimiter, '\n')
+    assert.equal(dataset.file.props.escapeChar, '"')
+    assert.equal(dataset.file.props.quote, '"')
+    assert.equal(dataset.file.props.fieldsDelimiter, ';')
   })
 })
