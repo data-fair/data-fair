@@ -2,7 +2,6 @@ const { Writable } = require('stream')
 const csv = require('csv-parser')
 const pump = require('util').promisify(require('pump'))
 
-// const possibleLinesDelimiters = [{ d: '\r\n', regexp: /\r\n/g }, { d: '\n', regexp: /[^\r]\n/g }]
 const possibleLinesDelimiters = ['\r\n', '\n']
 const possibleFieldsDelimiters = [',', ';', '\t', '|']
 const possibleEscapeChars = ['"', "'"]
@@ -23,16 +22,23 @@ exports.sniff = async (sample) => {
           const parsePromise = pump(parser, new Writable({
             objectMode: true,
             write(chunk, encoding, callback) {
+              Object.keys(chunk).forEach(key => {
+                // none matching labels and object keys means a failure of csv-parse to parse a line
+                if (!labels.includes(key)) {
+                  score -= 2
+                }
+              })
               labels.forEach(key => {
                 // console.log(key, chunk[key])
                 if (chunk[key] === undefined) {
-                  // TODO: maybe undefined at the end of a line is not as bad (it seems that csv-stringify doesn't complete the trailing commas)
-                  score -= 0.5
+                  // This is not necessarily a bad thing it seems
+                  // maybe undefined at the end of a line is not as bad (it seems that csv-stringify doesn't complete the trailing commas)
+                  // score -= 0.5
                 } else if (chunk[key].match(/^'.*'$/) || chunk[key].match(/^".*"$/)) {
                   // still wrapped in separators, can probably do better
                   score -= 1
                 } else if (chunk[key]) {
-                  // having many none empty values are a good sign
+                  // having many none empty values is a good sign
                   score += 1
                 }
               })
@@ -48,6 +54,7 @@ exports.sniff = async (sample) => {
     }
   }
   const bestCombination = combinations.sort((a, b) => b.score - a.score)[0]
+  // console.log(combinations)
   const result = bestCombination.props
   if (!result.labels || !result.labels.length) throw new Error('Échec de l\'analyse du fichier tabulaire, pas de colonne détectée.')
 

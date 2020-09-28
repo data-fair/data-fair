@@ -98,4 +98,18 @@ describe('CSV cases', () => {
     assert.equal(dataset.file.props.quote, '"')
     assert.equal(dataset.file.props.fieldsDelimiter, ';')
   })
+
+  it('Another CSV with empty values', async () => {
+    const ax = global.ax.dmeadus
+    const dataset = await testUtils.sendDataset('jep-2019.csv', ax)
+    assert.equal(dataset.status, 'finalized')
+    assert.equal(dataset.schema[0].key, 'Identifiant')
+    assert.equal(dataset.file.props.linesDelimiter, '\n')
+    assert.equal(dataset.file.props.escapeChar, '"')
+    assert.equal(dataset.file.props.quote, '"')
+    assert.equal(dataset.file.props.fieldsDelimiter, ',')
+    const res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
+    assert.equal(res.data.total, 35)
+    assert.equal(res.data.results[0]['Description_-_FR'], 'Elisabeth Berthon, feutrière styliste-modéliste, vous fera découvrir son atelier de créations et son travail sur le feutre et la soie')
+  })
 })
