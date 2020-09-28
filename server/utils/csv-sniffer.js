@@ -1,6 +1,7 @@
 const { Writable } = require('stream')
 const csv = require('csv-parser')
 const pump = require('util').promisify(require('pump'))
+const debug = require('debug')('csv-sniffer')
 
 const possibleLinesDelimiters = ['\r\n', '\n']
 const possibleFieldsDelimiters = [',', ';', '\t', '|']
@@ -17,7 +18,9 @@ exports.sniff = async (sample) => {
         for (const qc of possibleQuoteChars) {
           let score = 0
           let labels
-          const parser = csv({ separator: fd, quote: qc, escape: ec, newline: ld })
+          const parserOpts = { separator: fd, quote: qc, escape: ec, newline: ld }
+          debug('Evaluate parser opts', JSON.stringify(parserOpts))
+          const parser = csv(parserOpts)
           parser.on('headers', headers => { labels = headers })
           const parsePromise = pump(parser, new Writable({
             objectMode: true,
@@ -26,20 +29,31 @@ exports.sniff = async (sample) => {
                 // none matching labels and object keys means a failure of csv-parse to parse a line
                 if (!labels.includes(key)) {
                   score -= 2
+                  debug('Unmatched object key, score -= 2')
                 }
               })
               labels.forEach(key => {
+                const val = chunk[key]
                 // console.log(key, chunk[key])
-                if (chunk[key] === undefined) {
+                if (val === undefined) {
                   // This is not necessarily a bad thing it seems
                   // maybe undefined at the end of a line is not as bad (it seems that csv-stringify doesn't complete the trailing commas)
-                  // score -= 0.5
-                } else if (chunk[key].match(/^'.*'$/) || chunk[key].match(/^".*"$/)) {
-                  // still wrapped in separators, can probably do better
-                  score -= 1
-                } else if (chunk[key]) {
+                  // debug('Undefined property, score -= 0.1')
+                  // score -= 0.1
+                } else if (val) {
                   // having many none empty values is a good sign
+                  debug('Filled value, score += 1')
                   score += 1
+
+                  // value is prefixed/suffixed with a potential separator, probably missed it
+                  if (possibleQuoteChars.includes(val[0])) {
+                    debug('Starting with potential quote char, score -= 1')
+                    score -= 1
+                  }
+                  if (possibleQuoteChars.includes(val[val.length - 1])) {
+                    debug('Starting with potential quote char, score -= 1')
+                    score -= 1
+                  }
                 }
               })
               callback()
@@ -54,7 +68,7 @@ exports.sniff = async (sample) => {
     }
   }
   const bestCombination = combinations.sort((a, b) => b.score - a.score)[0]
-  // console.log(combinations)
+  debug(combinations)
   const result = bestCombination.props
   if (!result.labels || !result.labels.length) throw new Error('Échec de l\'analyse du fichier tabulaire, pas de colonne détectée.')
 

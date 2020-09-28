@@ -112,4 +112,14 @@ describe('CSV cases', () => {
     assert.equal(res.data.total, 35)
     assert.equal(res.data.results[0]['Description_-_FR'], 'Elisabeth Berthon, feutrière styliste-modéliste, vous fera découvrir son atelier de créations et son travail sur le feutre et la soie')
   })
+
+  it('A CSV with commas in quotes', async () => {
+    const ax = global.ax.dmeadus
+    const dataset = await testUtils.sendDataset('calendar.csv', ax)
+    assert.equal(dataset.status, 'finalized')
+    assert.equal(dataset.file.props.linesDelimiter, '\n')
+    assert.equal(dataset.file.props.escapeChar, '"')
+    assert.equal(dataset.file.props.quote, '"')
+    assert.equal(dataset.file.props.fieldsDelimiter, ',')
+  })
 })
