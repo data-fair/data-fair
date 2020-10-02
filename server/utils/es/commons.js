@@ -230,7 +230,7 @@ exports.prepareResultItem = (hit, dataset, query) => {
     if (!imageField) throw createError(400, 'Thumbnail management is only available if the "image" concept is associated to a field of the dataset.')
     if (res[imageField.key]) {
       const ignoreThumbor = dataset.attachmentsAsImage && !permissions.isPublic('datasets', dataset)
-      res._thumbnail = ignoreThumbor ? res[imageField.key] : thumbor.thumbnail(res[imageField.key], query.thumbnail)
+      res._thumbnail = ignoreThumbor ? res[imageField.key] : thumbor.thumbnail(res[imageField.key], query.thumbnail, dataset.thumbnails)
     }
   }
   // Description can be used as html content in some applications, we must sanitize it for XSS prevention

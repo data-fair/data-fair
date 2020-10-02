@@ -111,6 +111,7 @@
               </v-tab>
               <v-tab-item value="tab-preview-thumbnails">
                 <v-container fluid>
+                  <dataset-thumbnails-opts v-if="can('writeDescription')" />
                   <dataset-thumbnails />
                 </v-container>
               </v-tab-item>
@@ -221,6 +222,7 @@
   import DatasetVirtual from '~/components/datasets/virtual.vue'
   import DatasetSearchFiles from '~/components/datasets/search-files.vue'
   import DatasetThumbnails from '~/components/datasets/thumbnails.vue'
+  import DatasetThumbnailsOpts from '~/components/datasets/thumbnails-opts.vue'
   import DatasetPublications from '~/components/datasets/publications.vue'
   import DatasetStatus from '~/components/datasets/status.vue'
   import DatasetApplications from '~/components/datasets/applications.vue'
@@ -242,6 +244,7 @@
       DatasetVirtual,
       DatasetSearchFiles,
       DatasetThumbnails,
+      DatasetThumbnailsOpts,
       DatasetPublications,
       DatasetStatus,
       DatasetApplications,

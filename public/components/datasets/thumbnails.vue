@@ -52,8 +52,8 @@
           <v-col
             v-for="(item, i) in data.results"
             :key="i"
-            lg="2"
-            md="3"
+            lg="3"
+            md="4"
             sm="6"
             cols="12"
           >
@@ -61,8 +61,9 @@
               <v-img
                 :src="item._thumbnail"
                 :height="thumbnailHeight"
+                :contain="dataset.thumbnails && dataset.thumbnails.resizeMode === 'fitIn'"
               />
-              <v-card-title primary-title>
+              <v-card-title primary-title v-if="labelField || descriptionField">
                 <div>
                   <h3
                     v-if="labelField"
@@ -122,6 +123,9 @@
     },
     watch: {
       'dataset.schema'() {
+        this.refresh()
+      },
+      'dataset.thumbnails'() {
         this.refresh()
       },
       pagination: {

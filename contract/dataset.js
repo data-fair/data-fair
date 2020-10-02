@@ -401,6 +401,17 @@ module.exports = {
       'x-itemTitle': 'title',
       items: topic,
     },
+    thumbnails: {
+      type: 'object',
+      properties: {
+        resizeMode: {
+          type: 'string',
+          description: 'Define how the thumbnails will be adapted to the size requested by visualizations',
+          enum: ['crop', 'smartCrop', 'fitIn'],
+          default: 'crop',
+        },
+      },
+    },
     extras: {
       type: 'object',
       description: 'An object for extra content from client services of data-fair',

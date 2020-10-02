@@ -103,6 +103,7 @@ export default () => ({
       })
       Vue.set(dataset, 'extensions', extensions)
       Vue.set(dataset, 'schema', dataset.schema || [])
+      Vue.set(dataset, 'thumbnails', dataset.thumbnails || { resizeMode: 'crop', trim: false })
       Vue.set(dataset, 'publications', dataset.publications || [])
       commit('setAny', { dataset })
     },
