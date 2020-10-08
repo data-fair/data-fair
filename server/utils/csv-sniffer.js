@@ -45,14 +45,14 @@ exports.sniff = async (sample) => {
                   debug('Filled value, score += 1')
                   score += 1
 
-                  // value is prefixed/suffixed with a potential separator, probably missed it
+                  // value is prefixed/suffixed with a potential quote, probably missed it
                   if (possibleQuoteChars.includes(val[0])) {
-                    debug('Starting with potential quote char, score -= 1')
-                    score -= 1
+                    debug('Starting with potential quote char, score -= 2')
+                    score -= 2
                   }
                   if (possibleQuoteChars.includes(val[val.length - 1])) {
-                    debug('Starting with potential quote char, score -= 1')
-                    score -= 1
+                    debug('Ending with potential quote char, score -= 2')
+                    score -= 2
                   }
                 }
               })
@@ -62,6 +62,7 @@ exports.sniff = async (sample) => {
           parser.write(lines.join(ld))
           parser.end()
           await parsePromise
+          debug('score', score)
           combinations.push({ props: { fieldsDelimiter: fd, quote: qc, escapeChar: ec, linesDelimiter: ld, labels }, score })
         }
       }

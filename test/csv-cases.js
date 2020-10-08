@@ -122,4 +122,16 @@ describe('CSV cases', () => {
     assert.equal(dataset.file.props.quote, '"')
     assert.equal(dataset.file.props.fieldsDelimiter, ',')
   })
+
+  it('A CSV with weird mixes of single / double quotes and linebreaks', async () => {
+    const ax = global.ax.dmeadus
+    const dataset = await testUtils.sendDataset('csv-cases/Demarches_Libres.csv', ax)
+    assert.equal(dataset.status, 'finalized')
+    assert.equal(dataset.file.props.linesDelimiter, '\n')
+    assert.equal(dataset.file.props.escapeChar, '"')
+    assert.equal(dataset.file.props.quote, '"')
+    assert.equal(dataset.file.props.fieldsDelimiter, ';')
+    const res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
+    assert.equal(res.data.results[0].id, 800)
+  })
 })
