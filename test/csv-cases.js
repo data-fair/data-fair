@@ -9,6 +9,7 @@ describe('CSV cases', () => {
   after(() => {
     delete process.env.NO_STORAGE_CHECK
   })
+
   it('Process newly uploaded CSV dataset', async () => {
     const ax = global.ax.dmeadus
     const dataset = await testUtils.sendDataset('2018-08-30_Type_qualificatif.csv', ax)
@@ -133,5 +134,17 @@ describe('CSV cases', () => {
     assert.equal(dataset.file.props.fieldsDelimiter, ';')
     const res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
     assert.equal(res.data.results[0].id, 800)
+  })
+
+  it('A CSV with values containing many line breaks', async () => {
+    const ax = global.ax.dmeadus
+    const dataset = await testUtils.sendDataset('csv-cases/Fiches_Action.csv', ax)
+    assert.equal(dataset.status, 'finalized')
+    assert.equal(dataset.file.props.linesDelimiter, '\n')
+    assert.equal(dataset.file.props.escapeChar, '"')
+    assert.equal(dataset.file.props.quote, '"')
+    assert.equal(dataset.file.props.fieldsDelimiter, ';')
+    const res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
+    assert.equal(res.data.results[0].Id_action, 1)
   })
 })
