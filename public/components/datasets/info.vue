@@ -14,7 +14,7 @@
             <v-list-item-avatar class="ml-0 my-0">
               <v-icon>mdi-file</v-icon>
             </v-list-item-avatar>
-            <span>{{ (dataset.remoteFile || dataset.originalFile || dataset.file).name }} {{ ((dataset.remoteFile || dataset.originalFile || dataset.file).size / 1000) | displayBytes }}</span>
+            <span>{{ (dataset.remoteFile || dataset.originalFile || dataset.file).name }} {{ ((dataset.remoteFile || dataset.originalFile || dataset.file).size) | displayBytes }}</span>
           </v-list-item>
 
           <v-list-item
