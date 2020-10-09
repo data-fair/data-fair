@@ -4,7 +4,9 @@ const ajv = new Ajv()
 exports.sniff = (values, attachmentsPaths = [], existingField) => {
   if (existingField && existingField.ignoreDetection) return { type: 'string' }
 
-  if (checkAll(values, isOneOf, attachmentsPaths)) return { type: 'string', 'x-refersTo': 'http://schema.org/DigitalDocument' }
+  if (attachmentsPaths && attachmentsPaths.length && checkAll(values, isOneOf, attachmentsPaths, 'Vous avez chargé des pièces jointes, et une colonne semble contenir des chemins vers ces pièces jointes. Mais certaines valeurs sont erronées.')) {
+    return { type: 'string', 'x-refersTo': 'http://schema.org/DigitalDocument' }
+  }
   if (checkAll(values, val => booleanRegexp.test(val))) return { type: 'boolean' }
   if (checkAll(values, val => intRegexp.test(val))) return { type: 'integer' }
   if (checkAll(values, val => floatRegexp.test(val))) return { type: 'number' }
@@ -32,15 +34,34 @@ exports.escapeKey = (key) => {
   return key
 }
 
-function checkAll(values, check, param) {
+function checkAll(values, check, param, throwIfAlmost) {
   const definedValues = [...values].filter(v => !!v)
   if (!definedValues.length) return false
+  const invalidValues = []
+  const validValues = []
   for (const value of definedValues) {
-    if (!check(value.trim(), param)) {
-      return false
+    if (check(value.trim(), param)) {
+      validValues.push(value)
+    } else {
+      invalidValues.push(value)
     }
   }
-  return true
+  if (throwIfAlmost) {
+    console.log(definedValues)
+    console.log(validValues)
+    console.log(invalidValues)
+  }
+  if (throwIfAlmost) {
+    if (invalidValues.length && invalidValues.length <= (definedValues.length / 2)) {
+      const invalidValuesMsg = invalidValues.slice(0, 3).join(', ') + (invalidValues.length > 3 ? '...' : '.')
+      const validValuesMsg = validValues.slice(0, 3).join(', ') + (validValues.length > 3 ? '...' : '.')
+      throw new Error(`${throwIfAlmost}
+Valeurs invalides : ${invalidValuesMsg}
+Valeurs valides : ${validValuesMsg}
+`)
+    }
+  }
+  return !invalidValues.length
 }
 
 // underscore is accepted and ignored around numbers and booleans

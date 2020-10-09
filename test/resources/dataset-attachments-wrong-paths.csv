@@ -1,0 +1,5 @@
+attachment,comment,date
+test.odt,"an ODT file",2017-12-12
+dir1/test.pdf,"a PDF file",2018-12-12
+BADFILE.txt,"a file that does not exist in attachments",2018-12-12
+,no attachment on this line,2020-01-13

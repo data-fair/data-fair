@@ -35,6 +35,9 @@ exports.process = async function(app, dataset) {
       const existingField = dataset.schema && dataset.schema.find(f => f.key === escapedKey)
       Object.assign(fileField, fieldsSniffer.sniff(myCSVObject[field], attachments, existingField))
     })
+  if (attachments.length && !dataset.file.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')) {
+    throw new Error('Vous avez chargé des pièces jointes, mais aucune colonne ne contient les chemins vers ces pièces jointes.')
+  }
 
   dataset.schema = dataset.schema || []
   // Remove fields present in the stored schema, when absent from the raw file schema and not coming from extension

@@ -62,4 +62,43 @@ describe('Attachments', () => {
     assert.ok(odtItem)
     assert.equal(odtItem['_file.content'], 'This is a test libreoffice file.')
   })
+
+  it('Detect wrong attachment path', async () => {
+    const ax = global.ax.cdurning2
+
+    // Send dataset with a CSV and attachments in an archive
+    const form = new FormData()
+    form.append('dataset', fs.readFileSync('./test/resources/dataset-attachments-wrong-paths.csv'), 'dataset-attachments-wrong-paths.csv')
+    form.append('attachments', fs.readFileSync('./test/resources/files.zip'), 'files.zip')
+    const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
+    const dataset = res.data
+    assert.equal(res.status, 201)
+
+    try {
+      await workers.hook(`finalizer/${dataset.id}`)
+      assert.fail()
+    } catch (err) {
+      assert.ok(err.message.includes('une colonne semble contenir des chemins'))
+      assert.ok(err.message.includes('Valeurs invalides : BADFILE.txt'))
+    }
+  })
+
+  it('Detect missing attachment paths', async () => {
+    const ax = global.ax.cdurning2
+
+    // Send dataset with a CSV and attachments in an archive
+    const form = new FormData()
+    form.append('dataset', fs.readFileSync('./test/resources/dataset-attachments-no-paths.csv'), 'dataset-attachments-no-paths.csv')
+    form.append('attachments', fs.readFileSync('./test/resources/files.zip'), 'files.zip')
+    const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
+    const dataset = res.data
+    assert.equal(res.status, 201)
+
+    try {
+      await workers.hook(`finalizer/${dataset.id}`)
+      assert.fail()
+    } catch (err) {
+      assert.ok(err.message.includes('aucune colonne ne contient les chemins'))
+    }
+  })
 })
