@@ -406,6 +406,12 @@ router.post('', beforeUpload, checkStorage(true), filesUtils.uploadFile(validate
     const attachmentsFile = req.files.find(f => f.fieldname === 'attachments')
     if (datasetFile) {
       if (req.body.isVirtual) throw createError(400, 'Un jeu de données virtuel ne peut pas être initialisé avec un fichier')
+
+      // send header at this point, then asyncWrap keepalive option will keep request alive while we process files
+      // TODO: do this in a worker instead ?
+      res.writeHeader(201, { 'Content-Type': 'application/json' })
+      res.write(' ')
+
       dataset = await setFileInfo(db, datasetFile, attachmentsFile, initNew(req))
       await db.collection('datasets').insertOne(dataset)
     } else if (req.body.isVirtual) {
@@ -453,7 +459,7 @@ router.post('', beforeUpload, checkStorage(true), filesUtils.uploadFile(validate
     }
     throw err
   }
-}))
+}, { keepalive: true }))
 
 // PUT or POST with an id to create or update an existing dataset data
 const attemptInsert = asyncWrap(async(req, res, next) => {
@@ -490,6 +496,11 @@ const updateDataset = asyncWrap(async(req, res) => {
 
     let dataset = req.dataset
     if (datasetFile) {
+      // send header at this point, then asyncWrap keepalive option will keep request alive while we process files
+      // TODO: do this in a worker instead ?
+      res.writeHeader(req.isNewDataset ? 201 : 200, { 'Content-Type': 'application/json' })
+      res.write(' ')
+
       dataset = await setFileInfo(db, datasetFile, attachmentsFile, req.dataset)
     } else if (dataset.isVirtual) {
       const { isVirtual, ...patch } = req.body
@@ -525,7 +536,7 @@ const updateDataset = asyncWrap(async(req, res) => {
     }
     throw err
   }
-})
+}, { keepalive: true })
 router.post('/:datasetId', attemptInsert, readDataset(['finalized', 'error']), permissions.middleware('writeData', 'write'), checkStorage(true), filesUtils.uploadFile(validatePatch), updateDataset)
 router.put('/:datasetId', attemptInsert, readDataset(['finalized', 'error']), permissions.middleware('writeData', 'write'), checkStorage(true), filesUtils.uploadFile(validatePatch), updateDataset)
 
