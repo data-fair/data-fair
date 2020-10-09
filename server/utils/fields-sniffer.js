@@ -47,11 +47,6 @@ function checkAll(values, check, param, throwIfAlmost) {
     }
   }
   if (throwIfAlmost) {
-    console.log(definedValues)
-    console.log(validValues)
-    console.log(invalidValues)
-  }
-  if (throwIfAlmost) {
     if (invalidValues.length && invalidValues.length <= (definedValues.length / 2)) {
       const invalidValuesMsg = invalidValues.slice(0, 3).join(', ') + (invalidValues.length > 3 ? '...' : '.')
       const validValuesMsg = validValues.slice(0, 3).join(', ') + (validValues.length > 3 ? '...' : '.')

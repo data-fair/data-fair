@@ -36,7 +36,7 @@ exports.process = async function(app, dataset) {
       Object.assign(fileField, fieldsSniffer.sniff(myCSVObject[field], attachments, existingField))
     })
   if (attachments.length && !dataset.file.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')) {
-    throw new Error('Vous avez chargé des pièces jointes, mais aucune colonne ne contient les chemins vers ces pièces jointes.')
+    throw new Error(`Vous avez chargé des pièces jointes, mais aucune colonne ne contient les chemins vers ces pièces jointes. Valeurs attendues : ${attachments.slice(0, 3).join(', ')}.`)
   }
 
   dataset.schema = dataset.schema || []
