@@ -13,6 +13,8 @@ module.exports = {
   openapiViewerUrl: `http://${host}:5600/openapi-viewer/`,
   captureUrl: `http://${host}:5600/capture`,
   privateCaptureUrl: 'http://localhost:8087',
+  notifyUrl: `http://${host}:5600/notify`,
+  privateNotifyUrl: 'http://localhost:8088',
   defaultLimits: {
     totalStorage: 1000000000,
     datasetStorage: -1,
@@ -28,6 +30,7 @@ module.exports = {
   */
   secretKeys: {
     identities: 'dev_secret',
+    notifications: 'secret-notifications',
   },
   cache: {
     disabled: true,

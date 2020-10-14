@@ -2,15 +2,26 @@ const axios = require('axios')
 const config = require('config')
 const ua = require('universal-analytics')
 const events = require('../../shared/events.json')
+const notifications = require('./notifications')
 const debug = require('debug')('webhooks')
 
 exports.trigger = async (db, type, resource, event) => {
+  const eventType = events[type][event.type]
+
+  // first send notifications before actual webhooks
+  notifications.send({
+    sender: resource.owner,
+    topic: { key: `data-fair:${type}-${event.type}` },
+    title: (resource.title || resource.id) + ' - ' + eventType.text,
+    body: event.data || '',
+  })
+
   const settings = await db.collection('settings').findOne({ id: resource.owner.id, type: resource.owner.type }) || {}
   settings.webhooks = settings.webhooks || []
   for (const webhook of settings.webhooks) {
     if (webhook.events && webhook.events.length && !webhook.events.includes(`${type}-${event.type}`)) return
     debug(`Trigger webhook for event ${event.type}`, webhook)
-    const eventType = events[type][event.type]
+
     const href = `${config.publicUrl}/api/v1/${type}s/${resource.id}`
     try {
       // Simple HTTP POST (mattermost, etc.)

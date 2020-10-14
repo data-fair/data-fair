@@ -60,6 +60,17 @@ services:
       - STORAGE_EXPIRATION_SECONDS=600
       - MAX_AGE=600
 
+  notify:
+    image: koumoul/notify:master
+    network_mode: host
+    environment:
+      - PORT=8088
+      - PUBLIC_URL=http://localhost:5600/notify
+      - WS_PUBLIC_URL=ws://localhost:5600/notify
+      - DIRECTORY_URL=http://localhost:5600/simple-directory
+      - SECRET_NOTIFICATIONS=secret-notifications
+      - SECRET_SENDMAILS=secret-sendmails
+
 volumes:
   elasticsearch-data:
   mongo-data:

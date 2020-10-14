@@ -11,6 +11,8 @@ module.exports = {
   openapiViewerUrl: 'https://koumoul.com/openapi-viewer/',
   captureUrl: 'http://capture:8080',
   privateCaptureUrl: null,
+  notifyUrl: null,
+  privateNotifyUrl: null,
   pluginsDir: './plugins',
   mongoUrl: 'mongodb://localhost:27017/data-fair-' + (process.env.NODE_ENV || 'development'),
   map: {
@@ -124,6 +126,7 @@ module.exports = {
   secretKeys: {
     identities: null,
     limits: null,
+    notifications: null,
   },
   // Configure outgoing http calls
   globalWebhooks: {

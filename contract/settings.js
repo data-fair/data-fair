@@ -64,7 +64,7 @@ module.exports = {
                 title: 'Une réutilisation a rencontré une erreur',
               }, {
                 const: 'application-publication',
-                title: 'Une réutilisation a été publiée sur un catalogue rencontré une erreur',
+                title: 'Une réutilisation a été publiée sur un catalogue',
               }],
             },
           },

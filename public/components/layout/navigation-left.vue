@@ -80,6 +80,15 @@
       </v-list-item>
 
       <v-list-item
+        v-if="user && env.notifyUrl"
+        :nuxt="true"
+        :to="`/notifications`"
+      >
+        <v-list-item-action><v-icon>mdi-bell-plus</v-icon></v-list-item-action>
+        <v-list-item-title>Notifications</v-list-item-title>
+      </v-list-item>
+
+      <v-list-item
         v-if="canAdmin"
         :nuxt="true"
         to="/settings"

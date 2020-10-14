@@ -81,6 +81,7 @@ module.exports = {
     browserLogLevel: config.browserLogLevel,
     analytics: config.analytics,
     captureUrl: config.captureUrl,
+    notifyUrl: config.notifyUrl,
     theme: config.theme,
     baseAppsCategories: config.baseAppsCategories,
     datasetUrlTemplate: config.datasetUrlTemplate,

@@ -9,6 +9,8 @@ module.exports = {
   openapiViewerUrl: 'OPENAPI_VIEWER_URL',
   captureUrl: 'CAPTURE_URL',
   privateCaptureUrl: 'PRIVATE_CAPTURE_URL',
+  notifyUrl: 'NOTIFY_URL',
+  privateNotifyUrl: 'PRIVATE_NOTIFY_URL',
   mongoUrl: 'MONGO_URL',
   analytics: {
     __name: 'ANALYTICS',
@@ -32,6 +34,7 @@ module.exports = {
   secretKeys: {
     identities: 'SECRET_IDENTITIES',
     limits: 'SECRET_LIMITS',
+    notifications: 'SECRET_NOTIFICATIONS',
   },
   globalWebhooks: {
     consumption: {
