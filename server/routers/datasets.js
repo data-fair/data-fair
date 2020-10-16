@@ -526,7 +526,7 @@ const updateDataset = asyncWrap(async(req, res) => {
     dataset.updatedAt = moment().toISOString()
     await db.collection('datasets').replaceOne({ id: req.params.datasetId }, dataset)
     if (req.isNewDataset) await journals.log(req.app, dataset, { type: 'dataset-created' }, 'dataset')
-    else await journals.log(req.app, dataset, { type: 'dataset-updated' }, 'dataset')
+    else await journals.log(req.app, dataset, { type: 'data-updated' }, 'dataset')
     await datasetUtils.updateStorage(db, req.dataset)
     res.status(req.isNewDataset ? 201 : 200).send(clean(dataset))
   } catch (err) {
