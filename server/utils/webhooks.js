@@ -7,7 +7,7 @@ const debug = require('debug')('webhooks')
 
 exports.trigger = async (db, type, resource, event) => {
   const eventType = events[type][event.type]
-  if (!eventType) return console.log('Unknown event type', type, event.type)
+  if (!eventType) return console.error('Unknown event type', type, event.type)
   // first send notifications before actual webhooks
   notifications.send({
     sender: resource.owner,

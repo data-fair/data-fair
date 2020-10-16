@@ -209,7 +209,7 @@ describe('datasets', () => {
     let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
     assert.equal(res.status, 201)
 
-    const webhook = await eventToPromise(notifier, 'webhook')
+    const webhook = await testUtils.timeout(eventToPromise(notifier, 'webhook'), 1000, 'webhook not received')
     res = await ax.get(webhook.href + '/api-docs.json')
     assert.equal(res.status, 200)
     assert.equal(res.data.openapi, '3.0.0')
@@ -226,10 +226,10 @@ describe('datasets', () => {
     res = await ax.post(webhook.href, form, { headers: testUtils.formHeaders(form) })
 
     assert.equal(res.status, 200)
-    const wsRes = await eventToPromise(wsCli, 'message')
+    const wsRes = await testUtils.timeout(eventToPromise(wsCli, 'message'), 1000, 'ws message not received')
 
     assert.equal(JSON.parse(wsRes.data).channel, 'datasets/' + datasetId + '/journal')
-    await eventToPromise(notifier, 'webhook')
+    await testUtils.timeout(eventToPromise(notifier, 'webhook'), 1000, 'second webhook not received')
     res = await ax.get('/api/v1/datasets/' + datasetId + '/journal')
 
     assert.equal(res.data.length, 18)
@@ -257,7 +257,8 @@ describe('datasets', () => {
     schema.find(field => field.key === 'lon')['x-refersTo'] = 'http://schema.org/longitude'
     await ax.patch(webhook.href, { schema: schema })
 
-    await eventToPromise(notifier, 'webhook')
+    console.log('HAHA')
+    await testUtils.timeout(eventToPromise(notifier, 'webhook'), 4000, 'third webhook not received')
 
     // Delete the dataset
     res = await ax.delete('/api/v1/datasets/' + datasetId)
