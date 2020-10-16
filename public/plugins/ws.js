@@ -1,9 +1,10 @@
 import ReconnectingWebSocket from 'reconnecting-websocket'
 import eventBus from '~/event-bus'
 
-export default ({ env }) => {
+function configureWS (wsUrl, suffix = '') {
+  console.log('Configure WS', wsUrl)
   if (window.WebSocket) {
-    const ws = new ReconnectingWebSocket(env.wsPublicUrl)
+    const ws = new ReconnectingWebSocket(wsUrl)
     const subscriptions = {}
     let ready = false
     ws.addEventListener('open', () => {
@@ -17,11 +18,11 @@ export default ({ env }) => {
       ready = false
     })
 
-    eventBus.$on('subscribe', channel => {
+    eventBus.$on('subscribe' + suffix, channel => {
       subscriptions[channel] = true
       if (ready) ws.send(JSON.stringify({ type: 'subscribe', channel }))
     })
-    eventBus.$on('unsubscribe', channel => {
+    eventBus.$on('unsubscribe' + suffix, channel => {
       subscriptions[channel] = false
       if (ready) ws.send(JSON.stringify({ type: 'unsubscribe', channel }))
     })
@@ -31,6 +32,16 @@ export default ({ env }) => {
       if (body.type === 'message') {
         eventBus.$emit(body.channel, body.data)
       }
+      if (body.type === 'error' && body.data === 'authentication is required') {
+        ws.close()
+        // console.log(body)
+        // eventBus.$emit(body.channel, body.data)
+      }
     }
   }
+}
+
+export default ({ store, env }) => {
+  configureWS(env.wsPublicUrl)
+  configureWS(env.notifyWSUrl, '-notify')
 }

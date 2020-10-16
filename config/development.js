@@ -15,6 +15,7 @@ module.exports = {
   privateCaptureUrl: 'http://localhost:8087',
   notifyUrl: `http://${host}:5600/notify`,
   privateNotifyUrl: 'http://localhost:8088',
+  notifyWSUrl: 'ws://localhost:8088',
   defaultLimits: {
     totalStorage: 1000000000,
     datasetStorage: -1,

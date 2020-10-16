@@ -23,6 +23,15 @@ module.exports = {
     extend (config, { isServer, isDev, isClient }) {
       // Ignore all locale files of moment.js, those we want are loaded in plugins/moment.js
       config.plugins.push(new webpack.IgnorePlugin(/^\.\/locale$/, /moment$/))
+
+      // Loader for sounds
+      config.module.rules.push({
+        test: /\.(ogg|mp3|wav|mpe?g)$/i,
+        loader: 'file-loader',
+        options: {
+          name: '[path][name].[ext]',
+        },
+      })
     },
   },
   loading: { color: '#1e88e5' }, // Customize the progress bar color
@@ -82,6 +91,7 @@ module.exports = {
     analytics: config.analytics,
     captureUrl: config.captureUrl,
     notifyUrl: config.notifyUrl,
+    notifyWSUrl: config.notifyWSUrl,
     theme: config.theme,
     baseAppsCategories: config.baseAppsCategories,
     datasetUrlTemplate: config.datasetUrlTemplate,

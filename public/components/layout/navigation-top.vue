@@ -12,6 +12,7 @@
     />
     <v-spacer />
     <v-toolbar-items>
+      <notifications-queue v-if="user && env.notifyUrl" :notify-url="env.notifyUrl" />
       <template v-if="initialized">
         <v-btn
           v-if="!user"
@@ -25,6 +26,7 @@
           v-else
           offset-y
           nudge-left
+          max-height="500"
         >
           <template v-slot:activator="{on}">
             <v-btn
@@ -112,7 +114,10 @@
 
 <script>
   import { mapState, mapGetters, mapActions } from 'vuex'
+  import NotificationsQueue from '~/components/notifications-queue'
+
   export default {
+    components: { NotificationsQueue },
     computed: {
       ...mapState(['env', 'breadcrumbItems', 'breadcrumbsRouteName']),
       ...mapState('session', ['user', 'initialized']),
