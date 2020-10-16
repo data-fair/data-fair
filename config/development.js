@@ -76,4 +76,6 @@ module.exports = {
     settings: 'https://koumoul.com/documentation/userguide/parameters',
     catalogs: 'https://koumoul.com/documentation/userguide/catalogs',
   }, */
+  extraNavigationItems: [{ id: 'test', title: 'Test', iframe: 'https://koumoul.com', icon: 'mdi-link' }],
+  extraAdminNavigationItems: [{ id: 'test', title: 'Test admin', iframe: 'https://koumoul.com', icon: 'mdi-link' }],
 }

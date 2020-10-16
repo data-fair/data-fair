@@ -97,6 +97,8 @@ module.exports = {
     datasetUrlTemplate: config.datasetUrlTemplate,
     applicationUrlTemplate: config.applicationUrlTemplate,
     doc: config.doc,
+    extraNavigationItems: config.extraNavigationItems,
+    extraAdminNavigationItems: config.extraAdminNavigationItems,
   },
   head: {
     title: config.brand.title,

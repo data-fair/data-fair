@@ -237,4 +237,6 @@ module.exports = {
     settings: null,
     catalogs: null,
   },
+  extraNavigationItems: [],
+  extraAdminNavigationItems: [],
 }

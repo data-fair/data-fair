@@ -122,4 +122,12 @@ module.exports = {
     settings: 'DOC_SETTINGS',
     catalogs: 'DOC_CATALOGS',
   },
+  extraNavigationItems: {
+    __name: 'EXTRA_NAV_ITEMS',
+    __format: 'json',
+  },
+  extraAdminNavigationItems: {
+    __name: 'EXTRA_ADMIN_NAV_ITEMS',
+    __format: 'json',
+  },
 }

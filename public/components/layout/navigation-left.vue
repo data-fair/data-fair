@@ -58,6 +58,20 @@
         <v-list-item-action><v-icon>mdi-account-supervisor</v-icon></v-list-item-action>
         <v-list-item-title>Gestion des comptes</v-list-item-title>
       </v-list-item>
+
+      <template v-if="env.extraAdminNavigationItems">
+        <v-list-item
+          v-for="extra in env.extraAdminNavigationItems"
+          :key="extra.id"
+          :nuxt="!!extra.iframe"
+          :to="extra.iframe && `/admin-extra/${extra.id}`"
+          :href="extra.href"
+        >
+          <v-list-item-action><v-icon>{{extra.icon}}</v-icon></v-list-item-action>
+          <v-list-item-title>{{extra.title}}</v-list-item-title>
+        </v-list-item>
+      </template>
+    </v-list>
     </v-list>
 
     <v-list class="pt-0">
@@ -115,6 +129,20 @@
         <v-list-item-action><v-icon>mdi-transit-connection</v-icon></v-list-item-action>
         <v-list-item-title>Connecteurs</v-list-item-title>
       </v-list-item>
+
+      <template v-if="env.extraNavigationItems">
+        <v-list-item
+          v-for="extra in env.extraNavigationItems"
+          :key="extra.id"
+          v-if="!extra.can || (extra.can === 'contrib' && canContrib) || (extra.can === 'admin' && canAdmin)"
+          :nuxt="!!extra.iframe"
+          :to="extra.iframe && `/extra/${extra.id}`"
+          :href="extra.href"
+        >
+          <v-list-item-action><v-icon>{{extra.icon}}</v-icon></v-list-item-action>
+          <v-list-item-title>{{extra.title}}</v-list-item-title>
+        </v-list-item>
+      </template>
     </v-list>
 
     <v-footer absolute color="transparent">
