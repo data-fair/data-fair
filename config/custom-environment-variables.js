@@ -11,6 +11,7 @@ module.exports = {
   privateCaptureUrl: 'PRIVATE_CAPTURE_URL',
   notifyUrl: 'NOTIFY_URL',
   privateNotifyUrl: 'PRIVATE_NOTIFY_URL',
+  notifyWSUrl: 'NOTIFY_WS_URL',
   mongoUrl: 'MONGO_URL',
   analytics: {
     __name: 'ANALYTICS',
