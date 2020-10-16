@@ -63,7 +63,7 @@
                 :height="thumbnailHeight"
                 :contain="dataset.thumbnails && dataset.thumbnails.resizeMode === 'fitIn'"
               />
-              <v-card-title primary-title v-if="labelField || descriptionField">
+              <v-card-title v-if="labelField || descriptionField" primary-title>
                 <div>
                   <h3
                     v-if="labelField"

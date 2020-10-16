@@ -67,11 +67,10 @@
           :to="extra.iframe && `/admin-extra/${extra.id}`"
           :href="extra.href"
         >
-          <v-list-item-action><v-icon>{{extra.icon}}</v-icon></v-list-item-action>
-          <v-list-item-title>{{extra.title}}</v-list-item-title>
+          <v-list-item-action><v-icon>{{ extra.icon }}</v-icon></v-list-item-action>
+          <v-list-item-title>{{ extra.title }}</v-list-item-title>
         </v-list-item>
       </template>
-    </v-list>
     </v-list>
 
     <v-list class="pt-0">
@@ -132,15 +131,14 @@
 
       <template v-if="env.extraNavigationItems">
         <v-list-item
-          v-for="extra in env.extraNavigationItems"
+          v-for="extra in env.extraNavigationItems.filter(extra => !extra.can || (extra.can === 'contrib' && canContrib) || (extra.can === 'admin' && canAdmin))"
           :key="extra.id"
-          v-if="!extra.can || (extra.can === 'contrib' && canContrib) || (extra.can === 'admin' && canAdmin)"
           :nuxt="!!extra.iframe"
           :to="extra.iframe && `/extra/${extra.id}`"
           :href="extra.href"
         >
-          <v-list-item-action><v-icon>{{extra.icon}}</v-icon></v-list-item-action>
-          <v-list-item-title>{{extra.title}}</v-list-item-title>
+          <v-list-item-action><v-icon>{{ extra.icon }}</v-icon></v-list-item-action>
+          <v-list-item-title>{{ extra.title }}</v-list-item-title>
         </v-list-item>
       </template>
     </v-list>
