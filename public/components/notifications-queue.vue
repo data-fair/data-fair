@@ -14,7 +14,7 @@
       >
         <v-badge
           :content="countNew"
-          :value="countNew"
+          :value="!!countNew"
           color="pink"
           overlap
         >
@@ -44,7 +44,7 @@
             <v-list-item-subtitle>{{ notif.body }}</v-list-item-subtitle>
           </v-list-item-content>
           <v-list-item-action>
-            <owner-short :owner="notif.sender" />
+            <owner-short v-if="notif.sender" :owner="notif.sender" />
           </v-list-item-action>
         </v-list-item>
       </v-list-item-group>
