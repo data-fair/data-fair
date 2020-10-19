@@ -11,19 +11,24 @@ exports.middleware = function(operationId, permissionClass) {
     if (req.method === 'GET' && req.bypassPermission) return next()
     if (!exports.can(req.resourceType, req.resource, operationId, req.user)) {
       res.status(403)
-      if (req.user) {
-        if (
-          (req.resource.owner.type === 'user' && req.user.id === req.resource.owner.id) ||
-          (req.resource.owner.type === 'organization' && req.user.organizations.find(o => o.id === req.resource.owner.id) && req.resource.owner.id !== req.user.activeAccount.id)
-        ) {
-          // this can be used to handle automatic account switch or display better info with error message
-          res.set('x-owner', JSON.stringify(req.resource.owner))
+      const denomination = {
+        datasets: 'Le jeu de données',
+        applications: 'L\'application',
+        catalogs: 'Le connecteur',
+      }[req.resourceType]
+      if (req.user && operationId === 'readDescription' && denomination) {
+        if (req.resource.owner.type === 'user' && req.user.id === req.resource.owner.id) {
+          return res.send(`${denomination} ${req.resource.title} appartient à votre compte personnel mais vous avez sélectionné une organisation comme compte actif.
+    Sélectionnez votre compte personnel en tant que compte actif pour visualiser les informations.`)
+        }
+        if (req.resource.owner.type === 'organization' && req.user.organizations.find(o => o.id === req.resource.owner.id) && req.resource.owner.id !== req.user.activeAccount.id) {
+          return res.send(`${denomination} ${req.resource.title} appartient à l'organisation ${req.resource.owner.name} dont vous êtes membre.
+Sélectionnez l'organisation ${req.resource.owner.name} en tant que compte actif pour visualiser les informations.`)
         }
       }
       const operation = apiDocsUtil.operations(req.resourceApiDoc).find(o => o.id === operationId)
-      if (operation) res.send(`Permission manquante pour l'opération "${operation.title}" ou la catégorie "${permissionClass}".`)
-      else res.send(`Permission manquante pour cette opération ou la catégorie "${permissionClass}".`)
-      return
+      if (operation) return res.send(`Permission manquante pour l'opération "${operation.title}" ou la catégorie "${permissionClass}".`)
+      return res.send(`Permission manquante pour cette opération ou la catégorie "${permissionClass}".`)
     }
 
     // this is stored here to be used by cache headers utils to manage public cache

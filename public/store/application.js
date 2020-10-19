@@ -18,7 +18,6 @@ export default () => ({
     prodBaseApp: null,
     otherVersions: null,
     error: null, // error in initial info fetching
-    errorOwner: null,
   },
   getters: {
     resourceUrl: (state, getters, rootState) => state.applicationId ? rootState.env.publicUrl + '/api/v1/applications/' + state.applicationId : null,
@@ -65,7 +64,7 @@ export default () => ({
   },
   actions: {
     async fetchInfo({ commit, dispatch, getters, state }) {
-      commit('setAny', { error: null, errorOwner: null })
+      commit('setAny', { error: null })
       try {
         await dispatch('fetchApplication')
         await Promise.all([
@@ -78,10 +77,7 @@ export default () => ({
         if (getters.can('readJournal')) await dispatch('fetchJournal')
         await dispatch('fetchDatasets')
       } catch (error) {
-        if (error.response) {
-          commit('setAny', { error: error.response })
-          if (error.response.headers['x-owner']) commit('setAny', { errorOwner: JSON.parse(error.response.headers['x-owner']) })
-        }
+        if (error.response) commit('setAny', { error: error.response })
         console.log(error)
       }
     },

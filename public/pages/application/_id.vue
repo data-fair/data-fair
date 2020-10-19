@@ -5,18 +5,7 @@
       type="error"
       outlined
     >
-      <template v-if="error.status === 403">
-        Vous n'avez pas l'autorisation pour consulter les informations de cette visualisation.
-        <template v-if="errorOwner && errorOwner.type === 'user'">
-          Elle appartient à votre compte personnel mais vous avez sélectionné le compte {{ activeAccount.name }}.
-        </template>
-        <template v-if="errorOwner && errorOwner.type === 'organization'">
-          Elle appartient au compte {{ errorOwner.name }} dont vous êtes membre mais que vous n'avez pas sélectionné.
-        </template>
-      </template>
-      <template v-else>
-        {{ error.data }}
-      </template>
+      {{ error.data }}
     </v-alert>
     <template v-else>
       <doc-link
@@ -150,7 +139,7 @@
     }),
     computed: {
       ...mapState(['env']),
-      ...mapState('application', ['application', 'api', 'journal', 'prodBaseApp', 'error', 'errorOwner']),
+      ...mapState('application', ['application', 'api', 'journal', 'prodBaseApp', 'error']),
       ...mapGetters('application', ['resourceUrl', 'can', 'applicationLink', 'hasPrivateDatasets']),
     },
     created() {

@@ -10,6 +10,7 @@ export default () => ({
     api: null,
     // TODO: fetch nbPublications so we can display a warning when deleting
     nbPublications: null,
+    error: null,
   },
   getters: {
     resourceUrl: (state, getters, rootState) => state.catalogId ? rootState.env.publicUrl + '/api/v1/catalogs/' + state.catalogId : null,
@@ -28,13 +29,15 @@ export default () => ({
   },
   actions: {
     async fetchInfo({ commit, dispatch, getters, state }) {
+      commit('setAny', { error: null })
       try {
         const catalog = await this.$axios.$get(`api/v1/catalogs/${state.catalogId}`)
         commit('setAny', { catalog })
         const api = await this.$axios.$get(`api/v1/catalogs/${state.catalogId}/api-docs.json`)
         commit('setAny', { api })
       } catch (error) {
-        eventBus.$emit('notification', { error, msg: 'Erreur pendant la récupération des informations du catalogue:' })
+        if (error.response) commit('setAny', { error: error.response })
+        console.log(error)
       }
     },
     async setId({ commit, getters, dispatch, state }, catalogId) {

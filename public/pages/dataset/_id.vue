@@ -5,18 +5,7 @@
       type="error"
       outlined
     >
-      <template v-if="error.status === 403">
-        Vous n'avez pas l'autorisation pour consulter les informations de ce jeu de données.
-        <template v-if="errorOwner && errorOwner.type === 'user'">
-          Il appartient à votre compte personnel mais vous avez sélectionné le compte {{ activeAccount.name }}.
-        </template>
-        <template v-if="errorOwner && errorOwner.type === 'organization'">
-          Il appartient au compte {{ errorOwner.name }} dont vous êtes membre mais que vous n'avez pas sélectionné.
-        </template>
-      </template>
-      <template v-else>
-        {{ error.data }}
-      </template>
+      {{ error.data }}
     </v-alert>
     <template v-else>
       <v-row class="dataset">
@@ -281,7 +270,7 @@
     },
     data: () => ({}),
     computed: {
-      ...mapState('dataset', ['dataset', 'api', 'journal', 'error', 'errorOwner']),
+      ...mapState('dataset', ['dataset', 'api', 'journal', 'error']),
       ...mapGetters('dataset', ['resourceUrl', 'can', 'hasPublicApplications']),
       ...mapGetters('session', ['activeAccount']),
       fileProperty() {

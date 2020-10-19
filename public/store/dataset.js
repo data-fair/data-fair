@@ -33,7 +33,6 @@ export default () => ({
       error: 'error',
     },
     error: null, // error in initial info fetching
-    errorOwner: null,
   },
   getters: {
     resourceUrl: (state, getters, rootState) => state.datasetId ? rootState.env.publicUrl + '/api/v1/datasets/' + state.datasetId : null,
@@ -82,7 +81,7 @@ export default () => ({
   },
   actions: {
     async fetchInfo({ commit, dispatch, getters }) {
-      commit('setAny', { error: null, errorOwner: null })
+      commit('setAny', { error: null })
       try {
         await dispatch('fetchDataset')
         await Promise.all([
@@ -93,10 +92,7 @@ export default () => ({
         ])
         if (getters.can('readJournal')) await dispatch('fetchJournal')
       } catch (error) {
-        if (error.response) {
-          commit('setAny', { error: error.response })
-          if (error.response.headers['x-owner']) commit('setAny', { errorOwner: JSON.parse(error.response.headers['x-owner']) })
-        }
+        if (error.response) commit('setAny', { error: error.response })
         console.log(error)
       }
     },
