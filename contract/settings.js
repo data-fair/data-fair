@@ -42,6 +42,9 @@ module.exports = {
                 const: 'dataset-dataset-created',
                 title: 'Un nouveau jeu de données a été créé',
               }, {
+                const: 'dataset-data-updated',
+                title: 'Le fichier d\'un jeu de données a été mis à jour',
+              }, {
                 const: 'dataset-error',
                 title: 'Un jeu de données a rencontré une erreur',
               }, {
