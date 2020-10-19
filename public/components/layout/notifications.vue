@@ -37,7 +37,7 @@
         showSnackbar: false,
       }
     },
-    mounted() {
+    created() {
       eventBus.$on('notification', async notif => {
         this.showSnackbar = false
         await this.$nextTick()

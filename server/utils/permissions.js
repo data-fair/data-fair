@@ -11,9 +11,18 @@ exports.middleware = function(operationId, permissionClass) {
     if (req.method === 'GET' && req.bypassPermission) return next()
     if (!exports.can(req.resourceType, req.resource, operationId, req.user)) {
       res.status(403)
+      if (req.user) {
+        if (
+          (req.resource.owner.type === 'user' && req.user.id === req.resource.owner.id) ||
+          (req.resource.owner.type === 'organization' && req.user.organizations.find(o => o.id === req.resource.owner.id) && req.resource.owner.id !== req.user.activeAccount.id)
+        ) {
+          // this can be used to handle automatic account switch or display better info with error message
+          res.set('x-owner', JSON.stringify(req.resource.owner))
+        }
+      }
       const operation = apiDocsUtil.operations(req.resourceApiDoc).find(o => o.id === operationId)
-      if (operation) res.send(`Permission manquante pour l'opération "${operation.title}" ou la catégorie "${permissionClass}"`)
-      else res.send(`Permission manquante pour cette opération ou la catégorie "${permissionClass}"`)
+      if (operation) res.send(`Permission manquante pour l'opération "${operation.title}" ou la catégorie "${permissionClass}".`)
+      else res.send(`Permission manquante pour cette opération ou la catégorie "${permissionClass}".`)
       return
     }
 
