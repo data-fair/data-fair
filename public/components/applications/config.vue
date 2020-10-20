@@ -183,6 +183,7 @@
 <script>
   import debounce from 'debounce'
   import { mapState, mapActions, mapGetters } from 'vuex'
+  import dotProp from 'dot-prop'
   import VJsf from '@koumoul/vjsf/lib/VJsf.js'
   import '@koumoul/vjsf/lib/deps/third-party.js'
   import '@koumoul/vjsf/dist/main.css'
@@ -271,6 +272,16 @@
     async created() {
       this.fetchSchemas()
       this.fetchConfigs()
+      this.postMessageHandler = msg => {
+        console.log('received message from iframe', msg.data)
+        if (msg.data.type === 'set-config') {
+          this.editConfig = dotProp.set({ ...this.editConfig }, msg.data.content.field, msg.data.content.value)
+        }
+      }
+      window.addEventListener('message', this.postMessageHandler)
+    },
+    destroyed() {
+      window.removeEventListener('message', this.postMessageHandler)
     },
     methods: {
       ...mapActions('application', ['readConfig', 'writeConfig', 'readConfigDraft', 'writeConfigDraft', 'cancelConfigDraft', 'patchAndCommit', 'fetchProdBaseApp']),
