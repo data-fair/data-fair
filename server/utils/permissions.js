@@ -26,6 +26,12 @@ exports.middleware = function(operationId, permissionClass) {
 Sélectionnez l'organisation ${req.resource.owner.name} en tant que compte actif pour visualiser les informations.`)
         }
       }
+      if (!req.user) {
+        return res.send(`${denomination} n'est pas accessible publiquement. Veuillez vous connecter.`)
+      }
+      if (operationId === 'readDescription') {
+        return res.send(`${denomination} est accessible uniquement aux utilisateur autorisés par le propriétaire. Vous n'avez pas les permissions nécessaires pour visualiser les informations.`)
+      }
       const operation = apiDocsUtil.operations(req.resourceApiDoc).find(o => o.id === operationId)
       if (operation) return res.send(`Permission manquante pour l'opération "${operation.title}" ou la catégorie "${permissionClass}".`)
       return res.send(`Permission manquante pour cette opération ou la catégorie "${permissionClass}".`)
