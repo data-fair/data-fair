@@ -304,7 +304,6 @@
         if (!datasetsProp) {
           console.error('dit not find a "datasets" property in schema')
         } else {
-          datasetsProp.minItems = 1
           if (this.roDataset) {
             datasetsProp.readOnly = true
           }
