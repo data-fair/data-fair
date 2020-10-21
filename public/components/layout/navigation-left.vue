@@ -75,7 +75,7 @@
 
     <v-list class="pt-0">
       <v-list-item
-        v-if="activeAccount.type === 'organization'"
+        v-if="activeAccount.type === 'organization' && user.organization.role === 'admin'"
         :nuxt="true"
         two-line
         :to="`/organization`"
