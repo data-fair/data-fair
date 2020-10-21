@@ -75,6 +75,18 @@
 
     <v-list class="pt-0">
       <v-list-item
+        v-if="activeAccount.type === 'organization'"
+        :nuxt="true"
+        two-line
+        :to="`/organization`"
+      >
+        <v-list-item-action><v-icon>mdi-account-multiple</v-icon></v-list-item-action>
+        <v-list-item-content>
+          <v-list-item-title>Organisation</v-list-item-title>
+          <v-list-item-subtitle>{{activeAccount.name}}</v-list-item-subtitle>
+        </v-list-item-content>
+      </v-list-item>
+      <v-list-item
         :nuxt="true"
         :to="`/datasets`"
         :class="routePrefix === 'dataset' ? 'v-list-item--active' : ''"
@@ -157,6 +169,7 @@
       ...mapState(['env']),
       ...mapState('session', ['user']),
       ...mapGetters(['canAdmin', 'canContrib']),
+      ...mapGetters('session', ['activeAccount']),
       routePrefix() {
         return this.$route && this.$route.name && this.$route.name.split('-')[0]
       },

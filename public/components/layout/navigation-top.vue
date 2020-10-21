@@ -79,7 +79,7 @@
               </v-list-item>
               <v-divider />
             </template>
-            <v-list-item :href="env.directoryUrl + '/me'">
+            <v-list-item :to="'/me'" :nuxt="true">
               <v-list-item-title>Mon compte</v-list-item-title>
             </v-list-item>
             <v-divider />
