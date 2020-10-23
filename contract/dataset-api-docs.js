@@ -226,6 +226,19 @@ La valeur est une liste de champs séparés par des virgules.
     },
   }
 
+  const securitySchemes = {
+    apiKey: {
+      type: 'apiKey',
+      in: 'header',
+      name: 'x-apiKey',
+    },
+    sdCookie: {
+      type: 'apiKey',
+      in: 'cookie',
+      name: 'id_token',
+    },
+  }
+
   let description = `
 Cette documentation interactive à destination des développeurs permet de gérer et consommer les ressources du jeu de données "${dataset.title || dataset.id}".
 `
@@ -253,6 +266,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
 Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous pouvez créer dans les paramètres d'un compte possédant les permissions nécessaires aux opérations que vous souhaitez effectuer.
 `
 } else {
+  delete securitySchemes.apiKey
   description += `
   - ${anonymousApiRate}
   `
@@ -267,18 +281,7 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
       ...config.info,
     },
     components: {
-      securitySchemes: {
-        apiKey: {
-          type: 'apiKey',
-          in: 'header',
-          name: 'x-apiKey',
-        },
-        sdCookie: {
-          type: 'apiKey',
-          in: 'cookie',
-          name: 'id_token',
-        },
-      },
+      securitySchemes,
       schemas: { datasetSchema },
     },
     security: [{ apiKey: [] }, { sdCookie: [] }],
