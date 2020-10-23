@@ -63,11 +63,17 @@
             height="100%"
             :outlined="!hasChanges(extension)"
           >
-            <v-progress-linear color="primary" :value="extension.progress * 100" />
+            <v-progress-linear v-if="extension.error" color="error" :value="extension.progress * 100" />
+            <v-progress-linear v-else-if="!extension.progress || extension.forceNext" color="primary" indeterminate />
+            <v-progress-linear v-else-if="extension.progress" color="primary" :value="extension.progress * 100" />
+
             <v-card-title>
               {{ remoteServicesMap[extension.remoteService] && remoteServicesMap[extension.remoteService].actions[extension.action] && remoteServicesMap[extension.remoteService].actions[extension.action].summary }}
             </v-card-title>
             <v-card-text style="margin-bottom:40px;">
+              <v-alert v-if="extension.error" type="error" border="left">
+                {{ extension.error }}
+              </v-alert>
               <v-autocomplete
                 v-if="extension.active && remoteServicesMap[extension.remoteService] && selectFields[extension.remoteService + '_' + extension.action].fieldsAndTags"
                 v-model="extension.select"
@@ -174,8 +180,6 @@
       selectFields() {
         const res = {}
         this.localExtensions.forEach(extension => {
-          console.log(extension)
-          console.log(this.remoteServicesMap[extension.remoteService].actions)
           const fields = this.remoteServicesMap[extension.remoteService].actions[extension.action].output
             .map(field => { field['x-tags'] = field['x-tags'] || []; return field })
             .filter(f => !f.concept || f.concept !== 'http://schema.org/identifier')
