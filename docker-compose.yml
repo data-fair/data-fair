@@ -34,6 +34,7 @@ services:
       - LIST_ENTITIES_MODE=anonymous
       - NO_UI=${NO_UI}
       - AUTHRATELIMIT_ATTEMPTS=200
+      - DEFAULT_MAX_CREATED_ORGS=1
     volumes:
       - ./test/resources/users.json:/webapp/data/users.json
       - ./test/resources/organizations.json:/webapp/data/organizations.json
