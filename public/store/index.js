@@ -40,6 +40,7 @@ export default () => {
       propertyTypes,
       breadcrumbsRouteName: null,
       breadcrumbItems: null,
+      limits: null,
     },
     getters: {
       ownerLicenses: (state) => (owner) => {
