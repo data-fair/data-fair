@@ -87,71 +87,84 @@
         </v-list-item-content>
       </v-list-item>
       <v-list-item
-        :nuxt="true"
-        :to="`/datasets`"
-        :class="routePrefix === 'dataset' ? 'v-list-item--active' : ''"
-      >
-        <v-list-item-action><v-icon>mdi-database</v-icon></v-list-item-action>
-        <v-list-item-title>Jeux de données</v-list-item-title>
-      </v-list-item>
-
-      <v-list-item
-        :nuxt="true"
-        :to="`/applications`"
-        :class="routePrefix === 'application' ? 'v-list-item--active' : ''"
-      >
-        <v-list-item-action><v-icon>mdi-image-multiple</v-icon></v-list-item-action>
-        <v-list-item-title>Visualisations</v-list-item-title>
-      </v-list-item>
-
-      <v-list-item
-        v-if="user && env.notifyUrl"
-        :nuxt="true"
-        :to="`/notifications`"
-      >
-        <v-list-item-action><v-icon>mdi-bell-plus</v-icon></v-list-item-action>
-        <v-list-item-title>Notifications</v-list-item-title>
-      </v-list-item>
-
-      <v-list-item
         v-if="canAdmin"
         :nuxt="true"
-        to="/settings"
+        two-line
+        :to="`/subscription`"
       >
-        <v-list-item-action><v-icon>mdi-cog</v-icon></v-list-item-action>
-        <v-list-item-title>Paramètres</v-list-item-title>
+        <v-list-item-action><v-icon>mdi-card-account-details</v-icon></v-list-item-action>
+        <v-list-item-content>
+          <v-list-item-title>Abonnement</v-list-item-title>
+        </v-list-item-content>
       </v-list-item>
-
-      <v-list-item
-        v-if="canContrib"
-        :nuxt="true"
-        to="/storage"
-      >
-        <v-list-item-action><v-icon>mdi-harddisk</v-icon></v-list-item-action>
-        <v-list-item-title>Stockage</v-list-item-title>
-      </v-list-item>
-
-      <v-list-item
-        v-if="canContrib"
-        :nuxt="true"
-        :to="`/catalogs`"
-        :class="routePrefix === 'catalog' ? 'v-list-item--active' : ''"
-      >
-        <v-list-item-action><v-icon>mdi-transit-connection</v-icon></v-list-item-action>
-        <v-list-item-title>Connecteurs</v-list-item-title>
-      </v-list-item>
-
-      <template v-if="env.extraNavigationItems">
+      <template v-if="!missingSubscription">
         <v-list-item
-          v-for="extra in env.extraNavigationItems.filter(extra => !extra.can || (extra.can === 'contrib' && canContrib) || (extra.can === 'admin' && canAdmin))"
-          :key="extra.id"
-          :nuxt="!!extra.iframe"
-          :to="extra.iframe && `/extra/${extra.id}`"
-          :href="extra.href"
+          :nuxt="true"
+          :to="`/datasets`"
+          :class="routePrefix === 'dataset' ? 'v-list-item--active' : ''"
         >
-          <v-list-item-action><v-icon>{{ extra.icon }}</v-icon></v-list-item-action>
-          <v-list-item-title>{{ extra.title }}</v-list-item-title>
+          <v-list-item-action><v-icon>mdi-database</v-icon></v-list-item-action>
+          <v-list-item-title>Jeux de données</v-list-item-title>
         </v-list-item>
+
+        <v-list-item
+          :nuxt="true"
+          :to="`/applications`"
+          :class="routePrefix === 'application' ? 'v-list-item--active' : ''"
+        >
+          <v-list-item-action><v-icon>mdi-image-multiple</v-icon></v-list-item-action>
+          <v-list-item-title>Visualisations</v-list-item-title>
+        </v-list-item>
+
+        <v-list-item
+          v-if="user && env.notifyUrl"
+          :nuxt="true"
+          :to="`/notifications`"
+        >
+          <v-list-item-action><v-icon>mdi-bell-plus</v-icon></v-list-item-action>
+          <v-list-item-title>Notifications</v-list-item-title>
+        </v-list-item>
+
+        <v-list-item
+          v-if="canAdmin"
+          :nuxt="true"
+          to="/settings"
+        >
+          <v-list-item-action><v-icon>mdi-cog</v-icon></v-list-item-action>
+          <v-list-item-title>Paramètres</v-list-item-title>
+        </v-list-item>
+
+        <v-list-item
+          v-if="canContrib"
+          :nuxt="true"
+          to="/storage"
+        >
+          <v-list-item-action><v-icon>mdi-harddisk</v-icon></v-list-item-action>
+          <v-list-item-title>Stockage</v-list-item-title>
+        </v-list-item>
+
+        <v-list-item
+          v-if="canContrib"
+          :nuxt="true"
+          :to="`/catalogs`"
+          :class="routePrefix === 'catalog' ? 'v-list-item--active' : ''"
+        >
+          <v-list-item-action><v-icon>mdi-transit-connection</v-icon></v-list-item-action>
+          <v-list-item-title>Connecteurs</v-list-item-title>
+        </v-list-item>
+
+        <template v-if="env.extraNavigationItems">
+          <v-list-item
+            v-for="extra in env.extraNavigationItems.filter(extra => !extra.can || (extra.can === 'contrib' && canContrib) || (extra.can === 'admin' && canAdmin))"
+            :key="extra.id"
+            :nuxt="!!extra.iframe"
+            :to="extra.iframe && `/extra/${extra.id}`"
+            :href="extra.href"
+          >
+            <v-list-item-action><v-icon>{{ extra.icon }}</v-icon></v-list-item-action>
+            <v-list-item-title>{{ extra.title }}</v-list-item-title>
+          </v-list-item>
+        </template>
       </template>
     </v-list>
 
@@ -168,7 +181,7 @@
     computed: {
       ...mapState(['env']),
       ...mapState('session', ['user']),
-      ...mapGetters(['canAdmin', 'canContrib']),
+      ...mapGetters(['canAdmin', 'canContrib', 'missingSubscription']),
       ...mapGetters('session', ['activeAccount']),
       routePrefix() {
         return this.$route && this.$route.name && this.$route.name.split('-')[0]

@@ -1,5 +1,5 @@
 <template>
-  <v-iframe :src="extra && extra.iframe" />
+  <v-iframe :src="env.subscriptionUrl" />
 </template>
 
 <script>
@@ -10,9 +10,6 @@
     components: { VIframe },
     computed: {
       ...mapState(['env']),
-      extra() {
-        return this.env.extraNavigationItems.find(e => e.id === this.$route.params.id)
-      },
     },
   }
 </script>

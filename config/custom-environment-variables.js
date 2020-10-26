@@ -12,6 +12,7 @@ module.exports = {
   notifyUrl: 'NOTIFY_URL',
   privateNotifyUrl: 'PRIVATE_NOTIFY_URL',
   notifyWSUrl: 'NOTIFY_WS_URL',
+  subscriptionUrl: 'SUBSCRIPTION_URL',
   mongoUrl: 'MONGO_URL',
   analytics: {
     __name: 'ANALYTICS',

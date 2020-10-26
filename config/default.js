@@ -14,6 +14,7 @@ module.exports = {
   notifyUrl: null,
   privateNotifyUrl: null,
   notifyWSUrl: null,
+  subscriptionUrl: null,
   pluginsDir: './plugins',
   mongoUrl: 'mongodb://localhost:27017/data-fair-' + (process.env.NODE_ENV || 'development'),
   map: {

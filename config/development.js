@@ -16,6 +16,7 @@ module.exports = {
   notifyUrl: `http://${host}:5600/notify`,
   privateNotifyUrl: 'http://localhost:8088',
   notifyWSUrl: 'ws://localhost:8088',
+  subscriptionUrl: 'https://staging-koumoul.com/s/customers/embed/subscription',
   defaultLimits: {
     totalStorage: 1000000000,
     datasetStorage: -1,

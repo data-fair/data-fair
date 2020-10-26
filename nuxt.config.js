@@ -92,6 +92,7 @@ module.exports = {
     captureUrl: config.captureUrl,
     notifyUrl: config.notifyUrl,
     notifyWSUrl: config.notifyWSUrl,
+    subscriptionUrl: config.subscriptionUrl,
     theme: config.theme,
     baseAppsCategories: config.baseAppsCategories,
     datasetUrlTemplate: config.datasetUrlTemplate,

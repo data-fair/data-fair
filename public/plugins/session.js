@@ -6,4 +6,5 @@ export default ({ store, app, env }) => {
     cookieDomain: env.sessionDomain,
   })
   store.dispatch('session/loop', app.$cookies)
+  store.dispatch('fetchLimits')
 }

@@ -14,6 +14,7 @@ const schema = {
     id: { type: 'string' },
     name: { type: 'string' },
     lastUpdate: { type: 'string', format: 'date-time' },
+    defaults: { type: 'boolean', title: 'these limits were defined using default values only, not specifically defined' },
     store_bytes: limitTypeSchema,
     hide_brand: limitTypeSchema,
   },
@@ -25,24 +26,29 @@ exports.init = async (db) => {
   await dbUtils.ensureIndex(db, 'limits', { type: 1, id: 1 }, { name: 'limits-find-current', unique: true })
 }
 
-exports.get = async (db, consumer, type) => {
+exports.getLimits = async (db, consumer) => {
   const coll = db.collection('limits')
   const now = moment()
-  let limit = await coll.findOne({ type: consumer.type, id: consumer.id })
-  if (!limit && ['domain', 'ip-address'].includes(consumer.type)) {
-    limit = {
+  let limits = await coll.findOne({ type: consumer.type, id: consumer.id })
+  if (!limits) {
+    limits = {
       type: consumer.type,
       id: consumer.id,
       name: consumer.name || consumer.id,
       lastUpdate: now.toISOString(),
+      defaults: true,
       ...config.anonymousLimits,
     }
-    await coll.insertOne(limit)
+    await coll.insertOne(limits)
   }
+  return limits
+}
 
-  const res = (limit && limit[type]) || { limit: 0, consumption: 0 }
+exports.get = async (db, consumer, type) => {
+  const limits = await exports.getLimits(db, consumer)
+  const res = (limits && limits[type]) || { limit: 0, consumption: 0 }
   res.type = type
-  res.lastUpdate = limit ? limit.lastUpdate : new Date().toISOString()
+  res.lastUpdate = limits ? limits.lastUpdate : new Date().toISOString()
   return res
 }
 
@@ -69,7 +75,7 @@ const isSuperAdmin = (req, res, next) => {
   res.status(401).send()
 }
 
-const isAccountAdmin = (req, res, next) => {
+const isAccountMember = (req, res, next) => {
   if (req.query.key === config.secretKeys.limits) return next()
   if (!req.user) return res.status(401).send()
   if (req.user.adminMode) return next()
@@ -78,7 +84,7 @@ const isAccountAdmin = (req, res, next) => {
     if (req.user.id !== req.params.id) return res.status(403).send()
   }
   if (req.params.type === 'organization') {
-    const org = req.user.organizations.find(o => o.id === req.params.id && o.role === config.adminRole)
+    const org = req.user.organizations.find(o => o.id === req.params.id)
     if (!org) return res.status(403).send()
   }
   next()
@@ -96,12 +102,11 @@ router.post('/:type/:id', isSuperAdmin, asyncWrap(async (req, res, next) => {
 }))
 
 // A user can get limits information for himself only
-router.get('/:type/:id', isAccountAdmin, asyncWrap(async (req, res, next) => {
-  const limit = await req.app.get('db').collection('limits')
-    .findOne({ type: req.params.type, id: req.params.id })
-  if (!limit) return res.status(404).send()
-  delete limit._id
-  res.send(limit)
+router.get('/:type/:id', isAccountMember, asyncWrap(async (req, res, next) => {
+  const limits = await exports.getLimits(req.app.get('db'), { type: req.params.type, id: req.params.id })
+  if (!limits) return res.status(404).send()
+  delete limits._id
+  res.send(limits)
 }))
 
 router.get('/', isSuperAdmin, asyncWrap(async (req, res, next) => {

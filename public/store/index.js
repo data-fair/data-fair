@@ -76,6 +76,9 @@ export default () => {
         const role = state.session.user.organization.role
         return role === state.env.adminRole
       },
+      missingSubscription(state) {
+        return !!(state.limits && state.limits.defaults && state.env.subscriptionUrl)
+      },
     },
     mutations: {
       setAny(state, params) {
@@ -92,6 +95,12 @@ export default () => {
       },
     },
     actions: {
+      async fetchLimits({ getters, commit }) {
+        const activeAccount = getters['session/activeAccount']
+        if (!activeAccount) return
+        const limits = await this.$axios.$get(`api/v1/limits/${activeAccount.type}/${activeAccount.id}`)
+        commit('setAny', { limits })
+      },
       async fetchVocabulary({ state, commit }) {
         if (state.vocabulary) return
         const vocabulary = {}
