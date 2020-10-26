@@ -63,15 +63,31 @@
             height="100%"
             :outlined="!hasChanges(extension)"
           >
-            <v-progress-linear v-if="extension.error" color="error" :value="extension.progress * 100" />
-            <v-progress-linear v-else-if="!extension.progress || extension.forceNext" color="primary" indeterminate />
-            <v-progress-linear v-else-if="extension.progress" color="primary" :value="extension.progress * 100" />
+            <v-progress-linear
+              v-if="extension.error"
+              color="error"
+              :value="extension.progress * 100"
+            />
+            <v-progress-linear
+              v-else-if="!extension.progress || extension.forceNext"
+              color="primary"
+              indeterminate
+            />
+            <v-progress-linear
+              v-else-if="extension.progress"
+              color="primary"
+              :value="extension.progress * 100"
+            />
 
             <v-card-title>
               {{ remoteServicesMap[extension.remoteService] && remoteServicesMap[extension.remoteService].actions[extension.action] && remoteServicesMap[extension.remoteService].actions[extension.action].summary }}
             </v-card-title>
             <v-card-text style="margin-bottom:40px;">
-              <v-alert v-if="extension.error" type="error" border="left">
+              <v-alert
+                v-if="extension.error"
+                type="error"
+                border="left"
+              >
                 {{ extension.error }}
               </v-alert>
               <v-autocomplete

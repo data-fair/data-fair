@@ -83,7 +83,7 @@
         <v-list-item-action><v-icon>mdi-account-multiple</v-icon></v-list-item-action>
         <v-list-item-content>
           <v-list-item-title>Organisation</v-list-item-title>
-          <v-list-item-subtitle>{{activeAccount.name}}</v-list-item-subtitle>
+          <v-list-item-subtitle>{{ activeAccount.name }}</v-list-item-subtitle>
         </v-list-item-content>
       </v-list-item>
       <v-list-item
