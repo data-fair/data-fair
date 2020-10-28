@@ -213,13 +213,9 @@ router.put('/:applicationId/owner', readApplication, permissions.middleware('del
 
 // Delete an application configuration
 router.delete('/:applicationId', readApplication, permissions.middleware('delete', 'admin'), asyncWrap(async(req, res) => {
-  await req.app.get('db').collection('applications').deleteOne({
-    id: req.params.applicationId,
-  })
-  await req.app.get('db').collection('journals').deleteOne({
-    type: 'application',
-    id: req.params.applicationId,
-  })
+  await req.app.get('db').collection('applications').deleteOne({ id: req.params.applicationId })
+  await req.app.get('db').collection('journals').deleteOne({ type: 'application', id: req.params.applicationId })
+  await req.app.get('db').collection('applications-keys').deleteOne({ _id: req.application.id })
   try {
     await unlink(await capture.path(req.application))
   } catch (err) {
@@ -325,6 +321,7 @@ router.get('/:applicationId/journal', readApplication, permissions.middleware('r
     id: req.params.applicationId,
   })
   if (!journal) return res.send([])
+  delete journal.owner
   journal.events.reverse()
   res.json(journal.events)
 }))
@@ -372,6 +369,6 @@ router.post('/:applicationId/keys', readApplication, permissions.middleware('set
   req.body.forEach((key) => {
     if (!key.id) key.id = shortid.generate() + shortid.generate()
   })
-  await req.app.get('db').collection('applications-keys').replaceOne({ _id: req.application.id }, { _id: req.application.id, keys: req.body }, { upsert: true })
+  await req.app.get('db').collection('applications-keys').replaceOne({ _id: req.application.id }, { _id: req.application.id, keys: req.body, owner: req.application.owner }, { upsert: true })
   res.send(req.body)
 }))

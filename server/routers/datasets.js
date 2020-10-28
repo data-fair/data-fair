@@ -1005,6 +1005,7 @@ router.get('/:datasetId/journal', readDataset(), permissions.middleware('readJou
     id: req.params.datasetId,
   })
   if (!journal) return res.send([])
+  delete journal.owner
   journal.events.reverse()
   res.json(journal.events)
 }))
