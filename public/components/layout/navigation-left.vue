@@ -139,7 +139,6 @@
             <v-list-item-title>Connecteurs</v-list-item-title>
             <v-list-item-subtitle>data.gouv.fr ...</v-list-item-subtitle>
           </v-list-item-content>
-
         </v-list-item>
 
         <template v-if="env.extraNavigationItems">
@@ -154,7 +153,9 @@
             <v-list-item-action><v-icon>{{ extra.icon }}</v-icon></v-list-item-action>
             <v-list-item-content>
               <v-list-item-title>{{ extra.title }}</v-list-item-title>
-              <v-list-item-subtitle v-if="extra.subtitle">{{extra.subtitle}}</v-list-item-subtitle>
+              <v-list-item-subtitle v-if="extra.subtitle">
+                {{ extra.subtitle }}
+              </v-list-item-subtitle>
             </v-list-item-content>
           </v-list-item>
         </template>

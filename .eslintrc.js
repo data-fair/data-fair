@@ -14,6 +14,7 @@ module.exports = {
         'max': 1,
         'allowFirstLine': false
       }
-    }]
-  }
+    }],
+    'no-only-tests/no-only-tests': 'error'
+  },
 }
