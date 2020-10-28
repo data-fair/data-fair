@@ -5,6 +5,7 @@ const config = require('config')
 const fs = require('fs-extra')
 const path = require('path')
 const asyncWrap = require('../utils/async-wrap')
+const datasetUtils = require('../utils/dataset')
 const dataDir = path.resolve(config.dataDir)
 
 const router = module.exports = express.Router()
@@ -55,6 +56,11 @@ router.post('/:type/:id', asyncWrap(async (req, res) => {
 // Remove resources owned, permissions and anonymize created and updated
 router.delete('/:type/:id', asyncWrap(async (req, res) => {
   const identity = req.params
+
+  const datasetsCursor = req.app.get('db').collection('datasets').find({ 'owner.type': identity.type, 'owner.id': identity.id })
+  for await (const dataset of datasetsCursor) {
+    await datasetUtils.delete(req.app.get('db'), req.app.get('es'), dataset)
+  }
 
   for (const c of collectionNames) {
     const collection = req.app.get('db').collection(c)

@@ -19,7 +19,7 @@ const restDatasetsUtils = require('./rest-datasets')
 const vocabulary = require('../../contract/vocabulary')
 const limits = require('./limits')
 const extensionsUtils = require('./extensions')
-
+const esUtils = require('./es')
 const baseTypes = new Set(['text/csv', 'application/geo+json'])
 const dataDir = path.resolve(config.dataDir)
 
@@ -472,4 +472,30 @@ exports.previews = (dataset) => {
     previews.push({ id: 'thumbnails', title: 'Vignettes', href: `${config.publicUrl}/embed/dataset/${dataset.id}/thumbnails` })
   }
   return previews
+}
+
+exports.delete = async (db, es, dataset) => {
+  try {
+    await fs.remove(exports.dir(dataset))
+  } catch (err) {
+    console.error('Error while deleting dataset directory', err)
+  }
+  if (dataset.isRest) {
+    try {
+      await restDatasetsUtils.deleteDataset(db, dataset)
+    } catch (err) {
+      console.error('Error while removing mongodb collection for REST dataset', err)
+    }
+  }
+
+  await db.collection('datasets').deleteOne({ id: dataset.id })
+  await db.collection('journals').deleteOne({ type: 'dataset', id: dataset.id })
+  if (!dataset.isVirtual) {
+    try {
+      await esUtils.delete(es, dataset)
+    } catch (err) {
+      console.error('Error while deleting dataset indexes and alias', err)
+    }
+    await exports.updateStorage(db, dataset, true)
+  }
 }

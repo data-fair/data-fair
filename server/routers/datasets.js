@@ -298,31 +298,7 @@ router.put('/:datasetId/owner', readDataset(), permissions.middleware('delete', 
 
 // Delete a dataset
 router.delete('/:datasetId', readDataset(), permissions.middleware('delete', 'admin'), asyncWrap(async(req, res) => {
-  const db = req.app.get('db')
-  try {
-    await fs.remove(datasetUtils.dir(req.dataset))
-  } catch (err) {
-    console.error('Error while deleting dataset directory', err)
-  }
-  if (req.dataset.isRest) {
-    try {
-      await restDatasetsUtils.deleteDataset(db, req.dataset)
-    } catch (err) {
-      console.error('Error while removing mongodb collection for REST dataset', err)
-    }
-  }
-
-  await db.collection('datasets').deleteOne({ id: req.params.datasetId })
-  await db.collection('journals').deleteOne({ type: 'dataset', id: req.params.datasetId })
-  if (!req.dataset.isVirtual) {
-    try {
-      await esUtils.delete(req.app.get('es'), req.dataset)
-    } catch (err) {
-      console.error('Error while deleting dataset indexes and alias', err)
-    }
-    await datasetUtils.updateStorage(db, req.dataset, true)
-  }
-
+  await datasetUtils.delete(req.app.get('db'), req.app.get('es'), req.dataset)
   res.sendStatus(204)
 }))
 
