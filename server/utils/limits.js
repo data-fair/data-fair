@@ -62,11 +62,6 @@ exports.setConsumption = async (db, consumer, type, value) => {
     .findOneAndUpdate({ type: consumer.type, id: consumer.id }, { $set: { [`${type}.consumption`]: value } }, { returnOriginal: false, upsert: true })).value
 }
 
-exports.updateName = async (db, identity) => {
-  await db.collection('limits')
-    .updateMany({ type: identity.type, id: identity.id }, { $set: { name: identity.name } })
-}
-
 const router = exports.router = express.Router()
 
 const isSuperAdmin = (req, res, next) => {
