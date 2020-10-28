@@ -83,6 +83,7 @@ before('init globals', async () => {
     global.ax.builder('bhazeldean7@cnbc.com:passwd').then(ax => { global.ax.bhazeldean7 = ax }),
     global.ax.builder('bhazeldean7@cnbc.com:passwd', 'KWqAGZ4mG').then(ax => { global.ax.bhazeldean7Org = ax }),
     global.ax.builder('ngernier4@usa.gov:passwd', 'KWqAGZ4mG').then(ax => { global.ax.ngernier4Org = ax }),
+    global.ax.builder('icarlens9@independent.co.uk:passwd').then(ax => { global.ax.icarlens9 = ax }),
   ])
   debug('init globals ok')
 })

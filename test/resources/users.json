@@ -77,7 +77,10 @@
     "id": "icarlens9",
     "firstName": "Issie",
     "lastName": "Carlens",
-    "email": "icarlens9@independent.co.uk"
+    "email": "icarlens9@independent.co.uk",
+    "password": {
+      "clear": "passwd"
+    }
   },
   {
     "id": "alone",

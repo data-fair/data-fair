@@ -2,7 +2,10 @@
 // Useful both for functionalities and help respect GDPR rules
 const express = require('express')
 const config = require('config')
+const fs = require('fs-extra')
+const path = require('path')
 const asyncWrap = require('../utils/async-wrap')
+const dataDir = path.resolve(config.dataDir)
 
 const router = module.exports = express.Router()
 
@@ -13,7 +16,7 @@ router.use((req, res, next) => {
   next()
 })
 
-const collectionNames = ['remote-services', 'applications', 'datasets', 'catalogs']
+const collectionNames = ['applications', 'datasets', 'catalogs', 'applications-keys', 'journals']
 
 // notify a name change
 router.post('/:type/:id', asyncWrap(async (req, res) => {
@@ -75,6 +78,9 @@ router.delete('/:type/:id', asyncWrap(async (req, res) => {
   // settings and limits
   await req.app.get('db').collection('settings').deleteOne({ type: identity.type, id: identity.id })
   await req.app.get('db').collection('limits').deleteOne({ type: identity.type, id: identity.id })
+
+  // whole data directory
+  await fs.remove(path.join(dataDir, identity.type, identity.id))
 
   res.send()
 }))
