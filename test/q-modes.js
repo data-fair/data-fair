@@ -26,12 +26,7 @@ describe('query modes', () => {
     res = await ax.get('/api/v1/datasets/qmodes/lines')
     assert.equal(res.data.total, Object.keys(items).length)
 
-    // default mode searches for a full word
-    res = await ax.get('/api/v1/datasets/qmodes/lines', { params: { q: 'prefix' } })
-    assert.equal(res.data.total, 1)
-    assert.equal(res.data.results[0]._id, 't1')
-
-    // simple is the same as default
+    // simple mode searches for a full word
     res = await ax.get('/api/v1/datasets/qmodes/lines', { params: { q: 'prefix', q_mode: 'simple' } })
     assert.equal(res.data.total, 1)
     assert.equal(res.data.results[0]._id, 't1')

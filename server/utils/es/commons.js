@@ -152,14 +152,14 @@ exports.prepareQuery = (dataset, query) => {
   }
   if (query.q) {
     const qSearchFields = searchFields.filter(f => f !== '_id')
-    if (query.q_mode === 'complete') {
+    if (query.q_mode === 'simple') {
+      must.push({ simple_query_string: { query: query.q, fields: qSearchFields } })
+    } else {
       const q = query.q.trim()
       let complete = q
-      if (!q.endsWith('*')) complete = `${q}*|` + complete
-      if (!q.startsWith('"')) complete += `|"${q}"`
+      if (!q.includes('*') && !q.includes('?')) complete = `${q}*|` + complete
+      if (q.includes(' ') && !q.includes('"')) complete += `|"${q}"`
       must.push({ simple_query_string: { query: complete, fields: qSearchFields } })
-    } else {
-      must.push({ simple_query_string: { query: query.q, fields: qSearchFields } })
     }
   }
   Object.keys(query)
