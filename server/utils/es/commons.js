@@ -151,7 +151,16 @@ exports.prepareQuery = (dataset, query) => {
     must.push({ query_string: { query: query.qs, fields: searchFields } })
   }
   if (query.q) {
-    must.push({ simple_query_string: { query: query.q, fields: searchFields } })
+    const qSearchFields = searchFields.filter(f => f !== '_id')
+    if (query.q_mode === 'complete') {
+      const q = query.q.trim()
+      let complete = q
+      if (!q.endsWith('*')) complete = `${q}*|` + complete
+      if (!q.startsWith('"')) complete += `|"${q}"`
+      must.push({ simple_query_string: { query: complete, fields: qSearchFields } })
+    } else {
+      must.push({ simple_query_string: { query: query.q, fields: qSearchFields } })
+    }
   }
   Object.keys(query)
     .filter(k => k.endsWith('_in'))
