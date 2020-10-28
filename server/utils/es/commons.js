@@ -106,9 +106,11 @@ exports.prepareQuery = (dataset, query) => {
   }
 
   // Sort by list of fields (prefixed by - for descending sort)
-  esQuery.sort = exports.parseSort(query.sort || '_i', fields)
-  // Also implicitly sort by score
-  esQuery.sort.push('_score')
+  esQuery.sort = query.sort ? exports.parseSort(query.sort, [...fields, '_score']) : []
+  // implicitly sort by score after other criteria
+  if (!esQuery.sort.includes('_score') && query.q) esQuery.sort.push('_score')
+  // every other things equal, sort by original line order
+  if (!esQuery.sort.includes('_i')) esQuery.sort.push('_i')
 
   // Simple highlight management
   // https://www.elastic.co/guide/en/elasticsearch/reference/current/search-request-highlighting.html
