@@ -41,7 +41,7 @@
           </div>-->
 
           <h3 class="mt-3 mb-3">
-            Licenses
+            Licences
           </h3>
           <settings-licenses
             v-if="settings"

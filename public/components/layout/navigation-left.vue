@@ -5,16 +5,22 @@
     app
     permanent
   >
-    <v-list-item :href="env.brand.url || env.publicUrl">
-      <v-list-item-action>
-        <div class="main-logo">
-          <img v-if="env.brand.logo" :src="env.brand.logo">
-          <img v-else src="~/assets/logo.svg">
-        </div>
-      </v-list-item-action>
-      <v-list-item-title><h1>{{ env.brand.title || 'DataFair' }}</h1></v-list-item-title>
-    </v-list-item>
-    <v-divider />
+    <v-list class="pa-0">
+      <v-list-item
+        :href="env.brand.url"
+        :to="env.brand.url ? null: '/'"
+        :nuxt="true"
+      >
+        <v-list-item-action>
+          <div class="main-logo">
+            <img v-if="env.brand.logo" :src="env.brand.logo">
+            <img v-else src="~/assets/logo.svg">
+          </div>
+        </v-list-item-action>
+        <v-list-item-title><h1>{{ env.brand.title || 'DataFair' }}</h1></v-list-item-title>
+      </v-list-item>
+      <v-divider />
+    </v-list>
 
     <v-list
       v-if="user && user.adminMode"
@@ -74,29 +80,6 @@
     </v-list>
 
     <v-list class="pt-0">
-      <v-list-item
-        v-if="activeAccount && activeAccount.type === 'organization' && user.organization.role === 'admin'"
-        :nuxt="true"
-        two-line
-        :to="`/organization`"
-      >
-        <v-list-item-action><v-icon>mdi-account-multiple</v-icon></v-list-item-action>
-        <v-list-item-content>
-          <v-list-item-title>Organisation</v-list-item-title>
-          <v-list-item-subtitle>{{ activeAccount.name }}</v-list-item-subtitle>
-        </v-list-item-content>
-      </v-list-item>
-      <v-list-item
-        v-if="canAdmin"
-        :nuxt="true"
-        two-line
-        :to="`/subscription`"
-      >
-        <v-list-item-action><v-icon>mdi-card-account-details</v-icon></v-list-item-action>
-        <v-list-item-content>
-          <v-list-item-title>Abonnement</v-list-item-title>
-        </v-list-item-content>
-      </v-list-item>
       <template v-if="!missingSubscription">
         <v-list-item
           :nuxt="true"
@@ -116,41 +99,47 @@
           <v-list-item-title>Visualisations</v-list-item-title>
         </v-list-item>
 
+        <v-divider />
+
         <v-list-item
-          v-if="user && env.notifyUrl"
+          v-if="activeAccount && activeAccount.type === 'organization' && user.organization.role === 'admin'"
           :nuxt="true"
-          :to="`/notifications`"
+          dense
+          :to="`/organization`"
         >
-          <v-list-item-action><v-icon>mdi-bell-plus</v-icon></v-list-item-action>
-          <v-list-item-title>Notifications</v-list-item-title>
+          <v-list-item-action><v-icon>mdi-account-multiple</v-icon></v-list-item-action>
+          <v-list-item-content>
+            <v-list-item-title>Gestion de l'organisation</v-list-item-title>
+            <v-list-item-subtitle>{{ activeAccount.name }}</v-list-item-subtitle>
+          </v-list-item-content>
         </v-list-item>
 
         <v-list-item
           v-if="canAdmin"
           :nuxt="true"
+          dense
           to="/settings"
         >
           <v-list-item-action><v-icon>mdi-cog</v-icon></v-list-item-action>
-          <v-list-item-title>Paramètres</v-list-item-title>
+          <v-list-item-content>
+            <v-list-item-title>Paramètres</v-list-item-title>
+            <v-list-item-subtitle>licences, thématiques ...</v-list-item-subtitle>
+          </v-list-item-content>
         </v-list-item>
 
         <v-list-item
           v-if="canContrib"
           :nuxt="true"
-          to="/storage"
-        >
-          <v-list-item-action><v-icon>mdi-harddisk</v-icon></v-list-item-action>
-          <v-list-item-title>Stockage</v-list-item-title>
-        </v-list-item>
-
-        <v-list-item
-          v-if="canContrib"
-          :nuxt="true"
+          dense
           :to="`/catalogs`"
           :class="routePrefix === 'catalog' ? 'v-list-item--active' : ''"
         >
           <v-list-item-action><v-icon>mdi-transit-connection</v-icon></v-list-item-action>
-          <v-list-item-title>Connecteurs</v-list-item-title>
+          <v-list-item-content>
+            <v-list-item-title>Connecteurs</v-list-item-title>
+            <v-list-item-subtitle>data.gouv.fr ...</v-list-item-subtitle>
+          </v-list-item-content>
+
         </v-list-item>
 
         <template v-if="env.extraNavigationItems">
@@ -159,10 +148,14 @@
             :key="extra.id"
             :nuxt="!!extra.iframe"
             :to="extra.iframe && `/extra/${extra.id}`"
+            dense
             :href="extra.href"
           >
             <v-list-item-action><v-icon>{{ extra.icon }}</v-icon></v-list-item-action>
-            <v-list-item-title>{{ extra.title }}</v-list-item-title>
+            <v-list-item-content>
+              <v-list-item-title>{{ extra.title }}</v-list-item-title>
+              <v-list-item-subtitle v-if="extra.subtitle">{{extra.subtitle}}</v-list-item-subtitle>
+            </v-list-item-content>
           </v-list-item>
         </template>
       </template>

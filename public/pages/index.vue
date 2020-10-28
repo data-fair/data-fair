@@ -1,5 +1,6 @@
 <template>
-  <v-container class="pt-0">
+  <v-container class="pa-0" fluid>
+    <v-iframe v-if="missingSubscription" :src="env.subscriptionUrl" />
     <v-col md="6" offset-md="3">
       <v-responsive>
         <v-container class="fill-height">
@@ -31,10 +32,13 @@
 </template>
 
 <script>
-  const { mapState, mapActions } = require('vuex')
+  import 'iframe-resizer/js/iframeResizer'
+  import VIframe from '@koumoul/v-iframe'
+  const { mapState, mapActions, mapGetters } = require('vuex')
 
   export default {
     name: 'Home',
+    components: { VIframe },
     data: () => ({
       stats: null,
       headers: [
@@ -48,6 +52,7 @@
     computed: {
       ...mapState('session', ['user', 'initialized']),
       ...mapState(['env']),
+      ...mapGetters(['missingSubscription']),
       items() {
         if (!this.stats) return []
         const orgasItems = this.user.organizations.map(o => {

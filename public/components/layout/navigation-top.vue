@@ -80,8 +80,39 @@
               <v-divider />
             </template>
             <v-list-item :to="'/me'" :nuxt="true">
-              <v-list-item-title>Mon compte</v-list-item-title>
+              <v-list-item-content>
+                <v-list-item-title>Mon compte</v-list-item-title>
+              </v-list-item-content>
             </v-list-item>
+            <v-divider />
+            <v-list-item
+              v-if="canAdmin && env.subscriptionUrl"
+              :nuxt="true"
+              :to="`/subscription`"
+            >
+              <v-list-item-action><v-icon>mdi-card-account-details</v-icon></v-list-item-action>
+              <v-list-item-content>
+                <v-list-item-title>Abonnement</v-list-item-title>
+              </v-list-item-content>
+            </v-list-item>
+            <template v-if="!missingSubscription">
+              <v-list-item
+                v-if="env.notifyUrl"
+                :nuxt="true"
+                :to="`/notifications`"
+              >
+                <v-list-item-action><v-icon>mdi-bell-plus</v-icon></v-list-item-action>
+                <v-list-item-title>Notifications</v-list-item-title>
+              </v-list-item>
+              <v-list-item
+                v-if="canContrib"
+                :nuxt="true"
+                to="/storage"
+              >
+                <v-list-item-action><v-icon>mdi-harddisk</v-icon></v-list-item-action>
+                <v-list-item-title>Stockage</v-list-item-title>
+              </v-list-item>
+            </template>
             <v-divider />
 
             <!-- toggle admin mode -->
@@ -121,6 +152,7 @@
     computed: {
       ...mapState(['env', 'breadcrumbItems', 'breadcrumbsRouteName']),
       ...mapState('session', ['user', 'initialized']),
+      ...mapGetters(['canAdmin', 'canContrib', 'missingSubscription']),
       ...mapGetters('session', ['activeAccount']),
     },
     methods: {
