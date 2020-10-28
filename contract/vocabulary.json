@@ -100,6 +100,24 @@
     "tag": "Référentiels administratifs français"
   },
   {
+    "title": "Code EPCI",
+    "description": "Code du regroupement de communes, sur 9 chiffres",
+    "identifiers": [
+      "http://rdf.insee.fr/def/geo#EtablissementPublicDeCooperationIntercommunale"
+    ],
+    "type": "integer",
+    "tag": "Référentiels administratifs français"
+  },
+  {
+    "title": "Code IRIS",
+    "description": "Code d'une zone dans le découpage infracommunal IRIS",
+    "identifiers": [
+      "http://rdf.insee.fr/def/geo#codeIRIS"
+    ],
+    "type": "integer",
+    "tag": "Référentiels administratifs français"
+  },
+  {
     "title": "Latitude",
     "description": "Coordonné géographique qui permet de se situer par rapport à l'équateur",
     "identifiers": [
