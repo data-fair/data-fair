@@ -13,11 +13,13 @@ exports.exec = async (db, debug) => {
     debug('missing owner for journal', journal)
     if (journal.type === 'application') {
       const app = await db.collection('applications').findOne({ id: journal.id })
-      await db.collection('journals').updateOne({ _id: journal._id }, { $set: { owner: app.owner } })
+      if (!app) await db.collection('journals').deleteOne({ _id: journal._id })
+      else await db.collection('journals').updateOne({ _id: journal._id }, { $set: { owner: app.owner } })
     }
     if (journal.type === 'dataset') {
       const dataset = await db.collection('datasets').findOne({ id: journal.id })
-      await db.collection('journals').updateOne({ _id: journal._id }, { $set: { owner: dataset.owner } })
+      if (!dataset) await db.collection('journals').deleteOne({ _id: journal._id })
+      else await db.collection('journals').updateOne({ _id: journal._id }, { $set: { owner: dataset.owner } })
     }
   }
 }
