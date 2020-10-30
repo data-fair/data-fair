@@ -36,6 +36,7 @@
           <div class="mt-3 mb-3">
             <input
               type="file"
+              :accept="accepted.join(', ')"
               @change="onFileUpload"
             >
           </div>
@@ -72,6 +73,7 @@
           <div class="mt-3 mb-3">
             <input
               type="file"
+              accept=".zip"
               @change="onAttachmentUpload"
             >
             <v-checkbox
@@ -139,6 +141,24 @@
       action: null,
       importing: false,
       title: '',
+      accepted: [
+        '.csv',
+        '.geojson',
+        '.zip',
+        '.ods',
+        '.fods',
+        '.xlsx',
+        '.xls',
+        '.dbf',
+        '.txt',
+        '.dif',
+        '.tsv',
+        '.kml',
+        '.kmz',
+        '.xml',
+        '.gpx',
+        '.ics',
+      ],
     }),
     computed: {
       ...mapState('session', ['user']),
