@@ -166,6 +166,9 @@
               <template v-else-if="digitalDocumentField && digitalDocumentField.key === header.value">
                 <a :href="item._attachment_url">{{ item[header.value] }}</a>
               </template>
+              <template v-else-if="webPageField && webPageField.key === header.value">
+                <a v-if="item[header.value]" target="_blank" :href="item[header.value]">{{ item[header.value] | truncate(50) }}</a>
+              </template>
               <template v-else>
                 <v-hover v-slot:default="{ hover }">
                   <div :style="`position: relative; max-height: 40px; min-width: ${Math.min((item[header.value] + '').length, 50) * 6}px;`">
@@ -373,6 +376,9 @@
       },
       digitalDocumentField() {
         return this.dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')
+      },
+      webPageField() {
+        return this.dataset.schema.find(f => f['x-refersTo'] === 'https://schema.org/WebPage')
       },
       jsonSchema() {
         return {
