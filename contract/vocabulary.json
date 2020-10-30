@@ -28,6 +28,15 @@
     "tag": "Présentation"
   },
   {
+    "title": "Étiquette",
+    "description": "Une petite chaine de caractère utilisable simplement comme critère de classification des lignes",
+    "identifiers": [
+      "https://schema.org/DefinedTermSet"
+    ],
+    "type": "string",
+    "tag": "Présentation"
+  },
+  {
     "title": "Adresse",
     "description": "Une adresse écrite sur une ligne",
     "identifiers": [
