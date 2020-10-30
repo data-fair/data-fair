@@ -11,12 +11,12 @@
         :to="env.brand.url ? null: '/'"
         :nuxt="true"
       >
-        <v-list-item-action>
+        <v-list-item-avatar style="height: 45px;">
           <div class="main-logo">
             <img v-if="env.brand.logo" :src="env.brand.logo">
             <img v-else src="~/assets/logo.svg">
           </div>
-        </v-list-item-action>
+        </v-list-item-avatar>
         <v-list-item-title><h1>{{ env.brand.title || 'DataFair' }}</h1></v-list-item-title>
       </v-list-item>
       <v-divider />
@@ -25,8 +25,7 @@
     <v-list
       v-if="user && user.adminMode"
       color="admin"
-      tile
-      class="py-0 my-2"
+      class="py-0"
     >
       <v-list-item tile>
         <v-list-item-title>Administration</v-list-item-title>
@@ -79,7 +78,7 @@
       </template>
     </v-list>
 
-    <v-list class="pt-0">
+    <v-list nav>
       <template v-if="!missingSubscription">
         <v-list-item
           :nuxt="true"
@@ -99,7 +98,7 @@
           <v-list-item-title>Visualisations</v-list-item-title>
         </v-list-item>
 
-        <v-divider />
+        <v-divider class="pb-2" />
 
         <v-list-item
           v-if="activeAccount && activeAccount.type === 'organization' && user.organization.role === 'admin'"
