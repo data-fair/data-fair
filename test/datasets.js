@@ -257,7 +257,6 @@ describe('datasets', () => {
     schema.find(field => field.key === 'lon')['x-refersTo'] = 'http://schema.org/longitude'
     await ax.patch(webhook.href, { schema: schema })
 
-    console.log('HAHA')
     await testUtils.timeout(eventToPromise(notifier, 'webhook'), 4000, 'third webhook not received')
 
     // Delete the dataset
