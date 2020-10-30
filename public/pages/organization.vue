@@ -1,5 +1,5 @@
 <template>
-  <v-iframe :src="`${env.directoryUrl}/organization/${activeAccount.id}?embed=true`" />
+  <v-iframe :src="`${env.directoryUrl}/organization/${activeAccount.id}?embed=true&redirect=${encodeURIComponent(env.publicUrl)}`" />
 </template>
 
 <script>
