@@ -1,5 +1,6 @@
 <template>
   <v-navigation-drawer
+    class="navigation-left"
     color="primary"
     dark
     app
@@ -11,7 +12,7 @@
         :to="env.brand.url ? null: '/'"
         :nuxt="true"
       >
-        <v-list-item-avatar style="height: 45px;">
+        <v-list-item-avatar style="height: 45px;border-radius: 0;">
           <div class="main-logo">
             <img v-if="env.brand.logo" :src="env.brand.logo">
             <img v-else src="~/assets/logo.svg">

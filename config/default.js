@@ -60,7 +60,13 @@ module.exports = {
       admin: '#E53935', // red.darken1
     },
     cssUrl: null,
-    cssText: '',
+    cssText: `.navigation-left .v-navigation-drawer__content {
+  background: linear-gradient(90deg, rgba(25,118,210,1) 0%, rgba(30,136,229,1) 100%);
+}
+.v-btn.primary {
+  background: linear-gradient(270deg, rgba(25,118,210,1) 0%, rgba(30,136,229,1) 100%);
+}
+`,
   },
   defaultLimits: {
     // Maximum storage space per user or organization
