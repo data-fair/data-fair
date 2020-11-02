@@ -285,8 +285,8 @@ exports.bulkLines = async (req, res, next) => {
   let inputStream, parseStream
   if (req.files && req.files.actions && req.files.actions.length) {
     inputStream = fs.createReadStream(req.files.actions[0].path)
-    const mimetype = mime.lookup(req.files.actions[0].originalname)
-    parseStream = mimeTypeStream(mimetype).parser()
+    const ioStream = mimeTypeStream(mime.lookup(req.files.actions[0].originalname)) || mimeTypeStream('application/x-ndjson')
+    parseStream = ioStream.parser()
   } else {
     inputStream = req
     const ioStream = mimeTypeStream(req.get('Content-Type')) || mimeTypeStream('application/json')
