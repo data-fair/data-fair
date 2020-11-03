@@ -1,4 +1,4 @@
-const fs = require('fs')
+const fs = require('fs-extra')
 const FormData = require('form-data')
 const assert = require('assert').strict
 const testUtils = require('./resources/test-utils')
@@ -244,6 +244,70 @@ describe('REST datasets', () => {
     res = await ax.get('/api/v1/datasets/rest6/lines')
     assert.equal(res.data.total, 2)
     assert.equal(res.data.results.find(l => l._id === 'line1')['_file.content'], 'This is a test libreoffice file.')
+  })
+
+  it('Send bulk requests in ndjson file', async () => {
+    const ax = await global.ax.ngernier4
+    let res = await ax.post('/api/v1/datasets', {
+      isRest: true,
+      title: 'restndjson',
+      schema: [
+        { key: 'ip', type: 'string' },
+        { key: 'date', type: 'string', format: 'date-time' },
+        { key: 'bytes', type: 'number' },
+        { key: 'method', type: 'string' },
+        { key: 'protocol', type: 'string' },
+        { key: 'status', type: 'string' },
+        { key: 'referer', type: 'string' },
+        { key: 'url', type: 'string', 'x-refersTo': 'https://schema.org/WebPage' },
+        { key: 'lat', type: 'number', 'x-refersTo': 'http://schema.org/latitude' },
+        { key: 'lon', type: 'number', 'x-refersTo': 'http://schema.org/longitude' },
+        { key: 'browser', type: 'string' },
+        { key: 'device', type: 'string' },
+        { key: 'os', type: 'string' },
+        { key: 'collection', type: 'string' },
+        { key: 'resourceId', type: 'string' },
+        { key: 'operation', type: 'string' },
+      ],
+    })
+    await workers.hook('finalizer/restndjson')
+
+    // Create a line with an attached file
+    const form = new FormData()
+    form.append('actions', await fs.readFile('test/resources/access.log.ndjson'), 'actions.ndjson')
+    res = await ax.post('/api/v1/datasets/restndjson/_bulk_lines', form, { headers: testUtils.formHeaders(form) })
+    assert.equal(res.status, 200)
+    assert.equal(res.data.nbErrors, 0)
+    assert.equal(res.data.nbOk, 20)
+
+    await workers.hook('finalizer/restndjson')
+    res = await ax.get('/api/v1/datasets/restndjson/lines')
+    assert.equal(res.data.total, 20)
+  })
+
+  it('Send bulk requests in ndjson file and receive errors', async () => {
+    const ax = await global.ax.ngernier4
+    await ax.post('/api/v1/datasets', {
+      isRest: true,
+      title: 'restndjson',
+      schema: [
+        { key: 'ip', type: 'string' },
+        { key: 'date', type: 'string', format: 'date-time' },
+      ],
+    })
+    await workers.hook('finalizer/restndjson')
+
+    // Create a line with an attached file
+    const form = new FormData()
+    form.append('actions', await fs.readFile('test/resources/access.log.ndjson'), 'actions.ndjson')
+    try {
+      await ax.post('/api/v1/datasets/restndjson/_bulk_lines', form, { headers: testUtils.formHeaders(form) })
+      assert.fail()
+    } catch (err) {
+      assert.equal(err.status, 400)
+      assert.equal(err.data.nbErrors, 20)
+      assert.equal(err.data.nbOk, 0)
+    }
   })
 
   it('The size of the mongodb collection is part of storage consumption', async () => {

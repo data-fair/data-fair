@@ -124,7 +124,8 @@ const applyTransactions = async (req, transacs, validate) => {
     if (!bulkOp && !doc._error) await req.app.publish('datasets/' + dataset.id + '/transactions', transac)
     results.push({ _id: body._id, _action, _status: doc._error ? 400 : 200, ...doc })
   }
-  if (bulkOp) {
+
+  if (bulkOp && bulkOp.s.currentBatchSize) {
     await bulkOp.execute()
     for (const transac of transacs) {
       await req.app.publish('datasets/' + dataset.id + '/transactions', transac)
@@ -305,6 +306,7 @@ exports.bulkLines = async (req, res, next) => {
     transactionStream,
   )
   await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { status: 'updated' } })
+  if (!summary.nbOk && summary.nbErrors) res.status(400)
   res.send(summary)
   datasetUtils.updateStorage(db, req.dataset)
 }
