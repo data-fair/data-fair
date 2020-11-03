@@ -167,7 +167,11 @@
                 <a :href="item._attachment_url">{{ item[header.value] }}</a>
               </template>
               <template v-else-if="webPageField && webPageField.key === header.value">
-                <a v-if="item[header.value]" target="_blank" :href="item[header.value]">{{ item[header.value] | truncate(50) }}</a>
+                <a
+                  v-if="item[header.value]"
+                  target="_blank"
+                  :href="item[header.value]"
+                >{{ item[header.value] | truncate(50) }}</a>
               </template>
               <template v-else>
                 <v-hover v-slot:default="{ hover }">
