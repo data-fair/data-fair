@@ -9,8 +9,10 @@ exports.trigger = async (db, type, resource, event) => {
   const eventType = events[type][event.type]
   if (!eventType) return console.error('Unknown event type', type, event.type)
   // first send notifications before actual webhooks
+  const sender = { ...resource.owner }
+  delete sender.role
   notifications.send({
-    sender: resource.owner,
+    sender,
     topic: { key: `data-fair:${type}-${event.type}` },
     title: (resource.title || resource.id) + ' - ' + eventType.text,
     body: event.data || '',
