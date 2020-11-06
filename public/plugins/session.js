@@ -1,4 +1,4 @@
-export default ({ store, app, env }) => {
+export default async ({ store, app, env }) => {
   store.commit('setAny', { env: { ...env } })
   store.dispatch('session/init', {
     cookies: app.$cookies,
@@ -6,5 +6,5 @@ export default ({ store, app, env }) => {
     cookieDomain: env.sessionDomain,
   })
   store.dispatch('session/loop', app.$cookies)
-  store.dispatch('fetchLimits')
+  await store.dispatch('fetchLimits')
 }
