@@ -12,9 +12,11 @@
     computed: {
       ...mapState(['env']),
       ...mapGetters(['missingSubscription']),
+      ...mapGetters('session', ['activeAccount']),
     },
     mounted() {
-      if (this.missingSubscription) this.$router.replace('/subscription')
+      // this is intended mostly to react to page reload after the user created an organization
+      if (this.missingSubscription && this.activeAccount.type === 'organization') this.$router.replace('/subscription')
     },
   }
 </script>
