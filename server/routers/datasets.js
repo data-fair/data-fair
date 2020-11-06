@@ -253,6 +253,9 @@ router.patch('/:datasetId', readDataset(['finalized', 'error']), permissions.mid
     patch.status = 'loaded'
   } else if (patch.schema) {
     try {
+      // this method will routinely throw errors
+      // we just try in case elasticsearch considers the new mapping compatible
+      // so that we might optimize and reindex only when necessary
       await esUtils.updateDatasetMapping(req.app.get('es'), { id: req.dataset.id, schema: patch.schema })
       if (patch.extensions) {
         // Back to indexed state if schema did not change in significant manner, but extensions did
@@ -493,8 +496,22 @@ const updateDataset = asyncWrap(async(req, res) => {
       }
       req.body.rest = req.body.rest || {}
       dataset.schema = dataset.schema || []
-      if (req.isNewDataset) await restDatasetsUtils.initDataset(db, dataset)
-      dataset.status = 'schematized'
+      if (req.isNewDataset) {
+        await restDatasetsUtils.initDataset(db, dataset)
+        dataset.status = 'schematized'
+      } else {
+        try {
+          // this method will routinely throw errors
+          // we just try in case elasticsearch considers the new mapping compatible
+          // so that we might optimize and reindex only when necessary
+          await esUtils.updateDatasetMapping(req.app.get('es'), { id: req.dataset.id, schema: req.body.schema })
+          // Back to indexed state if schema did not change in significant manner
+          patch.status = 'indexed'
+        } catch (err) {
+          // generated ES mappings are not compatible, trigger full re-indexing
+          patch.status = 'schematized'
+        }
+      }
     }
     Object.assign(dataset, req.body)
 
