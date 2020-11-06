@@ -22,7 +22,9 @@ exports.esProperty = prop => {
   if (prop.type === 'string' && prop.format === 'date-time') esProp = { type: 'date', fields: innerTextField }
   if (prop.type === 'string' && prop.format === 'date') esProp = { type: 'date', fields: innerTextField }
   // uri-reference and full text fields are managed in the same way from now on, because we want to be able to aggregate on small full text fields
-  if (prop.type === 'string' && (prop.format === 'uri-reference' || !prop.format)) esProp = { type: 'keyword', ignore_above: 200, fields: innerTextField }
+  if (prop.type === 'string' && (prop.format === 'uri-reference' || !prop.format)) {
+    esProp = { type: 'keyword', ignore_above: 200, normalizer: 'keyword_normalizer', fields: innerTextField }
+  }
   // Do not index geometry, it will be copied and simplified in _geoshape
   if (prop['x-refersTo'] === 'https://purl.org/geojson/vocab#geometry') {
     // Geometry can be passed serialized in a string, or as an object
@@ -55,7 +57,7 @@ exports.parseSort = (sortStr, fields) => {
       field = s
       direction = 'asc'
     }
-    if (!fields.concat(['_key', '_count', '_time', 'metric', '_i', '_rand']).includes(field)) {
+    if (!fields.concat(['_key', '_count', '_time', 'metric', '_i', '_rand', '_score']).includes(field)) {
       throw createError(400, `Impossible de trier sur le champ ${field}, il n'existe pas dans le jeu de données.`)
     }
     return { [field]: direction }
@@ -106,7 +108,7 @@ exports.prepareQuery = (dataset, query) => {
   }
 
   // Sort by list of fields (prefixed by - for descending sort)
-  esQuery.sort = query.sort ? exports.parseSort(query.sort, [...fields, '_score']) : []
+  esQuery.sort = query.sort ? exports.parseSort(query.sort, fields) : []
   // implicitly sort by score after other criteria
   if (!esQuery.sort.includes('_score') && query.q) esQuery.sort.push('_score')
   // every other things equal, sort by original line order

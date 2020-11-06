@@ -52,7 +52,18 @@ exports.switchAlias = async (client, dataset, tempId) => {
 const indexBase = {
   // Minimal overhead by default as we might deal with a lot of small indices.
   // TODO: a way to override this ? Maybe intelligently based on size of the file ?
-  settings: { index: { number_of_shards: 1, number_of_replicas: 1 } },
+  settings: {
+    index: { number_of_shards: 1, number_of_replicas: 1 },
+    analysis: {
+      normalizer: {
+        // our keywords ignore case and diacritics variations
+        keyword_normalizer: {
+          type: 'custom',
+          filter: ['lowercase', 'asciifolding'],
+        },
+      },
+    },
+  },
   mappings: { },
 }
 
