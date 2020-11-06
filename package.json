@@ -156,7 +156,7 @@
     "vue-moment": "^4.1.0",
     "vue-truncate-filter": "^1.1.7",
     "vuedraggable": "^2.23.2",
-    "vuetify": "^2.3.14",
+    "vuetify": "^2.3.16",
     "ws": "^7.2.5",
     "xlsx": "^0.16.8"
   }

@@ -5,10 +5,20 @@
     dense
     class="px-0 main-app-bar"
   >
+    <v-toolbar-items v-if="!navContext.drawer">
+      <v-btn
+        text
+        @click="navContext.drawer = true"
+        color="primary"
+      >
+        <v-icon>mdi-menu</v-icon>
+      </v-btn>
+    </v-toolbar-items>
     <v-breadcrumbs
       v-if="breadcrumbItems && breadcrumbsRouteName === $route.name"
       :items="breadcrumbItems"
-      large
+      :large="!$vuetify.breakpoint.mobile"
+      :class="{'pl-1': $vuetify.breakpoint.mobile}"
     />
     <v-spacer />
     <v-toolbar-items>
@@ -149,6 +159,7 @@
 
   export default {
     components: { NotificationsQueue },
+    props: ['navContext'],
     computed: {
       ...mapState(['env', 'breadcrumbItems', 'breadcrumbsRouteName']),
       ...mapState('session', ['user', 'initialized']),

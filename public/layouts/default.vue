@@ -1,7 +1,7 @@
 <template>
   <v-app :dark="env.theme.dark">
-    <navigation-left />
-    <navigation-top />
+    <navigation-left :nav-context="navContext" />
+    <navigation-top :nav-context="navContext" />
     <v-main>
       <nuxt />
       <notifications />
@@ -17,8 +17,16 @@
 
   export default {
     components: { NavigationLeft, NavigationTop, Notifications },
+    data: () => ({
+      navContext: {
+        drawer: false,
+      },
+    }),
     computed: {
       ...mapState(['env']),
+    },
+    mounted() {
+      if (!this.$vuetify.breakpoint.mobile) this.navContext.drawer = true
     },
   }
 

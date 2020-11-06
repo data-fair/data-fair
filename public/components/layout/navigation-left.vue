@@ -1,10 +1,10 @@
 <template>
   <v-navigation-drawer
+    v-model="navContext.drawer"
     class="navigation-left"
     color="primary"
     dark
     app
-    permanent
   >
     <v-list class="pa-0">
       <v-list-item
@@ -172,6 +172,7 @@
 <script>
   import { mapState, mapGetters } from 'vuex'
   export default {
+    props: ['navContext'],
     computed: {
       ...mapState(['env']),
       ...mapState('session', ['user']),
