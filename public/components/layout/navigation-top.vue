@@ -128,6 +128,7 @@
             <!-- toggle admin mode -->
             <template v-if="user.isAdmin">
               <v-list-item dense>
+                <v-list-item-action><v-icon>mdi-shield-alert</v-icon></v-list-item-action>
                 <v-list-item-title style="overflow: visible;">
                   <v-switch
                     v-model="user.adminMode"
@@ -142,18 +143,21 @@
             </template>
 
             <v-list-item dense>
+              <v-list-item-action><v-icon>mdi-weather-night</v-icon></v-list-item-action>
               <v-list-item-title style="overflow: visible;">
                 <v-switch
                   v-model="$vuetify.theme.dark"
                   hide-details
                   class="mt-0"
                   label="mode nuit"
+                  color="white"
                   @change="setDarkCookie"
                 />
               </v-list-item-title>
             </v-list-item>
 
             <v-list-item @click="logout">
+              <v-list-item-action><v-icon>mdi-logout</v-icon></v-list-item-action>
               <v-list-item-title>Se déconnecter</v-list-item-title>
             </v-list-item>
           </v-list>

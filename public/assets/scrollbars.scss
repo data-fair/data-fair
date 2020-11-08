@@ -1,20 +1,28 @@
 .theme--light {
   .v-slide-group__wrapper::-webkit-scrollbar,
+  .v-menu__content::-webkit-scrollbar,
+  .v-navigation-drawer__content::-webkit-scrollbar,
   .v-data-table__wrapper::-webkit-scrollbar {
     width: 15px;
   }
   .v-slide-group__wrapper::-webkit-scrollbar-track,
+  .v-menu__content::-webkit-scrollbar-track,
+  .v-navigation-drawer__content::-webkit-scrollbar-track,
   .v-data-table__wrapper::-webkit-scrollbar-track {
     background: #e6e6e6;
     border-radius: 7px;
   }
   .v-slide-group__wrapper::-webkit-scrollbar-thumb,
+  .v-menu__content::-webkit-scrollbar-thumb,
+  .v-navigation-drawer__content::-webkit-scrollbar-thumb,
   .v-data-table__wrapper::-webkit-scrollbar-thumb {
     background: #b0b0b0;
     border: solid 3px #e6e6e6;
     border-radius: 7px;
   }
   .v-slide-group__wrapper::-webkit-scrollbar-thumb:hover,
+  .v-menu__content::-webkit-scrollbar-thumb:hover,
+  .v-navigation-drawer__content::-webkit-scrollbar-thumb:hover,
   .v-data-table__wrapper::-webkit-scrollbar-thumb:hover {
     background: #757575;
   }
@@ -22,21 +30,29 @@
 
 .theme--dark {
   .v-slide-group__wrapper::-webkit-scrollbar,
+  .v-menu__content::-webkit-scrollbar,
+  .v-navigation-drawer__content::-webkit-scrollbar,
   .v-data-table__wrapper::-webkit-scrollbar {
     width: 15px;
   }
   .v-slide-group__wrapper::-webkit-scrollbar-track,
+  .v-menu__content::-webkit-scrollbar-track,
+  .v-navigation-drawer__content::-webkit-scrollbar-track,
   .v-data-table__wrapper::-webkit-scrollbar-track {
     background: #121212;
     border-radius: 7px;
   }
   .v-slide-group__wrapper::-webkit-scrollbar-thumb,
+  .v-menu__content::-webkit-scrollbar-thumb,
+  .v-navigation-drawer__content::-webkit-scrollbar-thumb,
   .v-data-table__wrapper::-webkit-scrollbar-thumb {
     background: #424242;
     border: solid 3px #121212;
     border-radius: 7px;
   }
   .v-slide-group__wrapper::-webkit-scrollbar-thumb:hover,
+  .v-menu__content::-webkit-scrollbar-thumb:hover,
+  .v-navigation-drawer__content::-webkit-scrollbar-thumb:hover,
   .v-data-table__wrapper::-webkit-scrollbar-thumb:hover {
     background: #B6B6B6;
   }
