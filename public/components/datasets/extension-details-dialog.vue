@@ -16,7 +16,7 @@
       </v-tooltip>
     </template>
 
-    <v-card>
+    <v-card outlined>
       <v-toolbar dense flat>
         {{ remoteServicesMap[extension.remoteService] && remoteServicesMap[extension.remoteService].actions[extension.action].summary }}
         <v-spacer />

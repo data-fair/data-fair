@@ -23,35 +23,36 @@
 
     <v-stepper-items>
       <v-stepper-content step="1">
-        <v-sheet>
-          <p>Chargez un fichier de données principal.</p>
-          <p>
-            La liste des formats supportés est accessible dans <nuxt-link
-              :to="localePath({name: 'user-guide-id', params: {id: 'dataset'}})"
-              target="_blank"
-            >
-              la documentation
-            </nuxt-link>.
-          </p>
-          <div class="mt-3 mb-3">
-            <input
-              type="file"
-              :accept="accepted.join(', ')"
-              @change="onFileUpload"
-            >
-          </div>
-          <div
-            v-if="file"
-            class="mt-3 mb-3"
+        <p>Chargez un fichier de données principal.</p>
+        <p>
+          La liste des formats supportés est accessible dans <nuxt-link
+            :to="localePath({name: 'user-guide-id', params: {id: 'dataset'}})"
+            target="_blank"
           >
-            <v-text-field
-              v-model="title"
-              name="title"
-              label="Titre du jeu de données"
-              placeholder="Laissez vide pour utiliser le nom de fichier"
-            />
-          </div>
-        </v-sheet>
+            la documentation
+          </nuxt-link>.
+        </p>
+        <div class="mt-3 mb-3">
+          <v-file-input
+            label="sélectionnez un fichier"
+            outlined
+            dense
+             style="max-width: 300px;"
+            :accept="accepted.join(', ')"
+            @change="onFileUpload"
+          />
+        </div>
+        <div
+          v-if="file"
+          class="mt-3 mb-3"
+        >
+          <v-text-field
+            v-model="title"
+            name="title"
+            label="Titre du jeu de données"
+            placeholder="Laissez vide pour utiliser le nom de fichier"
+          />
+        </div>
         <v-btn
           class="mt-2"
           :disabled="!file"
@@ -67,23 +68,24 @@
         <file-formats />
       </v-stepper-content>
       <v-stepper-content step="2">
-        <v-sheet>
-          <p>Optionnellement vous pouvez charger une archive zip contenant des fichiers à utiliser comme pièces à joindre aux lignes du fichier principal.</p>
-          <p>Le fichier principal doit avoir un champ qui contient les chemins des pièces jointes dans l'archive.</p>
-          <div class="mt-3 mb-3">
-            <input
-              type="file"
-              accept=".zip"
-              @change="onAttachmentUpload"
-            >
-            <v-checkbox
-              v-if="attachment"
-              v-model="attachmentsAsImage"
-              hide-details
-              :label="`Traiter les pièces jointes comme des images`"
-            />
-          </div>
-        </v-sheet>
+        <p>Optionnellement vous pouvez charger une archive zip contenant des fichiers à utiliser comme pièces à joindre aux lignes du fichier principal.</p>
+        <p>Le fichier principal doit avoir un champ qui contient les chemins des pièces jointes dans l'archive.</p>
+        <div class="mt-3 mb-3">
+          <v-file-input
+            label="sélectionnez un fichier"
+            outlined
+            dense
+            style="max-width: 300px;"
+            accept=".zip"
+            @change="onAttachmentUpload"
+          />
+          <v-checkbox
+            v-if="attachment"
+            v-model="attachmentsAsImage"
+            hide-details
+            :label="`Traiter les pièces jointes comme des images`"
+          />
+        </div>
         <v-btn
           color="primary"
           class="mt-4"
@@ -93,25 +95,23 @@
         </v-btn>
       </v-stepper-content>
       <v-stepper-content step="3">
-        <v-sheet>
-          <v-radio-group
-            v-model="action"
-            class="mt-3 mb-3"
-            hide-details
-          >
-            <v-radio
-              v-for="a in actions"
-              :key="a.id"
-              :label="a.title"
-              :value="a"
-            />
-          </v-radio-group>
-          <v-progress-linear
-            v-if="importing"
-            v-model="uploadProgress"
-            class="mb-2"
+        <v-radio-group
+          v-model="action"
+          class="mt-3 mb-3"
+          hide-details
+        >
+          <v-radio
+            v-for="a in actions"
+            :key="a.id"
+            :label="a.title"
+            :value="a"
           />
-        </v-sheet>
+        </v-radio-group>
+        <v-progress-linear
+          v-if="importing"
+          v-model="uploadProgress"
+          class="mb-2"
+        />
         <v-btn
           :disabled="!action || importing"
           color="primary"
@@ -188,11 +188,11 @@
       },
     },
     methods: {
-      onFileUpload(e) {
-        this.file = e.target.files[0]
+      onFileUpload(file) {
+        this.file = file
       },
-      onAttachmentUpload(e) {
-        this.attachment = e.target.files[0]
+      onAttachmentUpload(file) {
+        this.attachment = file
       },
       async importData() {
         const options = {

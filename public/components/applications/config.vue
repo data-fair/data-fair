@@ -72,7 +72,7 @@
           class="pl-0"
         >
           <v-card
-            class="pa-2"
+            class="pa-0"
             outlined
             :style="!!application.errorMessageDraft ? `border-color: ${$vuetify.theme.themes.light.warning};` : ''"
           >
@@ -150,7 +150,7 @@
         v-model="showCancelDialog"
         max-width="500px"
       >
-        <v-card>
+        <v-card outlined>
           <v-card-title primary-title>
             Effacer le brouillon
           </v-card-title>
@@ -245,6 +245,8 @@
             maxWidth: 500,
             overlayOpacity: 0, // better when inside an iframe
           },
+          arrayItemCardProps: { outlined: true, tile: true },
+          dialogCardProps: { outlined: true },
         }
       },
     },

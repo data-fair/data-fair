@@ -18,7 +18,7 @@
             </v-btn>
           </template>
 
-          <v-card>
+          <v-card outlined>
             <v-toolbar dense flat>
               <v-toolbar-title>Nouvelle réutilisation externe</v-toolbar-title>
             </v-toolbar>
@@ -82,7 +82,7 @@
                 </v-btn>
               </template>
 
-              <v-card>
+              <v-card outlined>
                 <v-toolbar dense flat>
                   <v-toolbar-title>Editer la réutilisation externe</v-toolbar-title>
                 </v-toolbar>

@@ -1,5 +1,5 @@
 <template>
-  <v-stepper v-model="currentStep" class="elevation-0">
+  <v-stepper v-model="currentStep">
     <v-stepper-header>
       <v-stepper-step
         :complete="!!baseApp"
@@ -8,7 +8,7 @@
       >
         Sélection de l'application
       </v-stepper-step>
-
+      <v-divider></v-divider>
       <v-stepper-step
         :complete="!!title"
         step="2"
@@ -20,17 +20,16 @@
 
     <v-stepper-items>
       <v-stepper-content step="1">
-        <v-sheet>
-          <p>
-            Nous réalisons aussi des <span class="accent--text">applications personnalisées</span> sur demande.
-            N'hésitez pas à <a href="https://koumoul.com/contact" class="">Nous contacter</a> !
-          </p>
-          <base-apps
-            v-model="baseApp"
-            :dataset="dataset"
-            @input="currentStep = 2; title = dataset ? dataset.title + ' - ' + baseApp.title : baseApp.title"
-          />
-        </v-sheet>
+        <p>
+          Nous réalisons aussi des <span class="accent--text">applications personnalisées</span> sur demande.
+          N'hésitez pas à <a href="https://koumoul.com/contact" class="">Nous contacter</a> !
+        </p>
+        <base-apps
+          v-model="baseApp"
+          :dataset="dataset"
+          @input="currentStep = 2; title = dataset ? dataset.title + ' - ' + baseApp.title : baseApp.title"
+        />
+
         <!--<v-btn
           :disabled="!baseApp"
           color="primary"
@@ -41,14 +40,12 @@
       </v-stepper-content>
 
       <v-stepper-content step="2">
-        <v-sheet>
-          <v-text-field
-            v-model="title"
-            style="max-width: 500px;"
-            name="title"
-            label="Titre"
-          />
-        </v-sheet>
+        <v-text-field
+          v-model="title"
+          style="max-width: 500px;"
+          name="title"
+          label="Titre"
+        />
         <v-btn
           :disabled="!title"
           color="primary"

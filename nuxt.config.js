@@ -69,6 +69,7 @@ module.exports = {
       dark: config.theme.dark,
       themes: {
         light: config.theme.colors,
+        dark: { ...config.theme.colors, ...config.theme.darkColors },
       },
     },
     defaultAssets: {

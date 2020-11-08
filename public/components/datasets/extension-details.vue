@@ -38,7 +38,8 @@
             append-icon="mdi-magnify"
             class="mr-3"
             style="min-width:150px;"
-            solo
+            dense
+            outlined
             @keyup.enter.native="refresh"
             @click:append="refresh"
           />

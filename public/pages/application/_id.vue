@@ -24,7 +24,7 @@
             style="min-height: 270px;"
             class="mt-4"
           >
-            <v-tabs background-color="grey lighten-3">
+            <v-tabs :background-color="$vuetify.theme.dark ? '' : 'grey lighten-3'">
               <v-tab href="#tab-publish-permissions">
                 <v-icon>mdi-security</v-icon>&nbsp;&nbsp;Permissions
               </v-tab>
@@ -65,7 +65,7 @@
             outlined
             class="mt-6"
           >
-            <v-tabs background-color="grey lighten-3">
+            <v-tabs :background-color="$vuetify.theme.dark ? '' : 'grey lighten-3'">
               <template v-if="can('readJournal')">
                 <v-tab href="#tab-tech-journal">
                   <v-icon>mdi-calendar-text</v-icon>&nbsp;&nbsp;Journal
@@ -128,15 +128,7 @@
     async fetch({ store, params, route }) {
       await store.dispatch('application/setId', route.params.id)
     },
-    data: () => ({
-      showDeleteDialog: false,
-      showIntegrationDialog: false,
-      showCaptureDialog: false,
-      showOwnerDialog: false,
-      newOwner: null,
-      captureWidth: 800,
-      captureHeight: 450,
-    }),
+    data: () => ({}),
     computed: {
       ...mapState(['env']),
       ...mapState('application', ['application', 'api', 'journal', 'prodBaseApp', 'error']),

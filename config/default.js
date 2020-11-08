@@ -49,7 +49,6 @@ module.exports = {
   theme: {
     dark: false,
     colors: {
-      // standard vuetify colors
       primary: '#1E88E5', // blue.darken1
       secondary: '#42A5F5', // blue.lighten1,
       accent: '#FF9800', // orange.base
@@ -59,9 +58,17 @@ module.exports = {
       warning: '#E91E63', // pink.base
       admin: '#E53935', // red.darken1
     },
+    darkColors: {
+      primary: '#2196F3', // blue.base
+      success: '#00E676', // green.accent3
+    },
     cssUrl: null,
-    cssText: `.navigation-left .v-navigation-drawer__content {
+    cssText: `
+.theme--light .navigation-left .v-navigation-drawer__content {
   background: linear-gradient(90deg, rgba(25,118,210,1) 0%, rgba(30,136,229,1) 100%);
+}
+.theme--dark .navigation-left .v-navigation-drawer__content {
+  background: linear-gradient(90deg, #363636 0%, #272727 100%);
 }
 .v-btn.primary {
   background: linear-gradient(270deg, rgba(25,118,210,1) 0%, rgba(30,136,229,1) 100%);

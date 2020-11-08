@@ -23,7 +23,7 @@
               mdi-exit-to-app
             </v-icon>
           </v-list-item-avatar>
-          <v-list-item-title>Accéder à l'application</v-list-item-title>
+          <v-list-item-title>Ouvrir en pleine page</v-list-item-title>
         </v-list-item>
 
         <v-list-item
@@ -76,7 +76,7 @@
       </v-list>
     </v-menu>
     <v-dialog v-model="showIntegrationDialog">
-      <v-card>
+      <v-card outlined>
         <v-toolbar
           dense
           flat
@@ -112,7 +112,7 @@
       v-model="showCaptureDialog"
       max-width="500"
     >
-      <v-card>
+      <v-card outlined>
         <v-toolbar
           dense
           flat
@@ -126,7 +126,7 @@
             <v-icon>mdi-close</v-icon>
           </v-btn>
         </v-toolbar>
-        <v-card-text v-if="showCaptureDialog">
+        <v-card-text v-if="showCaptureDialog" class="pb-0 pt-2">
           <p>Une image statique au format PNG va être créée à partir de cette visualisation.</p>
           <v-text-field
             v-model="captureWidth"
@@ -138,12 +138,14 @@
             label="Hauteur"
             type="number"
           />
-          <br>
-          <a
-            :href="`${env.captureUrl}/api/v1/screenshot?target=${encodeURIComponent(applicationLink)}&width=${captureWidth}&height=${captureHeight}`"
-            download
-          >Télécharger la capture</a>
         </v-card-text>
+        <v-card-actions>
+          <v-spacer/>
+          <v-btn color="primary" icon :href="`${env.captureUrl}/api/v1/screenshot?target=${encodeURIComponent(applicationLink)}&width=${captureWidth}&height=${captureHeight}`" download title="télécharger la capture">
+            <v-icon>mdi-download</v-icon>
+          </v-btn>
+          <v-spacer/>
+        </v-card-actions>
       </v-card>
     </v-dialog>
 
@@ -151,7 +153,7 @@
       v-model="showDeleteDialog"
       max-width="500"
     >
-      <v-card>
+      <v-card outlined>
         <v-card-title primary-title>
           Suppression de la visualisation
         </v-card-title>
@@ -177,7 +179,7 @@
       v-model="showOwnerDialog"
       max-width="900"
     >
-      <v-card>
+      <v-card outlined>
         <v-card-title primary-title>
           Changer le propriétaire de l'application
         </v-card-title>

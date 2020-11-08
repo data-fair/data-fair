@@ -5,10 +5,10 @@
         <template v-if="(dataset.isVirtual || dataset.isRest) && journal">
           <v-list-item
             v-if="journal[0] && dataset.status !== 0"
-            :class="'pa-2 event-' + journal[0].type"
+            :class="`pa-2 event-${journal[0].type}`"
           >
             <v-list-item-avatar v-if="['finalize-end', 'publication', 'error'].includes(journal[0].type)" class="ml-0 my-0">
-              <v-icon>{{ events[journal[0].type].icon }}</v-icon>
+              <v-icon :color="events[journal[0].type].color || 'primary'">{{ events[journal[0].type].icon }}</v-icon>
             </v-list-item-avatar>
             <v-list-item-avatar v-else>
               <v-progress-circular
@@ -19,7 +19,9 @@
                 color="primary"
               />
             </v-list-item-avatar>
-            <span>{{ events[journal[0].type] && events[journal[0].type].text }}</span>
+            <span :class="events[journal[0].type].color ? `${events[journal[0].type].color}--text` : ''">
+              {{ events[journal[0].type] && events[journal[0].type].text }}
+            </span>
           </v-list-item>
         </template>
         <v-stepper
@@ -28,6 +30,7 @@
           :value="stateFromStatus(dataset.status)"
           alt-labels
           class="elevation-0"
+          style="background: transparent"
         >
           <v-stepper-header>
             <template v-for="(step, i) in steps">

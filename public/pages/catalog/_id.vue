@@ -11,7 +11,7 @@
       <v-row class="catalog">
         <v-col>
           <v-card outlined style="min-height: 600px;">
-            <v-tabs background-color="grey lighten-3">
+            <v-tabs :background-color="$vuetify.theme.dark ? '' : 'grey lighten-3'">
               <v-tab href="#tab-general-info">
                 <v-icon>mdi-information</v-icon>&nbsp;&nbsp;Informations
               </v-tab>

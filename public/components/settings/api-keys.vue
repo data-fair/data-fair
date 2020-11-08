@@ -19,7 +19,7 @@
           cols="12"
           lg="6"
         >
-          <v-card>
+          <v-card tile outlined>
             <v-card-title primary-title>
               <h4 class="title">
                 {{ apiKey.title }}
@@ -73,7 +73,7 @@
       v-model="showDialog"
       max-width="700px"
     >
-      <v-card>
+      <v-card outlined>
         <v-card-title primary-title>
           Ajout d'une nouvelle clé d'API
         </v-card-title>
@@ -123,7 +123,7 @@
       v-model="showDeleteDialog"
       max-width="700px"
     >
-      <v-card v-if="showDeleteDialog">
+      <v-card v-if="showDeleteDialog" outlined>
         <v-card-title primary-title>
           Suppression d'une clé d'API
         </v-card-title>
@@ -149,7 +149,7 @@
       v-model="showUseDialog"
       max-width="700px"
     >
-      <v-card v-if="showUseDialog">
+      <v-card v-if="showUseDialog" outlined>
         <v-card-title primary-title>
           Utilisation d'une clé d'API
         </v-card-title>

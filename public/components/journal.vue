@@ -7,8 +7,8 @@
       class="journal"
     >
       <template v-slot:item="{item}">
-        <tr :class="'event-' + item.type">
-          <td><v-icon>{{ eventTypes[item.type].icon }}</v-icon></td>
+        <tr :class="`event-${item.type} ${eventTypes[item.type].color ? eventTypes[item.type].color + '--text' : ''}`">
+          <td><v-icon :color="eventTypes[item.type].color || 'default'">{{ eventTypes[item.type].icon }}</v-icon></td>
           <td>
             {{ eventTypes[item.type].text }}
             <template v-if="item.data">

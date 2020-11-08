@@ -8,8 +8,8 @@
     <v-toolbar-items v-if="!navContext.drawer">
       <v-btn
         text
-        @click="navContext.drawer = true"
         color="primary"
+        @click="navContext.drawer = true"
       >
         <v-icon>mdi-menu</v-icon>
       </v-btn>
@@ -50,7 +50,7 @@
             </v-btn>
           </template>
 
-          <v-list>
+          <v-list outlined>
             <v-list-item disabled>
               <v-list-item-avatar class="ml-0 my-0">
                 <v-avatar :size="28">
@@ -127,21 +127,31 @@
 
             <!-- toggle admin mode -->
             <template v-if="user.isAdmin">
-              <v-list-item
-                v-if="!user.adminMode"
-                color="admin"
-                @click="setAdminMode(true)"
-              >
-                <v-list-item-title>{{ $t('common.activateAdminMode') }}</v-list-item-title>
-              </v-list-item>
-              <v-list-item
-                v-if="user.adminMode"
-                color="admin"
-                @click="setAdminMode(false)"
-              >
-                <v-list-item-title>{{ $t('common.deactivateAdminMode') }}</v-list-item-title>
+              <v-list-item dense>
+                <v-list-item-title style="overflow: visible;">
+                  <v-switch
+                    v-model="user.adminMode"
+                    color="admin"
+                    hide-details
+                    class="mt-0"
+                    label="mode admin"
+                    @change="setAdminMode"
+                  />
+                </v-list-item-title>
               </v-list-item>
             </template>
+
+            <v-list-item dense>
+              <v-list-item-title style="overflow: visible;">
+                <v-switch
+                  v-model="$vuetify.theme.dark"
+                  hide-details
+                  class="mt-0"
+                  label="mode nuit"
+                  @change="setDarkCookie"
+                />
+              </v-list-item-title>
+            </v-list-item>
 
             <v-list-item @click="logout">
               <v-list-item-title>Se déconnecter</v-list-item-title>
@@ -170,6 +180,9 @@
       ...mapActions('session', ['logout', 'login', 'setAdminMode', 'switchOrganization']),
       reload() {
         window.location.reload()
+      },
+      setDarkCookie(value) {
+        this.$cookies.set('theme_dark', '' + value, { path: '/', domain: this.env.sessionDomain })
       },
     },
   }

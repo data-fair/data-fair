@@ -142,7 +142,7 @@
       v-model="deleteChildDialog"
       max-width="500px"
     >
-      <v-card v-if="childrenById[dataset.virtual.children[currentChild]]">
+      <v-card v-if="childrenById[dataset.virtual.children[currentChild]]" outlined>
         <v-card-title primary-title>
           Suppression du jeu de données enfant
         </v-card-title>

@@ -1,5 +1,5 @@
 <template lang="html">
-  <div>
+  <div class="open-api">
     <v-iframe :src="src" />
   </div>
 </template>
@@ -28,4 +28,8 @@
 </script>
 
 <style lang="css">
+.open-api .v-iframe iframe {
+  background-color: white;
+  border: none;
+}
 </style>

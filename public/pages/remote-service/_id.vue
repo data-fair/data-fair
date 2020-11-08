@@ -3,7 +3,7 @@
     <v-row class="remoteService">
       <v-col>
         <v-card outlined style="min-height: 330px;">
-          <v-tabs background-color="grey lighten-3">
+          <v-tabs :background-color="$vuetify.theme.dark ? '' : 'grey lighten-3'">
             <v-tab href="#tab-general-info">
               Informations
             </v-tab>
@@ -23,7 +23,7 @@
         </v-card>
 
         <v-card outlined class="mt-4">
-          <v-tabs background-color="grey lighten-3">
+          <v-tabs :background-color="$vuetify.theme.dark ? '' : 'grey lighten-3'">
             <v-tab href="#tab-tech-config">
               Configuration
             </v-tab>

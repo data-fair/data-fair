@@ -7,7 +7,7 @@
       <v-jsf
         v-model="wrapper"
         :schema="wrapperSchema"
-        :options="{locale: 'fr', hideReadOnly: true, colorPickerProps: {showSwatches: true}}"
+        :options="{locale: 'fr', hideReadOnly: true, colorPickerProps: {showSwatches: true}, arrayItemCardProps: {outlined: true, tile: true}, dialogCardProps: {outlined: true}}"
         @change="change"
       />
     </v-form>

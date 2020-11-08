@@ -11,7 +11,7 @@
         <v-text-field
           v-model="filters.q"
           placeholder="Rechercher"
-          solo
+          outlined
           dense
           append-icon="mdi-magnify"
           hide-details

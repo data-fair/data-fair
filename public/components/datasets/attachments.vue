@@ -2,10 +2,13 @@
   <v-container fluid>
     <template v-if="can('writeData')">
       <p>Charger un fichier pour créer/modifier une pièce jointe. Le nom de fichier est l'identifiant de la pièce jointe.</p>
-      <input
-        type="file"
+      <v-file-input
+        label="sélectionnez un fichier"
+        outlined
+        dense
+        style="max-width: 300px;"
         @change="onFileUpload"
-      >
+      />
       <v-btn
         :disabled="!file || uploading"
         color="primary"
@@ -70,8 +73,8 @@
     },
     methods: {
       ...mapActions('dataset', ['patchAndCommit']),
-      onFileUpload(e) {
-        this.file = e.target.files[0]
+      onFileUpload(file) {
+        this.file = file
       },
       async confirmUpload() {
         const options = {

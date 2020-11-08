@@ -67,7 +67,7 @@
     </v-menu>
 
     <v-dialog v-model="showIntegrationDialog">
-      <v-card>
+      <v-card outlined>
         <v-toolbar
           dense
           flat
@@ -114,7 +114,7 @@
       v-model="showDeleteDialog"
       max-width="500"
     >
-      <v-card>
+      <v-card outlined>
         <v-card-title primary-title>
           Suppression du jeu de données
         </v-card-title>
@@ -156,7 +156,7 @@
       v-model="showOwnerDialog"
       max-width="900"
     >
-      <v-card>
+      <v-card outlined>
         <v-card-title primary-title>
           Changer le propriétaire du jeu de données
         </v-card-title>
@@ -183,7 +183,7 @@
       v-model="showUploadDialog"
       max-width="500"
     >
-      <v-card>
+      <v-card outlined>
         <v-card-title primary-title>
           Remplacement des données
         </v-card-title>
@@ -204,10 +204,13 @@
           </v-alert>
         </v-card-text>
         <v-card-text>
-          <input
-            type="file"
+          <v-file-input
+            label="sélectionnez un fichier"
+            outlined
+            dense
+            style="max-width: 300px;"
             @change="onFileUpload"
-          >
+          />
           <v-progress-linear
             v-if="uploading"
             v-model="uploadProgress"
@@ -269,8 +272,8 @@
         await this.remove()
         this.$router.push({ path: '/datasets' })
       },
-      onFileUpload(e) {
-        this.file = e.target.files[0]
+      onFileUpload(file) {
+        this.file = file
       },
       async confirmUpload() {
         const options = {

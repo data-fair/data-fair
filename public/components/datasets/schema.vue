@@ -75,7 +75,7 @@
       v-model="addPropertyDialog"
       max-width="500px"
     >
-      <v-card>
+      <v-card outlined>
         <v-card-title primary-title>
           Ajouter une propriété
         </v-card-title>

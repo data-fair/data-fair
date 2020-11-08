@@ -16,7 +16,7 @@
             style="min-height: 440px;"
             class="mt-4"
           >
-            <v-tabs background-color="grey lighten-3">
+            <v-tabs :background-color="$vuetify.theme.dark ? '' : 'grey lighten-3'">
               <v-tab href="#tab-general-info">
                 <v-icon>mdi-information</v-icon>&nbsp;&nbsp;Informations
               </v-tab>
@@ -72,7 +72,7 @@
             outlined
             class="mt-6"
           >
-            <v-tabs background-color="grey lighten-3">
+            <v-tabs :background-color="$vuetify.theme.dark ? '' : 'grey lighten-3'">
               <v-tab href="#tab-preview-table">
                 <v-icon>mdi-table</v-icon>&nbsp;&nbsp;Tableau
               </v-tab>
@@ -128,7 +128,7 @@
           </v-card>
 
           <v-card outlined class="mt-6">
-            <v-tabs background-color="grey lighten-3">
+            <v-tabs :background-color="$vuetify.theme.dark ? '' : 'grey lighten-3'">
               <v-tab href="#tab-reuses-apps">
                 <v-icon>mdi-image-multiple</v-icon>&nbsp;&nbsp;Visualisations
               </v-tab>
@@ -151,7 +151,7 @@
             style="min-height: 200px;"
             class="mt-6"
           >
-            <v-tabs background-color="grey lighten-3">
+            <v-tabs :background-color="$vuetify.theme.dark ? '' : 'grey lighten-3'">
               <v-tab href="#tab-publish-permissions">
                 <v-icon>mdi-security</v-icon>&nbsp;&nbsp;Permissions
               </v-tab>
@@ -181,7 +181,7 @@
             outlined
             class="mt-6"
           >
-            <v-tabs background-color="grey lighten-3">
+            <v-tabs :background-color="$vuetify.theme.dark ? '' : 'grey lighten-3'">
               <template v-if="can('readJournal')">
                 <v-tab href="#tab-tech-journal">
                   <v-icon>mdi-calendar-text</v-icon>&nbsp;&nbsp;Journal
@@ -270,6 +270,7 @@
     },
     data: () => ({}),
     computed: {
+      ...mapState(['env']),
       ...mapState('dataset', ['dataset', 'api', 'journal', 'error']),
       ...mapGetters('dataset', ['resourceUrl', 'can', 'hasPublicApplications']),
       ...mapGetters('session', ['activeAccount']),

@@ -79,7 +79,7 @@
       v-model="addPublicationDialog"
       max-width="700px"
     >
-      <v-card>
+      <v-card outlined>
         <v-card-title primary-title>
           Ajout d'une nouvelle publication
         </v-card-title>
@@ -117,7 +117,7 @@
       v-model="showDeleteDialog"
       max-width="500"
     >
-      <v-card v-if="showDeleteDialog">
+      <v-card v-if="showDeleteDialog" outlined>
         <v-card-title primary-title>
           Suppression d'une publication
         </v-card-title>
@@ -143,7 +143,7 @@
     </v-dialog>
 
     <v-dialog v-model="showRepublishDialog" max-width="500">
-      <v-card v-if="showRepublishDialog">
+      <v-card v-if="showRepublishDialog" outlined>
         <v-card-title primary-title>
           Re-publication
         </v-card-title>

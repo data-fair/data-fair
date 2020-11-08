@@ -10,9 +10,11 @@
       Ajouter une license
     </v-btn>
 
+
     <v-list
       v-if="settings.licenses.length"
       two-line
+      outlined
     >
       <v-list-item
         v-for="(license, rowIndex) in settings.licenses"
@@ -39,7 +41,7 @@
       v-model="showDialog"
       max-width="700px"
     >
-      <v-card>
+      <v-card outlined>
         <v-card-title primary-title>
           Ajout d'une nouvelle license
         </v-card-title>

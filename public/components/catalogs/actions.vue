@@ -44,7 +44,7 @@
       v-model="showDeleteDialog"
       max-width="500"
     >
-      <v-card>
+      <v-card outlined>
         <v-card-title primary-title>
           Suppression de la configuration du catalogue
         </v-card-title>
@@ -79,7 +79,7 @@
       </v-card>
     </v-dialog>
 
-    <v-dialog v-model="showOwnerDialog" max-width="900">
+    <v-dialog v-model="showOwnerDialog" max-width="900" outlined>
       <v-card>
         <v-card-title primary-title>
           Changer le propriétaire du catalogue

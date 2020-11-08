@@ -58,7 +58,7 @@
       v-model="showDeleteDialog"
       max-width="500"
     >
-      <v-card>
+      <v-card outlined>
         <v-card-title primary-title>
           Suppression de la configuration du service
         </v-card-title>

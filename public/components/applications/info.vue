@@ -6,8 +6,8 @@
       lg="5"
       order-md="2"
     >
-      <v-sheet>
-        <v-list dense>
+      <v-sheet style="background: transparent;">
+        <v-list dense style="background: transparent;">
           <owner-list-item :owner="application.owner" />
 
           <v-list-item

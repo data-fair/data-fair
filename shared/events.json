@@ -2,7 +2,8 @@
   "dataset": {
     "error": {
       "icon": "mdi-alert",
-      "text": "Le service a rencontré une erreur pendant le traitement du jeu de données"
+      "text": "Le service a rencontré une erreur pendant le traitement du jeu de données",
+      "color": "error"
     },
     "dataset-created": {
       "icon": "mdi-plus-circle-outline",
@@ -58,11 +59,13 @@
     },
     "finalize-end": {
       "icon": "mdi-check",
-      "text": "Les données et meta-données sont à jour, le jeu de données est disponible"
+      "text": "Les données et meta-données sont à jour, le jeu de données est disponible",
+      "color": "success"
     },
     "publication": {
       "icon": "mdi-publish",
-      "text": "Publication du jeu de données vers un catalogue effectuée"
+      "text": "Publication du jeu de données vers un catalogue effectuée",
+      "color": "success"
     },
     "download-start": {
       "icon": "mdi-file-download",
@@ -79,7 +82,8 @@
   "application": {
     "error": {
       "icon": "mdi-alert",
-      "text": "L'application a été configurée mais n'est pas fonctionnelle"
+      "text": "L'application a été configurée mais n'est pas fonctionnelle",
+      "color": "error"
     },
     "application-created": {
       "icon": "mdi-plus-circle-outline",
@@ -91,7 +95,8 @@
     },
     "config-updated": {
       "icon": "mdi-pencil",
-      "text": "La configuration a été mise à jour"
+      "text": "La configuration a été mise à jour",
+      "color": "success"
     },
     "config-draft-updated": {
       "icon": "mdi-pencil",

@@ -17,7 +17,8 @@
               name="q"
               label="Rechercher"
               hide-details
-              solo
+              outlined
+              dense
               append-icon="mdi-magnify"
               @keypress.enter="refresh"
             />
@@ -95,7 +96,7 @@
       max-width="500px"
       transition="dialog-transition"
     >
-      <v-card v-if="currentBaseApp">
+      <v-card v-if="currentBaseApp" outlined>
         <v-card-title primary-title>
           <h3 class="text-h6 mb-0">
             Édition de {{ currentBaseApp.title }}

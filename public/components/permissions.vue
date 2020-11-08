@@ -108,8 +108,8 @@
       max-width="800"
       persistent
     >
-      <v-card>
-        <v-card-title>Editer un ensemble de permissions</v-card-title>
+      <v-card outlined>
+        <v-card-title>Éditer des permissions</v-card-title>
         <v-card-text>
           <v-select
             v-model="currentPermission.type"

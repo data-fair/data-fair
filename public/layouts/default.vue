@@ -1,5 +1,5 @@
 <template>
-  <v-app :dark="env.theme.dark">
+  <v-app :dark="$vuetify.theme.dark">
     <navigation-left :nav-context="navContext" />
     <navigation-top :nav-context="navContext" />
     <v-main>
@@ -79,18 +79,11 @@ body .v-application {
   }
 }
 
-.event-finalize-end * {
-  color: green !important;
-}
+.event-finalize-end * {}
 
-.event-publication * {
-  color: green !important;
-}
+.event-publication * {}
 
 .event-error {
-  * {
-    color: red !important;
-  }
   .v-list__tile {
     height: auto;
   }

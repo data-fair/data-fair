@@ -162,6 +162,7 @@
 .properties-slide .v-slide-group__wrapper {
   overflow-x: visible;
 }
+
 .properties-slide .v-slide-group__prev, .properties-slide .v-slide-group__next {
   width: 0;
   min-width: 0;

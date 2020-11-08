@@ -2,7 +2,6 @@
   <v-navigation-drawer
     v-model="navContext.drawer"
     class="navigation-left"
-    color="primary"
     dark
     app
   >
@@ -22,13 +21,13 @@
       </v-list-item>
       <v-divider />
     </v-list>
-
     <v-list
       v-if="user && user.adminMode"
-      color="admin"
       class="py-0"
+      color="admin"
+      style="background-image: none;"
     >
-      <v-list-item tile>
+      <v-list-item tile color="admin">
         <v-list-item-title>Administration</v-list-item-title>
       </v-list-item>
       <v-list-item
@@ -77,6 +76,7 @@
           <v-list-item-title>{{ extra.title }}</v-list-item-title>
         </v-list-item>
       </template>
+      <v-divider />
     </v-list>
 
     <v-list nav>

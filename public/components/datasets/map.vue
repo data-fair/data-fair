@@ -4,7 +4,8 @@
       v-if="dataset"
       v-model="query"
       class="mt-2 ml-2 mx-2"
-      solo
+      outlined
+      dense
       style="position: absolute;z-index:2;max-width:400px;"
       label="Rechercher"
       append-icon="mdi-magnify"

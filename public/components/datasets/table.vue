@@ -33,7 +33,7 @@
                 placeholder="Rechercher"
                 append-icon="mdi-magnify"
                 class="mr-3"
-                solo
+                outlined
                 dense
                 hide-details
                 style="min-width:150px;"
@@ -203,7 +203,7 @@
       v-model="editLineDialog"
       max-width="500px"
     >
-      <v-card>
+      <v-card outlined>
         <v-card-title primary-title>
           Éditer une ligne
         </v-card-title>
@@ -216,16 +216,19 @@
               v-if="editLineDialog && editedLine"
               v-model="editedLine"
               :schema="jsonSchema"
-              :options="{locale: 'fr', removeAdditionalProperties: true}"
+              :options="{locale: 'fr', removeAdditionalProperties: true, arrayItemCardProps: {outlined: true, tile: true}, dialogCardProps: {outlined: true}}"
             />
 
             <template v-if="dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')">
               <p>Chargez un fichier en pièce jointe.</p>
               <div class="mt-3 mb-3">
-                <input
-                  type="file"
+                <v-file-input
+                  label="sélectionnez un fichier"
+                  outlined
+                  dense
+                  style="max-width: 300px;"
                   @change="onFileUpload"
-                >
+                />
               </div>
               <v-progress-linear v-model="uploadProgress" />
             </template>
@@ -244,7 +247,7 @@
     </v-dialog>
 
     <v-dialog v-model="deleteLineDialog" max-width="500px">
-      <v-card>
+      <v-card outlined>
         <v-card-title primary-title>
           Supprimer une ligne
         </v-card-title>
@@ -266,7 +269,7 @@
     </v-dialog>
 
     <v-dialog v-model="historyDialog" max-width="800px">
-      <v-card>
+      <v-card outlined>
         <v-toolbar dense flat>
           <v-toolbar-title>Historique des révisions</v-toolbar-title>
           <v-spacer />
@@ -497,8 +500,8 @@
         }
         this.historyLoading = false
       },
-      onFileUpload(e) {
-        this.file = e.target.files[0]
+      onFileUpload(file) {
+        this.file = file
       },
       async saveLine() {
         const options = {
