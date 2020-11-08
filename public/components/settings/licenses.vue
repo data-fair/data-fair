@@ -10,7 +10,6 @@
       Ajouter une license
     </v-btn>
 
-
     <v-list
       v-if="settings.licenses.length"
       two-line

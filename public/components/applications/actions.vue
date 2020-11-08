@@ -140,11 +140,17 @@
           />
         </v-card-text>
         <v-card-actions>
-          <v-spacer/>
-          <v-btn color="primary" icon :href="`${env.captureUrl}/api/v1/screenshot?target=${encodeURIComponent(applicationLink)}&width=${captureWidth}&height=${captureHeight}`" download title="télécharger la capture">
+          <v-spacer />
+          <v-btn
+            color="primary"
+            icon
+            :href="`${env.captureUrl}/api/v1/screenshot?target=${encodeURIComponent(applicationLink)}&width=${captureWidth}&height=${captureHeight}`"
+            download
+            title="télécharger la capture"
+          >
             <v-icon>mdi-download</v-icon>
           </v-btn>
-          <v-spacer/>
+          <v-spacer />
         </v-card-actions>
       </v-card>
     </v-dialog>

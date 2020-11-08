@@ -8,7 +8,7 @@
       >
         Sélection de l'application
       </v-stepper-step>
-      <v-divider></v-divider>
+      <v-divider />
       <v-stepper-step
         :complete="!!title"
         step="2"

@@ -79,7 +79,11 @@
       </v-card>
     </v-dialog>
 
-    <v-dialog v-model="showOwnerDialog" max-width="900" outlined>
+    <v-dialog
+      v-model="showOwnerDialog"
+      max-width="900"
+      outlined
+    >
       <v-card>
         <v-card-title primary-title>
           Changer le propriétaire du catalogue

@@ -37,7 +37,7 @@
             label="sélectionnez un fichier"
             outlined
             dense
-             style="max-width: 300px;"
+            style="max-width: 300px;"
             :accept="accepted.join(', ')"
             @change="onFileUpload"
           />
