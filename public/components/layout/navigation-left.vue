@@ -141,7 +141,7 @@
           </v-list-item-content>
         </v-list-item>
 
-        <template v-if="env.extraNavigationItems">
+        <template v-if="env.extraNavigationItems && user">
           <v-list-item
             v-for="extra in env.extraNavigationItems.filter(extra => !extra.can || (extra.can === 'contrib' && canContrib) || (extra.can === 'admin' && canAdmin))"
             :key="extra.id"
