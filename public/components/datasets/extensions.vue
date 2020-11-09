@@ -92,6 +92,7 @@
               </v-alert>
               <v-autocomplete
                 v-if="extension.active && remoteServicesMap[extension.remoteService] && selectFields[extension.remoteService + '_' + extension.action].fieldsAndTags"
+                :disabled="!can('writeDescription')"
                 v-model="extension.select"
                 :items="selectFields[extension.remoteService + '_' + extension.action].fieldsAndTags"
                 item-value="name"
@@ -107,6 +108,7 @@
             <v-card-actions style="position:absolute; bottom: 0px;width:100%;">
               <dataset-extension-details-dialog :extension="extension" :disabled="hasChanges(extension)" />
               <confirm-menu
+                v-if="can('writeDescription')"
                 yes-color="warning"
                 text="Souhaitez-vous confirmer la suppression ?"
                 tooltip="Supprimer l'extension"

@@ -6,7 +6,7 @@
           Champs principaux
         </h3>
         <v-btn
-          v-if="dataset.isRest"
+          v-if="dataset.isRest && can('writeDescription')"
           color="primary"
           fab
           x-small
@@ -113,119 +113,6 @@
       </v-card>
     </v-dialog>
   </v-row>
-
-  <!--
-
-    <v-container
-      v-for="extension in extensions"
-      :key="extension.key"
-      class="pa-0"
-      fluid
-    >
-      <br v-if="extension.key">
-      <v-subheader v-if="extension.key && remoteServicesMap[extension.remoteService]">
-        Extension: {{ remoteServicesMap[extension.remoteService].actions[extension.action].summary }} (service {{ remoteServicesMap[extension.remoteService].title }})
-      </v-subheader>
-      <v-row
-        v-for="field in schema.filter(field => !field['x-calculated'] && field['x-extension'] === extension.key)"
-        :key="field.key"
-      >
-        <div>
-          <v-btn
-            v-if="dataset.isRest"
-            flat
-            icon
-            color="warning"
-            title="Supprimer cette propriété"
-            @click="schema = schema.filter(f => f.key !== field.key)"
-          >
-            <v-icon>mdi-delete</v-icon>
-          </v-btn>
-        </div>
-        <v-col cols="2">
-          <v-text-field
-            v-model="field.key"
-            :disabled="true"
-            label="Clé"
-          />
-        </v-col>
-        <v-col cols="2">
-          <v-row
-            v-if="field.type === 'string'"
-          >
-            <v-col cols="8">
-              <v-text-field
-                :disabled="true"
-                :value="`${field.type}${field.format ? ' - ' + field.format : ''}`"
-                label="Type"
-              />
-            </v-col>
-            <v-col cols="4">
-              <v-select
-                v-model="field.separator"
-                :items="[', ', '; ', ' - ', ' / ']"
-                :disabled="field['x-extension'] || field.key.startsWith('_')"
-                label="Split"
-                placeholder=" "
-              />
-            </v-col>
-          </v-row>
-          <v-text-field
-            v-else
-            :disabled="true"
-            :value="`${field.type}${field.format ? ' - ' + field.format : ''}`"
-            label="Type"
-          />
-        </v-col>
-        <v-col cols="3">
-          <v-text-field
-            v-model="field.title"
-            :placeholder="field['x-originalName'] || ' '"
-            label="Libellé"
-          />
-        </v-col>
-        <v-col cols="3">
-          <v-textarea
-            :id="'description-' + field.key"
-            v-model="field.description"
-            label="Description"
-            rows="1"
-            placeholder=" "
-          />
-        </v-col>
-        <v-col cols="2">
-          <v-select
-            v-if="!field['x-extension']"
-            v-model="field['x-refersTo']"
-            :items="fieldsVocabulary[field.key]"
-            :disabled="field.key.startsWith('_')"
-            item-text="title"
-            item-value="id"
-            label="Concept"
-            placeholder=" "
-          />
-          <v-text-field
-            v-else-if="field['x-refersTo'] && vocabulary[field['x-refersTo']]"
-            v-model="vocabulary[field['x-refersTo']].title"
-            label="Concept"
-            disabled
-          />
-        </v-col>
-      </v-row>
-    </v-container>-->
-  <!--
-    <h4>Renseigner le schéma avec un fichier de métadonnées</h4>
-    <p>
-      Le fichier de métadonnées doit respecter <a
-        href="https://frictionlessdata.io/specs/table-schema/"
-        target="_blank"
-      >ce format</a>
-    </p>
-    <input
-      ref="schemaInput"
-      type="file"
-      @change="onMetadataUpload"
-    >-->
 </template>
 
 <script>
