@@ -77,6 +77,10 @@ module.exports = {
     cssUrl: 'THEME_CSS_URL',
     cssText: 'THEME_CSS_TEXT',
   },
+  darkModeSwitch: {
+    __name: 'DARK_MODE_SWITCH',
+    __format: 'json',
+  },
   defaultLimits: {
     totalStorage: {
       __name: 'DEFAULT_LIMITS_TOTAL_STORAGE',

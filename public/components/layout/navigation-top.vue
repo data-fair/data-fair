@@ -142,7 +142,7 @@
               </v-list-item>
             </template>
 
-            <v-list-item dense>
+            <v-list-item dense v-if="env.darkModeSwitch">
               <v-list-item-action><v-icon>mdi-weather-night</v-icon></v-list-item-action>
               <v-list-item-title style="overflow: visible;">
                 <v-switch

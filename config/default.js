@@ -75,6 +75,7 @@ module.exports = {
 }
 `,
   },
+  darkModeSwitch: true,
   defaultLimits: {
     // Maximum storage space per user or organization
     // -1 for unlimited storage
