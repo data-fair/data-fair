@@ -1,7 +1,7 @@
 <template>
   <v-container class="pa-0" fluid>
     <v-iframe v-if="missingSubscription" :src="env.subscriptionUrl" />
-    <v-col md="6" offset-md="3">
+    <v-col v-else md="6" offset-md="3">
       <v-responsive>
         <v-container class="fill-height">
           <v-row align="center">
