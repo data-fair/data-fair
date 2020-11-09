@@ -40,7 +40,6 @@
         </v-list-item>
       </v-list>
     </v-card-text>
-    <v-divider />
     <v-row v-if="showTopics" style="min-height:30px;">
       <v-col class="pt-1 pb-0">
         <v-chip
