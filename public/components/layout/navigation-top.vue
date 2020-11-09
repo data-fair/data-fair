@@ -187,6 +187,7 @@
       },
       setDarkCookie(value) {
         this.$cookies.set('theme_dark', '' + value, { path: '/', domain: this.env.sessionDomain })
+        this.reload()
       },
     },
   }
