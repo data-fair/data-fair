@@ -32,7 +32,7 @@ module.exports = async (client, dataset, fieldKey, query) => {
     esQuery.query.bool.must.push({
       simple_query_string: {
         query: q,
-        fields: [`${fieldKey}`, `${fieldKey}.text`],
+        fields: [`${fieldKey}`, `${fieldKey}.text`, `${fieldKey}.text_standard`],
         analyze_wildcard: true,
         lenient: true,
         default_operator: 'and',

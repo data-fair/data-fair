@@ -32,6 +32,7 @@ describe('search', () => {
     assert.equal(res.data.total, 1)
     // Filter on text field
     res = await ax.get('/api/v1/datasets/dataset/lines?q=lactée')
+    assert.equal(res.data.total, 1)
     // Filter on text field with default french stemming
     res = await ax.get('/api/v1/datasets/dataset/lines?q=lacté')
     assert.equal(res.data.total, 1)

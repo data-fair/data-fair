@@ -13,7 +13,12 @@ const permissions = require('../permissions')
 // From a property in data-fair schema to the property in an elasticsearch mapping
 exports.esProperty = prop => {
   // Add inner text field to almost everybody so that even dates, numbers, etc can be matched textually as well as exactly
-  const innerTextField = { text: { type: 'text', analyzer: config.elasticsearch.defaultAnalyzer, fielddata: true } }
+  const innerTextField = {
+    // language based analysis for better recall with stemming, etc
+    text: { type: 'text', analyzer: config.elasticsearch.defaultAnalyzer, fielddata: true },
+    // more "raw" analysis good to boost more exact matches and for wildcard queries
+    text_standard: { type: 'text', analyzer: 'standard', fielddata: true },
+  }
   let esProp = {}
   if (prop.type === 'object') esProp = { type: 'object' }
   if (prop.type === 'integer') esProp = { type: 'long', fields: innerTextField }
@@ -67,7 +72,7 @@ exports.parseSort = (sortStr, fields) => {
 // Check that a query_string query (lucene syntax)
 // does not try to use fields outside the current schema
 function checkQuery(query, fields, esFields) {
-  esFields = esFields || fields.concat(fields.map(f => f + '.text')).concat(['<implicit>'])
+  esFields = esFields || fields.concat(fields.map(f => f + '.text')).concat(fields.map(f => f + '.text_standard')).concat(['<implicit>'])
   query.field = query.field && query.field.replace(/\\/g, '')
   if (query.field === '_exists_') {
     const field = query.term.replace(/\\/g, '')
@@ -121,11 +126,13 @@ exports.prepareQuery = (dataset, query) => {
     query.highlight.split(',').forEach(key => {
       if (!fields.includes(key)) throw createError(400, `Impossible de demander un "highlight" sur le champ ${key}, il n'existe pas dans le jeu de données.`)
       esQuery.highlight.fields[key + '.text'] = {}
+      esQuery.highlight.fields[key + '.text_standard'] = {}
     })
   }
 
   const filter = []
   const must = []
+  const should = []
 
   // Enforced static filters from virtual datasets
   if (dataset.virtual && dataset.virtual.filters) {
@@ -146,7 +153,10 @@ exports.prepareQuery = (dataset, query) => {
     const esProp = exports.esProperty(f)
     if (esProp.index === false || esProp.enabled === false) return
     if (esProp.type === 'keyword') searchFields.push(f.key)
-    if (esProp.fields && esProp.fields.text) searchFields.push(f.key + '.text')
+    if (esProp.fields && esProp.fields.text) {
+      searchFields.push(f.key + '.text')
+      searchFields.push(f.key + '.text_standard')
+    }
   })
   if (query.qs) {
     checkQuery(queryParser.parse(query.qs), fields)
@@ -158,10 +168,19 @@ exports.prepareQuery = (dataset, query) => {
       must.push({ simple_query_string: { query: query.q, fields: qSearchFields } })
     } else {
       const q = query.q.trim()
-      let complete = q
-      if (!q.includes('*') && !q.includes('?')) complete = `${q}*|` + complete
-      if (q.includes(' ') && !q.includes('"')) complete += `|"${q}"`
-      must.push({ simple_query_string: { query: complete, fields: qSearchFields } })
+
+      // if the user didn't define wildcards himself, we use wildcard to create a "startsWith" functionality
+      // this is performed on the innerfield that uses standard analysis, as language stemming doesn't work well in this case
+      if (!q.includes('*') && !q.includes('?')) {
+        const qStandardFields = qSearchFields.filter(f => f.endsWith('_standard'))
+        should.push({ simple_query_string: { query: `${q}*`, fields: qStandardFields } })
+      }
+      // if the user submitted a multi word query and didn't use quotes
+      // we add some quotes to boost results with sequence of words
+      if (q.includes(' ') && !q.includes('"')) {
+        should.push({ simple_query_string: { query: `"${q}"`, fields: qSearchFields } })
+      }
+      should.push({ simple_query_string: { query: q, fields: qSearchFields } })
     }
   }
   Object.keys(query)
@@ -199,7 +218,8 @@ exports.prepareQuery = (dataset, query) => {
     })
   }
 
-  esQuery.query = { bool: { filter, must } }
+  const minimumShouldMatch = should.length ? 1 : 0
+  esQuery.query = { bool: { filter, must, should, minimum_should_match: minimumShouldMatch } }
 
   return esQuery
 }
@@ -234,7 +254,10 @@ exports.prepareResultItem = (hit, dataset, query) => {
     // return hightlight results and remove .text suffix of fields
     res._highlight = query.highlight.split(',')
       .reduce((a, key) => {
-        a[key] = (hit.highlight && hit.highlight[key + '.text']) || []
+        // is it possible to merge these 2 instead of chosing one ?
+        const textHighlight = (hit.highlight && hit.highlight[key + '.text']) || []
+        const textStandardHighlight = (hit.highlight && hit.highlight[key + '.text_standard']) || []
+        a[key] = textHighlight.length ? textHighlight : textStandardHighlight
         return a
       }, {})
   }

@@ -226,7 +226,7 @@ La valeur est une liste de champs séparés par des virgules.
     },
   }
 
-  const securitySchemes = {
+  let securitySchemes = {
     apiKey: {
       type: 'apiKey',
       in: 'header',
@@ -238,6 +238,7 @@ La valeur est une liste de champs séparés par des virgules.
       name: 'id_token',
     },
   }
+  let security = [{ apiKey: [] }, { sdCookie: [] }]
 
   let description = `
 Cette documentation interactive à destination des développeurs permet de gérer et consommer les ressources du jeu de données "${dataset.title || dataset.id}".
@@ -266,7 +267,9 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
 Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous pouvez créer dans les paramètres d'un compte possédant les permissions nécessaires aux opérations que vous souhaitez effectuer.
 `
 } else {
-  delete securitySchemes.apiKey
+  // no need to present complex security schemes if the data is public anyway
+  securitySchemes = {}
+  security = []
   description += `
   - ${anonymousApiRate}
   `
@@ -284,7 +287,7 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
       securitySchemes,
       schemas: { datasetSchema },
     },
-    security: [{ apiKey: [] }, { sdCookie: [] }],
+    security,
     servers: [{
       url: `${config.publicUrl}/api/v1/datasets/${dataset.id}`,
     }],
@@ -563,6 +566,15 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
             schema: {
               type: 'string',
               enum: properties,
+            },
+          }, {
+            in: 'query',
+            name: 'analysis',
+            description: 'Le type d\'analyse textuelle effectuée sur le champ. L\'analyse "lang" est intelligente en fonction de la langue, elle calcule la racine grammaticale des mots et ignore les mots les moins significatifs. L\'analyse "standard" effectue un travail plus basique d\'extraction de mots bruts depuis le texte.',
+            schema: {
+              type: 'string',
+              default: 'lang',
+              enum: ['lang', 'standard'],
             },
           }].concat(filterParams),
           // TODO: document sort param and interval
