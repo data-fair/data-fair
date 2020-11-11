@@ -92,8 +92,8 @@
               </v-alert>
               <v-autocomplete
                 v-if="extension.active && remoteServicesMap[extension.remoteService] && selectFields[extension.remoteService + '_' + extension.action].fieldsAndTags"
-                :disabled="!can('writeDescription')"
                 v-model="extension.select"
+                :disabled="!can('writeDescription')"
                 :items="selectFields[extension.remoteService + '_' + extension.action].fieldsAndTags"
                 item-value="name"
                 item-text="title"
