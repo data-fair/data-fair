@@ -37,6 +37,22 @@ module.exports = (dataset) => {
     },
   }, {
     in: 'query',
+    name: 'q_mode',
+    description: `
+  Ce paramètre permet d'altérer le comportement du paramètre "q".
+
+  Le mode par défaut "simple" expose directement la fonctionnalité [simple-query-string de Elasticsearch](https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-simple-query-string-query.html)
+
+  Le mode "complete" permet d'enrichir automatiquement la requête soumise par l'utilisateur pour un résultat intuitif dans le contexte d'un champ de type autocomplete. Attention ce mode est potentiellement moins performant et à limiter à des jeux de données au volume raisonnable.
+    `,
+    required: false,
+    schema: {
+      type: 'string',
+      default: 'simple',
+      enum: ['simple', 'complete'],
+    },
+  }, {
+    in: 'query',
     name: 'qs',
     description: `
 Champ de filtre et recherche textuelle avancé. Ce paramètre permet d'effectuer des requêtes complexes sur la source de données. Vous pouvez spécifier des filtres par champs, créer des combinaisons logiques à volonté, etc.

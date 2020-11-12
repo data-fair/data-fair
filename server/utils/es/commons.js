@@ -173,13 +173,8 @@ exports.prepareQuery = (dataset, query) => {
     const qSearchFields = searchFields.filter(f => f !== '_id')
     const qStandardFields = qSearchFields.filter(f => f.includes('.text_standard'))
 
-    if (query.q_mode === 'simple') {
-      // simple query uses ES simple query string directly
-      // only tuning is that we match both on stemmed and raw inner fields to boost exact matches
-      should.push({ simple_query_string: { query: q, fields: qSearchFields } })
-      should.push({ simple_query_string: { query: q, fields: qStandardFields } })
-    } else {
-      // the default "complete" mode, we try to accomodate for most cases and give the most intuitive results
+    if (query.q_mode === 'complete') {
+      // "complete" mode, we try to accomodate for most cases and give the most intuitive results
       // to a search query where the user might be using a autocomplete type control
 
       // if the user didn't define wildcards himself, we use wildcard to create a "startsWith" functionality
@@ -193,6 +188,11 @@ exports.prepareQuery = (dataset, query) => {
         should.push({ simple_query_string: { query: `"${q}"`, fields: qSearchFields } })
       }
       should.push({ simple_query_string: { query: q, fields: qSearchFields } })
+    } else {
+      // default "simple" mode uses ES simple query string directly
+      // only tuning is that we match both on stemmed and raw inner fields to boost exact matches
+      should.push({ simple_query_string: { query: q, fields: qSearchFields } })
+      should.push({ simple_query_string: { query: q, fields: qStandardFields } })
     }
   }
   Object.keys(query)
