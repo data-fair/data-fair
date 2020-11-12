@@ -160,7 +160,7 @@ export default () => ({
         }
         if (event.type === 'finalize-end') {
           const dataset = await this.$axios.$get(`api/v1/datasets/${state.datasetId}`, { params: { select: 'schema,bbox' } })
-          commit('patch', { schema: dataset.schema, bbox: dataset.bbox })
+          commit('patch', { schema: dataset.schema, bbox: dataset.bbox, finalizedAt: dataset.finalizedAt })
         }
         if (event.type === 'publication') {
           const dataset = await this.$axios.$get(`api/v1/datasets/${state.datasetId}`, { params: { select: 'publications' } })
