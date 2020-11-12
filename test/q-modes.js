@@ -48,6 +48,7 @@ describe('query modes', () => {
           highlight: 'content',
         },
       })
+      assert.ok(res.data.results[0]._highlight.content[0].includes('"highlighted"'))
       assert.equal(res.data.total, 1)
     }
 

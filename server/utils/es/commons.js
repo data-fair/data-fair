@@ -257,7 +257,11 @@ exports.prepareResultItem = (hit, dataset, query) => {
         // is it possible to merge these 2 instead of chosing one ?
         const textHighlight = (hit.highlight && hit.highlight[key + '.text']) || []
         const textStandardHighlight = (hit.highlight && hit.highlight[key + '.text_standard']) || []
-        a[key] = textHighlight.length ? textHighlight : textStandardHighlight
+        if (textStandardHighlight && textStandardHighlight.length && (textHighlight.length === 0 || !textHighlight[0].includes('<em class="highlighted">'))) {
+          a[key] = textStandardHighlight
+        } else {
+          a[key] = textHighlight
+        }
         return a
       }, {})
   }
