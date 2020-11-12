@@ -154,8 +154,14 @@ exports.prepareQuery = (dataset, query) => {
     if (esProp.index === false || esProp.enabled === false) return
     if (esProp.type === 'keyword') searchFields.push(f.key)
     if (esProp.fields && esProp.fields.text) {
-      searchFields.push(f.key + '.text')
-      searchFields.push(f.key + '.text_standard')
+      // automatic boost of some special properties well suited for full-text search
+      let suffix = ''
+      if (f['x-refersTo'] === 'http://www.w3.org/2000/01/rdf-schema#label') suffix = '^3'
+      if (f['x-refersTo'] === 'http://schema.org/description') suffix = '^2'
+      if (f['x-refersTo'] === 'https://schema.org/DefinedTermSet') suffix = '^2'
+
+      searchFields.push(f.key + '.text' + suffix)
+      searchFields.push(f.key + '.text_standard' + suffix)
     }
   })
   if (query.qs) {
@@ -163,16 +169,22 @@ exports.prepareQuery = (dataset, query) => {
     must.push({ query_string: { query: query.qs, fields: searchFields } })
   }
   if (query.q) {
+    const q = query.q.trim()
     const qSearchFields = searchFields.filter(f => f !== '_id')
+    const qStandardFields = qSearchFields.filter(f => f.includes('.text_standard'))
+
     if (query.q_mode === 'simple') {
-      must.push({ simple_query_string: { query: query.q, fields: qSearchFields } })
+      // simple query uses ES simple query string directly
+      // only tuning is that we match both on stemmed and raw inner fields to boost exact matches
+      should.push({ simple_query_string: { query: q, fields: qSearchFields } })
+      should.push({ simple_query_string: { query: q, fields: qStandardFields } })
     } else {
-      const q = query.q.trim()
+      // the default "complete" mode, we try to accomodate for most cases and give the most intuitive results
+      // to a search query where the user might be using a autocomplete type control
 
       // if the user didn't define wildcards himself, we use wildcard to create a "startsWith" functionality
       // this is performed on the innerfield that uses standard analysis, as language stemming doesn't work well in this case
       if (!q.includes('*') && !q.includes('?')) {
-        const qStandardFields = qSearchFields.filter(f => f.endsWith('_standard'))
         should.push({ simple_query_string: { query: `${q}*`, fields: qStandardFields } })
       }
       // if the user submitted a multi word query and didn't use quotes
