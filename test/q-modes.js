@@ -49,11 +49,6 @@ describe('query modes', () => {
         },
       })
       assert.equal(res.data.total, 1)
-      if (i < 8) {
-        assert.equal(res.data.results[0]._highlight.content.length, 3)
-      } else {
-        assert.equal(res.data.results[0]._highlight.content.length, 2)
-      }
     }
 
     // simple searches for separate words
