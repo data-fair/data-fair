@@ -37,6 +37,7 @@
                 dense
                 hide-details
                 style="min-width:150px;"
+                @input="qMode === 'complete' && refresh(true)"
                 @keyup.enter.native="refresh(true)"
                 @click:append="refresh(true)"
               />
@@ -352,7 +353,7 @@
     computed: {
       ...mapState(['vocabulary']),
       ...mapState('dataset', ['dataset']),
-      ...mapGetters('dataset', ['resourceUrl', 'can']),
+      ...mapGetters('dataset', ['resourceUrl', 'can', 'qMode']),
       headers() {
         const fieldsHeaders = this.dataset.schema
           .filter(field => !field['x-calculated'])
@@ -402,6 +403,7 @@
         const params = {
           size: this.pagination.itemsPerPage,
           page: this.pagination.page,
+          q_mode: this.qMode,
         }
         if (this.imageField) params.thumbnail = '40x40'
         if (this.pagination.sortBy[0]) {

@@ -15,9 +15,10 @@
             placeholder="Rechercher"
             append-icon="mdi-magnify"
             style="min-width:150px;"
-            solo
+            outlined
             dense
             hide-details
+            @input="qMode === 'complete' && refresh(true)"
             @keyup.enter.native="refresh(true)"
             @click:append="refresh(true)"
           />
@@ -179,7 +180,7 @@
     computed: {
       ...mapState(['vocabulary']),
       ...mapState('dataset', ['dataset']),
-      ...mapGetters('dataset', ['resourceUrl']),
+      ...mapGetters('dataset', ['resourceUrl', 'qMode']),
       headers() {
         const fieldsHeaders = this.dataset.schema
           .filter(field => !field['x-calculated'])
@@ -205,6 +206,7 @@
         const params = {
           size: this.pagination.itemsPerPage,
           page: this.pagination.page,
+          q_mode: this.qMode,
         }
         if (this.imageField) params.thumbnail = '40x40'
         if (this.pagination.sortBy[0]) {

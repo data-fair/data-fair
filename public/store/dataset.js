@@ -61,6 +61,9 @@ export default () => ({
     hasPublicApplications: (state) => {
       return state.applications && !!state.applications.find(a => a.visibility === 'public')
     },
+    qMode: (state) => {
+      return state.dataset && state.dataset.count && state.dataset.count < 2000 ? 'complete' : 'simple'
+    },
   },
   mutations: {
     setAny(state, params) {

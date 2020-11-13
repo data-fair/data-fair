@@ -22,6 +22,7 @@
               append-icon="mdi-magnify"
               class="mr-3"
               style="min-width:150px;"
+              @input="qMode === 'complete' && refresh(true)"
               @keyup.enter.native="refresh(true)"
               @click:append="refresh(true)"
             />
@@ -107,7 +108,7 @@
     }),
     computed: {
       ...mapState('dataset', ['dataset']),
-      ...mapGetters('dataset', ['resourceUrl']),
+      ...mapGetters('dataset', ['resourceUrl', 'qMode']),
       plural() {
         return this.data.total > 1
       },
@@ -151,6 +152,7 @@
           page: this.pagination.page,
           select: select.join(','),
           thumbnail: `${this.maxThumbnailWidth}x${this.thumbnailHeight}`,
+          q_mode: this.qMode,
         }
         if (this.query) params.q = this.query
         this.loading = true
