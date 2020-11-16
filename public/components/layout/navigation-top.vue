@@ -186,7 +186,8 @@
         window.location.reload()
       },
       setDarkCookie(value) {
-        this.$cookies.set('theme_dark', '' + value, { path: '/', domain: this.env.sessionDomain })
+        const maxAge = 60 * 60 * 24 * 100 // 100 days
+        this.$cookies.set('theme_dark', '' + value, { path: '/', domain: this.env.sessionDomain, maxAge })
         this.reload()
       },
     },
