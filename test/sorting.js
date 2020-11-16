@@ -2,7 +2,7 @@ const assert = require('assert').strict
 const workers = require('../server/workers')
 
 describe('Sorting', () => {
-  it('Ignore case and diacritics', async () => {
+  it.skip('Ignore case and diacritics', async () => {
     const ax = global.ax.dmeadus
     await ax.post('/api/v1/datasets', {
       isRest: true,
