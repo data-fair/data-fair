@@ -5,7 +5,7 @@
     </h2>
 
     <v-autocomplete
-      :items="datasets"
+      :items="datasets || []"
       :loading="loadingDatasets"
       :search-input.sync="search"
       :filter="() => true"

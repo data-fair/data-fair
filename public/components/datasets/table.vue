@@ -177,15 +177,22 @@
               <template v-else>
                 <v-hover v-slot:default="{ hover }">
                   <div :style="`position: relative; max-height: 40px; min-width: ${Math.min((item[header.value] + '').length, 50) * 6}px;`">
-                    <span>
-                      {{ ((item[header.value] === undefined || item[header.value] === null ? '' : item[header.value]) + '') | truncate(50) }}
+                    <span v-if="item[header.value] === undefined || item[header.value] === null" />
+                    <span v-else-if="header.field.format === 'date-time'">
+                      {{ item[header.value] | moment("DD/MM/YYYY, HH:mm") }}
+                    </span>
+                    <span v-else-if="header.field.type === 'boolean'">
+                      {{ item[header.value] ? 'oui' : 'non' }}
+                    </span>
+                    <span v-else>
+                      {{ (item[header.value] + '') | truncate(50) }}
                     </span>
                     <v-btn
                       v-if="hover && !filters.find(f => f.field.key === header.value) && isFilterable(item[header.value])"
                       fab
                       x-small
                       color="primary"
-                      style="top: -5px;right: -8px;"
+                      style="top: -5px;right: 0px;"
                       absolute
                       @click="addFilter(header.value, item[header.value])"
                     >
@@ -356,12 +363,13 @@
       ...mapGetters('dataset', ['resourceUrl', 'can', 'qMode']),
       headers() {
         const fieldsHeaders = this.dataset.schema
-          .filter(field => !field['x-calculated'])
+          .filter(field => !field['x-calculated'] || field.key === '_updatedAt')
           .map(field => ({
             text: field.title || field['x-originalName'] || field.key,
             value: field.key,
             sortable: field.type === 'string' || field.type === 'number' || field.type === 'integer',
             tooltip: field.description || (field['x-refersTo'] && this.vocabulary && this.vocabulary[field['x-refersTo']] && this.vocabulary[field['x-refersTo']].description),
+            field,
           }))
 
         if (this.imageField) {
