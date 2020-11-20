@@ -154,6 +154,7 @@ class TransactionStream extends Writable {
       }
       this.i += 1
     })
+    this.emit('batch')
   }
 
   async _write(chunk, encoding, cb) {
@@ -299,6 +300,17 @@ exports.bulkLines = async (req, res, next) => {
     errors: [],
   }
   const transactionStream = new TransactionStream({ req, validate, summary })
+
+  // we try both to have a HTTP failure if the transactions are clearly badly formatted
+  // and also to start writing in the HTTP response as soon as possible to limit the timeout risks
+  // this is accomplished partly by the keepalive option to async-wrap (see in the datasets router)
+  let firstBatch = true
+  transactionStream.on('batch', () => {
+    if (firstBatch) {
+      res.writeHeader(!summary.nbOk && summary.nbErrors ? 400 : 200, { 'Content-Type': 'application/json' })
+      firstBatch = false
+    }
+  })
 
   await pump(
     inputStream,
