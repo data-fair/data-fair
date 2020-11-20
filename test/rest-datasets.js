@@ -7,7 +7,7 @@ const restDatasetsUtils = require('../server/utils/rest-datasets')
 const datasetUtils = require('../server/utils/dataset')
 const workers = require('../server/workers')
 
-describe.only('REST datasets', () => {
+describe('REST datasets', () => {
   it('Create empty REST datasets', async () => {
     const ax = global.ax.dmeadus
     let res = await ax.post('/api/v1/datasets', { isRest: true, title: 'a rest dataset' })
