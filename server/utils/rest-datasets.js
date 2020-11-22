@@ -161,7 +161,7 @@ class TransactionStream extends Writable {
     try {
       chunk._action = chunk._action || (chunk._id ? 'update' : 'create')
       this.transactions.push(chunk)
-      if (this.transactions.length > 100) await this._applyTransactions()
+      if (this.transactions.length > 1000) await this._applyTransactions()
     } catch (err) {
       return cb(err)
     }
@@ -309,6 +309,8 @@ exports.bulkLines = async (req, res, next) => {
     if (firstBatch) {
       res.writeHeader(!summary.nbOk && summary.nbErrors ? 400 : 200, { 'Content-Type': 'application/json' })
       firstBatch = false
+    } else {
+      res.write(' ')
     }
   })
 
@@ -318,8 +320,8 @@ exports.bulkLines = async (req, res, next) => {
     transactionStream,
   )
   await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { status: 'updated' } })
-  if (!summary.nbOk && summary.nbErrors) res.status(400)
-  res.send(summary)
+  res.write(JSON.stringify(summary, null, 2))
+  res.end()
   datasetUtils.updateStorage(db, req.dataset)
 }
 
