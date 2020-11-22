@@ -286,7 +286,7 @@ exports.bulkLines = async (req, res, next) => {
   // or directly in the body
   let inputStream, parseStream
   if (req.files && req.files.actions && req.files.actions.length) {
-    inputStream = fs.createReadStream(req.files.actions[0].path)
+    inputStream = fs.createReadStream(req.files.actions[0].path, 'utf8')
     const ioStream = mimeTypeStream(mime.lookup(req.files.actions[0].originalname)) || mimeTypeStream('application/x-ndjson')
     parseStream = ioStream.parser()
   } else {
@@ -313,13 +313,20 @@ exports.bulkLines = async (req, res, next) => {
       res.write(' ')
     }
   })
-
-  await pump(
-    inputStream,
-    parseStream,
-    transactionStream,
-  )
-  await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { status: 'updated' } })
+  try {
+    await pump(
+      inputStream,
+      parseStream,
+      transactionStream,
+    )
+    await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { status: 'updated' } })
+  } catch (err) {
+    if (firstBatch) {
+      res.writeHeader(500, { 'Content-Type': 'application/json' })
+    }
+    summary.nbErrors += 1
+    summary.errors.push({ line: -1, error: err.message })
+  }
   res.write(JSON.stringify(summary, null, 2))
   res.end()
   datasetUtils.updateStorage(db, req.dataset)
