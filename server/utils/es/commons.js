@@ -28,7 +28,14 @@ exports.esProperty = prop => {
   if (prop.type === 'string' && prop.format === 'date') esProp = { type: 'date', fields: innerTextField }
   // uri-reference and full text fields are managed in the same way from now on, because we want to be able to aggregate on small full text fields
   if (prop.type === 'string' && (prop.format === 'uri-reference' || !prop.format)) {
-    esProp = { type: 'keyword', ignore_above: 200, fields: innerTextField }
+    esProp = {
+      type: 'keyword',
+      ignore_above: 200,
+      fields: {
+        ...innerTextField,
+        keyword_insensitive: { type: 'keyword', ignore_above: 200, normalizer: 'insensitive_normalizer' },
+      },
+    }
   }
   // Do not index geometry, it will be copied and simplified in _geoshape
   if (prop['x-refersTo'] === 'https://purl.org/geojson/vocab#geometry') {
@@ -53,20 +60,26 @@ exports.aliasName = dataset => {
 
 exports.parseSort = (sortStr, fields) => {
   if (!sortStr) return []
-  return sortStr.split(',').map(s => {
-    let field, direction
+  const result = []
+  const keys = sortStr.split(',')
+  keys.forEach(s => {
+    let key, order
     if (s.indexOf('-') === 0) {
-      field = s.slice(1)
-      direction = 'desc'
+      key = s.slice(1)
+      order = 'desc'
     } else {
-      field = s
-      direction = 'asc'
+      key = s
+      order = 'asc'
     }
-    if (!fields.concat(['_key', '_count', '_time', 'metric', '_i', '_rand', '_score']).includes(field)) {
-      throw createError(400, `Impossible de trier sur le champ ${field}, il n'existe pas dans le jeu de données.`)
+    if (!fields.concat(['_key', '_count', '_time', 'metric', '_i', '_rand', '_score']).includes(key)) {
+      throw createError(400, `Impossible de trier sur le champ ${key}, il n'existe pas dans le jeu de données.`)
     }
-    return { [field]: direction }
+    // ignore_unmapped is necessary to maintain compatibility with older indices
+    result.push({ [key + '.keyword_insensitive']: { order, unmapped_type: 'long' } })
+    result.push({ [key]: { order } })
   })
+
+  return result
 }
 
 // Check that a query_string query (lucene syntax)
@@ -115,9 +128,9 @@ exports.prepareQuery = (dataset, query) => {
   // Sort by list of fields (prefixed by - for descending sort)
   esQuery.sort = query.sort ? exports.parseSort(query.sort, fields) : []
   // implicitly sort by score after other criteria
-  if (!esQuery.sort.includes('_score') && query.q) esQuery.sort.push('_score')
+  if (!esQuery.sort.find(s => !!s._score) && query.q) esQuery.sort.push('_score')
   // every other things equal, sort by original line order
-  if (!esQuery.sort.includes('_i')) esQuery.sort.push('_i')
+  if (!esQuery.sort.find(s => !!s._i)) esQuery.sort.push('_i')
 
   // Simple highlight management
   // https://www.elastic.co/guide/en/elasticsearch/reference/current/search-request-highlighting.html
