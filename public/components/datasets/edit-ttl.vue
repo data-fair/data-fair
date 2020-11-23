@@ -30,12 +30,12 @@
         <v-select
           v-model="editTtl.prop"
           label="colonne de date de référence"
-          :items="schema"
+          :items="schema.filter(prop => prop.format === 'date-time')"
           item-value="key"
           :item-text="(field) => field.title || field['x-originalName'] || field.key"
         />
         <v-text-field
-          v-model="editTtl.delay.value"
+          v-model.number="editTtl.delay.value"
           type="number"
           label="nombre de jours avant expiration depuis la date de référence"
         />
@@ -45,7 +45,7 @@
         <v-btn text @click="show = false">
           annuler
         </v-btn>
-        <v-btn color="warning" @click="$emit('change', editTtl); show=false">
+        <v-btn color="warning" @click="change">
           enregistrer
         </v-btn>
       </v-card-actions>
@@ -66,6 +66,13 @@
         handler() {
           this.editTtl = JSON.parse(JSON.stringify(this.ttl))
         },
+      },
+    },
+    methods: {
+      change() {
+        this.editTtl.delay.value = this.editTtl.delay.value || 0
+        this.$emit('change', this.editTtl)
+        this.show = false
       },
     },
   }
