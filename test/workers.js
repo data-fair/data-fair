@@ -45,7 +45,7 @@ describe('workers', () => {
     const idProp = dataset.schema.find(p => p.key === 'id')
     assert.equal(idProp['x-cardinality'], 2)
     assert.notEqual(idProp.enum.indexOf('koumoul'), -1)
-    const esIndices = await global.es.indices.get({ index: esUtils.aliasName(dataset) })
+    const esIndices = (await global.es.indices.get({ index: esUtils.aliasName(dataset) })).body
     const esIndex = Object.values(esIndices)[0]
     const mapping = esIndex.mappings
     assert.equal(mapping.properties.id.type, 'keyword')
@@ -63,7 +63,7 @@ describe('workers', () => {
     dataset = await workers.hook('finalizer')
     assert.equal(dataset.status, 'finalized')
     assert.equal(dataset.count, 2)
-    const esIndices2 = await global.es.indices.get({ index: esUtils.aliasName(dataset) })
+    const esIndices2 = (await global.es.indices.get({ index: esUtils.aliasName(dataset) })).body
     const esIndex2 = Object.values(esIndices2)[0]
     const mapping2 = esIndex2.mappings
     assert.equal(mapping2.properties.id.type, 'keyword')

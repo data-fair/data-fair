@@ -96,23 +96,23 @@
           </v-col>
           <v-col>
             <p>
-              <span class="theme--light v-label">Clé normalisée :  </span><br>
+              <span :class="labelClass">Clé normalisée :  </span><br>
               {{ properties[currentProperty].key }}
             </p>
             <p v-if="properties[currentProperty]['x-originalName']">
-              <span class="theme--light v-label">Clé dans le fichier d'origine : </span><br>
+              <span :class="labelClass">Clé dans le fichier d'origine : </span><br>
               {{ properties[currentProperty]['x-originalName'] }}
             </p>
             <p>
-              <span class="theme--light v-label">Type : </span><br>
+              <span :class="labelClass">Type : </span><br>
               {{ propTypeTitle(properties[currentProperty]) }}
             </p>
             <p v-if="properties[currentProperty]['x-cardinality']">
-              <span class="theme--light v-label">Nombre de valeurs distinctes (approximative dans le cas de données volumineuses) : </span><br>
+              <span :class="labelClass">Nombre de valeurs distinctes (approximative dans le cas de données volumineuses) : </span><br>
               {{ properties[currentProperty]['x-cardinality'].toLocaleString() }}
             </p>
             <p v-if="properties[currentProperty].enum">
-              <span class="theme--light v-label">Valeurs : </span><br>
+              <span :class="labelClass">Valeurs : </span><br>
               {{ properties[currentProperty].enum.join(' - ') }}
             </p>
           </v-col>
@@ -139,6 +139,9 @@
       ...mapState(['vocabulary', 'vocabularyArray', 'vocabularyItems']),
       ...mapState('dataset', ['dataset']),
       ...mapGetters(['propTypeTitle']),
+      labelClass() {
+        return `theme--${this.$vuetify.theme.dark ? 'dark' : 'light'} v-label`
+      },
     },
     created() {
       this.properties.forEach(p => {

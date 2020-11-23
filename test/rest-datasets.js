@@ -1,5 +1,6 @@
 const fs = require('fs-extra')
 const FormData = require('form-data')
+const moment = require('moment')
 const assert = require('assert').strict
 const testUtils = require('./resources/test-utils')
 
@@ -358,5 +359,36 @@ describe('REST datasets', () => {
     assert.equal(res.data.storage.size, 478)
     assert.equal(res.data.storage.collectionSize, 164)
     assert.equal(res.data.storage.revisionsSize, 314)
+  })
+
+  it('Apply a TTL on some date-field', async () => {
+    const ax = await global.ax.hlalonde3
+    await ax.post('/api/v1/datasets', {
+      isRest: true,
+      title: 'restttl',
+      rest: {
+        ttl: {
+          active: true,
+          prop: 'attr2',
+          delay: {
+            value: 1,
+            unit: 'days',
+          },
+        },
+       },
+      schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string', format: 'date-time' }],
+    })
+    await workers.hook('finalizer/restttl')
+    await ax.post('/api/v1/datasets/restttl/lines', { attr1: 'test1', attr2: moment().subtract(3, 'days').toISOString() })
+    await ax.post('/api/v1/datasets/restttl/lines', { attr1: 'test1', attr2: moment().subtract(2, 'days').toISOString() })
+    await ax.post('/api/v1/datasets/restttl/lines', { attr1: 'test1', attr2: moment().subtract(1, 'days').toISOString() })
+    await ax.post('/api/v1/datasets/restttl/lines', { attr1: 'test1', attr2: moment().subtract(1, 'hours').toISOString() })
+    await workers.hook('finalizer/restttl')
+    let res = await ax.get('/api/v1/datasets/restttl/lines')
+    assert.equal(res.data.total, 4)
+    await workers.hook('ttlManager/restttl')
+    await workers.hook('finalizer/restttl')
+    res = await ax.get('/api/v1/datasets/restttl/lines')
+    assert.equal(res.data.total, 1)
   })
 })

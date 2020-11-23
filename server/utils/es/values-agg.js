@@ -118,7 +118,7 @@ module.exports = async (client, dataset, query, addGeoData) => {
     currentAggLevel.values.aggs.topHits = { top_hits: { size, _source: esQuery._source, sort: hitsSort } }
   }
   // Bound complexity with a timeout
-  const esResponse = await client.search({ index: aliasName(dataset), body: esQuery, timeout: '2s' })
+  const esResponse = (await client.search({ index: aliasName(dataset), body: esQuery, timeout: '2s' })).body
   return prepareValuesAggResponse(esResponse, valuesFields, dataset, query)
 }
 

@@ -40,12 +40,16 @@ exports.delete = async (client, dataset) => {
 exports.switchAlias = async (client, dataset, tempId) => {
   const name = aliasName(dataset)
   // Delete all other indices from this dataset
-  const previousIndices = await client.indices.get({ index: `${indexPrefix(dataset)}-*` })
-  for (const key in previousIndices) {
+  const previousIndices = await client.indices.get({ index: `${indexPrefix(dataset)}-*`, ignore_unavailable: true })
+  for (const key in previousIndices.body) {
     if (key !== tempId) await client.indices.delete({ index: key })
   }
-  await client.indices.deleteAlias({ name, index: '_all', ignore: [404] })
-  await client.indices.delete({ index: name, ignore: [404] })
+  try {
+    await client.indices.deleteAlias({ name, index: '_all' })
+  } catch (err) {
+    if (err.message !== 'aliases_not_found_exception') throw new Error(err)
+  }
+  await client.indices.delete({ index: name, ignore_unavailable: true })
   await client.indices.putAlias({ name, index: tempId })
 }
 

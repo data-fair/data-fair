@@ -36,7 +36,7 @@ module.exports = async (client, dataset, query) => {
   }
 
   // console.log(esQuery)
-  const esResponse = await client.search({ index: aliasName(dataset), body: esQuery })
+  const esResponse = (await client.search({ index: aliasName(dataset), body: esQuery })).body
 
   const buckets = esResponse.aggregations.sample.words.buckets
 
@@ -57,7 +57,7 @@ module.exports = async (client, dataset, query) => {
 // it is suggested that the highlight logic is the closest there is to satisfying this need
 // so we search for the analyzed term in the documents, get highlights and get the most frequest highlighted piece of text
 async function unstem(client, dataset, field, key) {
-  const res = await client.search({
+  const res = (await client.search({
     index: aliasName(dataset),
     body: {
       size: 20,
@@ -70,7 +70,7 @@ async function unstem(client, dataset, field, key) {
         post_tags: '<>',
       },
     },
-  })
+  })).body
 
   const words = {}
   res.hits.hits.forEach(hit => {

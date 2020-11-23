@@ -9,12 +9,14 @@ const ajv = require('ajv')()
 const Combine = require('stream-combiner')
 const multer = require('multer')
 const mime = require('mime-types')
-const { Transform, Writable } = require('stream')
+const { Readable, Transform, Writable } = require('stream')
 const mimeTypeStream = require('mime-type-stream')
+const moment = require('moment')
 const datasetUtils = require('./dataset')
 const attachmentsUtils = require('./attachments')
 const findUtils = require('./find')
 const fieldsSniffer = require('./fields-sniffer')
+const esUtils = require('../utils/es')
 
 const actions = ['create', 'update', 'patch', 'delete']
 
@@ -93,16 +95,16 @@ const applyTransactions = async (req, transacs, validate) => {
     const extendedBody = { ...body }
     extendedBody._needsIndexing = true
     extendedBody._updatedAt = new Date()
-    extendedBody._updatedBy = { id: req.user.id, name: req.user.name }
+    if (req.user) extendedBody._updatedBy = { id: req.user.id, name: req.user.name }
     extendedBody._deleted = false
     let doc = {}
     const filter = { _id: body._id }
     if (_action === 'create' || _action === 'update') {
-      if (!validate(body)) doc = { _error: validate.errors }
+      if (validate && !validate(body)) doc = { _error: validate.errors }
       else if (bulkOp) bulkOp.find(filter).upsert().replaceOne(extendedBody)
       else doc = (await collection.findOneAndReplace(filter, extendedBody, { upsert: true, returnOriginal: false })).value
     } else if (_action === 'patch') {
-      if (!validate(body)) doc = { _error: validate.errors }
+      if (validate && !validate(body)) doc = { _error: validate.errors }
       else if (bulkOp) bulkOp.find(filter).upsert().updateOne({ $set: extendedBody })
       else doc = (await collection.findOneAndUpdate(filter, { $set: extendedBody }, { upsert: true, returnOriginal: false })).value
     } else if (_action === 'delete') {
@@ -294,11 +296,7 @@ exports.bulkLines = async (req, res, next) => {
     const ioStream = mimeTypeStream(req.get('Content-Type')) || mimeTypeStream('application/json')
     parseStream = ioStream.parser()
   }
-  const summary = {
-    nbOk: 0,
-    nbErrors: 0,
-    errors: [],
-  }
+  const summary = { nbOk: 0, nbErrors: 0, errors: [] }
   const transactionStream = new TransactionStream({ req, validate, summary })
 
   // we try both to have a HTTP failure if the transactions are clearly badly formatted
@@ -407,4 +405,49 @@ exports.count = (db, dataset, filter) => {
   const collection = exports.collection(db, dataset)
   if (filter) return collection.countDocuments(filter)
   else return collection.estimatedDocumentCount()
+}
+
+exports.applyTTL = async (app, dataset) => {
+  const es = app.get('es')
+  const query = `${dataset.rest.ttl.prop}:[* TO ${moment().subtract(dataset.rest.ttl.delay.value, dataset.rest.ttl.delay.unit).toISOString()}]`
+  const summary = { nbOk: 0, nbErrors: 0, errors: [] }
+  await pump(
+    new Readable({
+      objectMode: true,
+      async read() {
+        if (this.reading) return
+        this.reading = true
+        try {
+          let { body } = await es.search({
+            index: esUtils.aliasName(dataset),
+            scroll: '15m',
+            size: 1,
+            body: {
+              query: {
+                query_string: { query },
+              },
+              _source: false,
+            },
+          })
+          while (body.hits.hits.length) {
+            body.hits.hits.forEach(hit => this.push(hit))
+            body = (await es.scroll({ scrollId: body._scroll_id, scroll: '15m' })).body
+          }
+          this.push(null)
+        } catch (err) {
+          this.emit('error', err)
+        }
+      },
+    }),
+    new Transform({
+      objectMode: true,
+      async transform(hit, encoding, callback) {
+        return callback(null, { _action: 'delete', _id: hit._id })
+      },
+    }),
+    new TransactionStream({ req: { app, dataset }, summary }),
+  )
+
+  await app.get('db').collection('datasets')
+    .updateOne({ id: dataset.id }, { $set: { status: 'updated', 'rest.ttl.checkedAt': new Date().toISOString() } })
 }

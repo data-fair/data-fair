@@ -393,6 +393,21 @@ module.exports = {
           default: false,
           description: 'Set to true to let data-fair store revisions of the lines in the dataset.',
         },
+        ttl: {
+          type: 'object',
+          properties: {
+            active: { type: 'boolean' },
+            prop: { type: 'string' },
+            checkedAt: { type: 'string', format: 'date-time', readOnly: true },
+            delay: {
+              type: 'object',
+              properties: {
+                value: { type: 'integer', default: 0 },
+                unit: { type: 'string', enum: ['hours', 'days', 'weeks', 'months'], default: 'days' },
+              },
+            },
+          },
+        },
       },
     },
     topics: {

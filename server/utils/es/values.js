@@ -50,6 +50,6 @@ module.exports = async (client, dataset, fieldKey, query) => {
   }
   if (q) query.sort = '_key'
   // Bound complexity with a timeout
-  const esResponse = await client.search({ index: aliasName(dataset), body: esQuery, timeout: '2s' })
+  const esResponse = (await client.search({ index: aliasName(dataset), body: esQuery, timeout: '2s' })).body
   return esResponse.aggregations.values.buckets.map(b => b.key_as_string || b.key)
 }

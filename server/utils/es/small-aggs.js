@@ -11,7 +11,7 @@ exports.max = async (client, dataset, fieldKey, query) => {
       max: { field: fieldKey },
     },
   }
-  const esResponse = await client.search({ index: aliasName(dataset), body: esQuery })
+  const esResponse = (await client.search({ index: aliasName(dataset), body: esQuery })).body
   return esResponse.aggregations.max.value
 }
 
@@ -25,6 +25,6 @@ exports.min = async (client, dataset, fieldKey, query) => {
       min: { field: fieldKey },
     },
   }
-  const esResponse = await client.search({ index: aliasName(dataset), body: esQuery })
+  const esResponse = (await client.search({ index: aliasName(dataset), body: esQuery })).body
   return esResponse.aggregations.min.value
 }

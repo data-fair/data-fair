@@ -1,5 +1,6 @@
 const config = require('config')
 const spawn = require('child-process-promise').spawn
+const moment = require('moment')
 const locks = require('../utils/locks')
 const journals = require('../utils/journals')
 const debug = require('debug')('workers')
@@ -14,6 +15,7 @@ const tasks = exports.tasks = {
   extender: require('./extender'),
   finalizer: require('./finalizer'),
   datasetPublisher: require('./dataset-publisher'),
+  ttlManager: require('./ttl-manager'),
   applicationPublisher: require('./application-publisher'),
 }
 
@@ -63,21 +65,26 @@ exports.stop = async () => {
 }
 
 // Filters to select eligible datasets or applications for processing
-const typesFilters = {
+const typesFilters = () => ({
   application: { 'publications.status': { $in: ['waiting', 'deleted'] } },
   dataset: {
     $or: [
+      // fetch next processing steps in usual sequence
       { status: { $nin: ['finalized', 'error', 'draft'] } },
+      // fetch datasets that are finalized, but need to update a publication
       { status: 'finalized', 'publications.status': { $in: ['waiting', 'deleted'] } },
+      // fetch rest datasets with a TTL to process
+      { status: 'finalized', count: { $gt: 0 }, isRest: true, 'rest.ttl.active': true, 'rest.ttl.checkedAt': { $lt: moment().subtract(1, 'hours').toISOString() } },
+      { status: 'finalized', count: { $gt: 0 }, isRest: true, 'rest.ttl.active': true, 'rest.ttl.checkedAt': { $exists: false } },
     ],
   },
-}
+})
 
 async function iter(app, type) {
   let resource, taskKey
   let stderr = ''
   try {
-    resource = await acquireNext(app.get('db'), type, typesFilters[type])
+    resource = await acquireNext(app.get('db'), type, typesFilters()[type])
     if (!resource) return
 
     // REST datasets trigger too many events
@@ -117,6 +124,13 @@ async function iter(app, type) {
       } else if (resource.status === 'finalized' && resource.publications && resource.publications.find(p => ['waiting', 'deleted'].includes(p.status))) {
         // dataset that are finalized can be published if requested
         taskKey = 'datasetPublisher'
+      } else if (
+        resource.status === 'finalized' &&
+        resource.isRest && resource.rest && resource.rest.ttl && resource.rest.ttl.active &&
+        resource.count &&
+        (!resource.rest.ttl.checkedAt || resource.rest.ttl.checkedAt < moment().subtract(1, 'hours').toISOString())
+      ) {
+        taskKey = 'ttlManager'
       }
     }
     if (!taskKey) return
@@ -153,14 +167,16 @@ async function iter(app, type) {
       errorMessage.push(err.message)
     }
 
-    console.warn(`failure in worker ${taskKey} - ${type} / ${resource.id}`, err)
     if (resource) {
+      console.warn(`failure in worker ${taskKey} - ${type} / ${resource.id}`, err)
       await journals.log(app, resource, { type: 'error', data: errorMessage.join('\n') }, type)
       await app.get('db').collection(type + 's').updateOne({ id: resource.id }, { $set: { status: 'error' } })
       resource.status = 'error'
       if (hooks[taskKey]) hooks[taskKey].reject({ resource, message: errorMessage.join('\n') })
       if (hooks[taskKey + '/' + resource.id]) hooks[taskKey + '/' + resource.id].reject({ resource, message: errorMessage.join('\n') })
       if (hooks['finalizer/' + resource.id]) hooks['finalizer/' + resource.id].reject({ resource, message: errorMessage.join('\n') })
+    } else {
+      console.warn(`failure in worker ${taskKey} - ${type}`, err)
     }
   } finally {
     if (resource) {

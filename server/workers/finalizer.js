@@ -94,13 +94,11 @@ exports.process = async function(app, dataset) {
   // manage mbtiles
   if (!dataset.isRest && !dataset.isVirtual) {
     if (dataset.bbox) {
-        debug('prepare mbtiles')
-        await tilesUtils.prepareMbtiles(dataset, db, es)
+      debug('prepare mbtiles')
+      await tilesUtils.prepareMbtiles(dataset, db, es)
     } else {
-      if (!dataset.isRest && !dataset.isVirtual) {
-        debug('delete geo files')
-        await tilesUtils.deleteMbtiles(dataset)
-      }
+      debug('delete geo files')
+      await tilesUtils.deleteMbtiles(dataset)
     }
   }
 

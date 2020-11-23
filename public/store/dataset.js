@@ -62,7 +62,7 @@ export default () => ({
       return state.applications && !!state.applications.find(a => a.visibility === 'public')
     },
     qMode: (state) => {
-      return state.dataset && state.dataset.count && state.dataset.count < 2000 ? 'complete' : 'simple'
+      return state.dataset && state.dataset.count && state.dataset.count < 10000 ? 'complete' : 'simple'
     },
   },
   mutations: {
@@ -110,6 +110,11 @@ export default () => ({
       Vue.set(dataset, 'extensions', extensions)
       Vue.set(dataset, 'schema', dataset.schema || [])
       Vue.set(dataset, 'thumbnails', dataset.thumbnails || { resizeMode: 'crop', trim: false })
+      Vue.set(dataset, 'publications', dataset.publications || [])
+      if (dataset.isRest) {
+        dataset.rest = dataset.rest || {}
+        dataset.rest.ttl = dataset.rest.ttl || { active: false, prop: '_updatedAt', delay: { value: 30, unit: 'days' } }
+      }
       Vue.set(dataset, 'publications', dataset.publications || [])
       commit('setAny', { dataset })
     },

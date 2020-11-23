@@ -34,7 +34,7 @@ module.exports = async (client, dataset, query) => {
       [query.metric]: { field: query.metric_field },
     }
   }
-  const esResponse = await client.search({ index: aliasName(dataset), body: esQuery })
+  const esResponse = (await client.search({ index: aliasName(dataset), body: esQuery })).body
   return prepareGeoAggResponse(esResponse, dataset, query)
 }
 

@@ -64,6 +64,20 @@
             </v-list-item-avatar>
             <span>Jeu de données incrémental</span>
           </v-list-item>
+          <v-list-item v-if="dataset.isRest && can('writeDescription')">
+            <v-list-item-avatar class="ml-0 my-0">
+              <v-icon :disabled="!dataset.rest.ttl.active">
+                mdi-delete-restore
+              </v-icon>
+            </v-list-item-avatar>
+            <span v-if="dataset.rest.ttl.active">Supprimer automatiquement les lignes dont la colonne {{ dataset.rest.ttl.prop }} contient une date dépassée de {{ dataset.rest.ttl.delay.value.toLocaleString() }} jours.</span>
+            <span v-else>pas de politique d'expiration automatique configurée</span>
+            <edit-ttl
+              :ttl="dataset.rest.ttl"
+              :schema="dataset.schema"
+              @change="ttl => {dataset.rest.ttl = ttl; patch({rest: dataset.rest})}"
+            />
+          </v-list-item>
         </v-list>
       </v-sheet>
     </v-col>
@@ -138,6 +152,7 @@
 
 <script>
   import OwnerListItem from '~/components/owners/list-item.vue'
+  import EditTtl from '~/components/datasets/edit-ttl.vue'
   const { mapState, mapActions, mapGetters } = require('vuex')
   const events = require('~/../shared/events.json').dataset
   const coordXUri = 'http://data.ign.fr/def/geometrie#coordX'
@@ -146,6 +161,7 @@
   export default {
     components: {
       OwnerListItem,
+      EditTtl,
     },
     data() {
       return { events, error: null }

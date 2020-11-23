@@ -1,5 +1,5 @@
 const config = require('config')
-const elasticsearch = require('elasticsearch')
+const elasticsearch = require('@elastic/elasticsearch')
 
 const smallAggs = require('./small-aggs')
 Object.assign(exports, require('./commons'))
@@ -16,7 +16,9 @@ exports.maxAgg = smallAggs.max
 exports.minAgg = smallAggs.min
 exports.indexStream = require('./index-stream')
 exports.init = async () => {
-  const client = elasticsearch.Client(Object.assign({}, config.elasticsearch))
+  let node = config.elasticsearch.host
+  if (!node.startsWith('http')) node = 'http://' + node
+  const client = new elasticsearch.Client(Object.assign({ node }, config.elasticsearch))
   await client.ping()
   await client.ingest.putPipeline({
     id: 'attachment',

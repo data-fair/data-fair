@@ -192,17 +192,17 @@ class ESInputStream extends Readable {
   async init() {
     if (!this.stats) return
     debug('Count missing query', JSON.stringify(this.query))
-    const res = await this.esClient.count({
+    const res = (await this.esClient.count({
       index: this.indexName,
       body: { query: this.query },
-    })
+    })).body
     this.stats.missing = res.count
     if (this.countQuery) {
       debug('Count already done query', JSON.stringify(this.countQuery))
-      const res = await this.esClient.count({
+      const res = (await this.esClient.count({
         index: this.indexName,
         body: { query: this.countQuery },
-      })
+      })).body
       this.stats.count = res.count
     } else {
       this.stats.count = 0
@@ -218,14 +218,14 @@ class ESInputStream extends Readable {
       let res
       if (!this.scrollId) {
         debug('Start streaming query', JSON.stringify(this.query))
-        res = await this.esClient.search({
+        res = (await this.esClient.search({
           index: this.indexName,
           scroll: '15m',
           size: 1000,
           body: { query: this.query },
-        })
+        })).body
       } else {
-        res = await this.esClient.scroll({ scroll_id: this.scrollId, scroll: '15m' })
+        res = (await this.esClient.scroll({ scrollId: this.scrollId, scroll: '15m' })).body
       }
       this.scrollId = res._scroll_id
       for (const hit of res.hits.hits) {
@@ -394,7 +394,7 @@ class PreserveExtensionStream extends Transform {
     this.bufferChars = 0
 
     // The ES index was not yet created, we will not try to extract previous extensions
-    if (!await esClient.indices.exists({ index: this.indexName })) return
+    if (!(await esClient.indices.exists({ index: this.indexName })).body) return
     for (const extension of extensions) {
       if (!extension.active) return
       const remoteService = await db.collection('remote-services').findOne({ id: extension.remoteService })
@@ -441,7 +441,7 @@ class PreserveExtensionStream extends Transform {
 
     if (searches.length) {
       const esClient = this.options.esClient
-      const { responses } = await esClient.msearch({ body: searches })
+      const { responses } = (await esClient.msearch({ body: searches })).body
       responses.forEach((res, i) => {
         const { item, extensionKey } = tasks[i]
         if (!res.hits) console.error('Missing response.hits in ES extension response', this.options.dataset.id, extensionKey, item, JSON.stringify(res))
