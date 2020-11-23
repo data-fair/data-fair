@@ -58,7 +58,7 @@ exports.aliasName = dataset => {
   return ids.map(id => `${config.indicesPrefix}-${id}`).join(',')
 }
 
-exports.parseSort = (sortStr, fields) => {
+exports.parseSort = (sortStr, fields, schema) => {
   if (!sortStr) return []
   const result = []
   const keys = sortStr.split(',')
@@ -74,12 +74,23 @@ exports.parseSort = (sortStr, fields) => {
     if (!fields.concat(['_key', '_count', '_time', 'metric', '_i', '_rand', '_score']).includes(key)) {
       throw createError(400, `Impossible de trier sur le champ ${key}, il n'existe pas dans le jeu de données.`)
     }
-    // ignore_unmapped is necessary to maintain compatibility with older indices
-    result.push({ [key + '.keyword_insensitive']: { order, unmapped_type: 'long' } })
+    const field = schema.find(f => f.key === key)
+    if (field && field.type === 'string' && (field.format === 'uri-reference' || !field.format)) {
+      // ignore_unmapped is necessary to maintain compatibility with older indices
+      result.push({ [key + '.keyword_insensitive']: { order, unmapped_type: 'long' } })
+    }
     result.push({ [key]: { order } })
   })
 
   return result
+}
+
+exports.parseOrder = (sortStr, fields, schema) => {
+  const sort = exports.parseSort(sortStr, fields, schema)
+  return sort.map(s => {
+    const key = Object.keys(s)[0]
+    return { [key]: s[key].order }
+  })
 }
 
 // Check that a query_string query (lucene syntax)
@@ -126,7 +137,7 @@ exports.prepareQuery = (dataset, query) => {
   }
 
   // Sort by list of fields (prefixed by - for descending sort)
-  esQuery.sort = query.sort ? exports.parseSort(query.sort, fields) : []
+  esQuery.sort = query.sort ? exports.parseSort(query.sort, fields, dataset.schema) : []
   // implicitly sort by score after other criteria
   if (!esQuery.sort.find(s => !!s._score) && query.q) esQuery.sort.push('_score')
   // every other things equal, sort by original line order
