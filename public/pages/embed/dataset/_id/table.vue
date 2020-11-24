@@ -70,7 +70,7 @@
               <th
                 v-for="header in headers"
                 :key="header.text"
-                :class="{'text-start': true, sortable: header.sortable, active : header.value === pagination.sortBy, asc: !pagination.sortDesc[0], desc: pagination.sortDesc[0]}"
+                :class="{'text-start': true, sortable: header.sortable, active : header.value === pagination.sortBy[0], asc: !pagination.sortDesc[0], desc: pagination.sortDesc[0]}"
                 nowrap
                 @click="orderBy(header)"
               >

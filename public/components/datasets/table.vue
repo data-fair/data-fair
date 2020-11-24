@@ -76,7 +76,8 @@
       </v-row>
       <v-data-table
         :headers="headers"
-        :items="data.results"
+        :items="items"
+        item-key="_id"
         :server-items-length="data.total"
         :loading="loading"
         :multi-sort="false"
@@ -90,7 +91,7 @@
               <th
                 v-for="header in headers"
                 :key="header.value"
-                :class="{'text-start': true, sortable: header.sortable, active : header.value === pagination.sortBy, asc: !pagination.sortDesc[0], desc: pagination.sortDesc[0]}"
+                :class="{'text-start': true, sortable: header.sortable, active : header.value === pagination.sortBy[0], asc: !pagination.sortDesc[0], desc: pagination.sortDesc[0]}"
                 nowrap
                 @click="orderBy(header)"
               >
@@ -121,6 +122,14 @@
           </thead>
         </template>
         <template v-slot:item="{item}">
+          <v-progress-linear
+            v-if="item._tmpState"
+            style="position: absolute;opacity: 0.2;"
+            indeterminate
+            background-opacity="0.5"
+            :color="{created: 'success', deleted: 'warning', updated: 'primary', editing: 'primary'}[item._tmpState]"
+            height="40"
+          />
           <tr>
             <td
               v-for="header in headers"
@@ -129,31 +138,33 @@
               :style="`height: 40px`"
             >
               <div v-if="header.value === '_actions'" style="min-width:120px;">
-                <v-btn
-                  icon
-                  color="warning"
-                  title="Supprimer cette ligne"
-                  @click="editedLine = Object.assign({}, item); deleteLineDialog = true;"
-                >
-                  <v-icon>mdi-delete</v-icon>
-                </v-btn>
-                <v-btn
-                  icon
-                  color="primary"
-                  title="Éditer cette ligne"
-                  @click="editedLine = Object.assign({}, item); showEditLineDialog();"
-                >
-                  <v-icon>mdi-pencil</v-icon>
-                </v-btn>
-                <v-btn
-                  v-if="dataset.rest && dataset.rest.history"
-                  icon
-                  color="primary"
-                  title="Voir l'historique des révisions de cette ligne"
-                  @click="showHistoryDialog(item)"
-                >
-                  <v-icon>mdi-history</v-icon>
-                </v-btn>
+                <template v-if="!item._tmpState">
+                  <v-btn
+                    icon
+                    color="warning"
+                    title="Supprimer cette ligne"
+                    @click="editedLine = Object.assign({}, item); deleteLineDialog = true;"
+                  >
+                    <v-icon>mdi-delete</v-icon>
+                  </v-btn>
+                  <v-btn
+                    icon
+                    color="primary"
+                    title="Éditer cette ligne"
+                    @click="editedLine = Object.assign({}, item); showEditLineDialog();"
+                  >
+                    <v-icon>mdi-pencil</v-icon>
+                  </v-btn>
+                  <v-btn
+                    v-if="dataset.rest && dataset.rest.history"
+                    icon
+                    color="primary"
+                    title="Voir l'historique des révisions de cette ligne"
+                    @click="showHistoryDialog(item)"
+                  >
+                    <v-icon>mdi-history</v-icon>
+                  </v-btn>
+                </template>
               </div>
               <template v-else-if="header.value === '_thumbnail'">
                 <v-avatar
@@ -188,7 +199,7 @@
                       {{ (item[header.value] + '') | truncate(50) }}
                     </span>
                     <v-btn
-                      v-if="hover && !filters.find(f => f.field.key === header.value) && isFilterable(item[header.value])"
+                      v-if="hover && !item._tmpState && !filters.find(f => f.field.key === header.value) && isFilterable(item[header.value])"
                       fab
                       x-small
                       color="primary"
@@ -244,10 +255,14 @@
         </v-card-text>
         <v-card-actions>
           <v-spacer />
-          <v-btn text @click="editLineDialog = false">
+          <v-btn text @click="editLineDialog = false;">
             Annuler
           </v-btn>
-          <v-btn color="primary" @click="saveLine">
+          <v-btn
+            color="primary"
+            :loading="saving"
+            @click="saveLine"
+          >
             Enregistrer
           </v-btn>
         </v-card-actions>
@@ -338,7 +353,6 @@
         sortBy: [null],
         sortDesc: [false],
       },
-      sort: null,
       notFound: false,
       loading: false,
       editLineDialog: false,
@@ -356,6 +370,10 @@
         itemsPerPage: 10,
       },
       filters: [],
+      createdLines: [],
+      updatedLines: [],
+      deletedLines: [],
+      saving: false,
     }),
     computed: {
       ...mapState(['vocabulary']),
@@ -424,10 +442,38 @@
         if (this.dataset.finalizedAt) params.finalizedAt = this.dataset.finalizedAt
         return params
       },
+      items() {
+        if (!this.data.results) return []
+        const items = [...this.data.results]
+        items.forEach(item => {
+          if (this.deletedLines.find(l => l._id === item._id)) {
+            item._tmpState = 'deleted'
+          } else if (this.updatedLines.find(l => l._id === item._id)) {
+            Object.assign(item, this.updatedLines.find(l => l._id === item._id))
+            item._tmpState = 'updated'
+          } else if ((this.editLineDialog || this.deleteLineDialog) && this.editedLine && (this.editedLine._id === item._id || this.editedId === item._id)) {
+            item._tmpState = 'editing'
+          } else {
+            item._tmpState = null
+          }
+        })
+        this.createdLines.forEach(l => {
+          items.unshift({ _tmpState: 'created', ...l })
+        })
+        if (this.pagination.sortBy[0] === '_updatedAt') {
+          if (this.pagination.sortDesc[0]) items.sort((a, b) => -a._updatedAt.localeCompare(b._updatedAt))
+          else items.sort((a, b) => a._updatedAt.localeCompare(b._updatedAt))
+        }
+
+        return items
+      },
     },
     watch: {
-      'dataset.schema'() {
-        this.refresh(true)
+      async 'dataset.schema'() {
+        await this.refresh(true)
+        this.createdLines = []
+        this.updatedLines = []
+        this.deletedLines = []
       },
       pagination: {
         handler () {
@@ -449,6 +495,10 @@
       },
     },
     mounted() {
+      if (this.dataset.schema.find(p => p.key === '_updatedAt')) {
+        this.pagination.sortBy = ['_updatedAt']
+        this.pagination.sortDesc = [true]
+      }
       this.refresh()
     },
     methods: {
@@ -514,10 +564,10 @@
         this.file = file
       },
       async saveLine() {
+        this.saving = true
         const options = {
           onUploadProgress: (e) => {
             if (e.lengthComputable) {
-              console.log('LOADED', e.loaded)
               this.uploadProgress = (e.loaded / e.total) * 100
             }
           },
@@ -528,21 +578,27 @@
         this.dataset.schema.filter(f => !f['x-calculated'] && !f['x-extension']).forEach(f => {
           if (this.editedLine[f.key] !== null && this.editedLine[f.key] !== undefined) formData.append([f.key], this.editedLine[f.key])
         })
-        if (this.editedId) formData.append('_id', this.editedId)
-        this.editLineDialog = false
+        if (this.editedId) {
+          formData.append('_id', this.editedId)
+        }
+
         try {
-          await this.$axios.$post(this.resourceUrl + '/lines', formData, options)
+          const res = await this.$axios.$post(this.resourceUrl + '/lines', formData, options)
+          if (this.editedId) this.updatedLines.push(res)
+          else this.createdLines.push(res)
+          this.saving = false
         } catch (error) {
           if (error.response && error.response.status === 404) this.notFound = true
           else eventBus.$emit('notification', { error, msg: 'Erreur pendant l\'enregistrement de la ligne\'' })
         }
+        this.saving = false
+        this.editLineDialog = false
       },
       async deleteLine() {
         try {
           await this.$axios.$delete(this.resourceUrl + '/lines/' + this.editedLine._id)
           this.deleteLineDialog = false
-          await new Promise(resolve => setTimeout(resolve, 1000))
-          this.refresh()
+          this.deletedLines.push(this.editedLine)
         } catch (error) {
           if (error.response && error.response.status === 404) this.notFound = true
           else eventBus.$emit('notification', { error, msg: 'Erreur pendant la suppression de la ligne\'' })

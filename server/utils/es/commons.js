@@ -141,7 +141,11 @@ exports.prepareQuery = (dataset, query) => {
   // implicitly sort by score after other criteria
   if (!esQuery.sort.find(s => !!s._score) && query.q) esQuery.sort.push('_score')
   // every other things equal, sort by original line order
-  if (!esQuery.sort.find(s => !!s._i)) esQuery.sort.push('_i')
+  if (fields.includes('_updatedAt')) {
+    if (!esQuery.sort.find(s => !!s._updatedAt)) esQuery.sort.push({ _updatedAt: 'desc' })
+  } else {
+    if (!esQuery.sort.find(s => !!s._i)) esQuery.sort.push('_i')
+  }
 
   // Simple highlight management
   // https://www.elastic.co/guide/en/elasticsearch/reference/current/search-request-highlighting.html
