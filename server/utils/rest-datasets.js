@@ -447,7 +447,9 @@ exports.applyTTL = async (app, dataset) => {
     }),
     new TransactionStream({ req: { app, dataset }, summary }),
   )
+  const patch = { 'rest.ttl.checkedAt': new Date().toISOString() }
+  if (summary.nbOk) patch.status = 'updated'
 
   await app.get('db').collection('datasets')
-    .updateOne({ id: dataset.id }, { $set: { status: 'updated', 'rest.ttl.checkedAt': new Date().toISOString() } })
+    .updateOne({ id: dataset.id }, { $set: patch })
 }
