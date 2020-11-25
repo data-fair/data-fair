@@ -1,7 +1,6 @@
 const config = require('config')
 const express = require('express')
 const eventToPromise = require('event-to-promise')
-const promisify = require('util').promisify
 const dbUtils = require('./utils/db')
 const esUtils = require('./utils/es')
 const wsUtils = require('./utils/ws')
