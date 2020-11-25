@@ -168,10 +168,8 @@ exports.run = async () => {
 exports.stop = async() => {
   if (config.mode.includes('server')) {
     server.close()
-    await Promise.all([
-      promisify((cb) => wss.close(cb))(),
-      wsUtils.stop(),
-    ])
+    wss.close()
+    wsUtils.stop()
   }
 
   if (config.mode.includes('worker')) {
