@@ -155,7 +155,7 @@
         </v-card-title>
         <v-card-text>
           <p>
-            Vous pouvez utiliser la clé d'API pour travailler avec <a :to="localePath('api-doc')">l'API HTTP racine de ce sercice</a> ou avec les APIs indépendantes de chaque entité (jeux de données, applications, services distants, etc.).
+            Vous pouvez utiliser la clé d'API pour travailler avec <a :to="localePath('api-doc')">l'API HTTP racine de ce service</a> ou avec les APIs indépendantes de chaque entité (jeux de données, applications, services distants, etc.).
           </p><p>
             Il suffit de passer le header "x-apiKey" dans votre client HTTP. Par exemple :
           </p>

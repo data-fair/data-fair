@@ -125,7 +125,10 @@ beforeEach('scratch data', async () => {
 
 after('stop app', async () => {
   debug('stop app')
-  await app.stop()
+  await Promise.race([
+    new Promise(resolve => setTimeout(resolve, 5000)),
+    app.stop(),
+  ])
   debug('stop app ok')
 })
 
