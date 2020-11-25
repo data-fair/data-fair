@@ -9,6 +9,7 @@ const ajv = require('ajv')()
 const Combine = require('stream-combiner')
 const multer = require('multer')
 const mime = require('mime-types')
+const uuidv4 = require('uuid/v4')
 const { Readable, Transform, Writable } = require('stream')
 const mimeTypeStream = require('mime-type-stream')
 const moment = require('moment')
@@ -28,9 +29,9 @@ function cleanLine(line) {
   return line
 }
 
+const tmpDir = path.join(config.dataDir, 'tmp')
 const destination = async (req, file, cb) => {
   try {
-    const tmpDir = path.join(config.dataDir, 'tmp')
     await fs.ensureDir(tmpDir)
     cb(null, tmpDir)
   } catch (err) {
@@ -38,12 +39,23 @@ const destination = async (req, file, cb) => {
   }
 }
 
+const filename = async (req, file, cb) => {
+  try {
+    const uid = uuidv4()
+    // creating empty file before streaming seems to fix some weird bugs with NFS
+    await fs.ensureFile(path.join(tmpDir, uid))
+    cb(null, uid)
+  } catch (err) {
+    cb(err)
+  }
+}
+
 exports.uploadAttachment = multer({
-  storage: multer.diskStorage({ destination }),
+  storage: multer.diskStorage({ destination, filename }),
 }).single('attachment')
 
 exports.uploadBulk = multer({
-  storage: multer.diskStorage({ destination }),
+  storage: multer.diskStorage({ destination, filename }),
 }).fields([{ name: 'attachments', maxCount: 1 }, { name: 'actions', maxCount: 1 }])
 
 exports.collection = (db, dataset) => {

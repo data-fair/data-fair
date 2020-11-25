@@ -43,8 +43,14 @@ const metadataStorage = multer.diskStorage({
       cb(err)
     }
   },
-  filename: function (req, file, cb) {
-    cb(null, file.originalname)
+  filename: async function (req, file, cb) {
+    try {
+      // creating empty file before streaming seems to fix some weird bugs with NFS
+      await fs.ensureFile(path.join(datasetUtils.metadataAttachmentsDir(req.dataset), file.originalname))
+      cb(null, file.originalname)
+    } catch (err) {
+      cb(err)
+    }
   },
 })
 
