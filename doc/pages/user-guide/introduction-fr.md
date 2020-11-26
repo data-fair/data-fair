@@ -8,7 +8,7 @@ La [plateforme](https://koumoul.com/s/data-fair/) est divisée en plusieurs part
 * Les [Services](https://koumoul.com/s/data-fair/remote-services) qui vont vous servir à améliorer vos données grâce à [l'enrichissement](user-guide/enrichment) ou à utiliser des données à jour directement dans les applications (comme des fonds de carte par exemple).
 * Les [Applications](https://koumoul.com/s/data-fair/applications) qui vont vous permettre d'avoir un visuel de vos données et d'interagir avec elles.
 * Les [Catalogues](https://koumoul.com/s/data-fair/catalogs) qui vont vous permettre de publier vos données sur d'autres plateformes telles que [data.gouv.fr](https://www.data.gouv.fr/fr/)
-* La *Documentation* vous permet d'avoir accès au [manuel utilisateur](https://koumoul.com/s/data-fair/user-guide), à différentes [vidéos](https://videos.koumoul.com/) explicatives, aux tutoriels postés régulièrement sur notre [notre blog](https://koumoul.com/blog), à la documentation de l'[API racine](https://koumoul.com/s/data-fair/api) et à la [documentation développeurs](https://koumoul.com/s/data-fair/interoperate) pour les plus techniques d'entre vous.
+* La *Documentation* vous permet d'avoir accès au [manuel utilisateur](https://koumoul.com/s/data-fair/user-guide), à différentes [vidéos](https://videos.koumoul.com/) explicatives, aux tutoriels postés régulièrement sur notre [notre blog](https://koumoul.com/blog), à la documentation de l'[API racine](https://koumoul.com/documentation/developer/data-fair) et à la [documentation développeurs](https://koumoul.com/documentation/developer) pour les plus techniques d'entre vous.
 
 ### Jeux de données
 
@@ -21,9 +21,9 @@ C'est la partie la plus importante, c'est dans cette section que vous allez pouv
 Dans cette partie de la plateforme, vous allez pouvoir ajouter et configurer les différents services que nous vous proposons pour pouvoir améliorer vos données en les [enrichissant](user-guide/enrichment).
 
 Pour le moment, nous mettons à votre disposition cinq services :  
-* [Données des entreprises](user-guide/service-entreprise)
-* [Géocoder](user-guide/service-geocoder)
-* [Cadastre](user-guide/service-land-register)
+* Données des entreprises
+* Géocoder
+* Cadastre
 * Divisions administratives n'est pas encore disponible pour le moment.
 * Services de données cartographiques. Ce service n'a pas besoin de concepts en entrée. Il est nécessaire pour toutes vos applications cartographiques.<br></br>
 
@@ -33,10 +33,10 @@ Pour le moment, nous mettons à votre disposition cinq services :
 
 Dans cette section, vous allez pouvoir ajouter et configurer les différentes applications que nous vous proposons pour pouvoir visualiser vos données.  
 Pour le moment, nous mettons à votre disposition quatre applications :
-* [Infos-Parcelles](user-guide/application-infos-parcel)
-* [Infos-Localisations](user-guide/application-infos-location)
+* Infos-Parcelles
+* Infos-Localisations
 * Portail thématique
-* Observatoire des entreprises qui n'a pas besoin de concept. Cette application fonctionne grâce au service [Données des entreprises](user-guide/service-entreprise) configuré en tant que filtre.
+* Observatoire des entreprises qui n'a pas besoin de concept. Cette application fonctionne grâce au service *Données des entreprises* configuré en tant que filtre.
 
 <br>
 

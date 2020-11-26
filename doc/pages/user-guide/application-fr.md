@@ -28,10 +28,6 @@ Une fois que vous avez ajouté les informations que vous voulez faire apparaîtr
 
 Pour accéder à votre application cliquer sur le bouton en haut à droite.
 
-Voici un exemple de configuration d'une application *Infos-Parcelles* sur les [permis de construire de Montpellier](https://koumoul.com/s/data-fair/application/infos-parcelles50/description).
-
-Voici un exemple de configuration d'une application Infos-Localisations sur les [Journées européennes du patrimoine en Occitanie](https://koumoul.com/s/data-fair/application/infos-locs5/description).
-
 La section *PERMISSIONS* va vous permettre de définir les droits d'utilisation de votre application. Vous pouvez ouvrir cette application à une organisation, à une seule personne ou la rendre publique. Pour de plus amples informations, concerter la page des [permissions](user-guide/permission).
 
 La section *PUBLICATION* vous permet, à l'aide d'un [catalogue](user-guide/catalog), de publier votre application sur une autre plateforme.
@@ -46,6 +42,6 @@ Une fois que vous avez configurer correctement votre application, l'utilisation 
 
 Une fois votre parcelle/marqueur trouvé, vous pouvez cliquer dessus. Une info-bulle apparaît et continent toutes les colonnes que vous avez sélectionnées lors de la configuration de votre application.
 
-Voici un exemple d'application *Info-Parcelles* sur les [permis de construire de Montpellier](https://koumoul.com/s/data-fair/app/infos-parcelles50).
+Voici un exemple d'application *Info-Parcelles* sur les [permis de construire  de locaux et logements en France (SITADEL)](https://koumoul.com/s/data-fair/app/permis-de-construire-de-locaux-et-logements-en-france-metropolitaine).
 
-Voici un exemple d'application *Info-Localisations* sur les [Journées européennes du patrimoine en Occitanie](https://koumoul.com/s/data-fair/app/infos-locs5).
+Voici un exemple d'application *Info-Localisations* sur les [Journées européennes du patrimoine en France en 2019](https://koumoul.com/s/data-fair/app/carte-des-evenements-des-journees-europeennes-du-patrimoine-en-france-2019).

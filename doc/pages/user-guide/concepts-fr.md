@@ -16,15 +16,15 @@ Voici la liste des services et applications Koumoul et les concepts que vous dev
 
 #### Services
 
-* [Données des entreprises](user-guide/service-entreprise) a besoin que les concepts *SIRET* ou *SIREN* (ou les deux) soient associés aux bonnes colonnes dans votre jeu de données.
-* [Géocoder](user-guide/service-geocoder) a besoin que les concepts *Adresse*, *Rue ou lieu-dit*, *Commune*, *Numéro de rue*, *Code postal*, *Code commune* soient associés aux bonnes colonnes dans votre jeu de données. Si un des concepts n'est pas renseigné dans votre jeu de données, le géocodage sera moins précis (il pourrait même être erroné).
-* [Cadastre](user-guide/service-land-register) a besoin que le concept *Code parcelle* soit associé à la colonne contenant les codes parcelles de votre jeu de données.
+* Données des entreprises a besoin que les concepts *SIRET* ou *SIREN* (ou les deux) soient associés aux bonnes colonnes dans votre jeu de données.
+* Géocoder a besoin que les concepts *Adresse*, *Rue ou lieu-dit*, *Commune*, *Numéro de rue*, *Code postal*, *Code commune* soient associés aux bonnes colonnes dans votre jeu de données. Si un des concepts n'est pas renseigné dans votre jeu de données, le géocodage sera moins précis (il pourrait même être erroné).
+* Cadastre a besoin que le concept *Code parcelle* soit associé à la colonne contenant les codes parcelles de votre jeu de données.
 * Divisions administratives n'est pas encore disponible pour le moment.
 * Services de données cartographiques. Ce service n'a pas besoin de concepts en entrée. Il est nécessaire pour toutes vos applications cartographiques.
 
 #### Applications
 
-* [Infos-Parcelles](user-guide/application-infos-parcel) a besoin que les concepts *Code parcelle*, *Latitude*, et *Longitude* soient associés aux bonnes colonnes dans votre jeu de données.
-* [Infos-Localisations](user-guide/application-infos-location) a besoin que les concepts *Latitude*, *Longitude* soient associés aux bonnes colonnes dans votre jeu de données.
+* Infos-Parcelles a besoin que les concepts *Code parcelle*, *Latitude*, et *Longitude* soient associés aux bonnes colonnes dans votre jeu de données.
+* Infos-Localisations a besoin que les concepts *Latitude*, *Longitude* soient associés aux bonnes colonnes dans votre jeu de données.
 * Portail thématique n'a pas besoin de concepts.
-* Observatoire des entreprises n'a pas besoin de concept, il a besoin qu'un service [*Données des entreprises*](user-guide/service-entreprise) soit configuré en tant que filtre.
+* Observatoire des entreprises n'a pas besoin de concept, il a besoin qu'un service *Données des entreprises* soit configuré en tant que filtre.
