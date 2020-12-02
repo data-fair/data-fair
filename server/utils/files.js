@@ -41,10 +41,6 @@ const storage = multer.diskStorage({
         return cb(null, 'attachments.zip')
       }
 
-      if (req.dataset && req.dataset.originalFile && req.dataset.originalFile.name !== file.originalname) {
-        throw new Error(`Pour mettre à jour le jeu de donnée vous devez charger un fichier avec le même nom ${req.dataset.originalFile.name}`)
-      }
-
       // creating empty file before streaming seems to fix some weird bugs with NFS
       await fs.ensureFile(path.join(req.uploadDir, file.originalname))
       cb(null, file.originalname)

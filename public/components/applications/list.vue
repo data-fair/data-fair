@@ -50,7 +50,7 @@
               v-if="!filtered"
               class="text-h6"
             >
-              Vous n'avez pas encore configuré d'applications.<br>Vous pouvez <nuxt-link :to="localePath('user-guide')">
+              Vous n'avez pas encore configuré de visualisation.<br>Vous pouvez <nuxt-link :to="localePath('user-guide')">
                 consulter la documentation
               </nuxt-link> pour en savoir plus.
             </div>

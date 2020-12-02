@@ -338,11 +338,17 @@ const setFileInfo = async (db, file, attachmentsFile, dataset) => {
     await fs.move(file.path, path.join(datasetUtils.dir(dataset), file.originalname))
   }
   dataset.title = dataset.title || file.title
+  const oldOriginalFileName = dataset.originalFile && datasetUtils.originalFileName(dataset)
   dataset.originalFile = {
     name: file.originalname,
     size: file.size,
     mimetype: file.mimetype,
   }
+  const newOriginalFileName = datasetUtils.originalFileName(dataset)
+  if (oldOriginalFileName && oldOriginalFileName !== newOriginalFileName) {
+    await fs.remove(oldOriginalFileName)
+  }
+
   if (!baseTypes.has(file.mimetype)) {
     // we first need to convert the file in a textual format easy to index
     dataset.status = 'uploaded'

@@ -1,5 +1,5 @@
 const assert = require('assert').strict
-const fs = require('fs')
+const fs = require('fs-extra')
 const FormData = require('form-data')
 const eventToPromise = require('event-to-promise')
 const WebSocket = require('ws')
@@ -267,5 +267,26 @@ describe('datasets', () => {
     } catch (err) {
       assert.equal(err.status, 404)
     }
+  })
+
+  it('Upload dataset and update with different file name', async () => {
+    const ax = global.ax.dmeadus
+    const form = new FormData()
+    form.append('file', datasetFd, 'dataset-name.csv')
+    let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
+    await workers.hook('finalizer/dataset-name')
+    res = await ax.get('/api/v1/limits/user/dmeadus0')
+    assert.equal(res.data.store_bytes.consumption, 151)
+    assert.deepEqual(await fs.readdir('data/test/user/dmeadus0/datasets/dataset-name/'), ['dataset-name.csv'])
+
+    const form2 = new FormData()
+    form2.append('file', datasetFd, 'dataset-name2.csv')
+    res = await ax.put('/api/v1/datasets/dataset-name', form2, { headers: testUtils.formHeaders(form2) })
+    assert.equal(res.data.originalFile.name, 'dataset-name2.csv')
+    assert.equal(res.data.file.name, 'dataset-name2.csv')
+    await workers.hook('finalizer/dataset-name')
+    res = await ax.get('/api/v1/limits/user/dmeadus0')
+    assert.equal(res.data.store_bytes.consumption, 151)
+    assert.deepEqual(await fs.readdir('data/test/user/dmeadus0/datasets/dataset-name/'), ['dataset-name2.csv'])
   })
 })

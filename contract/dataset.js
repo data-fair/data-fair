@@ -39,7 +39,7 @@ module.exports = {
   title: 'Dataset',
   type: 'object',
   additionalProperties: false,
-  required: ['file'],
+  required: [],
   properties: {
     id: {
       type: 'string',
