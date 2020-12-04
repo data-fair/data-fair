@@ -102,7 +102,7 @@ exports.process = async function(app, dataset) {
   } else if (tabularTypes.has(dataset.originalFile.mimetype)) {
     // TODO : store these file size limits in config file ?
     if (dataset.originalFile.size > 10 * 1000 * 1000) throw createError(400, 'File size of this format must not exceed 10 MB. You can however convert your file to CSV with an external tool and reupload it.')
-    const workbook = XLSX.readFile(originalFilePath)
+    const workbook = XLSX.readFile(originalFilePath, { cellDates: true })
     const worksheet = workbook.Sheets[workbook.SheetNames[0]]
     const data = XLSX.utils.sheet_to_csv(worksheet, { rawNumbers: true })
     const filePath = path.join(datasetUtils.dir(dataset), baseName + '.csv')
