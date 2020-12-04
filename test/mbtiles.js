@@ -13,7 +13,7 @@ describe('Generated mbtiles file', () => {
 
   it('Process uploaded CSV dataset', async () => {
     const ax = global.ax.dmeadus
-    const dataset = await testUtils.sendDataset('dataset1.csv', ax)
+    const dataset = await testUtils.sendDataset('datasets/dataset1.csv', ax)
     // Update schema to specify geo point
     const locProp = dataset.schema.find(p => p.key === 'loc')
     locProp['x-refersTo'] = 'http://www.w3.org/2003/01/geo/wgs84_pos#lat_long'
@@ -80,7 +80,7 @@ describe('Generated mbtiles file', () => {
 
   it('process uploaded geojson file', async () => {
     const ax = global.ax.dmeadus
-    const dataset = await testUtils.sendDataset('geojson-example.geojson', ax)
+    const dataset = await testUtils.sendDataset('geo/geojson-example.geojson', ax)
 
     // fetch results as geojson
     let res = await ax.get(`/api/v1/datasets/${dataset.id}/lines?xyz=0,0,0&format=geojson`)

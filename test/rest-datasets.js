@@ -197,7 +197,7 @@ describe('REST datasets', () => {
 
     // Create a line with an attached file
     const form = new FormData()
-    const attachmentContent = fs.readFileSync('./test/resources/files/dir1/test.pdf')
+    const attachmentContent = fs.readFileSync('./test/resources/datasets/files/dir1/test.pdf')
     form.append('attachment', attachmentContent, 'dir1/test.pdf')
     form.append('attr1', 10)
     res = await ax.post('/api/v1/datasets/rest5/lines', form, { headers: testUtils.formHeaders(form) })
@@ -229,7 +229,7 @@ describe('REST datasets', () => {
 
     // Create a line with an attached file
     const form = new FormData()
-    const attachmentsContent = fs.readFileSync('./test/resources/files.zip')
+    const attachmentsContent = fs.readFileSync('./test/resources/datasets/files.zip')
     form.append('attachments', attachmentsContent, 'files.zip')
     form.append('actions', Buffer.from(JSON.stringify([
       { _id: 'line1', attr1: 'test1', attachmentPath: 'test.odt' },
@@ -275,7 +275,7 @@ describe('REST datasets', () => {
 
     // Create a line with an attached file
     const form = new FormData()
-    form.append('actions', await fs.readFile('test/resources/access.log.ndjson'), 'actions.ndjson')
+    form.append('actions', await fs.readFile('test/resources/rest/access.log.ndjson'), 'actions.ndjson')
     res = await ax.post('/api/v1/datasets/restndjson/_bulk_lines', form, { headers: testUtils.formHeaders(form) })
     assert.equal(res.status, 200)
     assert.equal(res.data.nbErrors, 0)
@@ -300,7 +300,7 @@ describe('REST datasets', () => {
 
     // Create a line with an attached file
     const form = new FormData()
-    form.append('actions', await fs.readFile('test/resources/access.log.ndjson'), 'actions.ndjson')
+    form.append('actions', await fs.readFile('test/resources/rest/access.log.ndjson'), 'actions.ndjson')
     try {
       await ax.post('/api/v1/datasets/restndjson/_bulk_lines', form, { headers: testUtils.formHeaders(form) })
       assert.fail()

@@ -21,7 +21,7 @@ describe('virtual datasets', () => {
   it('Create a virtual dataset with a child and query', async () => {
   // Send basic dataset
     const ax = global.ax.dmeadus
-    const dataset = await testUtils.sendDataset('dataset1.csv', ax)
+    const dataset = await testUtils.sendDataset('datasets/dataset1.csv', ax)
     let res = await ax.post('/api/v1/datasets', {
       isVirtual: true,
       virtual: {
@@ -37,11 +37,11 @@ describe('virtual datasets', () => {
 
   it('Create a virtual dataset, add children and query', async () => {
     const ax = global.ax.dmeadus
-    const dataset1 = await testUtils.sendDataset('dataset1.csv', ax)
-    const dataset2 = await testUtils.sendDataset('dataset1.csv', ax)
-    const dataset3 = await testUtils.sendDataset('dataset1.csv', ax)
+    const dataset1 = await testUtils.sendDataset('datasets/dataset1.csv', ax)
+    const dataset2 = await testUtils.sendDataset('datasets/dataset1.csv', ax)
+    const dataset3 = await testUtils.sendDataset('datasets/dataset1.csv', ax)
     // last one is not a child, it should not be used
-    await testUtils.sendDataset('dataset1.csv', ax)
+    await testUtils.sendDataset('datasets/dataset1.csv', ax)
     let res = await ax.post('/api/v1/datasets', {
       isVirtual: true,
       title: 'a virtual dataset',
@@ -68,7 +68,7 @@ describe('virtual datasets', () => {
 
   it('Check compatibility of schema with children', async () => {
     const ax = global.ax.dmeadus
-    const dataset = await testUtils.sendDataset('dataset1.csv', ax)
+    const dataset = await testUtils.sendDataset('datasets/dataset1.csv', ax)
     let res = await ax.post('/api/v1/datasets', {
       isVirtual: true,
       title: 'a virtual dataset',
@@ -92,7 +92,7 @@ describe('virtual datasets', () => {
 
   it('Check that column restriction is enforced (select, search, aggs)', async () => {
     const ax = global.ax.dmeadus
-    const dataset = await testUtils.sendDataset('dataset1.csv', ax)
+    const dataset = await testUtils.sendDataset('datasets/dataset1.csv', ax)
     let res = await ax.post('/api/v1/datasets', {
       isVirtual: true,
       title: 'a virtual dataset',
@@ -159,7 +159,7 @@ describe('virtual datasets', () => {
 
   it('Apply static filter', async () => {
     const ax = global.ax.dmeadus
-    const dataset = await testUtils.sendDataset('dataset1.csv', ax)
+    const dataset = await testUtils.sendDataset('datasets/dataset1.csv', ax)
     let res = await ax.post('/api/v1/datasets', {
       isVirtual: true,
       title: 'a virtual dataset',
@@ -183,7 +183,7 @@ describe('virtual datasets', () => {
 
   it('Add another virtual dataset as child', async () => {
     const ax = global.ax.dmeadus
-    const dataset = await testUtils.sendDataset('dataset1.csv', ax)
+    const dataset = await testUtils.sendDataset('datasets/dataset1.csv', ax)
     let res = await ax.post('/api/v1/datasets', {
       isVirtual: true,
       title: 'a virtual dataset',
@@ -252,7 +252,7 @@ describe('virtual datasets', () => {
 
   it('A virtual dataset cannot have a child virtual dataset with filters (no way to enforce them)', async () => {
     const ax = global.ax.dmeadus
-    const dataset = await testUtils.sendDataset('dataset1.csv', ax)
+    const dataset = await testUtils.sendDataset('datasets/dataset1.csv', ax)
     let res = await ax.post('/api/v1/datasets', {
       isVirtual: true,
       title: 'a virtual dataset',
@@ -287,7 +287,7 @@ describe('virtual datasets', () => {
   it('A virtual dataset is updated after a child schema changes', async () => {
     // Send basic dataset
     const ax = global.ax.dmeadus
-    let dataset = await testUtils.sendDataset('dataset1.csv', ax)
+    let dataset = await testUtils.sendDataset('datasets/dataset1.csv', ax)
     let res = await ax.post('/api/v1/datasets', {
       isVirtual: true,
       virtual: {
@@ -320,7 +320,7 @@ describe('virtual datasets', () => {
 
   it('A virtual dataset is updated after a child schema changes', async () => {
     const ax = global.ax.dmeadus
-    let dataset = await testUtils.sendDataset('dataset1.csv', ax)
+    let dataset = await testUtils.sendDataset('datasets/dataset1.csv', ax)
     let res = await ax.post('/api/v1/datasets', {
       isVirtual: true,
       virtual: { children: [dataset.id] },
@@ -351,8 +351,8 @@ describe('virtual datasets', () => {
   it('A virtual dataset is in error if children become inconsistent', async () => {
     // Send basic dataset
     const ax = global.ax.dmeadus
-    const dataset1 = await testUtils.sendDataset('dataset1.csv', ax)
-    const dataset2 = await testUtils.sendDataset('dataset1.csv', ax)
+    const dataset1 = await testUtils.sendDataset('datasets/dataset1.csv', ax)
+    const dataset2 = await testUtils.sendDataset('datasets/dataset1.csv', ax)
     let res = await ax.post('/api/v1/datasets', {
       isVirtual: true,
       virtual: { children: [dataset1.id, dataset2.id] },

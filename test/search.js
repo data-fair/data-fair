@@ -6,7 +6,7 @@ const workers = require('../server/workers')
 
 describe('search', () => {
   it('Get lines in dataset', async () => {
-    const datasetData = fs.readFileSync('./test/resources/dataset1.csv')
+    const datasetData = fs.readFileSync('./test/resources/datasets/dataset1.csv')
     const form = new FormData()
     form.append('file', datasetData, 'dataset.csv')
     const ax = global.ax.dmeadus

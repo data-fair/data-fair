@@ -6,8 +6,8 @@ describe('datasets', () => {
     const ax = global.ax.dmeadus
 
     // 2 datasets in organization zone
-    const dataset1 = await testUtils.sendDataset('dataset1.csv', ax)
-    const dataset2 = await testUtils.sendDataset('dataset1.csv', ax)
+    const dataset1 = await testUtils.sendDataset('datasets/dataset1.csv', ax)
+    const dataset2 = await testUtils.sendDataset('datasets/dataset1.csv', ax)
 
     let res = await ax.get('/api/v1/datasets', { params: { facets: 'topics' } })
     assert.equal(res.data.count, 2)

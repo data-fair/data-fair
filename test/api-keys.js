@@ -39,7 +39,7 @@ describe('API keys', () => {
     }
 
     // Set the correct owner
-    const dataset = await testUtils.sendDataset('dataset1.csv', axKey2)
+    const dataset = await testUtils.sendDataset('datasets/dataset1.csv', axKey2)
     assert.equal(dataset.status, 'finalized')
     assert.equal(dataset.owner.type, 'user')
     assert.equal(dataset.owner.id, 'dmeadus0')
@@ -57,7 +57,7 @@ describe('API keys', () => {
 
     // Set the correct owner
     const axKey1 = await global.ax.builder(null, null, { headers: { 'x-apiKey': key1 } })
-    const dataset = await testUtils.sendDataset('dataset1.csv', axKey1)
+    const dataset = await testUtils.sendDataset('datasets/dataset1.csv', axKey1)
     assert.equal(dataset.status, 'finalized')
     assert.equal(dataset.owner.type, 'organization')
     assert.equal(dataset.owner.id, 'KWqAGZ4mG')

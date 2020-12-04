@@ -16,8 +16,8 @@ nock('http://test-catalog.com').persist()
 
 describe('workers', () => {
   it('Process newly uploaded CSV dataset', async () => {
-  // Send dataset
-    const datasetFd = fs.readFileSync('./test/resources/dataset1.csv')
+    // Send dataset
+    const datasetFd = fs.readFileSync('./test/resources/datasets/dataset1.csv')
     const form = new FormData()
     form.append('file', datasetFd, 'dataset.csv')
     const ax = global.ax.dmeadus
@@ -73,7 +73,7 @@ describe('workers', () => {
     assert.equal(mapping2.properties._geopoint.type, 'geo_point')
 
     // Reupload data with bad localization
-    const datasetFd2 = fs.readFileSync('./test/resources/dataset-bad-format.csv')
+    const datasetFd2 = fs.readFileSync('./test/resources/datasets/bad-format.csv')
     const form2 = new FormData()
     form2.append('file', datasetFd2, 'dataset.csv')
     await ax.post('/api/v1/datasets/' + dataset.id, form2, { headers: testUtils.formHeaders(form2) })
@@ -96,7 +96,7 @@ describe('workers', () => {
     const catalog = (await ax.post('/api/v1/catalogs', { url: 'http://test-catalog.com', title: 'Test catalog', apiKey: 'apiKey', type: 'udata' })).data
 
     // Send dataset
-    const datasetFd = fs.readFileSync('./test/resources/dataset1.csv')
+    const datasetFd = fs.readFileSync('./test/resources/datasets/dataset1.csv')
     const form = new FormData()
     form.append('file', datasetFd, 'dataset.csv')
     let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
@@ -117,7 +117,7 @@ describe('workers', () => {
 
   it('Process newly uploaded geojson dataset', async () => {
     // Send dataset
-    const datasetFd = fs.readFileSync('./test/resources/geojson-example.geojson')
+    const datasetFd = fs.readFileSync('./test/resources/geo/geojson-example.geojson')
     const form = new FormData()
     form.append('file', datasetFd, 'geojson-example.geojson')
     const ax = global.ax.dmeadus
@@ -144,7 +144,7 @@ describe('workers', () => {
 
   it('Log error for geojson with broken feature', async () => {
   // Send dataset
-    const datasetFd = fs.readFileSync('./test/resources/geojson-broken.geojson')
+    const datasetFd = fs.readFileSync('./test/resources/geo/geojson-broken.geojson')
     const form = new FormData()
     form.append('file', datasetFd, 'geojson-example.geojson')
     const ax = global.ax.dmeadus
@@ -168,7 +168,7 @@ describe('workers', () => {
   // skipped, because requires ogr2ogr in the build env
   it.skip('Process newly uploaded shapefile dataset', async () => {
   // Send dataset
-    const datasetFd = fs.readFileSync('./test/resources/stations.zip')
+    const datasetFd = fs.readFileSync('./test/resources/geo/stations.zip')
     const form = new FormData()
     form.append('file', datasetFd, 'stations.zip')
     const ax = global.ax.dmeadus
@@ -183,7 +183,7 @@ describe('workers', () => {
 
   it('Run tasks in children processes', async function() {
     config.worker.spawnTask = true
-    const datasetFd = fs.readFileSync('./test/resources/dataset1.csv')
+    const datasetFd = fs.readFileSync('./test/resources/datasets/dataset1.csv')
     const form = new FormData()
     form.append('file', datasetFd, 'dataset.csv')
     const ax = global.ax.dmeadus
@@ -201,7 +201,7 @@ describe('workers', () => {
 
   it('Manage failure in children processes', async function() {
     config.worker.spawnTask = true
-    const datasetFd = fs.readFileSync('./test/resources/geojson-broken.geojson')
+    const datasetFd = fs.readFileSync('./test/resources/geo/geojson-broken.geojson')
     const form = new FormData()
     form.append('file', datasetFd, 'geojson-broken2.geojson')
     const ax = global.ax.dmeadus

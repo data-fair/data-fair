@@ -36,7 +36,7 @@ describe('Base applications', () => {
 
   it('Get base apps completed with contextual dataset', async () => {
     const ax = global.ax.dmeadus
-    const dataset = await testUtils.sendDataset('dataset1.csv', ax)
+    const dataset = await testUtils.sendDataset('datasets/dataset1.csv', ax)
     const res = await ax.get('/api/v1/base-applications?dataset=' + dataset.id)
     assert.equal(res.status, 200)
     assert.equal(res.data.count, 1)

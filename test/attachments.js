@@ -9,7 +9,7 @@ const workers = require('../server/workers')
 describe('Attachments', () => {
   it('Process newly uploaded attachments alone', async () => {
     // Send dataset
-    const datasetFd = fs.readFileSync('./test/resources/files.zip')
+    const datasetFd = fs.readFileSync('./test/resources/datasets/files.zip')
     const form = new FormData()
     form.append('dataset', datasetFd, 'files.zip')
     const ax = global.ax.dmeadus
@@ -41,8 +41,8 @@ describe('Attachments', () => {
 
     // Send dataset with a CSV and attachments in an archive
     const form = new FormData()
-    form.append('dataset', fs.readFileSync('./test/resources/dataset-attachments.csv'), 'dataset-attachments.csv')
-    form.append('attachments', fs.readFileSync('./test/resources/files.zip'), 'files.zip')
+    form.append('dataset', fs.readFileSync('./test/resources/datasets/attachments.csv'), 'attachments.csv')
+    form.append('attachments', fs.readFileSync('./test/resources/datasets/files.zip'), 'files.zip')
     let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
     let dataset = res.data
     assert.equal(res.status, 201)
@@ -68,8 +68,8 @@ describe('Attachments', () => {
 
     // Send dataset with a CSV and attachments in an archive
     const form = new FormData()
-    form.append('dataset', fs.readFileSync('./test/resources/dataset-attachments-wrong-paths.csv'), 'dataset-attachments-wrong-paths.csv')
-    form.append('attachments', fs.readFileSync('./test/resources/files.zip'), 'files.zip')
+    form.append('dataset', fs.readFileSync('./test/resources/datasets/attachments-wrong-paths.csv'), 'attachments-wrong-paths.csv')
+    form.append('attachments', fs.readFileSync('./test/resources/datasets/files.zip'), 'files.zip')
     const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
     const dataset = res.data
     assert.equal(res.status, 201)
@@ -88,8 +88,8 @@ describe('Attachments', () => {
 
     // Send dataset with a CSV and attachments in an archive
     const form = new FormData()
-    form.append('dataset', fs.readFileSync('./test/resources/dataset-attachments-no-paths.csv'), 'dataset-attachments-no-paths.csv')
-    form.append('attachments', fs.readFileSync('./test/resources/files.zip'), 'files.zip')
+    form.append('dataset', fs.readFileSync('./test/resources/datasets/attachments-no-paths.csv'), 'attachments-no-paths.csv')
+    form.append('attachments', fs.readFileSync('./test/resources/datasets/files.zip'), 'files.zip')
     const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
     const dataset = res.data
     assert.equal(res.status, 201)

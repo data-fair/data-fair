@@ -8,7 +8,7 @@ describe('Cache headers', () => {
     const axAnonymous = global.ax.dmeadus
 
     // Set the correct owner
-    const dataset = await testUtils.sendDataset('dataset1.csv', ax)
+    const dataset = await testUtils.sendDataset('datasets/dataset1.csv', ax)
     assert.equal(dataset.status, 'finalized')
     assert.equal(dataset.owner.type, 'user')
     assert.equal(dataset.owner.id, 'dmeadus0')

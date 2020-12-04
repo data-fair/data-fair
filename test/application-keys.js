@@ -63,7 +63,7 @@ describe('Applications keys for unauthenticated readOnly access', () => {
     let res = await ax.post('/api/v1/applications', { url: 'http://monapp1.com/' })
     const appId = res.data.id
 
-    const dataset = await testUtils.sendDataset('dataset1.csv', ax)
+    const dataset = await testUtils.sendDataset('datasets/dataset1.csv', ax)
 
     res = await ax.put('/api/v1/applications/' + appId + '/config', {
       datasets: [{ href: `${config.publicUrl}/api/v1/datasets/${dataset.id}` }],

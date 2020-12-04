@@ -47,10 +47,10 @@ describe('datasets', () => {
     const axOrg = global.ax.dmeadusOrg
 
     // 1 dataset in user zone
-    await testUtils.sendDataset('dataset1.csv', ax)
+    await testUtils.sendDataset('datasets/dataset1.csv', ax)
     // 2 datasets in organization zone
-    await testUtils.sendDataset('dataset1.csv', axOrg)
-    await testUtils.sendDataset('dataset1.csv', axOrg)
+    await testUtils.sendDataset('datasets/dataset1.csv', axOrg)
+    await testUtils.sendDataset('datasets/dataset1.csv', axOrg)
 
     let res = await ax.get('/api/v1/datasets', { params: { facets: 'owner,field-type' } })
     assert.equal(res.data.count, 1)
@@ -73,7 +73,7 @@ describe('datasets', () => {
     assert.equal(res.data.facets['field-type'][0].count, 2)
   })
 
-  const datasetFd = fs.readFileSync('./test/resources/dataset1.csv')
+  const datasetFd = fs.readFileSync('./test/resources/datasets/dataset1.csv')
 
   it('Failure to upload dataset exceeding limit', async () => {
     const ax = global.ax.dmeadus
@@ -205,7 +205,7 @@ describe('datasets', () => {
     const ax = global.ax.cdurning2
     await ax.put('/api/v1/settings/user/cdurning2', { webhooks: [{ title: 'test', events: ['dataset-finalize-end'], target: { type: 'http', params: { url: 'http://localhost:5900' } } }] })
     let form = new FormData()
-    form.append('file', fs.readFileSync('./test/resources/Antennes du CD22.csv'), 'Antennes du CD22.csv')
+    form.append('file', fs.readFileSync('./test/resources/datasets/Antennes du CD22.csv'), 'Antennes du CD22.csv')
     let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
     assert.equal(res.status, 201)
 
@@ -222,7 +222,7 @@ describe('datasets', () => {
 
     // Send again the data to the same dataset
     form = new FormData()
-    form.append('file', fs.readFileSync('./test/resources/Antennes du CD22.csv'), 'Antennes du CD22.csv')
+    form.append('file', fs.readFileSync('./test/resources/datasets/Antennes du CD22.csv'), 'Antennes du CD22.csv')
     res = await ax.post(webhook.href, form, { headers: testUtils.formHeaders(form) })
 
     assert.equal(res.status, 200)

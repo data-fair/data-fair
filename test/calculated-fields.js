@@ -8,7 +8,7 @@ describe('Calculated fields', () => {
     const ax = global.ax.dmeadus
 
     // 1 dataset in user zone
-    const dataset = await testUtils.sendDataset('dataset1.csv', ax)
+    const dataset = await testUtils.sendDataset('datasets/dataset1.csv', ax)
     assert.ok(dataset.schema.find(f => f.key === '_id' && f['x-calculated'] === true))
     assert.ok(dataset.schema.find(f => f.key === '_i' && f['x-calculated'] === true))
     assert.ok(dataset.schema.find(f => f.key === '_rand' && f['x-calculated'] === true))
@@ -25,7 +25,7 @@ describe('Calculated fields', () => {
     const ax = global.ax.dmeadus
 
     // 1 dataset in user zone
-    const dataset = await testUtils.sendDataset('dataset-split.csv', ax)
+    const dataset = await testUtils.sendDataset('datasets/split.csv', ax)
     // keywords columns is not splitted, so only searchable through full text subfield
     let res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { select: 'keywords', qs: 'keywords:opendata' } })
     assert.equal(res.data.total, 0)

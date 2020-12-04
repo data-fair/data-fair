@@ -6,7 +6,7 @@ const testUtils = require('./resources/test-utils')
 describe('stats', () => {
   it('Get lines in dataset', async () => {
     const ax = global.ax.dmeadus
-    const datasetData = fs.readFileSync('./test/resources/dataset1.csv')
+    const datasetData = fs.readFileSync('./test/resources/datasets/dataset1.csv')
     const form = new FormData()
     form.append('file', datasetData, 'dataset.csv')
     let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
