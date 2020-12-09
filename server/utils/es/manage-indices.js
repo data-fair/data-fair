@@ -57,7 +57,11 @@ const indexBase = {
   // Minimal overhead by default as we might deal with a lot of small indices.
   // TODO: a way to override this ? Maybe intelligently based on size of the file ?
   settings: {
-    index: { number_of_shards: 1, number_of_replicas: 1 },
+    index: {
+      'mapping.total_fields.limit': 3000,
+      number_of_shards: 1,
+      number_of_replicas: 1,
+    },
     analysis: {
     normalizer: {
       // sorting ignores case and diacritics variations
