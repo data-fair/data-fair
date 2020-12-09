@@ -22,6 +22,8 @@
         :items="datasets"
         :loading="loadingDatasets"
         :search-input.sync="search"
+        :required="true"
+        :rules="[value => (value && value.length) || '']"
         hide-no-data
         item-text="title"
         item-value="id"
