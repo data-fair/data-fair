@@ -12,6 +12,7 @@
         <v-col>
           <dataset-status />
           <v-card
+            v-if="dataset.finalizedAt"
             outlined
             style="min-height: 440px;"
             class="mt-4"
