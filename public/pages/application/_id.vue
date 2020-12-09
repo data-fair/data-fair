@@ -126,6 +126,7 @@
       OpenApi,
     },
     async fetch({ store, params, route }) {
+      store.dispatch('application/clear')
       await store.dispatch('application/setId', route.params.id)
     },
     data: () => ({}),
@@ -143,11 +144,8 @@
         this.subscribe()
       }
     },
-    destroyed() {
-      this.clear()
-    },
     methods: {
-      ...mapActions('application', ['patch', 'clear', 'subscribe']),
+      ...mapActions('application', ['patch', 'subscribe']),
     },
   }
 </script>

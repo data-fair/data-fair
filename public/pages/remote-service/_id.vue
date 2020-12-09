@@ -62,6 +62,7 @@
   export default {
     components: { RemoteServiceActions, RemoteServiceInfo, RemoteServiceSchema, RemoteServiceConfig, OpenApi },
     async fetch({ store, params, route }) {
+      store.dispatch('remoteService/clear')
       await Promise.all([
         store.dispatch('remoteService/setId', route.params.id),
         store.dispatch('fetchVocabulary'),
@@ -78,11 +79,8 @@
       if (this.$route.path !== path) return this.$router.push(path)
       this.$store.dispatch('breadcrumbs', [{ text: 'Services', to: '/remote-services' }, { text: this.remoteService.title || this.remoteService.id }])
     },
-    destroyed() {
-      this.clear()
-    },
     methods: {
-      ...mapActions('remoteService', ['patch', 'remove', 'clear', 'refresh']),
+      ...mapActions('remoteService', ['patch', 'remove', 'refresh']),
       async confirmRemove() {
         this.showDeleteDialog = false
         await this.remove()

@@ -3,7 +3,7 @@
 </template>
 
 <script>
-  import { mapState, mapActions } from 'vuex'
+  import { mapState } from 'vuex'
 
   export default {
     middleware: 'dynamic-theme',
@@ -14,12 +14,6 @@
     },
     computed: {
       ...mapState('dataset', ['dataset']),
-    },
-    destroyed() {
-      this.clear()
-    },
-    methods: {
-      ...mapActions('dataset', ['clear']),
     },
   }
 </script>

@@ -37,7 +37,7 @@
 </template>
 
 <script>
-  import { mapState, mapActions, mapGetters } from 'vuex'
+  import { mapState, mapGetters } from 'vuex'
   import CatalogActions from '~/components/catalogs/actions.vue'
   import CatalogInfo from '~/components/catalogs/info.vue'
   import CatalogDatasets from '~/components/catalogs/datasets.vue'
@@ -45,6 +45,7 @@
   export default {
     components: { CatalogActions, CatalogInfo, CatalogDatasets },
     async fetch({ store, params, route }) {
+      store.dispatch('catalog/clear')
       await store.dispatch('catalog/setId', route.params.id)
     },
     data: () => ({
@@ -62,12 +63,6 @@
       const path = `/catalog/${this.$route.params.id}`
       if (this.$route.path !== path) return this.$router.push(path)
       if (this.catalog) this.$store.dispatch('breadcrumbs', [{ text: 'Connecteurs', to: '/catalogs' }, { text: this.catalog.title || this.catalog.id }])
-    },
-    destroyed() {
-      this.clear()
-    },
-    methods: {
-      ...mapActions('catalog', ['clear']),
     },
   }
 </script>

@@ -3,7 +3,7 @@
 </template>
 
 <script>
-  import { mapState, mapActions } from 'vuex'
+  import { mapState } from 'vuex'
 
   export default {
     layout: 'embed',
@@ -12,12 +12,6 @@
     },
     computed: {
       ...mapState('application', ['application']),
-    },
-    destroyed() {
-      this.clear()
-    },
-    methods: {
-      ...mapActions('application', ['clear']),
     },
   }
 </script>

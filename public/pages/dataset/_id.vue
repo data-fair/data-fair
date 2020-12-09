@@ -268,6 +268,7 @@
       OpenApi,
     },
     async fetch({ store, params, route }) {
+      store.dispatch('dataset/clear')
       await Promise.all([
         store.dispatch('dataset/setId', route.params.id),
         store.dispatch('fetchVocabulary'),
@@ -292,11 +293,8 @@
         this.subscribe()
       }
     },
-    destroyed() {
-      this.clear()
-    },
     methods: {
-      ...mapActions('dataset', ['clear', 'subscribe']),
+      ...mapActions('dataset', ['subscribe']),
     },
   }
 </script>
