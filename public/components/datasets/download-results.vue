@@ -33,16 +33,36 @@
       >
         Les résultats sont limités aux 10 000 premières lignes
       </v-alert>
-      <v-list class="pt-0">
+      <v-list class="pt-0" dense>
         <v-list-item :href="downloadUrls.csv" target="download">
           <v-list-item-avatar :size="30">
             <v-avatar :size="30">
               <v-icon>
-                mdi-file-delimited
+                mdi-file-delimited-outline
               </v-icon>
             </v-avatar>
           </v-list-item-avatar>
-          <v-list-item-title>Format CSV</v-list-item-title>
+          <v-list-item-title>format CSV</v-list-item-title>
+        </v-list-item>
+        <v-list-item :href="downloadUrls.xlsx" target="download">
+          <v-list-item-avatar :size="30">
+            <v-avatar :size="30">
+              <v-icon>
+                mdi-microsoft-excel
+              </v-icon>
+            </v-avatar>
+          </v-list-item-avatar>
+          <v-list-item-title>format XLSX</v-list-item-title>
+        </v-list-item>
+        <v-list-item :href="downloadUrls.ods" target="download">
+          <v-list-item-avatar :size="30">
+            <v-avatar :size="30">
+              <v-icon>
+                mdi-file-table-outline
+              </v-icon>
+            </v-avatar>
+          </v-list-item-avatar>
+          <v-list-item-title>format ODS</v-list-item-title>
         </v-list-item>
         <v-list-item
           v-if="dataset.bbox"
@@ -79,6 +99,8 @@
         }
         return {
           csv: buildURL(this.resourceUrl + '/lines', { ...params, format: 'csv' }),
+          xlsx: buildURL(this.resourceUrl + '/lines', { ...params, format: 'xlsx' }),
+          ods: buildURL(this.resourceUrl + '/lines', { ...params, format: 'ods' }),
           geojson: buildURL(this.resourceUrl + '/lines', { ...params, format: 'geojson' }),
         }
       },

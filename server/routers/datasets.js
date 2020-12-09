@@ -763,6 +763,21 @@ router.get('/:datasetId/lines', readDataset(), applicationKey, permissions.middl
     return
   }
 
+  if (req.query.format === 'xlsx') {
+    res.setHeader('content-disposition', `attachment; filename="${req.dataset.id}.xlsx"`)
+    res.throttleEnd()
+    res.status(200).send(outputs.results2sheet(req.dataset, req.query, result.results))
+    webhooks.trigger(req.app.get('db'), 'dataset', req.dataset, { type: 'downloaded-filter' })
+    return
+  }
+  if (req.query.format === 'ods') {
+    res.setHeader('content-disposition', `attachment; filename="${req.dataset.id}.ods"`)
+    res.throttleEnd()
+    res.status(200).send(outputs.results2sheet(req.dataset, req.query, result.results, 'ods'))
+    webhooks.trigger(req.app.get('db'), 'dataset', req.dataset, { type: 'downloaded-filter' })
+    return
+  }
+
   res.throttleEnd()
   res.status(200).send(result)
 }))
