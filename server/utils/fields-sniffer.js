@@ -1,6 +1,5 @@
 const Ajv = require('ajv')
 const ajv = new Ajv()
-const memoize = require('memoizee')
 
 exports.sniff = (values, attachmentsPaths = [], existingField) => {
   if (existingField && existingField.ignoreDetection) return { type: 'string' }
@@ -17,23 +16,23 @@ exports.sniff = (values, attachmentsPaths = [], existingField) => {
   return { type: 'string' }
 }
 
-exports.format = memoize((value, type) => {
+exports.format = (value, type) => {
   if (!value) return null
   if (typeof value !== 'string') value = JSON.stringify(value)
   if (type === 'string') return value.trim()
   const cleanValue = value.replace(new RegExp(`^${trimablePrefix}`, 'g'), '').replace(new RegExp(`${trimablePrefix}$`, 'g'), '')
   if (type === 'boolean') return ['1', 'true', 'vrai', 'oui', 'yes'].includes(cleanValue.toLowerCase())
   if (type === 'integer' || type === 'number') return Number(cleanValue.replace(/\s/g, '').replace(',', '.'))
-}, { max: 10000 })
+}
 
-exports.escapeKey = memoize((key) => {
+exports.escapeKey = (key) => {
   key = key.replace(/\.|\s|\$|;|,|:|!|\?\//g, '_').replace(/"/g, '')
   // prefixing by _ is reserved to fields calculated by data-fair
   while (key.startsWith('_')) {
     key = key.slice(1)
   }
   return key
-}, { max: 10000 })
+}
 
 function checkAll(values, check, param, throwIfAlmost) {
   const definedValues = [...values].filter(v => !!v)

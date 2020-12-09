@@ -197,6 +197,9 @@ exports.readStream = (dataset, raw = false) => {
   } else {
     throw new Error('Dataset type is not supported ' + dataset.file.mimetype)
   }
+
+  // small local cache for perf
+  const escapedKeys = {}
   return Combine(
     fs.createReadStream(exports.fileName(dataset)),
     iconv.decodeStream(dataset.file.encoding),
@@ -208,7 +211,13 @@ exports.readStream = (dataset, raw = false) => {
       transform(chunk, encoding, callback) {
         if (raw) {
           if (dataset.file.schema) {
-            if (Object.keys(chunk).filter(k => !k.startsWith('_')).find(k => !dataset.file.schema.find(p => p.key === fieldsSniffer.escapeKey(k)))) {
+            const unknownKey = Object.keys(chunk)
+              .filter(k => !k.startsWith('_'))
+              .find(k => !dataset.file.schema.find(p => {
+                escapedKeys[k] = escapedKeys[k] || fieldsSniffer.escapeKey(k)
+                return p.key === escapedKeys[k]
+              }))
+            if (unknownKey) {
               return callback(new Error(`Échec du traitement de la ligne ${(chunk._i + 1).toLocaleString()} du fichier. Le format est probablement invalide.`))
             }
           }
