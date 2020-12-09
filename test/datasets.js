@@ -289,4 +289,48 @@ describe('datasets', () => {
     assert.equal(res.data.store_bytes.consumption, 151)
     assert.deepEqual(await fs.readdir('data/test/user/dmeadus0/datasets/dataset-name/'), ['dataset-name2.csv'])
   })
+
+  it('Upload new dataset in user zone then change ownership to organization', async () => {
+    const ax = global.ax.dmeadus
+    const form = new FormData()
+    form.append('file', datasetFd, 'dataset1.csv')
+    const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
+    assert.equal(res.status, 201)
+
+    try {
+      await ax.put(`/api/v1/datasets/${res.data.id}/owner`, {
+        type: 'organization',
+        id: 'anotherorg',
+        name: 'Test',
+      })
+      assert.fail()
+    } catch (err) {
+      assert.equal(err.status, 403)
+    }
+
+    try {
+      await ax.put(`/api/v1/datasets/${res.data.id}/owner`, {
+        type: 'user',
+        id: 'anotheruser',
+        name: 'Test',
+      })
+      assert.fail()
+    } catch (err) {
+      assert.equal(err.status, 403)
+    }
+
+    await ax.put(`/api/v1/datasets/${res.data.id}/owner`, {
+      type: 'organization',
+      id: 'KWqAGZ4mG',
+      name: 'Fivechat',
+    })
+
+    try {
+      await ax.get(`/api/v1/datasets/${res.data.id}`)
+      assert.fail()
+    } catch (err) {
+      assert.equal(err.status, 403)
+    }
+    await global.ax.dmeadusOrg.get(`/api/v1/datasets/${res.data.id}`)
+  })
 })

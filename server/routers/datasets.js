@@ -281,7 +281,15 @@ router.patch('/:datasetId', readDataset(['finalized', 'error']), permissions.mid
 // Change ownership of a dataset
 router.put('/:datasetId/owner', readDataset(), permissions.middleware('delete', 'admin'), asyncWrap(async(req, res) => {
   // Must be able to delete the current dataset, and to create a new one for the new owner to proceed
-  if (!permissions.canDoForOwner(req.body, 'datasets', 'post', req.user)) return res.sendStatus(403)
+  if (!req.user.adminMode) {
+    if (req.body.type === 'user' && req.body.id !== req.user.id) return res.status(403).send()
+    if (req.body.type === 'organization') {
+      const userOrg = req.user.organizations.find(o => o.id === req.body.id)
+      if (!userOrg) return res.status(403).send()
+      if (![config.contribRole, config.adminRole].includes(userOrg.role)) return res.status(403).send()
+    }
+  }
+
   const patch = {
     owner: req.body,
     updatedBy: { id: req.user.id, name: req.user.name },
