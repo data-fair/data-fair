@@ -24,7 +24,12 @@ exports.process = async function(app, dataset) {
     indexName = es.aliasName(dataset)
     debug(`Update index ${indexName}`)
   } else {
-    indexName = await es.initDatasetIndex(esClient, dataset)
+    try {
+      indexName = await es.initDatasetIndex(esClient, dataset)
+    } catch (err) {
+      const errBody = err.meta && err.meta.body && err.meta.body.error
+      throw new Error(es.errorMessage(errBody) || err.message)
+    }
     debug(`Initialize new dataset index ${indexName}`)
   }
   const attachments = !!dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')

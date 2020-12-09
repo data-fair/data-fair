@@ -557,18 +557,8 @@ router.get('/:datasetId/lines/:lineId/revisions', readDataset(['finalized', 'upd
 
 // Error from ES backend should be stored in the journal
 async function manageESError(req, err) {
-  // console.error('Elasticsearch error', JSON.stringify(err.body || err, null, 2))
-  const errBody = (err.body && err.body.error) || {}
-  let message = err.message
-  if (errBody.root_cause && errBody.root_cause.reason) message = errBody.root_cause.reason
-  if (errBody.failed_shards && errBody.failed_shards[0] && errBody.failed_shards[0].reason) {
-    const shardReason = errBody.failed_shards[0].reason
-    if (shardReason.caused_by && shardReason.caused_by.reason) {
-      message = shardReason.caused_by.reason
-    } else {
-      message = shardReason.reason || shardReason
-    }
-  }
+  const errBody = (err.body && err.body.error) || (err.meta && err.meta.body && err.meta.body.error)
+  const message = esUtils.errorMessage(errBody) || err.message
 
   if (req.dataset.status === 'finalized' && err.statusCode >= 404 && errBody.type !== 'search_phase_execution_exception') {
     await req.app.get('db').collection('datasets').updateOne({ id: req.params.datasetId }, { $set: { status: 'error' } })
