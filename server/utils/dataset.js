@@ -217,7 +217,7 @@ exports.readStream = (dataset, raw = false) => {
         }
         const line = {}
         dataset.schema.forEach(prop => {
-          const value = fieldsSniffer.format(chunk[prop['x-originalName']], prop)
+          const value = fieldsSniffer.format(chunk[prop['x-originalName']], prop.type)
           if (value !== null) line[prop.key] = value
         })
         line._i = chunk._i
