@@ -8,10 +8,19 @@ async function childrenSchemas(db, owner, children, blackListedFields) {
   let schemas = []
   for (const childId of children) {
     const child = await db.collection('datasets')
-      .findOne({ id: childId, 'owner.id': owner.id, 'owner.type': owner.type }, { isVirtual: 1, virtual: 1, schema: 1 })
+      .findOne({
+        id: childId,
+        $or: [
+          // the virtual dataset can have children that are either from the same owner
+          // or completely public for the "read" opeations classes
+          // we could try to manage intermediate cases, but it would be complicated
+          { 'owner.id': owner.id, 'owner.type': owner.type },
+          { permissions: { $elemMatch: { classes: 'read', type: null, id: null } } },
+        ],
+      }, { isVirtual: 1, virtual: 1, schema: 1 })
     if (!child) continue
     if (child.isVirtual) {
-      const grandChildrenSchemas = await childrenSchemas(db, child.virtual.children, blackListedFields)
+      const grandChildrenSchemas = await childrenSchemas(db, owner, child.virtual.children, blackListedFields)
       grandChildrenSchemas.forEach(s => s.forEach(field => {
         if (!child.schema.find(f => f.key === field.key)) blackListedFields.add(field.key)
       }))
@@ -85,7 +94,15 @@ exports.descendants = async (db, dataset) => {
       connectToField: 'id',
       as: 'descendants',
       maxDepth: 20,
-      restrictSearchWithMatch: { 'owner.type': dataset.owner.type, 'owner.id': dataset.owner.id },
+      restrictSearchWithMatch: {
+        $or: [
+          // the virtual dataset can have children that are either from the same owner
+          // or completely public for the "read" opeations classes
+          // we could try to manage intermediate cases, but it would be complicated
+          { 'owner.id': dataset.owner.id, 'owner.type': dataset.owner.type },
+          { permissions: { $elemMatch: { classes: 'read', type: null, id: null } } },
+        ],
+      },
     },
   }, {
     $project: {

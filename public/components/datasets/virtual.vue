@@ -238,7 +238,7 @@
       async fetchChildren() {
         this.loadingChildren = true
         const res = await this.$axios.$get('api/v1/datasets', {
-          params: { size: 1000, select: 'id,title,schema', id: this.dataset.virtual.children.join(','), owner: `${this.dataset.owner.type}:${this.dataset.owner.id}` },
+          params: { size: 1000, select: 'id,title,schema', id: this.dataset.virtual.children.join(',') },
         })
         // remove children that do not exist anymore
         this.dataset.virtual.children = this.dataset.virtual.children.filter(child => res.results.find(d => d.id === child))
