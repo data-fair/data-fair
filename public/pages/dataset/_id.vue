@@ -68,7 +68,7 @@
           </v-card>
 
           <v-card
-            v-if="can('readLines')"
+            v-if="can('readLines') && dataset.finalizedAt"
             outlined
             class="mt-6"
           >
@@ -127,7 +127,11 @@
             </v-tabs>
           </v-card>
 
-          <v-card outlined class="mt-6">
+          <v-card
+            v-if="dataset.finalizedAt"
+            outlined
+            class="mt-6"
+          >
             <v-tabs :background-color="$vuetify.theme.dark ? '' : 'grey lighten-3'">
               <v-tab href="#tab-reuses-apps">
                 <v-icon>mdi-image-multiple</v-icon>&nbsp;&nbsp;Visualisations
@@ -146,7 +150,7 @@
           </v-card>
 
           <v-card
-            v-if="can('getPermissions')"
+            v-if="can('getPermissions') && dataset.finalizedAt"
             outlined
             style="min-height: 200px;"
             class="mt-6"
@@ -196,7 +200,7 @@
                 </v-tab-item>
               </template>
 
-              <template v-if="can('readApiDoc')">
+              <template v-if="can('readApiDoc') && dataset.finalizedAt">
                 <v-tab href="#tab-tech-apidoc">
                   <v-icon>mdi-cloud</v-icon>&nbsp;&nbsp;API
                 </v-tab>
