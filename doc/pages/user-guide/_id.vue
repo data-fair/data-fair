@@ -1,10 +1,5 @@
 <template lang="html">
-  <doc-page
-    :page="$route.params.id"
-    :pages="pages"
-    :content="content"
-    prefix="user-guide"
-  />
+  <doc-page :content="content" />
 </template>
 
 <script>
@@ -14,14 +9,11 @@
 
   export default {
     components: { DocPage },
-    data: () => ({
-      pages: ['introduction', 'dataset', 'format', 'concepts', 'permission', 'service', 'application', 'enrichment', 'catalog'],
-    }),
     computed: {
       content() {
         if (!this.$route) return
         const content = context(`./${this.$route.params.id}-${this.$i18n.locale}.md`) || context(`./${this.$route.params.id}-fr.md`)
-        return content
+        return content.default
       },
     },
     head() {

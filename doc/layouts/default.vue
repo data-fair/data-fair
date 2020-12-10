@@ -13,7 +13,7 @@
         <v-list-item-action>
           <v-img
             src="./logo.svg"
-            width="48"
+            width="40"
             contain
           />
         </v-list-item-action>

@@ -17,8 +17,7 @@
       content() {
         if (!this.$route) return
         const content = context(`./${this.$route.params.id}-${this.$i18n.locale}.md`) || context(`./${this.$route.params.id}-fr.md`)
-        console.log(content)
-        return content
+        return content.default
       },
     },
   }

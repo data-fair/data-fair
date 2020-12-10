@@ -1,7 +1,7 @@
 <template lang="html">
   <v-container
     fluid
-    class="doc-page"
+    class="doc-page px-6"
   >
     <v-row>
       <v-col>
@@ -49,6 +49,9 @@
           elemClasses[k].forEach(c => e.classList.add(c))
         })
       })
+      this.$el.querySelectorAll('img').forEach(img => {
+        img.parentElement.classList.add('text-center')
+      })
       this.ready = true
     },
   }
@@ -64,6 +67,12 @@
     }
     p img {
       max-width:100%;
+      margin: 12px auto;
+      border: solid;
+      border-width: 1px;
+    }
+    p:has(> img){
+      text-align: center !important;
     }
 }
 </style>

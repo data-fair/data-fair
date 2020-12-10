@@ -1,5 +1,5 @@
 <template lang="html">
-  <v-list dense>
+  <v-list dense expand>
     <template v-for="chapter in chapters">
       <v-list-group
         :key="chapter.id"
