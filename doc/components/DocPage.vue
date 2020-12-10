@@ -71,8 +71,5 @@
       border: solid;
       border-width: 1px;
     }
-    p:has(> img){
-      text-align: center !important;
-    }
 }
 </style>

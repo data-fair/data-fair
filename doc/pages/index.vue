@@ -106,8 +106,4 @@
 </script>
 
 <style>
-
-.jumbotron__image {
-  width: 100%
-}
 </style>

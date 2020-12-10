@@ -36,6 +36,9 @@ module.exports = {
     theme: config.theme,
     publicUrl: config.publicUrl,
   },
+  plugins: [
+    { src: '~plugins/moment' },
+  ],
   modules: [['nuxt-i18n', {
     seo: false,
     locales: [
