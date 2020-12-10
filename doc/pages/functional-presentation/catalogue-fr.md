@@ -1,7 +1,7 @@
 ---
 title: Catalogue de données
 section: 2
-subsection : 3
+subsection : 2
 updated: 2020-12-09
 description : Catalogue de données
 published: true

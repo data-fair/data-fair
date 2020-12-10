@@ -1,7 +1,7 @@
 ---
 title: Présentation détaillée d’une visualisation de données
 section: 2
-subsection : 6
+subsection : 5
 updated: 2020-12-09
 description : Présentation détaillée d’une visualisation de données
 published: true

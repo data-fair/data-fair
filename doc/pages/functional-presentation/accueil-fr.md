@@ -1,7 +1,7 @@
 ---
 title: Page d’accueil
 section: 2
-subsection : 2
+subsection : 1
 updated: 2020-12-09
 description : Page d’accueil
 published: true

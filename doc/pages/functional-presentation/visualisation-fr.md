@@ -1,7 +1,7 @@
 ---
 title: Liste des visualisations de données
 section: 2
-subsection : 5
+subsection : 4
 updated: 2020-12-09
 description : Liste des visualisations de données
 published: true

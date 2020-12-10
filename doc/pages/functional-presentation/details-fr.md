@@ -1,7 +1,7 @@
 ---
 title: Détails d’un jeu de données
 section: 2
-subsection : 4
+subsection : 3
 updated: 2020-12-09
 description : Détails d’un jeu de données
 published: true
