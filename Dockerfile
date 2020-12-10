@@ -48,6 +48,7 @@ ENV VERSION=$VERSION
 ENV NODE_ENV production
 ENV DEBUG db,upgrade*
 WORKDIR /webapp
+ADD LICENSE .
 ADD package.json .
 ADD package-lock.json .
 ADD patches patches
