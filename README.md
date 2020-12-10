@@ -2,7 +2,7 @@
 
 *Findable, Accessible, Interoperable and Reusable Data*
 
-[![Build Status](https:///koumoul-dev/data-fair.svg?branch=master)](https://travis-ci.org/koumoul-dev/data-fair)
+[![Build Status](https://travis-ci.com/koumoul-dev/data-fair.svg?branch=master)](https://travis-ci.com/koumoul-dev/data-fair)
 [![Coverage Status](https://coveralls.io/repos/github/koumoul-dev/data-fair/badge.svg?branch=master)](https://coveralls.io/github/koumoul-dev/data-fair?branch=master)
 
 [Visit documentation website (french)](https://koumoul-dev.github.io/data-fair/)
