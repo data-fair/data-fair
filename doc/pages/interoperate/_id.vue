@@ -1,27 +1,19 @@
 <template lang="html">
-  <doc-page
-    :page="$route.params.id"
-    :pages="pages"
-    :content="content"
-    prefix="interoperate"
-  />
+  <doc-page :content="content" />
 </template>
 
 <script>
-  import DocPage from '../../components/DocPage'
+  import DocPage from '~/components/DocPage'
   // Webpack way of requiring a bunch of modules at once
   const context = require.context('.', true, /\.md$/)
 
   export default {
     components: { DocPage },
-    data: () => ({
-      pages: ['applications', 'services', 'api'],
-    }),
     computed: {
       content() {
         if (!this.$route) return
         const content = context(`./${this.$route.params.id}-${this.$i18n.locale}.md`) || context(`./${this.$route.params.id}-fr.md`)
-        return content
+        return content.default
       },
     },
     head() {

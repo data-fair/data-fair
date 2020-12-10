@@ -16,10 +16,10 @@ La solution permet de gérer les différentes licences et thématiques dont vous
 Une licence est définie par son nom et son adresse.
 
 
-<img src="../../static/images/functional-presentation/licences.jpg" alt="Catalogue de données"></img>
+![Catalogue de données](./images/functional-presentation/licences.jpg)
 
 Une thématique est définie par son nom et sa couleur.
 
-<img src="../../static/images/functional-presentation/thematique.jpg" alt="Catalogue de données"></img>
+![Catalogue de données](./images/functional-presentation/thematique.jpg)
 
 Les licences et thématiques ajoutées dans votre configuration peuvent ensuite être assignées aux données. Les licences et thématiques de vos données seront disponibles dans votre portail de données.

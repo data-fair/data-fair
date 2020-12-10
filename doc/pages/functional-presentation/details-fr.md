@@ -10,7 +10,7 @@ Pour pouvoir être accessibles au plus grand nombre, les jeux de données sont p
 Différents outils permettent à un public plus averti de pouvoir aller plus loin (téléchargement, utilisation de l’API, partage, accès aux métadonnées, ...)
 
 
-<img src="../../static/images/functional-presentation/detail-1.jpg" alt="Catalogue de données"></img>
+![Catalogue de données](./images/functional-presentation/detail-1.jpg.jpg)
 
 La vignette d’informations présente le producteur des données, la licence associée, la date de dernière mise à jour ainsi que différents boutons d’actions. Ces actions sont les mêmes que celles sur les vignettes du catalogue de données, avec en plus la possibilité de télécharger les données.
 
@@ -18,11 +18,11 @@ En dessous du titre et de la description des données, les visualisations associ
 
 Les visualisations sont interactives et il est possible d’accéder à la page de la visualisation en cliquant sur son titre.
 
-<img src="../../static/images/functional-presentation/detail-2.jpg" alt="Catalogue de données"></img>
+![Catalogue de données](./images/functional-presentation/detail-2.jpg.jpg)
 
 En bas de page, différents boutons permettent de partager la page du jeu de données sur les réseaux sociaux (Facebook, Twitter, Linkedin, …).  
 La page de données possède des métadonnées enrichies qui permettent une meilleure indexation par les moteurs de recherche et un affichage d’une miniature sur les réseaux sociaux. Cette miniature présente la première visualisation associée au jeu de données, et ce côté graphique permet d’augmenter l’engagement des utilisateurs des réseaux sociaux.
 
-<img src="../../static/images/functional-presentation/detail-3.jpg" alt="Catalogue de données"></img>
+![Catalogue de données](./images/functional-presentation/detail-3.jpg.jpg)
 
 Il est possible de télécharger une partie du jeu de données filtré.L’interface de téléchargement est actuellement en cours d’amélioration pour intégrer la possibilité de télécharger les données dans une grande variété de formats (CSV, TSV, XLS, TXT,GeoJson, KML, ESRI Shapefile, …), ainsi que les pièces jointes associées au jeu de données.

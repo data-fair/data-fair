@@ -13,8 +13,7 @@ Chaque source est présentée au travers d’une vignette qui indique son titre,
 * Accéder à la documentation interactive de l’API
 * Consulter le schéma des données
 
-
-<img src="../../static/images/functional-presentation/catalogue.jpg" alt="Catalogue de données"></img>
+![Catalogue de données](./images/functional-presentation/catalogue.jpg)
 
 Un clic sur le titre ou la description d’une vignette permet de naviguer vers une page de détails du jeu de données.  
 

@@ -11,4 +11,4 @@ published: true
 Lors de l’ajout d’une clé d’api, il est possible de restreindre l’accès à une seule fonction. Il est ensuite possible de restreindre l’accès à une IP ou à un nom de domaine précis.
 
 
-<img src="../../static/images/functional-presentation/ajout-api.jpg" alt="Catalogue de données"></img>
+![Catalogue de données](./images/functional-presentation//ajout-api.jpg)

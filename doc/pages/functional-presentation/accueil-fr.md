@@ -12,4 +12,4 @@ Elle présente les derniers jeux de données ajoutés et les dernières visualis
 
 Le portail permet de mettre en avant du contenu éditorial (texte expliquant la démarche ou présentant le portail) et une visualisation mise en avant.
 
-<img src="../../static/images/functional-presentation/acceuil.jpg" alt="Page d’accueil"></img>
+![Page d’accueil](./images/functional-presentation/acceuil.jpg)

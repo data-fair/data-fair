@@ -1,3 +1,11 @@
+---
+title: Personnalisation
+section: 3
+updated: 2020-12-10
+description : Surcharge des libellés
+published: true
+---
+
 ### Internationalization
 
 All messages in *DataFair* are externalized and internationalized.

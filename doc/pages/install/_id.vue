@@ -1,10 +1,5 @@
 <template lang="html">
-  <doc-page
-    :page="$route.params.id"
-    :pages="pages"
-    :content="content"
-    prefix="install"
-  />
+  <doc-page :content="content" />
 </template>
 
 <script>
@@ -46,7 +41,7 @@
       content() {
         if (!this.$route) return
         const content = context(`./${this.$route.params.id}-${this.$i18n.locale}.md`) || context(`./${this.$route.params.id}-fr.md`)
-        return content.replace('{{I18N_VARS}}', this.i18nVars).replace('{{CONFIG_VARS}}', this.configVars)
+        return content.default.replace('{{I18N_VARS}}', this.i18nVars).replace('{{CONFIG_VARS}}', this.configVars)
       },
       configVars() {
         let table = `<table><thead><tr><th>${this.$t('pages.install.config.varKey')}</th><th>${this.$t('pages.install.config.varName')}</th><th>${this.$t('pages.install.config.varDesc')}</th><th>${this.$t('pages.install.config.varDefault')}</th></tr></thead><tbody>\n`

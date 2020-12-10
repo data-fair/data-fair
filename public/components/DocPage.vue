@@ -1,1 +1,1 @@
-/home/alban/github/data-fair/doc/components/DocPage.vue
+/home/bonnel-n/work/koumoul/data-fair/doc/components/DocPage.vue

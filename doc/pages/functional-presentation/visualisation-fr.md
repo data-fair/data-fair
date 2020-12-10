@@ -10,4 +10,4 @@ Tout comme pour les jeux de données, il y a un catalogue des visualisations dis
 
 Les visualisations sont présentées au travers de vignettes imagées. Comme pour les jeux de données, ces vignettes possèdent différents boutons d’actions pour pouvoir interagir rapidement avec la visualisation ou naviguer vers une vue plein écran de celle-ci. Un clic sur le titre ou l’image d’une vignette permet de naviguer vers une page de détails de la visualisation.
 
-<img src="../../static/images/functional-presentation/visualisations.jpg" alt="Catalogue de données"></img>
+![Catalogue de données](./images/functional-presentation/visualisations.jpg)

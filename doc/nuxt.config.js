@@ -15,7 +15,17 @@ const routes = dir.files('doc/pages/', { sync: true })
 
 module.exports = {
   srcDir: 'doc/',
-  build: { extractCSS: true },
+  build: {
+    extractCSS: true,
+    extend (config, ctx) {
+        config.module.rules.push({
+          enforce: 'pre',
+          test: /\.md$/,
+          loader: 'raw-loader',
+          exclude: /(node_modules)/,
+        })
+      },
+   },
   generate: {
     dir: 'doc-dist',
     routes,
@@ -26,7 +36,7 @@ module.exports = {
     theme: config.theme,
     publicUrl: config.publicUrl,
   },
-  modules: ['@digibytes/markdownit', ['nuxt-i18n', {
+  modules: [['nuxt-i18n', {
     seo: false,
     locales: [
       { code: 'fr' },

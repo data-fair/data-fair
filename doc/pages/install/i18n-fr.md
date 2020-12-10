@@ -1,3 +1,11 @@
+---
+title: Personnalisation
+section: 3
+updated: 2020-12-10
+description : Surcharge des libellés
+published: true
+---
+
 ### Internationalisation
 
 **Attention: l'internationalisation de DataFair est un travail en cours.**

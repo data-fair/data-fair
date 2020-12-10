@@ -13,6 +13,6 @@ Les utilisateurs enregistrés peuvent paramétrer différentes alertes email ou 
 Une liste d’alertes par défaut est présentée dans la catégorie **Notifications**.
 
 
-<img src="../../static/images/functional-presentation/notify.jpg" alt="Catalogue de données"></img>
+![Catalogue de données](./images/functional-presentation/notify.jpg)
 
 Lorsqu’une notification est déclenchée, une pastille colorée est présente sur la cloche en haut à droite. Un clic sur la cloche permet d'accéder à un résumé des alertes précédemment envoyées.

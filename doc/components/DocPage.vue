@@ -3,31 +3,15 @@
     fluid
     class="doc-page"
   >
-    <v-navigation-drawer
-      app
-      fixed
-      style="padding-top: 64px;"
-    >
-      <v-subheader>{{ $t(`pages.${prefix}.title`) }}</v-subheader>
-      <v-list>
-        <v-list-item
-          v-for="pageId in pages"
-          :key="pageId"
-          :to="localePath({name: prefix + '-id', params: {id: pageId}})"
-        >
-          <v-list-item-title>{{ $t(`pages.${prefix}.${pageId}.title`) }}</v-list-item-title>
-        </v-list-item>
-      </v-list>
-    </v-navigation-drawer>
     <v-row>
       <v-col>
         <h2 class="display1 my-4">
-          {{ $t(`pages.${prefix}.${page}.title`) }}
+          {{ (filledContent.meta && filledContent.meta.title) || this.$route.params.id }}
         </h2>
         <div
           v-show="ready"
           cols="12"
-          v-html="filledContent"
+          v-html="filledContent.html"
         />
       </v-col>
     </v-row>
@@ -36,16 +20,17 @@
 
 <script>
   import { mapState } from 'vuex'
-  const escape = require('escape-string-regexp')
+  const marked = require('@hackmd/meta-marked')
+  // const escape = require('escape-string-regexp')
   require('highlight.js/styles/github.css')
 
   export default {
-    props: ['prefix', 'pages', 'page', 'content'],
+    props: ['content'],
     data: () => ({ ready: false }),
     computed: {
       ...mapState(['env']),
       filledContent() {
-        return this.content.replace(new RegExp(escape('<span>{{</span>publicUrl<span>}}</span>', 'g')), this.env.publicUrl)
+        return marked(this.content)// .replace(new RegExp(escape('<span>{{</span>publicUrl<span>}}</span>', 'g')), this.env.publicUrl)
       },
     },
     mounted() {
@@ -76,6 +61,9 @@
     }
     code {
 
+    }
+    p img {
+      max-width:100%;
     }
 }
 </style>

@@ -14,7 +14,7 @@ La documentation des APIs est réalisée en suivant la spécification OpenAPI 3.
 Un autre avantage d’utiliser cette spécification est l’interopérabilité accrue, certains systèmes informatiques (par exemple les API gateway)  étant capable de comprendre cette spécification.
 
 
-<img src="../../static/images/functional-presentation/api.jpg" alt="Catalogue de données"></img>
+![Catalogue de données](./images/functional-presentation/api.jpg)
 
 La capture d’écran ci-dessus illustre un exemple de visualisation de documentation d’API pour accéder à un jeu de données.
 

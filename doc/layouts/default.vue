@@ -1,11 +1,39 @@
 <template>
   <v-app>
-    <v-app-bar
+    <v-navigation-drawer
+      app
+      fixed
+      width="300"
+    >
+      <v-list-item
+        :to="localePath({name: `index`})"
+        nuxt
+        exact
+      >
+        <v-list-item-action>
+          <v-img
+            src="./logo.svg"
+            width="48"
+            contain
+          />
+        </v-list-item-action>
+        <v-list-item-content>
+          <v-list-item-title class="headline font-weight-bold">
+            Data Fair
+          </v-list-item-title>
+        </v-list-item-content>
+      </v-list-item>
+      <v-divider />
+
+      <folder-menu />
+    </v-navigation-drawer>
+    <!-- <v-app-bar
       app
       scroll-off-screen
       color="primary"
       dark
     >
+
       <div class="logo-container">
         <nuxt-link
           :title="$t('pages.root.title')"
@@ -38,13 +66,18 @@
       </v-toolbar-items>
 
       <v-spacer />
+    </v-app-bar> -->
 
+    <v-main>
       <v-speed-dial
         direction="bottom"
         transition="fade-transition"
+        absolute
+        top
+        right
       >
         <template v-slot:activator>
-          <v-btn icon>
+          <v-btn icon color="primary">
             {{ $i18n.locale }}
           </v-btn>
         </template>
@@ -59,11 +92,8 @@
           {{ locale.code }}
         </v-btn>
       </v-speed-dial>
-    </v-app-bar>
-
-    <v-content>
       <nuxt />
-    </v-content>
+    </v-main>
 
     <v-footer class="pa-3">
       <v-spacer />
@@ -73,8 +103,10 @@
 </template>
 
 <script>
+  import FolderMenu from '~/components/FolderMenu'
 
   export default {
+    components: { FolderMenu },
     data: () => ({
       drawer: true,
       pages: [
@@ -91,17 +123,6 @@
 <style lang="less">
 body .v-application {
   font-family: 'Nunito', sans-serif;
-
-  .logo-container {
-    height: 100%;
-    padding: 4px;
-    margin-left: 4px !important;
-    margin-right: 4px;
-
-    img, svg {
-      height:100%;
-    }
-  }
 
   .notification .snack__content {
     height: auto;
