@@ -51,7 +51,7 @@
         <v-img
           :aspect-ratio="2"
           alt="Accès par API"
-          src="./home/undraw_nakamoto_2iv6.svg"
+          src="./home/data_process.svg"
           contain
         />
       </v-col>
@@ -73,7 +73,7 @@
         <v-img
           :aspect-ratio="2"
           alt="Accès par API"
-          src="./home/undraw_visual_data_b1wx.svg"
+          src="./home/data_processing_.svg"
           contain
         />
       </v-col>
