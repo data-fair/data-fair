@@ -14,7 +14,7 @@ Chaque source est présentée au travers d’une vignette qui indique son titre,
 * Consulter le schéma des données
 
 
-<img src="../../static/images/catalogue.jpg" alt="Catalogue de données"></img>
+<img src="../../static/images/functional-presentation/catalogue.jpg" alt="Catalogue de données"></img>
 
 Un clic sur le titre ou la description d’une vignette permet de naviguer vers une page de détails du jeu de données.  
 

@@ -9,4 +9,4 @@ published: true
 Les utilisateurs peuvent se connecter avec un mot de passe et un email ou en utilisant un compte externe existant tels qu’un compte Gmail via le protocole oAuth2.
 
 
-<img src="../../static/images/detail-visualisation.jpg" alt="Catalogue de données"></img>
+<img src="../../static/images/functional-presentation/detail-visualisation.jpg" alt="Catalogue de données"></img>
