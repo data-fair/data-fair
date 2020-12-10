@@ -107,15 +107,6 @@
 
   export default {
     components: { FolderMenu },
-    data: () => ({
-      drawer: true,
-      pages: [
-        { prefix: 'about', id: 'overview' },
-        { prefix: 'install', id: 'install' },
-        { prefix: 'interoperate', id: 'applications' },
-        { prefix: 'user-guide', id: 'introduction' },
-      ],
-    }),
   }
 
 </script>

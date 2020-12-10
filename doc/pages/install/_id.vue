@@ -34,9 +34,6 @@
 
   export default {
     components: { DocPage },
-    data: () => ({
-      pages: ['install', 'config', 'i18n'],
-    }),
     computed: {
       content() {
         if (!this.$route) return

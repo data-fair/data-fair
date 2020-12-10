@@ -14,10 +14,10 @@
         Version {{ version }}
       </h4>
       <h1 class="display-2 grey--text text--darken-3" style="margin-top:200px;">
-        Présentation fonctionnelle
+        Extensions
       </h1>
       <h4 style="margin-top:200px!important;">
-        {{ new Date() | moment('DD MMMM YYYY') }}<br>
+        {{ new Date() | moment('DD MMMM YYYY') }}
       </h4>
     </v-col>
     <div class="page-break" />
@@ -67,7 +67,7 @@
 
 <script>
   const marked = require('@hackmd/meta-marked')
-  const context = require.context('../functional-presentation/', true, /\.md$/)
+  const context = require.context('../interoperate/', true, /\.md$/)
   const version = require('../../../package.json').version
 
   export default {

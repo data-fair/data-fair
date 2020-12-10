@@ -14,10 +14,10 @@
         Version {{ version }}
       </h4>
       <h1 class="display-2 grey--text text--darken-3" style="margin-top:200px;">
-        Présentation fonctionnelle
+        Installation et configuration
       </h1>
       <h4 style="margin-top:200px!important;">
-        {{ new Date() | moment('DD MMMM YYYY') }}<br>
+        {{ new Date() | moment('DD MMMM YYYY') }}
       </h4>
     </v-col>
     <div class="page-break" />
@@ -67,8 +67,34 @@
 
 <script>
   const marked = require('@hackmd/meta-marked')
-  const context = require.context('../functional-presentation/', true, /\.md$/)
+  const context = require.context('../install/', true, /\.md$/)
   const version = require('../../../package.json').version
+
+  const flatten = require('flat')
+  // Webpack way of requiring a bunch of modules at once
+
+  // Used to flatten var definitions from custom-environment-variables.js
+  const defaults = Object.assign({}, require('../../../config/default.js'), require('../../../config/production.js'))
+  function flattenVars(vars, flatVars = [], prefix = '') {
+    Object.keys(vars).forEach(v => {
+      const key = prefix + v
+      let def = key.split('.').reduce((a, k) => { return a[k] }, defaults)
+      if (typeof def === 'object') def = JSON.stringify(def)
+      if (typeof vars[v] === 'string') flatVars.push({ key, name: vars[v], def })
+      else if (typeof vars[v] === 'object' && vars[v].__name) flatVars.push({ key, name: vars[v].__name, def })
+      else flattenVars(vars[v], flatVars, prefix + v + '.')
+    })
+    return flatVars
+  }
+  const customEnvVars = flattenVars(require('../../../config/custom-environment-variables'))
+  function escapeHtml(unsafe) {
+    return unsafe
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;')
+  }
 
   export default {
     layout: 'void',
@@ -87,7 +113,28 @@
             else return 1
           }
         })
+        sections[1].html = sections[1].html.replace('{{CONFIG_VARS}}', this.configVars)
+        sections[2].html = sections[2].html.replace('{{I18N_VARS}}', this.i18nVars)
         return sections
+      },
+      configVars() {
+        let table = `<table><thead><tr><th>${this.$t('pages.install.config.varKey')}</th><th>${this.$t('pages.install.config.varName')}</th><th>${this.$t('pages.install.config.varDesc')}</th><th>${this.$t('pages.install.config.varDefault')}</th></tr></thead><tbody>\n`
+        customEnvVars.forEach(v => {
+          const description = this.$te('pages.install.config.varDescriptions.' + v.key) ? this.$t('pages.install.config.varDescriptions.' + v.key) : ''
+          table += `<tr><td>${v.key}</td><td>${v.name}</td><td>${description}</td><td>${v.def}</td></tr>\n`
+        })
+        table += '</tbody></table>'
+        return table
+      },
+      i18nVars() {
+        const flatMessages = flatten(this.$i18n.messages[this.$i18n.locale], { delimiter: '_' })
+        let table = `<table><thead><tr><th>${this.$t('pages.install.i18n.i18nKey')}</th><th>${this.$t('pages.install.i18n.i18nVar')}</th><th>${this.$t('pages.install.i18n.i18nVal')}</th></tr></thead><tbody>\n`
+        table += Object.keys(flatMessages)
+          .filter(k => k.indexOf('doc_') !== 0)
+          .map(k => `<tr><td>${k.replace(/_/g, '.')}</td><td>I18N_${this.$i18n.locale}_${k}</td><td><pre>${escapeHtml((typeof flatMessages[k] === 'string') ? flatMessages[k] : 'MISSING')}</pre></td></tr>`)
+          .join('\n')
+        table += '</tbody></table>'
+        return table
       },
     },
     mounted () {
@@ -114,19 +161,12 @@
 </script>
 
 <style>
-/* .article img{
-  max-width:90%;
-  box-shadow: 0px 3px 3px -2px rgba(0,0,0,0.2), 0px 3px 4px 0px rgba(0,0,0,0.14), 0px 1px 8px 0px rgba(0,0,0,0.12);
-  margin:30px;
-} */
+pre {
+  white-space: pre-wrap;
+}
 
-.article p em{
-  display: flex;
-  justify-content: center;
-  flex-direction: column;
-  text-align: center;
-  margin-top: -20px;
-  color: rgba(0,0,0,0.6);
+code {
+
 }
 
 .article h2{
