@@ -43,6 +43,8 @@ after_success:
   - docker push $REPO:$TRAVIS_BRANCH
   # Doc build
   - npm run build-doc
+  # Push doc for master branch
+  - if [ $TRAVIS_BRANCH = "master" ]; then gh-pages-multi deploy -v -s doc-dist -t master; fi
   # The following is only for tags
   - if [ -z "$TRAVIS_TAG" ]; then exit 0; fi
   # create alternative tags for the docker image
@@ -54,11 +56,13 @@ after_success:
   - export MINOR=$(./node_modules/.bin/semver-extract --minor $TRAVIS_TAG)
   - docker tag $REPO:$TRAVIS_TAG $REPO:$MINOR
   - docker push $REPO:$MINOR
+  # Push doc in subdirectory with major version
+  - gh-pages-multi deploy -v -s doc-dist -t $MAJOR; fi
 
-deploy:
-  provider: pages
-  local_dir: doc-dist
-  skip-cleanup: true
-  github-token: $GITHUB_TOKEN  # Set in the settings page of your repository, as a secure variable
-  on:
-    tags: true
+#deploy:
+#  provider: pages
+#  local_dir: doc-dist
+#  skip-cleanup: true
+#  github-token: $GITHUB_TOKEN  # Set in the settings page of your repository, as a secure variable
+#  on:
+#    tags: true
