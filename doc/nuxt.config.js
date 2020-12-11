@@ -32,7 +32,7 @@ module.exports = {
     routes,
   },
   loading: { color: '#1e88e5' }, // Customize the progress bar color
-  router: { base: '/data-fair/' },
+  router: { base: process.env.DOC_BASE || '/' },
   env: {
     theme: config.theme,
     publicUrl: config.publicUrl,

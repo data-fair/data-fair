@@ -41,9 +41,8 @@ after_success:
   - docker pull $REPO:master
   - docker build -f Dockerfile --cache-from $REPO:master --build-arg VERSION=$TRAVIS_BUILD_NUMBER -t $REPO:$TRAVIS_BRANCH .
   - docker push $REPO:$TRAVIS_BRANCH
-  # Doc build
-  - npm run build-doc
   # Push doc for master branch
+  - DOC_BASE=/data-fair/master/ npm run build-doc
   - if [ $TRAVIS_BRANCH = "master" ]; then gh-pages-multi deploy -v -r https://${GITHUB_TOKEN}@github.com/koumoul-dev/data-fair.git -s doc-dist -t master; fi
   # The following is only for tags
   - if [ -z "$TRAVIS_TAG" ]; then exit 0; fi
@@ -57,6 +56,7 @@ after_success:
   - docker tag $REPO:$TRAVIS_TAG $REPO:$MINOR
   - docker push $REPO:$MINOR
   # Push doc in subdirectory with major version
+  - DOC_BASE=/data-fair/$MAJOR/ npm run build-doc
   - gh-pages-multi deploy -v -r https://${GITHUB_TOKEN}@github.com/koumoul-dev/data-fair.git -s doc-dist -t $MAJOR; fi
 
 #deploy:
