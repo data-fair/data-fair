@@ -1,0 +1,170 @@
+[
+  {
+    "name": "index___en",
+    "path": "/en",
+    "component": "/home/alban/github/data-fair/doc/pages/index.vue",
+    "chunkName": "pages/index",
+    "_name": "_6663cd76"
+  },
+  {
+    "name": "functional-presentation___fr",
+    "path": "/functional-presentation",
+    "component": "/home/alban/github/data-fair/doc/pages/functional-presentation/index.vue",
+    "chunkName": "pages/functional-presentation/index",
+    "_name": "_3bd807cb"
+  },
+  {
+    "name": "install___fr",
+    "path": "/install",
+    "component": "/home/alban/github/data-fair/doc/pages/install/index.vue",
+    "chunkName": "pages/install/index",
+    "_name": "_1ab5e602"
+  },
+  {
+    "name": "interoperate___fr",
+    "path": "/interoperate",
+    "component": "/home/alban/github/data-fair/doc/pages/interoperate/index.vue",
+    "chunkName": "pages/interoperate/index",
+    "_name": "_37c8f2b7"
+  },
+  {
+    "name": "functional-presentation___en",
+    "path": "/en/functional-presentation",
+    "component": "/home/alban/github/data-fair/doc/pages/functional-presentation/index.vue",
+    "chunkName": "pages/functional-presentation/index",
+    "_name": "_3bd807cb"
+  },
+  {
+    "name": "install___en",
+    "path": "/en/install",
+    "component": "/home/alban/github/data-fair/doc/pages/install/index.vue",
+    "chunkName": "pages/install/index",
+    "_name": "_1ab5e602"
+  },
+  {
+    "name": "interoperate___en",
+    "path": "/en/interoperate",
+    "component": "/home/alban/github/data-fair/doc/pages/interoperate/index.vue",
+    "chunkName": "pages/interoperate/index",
+    "_name": "_37c8f2b7"
+  },
+  {
+    "name": "full-functional-presentation___fr",
+    "path": "/full/functional-presentation",
+    "component": "/home/alban/github/data-fair/doc/pages/full/functional-presentation.vue",
+    "chunkName": "pages/full/functional-presentation",
+    "_name": "_1b4f5f30"
+  },
+  {
+    "name": "full-install___fr",
+    "path": "/full/install",
+    "component": "/home/alban/github/data-fair/doc/pages/full/install.vue",
+    "chunkName": "pages/full/install",
+    "_name": "_00827ab2"
+  },
+  {
+    "name": "full-interoperate___fr",
+    "path": "/full/interoperate",
+    "component": "/home/alban/github/data-fair/doc/pages/full/interoperate.vue",
+    "chunkName": "pages/full/interoperate",
+    "_name": "_f9358768"
+  },
+  {
+    "name": "full-functional-presentation___en",
+    "path": "/en/full/functional-presentation",
+    "component": "/home/alban/github/data-fair/doc/pages/full/functional-presentation.vue",
+    "chunkName": "pages/full/functional-presentation",
+    "_name": "_1b4f5f30"
+  },
+  {
+    "name": "full-install___en",
+    "path": "/en/full/install",
+    "component": "/home/alban/github/data-fair/doc/pages/full/install.vue",
+    "chunkName": "pages/full/install",
+    "_name": "_00827ab2"
+  },
+  {
+    "name": "full-interoperate___en",
+    "path": "/en/full/interoperate",
+    "component": "/home/alban/github/data-fair/doc/pages/full/interoperate.vue",
+    "chunkName": "pages/full/interoperate",
+    "_name": "_f9358768"
+  },
+  {
+    "name": "about-id___en",
+    "path": "/en/about/:id?",
+    "component": "/home/alban/github/data-fair/doc/pages/about/_id.vue",
+    "chunkName": "pages/about/_id",
+    "_name": "_303d0048"
+  },
+  {
+    "name": "functional-presentation-id___en",
+    "path": "/en/functional-presentation/:id?",
+    "component": "/home/alban/github/data-fair/doc/pages/functional-presentation/_id.vue",
+    "chunkName": "pages/functional-presentation/_id",
+    "_name": "_10cb80f3"
+  },
+  {
+    "name": "install-id___en",
+    "path": "/en/install/:id",
+    "component": "/home/alban/github/data-fair/doc/pages/install/_id.vue",
+    "chunkName": "pages/install/_id",
+    "_name": "_0f2980ea"
+  },
+  {
+    "name": "interoperate-id___en",
+    "path": "/en/interoperate/:id",
+    "component": "/home/alban/github/data-fair/doc/pages/interoperate/_id.vue",
+    "chunkName": "pages/interoperate/_id",
+    "_name": "_b8db9242"
+  },
+  {
+    "name": "user-guide-id___en",
+    "path": "/en/user-guide/:id?",
+    "component": "/home/alban/github/data-fair/doc/pages/user-guide/_id.vue",
+    "chunkName": "pages/user-guide/_id",
+    "_name": "_bb54599e"
+  },
+  {
+    "name": "about-id___fr",
+    "path": "/about/:id?",
+    "component": "/home/alban/github/data-fair/doc/pages/about/_id.vue",
+    "chunkName": "pages/about/_id",
+    "_name": "_303d0048"
+  },
+  {
+    "name": "functional-presentation-id___fr",
+    "path": "/functional-presentation/:id?",
+    "component": "/home/alban/github/data-fair/doc/pages/functional-presentation/_id.vue",
+    "chunkName": "pages/functional-presentation/_id",
+    "_name": "_10cb80f3"
+  },
+  {
+    "name": "install-id___fr",
+    "path": "/install/:id",
+    "component": "/home/alban/github/data-fair/doc/pages/install/_id.vue",
+    "chunkName": "pages/install/_id",
+    "_name": "_0f2980ea"
+  },
+  {
+    "name": "interoperate-id___fr",
+    "path": "/interoperate/:id",
+    "component": "/home/alban/github/data-fair/doc/pages/interoperate/_id.vue",
+    "chunkName": "pages/interoperate/_id",
+    "_name": "_b8db9242"
+  },
+  {
+    "name": "user-guide-id___fr",
+    "path": "/user-guide/:id?",
+    "component": "/home/alban/github/data-fair/doc/pages/user-guide/_id.vue",
+    "chunkName": "pages/user-guide/_id",
+    "_name": "_bb54599e"
+  },
+  {
+    "name": "index___fr",
+    "path": "/",
+    "component": "/home/alban/github/data-fair/doc/pages/index.vue",
+    "chunkName": "pages/index",
+    "_name": "_6663cd76"
+  }
+]
