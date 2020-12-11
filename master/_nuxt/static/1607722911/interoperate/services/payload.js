@@ -1,0 +1,1 @@
+__NUXT_JSONP__("/interoperate/services", {data:[{}],fetch:[],mutations:[]});

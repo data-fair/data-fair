@@ -1,0 +1,1 @@
+__NUXT_JSONP__("/en/technical-architecture/data-fair", {data:[{}],fetch:[],mutations:[]});

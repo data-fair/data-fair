@@ -1,0 +1,1 @@
+__NUXT_JSONP__("/about/technical-overview", {data:[{}],fetch:[],mutations:[]});

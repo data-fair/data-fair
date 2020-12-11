@@ -1,0 +1,1 @@
+__NUXT_JSONP__("/functional-presentation/connexion", {data:[{}],fetch:[],mutations:[]});
