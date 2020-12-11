@@ -44,7 +44,7 @@ after_success:
   # Doc build
   - npm run build-doc
   # Push doc for master branch
-  - if [ $TRAVIS_BRANCH = "master" ]; then gh-pages-multi deploy -v -s doc-dist -t master; fi
+  - if [ $TRAVIS_BRANCH = "master" ]; then gh-pages-multi deploy -v -r https://${GITHUB_TOKEN}@github.com/koumoul-dev/data-fair.git -s doc-dist -t master; fi
   # The following is only for tags
   - if [ -z "$TRAVIS_TAG" ]; then exit 0; fi
   # create alternative tags for the docker image
@@ -57,7 +57,7 @@ after_success:
   - docker tag $REPO:$TRAVIS_TAG $REPO:$MINOR
   - docker push $REPO:$MINOR
   # Push doc in subdirectory with major version
-  - gh-pages-multi deploy -v -s doc-dist -t $MAJOR; fi
+  - gh-pages-multi deploy -v -r https://${GITHUB_TOKEN}@github.com/koumoul-dev/data-fair.git -s doc-dist -t $MAJOR; fi
 
 #deploy:
 #  provider: pages
