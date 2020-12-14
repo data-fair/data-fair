@@ -6,7 +6,7 @@ description : Introduction
 published: true
 ---
 **Data Fair** et son écosystème permettent de mettre en œuvre une plateforme de partage (interne ou opendata) et de visualisation de données. Cette plateforme peut être à destination du grand public, qui peut accéder aux données au travers de visualisations interactives adaptées, aussi bien qu’à un public plus expert qui peut accéder aux données au travers des APIs.  
-Le mot **FAIR** fait référence à de la donnée []« Facile à trouver, Accessible, Interopérable et Réutilisable »](https://fr.wikipedia.org/wiki/Fair_data).
+Le mot **FAIR** fait référence à de la donnée [« Facile à trouver, Accessible, Interopérable et Réutilisable »](https://fr.wikipedia.org/wiki/Fair_data).
 
 Les **jeux de données** chargés sur la plateforme sont indexés. L’indexation d’un jeu de données augmente considérablement sa réutilisabilité et permet de réaliser des recherches textuelles dans des données volumineuses de plusieurs millions d’enregistrements ou dans les visualisations des données.
 
