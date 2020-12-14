@@ -1,9 +1,9 @@
 ---
-title: Clés d’API
+title: Gestion des jeux de données
 section: 3
-subsection : 2
+subsection : 3
 updated: 2020-12-09
-description : Clés d’API
+description : Gestion des jeux de données
 published: true
 ---
 
@@ -11,27 +11,20 @@ published: true
 Les jeux de données sont représentés sous formes de fiches sur la plateforme. Une fiche possède un titre et des informations relatives aux données.
 
 
-![Catalogue de données](./images/functional-presentation/jeux-2.jpg)
+![Fiche d'un jeu de données](./images/functional-presentation/jeu-2.jpg)
 
-Les informations d’une fiche comprennent le nom du fichier, sa taille, le nombre de lignes et les thématiques des données. L'icône du propriétaire des données et l’état de publication sont aussi disponibles sur chaque fiche.
-
-On peut rapidement ajouter un jeu de données à l’aide de différents boutons d’ajout.
+Les informations comprennent le nom du fichier, sa taille, le nombre de lignes et les thématiques des données.  
+L'icône du propriétaire des données et l’état de publication sont aussi disponibles sur chaque fiche.
 
 ### Types de données
 
 Il existe plusieurs types de jeux de données sur la plateforme, les fichiers, les jeux de données incrémentaux, les jeux de données virtuels.
 
-* Les fichiers
+* Les fichiers correspondent à des données sous formats tabulaires ou cartographiques. La plateforme permet d’indexer plusieurs formats de fichiers tels que le CSV, TSV, XLS, TXT,GeoJson, KML, ESRI Shapefile, …
 
-Les fichiers correspondent à des données sous formats tabulaires ou cartographiques. La plateforme permet d’indexer plusieurs formats de fichiers tels que le CSV, TSV, XLS, TXT,GeoJson, KML, ESRI Shapefile, …
+* Les jeux de données incrémentaux sont des données stockées dans des bases distantes. Ils sont mis à jour par API et correspondent parfaitement au besoin des données IOT.
 
-* Les jeux de données incrémentaux
-
-Les jeux de données incrémentaux sont des données stockées dans des bases distantes. Ils sont mis à jour par API et correspondent parfaitement au besoin des données IOT.
-
-* Les jeux de données virtuels
-
-Les jeux de données virtuels correspondent à des vues d’un ou plusieurs jeux de données. Ils permettent d’avoir un contrôle d’accès plus poussé. Ils peuvent par exemple servir à créer une vue publique, restreinte à certaines lignes et certaines colonnes, d’un jeu de données plus complet qui reste privé.
+* Les jeux de données virtuels correspondent à des vues d’un ou plusieurs jeux de données. Ils permettent d’avoir un contrôle d’accès plus poussé. Ils peuvent par exemple servir à créer une vue publique, restreinte à certaines lignes et certaines colonnes, d’un jeu de données plus complet qui reste privé.
 
 ### Edition d’un jeu de données
 
@@ -50,17 +43,18 @@ Lorsque la finalisation est terminée, le jeu de données passe en état "dispon
 
 ### Schéma des données
 
-La page d'édition d'un jeu de données permet de renseigner les concepts dans la section Schéma des données.  
+La page d'édition d'un jeu de données permet de renseigner les concepts dans la section *Schéma des données*.  
 Les concepts sont des notions connues pour la plateforme. Ils permettent d'augmenter la réutilisabilité de vos données et de faire le lien entre vos données et les fonctionnalités de la plateforme.
 
-![Catalogue de données](./images/functional-presentation/schema.jpg)
+![Schéma d'un jeu de données](./images/functional-presentation/schema.jpg)
 
 
 A l’aide des concepts, vous pouvez par exemple enrichir vos données pour leur donner encore plus de valeur ou bien projeter vos données sur une carte.
 Un concept est unique à une colonne d'un jeu de données. Vous ne pouvez pas avoir deux colonnes différentes avec le même concept pour un jeu de données.
+
 Les concepts sont nécessaires à la représentation de certaines visualisations. Par exemple, vos données ne pourront pas être projetées sur une carte si vous n'avez pas associé les concepts *Latitude* et *Longitude* aux colonnes qui contiennent les valeurs latitude et longitude.
 
-Dans la section des Schéma de données, on peut renseigner des libellés sur chacun des champs. Ces libellés seront ensuite utilisés dans les différentes visualisations qui utilisent ce jeu de données
+Dans la section des *Schéma de données*, on peut renseigner des libellés sur chacun des champs. Ces libellés seront ensuite utilisés dans les différentes visualisations qui utilisent votre de données
 
 ### Enrichissement des données
 
@@ -76,24 +70,19 @@ En fonction des données que vous possédez, vous pouvez choisir l'enrichissemen
 
 Un administrateur peut contrôler les permissions d’accès. En fonction du rôle attribué à un utilisateur, celui-ci à le droit d'accéder, de lire ou/et de modifier le contenu de la source.
 
-![Catalogue de données](./images/functional-presentation/permissions.jpg)
+![Persmissions d'un jeu de données](./images/functional-presentation/permissions.jpg)
 
 On peut ainsi donner le rôle d’*user* à un groupe de personnes et définir s’ils peuvent accéder et lire une ressource de la plateforme.
-
-Il est aussi possible d'attribuer des permissions plus finement et d’autoriser l’écriture à certains jeux de données pour un utilisateur ou un rôle en particulier.
 
 ### Journal du jeu de données
 
 Le journal d’un jeu de données permet de vérifier l’historique des modifications sur le jeu de données.  
-Le journal permet la traçabilité des chargement des jeux de données (type de modification, par qui, quand), des paramètres (type de modification, par qui, quand) et des habilitations (type de modification, par qui, quand).
+Le journal permet la traçabilité des modifications des jeux de données, des paramètres et des habilitations .
 
-![Catalogue de données](./images/functional-presentation/journal.jpg)
-
-
-Un journal global pour la suppression des jeux de données peut être réalisable.
+![Journal d'un jeu de données](./images/functional-presentation/journal.jpg)
 
 ### Pièces jointes
 
-Il est possible d’associer des pièces jointes à chaque ligne d’un jeu de données. Cela se fait en associant une archive au format zip qui contient les fichiers à associer. Il faut aussi qu’il y ait dans le jeu de données une colonne contenant les noms des fichiers à associer à chaque ligne. Deux types de fichiers peuvent être liés aux lignes : des images (png, jpg, …) ou des documents (pdf, docx, xlsx, …). Dans le cas où ce sont des documents qui sont liés aux lignes, ils sont indexés par la plateforme de sorte que les lignes puissent être filtrées avec des recherches fulltext portant sur des éléments contenus dans les documents.
+Il est possible d’associer des pièces jointes à chaque ligne d’un jeu de données. Cela se fait en associant une archive au format zip qui contient les fichiers à associer. Il faut aussi qu’il y ait dans le jeu de données une colonne contenant les noms des fichiers à associer à chaque ligne. Deux types de fichiers peuvent être liés aux lignes : des images (png, jpg, …) ou des documents (pdf, docx, xlsx, …). Dans le cas des documents, ils sont indexés par la plateforme de sorte que des recherches fulltext pussient etre réalisées sur les documents.
 
 Les pièces jointes peuvent aussi être directement attachées à un jeu de données et ainsi ajouter des fichiers de documentation ou des métadonnées riches.

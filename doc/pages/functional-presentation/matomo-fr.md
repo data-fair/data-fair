@@ -1,7 +1,7 @@
 ---
 title: Matomo - Statistiques d’utilisation
 section: 3
-subsection : 8
+subsection : 9
 updated: 2020-12-09
 description : Matomo - Statistiques d’utilisation
 published: true
@@ -9,7 +9,7 @@ published: true
 Ce module permet de comptabiliser les différentes statistiques de fréquentation de la plateforme. Ces statistiques sont disponibles sous différentes formes : tableaux, graphiques et cartes. En sélectionnant les différentes représentations des statistiques, il est possible de personnaliser ces tableaux de bord.  
 Il est également possible d'anonymiser les données et d’enregistrer les parcours utilisateurs tout en étant en conformité avec les recommandations de la CNIL.
 
-![Catalogue de données](./images/functional-presentation/matomo.jpg)
+![Matomo](./images/functional-presentation/matomo.jpg)
 
 Il est possible de traiter des données personnelles en activant les fonctionnalités suivantes :
 * Droit d'accès : les visiteurs peuvent avoir accès à leurs données personnelles

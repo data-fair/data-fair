@@ -17,4 +17,5 @@ Chaque source est présentée au travers d’une vignette qui indique son titre,
 
 Un clic sur le titre ou la description d’une vignette permet de naviguer vers une page de détails du jeu de données.  
 
-La liste des jeux de données peut être parcourue au moyen d’un mécanisme de scroll infini, aussi bien adapté à une utilisation bureautique ou mobile. Différents outils permettent d’effectuer des recherches dans cette liste, de la filtrer par thématique ou de la trier suivant différents critères.
+La liste des jeux de données peut être parcourue au moyen d’un mécanisme de scroll infini, aussi bien adapté à une utilisation bureautique ou mobile.  
+Différents outils permettent d’effectuer des recherches dans cette liste, de la filtrer par thématique ou de la trier suivant différents critères.

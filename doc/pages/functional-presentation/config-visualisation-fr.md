@@ -1,7 +1,7 @@
 ---
 title: Configuration des visualisations
 section: 3
-subsection : 3
+subsection : 4
 updated: 2020-12-09
 description : Configuration des visualisations
 published: true
@@ -11,17 +11,15 @@ Les visualisations interactives permettent de présenter les données de manièr
 
 Le menu de configuration se compose de différentes sections qui diffèrent selon les applications. La plupart du temps, le menu est composé de trois sections : la source de données, les options de rendu et les éléments liés à la navigation. Il est possible de filtrer les données si on ne souhaite pas représenter le jeu de données en entier.
 
-![Catalogue de données](./images/functional-presentation/configuration-visu.jpg)
+![Configuration d'une visualisation](./images/functional-presentation/configuration-visu.jpg)
 
-
-
-Un aperçu donne un rendu rapide de la visualisation. Lorsque l’on réalise des modifications sur le menu de configuration, elles sont directement représentées sur l'aperçu. Il est ainsi possible de modifier et tester rapidement différents rendus de la visualisation. Lorsque l’on est satisfait du rendu, on peut publier les modifications.
+Un aperçu donne un rendu rapide de la visualisation. Lorsque l’on réalise des modifications sur le menu de configuration, elles sont directement représentées sur l'aperçu. Il est ainsi possible de modifier et tester rapidement différents rendus de la visualisation. Lorsque le rendu est satisfaissant, la publication permet de valider les modifications réalisées. Les modifications sont alors visibles pour tous les utilisateurs de la visualsiation. 
 
 Une visualisation est privée par défaut et peut-être rendue publique par la suite. Dans tous les cas, il est recommandé de renseigner une description. Cette description sera visible sur la page de consultation de la visualisation.
 
 La solution proposée offre une grande variété de visualisations en constante progression.
 
-![Catalogue de données](./images/functional-presentation/valorisations.jpg)
+![Differentes visualisations](./images/functional-presentation/valorisations.jpg)
 
 ### Visualisations de type carte
 * **Infos parcelles** : Projeter ses données sur le plan cadastral français.
