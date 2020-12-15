@@ -1,7 +1,6 @@
 ---
 title: Simple Directory
-section: 2
-subsection : 2
+section: 3
 updated: 2020-12-09
 description : Simple Directory
 published: true

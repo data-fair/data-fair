@@ -1,7 +1,6 @@
 ---
 title: Portail de données
-section:
-
+section: 4
 updated: 2020-12-09
 description : Portail de données
 published: true
@@ -18,10 +17,10 @@ Modules de notre solution :
 * **DataFair**, le coeur de la solution, permet d’indexer, d’Apifier, d’enrichir et de partager facilement ses données.
 * Les **Connecteurs** permettent de communiquer avec des ressources externes
 * Les **Traitements périodiques** permettent de mettre à jour les données et de récolter les données issues de l’IOT
+* **Notify** permet de gérer les alertes et les notifications
 * **Matomo** permet d’avoir les statistiques du portail
 * **Capture** permet de créer les miniatures et les captures d’images des visualisations
 * **Thumbor** permet les traitement des images des jeux de données
 * **Backup** permet de gérer les sauvegardes de la plateforme
-* **Notify** permet de gérer les alertes et les notifications
 
 ![Catalogue de données](./images/technical-architecture/architecture.jpg)

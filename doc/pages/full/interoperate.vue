@@ -14,7 +14,7 @@
         Version {{ version }}
       </h4>
       <h1 class="display-2 grey--text text--darken-3" style="margin-top:200px;">
-        Extensions
+        Interopérer
       </h1>
       <h4 style="margin-top:200px!important;">
         {{ new Date() | moment('DD MMMM YYYY') }}

@@ -1,9 +1,8 @@
 ---
-title: Capture
-section: 2
-subsection : 4
+title: Thumbor
+section: 10
 updated: 2020-12-09
-description : Capture
+description : Thumbor
 published: true
 ---
 

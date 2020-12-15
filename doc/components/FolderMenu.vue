@@ -104,6 +104,12 @@
             },
           },
           {
+            id: 'technical-architecture',
+            title: {
+              fr: 'Architecture technique',
+            },
+          },
+          {
             id: 'install',
             title: {
               fr: 'Installation et configuration',
@@ -112,7 +118,7 @@
           {
             id: 'interoperate',
             title: {
-              fr: 'Extensions',
+              fr: 'Interopérer avec Data Fair',
             },
           },
         ]

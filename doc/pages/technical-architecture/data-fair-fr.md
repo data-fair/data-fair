@@ -1,7 +1,6 @@
 ---
 title: DataFair
 section: 2
-subsection : 1
 updated: 2020-12-09
 description : DataFair
 published: true
