@@ -30,7 +30,9 @@
     computed: {
       ...mapState(['env']),
       filledContent() {
-        return marked(this.content)// .replace(new RegExp(escape('<span>{{</span>publicUrl<span>}}</span>', 'g')), this.env.publicUrl)
+        const content = marked(this.content)
+        content.html = content.html.replace('<table>', '<div class="v-data-table v-data-table--dense theme--light"><div class="v-data-table__wrapper"><table>').replace('</table>', '</table></div></div>')
+        return content
       },
     },
     mounted() {
@@ -40,7 +42,6 @@
         h3: ['title', 'mb-4', 'mt-5'],
         h4: ['subheading', 'mb-3', 'mt-4'],
         p: ['body1'],
-        table: ['v-datatable', 'v-table', 'theme--light', 'elevation-1'],
         // code: ['theme--light'],
         pre: ['pt-3', 'mb-4', 'px-2'],
       }
@@ -65,7 +66,7 @@
     code {
 
     }
-    p img {
+    p img, .v-data-table {
       max-width:100%;
       margin: 12px auto;
       border: solid;

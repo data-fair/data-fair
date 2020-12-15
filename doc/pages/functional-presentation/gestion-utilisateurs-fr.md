@@ -7,8 +7,9 @@ description : Gestion des utilisateurs
 published: true
 ---
 
-Par défaut, il existe quatres rôles différents : utilisateur, contributeur, administrateur et super administrateur.  
-Les super administrateurs de la plateforme peuvent gérer l'ensemble des organisations et des membres de la plateforme. Ils peuvent aussi configurer le front office (portail DataFair).
+Par défaut, il existe quatres rôles différents : utilisateur, contributeur, administrateur et super administrateur.
+
+Les super administrateurs de la plateforme peuvent gérer l'ensemble des organisations et des membres de la plateforme. Ils peuvent aussi configurer le portail de données et gérer les traitements périodiques.
 
 Les administrateurs d’une organisation peuvent gérer les membres :
 
@@ -16,7 +17,7 @@ Les administrateurs d’une organisation peuvent gérer les membres :
 * Changer les rôles des membres
 * Exclure un membre
 
-Permissions par défaut des différents rôles d’une organisation:
+Permissions par défaut des différents rôles d’une organisation :
 
 | Actions                              | Utilisateur | Contributeur | Administrateur |
 |--------------------------------------|:-----------:|:------------:|:--------------:|

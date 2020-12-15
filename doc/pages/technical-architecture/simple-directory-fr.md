@@ -19,3 +19,7 @@ Par défaut, il existe quatres rôles différents : utilisateur, contributeur, a
 Les super administrateurs de la plateforme peuvent gérer l'ensemble des organisations et des membres de la plateforme. Il peuvent aussi configurer le front office (portail DataFair).
 
 Tous les membres d'une organisation n'ont pas les même droits.
+
+
+
+Il est possible d'ajouter d'autres protocoles, tel que LDAP, pour se conencter.

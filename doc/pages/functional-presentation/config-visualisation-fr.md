@@ -7,13 +7,13 @@ description : Configuration des visualisations
 published: true
 ---
 
-Les visualisations interactives permettent de présenter les données de manière ludique et qu'elles soient rapidement comprises. Elles peuvent être configurées grâce à une interface graphique qui ne requiert pas de compétences en programmation.
+Les visualisations interactives permettent de présenter les données de manière ludique et qu'elles soient rapidement comprises. Elle sont servies par des applications Web légères ([Cette section](./interoperate/applications) décrit en détails la manière de les créer). Elles peuvent être configurées grâce à une interface graphique qui ne **requiert pas de compétences en programmation**.
 
-Le menu de configuration se compose de différentes sections qui diffèrent selon les applications. La plupart du temps, le menu est composé de trois sections : la source de données, les options de rendu et les éléments liés à la navigation. Il est possible de filtrer les données si on ne souhaite pas représenter le jeu de données en entier.
+Le menu de configuration se compose de différentes sections qui diffèrent selon les applications. La plupart du temps, le menu est composé de trois sections : la source de données, les options de rendu et les éléments liés à la navigation. Il est souvent possible de filtrer les données si on ne souhaite pas représenter le jeu de données en entier.
 
 ![Configuration d'une visualisation](./images/functional-presentation/configuration-visu.jpg)
 
-Un aperçu donne un rendu rapide de la visualisation. Lorsque l’on réalise des modifications sur le menu de configuration, elles sont directement représentées sur l'aperçu. Il est ainsi possible de modifier et tester rapidement différents rendus de la visualisation. Lorsque le rendu est satisfaissant, la publication permet de valider les modifications réalisées. Les modifications sont alors visibles pour tous les utilisateurs de la visualsiation. 
+Un aperçu donne un rendu rapide de la visualisation. Lorsque l’on réalise des modifications sur le menu de configuration, elles sont directement représentées sur l'aperçu. Il est ainsi possible de modifier et tester rapidement différents rendus de la visualisation. Lorsque le rendu est satisfaissant, la publication permet de valider les modifications réalisées. Les modifications sont alors visibles pour tous les utilisateurs de la visualsiation.
 
 Une visualisation est privée par défaut et peut-être rendue publique par la suite. Dans tous les cas, il est recommandé de renseigner une description. Cette description sera visible sur la page de consultation de la visualisation.
 

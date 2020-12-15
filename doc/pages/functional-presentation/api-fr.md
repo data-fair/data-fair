@@ -16,7 +16,7 @@ Un autre avantage d’utiliser cette spécification est l’interopérabilité a
 
 ![API](./images/functional-presentation/api.jpg)
 
-La capture d’écran ci-dessus illustre un exemple de visualisation de documentation d’API pour accéder à un jeu de données.
 
-Le moissonnage des données de nos portails est fonctionnel par API.  
-Le site https://www.opendatarchives.fr/ a déjà moissonné les données du portail https://data.ademe.fr/ que nous avons réalisé.
+Les différentes utilisations possibles de l'API sont décrites plus en détails dans [cette section](./interoperate/api).
+
+Il est possible d'utiliser l'API pour moissonner les données d'un portail. Par exemple, le site https://www.opendatarchives.fr/ moissonne régulièrement les données du portail https://data.ademe.fr/ propulsé par Data Fair.
