@@ -1,7 +1,7 @@
 ---
-title: Statistiques d’utilisation du portail
+title: Analytics du portail
 section: 3
-subsection : 9
+subsection : 10
 updated: 2020-12-09
 description : Statistiques d’utilisation du portail
 published: true
@@ -42,16 +42,16 @@ La configuration du système de suivi des utilisateurs se compose en deux points
 
 **Configuration du système de suivi sur le portail**
 
-Ce point de configuratione est disponible sur la configuration du portail.
+Ce point de configuration est disponible sur la configuration du portail.
 Pour Google Analytics vous aurez besoin du *numero d'identifiant* et pour Matomo analytics, vous aurez besoin de l'*url du tracker* et de l'*identifiant de votre site*.
 
 ![Configuration](./images/functional-presentation/config-GA-1.jpg)
 
 
 **Configuration des événements**
-Ce point de configuratione est disponible dans les paramètres de data-fair à la catégorie *Appels exterieurs (webhooks)*.
+Ce point de configuration est disponible dans les paramètres de Data Fair à la catégorie *Appels exterieurs (webhooks)*.
 
-Vous pouvez definir quels événements vous souhaitez suivre dans vos analytics :
+Vous pouvez définir quels événements vous souhaitez suivre dans vos analytics :
 * Un nouveau jeu de données a été créé
 * Un jeu de données a rencontré une erreur
 * Un jeu de données a été finalisé et mis en ligne

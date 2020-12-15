@@ -1,10 +1,10 @@
 ---
-title: Gestion des alertes
+title: Alertes
 section: 2
 subsection : 7
 updated: 2020-12-09
 description : Gestion des alertes
-published: true
+published: false
 ---
 
 Les utilisateurs enregistrés peuvent paramétrer différentes alertes email ou navigateur. Une liste d’alertes par défaut est présentée dans la catégorie **Notifications**.

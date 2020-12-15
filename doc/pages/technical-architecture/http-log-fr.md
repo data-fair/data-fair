@@ -1,7 +1,7 @@
 ---
-title: Configuration des statistiques d'API
-section: 13
+title: Statistiques d'API
+section: 12
 updated: 2020-12-09
-description : Configuration des statistiques d'API
+description : Récupération des statistiques d'accès à l'API
 published: false
 ---

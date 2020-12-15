@@ -3,7 +3,7 @@ title: Personnalisation
 section: 3
 updated: 2020-12-10
 description : Surcharge des libellés
-published: true
+published: false
 ---
 
 ### Internationalisation

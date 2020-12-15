@@ -3,7 +3,7 @@ title: Installation
 section: 1
 updated: 2020-12-10
 description : Installation
-published: true
+published: false
 ---
 
 Cette application expose des services Web et interopère avec d'autres applications du même type. Pour comprendre comment *DataFair* fonctionne, vous pouvez aller voir la [description technique](https://koumoul-dev.github.io/data-fair/about/technical-overview).

@@ -1,5 +1,5 @@
 ---
-title: APIs proposées et intégration globale
+title: Accès par API
 section: 2
 subsection : 8
 updated: 2020-12-09

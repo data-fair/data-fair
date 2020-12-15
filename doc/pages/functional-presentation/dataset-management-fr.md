@@ -4,7 +4,7 @@ section: 3
 subsection : 2
 updated: 2020-12-09
 description : Gestion des jeux de données
-published: true
+published: false
 ---
 
 Les jeux de données sont représentés sous formes de fiches sur la plateforme. Une fiche possède un titre et des informations relatives aux données. Les informations comprennent le nom du fichier, sa taille, le nombre de lignes et les thématiques des données. L'icône du propriétaire des données et l’état de publication sont aussi disponibles sur chaque fiche.
@@ -22,37 +22,15 @@ Il existe plusieurs types de jeux de données sur la plateforme, les fichiers, l
 * Les **jeux de données virtuels** correspondent à des vues d’un ou plusieurs jeux de données. Ils permettent d’avoir un contrôle d’accès plus poussé. Ils peuvent par exemple servir à créer une vue publique, restreinte à certaines lignes et certaines colonnes, d’un jeu de données plus complet qui reste privé.
 
 ### Ajout d’un jeu de données
-Il est possible d'importer differentes sources de données sur Data-FAIR, tels que des fichiers directement depuis votre ordinateur ou des sources externes. Il sera ainsi possible d'importer des données depuis airtable ou depuis google drive. Il est aussi possible d'ajouter des pièces jointes à votre source.
+Il est possible d'importer différentes sources de données sur Data Fair. On peut déjà importer des fichiers directement depuis son ordinateur. Il sera bientôt possible d'importer des données depuis des sources externes comme Airtable ou Google drive.
 
-Une fois votre source et vos pièces jointes validées, une barre de progression vous indique l'état d'avancement du chargement.
+Une fois les données chargées, elles sont converties dans un format plus standard en interne, puis analysées automatiquement pour déterminer le schéma du jeu de données. Les données sont ensuite indexées puis éventuellement enrichies avec d'autres données externes. Des derniers traitements sont effectués pour calculer des propriétés liées aux données (cardinalités des champs, bornes géographiques, ...) puis le jeu de données est disponible pour pouvoir être édité ou utilisé.
 
-A la fin du chargement vous êtes redirigé vers la page d'édition du jeu de données. La plateforme continue le traitement de la source sur la page d'édition.
-
-Pour que le jeu de données soit utilisable, l'étape 6 doit être validée :
-
-* Chargement, qui représente la barre de progression.
-* La conversion vers un format utilisé par la plateforme en interne.
-* L'analyse, qui va déterminer le schéma du jeu de données.
-* L'indexation, qui va permettre de trouver et d'accéder rapidement aux données.
-* L’enrichissement, qui permet de complèter ves données avec des données externes.
-* La finalisation, qui correspond aux derniers traitements avant que le jeu de données ne soit disponible.
-
-Lorsque la finalisation est terminée, le jeu de données passe en état "disponible". Il peut alors être édité, enrichi et utilisé dans différentes visualisations de la plateforme.  
+Après cette étape, les données sont consultable a minima dans un tableau et sont triables et filtrable. Si les données ont des concepts de latitude et longitude, les données sont aussi consultable dans une carte. Si elles ont un concepts d'images, une galerie est générée.
 
 ### Edition d’un jeu de données
 
 La page d’édition d’un jeu de données permet de travailler la présentation et la réutilisabilité de ce jeu. Cette page permet de modifier le titre du jeu de données, mettre à jour les données, compléter le schéma des données, sémantiser les données pour qu'elles soient réutilisables dans des visualisations ou pour pouvoir être enrichies via des services complémentaires.
-
-À la création du jeu de données il est soumis à ces 6 étapes de traitement (les 2 premières uniquement dans le cas d’un jeu de données de type fichier). En cas de modification apportée par la suite seules les étapes nécessaires sont rejouées :
-
-1. Le chargement, représenté par la barre de progression.
-2. La conversion vers un format utilisé par la plateforme en interne.
-3. L'analyse, qui va déterminer le schéma du jeu de données.
-4. L’enrichissement, qui va parcourir les lignes et ajouter des colonnes en fonction des extensions demandées.
-5. L'indexation, qui va permettre d’exploiter les données du fichier.
-6. La finalisation, qui correspond aux derniers traitements avant que le jeu de données ne soit disponible.
-
-Lorsque la finalisation est terminée, le jeu de données passe en état "disponible". Il peut alors être de nouveau édité, enrichi ou utilisé dans vos visualisations.
 
 ### Schéma des données
 

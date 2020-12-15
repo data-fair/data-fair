@@ -4,7 +4,7 @@ section: 3
 subsection : 3
 updated: 2020-12-09
 description : Configuration des visualisations
-published: true
+published: false
 ---
 
 Les visualisations interactives permettent de présenter les données de manière ludique et qu'elles soient rapidement comprises. Elle sont servies par des applications Web légères ([Cette section](./interoperate/applications) décrit en détails la manière de les créer). Elles peuvent être configurées grâce à une interface graphique qui ne **requiert pas de compétences en programmation**.

@@ -3,7 +3,7 @@ title: Backup - Sauvegardes
 section: 11
 updated: 2020-12-09
 description : Backup - Sauvegardes
-published: true
+published: false
 ---
 
 Le service Backup permet de sauvegarder différents services de la solution dans un format compressé.

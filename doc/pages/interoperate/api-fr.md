@@ -6,7 +6,7 @@ description : API Data Fair
 published: true
 ---
 
-Data FAIR expose un API HTTP complète. Une partie de cette API est essentiellement à destination des applications et autres réutilisations des jeux de données. Une autre partie concerne principalement les producteurs de contenu qui souhaitent automatiser leur processus. Dans cette page nous proposons un aperçu de quelques méthodes de publication de contenu. Les exemples ci-dessous ne montrent qu'un échantillon des capacités de l'API DataFair et ne remplacent pas la documentation interactive bien plus complète embarquée dans le service.
+Data Fair expose une API Rest complète. Une partie de cette API est essentiellement à destination des applications et autres réutilisations des jeux de données. Une autre partie concerne principalement les producteurs de contenu qui souhaitent automatiser leur processus. Dans cette page nous proposons un aperçu de quelques méthodes de publication de contenu. Les exemples ci-dessous ne montrent qu'un échantillon des capacités de l'API DataFair et ne remplacent pas la documentation interactive bien plus complète embarquée dans le service.
 
 ### Pré-requis
 

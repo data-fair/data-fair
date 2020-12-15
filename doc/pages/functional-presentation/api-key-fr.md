@@ -1,7 +1,7 @@
 ---
 title: Clés d’API
 section: 3
-subsection : 10
+subsection : 9
 updated: 2020-12-09
 description : Clés d’API
 published: true

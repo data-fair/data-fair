@@ -3,7 +3,7 @@ title: Portail de données
 section: 4
 updated: 2020-12-09
 description : Portail de données
-published: true
+published: false
 ---
 Notre solution se compose de plusieurs modules open source et d’un abonnement à la plateforme Koumoul.
 

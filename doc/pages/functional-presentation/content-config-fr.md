@@ -1,5 +1,5 @@
 ---
-title: Création des pages de contenu
+title: Pages de contenu
 section: 3
 subsection : 8
 updated: 2020-12-09

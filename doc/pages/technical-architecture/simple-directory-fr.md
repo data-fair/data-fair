@@ -3,7 +3,7 @@ title: Simple Directory
 section: 3
 updated: 2020-12-09
 description : Simple Directory
-published: true
+published: false
 ---
 La connexion et la gestion des comptes est assurée par Simple-Directory.
 

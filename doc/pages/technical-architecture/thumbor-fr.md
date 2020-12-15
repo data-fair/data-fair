@@ -3,7 +3,7 @@ title: Thumbor
 section: 10
 updated: 2020-12-09
 description : Thumbor
-published: true
+published: false
 ---
 
 Le service Thumbor permet la gestion des images:

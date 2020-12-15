@@ -3,7 +3,7 @@ title: DataFair
 section: 2
 updated: 2020-12-09
 description : DataFair
-published: true
+published: false
 ---
 
 DataFair permet d'exposer facilement ses données via une API web, contractualisée et documentée, ce qui permet aux développeurs de les réutiliser facilement dans leurs **applications**. De plus les données peuvent être sémantisées, ce qui permet ensuite de les enrichir avec d'autres données sémantisées. Ainsi, des données qui ont une adresse peuvent par exemple être complétées par des coordonnées GPS, ce qui permet ensuite de les afficher sur une carte.
