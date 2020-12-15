@@ -1,7 +1,7 @@
 ---
 title: Gestion des utilisateurs
 section: 3
-subsection : 6
+subsection : 5
 updated: 2020-12-09
 description : Gestion des utilisateurs
 published: true

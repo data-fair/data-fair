@@ -1,7 +1,7 @@
 ---
 title: Traitements périodiques
 section: 3
-subsection : 8
+subsection : 7
 updated: 2020-12-09
 description : Traitements périodiques
 published: true

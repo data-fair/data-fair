@@ -1,7 +1,7 @@
 ---
 title: Configuration des visualisations
 section: 3
-subsection : 4
+subsection : 3
 updated: 2020-12-09
 description : Configuration des visualisations
 published: true

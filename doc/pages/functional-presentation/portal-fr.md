@@ -8,7 +8,7 @@ published: true
 
 Le front office se presente sous la forme d'**un portail** qui permet de présenter les jeux de données et les visualisations aux utilisateurs.
 
-Le portail de données est composé d’une page d'accueil, d’une page de données et d’une page de visualisations.
+Le portail de données est composé d’une page d'accueil, d’une page qui liste les données et d’une page qui liste les visualisations.
 La page d’accueil présente des chiffres clés, les derniers éléments ajoutés ainsi que du contenu mis en avant.
 La page de données permet d’accéder aux sources de données et de pouvoir effectuer des recherches multicritères, tandis que la page des visualisations permet d’accéder rapidement aux différentes visualisations.
 

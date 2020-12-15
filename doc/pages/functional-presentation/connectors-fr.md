@@ -1,7 +1,7 @@
 ---
 title: Connecteurs de catalogues
 section: 3
-subsection : 7
+subsection : 6
 updated: 2020-12-09
 description : Connecteurs de catalogues
 published: true

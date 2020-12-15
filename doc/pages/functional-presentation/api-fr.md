@@ -1,7 +1,7 @@
 ---
 title: APIs proposées et intégration globale
 section: 2
-subsection : 7
+subsection : 8
 updated: 2020-12-09
 description : APIs proposées et intégration globale
 published: true
