@@ -1,1 +1,0 @@
-__NUXT_JSONP__("/technical-architecture/connecteurs", {data:[{}],fetch:[],mutations:[]});

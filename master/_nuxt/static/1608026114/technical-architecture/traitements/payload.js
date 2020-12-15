@@ -1,1 +1,0 @@
-__NUXT_JSONP__("/technical-architecture/traitements", {data:[{}],fetch:[],mutations:[]});

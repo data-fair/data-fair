@@ -1,1 +1,0 @@
-__NUXT_JSONP__("/functional-presentation/gestion-utilisateurs", {data:[{}],fetch:[],mutations:[]});
