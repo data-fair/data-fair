@@ -1,1 +1,0 @@
-/home/bonnel-n/work/koumoul/data-fair/doc/components/DocPage.vue
