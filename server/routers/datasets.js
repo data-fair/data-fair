@@ -591,7 +591,7 @@ router.get('/:datasetId/lines', readDataset(), applicationKey, permissions.middl
       finalizedAt: req.dataset.finalizedAt,
       query,
     })
-    if (value !== null) return value
+    if (!config.cache.disabled && value !== null) return value
     const newValue = await esUtils.count(req.app.get('es'), req.dataset, query)
     cache.set(db, hash, newValue)
     return newValue
