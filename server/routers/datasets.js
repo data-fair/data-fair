@@ -399,13 +399,22 @@ router.post('', beforeUpload, checkStorage(true), filesUtils.uploadFile(validate
     const attachmentsFile = req.files.find(f => f.fieldname === 'attachments')
     if (datasetFile) {
       if (req.body.isVirtual) throw createError(400, 'Un jeu de données virtuel ne peut pas être initialisé avec un fichier')
-
-      // send header at this point, then asyncWrap keepalive option will keep request alive while we process files
       // TODO: do this in a worker instead ?
+      const datasetPromise = setFileInfo(db, datasetFile, attachmentsFile, initNew(req))
+      await Promise.race([datasetPromise, new Promise(resolve => setTimeout(resolve, 5000))])
+      // send header at this point, if we are not finished processing files
+      // asyncWrap keepalive option will keep request alive
       res.writeHeader(201, { 'Content-Type': 'application/json' })
       res.write(' ')
-
-      dataset = await setFileInfo(db, datasetFile, attachmentsFile, initNew(req))
+      let dataset
+      try {
+        dataset = await datasetPromise
+      } catch (err) {
+        // should not happen too often, but sometimes we get an error after sending the 201 status
+        // we return an error object nevertheless, better than to do nothing
+        res.send({ error: err.message })
+        throw err
+      }
       await db.collection('datasets').insertOne(dataset)
     } else if (req.body.isVirtual) {
       if (!req.body.title) throw createError(400, 'Un jeu de données virtuel doit être créé avec un titre')
