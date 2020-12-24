@@ -3,7 +3,7 @@ title: Services externes
 section: 3
 updated: 2020-12-10
 description : Services externes
-published: false
+published: true
 ---
 
 Une API peut être utlisée par ce service si elle respecte certains critères. Elle doit être décrite avec un certain formalisme : spécification OpenAPI 3.0, annotations sémantiques particulières et mécanisme d'identification de l'API.

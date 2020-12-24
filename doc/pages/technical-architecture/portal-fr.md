@@ -1,26 +1,19 @@
 ---
-title: Portail de données
+title: Data Fair Portal
 section: 4
 updated: 2020-12-09
-description : Portail de données
-published: false
+description : Portails de données
+published: true
 ---
-Notre solution se compose de plusieurs modules open source et d’un abonnement à la plateforme Koumoul.
 
-L’abonnement vous permet d’avoir accès au catalogue des applications, aux données de référence et aux fond de cartes mis à disposition par Koumoul.
+Data Fair Portal permet de réaliser des portails de données, publics ou privés.
 
-Les modules open sources peuvent être remplacés par d’autres solutions open source. Par exemple, le Portail de données peut être remplacé par la solution uData utilisée sur https://www.data.gouv.fr/
+Une organisation peut avoir plusieurs portails, et il sera bientôt possible de réaliser des portails multi-organisations. Chaque portail peut être publié sur un nom de domaine différent, Data Fair Portal agît à la manière d'un reverse proxy pour que chaque requête HTTP soit traitée dans le contexte du portail auquel elle fait référence.
 
-Modules de notre solution :
-* Le **Portail de données** permet d’exposer les jeux de données et les visualisations
-* **Simple Directory** permet de se connecter au portail et gérer les comptes.
-* **DataFair**, le coeur de la solution, permet d’indexer, d’Apifier, d’enrichir et de partager facilement ses données.
-* Les **Connecteurs** permettent de communiquer avec des ressources externes
-* Les **Traitements périodiques** permettent de mettre à jour les données et de récolter les données issues de l’IOT
-* **Notify** permet de gérer les alertes et les notifications
-* **Matomo** permet d’avoir les statistiques du portail
-* **Capture** permet de créer les miniatures et les captures d’images des visualisations
-* **Thumbor** permet les traitement des images des jeux de données
-* **Backup** permet de gérer les sauvegardes de la plateforme
+L'authentification avec Simple Directory n'étant possible que sur le même domaine (ou sur un sous domaine de celui pour lequel Simple Directory est configuré), les portails de données sur un autre domaine ne peuvent être que des portails open data.
 
-![Catalogue de données](./images/technical-architecture/architecture.jpg)
+### Stack technique
+
+Le backend de Data Fair Portal est écrit en NodeJS avec le framework ExpressJS. La persistance est assurée avec MongoDB. Le frontend est réalisé avec les frameworks VueJS, VuetifyJS et NuxtJS. La configuration des pages est faites à l'aide de JSON schémas interprétés par la librairie VJFS.
+
+Il n'y a pour l'instant qu'un mode de distribution qui est Docker, et il est recommandé d'opérer ce service dans un environnement tel que Kubernetes.

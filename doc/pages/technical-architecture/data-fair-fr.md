@@ -1,12 +1,12 @@
 ---
-title: DataFair
+title: Data Fair
 section: 2
 updated: 2020-12-09
-description : DataFair
-published: false
+description : Data Fair
+published: true
 ---
 
-DataFair permet d'exposer facilement ses données via une API web, contractualisée et documentée, ce qui permet aux développeurs de les réutiliser facilement dans leurs **applications**. De plus les données peuvent être sémantisées, ce qui permet ensuite de les enrichir avec d'autres données sémantisées. Ainsi, des données qui ont une adresse peuvent par exemple être complétées par des coordonnées GPS, ce qui permet ensuite de les afficher sur une carte.
+Data Fair permet d'exposer facilement ses données via une API web, contractualisée et documentée, ce qui permet aux développeurs de les réutiliser facilement dans leurs **applications**. De plus les données peuvent être sémantisées, ce qui permet ensuite de les enrichir avec d'autres données sémantisées. Ainsi, des données qui ont une adresse peuvent par exemple être complétées par des coordonnées GPS, ce qui permet ensuite de les afficher sur une carte.
 
 Le coeur de la solution permet
 * d’indexer des données
@@ -17,36 +17,33 @@ Le coeur de la solution permet
 * de gérer les droits d’accès aux données et aux visualisations (publication)
 
 
-### Concepts clés
+Cette page présente brièvement les langages de programmation, services et outils utilisés pour réaliser ce projet. Pour les développeurs vous pouvez consulter directement le [README et le code source sur github](https://github.com/koumoul-dev/data-fair).
 
-Les trois concepts centraux sont : les **jeux de données**, les **services distants** et les **applications**. La finalité de ce service est de pouvoir utiliser facilement des **applications** adaptées à différents métiers et alimentées par une combinaison de **services distants** et de données propres à l'utilisateur.
+## Backend
 
-Les **jeux de données** sont créés par les utilisateurs en chargeant des fichiers : le service stocke le fichier, l'analyse et déduit un schéma de données. Les données sont ensuite indexées suivant ce schéma et peuvent être requêtées au travers d'une API Web propre.  
-L'utilisateur peut sémantiser les champs des **jeux de données**, par exemple en déterminant qu'une colonne contenant des données sur 5 chiffres est un champ de type Code Postal.  
-Cette sémantisation permet 2 choses : les données peuvent être enrichies et servir à certains traitements si on dispose des **services distants** appropriés, et les données peuvent être utilisées dans des **applications** adaptées à leurs concepts.
-
-En complément des **jeux de données** basés fichiers, DataFair permet également de créer des **jeux de données** incrémentaux qui sont éditables en temps réel et des **jeux de données** virtuels qui sont des vues re-configurable d'un ou plusieurs **jeux de données**.
-
-Les **services distants** mettent à disposition des fonctionnalités sous forme d'APIs Web externes à DataFair qui respectent les règles d’interopérabilité d’OpenAPI 3.0.  
-Un des objectifs de DataFair est de permettre à des non informaticiens d'utiliser facilement des APIs tierces avec leurs propres données. Il y a 2 manières d'exploiter les **services distants** : l'utilisateur peut les utiliser pour ajouter en temps différé des colonnes à ses **jeux de données** (exemple géocodage) et les **applications** peuvent les exploiter en temps réel (exemple fonds de carte).
-
-Les **services distants** connectés sur une instance DataFair ne sont pas gérés par les utilisateurs directement, mais plutôt mis à leur disposition par les administrateurs. Nous proposon  un certain nombre de **services distants** compatibles avec l’abonnement (fonds de carte, base des entreprises de France, cadastre, base nationale des adresses, etc.).
-
-Les **applications** permettent d'exploiter au maximum le potentiel des données des utilisateurs et des **services distants**. Quelques exemples: un jeu de données contenant des codes de commune peut être projeté sur une carte du découpage administratif français, un jeu de données contenant des codes de parcelles peut être projeté sur le cadastre, etc.
-
-Les **applications** ne sont pas développées dans ce projet : ce sont des **applications** Web développées et déployées de manière autonome qui respectent les règles d’interopérabilité d’OpenAPI 3.0 avec DataFair. Elles peuvent être open source ou non. Chaque application de base peut être utilisée autant de fois que désiré pour valoriser différents **jeux de données**. DataFair permet de stocker et éditer les différents paramètres d'une même application de base.
-
-### Contrôles d’accès
-DataFair permet de contrôler simplement mais de manière puissante les permissions sur les différentes ressources. Les utilisateurs peuvent faire partie de une ou plusieurs organisations, qui peuvent elles même contenir un ou plusieurs utilisateurs.  
-Quand un utilisateur configure un jeux de données ou une application, il peut déterminer quels utilisateurs et organisations y ont accès. Ouvrir un accès à une organisation donne l'accès à tous les membres de cette organisation. Les accès peuvent également être ouverts en public et même les personnes non authentifiées pourront alors accéder à la ressource.
-
-Les utilisateurs et organisations ne sont pas gérées dans ce service. Ce service doit être connecté à un annuaire qui implémente le contrat du service d'identification Simple-Directory.
+Le backend sert l'application cliente (frontend) et l'API. Le frontend est une application Web dynamique avec un rendu côté serveur partiel et un rendu final côté client en Javascript.
 
 
-### Publication d’un jeu de données
+### Persistance
 
-La publication d’un jeu de données est soumise à plusieurs étapes décrite dans le schéma suivant :
+Ce service utilise 3 types de persistance : fichier, base de données et moteur de recherche.
 
-![Catalogue de données](./images/technical-architecture/publication.jpeg)
+La persistance fichier est utilisée pour stocker les jeux de données des utilisateurs : les fichiers sont stockés tels quels sur le système de fichier et sont ensuite analysés puis indexés.
 
-La solution couvre ainsi les cas de reprise de jeux de données d’une ancienne plateforme et la publication de nouveau jeux de données.
+Les informations sur les jeux de données, les services distants et les configurations d'applications sont stockées dans une base de données [MongoDB](https://www.mongodb.com/fr), qui est une base NoSQL open source orientée documents. Les jeux de données incrémentaux sont également stockés dans cette base.
+
+Les datasets sont indexés dans un moteur de recherche open source [ElasticSearch](https://www.elastic.co/fr/products/elasticsearch). Très performant et puissant il permet de faire des recherches textuelles et des agrégations pour des temps de réponse irréprochables.
+
+## Front end
+
+L'interface du service est une applications Web (HTML/CSS/JS).
+
+Le framework Javascript utilisé est [VueJS 2](https://vuejs.org/) complété principalement par [Nuxt](https://nuxtjs.org/) et [Vuetify](https://vuetifyjs.com/en/). Le tout forme un environnement très complet pour développer des interfaces graphiques dynamiques et claires. La documentation sur cet écosystème est bien fournie et de qualité. Ce n'est pas pour rien que VueJS fait partie des projets Github les plus populaires.
+
+## Code source
+
+Le code du backend est écrit en [NodeJS](https://nodejs.org/en/), en respectant la syntaxe ES7. Le code utilise donc massivement les promesses, cachées derrières des mots clés comme *async* ou *await*. Cela permet d'avoir du code clair, concis et facilement compréhensible, tout en étant très performant grâce à une gestion non bloquante des opérations asynchrones.
+
+Un autre aspect de NodeJS est très utilisé dans ce projet : la gestion d'opérations en flux (streams). Cela permet de réaliser des traitements sur des volumes importants sans abuser des ressources de la machine. Ce service demande donc peu de mémoire vive pour fonctionner (mais il en faudra par contre une bonne quantité pour ElasticSearch).
+
+Le serveur web et l'API sont écrits avec le framework [express 4](https://expressjs.com/fr/) qui est utilisé dans de nombreux projets Web NodeJS. Les briques fonctionnelles sont séparées dans des *router* Express, qui permettent par exemple de définir les opérations autour d'un certain concept.

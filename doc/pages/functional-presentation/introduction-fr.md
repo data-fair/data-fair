@@ -15,7 +15,8 @@ La partie **front-office** permet d’accéder au catalogue de jeux de données 
 Le **back-office** permet de gérer les différents éléments de la plateforme : comptes utilisateurs, jeux de données et visualisations. Les administrateurs peuvent paramétrer l'environnement et gérer les permissions d’accès aux données et visualisations. Selon leur profil, les utilisateurs du back-office pourront créer, éditer, enrichir, supprimer les jeux de données, les cartes et les graphiques.
 Le back-office permet de créer des **portails de données** (private ou open data) et aussi d’accéder à différentes statistiques d’utilisation des portails (analytics).
 
-Les principaux atouts de la solution sont :
+### Principaux atouts de la plateforme
+
 * La possibilité de charger des données sous différents formats.
 * L’enrichissement des données pour leur donner encore plus de valeur.
 * Les représentations possibles grâce à un large choix de visualisations interactives (graphiques, cartes, moteur de recherches, ...).
@@ -23,3 +24,20 @@ Les principaux atouts de la solution sont :
 * Une interface intuitive pour une prise en main rapide
 * La possibilité d’étendre la plateforme avec des visualisations spécifiques
 * Un cadre méthodologique pour publier des données sémantiques hautement réutilisables
+
+### Concepts clés
+
+Les trois concepts centraux sont : les **jeux de données**, les **services distants** et les **applications**. La finalité de ce service est de pouvoir utiliser facilement des **applications** adaptées à différents métiers et alimentées par une combinaison de **services distants** et de données propres à l'utilisateur.
+
+Les **jeux de données** sont créés par les utilisateurs en chargeant des fichiers : le service stocke le fichier, l'analyse et déduit un schéma de données. Les données sont ensuite indexées suivant ce schéma et peuvent être requêtées au travers d'une API Web propre.  
+
+L'utilisateur peut sémantiser les champs des **jeux de données**, par exemple en déterminant qu'une colonne contenant des données sur 5 chiffres est un champ de type Code Postal. Cette sémantisation permet 2 choses : les données peuvent être enrichies et servir à certains traitements si on dispose des **services distants** appropriés, et les données peuvent être utilisées dans des **applications** adaptées à leurs concepts.
+
+En complément des **jeux de données** basés fichiers, Data Fair permet également de créer des **jeux de données** incrémentaux qui sont éditables en temps réel et des **jeux de données** virtuels qui sont des vues re-configurable d'un ou plusieurs **jeux de données**.
+
+Les **services distants** mettent à disposition des fonctionnalités sous forme d'APIs Web externes à Data Fair qui respectent les règles d’interopérabilité d’OpenAPI 3.0.  
+Un des objectifs de Data Fair est de permettre à des non informaticiens d'utiliser facilement des APIs tierces avec leurs propres données. Il y a 2 manières d'exploiter les **services distants** : l'utilisateur peut les utiliser pour ajouter en temps différé des colonnes à ses **jeux de données** (exemple géocodage) et les **applications** peuvent les exploiter en temps réel (exemple fonds de carte).
+
+Les **services distants** connectés sur une instance Data Fair ne sont pas gérés par les utilisateurs directement, mais plutôt mis à leur disposition par les administrateurs.
+
+Les **applications** permettent d'exploiter au maximum le potentiel des données des utilisateurs et des **services distants**. Quelques exemples: un jeu de données contenant des codes de commune peut être projeté sur une carte du découpage administratif français, un jeu de données contenant des codes de parcelles peut être projeté sur le cadastre, etc.
