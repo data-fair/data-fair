@@ -54,6 +54,13 @@ const allowedTypes = exports.allowedTypes = new Set(['text/csv', 'application/ge
 
 // Form data fields are sent as strings, some have to be parsed as objects or arrays
 const fixFormBody = (body) => {
+  if (body.body) {
+    try {
+      return JSON.parse(body.body)
+    } catch (err) {
+      throw createError('400', `Invalid JSON in body part, ${err.message}`)
+    }
+  }
   Object.keys(datasetSchema.properties)
     .filter(key => body[key] !== undefined)
     .filter(key => ['object', 'array'].includes(datasetSchema.properties[key].type))
@@ -68,6 +75,7 @@ const fixFormBody = (body) => {
         }
       }
     })
+  return body
 }
 
 exports.uploadFile = (validate) => {
@@ -83,7 +91,7 @@ exports.uploadFile = (validate) => {
         if (!req.inputChecked) {
           if (!req.user) throw createError(401)
           if (!req.body) throw createError(400, 'Missing body')
-          fixFormBody(req.body)
+          req.body = fixFormBody(req.body)
           const valid = validate(req.body)
           if (!valid) throw createError(400, JSON.stringify(validate.errors))
           req.inputChecked = true
