@@ -406,7 +406,6 @@ router.post('', beforeUpload, checkStorage(true), filesUtils.uploadFile(validate
       // asyncWrap keepalive option will keep request alive
       res.writeHeader(201, { 'Content-Type': 'application/json' })
       res.write(' ')
-      let dataset
       try {
         dataset = await datasetPromise
       } catch (err) {
