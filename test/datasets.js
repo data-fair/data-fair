@@ -160,7 +160,7 @@ describe('datasets', () => {
     assert.equal(res.data.title, 'A dataset with pre-filled title')
   })
 
-  it.only('Upload new dataset with JSON body', async () => {
+  it('Upload new dataset with JSON body', async () => {
     const ax = global.ax.dmeadusOrg
     const form = new FormData()
     form.append('body', JSON.stringify({ title: 'A dataset with both file and JSON body', publications: [{ catalog: 'test', status: 'waiting' }] }))
