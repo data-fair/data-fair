@@ -13,13 +13,12 @@ This project uses the following stack : Mongo, ElasticSearch, NodeJS, Express, V
 
 We use [eslint]() both as a linter an a formatter (thanks to its fix mode). It also works on .vue files thanks to [vue-eslint-plugin](https://github.com/vuejs/eslint-plugin-vue). We strongly suggest integrating these tools in your editor, this [article](https://alligator.io/vuejs/vue-eslint-plugin/) can be useful to configure vue-eslint-plugin in your editor.
 
-Install dependencies, run bundler and launch service dependencies with docker-compose:
+Install dependencies and launch service dependencies with docker-compose:
 
     npm install
-    npm run build
     docker-compose up -d
 
-Run the 2 development servers with these commands et separate shells:
+Run the 2 development servers with these commands in separate shells:
 
     npm run dev-server
     npm run dev-client
