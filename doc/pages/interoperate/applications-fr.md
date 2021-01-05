@@ -2,7 +2,7 @@
 title: Applications de visualisation
 section: 2
 updated: 2020-12-10
-description : Applications de visualisation de données
+description: Applications de visualisation de données
 published: true
 ---
 

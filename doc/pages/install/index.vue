@@ -2,6 +2,11 @@
   <div class="pa-6 ma-6">
     <h2 class="display-1 mb-6">
       Installation et configuration
+      <v-btn :to="localePath({name: 'full-install'})" icon>
+        <v-icon color="primary">
+          mdi-printer
+        </v-icon>
+      </v-btn>
     </h2>
     <v-row v-for="(section, i) in sections.filter(s => !s.subsection)" :key="i">
       <v-col>

@@ -1,7 +1,12 @@
 <template lang="html">
   <div class="pa-6 ma-6">
     <h2 class="display-1 mb-6">
-      Extensions
+      Interopérer avec Data Fair
+      <v-btn :to="localePath({name: 'full-interoperate'})" icon>
+        <v-icon color="primary">
+          mdi-printer
+        </v-icon>
+      </v-btn>
     </h2>
     <v-row v-for="(section, i) in sections.filter(s => !s.subsection)" :key="i">
       <v-col>
