@@ -120,14 +120,14 @@
   margin:30px;
 } */
 
-.article p em{
+/* .article p em{
   display: flex;
   justify-content: center;
   flex-direction: column;
   text-align: center;
   margin-top: -20px;
   color: rgba(0,0,0,0.6);
-}
+} */
 
 .article h2{
   margin-top: 24px;
