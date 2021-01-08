@@ -77,8 +77,13 @@ if (config.mode.includes('server')) {
     }
     const status = err.statusCode || err.status || 500
     if (status === 500) console.error('Error in express route', err)
-    if (!res.headersSent) res.status(status).send(err.message)
-    else res.end()
+    if (!res.headersSent) {
+      res.set('Cache-Control', 'no-cache')
+      res.set('Expires', '-1')
+      res.status(status).send(err.message)
+    } else {
+      res.end()
+    }
   })
 
   const WebSocket = require('ws')
