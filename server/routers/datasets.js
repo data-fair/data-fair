@@ -770,16 +770,18 @@ router.get('/:datasetId/lines', readDataset(), applicationKey, permissions.middl
   }
 
   if (req.query.format === 'xlsx') {
-    res.setHeader('content-disposition', `attachment; filename="${req.dataset.id}.xlsx"`)
     res.throttleEnd()
-    res.status(200).send(outputs.results2sheet(req.dataset, req.query, result.results))
+    const sheet = outputs.results2sheet(req.dataset, req.query, result.results)
+    res.setHeader('content-disposition', `attachment; filename="${req.dataset.id}.xlsx"`)
+    res.status(200).send(sheet)
     webhooks.trigger(req.app.get('db'), 'dataset', req.dataset, { type: 'downloaded-filter' })
     return
   }
   if (req.query.format === 'ods') {
-    res.setHeader('content-disposition', `attachment; filename="${req.dataset.id}.ods"`)
     res.throttleEnd()
-    res.status(200).send(outputs.results2sheet(req.dataset, req.query, result.results, 'ods'))
+    const sheet = outputs.results2sheet(req.dataset, req.query, result.results, 'ods')
+    res.setHeader('content-disposition', `attachment; filename="${req.dataset.id}.ods"`)
+    res.status(200).send(sheet)
     webhooks.trigger(req.app.get('db'), 'dataset', req.dataset, { type: 'downloaded-filter' })
     return
   }
