@@ -39,7 +39,7 @@ exports.results2sheet = (dataset, query, results, bookType) => {
   const workbook = XLSX.utils.book_new()
   workbook.Props = {}
   workbook.Props.Title = dataset.title
-  XLSX.utils.book_append_sheet(workbook, sheet, dataset.id)
+  XLSX.utils.book_append_sheet(workbook, sheet, dataset.id.slice(0, 31))
   const result = XLSX.write(workbook, { type: 'buffer', cellDates: true, bookType, compression: true })
   return result
 }
