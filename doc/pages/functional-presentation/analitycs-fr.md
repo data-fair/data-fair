@@ -1,7 +1,7 @@
 ---
 title: Analytics du portail
 section: 3
-subsection : 10
+subsection : 11
 updated: 2020-12-09
 description : Statistiques d’utilisation du portail
 published: true
