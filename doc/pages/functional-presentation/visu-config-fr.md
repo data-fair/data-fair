@@ -13,9 +13,9 @@ Le menu de configuration se compose de différentes sections qui diffèrent selo
 
 ![Configuration d'une visualisation](./images/functional-presentation/configuration-visu.jpg)
 
-Un aperçu donne un rendu rapide de la visualisation. Lorsque l’on réalise des modifications sur le menu de configuration, elles sont directement représentées sur l'aperçu. Il est ainsi possible de modifier et tester rapidement différents rendus de la visualisation. Lorsque le rendu est satisfaissant, la publication permet de valider les modifications réalisées. Les modifications sont alors visibles pour tous les utilisateurs de la visualsiation.
+Un aperçu donne un rendu de la visualisation. Lorsque l’on réalise des modifications sur le menu de configuration, elles sont directement représentées sur l'aperçu. Il est ainsi possible de modifier et tester rapidement différents rendus de la visualisation. Lorsque le rendu est satisfaissant, l’enregistrement permet de valider les modifications réalisées. Les modifications sont alors visibles pour tous les utilisateurs de la visualsiation.
 
-Une visualisation est privée par défaut et peut-être rendue publique par la suite. Dans tous les cas, il est recommandé de renseigner une description. Cette description sera visible sur la page de consultation de la visualisation.
+Par défaut, une visualisation est privée. Elle peut être rendue publique par la suite. Dans tous les cas, il est recommandé de renseigner une description. Cette description sera visible sur la page de consultation de la visualisation.
 
 La solution proposée offre une grande variété de visualisations en constante progression.
 

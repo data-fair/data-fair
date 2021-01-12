@@ -11,7 +11,7 @@ Ce module permet de comptabiliser les différentes statistiques de fréquentatio
 Il est possible d'utiliser Matomo Analytics (ancienne piwik) ou Google Analytics comme système de suivi.
 
 ### Matomo Analytics
-Les statistiques sous **Matomo Analytics** sont disponibles sous différentes formes : tableaux, graphiques et cartes. En sélectionnant les différentes représentations des statistiques, il est possible de personnaliser ses tableaux de bord.  
+Les statistiques sous [Matomo Analytics](https://fr.matomo.org/) sont disponibles sous différentes formes : tableaux, graphiques et cartes. En sélectionnant les différentes représentations des statistiques, il est possible de personnaliser ses tableaux de bord.  
 Il est également possible d'anonymiser les données et d’enregistrer les parcours utilisateurs tout en étant en conformité avec les recommandations de la CNIL.
 
 ![Matomo](./images/functional-presentation/matomo.jpg)
@@ -29,7 +29,7 @@ Il est possible de traiter des données personnelles en activant les fonctionnal
 
 ### Google Analytics
 
-Les statistiques sous [**Google Analytics**](https://analytics.google.com/) sont aussi disponibles sous différentes formes : tableaux, graphiques et cartes. Il est aussi possible de personnaliser ses tableaux de bord.
+Les statistiques sous [Google Analytics](https://analytics.google.com/) sont aussi disponibles sous différentes formes : tableaux, graphiques et cartes. Il est aussi possible de personnaliser ses tableaux de bord.
 
 ![Google Analytics](./images/functional-presentation/google-analytics.jpg)
 

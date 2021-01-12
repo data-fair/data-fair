@@ -26,7 +26,7 @@ Il est possible d'importer différentes sources de données sur Data Fair. On pe
 
 Une fois les données chargées, elles sont converties dans un format plus standard en interne, puis analysées automatiquement pour déterminer le schéma du jeu de données. Les données sont ensuite indexées puis éventuellement enrichies avec d'autres données externes. Des derniers traitements sont effectués pour calculer des propriétés liées aux données (cardinalités des champs, bornes géographiques, ...) puis le jeu de données est disponible pour pouvoir être édité ou utilisé.
 
-Après cette étape, les données sont consultable a minima dans un tableau et sont triables et filtrable. Si les données ont des concepts de latitude et longitude, les données sont aussi consultable dans une carte. Si elles ont un concepts d'images, une galerie est générée.
+Après cette étape, les données sont consultables à minima dans un tableau et sont triables et filtrable. Si les concepts de **Latitude** et **Longitude** sont renseignés dans le schéma, les données sont aussi consultable dans une carte. Si elles ont un concept **Images**, une galerie est générée.
 
 ### Edition d’un jeu de données
 
@@ -34,7 +34,7 @@ La page d’édition d’un jeu de données permet de travailler la présentatio
 
 ### Schéma des données
 
-La page d'édition d'un jeu de données permet de renseigner les concepts dans la section *Schéma des données*.  
+La page d'édition d'un jeu de données permet, entre autres, de renseigner les concepts dans la section *Schéma des données*.  
 Les concepts sont des notions connues pour la plateforme. Ils permettent d'augmenter la réutilisabilité de vos données et de faire le lien entre vos données et les fonctionnalités de la plateforme.
 
 ![Schéma d'un jeu de données](./images/functional-presentation/schema.jpg)
@@ -65,14 +65,18 @@ Un administrateur peut contrôler finement les permissions d’accès aux donné
 
 On peut ainsi donner le rôle d’*user* à un groupe de personnes et définir s’ils peuvent accéder et lire une ressource de la plateforme.
 
+Il est aussi possible de gérer les permissions plus finement et de donner les droits à un seul ou plusieurs utilisateurs. La liste des personnes ayant des permissions sur un jeu de données est disponible dans la page d’édition de ce jeu.
+
 ### Journal du jeu de données
 
-Le journal d’un jeu de données permet de vérifier l’historique des modifications sur le jeu de données. Le journal permet la traçabilité des modifications des jeux de données, des paramètres et des habilitations.
+Le journal d’un jeu de données permet de vérifier l’historique des modifications sur le jeu de données.
 
 ![Journal d'un jeu de données](./images/functional-presentation/journal.jpg)
 
+Le journal permet la traçabilité des modifications des jeux de données, des paramètres et des habilitations.
+
 ### Pièces jointes
 
-Il est possible d’associer des pièces jointes à chaque ligne d’un jeu de données. Cela se fait en associant une archive au format zip qui contient les fichiers à associer. Il faut aussi qu’il y ait dans le jeu de données une colonne contenant les noms des fichiers à associer à chaque ligne. Deux types de fichiers peuvent être liés aux lignes : des images (png, jpg, …) ou des documents (pdf, docx, xlsx, …). Dans le cas des documents, ils sont indexés par la plateforme et les recherches *fulltext* tiennent compte du contenu de ces documents.
+Il est possible d’associer des pièces jointes à chaque ligne d’un jeu de données. Cela se fait en associant une archive au format zip qui contient les fichiers à associer. Il faut aussi qu’il y ait dans le jeu de données une colonne contenant les noms des fichiers à associer à chaque ligne. Deux types de fichiers peuvent être liés aux lignes : des images (png, jpg, …) ou des documents (pdf, docx, xlsx, …). Dans le cas des documents, ils sont indexés *fulltext* par la plateforme et les recherches tiennent compte du contenu de ces documents.
 
 Les pièces jointes peuvent aussi être directement attachées à un jeu de données. On peut par exemple ajouter des fichiers de documentation ou des métadonnées riches.

@@ -18,4 +18,4 @@ Une thématique est définie par son nom et sa couleur.
 
 ![Thématiques](./images/functional-presentation/thematique.jpg)
 
-Les licences et thématiques ajoutées dans votre configuration peuvent ensuite être assignées aux données. Les licences et thématiques de vos données seront disponibles dans votre portail de données.
+Les licences et thématiques ajoutées dans votre configuration peuvent ensuite être assignées aux données. Les licences et thématiques de vos données seront ainsi consultables sur votre portail.

@@ -1,7 +1,7 @@
 ---
 title: Connexion des utilisateurs
 section: 2
-subsection : 6
+subsection : 7
 updated: 2020-12-09
 description : Connexion des utilisateurs
 published: true

@@ -18,9 +18,8 @@ Une mire d’authentification est accessible sur toutes les pages du portail pou
 
 Le footer permet d'intégrer différents liens tels que les conditions d’utilisation, la page de contact et le site institutionnel entre autres.
 
-Le portail est **configurable**.
+Le portail est configurable, les points de configuration sont les suivants :
 
-Les points de configuration sont les suivants :
 * Titre et déscription
 * Choix des couleurs principale et secondaire
 * Logo, favicone et image d'accueil

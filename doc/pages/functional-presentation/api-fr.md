@@ -1,7 +1,7 @@
 ---
 title: Accès par API
 section: 2
-subsection : 8
+subsection : 9
 updated: 2020-12-09
 description : APIs proposées et intégration globale
 published: true
