@@ -1,4 +1,5 @@
 const nock = require('nock')
+const fs = require('fs-extra')
 const assert = require('assert').strict
 const FormData = require('form-data')
 const config = require('config')
@@ -10,15 +11,7 @@ describe('Extensions', () => {
   it('Extend dataset using remote service', async function() {
     const ax = global.ax.dmeadus
     // Initial dataset with addresses
-    let form = new FormData()
-    let content = `label,adr
-koumoul,19 rue de la voie lactée saint avé
-other,unknown address
-`
-    form.append('file', content, 'dataset.csv')
-    let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
-    assert.equal(res.status, 201)
-    let dataset = await workers.hook(`finalizer/${res.data.id}`)
+    let dataset = await testUtils.sendDataset('datasets/dataset-extensions.csv', ax)
 
     // Prepare for extension using created remote service and patch dataset to ask for it
     let nockScope = nock('http://test.com', { reqheaders: { 'x-apiKey': config.defaultRemoteKey.value } })
@@ -30,7 +23,7 @@ other,unknown address
           .map(JSON.stringify).join('\n') + '\n'
       })
     dataset.schema.find(field => field.key === 'adr')['x-refersTo'] = 'http://schema.org/address'
-    res = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
+    let res = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
       schema: dataset.schema,
       extensions: [{ active: true, remoteService: 'geocoder-koumoul', action: 'postCoords' }],
     })
@@ -55,7 +48,8 @@ other,unknown address
       return inputs.map(input => ({ key: input.key, lat: 50, lon: 50 }))
         .map(JSON.stringify).join('\n') + '\n'
     })
-    form = new FormData()
+    const form = new FormData()
+    let content = await fs.readFile('test/resources/datasets/dataset-extensions.csv')
     content += 'me,3 les noés la chapelle caro\n'
     form.append('file', content, 'dataset.csv')
     res = await ax.post(`/api/v1/datasets/${dataset.id}`, form, { headers: testUtils.formHeaders(form) })
@@ -112,10 +106,52 @@ other,unknown address
     assert.equal(lines[0], '\ufefflabel,adr,lat,lon')
     assert.equal(lines[1], 'koumoul,19 rue de la voie lactée saint avé,40,40')
 
-    // list generated geo files
+    // list generated files
     res = await ax.get(`/api/v1/datasets/${dataset.id}/data-files`)
     assert.equal(res.status, 200)
+    assert.ok(res.data.find(file => file.key === 'original'))
+    assert.ok(res.data.find(file => file.key === 'full'))
     assert.equal(res.data.length, 2)
+  })
+
+  it('Extend dataset that was previouly converted', async function() {
+    const ax = global.ax.dmeadus
+    // Initial dataset with addresses
+    let dataset = await testUtils.sendDataset('datasets/dataset-extensions.xlsx', ax)
+
+    // Prepare for extension using created remote service and patch dataset to ask for it
+    const nockScope = nock('http://test.com', { reqheaders: { 'x-apiKey': config.defaultRemoteKey.value } })
+      .post('/geocoder/coords').reply(200, (uri, requestBody) => {
+        const inputs = requestBody.trim().split('\n').map(JSON.parse)
+        assert.equal(inputs.length, 2)
+        assert.deepEqual(Object.keys(inputs[0]), ['q', 'key'])
+        return inputs.map(input => ({ key: input.key, lat: 10, lon: 10 }))
+          .map(JSON.stringify).join('\n') + '\n'
+      })
+    dataset.schema.find(field => field.key === 'adr')['x-refersTo'] = 'http://schema.org/address'
+    let res = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
+      schema: dataset.schema,
+      extensions: [{ active: true, remoteService: 'geocoder-koumoul', action: 'postCoords' }],
+    })
+    assert.equal(res.status, 200)
+    dataset = await workers.hook(`finalizer/${dataset.id}`)
+    nockScope.done()
+    const extensionKey = `_ext_${'geocoder-koumoul'}_postCoords`
+    assert.ok(dataset.schema.find(field => field.key === extensionKey + '.lat'))
+    assert.ok(dataset.schema.find(field => field.key === extensionKey + '.lon'))
+    // A search to check results
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
+    assert.equal(res.data.total, 2)
+    assert.equal(res.data.results[0][extensionKey + '.lat'], 10)
+    assert.equal(res.data.results[0][extensionKey + '.lon'], 10)
+
+    // list generated files
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/data-files`)
+    assert.equal(res.status, 200)
+    assert.ok(res.data.find(file => file.key === 'original'))
+    assert.ok(res.data.find(file => file.key === 'normalized'))
+    assert.ok(res.data.find(file => file.key === 'full'))
+    assert.equal(res.data.length, 3)
   })
 
   it('Manage errors during extension', async () => {

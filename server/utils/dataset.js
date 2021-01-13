@@ -119,11 +119,11 @@ exports.dataFiles = async (dataset) => {
       })
     }
   }
-  const parsed = path.parse(dataset.originalFile.name)
+  const parsed = path.parse(dataset.file.name)
   if (dataset.extensions && !!dataset.extensions.find(e => e.active)) {
     const name = `${parsed.name}-full${parsed.ext}`
     if (!files.includes(name)) {
-      console.error('Full data file not found', dir, name)
+      console.error('Full data file not found', path.join(dir, name))
     } else {
       results.push({
         name,
@@ -137,7 +137,7 @@ exports.dataFiles = async (dataset) => {
   if (dataset.bbox) {
     const mbtilesName = `${parsed.name}.mbtiles`
     if (!files.includes(mbtilesName)) {
-      console.error('Mbtiles data file not found', dir, mbtilesName)
+      console.error('Mbtiles data file not found', path.join(dir, mbtilesName))
     } else {
       results.push({
         name: mbtilesName,
