@@ -12,3 +12,4 @@
 .cache-require-paths.json
 /dist/
 /nuxt-dist
+/config/local-*
