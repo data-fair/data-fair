@@ -30,7 +30,7 @@ describe('Extensions', () => {
     assert.equal(res.status, 200)
     dataset = await workers.hook(`finalizer/${dataset.id}`)
     nockScope.done()
-    const extensionKey = `_ext_${'geocoder-koumoul'}_postCoords`
+    const extensionKey = '_ext_geocoder-koumoul_postCoords'
     assert.ok(dataset.schema.find(field => field.key === extensionKey + '.lat'))
     assert.ok(dataset.schema.find(field => field.key === extensionKey + '.lon'))
     // A search to check results
@@ -136,7 +136,7 @@ describe('Extensions', () => {
     assert.equal(res.status, 200)
     dataset = await workers.hook(`finalizer/${dataset.id}`)
     nockScope.done()
-    const extensionKey = `_ext_${'geocoder-koumoul'}_postCoords`
+    const extensionKey = '_ext_geocoder-koumoul_postCoords'
     assert.ok(dataset.schema.find(field => field.key === extensionKey + '.lat'))
     assert.ok(dataset.schema.find(field => field.key === extensionKey + '.lon'))
     // A search to check results
@@ -153,6 +153,67 @@ describe('Extensions', () => {
     assert.ok(res.data.find(file => file.key === 'full'))
     assert.ok(res.data.find(file => file.key === 'mbtiles'))
     assert.equal(res.data.length, 4)
+  })
+
+  it('Extend dataset using another remote service', async function() {
+    const ax = global.ax.dmeadus
+    // Initial dataset with addresses
+    let dataset = await testUtils.sendDataset('datasets/dataset-siret-extensions.csv', ax)
+
+    // Prepare for extension using created remote service and patch dataset to ask for it
+    const nockScope = nock('http://test.com', { reqheaders: { 'x-apiKey': config.defaultRemoteKey.value } })
+      // /sirene/api/v1/etablissements_bulk?select=NOMEN_LONG%2Cbodacc.capital%2CTEFET%2Clocation.lat%2Clocation.lon'
+      .post('/sirene/etablissements_bulk?select=NOMEN_LONG%2Cbodacc.capital%2CTEFET%2Clocation.lat%2Clocation.lon')
+      // .query({ params: { select: 'NOMEN_LONG,bodacc.capital,TEFET,location.lat,location.lon' } })
+      .reply(200, (uri, requestBody) => {
+        const inputs = requestBody.trim().split('\n').map(JSON.parse)
+        assert.equal(inputs.length, 1)
+        assert.deepEqual(Object.keys(inputs[0]), ['siret', 'key'])
+        return JSON.stringify({
+          NOMEN_LONG: 'KOUMOUL',
+          'location.lon': '-2.748514',
+          'location.lat': '47.687173',
+          key: inputs[0].key,
+        }) + '\n'
+      })
+    dataset.schema.find(field => field.key === 'siret')['x-refersTo'] = 'http://www.datatourisme.fr/ontology/core/1.0/#siret'
+    let res = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
+      schema: dataset.schema,
+      extensions: [{
+        active: true,
+        remoteService: 'sirene-koumoul',
+        action: 'findEtablissementsBulk',
+        select: [
+          'NOMEN_LONG',
+          'bodacc.capital',
+          'TEFET',
+          'location.lat',
+          'location.lon',
+        ],
+      }],
+    })
+    assert.equal(res.status, 200)
+    dataset = await workers.hook(`finalizer/${dataset.id}`)
+    nockScope.done()
+    const extensionKey = '_ext_sirene-koumoul_findEtablissementsBulk'
+    assert.ok(dataset.schema.find(field => field.key === extensionKey + '.location.lat'))
+    assert.ok(dataset.schema.find(field => field.key === extensionKey + '.location.lon'))
+
+    // A search to check results
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
+    assert.equal(res.data.total, 1)
+    assert.equal(res.data.results[0].label, 'koumoul')
+    assert.equal(res.data.results[0]['_ext_sirene-koumoul_findEtablissementsBulk.NOMEN_LONG'], 'KOUMOUL')
+
+    // list generated files
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/data-files`)
+    assert.equal(res.status, 200)
+    assert.ok(res.data.find(file => file.key === 'original'))
+    assert.ok(res.data.find(file => file.key === 'full'))
+    assert.equal(res.data.length, 2)
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/full`)
+    assert.equal(res.data.trim(), `label,siret,location.lat,location.lon,bodacc.capital,TEFET,NOMEN_LONG
+koumoul,82898347800011,47.687173,-2.748514,,,KOUMOUL`)
   })
 
   it('Manage errors during extension', async () => {

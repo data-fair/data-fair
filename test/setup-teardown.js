@@ -14,6 +14,7 @@ before('global mocks', () => {
   nock('http://test.com')
     .persist()
     .get('/geocoder/api-docs.json').reply(200, require('./resources/geocoder-api.json'))
+    .get('/sirene/api-docs.json').reply(200, require('./resources/sirene-api.json'))
 
   // fake catalog
   nock('http://test-catalog.com')

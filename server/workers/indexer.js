@@ -49,7 +49,10 @@ exports.process = async function(app, dataset) {
   const errorsSummary = indexStream.errorsSummary()
   if (errorsSummary) await journals.log(app, dataset, { type: 'error', data: errorsSummary })
 
-  const result = { status: 'indexed' }
+  const result = {
+    status: 'indexed',
+    schema: datasetUtils.cleanSchema(dataset),
+  }
   if (dataset.status === 'updated') {
     result.count = await restDatasetsUtils.count(db, dataset)
   } else {

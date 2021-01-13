@@ -6,7 +6,7 @@ describe('remote-services', () => {
     const ax = global.ax.anonymous
     const res = await ax.get('/api/v1/remote-services')
     assert.equal(res.status, 200)
-    assert.equal(res.data.count, 1)
+    assert.equal(res.data.count, 2)
   })
 
   it('Post a minimal external API, read it, update it and delete it', async () => {
@@ -18,7 +18,7 @@ describe('remote-services', () => {
     const eaId = res.data.id
     res = await ax.get('/api/v1/remote-services')
     assert.equal(res.status, 200)
-    assert.equal(res.data.count, 2)
+    assert.equal(res.data.count, 3)
     res = await ax.get('/api/v1/remote-services/' + eaId + '/api-docs.json')
     assert.equal(res.status, 200)
     assert.equal(res.data.openapi, '3.0.0')
@@ -46,7 +46,7 @@ describe('remote-services', () => {
     assert.equal(res.status, 204)
     res = await ax.get('/api/v1/remote-services')
     assert.equal(res.status, 200)
-    assert.equal(res.data.count, 1)
+    assert.equal(res.data.count, 2)
   })
 
   it('Unknown external service', async () => {

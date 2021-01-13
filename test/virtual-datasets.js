@@ -308,7 +308,7 @@ describe('virtual datasets', () => {
     })
     dataset = await workers.hook('finalizer/' + dataset.id)
     dateField = dataset.schema.find(f => f.key === 'some_date')
-    assert.equal(dateField.format, null)
+    assert.equal(dateField.format, undefined)
 
     virtualDateField = await workers.hook('finalizer/' + virtualDataset.id)
     virtualDateField = virtualDataset.schema.find(f => f.key === 'some_date')
@@ -337,11 +337,11 @@ describe('virtual datasets', () => {
     res = await ax.patch('/api/v1/datasets/' + dataset.id, { schema: dataset.schema })
     dataset = await workers.hook('finalizer/' + dataset.id)
     dateField = dataset.schema.find(f => f.key === 'some_date')
-    assert.equal(dateField.format, null)
+    assert.equal(dateField.format, undefined)
 
     virtualDataset = await workers.hook('finalizer/' + virtualDataset.id)
     virtualDateField = virtualDataset.schema.find(f => f.key === 'some_date')
-    assert.equal(virtualDateField.format, null)
+    assert.equal(virtualDateField.format, undefined)
 
     res = await ax.get(`/api/v1/datasets/${virtualDataset.id}/lines`)
     assert.equal(res.status, 200)

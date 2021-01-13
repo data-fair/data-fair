@@ -67,6 +67,9 @@ module.exports = {
   remoteServices: [{
     title: 'Geocoder',
     url: 'http://test.com/geocoder/api-docs.json',
+  }, {
+    title: 'Sirene',
+    url: 'http://test.com/sirene/api-docs.json',
   }],
   tippecanoe: {
     skip: false,

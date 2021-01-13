@@ -383,17 +383,17 @@ exports.remainingStorage = async (db, owner) => {
   return Math.max(0, limit - consumption)
 }
 
-exports.extendedSchema = (dataset) => {
-  dataset.schema = dataset.schema || []
-  const schema = dataset.schema.filter(f => f.key.startsWith('_ext_') || !f.key.startsWith('_'))
-
+exports.cleanSchema = (dataset) => {
+  const schema = dataset.schema = dataset.schema || []
   const fileSchema = dataset.file && dataset.file.schema
   schema.forEach(f => {
     // restore original type and format, in case of removal of a concept
+    // or updated fields in latest file
     const fileField = fileSchema && fileSchema.find(ff => ff.key === f.key)
-    if (fileField) {
+    if (fileField && (fileField.type !== f.type || fileField.format !== f.format)) {
       f.type = fileField.type
-      f.format = fileField.format
+      if (!fileField.format) delete f.format
+      else f.format = fileField.format
     }
 
     // apply type from concepts to the actual field (for example SIRET might be parsed a interger, but should be returned a string)
@@ -406,7 +406,12 @@ exports.extendedSchema = (dataset) => {
       }
     }
   })
+  return schema
+}
 
+exports.extendedSchema = (dataset) => {
+  exports.cleanSchema(dataset)
+  const schema = dataset.schema.filter(f => f.key.startsWith('_ext_') || !f.key.startsWith('_'))
   if (dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')) {
     schema.push({ 'x-calculated': true, key: '_file.content', type: 'string', title: 'Contenu textuel du fichier', description: 'Résultat d\'une extraction automatique' })
     schema.push({ 'x-calculated': true, key: '_file.content_type', type: 'string', title: 'Type mime du fichier', description: 'Résultat d\'une détection automatique.' })
