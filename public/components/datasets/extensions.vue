@@ -63,21 +63,24 @@
             height="100%"
             :outlined="!hasChanges(extension)"
           >
-            <v-progress-linear
-              v-if="extension.error"
-              color="error"
-              :value="extension.progress * 100"
-            />
-            <v-progress-linear
-              v-else-if="!extension.progress || extension.forceNext"
-              color="primary"
-              indeterminate
-            />
-            <v-progress-linear
-              v-else-if="extension.progress"
-              color="primary"
-              :value="extension.progress * 100"
-            />
+            <!-- only show progress bar if extension was saved -->
+            <template v-if="dataset.extensions.find(e => e.remoteService === extension.remoteService && e.action === extension.action)">
+              <v-progress-linear
+                v-if="extension.error"
+                color="error"
+                :value="extension.progress * 100"
+              />
+              <v-progress-linear
+                v-else-if="!extension.progress || extension.forceNext"
+                color="primary"
+                indeterminate
+              />
+              <v-progress-linear
+                v-else-if="extension.progress"
+                color="primary"
+                :value="extension.progress * 100"
+              />
+            </template>
 
             <v-card-title>
               {{ remoteServicesMap[extension.remoteService] && remoteServicesMap[extension.remoteService].actions[extension.action] && remoteServicesMap[extension.remoteService].actions[extension.action].summary }}
