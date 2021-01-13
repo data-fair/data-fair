@@ -503,6 +503,7 @@ const updateDataset = asyncWrap(async(req, res) => {
       res.write(' ')
 
       dataset = await setFileInfo(db, datasetFile, attachmentsFile, req.dataset)
+      if (req.query.skipAnalysis === 'true') dataset.status = 'schematized'
     } else if (dataset.isVirtual) {
       const { isVirtual, ...patch } = req.body
       if (!validatePatch(patch)) {
