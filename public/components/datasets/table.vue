@@ -192,6 +192,9 @@
                     <span v-else-if="header.field.format === 'date-time'">
                       {{ item[header.value] | moment("DD/MM/YYYY, HH:mm") }}
                     </span>
+                    <span v-else-if="header.field.format === 'date'">
+                      {{ item[header.value] | moment("DD/MM/YYYY") }}
+                    </span>
                     <span v-else-if="header.field.type === 'boolean'">
                       {{ item[header.value] ? 'oui' : 'non' }}
                     </span>

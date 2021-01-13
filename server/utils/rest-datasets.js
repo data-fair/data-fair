@@ -209,7 +209,7 @@ async function manageAttachment(req, keepExisting) {
     req.dataset.schema
       .filter(f => !f['x-calculated'])
       .forEach(f => {
-        if (req.body[f.key] !== undefined) req.body[f.key] = fieldsSniffer.format(req.body[f.key], f.type)
+        if (req.body[f.key] !== undefined) req.body[f.key] = fieldsSniffer.format(req.body[f.key], f)
       })
   }
   const lineId = req.params.lineId || req.body._id

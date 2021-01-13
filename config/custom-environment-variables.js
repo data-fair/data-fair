@@ -144,4 +144,12 @@ module.exports = {
     __name: 'EXTRA_ADMIN_NAV_ITEMS',
     __format: 'json',
   },
+  dateFormats: {
+    __name: 'DATE_FORMATS',
+    __format: 'json',
+  },
+  dateTimeFormats: {
+    __name: 'DATE_TIME_FORMATS',
+    __format: 'json',
+  },
 }

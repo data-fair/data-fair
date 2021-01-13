@@ -123,8 +123,18 @@
               <template v-else>
                 <v-hover v-slot:default="{ hover }">
                   <div :style="`position: relative; max-height: ${lineHeight}px; min-width: ${Math.min((item[header.value] + '').length, 50) * 6}px;`">
-                    <span>
-                      {{ ((item[header.value] === undefined || item[header.value] === null ? '' : item[header.value]) + '') | truncate(50) }}
+                    <span v-if="item[header.value] === undefined || item[header.value] === null" />
+                    <span v-else-if="header.field.format === 'date-time'">
+                      {{ item[header.value] | moment("DD/MM/YYYY, HH:mm") }}
+                    </span>
+                    <span v-else-if="header.field.format === 'date'">
+                      {{ item[header.value] | moment("DD/MM/YYYY") }}
+                    </span>
+                    <span v-else-if="header.field.type === 'boolean'">
+                      {{ item[header.value] ? 'oui' : 'non' }}
+                    </span>
+                    <span v-else>
+                      {{ (item[header.value] + '') | truncate(50) }}
                     </span>
                     <v-btn
                       v-if="hover && !filters.find(f => f.field.key === header.value) && isFilterable(item[header.value])"
@@ -189,6 +199,7 @@
             value: field.key,
             sortable: field.type === 'string' || field.type === 'number' || field.type === 'integer',
             tooltip: field.description || (field['x-refersTo'] && this.vocabulary && this.vocabulary[field['x-refersTo']] && this.vocabulary[field['x-refersTo']].description),
+            field,
           }))
 
         if (this.imageField) {

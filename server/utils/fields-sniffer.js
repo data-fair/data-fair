@@ -1,5 +1,7 @@
 const Ajv = require('ajv')
 const ajv = new Ajv()
+const moment = require('moment')
+const config = require('config')
 
 exports.sniff = (values, attachmentsPaths = [], existingField) => {
   if (existingField && existingField.ignoreDetection) return { type: 'string' }
@@ -12,17 +14,33 @@ exports.sniff = (values, attachmentsPaths = [], existingField) => {
   if (checkAll(values, val => floatRegexp.test(val))) return { type: 'number' }
   if (checkAll(values, dateTimeSchema)) return { type: 'string', format: 'date-time' }
   if (checkAll(values, dateSchema)) return { type: 'string', format: 'date' }
+  for (const dateTimeFormat of config.dateTimeFormats) {
+    if (checkAll(values, hasDateFormat(dateTimeFormat))) return { type: 'string', format: 'date-time', dateTimeFormat }
+  }
+  for (const dateFormat of config.dateFormats) {
+    if (checkAll(values, hasDateFormat(dateFormat))) return { type: 'string', format: 'date', dateFormat }
+  }
   if (checkAll(values, isUriRef)) return { type: 'string', format: 'uri-reference' }
   return { type: 'string' }
 }
 
-exports.format = (value, type) => {
+exports.format = (value, prop) => {
   if (!value) return null
   if (typeof value !== 'string') value = JSON.stringify(value)
-  if (type === 'string') return value.trim()
+  if (prop.type === 'string' && prop.format === 'date' && prop.dateFormat) {
+    const date = moment(value, prop.dateFormat, true)
+    if (date.isValid()) return date.format('YYYY-MM-DD')
+    else return null
+  }
+  if (prop.type === 'string' && prop.format === 'date-time' && prop.dateTimeFormat) {
+    const date = moment(value, prop.dateTimeFormat, true)
+    if (date.isValid()) return date.toISOString()
+    else return null
+  }
+  if (prop.type === 'string') return value.trim()
   const cleanValue = value.replace(new RegExp(`^${trimablePrefix}`, 'g'), '').replace(new RegExp(`${trimablePrefix}$`, 'g'), '')
-  if (type === 'boolean') return ['1', 'true', 'vrai', 'oui', 'yes'].includes(cleanValue.toLowerCase())
-  if (type === 'integer' || type === 'number') return Number(cleanValue.replace(/\s/g, '').replace(',', '.'))
+  if (prop.type === 'boolean') return ['1', 'true', 'vrai', 'oui', 'yes'].includes(cleanValue.toLowerCase())
+  if (prop.type === 'integer' || prop.type === 'number') return Number(cleanValue.replace(/\s/g, '').replace(',', '.'))
 }
 
 exports.escapeKey = (key) => {
@@ -71,3 +89,4 @@ const dateTimeSchema = ajv.compile({ type: 'string', format: 'date-time' })
 const dateSchema = ajv.compile({ type: 'string', format: 'date' })
 const uriRefSchema = ajv.compile({ type: 'string', format: 'uri-reference' })
 const isUriRef = (value) => value.length < 500 && uriRefSchema(value)
+const hasDateFormat = (format) => (value) => moment(value, format, true).isValid()

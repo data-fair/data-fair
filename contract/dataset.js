@@ -18,7 +18,7 @@ publicationSchema.properties.addToDataset = {
 
 const schema = {
   type: 'array',
-  description: 'JSON schema properties of the fields in the file',
+  description: 'JSON schema properties of the fields',
   items: {
     type: 'object',
     required: ['key'],
@@ -26,11 +26,25 @@ const schema = {
       key: { type: 'string', readOnly: true, 'x-display': 'hidden' },
       type: { type: 'string' },
       format: { type: ['string', 'null'] },
-      ignoreDetection: { type: 'boolean', default: false },
-      separator: { type: ['string', 'null'] },
       'x-originalName': { type: ['string', 'null'] },
       'x-refersTo': { type: ['string', 'null'] },
       'x-calculated': { type: 'boolean' },
+    },
+  },
+}
+
+const fileSchema = {
+  type: 'array',
+  description: 'JSON schema properties of the fields in the file',
+  items: {
+    type: 'object',
+    required: ['key'],
+    properties: {
+      ...schema.properties,
+      ignoreDetection: { type: 'boolean', default: false },
+      separator: { type: ['string', 'null'] },
+      dateFormat: { type: ['string', 'null'] },
+      dateTimeFormat: { type: ['string', 'null'] },
     },
   },
 }
@@ -83,7 +97,7 @@ module.exports = {
           enum: ['text/csv'],
           description: 'Mime type of the file',
         },
-        schema,
+        schema: fileSchema,
         props: {
           type: 'object',
           additionalProperties: false,

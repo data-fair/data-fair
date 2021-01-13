@@ -106,6 +106,12 @@
             <p>
               <span :class="labelClass">Type : </span><br>
               {{ propTypeTitle(properties[currentProperty]) }}
+              <template v-if="properties[currentProperty].dateFormat">
+                ({{ properties[currentProperty].dateFormat }})
+              </template>
+              <template v-if="properties[currentProperty].dateTimeFormat">
+                ({{ properties[currentProperty].dateTimeFormat }})
+              </template>
             </p>
             <p v-if="properties[currentProperty]['x-cardinality']">
               <span :class="labelClass">Nombre de valeurs distinctes (approximative dans le cas de données volumineuses) : </span><br>
