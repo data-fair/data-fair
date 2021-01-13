@@ -123,9 +123,9 @@ describe('Extensions', () => {
     const nockScope = nock('http://test.com', { reqheaders: { 'x-apiKey': config.defaultRemoteKey.value } })
       .post('/geocoder/coords').reply(200, (uri, requestBody) => {
         const inputs = requestBody.trim().split('\n').map(JSON.parse)
-        assert.equal(inputs.length, 2)
+        assert.equal(inputs.length, 3)
         assert.deepEqual(Object.keys(inputs[0]), ['q', 'key'])
-        return inputs.map(input => ({ key: input.key, lat: 10, lon: 10 }))
+        return inputs.map((input, i) => ({ key: input.key, lat: 10 * i, lon: 10 * i }))
           .map(JSON.stringify).join('\n') + '\n'
       })
     dataset.schema.find(field => field.key === 'adr')['x-refersTo'] = 'http://schema.org/address'
@@ -141,9 +141,9 @@ describe('Extensions', () => {
     assert.ok(dataset.schema.find(field => field.key === extensionKey + '.lon'))
     // A search to check results
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
-    assert.equal(res.data.total, 2)
-    assert.equal(res.data.results[0][extensionKey + '.lat'], 10)
-    assert.equal(res.data.results[0][extensionKey + '.lon'], 10)
+    assert.equal(res.data.total, 3)
+    assert.equal(res.data.results[0][extensionKey + '.lat'], 0)
+    assert.equal(res.data.results[0][extensionKey + '.lon'], 0)
 
     // list generated files
     res = await ax.get(`/api/v1/datasets/${dataset.id}/data-files`)
@@ -151,7 +151,8 @@ describe('Extensions', () => {
     assert.ok(res.data.find(file => file.key === 'original'))
     assert.ok(res.data.find(file => file.key === 'normalized'))
     assert.ok(res.data.find(file => file.key === 'full'))
-    assert.equal(res.data.length, 3)
+    assert.ok(res.data.find(file => file.key === 'mbtiles'))
+    assert.equal(res.data.length, 4)
   })
 
   it('Manage errors during extension', async () => {

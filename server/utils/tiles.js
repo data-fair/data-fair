@@ -4,6 +4,7 @@ const path = require('path')
 const fs = require('fs-extra')
 const vtpbf = require('vt-pbf')
 const Pbf = require('pbf')
+const flatten = require('flat')
 const { gunzip } = require('zlib')
 const memoize = require('memoizee')
 const MBTiles = require('@mapbox/mbtiles')
@@ -170,6 +171,7 @@ exports.prepareMbtiles = async (dataset, db, es) => {
   ]
   streams.push(new Transform({
     async transform(properties, encoding, callback) {
+      properties = flatten(properties)
       try {
         let geometry
         if (geopoints) {
