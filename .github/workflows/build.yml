@@ -31,7 +31,7 @@ jobs:
     - run: docker ps
     - run: TIPPECANOE_SKIP=true npm run test-cover
     - run: docker-compose stop
-    - run: npm run coveralls
+    # - run: npm run coveralls
     - name: Docker meta
       id: docker_meta
       uses: crazy-max/ghaction-docker-meta@v1
