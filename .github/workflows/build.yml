@@ -22,8 +22,12 @@ jobs:
     - run: npm i
     - run: npm run lint
     - run: npm run build
-    - run: NO_UI=tarue docker-compose up -d
-    - run: sleep 15
+    - run: NO_UI=true docker-compose up -d
+    - name: Wait for containers
+      uses: jakejarvis/wait-action@master
+      with:
+        time: '15s'
+    - run: docker ps
     - run: TIPPECANOE_SKIP=true npm test
+    - run: docker-compose stop
     - run: npm run coveralls
-    
