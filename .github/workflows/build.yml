@@ -1,0 +1,29 @@
+name: Build CI
+
+on:
+  push:
+    branches: [ master ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [12.x]
+        # See supported Node.js release schedule at https://nodejs.org/en/about/releases/
+
+    steps:
+    - uses: actions/checkout@v2
+    - uses: actions/setup-node@v1
+      with:
+        node-version: ${{ matrix.node-version }}
+    - run: npm i
+    - run: npm run lint
+    - run: npm run build
+    - run: NO_UI=tarue docker-compose up -d
+    - run: sleep 15
+    - run: TIPPECANOE_SKIP=true npm test
+    - run: npm run coveralls
+    
