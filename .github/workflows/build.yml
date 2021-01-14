@@ -56,6 +56,6 @@ jobs:
     - name: Image digest
       run: echo ${{ steps.docker_build.outputs.digest }}
     - name: Publish doc
-      run: export MAJOR=$(./node_modules/.bin/semver-extract --major $GITHUB_REF) \
-          DOC_BASE=/data-fair/$MAJOR/ npm run build-doc \
+      run: export MAJOR=$(./node_modules/.bin/semver-extract --major $GITHUB_REF) && \
+          DOC_BASE=/data-fair/$MAJOR/ npm run build-doc && \
           gh-pages-multi deploy -v -r https://${GITHUB_TOKEN}@github.com/koumoul-dev/data-fair.git -s doc-dist -t $MAJOR; fi
