@@ -43,8 +43,6 @@ RUN apk add --no-cache --virtual .tippe-deps bash sqlite-dev zlib-dev && \
     rm -rf tippecanoe && \
     apk del .tippe-deps
 
-ARG VERSION
-ENV VERSION=$VERSION
 ENV NODE_ENV production
 ENV DEBUG db,upgrade*
 WORKDIR /webapp
