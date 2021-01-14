@@ -5,6 +5,7 @@
   "main": "server",
   "scripts": {
     "test": "NODE_ENV=test mocha --exit --bail --timeout 10000 test/",
+    "test-cover": "nyc npm test",
     "coveralls": "nyc report --reporter=text-lcov | coveralls",
     "report": "nyc report --reporter=html",
     "lint": "eslint --ext js,vue --ignore-path .gitignore .",
