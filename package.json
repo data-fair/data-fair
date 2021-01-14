@@ -50,7 +50,7 @@
     "@elastic/elasticsearch": "^7.10.0",
     "@koumoul/express-request-proxy": "^2.3.0",
     "@koumoul/icalendar": "^0.7.3",
-    "@koumoul/nuxt-config-inject": "^0.4.9",
+    "@koumoul/nuxt-config-inject": "^0.4.10",
     "@koumoul/sd-express": "^0.19.2",
     "@koumoul/sd-vue": "^0.19.2",
     "@koumoul/v-iframe": "^0.2.3",
