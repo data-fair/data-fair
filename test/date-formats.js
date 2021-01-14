@@ -1,7 +1,7 @@
 const assert = require('assert').strict
 const testUtils = require('./resources/test-utils')
 
-describe.only('Date formats', () => {
+describe('Date formats', () => {
   it('Detect and parse usual french date formats', async function() {
     const ax = global.ax.dmeadus
     const dataset = await testUtils.sendDataset('datasets/date-formats.csv', ax)
