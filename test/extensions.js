@@ -151,8 +151,12 @@ describe('Extensions', () => {
     assert.ok(res.data.find(file => file.key === 'original'))
     assert.ok(res.data.find(file => file.key === 'normalized'))
     assert.ok(res.data.find(file => file.key === 'full'))
-    assert.ok(res.data.find(file => file.key === 'mbtiles'))
-    assert.equal(res.data.length, 4)
+    if (process.env.TIPPECANOE_SKIP !== 'true') {
+      assert.ok(res.data.find(file => file.key === 'mbtiles'))
+      assert.equal(res.data.length, 4)
+    } else {
+      assert.equal(res.data.length, 3)
+    }
   })
 
   it('Extend dataset using another remote service', async function() {
