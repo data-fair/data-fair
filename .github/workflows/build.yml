@@ -37,10 +37,6 @@ jobs:
       uses: crazy-max/ghaction-docker-meta@v1
       with:
         images: koumoul/data-fair
-    - name: Docker tags
-      run: echo ${{ steps.docker_meta.outputs.tags }}
-    - name: Docker labels
-      run: echo ${{ steps.docker_meta.outputs.labels }}
     - name: Set up QEMU
       uses: docker/setup-qemu-action@v1
     - name: Set up Docker Buildx
