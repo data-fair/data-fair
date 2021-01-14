@@ -1,0 +1,20 @@
+name: Publish documentation
+
+on:
+  release:
+    types: [ created ]
+
+jobs:
+  publish-doc:
+
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [12.x]
+
+    steps:
+      - run: npm i
+      - run: export MAJOR=$(./node_modules/.bin/semver-extract --major $GITHUB_REF)
+      - run: DOC_BASE=/data-fair/$MAJOR/ npm run build-doc
+      - run: gh-pages-multi deploy -v -r https://${GITHUB_TOKEN}@github.com/koumoul-dev/data-fair.git -s doc-dist -t $MAJOR; fi
