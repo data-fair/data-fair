@@ -66,7 +66,7 @@
             />
             <v-autocomplete
               v-model="properties[currentProperty]['x-refersTo']"
-              :items="vocabularyItems.filter(item => item.header || !properties.find(f => (f['x-refersTo'] === item.value) && (f.key !== properties[currentProperty].key)))"
+              :items="vocabularyItems.filter(item => filterVocabulary(currentProperty, item))"
               :disabled="!editable || dataset.isVirtual"
               label="Concept"
               :clearable="true"
@@ -162,6 +162,16 @@
           return { outlined: true, color: 'accent', dark: true, tile: true }
         }
         return { outlined: true, tile: true }
+      },
+      filterVocabulary(currentProperty, item) {
+        if (item.header) return true
+        const prop = this.properties[currentProperty]
+        if (this.properties.find(f => (f['x-refersTo'] === item.value) && (f.key !== prop.key))) return false
+        // accept different type if the concept's type is String
+        // in this case we will ignore the detected type and apply string
+        if (prop.type !== item.type && item.type !== 'string') return false
+        if (item.format === 'date-time' && prop.format !== 'date-time' && prop.format !== 'date') return false
+        return true
       },
     },
   }

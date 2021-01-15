@@ -118,7 +118,7 @@ export default () => {
         vocabularyArray
           .filter(term => !term.tag)
           .forEach(term => {
-            vocabularyItems.push({ text: term.title, value: term.identifiers[0] })
+            vocabularyItems.push({ text: term.title, value: term.identifiers[0], type: term.type, format: term.format })
           })
         vocabularyTags.forEach(tag => {
           vocabularyItems.push({ divider: true })
@@ -126,7 +126,7 @@ export default () => {
           vocabularyArray
             .filter(term => term.tag === tag)
             .forEach(term => {
-              vocabularyItems.push({ text: term.title, value: term.identifiers[0], tag, description: term.description })
+              vocabularyItems.push({ text: term.title, value: term.identifiers[0], tag, description: term.description, type: term.type, format: term.format })
             })
         })
         commit('setAny', { vocabularyItems })
