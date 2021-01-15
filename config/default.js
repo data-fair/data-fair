@@ -255,6 +255,6 @@ module.exports = {
   extraNavigationItems: [],
   extraAdminNavigationItems: [],
   // cf https://momentjs.com/docs/#/parsing/string-format/ en mode strict
-  dateFormats: ['DD/MM/YYYY'],
-  dateTimeFormats: ['DD/MM/YYYY HH:mm'],
+  dateFormats: ['D/M/YYYY', 'D/M/YY'],
+  dateTimeFormats: ['D/M/YYYY HH:mm', 'D/M/YY HH:mm', 'D/M/YYYY, HH:mm', 'D/M/YY, HH:mm'],
 }
