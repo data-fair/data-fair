@@ -192,22 +192,11 @@
     "tag": "Référentiels administratifs français"
   },
   {
-    "title": "Date",
-    "description": "Correspond à la date de l'évenement",
+    "title": "Date d'évènement",
+    "description": "Date d'un événement ponctuel sans durée définie",
     "identifiers": [
       "http://schema.org/Date",
       "http://purl.org/dc/identifierss/date"
-    ],
-    "type": "string",
-    "format": "date-time",
-    "tag": "Calendrier"
-  },
-  {
-    "title": "Date de création",
-    "description": "Date à laquelle a été créée la ressource",
-    "identifiers": [
-      "http://schema.org/dateCreated",
-      "http://purl.org/dc/identifierss/created"
     ],
     "type": "string",
     "format": "date-time",
@@ -284,7 +273,7 @@
   },
   {
     "title": "Date de début",
-    "description": "Permet de décrire un événement daté.",
+    "description": "Permet de décrire un évènement daté avec un début et une fin",
     "identifiers": [
       "https://schema.org/startDate"
     ],
@@ -294,9 +283,20 @@
   },
   {
     "title": "Date de fin",
-    "description": "Permet de décrire un événement daté.",
+    "description": "Permet de décrire un évènement daté avec un début et une fin",
     "identifiers": [
       "https://schema.org/endDate"
+    ],
+    "type": "string",
+    "format": "date-time",
+    "tag": "Calendrier"
+  },
+  {
+    "title": "Date de création",
+    "description": "Date à laquelle a été créée la ressource",
+    "identifiers": [
+      "http://schema.org/dateCreated",
+      "http://purl.org/dc/identifierss/created"
     ],
     "type": "string",
     "format": "date-time",
