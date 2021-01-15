@@ -1,9 +1,9 @@
 <template>
   <v-app class="embed">
-    <v-content>
+    <v-main>
       <nuxt />
       <notifications />
-    </v-content>
+    </v-main>
   </v-app>
 </template>
 
