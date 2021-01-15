@@ -3,6 +3,7 @@ name: Build CI
 on:
   push:
     branches: [ master ]
+    tags: [ '**' ]
 
 jobs:
   build:
