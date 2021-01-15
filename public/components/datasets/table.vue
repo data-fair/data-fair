@@ -230,31 +230,11 @@
           Éditer une ligne
         </v-card-title>
         <v-card-text>
-          <v-form
-            ref="editLineForm"
-            :lazy-validation="true"
-          >
-            <v-jsf
-              v-if="editLineDialog && editedLine"
-              v-model="editedLine"
-              :schema="jsonSchema"
-              :options="{locale: 'fr', removeAdditionalProperties: true, arrayItemCardProps: {outlined: true, tile: true}, dialogCardProps: {outlined: true}}"
-            />
-
-            <template v-if="dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')">
-              <p>Chargez un fichier en pièce jointe.</p>
-              <div class="mt-3 mb-3">
-                <v-file-input
-                  label="sélectionnez un fichier"
-                  outlined
-                  dense
-                  style="max-width: 300px;"
-                  @change="onFileUpload"
-                />
-              </div>
-              <v-progress-linear v-model="uploadProgress" />
-            </template>
-          </v-form>
+          <edit-line-form
+            v-if="editLineDialog && editedLine"
+            v-model="editedLine"
+            @onFileUpload="onFileUpload"
+          />
         </v-card-text>
         <v-card-actions>
           <v-spacer />
@@ -338,15 +318,14 @@
 <script>
   import { mapState, mapGetters } from 'vuex'
   import eventBus from '~/event-bus'
-  import VJsf from '@koumoul/vjsf/lib/VJsf.js'
-  import '@koumoul/vjsf/dist/main.css'
   import NbResults from '~/components/datasets/nb-results'
   import DatasetFilters from '~/components/datasets/filters'
+  import EditLineForm from '~/components/datasets/edit-line-form'
   import DownloadResults from '~/components/datasets/download-results'
   const filtersUtils = require('~/assets/filters-utils')
 
   export default {
-    components: { VJsf, NbResults, DatasetFilters, DownloadResults },
+    components: { EditLineForm, NbResults, DatasetFilters, DownloadResults },
     data: () => ({
       data: {},
       query: null,
@@ -416,17 +395,6 @@
       },
       webPageField() {
         return this.dataset.schema.find(f => f['x-refersTo'] === 'https://schema.org/WebPage')
-      },
-      jsonSchema() {
-        return {
-          type: 'object',
-          properties: this.dataset.schema
-            .filter(f => !f['x-calculated'])
-            .filter(f => !f['x-extension'])
-            .filter(f => f['x-refersTo'] !== 'http://schema.org/DigitalDocument')
-            // .map(f => ({ ...f, maxLength: 10000 }))
-            .reduce((a, f) => { a[f.key] = f; return a }, {}),
-        }
       },
       params() {
         const params = {
@@ -568,32 +536,9 @@
       },
       async saveLine() {
         this.saving = true
-        const options = {
-          onUploadProgress: (e) => {
-            if (e.lengthComputable) {
-              this.uploadProgress = (e.loaded / e.total) * 100
-            }
-          },
-        }
-        const formData = new FormData()
-        if (this.file) formData.append('attachment', this.file)
-
-        this.dataset.schema.filter(f => !f['x-calculated'] && !f['x-extension']).forEach(f => {
-          if (this.editedLine[f.key] !== null && this.editedLine[f.key] !== undefined) formData.append([f.key], this.editedLine[f.key])
-        })
-        if (this.editedId) {
-          formData.append('_id', this.editedId)
-        }
-
-        try {
-          const res = await this.$axios.$post(this.resourceUrl + '/lines', formData, options)
-          if (this.editedId) this.updatedLines.push(res)
-          else this.createdLines.push(res)
-          this.saving = false
-        } catch (error) {
-          if (error.response && error.response.status === 404) this.notFound = true
-          else eventBus.$emit('notification', { error, msg: 'Erreur pendant l\'enregistrement de la ligne\'' })
-        }
+        const res = await this.$store.dispatch('dataset/saveLine', { line: this.editedLine, file: this.file, id: this.editedId })
+        if (this.editedId) this.updatedLines.push(res)
+        else this.createdLines.push(res)
         this.saving = false
         this.editLineDialog = false
       },

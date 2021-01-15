@@ -33,6 +33,7 @@ export default () => ({
       error: 'error',
     },
     error: null, // error in initial info fetching
+    lineUploadProgress: 0,
   },
   getters: {
     resourceUrl: (state, getters, rootState) => state.datasetId ? rootState.env.publicUrl + '/api/v1/datasets/' + state.datasetId : null,
@@ -63,6 +64,17 @@ export default () => ({
     },
     qMode: (state) => {
       return state.dataset && state.dataset.count && state.dataset.count < 10000 ? 'complete' : 'simple'
+    },
+    jsonSchema: (state) => {
+      return state.dataset && {
+        type: 'object',
+        properties: state.dataset.schema
+          .filter(f => !f['x-calculated'])
+          .filter(f => !f['x-extension'])
+          .filter(f => f['x-refersTo'] !== 'http://schema.org/DigitalDocument')
+          // .map(f => ({ ...f, maxLength: 10000 }))
+          .reduce((a, f) => { a[f.key] = f; return a }, {}),
+      }
     },
   },
   mutations: {
@@ -231,6 +243,32 @@ export default () => ({
       } catch (error) {
         eventBus.$emit('notification', { error, msg: 'Erreur pendant le changement de propriétaire' })
       }
+    },
+    async saveLine({ commit, state, getters }, { file, line, id }) {
+      const options = {
+        onUploadProgress: (e) => {
+          if (e.lengthComputable) {
+            state.lineUploadProgress = (e.loaded / e.total) * 100
+          }
+        },
+      }
+      const formData = new FormData()
+      if (file) formData.append('attachment', file)
+
+      state.dataset.schema.filter(f => !f['x-calculated'] && !f['x-extension']).forEach(f => {
+        if (line[f.key] !== null && line[f.key] !== undefined) formData.append([f.key], line[f.key])
+      })
+      if (id) {
+        formData.append('_id', id)
+      }
+
+      try {
+        const res = await this.$axios.$post(getters.resourceUrl + '/lines', formData, options)
+        return res
+      } catch (error) {
+        eventBus.$emit('notification', { error, msg: 'Erreur pendant l\'enregistrement de la ligne\'' })
+      }
+      state.lineUploadProgress = 0
     },
   },
 })
