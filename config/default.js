@@ -255,6 +255,20 @@ module.exports = {
   extraNavigationItems: [],
   extraAdminNavigationItems: [],
   // cf https://momentjs.com/docs/#/parsing/string-format/ en mode strict
-  dateFormats: ['D/M/YYYY', 'D/M/YY'],
-  dateTimeFormats: ['D/M/YYYY HH:mm', 'D/M/YY HH:mm', 'D/M/YYYY, HH:mm', 'D/M/YY, HH:mm'],
+  // french formats for now, TODO: prepare for internationalization
+  dateFormats: [
+    'D/M/YYYY',
+    'D/M/YY',
+    'YYYY/M/D', // this one is not "french" but it is ok to add it, it not ambiguous
+  ],
+  dateTimeFormats: [
+    'D/M/YYYY H:m',
+    'D/M/YY H:m',
+    'D/M/YYYY, H:m',
+    'D/M/YY, H:m',
+    'D/M/YYYY H:m:s',
+    'D/M/YY H:m:s',
+    'D/M/YYYY, H:m:s',
+    'D/M/YY, H:m:s',
+  ],
 }
