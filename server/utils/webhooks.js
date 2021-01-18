@@ -11,12 +11,18 @@ exports.trigger = async (db, type, resource, event) => {
   // first send notifications before actual webhooks
   const sender = { ...resource.owner }
   delete sender.role
-  notifications.send({
+  const notif = {
     sender,
     topic: { key: `data-fair:${type}-${event.type}` },
     title: (resource.title || resource.id) + ' - ' + eventType.text,
     body: event.data || '',
-  })
+  }
+  notifications.send(notif)
+  const targettedNotif = {
+    ...notif,
+    topic: { key: `data-fair:${type}:${resource.id}:${event.type}` },
+  }
+  notifications.send(targettedNotif)
 
   const settings = await db.collection('settings').findOne({ id: resource.owner.id, type: resource.owner.type }) || {}
   settings.webhooks = settings.webhooks || []
