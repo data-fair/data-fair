@@ -37,7 +37,7 @@
           <v-list-item-title>Mise à jour</v-list-item-title>
         </v-list-item>
         <v-list-item
-          v-if="can('readLines')"
+          v-if="can('readLines') && !error"
           @click="showIntegrationDialog = true; previewId = 'table'"
         >
           <v-list-item-avatar>
@@ -253,7 +253,7 @@
       previewId: 'table',
     }),
     computed: {
-      ...mapState('dataset', ['dataset', 'nbApplications', 'dataFiles']),
+      ...mapState('dataset', ['dataset', 'nbApplications', 'dataFiles', 'error']),
       ...mapGetters('dataset', ['can']),
       downloadLink() {
         return this.dataset && this.resourceUrl + '/raw'

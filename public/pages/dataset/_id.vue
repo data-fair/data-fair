@@ -218,8 +218,8 @@
           </v-card>
         </v-col>
       </v-row>
-      <dataset-actions />
     </template>
+    <dataset-actions />
   </v-container>
 </template>
 

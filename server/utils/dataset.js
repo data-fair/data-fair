@@ -95,6 +95,9 @@ exports.lsFiles = async (dataset) => {
 exports.dataFiles = async (dataset) => {
   if (dataset.isVirtual || dataset.isRest) return []
   const dir = exports.dir(dataset)
+  if (!await fs.exists(dir)) {
+    throw new Error('Le répertoire de données est absent')
+  }
   const files = await fs.readdir(dir)
   const results = []
   if (!files.includes(dataset.originalFile.name)) {
