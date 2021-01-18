@@ -14,6 +14,11 @@ jobs:
         node-version: [12.x]
 
     steps:
+      - run: echo $GITHUB_REF
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v1
+        with:
+          node-version: ${{ matrix.node-version }}
       - run: npm i
       - run: export MAJOR=$(./node_modules/.bin/semver-extract --major $GITHUB_REF)
       - run: DOC_BASE=/data-fair/$MAJOR/ npm run build-doc
