@@ -100,6 +100,7 @@ exports.dataFiles = async (dataset) => {
   }
   const files = await fs.readdir(dir)
   const results = []
+  if (!dataset.originalFile) return []
   if (!files.includes(dataset.originalFile.name)) {
     console.error('Original data file not found', dir, dataset.originalFile.name)
   } else {
