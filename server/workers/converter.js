@@ -1,7 +1,7 @@
 // convert from tabular data to csv or geographical data to geojson
+const config = require('config')
 const path = require('path')
 const fs = require('fs-extra')
-const XLSX = require('xlsx')
 const createError = require('http-errors')
 const ogr2ogr = require('ogr2ogr')
 const util = require('util')
@@ -10,6 +10,7 @@ const csvStringify = require('csv-stringify')
 const datasetUtils = require('../utils/dataset')
 const icalendar = require('../utils/icalendar')
 const exec = require('../utils/exec')
+const xlsx = require('../utils/xlsx')
 const vocabulary = require('../../contract/vocabulary')
 
 exports.eventsPrefix = 'convert'
@@ -84,7 +85,7 @@ exports.process = async function(app, dataset) {
 
   if (calendarTypes.has(dataset.originalFile.mimetype)) {
     // TODO : store these file size limits in config file ?
-    if (dataset.originalFile.size > 10 * 1000 * 1000) throw createError(400, 'File size of this format must not exceed 10 MB. You can however convert your file to CSV with an external tool and reupload it.')
+    if (dataset.originalFile.size > config.defaultLimits.maxSpreadsheetSize) throw createError(400, 'File size of this format must not exceed 10 MB. You can however convert your file to CSV with an external tool and reupload it.')
     const { eventsStream, infos } = await icalendar.parse(originalFilePath)
     const filePath = path.join(datasetUtils.dir(dataset), baseName + '.csv')
     await pump(
@@ -102,9 +103,7 @@ exports.process = async function(app, dataset) {
   } else if (tabularTypes.has(dataset.originalFile.mimetype)) {
     // TODO : store these file size limits in config file ?
     if (dataset.originalFile.size > 10 * 1000 * 1000) throw createError(400, 'File size of this format must not exceed 10 MB. You can however convert your file to CSV with an external tool and reupload it.')
-    const workbook = XLSX.readFile(originalFilePath, { cellDates: true })
-    const worksheet = workbook.Sheets[workbook.SheetNames[0]]
-    const data = XLSX.utils.sheet_to_csv(worksheet, { rawNumbers: true })
+    const data = await xlsx.getCSV(originalFilePath)
     const filePath = path.join(datasetUtils.dir(dataset), baseName + '.csv')
     await fs.writeFile(filePath, data)
     dataset.file = {

@@ -119,8 +119,8 @@ module.exports = {
         },
       },
     },
-    // Limits applied
     hideBrand: 0,
+    maxSpreadsheetSize: 50 * 1000 * 1000, // 50mo
   },
   worker: {
     interval: 200,

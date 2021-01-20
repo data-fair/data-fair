@@ -90,6 +90,10 @@ module.exports = {
       __name: 'DEFAULT_LIMITS_DATASET_STORAGE',
       __format: 'json',
     },
+    maxSpreadsheetSize: {
+      __name: 'DEFAULT_LIMITS_MAX_SPREADSHEET_SIZE',
+      __format: 'json',
+    },
   },
   worker: {
     interval: {
