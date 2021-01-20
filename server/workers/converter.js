@@ -85,7 +85,9 @@ exports.process = async function(app, dataset) {
 
   if (calendarTypes.has(dataset.originalFile.mimetype)) {
     // TODO : store these file size limits in config file ?
-    if (dataset.originalFile.size > config.defaultLimits.maxSpreadsheetSize) throw createError(400, 'File size of this format must not exceed 10 MB. You can however convert your file to CSV with an external tool and reupload it.')
+    if (dataset.originalFile.size > config.defaultLimits.maxSpreadsheetSize) {
+      throw createError(400, `Un fichier de ce format ne peut pas excéder ${config.defaultLimits.maxSpreadsheetSize} Mo. Vous pouvez par contre le convertir en CSV avec un outil externe et le charger de nouveau.`)
+    }
     const { eventsStream, infos } = await icalendar.parse(originalFilePath)
     const filePath = path.join(datasetUtils.dir(dataset), baseName + '.csv')
     await pump(
@@ -101,8 +103,9 @@ exports.process = async function(app, dataset) {
     }
     icalendar.prepareSchema(dataset, infos)
   } else if (tabularTypes.has(dataset.originalFile.mimetype)) {
-    // TODO : store these file size limits in config file ?
-    if (dataset.originalFile.size > 10 * 1000 * 1000) throw createError(400, 'File size of this format must not exceed 10 MB. You can however convert your file to CSV with an external tool and reupload it.')
+    if (dataset.originalFile.size > config.defaultLimits.maxSpreadsheetSize) {
+      throw createError(400, `Un fichier de ce format ne peut pas excéder ${config.defaultLimits.maxSpreadsheetSize} Mo. Vous pouvez par contre le convertir en CSV avec un outil externe et le charger de nouveau.`)
+    }
     const data = await xlsx.getCSV(originalFilePath)
     const filePath = path.join(datasetUtils.dir(dataset), baseName + '.csv')
     await fs.writeFile(filePath, data)
@@ -113,7 +116,9 @@ exports.process = async function(app, dataset) {
       encoding: 'utf-8',
     }
   } else if (isShapefile || geographicalTypes.has(dataset.originalFile.mimetype)) {
-    if (dataset.originalFile.size > 100 * 1000 * 1000) throw createError(400, 'File size of this format must not exceed 10 MB. You can however convert your file to geoJSON with an external tool and reupload it.')
+    if (dataset.originalFile.size > config.defaultLimits.maxSpreadsheetSize) {
+      throw createError(400, `Un fichier de ce format ne peut pas excéder ${config.defaultLimits.maxSpreadsheetSize} Mo. Vous pouvez par contre le convertir en CSV avec un outil externe et le charger de nouveau.`)
+    }
     const geoJsonStream = ogr2ogr(originalFilePath)
       .format('GeoJSON')
       .options(['-lco', 'RFC7946=YES', '-t_srs', 'EPSG:4326'])
