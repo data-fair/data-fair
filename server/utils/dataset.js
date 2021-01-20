@@ -100,7 +100,7 @@ exports.dataFiles = async (dataset) => {
   }
   const files = await fs.readdir(dir)
   const results = []
-  if (!dataset.originalFile) return []
+  if (!dataset.originalFile) return results
   if (!files.includes(dataset.originalFile.name)) {
     console.error('Original data file not found', dir, dataset.originalFile.name)
   } else {
@@ -111,7 +111,8 @@ exports.dataFiles = async (dataset) => {
       mimetype: dataset.originalFile.mimetype,
     })
   }
-  if (dataset.file && dataset.file.name !== dataset.originalFile.name) {
+  if (!dataset.file) return results
+  if (dataset.file.name !== dataset.originalFile.name) {
     if (!files.includes(dataset.file.name)) {
       console.error('Normalized data file not found', dir, dataset.file.name)
     } else {
