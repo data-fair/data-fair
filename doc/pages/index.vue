@@ -11,12 +11,34 @@
         <p class="headline font-weight-regular grey--text text--darken-1 font-italic">
           Visualisez, exploitez et partagez vos données en quelques clics !
         </p>
-        <!-- <v-divider class="my-3" /> -->
-        <v-btn large href="https://github.com/koumoul-dev/data-fair">
-          <img src="../static/images/GitHub-Mark-32px.png">&nbsp;Github
-        </v-btn>
+        <div>
+          <v-btn
+            href="https://github.com/sponsors/koumoul-dev"
+            outlined
+            rounded
+            class="ml-2 pl-3"
+            color="primary"
+            style="text-transform: none;font-weight: bold;"
+          >
+            <v-icon color="pink">
+              mdi-heart-outline
+            </v-icon>&nbsp;&nbsp;Sponsor
+          </v-btn>
+          <v-btn
+            href="https://github.com/koumoul-dev/data-fair"
+            rounded
+            class="ml-2 pl-3"
+            color="primary"
+            style="text-transform: none;font-weight: bold;"
+          >
+            <v-icon>
+              mdi-github
+            </v-icon>&nbsp;&nbsp;Github
+          </v-btn>
+        </div>
       </v-col>
     </v-row>
+
     <v-row
       class="my-3 flex-row-reverse"
       align="center"
