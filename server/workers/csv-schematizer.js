@@ -43,7 +43,13 @@ exports.process = async function(app, dataset) {
   // Remove fields present in the stored schema, when absent from the raw file schema and not coming from extension
   dataset.schema = dataset.schema.filter(field => field['x-extension'] || dataset.file.schema.find(f => f.key === field.key))
   // Add fields not yet present in the stored schema
-  dataset.schema = dataset.schema.concat(dataset.file.schema.filter(field => !dataset.schema.find(f => f.key === field.key)))
+  const newFields = dataset.file.schema
+    .filter(field => !dataset.schema.find(f => f.key === field.key))
+    .map(field => {
+      const { dateFormat, dateTimeFormat, ...f } = field
+      return f
+    })
+  dataset.schema = dataset.schema.concat(newFields)
   datasetUtils.cleanSchema(dataset)
 
   debug('store status as schematized')

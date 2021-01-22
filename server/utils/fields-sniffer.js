@@ -24,16 +24,16 @@ exports.sniff = (values, attachmentsPaths = [], existingField) => {
   return { type: 'string' }
 }
 
-exports.format = (value, prop) => {
+exports.format = (value, prop, fileProp) => {
   if (!value) return null
   if (typeof value !== 'string') value = JSON.stringify(value)
-  if (prop.type === 'string' && prop.format === 'date' && prop.dateFormat) {
-    const date = moment(value, prop.dateFormat, true)
+  if (prop.type === 'string' && prop.format === 'date' && fileProp && fileProp.dateFormat) {
+    const date = moment(value, fileProp.dateFormat, true)
     if (date.isValid()) return date.format('YYYY-MM-DD')
     else return null
   }
-  if (prop.type === 'string' && prop.format === 'date-time' && prop.dateTimeFormat) {
-    const date = moment(value, prop.dateTimeFormat, true)
+  if (prop.type === 'string' && prop.format === 'date-time' && fileProp && fileProp.dateTimeFormat) {
+    const date = moment(value, fileProp.dateTimeFormat, true)
     if (date.isValid()) return date.toISOString()
     else return null
   }

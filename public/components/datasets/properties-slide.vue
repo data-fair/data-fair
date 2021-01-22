@@ -42,14 +42,14 @@
         <v-row class="px-3">
           <v-col>
             <v-text-field
-              v-model="properties[currentProperty].title"
-              :placeholder="properties[currentProperty]['x-originalName'] || ' '"
+              v-model="currentPropObj.title"
+              :placeholder="currentPropObj['x-originalName'] || ' '"
               label="Libellé"
               :disabled="!editable"
               hide-details
             />
             <v-textarea
-              v-model="properties[currentProperty].description"
+              v-model="currentPropObj.description"
               class="pt-2"
               label="Description"
               :disabled="!editable"
@@ -57,7 +57,7 @@
               filled
             />
             <v-select
-              v-model="properties[currentProperty].separator"
+              v-model="currentPropObj.separator"
               :items="[', ', '; ', ' - ', ' / ']"
               :disabled="!editable || dataset.isVirtual"
               label="Séparateur"
@@ -65,13 +65,13 @@
               hint="Ne renseigner que pour les champs multivalués. Ce caractère sera utilisé pour séparer les valeurs."
             />
             <v-autocomplete
-              v-model="properties[currentProperty]['x-refersTo']"
+              v-model="currentPropObj['x-refersTo']"
               :items="vocabularyItems.filter(item => filterVocabulary(currentProperty, item))"
               :disabled="!editable || dataset.isVirtual"
               label="Concept"
               :clearable="true"
               persistent-hint
-              :hint="properties[currentProperty]['x-refersTo'] ? vocabulary[properties[currentProperty]['x-refersTo']] && vocabulary[properties[currentProperty]['x-refersTo']].description : 'Les concepts des champs sont utilisés pour améliorer le traitement de la donnée et sa visualisation.'"
+              :hint="currentPropObj['x-refersTo'] ? vocabulary[currentPropObj['x-refersTo']] && vocabulary[currentPropObj['x-refersTo']].description : 'Les concepts des champs sont utilisés pour améliorer le traitement de la donnée et sa visualisation.'"
             >
               <template v-slot:item="data">
                 <template v-if="typeof data.item !== 'object'">
@@ -87,7 +87,7 @@
             </v-autocomplete>
             <v-checkbox
               v-if="dataset.file"
-              v-model="properties[currentProperty].ignoreDetection"
+              v-model="currentPropObj.ignoreDetection"
               :disabled="!editable"
               label="Ignorer la détection de type"
               persistent-hint
@@ -97,29 +97,29 @@
           <v-col>
             <p>
               <span :class="labelClass">Clé normalisée :  </span><br>
-              {{ properties[currentProperty].key }}
+              {{ currentPropObj.key }}
             </p>
-            <p v-if="properties[currentProperty]['x-originalName']">
+            <p v-if="currentPropObj['x-originalName']">
               <span :class="labelClass">Clé dans le fichier d'origine : </span><br>
-              {{ properties[currentProperty]['x-originalName'] }}
+              {{ currentPropObj['x-originalName'] }}
             </p>
             <p>
               <span :class="labelClass">Type : </span><br>
-              {{ propTypeTitle(properties[currentProperty]) }}
-              <template v-if="properties[currentProperty].dateFormat">
-                ({{ properties[currentProperty].dateFormat }})
+              {{ propTypeTitle(currentPropObj) }}
+              <template v-if="currentFileProp && currentFileProp.dateFormat">
+                ({{ currentFileProp.dateFormat }})
               </template>
-              <template v-if="properties[currentProperty].dateTimeFormat">
-                ({{ properties[currentProperty].dateTimeFormat }})
+              <template v-if="currentFileProp && currentFileProp.dateTimeFormat">
+                ({{ currentFileProp.dateTimeFormat }})
               </template>
             </p>
-            <p v-if="properties[currentProperty]['x-cardinality']">
+            <p v-if="currentPropObj['x-cardinality']">
               <span :class="labelClass">Nombre de valeurs distinctes (approximative dans le cas de données volumineuses) : </span><br>
-              {{ properties[currentProperty]['x-cardinality'].toLocaleString() }}
+              {{ currentPropObj['x-cardinality'].toLocaleString() }}
             </p>
-            <p v-if="properties[currentProperty].enum">
+            <p v-if="currentPropObj.enum">
               <span :class="labelClass">Valeurs : </span><br>
-              {{ properties[currentProperty].enum.join(' - ') }}
+              {{ currentPropObj.enum.join(' - ') }}
             </p>
           </v-col>
         </v-row>
@@ -136,8 +136,6 @@
     data() {
       return {
         datasetSchema,
-        propertiesByKeys: {},
-        propertiesValidity: {},
         currentProperty: null,
       }
     },
@@ -148,12 +146,15 @@
       labelClass() {
         return `theme--${this.$vuetify.theme.dark ? 'dark' : 'light'} v-label`
       },
-    },
-    created() {
-      this.properties.forEach(p => {
-        this.$set(this.propertiesByKeys, p.key, p)
-        this.$set(this.propertiesValidity, p.key, true)
-      })
+      currentPropObj() {
+        return this.currentProperty !== null && this.properties[this.currentProperty]
+      },
+      currentFileProp() {
+        return this.dataset.file &&
+          this.dataset.file.schema &&
+          this.currentPropObj &&
+          this.dataset.file.schema.find(p => p.key === this.currentPropObj.key)
+      },
     },
     methods: {
       cardProps(prop, i, active) {
@@ -165,7 +166,7 @@
       },
       filterVocabulary(currentProperty, item) {
         if (item.header) return true
-        const prop = this.properties[currentProperty]
+        const prop = this.currentPropObj
         if (this.properties.find(f => (f['x-refersTo'] === item.value) && (f.key !== prop.key))) return false
         // accept different type if the concept's type is String
         // in this case we will ignore the detected type and apply string
