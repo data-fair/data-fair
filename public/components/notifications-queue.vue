@@ -56,7 +56,7 @@
   import { mapState } from 'vuex'
   import eventBus from '~/event-bus'
   import OwnerShort from '~/components/owners/short.vue'
-  const sound = new Audio(require('@/assets/sounds/Information_Block.ogg'))
+  const sound = new Audio(require('@/assets/sounds/when-604.ogg'))
 
   export default {
     components: { OwnerShort },
