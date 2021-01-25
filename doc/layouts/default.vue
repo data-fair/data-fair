@@ -69,7 +69,7 @@
     </v-app-bar> -->
 
     <v-main>
-      <v-speed-dial
+      <!--<v-speed-dial
         direction="bottom"
         transition="fade-transition"
         absolute
@@ -91,7 +91,7 @@
         >
           {{ locale.code }}
         </v-btn>
-      </v-speed-dial>
+      </v-speed-dial>-->
       <nuxt />
     </v-main>
 
