@@ -27,13 +27,24 @@
           <v-btn
             href="https://github.com/koumoul-dev/data-fair"
             rounded
-            class="ml-2 pl-3"
+            class="ml-2 pl-2"
             color="primary"
             style="text-transform: none;font-weight: bold;"
           >
             <v-icon>
               mdi-github
-            </v-icon>&nbsp;&nbsp;Github
+            </v-icon>&nbsp;&nbsp;GitHub
+          </v-btn>
+          <v-btn
+            href="https://twitter.com/data_fair"
+            icon
+            large
+            class="ml-2"
+            color="#1DA1F2"
+          >
+            <v-icon>
+              mdi-twitter
+            </v-icon>
           </v-btn>
         </div>
       </v-col>
