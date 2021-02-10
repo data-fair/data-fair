@@ -50,27 +50,26 @@ exports.prepareSchema = async (db, dataset) => {
       field = null
       return
     }
+
+    // we used to have null values, better to just have absent info
+    matchingFields.forEach(f => {
+      if (!f.format) delete f.format
+      if (!f['x-refersTo']) delete f['x-refersTo']
+      if (!f.separator) delete f.separator
+    })
+
     // we take the first child field as reference
     field.title = field.title || matchingFields[0].title
     field.description = field.description || matchingFields[0].description
     field.type = matchingFields[0].type
     if (matchingFields[0].format) field.format = matchingFields[0].format
-    else {
-      delete matchingFields[0].format
-      delete field.format
-    }
+    else delete field.format
     // ignore "uri-reference" format, it is not significant anymore
     if (field.format === 'uri-reference') delete field.format
     if (matchingFields[0]['x-refersTo']) field['x-refersTo'] = matchingFields[0]['x-refersTo']
-    else {
-      delete matchingFields[0]['x-refersTo']
-      delete field['x-refersTo']
-    }
+    else delete field['x-refersTo']
     if (matchingFields[0].separator) field.separator = matchingFields[0].separator
-    else {
-      delete matchingFields[0].separator
-      delete field.separator
-    }
+    else delete field.separator
 
     // Some attributes of a a fields have to be homogeneous accross all children
     matchingFields.forEach(f => {
