@@ -23,11 +23,6 @@ describe('Extensions', () => {
       assert.ok(err.data.startsWith('no such index'))
     }
 
-    // we store the failure on the dataset to quickly identify datasets with broken indices
-    // this is not ideal might be replaced by a leess intrusive monitoring solution
-    const { status } = (await ax.get(`/api/v1/datasets/${dataset.id}`)).data
-    assert.equal(status, 'error')
-
     // cache headers are not filled, we do not want to store errors
     try {
       await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { finalizedAt: dataset.finalizedAt } })
