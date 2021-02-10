@@ -362,9 +362,12 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
               'multipart/form-data': {
                 schema: {
                   ...datasetPatchSchema,
-                  file: {
-                    type: 'string',
-                    format: 'binary',
+                  properties: {
+                    ...datasetPatchSchema.properties,
+                    file: {
+                      type: 'string',
+                      format: 'binary',
+                    },
                   },
                 },
               },
