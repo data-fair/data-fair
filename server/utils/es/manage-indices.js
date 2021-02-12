@@ -1,9 +1,10 @@
 const crypto = require('crypto')
+const config = require('config')
 const datasetUtils = require('../dataset')
 const { aliasName, esProperty } = require('./commons')
 
 exports.indexDefinition = (dataset) => {
-  const body = JSON.parse(JSON.stringify(indexBase))
+  const body = JSON.parse(JSON.stringify(indexBase(dataset)))
   const properties = body.mappings.properties = {}
   datasetUtils.extendedSchema(dataset).forEach(jsProp => {
     const esProp = esProperty(jsProp)
@@ -53,26 +54,27 @@ exports.switchAlias = async (client, dataset, tempId) => {
   await client.indices.putAlias({ name, index: tempId })
 }
 
-const indexBase = {
-  // Minimal overhead by default as we might deal with a lot of small indices.
-  // TODO: a way to override this ? Maybe intelligently based on size of the file ?
-  settings: {
-    index: {
-      'mapping.total_fields.limit': 3000,
-      number_of_shards: 1,
-      number_of_replicas: 1,
-    },
-    analysis: {
-    normalizer: {
-      // sorting ignores case and diacritics variations
-      insensitive_normalizer: {
-        type: 'custom',
-        filter: ['lowercase', 'asciifolding'],
+const indexBase = (dataset) => {
+  const nbShards = dataset.file ? Math.max(1, Math.ceil(dataset.file.size / config.elasticsearch.maxShardSize)) : 1
+  return {
+    settings: {
+      index: {
+        'mapping.total_fields.limit': 3000,
+        number_of_shards: nbShards,
+        number_of_replicas: config.elasticsearch.nbReplicas,
+      },
+      analysis: {
+        normalizer: {
+          // sorting ignores case and diacritics variations
+          insensitive_normalizer: {
+            type: 'custom',
+            filter: ['lowercase', 'asciifolding'],
+          },
+        },
       },
     },
-  },
-  },
-  mappings: { },
+    mappings: { },
+  }
 }
 
 exports.datasetInfos = async (client, dataset) => {

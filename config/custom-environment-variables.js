@@ -29,6 +29,14 @@ module.exports = {
       __name: 'ES_MAX_BULK_CHARS',
       __format: 'json',
     },
+    maxShardSize: {
+      __name: 'ES_MAX_SHARD_SIZE',
+      __format: 'json',
+    },
+    nbReplicas: {
+      __name: 'ES_NB_REPLICAS',
+      __format: 'json',
+    },
   },
   defaultRemoteKey: {
     value: 'DEFAULT_REMOTE_KEY',

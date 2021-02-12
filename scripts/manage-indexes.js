@@ -23,18 +23,18 @@ async function main() {
     const aliases = getAliasRes[index.index] && getAliasRes[index.index].aliases && Object.keys(getAliasRes[index.index].aliases)
     const alias = aliases.find(alias => index.index.startsWith(alias))
     if (!alias) {
-      console.warn(`index ${index.index} does not have matching alias`)
+      console.warn(`index ${index.index} does not have matching alias`, index['store.size'])
       continue
     }
     const dataset = await db.collection('datasets').findOne({ id: alias.replace(`${config.indicesPrefix}-`, '') })
     if (!dataset) {
-      console.warn(`alias ${alias} does not have matching dataset in database`)
+      console.warn(`alias ${alias} does not have matching dataset in database`, index['store.size'])
       continue
     }
     const segments = (await es.cat.segments({ index: index.index, format: 'json' })).body
 
     // force merge is recommended on read-only indexes only, so rest datasets are excluded
-    if (segments.length > 1 && !dataset.isRest) {
+    if (segments.length > 2 && !dataset.isRest) {
       await es.indices.forcemerge({ index: index.index, max_num_segments: 1 })
       console.log(`merged segments for index ${index.index}, number of segments=${segments.length}`)
     }
