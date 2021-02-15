@@ -46,7 +46,7 @@ module.exports = {
     identities: 'SECRET_IDENTITIES',
     limits: 'SECRET_LIMITS',
     notifications: 'SECRET_NOTIFICATIONS',
-    masterData: 'SECRET_MASTER_DTA',
+    masterData: 'SECRET_MASTER_DATA',
   },
   globalWebhooks: {
     consumption: {
