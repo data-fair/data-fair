@@ -2,6 +2,7 @@ const owner = require('./owner')
 const eventBy = require('./event-by')
 const permissions = require('./permissions')
 const topic = require('./topic')
+const masterData = require('./master-data')
 const publicationSchema = JSON.parse(JSON.stringify(require('./publication')))
 publicationSchema.properties.addToDataset = {
   type: 'object',
@@ -337,6 +338,10 @@ module.exports = {
           },
         },
       },
+    },
+    masterData: {
+      type: 'array',
+      items: masterData.schema,
     },
     publications: {
       type: 'array',

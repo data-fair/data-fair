@@ -63,9 +63,10 @@ export default () => ({
         eventBus.$emit('notification', { error, msg: 'Erreur pendant la suppression de la configuration du service:' })
       }
     },
-    async refresh({ commit, getters, dispatch }) {
+    async refresh({ state, dispatch }) {
       try {
-        await this.$axios.$post(getters.resourceUrl + '/_update')
+        const apiDoc = await this.$axios.$get(state.remoteService.url)
+        await dispatch('patch', { apiDoc })
         eventBus.$emit('notification', 'La définition de l\'API a bien été mise à jour')
         dispatch('fetchInfo')
       } catch (error) {

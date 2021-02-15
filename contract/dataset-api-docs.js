@@ -717,6 +717,7 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
         get: {
           summary: 'Récupérer des informations techniques',
           tags: ['Administration'],
+          'x-permissionClass': 'superadmin',
           responses: {
             200: {
               description: 'Informations techniques de diagnostic',
@@ -731,6 +732,7 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
         post: {
           summary: 'Forcer la reindexation',
           tags: ['Administration'],
+          'x-permissionClass': 'superadmin',
           responses: {
             200: {
               description: 'accusé de réception de la demande reindexation',
@@ -745,6 +747,7 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
         post: {
           summary: 'Forcer la re-finalisation',
           tags: ['Administration'],
+          'x-permissionClass': 'superadmin',
           responses: {
             200: {
               description: 'accusé de réception de la demande re-finalisation',

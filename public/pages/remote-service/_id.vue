@@ -14,7 +14,7 @@
             </v-tab-item>
 
             <v-tab href="#tab-general-schema">
-              Schéma
+              Extensions supportées
             </v-tab>
             <v-tab-item value="tab-general-schema">
               <remote-service-schema />

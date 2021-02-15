@@ -10,11 +10,13 @@ module.exports = (remoteService) => {
     openapi: '3.1.0',
     info: Object.assign({}, remoteService.apiDoc.info, {
       title: `API du service distant : ${remoteService.title || remoteService.id}`,
+      description: remoteService.description,
     }),
     servers: [{
       url: `${config.publicUrl}/api/v1/remote-services/${remoteService.id}`,
     }],
     components: {
+      schemas: (remoteService.apiDoc.components && remoteService.apiDoc.components.schemas) || {},
       securitySchemes: {
         sdCookie: {
           type: 'apiKey',
@@ -135,8 +137,26 @@ module.exports = (remoteService) => {
       },
     },
   }
-  const apiPaths = Object.keys(remoteService.apiDoc.paths).map(path => ({ ['/proxy' + path]: remoteService.apiDoc.paths[path] }))
-  apiPaths.forEach(path => Object.values(path).forEach(operations => Object.values(operations).forEach(operation => { operation['x-permissionClass'] = 'use' })))
-  Object.assign(api.paths, ...apiPaths)
+  const apiPaths = Object.keys(remoteService.apiDoc.paths).reduce((a, path) => {
+    a['/proxy' + path] = JSON.parse(JSON.stringify(remoteService.apiDoc.paths[path]))
+    return a
+  }, {})
+  for (const apiPath in apiPaths) {
+    for (const operation in apiPaths[apiPath]) {
+      const permissionClass = apiPaths[apiPath][operation]['x-permissionClass']
+      const tags = apiPaths[apiPath][operation].tags
+      // exclude some operations (mostly useful in case of a dataset exposed as a remote service)
+      if (tags && tags.includes('Administration')) {
+        delete apiPaths[apiPath][operation]
+      } else if (permissionClass && ['superadmin', 'admin', 'write'].includes(permissionClass)) {
+        delete apiPaths[apiPath][operation]
+      } else {
+        apiPaths[apiPath][operation]['x-permissionClass'] = 'use'
+      }
+    }
+    if (Object.keys(apiPaths[apiPath]).length) {
+      api.paths[apiPath] = apiPaths[apiPath]
+    }
+  }
   return api
 }
