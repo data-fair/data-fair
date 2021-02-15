@@ -199,12 +199,14 @@
         return extensions
       },
       selectFields() {
-        const res = {}
-        this.localExtensions.forEach(extension => {
+        const res = {};
+        (this.localExtensions || []).forEach(extension => {
           const fields = this.remoteServicesMap[extension.remoteService].actions[extension.action].output
             .map(field => { field['x-tags'] = field['x-tags'] || []; return field })
             .filter(f => !f.concept || f.concept !== 'http://schema.org/identifier')
             .filter(f => f.name !== 'error')
+            .filter(f => f.name !== '_error')
+            .filter(f => !f['x-calculated'])
             .sort((a, b) => (a.title || a.name).localeCompare(b.title || b.name))
           const tags = [...new Set([].concat(...fields.map(f => f['x-tags'])))].sort()
           const fieldsAndTags = []

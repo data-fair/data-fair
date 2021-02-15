@@ -21,17 +21,16 @@ exports.endpoints = (dataset) => {
 
   const datasetLineSchema = {
     type: 'object',
-    properties: dataset.schema.reduce((a, f) => { a[f.key] = { ...f }; delete a[f.key].key; return a }, {}),
+    properties: dataset.schema.reduce((a, f) => { a[f.key] = { ...f, title: f.title || f['x-originalName'] || f.key }; delete a[f.key].key; return a }, {}),
   }
   datasetLineSchema.properties._key = {
-    description: 'Identifiant de la ligne de requête',
+    title: 'Identifiant de la ligne de requête',
     type: 'string',
     'x-refersTo': 'http://schema.org/identifier',
   }
   datasetLineSchema.properties._error = {
     type: 'string',
     title: 'Erreur de récupération de données de référence',
-    description: 'Une erreur lors de la récupération des informations',
   }
 
   const properties = dataset.schema.map(p => p.key)
@@ -66,7 +65,7 @@ exports.endpoints = (dataset) => {
         ],
         summary: masterData.title,
         description: masterData.description || '',
-        operationId: `masterData_${masterData._id}_bulkSearch`,
+        operationId: `masterData_${masterData.id}_bulkSearch`,
         'x-operationType': 'http://schema.org/SearchAction',
         'x-permissionClass': 'read',
         parameters: [{
@@ -74,7 +73,7 @@ exports.endpoints = (dataset) => {
           name: 'select',
           description: 'La liste des champs à retourner',
           schema: {
-            default: ['*'],
+            default: [],
             type: 'array',
             items: {
               type: 'string',
