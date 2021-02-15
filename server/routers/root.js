@@ -6,7 +6,7 @@ const vocabulary = require('../../contract/vocabulary')
 const projections = require('../../contract/projections')
 
 const ajv = require('ajv')()
-const openApiSchema = require('../../contract/openapi-3.0.json')
+const openApiSchema = require('../../contract/openapi-3.1.json')
 const validateApi = ajv.compile(openApiSchema)
 const config = require('config')
 

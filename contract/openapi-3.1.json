@@ -1,5 +1,6 @@
 {
   "$ref": "#/definitions/API",
+  "description": "Manually patched version of openapi-v3.0 found [here](https://github.com/OAI/OpenAPI-Specification/tree/master/schemas), waiting for definitive version.",
   "definitions": {
     "API": {
       "type": "object",
@@ -11,7 +12,7 @@
       "properties": {
         "openapi": {
           "type": "string",
-          "pattern": "^3\\.0\\.\\d(-.+)?$"
+          "pattern": "^3\\.(0|1)\\.\\d(-.+)?$"
         },
         "info": {
           "$ref": "#/definitions/Info"
@@ -395,15 +396,19 @@
           "minItems": 1
         },
         "type": {
-          "type": "string",
-          "enum": [
-            "array",
-            "boolean",
-            "integer",
-            "number",
-            "object",
-            "string"
-          ]
+          "oneOf": [{
+            "type": "string",
+            "enum": [
+              "array",
+              "boolean",
+              "integer",
+              "number",
+              "object",
+              "string"
+            ]
+          }, {
+            "type": "array"
+          }]
         },
         "not": {
           "oneOf": [{
@@ -491,10 +496,6 @@
           "type": "string"
         },
         "default": {},
-        "nullable": {
-          "type": "boolean",
-          "default": false
-        },
         "discriminator": {
           "$ref": "#/definitions/Discriminator"
         },

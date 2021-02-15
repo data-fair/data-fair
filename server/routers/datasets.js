@@ -35,7 +35,7 @@ const outputs = require('../utils/outputs')
 const datasetPatchSchema = require('../../contract/dataset-patch')
 const validatePatch = ajv.compile(datasetPatchSchema)
 const datasetPostSchema = require('../../contract/dataset-post')
-const validatePost = ajv.compile(datasetPostSchema)
+const validatePost = ajv.compile(datasetPostSchema.properties.body)
 const debugFiles = require('debug')('files')
 const router = express.Router()
 

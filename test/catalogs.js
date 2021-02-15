@@ -62,7 +62,7 @@ describe('Catalogs', () => {
     assert.equal(res.data.count, 1)
     res = await ax.get('/api/v1/catalogs/' + eaId + '/api-docs.json')
     assert.equal(res.status, 200)
-    assert.equal(res.data.openapi, '3.0.0')
+    assert.equal(res.data.openapi, '3.1.0')
     /* res = await ax.get('/api/v1/catalogs/' + eaId)
     res = await ax.patch('/api/v1/catalogs/' + eaId, { title: 'Test catalog' })
     assert.equal(res.status, 200)

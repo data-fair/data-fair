@@ -1,14 +1,14 @@
 // TODO replace this schema with the official one when available
 // see https://github.com/OAI/OpenAPI-Specification/issues/1032
 // apiDoc: require('swagger2openapi/schemas/openapi-3.0.json'),
-const apiDoc = require('./openapi-3.0.json')
+const apiDoc = require('./openapi-3.1.json')
 
 module.exports = {
   title: 'Remote service',
   description: 'A remote service must be described with the openAPI 3.0 specification. If the API is secured, there must be at least one api-key based security scheme available.',
   type: 'object',
   additionalProperties: false,
-  required: ['apiDoc'],
+  required: ['apiDoc', 'title'],
   properties: {
     id: {
       type: 'string',

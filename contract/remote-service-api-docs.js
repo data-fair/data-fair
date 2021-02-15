@@ -7,7 +7,7 @@ const permissionsDoc = require('../server/utils/permissions').apiDoc
 
 module.exports = (remoteService) => {
   const api = {
-    openapi: '3.0.0',
+    openapi: '3.1.0',
     info: Object.assign({}, remoteService.apiDoc.info, {
       title: `API du service distant : ${remoteService.title || remoteService.id}`,
     }),

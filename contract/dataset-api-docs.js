@@ -2,6 +2,7 @@ const config = require('config')
 const prettyBytes = require('pretty-bytes')
 const datasetSchema = require('./dataset')
 const datasetPatchSchema = require('./dataset-patch')
+const datasetPost = require('./dataset-post')
 const journalSchema = require('./journal')
 const version = require('../package.json').version
 const permissionsDoc = require('../server/utils/permissions').apiDoc
@@ -17,6 +18,10 @@ const anonymousApiRate = apiRate('anonymous', 'anonyme')
 
 module.exports = (dataset) => {
   dataset.schema = dataset.schema || []
+  const datasetLineSchema = {
+    type: 'object',
+    properties: dataset.schema.reduce((a, f) => { a[f.key] = { ...f }; delete a[f.key].key; return a }, {}),
+  }
   const properties = dataset.schema.map(p => p.key)
   const textProperties = dataset.schema.filter(p => p.type === 'string').map(p => p.key)
   const uriRefProperties = dataset.schema.filter(p => !p['x-calculated'] && p.type === 'string' && p.format === 'uri-reference')
@@ -31,7 +36,6 @@ module.exports = (dataset) => {
 
   Pour plus d'information voir la documentation [ElasticSearch](https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-simple-query-string-query.html) correspondante.
     `,
-    required: false,
     schema: {
       type: 'string',
     },
@@ -45,7 +49,6 @@ module.exports = (dataset) => {
 
   Le mode "complete" permet d'enrichir automatiquement la requête soumise par l'utilisateur pour un résultat intuitif dans le contexte d'un champ de type autocomplete. Attention ce mode est potentiellement moins performant et à limiter à des jeux de données au volume raisonnable.
     `,
-    required: false,
     schema: {
       type: 'string',
       default: 'simple',
@@ -61,7 +64,6 @@ Exemple: ma_colonne:"du texte" AND ma_colonne2:valeur
 
 Pour plus d'information voir la documentation [ElasticSearch](https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-query-string-query.html) correspondante.
   `,
-    required: false,
     schema: {
       type: 'string',
     },
@@ -69,7 +71,6 @@ Pour plus d'information voir la documentation [ElasticSearch](https://www.elasti
     in: 'query',
     name: 'bbox',
     description: "Un filtre pour restreindre les résultats à une zone géographique. Le format est 'gauche,bas,droite,haut' autrement dit 'lonMin,latMin,lonMax,latMax'.",
-    required: false,
     schema: {
       type: 'array',
       items: {
@@ -85,7 +86,6 @@ Un filtre pour restreindre les résultats à une zone géographique avec les par
 
 Le format est 'x,y,z'.
   `,
-    required: false,
     schema: {
       type: 'array',
       items: {
@@ -101,7 +101,6 @@ Le format est 'x,y,z'.
       description: `
 Un filtre pour restreindre les résultats en fonction d'une liste de valeurs acceptées sur la propriété ${prop.key}.
     `,
-      required: false,
       schema: {
         type: 'array',
         items: {
@@ -122,10 +121,9 @@ Le tri à effectuer sous forme d'une liste de clés de champs séparées par des
 Par défaut le tri est ascendant, si un nom de champ est préfixé par un "-" alors le tri sera descendant.
 
 Exemple: ma_colonne,-ma_colonne2`,
-    required: false,
-    default: [],
     schema: {
       type: 'array',
+      default: [],
       items: {
         type: 'string',
         enum: properties,
@@ -136,17 +134,15 @@ Exemple: ma_colonne,-ma_colonne2`,
     in: 'query',
     name: 'size',
     description: 'Le nombre de résultats à retourner (taille de la pagination). 20 par défaut.',
-    required: false,
     schema: {
       default: 20,
       type: 'integer',
-      max: 10000,
+      maximum: 10000,
     },
   }, {
     in: 'query',
     name: 'select',
     description: 'La liste des champs à retourner',
-    required: false,
     schema: {
       default: ['*'],
       type: 'array',
@@ -166,6 +162,9 @@ Pour que ce paramètre soit accepté le concept "Image" doit être associé à u
 
 La valeur du paramètre est la dimension passée sous la form largeurxhauteur (300x200 par exemple) où un 0 sur la largeur ou la hauteur signifie que l'autre valeur est prise en compte et les proportions conservées.
     `,
+    schema: {
+      type: 'string',
+    },
   }, {
     in: 'query',
     name: 'highlight',
@@ -174,7 +173,6 @@ Demande à retourner des extraits du document qui contiennent les mots utilisés
 
 La valeur est une liste de champs séparés par des virgules.
     `,
-    required: false,
     schema: {
       type: 'array',
       items: {
@@ -192,20 +190,21 @@ La valeur est une liste de champs séparés par des virgules.
   - **neighbors** (défaut) : utilise la densité maximale parmi les tuiles voisines pour réduire la densité de la tuile courante au même niveau d'échantillonage (couteux en performance).
   - **max** : retourne le maximum (limité par le paramètre size) de résultat pour chaque tuile.
     `,
-    required: false,
-    enum: ['neighbors', 'max'],
-    default: 'neighbors',
+    schema: {
+      type: 'string',
+      enum: ['neighbors', 'max'],
+      default: 'neighbors',
+    },
   }]
 
   const aggSizeParam = {
     in: 'query',
     name: 'agg_size',
     description: 'Le nombre de buckets pour l\'agrégation (défaut 20)',
-    required: false,
     schema: {
       default: 20,
       type: 'integer',
-      max: 10000,
+      maximum: 10000,
     },
   }
 
@@ -213,7 +212,6 @@ La valeur est une liste de champs séparés par des virgules.
     in: 'query',
     name: 'metric',
     description: 'La métrique à appliquer',
-    required: false,
     schema: {
       type: 'string',
       enum: ['avg', 'sum', 'min', 'max'],
@@ -224,18 +222,18 @@ La valeur est une liste de champs séparés par des virgules.
     in: 'query',
     name: 'metric_field',
     description: 'Le champ sur lequel effectuer la calcul de métrique',
-    required: false,
     schema: {
       type: 'string',
-      enum: numberProperties,
     },
+  }
+  if (numberProperties.length) {
+    metricFieldParam.schema.enum = numberProperties
   }
 
   const formatParam = {
     in: 'query',
     name: 'format',
     description: 'Le format de la donnée. json par défaut, geojson et pbf pour tuiles vectorielles.',
-    required: false,
     schema: {
       default: 'json',
       enum: ['json'].concat(dataset.bbox && dataset.bbox.length === 4 ? ['pbf', 'geojson'] : []),
@@ -282,21 +280,22 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
     description += `
 Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous pouvez créer dans les paramètres d'un compte possédant les permissions nécessaires aux opérations que vous souhaitez effectuer.
 `
-} else {
-  // no need to present complex security schemes if the data is public anyway
-  securitySchemes = {}
-  security = []
-  description += `
-  - ${anonymousApiRate}
-  `
-}
+  } else {
+    // no need to present complex security schemes if the data is public anyway
+    securitySchemes = {}
+    security = []
+    description += `
+    - ${anonymousApiRate}
+    `
+  }
 
   const api = {
-    openapi: '3.0.0',
+    openapi: '3.1.0',
     info: {
       title: `API du jeu de données : ${dataset.title || dataset.id}`,
       description,
       version,
+      'x-api-id': `${new URL(config.publicUrl).hostname.replace(/\./g, '-')}-dataset-${dataset.id}`,
       ...config.info,
     },
     components: {
@@ -360,16 +359,7 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
             required: true,
             content: {
               'multipart/form-data': {
-                schema: {
-                  ...datasetPatchSchema,
-                  properties: {
-                    ...datasetPatchSchema.properties,
-                    file: {
-                      type: 'string',
-                      format: 'binary',
-                    },
-                  },
-                },
+                schema: datasetPost,
               },
             },
           },
@@ -389,7 +379,11 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
           operationId: 'delete',
           'x-permissionClass': 'admin',
           tags: ['Métadonnées'],
-          responses: {},
+          responses: {
+            204: {
+              description: 'Suppression effectuée',
+            },
+          },
         },
       },
       '/data-files': {
@@ -450,7 +444,6 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
             in: 'query',
             name: 'page',
             description: 'Le numéro de la page (indice de la pagination). Débute à 1.',
-            required: false,
             schema: {
               default: 1,
               type: 'integer',
@@ -471,10 +464,7 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
                       results: {
                         type: 'array',
                         description: 'Le tableau de résultats.',
-                        items: {
-                          type: 'object',
-                          properties: dataset.schema,
-                        },
+                        items: datasetLineSchema,
                       },
                     },
                   },
@@ -494,7 +484,6 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
             in: 'query',
             name: 'field',
             description: 'Le champ en fonction des valeurs duquel grouper les lignes du jeu de données',
-            required: true,
             schema: {
               type: 'string',
               enum: properties,
@@ -522,7 +511,7 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
           'x-permissionClass': 'read',
           tags: ['Données'],
           parameters: [{
-            in: 'url',
+            in: 'path',
             name: 'field',
             description: 'Le champ duquel lister les valeurs',
             required: true,
@@ -702,7 +691,6 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
               in: 'query',
               name: 'enum',
               description: 'Restreindre aux champs ayant une énumération de valeurs (moins de 50 valeurs distinctes)',
-              required: false,
               schema: {
                 type: 'boolean',
               },
@@ -731,6 +719,7 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
           tags: ['Administration'],
           responses: {
             200: {
+              description: 'Informations techniques de diagnostic',
               content: {
                 'application/json': {},
               },
@@ -742,12 +731,28 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
         post: {
           summary: 'Forcer la reindexation',
           tags: ['Administration'],
+          responses: {
+            200: {
+              description: 'accusé de réception de la demande reindexation',
+              content: {
+                'application/json': {},
+              },
+            },
+          },
         },
       },
       '/_refinalize': {
         post: {
           summary: 'Forcer la re-finalisation',
           tags: ['Administration'],
+          responses: {
+            200: {
+              description: 'accusé de réception de la demande re-finalisation',
+              content: {
+                'application/json': {},
+              },
+            },
+          },
         },
       },
       '/permissions': permissionsDoc,

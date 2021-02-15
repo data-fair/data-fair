@@ -4,7 +4,7 @@ const permissionsDoc = require('../server/utils/permissions').apiDoc
 
 module.exports = (catalog) => {
   const api = {
-    openapi: '3.0.0',
+    openapi: '3.1.0',
     info: {
       title: `Intégration du catalogue : ${catalog.url}`,
     },

@@ -3,11 +3,7 @@ const status = require('./status')
 const version = require('../package.json').version
 const dataset = require('./dataset')
 const datasetPatch = require('./dataset-patch')
-const datasetPost = JSON.parse(JSON.stringify(require('./dataset-post')))
-datasetPost.file = {
-  type: 'string',
-  format: 'binary',
-}
+const datasetPost = require('./dataset-post')
 const remoteService = { ...require('./remote-service') }
 delete remoteService.definitions
 const remoteServicePatch = { ...require('./remote-service-patch') }
@@ -19,7 +15,7 @@ const applicationPatch = require('./application-patch')
 const utils = require('./utils')
 
 module.exports = {
-  openapi: '3.0.0',
+  openapi: '3.1.0',
   info: Object.assign({
     title: 'API principale',
     description: `

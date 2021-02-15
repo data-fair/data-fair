@@ -3,8 +3,8 @@
 const dataset = require('./dataset')
 const datasetPatch = require('./dataset-patch')
 const postKeys = ['isVirtual', 'isRest', 'owner']
-module.exports = {
-  title: 'Dataset post',
+const body = {
+  title: 'Dataset JSON body',
   type: 'object',
   additionalProperties: false,
   properties: {
@@ -12,5 +12,22 @@ module.exports = {
   },
 }
 postKeys.forEach(k => {
-  module.exports.properties[k] = dataset.properties[k]
+  body.properties[k] = dataset.properties[k]
 })
+
+module.exports = {
+  title: 'Dataset post',
+  type: 'object',
+  additionalProperties: false,
+  properties: {
+    body,
+    file: {
+      type: 'string',
+      format: 'binary',
+    },
+    attachments: {
+      type: 'string',
+      format: 'binary',
+    },
+  },
+}

@@ -6,7 +6,7 @@ const permissionsDoc = require('../server/utils/permissions').apiDoc
 
 module.exports = (application) => {
   const api = {
-    openapi: '3.0.0',
+    openapi: '3.1.0',
     info: Object.assign({
       title: `Intégration de l'application : ${application.title || application.id}`,
       version: version,

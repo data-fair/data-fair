@@ -21,7 +21,7 @@ describe('remote-services', () => {
     assert.equal(res.data.count, 3)
     res = await ax.get('/api/v1/remote-services/' + eaId + '/api-docs.json')
     assert.equal(res.status, 200)
-    assert.equal(res.data.openapi, '3.0.0')
+    assert.equal(res.data.openapi, '3.1.0')
     res = await ax.get('/api/v1/remote-services/' + eaId)
     assert.equal(res.data.apiDoc.info['x-api-id'], 'geocoder2')
     res = await ax.patch('/api/v1/remote-services/' + eaId, { title: 'Test external api' })

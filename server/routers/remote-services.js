@@ -14,7 +14,7 @@ const ajv = require('ajv')()
 const validate = ajv.compile(require('../../contract/remote-service'))
 const servicePatch = require('../../contract/remote-service-patch')
 const validatePatch = ajv.compile(servicePatch)
-const openApiSchema = require('../../contract/openapi-3.0.json')
+const openApiSchema = require('../../contract/openapi-3.1.json')
 openApiSchema.$id = openApiSchema.$id + '-2' // dirty hack to handle ajv error
 const validateOpenApi = ajv.compile(openApiSchema)
 
