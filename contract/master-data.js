@@ -1,15 +1,16 @@
 exports.schema = {
-  type: 'obect',
+  type: 'object',
   required: ['id', 'title'],
   properties: {
-    id: { type: 'string' },
-    title: { type: 'string' },
-    description: { type: 'string' },
+    id: { type: 'string', title: 'Identifiant' },
+    title: { type: 'string', title: 'Titre' },
+    description: { type: 'string', title: 'Description', 'x-display': 'textarea' },
     input: {
       type: 'array',
-      items: {
-        type: 'string',
-      },
+      title: 'Champs pivots',
+      minItems: 1,
+      'x-options': { editMode: 'inline' },
+      items: { type: 'string', title: 'Clé' },
     },
   },
 }
@@ -22,12 +23,12 @@ exports.endpoints = (dataset) => {
     type: 'object',
     properties: dataset.schema.reduce((a, f) => { a[f.key] = { ...f }; delete a[f.key].key; return a }, {}),
   }
-  datasetLineSchema._key = {
+  datasetLineSchema.properties._key = {
     description: 'Identifiant de la ligne de requête',
     type: 'string',
     'x-refersTo': 'http://schema.org/identifier',
   }
-  datasetLineSchema._error = {
+  datasetLineSchema.properties._error = {
     type: 'string',
     title: 'Erreur de récupération de données de référence',
     description: 'Une erreur lors de la récupération des informations',
@@ -39,12 +40,17 @@ exports.endpoints = (dataset) => {
     const inputProperties = {}
     for (const input of masterData.input) {
       const prop = dataset.schema.find(p => p.key === input)
-      if (!prop) throw new Error(`Définition de données de référence invalide, la colonne ${input} n'existe pas`)
-      inputProperties[input] = {
-        title: prop.title,
-        description: prop.description,
-        type: prop.type,
-        'x-refersTo': prop['x-refersTo'],
+      if (!prop) {
+        inputProperties[input] = {
+          title: `Définition de données de référence invalide, la colonne ${input} n'existe pas`,
+        }
+      } else {
+        inputProperties[input] = {
+          title: prop.title,
+          description: prop.description,
+          type: prop.type,
+          'x-refersTo': prop['x-refersTo'],
+        }
       }
     }
     inputProperties._key = {
@@ -53,15 +59,16 @@ exports.endpoints = (dataset) => {
       'x-refersTo': 'http://schema.org/identifier',
     }
 
-    endpoints['masterData/{id}/lines'] = {
+    endpoints[`/masterData/${masterData.id}/_bulk_search`] = {
       post: {
         tags: [
           'Données de référence',
         ],
         summary: masterData.title,
         description: masterData.description || '',
-        operationId: `masterData_${masterData._id}_lines`,
+        operationId: `masterData_${masterData._id}_bulkSearch`,
         'x-operationType': 'http://schema.org/SearchAction',
+        'x-permissionClass': 'read',
         parameters: [{
           in: 'query',
           name: 'select',
@@ -102,14 +109,16 @@ exports.endpoints = (dataset) => {
         responses: {
           200: {
             description: 'Réponse en cas de succès de la requête',
-            'application/json': {
-              schema: {
-                type: 'array',
-                items: datasetLineSchema,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'array',
+                  items: datasetLineSchema,
+                },
               },
-            },
-            'application/xnd-json': {
-              schema: datasetLineSchema,
+              'application/xnd-json': {
+                schema: datasetLineSchema,
+              },
             },
           },
           400: {
@@ -126,4 +135,5 @@ exports.endpoints = (dataset) => {
       },
     }
   }
+  return endpoints
 }

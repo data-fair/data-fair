@@ -1,5 +1,5 @@
 <template>
-  <div class="actions-buttons">
+  <div v-if="dataset" class="actions-buttons">
     <v-menu bottom left>
       <template v-slot:activator="{on}">
         <v-btn

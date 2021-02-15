@@ -572,6 +572,11 @@ router.post('/:datasetId/_bulk_lines', readDataset(['finalized', 'updated', 'ind
 router.delete('/:datasetId/lines/:lineId', readDataset(['finalized', 'updated', 'indexed']), isRest, permissions.middleware('deleteLine', 'write'), asyncWrap(restDatasetsUtils.deleteLine))
 router.get('/:datasetId/lines/:lineId/revisions', readDataset(['finalized', 'updated', 'indexed']), isRest, permissions.middleware('readLineRevisions', 'read'), asyncWrap(restDatasetsUtils.readLineRevisions))
 
+// Specifc routes for datasets with masterData functionalities enabled
+router.post('/:datasetId/masterData/:masterDataId/_bulk_search', readDataset(), permissions.middleware('readLines', 'read'), asyncWrap(async(req, res) => {
+  res.send('TODO')
+}))
+
 // Error from ES backend should be stored in the journal
 async function manageESError(req, err) {
   const errBody = (err.body && err.body.error) || (err.meta && err.meta.body && err.meta.body.error)

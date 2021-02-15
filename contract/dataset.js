@@ -341,6 +341,7 @@ module.exports = {
     },
     masterData: {
       type: 'array',
+      title: 'Données de référence',
       items: masterData.schema,
     },
     publications: {

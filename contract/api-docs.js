@@ -317,6 +317,13 @@ Pour des exemples simples de publication de données vous pouvez consulter la [d
         },
       },
     },
+    '/datasets/{id}/msterData/{masterDataId}/_bulk_search': {
+      post: {
+        tags: ['Données de référence'],
+        summary: 'Accès dédié aux données de référence pour extensions de données',
+        operationId: 'masterData_bulkSearch',
+      },
+    },
     '/applications': {
       get: {
         summary: 'Récupérer la liste des applications.',

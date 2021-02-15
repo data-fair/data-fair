@@ -65,6 +65,19 @@
                 <doc-link tooltip="Consultez la documentation sur les pièces jointes des jeux de données" doc-key="datasetAttachments" />
                 <dataset-attachments />
               </v-tab-item>
+
+              <v-tab
+                v-if="user.adminMode"
+                href="#tab-general-masterdata"
+                class="admin--text"
+              >
+                <v-icon color="admin">
+                  mdi-star-four-points
+                </v-icon>&nbsp;&nbsp;Données de référence
+              </v-tab>
+              <v-tab-item value="tab-general-masterdata">
+                <dataset-master-data />
+              </v-tab-item>
             </v-tabs>
           </v-card>
 
@@ -241,6 +254,7 @@
   import DatasetStatus from '~/components/datasets/status.vue'
   import DatasetApplications from '~/components/datasets/applications.vue'
   import DatasetExternalReuses from '~/components/datasets/external-reuses.vue'
+  import DatasetMasterData from '~/components/datasets/master-data.vue'
   import Permissions from '~/components/permissions.vue'
   import Journal from '~/components/journal.vue'
   import OpenApi from '~/components/open-api.vue'
@@ -263,11 +277,12 @@
       DatasetStatus,
       DatasetApplications,
       DatasetExternalReuses,
+      DatasetMasterData,
       Permissions,
       Journal,
       OpenApi,
     },
-    async fetch({ store, params, route }) {
+    async fetch({ store, route }) {
       store.dispatch('dataset/clear')
       await Promise.all([
         store.dispatch('dataset/setId', route.params.id),
@@ -279,6 +294,7 @@
       ...mapState(['env']),
       ...mapState('dataset', ['dataset', 'api', 'journal', 'error']),
       ...mapGetters('dataset', ['resourceUrl', 'can', 'hasPublicApplications']),
+      ...mapState('session', ['user']),
       ...mapGetters('session', ['activeAccount']),
       fileProperty() {
         return this.dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')

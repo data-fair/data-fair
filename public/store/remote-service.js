@@ -66,7 +66,7 @@ export default () => ({
     async refresh({ state, dispatch }) {
       try {
         const apiDoc = await this.$axios.$get(state.remoteService.url)
-        await dispatch('patch', { apiDoc })
+        if (!await dispatch('patch', { apiDoc })) return
         eventBus.$emit('notification', 'La définition de l\'API a bien été mise à jour')
         dispatch('fetchInfo')
       } catch (error) {

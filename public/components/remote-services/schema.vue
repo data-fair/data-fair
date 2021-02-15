@@ -53,6 +53,9 @@
               {{ vocabulary[output.concept].title }}
             </v-chip>
           </template>
+          <v-chip v-if="nonSemOutputs(item.output)" style="margin:4px 4px;">
+            {{ nonSemOutputs(item.output) }} {{ nonSemOutputs(item.output) > 1 ? 'champs sans concepts' : 'champ sans concept' }}
+          </v-chip>
         </td>
       </tr>
     </template>
@@ -73,6 +76,11 @@
     computed: {
       ...mapState('remoteService', ['remoteService']),
       ...mapState(['vocabulary']),
+    },
+    methods: {
+      nonSemOutputs(output) {
+        return output.filter(output => !this.vocabulary[output.concept] && !output.name.startsWith('_')).length
+      },
     },
   }
 </script>

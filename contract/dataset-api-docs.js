@@ -7,6 +7,7 @@ const journalSchema = require('./journal')
 const version = require('../package.json').version
 const permissionsDoc = require('../server/utils/permissions').apiDoc
 const { visibility } = require('../server/utils/visibility')
+const masterData = require('./master-data')
 const utils = require('./utils')
 
 const apiRate = (key, label) => {
@@ -305,6 +306,7 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
     security,
     servers: [{
       url: `${config.publicUrl}/api/v1/datasets/${dataset.id}`,
+      description: `Instance DataFair - ${new URL(config.publicUrl).hostname}`,
     }],
     paths: {
       '/': {
@@ -759,6 +761,7 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
         },
       },
       '/permissions': permissionsDoc,
+      ...masterData.endpoints(dataset),
     },
     externalDocs: {
       description: 'Documentation sur Github',
