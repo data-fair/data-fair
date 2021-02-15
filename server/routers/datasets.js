@@ -574,6 +574,9 @@ router.get('/:datasetId/lines/:lineId/revisions', readDataset(['finalized', 'upd
 
 // Specifc routes for datasets with masterData functionalities enabled
 router.post('/:datasetId/masterData/:masterDataId/_bulk_search', readDataset(), permissions.middleware('readLines', 'read'), asyncWrap(async(req, res) => {
+  if (config.secretKeys.masterData && req.get('x-apiKey') !== config.secretKeys.masterData) {
+    return res.status(401).send('Les accès dédiés aux données de références sont protégés par un secret spécifique')
+  }
   res.send('TODO')
 }))
 

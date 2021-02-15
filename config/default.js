@@ -3,6 +3,7 @@ module.exports = {
   port: 8080,
   listenWhenReady: false,
   publicUrl: 'http://localhost:8080',
+  masterDataPublicUrl: null,
   wsPublicUrl: 'ws://localhost:8080',
   dataDir: '/data',
   sessionDomain: null,
@@ -145,6 +146,7 @@ module.exports = {
     identities: null,
     limits: null,
     notifications: null,
+    masterData: null,
   },
   // Configure outgoing http calls
   globalWebhooks: {
