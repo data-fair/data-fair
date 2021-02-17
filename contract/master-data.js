@@ -1,23 +1,66 @@
 exports.schema = {
   type: 'object',
-  required: ['id', 'title'],
+  title: 'Données de référence',
   properties: {
-    id: { type: 'string', title: 'Identifiant' },
-    title: { type: 'string', title: 'Titre' },
-    description: { type: 'string', title: 'Description', 'x-display': 'textarea' },
-    input: {
+    bulkSearchs: {
       type: 'array',
-      title: 'Champs pivots',
-      minItems: 1,
-      'x-options': { editMode: 'inline' },
-      items: { type: 'string', title: 'Clé' },
+      title: 'Recherches en masse',
+      'x-options': { editMode: 'dialog' },
+      items: {
+        type: 'object',
+        required: ['id', 'title'],
+        properties: {
+          id: { type: 'string', title: 'Identifiant' },
+          title: { type: 'string', title: 'Titre' },
+          description: { type: 'string', title: 'Description', 'x-display': 'textarea' },
+          input: {
+            type: 'array',
+            title: 'Filtres',
+            minItems: 1,
+            'x-options': { editMode: 'dialog' },
+            items: {
+              type: 'object',
+              required: ['type', 'property'],
+              oneOf: [{
+                title: 'Valeur exacte',
+                properties: {
+                  type: { type: 'string', const: 'equals', title: 'Type de filtre' },
+                  property: {
+                    type: 'object',
+                    title: 'Propriété comparée',
+                    'x-fromData': 'context.propertiesWithConcepts',
+                    'x-itemTitle': 'title',
+                    'x-itemKey': 'key',
+                  },
+                },
+              }, {
+                title: 'Date en entrée comprise dans l\'interval',
+                'x-if': 'context.hasDateIntervalConcepts',
+                properties: {
+                  type: { type: 'string', const: 'date-interval' },
+                  property: {
+                    type: 'object',
+                    title: 'Date à renseigner',
+                    properties: {
+                      'x-refersTo': { type: 'string', const: 'http://schema.org/Date' },
+                      key: { type: 'string', const: 'date' },
+                      type: { type: 'string', const: 'string' },
+                      format: { type: 'string', const: 'date-time' },
+                    },
+                  },
+                },
+              }],
+            },
+          },
+        },
+      },
     },
   },
 }
 
 exports.endpoints = (dataset) => {
   const endpoints = {}
-  if (!dataset.masterData) return endpoints
+  if (!dataset.masterData || !dataset.masterData.bulkSearchs) return endpoints
 
   const datasetLineSchema = {
     type: 'object',
@@ -35,22 +78,11 @@ exports.endpoints = (dataset) => {
 
   const properties = dataset.schema.map(p => p.key)
 
-  for (const masterData of dataset.masterData) {
+  for (const bulkSearch of dataset.masterData.bulkSearchs) {
     const inputProperties = {}
-    for (const input of masterData.input) {
-      const prop = dataset.schema.find(p => p.key === input)
-      if (!prop) {
-        inputProperties[input] = {
-          title: `Définition de données de référence invalide, la colonne ${input} n'existe pas`,
-        }
-      } else {
-        inputProperties[input] = {
-          title: prop.title,
-          description: prop.description,
-          type: prop.type,
-          'x-refersTo': prop['x-refersTo'],
-        }
-      }
+    for (const input of bulkSearch.input) {
+      inputProperties[input.property.key] = { ...input.property }
+      delete inputProperties[input.property.key].key
     }
     inputProperties._key = {
       description: 'Identifiant de la ligne de requête',
@@ -58,14 +90,14 @@ exports.endpoints = (dataset) => {
       'x-refersTo': 'http://schema.org/identifier',
     }
 
-    endpoints[`/masterData/${masterData.id}/_bulk_search`] = {
+    endpoints[`/master-data/bulk-searchs/${bulkSearch.id}`] = {
       post: {
         tags: [
-          'Données de référence',
+          'Recherche en masse de données de référence',
         ],
-        summary: masterData.title,
-        description: masterData.description || '',
-        operationId: `masterData_${masterData.id}_bulkSearch`,
+        summary: bulkSearch.title,
+        description: bulkSearch.description || '',
+        operationId: `masterData_bulkSearch_${bulkSearch.id}`,
         'x-operationType': 'http://schema.org/SearchAction',
         'x-permissionClass': 'read',
         parameters: [{

@@ -1,4 +1,4 @@
-const { Writable } = require('stream')
+const { Writable, Transform } = require('stream')
 const express = require('express')
 const ajv = require('ajv')()
 const util = require('util')
@@ -12,6 +12,7 @@ const config = require('config')
 const chardet = require('chardet')
 const slug = require('slugify')
 const sanitizeHtml = require('sanitize-html')
+const mimeTypeStream = require('mime-type-stream')
 const journals = require('../utils/journals')
 const esUtils = require('../utils/es')
 const filesUtils = require('../utils/files')
@@ -313,7 +314,7 @@ router.delete('/:datasetId', readDataset(), permissions.middleware('delete', 'ad
   res.sendStatus(204)
 }))
 
-const initNew = (req) => {
+const initNew = async (db, req) => {
   const dataset = { ...req.body }
   dataset.owner = usersUtils.owner(req)
   const date = moment().toISOString()
@@ -321,6 +322,9 @@ const initNew = (req) => {
   dataset.createdBy = dataset.updatedBy = { id: req.user.id, name: req.user.name }
   dataset.permissions = []
   dataset.schema = dataset.schema || []
+  if (dataset.extensions) {
+    dataset.schema = await extensions.prepareSchema(db, dataset.schema, dataset.extensions)
+  }
   return dataset
 }
 
@@ -400,7 +404,7 @@ router.post('', beforeUpload, checkStorage(true), filesUtils.uploadFile(validate
     if (datasetFile) {
       if (req.body.isVirtual) throw createError(400, 'Un jeu de données virtuel ne peut pas être initialisé avec un fichier')
       // TODO: do this in a worker instead ?
-      const datasetPromise = setFileInfo(db, datasetFile, attachmentsFile, initNew(req))
+      const datasetPromise = setFileInfo(db, datasetFile, attachmentsFile, await initNew(db, req))
       await Promise.race([datasetPromise, new Promise(resolve => setTimeout(resolve, 5000))])
       // send header at this point, if we are not finished processing files
       // asyncWrap keepalive option will keep request alive
@@ -421,7 +425,7 @@ router.post('', beforeUpload, checkStorage(true), filesUtils.uploadFile(validate
       if (!validatePost(req.body)) {
         throw createError(400, JSON.stringify(validatePost.errors))
       }
-      dataset = initNew(req)
+      dataset = await initNew(db, req)
       dataset.virtual = dataset.virtual || { children: [] }
       dataset.schema = await virtualDatasetsUtils.prepareSchema(db, dataset)
       dataset.status = 'indexed'
@@ -433,7 +437,7 @@ router.post('', beforeUpload, checkStorage(true), filesUtils.uploadFile(validate
       if (!validatePost(req.body)) {
         throw createError(400, JSON.stringify(validatePost.errors))
       }
-      dataset = initNew(req)
+      dataset = await initNew(db, req)
       dataset.rest = dataset.rest || {}
       dataset.schema = dataset.schema || []
       // create it with finalized status to prevent worker from acquiring it before collection is fully created
@@ -464,13 +468,14 @@ router.post('', beforeUpload, checkStorage(true), filesUtils.uploadFile(validate
 
 // PUT or POST with an id to create or update an existing dataset data
 const attemptInsert = asyncWrap(async(req, res, next) => {
+  const db = req.app.get('db')
   if (!req.user) return res.status(401).send()
 
-  const newDataset = initNew(req)
+  const newDataset = await initNew(db, req)
   newDataset.id = req.params.datasetId
 
   // Try insertion if the user is authorized, in case of conflict go on with the update scenario
-  if (permissions.canDoForOwner(newDataset.owner, 'datasets', 'post', req.user, req.app.get('db'))) {
+  if (permissions.canDoForOwner(newDataset.owner, 'datasets', 'post', req.user, db)) {
     try {
       await req.app.get('db').collection('datasets').insertOne(newDataset, true)
       req.isNewDataset = true
@@ -496,14 +501,19 @@ const updateDataset = asyncWrap(async(req, res) => {
     if (req.dataset.isRest && attachmentsFile) throw createError(400, 'Un jeu de données REST ne peut pas être créé avec des pièces jointes')
 
     let dataset = req.dataset
+    req.body.schema = req.body.schema || dataset.schema || []
+    if (req.body.extensions) {
+      req.body.schema = await extensions.prepareSchema(db, req.body.schema, req.body.extensions)
+    }
+
     if (datasetFile) {
       // send header at this point, then asyncWrap keepalive option will keep request alive while we process files
       // TODO: do this in a worker instead ?
       res.writeHeader(req.isNewDataset ? 201 : 200, { 'Content-Type': 'application/json' })
       res.write(' ')
 
-      dataset = await setFileInfo(db, datasetFile, attachmentsFile, req.dataset)
-      if (req.query.skipAnalysis === 'true') dataset.status = 'schematized'
+      dataset = await setFileInfo(db, datasetFile, attachmentsFile, { ...dataset, ...req.body })
+      if (req.query.skipAnalysis === 'true') req.body.status = 'schematized'
     } else if (dataset.isVirtual) {
       const { isVirtual, ...patch } = req.body
       if (!validatePatch(patch)) {
@@ -518,9 +528,8 @@ const updateDataset = asyncWrap(async(req, res) => {
         throw createError(400, validatePatch.errors)
       }
       req.body.rest = req.body.rest || {}
-      dataset.schema = dataset.schema || []
       if (req.isNewDataset) {
-        await restDatasetsUtils.initDataset(db, dataset)
+        await restDatasetsUtils.initDataset(db, { ...dataset, ...req.body })
         dataset.status = 'schematized'
       } else {
         try {
@@ -529,10 +538,10 @@ const updateDataset = asyncWrap(async(req, res) => {
           // so that we might optimize and reindex only when necessary
           await esUtils.updateDatasetMapping(req.app.get('es'), { id: req.dataset.id, schema: req.body.schema })
           // Back to indexed state if schema did not change in significant manner
-          patch.status = 'indexed'
+          req.body.status = 'indexed'
         } catch (err) {
           // generated ES mappings are not compatible, trigger full re-indexing
-          patch.status = 'schematized'
+          req.body.status = 'schematized'
         }
       }
     }
@@ -573,11 +582,67 @@ router.delete('/:datasetId/lines/:lineId', readDataset(['finalized', 'updated', 
 router.get('/:datasetId/lines/:lineId/revisions', readDataset(['finalized', 'updated', 'indexed']), isRest, permissions.middleware('readLineRevisions', 'read'), asyncWrap(restDatasetsUtils.readLineRevisions))
 
 // Specifc routes for datasets with masterData functionalities enabled
-router.post('/:datasetId/masterData/:masterDataId/_bulk_search', readDataset(), permissions.middleware('readLines', 'read'), asyncWrap(async(req, res) => {
-  if (config.secretKeys.masterData && req.get('x-apiKey') !== config.secretKeys.masterData) {
-    return res.status(401).send('Les accès dédiés aux données de références sont protégés par un secret spécifique')
+router.post('/:datasetId/master-data/bulk-searchs/:bulkSearchId', readDataset(), permissions.middleware('readLines', 'read'), asyncWrap(async(req, res) => {
+  if (config.secretKeys.masterData && req.get('x-md-apiKey') !== config.secretKeys.masterData) {
+    return res.status(403).send('L\'accès aux fonctionnalités "données de référence" est restreint.')
   }
-  res.send('TODO')
+  const bulkSearch = req.dataset.masterData && req.dataset.masterData.bulkSearchs && req.dataset.masterData.bulkSearchs.find(bs => bs.id === req.params.bulkSearchId)
+  if (!bulkSearch) return res.status(404).send(`Recherche en masse "${req.params.bulkSearchId}" inconnue`)
+
+  // this function will be called for each input line of the bulk search stream
+  const qsBuilder = (line) => {
+    return bulkSearch.input.map(input => {
+      if (input.type === 'equals') {
+        if ([null, undefined].includes(line[input.property.key])) {
+          throw createError(400, `la propriété en entrée ${input.property.key} est obligatoire`)
+        }
+        return `${input.property.key}:"${line[input.property.key]}"`
+      } else {
+        throw createError(400, `input type ${input.type} is not supported`)
+      }
+    }).map(f => `(${f})`).join(' AND ')
+  }
+  const ioStream = mimeTypeStream(req.get('Content-Type')) || mimeTypeStream('application/json')
+
+  let i = 0
+  await pump(
+    req,
+    ioStream.parser(),
+    new Transform({
+      async transform(line, encoding, callback) {
+        const current = i
+        try {
+          let esResponse
+          try {
+            esResponse = await esUtils.search(req.app.get('es'), req.dataset, {
+              select: req.query.select,
+              size: 1,
+              qs: qsBuilder(line),
+            })
+          } catch (err) {
+            await manageESError(req, err)
+          }
+          if (esResponse.hits.total.value > 1) {
+            throw new Error('La donnée de référence contient plus d\'une ligne correspondante.')
+          }
+          if (esResponse.hits.hits.length === 0) {
+            throw new Error('La donnée de référence ne contient pas de ligne correspondante.')
+          }
+          const responseLine = esResponse.hits.hits[0]._source
+          Object.keys(responseLine).forEach(k => {
+            if (k.startsWith('_')) delete responseLine[k]
+          })
+          callback(null, { ...responseLine, _key: line._key || current })
+        } catch (err) {
+          callback(null, { _key: line._key || current, _error: err.message })
+        }
+        i += 1
+      },
+      objectMode: true,
+    }),
+    ioStream.serializer(),
+    res,
+  )
 }))
 
 // Error from ES backend should be stored in the journal

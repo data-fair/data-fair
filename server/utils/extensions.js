@@ -89,6 +89,7 @@ exports.prepareSchema = async (db, schema, extensions) => {
     const selectFields = extension.select || []
     extensionsFields = extensionsFields.concat(action.output
       .filter(output => !!output)
+      .filter(output => output.name !== 'error' && output.name !== '_error')
       .filter(output => !output.concept || output.concept !== 'http://schema.org/identifier')
       .filter(output => selectFields.length === 0 || selectFields.includes(output.name))
       .map(output => {
@@ -105,12 +106,12 @@ exports.prepareSchema = async (db, schema, extensions) => {
           type: output.type || 'string',
         }
       }))
-    const errorField = action.output.find(o => o.name === 'error')
+    const errorField = action.output.find(o => o.name === '_error') || action.output.find(o => o.name === 'error')
 
     extensionsFields.push({
-      key: extensionKey + '.error',
+      key: extensionKey + '.' + (errorField ? errorField.name : 'error'),
       type: 'string',
-      'x-originalName': 'error',
+      'x-originalName': (errorField ? errorField.name : 'error'),
       'x-extension': extensionId,
       title: (errorField && errorField.title) || 'Erreur d\'enrichissement',
       description: (errorField && errorField.description) || 'Une erreur lors de la récupération des informations depuis un service distant',
@@ -257,6 +258,7 @@ class RemoteExtensionStream extends Transform {
     this.stats = options.stats
     this.extensionKey = options.extensionKey
     this.selectFields = options.extension.select || []
+    this.errorKey = options.action.output.find(o => o.name === '_error') ? '_error' : 'error'
     this.buffer = []
 
     // The field in the output that contains the line identifier of the bulk request
@@ -350,13 +352,12 @@ class RemoteExtensionStream extends Transform {
               throw new Error('Contenu invalide - ' + chunk)
             }
             if (_this.stats) _this.stats.count += 1
-
             const selectedItem = Object.keys(item)
-              .filter(itemKey => _this.selectFields.length === 0 || _this.selectFields.includes(itemKey) || itemKey === 'error')
+              .filter(itemKey => _this.selectFields.length === 0 || _this.selectFields.includes(itemKey) || itemKey === _this.errorKey)
               .reduce((a, itemKey) => { a[itemKey] = item[itemKey]; return a }, {})
 
             // override potential previous error
-            if (!selectedItem.error) selectedItem.error = ''
+            if (!selectedItem[_this.errorKey]) selectedItem[_this.errorKey] = ''
 
             const mappedItem = { doc: { [_this.extensionKey]: selectedItem } }
             mappedItem.id = item[_this.idOutput.name]

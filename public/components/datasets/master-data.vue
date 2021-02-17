@@ -5,8 +5,13 @@
         v-if="editMasterData"
         v-model="editMasterData"
         :schema="schema"
+        :options="{context}"
       />
-      <v-btn @click="validate">
+      <v-btn
+        color="primary"
+        class="mt-4"
+        @click="validate"
+      >
         Enregistrer
       </v-btn>
     </v-form>
@@ -29,24 +34,30 @@
     computed: {
       ...mapState('dataset', ['dataset']),
       schema() {
-        const schema = JSON.parse(JSON.stringify(datasetSchema.properties.masterData))
-        schema.items.properties.input.items.enum = this.dataset.schema.filter(p => p['x-refersTo']).map(p => p.key)
-        return schema
+        return JSON.parse(JSON.stringify(datasetSchema.properties.masterData))
+      },
+      context() {
+        return {
+          propertiesWithConcepts: this.dataset.schema
+            .filter(p => p['x-refersTo'])
+            .map(p => ({ key: p.key, title: p.title || p['x-originalName'] || p.key })),
+          hasDateIntervalConcepts: !!(this.dataset.schema.find(p => p['x-refersTo'] === 'https://schema.org/startDate') && this.dataset.schema.find(p => p['x-refersTo'] === 'https://schema.org/endDate')),
+        }
       },
     },
     watch: {
       'dataset.masterData': {
         handler() {
-          this.editMasterData = JSON.parse(JSON.stringify(this.dataset.masterData || []))
+          this.editMasterData = JSON.parse(JSON.stringify(this.dataset.masterData || {}))
         },
         immediate: true,
       },
     },
     methods: {
-      ...mapActions('dataset', ['patch']),
+      ...mapActions('dataset', ['patchAndCommit']),
       validate() {
         const valid = this.$refs.form.validate()
-        if (valid) this.patch({ masterData: this.editMasterData })
+        if (valid) this.patchAndCommit({ masterData: this.editMasterData })
       },
     },
   }

@@ -517,7 +517,8 @@
         },
         "xml": {
           "$ref": "#/definitions/XML"
-        }
+        },
+        "const": {}
       },
       "patternProperties": {
         "^x-": {}

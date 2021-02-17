@@ -339,11 +339,7 @@ module.exports = {
         },
       },
     },
-    masterData: {
-      type: 'array',
-      title: 'Données de référence',
-      items: masterData.schema,
-    },
+    masterData: masterData.schema,
     publications: {
       type: 'array',
       description: 'References to all the catalogs the dataset metadata is published too',

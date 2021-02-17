@@ -294,7 +294,7 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
     url: `${config.publicUrl}/api/v1/datasets/${dataset.id}`,
     description: `Instance DataFair - ${new URL(config.publicUrl).hostname}`,
   }]
-  if (dataset.masterData && dataset.masterData.length && config.masterDataPublicUrl && config.masterDataPublicUrl !== config.publicUrl) {
+  if (dataset.masterData && dataset.masterData.bulkSearchs && dataset.masterData.bulkSearchs.length && config.masterDataPublicUrl && config.masterDataPublicUrl !== config.publicUrl) {
     servers.push({
       url: `${config.masterDataPublicUrl}/api/v1/datasets/${dataset.id}`,
       description: `Accès DataFair MasterData - ${new URL(config.masterDataPublicUrl).hostname}`,
