@@ -53,7 +53,11 @@ exports.escapeKey = (key) => {
 }
 
 function checkAll(values, check, param, throwIfAlmost) {
-  const definedValues = [...values].map(v => v.trim()).filter(v => !!v)
+  const definedValues = [...values]
+    .filter(v => !!v)
+    .map(v => v.trim())
+    .filter(v => !!v)
+
   if (!definedValues.length) return false
   const invalidValues = []
   const validValues = []
