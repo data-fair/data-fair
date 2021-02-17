@@ -317,7 +317,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la [d
         },
       },
     },
-    '/datasets/{id}/msterData/{masterDataId}/_bulk_search': {
+    '/datasets/{id}/master-data/bulk-searchs/{bulkSearchId}': {
       post: {
         tags: ['Données de référence'],
         summary: 'Accès dédié aux données de référence pour extensions de données',
