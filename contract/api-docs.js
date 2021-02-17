@@ -14,6 +14,17 @@ const application = require('./application')
 const applicationPatch = require('./application-patch')
 const utils = require('./utils')
 
+const servers = [{
+  url: `${config.publicUrl}/api/v1`,
+  description: `Instance DataFair - ${new URL(config.publicUrl).hostname}`,
+}]
+if (config.masterDataPublicUrl && config.masterDataPublicUrl !== config.publicUrl) {
+  servers.push({
+    url: `${config.masterDataPublicUrl}/api/v1`,
+    description: `Accès DataFair MasterData - ${new URL(config.masterDataPublicUrl).hostname}`,
+  })
+}
+
 module.exports = {
   openapi: '3.1.0',
   info: Object.assign({
@@ -30,10 +41,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la [d
     version: version,
     'x-api-id': 'data-fair',
   }, config.info),
-  servers: [{
-    url: config.publicUrl + '/api/v1',
-    description: 'Serveur de ' + process.env.NODE_ENV || 'development',
-  }],
+  servers,
   components: {
     schemas: {
       dataset,
