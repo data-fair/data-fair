@@ -43,7 +43,7 @@ exports.schema = {
                     title: 'Date à renseigner',
                     properties: {
                       'x-refersTo': { type: 'string', const: 'http://schema.org/Date' },
-                      key: { type: 'string', const: 'date' },
+                      key: { type: 'string', const: '_date' },
                       type: { type: 'string', const: 'string' },
                       format: { type: 'string', const: 'date-time' },
                     },
@@ -81,7 +81,8 @@ exports.endpoints = (dataset) => {
   for (const bulkSearch of dataset.masterData.bulkSearchs) {
     const inputProperties = {}
     for (const input of bulkSearch.input) {
-      inputProperties[input.property.key] = { ...input.property }
+      const matchingProp = dataset.schema.find(p => p.key === input.property.key)
+      inputProperties[input.property.key] = matchingProp ? { ...matchingProp } : { ...input.property }
       delete inputProperties[input.property.key].key
     }
     inputProperties._key = {
