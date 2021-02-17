@@ -342,4 +342,32 @@ describe('datasets', () => {
     }
     await global.ax.dmeadusOrg.get(`/api/v1/datasets/${res.data.id}`)
   })
+
+  it('Upload new dataset and detect types', async () => {
+    const ax = global.ax.dmeadus
+    const dataset = await testUtils.sendDataset('datasets/dataset-types.csv', ax)
+    assert.equal(dataset.schema[0].key, 'string1')
+    assert.equal(dataset.schema[0].type, 'string')
+
+    assert.equal(dataset.schema[1].key, 'bool1')
+    assert.equal(dataset.schema[1].type, 'boolean')
+
+    assert.equal(dataset.schema[2].key, 'bool2')
+    assert.equal(dataset.schema[2].type, 'boolean')
+
+    assert.equal(dataset.schema[3].key, 'bool3')
+    assert.equal(dataset.schema[3].type, 'boolean')
+
+    assert.equal(dataset.schema[4].key, 'string2')
+    assert.equal(dataset.schema[4].type, 'string')
+
+    assert.equal(dataset.schema[5].key, 'number1')
+    assert.equal(dataset.schema[5].type, 'integer')
+
+    assert.equal(dataset.schema[6].key, 'number2')
+    assert.equal(dataset.schema[6].type, 'integer')
+
+    assert.equal(dataset.schema[7].key, 'number3')
+    assert.equal(dataset.schema[7].type, 'number')
+  })
 })
