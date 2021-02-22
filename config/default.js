@@ -73,7 +73,10 @@ module.exports = {
 .theme--dark .navigation-left .v-navigation-drawer__content {
   background: linear-gradient(90deg, #363636 0%, #272727 100%);
 }
-.v-btn.primary {
+/*.v-btn.primary {
+  background: linear-gradient(270deg, rgba(25,118,210,1) 0%, rgba(30,136,229,1) 100%);
+}*/
+.section-tabs .section-active {
   background: linear-gradient(270deg, rgba(25,118,210,1) 0%, rgba(30,136,229,1) 100%);
 }
 `,
