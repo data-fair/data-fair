@@ -58,14 +58,18 @@
             </v-list-item-avatar>
             <span>{{ application.createdBy.name }} {{ application.createdAt | moment("DD/MM/YYYY, HH:mm") }}</span>
           </v-list-item>
-          <v-list-item
-            v-if="dataset"
-            :to="`/dataset/${dataset.id}`"
-          >
-            <v-list-item-avatar class="ml-0 my-0">
-              <v-icon>mdi-database</v-icon>
-            </v-list-item-avatar>
-            <a>{{ dataset.title }}</a>
+          <v-list-item v-if="dataset">
+            <nuxt-link
+              :to="`/dataset/${dataset.id}`"
+              style="text-decoration:none"
+              class="mr-2"
+            >
+              <v-list-item-avatar class="ml-0 my-0">
+                <v-icon>mdi-database</v-icon>
+              </v-list-item-avatar>
+              <a>{{ dataset.title }}</a>
+            </nuxt-link>
+            <dataset-btn-table :dataset="dataset" />
           </v-list-item>
           <v-list-item v-if="nbSessions !== null">
             <v-list-item-avatar class="ml-0 my-0">
@@ -117,11 +121,12 @@
 
 <script>
   import OwnerListItem from '~/components/owners/list-item.vue'
+  import DatasetBtnTable from '~/components/datasets/btn-table.vue'
   import { mapState, mapActions, mapGetters } from 'vuex'
   const events = require('~/../shared/events.json').application
 
   export default {
-    components: { OwnerListItem },
+    components: { OwnerListItem, DatasetBtnTable },
     data() {
       return { events }
     },

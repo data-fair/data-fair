@@ -34,6 +34,7 @@ export default () => ({
     },
     error: null, // error in initial info fetching
     lineUploadProgress: 0,
+    showTableCard: null,
   },
   getters: {
     resourceUrl: (state, getters, rootState) => state.datasetId ? rootState.env.publicUrl + '/api/v1/datasets/' + state.datasetId : null,
@@ -156,6 +157,7 @@ export default () => ({
       commit('setAny', { dataFiles })
     },
     async setId({ commit, getters, dispatch, state }, datasetId) {
+      dispatch('clear')
       commit('setAny', { datasetId })
       await dispatch('fetchInfo')
     },
@@ -191,7 +193,7 @@ export default () => ({
     },
     clear({ commit, state }) {
       if (state.datasetId) eventBus.$emit('unsubscribe', 'datasets/' + state.datasetId + '/journal')
-      commit('setAny', { datasetId: null, dataset: null, api: null, journal: [] })
+      commit('setAny', { datasetId: null, dataset: null, api: null, journal: [], showTableCard: null })
     },
     async patch({ commit, getters, dispatch }, patch) {
       try {
