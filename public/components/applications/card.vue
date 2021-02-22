@@ -1,37 +1,39 @@
 <template>
   <v-card
-    :to="`/application/${application.id}`"
     outlined
-    :elevation="hover ? 2 : 0"
+    tile
+    :elevation="hover ? 4 : 0"
     @mouseenter="hover = true"
     @mouseleave="hover = false"
   >
-    <v-card-title>
-      <span style="white-space: nowrap;overflow: hidden;text-overflow: ellipsis;">
-        {{ application.title || application.id }}
-      </span>
-    </v-card-title>
-    <v-divider />
-    <v-img
-      :src="`${application.href}/capture`"
-      :aspect-ratio="800 / 450"
-    />
-    <v-divider />
-    <v-row v-if="showTopics" style="min-height:30px;">
-      <v-col class="pt-1 pb-0">
-        <v-chip
-          v-for="topic of application.topics"
-          :key="topic.id"
-          small
-          outlined
-          :color="topic.color || 'default'"
-          class="ml-2"
-          style="font-weight: bold"
-        >
-          {{ topic.title }}
-        </v-chip>
-      </v-col>
-    </v-row>
+    <nuxt-link :to="`/application/${application.id}`" style="text-decoration:none">
+      <v-card-title>
+        <span class="font-weight-bold" style="white-space: nowrap;overflow: hidden;text-overflow: ellipsis;">
+          {{ application.title || application.id }}
+        </span>
+      </v-card-title>
+      <v-divider />
+      <v-img
+        :src="`${application.href}/capture`"
+        :aspect-ratio="800 / 450"
+      />
+      <v-divider />
+      <v-row v-if="showTopics" style="min-height:30px;">
+        <v-col class="pt-1 pb-0">
+          <v-chip
+            v-for="topic of application.topics"
+            :key="topic.id"
+            small
+            outlined
+            :color="topic.color || 'default'"
+            class="ml-2"
+            style="font-weight: bold"
+          >
+            {{ topic.title }}
+          </v-chip>
+        </v-col>
+      </v-row>
+    </nuxt-link>
     <v-card-actions>
       <owner-short :owner="application.owner" />
       &nbsp;&nbsp;

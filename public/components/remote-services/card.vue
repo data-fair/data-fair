@@ -3,11 +3,12 @@
     height="100%"
     :to="`/remote-service/${remoteService.id}`"
     outlined
-    :elevation="hover ? 2 : 0"
+    tile
+    :elevation="hover ? 4 : 0"
     @mouseenter="hover = true"
     @mouseleave="hover = false"
   >
-    <v-card-title>
+    <v-card-title class="font-weight-bold">
       {{ remoteService.title || remoteService.id }}
     </v-card-title>
     <v-card-text

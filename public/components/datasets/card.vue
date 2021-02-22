@@ -1,13 +1,14 @@
 <template>
   <v-card
     outlined
-    :elevation="hover ? 2 : 0"
+    tile
+    :elevation="hover ? 4 : 0"
     @mouseenter="hover = true"
     @mouseleave="hover = false"
   >
     <nuxt-link :to="`/dataset/${dataset.id}`" style="text-decoration:none">
       <v-card-title>
-        <span class="grey--text text--darken-2 font-weight-bold" style="white-space: nowrap;overflow: hidden;text-overflow: ellipsis;">
+        <span class="font-weight-bold" style="white-space: nowrap;overflow: hidden;text-overflow: ellipsis;">
           {{ dataset.title || dataset.id }}
         </span>
       </v-card-title>
