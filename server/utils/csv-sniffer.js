@@ -5,7 +5,7 @@ const debug = require('debug')('csv-sniffer')
 
 const possibleLinesDelimiters = ['\r\n', '\n']
 const possibleFieldsDelimiters = [',', ';', '\t', '|']
-const possibleEscapeChars = ['"', "'"]
+// const possibleEscapeChars = ['"', "'"]
 const possibleQuoteChars = ['"', "'"]
 
 exports.sniff = async (sample) => {
@@ -13,11 +13,10 @@ exports.sniff = async (sample) => {
   const combinations = []
   for (const ld of possibleLinesDelimiters) {
     for (const fd of possibleFieldsDelimiters) {
-      for (const ec of possibleEscapeChars) {
-        for (const qc of possibleQuoteChars) {
+      for (const qc of possibleQuoteChars) {
           let score = 0
           let labels
-          const parserOpts = { separator: fd, quote: qc, escape: ec, newline: ld }
+          const parserOpts = { separator: fd, quote: qc, escape: qc, newline: ld }
           debug('Evaluate parser opts', JSON.stringify(parserOpts))
           const parser = csv(parserOpts)
           parser.on('headers', headers => { labels = headers })
@@ -84,9 +83,8 @@ exports.sniff = async (sample) => {
           // on larger files prevent checking last chunk as it might be broken by the sampling method
           if (i < 10 && previousChunk) checkChunk(previousChunk)
           debug('score', score)
-          combinations.push({ props: { fieldsDelimiter: fd, quote: qc, escapeChar: ec, linesDelimiter: ld, labels }, score })
+          combinations.push({ props: { fieldsDelimiter: fd, quote: qc, escapeChar: qc, linesDelimiter: ld, labels }, score })
         }
-      }
     }
   }
   const bestCombination = combinations.sort((a, b) => b.score - a.score)[0]

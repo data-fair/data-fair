@@ -100,6 +100,17 @@ describe('CSV cases', () => {
     assert.equal(dataset.file.props.fieldsDelimiter, ';')
   })
 
+  it('A CSV with \\r\\n inside quotes, but simply \\n as value separator', async () => {
+    const ax = global.ax.dmeadus
+    const dataset = await testUtils.sendDataset('csv-cases/Demarches_PCAET_V1_entete.csv', ax)
+    assert.equal(dataset.status, 'finalized')
+    assert.equal(dataset.schema[0].key, 'Id')
+    assert.equal(dataset.file.props.linesDelimiter, '\n')
+    assert.equal(dataset.file.props.escapeChar, '"')
+    assert.equal(dataset.file.props.quote, '"')
+    assert.equal(dataset.file.props.fieldsDelimiter, ';')
+  })
+
   it('Another CSV with empty values', async () => {
     const ax = global.ax.dmeadus
     const dataset = await testUtils.sendDataset('csv-cases/jep-2019.csv', ax)
