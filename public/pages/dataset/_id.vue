@@ -1,6 +1,6 @@
 <template>
   <v-row v-if="dataset || error">
-    <v-col>
+    <v-col :style="this.$vuetify.breakpoint.lgAndUp ? 'padding-right:256px;' : ''">
       <v-container class="py-0">
         <v-alert
           v-if="error"
@@ -262,13 +262,12 @@
         </template>
       </v-container>
     </v-col>
-    <div v-if="this.$vuetify.breakpoint.lgAndUp" style="width:256px;">
-      <navigation-right>
-        <template v-slot:actions>
-          <dataset-actions />
-        </template>
-      </navigation-right>
-    </div>
+
+    <navigation-right v-if="this.$vuetify.breakpoint.lgAndUp">
+      <template v-slot:actions>
+        <dataset-actions />
+      </template>
+    </navigation-right>
     <actions-button v-else>
       <template v-slot:actions>
         <dataset-actions />

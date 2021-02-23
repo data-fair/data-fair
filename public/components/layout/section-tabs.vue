@@ -1,7 +1,7 @@
 <template>
   <v-sheet
     :style="style"
-    class="mt-3 mb-10 section-tabs"
+    :class="`mt-3 mb-10 section-tabs section-tabs-${$vuetify.theme.dark ? 'dark' : 'light'}`"
     style="position: relative"
     color="transparent"
   >
@@ -9,6 +9,7 @@
       extended
       rounded
       :flat="$vuetify.theme.dark"
+      elevation="3"
       :color="$vuetify.theme.dark ? 'transparent' : 'grey lighten-4'"
       :style="toolbarStyle"
       :class="tab ? 'section-active mb-2' : ''"
@@ -80,5 +81,8 @@
   }
 </script>
 
-<style lang="css" scoped>
+<style lang="css">
+.section-tabs-light .section-active{
+  background: linear-gradient(90deg, rgba(255,255,255,1) 0%, rgba(245,245,245,1) 30%);
+}
 </style>
