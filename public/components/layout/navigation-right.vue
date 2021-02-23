@@ -7,6 +7,7 @@
     floating
     fixed
     style="padding-top: 70px"
+    color="transparent"
   >
     <slot name="actions" />
   </v-navigation-drawer>

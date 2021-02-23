@@ -3,11 +3,13 @@
     :style="style"
     class="mt-3 mb-10 section-tabs"
     style="position: relative"
+    color="transparent"
   >
     <v-toolbar
       extended
       rounded
-      color="grey lighten-4"
+      :flat="$vuetify.theme.dark"
+      :color="$vuetify.theme.dark ? 'transparent' : 'grey lighten-4'"
       :style="toolbarStyle"
       :class="tab ? 'section-active mb-2' : ''"
     >
