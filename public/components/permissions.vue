@@ -1,7 +1,7 @@
 <template>
   <div>
     <p>
-      Permettez à d'autres utilisateurs ou aux membres d'autres organisations de consulter et effectuer des actions sur cette ressource.
+      Permettez à d'autres utilisateurs ou aux membres d'autres organisations de consulter cette ressource.
     </p>
 
     <div id="dataset-privacy" style="width:400px">
