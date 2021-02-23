@@ -14,8 +14,9 @@
 
           <section-tabs
             v-if="dataset.finalizedAt"
-            :min-height="370"
+            :min-height="390"
             default-tab="tab-general-info"
+            :svg="checklistSvg"
           >
             <template v-slot:title>
               métadonnées
@@ -93,7 +94,7 @@
           <section-tabs
             v-if="can('readLines') && dataset.finalizedAt"
             default-tab="tab-preview-table"
-            texture="old-mathematics"
+            :svg="dataSvg"
           >
             <template v-slot:title>
               données
@@ -153,8 +154,9 @@
 
           <section-tabs
             v-if="dataset.finalizedAt"
-            texture="swirl"
             default-tab="tab-reuses-apps"
+            :svg="chartSvg"
+            :min-height="140"
           >
             <template v-slot:title>
               utilisations
@@ -179,7 +181,11 @@
             </template>
           </section-tabs>
 
-          <section-tabs v-if="dataset.finalizedAt">
+          <section-tabs
+            v-if="dataset.finalizedAt"
+            :svg="shareSvg"
+            :min-height="200"
+          >
             <template v-slot:title>
               partage
             </template>
@@ -214,6 +220,8 @@
           <section-tabs
             v-if="can('readJournal') || can('readApiDoc')"
             :default-tab="dataset.finalizedAt ? '' : 'tab-tech-journal'"
+            :svg="settingsSvg"
+            :min-height="550"
           >
             <template v-slot:title>
               activité
@@ -278,6 +286,15 @@
   import Journal from '~/components/journal.vue'
   import OpenApi from '~/components/open-api.vue'
 
+  const datavizSvg = require('~/assets/svg/undraw_All_the_data_re_hh4w.svg?raw')
+  const penSvg = require('~/assets/svg/undraw_pen_nqf7.svg?raw')
+  const textSvg = require('~/assets/svg/undraw_text_field_htlv.svg?raw')
+  const settingsSvg = require('~/assets/svg/Settings_Monochromatic.svg?raw')
+  const dataSvg = require('~/assets/svg/Data storage_Monochromatic.svg?raw')
+  const chartSvg = require('~/assets/svg/Smart phone data_Monochromatic.svg?raw')
+  const shareSvg = require('~/assets/svg/Share_Monochromatic.svg?raw')
+  const checklistSvg = require('~/assets/svg/Checklist _Monochromatic.svg?raw')
+
   export default {
     components: {
       SectionTabs,
@@ -301,6 +318,7 @@
       Permissions,
       Journal,
       OpenApi,
+
     },
     async fetch({ store, route }) {
       store.dispatch('dataset/clear')
@@ -309,7 +327,16 @@
         store.dispatch('fetchVocabulary'),
       ])
     },
-    data: () => ({}),
+    data: () => ({
+      datavizSvg,
+      penSvg,
+      textSvg,
+      settingsSvg,
+      dataSvg,
+      chartSvg,
+      shareSvg,
+      checklistSvg,
+    }),
     computed: {
       ...mapState(['env']),
       ...mapState('dataset', ['dataset', 'api', 'journal', 'error']),

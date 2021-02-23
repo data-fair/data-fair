@@ -63,7 +63,7 @@ module.exports = {
     browserBaseURL: config.publicUrl + '/',
     baseURL: `http://localhost:${config.port}/`,
   },
-  buildModules: ['@nuxtjs/vuetify'],
+  buildModules: ['@nuxtjs/vuetify', '@nuxtjs/svg'],
   vuetify: {
     theme: {
       dark: config.theme.dark,

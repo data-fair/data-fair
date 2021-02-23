@@ -24,6 +24,7 @@
   "license": "AGPL-3.0-only",
   "devDependencies": {
     "@hackmd/meta-marked": "^0.4.4",
+    "@nuxtjs/svg": "^0.1.12",
     "babel-eslint": "^10.1.0",
     "coveralls": "^3.1.0",
     "eslint": "^6.8.0",

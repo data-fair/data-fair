@@ -1,27 +1,23 @@
 <template>
-  <v-card
+  <v-sheet
     :style="style"
-    class="mt-3 mb-6 section-tabs"
+    class="mt-3 mb-10 section-tabs"
+    style="position: relative"
   >
     <v-toolbar
-      dark
       extended
-      dense
-      :color="tab ? 'primary' : ''"
-      extension-height="44"
-      elevation="0"
+      rounded
+      color="grey lighten-4"
       :style="toolbarStyle"
-      :class="tab ? 'section-active' : ''"
+      :class="tab ? 'section-active mb-2' : ''"
     >
-      <v-toolbar-title class="text-h6 font-weight-bold" @click="toggle">
+      <v-toolbar-title class="text-h5" @click="toggle">
         <slot name="title" />
       </v-toolbar-title>
       <template v-slot:extension>
         <v-tabs
           v-model="tab"
-          right
-          height="44"
-          :optional="true"
+          :optional="false"
         >
           <slot name="tabs" />
         </v-tabs>
@@ -30,15 +26,27 @@
     <v-tabs-items v-model="tab">
       <slot name="tabs-items" />
     </v-tabs-items>
-  </v-card>
+
+    <wrap-svg
+      v-if="svg"
+      :source="svg"
+      style="height: 94px;position: absolute;left: 8px; top: 8px;"
+      :color="$vuetify.theme.themes.light.primary"
+    />
+  </v-sheet>
 </template>
 
 <script>
+  import WrapSvg from '~/components/layout/svg.vue'
   export default {
+    components: {
+      WrapSvg,
+    },
     props: {
       minHeight: { type: Number },
       defaultTab: { type: String },
       texture: { type: String },
+      svg: { type: String },
     },
     data: () => ({
       tab: null,
@@ -49,10 +57,14 @@
         return `min-height: ${92 + this.minHeight}px;`
       },
       toolbarStyle() {
-        if (!this.texture) return ''
-        // const textureUrl = `${process.env.publicUrl}/textures/${this.texture}/${this.texture}.png`
-        const textureUrl = `https://www.transparenttextures.com/patterns/${this.texture}.png`
-        return `background-repeat: repeat; background-image: url("${textureUrl}")`
+        let css = ''
+        if (this.svg) css += 'padding-left: 160px;'
+        if (this.texture) {
+          // const textureUrl = `${process.env.publicUrl}/textures/${this.texture}/${this.texture}.png`
+          const textureUrl = `https://www.transparenttextures.com/patterns/${this.texture}.png`
+          css += `background-repeat: repeat; background-image: url("${textureUrl}");`
+        }
+        return css
       },
     },
     created() {
