@@ -30,7 +30,7 @@
     <wrap-svg
       v-if="svg"
       :source="svg"
-      style="height: 94px;position: absolute;left: 8px; top: 8px;"
+      style="height: 94px;position: absolute;left: 12px; top: 8px;"
       :color="$vuetify.theme.themes.light.primary"
     />
   </v-sheet>

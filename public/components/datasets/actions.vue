@@ -1,70 +1,56 @@
 <template>
-  <div v-if="dataset" class="actions-buttons">
-    <v-menu bottom left>
-      <template v-slot:activator="{on}">
-        <v-btn
-          fab
-          small
-          color="accent"
-          v-on="on"
-        >
-          <v-icon>mdi-dots-vertical</v-icon>
-        </v-btn>
-      </template>
-      <v-list>
-        <v-list-item
-          v-for="dataFile in (dataFiles || [])"
-          :key="dataFile.key"
-          :disabled="!can('downloadFullData')"
-          :href="dataFile.url"
-        >
-          <v-list-item-avatar>
-            <v-icon color="primary">
-              mdi-file-download
-            </v-icon>
-          </v-list-item-avatar>
-          <v-list-item-title>{{ dataFile.title }}</v-list-item-title>
-        </v-list-item>
-        <v-list-item
-          v-if="can('writeData')"
-          @click="showUploadDialog = true"
-        >
-          <v-list-item-avatar>
-            <v-icon color="warning">
-              mdi-file-upload
-            </v-icon>
-          </v-list-item-avatar>
-          <v-list-item-title>Mise à jour</v-list-item-title>
-        </v-list-item>
-        <v-list-item
-          v-if="can('readLines') && !error"
-          @click="showIntegrationDialog = true; previewId = 'table'"
-        >
-          <v-list-item-avatar>
-            <v-icon color="primary">
-              mdi-code-tags
-            </v-icon>
-          </v-list-item-avatar>
-          <v-list-item-title>Prévisualiser dans un site</v-list-item-title>
-        </v-list-item>
-        <v-list-item v-if="can('delete')" @click="showDeleteDialog = true">
-          <v-list-item-avatar>
-            <v-icon color="warning">
-              mdi-delete
-            </v-icon>
-          </v-list-item-avatar>
-          <v-list-item-title>Supprimer</v-list-item-title>
-        </v-list-item>
-        <v-list-item v-if="can('delete')" @click="showOwnerDialog = true">
-          <v-list-item-avatar>
-            <v-icon color="warning">
-              mdi-account
-            </v-icon>
-          </v-list-item-avatar>
-          <v-list-item-title>Changer de propriétaire</v-list-item-title>
-        </v-list-item>
-      </v-list>
-    </v-menu>
+  <v-list v-if="dataset">
+    <v-list-item
+      v-for="dataFile in (dataFiles || [])"
+      :key="dataFile.key"
+      :disabled="!can('downloadFullData')"
+      :href="dataFile.url"
+    >
+      <v-list-item-action>
+        <v-icon color="primary">
+          mdi-file-download
+        </v-icon>
+      </v-list-item-action>
+      <v-list-item-title>{{ dataFile.title }}</v-list-item-title>
+    </v-list-item>
+    <v-list-item
+      v-if="can('writeData')"
+      @click="showUploadDialog = true"
+    >
+      <v-list-item-action>
+        <v-icon color="warning">
+          mdi-file-upload
+        </v-icon>
+      </v-list-item-action>
+      <v-list-item-title>Mise à jour</v-list-item-title>
+    </v-list-item>
+    <v-list-item
+      v-if="can('readLines') && !error"
+      @click="showIntegrationDialog = true; previewId = 'table'"
+    >
+      <v-list-item-action>
+        <v-icon color="primary">
+          mdi-code-tags
+        </v-icon>
+      </v-list-item-action>
+      <v-list-item-title>Intégration</v-list-item-title>
+    </v-list-item>
+    <v-list-item v-if="can('delete')" @click="showDeleteDialog = true">
+      <v-list-item-action>
+        <v-icon color="warning">
+          mdi-delete
+        </v-icon>
+      </v-list-item-action>
+      <v-list-item-title>Supprimer</v-list-item-title>
+    </v-list-item>
+    <v-list-item v-if="can('delete')" @click="showOwnerDialog = true">
+      <v-list-item-action>
+        <v-icon color="warning">
+          mdi-account
+        </v-icon>
+      </v-list-item-action>
+      <v-list-item-title>Changer propriétaire</v-list-item-title>
+    </v-list-item>
 
     <v-dialog v-model="showIntegrationDialog">
       <v-card outlined>
@@ -231,7 +217,7 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
-  </div>
+  </v-list>
 </template>
 
 <script>

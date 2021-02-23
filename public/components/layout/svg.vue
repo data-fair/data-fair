@@ -10,7 +10,6 @@
     },
     computed: {
       themedSource() {
-        console.log(this.color)
         if (!this.color) return this.source
         return this.source
           .replace(/#6C63FF/gi, this.color) // default undraw color
