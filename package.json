@@ -24,7 +24,6 @@
   "license": "AGPL-3.0-only",
   "devDependencies": {
     "@hackmd/meta-marked": "^0.4.4",
-    "@nuxtjs/svg": "^0.1.12",
     "babel-eslint": "^10.1.0",
     "coveralls": "^3.1.0",
     "eslint": "^6.8.0",
@@ -60,6 +59,7 @@
     "@koumoul/vue-multianalytics": "^1.10.1",
     "@mapbox/mbtiles": "^0.11.0",
     "@nuxtjs/axios": "^5.12.3",
+    "@nuxtjs/svg": "^0.1.12",
     "@nuxtjs/vuetify": "^1.11.2",
     "@turf/clean-coords": "^6.0.1",
     "@turf/kinks": "^6.0.0",
