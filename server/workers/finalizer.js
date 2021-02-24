@@ -42,6 +42,8 @@ exports.process = async function(app, dataset) {
       // Set enum based on actual value, except for REST datasets, we don't want to prevent writing new values
       debug(`Set enum of field ${prop.key}`)
       prop.enum = aggResult.aggs.map(a => a.value)
+    } else {
+      delete prop.enum
     }
   }
 
