@@ -1,56 +1,6 @@
 <template>
-  <v-container class="pt-0" fluid>
-    <v-row v-if="user">
-      <v-col>
-        <datasets-list />
-      </v-col>
-
-      <div class="actions-buttons">
-        <v-menu
-          v-if="user && canContrib"
-          bottom
-          left
-        >
-          <template v-slot:activator="{on}">
-            <v-btn
-              fab
-              small
-              color="primary"
-              title="Créer un jeu de données"
-              v-on="on"
-            >
-              <v-icon>mdi-plus</v-icon>
-            </v-btn>
-          </template>
-          <v-list>
-            <v-list-item :to="{path: '/new-dataset', query: {type: 'file'}}">
-              <v-list-item-avatar>
-                <v-icon color="primary">
-                  mdi-file-upload
-                </v-icon>
-              </v-list-item-avatar>
-              <v-list-item-title>Importer un fichier</v-list-item-title>
-            </v-list-item>
-            <v-list-item :to="{path: '/new-dataset', query: {type: 'virtual'}}">
-              <v-list-item-avatar>
-                <v-icon color="primary">
-                  mdi-picture-in-picture-bottom-right-outline
-                </v-icon>
-              </v-list-item-avatar>
-              <v-list-item-title>Créer un jeu virtuel</v-list-item-title>
-            </v-list-item>
-            <v-list-item :to="{path: '/new-dataset', query: {type: 'rest'}}">
-              <v-list-item-avatar>
-                <v-icon color="primary">
-                  mdi-all-inclusive
-                </v-icon>
-              </v-list-item-avatar>
-              <v-list-item-title>Créer un jeu incrémental</v-list-item-title>
-            </v-list-item>
-          </v-list>
-        </v-menu>
-      </div>
-    </v-row>
+  <div>
+    <datasets-list v-if="user" />
     <!-- Anonymous: show jumbotron -->
     <v-col
       v-else-if="initialized"
@@ -81,7 +31,7 @@
         </v-container>
       </v-responsive>
     </v-col>
-  </v-container>
+  </div>
 </template>
 
 <script>

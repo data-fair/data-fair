@@ -1,31 +1,24 @@
 <template lang="html">
-  <v-col class="pa-0">
-    <v-row>
-      <v-col
-        cols="12"
-        sm="5"
-        md="4"
-        lg="3"
-        class="pb-0"
-      >
-        <v-text-field
-          v-model="filters.q"
-          placeholder="Rechercher"
-          outlined
-          dense
-          append-icon="mdi-magnify"
-          hide-details
-          @keyup.enter.native="writeParams"
-          @click:append="writeParams"
-        />
-      </v-col>
-      <v-switch
+  <v-col class="pt-0">
+    <v-row class="mb-2">
+      <v-text-field
+        v-model="filters.q"
+        placeholder="Rechercher"
+        outlined
+        dense
+        color="primary"
+        append-icon="mdi-magnify"
+        hide-details
+        @keyup.enter.native="writeParams"
+        @click:append="writeParams"
+      />
+      <!--<v-switch
         v-model="showShared"
         label="inclure ressources partagées"
         @change="writeParams"
-      />
+      />-->
     </v-row>
-    <v-row class="px-3">
+    <v-row class="mb-2">
       <template v-for="filter in Object.keys(fullFilterLabels)">
         <v-chip
           v-if="filters[filter]"

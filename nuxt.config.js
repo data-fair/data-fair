@@ -1,5 +1,6 @@
 const URL = require('url').URL
 const i18n = require('./i18n')
+const fr = require('vuetify/es5/locale/fr').default
 let config = require('config')
 config.basePath = new URL(config.publicUrl + '/').pathname
 config.i18nMessages = i18n.messages
@@ -76,6 +77,10 @@ module.exports = {
       font: {
         family: 'Nunito',
       },
+    },
+    lang: {
+      locales: { fr },
+      current: 'fr',
     },
   },
   env: {

@@ -158,7 +158,7 @@ exports.setResourceLinks = (resource, resourceType) => {
   if (resourceType === 'application') resource.exposedUrl = `${config.publicUrl}/app/${resource.id}`
 }
 
-exports.facetsQuery = (req, filterFields) => {
+exports.facetsQuery = (req, facetFields, filterFields) => {
   const facetsQueryParam = req.query.facets
   const pipeline = []
 
@@ -180,7 +180,7 @@ exports.facetsQuery = (req, filterFields) => {
   })
 
   const fields = facetsQueryParam && facetsQueryParam.length && facetsQueryParam.split(',')
-    .filter(f => filterFields[f] || f === 'owner' || f === 'visibility')
+    .filter(f => facetFields[f] || f === 'owner' || f === 'visibility')
   if (fields) {
     const facets = {}
     fields.forEach(f => {
@@ -215,9 +215,9 @@ exports.facetsQuery = (req, filterFields) => {
         facet.push({ $unwind: '$base-application' })
         facet.push({ $group: { _id: { [f]: '$base-application', id: '$id' } } })
       } else {
-        facet.push({ $unwind: '$' + (filterFields[f] || f).split('.').shift() })
+        facet.push({ $unwind: '$' + (facetFields[f] || f).split('.').shift() })
         if (f === 'owner') facet.push({ $project: { 'owner.role': 0 } })
-        facet.push({ $group: { _id: { [f]: '$' + (filterFields[f] || f), id: '$id' } } })
+        facet.push({ $group: { _id: { [f]: '$' + (facetFields[f] || f), id: '$id' } } })
       }
 
       facet.push({ $project: { [f]: '$_id.' + f, _id: 0 } })
