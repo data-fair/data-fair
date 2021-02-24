@@ -11,6 +11,7 @@
         outlined
         dense
         hide-details
+        rounded
         class="mb-4"
       />
     </template>
@@ -26,6 +27,7 @@
         outlined
         dense
         hide-details
+        rounded
         class="mb-4"
       />
     </template>
@@ -41,6 +43,7 @@
         outlined
         dense
         hide-details
+        rounded
         class="mb-4"
       />
     </template>
@@ -56,6 +59,7 @@
         outlined
         dense
         hide-details
+        rounded
         class="mb-4"
       />
     </template>
@@ -71,6 +75,7 @@
         outlined
         dense
         hide-details
+        rounded
         class="mb-4"
       />
     </template>

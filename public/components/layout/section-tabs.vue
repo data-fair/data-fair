@@ -10,8 +10,8 @@
     <v-toolbar
       extended
       rounded
-      :flat="$vuetify.theme.dark"
-      elevation="3"
+      flat
+      outlined
       :color="$vuetify.theme.dark ? 'transparent' : 'grey lighten-4'"
       :style="toolbarStyle"
       :class="tab ? 'section-active mb-2' : ''"
@@ -28,6 +28,7 @@
         <v-tabs
           v-model="tab"
           :optional="false"
+          style="margin-bottom: 1px;"
         >
           <slot name="tabs">
             <v-tab

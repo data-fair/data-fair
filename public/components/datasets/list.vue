@@ -44,14 +44,13 @@
       </v-container>
 
       <navigation-right v-if="this.$vuetify.breakpoint.lgAndUp">
-        <v-subheader>
-          Actions
-        </v-subheader>
         <datasets-list-actions />
         <template v-if="datasets">
-          <v-subheader>
-            Filtres
-          </v-subheader>
+          <v-list dense>
+            <v-subheader>
+              FILTRER
+            </v-subheader>
+          </v-list>
           <v-row class="px-2">
             <v-col class="py-0">
               <search-filters
@@ -69,7 +68,7 @@
           </v-row>
         </template>
       </navigation-right>
-      <actions-button v-else>
+      <actions-button v-else icon="mdi-plus">
         <template v-slot:actions>
           <datasets-list-actions />
         </template>

@@ -1,12 +1,12 @@
 <template>
   <v-navigation-drawer
-    class="navigation-right"
+    class="navigation-right pl-2"
     right
     permanent
     clipped
     floating
     fixed
-    style="padding-top: 50px"
+    style="padding-top: 60px"
     color="transparent"
   >
     <slot />

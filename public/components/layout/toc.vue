@@ -2,20 +2,26 @@
   <v-list
     v-scroll="onScroll"
     dense
-    class="pl-4 py-0"
+    shaped
+    class="py-0"
   >
-    <v-list-item
-      v-for="section in sections"
-      :key="section.id"
-      :style="activeSection && activeSection.id === section.id ? activeStyle : ''"
-      @click="goTo(section.id)"
-    >
-      <v-list-item-content>
-        <v-list-item-title :class="{'primary--text': activeSection && activeSection.id === section.id}">
-          {{ section.title }}
-        </v-list-item-title>
-      </v-list-item-content>
-    </v-list-item>
+    <v-subheader>
+      CONTENU
+    </v-subheader>
+    <v-list-item-group v-model="activeIndex" color="primary">
+      <v-list-item
+        v-for="(section, i) in sections"
+        :key="i"
+        :style="activeSection && activeSection.id === section.id ? activeStyle : ''"
+        @click="goTo(section.id)"
+      >
+        <v-list-item-content>
+          <v-list-item-title>
+            {{ section.title }}
+          </v-list-item-title>
+        </v-list-item-content>
+      </v-list-item>
+    </v-list-item-group>
   </v-list>
 </template>
 
@@ -28,13 +34,14 @@
       offsets: [],
       timeout: null,
       activeSection: null,
+      activeIndex: null,
     }),
     computed: {
       toc() {
         return this.sections.map(s => ({ ...s, hash: `#${s.id}` })).reverse()
       },
       activeStyle() {
-        return `border-left: 3px solid ${this.$vuetify.theme.themes.light.primary};`
+        return `border-left: 2px solid ${this.$vuetify.theme.themes.light.primary};`
       },
     },
     mounted() {
@@ -61,12 +68,15 @@
           0
         )
 
-        if (this.offsets.length !== this.toc.length) this.setOffsets()
+        // if (this.offsets.length !== this.toc.length) this.setOffsets()
+        this.setOffsets()
+
         let index = this.offsets.findIndex(offset => offset - 40 < currentOffset)
         if (index === -1) index = this.toc.length - 1
         if (currentOffset + window.innerHeight === document.documentElement.offsetHeight) {
           index = 0
         }
+        this.activeIndex = this.toc.length - (index + 1)
         this.activeSection = this.toc[index]
       },
       onScroll () {

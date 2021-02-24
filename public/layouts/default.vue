@@ -60,8 +60,8 @@ body .v-application {
   }
 
   .actions-buttons {
-    position: absolute;
-    top: 8px;
+    position: fixed;
+    top: 70px;
     right: 8px;
     margin: 0;
 

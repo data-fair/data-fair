@@ -11,7 +11,7 @@
           color="accent"
           v-on="on"
         >
-          <v-icon>mdi-dots-vertical</v-icon>
+          <v-icon v-text="icon" />
         </v-btn>
       </template>
       <slot name="actions" />
@@ -21,6 +21,9 @@
 
 <script>
   export default {
+    props: {
+      icon: { type: String, default: 'mdi-dots-vertical' },
+    },
   }
 </script>
 

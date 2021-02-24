@@ -16,7 +16,7 @@
 
               <section-tabs
                 :min-height="390"
-                :svg="checklistSvg"
+                :svg="buildingSvg"
                 :section="sections.find(s => s.id === 'structure')"
               >
                 <template v-slot:tabs>
@@ -254,13 +254,7 @@
     </v-col>
 
     <navigation-right v-if="this.$vuetify.breakpoint.lgAndUp">
-      <v-subheader>
-        Actions
-      </v-subheader>
       <dataset-actions />
-      <v-subheader>
-        Contenu
-      </v-subheader>
       <toc :sections="sections" />
     </navigation-right>
     <actions-button v-else>
@@ -307,6 +301,7 @@
   const shareSvg = require('~/assets/svg/Share_Monochromatic.svg?raw')
   const checklistSvg = require('~/assets/svg/Checklist _Monochromatic.svg?raw')
   const campaignSvg = require('~/assets/svg/Campaign launch_Monochromatic.svg?raw')
+  const buildingSvg = require('~/assets/svg/Process building_Monochromatic.svg?raw')
 
   export default {
     components: {
@@ -351,6 +346,7 @@
       shareSvg,
       campaignSvg,
       checklistSvg,
+      buildingSvg,
     }),
     computed: {
       ...mapState(['env']),

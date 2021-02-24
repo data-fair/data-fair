@@ -42,7 +42,7 @@
                 :rules="[() => stateFromStatus(dataset.status) !== i+1 || dataset.status !== 'error']"
                 :step="i+1"
                 :complete="stateFromStatus(dataset.status) > i+1"
-                :color="stateFromStatus(dataset.status) === i+1 ? 'accent' : 'primary'"
+                :color="stateFromStatus(dataset.status) === i+1 ? 'accent' : (step.color || 'primary')"
               >
                 <v-tooltip top>
                   <template v-slot:activator="{on}">
@@ -88,7 +88,7 @@
           { title: 'Analyse', description: 'Analyse des données et détection automatique du schéma associé' },
           { title: 'Indexation', description: 'Les données sont indexées pour faciliter leur manipulation' },
           { title: 'Enrichissement', description: 'Les données sont enrichies à partir des données de référence' },
-          { title: 'Finalisation', description: 'Derniers traitements avant que la source ne soit utilisable' },
+          { title: 'Finalisation', description: 'Derniers traitements avant que la source ne soit utilisable', color: 'success' },
         ],
         states: ['remote', 'uploaded', 'loaded', 'analyzed', 'schematized', 'indexed', 'extended', 'finalized'],
         stateSteps: [1, 2, 3, 4, 4, 5, 6, 7],

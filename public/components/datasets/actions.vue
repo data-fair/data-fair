@@ -1,14 +1,14 @@
 <template>
-  <v-list
-    v-if="dataset"
-    dense
-    class="py-0"
-  >
+  <v-list v-if="dataset" dense>
+    <v-subheader>
+      TÉLÉCHARGEMENTS
+    </v-subheader>
     <v-list-item
       v-for="dataFile in (dataFiles || [])"
       :key="dataFile.key"
       :disabled="!can('downloadFullData')"
       :href="dataFile.url"
+      nav
     >
       <v-list-item-icon>
         <v-icon color="primary">
@@ -19,6 +19,9 @@
         <v-list-item-title>{{ dataFile.title }}</v-list-item-title>
       </v-list-item-content>
     </v-list-item>
+    <v-subheader>
+      ACTIONS
+    </v-subheader>
     <v-list-item
       v-if="can('writeData')"
       @click="showUploadDialog = true"
@@ -29,7 +32,7 @@
         </v-icon>
       </v-list-item-icon>
       <v-list-item-content>
-        <v-list-item-title>Mise à jour</v-list-item-title>
+        <v-list-item-title>Mettre à jour</v-list-item-title>
       </v-list-item-content>
     </v-list-item>
     <v-list-item
@@ -42,7 +45,7 @@
         </v-icon>
       </v-list-item-icon>
       <v-list-item-content>
-        <v-list-item-title>Intégration</v-list-item-title>
+        <v-list-item-title>Intégrer dans un site</v-list-item-title>
       </v-list-item-content>
     </v-list-item>
     <v-list-item
@@ -55,7 +58,7 @@
         </v-icon>
       </v-list-item-icon>
       <v-list-item-content>
-        <v-list-item-title>API</v-list-item-title>
+        <v-list-item-title>Utiliser l'API</v-list-item-title>
       </v-list-item-content>
     </v-list-item>
     <v-list-item v-if="can('delete')" @click="showDeleteDialog = true">
@@ -94,7 +97,7 @@
             <v-icon>mdi-close</v-icon>
           </v-btn>
         </v-toolbar>
-        <v-card-text v-if="showIntegrationDialog">
+        <v-card-text v-if="showIntegrationDialog" class="pb-0 px-4">
           Pour intégrer une prévisualisation de ce jeu de données dans un site vous pouvez copier le code suivant ou un code similaire dans le contenu HTML de votre site.
           <br>
           <v-select
@@ -109,14 +112,17 @@
           />
           <br>
           <pre>
-  &lt;iframe src="{{ previewLink }}" width="100%" height="500px" style="background-color: transparent; border: none;"/&gt;
+  &lt;iframe
+    src="{{ previewLink }}"
+    width="100%" height="300px" style="background-color: transparent; border: none;"
+  /&gt;
             </pre>
           <br>
           Résultat:
           <iframe
             :src="previewLink"
             width="100%"
-            height="500px"
+            height="300px"
             style="background-color: transparent; border: none;"
           />
         </v-card-text>
