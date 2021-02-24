@@ -78,7 +78,7 @@ router.get('', cacheHeaders.noCache, asyncWrap(async(req, res) => {
     applications.countDocuments(query),
   ]
   if (req.query.facets) {
-    mongoQueries.push(applications.aggregate(findUtils.facetsQuery(req, facetFields)).toArray())
+    mongoQueries.push(applications.aggregate(findUtils.facetsQuery(req, facetFields, filterFields)).toArray())
   }
   let [results, count, facets] = await Promise.all(mongoQueries)
   results.forEach(r => {

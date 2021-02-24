@@ -158,7 +158,8 @@ exports.setResourceLinks = (resource, resourceType) => {
   if (resourceType === 'application') resource.exposedUrl = `${config.publicUrl}/app/${resource.id}`
 }
 
-exports.facetsQuery = (req, facetFields, filterFields) => {
+exports.facetsQuery = (req, facetFields = {}, filterFields) => {
+  filterFields = filterFields || facetFields
   const facetsQueryParam = req.query.facets
   const pipeline = []
 
