@@ -38,7 +38,7 @@ exports.process = async function(app, dataset) {
 
     const firstValue = aggResult.aggs[0]
     if (firstValue && firstValue.total === 1) prop['x-cardinality'] = dataset.count
-    if (!dataset.isRest && aggResult.total_values <= 50) {
+    if (!dataset.isRest && aggResult.total_values > 0 && aggResult.total_values <= 50) {
       // Set enum based on actual value, except for REST datasets, we don't want to prevent writing new values
       debug(`Set enum of field ${prop.key}`)
       prop.enum = aggResult.aggs.map(a => a.value)
