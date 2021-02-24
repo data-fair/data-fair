@@ -15,39 +15,28 @@
               <dataset-status />
 
               <section-tabs
-                v-if="dataset.finalizedAt"
                 :min-height="390"
-                default-tab="tab-general-info"
                 :svg="checklistSvg"
+                :section="sections.find(s => s.id === 'structure')"
               >
-                <template v-slot:title>
-                  métadonnées
-                </template>
                 <template v-slot:tabs>
-                  <v-tab href="#tab-general-info">
-                    <v-icon>mdi-information</v-icon>&nbsp;&nbsp;Informations
+                  <v-tab href="#structure-schema">
+                    <v-icon>mdi-table-cog</v-icon>&nbsp;&nbsp;Schéma
                   </v-tab>
 
                   <template v-if="can('writeDescription') && dataset.isVirtual">
-                    <v-tab href="#tab-general-virtual">
+                    <v-tab href="#structure-virtual">
                       <v-icon>mdi-picture-in-picture-bottom-right-outline</v-icon>&nbsp;&nbsp;Jeu virtuel
                     </v-tab>
                   </template>
 
-                  <v-tab href="#tab-general-schema">
-                    <v-icon>mdi-table-cog</v-icon>&nbsp;&nbsp;Schéma
-                  </v-tab>
-
-                  <v-tab href="#tab-general-extensions">
+                  <v-tab href="#structure-extensions">
                     <v-icon>mdi-merge</v-icon>&nbsp;&nbsp;Enrichissement
                   </v-tab>
 
-                  <v-tab href="#tab-general-attachments">
-                    <v-icon>mdi-attachment</v-icon>&nbsp;&nbsp;Pièces jointes
-                  </v-tab>
                   <v-tab
                     v-if="user.adminMode"
-                    href="#tab-general-masterdata"
+                    href="#structure-masterdata"
                     class="admin--text"
                   >
                     <v-icon color="admin">
@@ -56,96 +45,112 @@
                   </v-tab>
                 </template>
                 <template v-slot:tabs-items>
-                  <v-tab-item value="tab-general-info">
-                    <doc-link tooltip="Consultez la documentation sur l'édition de jeux de données" doc-key="datasetEdit" />
-                    <v-container fluid class="pb-0">
-                      <dataset-info />
-                    </v-container>
-                  </v-tab-item>
-
-                  <v-tab-item value="tab-general-virtual">
-                    <v-container fluid>
-                      <dataset-virtual />
-                    </v-container>
-                  </v-tab-item>
-
-                  <v-tab-item value="tab-general-schema">
+                  <v-tab-item value="structure-schema">
                     <v-container fluid class="pb-0">
                       <dataset-schema />
                     </v-container>
                   </v-tab-item>
 
-                  <v-tab-item value="tab-general-attachments">
-                    <doc-link tooltip="Consultez la documentation sur les pièces jointes des jeux de données" doc-key="datasetAttachments" />
-                    <dataset-attachments />
+                  <v-tab-item value="structure-virtual">
+                    <v-container fluid>
+                      <dataset-virtual />
+                    </v-container>
                   </v-tab-item>
 
-                  <v-tab-item value="tab-general-extensions">
+                  <v-tab-item value="structure-extensions">
                     <doc-link tooltip="Consultez la documentation sur l'extension de jeux de données" doc-key="datasetExtend" />
                     <v-container fluid class="pt-0">
                       <dataset-extensions />
                     </v-container>
                   </v-tab-item>
 
-                  <v-tab-item value="tab-general-masterdata">
+                  <v-tab-item value="structure-masterdata">
                     <dataset-master-data />
                   </v-tab-item>
                 </template>
               </section-tabs>
 
               <section-tabs
-                v-if="can('readLines') && dataset.finalizedAt"
-                default-tab="tab-preview-table"
+                :min-height="390"
+                :svg="checklistSvg"
+                :section="sections.find(s => s.id === 'metadata')"
+              >
+                <template v-slot:tabs>
+                  <v-tab href="#metadata-info">
+                    <v-icon>mdi-information</v-icon>&nbsp;&nbsp;Informations
+                  </v-tab>
+
+                  <v-tab href="#metadata-attachments">
+                    <v-icon>mdi-attachment</v-icon>&nbsp;&nbsp;Pièces jointes
+                  </v-tab>
+                </template>
+                <template v-slot:tabs-items>
+                  <v-tab-item value="metadata-info">
+                    <doc-link tooltip="Consultez la documentation sur l'édition de jeux de données" doc-key="datasetEdit" />
+                    <v-container fluid class="pb-0">
+                      <dataset-info />
+                    </v-container>
+                  </v-tab-item>
+
+                  <v-tab-item value="metadata-attachments">
+                    <doc-link tooltip="Consultez la documentation sur les pièces jointes des jeux de données" doc-key="datasetAttachments" />
+                    <dataset-attachments />
+                  </v-tab-item>
+                </template>
+              </section-tabs>
+
+              <section-tabs
                 :svg="dataSvg"
+                :section="sections.find(s => s.id === 'data')"
               >
                 <template v-slot:title>
-                  données
+                  Données
                 </template>
                 <template v-slot:tabs>
-                  <v-tab href="#tab-preview-table">
+                  <v-tab href="#data-table">
                     <v-icon>mdi-table</v-icon>&nbsp;&nbsp;Tableau
                   </v-tab>
 
-                  <v-tab v-if="!!dataset.schema.find(f => f['x-refersTo'] === 'https://schema.org/startDate') && !!dataset.schema.find(f => f['x-refersTo'] === 'https://schema.org/endDate' && !!dataset.schema.find(f => f['x-refersTo'] === 'http://www.w3.org/2000/01/rdf-schema#label'))" href="#tab-preview-calendar">
+                  <v-tab v-if="!!dataset.schema.find(f => f['x-refersTo'] === 'https://schema.org/startDate') && !!dataset.schema.find(f => f['x-refersTo'] === 'https://schema.org/endDate' && !!dataset.schema.find(f => f['x-refersTo'] === 'http://www.w3.org/2000/01/rdf-schema#label'))" href="#data-calendar">
                     <v-icon>mdi-calendar-range</v-icon>&nbsp;&nbsp;Calendrier
                   </v-tab>
 
-                  <v-tab v-if="dataset.bbox" href="#tab-preview-map">
+                  <v-tab v-if="dataset.bbox" href="#data-map">
                     <v-icon>mdi-map</v-icon>&nbsp;&nbsp;Carte
                   </v-tab>
 
-                  <v-tab v-if="fileProperty" href="#tab-preview-files">
+                  <v-tab v-if="fileProperty" href="#data-files">
                     <v-icon>mdi-content-copy</v-icon>&nbsp;&nbsp;Fichiers
                   </v-tab>
 
-                  <v-tab v-if="!!dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/image')" href="#tab-preview-thumbnails">
+                  <v-tab v-if="!!dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/image')" href="#data-thumbnails">
                     <v-icon>mdi-image</v-icon>&nbsp;&nbsp;Vignettes
                   </v-tab>
                 </template>
                 <template v-slot:tabs-items>
-                  <v-tab-item value="tab-preview-table">
+                  <v-tab-item value="data-table">
                     <dataset-table />
                   </v-tab-item>
 
-                  <v-tab-item value="tab-preview-calendar">
+                  <v-tab-item value="data-calendar">
                     <v-container fluid class="pa-0">
                       <dataset-calendar />
                     </v-container>
                   </v-tab-item>
 
-                  <v-tab-item value="tab-preview-map">
+                  <v-tab-item value="data-map">
                     <v-container fluid class="pa-0">
                       <dataset-map fixed-height="600" />
                     </v-container>
                   </v-tab-item>
 
-                  <v-tab-item value="tab-preview-files">
+                  <v-tab-item value="data-files">
                     <v-container fluid class="pa-0">
                       <dataset-search-files />
                     </v-container>
                   </v-tab-item>
 
-                  <v-tab-item value="tab-preview-thumbnails">
+                  <v-tab-item value="data-thumbnails">
                     <v-container fluid>
                       <dataset-thumbnails-opts v-if="can('writeDescription')" />
                       <dataset-thumbnails />
@@ -155,53 +160,52 @@
               </section-tabs>
 
               <section-tabs
-                v-if="dataset.finalizedAt"
-                default-tab="tab-reuses-apps"
+                :section="sections.find(s => s.id === 'reuses')"
                 :svg="chartSvg"
                 :min-height="140"
               >
                 <template v-slot:title>
-                  utilisations
+                  Utilisations
                 </template>
                 <template v-slot:tabs>
-                  <v-tab href="#tab-reuses-apps">
+                  <v-tab href="#reuses-apps">
                     <v-icon>mdi-image-multiple</v-icon>&nbsp;&nbsp;Visualisations
                   </v-tab>
 
-                  <v-tab href="#tab-reuses-external">
+                  <v-tab href="#reuses-external">
                     <v-icon>mdi-open-in-new</v-icon>&nbsp;&nbsp;Réutilisations externes
                   </v-tab>
                 </template>
                 <template v-slot:tabs-items>
-                  <v-tab-item value="tab-reuses-apps">
+                  <v-tab-item value="reuses-apps">
                     <dataset-applications />
                   </v-tab-item>
 
-                  <v-tab-item value="tab-reuses-external">
+                  <v-tab-item value="reuses-external">
                     <dataset-external-reuses />
                   </v-tab-item>
                 </template>
               </section-tabs>
 
               <section-tabs
-                v-if="dataset.finalizedAt"
+                :section="sections.find(s => s.id === 'share')"
                 :svg="shareSvg"
                 :min-height="200"
               >
                 <template v-slot:title>
-                  partage
+                  Partage
                 </template>
                 <template v-slot:tabs>
-                  <v-tab href="#tab-publish-permissions">
+                  <v-tab href="#share-permissions">
                     <v-icon>mdi-security</v-icon>&nbsp;&nbsp;Permissions
                   </v-tab>
 
-                  <v-tab href="#tab-publish-publications">
+                  <v-tab href="#share-publications">
                     <v-icon>mdi-publish</v-icon>&nbsp;&nbsp;Publications
                   </v-tab>
                 </template>
                 <template v-slot:tabs-items>
-                  <v-tab-item value="tab-publish-permissions">
+                  <v-tab-item value="share-permissions">
                     <v-container fluid>
                       <permissions
                         v-if="can('getPermissions')"
@@ -213,45 +217,31 @@
                     </v-container>
                   </v-tab-item>
 
-                  <v-tab-item value="tab-publish-publications">
+                  <v-tab-item value="share-publications">
                     <dataset-publications />
                   </v-tab-item>
                 </template>
               </section-tabs>
 
               <section-tabs
-                v-if="can('readJournal') || can('readApiDoc')"
-                :default-tab="dataset.finalizedAt ? '' : 'tab-tech-journal'"
+                :section="sections.find(s => s.id === 'activity')"
                 :svg="settingsSvg"
                 :min-height="550"
               >
                 <template v-slot:title>
-                  activité
+                  Activité
                 </template>
                 <template v-slot:tabs>
-                  <v-tab v-if="can('readJournal')" href="#tab-tech-journal">
+                  <v-tab v-if="can('readJournal')" href="#activity-journal">
                     <v-icon>mdi-calendar-text</v-icon>&nbsp;&nbsp;Journal
-                  </v-tab>
-
-                  <v-tab v-if="can('readApiDoc') && dataset.finalizedAt" href="#tab-tech-apidoc">
-                    <v-icon>mdi-cloud</v-icon>&nbsp;&nbsp;API
                   </v-tab>
                 </template>
                 <template v-slot:tabs-items>
-                  <v-tab-item value="tab-tech-journal">
+                  <v-tab-item value="activity-journal">
                     <v-container fluid class="pa-0">
                       <journal
                         :journal="journal"
                         type="dataset"
-                      />
-                    </v-container>
-                  </v-tab-item>
-
-                  <v-tab-item value="tab-tech-apidoc">
-                    <v-container fluid class="pa-0">
-                      <open-api
-                        v-if="resourceUrl"
-                        :url="resourceUrl + '/api-docs.json'"
                       />
                     </v-container>
                   </v-tab-item>
@@ -264,9 +254,14 @@
     </v-col>
 
     <navigation-right v-if="this.$vuetify.breakpoint.lgAndUp">
-      <template v-slot:actions>
-        <dataset-actions />
-      </template>
+      <v-subheader>
+        Actions
+      </v-subheader>
+      <dataset-actions />
+      <v-subheader>
+        Contenu
+      </v-subheader>
+      <toc :sections="sections" />
     </navigation-right>
     <actions-button v-else>
       <template v-slot:actions>
@@ -298,9 +293,9 @@
   import DatasetMasterData from '~/components/datasets/master-data.vue'
   import Permissions from '~/components/permissions.vue'
   import Journal from '~/components/journal.vue'
-  import OpenApi from '~/components/open-api.vue'
   import NavigationRight from '~/components/layout/navigation-right'
   import ActionsButton from '~/components/layout/actions-button'
+  import Toc from '~/components/layout/toc.vue'
 
   const datavizSvg = require('~/assets/svg/undraw_All_the_data_re_hh4w.svg?raw')
   const penSvg = require('~/assets/svg/undraw_pen_nqf7.svg?raw')
@@ -335,9 +330,9 @@
       DatasetMasterData,
       Permissions,
       Journal,
-      OpenApi,
       NavigationRight,
       ActionsButton,
+      Toc,
     },
     async fetch({ store, route }) {
       store.dispatch('dataset/clear')
@@ -354,8 +349,8 @@
       dataSvg,
       chartSvg,
       shareSvg,
-      checklistSvg,
       campaignSvg,
+      checklistSvg,
     }),
     computed: {
       ...mapState(['env']),
@@ -365,6 +360,25 @@
       ...mapGetters('session', ['activeAccount']),
       fileProperty() {
         return this.dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')
+      },
+      sections() {
+        const sections = []
+        if (!this.dataset) return sections
+        if (this.dataset.finalizedAt) {
+          sections.push({ title: 'Structure', id: 'structure' })
+          sections.push({ title: 'Métadonnées', id: 'metadata' })
+        }
+        if (this.can('readLines') && this.dataset.finalizedAt) {
+          sections.push({ title: 'Données', id: 'data' })
+        }
+        if (this.dataset.finalizedAt) {
+          sections.push({ title: 'Utilisations', id: 'reuses' })
+          sections.push({ title: 'Partage', id: 'share' })
+        }
+        if (this.can('readJournal') || this.can('readApiDoc')) {
+          sections.push({ title: 'Activité', id: 'activity' })
+        }
+        return sections
       },
     },
     created() {

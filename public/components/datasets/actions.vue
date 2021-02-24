@@ -1,55 +1,82 @@
 <template>
-  <v-list v-if="dataset">
+  <v-list
+    v-if="dataset"
+    dense
+    class="py-0"
+  >
     <v-list-item
       v-for="dataFile in (dataFiles || [])"
       :key="dataFile.key"
       :disabled="!can('downloadFullData')"
       :href="dataFile.url"
     >
-      <v-list-item-action>
+      <v-list-item-icon>
         <v-icon color="primary">
           mdi-file-download
         </v-icon>
-      </v-list-item-action>
-      <v-list-item-title>{{ dataFile.title }}</v-list-item-title>
+      </v-list-item-icon>
+      <v-list-item-content>
+        <v-list-item-title>{{ dataFile.title }}</v-list-item-title>
+      </v-list-item-content>
     </v-list-item>
     <v-list-item
       v-if="can('writeData')"
       @click="showUploadDialog = true"
     >
-      <v-list-item-action>
+      <v-list-item-icon>
         <v-icon color="warning">
           mdi-file-upload
         </v-icon>
-      </v-list-item-action>
-      <v-list-item-title>Mise à jour</v-list-item-title>
+      </v-list-item-icon>
+      <v-list-item-content>
+        <v-list-item-title>Mise à jour</v-list-item-title>
+      </v-list-item-content>
     </v-list-item>
     <v-list-item
       v-if="can('readLines') && !error"
       @click="showIntegrationDialog = true; previewId = 'table'"
     >
-      <v-list-item-action>
+      <v-list-item-icon>
         <v-icon color="primary">
           mdi-code-tags
         </v-icon>
-      </v-list-item-action>
-      <v-list-item-title>Intégration</v-list-item-title>
+      </v-list-item-icon>
+      <v-list-item-content>
+        <v-list-item-title>Intégration</v-list-item-title>
+      </v-list-item-content>
+    </v-list-item>
+    <v-list-item
+      v-if="can('readApiDoc') && !error"
+      @click="showAPIDialog = true"
+    >
+      <v-list-item-icon>
+        <v-icon color="primary">
+          mdi-cloud
+        </v-icon>
+      </v-list-item-icon>
+      <v-list-item-content>
+        <v-list-item-title>API</v-list-item-title>
+      </v-list-item-content>
     </v-list-item>
     <v-list-item v-if="can('delete')" @click="showDeleteDialog = true">
-      <v-list-item-action>
+      <v-list-item-icon>
         <v-icon color="warning">
           mdi-delete
         </v-icon>
-      </v-list-item-action>
-      <v-list-item-title>Supprimer</v-list-item-title>
+      </v-list-item-icon>
+      <v-list-item-content>
+        <v-list-item-title>Supprimer</v-list-item-title>
+      </v-list-item-content>
     </v-list-item>
     <v-list-item v-if="can('delete')" @click="showOwnerDialog = true">
-      <v-list-item-action>
+      <v-list-item-icon>
         <v-icon color="warning">
           mdi-account
         </v-icon>
-      </v-list-item-action>
-      <v-list-item-title>Changer propriétaire</v-list-item-title>
+      </v-list-item-icon>
+      <v-list-item-content>
+        <v-list-item-title>Changer le propriétaire</v-list-item-title>
+      </v-list-item-content>
     </v-list-item>
 
     <v-dialog v-model="showIntegrationDialog">
@@ -91,6 +118,30 @@
             width="100%"
             height="500px"
             style="background-color: transparent; border: none;"
+          />
+        </v-card-text>
+      </v-card>
+    </v-dialog>
+
+    <v-dialog v-model="showAPIDialog" fullscreen>
+      <v-card outlined>
+        <v-toolbar
+          dense
+          flat
+        >
+          <v-toolbar-title />
+          <v-spacer />
+          <v-btn
+            icon
+            @click.native="showAPIDialog = false"
+          >
+            <v-icon>mdi-close</v-icon>
+          </v-btn>
+        </v-toolbar>
+        <v-card-text v-if="showAPIDialog">
+          <open-api
+            v-if="resourceUrl"
+            :url="resourceUrl + '/api-docs.json'"
           />
         </v-card-text>
       </v-card>
@@ -223,10 +274,11 @@
 <script>
   import { mapState, mapGetters, mapActions } from 'vuex'
   import OwnerPick from '~/components/owners/pick.vue'
+  import OpenApi from '~/components/open-api.vue'
   import eventBus from '~/event-bus'
 
   export default {
-    components: { OwnerPick },
+    components: { OwnerPick, OpenApi },
     data: () => ({
       showDeleteDialog: false,
       showUploadDialog: false,
@@ -236,17 +288,12 @@
       uploadProgress: 0,
       newOwner: null,
       showIntegrationDialog: false,
+      showAPIDialog: false,
       previewId: 'table',
     }),
     computed: {
       ...mapState('dataset', ['dataset', 'nbApplications', 'dataFiles', 'error']),
-      ...mapGetters('dataset', ['can']),
-      downloadLink() {
-        return this.dataset && this.resourceUrl + '/raw'
-      },
-      downloadFullLink() {
-        return this.dataset && this.resourceUrl + '/full'
-      },
+      ...mapGetters('dataset', ['can', 'resourceUrl']),
       previewLink() {
         return this.dataset && this.dataset.previews.find(p => p.id === this.previewId).href
       },

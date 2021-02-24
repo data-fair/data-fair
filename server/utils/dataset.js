@@ -119,7 +119,7 @@ exports.dataFiles = async (dataset) => {
       results.push({
         name: dataset.file.name,
         key: 'normalized',
-        title: `Fichier normalisé (format ${dataset.file.mimetype.split('/').pop()})`,
+        title: `Fichier normalisé (${dataset.file.mimetype.split('/').pop()})`,
         mimetype: dataset.file.mimetype,
       })
     }
@@ -133,7 +133,7 @@ exports.dataFiles = async (dataset) => {
       results.push({
         name,
         key: 'full',
-        title: `Fichier étendu (format ${dataset.file.mimetype.split('/').pop()})`,
+        title: `Fichier étendu (${dataset.file.mimetype.split('/').pop()})`,
         mimetype: dataset.file.mimetype,
       })
     }
@@ -147,7 +147,7 @@ exports.dataFiles = async (dataset) => {
       results.push({
         name: mbtilesName,
         key: 'mbtiles',
-        title: 'Tuiles cartographiques (format mbtiles)',
+        title: 'Tuiles cartographiques (mbtiles)',
         mimetype: 'application/vnd.sqlite3',
       })
     }

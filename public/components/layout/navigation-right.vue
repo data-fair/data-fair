@@ -6,10 +6,10 @@
     clipped
     floating
     fixed
-    style="padding-top: 70px"
+    style="padding-top: 50px"
     color="transparent"
   >
-    <slot name="actions" />
+    <slot />
   </v-navigation-drawer>
 </template>
 

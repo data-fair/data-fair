@@ -1,5 +1,7 @@
 <template>
   <v-sheet
+    v-if="section"
+    :id="section.id"
     :style="style"
     :class="`mt-3 mb-10 section-tabs section-tabs-${$vuetify.theme.dark ? 'dark' : 'light'}`"
     style="position: relative"
@@ -14,15 +16,28 @@
       :style="toolbarStyle"
       :class="tab ? 'section-active mb-2' : ''"
     >
-      <v-toolbar-title class="text-h5" @click="toggle">
-        <slot name="title" />
+      <v-toolbar-title
+        class="text-h5"
+        @click="toggle"
+      >
+        <slot name="title">
+          {{ section.title }}
+        </slot>
       </v-toolbar-title>
       <template v-slot:extension>
         <v-tabs
           v-model="tab"
           :optional="false"
         >
-          <slot name="tabs" />
+          <slot name="tabs">
+            <v-tab
+              v-for="tab in section.children"
+              :key="tab.id"
+              :href="`#${section.id}-${tab.id}`"
+            >
+              <v-icon v-if="tab.icon" v-text="tab.icon" />&nbsp;&nbsp;{{ tab.title }}
+            </v-tab>
+          </slot>
         </v-tabs>
       </template>
     </v-toolbar>
@@ -50,6 +65,7 @@
       defaultTab: { type: String },
       texture: { type: String },
       svg: { type: String },
+      section: { type: Object },
     },
     data: () => ({
       tab: null,
