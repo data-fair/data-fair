@@ -1,77 +1,50 @@
 <template>
   <div class="applications-facets">
-    <!--valeurs cochées : {{ facetsValues }}
-    <br>
-    valeurs retournées : {{ facets }}-->
-
-    <!--<template v-if="facets.owner && facets.owner.length">
-      <v-subheader @click="visibleFacet = 'owner'">
-        Propriétaire
-        <v-icon v-if="visibleFacet !== 'owner'">
-          mdi-menu-down
-        </v-icon>
-      </v-subheader>
-      <template v-if="visibleFacet === 'owner'">
-        <v-checkbox
-          v-for="facetItem in facets.owner"
-          :key="`${facetItem.value.type}:${facetItem.value.id}`"
-          v-model="facetsValues.owner[`${facetItem.value.type}:${facetItem.value.id}`]"
-          :value="true"
-          :hide-details="true"
-          class="mt-0"
-        >
-          <span slot="label">
-            <v-icon v-if="facetItem.value.type === 'user'">mdi-account</v-icon>
-            <v-icon v-if="facetItem.value.type === 'organization'">mdi-account-group</v-icon>
-            {{ facetItem.value.name }}
-            ({{ facetItem.count }})
-          </span>
-        </v-checkbox>
-      </template>
-    </template>-->
-
-    <template v-if="facets.visibility && facets.visibility.length">
-      <v-subheader @click="visibleFacet = 'visibility'">
-        Visibilité
-      </v-subheader>
-      <v-checkbox
-        v-for="facetItem in facets.visibility"
-        :key="`${facetItem.value}`"
-        v-model="facetsValues.visibility[facetItem.value]"
-        :label="`${{public: 'Public', private: 'Privé', protected: 'Protégé'}[facetItem.value]} (${facetItem.count})`"
-        :value="true"
-        :hide-details="true"
-        class="mt-0"
+    <template v-if="facets.visibility">
+      <v-select
+        v-model="facetsValues.visibility"
+        multiple
+        label="Visibilité"
+        :items="facets.visibility"
+        item-value="value"
+        :item-text="item => `${{public: 'Public', private: 'Privé', protected: 'Protégé'}[item.value]} (${item.count})`"
+        outlined
+        dense
+        hide-details
+        rounded
+        class="mb-4"
       />
     </template>
 
-    <template v-if="facets.topics && facets.topics.length">
-      <v-subheader @click="visibleFacet = 'topics'">
-        Thématiques
-      </v-subheader>
-      <v-checkbox
-        v-for="facetItem in facets.topics"
-        :key="facetItem.value.id"
-        v-model="facetsValues.topics[facetItem.value.id]"
-        :label="`${facetItem.value.title} (${facetItem.count})`"
-        :value="true"
-        :hide-details="true"
-        class="mt-0"
+    <template v-if="facets.topics">
+      <v-select
+        v-model="facetsValues.topics"
+        multiple
+        label="Thématiques"
+        :items="facets.topics"
+        :item-value="item => item.value.id"
+        :item-text="item => `${item.value.title} (${item.count})`"
+        outlined
+        dense
+        hide-details
+        rounded
+        class="mb-4"
       />
     </template>
 
-    <template v-if="facets['base-application'] && facets['base-application'].length">
-      <v-subheader @click="visibleFacet = 'base-application'">
-        Application
-      </v-subheader>
-      <v-checkbox
-        v-for="facetItem in facets['base-application']"
-        :key="`${facetItem.value.url}`"
-        v-model="facetsValues['base-application'][facetItem.value.url]"
-        :label="`${facetItem.value.title} ${facetItem.value.version || ''} (${facetItem.count})`"
-        :value="true"
-        :hide-details="true"
-        class="mt-0"
+    <template v-if="facets['base-application']">
+      <v-select
+        v-model="facetsValues['base-application']"
+        multiple
+        label="Application"
+        :items="facets['base-application']"
+        :item-value="item => item.value.url"
+        :item-text="item => `${item.value.title} ${item.value.version || ''} (${item.count})`"
+        outlined
+        dense
+        hide-details
+        rounded
+        class="mb-4"
       />
     </template>
   </div>

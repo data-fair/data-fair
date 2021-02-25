@@ -1,23 +1,6 @@
 <template>
-  <v-container class="pt-0" fluid>
-    <v-row v-if="user">
-      <v-col>
-        <applications-list />
-      </v-col>
-
-      <div class="actions-buttons">
-        <v-btn
-          v-if="user && canContrib"
-          color="primary"
-          fab
-          small
-          title="Configurer une visualisation"
-          to="/new-application"
-        >
-          <v-icon>mdi-plus</v-icon>
-        </v-btn>
-      </div>
-    </v-row>
+  <div>
+    <applications-list v-if="user" />
     <!-- Anonymous: show jumbotron -->
     <v-col
       v-else-if="initialized"
@@ -48,11 +31,11 @@
         </v-container>
       </v-responsive>
     </v-col>
-  </v-container>
+  </div>
 </template>
 
 <script>
-  import { mapState, mapActions, mapGetters } from 'vuex'
+  import { mapState, mapActions } from 'vuex'
 
   import ApplicationsList from '~/components/applications/list.vue'
 
@@ -64,7 +47,6 @@
     },
     computed: {
       ...mapState('session', ['user', 'initialized']),
-      ...mapGetters(['canContrib']),
       importApp() {
         return this.$route.query.import
       },

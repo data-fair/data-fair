@@ -1,6 +1,6 @@
 <template lang="html">
-  <v-col class="pt-0">
-    <v-row class="mb-2">
+  <v-col>
+    <v-row class="mb-1">
       <v-text-field
         v-model="filters.q"
         placeholder="Rechercher"
@@ -18,7 +18,7 @@
         @change="writeParams"
       />-->
     </v-row>
-    <v-row class="mb-2">
+    <v-row class="mb-1">
       <template v-for="filter in Object.keys(fullFilterLabels)">
         <v-chip
           v-if="filters[filter]"

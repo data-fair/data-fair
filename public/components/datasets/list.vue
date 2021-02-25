@@ -46,11 +46,6 @@
       <navigation-right v-if="this.$vuetify.breakpoint.lgAndUp">
         <datasets-list-actions />
         <template v-if="datasets">
-          <v-list dense>
-            <v-subheader>
-              FILTRER
-            </v-subheader>
-          </v-list>
           <v-row class="px-2">
             <v-col class="py-0">
               <search-filters

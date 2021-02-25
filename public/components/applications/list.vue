@@ -1,22 +1,12 @@
 <template>
-  <div>
-    <search-filters
-      :filter-labels="{'dataset': 'Jeu de données', 'service': 'Service', 'url': 'Application'}"
-      :filters="filters"
-      :facets="applications && applications.facets"
-      type="applications"
-      @apply="refresh()"
-    />
-
-    <v-row v-scroll="onScroll">
-      <v-col
-        cols="12"
-        sm="6"
-        md="8"
-        lg="10"
-        xl="10"
-      >
-        <v-row v-if="applications" class="resourcesList">
+  <v-row>
+    <v-col :style="this.$vuetify.breakpoint.lgAndUp ? 'padding-right:256px;' : ''">
+      <v-container class="py-0">
+        <v-row
+          v-if="applications"
+          v-scroll="onScroll"
+          class="resourcesList"
+        >
           <v-col
             v-for="application in applications.results"
             :key="application.id"
@@ -29,42 +19,78 @@
           </v-col>
         </v-row>
         <search-progress :loading="loading" />
-      </v-col>
-      <v-col
-        v-if="applications && !$vuetify.breakpoint.xsOnly"
-        class="pl-2"
-        sm="6"
-        md="4"
-        lg="2"
-        xl="2"
-      >
-        <applications-facets :facets="applications.facets" :facets-values="facetsValues" />
-      </v-col>
-    </v-row>
 
-    <v-responsive v-if="!hasApplications" height="auto">
-      <v-container class="fill-height">
-        <v-row align="center">
-          <v-col class="text-center">
-            <div
-              v-if="!filtered"
-              class="text-h6"
-            >
-              Vous n'avez pas encore configuré de visualisation.<br>Vous pouvez <nuxt-link :to="localePath('user-guide')">
-                consulter la documentation
-              </nuxt-link> pour en savoir plus.
-            </div>
-            <div
-              v-else
-              class="text-h6"
-            >
-              Aucun résultat ne correspond aux critères de recherche
-            </div>
-          </v-col>
-        </v-row>
+        <v-responsive v-if="!hasApplications" height="auto">
+          <v-container class="fill-height">
+            <v-row align="center">
+              <v-col class="text-center">
+                <div
+                  v-if="!filtered"
+                  class="text-h6"
+                >
+                  Vous n'avez pas encore configuré de visualisation.<br>Vous pouvez <nuxt-link :to="localePath('user-guide')">
+                    consulter la documentation
+                  </nuxt-link> pour en savoir plus.
+                </div>
+                <div
+                  v-else
+                  class="text-h6"
+                >
+                  Aucun résultat ne correspond aux critères de recherche
+                </div>
+              </v-col>
+            </v-row>
+          </v-container>
+        </v-responsive>
       </v-container>
-    </v-responsive>
-  </div>
+
+      <navigation-right v-if="this.$vuetify.breakpoint.lgAndUp">
+        <v-list
+          v-if="canContrib"
+          dense
+          class="list-actions"
+        >
+          <v-list-item :to="{path: '/new-application'}">
+            <v-list-item-icon>
+              <v-icon color="primary">
+                mdi-plus-circle
+              </v-icon>
+            </v-list-item-icon>
+            <v-list-item-title>Configurer une visualisation</v-list-item-title>
+          </v-list-item>
+        </v-list>
+        <template v-if="applications">
+          <v-row class="px-2">
+            <v-col class="py-0">
+              <search-filters
+                :filter-labels="{'dataset': 'Jeu de données', 'service': 'Service', 'url': 'Application'}"
+                :filters="filters"
+                :facets="applications && applications.facets"
+                type="applications"
+                @apply="refresh()"
+              />
+              <applications-facets
+                :facets="applications.facets"
+                :facets-values="facetsValues"
+              />
+            </v-col>
+          </v-row>
+        </template>
+      </navigation-right>
+      <div v-else class="actions-buttons">
+        <v-btn
+          v-if="canContrib"
+          color="primary"
+          fab
+          small
+          title="Configurer une visualisation"
+          to="/new-application"
+        >
+          <v-icon>mdi-plus</v-icon>
+        </v-btn>
+      </div>
+    </v-col>
+  </v-row>
 </template>
 
 <script>
@@ -72,10 +98,17 @@
   import SearchFilters from '~/components/search/filters.vue'
   import ApplicationsFacets from '~/components/applications/facets.vue'
   import ApplicationCard from '~/components/applications/card.vue'
-  const { mapState } = require('vuex')
+  import NavigationRight from '~/components/layout/navigation-right'
+  const { mapState, mapGetters } = require('vuex')
 
   export default {
-    components: { SearchProgress, SearchFilters, ApplicationsFacets, ApplicationCard },
+    components: {
+      SearchProgress,
+      SearchFilters,
+      ApplicationsFacets,
+      ApplicationCard,
+      NavigationRight,
+    },
     data: () => ({
       applications: null,
       page: 1,
@@ -83,15 +116,16 @@
       filters: {},
       filtered: false,
       facetsValues: {
-        visibility: {},
-        'base-application': {},
-        topics: {},
+        visibility: [],
+        'base-application': [],
+        topics: [],
       },
       lastParams: null,
     }),
     computed: {
       ...mapState('session', ['user']),
       ...mapState(['env']),
+      ...mapGetters(['canContrib']),
       plural() {
         return this.applications.count > 1
       },
@@ -105,6 +139,7 @@
     watch: {
       facetsValues: {
         deep: true,
+        immediate: true,
         handler() {
           this.refresh()
         },
@@ -122,9 +157,7 @@
         const fullFilters = { ...this.filters }
         let hasFacetFilter = false
         Object.entries(this.facetsValues).forEach(([facetKey, facetValues]) => {
-          const facetFilter = Object.entries(facetValues)
-            .filter(([facetValue, valueActive]) => valueActive)
-            .map(([facetValue]) => facetValue).join(',')
+          const facetFilter = facetValues && facetValues.join(',')
           if (facetFilter) {
             hasFacetFilter = true
             fullFilters[facetKey] = facetFilter

@@ -1,5 +1,5 @@
 <template>
-  <v-list dense>
+  <v-list dense class="list-actions">
     <v-subheader>
       CRÉER UN JEU DE DONNÉES
     </v-subheader>
