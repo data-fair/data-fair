@@ -13,7 +13,8 @@
         <v-col
           cols="12"
           sm="6"
-          md="4"
+          md="5"
+          xl="4"
         >
           <v-alert
             v-if="!!application.errorMessageDraft"
@@ -68,7 +69,8 @@
         <v-col
           cols="12"
           sm="6"
-          md="8"
+          md="7"
+          xl="8"
           class="pl-0"
         >
           <v-card

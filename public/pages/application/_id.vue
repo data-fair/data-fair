@@ -50,7 +50,7 @@
                 </template>
                 <template v-slot:tabs-items>
                   <v-tab-item value="config-config">
-                    <v-container fluid class="pb-0">
+                    <v-container fluid class="pa-0">
                       <application-config />
                     </v-container>
                   </v-tab-item>
