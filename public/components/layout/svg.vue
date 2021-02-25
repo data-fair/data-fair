@@ -7,6 +7,7 @@
     props: {
       source: { type: String, required: true },
       color: { type: String },
+      secondaryColor: { type: String },
     },
     computed: {
       themedSource() {
@@ -14,6 +15,7 @@
         return this.source
           .replace(/#6C63FF/gi, this.color) // default undraw color
           .replace(/#68E1FD/gi, this.color) // default manypixels color
+          .replace(/#FFD200/gi, this.secondaryColor || this.$vuetify.theme.themes.light.accent)
       },
     },
   }

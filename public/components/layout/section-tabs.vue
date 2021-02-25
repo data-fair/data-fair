@@ -49,7 +49,7 @@
     <wrap-svg
       v-if="svg"
       :source="svg"
-      style="height: 94px;position: absolute;left: 12px; top: 8px;"
+      :style="svgStyle"
       :color="$vuetify.theme.themes.light.primary"
     />
   </v-sheet>
@@ -66,6 +66,7 @@
       defaultTab: { type: String },
       texture: { type: String },
       svg: { type: String },
+      svgNoMargin: { type: Boolean },
       section: { type: Object },
     },
     data: () => ({
@@ -85,6 +86,16 @@
           css += `background-repeat: repeat; background-image: url("${textureUrl}");`
         }
         return css
+      },
+      svgStyle() {
+        if (!this.svg) return
+        let style = 'position: absolute;'
+        if (this.svgNoMargin) {
+          style += 'height: 110px;left: 4px;top:0px;'
+        } else {
+          style += 'height: 94px;left: 12px;top:8px;'
+        }
+        return style
       },
     },
     created() {

@@ -1,81 +1,88 @@
 <template>
-  <div class="actions-buttons">
-    <v-menu bottom left>
-      <template v-slot:activator="{on}">
-        <v-btn
-          fab
-          small
-          color="accent"
-          v-on="on"
-        >
-          <v-icon>mdi-dots-vertical</v-icon>
-        </v-btn>
-      </template>
+  <v-list
+    v-if="application"
+    dense
+    class="list-actions"
+  >
+    <v-subheader>
+      ACTIONS
+    </v-subheader>
+    <v-list-item
+      :disabled="!can('readConfig')"
+      :href="applicationLink"
+      target="_blank"
+    >
+      <v-list-item-icon>
+        <v-icon color="primary">
+          mdi-exit-to-app
+        </v-icon>
+      </v-list-item-icon>
+      <v-list-item-title>Ouvrir en pleine page</v-list-item-title>
+    </v-list-item>
 
-      <v-list>
-        <v-list-item
-          :disabled="!can('readConfig')"
-          :href="applicationLink"
-          target="_blank"
-        >
-          <v-list-item-avatar>
-            <v-icon color="primary">
-              mdi-exit-to-app
-            </v-icon>
-          </v-list-item-avatar>
-          <v-list-item-title>Ouvrir en pleine page</v-list-item-title>
-        </v-list-item>
+    <v-list-item
+      v-if="can('writeConfig')"
+      @click="showIntegrationDialog = true"
+    >
+      <v-list-item-icon>
+        <v-icon color="primary">
+          mdi-code-tags
+        </v-icon>
+      </v-list-item-icon>
+      <v-list-item-title>Intégrer dans un site</v-list-item-title>
+    </v-list-item>
 
-        <v-list-item
-          v-if="can('writeConfig')"
-          @click="showIntegrationDialog = true"
-        >
-          <v-list-item-avatar>
-            <v-icon color="primary">
-              mdi-code-tags
-            </v-icon>
-          </v-list-item-avatar>
-          <v-list-item-title>Intégrer dans un site</v-list-item-title>
-        </v-list-item>
+    <v-list-item
+      v-if="can('writeConfig')"
+      @click="showCaptureDialog = true"
+    >
+      <v-list-item-icon>
+        <v-icon color="primary">
+          mdi-camera
+        </v-icon>
+      </v-list-item-icon>
+      <v-list-item-title>Effectuer une capture</v-list-item-title>
+    </v-list-item>
 
-        <v-list-item
-          v-if="can('writeConfig')"
-          @click="showCaptureDialog = true"
-        >
-          <v-list-item-avatar>
-            <v-icon color="primary">
-              mdi-camera
-            </v-icon>
-          </v-list-item-avatar>
-          <v-list-item-title>Effectuer une capture</v-list-item-title>
-        </v-list-item>
+    <v-list-item
+      v-if="can('readApiDoc')"
+      @click="showAPIDialog = true"
+    >
+      <v-list-item-icon>
+        <v-icon color="primary">
+          mdi-cloud
+        </v-icon>
+      </v-list-item-icon>
+      <v-list-item-content>
+        <v-list-item-title>Utiliser l'API</v-list-item-title>
+      </v-list-item-content>
+    </v-list-item>
 
-        <v-list-item
-          v-if="can('delete')"
-          @click="showDeleteDialog = true"
-        >
-          <v-list-item-avatar>
-            <v-icon color="warning">
-              mdi-delete
-            </v-icon>
-          </v-list-item-avatar>
-          <v-list-item-title>Supprimer</v-list-item-title>
-        </v-list-item>
+    <v-list-item
+      v-if="can('delete')"
+      @click="showDeleteDialog = true"
+    >
+      <v-list-item-icon>
+        <v-icon color="warning">
+          mdi-delete
+        </v-icon>
+      </v-list-item-icon>
+      <v-list-item-title>Supprimer</v-list-item-title>
+    </v-list-item>
 
-        <v-list-item
-          v-if="can('delete')"
-          @click="showOwnerDialog = true"
-        >
-          <v-list-item-avatar>
-            <v-icon color="warning">
-              mdi-account
-            </v-icon>
-          </v-list-item-avatar>
-          <v-list-item-title>Changer de propriétaire</v-list-item-title>
-        </v-list-item>
-      </v-list>
-    </v-menu>
-    <v-dialog v-model="showIntegrationDialog">
+    <v-list-item
+      v-if="can('delete')"
+      @click="showOwnerDialog = true"
+    >
+      <v-list-item-icon>
+        <v-icon color="warning">
+          mdi-account
+        </v-icon>
+      </v-list-item-icon>
+      <v-list-item-title>Changer de propriétaire</v-list-item-title>
+    </v-list-item>
+
+    <v-dialog v-model="showIntegrationDialog" max-width="1200">
       <v-card outlined>
         <v-toolbar
           dense
@@ -90,11 +97,14 @@
             <v-icon>mdi-close</v-icon>
           </v-btn>
         </v-toolbar>
-        <v-card-text v-if="showIntegrationDialog">
-          Pour intégrer cette application dans un site vous pouvez copier le code suivant ou un code similaire dans le contenu HTML de votre site.
+        <v-card-text v-if="showIntegrationDialog" class="pb-0 px-4">
+          Pour intégrer cette application dans un site vous pouvez copier le code suivant ou un code similaire dans le code source HTML.
           <br>
           <pre>
-  &lt;iframe src="{{ applicationLink }}?embed=true" width="100%" height="500px" style="background-color: transparent; border: none;"/&gt;
+  &lt;iframe
+    src="{{ applicationLink }}?embed=true"
+    width="100%" height="500px" style="background-color: transparent; border: none;"
+  /&gt;
             </pre>
           <br>
           Résultat:
@@ -207,20 +217,46 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
-  </div>
+
+    <v-dialog v-model="showAPIDialog" fullscreen>
+      <v-card outlined>
+        <v-toolbar
+          dense
+          flat
+        >
+          <v-toolbar-title />
+          <v-spacer />
+          <v-btn
+            icon
+            @click.native="showAPIDialog = false"
+          >
+            <v-icon>mdi-close</v-icon>
+          </v-btn>
+        </v-toolbar>
+        <v-card-text v-if="showAPIDialog">
+          <open-api
+            v-if="resourceUrl"
+            :url="resourceUrl + '/api-docs.json'"
+          />
+        </v-card-text>
+      </v-card>
+    </v-dialog>
+  </v-list>
 </template>
 
 <script>
   import { mapState, mapActions, mapGetters } from 'vuex'
   import OwnerPick from '~/components/owners/pick.vue'
+  import OpenApi from '~/components/open-api.vue'
 
   export default {
-    components: { OwnerPick },
+    components: { OwnerPick, OpenApi },
     data: () => ({
       showDeleteDialog: false,
       showIntegrationDialog: false,
       showCaptureDialog: false,
       showOwnerDialog: false,
+      showAPIDialog: false,
       newOwner: null,
       captureWidth: 800,
       captureHeight: 450,

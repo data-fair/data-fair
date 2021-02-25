@@ -1,6 +1,10 @@
 <template>
-  <v-list v-if="dataset" dense>
-    <v-subheader>
+  <v-list
+    v-if="dataset"
+    dense
+    class="list-actions"
+  >
+    <v-subheader v-if="dataFiles && dataFiles.length">
       TÉLÉCHARGEMENTS
     </v-subheader>
     <v-list-item
@@ -82,13 +86,13 @@
       </v-list-item-content>
     </v-list-item>
 
-    <v-dialog v-model="showIntegrationDialog">
+    <v-dialog v-model="showIntegrationDialog" max-width="1200">
       <v-card outlined>
         <v-toolbar
           dense
           flat
         >
-          <v-toolbar-title>Prévisualiser dans un site</v-toolbar-title>
+          <v-toolbar-title>Intégrer dans un site</v-toolbar-title>
           <v-spacer />
           <v-btn
             icon
@@ -98,7 +102,7 @@
           </v-btn>
         </v-toolbar>
         <v-card-text v-if="showIntegrationDialog" class="pb-0 px-4">
-          Pour intégrer une prévisualisation de ce jeu de données dans un site vous pouvez copier le code suivant ou un code similaire dans le contenu HTML de votre site.
+          Pour intégrer une prévisualisation de ce jeu de données dans un site vous pouvez copier le code suivant ou un code similaire dans le code source HTML.
           <br>
           <v-select
             v-if="dataset.previews && dataset.previews.length > 1"

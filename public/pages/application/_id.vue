@@ -1,106 +1,148 @@
 <template>
-  <v-container v-if="application || error" fluid>
-    <v-alert
-      v-if="error"
-      type="error"
-      outlined
-    >
-      {{ error.data }}
-    </v-alert>
-    <template v-else>
-      <doc-link
-        v-if="prodBaseApp"
-        :tooltip="`Consultez la documentation sur l'application ${prodBaseApp.title}`"
-        :doc-href="prodBaseApp.documentation"
-        offset="left"
-      />
-      <v-row class="application">
-        <v-col>
-          <application-info />
-          <application-config />
-          <v-card
-            v-if="can('getPermissions')"
-            outlined
-            style="min-height: 270px;"
-            class="mt-4"
-          >
-            <v-tabs :background-color="$vuetify.theme.dark ? '' : 'grey lighten-3'">
-              <v-tab href="#tab-publish-permissions">
-                <v-icon>mdi-security</v-icon>&nbsp;&nbsp;Permissions
-              </v-tab>
-              <v-tab-item value="tab-publish-permissions">
-                <v-container fluid>
-                  <permissions
-                    v-if="can('getPermissions')"
-                    :resource="application"
-                    :resource-url="resourceUrl"
-                    :api="api"
-                    :has-private-parents="hasPrivateDatasets"
-                  />
-                </v-container>
-              </v-tab-item>
+  <v-row v-if="application || error" class="fluid">
+    <v-col :style="this.$vuetify.breakpoint.lgAndUp ? 'padding-right:256px;' : ''">
+      <v-container class="py-0">
+        <v-alert
+          v-if="error"
+          type="error"
+          outlined
+        >
+          {{ error.data }}
+        </v-alert>
+        <template v-else>
+          <doc-link
+            v-if="prodBaseApp"
+            :tooltip="`Consultez la documentation sur l'application ${prodBaseApp.title}`"
+            :doc-href="prodBaseApp.documentation"
+            offset="left"
+          />
+          <v-row class="application">
+            <v-col>
+              <section-tabs
+                :svg="checklistSvg"
+                svg-no-margin
+                :section="sections.find(s => s.id === 'metadata')"
+              >
+                <template v-slot:tabs>
+                  <v-tab href="#metadata-info">
+                    <v-icon>mdi-information</v-icon>&nbsp;&nbsp;Informations
+                  </v-tab>
+                </template>
+                <template v-slot:tabs-items>
+                  <v-tab-item value="metadata-info">
+                    <v-container fluid class="pb-0">
+                      <application-info />
+                    </v-container>
+                  </v-tab-item>
+                </template>
+              </section-tabs>
 
-              <template v-if="can('getKeys')">
-                <v-tab href="#tab-publish-links">
-                  <v-icon>mdi-link</v-icon>&nbsp;&nbsp;Lien protégé
-                </v-tab>
-                <v-tab-item value="tab-publish-links">
-                  <v-container fluid>
-                    <application-protected-links />
-                  </v-container>
-                </v-tab-item>
-              </template>
+              <section-tabs
+                :min-height="390"
+                :svg="creativeSvg"
+                svg-no-margin
+                :section="sections.find(s => s.id === 'config')"
+              >
+                <template v-slot:tabs>
+                  <v-tab href="#config-config">
+                    <v-icon>mdi-information</v-icon>&nbsp;&nbsp;Édition
+                  </v-tab>
+                </template>
+                <template v-slot:tabs-items>
+                  <v-tab-item value="config-config">
+                    <v-container fluid class="pb-0">
+                      <application-config />
+                    </v-container>
+                  </v-tab-item>
+                </template>
+              </section-tabs>
 
-              <v-tab href="#tab-publish-publications">
-                <v-icon>mdi-publish</v-icon>&nbsp;&nbsp;Publications
-              </v-tab>
-              <v-tab-item value="tab-publish-publications">
-                <application-publications />
-              </v-tab-item>
-            </v-tabs>
-          </v-card>
+              <section-tabs
+                :section="sections.find(s => s.id === 'share')"
+                :svg="shareSvg"
+                svg-no-margin
+                :min-height="250"
+              >
+                <template v-slot:title>
+                  Partage
+                </template>
+                <template v-slot:tabs>
+                  <v-tab href="#share-permissions">
+                    <v-icon>mdi-security</v-icon>&nbsp;&nbsp;Permissions
+                  </v-tab>
 
-          <v-card
-            v-if="can('readJournal') || can('readApiDoc')"
-            outlined
-            class="mt-6"
-          >
-            <v-tabs :background-color="$vuetify.theme.dark ? '' : 'grey lighten-3'">
-              <template v-if="can('readJournal')">
-                <v-tab href="#tab-tech-journal">
-                  <v-icon>mdi-calendar-text</v-icon>&nbsp;&nbsp;Journal
-                </v-tab>
-                <v-tab-item value="tab-tech-journal">
-                  <v-container fluid class="pa-0">
-                    <journal
-                      :journal="journal"
-                      type="application"
-                    />
-                  </v-container>
-                </v-tab-item>
-              </template>
+                  <v-tab v-if="can('getKeys')" href="#share-links">
+                    <v-icon>mdi-link</v-icon>&nbsp;&nbsp;Lien protégé
+                  </v-tab>
 
-              <template v-if="can('readApiDoc')">
-                <v-tab href="#tab-tech-apidoc">
-                  <v-icon>mdi-cloud</v-icon>&nbsp;&nbsp;API
-                </v-tab>
-                <v-tab-item value="tab-tech-apidoc">
-                  <v-container fluid class="pa-0">
-                    <open-api
-                      v-if="resourceUrl"
-                      :url="resourceUrl + '/api-docs.json'"
-                    />
-                  </v-container>
-                </v-tab-item>
-              </template>
-            </v-tabs>
-          </v-card>
-        </v-col>
+                  <v-tab href="#share-publications">
+                    <v-icon>mdi-publish</v-icon>&nbsp;&nbsp;Publications
+                  </v-tab>
+                </template>
+                <template v-slot:tabs-items>
+                  <v-tab-item value="share-permissions">
+                    <v-container fluid>
+                      <permissions
+                        v-if="can('getPermissions')"
+                        :resource="application"
+                        :resource-url="resourceUrl"
+                        :api="api"
+                        :has-private-parents="hasPrivateDatasets"
+                      />
+                    </v-container>
+                  </v-tab-item>
 
+                  <v-tab-item value="share-links">
+                    <v-container fluid>
+                      <application-protected-links />
+                    </v-container>
+                  </v-tab-item>
+
+                  <v-tab-item value="share-publications">
+                    <application-publications />
+                  </v-tab-item>
+                </template>
+              </section-tabs>
+
+              <section-tabs
+                :section="sections.find(s => s.id === 'activity')"
+                :svg="settingsSvg"
+                :min-height="550"
+              >
+                <template v-slot:title>
+                  Activité
+                </template>
+                <template v-slot:tabs>
+                  <v-tab v-if="can('readJournal')" href="#activity-journal">
+                    <v-icon>mdi-calendar-text</v-icon>&nbsp;&nbsp;Journal
+                  </v-tab>
+                </template>
+                <template v-slot:tabs-items>
+                  <v-tab-item value="activity-journal">
+                    <v-container fluid class="pa-0">
+                      <journal
+                        :journal="journal"
+                        type="application"
+                      />
+                    </v-container>
+                  </v-tab-item>
+                </template>
+              </section-tabs>
+            </v-col>
+          </v-row>
+        </template>
+      </v-container>
+    </v-col>
+    <navigation-right v-if="this.$vuetify.breakpoint.lgAndUp">
+      <application-actions />
+      <toc :sections="sections" />
+    </navigation-right>
+    <actions-button v-else>
+      <template v-slot:actions>
         <application-actions />
-      </v-row>
-    </template>
-  </v-container>
+      </template>
+    </actions-button>
+  </v-row>
 </template>
 
 <script>
@@ -112,7 +154,15 @@
   import ApplicationConfig from '~/components/applications/config.vue'
   import Permissions from '~/components/permissions.vue'
   import Journal from '~/components/journal.vue'
-  import OpenApi from '~/components/open-api.vue'
+  import SectionTabs from '~/components/layout/section-tabs.vue'
+  import NavigationRight from '~/components/layout/navigation-right'
+  import ActionsButton from '~/components/layout/actions-button'
+  import Toc from '~/components/layout/toc.vue'
+
+  const checklistSvg = require('~/assets/svg/Checklist_Two Color.svg?raw')
+  const creativeSvg = require('~/assets/svg/Creative Process_Two Color.svg?raw')
+  const shareSvg = require('~/assets/svg/Share_Two Color.svg?raw')
+  const settingsSvg = require('~/assets/svg/Settings_Monochromatic.svg?raw')
 
   export default {
     components: {
@@ -123,17 +173,36 @@
       ApplicationConfig,
       Permissions,
       Journal,
-      OpenApi,
+      SectionTabs,
+      NavigationRight,
+      ActionsButton,
+      Toc,
     },
     async fetch({ store, params, route }) {
       store.dispatch('application/clear')
       await store.dispatch('application/setId', route.params.id)
     },
-    data: () => ({}),
+    data: () => ({
+      checklistSvg,
+      creativeSvg,
+      shareSvg,
+      settingsSvg,
+    }),
     computed: {
       ...mapState(['env']),
       ...mapState('application', ['application', 'api', 'journal', 'prodBaseApp', 'error']),
       ...mapGetters('application', ['resourceUrl', 'can', 'applicationLink', 'hasPrivateDatasets']),
+      sections() {
+        const sections = []
+        if (!this.application) return sections
+        sections.push({ title: 'Métadonnées', id: 'metadata' })
+        sections.push({ title: 'Configuration', id: 'config' })
+        sections.push({ title: 'Partage', id: 'share' })
+        if (this.can('readJournal')) {
+          sections.push({ title: 'Activité', id: 'activity' })
+        }
+        return sections
+      },
     },
     created() {
       // children pages are deprecated

@@ -17,6 +17,7 @@
               <section-tabs
                 :min-height="390"
                 :svg="buildingSvg"
+                svg-no-margin
                 :section="sections.find(s => s.id === 'structure')"
               >
                 <template v-slot:tabs>
@@ -73,6 +74,7 @@
               <section-tabs
                 :min-height="390"
                 :svg="checklistSvg"
+                svg-no-margin
                 :section="sections.find(s => s.id === 'metadata')"
               >
                 <template v-slot:tabs>
@@ -101,6 +103,7 @@
 
               <section-tabs
                 :svg="dataSvg"
+                svg-no-margin
                 :section="sections.find(s => s.id === 'data')"
               >
                 <template v-slot:title>
@@ -162,6 +165,7 @@
               <section-tabs
                 :section="sections.find(s => s.id === 'reuses')"
                 :svg="chartSvg"
+                svg-no-margin
                 :min-height="140"
               >
                 <template v-slot:title>
@@ -190,6 +194,7 @@
               <section-tabs
                 :section="sections.find(s => s.id === 'share')"
                 :svg="shareSvg"
+                svg-no-margin
                 :min-height="200"
               >
                 <template v-slot:title>
@@ -267,7 +272,6 @@
 
 <script>
   import { mapState, mapActions, mapGetters } from 'vuex'
-  import SectionTabs from '~/components/layout/section-tabs.vue'
   import DatasetInfo from '~/components/datasets/info.vue'
   import DatasetSchema from '~/components/datasets/schema.vue'
   import DatasetActions from '~/components/datasets/actions.vue'
@@ -287,21 +291,21 @@
   import DatasetMasterData from '~/components/datasets/master-data.vue'
   import Permissions from '~/components/permissions.vue'
   import Journal from '~/components/journal.vue'
+  import SectionTabs from '~/components/layout/section-tabs.vue'
   import NavigationRight from '~/components/layout/navigation-right'
   import ActionsButton from '~/components/layout/actions-button'
   import Toc from '~/components/layout/toc.vue'
 
-  const datavizSvg = require('~/assets/svg/undraw_All_the_data_re_hh4w.svg?raw')
-  const penSvg = require('~/assets/svg/undraw_pen_nqf7.svg?raw')
-  const textSvg = require('~/assets/svg/undraw_text_field_htlv.svg?raw')
   const settingsSvg = require('~/assets/svg/Settings_Monochromatic.svg?raw')
-  const dataSvg = require('~/assets/svg/Data storage_Monochromatic.svg?raw')
-  // const chartSvg = require('~/assets/svg/Smart phone data_Monochromatic.svg?raw')
-  const chartSvg = require('~/assets/svg/Graphics and charts_Monochromatic.svg?raw')
-  const shareSvg = require('~/assets/svg/Share_Monochromatic.svg?raw')
-  const checklistSvg = require('~/assets/svg/Checklist _Monochromatic.svg?raw')
-  const campaignSvg = require('~/assets/svg/Campaign launch_Monochromatic.svg?raw')
-  const buildingSvg = require('~/assets/svg/Process building_Monochromatic.svg?raw')
+  const dataSvg = require('~/assets/svg/Data storage_Two Color.svg?raw')
+  // const chartSvg = require('~/assets/svg/Graphics and charts_Monochromatic.svg?raw')
+  const chartSvg = require('~/assets/svg/Graphics and charts_Two Color.svg?raw')
+  // const shareSvg = require('~/assets/svg/Share_Monochromatic.svg?raw')
+  const shareSvg = require('~/assets/svg/Share_Two Color.svg?raw')
+  // const checklistSvg = require('~/assets/svg/Checklist _Monochromatic.svg?raw')
+  const checklistSvg = require('~/assets/svg/Checklist_Two Color.svg?raw')
+  // const buildingSvg = require('~/assets/svg/Process building_Monochromatic.svg?raw')
+  const buildingSvg = require('~/assets/svg/Team building _Two Color.svg?raw')
 
   export default {
     components: {
@@ -337,14 +341,10 @@
       ])
     },
     data: () => ({
-      datavizSvg,
-      penSvg,
-      textSvg,
       settingsSvg,
       dataSvg,
       chartSvg,
       shareSvg,
-      campaignSvg,
       checklistSvg,
       buildingSvg,
     }),
@@ -371,7 +371,7 @@
           sections.push({ title: 'Utilisations', id: 'reuses' })
           sections.push({ title: 'Partage', id: 'share' })
         }
-        if (this.can('readJournal') || this.can('readApiDoc')) {
+        if (this.can('readJournal')) {
           sections.push({ title: 'Activité', id: 'activity' })
         }
         return sections
