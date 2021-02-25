@@ -653,11 +653,11 @@ async function manageESError(req, err) {
   // We used to store an error on the data whenever a dataset encoutered an elasticsearch error
   // but this can end up storing too many errors when the cluster is in a bad state
   // revert to simply logging
-  if (req.dataset.status === 'finalized' && err.statusCode >= 404 && errBody.type !== 'search_phase_execution_exception') {
+  // if (req.dataset.status === 'finalized' && err.statusCode >= 404 && errBody.type !== 'search_phase_execution_exception') {
     // await req.app.get('db').collection('datasets').updateOne({ id: req.params.datasetId }, { $set: { status: 'error' } })
     // await journals.log(req.app, req.dataset, { type: 'error', data: message })
-    console.error(`elasticsearch query error ${req.dataset.id}`, message)
-  }
+  // }
+  console.error(`elasticsearch query error ${req.dataset.id}`, err)
   throw createError(err.status, message)
 }
 
