@@ -1,13 +1,13 @@
 <template>
   <div>
-    <p>Définissez des licenses pour clarifier les utilisations possibles des jeux de données que vous diffusez.</p>
+    <p>Définissez des licences pour clarifier les utilisations possibles des jeux de données que vous diffusez.</p>
 
     <v-btn
       color="primary"
       class="mb-3"
       @click="showDialog = true"
     >
-      Ajouter une license
+      Ajouter une licence
     </v-btn>
 
     <v-list
@@ -27,7 +27,7 @@
           <v-btn
             color="warning"
             icon
-            title="Supprimer cette license"
+            title="Supprimer cette licence"
             @click="removeLicense(rowIndex)"
           >
             <v-icon>mdi-delete</v-icon>

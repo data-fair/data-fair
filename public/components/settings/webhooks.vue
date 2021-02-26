@@ -8,7 +8,7 @@
       <v-jsf
         v-model="wrapper"
         :schema="wrapperSchema"
-        :options="{locale: 'fr', arrayItemCardProps: {outlined: true, tile: true}, dialogCardProps: {outlined: true}}"
+        :options="{locale: 'fr', arrayItemCardProps: {outlined: true, tile: true}, editMode: 'inline'}"
         @change="change"
       />
     </v-form>

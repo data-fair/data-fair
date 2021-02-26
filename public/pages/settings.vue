@@ -1,18 +1,20 @@
 <template lang="html">
-  <v-container>
-    <doc-link tooltip="Consultez la documentation sur les paramètres" doc-key="settings" />
-    <v-row v-if="initialized">
-      <v-col>
-        <!--<v-subheader>{{ $t('pages.settings.description') }}</v-subheader>-->
-        <template v-if="authorized">
-          <h2 class="mb-4">
-            Paramètres de l'{{ activeAccount.type ==='organization' ? ('organisation ' + organization.name): ('utilisateur ' + user.name) }}
-          </h2>
-          <p v-if="activeAccount.type ==='organization'">
-            Vous êtes <strong>{{ user.organizations.find(o => o.id===activeAccount.id).role }}</strong> dans cette organisation.
-          </p>
+  <v-row>
+    <v-col :style="this.$vuetify.breakpoint.lgAndUp ? 'padding-right:256px;' : ''">
+      <v-container class="py-0">
+        <doc-link tooltip="Consultez la documentation sur les paramètres" doc-key="settings" />
+        <v-row v-if="initialized">
+          <v-col>
+            <!--<v-subheader>{{ $t('pages.settings.description') }}</v-subheader>-->
+            <template v-if="authorized">
+              <h2 class="mb-4">
+                Paramètres de l'{{ activeAccount.type ==='organization' ? ('organisation ' + organization.name): ('utilisateur ' + user.name) }}
+              </h2>
+              <p v-if="activeAccount.type ==='organization'">
+                Vous êtes <strong>{{ user.organizations.find(o => o.id===activeAccount.id).role }}</strong> dans cette organisation.
+              </p>
 
-          <!--<div v-if="activeAccount.type ==='organization'">
+              <!--<div v-if="activeAccount.type ==='organization'">
             <h3 class="mb-3">
               Permissions générales par rôle
             </h3>
@@ -40,43 +42,51 @@
             </v-data-table>
           </div>-->
 
-          <h3 class="mt-3 mb-3">
-            Licences
-          </h3>
-          <settings-licenses
-            v-if="settings"
-            :settings="settings"
-            @license-updated="save"
-          />
-          <h3 class="mt-3 mb-3">
-            Thématiques
-          </h3>
-          <settings-topics
-            v-if="settings"
-            :settings="settings"
-            @updated="save"
-          />
-          <h3 class="mt-3 mb-3">
-            Clés d'API
-          </h3>
-          <settings-api-keys
-            v-if="settings"
-            :settings="settings"
-            @updated="save"
-          />
-          <h3 class="mt-3 mb-3">
-            Appels extérieurs (Webhooks)
-          </h3>
-          <settings-webhooks
-            v-if="settings"
-            :settings="settings"
-            @webhook-updated="save"
-          />
-        </template>
-        <not-authorized v-else />
-      </v-col>
-    </v-row>
-  </v-container>
+              <h3 id="licences" class="mt-10 mb-3">
+                Licences
+              </h3>
+              <settings-licenses
+                v-if="settings"
+                :settings="settings"
+                @license-updated="save"
+              />
+
+              <h3 id="topics" class="mt-10 mb-3">
+                Thématiques
+              </h3>
+              <settings-topics
+                v-if="settings"
+                :settings="settings"
+                @updated="save"
+              />
+
+              <h3 id="api-keys" class="mt-10 mb-3">
+                Clés d'API
+              </h3>
+              <settings-api-keys
+                v-if="settings"
+                :settings="settings"
+                @updated="save"
+              />
+
+              <h3 id="webhooks" class="mt-10 mb-3">
+                Appels extérieurs (Webhooks)
+              </h3>
+              <settings-webhooks
+                v-if="settings"
+                :settings="settings"
+                @webhook-updated="save"
+              />
+            </template>
+            <not-authorized v-else />
+          </v-col>
+        </v-row>
+      </v-container>
+    </v-col>
+    <navigation-right v-if="this.$vuetify.breakpoint.lgAndUp">
+      <toc :sections="sections" />
+    </navigation-right>
+  </v-row>
 </template>
 
 <script>
@@ -85,11 +95,13 @@
   import SettingsLicenses from '~/components/settings/licenses.vue'
   import SettingsApiKeys from '~/components/settings/api-keys.vue'
   import SettingsTopics from '~/components/settings/topics.vue'
+  import NavigationRight from '~/components/layout/navigation-right'
+  import Toc from '~/components/layout/toc.vue'
   import eventBus from '~/event-bus'
 
   export default {
     // middleware: 'auth',
-    components: { SettingsWebhooks, SettingsLicenses, SettingsApiKeys, SettingsTopics },
+    components: { SettingsWebhooks, SettingsLicenses, SettingsApiKeys, SettingsTopics, NavigationRight, Toc },
     data: () => ({
       api: null,
       operations: null,
@@ -111,6 +123,21 @@
           if (organization.role !== this.env.adminRole) return false
         }
         return true
+      },
+      sections() {
+        return [{
+          id: 'licences',
+          title: 'Licences',
+        }, {
+          id: 'topics',
+          title: 'Thématiques',
+        }, {
+          id: 'api-keys',
+          title: 'Clés d\'API',
+        }, {
+          id: 'webhooks',
+          title: 'Appels extérieurs (Webhooks)',
+        }]
       },
     },
     watch: {

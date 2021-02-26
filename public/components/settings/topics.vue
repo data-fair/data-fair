@@ -7,7 +7,7 @@
       <v-jsf
         v-model="wrapper"
         :schema="wrapperSchema"
-        :options="{locale: 'fr', hideReadOnly: true, colorPickerProps: {showSwatches: true}, arrayItemCardProps: {outlined: true, tile: true}, dialogCardProps: {outlined: true}}"
+        :options="opts"
         @change="change"
       />
     </v-form>
@@ -46,12 +46,20 @@
       wrapper: {
         topics: [],
       },
+      opts: {
+        locale: 'fr',
+        hideReadOnly: true,
+        colorPickerProps: { showSwatches: true },
+        arrayItemCardProps: { outlined: true, tile: true },
+        editMode: 'inline',
+      },
     }),
     created() {
       this.wrapper.topics = JSON.parse(JSON.stringify(this.settings.topics || []))
     },
     methods: {
       async change() {
+        console.log('change !')
         await new Promise(resolve => setTimeout(resolve, 10))
         if (this.formValid) {
           this.settings.topics = JSON.parse(JSON.stringify(this.wrapper.topics))
