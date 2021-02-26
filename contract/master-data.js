@@ -17,7 +17,7 @@ exports.schema = {
             type: 'array',
             title: 'Filtres',
             minItems: 1,
-            'x-options': { editMode: 'dialog' },
+            'x-options': { editMode: 'inline' },
             items: {
               type: 'object',
               required: ['type', 'property'],
