@@ -19,18 +19,17 @@
       />
     </nuxt-link>
     <v-card-actions style="position:absolute; bottom: 0px;width:100%;">
-      <owner-short :owner="catalog.owner" />
+      <!--<owner-short :owner="catalog.owner" />-->
       <v-spacer />
     </v-card-actions>
   </v-card>
 </template>
 
 <script>
-  import OwnerShort from '~/components/owners/short.vue'
   const marked = require('marked')
 
   export default {
-    components: { OwnerShort },
+    components: { },
     props: ['catalog'],
     data: () => ({
       marked,

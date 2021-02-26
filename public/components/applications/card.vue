@@ -34,11 +34,10 @@
         </v-col>
       </v-row>
     </nuxt-link>
-    <v-card-actions>
-      <owner-short :owner="application.owner" />
-      &nbsp;&nbsp;
+    <v-card-actions class="pl-3">
+      <!--<owner-short :owner="application.owner" />-->
       <visibility :visibility="application.visibility" />
-      <v-spacer />
+      &nbsp;&nbsp;
       <v-tooltip v-if="!!application.errorMessage" top>
         <template v-slot:activator="{on}">
           <v-icon color="error" v-on="on">

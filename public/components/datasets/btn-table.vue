@@ -2,15 +2,15 @@
   <v-dialog
     v-model="dialog"
     :fullscreen="$vuetify.breakpoint.smAndDown"
+    max-width="1200"
   >
     <template v-slot:activator="{ on }">
-      <v-btn
-        icon
-        title="Prévisualisez la donnée"
+      <v-icon
+        title="Prévisualiser la donnée"
         v-on="on"
       >
-        <v-icon>mdi-table</v-icon>
-      </v-btn>
+        mdi-table
+      </v-icon>
     </template>
     <v-card v-if="dialog">
       <v-toolbar dense flat>

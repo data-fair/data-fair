@@ -57,11 +57,11 @@
         </v-col>
       </v-row>
     </nuxt-link>
-    <v-card-actions>
-      <owner-short :owner="dataset.owner" />
-      &nbsp;&nbsp;
+    <v-card-actions class="pl-3">
+      <!--<owner-short :owner="dataset.owner" />
+      &nbsp;&nbsp;-->
       <visibility :visibility="dataset.visibility" />
-      <v-spacer />
+      &nbsp;&nbsp;
       <v-tooltip v-if="dataset.status === 'error'" top>
         <template v-slot:activator="{on}">
           <v-icon color="error" v-on="on">
@@ -70,19 +70,19 @@
         </template>
         En erreur
       </v-tooltip>
+      <v-spacer />
       <dataset-btn-table v-if="dataset.finalizedAt" :dataset="dataset" />
     </v-card-actions>
   </v-card>
 </template>
 
 <script>
-  import OwnerShort from '~/components/owners/short.vue'
   import Visibility from '~/components/visibility.vue'
   import DatasetBtnTable from '~/components/datasets/btn-table.vue'
   const marked = require('marked')
 
   export default {
-    components: { OwnerShort, Visibility, DatasetBtnTable },
+    components: { Visibility, DatasetBtnTable },
     props: ['dataset', 'showTopics'],
     data: () => ({
       marked,
