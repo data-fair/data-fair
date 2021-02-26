@@ -26,12 +26,7 @@
               <v-icon>mdi-file-image</v-icon>
             </v-list-item-avatar>
             <span>{{ prodBaseApp ? prodBaseApp.title : application.url.split('/').slice(-3,-2).pop() }}</span>
-          </v-list-item>
-          <v-list-item>
-            <v-list-item-avatar class="ml-0 my-0">
-              <v-icon>mdi-information-outline</v-icon>
-            </v-list-item-avatar>
-            <span>Version {{ version }}</span>
+            &nbsp;<span>- version {{ version }}</span>
             <v-spacer />
             <span v-if="upgradeAvailable" class="accent--text">
               Version {{ upgradeAvailable.version }} disponible</span>
