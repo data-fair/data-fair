@@ -1,41 +1,11 @@
 <template>
-  <v-container class="pt-0" fluid>
-    <doc-link
+  <div>
+    <!--<doc-link
       tooltip="Consultez la documentation sur les connecteurs"
       doc-key="catalogs"
       offset="left"
-    />
-    <v-row v-if="user">
-      <v-col>
-        <v-subheader class="px-0 pr-12 mb-2">
-          {{ $t('pages.catalogs.description') }}
-        </v-subheader>
-        <catalogs-list />
-      </v-col>
-
-      <div class="actions-buttons">
-        <v-btn
-          v-if="user && canAdmin"
-          color="primary"
-          fab
-          small
-          title="Configurer un catalogue"
-          @click="importCatalogSheet = true"
-        >
-          <v-icon>mdi-plus</v-icon>
-        </v-btn>
-      </div>
-
-      <div class="text-center">
-        <v-bottom-sheet v-model="importCatalogSheet">
-          <import-catalog
-            v-if="importCatalogSheet"
-            :init-catalog="importCatalog"
-            @cancel="importCatalogSheet = false"
-          />
-        </v-bottom-sheet>
-      </div>
-    </v-row>
+    />-->
+    <catalogs-list v-if="user" />
     <!-- Anonymous: show jumbotron -->
     <v-col
       v-else-if="initialized"
@@ -66,26 +36,18 @@
         </v-container>
       </v-responsive>
     </v-col>
-  </v-container>
+  </div>
 </template>
 
 <script>
-  import { mapState, mapActions, mapGetters } from 'vuex'
+  import { mapState, mapActions } from 'vuex'
 
-  import ImportCatalog from '~/components/catalogs/import.vue'
   import CatalogsList from '~/components/catalogs/list.vue'
 
   export default {
-    components: { ImportCatalog, CatalogsList },
-    data() {
-      return { importCatalogSheet: !!this.$route.query.import }
-    },
+    components: { CatalogsList },
     computed: {
       ...mapState('session', ['user', 'initialized']),
-      ...mapGetters(['canAdmin']),
-      importCatalog() {
-        return this.$route.query.import
-      },
     },
     methods: {
       ...mapActions('session', ['login']),

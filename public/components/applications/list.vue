@@ -13,7 +13,6 @@
             cols="12"
             md="6"
             lg="4"
-            xl="3"
           >
             <application-card :application="application" :show-topics="applications.facets.topics.length" />
           </v-col>

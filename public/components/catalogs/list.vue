@@ -1,72 +1,127 @@
 <template>
-  <div>
-    <search-filters
-      :filter-labels="{}"
-      :filters="filters"
-      :facets="catalogs && catalogs.facets"
-      type="catalogs"
-      @apply="refresh()"
-    />
+  <v-row>
+    <v-col :style="this.$vuetify.breakpoint.lgAndUp ? 'padding-right:256px;' : ''">
+      <v-container class="py-0">
+        <v-subheader class="px-0 pr-12 mb-2">
+          {{ $t('pages.catalogs.description') }}
+        </v-subheader>
 
-    <v-container
-      v-scroll="onScroll"
-      class="pa-0"
-      fluid
-    >
-      <v-row v-if="catalogs" class="resourcesList">
-        <v-col
-          v-for="catalog in catalogs.results"
-          :key="catalog.id"
-          cols="12"
-          sm="6"
-          md="4"
-          lg="3"
-          xl="2"
+        <v-row
+          v-if="catalogs"
+          v-scroll="onScroll"
+          class="resourcesList"
         >
-          <catalog-card :catalog="catalog" />
-        </v-col>
-        <search-progress :loading="loading" />
-      </v-row>
-    </v-container>
-
-    <v-responsive v-if="!hasCatalogs" height="auto">
-      <v-container class="fill-height">
-        <v-row align="center">
-          <v-col class="text-center">
-            <div v-if="!filtered" class="text-h6">
-              Vous n'avez pas encore ajouté de connecteur vers des catalogues externes.<br>Vous pouvez <nuxt-link :to="localePath('user-guide')">
-                consulter la documentation
-              </nuxt-link> pour en savoir plus.
-            </div>
-            <div v-else class="text-h6">
-              Aucun résultat ne correspond aux critères de recherche
-            </div>
+          <v-col
+            v-for="catalog in catalogs.results"
+            :key="catalog.id"
+            cols="12"
+            md="6"
+            lg="4"
+          >
+            <catalog-card :catalog="catalog" />
           </v-col>
         </v-row>
+        <search-progress :loading="loading" />
+
+        <v-responsive v-if="!hasCatalogs" height="auto">
+          <v-container class="fill-height">
+            <v-row align="center">
+              <v-col class="text-center">
+                <div v-if="!filtered" class="text-h6">
+                  Vous n'avez pas encore ajouté de connecteur vers des catalogues externes.<br>Vous pouvez <nuxt-link :to="localePath('user-guide')">
+                    consulter la documentation
+                  </nuxt-link> pour en savoir plus.
+                </div>
+                <div v-else class="text-h6">
+                  Aucun résultat ne correspond aux critères de recherche
+                </div>
+              </v-col>
+            </v-row>
+          </v-container>
+        </v-responsive>
       </v-container>
-    </v-responsive>
-  </div>
+
+      <navigation-right v-if="this.$vuetify.breakpoint.lgAndUp">
+        <v-list
+          v-if="canAdmin"
+          dense
+          class="list-actions"
+        >
+          <v-list-item @click="importCatalogSheet = true">
+            <v-list-item-icon>
+              <v-icon color="primary">
+                mdi-plus-circle
+              </v-icon>
+            </v-list-item-icon>
+            <v-list-item-title>Configurer un catalogue</v-list-item-title>
+          </v-list-item>
+        </v-list>
+        <template v-if="catalogs">
+          <v-row class="px-2">
+            <v-col class="py-0">
+              <search-filters
+                :filter-labels="{}"
+                :filters="filters"
+                :facets="catalogs && catalogs.facets"
+                type="catalogs"
+                @apply="refresh()"
+              />
+            </v-col>
+          </v-row>
+        </template>
+      </navigation-right>
+
+      <div v-else class="actions-buttons">
+        <v-btn
+          v-if="canAdmin"
+          color="primary"
+          fab
+          small
+          title="Configurer un catalogue"
+          @click="importCatalogSheet = true"
+        >
+          <v-icon>mdi-plus</v-icon>
+        </v-btn>
+      </div>
+
+      <div class="text-center">
+        <v-bottom-sheet v-model="importCatalogSheet">
+          <import-catalog
+            v-if="importCatalogSheet"
+            :init-catalog="importCatalog"
+            @cancel="importCatalogSheet = false"
+          />
+        </v-bottom-sheet>
+      </div>
+    </v-col>
+  </v-row>
 </template>
 
 <script>
+  import ImportCatalog from '~/components/catalogs/import.vue'
   import SearchProgress from '~/components/search/progress.vue'
   import SearchFilters from '~/components/search/filters.vue'
   import CatalogCard from '~/components/catalogs/card.vue'
+  import NavigationRight from '~/components/layout/navigation-right'
 
-  const { mapState } = require('vuex')
+  const { mapState, mapGetters } = require('vuex')
 
   export default {
-    components: { SearchProgress, SearchFilters, CatalogCard },
-    data: () => ({
-      catalogs: null,
-      page: 1,
-      loading: true,
-      filters: {},
-      filtered: false,
-    }),
+    components: { ImportCatalog, SearchProgress, SearchFilters, CatalogCard, NavigationRight },
+    data() {
+      return {
+        catalogs: null,
+        page: 1,
+        loading: true,
+        filters: {},
+        filtered: false,
+        importCatalogSheet: !!this.$route.query.import,
+      }
+    },
     computed: {
       ...mapState('session', ['user']),
       ...mapState(['env']),
+      ...mapGetters(['canAdmin']),
       plural() {
         return this.catalogs.count > 1
       },
@@ -76,6 +131,12 @@
       hasCatalogs() {
         return !this.catalogs || this.catalogs.count
       },
+      importCatalog() {
+        return this.$route.query.import
+      },
+    },
+    created() {
+      this.refresh()
     },
     methods: {
       onScroll(e) {

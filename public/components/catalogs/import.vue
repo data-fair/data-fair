@@ -54,10 +54,12 @@
 
       <v-stepper-content step="2">
         <v-sheet min-height="200">
-          <catalog-config-form
-            :catalog="catalog"
-            :catalog-type="catalogTypes.find(t => t.key === catalog.type)"
-          />
+          <v-form ref="config-form">
+            <catalog-config-form
+              :catalog="catalog"
+              :catalog-type="catalogTypes.find(t => t.key === catalog.type)"
+            />
+          </v-form>
         </v-sheet>
         <v-btn
           :disabled="!catalog"
@@ -116,6 +118,7 @@
         }
       },
       async importCatalog() {
+        if (!this.$refs['config-form'].validate()) return
         this.importing = true
         try {
           const catalog = await this.$axios.$post('api/v1/catalogs', this.catalog)
