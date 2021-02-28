@@ -14,7 +14,7 @@ if (process.env.NODE_ENV === 'production') {
 const webpack = require('webpack')
 
 module.exports = {
-  mode: 'spa',
+  ssr: false,
   srcDir: 'public/',
   buildDir: 'nuxt-dist',
   build: {

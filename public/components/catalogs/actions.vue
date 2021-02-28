@@ -1,45 +1,33 @@
 <template>
-  <div class="actions-buttons">
-    <v-menu
-      bottom
-      left
+  <v-list
+    v-if="catalog"
+    dense
+    class="list-actions"
+  >
+    <v-list-item
+      v-if="can('delete')"
+      @click="showDeleteDialog = true"
     >
-      <template v-slot:activator="{on}">
-        <v-btn
-          fab
-          small
-          color="accent"
-          v-on="on"
-        >
-          <v-icon>mdi-dots-vertical</v-icon>
-        </v-btn>
-      </template>
-      <v-list>
-        <v-list-item
-          v-if="can('delete')"
-          @click="showDeleteDialog = true"
-        >
-          <v-list-item-avatar>
-            <v-icon color="warning">
-              mdi-delete
-            </v-icon>
-          </v-list-item-avatar>
-          <v-list-item-title>Supprimer</v-list-item-title>
-        </v-list-item>
+      <v-list-item-icon>
+        <v-icon color="warning">
+          mdi-delete
+        </v-icon>
+      </v-list-item-icon>
+      <v-list-item-title>Supprimer</v-list-item-title>
+    </v-list-item>
 
-        <v-list-item
-          v-if="can('delete')"
-          @click="showOwnerDialog = true"
-        >
-          <v-list-item-avatar>
-            <v-icon color="warning">
-              mdi-account
-            </v-icon>
-          </v-list-item-avatar>
-          <v-list-item-title>Changer de propriétaire</v-list-item-title>
-        </v-list-item>
-      </v-list>
-    </v-menu>
+    <v-list-item
+      v-if="can('delete')"
+      @click="showOwnerDialog = true"
+    >
+      <v-list-item-icon>
+        <v-icon color="warning">
+          mdi-account
+        </v-icon>
+      </v-list-item-icon>
+      <v-list-item-title>Changer de propriétaire</v-list-item-title>
+    </v-list-item>
+
     <v-dialog
       v-model="showDeleteDialog"
       max-width="500"
@@ -106,7 +94,7 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
-  </div>
+  </v-list>
 </template>
 
 <script>
