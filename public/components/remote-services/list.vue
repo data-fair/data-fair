@@ -1,62 +1,118 @@
 <template>
-  <div>
-    <search-filters
-      :filter-labels="{}"
-      :hide-owners="true"
-      :filters="filters"
-      :facets="remoteServices && remoteServices.facets"
-      type="remote-services"
-      @apply="refresh()"
-    />
+  <v-row>
+    <v-col :style="this.$vuetify.breakpoint.lgAndUp ? 'padding-right:256px;' : ''">
+      <v-container class="py-0">
+        <v-subheader class="px-0 pr-12 mb-2">
+          {{ $t('pages.services.description') }}
+        </v-subheader>
 
-    <v-container
-      v-scroll="onScroll"
-      class="pa-0"
-      fluid
-    >
-      <v-row v-if="remoteServices" class="resourcesList">
-        <v-col
-          v-for="remoteService in remoteServices.results"
-          :key="remoteService.id"
-          cols="12"
-          sm="6"
-          md="4"
-          lg="3"
-          xl="2"
+        <v-container
+          v-scroll="onScroll"
+          class="pa-0"
+          fluid
         >
-          <remote-service-card :remote-service="remoteService" />
-        </v-col>
-        <search-progress :loading="loading" />
-      </v-row>
-    </v-container>
+          <v-row v-if="remoteServices" class="resourcesList">
+            <v-col
+              v-for="remoteService in remoteServices.results"
+              :key="remoteService.id"
+              cols="12"
+              md="6"
+              lg="4"
+            >
+              <remote-service-card :remote-service="remoteService" />
+            </v-col>
+            <search-progress :loading="loading" />
+          </v-row>
+        </v-container>
 
-    <v-row v-if="remoteServices && remoteServices.count > size">
-      <v-spacer />
-      <v-pagination
-        v-model="page"
-        circle
-        :length="Math.ceil(remoteServices.count / size)"
-        @input="$vuetify.goTo('.resourcesList', {offset});refresh()"
-      />
-    </v-row>
-  </div>
+        <v-row v-if="remoteServices && remoteServices.count > size">
+          <v-spacer />
+          <v-pagination
+            v-model="page"
+            circle
+            :length="Math.ceil(remoteServices.count / size)"
+            @input="$vuetify.goTo('.resourcesList', {offset});refresh()"
+          />
+        </v-row>
+      </v-container>
+
+      <navigation-right v-if="this.$vuetify.breakpoint.lgAndUp">
+        <v-list
+          v-if="user && user.adminMode"
+          dense
+          class="list-actions"
+        >
+          <v-list-item @click="importServiceSheet = true">
+            <v-list-item-icon>
+              <v-icon color="primary">
+                mdi-plus-circle
+              </v-icon>
+            </v-list-item-icon>
+            <v-list-item-title>Configurer un service</v-list-item-title>
+          </v-list-item>
+        </v-list>
+        <template v-if="remoteServices">
+          <v-row class="px-2">
+            <v-col class="py-0">
+              <search-filters
+                :filter-labels="{}"
+                :hide-owners="true"
+                :filters="filters"
+                :facets="remoteServices && remoteServices.facets"
+                type="remote-services"
+                @apply="refresh()"
+              />
+            </v-col>
+          </v-row>
+        </template>
+      </navigation-right>
+
+      <div v-else class="actions-buttons">
+        <v-btn
+          v-if="user && user.adminMode"
+          color="primary"
+          fab
+          small
+          title="Configurer un catalogue"
+          @click="importCatalogSheet = true"
+        >
+          <v-icon>mdi-plus</v-icon>
+        </v-btn>
+      </div>
+
+      <div class="text-center">
+        <v-bottom-sheet v-model="importServiceSheet">
+          <import-remote-service
+            v-if="importServiceSheet"
+            :init-service="importService"
+            @cancel="importServiceSheet = false"
+          />
+        </v-bottom-sheet>
+      </div>
+    </v-col>
+  </v-row>
 </template>
 
 <script>
+  import ImportRemoteService from '~/components/remote-services/import.vue'
   import SearchProgress from '~/components/search/progress.vue'
   import SearchFilters from '~/components/search/filters.vue'
   import RemoteServiceCard from '~/components/remote-services/card.vue'
+  import NavigationRight from '~/components/layout/navigation-right'
   const { mapState } = require('vuex')
 
   export default {
-    components: { SearchProgress, SearchFilters, RemoteServiceCard },
-    data: () => ({
-      page: 1,
-      loading: true,
-      remoteServices: null,
-      filters: {},
-      filtered: false,
-    }),
+    components: { ImportRemoteService, SearchProgress, SearchFilters, RemoteServiceCard, NavigationRight },
+    data() {
+      return {
+        page: 1,
+        loading: true,
+        remoteServices: null,
+        filters: {},
+        filtered: false,
+        importServiceSheet: !!this.$route.query.import,
+      }
+    },
     computed: {
       ...mapState('session', ['user']),
       ...mapState(['env']),
@@ -66,6 +122,12 @@
       size() {
         return { xs: 12, sm: 12, md: 12, lg: 15, xl: 24 }[this.$vuetify.breakpoint.name]
       },
+      importService() {
+        return this.$route.query.import
+      },
+    },
+    created() {
+      this.refresh()
     },
     methods: {
       onScroll(e) {

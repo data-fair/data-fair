@@ -26,6 +26,7 @@
       class="py-0"
       color="admin"
       style="background-image: none;"
+      nav
     >
       <v-list-item tile color="admin">
         <v-list-item-title>Administration</v-list-item-title>
@@ -33,7 +34,7 @@
       <v-list-item
         :nuxt="true"
         :to="`/remote-services`"
-        :class="routePrefix === 'remote-service' ? 'v-list-item--active' : ''"
+        :class="routePrefix === 'remote' ? 'v-list-item--active' : ''"
       >
         <v-list-item-action><v-icon>mdi-cloud</v-icon></v-list-item-action>
         <v-list-item-title>Services</v-list-item-title>

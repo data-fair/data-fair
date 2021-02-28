@@ -45,7 +45,7 @@
               >
                 <template v-slot:tabs>
                   <v-tab href="#config-config">
-                    <v-icon>mdi-information</v-icon>&nbsp;&nbsp;Édition
+                    <v-icon>mdi-pencil</v-icon>&nbsp;&nbsp;Édition
                   </v-tab>
                 </template>
                 <template v-slot:tabs-items>

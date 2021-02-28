@@ -1,36 +1,6 @@
 <template>
-  <v-container class="pt-0" fluid>
-    <v-row v-if="user">
-      <v-col>
-        <v-subheader class="px-0 pr-12 mb-2">
-          {{ $t('pages.services.description') }}
-        </v-subheader>
-        <remote-services-list />
-      </v-col>
-
-      <div class="actions-buttons">
-        <v-btn
-          v-if="user"
-          color="primary"
-          fab
-          small
-          title="Configurer un service"
-          @click="importServiceSheet = true"
-        >
-          <v-icon>mdi-plus</v-icon>
-        </v-btn>
-      </div>
-
-      <div class="text-center">
-        <v-bottom-sheet v-model="importServiceSheet">
-          <import-remote-service
-            v-if="importServiceSheet"
-            :init-service="importService"
-            @cancel="importServiceSheet = false"
-          />
-        </v-bottom-sheet>
-      </div>
-    </v-row>
+  <div>
+    <remote-services-list v-if="user" />
     <!-- Anonymous: show jumbotron -->
     <v-col
       v-else-if="initialized"
@@ -61,26 +31,19 @@
         </v-container>
       </v-responsive>
     </v-col>
-  </v-container>
+  </div>
 </template>
 
 <script>
   import { mapState, mapActions } from 'vuex'
 
-  import ImportRemoteService from '~/components/remote-services/import.vue'
   import RemoteServicesList from '~/components/remote-services/list.vue'
 
   export default {
     name: 'Datasets',
-    components: { ImportRemoteService, RemoteServicesList },
-    data() {
-      return { importServiceSheet: !!this.$route.query.import }
-    },
+    components: { RemoteServicesList },
     computed: {
       ...mapState('session', ['user', 'initialized']),
-      importService() {
-        return this.$route.query.import
-      },
     },
     methods: {
       ...mapActions('session', ['login']),
