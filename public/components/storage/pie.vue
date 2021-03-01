@@ -38,7 +38,7 @@
             data: largestDatasets.map(d => d.storage.size),
             backgroundColor: largestDatasets.map((_, i) => c(i)),
           }],
-          labels: largestDatasets.map(d => d.title),
+          labels: largestDatasets.map(d => Vue.filter('truncate')(d.title, 30)),
         }
         if (otherDatasets.length) {
           data.datasets[0].data.push(otherDatasets.reduce((a, d) => a + d.storage.size, 0))
@@ -58,7 +58,6 @@
           tooltips: {
             callbacks: {
               label: function(tooltipItem, data) {
-                console.log(tooltipItem, data)
                 return data.labels[tooltipItem.index] + ': ' + Vue.filter('displayBytes')(data.datasets[0].data[tooltipItem.index])
               },
             },
