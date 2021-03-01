@@ -14,8 +14,6 @@ describe('stats', () => {
 
     res = await ax.get('/api/v1/stats')
     assert.equal(res.status, 200)
-    assert.ok(res.data.user.storage > 0)
-    assert.ok(res.data.organizations.KWqAGZ4mG.storage === 0)
-    assert.ok(res.data.organizations['3sSi7xDIK'].storage === 0)
+    assert.ok(res.data.storage > 0)
   })
 })
