@@ -1,5 +1,5 @@
 <template>
-  <v-app :dark="$vuetify.theme.dark">
+  <v-app :dark="$vuetify.theme.dark" class="data-fair">
     <navigation-left :nav-context="navContext" />
     <navigation-top :nav-context="navContext" />
     <v-main>

@@ -43,7 +43,7 @@
 </template>
 
 <script>
-  import StorageDetails from '~/components/storage-details.vue'
+  import StorageDetails from '~/components/storage/details.vue'
   import { mapState, mapGetters } from 'vuex'
 
   export default {
@@ -69,9 +69,7 @@
     async created() {
       if (!this.authorized) return
       this.datasets = (await this.$axios.$get('api/v1/datasets', { params: { size: 10000, owner: `${this.activeAccount.type}:${this.activeAccount.id}`, select: 'id,title,storage', sort: 'storage.size:-1' } })).results
-      const stats = await this.$axios.$get('api/v1/stats')
-      if (this.activeAccount.type === 'user') this.stats = stats.user
-      else this.stats = stats.organizations[this.activeAccount.id]
+      this.stats = await this.$axios.$get('api/v1/stats')
     },
   }
 </script>

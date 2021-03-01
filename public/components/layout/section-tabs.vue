@@ -25,21 +25,23 @@
         </slot>
       </v-toolbar-title>
       <template v-slot:extension>
-        <v-tabs
-          v-model="tab"
-          :optional="false"
-          style="margin-bottom: 1px;"
-        >
-          <slot name="tabs">
-            <v-tab
-              v-for="tab in section.children"
-              :key="tab.id"
-              :href="`#${section.id}-${tab.id}`"
-            >
-              <v-icon v-if="tab.icon" v-text="tab.icon" />&nbsp;&nbsp;{{ tab.title }}
-            </v-tab>
-          </slot>
-        </v-tabs>
+        <slot name="extension">
+          <v-tabs
+            v-model="tab"
+            :optional="false"
+            style="margin-bottom: 1px;"
+          >
+            <slot name="tabs">
+              <v-tab
+                v-for="tab in section.children"
+                :key="tab.id"
+                :href="`#${section.id}-${tab.id}`"
+              >
+                <v-icon v-if="tab.icon" v-text="tab.icon" />&nbsp;&nbsp;{{ tab.title }}
+              </v-tab>
+            </slot>
+          </v-tabs>
+        </slot>
       </template>
     </v-toolbar>
     <v-tabs-items v-model="tab">

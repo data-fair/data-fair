@@ -5,7 +5,7 @@
         <v-list-item-content>
           <v-list-item-title>
             <a
-              :href="dataset.link"
+              :href="dataset.page"
               target="_top"
             >{{ dataset.title || dataset.id }}</a> ({{ dataset.storage.size | displayBytes }})
           </v-list-item-title>

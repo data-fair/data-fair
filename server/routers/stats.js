@@ -8,22 +8,16 @@ const router = module.exports = express.Router()
 
 router.get('', cacheHeaders.noCache, asyncWrap(async(req, res) => {
   if (!req.user) return res.status(401).send()
-  const stats = { organizations: {} }
-  if (!(req.user.isApiKey && req.user.organization)) {
-    stats.user = await ownerStats(req.app.get('db'), { id: req.user.id, type: 'user' })
-  }
-  for (const orga of req.user.organizations) {
-    stats.organizations[orga.id] = await ownerStats(req.app.get('db'), { id: orga.id, type: 'organization' })
-  }
-  res.send(stats)
+  res.send(await ownerStats(req.app.get('db'), req.user.activeAccount))
 }))
 
 async function ownerStats(db, owner) {
   const limits = await db.collection('limits')
     .findOne({ type: owner.type, id: owner.id })
+  console.log(limits)
   return {
     storage: await datasetUtils.totalStorage(db, owner),
-    storageLimit: limits && limits.store_bytes ? limits.store_bytes.limit : config.defaultLimits.totalStorage,
+    storageLimit: limits && limits.store_bytes && (limits.store_bytes.limit !== undefined) ? limits.store_bytes.limit : config.defaultLimits.totalStorage,
     datasets: await ownerCount(db, 'datasets', owner),
     applications: await ownerCount(db, 'applications', owner),
   }

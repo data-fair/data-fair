@@ -1,22 +1,18 @@
 <template>
-  <v-container class="pa-0" fluid>
+  <v-row v-if="initialized" class="home">
     <v-iframe v-if="missingSubscription" :src="env.subscriptionUrl" />
-    <v-col
-      v-else
-      md="6"
-      offset-md="3"
-    >
-      <v-responsive>
-        <v-container class="fill-height">
-          <v-row align="center">
-            <v-col class="text-center">
-              <h3 class="display-1 mb-3 mt-5">
-                {{ $t('common.title') }}
-              </h3>
-              <div class="text-h6">
-                {{ $t('pages.root.description') }}
-              </div>
-              <template v-if="initialized && !user">
+    <v-col v-else :style="this.$vuetify.breakpoint.lgAndUp ? 'padding-right:256px;' : ''">
+      <v-container class="py-0">
+        <v-responsive v-if="!user">
+          <v-container class="fill-height">
+            <v-row align="center">
+              <v-col class="text-center">
+                <h3 class="display-1 mb-3 mt-5">
+                  {{ $t('common.title') }}
+                </h3>
+                <div class="text-h6">
+                  {{ $t('pages.root.description') }}
+                </div>
                 <p class="title mt-5">
                   {{ $t('common.authrequired') }}
                 </p>
@@ -26,25 +22,151 @@
                 >
                   {{ $t('common.login') }}
                 </v-btn>
+              </v-col>
+            </v-row>
+          </v-container>
+        </v-responsive>
+        <v-row>
+          <v-col>
+            <h2 class="mb-4">
+              Espace de l'{{ activeAccount.type ==='organization' ? 'organisation' : 'utilisateur' }} {{ activeAccount.name }}
+            </h2>
+            <p v-if="activeAccount.type ==='organization'">
+              Vous êtes <strong>{{ user.organizations.find(o => o.id===activeAccount.id).role }}</strong> dans cette organisation.
+            </p>
+            <p>
+              {{ $t('pages.root.description') }}
+            </p>
+            <section-tabs
+              :min-height="390"
+              :svg="dataSvg"
+              svg-no-margin
+              :section="sections.find(s => s.id === 'datasets')"
+            >
+              <template v-slot:extension>
+                <p v-if="stats && datasets">
+                  <span v-if="datasets.length > 1">
+                    <nuxt-link to="/datasets">
+                      {{ datasets.length.toLocaleString() }} jeux de données
+                    </nuxt-link> ont déjà été créés dans votre espace.
+                  </span>
+                  <span v-else-if="datasets.length === 1">
+                    <nuxt-link to="/datasets">
+                      1 jeu de données
+                    </nuxt-link> a déjà été créé dans votre espace.
+                  </span>
+                  <span v-else>
+                    Aucun jeu de donnée n'a été créé pour l'instant dans votre espace.
+                  </span>
+                  <span>
+                    Vous utilisez {{ stats.storage | displayBytes }} de stockage{{ stats.storageLimit ? '' : '.' }}
+                  </span>
+                  <span v-if="stats.storageLimit">
+                    sur un total disponible de {{ stats.storageLimit | displayBytes }}.
+                  </span>
+                </p>
               </template>
-            </v-col>
-          </v-row>
-        </v-container>
-      </v-responsive>
+              <template v-slot:tabs-items>
+                <v-container fluid class="py-0">
+                  <v-row>
+                    <v-col>
+                      <storage-pie
+                        v-if="stats && datasets"
+                        :stats="stats"
+                        :datasets="datasets"
+                      />
+                    </v-col>
+                    <v-col>
+                      <datasets-actions />
+                    </v-col>
+                  </v-row>
+                </v-container>
+              </template>
+            </section-tabs>
+
+            <section-tabs
+              :min-height="390"
+              :svg="graphicSvg"
+              :section="sections.find(s => s.id === 'apps')"
+            >
+              <template v-slot:extension>
+                <p v-if="stats">
+                  <span v-if="stats.applications > 1">
+                    <nuxt-link to="/applications">
+                      {{ datasets.length.toLocaleString() }} visualisations
+                    </nuxt-link> ont déjà été configurées dans votre espace.
+                  </span>
+                  <span v-else-if="stats.applications=== 1">
+                    <nuxt-link to="/applications">
+                      1 visualisation
+                    </nuxt-link> a déjà été configurée dans votre espace.
+                  </span>
+                  <span v-else>
+                    Aucune visualisation n'a été configurée pour l'instant dans votre espace.
+                  </span>
+                  <span v-if="baseApps">
+                    Vous avez accès à {{ baseApps.length.toLocaleString() }} applications pour configurer autant de visualisations que vous le souhaitez.
+                  </span>
+                </p>
+              </template>
+              <template v-slot:tabs-items>
+                <v-container fluid class="py-0">
+                  <v-row v-if="baseApps" class="ma-2">
+                    <v-spacer />
+                    <v-carousel
+                      cycle
+                      style="max-width:510px;max-height:300px;"
+                      hide-delimiters
+                      show-arrows-on-hover
+                    >
+                      <v-carousel-item
+                        v-for="(app, i) in baseApps"
+                        :key="i"
+                      >
+                        <div style="position:relative">
+                          <v-sheet
+                            style="position:absolute;top:0;left:0;right:0;z-index:1;"
+                            flat
+                            color="rgba(0, 0, 0, 0.4)"
+                            class="pa-2"
+                          >
+                            {{ app.title }}
+                          </v-sheet>
+                          <v-img :src="app.image" />
+                        </div>
+                      </v-carousel-item>
+                    </v-carousel>
+                    <v-spacer />
+                  </v-row>
+                </v-container>
+              </template>
+            </section-tabs>
+          </v-col>
+        </v-row>
+      </v-container>
     </v-col>
-  </v-container>
+  </v-row>
 </template>
 
 <script>
   import 'iframe-resizer/js/iframeResizer'
   import VIframe from '@koumoul/v-iframe'
+  import StoragePie from '~/components/storage/pie.vue'
+  import SectionTabs from '~/components/layout/section-tabs.vue'
+  import DatasetsActions from '~/components/datasets/list-actions.vue'
+
   const { mapState, mapActions, mapGetters } = require('vuex')
+
+  const dataSvg = require('~/assets/svg/Data Arranging_Two Color.svg?raw')
+  const graphicSvg = require('~/assets/svg/Graphics and charts_Monochromatic.svg?raw')
 
   export default {
     name: 'Home',
-    components: { VIframe },
+    components: { VIframe, StoragePie, SectionTabs, DatasetsActions },
     data: () => ({
       stats: null,
+      datasets: null,
+      baseApps: null,
       headers: [
         { text: '', value: 'name', sortable: false },
         { text: 'Nombre de jeux de données', value: 'datasets', sortable: false },
@@ -52,29 +174,47 @@
         { text: 'Espace total disponible', value: 'storageLimit', sortable: false },
         { text: 'Nombre d\'applications', value: 'applications', sortable: false },
       ],
+      dataSvg,
+      graphicSvg,
     }),
     computed: {
       ...mapState('session', ['user', 'initialized']),
       ...mapState(['env']),
       ...mapGetters(['missingSubscription']),
-      items() {
-        if (!this.stats) return []
-        const orgasItems = this.user.organizations.map(o => {
-          return { name: o.name, ...this.stats.organizations[o.id] }
-        })
-        return [{ name: 'Espace personnel', ...this.stats.user }].concat(orgasItems)
+      ...mapGetters('session', ['activeAccount']),
+      sections() {
+        return [
+          { id: 'datasets', title: 'Jeux de données' },
+          { id: 'apps', title: 'Visualisations' },
+        ]
       },
     },
-    watch: {
-      user: {
-        async handler(user) {
-          if (user) this.stats = await this.$axios.$get('api/v1/stats')
+    async created() {
+      if (!this.user) return
+      this.stats = await this.$axios.$get('api/v1/stats')
+      this.datasets = (await this.$axios.$get('api/v1/datasets', {
+        params: {
+          size: 10000,
+          owner: `${this.activeAccount.type}:${this.activeAccount.id}`,
+          select: 'id,title,storage',
+          sort: 'storage.size:-1',
         },
-        immediate: true,
-      },
+      })).results
+
+      this.baseApps = (await this.$axios.get('api/v1/base-applications', {
+        size: 10000,
+        privateAccess: this.activeAccount.type + ':' + this.activeAccount.id,
+        select: 'title,image',
+      })).data.results
     },
     methods: {
       ...mapActions('session', ['login']),
     },
   }
 </script>
+
+<style lang="css">
+.data-fair .home a {
+  text-decoration: none;
+}
+</style>

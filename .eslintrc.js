@@ -8,6 +8,7 @@ module.exports = {
     // TODO: we need to remove the following rules and fix the resulting errors on of these days
     'node/no-deprecated-api': 'off',
     'vue/require-prop-types': 'off',
+    'no-new': 'off',
     'vue/max-attributes-per-line': ['error', {
       'singleline': 2,
       'multiline': {
