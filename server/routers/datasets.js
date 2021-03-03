@@ -269,7 +269,7 @@ router.patch('/:datasetId', readDataset(['finalized', 'error']), permissions.mid
       // generated ES mappings are not compatible, trigger full re-indexing
       patch.status = 'schematized'
     }
-  } else if (patch.thumbnails) {
+  } else if (patch.thumbnails || patch.masterData) {
     // just change finalizedAt so that cache is invalidated, but the worker doesn't relly need to work on the dataset
     patch.finalizedAt = (new Date()).toISOString()
   }
