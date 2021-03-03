@@ -77,7 +77,7 @@
                     Aucun jeu de donnée n'a été créé pour l'instant dans votre espace.
                   </span>
                   <span>
-                    Vous utilisez {{ stats.storage | displayBytes }} de stockage{{ stats.storageLimit ? '' : '.' }}
+                    Vous utilisez {{ stats.storage | displayBytes }}{{ stats.storageLimit ? '' : ' de stockage.' }}
                   </span>
                   <span v-if="stats.storageLimit">
                     sur un total disponible de {{ stats.storageLimit | displayBytes }}.
@@ -85,16 +85,24 @@
                 </p>
               </template>
               <template v-slot:tabs-items>
-                <v-container fluid class="py-0">
+                <v-container fluid class="pa-0">
                   <v-row>
-                    <v-col>
-                      <storage-pie
+                    <v-col
+                      cols="12"
+                      sm="6"
+                      md="8"
+                    >
+                      <storage-treemap
                         v-if="stats && datasets"
                         :stats="stats"
                         :datasets="datasets"
                       />
                     </v-col>
-                    <v-col>
+                    <v-col
+                      cols="12"
+                      sm="6"
+                      md="4"
+                    >
                       <datasets-actions />
                     </v-col>
                   </v-row>
@@ -129,7 +137,7 @@
               </template>
               <template v-slot:tabs-items>
                 <v-container fluid class="py-0">
-                  <v-row v-if="baseApps" class="ma-2">
+                  <v-row v-if="baseApps" class="mt-4">
                     <v-spacer />
                     <v-carousel
                       cycle
@@ -145,7 +153,7 @@
                           <v-sheet
                             style="position:absolute;top:0;left:0;right:0;z-index:1;"
                             flat
-                            color="rgba(0, 0, 0, 0.4)"
+                            color="rgba(0, 0, 0, 0.5)"
                             class="pa-2"
                           >
                             {{ app.title }}
@@ -174,6 +182,7 @@
   import 'iframe-resizer/js/iframeResizer'
   import VIframe from '@koumoul/v-iframe'
   import StoragePie from '~/components/storage/pie.vue'
+  import StorageTreemap from '~/components/storage/treemap.vue'
   import SectionTabs from '~/components/layout/section-tabs.vue'
   import DatasetsActions from '~/components/datasets/list-actions.vue'
   import WrapSvg from '~/components/layout/svg.vue'
@@ -188,7 +197,7 @@
 
   export default {
     name: 'Home',
-    components: { WrapSvg, VIframe, StoragePie, SectionTabs, DatasetsActions, NavigationRight, Activity },
+    components: { WrapSvg, VIframe, StorageTreemap, StoragePie, SectionTabs, DatasetsActions, NavigationRight, Activity },
     data: () => ({
       stats: null,
       datasets: null,
@@ -232,7 +241,7 @@
 
       this.datasets = await this.$axios.$get('api/v1/datasets', {
         params: {
-          size: 8,
+          size: 7,
           owner: `${this.activeAccount.type}:${this.activeAccount.id}`,
           select: 'id,title,storage',
           sort: 'storage.size:-1',
