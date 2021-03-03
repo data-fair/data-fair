@@ -25,7 +25,7 @@
 
 <script>
   import Vue from 'vue'
-  import tinycolor from 'tinycolor2'
+  import { mapGetters } from 'vuex'
   const d3 = require('d3-hierarchy')
 
   export default {
@@ -40,18 +40,20 @@
       ratio: 1.62,
     }),
     computed: {
-      lightPrimary() {
-        return tinycolor(this.$vuetify.theme.themes.light.primary).brighten(10).toHexString()
-      },
-      lightAccent() {
-        return tinycolor(this.$vuetify.theme.themes.light.accent).brighten(10).toHexString()
-      },
+      ...mapGetters(['lightPrimary10', 'lightAccent10', 'darkPrimary10', 'darkAccent10']),
     },
     mounted() {
       window.addEventListener('resize', () => this.refresh(), true)
       this.refresh()
     },
     methods: {
+      visibilityColor(visibility) {
+        if (this.$vuetify.theme.dark) {
+          return visibility === 'public' ? this.darkPrimary10 : this.darkAccent10
+        } else {
+          return visibility === 'public' ? this.lightPrimary10 : this.lightAccent10
+        }
+      },
       refresh() {
         this.width = this.$el.offsetWidth
         const data = {
@@ -61,7 +63,7 @@
             size: d.storage.size,
             tooltip: `${d.title} - ${Vue.filter('displayBytes')(d.storage.size)} - ${{ public: 'Public', private: 'Privé', protected: 'Protégé' }[d.visibility]}`,
             to: `/dataset/${d.id}`,
-            color: d.visibility === 'public' ? this.lightPrimary : this.lightAccent,
+            color: this.visibilityColor(d.visibility),
           })),
         }
         if (this.datasets.count > this.datasets.results.length) {

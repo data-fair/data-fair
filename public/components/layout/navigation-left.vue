@@ -2,6 +2,7 @@
   <v-navigation-drawer
     v-model="navContext.drawer"
     class="navigation-left"
+    :style="style"
     dark
     app
     clipped
@@ -174,10 +175,17 @@
     computed: {
       ...mapState(['env']),
       ...mapState('session', ['user']),
-      ...mapGetters(['canAdmin', 'canContrib', 'missingSubscription']),
+      ...mapGetters(['canAdmin', 'canContrib', 'missingSubscription', 'lightPrimary5', 'darkPrimary5']),
       ...mapGetters('session', ['activeAccount']),
       routePrefix() {
         return this.$route && this.$route.name && this.$route.name.split('-')[0]
+      },
+      style() {
+        if (this.$vuetify.theme.dark) {
+          return 'background: linear-gradient(90deg, #363636 0%, #272727 100%);'
+        } else {
+          return `background: linear-gradient(90deg, ${this.darkPrimary5} 0%, ${this.lightPrimary5} 100%);`
+        }
       },
     },
   }

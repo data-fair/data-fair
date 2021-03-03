@@ -5,6 +5,7 @@ import dataset from './dataset'
 import remoteService from './remote-service'
 import application from './application'
 import catalog from './catalog'
+import tinycolor from 'tinycolor2'
 
 Vue.use(Vuex)
 
@@ -79,6 +80,24 @@ export default () => {
       },
       missingSubscription(state) {
         return !!(state.limits && state.limits.defaults && state.env.subscriptionUrl)
+      },
+      lightPrimary5(state) {
+        return tinycolor(state.env.theme.colors.primary).brighten(5).toHexString()
+      },
+      lightPrimary10(state) {
+        return tinycolor(state.env.theme.colors.primary).brighten(10).toHexString()
+      },
+      darkPrimary5(state) {
+        return tinycolor(state.env.theme.colors.primary).darken(5).toHexString()
+      },
+      darkPrimary10(state) {
+        return tinycolor(state.env.theme.colors.primary).darken(10).toHexString()
+      },
+      lightAccent10(state) {
+        return tinycolor(state.env.theme.colors.accent).brighten(10).toHexString()
+      },
+      darkAccent10(state) {
+        return tinycolor(state.env.theme.colors.accent).darken(10).toHexString()
       },
     },
     mutations: {

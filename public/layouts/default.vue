@@ -1,5 +1,6 @@
 <template>
   <v-app :dark="$vuetify.theme.dark" class="data-fair">
+    <dynamic-style />
     <navigation-left :nav-context="navContext" />
     <navigation-top :nav-context="navContext" />
     <v-main>
@@ -10,13 +11,14 @@
 </template>
 
 <script>
+  import DynamicStyle from '~/components/layout/dynamic-style.vue'
   import NavigationLeft from '~/components/layout/navigation-left.vue'
   import NavigationTop from '~/components/layout/navigation-top.vue'
   import Notifications from '~/components/layout/notifications.vue'
   const { mapState } = require('vuex')
 
   export default {
-    components: { NavigationLeft, NavigationTop, Notifications },
+    components: { DynamicStyle, NavigationLeft, NavigationTop, Notifications },
     data: () => ({
       navContext: {
         drawer: false,
@@ -47,10 +49,6 @@ body .v-application {
     img {
       height:100%;
     }
-  }
-
-  main.content {
-    // background-color: white;
   }
 
   .main-toolbar-light {

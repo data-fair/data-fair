@@ -111,7 +111,7 @@
             </section-tabs>
 
             <section-tabs
-              :min-height="390"
+              :min-height="400"
               :svg="graphicSvg"
               :section="sections.find(s => s.id === 'apps')"
             >
@@ -136,8 +136,8 @@
                 </p>
               </template>
               <template v-slot:tabs-items>
-                <v-container fluid class="py-0">
-                  <v-row v-if="baseApps" class="mt-4">
+                <v-container fluid>
+                  <v-row v-if="baseApps">
                     <v-spacer />
                     <v-carousel
                       cycle
