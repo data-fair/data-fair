@@ -14,7 +14,7 @@
       outlined
       :color="$vuetify.theme.dark ? 'transparent' : 'grey lighten-4'"
       :style="toolbarStyle"
-      :class="tab ? 'section-active mb-2' : ''"
+      class="mb-2 section-active"
     >
       <v-toolbar-title
         class="text-h5"
