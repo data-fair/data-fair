@@ -10,6 +10,10 @@
                 <h3 class="display-1 mb-3 mt-5">
                   {{ $t('common.title') }}
                 </h3>
+                <wrap-svg
+                  :source="dataProcessSvg"
+                  :color="$vuetify.theme.themes.light.primary"
+                />
                 <div class="text-h6">
                   {{ $t('pages.root.description') }}
                 </div>
@@ -26,7 +30,7 @@
             </v-row>
           </v-container>
         </v-responsive>
-        <v-row>
+        <v-row v-else>
           <v-col>
             <h2 class="mb-4">
               Espace de l'{{ activeAccount.type ==='organization' ? 'organisation' : 'utilisateur' }} {{ activeAccount.name }}
@@ -154,15 +158,17 @@
   import StoragePie from '~/components/storage/pie.vue'
   import SectionTabs from '~/components/layout/section-tabs.vue'
   import DatasetsActions from '~/components/datasets/list-actions.vue'
+  import WrapSvg from '~/components/layout/svg.vue'
 
   const { mapState, mapActions, mapGetters } = require('vuex')
 
   const dataSvg = require('~/assets/svg/Data Arranging_Two Color.svg?raw')
   const graphicSvg = require('~/assets/svg/Graphics and charts_Monochromatic.svg?raw')
+  const dataProcessSvg = require('~/assets/svg/Data Process_Two Color.svg?raw')
 
   export default {
     name: 'Home',
-    components: { VIframe, StoragePie, SectionTabs, DatasetsActions },
+    components: { WrapSvg, VIframe, StoragePie, SectionTabs, DatasetsActions },
     data: () => ({
       stats: null,
       datasets: null,
@@ -176,6 +182,7 @@
       ],
       dataSvg,
       graphicSvg,
+      dataProcessSvg,
     }),
     computed: {
       ...mapState('session', ['user', 'initialized']),

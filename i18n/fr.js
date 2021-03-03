@@ -18,15 +18,15 @@ module.exports = {
     },
     datasets: {
       title: 'Jeux de données',
-      description: 'Cet espace vous permet de transformer vos fichiers de données en flux interopérables que vous pouvez mettre à disposition d\'autres utilisateurs ou utiliser dans des applications spécifiques.',
+      description: 'Cet espace vous permet de transformer vos fichiers de données en sources interopérables que vous pouvez mettre à disposition d\'autres utilisateurs ou utiliser dans des applications spécifiques.',
     },
     services: {
       title: 'Services',
       description: 'Vous pouvez réutiliser d\'autres services (API) pour enrichir vos données ou accéder à d\'autres données dans les applications, comme par exemple des fonds de carte.',
     },
     applications: {
-      title: 'Applications',
-      description: 'Vous pouvez ici configurer des applications qui vont utiliser vos flux de données. Ces applications peuvent ensuite être partagées ou intégrées dans d\'autres sites web.',
+      title: 'Visualisations',
+      description: 'Vous pouvez ici configurer des visualisations qui vont utiliser vos jeux de données. Ces applications peuvent ensuite être partagées ou intégrées dans d\'autres sites web.',
     },
     catalogs: {
       title: 'Catalogues externes',

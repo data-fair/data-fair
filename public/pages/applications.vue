@@ -14,6 +14,10 @@
               <h3 class="display-1 mb-3 mt-5">
                 {{ $t('pages.applications.title') }}
               </h3>
+              <wrap-svg
+                :source="graphicSvg"
+                :color="$vuetify.theme.themes.light.primary"
+              />
               <div class="text-h6">
                 {{ $t('pages.applications.description') }}
               </div>
@@ -35,15 +39,20 @@
 </template>
 
 <script>
+  import ApplicationsList from '~/components/applications/list.vue'
+  import WrapSvg from '~/components/layout/svg.vue'
   import { mapState, mapActions } from 'vuex'
 
-  import ApplicationsList from '~/components/applications/list.vue'
+  const graphicSvg = require('~/assets/svg/Graphics and charts_Monochromatic.svg?raw')
 
   export default {
     name: 'Datasets',
-    components: { ApplicationsList },
+    components: { ApplicationsList, WrapSvg },
     data() {
-      return { importApplicationSheet: !!this.$route.query.import }
+      return {
+        importApplicationSheet: !!this.$route.query.import,
+        graphicSvg,
+      }
     },
     computed: {
       ...mapState('session', ['user', 'initialized']),

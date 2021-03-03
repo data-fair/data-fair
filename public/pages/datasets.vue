@@ -14,6 +14,10 @@
               <h3 class="display-1 mb-3 mt-5">
                 {{ $t('pages.datasets.title') }}
               </h3>
+              <wrap-svg
+                :source="dataSvg"
+                :color="$vuetify.theme.themes.light.primary"
+              />
               <div class="text-h6">
                 {{ $t('pages.datasets.description') }}
               </div>
@@ -35,15 +39,19 @@
 </template>
 
 <script>
+  import DatasetsList from '~/components/datasets/list.vue'
+  import WrapSvg from '~/components/layout/svg.vue'
   import { mapState, mapActions, mapGetters } from 'vuex'
 
-  import DatasetsList from '~/components/datasets/list.vue'
+  const dataSvg = require('~/assets/svg/Data Arranging_Two Color.svg?raw')
 
   export default {
     name: 'Datasets',
-    components: { DatasetsList },
+    components: { DatasetsList, WrapSvg },
     data() {
-      return { }
+      return {
+        dataSvg,
+      }
     },
     computed: {
       ...mapState('session', ['user', 'initialized']),
