@@ -253,6 +253,8 @@ module.exports = {
   datasetUrlTemplate: null,
   applicationUrlTemplate: null,
   doc: {
+    applications: null,
+    datasets: null,
     datasetEdit: null,
     datasetExtend: null,
     datasetAttachments: null,

@@ -27,9 +27,14 @@
                   v-if="!filtered"
                   class="text-h6"
                 >
-                  Vous n'avez pas encore ajouté de jeu de données.<br>Vous pouvez <nuxt-link :to="localePath('user-guide')">
+                  Vous n'avez pas encore ajouté de jeu de données.
+                  <!--<br>Vous pouvez <nuxt-link :to="localePath('user-guide')">
                     consulter la documentation
-                  </nuxt-link> pour en savoir plus.
+                  </nuxt-link> pour en savoir plus.-->
+                  <wrap-svg
+                    :source="dataSvg"
+                    :color="$vuetify.theme.themes.light.primary"
+                  />
                 </div>
                 <div
                   v-else
@@ -80,7 +85,11 @@
   import DatasetCard from '~/components/datasets/card.vue'
   import NavigationRight from '~/components/layout/navigation-right'
   import ActionsButton from '~/components/layout/actions-button'
+  import WrapSvg from '~/components/layout/svg.vue'
+
   const { mapState, mapGetters } = require('vuex')
+
+  const dataSvg = require('~/assets/svg/Data Arranging_Two Color.svg?raw')
 
   export default {
     components: {
@@ -91,6 +100,7 @@
       DatasetCard,
       NavigationRight,
       ActionsButton,
+      WrapSvg,
     },
     data: () => ({
       datasets: null,
@@ -106,6 +116,7 @@
         topics: [],
       },
       lastParams: null,
+      dataSvg,
     }),
     computed: {
       ...mapState('session', ['user']),

@@ -83,6 +83,9 @@
     }, {
       "id": "dhannan8",
       "role": "user"
+    }, {
+      "id": "superadmin",
+      "role": "admin"
     }]
   },
   {

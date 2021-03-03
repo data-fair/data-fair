@@ -119,7 +119,7 @@
       // children pages are deprecated
       const path = `/catalog/${this.$route.params.id}`
       if (this.$route.path !== path) return this.$router.push(path)
-      if (this.catalog) this.$store.dispatch('breadcrumbs', [{ text: 'Connecteurs', to: '/catalogs' }, { text: this.catalog.title || this.catalog.id }])
+      if (this.catalog) this.$store.dispatch('breadcrumbs', [{ text: 'Catalogues', to: '/catalogs' }, { text: this.catalog.title || this.catalog.id }])
     },
   }
 </script>

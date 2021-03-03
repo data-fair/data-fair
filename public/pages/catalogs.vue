@@ -1,7 +1,7 @@
 <template>
   <div>
     <!--<doc-link
-      tooltip="Consultez la documentation sur les connecteurs"
+      tooltip="Consultez la documentation sur les catalogues"
       doc-key="catalogs"
       offset="left"
     />-->

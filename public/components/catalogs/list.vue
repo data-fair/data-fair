@@ -2,10 +2,6 @@
   <v-row>
     <v-col :style="this.$vuetify.breakpoint.lgAndUp ? 'padding-right:256px;' : ''">
       <v-container class="py-0">
-        <v-subheader class="px-0 pr-12 mb-2">
-          {{ $t('pages.catalogs.description') }}
-        </v-subheader>
-
         <v-row
           v-if="catalogs"
           v-scroll="onScroll"
@@ -28,9 +24,16 @@
             <v-row align="center">
               <v-col class="text-center">
                 <div v-if="!filtered" class="text-h6">
-                  Vous n'avez pas encore ajouté de connecteur vers des catalogues externes.<br>Vous pouvez <nuxt-link :to="localePath('user-guide')">
+                  {{ $t('pages.catalogs.description') }}
+                  <!--<br>
+                  Vous n'avez pas encore ajouté de connecteur vers des catalogues externes.-->
+                  <!--<br>Vous pouvez <nuxt-link :to="localePath('user-guide')">
                     consulter la documentation
-                  </nuxt-link> pour en savoir plus.
+                  </nuxt-link> pour en savoir plus.-->
+                  <wrap-svg
+                    :source="wwwSvg"
+                    :color="$vuetify.theme.themes.light.primary"
+                  />
                 </div>
                 <div v-else class="text-h6">
                   Aucun résultat ne correspond aux critères de recherche
@@ -103,11 +106,14 @@
   import SearchFilters from '~/components/search/filters.vue'
   import CatalogCard from '~/components/catalogs/card.vue'
   import NavigationRight from '~/components/layout/navigation-right'
+  import WrapSvg from '~/components/layout/svg.vue'
 
   const { mapState, mapGetters } = require('vuex')
 
+  const wwwSvg = require('~/assets/svg/World wide web_Two Color.svg?raw')
+
   export default {
-    components: { ImportCatalog, SearchProgress, SearchFilters, CatalogCard, NavigationRight },
+    components: { ImportCatalog, SearchProgress, SearchFilters, CatalogCard, NavigationRight, WrapSvg },
     data() {
       return {
         catalogs: null,
@@ -116,6 +122,7 @@
         filters: {},
         filtered: false,
         importCatalogSheet: !!this.$route.query.import,
+        wwwSvg,
       }
     },
     computed: {
@@ -156,7 +163,7 @@
         })
         if (append) catalogs.results.forEach(r => this.catalogs.results.push(r))
         else this.catalogs = catalogs
-        this.$store.dispatch('breadcrumbs', [{ text: `${this.catalogs.count} ${this.plural ? 'connecteurs configurés' : 'connecteur configuré'}` }])
+        this.$store.dispatch('breadcrumbs', [{ text: `${this.catalogs.count} ${this.plural ? 'catalogues configurés' : 'catalogue configuré'}` }])
         this.filtered = this.filters.q !== undefined
         this.loading = false
       },

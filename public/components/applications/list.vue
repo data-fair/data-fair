@@ -27,9 +27,14 @@
                   v-if="!filtered"
                   class="text-h6"
                 >
-                  Vous n'avez pas encore configuré de visualisation.<br>Vous pouvez <nuxt-link :to="localePath('user-guide')">
+                  Vous n'avez pas encore configuré de visualisation.
+                  <!--<br>Vous pouvez <nuxt-link :to="localePath('user-guide')">
                     consulter la documentation
-                  </nuxt-link> pour en savoir plus.
+                  </nuxt-link> pour en savoir plus.-->
+                  <wrap-svg
+                    :source="graphicSvg"
+                    :color="$vuetify.theme.themes.light.primary"
+                  />
                 </div>
                 <div
                   v-else
@@ -98,7 +103,11 @@
   import ApplicationsFacets from '~/components/applications/facets.vue'
   import ApplicationCard from '~/components/applications/card.vue'
   import NavigationRight from '~/components/layout/navigation-right'
+  import WrapSvg from '~/components/layout/svg.vue'
+
   const { mapState, mapGetters } = require('vuex')
+
+  const graphicSvg = require('~/assets/svg/Graphics and charts_Monochromatic.svg?raw')
 
   export default {
     components: {
@@ -107,6 +116,7 @@
       ApplicationsFacets,
       ApplicationCard,
       NavigationRight,
+      WrapSvg,
     },
     data: () => ({
       applications: null,
@@ -120,6 +130,7 @@
         topics: [],
       },
       lastParams: null,
+      graphicSvg,
     }),
     computed: {
       ...mapState('session', ['user']),

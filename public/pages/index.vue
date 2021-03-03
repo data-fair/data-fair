@@ -221,7 +221,7 @@
 </script>
 
 <style lang="css">
-.data-fair .home a {
+.data-fair a {
   text-decoration: none;
 }
 </style>

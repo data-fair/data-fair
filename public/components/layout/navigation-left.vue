@@ -137,7 +137,7 @@
         >
           <v-list-item-action><v-icon>mdi-transit-connection</v-icon></v-list-item-action>
           <v-list-item-content>
-            <v-list-item-title>Connecteurs</v-list-item-title>
+            <v-list-item-title>Catalogues</v-list-item-title>
             <v-list-item-subtitle>data.gouv.fr ...</v-list-item-subtitle>
           </v-list-item-content>
         </v-list-item>
