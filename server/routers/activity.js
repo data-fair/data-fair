@@ -10,7 +10,7 @@ const router = module.exports = express.Router()
 router.get('', asyncWrap(async(req, res) => {
   const db = req.app.get('db')
   const query = findUtils.query(req, {})
-  const size = 8
+  const size = findUtils.pagination(req.query)[1]
   const [datasets, applications] = await Promise.all([
     db.collection('datasets')
       .find(query).limit(size).sort({ updatedAt: -1 }).project({ id: 1, _id: 0, title: 1, updatedAt: 1 }).toArray(),

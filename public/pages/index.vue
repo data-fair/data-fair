@@ -205,9 +205,16 @@
     },
     async created() {
       if (!this.user) return
+      this.$store.dispatch('breadcrumbs', [{ text: 'Partage et visualisation et de données' }])
+
       this.stats = await this.$axios.$get('api/v1/stats')
 
-      this.activity = await this.$axios.$get('api/v1/activity')
+      this.activity = await this.$axios.$get('api/v1/activity', {
+        params: {
+          size: 8,
+          owner: `${this.activeAccount.type}:${this.activeAccount.id}`,
+        },
+      })
 
       this.datasets = await this.$axios.$get('api/v1/datasets', {
         params: {
