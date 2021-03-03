@@ -45,10 +45,10 @@
           data.datasets[0].backgroundColor.push(tinycolor(this.$vuetify.theme.themes.light.accent).lighten(20).toHexString())
           data.labels.push(otherDatasets.length.toLocaleString() + ' autres jeux de données')
         }
-        if (this.stats.storageLimit) {
+        /* if (this.stats.storageLimit) {
           data.datasets[0].data.push(Math.max(0, this.stats.storageLimit - this.stats.storage))
           data.labels.push('Espace restant')
-        }
+        } */
         const options = {
           // responsive: false,
           legend: {
