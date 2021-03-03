@@ -117,6 +117,7 @@ module.exports = {
       { hid: 'description', name: 'description', content: config.brand.description },
       { hid: 'robots', name: 'robots', content: 'noindex' },
     ],
+    link: [],
     style: [],
   },
 }
