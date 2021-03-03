@@ -26,8 +26,14 @@
     </template>
 
     <v-list :width="500" dense>
+      <v-list-item v-if="!notifications">
+        <v-list-item-title>Chargement...</v-list-item-title>
+      </v-list-item>
+      <v-list-item v-else-if="notifications.length === 0">
+        <v-list-item-title>Aucune notification reçue</v-list-item-title>
+      </v-list-item>
       <v-list-item-group
-        v-if="notifications"
+        v-else
         active-class="pink--text"
         multiple
         :value="notifications.filter(n => n.new).map(n => n._id)"
