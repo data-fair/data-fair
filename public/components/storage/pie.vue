@@ -12,7 +12,7 @@
 
   export default {
     props: {
-      datasets: { type: Array, required: true },
+      datasets: { type: Object, required: true },
       stats: { type: Object, required: true },
       width: { type: Number, default: 300 },
     },
@@ -24,26 +24,21 @@
     },
     methods: {
       async refresh() {
-        const nbLargest = 8
-        let largestDatasets = this.datasets
-        let otherDatasets = []
-        if (this.datasets.length > nbLargest + 1) {
-          largestDatasets = this.datasets.slice(0, nbLargest)
-          otherDatasets = this.datasets.slice(nbLargest)
-        }
         const c = (light) => tinycolor(this.$vuetify.theme.themes.light.primary).lighten(light * 5).toHexString()
         const data = {
           datasets: [{
             borderWidth: 1,
-            data: largestDatasets.map(d => d.storage.size),
-            backgroundColor: largestDatasets.map((_, i) => c(i)),
+            data: this.datasets.results.map(d => d.storage.size),
+            backgroundColor: this.datasets.results.map((_, i) => c(i)),
           }],
-          labels: largestDatasets.map(d => Vue.filter('truncate')(d.title, 30)),
+          labels: this.datasets.results.map(d => Vue.filter('truncate')(d.title, 30)),
         }
-        if (otherDatasets.length) {
-          data.datasets[0].data.push(otherDatasets.reduce((a, d) => a + d.storage.size, 0))
+        if (this.datasets.count > this.datasets.results.length) {
+          data.datasets[0].data.push(this.stats.storage - this.datasets.results.reduce((a, d) => a + d.storage.size, 0))
           data.datasets[0].backgroundColor.push(tinycolor(this.$vuetify.theme.themes.light.accent).lighten(20).toHexString())
-          data.labels.push(otherDatasets.length.toLocaleString() + ' autres jeux de données')
+          const nbOthers = this.datasets.count - this.datasets.results.length
+          if (nbOthers === 1) data.labels.push('1 autre jeu de donnée')
+          else data.labels.push(nbOthers.toLocaleString() + ' autres jeux de données')
         }
         /* if (this.stats.storageLimit) {
           data.datasets[0].data.push(Math.max(0, this.stats.storageLimit - this.stats.storage))

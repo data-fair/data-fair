@@ -59,6 +59,7 @@ if (config.mode.includes('server')) {
   app.use('/api/v1/settings', require('./routers/settings'))
   app.use('/api/v1/admin', require('./routers/admin'))
   app.use('/api/v1/identities', require('./routers/identities'))
+  app.use('/api/v1/activity', require('./routers/activity'))
   app.use('/api/v1/limits', limits.router)
   app.use('/api/v1/session', session.router)
 

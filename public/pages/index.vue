@@ -49,12 +49,12 @@
             >
               <template v-slot:extension>
                 <p v-if="stats && datasets">
-                  <span v-if="datasets.length > 1">
+                  <span v-if="datasets.count > 1">
                     <nuxt-link to="/datasets">
-                      {{ datasets.length.toLocaleString() }} jeux de données
+                      {{ datasets.count.toLocaleString() }} jeux de données
                     </nuxt-link> ont déjà été créés dans votre espace.
                   </span>
-                  <span v-else-if="datasets.length === 1">
+                  <span v-else-if="datasets.count === 1">
                     <nuxt-link to="/datasets">
                       1 jeu de données
                     </nuxt-link> a déjà été créé dans votre espace.
@@ -97,7 +97,7 @@
                 <p v-if="stats">
                   <span v-if="stats.applications > 1">
                     <nuxt-link to="/applications">
-                      {{ datasets.length.toLocaleString() }} visualisations
+                      {{ stats.applications.toLocaleString() }} visualisations
                     </nuxt-link> ont déjà été configurées dans votre espace.
                   </span>
                   <span v-else-if="stats.applications=== 1">
@@ -149,6 +149,10 @@
         </v-row>
       </v-container>
     </v-col>
+
+    <navigation-right v-if="this.$vuetify.breakpoint.lgAndUp">
+      <activity v-if="activity" :activity="activity" />
+    </navigation-right>
   </v-row>
 </template>
 
@@ -159,6 +163,8 @@
   import SectionTabs from '~/components/layout/section-tabs.vue'
   import DatasetsActions from '~/components/datasets/list-actions.vue'
   import WrapSvg from '~/components/layout/svg.vue'
+  import NavigationRight from '~/components/layout/navigation-right.vue'
+  import Activity from '~/components/activity.vue'
 
   const { mapState, mapActions, mapGetters } = require('vuex')
 
@@ -168,11 +174,12 @@
 
   export default {
     name: 'Home',
-    components: { WrapSvg, VIframe, StoragePie, SectionTabs, DatasetsActions },
+    components: { WrapSvg, VIframe, StoragePie, SectionTabs, DatasetsActions, NavigationRight, Activity },
     data: () => ({
       stats: null,
       datasets: null,
       baseApps: null,
+      activity: null,
       headers: [
         { text: '', value: 'name', sortable: false },
         { text: 'Nombre de jeux de données', value: 'datasets', sortable: false },
@@ -199,20 +206,23 @@
     async created() {
       if (!this.user) return
       this.stats = await this.$axios.$get('api/v1/stats')
-      this.datasets = (await this.$axios.$get('api/v1/datasets', {
+
+      this.activity = await this.$axios.$get('api/v1/activity')
+
+      this.datasets = await this.$axios.$get('api/v1/datasets', {
         params: {
-          size: 10000,
+          size: 8,
           owner: `${this.activeAccount.type}:${this.activeAccount.id}`,
           select: 'id,title,storage',
           sort: 'storage.size:-1',
         },
-      })).results
+      })
 
-      this.baseApps = (await this.$axios.get('api/v1/base-applications', {
+      this.baseApps = (await this.$axios.$get('api/v1/base-applications', {
         size: 10000,
         privateAccess: this.activeAccount.type + ':' + this.activeAccount.id,
         select: 'title,image',
-      })).data.results
+      })).results
     },
     methods: {
       ...mapActions('session', ['login']),
