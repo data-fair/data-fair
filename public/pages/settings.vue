@@ -132,29 +132,16 @@
                   <v-container fluid class="py-0">
                     <v-row>
                       <v-col cols="12" md="6">
-                        <settings-api-keys
+                        <settings-webhooks
                           v-if="settings"
                           :settings="settings"
-                          @updated="save"
+                          @webhook-updated="save"
                         />
                       </v-col>
                     </v-row>
                   </v-container>
                 </template>
               </section-tabs>
-
-              <h3 id="webhooks" class="mt-10 mb-3">
-                Appels extérieurs (Webhooks)
-              </h3>
-              <v-row>
-                <v-col cols="12" md="6">
-                  <settings-webhooks
-                    v-if="settings"
-                    :settings="settings"
-                    @webhook-updated="save"
-                  />
-                </v-col>
-              </v-row>
             </template>
             <not-authorized v-else />
           </v-col>
