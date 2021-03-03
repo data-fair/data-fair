@@ -121,7 +121,7 @@
           <v-list-item-action><v-icon>mdi-cog</v-icon></v-list-item-action>
           <v-list-item-content>
             <v-list-item-title>Paramètres</v-list-item-title>
-            <v-list-item-subtitle>licences, thématiques ...</v-list-item-subtitle>
+            <v-list-item-subtitle>Licences, thématiques ...</v-list-item-subtitle>
           </v-list-item-content>
         </v-list-item>
 

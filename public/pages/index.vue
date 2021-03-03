@@ -205,7 +205,7 @@
     },
     async created() {
       if (!this.user) return
-      this.$store.dispatch('breadcrumbs', [{ text: 'Partage et visualisation et de données' }])
+      this.$store.dispatch('breadcrumbs', [{ text: 'Partage et visualisation de données' }])
 
       this.stats = await this.$axios.$get('api/v1/stats')
 
