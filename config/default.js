@@ -47,6 +47,7 @@ module.exports = {
     logo: null,
     title: 'DataFair',
     description: 'Find, Access, Interoperate, Reuse data on the Web',
+    url: null,
     embed: null,
   },
   theme: {

@@ -30,7 +30,7 @@ module.exports = {
     },
     catalogs: {
       title: 'Catalogues externes',
-      description: 'Cet espace vous permet de configurer des liens vers des catalogues distants, vers lesquels vous pourrez ensuite publier vos jeux de données et applications.',
+      description: 'Cet espace vous permet de configurer des liens vers des catalogues distants, vers lesquels vous pourrez ensuite publier vos jeux de données et visualisations.',
     },
     settings: {
       title: 'Paramètres',
