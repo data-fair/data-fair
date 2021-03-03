@@ -10,11 +10,12 @@ const router = module.exports = express.Router()
 router.get('', asyncWrap(async(req, res) => {
   const db = req.app.get('db')
   const query = findUtils.query(req, {})
+  const size = 10
   const [datasets, applications] = await Promise.all([
     db.collection('datasets')
-      .find(query).limit(20).sort({ updatedAt: -1 }).project({ id: 1, _id: 0, title: 1, updatedAt: 1 }).toArray(),
+      .find(query).limit(size).sort({ updatedAt: -1 }).project({ id: 1, _id: 0, title: 1, updatedAt: 1 }).toArray(),
     db.collection('applications')
-      .find(query).limit(20).sort({ updatedAt: -1 }).project({ id: 1, _id: 0, title: 1, updatedAt: 1 }).toArray(),
+      .find(query).limit(size).sort({ updatedAt: -1 }).project({ id: 1, _id: 0, title: 1, updatedAt: 1 }).toArray(),
   ])
 
   datasets.forEach(d => { d.type = 'dataset' })
@@ -27,7 +28,7 @@ router.get('', asyncWrap(async(req, res) => {
       return line
     })
     .sort((a, b) => b.date.localeCompare(a.date))
-    .slice(0, 20)
+    .slice(0, size)
 
   res.send({
     results,

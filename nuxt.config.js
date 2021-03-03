@@ -117,9 +117,6 @@ module.exports = {
       { hid: 'description', name: 'description', content: config.brand.description },
       { hid: 'robots', name: 'robots', content: 'noindex' },
     ],
-    link: [
-      { rel: 'stylesheet', href: 'https://fonts.googleapis.com/css?family=Nunito:300,400,500,700,400italic' },
-    ],
     style: [],
   },
 }
