@@ -31,7 +31,7 @@ module.exports = (dataset) => {
     in: 'query',
     name: 'q',
     description: `
-  Champ de recherche simple. Ce paramètre peut-être utilisé pour exposer une fonctionalité de recherche textuelle riche aux utilisateurs sans risque de créer des erreurs de syntaxe.
+  Colonne de recherche simple. Ce paramètre peut-être utilisé pour exposer une fonctionalité de recherche textuelle riche aux utilisateurs sans risque de créer des erreurs de syntaxe.
 
   Exemple: "open data" | "open source"
 
@@ -59,7 +59,7 @@ module.exports = (dataset) => {
     in: 'query',
     name: 'qs',
     description: `
-Champ de filtre et recherche textuelle avancé. Ce paramètre permet d'effectuer des requêtes complexes sur la source de données. Vous pouvez spécifier des filtres par champs, créer des combinaisons logiques à volonté, etc.
+Colonne de filtre et recherche textuelle avancée. Ce paramètre permet d'effectuer des requêtes complexes sur la source de données. Vous pouvez spécifier des filtres par colonne, créer des combinaisons logiques à volonté, etc.
 
 Exemple: ma_colonne:"du texte" AND ma_colonne2:valeur
 
@@ -117,9 +117,9 @@ Un filtre pour restreindre les résultats en fonction d'une liste de valeurs acc
     in: 'query',
     name: 'sort',
     description: `
-Le tri à effectuer sous forme d'une liste de clés de champs séparées par des virgules.
+Le tri à effectuer sous forme d'une liste de clés de colonnes séparées par des virgules.
 
-Par défaut le tri est ascendant, si un nom de champ est préfixé par un "-" alors le tri sera descendant.
+Par défaut le tri est ascendant, si un nom de colonne est préfixé par un "-" alors le tri sera descendant.
 
 Exemple: ma_colonne,-ma_colonne2`,
     schema: {
@@ -143,7 +143,7 @@ Exemple: ma_colonne,-ma_colonne2`,
   }, {
     in: 'query',
     name: 'select',
-    description: 'La liste des champs à retourner',
+    description: 'La liste des colonnes à retourner',
     schema: {
       default: ['*'],
       type: 'array',
@@ -157,9 +157,9 @@ Exemple: ma_colonne,-ma_colonne2`,
     in: 'query',
     name: 'thumbnail',
     description: `
-Demande à retourner un lien de vignette d'une dimension déterminée à partir d'un champ image.
+Demande à retourner un lien de vignette d'une dimension déterminée à partir d'une colonne image.
 
-Pour que ce paramètre soit accepté le concept "Image" doit être associé à un champ du jeu de données.
+Pour que ce paramètre soit accepté le concept "Image" doit être associé à une colonne du jeu de données.
 
 La valeur du paramètre est la dimension passée sous la form largeurxhauteur (300x200 par exemple) où un 0 sur la largeur ou la hauteur signifie que l'autre valeur est prise en compte et les proportions conservées.
     `,
@@ -172,7 +172,7 @@ La valeur du paramètre est la dimension passée sous la form largeurxhauteur (3
     description: `
 Demande à retourner des extraits du document qui contiennent les mots utilisés en filtre (paramètres q et qs).
 
-La valeur est une liste de champs séparés par des virgules.
+La valeur est une liste de colonnes séparées par des virgules.
     `,
     schema: {
       type: 'array',
@@ -222,7 +222,7 @@ La valeur est une liste de champs séparés par des virgules.
   const metricFieldParam = {
     in: 'query',
     name: 'metric_field',
-    description: 'Le champ sur lequel effectuer la calcul de métrique',
+    description: 'La colonne sur lequel effectuer la calcul de métrique',
     schema: {
       type: 'string',
     },
@@ -486,14 +486,14 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
       },
       '/values_agg': {
         get: {
-          summary: 'Récupérer des informations agrégées en fonction des valeurs d\'un champ.',
+          summary: 'Récupérer des informations agrégées en fonction des valeurs d\'une colonne.',
           operationId: 'getValuesAgg',
           'x-permissionClass': 'read',
           tags: ['Données'],
           parameters: [{
             in: 'query',
             name: 'field',
-            description: 'Le champ en fonction des valeurs duquel grouper les lignes du jeu de données',
+            description: 'La colonne en fonction des valeurs desquelles grouper les lignes du jeu de données',
             schema: {
               type: 'string',
               enum: properties,
@@ -502,7 +502,7 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
           // TODO: document sort param and interval
           responses: {
             200: {
-              description: 'Les informations du jeu de données agrégées par valeurs d\'un champ.',
+              description: 'Les informations du jeu de données agrégées par valeurs d\'une colonne.',
               content: {
                 'application/json': {
                   schema: {
@@ -516,14 +516,14 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
       },
       '/values/{field}': {
         get: {
-          summary: 'Récupérer la liste des valeurs distinctes d\'un champ éventuellement filtrée par le paramètre q.',
+          summary: 'Récupérer la liste des valeurs distinctes d\'une colonne éventuellement filtrée par le paramètre q.',
           operationId: 'getValues',
           'x-permissionClass': 'read',
           tags: ['Données'],
           parameters: [{
             in: 'path',
             name: 'field',
-            description: 'Le champ duquel lister les valeurs',
+            description: 'La colonne de laquelle lister les valeurs',
             required: true,
             schema: {
               type: 'string',
@@ -533,7 +533,7 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
           // TODO: document sort param and interval
           responses: {
             200: {
-              description: 'Les informations du jeu de données agrégées par valeurs d\'un champ.',
+              description: 'Les informations du jeu de données agrégées par valeurs d\'une colonne.',
               content: {
                 'application/json': {
                   schema: {
@@ -579,7 +579,7 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
           parameters: [{
             in: 'query',
             name: 'field',
-            description: 'Le champ sur lequel effectuer l\'analyse',
+            description: 'La colonne sur lequel effectuer l\'analyse',
             required: true,
             schema: {
               type: 'string',
@@ -588,7 +588,7 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
           }, {
             in: 'query',
             name: 'analysis',
-            description: 'Le type d\'analyse textuelle effectuée sur le champ. L\'analyse "lang" est intelligente en fonction de la langue, elle calcule la racine grammaticale des mots et ignore les mots les moins significatifs. L\'analyse "standard" effectue un travail plus basique d\'extraction de mots bruts depuis le texte.',
+            description: 'Le type d\'analyse textuelle effectuée sur la colonne. L\'analyse "lang" est intelligente en fonction de la langue, elle calcule la racine grammaticale des mots et ignore les mots les moins significatifs. L\'analyse "standard" effectue un travail plus basique d\'extraction de mots bruts depuis le texte.',
             schema: {
               type: 'string',
               default: 'lang',
@@ -690,17 +690,17 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
       },
       '/schema': {
         get: {
-          summary: 'Récupérer la liste des champs filtrable',
+          summary: 'Récupérer la liste des colonnes filtrable',
           operationId: 'readSchema',
           'x-permissionClass': 'read',
           tags: ['Métadonnées'],
           parameters: [
-            utils.filterParam('type', 'Filtre sur le type de champ', ['string', 'boolean', 'integer', 'number']),
-            utils.filterParam('format', 'Filtre sur de format d\'un champ de type chaine de caractère', ['uri-reference', 'date', 'date-time']),
+            utils.filterParam('type', 'Filtre sur le type de colonne', ['string', 'boolean', 'integer', 'number']),
+            utils.filterParam('format', 'Filtre sur de format d\'une colonne de type chaine de caractère', ['uri-reference', 'date', 'date-time']),
             {
               in: 'query',
               name: 'enum',
-              description: 'Restreindre aux champs ayant une énumération de valeurs (moins de 50 valeurs distinctes)',
+              description: 'Restreindre aux colonnes ayant une énumération de valeurs (moins de 50 valeurs distinctes)',
               schema: {
                 type: 'boolean',
               },
@@ -708,7 +708,7 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
           ],
           responses: {
             200: {
-              description: 'La liste des champs.',
+              description: 'La liste des colonnes.',
               content: {
                 'application/json': {
                   schema: {

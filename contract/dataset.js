@@ -331,7 +331,7 @@ module.exports = {
           },
           select: {
             type: 'array',
-            description: 'La liste des champs à sélectionner dans le retour du service distant. Tous les champs si absent ou vide.',
+            description: 'La liste des colonnes à sélectionner dans le retour du service distant. Toutes les colonnes si absent ou vide.',
             items: {
               type: 'string',
             },

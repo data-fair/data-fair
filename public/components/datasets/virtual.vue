@@ -51,7 +51,7 @@
                 :item-text="(field) => field.title || field['x-originalName'] || field.key"
                 hide-no-data
                 item-value="id"
-                label="Ajouter un champ"
+                label="Ajouter une colonne"
                 return-object
                 style="max-width: 400px;"
                 @change="addField"
@@ -72,11 +72,11 @@
     </v-card>
 
     <h2 class="text-h6 mt-4 mb-3">
-      Champs sélectionnés
+      Colonnes sélectionnées
     </h2>
 
     <p v-if="dataset.schema.filter(f => !f['x-calculated']).length === 0">
-      Aucun champ hérité pour l'instant.
+      Aucune colonne héritée pour l'instant.
     </p>
     <v-list
       v-else

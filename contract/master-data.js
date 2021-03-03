@@ -104,7 +104,7 @@ exports.endpoints = (dataset) => {
         parameters: [{
           in: 'query',
           name: 'select',
-          description: 'La liste des champs à retourner',
+          description: 'La liste des colonnes à retourner',
           schema: {
             default: [],
             type: 'array',

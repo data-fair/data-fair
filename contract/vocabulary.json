@@ -255,7 +255,7 @@
   },
   {
     "title": "Coordonnée X",
-    "description": "Coordonnée géographique X (Easting) selon une projection à définir sur le jeu de données. Ce champ sera utilisé pour calculer les attributs latitude/longitude.",
+    "description": "Coordonnée géographique X (Easting) selon une projection à définir sur le jeu de données. Cette colonne sera utilisé epour calculer les attributs latitude/longitude.",
     "identifiers": [
       "http://data.ign.fr/def/geometrie#coordX"
     ],
@@ -264,7 +264,7 @@
   },
   {
     "title": "Coordonnée Y",
-    "description": "Coordonnée géographique Y (Northing) selon une projection à définir sur le jeu de données. Ce champ sera utilisé pour calculer les attributs latitude/longitude.",
+    "description": "Coordonnée géographique Y (Northing) selon une projection à définir sur le jeu de données. Cette colonne sera utilisée pour calculer les attributs latitude/longitude.",
     "identifiers": [
       "http://data.ign.fr/def/geometrie#coordY"
     ],

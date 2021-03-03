@@ -62,7 +62,7 @@
               :disabled="!editable || dataset.isVirtual"
               label="Séparateur"
               persistent-hint
-              hint="Ne renseigner que pour les champs multivalués. Ce caractère sera utilisé pour séparer les valeurs."
+              hint="Ne renseigner que pour les colonnes multivaluées. Ce caractère sera utilisé pour séparer les valeurs."
             />
             <v-autocomplete
               v-model="currentPropObj['x-refersTo']"
@@ -71,7 +71,7 @@
               label="Concept"
               :clearable="true"
               persistent-hint
-              :hint="currentPropObj['x-refersTo'] ? vocabulary[currentPropObj['x-refersTo']] && vocabulary[currentPropObj['x-refersTo']].description : 'Les concepts des champs sont utilisés pour améliorer le traitement de la donnée et sa visualisation.'"
+              :hint="currentPropObj['x-refersTo'] ? vocabulary[currentPropObj['x-refersTo']] && vocabulary[currentPropObj['x-refersTo']].description : 'Les concepts des colonnes sont utilisés pour améliorer le traitement de la donnée et sa visualisation.'"
             >
               <template v-slot:item="data">
                 <template v-if="typeof data.item !== 'object'">

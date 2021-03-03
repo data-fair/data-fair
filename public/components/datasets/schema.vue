@@ -3,7 +3,7 @@
     <v-col class="py-0">
       <v-row class="px-3">
         <h3 class="text-h6">
-          Champs principaux
+          Colonnes principales
         </h3>
         <v-btn
           v-if="dataset.isRest && can('writeDescription')"
@@ -43,7 +43,7 @@
 
       <v-row class="px-3 pt-3">
         <h3 class="text-h6">
-          Champs calculés
+          Colonnes calculées
         </h3>
       </v-row>
 

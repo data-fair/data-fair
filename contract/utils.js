@@ -72,7 +72,7 @@ exports.visibilityParams = [{
 exports.selectParam = (values) => ({
   in: 'query',
   name: 'select',
-  description: 'La liste des champs à retourner',
+  description: 'La liste des colonnes à retourner',
   required: false,
   schema: {
     default: ['title'],

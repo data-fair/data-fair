@@ -5,10 +5,10 @@
     style="line-height: 1;"
   >
     <template v-if="total <= 10000">
-      {{ total.toLocaleString() }} {{ plural ? 'enregistrements' : 'enregistrement' }}
+      {{ total.toLocaleString() }} {{ plural ? 'lignes' : 'ligne' }}
     </template>
     <template v-else>
-      {{ (10000).toLocaleString() }} {{ plural ? 'premiers enregistrements' : 'premier enregistrement' }} ({{ total.toLocaleString() }} au total)
+      {{ (10000).toLocaleString() }} {{ plural ? 'premières lignes' : 'première ligne' }} ({{ total.toLocaleString() }} au total)
     </template>
   </div>
 </template>

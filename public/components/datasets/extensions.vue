@@ -100,9 +100,9 @@
                 :items="selectFields[extension.remoteService + '_' + extension.action].fieldsAndTags"
                 item-value="name"
                 item-text="title"
-                label="Champs additionnels"
+                label="Colonnes additionnelles"
                 multiple
-                placeholder="Tous les champs en sortie"
+                placeholder="Toutes les colonnes en sortie"
                 persistent-hint
                 chips
                 deletable-chips

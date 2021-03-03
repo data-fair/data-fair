@@ -54,7 +54,7 @@
             </v-chip>
           </template>
           <v-chip v-if="nonSemOutputs(item.output)" style="margin:4px 4px;">
-            {{ nonSemOutputs(item.output) }} {{ nonSemOutputs(item.output) > 1 ? 'champs sans concepts' : 'champ sans concept' }}
+            {{ nonSemOutputs(item.output) }} {{ nonSemOutputs(item.output) > 1 ? 'colonnes sans concepts' : 'colonne sans concept' }}
           </v-chip>
         </td>
       </tr>

@@ -69,7 +69,7 @@
       </v-stepper-content>
       <v-stepper-content step="2">
         <p>Optionnellement vous pouvez charger une archive zip contenant des fichiers à utiliser comme pièces à joindre aux lignes du fichier principal.</p>
-        <p>Le fichier principal doit avoir un champ qui contient les chemins des pièces jointes dans l'archive.</p>
+        <p>Le fichier principal doit avoir une colonne qui contient les chemins des pièces jointes dans l'archive.</p>
         <div class="mt-3 mb-3">
           <v-file-input
             label="sélectionnez un fichier"

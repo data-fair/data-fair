@@ -128,7 +128,7 @@ module.exports = {
       },
       dataset: {
         title: 'Importer ses propres données',
-        description: 'Les jeux de données sont créés en chargeant des fichiers. Ils sont stockés, analysés et un schéma de données est déduit. Les données sont ensuite indexées suivant ce schéma et peuvent être requêtées au travers d\'une API Rest. Les champs du schéma peuvent être sémantisés, ce qui permet ensuite d\'enrichir les données et de les réutiliser dans des applications dédiées.',
+        description: 'Les jeux de données sont créés en chargeant des fichiers. Ils sont stockés, analysés et un schéma de données est déduit. Les données sont ensuite indexées suivant ce schéma et peuvent être requêtées au travers d\'une API Rest. Les colonnes du schéma peuvent être sémantisées, ce qui permet ensuite d\'enrichir les données et de les réutiliser dans des applications dédiées.',
       },
       format: {
         title: 'Format de fichiers pris en charge',
