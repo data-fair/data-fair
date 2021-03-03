@@ -38,6 +38,20 @@
             <p v-if="activeAccount.type ==='organization'">
               Vous êtes <strong>{{ user.organizations.find(o => o.id===activeAccount.id).role }}</strong> dans cette organisation.
             </p>
+            <p v-else-if="user.organizations.length">
+              <v-icon color="warning">
+                mdi-alert
+              </v-icon>
+              Pour travailler en <strong>mode collaboratif</strong> vous devez ouvrir le menu personnel (en haut à droite) et changer de compte actif.
+              Pour créer une nouvelle organisation rendez vous sur <nuxt-link to="/me">
+                votre compte.
+              </nuxt-link>
+            </p>
+            <p v-else>
+              Pour travailler en <strong>mode collaboratif</strong> vous devez créer une organisation. Pour cela rendez vous sur <nuxt-link to="/me">
+                votre compte.
+              </nuxt-link>
+            </p>
             <p>
               {{ $t('pages.root.description') }}
             </p>
