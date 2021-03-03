@@ -33,6 +33,10 @@
 </script>
 
 <style lang="less">
+html {
+  overflow-y: scroll !important;
+}
+
 body .v-application {
   .logo-container {
     height: 100%;

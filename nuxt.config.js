@@ -19,6 +19,11 @@ module.exports = {
   buildDir: 'nuxt-dist',
   build: {
     // cache: true,
+    splitChunks: {
+      // necessary so that css rules from different layouts are not overlappedare not loaded
+      // cf https://github.com/nuxt/nuxt.js/issues/3877
+      layouts: true,
+    },
     publicPath: config.publicUrl + '/_nuxt/',
     transpile: [/@koumoul/], // Necessary for "à la carte" import of vuetify components
     extend (config, { isServer, isDev, isClient }) {

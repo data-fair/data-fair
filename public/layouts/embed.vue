@@ -36,10 +36,7 @@
 
 </script>
 
-<style lang="less">
-body .application {
-  font-family: 'Nunito', sans-serif;
-}
+<style lang="css">
 html {
   overflow-y: auto !important;
 }
