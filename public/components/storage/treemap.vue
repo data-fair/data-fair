@@ -3,7 +3,7 @@
     <div
       v-for="box in boxes || []"
       :key="box.data.id"
-      :style="`padding:1.5px; position:absolute; top:${box.y0}px; left:${box.x0}px; bottom:${height - box.y1}px; right:${width - box.x1}px;`"
+      :style="`padding:1.5px; position:absolute; top:${box.y0}px; left:${box.x0 * ratio}px; bottom:${height - box.y1}px; right:${width - (box.x1 * ratio)}px;`"
     >
       <v-card
         style="width:100%;height:100%;"
@@ -25,6 +25,7 @@
 
 <script>
   import Vue from 'vue'
+  import tinycolor from 'tinycolor2'
   const d3 = require('d3-hierarchy')
 
   export default {
@@ -36,7 +37,16 @@
       width: null,
       height: 300,
       boxes: null,
+      ratio: 1.62,
     }),
+    computed: {
+      lightPrimary() {
+        return tinycolor(this.$vuetify.theme.themes.light.primary).brighten(10).toHexString()
+      },
+      lightAccent() {
+        return tinycolor(this.$vuetify.theme.themes.light.accent).brighten(10).toHexString()
+      },
+    },
     mounted() {
       window.addEventListener('resize', () => this.refresh(), true)
       this.refresh()
@@ -51,7 +61,7 @@
             size: d.storage.size,
             tooltip: `${d.title} - ${Vue.filter('displayBytes')(d.storage.size)} - ${{ public: 'Public', private: 'Privé', protected: 'Protégé' }[d.visibility]}`,
             to: `/dataset/${d.id}`,
-            color: d.visibility === 'public' ? 'primary' : 'accent',
+            color: d.visibility === 'public' ? this.lightPrimary : this.lightAccent,
           })),
         }
         if (this.datasets.count > this.datasets.results.length) {
@@ -66,9 +76,11 @@
             color: 'grey',
           })
         }
-        const hierarchy = d3.hierarchy(data).sum(d => d.size)
+        const hierarchy = d3.hierarchy(data)
+          // .sum(d => d.size)
+          .sum(d => Math.sqrt(d.size))
         d3.treemap()
-          .size([this.width, this.height])
+          .size([this.width / this.ratio, this.height])
           .tile(d3.treemapSquarify.ratio(1))(hierarchy)
 
         this.boxes = hierarchy.leaves()

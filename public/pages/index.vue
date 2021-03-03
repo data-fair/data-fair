@@ -85,12 +85,12 @@
                 </p>
               </template>
               <template v-slot:tabs-items>
-                <v-container fluid class="pa-0">
+                <v-container fluid class="py-0 px-2">
                   <v-row>
                     <v-col
                       cols="12"
                       sm="6"
-                      md="8"
+                      md="7"
                     >
                       <storage-treemap
                         v-if="stats && datasets"
@@ -101,7 +101,7 @@
                     <v-col
                       cols="12"
                       sm="6"
-                      md="4"
+                      md="5"
                     >
                       <datasets-actions />
                     </v-col>
@@ -241,7 +241,7 @@
 
       this.datasets = await this.$axios.$get('api/v1/datasets', {
         params: {
-          size: 7,
+          size: 11,
           owner: `${this.activeAccount.type}:${this.activeAccount.id}`,
           select: 'id,title,storage',
           sort: 'storage.size:-1',
