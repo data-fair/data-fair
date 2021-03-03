@@ -1,9 +1,5 @@
 <template>
   <div>
-    <p>
-      Les <i>webhooks</i> sont un moyen de lier d'autres services Web à des événements internes à ce service de diffusion de données (créations, mises à jour, etc.).
-      Il s'agit d'une configuration technique pour personne avertie.
-    </p>
     <v-form v-model="formValid">
       <v-jsf
         v-model="wrapper"

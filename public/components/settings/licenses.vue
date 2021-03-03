@@ -1,7 +1,5 @@
 <template>
   <div>
-    <p>Définissez des licences pour clarifier les utilisations possibles des jeux de données que vous diffusez.</p>
-
     <v-btn
       color="primary"
       class="mb-3"

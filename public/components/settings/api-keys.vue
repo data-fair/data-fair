@@ -1,9 +1,5 @@
 <template>
   <div>
-    <p>
-      Les <i>clés d'API</i> sont un moyen d'utiliser l'API de data-fair de manière sécurisée.
-      Il s'agit d'une configuration technique pour personne avertie.
-    </p>
     <v-btn
       color="primary"
       class="mb-3"
@@ -11,13 +7,12 @@
     >
       Ajouter une clé d'API
     </v-btn>
-    <v-container>
+    <v-container class="pa-0">
       <v-row>
         <v-col
           v-for="(apiKey, rowIndex) in settings.apiKeys"
           :key="rowIndex"
           cols="12"
-          lg="6"
         >
           <v-card tile outlined>
             <v-card-title primary-title>

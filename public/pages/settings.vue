@@ -42,41 +42,119 @@
             </v-data-table>
           </div>-->
 
-              <h3 id="licences" class="mt-10 mb-3">
-                Licences
-              </h3>
-              <settings-licenses
-                v-if="settings"
-                :settings="settings"
-                @license-updated="save"
-              />
+              <section-tabs
+                :svg="qualitySvg"
+                :section="sections.find(s => s.id === 'licences')"
+              >
+                <template v-slot:extension>
+                  <p>
+                    Définissez des licences pour clarifier les utilisations possibles des jeux de données que vous diffusez.
+                  </p>
+                </template>
+                <template v-slot:tabs-items>
+                  <v-container fluid class="py-0">
+                    <v-row>
+                      <v-col cols="12" md="6">
+                        <settings-licenses
+                          v-if="settings"
+                          :settings="settings"
+                          @license-updated="save"
+                        />
+                      </v-col>
+                    </v-row>
+                  </v-container>
+                </template>
+              </section-tabs>
 
-              <h3 id="topics" class="mt-10 mb-3">
-                Thématiques
-              </h3>
-              <settings-topics
-                v-if="settings"
-                :settings="settings"
-                @updated="save"
-              />
+              <section-tabs
+                :svg="flagsSvg"
+                svg-no-margin
+                :section="sections.find(s => s.id === 'topics')"
+              >
+                <template v-slot:extension>
+                  <p>
+                    Les thématiques sont une manière simple d'organiser vos jeux de données et vos visualisations.
+                  </p>
+                </template>
+                <template v-slot:tabs-items>
+                  <v-container fluid class="py-0">
+                    <v-row>
+                      <v-col cols="12" md="6">
+                        <settings-topics
+                          v-if="settings"
+                          :settings="settings"
+                          @updated="save"
+                        />
+                      </v-col>
+                    </v-row>
+                  </v-container>
+                </template>
+              </section-tabs>
 
-              <h3 id="api-keys" class="mt-10 mb-3">
-                Clés d'API
-              </h3>
-              <settings-api-keys
-                v-if="settings"
-                :settings="settings"
-                @updated="save"
-              />
+              <section-tabs
+                :svg="securitysSvg"
+                svg-no-margin
+                :section="sections.find(s => s.id === 'api-keys')"
+              >
+                <template v-slot:extension>
+                  <p>
+                    Les clés d'API sont un moyen d'utiliser l'API de data-fair de manière sécurisée.
+                    Il s'agit d'une configuration technique pour personne avertie.
+                  </p>
+                </template>
+                <template v-slot:tabs-items>
+                  <v-container fluid class="py-0">
+                    <v-row>
+                      <v-col cols="12" md="6">
+                        <settings-api-keys
+                          v-if="settings"
+                          :settings="settings"
+                          @updated="save"
+                        />
+                      </v-col>
+                    </v-row>
+                  </v-container>
+                </template>
+              </section-tabs>
+
+              <section-tabs
+                :svg="wwwSvg"
+                svg-no-margin
+                :section="sections.find(s => s.id === 'webhooks')"
+              >
+                <template v-slot:extension>
+                  <p>
+                    Les <i>webhooks</i> sont un moyen de lier d'autres services Web à des événements internes à ce service de diffusion de données (créations, mises à jour, etc.).
+                    Il s'agit d'une configuration technique pour personne avertie.
+                  </p>
+                </template>
+                <template v-slot:tabs-items>
+                  <v-container fluid class="py-0">
+                    <v-row>
+                      <v-col cols="12" md="6">
+                        <settings-api-keys
+                          v-if="settings"
+                          :settings="settings"
+                          @updated="save"
+                        />
+                      </v-col>
+                    </v-row>
+                  </v-container>
+                </template>
+              </section-tabs>
 
               <h3 id="webhooks" class="mt-10 mb-3">
                 Appels extérieurs (Webhooks)
               </h3>
-              <settings-webhooks
-                v-if="settings"
-                :settings="settings"
-                @webhook-updated="save"
-              />
+              <v-row>
+                <v-col cols="12" md="6">
+                  <settings-webhooks
+                    v-if="settings"
+                    :settings="settings"
+                    @webhook-updated="save"
+                  />
+                </v-col>
+              </v-row>
             </template>
             <not-authorized v-else />
           </v-col>
@@ -95,13 +173,19 @@
   import SettingsLicenses from '~/components/settings/licenses.vue'
   import SettingsApiKeys from '~/components/settings/api-keys.vue'
   import SettingsTopics from '~/components/settings/topics.vue'
+  import SectionTabs from '~/components/layout/section-tabs.vue'
   import NavigationRight from '~/components/layout/navigation-right'
   import Toc from '~/components/layout/toc.vue'
   import eventBus from '~/event-bus'
 
+  const qualitySvg = require('~/assets/svg/Quality Check_Monochromatic.svg?raw')
+  const flagsSvg = require('~/assets/svg/Crossed flags_Two Color.svg?raw')
+  const securitysSvg = require('~/assets/svg/Security_Two Color.svg?raw')
+  const wwwSvg = require('~/assets/svg/World wide web_Two Color.svg?raw')
+
   export default {
     // middleware: 'auth',
-    components: { SettingsWebhooks, SettingsLicenses, SettingsApiKeys, SettingsTopics, NavigationRight, Toc },
+    components: { SettingsWebhooks, SettingsLicenses, SettingsApiKeys, SettingsTopics, SectionTabs, NavigationRight, Toc },
     data: () => ({
       api: null,
       operations: null,
@@ -109,6 +193,10 @@
       organization: {},
       settings: null,
       ready: false,
+      qualitySvg,
+      flagsSvg,
+      securitysSvg,
+      wwwSvg,
     }),
     computed: {
       ...mapState('session', ['user', 'initialized']),

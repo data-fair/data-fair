@@ -1,8 +1,5 @@
 <template>
   <div>
-    <p>
-      Les thématiques sont une manière simple d'organiser vos jeux de données et vos applications.
-    </p>
     <v-form v-model="formValid">
       <v-jsf
         v-model="wrapper"
