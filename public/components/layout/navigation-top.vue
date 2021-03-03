@@ -45,7 +45,7 @@
           v-else
           offset-y
           nudge-left
-          max-height="500"
+          max-height="510"
         >
           <template v-slot:activator="{on}">
             <v-btn
