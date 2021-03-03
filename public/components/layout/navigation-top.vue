@@ -3,8 +3,17 @@
     app
     flat
     dense
+    clipped-left
     class="px-0 main-app-bar"
   >
+    <v-list
+      :style="$vuetify.breakpoint.mobile ? '' : 'width: 255px;'"
+      class="py-0"
+      color="transparent"
+    >
+      <brand-title />
+    </v-list>
+    <v-divider v-if="!$vuetify.breakpoint.mobile" vertical />
     <v-toolbar-items v-if="!navContext.drawer">
       <v-btn
         text
@@ -170,9 +179,10 @@
 <script>
   import { mapState, mapGetters, mapActions } from 'vuex'
   import NotificationsQueue from '~/components/notifications-queue'
+  import BrandTitle from '~/components/layout/brand-title.vue'
 
   export default {
-    components: { NotificationsQueue },
+    components: { NotificationsQueue, BrandTitle },
     props: ['navContext'],
     computed: {
       ...mapState(['env', 'breadcrumbItems', 'breadcrumbsRouteName']),

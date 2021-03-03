@@ -4,23 +4,12 @@
     class="navigation-left"
     dark
     app
+    clipped
   >
-    <v-list class="pa-0">
-      <v-list-item
-        :href="env.brand.url"
-        :to="env.brand.url ? null: '/'"
-        :nuxt="true"
-      >
-        <v-list-item-avatar style="height: 45px;border-radius: 0;">
-          <div class="main-logo">
-            <img v-if="env.brand.logo" :src="env.brand.logo">
-            <img v-else src="~/assets/logo.svg">
-          </div>
-        </v-list-item-avatar>
-        <v-list-item-title><h1>{{ env.brand.title || 'DataFair' }}</h1></v-list-item-title>
-      </v-list-item>
+    <!--<v-list class="pa-0">
+      <brand-title />
       <v-divider />
-    </v-list>
+    </v-list>-->
     <v-list
       v-if="user && user.adminMode"
       class="py-0"
@@ -82,6 +71,14 @@
 
     <v-list nav>
       <template v-if="!missingSubscription">
+        <v-list-item
+          :nuxt="true"
+          :to="`/`"
+        >
+          <v-list-item-action><v-icon>mdi-home</v-icon></v-list-item-action>
+          <v-list-item-title>Tableau de bord</v-list-item-title>
+        </v-list-item>
+
         <v-list-item
           :nuxt="true"
           :to="`/datasets`"
@@ -185,10 +182,3 @@
     },
   }
 </script>
-
-<style lang="css" scoped>
-.main-logo img {
-  width: 40px;
-  height: auto;
-}
-</style>
