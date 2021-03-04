@@ -1,7 +1,7 @@
 <template>
   <v-row>
     <v-col class="py-0">
-      <v-row class="px-3">
+      <v-row class="px-3 pb-2" style="height:44px;">
         <h3 class="text-h6">
           Colonnes
         </h3>
@@ -16,7 +16,7 @@
           <v-icon>mdi-plus</v-icon>
         </v-btn>
         <v-spacer />
-        <div class="pb-2">
+        <div>
           <v-btn
             v-if="updated"
             text
@@ -36,39 +36,10 @@
 
       <properties-slide
         v-if="schema && schema.length"
-        :properties="schema.filter(p => !p['x-calculated'] && !p['x-extension'])"
-        :original-properties="JSON.parse(originalSchema).filter(p => !p['x-calculated'] && !p['x-extension'])"
+        :properties="schema.filter(p => !p['x-calculated'])"
+        :original-properties="JSON.parse(originalSchema).filter(p => !p['x-calculated'])"
         :editable="can('writeDescription')"
       />
-
-      <!--<v-row class="px-3 pt-3">
-        <h3 class="text-h6">
-          Colonnes calculées
-        </h3>
-      </v-row>
-
-      <properties-slide
-        v-if="schema && schema.length"
-        :properties="schema.filter(p => p['x-calculated'])"
-        :original-properties="JSON.parse(originalSchema).filter(p => p['x-calculated'])"
-        :editable="false"
-      />-->
-
-      <template v-for="extension in extensions">
-        <v-row :key="`${extension.key}-title`" class="px-3 pt-6">
-          <h3 class="text-h6">
-            Extension: {{ remoteServicesMap[extension.remoteService].actions[extension.action].summary }} (service {{ remoteServicesMap[extension.remoteService].title }})
-          </h3>
-        </v-row>
-
-        <properties-slide
-          v-if="schema && schema.length"
-          :key="`${extension.key}-properties`"
-          :properties="schema.filter(p => p['x-extension'] === extension.key)"
-          :original-properties="JSON.parse(originalSchema).filter(p => p['x-extension'] === extension.key)"
-          :editable="false"
-        />
-      </template>
     </v-col>
 
     <v-dialog

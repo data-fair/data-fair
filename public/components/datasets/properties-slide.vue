@@ -5,18 +5,25 @@
         v-for="(prop, i) in properties"
         :key="prop.key"
         style="text-transform: none;"
-        min-width="100"
-        class="mx-1 my-1"
+        class="ma-0 px-2"
         v-bind="btnProps(prop, i, currentProperty === i)"
         @click="currentProperty = currentProperty === i ? null : i"
       >
+        <v-icon
+          small
+          style="margin-right:4px;"
+          v-text="propTypeIcon(prop)"
+        />
+
         {{ prop.title || prop['x-originalName'] || prop.key }}
-        &nbsp;<v-icon v-text="propTypeIcon(prop)" />
       </v-btn>
+    </v-row>
+    <v-row v-if="currentProperty == null">
+      <v-subheader>Cliquez sur un nom de colonne pour afficher les informations détaillées.</v-subheader>
     </v-row>
     <v-expand-transition>
       <v-sheet v-if="currentProperty != null">
-        <v-row class="px-3">
+        <v-row>
           <v-col>
             <v-text-field
               v-model="currentPropObj.title"
@@ -72,6 +79,7 @@
             />
           </v-col>
           <v-col>
+            <!-- Extension: {{ remoteServicesMap[extension.remoteService].actions[extension.action].summary }} (service {{ remoteServicesMap[extension.remoteService].title }}) -->
             <p>
               <span :class="labelClass">Clé normalisée :  </span><br>
               {{ currentPropObj.key }}
@@ -135,11 +143,11 @@
     },
     methods: {
       btnProps(prop, i, active) {
-        if (active) return { color: 'primary', dark: true, depressed: true }
+        if (active) return { color: 'primary', dark: true, outlined: true, small: true }
         if (this.editable && JSON.stringify(prop) !== JSON.stringify(this.originalProperties[i])) {
-          return { color: 'accent', dark: true, depressed: true }
+          return { color: 'accent', dark: true, text: true, small: true }
         }
-        return { color: '#757575', dark: true, depressed: true }
+        return { color: 'transparent', depressed: true, small: true }
       },
       filterVocabulary(item) {
         if (item.header) return true
