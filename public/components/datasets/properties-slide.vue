@@ -68,7 +68,7 @@
               :disabled="!editable"
               label="Ignorer la détection de type"
               persistent-hint
-              hint="Si vous cochez cette case la détection automatique de type sera désactivée et la colonne sera traitée comme une simple chaîne de caractère."
+              hint="Si vous cochez cette case la détection automatique de type sera désactivée et la colonne sera traitée comme un simple texte."
             />
           </v-col>
           <v-col>
@@ -91,7 +91,7 @@
               </template>
             </p>
             <p v-if="currentPropObj['x-cardinality']">
-              <span :class="labelClass">Nombre de valeurs distinctes (approximative dans le cas de données volumineuses) : </span><br>
+              <span :class="labelClass">Nombre de valeurs distinctes (approximatif dans le cas de données volumineuses) : </span><br>
               {{ currentPropObj['x-cardinality'].toLocaleString() }}
             </p>
             <p v-if="currentPropObj.enum">
