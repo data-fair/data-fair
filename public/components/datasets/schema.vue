@@ -3,7 +3,7 @@
     <v-col class="py-0">
       <v-row class="px-3">
         <h3 class="text-h6">
-          Colonnes principales
+          Colonnes
         </h3>
         <v-btn
           v-if="dataset.isRest && can('writeDescription')"
@@ -16,7 +16,7 @@
           <v-icon>mdi-plus</v-icon>
         </v-btn>
         <v-spacer />
-        <div>
+        <div class="pb-2">
           <v-btn
             v-if="updated"
             text
@@ -41,7 +41,7 @@
         :editable="can('writeDescription')"
       />
 
-      <v-row class="px-3 pt-3">
+      <!--<v-row class="px-3 pt-3">
         <h3 class="text-h6">
           Colonnes calculées
         </h3>
@@ -52,7 +52,7 @@
         :properties="schema.filter(p => p['x-calculated'])"
         :original-properties="JSON.parse(originalSchema).filter(p => p['x-calculated'])"
         :editable="false"
-      />
+      />-->
 
       <template v-for="extension in extensions">
         <v-row :key="`${extension.key}-title`" class="px-3 pt-6">

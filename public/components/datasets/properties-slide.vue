@@ -1,42 +1,19 @@
 <template>
   <v-sheet class="properties-slide">
-    <v-slide-group
-      show-arrows
-    >
-      <!-- empty slots to prevent rendering arrows, we prefer a horizontal scrollbar for now -->
-      <div slot="prev" />
-      <div slot="next" />
-
-      <v-slide-item
+    <v-row>
+      <v-btn
         v-for="(prop, i) in properties"
         :key="prop.key"
+        style="text-transform: none;"
+        min-width="100"
+        class="mx-1 my-1"
+        v-bind="btnProps(prop, i, currentProperty === i)"
+        @click="currentProperty = currentProperty === i ? null : i"
       >
-        <v-card
-          min-width="100"
-          class="mx-1 my-2"
-          v-bind="cardProps(prop, i, currentProperty === i)"
-          @click="currentProperty = currentProperty === i ? null : i"
-        >
-          <v-card-title primary-title>
-            {{ prop.title || prop['x-originalName'] || prop.key }}
-          </v-card-title>
-          <v-card-subtitle class="pb-0 caption">
-            {{ prop.title && prop.title !== (prop['x-originalName'] || prop.key) ? (prop['x-originalName'] || prop.key) : '&nbsp;' }}
-          </v-card-subtitle>
-          <v-card-text>
-            <p class="mb-0">
-              {{ propTypeTitle(prop) }}
-            </p>
-            <p v-if="prop['x-cardinality']" class="mb-0">
-              {{ prop['x-cardinality'].toLocaleString() }} valeurs distinctes
-            </p>
-            <p v-if="prop['x-refersTo']" class="mb-0 font-weight-bold">
-              {{ vocabulary[prop['x-refersTo']] && vocabulary[prop['x-refersTo']].title }}
-            </p>
-          </v-card-text>
-        </v-card>
-      </v-slide-item>
-    </v-slide-group>
+        {{ prop.title || prop['x-originalName'] || prop.key }}
+        &nbsp;<v-icon v-text="propTypeIcon(prop)" />
+      </v-btn>
+    </v-row>
     <v-expand-transition>
       <v-sheet v-if="currentProperty != null">
         <v-row class="px-3">
@@ -66,7 +43,7 @@
             />
             <v-autocomplete
               v-model="currentPropObj['x-refersTo']"
-              :items="vocabularyItems.filter(item => filterVocabulary(currentProperty, item))"
+              :items="vocabularyItems.filter(item => filterVocabulary(item))"
               :disabled="!editable || dataset.isVirtual"
               label="Concept"
               :clearable="true"
@@ -142,7 +119,7 @@
     computed: {
       ...mapState(['vocabulary', 'vocabularyArray', 'vocabularyItems']),
       ...mapState('dataset', ['dataset']),
-      ...mapGetters(['propTypeTitle']),
+      ...mapGetters(['propTypeTitle', 'propTypeIcon']),
       labelClass() {
         return `theme--${this.$vuetify.theme.dark ? 'dark' : 'light'} v-label`
       },
@@ -157,14 +134,14 @@
       },
     },
     methods: {
-      cardProps(prop, i, active) {
-        if (active) return { color: 'primary', dark: true, elevation: 4 }
+      btnProps(prop, i, active) {
+        if (active) return { color: 'primary', dark: true, depressed: true }
         if (this.editable && JSON.stringify(prop) !== JSON.stringify(this.originalProperties[i])) {
-          return { outlined: true, color: 'accent', dark: true, tile: true }
+          return { color: 'accent', dark: true, depressed: true }
         }
-        return { outlined: true, tile: true }
+        return { color: '#757575', dark: true, depressed: true }
       },
-      filterVocabulary(currentProperty, item) {
+      filterVocabulary(item) {
         if (item.header) return true
         const prop = this.currentPropObj
         if (this.properties.find(f => (f['x-refersTo'] === item.value) && (f.key !== prop.key))) return false

@@ -10,13 +10,13 @@ import tinycolor from 'tinycolor2'
 Vue.use(Vuex)
 
 const propertyTypes = [
-  { type: 'string', title: 'Texte' },
-  { type: 'string', maxLength: 100000, title: 'Texte long' },
-  { type: 'string', format: 'date', title: 'Date' },
-  { type: 'string', format: 'date-time', title: 'Date et heure' },
-  { type: 'integer', title: 'Nombre entier' },
-  { type: 'number', title: 'Nombre' },
-  { type: 'boolean', title: 'Booléen' },
+  { type: 'string', title: 'Texte', icon: 'mdi-text-short' },
+  { type: 'string', maxLength: 100000, title: 'Texte long', icon: 'mdi-text-subject' },
+  { type: 'string', format: 'date', title: 'Date', icon: 'mdi-calendar' },
+  { type: 'string', format: 'date-time', title: 'Date et heure', icon: 'mdi-clock-outline' },
+  { type: 'integer', title: 'Nombre entier', icon: 'mdi-numeric' },
+  { type: 'number', title: 'Nombre', icon: 'mdi-numeric' },
+  { type: 'boolean', title: 'Booléen', icon: 'mdi-checkbox-marked-circle-outline' },
 ]
 
 export default () => {
@@ -63,6 +63,15 @@ export default () => {
           if (type) return type.title
         }
         return propertyTypes.find(p => p.type === prop.type).title
+      },
+      propTypeIcon: (state) => (prop) => {
+        if (prop.type === 'object') return 'mdi-code-braces'
+        if (prop.type === 'array') return 'mdi-code-array'
+        if (prop.format) {
+          const type = propertyTypes.find(p => p.type === prop.type && p.format === prop.format)
+          if (type) return type.icon
+        }
+        return propertyTypes.find(p => p.type === prop.type).icon
       },
       canContrib(state, getters) {
         const activeAccount = getters['session/activeAccount']

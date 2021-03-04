@@ -15,7 +15,7 @@
               <dataset-status />
 
               <section-tabs
-                :min-height="390"
+                :min-height="220"
                 :svg="buildingSvg"
                 svg-no-margin
                 :section="sections.find(s => s.id === 'structure')"
