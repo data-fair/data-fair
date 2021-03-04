@@ -19,7 +19,7 @@
       </v-btn>
     </v-row>
     <v-row v-if="currentProperty == null">
-      <v-subheader>Cliquez sur un nom de colonne pour afficher les informations détaillées.</v-subheader>
+      <v-subheader>Cliquez sur un nom de colonne pour afficher ses informations détaillées.</v-subheader>
     </v-row>
     <v-expand-transition>
       <v-sheet v-if="currentProperty != null">

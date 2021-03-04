@@ -1,6 +1,6 @@
 <template>
   <v-app :dark="$vuetify.theme.dark" class="data-fair">
-    <dynamic-style />
+    <dynamic-style html-overflow="scroll" />
     <navigation-left :nav-context="navContext" />
     <navigation-top :nav-context="navContext" />
     <v-main>
@@ -35,9 +35,6 @@
 </script>
 
 <style lang="less">
-html {
-  overflow-y: scroll !important;
-}
 
 body .v-application {
   .logo-container {

@@ -1,5 +1,6 @@
 <template>
   <v-app class="embed">
+    <dynamic-style />
     <v-main>
       <nuxt />
       <notifications />
@@ -8,11 +9,12 @@
 </template>
 
 <script>
+  import DynamicStyle from '~/components/layout/dynamic-style.vue'
   import eventBus from '~/event-bus'
   import Notifications from '~/components/layout/notifications.vue'
 
   export default {
-    components: { Notifications },
+    components: { DynamicStyle, Notifications },
     data() {
       return {
         notification: null,
@@ -37,7 +39,8 @@
 </script>
 
 <style lang="css">
+/* hidden by default to prevent glitch when first displaying the page in embed mode */
 html {
-  overflow-y: auto !important;
+  overflow-y: auto;
 }
 </style>
