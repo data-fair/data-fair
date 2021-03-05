@@ -89,7 +89,7 @@
                     name: 'ordered-list',
                     action: EasyMDE.toggleOrderedList,
                     className: 'mdi mdi-format-list-numbered',
-                    title: 'Listé numérotée',
+                    title: 'Liste numérotée',
                   },
                   '|',
                   {
