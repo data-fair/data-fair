@@ -135,7 +135,7 @@
                   '|',
                   {
                     name: 'guide',
-                    action: 'https://easymde.com/markdown-guide',
+                    action: 'https://simplemde.com/markdown-guide',
                     className: 'mdi mdi-help-circle success--text',
                     title: 'Documentation de la syntaxe',
                     noDisable: true,
