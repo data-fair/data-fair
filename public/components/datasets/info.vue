@@ -138,7 +138,7 @@
         v-model="dataset.description"
         :disabled="!can('writeDescription')"
         label="Description"
-        @blur="patch({description: dataset.description})"
+        @change="patch({description: dataset.description})"
       />
     </v-col>
   </v-row>

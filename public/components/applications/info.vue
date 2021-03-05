@@ -103,7 +103,7 @@
         v-model="application.description"
         :disabled="!can('writeDescription')"
         label="Description"
-        @blur="patch({description: application.description})"
+        @change="patch({description: application.description})"
       />
     </v-col>
   </v-row>

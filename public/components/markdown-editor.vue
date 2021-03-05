@@ -144,12 +144,17 @@
       }
       this.easymde = new EasyMDE(config)
 
+      let changed = false
       this.easymde.codemirror.on('change', () => {
+        changed = true
         this.$emit('input', this.easymde.value())
       })
       this.easymde.codemirror.on('blur', () => {
         // timeout to prevent triggering save when clicking on a menu button
-        this.blurTimeout = setTimeout(() => this.$emit('blur'), 500)
+        this.blurTimeout = setTimeout(() => {
+          if (changed) this.$emit('change')
+          changed = false
+        }, 500)
       })
       this.easymde.codemirror.on('focus', () => {
         clearTimeout(this.blurTimeout)
