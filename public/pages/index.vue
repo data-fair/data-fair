@@ -181,7 +181,6 @@
 <script>
   import 'iframe-resizer/js/iframeResizer'
   import VIframe from '@koumoul/v-iframe'
-  import StoragePie from '~/components/storage/pie.vue'
   import StorageTreemap from '~/components/storage/treemap.vue'
   import SectionTabs from '~/components/layout/section-tabs.vue'
   import DatasetsActions from '~/components/datasets/list-actions.vue'
@@ -197,7 +196,7 @@
 
   export default {
     name: 'Home',
-    components: { WrapSvg, VIframe, StorageTreemap, StoragePie, SectionTabs, DatasetsActions, NavigationRight, Activity },
+    components: { WrapSvg, VIframe, StorageTreemap, SectionTabs, DatasetsActions, NavigationRight, Activity },
     data: () => ({
       stats: null,
       datasets: null,
