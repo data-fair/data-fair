@@ -89,7 +89,7 @@
                 <template v-slot:tabs-items>
                   <v-tab-item value="metadata-info">
                     <doc-link tooltip="Consultez la documentation sur l'édition de jeux de données" doc-key="datasetEdit" />
-                    <v-container fluid class="pb-0">
+                    <v-container fluid class="py-0">
                       <dataset-info />
                     </v-container>
                   </v-tab-item>

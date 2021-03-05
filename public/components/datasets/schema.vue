@@ -103,15 +103,9 @@
     computed: {
       ...mapState(['vocabulary', 'propertyTypes']),
       ...mapState('dataset', ['dataset']),
-      ...mapGetters('dataset', ['remoteServicesMap', 'can']),
+      ...mapGetters('dataset', ['can']),
       updated() {
         return JSON.stringify(this.schema) !== this.originalSchema
-      },
-      extensions() {
-        return (this.dataset.extensions || [])
-          .filter(ext => ext.active)
-          .filter(ext => this.remoteServicesMap[ext.remoteService] && this.remoteServicesMap[ext.remoteService].actions[ext.action])
-          .map(ext => ({ key: ext.remoteService + '/' + ext.action, ...ext }))
       },
     },
     watch: {

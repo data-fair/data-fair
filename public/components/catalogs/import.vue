@@ -77,7 +77,7 @@
 </template>
 
 <script>
-  import marked from 'marked'
+  import marked from 'marked/lib/marked'
   import { mapState } from 'vuex'
   import eventBus from '~/event-bus'
   import CatalogConfigForm from './config-form.vue'

@@ -81,29 +81,7 @@
           </v-list-item>
         </v-list>
       </v-sheet>
-    </v-col>
-    <v-col
-      cols="12"
-      md="6"
-      lg="7"
-      order-md="1"
-    >
-      <v-text-field
-        v-model="dataset.title"
-        :disabled="!can('writeDescription')"
-        label="Titre"
-        dense
-        @change="patch({title: dataset.title})"
-      />
-      <v-textarea
-        v-model="dataset.description"
-        :disabled="!can('writeDescription')"
-        label="Description"
-        filled
-        dense
-        rows="4"
-        @change="patch({description: dataset.description})"
-      />
+
       <v-select
         v-model="dataset.license"
         :items="licenses"
@@ -111,7 +89,6 @@
         item-text="title"
         item-key="href"
         label="Licence"
-        dense
         return-object
         @input="patch({license: dataset.license})"
       />
@@ -124,7 +101,6 @@
         item-key="id"
         label="Thématiques"
         multiple
-        dense
         return-object
         @input="patch({topics: dataset.topics})"
       />
@@ -137,15 +113,32 @@
         item-key="code"
         label="Projection cartographique"
         return-object
-        dense
         @input="patch({projection: dataset.projection})"
       />
       <v-text-field
         v-model="dataset.origin"
         :disabled="!can('writeDescription')"
         label="Provenance"
-        dense
         @change="patch({origin: dataset.origin})"
+      />
+    </v-col>
+    <v-col
+      cols="12"
+      md="6"
+      lg="7"
+      order-md="1"
+    >
+      <v-text-field
+        v-model="dataset.title"
+        :disabled="!can('writeDescription')"
+        label="Titre"
+        @change="patch({title: dataset.title})"
+      />
+      <markdown-editor
+        v-model="dataset.description"
+        :disabled="!can('writeDescription')"
+        label="Description"
+        @blur="patch({description: dataset.description})"
       />
     </v-col>
   </v-row>
@@ -154,8 +147,11 @@
 <script>
   import OwnerListItem from '~/components/owners/list-item.vue'
   import EditTtl from '~/components/datasets/edit-ttl.vue'
+  import MarkdownEditor from '~/components/markdown-editor.vue'
+
   const { mapState, mapActions, mapGetters } = require('vuex')
   const events = require('~/../shared/events.json').dataset
+
   const coordXUri = 'http://data.ign.fr/def/geometrie#coordX'
   const coordYUri = 'http://data.ign.fr/def/geometrie#coordY'
 
@@ -163,6 +159,7 @@
     components: {
       OwnerListItem,
       EditTtl,
+      MarkdownEditor,
     },
     data() {
       return { events, error: null }

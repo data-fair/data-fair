@@ -74,6 +74,18 @@
           </v-list-item>
         </v-list>
       </v-sheet>
+      <v-select
+        v-if="topics && topics.length"
+        v-model="application.topics"
+        :disabled="!can('writeDescription')"
+        :items="topics"
+        item-text="title"
+        item-key="id"
+        label="Thématiques"
+        multiple
+        return-object
+        @input="patch({topics: application.topics})"
+      />
     </v-col>
     <v-col
       cols="12"
@@ -85,30 +97,13 @@
         v-model="application.title"
         :disabled="!can('writeDescription')"
         label="Titre"
-        dense
         @change="patch({title: application.title})"
       />
-      <v-textarea
+      <markdown-editor
         v-model="application.description"
         :disabled="!can('writeDescription')"
         label="Description"
-        filled
-        dense
-        rows="4"
-        @change="patch({description: application.description})"
-      />
-      <v-select
-        v-if="topics && topics.length"
-        v-model="application.topics"
-        :disabled="!can('writeDescription')"
-        :items="topics"
-        item-text="title"
-        item-key="id"
-        label="Thématiques"
-        multiple
-        dense
-        return-object
-        @input="patch({topics: application.topics})"
+        @blur="patch({description: application.description})"
       />
     </v-col>
   </v-row>
@@ -117,11 +112,12 @@
 <script>
   import OwnerListItem from '~/components/owners/list-item.vue'
   import DatasetBtnTable from '~/components/datasets/btn-table.vue'
+  import MarkdownEditor from '~/components/markdown-editor.vue'
   import { mapState, mapActions, mapGetters } from 'vuex'
   const events = require('~/../shared/events.json').application
 
   export default {
-    components: { OwnerListItem, DatasetBtnTable },
+    components: { OwnerListItem, DatasetBtnTable, MarkdownEditor },
     data() {
       return { events }
     },

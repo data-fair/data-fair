@@ -29,29 +29,62 @@
               v-model="currentPropObj.title"
               :placeholder="currentPropObj['x-originalName'] || ' '"
               label="Libellé"
-              :disabled="!editable"
+              :disabled="!editable || !!currentPropObj['x-extension']"
               hide-details
             />
             <v-textarea
               v-model="currentPropObj.description"
               class="pt-2"
               label="Description"
-              :disabled="!editable"
+              :disabled="!editable || !!currentPropObj['x-extension']"
               hide-details
+              rows="7"
               filled
             />
+          </v-col>
+          <v-col>
+            <v-list dense>
+              <v-list-item v-if="currentPropObj['x-extension'] && extensions[currentPropObj['x-extension']]" class="pl-0 font-weight-bold">
+                <span :class="labelClass">Extension : </span>&nbsp;
+                {{ extensions[currentPropObj['x-extension']].title }}
+              </v-list-item>
+              <v-list-item v-if="currentPropObj['x-originalName']" class="pl-0">
+                <span :class="labelClass">Clé dans la source : </span>&nbsp;
+                {{ currentPropObj['x-originalName'] }}
+              </v-list-item>
+              <v-list-item class="pl-0">
+                <span :class="labelClass">Type :</span>&nbsp;
+                {{ propTypeTitle(currentPropObj) }}
+                <template v-if="currentFileProp && currentFileProp.dateFormat">
+                  ({{ currentFileProp.dateFormat }})
+                </template>
+                <template v-if="currentFileProp && currentFileProp.dateTimeFormat">
+                  ({{ currentFileProp.dateTimeFormat }})
+                </template>
+              </v-list-item>
+              <v-list-item v-if="currentPropObj['x-cardinality']" class="pl-0">
+                <span :class="labelClass">Nombre de valeurs distinctes <v-icon title="approximatif dans le cas de données volumineuses" v-text="'mdi-information'" /> : </span>&nbsp;
+                {{ currentPropObj['x-cardinality'].toLocaleString() }}
+              </v-list-item>
+              <v-list-item v-if="currentPropObj.enum" class="pl-0">
+                <span :class="labelClass">Valeurs : </span>&nbsp;
+                {{ currentPropObj.enum.join(' - ') | truncate(100) }}
+              </v-list-item>
+            </v-list>
             <v-select
+              v-if="currentPropObj.type === 'string'"
               v-model="currentPropObj.separator"
               :items="[', ', '; ', ' - ', ' / ']"
-              :disabled="!editable || dataset.isVirtual"
+              :disabled="!editable || !!currentPropObj['x-extension'] || dataset.isVirtual"
               label="Séparateur"
               persistent-hint
+              clearable
               hint="Ne renseigner que pour les colonnes multivaluées. Ce caractère sera utilisé pour séparer les valeurs."
             />
             <v-autocomplete
               v-model="currentPropObj['x-refersTo']"
               :items="vocabularyItems.filter(item => filterVocabulary(item))"
-              :disabled="!editable || dataset.isVirtual"
+              :disabled="!editable || !!currentPropObj['x-extension'] || dataset.isVirtual"
               label="Concept"
               :clearable="true"
               persistent-hint
@@ -72,40 +105,11 @@
             <v-checkbox
               v-if="dataset.file"
               v-model="currentPropObj.ignoreDetection"
-              :disabled="!editable"
+              :disabled="!editable || !!currentPropObj['x-extension']"
               label="Ignorer la détection de type"
               persistent-hint
               hint="Si vous cochez cette case la détection automatique de type sera désactivée et la colonne sera traitée comme un simple texte."
             />
-          </v-col>
-          <v-col>
-            <!-- Extension: {{ remoteServicesMap[extension.remoteService].actions[extension.action].summary }} (service {{ remoteServicesMap[extension.remoteService].title }}) -->
-            <p>
-              <span :class="labelClass">Clé normalisée :  </span><br>
-              {{ currentPropObj.key }}
-            </p>
-            <p v-if="currentPropObj['x-originalName']">
-              <span :class="labelClass">Clé dans le fichier d'origine : </span><br>
-              {{ currentPropObj['x-originalName'] }}
-            </p>
-            <p>
-              <span :class="labelClass">Type : </span><br>
-              {{ propTypeTitle(currentPropObj) }}
-              <template v-if="currentFileProp && currentFileProp.dateFormat">
-                ({{ currentFileProp.dateFormat }})
-              </template>
-              <template v-if="currentFileProp && currentFileProp.dateTimeFormat">
-                ({{ currentFileProp.dateTimeFormat }})
-              </template>
-            </p>
-            <p v-if="currentPropObj['x-cardinality']">
-              <span :class="labelClass">Nombre de valeurs distinctes (approximatif dans le cas de données volumineuses) : </span><br>
-              {{ currentPropObj['x-cardinality'].toLocaleString() }}
-            </p>
-            <p v-if="currentPropObj.enum">
-              <span :class="labelClass">Valeurs : </span><br>
-              {{ currentPropObj.enum.join(' - ') }}
-            </p>
           </v-col>
         </v-row>
       </v-sheet>
@@ -128,6 +132,7 @@
       ...mapState(['vocabulary', 'vocabularyArray', 'vocabularyItems']),
       ...mapState('dataset', ['dataset']),
       ...mapGetters(['propTypeTitle', 'propTypeIcon']),
+      ...mapGetters('dataset', ['remoteServicesMap']),
       labelClass() {
         return `theme--${this.$vuetify.theme.dark ? 'dark' : 'light'} v-label`
       },
@@ -139,6 +144,18 @@
           this.dataset.file.schema &&
           this.currentPropObj &&
           this.dataset.file.schema.find(p => p.key === this.currentPropObj.key)
+      },
+      extensions() {
+        return (this.dataset.extensions || [])
+          .filter(ext => ext.active)
+          .filter(ext => this.remoteServicesMap[ext.remoteService] && this.remoteServicesMap[ext.remoteService].actions[ext.action])
+          .reduce((a, ext) => {
+            a[ext.remoteService + '/' + ext.action] = {
+              ...ext,
+              title: `${this.remoteServicesMap[ext.remoteService].actions[ext.action].summary}`,
+            }
+            return a
+          }, {})
       },
     },
     methods: {

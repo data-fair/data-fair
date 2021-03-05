@@ -79,7 +79,7 @@
 <script>
   import Visibility from '~/components/visibility.vue'
   import DatasetBtnTable from '~/components/datasets/btn-table.vue'
-  const marked = require('marked')
+  const marked = require('marked/lib/marked')
 
   export default {
     components: { Visibility, DatasetBtnTable },
