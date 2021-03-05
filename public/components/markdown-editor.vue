@@ -35,6 +35,7 @@
         renderingConfig: {},
         status: false,
         autoDownloadFontAwesome: false,
+        spellChecker: false,
         insertTexts: {
           link: ['[titre du lien', '](adresse du lien)'],
           image: ['![](', 'adresse de l\'image)'],
