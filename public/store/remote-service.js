@@ -44,7 +44,7 @@ export default () => ({
         const silent = patch.silent
         delete patch.silent
         await this.$axios.patch(getters.resourceUrl, patch)
-        if (!silent) eventBus.$emit('notification', 'La configuration du service a bien été mise à jour.')
+        if (!silent) eventBus.$emit('notification', 'La configuration du service a été mise à jour.')
         return true
       } catch (error) {
         eventBus.$emit('notification', { error, msg: 'Erreur pendant la mise à jour de la configuration du service:' })
@@ -58,7 +58,7 @@ export default () => ({
     async remove({ state, getters, dispatch }) {
       try {
         await this.$axios.delete(getters.resourceUrl)
-        eventBus.$emit('notification', `La configuration du service ${state.remoteService.title} a bien été supprimée`)
+        eventBus.$emit('notification', `La configuration du service ${state.remoteService.title} a été supprimée`)
       } catch (error) {
         eventBus.$emit('notification', { error, msg: 'Erreur pendant la suppression de la configuration du service:' })
       }
@@ -67,7 +67,7 @@ export default () => ({
       try {
         const apiDoc = await this.$axios.$get(state.remoteService.url)
         if (!await dispatch('patch', { apiDoc })) return
-        eventBus.$emit('notification', 'La définition de l\'API a bien été mise à jour')
+        eventBus.$emit('notification', 'La définition de l\'API a été mise à jour')
         dispatch('fetchInfo')
       } catch (error) {
         eventBus.$emit('notification', { error, msg: 'Erreur pendant la mise à jour de la définition de l\'API:' })

@@ -68,14 +68,6 @@ body .v-application {
       margin-bottom: 16px;
     }
   }
-
-  .notification .v-snack__content {
-    height: auto;
-    p {
-      margin-bottom: 4px;
-      margin-top: 4px;
-    }
-  }
 }
 
 .event-finalize-end * {}

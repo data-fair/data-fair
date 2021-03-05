@@ -200,7 +200,7 @@ export default () => ({
         const silent = patch.silent
         delete patch.silent
         await this.$axios.patch(getters.resourceUrl, patch)
-        if (!silent) eventBus.$emit('notification', 'Le jeu de données a bien été mis à jour.')
+        if (!silent) eventBus.$emit('notification', 'Le jeu de données a été mis à jour.')
         return true
       } catch (error) {
         if (error.status === 409) {
@@ -221,7 +221,7 @@ export default () => ({
     async remove({ state, getters, dispatch }) {
       try {
         await this.$axios.delete(getters.resourceUrl)
-        eventBus.$emit('notification', `Le jeu de données ${state.dataset.title} a bien été supprimé`)
+        eventBus.$emit('notification', `Le jeu de données ${state.dataset.title} a été supprimé`)
       } catch (error) {
         eventBus.$emit('notification', { error, msg: 'Erreur pendant la suppression du jeu de données' })
       }

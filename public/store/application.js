@@ -146,7 +146,7 @@ export default () => ({
         const silent = patch.silent
         delete patch.silent
         await this.$axios.patch(getters.resourceUrl, patch)
-        if (!silent) eventBus.$emit('notification', 'La visualisation a bien été mise à jour.')
+        if (!silent) eventBus.$emit('notification', 'La visualisation a été mise à jour.')
         return true
       } catch (error) {
         eventBus.$emit('notification', { error, msg: 'Erreur pendant la mise à jour de la visualisation:' })
@@ -160,7 +160,7 @@ export default () => ({
     async remove({ state, getters, dispatch }) {
       try {
         await this.$axios.delete(getters.resourceUrl)
-        eventBus.$emit('notification', `La visualisation ${state.application.title} a bien été supprimée.`)
+        eventBus.$emit('notification', `La visualisation ${state.application.title} a été supprimée.`)
       } catch (error) {
         eventBus.$emit('notification', { error, msg: 'Erreur pendant la suppression de la visualisation:' })
       }

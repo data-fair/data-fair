@@ -52,7 +52,7 @@ export default () => ({
         const silent = patch.silent
         delete patch.silent
         await this.$axios.patch(getters.resourceUrl, patch)
-        if (!silent) eventBus.$emit('notification', 'La configuration du catalogue a bien été mise à jour.')
+        if (!silent) eventBus.$emit('notification', 'La configuration du catalogue a été mise à jour.')
         return true
       } catch (error) {
         eventBus.$emit('notification', { error, msg: 'Erreur pendant la mise à jour de la configuration du catalogue:' })
@@ -66,7 +66,7 @@ export default () => ({
     async remove({ state, getters, dispatch }) {
       try {
         await this.$axios.delete(getters.resourceUrl)
-        eventBus.$emit('notification', `La configuration du catalogue ${state.catalog.title} a bien été supprimée`)
+        eventBus.$emit('notification', `La configuration du catalogue ${state.catalog.title} a été supprimée`)
       } catch (error) {
         eventBus.$emit('notification', { error, msg: 'Erreur pendant la suppression de la configuration du catalogue:' })
       }
