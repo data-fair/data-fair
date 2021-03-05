@@ -22,12 +22,7 @@
   import { mapState, mapGetters } from 'vuex'
   import debounce from 'debounce'
   import eventBus from '~/event-bus'
-
-  let mapboxgl = null
-  if (process.browser) {
-    mapboxgl = require('mapbox-gl')
-    require('mapbox-gl/dist/mapbox-gl.css')
-  }
+  require('mapbox-gl/dist/mapbox-gl.css')
 
   function resizeBBOX(bbox, ratio) {
     const d1 = bbox[2] - bbox[0]
@@ -100,6 +95,11 @@
       },
     },
     async mounted() {
+      let mapboxgl = null
+      if (process.browser) {
+        mapboxgl = await import('mapbox-gl')
+      }
+
       if (!mapboxgl) return
       try {
         this.mapHeight = this.fixedHeight ? this.fixedHeight : Math.max(window.innerHeight - this.$el.getBoundingClientRect().top - this.heightMargin, 300)
