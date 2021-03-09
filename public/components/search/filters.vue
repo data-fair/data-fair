@@ -107,7 +107,6 @@
         if (this.filters.showAll && this.owners.length) query.owner = this.owners.join(',').replace()
         else delete query.owner
         this.$router.push({ query })
-        console.log(query)
         this.searchQuery({ type: this.type, query })
       },
     },
