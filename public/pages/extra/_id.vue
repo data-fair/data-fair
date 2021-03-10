@@ -21,20 +21,28 @@
     },
     computed: {
       ...mapState(['env']),
+      iframeUrl() {
+        const extra = this.env.extraNavigationItems.find(e => e.id === this.$route.params.id)
+        return extra && extra.iframe
+      },
     },
     watch: {
-      // trigger navigation inside the iframe when our breadcrumb is clicked
-      '$route.query.to'() {
-        if (this.to !== this.$route.query.to) {
+      async '$route.query.to'() {
+        if (!this.$route.query.to) {
+          // left menu was re-clicked, reload iframe with starting url
+          this.url = null
+          await this.$nextTick()
+          this.url = this.iframeUrl
+        } else if (this.to !== this.$route.query.to) {
+          // trigger navigation inside the iframe when our breadcrumb is clicked
           this.$refs.iframe.sendMessage({ to: this.$route.query.to })
         }
       },
     },
     mounted() {
-      const extra = this.env.extraNavigationItems.find(e => e.id === this.$route.params.id)
-      if (!extra || !extra.iframe) return
-      // if the navigation to the extra page as an initial "to" query parameter we transmit it
-      const url = new URL(extra.iframe)
+      if (!this.iframeUrl) return
+      // if the navigation to the extra page has an initial "to" query parameter we transmit it
+      const url = new URL(this.iframeUrl)
       if (this.$route.query.to) url.searchParams.append('to', this.$route.query.to)
       this.url = url.href
     },
