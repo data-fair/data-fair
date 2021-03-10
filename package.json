@@ -54,7 +54,7 @@
     "@koumoul/nuxt-config-inject": "^0.4.10",
     "@koumoul/sd-express": "^0.19.2",
     "@koumoul/sd-vue": "^0.19.2",
-    "@koumoul/v-iframe": "^0.2.3",
+    "@koumoul/v-iframe": "^0.3.0",
     "@koumoul/vjsf": "^1.21.2",
     "@koumoul/vue-multianalytics": "^1.10.1",
     "@mapbox/mbtiles": "^0.11.0",
