@@ -176,6 +176,40 @@ module.exports = {
       'x-itemTitle': 'title',
       items: topic,
     },
+    publicationSites: {
+      type: 'array',
+      title: 'Sites de publication',
+      items: {
+        type: 'object',
+        required: ['type', 'id'],
+        properties: {
+          type: {
+            type: 'string',
+            description: 'A type of publication site, used to separate management of different types. Example: "data-fair-portals".',
+          },
+          id: {
+            type: 'string',
+            description: 'Id should be unique for a specific type',
+          },
+          url: {
+            type: 'string',
+            description: 'Used to link back to the root of the publication site',
+          },
+          onlyPublic: {
+            type: 'boolean',
+            description: 'This site will only accept resources that were previously opened to anonymous users',
+          },
+          datasetUrlTemplate: {
+            type: 'string',
+            description: 'Example: http://my-portal/datasets/{id}',
+          },
+          applicationUrlTemplate: {
+            type: 'string',
+            description: 'Example: http://my-portal/applications/{id}',
+          },
+        },
+      },
+    },
     operationsPermissions: {
       type: 'object',
       deprecated: true,
