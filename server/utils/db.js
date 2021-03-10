@@ -20,7 +20,7 @@ exports.connect = async () => {
   let client
   const opts = {
     useNewUrlParser: true,
-    reconnectTries: Number.MAX_VALUE,
+    useUnifiedTopology: true,
     // workers generate a lot of opened sockets if we do not change this setting
     poolSize: config.mode === 'task' ? 1 : 5,
   }
