@@ -5,9 +5,5 @@
 </template>
 
 <script>
-  import DatasetExtensions from '~/components/datasets/extensions.vue'
-
-  export default {
-    components: { DatasetExtensions },
-  }
+  export default {}
 </script>

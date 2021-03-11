@@ -1,5 +1,5 @@
 <template lang="html">
-  <thumbnails
+  <dataset-thumbnails
     :init-rows-per-page="6"
     :hide-rows-per-page="true"
   />
@@ -7,10 +7,7 @@
 
 <script>
   import 'iframe-resizer/js/iframeResizer.contentWindow'
-  import Thumbnails from '~/components/datasets/thumbnails.vue'
-  export default {
-    components: { Thumbnails },
-  }
+  export default {}
 </script>
 
 <style lang="css">

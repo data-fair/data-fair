@@ -40,7 +40,7 @@
               style="width: auto"
             />
             <v-spacer v-if="$vuetify.breakpoint.xs" />
-            <download-results :params="params" :total="data.total" />
+            <dataset-download-results :params="params" :total="data.total" />
           </v-row>
         </v-col>
       </v-row>
@@ -52,7 +52,7 @@
       </v-row>
       <v-row>
         <v-col class="pb-1 pt-0">
-          <nb-results :total="data.total" class="ml-3" />
+          <dataset-nb-results :total="data.total" class="ml-3" />
         </v-col>
       </v-row>
       <v-data-table
@@ -161,17 +161,9 @@
 <script>
   import { mapState, mapGetters } from 'vuex'
   import eventBus from '~/event-bus'
-  import DownloadResults from '~/components/datasets/download-results'
-  import DatasetFilters from '~/components/datasets/filters'
-  import NbResults from '~/components/datasets/nb-results'
   const filtersUtils = require('~/assets/filters-utils')
 
   export default {
-    components: {
-      DownloadResults,
-      DatasetFilters,
-      NbResults,
-    },
     data: () => ({
       data: {},
       query: null,

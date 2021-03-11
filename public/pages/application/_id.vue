@@ -155,18 +155,6 @@
 
 <script>
   import { mapState, mapActions, mapGetters } from 'vuex'
-  import ApplicationActions from '~/components/applications/actions.vue'
-  import ApplicationInfo from '~/components/applications/info.vue'
-  import ApplicationPublicationSites from '~/components/applications/publication-sites.vue'
-  import ApplicationCatalogPublications from '~/components/applications/catalog-publications.vue'
-  import ApplicationProtectedLinks from '~/components/applications/protected-links.vue'
-  import ApplicationConfig from '~/components/applications/config.vue'
-  import Permissions from '~/components/permissions.vue'
-  import Journal from '~/components/journal.vue'
-  import SectionTabs from '~/components/layout/section-tabs.vue'
-  import NavigationRight from '~/components/layout/navigation-right'
-  import ActionsButton from '~/components/layout/actions-button'
-  import Toc from '~/components/layout/toc.vue'
 
   const checklistSvg = require('~/assets/svg/Checklist_Two Color.svg?raw')
   const creativeSvg = require('~/assets/svg/Creative Process_Two Color.svg?raw')
@@ -174,20 +162,6 @@
   const settingsSvg = require('~/assets/svg/Settings_Monochromatic.svg?raw')
 
   export default {
-    components: {
-      ApplicationActions,
-      ApplicationInfo,
-      ApplicationPublicationSites,
-      ApplicationCatalogPublications,
-      ApplicationProtectedLinks,
-      ApplicationConfig,
-      Permissions,
-      Journal,
-      SectionTabs,
-      NavigationRight,
-      ActionsButton,
-      Toc,
-    },
     async fetch({ store, params, route }) {
       store.dispatch('application/clear')
       await store.dispatch('application/setId', route.params.id)

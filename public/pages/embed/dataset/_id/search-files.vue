@@ -1,5 +1,5 @@
 <template lang="html">
-  <search-files
+  <dataset-search-files
     :init-rows-per-page="4"
     :hide-rows-per-page="true"
   />
@@ -7,10 +7,7 @@
 
 <script>
   import 'iframe-resizer/js/iframeResizer.contentWindow'
-  import SearchFiles from '~/components/datasets/search-files.vue'
-  export default {
-    components: { SearchFiles },
-  }
+  export default {}
 </script>
 
 <style lang="css">

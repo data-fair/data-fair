@@ -1,6 +1,6 @@
 <template>
   <div>
-    <applications-list v-if="user" />
+    <application-list v-if="user" />
     <!-- Anonymous: show jumbotron -->
     <v-col
       v-else-if="initialized"
@@ -14,7 +14,7 @@
               <h3 class="display-1 mb-3 mt-5">
                 {{ $t('pages.applications.title') }}
               </h3>
-              <wrap-svg
+              <layout-wrap-svg
                 :source="graphicSvg"
                 :color="$vuetify.theme.themes.light.primary"
               />
@@ -39,15 +39,11 @@
 </template>
 
 <script>
-  import ApplicationsList from '~/components/applications/list.vue'
-  import WrapSvg from '~/components/layout/svg.vue'
   import { mapState, mapActions } from 'vuex'
 
   const graphicSvg = require('~/assets/svg/Graphics and charts_Monochromatic.svg?raw')
 
   export default {
-    name: 'Datasets',
-    components: { ApplicationsList, WrapSvg },
     data() {
       return {
         importApplicationSheet: !!this.$route.query.import,

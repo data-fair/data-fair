@@ -32,7 +32,6 @@
   }
 
   export default {
-    name: 'Topics',
     components: { VJsf },
     props: ['settings'],
     data: () => ({

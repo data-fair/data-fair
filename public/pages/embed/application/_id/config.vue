@@ -4,11 +4,8 @@
 
 <script>
   import 'iframe-resizer/js/iframeResizer.contentWindow'
-  import ApplicationConfig from '~/components/applications/config.vue'
 
-  export default {
-    components: { ApplicationConfig },
-  }
+  export default {}
 </script>
 
 <style lang="css">

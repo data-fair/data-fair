@@ -48,7 +48,7 @@
       <slot name="tabs-items" />
     </v-tabs-items>
 
-    <wrap-svg
+    <layout-wrap-svg
       v-if="svg"
       :source="svg"
       :style="svgStyle"
@@ -58,11 +58,7 @@
 </template>
 
 <script>
-  import WrapSvg from '~/components/layout/svg.vue'
   export default {
-    components: {
-      WrapSvg,
-    },
     props: {
       minHeight: { type: Number },
       defaultTab: { type: String },

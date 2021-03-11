@@ -40,7 +40,6 @@
   import RemoteServicesList from '~/components/remote-services/list.vue'
 
   export default {
-    name: 'Datasets',
     components: { RemoteServicesList },
     computed: {
       ...mapState('session', ['user', 'initialized']),

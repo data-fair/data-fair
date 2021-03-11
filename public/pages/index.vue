@@ -10,7 +10,7 @@
                 <h3 class="display-1 mb-3 mt-5">
                   {{ $t('common.title') }}
                 </h3>
-                <wrap-svg
+                <layout-wrap-svg
                   :source="dataProcessSvg"
                   :color="$vuetify.theme.themes.light.primary"
                 />
@@ -103,7 +103,7 @@
                       sm="6"
                       md="5"
                     >
-                      <datasets-actions />
+                      <dataset-list-actions />
                     </v-col>
                   </v-row>
                 </v-container>
@@ -183,8 +183,6 @@
   import VIframe from '@koumoul/v-iframe'
   import StorageTreemap from '~/components/storage/treemap.vue'
   import SectionTabs from '~/components/layout/section-tabs.vue'
-  import DatasetsActions from '~/components/datasets/list-actions.vue'
-  import WrapSvg from '~/components/layout/svg.vue'
   import NavigationRight from '~/components/layout/navigation-right.vue'
   import Activity from '~/components/activity.vue'
 
@@ -195,8 +193,7 @@
   const dataProcessSvg = require('~/assets/svg/Data Process_Two Color.svg?raw')
 
   export default {
-    name: 'Home',
-    components: { WrapSvg, VIframe, StorageTreemap, SectionTabs, DatasetsActions, NavigationRight, Activity },
+    components: { VIframe, StorageTreemap, SectionTabs, NavigationRight, Activity },
     data: () => ({
       stats: null,
       datasets: null,

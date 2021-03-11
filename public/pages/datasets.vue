@@ -1,6 +1,6 @@
 <template>
   <div>
-    <datasets-list v-if="user" />
+    <dataset-list v-if="user" />
     <!-- Anonymous: show jumbotron -->
     <v-col
       v-else-if="initialized"
@@ -14,7 +14,7 @@
               <h3 class="display-1 mb-3 mt-5">
                 {{ $t('pages.datasets.title') }}
               </h3>
-              <wrap-svg
+              <layout-wrap-svg
                 :source="dataSvg"
                 :color="$vuetify.theme.themes.light.primary"
               />
@@ -39,15 +39,11 @@
 </template>
 
 <script>
-  import DatasetsList from '~/components/datasets/list.vue'
-  import WrapSvg from '~/components/layout/svg.vue'
   import { mapState, mapActions, mapGetters } from 'vuex'
 
   const dataSvg = require('~/assets/svg/Data Arranging_Two Color.svg?raw')
 
   export default {
-    name: 'Datasets',
-    components: { DatasetsList, WrapSvg },
     data() {
       return {
         dataSvg,

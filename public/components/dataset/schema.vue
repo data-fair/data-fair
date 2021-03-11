@@ -90,7 +90,6 @@
   import { mapState, mapActions, mapGetters } from 'vuex'
   import PropertiesSlide from '~/components/datasets/properties-slide.vue'
   export default {
-    name: 'Schema',
     components: { PropertiesSlide },
     data: () => ({
       schema: [],

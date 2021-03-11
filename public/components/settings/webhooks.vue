@@ -32,7 +32,6 @@
   }
 
   export default {
-    name: 'Webhooks',
     components: { VJsf },
     props: ['settings'],
     data: () => ({

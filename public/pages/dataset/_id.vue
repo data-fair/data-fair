@@ -280,26 +280,6 @@
 
 <script>
   import { mapState, mapActions, mapGetters } from 'vuex'
-  import DatasetInfo from '~/components/datasets/info.vue'
-  import DatasetSchema from '~/components/datasets/schema.vue'
-  import DatasetActions from '~/components/datasets/actions.vue'
-  import DatasetExtensions from '~/components/datasets/extensions.vue'
-  import DatasetAttachments from '~/components/datasets/attachments.vue'
-  import DatasetTable from '~/components/datasets/table.vue'
-  import DatasetCalendar from '~/components/datasets/calendar.vue'
-  import DatasetMap from '~/components/datasets/map.vue'
-  import DatasetVirtual from '~/components/datasets/virtual.vue'
-  import DatasetSearchFiles from '~/components/datasets/search-files.vue'
-  import DatasetThumbnails from '~/components/datasets/thumbnails.vue'
-  import DatasetThumbnailsOpts from '~/components/datasets/thumbnails-opts.vue'
-  import DatasetCatalogPublications from '~/components/datasets/catalog-publications.vue'
-  import DatasetPublicationSites from '~/components/datasets/publication-sites.vue'
-  import DatasetStatus from '~/components/datasets/status.vue'
-  import DatasetApplications from '~/components/datasets/applications.vue'
-  import DatasetExternalReuses from '~/components/datasets/external-reuses.vue'
-  import DatasetMasterData from '~/components/datasets/master-data.vue'
-  import Permissions from '~/components/permissions.vue'
-  import Journal from '~/components/journal.vue'
   import SectionTabs from '~/components/layout/section-tabs.vue'
   import NavigationRight from '~/components/layout/navigation-right'
   import ActionsButton from '~/components/layout/actions-button'
@@ -319,26 +299,7 @@
   export default {
     components: {
       SectionTabs,
-      DatasetActions,
-      DatasetInfo,
-      DatasetSchema,
-      DatasetExtensions,
-      DatasetAttachments,
-      DatasetTable,
-      DatasetCalendar,
-      DatasetMap,
-      DatasetVirtual,
-      DatasetSearchFiles,
-      DatasetThumbnails,
-      DatasetThumbnailsOpts,
-      DatasetPublicationSites,
-      DatasetCatalogPublications,
-      DatasetStatus,
-      DatasetApplications,
-      DatasetExternalReuses,
-      DatasetMasterData,
       Permissions,
-      Journal,
       NavigationRight,
       ActionsButton,
       Toc,

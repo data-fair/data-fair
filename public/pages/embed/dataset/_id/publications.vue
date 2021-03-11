@@ -1,15 +1,12 @@
 <template lang="html">
-  <dataset-publications />
+  <dataset-catalog-publications />
 </template>
 
 <script>
   import 'iframe-resizer/js/iframeResizer.contentWindow'
-  import DatasetPublications from '~/components/datasets/catalog-publications.vue'
 
   export default {
-    components: {
-      DatasetPublications,
-    },
+    components: {},
   }
 
 </script>

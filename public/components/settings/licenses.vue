@@ -79,7 +79,6 @@
 <script>
 
   export default {
-    name: 'Licenses',
     props: ['settings'],
     data: () => ({
       newLicense: {

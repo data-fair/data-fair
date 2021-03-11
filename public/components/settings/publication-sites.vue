@@ -32,7 +32,6 @@
   }
 
   export default {
-    name: 'PublicationSites',
     components: { VJsf },
     props: ['settings'],
     data: () => ({

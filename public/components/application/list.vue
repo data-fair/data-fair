@@ -3,23 +3,23 @@
     <v-col :style="this.$vuetify.breakpoint.lgAndUp ? 'padding-right:256px;' : ''">
       <v-container class="py-0">
         <v-row
-          v-if="datasets"
+          v-if="applications"
           v-scroll="onScroll"
           class="resourcesList"
         >
           <v-col
-            v-for="dataset in datasets.results"
-            :key="dataset.id"
+            v-for="application in applications.results"
+            :key="application.id"
             cols="12"
             md="6"
             lg="4"
           >
-            <dataset-card :dataset="dataset" :show-topics="datasets.facets.topics.length" />
+            <application-card :application="application" :show-topics="applications.facets.topics.length" />
           </v-col>
         </v-row>
         <search-progress :loading="loading" />
 
-        <v-responsive v-if="!hasDatasets" height="auto">
+        <v-responsive v-if="!hasApplications" height="auto">
           <v-container class="fill-height">
             <v-row align="center">
               <v-col class="text-center">
@@ -27,12 +27,12 @@
                   v-if="!filtered"
                   class="text-h6"
                 >
-                  Vous n'avez pas encore ajouté de jeu de données.
+                  Vous n'avez pas encore configuré de visualisation.
                   <!--<br>Vous pouvez <nuxt-link :to="localePath('user-guide')">
                     consulter la documentation
                   </nuxt-link> pour en savoir plus.-->
-                  <wrap-svg
-                    :source="dataSvg"
+                  <layout-wrap-svg
+                    :source="graphicSvg"
                     :color="$vuetify.theme.themes.light.primary"
                   />
                 </div>
@@ -49,30 +49,50 @@
       </v-container>
 
       <navigation-right v-if="this.$vuetify.breakpoint.lgAndUp">
-        <datasets-list-actions />
-        <template v-if="datasets">
+        <v-list
+          v-if="canContrib"
+          dense
+          class="list-actions"
+        >
+          <v-list-item :to="{path: '/new-application'}">
+            <v-list-item-icon>
+              <v-icon color="primary">
+                mdi-plus-circle
+              </v-icon>
+            </v-list-item-icon>
+            <v-list-item-title>Configurer une visualisation</v-list-item-title>
+          </v-list-item>
+        </v-list>
+        <template v-if="applications">
           <v-row class="px-2">
             <v-col class="py-0">
               <search-filters
-                :filter-labels="{children: 'Jeu de données agrégé'}"
+                :filter-labels="{'dataset': 'Jeu de données', 'service': 'Service', 'url': 'Application'}"
                 :filters="filters"
-                :facets="datasets && datasets.facets"
-                type="datasets"
+                :facets="applications && applications.facets"
+                type="applications"
                 @apply="refresh()"
               />
-              <datasets-facets
-                :facets="datasets.facets"
+              <applications-facets
+                :facets="applications.facets"
                 :facets-values="facetsValues"
               />
             </v-col>
           </v-row>
         </template>
       </navigation-right>
-      <actions-button v-else icon="mdi-plus">
-        <template v-slot:actions>
-          <datasets-list-actions />
-        </template>
-      </actions-button>
+      <div v-else class="actions-buttons">
+        <v-btn
+          v-if="canContrib"
+          color="primary"
+          fab
+          small
+          title="Configurer une visualisation"
+          to="/new-application"
+        >
+          <v-icon>mdi-plus</v-icon>
+        </v-btn>
+      </div>
     </v-col>
   </v-row>
 </template>
@@ -80,56 +100,48 @@
 <script>
   import SearchProgress from '~/components/search/progress.vue'
   import SearchFilters from '~/components/search/filters.vue'
-  import DatasetsFacets from '~/components/datasets/facets.vue'
-  import DatasetsListActions from '~/components/datasets/list-actions.vue'
-  import DatasetCard from '~/components/datasets/card.vue'
+  import ApplicationsFacets from '~/components/applications/facets.vue'
+  import ApplicationCard from '~/components/applications/card.vue'
   import NavigationRight from '~/components/layout/navigation-right'
-  import ActionsButton from '~/components/layout/actions-button'
-  import WrapSvg from '~/components/layout/svg.vue'
 
   const { mapState, mapGetters } = require('vuex')
 
-  const dataSvg = require('~/assets/svg/Data Arranging_Two Color.svg?raw')
+  const graphicSvg = require('~/assets/svg/Graphics and charts_Monochromatic.svg?raw')
 
   export default {
     components: {
       SearchProgress,
       SearchFilters,
-      DatasetsFacets,
-      DatasetsListActions,
-      DatasetCard,
+      ApplicationsFacets,
+      ApplicationCard,
       NavigationRight,
-      ActionsButton,
-      WrapSvg,
     },
     data: () => ({
-      datasets: null,
+      applications: null,
       page: 1,
       loading: true,
       filters: {},
       filtered: false,
       facetsValues: {
-        status: [],
         visibility: [],
-        services: [],
-        concepts: [],
+        'base-application': [],
         topics: [],
       },
       lastParams: null,
-      dataSvg,
+      graphicSvg,
     }),
     computed: {
       ...mapState('session', ['user']),
-      ...mapGetters('session', ['activeAccount']),
       ...mapState(['env']),
+      ...mapGetters(['canContrib']),
       plural() {
-        return this.datasets.count > 1
+        return this.applications.count > 1
       },
       size() {
         return { xs: 12, sm: 12, md: 12, lg: 15, xl: 24 }[this.$vuetify.breakpoint.name]
       },
-      hasDatasets() {
-        return !this.datasets || this.datasets.count
+      hasApplications() {
+        return !this.applications || this.applications.count
       },
     },
     watch: {
@@ -143,9 +155,9 @@
     },
     methods: {
       onScroll(e) {
-        if (!this.datasets) return
+        if (!this.applications) return
         const se = e.target.scrollingElement
-        if (se.clientHeight + se.scrollTop > se.scrollHeight - 140 && this.datasets.results.length < this.datasets.count) {
+        if (se.clientHeight + se.scrollTop > se.scrollHeight - 140 && this.applications.results.length < this.applications.count) {
           this.refresh(true)
         }
       },
@@ -153,9 +165,6 @@
         const fullFilters = { ...this.filters }
         let hasFacetFilter = false
         Object.entries(this.facetsValues).forEach(([facetKey, facetValues]) => {
-          /* const facetFilter = Object.entries(facetValues)
-            .filter(([facetValue, valueActive]) => valueActive)
-            .map(([facetValue]) => facetValue).join(',') */
           const facetFilter = facetValues && facetValues.join(',')
           if (facetFilter) {
             hasFacetFilter = true
@@ -167,18 +176,18 @@
         const params = {
           size: this.size,
           page: this.page,
-          select: 'title,description,status,topics,isVirtual,isRest,file,count,finalizedAt',
-          facets: 'status,visibility,services,concepts,topics',
-          sort: 'createdAt:-1',
+          select: 'title,description,status,topics,errorMessage',
           ...fullFilters,
+          facets: 'visibility,base-application,topics',
+          sort: 'createdAt:-1',
         }
         if (JSON.stringify(params) !== JSON.stringify(this.lastParams)) {
           this.lastParams = params
           this.loading = true
-          const datasets = await this.$axios.$get('api/v1/datasets', { params })
-          if (append) datasets.results.forEach(r => this.datasets.results.push(r))
-          else this.datasets = datasets
-          this.$store.dispatch('breadcrumbs', [{ text: `${this.datasets.count} ${this.plural ? 'jeux' : 'jeu'} de données` }])
+          const applications = await this.$axios.$get('api/v1/applications', { params })
+          if (append) applications.results.forEach(r => this.applications.results.push(r))
+          else this.applications = applications
+          this.$store.dispatch('breadcrumbs', [{ text: `${this.applications.count} visualisation${this.plural ? 's' : ''}` }])
           this.filtered = !!this.filters.q || hasFacetFilter
           this.loading = false
         }

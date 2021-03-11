@@ -30,7 +30,7 @@
                   <!--<br>Vous pouvez <nuxt-link :to="localePath('user-guide')">
                     consulter la documentation
                   </nuxt-link> pour en savoir plus.-->
-                  <wrap-svg
+                  <layout-wrap-svg
                     :source="wwwSvg"
                     :color="$vuetify.theme.themes.light.primary"
                   />
@@ -106,14 +106,13 @@
   import SearchFilters from '~/components/search/filters.vue'
   import CatalogCard from '~/components/catalogs/card.vue'
   import NavigationRight from '~/components/layout/navigation-right'
-  import WrapSvg from '~/components/layout/svg.vue'
 
   const { mapState, mapGetters } = require('vuex')
 
   const wwwSvg = require('~/assets/svg/World wide web_Two Color.svg?raw')
 
   export default {
-    components: { ImportCatalog, SearchProgress, SearchFilters, CatalogCard, NavigationRight, WrapSvg },
+    components: { ImportCatalog, SearchProgress, SearchFilters, CatalogCard, NavigationRight },
     data() {
       return {
         catalogs: null,

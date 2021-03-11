@@ -3,11 +3,7 @@
 </template>
 
 <script>
-  import DatasetCalendar from '~/components/datasets/calendar.vue'
-
-  export default {
-    components: { DatasetCalendar },
-  }
+  export default {}
 </script>
 
 <style lang="css">
