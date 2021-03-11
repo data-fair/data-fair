@@ -1,5 +1,5 @@
 <template>
-  <div :style="`position:relative;width:100%;height:${height}px;`">
+  <div v-if="datasets.count" :style="`position:relative;width:100%;height:${height}px;`">
     <div
       v-for="box in boxes || []"
       :key="box.data.id"
