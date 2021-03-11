@@ -77,12 +77,9 @@
 </template>
 
 <script>
-  import Visibility from '~/components/visibility.vue'
-  import DatasetBtnTable from '~/components/datasets/btn-table.vue'
   const marked = require('marked/lib/marked')
 
   export default {
-    components: { Visibility, DatasetBtnTable },
     props: ['dataset', 'showTopics'],
     data: () => ({
       marked,

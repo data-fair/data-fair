@@ -1,20 +1,17 @@
 <template>
   <v-app class="embed">
-    <dynamic-style />
+    <layout-dynamic-style />
     <v-main>
       <nuxt />
-      <notifications />
+      <layout-notifications />
     </v-main>
   </v-app>
 </template>
 
 <script>
-  import DynamicStyle from '~/components/layout/dynamic-style.vue'
   import eventBus from '~/event-bus'
-  import Notifications from '~/components/layout/notifications.vue'
 
   export default {
-    components: { DynamicStyle, Notifications },
     data() {
       return {
         notification: null,

@@ -55,7 +55,7 @@
             <p>
               {{ $t('pages.root.description') }}
             </p>
-            <section-tabs
+            <layout-section-tabs
               :min-height="390"
               :svg="dataSvg"
               svg-no-margin
@@ -108,9 +108,9 @@
                   </v-row>
                 </v-container>
               </template>
-            </section-tabs>
+            </layout-section-tabs>
 
-            <section-tabs
+            <layout-section-tabs
               :min-height="400"
               :svg="graphicSvg"
               :section="sections.find(s => s.id === 'apps')"
@@ -166,25 +166,21 @@
                   </v-row>
                 </v-container>
               </template>
-            </section-tabs>
+            </layout-section-tabs>
           </v-col>
         </v-row>
       </v-container>
     </v-col>
 
-    <navigation-right v-if="this.$vuetify.breakpoint.lgAndUp">
+    <layout-navigation-right v-if="this.$vuetify.breakpoint.lgAndUp">
       <activity v-if="activity" :activity="activity" />
-    </navigation-right>
+    </layout-navigation-right>
   </v-row>
 </template>
 
 <script>
   import 'iframe-resizer/js/iframeResizer'
   import VIframe from '@koumoul/v-iframe'
-  import StorageTreemap from '~/components/storage/treemap.vue'
-  import SectionTabs from '~/components/layout/section-tabs.vue'
-  import NavigationRight from '~/components/layout/navigation-right.vue'
-  import Activity from '~/components/activity.vue'
 
   const { mapState, mapActions, mapGetters } = require('vuex')
 
@@ -193,7 +189,7 @@
   const dataProcessSvg = require('~/assets/svg/Data Process_Two Color.svg?raw')
 
   export default {
-    components: { VIframe, StorageTreemap, SectionTabs, NavigationRight, Activity },
+    components: { VIframe },
     data: () => ({
       stats: null,
       datasets: null,

@@ -99,10 +99,8 @@
 
 <script>
   import { mapState, mapActions, mapGetters } from 'vuex'
-  import OwnerPick from '~/components/owners/pick.vue'
 
   export default {
-    components: { OwnerPick },
     data: () => ({
       showDeleteDialog: false,
       showOwnerDialog: false,

@@ -54,12 +54,9 @@
 </template>
 
 <script>
-  import OwnerListItem from '~/components/owners/list-item.vue'
   import { mapState, mapActions, mapGetters } from 'vuex'
-  import CatalogConfigForm from '~/components/catalogs/config-form.vue'
 
   export default {
-    components: { CatalogConfigForm, OwnerListItem },
     computed: {
       ...mapState('catalog', ['catalog']),
       ...mapGetters('catalog', ['can']),

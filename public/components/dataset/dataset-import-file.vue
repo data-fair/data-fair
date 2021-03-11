@@ -65,7 +65,7 @@
         <h3 class="text-h6 mt-4">
           Formats supportés
         </h3>
-        <file-formats />
+        <dataset-file-formats />
       </v-stepper-content>
       <v-stepper-content step="2">
         <p>Optionnellement vous pouvez charger une archive zip contenant des fichiers à utiliser comme pièces à joindre aux lignes du fichier principal.</p>
@@ -125,12 +125,10 @@
 </template>
 
 <script>
-  import FileFormats from '~/components/datasets/file-formats.vue'
   import { mapState, mapGetters } from 'vuex'
   import eventBus from '~/event-bus'
 
   export default {
-    components: { FileFormats },
     data: () => ({
       file: null,
       attachment: null,

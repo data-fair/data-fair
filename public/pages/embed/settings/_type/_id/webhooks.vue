@@ -10,12 +10,10 @@
 
 <script>
   import 'iframe-resizer/js/iframeResizer.contentWindow'
-  import SettingsWebhooks from '~/components/settings/webhooks.vue'
   import eventBus from '~/event-bus'
 
   export default {
     layout: 'embed',
-    components: { SettingsWebhooks },
     data: () => ({
       api: null,
       settings: null,

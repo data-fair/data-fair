@@ -87,7 +87,7 @@
                   <v-toolbar-title>Editer la réutilisation externe</v-toolbar-title>
                 </v-toolbar>
                 <v-card-text>
-                  <external-reuse-form :reuse="reuse" />
+                  <dataset-external-reuse-form :reuse="reuse" />
                 </v-card-text>
 
                 <v-divider />
@@ -121,13 +121,10 @@
 </template>
 
 <script>
-  import ConfirmMenu from '~/components/confirm-menu.vue'
-  import ExternalReuseForm from '~/components/datasets/external-reuse-form.vue'
 
   const { mapState, mapGetters } = require('vuex')
 
   export default {
-    components: { ConfirmMenu, ExternalReuseForm },
     data: function() {
       return {
         dialog: null,

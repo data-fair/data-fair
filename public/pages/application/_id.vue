@@ -10,7 +10,7 @@
           {{ error.data }}
         </v-alert>
         <template v-else>
-          <doc-link
+          <layout-doc-link
             v-if="prodBaseApp"
             :tooltip="`Consultez la documentation sur l'application ${prodBaseApp.title}`"
             :doc-href="prodBaseApp.documentation"

@@ -80,10 +80,8 @@
   import marked from 'marked/lib/marked'
   import { mapState } from 'vuex'
   import eventBus from '~/event-bus'
-  import CatalogConfigForm from './config-form.vue'
 
   export default {
-    components: { CatalogConfigForm },
     props: ['initCatalog'],
     data: () => ({
       currentStep: null,

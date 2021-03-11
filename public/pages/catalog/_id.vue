@@ -12,7 +12,7 @@
         <template v-else>
           <v-row class="catalog">
             <v-col>
-              <section-tabs
+              <layout-section-tabs
                 :min-height="390"
                 :svg="checklistSvg"
                 svg-no-margin
@@ -30,9 +30,9 @@
                     </v-container>
                   </v-tab-item>
                 </template>
-              </section-tabs>
+              </layout-section-tabs>
 
-              <section-tabs
+              <layout-section-tabs
                 :min-height="390"
                 :svg="progressSvg"
                 svg-no-margin
@@ -50,48 +50,32 @@
                     </v-container>
                   </v-tab-item>
                 </template>
-              </section-tabs>
+              </layout-section-tabs>
             </v-col>
           </v-row>
         </template>
       </v-container>
     </v-col>
 
-    <navigation-right v-if="this.$vuetify.breakpoint.lgAndUp">
+    <layout-navigation-right v-if="this.$vuetify.breakpoint.lgAndUp">
       <catalog-actions />
-      <toc :sections="sections" />
-    </navigation-right>
-    <actions-button v-else>
+      <layout-toc :sections="sections" />
+    </layout-navigation-right>
+    <layout-actions-button v-else>
       <template v-slot:actions>
         <catalog-actions />
       </template>
-    </actions-button>
+    </layout-actions-button>
   </v-row>
 </template>
 
 <script>
   import { mapState, mapGetters } from 'vuex'
-  import CatalogActions from '~/components/catalogs/actions.vue'
-  import CatalogInfo from '~/components/catalogs/info.vue'
-  import CatalogDatasets from '~/components/catalogs/datasets.vue'
-  import SectionTabs from '~/components/layout/section-tabs.vue'
-  import NavigationRight from '~/components/layout/navigation-right'
-  import ActionsButton from '~/components/layout/actions-button'
-  import Toc from '~/components/layout/toc.vue'
 
   const checklistSvg = require('~/assets/svg/Checklist_Two Color.svg?raw')
   const progressSvg = require('~/assets/svg/Progress _Two Color.svg?raw')
 
   export default {
-    components: {
-      CatalogActions,
-      CatalogInfo,
-      CatalogDatasets,
-      SectionTabs,
-      NavigationRight,
-      ActionsButton,
-      Toc,
-    },
     async fetch({ store, route }) {
       store.dispatch('catalog/clear')
       await store.dispatch('catalog/setId', route.params.id)

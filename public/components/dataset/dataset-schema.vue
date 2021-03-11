@@ -34,7 +34,7 @@
         </div>
       </v-row>
 
-      <properties-slide
+      <dataset-properties-slide
         v-if="schema && schema.length"
         :properties="schema.filter(p => !p['x-calculated'])"
         :original-properties="JSON.parse(originalSchema).filter(p => !p['x-calculated'])"
@@ -88,9 +88,7 @@
 
 <script>
   import { mapState, mapActions, mapGetters } from 'vuex'
-  import PropertiesSlide from '~/components/datasets/properties-slide.vue'
   export default {
-    components: { PropertiesSlide },
     data: () => ({
       schema: [],
       editField: null,

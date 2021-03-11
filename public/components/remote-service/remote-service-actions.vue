@@ -108,10 +108,8 @@
 
 <script>
   import { mapState, mapActions, mapGetters } from 'vuex'
-  import OpenApi from '~/components/open-api.vue'
 
   export default {
-    components: { OpenApi },
     data: () => ({
       showDeleteDialog: false,
       showAPIDialog: false,

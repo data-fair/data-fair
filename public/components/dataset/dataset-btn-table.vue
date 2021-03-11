@@ -30,9 +30,7 @@
 </template>
 
 <script>
-  import DatasetTable from '~/components/datasets/table.vue'
   export default {
-    components: { DatasetTable },
     props: ['dataset'],
     data: () => ({
       dialog: false,

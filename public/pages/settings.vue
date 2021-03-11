@@ -2,7 +2,7 @@
   <v-row>
     <v-col :style="this.$vuetify.breakpoint.lgAndUp ? 'padding-right:256px;' : ''">
       <v-container class="py-0">
-        <doc-link tooltip="Consultez la documentation sur les paramètres" doc-key="settings" />
+        <layout-doc-link tooltip="Consultez la documentation sur les paramètres" doc-key="settings" />
         <v-row v-if="initialized">
           <v-col>
             <!--<v-subheader>{{ $t('pages.settings.description') }}</v-subheader>-->
@@ -42,7 +42,7 @@
             </v-data-table>
           </div>-->
 
-              <section-tabs
+              <layout-section-tabs
                 :svg="qualitySvg"
                 :section="sections.find(s => s.id === 'licences')"
               >
@@ -64,9 +64,9 @@
                     </v-row>
                   </v-container>
                 </template>
-              </section-tabs>
+              </layout-section-tabs>
 
-              <section-tabs
+              <layout-section-tabs
                 :svg="flagsSvg"
                 svg-no-margin
                 :section="sections.find(s => s.id === 'topics')"
@@ -89,9 +89,9 @@
                     </v-row>
                   </v-container>
                 </template>
-              </section-tabs>
+              </layout-section-tabs>
 
-              <section-tabs
+              <layout-section-tabs
                 :svg="securitysSvg"
                 svg-no-margin
                 :section="sections.find(s => s.id === 'api-keys')"
@@ -115,9 +115,9 @@
                     </v-row>
                   </v-container>
                 </template>
-              </section-tabs>
+              </layout-section-tabs>
 
-              <section-tabs
+              <layout-section-tabs
                 :svg="wwwSvg"
                 svg-no-margin
                 :section="sections.find(s => s.id === 'webhooks')"
@@ -141,9 +141,9 @@
                     </v-row>
                   </v-container>
                 </template>
-              </section-tabs>
+              </layout-section-tabs>
 
-              <section-tabs
+              <layout-section-tabs
                 :svg="uiSvg"
                 svg-no-margin
                 :section="sections.find(s => s.id === 'publicationSites')"
@@ -168,29 +168,21 @@
                     </v-row>
                   </v-container>
                 </template>
-              </section-tabs>
+              </layout-section-tabs>
             </template>
-            <not-authorized v-else />
+            <layout-not-authorized v-else />
           </v-col>
         </v-row>
       </v-container>
     </v-col>
-    <navigation-right v-if="this.$vuetify.breakpoint.lgAndUp">
-      <toc :sections="sections" />
-    </navigation-right>
+    <layout-navigation-right v-if="this.$vuetify.breakpoint.lgAndUp">
+      <layout-toc :sections="sections" />
+    </layout-navigation-right>
   </v-row>
 </template>
 
 <script>
   import { mapState, mapGetters } from 'vuex'
-  import SettingsWebhooks from '~/components/settings/webhooks.vue'
-  import SettingsPublicationSites from '~/components/settings/publication-sites.vue'
-  import SettingsLicenses from '~/components/settings/licenses.vue'
-  import SettingsApiKeys from '~/components/settings/api-keys.vue'
-  import SettingsTopics from '~/components/settings/topics.vue'
-  import SectionTabs from '~/components/layout/section-tabs.vue'
-  import NavigationRight from '~/components/layout/navigation-right'
-  import Toc from '~/components/layout/toc.vue'
   import eventBus from '~/event-bus'
 
   const qualitySvg = require('~/assets/svg/Quality Check_Monochromatic.svg?raw')
@@ -201,16 +193,6 @@
 
   export default {
     // middleware: 'auth',
-    components: {
-      SettingsWebhooks,
-      SettingsPublicationSites,
-      SettingsLicenses,
-      SettingsApiKeys,
-      SettingsTopics,
-      SectionTabs,
-      NavigationRight,
-      Toc,
-    },
     data: () => ({
       api: null,
       operations: null,

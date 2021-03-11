@@ -44,11 +44,10 @@
 <script>
 
   import { mapState, mapGetters } from 'vuex'
-  import ApplicationCard from '~/components/applications/card.vue'
   const Draggable = require('vuedraggable')
 
   export default {
-    components: { ApplicationCard, Draggable },
+    components: { Draggable },
     computed: {
       ...mapState('dataset', ['dataset', 'applications']),
       ...mapGetters(['canContrib']),

@@ -283,12 +283,9 @@
 
 <script>
   import { mapState, mapGetters, mapActions } from 'vuex'
-  import OwnerPick from '~/components/owners/pick.vue'
-  import OpenApi from '~/components/open-api.vue'
   import eventBus from '~/event-bus'
 
   export default {
-    components: { OwnerPick, OpenApi },
     data: () => ({
       showDeleteDialog: false,
       showUploadDialog: false,

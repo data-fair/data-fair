@@ -10,7 +10,7 @@
       <v-row class="px-3">
         <v-col class="pb-0">
           <v-row class="px-3">
-            <nb-results :total="data.total" />
+            <dataset-nb-results :total="data.total" />
           </v-row>
           <v-row>
             <v-col
@@ -83,10 +83,8 @@
 <script>
   import { mapState, mapGetters } from 'vuex'
   import eventBus from '~/event-bus'
-  import NbResults from '~/components/datasets/nb-results'
 
   export default {
-    components: { NbResults },
     props: ['inititemsPerPage', 'hideitemsPerPage'],
     data: () => ({
       data: null,

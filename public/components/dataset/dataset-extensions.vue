@@ -136,16 +136,10 @@
 
 <script>
   import { mapState, mapActions, mapGetters } from 'vuex'
-  import DatasetExtensionDetailsDialog from '~/components/datasets/extension-details-dialog.vue'
-  import ConfirmMenu from '~/components/confirm-menu.vue'
   import eventBus from '~/event-bus'
   import logger from '~/logger'
 
   export default {
-    components: {
-      DatasetExtensionDetailsDialog,
-      ConfirmMenu,
-    },
     data() {
       return {
         ready: false,

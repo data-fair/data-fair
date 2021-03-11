@@ -4,7 +4,7 @@
       <v-container class="py-0">
         <v-row class="remoteService">
           <v-col>
-            <section-tabs
+            <layout-section-tabs
               :min-height="300"
               :svg="checklistSvg"
               svg-no-margin
@@ -32,9 +32,9 @@
                   </v-container>
                 </v-tab-item>
               </template>
-            </section-tabs>
+            </layout-section-tabs>
 
-            <section-tabs
+            <layout-section-tabs
               :min-height="300"
               :svg="settingsSvg"
               svg-no-margin
@@ -52,49 +52,31 @@
                   </v-container>
                 </v-tab-item>
               </template>
-            </section-tabs>
+            </layout-section-tabs>
           </v-col>
         </v-row>
       </v-container>
     </v-col>
 
-    <navigation-right v-if="this.$vuetify.breakpoint.lgAndUp">
+    <layout-navigation-right v-if="this.$vuetify.breakpoint.lgAndUp">
       <remote-service-actions />
-      <toc :sections="sections" />
-    </navigation-right>
-    <actions-button v-else>
+      <layout-toc :sections="sections" />
+    </layout-navigation-right>
+    <layout-actions-button v-else>
       <template v-slot:actions>
         <remote-service-actions />
       </template>
-    </actions-button>
+    </layout-actions-button>
   </v-row>
 </template>
 
 <script>
   import { mapState, mapActions, mapGetters } from 'vuex'
-  import RemoteServiceActions from '~/components/remote-services/actions.vue'
-  import RemoteServiceInfo from '~/components/remote-services/info.vue'
-  import RemoteServiceSchema from '~/components/remote-services/schema.vue'
-  import RemoteServiceConfig from '~/components/remote-services/config.vue'
-  import SectionTabs from '~/components/layout/section-tabs.vue'
-  import NavigationRight from '~/components/layout/navigation-right'
-  import ActionsButton from '~/components/layout/actions-button'
-  import Toc from '~/components/layout/toc.vue'
 
   const checklistSvg = require('~/assets/svg/Checklist_Two Color.svg?raw')
   const settingsSvg = require('~/assets/svg/Settings_Two Color.svg?raw')
 
   export default {
-    components: {
-      RemoteServiceActions,
-      RemoteServiceInfo,
-      RemoteServiceSchema,
-      RemoteServiceConfig,
-      SectionTabs,
-      NavigationRight,
-      ActionsButton,
-      Toc,
-    },
     async fetch({ store, params, route }) {
       store.dispatch('remoteService/clear')
       await Promise.all([

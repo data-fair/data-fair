@@ -1,11 +1,11 @@
 <template>
   <div>
-    <!--<doc-link
+    <!--<layout-doc-link
       tooltip="Consultez la documentation sur les catalogues"
       doc-key="catalogs"
       offset="left"
     />-->
-    <catalogs-list v-if="user" />
+    <catalog-list v-if="user" />
     <!-- Anonymous: show jumbotron -->
     <v-col
       v-else-if="initialized"
@@ -42,10 +42,7 @@
 <script>
   import { mapState, mapActions } from 'vuex'
 
-  import CatalogsList from '~/components/catalogs/list.vue'
-
   export default {
-    components: { CatalogsList },
     computed: {
       ...mapState('session', ['user', 'initialized']),
     },

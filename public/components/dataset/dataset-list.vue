@@ -48,8 +48,8 @@
         </v-responsive>
       </v-container>
 
-      <navigation-right v-if="this.$vuetify.breakpoint.lgAndUp">
-        <datasets-list-actions />
+      <layout-navigation-right v-if="this.$vuetify.breakpoint.lgAndUp">
+        <dataset-list-actions />
         <template v-if="datasets">
           <v-row class="px-2">
             <v-col class="py-0">
@@ -60,46 +60,29 @@
                 type="datasets"
                 @apply="refresh()"
               />
-              <datasets-facets
+              <dataset-facets
                 :facets="datasets.facets"
                 :facets-values="facetsValues"
               />
             </v-col>
           </v-row>
         </template>
-      </navigation-right>
-      <actions-button v-else icon="mdi-plus">
+      </layout-navigation-right>
+      <layout-actions-button v-else icon="mdi-plus">
         <template v-slot:actions>
-          <datasets-list-actions />
+          <dataset-list-actions />
         </template>
-      </actions-button>
+      </layout-actions-button>
     </v-col>
   </v-row>
 </template>
 
 <script>
-  import SearchProgress from '~/components/search/progress.vue'
-  import SearchFilters from '~/components/search/filters.vue'
-  import DatasetsFacets from '~/components/datasets/facets.vue'
-  import DatasetsListActions from '~/components/datasets/list-actions.vue'
-  import DatasetCard from '~/components/datasets/card.vue'
-  import NavigationRight from '~/components/layout/navigation-right'
-  import ActionsButton from '~/components/layout/actions-button'
-
   const { mapState, mapGetters } = require('vuex')
 
   const dataSvg = require('~/assets/svg/Data Arranging_Two Color.svg?raw')
 
   export default {
-    components: {
-      SearchProgress,
-      SearchFilters,
-      DatasetsFacets,
-      DatasetsListActions,
-      DatasetCard,
-      NavigationRight,
-      ActionsButton,
-    },
     data: () => ({
       datasets: null,
       page: 1,

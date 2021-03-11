@@ -48,7 +48,7 @@
         </v-responsive>
       </v-container>
 
-      <navigation-right v-if="this.$vuetify.breakpoint.lgAndUp">
+      <layout-navigation-right v-if="this.$vuetify.breakpoint.lgAndUp">
         <v-list
           v-if="canContrib"
           dense
@@ -73,14 +73,14 @@
                 type="applications"
                 @apply="refresh()"
               />
-              <applications-facets
+              <application-facets
                 :facets="applications.facets"
                 :facets-values="facetsValues"
               />
             </v-col>
           </v-row>
         </template>
-      </navigation-right>
+      </layout-navigation-right>
       <div v-else class="actions-buttons">
         <v-btn
           v-if="canContrib"
@@ -98,24 +98,11 @@
 </template>
 
 <script>
-  import SearchProgress from '~/components/search/progress.vue'
-  import SearchFilters from '~/components/search/filters.vue'
-  import ApplicationsFacets from '~/components/applications/facets.vue'
-  import ApplicationCard from '~/components/applications/card.vue'
-  import NavigationRight from '~/components/layout/navigation-right'
-
   const { mapState, mapGetters } = require('vuex')
 
   const graphicSvg = require('~/assets/svg/Graphics and charts_Monochromatic.svg?raw')
 
   export default {
-    components: {
-      SearchProgress,
-      SearchFilters,
-      ApplicationsFacets,
-      ApplicationCard,
-      NavigationRight,
-    },
     data: () => ({
       applications: null,
       page: 1,

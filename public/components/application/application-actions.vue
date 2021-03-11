@@ -246,11 +246,8 @@
 
 <script>
   import { mapState, mapActions, mapGetters } from 'vuex'
-  import OwnerPick from '~/components/owners/pick.vue'
-  import OpenApi from '~/components/open-api.vue'
 
   export default {
-    components: { OwnerPick, OpenApi },
     data: () => ({
       showDeleteDialog: false,
       showIntegrationDialog: false,

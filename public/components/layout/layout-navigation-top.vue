@@ -11,7 +11,7 @@
       class="py-0"
       color="transparent"
     >
-      <brand-title />
+      <layout-brand-title />
     </v-list>
     <v-divider v-if="!$vuetify.breakpoint.mobile" vertical />
     <v-toolbar-items v-if="!navContext.drawer">
@@ -178,11 +178,8 @@
 
 <script>
   import { mapState, mapGetters, mapActions } from 'vuex'
-  import NotificationsQueue from '~/components/notifications-queue'
-  import BrandTitle from '~/components/layout/brand-title.vue'
 
   export default {
-    components: { NotificationsQueue, BrandTitle },
     props: ['navContext'],
     computed: {
       ...mapState(['env', 'breadcrumbItems', 'breadcrumbsRouteName']),

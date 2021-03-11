@@ -36,18 +36,16 @@
           />
         </template>
 
-        <not-authorized v-else />
+        <layout-not-authorized v-else />
       </v-col>
     </v-row>
   </v-container>
 </template>
 
 <script>
-  import StorageDetails from '~/components/storage/details.vue'
   import { mapState, mapGetters } from 'vuex'
 
   export default {
-    components: { StorageDetails },
     data: () => ({
       datasets: null,
       stats: null,

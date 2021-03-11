@@ -60,11 +60,7 @@
 </template>
 
 <script>
-  import OwnerShort from '~/components/owners/short.vue'
-  import Visibility from '~/components/visibility.vue'
-
   export default {
-    components: { OwnerShort, Visibility },
     props: ['application', 'showTopics'],
     data: () => ({
       hover: false,

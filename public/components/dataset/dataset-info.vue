@@ -145,10 +145,6 @@
 </template>
 
 <script>
-  import OwnerListItem from '~/components/owners/list-item.vue'
-  import EditTtl from '~/components/datasets/edit-ttl.vue'
-  import MarkdownEditor from '~/components/markdown-editor.vue'
-
   const { mapState, mapActions, mapGetters } = require('vuex')
   const events = require('~/../shared/events.json').dataset
 
@@ -156,11 +152,6 @@
   const coordYUri = 'http://data.ign.fr/def/geometrie#coordY'
 
   export default {
-    components: {
-      OwnerListItem,
-      EditTtl,
-      MarkdownEditor,
-    },
     data() {
       return { events, error: null }
     },

@@ -34,10 +34,8 @@
 
 <script>
   import { mapGetters } from 'vuex'
-  import DatasetExtensionDetails from '~/components/datasets/extension-details.vue'
 
   export default {
-    components: { DatasetExtensionDetails },
     props: ['extension', 'disabled'],
     data() {
       return {

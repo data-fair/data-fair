@@ -12,7 +12,7 @@
           />
         </template>
 
-        <not-authorized v-else />
+        <layout-not-authorized v-else />
       </v-col>
     </v-row>
   </v-container>
@@ -20,12 +20,10 @@
 
 <script>
   import 'iframe-resizer/js/iframeResizer.contentWindow'
-  import StorageDetails from '~/components/storage/details.vue'
   import { mapState } from 'vuex'
 
   export default {
     layout: 'embed',
-    components: { StorageDetails },
     data: () => ({
       datasets: null,
     }),

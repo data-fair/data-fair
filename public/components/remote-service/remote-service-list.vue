@@ -36,7 +36,7 @@
         </v-row>
       </v-container>
 
-      <navigation-right v-if="this.$vuetify.breakpoint.lgAndUp">
+      <layout-navigation-right v-if="this.$vuetify.breakpoint.lgAndUp">
         <v-list
           v-if="user && user.adminMode"
           dense
@@ -65,7 +65,7 @@
             </v-col>
           </v-row>
         </template>
-      </navigation-right>
+      </layout-navigation-right>
 
       <div v-else class="actions-buttons">
         <v-btn
@@ -82,7 +82,7 @@
 
       <div class="text-center">
         <v-bottom-sheet v-model="importServiceSheet">
-          <import-remote-service
+          <remote-service-import
             v-if="importServiceSheet"
             :init-service="importService"
             @cancel="importServiceSheet = false"
@@ -94,15 +94,9 @@
 </template>
 
 <script>
-  import ImportRemoteService from '~/components/remote-services/import.vue'
-  import SearchProgress from '~/components/search/progress.vue'
-  import SearchFilters from '~/components/search/filters.vue'
-  import RemoteServiceCard from '~/components/remote-services/card.vue'
-  import NavigationRight from '~/components/layout/navigation-right'
   const { mapState } = require('vuex')
 
   export default {
-    components: { ImportRemoteService, SearchProgress, SearchFilters, RemoteServiceCard, NavigationRight },
     data() {
       return {
         page: 1,

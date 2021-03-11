@@ -14,7 +14,7 @@
             <v-col>
               <dataset-status />
 
-              <section-tabs
+              <layout-section-tabs
                 :min-height="180"
                 :svg="buildingSvg"
                 svg-no-margin
@@ -59,7 +59,7 @@
                   </v-tab-item>
 
                   <v-tab-item value="structure-extensions">
-                    <doc-link tooltip="Consultez la documentation sur l'extension de jeux de données" doc-key="datasetExtend" />
+                    <layout-doc-link tooltip="Consultez la documentation sur l'extension de jeux de données" doc-key="datasetExtend" />
                     <v-container fluid class="pt-0">
                       <dataset-extensions />
                     </v-container>
@@ -69,9 +69,9 @@
                     <dataset-master-data />
                   </v-tab-item>
                 </template>
-              </section-tabs>
+              </layout-section-tabs>
 
-              <section-tabs
+              <layout-section-tabs
                 :min-height="390"
                 :svg="checklistSvg"
                 svg-no-margin
@@ -88,20 +88,20 @@
                 </template>
                 <template v-slot:tabs-items>
                   <v-tab-item value="metadata-info">
-                    <doc-link tooltip="Consultez la documentation sur l'édition de jeux de données" doc-key="datasetEdit" />
+                    <layout-doc-link tooltip="Consultez la documentation sur l'édition de jeux de données" doc-key="datasetEdit" />
                     <v-container fluid class="py-0">
                       <dataset-info />
                     </v-container>
                   </v-tab-item>
 
                   <v-tab-item value="metadata-attachments">
-                    <doc-link tooltip="Consultez la documentation sur les pièces jointes des jeux de données" doc-key="datasetAttachments" />
+                    <layout-doc-link tooltip="Consultez la documentation sur les pièces jointes des jeux de données" doc-key="datasetAttachments" />
                     <dataset-attachments />
                   </v-tab-item>
                 </template>
-              </section-tabs>
+              </layout-section-tabs>
 
-              <section-tabs
+              <layout-section-tabs
                 :svg="dataSvg"
                 svg-no-margin
                 :section="sections.find(s => s.id === 'data')"
@@ -160,9 +160,9 @@
                     </v-container>
                   </v-tab-item>
                 </template>
-              </section-tabs>
+              </layout-section-tabs>
 
-              <section-tabs
+              <layout-section-tabs
                 :section="sections.find(s => s.id === 'reuses')"
                 :svg="chartSvg"
                 svg-no-margin
@@ -189,9 +189,9 @@
                     <dataset-external-reuses />
                   </v-tab-item>
                 </template>
-              </section-tabs>
+              </layout-section-tabs>
 
-              <section-tabs
+              <layout-section-tabs
                 :section="sections.find(s => s.id === 'share')"
                 :svg="shareSvg"
                 svg-no-margin
@@ -234,9 +234,9 @@
                     <dataset-catalog-publications />
                   </v-tab-item>
                 </template>
-              </section-tabs>
+              </layout-section-tabs>
 
-              <section-tabs
+              <layout-section-tabs
                 :section="sections.find(s => s.id === 'activity')"
                 :svg="settingsSvg"
                 :min-height="550"
@@ -259,31 +259,27 @@
                     </v-container>
                   </v-tab-item>
                 </template>
-              </section-tabs>
+              </layout-section-tabs>
             </v-col>
           </v-row>
         </template>
       </v-container>
     </v-col>
 
-    <navigation-right v-if="this.$vuetify.breakpoint.lgAndUp">
+    <layout-navigation-right v-if="this.$vuetify.breakpoint.lgAndUp">
       <dataset-actions />
-      <toc :sections="sections" />
-    </navigation-right>
-    <actions-button v-else>
+      <layout-toc :sections="sections" />
+    </layout-navigation-right>
+    <layout-actions-button v-else>
       <template v-slot:actions>
         <dataset-actions />
       </template>
-    </actions-button>
+    </layout-actions-button>
   </v-row>
 </template>
 
 <script>
   import { mapState, mapActions, mapGetters } from 'vuex'
-  import SectionTabs from '~/components/layout/section-tabs.vue'
-  import NavigationRight from '~/components/layout/navigation-right'
-  import ActionsButton from '~/components/layout/actions-button'
-  import Toc from '~/components/layout/toc.vue'
 
   const settingsSvg = require('~/assets/svg/Settings_Monochromatic.svg?raw')
   const dataSvg = require('~/assets/svg/Data storage_Two Color.svg?raw')
@@ -297,13 +293,6 @@
   const buildingSvg = require('~/assets/svg/Team building _Two Color.svg?raw')
 
   export default {
-    components: {
-      SectionTabs,
-      Permissions,
-      NavigationRight,
-      ActionsButton,
-      Toc,
-    },
     async fetch({ store, route }) {
       store.dispatch('dataset/clear')
       await Promise.all([

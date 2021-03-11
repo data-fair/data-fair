@@ -24,7 +24,7 @@
           Nous réalisons aussi des <span class="accent--text">applications personnalisées</span> sur demande.
           N'hésitez pas à <a href="https://koumoul.com/contact" class="">Nous contacter</a> !
         </p>
-        <base-apps
+        <application-base-apps
           v-model="baseApp"
           :dataset="dataset"
           @input="currentStep = 2; title = dataset ? dataset.title + ' - ' + baseApp.title : baseApp.title"
@@ -68,10 +68,8 @@
 <script>
   import { mapState, mapGetters } from 'vuex'
   import eventBus from '~/event-bus'
-  import BaseApps from '~/components/applications/base-apps.vue'
 
   export default {
-    components: { BaseApps },
     props: ['initApp'],
     async fetch() {
       if (this.$route.query.dataset) {

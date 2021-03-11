@@ -44,7 +44,7 @@
         </v-responsive>
       </v-container>
 
-      <navigation-right v-if="this.$vuetify.breakpoint.lgAndUp">
+      <layout-navigation-right v-if="this.$vuetify.breakpoint.lgAndUp">
         <v-list
           v-if="canAdmin"
           dense
@@ -72,7 +72,7 @@
             </v-col>
           </v-row>
         </template>
-      </navigation-right>
+      </layout-navigation-right>
 
       <div v-else class="actions-buttons">
         <v-btn
@@ -89,7 +89,7 @@
 
       <div class="text-center">
         <v-bottom-sheet v-model="importCatalogSheet">
-          <import-catalog
+          <catalog-import
             v-if="importCatalogSheet"
             :init-catalog="importCatalog"
             @cancel="importCatalogSheet = false"
@@ -101,18 +101,11 @@
 </template>
 
 <script>
-  import ImportCatalog from '~/components/catalogs/import.vue'
-  import SearchProgress from '~/components/search/progress.vue'
-  import SearchFilters from '~/components/search/filters.vue'
-  import CatalogCard from '~/components/catalogs/card.vue'
-  import NavigationRight from '~/components/layout/navigation-right'
-
   const { mapState, mapGetters } = require('vuex')
 
   const wwwSvg = require('~/assets/svg/World wide web_Two Color.svg?raw')
 
   export default {
-    components: { ImportCatalog, SearchProgress, SearchFilters, CatalogCard, NavigationRight },
     data() {
       return {
         catalogs: null,

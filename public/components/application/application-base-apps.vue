@@ -28,7 +28,7 @@
               <span :key="'span-' + i">{{ disabled }}</span>
             </template>
           </v-tooltip>
-          <base-app-card
+          <application-base-apps-card
             :id="`baseapp-${baseApp._id}`"
             :base-app="baseApp"
             :selected="value && value._id === baseApp._id"
@@ -42,10 +42,8 @@
 
 <script>
   import { mapGetters, mapState } from 'vuex'
-  import BaseAppCard from '~/components/applications/base-app-card.vue'
 
   export default {
-    components: { BaseAppCard },
     props: ['dataset', 'value'],
     data: () => ({
       baseApps: null,

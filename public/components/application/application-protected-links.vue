@@ -41,10 +41,8 @@
 
 <script>
   import { mapState, mapGetters } from 'vuex'
-  import ConfirmMenu from '~/components/confirm-menu.vue'
 
   export default {
-    components: { ConfirmMenu },
     data() {
       return {
         applicationKeys: null,

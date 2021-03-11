@@ -9,7 +9,7 @@
       <v-row class="px-3">
         <v-col class="pb-0">
           <v-row class="px-3">
-            <nb-results :total="data.total" />
+            <dataset-nb-results :total="data.total" />
             <v-btn
               v-if="dataset.isRest && can('writeData')"
               color="primary"
@@ -65,7 +65,7 @@
               :total-visible="$vuetify.breakpoint.lgAndUp ? 7 : 5"
               class="mx-4"
             />
-            <download-results :params="params" :total="data.total" />
+            <dataset-download-results :params="params" :total="data.total" />
           </v-row>
         </v-col>
       </v-row>
@@ -230,7 +230,7 @@
           Éditer une ligne
         </v-card-title>
         <v-card-text>
-          <edit-line-form
+          <dataset-edit-line-form
             v-if="editLineDialog && editedLine"
             v-model="editedLine"
             @onFileUpload="onFileUpload"
@@ -318,14 +318,9 @@
 <script>
   import { mapState, mapGetters } from 'vuex'
   import eventBus from '~/event-bus'
-  import NbResults from '~/components/datasets/nb-results'
-  import DatasetFilters from '~/components/datasets/filters'
-  import EditLineForm from '~/components/datasets/edit-line-form'
-  import DownloadResults from '~/components/datasets/download-results'
   const filtersUtils = require('~/assets/filters-utils')
 
   export default {
-    components: { EditLineForm, NbResults, DatasetFilters, DownloadResults },
     data: () => ({
       data: {},
       query: null,

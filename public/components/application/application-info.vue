@@ -110,13 +110,10 @@
 </template>
 
 <script>
-  import OwnerListItem from '~/components/owners/list-item.vue'
-  import MarkdownEditor from '~/components/markdown-editor.vue'
   import { mapState, mapActions, mapGetters } from 'vuex'
   const events = require('~/../shared/events.json').application
 
   export default {
-    components: { OwnerListItem, MarkdownEditor },
     data() {
       return { events }
     },

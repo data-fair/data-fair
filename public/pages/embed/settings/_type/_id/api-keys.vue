@@ -10,12 +10,10 @@
 
 <script>
   import 'iframe-resizer/js/iframeResizer.contentWindow'
-  import SettingsApiKeys from '~/components/settings/api-keys.vue'
   import eventBus from '~/event-bus'
 
   export default {
     layout: 'embed',
-    components: { SettingsApiKeys },
     data: () => ({
       api: null,
       settings: null,
