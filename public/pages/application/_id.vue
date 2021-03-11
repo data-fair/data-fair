@@ -75,8 +75,12 @@
                     <v-icon>mdi-link</v-icon>&nbsp;&nbsp;Lien protégé
                   </v-tab>
 
+                  <v-tab v-if="publicationSites && publicationSites.length" href="#share-publication-sites">
+                    <v-icon>mdi-presentation</v-icon>&nbsp;&nbsp;Portails
+                  </v-tab>
+
                   <v-tab href="#share-publications">
-                    <v-icon>mdi-publish</v-icon>&nbsp;&nbsp;Publications
+                    <v-icon>mdi-transit-connection</v-icon>&nbsp;&nbsp;Catalogues
                   </v-tab>
                 </template>
                 <template v-slot:tabs-items>
@@ -98,8 +102,12 @@
                     </v-container>
                   </v-tab-item>
 
+                  <v-tab-item value="share-publication-sites">
+                    <application-publication-sites :publication-sites="publicationSites" />
+                  </v-tab-item>
+
                   <v-tab-item value="share-publications">
-                    <application-publications />
+                    <application-catalog-publications />
                   </v-tab-item>
                 </template>
               </section-tabs>
@@ -149,7 +157,8 @@
   import { mapState, mapActions, mapGetters } from 'vuex'
   import ApplicationActions from '~/components/applications/actions.vue'
   import ApplicationInfo from '~/components/applications/info.vue'
-  import ApplicationPublications from '~/components/applications/publications.vue'
+  import ApplicationPublicationSites from '~/components/applications/publication-sites.vue'
+  import ApplicationCatalogPublications from '~/components/applications/catalog-publications.vue'
   import ApplicationProtectedLinks from '~/components/applications/protected-links.vue'
   import ApplicationConfig from '~/components/applications/config.vue'
   import Permissions from '~/components/permissions.vue'
@@ -168,7 +177,8 @@
     components: {
       ApplicationActions,
       ApplicationInfo,
-      ApplicationPublications,
+      ApplicationPublicationSites,
+      ApplicationCatalogPublications,
       ApplicationProtectedLinks,
       ApplicationConfig,
       Permissions,
@@ -181,6 +191,7 @@
     async fetch({ store, params, route }) {
       store.dispatch('application/clear')
       await store.dispatch('application/setId', route.params.id)
+      await store.dispatch('fetchPublicationSites', store.state.application.application.owner)
     },
     data: () => ({
       checklistSvg,
@@ -192,6 +203,9 @@
       ...mapState(['env']),
       ...mapState('application', ['application', 'api', 'journal', 'prodBaseApp', 'error']),
       ...mapGetters('application', ['resourceUrl', 'can', 'applicationLink', 'hasPrivateDatasets']),
+      publicationSites() {
+        return this.$store.getters.ownerPublicationSites(this.application.owner)
+      },
       sections() {
         const sections = []
         if (!this.application) return sections

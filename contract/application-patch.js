@@ -3,7 +3,7 @@
 // the rest is read only fields
 
 const application = require('./application')
-const patchKeys = ['configuration', 'url', 'urlDraft', 'description', 'title', 'publications', 'extras', 'topics']
+const patchKeys = ['configuration', 'url', 'urlDraft', 'description', 'title', 'publications', 'publicationSites', 'extras', 'topics']
 module.exports = {
   title: 'Application patch',
   type: 'object',

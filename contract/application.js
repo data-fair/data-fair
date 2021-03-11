@@ -78,6 +78,13 @@ module.exports = {
       description: 'References to all the catalogs the application metadata is published too',
       items: publicationSchema,
     },
+    publicationSites: {
+      type: 'array',
+      description: 'References to all sites the application is exposed in.',
+      items: {
+        type: 'string',
+      },
+    },
     topics: {
       type: 'array',
       title: 'Liste de thématiques',

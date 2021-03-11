@@ -14,7 +14,7 @@
       color="primary"
       @click="addPublicationDialog = true"
     >
-      Ajouter une publication
+      Publier sur un catalogue
     </v-btn>
 
     <v-list

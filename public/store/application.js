@@ -84,6 +84,7 @@ export default () => ({
     async fetchApplication({ commit, state }) {
       const application = await this.$axios.$get(`api/v1/applications/${state.applicationId}`)
       Vue.set(application, 'publications', application.publications || [])
+      Vue.set(application, 'publicationSites', application.publicationSites || [])
       commit('setAny', { application })
     },
     async fetchProdBaseApp({ commit, state }) {

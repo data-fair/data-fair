@@ -61,6 +61,7 @@ router.get('', cacheHeaders.noCache, asyncWrap(async(req, res) => {
     'base-application': 'url',
     dataset: 'configuration.datasets.href',
     topics: 'topics.id',
+    publicationSites: 'publicationSites',
   }
   const facetFields = {
     ...filterFields,
