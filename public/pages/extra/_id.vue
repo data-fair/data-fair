@@ -40,6 +40,7 @@
       },
     },
     mounted() {
+      this.$store.dispatch('breadcrumbs', null)
       if (!this.iframeUrl) return
       // if the navigation to the extra page has an initial "to" query parameter we transmit it
       const url = new URL(this.iframeUrl)
