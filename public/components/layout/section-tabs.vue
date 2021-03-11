@@ -12,12 +12,12 @@
       rounded
       flat
       outlined
-      :color="$vuetify.theme.dark ? 'transparent' : 'grey lighten-4'"
+      :color="toolbarColor"
       :style="toolbarStyle"
       class="mb-2 section-active"
     >
       <v-toolbar-title
-        class="text-h5"
+        :class="{'text-h5': true, 'admin--text': admin}"
         @click="toggle"
       >
         <slot name="title">
@@ -70,6 +70,7 @@
       svg: { type: String },
       svgNoMargin: { type: Boolean },
       section: { type: Object },
+      admin: { type: Boolean, default: false },
     },
     data: () => ({
       tab: null,
@@ -78,6 +79,10 @@
       style() {
         if (!this.tab || !this.minHeight) return ''
         return `min-height: ${92 + this.minHeight}px;`
+      },
+      toolbarColor() {
+        if (this.admin) return 'admin'
+        return this.$vuetify.theme.dark ? 'transparent' : 'grey lighten-4'
       },
       toolbarStyle() {
         let css = ''

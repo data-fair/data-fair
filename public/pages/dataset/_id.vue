@@ -205,8 +205,12 @@
                     <v-icon>mdi-security</v-icon>&nbsp;&nbsp;Permissions
                   </v-tab>
 
+                  <v-tab v-if="publicationSites && publicationSites.length" href="#share-publication-sites">
+                    <v-icon>mdi-presentation</v-icon>&nbsp;&nbsp;Portails
+                  </v-tab>
+
                   <v-tab href="#share-publications">
-                    <v-icon>mdi-publish</v-icon>&nbsp;&nbsp;Publications
+                    <v-icon>mdi-transit-connection</v-icon>&nbsp;&nbsp;Catalogues
                   </v-tab>
                 </template>
                 <template v-slot:tabs-items>
@@ -222,8 +226,12 @@
                     </v-container>
                   </v-tab-item>
 
+                  <v-tab-item value="share-publication-sites">
+                    <dataset-publication-sites :publication-sites="publicationSites" />
+                  </v-tab-item>
+
                   <v-tab-item value="share-publications">
-                    <dataset-publications />
+                    <dataset-catalog-publications />
                   </v-tab-item>
                 </template>
               </section-tabs>
@@ -284,7 +292,8 @@
   import DatasetSearchFiles from '~/components/datasets/search-files.vue'
   import DatasetThumbnails from '~/components/datasets/thumbnails.vue'
   import DatasetThumbnailsOpts from '~/components/datasets/thumbnails-opts.vue'
-  import DatasetPublications from '~/components/datasets/publications.vue'
+  import DatasetCatalogPublications from '~/components/datasets/catalog-publications.vue'
+  import DatasetPublicationSites from '~/components/datasets/publication-sites.vue'
   import DatasetStatus from '~/components/datasets/status.vue'
   import DatasetApplications from '~/components/datasets/applications.vue'
   import DatasetExternalReuses from '~/components/datasets/external-reuses.vue'
@@ -322,7 +331,8 @@
       DatasetSearchFiles,
       DatasetThumbnails,
       DatasetThumbnailsOpts,
-      DatasetPublications,
+      DatasetPublicationSites,
+      DatasetCatalogPublications,
       DatasetStatus,
       DatasetApplications,
       DatasetExternalReuses,
@@ -339,6 +349,7 @@
         store.dispatch('dataset/setId', route.params.id),
         store.dispatch('fetchVocabulary'),
       ])
+      await store.dispatch('fetchPublicationSites', store.state.dataset.dataset.owner)
     },
     data: () => ({
       settingsSvg,
@@ -354,6 +365,9 @@
       ...mapGetters('dataset', ['resourceUrl', 'can', 'hasPublicApplications']),
       ...mapState('session', ['user']),
       ...mapGetters('session', ['activeAccount']),
+      publicationSites() {
+        return this.$store.getters.ownerPublicationSites(this.dataset.owner)
+      },
       fileProperty() {
         return this.dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')
       },

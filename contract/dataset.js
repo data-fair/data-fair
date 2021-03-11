@@ -3,6 +3,7 @@ const eventBy = require('./event-by')
 const permissions = require('./permissions')
 const topic = require('./topic')
 const masterData = require('./master-data')
+
 const publicationSchema = JSON.parse(JSON.stringify(require('./publication')))
 publicationSchema.properties.addToDataset = {
   type: 'object',
@@ -344,6 +345,13 @@ module.exports = {
       type: 'array',
       description: 'References to all the catalogs the dataset metadata is published too',
       items: publicationSchema,
+    },
+    publicationSites: {
+      type: 'array',
+      description: 'References to all sites the dataset is exposed in.',
+      items: {
+        type: 'string',
+      },
     },
     hasFiles: {
       type: 'boolean',

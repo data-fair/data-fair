@@ -142,6 +142,33 @@
                   </v-container>
                 </template>
               </section-tabs>
+
+              <section-tabs
+                :svg="uiSvg"
+                svg-no-margin
+                :section="sections.find(s => s.id === 'publicationSites')"
+                :admin="true"
+              >
+                <template v-slot:extension>
+                  <p>
+                    Les <i>sites de publication</i> sont les sites externes à data-fair qui peuvent exposer ses ressources (jeux de données et visualisations).
+                    Cette liste de sites est normalement gérée automatiquement par le projet data-fair-portals.
+                  </p>
+                </template>
+                <template v-slot:tabs-items>
+                  <v-container fluid class="py-0">
+                    <v-row>
+                      <v-col cols="12" md="6">
+                        <settings-publication-sites
+                          v-if="settings"
+                          :settings="settings"
+                          @updated="save"
+                        />
+                      </v-col>
+                    </v-row>
+                  </v-container>
+                </template>
+              </section-tabs>
             </template>
             <not-authorized v-else />
           </v-col>
@@ -157,6 +184,7 @@
 <script>
   import { mapState, mapGetters } from 'vuex'
   import SettingsWebhooks from '~/components/settings/webhooks.vue'
+  import SettingsPublicationSites from '~/components/settings/publication-sites.vue'
   import SettingsLicenses from '~/components/settings/licenses.vue'
   import SettingsApiKeys from '~/components/settings/api-keys.vue'
   import SettingsTopics from '~/components/settings/topics.vue'
@@ -169,10 +197,20 @@
   const flagsSvg = require('~/assets/svg/Crossed flags_Two Color.svg?raw')
   const securitysSvg = require('~/assets/svg/Security_Two Color.svg?raw')
   const wwwSvg = require('~/assets/svg/World wide web_Two Color.svg?raw')
+  const uiSvg = require('~/assets/svg/User Interface _Two Color.svg?raw')
 
   export default {
     // middleware: 'auth',
-    components: { SettingsWebhooks, SettingsLicenses, SettingsApiKeys, SettingsTopics, SectionTabs, NavigationRight, Toc },
+    components: {
+      SettingsWebhooks,
+      SettingsPublicationSites,
+      SettingsLicenses,
+      SettingsApiKeys,
+      SettingsTopics,
+      SectionTabs,
+      NavigationRight,
+      Toc,
+    },
     data: () => ({
       api: null,
       operations: null,
@@ -184,6 +222,7 @@
       flagsSvg,
       securitysSvg,
       wwwSvg,
+      uiSvg,
     }),
     computed: {
       ...mapState('session', ['user', 'initialized']),
@@ -200,7 +239,7 @@
         return true
       },
       sections() {
-        return [{
+        const sections = [{
           id: 'licences',
           title: 'Licences',
         }, {
@@ -213,6 +252,13 @@
           id: 'webhooks',
           title: 'Appels extérieurs (Webhooks)',
         }]
+        if (this.user.adminMode) {
+          sections.push({
+            id: 'publicationSites',
+            title: 'Sites de publication',
+          })
+        }
+        return sections
       },
     },
     watch: {

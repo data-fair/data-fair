@@ -59,7 +59,7 @@ router.put('/:type/:id', isOwnerAdmin, asyncWrap(async(req, res) => {
   req.body.apiKeys = req.body.apiKeys || []
   req.body.apiKeys.forEach(apiKey => delete apiKey.clearKey)
   req.body.topics = req.body.topics || []
-  req.body.publicationSites = req.body.publicationSite || []
+  req.body.publicationSites = req.body.publicationSites || []
 
   const valid = validate(req.body)
   if (!valid) return res.status(400).send(validate.errors)
@@ -102,14 +102,19 @@ router.get('/:type/:id/topics', isOwnerMember, asyncWrap(async(req, res) => {
   res.status(200).send((result && result.topics) || [])
 }))
 
-// Get publication sites as owner
+// Get publication sites as owner (see all) or other use (only private)
 router.get('/:type/:id/publication-sites', isOwnerMember, asyncWrap(async(req, res) => {
   const settings = req.app.get('db').collection('settings')
   const result = await settings.findOne({
     type: req.params.type,
     id: req.params.id,
   })
-  res.status(200).send((result && result.publicationSites) || [])
+  const publicationSites = (result && result.publicationSites) || []
+  if (!req.user) return res.status(401).send()
+  if (!req.user.adminMode && !permissions.getOwnerRole({ type: req.params.type, id: req.params.id }, req.user)) {
+    return res.status(200).send(publicationSites.filter(p => !p.private))
+  }
+  res.status(200).send(publicationSites)
 }))
 
 // Get licenses list as anyone

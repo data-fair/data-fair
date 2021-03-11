@@ -44,6 +44,7 @@ exports.init = async (db) => {
     exports.ensureIndex(db, 'datasets', { 'owner.type': 1, 'owner.id': 1 }),
     exports.ensureIndex(db, 'datasets', { title: 'text', description: 'text', 'owner.name': 'text' }, { name: 'fulltext' }),
     exports.ensureIndex(db, 'datasets', { 'virtual.children': 1 }),
+    exports.ensureIndex(db, 'datasets', { publicationSites: 1 }),
     exports.ensureIndex(db, 'datasets', { 'rest.ttl.checkedAt': 1 }),
     exports.ensureIndex(db, 'datasets', { 'rest.ttl.active': 1 }),
     // remote-services indexes

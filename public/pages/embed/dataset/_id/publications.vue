@@ -4,7 +4,7 @@
 
 <script>
   import 'iframe-resizer/js/iframeResizer.contentWindow'
-  import DatasetPublications from '~/components/datasets/publications.vue'
+  import DatasetPublications from '~/components/datasets/catalog-publications.vue'
 
   export default {
     components: {

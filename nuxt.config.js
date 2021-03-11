@@ -49,7 +49,6 @@ module.exports = {
   ],
   router: {
     base: config.basePath,
-    // middleware: 'breadcrumb',
   },
   modules: ['@digibytes/markdownit', '@nuxtjs/axios', 'cookie-universal-nuxt', ['nuxt-i18n', {
     seo: false,

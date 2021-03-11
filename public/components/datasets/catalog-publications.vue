@@ -6,7 +6,7 @@
     </p>
 
     <p v-if="!dataset.publications.length">
-      Il n'existe pas encore de publication de ce jeu de données.
+      Il n'existe pas encore de publication de ce jeu de données sur un catalogue.
     </p>
 
     <v-btn
@@ -14,7 +14,7 @@
       color="primary"
       @click="addPublicationDialog = true"
     >
-      Ajouter une publication
+      Publier sur un catalogue
     </v-btn>
 
     <v-list
