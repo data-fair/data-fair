@@ -10,7 +10,7 @@
                 <h3 class="display-1 mb-3 mt-5">
                   {{ $t('common.title') }}
                 </h3>
-                <wrap-svg
+                <layout-wrap-svg
                   :source="dataProcessSvg"
                   :color="$vuetify.theme.themes.light.primary"
                 />
@@ -55,7 +55,7 @@
             <p>
               {{ $t('pages.root.description') }}
             </p>
-            <section-tabs
+            <layout-section-tabs
               :min-height="390"
               :svg="dataSvg"
               svg-no-margin
@@ -103,14 +103,14 @@
                       sm="6"
                       md="5"
                     >
-                      <datasets-actions />
+                      <dataset-list-actions />
                     </v-col>
                   </v-row>
                 </v-container>
               </template>
-            </section-tabs>
+            </layout-section-tabs>
 
-            <section-tabs
+            <layout-section-tabs
               :min-height="400"
               :svg="graphicSvg"
               :section="sections.find(s => s.id === 'apps')"
@@ -166,37 +166,26 @@
                   </v-row>
                 </v-container>
               </template>
-            </section-tabs>
+            </layout-section-tabs>
           </v-col>
         </v-row>
       </v-container>
     </v-col>
 
-    <navigation-right v-if="this.$vuetify.breakpoint.lgAndUp">
+    <layout-navigation-right v-if="this.$vuetify.breakpoint.lgAndUp">
       <activity v-if="activity" :activity="activity" />
-    </navigation-right>
+    </layout-navigation-right>
   </v-row>
 </template>
 
 <script>
   import 'iframe-resizer/js/iframeResizer'
   import VIframe from '@koumoul/v-iframe'
-  import StorageTreemap from '~/components/storage/treemap.vue'
-  import SectionTabs from '~/components/layout/section-tabs.vue'
-  import DatasetsActions from '~/components/datasets/list-actions.vue'
-  import WrapSvg from '~/components/layout/svg.vue'
-  import NavigationRight from '~/components/layout/navigation-right.vue'
-  import Activity from '~/components/activity.vue'
 
   const { mapState, mapActions, mapGetters } = require('vuex')
 
-  const dataSvg = require('~/assets/svg/Data Arranging_Two Color.svg?raw')
-  const graphicSvg = require('~/assets/svg/Graphics and charts_Monochromatic.svg?raw')
-  const dataProcessSvg = require('~/assets/svg/Data Process_Two Color.svg?raw')
-
   export default {
-    name: 'Home',
-    components: { WrapSvg, VIframe, StorageTreemap, SectionTabs, DatasetsActions, NavigationRight, Activity },
+    components: { VIframe },
     data: () => ({
       stats: null,
       datasets: null,
@@ -209,9 +198,9 @@
         { text: 'Espace total disponible', value: 'storageLimit', sortable: false },
         { text: 'Nombre d\'applications', value: 'applications', sortable: false },
       ],
-      dataSvg,
-      graphicSvg,
-      dataProcessSvg,
+      dataSvg: require('~/assets/svg/Data Arranging_Two Color.svg?raw'),
+      graphicSvg: require('~/assets/svg/Graphics and charts_Monochromatic.svg?raw'),
+      dataProcessSvg: require('~/assets/svg/Data Process_Two Color.svg?raw'),
     }),
     computed: {
       ...mapState('session', ['user', 'initialized']),

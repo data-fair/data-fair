@@ -6,11 +6,7 @@
 </template>
 
 <script>
-  import DatasetMap from '~/components/datasets/map.vue'
-
-  export default {
-    components: { DatasetMap },
-  }
+  export default {}
 </script>
 
 <style lang="css">

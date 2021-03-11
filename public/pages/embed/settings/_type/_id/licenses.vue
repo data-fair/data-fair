@@ -10,12 +10,10 @@
 
 <script>
   import 'iframe-resizer/js/iframeResizer.contentWindow'
-  import SettingsLicenses from '~/components/settings/licenses.vue'
   import eventBus from '~/event-bus'
 
   export default {
     layout: 'embed',
-    components: { SettingsLicenses },
     data: () => ({
       api: null,
       settings: null,

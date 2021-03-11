@@ -192,7 +192,6 @@
   import eventBus from '~/event-bus'
 
   export default {
-    name: 'Permissions',
     props: ['resource', 'resourceUrl', 'api', 'hasPublicDeps', 'hasPrivateParents'],
     data: () => ({
       permissions: [],

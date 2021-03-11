@@ -1,14 +1,12 @@
 <template>
   <v-container fluid class="pa-0">
-    <import />
+    <application-import />
   </v-container>
 </template>
 
 <script>
-  import Import from '~/components/applications/import.vue'
 
   export default {
-    components: { Import },
     async fetch({ store }) {
       await store.dispatch('fetchVocabulary')
     },

@@ -7,7 +7,7 @@
       Vous n'avez pas la permission de saisir ces données
     </v-alert>
     <template v-else>
-      <edit-line-form
+      <dataset-edit-line-form
         v-model="line"
         @onFileUpload="onFileUpload"
       />
@@ -29,11 +29,9 @@
 
 <script>
   import 'iframe-resizer/js/iframeResizer.contentWindow'
-  import EditLineForm from '~/components/datasets/edit-line-form'
   import { mapState } from 'vuex'
 
   export default {
-    components: { EditLineForm },
     data: () => ({
       saving: false,
       sent: false,

@@ -1,6 +1,6 @@
 <template>
   <div>
-    <remote-services-list v-if="user" />
+    <remote-service-list v-if="user" />
     <!-- Anonymous: show jumbotron -->
     <v-col
       v-else-if="initialized"
@@ -37,11 +37,7 @@
 <script>
   import { mapState, mapActions } from 'vuex'
 
-  import RemoteServicesList from '~/components/remote-services/list.vue'
-
   export default {
-    name: 'Datasets',
-    components: { RemoteServicesList },
     computed: {
       ...mapState('session', ['user', 'initialized']),
     },

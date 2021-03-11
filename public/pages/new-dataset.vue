@@ -1,18 +1,13 @@
 <template>
   <v-container fluid class="pa-0">
-    <import-file v-if="$route.query.type === 'file'" />
-    <create-virtual v-if="$route.query.type === 'virtual'" />
-    <create-rest v-if="$route.query.type === 'rest'" />
+    <dataset-import-file v-if="$route.query.type === 'file'" />
+    <dataset-create-virtual v-if="$route.query.type === 'virtual'" />
+    <dataset-create-rest v-if="$route.query.type === 'rest'" />
   </v-container>
 </template>
 
 <script>
-  import ImportFile from '~/components/datasets/import-file.vue'
-  import CreateVirtual from '~/components/datasets/create-virtual.vue'
-  import CreateRest from '~/components/datasets/create-rest.vue'
-
   export default {
-    components: { ImportFile, CreateVirtual, CreateRest },
     created() {
       let pageName
       if (this.$route.query.type === 'file') pageName = 'Importer un fichier'

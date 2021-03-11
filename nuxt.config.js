@@ -15,6 +15,7 @@ const webpack = require('webpack')
 
 module.exports = {
   ssr: false,
+  components: true,
   srcDir: 'public/',
   buildDir: 'nuxt-dist',
   build: {

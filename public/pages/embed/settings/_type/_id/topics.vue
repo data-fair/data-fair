@@ -10,12 +10,10 @@
 
 <script>
   import 'iframe-resizer/js/iframeResizer.contentWindow'
-  import SettingsTopics from '~/components/settings/topics.vue'
   import eventBus from '~/event-bus'
 
   export default {
     layout: 'embed',
-    components: { SettingsTopics },
     data: () => ({
       api: null,
       settings: null,

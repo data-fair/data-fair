@@ -8,10 +8,8 @@
 <script>
   import 'iframe-resizer/js/iframeResizer.contentWindow'
   import { mapActions, mapState } from 'vuex'
-  import DatasetExtensionDetails from '~/components/datasets/extension-details.vue'
 
   export default {
-    components: { DatasetExtensionDetails },
     computed: {
       ...mapState('dataset', ['dataset']),
     },

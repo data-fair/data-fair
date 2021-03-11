@@ -11,10 +11,7 @@
 </template>
 
 <script>
-  import OpenApi from '~/components/open-api.vue'
-
   export default {
-    components: { OpenApi },
     computed: {
       resourceUrl() {
         return this.$store.state.env.publicUrl + '/api/v1/api-docs.json'

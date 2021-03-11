@@ -10,7 +10,7 @@
           {{ error.data }}
         </v-alert>
         <template v-else>
-          <doc-link
+          <layout-doc-link
             v-if="prodBaseApp"
             :tooltip="`Consultez la documentation sur l'application ${prodBaseApp.title}`"
             :doc-href="prodBaseApp.documentation"
@@ -18,7 +18,7 @@
           />
           <v-row class="application">
             <v-col>
-              <section-tabs
+              <layout-section-tabs
                 :svg="checklistSvg"
                 svg-no-margin
                 :section="sections.find(s => s.id === 'metadata')"
@@ -35,9 +35,9 @@
                     </v-container>
                   </v-tab-item>
                 </template>
-              </section-tabs>
+              </layout-section-tabs>
 
-              <section-tabs
+              <layout-section-tabs
                 :min-height="390"
                 :svg="creativeSvg"
                 svg-no-margin
@@ -55,9 +55,9 @@
                     </v-container>
                   </v-tab-item>
                 </template>
-              </section-tabs>
+              </layout-section-tabs>
 
-              <section-tabs
+              <layout-section-tabs
                 :section="sections.find(s => s.id === 'share')"
                 :svg="shareSvg"
                 svg-no-margin
@@ -110,9 +110,9 @@
                     <application-catalog-publications />
                   </v-tab-item>
                 </template>
-              </section-tabs>
+              </layout-section-tabs>
 
-              <section-tabs
+              <layout-section-tabs
                 :section="sections.find(s => s.id === 'activity')"
                 :svg="settingsSvg"
                 :min-height="550"
@@ -135,69 +135,38 @@
                     </v-container>
                   </v-tab-item>
                 </template>
-              </section-tabs>
+              </layout-section-tabs>
             </v-col>
           </v-row>
         </template>
       </v-container>
     </v-col>
-    <navigation-right v-if="this.$vuetify.breakpoint.lgAndUp">
+    <layout-navigation-right v-if="this.$vuetify.breakpoint.lgAndUp">
       <application-actions />
-      <toc :sections="sections" />
-    </navigation-right>
-    <actions-button v-else>
+      <layout-toc :sections="sections" />
+    </layout-navigation-right>
+    <layout-actions-button v-else>
       <template v-slot:actions>
         <application-actions />
       </template>
-    </actions-button>
+    </layout-actions-button>
   </v-row>
 </template>
 
 <script>
   import { mapState, mapActions, mapGetters } from 'vuex'
-  import ApplicationActions from '~/components/applications/actions.vue'
-  import ApplicationInfo from '~/components/applications/info.vue'
-  import ApplicationPublicationSites from '~/components/applications/publication-sites.vue'
-  import ApplicationCatalogPublications from '~/components/applications/catalog-publications.vue'
-  import ApplicationProtectedLinks from '~/components/applications/protected-links.vue'
-  import ApplicationConfig from '~/components/applications/config.vue'
-  import Permissions from '~/components/permissions.vue'
-  import Journal from '~/components/journal.vue'
-  import SectionTabs from '~/components/layout/section-tabs.vue'
-  import NavigationRight from '~/components/layout/navigation-right'
-  import ActionsButton from '~/components/layout/actions-button'
-  import Toc from '~/components/layout/toc.vue'
-
-  const checklistSvg = require('~/assets/svg/Checklist_Two Color.svg?raw')
-  const creativeSvg = require('~/assets/svg/Creative Process_Two Color.svg?raw')
-  const shareSvg = require('~/assets/svg/Share_Two Color.svg?raw')
-  const settingsSvg = require('~/assets/svg/Settings_Monochromatic.svg?raw')
 
   export default {
-    components: {
-      ApplicationActions,
-      ApplicationInfo,
-      ApplicationPublicationSites,
-      ApplicationCatalogPublications,
-      ApplicationProtectedLinks,
-      ApplicationConfig,
-      Permissions,
-      Journal,
-      SectionTabs,
-      NavigationRight,
-      ActionsButton,
-      Toc,
-    },
     async fetch({ store, params, route }) {
       store.dispatch('application/clear')
       await store.dispatch('application/setId', route.params.id)
       await store.dispatch('fetchPublicationSites', store.state.application.application.owner)
     },
     data: () => ({
-      checklistSvg,
-      creativeSvg,
-      shareSvg,
-      settingsSvg,
+      checklistSvg: require('~/assets/svg/Checklist_Two Color.svg?raw'),
+      creativeSvg: require('~/assets/svg/Creative Process_Two Color.svg?raw'),
+      shareSvg: require('~/assets/svg/Share_Two Color.svg?raw'),
+      settingsSvg: require('~/assets/svg/Settings_Monochromatic.svg?raw'),
     }),
     computed: {
       ...mapState(['env']),
