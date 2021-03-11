@@ -72,9 +72,6 @@
 <script>
   import { mapState, mapGetters } from 'vuex'
 
-  const checklistSvg = require('~/assets/svg/Checklist_Two Color.svg?raw')
-  const progressSvg = require('~/assets/svg/Progress _Two Color.svg?raw')
-
   export default {
     async fetch({ store, route }) {
       store.dispatch('catalog/clear')
@@ -85,8 +82,8 @@
       showOwnerDialog: false,
       newOwner: null,
       mini: false,
-      checklistSvg,
-      progressSvg,
+      checklistSvg: require('~/assets/svg/Checklist_Two Color.svg?raw'),
+      progressSvg: require('~/assets/svg/Progress _Two Color.svg?raw'),
     }),
     computed: {
       ...mapState('catalog', ['catalog', 'error']),

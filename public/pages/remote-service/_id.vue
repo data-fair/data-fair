@@ -73,9 +73,6 @@
 <script>
   import { mapState, mapActions, mapGetters } from 'vuex'
 
-  const checklistSvg = require('~/assets/svg/Checklist_Two Color.svg?raw')
-  const settingsSvg = require('~/assets/svg/Settings_Two Color.svg?raw')
-
   export default {
     async fetch({ store, params, route }) {
       store.dispatch('remoteService/clear')
@@ -85,8 +82,8 @@
       ])
     },
     data: () => ({
-      checklistSvg,
-      settingsSvg,
+      checklistSvg: require('~/assets/svg/Checklist_Two Color.svg?raw'),
+      settingsSvg: require('~/assets/svg/Settings_Two Color.svg?raw'),
     }),
     computed: {
       ...mapState('session', ['user']),

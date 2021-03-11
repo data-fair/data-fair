@@ -185,12 +185,6 @@
   import { mapState, mapGetters } from 'vuex'
   import eventBus from '~/event-bus'
 
-  const qualitySvg = require('~/assets/svg/Quality Check_Monochromatic.svg?raw')
-  const flagsSvg = require('~/assets/svg/Crossed flags_Two Color.svg?raw')
-  const securitysSvg = require('~/assets/svg/Security_Two Color.svg?raw')
-  const wwwSvg = require('~/assets/svg/World wide web_Two Color.svg?raw')
-  const uiSvg = require('~/assets/svg/User Interface _Two Color.svg?raw')
-
   export default {
     // middleware: 'auth',
     data: () => ({
@@ -200,11 +194,11 @@
       organization: {},
       settings: null,
       ready: false,
-      qualitySvg,
-      flagsSvg,
-      securitysSvg,
-      wwwSvg,
-      uiSvg,
+      qualitySvg: require('~/assets/svg/Quality Check_Monochromatic.svg?raw'),
+      flagsSvg: require('~/assets/svg/Crossed flags_Two Color.svg?raw'),
+      securitysSvg: require('~/assets/svg/Security_Two Color.svg?raw'),
+      wwwSvg: require('~/assets/svg/World wide web_Two Color.svg?raw'),
+      uiSvg: require('~/assets/svg/User Interface _Two Color.svg?raw'),
     }),
     computed: {
       ...mapState('session', ['user', 'initialized']),

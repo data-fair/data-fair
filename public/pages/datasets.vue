@@ -41,14 +41,10 @@
 <script>
   import { mapState, mapActions, mapGetters } from 'vuex'
 
-  const dataSvg = require('~/assets/svg/Data Arranging_Two Color.svg?raw')
-
   export default {
-    data() {
-      return {
-        dataSvg,
-      }
-    },
+    data: () => ({
+      dataSvg: require('~/assets/svg/Data Arranging_Two Color.svg?raw'),
+    }),
     computed: {
       ...mapState('session', ['user', 'initialized']),
       ...mapGetters(['canContrib']),

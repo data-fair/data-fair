@@ -103,8 +103,6 @@
 <script>
   const { mapState, mapGetters } = require('vuex')
 
-  const wwwSvg = require('~/assets/svg/World wide web_Two Color.svg?raw')
-
   export default {
     data() {
       return {
@@ -114,7 +112,7 @@
         filters: {},
         filtered: false,
         importCatalogSheet: !!this.$route.query.import,
-        wwwSvg,
+        wwwSvg: require('~/assets/svg/World wide web_Two Color.svg?raw'),
       }
     },
     computed: {

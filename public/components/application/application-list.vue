@@ -100,8 +100,6 @@
 <script>
   const { mapState, mapGetters } = require('vuex')
 
-  const graphicSvg = require('~/assets/svg/Graphics and charts_Monochromatic.svg?raw')
-
   export default {
     data: () => ({
       applications: null,
@@ -115,7 +113,7 @@
         topics: [],
       },
       lastParams: null,
-      graphicSvg,
+      graphicSvg: require('~/assets/svg/Graphics and charts_Monochromatic.svg?raw'),
     }),
     computed: {
       ...mapState('session', ['user']),

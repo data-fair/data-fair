@@ -184,10 +184,6 @@
 
   const { mapState, mapActions, mapGetters } = require('vuex')
 
-  const dataSvg = require('~/assets/svg/Data Arranging_Two Color.svg?raw')
-  const graphicSvg = require('~/assets/svg/Graphics and charts_Monochromatic.svg?raw')
-  const dataProcessSvg = require('~/assets/svg/Data Process_Two Color.svg?raw')
-
   export default {
     components: { VIframe },
     data: () => ({
@@ -202,9 +198,9 @@
         { text: 'Espace total disponible', value: 'storageLimit', sortable: false },
         { text: 'Nombre d\'applications', value: 'applications', sortable: false },
       ],
-      dataSvg,
-      graphicSvg,
-      dataProcessSvg,
+      dataSvg: require('~/assets/svg/Data Arranging_Two Color.svg?raw'),
+      graphicSvg: require('~/assets/svg/Graphics and charts_Monochromatic.svg?raw'),
+      dataProcessSvg: require('~/assets/svg/Data Process_Two Color.svg?raw'),
     }),
     computed: {
       ...mapState('session', ['user', 'initialized']),

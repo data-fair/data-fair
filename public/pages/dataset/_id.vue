@@ -281,17 +281,6 @@
 <script>
   import { mapState, mapActions, mapGetters } from 'vuex'
 
-  const settingsSvg = require('~/assets/svg/Settings_Monochromatic.svg?raw')
-  const dataSvg = require('~/assets/svg/Data storage_Two Color.svg?raw')
-  // const chartSvg = require('~/assets/svg/Graphics and charts_Monochromatic.svg?raw')
-  const chartSvg = require('~/assets/svg/Graphics and charts_Two Color.svg?raw')
-  // const shareSvg = require('~/assets/svg/Share_Monochromatic.svg?raw')
-  const shareSvg = require('~/assets/svg/Share_Two Color.svg?raw')
-  // const checklistSvg = require('~/assets/svg/Checklist _Monochromatic.svg?raw')
-  const checklistSvg = require('~/assets/svg/Checklist_Two Color.svg?raw')
-  // const buildingSvg = require('~/assets/svg/Process building_Monochromatic.svg?raw')
-  const buildingSvg = require('~/assets/svg/Team building _Two Color.svg?raw')
-
   export default {
     async fetch({ store, route }) {
       store.dispatch('dataset/clear')
@@ -302,12 +291,12 @@
       await store.dispatch('fetchPublicationSites', store.state.dataset.dataset.owner)
     },
     data: () => ({
-      settingsSvg,
-      dataSvg,
-      chartSvg,
-      shareSvg,
-      checklistSvg,
-      buildingSvg,
+      settingsSvg: require('~/assets/svg/Settings_Monochromatic.svg?raw'),
+      dataSvg: require('~/assets/svg/Data storage_Two Color.svg?raw'),
+      chartSvg: require('~/assets/svg/Graphics and charts_Two Color.svg?raw'),
+      shareSvg: require('~/assets/svg/Share_Two Color.svg?raw'),
+      checklistSvg: require('~/assets/svg/Checklist_Two Color.svg?raw'),
+      buildingSvg: require('~/assets/svg/Team building _Two Color.svg?raw'),
     }),
     computed: {
       ...mapState(['env']),

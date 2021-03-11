@@ -80,8 +80,6 @@
 <script>
   const { mapState, mapGetters } = require('vuex')
 
-  const dataSvg = require('~/assets/svg/Data Arranging_Two Color.svg?raw')
-
   export default {
     data: () => ({
       datasets: null,
@@ -97,7 +95,7 @@
         topics: [],
       },
       lastParams: null,
-      dataSvg,
+      dataSvg: require('~/assets/svg/Data Arranging_Two Color.svg?raw'),
     }),
     computed: {
       ...mapState('session', ['user']),

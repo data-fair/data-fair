@@ -41,13 +41,11 @@
 <script>
   import { mapState, mapActions } from 'vuex'
 
-  const graphicSvg = require('~/assets/svg/Graphics and charts_Monochromatic.svg?raw')
-
   export default {
     data() {
       return {
         importApplicationSheet: !!this.$route.query.import,
-        graphicSvg,
+        graphicSvg: require('~/assets/svg/Graphics and charts_Monochromatic.svg?raw'),
       }
     },
     computed: {
