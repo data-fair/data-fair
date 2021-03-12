@@ -31,6 +31,7 @@
       // cf https://github.com/Ionaru/easy-markdown-editor#configuration
       const config = {
         element: this.$el.querySelector('textarea'),
+        theme: 'dark',
         initialValue: this.value,
         renderingConfig: {},
         status: false,
@@ -169,6 +170,7 @@
 </script>
 
 <style lang="css">
+/* lighter style, a v-card is used for the border */
 .markdown-editor .v-input__slot {
   display: block;
 }
@@ -176,8 +178,38 @@
   border: none;
   padding: 2px;
 }
-
 .markdown-editor .EasyMDEContainer .CodeMirror {
   border: none;
+  background-color: #F0F0F0;
 }
+
+/* dark mode, cf https://github.com/Ionaru/easy-markdown-editor/issues/131 */
+.markdown-editor.theme--dark .CodeMirror {
+  color: white;
+  background-color: #303030;
+}
+.markdown-editor.theme--dark .CodeMirror-cursor {
+  border-left-color: white;
+  border-right-color: white;
+}
+.markdown-editor.theme--dark .editor-toolbar > .active, .markdown-editor.theme--dark .editor-toolbar > button:hover, .markdown-editor.theme--dark .editor-preview pre, .markdown-editor.theme--dark .cm-s-easymde .cm-comment {
+  background-color: #303030;
+}
+.markdown-editor.theme--dark .editor-preview {
+  background-color: #1E1E1E;
+}
+
+/*
+editorDark: {
+
+    "& .editor-toolbar > *": {
+        color: theme.palette.common.white
+    },
+    "& .editor-toolbar > .active, .editor-toolbar > button:hover, .editor-preview pre, .cm-s-easymde .cm-comment": {
+        backgroundColor: theme.palette.background.paper
+    },
+    "& .editor-preview": {
+        backgroundColor: theme.palette.background.default
+    }
+}*/
 </style>

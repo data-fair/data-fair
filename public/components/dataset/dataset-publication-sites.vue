@@ -4,7 +4,11 @@
       Publiez ce jeu de données sur un ou plusieurs de vos portails.
     </p>
     <v-row class="px-2">
-      <v-card tile style="min-width: 400px;width:">
+      <v-card
+        tile
+        outlined
+        style="min-width: 400px;width:"
+      >
         <v-list class="py-0" two-line>
           <v-list-item
             v-for="(site,i) in publicationSites"
