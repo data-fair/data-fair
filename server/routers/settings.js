@@ -136,14 +136,14 @@ router.post('/:type/:id/publication-sites', isOwnerAdmin, asyncWrap(async(req, r
   }
   const valid = validate(settings)
   if (!valid) return res.status(400).send(validate.errors)
-  await db.collection('settings').replaceOne(owner, settings)
+  await db.collection('settings').replaceOne(owner, settings, { upsert: true })
   res.status(200).send(req.body)
 }))
 // delete publication sites as owner (used by data-fair-portals to sync portals)
 router.delete('/:type/:id/publication-sites/:siteType/:siteId', isOwnerAdmin, asyncWrap(async(req, res) => {
   const db = req.app.get('db')
   const owner = { type: req.params.type, id: req.params.id }
-  let settings = await db.collection('settings').findOne(owner, { upsert: true })
+  let settings = await db.collection('settings').findOne(owner)
   if (!settings) {
     settings = {}
     fillSettings(owner, req.user, settings)
