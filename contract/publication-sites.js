@@ -3,7 +3,7 @@ module.exports = {
   title: 'Sites de publication',
   items: {
     type: 'object',
-    required: ['type', 'id'],
+    required: ['type', 'id', 'url'],
     properties: {
       type: {
         type: 'string',

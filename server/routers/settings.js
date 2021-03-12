@@ -50,17 +50,20 @@ router.get('/:type/:id', isOwnerAdmin, cacheHeaders.noCache, asyncWrap(async(req
   res.status(200).send(result || {})
 }))
 
+const initNew = (owner, user, settings) => {
+  Object.assign(settings, owner)
+  settings.name = owner.type === 'user' ? user.name : user.organizations.find(o => o.id === owner.id).name
+  settings.apiKeys = settings.apiKeys || []
+  settings.apiKeys.forEach(apiKey => delete apiKey.clearKey)
+  settings.topics = settings.topics || []
+  settings.publicationSites = settings.publicationSites || []
+}
+
 // update settings as owner
 router.put('/:type/:id', isOwnerAdmin, asyncWrap(async(req, res) => {
   const db = req.app.get('db')
-  req.body.type = req.params.type
-  req.body.id = req.params.id
-  req.body.name = req.params.type === 'user' ? req.user.name : req.user.organizations.find(o => o.id === req.params.id).name
-  req.body.apiKeys = req.body.apiKeys || []
-  req.body.apiKeys.forEach(apiKey => delete apiKey.clearKey)
-  req.body.topics = req.body.topics || []
-  req.body.publicationSites = req.body.publicationSites || []
-
+  const owner = { type: req.params.type, id: req.params.id }
+  initNew(owner, req.user, req.body)
   const valid = validate(req.body)
   if (!valid) return res.status(400).send(validate.errors)
   const settings = db.collection('settings')
@@ -82,7 +85,6 @@ router.put('/:type/:id', isOwnerAdmin, asyncWrap(async(req, res) => {
     if (!topic.id) topic.id = shortid.generate()
   })
 
-  const owner = { type: req.params.type, id: req.params.id }
   const oldSettings = (await settings.findOneAndReplace(owner, req.body, { upsert: true })).value
 
   await topicsUtils.updateTopics(db, owner, (oldSettings && oldSettings.topics) || [], req.body.topics)
@@ -115,6 +117,43 @@ router.get('/:type/:id/publication-sites', isOwnerMember, asyncWrap(async(req, r
     return res.status(200).send(publicationSites.filter(p => !p.private))
   }
   res.status(200).send(publicationSites)
+}))
+// create/update publication sites as owner (used by data-fair-portals to sync portals)
+router.post('/:type/:id/publication-sites', isOwnerAdmin, asyncWrap(async(req, res) => {
+  const db = req.app.get('db')
+  const owner = { type: req.params.type, id: req.params.id }
+  let settings = await db.collection('settings').findOne(owner)
+  if (!settings) {
+    settings = {}
+    initNew(owner, req.user, settings)
+  }
+  settings.publicationSites = settings.publicationSites || []
+  const index = settings.publicationSites.findIndex(ps => ps.type === req.body.type && ps.id === req.body.id)
+  if (index === -1) {
+    settings.publicationSites.push(req.body)
+  } else {
+    settings.publicationSites[index] = req.body
+  }
+  const valid = validate(settings)
+  if (!valid) return res.status(400).send(validate.errors)
+  await db.collection('settings').replaceOne(owner, settings)
+  res.status(200).send(req.body)
+}))
+// delete publication sites as owner (used by data-fair-portals to sync portals)
+router.delete('/:type/:id/publication-sites/:siteType/:siteId', isOwnerAdmin, asyncWrap(async(req, res) => {
+  const db = req.app.get('db')
+  const owner = { type: req.params.type, id: req.params.id }
+  let settings = await db.collection('settings').findOne(owner, { upsert: true })
+  if (!settings) {
+    settings = {}
+    initNew(owner, req.user, settings)
+  }
+  settings.publicationSites = settings.publicationSites || []
+  settings.publicationSites = settings.publicationSites.filter(ps => ps.type !== req.params.siteType || ps.id !== req.params.siteId)
+  const valid = validate(settings)
+  if (!valid) return res.status(400).send(validate.errors)
+  await db.collection('settings').replaceOne(owner, settings, { upsert: true })
+  res.status(200).send(req.body)
 }))
 
 // Get licenses list as anyone
