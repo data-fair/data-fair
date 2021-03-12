@@ -50,7 +50,7 @@ router.get('/:type/:id', isOwnerAdmin, cacheHeaders.noCache, asyncWrap(async(req
   res.status(200).send(result || {})
 }))
 
-const initNew = (owner, user, settings) => {
+const fillSettings = (owner, user, settings) => {
   Object.assign(settings, owner)
   settings.name = owner.type === 'user' ? user.name : user.organizations.find(o => o.id === owner.id).name
   settings.apiKeys = settings.apiKeys || []
@@ -63,7 +63,7 @@ const initNew = (owner, user, settings) => {
 router.put('/:type/:id', isOwnerAdmin, asyncWrap(async(req, res) => {
   const db = req.app.get('db')
   const owner = { type: req.params.type, id: req.params.id }
-  initNew(owner, req.user, req.body)
+  fillSettings(owner, req.user, req.body)
   const valid = validate(req.body)
   if (!valid) return res.status(400).send(validate.errors)
   const settings = db.collection('settings')
@@ -125,7 +125,7 @@ router.post('/:type/:id/publication-sites', isOwnerAdmin, asyncWrap(async(req, r
   let settings = await db.collection('settings').findOne(owner)
   if (!settings) {
     settings = {}
-    initNew(owner, req.user, settings)
+    fillSettings(owner, req.user, settings)
   }
   settings.publicationSites = settings.publicationSites || []
   const index = settings.publicationSites.findIndex(ps => ps.type === req.body.type && ps.id === req.body.id)
@@ -146,7 +146,7 @@ router.delete('/:type/:id/publication-sites/:siteType/:siteId', isOwnerAdmin, as
   let settings = await db.collection('settings').findOne(owner, { upsert: true })
   if (!settings) {
     settings = {}
-    initNew(owner, req.user, settings)
+    fillSettings(owner, req.user, settings)
   }
   settings.publicationSites = settings.publicationSites || []
   settings.publicationSites = settings.publicationSites.filter(ps => ps.type !== req.params.siteType || ps.id !== req.params.siteId)
