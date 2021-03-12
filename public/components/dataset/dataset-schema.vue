@@ -2,8 +2,8 @@
   <v-row>
     <v-col class="py-0">
       <v-row class="px-3 pb-2" style="height:44px;">
-        <h3 class="text-h6">
-          Colonnes
+        <h3 v-if="notCalculatedProperties" class="text-h6">
+          {{ notCalculatedProperties.length.toLocaleString() }} colonne{{ notCalculatedProperties.length > 1 ? 's' : '' }}
         </h3>
         <v-btn
           v-if="dataset.isRest && can('writeDescription')"
@@ -15,6 +15,17 @@
         >
           <v-icon>mdi-plus</v-icon>
         </v-btn>
+        <v-text-field
+          v-if="notCalculatedProperties && notCalculatedProperties.length > 10"
+          v-model="schemaFilter"
+          placeholder="Rechercher"
+          outlined
+          rounded
+          dense
+          style="max-width:180px;"
+          append-icon="mdi-magnify"
+          class="mx-3"
+        />
         <v-spacer />
         <div>
           <v-btn
@@ -36,8 +47,8 @@
 
       <dataset-properties-slide
         v-if="schema && schema.length"
-        :properties="schema.filter(p => !p['x-calculated'])"
-        :original-properties="JSON.parse(originalSchema).filter(p => !p['x-calculated'])"
+        :properties="filteredProperties"
+        :original-properties="originalProperties"
         :editable="can('writeDescription')"
       />
     </v-col>
@@ -91,6 +102,7 @@
   export default {
     data: () => ({
       schema: [],
+      schemaFilter: '',
       editField: null,
       originalSchema: null,
       addPropertyDialog: false,
@@ -103,6 +115,26 @@
       ...mapGetters('dataset', ['can']),
       updated() {
         return JSON.stringify(this.schema) !== this.originalSchema
+      },
+      originalProperties() {
+        return JSON.parse(this.originalSchema)
+      },
+      notCalculatedProperties() {
+        return this.schema.filter(p => !p['x-calculated'])
+      },
+      filterableProperties() {
+        return this.notCalculatedProperties.map(p => ({
+          key: p.key,
+          search: `${(p.title || '').toLowerCase()} ${(p['x-originalName'] || '').toLowerCase()} ${p.key.toLowerCase()}`,
+          prop: p,
+        }))
+      },
+      filteredProperties() {
+        if (!this.schemaFilter) return this.notCalculatedProperties
+        const filter = this.schemaFilter.toLowerCase()
+        return this.filterableProperties
+          .filter(fp => fp.search.includes(filter) || JSON.stringify(fp.prop) !== JSON.stringify(this.originalProperties.find(p => p.key === fp.key)))
+          .map(fp => fp.prop)
       },
     },
     watch: {

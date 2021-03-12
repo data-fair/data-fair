@@ -158,10 +158,15 @@
           }, {})
       },
     },
+    watch: {
+      'properties.length'() {
+        this.currentProperty = null
+      },
+    },
     methods: {
       btnProps(prop, i, active) {
         if (active) return { color: 'primary', dark: true, outlined: true, small: true }
-        if (this.editable && JSON.stringify(prop) !== JSON.stringify(this.originalProperties[i])) {
+        if (this.editable && JSON.stringify(prop) !== JSON.stringify(this.originalProperties.find(p => p.key === prop.key))) {
           return { color: 'accent', dark: true, text: true, small: true }
         }
         return { color: 'transparent', depressed: true, small: true }
