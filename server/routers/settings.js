@@ -106,14 +106,12 @@ router.get('/:type/:id/topics', isOwnerMember, asyncWrap(async(req, res) => {
 
 // Get publication sites as owner (see all) or other use (only private)
 router.get('/:type/:id/publication-sites', isOwnerMember, asyncWrap(async(req, res) => {
-  const settings = req.app.get('db').collection('settings')
-  const result = await settings.findOne({
-    type: req.params.type,
-    id: req.params.id,
-  })
-  const publicationSites = (result && result.publicationSites) || []
+  const db = req.app.get('db')
+  const owner = { type: req.params.type, id: req.params.id }
+  const settings = await db.collection('settings').findOne(owner, { projection: { _id: 0 } })
+  const publicationSites = (settings && settings.publicationSites) || []
   if (!req.user) return res.status(401).send()
-  if (!req.user.adminMode && !permissions.getOwnerRole({ type: req.params.type, id: req.params.id }, req.user)) {
+  if (!req.user.adminMode && !permissions.getOwnerRole(owner, req.user)) {
     return res.status(200).send(publicationSites.filter(p => !p.private))
   }
   res.status(200).send(publicationSites)
@@ -122,7 +120,7 @@ router.get('/:type/:id/publication-sites', isOwnerMember, asyncWrap(async(req, r
 router.post('/:type/:id/publication-sites', isOwnerAdmin, asyncWrap(async(req, res) => {
   const db = req.app.get('db')
   const owner = { type: req.params.type, id: req.params.id }
-  let settings = await db.collection('settings').findOne(owner)
+  let settings = await db.collection('settings').findOne(owner, { projection: { _id: 0 } })
   if (!settings) {
     settings = {}
     fillSettings(owner, req.user, settings)
@@ -143,7 +141,7 @@ router.post('/:type/:id/publication-sites', isOwnerAdmin, asyncWrap(async(req, r
 router.delete('/:type/:id/publication-sites/:siteType/:siteId', isOwnerAdmin, asyncWrap(async(req, res) => {
   const db = req.app.get('db')
   const owner = { type: req.params.type, id: req.params.id }
-  let settings = await db.collection('settings').findOne(owner)
+  let settings = await db.collection('settings').findOne(owner, { projection: { _id: 0 } })
   if (!settings) {
     settings = {}
     fillSettings(owner, req.user, settings)
