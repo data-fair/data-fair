@@ -72,7 +72,7 @@
             </v-list-item-avatar>
             <span v-if="dataset.rest.ttl.active">Supprimer automatiquement les lignes dont la colonne {{ dataset.rest.ttl.prop }} contient une date dépassée de {{ dataset.rest.ttl.delay.value.toLocaleString() }} jours.</span>
             <span v-else>pas de politique d'expiration automatique configurée</span>
-            <edit-ttl
+            <dataset-edit-ttl
               v-if="can('writeDescription')"
               :ttl="dataset.rest.ttl"
               :schema="dataset.schema"
