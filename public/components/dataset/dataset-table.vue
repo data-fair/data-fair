@@ -351,6 +351,7 @@
       updatedLines: [],
       deletedLines: [],
       saving: false,
+      lastParams: null,
     }),
     computed: {
       ...mapState(['vocabulary']),
@@ -469,7 +470,18 @@
     },
     methods: {
       async refresh(resetPagination) {
-        if (resetPagination) this.pagination.page = 1
+        if (resetPagination) {
+          this.pagination.page = 1
+          // this is debatable
+          // but in case of full-text search you can forget that a sort is active
+          // and be surprised by counter-intuitive results
+          this.pagination.sortBy = [null]
+        }
+
+        const paramsStr = JSON.stringify(this.params)
+        if (paramsStr === this.lastParams) return
+        this.lastParams = paramsStr
+
         // this.data = {}
         this.loading = true
         try {

@@ -178,6 +178,7 @@
       loading: false,
       lineHeight: 40,
       filters: [],
+      lastParams: null,
     }),
     computed: {
       ...mapState(['vocabulary']),
@@ -255,7 +256,18 @@
         this.pagination.itemsPerPage = Math.min(Math.max(nbRows, 4), 50)
       },
       async refresh(resetPagination) {
-        if (resetPagination) this.pagination.page = 1
+        if (resetPagination) {
+          this.pagination.page = 1
+          // this is debatable
+          // but in case of full-text search you can forget that a sort is active
+          // and be surprised by counter-intuitive results
+          this.pagination.sortBy = [null]
+        }
+
+        // prevent triggering multiple times the same request
+        const paramsStr = JSON.stringify(this.params)
+        if (paramsStr === this.lastParams) return
+        this.lastParams = paramsStr
 
         // this.data = {}
         this.loading = true
