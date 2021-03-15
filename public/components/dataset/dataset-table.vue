@@ -478,6 +478,7 @@
           this.pagination.sortBy = [null]
         }
 
+        // prevent triggering multiple times the same request
         const paramsStr = JSON.stringify(this.params)
         if (paramsStr === this.lastParams) return
         this.lastParams = paramsStr

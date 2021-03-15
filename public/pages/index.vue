@@ -220,26 +220,17 @@
 
       this.stats = await this.$axios.$get('api/v1/stats')
 
+      const owner = `${this.activeAccount.type}:${this.activeAccount.id}`
       this.activity = await this.$axios.$get('api/v1/activity', {
-        params: {
-          size: 8,
-          owner: `${this.activeAccount.type}:${this.activeAccount.id}`,
-        },
+        params: { size: 8, owner },
       })
 
       this.datasets = await this.$axios.$get('api/v1/datasets', {
-        params: {
-          size: 11,
-          owner: `${this.activeAccount.type}:${this.activeAccount.id}`,
-          select: 'id,title,storage',
-          sort: 'storage.size:-1',
-        },
+        params: { size: 11, owner: owner, select: 'id,title,storage', sort: 'storage.size:-1' },
       })
 
       this.baseApps = (await this.$axios.$get('api/v1/base-applications', {
-        size: 10000,
-        privateAccess: this.activeAccount.type + ':' + this.activeAccount.id,
-        select: 'title,image',
+        params: { size: 10000, privateAccess: owner, select: 'title,image' },
       })).results
     },
     methods: {
