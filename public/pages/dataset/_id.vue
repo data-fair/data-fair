@@ -205,7 +205,7 @@
                     <v-icon>mdi-security</v-icon>&nbsp;&nbsp;Permissions
                   </v-tab>
 
-                  <v-tab v-if="publicationSites && publicationSites.length" href="#share-publication-sites">
+                  <v-tab href="#share-publication-sites">
                     <v-icon>mdi-presentation</v-icon>&nbsp;&nbsp;Portails
                   </v-tab>
 
@@ -288,7 +288,9 @@
         store.dispatch('dataset/setId', route.params.id),
         store.dispatch('fetchVocabulary'),
       ])
-      await store.dispatch('fetchPublicationSites', store.state.dataset.dataset.owner)
+      if (store.state.dataset.dataset) {
+        await store.dispatch('fetchPublicationSites', store.state.dataset.dataset.owner)
+      }
     },
     data: () => ({
       settingsSvg: require('~/assets/svg/Settings_Monochromatic.svg?raw'),

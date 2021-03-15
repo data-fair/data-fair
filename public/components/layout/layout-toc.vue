@@ -1,5 +1,6 @@
 <template>
   <v-list
+    v-if="sections && sections.length"
     v-scroll="onScroll"
     dense
     shaped

@@ -75,7 +75,7 @@
                     <v-icon>mdi-link</v-icon>&nbsp;&nbsp;Lien protégé
                   </v-tab>
 
-                  <v-tab v-if="publicationSites && publicationSites.length" href="#share-publication-sites">
+                  <v-tab href="#share-publication-sites">
                     <v-icon>mdi-presentation</v-icon>&nbsp;&nbsp;Portails
                   </v-tab>
 
@@ -160,7 +160,9 @@
     async fetch({ store, params, route }) {
       store.dispatch('application/clear')
       await store.dispatch('application/setId', route.params.id)
-      await store.dispatch('fetchPublicationSites', store.state.application.application.owner)
+      if (store.state.application.application) {
+        await store.dispatch('fetchPublicationSites', store.state.application.application.owner)
+      }
     },
     data: () => ({
       checklistSvg: require('~/assets/svg/Checklist_Two Color.svg?raw'),
