@@ -12,11 +12,15 @@
         @keyup.enter.native="writeParams"
         @click:append="writeParams"
       />
-      <!--<v-switch
+      <v-switch
+        v-if="user.adminMode"
         v-model="showShared"
-        label="inclure ressources partagées"
+        background-color="admin"
+        dark
+        label="inclure les resources des autres comptes"
+        hide-details
         @change="writeParams"
-      />-->
+      />
     </v-row>
     <v-row class="mb-1">
       <template v-for="filter in Object.keys(fullFilterLabels)">
