@@ -117,6 +117,7 @@
     }),
     computed: {
       ...mapState('session', ['user']),
+      ...mapGetters('session', ['activeAccount']),
       ...mapState(['env']),
       ...mapGetters(['canContrib']),
       plural() {
@@ -132,11 +133,14 @@
     watch: {
       facetsValues: {
         deep: true,
-        immediate: true,
         handler() {
           this.refresh()
         },
       },
+    },
+    mounted() {
+      this.filters = { owner: `${this.activeAccount.type}:${this.activeAccount.id}` }
+      this.refresh()
     },
     methods: {
       onScroll(e) {

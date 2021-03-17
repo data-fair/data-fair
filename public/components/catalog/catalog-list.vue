@@ -112,11 +112,13 @@
         filters: {},
         filtered: false,
         importCatalogSheet: !!this.$route.query.import,
+        lastParams: null,
         wwwSvg: require('~/assets/svg/World wide web_Two Color.svg?raw'),
       }
     },
     computed: {
       ...mapState('session', ['user']),
+      ...mapGetters('session', ['activeAccount']),
       ...mapState(['env']),
       ...mapGetters(['canAdmin']),
       plural() {
@@ -133,6 +135,7 @@
       },
     },
     created() {
+      this.filters = { owner: `${this.activeAccount.type}:${this.activeAccount.id}` }
       this.refresh()
     },
     methods: {
@@ -144,18 +147,26 @@
         }
       },
       async refresh(append) {
-        this.loading = true
         if (append) this.page += 1
         else this.page = 1
-        const catalogs = await this.$axios.$get('api/v1/catalogs', {
-          params:
-            { size: this.size, page: this.page, select: 'title,description', ...this.filters, facets: 'owner', sort: 'createdAt:-1' },
-        })
-        if (append) catalogs.results.forEach(r => this.catalogs.results.push(r))
-        else this.catalogs = catalogs
-        this.$store.dispatch('breadcrumbs', [{ text: `${this.catalogs.count} ${this.plural ? 'catalogues configurés' : 'catalogue configuré'}` }])
-        this.filtered = this.filters.q !== undefined
-        this.loading = false
+        const params = {
+          size: this.size,
+          page: this.page,
+          select: 'title,description',
+          ...this.filters,
+          facets: 'owner',
+          sort: 'createdAt:-1',
+        }
+        if (JSON.stringify(params) !== JSON.stringify(this.lastParams)) {
+          this.lastParams = params
+          this.loading = true
+          const catalogs = await this.$axios.$get('api/v1/catalogs', { params })
+          if (append) catalogs.results.forEach(r => this.catalogs.results.push(r))
+          else this.catalogs = catalogs
+          this.$store.dispatch('breadcrumbs', [{ text: `${this.catalogs.count} ${this.plural ? 'catalogues configurés' : 'catalogue configuré'}` }])
+          this.filtered = this.filters.q !== undefined
+          this.loading = false
+        }
       },
     },
   }

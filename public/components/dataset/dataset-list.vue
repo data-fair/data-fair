@@ -114,11 +114,14 @@
     watch: {
       facetsValues: {
         deep: true,
-        immediate: true,
         handler() {
           this.refresh()
         },
       },
+    },
+    mounted() {
+      this.filters = { owner: `${this.activeAccount.type}:${this.activeAccount.id}` }
+      this.refresh()
     },
     methods: {
       onScroll(e) {
