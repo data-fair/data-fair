@@ -23,7 +23,7 @@
               <v-toolbar-title>Nouvelle réutilisation externe</v-toolbar-title>
             </v-toolbar>
             <v-card-text>
-              <external-reuse-form :reuse="newReuse" />
+              <dataset-external-reuse-form :reuse="newReuse" />
             </v-card-text>
 
             <v-divider />
