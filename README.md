@@ -2,7 +2,7 @@
 
 *Findable, Accessible, Interoperable and Reusable Data*
 
-[Visit documentation website (french)](https://koumoul-dev.github.io/data-fair/)
+[Visit documentation website (french)](https://koumoul-dev.github.io/data-fair/2/)
 
 ## Development environment
 
