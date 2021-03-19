@@ -24,4 +24,4 @@ jobs:
       - run : |
           git config --global user.email "github-actions@koumoul.com"
           git config --global user.name "github-actions"
-      - run: ./node_modules/.bin/gh-pages-multi deploy -v -r https://${GITHUB_TOKEN}@github.com/koumoul-dev/data-fair.git -s doc-dist -t $MAJOR
+      - run: ./node_modules/.bin/gh-pages-multi deploy -v -r https://${{ secrets.GH_TOKEN }}@github.com/koumoul-dev/data-fair.git -s doc-dist -t $MAJOR
