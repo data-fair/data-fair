@@ -21,4 +21,4 @@ jobs:
       - run: npm i
       - run: export MAJOR=$(./node_modules/.bin/semver-extract --major --branch $GITHUB_REF)
       - run: DOC_BASE=/data-fair/$MAJOR/ npm run build-doc
-      - run: gh-pages-multi deploy -v -r https://${GITHUB_TOKEN}@github.com/koumoul-dev/data-fair.git -s doc-dist -t $MAJOR
+      - run: ./node_modules/.bin/gh-pages-multi deploy -v -r https://${GITHUB_TOKEN}@github.com/koumoul-dev/data-fair.git -s doc-dist -t $MAJOR
