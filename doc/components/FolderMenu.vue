@@ -1,10 +1,10 @@
 <template lang="html">
   <v-list dense expand>
-    <template v-for="chapter in chapters">
+    <template v-for="(chapter, i) in chapters">
       <v-list-group
         :key="chapter.id"
         no-action
-        :value="true"
+        :value="i === 0"
       >
         <v-list-item
           slot="activator"

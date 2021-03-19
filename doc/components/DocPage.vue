@@ -1,13 +1,18 @@
 <template lang="html">
-  <v-container
-    fluid
-    class="doc-page px-6"
-  >
+  <v-container class="doc-page">
     <v-row>
       <v-col>
         <h2 class="display1 my-4">
           {{ (filledContent.meta && filledContent.meta.title) || this.$route.params.id }}
         </h2>
+        <v-alert
+          v-if="filledContent.meta && filledContent.meta.published === false"
+          type="warning"
+          border="left"
+          outlined
+        >
+          Cette page est en chantier et les informations qu'elle contient peuvent ne pas être à jour.
+        </v-alert>
         <div
           v-show="ready"
           cols="12"

@@ -1,6 +1,6 @@
 <template lang="html">
-  <div class="pa-6 ma-6">
-    <h2 class="display-1 mb-6">
+  <v-container class="index-page">
+    <h2 class="display-1 my-6">
       Installation et configuration
       <v-btn :to="localePath({name: 'full-install'})" icon>
         <v-icon color="primary">
@@ -25,7 +25,7 @@
       </v-col>
     </v-row>
     <!-- {{ sections }} -->
-  </div>
+  </v-container>
 </template>
 
 <script>

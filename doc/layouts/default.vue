@@ -10,13 +10,9 @@
         nuxt
         exact
       >
-        <v-list-item-action>
-          <v-img
-            src="./logo.svg"
-            width="40"
-            contain
-          />
-        </v-list-item-action>
+        <v-list-item-avatar class="brand-logo">
+          <v-img src="./logo.png" />
+        </v-list-item-avatar>
         <v-list-item-content>
           <v-list-item-title class="headline font-weight-bold">
             Data Fair
@@ -122,6 +118,19 @@ body .v-application {
       margin-top: 4px;
     }
   }
+
+  a {
+    text-decoration: none;
+  }
+}
+
+.brand-logo.v-avatar {
+  border-radius: 0;
+  overflow: visible;
+}
+.brand-logo.v-avatar img {
+  width: 40px !important;
+  height: auto !important;
 }
 
 </style>

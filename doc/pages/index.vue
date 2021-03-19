@@ -1,6 +1,6 @@
 <template>
-  <v-container class="pa-6" fluid>
-    <v-row align="center" class="pb-6">
+  <v-container>
+    <v-row align="center" class="py-6">
       <v-col
         class="text-center"
         cols="12"
