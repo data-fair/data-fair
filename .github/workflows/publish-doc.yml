@@ -19,9 +19,10 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
       - run: npm i
-      - run: export MAJOR=$(./node_modules/.bin/semver-extract --major --branch $GITHUB_REF)
-      - run: DOC_BASE=/data-fair/$MAJOR/ npm run build-doc
-      - run : |
+      - run: |
+          export MAJOR=$(./node_modules/.bin/semver-extract --major --branch $GITHUB_REF)
+          echo "MAJOR=$MAJOR"
+          DOC_BASE=/data-fair/$MAJOR/ npm run build-doc
           git config --global user.email "github-actions@koumoul.com"
           git config --global user.name "github-actions"
-      - run: ./node_modules/.bin/gh-pages-multi deploy -v -r https://${{ secrets.GH_TOKEN }}@github.com/koumoul-dev/data-fair.git -s doc-dist -t $MAJOR
+          ./node_modules/.bin/gh-pages-multi deploy -v -r https://${{ secrets.GH_TOKEN }}@github.com/koumoul-dev/data-fair.git -s doc-dist -t $MAJOR
