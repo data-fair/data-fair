@@ -1,1 +1,0 @@
-__NUXT_JSONP__("/en/technical-architecture/backup", {data:[{}],fetch:[],mutations:[]});

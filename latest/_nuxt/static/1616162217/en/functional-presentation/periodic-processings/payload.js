@@ -1,1 +1,0 @@
-__NUXT_JSONP__("/en/functional-presentation/periodic-processings", {data:[{}],fetch:[],mutations:[]});

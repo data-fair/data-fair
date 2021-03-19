@@ -1,1 +1,0 @@
-__NUXT_JSONP__("/en/technical-architecture/portal", {data:[{}],fetch:[],mutations:[]});
