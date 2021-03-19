@@ -84,7 +84,7 @@ services:
   #########################
 
   data-fair:
-    image: koumoul/data-fair:0
+    image: koumoul/data-fair:2
     restart: always
     volumes:
       - data-fair-data:/webapp/data
@@ -100,8 +100,13 @@ services:
       - OPENAPI_VIEWER_URL=${PROTOCOL}://${DOMAIN}/api-doc/
       - THUMBOR_URL=${PROTOCOL}://${DOMAIN}/thumbor/
       - THUMBOR_KEY=${SECRET}
+      - CAPTURE_URL=${PROTOCOL}://${DOMAIN}/capture/
+      - NOTIFY_URL=${PROTOCOL}://${DOMAIN}/notify
+      - NOTIFY_WS_URL=wss://${DOMAIN}/notify
       - MONGO_URL=mongodb://mongo:27017/data-fair
       - ES_HOST=elasticsearch:9200
+      - SECRET_IDENTITIES=${SECRET}
+      - SECRET_NOTIFICATIONS=${SECRET}
 
   simple-directory:
     image: koumoul/simple-directory:1
@@ -123,6 +128,9 @@ services:
       - MAILS_TRANSPORT=${MAILS_TRANSPORT}
       - MAILDEV_ACTIVE=${MAILDEV}
       - MAILDEV_URL=${PROTOCOL}://${DOMAIN}/mails/
+      - I18N_LOCALES=["fr"]
+      - PASSWORDLESS=false
+      - USER_SELF_DELETE=true
 
   openapi-viewer:
     image: koumoul/openapi-viewer:1
@@ -131,13 +139,26 @@ services:
       - "traefik.enable=true"
       - "traefik.frontend.rule=PathPrefixStrip:/api-doc/"
 
-
   capture:
     image: koumoul/capture:1
     restart: 'always'
     shm_size: '1gb'
     environment:
       - PUBLIC_URL=${PROTOCOL}://${DOMAIN}/capture
+      - DIRECTORY_URL=${PROTOCOL}://${DOMAIN}/simple-directory
+
+  notify:
+    image: koumoul/notify:0
+    restart: 'always'
+    environment:
+      - PUBLIC_URL=${PROTOCOL}://${DOMAIN}/notify
+      - WS_PUBLIC_URL=wss://${DOMAIN}/notify
+      - DIRECTORY_URL=${PROTOCOL}://${DOMAIN}/simple-directory
+      - OPENAPI_VIEWER_URL=${PROTOCOL}://${DOMAIN}/api-doc/
+      - MONGO_URL=mongodb://mongo:27017/notify
+      - SECRET_IDENTITIES=${SECRET}
+      - SECRET_NOTIFICATIONS=${SECRET}
+      - SECRET_SENDMAILS=${SECRET}
 
   thumbor:
     image: apsl/thumbor:6.4.2
@@ -155,7 +176,7 @@ services:
   #########################
 
   elasticsearch:
-    image: koumoul/data-fair-elasticsearch:6.3.2
+    image: koumoul/data-fair-elasticsearch:7.10.1
     restart: always
     volumes:
       - elasticsearch-data:/usr/share/elasticsearch/data
@@ -182,12 +203,15 @@ Récupérer les dernières versions des images compatibles:
 docker-compose pull
 ```
 
-Configurez quelques variables d'environnement nécessaires:
+Préparez un fichier `.env` à côté du fichier `docker-compose.yml`:
 
 ```sh
+# quelques variables d'environnement nécessaires
 export ADMINS='["alban.mouton@koumoul.com"]'
 export SECRET=type some random string here
 ```
+
+La suite du contenu du fichier `.env` est discutée dans les sous-sections suivantes.
 
 ### Variante 1 : HTTP local avec envoi de mail virtuel
 
@@ -196,15 +220,16 @@ Cette variante est utile pour se faire la main sur la logique de déploiement et
 Créez une paire identifiant / mot de passe pour la protection de la boite mail locale:
 
 ```sh
-export MAILDEV_BASIC="$(htpasswd -nbm user passwd)"
+htpasswd -nbm user passwd
 ```
 
-Configurez les autres variables d'environnement puis lancez les services:
+Puis copiez son contenu dans le fichier `.env`:
 
 ```sh
-export MAILDEV=true
-export PROTOCOL=http
-export DOMAIN=localhost
+MAILDEV_BASIC="résultat de htpasswd"
+MAILDEV=true
+PROTOCOL=http
+DOMAIN=localhost
 ```
 
 Lancez les services:
@@ -230,17 +255,29 @@ Vous pouvez suivre les instructions précédentes. Mais les variables d'environn
 
 La variable MAILS_TRANSPORT attend un objet JSON de configuration compatible avec la librairie [nodemailer](https://nodemailer.com/smtp/)
 
+Modifiez le contenu du fichier `.env`:
+
 ```sh
-export ADMINS='["alban.mouton@koumoul.com"]'
-export MAILDEV=false
-export PROTOCOL=http
-export DOMAIN=MON NOM DE MACHINE
-export MAILS_TRANSPORT='{"service": "Mailgun", "auth": {...}}'
+ADMINS='["alban.mouton@koumoul.com"]'
+MAILDEV=false
+PROTOCOL=http
+DOMAIN="nom de la machine"
+MAILS_TRANSPORT='{"service": "Mailgun", "auth": {...}}'
+```
+
+Lancez les services:
+
+```sh
 docker-compose up -d --force-recreate
+```
+
+Vérifiez l'état des services:
+
+```sh
 docker-compose ps
 ```
 
-Et accédez sur "http://MON_NOM_DE_MACHINE".
+Et accédez sur "http://nom de la machine".
 
 ### Variante 3 : HTTPS sur un serveur
 
@@ -259,7 +296,5 @@ La mise à jour s'effectue en lançant les 2 commandes suivantes :
 docker-compose pull
 docker-compose up -d
 ```
-
-Pensez bien à re-définir les variables d'environnement à chaque fois que vous faites cette opération. Pour des changements de versions majeures, vous pouvez avoir besoin de mettre à jour le contenu du fichier docker-compose.yml
 
 Pour plus d'informations sur les commandes disponibles, vous pouvez [consulter la documentation](https://docs.docker.com/compose/).
