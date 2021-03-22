@@ -74,8 +74,8 @@ exports.initServer = async (wss, db, session) => {
       })
 
       ws.on('close', () => {
-        Object.keys(subscribers).forEach(sub => {
-          delete sub[clientId]
+        Object.keys(subscribers).forEach(channel => {
+          delete subscribers[channel][clientId]
         })
         delete clients[clientId]
       })
