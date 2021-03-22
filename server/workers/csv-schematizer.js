@@ -10,22 +10,11 @@ exports.process = async function(app, dataset) {
 
   // get a random sampling to test values type on fewer elements
   debug('extract dataset sample')
-  const sample = await datasetUtils.sample(dataset)
-  const firstLine = sample[0]
-  if (!firstLine) throw new Error('Èchec de l\'échantillonage des données')
-  // Convert an array of objects to an object of sets
-  // Each set will hold the differents values for each field
-  const myCSVObject = sample.reduce((acc, current) => {
-    // TODO We should not add items to the set if it's size is > 100 or the item's length > 50 (numbers may be tweaked)
-    Object.keys(acc).forEach(k => acc[k].add(current[k]))
-    return acc
-  }, Object.assign({}, ...Object.keys(firstLine).map(k => ({
-    [k]: new Set([firstLine[k]]),
-  }))))
+  const sampleValues = await datasetUtils.sampleValues(dataset)
   debug('list attachments')
   // Now we can extract infos for each field
   const attachments = await datasetUtils.lsAttachments(dataset)
-  Object.keys(myCSVObject)
+  Object.keys(sampleValues)
     // do not keep columns with empty string as header
     .filter(field => !!field)
     .forEach(field => {
@@ -33,7 +22,7 @@ exports.process = async function(app, dataset) {
       const fileField = dataset.file.schema.find(f => f.key === escapedKey)
       if (!fileField) throw new Error(`Champ ${field} présent dans la donnée mais absent de l'analyse initiale du fichier`)
       const existingField = dataset.schema && dataset.schema.find(f => f.key === escapedKey)
-      Object.assign(fileField, fieldsSniffer.sniff(myCSVObject[field], attachments, existingField))
+      Object.assign(fileField, fieldsSniffer.sniff(sampleValues[field], attachments, existingField))
     })
   if (attachments.length && !dataset.file.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')) {
     throw new Error(`Vous avez chargé des pièces jointes, mais aucune colonne ne contient les chemins vers ces pièces jointes. Valeurs attendues : ${attachments.slice(0, 3).join(', ')}.`)

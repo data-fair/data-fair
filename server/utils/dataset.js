@@ -8,7 +8,6 @@ const csv = require('csv-parser')
 const JSONStream = require('JSONStream')
 const dir = require('node-dir')
 const { Writable } = require('stream')
-const shuffle = require('shuffle-array')
 const csvStringify = require('csv-stringify')
 const flatten = require('flat')
 const pump = require('util').promisify(require('pump'))
@@ -296,21 +295,27 @@ exports.writeFullFile = async (db, es, dataset) => {
   await fs.move(tmpFullFile, exports.fullFileName(dataset), { overwrite: true })
 }
 
-exports.sample = async (dataset) => {
+exports.sampleValues = async (dataset) => {
   let currentLine = 0
-  const linesNumber = [...Array(dataset.file.props.numLines).keys()]
-  shuffle(linesNumber)
-  const sampleLineNumbers = new Set(linesNumber.slice(0, Math.min(dataset.file.props.numLines, 4000)))
-  const sample = []
+  const sampleValues = {}
   await pump(exports.readStream(dataset, true), new Writable({
     objectMode: true,
     write(chunk, encoding, callback) {
-      if (sampleLineNumbers.has(currentLine)) sample.push(chunk)
+      for (const key of Object.keys(chunk)) {
+        if (key === 'Déchets de pierres et sables') console.log(chunk[key])
+        sampleValues[key] = sampleValues[key] || new Set([])
+        // stop if we already have a lot of samples
+        if (sampleValues[key].length > 1000) continue
+        // ignore empty of too long values to prevent costly sniffing
+        if (!chunk[key] || chunk[key].length > 200) continue
+        sampleValues[key].add(chunk[key])
+      }
       currentLine += 1
       callback()
     },
   }))
-  return sample
+  if (currentLine === 0) throw new Error('Èchec de l\'échantillonage des données')
+  return sampleValues
 }
 
 exports.countLines = async (dataset) => {
