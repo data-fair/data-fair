@@ -52,33 +52,7 @@ const storage = multer.diskStorage({
 
 const allowedTypes = exports.allowedTypes = new Set(['text/csv', 'application/geo+json', ...tabularTypes, ...geographicalTypes, ...archiveTypes, ...calendarTypes])
 
-// Form data fields are sent as strings, some have to be parsed as objects or arrays
-const fixFormBody = (body) => {
-  if (body.body) {
-    try {
-      return JSON.parse(body.body)
-    } catch (err) {
-      throw createError('400', `Invalid JSON in body part, ${err.message}`)
-    }
-  }
-  Object.keys(datasetSchema.properties)
-    .filter(key => body[key] !== undefined)
-    .filter(key => ['object', 'array'].includes(datasetSchema.properties[key].type))
-    .forEach(key => {
-      if (body[key].trim() === '') {
-        delete body[key]
-      } else {
-        try {
-          body[key] = JSON.parse(body[key])
-        } catch (err) {
-          throw createError('400', `Invalid JSON in part "${key}", ${err.message}`)
-        }
-      }
-    })
-  return body
-}
-
-exports.uploadFile = (validate) => {
+exports.uploadFile = () => {
   return multer({
     limits: {
       files: 2, // no more than the dataset file + attachments archive
@@ -87,16 +61,6 @@ exports.uploadFile = (validate) => {
     fileFilter: async function fileFilter(req, file, cb) {
       try {
         debug('Accept file ?', file.originalname)
-        // Input verification, only performed once, not for attachments and dataset both
-        if (!req.inputChecked) {
-          if (!req.user) throw createError(401)
-          if (!req.body) throw createError(400, 'Missing body')
-          req.body = fixFormBody(req.body)
-          const valid = validate(req.body)
-          if (!valid) throw createError(400, JSON.stringify(validate.errors))
-          req.inputChecked = true
-        }
-
         // mime type is broken on windows it seems.. detect based on extension instead
         file.mimetype = mime.lookup(file.originalname) || fallbackMimeTypes[file.originalname.split('.').pop()] || file.originalname.split('.').pop()
 
@@ -115,4 +79,39 @@ exports.uploadFile = (validate) => {
       }
     },
   }).any()
+}
+
+const getFormBody = (body) => {
+  if (body.body) {
+    try {
+      return JSON.parse(body.body)
+    } catch (err) {
+      throw createError('400', `Invalid JSON in body part, ${err.message}`)
+    }
+  }
+  Object.keys(datasetSchema.properties)
+    .filter(key => typeof body[key] === 'string')
+    .filter(key => ['object', 'array'].includes(datasetSchema.properties[key].type))
+    .forEach(key => {
+      console.log(body[key])
+      if (body[key].trim() === '') {
+        delete body[key]
+      } else {
+        try {
+          body[key] = JSON.parse(body[key])
+        } catch (err) {
+          throw createError('400', `Invalid JSON in part "${key}", ${err.message}`)
+        }
+      }
+    })
+  return body
+}
+
+// Form data fields are sent as strings, some have to be parsed as objects or arrays
+exports.fixFormBody = (validate) => (req, res, next) => {
+  if (!req.body) return res.status(400).send('Missing body')
+  req.body = getFormBody(req.body)
+  const valid = validate(req.body)
+  if (!valid) return res.status(400).send(validate.errors)
+  next()
 }

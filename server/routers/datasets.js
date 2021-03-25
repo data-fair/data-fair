@@ -392,7 +392,7 @@ const beforeUpload = asyncWrap(async(req, res, next) => {
   if (!permissions.canDoForOwner(usersUtils.owner(req), 'datasets', 'post', req.user, req.app.get('db'))) return res.sendStatus(403)
   next()
 })
-router.post('', beforeUpload, checkStorage(true), filesUtils.uploadFile(validatePost), asyncWrap(async(req, res) => {
+router.post('', beforeUpload, checkStorage(true), filesUtils.uploadFile(), filesUtils.fixFormBody(validatePost), asyncWrap(async(req, res) => {
   req.files = req.files || []
   debugFiles('POST datasets uploaded some files', req.files)
   try {
@@ -563,8 +563,8 @@ const updateDataset = asyncWrap(async(req, res) => {
     throw err
   }
 }, { keepalive: true })
-router.post('/:datasetId', attemptInsert, readDataset(['finalized', 'error']), permissions.middleware('writeData', 'write'), checkStorage(true), filesUtils.uploadFile(validatePatch), updateDataset)
-router.put('/:datasetId', attemptInsert, readDataset(['finalized', 'error']), permissions.middleware('writeData', 'write'), checkStorage(true), filesUtils.uploadFile(validatePatch), updateDataset)
+router.post('/:datasetId', attemptInsert, readDataset(['finalized', 'error']), permissions.middleware('writeData', 'write'), checkStorage(true), filesUtils.uploadFile(), filesUtils.fixFormBody(validatePost), updateDataset)
+router.put('/:datasetId', attemptInsert, readDataset(['finalized', 'error']), permissions.middleware('writeData', 'write'), checkStorage(true), filesUtils.uploadFile(), filesUtils.fixFormBody(validatePost), updateDataset)
 
 // CRUD operations for REST datasets
 function isRest(req, res, next) {

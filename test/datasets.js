@@ -387,9 +387,8 @@ describe('datasets', () => {
       delete f.format
     })
     const form2 = new FormData()
-    // TODO : investigate why this fails when we swap the two following lines
-    form2.append('schema', JSON.stringify(schema))
     form2.append('file', datasetFd, 'dataset-name.csv')
+    form2.append('schema', JSON.stringify(schema))
     res = await ax.post('/api/v1/datasets/dataset-name', form2, { headers: testUtils.formHeaders(form2) })
     await workers.hook('finalizer/dataset-name')
     res = await ax.get('/api/v1/datasets/dataset-name')
