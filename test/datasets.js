@@ -370,4 +370,29 @@ describe('datasets', () => {
     assert.equal(dataset.schema[7].key, 'number3')
     assert.equal(dataset.schema[7].type, 'number')
   })
+
+  it('Upload dataset and update it\'s data and schema', async () => {
+    const ax = global.ax.dmeadus
+    const form = new FormData()
+    form.append('file', datasetFd, 'dataset-name.csv')
+    let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
+    await workers.hook('finalizer/dataset-name')
+    res = await ax.get('/api/v1/datasets/dataset-name')
+    const schema = res.data.schema.filter(f => !f['x-calculated'])
+    schema.forEach(f => {
+      delete f.enum
+      delete f['x-cardinality']
+      f.ignoreDetection = true
+      f.type = 'string'
+      delete f.format
+    })
+    const form2 = new FormData()
+    // TODO : investigate why this fails when we swap the two following lines
+    form2.append('schema', JSON.stringify(schema))
+    form2.append('file', datasetFd, 'dataset-name.csv')
+    res = await ax.post('/api/v1/datasets/dataset-name', form2, { headers: testUtils.formHeaders(form2) })
+    await workers.hook('finalizer/dataset-name')
+    res = await ax.get('/api/v1/datasets/dataset-name')
+    assert.equal(res.data.schema.filter(f => f.ignoreDetection).length, 4)
+  })
 })
