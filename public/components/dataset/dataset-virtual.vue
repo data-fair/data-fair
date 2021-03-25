@@ -1,5 +1,5 @@
 <template lang="html">
-  <v-container fluid>
+  <v-container fluid class="dataset-virtual">
     <h2 class="text-h6 mt-3 mb-3">
       Jeux de données agrégés
     </h2>
@@ -27,7 +27,7 @@
     />
     <div
       v-else
-      style="height: 2px;"
+      style="max-height: 2px;"
     />
 
     <v-card outlined>
@@ -35,16 +35,20 @@
         :items="dataset.virtual.children"
         hide-default-header
         hide-default-footer
+        :items-per-page="1000"
+        height="300"
       >
         <template slot="no-data">
           Aucun jeu de données agrégé pour l'instant.
         </template>
         <template v-slot:item="{item, index}">
           <tr v-if="childrenById[item]">
-            <td class="pt-3">
-              <span class="subheading">
-                <nuxt-link :to="`/dataset/${item}`">{{ childrenById[item].title }} ({{ childrenById[item].id }})</nuxt-link>
-              </span>
+            <td class="py-2">
+              <div class="subheading">
+                <nuxt-link :to="`/dataset/${item}`">
+                  {{ childrenById[item].title }} ({{ childrenById[item].id }})
+                </nuxt-link>
+              </div>
               <v-select
                 :value="null"
                 :items="childrenById[item].schema.filter(f => !f['x-calculated'] && !existingFields.includes(f.key))"
@@ -54,6 +58,10 @@
                 label="Ajouter une colonne"
                 return-object
                 style="max-width: 400px;"
+                hide-details
+                dense
+                solo
+                flat
                 @change="addField"
               />
             </td>
@@ -82,6 +90,7 @@
       v-else
       three-line
       outlined
+      class="py-0"
     >
       <draggable
         v-model="dataset.schema"
@@ -101,17 +110,20 @@
               mdi-sort
             </v-icon>
           </v-list-item-avatar>
-          <v-list-item-content>
+          <v-list-item-content class="py-1">
             <v-list-item-title>{{ field.title || field['x-originalName'] || field.key }} ({{ field.key }})</v-list-item-title>
             <v-combobox
               v-if="filtersByKey[field.key]"
               v-model="filtersByKey[field.key].values"
               :items="valuesByKey[field.key]"
               label="Restreindre à des valeurs"
+              outlined
               chips
               clearable
               multiple
               small-chips
+              hide-details
+              dense
               @change="saveFilters"
             >
               <template v-slot:selection="data">
@@ -270,7 +282,8 @@
         await this.patchAndCommit({ virtual: { ...this.dataset.virtual, filters: this.dataset.virtual.filters } })
       },
       async addField(field) {
-        await this.patchAndCommit({ schema: this.dataset.schema.concat({ key: field.key, title: field.title }) })
+        const prop = { key: field.key, title: field.title, type: field.type, format: field.format }
+        await this.patchAndCommit({ schema: this.dataset.schema.concat(prop) })
       },
       async deleteField(field) {
         await this.patchAndCommit({ schema: this.dataset.schema.filter(f => f.key !== field.key) })
@@ -282,5 +295,9 @@
 <style lang="css">
 .handle {
   cursor: grab;
+}
+
+.dataset-virtual tbody tr:hover {
+  background-color: transparent !important;
 }
 </style>
