@@ -267,7 +267,7 @@
     </v-col>
 
     <layout-navigation-right v-if="this.$vuetify.breakpoint.lgAndUp">
-      <dataset-actions />
+      <dataset-actions :publication-sites="publicationSites" />
       <layout-toc :sections="sections" />
     </layout-navigation-right>
     <layout-actions-button v-else>

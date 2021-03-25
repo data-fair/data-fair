@@ -52,6 +52,23 @@
         <v-list-item-title>Intégrer dans un site</v-list-item-title>
       </v-list-item-content>
     </v-list-item>
+    <template v-if="!error">
+      <v-list-item
+        v-for="link in publicationSitesLinks"
+        :key="link.url"
+        :href="link.url"
+        target="_blank"
+      >
+        <v-list-item-icon>
+          <v-icon color="primary">
+            mdi-open-in-new
+          </v-icon>
+        </v-list-item-icon>
+        <v-list-item-content>
+          <v-list-item-title>Voir sur {{ link.title }}</v-list-item-title>
+        </v-list-item-content>
+      </v-list-item>
+    </template>
     <v-list-item
       v-if="can('readApiDoc') && !error"
       @click="showAPIDialog = true"
@@ -286,6 +303,12 @@
   import eventBus from '~/event-bus'
 
   export default {
+    props: {
+      publicationSites: {
+        type: Array,
+        default: () => [],
+      },
+    },
     data: () => ({
       showDeleteDialog: false,
       showUploadDialog: false,
@@ -303,6 +326,17 @@
       ...mapGetters('dataset', ['can', 'resourceUrl']),
       previewLink() {
         return this.dataset && this.dataset.previews.find(p => p.id === this.previewId).href
+      },
+      publicationSitesLinks() {
+        if (!this.dataset.publicationSites) return []
+        return this.dataset.publicationSites.map(dps => {
+          const site = this.publicationSites.find(site => dps === `${site.type}:${site.id}`)
+          if (!site) return null
+          return {
+            url: site.datasetUrlTemplate.replace('{id}', this.dataset.id),
+            title: site.title || (site.url && site.url.replace('http://', '').replace('https://', '')) || site.id,
+          }
+        })
       },
     },
     methods: {
