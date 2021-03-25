@@ -188,7 +188,7 @@
       ...mapGetters('session', ['activeAccount']),
     },
     methods: {
-      ...mapActions('session', ['logout', 'login', 'setAdminMode', 'switchOrganization']),
+      ...mapActions('session', ['logout', 'login', 'switchOrganization']),
       reload() {
         window.location.reload()
       },
@@ -196,6 +196,10 @@
         const maxAge = 60 * 60 * 24 * 100 // 100 days
         this.$cookies.set('theme_dark', '' + value, { path: '/', domain: this.env.sessionDomain, maxAge })
         this.reload()
+      },
+      setAdminMode(value) {
+        const redirect = value ? null : this.env.publicUrl
+        this.$store.dispatch('session/setAdminMode', { value, redirect })
       },
     },
   }
