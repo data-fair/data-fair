@@ -321,3 +321,29 @@ exports.prepareResultItem = (hit, dataset, query) => {
 
   return res
 }
+
+// try to produce a somewhat readable error message from a structured error from elasticsearch
+exports.errorMessage = (err) => {
+  const errBody = (err.body && err.body.error) || (err.meta && err.meta.body && err.meta.body.error) || err.error
+  if (!errBody) return err.message || err
+  const parts = []
+  if (errBody.reason) {
+    parts.push(errBody.reason)
+  }
+  if (errBody.root_cause && errBody.root_cause.reason && !parts.includes(errBody.root_cause.reason)) {
+    parts.push(errBody.root_cause.reason)
+  }
+  if (errBody.root_cause && errBody.root_cause[0] && errBody.root_cause[0].reason && !parts.includes(errBody.root_cause[0].reason)) {
+    parts.push(errBody.root_cause[0].reason)
+  }
+  if (errBody.failed_shards && errBody.failed_shards[0] && errBody.failed_shards[0].reason) {
+    const shardReason = errBody.failed_shards[0].reason
+    if (shardReason.caused_by && shardReason.caused_by.reason && !parts.includes(shardReason.caused_by.reason)) {
+      parts.push(shardReason.caused_by.reason)
+    } else {
+      const reason = shardReason.reason || shardReason
+      if (!parts.includes(reason)) parts.push(reason)
+    }
+  }
+  return parts.join(' - ')
+}

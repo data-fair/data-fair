@@ -649,7 +649,7 @@ router.post('/:datasetId/master-data/bulk-searchs/:bulkSearchId', readDataset(),
 // Error from ES backend should be stored in the journal
 async function manageESError(req, err) {
   console.error(`elasticsearch query error ${req.dataset.id}`, err)
-  const message = esUtils.errorMessage(err) || err.message
+  const message = esUtils.errorMessage(err)
 
   // We used to store an error on the data whenever a dataset encoutered an elasticsearch error
   // but this can end up storing too many errors when the cluster is in a bad state
