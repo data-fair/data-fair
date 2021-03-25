@@ -132,7 +132,12 @@
         try {
           const configurationDraft = {}
           if (this.dataset) {
-            configurationDraft.datasets = [{ href: this.dataset.href, title: this.dataset.title, id: this.dataset.id }]
+            configurationDraft.datasets = [{
+              href: this.dataset.href,
+              title: this.dataset.title,
+              id: this.dataset.id,
+              schema: this.dataset.schema,
+            }]
           }
           const application = await this.$axios.$post('api/v1/applications', {
             url: this.baseApp.url,
