@@ -27,8 +27,9 @@ exports.process = async function(app, dataset) {
     try {
       indexName = await es.initDatasetIndex(esClient, dataset)
     } catch (err) {
-      const errBody = err.meta && err.meta.body && err.meta.body.error
-      throw new Error(es.errorMessage(errBody) || err.message)
+      debug('elasticsearch init index error', err)
+      const message = es.errorMessage(err) || err.message
+      throw new Error(message)
     }
     debug(`Initialize new dataset index ${indexName}`)
   }

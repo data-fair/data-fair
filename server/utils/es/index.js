@@ -15,7 +15,9 @@ exports.wordsAgg = require('./words-agg')
 exports.maxAgg = smallAggs.max
 exports.minAgg = smallAggs.min
 exports.indexStream = require('./index-stream')
-exports.errorMessage = (errBody) => {
+exports.errorMessage = (err) => {
+  if (!err) return
+  const errBody = (err.body && err.body.error) || (err.meta && err.meta.body && err.meta.body.error)
   if (!errBody) return
   let message
   if (errBody.reason) message = errBody.reason
