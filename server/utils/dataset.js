@@ -305,7 +305,7 @@ exports.sampleValues = async (dataset) => {
         if (key === 'Déchets de pierres et sables') console.log(chunk[key])
         sampleValues[key] = sampleValues[key] || new Set([])
         // stop if we already have a lot of samples
-        if (sampleValues[key].length > 1000) continue
+        if (sampleValues[key].size > 1000) continue
         // ignore empty of too long values to prevent costly sniffing
         if (!chunk[key] || chunk[key].length > 200) continue
         sampleValues[key].add(chunk[key])
