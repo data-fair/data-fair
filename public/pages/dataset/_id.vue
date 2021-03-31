@@ -272,7 +272,7 @@
     </layout-navigation-right>
     <layout-actions-button v-else>
       <template v-slot:actions>
-        <dataset-actions />
+        <dataset-actions :publication-sites="publicationSites" />
       </template>
     </layout-actions-button>
   </v-row>
@@ -307,9 +307,11 @@
       ...mapState('session', ['user']),
       ...mapGetters('session', ['activeAccount']),
       publicationSites() {
+        if (!this.dataset) return []
         return this.$store.getters.ownerPublicationSites(this.dataset.owner)
       },
       fileProperty() {
+        if (!this.dataset) return
         return this.dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')
       },
       sections() {

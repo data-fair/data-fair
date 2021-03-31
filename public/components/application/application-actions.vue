@@ -32,6 +32,24 @@
       <v-list-item-title>Intégrer dans un site</v-list-item-title>
     </v-list-item>
 
+    <template v-if="!error">
+      <v-list-item
+        v-for="link in publicationSitesLinks"
+        :key="link.url"
+        :href="link.url"
+        target="_blank"
+      >
+        <v-list-item-icon>
+          <v-icon color="primary">
+            mdi-open-in-new
+          </v-icon>
+        </v-list-item-icon>
+        <v-list-item-content>
+          <v-list-item-title>Voir sur {{ link.title }}</v-list-item-title>
+        </v-list-item-content>
+      </v-list-item>
+    </template>
+
     <v-list-item
       v-if="can('writeConfig')"
       @click="showCaptureDialog = true"
@@ -248,6 +266,12 @@
   import { mapState, mapActions, mapGetters } from 'vuex'
 
   export default {
+    props: {
+      publicationSites: {
+        type: Array,
+        default: () => [],
+      },
+    },
     data: () => ({
       showDeleteDialog: false,
       showIntegrationDialog: false,
@@ -262,6 +286,17 @@
       ...mapState(['env']),
       ...mapState('application', ['application', 'api']),
       ...mapGetters('application', ['resourceUrl', 'can', 'applicationLink']),
+      publicationSitesLinks() {
+        if (!this.application.publicationSites) return []
+        return this.application.publicationSites.map(dps => {
+          const site = this.publicationSites.find(site => dps === `${site.type}:${site.id}`)
+          if (!site) return null
+          return {
+            url: site.applicationUrlTemplate.replace('{id}', this.application.id),
+            title: site.title || (site.url && site.url.replace('http://', '').replace('https://', '')) || site.id,
+          }
+        })
+      },
     },
     methods: {
       ...mapActions('application', ['setId', 'patch', 'remove', 'clear', 'changeOwner', 'subscribe']),

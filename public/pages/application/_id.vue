@@ -142,12 +142,12 @@
       </v-container>
     </v-col>
     <layout-navigation-right v-if="this.$vuetify.breakpoint.lgAndUp">
-      <application-actions />
+      <application-actions :publication-sites="publicationSites" />
       <layout-toc :sections="sections" />
     </layout-navigation-right>
     <layout-actions-button v-else>
       <template v-slot:actions>
-        <application-actions />
+        <application-actions :publication-sites="publicationSites" />
       </template>
     </layout-actions-button>
   </v-row>
@@ -175,6 +175,7 @@
       ...mapState('application', ['application', 'api', 'journal', 'prodBaseApp', 'error']),
       ...mapGetters('application', ['resourceUrl', 'can', 'applicationLink', 'hasPrivateDatasets']),
       publicationSites() {
+        if (!this.application) return []
         return this.$store.getters.ownerPublicationSites(this.application.owner)
       },
       sections() {
