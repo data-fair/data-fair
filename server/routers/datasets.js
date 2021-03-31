@@ -187,19 +187,42 @@ router.get('/:datasetId', readDataset(), applicationKey, permissions.middleware(
 // retrieve only the schema.. Mostly useful for easy select fields
 router.get('/:datasetId/schema', readDataset(), applicationKey, permissions.middleware('readDescription', 'read'), cacheHeaders.noCache, (req, res, next) => {
   let schema = req.dataset.schema
-  schema.forEach(field => {
-    field.label = field.title || field['x-originalName'] || field.key
-  })
-  if (req.query.type) {
-    const types = req.query.type.split(',')
-    schema = schema.filter(field => types.includes(field.type))
-  }
-  if (req.query.format) {
-    const formats = req.query.format.split(',')
-    schema = schema.filter(field => formats.includes(field.format))
-  }
-  if (req.query.enum === 'true') {
-    schema = schema.filter(field => !!field.enum)
+  if (req.query.mimeType === 'application/tableschema+json') {
+    schema = {
+      fields: schema.filter(f => !f['x-calculated'])
+      .filter(f => !f['x-extension'])
+      .map(f => {
+        const field = { name: f.key, title: f.title || f['x-originalName'], type: f.type }
+        if (f.description) field.description = f.description
+        // if (f.format) field.format = f.format // commented besause uri-reference format is not in tableschema
+        if (f['x-refersTo']) field.rdfType = f['x-refersTo']
+        return field
+      }),
+    }
+  } else if (req.query.mimeType === 'application/schema+json') {
+    schema = {
+      type: 'object',
+      properties: schema
+        .filter(f => !f['x-calculated'])
+        .filter(f => !f['x-extension'])
+        // .map(f => ({ ...f, maxLength: 10000 }))
+        .reduce((a, f) => { a[f.key] = f; return a }, {}),
+      }
+  } else {
+    schema.forEach(field => {
+      field.label = field.title || field['x-originalName'] || field.key
+    })
+    if (req.query.type) {
+      const types = req.query.type.split(',')
+      schema = schema.filter(field => types.includes(field.type))
+    }
+    if (req.query.format) {
+      const formats = req.query.format.split(',')
+      schema = schema.filter(field => formats.includes(field.format))
+    }
+    if (req.query.enum === 'true') {
+      schema = schema.filter(field => !!field.enum)
+    }
   }
   res.status(200).send(schema)
 })

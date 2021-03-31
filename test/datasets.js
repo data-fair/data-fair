@@ -8,6 +8,8 @@ const testUtils = require('./resources/test-utils')
 
 const workers = require('../server/workers')
 
+const { validate } = require('tableschema')
+
 let notifier
 describe('datasets', () => {
   before('prepare notifier', async () => {
@@ -268,6 +270,9 @@ describe('datasets', () => {
 
     await testUtils.timeout(eventToPromise(notifier, 'webhook'), 4000, 'third webhook not received')
 
+    res = await ax.get('/api/v1/datasets/' + datasetId + '/schema?mimeType=application/tableschema%2Bjson')
+    const { valid } = await validate(res.data)
+    assert.equal(valid, true)
     // Delete the dataset
     res = await ax.delete('/api/v1/datasets/' + datasetId)
     assert.equal(res.status, 204)
