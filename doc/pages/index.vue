@@ -54,7 +54,7 @@
         :width="$vuetify.breakpoint.lgAndUp ? 800 : 560"
         :height="$vuetify.breakpoint.lgAndUp ? 450 : 315"
         sandbox="allow-same-origin allow-scripts allow-popups"
-        src="https://videos.koumoul.com/videos/embed/22162d96-fe33-4cdd-97b6-15041ae6ec46?title=0&warningTitle=0&peertubeLink=0&autoplay=1"
+        src="https://videos.koumoul.com/videos/embed/88b39efd-2023-4f5e-84f4-748cb22c56f1?title=0&warningTitle=0&peertubeLink=0&autoplay=1"
         frameborder="0"
         allowfullscreen
       />
