@@ -32,6 +32,7 @@
             :item-text="(baseApp => `${baseApp.title} (${baseApp.version})`)"
             item-value="url"
             label="Changer de version"
+            @change="saveDraft"
           />
           <v-form
             v-if="draftSchema && editConfig"
@@ -44,7 +45,7 @@
               v-model="editConfig"
               :schema="draftSchema"
               :options="vjsfOptions"
-              @error="error => eventBus.$emit('notification', {error})"
+              @change="saveDraft"
             />
             <v-row class="mt-3">
               <v-spacer />
@@ -183,7 +184,6 @@
 </template>
 
 <script>
-  import debounce from 'debounce'
   import { mapState, mapActions, mapGetters } from 'vuex'
   import dotProp from 'dot-prop'
   import VJsf from '@koumoul/vjsf/lib/VJsf.js'
@@ -259,15 +259,6 @@
       config() {
         this.refreshProdPreview()
       },
-      editConfig: {
-        handler: debounce(function() {
-          this.saveDraft()
-        }, 200),
-        deep: true,
-      },
-      editUrl() {
-        this.saveDraft()
-      },
       async 'application.urlDraft'() {
         await this.fetchSchemas()
         this.refreshDraftPreview()
@@ -280,6 +271,7 @@
         console.log('received message from iframe', msg.data)
         if (msg.data.type === 'set-config') {
           this.editConfig = dotProp.set({ ...this.editConfig }, msg.data.content.field, msg.data.content.value)
+          this.saveDraft()
         }
       }
       window.addEventListener('message', this.postMessageHandler)
@@ -357,8 +349,8 @@
         this.$store.commit('application/patch', { status: application.status, errorMessage: application.errorMessage, errorMessageDraft: application.errorMessageDraft })
       },
       async saveDraft(e) {
+        console.log('saveDraft')
         if (!this.can('writeConfig')) return
-        if (JSON.stringify(this.editConfig) === JSON.stringify(this.application.configurationDraft) && this.editUrl === this.application.urlDraft) return
         this.$refs.configForm && this.$refs.configForm.validate()
         if (!this.formValid) return
         this.patchAndCommit({ urlDraft: this.editUrl, silent: true })
