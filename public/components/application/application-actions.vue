@@ -32,7 +32,7 @@
       <v-list-item-title>Intégrer dans un site</v-list-item-title>
     </v-list-item>
 
-    <template v-if="!error">
+    <template>
       <v-list-item
         v-for="link in publicationSitesLinks"
         :key="link.url"
@@ -295,7 +295,7 @@
             url: site.applicationUrlTemplate.replace('{id}', this.application.id),
             title: site.title || (site.url && site.url.replace('http://', '').replace('https://', '')) || site.id,
           }
-        })
+        }).filter(ps => !!ps)
       },
     },
     methods: {

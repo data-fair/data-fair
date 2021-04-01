@@ -336,7 +336,7 @@
             url: site.datasetUrlTemplate.replace('{id}', this.dataset.id),
             title: site.title || (site.url && site.url.replace('http://', '').replace('https://', '')) || site.id,
           }
-        })
+        }).filter(ps => !!ps)
       },
     },
     methods: {
