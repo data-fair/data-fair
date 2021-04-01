@@ -1,6 +1,6 @@
 <template>
   <v-container>
-    <v-row align="center" class="py-6">
+    <v-row align="center" class="pt-6 pb-3">
       <v-col
         class="text-center"
         cols="12"
@@ -48,6 +48,16 @@
           </v-btn>
         </div>
       </v-col>
+    </v-row>
+    <v-row justify="center" class="pb-3">
+      <iframe
+        :width="$vuetify.breakpoint.lgAndUp ? 800 : 560"
+        :height="$vuetify.breakpoint.lgAndUp ? 450 : 315"
+        sandbox="allow-same-origin allow-scripts allow-popups"
+        src="https://videos.koumoul.com/videos/embed/22162d96-fe33-4cdd-97b6-15041ae6ec46?title=0&warningTitle=0&peertubeLink=0&autoplay=1"
+        frameborder="0"
+        allowfullscreen
+      />
     </v-row>
 
     <v-row

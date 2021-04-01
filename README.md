@@ -4,6 +4,8 @@
 
 [Visit documentation website (french)](https://koumoul-dev.github.io/data-fair/2/)
 
+![](doc/static/data-fair.gif)
+
 ## Development environment
 
 This project uses the following stack : Mongo, ElasticSearch, NodeJS, Express, VueJS, NUXT and Docker. The primary language used is javascript with the ES7 syntax.
