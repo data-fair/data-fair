@@ -376,13 +376,42 @@ describe('virtual datasets', () => {
     assert.equal(virtualDataset.status, 'error')
   })
 
-  // Check that column restriction from virtual child is enforced
+  it('A virtual dataset cannot have a private child from another owner', async () => {
+    const ax = global.ax.dmeadus
+    const dataset = await testUtils.sendDataset('datasets/dataset1.csv', ax)
 
-  // Check presence of calculated fields (bbox, cardinality, etc.)
-  // let virtualDataset = await workers.hook('finalizer/' + res.data.id)
-  // assert.equal(virtualDataset.status, 'finalized')
+    const res = await global.ax.cdurning2.post('/api/v1/datasets', {
+      isVirtual: true,
+      title: 'a virtual dataset',
+      virtual: {
+        children: [dataset.id],
+      },
+    })
 
-  // Check that it is possible to list the virtual datasets that use a dataset
+    try {
+      await global.ax.cdurning2.get(`/api/v1/datasets/${res.data.id}/lines`)
+      assert.fail('filter in child should fail')
+    } catch (err) {
+      assert.equal(err.status, 501)
+    }
+  })
 
-// Check that updating / deleting a child impacts the parents (and other ancestors)
+  it('A virtual dataset can have a public child from another owner', async () => {
+    const ax = global.ax.dmeadus
+    const dataset = await testUtils.sendDataset('datasets/dataset1.csv', ax)
+    await ax.put('/api/v1/datasets/' + dataset.id + '/permissions', [
+      { classes: ['read'] },
+    ])
+
+    const res = await global.ax.cdurning2.post('/api/v1/datasets', {
+      isVirtual: true,
+      title: 'a virtual dataset',
+      virtual: {
+        children: [dataset.id],
+      },
+    })
+
+    await global.ax.cdurning2.get(`/api/v1/datasets/${res.data.id}/lines`)
+    console.log(res)
+  })
 })
