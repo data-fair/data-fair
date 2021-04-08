@@ -45,7 +45,6 @@ if (config.mode.includes('server')) {
   app.use(require('cookie-parser')())
   app.use(session.cors({ acceptAllOrigins: true }))
   app.use(session.auth)
-  app.use(rateLimiting.middleware)
 
   // Business routers
   const apiKey = require('./utils/api-key')
@@ -54,7 +53,7 @@ if (config.mode.includes('server')) {
   app.use('/api/v1/catalogs', apiKey('catalogs'), require('./routers/catalogs'))
   app.use('/api/v1/base-applications', require('./routers/base-applications').router)
   app.use('/api/v1/applications', apiKey('applications'), require('./routers/applications'))
-  app.use('/api/v1/datasets', apiKey('datasets'), require('./routers/datasets'))
+  app.use('/api/v1/datasets', rateLimiting.middleware, apiKey('datasets'), require('./routers/datasets'))
   app.use('/api/v1/stats', apiKey('stats'), require('./routers/stats'))
   app.use('/api/v1/settings', require('./routers/settings'))
   app.use('/api/v1/admin', require('./routers/admin'))
