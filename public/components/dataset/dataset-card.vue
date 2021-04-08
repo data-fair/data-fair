@@ -58,10 +58,9 @@
       </v-row>
     </nuxt-link>
     <v-card-actions class="pl-3">
-      <!--<owner-short :owner="dataset.owner" />
-      &nbsp;&nbsp;-->
-      <visibility :visibility="dataset.visibility" />
+      <owner-short v-if="showOwner" :owner="dataset.owner" />
       &nbsp;&nbsp;
+      <visibility :visibility="dataset.visibility" />
       <v-tooltip v-if="dataset.status === 'error'" top>
         <template v-slot:activator="{on}">
           <v-icon color="error" v-on="on">
@@ -80,7 +79,7 @@
   const marked = require('marked/lib/marked')
 
   export default {
-    props: ['dataset', 'showTopics'],
+    props: ['dataset', 'showTopics', 'showOwner'],
     data: () => ({
       marked,
       hover: false,

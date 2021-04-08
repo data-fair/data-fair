@@ -14,7 +14,11 @@
             md="6"
             lg="4"
           >
-            <application-card :application="application" :show-topics="applications.facets.topics.length" />
+            <application-card
+              :application="application"
+              :show-topics="applications.facets.topics.length"
+              :show-owner="filters.owner === null"
+            />
           </v-col>
         </v-row>
         <search-progress :loading="loading" />
@@ -154,6 +158,7 @@
         const fullFilters = { ...this.filters }
         let hasFacetFilter = false
         Object.entries(this.facetsValues).forEach(([facetKey, facetValues]) => {
+          if (this.filters.owner !== null && facetKey === 'owner') return
           const facetFilter = facetValues && facetValues.join(',')
           if (facetFilter) {
             hasFacetFilter = true
@@ -162,12 +167,14 @@
         })
         if (append) this.page += 1
         else this.page = 1
+        let facets = 'visibility,base-application,topics'
+        if (this.filters.owner === null) facets += ',owner'
         const params = {
           size: this.size,
           page: this.page,
           select: 'title,description,status,topics,errorMessage',
           ...fullFilters,
-          facets: 'visibility,base-application,topics',
+          facets,
           sort: 'createdAt:-1',
         }
         if (JSON.stringify(params) !== JSON.stringify(this.lastParams)) {

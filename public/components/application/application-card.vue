@@ -35,9 +35,9 @@
       </v-row>
     </nuxt-link>
     <v-card-actions class="pl-3">
-      <!--<owner-short :owner="application.owner" />-->
-      <visibility :visibility="application.visibility" />
+      <owner-short v-if="showOwner" :owner="application.owner" />
       &nbsp;&nbsp;
+      <visibility :visibility="application.visibility" />
       <v-tooltip v-if="!!application.errorMessage" top>
         <template v-slot:activator="{on}">
           <v-icon color="error" v-on="on">
@@ -61,7 +61,7 @@
 
 <script>
   export default {
-    props: ['application', 'showTopics'],
+    props: ['application', 'showTopics', 'showOwner'],
     data: () => ({
       hover: false,
     }),

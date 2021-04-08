@@ -1,5 +1,21 @@
 <template>
   <div class="applications-facets">
+    <template v-if="facets.owner">
+      <v-select
+        v-model="facetsValues.owner"
+        multiple
+        label="Propriétaire"
+        :items="facets.owner"
+        :item-value="item => `${item.value.type}:${item.value.id}`"
+        :item-text="item => `${item.value.name} (${item.count})`"
+        hide-details
+        rounded
+        class="mb-4 mt-0 pt-0"
+        background-color="admin"
+        dark
+      />
+    </template>
+
     <template v-if="facets.visibility">
       <v-select
         v-model="facetsValues.visibility"

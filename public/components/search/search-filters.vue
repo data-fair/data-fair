@@ -12,15 +12,24 @@
         @keyup.enter.native="writeParams"
         @click:append="writeParams"
       />
-      <v-switch
+      <v-card
         v-if="user.adminMode"
-        v-model="showShared"
-        background-color="admin"
+        color="admin"
         dark
-        label="inclure les resources des autres comptes"
-        hide-details
-        @change="writeParams"
-      />
+        flat
+        class="mt-2"
+      >
+        <v-card-text class="pa-1">
+          <v-switch
+            v-model="showShared"
+            label="inclure les resources des autres comptes"
+            hide-details
+            dense
+            class="mt-0"
+            @change="writeParams"
+          />
+        </v-card-text>
+      </v-card>
     </v-row>
     <v-row class="mb-1">
       <template v-for="filter in Object.keys(fullFilterLabels)">

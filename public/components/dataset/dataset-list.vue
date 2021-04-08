@@ -14,7 +14,11 @@
             md="6"
             lg="4"
           >
-            <dataset-card :dataset="dataset" :show-topics="datasets.facets.topics.length" />
+            <dataset-card
+              :dataset="dataset"
+              :show-topics="datasets.facets.topics.length"
+              :show-owner="filters.owner === null"
+            />
           </v-col>
         </v-row>
         <search-progress :loading="loading" />
@@ -135,6 +139,7 @@
         const fullFilters = { ...this.filters }
         let hasFacetFilter = false
         Object.entries(this.facetsValues).forEach(([facetKey, facetValues]) => {
+          if (this.filters.owner !== null && facetKey === 'owner') return
           /* const facetFilter = Object.entries(facetValues)
             .filter(([facetValue, valueActive]) => valueActive)
             .map(([facetValue]) => facetValue).join(',') */
@@ -146,11 +151,13 @@
         })
         if (append) this.page += 1
         else this.page = 1
+        let facets = 'status,visibility,services,concepts,topics'
+        if (this.filters.owner === null) facets += ',owner'
         const params = {
           size: this.size,
           page: this.page,
           select: 'title,description,status,topics,isVirtual,isRest,file,count,finalizedAt',
-          facets: 'status,visibility,services,concepts,topics',
+          facets,
           sort: 'createdAt:-1',
           ...fullFilters,
         }
