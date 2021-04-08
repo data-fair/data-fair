@@ -43,6 +43,6 @@ describe('Base applications', () => {
     const app = res.data.results[0]
     assert.equal(app.category, 'autre')
     assert.equal(app.disabled.length, 1)
-    assert.equal(app.disabled[0], 'Cette application n\'utilise pas de sources de données de type fichier.')
+    assert.equal(app.disabled[0], 'n\'utilise pas de sources de données de type fichier.')
   })
 })
