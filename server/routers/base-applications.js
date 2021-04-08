@@ -189,13 +189,16 @@ router.get('', cacheHeaders.noCache, asyncWrap(async(req, res) => {
       application.disabled = []
       application.category = application.category || 'autre'
       if (datasetId && (!application.datasetsFilters || !application.datasetsFilters.length)) {
-        application.disabled.push('Cette application n\'utilise pas de sources de données de type fichier.')
+        application.disabled.push('n\'utilise pas de sources de données de type fichier.')
       } else {
+        const requirements = []
         if (application.datasetsFilters && application.datasetsFilters.length && !datasetCount) {
-          application.disabled.push('Cette application nécessite une source de données.')
+          requirements.push('une source de données')
         } else {
           (application.datasetsFilters || []).forEach(filter => {
-            if (filter.bbox && !datasetBBox) application.disabled.push('Cette application nécessite une source avec des données géolocalisées.')
+            if (filter.bbox && !datasetBBox) {
+              requirements.push('des données géolocalisées (concepts latitude/longitude)')
+            }
             if (filter.concepts) {
               const foundConcepts = []
               filter.concepts.forEach(concept => {
@@ -204,13 +207,16 @@ router.get('', cacheHeaders.noCache, asyncWrap(async(req, res) => {
                 }
               })
               if (!foundConcepts.length) {
-                application.disabled.push(`Cette application nécessite une source avec un champ de concept ${filter.concepts.map(concept => vocabulary[concept].title).join(' ou ')}.`)
+                requirements.push(`le concept ${filter.concepts.map(concept => vocabulary[concept].title).join(' ou ')}`)
               }
             }
             if (filter['field-type'] && !datasetTypes.find(t => filter['field-type'].includes(t))) {
-              application.disabled.push(`Cette application nécessite une source avec un champ de type ${filter['field-type'].join(' ou ')}.`)
+              requirements.push(`le type ${filter['field-type'].join(' ou ')}`)
             }
           })
+        }
+        if (requirements.length) {
+          application.disabled.push(`nécessite ${requirements.join(' et ')}.`)
         }
       }
     }

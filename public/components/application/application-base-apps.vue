@@ -21,11 +21,23 @@
           sm="4"
           cols="6"
         >
-          <v-tooltip top :activator="`#baseapp-${baseApp._id}`">
+          <v-tooltip
+            top
+            :activator="`#baseapp-${baseApp._id}`"
+            content-class="base-app-tooltip"
+          >
             <span v-if="baseApp.description">{{ baseApp.description }}</span>
             <template v-for="(disabled, i) in baseApp.disabled">
               <br :key="'br-' + i">
-              <span :key="'span-' + i">{{ disabled }}</span>
+              <v-alert
+                :key="'alert-' + i"
+                type="error"
+                dense
+                border="left"
+                class="my-2"
+              >
+                <span>{{ disabled }}</span>
+              </v-alert>
             </template>
           </v-tooltip>
           <application-base-apps-card
@@ -81,4 +93,9 @@
 </script>
 
 <style lang="css" scoped>
+.v-tooltip__content.base-app-tooltip {
+  background: rgba(97, 97, 97, 1);
+  opacity: 1 !important;
+  max-width: 600px;
+}
 </style>
