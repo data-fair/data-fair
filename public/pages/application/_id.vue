@@ -31,6 +31,9 @@
                 <template v-slot:tabs-items>
                   <v-tab-item value="metadata-info">
                     <v-container fluid class="pb-0">
+                      <tutorial-alert id="app-configure-meta">
+                        Vous pouvez configurer des thématiques dans les paramètres.
+                      </tutorial-alert>
                       <application-info />
                     </v-container>
                   </v-tab-item>
@@ -84,6 +87,9 @@
                   </v-tab>
                 </template>
                 <template v-slot:tabs-items>
+                  <tutorial-alert id="app-share-portal">
+                    Configurez des portails pour mieux partager vos données au public ou en interne.
+                  </tutorial-alert>
                   <v-tab-item value="share-permissions">
                     <v-container fluid>
                       <permissions

@@ -1,7 +1,7 @@
 <template>
   <v-card
-    :color="selected ? 'primary' : (baseApp.disabled.length ? 'error' : '')"
-    :dark="selected || !!baseApp.disabled.length"
+    :color="selected ? 'primary' : ''"
+    :dark="selected"
     :style="baseApp.disabled.length ? 'cursor:default' : 'cursor:pointer'"
     :elevation="hover && !baseApp.disabled.length ? 2 : 0"
     outlined
@@ -14,7 +14,7 @@
       :alt="baseApp.title"
       aspect-ratio="2.5"
     />
-    <v-card-title>
+    <v-card-title :class="{'error--text': baseApp.disabled.length}">
       <h5>
         <v-icon v-if="!baseApp.public" title="Application à accès restreint">
           mdi-security

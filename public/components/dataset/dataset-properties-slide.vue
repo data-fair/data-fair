@@ -19,9 +19,6 @@
       </v-btn>
     </v-row>
     <v-row v-if="currentProperty == null">
-      <tutorial-alert id="add-concepts">
-        Pensez à renseigner des concepts sur les colonnes. Ces concepts seront utilisés pour proposer des visualisations de données adaptées et des possibilités d'enrichissement.
-      </tutorial-alert>
       <v-subheader>Cliquez sur un nom de colonne pour afficher ses informations détaillées.</v-subheader>
     </v-row>
     <v-expand-transition>

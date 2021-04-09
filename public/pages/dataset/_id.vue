@@ -47,7 +47,10 @@
                 </template>
                 <template v-slot:tabs-items>
                   <v-tab-item value="structure-schema">
-                    <v-container fluid class="pb-0">
+                    <v-container fluid class="py-0">
+                      <tutorial-alert id="dataset-add-concepts">
+                        Pensez à renseigner des concepts sur les colonnes. Ces concepts seront utilisés pour proposer des visualisations de données adaptées et des possibilités d'enrichissement.
+                      </tutorial-alert>
                       <dataset-schema />
                     </v-container>
                   </v-tab-item>
@@ -90,6 +93,9 @@
                   <v-tab-item value="metadata-info">
                     <layout-doc-link tooltip="Consultez la documentation sur l'édition de jeux de données" doc-key="datasetEdit" />
                     <v-container fluid class="py-0">
+                      <tutorial-alert id="dataset-configure-meta">
+                        Vous pouvez configurer des licences et des thématiques dans les paramètres.
+                      </tutorial-alert>
                       <dataset-info />
                     </v-container>
                   </v-tab-item>
@@ -214,6 +220,9 @@
                   </v-tab>
                 </template>
                 <template v-slot:tabs-items>
+                  <tutorial-alert id="dataset-share-portal">
+                    Configurez des portails pour mieux partager vos données au public ou en interne.
+                  </tutorial-alert>
                   <v-tab-item value="share-permissions">
                     <v-container fluid>
                       <permissions

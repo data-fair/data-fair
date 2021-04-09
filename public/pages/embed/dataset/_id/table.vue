@@ -1,5 +1,8 @@
 <template>
   <v-container fluid class="pa-0">
+    <tutorial-alert id="dataset-table">
+      Appliquez des filtres en survolant les valeurs et triez en cliquant sur les entêtes de colonnes. Cliquez sur le bouton en haut à droite pour télécharger dans un fichier le contenu filtré et trié.
+    </tutorial-alert>
     <v-sheet v-if="notFound" class="pa-2">
       <p>Les données ne sont pas accessibles. Soit le jeu de données n'a pas encore été entièrement traité, soit il y a eu une erreur dans le traitement.</p>
     </v-sheet>

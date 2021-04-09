@@ -2,6 +2,7 @@
   <v-alert
     v-model="show"
     type="info"
+    color="success"
     border="left"
     dense
     class="my-2"
