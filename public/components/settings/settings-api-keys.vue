@@ -42,6 +42,12 @@
               >
                 Cette clé est de type super-administrateur
               </v-alert>
+              <v-alert
+                :value="!!apiKey.asAccount"
+                type="warning"
+              >
+                Cette clé permet de travailler dans le contexte d'autres comptes
+              </v-alert>
               <p v-if="!!apiKey.clearKey">
                 Clé secrète : {{ apiKey.clearKey }}
               </p>
@@ -87,6 +93,14 @@
               color="white"
               dark
               label="Clé de type super-administrateur "
+            />
+            <v-checkbox
+              v-if="user.adminMode && newApiKey.adminMode"
+              v-model="newApiKey.asAccount"
+              background-color="admin"
+              color="white"
+              dark
+              label="Clé permettant de travailler dans le contexte d'autres comptes (nécessaire pour configurer le service de traitements périodiques)"
             />
             <v-checkbox
               v-for="scope of scopes"

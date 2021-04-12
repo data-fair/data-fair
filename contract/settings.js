@@ -146,12 +146,15 @@ module.exports = {
     },
     apiKeys: {
       type: 'array',
-      description: 'Lis of API keys',
+      description: 'List of API keys',
       items: {
         type: 'object',
         additionalProperties: false,
         required: ['title'],
         properties: {
+          id: {
+            type: 'string',
+          },
           title: {
             type: 'string',
           },
@@ -165,6 +168,10 @@ module.exports = {
             },
           },
           adminMode: {
+            type: 'boolean',
+            default: false,
+          },
+          asAccount: {
             type: 'boolean',
             default: false,
           },

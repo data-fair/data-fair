@@ -117,7 +117,7 @@ module.exports = {
     maxSpreadsheetSize: 50 * 1000 * 1000, // 50mo
   },
   worker: {
-    interval: 200,
+    interval: 500,
     releaseInterval: 2000,
     concurrency: 4,
     spawnTask: true,
