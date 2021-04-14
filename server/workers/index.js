@@ -48,6 +48,7 @@ exports.start = async (app) => {
     for (let i = 0; i < config.worker.concurrency; i++) {
       if (currentIters[i]) continue
       currentIters[i] = Promise.all([iter(app, 'dataset'), iter(app, 'application')])
+      currentIters[i].catch(err => console.error('error in worker iter', err))
       currentIters[i].finally(() => {
         currentIters[i] = null
       })
