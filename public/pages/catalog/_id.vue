@@ -57,7 +57,7 @@
       </v-container>
     </v-col>
 
-    <layout-navigation-right v-if="this.$vuetify.breakpoint.lgAndUp">
+    <layout-navigation-right v-if="$vuetify.breakpoint.lgAndUp">
       <catalog-actions />
       <layout-toc :sections="sections" />
     </layout-navigation-right>
