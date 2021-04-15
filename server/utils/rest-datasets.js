@@ -50,6 +50,14 @@ const filename = async (req, file, cb) => {
   }
 }
 
+const transactionsPacketsSize = 1000
+const padISize = (transactionsPacketsSize - 1).toString().length
+// cf https://github.com/puckey/pad-number/blob/master/index.js
+const padI = (i) => {
+  const str = i.toString()
+  return new Array((padISize - str.length) + 1).join('0') + str
+}
+
 exports.uploadAttachment = multer({
   storage: multer.diskStorage({ destination, filename }),
 }).single('attachment')
@@ -92,12 +100,15 @@ exports.deleteDataset = async (db, dataset) => {
 const applyTransactions = async (req, transacs, validate) => {
   const db = req.app.get('db')
   const dataset = req.dataset
+  const datasetCreatedAt = new Date(dataset.createdAt).getTime()
+  const updatedAt = new Date()
   const collection = exports.collection(db, dataset)
   const history = dataset.rest && dataset.rest.history
   const results = []
   // in non history or single action mode, better to not use bulk op
   const bulkOp = !history && transacs.length > 1 ? collection.initializeOrderedBulkOp() : null
 
+  let i = 0
   for (const transac of transacs) {
     const { _action, ...body } = transac
     if (!actions.includes(_action)) throw createError(400, `action "${_action}" is unknown, use one of ${JSON.stringify(actions)}`)
@@ -106,7 +117,9 @@ const applyTransactions = async (req, transacs, validate) => {
 
     const extendedBody = { ...body }
     extendedBody._needsIndexing = true
-    extendedBody._updatedAt = new Date()
+    extendedBody._updatedAt = updatedAt
+    extendedBody._i = Number((updatedAt.getTime() - datasetCreatedAt) + padI(i))
+    i++
     if (req.user) extendedBody._updatedBy = { id: req.user.id, name: req.user.name }
     extendedBody._deleted = false
     let doc = {}
@@ -175,7 +188,8 @@ class TransactionStream extends Writable {
     try {
       chunk._action = chunk._action || (chunk._id ? 'update' : 'create')
       this.transactions.push(chunk)
-      if (this.transactions.length > 1000) await this._applyTransactions()
+      // WARNING: changing this number has impact on the _i generation logic
+      if (this.transactions.length > transactionsPacketsSize) await this._applyTransactions()
     } catch (err) {
       return cb(err)
     }
@@ -367,7 +381,8 @@ exports.readStream = (db, dataset, onlyUpdated) => {
   return Combine(collection.find(filter).stream(), new Transform({
     objectMode: true,
     async transform(chunk, encoding, cb) {
-      chunk._i = chunk._updatedAt.getTime()
+      // now _i should always be defined, but keep the OR for retro-compatibility
+      chunk._i = chunk._i || chunk._updatedAt.getTime()
       cb(null, chunk)
     },
   }))

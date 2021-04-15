@@ -113,6 +113,12 @@ describe('REST datasets', () => {
     res = await ax.get('/api/v1/datasets/rest3/lines')
     assert.equal(res.data.total, 4)
 
+    // check that _i is incremental and unique even inside the same bulk
+    assert.ok(res.data.results[0]._i.toString().endsWith('000'))
+    assert.ok(res.data.results[1]._i.toString().endsWith('001'))
+    assert.ok(res.data.results[2]._i.toString().endsWith('002'))
+    assert.ok(res.data.results[3]._i.toString().endsWith('003'))
+
     // Patch one through db query to check that it won't processed
     // we must be sure that the whole dataset is not reindexed each time, only the diffs
     const collection = restDatasetsUtils.collection(global.db, dataset)
@@ -312,7 +318,7 @@ describe('REST datasets', () => {
   })
 
   it('The size of the mongodb collection is part of storage consumption', async () => {
-  // Load a few lines
+    // Load a few lines
     const ax = await global.ax.builder('ccherryholme1@icio.us:passwd')
     await ax.post('/api/v1/datasets', {
       isRest: true,
@@ -329,10 +335,11 @@ describe('REST datasets', () => {
 
     let res = await ax.get('/api/v1/stats')
     assert.equal(res.status, 200)
-    assert.equal(res.data.storage, 684)
+    assert.ok(res.data.storage > 600)
+    const storageSize = res.data.storage
     res = await ax.get('/api/v1/datasets/rest7')
-    assert.equal(res.data.storage.size, 684)
-    assert.equal(res.data.storage.collectionSize, 684)
+    assert.equal(res.data.storage.size, storageSize)
+    assert.equal(res.data.storage.collectionSize, storageSize)
   })
 
   it('Activate the history mode', async () => {
@@ -354,11 +361,13 @@ describe('REST datasets', () => {
     assert.equal(res.data.results[1].attr1, 'test1')
 
     res = await ax.get('/api/v1/stats')
-    assert.equal(res.data.storage, 478)
+    assert.ok(res.data.storage > 400)
+    const storageSize = res.data.storage
     res = await ax.get('/api/v1/datasets/resthist')
-    assert.equal(res.data.storage.size, 478)
-    assert.equal(res.data.storage.collectionSize, 164)
-    assert.equal(res.data.storage.revisionsSize, 314)
+    assert.equal(res.data.storage.size, storageSize)
+    assert.ok(res.data.storage.collectionSize > 100)
+    assert.ok(res.data.storage.revisionsSize > 300)
+    assert.equal(res.data.storage.revisionsSize + res.data.storage.collectionSize, storageSize)
   })
 
   it('Apply a TTL on some date-field', async () => {
