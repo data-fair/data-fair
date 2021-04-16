@@ -160,10 +160,8 @@ router.get('', cacheHeaders.noCache, asyncWrap(async(req, res) => {
 // Shared middleware to read dataset in db
 // also checks that the dataset is in a state compatible with some action
 // supports waiting a little bit to be a little permissive with the user
-const readDataset = (acceptedStatuses) => asyncWrap(async(req, res, next) => {
-  if (typeof acceptedStatuses === 'function') {
-    acceptedStatuses = acceptedStatuses(req.body)
-  }
+const readDataset = (_acceptedStatuses) => asyncWrap(async(req, res, next) => {
+  const acceptedStatuses = typeof _acceptedStatuses === 'function' ? _acceptedStatuses(req.body) : _acceptedStatuses
   for (let i = 0; i < 10; i++) {
     req.dataset = req.resource = await req.app.get('db').collection('datasets')
       .findOne({ id: req.params.datasetId }, { projection: { _id: 0 } })
