@@ -122,6 +122,7 @@ exports.descendants = async (db, dataset) => {
       'descendants.virtual': 1,
     },
   }]).toArray()
+  if (!res[0]) return []
   const virtualDescendantsWithFilters = res[0].descendants
     .filter(d => d.isVirtual && d.virtual.filters && d.virtual.filters.length)
   if (virtualDescendantsWithFilters.length) {

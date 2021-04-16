@@ -161,6 +161,9 @@ router.get('', cacheHeaders.noCache, asyncWrap(async(req, res) => {
 // also checks that the dataset is in a state compatible with some action
 // supports waiting a little bit to be a little permissive with the user
 const readDataset = (acceptedStatuses) => asyncWrap(async(req, res, next) => {
+  if (typeof acceptedStatuses === 'function') {
+    acceptedStatuses = acceptedStatuses(req.body)
+  }
   for (let i = 0; i < 10; i++) {
     req.dataset = req.resource = await req.app.get('db').collection('datasets')
       .findOne({ id: req.params.datasetId }, { projection: { _id: 0 } })
@@ -230,7 +233,14 @@ router.get('/:datasetId/schema', readDataset(), applicationKey, permissions.midd
 })
 
 // Update a dataset's metadata
-router.patch('/:datasetId', readDataset(['finalized', 'error']), permissions.middleware('writeDescription', 'write'), asyncWrap(async(req, res) => {
+router.patch('/:datasetId', readDataset((patch) => {
+  // accept different statuses of the dataset depending on the content of the patch
+  if (patch.schema || patch.virtual || patch.extensions || patch.publications || patch.projection) {
+    return ['finalized', 'error']
+  } else {
+    return null
+  }
+}), permissions.middleware('writeDescription', 'write'), asyncWrap(async(req, res) => {
   const db = req.app.get('db')
   const patch = req.body
   if (!validatePatch(patch)) return res.status(400).send(validatePatch.errors)
