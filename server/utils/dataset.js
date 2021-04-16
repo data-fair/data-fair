@@ -413,7 +413,13 @@ exports.cleanSchema = (dataset) => {
       // forcing other types than string is more dangerous, for now lets do just that
       if (concept && concept.type === 'string') {
         f.type = concept.type
-        if (concept.format) f.format = concept.format
+        if (concept.format) {
+          if (concept.format === 'date-time' && f.format === 'date') {
+            // special case, concepts with date-time format also accept date format
+          } else {
+            f.format = concept.format
+          }
+        }
       }
     }
   })
