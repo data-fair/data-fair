@@ -32,7 +32,7 @@
             :item-text="(baseApp => `${baseApp.title} (${baseApp.version})`)"
             item-value="url"
             label="Changer de version"
-            @change="saveDraft"
+            @change="saveUrlDraft"
           />
           <v-form
             v-if="draftSchema && editConfig"
@@ -40,7 +40,6 @@
             v-model="formValid"
             @submit="validateDraft"
           >
-            <!--{{ editConfig }}-->
             <v-jsf
               v-model="editConfig"
               :schema="draftSchema"
@@ -84,71 +83,6 @@
         </v-col>
       </v-row>
 
-      <!--<v-expansion-panels
-        v-model="expansion"
-        multiple
-        flat
-        mandatory
-      >
-        <v-expansion-panel
-          v-if="configClone"
-          :popout="false"
-          :value="1"
-          expand
-        >
-          <v-expansion-panel-header>
-            Dernière configuration validée (lecture seule)
-          </v-expansion-panel-header>
-          <v-expansion-panel-content>
-            <v-card v-if="config && Object.keys(config).length">
-              <v-card-text class="grey lighten-3">
-                <v-row>
-                  <v-col
-                    cols="12"
-                    sm="6"
-                    md="4"
-                  >
-                    <p v-if="prodBaseApp">
-                      Version : {{ `${prodBaseApp.title} (${prodBaseApp.version})` }}
-                    </p>
-                    <v-form ref="prodConfigForm">
-                      <v-jsf
-                        v-if="prodSchema"
-                        v-model="configClone"
-                        :schema="prodSchema"
-                        :options="vjsfOptions"
-                        @error="error => eventBus.$emit('notification', {error})"
-                      />
-                    </v-form>
-                  </v-col>
-                  <v-col
-                    cols="12"
-                    sm="6"
-                    md="8"
-                    class="pa-0"
-                  >
-                    <v-iframe
-                      v-if="showProdPreview && expansion[0]"
-                      :src="applicationLink + '?embed=true'"
-                    />
-                  </v-col>
-                </v-row>
-              </v-card-text>
-            </v-card>
-          </v-expansion-panel-content>
-        </v-expansion-panel>
-        <v-expansion-panel>
-          <v-expansion-panel-header>
-            Brouillon (écriture)
-          </v-expansion-panel-header>
-          <v-expansion-panel-content>
-            <v-card>
-              <v-card-text class="grey lighten-3" />
-            </v-card>
-          </v-expansion-panel-content>
-        </v-expansion-panel>
-      </v-expansion-panels>
-    -->
       <v-dialog
         v-model="showCancelDialog"
         max-width="500px"
@@ -204,7 +138,6 @@
         showProdPreview: true,
         showDraftConfig: true,
         draftSchema: null,
-        prodSchema: null,
         formValid: false,
         editConfig: null,
         editUrl: null,
@@ -259,14 +192,10 @@
       config() {
         this.refreshProdPreview()
       },
-      async 'application.urlDraft'() {
-        await this.fetchSchemas()
-        this.refreshDraftPreview()
-      },
     },
     async created() {
-      this.fetchSchemas()
-      this.fetchConfigs()
+      await this.fetchConfigs()
+      await this.fetchSchema()
       this.postMessageHandler = msg => {
         console.log('received message from iframe', msg.data)
         if (msg.data.type === 'set-config') {
@@ -278,6 +207,9 @@
     },
     destroyed() {
       window.removeEventListener('message', this.postMessageHandler)
+    },
+    mounted() {
+      console.log('mounted application-config')
     },
     methods: {
       ...mapActions('application', ['readConfig', 'writeConfig', 'readConfigDraft', 'writeConfigDraft', 'cancelConfigDraft', 'patchAndCommit', 'fetchProdBaseApp']),
@@ -305,12 +237,11 @@
           }
         }
       },
-      async fetchSchemas() {
+      async fetchSchema() {
         this.draftSchema = null
-        this.prodSchema = null
 
         // Only try the deprecated iframe mode, if config schema is not found
-        const draftSchemaUrl = (this.application.urlDraft || this.application.url) + 'config-schema.json'
+        const draftSchemaUrl = this.editUrl + 'config-schema.json'
         try {
           this.draftSchema = await this.$axios.$get(draftSchemaUrl)
 
@@ -330,7 +261,6 @@
             eventBus.$emit('notification', { error })
           }
         }
-        this.prodSchema = await this.$axios.$get(this.application.url + 'config-schema.json')
       },
       refreshDraftConfig() {
         this.showDraftConfig = false
@@ -349,13 +279,21 @@
         this.$store.commit('application/patch', { status: application.status, errorMessage: application.errorMessage, errorMessageDraft: application.errorMessageDraft })
       },
       async saveDraft(e) {
-        console.log('saveDraft')
         if (!this.can('writeConfig')) return
         this.$refs.configForm && this.$refs.configForm.validate()
         if (!this.formValid) return
-        this.patchAndCommit({ urlDraft: this.editUrl, silent: true })
         await this.writeConfigDraft(this.editConfig)
         await this.fetchStatus()
+        // errors in draft app should be pushed by websocket, but to be extra safe we check after 5 seconds
+        await new Promise(resolve => setTimeout(resolve, 5000))
+        await this.fetchStatus()
+      },
+      async saveUrlDraft(e) {
+        if (!this.can('writeConfig')) return
+        this.patchAndCommit({ urlDraft: this.editUrl, silent: true })
+        await this.fetchStatus()
+        await this.fetchSchema()
+        this.refreshDraftPreview()
         // errors in draft app should be pushed by websocket, but to be extra safe we check after 5 seconds
         await new Promise(resolve => setTimeout(resolve, 5000))
         await this.fetchStatus()
