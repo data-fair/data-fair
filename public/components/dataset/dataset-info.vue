@@ -17,17 +17,6 @@
             <span>{{ (dataset.remoteFile || dataset.originalFile || dataset.file).name }} {{ ((dataset.remoteFile || dataset.originalFile || dataset.file).size) | displayBytes }}</span>
           </v-list-item>
 
-          <v-list-item
-            v-if="resourcePublicUrl"
-            :href="resourcePublicUrl"
-            color="primary"
-          >
-            <v-list-item-avatar class="ml-0 my-0">
-              <v-icon>mdi-link</v-icon>
-            </v-list-item-avatar>
-            <a>Page de présentation</a>
-          </v-list-item>
-
           <v-list-item>
             <v-list-item-avatar class="ml-0 my-0">
               <v-icon>mdi-pencil</v-icon>
@@ -159,7 +148,7 @@
       ...mapState(['projections']),
       ...mapState('dataset', ['dataset', 'nbVirtualDatasets']),
       ...mapState('session', ['user']),
-      ...mapGetters('dataset', ['can', 'resourceUrl', 'resourcePublicUrl']),
+      ...mapGetters('dataset', ['can', 'resourceUrl']),
       licenses() {
         return this.$store.getters.ownerLicenses(this.dataset.owner)
       },

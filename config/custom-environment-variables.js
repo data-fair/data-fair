@@ -141,8 +141,6 @@ module.exports = {
       __format: 'json',
     },
   },
-  datasetUrlTemplate: 'DATASET_URL_TEMPLATE',
-  applicationUrlTemplate: 'APPLICATION_URL_TEMPLATE',
   doc: {
     datasetEdit: 'DOC_DATASET_EDIT',
     datasetExtend: 'DOC_DATASET_EXTEND',

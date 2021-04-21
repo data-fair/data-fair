@@ -68,8 +68,6 @@ module.exports = {
   tippecanoe: {
     docker: true,
   },
-  // datasetUrlTemplate: 'http://localhost:5600/dataset/{id}',
-  // applicationUrlTemplate: 'http://localhost:5600/application/{id}',
   /* doc: {
     datasetEdit: 'https://koumoul.com/documentation/userguide/edition-dataset',
     datasetExtend: 'https://koumoul.com/documentation/userguide/enrichment',

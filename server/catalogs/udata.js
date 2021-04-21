@@ -152,9 +152,6 @@ function getDatasetUrl(catalog, dataset) {
   if (catalog.datasetUrlTemplate) {
     return catalog.datasetUrlTemplate.replace('{id}', dataset.id)
   }
-  if (config.datasetUrlTemplate) {
-    return config.datasetUrlTemplate.replace('{id}', dataset.id)
-  }
   return `${config.publicUrl}/dataset/${dataset.id}`
 }
 

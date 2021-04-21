@@ -10,17 +10,6 @@
         <v-list dense style="background: transparent;">
           <owner-list-item :owner="application.owner" />
 
-          <v-list-item
-            v-if="resourcePublicUrl"
-            :href="resourcePublicUrl"
-            color="primary"
-          >
-            <v-list-item-avatar class="ml-0 my-0">
-              <v-icon>mdi-link</v-icon>
-            </v-list-item-avatar>
-            <a>Page de présentation</a>
-          </v-list-item>
-
           <v-list-item>
             <v-list-item-avatar class="ml-0 my-0">
               <v-icon>mdi-file-image</v-icon>
@@ -119,7 +108,7 @@
     },
     computed: {
       ...mapState('application', ['application', 'nbSessions', 'journal', 'prodBaseApp']),
-      ...mapGetters('application', ['can', 'resourcePublicUrl', 'availableVersions']),
+      ...mapGetters('application', ['can', 'availableVersions']),
       topics() {
         return this.$store.getters.ownerTopics(this.application.owner)
       },
