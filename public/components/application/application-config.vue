@@ -156,9 +156,8 @@
         if (JSON.stringify(this.editConfig) !== JSON.stringify(this.configDraft)) return true
         if (this.application.urlDraft) {
           return this.editUrl !== this.application.urlDraft
-        } else {
-          return this.editUrl !== this.application.url
         }
+        return false
       },
       hasDraft() {
         // (JSON.stringify(this.config) !== JSON.stringify(this.configDraft) || (this.application.urlDraft && this.application.urlDraft !== this.application.url)
