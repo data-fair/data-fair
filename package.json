@@ -82,7 +82,7 @@
     "cookie-parser": "^1.4.5",
     "cookie-universal-nuxt": "^2.1.4",
     "cors": "^2.8.5",
-    "csv-parser": "^2.3.5",
+    "csv-parser": "^3.0.0",
     "csv-stringify": "^5.5.3",
     "d3-hierarchy": "^2.0.0",
     "debounce": "^1.2.0",

@@ -158,4 +158,19 @@ describe('CSV cases', () => {
     const res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
     assert.equal(res.data.results[0].Id_action, 1)
   })
+
+  it('A CSV with missing trailing values', async () => {
+    const ax = global.ax.dmeadus
+    const dataset = await testUtils.sendDataset('csv-cases/Demarches_PCAET_V2_pec_seq.csv', ax)
+    assert.equal(dataset.status, 'finalized')
+    assert.equal(dataset.file.props.linesDelimiter, '\n')
+    assert.equal(dataset.file.props.escapeChar, '"')
+    assert.equal(dataset.file.props.quote, '"')
+    assert.equal(dataset.file.props.fieldsDelimiter, ';')
+    const objectif3Prop = dataset.schema.find(p => p['x-originalName'] === 'Objectif 3')
+    assert.equal(objectif3Prop.type, 'string')
+    assert.equal(objectif3Prop['x-cardinality'], 0)
+    const res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
+    assert.equal(res.data.results[0].SEQ_1_Estimation_Sequestration_nette_CO2, 149300)
+  })
 })

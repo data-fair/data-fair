@@ -216,7 +216,7 @@ exports.readStream = (dataset, raw = false) => {
         if (raw) {
           if (dataset.file.schema) {
             const unknownKey = Object.keys(chunk)
-              .filter(k => !k.startsWith('_'))
+              .filter(k => k !== '_i')
               .find(k => !dataset.file.schema.find(p => {
                 escapedKeys[k] = escapedKeys[k] || fieldsSniffer.escapeKey(k)
                 return p.key === escapedKeys[k]
@@ -224,6 +224,11 @@ exports.readStream = (dataset, raw = false) => {
             if (unknownKey) {
               return callback(new Error(`Échec du traitement de la ligne ${(chunk._i + 1).toLocaleString()} du fichier. Le format est probablement invalide.`))
             }
+
+            // this should not be necessary, but csv-parser does not return all trailing empty values
+            dataset.file.schema.forEach(prop => {
+              if (chunk[prop['x-originalName']] === undefined) chunk[prop['x-originalName']] = ''
+            })
           }
           delete chunk._i
           return callback(null, chunk)
@@ -302,7 +307,6 @@ exports.sampleValues = async (dataset) => {
     objectMode: true,
     write(chunk, encoding, callback) {
       for (const key of Object.keys(chunk)) {
-        if (key === 'Déchets de pierres et sables') console.log(chunk[key])
         sampleValues[key] = sampleValues[key] || new Set([])
         // stop if we already have a lot of samples
         if (sampleValues[key].size > 1000) continue
