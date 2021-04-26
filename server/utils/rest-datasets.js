@@ -378,7 +378,7 @@ exports.readStream = (db, dataset, onlyUpdated) => {
   const collection = exports.collection(db, dataset)
   const filter = {}
   if (onlyUpdated) filter._needsIndexing = true
-  return Combine(collection.find(filter).stream(), new Transform({
+  return Combine(collection.find(filter).batchSize(config.elasticsearch.maxBulkLines / 2).stream(), new Transform({
     objectMode: true,
     async transform(chunk, encoding, cb) {
       // now _i should always be defined, but keep the OR for retro-compatibility
