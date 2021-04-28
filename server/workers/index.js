@@ -88,9 +88,6 @@ async function iter(app, type) {
     resource = await acquireNext(app.get('db'), type, typesFilters()[type])
     if (!resource) return
 
-    // REST datasets trigger too many events
-    const noStoreEvent = type === 'dataset' && resource.isRest && resource.finalizedAt
-
     if (type === 'application') {
       // Not much to do on applications.. Just catalog publication
       taskKey = 'applicationPublisher'
@@ -137,6 +134,9 @@ async function iter(app, type) {
     if (!taskKey) return
     const task = tasks[taskKey]
     debug(`run task ${taskKey} - ${type} / ${resource.id}`)
+
+    // REST datasets trigger too many events
+    const noStoreEvent = type === 'dataset' && resource.isRest && ['indexer', 'finalizer', 'extender'].includes(taskKey)
 
     if (task.eventsPrefix) await journals.log(app, resource, { type: task.eventsPrefix + '-start' }, type, noStoreEvent)
 
