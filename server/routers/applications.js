@@ -142,7 +142,7 @@ const readApplication = asyncWrap(async(req, res, next) => {
 router.use('/:applicationId/permissions', readApplication, permissions.router('applications', 'application'))
 
 // retrieve a application by its id
-router.get('/:applicationId', readApplication, permissions.middleware('readDescription', 'read'), cacheHeaders.resourceBased, (req, res, next) => {
+router.get('/:applicationId', readApplication, permissions.middleware('readDescription', 'read'), cacheHeaders.noCache, (req, res, next) => {
   req.application.userPermissions = permissions.list('applications', req.application, req.user)
   res.status(200).send(clean(req.application))
 })
