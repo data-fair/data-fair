@@ -20,8 +20,7 @@ module.exports = (scope) => {
     const asAccount = req.get('x-account') || req.query.account
     if (apiKey.adminMode && apiKey.asAccount) {
       if (!asAccount) return res.status(403).send('Cette clé d\'API requiert de spécifier le compte à incarner')
-      const accountParts = asAccount.split(':')
-      const account = { type: accountParts[0], id: accountParts[1] }
+      const account = JSON.parse(asAccount)
       req.user = {
         id: apiKey.id,
         name: apiKey.title,
@@ -31,7 +30,7 @@ module.exports = (scope) => {
         req.user.organizations = []
         req.user.activeAccount = { ...account, name: req.user.name }
       } else {
-        req.user.organization = { id: account.id, role: config.adminRole }
+        req.user.organization = { id: account.id, name: account.name, role: config.adminRole }
         req.user.organizations = [req.user.organization]
         req.user.activeAccount = { ...req.user.organization, type: 'organization' }
       }
