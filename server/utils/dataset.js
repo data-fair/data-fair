@@ -360,13 +360,16 @@ exports.storage = async (db, dataset) => {
   if (dataset.isRest) {
     const collection = await restDatasetsUtils.collection(db, dataset)
     const stats = await collection.stats()
-    storage.size += stats.size
-    storage.collectionSize = stats.size
+    // we remove 60 bytes per line that are not really part of the original payload but added by _updatedAt, _needsIndexing, and _i.
+    storage.collectionSize = Math.max(0, stats.size - (stats.count * 60))
+    storage.size += storage.collectionSize
+
     if (dataset.rest && dataset.rest.history) {
       const revisionsCollection = await restDatasetsUtils.revisionsCollection(db, dataset)
       const revisionsStats = await revisionsCollection.stats()
-      storage.size += revisionsStats.size
-      storage.revisionsSize = revisionsStats.size
+      // we remove 60 bytes per line that are not really part of the original payload but added by _updatedAt, _needsIndexing, and _i.
+      storage.revisionsSize = Math.max(0, revisionsStats.size - (revisionsStats.count * 60))
+      storage.size += storage.revisionsSize
     }
   }
   return storage

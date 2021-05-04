@@ -335,7 +335,7 @@ describe('REST datasets', () => {
 
     let res = await ax.get('/api/v1/stats')
     assert.equal(res.status, 200)
-    assert.ok(res.data.storage > 600)
+    assert.ok(res.data.storage > 400)
     const storageSize = res.data.storage
     res = await ax.get('/api/v1/datasets/rest7')
     assert.equal(res.data.storage.size, storageSize)
@@ -361,12 +361,12 @@ describe('REST datasets', () => {
     assert.equal(res.data.results[1].attr1, 'test1')
 
     res = await ax.get('/api/v1/stats')
-    assert.ok(res.data.storage > 400)
+    assert.ok(res.data.storage > 300)
     const storageSize = res.data.storage
     res = await ax.get('/api/v1/datasets/resthist')
     assert.equal(res.data.storage.size, storageSize)
     assert.ok(res.data.storage.collectionSize > 100)
-    assert.ok(res.data.storage.revisionsSize > 300)
+    assert.ok(res.data.storage.revisionsSize > 200)
     assert.equal(res.data.storage.revisionsSize + res.data.storage.collectionSize, storageSize)
   })
 
