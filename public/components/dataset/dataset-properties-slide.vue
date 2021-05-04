@@ -103,7 +103,7 @@
               </template>
             </v-autocomplete>
             <v-checkbox
-              v-if="dataset.file"
+              v-if="dataset.file && dataset.file.mimetype === 'text/csv'"
               v-model="currentPropObj.ignoreDetection"
               :disabled="!editable || !!currentPropObj['x-extension']"
               label="Ignorer la détection de type"
