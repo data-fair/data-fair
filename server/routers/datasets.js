@@ -474,8 +474,9 @@ router.post('', beforeUpload, checkStorage(true), filesUtils.uploadFile(), files
       dataset = await initNew(db, req)
       dataset.rest = dataset.rest || {}
       dataset.schema = dataset.schema || []
-      // create it with finalized status to prevent worker from acquiring it before collection is fully created
-      dataset.status = 'finalized'
+      // the dataset will go through a first index/finalize steps, not really necessary
+      // but this way everything will be initialized (journal, index)
+      dataset.status = 'schematized'
       const baseId = slug(req.body.title).toLowerCase()
       await datasetUtils.insertWithBaseId(db, dataset, baseId)
       await restDatasetsUtils.initDataset(db, dataset)
