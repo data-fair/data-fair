@@ -217,7 +217,7 @@
     "identifiers": [
       "https://purl.org/geojson/vocab#geometry"
     ],
-    "type": "object",
+    "type": "string",
     "tag": "Géographie"
   },
   {
