@@ -78,7 +78,7 @@
     "identifiers": [
       "http://schema.org/postalCode"
     ],
-    "type": "integer",
+    "type": "string",
     "tag": "Adresse"
   },
   {
@@ -105,7 +105,7 @@
     "identifiers": [
       "http://rdf.insee.fr/def/geo#codeRegion"
     ],
-    "type": "integer",
+    "type": "string",
     "tag": "Référentiels administratifs français"
   },
   {
@@ -114,7 +114,7 @@
     "identifiers": [
       "http://rdf.insee.fr/def/geo#EtablissementPublicDeCooperationIntercommunale"
     ],
-    "type": "integer",
+    "type": "string",
     "tag": "Référentiels administratifs français"
   },
   {
@@ -123,7 +123,7 @@
     "identifiers": [
       "http://rdf.insee.fr/def/geo#codeIRIS"
     ],
-    "type": "integer",
+    "type": "string",
     "tag": "Référentiels administratifs français"
   },
   {
@@ -188,7 +188,7 @@
     "identifiers": [
       "http://id.insee.fr/concepts/cj/cjNiveauIII"
     ],
-    "type": "integer",
+    "type": "string",
     "tag": "Référentiels administratifs français"
   },
   {
