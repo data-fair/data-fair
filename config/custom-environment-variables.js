@@ -128,6 +128,18 @@ module.exports = {
     url: 'THUMBOR_URL',
     key: 'THUMBOR_KEY',
   },
+  applications: {
+    __name: 'APPLICATIONS',
+    __format: 'json',
+  },
+  applicationsDirectories: {
+    __name: 'APPLICATIONS_DIRECTORIES',
+    __format: 'json',
+  },
+  remoteServices: {
+    __name: 'REMOTE_SERVICES',
+    __format: 'json',
+  },
   info: {
     termsOfService: 'INFO_TOS',
     contact: {
