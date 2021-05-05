@@ -77,7 +77,7 @@
           :to="`/`"
         >
           <v-list-item-action><v-icon>mdi-home</v-icon></v-list-item-action>
-          <v-list-item-title>Tableau de bord</v-list-item-title>
+          <v-list-item-title>{{ $t('navigation.dashboard') }}</v-list-item-title>
         </v-list-item>
 
         <v-list-item
@@ -86,7 +86,7 @@
           :class="routePrefix === 'dataset' ? 'v-list-item--active' : ''"
         >
           <v-list-item-action><v-icon>mdi-database</v-icon></v-list-item-action>
-          <v-list-item-title>Jeux de données</v-list-item-title>
+          <v-list-item-title>{{ $t('navigation.datasets') }}</v-list-item-title>
         </v-list-item>
 
         <v-list-item
@@ -95,7 +95,7 @@
           :class="routePrefix === 'application' ? 'v-list-item--active' : ''"
         >
           <v-list-item-action><v-icon>mdi-image-multiple</v-icon></v-list-item-action>
-          <v-list-item-title>Visualisations</v-list-item-title>
+          <v-list-item-title>{{ $t('navigation.viz') }}</v-list-item-title>
         </v-list-item>
 
         <v-divider class="pb-2" />
@@ -108,7 +108,7 @@
         >
           <v-list-item-action><v-icon>mdi-account-multiple</v-icon></v-list-item-action>
           <v-list-item-content>
-            <v-list-item-title>Gestion de l'organisation</v-list-item-title>
+            <v-list-item-title>{{ $t('navigation.org') }}</v-list-item-title>
             <v-list-item-subtitle>{{ activeAccount.name }}</v-list-item-subtitle>
           </v-list-item-content>
         </v-list-item>
@@ -121,8 +121,8 @@
         >
           <v-list-item-action><v-icon>mdi-cog</v-icon></v-list-item-action>
           <v-list-item-content>
-            <v-list-item-title>Paramètres</v-list-item-title>
-            <v-list-item-subtitle>Licences, thématiques ...</v-list-item-subtitle>
+            <v-list-item-title>{{ $t('navigation.params') }}</v-list-item-title>
+            <v-list-item-subtitle>{{ $t('navigation.paramsSub') }}</v-list-item-subtitle>
           </v-list-item-content>
         </v-list-item>
 
@@ -135,8 +135,8 @@
         >
           <v-list-item-action><v-icon>mdi-transit-connection</v-icon></v-list-item-action>
           <v-list-item-content>
-            <v-list-item-title>Catalogues</v-list-item-title>
-            <v-list-item-subtitle>data.gouv.fr ...</v-list-item-subtitle>
+            <v-list-item-title>{{ $t('navigation.catalogs') }}</v-list-item-title>
+            <v-list-item-subtitle>{{ $t('navigation.catalogsSub') }}</v-list-item-subtitle>
           </v-list-item-content>
         </v-list-item>
 
@@ -163,7 +163,7 @@
 
     <v-footer absolute color="transparent">
       <v-spacer />
-      <span class="caption">Maintenu par&nbsp;<a href="https://koumoul.com" style="color: white;">Koumoul</a></span>
+      <span class="caption"><a href="https://koumoul-dev.github.io/data-fair/2/" style="color: white;">Powered by Data Fair</a></span>
     </v-footer>
   </v-navigation-drawer>
 </template>

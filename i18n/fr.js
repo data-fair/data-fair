@@ -3,13 +3,23 @@
 
 module.exports = {
   common: {
-    title: 'DataFair',
+    title: 'Data Fair',
     description: 'Données Facilement trouvables, Accessibles, Interopérables et Réutilisables',
     login: 'Se connecter / S\'inscrire',
     authrequired: 'Vous devez être authentifié pour utiliser ce service.',
     seemore: 'En savoir plus',
     activateAdminMode: 'Activer mode admin',
     deactivateAdminMode: 'Désactiver mode admin',
+  },
+  navigation: {
+    dashboard: 'Tableau de bord',
+    datasets: 'Jeux de données',
+    viz: 'Visualisations',
+    org: 'Gestion de l\'organisation',
+    params: 'Paramètres',
+    paramsSub: 'Licences, thématiques ...',
+    catalogs: 'Catalogues',
+    catalogsSub: 'data.gouv.fr ...',
   },
   pages: {
     root: {
