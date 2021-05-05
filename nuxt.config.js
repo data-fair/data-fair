@@ -107,6 +107,7 @@ module.exports = {
     extraNavigationItems: config.extraNavigationItems,
     extraAdminNavigationItems: config.extraAdminNavigationItems,
     darkModeSwitch: config.darkModeSwitch,
+    disableSharing: config.disableSharing,
   },
   head: {
     title: config.brand.title,

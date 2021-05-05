@@ -230,6 +230,7 @@ module.exports = {
     href: 'https://www.data.gouv.fr',
     logo: 'https://static.data.gouv.fr/_themes/gouvfr/img/logo-header.svg',
   }],
+  disableSharing: false,
   proxyNuxt: false,
   tippecanoe: {
     skip: false,

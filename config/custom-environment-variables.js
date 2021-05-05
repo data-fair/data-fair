@@ -144,6 +144,10 @@ module.exports = {
     __name: 'CATALOGS',
     __format: 'json',
   },
+  disableSharing: {
+    __name: 'DISABLE_SHARING',
+    __format: 'json',
+  },
   info: {
     termsOfService: 'INFO_TOS',
     contact: {

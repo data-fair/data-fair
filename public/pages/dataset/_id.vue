@@ -196,8 +196,8 @@
                   </v-tab-item>
                 </template>
               </layout-section-tabs>
-
               <layout-section-tabs
+                v-if="!env.disableSharing"
                 :section="sections.find(s => s.id === 'share')"
                 :svg="shareSvg"
                 svg-no-margin
