@@ -24,7 +24,7 @@ module.exports = {
   pages: {
     root: {
       title: 'Accueil',
-      description: 'Enrichissez et publiez facilement vos données. Vous pouvez les utiliser dans des applications dédiées et les mettre a disposition d\'autres personnes en mode ouvert ou privé.',
+      description: 'Enrichissez et publiez facilement vos données. Vous pouvez les utiliser dans des applications dédiées et les mettre à disposition d\'autres personnes en mode ouvert ou privé.',
     },
     datasets: {
       title: 'Jeux de données',
