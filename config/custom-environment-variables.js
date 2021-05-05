@@ -140,6 +140,10 @@ module.exports = {
     __name: 'REMOTE_SERVICES',
     __format: 'json',
   },
+  catalogs: {
+    __name: 'CATALOGS',
+    __format: 'json',
+  },
   info: {
     termsOfService: 'INFO_TOS',
     contact: {
