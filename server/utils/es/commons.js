@@ -5,6 +5,7 @@ const createError = require('http-errors')
 const flatten = require('flat')
 const queryParser = require('lucene-query-parser')
 const sanitizeHtml = require('sanitize-html')
+const truncateMiddle = require('truncate-middle')
 const thumbor = require('../thumbor')
 const tiles = require('../tiles')
 const geo = require('../geo')
@@ -317,6 +318,16 @@ exports.prepareResultItem = (hit, dataset, query) => {
   const descriptionField = dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/description')
   if (descriptionField && res[descriptionField.key]) {
     res[descriptionField.key] = sanitizeHtml(res[descriptionField.key])
+  }
+
+  // Truncate string results for faster previews
+  if (query.truncate) {
+    const truncate = Number(query.truncate)
+    for (const key in res) {
+      if (typeof res[key] !== 'string') continue
+      if (descriptionField && descriptionField.key === key) continue
+      res[key] = truncateMiddle(res[key], truncate, 0, '...')
+    }
   }
 
   return res

@@ -137,7 +137,7 @@
                       {{ item[header.value] ? 'oui' : 'non' }}
                     </span>
                     <span v-else>
-                      {{ (item[header.value] + '') | truncate(50) }}
+                      {{ item[header.value] + '' }}
                     </span>
                     <v-btn
                       v-if="hover && !filters.find(f => f.field.key === header.value) && isFilterable(item[header.value])"
@@ -214,6 +214,7 @@
           size: this.pagination.itemsPerPage,
           page: this.pagination.page,
           q_mode: this.qMode,
+          truncate: 50,
         }
         if (this.imageField) params.thumbnail = '40x40'
         if (this.pagination.sortBy[0]) {

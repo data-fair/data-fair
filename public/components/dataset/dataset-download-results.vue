@@ -97,6 +97,7 @@
           size: 10000,
           page: 1,
         }
+        delete params.truncate
         return {
           csv: buildURL(this.resourceUrl + '/lines', { ...params, format: 'csv' }),
           xlsx: buildURL(this.resourceUrl + '/lines', { ...params, format: 'xlsx' }),
