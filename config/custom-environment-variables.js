@@ -161,6 +161,12 @@ module.exports = {
       __format: 'json',
     },
   },
+  ogr2ogr: {
+    skip: {
+      __name: 'OGR2OGR_SKIP',
+      __format: 'json',
+    },
+  },
   doc: {
     datasetEdit: 'DOC_DATASET_EDIT',
     datasetExtend: 'DOC_DATASET_EXTEND',

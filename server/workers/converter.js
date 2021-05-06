@@ -7,6 +7,7 @@ const ogr2ogr = require('ogr2ogr')
 const util = require('util')
 const pump = util.promisify(require('pump'))
 const csvStringify = require('csv-stringify')
+const { displayBytes } = require('../utils/bytes')
 const datasetUtils = require('../utils/dataset')
 const icalendar = require('../utils/icalendar')
 const exec = require('../utils/exec')
@@ -54,9 +55,13 @@ exports.process = async function(app, dataset) {
     debug('decompress', dataset.originalFile.mimetype, originalFilePath, dirName)
     await decompress(dataset.originalFile.mimetype, originalFilePath, dirName)
     const files = await datasetUtils.lsAttachments(dataset)
-    const fileNames = files.map(f => path.parse(f).base)
+    const fileNames = files.map(f => path.parse(f))
+
     // Check if this archive is actually a shapefile source
-    if (fileNames.find(f => f === baseName + '.shp') && fileNames.find(f => f === baseName + '.shx') && fileNames.find(f => f === baseName + '.dbf')) {
+    const shpFile = fileNames.find(f => f.ext.toLowerCase().endsWith('.shp'))
+    if (shpFile &&
+        fileNames.find(f => f.name === shpFile.name && f.ext.toLowerCase().endsWith('.shx')) &&
+        fileNames.find(f => f.name === shpFile.name && f.ext.toLowerCase().endsWith('.dbf'))) {
       isShapefile = true
     } else {
       const csvFilePath = path.join(datasetUtils.dir(dataset), baseName + '.csv')
@@ -86,7 +91,7 @@ exports.process = async function(app, dataset) {
   if (calendarTypes.has(dataset.originalFile.mimetype)) {
     // TODO : store these file size limits in config file ?
     if (dataset.originalFile.size > config.defaultLimits.maxSpreadsheetSize) {
-      throw createError(400, `Un fichier de ce format ne peut pas excéder ${config.defaultLimits.maxSpreadsheetSize} Mo. Vous pouvez par contre le convertir en CSV avec un outil externe et le charger de nouveau.`)
+      throw createError(400, `Un fichier de ce format ne peut pas excéder ${displayBytes(config.defaultLimits.maxSpreadsheetSize)}. Vous pouvez par contre le convertir en CSV avec un outil externe et le charger de nouveau.`)
     }
     const { eventsStream, infos } = await icalendar.parse(originalFilePath)
     const filePath = path.join(datasetUtils.dir(dataset), baseName + '.csv')
@@ -104,7 +109,7 @@ exports.process = async function(app, dataset) {
     icalendar.prepareSchema(dataset, infos)
   } else if (tabularTypes.has(dataset.originalFile.mimetype)) {
     if (dataset.originalFile.size > config.defaultLimits.maxSpreadsheetSize) {
-      throw createError(400, `Un fichier de ce format ne peut pas excéder ${config.defaultLimits.maxSpreadsheetSize} Mo. Vous pouvez par contre le convertir en CSV avec un outil externe et le charger de nouveau.`)
+      throw createError(400, `Un fichier de ce format ne peut pas excéder ${displayBytes(config.defaultLimits.maxSpreadsheetSize)}. Vous pouvez par contre le convertir en CSV avec un outil externe et le charger de nouveau.`)
     }
     const data = await xlsx.getCSV(originalFilePath)
     const filePath = path.join(datasetUtils.dir(dataset), baseName + '.csv')
@@ -116,8 +121,11 @@ exports.process = async function(app, dataset) {
       encoding: 'utf-8',
     }
   } else if (isShapefile || geographicalTypes.has(dataset.originalFile.mimetype)) {
+    if (config.ogr2ogr.skip) {
+      throw createError(400, 'Les fichiers de type shapefile ne sont pas supportés sur ce service.')
+    }
     if (dataset.originalFile.size > config.defaultLimits.maxSpreadsheetSize) {
-      throw createError(400, `Un fichier de ce format ne peut pas excéder ${config.defaultLimits.maxSpreadsheetSize} Mo. Vous pouvez par contre le convertir en CSV avec un outil externe et le charger de nouveau.`)
+      throw createError(400, `Un fichier de ce format ne peut pas excéder ${displayBytes(config.defaultLimits.maxSpreadsheetSize)}. Vous pouvez par contre le convertir en CSV avec un outil externe et le charger de nouveau.`)
     }
     const geoJsonStream = ogr2ogr(originalFilePath)
       .format('GeoJSON')

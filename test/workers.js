@@ -166,8 +166,12 @@ describe('workers', () => {
   })
 
   // skipped, because requires ogr2ogr in the build env
-  it.skip('Process newly uploaded shapefile dataset', async () => {
-  // Send dataset
+  it('Process newly uploaded shapefile dataset', async () => {
+    if (config.ogr2ogr.skip) {
+      return console.log('Skip ogr2ogr test in this environment')
+    }
+
+    // Send dataset
     const datasetFd = fs.readFileSync('./test/resources/geo/stations.zip')
     const form = new FormData()
     form.append('file', datasetFd, 'stations.zip')
@@ -179,6 +183,25 @@ describe('workers', () => {
     const dataset = await workers.hook('converter')
     assert.equal(dataset.status, 'loaded')
     assert.equal(dataset.file.name, 'stations.geojson')
+  })
+
+  it('Process shapefile dataset where zip file has different name from contents', async () => {
+    if (config.ogr2ogr.skip) {
+      return console.log('Skip ogr2ogr test in this environment')
+    }
+
+    // Send dataset
+    const datasetFd = fs.readFileSync('./test/resources/geo/stations2.zip')
+    const form = new FormData()
+    form.append('file', datasetFd, 'stations2.zip')
+    const ax = global.ax.dmeadus
+    const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
+    assert.equal(res.status, 201)
+
+    // dataset converted
+    const dataset = await workers.hook('converter')
+    assert.equal(dataset.status, 'loaded')
+    assert.equal(dataset.file.name, 'stations2.geojson')
   })
 
   it('Run tasks in children processes', async function() {

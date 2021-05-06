@@ -134,7 +134,6 @@
     "ogr2ogr": "^2.1.0",
     "parse5": "^6.0.1",
     "patch-package": "^6.2.2",
-    "pretty-bytes": "^5.4.1",
     "proj4": "^2.6.3",
     "pump": "^3.0.0",
     "random-seed": "^0.3.0",

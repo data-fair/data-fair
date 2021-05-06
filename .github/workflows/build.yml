@@ -28,7 +28,7 @@ jobs:
       with:
         time: '15s'
     - run: docker ps
-    - run: TIPPECANOE_SKIP=true npm run test-cover
+    - run: TIPPECANOE_SKIP=true OGR2OGR_SKIP=true npm run test-cover
     - run: docker-compose stop
     # - run: npm run coveralls
     - name: Docker meta
