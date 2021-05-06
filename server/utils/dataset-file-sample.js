@@ -10,7 +10,7 @@ module.exports = async function(dataset) {
   const fileName = datasetUtils.fileName(dataset)
   const st = await stat(fileName)
   const fd = await open(fileName, 'r')
-  const size = Math.min(st.size, 128 * 1024)
+  const size = Math.min(st.size, 1024 * 1024)
   const buffer = Buffer.alloc(size)
   await read(fd, buffer, 0, size, 0)
   fs.close(fd)

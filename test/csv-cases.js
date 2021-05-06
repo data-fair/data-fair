@@ -173,4 +173,15 @@ describe('CSV cases', () => {
     const res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
     assert.equal(res.data.results[0].SEQ_1_Estimation_Sequestration_nette_CO2, 149300)
   })
+
+  it('A CSV with single quotes in content', async () => {
+    const ax = global.ax.dmeadus
+    const dataset = await testUtils.sendDataset('csv-cases/single-quotes.csv', ax)
+    assert.equal(dataset.status, 'finalized')
+    assert.equal(dataset.file.props.linesDelimiter, '\n')
+    assert.equal(dataset.file.props.escapeChar, '"')
+    assert.equal(dataset.file.props.quote, '"')
+    assert.equal(dataset.file.props.fieldsDelimiter, ';')
+    const res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
+  })
 })

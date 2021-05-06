@@ -27,8 +27,8 @@ exports.sniff = async (sample) => {
           Object.keys(chunk).forEach(key => {
             // none matching labels and object keys means a failure of csv-parse to parse a line
             if (!labels.includes(key)) {
-              score -= 2
-              debug('Unmatched object key, score -= 2')
+              score -= 10
+              debug('Unmatched object key, score -= 10')
             }
           })
           labels.forEach(key => {
@@ -40,8 +40,8 @@ exports.sniff = async (sample) => {
               // debug('Undefined property, score -= 0.1')
               // score -= 0.1
             } else if (val) {
-              if (val.includes('\n')) {
-                // if the valuu contains line breaks quoting was probably good, and we need to compensate for having potentially less lines
+              /* if (val.includes('\n')) {
+                // if the value contains line breaks quoting was probably good, and we need to compensate for having potentially less lines
                 const lineBreaksBoost = val.split('\n').length * 0.5
                 debug('Value contains linebreaks, score += ' + lineBreaksBoost)
                 score += lineBreaksBoost
@@ -49,7 +49,8 @@ exports.sniff = async (sample) => {
                 // having many none empty values is a good sign
                 // debug('Filled value, score += 1')
                 score += 1
-              }
+              } */
+              score += 1
 
               // value is prefixed/suffixed with a potential quote, probably missed it
               if (possibleQuoteChars.includes(val[0])) {
