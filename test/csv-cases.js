@@ -183,5 +183,6 @@ describe('CSV cases', () => {
     assert.equal(dataset.file.props.quote, '"')
     assert.equal(dataset.file.props.fieldsDelimiter, ';')
     const res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
+    assert.equal(res.data.results[0].COM, 'L\' Abergement-Clémenciat')
   })
 })
