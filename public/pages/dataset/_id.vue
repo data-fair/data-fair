@@ -116,16 +116,16 @@
                   Données
                 </template>
                 <template v-slot:tabs>
+                  <v-tab v-if="dataset.bbox" href="#data-map">
+                    <v-icon>mdi-map</v-icon>&nbsp;&nbsp;Carte
+                  </v-tab>
+
                   <v-tab href="#data-table">
                     <v-icon>mdi-table</v-icon>&nbsp;&nbsp;Tableau
                   </v-tab>
 
                   <v-tab v-if="!!dataset.schema.find(f => f['x-refersTo'] === 'https://schema.org/startDate') && !!dataset.schema.find(f => f['x-refersTo'] === 'https://schema.org/endDate' && !!dataset.schema.find(f => f['x-refersTo'] === 'http://www.w3.org/2000/01/rdf-schema#label'))" href="#data-calendar">
                     <v-icon>mdi-calendar-range</v-icon>&nbsp;&nbsp;Calendrier
-                  </v-tab>
-
-                  <v-tab v-if="dataset.bbox" href="#data-map">
-                    <v-icon>mdi-map</v-icon>&nbsp;&nbsp;Carte
                   </v-tab>
 
                   <v-tab v-if="fileProperty" href="#data-files">
@@ -137,6 +137,12 @@
                   </v-tab>
                 </template>
                 <template v-slot:tabs-items>
+                  <v-tab-item value="data-map">
+                    <v-container fluid class="pa-0">
+                      <dataset-map fixed-height="600" />
+                    </v-container>
+                  </v-tab-item>
+
                   <v-tab-item value="data-table">
                     <dataset-table />
                   </v-tab-item>
@@ -144,12 +150,6 @@
                   <v-tab-item value="data-calendar">
                     <v-container fluid class="pa-0">
                       <dataset-calendar />
-                    </v-container>
-                  </v-tab-item>
-
-                  <v-tab-item value="data-map">
-                    <v-container fluid class="pa-0">
-                      <dataset-map fixed-height="600" />
                     </v-container>
                   </v-tab-item>
 
