@@ -166,6 +166,10 @@ module.exports = {
       __name: 'OGR2OGR_SKIP',
       __format: 'json',
     },
+    timeout: {
+      __name: 'OGR2OGR_TIMEOUT',
+      __format: 'json',
+    },
   },
   doc: {
     datasetEdit: 'DOC_DATASET_EDIT',

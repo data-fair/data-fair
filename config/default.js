@@ -241,6 +241,7 @@ module.exports = {
   },
   ogr2ogr: {
     skip: false,
+    timeout: 360000, // 6 minutes
   },
   doc: {
     applications: null,
