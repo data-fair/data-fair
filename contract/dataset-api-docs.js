@@ -25,7 +25,7 @@ module.exports = (dataset) => {
   }
   const properties = dataset.schema.map(p => p.key)
   const textProperties = dataset.schema.filter(p => p.type === 'string').map(p => p.key)
-  const uriRefProperties = dataset.schema.filter(p => !p['x-calculated'] && p.type === 'string' && p.format === 'uri-reference')
+  const uriRefProperties = dataset.schema.filter(p => !p['x-calculated'] && p.type === 'string')
   const numberProperties = dataset.schema.filter(p => p.type === 'number').map(p => p.key)
   const filterParams = [{
     in: 'query',
