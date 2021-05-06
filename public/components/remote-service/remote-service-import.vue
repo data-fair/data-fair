@@ -95,16 +95,16 @@
       async importApi() {
         const securities = (this.apiDoc.security || []).map(s => Object.keys(s).pop()).map(s => this.apiDoc.components.securitySchemes[s])
         const apiKeySecurity = securities.find(s => s.type === 'apiKey')
-        if (!apiKeySecurity) return eventBus.$emit('notification', { type: 'error', msg: 'Erreur, l\'API importée n\'a pas de schéma de sécurité adapté' })
 
         this.importing = true
         try {
-          const remoteService = await this.$axios.$post('api/v1/remote-services', {
+          const body = {
             apiDoc: this.apiDoc,
-            apiKey: { in: apiKeySecurity.in, name: apiKeySecurity.name },
             url: this.apiDocUrl,
             server: this.apiDoc.servers && this.apiDoc.servers.length && this.apiDoc.servers[0].url,
-          })
+          }
+          if (apiKeySecurity) body.apiKey = { in: apiKeySecurity.in, name: apiKeySecurity.name }
+          const remoteService = await this.$axios.$post('api/v1/remote-services', body)
           this.$router.push({ path: `/remote-service/${remoteService.id}` })
         } catch (error) {
           eventBus.$emit('notification', { error, msg: 'Erreur pendant l\'import de la description du service' })
