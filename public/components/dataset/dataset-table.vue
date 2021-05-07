@@ -23,6 +23,7 @@
             >
               <v-icon>mdi-plus</v-icon>
             </v-btn>
+            <dataset-rest-upload-actions v-if="dataset.isRest && can('writeData')" :dataset="dataset" />
           </v-row>
           <v-row>
             <v-col

@@ -50,7 +50,7 @@
           <v-select
             v-model="primaryKey"
             label="Clé primaire"
-            :disabled="dataset.count || !can('writeDescription')"
+            :disabled="!!dataset.count || !can('writeDescription')"
             :messages="dataset.count ? 'La clé primaire ne peut pas être modifiée une fois que des données ont été insérées.' : 'Optionnel. Utilisez une ou plusieurs colonnes du schéma pour construire une clé primaire qui identifiera de manière unique chaque ligne de la donnée.'"
             :items="notCalculatedProperties.map(p => ({text: p.title || p['x-originalName'] || p.key, value: p.key}))"
             style="max-width: 500px;"
