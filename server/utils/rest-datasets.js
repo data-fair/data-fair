@@ -13,6 +13,7 @@ const uuidv4 = require('uuid/v4')
 const { Readable, Transform, Writable } = require('stream')
 const mimeTypeStream = require('mime-type-stream')
 const moment = require('moment')
+const objectHash = require('object-hash')
 const datasetUtils = require('./dataset')
 const attachmentsUtils = require('./attachments')
 const findUtils = require('./find')
@@ -26,6 +27,7 @@ function cleanLine(line) {
   delete line._deleted
   delete line._action
   delete line._error
+  delete line._hash
   return line
 }
 
@@ -103,13 +105,15 @@ const applyTransactions = async (req, transacs, validate) => {
   const updatedAt = new Date()
   const collection = exports.collection(db, dataset)
   const history = dataset.rest && dataset.rest.history
+  const patchProjection = dataset.schema
+          .filter(f => !f['x-calculated'])
+          .filter(f => !f['x-extension'])
+          .reduce((a, p) => { a[p.key] = 1; return a }, {})
   const results = []
-  // in non history or single action mode, better to not use bulk op
-  const bulkOp = !history && transacs.length > 1 ? collection.initializeOrderedBulkOp() : null
 
   let i = 0
   for (const transac of transacs) {
-    const { _action, ...body } = transac
+    let { _action, ...body } = transac
     if (!actions.includes(_action)) throw createError(400, `action "${_action}" is unknown, use one of ${JSON.stringify(actions)}`)
     if (_action === 'create' && !body._id) body._id = shortid.generate()
     if (!body._id) throw createError(400, '"_id" attribute is required')
@@ -119,27 +123,53 @@ const applyTransactions = async (req, transacs, validate) => {
     extendedBody._updatedAt = updatedAt
     extendedBody._i = Number((updatedAt.getTime() - datasetCreatedAt) + padI(i))
     i++
+
+    const result = { _id: body._id, _action }
+
     if (req.user) extendedBody._updatedBy = { id: req.user.id, name: req.user.name }
-    extendedBody._deleted = false
-    let doc = {}
-    const filter = { _id: body._id }
-    if (_action === 'create' || _action === 'update') {
-      if (validate && !validate(body)) doc = { _error: validate.errors }
-      else if (bulkOp) bulkOp.find(filter).upsert().replaceOne(extendedBody)
-      else doc = (await collection.findOneAndReplace(filter, extendedBody, { upsert: true, returnOriginal: false })).value
-    } else if (_action === 'patch') {
-      if (validate && !validate(body)) doc = { _error: validate.errors }
-      else if (bulkOp) bulkOp.find(filter).upsert().updateOne({ $set: extendedBody })
-      else doc = (await collection.findOneAndUpdate(filter, { $set: extendedBody }, { upsert: true, returnOriginal: false })).value
-    } else if (_action === 'delete') {
+
+    if (_action === 'delete') {
       extendedBody._deleted = true
-      if (bulkOp) bulkOp.find(filter).replaceOne(extendedBody)
-      else doc = (await collection.findOneAndReplace(filter, extendedBody, { returnOriginal: false })).value
+      try {
+        await collection.replaceOne({ _id: body._id }, extendedBody)
+      } catch (err) {
+        result._error = err.message
+        result._status = 500
+      }
+    } else {
+      extendedBody._deleted = false
+      if (_action === 'patch') {
+        // reading the previous body is necessary both for proper hash management and for schema validation
+        const previousBody = await collection.findOne({ _id: body._id }, { projection: patchProjection })
+        if (previousBody) {
+          body = { ...previousBody, ...body }
+          Object.assign(extendedBody, body)
+        }
+      }
+
+      if (validate && !validate(body)) {
+        result._error = validate.errors
+        result._status = 400
+      } else {
+        extendedBody._hash = objectHash(body)
+        const filter = { _id: body._id, _hash: { $ne: extendedBody._hash } }
+        try {
+          await collection.replaceOne(filter, extendedBody, { upsert: true })
+        } catch (err) {
+          if (err.code === 11000) {
+            // this conflict means that the hash was unchanged
+            result.status = 304
+          } else {
+            result._error = err.message
+            result._status = 500
+          }
+        }
+      }
     }
 
-    if (history && !doc._error) {
+    if (history && !result._error) {
       const revisionsCollection = exports.revisionsCollection(db, dataset)
-      const revision = { ...doc }
+      const revision = { ...extendedBody, _action }
       delete revision._needsIndexing
       revision._lineId = revision._id
       delete revision._id
@@ -147,16 +177,10 @@ const applyTransactions = async (req, transacs, validate) => {
       await revisionsCollection.insertOne(revision)
     }
 
-    if (!bulkOp && !doc._error) await req.app.publish('datasets/' + dataset.id + '/transactions', transac)
-    results.push({ _id: body._id, _action, _status: doc._error ? 400 : 200, ...doc })
+    if (!result._error) await req.app.publish('datasets/' + dataset.id + '/transactions', transac)
+    results.push({ ...result, ...extendedBody })
   }
 
-  if (bulkOp && bulkOp.s.currentBatchSize) {
-    await bulkOp.execute()
-    for (const transac of transacs) {
-      await req.app.publish('datasets/' + dataset.id + '/transactions', transac)
-    }
-  }
   return results
 }
 
@@ -174,9 +198,12 @@ class TransactionStream extends Writable {
     results.forEach(res => {
       if (res._error) {
         this.options.summary.nbErrors += 1
-        if (this.options.summary.errors.length < 10) this.options.summary.errors.push({ line: this.i, error: res._error })
+        if (this.options.summary.errors.length < 10) this.options.summary.errors.push({ line: this.i, error: res._error, status: res._status })
       } else {
         this.options.summary.nbOk += 1
+        if (res.status === 304) {
+          this.options.summary.nbNotModified += 1
+        }
       }
       this.i += 1
     })
@@ -264,7 +291,7 @@ exports.createLine = async (req, res, next) => {
   req.body._id = req.body._id || shortid.generate()
   await manageAttachment(req, false)
   const line = (await applyTransactions(req, [{ _action, ...req.body }], compileSchema(req.dataset)))[0]
-  if (line._error) return res.status(400).send(line._error)
+  if (line._error) return res.status(line._status).send(line._error)
   await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { status: 'updated' } })
   res.status(201).send(cleanLine(line))
   datasetUtils.updateStorage(db, req.dataset)
@@ -274,7 +301,7 @@ exports.deleteLine = async (req, res, next) => {
   const db = req.app.get('db')
   await manageAttachment(req, false)
   const line = (await applyTransactions(req, [{ _action: 'delete', _id: req.params.lineId }], compileSchema(req.dataset)))[0]
-  if (line._error) return res.status(400).send(line._error)
+  if (line._error) return res.status(line._status).send(line._error)
   await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { status: 'updated' } })
   res.status(204).send()
   datasetUtils.updateStorage(db, req.dataset)
@@ -284,7 +311,7 @@ exports.updateLine = async (req, res, next) => {
   const db = req.app.get('db')
   await manageAttachment(req, false)
   const line = (await applyTransactions(req, [{ _action: 'update', _id: req.params.lineId, ...req.body }], compileSchema(req.dataset)))[0]
-  if (line._error) return res.status(400).send(line._error)
+  if (line._error) return res.status(line._status).send(line._error)
   await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { status: 'updated' } })
   res.status(200).send(cleanLine(line))
   datasetUtils.updateStorage(db, req.dataset)
@@ -294,7 +321,7 @@ exports.patchLine = async (req, res, next) => {
   const db = req.app.get('db')
   await manageAttachment(req, true)
   const line = (await applyTransactions(req, [{ _action: 'patch', _id: req.params.lineId, ...req.body }], compileSchema(req.dataset)))[0]
-  if (line._error) return res.status(400).send(line._error)
+  if (line._error) return res.status(line._status).send(line._error)
   await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { status: 'updated' } })
   res.status(200).send(cleanLine(line))
   datasetUtils.updateStorage(db, req.dataset)
@@ -321,7 +348,7 @@ exports.bulkLines = async (req, res, next) => {
     const ioStream = mimeTypeStream(req.get('Content-Type')) || mimeTypeStream('application/json')
     parseStream = ioStream.parser()
   }
-  const summary = { nbOk: 0, nbErrors: 0, errors: [] }
+  const summary = { nbOk: 0, nbNotModified: 0, nbErrors: 0, errors: [] }
   const transactionStream = new TransactionStream({ req, validate, summary })
 
   // we try both to have a HTTP failure if the transactions are clearly badly formatted
