@@ -445,4 +445,29 @@ describe('REST datasets', () => {
     dataset = await workers.hook('finalizer/restidem')
     assert.equal(dataset.count, 3)
   })
+
+  it('Delete all lines from a rest dataset', async () => {
+    const ax = global.ax.dmeadus
+    await ax.post('/api/v1/datasets', {
+      isRest: true,
+      title: 'restdel',
+      schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }],
+    })
+    let dataset = await workers.hook('indexer/restdel')
+    await ax.post('/api/v1/datasets/restdel/_bulk_lines', [
+      { _id: 'line1', attr1: 'test1', attr2: 'test1' },
+      { _id: 'line2', attr1: 'test1', attr2: 'test1' },
+      { _id: 'line3', attr1: 'test1', attr2: 'test1' },
+      { _id: 'line4', attr1: 'test1', attr2: 'test1' },
+    ])
+    const collection = restDatasetsUtils.collection(global.db, dataset)
+    dataset = await workers.hook('finalizer/restdel')
+    assert.equal(dataset.count, 4)
+
+    await ax.delete('/api/v1/datasets/restdel/lines')
+    assert.equal(await collection.countDocuments({ _needsIndexing: true }), 4)
+    dataset = await workers.hook('finalizer/restdel')
+    // assert.equal(dataset.count, 0)
+    assert.equal(await collection.countDocuments({}), 0)
+  })
 })

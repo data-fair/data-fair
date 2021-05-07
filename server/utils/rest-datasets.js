@@ -130,6 +130,7 @@ const applyTransactions = async (req, transacs, validate) => {
 
     if (_action === 'delete') {
       extendedBody._deleted = true
+      extendedBody._hash = null
       try {
         await collection.replaceOne({ _id: body._id }, extendedBody)
       } catch (err) {
@@ -299,7 +300,6 @@ exports.createLine = async (req, res, next) => {
 
 exports.deleteLine = async (req, res, next) => {
   const db = req.app.get('db')
-  await manageAttachment(req, false)
   const line = (await applyTransactions(req, [{ _action: 'delete', _id: req.params.lineId }], compileSchema(req.dataset)))[0]
   if (line._error) return res.status(line._status).send(line._error)
   await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { status: 'updated' } })
@@ -324,6 +324,15 @@ exports.patchLine = async (req, res, next) => {
   if (line._error) return res.status(line._status).send(line._error)
   await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { status: 'updated' } })
   res.status(200).send(cleanLine(line))
+  datasetUtils.updateStorage(db, req.dataset)
+}
+
+exports.deleteAllLines = async (req, res, next) => {
+  const db = req.app.get('db')
+  const collection = exports.collection(db, req.dataset)
+  await collection.updateMany({}, { $set: { _needsIndexing: true, _deleted: true, _hash: null, _updatedAt: new Date(), _action: 'delete' } })
+  await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { status: 'updated' } })
+  res.status(204).send()
   datasetUtils.updateStorage(db, req.dataset)
 }
 

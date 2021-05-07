@@ -615,6 +615,7 @@ router.patch('/:datasetId/lines/:lineId', readDataset(['finalized', 'updated', '
 router.post('/:datasetId/_bulk_lines', readDataset(['finalized', 'updated', 'indexed']), isRest, permissions.middleware('bulkLines', 'write'), checkStorage(false), restDatasetsUtils.uploadBulk, asyncWrap(restDatasetsUtils.bulkLines))
 router.delete('/:datasetId/lines/:lineId', readDataset(['finalized', 'updated', 'indexed']), isRest, permissions.middleware('deleteLine', 'write'), asyncWrap(restDatasetsUtils.deleteLine))
 router.get('/:datasetId/lines/:lineId/revisions', readDataset(['finalized', 'updated', 'indexed']), isRest, permissions.middleware('readLineRevisions', 'read'), asyncWrap(restDatasetsUtils.readLineRevisions))
+router.delete('/:datasetId/lines', readDataset(['finalized', 'updated', 'indexed']), isRest, permissions.middleware('deleteLine', 'write'), asyncWrap(restDatasetsUtils.deleteAllLines))
 
 // Specifc routes for datasets with masterData functionalities enabled
 router.post('/:datasetId/master-data/bulk-searchs/:bulkSearchId', readDataset(), permissions.middleware('readLines', 'read'), asyncWrap(async(req, res) => {

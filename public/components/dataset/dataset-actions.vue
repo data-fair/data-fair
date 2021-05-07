@@ -92,6 +92,16 @@
         <v-list-item-title>Supprimer</v-list-item-title>
       </v-list-item-content>
     </v-list-item>
+    <v-list-item v-if="dataset.isRest && can('deleteLine')" @click="showDeleteAllLinesDialog = true">
+      <v-list-item-icon>
+        <v-icon color="warning">
+          mdi-delete-sweep
+        </v-icon>
+      </v-list-item-icon>
+      <v-list-item-content>
+        <v-list-item-title>Supprimer toutes les lignes</v-list-item-title>
+      </v-list-item-content>
+    </v-list-item>
     <v-list-item v-if="can('delete')" @click="showOwnerDialog = true">
       <v-list-item-icon>
         <v-icon color="warning">
@@ -217,6 +227,32 @@
     </v-dialog>
 
     <v-dialog
+      v-model="showDeleteAllLinesDialog"
+      max-width="500"
+    >
+      <v-card outlined>
+        <v-card-title primary-title>
+          Suppression des lignes du jeu de données
+        </v-card-title>
+        <v-card-text>
+          <p>Voulez vous vraiment supprimer toutes les lignes du jeu de données "{{ dataset.title }}" ? La suppression est définitive et les données ne pourront pas être récupérées.</p>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn text @click="showDeleteAllLinesDialog = false">
+            Non
+          </v-btn>
+          <v-btn
+            color="warning"
+            @click="confirmDeleteAllLines"
+          >
+            Oui
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <v-dialog
       v-model="showOwnerDialog"
       max-width="900"
     >
@@ -311,6 +347,7 @@
     },
     data: () => ({
       showDeleteDialog: false,
+      showDeleteAllLinesDialog: false,
       showUploadDialog: false,
       showOwnerDialog: false,
       file: null,
@@ -345,6 +382,10 @@
         this.showDeleteDialog = false
         await this.remove()
         this.$router.push({ path: '/datasets' })
+      },
+      async confirmDeleteAllLines() {
+        this.showDeleteAllLinesDialog = false
+        await this.$axios.$delete(`api/v1/datasets/${this.dataset.id}/lines`)
       },
       onFileUpload(file) {
         this.file = file
