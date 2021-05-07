@@ -26,7 +26,7 @@ const currentIters = []
 
 // Hooks for testing
 const hooks = {}
-exports.hook = (key, delay = 5000, message = 'time limit on worker hook') => {
+exports.hook = (key, delay = 10000, message = 'time limit on worker hook') => {
   const promise = new Promise((resolve, reject) => {
     hooks[key] = { resolve, reject }
   })
