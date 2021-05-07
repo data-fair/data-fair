@@ -26,9 +26,14 @@ const currentIters = []
 
 // Hooks for testing
 const hooks = {}
-exports.hook = (key) => new Promise((resolve, reject) => {
-  hooks[key] = { resolve, reject }
-})
+exports.hook = (key, delay = 5000, message = 'time limit on worker hook') => {
+  const promise = new Promise((resolve, reject) => {
+    hooks[key] = { resolve, reject }
+  })
+  const error = new Error(message) // prepare error at this level so that stack trace is useful
+  const timeoutPromise = new Promise((resolve, reject) => setTimeout(() => reject(error), delay))
+  return Promise.race([promise, timeoutPromise])
+}
 // clear also for testing
 exports.clear = () => {
   for (let i = 0; i < config.worker.concurrency; i++) {

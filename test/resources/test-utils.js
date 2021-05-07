@@ -18,6 +18,7 @@ exports.sendDataset = async(fileName, ax) => {
 }
 
 exports.timeout = (promise, delay = 1000, message = 'time limit exceeded') => {
-  const timeoutPromise = new Promise((resolve, reject) => setTimeout(() => reject(new Error(message)), delay))
+  const error = new Error(message) // prepare error at this level so that stack trace is useful
+  const timeoutPromise = new Promise((resolve, reject) => setTimeout(() => reject(error), delay))
   return Promise.race([promise, timeoutPromise])
 }
