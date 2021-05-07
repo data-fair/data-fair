@@ -409,7 +409,7 @@ describe('REST datasets', () => {
       title: 'restidem',
       schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }],
     })
-    await workers.hook('indexer/restidem')
+    await workers.hook('finalizer/restidem')
     let res = await ax.post('/api/v1/datasets/restidem/_bulk_lines', [
       { _id: 'line1', attr1: 'test1', attr2: 'test1' },
       { _id: 'line2', attr1: 'test1', attr2: 'test1' },
@@ -469,5 +469,25 @@ describe('REST datasets', () => {
     dataset = await workers.hook('finalizer/restdel')
     // assert.equal(dataset.count, 0)
     assert.equal(await collection.countDocuments({}), 0)
+  })
+
+  it('Send bulk actions as a CSV', async () => {
+    const ax = global.ax.dmeadus
+    await ax.post('/api/v1/datasets', {
+      isRest: true,
+      title: 'restdel',
+      schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }],
+    })
+    let dataset = await workers.hook('indexer/restdel')
+    await ax.post('/api/v1/datasets/restdel/_bulk_lines', `_id,attr1,attr2
+line1,test1,test1
+line2,test1,test1`, { headers: { 'content-type': 'text/csv' } })
+    dataset = await workers.hook('finalizer/restdel')
+    assert.equal(dataset.count, 2)
+    const lines = (await ax.get('/api/v1/datasets/restdel/lines', { params: { sort: '_i' } })).data.results
+    assert.equal(lines[0]._id, 'line1')
+    assert.equal(lines[0].attr1, 'test1')
+    assert.equal(lines[1]._id, 'line2')
+    assert.equal(lines[1].attr1, 'test1')
   })
 })

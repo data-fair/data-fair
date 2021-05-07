@@ -12,6 +12,8 @@ const csvStringify = require('csv-stringify')
 const flatten = require('flat')
 const pump = require('util').promisify(require('pump'))
 const tmp = require('tmp-promise')
+const mimeTypeStream = require('mime-type-stream')
+const createError = require('http-errors')
 const fieldsSniffer = require('./fields-sniffer')
 const geoUtils = require('./geo')
 const restDatasetsUtils = require('./rest-datasets')
@@ -161,22 +163,23 @@ exports.dataFiles = async (dataset) => {
   return results
 }
 
-// Read the dataset file and get a stream of line items
-exports.readStream = (dataset, raw = false) => {
-  if (dataset.isRest) return restDatasetsUtils.readStream(dataset)
-
-  let parser, transformer
-  if (dataset.file.mimetype === 'text/csv') {
+// used both by exports.readStream and bulk transactions in rest datasets
+exports.transformFileStreams = (mimeType, schema, fileSchema, fileProps = {}, raw = false) => {
+  const streams = []
+  if (mimeType === 'application/x-ndjson' || mimeType === 'application/json') {
+    streams.push(mimeTypeStream(mimeType).parser())
+  } else if (mimeType === 'text/csv') {
     // use result from csv-sniffer to configure parser
     const parserOpts = {
-      separator: dataset.file.props.fieldsDelimiter,
-      escape: dataset.file.props.escapeChar,
-      quote: dataset.file.props.quote || dataset.file.props.escapeChar,
-      newline: dataset.file.props.linesDelimiter,
+      separator: fileProps.fieldsDelimiter || ',',
+      escape: fileProps.escapeChar || '"',
+      quote: fileProps.quote || fileProps.escapeChar || '"',
+      newline: fileProps.linesDelimiter || '\n',
     }
-    parser = csv(parserOpts)
+
+    streams.push(csv(parserOpts))
     // reject empty lines (parsing failures from csv-parser)
-    transformer = new Transform({
+    streams.push(new Transform({
       objectMode: true,
       transform(item, encoding, callback) {
         const hasContent = Object.keys(item).reduce((a, b) => a || ![undefined, '\n', '\r', '\r\n'].includes(item[b]), false)
@@ -184,40 +187,20 @@ exports.readStream = (dataset, raw = false) => {
         if (hasContent) callback(null, item)
         else callback()
       },
-    })
-  } else if (dataset.file.mimetype === 'application/geo+json') {
-    parser = JSONStream.parse('features.*')
-    // transform geojson features into raw data items
-    transformer = new Transform({
-      objectMode: true,
-      transform(feature, encoding, callback) {
-        const item = { ...feature.properties }
-        if (feature.id) item.id = feature.id
-        item.geometry = feature.geometry
-        item._i = this.i = (this.i || 0) + 1
-        callback(null, item)
-      },
-    })
-  } else {
-    throw new Error('Dataset type is not supported ' + dataset.file.mimetype)
-  }
+    }))
 
-  // small local cache for perf
-  const escapedKeys = {}
-  return Combine(
-    fs.createReadStream(exports.fileName(dataset)),
-    iconv.decodeStream(dataset.file.encoding),
-    parser,
-    transformer,
-    // Fix the objects based on fields sniffing
-    new Transform({
+    // small local cache for perf
+    const escapedKeys = {}
+
+    // Fix the objects based on schema
+    streams.push(new Transform({
       objectMode: true,
       transform(chunk, encoding, callback) {
         if (raw) {
-          if (dataset.file.schema) {
+          if (fileSchema) {
             const unknownKey = Object.keys(chunk)
               .filter(k => k !== '_i')
-              .find(k => !dataset.file.schema.find(p => {
+              .find(k => !fileSchema.find(p => {
                 escapedKeys[k] = escapedKeys[k] || fieldsSniffer.escapeKey(k)
                 return p.key === escapedKeys[k]
               }))
@@ -226,7 +209,7 @@ exports.readStream = (dataset, raw = false) => {
             }
 
             // this should not be necessary, but csv-parser does not return all trailing empty values
-            dataset.file.schema.forEach(prop => {
+            fileSchema.forEach(prop => {
               if (chunk[prop['x-originalName']] === undefined) chunk[prop['x-originalName']] = ''
             })
           }
@@ -234,15 +217,48 @@ exports.readStream = (dataset, raw = false) => {
           return callback(null, chunk)
         }
         const line = {}
-        dataset.schema.forEach(prop => {
-          const fileProp = dataset.file && dataset.file.schema && dataset.file.schema.find(p => p.key === prop.key)
-          const value = fieldsSniffer.format(chunk[prop['x-originalName']], prop, fileProp)
+        schema.forEach(prop => {
+          const fileProp = fileSchema && fileSchema.find(p => p.key === prop.key)
+          const value = fieldsSniffer.format(chunk[prop['x-originalName'] || prop.key], prop, fileProp)
           if (value !== null) line[prop.key] = value
         })
         line._i = chunk._i
         callback(null, line)
       },
-    }),
+    }))
+  } else if (mimeType === 'application/geo+json') {
+    streams.push(JSONStream.parse('features.*'))
+    // transform geojson features into raw data items
+    streams.push(new Transform({
+      objectMode: true,
+      transform(feature, encoding, callback) {
+        const item = { ...feature.properties }
+        if (feature.id) item.id = feature.id
+        item.geometry = feature.geometry
+
+        const line = { _i: this.i = (this.i || 0) + 1 }
+        schema.forEach(prop => {
+          const value = fieldsSniffer.format(item[prop['x-originalName']], prop)
+          if (value !== null) line[prop.key] = value
+        })
+        callback(null, line)
+      },
+    }))
+  } else {
+    throw createError(400, 'mime-type is not supported ' + mimeType)
+  }
+
+  return streams
+}
+
+// Read the dataset file and get a stream of line items
+exports.readStream = (dataset, raw = false) => {
+  if (dataset.isRest) return restDatasetsUtils.readStream(dataset)
+
+  return Combine(
+    fs.createReadStream(exports.fileName(dataset)),
+    iconv.decodeStream(dataset.file.encoding),
+    ...exports.transformFileStreams(dataset.file.mimetype, dataset.schema, dataset.file.schema, dataset.file.props, raw),
   )
 }
 

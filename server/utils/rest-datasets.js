@@ -11,7 +11,6 @@ const multer = require('multer')
 const mime = require('mime-types')
 const uuidv4 = require('uuid/v4')
 const { Readable, Transform, Writable } = require('stream')
-const mimeTypeStream = require('mime-type-stream')
 const moment = require('moment')
 const objectHash = require('object-hash')
 const datasetUtils = require('./dataset')
@@ -214,6 +213,7 @@ class TransactionStream extends Writable {
   async _write(chunk, encoding, cb) {
     try {
       chunk._action = chunk._action || (chunk._id ? 'update' : 'create')
+      delete chunk._i
       this.transactions.push(chunk)
       // WARNING: changing this number has impact on the _i generation logic
       if (this.transactions.length > transactionsPacketsSize) await this._applyTransactions()
@@ -347,15 +347,15 @@ exports.bulkLines = async (req, res, next) => {
 
   // The list of actions/operations/transactions is either in a "actions" file
   // or directly in the body
-  let inputStream, parseStream
+  let inputStream, parseStreams
+  const transactionSchema = [...req.dataset.schema, { key: '_id', type: 'string' }, { key: '_action', type: 'string' }]
   if (req.files && req.files.actions && req.files.actions.length) {
     inputStream = fs.createReadStream(req.files.actions[0].path, 'utf8')
-    const ioStream = mimeTypeStream(mime.lookup(req.files.actions[0].originalname)) || mimeTypeStream('application/x-ndjson')
-    parseStream = ioStream.parser()
+    parseStreams = datasetUtils.transformFileStreams(mime.lookup(req.files.actions[0].originalname) || 'application/x-ndjson', transactionSchema)
   } else {
     inputStream = req
-    const ioStream = mimeTypeStream(req.get('Content-Type')) || mimeTypeStream('application/json')
-    parseStream = ioStream.parser()
+    const contentType = req.get('Content-Type') && req.get('Content-Type').split(';')[0]
+    parseStreams = datasetUtils.transformFileStreams(contentType || 'application/json', transactionSchema)
   }
   const summary = { nbOk: 0, nbNotModified: 0, nbErrors: 0, errors: [] }
   const transactionStream = new TransactionStream({ req, validate, summary })
@@ -375,7 +375,7 @@ exports.bulkLines = async (req, res, next) => {
   try {
     await pump(
       inputStream,
-      parseStream,
+      ...parseStreams,
       transactionStream,
     )
     await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { status: 'updated' } })
