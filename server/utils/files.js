@@ -3,7 +3,7 @@ const config = require('config')
 const path = require('path')
 const multer = require('multer')
 const createError = require('http-errors')
-const shortid = require('shortid')
+const { nanoid } = require('nanoid')
 const mime = require('mime-types')
 const datasetSchema = require('../../contract/dataset')
 const fallbackMimeTypes = {
@@ -22,7 +22,7 @@ const storage = multer.diskStorage({
         req.uploadDir = path.join(config.dataDir, req.dataset.owner.type, req.dataset.owner.id, 'datasets', req.dataset.id)
       } else {
         // a tmp dir in case of new dataset, it will be moved into the actual dataset directory after upload completion and final id atttribution
-        req.uploadDir = path.join(config.dataDir, 'tmp', shortid.generate())
+        req.uploadDir = path.join(config.dataDir, 'tmp', nanoid())
         // const owner = req.dataset ? req.dataset.owner : usersUtils.owner(req)
         // return path.join(config.dataDir, owner.type, owner.id, 'datasets', req.dataset.id)
       }

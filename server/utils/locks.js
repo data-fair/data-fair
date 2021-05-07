@@ -1,6 +1,6 @@
-const shortid = require('shortid')
+const { nanoid } = require('nanoid')
 const config = require('config')
-const pid = shortid.generate()
+const pid = nanoid()
 
 let interval
 exports.init = async db => {

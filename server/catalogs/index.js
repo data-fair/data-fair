@@ -1,6 +1,6 @@
 const fs = require('fs-extra')
 const createError = require('http-errors')
-const shortid = require('shortid')
+const { nanoid } = require('nanoid')
 const config = require('config')
 const path = require('path')
 const url = require('url')
@@ -122,7 +122,7 @@ exports.processPublications = async function(app, type, resource) {
   const resourcesCollection = db.collection(type + 's')
   const catalogsCollection = db.collection('catalogs')
   resource.public = permissionsUtil.isPublic(type + 's', resource)
-  resource.publications.filter(p => !p.id).forEach(p => { p.id = shortid.generate() })
+  resource.publications.filter(p => !p.id).forEach(p => { p.id = nanoid() })
   await resourcesCollection.updateOne({ id: resource.id }, { $set: { publications: resource.publications } })
 
   const processedPublication = resource.publications.find(p => ['waiting', 'deleted'].includes(p.status))

@@ -2,14 +2,13 @@ const config = require('config')
 const fs = require('fs-extra')
 const path = require('path')
 const createError = require('http-errors')
-const shortid = require('shortid')
+const { nanoid } = require('nanoid')
 const util = require('util')
 const pump = util.promisify(require('pump'))
 const ajv = require('ajv')()
 const Combine = require('stream-combiner')
 const multer = require('multer')
 const mime = require('mime-types')
-const uuidv4 = require('uuid/v4')
 const { Readable, Transform, Writable } = require('stream')
 const moment = require('moment')
 const objectHash = require('object-hash')
@@ -42,7 +41,7 @@ const destination = async (req, file, cb) => {
 
 const filename = async (req, file, cb) => {
   try {
-    const uid = uuidv4()
+    const uid = nanoid()
     // creating empty file before streaming seems to fix some weird bugs with NFS
     await fs.ensureFile(path.join(tmpDir, uid))
     cb(null, uid)
@@ -97,6 +96,15 @@ exports.deleteDataset = async (db, dataset) => {
   ])
 }
 
+const getLineId = (line, dataset) => {
+  if (dataset.primaryKey && dataset.primaryKey.length) {
+    const primaryKey = dataset.primaryKey.map(p => line[p])
+    return Buffer.from(JSON.stringify(primaryKey).slice(2, -2)).toString('hex')
+  } else {
+    return nanoid()
+  }
+}
+
 const applyTransactions = async (req, transacs, validate) => {
   const db = req.app.get('db')
   const dataset = req.dataset
@@ -115,12 +123,7 @@ const applyTransactions = async (req, transacs, validate) => {
     let { _action, ...body } = transac
     if (!actions.includes(_action)) throw createError(400, `action "${_action}" is unknown, use one of ${JSON.stringify(actions)}`)
     if (_action === 'create' && !body._id) {
-      if (dataset.primaryKey && dataset.primaryKey.length) {
-        const primaryKey = dataset.primaryKey.map(p => body[p])
-        body._id = Buffer.from(JSON.stringify(primaryKey).slice(2, -2)).toString('hex')
-      } else {
-        body._id = shortid.generate()
-      }
+      body._id = getLineId(body, dataset)
     }
     if (!body._id) throw createError(400, '"_id" attribute is required')
 
@@ -296,7 +299,7 @@ exports.readLine = async (req, res, next) => {
 exports.createLine = async (req, res, next) => {
   const db = req.app.get('db')
   const _action = req.body._id ? 'update' : 'create'
-  req.body._id = req.body._id || shortid.generate()
+  req.body._id = req.body._id || getLineId(req.body, req.dataset)
   await manageAttachment(req, false)
   const line = (await applyTransactions(req, [{ _action, ...req.body }], compileSchema(req.dataset)))[0]
   if (line._error) return res.status(line._status).send(line._error)

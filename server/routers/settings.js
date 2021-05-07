@@ -1,8 +1,7 @@
 const crypto = require('crypto')
 const express = require('express')
 const ajv = require('ajv')()
-const uuidv4 = require('uuid/v4')
-const shortid = require('shortid')
+const { nanoid } = require('nanoid')
 const createError = require('http-errors')
 const settingSchema = require('../../contract/settings')
 const validate = ajv.compile(settingSchema)
@@ -73,10 +72,10 @@ router.put('/:type/:id', isOwnerAdmin, asyncWrap(async(req, res) => {
     if (apiKey.adminMode && !req.user.adminMode) {
       throw createError(403, 'Only superadmin can manage api keys with adminMode=true')
     }
-    if (!apiKey.id) apiKey.id = shortid.generate()
+    if (!apiKey.id) apiKey.id = nanoid()
 
     if (!apiKey.key) {
-      fullApiKeys[i].clearKey = uuidv4()
+      fullApiKeys[i].clearKey = nanoid()
       const hash = crypto.createHash('sha512')
       hash.update(fullApiKeys[i].clearKey)
       fullApiKeys[i].key = apiKey.key = hash.digest('hex')
@@ -84,7 +83,7 @@ router.put('/:type/:id', isOwnerAdmin, asyncWrap(async(req, res) => {
   })
 
   req.body.topics.forEach((topic) => {
-    if (!topic.id) topic.id = shortid.generate()
+    if (!topic.id) topic.id = nanoid()
   })
 
   const oldSettings = (await settings.findOneAndReplace(owner, req.body, { upsert: true })).value

@@ -12,7 +12,7 @@ Downstream examples:
 {type: 'message', channel: 'my_channel', data: {...}}
 {type: 'error', data: {...}}
 */
-const shortid = require('shortid')
+const { nanoid } = require('nanoid')
 const permissions = require('./permissions')
 
 let cursor
@@ -35,7 +35,7 @@ exports.initServer = async (wss, db, session) => {
   wss.on('connection', (ws, req) => {
     session.auth(req, null, () => {
       // Associate ws connections to ids for subscriptions
-      const clientId = shortid.generate()
+      const clientId = nanoid()
       clients[clientId] = ws
 
       // Manage subscribe/unsubscribe demands
