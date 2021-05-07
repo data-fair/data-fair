@@ -409,14 +409,14 @@ describe('REST datasets', () => {
       title: 'restidem',
       schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }],
     })
-    let dataset = await workers.hook('indexer/restidem')
+    await workers.hook('indexer/restidem')
     let res = await ax.post('/api/v1/datasets/restidem/_bulk_lines', [
       { _id: 'line1', attr1: 'test1', attr2: 'test1' },
       { _id: 'line2', attr1: 'test1', attr2: 'test1' },
       { _id: 'line3', attr1: 'test1', attr2: 'test1' },
       { _id: 'line4', attr1: 'test1', attr2: 'test1' },
     ])
-    dataset = await workers.hook('finalizer/restidem')
+    let dataset = await workers.hook('finalizer/restidem')
     res = await ax.get('/api/v1/datasets/restidem/lines')
     assert.equal(res.data.total, 4)
 
