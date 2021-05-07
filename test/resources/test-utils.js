@@ -17,7 +17,7 @@ exports.sendDataset = async(fileName, ax) => {
   return workers.hook(`finalizer/${res.data.id}`)
 }
 
-exports.timeout = (promise, delay, message) => {
-  const timeoutPromise = new Promise((resolve, reject) => setTimeout(() => reject(new Error(message || 'time limit exceeded')), delay))
+exports.timeout = (promise, delay = 1000, message = 'time limit exceeded') => {
+  const timeoutPromise = new Promise((resolve, reject) => setTimeout(() => reject(new Error(message)), delay))
   return Promise.race([promise, timeoutPromise])
 }

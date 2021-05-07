@@ -65,7 +65,7 @@ describe('REST datasets', () => {
       title: 'rest2',
       schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }],
     })
-    await workers.hook('indexer/rest2')
+    await workers.hook('finalizer/rest2')
     let res = await ax.post('/api/v1/datasets/rest2/_bulk_lines', [
       { attr1: 'test1', attr2: 'test1' },
       { _id: 'line2', attr1: 'test1', attr2: 'test1' },
@@ -99,14 +99,13 @@ describe('REST datasets', () => {
       title: 'rest3',
       schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }],
     })
-    let dataset = await workers.hook('indexer/rest3')
+    let dataset = await workers.hook('finalizer/rest3')
     let res = await ax.post('/api/v1/datasets/rest3/_bulk_lines', [
       { _id: 'line1', attr1: 'test1', attr2: 'test1' },
       { _id: 'line2', attr1: 'test1', attr2: 'test1' },
       { _id: 'line3', attr1: 'test1', attr2: 'test1' },
       { _id: 'line4', attr1: 'test1', attr2: 'test1' },
     ])
-    await workers.hook('indexer/rest3')
     dataset = await workers.hook('finalizer/rest3')
     assert.ok(dataset.schema.find(f => f.key === '_id'))
     assert.ok(dataset.schema.find(f => f.key === '_updatedAt'))
@@ -147,7 +146,7 @@ describe('REST datasets', () => {
       title: 'rest4',
       schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }],
     })
-    await workers.hook('indexer/rest4')
+    await workers.hook('finalizer/rest4')
     try {
       await ax.post('/api/v1/datasets/rest4/lines', { attr3: 'test1' })
       assert.fail()
@@ -426,22 +425,20 @@ describe('REST datasets', () => {
 
     ])
     assert.equal(await collection.countDocuments({ _needsIndexing: true }), 0)
-    await workers.hook('indexer/restidem')
+    await workers.hook('finalizer/restidem')
 
     res = await ax.post('/api/v1/datasets/restidem/_bulk_lines', [
       { _id: 'line1', attr1: 'test1', attr2: 'test1' },
       { _action: 'delete', _id: 'line2' },
     ])
     assert.equal(await collection.countDocuments({ _needsIndexing: true }), 1)
-    await workers.hook('indexer/restidem')
+    await workers.hook('finalizer/restidem')
 
     res = await ax.post('/api/v1/datasets/restidem/_bulk_lines', [
       { _action: 'patch', _id: 'line3', attr1: 'test2' },
       { _action: 'patch', _id: 'line4', attr1: 'test1' },
     ])
     assert.equal(await collection.countDocuments({ _needsIndexing: true }), 1)
-    await workers.hook('indexer/restidem')
-
     dataset = await workers.hook('finalizer/restidem')
     assert.equal(dataset.count, 3)
   })
@@ -453,7 +450,7 @@ describe('REST datasets', () => {
       title: 'restdel',
       schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }],
     })
-    let dataset = await workers.hook('indexer/restdel')
+    let dataset = await workers.hook('finalizer/restdel')
     await ax.post('/api/v1/datasets/restdel/_bulk_lines', [
       { _id: 'line1', attr1: 'test1', attr2: 'test1' },
       { _id: 'line2', attr1: 'test1', attr2: 'test1' },
@@ -478,7 +475,7 @@ describe('REST datasets', () => {
       title: 'restdel',
       schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }],
     })
-    let dataset = await workers.hook('indexer/restdel')
+    let dataset = await workers.hook('finalizer/restdel')
     await ax.post('/api/v1/datasets/restdel/_bulk_lines', `_id,attr1,attr2
 line1,test1,test1
 line2,test1,test1`, { headers: { 'content-type': 'text/csv' } })
@@ -507,6 +504,8 @@ test2,test2,test3`, { headers: { 'content-type': 'text/csv' } })
     dataset = await workers.hook('finalizer/restkey')
     assert.equal(dataset.count, 2)
     const lines = (await ax.get('/api/v1/datasets/restkey/lines', { params: { sort: '_i' } })).data.results
-    console.log(lines)
+    assert.equal(lines[0].attr1, 'test1')
+    assert.equal(lines[1].attr1, 'test2')
+    assert.equal(lines[1].attr3, 'test3')
   })
 })
