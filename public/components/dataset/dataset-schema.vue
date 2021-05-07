@@ -1,7 +1,7 @@
 <template>
   <v-row>
     <v-col class="py-0">
-      <v-row class="px-3 pb-2" style="height:44px;">
+      <v-row class="px-3 pb-1" style="height:44px;">
         <h3 v-if="notCalculatedProperties" class="text-h6">
           {{ notCalculatedProperties.length.toLocaleString() }} colonne{{ notCalculatedProperties.length > 1 ? 's' : '' }}
         </h3>
@@ -43,6 +43,20 @@
             Appliquer
           </v-btn>
         </div>
+      </v-row>
+
+      <v-row v-if="notCalculatedProperties && notCalculatedProperties.length">
+        <v-col>
+          <v-select
+            v-model="primaryKey"
+            label="Clé primaire"
+            :disabled="dataset.count || !can('writeDescription')"
+            :messages="dataset.count ? 'La clé primaire ne peut pas être modifiée une fois que des données ont été insérées.' : 'Optionnel. Utilisez une ou plusieurs colonnes du schéma pour construire une clé primaire qui identifiera de manière unique chaque ligne de la donnée.'"
+            :items="notCalculatedProperties.map(p => ({text: p.title || p['x-originalName'] || p.key, value: p.key}))"
+            style="max-width: 500px;"
+            multiple
+          />
+        </v-col>
       </v-row>
 
       <dataset-properties-slide
@@ -108,13 +122,15 @@
       addPropertyDialog: false,
       newPropertyKey: null,
       newPropertyType: null,
+      primaryKey: null,
     }),
     computed: {
       ...mapState(['vocabulary', 'propertyTypes']),
       ...mapState('dataset', ['dataset']),
       ...mapGetters('dataset', ['can']),
       updated() {
-        return JSON.stringify(this.schema) !== this.originalSchema
+        return JSON.stringify(this.schema) !== this.originalSchema ||
+          JSON.stringify(this.primaryKey) !== JSON.stringify(this.dataset.primaryKey)
       },
       originalProperties() {
         return JSON.parse(this.originalSchema)
@@ -154,6 +170,8 @@
         if (this.originalSchema === originalSchema) return
         this.originalSchema = originalSchema
         this.schema = this.dataset.schema.map(field => Object.assign({}, field))
+        this.dataset.primaryKey = this.dataset.primaryKey || []
+        this.primaryKey = this.dataset.primaryKey.filter(k => !!this.schema.find(p => p.key === k))
         this.dataset.extensions = this.dataset.extensions || []
         this.fetchRemoteServices()
       },
@@ -172,7 +190,7 @@
         }
       },
       save() {
-        this.patchAndCommit({ schema: this.schema.map(field => Object.assign({}, field)) })
+        this.patchAndCommit({ schema: this.schema.map(field => Object.assign({}, field)), primaryKey: [...this.primaryKey] })
       },
       /* onMetadataUpload(e) {
         const reader = new FileReader()

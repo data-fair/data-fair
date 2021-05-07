@@ -239,6 +239,13 @@ module.exports = {
       enum: ['remote', 'uploaded', 'loaded', 'analyzed', 'schematized', 'indexed', 'extended', 'finalized', 'error'],
       description: 'The processing steps of a dataset.',
     },
+    primaryKey: {
+      type: 'array',
+      description: 'List of properties of the schema used as unique primary key for each line',
+      items: {
+        type: 'string',
+      },
+    },
     schema,
     count: {
       type: 'number',

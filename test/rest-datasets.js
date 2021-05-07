@@ -490,4 +490,23 @@ line2,test1,test1`, { headers: { 'content-type': 'text/csv' } })
     assert.equal(lines[1]._id, 'line2')
     assert.equal(lines[1].attr1, 'test1')
   })
+
+  it('Use the primary key defined by the user', async () => {
+    const ax = global.ax.dmeadus
+    await ax.post('/api/v1/datasets', {
+      isRest: true,
+      title: 'restkey',
+      schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }, { key: 'attr3', type: 'string' }],
+      primaryKey: ['attr1', 'attr2'],
+    })
+    let dataset = await workers.hook('finalizer/restkey')
+    await ax.post('/api/v1/datasets/restkey/_bulk_lines', `attr1,attr2,attr3
+test1,test1,test1
+test2,test2,test2
+test2,test2,test3`, { headers: { 'content-type': 'text/csv' } })
+    dataset = await workers.hook('finalizer/restkey')
+    assert.equal(dataset.count, 2)
+    const lines = (await ax.get('/api/v1/datasets/restkey/lines', { params: { sort: '_i' } })).data.results
+    console.log(lines)
+  })
 })

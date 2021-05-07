@@ -114,7 +114,14 @@ const applyTransactions = async (req, transacs, validate) => {
   for (const transac of transacs) {
     let { _action, ...body } = transac
     if (!actions.includes(_action)) throw createError(400, `action "${_action}" is unknown, use one of ${JSON.stringify(actions)}`)
-    if (_action === 'create' && !body._id) body._id = shortid.generate()
+    if (_action === 'create' && !body._id) {
+      if (dataset.primaryKey && dataset.primaryKey.length) {
+        const primaryKey = dataset.primaryKey.map(p => body[p])
+        body._id = Buffer.from(JSON.stringify(primaryKey).slice(2, -2)).toString('hex')
+      } else {
+        body._id = shortid.generate()
+      }
+    }
     if (!body._id) throw createError(400, '"_id" attribute is required')
 
     const extendedBody = { ...body }
