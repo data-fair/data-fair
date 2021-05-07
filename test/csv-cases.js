@@ -185,4 +185,12 @@ describe('CSV cases', () => {
     const res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
     assert.equal(res.data.results[0].COM, 'L\' Abergement-Clémenciat')
   })
+
+  it('A CSV with empty values in number properties', async () => {
+    const ax = global.ax.dmeadus
+    const dataset = await testUtils.sendDataset('csv-cases/empty-number-values.csv', ax)
+    const res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { truncate: 4 } })
+    assert.equal(res.data.results[0].appellation, 'Agri...')
+    assert.equal(res.data.results[0].r2, undefined)
+  })
 })

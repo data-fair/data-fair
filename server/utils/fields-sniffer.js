@@ -39,6 +39,7 @@ exports.format = (value, prop, fileProp) => {
   }
   if (prop.type === 'string') return value.trim()
   const cleanValue = value.replace(new RegExp(`^${trimablePrefix}`, 'g'), '').replace(new RegExp(`${trimablePrefix}$`, 'g'), '')
+  if (!cleanValue) return null
   if (prop.type === 'boolean') return ['1', 'true', 'vrai', 'oui', 'yes'].includes(cleanValue.toLowerCase())
   if (prop.type === 'integer' || prop.type === 'number') return Number(cleanValue.replace(/\s/g, '').replace(',', '.'))
 }
