@@ -462,9 +462,8 @@ describe('REST datasets', () => {
     assert.equal(dataset.count, 4)
 
     await ax.delete('/api/v1/datasets/restdel/lines')
-    assert.equal(await collection.countDocuments({ _needsIndexing: true }), 4)
     dataset = await workers.hook('finalizer/restdel')
-    // assert.equal(dataset.count, 0)
+    assert.equal(dataset.count, 0)
     assert.equal(await collection.countDocuments({}), 0)
   })
 
