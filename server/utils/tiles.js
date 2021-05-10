@@ -171,7 +171,7 @@ exports.prepareMbtiles = async (dataset, db, es) => {
   ]
   streams.push(new Transform({
     async transform(properties, encoding, callback) {
-      properties = flatten(properties)
+      properties = flatten(properties, { safe: true })
       try {
         let geometry
         if (geopoints) {

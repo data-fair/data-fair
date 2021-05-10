@@ -281,7 +281,7 @@ exports.writeFullFile = async (db, es, dataset) => {
     // transforms.push(csvStringify({ columns: relevantSchema.map(field => field.title || field['x-originalName'] || field.key), header: true }))
     transforms.push(new Transform({
       transform(chunk, encoding, callback) {
-        const flatChunk = flatten(chunk)
+        const flatChunk = flatten(chunk, { safe: true })
         callback(null, relevantSchema.map(field => flatChunk[field.key]))
       },
       objectMode: true,

@@ -230,7 +230,7 @@ class ESInputStream extends Readable {
       }
       this.scrollId = res._scroll_id
       for (const hit of res.hits.hits) {
-        this.reading = this.push({ id: hit._id, doc: flatten(hit._source) })
+        this.reading = this.push({ id: hit._id, doc: flatten(hit._source, { safe: true }) })
         this.i += 1
       }
 
@@ -494,7 +494,7 @@ class PreserveExtensionStream extends Transform {
 
 exports.applyCalculations = async (dataset, item) => {
   let warning = null
-  const flatItem = flatten(item)
+  const flatItem = flatten(item, { safe: true })
 
   // Add base64 content of attachments
   const attachmentField = dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')

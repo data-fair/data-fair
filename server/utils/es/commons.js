@@ -284,7 +284,7 @@ exports.prepareResultItem = (hit, dataset, query) => {
     hit._source[field.key] = hit._source[field.key].join(field.separator)
   })
 
-  const res = flatten(hit._source)
+  const res = flatten(hit._source, { safe: true })
   res._score = hit._score
   if (dataset.schema.find(f => f.key === '_id')) {
     if (!query.select || query.select === '*' || query.select.split(',').includes('_id')) {

@@ -135,7 +135,7 @@ exports.result2geojson = esResponse => {
         type: 'Feature',
         id: hit._id,
         geometry: hit._source._geoshape,
-        properties: flatten({ ...properties, _id: hit._id }),
+        properties: flatten({ ...properties, _id: hit._id }, { safe: true }),
       }
     }),
   }
