@@ -187,7 +187,7 @@
                   v-if="item[header.value]"
                   target="_blank"
                   :href="item[header.value]"
-                >{{ item[header.value] }}</a>
+                >{{ item[header.value] | truncate(50) }}</a>
               </template>
               <template v-else>
                 <v-hover v-slot:default="{ hover }">
@@ -203,7 +203,7 @@
                       {{ item[header.value] ? 'oui' : 'non' }}
                     </span>
                     <span v-else>
-                      {{ item[header.value] + '' }}
+                      {{ item[header.value] + '' | truncate(50) }}
                     </span>
                     <v-btn
                       v-if="hover && !item._tmpState && !filters.find(f => f.field.key === header.value) && isFilterable(item[header.value])"
@@ -401,8 +401,9 @@
           size: this.pagination.itemsPerPage,
           page: this.pagination.page,
           q_mode: this.qMode,
-          truncate: 50,
         }
+        // truncate on server side for performance, but not for editabled rest datasets
+        if (!this.dataset.isRest) params.truncate = 50
         if (this.imageField) params.thumbnail = '40x40'
         if (this.pagination.sortBy[0]) {
           params.sort = (this.pagination.sortDesc[0] ? '-' : '') + this.pagination.sortBy[0]
