@@ -125,7 +125,9 @@ exports.prepareQuery = (dataset, query) => {
 
   // Select fields to return
   const fields = dataset.schema.map(f => f.key)
-  esQuery._source = (query.select && query.select !== '*') ? query.select.split(',') : fields
+  // do not include by default heavy calculated fields used for indexing geo data
+  const defaultFields = fields.filter(key => key !== '_geoshape' && key !== '_geocorners')
+  esQuery._source = (query.select && query.select !== '*') ? query.select.split(',') : defaultFields
   const unknownField = esQuery._source.find(s => !fields.includes(s))
   if (unknownField) throw createError(400, `Impossible de sélectionner le champ ${unknownField}, il n'existe pas dans le jeu de données.`)
 
