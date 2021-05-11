@@ -167,7 +167,11 @@
 
           if (feature.properties._id === undefined) return console.error('needs _id property to be able to fetch item', feature.properties)
           const qs = `_id:"${feature.properties._id}"`
-          const item = (await this.$axios.$get(this.resourceUrl + '/lines', { params: { qs, size: 1 } })).results[0]
+          const select = this.dataset.schema
+            .filter(field => !field['x-calculated'] && field['x-refersTo'] !== 'https://purl.org/geojson/vocab#geometry')
+            .map(field => field.key)
+            .join(',')
+          const item = (await this.$axios.$get(this.resourceUrl + '/lines', { params: { qs, size: 1, select } })).results[0]
           if (!item) return console.error('item not found with filter', qs)
 
           const htmlList = this.dataset.schema

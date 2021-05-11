@@ -220,7 +220,7 @@ export default () => ({
     async remove({ state, getters, dispatch }) {
       try {
         await this.$axios.delete(getters.resourceUrl)
-        eventBus.$emit('notification', `Le jeu de données ${state.dataset.title} a été supprimé`)
+        eventBus.$emit('notification', `Le jeu de données ${state.dataset.title || state.dataset.id} a été supprimé`)
       } catch (error) {
         eventBus.$emit('notification', { error, msg: 'Erreur pendant la suppression du jeu de données' })
       }
@@ -240,7 +240,7 @@ export default () => ({
       try {
         await this.$axios.$put(`api/v1/datasets/${state.dataset.id}/owner`, owner)
         commit('patch', { owner })
-        eventBus.$emit('notification', `Le jeu de données ${state.dataset.title} a changé de propriétaire`)
+        eventBus.$emit('notification', `Le jeu de données ${state.dataset.title || state.dataset.id} a changé de propriétaire`)
       } catch (error) {
         eventBus.$emit('notification', { error, msg: 'Erreur pendant le changement de propriétaire' })
       }
