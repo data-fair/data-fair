@@ -24,6 +24,7 @@ module.exports = (dataset) => {
     properties: dataset.schema.reduce((a, f) => {
       a[f.key] = { ...f }
       delete a[f.key].key
+      a[f.key].title = a[f.key].title || ''
       a[f.key].description = a[f.key].description || ''
       return a
     }, {}),
