@@ -21,7 +21,12 @@ module.exports = (dataset) => {
   dataset.schema = dataset.schema || []
   const datasetLineSchema = {
     type: 'object',
-    properties: dataset.schema.reduce((a, f) => { a[f.key] = { ...f }; delete a[f.key].key; return a }, {}),
+    properties: dataset.schema.reduce((a, f) => {
+      a[f.key] = { ...f }
+      delete a[f.key].key
+      a[f.key].description = a[f.key].description || ''
+      return a
+    }, {}),
   }
   const properties = dataset.schema.map(p => p.key)
   const textProperties = dataset.schema.filter(p => p.type === 'string').map(p => p.key)
