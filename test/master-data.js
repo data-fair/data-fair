@@ -46,7 +46,7 @@ const siretProperty = {
   'x-refersTo': 'http://www.datatourisme.fr/ontology/core/1.0/#siret',
 }
 
-describe.only('Master data management', () => {
+describe('Master data management', () => {
   it('should define and use a dataset as master-data remote-service used for extensions', async () => {
     const { remoteService, apiDoc } = await initMaster(
       [siretProperty, { key: 'extra', type: 'string' }],

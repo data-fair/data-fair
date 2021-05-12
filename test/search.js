@@ -47,6 +47,12 @@ describe('search', () => {
     }
     res = await ax.get('/api/v1/datasets/dataset/lines?bbox=-2.5,40,3,47')
     assert.equal(res.data.total, 1)
+    res = await ax.get('/api/v1/datasets/dataset/lines?geo_distance=-2.75,47.7,10km')
+    assert.equal(res.data.total, 1)
+    res = await ax.get('/api/v1/datasets/dataset/lines?geo_distance=-2.74,47.7,1')
+    assert.equal(res.data.total, 0)
+    res = await ax.get('/api/v1/datasets/dataset/lines?geo_distance=-2.748526,47.687375')
+    assert.equal(res.data.total, 1)
     res = await ax.get('/api/v1/datasets/dataset/geo_agg?bbox=-3,47,-2,48')
     assert.equal(res.status, 200)
     assert.equal(res.data.aggs.length, 1)

@@ -261,6 +261,34 @@ exports.prepareQuery = (dataset, query) => {
     })
   }
 
+  if (query.geo_distance) {
+    if (!dataset.bbox) throw createError(400, '"geo_distance" filter cannot be used on this dataset. It is not geolocalized.')
+    let [lon, lat, distance] = query.geo_distance.split(',')
+    lon = Number(lon)
+    lat = Number(lat)
+    if (!distance || distance === 0) {
+      filter.push({
+        geo_shape: {
+          _geoshape: {
+            relation: 'contains',
+            shape: {
+              type: 'point',
+              coordinates: [lon, lat],
+            },
+          },
+        },
+      })
+    } else {
+      // TODO: use _geoshape after upgrading ES
+      filter.push({
+        geo_distance: {
+          distance,
+          _geopoint: { lat, lon },
+        },
+      })
+    }
+  }
+
   const minimumShouldMatch = should.length ? 1 : 0
   esQuery.query = { bool: { filter, must, should, minimum_should_match: minimumShouldMatch } }
 

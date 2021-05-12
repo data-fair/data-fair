@@ -68,33 +68,55 @@ Pour plus d'information voir la documentation [ElasticSearch](https://www.elasti
     schema: {
       type: 'string',
     },
-  }, {
-    in: 'query',
-    name: 'bbox',
-    description: "Un filtre pour restreindre les résultats à une zone géographique. Le format est 'gauche,bas,droite,haut' autrement dit 'lonMin,latMin,lonMax,latMax'.",
-    schema: {
-      type: 'array',
-      items: {
-        type: 'number',
-      },
-    },
-    style: 'commaDelimited',
-  }, {
-    in: 'query',
-    name: 'xyz',
-    description: `
-Un filtre pour restreindre les résultats à une zone géographique avec les paramètres standards de tuiles géographiques x,y et z.
-
-Le format est 'x,y,z'.
-  `,
-    schema: {
-      type: 'array',
-      items: {
-        type: 'number',
-      },
-    },
-    style: 'commaDelimited',
   }]
+  if (dataset.bbox && dataset.bbox.length === 4) {
+    filterParams.push({
+      in: 'query',
+      name: 'bbox',
+      description: "Un filtre pour restreindre les résultats à une zone géographique. Le format est 'gauche,bas,droite,haut' autrement dit 'lonMin,latMin,lonMax,latMax'.",
+      schema: {
+        type: 'array',
+        items: {
+          type: 'number',
+        },
+      },
+      style: 'commaDelimited',
+    })
+    filterParams.push({
+      in: 'query',
+      name: 'xyz',
+      description: `
+  Un filtre pour restreindre les résultats à une zone géographique avec les paramètres standards de tuiles géographiques x,y et z.
+
+  Le format est 'x,y,z'.
+    `,
+      schema: {
+        type: 'array',
+        items: {
+          type: 'number',
+        },
+      },
+      style: 'commaDelimited',
+    })
+    filterParams.push({
+      in: 'query',
+      name: 'geo_distance',
+      description: `
+  Un filtre pour restreindre les résultats à moins d'une certaine distance du point passé en paramètre.
+
+  Le format est 'lon,lat,distance'. La distance optionnelle (0 par défaut) et est exprimée en mètres.
+
+  Si les documents contiennent des géométries la distance est calculée à partir de leurs centroïdes à moins que la distance soit 0 auquel cas le filtre retourner tous les documents dont la géométrie contient le point passé en paramètre.
+    `,
+      schema: {
+        type: 'array',
+        items: {
+          type: 'number',
+        },
+      },
+      style: 'commaDelimited',
+    })
+  }
   uriRefProperties.forEach(prop => {
     filterParams.push({
       in: 'query',
