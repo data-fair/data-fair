@@ -21,7 +21,6 @@ describe('geo files support', () => {
     assert.equal(dataset.schema.length, 5)
     const idField = dataset.schema.find(field => field.key === 'id')
     assert.equal(idField.type, 'string')
-    assert.equal(idField.format, 'uri-reference')
     const descField = dataset.schema.find(field => field.key === 'desc')
     assert.equal(descField.type, 'string')
     assert.ok(!descField.format)
@@ -43,6 +42,29 @@ describe('geo files support', () => {
     const feature = geojson.features[0]
     assert.equal(feature.properties._i, 1)
     assert.equal(feature.properties.bool, true)
+  })
+
+  it('Upload geojson dataset with some schema info', async () => {
+    // Send dataset
+    const datasetFd = fs.readFileSync('./test/resources/geo/geojson-example.geojson')
+    const form = new FormData()
+    form.append('file', datasetFd, 'geojson-example.geojson')
+    form.append('schema', JSON.stringify([{
+      key: 'prop1',
+      'x-originalName': 'prop1',
+      title: 'Code région',
+      type: 'string',
+      ignoreDetection: true,
+      'x-refersTo': 'http://rdf.insee.fr/def/geo#codeRegion',
+    }]))
+    const ax = global.ax.dmeadus
+    const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
+    assert.equal(res.status, 201)
+
+    // Dataset received and parsed
+    const dataset = await workers.hook('geojsonAnalyzer')
+    const prop1 = dataset.schema.find(p => p.key === 'prop1')
+    assert.equal(prop1['x-refersTo'], 'http://rdf.insee.fr/def/geo#codeRegion')
   })
 
   it('Log error for geojson with broken feature', async () => {

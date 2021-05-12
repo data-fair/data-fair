@@ -66,11 +66,16 @@ exports.process = async function(app, dataset) {
   )
 
   dataset.status = 'schematized'
-  dataset.schema = analyzer.schema
+  dataset.file.schema = analyzer.schema
+
+  datasetUtils.mergeFileSchema(dataset)
+  datasetUtils.cleanSchema(dataset)
+
   await db.collection('datasets').updateOne({ id: dataset.id }, {
     $set: {
       status: 'schematized',
-      schema: analyzer.schema,
+      file: dataset.file,
+      schema: dataset.schema,
     },
   })
 }

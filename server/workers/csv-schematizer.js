@@ -28,17 +28,7 @@ exports.process = async function(app, dataset) {
     throw new Error(`Vous avez chargé des pièces jointes, mais aucune colonne ne contient les chemins vers ces pièces jointes. Valeurs attendues : ${attachments.slice(0, 3).join(', ')}.`)
   }
 
-  dataset.schema = dataset.schema || []
-  // Remove fields present in the stored schema, when absent from the raw file schema and not coming from extension
-  dataset.schema = dataset.schema.filter(field => field['x-extension'] || dataset.file.schema.find(f => f.key === field.key))
-  // Add fields not yet present in the stored schema
-  const newFields = dataset.file.schema
-    .filter(field => !dataset.schema.find(f => f.key === field.key))
-    .map(field => {
-      const { dateFormat, dateTimeFormat, ...f } = field
-      return f
-    })
-  dataset.schema = dataset.schema.concat(newFields)
+  datasetUtils.mergeFileSchema(dataset)
   datasetUtils.cleanSchema(dataset)
 
   debug('store status as schematized')
