@@ -638,6 +638,7 @@ router.post('/:datasetId/master-data/bulk-searchs/:bulkSearchId', readDataset(),
       }
     }).map(f => `(${f})`).join(' AND ')
   }
+
   const ioStream = mimeTypeStream(req.get('Content-Type')) || mimeTypeStream('application/json')
 
   let i = 0
@@ -647,19 +648,18 @@ router.post('/:datasetId/master-data/bulk-searchs/:bulkSearchId', readDataset(),
     new Transform({
       async transform(line, encoding, callback) {
         const current = i
+        i += 1
         try {
           let esResponse
           try {
             esResponse = await esUtils.search(req.app.get('es'), req.dataset, {
               select: req.query.select,
+              sort: bulkSearch.sort,
               size: 1,
               qs: qsBuilder(line),
             })
           } catch (err) {
             await manageESError(req, err)
-          }
-          if (esResponse.hits.total.value > 1) {
-            throw new Error('La donnée de référence contient plus d\'une ligne correspondante.')
           }
           if (esResponse.hits.hits.length === 0) {
             throw new Error('La donnée de référence ne contient pas de ligne correspondante.')
@@ -672,7 +672,6 @@ router.post('/:datasetId/master-data/bulk-searchs/:bulkSearchId', readDataset(),
         } catch (err) {
           callback(null, { _key: line._key || current, _error: err.message })
         }
-        i += 1
       },
       objectMode: true,
     }),

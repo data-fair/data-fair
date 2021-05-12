@@ -149,7 +149,7 @@
     "semver": "^7.3.4",
     "shortid": "^2.2.16",
     "slugify": "^1.4.6",
-    "soas": "^0.4.1",
+    "soas": "^0.5.1",
     "stream-combiner": "^0.2.2",
     "stream-throttle": "^0.1.3",
     "style-loader": "^1.3.0",

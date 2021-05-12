@@ -52,6 +52,16 @@ exports.schema = {
               }],
             },
           },
+          sort: {
+            type: 'string',
+            title: 'Tri pour choisir le meilleur résultat',
+            description: `
+Le tri à effectuer sous forme d'une liste de clés de colonnes séparées par des virgules.
+
+Par défaut le tri est ascendant, si un nom de colonne est préfixé par un "-" alors le tri sera descendant.
+
+Exemple: ma_colonne,-ma_colonne2`,
+          },
         },
       },
     },
@@ -119,19 +129,9 @@ exports.endpoints = (dataset) => {
           description: 'Ensemble de filtres à appliquer',
           required: true,
           content: {
-            'application/json': {
-              schema: {
-                type: 'array',
-                items: {
-                  title: 'Filtre pour une ligne',
-                  type: 'object',
-                  properties: inputProperties,
-                },
-              },
-            },
             'application/x-ndjson': {
               schema: {
-                title: 'Filtre pour un établissement',
+                title: 'Filtre pour une ligne',
                 type: 'object',
                 properties: inputProperties,
               },
@@ -142,13 +142,7 @@ exports.endpoints = (dataset) => {
           200: {
             description: 'Réponse en cas de succès de la requête',
             content: {
-              'application/json': {
-                schema: {
-                  type: 'array',
-                  items: datasetLineSchema,
-                },
-              },
-              'application/xnd-json': {
+              'application/x-ndjson': {
                 schema: datasetLineSchema,
               },
             },

@@ -38,6 +38,7 @@
       },
       context() {
         return {
+          dataset: this.dataset,
           propertiesWithConcepts: this.dataset.schema
             .filter(p => p['x-refersTo'])
             .map(p => ({ key: p.key, title: p.title || p['x-originalName'] || p.key })),
