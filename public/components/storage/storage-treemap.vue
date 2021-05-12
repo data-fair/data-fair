@@ -59,9 +59,9 @@
         const data = {
           children: this.datasets.results.map(d => ({
             id: d.id,
-            title: d.title,
+            title: d.title || d.id,
             size: d.storage.size,
-            tooltip: `${d.title} - ${Vue.filter('displayBytes')(d.storage.size)} - ${{ public: 'Public', private: 'Privé', protected: 'Protégé' }[d.visibility]}`,
+            tooltip: `${d.title || d.id} - ${Vue.filter('displayBytes')(d.storage.size)} - ${{ public: 'Public', private: 'Privé', protected: 'Protégé' }[d.visibility]}`,
             to: `/dataset/${d.id}`,
             color: this.visibilityColor(d.visibility),
           })),

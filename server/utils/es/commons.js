@@ -266,7 +266,7 @@ exports.prepareQuery = (dataset, query) => {
     let [lon, lat, distance] = query.geo_distance.split(',')
     lon = Number(lon)
     lat = Number(lat)
-    if (!distance || distance === 0) {
+    if (!distance || distance === '0' || distance === '0m' || distance === '0km') {
       filter.push({
         geo_shape: {
           _geoshape: {

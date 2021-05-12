@@ -626,23 +626,32 @@ router.post('/:datasetId/master-data/bulk-searchs/:bulkSearchId', readDataset(),
   if (!bulkSearch) return res.status(404).send(`Recherche en masse "${req.params.bulkSearchId}" inconnue`)
 
   // this function will be called for each input line of the bulk search stream
-  const qsBuilder = (line) => {
-    return bulkSearch.input.map(input => {
+  const paramsBuilder = (line) => {
+    const params = {}
+    const qs = []
+    bulkSearch.input.forEach(input => {
+      if ([null, undefined].includes(line[input.property.key])) {
+        throw createError(400, `la propriété en entrée ${input.property.key} est obligatoire`)
+      }
       if (input.type === 'equals') {
-        if ([null, undefined].includes(line[input.property.key])) {
-          throw createError(400, `la propriété en entrée ${input.property.key} est obligatoire`)
-        }
-        return `${input.property.key}:"${line[input.property.key]}"`
+        qs.push(`${input.property.key}:"${line[input.property.key]}"`)
       } else if (input.type === 'date-in-interval') {
         const startDate = req.dataset.schema.find(p => p['x-refersTo'] === 'https://schema.org/startDate')
         const endDate = req.dataset.schema.find(p => p['x-refersTo'] === 'https://schema.org/endDate')
         if (!startDate || !endDate) throw new Error('cet enrichissement sur interval de date requiert les concepts "date de début" et "date de fin"')
         const date = line[input.property.key].replace(/:/g, '\\:')
-        return `(${endDate.key}:[${date} TO *]) AND (${startDate.key}:[* TO ${date}])`
+        qs.push(`${endDate.key}:[${date} TO *]`)
+        qs.push(`${startDate.key}:[* TO ${date}]`)
+      } else if (input.type === 'geo-distance') {
+        const [lat, lon] = line[input.property.key].split(',')
+        params.geo_distance = `${lon},${lat},${input.distance}`
       } else {
         throw createError(400, `input type ${input.type} is not supported`)
       }
-    }).map(f => `(${f})`).join(' AND ')
+    })
+    if (qs.length) params.qs = qs.map(f => `(${f})`).join(' AND ')
+
+    return params
   }
 
   const ioStream = mimeTypeStream(req.get('Content-Type')) || mimeTypeStream('application/json')
@@ -662,8 +671,8 @@ router.post('/:datasetId/master-data/bulk-searchs/:bulkSearchId', readDataset(),
             esResponse = await esUtils.search(req.app.get('es'), req.dataset, {
               select: req.query.select,
               sort: bulkSearch.sort,
+              ...paramsBuilder(line),
               size: 1,
-              qs: qsBuilder(line),
             })
           } catch (err) {
             await manageESError(req, err)

@@ -66,6 +66,13 @@ const dateProperty = {
   format: 'date-time',
   'x-refersTo': 'http://schema.org/Date',
 }
+const latlonProperty = {
+  key: 'latlon',
+  title: 'lat/long',
+  type: 'string',
+  'x-refersTo': 'http://www.w3.org/2003/01/geo/wgs84_pos#lat_long',
+}
+const geopointProperty = { ...latlonProperty, key: '_geopoint', title: 'Geopoint' }
 
 describe('Master data management', () => {
   it('should define and use a dataset as master-data remote-service used for extensions', async () => {
@@ -199,6 +206,41 @@ it('should handle date-in-interval search type', async () => {
     input.map(line => JSON.stringify(line)).join('\n'),
     { headers: { 'Content-Type': 'application/x-ndjson' }, params: { select: 'extra' } })
   ).data.split('\n').filter(line => !!line).map(line => JSON.parse(line))
+  assert.equal(results[0].extra, 'Extra information 1')
+  assert.equal(results[1].extra, 'Extra information 2')
+  assert.ok(results[2]._error.includes('pas de ligne'))
+})
+
+it('should handle geo-distance search type', async () => {
+  await initMaster(
+    [latlonProperty, { key: 'extra', type: 'string' }],
+    [{
+      id: 'geo-dist',
+      title: 'Fetch info matching geo shape',
+      input: [{ type: 'geo-distance', distance: 0, property: geopointProperty }],
+    }],
+  )
+
+  const ax = global.ax.superadmin
+
+  const items = [
+    { latlon: '-2.7,47.6', extra: 'Extra information 1' },
+    { latlon: '-2.8,45.5', extra: 'Extra information 2' },
+  ]
+  await ax.post('/api/v1/datasets/master/_bulk_lines', items)
+  await workers.hook('finalizer/master')
+
+  const input = [
+    { _geopoint: '-2.7,47.6' },
+    { _geopoint: '-2.8,45.5' },
+    { _geopoint: '-2.7,49' },
+  ]
+  const results = (await ax.post(
+    '/api/v1/datasets/master/master-data/bulk-searchs/geo-dist',
+    input.map(line => JSON.stringify(line)).join('\n'),
+    { headers: { 'Content-Type': 'application/x-ndjson' }, params: { select: 'extra' } })
+  ).data.split('\n').filter(line => !!line).map(line => JSON.parse(line))
+  console.log(results)
   assert.equal(results[0].extra, 'Extra information 1')
   assert.equal(results[1].extra, 'Extra information 2')
   assert.ok(results[2]._error.includes('pas de ligne'))
