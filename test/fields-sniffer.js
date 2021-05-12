@@ -41,7 +41,7 @@ describe('field sniffer', () => {
   })
 
   it('Work with keywords and texts', () => {
-    assert.deepEqual(sniffer.sniff(['id1', 'id2']), { type: 'string', format: 'uri-reference' })
+    assert.deepEqual(sniffer.sniff(['id1', 'id2']), { type: 'string' })
     assert.deepEqual(sniffer.sniff(['id1', 'a text with whitespaces']), { type: 'string' })
   })
 

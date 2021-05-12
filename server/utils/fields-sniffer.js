@@ -20,7 +20,6 @@ exports.sniff = (values, attachmentsPaths = [], existingField) => {
   for (const dateFormat of config.dateFormats) {
     if (checkAll(values, hasDateFormat(dateFormat))) return { type: 'string', format: 'date', dateFormat }
   }
-  if (checkAll(values, isUriRef)) return { type: 'string', format: 'uri-reference' }
   return { type: 'string' }
 }
 
@@ -92,6 +91,4 @@ const intRegexp = new RegExp(`^${trimablePrefix}(-|\\+)?[0-9\\s]+${trimablePrefi
 const floatRegexp = new RegExp(`^${trimablePrefix}(-|\\+)?([0-9\\s]+([.,][0-9]+)?)${trimablePrefix}$`)
 const dateTimeSchema = ajv.compile({ type: 'string', format: 'date-time' })
 const dateSchema = ajv.compile({ type: 'string', format: 'date' })
-const uriRefSchema = ajv.compile({ type: 'string', format: 'uri-reference' })
-const isUriRef = (value) => value.length < 500 && uriRefSchema(value)
 const hasDateFormat = (format) => (value) => moment(value, format, true).isValid()

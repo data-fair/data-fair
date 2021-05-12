@@ -34,7 +34,7 @@ describe('workers', () => {
     const idField = dataset.schema.find(f => f.key === 'id')
     const dateField = dataset.schema.find(f => f.key === 'some_date')
     assert.equal(idField.type, 'string')
-    assert.equal(idField.format, 'uri-reference')
+    assert.equal(idField.format, undefined)
     assert.equal(dateField.type, 'string')
     assert.equal(dateField.format, 'date')
 
