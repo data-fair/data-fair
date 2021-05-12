@@ -34,10 +34,10 @@ exports.schema = {
                   },
                 },
               }, {
-                title: 'Date en entrée comprise dans l\'interval',
+                title: 'Date dans l\'interval',
                 'x-if': 'context.hasDateIntervalConcepts',
                 properties: {
-                  type: { type: 'string', const: 'date-interval' },
+                  type: { type: 'string', const: 'date-in-interval' },
                   property: {
                     type: 'object',
                     title: 'Date à renseigner',
@@ -46,6 +46,26 @@ exports.schema = {
                       key: { type: 'string', const: '_date' },
                       type: { type: 'string', const: 'string' },
                       format: { type: 'string', const: 'date-time' },
+                    },
+                  },
+                },
+              }, {
+                title: 'Coordonnée géographique à une distance',
+                'x-if': 'context.dataset.bbox',
+                properties: {
+                  type: { type: 'string', const: 'geo-distance' },
+                  distance: {
+                    type: 'integer',
+                    title: 'Distance',
+                    default: 0,
+                  },
+                  property: {
+                    type: 'object',
+                    title: 'Point à renseigner',
+                    properties: {
+                      'x-refersTo': { type: 'string', const: 'http://www.w3.org/2003/01/geo/wgs84_pos#lat_long' },
+                      key: { type: 'string', const: '_geopoint' },
+                      type: { type: 'string', const: 'string' },
                     },
                   },
                 },

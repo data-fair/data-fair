@@ -45,6 +45,27 @@ const siretProperty = {
   type: 'string',
   'x-refersTo': 'http://www.datatourisme.fr/ontology/core/1.0/#siret',
 }
+const startProperty = {
+  key: 'start',
+  title: 'Start',
+  type: 'string',
+  format: 'date-time',
+  'x-refersTo': 'https://schema.org/startDate',
+}
+const endProperty = {
+  key: 'end',
+  title: 'End',
+  type: 'string',
+  format: 'date-time',
+  'x-refersTo': 'https://schema.org/endDate',
+}
+const dateProperty = {
+  key: '_date',
+  title: 'Date',
+  type: 'string',
+  format: 'date-time',
+  'x-refersTo': 'http://schema.org/Date',
+}
 
 describe('Master data management', () => {
   it('should define and use a dataset as master-data remote-service used for extensions', async () => {
@@ -147,4 +168,38 @@ describe('Master data management', () => {
     assert.equal(resultsDesc[1]._key, 1)
     assert.equal(resultsDesc[1].extra, 'Extra information 3')
   })
+})
+
+it('should handle date-in-interval search type', async () => {
+  await initMaster(
+    [startProperty, endProperty, { key: 'extra', type: 'string' }],
+    [{
+      id: 'date-int',
+      title: 'Fetch extra info when date is in interval',
+      input: [{ type: 'date-in-interval', property: dateProperty }],
+    }],
+  )
+
+  const ax = global.ax.superadmin
+
+  const items = [
+    { start: '2021-05-12T14:23:15.178Z', end: '2021-05-15T14:23:15.178Z', extra: 'Extra information 1' },
+    { start: '2021-05-15T14:23:15.178Z', end: '2021-05-18T14:23:15.178Z', extra: 'Extra information 2' },
+  ]
+  await ax.post('/api/v1/datasets/master/_bulk_lines', items)
+  await workers.hook('finalizer/master')
+
+  const input = [
+    { _date: '2021-05-14T14:23:15.178Z' },
+    { _date: '2021-05-18T14:23:15.178Z' },
+    { _date: '2021-05-25T14:23:15.178Z' },
+  ]
+  const results = (await ax.post(
+    '/api/v1/datasets/master/master-data/bulk-searchs/date-int',
+    input.map(line => JSON.stringify(line)).join('\n'),
+    { headers: { 'Content-Type': 'application/x-ndjson' }, params: { select: 'extra' } })
+  ).data.split('\n').filter(line => !!line).map(line => JSON.parse(line))
+  assert.equal(results[0].extra, 'Extra information 1')
+  assert.equal(results[1].extra, 'Extra information 2')
+  assert.ok(results[2]._error.includes('pas de ligne'))
 })

@@ -24,14 +24,14 @@ const coordYUri = 'http://data.ign.fr/def/geometrie#coordY'
 exports.allGeoConcepts = [geomUri, latlonUri, ...latUri, ...lonUri, coordXUri, coordYUri]
 
 exports.schemaHasGeopoint = (schema) => {
-  const latlon = schema.find(p => p['x-refersTo'] === latlonUri)
-  if (latlon) return latlon.key
   const lat = schema.find(p => latUri.indexOf(p['x-refersTo']) !== -1)
   const lon = schema.find(p => lonUri.indexOf(p['x-refersTo']) !== -1)
   if (lat && lon) return `${lat.key}/${lon.key}`
   const x = schema.find(p => p['x-refersTo'] === coordXUri)
   const y = schema.find(p => p['x-refersTo'] === coordYUri)
   if (x && y) return `${x.key}/${y.key}`
+  const latlon = schema.find(p => p['x-refersTo'] === latlonUri)
+  if (latlon) return latlon.key
   return false
 }
 

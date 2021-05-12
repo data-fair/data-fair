@@ -633,6 +633,12 @@ router.post('/:datasetId/master-data/bulk-searchs/:bulkSearchId', readDataset(),
           throw createError(400, `la propriété en entrée ${input.property.key} est obligatoire`)
         }
         return `${input.property.key}:"${line[input.property.key]}"`
+      } else if (input.type === 'date-in-interval') {
+        const startDate = req.dataset.schema.find(p => p['x-refersTo'] === 'https://schema.org/startDate')
+        const endDate = req.dataset.schema.find(p => p['x-refersTo'] === 'https://schema.org/endDate')
+        if (!startDate || !endDate) throw new Error('cet enrichissement sur interval de date requiert les concepts "date de début" et "date de fin"')
+        const date = line[input.property.key].replace(/:/g, '\\:')
+        return `(${endDate.key}:[${date} TO *]) AND (${startDate.key}:[* TO ${date}])`
       } else {
         throw createError(400, `input type ${input.type} is not supported`)
       }
@@ -647,6 +653,7 @@ router.post('/:datasetId/master-data/bulk-searchs/:bulkSearchId', readDataset(),
     ioStream.parser(),
     new Transform({
       async transform(line, encoding, callback) {
+        // console.log(line, qsBuilder(line))
         const current = i
         i += 1
         try {

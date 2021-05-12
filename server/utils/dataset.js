@@ -464,6 +464,8 @@ exports.cleanSchema = (dataset) => {
   return schema
 }
 
+const latlonUri = 'http://www.w3.org/2003/01/geo/wgs84_pos#lat_long'
+
 exports.extendedSchema = (dataset) => {
   exports.cleanSchema(dataset)
   const schema = dataset.schema.filter(f => f.key.startsWith('_ext_') || !f.key.startsWith('_'))
@@ -479,7 +481,9 @@ exports.extendedSchema = (dataset) => {
   }
   if (geoUtils.schemaHasGeopoint(dataset.schema) || geoUtils.schemaHasGeometry(dataset.schema)) {
     schema.push({ 'x-calculated': true, key: '_geoshape', type: 'object', title: 'Géométrie', description: 'Au format d\'une géométrie GeoJSON' })
-    schema.push({ 'x-calculated': true, key: '_geopoint', type: 'string', title: 'Coordonnée géographique', description: 'Centroïde au format "lat,lon"' })
+    const geopoint = { 'x-calculated': true, key: '_geopoint', type: 'string', title: 'Coordonnée géographique', description: 'Centroïde au format "lat,lon"' }
+    if (!schema.find(p => p['x-refersTo'] === latlonUri)) geopoint['x-refersTo'] = latlonUri
+    schema.push(geopoint)
     schema.push({ 'x-calculated': true, key: '_geocorners', type: 'array', title: 'Boite englobante de la géométrie', description: 'Sous forme d\'un tableau de coordonnées au format "lat,lon"' })
   }
   if (dataset.isRest) {
