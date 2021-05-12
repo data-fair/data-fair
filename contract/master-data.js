@@ -94,7 +94,15 @@ exports.endpoints = (dataset) => {
 
   const datasetLineSchema = {
     type: 'object',
-    properties: dataset.schema.reduce((a, f) => { a[f.key] = { ...f, title: f.title || f['x-originalName'] || f.key }; delete a[f.key].key; return a }, {}),
+    properties: dataset.schema.reduce((a, f) => {
+      a[f.key] = {
+        ...f,
+        title: f.title || f['x-originalName'] || f.key,
+        description: f.description || '',
+      }
+      delete a[f.key].key
+      return a
+    }, {}),
   }
   datasetLineSchema.properties._key = {
     title: 'Identifiant de la ligne de requête',
