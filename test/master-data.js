@@ -33,7 +33,7 @@ describe('Master data management', () => {
         }],
       },
     })
-    await workers.hook('indexer/master')
+    await workers.hook('finalizer/master')
     const master = (await ax.get('api/v1/datasets/master')).data
     const items = [
       { siret: '82898347800011', extra: 'Extra information' },
