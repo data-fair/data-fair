@@ -121,6 +121,8 @@ exports.endpoints = (dataset) => {
     for (const input of bulkSearch.input) {
       const matchingProp = dataset.schema.find(p => p.key === input.property.key)
       inputProperties[input.property.key] = matchingProp ? { ...matchingProp } : { ...input.property }
+      inputProperties[input.property.key].title = inputProperties[input.property.key].title || ''
+      inputProperties[input.property.key].description = inputProperties[input.property.key].description || ''
       delete inputProperties[input.property.key].key
     }
     inputProperties._key = {
