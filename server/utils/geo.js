@@ -30,7 +30,7 @@ exports.schemaHasGeopoint = (schema) => {
   const x = schema.find(p => p['x-refersTo'] === coordXUri)
   const y = schema.find(p => p['x-refersTo'] === coordYUri)
   if (x && y) return `${x.key}/${y.key}`
-  const latlon = schema.find(p => p['x-refersTo'] === latlonUri)
+  const latlon = schema.find(p => !p['x-calculated'] && p['x-refersTo'] === latlonUri)
   if (latlon) return latlon.key
   return false
 }
