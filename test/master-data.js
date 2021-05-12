@@ -98,7 +98,7 @@ describe.only('Master data management', () => {
     assert.ok(!results[0]['_ext_localhost-dataset-master_masterData_bulkSearch_siret.siret'])
   })
 
-  it.only('should handle sorting to chose ambiguous result', async () => {
+  it('should handle sorting to chose ambiguous result', async () => {
     await initMaster(
       [siretProperty, { key: 'sortKey', type: 'integer' }, { key: 'extra', type: 'string' }],
       [{
