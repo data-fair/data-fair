@@ -43,8 +43,6 @@ exports.process = async function(app, dataset) {
     escapeChar: sniffResult.escapeChar,
     quote: sniffResult.quote,
   }
-  debug('count lines')
-  props.numLines = await datasetUtils.countLines(dataset)
 
   debug('store status as analyzed')
   dataset.status = 'analyzed'

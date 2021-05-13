@@ -116,14 +116,17 @@ async function iter(app, type) {
         // Deduce a schema from geojson properties
         taskKey = 'geojsonAnalyzer'
       } else if (resource.status === 'schematized' || (resource.isRest && resource.status === 'updated')) {
-        // index the content of the dataset in ES
-        // either just schematized or an updated REST dataset
-        taskKey = 'indexer'
-      } else if (resource.status === 'indexed' && (resource.extensions && resource.extensions.find(e => e.active))) {
-        // Perform extensions from remote services for dataset that are
-        // indexed and have at least one active extension
-        taskKey = 'extender'
-      } else if (resource.status === 'indexed' || resource.status === 'extended') {
+        if (resource.extensions && resource.extensions.find(e => e.active)) {
+          // Perform extensions from remote services for dataset that have at least one active extension
+          taskKey = 'extender'
+        } else {
+          // index the content of the dataset in ES
+          // either just schematized or an updated REST dataset
+          taskKey = 'indexer'
+        }
+      } else if (resource.status === 'extended') {
+          taskKey = 'indexer'
+      } else if (resource.status === 'indexed') {
         // finalization covers some metadata enrichment, schema cleanup, etc.
         // either extended or there are no extensions to perform
         taskKey = 'finalizer'

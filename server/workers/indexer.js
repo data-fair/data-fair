@@ -5,7 +5,6 @@ const { Writable } = require('stream')
 const es = require('../utils/es')
 const datasetUtils = require('../utils/dataset')
 const restDatasetsUtils = require('../utils/rest-datasets')
-const extensionsUtils = require('../utils/extensions')
 const journals = require('../utils/journals')
 
 exports.eventsPrefix = 'index'
@@ -35,17 +34,17 @@ exports.process = async function(app, dataset) {
   }
   const attachments = !!dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')
   const indexStream = es.indexStream({ esClient, indexName, dataset, attachments })
-  // reindex and preserve previous extensions
+
   debug('Run index stream')
-  let readStream, writeStream
+  let readStreams, writeStream
   if (dataset.isRest) {
-    readStream = restDatasetsUtils.readStream(db, dataset, dataset.status === 'updated')
+    readStreams = [restDatasetsUtils.readStream(db, dataset, dataset.status === 'updated')]
     writeStream = restDatasetsUtils.markIndexedStream(db, dataset)
   } else {
-    readStream = datasetUtils.readStream(dataset)
+    readStreams = datasetUtils.readStreams(dataset, false, dataset.extensions && dataset.extensions.find(e => e.active))
     writeStream = new Writable({ objectMode: true, write(chunk, encoding, cb) { cb() } })
   }
-  await pump(readStream, extensionsUtils.preserveExtensionStream({ db, esClient, dataset, calculated: false }), indexStream, writeStream)
+  await pump(...readStreams, indexStream, writeStream)
   debug('index stream ok')
   const errorsSummary = indexStream.errorsSummary()
   if (errorsSummary) await journals.log(app, dataset, { type: 'error', data: errorsSummary })

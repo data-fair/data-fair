@@ -274,6 +274,9 @@ router.patch('/:datasetId', readDataset((patch) => {
       patch.schema = await virtualDatasetsUtils.prepareSchema(db, { ...req.dataset, ...patch })
       patch.status = 'indexed'
     }
+  } else if (patch.extensions) {
+    // extensions have changed, trigger full re-indexing
+    patch.status = 'schematized'
   } else if (patch.projection && (!req.dataset.projection || patch.projection.code !== req.dataset.projection.code)) {
     // geo projection has changed, trigger full re-indexing
     patch.status = 'schematized'
@@ -292,13 +295,7 @@ router.patch('/:datasetId', readDataset((patch) => {
       // we just try in case elasticsearch considers the new mapping compatible
       // so that we might optimize and reindex only when necessary
       await esUtils.updateDatasetMapping(req.app.get('es'), { id: req.dataset.id, schema: patch.schema })
-      if (patch.extensions) {
-        // Back to indexed state if schema did not change in significant manner, but extensions did
-        patch.status = 'indexed'
-      } else {
-        // Extended otherwise, to re-calculate geometries and stuff
-        patch.status = 'extended'
-      }
+      patch.status = 'extended'
     } catch (err) {
       // generated ES mappings are not compatible, trigger full re-indexing
       patch.status = 'schematized'

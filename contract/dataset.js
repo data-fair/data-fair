@@ -317,18 +317,6 @@ module.exports = {
             type: 'boolean',
             description: 'Toggle on and off the extension',
           },
-          forceNext: {
-            type: 'boolean',
-            description: 'Set to true to force overwriting extension results on next indexing.',
-          },
-          progress: {
-            type: 'number',
-            description: 'From 0 to 1 based on progress of the extension.',
-          },
-          error: {
-            type: 'string',
-            description: 'An error that occured during the last time the extension was run',
-          },
           remoteService: {
             type: 'string',
             description: "L'identifiant du service distant utilisé pour l'enrichissement",

@@ -106,6 +106,7 @@
     "install": "^0.13.0",
     "js-cookie": "^2.2.1",
     "json-refs": "^3.0.15",
+    "json-stable-stringify": "^1.0.1",
     "JSONStream": "^1.3.5",
     "jwks-rsa": "^1.12.0",
     "jwt-decode": "^2.2.0",

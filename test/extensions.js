@@ -8,7 +8,7 @@ const testUtils = require('./resources/test-utils')
 const workers = require('../server/workers')
 
 describe('Extensions', () => {
-  it('Extend dataset using remote service', async function() {
+  it.only('Extend dataset using remote service', async function() {
     const ax = global.ax.dmeadus
     // Initial dataset with addresses
     let dataset = await testUtils.sendDataset('datasets/dataset-extensions.csv', ax)
@@ -60,16 +60,16 @@ describe('Extensions', () => {
     // and new result with new extension
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines?select=*`)
     assert.equal(res.data.total, 3)
-    let existingResult = res.data.results.find(l => l.label === 'koumoul')
+    const existingResult = res.data.results.find(l => l.label === 'koumoul')
     assert.equal(existingResult[extensionKey + '.lat'], 10)
     assert.equal(existingResult[extensionKey + '.lon'], 10)
     assert.equal(existingResult._geopoint, '10,10')
-    let newResult = res.data.results.find(l => l.label === 'me')
+    const newResult = res.data.results.find(l => l.label === 'me')
     assert.equal(newResult[extensionKey + '.lat'], 50)
     assert.equal(newResult[extensionKey + '.lon'], 50)
     assert.equal(newResult._geopoint, '50,50')
 
-    // Re process full extension because of forceNext parameter
+    // Reduce selected output using extension.select
     nockScope = nock('http://test.com').post('/geocoder/coords').reply(200, (uri, requestBody) => {
       const inputs = requestBody.trim().split('\n').map(JSON.parse)
       assert.equal(inputs.length, 3)
@@ -77,28 +77,10 @@ describe('Extensions', () => {
       return inputs.map(input => ({ key: input.key, lat: 40, lon: 40 }))
         .map(JSON.stringify).join('\n') + '\n'
     })
-    res = await ax.patch(`/api/v1/datasets/${dataset.id}`, { extensions: [{ active: true, forceNext: true, remoteService: 'geocoder-koumoul', action: 'postCoords' }] })
-    assert.equal(res.status, 200)
-    await workers.hook(`finalizer/${dataset.id}`)
-    nockScope.done()
-    // A search to check re-indexed results with overwritten extensions
-    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines?select=*`)
-    assert.equal(res.data.total, 3)
-    existingResult = res.data.results.find(l => l.label === 'koumoul')
-    assert.equal(existingResult[extensionKey + '.lat'], 40)
-    assert.equal(existingResult[extensionKey + '.lon'], 40)
-    newResult = res.data.results.find(l => l.label === 'me')
-    assert.equal(newResult[extensionKey + '.lat'], 40)
-    assert.equal(newResult[extensionKey + '.lon'], 40)
-    assert.equal(newResult._geopoint, '40,40')
-    dataset = (await ax.get(`/api/v1/datasets/${dataset.id}`)).data
-    assert.equal(dataset.extensions[0].forceNext, false)
-    assert.equal(dataset.extensions[0].progress, 1)
-
-    // Reduce selected output using extension.select
     res = await ax.patch(`/api/v1/datasets/${dataset.id}`, { extensions: [{ active: true, remoteService: 'geocoder-koumoul', action: 'postCoords', select: ['lat', 'lon'] }] })
     assert.equal(res.status, 200)
     await workers.hook(`finalizer/${dataset.id}`)
+    nockScope.done()
 
     // Download extended file
     res = await ax.get(`/api/v1/datasets/${dataset.id}/full`)
