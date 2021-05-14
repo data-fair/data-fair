@@ -23,7 +23,7 @@ exports.process = async function(app, dataset) {
   debug('sniff csv sample')
   const sniffResult = await csvSniffer.sniff(decodedSample)
 
-  const schema = dataset.file.schema = sniffResult.labels
+  dataset.file.schema = sniffResult.labels
     .map((field, i) => ({
       key: fieldsSniffer.escapeKey(field),
       'x-originalName': field.replace(/""/g, '"').replace(/^"/, '').replace(/"$/, ''),
@@ -32,25 +32,48 @@ exports.process = async function(app, dataset) {
     .filter(field => !!field.key)
 
   const keys = new Set([])
-  schema.forEach(field => {
+  dataset.file.schema.forEach(field => {
     if (keys.has(field.key)) throw new Error(`Échec de l'analyse du fichier tabulaire, il contient plusieurs fois la colonne "${field.key}".`)
     keys.add(field.key)
   })
 
-  const props = dataset.file.props = {
+  dataset.file.props = {
     linesDelimiter: sniffResult.linesDelimiter,
     fieldsDelimiter: sniffResult.fieldsDelimiter,
     escapeChar: sniffResult.escapeChar,
     quote: sniffResult.quote,
   }
 
+  // get a random sampling to test values type on fewer elements
+  debug('extract dataset sample')
+  const sampleValues = await datasetUtils.sampleValues(dataset)
+  debug('list attachments')
+  // Now we can extract infos for each field
+  const attachments = await datasetUtils.lsAttachments(dataset)
+  Object.keys(sampleValues)
+    // do not keep columns with empty string as header
+    .filter(field => !!field)
+    .forEach(field => {
+      const escapedKey = fieldsSniffer.escapeKey(field)
+      const fileField = dataset.file.schema.find(f => f.key === escapedKey)
+      if (!fileField) throw new Error(`Champ ${field} présent dans la donnée mais absent de l'analyse initiale du fichier`)
+      const existingField = dataset.schema && dataset.schema.find(f => f.key === escapedKey)
+      Object.assign(fileField, fieldsSniffer.sniff(sampleValues[field], attachments, existingField))
+    })
+  if (attachments.length && !dataset.file.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')) {
+    throw new Error(`Vous avez chargé des pièces jointes, mais aucune colonne ne contient les chemins vers ces pièces jointes. Valeurs attendues : ${attachments.slice(0, 3).join(', ')}.`)
+  }
+
+  datasetUtils.mergeFileSchema(dataset)
+  datasetUtils.cleanSchema(dataset)
+
   debug('store status as analyzed')
   dataset.status = 'analyzed'
   await db.collection('datasets').updateOne({ id: dataset.id }, {
     $set: {
-      'file.props': props,
       status: 'analyzed',
-      'file.schema': schema,
+      file: dataset.file,
+      schema: dataset.schema,
     },
   })
 }

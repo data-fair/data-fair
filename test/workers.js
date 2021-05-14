@@ -27,10 +27,6 @@ describe('workers', () => {
     // Dataset received and parsed
     let dataset = await workers.hook('csvAnalyzer')
     assert.equal(dataset.status, 'analyzed')
-
-    // Auto schema proposal
-    dataset = await workers.hook('csvSchematizer')
-    assert.equal(dataset.status, 'schematized')
     const idField = dataset.schema.find(f => f.key === 'id')
     const dateField = dataset.schema.find(f => f.key === 'some_date')
     assert.equal(idField.type, 'string')
@@ -125,8 +121,6 @@ describe('workers', () => {
     assert.equal(res.status, 201)
     let dataset = await workers.hook(`csvAnalyzer/${res.data.id}`)
     assert.equal(dataset.status, 'analyzed')
-    dataset = await workers.hook(`csvSchematizer/${dataset.id}`)
-    assert.equal(dataset.status, 'schematized')
     dataset = await workers.hook(`finalizer/${dataset.id}`)
     assert.equal(dataset.status, 'finalized')
     assert.equal(dataset.count, 2)

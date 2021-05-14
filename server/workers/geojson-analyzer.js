@@ -1,6 +1,4 @@
 // Analyze geojson dataset data, check validity and detect schema
-// Perform the equivalent of csv-analyzer + csv-schematizer but for geojson and
-// in a single worker
 const util = require('util')
 const fs = require('fs')
 const { Writable } = require('stream')
@@ -65,7 +63,7 @@ exports.process = async function(app, dataset) {
     analyzer,
   )
 
-  dataset.status = 'schematized'
+  dataset.status = 'analyzed'
   dataset.file.schema = analyzer.schema
 
   datasetUtils.mergeFileSchema(dataset)
@@ -73,7 +71,7 @@ exports.process = async function(app, dataset) {
 
   await db.collection('datasets').updateOne({ id: dataset.id }, {
     $set: {
-      status: 'schematized',
+      status: 'analyzed',
       file: dataset.file,
       schema: dataset.schema,
     },

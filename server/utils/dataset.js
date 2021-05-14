@@ -482,7 +482,7 @@ exports.extendedSchema = (dataset) => {
 exports.reindex = async (db, dataset) => {
   const patch = { status: 'loaded' }
   if (dataset.isVirtual) patch.status = 'indexed'
-  else if (dataset.isRest) patch.status = 'schematized'
+  else if (dataset.isRest) patch.status = 'analyzed'
   else if (dataset.originalFile && !baseTypes.has(dataset.originalFile.mimetype)) patch.status = 'uploaded'
   return (await db.collection('datasets')
     .findOneAndUpdate({ id: dataset.id }, { $set: patch }, { returnOriginal: false })).value

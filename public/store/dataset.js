@@ -22,9 +22,7 @@ export default () => ({
       'convert-end': 'loaded',
       'analyze-start': 'loaded',
       'analyze-end': 'analyzed',
-      'schematize-start': 'analyzed',
-      'schematize-end': 'schematized',
-      'index-start': 'schematized',
+      'index-start': 'analyzed',
       'index-end': 'indexed',
       'extend-start': 'indexed',
       'extend-end': 'extended',
@@ -175,7 +173,7 @@ export default () => ({
         if (state.eventStates[event.type] && state.dataset) {
           commit('patch', { status: state.eventStates[event.type] })
         }
-        if (event.type === 'schematize-end' || event.type === 'extend-start') {
+        if (event.type === 'analyze-end' || event.type === 'extend-start') {
           const dataset = await this.$axios.$get(`api/v1/datasets/${state.datasetId}`, { params: { select: 'schema' } })
           commit('patch', { schema: dataset.schema })
         }

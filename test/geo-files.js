@@ -17,7 +17,7 @@ describe('geo files support', () => {
 
     // Dataset received and parsed
     let dataset = await workers.hook('geojsonAnalyzer')
-    assert.equal(dataset.status, 'schematized')
+    assert.equal(dataset.status, 'analyzed')
     assert.equal(dataset.schema.length, 5)
     const idField = dataset.schema.find(field => field.key === 'id')
     assert.equal(idField.type, 'string')

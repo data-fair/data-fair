@@ -90,7 +90,7 @@
           { title: 'Enrichissement', description: 'Les données sont enrichies à partir des données de référence' },
           { title: 'Finalisation', description: 'Derniers traitements avant que la source ne soit utilisable', color: 'success' },
         ],
-        states: ['remote', 'uploaded', 'loaded', 'analyzed', 'schematized', 'indexed', 'extended', 'finalized'],
+        states: ['remote', 'uploaded', 'loaded', 'analyzed', 'indexed', 'extended', 'finalized'],
         stateSteps: [1, 2, 3, 4, 4, 5, 6, 7],
       }
     },
