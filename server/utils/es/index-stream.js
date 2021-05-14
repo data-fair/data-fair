@@ -37,10 +37,8 @@ class IndexStream extends Transform {
         this.body.push(item)
       } else {
         const params = { index: { _index: this.options.indexName } }
-        if (item._id) {
-          params.index._id = item._id
-          delete item._id
-        }
+        params.index._id = item._id || (item._i + '')
+        delete item._id
         this.body.push(params)
         warning = await applyCalculations(this.options.dataset, item)
         this.body.push(item)

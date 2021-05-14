@@ -39,8 +39,8 @@ exports.extend = async(app, dataset, extensions) => {
     return
   }
 
-  const inputStreams = datasetUtils.readStreams(dataset)
-  const writeStreams = await datasetUtils.writeFullFileStreams(db, dataset)
+  const inputStreams = datasetUtils.readStreams(db, dataset)
+  const writeStreams = await datasetUtils.writeExtendedStreams(db, dataset)
   await pump(
     ...inputStreams,
     new RemoteExtensionStream({ extensions: detailedExtensions, dataset, db }),

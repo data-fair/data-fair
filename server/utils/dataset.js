@@ -251,8 +251,8 @@ exports.transformFileStreams = (mimeType, schema, fileSchema, fileProps = {}, ra
 }
 
 // Read the dataset file and get a stream of line items
-exports.readStreams = (dataset, raw = false, full = false) => {
-  if (dataset.isRest) return [restDatasetsUtils.readStream(dataset)]
+exports.readStreams = (db, dataset, raw = false, full = false) => {
+  if (dataset.isRest) return restDatasetsUtils.readStreams(db, dataset)
   return [
     fs.createReadStream(full ? exports.fullFileName(dataset) : exports.fileName(dataset)),
     stripBom(),
@@ -262,7 +262,8 @@ exports.readStreams = (dataset, raw = false, full = false) => {
 }
 
 // Used by extender worker to produce the "full" version of the file
-exports.writeFullFileStreams = async (db, dataset) => {
+exports.writeExtendedStreams = async (db, dataset) => {
+  if (dataset.isRest) return restDatasetsUtils.writeExtendedStreams(db, dataset)
   const tmpFullFile = await tmp.tmpName({ dir: path.join(dataDir, 'tmp') })
   // creating empty file before streaming seems to fix some weird bugs with NFS
   await fs.ensureFile(tmpFullFile)
@@ -312,7 +313,7 @@ exports.writeFullFileStreams = async (db, dataset) => {
 exports.sampleValues = async (dataset) => {
   let currentLine = 0
   const sampleValues = {}
-  await pump(...exports.readStreams(dataset, true), new Writable({
+  await pump(...exports.readStreams(null, dataset, true), new Writable({
     objectMode: true,
     write(chunk, encoding, callback) {
       for (const key of Object.keys(chunk)) {

@@ -38,10 +38,10 @@ exports.process = async function(app, dataset) {
   debug('Run index stream')
   let readStreams, writeStream
   if (dataset.isRest) {
-    readStreams = [restDatasetsUtils.readStream(db, dataset, dataset.status === 'updated')]
+    readStreams = restDatasetsUtils.readStreams(db, dataset, dataset.status === 'updated')
     writeStream = restDatasetsUtils.markIndexedStream(db, dataset)
   } else {
-    readStreams = datasetUtils.readStreams(dataset, false, dataset.extensions && dataset.extensions.find(e => e.active))
+    readStreams = datasetUtils.readStreams(db, dataset, false, dataset.extensions && dataset.extensions.find(e => e.active))
     writeStream = new Writable({ objectMode: true, write(chunk, encoding, cb) { cb() } })
   }
   await pump(...readStreams, indexStream, writeStream)

@@ -166,10 +166,11 @@ exports.prepareMbtiles = async (dataset, db, es) => {
 
   // first write a temporary geojson file with all content + extensions + same calculated fields as indexed
   const streams = [
-    ...datasetUtils.readStreams(dataset, false, dataset.extensions && dataset.extensions.find(e => e.active)),
+    ...datasetUtils.readStreams(db, dataset, false, dataset.extensions && dataset.extensions.find(e => e.active)),
   ]
   streams.push(new Transform({
     async transform(properties, encoding, callback) {
+      properties._id = properties._id || (properties._i + '')
       properties = flatten(properties, { safe: true })
       try {
         let geometry

@@ -6,7 +6,6 @@ const { nanoid } = require('nanoid')
 const util = require('util')
 const pump = util.promisify(require('pump'))
 const ajv = require('ajv')()
-const Combine = require('stream-combiner')
 const multer = require('multer')
 const mime = require('mime-types')
 const { Readable, Transform, Writable } = require('stream')
@@ -422,18 +421,36 @@ exports.readLineRevisions = async (req, res, next) => {
   res.send({ total, results })
 }
 
-exports.readStream = (db, dataset, onlyUpdated) => {
+exports.readStreams = (db, dataset, onlyUpdated) => {
   const collection = exports.collection(db, dataset)
   const filter = {}
   if (onlyUpdated) filter._needsIndexing = true
-  return Combine(collection.find(filter).batchSize(config.elasticsearch.maxBulkLines / 2).stream(), new Transform({
+  return [
+    collection.find(filter).batchSize(config.elasticsearch.maxBulkLines / 2).stream(),
+    new Transform({
+      objectMode: true,
+      async transform(chunk, encoding, cb) {
+        // now _i should always be defined, but keep the OR for retro-compatibility
+        chunk._i = chunk._i || chunk._updatedAt.getTime()
+        cb(null, chunk)
+      },
+    }),
+  ]
+}
+
+exports.writeExtendedStreams = (db, dataset) => {
+  const collection = exports.collection(db, dataset)
+  return [new Writable({
     objectMode: true,
-    async transform(chunk, encoding, cb) {
-      // now _i should always be defined, but keep the OR for retro-compatibility
-      chunk._i = chunk._i || chunk._updatedAt.getTime()
-      cb(null, chunk)
+    async write(item, encoding, cb) {
+      try {
+        await collection.replaceOne({ _id: item._id }, item)
+        cb()
+      } catch (err) {
+        cb(err)
+      }
     },
-  }))
+  })]
 }
 
 exports.markIndexedStream = (db, dataset) => {
