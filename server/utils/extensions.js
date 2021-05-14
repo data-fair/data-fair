@@ -95,7 +95,7 @@ class RemoteExtensionStream extends Transform {
           'Content-Type': 'application/x-ndjson',
           'x-consumer': JSON.stringify(this.dataset.owner),
         },
-        qs: {},
+        params: {},
         responseType: 'text',
         data: '',
       }
@@ -106,7 +106,7 @@ class RemoteExtensionStream extends Transform {
         opts.headers[config.defaultRemoteKey.name] = config.defaultRemoteKey.value
       }
       if (extension.select && extension.select.length) {
-        opts.qs.select = extension.select.join(',')
+        opts.params.select = extension.select.join(',')
       }
       const inputs = this.buffer
         .map(extension.inputMapping)
@@ -118,6 +118,7 @@ class RemoteExtensionStream extends Transform {
 
       // first get previous results from cache
       for (let i = 0; i < inputs.length; i++) {
+        if (Object.keys(inputs[i]).length === 1) continue
         const { value } = await this.db.collection('extensions-cache')
           .findOneAndUpdate({ extensionKey: extension.extensionKey, input: inputCacheKeys[i] }, { $set: { lastUsed: new Date() } })
         if (value) this.buffer[i][extension.extensionKey] = value.output

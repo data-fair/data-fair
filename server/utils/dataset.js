@@ -1,10 +1,10 @@
 const fs = require('fs-extra')
 const path = require('path')
-const Combine = require('stream-combiner')
 const { Transform } = require('stream')
 const iconv = require('iconv-lite')
 const config = require('config')
 const csv = require('csv-parser')
+const stripBom = require('strip-bom-stream')
 const JSONStream = require('JSONStream')
 const dir = require('node-dir')
 const { Writable } = require('stream')
@@ -255,6 +255,7 @@ exports.readStreams = (dataset, raw = false, full = false) => {
   if (dataset.isRest) return [restDatasetsUtils.readStream(dataset)]
   return [
     fs.createReadStream(full ? exports.fullFileName(dataset) : exports.fileName(dataset)),
+    stripBom(),
     iconv.decodeStream(dataset.file.encoding),
     ...exports.transformFileStreams(dataset.file.mimetype, dataset.schema, dataset.file.schema, dataset.file.props, raw),
   ]

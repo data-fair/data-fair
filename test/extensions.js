@@ -8,7 +8,7 @@ const testUtils = require('./resources/test-utils')
 const workers = require('../server/workers')
 
 describe('Extensions', () => {
-  it.only('Extend dataset using remote service', async function() {
+  it('Extend dataset using remote service', async function() {
     const ax = global.ax.dmeadus
     // Initial dataset with addresses
     let dataset = await testUtils.sendDataset('datasets/dataset-extensions.csv', ax)
@@ -70,7 +70,7 @@ describe('Extensions', () => {
     assert.equal(newResult._geopoint, '50,50')
 
     // Reduce selected output using extension.select
-    nockScope = nock('http://test.com').post('/geocoder/coords').reply(200, (uri, requestBody) => {
+    nockScope = nock('http://test.com').post('/geocoder/coords?select=lat,lon').reply(200, (uri, requestBody) => {
       const inputs = requestBody.trim().split('\n').map(JSON.parse)
       assert.equal(inputs.length, 3)
       assert.deepEqual(Object.keys(inputs[0]), ['q', 'key'])
@@ -188,6 +188,7 @@ describe('Extensions', () => {
     // A search to check results
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
     assert.equal(res.data.total, 1)
+    console.log(res.data.results[0])
     assert.equal(res.data.results[0].label, 'koumoul')
     assert.equal(res.data.results[0]['_ext_sirene-koumoul_findEtablissementsBulk.NOMEN_LONG'], 'KOUMOUL')
 
@@ -223,17 +224,28 @@ other,unknown address
       extensions: [{ active: true, remoteService: 'geocoder-koumoul', action: 'postCoords' }],
     })
     assert.equal(res.status, 200)
-    await workers.hook('finalizer')
+    try {
+      await workers.hook('extender')
+      assert.fail()
+    } catch (err) {
+      assert.equal(err.message, '500 - some error')
+    }
+
     dataset = (await ax.get(`/api/v1/datasets/${dataset.id}`)).data
-    assert.ok(dataset.extensions[0].error)
+    assert.equal(dataset.status, 'error')
 
     // Prepare for extension failure with bad body in response
     nock('http://test.com').post('/geocoder/coords').reply(200, 'some error')
     res = await ax.patch(`/api/v1/datasets/${dataset.id}`, { extensions: [{ active: true, forceNext: true, remoteService: 'geocoder-koumoul', action: 'postCoords' }] })
     assert.equal(res.status, 200)
-    await workers.hook('finalizer')
+    try {
+      await workers.hook('extender')
+      assert.fail()
+    } catch (err) {
+      assert.ok(err.message.startsWith('Unexpected token s'))
+    }
     dataset = (await ax.get('/api/v1/datasets/dataset2')).data
-    assert.ok(dataset.extensions[0].error)
+    assert.equal(dataset.status, 'error')
   })
 
   it('Manage empty queries', async () => {
@@ -250,7 +262,6 @@ empty,
     assert.equal(res.status, 201)
     const dataset = await workers.hook(`finalizer/${res.data.id}`)
 
-    // Prepare for extension failure with HTTP error code
     nock('http://test.com', { reqheaders: { 'x-apiKey': 'test_default_key' } })
       .post('/geocoder/coords').reply(200, (uri, requestBody) => {
         const inputs = requestBody.trim().split('\n').map(JSON.parse)
