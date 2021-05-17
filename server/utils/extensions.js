@@ -201,15 +201,19 @@ exports.prepareSchema = async (db, schema, extensions) => {
         const key = extensionKey + '.' + output.name
         const existingField = schema.find(field => field.key === key)
         if (existingField) return existingField
-        return {
+        const field = {
           key,
           'x-originalName': output.name,
           'x-extension': extensionId,
-          'x-refersTo': output.concept,
           title: output.title,
           description: output.description,
           type: output.type || 'string',
         }
+        // only keep the concept if it does not conflict with existing property
+        if (output.concept && !schema.find(f => !f['x-extension'] && f['x-refersTo'] === output.concept)) {
+          field['x-refersTo'] = output.concept
+        }
+        return field
       }))
     const errorField = action.output.find(o => o.name === '_error') || action.output.find(o => o.name === 'error')
 

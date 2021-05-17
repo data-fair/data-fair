@@ -331,4 +331,52 @@ koumoul,19 rue de la voie lactée saint avé
       assert.ok(err.status, 404)
     }
   })
+
+  it('Do not add already present concept', async () => {
+    const ax = global.ax.dmeadus
+    // Initial dataset with addresses
+    let dataset = await testUtils.sendDataset('datasets/dataset-siret-extensions.csv', ax)
+
+    // Prepare for extension using created remote service and patch dataset to ask for it
+    const nockScope = nock('http://test.com', { reqheaders: { 'x-apiKey': config.defaultRemoteKey.value } })
+      // /sirene/api/v1/etablissements_bulk?select=NOMEN_LONG%2Cbodacc.capital%2CTEFET%2Clocation.lat%2Clocation.lon'
+      .post('/sirene/etablissements_bulk?select=siret,NOMEN_LONG%2Cbodacc.capital%2CTEFET%2Clocation.lat%2Clocation.lon')
+      // .query({ params: { select: 'NOMEN_LONG,bodacc.capital,TEFET,location.lat,location.lon' } })
+      .reply(200, (uri, requestBody) => {
+        const inputs = requestBody.trim().split('\n').map(JSON.parse)
+        assert.equal(inputs.length, 1)
+        assert.deepEqual(Object.keys(inputs[0]), ['siret', 'key'])
+        return JSON.stringify({
+          siret: '82898347800011',
+          NOMEN_LONG: 'KOUMOUL',
+          'location.lon': '-2.748514',
+          'location.lat': '47.687173',
+          key: inputs[0].key,
+        }) + '\n'
+      })
+    dataset.schema.find(field => field.key === 'siret')['x-refersTo'] = 'http://www.datatourisme.fr/ontology/core/1.0/#siret'
+    const res = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
+      schema: dataset.schema,
+      extensions: [{
+        active: true,
+        remoteService: 'sirene-koumoul',
+        action: 'findEtablissementsBulk',
+        select: [
+          'siret',
+          'NOMEN_LONG',
+          'bodacc.capital',
+          'TEFET',
+          'location.lat',
+          'location.lon',
+        ],
+      }],
+    })
+    assert.equal(res.status, 200)
+    dataset = await workers.hook(`finalizer/${dataset.id}`)
+    nockScope.done()
+    const extensionKey = '_ext_sirene-koumoul_findEtablissementsBulk'
+    assert.ok(dataset.schema.find(field => field.key === extensionKey + '.location.lat'))
+    const extSiret = dataset.schema.find(field => field.key === '_ext_sirene-koumoul_findEtablissementsBulk.siret')
+    assert.ok(!extSiret['x-refersTo'])
+  })
 })
