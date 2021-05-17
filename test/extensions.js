@@ -278,4 +278,53 @@ empty,
     assert.equal(res.status, 200)
     await workers.hook('finalizer')
   })
+
+  it('Delete extended file when removing extensions', async () => {
+    const ax = global.ax.dmeadus
+
+    // Initial dataset with addresses
+    const form = new FormData()
+    const content = `label,adr
+koumoul,19 rue de la voie lactée saint avé
+`
+    form.append('file', content, 'dataset4.csv')
+    let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
+    assert.equal(res.status, 201)
+    const dataset = await workers.hook(`finalizer/${res.data.id}`)
+
+    nock('http://test.com', { reqheaders: { 'x-apiKey': 'test_default_key' } })
+      .post('/geocoder/coords').reply(200, (uri, requestBody) => {
+        const inputs = requestBody.trim().split('\n').map(JSON.parse)
+        return inputs.map(input => ({ key: input.key, lat: 10, lon: 10 }))
+          .map(JSON.stringify).join('\n') + '\n'
+      })
+
+    dataset.schema.find(field => field.key === 'adr')['x-refersTo'] = 'http://schema.org/address'
+    res = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
+      schema: dataset.schema,
+      extensions: [{ active: true, remoteService: 'geocoder-koumoul', action: 'postCoords' }],
+    })
+    assert.equal(res.status, 200)
+    await workers.hook('finalizer')
+
+    // Download extended file
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/full`)
+    const lines = res.data.split('\n')
+    assert.equal(lines[0], '\ufefflabel,adr,lat,lon,matchLevel,status')
+    assert.equal(lines[1], 'koumoul,19 rue de la voie lactée saint avé,10,10,,')
+
+    // deactivate extension
+    res = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
+      schema: dataset.schema,
+      extensions: [{ active: false, remoteService: 'geocoder-koumoul', action: 'postCoords' }],
+    })
+    assert.equal(res.status, 200)
+    await workers.hook('finalizer')
+    try {
+      res = await ax.get(`/api/v1/datasets/${dataset.id}/full`)
+      assert.fail()
+    } catch (err) {
+      assert.equal(err.response.status, 404)
+    }
+  })
 })
