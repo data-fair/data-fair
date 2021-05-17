@@ -71,6 +71,9 @@ exports.init = async (db) => {
     exports.ensureIndex(db, 'settings', { 'apiKeys.key': 1 }, { sparse: true }),
     // Sessions managed by express-session, but we add our custom indices
     exports.ensureIndex(db, 'sessions', { 'session.activeApplications.id': 1 }),
+    // shared extensions cache with a 10 days expiration delay
+    exports.ensureIndex(db, 'extensions-cache', { extensionKey: 1, input: 1 }, { name: 'main-keys' }),
+    exports.ensureIndex(db, 'extensions-cache', { lastUsed: 1 }, { name: 'expiration', expireAfterSeconds: 60 * 60 * 24 * 10 }),
   ]
   await Promise.all(promises)
 }

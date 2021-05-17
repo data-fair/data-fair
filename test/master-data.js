@@ -120,7 +120,6 @@ describe('Master data management', () => {
     const slave = await workers.hook('finalizer/slave')
     assert.ok(slave.schema.find(p => p.key === '_ext_localhost-dataset-master_masterData_bulkSearch_siret.extra'))
     assert.ok(slave.schema.find(p => p.key === '_ext_localhost-dataset-master_masterData_bulkSearch_siret._error'))
-    assert.equal(slave.extensions[0].progress, 1)
     const results = (await ax.get('/api/v1/datasets/slave/lines')).data.results
     assert.equal(results[0]['_ext_localhost-dataset-master_masterData_bulkSearch_siret.extra'], 'Extra information')
     assert.ok(!results[0]['_ext_localhost-dataset-master_masterData_bulkSearch_siret.siret'])

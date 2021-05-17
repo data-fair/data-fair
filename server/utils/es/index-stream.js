@@ -1,7 +1,12 @@
 const { Transform } = require('stream')
+const path = require('path')
+const fs = require('fs-extra')
 const config = require('config')
 const truncateMiddle = require('truncate-middle')
-const extensions = require('../extensions')
+const flatten = require('flat')
+const datasetUtils = require('../dataset')
+const geoUtils = require('../geo')
+const randomSeed = require('random-seed')
 
 const debug = require('debug')('index-stream')
 
@@ -19,7 +24,7 @@ class IndexStream extends Transform {
     try {
       let warning
       if (this.options.updateMode) {
-        warning = await extensions.applyCalculations(this.options.dataset, item.doc)
+        warning = await applyCalculations(this.options.dataset, item.doc)
         const keys = Object.keys(item.doc)
         if (keys.length === 0 || (keys.length === 1 && keys[0] === '_i')) return callback()
         this.body.push({ update: { _index: this.options.indexName, _id: item.id, retry_on_conflict: 3 } })
@@ -32,12 +37,10 @@ class IndexStream extends Transform {
         this.body.push(item)
       } else {
         const params = { index: { _index: this.options.indexName } }
-        if (item._id) {
-          params.index._id = item._id
-          delete item._id
-        }
+        params.index._id = item._id || (item._i + '')
+        delete item._id
         this.body.push(params)
-        warning = await extensions.applyCalculations(this.options.dataset, item)
+        warning = await applyCalculations(this.options.dataset, item)
         this.body.push(item)
         this.bulkChars += JSON.stringify(item).length
       }
@@ -136,6 +139,43 @@ class IndexStream extends Transform {
     if (this.erroredItems.length > this.i / 2) throw new Error(msg)
     return msg
   }
+}
+
+const applyCalculations = async (dataset, item) => {
+  let warning = null
+  const flatItem = flatten(item, { safe: true })
+
+  // Add base64 content of attachments
+  const attachmentField = dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')
+  if (attachmentField && flatItem[attachmentField.key]) {
+    const filePath = path.join(datasetUtils.attachmentsDir(dataset), flatItem[attachmentField.key])
+    if (await fs.pathExists(filePath)) {
+      const stats = await fs.stat(filePath)
+      if (stats.size > config.defaultLimits.attachmentIndexed) {
+        warning = 'Pièce jointe trop volumineuse pour être analysée'
+      } else {
+        item._attachment_url = `${config.publicUrl}/api/v1/datasets/${dataset.id}/attachments/${flatItem[attachmentField.key]}`
+        item._file_raw = (await fs.readFile(filePath))
+          .toString('base64')
+      }
+    }
+  }
+
+  // calculate geopoint and geometry fields depending on concepts
+  if (geoUtils.schemaHasGeopoint(dataset.schema)) {
+    Object.assign(item, geoUtils.latlon2fields(dataset, flatItem))
+  } else if (geoUtils.schemaHasGeometry(dataset.schema)) {
+    Object.assign(item, await geoUtils.geometry2fields(dataset.schema, flatItem))
+  }
+
+  // Add a pseudo-random number for random sorting (more natural distribution)
+  item._rand = randomSeed.create(dataset.id + item._i)(1000000)
+
+  // split the fields that have a separator in their schema
+  dataset.schema.filter(field => field.separator && item[field.key]).forEach(field => {
+    item[field.key] = item[field.key].split(field.separator.trim()).map(part => part.trim())
+  })
+  return warning
 }
 
 module.exports = (options) => new IndexStream(options)

@@ -247,7 +247,7 @@ router.patch('/:datasetId', readDataset((patch) => {
   // Except download.. We only try it again if the fetch failed.
   if (req.dataset.status === 'error') {
     if (req.dataset.isVirtual) patch.status = 'indexed'
-    else if (req.dataset.isRest) patch.status = 'schematized'
+    else if (req.dataset.isRest) patch.status = 'analyzed'
     else if (req.dataset.remoteFile && !req.dataset.originalFile) patch.status = 'imported'
     else if (!baseTypes.has(req.dataset.originalFile.mimetype)) patch.status = 'uploaded'
     else patch.status = 'loaded'
@@ -274,15 +274,18 @@ router.patch('/:datasetId', readDataset((patch) => {
       patch.schema = await virtualDatasetsUtils.prepareSchema(db, { ...req.dataset, ...patch })
       patch.status = 'indexed'
     }
+  } else if (patch.extensions) {
+    // extensions have changed, trigger full re-indexing
+    patch.status = 'analyzed'
   } else if (patch.projection && (!req.dataset.projection || patch.projection.code !== req.dataset.projection.code)) {
     // geo projection has changed, trigger full re-indexing
-    patch.status = 'schematized'
+    patch.status = 'analyzed'
   } else if (patch.schema && geo.geoFieldsKey(patch.schema) !== geo.geoFieldsKey(req.dataset.schema)) {
     // geo concepts haved changed, trigger full re-indexing
-    patch.status = 'schematized'
+    patch.status = 'analyzed'
   } else if (patch.schema && patch.schema.find(f => req.dataset.schema.find(df => df.key === f.key && df.separator !== f.separator))) {
     // some separator has changed on a field, trigger full re-indexing
-    patch.status = 'schematized'
+    patch.status = 'analyzed'
   } else if (patch.schema && patch.schema.find(f => req.dataset.schema.find(df => df.key === f.key && df.ignoreDetection !== f.ignoreDetection))) {
     // some ignoreDetection param has changed on a field, trigger full analysis / re-indexing
     patch.status = 'loaded'
@@ -292,16 +295,10 @@ router.patch('/:datasetId', readDataset((patch) => {
       // we just try in case elasticsearch considers the new mapping compatible
       // so that we might optimize and reindex only when necessary
       await esUtils.updateDatasetMapping(req.app.get('es'), { id: req.dataset.id, schema: patch.schema })
-      if (patch.extensions) {
-        // Back to indexed state if schema did not change in significant manner, but extensions did
-        patch.status = 'indexed'
-      } else {
-        // Extended otherwise, to re-calculate geometries and stuff
-        patch.status = 'extended'
-      }
+      patch.status = 'extended'
     } catch (err) {
       // generated ES mappings are not compatible, trigger full re-indexing
-      patch.status = 'schematized'
+      patch.status = 'analyzed'
     }
   } else if (patch.thumbnails || patch.masterData) {
     // just change finalizedAt so that cache is invalidated, but the worker doesn't relly need to work on the dataset
@@ -476,11 +473,11 @@ router.post('', beforeUpload, checkStorage(true), filesUtils.uploadFile(), files
       dataset.schema = dataset.schema || []
       // the dataset will go through a first index/finalize steps, not really necessary
       // but this way everything will be initialized (journal, index)
-      dataset.status = 'schematized'
+      dataset.status = 'analyzed'
       const baseId = slug(req.body.title).toLowerCase()
       await datasetUtils.insertWithBaseId(db, dataset, baseId)
       await restDatasetsUtils.initDataset(db, dataset)
-      await db.collection('datasets').updateOne({ id: dataset.id }, { $set: { status: 'schematized' } })
+      await db.collection('datasets').updateOne({ id: dataset.id }, { $set: { status: 'analyzed' } })
     } else {
       throw createError(400, 'Un jeu de données doit être initialisé avec un fichier ou déclaré "virtuel" ou "REST"')
     }
@@ -548,7 +545,7 @@ const updateDataset = asyncWrap(async(req, res) => {
       res.write(' ')
 
       dataset = await setFileInfo(db, datasetFile, attachmentsFile, { ...dataset, ...req.body })
-      if (req.query.skipAnalysis === 'true') req.body.status = 'schematized'
+      if (req.query.skipAnalysis === 'true') req.body.status = 'analyzed'
     } else if (dataset.isVirtual) {
       const { isVirtual, ...patch } = req.body
       if (!validatePatch(patch)) {
@@ -565,7 +562,7 @@ const updateDataset = asyncWrap(async(req, res) => {
       req.body.rest = req.body.rest || {}
       if (req.isNewDataset) {
         await restDatasetsUtils.initDataset(db, { ...dataset, ...req.body })
-        dataset.status = 'schematized'
+        dataset.status = 'analyzed'
       } else {
         try {
           // this method will routinely throw errors
@@ -576,7 +573,7 @@ const updateDataset = asyncWrap(async(req, res) => {
           req.body.status = 'indexed'
         } catch (err) {
           // generated ES mappings are not compatible, trigger full re-indexing
-          req.body.status = 'schematized'
+          req.body.status = 'analyzed'
         }
       }
     }

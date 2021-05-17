@@ -81,14 +81,14 @@
           <tr style="height: 30px;border-bottom: 2px solid rgba(0,0,0,0.24);">
             <th
               :colspan="inputFields.length"
-              class="column text-left"
+              class="column text-left pl-4"
               style="border-right: 2px solid rgba(0,0,0,0.24);"
             >
               <span style="font-weight: bold;">Entrées</span>
             </th>
             <th
               :colspan="outputFields.length"
-              class="column text-left"
+              class="column text-left pl-4"
             >
               <span style="font-weight: bold;">Résultats</span>
             </th>
@@ -100,6 +100,7 @@
               :class="{'text-start': true, sortable: header.sortable, active : header.value === pagination.sortBy, asc: !pagination.descending, desc: !pagination.descending}"
               nowrap
               :style="i === inputFields.length - 1 ? 'border-right: 2px solid rgba(0,0,0,0.24);' : ''"
+              class="text-left pl-4"
               @click="orderBy(header)"
             >
               <v-tooltip

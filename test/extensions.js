@@ -60,45 +60,27 @@ describe('Extensions', () => {
     // and new result with new extension
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines?select=*`)
     assert.equal(res.data.total, 3)
-    let existingResult = res.data.results.find(l => l.label === 'koumoul')
+    const existingResult = res.data.results.find(l => l.label === 'koumoul')
     assert.equal(existingResult[extensionKey + '.lat'], 10)
     assert.equal(existingResult[extensionKey + '.lon'], 10)
     assert.equal(existingResult._geopoint, '10,10')
-    let newResult = res.data.results.find(l => l.label === 'me')
+    const newResult = res.data.results.find(l => l.label === 'me')
     assert.equal(newResult[extensionKey + '.lat'], 50)
     assert.equal(newResult[extensionKey + '.lon'], 50)
     assert.equal(newResult._geopoint, '50,50')
 
-    // Re process full extension because of forceNext parameter
-    nockScope = nock('http://test.com').post('/geocoder/coords').reply(200, (uri, requestBody) => {
+    // Reduce selected output using extension.select
+    nockScope = nock('http://test.com').post('/geocoder/coords?select=lat,lon').reply(200, (uri, requestBody) => {
       const inputs = requestBody.trim().split('\n').map(JSON.parse)
       assert.equal(inputs.length, 3)
       assert.deepEqual(Object.keys(inputs[0]), ['q', 'key'])
       return inputs.map(input => ({ key: input.key, lat: 40, lon: 40 }))
         .map(JSON.stringify).join('\n') + '\n'
     })
-    res = await ax.patch(`/api/v1/datasets/${dataset.id}`, { extensions: [{ active: true, forceNext: true, remoteService: 'geocoder-koumoul', action: 'postCoords' }] })
-    assert.equal(res.status, 200)
-    await workers.hook(`finalizer/${dataset.id}`)
-    nockScope.done()
-    // A search to check re-indexed results with overwritten extensions
-    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines?select=*`)
-    assert.equal(res.data.total, 3)
-    existingResult = res.data.results.find(l => l.label === 'koumoul')
-    assert.equal(existingResult[extensionKey + '.lat'], 40)
-    assert.equal(existingResult[extensionKey + '.lon'], 40)
-    newResult = res.data.results.find(l => l.label === 'me')
-    assert.equal(newResult[extensionKey + '.lat'], 40)
-    assert.equal(newResult[extensionKey + '.lon'], 40)
-    assert.equal(newResult._geopoint, '40,40')
-    dataset = (await ax.get(`/api/v1/datasets/${dataset.id}`)).data
-    assert.equal(dataset.extensions[0].forceNext, false)
-    assert.equal(dataset.extensions[0].progress, 1)
-
-    // Reduce selected output using extension.select
     res = await ax.patch(`/api/v1/datasets/${dataset.id}`, { extensions: [{ active: true, remoteService: 'geocoder-koumoul', action: 'postCoords', select: ['lat', 'lon'] }] })
     assert.equal(res.status, 200)
     await workers.hook(`finalizer/${dataset.id}`)
+    nockScope.done()
 
     // Download extended file
     res = await ax.get(`/api/v1/datasets/${dataset.id}/full`)
@@ -206,6 +188,7 @@ describe('Extensions', () => {
     // A search to check results
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
     assert.equal(res.data.total, 1)
+    console.log(res.data.results[0])
     assert.equal(res.data.results[0].label, 'koumoul')
     assert.equal(res.data.results[0]['_ext_sirene-koumoul_findEtablissementsBulk.NOMEN_LONG'], 'KOUMOUL')
 
@@ -241,17 +224,28 @@ other,unknown address
       extensions: [{ active: true, remoteService: 'geocoder-koumoul', action: 'postCoords' }],
     })
     assert.equal(res.status, 200)
-    await workers.hook('finalizer')
+    try {
+      await workers.hook('extender')
+      assert.fail()
+    } catch (err) {
+      assert.equal(err.message, '500 - some error')
+    }
+
     dataset = (await ax.get(`/api/v1/datasets/${dataset.id}`)).data
-    assert.ok(dataset.extensions[0].error)
+    assert.equal(dataset.status, 'error')
 
     // Prepare for extension failure with bad body in response
     nock('http://test.com').post('/geocoder/coords').reply(200, 'some error')
     res = await ax.patch(`/api/v1/datasets/${dataset.id}`, { extensions: [{ active: true, forceNext: true, remoteService: 'geocoder-koumoul', action: 'postCoords' }] })
     assert.equal(res.status, 200)
-    await workers.hook('finalizer')
+    try {
+      await workers.hook('extender')
+      assert.fail()
+    } catch (err) {
+      assert.ok(err.message.startsWith('Unexpected token s'))
+    }
     dataset = (await ax.get('/api/v1/datasets/dataset2')).data
-    assert.ok(dataset.extensions[0].error)
+    assert.equal(dataset.status, 'error')
   })
 
   it('Manage empty queries', async () => {
@@ -268,7 +262,6 @@ empty,
     assert.equal(res.status, 201)
     const dataset = await workers.hook(`finalizer/${res.data.id}`)
 
-    // Prepare for extension failure with HTTP error code
     nock('http://test.com', { reqheaders: { 'x-apiKey': 'test_default_key' } })
       .post('/geocoder/coords').reply(200, (uri, requestBody) => {
         const inputs = requestBody.trim().split('\n').map(JSON.parse)
@@ -284,5 +277,54 @@ empty,
     })
     assert.equal(res.status, 200)
     await workers.hook('finalizer')
+  })
+
+  it('Delete extended file when removing extensions', async () => {
+    const ax = global.ax.dmeadus
+
+    // Initial dataset with addresses
+    const form = new FormData()
+    const content = `label,adr
+koumoul,19 rue de la voie lactée saint avé
+`
+    form.append('file', content, 'dataset4.csv')
+    let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
+    assert.equal(res.status, 201)
+    const dataset = await workers.hook(`finalizer/${res.data.id}`)
+
+    nock('http://test.com', { reqheaders: { 'x-apiKey': 'test_default_key' } })
+      .post('/geocoder/coords').reply(200, (uri, requestBody) => {
+        const inputs = requestBody.trim().split('\n').map(JSON.parse)
+        return inputs.map(input => ({ key: input.key, lat: 10, lon: 10 }))
+          .map(JSON.stringify).join('\n') + '\n'
+      })
+
+    dataset.schema.find(field => field.key === 'adr')['x-refersTo'] = 'http://schema.org/address'
+    res = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
+      schema: dataset.schema,
+      extensions: [{ active: true, remoteService: 'geocoder-koumoul', action: 'postCoords' }],
+    })
+    assert.equal(res.status, 200)
+    await workers.hook('finalizer')
+
+    // Download extended file
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/full`)
+    const lines = res.data.split('\n')
+    assert.equal(lines[0], '\ufefflabel,adr,lat,lon,matchLevel,status')
+    assert.equal(lines[1], 'koumoul,19 rue de la voie lactée saint avé,10,10,,')
+
+    // deactivate extension
+    res = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
+      schema: dataset.schema,
+      extensions: [{ active: false, remoteService: 'geocoder-koumoul', action: 'postCoords' }],
+    })
+    assert.equal(res.status, 200)
+    await workers.hook('finalizer')
+    try {
+      res = await ax.get(`/api/v1/datasets/${dataset.id}/full`)
+      assert.fail()
+    } catch (err) {
+      assert.equal(err.response.status, 404)
+    }
   })
 })

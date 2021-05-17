@@ -63,36 +63,10 @@
             height="100%"
             :outlined="!hasChanges(extension)"
           >
-            <!-- only show progress bar if extension was saved -->
-            <template v-if="dataset.extensions.find(e => e.remoteService === extension.remoteService && e.action === extension.action)">
-              <v-progress-linear
-                v-if="extension.error"
-                color="error"
-                :value="extension.progress * 100"
-              />
-              <v-progress-linear
-                v-else-if="!extension.progress || extension.forceNext"
-                color="primary"
-                indeterminate
-              />
-              <v-progress-linear
-                v-else-if="extension.progress"
-                color="primary"
-                :value="extension.progress * 100"
-              />
-            </template>
-
             <v-card-title>
               {{ remoteServicesMap[extension.remoteService] && remoteServicesMap[extension.remoteService].actions[extension.action] && remoteServicesMap[extension.remoteService].actions[extension.action].summary }}
             </v-card-title>
             <v-card-text style="margin-bottom:40px;">
-              <v-alert
-                v-if="extension.error"
-                type="error"
-                border="left"
-              >
-                {{ extension.error }}
-              </v-alert>
               <v-autocomplete
                 v-if="extension.active && remoteServicesMap[extension.remoteService] && selectFields[extension.remoteService + '_' + extension.action].fieldsAndTags"
                 v-model="extension.select"
@@ -159,9 +133,6 @@
       ...mapState(['vocabulary']),
       ...mapState('dataset', ['dataset', 'datasetClone', 'remoteServices']),
       ...mapGetters('dataset', ['can', 'remoteServicesMap']),
-      channel() {
-        return 'datasets/' + this.dataset.id + '/extend-progress'
-      },
       datasetConcepts() {
         return new Set(this.dataset.schema.map(field => field['x-refersTo']).filter(c => c))
       },
@@ -195,6 +166,9 @@
       selectFields() {
         const res = {};
         (this.localExtensions || []).forEach(extension => {
+          if (!this.remoteServicesMap[extension.remoteService] || !this.remoteServicesMap[extension.remoteService].actions[extension.action]) {
+            return
+          }
           const fields = this.remoteServicesMap[extension.remoteService].actions[extension.action].output
             .map(field => { field['x-tags'] = field['x-tags'] || []; return field })
             .filter(f => !f.concept || f.concept !== 'http://schema.org/identifier')
@@ -230,16 +204,6 @@
       })
       this.localExtensions = JSON.parse(JSON.stringify(this.dataset.extensions))
 
-      eventBus.$emit('subscribe', this.channel)
-      eventBus.$on(this.channel, info => {
-        const extension = this.localExtensions.find(e => e.remoteService === info.remoteService && e.action === info.action)
-        if (extension) {
-          this.$set(extension, 'progress', info.progress)
-          this.$set(extension, 'error', info.error)
-          extension.progress = info.progress
-        }
-      })
-
       // TODO: remove deprecated extensions based on available extensions
       /* const nbExtensions = this.localExtensions.length
       this.localExtensions = this.localExtensions.filter(e => {
@@ -250,9 +214,6 @@
       }
       logger.debug('localExtensions after fetchRemoteServices', this.localExtensions) */
       this.ready = true
-    },
-    destroyed() {
-      eventBus.$emit('unsubscribe', this.channel)
     },
     methods: {
       ...mapActions('dataset', ['fetchRemoteServices', 'patch']),
@@ -281,7 +242,6 @@
         this.patch({ extensions: this.dataset.extensions })
       },
       applyExtension(idx) {
-        this.localExtensions[idx].progress = 0
         const extension = this.localExtensions[idx]
         const savedIdx = this.dataset.extensions.findIndex(e => e.remoteService === extension.remoteService && e.action === extension.action)
         if (savedIdx === -1) this.dataset.extensions.push(extension)

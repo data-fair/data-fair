@@ -10,7 +10,6 @@ const tasks = exports.tasks = {
   converter: require('./converter'),
   csvAnalyzer: require('./csv-analyzer'),
   geojsonAnalyzer: require('./geojson-analyzer'),
-  csvSchematizer: require('./csv-schematizer'),
   indexer: require('./indexer'),
   extender: require('./extender'),
   finalizer: require('./finalizer'),
@@ -109,21 +108,21 @@ async function iter(app, type) {
       } else if (resource.status === 'loaded' && resource.file && resource.file.mimetype === 'text/csv') {
         // Quickly parse a CSV file
         taskKey = 'csvAnalyzer'
-      } else if (resource.status === 'analyzed' && resource.file && resource.file.mimetype === 'text/csv') {
-        // Deduce a schema from CSV structure
-        taskKey = 'csvSchematizer'
       } else if (resource.status === 'loaded' && resource.file && resource.file.mimetype === 'application/geo+json') {
         // Deduce a schema from geojson properties
         taskKey = 'geojsonAnalyzer'
-      } else if (resource.status === 'schematized' || (resource.isRest && resource.status === 'updated')) {
-        // index the content of the dataset in ES
-        // either just schematized or an updated REST dataset
-        taskKey = 'indexer'
-      } else if (resource.status === 'indexed' && (resource.extensions && resource.extensions.find(e => e.active))) {
-        // Perform extensions from remote services for dataset that are
-        // indexed and have at least one active extension
-        taskKey = 'extender'
-      } else if (resource.status === 'indexed' || resource.status === 'extended') {
+      } else if (resource.status === 'analyzed' || (resource.isRest && resource.status === 'updated')) {
+        if (resource.extensions && resource.extensions.find(e => e.active)) {
+          // Perform extensions from remote services for dataset that have at least one active extension
+          taskKey = 'extender'
+        } else {
+          // index the content of the dataset in ES
+          // either just analyzed or an updated REST dataset
+          taskKey = 'indexer'
+        }
+      } else if (resource.status === 'extended') {
+          taskKey = 'indexer'
+      } else if (resource.status === 'indexed') {
         // finalization covers some metadata enrichment, schema cleanup, etc.
         // either extended or there are no extensions to perform
         taskKey = 'finalizer'

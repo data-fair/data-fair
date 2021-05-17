@@ -1,10 +1,10 @@
 const fs = require('fs-extra')
 const path = require('path')
-const Combine = require('stream-combiner')
 const { Transform } = require('stream')
 const iconv = require('iconv-lite')
 const config = require('config')
 const csv = require('csv-parser')
+const stripBom = require('strip-bom-stream')
 const JSONStream = require('JSONStream')
 const dir = require('node-dir')
 const { Writable } = require('stream')
@@ -19,7 +19,6 @@ const geoUtils = require('./geo')
 const restDatasetsUtils = require('./rest-datasets')
 const vocabulary = require('../../contract/vocabulary')
 const limits = require('./limits')
-const extensionsUtils = require('./extensions')
 const esUtils = require('./es')
 const baseTypes = new Set(['text/csv', 'application/geo+json'])
 const dataDir = path.resolve(config.dataDir)
@@ -252,18 +251,19 @@ exports.transformFileStreams = (mimeType, schema, fileSchema, fileProps = {}, ra
 }
 
 // Read the dataset file and get a stream of line items
-exports.readStream = (dataset, raw = false) => {
-  if (dataset.isRest) return restDatasetsUtils.readStream(dataset)
-
-  return Combine(
-    fs.createReadStream(exports.fileName(dataset)),
+exports.readStreams = (db, dataset, raw = false, full = false) => {
+  if (dataset.isRest) return restDatasetsUtils.readStreams(db, dataset)
+  return [
+    fs.createReadStream(full ? exports.fullFileName(dataset) : exports.fileName(dataset)),
+    stripBom(),
     iconv.decodeStream(dataset.file.encoding),
     ...exports.transformFileStreams(dataset.file.mimetype, dataset.schema, dataset.file.schema, dataset.file.props, raw),
-  )
+  ]
 }
 
 // Used by extender worker to produce the "full" version of the file
-exports.writeFullFile = async (db, es, dataset) => {
+exports.writeExtendedStreams = async (db, dataset) => {
+  if (dataset.isRest) return restDatasetsUtils.writeExtendedStreams(db, dataset)
   const tmpFullFile = await tmp.tmpName({ dir: path.join(dataDir, 'tmp') })
   // creating empty file before streaming seems to fix some weird bugs with NFS
   await fs.ensureFile(tmpFullFile)
@@ -307,19 +307,13 @@ exports.writeFullFile = async (db, es, dataset) => {
     throw new Error('Dataset type is not supported ' + dataset.file.mimetype)
   }
 
-  await pump(
-    exports.readStream(dataset),
-    extensionsUtils.preserveExtensionStream({ db, esClient: es, dataset, calculated: false }),
-    ...transforms,
-    writeStream,
-  )
-  await fs.move(tmpFullFile, exports.fullFileName(dataset), { overwrite: true })
+  return [...transforms, writeStream]
 }
 
 exports.sampleValues = async (dataset) => {
   let currentLine = 0
   const sampleValues = {}
-  await pump(exports.readStream(dataset, true), new Writable({
+  await pump(...exports.readStreams(null, dataset, true), new Writable({
     objectMode: true,
     write(chunk, encoding, callback) {
       for (const key of Object.keys(chunk)) {
@@ -336,18 +330,6 @@ exports.sampleValues = async (dataset) => {
   }))
   if (currentLine === 0) throw new Error('Èchec de l\'échantillonage des données')
   return sampleValues
-}
-
-exports.countLines = async (dataset) => {
-  let nbLines = 0
-  await pump(exports.readStream(dataset, true), new Writable({
-    objectMode: true,
-    write(chunk, encoding, callback) {
-      nbLines += 1
-      callback()
-    },
-  }))
-  return nbLines
 }
 
 exports.storage = async (db, dataset) => {
@@ -500,7 +482,7 @@ exports.extendedSchema = (dataset) => {
 exports.reindex = async (db, dataset) => {
   const patch = { status: 'loaded' }
   if (dataset.isVirtual) patch.status = 'indexed'
-  else if (dataset.isRest) patch.status = 'schematized'
+  else if (dataset.isRest) patch.status = 'analyzed'
   else if (dataset.originalFile && !baseTypes.has(dataset.originalFile.mimetype)) patch.status = 'uploaded'
   return (await db.collection('datasets')
     .findOneAndUpdate({ id: dataset.id }, { $set: patch }, { returnOriginal: false })).value
