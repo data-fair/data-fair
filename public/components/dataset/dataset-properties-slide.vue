@@ -6,6 +6,7 @@
         :key="prop.key"
         style="text-transform: none;"
         class="ma-0 px-2"
+        :class="{'font-weight-bold': !!prop['x-refersTo']}"
         v-bind="btnProps(prop, i, currentProperty === i)"
         @click="currentProperty = currentProperty === i ? null : i"
       >
