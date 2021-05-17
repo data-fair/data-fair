@@ -15,7 +15,6 @@ const tmp = require('tmp-promise')
 const JSONStream = require('JSONStream')
 const datasetUtils = require('./dataset')
 const geoUtils = require('./geo')
-const extensionsUtils = require('./extensions')
 const debug = require('debug')('tiles')
 
 const dataDir = path.resolve(config.dataDir)

@@ -110,7 +110,6 @@
 
 <script>
   import { mapState, mapActions, mapGetters } from 'vuex'
-  import eventBus from '~/event-bus'
   import logger from '~/logger'
 
   export default {
