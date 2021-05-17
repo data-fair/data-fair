@@ -13,30 +13,34 @@ const permissions = require('../permissions')
 
 // From a property in data-fair schema to the property in an elasticsearch mapping
 exports.esProperty = prop => {
+  const capabilities = prop['x-capabilities'] || {}
   // Add inner text field to almost everybody so that even dates, numbers, etc can be matched textually as well as exactly
-  const innerTextField = {
+  const innerFields = {}
+  const textFieldData = capabilities.textAgg !== false
+  if (capabilities.textLocal !== false) {
     // language based analysis for better recall with stemming, etc
-    text: { type: 'text', analyzer: config.elasticsearch.defaultAnalyzer, fielddata: true },
+    innerFields.text = { type: 'text', analyzer: config.elasticsearch.defaultAnalyzer, fielddata: textFieldData }
+  }
+  if (capabilities.text !== false) {
     // more "raw" analysis good to boost more exact matches and for wildcard queries
-    text_standard: { type: 'text', analyzer: 'standard', fielddata: true },
+    innerFields.text_standard = { type: 'text', analyzer: 'standard', fielddata: textFieldData }
   }
   let esProp = {}
-  if (prop.type === 'object') esProp = { type: 'object' }
-  if (prop.type === 'integer') esProp = { type: 'long', fields: innerTextField }
-  if (prop.type === 'number') esProp = { type: 'double', fields: innerTextField }
-  if (prop.type === 'boolean') esProp = { type: 'boolean', fields: innerTextField }
-  if (prop.type === 'string' && prop.format === 'date-time') esProp = { type: 'date', fields: innerTextField }
-  if (prop.type === 'string' && prop.format === 'date') esProp = { type: 'date', fields: innerTextField }
+  const index = capabilities.index !== false
+  const values = capabilities.values !== false
+  if (prop.type === 'object') esProp = { type: 'object', enabled: index }
+  if (prop.type === 'integer') esProp = { type: 'long', fields: innerFields, index, doc_values: values }
+  if (prop.type === 'number') esProp = { type: 'double', fields: innerFields, index, doc_values: values }
+  if (prop.type === 'boolean') esProp = { type: 'boolean', index, doc_values: values }
+  if (prop.type === 'string' && prop.format === 'date-time') esProp = { type: 'date', fields: innerFields, index, doc_values: values }
+  if (prop.type === 'string' && prop.format === 'date') esProp = { type: 'date', fields: innerFields, index, doc_values: values }
   // uri-reference and full text fields are managed in the same way from now on, because we want to be able to aggregate on small full text fields
   if (prop.type === 'string' && (prop.format === 'uri-reference' || !prop.format)) {
-    esProp = {
-      type: 'keyword',
-      ignore_above: 200,
-      fields: {
-        ...innerTextField,
-        keyword_insensitive: { type: 'keyword', ignore_above: 200, normalizer: 'insensitive_normalizer' },
-      },
+    if (capabilities.insensitive !== false) {
+      // handle case and diacritics for better sorting
+      innerFields.keyword_insensitive = { type: 'keyword', ignore_above: 200, normalizer: 'insensitive_normalizer' }
     }
+    esProp = { type: 'keyword', ignore_above: 200, fields: innerFields, index, doc_values: values }
   }
   // Do not index geometry, it will be copied and simplified in _geoshape
   if (prop['x-refersTo'] === 'https://purl.org/geojson/vocab#geometry') {
@@ -76,11 +80,17 @@ exports.parseSort = (sortStr, fields, schema) => {
       throw createError(400, `Impossible de trier sur le champ ${key}, il n'existe pas dans le jeu de données.`)
     }
     const field = schema.find(f => f.key === key)
-    if (field && field.type === 'string' && (field.format === 'uri-reference' || !field.format)) {
+    const capabilities = field['x-capabilities'] || {}
+    if (capabilities.values === false && capabilities.insensitive === false) {
+      throw createError(400, `Impossible de trier sur le champ ${key}, la fonctionnalité a été désactivée.`)
+    }
+    if (capabilities.insensitive !== false && field && field.type === 'string' && (field.format === 'uri-reference' || !field.format)) {
       // ignore_unmapped is necessary to maintain compatibility with older indices
       result.push({ [key + '.keyword_insensitive']: { order, unmapped_type: 'long' } })
     }
-    result.push({ [key]: { order } })
+    if (capabilities.values !== false) {
+      result.push({ [key]: { order } })
+    }
   })
 
   return result

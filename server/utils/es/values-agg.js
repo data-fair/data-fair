@@ -8,6 +8,11 @@ module.exports = async (client, dataset, query, addGeoData) => {
   const valuesFields = query.field.split(';')
   // matching properties from the schema
   const props = valuesFields.map(f => dataset.schema.find(p => p.key === f))
+  props.forEach(prop => {
+    if (prop['x-capabilities'] && prop['x-capabilities'].values === false) {
+      throw createError(400, `Impossible de grouper sur le champ ${prop.key}, la fonctionnalité a été désactivée.`)
+    }
+  })
   // sorting for each level
   const sorts = query.sort ? query.sort.split(';') : []
   // interval for each level
