@@ -46,8 +46,9 @@
       </v-row>
 
       <v-row v-if="notCalculatedProperties && notCalculatedProperties.length">
-        <v-col>
+        <v-col class="pt-0">
           <v-select
+            v-if="dataset.isRest"
             v-model="primaryKey"
             label="Clé primaire"
             :disabled="!!dataset.count || !can('writeDescription')"
