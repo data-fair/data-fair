@@ -339,8 +339,7 @@ exports.patchLine = async (req, res, next) => {
 exports.deleteAllLines = async (req, res, next) => {
   const db = req.app.get('db')
   const esClient = req.app.get('es')
-  const collection = exports.collection(db, req.dataset)
-  await collection.deleteMany({})
+  await exports.initDataset(db, req.dataset)
   const indexName = await esUtils.initDatasetIndex(esClient, req.dataset)
   await esUtils.switchAlias(esClient, req.dataset, indexName)
   await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { status: 'updated' } })
