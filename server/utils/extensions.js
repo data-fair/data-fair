@@ -6,6 +6,7 @@ const { Transform } = require('stream')
 const stringify = require('json-stable-stringify')
 const axios = require('./axios')
 const datasetUtils = require('./dataset')
+const geoUtils = require('./geo')
 
 const debug = require('debug')('extensions')
 
@@ -28,7 +29,7 @@ exports.extend = async(app, dataset, extensions) => {
     }
 
     const extensionKey = getExtensionKey(remoteService.id, action.id)
-    const inputMapping = prepareInputMapping(action, dataset.schema, extensionKey, extension.select)
+    const inputMapping = prepareInputMapping(action, dataset, extensionKey, extension.select)
     const errorKey = action.output.find(o => o.name === '_error') ? '_error' : 'error'
     const idInput = action.input.find(input => input.concept === 'http://schema.org/identifier')
     if (!idInput) throw new Error('A field with concept "http://schema.org/identifier" is required and missing in the remote service action', action)
@@ -108,14 +109,13 @@ class RemoteExtensionStream extends Transform {
       if (extension.select && extension.select.length) {
         opts.params.select = extension.select.join(',')
       }
-      const inputs = this.buffer
-        .map(extension.inputMapping)
-        .map((input, i) => {
-          input[extension.idInput.name] = i
-          return input
-        })
+      const inputs = []
+      for (const i in this.buffer) {
+        const input = await extension.inputMapping(this.buffer[i])
+        input[extension.idInput.name] = i
+        inputs.push(input)
+      }
       const inputCacheKeys = inputs.map(input => stringify([input, extension.select || []]))
-
       // first get previous results from cache
       for (let i = 0; i < inputs.length; i++) {
         if (Object.keys(inputs[i]).length === 1) continue
@@ -161,20 +161,28 @@ function getExtensionKey(remoteServiceId, actionId) {
 }
 
 // Create a function that will transform items from a dataset into inputs for an action
-function prepareInputMapping(action, schema, extensionKey, selectFields) {
-  const fields = action.input.map(input => {
-    const field = schema.find(f =>
+function prepareInputMapping(action, dataset, extensionKey, selectFields) {
+  const fieldMappings = action.input.map(input => {
+    const field = dataset.schema.find(f =>
       f['x-refersTo'] === input.concept &&
       f['x-refersTo'] !== 'http://schema.org/identifier' &&
       f.key.indexOf(extensionKey) !== 0,
     )
     if (field) return [field.key, input.name, field]
   }).filter(i => i)
-  return (item) => {
+  return async (item) => {
     const mappedItem = {}
-    fields.forEach(m => {
-      const val = item[m[0]]
-      if (val !== undefined && val !== '') mappedItem[m[1]] = val
+    if (fieldMappings.find(mapping => mapping[0].startsWith('_geo'))) {
+      // calculate geopoint and geometry fields depending on concepts
+      if (geoUtils.schemaHasGeopoint(dataset.schema)) {
+        item = { ...item, ...geoUtils.latlon2fields(dataset, item) }
+      } else if (geoUtils.schemaHasGeometry(dataset.schema)) {
+        item = { ...item, ...await geoUtils.geometry2fields(dataset.schema, item) }
+      }
+    }
+    fieldMappings.forEach(mapping => {
+      const val = item[mapping[0]]
+      if (val !== undefined && val !== '') mappedItem[mapping[1]] = val
     })
     return mappedItem
   }

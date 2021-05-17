@@ -38,7 +38,7 @@ module.exports = {
     disabled: true,
   },
   worker: {
-    spawnTask: true,
+    spawnTask: false,
   },
   browserLogLevel: 'debug',
   remoteServices: [{
