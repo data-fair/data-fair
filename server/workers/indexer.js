@@ -1,6 +1,7 @@
 // Index tabular datasets with elasticsearch using available information on dataset schema
 const util = require('util')
 const pump = util.promisify(require('pump'))
+const fs = require('fs-extra')
 const { Writable } = require('stream')
 const es = require('../utils/es')
 const datasetUtils = require('../utils/dataset')
@@ -41,7 +42,9 @@ exports.process = async function(app, dataset) {
     readStreams = restDatasetsUtils.readStreams(db, dataset, dataset.status === 'updated')
     writeStream = restDatasetsUtils.markIndexedStream(db, dataset)
   } else {
-    readStreams = datasetUtils.readStreams(db, dataset, false, dataset.extensions && dataset.extensions.find(e => e.active))
+    const extended = dataset.extensions && dataset.extensions.find(e => e.active)
+    if (!extended) await fs.remove(datasetUtils.fullFileName(dataset))
+    readStreams = datasetUtils.readStreams(db, dataset, false, extended)
     writeStream = new Writable({ objectMode: true, write(chunk, encoding, cb) { cb() } })
   }
   await pump(...readStreams, indexStream, writeStream)

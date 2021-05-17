@@ -307,11 +307,11 @@ koumoul,19 rue de la voie lactée saint avé
     assert.equal(res.status, 200)
     await workers.hook('finalizer')
 
-    // Download extended file
-    res = await ax.get(`/api/v1/datasets/${dataset.id}/full`)
-    const lines = res.data.split('\n')
-    assert.equal(lines[0], '\ufefflabel,adr,lat,lon,matchLevel,status')
-    assert.equal(lines[1], 'koumoul,19 rue de la voie lactée saint avé,10,10,,')
+    // check extended file
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/data-files`)
+    const fullFile = res.data.find(file => file.key === 'full')
+    assert.ok(fullFile)
+    res = await ax.get(fullFile.url)
 
     // deactivate extension
     res = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
@@ -320,11 +320,15 @@ koumoul,19 rue de la voie lactée saint avé
     })
     assert.equal(res.status, 200)
     await workers.hook('finalizer')
+
+    // check extended file was deleted
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/data-files`)
+    assert.ok(!res.data.find(file => file.key === 'full'))
     try {
-      res = await ax.get(`/api/v1/datasets/${dataset.id}/full`)
+      res = await ax.get(fullFile.url)
       assert.fail()
     } catch (err) {
-      assert.equal(err.response.status, 404)
+      assert.ok(err.status, 404)
     }
   })
 })
