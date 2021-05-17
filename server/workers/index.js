@@ -86,14 +86,20 @@ const typesFilters = () => ({
 })
 
 async function iter(app, type) {
+  const db = app.get('db')
   let resource, taskKey
   let stderr = ''
   try {
-    resource = await acquireNext(app.get('db'), type, typesFilters()[type])
+    resource = await acquireNext(db, type, typesFilters()[type])
     if (!resource) return
 
     // REST datasets trigger too many events
-    const noStoreEvent = type === 'dataset' && resource.isRest && resource.finalizedAt
+    let noStoreEvent = false
+    if (type === 'dataset' && resource.isRest && resource.finalizedAt) {
+      const lastEvent = (await db.collection('journals')
+        .findOne({ id: resource.id, type, 'owner.type': resource.owner.type, 'owner.id': resource.owner.id }, { projection: { events: { $slice: -1 } } })).events[0]
+      if (lastEvent && lastEvent.type === 'finalize-end') noStoreEvent = true
+    }
 
     if (type === 'application') {
       // Not much to do on applications.. Just catalog publication
@@ -165,9 +171,14 @@ async function iter(app, type) {
     // Build back the original error message from the stderr of the child process
     const errorMessage = []
     if (stderr) {
-      stderr.split('\n').filter(line => !!line && !line.startsWith('worker:')).forEach(line => {
-        errorMessage.push(line)
-      })
+      stderr.split('\n')
+        .filter(line => !!line)
+        .filter(line => !line.includes('Warning:'))
+        .filter(line => !line.includes('--trace-warnings'))
+        .filter(line => !line.startsWith('worker:'))
+        .forEach(line => {
+          errorMessage.push(line)
+        })
     } else {
       errorMessage.push(err.message)
     }
