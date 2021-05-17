@@ -239,7 +239,6 @@ it('should handle geo-distance search type', async () => {
     input.map(line => JSON.stringify(line)).join('\n'),
     { headers: { 'Content-Type': 'application/x-ndjson' }, params: { select: 'extra' } })
   ).data.split('\n').filter(line => !!line).map(line => JSON.parse(line))
-  console.log(results)
   assert.equal(results[0].extra, 'Extra information 1')
   assert.equal(results[1].extra, 'Extra information 2')
   assert.ok(results[2]._error.includes('pas de ligne'))

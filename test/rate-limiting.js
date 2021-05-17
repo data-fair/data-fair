@@ -6,10 +6,10 @@ const testUtils = require('./resources/test-utils')
 
 describe('rate limiting', () => {
   it('should throttle content download', async () => {
-    const ax = await global.ax.dmeadus
+    const ax = await global.ax.hlalonde3
 
     // higher storage limit first
-    await ax.post('/api/v1/limits/user/dmeadus0',
+    await ax.post('/api/v1/limits/user/hlalonde3',
       { store_bytes: { limit: 10000000, consumption: 0 }, lastUpdate: new Date().toISOString() },
       { params: { key: config.secretKeys.limits } })
 
@@ -21,7 +21,7 @@ describe('rate limiting', () => {
     }
 
     const dataset = await testUtils.sendDataset(tmpFile.path, ax)
-    await global.ax.dmeadus.put('/api/v1/datasets/' + dataset.id + '/permissions', [
+    await ax.put('/api/v1/datasets/' + dataset.id + '/permissions', [
       { classes: ['read'] },
     ])
     assert.ok(dataset.file.size > 100000, 'content should be larger than 100KB')
