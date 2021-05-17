@@ -53,8 +53,6 @@
         </v-list>
       </v-menu>
       <v-row>
-        {{ dataset.extensions[1] }}
-        {{ localExtensions[1] }}
         <v-col
           v-for="(extension, idx) in localExtensions"
           :key="extension.remoteService + '--' + extension.action"
@@ -243,10 +241,10 @@
         this.patch({ extensions: this.dataset.extensions })
       },
       applyExtension(idx) {
-        const extension = this.localExtensions[idx]
+        const extension = JSON.parse(JSON.stringify(this.localExtensions[idx]))
         const savedIdx = this.dataset.extensions.findIndex(e => e.remoteService === extension.remoteService && e.action === extension.action)
         if (savedIdx === -1) this.dataset.extensions.push(extension)
-        else this.dataset.extensions[savedIdx] = { ...extension, forceNext: true }
+        else this.dataset.extensions[savedIdx] = extension
         this.patch({ extensions: this.dataset.extensions })
       },
     },
