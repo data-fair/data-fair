@@ -653,6 +653,8 @@ router.post('/:datasetId/master-data/bulk-searchs/:bulkSearchId', readDataset(),
 
   const ioStream = mimeTypeStream(req.get('Content-Type')) || mimeTypeStream('application/json')
 
+  if (req.dataset.isVirtual) req.dataset.descendants = await virtualDatasetsUtils.descendants(req.app.get('db'), req.dataset)
+
   let i = 0
   await pump(
     req,

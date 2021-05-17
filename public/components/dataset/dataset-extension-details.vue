@@ -193,7 +193,7 @@
           .filter(f => f['x-extension'] === `${this.remoteService}/${this.action}`)
       },
       errorField() {
-        return this.outputFields && this.outputFields.find(f => f['x-originalName'] === 'error')
+        return this.outputFields && this.outputFields.find(f => f['x-originalName'] === 'error' || f['x-originalName'] === '_error')
       },
       selectFields() {
         if (!this.inputFields || !this.outputFields) return
