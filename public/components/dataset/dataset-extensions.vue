@@ -53,6 +53,8 @@
         </v-list>
       </v-menu>
       <v-row>
+        {{ dataset.extensions[1] }}
+        {{ localExtensions[1] }}
         <v-col
           v-for="(extension, idx) in localExtensions"
           :key="extension.remoteService + '--' + extension.action"

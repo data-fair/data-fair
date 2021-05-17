@@ -120,9 +120,42 @@ describe('Master data management', () => {
     const slave = await workers.hook('finalizer/slave')
     assert.ok(slave.schema.find(p => p.key === '_ext_localhost-dataset-master_masterData_bulkSearch_siret.extra'))
     assert.ok(slave.schema.find(p => p.key === '_ext_localhost-dataset-master_masterData_bulkSearch_siret._error'))
+    assert.ok(!slave.schema.find(p => p.key === '_ext_localhost-dataset-master_masterData_bulkSearch_siret.siret'))
     const results = (await ax.get('/api/v1/datasets/slave/lines')).data.results
     assert.equal(results[0]['_ext_localhost-dataset-master_masterData_bulkSearch_siret.extra'], 'Extra information')
     assert.ok(!results[0]['_ext_localhost-dataset-master_masterData_bulkSearch_siret.siret'])
+  })
+
+  it('not return calculated properties', async () => {
+    const { remoteService } = await initMaster(
+      [siretProperty, { key: 'extra', type: 'string' }],
+      [{
+        id: 'siret',
+        title: 'Fetch extra info from siret',
+        description: '',
+        input: [{ type: 'equals', property: siretProperty }],
+      }],
+    )
+    const ax = global.ax.superadmin
+
+    // create slave dataset
+    await ax.put('/api/v1/datasets/slave', {
+      isRest: true,
+      title: 'slave',
+      schema: [siretProperty],
+      extensions: [{
+        active: true,
+        remoteService: remoteService.id,
+        action: 'masterData_bulkSearch_siret',
+      }],
+    })
+    await workers.hook('finalizer/slave')
+    await ax.post('/api/v1/datasets/slave/_bulk_lines', [{ siret: '82898347800011' }].map(item => ({ _id: item.siret, ...item })))
+    const slave = await workers.hook('finalizer/slave')
+    assert.ok(slave.schema.find(p => p.key === '_ext_localhost-dataset-master_masterData_bulkSearch_siret.extra'))
+    assert.ok(slave.schema.find(p => p.key === '_ext_localhost-dataset-master_masterData_bulkSearch_siret._error'))
+    assert.ok(slave.schema.find(p => p.key === '_ext_localhost-dataset-master_masterData_bulkSearch_siret.siret'))
+    assert.ok(!slave.schema.find(p => p.key === '_ext_localhost-dataset-master_masterData_bulkSearch_siret._rand'))
   })
 
   it('should handle sorting to chose ambiguous result', async () => {

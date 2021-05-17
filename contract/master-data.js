@@ -91,10 +91,10 @@ Exemple: ma_colonne,-ma_colonne2`,
 exports.endpoints = (dataset) => {
   const endpoints = {}
   if (!dataset.masterData || !dataset.masterData.bulkSearchs) return endpoints
-
+  const outputProperties = dataset.schema.filter(f => !f['x-calculated'])
   const datasetLineSchema = {
     type: 'object',
-    properties: dataset.schema.reduce((a, f) => {
+    properties: outputProperties.reduce((a, f) => {
       a[f.key] = {
         ...f,
         title: f.title || f['x-originalName'] || f.key,
@@ -114,7 +114,7 @@ exports.endpoints = (dataset) => {
     title: 'Erreur de récupération de données de référence',
   }
 
-  const properties = dataset.schema.map(p => p.key)
+  const properties = outputProperties.map(p => p.key)
 
   for (const bulkSearch of dataset.masterData.bulkSearchs) {
     const inputProperties = {}
