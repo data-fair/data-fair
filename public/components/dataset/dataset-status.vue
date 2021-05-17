@@ -86,12 +86,11 @@
           { title: 'Chargement', description: 'Le fichier est chargé sur notre plateforme' },
           { title: 'Conversion', description: 'Le fichier est converti dans un format qui va faciliter son traitement' },
           { title: 'Analyse', description: 'Analyse des données et détection automatique du schéma associé' },
-          { title: 'Indexation', description: 'Les données sont indexées pour faciliter leur manipulation' },
           { title: 'Enrichissement', description: 'Les données sont enrichies à partir des données de référence' },
+          { title: 'Indexation', description: 'Les données sont indexées pour faciliter leur manipulation' },
           { title: 'Finalisation', description: 'Derniers traitements avant que la source ne soit utilisable', color: 'success' },
         ],
-        states: ['remote', 'uploaded', 'loaded', 'analyzed', 'indexed', 'extended', 'finalized'],
-        stateSteps: [1, 2, 3, 4, 4, 5, 6, 7],
+        states: ['remote', 'uploaded', 'loaded', 'analyzed', 'extended', 'indexed', 'finalized'],
       }
     },
     computed: {
@@ -101,11 +100,11 @@
     methods: {
       ...mapActions('dataset', ['patch']),
       stateFromStatus(status) {
-        if (status !== 'error') return this.stateSteps[this.states.indexOf(status)]
+        if (status !== 'error') return this.states.indexOf(status) + 1
         else {
           const idx = (this.journal || []).findIndex(e => e.type === 'error')
           if (idx < 0) return 0
-          return this.stateSteps[this.states.indexOf(this.eventStates[this.journal[idx + 1].type])]
+          return this.states.indexOf(this.eventStates[this.journal[idx + 1].type]) + 1
         }
       },
     },
