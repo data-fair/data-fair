@@ -3,8 +3,13 @@ const { prepareQuery, aliasName } = require('./commons')
 
 module.exports = async (client, dataset, query) => {
   if (!query.field) throw createError(400, '"field" parameter is required')
-  const fields = dataset.schema.map(f => f.key)
-  if (!fields.includes(query.field)) throw createError(400, `Impossible d'agréger sur le champ ${query.field}, il n'existe pas dans le jeu de données.`)
+  const prop = dataset.schema.find(f => f.key === query.field)
+  if (!prop) {
+    throw createError(400, `Impossible d'agréger sur le champ ${query.field}, il n'existe pas dans le jeu de données.`)
+  }
+  if (prop['x-capabilities'] && prop['x-capabilities'].textAgg === false) {
+    throw createError(400, `Impossible d'agréger sur le champ ${prop.key}, la fonctionnalité a été désactivée.`)
+  }
 
   const field = query.analysis === 'standard' ? query.field + '.text_standard' : query.field + '.text'
   const size = Number(query.size || 20)

@@ -8,11 +8,6 @@ module.exports = async (client, dataset, query, addGeoData) => {
   const valuesFields = query.field.split(';')
   // matching properties from the schema
   const props = valuesFields.map(f => dataset.schema.find(p => p.key === f))
-  props.forEach(prop => {
-    if (prop['x-capabilities'] && prop['x-capabilities'].values === false) {
-      throw createError(400, `Impossible de grouper sur le champ ${prop.key}, la fonctionnalité a été désactivée.`)
-    }
-  })
   // sorting for each level
   const sorts = query.sort ? query.sort.split(';') : []
   // interval for each level
@@ -22,7 +17,9 @@ module.exports = async (client, dataset, query, addGeoData) => {
   const aggTypes = []
   for (let i = 0; i < valuesFields.length; i++) {
     if (!props[i]) throw createError(400, `Le paramètre "field" référence un champ inconnu ${valuesFields[i]}`)
-
+    if (props[i]['x-capabilities'] && props[i]['x-capabilities'].values === false) {
+      throw createError(400, `Impossible de grouper sur le champ ${props[i].key}, la fonctionnalité a été désactivée.`)
+    }
     intervals[i] = intervals[i] || 'value' // default is to group by strict value (simple terms aggregation)
     aggTypes[i] = 'terms'
     if (intervals[i] !== 'value') {

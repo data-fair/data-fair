@@ -17,11 +17,11 @@ exports.esProperty = prop => {
   // Add inner text field to almost everybody so that even dates, numbers, etc can be matched textually as well as exactly
   const innerFields = {}
   const textFieldData = capabilities.textAgg !== false
-  if (capabilities.textLocal !== false) {
+  if (capabilities.text !== false) {
     // language based analysis for better recall with stemming, etc
     innerFields.text = { type: 'text', analyzer: config.elasticsearch.defaultAnalyzer, fielddata: textFieldData }
   }
-  if (capabilities.text !== false) {
+  if (capabilities.textStandard !== false) {
     // more "raw" analysis good to boost more exact matches and for wildcard queries
     innerFields.text_standard = { type: 'text', analyzer: 'standard', fielddata: textFieldData }
   }
@@ -50,8 +50,14 @@ exports.esProperty = prop => {
   }
   // Hardcoded calculated properties
   if (prop.key === '_geopoint') esProp = { type: 'geo_point' }
-  if (prop.key === '_geoshape') esProp = { type: 'geo_shape' }
-  if (prop.key === '_geocorners') esProp = { type: 'geo_point' }
+  if (prop.key === '_geoshape') {
+    if (capabilities.geoShape !== false) esProp = { type: 'geo_shape' }
+    else esProp = { type: 'object', enabled: false }
+  }
+  if (prop.key === '_geocorners') {
+    if (capabilities.geoCorners !== false) esProp = { type: 'geo_point' }
+    else esProp = { type: 'keyword', index: false, doc_values: false }
+  }
   if (prop.key === '_i') esProp = { type: 'long' }
   if (prop.key === '_rand') esProp = { type: 'integer' }
   if (prop.key === '_id') return null
@@ -80,7 +86,7 @@ exports.parseSort = (sortStr, fields, schema) => {
       throw createError(400, `Impossible de trier sur le champ ${key}, il n'existe pas dans le jeu de données.`)
     }
     const field = schema.find(f => f.key === key)
-    const capabilities = field['x-capabilities'] || {}
+    const capabilities = (field && field['x-capabilities']) || {}
     if (capabilities.values === false && capabilities.insensitive === false) {
       throw createError(400, `Impossible de trier sur le champ ${key}, la fonctionnalité a été désactivée.`)
     }
@@ -106,8 +112,17 @@ exports.parseOrder = (sortStr, fields, schema) => {
 
 // Check that a query_string query (lucene syntax)
 // does not try to use fields outside the current schema
-function checkQuery(query, fields, esFields) {
-  esFields = esFields || fields.concat(fields.map(f => f + '.text')).concat(fields.map(f => f + '.text_standard')).concat(['<implicit>'])
+function checkQuery(query, schema, esFields) {
+  if (!esFields) {
+    esFields = ['<implicit>']
+    schema.forEach(prop => {
+      const capabilities = prop['x-capabilities'] || []
+      if (capabilities.index !== false) esFields.push(prop.key)
+      if (capabilities.text !== false) esFields.push(prop.key + '.text')
+      if (capabilities.textStandard !== false) esFields.push(prop.key + '.text_standard')
+      if (capabilities.insensitive !== false) esFields.push(prop.key + '.keyword_insensitive')
+    })
+  }
   query.field = query.field && query.field.replace(/\\/g, '')
   if (query.field === '_exists_') {
     const field = query.term.replace(/\\/g, '')
@@ -117,8 +132,8 @@ function checkQuery(query, fields, esFields) {
   } else if (query.field && !esFields.includes(query.field)) {
     throw createError(400, `Impossible de faire une recherche sur le champ ${query.field}, il n'existe pas dans le jeu de données.`)
   }
-  if (query.left) checkQuery(query.left, fields, esFields)
-  if (query.right) checkQuery(query.right, fields, esFields)
+  if (query.left) checkQuery(query.left, schema, esFields)
+  if (query.right) checkQuery(query.right, schema, esFields)
 }
 
 exports.prepareQuery = (dataset, query) => {
@@ -194,19 +209,19 @@ exports.prepareQuery = (dataset, query) => {
     const esProp = exports.esProperty(f)
     if (esProp.index === false || esProp.enabled === false) return
     if (esProp.type === 'keyword') searchFields.push(f.key)
-    if (esProp.fields && esProp.fields.text) {
+    if (esProp.fields && (esProp.fields.text || esProp.fields.text_standard)) {
       // automatic boost of some special properties well suited for full-text search
       let suffix = ''
       if (f['x-refersTo'] === 'http://www.w3.org/2000/01/rdf-schema#label') suffix = '^3'
       if (f['x-refersTo'] === 'http://schema.org/description') suffix = '^2'
       if (f['x-refersTo'] === 'https://schema.org/DefinedTermSet') suffix = '^2'
 
-      searchFields.push(f.key + '.text' + suffix)
-      searchFields.push(f.key + '.text_standard' + suffix)
+      if (esProp.fields.text) searchFields.push(f.key + '.text' + suffix)
+      if (esProp.fields.text_standard) searchFields.push(f.key + '.text_standard' + suffix)
     }
   })
   if (query.qs) {
-    checkQuery(queryParser.parse(query.qs), fields)
+    checkQuery(queryParser.parse(query.qs), dataset.schema)
     must.push({ query_string: { query: query.qs, fields: searchFields } })
   }
   if (query.q) {
@@ -243,7 +258,10 @@ exports.prepareQuery = (dataset, query) => {
       values: query[key].split(','),
     }))
     .forEach(inFilter => {
-      if (!fields.includes(inFilter.key)) throw createError(400, `Impossible de faire une recherche sur le champ ${inFilter.key}, il n'existe pas dans le jeu de données.`)
+      const prop = dataset.schema.find(p => p.key === inFilter.key)
+      if (!prop || (prop['x-capabilities'] && prop['x-capabilities'].index === false)) {
+        throw createError(400, `Impossible de faire une recherche sur le champ ${inFilter.key}, il n'existe pas dans le jeu de données.`)
+      }
       filter.push({
         terms: {
           [inFilter.key]: inFilter.values,
@@ -252,6 +270,10 @@ exports.prepareQuery = (dataset, query) => {
     })
 
   // bounding box filter to restrict results on geo zone: left,bottom,right,top
+  const geoShapeProp = dataset.schema.find(p => p.key === '_geoshape')
+  const geoShape = geoShapeProp && (!geoShapeProp['x-capabilities'] || geoShapeProp['x-capabilities'].geoShape !== false)
+  const geoCornersProp = dataset.schema.find(p => p.key === '_geocorners')
+  const geoCorners = geoCornersProp && (!geoCornersProp['x-capabilities'] || geoCornersProp['x-capabilities'].geoCorners !== false)
   if (query.bbox || query.xyz) {
     if (!dataset.bbox) throw createError(400, '"bbox" filter cannot be used on this dataset. It is not geolocalized.')
     const bbox = exports.getQueryBBOX(query, dataset)
@@ -260,7 +282,7 @@ exports.prepareQuery = (dataset, query) => {
     // partial geometries in tiles
     filter.push({
       geo_shape: {
-        _geoshape: {
+        [geoShape ? '_geoshape' : (geoCorners ? '_geocorners' : '_geopoint')]: {
           relation: 'intersects',
           shape: {
             type: 'envelope',
@@ -274,9 +296,10 @@ exports.prepareQuery = (dataset, query) => {
   if (query.geo_distance) {
     if (!dataset.bbox) throw createError(400, '"geo_distance" filter cannot be used on this dataset. It is not geolocalized.')
     let [lon, lat, distance] = query.geo_distance.split(',')
+    if (!distance || distance === '0') distance = '0m'
     lon = Number(lon)
     lat = Number(lat)
-    if (!distance || distance === '0' || distance === '0m' || distance === '0km') {
+    if (geoShape && (distance === '0m' || distance === '0km')) {
       filter.push({
         geo_shape: {
           _geoshape: {
@@ -290,6 +313,10 @@ exports.prepareQuery = (dataset, query) => {
       })
     } else {
       // TODO: use _geoshape after upgrading ES
+
+      // distance of 0 is not accepted
+      if (distance === '0m' || distance === '0km') distance = '1m'
+
       filter.push({
         geo_distance: {
           distance,

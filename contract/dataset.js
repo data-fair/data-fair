@@ -38,7 +38,7 @@ const schema = {
             type: 'boolean',
             default: true,
             'x-display': 'switch',
-            title: 'Triable, filtrable et groupable sur valeur exacte',
+            title: 'Filtrable sur valeur exacte',
             description: 'Désactivez cette capacité si la donnée contient par exemple des textes longs pour lesquels des filtres sur valeurs exactes ont peu de sens.',
           },
           values: {
@@ -48,14 +48,14 @@ const schema = {
             title: 'Triable et groupable',
             description: 'Désactivez cette capacité si la donnée contient par exemple des textes longs pour lesquels trier ou grouper par valeur a peu de sens.',
           },
-          text: {
+          textStandard: {
             type: 'boolean',
             default: true,
             'x-display': 'switch',
             title: 'Texte analysé pour recherche textuelle',
             description: 'Désactivez cette capacité dans le cas d\'un code, une url, etc. N\'importe quel contenu sur lequel la recherche de mots a peu de sens.',
           },
-          textLocal: {
+          text: {
             type: 'boolean',
             default: true,
             'x-display': 'switch',
