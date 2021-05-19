@@ -253,11 +253,12 @@ exports.transformFileStreams = (mimeType, schema, fileSchema, fileProps = {}, ra
 // Read the dataset file and get a stream of line items
 exports.readStreams = (db, dataset, raw = false, full = false) => {
   if (dataset.isRest) return restDatasetsUtils.readStreams(db, dataset)
+  const fileName = full ? exports.fullFileName(dataset) : exports.fileName(dataset)
   return [
-    fs.createReadStream(full ? exports.fullFileName(dataset) : exports.fileName(dataset)),
+    fs.createReadStream(fileName),
     stripBom(),
     iconv.decodeStream(dataset.file.encoding),
-    ...exports.transformFileStreams(dataset.file.mimetype, dataset.schema, dataset.file.schema, dataset.file.props, raw),
+    ...exports.transformFileStreams(dataset.file.mimetype, dataset.schema, dataset.file.schema, full ? {} : dataset.file.props, raw),
   ]
 }
 

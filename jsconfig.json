@@ -1,0 +1,7 @@
+{
+    "compilerOptions": {
+      "module": "commonjs",
+      "target": "es6"
+    },
+    "exclude": ["node_modules", "nuxt-dist", "dist", "data", ".nyc_output", ".nuxt", ".github", "i18n", "patches"]
+}
