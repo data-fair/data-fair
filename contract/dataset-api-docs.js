@@ -29,10 +29,21 @@ module.exports = (dataset) => {
       return a
     }, {}),
   }
-  const properties = dataset.schema.map(p => p.key)
-  const textProperties = dataset.schema.filter(p => p.type === 'string').map(p => p.key)
-  const uriRefProperties = dataset.schema.filter(p => !p['x-calculated'] && p.type === 'string')
-  const numberProperties = dataset.schema.filter(p => p.type === 'number').map(p => p.key)
+
+  const properties = dataset.schema
+  const stringProperties = properties
+    .filter(p => !p['x-calculated'] && p.type === 'string' && (!p.format || p.format === 'uri-reference'))
+  const textSearchProperties = stringProperties
+    .filter(p => !p['x-capabilities'] || p['x-capabilities'].text !== false || p['x-capabilities'].textStandard !== false)
+  const textAggProperties = stringProperties
+    .filter(p => !p['x-capabilities'] || p['x-capabilities'].textAgg !== false)
+  const stringFilterProperties = dataset.schema
+    .filter(p => !p['x-capabilities'] || p['x-capabilities'].index !== false)
+  const stringValuesProperties = dataset.schema
+    .filter(p => !p['x-capabilities'] || p['x-capabilities'].index !== false)
+  const numberProperties = dataset.schema
+    .filter(p => p.type === 'number')
+
   const filterParams = [{
     in: 'query',
     name: 'q',
@@ -123,7 +134,7 @@ Pour plus d'information voir la documentation [ElasticSearch](https://www.elasti
       style: 'commaDelimited',
     })
   }
-  uriRefProperties.forEach(prop => {
+  stringFilterProperties.forEach(prop => {
     filterParams.push({
       in: 'query',
       name: `${prop.key}_in`,
@@ -155,7 +166,7 @@ Exemple: ma_colonne,-ma_colonne2`,
       default: [],
       items: {
         type: 'string',
-        enum: properties,
+        enum: stringValuesProperties.map(p => p.key),
       },
     },
     style: 'commaDelimited',
@@ -177,7 +188,7 @@ Exemple: ma_colonne,-ma_colonne2`,
       type: 'array',
       items: {
         type: 'string',
-        enum: properties,
+        enum: properties.map(p => p.key),
       },
     },
     style: 'commaDelimited',
@@ -206,7 +217,7 @@ La valeur est une liste de colonnes séparées par des virgules.
       type: 'array',
       items: {
         type: 'string',
-        enum: textProperties,
+        enum: textSearchProperties.map(p => p.key),
       },
     },
     style: 'commaDelimited',
@@ -256,7 +267,7 @@ La valeur est une liste de colonnes séparées par des virgules.
     },
   }
   if (numberProperties.length) {
-    metricFieldParam.schema.enum = numberProperties
+    metricFieldParam.schema.enum = numberProperties.map(p => p.key)
   }
 
   const formatParam = {
@@ -524,7 +535,7 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
             description: 'La colonne en fonction des valeurs desquelles grouper les lignes du jeu de données',
             schema: {
               type: 'string',
-              enum: properties,
+              enum: stringValuesProperties.map(p => p.key),
             },
           }, formatParam, metricParam, metricFieldParam, aggSizeParam].concat(filterParams).concat(hitsParams),
           // TODO: document sort param and interval
@@ -555,7 +566,7 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
             required: true,
             schema: {
               type: 'string',
-              enum: properties,
+              enum: stringValuesProperties.map(p => p.key),
             },
           }].concat(filterParams),
           // TODO: document sort param and interval
@@ -611,7 +622,7 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
             required: true,
             schema: {
               type: 'string',
-              enum: properties,
+              enum: textAggProperties.map(p => p.key),
             },
           }, {
             in: 'query',
