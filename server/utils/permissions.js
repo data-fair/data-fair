@@ -54,6 +54,7 @@ const getOwnerRole = exports.getOwnerRole = (owner, user) => {
 const getOwnerClasses = (owner, user, resourceType) => {
   const operationsClasses = apiDocsUtil.operationsClasses[resourceType]
   const ownerRole = getOwnerRole(owner, user)
+  if (!ownerRole) return null
   // classes of operations the user can do based on him being member of the resource's owner
   if (ownerRole === config.adminRole || (user && user.adminMode)) {
     return Object.keys(operationsClasses).concat(['post'])
