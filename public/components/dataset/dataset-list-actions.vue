@@ -1,5 +1,9 @@
 <template>
-  <v-list dense class="list-actions">
+  <v-list
+    v-if="canContrib"
+    dense
+    class="list-actions"
+  >
     <v-subheader>
       CRÉER UN JEU DE DONNÉES
     </v-subheader>
@@ -58,7 +62,12 @@
 </template>
 
 <script>
+  const { mapGetters } = require('vuex')
+
   export default {
+    computed: {
+      ...mapGetters(['canContrib']),
+    },
   }
 </script>
 

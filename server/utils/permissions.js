@@ -61,9 +61,7 @@ const getOwnerClasses = (owner, user, resourceType) => {
   if (ownerRole === config.contribRole) {
     return apiDocsUtil.contribOperationsClasses[resourceType] || []
   }
-  if (ownerRole === config.userRole) {
-    return apiDocsUtil.userOperationsClasses[resourceType] || []
-  }
+  return apiDocsUtil.userOperationsClasses[resourceType] || []
 }
 
 const matchPermission = (owner, permission, user) => {
