@@ -46,6 +46,7 @@
       dataSvg: require('~/assets/svg/Data Arranging_Two Color.svg?raw'),
     }),
     computed: {
+      ...mapState(['env']),
       ...mapState('session', ['user', 'initialized']),
       ...mapGetters(['canContrib']),
     },

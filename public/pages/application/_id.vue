@@ -61,7 +61,6 @@
               </layout-section-tabs>
 
               <layout-section-tabs
-                v-if="!env.disableSharing"
                 :section="sections.find(s => s.id === 'share')"
                 :svg="shareSvg"
                 svg-no-margin
@@ -190,7 +189,9 @@
         if (!this.application) return sections
         sections.push({ title: 'Métadonnées', id: 'metadata' })
         sections.push({ title: 'Configuration', id: 'config' })
-        sections.push({ title: 'Partage', id: 'share' })
+        if (!this.env.disableSharing) {
+          sections.push({ title: 'Partage', id: 'share' })
+        }
         if (this.can('readJournal')) {
           sections.push({ title: 'Activité', id: 'activity' })
         }

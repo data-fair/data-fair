@@ -72,7 +72,10 @@
                 :section="sections.find(s => s.id === 'topics')"
               >
                 <template v-slot:extension>
-                  <p>
+                  <p v-if="env.disableApplications">
+                    Les thématiques sont une manière simple d'organiser vos jeux de données.
+                  </p>
+                  <p v-else>
                     Les thématiques sont une manière simple d'organiser vos jeux de données et vos visualisations.
                   </p>
                 </template>

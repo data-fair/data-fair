@@ -14,7 +14,7 @@
                   :source="dataProcessSvg"
                   :color="$vuetify.theme.themes.light.primary"
                 />
-                <div class="text-h6">
+                <div v-if="!env.disableApplications && !env.disableRemoteServices" class="text-h6">
                   {{ $t('pages.root.description') }}
                 </div>
                 <p class="title mt-5">
@@ -52,7 +52,7 @@
                 votre compte.
               </nuxt-link>
             </p>
-            <p>
+            <p v-if="!env.disableApplications && !env.disableRemoteServices">
               {{ $t('pages.root.description') }}
             </p>
             <layout-section-tabs
@@ -77,9 +77,9 @@
                     Aucun jeu de donnée n'a été créé pour l'instant dans votre espace.
                   </span>
                   <span>
-                    Vous utilisez {{ stats.storage | displayBytes }}{{ stats.storageLimit ? '' : ' de stockage.' }}
+                    Vous utilisez {{ stats.storage | displayBytes }}{{ (stats.storageLimit && stats.storageLimit !== -1) ? '' : ' de stockage.' }}
                   </span>
-                  <span v-if="stats.storageLimit">
+                  <span v-if="stats.storageLimit && stats.storageLimit !== -1">
                     sur un total disponible de {{ stats.storageLimit | displayBytes }}.
                   </span>
                 </p>
@@ -111,6 +111,7 @@
             </layout-section-tabs>
 
             <layout-section-tabs
+              v-if="!env.disableApplications"
               :min-height="400"
               :svg="graphicSvg"
               :section="sections.find(s => s.id === 'apps')"

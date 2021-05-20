@@ -231,6 +231,8 @@ module.exports = {
     logo: 'https://static.data.gouv.fr/_themes/gouvfr/img/logo-header.svg',
   }],
   disableSharing: false,
+  disableApplications: false,
+  disableRemoteServices: false,
   proxyNuxt: false,
   tippecanoe: {
     skip: false,

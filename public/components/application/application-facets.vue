@@ -16,7 +16,7 @@
       />
     </template>
 
-    <template v-if="facets.visibility">
+    <template v-if="facets.visibility && !env.disableSharing">
       <v-select
         v-model="facetsValues.visibility"
         multiple
@@ -75,7 +75,7 @@
       return { visibleFacet: 'visibility' }
     },
     computed: {
-      ...mapState(['vocabulary']),
+      ...mapState(['vocabulary', 'env']),
     },
   }
 </script>

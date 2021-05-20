@@ -148,6 +148,14 @@ module.exports = {
     __name: 'DISABLE_SHARING',
     __format: 'json',
   },
+  disableApplications: {
+    __name: 'DISABLE_APPLICATIONS',
+    __format: 'json',
+  },
+  disableRemoteServices: {
+    __name: 'DISABLE_REMOTE_SERVICES',
+    __format: 'json',
+  },
   info: {
     termsOfService: 'INFO_TOS',
     contact: {

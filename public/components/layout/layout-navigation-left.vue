@@ -45,7 +45,11 @@
         <v-list-item-title>Erreurs</v-list-item-title>
       </v-list-item>
 
-      <v-list-item :nuxt="true" :to="`/admin/base-apps`">
+      <v-list-item
+        v-if="!env.disableApplications"
+        :nuxt="true"
+        :to="`/admin/base-apps`"
+      >
         <v-list-item-action><v-icon>mdi-apps</v-icon></v-list-item-action>
         <v-list-item-title>Applications</v-list-item-title>
       </v-list-item>
@@ -90,6 +94,7 @@
         </v-list-item>
 
         <v-list-item
+          v-if="!env.disableApplications"
           :nuxt="true"
           :to="`/applications`"
           :class="routePrefix === 'application' ? 'v-list-item--active' : ''"

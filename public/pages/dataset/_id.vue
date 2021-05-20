@@ -31,7 +31,7 @@
                     </v-tab>
                   </template>
 
-                  <v-tab href="#structure-extensions">
+                  <v-tab v-if="!env.disableRemoteServices" href="#structure-extensions">
                     <v-icon>mdi-merge</v-icon>&nbsp;&nbsp;Enrichissement
                   </v-tab>
 
@@ -116,7 +116,7 @@
                   Données
                 </template>
                 <template v-slot:tabs>
-                  <v-tab v-if="dataset.bbox" href="#data-map">
+                  <v-tab v-if="dataset.bbox && !env.disableRemoteServices" href="#data-map">
                     <v-icon>mdi-map</v-icon>&nbsp;&nbsp;Carte
                   </v-tab>
 
@@ -182,7 +182,7 @@
                     <v-icon>mdi-image-multiple</v-icon>&nbsp;&nbsp;Visualisations
                   </v-tab>
 
-                  <v-tab href="#reuses-external">
+                  <v-tab v-if="!env.disableApplications" href="#reuses-external">
                     <v-icon>mdi-open-in-new</v-icon>&nbsp;&nbsp;Réutilisations externes
                   </v-tab>
                 </template>
@@ -197,7 +197,6 @@
                 </template>
               </layout-section-tabs>
               <layout-section-tabs
-                v-if="!env.disableSharing"
                 :section="sections.find(s => s.id === 'share')"
                 :svg="shareSvg"
                 svg-no-margin
@@ -335,7 +334,9 @@
         }
         if (this.dataset.finalizedAt) {
           sections.push({ title: 'Utilisations', id: 'reuses' })
-          sections.push({ title: 'Partage', id: 'share' })
+          if (!this.env.disableSharing) {
+            sections.push({ title: 'Partage', id: 'share' })
+          }
         }
         if (this.can('readJournal')) {
           sections.push({ title: 'Activité', id: 'activity' })
