@@ -99,6 +99,39 @@
                 >
                   mdi-arrow-up
                 </v-icon>
+                <v-menu
+                  v-if="header.field.enum && header.filterable"
+                  bottom
+                  offset-y
+                >
+                  <template #activator="{on, attrs}">
+                    <v-btn
+                      small
+                      depressed
+                      text
+                      v-bind="attrs"
+                      class="pa-0"
+                      color="primary"
+                      style="min-width:40px;"
+                      v-on="on"
+                    >
+                      <v-icon>mdi-filter-variant</v-icon>
+                    </v-btn>
+                  </template>
+                  <v-list
+                    dense
+                    :style="`max-height:${filterHeight}px;`"
+                    class="py-0"
+                  >
+                    <v-list-item
+                      v-for="value in header.field.enum"
+                      :key="value"
+                      @click="addFilter(header.value, value)"
+                    >
+                      {{ value }}
+                    </v-list-item>
+                  </v-list>
+                </v-menu>
               </th>
             </tr>
           </thead>
@@ -180,6 +213,7 @@
       notFound: false,
       loading: false,
       lineHeight: 40,
+      filterHeight: 500,
       filters: [],
       lastParams: null,
     }),
@@ -264,6 +298,7 @@
         if (this.filters.length) top += 28
         const nbRows = Math.floor(Math.max(height - top, 120) / (this.lineHeight + 2))
         this.pagination.itemsPerPage = Math.min(Math.max(nbRows, 4), 50)
+        this.filterHeight = height - top
       },
       async refresh(resetPagination) {
         if (resetPagination) {

@@ -140,7 +140,11 @@
                       <v-icon>mdi-filter-variant</v-icon>
                     </v-btn>
                   </template>
-                  <v-list dense>
+                  <v-list
+                    dense
+                    :style="`max-height:420px;`"
+                    class="py-0"
+                  >
                     <v-list-item
                       v-for="value in header.field.enum"
                       :key="value"
