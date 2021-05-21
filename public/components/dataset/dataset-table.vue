@@ -121,6 +121,35 @@
                 >
                   mdi-arrow-up
                 </v-icon>
+                <v-menu
+                  v-if="header.field.enum && header.filterable"
+                  bottom
+                  offset-y
+                >
+                  <template #activator="{on, attrs}">
+                    <v-btn
+                      small
+                      depressed
+                      text
+                      v-bind="attrs"
+                      class="pa-0"
+                      color="primary"
+                      style="min-width:40px;"
+                      v-on="on"
+                    >
+                      <v-icon>mdi-filter-variant</v-icon>
+                    </v-btn>
+                  </template>
+                  <v-list dense>
+                    <v-list-item
+                      v-for="value in header.field.enum"
+                      :key="value"
+                      @click="addFilter(header.value, value)"
+                    >
+                      {{ value }}
+                    </v-list-item>
+                  </v-list>
+                </v-menu>
               </th>
             </tr>
           </thead>
@@ -573,6 +602,7 @@
         }
       },
       addFilter(key, value) {
+        this.filters = this.filters.filter(f => f.field.key !== key)
         const field = this.dataset.schema.find(f => f.key === key)
         this.filters.push({ type: 'in', field, values: [value] })
       },
