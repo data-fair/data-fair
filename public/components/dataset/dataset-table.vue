@@ -122,7 +122,7 @@
                   mdi-arrow-up
                 </v-icon>
                 <v-menu
-                  v-if="header.field.enum && header.filterable && header.field['x-cardinality'] > 1 && header.field['x-cardinality'] < (dataset.count/2)"
+                  v-if="header.field && header.field.enum && header.filterable && header.field['x-cardinality'] > 1"
                   bottom
                   offset-y
                 >

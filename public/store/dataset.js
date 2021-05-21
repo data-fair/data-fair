@@ -71,7 +71,7 @@ export default () => ({
           .filter(f => !f['x-extension'])
           .filter(f => f['x-refersTo'] !== 'http://schema.org/DigitalDocument')
           // .map(f => ({ ...f, maxLength: 10000 }))
-          .reduce((a, f) => { a[f.key] = f; return a }, {}),
+          .reduce((a, f) => { a[f.key] = { ...f, enum: undefined }; return a }, {}),
       }
     },
   },

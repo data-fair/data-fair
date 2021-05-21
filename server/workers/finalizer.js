@@ -36,11 +36,18 @@ exports.process = async function(app, dataset) {
     const aggResult = await esUtils.valuesAgg(es, queryableDataset, { field: prop.key, agg_size: '50', precision_threshold: 3000 })
     prop['x-cardinality'] = aggResult.total_values
     debug(`Cardinality of field ${prop.key} is ${prop['x-cardinality']}`)
-
-    const firstValue = aggResult.aggs[0]
-    if (firstValue && firstValue.total === 1) prop['x-cardinality'] = dataset.count
-    if (!dataset.isRest && aggResult.total_values > 0 && aggResult.total_values <= 50) {
-      // Set enum based on actual value, except for REST datasets, we don't want to prevent writing new values
+    // store a list of values if the cardinality is not too large and
+    let setEnum = aggResult.total_values > 0 && aggResult.total_values <= 50
+    // cardinality is not too close to overall count
+    // also if the cell is not too sparse
+    if (setEnum) {
+      const totalWithValue = aggResult.aggs.reduce((t, item) => { t += item.total; return t }, 0)
+      // cardinality is not too close to overall count
+      if (aggResult.total_values > totalWithValue / 2) setEnum = false
+      // also if the cell is not too sparse
+      if (totalWithValue <= aggResult.total / 5) setEnum = false
+    }
+    if (setEnum) {
       debug(`Set enum of field ${prop.key}`)
       prop.enum = aggResult.aggs.map(a => a.value)
     } else {
