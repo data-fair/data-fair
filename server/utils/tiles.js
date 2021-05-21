@@ -136,7 +136,7 @@ exports.defaultSelect = (dataset) => {
     if (prop.type === 'boolean') return true
     if (prop.type === 'string' && prop.format === 'date-time') return true
     if (prop.type === 'string' && prop.format === 'date') return true
-    if (prop.type === 'string' && prop.enum) return true
+    if (prop.type === 'string' && 'x-cardinality' in prop && prop['x-cardinality'] <= 50) return true
     if (prop.type === 'string' && prop['x-refersTo'] === 'http://www.w3.org/2000/01/rdf-schema#label') return true
     return false
   }).map(prop => prop.key)
