@@ -2,11 +2,16 @@
   <v-dialog
     v-model="dialog"
     max-width="800px"
-    @input="$set(property, 'x-capabilities', property['x-capabilities'] || {})"
+    @input="toggle"
   >
     <template #activator="{on, attrs}">
       <v-btn
-        icon
+        v-if="user.adminMode"
+        fab
+        small
+        depressed
+        color="admin"
+        dark
         v-bind="attrs"
         title="configuration technique"
         absolute
@@ -33,7 +38,7 @@
       <v-card-text class="px-3 pb-0">
         <tutorial-alert id="capabilities">
           Par défaut toutes les options sont cochées pour maximiser les utilisations possibles de vos jeux de données. Pour de petits volumes il n'y a pas d'inconvénient à conserver ce paramétrage.
-          Mais pour des volumes importants désactiver les options inutiles permet de réduire les temps de traitement et de requêtes.
+          Mais pour des volumes importants désactiver les options inutiles permet de réduire les temps de traitement et de requête.
         </tutorial-alert>
         <tutorial-alert id="capabilities-energy">
           Qui dit temps de traitement dit énergie. En désactivant les options inutiles vous contribuez à rendre cette plateforme moins énergivore.
@@ -41,10 +46,11 @@
 
         <v-form ref="form">
           <v-jsf
-            v-if="property['x-capabilities']"
-            v-model="property['x-capabilities']"
+            v-if="editCapabilities"
+            v-model="editCapabilities"
             :schema="schema"
             :options="{context}"
+            @change="apply"
           />
         </v-form>
       </v-card-text>
@@ -53,6 +59,7 @@
 </template>
 
 <script>
+  import { mapState } from 'vuex'
   import VJsf from '@koumoul/vjsf/lib/VJsf.js'
   import '@koumoul/vjsf/dist/main.css'
   import '@koumoul/vjsf/lib/deps/third-party.js'
@@ -64,14 +71,52 @@
     data() {
       return {
         dialog: false,
+        editCapabilities: null,
       }
     },
     computed: {
+      ...mapState('session', ['user']),
+      relevantCapabilities() {
+        if (this.property.type === 'number' || this.property.type === 'integer') {
+          return ['index', 'textStandard', 'values']
+        } else if (this.property.type === 'boolean') {
+          return ['index', 'textStandard', 'values']
+        } else if (this.property.type === 'string' && (this.property.format === 'date' || this.property.format === 'date-time')) {
+          return ['index', 'textStandard', 'values']
+        } else if (this.property['x-refersTo'] === 'https://purl.org/geojson/vocab#geometry') {
+          return ['geoShape']
+        } else if (this.property.type === 'string') {
+          return ['index', 'text', 'textStandard', 'textAgg', 'values', 'insensitive']
+        }
+        return ['index']
+      },
       schema() {
-        return JSON.parse(JSON.stringify(capabilitiesSchema))
+        const schema = JSON.parse(JSON.stringify(capabilitiesSchema))
+        Object.keys(schema.properties).forEach(key => {
+          if (!this.relevantCapabilities.includes(key)) delete schema.properties[key]
+        })
+        return schema
       },
       context() {
         return {}
+      },
+    },
+    methods: {
+      toggle(show) {
+        if (show) {
+          this.editCapabilities = this.property['x-capabilities'] ? { ...this.property['x-capabilities'] } : {}
+        } else {
+          this.editCapabilities = null
+        }
+      },
+      apply() {
+        const capabilities = { ...this.editCapabilities }
+        // we only keep the values that were toggled to false
+        for (const key in capabilities) {
+          if (capabilities[key] === true) delete capabilities[key]
+        }
+        if (Object.keys(capabilities).length) this.$set(this.property, 'x-capabilities', capabilities)
+        else delete this.property['x-capabilities']
       },
     },
   }

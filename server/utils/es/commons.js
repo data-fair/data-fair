@@ -16,14 +16,9 @@ exports.esProperty = prop => {
   const capabilities = prop['x-capabilities'] || {}
   // Add inner text field to almost everybody so that even dates, numbers, etc can be matched textually as well as exactly
   const innerFields = {}
-  const textFieldData = capabilities.textAgg !== false
-  if (capabilities.text !== false) {
-    // language based analysis for better recall with stemming, etc
-    innerFields.text = { type: 'text', analyzer: config.elasticsearch.defaultAnalyzer, fielddata: textFieldData }
-  }
   if (capabilities.textStandard !== false) {
     // more "raw" analysis good to boost more exact matches and for wildcard queries
-    innerFields.text_standard = { type: 'text', analyzer: 'standard', fielddata: textFieldData }
+    innerFields.text_standard = { type: 'text', analyzer: 'standard' }
   }
   let esProp = {}
   const index = capabilities.index !== false
@@ -36,6 +31,14 @@ exports.esProperty = prop => {
   if (prop.type === 'string' && prop.format === 'date') esProp = { type: 'date', fields: innerFields, index, doc_values: values }
   // uri-reference and full text fields are managed in the same way from now on, because we want to be able to aggregate on small full text fields
   if (prop.type === 'string' && (prop.format === 'uri-reference' || !prop.format)) {
+    const textFieldData = capabilities.textAgg !== false
+    if (capabilities.textStandard !== false) {
+      innerFields.text_standard.fielddata = textFieldData
+    }
+    if (capabilities.text !== false) {
+      // language based analysis for better recall with stemming, etc
+      innerFields.text = { type: 'text', analyzer: config.elasticsearch.defaultAnalyzer, fielddata: textFieldData }
+    }
     if (capabilities.insensitive !== false) {
       // handle case and diacritics for better sorting
       innerFields.keyword_insensitive = { type: 'keyword', ignore_above: 200, normalizer: 'insensitive_normalizer' }
@@ -130,7 +133,10 @@ function checkQuery(query, schema, esFields) {
       throw createError(400, `Impossible de faire une recherche sur le champ ${field}, il n'existe pas dans le jeu de données.`)
     }
   } else if (query.field && !esFields.includes(query.field)) {
-    throw createError(400, `Impossible de faire une recherche sur le champ ${query.field}, il n'existe pas dans le jeu de données.`)
+    if (!schema.find(p => p.key === query.field)) {
+      throw createError(400, `Impossible de faire une recherche sur le champ ${query.field}, il n'existe pas dans le jeu de données.`)
+    }
+    throw createError(400, `Impossible de faire une recherche sur le champ ${query.field}, la fonctionnalité a été désactivée.`)
   }
   if (query.left) checkQuery(query.left, schema, esFields)
   if (query.right) checkQuery(query.right, schema, esFields)
@@ -206,9 +212,9 @@ exports.prepareQuery = (dataset, query) => {
       searchFields.push('_id')
       return
     }
+
     const esProp = exports.esProperty(f)
-    if (esProp.index === false || esProp.enabled === false) return
-    if (esProp.type === 'keyword') searchFields.push(f.key)
+    if (esProp.index !== false && esProp.enabled !== false && esProp.type === 'keyword') searchFields.push(f.key)
     if (esProp.fields && (esProp.fields.text || esProp.fields.text_standard)) {
       // automatic boost of some special properties well suited for full-text search
       let suffix = ''

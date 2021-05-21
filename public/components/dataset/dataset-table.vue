@@ -206,7 +206,7 @@
                       {{ item[header.value] + '' | truncate(50) }}
                     </span>
                     <v-btn
-                      v-if="hover && !item._tmpState && !filters.find(f => f.field.key === header.value) && isFilterable(item[header.value])"
+                      v-if="hover && !item._tmpState && !filters.find(f => f.field.key === header.value) && header.filterable && isFilterable(item[header.value])"
                       fab
                       x-small
                       color="primary"
@@ -367,7 +367,13 @@
           .map(field => ({
             text: field.title || field['x-originalName'] || field.key,
             value: field.key,
-            sortable: field.type === 'string' || field.type === 'number' || field.type === 'integer',
+            sortable:
+              (!field['x-capabilities'] || field['x-capabilities'].values !== false) && (
+                (field.type === 'string' && field['x-refersTo'] !== 'https://purl.org/geojson/vocab#geometry') ||
+                field.type === 'number' ||
+                field.type === 'integer'
+              ),
+            filterable: (!field['x-capabilities'] || field['x-capabilities'].index !== false) && field['x-refersTo'] !== 'https://purl.org/geojson/vocab#geometry',
             tooltip: field.description || (field['x-refersTo'] && this.vocabulary && this.vocabulary[field['x-refersTo']] && this.vocabulary[field['x-refersTo']].description),
             field,
           }))

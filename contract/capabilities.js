@@ -33,7 +33,7 @@ module.exports = {
       type: 'boolean',
       default: true,
       'x-display': 'switch',
-      title: 'Aggrégation par mot',
+      title: 'Statistiques de mots',
       description: 'Désactivez cette capacité si vous n\'avez pas l\'intention d\'obtenir des statistiques sur les occurences de mots (par exemple pour construire un nuage de mot).',
     },
     insensitive: {
@@ -48,7 +48,7 @@ module.exports = {
       default: true,
       'x-display': 'switch',
       title: 'Formes géométriques complexes',
-      description: 'Désactivez cette capacité si la donnée ne contient que des géométries basiques de points ou bien si utiliser les centroïdes des géométries est suffisant pour vos besoins.',
+      description: 'Désactivez cette capacité si la donnée ne contient que des géométries basiques de points ou bien si requêter les géométries uniquement à partir de leurs centroïdes est suffisant pour vos besoins.',
     },
   },
 }
