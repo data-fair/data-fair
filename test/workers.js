@@ -40,7 +40,6 @@ describe('workers', () => {
     assert.equal(dataset.count, 2)
     const idProp = dataset.schema.find(p => p.key === 'id')
     assert.equal(idProp['x-cardinality'], 2)
-    assert.notEqual(idProp.enum.indexOf('koumoul'), -1)
     const esIndices = (await global.es.indices.get({ index: esUtils.aliasName(dataset) })).body
     const esIndex = Object.values(esIndices)[0]
     const mapping = esIndex.mappings
