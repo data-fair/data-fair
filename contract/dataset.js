@@ -3,8 +3,9 @@ const eventBy = require('./event-by')
 const permissions = require('./permissions')
 const topic = require('./topic')
 const masterData = require('./master-data')
-
+const capabilities = require('./capabilities')
 const publicationSchema = JSON.parse(JSON.stringify(require('./publication')))
+
 publicationSchema.properties.addToDataset = {
   type: 'object',
   description: 'Fill this object to create a new resource (or community resource) to an existing dataset. If empty a new dataset will be created.',
@@ -31,6 +32,7 @@ const schema = {
       'x-originalName': { type: ['string', 'null'] },
       'x-refersTo': { type: ['string', 'null'] },
       'x-calculated': { type: 'boolean' },
+      'x-capabilities': capabilities,
     },
   },
 }

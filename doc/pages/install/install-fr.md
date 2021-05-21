@@ -176,7 +176,7 @@ services:
   #########################
 
   elasticsearch:
-    image: koumoul/data-fair-elasticsearch:7.10.1
+    image: koumoul/data-fair-elasticsearch:7.10.2
     restart: always
     volumes:
       - elasticsearch-data:/usr/share/elasticsearch/data

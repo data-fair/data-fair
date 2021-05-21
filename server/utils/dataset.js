@@ -463,11 +463,14 @@ exports.extendedSchema = (dataset) => {
     }
   }
   if (geoUtils.schemaHasGeopoint(dataset.schema) || geoUtils.schemaHasGeometry(dataset.schema)) {
-    schema.push({ 'x-calculated': true, key: '_geoshape', type: 'object', title: 'Géométrie', description: 'Au format d\'une géométrie GeoJSON' })
+    const geomProp = dataset.schema.find(p => p.key === geoUtils.schemaHasGeometry(dataset.schema))
+    let geoShape = false
+    if (geomProp && (!geomProp['x-capabilities'] || geomProp['x-capabilities'].geoShape !== false)) geoShape = true
+    schema.push({ 'x-calculated': true, key: '_geoshape', type: 'object', title: 'Géométrie', description: 'Au format d\'une géométrie GeoJSON', 'x-capabilities': { geoShape } })
     const geopoint = { 'x-calculated': true, key: '_geopoint', type: 'string', title: 'Coordonnée géographique', description: 'Centroïde au format "lat,lon"' }
     if (!schema.find(p => p['x-refersTo'] === latlonUri)) geopoint['x-refersTo'] = latlonUri
     schema.push(geopoint)
-    schema.push({ 'x-calculated': true, key: '_geocorners', type: 'array', title: 'Boite englobante de la géométrie', description: 'Sous forme d\'un tableau de coordonnées au format "lat,lon"' })
+    schema.push({ 'x-calculated': true, key: '_geocorners', type: 'array', title: 'Boite englobante de la géométrie', description: 'Sous forme d\'un tableau de coordonnées au format "lat,lon"', 'x-capabilities': { geoCorners: !!geomProp } })
   }
   if (dataset.isRest) {
     schema.push({ 'x-calculated': true, key: '_updatedAt', type: 'string', format: 'date-time', title: 'Date de mise à jour', description: 'Date de dernière mise à jour de la ligne du jeu de données' })
@@ -490,7 +493,7 @@ exports.reindex = async (db, dataset) => {
 }
 
 exports.refinalize = async (db, dataset) => {
-  const patch = { status: 'extended' }
+  const patch = { status: 'indexed' }
   return (await db.collection('datasets')
     .findOneAndUpdate({ id: dataset.id }, { $set: patch }, { returnOriginal: false })).value
 }

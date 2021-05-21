@@ -17,7 +17,9 @@ module.exports = async (client, dataset, query, addGeoData) => {
   const aggTypes = []
   for (let i = 0; i < valuesFields.length; i++) {
     if (!props[i]) throw createError(400, `Le paramètre "field" référence un champ inconnu ${valuesFields[i]}`)
-
+    if (props[i]['x-capabilities'] && props[i]['x-capabilities'].values === false) {
+      throw createError(400, `Impossible de grouper sur le champ ${props[i].key}, la fonctionnalité a été désactivée.`)
+    }
     intervals[i] = intervals[i] || 'value' // default is to group by strict value (simple terms aggregation)
     aggTypes[i] = 'terms'
     if (intervals[i] !== 'value') {

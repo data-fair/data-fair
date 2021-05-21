@@ -425,7 +425,7 @@ exports.readStreams = (db, dataset, onlyUpdated) => {
   const filter = {}
   if (onlyUpdated) filter._needsIndexing = true
   return [
-    collection.find(filter).batchSize(config.elasticsearch.maxBulkLines / 2).stream(),
+    collection.find(filter).batchSize(100).stream(),
     new Transform({
       objectMode: true,
       async transform(chunk, encoding, cb) {

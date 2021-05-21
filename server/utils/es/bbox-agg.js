@@ -6,9 +6,11 @@ module.exports = async (client, dataset, query = {}) => {
 
   const esQuery = prepareQuery(dataset, query)
   esQuery.size = 0
-  // Use corners, not centroid in order to get truly surrounding box
+  // if necessary use corners, not centroid in order to get truly surrounding box
   // and to function even with a single document
-  esQuery.aggs = { bbox: { geo_bounds: { field: '_geocorners' } } }
+  const geoCornersProp = dataset.schema.find(p => p.key === '_geocorners')
+  const geoCorners = geoCornersProp && (!geoCornersProp['x-capabilities'] || geoCornersProp['x-capabilities'].geoCorners !== false)
+  esQuery.aggs = { bbox: { geo_bounds: { field: geoCorners ? '_geocorners' : '_geopoint' } } }
   const esResponse = (await client.search({ index: aliasName(dataset), body: esQuery })).body
   const response = { total: esResponse.hits.total.value }
   // ES bounds to standard bounding box: left,bottom,right,top
