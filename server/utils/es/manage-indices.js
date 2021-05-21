@@ -79,7 +79,7 @@ const indexBase = (dataset) => {
 
 exports.datasetInfos = async (client, dataset) => {
   // const indices = await client.indices.get({index: `${indexPrefix(dataset)}-*`})
-  const indices = await client.cat.indices({ index: `${indexPrefix(dataset)}-*`, format: 'json' })
+  const indices = (await client.cat.indices({ index: `${indexPrefix(dataset)}-*`, format: 'json' })).body
   for (const index of indices) {
     index.definition = await client.indices.get({ index: index.index })
   }
