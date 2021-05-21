@@ -6,7 +6,7 @@
   >
     <template #activator="{on, attrs}">
       <v-btn
-        v-if="user.adminMode"
+        v-if="user.adminMode && relevantCapabilities && relevantCapabilities.length"
         fab
         small
         depressed
@@ -49,7 +49,7 @@
             v-if="editCapabilities"
             v-model="editCapabilities"
             :schema="schema"
-            :options="{context}"
+            :options="{context, disableAll: editable}"
             @change="apply"
           />
         </v-form>
@@ -85,10 +85,12 @@
           return ['index', 'textStandard', 'values']
         } else if (this.property['x-refersTo'] === 'https://purl.org/geojson/vocab#geometry') {
           return ['geoShape']
+        } else if (this.property['x-refersTo'] === 'http://schema.org/DigitalDocument') {
+          return ['indexAttachment']
         } else if (this.property.type === 'string') {
           return ['index', 'text', 'textStandard', 'textAgg', 'values', 'insensitive']
         }
-        return ['index']
+        return []
       },
       schema() {
         const schema = JSON.parse(JSON.stringify(capabilitiesSchema))

@@ -128,7 +128,7 @@
                     <v-icon>mdi-calendar-range</v-icon>&nbsp;&nbsp;Calendrier
                   </v-tab>
 
-                  <v-tab v-if="fileProperty" href="#data-files">
+                  <v-tab v-if="fileProperty && (!fileProperty['x-capabilities'] || fileProperty['x-capabilities'].indexAttachment !== false)" href="#data-files">
                     <v-icon>mdi-content-copy</v-icon>&nbsp;&nbsp;Fichiers
                   </v-tab>
 

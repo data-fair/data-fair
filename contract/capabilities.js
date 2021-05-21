@@ -50,5 +50,12 @@ module.exports = {
       title: 'Formes géométriques complexes',
       description: 'Désactivez cette capacité si la donnée ne contient que des géométries basiques de points ou bien si requêter les géométries uniquement à partir de leurs centroïdes est suffisant pour vos besoins.',
     },
+    indexAttachment: {
+      type: 'boolean',
+      default: true,
+      'x-display': 'switch',
+      title: 'Contenu des pièces jointes analysé pour recherche textuelle',
+      description: 'Désactivez cette option si vous souhaitez que les pièces jointes soient simplement téléchargeables et que l\'extraction de leur contenu textuel pour recherche de mots n\'est pas pertinente.',
+    },
   },
 }

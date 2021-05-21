@@ -1,5 +1,8 @@
+const fs = require('fs-extra')
 const assert = require('assert').strict
+const FormData = require('form-data')
 const workers = require('../server/workers')
+const testUtils = require('./resources/test-utils')
 
 describe('Properties capabilities', () => {
   it('Disable case-sensitive sort', async () => {
@@ -194,5 +197,28 @@ describe('Properties capabilities', () => {
     assert.equal(res.data.total, 1)
     res = await ax.get('/api/v1/datasets/rest-geoshape/lines', { params: { bbox: '-2.41,47.8,-2.35,47.9' } })
     assert.equal(res.data.total, 2)
+  })
+
+  it('Disable extracting text from attachment', async () => {
+    const ax = global.ax.cdurning2
+
+    // Send dataset with a CSV and attachments in an archive
+    const form = new FormData()
+    form.append('dataset', fs.readFileSync('./test/resources/datasets/attachments.csv'), 'attachments.csv')
+    form.append('attachments', fs.readFileSync('./test/resources/datasets/files.zip'), 'files.zip')
+    const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
+    let dataset = res.data
+    assert.equal(res.status, 201)
+
+    dataset = await workers.hook(`finalizer/${dataset.id}`)
+    assert.ok(dataset.schema.find(p => p.key === '_file.content'))
+
+    await ax.patch(`/api/v1/datasets/${dataset.id}`, {
+      schema: [
+        { key: 'attachment', type: 'string', 'x-refersTo': 'http://schema.org/DigitalDocument', 'x-capabilities': { indexAttachment: false } },
+      ],
+    })
+    dataset = await workers.hook(`finalizer/${dataset.id}`)
+    assert.equal(dataset.schema.find(p => p.key === '_file.content'), undefined)
   })
 })

@@ -155,8 +155,9 @@ const applyCalculations = async (dataset, item) => {
         warning = 'Pièce jointe trop volumineuse pour être analysée'
       } else {
         item._attachment_url = `${config.publicUrl}/api/v1/datasets/${dataset.id}/attachments/${flatItem[attachmentField.key]}`
-        item._file_raw = (await fs.readFile(filePath))
-          .toString('base64')
+        if (!attachmentField['x-capabilities'] || attachmentField['x-capabilities'].indexAttachment !== false) {
+          item._file_raw = (await fs.readFile(filePath)).toString('base64')
+        }
       }
     }
   }
