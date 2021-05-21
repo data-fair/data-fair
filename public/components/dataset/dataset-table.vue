@@ -122,7 +122,7 @@
                   mdi-arrow-up
                 </v-icon>
                 <v-menu
-                  v-if="header.field.enum && header.filterable"
+                  v-if="header.field.enum && header.filterable && header.field['x-cardinality'] > 1 && header.field['x-cardinality'] < (dataset.count/2)"
                   bottom
                   offset-y
                 >
@@ -150,7 +150,7 @@
                       :key="value"
                       @click="addFilter(header.value, value)"
                     >
-                      {{ value }}
+                      <dataset-cell-value :value="value" :property="header.field" />
                     </v-list-item>
                   </v-list>
                 </v-menu>
@@ -225,19 +225,7 @@
               <template v-else>
                 <v-hover v-slot:default="{ hover }">
                   <div :style="`position: relative; max-height: 40px; min-width: ${Math.min((item[header.value] + '').length, 50) * 6}px;`">
-                    <span v-if="item[header.value] === undefined || item[header.value] === null" />
-                    <span v-else-if="header.field.format === 'date-time'">
-                      {{ item[header.value] | moment("DD/MM/YYYY, HH:mm") }}
-                    </span>
-                    <span v-else-if="header.field.format === 'date'">
-                      {{ item[header.value] | moment("DD/MM/YYYY") }}
-                    </span>
-                    <span v-else-if="header.field.type === 'boolean'">
-                      {{ item[header.value] ? 'oui' : 'non' }}
-                    </span>
-                    <span v-else>
-                      {{ item[header.value] + '' | truncate(50) }}
-                    </span>
+                    <dataset-cell-value :value="item[header.value]" :property="header.field" />
                     <v-btn
                       v-if="hover && !item._tmpState && !filters.find(f => f.field.key === header.value) && header.filterable && isFilterable(item[header.value])"
                       fab
