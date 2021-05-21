@@ -493,7 +493,7 @@ exports.reindex = async (db, dataset) => {
 }
 
 exports.refinalize = async (db, dataset) => {
-  const patch = { status: 'extended' }
+  const patch = { status: 'indexed' }
   return (await db.collection('datasets')
     .findOneAndUpdate({ id: dataset.id }, { $set: patch }, { returnOriginal: false })).value
 }
