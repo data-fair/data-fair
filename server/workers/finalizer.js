@@ -20,8 +20,12 @@ exports.process = async function(app, dataset) {
 
   if (dataset.isVirtual) {
     queryableDataset.descendants = await virtualDatasetsUtils.descendants(db, dataset)
-    result.schema = await virtualDatasetsUtils.prepareSchema(db, dataset)
+    queryableDataset.schema = result.schema = await virtualDatasetsUtils.prepareSchema(db, dataset)
   }
+
+  // Add the calculated fields to the schema
+  debug('prepare extended schema')
+  queryableDataset.schema = result.schema = datasetUtils.extendedSchema(dataset)
 
   const geopoint = geoUtils.schemaHasGeopoint(dataset.schema)
   const geometry = geoUtils.schemaHasGeometry(dataset.schema)
@@ -89,10 +93,6 @@ exports.process = async function(app, dataset) {
       endDate: new Date(timePeriod.endDate).toISOString(),
     }
   }
-
-  // Add the calculated fields to the schema
-  debug('prepare extended schema')
-  result.schema = datasetUtils.extendedSchema(dataset)
 
   result.finalizedAt = (new Date()).toISOString()
   if (dataset.isRest && (await collection.findOne({ id: dataset.id })).status === 'updated') {
