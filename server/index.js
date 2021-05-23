@@ -18,7 +18,7 @@ app.run().then(app => {
     console.debug(`Failure in data-fair task ${process.argv[2]} / ${process.argv[3]} / ${process.argv[4]}`, err)
     try {
       // sometimes we miss details from the error response, safer to do this in a try/catch in case of circular data
-      console.debug('full error', JSON.stringify(err))
+      console.debug('full error', JSON.stringify(err, null, 2))
     } catch (err2) {
       console.debug(err2)
     }
