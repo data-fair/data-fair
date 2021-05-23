@@ -94,7 +94,7 @@ Pour plus d'information voir la documentation [ElasticSearch](https://www.elasti
       schema: {
         type: 'array',
         items: {
-          type: 'number',
+          type: 'string',
         },
       },
       style: 'commaDelimited',
@@ -110,7 +110,7 @@ Pour plus d'information voir la documentation [ElasticSearch](https://www.elasti
       schema: {
         type: 'array',
         items: {
-          type: 'number',
+          type: 'string',
         },
       },
       style: 'commaDelimited',
@@ -128,7 +128,7 @@ Pour plus d'information voir la documentation [ElasticSearch](https://www.elasti
       schema: {
         type: 'array',
         items: {
-          type: 'number',
+          type: 'string',
         },
       },
       style: 'commaDelimited',
