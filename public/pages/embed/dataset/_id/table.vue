@@ -103,6 +103,7 @@
                   v-if="header.field && header.field.enum && header.filterable && header.field['x-cardinality'] > 1"
                   bottom
                   offset-y
+                  :max-height="filterHeight"
                 >
                   <template #activator="{on, attrs}">
                     <v-btn
@@ -120,11 +121,10 @@
                   </template>
                   <v-list
                     dense
-                    :style="`max-height:${filterHeight}px;`"
                     class="py-0"
                   >
                     <v-list-item
-                      v-for="value in header.field.enum"
+                      v-for="value in header.field.enum.slice().sort()"
                       :key="value"
                       @click="addFilter(header.value, value)"
                     >
