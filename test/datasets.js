@@ -223,7 +223,7 @@ describe('datasets', () => {
     const webhook = await testUtils.timeout(eventToPromise(notifier, 'webhook'), 1000, 'webhook not received')
     res = await ax.get(webhook.href + '/api-docs.json')
     assert.equal(res.status, 200)
-    assert.equal(res.data.openapi, '3.1.0')
+    assert.equal(res.data.openapi, '3.0.0')
     const datasetId = webhook.href.split('/').pop()
     // testing journal, updating data and then journal length again
     wsCli.send(JSON.stringify({ type: 'subscribe', channel: 'datasets/' + datasetId + '/journal' }))

@@ -26,7 +26,7 @@ if (config.masterDataPublicUrl && config.masterDataPublicUrl !== config.publicUr
 }
 
 module.exports = {
-  openapi: '3.1.0',
+  openapi: '3.0.0',
   info: Object.assign({
     title: 'API principale',
     description: `

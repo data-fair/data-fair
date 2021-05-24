@@ -5,7 +5,7 @@ describe('root', () => {
     const ax = global.ax.anonymous
     const res = await ax.get('/api/v1/api-docs.json')
     assert.equal(res.status, 200)
-    assert.equal(res.data.openapi, '3.1.0')
+    assert.equal(res.data.openapi, '3.0.0')
   })
 
   it('Get vocabulary', async () => {

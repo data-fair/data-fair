@@ -341,7 +341,7 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
   }
 
   const api = {
-    openapi: '3.1.0',
+    openapi: '3.0.0',
     info: {
       title: `API du jeu de données : ${dataset.title || dataset.id}`,
       description,
