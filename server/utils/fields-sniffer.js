@@ -43,8 +43,9 @@ exports.format = (value, prop, fileProp) => {
   if (prop.type === 'integer' || prop.type === 'number') return Number(cleanValue.replace(/\s/g, '').replace(',', '.'))
 }
 
+// WARNING: this code is duplicated in dataset-schema.vue
 exports.escapeKey = (key) => {
-  key = key.replace(/\.|\s|\$|;|,|:|!|\?\//g, '_').replace(/"/g, '')
+  key = key.replace(/\.|\s|\$|;|,|:|!/g, '_').replace(/"/g, '')
   // prefixing by _ is reserved to fields calculated by data-fair
   while (key.startsWith('_')) {
     key = key.slice(1)

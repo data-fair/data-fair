@@ -114,6 +114,17 @@
 
 <script>
   import { mapState, mapActions, mapGetters } from 'vuex'
+
+  // WARNING: this code is duplicated in field-sniffer.js
+  const escapeKey = (key) => {
+    key = key.replace(/\.|\s|\$|;|,|:|!/g, '_').replace(/"/g, '')
+    // prefixing by _ is reserved to fields calculated by data-fair
+    while (key.startsWith('_')) {
+      key = key.slice(1)
+    }
+    return key
+  }
+
   export default {
     data: () => ({
       schema: [],
@@ -186,7 +197,7 @@
       },
       addProperty() {
         if (this.$refs.addPropertyForm.validate()) {
-          this.schema.push({ key: this.newPropertyKey, ...this.newPropertyType, title: '' })
+          this.schema.push({ key: escapeKey(this.newPropertyKey), ...this.newPropertyType, title: '' })
           this.addPropertyDialog = false
         }
       },
