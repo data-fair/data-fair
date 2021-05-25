@@ -128,7 +128,7 @@
                       :key="value"
                       @click="addFilter(header.value, value)"
                     >
-                      <dataset-cell-value :value="value" :property="header.field" />
+                      {{ value | cellValues(header.field) }}
                     </v-list-item>
                   </v-list>
                 </v-menu>
@@ -159,7 +159,7 @@
               <template v-else>
                 <v-hover v-slot:default="{ hover }">
                   <div :style="`position: relative; max-height: ${lineHeight}px; min-width: ${Math.min((item[header.value] + '').length, 50) * 6}px;`">
-                    <dataset-cell-value :value="item[header.value]" :property="header.field" />
+                    <span>{{ item[header.value] | cellvalues(header.field) }}</span>
                     <v-btn
                       v-if="hover && !filters.find(f => f.field.key === header.value) && header.filterable && isFilterable(item[header.value])"
                       fab

@@ -43,6 +43,7 @@ module.exports = {
     { src: '~plugins/session' },
     { src: '~plugins/moment' },
     { src: '~plugins/truncate' },
+    { src: '~plugins/cell-values' },
     { src: '~plugins/display-bytes' },
     { src: '~plugins/logger', ssr: false },
     { src: '~plugins/analytics', ssr: false },
