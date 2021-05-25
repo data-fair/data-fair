@@ -53,6 +53,15 @@ describe('values aggs', () => {
     assert.equal(res.data.aggs[0].aggs[0].total, 2)
     assert.equal(res.data.aggs[0].aggs[0].metric, 0)
 
+    // 2 level aggregation with inner results
+    res = await ax.get('/api/v1/datasets/dataset/values_agg?field=id;adr&metric_field=employees&metric=sum&sort=-count;-count&size=10')
+    assert.equal(res.data.aggs[0].total, 3)
+    assert.equal(res.data.aggs[0].aggs.length, 2)
+    assert.equal(res.data.aggs[0].aggs[0].value, 'bureau')
+    assert.equal(res.data.aggs[0].aggs[0].total, 2)
+    assert.equal(res.data.aggs[0].aggs[0].metric, 0)
+    assert.equal(res.data.aggs[0].aggs[0].results.length, 2)
+
     // data histogram aggregation
     res = await ax.get('/api/v1/datasets/dataset/values_agg?field=somedate&interval=month&metric_field=employees&metric=sum')
     assert.equal(res.data.aggs.length, 3)

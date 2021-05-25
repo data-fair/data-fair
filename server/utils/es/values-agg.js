@@ -150,7 +150,7 @@ const recurseAggResponse = (response, aggRes, dataset, query) => {
       aggItem.metric = b.metric.value
     }
     if (b.values) {
-      recurseAggResponse(aggItem, b)
+      recurseAggResponse(aggItem, b, dataset, query)
     }
     if (b.centroid) {
       aggItem.centroid = b.centroid.location

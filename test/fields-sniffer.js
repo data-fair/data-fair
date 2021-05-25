@@ -35,7 +35,7 @@ describe('field sniffer', () => {
     assert.equal(sniffer.sniff(['_0', '   10 426']).type, 'integer')
   })
 
-  it.only('Work with dates', () => {
+  it('Work with dates', () => {
     assert.deepEqual(sniffer.sniff([' 2017-11-29', '2017-12-12']), { type: 'string', format: 'date' })
     assert.deepEqual(sniffer.sniff([' 2017-11-29T12:24:36.816Z ']), { type: 'string', format: 'date-time' })
     assert.deepEqual(sniffer.sniff(['2019-11-14T14:00:12']), { type: 'string', format: 'date-time', dateTimeFormat: 'YYYY-MM-DDTHH:mm:ss' })
