@@ -272,5 +272,6 @@ module.exports = {
     'D/M/YY H:m:s',
     'D/M/YYYY, H:m:s',
     'D/M/YY, H:m:s',
+    'YYYY-MM-DDTHH:mm:ss', // shorter iso not accepted by json schema date-time format
   ],
 }
