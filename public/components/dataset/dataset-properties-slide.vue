@@ -44,8 +44,9 @@
             />
           </v-col>
           <v-col>
-            <dataset-property-capabilities :property="currentPropObj" :editable="!editable || !!currentPropObj['x-extension'] || dataset.isVirtual" />
-            <v-list dense class="mt-3">
+            <dataset-property-capabilities :property="currentPropObj" :editable="editable && !currentPropObj['x-extension'] && !dataset.isVirtual" />
+            <dataset-property-labels :property="currentPropObj" :editable="editable && !currentPropObj['x-extension'] && !dataset.isVirtual" />
+            <v-list dense class="mt-4">
               <v-list-item v-if="currentPropObj['x-extension'] && extensions[currentPropObj['x-extension']]" class="pl-0 font-weight-bold">
                 <span :class="labelClass">Extension : </span>&nbsp;
                 {{ extensions[currentPropObj['x-extension']].title }}

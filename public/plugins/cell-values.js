@@ -14,6 +14,7 @@ Vue.filter('cellValues', function (values, property) {
       if (typeof value === 'string') return value === 'true' ? 'oui' : 'non'
       return value ? 'oui' : 'non'
     }
+    if (property['x-labels'] && property['x-labels'][value]) return property['x-labels'][value]
     return truncateMiddle(value + '', 50, 0, '...')
   }).join(', ')
 })

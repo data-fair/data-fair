@@ -33,6 +33,9 @@ const schema = {
       'x-refersTo': { type: ['string', 'null'] },
       'x-calculated': { type: 'boolean' },
       'x-capabilities': capabilities,
+      'x-labels': {
+        type: 'object',
+      },
     },
   },
 }

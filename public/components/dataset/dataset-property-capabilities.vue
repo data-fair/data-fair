@@ -49,7 +49,7 @@
             v-if="editCapabilities"
             v-model="editCapabilities"
             :schema="schema"
-            :options="{context, disableAll: editable}"
+            :options="{context, disableAll: !editable}"
             @change="apply"
           />
         </v-form>
