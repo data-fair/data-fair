@@ -22,6 +22,7 @@ describe('Enum of actual values in schema', () => {
       { attr1: 'test2', attr2: 'test8' },
       { attr1: 'test2', attr2: 'test9' },
       { attr1: 'test2', attr2: 'test9' },
+      { attr1: '', attr2: 'test10' },
     ])
     const dataset = await workers.hook('finalizer/rest2')
     const attr1 = dataset.schema.find(p => p.key === 'attr1')

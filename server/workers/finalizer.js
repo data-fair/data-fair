@@ -53,7 +53,10 @@ exports.process = async function(app, dataset) {
     }
     if (setEnum) {
       debug(`Set enum of field ${prop.key}`)
-      prop.enum = aggResult.aggs.map(a => a.value)
+      prop.enum = aggResult.aggs.map(a => a.value).filter(v => {
+        if (typeof v === 'string') return !!v.trim()
+        else return true
+      })
     } else {
       delete prop.enum
     }
