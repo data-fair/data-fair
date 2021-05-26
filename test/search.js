@@ -1,4 +1,4 @@
-const assert = require('assert')
+const assert = require('assert').strict
 const fs = require('fs')
 const FormData = require('form-data')
 const testUtils = require('./resources/test-utils')
@@ -73,13 +73,13 @@ describe('search', () => {
 
     res = await ax.get('/api/v1/datasets/dataset/lines?format=csv')
     let lines = res.data.split('\n')
-    assert.equal(lines[0], '\ufeff"id","adr","some date","loc"')
+    assert.equal(lines[0].trim(), '"id","adr","some date","loc"')
     assert.equal(lines[1], '"koumoul","19 rue de la voie lactée saint avé","2017-12-12","47.687375,-2.748526"')
     locProp.title = 'Localisation'
     await ax.patch('/api/v1/datasets/' + dataset.id, { schema: dataset.schema })
     res = await ax.get('/api/v1/datasets/dataset/lines?format=csv')
     lines = res.data.split('\n')
-    assert.equal(lines[0], '\ufeff"id","adr","some date","loc"')
+    assert.equal(lines[0].trim(), '"id","adr","some date","loc"')
     assert.equal(lines[1], '"koumoul","19 rue de la voie lactée saint avé","2017-12-12","47.687375,-2.748526"')
   })
 })
