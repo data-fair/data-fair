@@ -4,14 +4,13 @@ on:
   push:
     branches: [ 'master' ]
     tags: [ 'v*.*.*' ]
-  pull_request:
 
 jobs:
   publish-doc:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node-version: [12.x]
+        node-version: [14.x]
     steps:
       - run: echo $GITHUB_REF
       - uses: actions/checkout@v2

@@ -1,4 +1,4 @@
-FROM koumoul/webapp-base:1.12.2
+FROM koumoul/webapp-base:14.17.0
 MAINTAINER "contact@koumoul.com"
 
 RUN apk add --no-cache --update python make g++ unzip
@@ -51,7 +51,6 @@ ADD package.json .
 ADD package-lock.json .
 ADD patches patches
 RUN npm install --production && node-prune
-RUN ./node_modules/.bin/patch-package
 ADD nodemon.json .
 
 # Adding UI files
