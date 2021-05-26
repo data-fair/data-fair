@@ -34,6 +34,7 @@ const initMaster = async (schema, bulkSearchs) => {
       name: 'x-apiKey',
       value: apiKey,
     },
+    public: true,
   })).data
 
   return { master, apiKey, remoteService, apiDoc }

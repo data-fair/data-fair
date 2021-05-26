@@ -53,6 +53,32 @@
                 </v-tab-item>
               </template>
             </layout-section-tabs>
+
+            <layout-section-tabs
+              :section="sections.find(s => s.id === 'share')"
+              :svg="shareSvg"
+              svg-no-margin
+              :min-height="200"
+            >
+              <template v-slot:title>
+                Partage
+              </template>
+              <template v-slot:tabs>
+                <v-tab href="#share-permissions">
+                  <v-icon>mdi-security</v-icon>&nbsp;&nbsp;Visibilité
+                </v-tab>
+              </template>
+              <template v-slot:tabs-items>
+                <tutorial-alert id="dataset-share-portal">
+                  Contrôlez l'utilisation de ce service distant par vos utilisateurs.
+                </tutorial-alert>
+                <v-tab-item value="share-permissions">
+                  <v-container fluid>
+                    <remote-service-access />
+                  </v-container>
+                </v-tab-item>
+              </template>
+            </layout-section-tabs>
           </v-col>
         </v-row>
       </v-container>
@@ -84,6 +110,7 @@
     data: () => ({
       checklistSvg: require('~/assets/svg/Checklist_Two Color.svg?raw'),
       settingsSvg: require('~/assets/svg/Settings_Two Color.svg?raw'),
+      shareSvg: require('~/assets/svg/Share_Two Color.svg?raw'),
     }),
     computed: {
       ...mapState('session', ['user']),
@@ -94,6 +121,7 @@
         if (!this.remoteService) return sections
         sections.push({ title: 'Métadonnées', id: 'metadata' })
         sections.push({ title: 'Configuration', id: 'config' })
+        sections.push({ title: 'Partage', id: 'share' })
         return sections
       },
     },

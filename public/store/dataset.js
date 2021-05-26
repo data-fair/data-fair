@@ -229,7 +229,7 @@ export default () => ({
     async fetchRemoteServices({ getters, commit, state }) {
       let remoteServices = []
       const data = await this.$axios.$get('api/v1/remote-services', {
-        params: { size: 100 },
+        params: { size: 100, privateAccess: `${state.dataset.owner.type}:${state.dataset.owner.id}` },
       })
       remoteServices = data.results
       commit('setAny', { remoteServices })

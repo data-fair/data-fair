@@ -11,7 +11,7 @@ function queryVal(val) {
   return val
 }
 
-exports.query = (req, fieldsMap, forceShowAll) => {
+exports.query = (req, fieldsMap, globalMode) => {
   const query = {}
   if (!req.query) return query
 
@@ -32,20 +32,48 @@ exports.query = (req, fieldsMap, forceShowAll) => {
     query[fieldsMap[name]] = { $in: req.query[name].split(',').map(queryVal) }
   })
 
-  let showAll = req.query.showAll === 'true'
-  if (showAll && !req.user.adminMode) throw createError(400, 'Only super admins can override permissions filter with showAll parameter')
-  showAll = showAll || forceShowAll
   query.$and = []
-  if (!showAll) {
-    query.$and.push({ $or: permissions.filter(req.user) })
-  }
-  if (visibility.filters(req.query)) {
-    query.$and.push({ $or: visibility.filters(req.query) })
-  }
-  if (req.query.owner && !forceShowAll) {
-    delete query['owner.type']
-    delete query['owner.id']
-    query.$and.push({ $or: exports.ownerFilters(req.query) })
+
+  const showAll = req.query.showAll === 'true'
+  if (showAll && !req.user.adminMode) throw createError(400, 'Only super admins can override permissions filter with showAll parameter')
+
+  if (globalMode) {
+    // in global mode (remote services and base-applications) the resources do not have a owner
+    // they are managed by superadmin and theu are shared by public / privateAccess attributes
+
+    const accessFilter = []
+    if (!showAll) {
+      accessFilter.push({ public: true })
+    }
+    // You can use ?privateAccess=user:alban,organization:koumoul
+    const privateAccess = []
+    if (req.query.privateAccess) {
+      req.query.privateAccess.split(',').forEach(p => {
+        const [type, id] = p.split(':')
+        if (!req.user) throw createError(401)
+        if (!req.user.adminMode) {
+          if (type === 'user' && id !== req.user.id) throw createError(403)
+          if (type === 'organization' && !req.user.organizations.find(o => o.id === id)) throw createError(403)
+        }
+        privateAccess.push({ type, id })
+        accessFilter.push({ privateAccess: { $elemMatch: { type, id } } })
+      })
+    }
+    if (accessFilter.length) query.$and.push({ $or: accessFilter })
+  } else {
+    // in normal mode (datasets and applications) the visibility is determined from the owner and permissions
+
+    if (!showAll) {
+      query.$and.push({ $or: permissions.filter(req.user) })
+    }
+    if (visibility.filters(req.query)) {
+      query.$and.push({ $or: visibility.filters(req.query) })
+    }
+    if (req.query.owner) {
+      delete query['owner.type']
+      delete query['owner.id']
+      query.$and.push({ $or: exports.ownerFilters(req.query) })
+    }
   }
   if (!query.$and.length) delete query.$and
   return query

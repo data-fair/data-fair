@@ -9,7 +9,6 @@ const remoteServiceAPIDocs = require('../../contract/remote-service-api-docs')
 const mongoEscape = require('mongo-escape')
 const config = require('config')
 const requestIp = require('request-ip')
-
 const ajv = require('ajv')()
 const validate = ajv.compile(require('../../contract/remote-service'))
 const servicePatch = require('../../contract/remote-service-patch')
@@ -22,6 +21,7 @@ const findUtils = require('../utils/find')
 const asyncWrap = require('../utils/async-wrap')
 const cacheHeaders = require('../utils/cache-headers')
 const rateLimiting = require('../utils/rate-limiting')
+const { access } = require('fs')
 
 const debug = require('debug')('remote-services')
 
@@ -51,6 +51,8 @@ exports.init = async(db) => {
     apiDoc: apisDict[s.url],
     server: apisDict[s.url].servers && apisDict[s.url].servers.length && apisDict[s.url].servers[0].url,
     actions: computeActions(apisDict[s.url]),
+    public: true,
+    privateAccess: [],
   }, true)).filter(s => !existingServices.find(es => es.id === s.id))
   if (servicesToInsert.length) await remoteServices.insertMany(servicesToInsert)
 }
@@ -71,9 +73,10 @@ const computeActions = (apiDoc) => {
   return actions
 }
 
-function clean(remoteService) {
+function clean(remoteService, user) {
   delete remoteService._id
   if (remoteService.apiKey && remoteService.apiKey.value) remoteService.apiKey.value = '**********'
+  if (!user || !user.adminMode) delete remoteService.privateAccess
   findUtils.setResourceLinks(remoteService, 'remote-service')
   return remoteService
 }
@@ -89,8 +92,10 @@ router.get('', cacheHeaders.noCache, asyncWrap(async(req, res) => {
     ids: 'id',
     id: 'id',
   }, true)
+
   delete req.query.owner
   query.owner = { $exists: false } // restrict to the newly centralized remote services
+  console.log(query)
   const sort = findUtils.sort(req.query.sort)
   const project = findUtils.project(req.query.select, ['apiDoc'])
   const [skip, size] = findUtils.pagination(req.query)
@@ -102,7 +107,7 @@ router.get('', cacheHeaders.noCache, asyncWrap(async(req, res) => {
     mongoQueries.push(remoteServices.aggregate(findUtils.facetsQuery(req, {})).toArray())
   }
   let [results, count, facets] = await Promise.all(mongoQueries)
-  results.forEach(r => clean(r))
+  results.forEach(r => clean(r, req.user))
   facets = findUtils.parseFacets(facets)
   res.json({ count, results: results.map(result => mongoEscape.unescape(result, true)), facets })
 }))
@@ -144,7 +149,7 @@ router.post('', asyncWrap(async(req, res) => {
     }
   }
 
-  res.status(201).json(clean(service))
+  res.status(201).json(clean(service, req.user))
 }))
 
 // Shared middleware
@@ -162,7 +167,11 @@ const readService = asyncWrap(async(req, res, next) => {
 
 // retrieve a remoteService by its id as anybody
 router.get('/:remoteServiceId', readService, cacheHeaders.resourceBased, (req, res, next) => {
-  res.status(200).send(clean(req.remoteService))
+  // TODO: allow based on privateAccess ?
+  if (!req.user) return res.status(401).send()
+  if (!req.user.adminMode) return res.status(403).send()
+
+  res.status(200).send(clean(req.remoteService, req.user))
 })
 
 // PUT used to create or update as super admin
@@ -190,7 +199,7 @@ router.put('/:remoteServiceId', attemptInsert, readService, asyncWrap(async(req,
     newService.actions = computeActions(newService.apiDoc)
   }
   await req.app.get('db').collection('remote-services').replaceOne({ id: req.params.remoteServiceId }, mongoEscape.escape(newService, true))
-  res.status(200).json(clean(newService))
+  res.status(200).json(clean(newService, req.user))
 }))
 
 // Update a remote service configuration as super admin
@@ -210,7 +219,7 @@ router.patch('/:remoteServiceId', readService, asyncWrap(async(req, res) => {
 
   const patchedService = (await req.app.get('db').collection('remote-services')
     .findOneAndUpdate({ id: req.params.remoteServiceId }, { $set: mongoEscape.escape(patch, true) }, { returnOriginal: false })).value
-  res.status(200).json(clean(mongoEscape.unescape(patchedService)))
+  res.status(200).json(clean(mongoEscape.unescape(patchedService, req.user)))
 }))
 
 // Delete a remoteService as super admin
@@ -240,7 +249,7 @@ router.post('/:remoteServiceId/_update', readService, asyncWrap(async(req, res) 
   await req.app.get('db').collection('remote-services').replaceOne({
     id: req.params.remoteServiceId,
   }, mongoEscape.escape(req.remoteService, true))
-  res.status(200).json(clean(req.remoteService))
+  res.status(200).json(clean(req.remoteService, req.user))
 }))
 
 async function getAppOwner(req) {
@@ -289,8 +298,17 @@ router.use('/:remoteServiceId/proxy*', (req, res, next) => { req.app.get('anonym
   }
 
   // for perf, do not use the middleware readService, we want to read only absolutely necessary info
+  const accessFilter = [{ public: true }]
+  if (req.user) {
+    accessFilter.push({ privateAccess: { $elemMatch: { type: req.user.activeAccount.type, id: req.user.activeAccount.id } } })
+  }
+  if (appOwner) {
+    accessFilter.push({ privateAccess: { $elemMatch: { type: appOwner.type, id: appOwner.id } } })
+  }
   const remoteService = await req.app.get('db').collection('remote-services')
-    .findOne({ id: req.params.remoteServiceId }, { projection: { _id: 0, id: 1, server: 1, apiKey: 1 } })
+    .findOne({ id: req.params.remoteServiceId, $or: accessFilter }, { projection: { _id: 0, id: 1, server: 1, apiKey: 1 } })
+
+  if (!remoteService) return res.status(404).send('service distant inconnu')
 
   const headers = { 'x-forwarded-url': `${config.publicUrl}/api/v1/remote-services/${remoteService.id}/proxy/` }
   if (appOwner) headers['x-consumer'] = JSON.stringify(appOwner)

@@ -146,25 +146,7 @@
                   name="documentation"
                   label="Documentation"
                 />
-                <v-checkbox
-                  v-model="patch.public"
-                  label="Public"
-                />
-                <v-autocomplete
-                  v-if="!patch.public"
-                  v-model="patch.privateAccess"
-                  :items="organizations"
-                  :loading="loadingOrganizations"
-                  :search-input.sync="searchOrganizations"
-                  :filter="() => true"
-                  :multiple="true"
-                  :clearable="true"
-                  item-text="name"
-                  item-value="id"
-                  label="Vue restreinte à des organisations"
-                  placeholder="Saisissez le nom d'organisation"
-                  return-object
-                />
+                <private-access :patch="patch" />
               </v-form>
             </v-card-text>
             <v-card-actions>
@@ -199,18 +181,10 @@
         currentBaseApp: null,
         q: null,
         urlToAdd: null,
-        loadingOrganizations: false,
-        searchOrganizations: '',
-        organizations: [],
       }
     },
     computed: {
       ...mapState(['env']),
-    },
-    watch: {
-      searchOrganizations() {
-        this.listOrganizations()
-      },
     },
     async mounted() {
       this.refresh()
@@ -249,19 +223,6 @@
           eventBus.$emit('notification', { error, msg: 'Impossible d\'ajouter\' l\'application' })
         }
         this.refresh()
-      },
-      listOrganizations: async function() {
-        if (this.search && this.search === this.currentEntity.name) return
-
-        this.loadingOrganizations = true
-        if (!this.searchOrganizations || this.searchOrganizations.length < 3) {
-          this.organizations = this.patch.privateAccess
-        } else {
-          this.organizations = this.patch.privateAccess.concat((await this.$axios.$get(this.env.directoryUrl + '/api/organizations', { params: { q: this.searchOrganizations } }))
-            .results.map(r => ({ ...r, type: 'organization' })),
-          )
-        }
-        this.loadingOrganizations = false
       },
     },
   }

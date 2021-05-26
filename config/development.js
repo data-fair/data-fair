@@ -77,7 +77,7 @@ module.exports = {
   }, */
   extraNavigationItems: [{ id: 'test', title: 'Test', iframe: `http://${host}:5600/_dev/extra`, icon: 'mdi-link' }],
   extraAdminNavigationItems: [{ id: 'test', title: 'Test admin', iframe: 'https://koumoul.com', icon: 'mdi-link' }],
-  disableSharing: true,
-  disableApplications: true,
-  disableRemoteServices: true,
+  disableSharing: false,
+  disableApplications: false,
+  disableRemoteServices: false,
 }

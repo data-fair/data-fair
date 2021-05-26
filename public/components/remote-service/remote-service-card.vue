@@ -13,8 +13,21 @@
     </v-card-title>
     <v-card-text
       style="min-height:60px"
+      class="pb-0"
       v-html="marked($options.filters.truncate(remoteService.description || '', 200))"
     />
+    <v-card-actions>
+      <visibility :visibility="remoteService.public ? 'public' : 'protected'" />
+      <template v-if="!remoteService.public && remoteService.privateAccess">
+        <div
+          v-for="owner in remoteService.privateAccess"
+          :key="owner.id"
+          class="ml-2"
+        >
+          <owner-short :owner="owner" />
+        </div>
+      </template>
+    </v-card-actions>
   </v-card>
 </template>
 

@@ -13,7 +13,7 @@ describe('remote-services', () => {
     const ax = global.ax.superadmin
     const apiDoc = require('./resources/geocoder-api.json')
     apiDoc.info['x-api-id'] = 'geocoder2'
-    let res = await ax.post('/api/v1/remote-services', { apiDoc, apiKey: { in: 'header', name: 'x-apiKey' } })
+    let res = await ax.post('/api/v1/remote-services', { apiDoc, apiKey: { in: 'header', name: 'x-apiKey' }, public: true })
     assert.equal(res.status, 201)
     const eaId = res.data.id
     res = await ax.get('/api/v1/remote-services')

@@ -3,6 +3,8 @@
 // apiDoc: require('swagger2openapi/schemas/openapi-3.0.json'),
 const apiDoc = require('./openapi-3.1.json')
 
+const owner = require('./owner')
+
 module.exports = {
   title: 'Remote service',
   description: 'A remote service must be described with the openAPI 3.0 specification. If the API is secured, there must be at least one api-key based security scheme available.',
@@ -61,6 +63,13 @@ module.exports = {
     },
     actions: {
       type: 'array',
+    },
+    public: {
+      type: 'boolean',
+    },
+    privateAccess: {
+      type: 'array',
+      items: owner,
     },
     parameters: {
       type: 'array',

@@ -51,20 +51,6 @@
             <v-list-item-title>Configurer un service</v-list-item-title>
           </v-list-item>
         </v-list>
-        <template v-if="remoteServices">
-          <v-row class="px-2">
-            <v-col class="py-0">
-              <search-filters
-                :filter-labels="{}"
-                :hide-owners="true"
-                :filters="filters"
-                :facets="remoteServices && remoteServices.facets"
-                type="remote-services"
-                @apply="refresh()"
-              />
-            </v-col>
-          </v-row>
-        </template>
       </layout-navigation-right>
 
       <div v-else class="actions-buttons">
@@ -136,8 +122,13 @@
         if (append) this.page += 1
         else this.page = 1
         const remoteServices = await this.$axios.$get('api/v1/remote-services', {
-          params:
-            { size: this.size, page: this.page, select: 'title,description', ...this.filters },
+          params: {
+            size: this.size,
+            page: this.page,
+            select: 'title,description,public,privateAccess',
+            showAll: 'true',
+            ...this.filters,
+          },
         })
         if (append) remoteServices.results.forEach(r => this.remoteServices.results.push(r))
         else this.remoteServices = remoteServices
