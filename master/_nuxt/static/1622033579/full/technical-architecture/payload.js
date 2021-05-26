@@ -1,1 +1,0 @@
-__NUXT_JSONP__("/full/technical-architecture", {data:[{}],fetch:[],mutations:[]});

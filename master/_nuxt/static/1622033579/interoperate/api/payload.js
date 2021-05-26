@@ -1,1 +1,0 @@
-__NUXT_JSONP__("/interoperate/api", {data:[{}],fetch:[],mutations:[]});

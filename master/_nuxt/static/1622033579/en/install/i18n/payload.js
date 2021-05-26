@@ -1,1 +1,0 @@
-__NUXT_JSONP__("/en/install/i18n", {data:[{}],fetch:[],mutations:[]});

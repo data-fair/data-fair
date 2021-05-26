@@ -1,1 +1,0 @@
-__NUXT_JSONP__("/en/technical-architecture/simple-directory", {data:[{}],fetch:[],mutations:[]});

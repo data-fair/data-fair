@@ -1,0 +1,1 @@
+__NUXT_JSONP__("/en/install/config", {data:[{}],fetch:{},mutations:[]});

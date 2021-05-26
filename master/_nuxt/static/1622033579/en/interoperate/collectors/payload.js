@@ -1,1 +1,0 @@
-__NUXT_JSONP__("/en/interoperate/collectors", {data:[{}],fetch:[],mutations:[]});
