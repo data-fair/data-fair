@@ -14,7 +14,7 @@
           <v-img src="./logo.png" />
         </v-list-item-avatar>
         <v-list-item-content>
-          <v-list-item-title class="headline font-weight-bold">
+          <v-list-item-title class="text-h5 font-weight-bold">
             Data Fair
           </v-list-item-title>
         </v-list-item-content>

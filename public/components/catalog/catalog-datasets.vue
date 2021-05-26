@@ -7,7 +7,7 @@
     />
     <v-row v-if="datasets && !loading">
       <v-col>
-        <h3 class="display-1 mb-4">
+        <h3 class="text-h4 mb-4">
           {{ datasets.count }} {{ datasets.count > 1 ? 'jeux de données' : 'jeu de données' }} dans le catalogue
         </h3>
         <v-card>

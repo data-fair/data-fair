@@ -11,7 +11,7 @@
         <v-container class="fill-height">
           <v-row align="center">
             <v-col class="text-center">
-              <h3 class="display-1 mb-3 mt-5">
+              <h3 class="text-h4 mb-3 mt-5">
                 {{ $t('pages.datasets.title') }}
               </h3>
               <layout-wrap-svg
@@ -21,7 +21,7 @@
               <div class="text-h6">
                 {{ $t('pages.datasets.description') }}
               </div>
-              <p class="title mt-5">
+              <p class="text-h6 mt-5">
                 {{ $t('common.authrequired') }}
               </p>
               <v-btn

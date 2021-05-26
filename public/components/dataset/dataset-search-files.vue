@@ -70,7 +70,7 @@
           <v-col cols="12">
             <h4><a :href="resourceUrl + '/attachments/' + item[fileProperty.key]">{{ item[fileProperty.key] }}</a></h4>
             <p
-              class="body-1"
+              class="text-body-1"
               v-html="item._highlight['_file.content'].join('... ')"
             />
           </v-col>

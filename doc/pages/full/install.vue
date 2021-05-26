@@ -7,13 +7,13 @@
         src="./logo.svg"
         class="my-6"
       />
-      <h1 class="display-2 grey--text text--darken-3">
+      <h1 class="text-h3 grey--text text--darken-3">
         Data Fair
       </h1>
       <h4>
         Version {{ version }}
       </h4>
-      <h1 class="display-2 grey--text text--darken-3" style="margin-top:200px;">
+      <h1 class="text-h3 grey--text text--darken-3" style="margin-top:200px;">
         Installation et configuration
       </h1>
       <h4 style="margin-top:200px!important;">
@@ -21,7 +21,7 @@
       </h4>
     </v-col>
     <div class="page-break" />
-    <h2 class="display-1 my-4 grey--text text--darken-3">
+    <h2 class="text-h4 my-4 grey--text text--darken-3">
       Table des matières
     </h2>
     <template v-for="(section, i) in sections">
@@ -45,14 +45,14 @@
       <h2
         v-if="!section.meta.subsection"
         :key="'t-'+i"
-        class="display-1 my-4 grey--text text--darken-3"
+        class="text-h4 my-4 grey--text text--darken-3"
       >
         {{ section.meta.section }} - {{ section.meta.title }}
       </h2>
       <h3
         v-else
         :key="'t-'+i"
-        class="headline my-4 grey--text text--darken-3"
+        class="text-h5 my-4 grey--text text--darken-3"
       >
         {{ section.meta.section }}.{{ section.meta.subsection }} - {{ section.meta.title }}
       </h3>

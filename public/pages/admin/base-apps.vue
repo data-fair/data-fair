@@ -4,7 +4,7 @@
       <v-container class="py-0">
         <v-row>
           <v-col>
-            <h2 class="title">
+            <h2 class="text-h6">
               Applications
             </h2>
             <v-row>

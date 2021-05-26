@@ -1,7 +1,7 @@
 <template>
   <div
     v-if="total !== undefined"
-    class="caption"
+    class="text-caption"
     style="line-height: 1;"
   >
     <template v-if="total <= 10000">

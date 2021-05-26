@@ -39,7 +39,7 @@
           v-if="remoteService.parameters.filter(p => p.operationId === operation.id).length"
           :key="operation.id"
         >
-          <h3 class="title mt-4 mb-2">
+          <h3 class="text-h6 mt-4 mb-2">
             {{ operation.title }}
           </h3>
           <v-text-field

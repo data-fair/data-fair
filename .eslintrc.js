@@ -10,12 +10,12 @@ module.exports = {
     'vue/require-prop-types': 'off',
     'no-new': 'off',
     'vue/max-attributes-per-line': ['error', {
-      'singleline': 2,
-      'multiline': {
-        'max': 1,
-        'allowFirstLine': false
-      }
+      singleline: 2,
+      multiline: {
+        max: 1,
+        allowFirstLine: false,
+      },
     }],
-    'no-only-tests/no-only-tests': 'error'
+    'no-only-tests/no-only-tests': 'error',
   },
 }

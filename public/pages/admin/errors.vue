@@ -6,7 +6,7 @@
           Aucun jeu de données en erreur
         </p>
         <template v-else-if="datasetsErrors">
-          <h3 class="title">
+          <h3 class="text-h6">
             Jeux de données en erreur
           </h3>
           <v-sheet
@@ -46,7 +46,7 @@
           Aucune application en erreur
         </p>
         <template v-else-if="applicationsErrors">
-          <h3 class="title">
+          <h3 class="text-h6">
             Applications en erreur
           </h3>
           <v-sheet
@@ -75,7 +75,7 @@
           Aucune application avec brouillon en erreur
         </p>
         <template v-else-if="applicationsDraftErrors">
-          <h3 class="title">
+          <h3 class="text-h6">
             Applications avec brouillon en erreur
           </h3>
           <v-sheet

@@ -5,10 +5,10 @@
         class="text-center"
         cols="12"
       >
-        <h2 class="display-2 font-weight-bold grey--text text--darken-3 mb-4">
+        <h2 class="text-h3 font-weight-bold grey--text text--darken-3 mb-4">
           Data Fair
         </h2>
-        <p class="headline font-weight-regular grey--text text--darken-1 font-italic">
+        <p class="text-h5 font-weight-regular grey--text text--darken-1 font-italic">
           Visualisez, exploitez et partagez vos données en quelques clics !
         </p>
         <div>
@@ -65,7 +65,7 @@
       align="center"
     >
       <v-col md="6" sm="12">
-        <h3 class="headline grey--text text--darken-3 mb-2">
+        <h3 class="text-h5 grey--text text--darken-3 mb-2">
           Gérez vos sources de données
         </h3>
         <p>Chargez directement vos fichiers avec l'interface. Une <strong>grande variété de formats</strong> est supportée (XLS,CSV,SHP,...)</p>
@@ -84,7 +84,7 @@
 
     <v-row class="my-3" align="center">
       <v-col md="6" sm="12">
-        <h3 class="headline grey--text text--darken-3 mb-2">
+        <h3 class="text-h5 grey--text text--darken-3 mb-2">
           Enrichissez et structurez
         </h3>
         <p>Accédez aux données issues de l'opendata, enrichissez vos données pour leur donner encore plus de valeur et les rendre <strong>hautement réutilisables</strong>.</p>
@@ -105,7 +105,7 @@
       align="center"
     >
       <v-col md="6" sm="12">
-        <h3 class="headline grey--text text--darken-3 mb-2">
+        <h3 class="text-h5 grey--text text--darken-3 mb-2">
           Visualisez dynamiquement
         </h3>
         <p>Configurez des visualisations de données interactives en quelques clics, <strong>sans avoir besoin de programmer</strong>.</p>
@@ -124,7 +124,7 @@
 
     <v-row class="my-3" align="center">
       <v-col md="6" sm="12">
-        <h3 class="headline grey--text text--darken-3 mb-2">
+        <h3 class="text-h5 grey--text text--darken-3 mb-2">
           Partagez en interne / opendata
         </h3>
         <p><strong>Contrôlez finement les accès</strong> aux données et aux visualisations pour les partager en interne ou les ouvrir vers l'extérieur.</p>

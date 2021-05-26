@@ -168,7 +168,7 @@
 
     <v-footer absolute color="transparent">
       <v-spacer />
-      <span class="caption"><a href="https://koumoul-dev.github.io/data-fair/2/" style="color: white;">Powered by Data Fair</a></span>
+      <span class="text-caption"><a href="https://koumoul-dev.github.io/data-fair/2/" style="color: white;">Powered by Data Fair</a></span>
     </v-footer>
   </v-navigation-drawer>
 </template>

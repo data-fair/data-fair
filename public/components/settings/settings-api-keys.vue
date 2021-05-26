@@ -16,7 +16,7 @@
         >
           <v-card tile outlined>
             <v-card-title primary-title>
-              <h4 class="title">
+              <h4 class="text-h6">
                 {{ apiKey.title }}
               </h4>
               <v-spacer />

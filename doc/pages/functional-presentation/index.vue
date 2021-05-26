@@ -1,6 +1,6 @@
 <template lang="html">
   <v-container class="index-page">
-    <h2 class="display-1 my-6">
+    <h2 class="text-h4 my-6">
       Présentation fonctionnelle
       <v-btn :to="localePath({name: 'full-functional-presentation'})" icon>
         <v-icon color="primary">
@@ -10,7 +10,7 @@
     </h2>
     <v-row v-for="(section, i) in sections.filter(s => !s.subsection)" :key="i">
       <v-col>
-        <nuxt-link :to="localePath({name: `functional-presentation-id`, params: {id: section.id}})" class="headline">
+        <nuxt-link :to="localePath({name: `functional-presentation-id`, params: {id: section.id}})" class="text-h5">
           {{ i +1 }} - {{ section.title }}
         </nuxt-link>
         <v-row
@@ -18,7 +18,7 @@
           :key="j"
           class="px-6"
         >
-          <nuxt-link :to="localePath({name: `functional-presentation-id`, params: {id: subsection.id}})" class="title">
+          <nuxt-link :to="localePath({name: `functional-presentation-id`, params: {id: subsection.id}})" class="text-h6">
             {{ i +1 }}.{{ j +1 }} - {{ subsection.title }}
           </nuxt-link>
         </v-row>

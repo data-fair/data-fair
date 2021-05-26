@@ -2,7 +2,7 @@
   <v-row v-if="info && status">
     <v-col :style="this.$vuetify.breakpoint.lgAndUp ? 'padding-right:256px;' : ''">
       <v-container class="py-0">
-        <h2 class="title">
+        <h2 class="text-h6">
           Informations du service
         </h2>
         <p>Version : {{ info.version }}</p>
