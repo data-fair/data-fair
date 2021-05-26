@@ -21,7 +21,6 @@ const findUtils = require('../utils/find')
 const asyncWrap = require('../utils/async-wrap')
 const cacheHeaders = require('../utils/cache-headers')
 const rateLimiting = require('../utils/rate-limiting')
-const { access } = require('fs')
 
 const debug = require('debug')('remote-services')
 
