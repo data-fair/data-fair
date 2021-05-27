@@ -77,7 +77,7 @@ const typesFilters = () => ({
       // fetch next processing steps in usual sequence
       { status: { $nin: ['finalized', 'error', 'draft'] } },
       // fetch datasets that are finalized, but need to update a publication
-      { status: 'finalized', 'publications.status': { $in: ['waiting', 'deleted'] } },
+      { status: 'finalized', 'draft.reason': { $exists: false }, 'publications.status': { $in: ['waiting', 'deleted'] } },
       // fetch rest datasets with a TTL to process
       { status: 'finalized', count: { $gt: 0 }, isRest: true, 'rest.ttl.active': true, 'rest.ttl.checkedAt': { $lt: moment().subtract(1, 'hours').toISOString() } },
       { status: 'finalized', count: { $gt: 0 }, isRest: true, 'rest.ttl.active': true, 'rest.ttl.checkedAt': { $exists: false } },
@@ -132,7 +132,7 @@ async function iter(app, type) {
         // finalization covers some metadata enrichment, schema cleanup, etc.
         // either extended or there are no extensions to perform
         taskKey = 'finalizer'
-      } else if (resource.status === 'finalized' && resource.publications && resource.publications.find(p => ['waiting', 'deleted'].includes(p.status))) {
+      } else if (resource.status === 'finalized' && !(resource.draft && resource.draft.reason) && resource.publications && resource.publications.find(p => ['waiting', 'deleted'].includes(p.status))) {
         // dataset that are finalized can be published if requested
         taskKey = 'datasetPublisher'
       } else if (

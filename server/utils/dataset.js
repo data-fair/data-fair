@@ -24,15 +24,17 @@ const baseTypes = new Set(['text/csv', 'application/geo+json'])
 const dataDir = path.resolve(config.dataDir)
 
 exports.dir = (dataset) => {
-  return path.join(dataDir, dataset.owner.type, dataset.owner.id, 'datasets', dataset.id)
+  const parts = [dataDir, dataset.owner.type, dataset.owner.id, 'datasets', dataset.id]
+  if (dataset.draft && dataset.draft.reason) parts.push('draft')
+  return path.join(...parts)
 }
 
 exports.fileName = (dataset) => {
   return path.join(exports.dir(dataset), dataset.file.name)
 }
 
-exports.originalFileName = (dataset) => {
-  return path.join(exports.dir(dataset), dataset.originalFile.name)
+exports.originalFileName = (dataset, draft) => {
+  return path.join(exports.dir(dataset, draft), dataset.originalFile.name)
 }
 
 exports.fullFileName = (dataset) => {
