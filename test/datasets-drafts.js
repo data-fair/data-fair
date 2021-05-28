@@ -2,6 +2,7 @@ const assert = require('assert').strict
 const fs = require('fs')
 const nock = require('nock')
 const FormData = require('form-data')
+const tmp = require('tmp-promise')
 
 const testUtils = require('./resources/test-utils')
 
@@ -164,8 +165,28 @@ describe('datasets in draft mode', () => {
     assert.equal(res.data.total, 5)
   })
 
-  // should only extend and index a sample
-  // should store updates in draft property
-  // should not send publications
+  it('create a draft of a large file and index a sample', async () => {
+    // prepare a content with 200 lines
+    let content = 'col'
+    for (let i = 0; i < 200; i++) {
+      content += '\nval' + i
+    }
+    const form = new FormData()
+    form.append('file', content, 'dataset.csv')
+    const ax = global.ax.dmeadus
+    await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form), params: { draft: true } })
+    let dataset = await workers.hook('finalizer')
+    assert.equal(dataset.draft.count, 100)
+    let res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { draft: true } })
+    assert.equal(res.data.total, 100)
+
+    // validate the draft
+    await ax.post(`/api/v1/datasets/${dataset.id}/draft`)
+    dataset = await workers.hook('finalizer')
+    assert.equal(dataset.count, 200)
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
+    assert.equal(res.data.total, 200)
+  })
+
   // should be counted in storage (full file)
 })

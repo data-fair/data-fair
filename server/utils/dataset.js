@@ -170,7 +170,7 @@ exports.dataFiles = async (dataset) => {
 }
 
 // used both by exports.readStream and bulk transactions in rest datasets
-exports.transformFileStreams = (mimeType, schema, fileSchema, fileProps = {}, raw = false) => {
+exports.transformFileStreams = (mimeType, schema, fileSchema, fileProps = {}, raw = false, limit = -1) => {
   const streams = []
   if (mimeType === 'application/x-ndjson' || mimeType === 'application/json') {
     streams.push(mimeTypeStream(mimeType).parser())
@@ -254,6 +254,24 @@ exports.transformFileStreams = (mimeType, schema, fileSchema, fileProps = {}, ra
     throw createError(400, 'mime-type is not supported ' + mimeType)
   }
 
+  if (limit !== -1) {
+    streams.push(new Transform({
+      objectMode: true,
+      transform(item, encoding, callback) {
+        this.i = (this.i || 0) + 1
+        if (this.i > limit) return callback()
+        callback(null, item)
+
+        // interrupt source stream it we are done
+        if (this.i === limit) {
+          // streams[0].close()
+          streams[0].unpipe()
+          this.end()
+        }
+      },
+    }))
+  }
+
   return streams
 }
 
@@ -265,7 +283,7 @@ exports.readStreams = (db, dataset, raw = false, full = false) => {
     fs.createReadStream(fileName),
     stripBom(),
     iconv.decodeStream(dataset.file.encoding),
-    ...exports.transformFileStreams(dataset.file.mimetype, dataset.schema, dataset.file.schema, full ? {} : dataset.file.props, raw),
+    ...exports.transformFileStreams(dataset.file.mimetype, dataset.schema, dataset.file.schema, full ? {} : dataset.file.props, raw, dataset.draftReason ? 100 : -1),
   ]
 }
 
@@ -321,18 +339,25 @@ exports.writeExtendedStreams = async (db, dataset) => {
 exports.sampleValues = async (dataset) => {
   let currentLine = 0
   const sampleValues = {}
-  await pump(...exports.readStreams(null, dataset, true), new Writable({
+  const streams = exports.readStreams(null, dataset, true)
+  await pump(...streams, new Writable({
     objectMode: true,
     write(chunk, encoding, callback) {
+      let finished = true
       for (const key of Object.keys(chunk)) {
         sampleValues[key] = sampleValues[key] || new Set([])
         // stop if we already have a lot of samples
         if (sampleValues[key].size > 1000) continue
         // ignore empty of too long values to prevent costly sniffing
         if (!chunk[key] || chunk[key].length > 200) continue
+        finished = false
         sampleValues[key].add(chunk[key])
       }
       currentLine += 1
+      if (finished) {
+        streams[0].unpipe()
+        this.end()
+      }
       callback()
     },
   }))
