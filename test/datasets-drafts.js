@@ -15,7 +15,7 @@ nock('http://test-catalog.com').persist()
   .post('/api/1/datasets/').reply(201, { slug: 'my-dataset', page: 'http://test-catalog.com/datasets/my-dataset' })
 
 describe('datasets in draft mode', () => {
-  it('create new dataset in draft mode', async () => {
+  it('create new dataset in draft mode and validate it', async () => {
     // Send dataset
     const datasetFd = fs.readFileSync('./test/resources/datasets/dataset1.csv')
     const form = new FormData()
@@ -125,6 +125,43 @@ describe('datasets in draft mode', () => {
     assert.equal(journal[14].draft, undefined)
     assert.equal(journal[15].type, 'finalize-end')
     assert.equal(journal[15].draft, undefined)
+  })
+
+  it('create a draft when updating the data file', async () => {
+    // Send dataset
+    const datasetFd = fs.readFileSync('./test/resources/datasets/dataset1.csv')
+    const form = new FormData()
+    form.append('file', datasetFd, 'dataset1.csv')
+    const ax = global.ax.dmeadus
+    let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
+    let dataset = await workers.hook('finalizer')
+
+    // upload a new file
+    const datasetFd2 = fs.readFileSync('./test/resources/datasets/dataset2.csv')
+    const form2 = new FormData()
+    form2.append('file', datasetFd2, 'dataset2.csv')
+    await ax.post('/api/v1/datasets/' + dataset.id, form2, { headers: testUtils.formHeaders(form2), params: { draft: true } })
+    dataset = await workers.hook('finalizer')
+    assert.equal(dataset.file.name, 'dataset1.csv')
+    assert.equal(dataset.count, 2)
+    assert.equal(dataset.draft.file.name, 'dataset2.csv')
+    assert.equal(dataset.draft.count, 5)
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
+    assert.equal(res.data.total, 2)
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { draft: true } })
+    assert.equal(res.data.total, 5)
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/raw`)
+    assert.ok(res.data.startsWith('id,adr,some date,loc'))
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/raw`, { params: { draft: true } })
+    assert.ok(res.data.startsWith('id,adr,somedate,employees'))
+
+    // validate the draft
+    await ax.post(`/api/v1/datasets/${dataset.id}/draft`)
+    dataset = await workers.hook('finalizer')
+    assert.equal(dataset.status, 'finalized')
+    assert.equal(dataset.file.name, 'dataset2.csv')
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
+    assert.equal(res.data.total, 5)
   })
 
   // should only extend and index a sample

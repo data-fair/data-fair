@@ -638,7 +638,6 @@ router.post('/:datasetId/draft', readDataset(['finalized'], false, true), permis
   if (!req.dataset.draft) {
     return res.status(409).send('Le jeu de données n\'est pas en état brouillon')
   }
-  const draftDir = datasetUtils.dir(req.dataset)
   const patch = {
     ...req.dataset.draft,
     status: 'analyzed',
@@ -654,8 +653,10 @@ router.post('/:datasetId/draft', readDataset(['finalized'], false, true), permis
     { $set: patch, $unset: { draft: '' } },
     { returnOriginal: false },
   )).value
+  await fs.ensureDir(datasetUtils.dir(patchedDataset))
+  await fs.move(datasetUtils.originalFileName(req.dataset), datasetUtils.originalFileName(patchedDataset))
   await journals.log(req.app, patchedDataset, { type: 'draft-validated' }, 'dataset')
-  await fs.move(draftDir, datasetUtils.dir(patchedDataset))
+  await esUtils.delete(req.app.get('es'), req.dataset)
   await datasetUtils.updateStorage(db, patchedDataset)
   return res.send(patchedDataset)
 }))
@@ -670,6 +671,7 @@ router.delete('/:datasetId/draft', readDataset(['finalized', 'error'], false, tr
   const patchedDataset = (await db.collection('datasets')
     .findOneAndUpdate({ id: req.params.datasetId }, { $unset: { draft: '' } }, { returnOriginal: false })).value
   await fs.remove(datasetUtils.dir(req.dataset))
+  await esUtils.delete(req.app.get('es'), req.dataset)
   await datasetUtils.updateStorage(db, patchedDataset)
   return res.send(patchedDataset)
 }))
