@@ -1,5 +1,5 @@
 <template>
-  <v-container fluid class="pa-0">
+  <v-container fluid>
     <tutorial-alert id="dataset-table">
       Appliquez des filtres en survolant les valeurs et triez en cliquant sur les entêtes de colonnes. Cliquez sur le bouton en haut à droite pour télécharger dans un fichier le contenu filtré et trié.
     </tutorial-alert>
@@ -9,7 +9,7 @@
       </v-col>
     </v-row>
     <template v-else>
-      <v-row class="px-3">
+      <v-row>
         <v-col class="pb-0">
           <v-row class="px-3">
             <dataset-nb-results :total="data.total" />

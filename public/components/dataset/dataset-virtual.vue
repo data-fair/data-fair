@@ -1,190 +1,192 @@
 <template lang="html">
-  <v-container fluid class="dataset-virtual">
-    <h2 class="text-h6 mt-3 mb-3">
-      Jeux de données agrégés
-    </h2>
+  <v-row class="dataset-virtual">
+    <v-col>
+      <h2 class="text-h6">
+        Jeux de données agrégés
+      </h2>
 
-    <v-autocomplete
-      :items="datasets || []"
-      :loading="loadingDatasets"
-      :search-input.sync="search"
-      :filter="() => true"
-      style="max-width: 400px;"
-      hide-no-data
-      item-text="title"
-      item-value="id"
-      label="Ajouter un jeu de données"
-      placeholder="Recherchez"
-      @change="addChild"
-    />
+      <v-autocomplete
+        :items="datasets || []"
+        :loading="loadingDatasets"
+        :search-input.sync="search"
+        :filter="() => true"
+        style="max-width: 400px;"
+        hide-no-data
+        item-text="title"
+        item-value="id"
+        label="Ajouter un jeu de données"
+        placeholder="Recherchez"
+        @change="addChild"
+      />
 
-    <v-progress-linear
-      v-if="loadingChildren"
-      :indeterminate="true"
-      color="primary"
-      height="2"
-      style="margin:0;"
-    />
-    <div
-      v-else
-      style="max-height: 2px;"
-    />
+      <v-progress-linear
+        v-if="loadingChildren"
+        :indeterminate="true"
+        color="primary"
+        height="2"
+        style="margin:0;"
+      />
+      <div
+        v-else
+        style="max-height: 2px;"
+      />
 
-    <v-card outlined>
-      <v-data-table
-        :items="dataset.virtual.children"
-        hide-default-header
-        hide-default-footer
-        :items-per-page="1000"
-        height="300"
+      <v-card outlined>
+        <v-data-table
+          :items="dataset.virtual.children"
+          hide-default-header
+          hide-default-footer
+          :items-per-page="1000"
+          height="300"
+        >
+          <template slot="no-data">
+            Aucun jeu de données agrégé pour l'instant.
+          </template>
+          <template v-slot:item="{item, index}">
+            <tr v-if="childrenById[item]">
+              <td class="py-2">
+                <div class="subheading">
+                  <nuxt-link :to="`/dataset/${item}`">
+                    {{ childrenById[item].title }} ({{ childrenById[item].id }})
+                  </nuxt-link>
+                </div>
+                <v-select
+                  :value="null"
+                  :items="childrenById[item].schema.filter(f => !f['x-calculated'] && !existingFields.includes(f.key))"
+                  :item-text="(field) => field.title || field['x-originalName'] || field.key"
+                  hide-no-data
+                  item-value="id"
+                  label="Ajouter une colonne"
+                  return-object
+                  style="max-width: 400px;"
+                  hide-details
+                  dense
+                  solo
+                  flat
+                  @change="addField"
+                />
+              </td>
+              <td class="text-right">
+                <v-icon
+                  color="warning"
+                  title="Supprimer"
+                  @click="currentChild = index; deleteChildDialog = true"
+                >
+                  mdi-delete
+                </v-icon>
+              </td>
+            </tr>
+          </template>
+        </v-data-table>
+      </v-card>
+
+      <h2 class="text-h6 mt-4">
+        Colonnes sélectionnées
+      </h2>
+
+      <p v-if="dataset.schema.filter(f => !f['x-calculated']).length === 0">
+        Aucune colonne héritée pour l'instant.
+      </p>
+      <v-list
+        v-else
+        three-line
+        outlined
+        class="py-0"
       >
-        <template slot="no-data">
-          Aucun jeu de données agrégé pour l'instant.
-        </template>
-        <template v-slot:item="{item, index}">
-          <tr v-if="childrenById[item]">
-            <td class="py-2">
-              <div class="subheading">
-                <nuxt-link :to="`/dataset/${item}`">
-                  {{ childrenById[item].title }} ({{ childrenById[item].id }})
-                </nuxt-link>
-              </div>
-              <v-select
-                :value="null"
-                :items="childrenById[item].schema.filter(f => !f['x-calculated'] && !existingFields.includes(f.key))"
-                :item-text="(field) => field.title || field['x-originalName'] || field.key"
-                hide-no-data
-                item-value="id"
-                label="Ajouter une colonne"
-                return-object
-                style="max-width: 400px;"
+        <draggable
+          v-model="dataset.schema"
+          :options="{handle: '.handle'}"
+          @end="saveSchema"
+        >
+          <v-list-item
+            v-for="field in dataset.schema"
+            v-show="!field['x-calculated']"
+            :key="field.key"
+          >
+            <v-list-item-avatar>
+              <v-icon
+                title="Réordonner"
+                class="handle"
+              >
+                mdi-sort
+              </v-icon>
+            </v-list-item-avatar>
+            <v-list-item-content class="py-1">
+              <v-list-item-title>{{ field.title || field['x-originalName'] || field.key }} ({{ field.key }})</v-list-item-title>
+              <v-combobox
+                v-if="filtersByKey[field.key]"
+                v-model="filtersByKey[field.key].values"
+                :items="valuesByKey[field.key]"
+                label="Restreindre à des valeurs"
+                outlined
+                chips
+                clearable
+                multiple
+                small-chips
                 hide-details
                 dense
-                solo
-                flat
-                @change="addField"
-              />
-            </td>
-            <td class="text-right">
+                @change="saveFilters"
+              >
+                <template v-slot:selection="data">
+                  <v-chip
+                    close
+                    small
+                    @click:close="filtersByKey[field.key].values = filtersByKey[field.key].values.filter(v => v !== data.item); saveFilters()"
+                  >
+                    {{ data.item }}
+                  </v-chip>
+                </template>
+              </v-combobox>
+            </v-list-item-content>
+            <v-list-item-action>
               <v-icon
                 color="warning"
                 title="Supprimer"
-                @click="currentChild = index; deleteChildDialog = true"
+                @click="deleteField(field)"
               >
                 mdi-delete
               </v-icon>
-            </td>
-          </tr>
-        </template>
-      </v-data-table>
-    </v-card>
+            </v-list-item-action>
+          </v-list-item>
+        </draggable>
+      </v-list>
 
-    <h2 class="text-h6 mt-4 mb-3">
-      Colonnes sélectionnées
-    </h2>
-
-    <p v-if="dataset.schema.filter(f => !f['x-calculated']).length === 0">
-      Aucune colonne héritée pour l'instant.
-    </p>
-    <v-list
-      v-else
-      three-line
-      outlined
-      class="py-0"
-    >
-      <draggable
-        v-model="dataset.schema"
-        :options="{handle: '.handle'}"
-        @end="saveSchema"
+      <v-dialog
+        v-model="deleteChildDialog"
+        max-width="500px"
       >
-        <v-list-item
-          v-for="field in dataset.schema"
-          v-show="!field['x-calculated']"
-          :key="field.key"
-        >
-          <v-list-item-avatar>
-            <v-icon
-              title="Réordonner"
-              class="handle"
-            >
-              mdi-sort
-            </v-icon>
-          </v-list-item-avatar>
-          <v-list-item-content class="py-1">
-            <v-list-item-title>{{ field.title || field['x-originalName'] || field.key }} ({{ field.key }})</v-list-item-title>
-            <v-combobox
-              v-if="filtersByKey[field.key]"
-              v-model="filtersByKey[field.key].values"
-              :items="valuesByKey[field.key]"
-              label="Restreindre à des valeurs"
+        <v-card v-if="childrenById[dataset.virtual.children[currentChild]]" outlined>
+          <v-card-title primary-title>
+            Suppression du jeu de données enfant
+          </v-card-title>
+          <v-card-text>
+            <v-alert
+              :value="true"
+              type="error"
               outlined
-              chips
-              clearable
-              multiple
-              small-chips
-              hide-details
-              dense
-              @change="saveFilters"
             >
-              <template v-slot:selection="data">
-                <v-chip
-                  close
-                  small
-                  @click:close="filtersByKey[field.key].values = filtersByKey[field.key].values.filter(v => v !== data.item); saveFilters()"
-                >
-                  {{ data.item }}
-                </v-chip>
-              </template>
-            </v-combobox>
-          </v-list-item-content>
-          <v-list-item-action>
-            <v-icon
+              Attention ! Supprimer ce jeu de données de la liste peut impacter le schéma du jeu de données virtuel et les applications qui l'utilisent.
+            </v-alert>
+          </v-card-text>
+          <v-card-text>
+            Voulez vous vraiment supprimer le jeu de données "{{ childrenById[dataset.virtual.children[currentChild]].title }}" de la liste ?
+          </v-card-text>
+          <v-card-actions>
+            <v-spacer />
+            <v-btn text @click="deleteChildDialog = false">
+              Non
+            </v-btn>
+            <v-btn
               color="warning"
-              title="Supprimer"
-              @click="deleteField(field)"
+              @click="deleteChild(currentChild); deleteChildDialog = false"
             >
-              mdi-delete
-            </v-icon>
-          </v-list-item-action>
-        </v-list-item>
-      </draggable>
-    </v-list>
-
-    <v-dialog
-      v-model="deleteChildDialog"
-      max-width="500px"
-    >
-      <v-card v-if="childrenById[dataset.virtual.children[currentChild]]" outlined>
-        <v-card-title primary-title>
-          Suppression du jeu de données enfant
-        </v-card-title>
-        <v-card-text>
-          <v-alert
-            :value="true"
-            type="error"
-            outlined
-          >
-            Attention ! Supprimer ce jeu de données de la liste peut impacter le schéma du jeu de données virtuel et les applications qui l'utilisent.
-          </v-alert>
-        </v-card-text>
-        <v-card-text>
-          Voulez vous vraiment supprimer le jeu de données "{{ childrenById[dataset.virtual.children[currentChild]].title }}" de la liste ?
-        </v-card-text>
-        <v-card-actions>
-          <v-spacer />
-          <v-btn text @click="deleteChildDialog = false">
-            Non
-          </v-btn>
-          <v-btn
-            color="warning"
-            @click="deleteChild(currentChild); deleteChildDialog = false"
-          >
-            Oui
-          </v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
-  </v-container>
+              Oui
+            </v-btn>
+          </v-card-actions>
+        </v-card>
+      </v-dialog>
+    </v-col>
+  </v-row>
 </template>
 
 <script>

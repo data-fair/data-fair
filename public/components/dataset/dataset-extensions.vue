@@ -1,6 +1,6 @@
 <template lang="html">
   <v-row>
-    <v-col>
+    <v-col class="my-4">
       <p v-if="dataset.extensions && !dataset.extensions.length">
         Étendez votre jeu de données avec de nouvelles colonnes issues de sources de données de référence.
       </p>
