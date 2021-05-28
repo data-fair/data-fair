@@ -478,7 +478,7 @@ module.exports.properties.draft = {
   type: 'object',
   additionalProperties: false,
   properties: {
-    reason: {
+    draftReason: {
       type: 'object',
       title: 'Why was the dataset switched in draft mode',
       properties: {

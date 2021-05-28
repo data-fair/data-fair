@@ -5,6 +5,7 @@ module.exports.log = async function(app, resource, event, type = 'dataset', noSt
   try {
     const db = app.get('db')
     event.date = moment().toISOString()
+    if (resource.draftReason) event.draft = true
 
     if (!noStoreEvent) {
       await db.collection('journals')

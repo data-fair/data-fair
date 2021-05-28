@@ -150,7 +150,5 @@ exports.process = async function(app, dataset) {
   const patch = { status: dataset.status, file: dataset.file, schema: dataset.schema }
   if (dataset.timeZone) patch.timeZone = dataset.timeZone
 
-  await db.collection('datasets').updateOne({ id: dataset.id }, {
-    $set: patch,
-  })
+  await datasetUtils.applyPatch(db, dataset, patch)
 }

@@ -164,6 +164,10 @@ exports.run = async () => {
   // for  extra resiliency to fatal memory exceptions
   if (config.mode === 'task') {
     const resource = await app.get('db').collection(process.argv[3] + 's').findOne({ id: process.argv[4] })
+    if (process.env.DATASET_DRAFT === 'true') {
+      Object.assign(resource, resource.draft)
+      delete resource.draft
+    }
     await workers.tasks[process.argv[2]].process(app, resource)
   }
 

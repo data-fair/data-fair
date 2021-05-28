@@ -24,8 +24,13 @@ const baseTypes = new Set(['text/csv', 'application/geo+json'])
 const dataDir = path.resolve(config.dataDir)
 
 exports.dir = (dataset) => {
-  const parts = [dataDir, dataset.owner.type, dataset.owner.id, 'datasets', dataset.id]
-  if (dataset.draft && dataset.draft.reason) parts.push('draft')
+  const parts = [
+    dataDir,
+    dataset.owner.type,
+    dataset.owner.id,
+    dataset.draftReason ? 'datasets-drafts' : 'datasets',
+    dataset.id,
+  ]
   return path.join(...parts)
 }
 
@@ -33,8 +38,8 @@ exports.fileName = (dataset) => {
   return path.join(exports.dir(dataset), dataset.file.name)
 }
 
-exports.originalFileName = (dataset, draft) => {
-  return path.join(exports.dir(dataset, draft), dataset.originalFile.name)
+exports.originalFileName = (dataset) => {
+  return path.join(exports.dir(dataset), dataset.originalFile.name)
 }
 
 exports.fullFileName = (dataset) => {
@@ -563,4 +568,19 @@ exports.delete = async (db, es, dataset) => {
     }
     await exports.updateStorage(db, dataset, true)
   }
+}
+
+exports.applyPatch = async (db, dataset, patch) => {
+  Object.assign(dataset, patch)
+
+  // if the dataset is in draft mode all patched values are stored in the draft state
+  if (dataset.draftReason) {
+    const draftPatch = {}
+    Object.keys(patch).forEach(key => {
+      draftPatch['draft.' + key] = patch[key]
+    })
+    patch = draftPatch
+  }
+  await db.collection('datasets')
+    .updateOne({ id: dataset.id }, { $set: patch })
 }

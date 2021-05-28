@@ -69,11 +69,12 @@ exports.process = async function(app, dataset) {
 
   debug('store status as analyzed')
   dataset.status = 'analyzed'
-  await db.collection('datasets').updateOne({ id: dataset.id }, {
-    $set: {
-      status: 'analyzed',
-      file: dataset.file,
-      schema: dataset.schema,
-    },
-  })
+
+  const patch = {
+    status: 'analyzed',
+    file: dataset.file,
+    schema: dataset.schema,
+  }
+
+  await datasetUtils.applyPatch(db, dataset, patch)
 }

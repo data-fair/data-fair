@@ -160,20 +160,30 @@ router.get('', cacheHeaders.noCache, asyncWrap(async(req, res) => {
 // Shared middleware to read dataset in db
 // also checks that the dataset is in a state compatible with some action
 // supports waiting a little bit to be a little permissive with the user
-const readDataset = (_acceptedStatuses, noDraft) => asyncWrap(async(req, res, next) => {
+const readDataset = (_acceptedStatuses, noDraft, preserveDraft) => asyncWrap(async(req, res, next) => {
   const acceptedStatuses = typeof _acceptedStatuses === 'function' ? _acceptedStatuses(req.body) : _acceptedStatuses
   for (let i = 0; i < 10; i++) {
     req.dataset = req.resource = await req.app.get('db').collection('datasets')
       .findOne({ id: req.params.datasetId }, { projection: { _id: 0 } })
     if (!req.dataset) return res.status(404).send('Dataset not found')
-    if (noDraft && req.dataset.draft && req.dataset.draft.reason) {
+    if (noDraft && req.dataset.draft) {
       throw createError(409, 'Le jeu de données est en mode brouillon, vous devez confirmer ou annuler les changements avant de pouvoir le mettre à jour de nouveau.')
     }
-    if (req.query.draft !== 'true') delete req.dataset.draft
+    // in draft mode the draft is automatically merged and all following operations use dataset.draftReason to adapt
+    if ((preserveDraft || req.query.draft === 'true') && req.dataset.draft) {
+      Object.assign(req.dataset, req.dataset.draft)
+    }
+    if (!preserveDraft) {
+      delete req.dataset.draft
+    }
+
     req.resourceType = 'datasets'
     req.resourceApiDoc = datasetAPIDocs(req.dataset)
 
-    if (req.isNewDataset || !acceptedStatuses || acceptedStatuses.includes(req.dataset.status)) return next()
+    if (
+      req.dataset.status !== 'draft' &&
+      (req.isNewDataset || !acceptedStatuses || acceptedStatuses.includes(req.dataset.status))
+    ) return next()
 
     // dataset found but not in proper state.. wait a little while
     await new Promise(resolve => setTimeout(resolve, 400))
@@ -244,7 +254,7 @@ router.patch('/:datasetId', readDataset((patch) => {
   }
 }), permissions.middleware('writeDescription', 'write'), asyncWrap(async(req, res) => {
   const db = req.app.get('db')
-  let patch = req.body
+  const patch = req.body
   if (!validatePatch(patch)) return res.status(400).send(validatePatch.errors)
 
   // Changed a previously failed dataset, retry everything.
@@ -309,18 +319,9 @@ router.patch('/:datasetId', readDataset((patch) => {
     patch.finalizedAt = (new Date()).toISOString()
   }
 
-  // if the dataset is in draft mode all patched values are stored in the draft state
-  if (req.dataset.draft && req.dataset.draft.reason) {
-    const draftPatch = {}
-    Object.keys(patch).forEach(key => {
-      draftPatch['draft.' + key] = patch[key]
-    })
-    patch = draftPatch
-  }
+  await datasetUtils.applyPatch(db, req.dataset, patch)
 
-  const patchedDataset = (await req.app.get('db').collection('datasets')
-    .findOneAndUpdate({ id: req.params.datasetId }, { $set: patch }, { returnOriginal: false })).value
-  res.status(200).json(clean(patchedDataset))
+  res.status(200).json(clean(req.dataset))
 }))
 
 // Change ownership of a dataset
@@ -398,22 +399,23 @@ const setFileInfo = async (db, file, attachmentsFile, dataset, draft) => {
     } while (dbExists || fileExists)
 
     if (draft) {
-      dataset.draft.reason = { key: 'file-new', message: 'Nouveau jeu de données chargé en mode brouillon' }
+      dataset.status = 'draft'
+      patch.draftReason = { key: 'file-new', message: 'Nouveau jeu de données chargé en mode brouillon' }
     }
 
-    await fs.ensureDir(datasetUtils.dir(dataset))
-    await fs.move(file.path, path.join(datasetUtils.dir(dataset), datasetUtils.originalFileName(dataset, draft)))
+    await fs.ensureDir(datasetUtils.dir({ ...dataset, ...patch }))
+    await fs.move(file.path, datasetUtils.originalFileName({ ...dataset, ...patch }))
   } else {
     if (draft) {
-      dataset.draft.reason = { key: 'file-updated', message: 'Nouveau fichier chargé sur un jeu de données existant' }
+      patch.draftReason = { key: 'file-updated', message: 'Nouveau fichier chargé sur un jeu de données existant' }
     }
   }
-  patch.title = dataset.title || file.title
+  dataset.title = dataset.title || file.title
 
   // in draft mode this file replacement will occur later, when draft is validated
   if (!draft) {
-    const oldOriginalFileName = dataset.originalFile && datasetUtils.originalFileName(dataset)
-    const newOriginalFileName = datasetUtils.originalFileName(dataset)
+    const oldOriginalFileName = dataset.originalFile && datasetUtils.originalFileName({ ...dataset, ...patch, originalFile: dataset.originalFile })
+    const newOriginalFileName = datasetUtils.originalFileName({ ...dataset, ...patch })
     if (oldOriginalFileName && oldOriginalFileName !== newOriginalFileName) {
       await fs.remove(oldOriginalFileName)
     }
@@ -421,28 +423,28 @@ const setFileInfo = async (db, file, attachmentsFile, dataset, draft) => {
 
   if (!baseTypes.has(file.mimetype)) {
     // we first need to convert the file in a textual format easy to index
-    dataset.status = 'uploaded'
+    patch.status = 'uploaded'
   } else {
     // The format of the original file is already well suited to workers
-    dataset.status = 'loaded'
+    patch.status = 'loaded'
     patch.file = patch.originalFile
-    const fileName = datasetUtils.fileName(dataset)
+    const fileName = datasetUtils.fileName({ ...dataset, ...patch })
     // Try to prevent weird bug with NFS by forcing syncing file before sampling
     const fd = await fs.open(fileName, 'r')
     await fs.fsync(fd)
     await fs.close(fd)
-    const fileSample = await datasetFileSample(dataset)
+    const fileSample = await datasetFileSample({ ...dataset, ...patch })
     debugFiles(`Attempt to detect encoding from ${fileSample.length} first bytes of file ${fileName}`)
     patch.file.encoding = chardet.detect(fileSample)
     debugFiles(`Detected encoding ${patch.file.encoding} for file ${fileName}`)
   }
 
   if (attachmentsFile) {
-    await attachments.replaceAllAttachments(dataset, attachmentsFile)
+    await attachments.replaceAllAttachments({ ...dataset, ...patch }, attachmentsFile)
   }
 
   if (draft) {
-    Object.assign(dataset.draft, patch)
+    dataset.draft = patch
   } else {
     Object.assign(dataset, patch)
   }
@@ -628,30 +630,45 @@ const updateDataset = asyncWrap(async(req, res) => {
   }
 }, { keepalive: true })
 router.post('/:datasetId', attemptInsert, readDataset(['finalized', 'error'], true), permissions.middleware('writeData', 'write'), checkStorage(true), filesUtils.uploadFile(), filesUtils.fixFormBody(validatePost), updateDataset)
-router.put('/:datasetId', attemptInsert, readDataset(['finalized', 'error']), true, permissions.middleware('writeData', 'write'), checkStorage(true), filesUtils.uploadFile(), filesUtils.fixFormBody(validatePost), updateDataset)
+router.put('/:datasetId', attemptInsert, readDataset(['finalized', 'error'], true), permissions.middleware('writeData', 'write'), checkStorage(true), filesUtils.uploadFile(), filesUtils.fixFormBody(validatePost), updateDataset)
 
-router.post('/:datasetId/_validate_draft', readDataset(['finalized'], false, true), permissions.middleware('writeData', 'write'), asyncWrap(async (req, res, next) => {
+// validate the draft
+router.post('/:datasetId/draft', readDataset(['finalized'], false, true), permissions.middleware('writeData', 'write'), asyncWrap(async (req, res, next) => {
   const db = req.app.get('db')
-  if (!req.dataset.draft || !req.dataset.draft.reason) {
+  if (!req.dataset.draft) {
     return res.status(409).send('Le jeu de données n\'est pas en état brouillon')
   }
   const draftDir = datasetUtils.dir(req.dataset)
-  await journals.log(req.app, req.dataset, { type: 'draft-validated' }, 'dataset')
-  const patchedDataset = (await db.collection('datasets').findOneAndupdate({ id: req.params.datasetId },
-    { $set: { ...req.dataset.draft, reason: undefined, status: 'analyzed' }, $unset: { draft: '' } })).value
+  const patch = {
+    ...req.dataset.draft,
+    status: 'analyzed',
+    updatedAt: moment().toISOString(),
+    updatedBy: { id: req.user.id, name: req.user.name },
+  }
+  delete patch.finalizedAt
+  delete patch.draftReason
+  delete patch.count
+  delete patch.bbox
+  delete patch.storage
+  const patchedDataset = (await db.collection('datasets').findOneAndUpdate({ id: req.params.datasetId },
+    { $set: patch, $unset: { draft: '' } },
+    { returnOriginal: false },
+  )).value
+  await journals.log(req.app, patchedDataset, { type: 'draft-validated' }, 'dataset')
   await fs.move(draftDir, datasetUtils.dir(patchedDataset))
   await datasetUtils.updateStorage(db, patchedDataset)
   return res.send(patchedDataset)
 }))
 
-router.post('/:datasetId/_cancel_draft', readDataset(['finalized', 'error'], false, true), permissions.middleware('writeData', 'write'), asyncWrap(async (req, res, next) => {
+// cancel the draft
+router.delete('/:datasetId/draft', readDataset(['finalized', 'error'], false, true), permissions.middleware('writeData', 'write'), asyncWrap(async (req, res, next) => {
   const db = req.app.get('db')
-  if (!req.dataset.draft || !req.dataset.draft.reason) {
+  if (!req.dataset.draft) {
     return res.status(409).send('Le jeu de données n\'est pas en état brouillon')
   }
   await journals.log(req.app, req.dataset, { type: 'draft-cancelled' }, 'dataset')
   const patchedDataset = (await db.collection('datasets')
-    .findOneAndupdate({ id: req.params.datasetId }, { $unset: { draft: '' } })).value
+    .findOneAndUpdate({ id: req.params.datasetId }, { $unset: { draft: '' } }, { returnOriginal: false })).value
   await fs.remove(datasetUtils.dir(req.dataset))
   await datasetUtils.updateStorage(db, patchedDataset)
   return res.send(patchedDataset)
@@ -665,6 +682,7 @@ function isRest(req, res, next) {
   }
   next()
 }
+router.get('/:datasetId/lines/:lineId', readDataset(), isRest, permissions.middleware('readLine', 'read'), cacheHeaders.noCache, asyncWrap(restDatasetsUtils.readLine))
 router.post('/:datasetId/lines', readDataset(['finalized', 'updated', 'indexed']), isRest, permissions.middleware('createLine', 'write'), checkStorage(false), restDatasetsUtils.uploadAttachment, asyncWrap(restDatasetsUtils.createLine))
 router.put('/:datasetId/lines/:lineId', readDataset(['finalized', 'updated', 'indexed']), isRest, permissions.middleware('updateLine', 'write'), checkStorage(false), restDatasetsUtils.uploadAttachment, asyncWrap(restDatasetsUtils.updateLine))
 router.patch('/:datasetId/lines/:lineId', readDataset(['finalized', 'updated', 'indexed']), isRest, permissions.middleware('patchLine', 'write'), checkStorage(false), restDatasetsUtils.uploadAttachment, asyncWrap(restDatasetsUtils.patchLine))

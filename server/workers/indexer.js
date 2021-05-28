@@ -71,6 +71,5 @@ exports.process = async function(app, dataset) {
     result.status = 'updated'
   }
 
-  Object.assign(dataset, result)
-  await collection.updateOne({ id: dataset.id }, { $set: result })
+  await datasetUtils.applyPatch(db, dataset, result)
 }

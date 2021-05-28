@@ -1,10 +1,8 @@
 const datasetFileSample = require('../utils/dataset-file-sample')
 const chardet = require('chardet')
 const baseTypes = new Set(['text/csv', 'application/geo+json'])
-const config = require('config')
 const request = require('request')
 const fs = require('fs-extra')
-const path = require('path')
 const util = require('util')
 const pump = util.promisify(require('pump'))
 const catalogs = require('../catalogs')
@@ -15,12 +13,10 @@ exports.eventsPrefix = 'download'
 exports.process = async function(app, dataset) {
   const debug = require('debug')(`worker:downloader:${dataset.id}`)
 
-  const uploadDir = path.join(config.dataDir, dataset.owner.type, dataset.owner.id)
-  await fs.ensureDir(uploadDir)
+  const db = app.get('db')
 
-  debug(`Will attempt to download ${dataset.remoteFile.url} into ${uploadDir}`)
-
-  dataset.originalFile = {
+  const patch = {}
+  patch.originalFile = {
     name: dataset.remoteFile.name,
     mimetype: dataset.remoteFile.mimetype,
     size: dataset.remoteFile.size,
@@ -39,7 +35,7 @@ exports.process = async function(app, dataset) {
   const remainingStorage = await datasetUtils.remainingStorage(app.get('db'), dataset.owner)
   if (remainingStorage === 0) throw new Error('Vous avez atteint la limite de votre espace de stockage.')
 
-  const fileName = datasetUtils.originalFileName(dataset)
+  const fileName = datasetUtils.originalFileName({ ...dataset, ...patch })
   await pump(
     request({ ...catalogHttpParams, method: 'GET', url: dataset.remoteFile.url }),
     fs.createWriteStream(fileName),
@@ -48,14 +44,14 @@ exports.process = async function(app, dataset) {
 
   if (!baseTypes.has(dataset.originalFile.mimetype)) {
     // we first need to convert the file in a textual format easy to index
-    dataset.status = 'uploaded'
+    patch.status = 'uploaded'
   } else {
     // The format of the original file is already well suited to workers
-    dataset.status = 'loaded'
-    dataset.file = dataset.originalFile
+    patch.status = 'loaded'
+    patch.file = dataset.originalFile
     const fileSample = await datasetFileSample(dataset)
-    dataset.file.encoding = chardet.detect(fileSample)
+    patch.file.encoding = chardet.detect(fileSample)
   }
-  await app.get('db').collection('datasets').replaceOne({ id: dataset.id }, dataset)
+  await datasetUtils.applyPatch(db, dataset, patch)
   await datasetUtils.updateStorage(app.get('db'), dataset)
 }
