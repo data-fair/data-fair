@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <v-container fluid class="px-0">
     <!--<layout-doc-link
       tooltip="Consultez la documentation sur les catalogues"
       doc-key="catalogs"
@@ -36,7 +36,7 @@
         </v-container>
       </v-responsive>
     </v-col>
-  </div>
+  </v-container>
 </template>
 
 <script>

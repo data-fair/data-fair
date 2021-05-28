@@ -1,5 +1,5 @@
 <template>
-  <v-row v-if="dataset || error">
+  <v-row v-if="dataset || error" class="my-0">
     <v-col :style="this.$vuetify.breakpoint.lgAndUp ? 'padding-right:256px;' : ''">
       <v-container class="py-0">
         <v-alert
