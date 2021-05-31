@@ -135,6 +135,14 @@
         this.$store.dispatch('breadcrumbs', [{ text: `${this.remoteServices.count} service${this.plural ? 's' : ''}` }])
         this.filtered = this.filters.q !== undefined
         this.loading = false
+
+        // if the page is too large for the user to trigger a scroll we append results immediately
+        await this.$nextTick()
+        await this.$nextTick()
+        const html = document.getElementsByTagName('html')
+        if (html[0].scrollHeight === html[0].clientHeight && this.remoteServices.results.length < this.remoteServices.count) {
+          this.refresh(true)
+        }
       },
     },
   }
