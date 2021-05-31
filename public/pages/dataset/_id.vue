@@ -1,5 +1,5 @@
 <template>
-  <v-row v-if="dataset || error">
+  <v-row v-if="dataset || error" class="my-0">
     <v-col :style="this.$vuetify.breakpoint.lgAndUp ? 'padding-right:256px;' : ''">
       <v-container class="py-0">
         <v-alert
@@ -47,7 +47,7 @@
                 </template>
                 <template v-slot:tabs-items>
                   <v-tab-item value="structure-schema">
-                    <v-container fluid class="py-0">
+                    <v-container fluid>
                       <tutorial-alert id="dataset-add-concepts">
                         Pensez à renseigner des concepts sur les colonnes. Ces concepts seront utilisés pour proposer des visualisations de données adaptées et des possibilités d'enrichissement.
                       </tutorial-alert>
@@ -63,7 +63,7 @@
 
                   <v-tab-item value="structure-extensions">
                     <layout-doc-link tooltip="Consultez la documentation sur l'extension de jeux de données" doc-key="datasetExtend" />
-                    <v-container fluid class="pt-0">
+                    <v-container fluid>
                       <dataset-extensions />
                     </v-container>
                   </v-tab-item>

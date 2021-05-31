@@ -15,7 +15,7 @@
       <draggable
         :list="applications"
         :options="dragOptions"
-        class="layout row wrap"
+        class="layout row wrap my-0"
         @end="changeOrder"
       >
         <v-col

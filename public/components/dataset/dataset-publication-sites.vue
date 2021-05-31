@@ -11,7 +11,7 @@
         <v-card
           tile
           outlined
-          style="min-width: 400px;width:"
+          style="min-width: 400px;"
         >
           <v-list class="py-0" two-line>
             <v-list-item

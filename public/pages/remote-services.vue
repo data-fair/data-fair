@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <v-container fluid class="px-0">
     <remote-service-list v-if="user" />
     <!-- Anonymous: show jumbotron -->
     <v-col
@@ -31,7 +31,7 @@
         </v-container>
       </v-responsive>
     </v-col>
-  </div>
+  </v-container>
 </template>
 
 <script>

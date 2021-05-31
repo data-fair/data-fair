@@ -1,6 +1,6 @@
 <template>
   <v-row>
-    <v-col class="py-0">
+    <v-col>
       <v-row class="px-3 pb-1" style="height:44px;">
         <h3 v-if="notCalculatedProperties" class="text-h6">
           {{ notCalculatedProperties.length.toLocaleString() }} colonne{{ notCalculatedProperties.length > 1 ? 's' : '' }}

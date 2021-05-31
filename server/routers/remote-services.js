@@ -94,7 +94,6 @@ router.get('', cacheHeaders.noCache, asyncWrap(async(req, res) => {
 
   delete req.query.owner
   query.owner = { $exists: false } // restrict to the newly centralized remote services
-  console.log(query)
   const sort = findUtils.sort(req.query.sort)
   const project = findUtils.project(req.query.select, ['apiDoc'])
   const [skip, size] = findUtils.pagination(req.query)

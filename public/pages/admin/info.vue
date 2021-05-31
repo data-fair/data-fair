@@ -1,5 +1,5 @@
 <template lang="html">
-  <v-row v-if="info && status">
+  <v-row v-if="info && status" class="my-0">
     <v-col :style="this.$vuetify.breakpoint.lgAndUp ? 'padding-right:256px;' : ''">
       <v-container class="py-0">
         <h2 class="text-h6">
