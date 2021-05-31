@@ -379,8 +379,8 @@ exports.prepareResultItem = (hit, dataset, query) => {
         return a
       }, {})
   }
+  const imageField = dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/image')
   if (query.thumbnail) {
-    const imageField = dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/image')
     if (!imageField) throw createError(400, 'Thumbnail management is only available if the "image" concept is associated to a field of the dataset.')
     if (res[imageField.key]) {
       const ignoreThumbor = dataset.attachmentsAsImage && !permissions.isPublic('datasets', dataset)
@@ -395,10 +395,21 @@ exports.prepareResultItem = (hit, dataset, query) => {
 
   // Truncate string results for faster previews
   if (query.truncate) {
+    const linkField = dataset.schema.find(f => f['x-refersTo'] === 'https://schema.org/WebPage')
+    const emailField = dataset.schema.find(f => f['x-refersTo'] === 'https://www.w3.org/2006/vcard/ns#email')
+    const docField = dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')
+
     const truncate = Number(query.truncate)
     for (const key in res) {
       if (typeof res[key] !== 'string') continue
       if (descriptionField && descriptionField.key === key) continue
+      if (imageField && imageField.key === key) continue
+      if (linkField && linkField.key === key) continue
+      if (emailField && emailField.key === key) continue
+      if (docField && docField.key === key) continue
+      if (key === '_thumbnail') continue
+      if (key === '_highlight') continue
+      if (key === '_id') continue
       res[key] = truncateMiddle(res[key], truncate, 0, '...')
     }
   }
