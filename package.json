@@ -136,6 +136,7 @@
     "request-promise-native": "^1.0.9",
     "rrule": "^2.6.8",
     "sanitize-html": "^1.27.5",
+    "sass": "~1.32.12",
     "scrolling-element": "^1.0.2",
     "semver": "^7.3.4",
     "shortid": "^2.2.16",

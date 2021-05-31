@@ -36,7 +36,7 @@
                   </v-tab>
 
                   <v-tab
-                    v-if="user.adminMode"
+                    v-if="user.adminMode && !dataset.draftReason"
                     href="#structure-masterdata"
                     class="admin--text"
                   >
@@ -85,7 +85,7 @@
                     <v-icon>mdi-information</v-icon>&nbsp;&nbsp;Informations
                   </v-tab>
 
-                  <v-tab href="#metadata-attachments">
+                  <v-tab v-if="!dataset.draftReason" href="#metadata-attachments">
                     <v-icon>mdi-attachment</v-icon>&nbsp;&nbsp;Pièces jointes
                   </v-tab>
                 </template>
@@ -332,7 +332,7 @@
         if (this.can('readLines') && this.dataset.finalizedAt) {
           sections.push({ title: 'Données', id: 'data' })
         }
-        if (this.dataset.finalizedAt) {
+        if (this.dataset.finalizedAt && !this.dataset.draftReason) {
           sections.push({ title: 'Utilisations', id: 'reuses' })
           if (!this.env.disableSharing) {
             sections.push({ title: 'Partage', id: 'share' })

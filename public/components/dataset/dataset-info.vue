@@ -182,9 +182,9 @@
 
       // Ping the data endpoint to check that index is available
       try {
-        this.data = await this.$axios.$get(this.resourceUrl + '/lines', { size: 0 })
+        this.data = await this.$axios.$get(this.resourceUrl + '/lines', { params: { size: 0, draft: !!this.dataset.draftReason } })
       } catch (err) {
-      // Do nothing, error should be added to the journal
+        // Do nothing, error should be added to the journal
       }
     },
     methods: {

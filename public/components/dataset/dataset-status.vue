@@ -71,6 +71,11 @@
         <v-icon>mdi-play</v-icon>
       </v-btn>
     </v-alert>
+    <v-row v-if="dataset.draftReason">
+      <v-alert type="info">
+        {{ dataset.draftReason.message }}
+      </v-alert>
+    </v-row>
   </v-container>
 </template>
 

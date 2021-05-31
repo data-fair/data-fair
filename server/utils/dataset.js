@@ -276,14 +276,15 @@ exports.transformFileStreams = (mimeType, schema, fileSchema, fileProps = {}, ra
 }
 
 // Read the dataset file and get a stream of line items
-exports.readStreams = (db, dataset, raw = false, full = false) => {
+exports.readStreams = (db, dataset, raw = false, full = false, ignoreDraftLimit = false) => {
   if (dataset.isRest) return restDatasetsUtils.readStreams(db, dataset)
   const fileName = full ? exports.fullFileName(dataset) : exports.fileName(dataset)
+  const limit = (dataset.draftReason && !ignoreDraftLimit) ? 100 : -1
   return [
     fs.createReadStream(fileName),
     stripBom(),
     iconv.decodeStream(dataset.file.encoding),
-    ...exports.transformFileStreams(dataset.file.mimetype, dataset.schema, dataset.file.schema, full ? {} : dataset.file.props, raw, dataset.draftReason ? 100 : -1),
+    ...exports.transformFileStreams(dataset.file.mimetype, dataset.schema, dataset.file.schema, full ? {} : dataset.file.props, raw, limit),
   ]
 }
 
@@ -339,7 +340,7 @@ exports.writeExtendedStreams = async (db, dataset) => {
 exports.sampleValues = async (dataset) => {
   let currentLine = 0
   const sampleValues = {}
-  const streams = exports.readStreams(null, dataset, true)
+  const streams = exports.readStreams(null, dataset, true, false, true)
   await pump(...streams, new Writable({
     objectMode: true,
     write(chunk, encoding, callback) {

@@ -110,7 +110,7 @@ export default () => ({
       }
     },
     async fetchDataset({ commit, state }) {
-      const dataset = await this.$axios.$get(`api/v1/datasets/${state.datasetId}`)
+      const dataset = await this.$axios.$get(`api/v1/datasets/${state.datasetId}`, { params: { draft: 'true' } })
       const extensions = (dataset.extensions || []).map(ext => {
         ext.error = ext.error || ''
         ext.progress = ext.progress || 0
@@ -142,15 +142,15 @@ export default () => ({
       commit('setAny', { nbVirtualDatasets: virtuals.count })
     },
     async fetchApiDoc({ commit, state }) {
-      const api = await this.$axios.$get(`api/v1/datasets/${state.datasetId}/api-docs.json`)
+      const api = await this.$axios.$get(`api/v1/datasets/${state.datasetId}/api-docs.json`, { params: { draft: 'true' } })
       commit('setAny', { api })
     },
     async fetchJournal({ commit, state }) {
-      const journal = await this.$axios.$get(`api/v1/datasets/${state.datasetId}/journal`)
+      const journal = await this.$axios.$get(`api/v1/datasets/${state.datasetId}/journal`, { params: { draft: 'true' } })
       commit('setAny', { journal })
     },
     async fetchDataFiles({ commit, state }) {
-      const dataFiles = await this.$axios.$get(`api/v1/datasets/${state.datasetId}/data-files`)
+      const dataFiles = await this.$axios.$get(`api/v1/datasets/${state.datasetId}/data-files`, { params: { draft: 'true' } })
       commit('setAny', { dataFiles })
     },
     async setId({ commit, getters, dispatch, state }, datasetId) {
@@ -174,15 +174,15 @@ export default () => ({
           commit('patch', { status: state.eventStates[event.type] })
         }
         if (event.type === 'analyze-end' || event.type === 'extend-start') {
-          const dataset = await this.$axios.$get(`api/v1/datasets/${state.datasetId}`, { params: { select: 'schema' } })
+          const dataset = await this.$axios.$get(`api/v1/datasets/${state.datasetId}`, { params: { select: 'schema', draft: 'true' } })
           commit('patch', { schema: dataset.schema })
         }
         if (event.type === 'finalize-end') {
-          const dataset = await this.$axios.$get(`api/v1/datasets/${state.datasetId}`, { params: { select: 'schema,bbox' } })
+          const dataset = await this.$axios.$get(`api/v1/datasets/${state.datasetId}`, { params: { select: 'schema,bbox', draft: 'true' } })
           commit('patch', { schema: dataset.schema, bbox: dataset.bbox, finalizedAt: dataset.finalizedAt })
         }
         if (event.type === 'publication') {
-          const dataset = await this.$axios.$get(`api/v1/datasets/${state.datasetId}`, { params: { select: 'publications' } })
+          const dataset = await this.$axios.$get(`api/v1/datasets/${state.datasetId}`, { params: { select: 'publications', draft: 'true' } })
           commit('patch', { publications: dataset.publications })
         }
         dispatch('fetchApiDoc')
@@ -213,7 +213,7 @@ export default () => ({
       if (patched) commit('patch', patch)
     },
     async reindex({ state, dispatch }) {
-      await this.$axios.$post(`api/v1/datasets/${state.dataset.id}/_reindex`)
+      await this.$axios.$post(`api/v1/datasets/${state.dataset.id}/_reindex`, null, { params: { draft: 'true' } })
     },
     async remove({ state, getters, dispatch }) {
       try {
