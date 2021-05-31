@@ -79,6 +79,8 @@
         item-key="href"
         label="Licence"
         return-object
+        hide-details
+        class="mb-3"
         @input="patch({license: dataset.license})"
       />
       <v-select
@@ -91,6 +93,8 @@
         label="Thématiques"
         multiple
         return-object
+        hide-details
+        class="mb-3"
         @input="patch({topics: dataset.topics})"
       />
       <v-select
@@ -102,13 +106,25 @@
         item-key="code"
         label="Projection cartographique"
         return-object
+        hide-details
+        class="mb-3"
         @input="patch({projection: dataset.projection})"
       />
       <v-text-field
         v-model="dataset.origin"
         :disabled="!can('writeDescription')"
         label="Provenance"
+        hide-details
+        class="mb-3"
         @change="patch({origin: dataset.origin})"
+      />
+      <v-text-field
+        v-model="dataset.image"
+        :disabled="!can('writeDescription')"
+        label="Adresse d'une image utilisée comme vignette"
+        hide-details
+        class="mb-3"
+        @change="patch({image: dataset.image})"
       />
     </v-col>
     <v-col
