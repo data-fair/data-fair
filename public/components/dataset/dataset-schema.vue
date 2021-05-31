@@ -16,7 +16,7 @@
           <v-icon>mdi-plus</v-icon>
         </v-btn>
         <v-text-field
-          v-if="notCalculatedProperties && notCalculatedProperties.length > 1"
+          v-if="notCalculatedProperties && notCalculatedProperties.length > 10"
           v-model="schemaFilter"
           placeholder="Rechercher"
           outlined
