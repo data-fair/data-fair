@@ -120,6 +120,12 @@ exports.process = async function(app, dataset) {
     await attachmentsUtils.removeAll(dataset)
   }
 
+  // virtual datasets have to be re-counted here (others were implicitly counte ad index step)
+  if (dataset.isVirtual) {
+    dataset.descendants = await virtualDatasetsUtils.descendants(db, dataset)
+    result.count = dataset.count = await esUtils.count(es, queryableDataset, {})
+  }
+
   await collection.updateOne({ id: dataset.id }, { $set: result })
 
   // parent virtual datasets have to be re-finalized too
