@@ -1,6 +1,6 @@
 <template lang="html">
   <v-col>
-    <v-row class="mb-1">
+    <v-row class="mt-1">
       <v-text-field
         v-model="filters.q"
         placeholder="Rechercher"

@@ -6,8 +6,8 @@
         multiple
         label="Propriétaire"
         :items="facets.owner"
-        :item-value="item => `${item.value.type}:${item.value.id}`"
-        :item-text="item => `${item.value.name} (${item.count})`"
+        :item-value="item => item.value && `${item.value.type}:${item.value.id}`"
+        :item-text="item => item.value && `${item.value.name} (${item.count})`"
         outlined
         dense
         hide-details
@@ -23,7 +23,7 @@
         label="Visibilité"
         :items="facets.visibility"
         item-value="value"
-        :item-text="item => `${{public: 'Public', private: 'Privé', protected: 'Protégé'}[item.value]} (${item.count})`"
+        :item-text="item => item.value && `${{public: 'Public', private: 'Privé', protected: 'Protégé'}[item.value]} (${item.count})`"
         outlined
         dense
         hide-details
@@ -39,7 +39,7 @@
         label="État"
         :items="facets.status"
         item-value="value"
-        :item-text="item => `${statuses.dataset[item.value] ? statuses.dataset[item.value].title : item.value} (${item.count})`"
+        :item-text="item => item.value && `${statuses.dataset[item.value] ? statuses.dataset[item.value].title : item.value} (${item.count})`"
         outlined
         dense
         hide-details
@@ -54,8 +54,8 @@
         multiple
         label="Thématiques"
         :items="facets.topics"
-        :item-value="item => item.value.id"
-        :item-text="item => `${item.value.title} (${item.count})`"
+        :item-value="item => item.value && item.value.id"
+        :item-text="item => item.value && `${item.value.title} (${item.count})`"
         outlined
         dense
         hide-details
@@ -71,7 +71,7 @@
         label="Enrichissement"
         :items="facets.services"
         item-value="value"
-        :item-text="item => `${item.value.replace('koumoul-', '').replace('-koumoul', '')} (${item.count})`"
+        :item-text="item => item.value && `${item.value.replace('koumoul-', '').replace('-koumoul', '')} (${item.count})`"
         outlined
         dense
         hide-details
@@ -87,7 +87,7 @@
         label="Concepts"
         :items="facets.concepts.filter(facetItem => vocabulary && vocabulary[facetItem.value])"
         item-value="value"
-        :item-text="item => `${vocabulary && vocabulary[item.value].title} (${item.count})`"
+        :item-text="item => item.value && `${vocabulary && vocabulary[item.value] && vocabulary[item.value].title} (${item.count})`"
         outlined
         dense
         hide-details
