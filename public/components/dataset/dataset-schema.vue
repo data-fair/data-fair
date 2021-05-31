@@ -1,7 +1,7 @@
 <template>
   <v-row>
     <v-col>
-      <v-row class="px-3 pb-1" style="height:44px;">
+      <v-row class="px-3 pb-1 ma-0" style="height:44px;">
         <h3 v-if="notCalculatedProperties" class="text-h6">
           {{ notCalculatedProperties.length.toLocaleString() }} colonne{{ notCalculatedProperties.length > 1 ? 's' : '' }}
         </h3>
@@ -16,7 +16,7 @@
           <v-icon>mdi-plus</v-icon>
         </v-btn>
         <v-text-field
-          v-if="notCalculatedProperties && notCalculatedProperties.length > 10"
+          v-if="notCalculatedProperties && notCalculatedProperties.length > 1"
           v-model="schemaFilter"
           placeholder="Rechercher"
           outlined
