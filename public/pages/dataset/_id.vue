@@ -182,7 +182,7 @@
                     <v-icon>mdi-image-multiple</v-icon>&nbsp;&nbsp;Visualisations
                   </v-tab>
 
-                  <v-tab v-if="!env.disableApplications" href="#reuses-external">
+                  <v-tab href="#reuses-external">
                     <v-icon>mdi-open-in-new</v-icon>&nbsp;&nbsp;Réutilisations externes
                   </v-tab>
                 </template>
@@ -333,7 +333,9 @@
           sections.push({ title: 'Données', id: 'data' })
         }
         if (this.dataset.finalizedAt) {
-          sections.push({ title: 'Utilisations', id: 'reuses' })
+          if (!this.env.disableApplications) {
+            sections.push({ title: 'Utilisations', id: 'reuses' })
+          }
           if (!this.env.disableSharing) {
             sections.push({ title: 'Partage', id: 'share' })
           }
