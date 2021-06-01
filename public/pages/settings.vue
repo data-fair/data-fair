@@ -52,7 +52,7 @@
                   </p>
                 </template>
                 <template v-slot:tabs-items>
-                  <v-container fluid class="py-0">
+                  <v-container fluid class="py-1">
                     <v-row>
                       <v-col cols="12" md="6">
                         <settings-licenses
@@ -80,7 +80,7 @@
                   </p>
                 </template>
                 <template v-slot:tabs-items>
-                  <v-container fluid class="py-0">
+                  <v-container fluid class="py-1">
                     <v-row>
                       <v-col cols="12" md="6">
                         <settings-topics
@@ -106,7 +106,7 @@
                   </p>
                 </template>
                 <template v-slot:tabs-items>
-                  <v-container fluid class="py-0">
+                  <v-container fluid class="py-1">
                     <v-row>
                       <v-col cols="12" md="6">
                         <settings-api-keys
@@ -132,7 +132,7 @@
                   </p>
                 </template>
                 <template v-slot:tabs-items>
-                  <v-container fluid class="py-0">
+                  <v-container fluid class="py-1">
                     <v-row>
                       <v-col cols="12" md="6">
                         <settings-webhooks
@@ -159,7 +159,7 @@
                   </p>
                 </template>
                 <template v-slot:tabs-items>
-                  <v-container fluid class="py-0">
+                  <v-container fluid class="py-1">
                     <v-row>
                       <v-col cols="12" md="6">
                         <settings-publication-sites
