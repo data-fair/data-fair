@@ -79,7 +79,14 @@
       "text": "Un jeu de données a été téléchargé dans un format fichier"
     },
     "draft-validated": {
-      "text": "Le brouillon du jeu de données a été validé"
+      "icon": "mdi-file-check",
+      "text": "Le brouillon du jeu de données a été validé",
+      "color": "primary"
+    },
+    "draft-cancelled": {
+      "icon": "mdi-file-cancel",
+      "text": "Le brouillon du jeu de données a été annulé",
+      "color": "warning"
     }
   },
   "application": {

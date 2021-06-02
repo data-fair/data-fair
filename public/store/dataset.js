@@ -169,6 +169,11 @@ export default () => ({
         if (event.type === 'error') {
           eventBus.$emit('notification', { error: event.data, msg: 'Le service a rencontré une erreur pendant le traitement du jeu de données:' })
         }
+
+        if (event.type === 'draft-validated' || event.type === 'draft-cancelled' || event.type === 'data-updated') {
+          return dispatch('fetchInfo')
+        }
+
         dispatch('addJournalEvent', event)
 
         // refresh dataset with relevant parts when receiving journal event
@@ -216,6 +221,12 @@ export default () => ({
     },
     async reindex({ state, dispatch }) {
       await this.$axios.$post(`api/v1/datasets/${state.dataset.id}/_reindex`, null, { params: { draft: state.draftMode } })
+    },
+    async cancelDraft({ state, dispatch }) {
+      await this.$axios.$delete(`api/v1/datasets/${state.dataset.id}/draft`)
+    },
+    async validateDraft({ state, dispatch }) {
+      await this.$axios.$post(`api/v1/datasets/${state.dataset.id}/draft`)
     },
     async remove({ state, getters, dispatch }) {
       try {
