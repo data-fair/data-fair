@@ -16,7 +16,7 @@
       <v-card-text style="min-height: 96px;" class="pa-0">
         <v-list dense>
           <v-list-item v-if="dataset.isVirtual">
-            <v-list-item-avatar>
+            <v-list-item-avatar class="ml-0 my-0">
               <v-icon>mdi-picture-in-picture-bottom-right-outline</v-icon>
             </v-list-item-avatar>
             <span>Jeu de données virtuel</span>
