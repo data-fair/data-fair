@@ -163,9 +163,8 @@ describe('datasets in draft mode', () => {
   })
 
   it('create a draft of a large file and index a sample', async () => {
-    // prepare a content with 200 lines
     let content = 'col'
-    for (let i = 0; i < 200; i++) {
+    for (let i = 0; i < 2000; i++) {
       content += '\nval' + i
     }
     const form = new FormData()
@@ -180,9 +179,9 @@ describe('datasets in draft mode', () => {
     // validate the draft
     await ax.post(`/api/v1/datasets/${dataset.id}/draft`)
     dataset = await workers.hook('finalizer')
-    assert.equal(dataset.count, 200)
+    assert.equal(dataset.count, 2000)
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
-    assert.equal(res.data.total, 200)
+    assert.equal(res.data.total, 2000)
   })
 
   // should be counted in storage (full file)

@@ -175,7 +175,7 @@ exports.dataFiles = async (dataset) => {
 }
 
 // used both by exports.readStream and bulk transactions in rest datasets
-exports.transformFileStreams = (mimeType, schema, fileSchema, fileProps = {}, raw = false, limit = -1) => {
+exports.transformFileStreams = (mimeType, schema, fileSchema, fileProps = {}, raw = false) => {
   const streams = []
   if (mimeType === 'application/x-ndjson' || mimeType === 'application/json') {
     streams.push(mimeTypeStream(mimeType).parser())
@@ -259,6 +259,23 @@ exports.transformFileStreams = (mimeType, schema, fileSchema, fileProps = {}, ra
     throw createError(400, 'mime-type is not supported ' + mimeType)
   }
 
+  return streams
+}
+
+// Read the dataset file and get a stream of line items
+exports.readStreams = (db, dataset, raw = false, full = false, ignoreDraftLimit = false) => {
+  if (dataset.isRest) return restDatasetsUtils.readStreams(db, dataset)
+  const fileName = full ? exports.fullFileName(dataset) : exports.fileName(dataset)
+
+  const streams = [
+    fs.createReadStream(fileName),
+    stripBom(),
+    iconv.decodeStream(dataset.file.encoding),
+    ...exports.transformFileStreams(dataset.file.mimetype, dataset.schema, dataset.file.schema, full ? {} : dataset.file.props, raw),
+  ]
+
+  // manage interruption in case of draft mode
+  const limit = (dataset.draftReason && !ignoreDraftLimit) ? 100 : -1
   if (limit !== -1) {
     streams.push(new Transform({
       objectMode: true,
@@ -269,28 +286,14 @@ exports.transformFileStreams = (mimeType, schema, fileSchema, fileProps = {}, ra
 
         // interrupt source stream it we are done
         if (this.i === limit) {
-          // streams[0].close()
           streams[0].unpipe()
-          this.end()
+          streams[1].end()
         }
       },
     }))
   }
 
   return streams
-}
-
-// Read the dataset file and get a stream of line items
-exports.readStreams = (db, dataset, raw = false, full = false, ignoreDraftLimit = false) => {
-  if (dataset.isRest) return restDatasetsUtils.readStreams(db, dataset)
-  const fileName = full ? exports.fullFileName(dataset) : exports.fileName(dataset)
-  const limit = (dataset.draftReason && !ignoreDraftLimit) ? 100 : -1
-  return [
-    fs.createReadStream(fileName),
-    stripBom(),
-    iconv.decodeStream(dataset.file.encoding),
-    ...exports.transformFileStreams(dataset.file.mimetype, dataset.schema, dataset.file.schema, full ? {} : dataset.file.props, raw, limit),
-  ]
 }
 
 // Used by extender worker to produce the "full" version of the file
@@ -344,11 +347,14 @@ exports.writeExtendedStreams = async (db, dataset) => {
 
 exports.sampleValues = async (dataset) => {
   let currentLine = 0
+  let stopped = false
   const sampleValues = {}
   const streams = exports.readStreams(null, dataset, true, false, true)
   await pump(...streams, new Writable({
     objectMode: true,
     write(chunk, encoding, callback) {
+      if (stopped) return callback()
+
       let finished = true
       for (const key of Object.keys(chunk)) {
         sampleValues[key] = sampleValues[key] || new Set([])
@@ -360,11 +366,14 @@ exports.sampleValues = async (dataset) => {
         sampleValues[key].add(chunk[key])
       }
       currentLine += 1
-      if (finished) {
-        streams[0].unpipe()
-        this.end()
-      }
+
       callback()
+
+      if (finished) {
+        stopped = true
+        streams[0].unpipe()
+        streams[1].end()
+      }
     },
   }))
   if (currentLine === 0) throw new Error('Èchec de l\'échantillonage des données')
