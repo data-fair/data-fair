@@ -27,13 +27,13 @@ module.exports = {
       config.plugins.push(new webpack.IgnorePlugin(/^\.\/locale$/, /moment$/))
 
       // Loader for sounds
-      config.module.rules.push({
+      /* config.module.rules.push({
         test: /\.(ogg|mp3|wav|mpe?g)$/i,
         loader: 'file-loader',
         options: {
           name: '[path][name].[ext]',
         },
-      })
+      }) */
     },
   },
   loading: { color: '#1e88e5' }, // Customize the progress bar color

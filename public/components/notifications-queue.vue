@@ -61,7 +61,7 @@
 <script>
   import { mapState } from 'vuex'
   import eventBus from '~/event-bus'
-  const sound = new Audio(require('@/assets/sounds/when-604.ogg'))
+  // const sound = new Audio(require('@/assets/sounds/when-604.ogg'))
 
   export default {
     props: ['notifyUrl'],
@@ -93,7 +93,7 @@
         const channel = `user:${this.user.id}:notifications`
         eventBus.$emit('subscribe-notify', channel)
         eventBus.$on(channel, notification => {
-          sound.play()
+          // sound.play()
           if (this.notifications) {
             notification.new = true
             this.notifications.unshift(notification)
