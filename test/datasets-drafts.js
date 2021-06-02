@@ -2,11 +2,8 @@ const assert = require('assert').strict
 const fs = require('fs')
 const nock = require('nock')
 const FormData = require('form-data')
-const tmp = require('tmp-promise')
 
 const testUtils = require('./resources/test-utils')
-
-const config = require('config')
 
 const workers = require('../server/workers')
 const esUtils = require('../server/utils/es')

@@ -164,7 +164,12 @@ exports.dataFiles = async (dataset) => {
     const stats = await fs.stat(path.join(exports.dir(dataset), result.name))
     result.size = stats.size
     result.updatedAt = stats.mtime
-    result.url = `${config.publicUrl}/api/v1/datasets/${dataset.id}/data-files/${result.name}`
+    let url = `${config.publicUrl}/api/v1/datasets/${dataset.id}/data-files/${result.name}`
+    if (dataset.draftReason) {
+      url += '?draft=true'
+      result.title += ' - brouillon'
+    }
+    result.url = url
   }
   return results
 }
