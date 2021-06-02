@@ -12,7 +12,8 @@
     components: { VIframe },
     computed: {
       ...mapState(['env']),
-      ...mapGetters('session', ['user', 'activeAccount']),
+      ...mapState('session', ['user']),
+      ...mapGetters('session', ['activeAccount']),
       authorized() {
         if (!this.user) return false
         if (this.activeAccount.type === 'user') return false
