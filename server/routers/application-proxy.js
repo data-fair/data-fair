@@ -307,8 +307,8 @@ router.all('/:applicationId*', setResource, (req, res, next) => { req.app.get('a
   requestProxy(options)(req, res, err => {
     if (err) {
       let message = err.message
-      if (err.code) message += ' / ' + err.code
-      if (err.reason) message += ' / ' + err.reason
+      if (err.code) message += ' - ' + err.code
+      if (err.reason) message += ' - ' + err.reason
       console.error('Error while proxying application', message)
       if (err.rawPacket) console.log(err.rawPacket.toString())
     }
