@@ -33,6 +33,7 @@ export default () => ({
     error: null, // error in initial info fetching
     lineUploadProgress: 0,
     showTableCard: null,
+    draftMode: null,
   },
   getters: {
     resourceUrl: (state, getters, rootState) => state.datasetId ? rootState.env.publicUrl + '/api/v1/datasets/' + state.datasetId : null,
@@ -110,7 +111,7 @@ export default () => ({
       }
     },
     async fetchDataset({ commit, state }) {
-      const dataset = await this.$axios.$get(`api/v1/datasets/${state.datasetId}`, { params: { draft: 'true' } })
+      const dataset = await this.$axios.$get(`api/v1/datasets/${state.datasetId}`, { params: { draft: state.draftMode } })
       const extensions = (dataset.extensions || []).map(ext => {
         ext.error = ext.error || ''
         ext.progress = ext.progress || 0
@@ -142,20 +143,21 @@ export default () => ({
       commit('setAny', { nbVirtualDatasets: virtuals.count })
     },
     async fetchApiDoc({ commit, state }) {
-      const api = await this.$axios.$get(`api/v1/datasets/${state.datasetId}/api-docs.json`, { params: { draft: 'true' } })
+      const api = await this.$axios.$get(`api/v1/datasets/${state.datasetId}/api-docs.json`, { params: { draft: state.draftMode } })
       commit('setAny', { api })
     },
     async fetchJournal({ commit, state }) {
-      const journal = await this.$axios.$get(`api/v1/datasets/${state.datasetId}/journal`, { params: { draft: 'true' } })
+      const journal = await this.$axios.$get(`api/v1/datasets/${state.datasetId}/journal`, { params: { draft: state.draftMode } })
       commit('setAny', { journal })
     },
     async fetchDataFiles({ commit, state }) {
-      const dataFiles = await this.$axios.$get(`api/v1/datasets/${state.datasetId}/data-files`, { params: { draft: 'true' } })
+      const dataFiles = await this.$axios.$get(`api/v1/datasets/${state.datasetId}/data-files`, { params: { draft: state.draftMode } })
       commit('setAny', { dataFiles })
     },
-    async setId({ commit, getters, dispatch, state }, datasetId) {
+    async setId({ commit, getters, dispatch, state }, { datasetId, draftMode }) {
+      console.log('??', draftMode)
       dispatch('clear')
-      commit('setAny', { datasetId })
+      commit('setAny', { datasetId, draftMode })
       await dispatch('fetchInfo')
     },
     subscribe({ getters, dispatch, state, commit }) {
@@ -192,11 +194,11 @@ export default () => ({
       if (state.datasetId) eventBus.$emit('unsubscribe', 'datasets/' + state.datasetId + '/journal')
       commit('setAny', { datasetId: null, dataset: null, api: null, journal: [], showTableCard: null })
     },
-    async patch({ commit, getters, dispatch }, patch) {
+    async patch({ commit, getters, dispatch, state }, patch) {
       try {
         const silent = patch.silent
         delete patch.silent
-        await this.$axios.patch(getters.resourceUrl, patch)
+        await this.$axios.patch(getters.resourceUrl, patch, { params: { draft: state.draftMode } })
         if (!silent) eventBus.$emit('notification', 'Le jeu de données a été mis à jour.')
         return true
       } catch (error) {
@@ -213,7 +215,7 @@ export default () => ({
       if (patched) commit('patch', patch)
     },
     async reindex({ state, dispatch }) {
-      await this.$axios.$post(`api/v1/datasets/${state.dataset.id}/_reindex`, null, { params: { draft: 'true' } })
+      await this.$axios.$post(`api/v1/datasets/${state.dataset.id}/_reindex`, null, { params: { draft: state.draftMode } })
     },
     async remove({ state, getters, dispatch }) {
       try {

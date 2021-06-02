@@ -37,7 +37,7 @@
     }),
     watch: {
       dialog() {
-        if (this.dialog) this.$store.dispatch('dataset/setId', this.dataset.id)
+        if (this.dialog) this.$store.dispatch('dataset/setId', { datasetId: this.dataset.id })
       },
     },
   }

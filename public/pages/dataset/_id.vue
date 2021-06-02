@@ -293,7 +293,7 @@
     async fetch({ store, route }) {
       store.dispatch('dataset/clear')
       await Promise.all([
-        store.dispatch('dataset/setId', route.params.id),
+        store.dispatch('dataset/setId', { datasetId: route.params.id, draftMode: true }),
         store.dispatch('fetchVocabulary'),
       ])
       if (store.state.dataset.dataset) {

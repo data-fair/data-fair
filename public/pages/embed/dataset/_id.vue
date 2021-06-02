@@ -9,7 +9,7 @@
     middleware: 'dynamic-theme',
     layout: 'embed',
     async fetch({ store, params, route }) {
-      await store.dispatch('dataset/setId', route.params.id)
+      await store.dispatch('dataset/setId', { datasetId: route.params.id })
       await store.dispatch('fetchVocabulary', route.params.id)
     },
     computed: {
