@@ -11,7 +11,7 @@
     <template v-else>
       <v-row>
         <v-col class="pb-0">
-          <v-row class="px-3">
+          <v-row class="px-3 ma-0">
             <dataset-nb-results :total="data.total" />
             <v-btn
               v-if="dataset.isRest && can('writeData')"

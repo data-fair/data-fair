@@ -46,7 +46,7 @@ describe('virtual datasets', () => {
       isVirtual: true,
       title: 'a virtual dataset',
     })
-    const virtualDataset = res.data
+    let virtualDataset = res.data
     try {
       await workers.hook('finalizer/' + virtualDataset.id)
       assert.fail('finalization without children should fail')
@@ -59,7 +59,8 @@ describe('virtual datasets', () => {
         key: 'id',
       }],
     })
-    await workers.hook('finalizer/' + virtualDataset.id)
+    virtualDataset = await workers.hook('finalizer/' + virtualDataset.id)
+    assert.equal(virtualDataset.count, 6)
     res = await ax.get(`/api/v1/datasets/${virtualDataset.id}/lines`)
     assert.equal(res.data.total, 6)
     res = await ax.get(`/api/v1/datasets/${virtualDataset.id}/lines`, { params: { q: 'koumoul' } })

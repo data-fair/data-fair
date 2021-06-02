@@ -1,59 +1,68 @@
 <template lang="html">
   <v-container fluid>
-    <template v-if="can('writeData')">
-      <p>Charger un fichier pour créer/modifier une pièce jointe. Le nom de fichier est l'identifiant de la pièce jointe.</p>
-      <v-file-input
-        label="sélectionnez un fichier"
-        outlined
-        dense
-        style="max-width: 300px;"
-        @change="onFileUpload"
-      />
-      <v-btn
-        :disabled="!file || uploading"
-        color="primary"
-        @click="confirmUpload()"
+    <v-row>
+      <v-col>
+        <template v-if="can('writeData')">
+          <p>Charger un fichier pour créer/modifier une pièce jointe. Le nom de fichier est l'identifiant de la pièce jointe.</p>
+          <v-file-input
+            label="sélectionnez un fichier"
+            outlined
+            dense
+            style="max-width: 300px;"
+            @change="onFileUpload"
+          />
+          <v-btn
+            :disabled="!file || uploading"
+            color="primary"
+            @click="confirmUpload()"
+          >
+            Charger
+          </v-btn>
+          <v-progress-linear
+            v-if="uploading"
+            v-model="uploadProgress"
+          />
+        </template>
+        <p v-else-if="!dataset.attachments || dataset.attachments.length === 0">
+          Aucune pièce jointe chargée pour l'instant.
+        </p>
+      </v-col>
+    </v-row>
+    <v-row>
+      <v-col
+        v-for="(attachment, i) in dataset.attachments"
+        :key="i"
+        cols="12"
+        md="6"
+        lg="4"
       >
-        Charger
-      </v-btn>
-      <v-progress-linear
-        v-if="uploading"
-        v-model="uploadProgress"
-      />
-    </template>
-    <p v-else-if="!dataset.attachments || dataset.attachments.length === 0">
-      Aucune pièce jointe chargée pour l'instant.
-    </p>
-    <v-container class="pa-0 mt-2" fluid>
-      <v-row>
-        <v-col
-          v-for="(attachment, i) in dataset.attachments"
-          :key="i"
-          cols="12"
-          md="6"
-          lg="4"
-        >
-          <v-card>
-            <v-card-title primary-title>
-              <a :href="resourceUrl + '/metadata-attachments/' + attachment.name">{{ attachment.name }} ({{ (attachment.size / 1000).toFixed(2) }} ko)</a>
-            </v-card-title>
-            <v-card-text>
-              <span>{{ attachment.updatedAt | moment("DD/MM/YYYY, HH:mm") }}</span>
-            </v-card-text>
-            <v-card-actions v-if="can('writeData')">
-              <v-spacer />
-              <v-btn
-                icon
-                color="warning"
-                @click="deleteAttachment(attachment)"
-              >
-                <v-icon>mdi-delete</v-icon>
-              </v-btn>
-            </v-card-actions>
-          </v-card>
-        </v-col>
-      </v-row>
-    </v-container>
+        <v-card>
+          <v-card-title primary-title>
+            <a :href="resourceUrl + '/metadata-attachments/' + attachment.name">{{ attachment.name }} ({{ (attachment.size / 1000).toFixed(2) }} ko)</a>
+          </v-card-title>
+          <v-card-text>
+            <span>{{ attachment.updatedAt | moment("DD/MM/YYYY, HH:mm") }}</span>
+          </v-card-text>
+          <v-card-actions v-if="can('writeData')">
+            <v-btn
+              v-if="attachment.mimetype && attachment.mimetype.startsWith('image/')"
+              text
+              @click="patchAndCommit({'image': resourceUrl + '/metadata-attachments/' + attachment.name})"
+            >
+              utiliser comme vignette
+            </v-btn>
+            <v-spacer />
+            <v-btn
+              icon
+              color="warning"
+              @click="deleteAttachment(attachment)"
+            >
+              <v-icon>mdi-delete</v-icon>
+            </v-btn>
+          </v-card-actions>
+        </v-card>
+      </v-col>
+    </v-row>
   </v-container>
 </template>
 

@@ -166,6 +166,14 @@
           this.$store.dispatch('breadcrumbs', [{ text: `${this.catalogs.count} ${this.plural ? 'catalogues configurés' : 'catalogue configuré'}` }])
           this.filtered = this.filters.q !== undefined
           this.loading = false
+
+          // if the page is too large for the user to trigger a scroll we append results immediately
+          await this.$nextTick()
+          await this.$nextTick()
+          const html = document.getElementsByTagName('html')
+          if (html[0].scrollHeight === html[0].clientHeight && this.catalogs.results.length < this.catalogs.count) {
+            this.refresh(true)
+          }
         }
       },
     },

@@ -170,6 +170,14 @@
           this.$store.dispatch('breadcrumbs', [{ text: `${this.datasets.count} ${this.plural ? 'jeux' : 'jeu'} de données` }])
           this.filtered = !!this.filters.q || hasFacetFilter
           this.loading = false
+
+          // if the page is too large for the user to trigger a scroll we append results immediately
+          await this.$nextTick()
+          await this.$nextTick()
+          const html = document.getElementsByTagName('html')
+          if (html[0].scrollHeight === html[0].clientHeight && this.datasets.results.length < this.datasets.count) {
+            this.refresh(true)
+          }
         }
       },
     },

@@ -38,18 +38,21 @@ const validatePatch = ajv.compile(datasetPatchSchema)
 const datasetPostSchema = require('../../contract/dataset-post')
 const validatePost = ajv.compile(datasetPostSchema.properties.body)
 const debugFiles = require('debug')('files')
-const router = express.Router()
-
+const thumbor = require('../utils/thumbor')
 const datasetFileSample = require('../utils/dataset-file-sample')
+
 const baseTypes = new Set(['text/csv', 'application/geo+json'])
 
-function clean(dataset) {
+const router = express.Router()
+
+function clean(dataset, thumbnail = '300x200') {
   dataset.public = permissions.isPublic('datasets', dataset)
   dataset.visibility = visibilityUtils.visibility(dataset)
   delete dataset.permissions
   dataset.description = dataset.description ? sanitizeHtml(dataset.description) : ''
   dataset.previews = datasetUtils.previews(dataset)
   findUtils.setResourceLinks(dataset, 'dataset')
+  if (dataset.image && dataset.public) dataset.thumbnail = thumbor.thumbnail(dataset.image, thumbnail)
   return dataset
 }
 
@@ -151,7 +154,7 @@ router.get('', cacheHeaders.noCache, asyncWrap(async(req, res) => {
   let [results, count, facets] = await Promise.all(mongoQueries)
   results.forEach(r => {
     r.userPermissions = permissions.list('datasets', r, req.user)
-    clean(r)
+    clean(r, req.query.thumbnail)
   })
   facets = findUtils.parseFacets(facets)
   res.json({ count, results, facets })
@@ -196,7 +199,7 @@ router.use('/:datasetId/permissions', readDataset(), permissions.router('dataset
 // retrieve a dataset by its id
 router.get('/:datasetId', readDataset(), applicationKey, permissions.middleware('readDescription', 'read'), cacheHeaders.noCache, (req, res, next) => {
   req.dataset.userPermissions = permissions.list('datasets', req.dataset, req.user)
-  res.status(200).send(clean(req.dataset))
+  res.status(200).send(clean(req.dataset, req.query.thumbnail))
 })
 
 // retrieve only the schema.. Mostly useful for easy select fields

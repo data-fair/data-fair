@@ -42,7 +42,7 @@
         </v-list>
       </v-card-text>
       <v-row v-if="showTopics" style="min-height:30px;">
-        <v-col class="pt-1 pb-0">
+        <v-col class="pt-2 pb-2">
           <v-chip
             v-for="topic of dataset.topics"
             :key="topic.id"

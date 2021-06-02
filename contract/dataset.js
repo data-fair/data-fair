@@ -81,6 +81,10 @@ module.exports = {
       type: 'string',
       description: 'Detailed description of the dataset',
     },
+    image: {
+      type: 'string',
+      description: 'URL d\'une image, illustration du jeu de données',
+    },
     file: {
       type: 'object',
       additionalProperties: false,
