@@ -1,1 +1,0 @@
-__NUXT_JSONP__("/en/interoperate/connectors", {data:[{}],fetch:[],mutations:[]});

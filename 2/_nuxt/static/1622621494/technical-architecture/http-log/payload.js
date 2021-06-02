@@ -1,1 +1,0 @@
-__NUXT_JSONP__("/technical-architecture/http-log", {data:[{}],fetch:[],mutations:[]});

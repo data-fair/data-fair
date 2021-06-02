@@ -1,0 +1,1 @@
+__NUXT_JSONP__("/en/technical-architecture/capture", {data:[{}],fetch:{},mutations:[]});
