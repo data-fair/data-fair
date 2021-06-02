@@ -81,13 +81,13 @@
           <v-col v-if="dataset.draftReason.key === 'file-new'" class="grow">
             <p>Le jeu de données a été créé en mode brouillon. Cet état vous permet de travailler son paramétrage.</p>
             <p class="mb-0">
-              Vérifiez que le fichier a bien été lu, parcourez un échantillon de la donnée, ajoutez des concepts au schéma, configurez des extensions, etc. Quand vous êtes satisfait, validez le brouillon et le jeu de données sera traité intégralement.
+              Vérifiez que le fichier a bien été lu, parcourez les 100 premières lignes de la donnée, ajoutez des concepts au schéma, configurez des extensions, etc. Quand vous êtes satisfait, validez le brouillon et le jeu de données sera traité intégralement.
             </p>
           </v-col>
-          <v-col v-if="dataset.draftReason.key === 'file-updated'" class="grow">
+          <v-col v-else-if="dataset.draftReason.key === 'file-updated'" class="grow">
             <p>Le jeu de données est passé en mode brouillon suite au chargement d'un nouveau fichier.</p>
             <p class="mb-0">
-              Vérifiez que le fichier a bien été lu, parcourez un échantillon de la donnée, etc. Quand vous êtes satisfait, validez le brouillon et le jeu de données sera traité intégralement.
+              Vérifiez que le fichier a bien été lu, parcourez les 100 premières lignes de la donnée, etc. Quand vous êtes satisfait, validez le brouillon et le jeu de données sera traité intégralement.
             </p>
           </v-col>
           <v-col v-else class="grow">
