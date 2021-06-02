@@ -106,6 +106,12 @@ const getFormBody = (body) => {
         }
       }
     })
+  Object.keys(datasetSchema.properties)
+    .filter(key => typeof body[key] === 'string')
+    .filter(key => datasetSchema.properties[key].type === 'boolean')
+    .forEach(key => {
+      body[key] = body[key] === 'true'
+    })
   return body
 }
 
