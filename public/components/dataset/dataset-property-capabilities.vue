@@ -77,17 +77,18 @@
     computed: {
       ...mapState('session', ['user']),
       relevantCapabilities() {
-        if (this.property.type === 'number' || this.property.type === 'integer') {
+        const type = this.property.ignoreDetection ? 'string' : this.property.type
+        if (type === 'number' || type === 'integer') {
           return ['index', 'textStandard', 'values']
-        } else if (this.property.type === 'boolean') {
+        } else if (type === 'boolean') {
           return ['index', 'textStandard', 'values']
-        } else if (this.property.type === 'string' && (this.property.format === 'date' || this.property.format === 'date-time')) {
+        } else if (type === 'string' && (this.property.format === 'date' || this.property.format === 'date-time')) {
           return ['index', 'textStandard', 'values']
         } else if (this.property['x-refersTo'] === 'https://purl.org/geojson/vocab#geometry') {
           return ['geoShape']
         } else if (this.property['x-refersTo'] === 'http://schema.org/DigitalDocument') {
           return ['indexAttachment']
-        } else if (this.property.type === 'string') {
+        } else if (type === 'string') {
           return ['index', 'text', 'textStandard', 'textAgg', 'values', 'insensitive']
         }
         return []
