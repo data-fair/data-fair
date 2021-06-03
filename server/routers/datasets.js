@@ -212,7 +212,7 @@ router.get('/:datasetId/schema', readDataset(), applicationKey, permissions.midd
         .filter(f => !f['x-calculated'])
         .filter(f => !f['x-extension'])
         // .map(f => ({ ...f, maxLength: 10000 }))
-        .reduce((a, f) => { a[f.key] = { ...f, enum: undefined }; return a }, {}),
+        .reduce((a, f) => { a[f.key] = { ...f, enum: undefined, key: undefined, ignoreDetection: undefined }; return a }, {}),
       }
   } else {
     schema.forEach(field => {
