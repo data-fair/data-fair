@@ -822,6 +822,14 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
     delete api.paths['/full']
   }
 
+  if (textAggProperties.length === 0) {
+    delete api.paths['/words_agg']
+  }
+  if (stringValuesProperties.length === 0) {
+    delete api.paths['/values_agg']
+    delete api.paths['/values/{field}']
+  }
+
   if (dataset.bbox && dataset.bbox.length === 4) {
     api.paths['/geo_agg'] = {
       get: {
