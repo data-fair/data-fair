@@ -2,8 +2,10 @@ const fs = require('fs-extra')
 const FormData = require('form-data')
 const moment = require('moment')
 const assert = require('assert').strict
-const testUtils = require('./resources/test-utils')
+const { Writable } = require('stream')
+const pump = require('util').promisify(require('pump'))
 
+const testUtils = require('./resources/test-utils')
 const restDatasetsUtils = require('../server/utils/rest-datasets')
 const datasetUtils = require('../server/utils/dataset')
 const workers = require('../server/workers')
@@ -113,10 +115,10 @@ describe('REST datasets', () => {
     assert.equal(res.data.total, 4)
 
     // check that _i is incremental and unique even inside the same bulk
-    assert.ok(res.data.results[0]._i.toString().endsWith('000'))
-    assert.ok(res.data.results[1]._i.toString().endsWith('001'))
-    assert.ok(res.data.results[2]._i.toString().endsWith('002'))
-    assert.ok(res.data.results[3]._i.toString().endsWith('003'))
+    assert.ok(res.data.results[0]._i.toString().endsWith('00'))
+    assert.ok(res.data.results[1]._i.toString().endsWith('01'))
+    assert.ok(res.data.results[2]._i.toString().endsWith('02'))
+    assert.ok(res.data.results[3]._i.toString().endsWith('03'))
 
     // Patch one through db query to check that it won't processed
     // we must be sure that the whole dataset is not reindexed each time, only the diffs
@@ -507,4 +509,32 @@ test2,test2,test3`, { headers: { 'content-type': 'text/csv' } })
     assert.equal(lines[1].attr1, 'test2')
     assert.equal(lines[1].attr3, 'test3')
   })
+})
+
+it('Perform CRUD operations in larger bulk and keep request alive', async () => {
+  const ax = global.ax.dmeadus
+  await ax.put('/api/v1/datasets/rest2', {
+    isRest: true,
+    title: 'restlarge',
+    schema: [{ key: 'attr1', type: 'string' }],
+  })
+  await workers.hook('finalizer/rest2')
+  const bulkLines = []
+  for (let i = 0; i < 550; i++) {
+    bulkLines.push({ attr1: 'test' + i })
+  }
+  const res = await ax.post('/api/v1/datasets/rest2/_bulk_lines', bulkLines, { responseType: 'stream' })
+  let i = 0
+  await pump(res.data, new Writable({
+    write(chunk, encoding, callback) {
+      i += 1
+      if (i < 6) assert.equal(chunk.toString(), ' ')
+      else {
+        const result = JSON.parse(chunk.toString())
+        assert.equal(result.nbOk, 550)
+      }
+      callback()
+    },
+  }))
+  assert.equal(i, 6)
 })

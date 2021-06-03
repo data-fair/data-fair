@@ -49,7 +49,7 @@ const filename = async (req, file, cb) => {
   }
 }
 
-const transactionsPacketsSize = 1000
+const transactionsPacketsSize = 100
 const padISize = (transactionsPacketsSize - 1).toString().length
 // cf https://github.com/puckey/pad-number/blob/master/index.js
 const padI = (i) => {
