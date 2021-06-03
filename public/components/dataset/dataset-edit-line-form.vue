@@ -18,7 +18,7 @@
           outlined
           dense
           style="max-width: 300px;"
-          @change="file => $emit(onFileUpload, file)"
+          @change="file => $emit('onFileUpload', file)"
         />
       </div>
       <v-progress-linear v-model="lineUploadProgress" />
