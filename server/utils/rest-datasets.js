@@ -157,6 +157,7 @@ const applyTransactions = async (req, transacs, validate) => {
       }
 
       if (validate && !validate(body)) {
+        await new Promise(resolve => setTimeout(resolve, 0)) // non-blocking in case of large series of errors
         result._error = validate.errors
         result._status = 400
       } else {
