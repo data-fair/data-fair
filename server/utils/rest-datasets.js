@@ -188,7 +188,10 @@ const applyTransactions = async (req, transacs, validate) => {
       await revisionsCollection.insertOne(revision)
     }
 
-    if (!result._error) await req.app.publish('datasets/' + dataset.id + '/transactions', transac)
+    // disable this systematic broadcasting of transactions, not a good idea when doing large bulk inserts
+    // and not really used anyway
+    // if (!result._error) await req.app.publish('datasets/' + dataset.id + '/transactions', transac)
+
     results.push({ ...result, ...extendedBody })
   }
 
