@@ -10,7 +10,8 @@ const multer = require('multer')
 const mime = require('mime-types')
 const { Readable, Transform, Writable } = require('stream')
 const moment = require('moment')
-const objectHash = require('object-hash')
+const { crc32 } = require('crc')
+const stableStringify = require('fast-json-stable-stringify')
 const datasetUtils = require('./dataset')
 const attachmentsUtils = require('./attachments')
 const findUtils = require('./find')
@@ -161,7 +162,7 @@ const applyTransactions = async (req, transacs, validate) => {
         result._error = validate.errors
         result._status = 400
       } else {
-        extendedBody._hash = objectHash(body)
+        extendedBody._hash = crc32(stableStringify(body)).toString(16)
         const filter = { _id: body._id, _hash: { $ne: extendedBody._hash } }
         try {
           await collection.replaceOne(filter, extendedBody, { upsert: true })

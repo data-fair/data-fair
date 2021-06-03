@@ -1,5 +1,5 @@
 // Caches some data in mongodb
-// Do not use this too mush as elasticsearch is a performant backend already,
+// Do not use this too much as elasticsearch is a performant backend already,
 // only for specific cases like vector tiles
 
 const config = require('config')
