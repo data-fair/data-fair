@@ -244,7 +244,5 @@ describe('datasets in draft mode', () => {
     assert.equal(res.data.total, 86)
   })
 
-  // should manage converted file too
-  // should extend the draft sample
   // should add draft parameter to api-doc (default true value if api-doc is opened with ?draft=true)
 })
