@@ -8,6 +8,7 @@ export default () => ({
   state: {
     datasetId: null,
     dataset: null,
+    validatedDataset: null,
     api: null,
     journal: [],
     remoteServices: [],
@@ -128,6 +129,10 @@ export default () => ({
         dataset.rest.ttl = dataset.rest.ttl || { active: false, prop: '_updatedAt', delay: { value: 30, unit: 'days' } }
       }
       commit('setAny', { dataset })
+      if (dataset.draftReason && dataset.draftReason.key === 'file-updated') {
+        const validatedDataset = await this.$axios.$get(`api/v1/datasets/${state.datasetId}`)
+        commit('setAny', { validatedDataset })
+      }
     },
     async fetchApplications({ commit, state }) {
       const apps = await this.$axios.$get('api/v1/applications', { params: { dataset: state.dataset.id, size: 10000, select: 'id,title' } })
@@ -155,7 +160,6 @@ export default () => ({
       commit('setAny', { dataFiles })
     },
     async setId({ commit, getters, dispatch, state }, { datasetId, draftMode }) {
-      console.log('??', draftMode)
       dispatch('clear')
       commit('setAny', { datasetId, draftMode })
       await dispatch('fetchInfo')

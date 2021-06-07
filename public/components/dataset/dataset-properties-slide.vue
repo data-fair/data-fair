@@ -2,12 +2,12 @@
   <v-sheet class="properties-slide">
     <v-row>
       <v-btn
-        v-for="(prop, i) in properties"
+        v-for="({prop, originalProp, warning}, i) in propertiesRefs"
         :key="prop.key"
         style="text-transform: none;"
         class="ma-0 px-2"
         :class="{'font-weight-black': !!prop['x-refersTo']}"
-        v-bind="btnProps(prop, i, currentProperty === i)"
+        v-bind="btnProps(prop, originalProp, warning, i, currentProperty === i)"
         @click="currentProperty = currentProperty === i ? null : i"
       >
         <v-icon
@@ -15,7 +15,6 @@
           style="margin-right:4px;"
           v-text="propTypeIcon(prop)"
         />
-
         {{ prop.title || prop['x-originalName'] || prop.key }}
       </v-btn>
     </v-row>
@@ -24,40 +23,52 @@
     </v-row>
     <v-expand-transition>
       <v-sheet v-if="currentProperty != null">
+        <v-row v-if="currentPropRef.warning">
+          <v-col class="mt-4 py-0 px-2">
+            <v-alert
+              type="warning"
+              dense
+              outlined
+              class="mb-0"
+            >
+              {{ currentPropRef.warning }}
+            </v-alert>
+          </v-col>
+        </v-row>
         <v-row>
           <v-col>
             <v-text-field
-              v-model="currentPropObj.title"
-              :placeholder="currentPropObj['x-originalName'] || ' '"
+              v-model="currentPropRef.prop.title"
+              :placeholder="currentPropRef.prop['x-originalName'] || ' '"
               label="Libellé"
-              :disabled="!editable || !!currentPropObj['x-extension']"
+              :disabled="!editable || !currentPropRef.editable"
               hide-details
             />
             <v-textarea
-              v-model="currentPropObj.description"
+              v-model="currentPropRef.prop.description"
               class="pt-2"
               label="Description"
-              :disabled="!editable || !!currentPropObj['x-extension']"
+              :disabled="!editable || !currentPropRef.editable"
               hide-details
               rows="7"
               filled
             />
           </v-col>
           <v-col>
-            <dataset-property-capabilities :property="currentPropObj" :editable="editable && !currentPropObj['x-extension'] && !dataset.isVirtual" />
-            <dataset-property-labels :property="currentPropObj" :editable="editable && !currentPropObj['x-extension'] && !dataset.isVirtual" />
+            <dataset-property-capabilities :property="currentPropRef.prop" :editable="editable && currentPropRef.editable && !dataset.isVirtual" />
+            <dataset-property-labels :property="currentPropRef.prop" :editable="editable && currentPropRef.editable && !dataset.isVirtual" />
             <v-list dense class="mt-4">
-              <v-list-item v-if="currentPropObj['x-extension'] && extensions[currentPropObj['x-extension']]" class="pl-0 font-weight-bold">
+              <v-list-item v-if="currentPropRef.prop['x-extension'] && extensions[currentPropRef.prop['x-extension']]" class="pl-0 font-weight-bold">
                 <span :class="labelClass">Extension : </span>&nbsp;
-                {{ extensions[currentPropObj['x-extension']].title }}
+                {{ extensions[currentPropRef.prop['x-extension']].title }}
               </v-list-item>
-              <v-list-item v-if="currentPropObj['x-originalName']" class="pl-0">
+              <v-list-item v-if="currentPropRef.prop['x-originalName']" class="pl-0">
                 <span :class="labelClass">Clé dans la source : </span>&nbsp;
-                {{ currentPropObj['x-originalName'] }}
+                {{ currentPropRef.prop['x-originalName'] }}
               </v-list-item>
               <v-list-item class="pl-0">
                 <span :class="labelClass">Type :</span>&nbsp;
-                {{ propTypeTitle(currentPropObj) }}
+                {{ propTypeTitle(currentPropRef.prop) }}
                 <template v-if="currentFileProp && currentFileProp.dateFormat">
                   ({{ currentFileProp.dateFormat }})
                 </template>
@@ -65,33 +76,33 @@
                   ({{ currentFileProp.dateTimeFormat }})
                 </template>
               </v-list-item>
-              <v-list-item v-if="currentPropObj['x-cardinality']" class="pl-0">
+              <v-list-item v-if="currentPropRef.prop['x-cardinality']" class="pl-0">
                 <span :class="labelClass">Nombre de valeurs distinctes <v-icon title="approximatif dans le cas de données volumineuses" v-text="'mdi-information'" /> : </span>&nbsp;
-                {{ currentPropObj['x-cardinality'].toLocaleString() }}
+                {{ currentPropRef.prop['x-cardinality'].toLocaleString() }}
               </v-list-item>
-              <v-list-item v-if="currentPropObj.enum" class="pl-0">
+              <v-list-item v-if="currentPropRef.prop.enum" class="pl-0">
                 <span :class="labelClass">Valeurs : </span>&nbsp;
-                {{ currentPropObj.enum.join(' - ') | truncate(100) }}
+                {{ currentPropRef.prop.enum.join(' - ') | truncate(100) }}
               </v-list-item>
             </v-list>
             <v-select
-              v-if="currentPropObj.type === 'string'"
-              v-model="currentPropObj.separator"
+              v-if="currentPropRef.prop.type === 'string'"
+              v-model="currentPropRef.prop.separator"
               :items="[', ', '; ', ' - ', ' / ']"
-              :disabled="!editable || !!currentPropObj['x-extension'] || dataset.isVirtual"
+              :disabled="!editable || !currentPropRef.editable || dataset.isVirtual"
               label="Séparateur"
               persistent-hint
               clearable
               hint="Ne renseigner que pour les colonnes multivaluées. Ce caractère sera utilisé pour séparer les valeurs."
             />
             <v-autocomplete
-              v-model="currentPropObj['x-refersTo']"
+              v-model="currentPropRef.prop['x-refersTo']"
               :items="vocabularyItems.filter(item => filterVocabulary(item))"
-              :disabled="!editable || !!currentPropObj['x-extension'] || dataset.isVirtual"
+              :disabled="!editable || !currentPropRef.editable || dataset.isVirtual"
               label="Concept"
               :clearable="true"
               persistent-hint
-              :hint="currentPropObj['x-refersTo'] ? vocabulary[currentPropObj['x-refersTo']] && vocabulary[currentPropObj['x-refersTo']].description : 'Les concepts des colonnes sont utilisés pour améliorer le traitement de la donnée et sa visualisation.'"
+              :hint="currentPropRef.prop['x-refersTo'] ? vocabulary[currentPropRef.prop['x-refersTo']] && vocabulary[currentPropRef.prop['x-refersTo']].description : 'Les concepts des colonnes sont utilisés pour améliorer le traitement de la donnée et sa visualisation.'"
             >
               <template v-slot:item="data">
                 <template v-if="typeof data.item !== 'object'">
@@ -107,8 +118,8 @@
             </v-autocomplete>
             <v-checkbox
               v-if="dataset.file && dataset.file.mimetype === 'text/csv'"
-              v-model="currentPropObj.ignoreDetection"
-              :disabled="!editable || !!currentPropObj['x-extension']"
+              v-model="currentPropRef.prop.ignoreDetection"
+              :disabled="!editable || !currentPropRef.editable"
               label="Ignorer la détection de type"
               persistent-hint
               hint="Si vous cochez cette case la détection automatique de type sera désactivée et la colonne sera traitée comme un simple texte."
@@ -124,7 +135,7 @@
   import { mapState, mapGetters } from 'vuex'
   const datasetSchema = require('~/../contract/dataset.js')
   export default {
-    props: ['properties', 'originalProperties', 'editable'],
+    props: ['propertiesRefs', 'editable'],
     data() {
       return {
         datasetSchema,
@@ -139,14 +150,15 @@
       labelClass() {
         return `theme--${this.$vuetify.theme.dark ? 'dark' : 'light'} v-label`
       },
-      currentPropObj() {
-        return this.currentProperty !== null && this.properties[this.currentProperty]
+      currentPropRef() {
+        return this.currentProperty !== null && this.propertiesRefs[this.currentProperty]
       },
       currentFileProp() {
         return this.dataset.file &&
           this.dataset.file.schema &&
-          this.currentPropObj &&
-          this.dataset.file.schema.find(p => p.key === this.currentPropObj.key)
+          this.currentPropRef &&
+          this.currentPropRef.prop &&
+          this.dataset.file.schema.find(p => p.key === this.currentPropRef.prop.key)
       },
       extensions() {
         return (this.dataset.extensions || [])
@@ -167,17 +179,18 @@
       },
     },
     methods: {
-      btnProps(prop, i, active) {
+      btnProps(prop, originalProp, warning, i, active) {
         if (active) return { color: 'primary', dark: true, outlined: true, small: true }
-        if (this.editable && JSON.stringify(prop) !== JSON.stringify(this.originalProperties.find(p => p.key === prop.key))) {
+        if (warning) return { color: 'warning', dark: true, text: true, small: true }
+        if (this.editable && JSON.stringify(prop) !== JSON.stringify(originalProp)) {
           return { color: 'accent', dark: true, text: true, small: true }
         }
         return { color: 'transparent', depressed: true, small: true }
       },
       filterVocabulary(item) {
         if (item.header) return true
-        const prop = this.currentPropObj
-        if (this.properties.find(f => (f['x-refersTo'] === item.value) && (f.key !== prop.key))) return false
+        const prop = this.currentPropRef.prop
+        if (this.propertiesRefs.find(pr => (pr.prop['x-refersTo'] === item.value) && (pr.key !== prop.key))) return false
         // accept different type if the concept's type is String
         // in this case we will ignore the detected type and apply string
         if (prop.type !== item.type && item.type !== 'string') return false

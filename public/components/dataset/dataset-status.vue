@@ -71,7 +71,7 @@
         <v-icon>mdi-play</v-icon>
       </v-btn>
     </v-alert>
-    <v-row v-if="dataset.draftReason">
+    <v-row v-if="dataset.draftReason" class="px-2">
       <v-alert
         type="info"
         style="width: 100%"
