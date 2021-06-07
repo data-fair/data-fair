@@ -15,5 +15,6 @@ exports.process = async function(app, dataset) {
 
   const patch = { status: 'extended' }
   await datasetUtils.applyPatch(db, dataset, patch)
+  await datasetUtils.updateStorage(app.get('db'), dataset)
   debug('done')
 }

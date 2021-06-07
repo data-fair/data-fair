@@ -184,10 +184,9 @@ describe('datasets in draft mode', () => {
     assert.equal(res.data.total, 2000)
   })
 
-  // should be counted in storage (full file)
   // should manage attachments too
   // should manage metadata-attachments
   // should manage converted file too
   // should extend the draft sample
-  // should add drat parameter to api-doc (default true value if opi-doc is opened with ?draft=true)
+  // should add draft parameter to api-doc (default true value if api-doc is opened with ?draft=true)
 })

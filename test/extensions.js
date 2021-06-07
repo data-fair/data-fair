@@ -220,7 +220,6 @@ describe('Extensions', () => {
     // A search to check results
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
     assert.equal(res.data.total, 1)
-    console.log(res.data.results[0])
     assert.equal(res.data.results[0].label, 'koumoul')
     assert.equal(res.data.results[0]['_ext_sirene-koumoul_findEtablissementsBulk.NOMEN_LONG'], 'KOUMOUL')
 
@@ -229,6 +228,7 @@ describe('Extensions', () => {
     assert.equal(res.status, 200)
     assert.ok(res.data.find(file => file.key === 'original'))
     assert.ok(res.data.find(file => file.key === 'full'))
+    assert.equal(dataset.storage.fileSize, res.data.find(file => file.key === 'full').size)
     assert.equal(res.data.length, 2)
     res = await ax.get(`/api/v1/datasets/${dataset.id}/full`)
     assert.equal(res.data.trim(), `label,siret,location.lat,location.lon,bodacc.capital,TEFET,NOMEN_LONG

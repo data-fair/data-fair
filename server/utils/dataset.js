@@ -384,12 +384,18 @@ exports.storage = async (db, dataset) => {
   const storage = {
     size: 0,
   }
-  if (dataset.originalFile && dataset.originalFile.size) {
-    storage.size += dataset.originalFile.size
-    storage.fileSize = dataset.originalFile.size
-  } else if (dataset.file && dataset.file.size) {
-    storage.size += dataset.file.size
-    storage.fileSize = dataset.file.size
+  if (!dataset.draftReason && dataset.file && await fs.pathExists(exports.fullFileName(dataset))) {
+    const fullSize = (await fs.promises.stat(exports.fullFileName(dataset))).size
+    storage.size += fullSize
+    storage.fileSize = fullSize
+  } else {
+    if (dataset.originalFile && dataset.originalFile.size) {
+      storage.size += dataset.originalFile.size
+      storage.fileSize = dataset.originalFile.size
+    } else if (dataset.file && dataset.file.size) {
+      storage.size += dataset.file.size
+      storage.fileSize = dataset.file.size
+    }
   }
   const attachments = await exports.lsAttachments(dataset)
   for (const attachment of attachments) {
