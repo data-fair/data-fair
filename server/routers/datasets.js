@@ -664,6 +664,10 @@ router.post('/:datasetId/draft', readDataset(['finalized'], false, true), permis
   if (req.dataset.prod.file) await fs.remove(datasetUtils.fullFileName(req.dataset.prod))
   await fs.ensureDir(datasetUtils.dir(patchedDataset))
   await fs.move(datasetUtils.originalFileName(req.dataset), datasetUtils.originalFileName(patchedDataset))
+  if (await fs.pathExists(datasetUtils.attachmentsDir(req.dataset))) {
+    await fs.remove(datasetUtils.attachmentsDir(patchedDataset))
+    await fs.move(datasetUtils.attachmentsDir(req.dataset), datasetUtils.attachmentsDir(patchedDataset))
+  }
   await journals.log(req.app, patchedDataset, { type: 'draft-validated' }, 'dataset')
   await esUtils.delete(req.app.get('es'), req.dataset)
   await datasetUtils.updateStorage(db, patchedDataset)

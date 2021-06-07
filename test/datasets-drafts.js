@@ -184,8 +184,34 @@ describe('datasets in draft mode', () => {
     assert.equal(res.data.total, 2000)
   })
 
-  // should manage attachments too
-  // should manage metadata-attachments
+  it('Create a draft with attachments', async () => {
+    const ax = global.ax.dmeadus
+
+    // Send dataset with a CSV and attachments in an archive
+    const form = new FormData()
+    form.append('dataset', fs.readFileSync('./test/resources/datasets/attachments.csv'), 'attachments.csv')
+    form.append('attachments', fs.readFileSync('./test/resources/datasets/files.zip'), 'files.zip')
+    let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form), params: { draft: true } })
+    let dataset = res.data
+    assert.equal(res.status, 201)
+
+    // ES indexation and finalization of draft
+    dataset = await workers.hook(`finalizer/${dataset.id}`)
+    assert.equal(dataset.status, 'draft')
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { draft: true } })
+    assert.equal(res.data.total, 3)
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { q: 'test', draft: true } })
+    assert.equal(res.data.total, 2)
+
+    // validate the draft
+    await ax.post(`/api/v1/datasets/${dataset.id}/draft`)
+    dataset = await workers.hook(`finalizer/${dataset.id}`)
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
+    assert.equal(res.data.total, 3)
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { q: 'test' } })
+    assert.equal(res.data.total, 2)
+  })
+
   // should manage converted file too
   // should extend the draft sample
   // should add draft parameter to api-doc (default true value if api-doc is opened with ?draft=true)
