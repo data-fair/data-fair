@@ -17,7 +17,6 @@ exports.process = async function(app, dataset) {
 
   const db = app.get('db')
   const esClient = app.get('es')
-  const collection = db.collection('datasets')
 
   let indexName
   if (dataset.status === 'updated') {
