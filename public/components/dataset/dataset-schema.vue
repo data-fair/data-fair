@@ -153,8 +153,7 @@
         const props = []
         if (this.validatedDataset && this.validatedDataset.schema) {
           this.validatedDataset.schema.forEach(vp => {
-            if (!this.notCalculatedProperties.find(p => vp.key === p.key)) {
-              console.log('removed', vp.key)
+            if (!vp['x-calculated'] && !this.notCalculatedProperties.find(p => vp.key === p.key)) {
               props.push({
                 key: vp.key,
                 search: `${(vp.title || '').toLowerCase()} ${(vp['x-originalName'] || '').toLowerCase()} ${vp.key.toLowerCase()}`,
@@ -166,14 +165,27 @@
             }
           })
         }
-        return props.concat(this.notCalculatedProperties.map(p => ({
-          key: p.key,
-          search: `${(p.title || '').toLowerCase()} ${(p['x-originalName'] || '').toLowerCase()} ${p.key.toLowerCase()}`,
-          prop: p,
-          originalProp: this.originalProperties.find(op => op.key === p.key),
-          validatedProp: this.validatedDataset && this.validatedDataset.schema && this.validatedDataset.schema.find(vp => vp.key === p.key),
-          editable: !p['x-extension'],
-        })))
+        return props.concat(this.notCalculatedProperties.map(p => {
+          const validatedProp = this.validatedDataset && this.validatedDataset.schema && this.validatedDataset.schema.find(vp => vp.key === p.key)
+          let warning
+          if (validatedProp) {
+            if (validatedProp.type !== p.type) {
+              warning = 'Cette propriété a changé de type dans la nouvelle version du fichier.'
+            }
+            if (validatedProp.type === 'string' && p.type === 'string' && validatedProp.format !== p.format) {
+              warning = 'Cette propriété a changé de type dans la nouvelle version du fichier.'
+            }
+          }
+          return {
+            key: p.key,
+            search: `${(p.title || '').toLowerCase()} ${(p['x-originalName'] || '').toLowerCase()} ${p.key.toLowerCase()}`,
+            prop: p,
+            originalProp: this.originalProperties.find(op => op.key === p.key),
+            validatedProp,
+            editable: !p['x-extension'],
+            warning,
+          }
+        }))
       },
       filteredProperties() {
         const filter = this.schemaFilter && this.schemaFilter.toLowerCase()

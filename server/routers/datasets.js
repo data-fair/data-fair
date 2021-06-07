@@ -173,6 +173,9 @@ const readDataset = (_acceptedStatuses, noDraft, preserveDraft) => asyncWrap(asy
       throw createError(409, 'Le jeu de données est en mode brouillon, vous devez confirmer ou annuler les changements avant de pouvoir le mettre à jour de nouveau.')
     }
     // in draft mode the draft is automatically merged and all following operations use dataset.draftReason to adapt
+    if (preserveDraft) {
+      req.dataset.prod = { ...req.dataset }
+    }
     if ((preserveDraft || req.query.draft === 'true') && req.dataset.draft) {
       Object.assign(req.dataset, req.dataset.draft)
     }
@@ -657,6 +660,9 @@ router.post('/:datasetId/draft', readDataset(['finalized'], false, true), permis
     { returnOriginal: false },
   )).value
   await fs.ensureDir(datasetUtils.dir(patchedDataset))
+  await fs.remove(datasetUtils.originalFileName(req.dataset.prod))
+  await fs.remove(datasetUtils.fileName(req.dataset.prod))
+  await fs.remove(datasetUtils.fullFileName(req.dataset.prod))
   await fs.move(datasetUtils.originalFileName(req.dataset), datasetUtils.originalFileName(patchedDataset))
   await journals.log(req.app, patchedDataset, { type: 'draft-validated' }, 'dataset')
   await esUtils.delete(req.app.get('es'), req.dataset)

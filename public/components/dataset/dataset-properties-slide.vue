@@ -24,7 +24,7 @@
     <v-expand-transition>
       <v-sheet v-if="currentProperty != null">
         <v-row v-if="currentPropRef.warning">
-          <v-col class="mt-4 py-0 px-2">
+          <v-col class="mt-4 pa-0">
             <v-alert
               type="warning"
               dense

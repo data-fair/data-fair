@@ -132,6 +132,8 @@ export default () => ({
       if (dataset.draftReason && dataset.draftReason.key === 'file-updated') {
         const validatedDataset = await this.$axios.$get(`api/v1/datasets/${state.datasetId}`)
         commit('setAny', { validatedDataset })
+      } else {
+        commit('setAny', { validatedDataset: null })
       }
     },
     async fetchApplications({ commit, state }) {
