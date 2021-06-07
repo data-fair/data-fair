@@ -440,6 +440,7 @@
           params.qs = filtersUtils.filters2qs(this.filters)
         }
         if (this.dataset.finalizedAt) params.finalizedAt = this.dataset.finalizedAt
+        if (this.dataset.draftReason) params.draft = 'true'
         return params
       },
       items() {

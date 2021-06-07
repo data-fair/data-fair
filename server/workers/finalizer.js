@@ -102,7 +102,14 @@ exports.process = async function(app, dataset) {
     // dataset was updated while we were finalizing.. keep it as such
     delete result.status
   }
-  Object.assign(dataset, result)
+
+  // virtual datasets have to be re-counted here (others were implicitly counte ad index step)
+  if (dataset.isVirtual) {
+    dataset.descendants = await virtualDatasetsUtils.descendants(db, dataset)
+    result.count = dataset.count = await esUtils.count(es, queryableDataset, {})
+  }
+
+  await datasetUtils.applyPatch(db, dataset, result)
 
   // manage mbtiles
   if (!dataset.isRest && !dataset.isVirtual) {
@@ -120,17 +127,11 @@ exports.process = async function(app, dataset) {
     await attachmentsUtils.removeAll(dataset)
   }
 
-  // virtual datasets have to be re-counted here (others were implicitly counte ad index step)
-  if (dataset.isVirtual) {
-    dataset.descendants = await virtualDatasetsUtils.descendants(db, dataset)
-    result.count = dataset.count = await esUtils.count(es, queryableDataset, {})
-  }
-
-  await collection.updateOne({ id: dataset.id }, { $set: result })
-
   // parent virtual datasets have to be re-finalized too
-  for await (const virtualDataset of collection.find({ 'virtual.children': dataset.id })) {
-    await collection.updateOne({ id: virtualDataset.id }, { $set: { status: 'indexed' } })
+  if (!dataset.draftReason) {
+    for await (const virtualDataset of collection.find({ 'virtual.children': dataset.id })) {
+      await collection.updateOne({ id: virtualDataset.id }, { $set: { status: 'indexed' } })
+    }
   }
 
   debug('done')

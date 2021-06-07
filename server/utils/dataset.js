@@ -24,7 +24,14 @@ const baseTypes = new Set(['text/csv', 'application/geo+json'])
 const dataDir = path.resolve(config.dataDir)
 
 exports.dir = (dataset) => {
-  return path.join(dataDir, dataset.owner.type, dataset.owner.id, 'datasets', dataset.id)
+  const parts = [
+    dataDir,
+    dataset.owner.type,
+    dataset.owner.id,
+    dataset.draftReason ? 'datasets-drafts' : 'datasets',
+    dataset.id,
+  ]
+  return path.join(...parts)
 }
 
 exports.fileName = (dataset) => {
@@ -157,7 +164,12 @@ exports.dataFiles = async (dataset) => {
     const stats = await fs.stat(path.join(exports.dir(dataset), result.name))
     result.size = stats.size
     result.updatedAt = stats.mtime
-    result.url = `${config.publicUrl}/api/v1/datasets/${dataset.id}/data-files/${result.name}`
+    let url = `${config.publicUrl}/api/v1/datasets/${dataset.id}/data-files/${result.name}`
+    if (dataset.draftReason) {
+      url += '?draft=true'
+      result.title += ' - brouillon'
+    }
+    result.url = url
   }
   return results
 }
@@ -251,15 +263,37 @@ exports.transformFileStreams = (mimeType, schema, fileSchema, fileProps = {}, ra
 }
 
 // Read the dataset file and get a stream of line items
-exports.readStreams = (db, dataset, raw = false, full = false) => {
+exports.readStreams = (db, dataset, raw = false, full = false, ignoreDraftLimit = false) => {
   if (dataset.isRest) return restDatasetsUtils.readStreams(db, dataset)
   const fileName = full ? exports.fullFileName(dataset) : exports.fileName(dataset)
-  return [
+
+  const streams = [
     fs.createReadStream(fileName),
     stripBom(),
     iconv.decodeStream(dataset.file.encoding),
     ...exports.transformFileStreams(dataset.file.mimetype, dataset.schema, dataset.file.schema, full ? {} : dataset.file.props, raw),
   ]
+
+  // manage interruption in case of draft mode
+  const limit = (dataset.draftReason && !ignoreDraftLimit) ? 100 : -1
+  if (limit !== -1) {
+    streams.push(new Transform({
+      objectMode: true,
+      transform(item, encoding, callback) {
+        this.i = (this.i || 0) + 1
+        if (this.i > limit) return callback()
+        callback(null, item)
+
+        // interrupt source stream it we are done
+        if (this.i === limit) {
+          streams[0].unpipe()
+          streams[1].end()
+        }
+      },
+    }))
+  }
+
+  return streams
 }
 
 // Used by extender worker to produce the "full" version of the file
@@ -313,20 +347,33 @@ exports.writeExtendedStreams = async (db, dataset) => {
 
 exports.sampleValues = async (dataset) => {
   let currentLine = 0
+  let stopped = false
   const sampleValues = {}
-  await pump(...exports.readStreams(null, dataset, true), new Writable({
+  const streams = exports.readStreams(null, dataset, true, false, true)
+  await pump(...streams, new Writable({
     objectMode: true,
     write(chunk, encoding, callback) {
+      if (stopped) return callback()
+
+      let finished = true
       for (const key of Object.keys(chunk)) {
         sampleValues[key] = sampleValues[key] || new Set([])
         // stop if we already have a lot of samples
         if (sampleValues[key].size > 1000) continue
         // ignore empty of too long values to prevent costly sniffing
         if (!chunk[key] || chunk[key].length > 200) continue
+        finished = false
         sampleValues[key].add(chunk[key])
       }
       currentLine += 1
+
       callback()
+
+      if (finished) {
+        stopped = true
+        streams[0].unpipe()
+        streams[1].end()
+      }
     },
   }))
   if (currentLine === 0) throw new Error('Èchec de l\'échantillonage des données')
@@ -561,4 +608,19 @@ exports.delete = async (db, es, dataset) => {
     }
     await exports.updateStorage(db, dataset, true)
   }
+}
+
+exports.applyPatch = async (db, dataset, patch) => {
+  Object.assign(dataset, patch)
+
+  // if the dataset is in draft mode all patched values are stored in the draft state
+  if (dataset.draftReason) {
+    const draftPatch = {}
+    Object.keys(patch).forEach(key => {
+      draftPatch['draft.' + key] = patch[key]
+    })
+    patch = draftPatch
+  }
+  await db.collection('datasets')
+    .updateOne({ id: dataset.id }, { $set: patch })
 }

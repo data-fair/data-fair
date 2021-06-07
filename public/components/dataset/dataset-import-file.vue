@@ -199,6 +199,7 @@
               this.uploadProgress = (e.loaded / e.total) * 100
             }
           },
+          params: {},
         }
         const formData = new FormData()
 
@@ -212,8 +213,10 @@
         try {
           let dataset
           if (this.action.type === 'create') {
+            if (this.file.size > 100000) options.params.draft = 'true'
             dataset = await this.$axios.$post('api/v1/datasets', formData, options)
           } else {
+            options.params.draft = 'true'
             dataset = await this.$axios.$post('api/v1/datasets/' + this.action.id, formData, options)
           }
           if (dataset.error) throw new Error(dataset.error)

@@ -76,6 +76,8 @@ const typesFilters = () => ({
     $or: [
       // fetch next processing steps in usual sequence
       { status: { $nin: ['finalized', 'error', 'draft'] } },
+      // fetch next processing steps in usual sequence, but of the draft version of the dataset
+      { 'draft.status': { $exists: true, $nin: ['finalized', 'error'] } },
       // fetch datasets that are finalized, but need to update a publication
       { status: 'finalized', 'publications.status': { $in: ['waiting', 'deleted'] } },
       // fetch rest datasets with a TTL to process
@@ -92,6 +94,12 @@ async function iter(app, type) {
   try {
     resource = await acquireNext(db, type, typesFilters()[type])
     if (!resource) return
+
+    // if there is something to be done in the draft mode of the dataset, it is prioritary
+    if (type === 'dataset' && resource.draft && resource.draft.status !== 'finalized' && resource.draft.status !== 'error') {
+      Object.assign(resource, resource.draft)
+      delete resource.draft
+    }
 
     // REST datasets trigger too many events
     let noStoreEvent = false
@@ -132,7 +140,7 @@ async function iter(app, type) {
         // finalization covers some metadata enrichment, schema cleanup, etc.
         // either extended or there are no extensions to perform
         taskKey = 'finalizer'
-      } else if (resource.status === 'finalized' && resource.publications && resource.publications.find(p => ['waiting', 'deleted'].includes(p.status))) {
+      } else if (resource.status === 'finalized' && !resource.draftReason && resource.publications && resource.publications.find(p => ['waiting', 'deleted'].includes(p.status))) {
         // dataset that are finalized can be published if requested
         taskKey = 'datasetPublisher'
       } else if (
@@ -152,7 +160,7 @@ async function iter(app, type) {
 
     if (config.worker.spawnTask) {
       // Run a task in a dedicated child process for  extra resiliency to fatal memory exceptions
-      const spawnPromise = spawn('node', ['server', taskKey, type, resource.id], { env: { ...process.env, DEBUG: '', MODE: 'task' } })
+      const spawnPromise = spawn('node', ['server', taskKey, type, resource.id], { env: { ...process.env, DEBUG: '', MODE: 'task', DRAFT: '' + !!resource.draftReason } })
       spawnPromise.childProcess.stdout.on('data', data => debug('[spawned task stdout] ' + data))
       spawnPromise.childProcess.stderr.on('data', data => {
         debug('[spawned task stderr] ' + data)
@@ -164,9 +172,15 @@ async function iter(app, type) {
     }
 
     const newResource = await app.get('db').collection(type + 's').findOne({ id: resource.id })
-    if (hooks[taskKey]) hooks[taskKey].resolve(newResource)
-    if (hooks[taskKey + '/' + resource.id]) hooks[taskKey + '/' + resource.id].resolve(newResource)
-    if (task.eventsPrefix && newResource) await journals.log(app, newResource, { type: task.eventsPrefix + '-end' }, type, noStoreEvent)
+    if (hooks[taskKey]) hooks[taskKey].resolve(JSON.parse(JSON.stringify(newResource)))
+    if (hooks[taskKey + '/' + resource.id]) hooks[taskKey + '/' + resource.id].resolve(JSON.parse(JSON.stringify(newResource)))
+    if (task.eventsPrefix && newResource) {
+      if (resource.draftReason) {
+        Object.assign(newResource, newResource.draft)
+        delete newResource.draft
+      }
+      await journals.log(app, newResource, { type: task.eventsPrefix + '-end' }, type, noStoreEvent)
+    }
   } catch (err) {
     // Build back the original error message from the stderr of the child process
     const errorMessage = []
@@ -186,7 +200,7 @@ async function iter(app, type) {
     if (resource) {
       console.warn(`failure in worker ${taskKey} - ${type} / ${resource.id}`, err)
       await journals.log(app, resource, { type: 'error', data: errorMessage.join('\n') }, type)
-      await app.get('db').collection(type + 's').updateOne({ id: resource.id }, { $set: { status: 'error' } })
+      await app.get('db').collection(type + 's').updateOne({ id: resource.id }, { $set: { [resource.draftReason ? 'draft.status' : 'status']: 'error' } })
       resource.status = 'error'
       if (hooks[taskKey]) hooks[taskKey].reject({ resource, message: errorMessage.join('\n') })
       if (hooks[taskKey + '/' + resource.id]) hooks[taskKey + '/' + resource.id].reject({ resource, message: errorMessage.join('\n') })

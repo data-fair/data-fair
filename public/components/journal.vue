@@ -14,7 +14,8 @@
             </v-icon>
           </td>
           <td>
-            {{ eventTypes[item.type].text }}
+            <span>{{ eventTypes[item.type].text }}</span>
+            <span v-if="item.draft" class="font-weight-thin font-italic ml-4">brouillon</span>
             <template v-if="item.data">
               <br>
               <p class="mb-0" v-html="item.data" />

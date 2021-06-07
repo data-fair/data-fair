@@ -6,6 +6,7 @@ const createError = require('http-errors')
 const { nanoid } = require('nanoid')
 const mime = require('mime-types')
 const datasetSchema = require('../../contract/dataset')
+const datasetUtils = require('./dataset')
 const fallbackMimeTypes = {
   dbf: 'application/dbase',
   dif: 'text/plain',
@@ -19,9 +20,10 @@ const storage = multer.diskStorage({
   destination: async function(req, file, cb) {
     try {
       if (req.dataset) {
-        req.uploadDir = path.join(config.dataDir, req.dataset.owner.type, req.dataset.owner.id, 'datasets', req.dataset.id)
+        req.uploadDir = datasetUtils.dir({ ...req.dataset, draftReason: req.query.draft === 'true' })
       } else {
-        // a tmp dir in case of new dataset, it will be moved into the actual dataset directory after upload completion and final id atttribution
+        // a tmp dir in case of new dataset, it will be moved into the actual dataset directory
+        // after upload completion and final id atttribution
         req.uploadDir = path.join(config.dataDir, 'tmp', nanoid())
         // const owner = req.dataset ? req.dataset.owner : usersUtils.owner(req)
         // return path.join(config.dataDir, owner.type, owner.id, 'datasets', req.dataset.id)
@@ -103,6 +105,12 @@ const getFormBody = (body) => {
           throw createError('400', `Invalid JSON in part "${key}", ${err.message}`)
         }
       }
+    })
+  Object.keys(datasetSchema.properties)
+    .filter(key => typeof body[key] === 'string')
+    .filter(key => datasetSchema.properties[key].type === 'boolean')
+    .forEach(key => {
+      body[key] = body[key] === 'true'
     })
   return body
 }

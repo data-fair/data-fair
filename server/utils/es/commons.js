@@ -68,8 +68,9 @@ exports.esProperty = prop => {
 }
 
 exports.aliasName = dataset => {
-  const ids = dataset.isVirtual ? dataset.descendants : [dataset.id]
-  return ids.map(id => `${config.indicesPrefix}-${id}`).join(',')
+  if (dataset.isVirtual) return dataset.descendants.map(id => `${config.indicesPrefix}-${id}`).join(',')
+  if (dataset.draftReason) return `${config.indicesPrefix}_draft-${dataset.id}`
+  return `${config.indicesPrefix}-${dataset.id}`
 }
 
 exports.parseSort = (sortStr, fields, schema) => {

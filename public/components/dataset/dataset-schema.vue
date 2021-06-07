@@ -62,8 +62,7 @@
 
       <dataset-properties-slide
         v-if="schema && schema.length"
-        :properties="filteredProperties"
-        :original-properties="originalProperties"
+        :properties-refs="filteredProperties"
         :editable="can('writeDescription')"
       />
     </v-col>
@@ -138,7 +137,7 @@
     }),
     computed: {
       ...mapState(['vocabulary', 'propertyTypes']),
-      ...mapState('dataset', ['dataset']),
+      ...mapState('dataset', ['dataset', 'validatedDataset']),
       ...mapGetters('dataset', ['can']),
       updated() {
         return JSON.stringify(this.schema) !== this.originalSchema ||
@@ -151,18 +150,47 @@
         return this.schema.filter(p => !p['x-calculated'])
       },
       filterableProperties() {
-        return this.notCalculatedProperties.map(p => ({
-          key: p.key,
-          search: `${(p.title || '').toLowerCase()} ${(p['x-originalName'] || '').toLowerCase()} ${p.key.toLowerCase()}`,
-          prop: p,
+        const props = []
+        if (this.validatedDataset && this.validatedDataset.schema) {
+          this.validatedDataset.schema.forEach(vp => {
+            if (!vp['x-calculated'] && !this.notCalculatedProperties.find(p => vp.key === p.key)) {
+              props.push({
+                key: vp.key,
+                search: `${(vp.title || '').toLowerCase()} ${(vp['x-originalName'] || '').toLowerCase()} ${vp.key.toLowerCase()}`,
+                prop: vp,
+                originalProp: vp,
+                editable: false,
+                warning: 'Cette propriété n\'apparait plus dans la nouvelle version du fichier.',
+              })
+            }
+          })
+        }
+        return props.concat(this.notCalculatedProperties.map(p => {
+          const validatedProp = this.validatedDataset && this.validatedDataset.schema && this.validatedDataset.schema.find(vp => vp.key === p.key)
+          let warning
+          if (validatedProp) {
+            if (validatedProp.type !== p.type) {
+              warning = 'Cette propriété a changé de type dans la nouvelle version du fichier.'
+            }
+            if (validatedProp.type === 'string' && p.type === 'string' && validatedProp.format !== p.format) {
+              warning = 'Cette propriété a changé de type dans la nouvelle version du fichier.'
+            }
+          }
+          return {
+            key: p.key,
+            search: `${(p.title || '').toLowerCase()} ${(p['x-originalName'] || '').toLowerCase()} ${p.key.toLowerCase()}`,
+            prop: p,
+            originalProp: this.originalProperties.find(op => op.key === p.key),
+            validatedProp,
+            editable: !p['x-extension'],
+            warning,
+          }
         }))
       },
       filteredProperties() {
-        if (!this.schemaFilter) return this.notCalculatedProperties
-        const filter = this.schemaFilter.toLowerCase()
+        const filter = this.schemaFilter && this.schemaFilter.toLowerCase()
         return this.filterableProperties
-          .filter(fp => fp.search.includes(filter) || JSON.stringify(fp.prop) !== JSON.stringify(this.originalProperties.find(p => p.key === fp.key)))
-          .map(fp => fp.prop)
+          .filter(fp => !filter || (fp.search.includes(filter) || JSON.stringify(fp.prop) !== JSON.stringify(fp.originalProp)))
       },
     },
     watch: {

@@ -8,6 +8,7 @@ export default () => ({
   state: {
     datasetId: null,
     dataset: null,
+    validatedDataset: null,
     api: null,
     journal: [],
     remoteServices: [],
@@ -33,6 +34,7 @@ export default () => ({
     error: null, // error in initial info fetching
     lineUploadProgress: 0,
     showTableCard: null,
+    draftMode: null,
   },
   getters: {
     resourceUrl: (state, getters, rootState) => state.datasetId ? rootState.env.publicUrl + '/api/v1/datasets/' + state.datasetId : null,
@@ -110,7 +112,7 @@ export default () => ({
       }
     },
     async fetchDataset({ commit, state }) {
-      const dataset = await this.$axios.$get(`api/v1/datasets/${state.datasetId}`)
+      const dataset = await this.$axios.$get(`api/v1/datasets/${state.datasetId}`, { params: { draft: state.draftMode } })
       const extensions = (dataset.extensions || []).map(ext => {
         ext.error = ext.error || ''
         ext.progress = ext.progress || 0
@@ -127,6 +129,12 @@ export default () => ({
         dataset.rest.ttl = dataset.rest.ttl || { active: false, prop: '_updatedAt', delay: { value: 30, unit: 'days' } }
       }
       commit('setAny', { dataset })
+      if (dataset.draftReason && dataset.draftReason.key === 'file-updated') {
+        const validatedDataset = await this.$axios.$get(`api/v1/datasets/${state.datasetId}`)
+        commit('setAny', { validatedDataset })
+      } else {
+        commit('setAny', { validatedDataset: null })
+      }
     },
     async fetchApplications({ commit, state }) {
       const apps = await this.$axios.$get('api/v1/applications', { params: { dataset: state.dataset.id, size: 10000, select: 'id,title' } })
@@ -142,20 +150,20 @@ export default () => ({
       commit('setAny', { nbVirtualDatasets: virtuals.count })
     },
     async fetchApiDoc({ commit, state }) {
-      const api = await this.$axios.$get(`api/v1/datasets/${state.datasetId}/api-docs.json`)
+      const api = await this.$axios.$get(`api/v1/datasets/${state.datasetId}/api-docs.json`, { params: { draft: state.draftMode } })
       commit('setAny', { api })
     },
     async fetchJournal({ commit, state }) {
-      const journal = await this.$axios.$get(`api/v1/datasets/${state.datasetId}/journal`)
+      const journal = await this.$axios.$get(`api/v1/datasets/${state.datasetId}/journal`, { params: { draft: state.draftMode } })
       commit('setAny', { journal })
     },
     async fetchDataFiles({ commit, state }) {
-      const dataFiles = await this.$axios.$get(`api/v1/datasets/${state.datasetId}/data-files`)
+      const dataFiles = await this.$axios.$get(`api/v1/datasets/${state.datasetId}/data-files`, { params: { draft: state.draftMode } })
       commit('setAny', { dataFiles })
     },
-    async setId({ commit, getters, dispatch, state }, datasetId) {
+    async setId({ commit, getters, dispatch, state }, { datasetId, draftMode }) {
       dispatch('clear')
-      commit('setAny', { datasetId })
+      commit('setAny', { datasetId, draftMode })
       await dispatch('fetchInfo')
     },
     subscribe({ getters, dispatch, state, commit }) {
@@ -167,6 +175,11 @@ export default () => ({
         if (event.type === 'error') {
           eventBus.$emit('notification', { error: event.data, msg: 'Le service a rencontré une erreur pendant le traitement du jeu de données:' })
         }
+
+        if (event.type === 'draft-validated' || event.type === 'draft-cancelled' || event.type === 'data-updated') {
+          return dispatch('fetchInfo')
+        }
+
         dispatch('addJournalEvent', event)
 
         // refresh dataset with relevant parts when receiving journal event
@@ -174,15 +187,15 @@ export default () => ({
           commit('patch', { status: state.eventStates[event.type] })
         }
         if (event.type === 'analyze-end' || event.type === 'extend-start') {
-          const dataset = await this.$axios.$get(`api/v1/datasets/${state.datasetId}`, { params: { select: 'schema' } })
+          const dataset = await this.$axios.$get(`api/v1/datasets/${state.datasetId}`, { params: { select: 'schema', draft: 'true' } })
           commit('patch', { schema: dataset.schema })
         }
         if (event.type === 'finalize-end') {
-          const dataset = await this.$axios.$get(`api/v1/datasets/${state.datasetId}`, { params: { select: 'schema,bbox' } })
+          const dataset = await this.$axios.$get(`api/v1/datasets/${state.datasetId}`, { params: { select: 'schema,bbox', draft: 'true' } })
           commit('patch', { schema: dataset.schema, bbox: dataset.bbox, finalizedAt: dataset.finalizedAt })
         }
         if (event.type === 'publication') {
-          const dataset = await this.$axios.$get(`api/v1/datasets/${state.datasetId}`, { params: { select: 'publications' } })
+          const dataset = await this.$axios.$get(`api/v1/datasets/${state.datasetId}`, { params: { select: 'publications', draft: 'true' } })
           commit('patch', { publications: dataset.publications })
         }
         dispatch('fetchApiDoc')
@@ -192,11 +205,11 @@ export default () => ({
       if (state.datasetId) eventBus.$emit('unsubscribe', 'datasets/' + state.datasetId + '/journal')
       commit('setAny', { datasetId: null, dataset: null, api: null, journal: [], showTableCard: null })
     },
-    async patch({ commit, getters, dispatch }, patch) {
+    async patch({ commit, getters, dispatch, state }, patch) {
       try {
         const silent = patch.silent
         delete patch.silent
-        await this.$axios.patch(getters.resourceUrl, patch)
+        await this.$axios.patch(getters.resourceUrl, patch, { params: { draft: state.draftMode } })
         if (!silent) eventBus.$emit('notification', 'Le jeu de données a été mis à jour.')
         return true
       } catch (error) {
@@ -213,7 +226,13 @@ export default () => ({
       if (patched) commit('patch', patch)
     },
     async reindex({ state, dispatch }) {
-      await this.$axios.$post(`api/v1/datasets/${state.dataset.id}/_reindex`)
+      await this.$axios.$post(`api/v1/datasets/${state.dataset.id}/_reindex`, null, { params: { draft: state.draftMode } })
+    },
+    async cancelDraft({ state, dispatch }) {
+      await this.$axios.$delete(`api/v1/datasets/${state.dataset.id}/draft`)
+    },
+    async validateDraft({ state, dispatch }) {
+      await this.$axios.$post(`api/v1/datasets/${state.dataset.id}/draft`)
     },
     async remove({ state, getters, dispatch }) {
       try {

@@ -473,3 +473,36 @@ module.exports = {
     },
   },
 }
+
+const draftKeys = ['schema', 'description', 'title', 'license', 'origin', 'extensions', 'publications', 'publicationSites', 'virtual', 'rest', 'extras', 'attachmentsAsImage', 'projection', 'attachments', 'topics', 'thumbnails', 'masterData', 'primaryKey']
+
+module.exports.properties.draft = {
+  title: 'Dataset draft',
+  description: 'Some properties waiting for confirmation before being merged into the main dataset info',
+  type: 'object',
+  additionalProperties: false,
+  properties: {
+    draftReason: {
+      type: 'object',
+      title: 'Why was the dataset switched in draft mode',
+      properties: {
+        key: {
+          type: 'string',
+          enum: ['manual', 'file-new', 'file-updated'],
+        },
+        message: {
+          type: 'string',
+        },
+        details: {
+          type: 'array',
+          items: {
+            type: 'string',
+          },
+        },
+      },
+    },
+  },
+}
+draftKeys.forEach(k => {
+  module.exports.properties.draft.properties[k] = module.exports.properties[k]
+})

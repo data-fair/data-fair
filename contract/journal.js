@@ -28,6 +28,9 @@ module.exports = {
           data: {
             type: 'string',
           },
+          draft: {
+            type: 'boolean',
+          },
         },
       },
     },

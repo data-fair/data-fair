@@ -40,7 +40,7 @@
       </v-list-item-content>
     </v-list-item>
     <v-list-item
-      v-if="can('readLines') && !error"
+      v-if="can('readLines') && !error && !dataset.draftReason"
       @click="showIntegrationDialog = true; previewId = 'table'"
     >
       <v-list-item-icon>
@@ -178,7 +178,7 @@
         <v-card-text v-if="showAPIDialog">
           <open-api
             v-if="resourceUrl"
-            :url="resourceUrl + '/api-docs.json'"
+            :url="resourceUrl + '/api-docs.json' + (dataset.draftReason ? '?draft=true' : '')"
           />
         </v-card-text>
       </v-card>
@@ -397,6 +397,7 @@
               this.uploadProgress = (e.loaded / e.total) * 100
             }
           },
+          params: { draft: 'true' },
         }
         const formData = new FormData()
         formData.append('file', this.file)

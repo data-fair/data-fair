@@ -69,11 +69,11 @@ exports.process = async function(app, dataset) {
   datasetUtils.mergeFileSchema(dataset)
   datasetUtils.cleanSchema(dataset)
 
-  await db.collection('datasets').updateOne({ id: dataset.id }, {
-    $set: {
-      status: 'analyzed',
-      file: dataset.file,
-      schema: dataset.schema,
-    },
-  })
+  const patch = {
+    status: 'analyzed',
+    file: dataset.file,
+    schema: dataset.schema,
+  }
+
+  await datasetUtils.applyPatch(db, dataset, patch)
 }
