@@ -646,10 +646,11 @@ router.post('/:datasetId/draft', readDataset(['finalized'], false, true), permis
   }
   const patch = {
     ...req.dataset.draft,
-    status: 'analyzed',
     updatedAt: moment().toISOString(),
     updatedBy: { id: req.user.id, name: req.user.name },
   }
+  if (!baseTypes.has(req.dataset.originalFile.mimetype)) patch.status = 'uploaded'
+  else patch.status = 'analyzed'
   delete patch.finalizedAt
   delete patch.draftReason
   delete patch.count

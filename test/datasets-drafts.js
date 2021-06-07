@@ -2,6 +2,7 @@ const assert = require('assert').strict
 const fs = require('fs')
 const nock = require('nock')
 const FormData = require('form-data')
+const config = require('config')
 
 const testUtils = require('./resources/test-utils')
 
@@ -210,6 +211,37 @@ describe('datasets in draft mode', () => {
     assert.equal(res.data.total, 3)
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { q: 'test' } })
     assert.equal(res.data.total, 2)
+  })
+
+  it('Create a draft of a geo file that requires conversion', async () => {
+    if (config.ogr2ogr.skip) {
+      return console.log('Skip ogr2ogr test in this environment')
+    }
+
+    // Send dataset
+    const datasetFd = fs.readFileSync('./test/resources/geo/stations.zip')
+    const form = new FormData()
+    form.append('file', datasetFd, 'stations.zip')
+    const ax = global.ax.dmeadus
+    let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form), params: { draft: true } })
+    assert.equal(res.status, 201)
+
+    // dataset converted
+    let dataset = await workers.hook('converter')
+    assert.equal(dataset.status, 'draft')
+    assert.equal(dataset.draft.status, 'loaded')
+    assert.equal(dataset.draft.file.name, 'stations.geojson')
+
+    dataset = await workers.hook('finalizer')
+
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { draft: true } })
+    assert.equal(res.data.total, 86)
+
+    // validate the draft
+    await ax.post(`/api/v1/datasets/${dataset.id}/draft`)
+    dataset = await workers.hook(`finalizer/${dataset.id}`)
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
+    assert.equal(res.data.total, 86)
   })
 
   // should manage converted file too
