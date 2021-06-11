@@ -244,5 +244,35 @@ describe('datasets in draft mode', () => {
     assert.equal(res.data.total, 86)
   })
 
-  // should add draft parameter to api-doc (default true value if api-doc is opened with ?draft=true)
+  it('Manage error status in draft mode', async () => {
+    const ax = global.ax.dmeadus
+
+    // Initial dataset with addresses
+    const form = new FormData()
+    const content = `label,adr
+koumoul,19 rue de la voie lactée saint avé
+other,unknown address
+`
+    form.append('file', content, 'dataset2.csv')
+    let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form), params: { draft: true } })
+    assert.equal(res.status, 201)
+    let dataset = await workers.hook(`finalizer/${res.data.id}`)
+    dataset.draft.schema.find(field => field.key === 'adr')['x-refersTo'] = 'http://schema.org/address'
+    // Prepare for extension failure with HTTP error code
+    nock('http://test.com').post('/geocoder/coords').reply(500, 'some error')
+    res = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
+      schema: dataset.draft.schema,
+      extensions: [{ active: true, remoteService: 'geocoder-koumoul', action: 'postCoords' }],
+    }, { params: { draft: true } })
+    assert.equal(res.status, 200)
+    try {
+      await workers.hook('extender')
+      assert.fail()
+    } catch (err) {
+      assert.equal(err.message, '500 - some error')
+    }
+
+    dataset = (await ax.get(`/api/v1/datasets/${dataset.id}`, { params: { draft: true } })).data
+    assert.equal(dataset.status, 'error')
+  })
 })
