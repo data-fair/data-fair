@@ -491,6 +491,7 @@ router.post('', beforeUpload, checkStorage(true), filesUtils.uploadFile(), files
         throw err
       }
       await db.collection('datasets').insertOne(dataset)
+      await datasetUtils.updateStorage(db, dataset)
     } else if (req.body.isVirtual) {
       if (!req.body.title) throw createError(400, 'Un jeu de données virtuel doit être créé avec un titre')
       if (attachmentsFile) throw createError(400, 'Un jeu de données virtuel ne peut pas avoir de pièces jointes')
@@ -525,10 +526,7 @@ router.post('', beforeUpload, checkStorage(true), filesUtils.uploadFile(), files
 
     delete dataset._id
 
-    await Promise.all([
-      journals.log(req.app, dataset, { type: 'dataset-created', href: config.publicUrl + '/dataset/' + dataset.id }, 'dataset'),
-      datasetUtils.updateStorage(db, dataset),
-    ])
+    await journals.log(req.app, dataset, { type: 'dataset-created', href: config.publicUrl + '/dataset/' + dataset.id }, 'dataset')
     res.status(201).send(clean(dataset))
   } catch (err) {
     // Wrapped the whole thing in a try/catch to remove files in case of failure

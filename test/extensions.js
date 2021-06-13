@@ -3,10 +3,11 @@ const fs = require('fs-extra')
 const assert = require('assert').strict
 const FormData = require('form-data')
 const config = require('config')
+const eventToPromise = require('event-to-promise')
 const testUtils = require('./resources/test-utils')
 
 const workers = require('../server/workers')
-
+const extensionsEvents = require('../server/utils/extensions').events
 describe('Extensions', () => {
   it('Extend dataset using remote service', async function() {
     const ax = global.ax.dmeadus
@@ -410,5 +411,55 @@ koumoul,19 rue de la voie lactée saint avé
     assert.ok(dataset.schema.find(field => field.key === extensionKey + '.location.lat'))
     const extSiret = dataset.schema.find(field => field.key === '_ext_sirene-koumoul_findEtablissementsBulk.siret')
     assert.ok(!extSiret['x-refersTo'])
+  })
+
+  it('Extend a REST dataset', async () => {
+    const ax = global.ax.dmeadus
+
+    let dataset = (await ax.post('/api/v1/datasets', {
+      isRest: true,
+      title: 'rest-extension',
+      schema: [{ key: 'address', type: 'string', 'x-refersTo': 'http://schema.org/address' }],
+      extensions: [{ active: true, remoteService: 'geocoder-koumoul', action: 'postCoords' }],
+    })).data
+    await workers.hook(`finalizer/${dataset.id}`)
+
+    // extend first inserted line
+    let nockScope = nock('http://test.com', { reqheaders: { 'x-apiKey': config.defaultRemoteKey.value } })
+      .post('/geocoder/coords').reply(200, (uri, requestBody) => {
+        const inputs = requestBody.trim().split('\n').map(JSON.parse)
+        assert.equal(inputs.length, 1)
+        assert.deepEqual(Object.keys(inputs[0]), ['q', 'key'])
+        return inputs.map(input => ({ key: input.key, lat: 10, lon: 10 }))
+          .map(JSON.stringify).join('\n') + '\n'
+      })
+    await ax.post(`/api/v1/datasets/${dataset.id}/lines`, { address: '19 rue de la voie lactée saint avé' })
+    let inputsEvent = await eventToPromise(extensionsEvents, 'inputs')
+    assert.equal(inputsEvent, 1)
+    dataset = await workers.hook(`finalizer/${dataset.id}`)
+    nockScope.done()
+    // console.log(dataset)
+
+    // A search to check results
+    const extensionKey = '_ext_geocoder-koumoul_postCoords'
+    const res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
+    assert.equal(res.data.total, 1)
+    assert.equal(res.data.results[0][extensionKey + '.lat'], 10)
+    assert.equal(res.data.results[0][extensionKey + '.lon'], 10)
+
+    // extend second inserted line
+    nockScope = nock('http://test.com', { reqheaders: { 'x-apiKey': config.defaultRemoteKey.value } })
+      .post('/geocoder/coords').reply(200, (uri, requestBody) => {
+        const inputs = requestBody.trim().split('\n').map(JSON.parse)
+        assert.equal(inputs.length, 1)
+        assert.deepEqual(Object.keys(inputs[0]), ['q', 'key'])
+        return inputs.map(input => ({ key: input.key, lat: 10, lon: 10 }))
+          .map(JSON.stringify).join('\n') + '\n'
+      })
+    await ax.post(`/api/v1/datasets/${dataset.id}/lines`, { address: 'unknown address' })
+    inputsEvent = await eventToPromise(extensionsEvents, 'inputs')
+    assert.equal(inputsEvent, 1)
+    dataset = await workers.hook(`finalizer/${dataset.id}`)
+    nockScope.done()
   })
 })

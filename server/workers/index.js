@@ -125,6 +125,8 @@ async function iter(app, type) {
       } else if (resource.status === 'loaded' && resource.file && resource.file.mimetype === 'application/geo+json') {
         // Deduce a schema from geojson properties
         taskKey = 'geojsonAnalyzer'
+      } else if (resource.isRest && resource.status === 'extended-updated') {
+        taskKey = 'indexer'
       } else if (resource.status === 'analyzed' || (resource.isRest && resource.status === 'updated')) {
         if (resource.extensions && resource.extensions.find(e => e.active)) {
           // Perform extensions from remote services for dataset that have at least one active extension

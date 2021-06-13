@@ -143,6 +143,7 @@
     methods: {
       ...mapActions('dataset', ['patch', 'validateDraft', 'cancelDraft']),
       stateFromStatus(status) {
+        if (status === 'updated-extended') status = 'extended'
         if (status !== 'error') return this.states.indexOf(status) + 1
         else {
           const idx = (this.journal || []).findIndex(e => e.type === 'error')

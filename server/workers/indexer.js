@@ -19,7 +19,7 @@ exports.process = async function(app, dataset) {
   const esClient = app.get('es')
 
   let indexName
-  if (dataset.status === 'updated') {
+  if (dataset.status === 'updated' || dataset.status === 'extended-updated') {
     indexName = es.aliasName(dataset)
     debug(`Update index ${indexName}`)
   } else {
@@ -38,7 +38,7 @@ exports.process = async function(app, dataset) {
   debug('Run index stream')
   let readStreams, writeStream
   if (dataset.isRest) {
-    readStreams = restDatasetsUtils.readStreams(db, dataset, dataset.status === 'updated')
+    readStreams = restDatasetsUtils.readStreams(db, dataset, dataset.status === 'updated' || dataset.status === 'extended-updated')
     writeStream = restDatasetsUtils.markIndexedStream(db, dataset)
   } else {
     const extended = dataset.extensions && dataset.extensions.find(e => e.active)
@@ -55,7 +55,7 @@ exports.process = async function(app, dataset) {
     status: 'indexed',
     schema: datasetUtils.cleanSchema(dataset),
   }
-  if (dataset.status === 'updated') {
+  if (dataset.status === 'updated' || dataset.status === 'extended-updated') {
     result.count = await restDatasetsUtils.count(db, dataset)
   } else {
     debug('Switch alias to point to new datasets index')
@@ -65,7 +65,7 @@ exports.process = async function(app, dataset) {
 
   // Some data was updated in the interval during which we performed indexation
   // keep dataset as "updated" so that this worker keeps going
-  if (dataset.status === 'updated' && await restDatasetsUtils.count(db, dataset, { _needsIndexing: true })) {
+  if ((dataset.status === 'updated' || dataset.status === 'extended-updated') && await restDatasetsUtils.count(db, dataset, { _needsIndexing: true })) {
     debug('REST dataset indexed, but some data is still fresh, stay in "updated" status')
     result.status = 'updated'
   }

@@ -13,7 +13,7 @@ exports.process = async function(app, dataset) {
   await extensionsUtils.extend(app, dataset, dataset.extensions || [])
   debug('extensions ok')
 
-  const patch = { status: 'extended' }
+  const patch = { status: dataset.status === 'updated' ? 'extended-updated' : 'extended' }
   await datasetUtils.applyPatch(db, dataset, patch)
   await datasetUtils.updateStorage(app.get('db'), dataset)
   debug('done')

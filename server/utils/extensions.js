@@ -3,12 +3,16 @@ const util = require('util')
 const pump = util.promisify(require('pump'))
 const fs = require('fs-extra')
 const { Transform } = require('stream')
+const EventEmitter = require('events')
 const stringify = require('json-stable-stringify')
 const axios = require('./axios')
 const datasetUtils = require('./dataset')
+const restDatasetsUtils = require('./rest-datasets')
 const geoUtils = require('./geo')
 
 const debug = require('debug')('extensions')
+
+exports.events = new EventEmitter()
 
 // Apply an extension to a dataset: meaning, query a remote service in batches
 // and add the result either to a "full" file or to the collection in case of a rest dataset
@@ -42,7 +46,12 @@ exports.extend = async(app, dataset, extensions) => {
     return
   }
 
-  const inputStreams = datasetUtils.readStreams(db, dataset)
+  let inputStreams
+  if (dataset.isRest) {
+    inputStreams = restDatasetsUtils.readStreams(db, dataset, dataset.status === 'updated')
+  } else {
+    inputStreams = datasetUtils.readStreams(db, dataset)
+  }
   const writeStreams = await datasetUtils.writeExtendedStreams(db, dataset)
   await pump(
     ...inputStreams,
@@ -88,6 +97,8 @@ class RemoteExtensionStream extends Transform {
 
   async _sendBuffer() {
     if (!this.buffer.length) return
+    exports.events.emit('inputs', this.buffer.length)
+
     for (const extension of this.extensions) {
       debug(`Send req with ${this.buffer.length} items`, this.reqOpts)
       const opts = {
