@@ -56,7 +56,11 @@
           </v-col>
           <v-col>
             <dataset-property-capabilities :property="currentPropRef.prop" :editable="editable && currentPropRef.editable && !dataset.isVirtual" />
-            <dataset-property-labels :property="currentPropRef.prop" :editable="editable && currentPropRef.editable && !dataset.isVirtual" />
+            <dataset-property-labels
+              v-if="(currentPropRef.prop.type === 'string' && (!currentPropRef.prop.format || currentPropRef.prop.format === 'uri-reference') || currentPropRef.prop.type === 'boolean')"
+              :property="currentPropRef.prop"
+              :editable="editable && currentPropRef.editable && !dataset.isVirtual"
+            />
             <v-list dense class="mt-4">
               <v-list-item v-if="currentPropRef.prop['x-extension'] && extensions[currentPropRef.prop['x-extension']]" class="pl-0 font-weight-bold">
                 <span :class="labelClass">Extension : </span>&nbsp;

@@ -60,17 +60,6 @@
   import '@koumoul/vjsf/dist/main.css'
   import '@koumoul/vjsf/lib/deps/third-party.js'
 
-  const schema = {
-    type: 'array',
-    title: ' ',
-    items: {
-      type: 'object',
-      properties: {
-        value: { type: 'string', title: 'valeur', 'x-cols': 6 },
-        label: { type: 'string', title: 'libellé', 'x-cols': 6 },
-      },
-    },
-  }
   export default {
     components: { VJsf },
     props: ['editable', 'property'],
@@ -78,11 +67,26 @@
       return {
         dialog: false,
         editLabels: null,
-        schema,
       }
     },
     computed: {
       ...mapState('session', ['user']),
+      schema() {
+        const value = { type: 'string', title: 'valeur', 'x-cols': 6 }
+        if (this.property.type === 'boolean') value.enum = ['true', 'false']
+        if (this.property.enum) value.examples = this.property.enum
+        return {
+          type: 'array',
+          title: ' ',
+          items: {
+            type: 'object',
+            properties: {
+              value,
+              label: { type: 'string', title: 'libellé', 'x-cols': 6 },
+            },
+          },
+        }
+      },
     },
     methods: {
       toggle(show) {
