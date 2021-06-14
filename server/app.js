@@ -7,6 +7,7 @@ const wsUtils = require('./utils/ws')
 const limits = require('./utils/limits')
 const locksUtils = require('./utils/locks')
 const rateLimiting = require('./utils/rate-limiting')
+const datasetUtils = require('./utils/dataset')
 const workers = require('./workers')
 const session = require('@koumoul/sd-express')({
   directoryUrl: config.directoryUrl,
@@ -165,8 +166,7 @@ exports.run = async () => {
   if (config.mode === 'task') {
     const resource = await app.get('db').collection(process.argv[3] + 's').findOne({ id: process.argv[4] })
     if (process.env.DATASET_DRAFT === 'true') {
-      Object.assign(resource, resource.draft)
-      delete resource.draft
+      datasetUtils.mergeDraft(resource)
     }
     await workers.tasks[process.argv[2]].process(app, resource)
   }

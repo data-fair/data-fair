@@ -178,6 +178,7 @@ const readDataset = (_acceptedStatuses, noDraft, preserveDraft) => asyncWrap(asy
     }
     if ((preserveDraft || req.query.draft === 'true') && req.dataset.draft) {
       Object.assign(req.dataset, req.dataset.draft)
+      if (!req.dataset.draft.finalizedAt) delete req.dataset.finalizedAt
     }
     if (!preserveDraft) {
       delete req.dataset.draft

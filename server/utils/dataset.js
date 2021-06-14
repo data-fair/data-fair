@@ -630,3 +630,9 @@ exports.applyPatch = async (db, dataset, patch) => {
   await db.collection('datasets')
     .updateOne({ id: dataset.id }, { $set: patch })
 }
+
+exports.mergeDraft = (dataset) => {
+  Object.assign(dataset, dataset.draft)
+  if (!dataset.draft.finalizedAt) delete dataset.finalizedAt
+  delete dataset.draft
+}

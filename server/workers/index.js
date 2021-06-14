@@ -3,6 +3,7 @@ const spawn = require('child-process-promise').spawn
 const moment = require('moment')
 const locks = require('../utils/locks')
 const journals = require('../utils/journals')
+const datasetUtils = require('../utils/dataset')
 const debug = require('debug')('workers')
 
 const tasks = exports.tasks = {
@@ -97,8 +98,7 @@ async function iter(app, type) {
 
     // if there is something to be done in the draft mode of the dataset, it is prioritary
     if (type === 'dataset' && resource.draft && resource.draft.status !== 'finalized' && resource.draft.status !== 'error') {
-      Object.assign(resource, resource.draft)
-      delete resource.draft
+      datasetUtils.mergeDraft(resource)
     }
 
     // REST datasets trigger too many events
@@ -178,8 +178,7 @@ async function iter(app, type) {
     if (hooks[taskKey + '/' + resource.id]) hooks[taskKey + '/' + resource.id].resolve(JSON.parse(JSON.stringify(newResource)))
     if (task.eventsPrefix && newResource) {
       if (resource.draftReason) {
-        Object.assign(newResource, newResource.draft)
-        delete newResource.draft
+        datasetUtils.mergeDraft(newResource)
       }
       await journals.log(app, newResource, { type: task.eventsPrefix + '-end' }, type, noStoreEvent)
     }
