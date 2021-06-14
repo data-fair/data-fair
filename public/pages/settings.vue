@@ -58,7 +58,7 @@
                         <settings-licenses
                           v-if="settings"
                           :settings="settings"
-                          @license-updated="save"
+                          @license-updated="save('fetchLicenses')"
                         />
                       </v-col>
                     </v-row>
@@ -86,7 +86,7 @@
                         <settings-topics
                           v-if="settings"
                           :settings="settings"
-                          @updated="save"
+                          @updated="save('fetchTopics')"
                         />
                       </v-col>
                     </v-row>
@@ -165,7 +165,7 @@
                         <settings-publication-sites
                           v-if="settings"
                           :settings="settings"
-                          @updated="save"
+                          @updated="save('fetchPublicationSites')"
                         />
                       </v-col>
                     </v-row>
@@ -277,10 +277,11 @@
         })
         */
       },
-      async save() {
+      async save(action) {
         try {
           this.settings = await this.$axios.$put('api/v1/settings/' + this.activeAccount.type + '/' + this.activeAccount.id, this.settings)
           eventBus.$emit('notification', 'Les paramètres ont été mis à jour')
+          if (action) this.$store.dispatch(action, this.activeAccount)
         } catch (error) {
           eventBus.$emit('notification', { error, msg: 'Erreur pendant la mise à jour des paramètres' })
         }
