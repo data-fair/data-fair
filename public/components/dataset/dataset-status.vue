@@ -98,6 +98,7 @@
               v-if="dataset.draftReason.key !== 'file-new'"
               color="warning"
               class="ma-1"
+              :disabled="dataset.status !== 'error' && dataset.status !== 'finalized'"
               @click="cancelDraft"
             >
               Annuler le brouillon
@@ -105,6 +106,7 @@
             <v-btn
               color="primary"
               class="ma-1"
+              :disabled="dataset.status !== 'finalized'"
               @click="validateDraft"
             >
               Valider le brouillon
