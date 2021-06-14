@@ -91,6 +91,7 @@
         if (this.dataset.schema.find(p => p.key === '_id')) url += '&select=_id'
         if (this.query) url += '&q=' + encodeURIComponent(this.query)
         if (this.dataset.finalizedAt) url += '&finalizedAt=' + encodeURIComponent(this.dataset.finalizedAt)
+        if (this.dataset.draftReason) url += 'draft=true'
         return url
       },
     },

@@ -185,7 +185,9 @@
     methods: {
       async refresh() {
         try {
-          this.data = (await this.$axios.$get(this.resourceUrl + '/lines', { params: { size: 10000, sort: this.startDateProp } })).results
+          const params = { size: 10000, sort: this.startDateProp }
+          if (this.dataset.draftReason) params.draft = 'true'
+          this.data = (await this.$axios.$get(this.resourceUrl + '/lines', { params })).results
         } catch (error) {
           eventBus.$emit('notification', { error })
         }

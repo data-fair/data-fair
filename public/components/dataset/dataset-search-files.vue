@@ -133,6 +133,7 @@
           q_mode: this.qMode,
         }
         if (this.query) params.q = this.query
+        if (this.dataset.draftReason) params.draft = 'true'
         this.loading = true
         try {
           this.data = await this.$axios.$get(this.resourceUrl + '/lines', { params })
