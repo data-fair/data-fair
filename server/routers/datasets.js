@@ -707,9 +707,6 @@ router.delete('/:datasetId/lines', readDataset(['finalized', 'updated', 'indexed
 
 // Specifc routes for datasets with masterData functionalities enabled
 router.post('/:datasetId/master-data/bulk-searchs/:bulkSearchId', readDataset(), permissions.middleware('readLines', 'read'), asyncWrap(async(req, res) => {
-  if (config.secretKeys.masterData && req.get('x-md-apiKey') !== config.secretKeys.masterData) {
-    return res.status(403).send('L\'accès aux fonctionnalités "données de référence" est restreint.')
-  }
   const bulkSearch = req.dataset.masterData && req.dataset.masterData.bulkSearchs && req.dataset.masterData.bulkSearchs.find(bs => bs.id === req.params.bulkSearchId)
   if (!bulkSearch) return res.status(404).send(`Recherche en masse "${req.params.bulkSearchId}" inconnue`)
 

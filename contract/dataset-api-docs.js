@@ -334,12 +334,6 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
     url: `${config.publicUrl}/api/v1/datasets/${dataset.id}`,
     description: `Jeu de données DataFair - ${new URL(config.publicUrl).hostname} - ${dataset.title}`,
   }]
-  if (dataset.masterData && dataset.masterData.bulkSearchs && dataset.masterData.bulkSearchs.length && config.masterDataPublicUrl && config.masterDataPublicUrl !== config.publicUrl) {
-    servers.push({
-      url: `${config.masterDataPublicUrl}/api/v1/datasets/${dataset.id}`,
-      description: `Accès DataFair MasterData - ${new URL(config.masterDataPublicUrl).hostname} - ${dataset.title}`,
-    })
-  }
 
   const api = {
     openapi: '3.0.0',

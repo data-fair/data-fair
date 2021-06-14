@@ -18,12 +18,6 @@ const servers = [{
   url: `${config.publicUrl}/api/v1`,
   description: `Instance DataFair - ${new URL(config.publicUrl).hostname}`,
 }]
-if (config.masterDataPublicUrl && config.masterDataPublicUrl !== config.publicUrl) {
-  servers.push({
-    url: `${config.masterDataPublicUrl}/api/v1`,
-    description: `Accès DataFair MasterData - ${new URL(config.masterDataPublicUrl).hostname}`,
-  })
-}
 
 module.exports = {
   openapi: '3.0.0',
