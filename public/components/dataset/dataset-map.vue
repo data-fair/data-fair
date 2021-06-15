@@ -172,7 +172,9 @@
             .filter(field => !field['x-calculated'] && field['x-refersTo'] !== 'https://purl.org/geojson/vocab#geometry')
             .map(field => field.key)
             .join(',')
-          const item = (await this.$axios.$get(this.resourceUrl + '/lines', { params: { qs, size: 1, select } })).results[0]
+          const params = { qs, size: 1, select }
+          if (this.dataset.draftReason) params.draft = 'true'
+          const item = (await this.$axios.$get(this.resourceUrl + '/lines', { params })).results[0]
           if (!item) return console.error('item not found with filter', qs)
 
           const htmlList = this.dataset.schema
@@ -211,7 +213,9 @@
     },
     methods: {
       async getBBox() {
-        const bbox = (await this.$axios.$get(this.resourceUrl + '/lines', { params: { format: 'geojson', size: 0, q: this.query } })).bbox
+        const params = { format: 'geojson', size: 0, q: this.query }
+        if (this.dataset.draftReason) params.draft = 'true'
+        const bbox = (await this.$axios.$get(this.resourceUrl + '/lines', { params })).bbox
         if (!bbox || !bbox.length) {
           return null
         }
