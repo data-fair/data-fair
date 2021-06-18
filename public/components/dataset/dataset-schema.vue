@@ -172,8 +172,8 @@
             if (validatedProp.type !== p.type) {
               warning = 'Cette propriété a changé de type dans la nouvelle version du fichier.'
             }
-            const format = p.format !== 'uri-reference' ? p.format : null
-            const validatedFormat = validatedProp.format !== 'uri-reference' ? validatedProp.format : null
+            const format = (p.format && p.format !== 'uri-reference') ? p.format : null
+            const validatedFormat = (validatedProp.format && validatedProp.format !== 'uri-reference') ? validatedProp.format : null
             if (validatedProp.type === 'string' && p.type === 'string' && validatedFormat !== format) {
               warning = 'Cette propriété a changé de type dans la nouvelle version du fichier.'
             }
