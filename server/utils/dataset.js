@@ -634,5 +634,6 @@ exports.applyPatch = async (db, dataset, patch) => {
 exports.mergeDraft = (dataset) => {
   Object.assign(dataset, dataset.draft)
   if (!dataset.draft.finalizedAt) delete dataset.finalizedAt
+  if (!dataset.draft.bbox) delete dataset.bbox
   delete dataset.draft
 }
