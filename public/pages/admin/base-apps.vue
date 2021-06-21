@@ -44,7 +44,7 @@
             <v-sheet v-if="baseApps">
               <v-list three-line>
                 <v-list-item
-                  v-for="baseApp in baseApps.results"
+                  v-for="baseApp in baseApps"
                   :key="baseApp.id"
                 >
                   <v-list-item-avatar tile>
@@ -52,7 +52,11 @@
                   </v-list-item-avatar>
                   <v-list-item-content>
                     <v-list-item-title>
-                      {{ baseApp.category || 'autre' }} - {{ baseApp.title }} - {{ baseApp.applicationName }} ({{ baseApp.version }}) - <a :href="baseApp.url">{{ baseApp.url }}</a>
+                      {{ baseApp.title }}
+                      <v-chip small dark>
+                        {{ baseApp.category || 'autre' }}
+                      </v-chip>
+                      <a :href="baseApp.url">{{ baseApp.applicationName }} ({{ baseApp.version }})</a>
                       <v-icon
                         v-if="baseApp.public"
                         color="green"
@@ -191,7 +195,8 @@
     },
     methods: {
       async refresh() {
-        this.baseApps = await this.$axios.$get('api/v1/admin/base-applications', { params: { size: 10000, thumbnail: '40x40', count: true, q: this.q } })
+        this.baseApps = (await this.$axios.$get('api/v1/admin/base-applications', { params: { size: 10000, thumbnail: '40x40', count: true, q: this.q } }))
+          .results.sort((ba1, ba2) => ba1.title.localeCompare(ba2.title))
       },
       newPatch(baseApp) {
         return {
