@@ -8,12 +8,18 @@ exports.process = async function(app, dataset) {
   const debug = require('debug')(`worker:extender:${dataset.id}`)
 
   const db = app.get('db')
+  const patch = { status: dataset.status === 'updated' ? 'extended-updated' : 'extended' }
+
+  debug('check extensions validity')
+  const validExtensions = await extensionsUtils.filterExtensions(db, dataset.schema, dataset.extensions || [])
+  if (validExtensions.length !== (dataset.extensions || []).length) {
+    patch.extensions = validExtensions
+  }
 
   debug('apply extensions', dataset.extensions)
-  await extensionsUtils.extend(app, dataset, dataset.extensions || [])
+  await extensionsUtils.extend(app, dataset, validExtensions)
   debug('extensions ok')
 
-  const patch = { status: dataset.status === 'updated' ? 'extended-updated' : 'extended' }
   await datasetUtils.applyPatch(db, dataset, patch)
   await datasetUtils.updateStorage(app.get('db'), dataset)
   debug('done')

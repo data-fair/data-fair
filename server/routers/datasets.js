@@ -284,7 +284,9 @@ router.patch('/:datasetId', readDataset((patch) => {
 
   patch.updatedAt = moment().toISOString()
   patch.updatedBy = { id: req.user.id, name: req.user.name }
-  if (patch.extensions) patch.schema = await extensions.prepareSchema(db, patch.schema || req.dataset.schema, patch.extensions)
+  if (patch.extensions || req.dataset.extensions) {
+    patch.schema = await extensions.prepareSchema(db, patch.schema || req.dataset.schema, patch.extensions || req.dataset.extensions)
+  }
 
   // Re-publish publications
   if (!patch.publications && req.dataset.publications && req.dataset.publications.length) {
