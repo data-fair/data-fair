@@ -45,7 +45,8 @@ const baseTypes = new Set(['text/csv', 'application/geo+json'])
 
 const router = express.Router()
 
-function clean(dataset, thumbnail = '300x200') {
+function clean(dataset, thumbnail = '300x200', draft = false) {
+  if (draft) datasetUtils.mergeDraft(dataset)
   dataset.public = permissions.isPublic('datasets', dataset)
   dataset.visibility = visibilityUtils.visibility(dataset)
   delete dataset.permissions
@@ -529,7 +530,7 @@ router.post('', beforeUpload, checkStorage(true), filesUtils.uploadFile(), files
     delete dataset._id
 
     await journals.log(req.app, dataset, { type: 'dataset-created', href: config.publicUrl + '/dataset/' + dataset.id }, 'dataset')
-    res.status(201).send(clean(dataset))
+    res.status(201).send(clean(dataset, null, req.query.draft === 'true'))
   } catch (err) {
     // Wrapped the whole thing in a try/catch to remove files in case of failure
     for (const file of req.files) {
@@ -618,15 +619,20 @@ const updateDataset = asyncWrap(async(req, res) => {
         }
       }
     }
-    Object.assign(dataset, req.body)
+    req.body.updatedBy = { id: req.user.id, name: req.user.name }
+    req.body.updatedAt = moment().toISOString()
+    if (req.query.draft === 'true') {
+      console.log(req.body)
+      Object.assign(dataset.draft, req.body)
+    } else {
+      Object.assign(dataset, req.body)
+    }
 
-    dataset.updatedBy = { id: req.user.id, name: req.user.name }
-    dataset.updatedAt = moment().toISOString()
     await db.collection('datasets').replaceOne({ id: req.params.datasetId }, dataset)
     if (req.isNewDataset) await journals.log(req.app, dataset, { type: 'dataset-created' }, 'dataset')
     else if (!dataset.isRest && !dataset.isVirtual) await journals.log(req.app, dataset, { type: 'data-updated' }, 'dataset')
     await datasetUtils.updateStorage(db, req.dataset)
-    res.status(req.isNewDataset ? 201 : 200).send(clean(dataset))
+    res.status(req.isNewDataset ? 201 : 200).send(clean(dataset, null, req.query.draft === 'true'))
   } catch (err) {
     // Wrapped the whole thing in a try/catch to remove files in case of failure
     for (const file of req.files) {

@@ -51,7 +51,11 @@ describe('datasets in draft mode', () => {
     // Update schema to specify geo point
     const locProp = dataset.schema.find(p => p.key === 'loc')
     locProp['x-refersTo'] = 'http://www.w3.org/2003/01/geo/wgs84_pos#lat_long'
-    await ax.patch('/api/v1/datasets/' + dataset.id, { schema: dataset.schema }, { params: { draft: true } })
+    dataset = (await ax.patch('/api/v1/datasets/' + dataset.id, { schema: dataset.schema }, { params: { draft: true } })).data
+    assert.equal(dataset.status, 'analyzed')
+    assert.equal(dataset.draftReason.key, 'file-new')
+    const patchedLocProp = dataset.schema.find(p => p.key === 'loc')
+    assert.equal(patchedLocProp['x-refersTo'], 'http://www.w3.org/2003/01/geo/wgs84_pos#lat_long')
 
     // Second ES indexation
     dataset = await workers.hook('finalizer')
@@ -139,7 +143,11 @@ describe('datasets in draft mode', () => {
     const datasetFd2 = fs.readFileSync('./test/resources/datasets/dataset2.csv')
     const form2 = new FormData()
     form2.append('file', datasetFd2, 'dataset2.csv')
-    await ax.post('/api/v1/datasets/' + dataset.id, form2, { headers: testUtils.formHeaders(form2), params: { draft: true } })
+    form2.append('description', 'draft description')
+    dataset = (await ax.post('/api/v1/datasets/' + dataset.id, form2, { headers: testUtils.formHeaders(form2), params: { draft: true } })).data
+    console.log(dataset)
+    assert.equal(dataset.status, 'loaded')
+    assert.equal(dataset.draftReason.key, 'file-updated')
     dataset = await workers.hook('finalizer')
     assert.equal(dataset.file.name, 'dataset1.csv')
     assert.equal(dataset.count, 2)

@@ -139,7 +139,7 @@
                 <template v-slot:tabs-items>
                   <v-tab-item value="data-map">
                     <v-container fluid class="pa-0">
-                      <dataset-map fixed-height="600" />
+                      <dataset-map v-if="dataset.bbox" fixed-height="600" />
                     </v-container>
                   </v-tab-item>
 
