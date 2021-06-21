@@ -142,9 +142,9 @@
                     <v-spacer />
                     <v-carousel
                       cycle
-                      style="max-width:510px;max-height:300px;"
+                      style="max-width:510px;"
                       hide-delimiters
-                      show-arrows-on-hover
+                      show-arrows
                     >
                       <v-carousel-item
                         v-for="(app, i) in baseApps"
@@ -154,12 +154,27 @@
                           <v-sheet
                             style="position:absolute;top:0;left:0;right:0;z-index:1;"
                             flat
-                            color="rgba(0, 0, 0, 0.5)"
+                            color="rgba(0, 0, 0, 0.6)"
                             class="pa-2"
+                            dark
                           >
                             {{ app.title }}
                           </v-sheet>
-                          <v-img :src="app.image" />
+                          <v-img
+                            :src="app.image"
+                            height="340"
+                            contain
+                          />
+                          <v-sheet
+                            v-if="app.description"
+                            style="position:absolute;bottom:0;left:0;right:0;z-index:1;"
+                            flat
+                            color="rgba(0, 0, 0, 0.6)"
+                            class="pa-2"
+                            dark
+                          >
+                            {{ app.description }}
+                          </v-sheet>
                         </div>
                       </v-carousel-item>
                     </v-carousel>
