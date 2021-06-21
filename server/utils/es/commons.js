@@ -411,6 +411,9 @@ exports.prepareResultItem = (hit, dataset, query) => {
       if (key === '_thumbnail') continue
       if (key === '_highlight') continue
       if (key === '_id') continue
+      if (key === '_geopoint') continue
+      if (key === '_geoshape') continue
+      if (key === '_attachment_url') continue
       res[key] = truncateMiddle(res[key], truncate, 0, '...')
     }
   }
