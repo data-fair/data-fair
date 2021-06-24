@@ -7,9 +7,9 @@
       <p>Les données ne sont pas accessibles. Soit le jeu de données n'a pas encore été entièrement traité, soit il y a eu une erreur dans le traitement.</p>
     </v-sheet>
     <template v-else>
-      <v-row class="px-3">
+      <v-row class="ma-0">
         <v-col
-          class="pb-0 pr-0"
+          class="pb-0 pr-0 pl-1 pt-1"
           sm="4"
           cols="12"
         >
@@ -48,13 +48,13 @@
         </v-col>
       </v-row>
 
-      <v-row v-if="filters.length">
-        <v-col class="pb-1 pt-1">
+      <v-row v-if="filters.length" class="ma-0">
+        <v-col class="pb-1 pt-1 pl-0">
           <dataset-filters v-model="filters" />
         </v-col>
       </v-row>
-      <v-row>
-        <v-col class="pb-1 pt-0">
+      <v-row class="ma-0">
+        <v-col class="pl-0 pb-1 pt-1">
           <dataset-nb-results :total="data.total" class="ml-3" />
         </v-col>
       </v-row>
