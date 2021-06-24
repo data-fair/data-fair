@@ -135,6 +135,10 @@ module.exports = {
     __name: 'APPLICATIONS_DIRECTORIES',
     __format: 'json',
   },
+  baseAppsCategories: {
+    __name: 'BASE_APPS_CATEGORIES',
+    __format: 'json',
+  },
   remoteServices: {
     __name: 'REMOTE_SERVICES',
     __format: 'json',

@@ -8,7 +8,6 @@ export default async function ({ $vuetify, query, store }) {
     while (!tinycolor.isReadable('#FFFFFF', c)) {
       c.darken(2)
     }
-    // force a somewhat dark color so that contrast if ok for buttons, etc
     $vuetify.theme.themes.dark.primary = c.toHexString()
     $vuetify.theme.themes.light.primary = c.toHexString()
   }
