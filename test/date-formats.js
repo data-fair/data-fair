@@ -58,6 +58,6 @@ describe('Date formats', () => {
     assert.equal(dateProp.dateTimeFormat, 'YYYY-MM-DDTHH:mm:ss')
 
     const results = (await ax.get(`/api/v1/datasets/${dataset.id}/lines`)).data.results
-    assert.equal(results[0].datetime, '2021-02-23T09:27:50.000Z')
+    assert.equal(results[0].datetime, new Date('2021-02-23T10:27:50').toISOString())
   })
 })
