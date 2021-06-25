@@ -159,7 +159,7 @@
               <template v-else>
                 <v-hover v-slot:default="{ hover }">
                   <div :style="`position: relative; max-height: ${lineHeight}px; min-width: ${Math.min((item[header.value] + '').length, 50) * 6}px;`">
-                    <span>{{ item[header.value] | cellvalues(header.field) }}</span>
+                    <span>{{ item[header.value] | cellValues(header.field) }}</span>
                     <v-btn
                       v-if="hover && !filters.find(f => f.field.key === header.value) && header.filterable && isFilterable(item[header.value])"
                       fab
