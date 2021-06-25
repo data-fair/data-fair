@@ -322,7 +322,7 @@ router.patch('/:datasetId', readDataset((patch) => {
       // we just try in case elasticsearch considers the new mapping compatible
       // so that we might optimize and reindex only when necessary
       await esUtils.updateDatasetMapping(req.app.get('es'), { id: req.dataset.id, schema: patch.schema })
-      patch.status = 'extended'
+      patch.status = 'indexed'
     } catch (err) {
       // generated ES mappings are not compatible, trigger full re-indexing
       patch.status = 'analyzed'

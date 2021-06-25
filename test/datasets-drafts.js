@@ -325,7 +325,6 @@ koumoul
 other
 `
     form2.append('file', content2, 'dataset2-noadr.csv')
-    console.log('log draft')
     res = await ax.post('/api/v1/datasets/' + dataset.id, form2, { headers: testUtils.formHeaders(form2), params: { draft: true } })
     assert.equal(res.status, 200)
     dataset = await workers.hook(`finalizer/${dataset.id}`)

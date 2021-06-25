@@ -413,6 +413,5 @@ describe('virtual datasets', () => {
     })
 
     await global.ax.cdurning2.get(`/api/v1/datasets/${res.data.id}/lines`)
-    console.log(res)
   })
 })
