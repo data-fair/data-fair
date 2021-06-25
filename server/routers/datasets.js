@@ -164,7 +164,7 @@ router.get('', cacheHeaders.noCache, asyncWrap(async(req, res) => {
 // Shared middleware to read dataset in db
 // also checks that the dataset is in a state compatible with some action
 // supports waiting a little bit to be a little permissive with the user
-const readDataset = (_acceptedStatuses, noDraft, preserveDraft) => asyncWrap(async(req, res, next) => {
+const readDataset = (_acceptedStatuses, noDraft, preserveDraft, ignoreDraft) => asyncWrap(async(req, res, next) => {
   const acceptedStatuses = typeof _acceptedStatuses === 'function' ? _acceptedStatuses(req.body) : _acceptedStatuses
   for (let i = 0; i < 10; i++) {
     req.dataset = req.resource = await req.app.get('db').collection('datasets')
@@ -193,6 +193,8 @@ const readDataset = (_acceptedStatuses, noDraft, preserveDraft) => asyncWrap(asy
       req.dataset.status !== 'draft' &&
       (req.isNewDataset || !acceptedStatuses || acceptedStatuses.includes(req.dataset.status))
     ) return next()
+
+    if (req.dataset.status === 'draft' && ignoreDraft) return next()
 
     // dataset found but not in proper state.. wait a little while
     await new Promise(resolve => setTimeout(resolve, 400))
@@ -365,7 +367,7 @@ router.put('/:datasetId/owner', readDataset(), permissions.middleware('delete', 
 }))
 
 // Delete a dataset
-router.delete('/:datasetId', readDataset(), permissions.middleware('delete', 'admin'), asyncWrap(async(req, res) => {
+router.delete('/:datasetId', readDataset(null, null, null, true), permissions.middleware('delete', 'admin'), asyncWrap(async(req, res) => {
   await datasetUtils.delete(req.app.get('db'), req.app.get('es'), req.dataset)
   res.sendStatus(204)
 }))
