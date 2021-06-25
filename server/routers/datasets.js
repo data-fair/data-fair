@@ -624,7 +624,6 @@ const updateDataset = asyncWrap(async(req, res) => {
     req.body.updatedBy = { id: req.user.id, name: req.user.name }
     req.body.updatedAt = moment().toISOString()
     if (req.query.draft === 'true') {
-      console.log(req.body)
       Object.assign(dataset.draft, req.body)
     } else {
       Object.assign(dataset, req.body)

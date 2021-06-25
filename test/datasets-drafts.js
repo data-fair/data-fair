@@ -145,7 +145,6 @@ describe('datasets in draft mode', () => {
     form2.append('file', datasetFd2, 'dataset2.csv')
     form2.append('description', 'draft description')
     dataset = (await ax.post('/api/v1/datasets/' + dataset.id, form2, { headers: testUtils.formHeaders(form2), params: { draft: true } })).data
-    console.log(dataset)
     assert.equal(dataset.status, 'loaded')
     assert.equal(dataset.draftReason.key, 'file-updated')
     dataset = await workers.hook('finalizer')
@@ -282,5 +281,57 @@ other,unknown address
 
     dataset = (await ax.get(`/api/v1/datasets/${dataset.id}`, { params: { draft: true } })).data
     assert.equal(dataset.status, 'error')
+  })
+
+  it('Remove extensions when draft file is missing the input properties', async () => {
+    const ax = global.ax.dmeadus
+
+    // Initial dataset with addresses
+    const form = new FormData()
+    const content = `label,adr
+koumoul,19 rue de la voie lactée saint avé
+other,address
+`
+    form.append('file', content, 'dataset2.csv')
+    let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form), params: { draft: true } })
+    assert.equal(res.status, 201)
+    let dataset = await workers.hook(`finalizer/${res.data.id}`)
+    dataset.draft.schema.find(field => field.key === 'adr')['x-refersTo'] = 'http://schema.org/address'
+    // Prepare for extension
+    nock('http://test.com').post('/geocoder/coords').reply(200, (uri, requestBody) => {
+      const inputs = requestBody.trim().split('\n').map(JSON.parse)
+      assert.equal(inputs.length, 2)
+      assert.deepEqual(Object.keys(inputs[0]), ['q', 'key'])
+      return inputs.map(input => ({ key: input.key, lat: 10, lon: 10 }))
+        .map(JSON.stringify).join('\n') + '\n'
+    })
+    res = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
+      schema: dataset.draft.schema,
+      extensions: [{ active: true, remoteService: 'geocoder-koumoul', action: 'postCoords' }],
+    }, { params: { draft: true } })
+    assert.equal(res.status, 200)
+    await workers.hook(`finalizer/${dataset.id}`)
+
+    // validate the draft
+    await ax.post(`/api/v1/datasets/${dataset.id}/draft`)
+    dataset = await workers.hook(`finalizer/${dataset.id}`)
+    assert.equal(dataset.schema.length, 13)
+
+    // load a file missing the address property
+
+    const form2 = new FormData()
+    const content2 = `label
+koumoul
+other
+`
+    form2.append('file', content2, 'dataset2-noadr.csv')
+    console.log('log draft')
+    res = await ax.post('/api/v1/datasets/' + dataset.id, form2, { headers: testUtils.formHeaders(form2), params: { draft: true } })
+    assert.equal(res.status, 200)
+    dataset = await workers.hook(`finalizer/${dataset.id}`)
+    assert.equal(dataset.extensions.length, 1)
+    assert.equal(dataset.schema.length, 13)
+    assert.equal(dataset.draft.extensions.length, 0)
+    assert.equal(dataset.draft.schema.length, 4)
   })
 })

@@ -14,6 +14,7 @@ exports.process = async function(app, dataset) {
   const validExtensions = await extensionsUtils.filterExtensions(db, dataset.schema, dataset.extensions || [])
   if (validExtensions.length !== (dataset.extensions || []).length) {
     patch.extensions = validExtensions
+    patch.schema = await extensionsUtils.prepareSchema(db, dataset.schema, dataset.extensions || [])
   }
 
   debug('apply extensions', dataset.extensions)
