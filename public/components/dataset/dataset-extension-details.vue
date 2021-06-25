@@ -7,7 +7,7 @@
       <h3 v-if="data.total > 10000">
         Consultez {{ plural ? 'les' : 'le' }} {{ (10000).toLocaleString() }} premiers résultats d'extension ({{ data.total.toLocaleString() }} au total)
       </h3>
-      <v-row>
+      <v-row class="ma-0">
         <p v-if="nbErrors === 0">
           Il n'y a aucune erreur dans le retour de l'extension.
         </p>

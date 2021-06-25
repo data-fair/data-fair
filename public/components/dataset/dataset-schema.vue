@@ -45,7 +45,7 @@
         </div>
       </v-row>
 
-      <v-row v-if="notCalculatedProperties && notCalculatedProperties.length">
+      <v-row v-if="notCalculatedProperties && notCalculatedProperties.length" class="mt-0 mb-2">
         <v-col class="pt-0">
           <v-select
             v-if="dataset.isRest"
