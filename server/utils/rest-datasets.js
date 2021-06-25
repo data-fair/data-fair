@@ -366,8 +366,15 @@ exports.bulkLines = async (req, res, next) => {
   let inputStream, parseStreams
   const transactionSchema = [...req.dataset.schema, { key: '_id', type: 'string' }, { key: '_action', type: 'string' }]
   if (req.files && req.files.actions && req.files.actions.length) {
-    inputStream = fs.createReadStream(req.files.actions[0].path, 'utf8')
-    parseStreams = datasetUtils.transformFileStreams(mime.lookup(req.files.actions[0].originalname) || 'application/x-ndjson', transactionSchema)
+    inputStream = fs.createReadStream(req.files.actions[0].path)
+
+    // handle .csv.gz file or other .gz files
+    let actionsMime = mime.lookup(req.files.actions[0].originalname)
+    if (req.files.actions[0].originalname.endsWith('.gz')) {
+      actionsMime = mime.lookup(req.files.actions[0].originalname.slice(0, -3))
+      if (actionsMime) actionsMime += '+gzip'
+    }
+    parseStreams = datasetUtils.transformFileStreams(actionsMime || 'application/x-ndjson', transactionSchema)
   } else {
     inputStream = req
     const contentType = req.get('Content-Type') && req.get('Content-Type').split(';')[0]

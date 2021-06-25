@@ -14,6 +14,7 @@ const pump = require('util').promisify(require('pump'))
 const tmp = require('tmp-promise')
 const mimeTypeStream = require('mime-type-stream')
 const createError = require('http-errors')
+const { createGunzip } = require('zlib')
 const fieldsSniffer = require('./fields-sniffer')
 const geoUtils = require('./geo')
 const restDatasetsUtils = require('./rest-datasets')
@@ -177,6 +178,12 @@ exports.dataFiles = async (dataset) => {
 // used both by exports.readStream and bulk transactions in rest datasets
 exports.transformFileStreams = (mimeType, schema, fileSchema, fileProps = {}, raw = false) => {
   const streams = []
+
+  // file is gzipped
+  if (mimeType.endsWith('+gzip')) {
+    mimeType = mimeType.replace('+gzip', '')
+    streams.push(createGunzip())
+  }
   if (mimeType === 'application/x-ndjson' || mimeType === 'application/json') {
     streams.push(mimeTypeStream(mimeType).parser())
   } else if (mimeType === 'text/csv') {
