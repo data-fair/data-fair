@@ -528,7 +528,7 @@ router.post('', beforeUpload, checkStorage(true), filesUtils.uploadFile(), files
       await restDatasetsUtils.initDataset(db, dataset)
       await db.collection('datasets').updateOne({ id: dataset.id }, { $set: { status: 'analyzed' } })
     } else {
-      throw createError(400, 'Un jeu de données doit être initialisé avec un fichier ou déclaré "virtuel" ou "REST"')
+      throw createError(400, 'Un jeu de données doit être initialisé avec un fichier ou déclaré "virtuel" ou "incrémental"')
     }
 
     delete dataset._id
@@ -571,8 +571,8 @@ const updateDataset = asyncWrap(async(req, res) => {
     // After uploadFile, req.files contains the metadata of an uploaded file, and req.body the content of additional text fields
     const datasetFile = req.files.find(f => f.fieldname === 'file' || f.fieldname === 'dataset')
     const attachmentsFile = req.files.find(f => f.fieldname === 'attachments')
-    if (!datasetFile && !req.dataset.isVirtual && !req.dataset.isRest) throw createError(400, 'Un jeu de données doit être initialisé avec un fichier ou déclaré "virtuel"')
-    if (datasetFile && (req.dataset.isVirtual || req.dataset.isRest)) throw createError(400, 'Un jeu de données est soit initialisé avec un fichier soit déclaré "virtuel"')
+    if (!datasetFile && !req.dataset.isVirtual && !req.dataset.isRest) throw createError(400, 'Un jeu de données doit être initialisé avec un fichier ou déclaré "virtuel" ou "incrémental"')
+    if (datasetFile && (req.dataset.isVirtual || req.dataset.isRest)) throw createError(400, 'Un jeu de données est soit initialisé avec un fichier soit déclaré "virtuel" ou "incrémental"')
     if (req.dataset.isVirtual && !req.dataset.title) throw createError(400, 'Un jeu de données virtuel doit être créé avec un titre')
     if (req.dataset.isRest && !req.dataset.title) throw createError(400, 'Un jeu de données REST doit être créé avec un titre')
     if (req.dataset.isVirtual && attachmentsFile) throw createError(400, 'Un jeu de données virtuel ne peut pas avoir des pièces jointes')
