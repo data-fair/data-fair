@@ -100,8 +100,6 @@ const getLineId = (line, dataset) => {
   if (dataset.primaryKey && dataset.primaryKey.length) {
     const primaryKey = dataset.primaryKey.map(p => line[p])
     return Buffer.from(JSON.stringify(primaryKey).slice(2, -2)).toString('hex')
-  } else {
-    return nanoid()
   }
 }
 
@@ -122,9 +120,8 @@ const applyTransactions = async (req, transacs, validate) => {
   for (const transac of transacs) {
     let { _action, ...body } = transac
     if (!actions.includes(_action)) throw createError(400, `action "${_action}" is unknown, use one of ${JSON.stringify(actions)}`)
-    if (_action === 'create' && !body._id) {
-      body._id = getLineId(body, dataset)
-    }
+    if (!body._id) body._id = getLineId(body, dataset)
+    if (_action === 'create' && !body._id) body._id = nanoid()
     if (!body._id) throw createError(400, '"_id" attribute is required')
 
     const extendedBody = { ...body }
@@ -149,7 +146,6 @@ const applyTransactions = async (req, transacs, validate) => {
     } else {
       extendedBody._deleted = false
       if (_action === 'patch') {
-        // reading the previous body is necessary both for proper hash management and for schema validation
         const previousBody = await collection.findOne({ _id: body._id }, { projection: patchProjection })
         if (previousBody) {
           body = { ...previousBody, ...body }
@@ -303,7 +299,7 @@ exports.readLine = async (req, res, next) => {
 exports.createLine = async (req, res, next) => {
   const db = req.app.get('db')
   const _action = req.body._id ? 'update' : 'create'
-  req.body._id = req.body._id || getLineId(req.body, req.dataset)
+  req.body._id = req.body._id || getLineId(req.body, req.dataset) || nanoid()
   await manageAttachment(req, false)
   const line = (await applyTransactions(req, [{ _action, ...req.body }], compileSchema(req.dataset)))[0]
   if (line._error) return res.status(line._status).send(line._error)
