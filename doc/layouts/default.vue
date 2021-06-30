@@ -93,7 +93,7 @@
 
     <v-footer class="pa-3">
       <v-spacer />
-      <div>Powered by <a href="https://koumoul.com">Koumoul</a></div>
+      <div>Maintained by <a href="https://koumoul.com">Koumoul</a></div>
     </v-footer>
   </v-app>
 </template>

@@ -352,6 +352,9 @@ exports.bulkLines = async (req, res, next) => {
   const db = req.app.get('db')
   const validate = compileSchema(req.dataset)
 
+  // no buffering nor caching of this response in the reverse proxy
+  res.setHeader('X-Accel-Buffering', 'no')
+
   // If attachments are sent, add them to the existing ones
   if (req.files && req.files.attachments && req.files.attachments[0]) {
     await attachmentsUtils.addAttachments(req.dataset, req.files.attachments[0])

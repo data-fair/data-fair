@@ -721,6 +721,9 @@ router.post('/:datasetId/master-data/bulk-searchs/:bulkSearchId', readDataset(),
   const bulkSearch = req.dataset.masterData && req.dataset.masterData.bulkSearchs && req.dataset.masterData.bulkSearchs.find(bs => bs.id === req.params.bulkSearchId)
   if (!bulkSearch) return res.status(404).send(`Recherche en masse "${req.params.bulkSearchId}" inconnue`)
 
+  // no buffering nor caching of this response in the reverse proxy
+  res.setHeader('X-Accel-Buffering', 'no')
+
   // this function will be called for each input line of the bulk search stream
   const paramsBuilder = (line) => {
     const params = {}
