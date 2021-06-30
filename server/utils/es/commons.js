@@ -414,6 +414,8 @@ exports.prepareResultItem = (hit, dataset, query) => {
       if (key === '_geopoint') continue
       if (key === '_geoshape') continue
       if (key === '_attachment_url') continue
+      const field = dataset.schema.find(f => f.key === key)
+      if (field && field.separator) continue
       res[key] = truncateMiddle(res[key], truncate, 0, '...')
     }
   }

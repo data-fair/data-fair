@@ -157,15 +157,35 @@
                 <a :href="item._attachment_url">{{ item[header.value] }}</a>
               </template>
               <template v-else>
-                <v-hover v-slot:default="{ hover }">
-                  <div :style="`position: relative; max-height: ${lineHeight}px; min-width: ${Math.min((item[header.value] + '').length, 50) * 6}px;`">
+                <div v-if="header.field.type === 'string' && header.field.separator" :style="`max-height: 40px; min-width: ${Math.min((item[header.value] + '').length, 50) * 6}px;`">
+                  <v-chip-group style="max-width:500px;" show-arrows>
+                    <v-hover
+                      v-for="(value, i) in item[header.value].split(header.field.separator).map(v => v.trim())"
+                      v-slot:default="{ hover }"
+                      :key="i"
+                    >
+                      <v-chip
+                        class="my-0"
+                        :color="hover ? 'primary' : 'default'"
+                        @click="addFilter(header.value, value)"
+                      >
+                        <span>
+                          {{ value | cellValues(header.field) }}
+                          <v-icon v-if="hover">mdi-filter-variant</v-icon>
+                        </span>
+                      </v-chip>
+                    </v-hover>
+                  </v-chip-group>
+                </div>
+                <v-hover v-else v-slot:default="{ hover }">
+                  <div :style="`position: relative; max-height: 40px; min-width: ${Math.min((item[header.value] + '').length, 50) * 6}px;`">
                     <span>{{ item[header.value] | cellValues(header.field) }}</span>
                     <v-btn
-                      v-if="hover && !filters.find(f => f.field.key === header.value) && header.filterable && isFilterable(item[header.value])"
+                      v-if="hover && !item._tmpState && !filters.find(f => f.field.key === header.value) && header.filterable && isFilterable(item[header.value])"
                       fab
                       x-small
                       color="primary"
-                      style="top: -5px;right: -8px;"
+                      style="top: -7px;right: 0px;"
                       absolute
                       @click="addFilter(header.value, item[header.value])"
                     >
