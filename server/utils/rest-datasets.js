@@ -250,7 +250,7 @@ const compileSchema = (dataset) => {
     properties: dataset.schema
       .filter(f => f.key[0] !== '_')
       .concat([{ key: '_id', type: 'string' }])
-      .reduce((a, b) => { a[b.key] = { ...b, enum: undefined, key: undefined, ignoreDetection: undefined }; return a }, {}),
+      .reduce((a, b) => { a[b.key] = { ...b, enum: undefined, key: undefined, ignoreDetection: undefined, separator: undefined }; return a }, {}),
   })
 }
 
