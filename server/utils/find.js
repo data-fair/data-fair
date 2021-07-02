@@ -21,6 +21,8 @@ exports.query = (req, fieldsMap, globalMode) => {
     }
   }
 
+  query.$and = []
+
   // "standard" field mapping for applications/apis/datasets routes
   // @deprecated owner-type and owner-id : we shall use the owner parameter bellow : owner=organization:id1,user:id2,organization:id3
   Object.assign(fieldsMap, {
@@ -29,10 +31,16 @@ exports.query = (req, fieldsMap, globalMode) => {
     status: 'status',
   })
   Object.keys(fieldsMap).filter(name => req.query[name] !== undefined).forEach(name => {
-    query[fieldsMap[name]] = { $in: req.query[name].split(',').map(queryVal) }
+    const values = req.query[name].split(',').map(queryVal)
+    const notNullValues = values.filter(v => v !== 'null')
+    const or = []
+    if (notNullValues.length) or.push({ [fieldsMap[name]]: { $in: notNullValues } })
+    if (values.find(v => v === 'null')) {
+      or.push({ [fieldsMap[name]]: { $exists: false } })
+      or.push({ [fieldsMap[name]]: { $size: 0 } })
+    }
+    query.$and.push({ $or: or })
   })
-
-  query.$and = []
 
   const showAll = req.query.showAll === 'true'
   if (showAll && !req.user.adminMode) throw createError(400, 'Only super admins can override permissions filter with showAll parameter')
@@ -186,7 +194,7 @@ exports.setResourceLinks = (resource, resourceType) => {
   if (resourceType === 'application') resource.exposedUrl = `${config.publicUrl}/app/${resource.id}`
 }
 
-exports.facetsQuery = (req, facetFields = {}, filterFields) => {
+exports.facetsQuery = (req, facetFields = {}, filterFields, nullFacetFields = []) => {
   filterFields = filterFields || facetFields
   const facetsQueryParam = req.query.facets
   const pipeline = []
@@ -244,7 +252,12 @@ exports.facetsQuery = (req, facetFields = {}, filterFields) => {
         facet.push({ $unwind: '$base-application' })
         facet.push({ $group: { _id: { [f]: '$base-application', id: '$id' } } })
       } else {
-        facet.push({ $unwind: '$' + (facetFields[f] || f).split('.').shift() })
+        facet.push({
+          $unwind: {
+            path: '$' + (facetFields[f] || f).split('.').shift(),
+            preserveNullAndEmptyArrays: nullFacetFields.includes(f),
+          },
+        })
         if (f === 'owner') facet.push({ $project: { 'owner.role': 0 } })
         facet.push({ $group: { _id: { [f]: '$' + (facetFields[f] || f), id: '$id' } } })
       }
@@ -293,7 +306,7 @@ exports.parseFacets = (facets) => {
           },
         }))
     } else {
-      res[k] = values.filter(r => r._id).map(r => ({ count: r.count, value: r._id }))
+      res[k] = values.map(r => ({ count: r.count, value: r._id }))
     }
   })
   Object.keys(res).forEach(facetKey => {

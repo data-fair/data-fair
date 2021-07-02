@@ -48,6 +48,22 @@
       />
     </template>
 
+    <template v-if="facets.publicationSites && facets.publicationSites.find(item => item.value !== null)">
+      <v-select
+        v-model="facetsValues.publicationSites"
+        multiple
+        label="Portails"
+        :items="facets.publicationSites"
+        :item-value="item => item.value || 'null'"
+        :item-text="item => publicationSiteText(item)"
+        outlined
+        dense
+        hide-details
+        rounded
+        class="mb-4"
+      />
+    </template>
+
     <template v-if="facets['base-application']">
       <v-select
         v-model="facetsValues['base-application']"
@@ -67,7 +83,7 @@
 </template>
 
 <script>
-  import { mapState } from 'vuex'
+  import { mapState, mapGetters } from 'vuex'
 
   export default {
     props: ['facets', 'facetsValues'],
@@ -76,6 +92,17 @@
     },
     computed: {
       ...mapState(['vocabulary', 'env']),
+      ...mapGetters(['activeAccountPublicationSitesById']),
+    },
+    methods: {
+      publicationSiteText(item) {
+        let title = item.value
+        if (item.value === null) title = 'aucun'
+        else if (this.activeAccountPublicationSitesById && this.activeAccountPublicationSitesById[item.value]) {
+          title = this.activeAccountPublicationSitesById[item.value].url
+        }
+        return `${title} (${item.count})`
+      },
     },
   }
 </script>

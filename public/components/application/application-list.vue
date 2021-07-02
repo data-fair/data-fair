@@ -115,6 +115,7 @@
         visibility: [],
         'base-application': [],
         topics: [],
+        publicationSites: [],
       },
       lastParams: null,
       graphicSvg: require('~/assets/svg/Graphics and charts_Monochromatic.svg?raw'),
@@ -167,7 +168,7 @@
         })
         if (append) this.page += 1
         else this.page = 1
-        let facets = 'visibility,base-application,topics'
+        let facets = 'visibility,base-application,topics,publicationSites'
         if (this.filters.owner === null) facets += ',owner'
         const params = {
           size: this.size,

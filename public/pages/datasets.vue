@@ -49,13 +49,17 @@
       ...mapState(['env']),
       ...mapState('session', ['user', 'initialized']),
       ...mapGetters(['canContrib']),
+      ...mapGetters('session', ['activeAccount']),
     },
     created() {
       this.fetchVocabulary()
+      if (this.activeAccount) {
+        this.fetchPublicationSites(this.activeAccount)
+      }
     },
     methods: {
       ...mapActions('session', ['login']),
-      ...mapActions(['fetchVocabulary']),
+      ...mapActions(['fetchVocabulary', 'fetchPublicationSites']),
     },
   }
 </script>

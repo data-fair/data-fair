@@ -133,6 +133,7 @@ router.get('', cacheHeaders.noCache, asyncWrap(async(req, res) => {
     ...filterFields,
     topics: 'topics',
   }
+  const nullFacetFields = ['publicationSites']
   const query = findUtils.query(req, Object.assign({
     filename: 'originalFile.name',
     ids: 'id',
@@ -150,7 +151,7 @@ router.get('', cacheHeaders.noCache, asyncWrap(async(req, res) => {
     datasets.countDocuments(query),
   ]
   if (req.query.facets) {
-    mongoQueries.push(datasets.aggregate(findUtils.facetsQuery(req, facetFields, filterFields)).toArray())
+    mongoQueries.push(datasets.aggregate(findUtils.facetsQuery(req, facetFields, filterFields, nullFacetFields)).toArray())
   }
   let [results, count, facets] = await Promise.all(mongoQueries)
   results.forEach(r => {
