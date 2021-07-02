@@ -275,10 +275,10 @@ La valeur est une liste de colonnes séparées par des virgules.
   const formatParam = {
     in: 'query',
     name: 'format',
-    description: 'Le format de la donnée. json par défaut, geojson et pbf pour tuiles vectorielles.',
+    description: 'Le format de la donnée. json par défaut, pbf pour tuiles vectorielles, geojson et wkt pour formats géographiques.',
     schema: {
       default: 'json',
-      enum: ['json'].concat(dataset.bbox && dataset.bbox.length === 4 ? ['pbf', 'geojson'] : []),
+      enum: ['json'].concat(dataset.bbox && dataset.bbox.length === 4 ? ['pbf', 'geojson', 'wkt'] : []),
     },
   }
 

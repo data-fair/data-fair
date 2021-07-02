@@ -7,10 +7,10 @@ const kinks = require('@turf/kinks').default
 const unkink = require('@turf/unkink-polygon').default
 const flatten = require('flat')
 const exec = require('child-process-promise').exec
-const wktParser = require('terraformer-wkt-parser')
 const tmp = require('tmp-promise')
 const writeFile = util.promisify(fs.writeFile)
 const proj4 = require('proj4')
+const { wktToGeoJSON, geojsonToWKT } = require('@terraformer/wkt')
 const debug = require('debug')('geo')
 
 const projections = require('../../contract/projections')
@@ -161,6 +161,16 @@ exports.aggs2geojson = aggsResult => {
   }
 }
 
+exports.result2wkt = esResponse => {
+  const geometryCollection = {
+    type: 'GeometryCollection',
+    geometries: esResponse.hits.hits.map(hit => {
+      return hit._source._geoshape
+    }),
+  }
+  return geojsonToWKT(geometryCollection)
+}
+
 // Simple wrapping of the command line prepair https://github.com/tudelft3d/prepair
 // help fixing some polygons
 const customUnkink = async (feature) => {
@@ -193,7 +203,7 @@ const prepair = async (feature) => {
     tmpFile = await tmp.file({ postfix: '.geojson' })
     await writeFile(tmpFile.fd, JSON.stringify(feature))
     const repaired = await exec(`../prepair/prepair --ogr '${tmpFile.path}'`, { maxBuffer: 100000000 })
-    feature.geometry = wktParser.parse(repaired.stdout)
+    feature.geometry = wktToGeoJSON(repaired.stdout)
     return feature
   } catch (err) {
     if (tmpFile) tmpFile.cleanup()

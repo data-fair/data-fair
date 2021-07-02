@@ -9,6 +9,7 @@ const truncateMiddle = require('truncate-middle')
 const thumbor = require('../thumbor')
 const tiles = require('../tiles')
 const geo = require('../geo')
+const { geojsonToWKT } = require('@terraformer/wkt')
 const permissions = require('../permissions')
 
 // From a property in data-fair schema to the property in an elasticsearch mapping
@@ -418,6 +419,15 @@ exports.prepareResultItem = (hit, dataset, query) => {
       if (field && field.separator) continue
       res[key] = truncateMiddle(res[key], truncate, 0, '...')
     }
+  }
+
+  if (query.wkt === 'true') {
+    const geometryField = dataset.schema.find(f => f['x-refersTo'] === 'https://purl.org/geojson/vocab#geometry')
+    if (geometryField && res[geometryField.key]) {
+      const geometry = typeof res[geometryField.key] === 'string' ? JSON.parse(res[geometryField.key]) : res[geometryField.key]
+      res[geometryField.key] = geojsonToWKT(geometry)
+    }
+    if (res._geoshape) res._geoshape = geojsonToWKT(res._geoshape)
   }
 
   return res

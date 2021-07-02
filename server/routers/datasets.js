@@ -841,6 +841,9 @@ router.get('/:datasetId/lines', readDataset(), applicationKey, permissions.middl
     req.query.select = (req.query.select ? req.query.select : tiles.defaultSelect(req.dataset).join(','))
     if (!req.query.select.includes('_geoshape')) req.query.select += ',_geoshape'
   }
+  if (req.query.format === 'wkt') {
+    req.query.select = '_geoshape'
+  }
 
   if (req.dataset.isVirtual) req.dataset.descendants = await virtualDatasetsUtils.descendants(db, req.dataset)
 
@@ -954,6 +957,14 @@ router.get('/:datasetId/lines', readDataset(), applicationKey, permissions.middl
     res.throttleEnd()
     webhooks.trigger(req.app.get('db'), 'dataset', req.dataset, { type: 'downloaded-filter' })
     return res.status(200).send(geojson)
+  }
+
+  if (req.query.format === 'wkt') {
+    const wkt = geo.result2wkt(esResponse)
+    res.setHeader('content-disposition', `attachment; filename="${req.dataset.id}.wkt"`)
+    res.throttleEnd()
+    webhooks.trigger(req.app.get('db'), 'dataset', req.dataset, { type: 'downloaded-filter' })
+    return res.status(200).send(wkt)
   }
 
   if (vectorTileRequested) {
