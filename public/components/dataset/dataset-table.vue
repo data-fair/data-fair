@@ -224,7 +224,11 @@
               </template>
               <template v-else>
                 <div v-if="header.field.type === 'string' && header.field.separator" :style="`max-height: 40px; min-width: ${Math.min((item[header.value] + '').length, 50) * 6}px;`">
-                  <v-chip-group style="max-width:500px;" show-arrows>
+                  <v-chip-group
+                    v-if="item[header.value]"
+                    style="max-width:500px;"
+                    show-arrows
+                  >
                     <v-hover
                       v-for="(value, i) in item[header.value].split(header.field.separator).map(v => v.trim())"
                       v-slot:default="{ hover }"
