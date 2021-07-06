@@ -74,7 +74,7 @@
         </v-col>
       </v-row>
       <v-row v-if="filters.length">
-        <v-col class="pb-1 pt-1">
+        <v-col class="pb-1 pt-2 pl-0">
           <dataset-filters v-model="filters" />
         </v-col>
       </v-row>
@@ -255,7 +255,7 @@
                       fab
                       x-small
                       color="primary"
-                      style="top: -7px;right: 0px;"
+                      style="right: -10px;top: 50%;transform: translate(0, -50%);"
                       absolute
                       @click="addFilter(header.value, item[header.value])"
                     >

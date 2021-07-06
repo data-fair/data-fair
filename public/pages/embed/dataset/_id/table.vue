@@ -196,7 +196,7 @@
                       fab
                       x-small
                       color="primary"
-                      style="top: -7px;right: 0px;"
+                      style="right: -10px;top: 50%;transform: translate(0, -50%);"
                       absolute
                       @click="addFilter(header.value, item[header.value])"
                     >
