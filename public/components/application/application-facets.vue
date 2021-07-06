@@ -98,8 +98,11 @@
       publicationSiteText(item) {
         let title = item.value
         if (item.value === null) title = 'aucun'
-        else if (this.activeAccountPublicationSitesById && this.activeAccountPublicationSitesById[item.value]) {
-          title = this.activeAccountPublicationSitesById[item.value].url
+        else {
+          const publicationSite = this.activeAccountPublicationSitesById && this.activeAccountPublicationSitesById[item.value]
+          if (publicationSite) {
+            title = publicationSite.title || publicationSite.url || publicationSite.id
+          }
         }
         return `${title} (${item.count})`
       },
