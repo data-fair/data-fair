@@ -158,7 +158,6 @@
     "uuid": "^3.4.0",
     "vt-pbf": "3.1.1",
     "vue-moment": "^4.1.0",
-    "vue-truncate-filter": "^1.1.7",
     "vuedraggable": "^2.24.3",
     "vuetify": "^2.5.3",
     "ws": "^7.4.1",

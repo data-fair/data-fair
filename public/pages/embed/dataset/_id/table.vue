@@ -49,12 +49,12 @@
       </v-row>
 
       <v-row v-if="filters.length" class="ma-0">
-        <v-col class="pb-1 pt-1 pl-0">
+        <v-col class="pb-1 pt-2 pl-0">
           <dataset-filters v-model="filters" />
         </v-col>
       </v-row>
       <v-row class="ma-0">
-        <v-col class="pl-0 pb-1 pt-1">
+        <v-col class="pl-0 pb-1 pt-2">
           <dataset-nb-results :total="data.total" class="ml-3" />
         </v-col>
       </v-row>
@@ -154,7 +154,14 @@
                 </v-avatar>
               </template>
               <template v-else-if="digitalDocumentField && digitalDocumentField.key === header.value">
-                <a :href="item._attachment_url">{{ item[header.value] }}</a>
+                <a :href="item._attachment_url">{{ item[header.value] | truncate(50) }}</a>
+              </template>
+              <template v-else-if="webPageField && webPageField.key === header.value">
+                <a
+                  v-if="item[header.value]"
+                  target="_blank"
+                  :href="item[header.value]"
+                >{{ item[header.value] | truncate(50) }}</a>
               </template>
               <template v-else>
                 <div v-if="header.field.type === 'string' && header.field.separator" :style="`max-height: 40px; min-width: ${Math.min((item[header.value] + '').length, 50) * 6}px;`">
@@ -169,7 +176,7 @@
                       :key="i"
                     >
                       <v-chip
-                        class="my-0"
+                        :class="{'my-0': true, 'px-4': !hover, 'px-2': hover}"
                         :color="hover ? 'primary' : 'default'"
                         @click="addFilter(header.value, value)"
                       >
@@ -260,6 +267,9 @@
       },
       digitalDocumentField() {
         return this.dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')
+      },
+      webPageField() {
+        return this.dataset.schema.find(f => f['x-refersTo'] === 'https://schema.org/WebPage')
       },
       params() {
         const params = {

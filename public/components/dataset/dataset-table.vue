@@ -213,7 +213,7 @@
                 </v-avatar>
               </template>
               <template v-else-if="digitalDocumentField && digitalDocumentField.key === header.value">
-                <a :href="item._attachment_url">{{ item[header.value] }}</a>
+                <a :href="item._attachment_url">{{ item[header.value]| truncate(50) }}</a>
               </template>
               <template v-else-if="webPageField && webPageField.key === header.value">
                 <a
@@ -235,7 +235,7 @@
                       :key="i"
                     >
                       <v-chip
-                        class="my-0"
+                        :class="{'my-0': true, 'px-4': !hover, 'px-2': hover}"
                         :color="hover ? 'primary' : 'default'"
                         @click="addFilter(header.value, value)"
                       >
