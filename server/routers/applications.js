@@ -67,6 +67,7 @@ router.get('', cacheHeaders.noCache, asyncWrap(async(req, res) => {
     ...filterFields,
     topics: 'topics',
   }
+  const nullFacetFields = ['publicationSites']
   const query = findUtils.query(req, Object.assign({
     ids: 'id',
     id: 'id',
@@ -79,14 +80,14 @@ router.get('', cacheHeaders.noCache, asyncWrap(async(req, res) => {
     applications.countDocuments(query),
   ]
   if (req.query.facets) {
-    mongoQueries.push(applications.aggregate(findUtils.facetsQuery(req, facetFields, filterFields)).toArray())
+    mongoQueries.push(applications.aggregate(findUtils.facetsQuery(req, facetFields, filterFields, nullFacetFields)).toArray())
   }
   let [results, count, facets] = await Promise.all(mongoQueries)
   results.forEach(r => {
     r.userPermissions = permissions.list('applications', r, req.user)
     clean(r)
   })
-  facets = findUtils.parseFacets(facets)
+  facets = findUtils.parseFacets(facets, nullFacetFields)
   res.json({ count, results, facets })
 }))
 

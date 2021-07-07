@@ -158,7 +158,7 @@ router.get('', cacheHeaders.noCache, asyncWrap(async(req, res) => {
     r.userPermissions = permissions.list('datasets', r, req.user)
     clean(r, req.query.thumbnail)
   })
-  facets = findUtils.parseFacets(facets)
+  facets = findUtils.parseFacets(facets, nullFacetFields)
   res.json({ count, results, facets })
 }))
 
