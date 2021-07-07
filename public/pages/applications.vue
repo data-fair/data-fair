@@ -39,7 +39,7 @@
 </template>
 
 <script>
-  import { mapState, mapActions } from 'vuex'
+  import { mapState, mapActions, mapGetters } from 'vuex'
 
   export default {
     data() {
@@ -50,12 +50,19 @@
     },
     computed: {
       ...mapState('session', ['user', 'initialized']),
+      ...mapGetters('session', ['activeAccount']),
       importApp() {
         return this.$route.query.import
       },
     },
+    created() {
+      if (this.activeAccount) {
+        this.fetchPublicationSites(this.activeAccount)
+      }
+    },
     methods: {
       ...mapActions('session', ['login']),
+      ...mapActions(['fetchPublicationSites']),
     },
   }
 </script>

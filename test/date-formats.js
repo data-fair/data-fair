@@ -45,4 +45,19 @@ describe('Date formats', () => {
     dateProp = dataset.schema.find(p => p.key === 'date')
     assert.equal(dateProp.dateFormat, undefined)
   })
+
+  it('Accept ISO date without Z or timezone suffix', async function() {
+    const ax = global.ax.dmeadus
+    const form = new FormData()
+    form.append('file', 'str,datetime\nstrval,2021-02-23T10:27:50', 'dataset.csv')
+    const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
+    const dataset = await workers.hook(`finalizer/${res.data.id}`)
+    const dateProp = dataset.file.schema.find(p => p.key === 'datetime')
+    assert.equal(dateProp.type, 'string')
+    assert.equal(dateProp.format, 'date-time')
+    assert.equal(dateProp.dateTimeFormat, 'YYYY-MM-DDTHH:mm:ss')
+
+    const results = (await ax.get(`/api/v1/datasets/${dataset.id}/lines`)).data.results
+    assert.equal(results[0].datetime, new Date('2021-02-23T10:27:50').toISOString())
+  })
 })

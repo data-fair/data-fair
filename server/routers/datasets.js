@@ -45,7 +45,8 @@ const baseTypes = new Set(['text/csv', 'application/geo+json'])
 
 const router = express.Router()
 
-function clean(dataset, thumbnail = '300x200') {
+function clean(dataset, thumbnail = '300x200', draft = false) {
+  if (draft) datasetUtils.mergeDraft(dataset)
   dataset.public = permissions.isPublic('datasets', dataset)
   dataset.visibility = visibilityUtils.visibility(dataset)
   delete dataset.permissions
@@ -132,6 +133,7 @@ router.get('', cacheHeaders.noCache, asyncWrap(async(req, res) => {
     ...filterFields,
     topics: 'topics',
   }
+  const nullFacetFields = ['publicationSites']
   const query = findUtils.query(req, Object.assign({
     filename: 'originalFile.name',
     ids: 'id',
@@ -149,7 +151,7 @@ router.get('', cacheHeaders.noCache, asyncWrap(async(req, res) => {
     datasets.countDocuments(query),
   ]
   if (req.query.facets) {
-    mongoQueries.push(datasets.aggregate(findUtils.facetsQuery(req, facetFields, filterFields)).toArray())
+    mongoQueries.push(datasets.aggregate(findUtils.facetsQuery(req, facetFields, filterFields, nullFacetFields)).toArray())
   }
   let [results, count, facets] = await Promise.all(mongoQueries)
   results.forEach(r => {
@@ -163,7 +165,7 @@ router.get('', cacheHeaders.noCache, asyncWrap(async(req, res) => {
 // Shared middleware to read dataset in db
 // also checks that the dataset is in a state compatible with some action
 // supports waiting a little bit to be a little permissive with the user
-const readDataset = (_acceptedStatuses, noDraft, preserveDraft) => asyncWrap(async(req, res, next) => {
+const readDataset = (_acceptedStatuses, noDraft, preserveDraft, ignoreDraft) => asyncWrap(async(req, res, next) => {
   const acceptedStatuses = typeof _acceptedStatuses === 'function' ? _acceptedStatuses(req.body) : _acceptedStatuses
   for (let i = 0; i < 10; i++) {
     req.dataset = req.resource = await req.app.get('db').collection('datasets')
@@ -179,6 +181,7 @@ const readDataset = (_acceptedStatuses, noDraft, preserveDraft) => asyncWrap(asy
     if ((preserveDraft || req.query.draft === 'true') && req.dataset.draft) {
       Object.assign(req.dataset, req.dataset.draft)
       if (!req.dataset.draft.finalizedAt) delete req.dataset.finalizedAt
+      if (!req.dataset.draft.bbox) delete req.dataset.bbox
     }
     if (!preserveDraft) {
       delete req.dataset.draft
@@ -191,6 +194,8 @@ const readDataset = (_acceptedStatuses, noDraft, preserveDraft) => asyncWrap(asy
       req.dataset.status !== 'draft' &&
       (req.isNewDataset || !acceptedStatuses || acceptedStatuses.includes(req.dataset.status))
     ) return next()
+
+    if (req.dataset.status === 'draft' && ignoreDraft) return next()
 
     // dataset found but not in proper state.. wait a little while
     await new Promise(resolve => setTimeout(resolve, 400))
@@ -230,7 +235,7 @@ router.get('/:datasetId/schema', readDataset(), applicationKey, permissions.midd
         .filter(f => !f['x-calculated'])
         .filter(f => !f['x-extension'])
         // .map(f => ({ ...f, maxLength: 10000 }))
-        .reduce((a, f) => { a[f.key] = { ...f, enum: undefined, key: undefined, ignoreDetection: undefined }; return a }, {}),
+        .reduce((a, f) => { a[f.key] = { ...f, enum: undefined, key: undefined, ignoreDetection: undefined, separator: undefined }; return a }, {}),
       }
   } else {
     schema.forEach(field => {
@@ -282,7 +287,9 @@ router.patch('/:datasetId', readDataset((patch) => {
 
   patch.updatedAt = moment().toISOString()
   patch.updatedBy = { id: req.user.id, name: req.user.name }
-  if (patch.extensions) patch.schema = await extensions.prepareSchema(db, patch.schema || req.dataset.schema, patch.extensions)
+  if (patch.extensions || req.dataset.extensions) {
+    patch.schema = await extensions.prepareSchema(db, patch.schema || req.dataset.schema, patch.extensions || req.dataset.extensions)
+  }
 
   // Re-publish publications
   if (!patch.publications && req.dataset.publications && req.dataset.publications.length) {
@@ -316,7 +323,7 @@ router.patch('/:datasetId', readDataset((patch) => {
       // we just try in case elasticsearch considers the new mapping compatible
       // so that we might optimize and reindex only when necessary
       await esUtils.updateDatasetMapping(req.app.get('es'), { id: req.dataset.id, schema: patch.schema })
-      patch.status = 'extended'
+      patch.status = 'indexed'
     } catch (err) {
       // generated ES mappings are not compatible, trigger full re-indexing
       patch.status = 'analyzed'
@@ -361,7 +368,7 @@ router.put('/:datasetId/owner', readDataset(), permissions.middleware('delete', 
 }))
 
 // Delete a dataset
-router.delete('/:datasetId', readDataset(), permissions.middleware('delete', 'admin'), asyncWrap(async(req, res) => {
+router.delete('/:datasetId', readDataset(null, null, null, true), permissions.middleware('delete', 'admin'), asyncWrap(async(req, res) => {
   await datasetUtils.delete(req.app.get('db'), req.app.get('es'), req.dataset)
   res.sendStatus(204)
 }))
@@ -522,13 +529,13 @@ router.post('', beforeUpload, checkStorage(true), filesUtils.uploadFile(), files
       await restDatasetsUtils.initDataset(db, dataset)
       await db.collection('datasets').updateOne({ id: dataset.id }, { $set: { status: 'analyzed' } })
     } else {
-      throw createError(400, 'Un jeu de données doit être initialisé avec un fichier ou déclaré "virtuel" ou "REST"')
+      throw createError(400, 'Un jeu de données doit être initialisé avec un fichier ou déclaré "virtuel" ou "incrémental"')
     }
 
     delete dataset._id
 
     await journals.log(req.app, dataset, { type: 'dataset-created', href: config.publicUrl + '/dataset/' + dataset.id }, 'dataset')
-    res.status(201).send(clean(dataset))
+    res.status(201).send(clean(dataset, null, req.query.draft === 'true'))
   } catch (err) {
     // Wrapped the whole thing in a try/catch to remove files in case of failure
     for (const file of req.files) {
@@ -565,8 +572,8 @@ const updateDataset = asyncWrap(async(req, res) => {
     // After uploadFile, req.files contains the metadata of an uploaded file, and req.body the content of additional text fields
     const datasetFile = req.files.find(f => f.fieldname === 'file' || f.fieldname === 'dataset')
     const attachmentsFile = req.files.find(f => f.fieldname === 'attachments')
-    if (!datasetFile && !req.dataset.isVirtual && !req.dataset.isRest) throw createError(400, 'Un jeu de données doit être initialisé avec un fichier ou déclaré "virtuel"')
-    if (datasetFile && (req.dataset.isVirtual || req.dataset.isRest)) throw createError(400, 'Un jeu de données est soit initialisé avec un fichier soit déclaré "virtuel"')
+    if (!datasetFile && !req.dataset.isVirtual && !req.dataset.isRest) throw createError(400, 'Un jeu de données doit être initialisé avec un fichier ou déclaré "virtuel" ou "incrémental"')
+    if (datasetFile && (req.dataset.isVirtual || req.dataset.isRest)) throw createError(400, 'Un jeu de données est soit initialisé avec un fichier soit déclaré "virtuel" ou "incrémental"')
     if (req.dataset.isVirtual && !req.dataset.title) throw createError(400, 'Un jeu de données virtuel doit être créé avec un titre')
     if (req.dataset.isRest && !req.dataset.title) throw createError(400, 'Un jeu de données REST doit être créé avec un titre')
     if (req.dataset.isVirtual && attachmentsFile) throw createError(400, 'Un jeu de données virtuel ne peut pas avoir des pièces jointes')
@@ -617,15 +624,19 @@ const updateDataset = asyncWrap(async(req, res) => {
         }
       }
     }
-    Object.assign(dataset, req.body)
+    req.body.updatedBy = { id: req.user.id, name: req.user.name }
+    req.body.updatedAt = moment().toISOString()
+    if (req.query.draft === 'true') {
+      Object.assign(dataset.draft, req.body)
+    } else {
+      Object.assign(dataset, req.body)
+    }
 
-    dataset.updatedBy = { id: req.user.id, name: req.user.name }
-    dataset.updatedAt = moment().toISOString()
     await db.collection('datasets').replaceOne({ id: req.params.datasetId }, dataset)
     if (req.isNewDataset) await journals.log(req.app, dataset, { type: 'dataset-created' }, 'dataset')
     else if (!dataset.isRest && !dataset.isVirtual) await journals.log(req.app, dataset, { type: 'data-updated' }, 'dataset')
     await datasetUtils.updateStorage(db, req.dataset)
-    res.status(req.isNewDataset ? 201 : 200).send(clean(dataset))
+    res.status(req.isNewDataset ? 201 : 200).send(clean(dataset, null, req.query.draft === 'true'))
   } catch (err) {
     // Wrapped the whole thing in a try/catch to remove files in case of failure
     for (const file of req.files) {
@@ -710,6 +721,9 @@ router.delete('/:datasetId/lines', readDataset(['finalized', 'updated', 'indexed
 router.post('/:datasetId/master-data/bulk-searchs/:bulkSearchId', readDataset(), permissions.middleware('readLines', 'read'), asyncWrap(async(req, res) => {
   const bulkSearch = req.dataset.masterData && req.dataset.masterData.bulkSearchs && req.dataset.masterData.bulkSearchs.find(bs => bs.id === req.params.bulkSearchId)
   if (!bulkSearch) return res.status(404).send(`Recherche en masse "${req.params.bulkSearchId}" inconnue`)
+
+  // no buffering nor caching of this response in the reverse proxy
+  res.setHeader('X-Accel-Buffering', 'no')
 
   // this function will be called for each input line of the bulk search stream
   const paramsBuilder = (line) => {
@@ -828,6 +842,9 @@ router.get('/:datasetId/lines', readDataset(), applicationKey, permissions.middl
     req.query.select = (req.query.select ? req.query.select : tiles.defaultSelect(req.dataset).join(','))
     if (!req.query.select.includes('_geoshape')) req.query.select += ',_geoshape'
   }
+  if (req.query.format === 'wkt') {
+    req.query.select = '_geoshape'
+  }
 
   if (req.dataset.isVirtual) req.dataset.descendants = await virtualDatasetsUtils.descendants(db, req.dataset)
 
@@ -941,6 +958,14 @@ router.get('/:datasetId/lines', readDataset(), applicationKey, permissions.middl
     res.throttleEnd()
     webhooks.trigger(req.app.get('db'), 'dataset', req.dataset, { type: 'downloaded-filter' })
     return res.status(200).send(geojson)
+  }
+
+  if (req.query.format === 'wkt') {
+    const wkt = geo.result2wkt(esResponse)
+    res.setHeader('content-disposition', `attachment; filename="${req.dataset.id}.wkt"`)
+    res.throttleEnd()
+    webhooks.trigger(req.app.get('db'), 'dataset', req.dataset, { type: 'downloaded-filter' })
+    return res.status(200).send(wkt)
   }
 
   if (vectorTileRequested) {

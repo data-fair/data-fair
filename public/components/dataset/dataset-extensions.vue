@@ -52,14 +52,15 @@
           </template>
         </v-list>
       </v-menu>
-      <v-row>
+      <v-row class="mt-0">
         <v-col
           v-for="(extension, idx) in localExtensions"
           :key="extension.remoteService + '--' + extension.action"
-          :cols="6"
+          cols="12"
+          md="6"
         >
           <v-card
-            v-if="remoteServicesMap[extension.remoteService]"
+            :loading="!ready"
             height="100%"
             :outlined="!hasChanges(extension)"
           >

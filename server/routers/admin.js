@@ -133,7 +133,7 @@ router.get('/base-applications', asyncWrap(async(req, res) => {
   const agg = [{
     $match: query,
   }, {
-    $sort: { public: -1, title: 1 },
+    $sort: { public: -1 },
   }, {
     $skip: skip,
   }, {

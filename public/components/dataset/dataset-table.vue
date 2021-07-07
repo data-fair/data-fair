@@ -74,7 +74,7 @@
         </v-col>
       </v-row>
       <v-row v-if="filters.length">
-        <v-col class="pb-1 pt-1">
+        <v-col class="pb-1 pt-2 pl-0">
           <dataset-filters v-model="filters" />
         </v-col>
       </v-row>
@@ -213,7 +213,7 @@
                 </v-avatar>
               </template>
               <template v-else-if="digitalDocumentField && digitalDocumentField.key === header.value">
-                <a :href="item._attachment_url">{{ item[header.value] }}</a>
+                <a :href="item._attachment_url">{{ item[header.value]| truncate(50) }}</a>
               </template>
               <template v-else-if="webPageField && webPageField.key === header.value">
                 <a
@@ -223,7 +223,31 @@
                 >{{ item[header.value] | truncate(50) }}</a>
               </template>
               <template v-else>
-                <v-hover v-slot:default="{ hover }">
+                <div v-if="header.field.type === 'string' && header.field.separator" :style="`max-height: 40px; min-width: ${Math.min((item[header.value] + '').length, 50) * 6}px;`">
+                  <v-chip-group
+                    v-if="item[header.value]"
+                    style="max-width:500px;"
+                    show-arrows
+                  >
+                    <v-hover
+                      v-for="(value, i) in item[header.value].split(header.field.separator).map(v => v.trim())"
+                      v-slot:default="{ hover }"
+                      :key="i"
+                    >
+                      <v-chip
+                        :class="{'my-0': true, 'px-4': !hover, 'px-2': hover}"
+                        :color="hover ? 'primary' : 'default'"
+                        @click="addFilter(header.value, value)"
+                      >
+                        <span>
+                          {{ value | cellValues(header.field) }}
+                          <v-icon v-if="hover">mdi-filter-variant</v-icon>
+                        </span>
+                      </v-chip>
+                    </v-hover>
+                  </v-chip-group>
+                </div>
+                <v-hover v-else v-slot:default="{ hover }">
                   <div :style="`position: relative; max-height: 40px; min-width: ${Math.min((item[header.value] + '').length, 50) * 6}px;`">
                     <span>{{ item[header.value] | cellValues(header.field) }}</span>
                     <v-btn
@@ -231,7 +255,7 @@
                       fab
                       x-small
                       color="primary"
-                      style="top: -5px;right: 0px;"
+                      style="right: -10px;top: 50%;transform: translate(0, -50%);"
                       absolute
                       @click="addFilter(header.value, item[header.value])"
                     >

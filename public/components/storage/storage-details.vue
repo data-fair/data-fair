@@ -7,20 +7,24 @@
             <a
               :href="dataset.page"
               target="_top"
-            >{{ dataset.title || dataset.id }}</a> ({{ dataset.storage.size | displayBytes }})
+            >{{ dataset.title || dataset.id }}</a>
+            <span v-if="dataset.storage">({{ dataset.storage.size | displayBytes }})</span>
+            <span v-else>(pas d'information de stockage)</span>
           </v-list-item-title>
-          <v-list-item-subtitle v-if="dataset.storage.fileSize">
-            {{ dataset.storage.fileSize | displayBytes }} de fichier de données
-          </v-list-item-subtitle>
-          <v-list-item-subtitle v-if="dataset.storage.attachmentsSize">
-            {{ dataset.storage.attachmentsSize | displayBytes }} de pièces jointes
-          </v-list-item-subtitle>
-          <v-list-item-subtitle v-if="dataset.storage.collectionSize">
-            {{ dataset.storage.collectionSize | displayBytes }} de lignes en base de données
-          </v-list-item-subtitle>
-          <v-list-item-subtitle v-if="dataset.storage.revisionsSize">
-            {{ dataset.storage.revisionsSize | displayBytes }} de révisions historisées
-          </v-list-item-subtitle>
+          <template v-if="dataset.storage">
+            <v-list-item-subtitle v-if="dataset.storage.fileSize">
+              {{ dataset.storage.fileSize | displayBytes }} de fichier de données
+            </v-list-item-subtitle>
+            <v-list-item-subtitle v-if="dataset.storage.attachmentsSize">
+              {{ dataset.storage.attachmentsSize | displayBytes }} de pièces jointes
+            </v-list-item-subtitle>
+            <v-list-item-subtitle v-if="dataset.storage.collectionSize">
+              {{ dataset.storage.collectionSize | displayBytes }} de lignes en base de données
+            </v-list-item-subtitle>
+            <v-list-item-subtitle v-if="dataset.storage.revisionsSize">
+              {{ dataset.storage.revisionsSize | displayBytes }} de révisions historisées
+            </v-list-item-subtitle>
+          </template>
         </v-list-item-content>
       </v-list-item>
       <v-divider

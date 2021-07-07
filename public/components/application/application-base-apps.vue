@@ -13,7 +13,7 @@
       <h3 :key="category" class="text-h6">
         {{ 'Visualisation de type '+category }}
       </h3>
-      <v-row :key="'layout-'+category">
+      <v-row :key="'layout-'+category" class="mt-0 mb-1">
         <v-col
           v-for="baseApp in baseApps.filter(a => a.category === category)"
           :key="baseApp.id"

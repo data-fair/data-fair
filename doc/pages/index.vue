@@ -140,12 +140,66 @@
         />
       </v-col>
     </v-row>
+
+    <h3 class="text-h5 grey--text text--darken-3 mb-2 mt-6">
+      Soutiens
+    </h3>
+    <v-row>
+      <v-col
+        v-for="sponsor in sponsors"
+        :key="sponsor.name"
+        cols="6"
+        xl="4"
+      >
+        <v-card outlined :href="sponsor.link">
+          <v-row class="ma-0 pt-2 px-3">
+            <v-img
+              color="blue"
+              :src="sponsor.img"
+              max-width="250"
+              min-height="70"
+              contain
+            />
+          </v-row>
+          <v-card-text>
+            <p class="text-caption">
+              {{ sponsor.description }}
+            </p>
+            <p class="mb-0 text-body-2">
+              {{ sponsor.thanks }}
+            </p>
+          </v-card-text>
+        </v-card>
+        <v-col />
+      </v-col>
+    </v-row>
   </v-container>
   <!-- </div> -->
 </template>
 
 <script>
-  export default { }
+  export default {
+    data() {
+      return {
+        sponsors: [
+          {
+            name: 'Koumoul',
+            description: 'Visualisez, exploitez et partagez vos données en quelques clics !',
+            img: 'https://koumoul.com/static/logo-slogan.png',
+            link: 'https://koumoul.com',
+            thanks: 'Koumoul développe l\'écosystème Data Fair et l\'héberge comme service en ligne.',
+          },
+          {
+            name: 'Dawizz',
+            description: 'Outil de cartographie et de catalogage de vos données.',
+            img: 'https://www.dawizz.fr/wp-content/uploads/2018/04/logo-Dawizz-all-about-your-data-home.png',
+            link: 'https://dawizz.fr',
+            thanks: 'Dawizz intègre Data Fair dans sa plateforme et soutient son développement.',
+          },
+        ],
+      }
+    },
+  }
 </script>
 
 <style>

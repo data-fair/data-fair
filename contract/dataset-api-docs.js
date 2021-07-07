@@ -25,6 +25,7 @@ module.exports = (dataset) => {
       a[f.key] = { ...f }
       delete a[f.key].key
       delete a[f.key].ignoreDetection
+      delete a[f.key].separator
       a[f.key].title = a[f.key].title || ''
       a[f.key].description = a[f.key].description || ''
       return a
@@ -274,10 +275,10 @@ La valeur est une liste de colonnes séparées par des virgules.
   const formatParam = {
     in: 'query',
     name: 'format',
-    description: 'Le format de la donnée. json par défaut, geojson et pbf pour tuiles vectorielles.',
+    description: 'Le format de la donnée. json par défaut, pbf pour tuiles vectorielles, geojson et wkt pour formats géographiques.',
     schema: {
       default: 'json',
-      enum: ['json'].concat(dataset.bbox && dataset.bbox.length === 4 ? ['pbf', 'geojson'] : []),
+      enum: ['json'].concat(dataset.bbox && dataset.bbox.length === 4 ? ['pbf', 'geojson', 'wkt'] : []),
     },
   }
 

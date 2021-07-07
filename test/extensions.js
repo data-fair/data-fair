@@ -462,4 +462,44 @@ koumoul,19 rue de la voie lactée saint avé
     dataset = await workers.hook(`finalizer/${dataset.id}`)
     nockScope.done()
   })
+
+  it('Remove extensions when input properties got removed', async () => {
+    const ax = global.ax.dmeadus
+
+    // Initial dataset with addresses
+    const form = new FormData()
+    const content = `label,adr
+koumoul,19 rue de la voie lactée saint avé
+other,unknown address
+`
+    form.append('file', content, 'dataset2.csv')
+    let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
+    assert.equal(res.status, 201)
+    let dataset = await workers.hook(`finalizer/${res.data.id}`)
+    dataset.schema.find(field => field.key === 'adr')['x-refersTo'] = 'http://schema.org/address'
+    const nockScope = nock('http://test.com').post('/geocoder/coords').reply(200, (uri, requestBody) => {
+      const inputs = requestBody.trim().split('\n').map(JSON.parse)
+      assert.equal(inputs.length, 2)
+      assert.deepEqual(Object.keys(inputs[0]), ['q', 'key'])
+      return inputs.map(input => ({ key: input.key, lat: 50, lon: 50 }))
+        .map(JSON.stringify).join('\n') + '\n'
+    })
+    res = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
+      schema: dataset.schema,
+      extensions: [{ active: true, remoteService: 'geocoder-koumoul', action: 'postCoords' }],
+    })
+    await workers.hook(`extender/${dataset.id}`)
+    nockScope.done()
+    dataset = await workers.hook(`finalizer/${dataset.id}`)
+    assert.equal(dataset.extensions.length, 1)
+    assert.equal(dataset.schema.length, 13)
+
+    // if we remove the concept, the extension is removed also
+    delete dataset.schema.find(field => field.key === 'adr')['x-refersTo']
+    dataset = (await ax.patch(`/api/v1/datasets/${dataset.id}`, { schema: dataset.schema })).data
+    assert.equal(dataset.schema.length, 8)
+    /* await workers.hook(`extender/${dataset.id}`)
+    dataset = await workers.hook(`finalizer/${dataset.id}`)
+    assert.equal(dataset.extensions.length, 0) */
+  })
 })

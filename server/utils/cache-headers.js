@@ -32,6 +32,8 @@ exports.resourceBased = (req, res, next) => {
     } else {
       res.setHeader('Expires', '-1')
       res.setHeader('Cache-Control', 'must-revalidate, private')
+      // no buffering nor caching of this response in the reverse proxy
+      res.setHeader('X-Accel-Buffering', 'no')
     }
   }
 
@@ -42,5 +44,7 @@ exports.resourceBased = (req, res, next) => {
 exports.noCache = (req, res, next) => {
   res.setHeader('Expires', '-1')
   res.setHeader('Cache-Control', 'must-revalidate, private')
+  // no buffering nor caching of this response in the reverse proxy
+  res.setHeader('X-Accel-Buffering', 'no')
   next()
 }

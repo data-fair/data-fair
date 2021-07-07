@@ -1,9 +1,8 @@
 import Vue from 'vue'
-import VueTruncate from 'vue-truncate-filter'
-Vue.use(VueTruncate)
 
 const truncateMiddle = require('truncate-middle')
 
-Vue.filter('truncateMiddle', function (text, before, after = 0, ellipsis = '...') {
+Vue.filter('truncate', function (text, before, after = 0, ellipsis = '...') {
+  console.log(text, before, truncateMiddle(text, before, after, ellipsis))
   return truncateMiddle(text, before, after, ellipsis)
 })

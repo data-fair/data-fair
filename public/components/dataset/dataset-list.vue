@@ -97,6 +97,7 @@
         services: [],
         concepts: [],
         topics: [],
+        publicationSites: [],
       },
       lastParams: null,
       dataSvg: require('~/assets/svg/Data Arranging_Two Color.svg?raw'),
@@ -151,7 +152,7 @@
         })
         if (append) this.page += 1
         else this.page = 1
-        let facets = 'status,visibility,services,concepts,topics'
+        let facets = 'status,visibility,services,concepts,topics,publicationSites'
         if (this.filters.owner === null) facets += ',owner'
         const params = {
           size: this.size,

@@ -105,7 +105,7 @@ router.get('/:type/:id/topics', isOwnerMember, asyncWrap(async(req, res) => {
   res.status(200).send((result && result.topics) || [])
 }))
 
-// Get publication sites as owner (see all) or other use (only private)
+// Get publication sites as owner (see all) or other use (only public)
 router.get('/:type/:id/publication-sites', isOwnerMember, asyncWrap(async(req, res) => {
   const db = req.app.get('db')
   const owner = { type: req.params.type, id: req.params.id }

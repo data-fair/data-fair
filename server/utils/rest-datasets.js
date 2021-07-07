@@ -100,8 +100,6 @@ const getLineId = (line, dataset) => {
   if (dataset.primaryKey && dataset.primaryKey.length) {
     const primaryKey = dataset.primaryKey.map(p => line[p])
     return Buffer.from(JSON.stringify(primaryKey).slice(2, -2)).toString('hex')
-  } else {
-    return nanoid()
   }
 }
 
@@ -122,9 +120,8 @@ const applyTransactions = async (req, transacs, validate) => {
   for (const transac of transacs) {
     let { _action, ...body } = transac
     if (!actions.includes(_action)) throw createError(400, `action "${_action}" is unknown, use one of ${JSON.stringify(actions)}`)
-    if (_action === 'create' && !body._id) {
-      body._id = getLineId(body, dataset)
-    }
+    if (!body._id) body._id = getLineId(body, dataset)
+    if (_action === 'create' && !body._id) body._id = nanoid()
     if (!body._id) throw createError(400, '"_id" attribute is required')
 
     const extendedBody = { ...body }
@@ -149,7 +146,6 @@ const applyTransactions = async (req, transacs, validate) => {
     } else {
       extendedBody._deleted = false
       if (_action === 'patch') {
-        // reading the previous body is necessary both for proper hash management and for schema validation
         const previousBody = await collection.findOne({ _id: body._id }, { projection: patchProjection })
         if (previousBody) {
           body = { ...previousBody, ...body }
@@ -254,7 +250,7 @@ const compileSchema = (dataset) => {
     properties: dataset.schema
       .filter(f => f.key[0] !== '_')
       .concat([{ key: '_id', type: 'string' }])
-      .reduce((a, b) => { a[b.key] = { ...b, enum: undefined, key: undefined, ignoreDetection: undefined }; return a }, {}),
+      .reduce((a, b) => { a[b.key] = { ...b, enum: undefined, key: undefined, ignoreDetection: undefined, separator: undefined }; return a }, {}),
   })
 }
 
@@ -303,7 +299,7 @@ exports.readLine = async (req, res, next) => {
 exports.createLine = async (req, res, next) => {
   const db = req.app.get('db')
   const _action = req.body._id ? 'update' : 'create'
-  req.body._id = req.body._id || getLineId(req.body, req.dataset)
+  req.body._id = req.body._id || getLineId(req.body, req.dataset) || nanoid()
   await manageAttachment(req, false)
   const line = (await applyTransactions(req, [{ _action, ...req.body }], compileSchema(req.dataset)))[0]
   if (line._error) return res.status(line._status).send(line._error)
@@ -356,6 +352,9 @@ exports.bulkLines = async (req, res, next) => {
   const db = req.app.get('db')
   const validate = compileSchema(req.dataset)
 
+  // no buffering nor caching of this response in the reverse proxy
+  res.setHeader('X-Accel-Buffering', 'no')
+
   // If attachments are sent, add them to the existing ones
   if (req.files && req.files.attachments && req.files.attachments[0]) {
     await attachmentsUtils.addAttachments(req.dataset, req.files.attachments[0])
@@ -366,8 +365,15 @@ exports.bulkLines = async (req, res, next) => {
   let inputStream, parseStreams
   const transactionSchema = [...req.dataset.schema, { key: '_id', type: 'string' }, { key: '_action', type: 'string' }]
   if (req.files && req.files.actions && req.files.actions.length) {
-    inputStream = fs.createReadStream(req.files.actions[0].path, 'utf8')
-    parseStreams = datasetUtils.transformFileStreams(mime.lookup(req.files.actions[0].originalname) || 'application/x-ndjson', transactionSchema)
+    inputStream = fs.createReadStream(req.files.actions[0].path)
+
+    // handle .csv.gz file or other .gz files
+    let actionsMime = mime.lookup(req.files.actions[0].originalname)
+    if (req.files.actions[0].originalname.endsWith('.gz')) {
+      actionsMime = mime.lookup(req.files.actions[0].originalname.slice(0, -3))
+      if (actionsMime) actionsMime += '+gzip'
+    }
+    parseStreams = datasetUtils.transformFileStreams(actionsMime || 'application/x-ndjson', transactionSchema)
   } else {
     inputStream = req
     const contentType = req.get('Content-Type') && req.get('Content-Type').split(';')[0]

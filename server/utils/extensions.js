@@ -210,6 +210,10 @@ exports.prepareSchema = async (db, schema, extensions) => {
     if (!remoteService) continue
     const action = remoteService.actions.find(action => action.id === extension.action)
     if (!action) continue
+    // ignore extensions with missing input
+    if (!action.input.find(i => i.concept && schema.concat(extensionsFields).find(prop => prop['x-refersTo'] && prop['x-refersTo'] === i.concept))) {
+      continue
+    }
     const extensionKey = getExtensionKey(extension.remoteService, extension.action)
     const extensionId = `${extension.remoteService}/${extension.action}`
     const selectFields = extension.select || []
@@ -249,4 +253,19 @@ exports.prepareSchema = async (db, schema, extensions) => {
     })
   }
   return schema.filter(field => !field['x-extension']).concat(extensionsFields)
+}
+
+// filter out extensions that don't have the necessary input
+exports.filterExtensions = async (db, schema, extensions = []) => {
+  const validExtensions = []
+  for (const extension of extensions) {
+    const remoteService = await db.collection('remote-services').findOne({ id: extension.remoteService })
+    if (!remoteService) continue
+    const action = remoteService.actions.find(action => action.id === extension.action)
+    if (!action) continue
+    if (action.input.find(i => i.concept && schema.find(prop => prop['x-refersTo'] && prop['x-refersTo'] === i.concept))) {
+      validExtensions.push(extension)
+    }
+  }
+  return validExtensions
 }

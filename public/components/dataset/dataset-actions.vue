@@ -27,7 +27,7 @@
       ACTIONS
     </v-subheader>
     <v-list-item
-      v-if="can('writeData')"
+      v-if="can('writeData') && !dataset.isRest && !dataset.isVirtual"
       @click="showUploadDialog = true"
     >
       <v-list-item-icon>

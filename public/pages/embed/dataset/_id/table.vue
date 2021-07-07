@@ -7,9 +7,9 @@
       <p>Les données ne sont pas accessibles. Soit le jeu de données n'a pas encore été entièrement traité, soit il y a eu une erreur dans le traitement.</p>
     </v-sheet>
     <template v-else>
-      <v-row class="px-3">
+      <v-row class="ma-0">
         <v-col
-          class="pb-0 pr-0"
+          class="pb-0 pr-0 pl-1 pt-1"
           sm="4"
           cols="12"
         >
@@ -48,13 +48,13 @@
         </v-col>
       </v-row>
 
-      <v-row v-if="filters.length">
-        <v-col class="pb-1 pt-1">
+      <v-row v-if="filters.length" class="ma-0">
+        <v-col class="pb-1 pt-2 pl-0">
           <dataset-filters v-model="filters" />
         </v-col>
       </v-row>
-      <v-row>
-        <v-col class="pb-1 pt-0">
+      <v-row class="ma-0">
+        <v-col class="pl-0 pb-1 pt-2">
           <dataset-nb-results :total="data.total" class="ml-3" />
         </v-col>
       </v-row>
@@ -154,18 +154,49 @@
                 </v-avatar>
               </template>
               <template v-else-if="digitalDocumentField && digitalDocumentField.key === header.value">
-                <a :href="item._attachment_url">{{ item[header.value] }}</a>
+                <a :href="item._attachment_url">{{ item[header.value] | truncate(50) }}</a>
+              </template>
+              <template v-else-if="webPageField && webPageField.key === header.value">
+                <a
+                  v-if="item[header.value]"
+                  target="_blank"
+                  :href="item[header.value]"
+                >{{ item[header.value] | truncate(50) }}</a>
               </template>
               <template v-else>
-                <v-hover v-slot:default="{ hover }">
-                  <div :style="`position: relative; max-height: ${lineHeight}px; min-width: ${Math.min((item[header.value] + '').length, 50) * 6}px;`">
-                    <span>{{ item[header.value] | cellvalues(header.field) }}</span>
+                <div v-if="header.field.type === 'string' && header.field.separator" :style="`max-height: 40px; min-width: ${Math.min((item[header.value] + '').length, 50) * 6}px;`">
+                  <v-chip-group
+                    v-if="item[header.value]"
+                    style="max-width:500px;"
+                    show-arrows
+                  >
+                    <v-hover
+                      v-for="(value, i) in item[header.value].split(header.field.separator).map(v => v.trim())"
+                      v-slot:default="{ hover }"
+                      :key="i"
+                    >
+                      <v-chip
+                        :class="{'my-0': true, 'px-4': !hover, 'px-2': hover}"
+                        :color="hover ? 'primary' : 'default'"
+                        @click="addFilter(header.value, value)"
+                      >
+                        <span>
+                          {{ value | cellValues(header.field) }}
+                          <v-icon v-if="hover">mdi-filter-variant</v-icon>
+                        </span>
+                      </v-chip>
+                    </v-hover>
+                  </v-chip-group>
+                </div>
+                <v-hover v-else v-slot:default="{ hover }">
+                  <div :style="`position: relative; max-height: 40px; min-width: ${Math.min((item[header.value] + '').length, 50) * 6}px;`">
+                    <span>{{ item[header.value] | cellValues(header.field) }}</span>
                     <v-btn
-                      v-if="hover && !filters.find(f => f.field.key === header.value) && header.filterable && isFilterable(item[header.value])"
+                      v-if="hover && !item._tmpState && !filters.find(f => f.field.key === header.value) && header.filterable && isFilterable(item[header.value])"
                       fab
                       x-small
                       color="primary"
-                      style="top: -5px;right: -8px;"
+                      style="right: -10px;top: 50%;transform: translate(0, -50%);"
                       absolute
                       @click="addFilter(header.value, item[header.value])"
                     >
@@ -237,6 +268,9 @@
       digitalDocumentField() {
         return this.dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')
       },
+      webPageField() {
+        return this.dataset.schema.find(f => f['x-refersTo'] === 'https://schema.org/WebPage')
+      },
       params() {
         const params = {
           size: this.pagination.itemsPerPage,
@@ -282,7 +316,7 @@
       setItemsPerPage() {
         // adapt number of lines to window height
         const height = window.innerHeight
-        let top = this.$vuetify.breakpoint.xs ? 170 : 120
+        let top = this.$vuetify.breakpoint.xs ? 150 : 100
         if (this.filters.length) top += 28
         const nbRows = Math.floor(Math.max(height - top, 120) / (this.lineHeight + 2))
         this.pagination.itemsPerPage = Math.min(Math.max(nbRows, 4), 50)
@@ -338,7 +372,7 @@
 </script>
 
 <style>
-.embed .v-datatable td {
+.embed .v-data-table td {
   white-space: nowrap;
 }
 </style>

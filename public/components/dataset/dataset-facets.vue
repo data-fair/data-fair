@@ -64,6 +64,22 @@
       />
     </template>
 
+    <template v-if="facets.publicationSites && facets.publicationSites.find(item => item.value !== null)">
+      <v-select
+        v-model="facetsValues.publicationSites"
+        multiple
+        label="Portails"
+        :items="facets.publicationSites"
+        :item-value="item => item.value || 'null'"
+        :item-text="item => publicationSiteText(item)"
+        outlined
+        dense
+        hide-details
+        rounded
+        class="mb-4"
+      />
+    </template>
+
     <template v-if="facets.services">
       <v-select
         v-model="facetsValues.services"
@@ -99,7 +115,7 @@
 </template>
 
 <script>
-  import { mapState } from 'vuex'
+  import { mapState, mapGetters } from 'vuex'
   import statuses from '../../../shared/statuses.json'
 
   export default {
@@ -109,6 +125,20 @@
     },
     computed: {
       ...mapState(['vocabulary', 'env']),
+      ...mapGetters(['activeAccountPublicationSitesById']),
+    },
+    methods: {
+      publicationSiteText(item) {
+        let title = item.value
+        if (item.value === null) title = 'aucun'
+        else {
+          const publicationSite = this.activeAccountPublicationSitesById && this.activeAccountPublicationSitesById[item.value]
+          if (publicationSite) {
+            title = publicationSite.title || publicationSite.url || publicationSite.id
+          }
+        }
+        return `${title} (${item.count})`
+      },
     },
   }
 </script>

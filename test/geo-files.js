@@ -42,6 +42,12 @@ describe('geo files support', () => {
     const feature = geojson.features[0]
     assert.equal(feature.properties._i, 1)
     assert.equal(feature.properties.bool, true)
+
+    const wkt = (await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { format: 'wkt' } })).data
+    assert.ok(wkt.startsWith('GEOMETRYCOLLECTION'))
+
+    const jsonWkt = (await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { wkt: 'true' } })).data
+    assert.ok(jsonWkt.results[0].geometry.startsWith('LINESTRING'))
   })
 
   it('Upload geojson dataset with some schema info', async () => {

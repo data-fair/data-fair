@@ -54,6 +54,11 @@ export default () => {
       ownerPublicationSites: (state) => (owner) => {
         return state.publicationSites[owner.type + '/' + owner.id]
       },
+      activeAccountPublicationSitesById: (state, getters) => {
+        const activeAccount = getters['session/activeAccount']
+        return activeAccount && state.publicationSites[activeAccount.type + '/' + activeAccount.id]
+          .reduce((a, ps) => { a[ps.type + ':' + ps.id] = ps; return a }, {})
+      },
       searchQuery: (state) => (type) => {
         const searchQuery = Object.assign({}, state.searchQueries[type])
         if (searchQuery.owner === undefined && state.user) searchQuery.owner = `user:${state.user.id}`

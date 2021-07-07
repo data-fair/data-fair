@@ -1,6 +1,6 @@
 <template>
   <v-sheet class="properties-slide">
-    <v-row>
+    <v-row class="ma-0">
       <v-btn
         v-for="({prop, originalProp, warning}, i) in propertiesRefs"
         :key="prop.key"
@@ -18,7 +18,7 @@
         {{ prop.title || prop['x-originalName'] || prop.key }}
       </v-btn>
     </v-row>
-    <v-row v-if="currentProperty == null">
+    <v-row v-if="currentProperty == null" class="ma-0">
       <v-subheader>Cliquez sur un nom de colonne pour afficher ses informations détaillées.</v-subheader>
     </v-row>
     <v-expand-transition>
