@@ -411,6 +411,12 @@ exports.bulkLines = async (req, res, next) => {
   res.write(JSON.stringify(summary, null, 2))
   res.end()
   datasetUtils.updateStorage(db, req.dataset)
+
+  for (const key in req.files) {
+    for (const file of req.files[key]) {
+      await fs.unlink(file.path)
+    }
+  }
 }
 
 exports.readLineRevisions = async (req, res, next) => {

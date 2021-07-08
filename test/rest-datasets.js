@@ -220,6 +220,8 @@ describe('REST datasets', () => {
     res = await ax.get('/api/v1/datasets/rest5/lines')
     assert.equal(res.data.total, 1)
     assert.equal(res.data.results[0]['_file.content'], 'This is a test pdf file.')
+
+    assert.equal((await fs.readdir('data/test/tmp')).length, 0)
   })
 
   it('Send attachments with bulk request', async () => {
@@ -317,6 +319,8 @@ describe('REST datasets', () => {
       assert.equal(err.data.nbErrors, 20)
       assert.equal(err.data.nbOk, 0)
     }
+
+    assert.equal((await fs.readdir('data/test/tmp')).length, 0)
   })
 
   it('The size of the mongodb collection is part of storage consumption', async () => {
