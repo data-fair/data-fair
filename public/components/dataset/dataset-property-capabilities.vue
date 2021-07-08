@@ -6,11 +6,10 @@
   >
     <template #activator="{on, attrs}">
       <v-btn
-        v-if="user.adminMode && relevantCapabilities && relevantCapabilities.length"
+        v-if="relevantCapabilities && relevantCapabilities.length"
         fab
         small
         depressed
-        color="admin"
         dark
         v-bind="attrs"
         title="configuration technique"
