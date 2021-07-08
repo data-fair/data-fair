@@ -128,6 +128,14 @@
               persistent-hint
               hint="Si vous cochez cette case la détection automatique de type sera désactivée et la colonne sera traitée comme un simple texte."
             />
+            <v-checkbox
+              v-if="dataset.isRest"
+              v-model="currentPropRef.prop.readOnly"
+              :disabled="!editable || !currentPropRef.editable"
+              label="Lecture seule"
+              persistent-hint
+              hint="Si vous cochez cette case la colonne sera affichée en lecture seule dans le formulaire de saisie."
+            />
           </v-col>
         </v-row>
       </v-sheet>
