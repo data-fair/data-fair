@@ -256,7 +256,8 @@ exports.transformFileStreams = (mimeType, schema, fileSchema, fileProps = {}, ra
 
         const line = { _i: this.i = (this.i || 0) + 1 }
         schema.forEach(prop => {
-          const value = fieldsSniffer.format(item[prop['x-originalName']], prop)
+          const fileProp = fileSchema && fileSchema.find(p => p.key === prop.key)
+          const value = fieldsSniffer.format(item[prop['x-originalName']], prop, fileProp)
           if (value !== null) line[prop.key] = value
         })
         callback(null, line)
