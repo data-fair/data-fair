@@ -134,4 +134,20 @@ describe('geo files support', () => {
     assert.equal(dataset.status, 'loaded')
     assert.equal(dataset.file.name, 'stations2.geojson')
   })
+
+  it('Upload CSV file with WKT geometries', async () => {
+    const ax = global.ax.dmeadus
+    let dataset = await testUtils.sendDataset('geo/wkt.csv', ax)
+    dataset.schema.find(p => p.key === 'geom')['x-refersTo'] = 'https://purl.org/geojson/vocab#geometry'
+    await ax.patch(`/api/v1/datasets/${dataset.id}`, { schema: dataset.schema })
+    dataset = await workers.hook('finalizer')
+    assert.ok(dataset.bbox)
+
+    const geojson = (await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { format: 'geojson' } })).data
+    assert.equal(geojson.type, 'FeatureCollection')
+    assert.equal(geojson.total, 1)
+
+    const wkt = (await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { format: 'wkt' } })).data
+    assert.ok(wkt.startsWith('GEOMETRYCOLLECTION'))
+  })
 })

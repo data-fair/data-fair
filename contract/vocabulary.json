@@ -212,8 +212,8 @@
     "tag": "Référentiels administratifs français"
   },
   {
-    "title": "Géometrie GeoJSON",
-    "description": "Une géométrie (point, polygone, ligne, etc.) au format GeoJSON.",
+    "title": "Géometrie GeoJSON ou WKT",
+    "description": "Une géométrie (point, polygone, ligne, etc.) au format GeoJSON ou WKT.",
     "identifiers": [
       "https://purl.org/geojson/vocab#geometry"
     ],
