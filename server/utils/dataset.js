@@ -600,9 +600,16 @@ exports.previews = (dataset) => {
 
 exports.delete = async (db, es, dataset) => {
   try {
-    await fs.remove(exports.dir(dataset))
+    await fs.remove(exports.dir({ ...dataset, draftReason: null }))
   } catch (err) {
     console.error('Error while deleting dataset directory', err)
+  }
+  if (dataset.draft) {
+    try {
+      await fs.remove(exports.dir({ ...dataset, ...dataset.draft }))
+    } catch (err) {
+      console.error('Error while deleting dataset draft directory', err)
+    }
   }
   if (dataset.isRest) {
     try {
