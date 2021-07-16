@@ -142,6 +142,7 @@
       accepted: [
         '.csv',
         '.geojson',
+        '.gpkg',
         '.zip',
         '.ods',
         '.fods',

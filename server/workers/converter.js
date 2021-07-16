@@ -36,6 +36,7 @@ const geographicalTypes = exports.geographicalTypes = new Set([
   'application/vnd.google-earth.kml+xml', // kml
   'application/vnd.google-earth.kmz', // kmz
   'application/gpx+xml', // gpx or xml ?
+  'application/geopackage+sqlite3', // gpkg
 ])
 const calendarTypes = exports.calendarTypes = new Set(['text/calendar'])
 
