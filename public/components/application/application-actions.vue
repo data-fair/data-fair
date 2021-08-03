@@ -122,7 +122,7 @@
   &lt;iframe
     src="{{ applicationLink }}?embed=true"
     width="100%" height="500px" style="background-color: transparent; border: none;"
-  /&gt;
+  /&gt;&lt;/iframe&gt;
             </pre>
           <br>
           Résultat:
