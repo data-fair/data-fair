@@ -725,10 +725,11 @@ router.get('/:datasetId/master-data/single-searchs/:singleSearchId', readDataset
   if (req.dataset.isVirtual) req.dataset.descendants = await virtualDatasetsUtils.descendants(req.app.get('db'), req.dataset)
 
   let esResponse
-  console.log({ q: req.query.q, size: req.query.size })
+  let select = singleSearch.output.key
+  if (singleSearch.label) select += ',' + singleSearch.label.key
   try {
     esResponse = await esUtils.search(req.app.get('es'), req.dataset,
-      { q: req.query.q, size: req.query.size, q_mode: 'complete' })
+      { q: req.query.q, size: req.query.size, q_mode: 'complete', select })
   } catch (err) {
     await manageESError(req, err)
   }

@@ -12,7 +12,7 @@ exports.schema = {
       'x-options': { editMode: 'dialog' },
       items: {
         type: 'object',
-        required: ['id', 'title', 'input', 'output'],
+        required: ['id', 'title', 'output'],
         properties: {
           id: { type: 'string', title: 'Identifiant' },
           title: { type: 'string', title: 'Titre' },
@@ -174,6 +174,24 @@ exports.endpoints = (dataset) => {
   const properties = outputProperties.map(p => p.key)
 
   for (const singleSearch of dataset.masterData.singleSearchs) {
+    const properties = {
+      [singleSearch.output.key]: {
+        type: 'string',
+        title: 'Propriété à retourner',
+        'x-refersTo': singleSearch.output['x-refersTo'],
+      },
+      _score: {
+        type: 'number',
+        title: 'Pertinence du résultat',
+      },
+    }
+    if (singleSearch.label && singleSearch.label.key) {
+      properties[singleSearch.label.key] = {
+        type: 'string',
+        title: 'Propriété utilisée pour représenter les résultats',
+        'x-refersTo': 'http://www.w3.org/2000/01/rdf-schema#label',
+      }
+    }
     endpoints[`/master-data/single-searchs/${singleSearch.id}`] = {
       get: {
         tags: ['Recherche unitaire de données de référence'],
@@ -207,21 +225,7 @@ exports.endpoints = (dataset) => {
                 properties: {
                   schema: {
                     type: 'object',
-                    properties: {
-                      output: {
-                        type: 'string',
-                        title: 'Propriété à retourner',
-                        'x-refersTo': singleSearch.output['x-refersTo'],
-                      },
-                      label: {
-                        type: 'string',
-                        title: 'Propriété utilisée pour représenter les résultats',
-                      },
-                      score: {
-                        type: 'number',
-                        title: 'Pertinence du résultat',
-                      },
-                    },
+                    properties,
                   },
                 },
               },
