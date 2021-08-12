@@ -718,6 +718,30 @@ router.get('/:datasetId/lines/:lineId/revisions', readDataset(['finalized', 'upd
 router.delete('/:datasetId/lines', readDataset(['finalized', 'updated', 'indexed']), isRest, permissions.middleware('deleteLine', 'write'), asyncWrap(restDatasetsUtils.deleteAllLines))
 
 // Specifc routes for datasets with masterData functionalities enabled
+router.get('/:datasetId/master-data/single-searchs/:singleSearchId', readDataset(), permissions.middleware('readLines', 'read'), asyncWrap(async(req, res) => {
+  const singleSearch = req.dataset.masterData && req.dataset.masterData.singleSearchs && req.dataset.masterData.singleSearchs.find(ss => ss.id === req.params.singleSearchId)
+  if (!singleSearch) return res.status(404).send(`Recherche unitaire "${req.params.singleSearchId}" inconnue`)
+
+  if (req.dataset.isVirtual) req.dataset.descendants = await virtualDatasetsUtils.descendants(req.app.get('db'), req.dataset)
+
+  let esResponse
+  console.log({ q: req.query.q, size: req.query.size })
+  try {
+    esResponse = await esUtils.search(req.app.get('es'), req.dataset,
+      { q: req.query.q, size: req.query.size, q_mode: 'complete' })
+  } catch (err) {
+    await manageESError(req, err)
+  }
+  const result = {
+    total: esResponse.hits.total.value,
+    results: esResponse.hits.hits.map(hit => {
+      const item = esUtils.prepareResultItem(hit, req.dataset, req.query)
+      const label = singleSearch.label ? (item[singleSearch.label.key] || item[singleSearch.output.key]) : item[singleSearch.output.key]
+      return { output: item[singleSearch.output.key], label, score: item._score || undefined }
+    }),
+  }
+  res.send(result)
+}))
 router.post('/:datasetId/master-data/bulk-searchs/:bulkSearchId', readDataset(), permissions.middleware('readLines', 'read'), asyncWrap(async(req, res) => {
   const bulkSearch = req.dataset.masterData && req.dataset.masterData.bulkSearchs && req.dataset.masterData.bulkSearchs.find(bs => bs.id === req.params.bulkSearchId)
   if (!bulkSearch) return res.status(404).send(`Recherche en masse "${req.params.bulkSearchId}" inconnue`)

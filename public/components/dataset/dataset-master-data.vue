@@ -5,7 +5,7 @@
         v-if="editMasterData"
         v-model="editMasterData"
         :schema="schema"
-        :options="{context}"
+        :options="{context, locale: 'fr'}"
       />
       <v-btn
         color="primary"
@@ -39,6 +39,12 @@
       context() {
         return {
           dataset: this.dataset,
+          stringProperties: this.dataset.schema
+            .filter(p => p.type === 'string')
+            .map(p => ({ key: p.key, title: p.title || p['x-originalName'] || p.key })),
+          searchProperties: this.dataset.schema
+            .filter(p => p.type === 'string' && (!p['x-capabilities'] || !p['x-capabilities'].textStandard))
+            .map(p => ({ key: p.key, title: p.title || p['x-originalName'] || p.key })),
           propertiesWithConcepts: this.dataset.schema
             .filter(p => p['x-refersTo'])
             .map(p => ({ key: p.key, title: p.title || p['x-originalName'] || p.key })),

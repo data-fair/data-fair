@@ -2,9 +2,64 @@ exports.schema = {
   type: 'object',
   title: 'Données de référence',
   properties: {
+    singleSearchs: {
+      type: 'array',
+      title: 'Recherches unitaires',
+      'x-slots': {
+        before: 'Les recherches unitaires sont utilisables pour récupérer plusieurs lignes du jeu de données de référence à partir d\'une recherche sur 1 critère. Elles servent notamment à construire des champs de recherche dans les formulaires d\'édition de ligne des jeux incrémentaux.',
+      },
+      'x-class': 'mb-4',
+      'x-options': { editMode: 'dialog' },
+      items: {
+        type: 'object',
+        required: ['id', 'title', 'input', 'output'],
+        properties: {
+          id: { type: 'string', title: 'Identifiant' },
+          title: { type: 'string', title: 'Titre' },
+          description: { type: 'string', title: 'Description', 'x-display': 'textarea' },
+          output: {
+            type: 'object',
+            title: 'Propriété à retourner',
+            'x-fromData': 'context.propertiesWithConcepts',
+            'x-itemTitle': 'title',
+            'x-itemKey': 'key',
+          },
+          label: {
+            type: 'object',
+            title: 'Propriété utilisée pour représenter les résultats',
+            'x-fromData': 'context.stringProperties',
+            'x-itemTitle': 'title',
+            'x-itemKey': 'key',
+          },
+          /* input: {
+            type: 'array',
+            title: 'Propriétés utilisées pour la recherche',
+            minItems: 1,
+            'x-options': { editMode: 'inline' },
+            items: {
+              type: 'object',
+              required: ['property'],
+              properties: {
+                property: {
+                  type: 'object',
+                  title: 'Propriété',
+                  'x-fromData': 'context.searchProperties',
+                  'x-itemTitle': 'title',
+                  'x-itemKey': 'key',
+                },
+              },
+            },
+          }, */
+        },
+      },
+    },
     bulkSearchs: {
       type: 'array',
       title: 'Recherches en masse',
+      'x-slots': {
+        before: 'Les recherches en masse sont utilisables pour enrichir des données de multiples lignes avec 1 résultat par ligne.',
+      },
+      'x-class': 'mt-4',
       'x-options': { editMode: 'dialog' },
       items: {
         type: 'object',
@@ -118,6 +173,65 @@ exports.endpoints = (dataset) => {
 
   const properties = outputProperties.map(p => p.key)
 
+  for (const singleSearch of dataset.masterData.singleSearchs) {
+    endpoints[`/master-data/single-searchs/${singleSearch.id}`] = {
+      get: {
+        tags: ['Recherche unitaire de données de référence'],
+        summary: singleSearch.title,
+        description: singleSearch.description || '',
+        operationId: `masterData_bulkSearch_${singleSearch.id}`,
+        'x-operationType': 'http://schema.org/SearchAction',
+        'x-permissionClass': 'read',
+        parameters: [{
+          in: 'query',
+          name: 'q',
+          description: 'La recherche textuelle à effectuer',
+          schema: {
+            type: 'string',
+          },
+        }, {
+          in: 'query',
+          name: 'size',
+          description: 'Nombre de résultats candidats à retourner',
+          schema: {
+            type: 'integer',
+            default: 20,
+          },
+        }],
+        responses: {
+          200: {
+            description: 'Réponse en cas de succès de la requête',
+            content: {
+              'application/json': {
+                type: 'object',
+                properties: {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      output: {
+                        type: 'string',
+                        title: 'Propriété à retourner',
+                        'x-refersTo': singleSearch.output['x-refersTo'],
+                      },
+                      label: {
+                        type: 'string',
+                        title: 'Propriété utilisée pour représenter les résultats',
+                      },
+                      score: {
+                        type: 'number',
+                        title: 'Pertinence du résultat',
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    }
+  }
+
   for (const bulkSearch of dataset.masterData.bulkSearchs) {
     const inputProperties = {}
     for (const input of bulkSearch.input) {
@@ -137,9 +251,7 @@ exports.endpoints = (dataset) => {
 
     endpoints[`/master-data/bulk-searchs/${bulkSearch.id}`] = {
       post: {
-        tags: [
-          'Recherche en masse de données de référence',
-        ],
+        tags: ['Recherche en masse de données de référence'],
         summary: bulkSearch.title,
         description: bulkSearch.description || '',
         operationId: `masterData_bulkSearch_${bulkSearch.id}`,
