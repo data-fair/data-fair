@@ -173,7 +173,7 @@ exports.endpoints = (dataset) => {
 
   const properties = outputProperties.map(p => p.key)
 
-  for (const singleSearch of dataset.masterData.singleSearchs) {
+  for (const singleSearch of dataset.masterData.singleSearchs || []) {
     const properties = {
       [singleSearch.output.key]: {
         type: 'string',
@@ -236,7 +236,7 @@ exports.endpoints = (dataset) => {
     }
   }
 
-  for (const bulkSearch of dataset.masterData.bulkSearchs) {
+  for (const bulkSearch of dataset.masterData.bulkSearchs || []) {
     const inputProperties = {}
     for (const input of bulkSearch.input) {
       const matchingProp = dataset.schema.find(p => p.key === input.property.key)
