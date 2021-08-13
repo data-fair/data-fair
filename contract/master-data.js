@@ -158,6 +158,7 @@ exports.endpoints = (dataset) => {
       delete a[f.key].key
       delete a[f.key].ignoreDetection
       delete a[f.key].separator
+      delete a[f.key].icon
       return a
     }, {}),
   }
@@ -221,11 +222,13 @@ exports.endpoints = (dataset) => {
             description: 'Réponse en cas de succès de la requête',
             content: {
               'application/json': {
-                type: 'object',
-                properties: {
-                  schema: {
-                    type: 'object',
-                    properties,
+                schema: {
+                  type: 'object',
+                  properties: {
+                    schema: {
+                      type: 'object',
+                      properties,
+                    },
                   },
                 },
               },
@@ -246,6 +249,7 @@ exports.endpoints = (dataset) => {
       delete inputProperties[input.property.key].key
       delete inputProperties[input.property.key].ignoreDetection
       delete inputProperties[input.property.key].separator
+      delete inputProperties[input.property.key].icon
     }
     inputProperties._key = {
       description: 'Identifiant de la ligne de requête',

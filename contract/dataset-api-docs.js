@@ -26,6 +26,7 @@ module.exports = (dataset) => {
       delete a[f.key].key
       delete a[f.key].ignoreDetection
       delete a[f.key].separator
+      delete a[f.key].icon
       a[f.key].title = a[f.key].title || ''
       a[f.key].description = a[f.key].description || ''
       return a
