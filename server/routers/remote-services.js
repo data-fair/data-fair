@@ -10,6 +10,7 @@ const mongoEscape = require('mongo-escape')
 const config = require('config')
 const requestIp = require('request-ip')
 const ajv = require('ajv')()
+const createError = require('http-errors')
 const validate = ajv.compile(require('../../contract/remote-service'))
 const servicePatch = require('../../contract/remote-service-patch')
 const validatePatch = ajv.compile(servicePatch)
@@ -21,10 +22,25 @@ const findUtils = require('../utils/find')
 const asyncWrap = require('../utils/async-wrap')
 const cacheHeaders = require('../utils/cache-headers')
 const rateLimiting = require('../utils/rate-limiting')
+const datasetAPIDocs = require('../../contract/dataset-api-docs')
 
 const debug = require('debug')('remote-services')
 
 const router = exports.router = express.Router()
+
+exports.syncDataset = async (db, dataset) => {
+  const id = 'dataset:' + dataset.id
+  console.log('sync ?', dataset)
+  if (dataset.masterData && ((dataset.masterData.singleSearchs && dataset.masterData.singleSearchs.length) || (dataset.masterData.bulkSearchs && dataset.masterData.bulkSearchs.length))) {
+    const apiDoc = datasetAPIDocs(dataset)
+    console.log(apiDoc)
+    const service = initNew({ id, apiDoc, privateAccess: [dataset.owner] })
+    if (!validate(service)) throw createError(400, JSON.stringify(validate.errors))
+    await db.collection('remote-services').replaceOne({ id }, mongoEscape.escape(service, true), { upsert: true })
+  } else {
+    await db.collection('remote-services').deleteOne({ id })
+  }
+}
 
 // Create default services for the data-fair instance
 exports.init = async(db) => {
@@ -110,8 +126,8 @@ router.get('', cacheHeaders.noCache, asyncWrap(async(req, res) => {
   res.json({ count, results: results.map(result => mongoEscape.unescape(result, true)), facets })
 }))
 
-const initNew = (req) => {
-  const service = { ...req.body }
+const initNew = (body) => {
+  const service = { ...body }
   if (service.apiDoc) {
     if (service.apiDoc.info) {
       service.title = service.title || service.apiDoc.info.title
@@ -128,7 +144,7 @@ router.post('', asyncWrap(async(req, res) => {
   if (!req.user.adminMode) return res.status(403).send()
   // if title is set, we build id from it
   if (req.body.title && !req.body.id) req.body.id = slug(req.body.title, { lower: true })
-  const service = initNew(req)
+  const service = initNew(req.body)
   if (!validate(service)) return res.status(400).send(validate.errors)
 
   // Generate ids and try insertion until there is no conflict on id
@@ -177,7 +193,7 @@ const attemptInsert = asyncWrap(async(req, res, next) => {
   if (!req.user) return res.status(401).send()
   if (!req.user.adminMode) return res.status(403).send()
 
-  const newService = initNew(req)
+  const newService = initNew(req.body)
   newService.id = req.params.remoteServiceId
   if (!validate(newService)) return res.status(400).send(validate.errors)
 

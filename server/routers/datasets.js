@@ -40,6 +40,7 @@ const validatePost = ajv.compile(datasetPostSchema.properties.body)
 const debugFiles = require('debug')('files')
 const thumbor = require('../utils/thumbor')
 const datasetFileSample = require('../utils/dataset-file-sample')
+const { syncDataset: syncRemoteService } = require('./remote-services')
 
 const baseTypes = new Set(['text/csv', 'application/geo+json'])
 
@@ -335,6 +336,8 @@ router.patch('/:datasetId', readDataset((patch) => {
 
   await datasetUtils.applyPatch(db, req.dataset, patch)
 
+  await syncRemoteService(db, req.dataset)
+
   res.status(200).json(clean(req.dataset))
 }))
 
@@ -364,12 +367,16 @@ router.put('/:datasetId/owner', readDataset(), permissions.middleware('delete', 
   } catch (err) {
     console.error('Error while moving dataset directory', err)
   }
+
+  await syncRemoteService(req.app.get('db'), patchedDataset)
+
   res.status(200).json(clean(patchedDataset))
 }))
 
 // Delete a dataset
 router.delete('/:datasetId', readDataset(null, null, null, true), permissions.middleware('delete', 'admin'), asyncWrap(async(req, res) => {
   await datasetUtils.delete(req.app.get('db'), req.app.get('es'), req.dataset)
+  await syncRemoteService(req.app.get('db'), { ...req.dataset, masterData: null })
   res.sendStatus(204)
 }))
 
@@ -535,6 +542,7 @@ router.post('', beforeUpload, checkStorage(true), filesUtils.uploadFile(), files
     delete dataset._id
 
     await journals.log(req.app, dataset, { type: 'dataset-created', href: config.publicUrl + '/dataset/' + dataset.id }, 'dataset')
+    await syncRemoteService(db, dataset)
     res.status(201).send(clean(dataset, null, req.query.draft === 'true'))
   } catch (err) {
     // Wrapped the whole thing in a try/catch to remove files in case of failure
@@ -636,6 +644,7 @@ const updateDataset = asyncWrap(async(req, res) => {
     if (req.isNewDataset) await journals.log(req.app, dataset, { type: 'dataset-created' }, 'dataset')
     else if (!dataset.isRest && !dataset.isVirtual) await journals.log(req.app, dataset, { type: 'data-updated' }, 'dataset')
     await datasetUtils.updateStorage(db, req.dataset)
+    await syncRemoteService(db, dataset)
     res.status(req.isNewDataset ? 201 : 200).send(clean(dataset, null, req.query.draft === 'true'))
   } catch (err) {
     // Wrapped the whole thing in a try/catch to remove files in case of failure
