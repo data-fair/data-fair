@@ -176,7 +176,7 @@ exports.endpoints = (dataset) => {
 
   for (const singleSearch of dataset.masterData.singleSearchs || []) {
     const properties = {
-      [singleSearch.output.key]: {
+      output: {
         type: 'string',
         title: 'Propriété à retourner',
         'x-refersTo': singleSearch.output['x-refersTo'],
@@ -187,7 +187,7 @@ exports.endpoints = (dataset) => {
       },
     }
     if (singleSearch.label && singleSearch.label.key) {
-      properties[singleSearch.label.key] = {
+      properties.label = {
         type: 'string',
         title: 'Propriété utilisée pour représenter les résultats',
         'x-refersTo': 'http://www.w3.org/2000/01/rdf-schema#label',
@@ -198,7 +198,7 @@ exports.endpoints = (dataset) => {
         tags: ['Recherche unitaire de données de référence'],
         summary: singleSearch.title,
         description: singleSearch.description || '',
-        operationId: `masterData_bulkSearch_${singleSearch.id}`,
+        operationId: `masterData_singleSearch_${singleSearch.id}`,
         'x-operationType': 'http://schema.org/SearchAction',
         'x-permissionClass': 'read',
         parameters: [{
@@ -224,12 +224,7 @@ exports.endpoints = (dataset) => {
               'application/json': {
                 schema: {
                   type: 'object',
-                  properties: {
-                    schema: {
-                      type: 'object',
-                      properties,
-                    },
-                  },
+                  properties,
                 },
               },
             },

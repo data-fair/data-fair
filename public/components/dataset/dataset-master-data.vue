@@ -47,7 +47,7 @@
             .map(p => ({ key: p.key, title: p.title || p['x-originalName'] || p.key })),
           propertiesWithConcepts: this.dataset.schema
             .filter(p => p['x-refersTo'])
-            .map(p => ({ key: p.key, title: p.title || p['x-originalName'] || p.key })),
+            .map(p => ({ key: p.key, title: p.title || p['x-originalName'] || p.key, 'x-refersTo': p['x-refersTo'] })),
           hasDateIntervalConcepts: !!(this.dataset.schema.find(p => p['x-refersTo'] === 'https://schema.org/startDate') && this.dataset.schema.find(p => p['x-refersTo'] === 'https://schema.org/endDate')),
         }
       },

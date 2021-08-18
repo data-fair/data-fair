@@ -745,7 +745,8 @@ router.get('/:datasetId/master-data/single-searchs/:singleSearchId', readDataset
     total: esResponse.hits.total.value,
     results: esResponse.hits.hits.map(hit => {
       const item = esUtils.prepareResultItem(hit, req.dataset, req.query)
-      const label = singleSearch.label ? (item[singleSearch.label.key] || item[singleSearch.output.key]) : item[singleSearch.output.key]
+      let label = item[singleSearch.output.key]
+      if (singleSearch.label && item[singleSearch.label.key]) label += `(${item[singleSearch.label.key]})`
       return { output: item[singleSearch.output.key], label, score: item._score || undefined }
     }),
   }
