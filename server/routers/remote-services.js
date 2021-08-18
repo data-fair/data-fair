@@ -30,11 +30,15 @@ const router = exports.router = express.Router()
 
 exports.syncDataset = async (db, dataset) => {
   const id = 'dataset:' + dataset.id
-  console.log('sync ?', dataset)
   if (dataset.masterData && ((dataset.masterData.singleSearchs && dataset.masterData.singleSearchs.length) || (dataset.masterData.bulkSearchs && dataset.masterData.bulkSearchs.length))) {
     const apiDoc = datasetAPIDocs(dataset)
-    console.log(apiDoc)
-    const service = initNew({ id, apiDoc, privateAccess: [dataset.owner] })
+    const service = initNew({
+      id,
+      apiDoc,
+      url: `${config.publicUrl}/api/v1/datasets/${dataset.id}/api-docs.json`,
+      server: apiDoc.servers && apiDoc.servers.length && apiDoc.servers[0].url,
+      privateAccess: [dataset.owner],
+    })
     if (!validate(service)) throw createError(400, JSON.stringify(validate.errors))
     await db.collection('remote-services').replaceOne({ id }, mongoEscape.escape(service, true), { upsert: true })
   } else {

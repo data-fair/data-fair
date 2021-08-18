@@ -142,8 +142,8 @@ export default () => {
         const limits = await this.$axios.$get(`api/v1/limits/${activeAccount.type}/${activeAccount.id}`)
         commit('setAny', { limits })
       },
-      async fetchVocabulary({ state, commit }) {
-        if (state.vocabulary) return
+      async fetchVocabulary({ state, commit }, force = false) {
+        if (state.vocabulary && !force) return
         const vocabulary = {}
         const vocabularyArray = await this.$axios.$get('api/v1/vocabulary')
         const vocabularyTags = []

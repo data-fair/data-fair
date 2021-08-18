@@ -204,6 +204,7 @@ module.exports = {
           title: { type: 'string', title: 'Titre' },
           description: { type: 'string', title: 'Description' },
           tag: { type: 'string', title: 'Catégorie' },
+          type: { type: 'string', const: 'string' },
         },
       },
     },
