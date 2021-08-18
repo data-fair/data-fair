@@ -757,7 +757,7 @@ router.post('/:datasetId/master-data/bulk-searchs/:bulkSearchId', readDataset(),
   res.setHeader('X-Accel-Buffering', 'no')
   await pump(
     req,
-    ...await bulkSearchStreams(req.app.get('db'), req.app.get('es'), req.dataset, req.params.bulkSearchId, req.get('Content-Type'), req.query.select),
+    ...await bulkSearchStreams(req.app.get('db'), req.app.get('es'), req.dataset, req.get('Content-Type'), req.params.bulkSearchId, req.query.select),
     res,
   )
 }))
