@@ -55,9 +55,10 @@ if (config.mode.includes('server')) {
 
   // set current baseUrl, i.e. the url of simple-directory on the current user's domain
   const basePath = new URL(config.publicUrl).pathname
-  app.use('/api', (req, res, next) => {
+  app.use('/', (req, res, next) => {
     const u = originalUrl(req)
     req.publicBaseUrl = u.full ? formatUrl({ protocol: u.protocol, hostname: u.hostname, port: u.port, pathname: basePath.slice(0, -1) }) : config.publicUrl
+    req.publicWsBaseUrl = req.publicBaseUrl.replace('http:', 'ws:').replace('https:', 'wss:')
     req.publicBasePath = basePath
     next()
   })

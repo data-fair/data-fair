@@ -83,9 +83,10 @@ router.all('/:applicationId*', setResource, (req, res, next) => { req.app.get('a
   const limitsPromise = db.collection('limits').findOne({ type: req.application.owner.type, id: req.application.owner.id })
 
   delete req.application.permissions
-  req.application.apiUrl = config.publicUrl + '/api/v1'
+  req.application.apiUrl = req.publicBaseUrl + '/api/v1'
+  // TODO: captureUrl should be on same domain too ?
   req.application.captureUrl = config.captureUrl
-  req.application.wsUrl = config.wsPublicUrl
+  req.application.wsUrl = req.publicWsBaseUrl
   if (req.query.draft === 'true') {
     req.application.configuration = req.application.configurationDraft || req.application.configuration
   }
@@ -108,6 +109,9 @@ router.all('/:applicationId*', setResource, (req, res, next) => { req.app.get('a
   // and so benefit from better caching
   const datasets = req.application.configuration && req.application.configuration.datasets && req.application.configuration.datasets.filter(d => !!d)
   if (datasets && datasets.length) {
+    datasets.filter(d => d.href).forEach(d => {
+      d.href = d.href.replace(config.publicUrl, req.publicBaseUrl)
+    })
     const freshDatasets = await db.collection('datasets')
       .find({ $or: datasets.map(d => ({ id: d.id })) })
       .project({ _id: 0, id: 1, finalizedAt: 1 })
@@ -138,6 +142,8 @@ router.all('/:applicationId*', setResource, (req, res, next) => { req.app.get('a
   findUtils.setResourceLinks(req.application, 'application')
   // Remove trailing slash for more homogeneous rules afterward
   const cleanApplicationUrl = applicationUrl.replace(/\/$/, '')
+
+  // TODO: also adapt these headers to multi-domain ?
   const headers = {
     'X-Exposed-Url': req.application.exposedUrl,
     'X-Application-Url': config.publicUrl + '/api/v1/applications/' + req.params.applicationId,
