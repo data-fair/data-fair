@@ -288,7 +288,7 @@ exports.facetsQuery = (req, facetFields = {}, filterFields, nullFacetFields = []
   return pipeline
 }
 
-exports.parseFacets = (facets) => {
+exports.parseFacets = (facets, nullFacetFields = []) => {
   if (!facets) return
   const res = {}
   Object.entries(facets.pop()).forEach(([k, values]) => {
@@ -306,7 +306,9 @@ exports.parseFacets = (facets) => {
           },
         }))
     } else {
-      res[k] = values.map(r => ({ count: r.count, value: r._id }))
+      res[k] = values
+        .filter(r => r._id || nullFacetFields.includes(k))
+        .map(r => ({ count: r.count, value: r._id }))
     }
   })
   Object.keys(res).forEach(facetKey => {

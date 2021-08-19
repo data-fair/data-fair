@@ -85,11 +85,20 @@ exports.latlon2fields = (dataset, doc) => {
   }
 }
 
+// Geometry can be passed as an object, as a geojson string or as a WKT string
+exports.readGeometry = (value) => {
+  if (typeof value === 'object') return value
+  try {
+    return JSON.parse(value)
+  } catch (err) {
+    return wktToGeoJSON(value)
+  }
+}
+
 exports.geometry2fields = async (schema, doc) => {
   const prop = schema.find(p => p['x-refersTo'] === geomUri)
   if (!prop || !doc[prop.key] || doc[prop.key] === '{}' || doc[prop.key] === {} || doc[prop.key] === 'undefined') return {}
-  // Geometry can be passed serialized in a string, or as an object
-  const geometry = typeof doc[prop.key] === 'string' ? JSON.parse(doc[prop.key]) : doc[prop.key]
+  const geometry = this.readGeometry(doc[prop.key])
   const feature = { type: 'Feature', geometry }
   // Do the best we can to fix invalid geojson
   try {

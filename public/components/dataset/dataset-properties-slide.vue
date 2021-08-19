@@ -128,6 +128,25 @@
               persistent-hint
               hint="Si vous cochez cette case la détection automatique de type sera désactivée et la colonne sera traitée comme un simple texte."
             />
+            <v-checkbox
+              v-if="dataset.isRest"
+              v-model="currentPropRef.prop.readOnly"
+              :disabled="!editable || !currentPropRef.editable"
+              label="Lecture seule"
+              persistent-hint
+              hint="Si vous cochez cette case la colonne sera affichée en lecture seule dans le formulaire de saisie."
+            />
+            <v-select
+              v-if="currentPropRef.prop['x-refersTo'] && availableMasters[currentPropRef.prop['x-refersTo']]"
+              item-value="id"
+              item-text="title"
+              :items="availableMasters[currentPropRef.prop['x-refersTo']]"
+              :value="currentPropRef.prop['x-master']"
+              label="Valeurs issues d'une donnée de référence"
+              :clearable="true"
+              :return-object="true"
+              @input="setMasterData"
+            />
           </v-col>
         </v-row>
       </v-sheet>
@@ -136,7 +155,7 @@
 </template>
 
 <script>
-  import { mapState, mapGetters } from 'vuex'
+  import { mapState, mapGetters, mapActions } from 'vuex'
   const datasetSchema = require('~/../contract/dataset.js')
   export default {
     props: ['propertiesRefs', 'editable'],
@@ -148,9 +167,9 @@
     },
     computed: {
       ...mapState(['vocabulary', 'vocabularyArray', 'vocabularyItems']),
-      ...mapState('dataset', ['dataset']),
+      ...mapState('dataset', ['dataset', 'remoteServices']),
       ...mapGetters(['propTypeTitle', 'propTypeIcon']),
-      ...mapGetters('dataset', ['remoteServicesMap']),
+      ...mapGetters('dataset', ['remoteServicesMap', 'availableMasters']),
       labelClass() {
         return `theme--${this.$vuetify.theme.dark ? 'dark' : 'light'} v-label`
       },
@@ -182,7 +201,11 @@
         this.currentProperty = null
       },
     },
+    async created() {
+      await this.fetchRemoteServices()
+    },
     methods: {
+      ...mapActions('dataset', ['fetchRemoteServices', 'patch']),
       btnProps(prop, originalProp, warning, i, active) {
         if (active) return { color: 'primary', dark: true, outlined: true, small: true }
         if (warning) return { color: 'warning', dark: true, text: true, small: true }
@@ -200,6 +223,21 @@
         if (prop.type !== item.type && item.type !== 'string') return false
         if (item.format === 'date-time' && prop.format !== 'date-time' && prop.format !== 'date') return false
         return true
+      },
+      setMasterData(masterData) {
+        if (!masterData) {
+          this.$delete(this.currentPropRef.prop, 'x-master')
+          delete this.currentPropRef.prop['x-fromUrl']
+          delete this.currentPropRef.prop['x-itemKey']
+          delete this.currentPropRef.prop['x-itemTitle']
+          delete this.currentPropRef.prop['x-itemsProp']
+        } else {
+          this.$set(this.currentPropRef.prop, 'x-master', { id: masterData.id, title: masterData.title, service: masterData.service, action: masterData.action })
+          this.currentPropRef.prop['x-fromUrl'] = masterData['x-fromUrl']
+          this.currentPropRef.prop['x-itemKey'] = masterData['x-itemKey']
+          if (masterData['x-itemTitle']) this.currentPropRef.prop['x-itemTitle'] = masterData['x-itemTitle']
+          this.currentPropRef.prop['x-itemsProp'] = 'results'
+        }
       },
     },
   }

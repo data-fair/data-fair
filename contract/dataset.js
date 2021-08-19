@@ -36,6 +36,25 @@ const schema = {
       'x-labels': {
         type: 'object',
       },
+      'x-master': {
+        type: 'object',
+        properties: {
+          id: {
+            type: 'string',
+          },
+          title: {
+            type: 'string',
+          },
+          remoteService: {
+            type: 'string',
+            description: "L'identifiant du service distant utilisé pour l'enrichissement",
+          },
+          action: {
+            type: 'string',
+            description: "L'identifiant de l'action du service distant à utiliser pour l'enrichissement",
+          },
+        },
+      },
     },
   },
 }

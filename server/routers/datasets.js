@@ -1,4 +1,4 @@
-const { Writable, Transform } = require('stream')
+const { Writable } = require('stream')
 const express = require('express')
 const ajv = require('ajv')()
 const util = require('util')
@@ -12,7 +12,6 @@ const config = require('config')
 const chardet = require('chardet')
 const slug = require('slugify')
 const sanitizeHtml = require('sanitize-html')
-const mimeTypeStream = require('mime-type-stream')
 const journals = require('../utils/journals')
 const esUtils = require('../utils/es')
 const filesUtils = require('../utils/files')
@@ -40,7 +39,8 @@ const validatePost = ajv.compile(datasetPostSchema.properties.body)
 const debugFiles = require('debug')('files')
 const thumbor = require('../utils/thumbor')
 const datasetFileSample = require('../utils/dataset-file-sample')
-
+const { bulkSearchStreams } = require('../utils/master-data')
+const { syncDataset: syncRemoteService } = require('./remote-services')
 const baseTypes = new Set(['text/csv', 'application/geo+json'])
 
 const router = express.Router()
@@ -158,7 +158,7 @@ router.get('', cacheHeaders.noCache, asyncWrap(async(req, res) => {
     r.userPermissions = permissions.list('datasets', r, req.user)
     clean(r, req.query.thumbnail)
   })
-  facets = findUtils.parseFacets(facets)
+  facets = findUtils.parseFacets(facets, nullFacetFields)
   res.json({ count, results, facets })
 }))
 
@@ -335,6 +335,8 @@ router.patch('/:datasetId', readDataset((patch) => {
 
   await datasetUtils.applyPatch(db, req.dataset, patch)
 
+  await syncRemoteService(db, req.dataset)
+
   res.status(200).json(clean(req.dataset))
 }))
 
@@ -364,12 +366,16 @@ router.put('/:datasetId/owner', readDataset(), permissions.middleware('delete', 
   } catch (err) {
     console.error('Error while moving dataset directory', err)
   }
+
+  await syncRemoteService(req.app.get('db'), patchedDataset)
+
   res.status(200).json(clean(patchedDataset))
 }))
 
 // Delete a dataset
 router.delete('/:datasetId', readDataset(null, null, null, true), permissions.middleware('delete', 'admin'), asyncWrap(async(req, res) => {
   await datasetUtils.delete(req.app.get('db'), req.app.get('es'), req.dataset)
+  await syncRemoteService(req.app.get('db'), { ...req.dataset, masterData: null })
   res.sendStatus(204)
 }))
 
@@ -535,6 +541,7 @@ router.post('', beforeUpload, checkStorage(true), filesUtils.uploadFile(), files
     delete dataset._id
 
     await journals.log(req.app, dataset, { type: 'dataset-created', href: config.publicUrl + '/dataset/' + dataset.id }, 'dataset')
+    await syncRemoteService(db, dataset)
     res.status(201).send(clean(dataset, null, req.query.draft === 'true'))
   } catch (err) {
     // Wrapped the whole thing in a try/catch to remove files in case of failure
@@ -636,6 +643,7 @@ const updateDataset = asyncWrap(async(req, res) => {
     if (req.isNewDataset) await journals.log(req.app, dataset, { type: 'dataset-created' }, 'dataset')
     else if (!dataset.isRest && !dataset.isVirtual) await journals.log(req.app, dataset, { type: 'data-updated' }, 'dataset')
     await datasetUtils.updateStorage(db, req.dataset)
+    await syncRemoteService(db, dataset)
     res.status(req.isNewDataset ? 201 : 200).send(clean(dataset, null, req.query.draft === 'true'))
   } catch (err) {
     // Wrapped the whole thing in a try/catch to remove files in case of failure
@@ -718,82 +726,38 @@ router.get('/:datasetId/lines/:lineId/revisions', readDataset(['finalized', 'upd
 router.delete('/:datasetId/lines', readDataset(['finalized', 'updated', 'indexed']), isRest, permissions.middleware('deleteLine', 'write'), asyncWrap(restDatasetsUtils.deleteAllLines))
 
 // Specifc routes for datasets with masterData functionalities enabled
-router.post('/:datasetId/master-data/bulk-searchs/:bulkSearchId', readDataset(), permissions.middleware('readLines', 'read'), asyncWrap(async(req, res) => {
-  const bulkSearch = req.dataset.masterData && req.dataset.masterData.bulkSearchs && req.dataset.masterData.bulkSearchs.find(bs => bs.id === req.params.bulkSearchId)
-  if (!bulkSearch) return res.status(404).send(`Recherche en masse "${req.params.bulkSearchId}" inconnue`)
-
-  // no buffering nor caching of this response in the reverse proxy
-  res.setHeader('X-Accel-Buffering', 'no')
-
-  // this function will be called for each input line of the bulk search stream
-  const paramsBuilder = (line) => {
-    const params = {}
-    const qs = []
-    bulkSearch.input.forEach(input => {
-      if ([null, undefined].includes(line[input.property.key])) {
-        throw createError(400, `la propriété en entrée ${input.property.key} est obligatoire`)
-      }
-      if (input.type === 'equals') {
-        qs.push(`${input.property.key}:"${line[input.property.key]}"`)
-      } else if (input.type === 'date-in-interval') {
-        const startDate = req.dataset.schema.find(p => p['x-refersTo'] === 'https://schema.org/startDate')
-        const endDate = req.dataset.schema.find(p => p['x-refersTo'] === 'https://schema.org/endDate')
-        if (!startDate || !endDate) throw new Error('cet enrichissement sur interval de date requiert les concepts "date de début" et "date de fin"')
-        const date = line[input.property.key].replace(/:/g, '\\:')
-        qs.push(`${endDate.key}:[${date} TO *]`)
-        qs.push(`${startDate.key}:[* TO ${date}]`)
-      } else if (input.type === 'geo-distance') {
-        const [lat, lon] = line[input.property.key].split(',')
-        params.geo_distance = `${lon},${lat},${input.distance}`
-      } else {
-        throw createError(400, `input type ${input.type} is not supported`)
-      }
-    })
-    if (qs.length) params.qs = qs.map(f => `(${f})`).join(' AND ')
-
-    return params
-  }
-
-  const ioStream = mimeTypeStream(req.get('Content-Type')) || mimeTypeStream('application/json')
+router.get('/:datasetId/master-data/single-searchs/:singleSearchId', readDataset(), permissions.middleware('readLines', 'read'), asyncWrap(async(req, res) => {
+  const singleSearch = req.dataset.masterData && req.dataset.masterData.singleSearchs && req.dataset.masterData.singleSearchs.find(ss => ss.id === req.params.singleSearchId)
+  if (!singleSearch) return res.status(404).send(`Recherche unitaire "${req.params.singleSearchId}" inconnue`)
 
   if (req.dataset.isVirtual) req.dataset.descendants = await virtualDatasetsUtils.descendants(req.app.get('db'), req.dataset)
 
-  let i = 0
+  let esResponse
+  let select = singleSearch.output.key
+  if (singleSearch.label) select += ',' + singleSearch.label.key
+  try {
+    esResponse = await esUtils.search(req.app.get('es'), req.dataset,
+      { q: req.query.q, size: req.query.size, q_mode: 'complete', select })
+  } catch (err) {
+    await manageESError(req, err)
+  }
+  const result = {
+    total: esResponse.hits.total.value,
+    results: esResponse.hits.hits.map(hit => {
+      const item = esUtils.prepareResultItem(hit, req.dataset, req.query)
+      let label = item[singleSearch.output.key]
+      if (singleSearch.label && item[singleSearch.label.key]) label += ` (${item[singleSearch.label.key]})`
+      return { output: item[singleSearch.output.key], label, score: item._score || undefined }
+    }),
+  }
+  res.send(result)
+}))
+router.post('/:datasetId/master-data/bulk-searchs/:bulkSearchId', readDataset(), permissions.middleware('readLines', 'read'), asyncWrap(async(req, res) => {
+  // no buffering nor caching of this response in the reverse proxy
+  res.setHeader('X-Accel-Buffering', 'no')
   await pump(
     req,
-    ioStream.parser(),
-    new Transform({
-      async transform(line, encoding, callback) {
-        // console.log(line, qsBuilder(line))
-        const current = i
-        i += 1
-        try {
-          let esResponse
-          try {
-            esResponse = await esUtils.search(req.app.get('es'), req.dataset, {
-              select: req.query.select,
-              sort: bulkSearch.sort,
-              ...paramsBuilder(line),
-              size: 1,
-            })
-          } catch (err) {
-            await manageESError(req, err)
-          }
-          if (esResponse.hits.hits.length === 0) {
-            throw new Error('La donnée de référence ne contient pas de ligne correspondante.')
-          }
-          const responseLine = esResponse.hits.hits[0]._source
-          Object.keys(responseLine).forEach(k => {
-            if (k.startsWith('_')) delete responseLine[k]
-          })
-          callback(null, { ...responseLine, _key: line._key || current })
-        } catch (err) {
-          callback(null, { _key: line._key || current, _error: err.message })
-        }
-      },
-      objectMode: true,
-    }),
-    ioStream.serializer(),
+    ...await bulkSearchStreams(req.app.get('db'), req.app.get('es'), req.dataset, req.get('Content-Type'), req.params.bulkSearchId, req.query.select),
     res,
   )
 }))

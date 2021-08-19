@@ -9,6 +9,7 @@ const axios = require('./axios')
 const datasetUtils = require('./dataset')
 const restDatasetsUtils = require('./rest-datasets')
 const geoUtils = require('./geo')
+const { bulkSearchPromise, bulkSearchStreams } = require('./master-data')
 
 const debug = require('debug')('extensions')
 
@@ -18,6 +19,7 @@ exports.events = new EventEmitter()
 // and add the result either to a "full" file or to the collection in case of a rest dataset
 exports.extend = async(app, dataset, extensions) => {
   const db = app.get('db')
+  const es = app.get('es')
   const detailedExtensions = []
   for (const extension of extensions) {
     if (!extension.active) continue
@@ -55,7 +57,7 @@ exports.extend = async(app, dataset, extensions) => {
   const writeStreams = await datasetUtils.writeExtendedStreams(db, dataset)
   await pump(
     ...inputStreams,
-    new RemoteExtensionStream({ extensions: detailedExtensions, dataset, db }),
+    new RemoteExtensionStream({ extensions: detailedExtensions, dataset, db, es }),
     ...writeStreams,
   )
   const filePath = writeStreams[writeStreams.length - 1].path
@@ -66,12 +68,13 @@ exports.extend = async(app, dataset, extensions) => {
 
 // Perform HTTP requests to a remote service to extend data
 class RemoteExtensionStream extends Transform {
-  constructor({ extensions, dataset, db }) {
+  constructor({ extensions, dataset, db, es }) {
     super({ objectMode: true })
     this.i = 0
     this.dataset = dataset
     this.extensions = extensions
     this.db = db
+    this.es = es
     this.buffer = []
   }
 
@@ -139,8 +142,25 @@ class RemoteExtensionStream extends Transform {
       }
       if (!opts.data) continue
 
-      // query the missing results using HTTP request to remote service
-      let data = (await axios(opts)).data
+      // query the missing results using HTTP or request to remote service or local stream to local service
+      let data
+      if (
+        extension.remoteService.server.startsWith(`${config.publicUrl}/api/v1/datasets/`) &&
+        extension.remoteService.privateAccess &&
+        extension.remoteService.privateAccess.find(pa => pa.type === this.dataset.owner.type) &&
+        extension.remoteService.privateAccess.find(pa => pa.id === this.dataset.owner.id)
+      ) {
+        const masterDatasetId = extension.remoteService.server.replace(`${config.publicUrl}/api/v1/datasets/`, '')
+        const masterDataset = await this.db.collection('datasets').findOne({ id: masterDatasetId, 'owner.type': this.dataset.owner.type, 'owner.id': this.dataset.owner.id })
+        if (!masterDataset) throw new Error('dataset de données de référence inconnu ' + masterDatasetId)
+        const bulkSearchId = extension.action.id.replace('masterData_bulkSearch_', '')
+        data = await bulkSearchPromise(
+          await bulkSearchStreams(this.db, this.es, masterDataset, 'application/x-ndjson', bulkSearchId, opts.params.select),
+          opts.data,
+        )
+      } else {
+        data = (await axios(opts)).data
+      }
       if (typeof data === 'object') data = JSON.stringify(data) // axios parses the object when there is only one
       const results = data.split('\n').filter(line => !!line).map(JSON.parse)
 

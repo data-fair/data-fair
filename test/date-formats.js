@@ -60,4 +60,30 @@ describe('Date formats', () => {
     const results = (await ax.get(`/api/v1/datasets/${dataset.id}/lines`)).data.results
     assert.equal(results[0].datetime, new Date('2021-02-23T10:27:50').toISOString())
   })
+
+  it('Accept formatted date in geojson', async () => {
+    const form = new FormData()
+    form.append('file', JSON.stringify({
+      type: 'FeatureCollection',
+      features: [
+          {
+              type: 'Feature',
+              id: 'id1',
+              geometry: {
+                  type: 'LineString',
+                  coordinates: [[102.0, 0.0], [103.0, 1.0], [104.0, 0.0], [105.0, 1.0]],
+              },
+              properties: {
+                  date: '2018/01/01',
+              },
+          },
+        ],
+      }), 'geojson-example.geojson')
+    const ax = global.ax.dmeadus
+    const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
+    assert.equal(res.status, 201)
+    const dataset = await workers.hook(`finalizer/${res.data.id}`)
+    const dateProp = dataset.file.schema.find(p => p.key === 'date')
+    assert.equal(dateProp.dateFormat, 'YYYY/M/D')
+  })
 })

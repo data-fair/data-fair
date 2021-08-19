@@ -189,5 +189,24 @@ module.exports = {
       type: 'object',
       deprecated: true,
     },
+    privateVocabulary: {
+      type: 'array',
+      title: 'Vocabulaire privé',
+      items: {
+        type: 'object',
+        properties: {
+          identifiers: {
+            type: 'array',
+            items: [
+              { type: 'string', title: 'Identifiant', description: 'Renseignez idéalement une URI issue d\'un vocabulaire standardisé, c\'est à dire un identifiant mondialement unique pour ce concept. Si ce n\'est pas possible vous pouvez saisir une chaine de caractère non ambigue.' },
+            ],
+          },
+          title: { type: 'string', title: 'Titre' },
+          description: { type: 'string', title: 'Description' },
+          tag: { type: 'string', title: 'Catégorie' },
+          type: { type: 'string', const: 'string' },
+        },
+      },
+    },
   },
 }

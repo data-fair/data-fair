@@ -220,6 +220,8 @@ describe('REST datasets', () => {
     res = await ax.get('/api/v1/datasets/rest5/lines')
     assert.equal(res.data.total, 1)
     assert.equal(res.data.results[0]['_file.content'], 'This is a test pdf file.')
+
+    assert.equal((await fs.readdir('data/test/tmp')).length, 0)
   })
 
   it('Send attachments with bulk request', async () => {
@@ -317,6 +319,8 @@ describe('REST datasets', () => {
       assert.equal(err.data.nbErrors, 20)
       assert.equal(err.data.nbOk, 0)
     }
+
+    assert.equal((await fs.readdir('data/test/tmp')).length, 0)
   })
 
   it('The size of the mongodb collection is part of storage consumption', async () => {
@@ -475,19 +479,36 @@ describe('REST datasets', () => {
     await ax.post('/api/v1/datasets', {
       isRest: true,
       title: 'restcsv',
-      schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }],
+      schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }, { key: 'attr3', type: 'boolean' }],
     })
     let dataset = await workers.hook('finalizer/restcsv')
-    await ax.post('/api/v1/datasets/restcsv/_bulk_lines', `_id,attr1,attr2
-line1,test1,test1
-line2,test1,test1`, { headers: { 'content-type': 'text/csv' } })
+    await ax.post('/api/v1/datasets/restcsv/_bulk_lines', `_id,attr1,attr2,attr3
+line1,test1,test1,oui
+line2,test1,test1,non`, { headers: { 'content-type': 'text/csv' } })
     dataset = await workers.hook('finalizer/restcsv')
     assert.equal(dataset.count, 2)
-    const lines = (await ax.get('/api/v1/datasets/restcsv/lines', { params: { sort: '_i' } })).data.results
+    let lines = (await ax.get('/api/v1/datasets/restcsv/lines', { params: { sort: '_i' } })).data.results
     assert.equal(lines[0]._id, 'line1')
     assert.equal(lines[0].attr1, 'test1')
+    assert.equal(lines[0].attr2, 'test1')
+    assert.equal(lines[0].attr3, true)
     assert.equal(lines[1]._id, 'line2')
     assert.equal(lines[1].attr1, 'test1')
+    assert.equal(lines[1].attr2, 'test1')
+    assert.equal(lines[1].attr3, false)
+
+    await ax.post('/api/v1/datasets/restcsv/_bulk_lines', `_action,_id,attr1,attr2
+patch,line1,test2
+update,line2,test2,test2`, { headers: { 'content-type': 'text/csv' } })
+    dataset = await workers.hook('finalizer/restcsv')
+    assert.equal(dataset.count, 2)
+    lines = (await ax.get('/api/v1/datasets/restcsv/lines', { params: { sort: '_i' } })).data.results
+    assert.equal(lines[0]._id, 'line1')
+    assert.equal(lines[0].attr1, 'test2')
+    assert.equal(lines[0].attr2, 'test1')
+    assert.equal(lines[1]._id, 'line2')
+    assert.equal(lines[1].attr1, 'test2')
+    assert.equal(lines[1].attr2, 'test2')
   })
 
   it('Send bulk actions as a gzipped CSV', async () => {

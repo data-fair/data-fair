@@ -35,7 +35,7 @@ module.exports = {
   },
   indicesPrefix: 'dataset-' + (process.env.NODE_ENV || 'development'),
   info: {
-    termsOfService: 'https://koumoul.com/term-of-service',
+    termsOfService: 'https://koumoul.com/platform/term-of-service',
     contact: {
       name: 'Koumoul',
       url: 'https://koumoul.com',

@@ -76,6 +76,31 @@ export default () => ({
           .reduce((a, f) => { a[f.key] = { ...f, enum: undefined, key: undefined, ignoreDetection: undefined }; return a }, {}),
       }
     },
+    availableMasters(state) {
+      if (!state.remoteServices) return
+      const masters = {}
+      state.remoteServices.forEach(service => {
+        service.actions
+          .filter(a => !a.inputCollection && a.type === 'http://schema.org/SearchAction')
+          .filter(a => a.output.filter(o => o.concept && o.concept !== 'http://www.w3.org/2000/01/rdf-schema#label').length === 1)
+          .forEach(a => {
+            const labelOutput = a.output.find(o => o.concept === 'http://www.w3.org/2000/01/rdf-schema#label')
+            const keyOutput = a.output.find(o => o.concept && o.concept !== 'http://www.w3.org/2000/01/rdf-schema#label')
+            const master = {
+              id: service.id + '--' + a.id,
+              title: a.summary,
+              remoteService: service.id,
+              action: a.id,
+              'x-fromUrl': service.server + a.operation.path + '?q={q}',
+              'x-itemKey': keyOutput.name,
+              'x-itemTitle': labelOutput && labelOutput.name,
+            }
+            masters[keyOutput.concept] = masters[keyOutput.concept] || []
+            masters[keyOutput.concept].push(master)
+        })
+      })
+      return masters
+    },
   },
   mutations: {
     setAny(state, params) {

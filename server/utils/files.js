@@ -11,6 +11,7 @@ const fallbackMimeTypes = {
   dbf: 'application/dbase',
   dif: 'text/plain',
   fods: 'application/vnd.oasis.opendocument.spreadsheet',
+  gpkg: 'application/geopackage+sqlite3',
 }
 const debug = require('debug')('files')
 

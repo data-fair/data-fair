@@ -148,7 +148,7 @@
               extension.disabled = 'Cette extension a déjà été ajoutée'
             }
             if (!extension.action.input.find(i => this.datasetConcepts.has(i.concept))) {
-              const missingConcepts = extension.action.input.filter(i => i.concept !== 'http://schema.org/identifier').map(i => this.vocabulary[i.concept].title)
+              const missingConcepts = extension.action.input.filter(i => i.concept !== 'http://schema.org/identifier').map(i => this.vocabulary[i.concept] ? this.vocabulary[i.concept].title : 'concept déprécié')
               if (missingConcepts.length > 1) {
                 extension.disabled = `Il faut associer au moins l'un des concepts suivants à vos colonnes : ${missingConcepts.join(', ')}`
               } else {

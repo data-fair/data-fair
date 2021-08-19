@@ -147,6 +147,34 @@
               </layout-section-tabs>
 
               <layout-section-tabs
+                :svg="checklistSvg"
+                svg-no-margin
+                :section="sections.find(s => s.id === 'privateVocabulary')"
+              >
+                <template v-slot:extension>
+                  <p>
+                    Le <i>vocabulaire privé</i> vous permet d'étendre la liste des concepts avec lesquels pour pouvez annoter les colonnes de vos jeux de données.
+                  </p>
+                </template>
+                <template v-slot:tabs-items>
+                  <v-container fluid>
+                    <v-alert type="warning">
+                      Attention, si vous supprimez ou changez l'identifiant d'un concept référencé dans des jeux de données vous pouvez causer des dysfonctionnements.
+                    </v-alert>
+                    <v-row>
+                      <v-col cols="12" md="6">
+                        <settings-private-vocabulary
+                          v-if="settings"
+                          :settings="settings"
+                          @updated="save('fetchVocabulary')"
+                        />
+                      </v-col>
+                    </v-row>
+                  </v-container>
+                </template>
+              </layout-section-tabs>
+
+              <layout-section-tabs
                 :svg="uiSvg"
                 svg-no-margin
                 :section="sections.find(s => s.id === 'publicationSites')"
@@ -202,6 +230,7 @@
       securitysSvg: require('~/assets/svg/Security_Two Color.svg?raw'),
       wwwSvg: require('~/assets/svg/World wide web_Two Color.svg?raw'),
       uiSvg: require('~/assets/svg/User Interface _Two Color.svg?raw'),
+      checklistSvg: require('~/assets/svg/Checklist_Two Color.svg?raw'),
     }),
     computed: {
       ...mapState('session', ['user', 'initialized']),
@@ -230,6 +259,9 @@
         }, {
           id: 'webhooks',
           title: 'Appels extérieurs (Webhooks)',
+        }, {
+          id: 'privateVocabulary',
+          title: 'Vocabulaire privé',
         }]
         if (this.user.adminMode) {
           sections.push({
