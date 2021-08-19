@@ -157,7 +157,10 @@
                   </p>
                 </template>
                 <template v-slot:tabs-items>
-                  <v-container fluid class="py-1">
+                  <v-container fluid>
+                    <v-alert type="warning">
+                      Attention, si vous supprimez ou changez l'identifiant d'un concept référencé dans des jeux de données vous pouvez causer des dysfonctionnements.
+                    </v-alert>
                     <v-row>
                       <v-col cols="12" md="6">
                         <settings-private-vocabulary
