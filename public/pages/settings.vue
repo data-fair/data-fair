@@ -153,7 +153,7 @@
               >
                 <template v-slot:extension>
                   <p>
-                    Le <i>vocabulaire privé</i> vous permet d'étendre la liste des concepts avec lesquels pour pouvez annoter les colonne de vos jeux de données.
+                    Le <i>vocabulaire privé</i> vous permet d'étendre la liste des concepts avec lesquels pour pouvez annoter les colonnes de vos jeux de données.
                   </p>
                 </template>
                 <template v-slot:tabs-items>
