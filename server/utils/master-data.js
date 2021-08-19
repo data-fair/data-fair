@@ -62,7 +62,6 @@ exports.bulkSearchStreams = async (db, es, dataset, contentType, bulkSearchId, s
     ioStream.parser(),
     new Transform({
       async transform(line, encoding, callback) {
-        console.log('line', line)
         const current = i
         i += 1
         try {
