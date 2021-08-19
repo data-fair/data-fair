@@ -1,6 +1,8 @@
 const config = require('config')
 const express = require('express')
 const eventToPromise = require('event-to-promise')
+const originalUrl = require('original-url')
+const { format: formatUrl } = require('url')
 const dbUtils = require('./utils/db')
 const esUtils = require('./utils/es')
 const wsUtils = require('./utils/ws')
@@ -12,8 +14,6 @@ const workers = require('./workers')
 const session = require('@koumoul/sd-express')({
   directoryUrl: config.directoryUrl,
   privateDirectoryUrl: config.privateDirectoryUrl || config.directoryUrl,
-  publicUrl: config.publicUrl,
-  cookieDomain: config.sessionDomain,
 })
 
 const app = express()
@@ -29,12 +29,19 @@ if (config.mode.includes('server')) {
   app.set('json spaces', 2)
 
   if (process.env.NODE_ENV === 'development') {
-  // Create a mono-domain environment with other services in dev
+    // Create a mono-domain environment with other services in dev
     const { createProxyMiddleware } = require('http-proxy-middleware')
     app.use('/openapi-viewer', createProxyMiddleware({ target: 'http://localhost:5680', pathRewrite: { '^/openapi-viewer': '' } }))
     app.use('/simple-directory', createProxyMiddleware({ target: 'http://localhost:8080', pathRewrite: { '^/simple-directory': '' } }))
     app.use('/capture', createProxyMiddleware({ target: 'http://localhost:8087', pathRewrite: { '^/capture': '' } }))
     app.use('/notify', createProxyMiddleware({ target: 'http://localhost:8088', pathRewrite: { '^/notify': '' } }))
+
+    // but also serve this whole service on another domain, use this to simulate a portal exposed independantly
+    const mirrorApp = express()
+    mirrorApp.use('/', createProxyMiddleware({ target: 'http://localhost:5600' }))
+    mirrorApp.listen(5601, () => {
+      console.log('mirror server listening on http://localhost:5601')
+    })
   }
 
   const bodyParser = require('body-parser').json({ limit: '1000kb' })
@@ -44,8 +51,16 @@ if (config.mode.includes('server')) {
     bodyParser(req, res, next)
   })
   app.use(require('cookie-parser')())
-  app.use(session.cors({ acceptAllOrigins: true }))
   app.use(session.auth)
+
+  // set current baseUrl, i.e. the url of simple-directory on the current user's domain
+  const basePath = new URL(config.publicUrl).pathname
+  app.use('/api', (req, res, next) => {
+    const u = originalUrl(req)
+    req.publicBaseUrl = u.full ? formatUrl({ protocol: u.protocol, hostname: u.hostname, port: u.port, pathname: basePath.slice(0, -1) }) : config.publicUrl
+    req.publicBasePath = basePath
+    next()
+  })
 
   // Business routers
   const apiKey = require('./utils/api-key')
@@ -61,7 +76,6 @@ if (config.mode.includes('server')) {
   app.use('/api/v1/identities', require('./routers/identities'))
   app.use('/api/v1/activity', require('./routers/activity'))
   app.use('/api/v1/limits', limits.router)
-  app.use('/api/v1/session', session.router)
 
   // External applications proxy
   const serviceWorkers = require('./utils/service-workers')
@@ -69,7 +83,7 @@ if (config.mode.includes('server')) {
     res.setHeader('Content-Type', 'application/javascript')
     res.send(serviceWorkers.sw(req.application))
   })
-  app.use('/app', session.loginCallback, require('./routers/application-proxy'))
+  app.use('/app', require('./routers/application-proxy'))
 
   // Error management
   app.use((err, req, res, next) => {
@@ -138,8 +152,7 @@ exports.run = async () => {
       if (!req.app.get('ui-ready')) res.status(503).send('Service indisponible pour cause de maintenance.')
       else next()
     })
-    app.use(session.decode)
-    app.use(session.loginCallback)
+    app.use(session.auth)
 
     app.use((req, res, next) => {
       req.session.activeApplications = req.session.activeApplications || []

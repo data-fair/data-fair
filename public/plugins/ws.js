@@ -42,6 +42,10 @@ function configureWS (wsUrl, suffix = '') {
 }
 
 export default ({ store, env }) => {
-  configureWS(env.wsPublicUrl)
-  if (env.notifyWSUrl) configureWS(env.notifyWSUrl, '-notify')
+  // reconstruct this env var that we used to have but lost when implementing multi-domain exposition
+  const wsPublicUrl = (window.location.origin + env.basePath)
+    .replace('http:', 'ws:').replace('https:', 'wss:')
+  configureWS(wsPublicUrl)
+  // TODO: the same for notifyUrl ?
+  // if (env.notifyWSUrl) configureWS(env.notifyWSUrl, '-notify')
 }
