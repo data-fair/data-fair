@@ -69,6 +69,7 @@
               :total-visible="$vuetify.breakpoint.lgAndUp ? 7 : 5"
               class="mx-4"
             />
+            <dataset-select-cols v-model="selectedCols" :headers="headers" />
             <dataset-download-results :params="params" :total="data.total" />
           </v-row>
         </v-col>
@@ -79,7 +80,7 @@
         </v-col>
       </v-row>
       <v-data-table
-        :headers="headers"
+        :headers="selectedHeaders"
         :items="items"
         item-key="_id"
         :server-items-length="data.total"
@@ -93,7 +94,7 @@
           <thead class="v-data-table-header">
             <tr>
               <th
-                v-for="header in headers"
+                v-for="header in selectedHeaders"
                 :key="header.value"
                 :class="{'text-start': true, sortable: header.sortable, active : header.value === pagination.sortBy[0], asc: !pagination.sortDesc[0], desc: pagination.sortDesc[0]}"
                 nowrap
@@ -169,7 +170,7 @@
           />
           <tr>
             <td
-              v-for="header in headers"
+              v-for="header in selectedHeaders"
               :key="header.value"
               class="pr-0 pl-4"
               :style="`height: 40px`"
@@ -401,9 +402,11 @@
       deletedLines: [],
       saving: false,
       lastParams: null,
+      selectedCols: [],
     }),
     computed: {
       ...mapState(['vocabulary']),
+      ...mapState('session', ['user']),
       ...mapState('dataset', ['dataset']),
       ...mapGetters('dataset', ['resourceUrl', 'can', 'qMode']),
       headers() {
@@ -430,6 +433,10 @@
           fieldsHeaders.unshift({ text: '', value: '_actions' })
         }
         return fieldsHeaders
+      },
+      selectedHeaders() {
+        if (this.selectedCols.length === 0) return this.headers
+        return this.headers.filter(h => !h.field || this.selectedCols.includes(h.value))
       },
       historyHeaders() {
         const historyHeaders = this.headers
@@ -492,6 +499,12 @@
 
         return items
       },
+      filtersStorageKey() {
+        return `${this.user.id}:dataset:${this.dataset.id}:table-filters`
+      },
+      selectedColsStorageKey() {
+        return `${this.user.id}:dataset:${this.dataset.id}:table-selected-cols`
+      },
     },
     watch: {
       async 'dataset.schema'() {
@@ -514,12 +527,23 @@
       },
       filters: {
         handler () {
+          localStorage.setItem(this.filtersStorageKey, JSON.stringify(this.filters))
           this.refresh(true)
+        },
+        deep: true,
+      },
+      selectedCols: {
+        handler () {
+          localStorage.setItem(this.selectedColsStorageKey, JSON.stringify(this.selectedCols))
         },
         deep: true,
       },
     },
     mounted() {
+      const storedFilters = localStorage.getItem(this.filtersStorageKey)
+      if (storedFilters) this.filters = JSON.parse(storedFilters)
+      const storedSelectedCols = localStorage.getItem(this.selectedColsStorageKey)
+      if (storedSelectedCols) this.selectedCols = JSON.parse(storedSelectedCols)
       if (this.dataset.schema.find(p => p.key === '_updatedAt')) {
         this.pagination.sortBy = ['_updatedAt']
         this.pagination.sortDesc = [true]
