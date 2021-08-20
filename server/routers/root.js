@@ -27,7 +27,7 @@ router.get('/vocabulary', asyncWrap(async (req, res) => {
   if (req.user && req.user.activeAccount) {
     const settings = await req.app.get('db').collection('settings')
       .findOne({ type: req.user.activeAccount.type, id: req.user.activeAccount.id }, { projection: { _id: 0, id: 0, type: 0 } })
-    privateVocabulary = settings.privateVocabulary || []
+    privateVocabulary = (settings && settings.privateVocabulary) || []
   }
 
   res.json(vocabulary.concat(privateVocabulary.map(pv => ({ ...pv, private: true }))))
