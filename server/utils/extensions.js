@@ -10,6 +10,7 @@ const datasetUtils = require('./dataset')
 const restDatasetsUtils = require('./rest-datasets')
 const geoUtils = require('./geo')
 const { bulkSearchPromise, bulkSearchStreams } = require('./master-data')
+const taskProgress = require('./task-progress')
 
 const debug = require('debug')('extensions')
 
@@ -49,11 +50,14 @@ exports.extend = async(app, dataset, extensions) => {
   }
 
   let inputStreams
+  const progress = taskProgress(app, dataset.id, 'extend', 100)
+  await progress(0)
   if (dataset.isRest) {
-    inputStreams = restDatasetsUtils.readStreams(db, dataset, dataset.status === 'updated')
+    inputStreams = await restDatasetsUtils.readStreams(db, dataset, dataset.status === 'updated', progress)
   } else {
-    inputStreams = datasetUtils.readStreams(db, dataset)
+    inputStreams = await datasetUtils.readStreams(db, dataset, false, false, false, progress)
   }
+
   const writeStreams = await datasetUtils.writeExtendedStreams(db, dataset)
   await pump(
     ...inputStreams,

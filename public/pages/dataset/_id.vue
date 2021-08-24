@@ -277,6 +277,20 @@
     <layout-navigation-right v-if="this.$vuetify.breakpoint.lgAndUp">
       <dataset-actions :publication-sites="publicationSites" />
       <layout-toc :sections="sections" />
+      <v-row v-if="taskProgress" class="pr-2 pt-2">
+        <v-col>
+          <v-progress-linear
+            height="16"
+            dark
+            background-opacity="0.5"
+            :value="taskProgress.progress"
+            :indeterminate="taskProgress.progress === undefined"
+            rounded
+          >
+            <span>{{ $t('tasks.' + taskProgress.task) }}</span>
+          </v-progress-linear>
+        </v-col>
+      </v-row>
     </layout-navigation-right>
     <layout-actions-button v-else>
       <template v-slot:actions>
@@ -310,7 +324,7 @@
     }),
     computed: {
       ...mapState(['env']),
-      ...mapState('dataset', ['dataset', 'api', 'journal', 'error']),
+      ...mapState('dataset', ['dataset', 'api', 'journal', 'error', 'taskProgress']),
       ...mapGetters('dataset', ['resourceUrl', 'can', 'hasPublicApplications']),
       ...mapState('session', ['user']),
       ...mapGetters('session', ['activeAccount']),

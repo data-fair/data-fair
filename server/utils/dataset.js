@@ -271,16 +271,25 @@ exports.transformFileStreams = (mimeType, schema, fileSchema, fileProps = {}, ra
 }
 
 // Read the dataset file and get a stream of line items
-exports.readStreams = (db, dataset, raw = false, full = false, ignoreDraftLimit = false) => {
+exports.readStreams = async (db, dataset, raw = false, full = false, ignoreDraftLimit = false, progress) => {
   if (dataset.isRest) return restDatasetsUtils.readStreams(db, dataset)
   const fileName = full ? exports.fullFileName(dataset) : exports.fileName(dataset)
 
-  const streams = [
-    fs.createReadStream(fileName),
+  let streams = [fs.createReadStream(fileName)]
+  if (progress) {
+    const { size } = await fs.stat(fileName)
+    streams.push(new Transform({
+      transform(chunk, encoding, callback) {
+        progress((chunk.length / size) * 100)
+        callback(null, chunk)
+      },
+    }))
+  }
+  streams = streams.concat([
     stripBom(),
     iconv.decodeStream(dataset.file.encoding),
     ...exports.transformFileStreams(dataset.file.mimetype, dataset.schema, dataset.file.schema, full ? {} : dataset.file.props, raw),
-  ]
+  ])
 
   // manage interruption in case of draft mode
   const limit = (dataset.draftReason && !ignoreDraftLimit) ? 100 : -1
@@ -292,7 +301,7 @@ exports.readStreams = (db, dataset, raw = false, full = false, ignoreDraftLimit 
         if (this.i > limit) return callback()
         callback(null, item)
 
-        // interrupt source stream it we are done
+        // interrupt source stream if we are done
         if (this.i === limit) {
           streams[0].unpipe()
           streams[1].end()
@@ -357,7 +366,7 @@ exports.sampleValues = async (dataset) => {
   let currentLine = 0
   let stopped = false
   const sampleValues = {}
-  const streams = exports.readStreams(null, dataset, true, false, true)
+  const streams = await exports.readStreams(null, dataset, true, false, true)
   await pump(...streams, new Writable({
     objectMode: true,
     write(chunk, encoding, callback) {

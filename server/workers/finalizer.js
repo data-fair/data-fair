@@ -5,6 +5,7 @@ const tilesUtils = require('../utils/tiles')
 const datasetUtils = require('../utils/dataset')
 const attachmentsUtils = require('../utils/attachments')
 const virtualDatasetsUtils = require('../utils/virtual-datasets')
+const taskProgress = require('../utils/task-progress')
 
 exports.eventsPrefix = 'finalize'
 
@@ -30,11 +31,21 @@ exports.process = async function(app, dataset) {
   const geopoint = geoUtils.schemaHasGeopoint(dataset.schema)
   const geometry = geoUtils.schemaHasGeometry(dataset.schema)
 
+  const startDateField = dataset.schema.find(f => f['x-refersTo'] === 'https://schema.org/startDate')
+  const endDateField = dataset.schema.find(f => f['x-refersTo'] === 'https://schema.org/endDate')
+
   // Try to calculate enum values
   const cardinalityProps = dataset.schema
     .filter(prop => !prop.key.startsWith('_'))
     .filter(prop => prop['x-refersTo'] !== 'https://purl.org/geojson/vocab#geometry')
     .filter(prop => !prop['x-capabilities'] || prop['x-capabilities'].values !== false)
+
+  let nbSteps = cardinalityProps.length + 1
+  if (startDateField || endDateField) nbSteps += 1
+  if (geopoint || geometry) nbSteps += 1
+  const progress = taskProgress(app, dataset.id, exports.eventsPrefix, nbSteps)
+  await progress(0)
+
   for (const prop of cardinalityProps) {
     debug(`Calculate cardinality of field ${prop.key}`)
     const aggResult = await esUtils.valuesAgg(es, queryableDataset, { field: prop.key, agg_size: '50', precision_threshold: 3000 })
@@ -60,6 +71,7 @@ exports.process = async function(app, dataset) {
     } else {
       delete prop.enum
     }
+    await progress()
   }
 
   // calculate geographical coverage
@@ -68,13 +80,12 @@ exports.process = async function(app, dataset) {
     queryableDataset.bbox = []
     result.bbox = dataset.bbox = (await esUtils.bboxAgg(es, queryableDataset)).bbox
     debug('bounding box ok', result.bbox)
+    await progress()
   } else {
     result.bbox = null
   }
 
   // calculate temporal coverage
-  const startDateField = dataset.schema.find(f => f['x-refersTo'] === 'https://schema.org/startDate')
-  const endDateField = dataset.schema.find(f => f['x-refersTo'] === 'https://schema.org/endDate')
   if (startDateField || endDateField) {
     const promises = []
     if (startDateField) {
@@ -95,6 +106,7 @@ exports.process = async function(app, dataset) {
       startDate: new Date(timePeriod.startDate).toISOString(),
       endDate: new Date(timePeriod.endDate).toISOString(),
     }
+    await progress()
   }
 
   result.finalizedAt = (new Date()).toISOString()
@@ -133,6 +145,8 @@ exports.process = async function(app, dataset) {
       await collection.updateOne({ id: virtualDataset.id }, { $set: { status: 'indexed' } })
     }
   }
+
+  await progress()
 
   debug('done')
 }

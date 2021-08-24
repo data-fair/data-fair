@@ -437,15 +437,18 @@ exports.readLineRevisions = async (req, res, next) => {
   res.send({ total, results })
 }
 
-exports.readStreams = (db, dataset, onlyUpdated) => {
+exports.readStreams = async (db, dataset, onlyUpdated, progress) => {
   const collection = exports.collection(db, dataset)
   const filter = {}
   if (onlyUpdated) filter._needsIndexing = true
+  const count = await collection.countDocuments(filter)
+  const inc = 100 / count
   return [
     collection.find(filter).batchSize(100).stream(),
     new Transform({
       objectMode: true,
       async transform(chunk, encoding, cb) {
+        if (progress) progress(inc)
         // now _i should always be defined, but keep the OR for retro-compatibility
         chunk._i = chunk._i || chunk._updatedAt.getTime()
         cb(null, chunk)
