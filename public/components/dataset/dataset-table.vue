@@ -204,6 +204,13 @@
                   </v-btn>
                 </template>
               </div>
+              <div v-else-if="header.value.startsWith('_ext') && item._tmpState === 'updated'">
+                <v-progress-circular
+                  size="14"
+                  width="2"
+                  :indeterminate="true"
+                />
+              </div>
               <template v-else-if="header.value === '_thumbnail'">
                 <v-avatar
                   v-if="item._thumbnail"
@@ -277,12 +284,13 @@
     >
       <v-card outlined>
         <v-card-title primary-title>
-          Éditer une ligne
+          {{ editedId ? 'Éditer une ligne' : 'Ajouter une ligne' }}
         </v-card-title>
         <v-card-text>
           <dataset-edit-line-form
             v-if="editLineDialog && editedLine"
             v-model="editedLine"
+            :selected-cols="editedId ? selectedCols : []"
             @onFileUpload="onFileUpload"
           />
         </v-card-text>
