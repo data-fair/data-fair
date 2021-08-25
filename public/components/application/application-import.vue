@@ -1,5 +1,5 @@
 <template>
-  <v-stepper v-model="currentStep">
+  <v-stepper v-if="dataset || !this.$route.query.dataset" v-model="currentStep">
     <v-stepper-header>
       <v-stepper-step
         :complete="!!baseApp"
