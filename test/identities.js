@@ -1,11 +1,8 @@
 const assert = require('assert').strict
 const fs = require('fs-extra')
 const path = require('path')
-const FormData = require('form-data')
 const config = require('config')
 const testUtils = require('./resources/test-utils')
-
-const datasetFd = fs.readFileSync('./test/resources/datasets/dataset1.csv')
 
 describe('identities', () => {
   it('Check secret key', async () => {
