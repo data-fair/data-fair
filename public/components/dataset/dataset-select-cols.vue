@@ -3,6 +3,7 @@
     offset-y
     tile
     :close-on-content-click="false"
+    max-height="500"
   >
     <template v-slot:activator="{ on }">
       <v-btn
@@ -11,7 +12,7 @@
         :color="value.length ? 'warning' : 'default'"
         v-on="on"
       >
-        <v-icon>mdi-table-settings</v-icon>
+        <v-icon>mdi-table-eye</v-icon>
       </v-btn>
     </template>
     <v-card>
