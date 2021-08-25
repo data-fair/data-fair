@@ -70,7 +70,7 @@
               class="mx-4"
             />
             <dataset-select-cols v-model="selectedCols" :headers="headers" />
-            <dataset-download-results :params="params" :total="data.total" />
+            <dataset-download-results :params="downloadParams" :total="data.total" />
           </v-row>
         </v-col>
       </v-row>
@@ -481,6 +481,10 @@
         if (this.dataset.finalizedAt) params.finalizedAt = this.dataset.finalizedAt
         if (this.dataset.draftReason) params.draft = 'true'
         return params
+      },
+      downloadParams() {
+        if (this.selectedCols.length === 0) return this.params
+        return { ...this.params, select: this.selectedCols.join(',') }
       },
       items() {
         if (!this.data.results) return []
