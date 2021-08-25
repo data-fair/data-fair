@@ -390,7 +390,6 @@
         if (query.cols) this.selectedCols = query.cols.split(',')
         if (query.q) this.query = query.q
         Object.keys(query).filter(key => key.endsWith('_in')).forEach(key => {
-          console.log(key, key.substring(0, -3), query[key])
           this.filters.push({
             type: 'in',
             field: this.dataset.schema.find(p => p.key === key.slice(0, -3)),
@@ -407,7 +406,6 @@
         if (this.query) query.q = this.query
         else delete query.q
 
-        console.log(this.filters)
         Object.keys(query).filter(key => key.endsWith('_in')).forEach(key => delete query[key])
         this.filters.filter(f => f.type === 'in').forEach(f => {
           query[f.field.key + '_in'] = JSON.stringify(f.values).slice(1, -1)

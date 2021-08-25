@@ -1,5 +1,5 @@
 <template>
-  <v-stepper v-if="dataset || !this.$route.query.dataset" v-model="currentStep">
+  <v-stepper v-model="currentStep">
     <v-stepper-header>
       <v-stepper-step
         :complete="!!baseApp"
@@ -25,6 +25,7 @@
           N'hésitez pas à <a href="https://koumoul.com/contact" class="">Nous contacter</a> !
         </p>
         <application-base-apps
+          v-if="dataset || !this.$route.query.dataset"
           v-model="baseApp"
           :dataset="dataset"
           @input="currentStep = 2; title = dataset ? dataset.title + ' - ' + baseApp.title : baseApp.title"
