@@ -276,21 +276,20 @@
 
     <layout-navigation-right v-if="this.$vuetify.breakpoint.lgAndUp">
       <dataset-actions :publication-sites="publicationSites" />
-      <layout-toc :sections="sections" />
-      <v-row v-if="taskProgress" class="pr-2 pt-2">
-        <v-col>
+      <layout-toc :sections="sections">
+        <template v-slot:title="{section}">
+          {{ section.id === 'activity' && taskProgress ? ('Activité - ' + $t('tasks.' + taskProgress.task)) : section.title }}
+        </template>
+        <template v-slot:bottom="{section}">
           <v-progress-linear
-            height="16"
-            dark
-            background-opacity="0.5"
+            v-if="section.id === 'activity' && taskProgress"
             :value="taskProgress.progress"
             :indeterminate="taskProgress.progress === undefined"
-            rounded
-          >
-            <span>{{ $t('tasks.' + taskProgress.task) }}</span>
-          </v-progress-linear>
-        </v-col>
-      </v-row>
+            absolute
+            bottom
+          />
+        </template>
+      </layout-toc>
     </layout-navigation-right>
     <layout-actions-button v-else>
       <template v-slot:actions>

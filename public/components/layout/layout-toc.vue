@@ -3,8 +3,7 @@
     v-if="sections && sections.length"
     v-scroll="onScroll"
     dense
-    shaped
-    class="py-0"
+    class="py-0 pr-2"
   >
     <v-subheader>
       CONTENU
@@ -18,8 +17,11 @@
       >
         <v-list-item-content>
           <v-list-item-title>
-            {{ section.title }}
+            <slot name="title" :section="section">
+              {{ section.title }}
+            </slot>
           </v-list-item-title>
+          <slot name="bottom" :section="section" />
         </v-list-item-content>
       </v-list-item>
     </v-list-item-group>
