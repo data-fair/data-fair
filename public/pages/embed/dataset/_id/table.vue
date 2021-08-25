@@ -414,6 +414,8 @@
         })
 
         this.$router.push({ query })
+
+        if (global.parent) parent.postMessage({ query }, '*')
       },
     },
   }
