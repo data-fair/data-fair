@@ -118,6 +118,7 @@ describe('datasets', () => {
     assert.equal(res.data.previews[0].id, 'table')
     assert.equal(res.data.previews[0].title, 'Tableau')
     assert.ok(res.data.previews[0].href.endsWith('/embed/dataset/dataset1/table'))
+    await workers.hook('finalizer/' + res.data.id)
   })
 
   it('Upload new dataset in user zone with title', async () => {
@@ -129,6 +130,7 @@ describe('datasets', () => {
     assert.equal(res.status, 201)
     assert.equal(res.data.id, 'my-title')
     assert.equal(res.data.title, 'My title')
+    await workers.hook('finalizer/' + res.data.id)
   })
 
   it('Upload new dataset in organization zone', async () => {
@@ -139,6 +141,7 @@ describe('datasets', () => {
     assert.equal(res.status, 201)
     assert.equal(res.data.owner.type, 'organization')
     assert.equal(res.data.owner.id, 'KWqAGZ4mG')
+    await workers.hook('finalizer/' + res.data.id)
   })
 
   it('Uploading same file twice should increment id', async () => {
@@ -149,6 +152,7 @@ describe('datasets', () => {
       const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
       assert.equal(res.status, 201)
       assert.equal(res.data.id, 'my-dataset' + (i === 1 ? '' : i))
+      await workers.hook('finalizer/' + res.data.id)
     }
   })
 
@@ -160,6 +164,7 @@ describe('datasets', () => {
     form.append('file', datasetFd, 'yet-a-dataset.csv')
     const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
     assert.equal(res.data.title, 'A dataset with pre-filled title')
+    await workers.hook('finalizer/' + res.data.id)
   })
 
   it('Upload new dataset with JSON body', async () => {
@@ -169,6 +174,7 @@ describe('datasets', () => {
     form.append('file', datasetFd, 'yet-a-dataset.csv')
     const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
     assert.equal(res.data.title, 'A dataset with both file and JSON body')
+    await workers.hook('finalizer/' + res.data.id)
   })
 
   it('Upload new dataset with defined id', async () => {
