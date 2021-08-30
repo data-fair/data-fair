@@ -24,4 +24,5 @@ jobs:
           DOC_BASE=/data-fair/$MAJOR/ npm run build-doc
           git config --global user.email "github-actions@koumoul.com"
           git config --global user.name "github-actions"
-          ./node_modules/.bin/gh-pages-multi deploy -v -r https://${{ secrets.GH_TOKEN }}@github.com/koumoul-dev/data-fair.git -s doc-dist -t $MAJOR
+          ./node_modules/.bin/gh-pages-multi deploy -v -r https://${{ secrets.GH_TOKEN }}@github.com/data-fair/data-fair.git -s doc-dist -b main -t $MAJOR
+
