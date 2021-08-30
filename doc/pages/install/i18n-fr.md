@@ -12,7 +12,7 @@ published: false
 
 Les libellés de *Data Fair* sont externalisés et internationalisés.
 
-Pour ajouter une langue vous pouvez ajouter un fichier dans [ce répertoire](https://github.com/koumoul-dev/data-fair/tree/master/i18n) soit par surcharge de l'image docker soit en soumettant une *pull request*.
+Pour ajouter une langue vous pouvez ajouter un fichier dans [ce répertoire](https://github.com/data-fair/data-fair/tree/master/i18n) soit par surcharge de l'image docker soit en soumettant une *pull request*.
 
 Pour modifier des valeurs de libellés vous pouvez passer des variables d'environnements au démarrage du service. La table ci-dessous contient la liste des clés supportées.
 

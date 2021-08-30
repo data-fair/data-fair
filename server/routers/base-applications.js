@@ -189,7 +189,7 @@ router.get('', cacheHeaders.noCache, asyncWrap(async(req, res) => {
       application.disabled = []
       application.category = application.category || 'autre'
       if (datasetId && (!application.datasetsFilters || !application.datasetsFilters.length)) {
-        application.disabled.push('n\'utilise pas de sources de données de type fichier.')
+        application.disabled.push('n\'utilise pas de jeu de données comme source.')
       } else {
         const requirements = []
         if (application.datasetsFilters && application.datasetsFilters.length && !datasetCount) {

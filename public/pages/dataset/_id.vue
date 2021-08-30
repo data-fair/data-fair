@@ -276,7 +276,20 @@
 
     <layout-navigation-right v-if="this.$vuetify.breakpoint.lgAndUp">
       <dataset-actions :publication-sites="publicationSites" />
-      <layout-toc :sections="sections" />
+      <layout-toc :sections="sections">
+        <template v-slot:title="{section}">
+          {{ section.id === 'activity' && taskProgress ? ('Activité - ' + $t('tasks.' + taskProgress.task)) : section.title }}
+        </template>
+        <template v-slot:bottom="{section}">
+          <v-progress-linear
+            v-if="section.id === 'activity' && taskProgress"
+            :value="taskProgress.progress"
+            :indeterminate="taskProgress.progress === undefined"
+            absolute
+            bottom
+          />
+        </template>
+      </layout-toc>
     </layout-navigation-right>
     <layout-actions-button v-else>
       <template v-slot:actions>
@@ -310,7 +323,7 @@
     }),
     computed: {
       ...mapState(['env']),
-      ...mapState('dataset', ['dataset', 'api', 'journal', 'error']),
+      ...mapState('dataset', ['dataset', 'api', 'journal', 'error', 'taskProgress']),
       ...mapGetters('dataset', ['resourceUrl', 'can', 'hasPublicApplications']),
       ...mapState('session', ['user']),
       ...mapGetters('session', ['activeAccount']),

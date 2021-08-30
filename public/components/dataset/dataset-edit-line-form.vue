@@ -5,7 +5,7 @@
   >
     <v-jsf
       :value="value"
-      :schema="jsonSchema"
+      :schema="editSchema"
       :options="vjsfOptions"
       @input="val => $emit('input', val)"
     />
@@ -33,7 +33,7 @@
   import { mapState, mapGetters } from 'vuex'
   export default {
     components: { VJsf },
-    props: ['value'],
+    props: ['value', 'selectedCols'],
     data: () => ({
       vjsfOptions: {
         locale: 'fr',
@@ -53,6 +53,18 @@
     computed: {
       ...mapState('dataset', ['dataset', 'lineUploadProgress']),
       ...mapGetters('dataset', ['jsonSchema']),
+      editSchema() {
+        if (!this.selectedCols || !this.selectedCols.length) return this.jsonSchema
+        const schema = JSON.parse(JSON.stringify(this.jsonSchema))
+        Object.keys(schema.properties).forEach(key => {
+          if (!this.selectedCols.includes(key)) {
+            schema.properties[key].readOnly = true
+            schema.properties[key]['x-options'] = schema.properties[key]['x-options'] || {}
+            schema.properties[key]['x-options'].hideReadOnly = true
+          }
+        })
+        return schema
+      },
     },
   }
 </script>

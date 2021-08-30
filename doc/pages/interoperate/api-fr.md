@@ -32,7 +32,7 @@ export Data Fair_URL="http://localhost/data-fair"
 Téléchargez un fichier CSV d'exemple :
 
 ```sh
-curl https://raw.githubusercontent.com/koumoul-dev/data-fair/master/test/resources/dataset1.csv -o dataset1.csv
+curl https://raw.githubusercontent.com/data-fair/data-fair/master/test/resources/dataset1.csv -o dataset1.csv
 ```
 
 Créez un jeu de données simple à partir de ce fichier avec une requête HTTP multipart :
@@ -64,13 +64,13 @@ curl -v --header "x-apiKey: $API_KEY" $Data Fair_URL/api/v1/datasets/$DATASET_ID
 Téléchargez un fichier CSV d'exemple qui contient une colonne de chemins vers des pièces jointes :
 
 ```sh
-curl https://raw.githubusercontent.com/koumoul-dev/data-fair/master/test/resources/dataset-attachments.csv -o dataset-attachments.csv
+curl https://raw.githubusercontent.com/data-fair/data-fair/master/test/resources/dataset-attachments.csv -o dataset-attachments.csv
 ```
 
 Téléchargez l'archive contenant les pièces jointes correspondantes :
 
 ```sh
-curl https://raw.githubusercontent.com/koumoul-dev/data-fair/master/test/resources/files.zip -o files.zip
+curl https://raw.githubusercontent.com/data-fair/data-fair/master/test/resources/files.zip -o files.zip
 ```
 
 Créez un jeu de données basé sur le CSV et enrichi avec les pièces jointes de l'archive grâce à cette requête HTTP multipart :

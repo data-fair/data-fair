@@ -43,7 +43,8 @@
               style="width: auto"
             />
             <v-spacer v-if="$vuetify.breakpoint.xs" />
-            <dataset-download-results :params="params" :total="data.total" />
+            <dataset-select-cols v-model="selectedCols" :headers="headers" />
+            <dataset-download-results :params="downloadParams" :total="data.total" />
           </v-row>
         </v-col>
       </v-row>
@@ -59,7 +60,7 @@
         </v-col>
       </v-row>
       <v-data-table
-        :headers="headers"
+        :headers="selectedHeaders"
         :items="data.results"
         :server-items-length="data.total"
         :loading="loading"
@@ -71,7 +72,7 @@
           <thead class="v-data-table-header">
             <tr>
               <th
-                v-for="header in headers"
+                v-for="header in selectedHeaders"
                 :key="header.text"
                 :class="{'text-start': true, sortable: header.sortable, active : header.value === pagination.sortBy[0], asc: !pagination.sortDesc[0], desc: pagination.sortDesc[0]}"
                 nowrap
@@ -139,7 +140,7 @@
         <template v-slot:item="{item}">
           <tr>
             <td
-              v-for="header in headers"
+              v-for="header in selectedHeaders"
               :key="header.value"
               :class="`pl-4 pr-0`"
               :style="`height: ${lineHeight}px`"
@@ -235,6 +236,7 @@
       filterHeight: 500,
       filters: [],
       lastParams: null,
+      selectedCols: [],
     }),
     computed: {
       ...mapState(['vocabulary']),
@@ -261,6 +263,10 @@
           fieldsHeaders.unshift({ text: '', value: '_thumbnail' })
         }
         return fieldsHeaders
+      },
+      selectedHeaders() {
+        if (this.selectedCols.length === 0) return this.headers
+        return this.headers.filter(h => !h.field || this.selectedCols.includes(h.value))
       },
       imageField() {
         return this.dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/image')
@@ -289,6 +295,10 @@
         if (this.dataset.finalizedAt) params.finalizedAt = this.dataset.finalizedAt
         return params
       },
+      downloadParams() {
+        if (this.selectedCols.length === 0) return this.params
+        return { ...this.params, select: this.selectedCols.join(',') }
+      },
     },
     watch: {
       'dataset.schema'() {
@@ -307,8 +317,15 @@
         },
         deep: true,
       },
+      selectedCols: {
+        handler () {
+          this.writeQueryParams()
+        },
+        deep: true,
+      },
     },
     mounted() {
+      this.readQueryParams()
       this.setItemsPerPage()
       this.refresh()
     },
@@ -323,6 +340,7 @@
         this.filterHeight = height - top
       },
       async refresh(resetPagination) {
+        this.writeQueryParams()
         if (resetPagination) {
           this.pagination.page = 1
           // this is debatable
@@ -366,6 +384,36 @@
         if (value === undefined || value === null || value === '') return false
         if (typeof value === 'string' && (value.length > 200 || value.startsWith('{'))) return false
         return true
+      },
+      readQueryParams() {
+        const query = this.$route.query
+        if (query.cols) this.selectedCols = query.cols.split(',')
+        if (query.q) this.query = query.q
+        Object.keys(query).filter(key => key.endsWith('_in')).forEach(key => {
+          this.filters.push({
+            type: 'in',
+            field: this.dataset.schema.find(p => p.key === key.slice(0, -3)),
+            values: JSON.parse(`[${query[key]}]`),
+          })
+        })
+      },
+      writeQueryParams() {
+        const query = { ...this.$route.query }
+
+        if (this.selectedCols.length) query.cols = this.selectedCols.join(',')
+        else delete query.cols
+
+        if (this.query) query.q = this.query
+        else delete query.q
+
+        Object.keys(query).filter(key => key.endsWith('_in')).forEach(key => delete query[key])
+        this.filters.filter(f => f.type === 'in').forEach(f => {
+          query[f.field.key + '_in'] = JSON.stringify(f.values).slice(1, -1)
+        })
+
+        this.$router.push({ query })
+
+        if (global.parent) parent.postMessage({ query }, '*')
       },
     },
   }

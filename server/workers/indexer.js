@@ -7,6 +7,7 @@ const es = require('../utils/es')
 const datasetUtils = require('../utils/dataset')
 const restDatasetsUtils = require('../utils/rest-datasets')
 const journals = require('../utils/journals')
+const taskProgress = require('../utils/task-progress')
 
 exports.eventsPrefix = 'index'
 
@@ -37,13 +38,15 @@ exports.process = async function(app, dataset) {
 
   debug('Run index stream')
   let readStreams, writeStream
+  const progress = taskProgress(app, dataset.id, exports.eventsPrefix, 100)
+  await progress(0)
   if (dataset.isRest) {
-    readStreams = restDatasetsUtils.readStreams(db, dataset, dataset.status === 'updated' || dataset.status === 'extended-updated')
+    readStreams = await restDatasetsUtils.readStreams(db, dataset, dataset.status === 'updated' || dataset.status === 'extended-updated', progress)
     writeStream = restDatasetsUtils.markIndexedStream(db, dataset)
   } else {
     const extended = dataset.extensions && dataset.extensions.find(e => e.active)
     if (!extended) await fs.remove(datasetUtils.fullFileName(dataset))
-    readStreams = datasetUtils.readStreams(db, dataset, false, extended)
+    readStreams = await datasetUtils.readStreams(db, dataset, false, extended, false, progress)
     writeStream = new Writable({ objectMode: true, write(chunk, encoding, cb) { cb() } })
   }
   await pump(...readStreams, indexStream, writeStream)

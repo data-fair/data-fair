@@ -69,7 +69,8 @@
               :total-visible="$vuetify.breakpoint.lgAndUp ? 7 : 5"
               class="mx-4"
             />
-            <dataset-download-results :params="params" :total="data.total" />
+            <dataset-select-cols v-model="selectedCols" :headers="headers" />
+            <dataset-download-results :params="downloadParams" :total="data.total" />
           </v-row>
         </v-col>
       </v-row>
@@ -79,7 +80,7 @@
         </v-col>
       </v-row>
       <v-data-table
-        :headers="headers"
+        :headers="selectedHeaders"
         :items="items"
         item-key="_id"
         :server-items-length="data.total"
@@ -93,7 +94,7 @@
           <thead class="v-data-table-header">
             <tr>
               <th
-                v-for="header in headers"
+                v-for="header in selectedHeaders"
                 :key="header.value"
                 :class="{'text-start': true, sortable: header.sortable, active : header.value === pagination.sortBy[0], asc: !pagination.sortDesc[0], desc: pagination.sortDesc[0]}"
                 nowrap
@@ -169,7 +170,7 @@
           />
           <tr>
             <td
-              v-for="header in headers"
+              v-for="header in selectedHeaders"
               :key="header.value"
               class="pr-0 pl-4"
               :style="`height: 40px`"
@@ -202,6 +203,13 @@
                     <v-icon>mdi-history</v-icon>
                   </v-btn>
                 </template>
+              </div>
+              <div v-else-if="header.value.startsWith('_ext') && item._tmpState === 'updated'">
+                <v-progress-circular
+                  size="14"
+                  width="2"
+                  :indeterminate="true"
+                />
               </div>
               <template v-else-if="header.value === '_thumbnail'">
                 <v-avatar
@@ -276,12 +284,13 @@
     >
       <v-card outlined>
         <v-card-title primary-title>
-          Éditer une ligne
+          {{ editedId ? 'Éditer une ligne' : 'Ajouter une ligne' }}
         </v-card-title>
         <v-card-text>
           <dataset-edit-line-form
             v-if="editLineDialog && editedLine"
             v-model="editedLine"
+            :selected-cols="editedId ? selectedCols : []"
             @onFileUpload="onFileUpload"
           />
         </v-card-text>
@@ -401,9 +410,11 @@
       deletedLines: [],
       saving: false,
       lastParams: null,
+      selectedCols: [],
     }),
     computed: {
       ...mapState(['vocabulary']),
+      ...mapState('session', ['user']),
       ...mapState('dataset', ['dataset']),
       ...mapGetters('dataset', ['resourceUrl', 'can', 'qMode']),
       headers() {
@@ -430,6 +441,10 @@
           fieldsHeaders.unshift({ text: '', value: '_actions' })
         }
         return fieldsHeaders
+      },
+      selectedHeaders() {
+        if (this.selectedCols.length === 0) return this.headers
+        return this.headers.filter(h => !h.field || this.selectedCols.includes(h.value))
       },
       historyHeaders() {
         const historyHeaders = this.headers
@@ -467,6 +482,10 @@
         if (this.dataset.draftReason) params.draft = 'true'
         return params
       },
+      downloadParams() {
+        if (this.selectedCols.length === 0) return this.params
+        return { ...this.params, select: this.selectedCols.join(',') }
+      },
       items() {
         if (!this.data.results) return []
         const items = [...this.data.results]
@@ -492,6 +511,12 @@
 
         return items
       },
+      filtersStorageKey() {
+        return `${this.user.id}:dataset:${this.dataset.id}:table-filters`
+      },
+      selectedColsStorageKey() {
+        return `${this.user.id}:dataset:${this.dataset.id}:table-selected-cols`
+      },
     },
     watch: {
       async 'dataset.schema'() {
@@ -514,12 +539,23 @@
       },
       filters: {
         handler () {
+          localStorage.setItem(this.filtersStorageKey, JSON.stringify(this.filters))
           this.refresh(true)
+        },
+        deep: true,
+      },
+      selectedCols: {
+        handler () {
+          localStorage.setItem(this.selectedColsStorageKey, JSON.stringify(this.selectedCols))
         },
         deep: true,
       },
     },
     mounted() {
+      const storedFilters = localStorage.getItem(this.filtersStorageKey)
+      if (storedFilters) this.filters = JSON.parse(storedFilters)
+      const storedSelectedCols = localStorage.getItem(this.selectedColsStorageKey)
+      if (storedSelectedCols) this.selectedCols = JSON.parse(storedSelectedCols)
       if (this.dataset.schema.find(p => p.key === '_updatedAt')) {
         this.pagination.sortBy = ['_updatedAt']
         this.pagination.sortDesc = [true]

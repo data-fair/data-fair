@@ -21,6 +21,13 @@ module.exports = {
     catalogs: 'Catalogues',
     catalogsSub: 'data.gouv.fr ...',
   },
+  tasks: {
+    index: 'indexation',
+    extend: 'extensions',
+    analyze: 'analyse',
+    finalize: 'finalisation',
+    convert: 'conversion',
+  },
   pages: {
     root: {
       title: 'Accueil',

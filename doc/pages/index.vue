@@ -25,7 +25,7 @@
             </v-icon>&nbsp;&nbsp;Sponsor
           </v-btn>
           <v-btn
-            href="https://github.com/koumoul-dev/data-fair"
+            href="https://github.com/data-fair/data-fair"
             rounded
             class="ml-2 pl-2"
             color="primary"

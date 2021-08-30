@@ -6,9 +6,9 @@ description : Installation
 published: false
 ---
 
-Cette application expose des services Web et interopère avec d'autres applications du même type. Pour comprendre comment *Data Fair* fonctionne, vous pouvez aller voir la [description technique](https://koumoul-dev.github.io/data-fair/about/technical-overview).
+Cette application expose des services Web et interopère avec d'autres applications du même type. Pour comprendre comment *Data Fair* fonctionne, vous pouvez aller voir la [description technique](https://data-fair.github.io/2/about/technical-overview).
 
-Nous proposons une installation simple grâce à l'utilisation de conteneurs [Docker](https://docker.com) basés sur [l'image](https://hub.docker.com/r/koumoul/data-fair/) que nous mettons à disposition. Le service peut être installé hors Docker, nous vous conseillons dans ce cas de regarder la documentation pour les développeurs directement dans le [répertoire du projet](https://github.com/koumoul-dev/data-fair).
+Nous proposons une installation simple grâce à l'utilisation de conteneurs [Docker](https://docker.com) basés sur [l'image](https://github.com/data-fair/data-fair/pkgs/container/data-fair) que nous mettons à disposition. Le service peut être installé hors Docker, nous vous conseillons dans ce cas de regarder la documentation pour les développeurs directement dans le [répertoire du projet](https://github.com/data-fair/data-fair).
 
 
 ## Prérequis

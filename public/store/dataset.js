@@ -35,10 +35,12 @@ export default () => ({
     lineUploadProgress: 0,
     showTableCard: null,
     draftMode: null,
+    taskProgress: null,
   },
   getters: {
     resourceUrl: (state, getters, rootState) => state.datasetId ? rootState.env.publicUrl + '/api/v1/datasets/' + state.datasetId : null,
     journalChannel: (state) => 'datasets/' + state.datasetId + '/journal',
+    taskProgressChannel: (state) => 'datasets/' + state.datasetId + '/task-progress',
     concepts: state => {
       if (!state.dataset) return new Set()
       return new Set(state.dataset.schema.map(field => field['x-refersTo']).filter(c => c))
@@ -194,10 +196,13 @@ export default () => ({
     subscribe({ getters, dispatch, state, commit }) {
       eventBus.$emit('subscribe', getters.journalChannel)
       eventBus.$on(getters.journalChannel, async event => {
+        if (event.type.endsWith('-start')) commit('setAny', { taskProgress: { task: event.type.replace('-start', '') } })
         if (event.type === 'finalize-end') {
+          commit('setAny', { taskProgress: null })
           eventBus.$emit('notification', { type: 'success', msg: 'Le jeu de données a été traité en fonction de vos dernières modifications et est prêt à être utilisé ou édité de nouveau.' })
         }
         if (event.type === 'error') {
+          commit('setAny', { taskProgress: null })
           eventBus.$emit('notification', { error: event.data, msg: 'Le service a rencontré une erreur pendant le traitement du jeu de données:' })
         }
 
@@ -225,9 +230,16 @@ export default () => ({
         }
         dispatch('fetchApiDoc')
       })
+      eventBus.$emit('subscribe', getters.taskProgressChannel)
+      eventBus.$on(getters.taskProgressChannel, async taskProgress => {
+        commit('setAny', { taskProgress })
+      })
     },
-    clear({ commit, state }) {
-      if (state.datasetId) eventBus.$emit('unsubscribe', 'datasets/' + state.datasetId + '/journal')
+    clear({ commit, state, getters }) {
+      if (state.datasetId) {
+        eventBus.$emit('unsubscribe', getters.journalChannel)
+        eventBus.$emit('unsubscribe', getters.taskProgressChannel)
+      }
       commit('setAny', { datasetId: null, dataset: null, api: null, journal: [], showTableCard: null })
     },
     async patch({ commit, getters, dispatch, state }, patch) {
