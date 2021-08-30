@@ -24,12 +24,12 @@
   "license": "AGPL-3.0-only",
   "devDependencies": {
     "@hackmd/meta-marked": "^0.4.4",
+    "@koumoul/gh-pages-multi": "^0.7.1",
     "babel-eslint": "^10.1.0",
     "coveralls": "^3.1.0",
     "eslint": "^7.27.0",
     "eslint-config-vuetify": "^0.6.1",
     "eslint-plugin-no-only-tests": "^2.6.0",
-    "gh-pages-multi": "^0.2.0",
     "http-proxy-middleware": "^1.0.6",
     "mocha": "^7.2.0",
     "nock": "^12.0.3",
