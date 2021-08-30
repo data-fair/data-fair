@@ -86,7 +86,7 @@ module.exports = (catalog) => {
     },
     externalDocs: {
       description: 'Documentation sur Github',
-      url: 'https://koumoul-dev.github.io/data-fair/',
+      url: 'https://data-fair.github.io',
     },
   }
   return api

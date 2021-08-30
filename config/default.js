@@ -171,6 +171,7 @@ module.exports = {
     'https://koumoul.com/apps/',
     'https://staging-koumoul.com/apps/',
     'https://koumoul-dev.github.io/',
+    'https://data-fair.github.io/',
     'https://cdn.jsdelivr.net/npm/@koumoul/',
   ],
   applications: [{

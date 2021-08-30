@@ -809,7 +809,7 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
     },
     externalDocs: {
       description: 'Documentation sur Github',
-      url: 'https://koumoul-dev.github.io/data-fair/',
+      url: 'https://data-fair.github.io',
     },
   }
 

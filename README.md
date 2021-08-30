@@ -1,8 +1,8 @@
-# <img alt="Data FAIR logo" src="https://cdn.rawgit.com/koumoul-dev/data-fair/master/public/assets/logo.svg" width="40"> Data FAIR
+# <img alt="Data FAIR logo" src="https://cdn.rawgit.com/data-fair/data-fair/master/public/assets/logo.svg" width="40"> Data FAIR
 
 *Findable, Accessible, Interoperable and Reusable Data*
 
-[Visit documentation website (french)](https://koumoul-dev.github.io/data-fair/2/)
+[Visit documentation website (french)](https://data-fair.github.io/2/)
 
 ![](doc/static/data-fair.gif)
 

@@ -10,8 +10,9 @@ N'importe qui peut développer une nouvelle application de visualisation de donn
 
 ### Exemples
 
-  - Une application statique développée avec des frameworks modernes : [data-fair-charts](https://github.com/koumoul-dev/data-fair-charts)
-  - Une application statique minimaliste en HTML/JS/CSS pur avec juste un petit peu de jQuery : [data-fair-minimal](https://github.com/koumoul-dev/data-fair-minimal)
+  - Un plugin pour [vue-cli](https://cli.vuejs.org/) qui permet de générer une application : [vue-cli-plugin-app](https://github.com/data-fair/vue-cli-plugin-app)
+  - Une application statique minimaliste en HTML/JS/CSS pur avec juste un petit peu de jQuery : [app-minimal](https://github.com/data-fair/app-minimal)
+  - Une application complète développée avec des frameworks modernes : [app-charts](https://github.com/data-fair/app-charts)
 
 ### Métadonnées essentielles
 
@@ -60,7 +61,7 @@ Ces informations sont transmises à l'aide de headers HTTP que le serveur de l'a
 
 #### Serveur de développement Data Fair
 
-Le projet [df-dev-server](https://github.com/koumoul-dev/df-dev-server) permet de simplifier le développement des applications Data Fair.
+Le projet [df-dev-server](https://github.com/data-fair/dev-server) permet de simplifier le développement des applications Data Fair.
 
  * Il est plus léger que Data Fair car il n'a pas besoin des différents services en local (bases de données, gestion utilisateurs, ...)
  * Il permet d'avoir déjà des données de disponible en se connectant à des sources distantes

@@ -817,7 +817,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la [d
   },
   externalDocs: {
     description: 'Documentation sur Github',
-    url: 'https://koumoul-dev.github.io/data-fair/',
+    url: 'https://data-fair.github.io',
   },
   definitions: {
     API: {

@@ -17,7 +17,7 @@ Le coeur de la solution permet
 * de gérer les droits d’accès aux données et aux visualisations (publication)
 
 
-Cette page présente brièvement les langages de programmation, services et outils utilisés pour réaliser ce projet. Pour les développeurs vous pouvez consulter directement le [README et le code source sur github](https://github.com/koumoul-dev/data-fair).
+Cette page présente brièvement les langages de programmation, services et outils utilisés pour réaliser ce projet. Pour les développeurs vous pouvez consulter directement le [README et le code source sur github](https://github.com/data-fair/data-fair).
 
 ## Backend
 
