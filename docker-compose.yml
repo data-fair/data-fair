@@ -16,7 +16,7 @@ services:
     volumes:
       - mongo-data:/data/db
   sd:
-    image: koumoul/simple-directory:master
+    image: koumoul/simple-directory:multi-domain
     network_mode: host
     environment:
       - DEBUG=webhooks
