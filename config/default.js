@@ -218,9 +218,6 @@ module.exports = {
     title: 'Cadastre',
     url: 'https://koumoul.com/s/cadastre/api-docs.json',
   }, {
-    title: 'Divisions administratives',
-    url: 'https://koumoul.com/s/insee-mapping/api/v1/api-docs.json',
-  }, {
     title: 'Service de données cartographiques',
     url: 'https://koumoul.com/s/tileserver/api/v1/api-docs.json',
   }],
