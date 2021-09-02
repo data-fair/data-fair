@@ -1,4 +1,4 @@
-# <img alt="Data FAIR logo" src="https://cdn.rawgit.com/data-fair/data-fair/master/public/assets/logo.svg" width="40"> Data FAIR
+# <img alt="Data FAIR logo" src="https://cdn.jsdelivr.net/gh/data-fair/data-fair@master/public/assets/logo.svg" width="40"> Data FAIR
 
 *Findable, Accessible, Interoperable and Reusable Data*
 
