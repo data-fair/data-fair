@@ -134,6 +134,9 @@ describe('REST datasets', () => {
     assert.equal(await collection.countDocuments({ _needsIndexing: true }), 2)
 
     dataset = await workers.hook('finalizer/rest3')
+    assert.ok(dataset.updatedAt > dataset.createdAt)
+    assert.ok(dataset.dataUpdatedAt > dataset.updatedAt)
+    assert.ok(dataset.finalizedAt > dataset.dataUpdatedAt)
     assert.equal(await collection.countDocuments({ _needsIndexing: true }), 0)
     assert.equal(dataset.count, 3)
     res = await ax.get('/api/v1/datasets/rest3/lines')

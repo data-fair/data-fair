@@ -166,6 +166,8 @@ describe('datasets in draft mode', () => {
     dataset = await workers.hook('finalizer')
     assert.equal(dataset.status, 'finalized')
     assert.equal(dataset.file.name, 'dataset2.csv')
+    assert.ok(dataset.updatedAt > dataset.createdAt)
+    assert.equal(dataset.dataUpdatedAt, dataset.updatedAt)
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
     assert.equal(res.data.total, 5)
   })

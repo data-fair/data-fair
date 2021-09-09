@@ -188,6 +188,12 @@ const applyTransactions = async (req, transacs, validate) => {
     // and not really used anyway
     // if (!result._error) await req.app.publish('datasets/' + dataset.id + '/transactions', transac)
 
+    if (req.user) {
+      db.collection('datasets').updateOne(
+        { id: dataset.id },
+        { $set: { dataUpdatedAt: updatedAt.toISOString(), dataUpdatedBy: { id: req.user.id, name: req.user.name } } })
+    }
+
     results.push({ ...result, ...extendedBody })
   }
 
