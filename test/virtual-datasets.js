@@ -61,6 +61,8 @@ describe('virtual datasets', () => {
     })
     virtualDataset = await workers.hook('finalizer/' + virtualDataset.id)
     assert.equal(virtualDataset.count, 6)
+    assert.equal(virtualDataset.dataUpdatedAt, dataset3.dataUpdatedAt)
+    assert.deepEqual(virtualDataset.dataUpdatedBy, dataset3.dataUpdatedBy)
     res = await ax.get(`/api/v1/datasets/${virtualDataset.id}/lines`)
     assert.equal(res.data.total, 6)
     res = await ax.get(`/api/v1/datasets/${virtualDataset.id}/lines`, { params: { q: 'koumoul' } })
