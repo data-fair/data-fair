@@ -244,18 +244,24 @@ module.exports = {
         revisionSize: { type: 'integer' },
       },
     },
-    createdBy: eventBy,
-    updatedBy: eventBy,
     createdAt: {
       type: 'string',
       description: 'Creation date of this dataset',
       format: 'date-time',
     },
+    createdBy: eventBy,
     updatedAt: {
+      type: 'string',
+      description: 'Date of the last metadata update for this dataset',
+      format: 'date-time',
+    },
+    updatedBy: eventBy,
+    dataUpdatedAt: {
       type: 'string',
       description: 'Date of the last update for this dataset',
       format: 'date-time',
     },
+    dataUpdatedBy: eventBy,
     finalizedAt: {
       type: 'string',
       description: 'Date of the last finalization for this dataset',

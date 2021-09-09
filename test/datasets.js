@@ -118,6 +118,8 @@ describe('datasets', () => {
     assert.equal(res.data.previews[0].id, 'table')
     assert.equal(res.data.previews[0].title, 'Tableau')
     assert.ok(res.data.previews[0].href.endsWith('/embed/dataset/dataset1/table'))
+    assert.equal(res.data.updatedAt, res.data.createdAt)
+    assert.equal(res.data.updatedAt, res.data.dataUpdatedAt)
     await workers.hook('finalizer/' + res.data.id)
   })
 
@@ -272,7 +274,9 @@ describe('datasets', () => {
     const schema = res.data.schema
     schema.find(field => field.key === 'lat')['x-refersTo'] = 'http://schema.org/latitude'
     schema.find(field => field.key === 'lon')['x-refersTo'] = 'http://schema.org/longitude'
-    await ax.patch(webhook.href, { schema: schema })
+    res = await ax.patch(webhook.href, { schema: schema })
+    assert.ok(res.data.dataUpdatedAt > res.data.createdAt)
+    assert.ok(res.data.updatedAt > res.data.dataUpdatedAt)
 
     await testUtils.timeout(eventToPromise(notifier, 'webhook'), 4000, 'third webhook not received')
 
@@ -304,7 +308,10 @@ describe('datasets', () => {
     res = await ax.put('/api/v1/datasets/dataset-name', form2, { headers: testUtils.formHeaders(form2) })
     assert.equal(res.data.originalFile.name, 'dataset-name2.csv')
     assert.equal(res.data.file.name, 'dataset-name2.csv')
-    await workers.hook('finalizer/dataset-name')
+    const dataset = await workers.hook('finalizer/dataset-name')
+    console.log(dataset)
+    assert.equal(dataset.updatedAt, dataset.dataUpdatedAt)
+    assert.notEqual(dataset.updatedAt, dataset.createdAt)
     res = await ax.get('/api/v1/limits/user/dmeadus0')
     assert.equal(res.data.store_bytes.consumption, 151)
     assert.deepEqual(await fs.readdir('data/test/user/dmeadus0/datasets/dataset-name/'), ['dataset-name2.csv'])

@@ -17,14 +17,21 @@
             <span>{{ (dataset.remoteFile || dataset.originalFile || dataset.file).name }} {{ ((dataset.remoteFile || dataset.originalFile || dataset.file).size) | displayBytes }}</span>
           </v-list-item>
 
-          <v-list-item>
+          <v-list-item title="dernière mise à jour des métadonnées">
             <v-list-item-avatar class="ml-0 my-0">
               <v-icon>mdi-pencil</v-icon>
             </v-list-item-avatar>
             <span>{{ dataset.updatedBy.name }} {{ dataset.updatedAt | moment("DD/MM/YYYY, HH:mm") }}</span>
           </v-list-item>
 
-          <v-list-item>
+          <v-list-item v-if="dataset.dataUpdatedAt" title="dernière mise à jour des données">
+            <v-list-item-avatar class="ml-0 my-0">
+              <v-icon>mdi-upload</v-icon>
+            </v-list-item-avatar>
+            <span>{{ dataset.dataUpdatedBy.name }} {{ dataset.dataUpdatedAt | moment("DD/MM/YYYY, HH:mm") }}</span>
+          </v-list-item>
+
+          <v-list-item title="création">
             <v-list-item-avatar class="ml-0 my-0">
               <v-icon>mdi-plus-circle-outline</v-icon>
             </v-list-item-avatar>

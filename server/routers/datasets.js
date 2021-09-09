@@ -394,7 +394,10 @@ const initNew = async (db, req) => {
 }
 
 const setFileInfo = async (db, file, attachmentsFile, dataset, draft) => {
-  const patch = {}
+  const patch = {
+    dataUpdatedBy: dataset.updatedBy,
+    dataUpdatedAt: dataset.updatedAt,
+  }
   patch.originalFile = {
     name: file.originalname,
     size: file.size,
@@ -592,6 +595,9 @@ const updateDataset = asyncWrap(async(req, res) => {
       req.body.schema = await extensions.prepareSchema(db, req.body.schema, req.body.extensions)
     }
 
+    req.body.updatedBy = { id: req.user.id, name: req.user.name }
+    req.body.updatedAt = moment().toISOString()
+
     if (datasetFile) {
       // send header at this point, then asyncWrap keepalive option will keep request alive while we process files
       // TODO: do this in a worker instead ?
@@ -601,7 +607,7 @@ const updateDataset = asyncWrap(async(req, res) => {
       dataset = await setFileInfo(db, datasetFile, attachmentsFile, { ...dataset, ...req.body }, req.query.draft === 'true')
       if (req.query.skipAnalysis === 'true') req.body.status = 'analyzed'
     } else if (dataset.isVirtual) {
-      const { isVirtual, ...patch } = req.body
+      const { isVirtual, updatedBy, updatedAt, ...patch } = req.body
       if (!validatePatch(patch)) {
         throw createError(400, validatePatch.errors)
       }
@@ -609,7 +615,7 @@ const updateDataset = asyncWrap(async(req, res) => {
       req.body.schema = await virtualDatasetsUtils.prepareSchema(db, { ...dataset, ...req.body })
       req.body.status = 'indexed'
     } else if (dataset.isRest) {
-      const { isRest, ...patch } = req.body
+      const { isRest, updatedBy, updatedAt, ...patch } = req.body
       if (!validatePatch(patch)) {
         throw createError(400, validatePatch.errors)
       }
@@ -631,8 +637,6 @@ const updateDataset = asyncWrap(async(req, res) => {
         }
       }
     }
-    req.body.updatedBy = { id: req.user.id, name: req.user.name }
-    req.body.updatedAt = moment().toISOString()
     if (req.query.draft === 'true') {
       Object.assign(dataset.draft, req.body)
     } else {
@@ -641,7 +645,9 @@ const updateDataset = asyncWrap(async(req, res) => {
 
     await db.collection('datasets').replaceOne({ id: req.params.datasetId }, dataset)
     if (req.isNewDataset) await journals.log(req.app, dataset, { type: 'dataset-created' }, 'dataset')
-    else if (!dataset.isRest && !dataset.isVirtual) await journals.log(req.app, dataset, { type: 'data-updated' }, 'dataset')
+    else if (!dataset.isRest && !dataset.isVirtual) {
+      await journals.log(req.app, dataset, { type: 'data-updated' }, 'dataset')
+    }
     await datasetUtils.updateStorage(db, req.dataset)
     await syncRemoteService(db, dataset)
     res.status(req.isNewDataset ? 201 : 200).send(clean(dataset, null, req.query.draft === 'true'))
@@ -666,6 +672,10 @@ router.post('/:datasetId/draft', readDataset(['finalized'], false, true), permis
     ...req.dataset.draft,
     updatedAt: moment().toISOString(),
     updatedBy: { id: req.user.id, name: req.user.name },
+  }
+  if (req.dataset.draft.dataUpdatedAt) {
+    patch.dataUpdatedAt = patch.updatedAt
+    patch.dataUpdatedBy = patch.updatedBy
   }
   if (!baseTypes.has(req.dataset.originalFile.mimetype)) patch.status = 'uploaded'
   else patch.status = 'analyzed'
