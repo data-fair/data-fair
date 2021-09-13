@@ -263,7 +263,11 @@
         }
         if (this.query) params.q = this.query
         if (this.filters.length) {
-          params.qs = filtersUtils.filters2qs(this.filters)
+          try {
+            params.qs = filtersUtils.filters2qs(this.filters)
+          } catch (error) {
+            this.$nextTick(() => eventBus.$emit('notification', { error }))
+          }
         }
         if (this.dataset.finalizedAt) params.finalizedAt = this.dataset.finalizedAt
         return params
@@ -334,7 +338,6 @@
           // console.log('data', this.data)
           this.notFound = false
         } catch (error) {
-          console.log('ERROR', error)
           if (error.status === 404) this.notFound = true
           else eventBus.$emit('notification', { error, msg: 'Erreur pendant la récupération des données' })
         }

@@ -9,29 +9,7 @@
 </template>
 
 <script>
-  import eventBus from '~/event-bus'
-
-  export default {
-    data() {
-      return {
-        notification: null,
-        showSnackbar: false,
-      }
-    },
-    mounted() {
-      eventBus.$on('notification', async notif => {
-        this.showSnackbar = false
-        await this.$nextTick()
-        if (typeof notif === 'string') notif = { msg: notif }
-        if (notif.error) {
-          notif.type = 'error'
-          notif.errorMsg = (notif.error.response && (notif.error.response.data || notif.error.response.status)) || notif.error.message || notif.error
-        }
-        this.notification = notif
-        this.showSnackbar = true
-      })
-    },
-  }
+  export default {}
 
 </script>
 

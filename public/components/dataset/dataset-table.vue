@@ -124,7 +124,7 @@
                 </v-icon>
                 <dataset-filter-col
                   v-if="header.field && header.filterable"
-                  :max-height="filterHeight"
+                  :max-height="420"
                   :field="header.field"
                   @filter="f => addFilter(header.value, f)"
                 />
@@ -449,8 +449,13 @@
         }
         if (this.query) params.q = this.query
         if (this.filters.length) {
-          params.qs = filtersUtils.filters2qs(this.filters)
+          try {
+            params.qs = filtersUtils.filters2qs(this.filters)
+          } catch (error) {
+            this.$nextTick(() => eventBus.$emit('notification', { error }))
+          }
         }
+
         if (this.dataset.finalizedAt) params.finalizedAt = this.dataset.finalizedAt
         if (this.dataset.draftReason) params.draft = 'true'
         return params

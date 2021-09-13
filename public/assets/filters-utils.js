@@ -1,7 +1,6 @@
 
 export function filter2qs(filter) {
   const key = escape(filter.field.key)
-  console.log(filter)
 
   if (!filter.type || filter.type === 'in') {
     if ([null, undefined, ''].includes(filter.values)) return null
@@ -16,6 +15,7 @@ export function filter2qs(filter) {
     return `${escape(filter.field.key)}:[${filter.minValue} TO ${filter.maxValue}]`
   } else if (filter.type === 'starts') {
     if ([null, undefined, ''].includes(filter.value)) return null
+    if (filter.value.includes(',')) throw new Error('vous ne pouvez pas appliquer un filtre "commence par" contenant une virgule')
     return `${key}:${escape(filter.value)}*`
   }
 }
@@ -49,6 +49,7 @@ const escape = (val) => {
       char === '*' ||
       char === '?' ||
       char === ':' ||
+      char === ' ' ||
       char === '\\' ||
       char === '/'
     ) return '\\' + char
