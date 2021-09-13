@@ -1,6 +1,7 @@
 
 export function filter2qs(filter) {
   const key = escape(filter.field.key)
+  console.log(filter)
 
   if (!filter.type || filter.type === 'in') {
     if ([null, undefined, ''].includes(filter.values)) return null
@@ -13,6 +14,9 @@ export function filter2qs(filter) {
   } else if (filter.type === 'interval') {
     if (!filter.minValue || !filter.maxValue) return null
     return `${escape(filter.field.key)}:[${filter.minValue} TO ${filter.maxValue}]`
+  } else if (filter.type === 'starts') {
+    if ([null, undefined, ''].includes(filter.value)) return null
+    return `${key}:${escape(filter.value)}*`
   }
 }
 
@@ -50,4 +54,34 @@ const escape = (val) => {
     ) return '\\' + char
     else return char
   }).join('')
+}
+
+export function writeQueryParams(filters, query) {
+  Object.keys(query).filter(key => key.endsWith('_in')).forEach(key => delete query[key])
+  filters.filter(f => f.type === 'in').forEach(f => {
+    query[f.field.key + '_in'] = JSON.stringify(f.values).slice(1, -1)
+  })
+  Object.keys(query).filter(key => key.endsWith('_starts')).forEach(key => delete query[key])
+  filters.filter(f => f.type === 'starts').forEach(f => {
+    query[f.field.key + '_starts'] = f.value
+  })
+}
+
+export function readQueryParams(query, dataset) {
+  const filters = []
+  Object.keys(query).filter(key => key.endsWith('_in')).forEach(key => {
+    filters.push({
+      type: 'in',
+      field: dataset.schema.find(p => p.key === key.slice(0, -3)),
+      values: JSON.parse(`[${query[key]}]`),
+    })
+  })
+  Object.keys(query).filter(key => key.endsWith('_starts')).forEach(key => {
+    filters.push({
+      type: 'starts',
+      field: dataset.schema.find(p => p.key === key.slice(0, -7)),
+      value: query[key],
+    })
+  })
+  return filters
 }

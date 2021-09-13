@@ -100,39 +100,12 @@
                 >
                   mdi-arrow-up
                 </v-icon>
-                <v-menu
-                  v-if="header.field && header.field.enum && header.filterable && header.field['x-cardinality'] > 1"
-                  bottom
-                  offset-y
+                <dataset-filter-col
+                  v-if="header.field && header.filterable"
                   :max-height="filterHeight"
-                >
-                  <template #activator="{on, attrs}">
-                    <v-btn
-                      small
-                      depressed
-                      text
-                      v-bind="attrs"
-                      class="pa-0"
-                      color="primary"
-                      style="min-width:40px;"
-                      v-on="on"
-                    >
-                      <v-icon>mdi-filter-variant</v-icon>
-                    </v-btn>
-                  </template>
-                  <v-list
-                    dense
-                    class="py-0"
-                  >
-                    <v-list-item
-                      v-for="value in header.field.enum.slice().sort()"
-                      :key="value"
-                      @click="addFilter(header.value, value)"
-                    >
-                      {{ value | cellValues(header.field) }}
-                    </v-list-item>
-                  </v-list>
-                </v-menu>
+                  :field="header.field"
+                  @filter="f => addFilter(header.value, f)"
+                />
               </th>
             </tr>
           </thead>
@@ -376,9 +349,11 @@
           this.$set(this.pagination.sortDesc, 0, true)
         }
       },
-      addFilter(key, value) {
-        const field = this.dataset.schema.find(f => f.key === key)
-        this.filters.push({ type: 'in', field, values: [value] })
+      addFilter(key, filter) {
+        if (typeof filter !== 'object') filter = { type: 'in', values: [filter] }
+        filter.field = this.dataset.schema.find(f => f.key === key)
+        this.filters = this.filters.filter(f => !(f.field.key === key))
+        this.filters.push(filter)
       },
       isFilterable(value) {
         if (value === undefined || value === null || value === '') return false
@@ -389,13 +364,7 @@
         const query = this.$route.query
         if (query.cols) this.selectedCols = query.cols.split(',')
         if (query.q) this.query = query.q
-        Object.keys(query).filter(key => key.endsWith('_in')).forEach(key => {
-          this.filters.push({
-            type: 'in',
-            field: this.dataset.schema.find(p => p.key === key.slice(0, -3)),
-            values: JSON.parse(`[${query[key]}]`),
-          })
-        })
+        this.filters = filtersUtils.readQueryParams(query, this.dataset)
       },
       writeQueryParams() {
         const query = { ...this.$route.query }
@@ -406,10 +375,7 @@
         if (this.query) query.q = this.query
         else delete query.q
 
-        Object.keys(query).filter(key => key.endsWith('_in')).forEach(key => delete query[key])
-        this.filters.filter(f => f.type === 'in').forEach(f => {
-          query[f.field.key + '_in'] = JSON.stringify(f.values).slice(1, -1)
-        })
+        filtersUtils.writeQueryParams(this.filters, query)
 
         this.$router.push({ query })
 

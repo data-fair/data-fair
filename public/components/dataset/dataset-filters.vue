@@ -19,7 +19,10 @@
         @click:close="removeFilter(i)"
         @click="toggle"
       >
-        {{ filter.field.title || filter.field['x-originalName'] || filter.field.key }} = {{ filter.values | cellValues(filter.field) }}
+        {{ filter.field.title || filter.field['x-originalName'] || filter.field.key }}
+        :
+        {{ filter.values || [filter.value] | cellValues(filter.field) }}
+        {{ filter.type === 'starts' ? '*' : '' }}
       </v-chip>
     </v-slide-item>
   </v-slide-group>

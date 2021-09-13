@@ -122,39 +122,12 @@
                 >
                   mdi-arrow-up
                 </v-icon>
-                <v-menu
-                  v-if="header.field && header.field.enum && header.filterable && header.field['x-cardinality'] > 1"
-                  bottom
-                  offset-y
-                  :max-height="420"
-                >
-                  <template #activator="{on, attrs}">
-                    <v-btn
-                      small
-                      depressed
-                      text
-                      v-bind="attrs"
-                      class="pa-0"
-                      color="primary"
-                      style="min-width:40px;"
-                      v-on="on"
-                    >
-                      <v-icon>mdi-filter-variant</v-icon>
-                    </v-btn>
-                  </template>
-                  <v-list
-                    dense
-                    class="py-0"
-                  >
-                    <v-list-item
-                      v-for="value in header.field.enum.slice().sort()"
-                      :key="value"
-                      @click="addFilter(header.value, value)"
-                    >
-                      {{ value | cellValues(header.field) }}
-                    </v-list-item>
-                  </v-list>
-                </v-menu>
+                <dataset-filter-col
+                  v-if="header.field && header.filterable"
+                  :max-height="filterHeight"
+                  :field="header.field"
+                  @filter="f => addFilter(header.value, f)"
+                />
               </th>
             </tr>
           </thead>
@@ -654,10 +627,11 @@
           else eventBus.$emit('notification', { error, msg: 'Erreur pendant la suppression de la ligne\'' })
         }
       },
-      addFilter(key, value) {
-        this.filters = this.filters.filter(f => f.field.key !== key)
-        const field = this.dataset.schema.find(f => f.key === key)
-        this.filters.push({ type: 'in', field, values: [value] })
+      addFilter(key, filter) {
+        if (typeof filter !== 'object') filter = { type: 'in', values: [filter] }
+        filter.field = this.dataset.schema.find(f => f.key === key)
+        this.filters = this.filters.filter(f => !(f.field.key === key))
+        this.filters.push(filter)
       },
       isFilterable(value) {
         if (value === undefined || value === null || value === '') return false
