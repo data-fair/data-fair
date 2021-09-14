@@ -117,7 +117,13 @@ exports.process = async function(app, dataset) {
 
   // virtual datasets have to be re-counted here (others were implicitly counte ad index step)
   if (dataset.isVirtual) {
-    dataset.descendants = await virtualDatasetsUtils.descendants(db, dataset)
+    const descendants = await virtualDatasetsUtils.descendants(db, dataset, ['dataUpdatedAt', 'dataUpdatedBy'])
+    dataset.descendants = descendants.map(d => d.id)
+    const lastDataUpdate = descendants.filter(d => !!d.dataUpdatedAt).sort((d1, d2) => d1.dataUpdatedAt > d2.dataUpdatedAt ? 1 : -1).pop()
+    if (lastDataUpdate) {
+      result.dataUpdatedAt = lastDataUpdate.dataUpdatedAt
+      result.dataUpdatedBy = lastDataUpdate.dataUpdatedBy
+    }
     result.count = dataset.count = await esUtils.count(es, queryableDataset, {})
   }
 

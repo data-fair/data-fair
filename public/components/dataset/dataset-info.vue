@@ -26,7 +26,7 @@
 
           <v-list-item v-if="dataset.dataUpdatedAt" title="dernière mise à jour des données">
             <v-list-item-avatar class="ml-0 my-0">
-              <v-icon>mdi-upload</v-icon>
+              <v-icon>{{ dataset.isRest ? 'mdi-playlist-edit' : 'mdi-upload' }}</v-icon>
             </v-list-item-avatar>
             <span>{{ dataset.dataUpdatedBy.name }} {{ dataset.dataUpdatedAt | moment("DD/MM/YYYY, HH:mm") }}</span>
           </v-list-item>

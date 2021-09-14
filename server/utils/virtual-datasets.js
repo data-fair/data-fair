@@ -92,7 +92,13 @@ exports.prepareSchema = async (db, dataset) => {
 }
 
 // Only non virtual descendants on which to perform the actual ES queries
-exports.descendants = async (db, dataset) => {
+exports.descendants = async (db, dataset, extraProperties) => {
+  const project = {
+    'descendants.id': 1,
+    'descendants.isVirtual': 1,
+    'descendants.virtual': 1,
+  }
+  if (extraProperties) extraProperties.forEach(p => { project['descendants.' + p] = 1 })
   const res = await db.collection('datasets').aggregate([{
     $match: {
       id: dataset.id,
@@ -116,11 +122,7 @@ exports.descendants = async (db, dataset) => {
       },
     },
   }, {
-    $project: {
-      'descendants.id': 1,
-      'descendants.isVirtual': 1,
-      'descendants.virtual': 1,
-    },
+    $project: project,
   }]).toArray()
   if (!res[0]) return []
   const virtualDescendantsWithFilters = res[0].descendants
@@ -128,9 +130,9 @@ exports.descendants = async (db, dataset) => {
   if (virtualDescendantsWithFilters.length) {
     throw createError(501, 'Le jeu de données virtuel ne peut pas être requêté, il agrège un autre jeu de données virtuel avec des filtres dont nous ne pouvons pas garantir l\'application.')
   }
-  const physicalDescendants = res[0].descendants.filter(d => !d.isVirtual).map(d => d.id)
+  const physicalDescendants = res[0].descendants.filter(d => !d.isVirtual)
   if (physicalDescendants.length === 0) {
     throw createError(501, 'Le jeu de données virtuel ne peut pas être requêté, il n\'agrège aucun jeu de données physique.')
   }
-  return physicalDescendants
+  return extraProperties ? physicalDescendants : physicalDescendants.map(d => d.id)
 }
