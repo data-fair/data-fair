@@ -55,7 +55,7 @@ jobs:
         password: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Prepare VERSION.json
-      run: 'echo "{\"ref\": \"${{github.red}}\", \"commit\": \"${{github.sha}}\"}"'
+      run: 'echo "{\"ref\": \"${{github.ref}}\", \"commit\": \"${{github.sha}}\"}" > VERSION.json'
 
     - name: Build and push docker images
       id: docker_build
