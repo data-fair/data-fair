@@ -16,11 +16,11 @@ router.use(asyncWrap(async (req, res, next) => {
 
 router.use(cacheHeaders.noCache)
 
+let version = pjson.version
+try { version = require('./VERSION.json') } catch (err) {}
+
 router.get('/info', asyncWrap(async (req, res, next) => {
-  res.send({
-    version: pjson.version,
-    config,
-  })
+  res.send({ version, config })
 }))
 
 router.get('/datasets-errors', asyncWrap(async (req, res, next) => {

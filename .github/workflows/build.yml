@@ -54,6 +54,9 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
 
+    - name: Prepare VERSION.json
+      run: 'echo "{\"ref\": \"${{GITHUB_REF}}\", \"commit\": \"${{GITHUB_SHA}}\"}"'
+
     - name: Build and push docker images
       id: docker_build
       uses: docker/build-push-action@v2

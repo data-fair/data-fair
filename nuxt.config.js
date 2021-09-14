@@ -88,7 +88,6 @@ module.exports = {
     mainPublicUrl: config.publicUrl,
     basePath: config.basePath,
     directoryUrl: config.directoryUrl,
-    sessionDomain: config.sessionDomain,
     adminRole: config.adminRole,
     contribRole: config.contribRole,
     map: config.map,

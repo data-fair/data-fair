@@ -66,7 +66,7 @@ RUN npm run build
 ADD server server
 ADD scripts scripts
 ADD upgrade upgrade
-ADD README.md .
+ADD README.md VERSION.json* .
 
 VOLUME /data
 EXPOSE 8080
