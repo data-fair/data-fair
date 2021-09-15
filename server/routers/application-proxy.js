@@ -23,7 +23,7 @@ const setResource = asyncWrap(async(req, res, next) => {
   req.application = req.resource = await req.app.get('db').collection('applications')
     .findOne({ id: req.params.applicationId }, { projection: { _id: 0 } })
   if (!req.application) return res.status(404).send('Application configuration not found')
-  findUtils.setResourceLinks(req.application, 'application')
+  findUtils.setResourceLinks(req.application, 'application', req.publicBaseUrl)
   req.resourceType = 'applications'
   req.resourceApiDoc = applicationAPIDocs(req.application)
   next()
@@ -57,7 +57,7 @@ router.get('/:applicationId/manifest.json', setResource, permissions.middleware(
 // prevents opening a browser if the app is installed standalone
 router.get('/:applicationId/login', setResource, (req, res) => {
   res.setHeader('Content-Type', 'text/html')
-  let redirect = encodeURIComponent(`${config.publicUrl}/app/${req.params.applicationId}?`)
+  let redirect = encodeURIComponent(`${req.publicBaseUrl}/app/${req.params.applicationId}?`)
   if (req.application.owner.type === 'organization') redirect += `id_token_org=${encodeURIComponent(req.application.owner.id)}&`
   redirect += 'id_token='
   res.send(loginHtml
@@ -76,7 +76,7 @@ router.all('/:applicationId*', setResource, (req, res, next) => { req.app.get('a
     matchinApplicationKey = applicationKeys && !!applicationKeys.keys.find(k => k.id === req.query.key)
   }
   if (!permissions.can('applications', req.application, 'readConfig', req.user) && !matchinApplicationKey) {
-    return res.redirect(`${config.publicUrl}/app/${req.application.id}/login`)
+    return res.redirect(`${req.publicBaseUrl}/app/${req.application.id}/login`)
   }
 
   // check owner limits
@@ -139,18 +139,18 @@ router.all('/:applicationId*', setResource, (req, res, next) => { req.app.get('a
     delete req.headers['if-modified-since']
   }
 
-  findUtils.setResourceLinks(req.application, 'application')
+  findUtils.setResourceLinks(req.application, 'application', req.publicBaseUrl)
   // Remove trailing slash for more homogeneous rules afterward
   const cleanApplicationUrl = applicationUrl.replace(/\/$/, '')
 
   // TODO: also adapt these headers to multi-domain ?
   const headers = {
     'X-Exposed-Url': req.application.exposedUrl,
-    'X-Application-Url': config.publicUrl + '/api/v1/applications/' + req.params.applicationId,
+    'X-Application-Url': req.publicBaseUrl + '/api/v1/applications/' + req.params.applicationId,
     'X-Directory-Url': config.directoryUrl,
-    'X-API-Url': config.publicUrl + '/api/v1',
+    'X-API-Url': req.publicBaseUrl + '/api/v1',
     // This header is deprecated, use X-Application-Url instead and concatenate /config to it
-    'X-Config-Url': config.publicUrl + '/api/v1/applications/' + req.params.applicationId + '/config',
+    'X-Config-Url': req.publicBaseUrl + '/api/v1/applications/' + req.params.applicationId + '/config',
     'accept-encoding': 'identity',
   }
   const options = {

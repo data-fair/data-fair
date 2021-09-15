@@ -30,7 +30,7 @@ const cacheHeaders = require('../utils/cache-headers')
 
 const router = module.exports = express.Router()
 
-function clean(application) {
+function clean(application, publicUrl) {
   application.public = permissions.isPublic('applications', application)
   application.visibility = visibilityUtils.visibility(application)
 
@@ -38,7 +38,7 @@ function clean(application) {
   delete application._id
   delete application.configuration
   application.description = application.description ? sanitizeHtml(application.description) : ''
-  findUtils.setResourceLinks(application, 'application')
+  findUtils.setResourceLinks(application, 'application', publicUrl)
   return application
 }
 
@@ -145,7 +145,7 @@ router.use('/:applicationId/permissions', readApplication, permissions.router('a
 // retrieve a application by its id
 router.get('/:applicationId', readApplication, permissions.middleware('readDescription', 'read'), cacheHeaders.noCache, (req, res, next) => {
   req.application.userPermissions = permissions.list('applications', req.application, req.user)
-  res.status(200).send(clean(req.application))
+  res.status(200).send(clean(req.application, req.publicBaseUrl))
 })
 
 // PUT used to create or update
@@ -159,7 +159,7 @@ const attemptInsert = asyncWrap(async(req, res, next) => {
     try {
       await req.app.get('db').collection('applications').insertOne(newApplication, true)
       await journals.log(req.app, newApplication, { type: 'application-created', href: config.publicUrl + '/application/' + newApplication.id }, 'application')
-      return res.status(201).json(clean(newApplication))
+      return res.status(201).json(clean(newApplication, req.publicBaseUrl))
     } catch (err) {
       if (err.code !== 11000) throw err
     }
@@ -178,7 +178,7 @@ router.put('/:applicationId', attemptInsert, readApplication, permissions.middle
   newApplication.updatedBy = { id: req.user.id, name: req.user.name }
   newApplication.created = true
   await req.app.get('db').collection('applications').replaceOne({ id: req.params.applicationId }, newApplication)
-  res.status(200).json(clean(newApplication))
+  res.status(200).json(clean(newApplication, req.publicBaseUrl))
 }))
 
 // Update an application configuration
@@ -201,7 +201,7 @@ router.patch('/:applicationId', readApplication, permissions.middleware('writeDe
 
   const patchedApplication = (await req.app.get('db').collection('applications')
     .findOneAndUpdate({ id: req.params.applicationId }, { $set: patch }, { returnOriginal: false })).value
-  res.status(200).json(clean(patchedApplication))
+  res.status(200).json(clean(patchedApplication, req.publicBaseUrl))
 }))
 
 // Change ownership of an application
@@ -210,7 +210,7 @@ router.put('/:applicationId/owner', readApplication, permissions.middleware('del
   if (!permissions.canDoForOwner(req.body, 'applications', 'post', req.user)) return res.sendStatus(403)
   const patchedApp = (await req.app.get('db').collection('applications')
     .findOneAndUpdate({ id: req.params.applicationId }, { $set: { owner: req.body } }, { returnOriginal: false })).value
-  res.status(200).json(clean(patchedApp))
+  res.status(200).json(clean(patchedApp, req.publicBaseUrl))
 }))
 
 // Delete an application configuration
@@ -306,7 +306,7 @@ router.get('/:applicationId/base-application', readApplication, permissions.midd
   const baseApplications = db.collection('base-applications')
   const baseApp = await baseApplications.findOne({ url: req.application.url })
   if (!baseApp) return res.status(404).send('No base application matching ' + req.application.url)
-  res.send(baseAppsUtils.clean(baseApp))
+  res.send(baseAppsUtils.clean(baseApp, req.publicBaseUrl))
 }))
 
 router.get('/:applicationId/api-docs.json', readApplication, permissions.middleware('readApiDoc', 'read'), cacheHeaders.resourceBased, (req, res) => {
