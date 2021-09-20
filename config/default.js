@@ -75,6 +75,8 @@ module.exports = {
     totalStorage: -1,
     // Maximum storage space for 1 dataset
     datasetStorage: -1,
+    // Maximum number of datasets for 1 owner
+    datasetsNb: -1,
     // Maximum storage space for 1 attachment
     attachmentStorage: 100 * 1000 * 1000,
     // Maximum size for attachment to be indexed

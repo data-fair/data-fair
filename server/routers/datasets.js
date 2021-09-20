@@ -38,9 +38,11 @@ const datasetPostSchema = require('../../contract/dataset-post')
 const validatePost = ajv.compile(datasetPostSchema.properties.body)
 const debugFiles = require('debug')('files')
 const thumbor = require('../utils/thumbor')
+const limits = require('../utils/limits')
 const datasetFileSample = require('../utils/dataset-file-sample')
 const { bulkSearchStreams } = require('../utils/master-data')
 const { syncDataset: syncRemoteService } = require('./remote-services')
+const owner = require('../../contract/owner')
 const baseTypes = new Set(['text/csv', 'application/geo+json'])
 
 const router = express.Router()
@@ -66,7 +68,9 @@ const checkStorage = (overwrite) => asyncWrap(async (req, res, next) => {
 
   const owner = req.dataset ? req.dataset.owner : usersUtils.owner(req)
   const datasetLimit = config.defaultLimits.datasetStorage
-  if (datasetLimit !== -1 && datasetLimit < estimatedContentSize) throw createError(413, 'Dataset size exceeds the authorized limit')
+  if (datasetLimit !== -1 && datasetLimit < estimatedContentSize) {
+    throw createError(413, 'Dataset size exceeds the authorized limit')
+  }
   let remainingStorage = await datasetUtils.remainingStorage(req.app.get('db'), owner)
   if (remainingStorage !== -1) {
     if (overwrite && req.dataset && req.dataset.storage) {
@@ -92,6 +96,13 @@ const checkStorage = (overwrite) => asyncWrap(async (req, res, next) => {
   }
   next()
 })
+
+const checkNbDatasets = async (db, owner) => {
+  const { limit } = await limits.get(db, owner, 'nb_datasets', config.defaultLimits.datasetsNb)
+  if (limit === -1) return true
+  const nbDatasets = await db.datasets.count({ 'owner.type': owner.type, 'owner.id': owner.id })
+  if (nbDatasets >= limit) throw createError(429, 'Vous avez atteint le votre nombre de jeux de données auquel vous avez droit')
+}
 
 // check if the endpoint is called from an application with an aunauthenticated readOnly application key
 const applicationKey = asyncWrap(async (req, res, next) => {
@@ -478,6 +489,7 @@ const setFileInfo = async (db, file, attachmentsFile, dataset, draft) => {
 const beforeUpload = asyncWrap(async(req, res, next) => {
   if (!req.user) return res.status(401).send()
   if (!permissions.canDoForOwner(usersUtils.owner(req), 'datasets', 'post', req.user, req.app.get('db'))) return res.sendStatus(403)
+  checkNbDatasets(req.app.get('db'), req.user.activeAccount)
   next()
 })
 router.post('', beforeUpload, checkStorage(true), filesUtils.uploadFile(), filesUtils.fixFormBody(validatePost), asyncWrap(async(req, res) => {

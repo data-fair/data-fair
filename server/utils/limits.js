@@ -16,6 +16,7 @@ const schema = {
     lastUpdate: { type: 'string', format: 'date-time' },
     defaults: { type: 'boolean', title: 'these limits were defined using default values only, not specifically defined' },
     store_bytes: limitTypeSchema,
+    nb_datasets: limitTypeSchema,
     hide_brand: limitTypeSchema,
   },
 }
@@ -37,16 +38,15 @@ exports.getLimits = async (db, consumer) => {
       name: consumer.name || consumer.id,
       lastUpdate: now.toISOString(),
       defaults: true,
-      ...config.anonymousLimits,
     }
     await coll.insertOne(limits)
   }
   return limits
 }
 
-exports.get = async (db, consumer, type) => {
+exports.get = async (db, consumer, type, defaultLimit = 0) => {
   const limits = await exports.getLimits(db, consumer)
-  const res = (limits && limits[type]) || { limit: 0, consumption: 0 }
+  const res = (limits && limits[type]) || { limit: defaultLimit, consumption: 0 }
   res.type = type
   res.lastUpdate = limits ? limits.lastUpdate : new Date().toISOString()
   return res
