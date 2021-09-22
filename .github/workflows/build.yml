@@ -67,7 +67,7 @@ jobs:
 
     - name: Send Keel notification to staging-koumoul.com
       run: |
-        curl -s --fail --show-error -X POST https://keel.admin.staging-koumoul.com/v1/webhooks/native -u ${{ secrets.KEEL_STAGING_USER }}:${{ secrets.KEEL_STAGING_PASSWORD }} -d '{"name": "ghcr.io/${{ github.repository }} ", "tag": "${{ steps.docker_meta.outputs.version }}"}'
+        curl -s --fail --show-error -X POST https://keel.admin.staging-koumoul.com/v1/webhooks/native -u ${{ secrets.KEEL_STAGING_USER }}:${{ secrets.KEEL_STAGING_PASSWORD }} -d '{"name": "ghcr.io/${{ github.repository }}", "tag": "${{ steps.docker_meta.outputs.version }}"}'
     - name: Send Keel notification to koumoul.com
       run: |
-        curl -s --fail --show-error -X POST https://keel.admin.koumoul.com/v1/webhooks/native -u ${{ secrets.KEEL_PROD_USER }}:${{ secrets.KEEL_PROD_PASSWORD }} -d '{"name": "ghcr.io/${{ github.repository }} ", "tag": "${{ steps.docker_meta.outputs.version }}"}'
+        curl -s --fail --show-error -X POST https://keel.admin.koumoul.com/v1/webhooks/native -u ${{ secrets.KEEL_PROD_USER }}:${{ secrets.KEEL_PROD_PASSWORD }} -d '{"name": "ghcr.io/${{ github.repository }}", "tag": "${{ steps.docker_meta.outputs.version }}"}'
