@@ -293,6 +293,7 @@ async function getAppOwner(req) {
 }
 
 // Use the proxy as a user with an active session on an application
+// TODO: replace express-request-proxy by a simple use of https.request as done in application proxy
 router.use('/:remoteServiceId/proxy*', (req, res, next) => { req.app.get('anonymSession')(req, res, next) }, asyncWrap(async (req, res, next) => {
   // only consider a session that truly comes from an application
   const session = req.session && req.session.activeApplications ? req.session : null
