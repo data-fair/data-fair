@@ -104,6 +104,18 @@
             },
           },
           {
+            id: 'user-guide',
+            title: {
+              fr: 'Manuel utilisateur',
+            },
+          },
+          {
+            id: 'interoperate',
+            title: {
+              fr: 'Interopérer avec Data Fair',
+            },
+          },
+          {
             id: 'technical-architecture',
             title: {
               fr: 'Architecture technique',
@@ -113,12 +125,6 @@
             id: 'install',
             title: {
               fr: 'Installation et configuration',
-            },
-          },
-          {
-            id: 'interoperate',
-            title: {
-              fr: 'Interopérer avec Data Fair',
             },
           },
         ]

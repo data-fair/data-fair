@@ -67,7 +67,7 @@
 
 <script>
   const marked = require('@hackmd/meta-marked')
-  const context = require.context('../functional-presentation/', true, /\.md$/)
+  const context = require.context('../user-guide/', true, /\.md$/)
   const version = require('../../../package.json').version
 
   export default {
