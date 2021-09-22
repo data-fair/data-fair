@@ -39,6 +39,7 @@
     "tableschema": "^1.12.4"
   },
   "dependencies": {
+    "@alloc/quick-lru": "^5.2.0",
     "@digibytes/markdownit": "^1.2.2",
     "@elastic/elasticsearch": "^7.10.0",
     "@koumoul/express-request-proxy": "^2.3.0",
@@ -134,7 +135,6 @@
     "patch-package": "^6.4.7",
     "proj4": "^2.7.2",
     "pump": "^3.0.0",
-    "quick-lru": "^6.0.1",
     "random-seed": "^0.3.0",
     "rate-limiter-flexible": "^2.2.2",
     "reconnecting-websocket": "^4.4.0",

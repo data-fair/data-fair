@@ -3,12 +3,13 @@ const config = require('config')
 const fs = require('fs')
 const path = require('path')
 const https = require('https')
+const http = require('http')
 const CacheableRequest = require('cacheable-request')
 const parse5 = require('parse5')
 const { Writable } = require('stream')
 const pump = require('util').promisify(require('pump'))
 const CacheableLookup = require('cacheable-lookup')
-const QuickLRU = require('quick-lru')
+const QuickLRU = require('@alloc/quick-lru')
 const asyncWrap = require('../utils/async-wrap')
 const findUtils = require('../utils/find')
 const applicationAPIDocs = require('../../contract/application-api-docs')
@@ -19,7 +20,9 @@ const router = module.exports = express.Router()
 // const debug = require('debug')('application-proxy')
 
 const cacheableLookup = new CacheableLookup()
-const cacheableRequest = new CacheableRequest(https.request, new QuickLRU({ maxSize: 1000 }))
+const requestStorage = new QuickLRU({ maxSize: 1000 })
+const cacheableRequestHTTP = new CacheableRequest(http.request, requestStorage)
+const cacheableRequestHTTPS = new CacheableRequest(https.request, requestStorage)
 
 const loginHtml = fs.readFileSync(path.join(__dirname, '../resources/login.html'), 'utf8')
 
@@ -171,9 +174,8 @@ router.all('/:applicationId*', setResource, (req, res, next) => { req.app.get('a
     headers,
     lookup: cacheableLookup.lookup,
   }
-
   await new Promise((resolve, reject) => {
-    const cacheAppReq = cacheableRequest(options, async (appRes) => {
+    const cacheAppReq = (targetUrl.protocol === 'http:' ? cacheableRequestHTTP : cacheableRequestHTTPS)(options, async (appRes) => {
       try {
         if (appRes.statusCode === 301 || appRes.statusCode === 302) {
           const location = appRes.headers.location
@@ -274,7 +276,6 @@ router.all('/:applicationId*', setResource, (req, res, next) => { req.app.get('a
 
     cacheAppReq.on('error', err => reject(err))
     cacheAppReq.on('request', req => {
-      console.log('request done !')
       req.on('error', err => reject(err))
       req.end()
     })
