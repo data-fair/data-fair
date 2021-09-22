@@ -1,11 +1,15 @@
 const express = require('express')
-const requestProxy = require('@koumoul/express-request-proxy')
 const config = require('config')
 const fs = require('fs')
 const path = require('path')
+const https = require('https')
+const http = require('http')
+const CacheableRequest = require('cacheable-request')
 const parse5 = require('parse5')
-const { Transform } = require('stream')
-const url = require('url')
+const { Writable } = require('stream')
+const pump = require('util').promisify(require('pump'))
+const CacheableLookup = require('cacheable-lookup')
+const QuickLRU = require('@alloc/quick-lru')
 const asyncWrap = require('../utils/async-wrap')
 const findUtils = require('../utils/find')
 const applicationAPIDocs = require('../../contract/application-api-docs')
@@ -13,7 +17,12 @@ const permissions = require('../utils/permissions')
 const thumbor = require('../utils/thumbor')
 const serviceWorkers = require('../utils/service-workers')
 const router = module.exports = express.Router()
-const debug = require('debug')('application-proxy')
+// const debug = require('debug')('application-proxy')
+
+const cacheableLookup = new CacheableLookup()
+const requestStorage = new QuickLRU({ maxSize: 1000 })
+const cacheableRequestHTTP = new CacheableRequest(http.request, requestStorage)
+const cacheableRequestHTTPS = new CacheableRequest(https.request, requestStorage)
 
 const loginHtml = fs.readFileSync(path.join(__dirname, '../resources/login.html'), 'utf8')
 
@@ -92,6 +101,8 @@ router.all('/:applicationId*', setResource, (req, res, next) => { req.app.get('a
   }
   delete req.application.configurationDraft
   const applicationUrl = (req.query.draft === 'true' ? (req.application.urlDraft || req.application.url) : req.application.url)
+  // Remove trailing slash for more homogeneous rules afterward
+  const cleanApplicationUrl = applicationUrl.replace(/\/$/, '')
 
   // check that the user can access the base appli
   const accessFilter = [
@@ -128,50 +139,6 @@ router.all('/:applicationId*', setResource, (req, res, next) => { req.app.get('a
   const baseApp = await baseAppPromise
   if (!baseApp) return res.status(404).send('Application de base inconnue ou à accès restreint.')
 
-  const ifModifiedSince = req.headers['if-modified-since'] && new Date(req.headers['if-modified-since'])
-  // go through UTC transformation to lose milliseconds just as last-modified and if-modified-since headers do
-  const updatedAt = new Date(new Date(Math.max(...updateDates)).toUTCString())
-
-  // The configuration (or datasets) was updated since last read of the html file,
-  // we need to re-fetch it from backend to be able to re-inject the new configuration
-  // so we remove if-modified-since so that the backend will not respond with a 304
-  if (ifModifiedSince && (updatedAt > ifModifiedSince)) {
-    delete req.headers['if-modified-since']
-  }
-
-  findUtils.setResourceLinks(req.application, 'application', req.publicBaseUrl)
-  // Remove trailing slash for more homogeneous rules afterward
-  const cleanApplicationUrl = applicationUrl.replace(/\/$/, '')
-
-  // TODO: also adapt these headers to multi-domain ?
-  const headers = {
-    'X-Exposed-Url': req.application.exposedUrl,
-    'X-Application-Url': req.publicBaseUrl + '/api/v1/applications/' + req.params.applicationId,
-    'X-Directory-Url': config.directoryUrl,
-    'X-API-Url': req.publicBaseUrl + '/api/v1',
-    // This header is deprecated, use X-Application-Url instead and concatenate /config to it
-    'X-Config-Url': req.publicBaseUrl + '/api/v1/applications/' + req.params.applicationId + '/config',
-    'accept-encoding': 'identity',
-  }
-  const options = {
-    url: cleanApplicationUrl + '/*',
-    headers,
-    timeout: config.remoteTimeout,
-  }
-
-  const originalUrl = url.parse(req.originalUrl)
-  // Trailing / are removed by express...
-  // we want them with added index.html
-  if (req.params['0'] === '') {
-    req.params['0'] = '/index.html'
-  } else if (originalUrl.pathname.endsWith('/')) {
-    req.params['0'] += '/index.html'
-  }
-
-  // We never transmit authentication
-  delete req.headers.authorization
-  delete req.headers.cookie
-
   // Remember active sessions
   if (req.session) {
     // temporarily empty previous sessions where applications were stored as strings
@@ -181,143 +148,140 @@ router.all('/:applicationId*', setResource, (req, res, next) => { req.app.get('a
     }
   }
 
-  options.transforms = [{
-    // fix cache. Remove etag,  calculate last-modified, etc.
-    name: 'cache-manager',
-    match: (resp) => {
-      debug(`Incoming response ${req.originalUrl} - ${resp.statusCode}`)
-      delete resp.headers.expires
-      delete resp.headers.etag
-      resp.headers['cache-control'] = 'private, max-age=0, must-revalidate'
-      resp.headers.pragma = 'no-cache'
-      if (resp.statusCode !== 200) return false
-      const lastModified = resp.headers['last-modified'] && new Date(resp.headers['last-modified'])
-      const comparisonDate = lastModified && lastModified > updatedAt ? lastModified : updatedAt
-      resp.headers['last-modified'] = comparisonDate.toUTCString()
-      if (ifModifiedSince && ifModifiedSince >= comparisonDate) {
-        resp.statusCode = 304
-      }
-      debug(`Cache headers processed: if-modified-since=${ifModifiedSince} - updatedAt=${updatedAt} - last-modified=${lastModified} - statusCode=${resp.statusCode}`)
-      return false
-    },
-    // never actually called
-    transform: () => null,
-  }, {
-    name: 'redirect-fixer',
-    match: (resp) => {
-      // No permanent redirects, they are a pain for developping, debugging, etc.
-      if (resp.statusCode === 301) resp.statusCode = 302
+  findUtils.setResourceLinks(req.application, 'application')
 
-      // Fix redirects
-      if (resp.statusCode === 302) {
-        resp.headers.location = resp.headers.location.replace(cleanApplicationUrl, req.application.exposedUrl)
-        resp.headers.location = resp.headers.location.replace(cleanApplicationUrl.replace('https://', 'http://'), req.application.exposedUrl)
-        // for gitlab pages
-        resp.headers.location = resp.headers.location.replace(cleanApplicationUrl.replace('https:', ''), req.application.exposedUrl)
-      }
+  const headers = {
+    'X-Exposed-Url': req.application.exposedUrl,
+    'X-Application-Url': req.publicBaseUrl + '/api/v1/applications/' + req.params.applicationId,
+    'X-Directory-Url': config.directoryUrl,
+    'X-API-Url': req.publicBaseUrl + '/api/v1',
+    // This header is deprecated, use X-Application-Url instead and concatenate /config to it
+    'X-Config-Url': req.publicBaseUrl + '/api/v1/applications/' + req.params.applicationId + '/config',
+    'accept-encoding': 'identity',
+  }
 
-      return false
-    },
-    // never actually called
-    transform: () => null,
-  }, {
-    // Transform HTML content from response to inject params.
-    // Usefull for client-side only applications that cannot read the headers.
-    name: 'config-injector',
-    match: (resp) => {
-      // Do not attempt to transform errors or redirects
-      if (resp.statusCode !== 200) return false
+  // merge incoming an target URL elements
+  const incomingUrl = new URL('http://host' + req.url)
+  const targetUrl = new URL(cleanApplicationUrl)
+  let extraPath = req.params['0']
+  if (extraPath === '') extraPath = '/index.html'
+  else if (incomingUrl.pathname.endsWith('/')) extraPath += '/index.html'
+  targetUrl.pathname = path.join(targetUrl.pathname, extraPath)
+  targetUrl.search = incomingUrl.searchParams
 
-      // Do not transform compressed content
-      if (resp.headers['content-encoding'] && resp.headers['content-encoding'] !== 'identity') {
-        console.error(`A proxied application (${req.originalUrl}) sent compressed data (${resp.headers['content-encoding']})`)
-        return false
-      }
+  const options = {
+    host: targetUrl.host,
+    port: targetUrl.port,
+    protocol: targetUrl.protocol,
+    path: targetUrl.pathname + targetUrl.hash + targetUrl.search,
+    timeout: config.remoteTimeout,
+    headers,
+    lookup: cacheableLookup.lookup,
+  }
+  await new Promise((resolve, reject) => {
+    const cacheAppReq = (targetUrl.protocol === 'http:' ? cacheableRequestHTTP : cacheableRequestHTTPS)(options, async (appRes) => {
+      try {
+        if (appRes.statusCode === 301 || appRes.statusCode === 302) {
+          const location = appRes.headers.location
+            .replace(cleanApplicationUrl, req.application.exposedUrl)
+            .replace(cleanApplicationUrl.replace('https://', 'http://'), req.application.exposedUrl)
+            .replace(cleanApplicationUrl.replace('https:', ''), req.application.exposedUrl) // for gitlab pages
+          res.redirect(location)
+          await pump(appRes, res)
+          return resolve()
+        }
 
-      // force HTML content type as CDN might not respect it
-      if (req.params['0'].endsWith('.html')) {
-        resp.headers['content-type'] = 'text/html; charset=utf-8'
-      }
+        let contentType = appRes.headers['content-type']
+        // force HTML content type as CDN might not respect it
+        if (!contentType || targetUrl.pathname.endsWith('.html')) {
+          contentType = 'text/html; charset=utf-8'
+        }
+        res.set('content-type', contentType)
 
-      // Only transform HTML
-      return !resp.headers['content-type'] || (resp.headers['content-type'].indexOf('text/html') === 0)
-    },
-    transform: () => {
-      return new Transform({
-        transform(chunk, encoding, callback) {
-          this.str = (this.str || '') + chunk
-          callback()
-        },
-        flush(callback) {
-          let document
-          try {
-            document = parse5.parse(this.str.replace(/%APPLICATION%/, JSON.stringify(req.application)))
-          } catch (err) {
-            return callback(err)
-          }
-          const html = document.childNodes.find(c => c.tagName === 'html')
-          if (!html) return callback(new Error('HTML structure is broken, expect html, head and body elements'))
-          const head = html.childNodes.find(c => c.tagName === 'head')
-          const body = html.childNodes.find(c => c.tagName === 'body')
-          if (!head || !body) return callback(new Error('HTML structure is broken, expect html, head and body elements'))
-
-          // Data-fair generates a manifest per app
-          const manifestUrl = new URL(req.application.exposedUrl).pathname + '/manifest.json'
-          const manifest = head.childNodes.find(c => c.attrs && c.attrs.find(a => a.name === 'rel' && a.value === 'manifest'))
-          if (manifest) {
-            manifest.attrs.find(a => a.name === 'href').value = manifestUrl
-          } else {
-            head.childNodes.push({
-              nodeName: 'link',
-              tagName: 'link',
-              attrs: [
-                { name: 'rel', value: 'manifest' },
-                { name: 'crossorigin', value: 'use-credentials' },
-                { name: 'href', value: manifestUrl },
-              ],
-            })
-          }
-
-          // Data-fair also generates a basic service-workers configuration per app
-          head.childNodes.push({
-            nodeName: 'script',
-            tagName: 'script',
-            attrs: [{ name: 'type', value: 'text/javascript' }],
-            childNodes: [{
-              nodeName: '#text',
-              value: serviceWorkers.register(req.application),
-            }],
+        // first some requests that must be forwarded directly
+        if (
+          appRes.statusCode !== 200 || // Do not attempt to transform errors or redirects
+          (appRes.headers['content-encoding'] && appRes.headers['content-encoding'] !== 'identity') || // Do not transform compressed content
+          (!contentType.startsWith('text/html'))// only transform html content
+        ) {
+          ['content-type', 'content-length', 'pragma', 'cache-control', 'expires', 'last-modified'].forEach(header => {
+            if (appRes.headers[header]) res.set(header, appRes.headers[header])
           })
+          res.status(appRes.statusCode)
+          await pump(appRes, res)
+          return resolve()
+        }
 
+        // all that follows is only applied to simple textual html content, we enrich it
+        let buffer
+        await pump(appRes, new Writable({
+          write(chunk, encoding, callback) {
+            buffer = buffer ? Buffer.concat([buffer, chunk]) : chunk
+            callback()
+          },
+        }))
+        const document = parse5.parse(buffer.toString().replace(/%APPLICATION%/, JSON.stringify(req.application)))
+        const html = document.childNodes.find(c => c.tagName === 'html')
+        if (!html) throw new Error('HTML structure is broken, expect html, head and body elements')
+        const head = html.childNodes.find(c => c.tagName === 'head')
+        const body = html.childNodes.find(c => c.tagName === 'body')
+        if (!head || !body) throw new Error('HTML structure is broken, expect html, head and body elements')
+
+        // Data-fair generates a manifest per app
+        const manifestUrl = new URL(req.application.exposedUrl).pathname + '/manifest.json'
+        const manifest = head.childNodes.find(c => c.attrs && c.attrs.find(a => a.name === 'rel' && a.value === 'manifest'))
+        if (manifest) {
+          manifest.attrs.find(a => a.name === 'href').value = manifestUrl
+        } else {
           head.childNodes.push({
-            nodeName: 'meta',
-            tagName: 'meta',
+            nodeName: 'link',
+            tagName: 'link',
             attrs: [
-              { name: 'name', value: 'referrer' },
-              { name: 'content', value: 'same-origin' },
+              { name: 'rel', value: 'manifest' },
+              { name: 'crossorigin', value: 'use-credentials' },
+              { name: 'href', value: manifestUrl },
             ],
           })
+        }
 
-          // add a brand logo somewhere over the applications
-          const hideBrand = (limits && limits.hide_brand && limits.hide_brand.limit) || config.defaultLimits.hideBrand
-          if (brandEmbed && !hideBrand) {
-            brandEmbed.childNodes.forEach(childNode => body.childNodes.push(childNode))
-          }
+        // Data-fair also generates a basic service-workers configuration per app
+        head.childNodes.push({
+          nodeName: 'script',
+          tagName: 'script',
+          attrs: [{ name: 'type', value: 'text/javascript' }],
+          childNodes: [{
+            nodeName: '#text',
+            value: serviceWorkers.register(req.application),
+          }],
+        })
 
-          callback(null, parse5.serialize(document))
-        },
-      })
-    },
-  }]
+        head.childNodes.push({
+          nodeName: 'meta',
+          tagName: 'meta',
+          attrs: [
+            { name: 'name', value: 'referrer' },
+            { name: 'content', value: 'same-origin' },
+          ],
+        })
 
-  requestProxy(options)(req, res, err => {
-    if (err) {
-      let message = err.message
-      if (err.code) message += ' - ' + err.code
-      if (err.reason) message += ' - ' + err.reason
-      console.error('Error while proxying application', message)
-      if (err.rawPacket) console.log(err.rawPacket.toString())
-    }
-    next(err)
+        // add a brand logo somewhere over the applications
+        const hideBrand = (limits && limits.hide_brand && limits.hide_brand.limit) || config.defaultLimits.hideBrand
+        if (brandEmbed && !hideBrand) {
+          brandEmbed.childNodes.forEach(childNode => body.childNodes.push(childNode))
+        }
+
+        res.set('cache-control', 'private, max-age=0, must-revalidate')
+        res.set('pragma', 'no-cache')
+        res.send(parse5.serialize(document))
+      } catch (err) {
+        reject(err)
+      }
+    })
+
+    cacheAppReq.on('error', err => reject(err))
+    cacheAppReq.on('request', req => {
+      req.on('error', err => reject(err))
+      req.end()
+    })
   })
 }))

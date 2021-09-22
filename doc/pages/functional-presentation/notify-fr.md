@@ -1,7 +1,7 @@
 ---
 title: Alertes
 section: 3
-subsection : 8
+subsection : 10
 updated: 2020-12-09
 description : Gestion des alertes
 published: false
