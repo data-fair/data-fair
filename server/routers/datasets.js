@@ -45,14 +45,14 @@ const baseTypes = new Set(['text/csv', 'application/geo+json'])
 
 const router = express.Router()
 
-function clean(dataset, thumbnail = '300x200', draft = false) {
+function clean(publicUrl, dataset, thumbnail = '300x200', draft = false) {
   if (draft) datasetUtils.mergeDraft(dataset)
   dataset.public = permissions.isPublic('datasets', dataset)
   dataset.visibility = visibilityUtils.visibility(dataset)
   delete dataset.permissions
   dataset.description = dataset.description ? sanitizeHtml(dataset.description) : ''
   dataset.previews = datasetUtils.previews(dataset)
-  findUtils.setResourceLinks(dataset, 'dataset')
+  findUtils.setResourceLinks(dataset, 'dataset', publicUrl)
   if (dataset.image && dataset.public) dataset.thumbnail = thumbor.thumbnail(dataset.image, thumbnail)
   return dataset
 }
@@ -156,7 +156,7 @@ router.get('', cacheHeaders.noCache, asyncWrap(async(req, res) => {
   let [results, count, facets] = await Promise.all(mongoQueries)
   results.forEach(r => {
     r.userPermissions = permissions.list('datasets', r, req.user)
-    clean(r, req.query.thumbnail)
+    clean(req.publicBaseUrl, r, req.query.thumbnail)
   })
   facets = findUtils.parseFacets(facets, nullFacetFields)
   res.json({ count, results, facets })
@@ -208,7 +208,7 @@ router.use('/:datasetId/permissions', readDataset(), permissions.router('dataset
 // retrieve a dataset by its id
 router.get('/:datasetId', readDataset(), applicationKey, permissions.middleware('readDescription', 'read'), cacheHeaders.noCache, (req, res, next) => {
   req.dataset.userPermissions = permissions.list('datasets', req.dataset, req.user)
-  res.status(200).send(clean(req.dataset, req.query.thumbnail))
+  res.status(200).send(clean(req.publicBaseUrl, req.dataset, req.query.thumbnail))
 })
 
 // retrieve only the schema.. Mostly useful for easy select fields
@@ -283,7 +283,7 @@ router.patch('/:datasetId', readDataset((patch) => {
   Object.keys(patch).forEach(patchKey => {
     if (JSON.stringify(patch[patchKey]) === JSON.stringify(req.dataset[patchKey])) { delete patch[patchKey] }
   })
-  if (Object.keys(patch).length === 0) return res.status(200).send(clean(req.dataset))
+  if (Object.keys(patch).length === 0) return res.status(200).send(clean(req.publicBaseUrl, req.dataset))
 
   patch.updatedAt = moment().toISOString()
   patch.updatedBy = { id: req.user.id, name: req.user.name }
@@ -337,7 +337,7 @@ router.patch('/:datasetId', readDataset((patch) => {
 
   await syncRemoteService(db, req.dataset)
 
-  res.status(200).json(clean(req.dataset))
+  res.status(200).json(clean(req.publicBaseUrl, req.dataset))
 }))
 
 // Change ownership of a dataset
@@ -369,7 +369,7 @@ router.put('/:datasetId/owner', readDataset(), permissions.middleware('delete', 
 
   await syncRemoteService(req.app.get('db'), patchedDataset)
 
-  res.status(200).json(clean(patchedDataset))
+  res.status(200).json(clean(req.publicBaseUrl, patchedDataset))
 }))
 
 // Delete a dataset
@@ -545,7 +545,7 @@ router.post('', beforeUpload, checkStorage(true), filesUtils.uploadFile(), files
 
     await journals.log(req.app, dataset, { type: 'dataset-created', href: config.publicUrl + '/dataset/' + dataset.id }, 'dataset')
     await syncRemoteService(db, dataset)
-    res.status(201).send(clean(dataset, null, req.query.draft === 'true'))
+    res.status(201).send(clean(req.publicBaseUrl, dataset, null, req.query.draft === 'true'))
   } catch (err) {
     // Wrapped the whole thing in a try/catch to remove files in case of failure
     for (const file of req.files) {
@@ -650,7 +650,7 @@ const updateDataset = asyncWrap(async(req, res) => {
     }
     await datasetUtils.updateStorage(db, req.dataset)
     await syncRemoteService(db, dataset)
-    res.status(req.isNewDataset ? 201 : 200).send(clean(dataset, null, req.query.draft === 'true'))
+    res.status(req.isNewDataset ? 201 : 200).send(clean(req.publicBaseUrl, dataset, null, req.query.draft === 'true'))
   } catch (err) {
     // Wrapped the whole thing in a try/catch to remove files in case of failure
     for (const file of req.files) {

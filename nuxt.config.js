@@ -20,7 +20,7 @@ module.exports = {
   buildDir: 'nuxt-dist',
   build: {
     // cache: true,
-    publicPath: config.publicUrl + '/_nuxt/',
+    publicPath: config.basePath + '_nuxt/',
     transpile: [/@koumoul/, 'easymde', 'marked'], // Necessary for "à la carte" import of vuetify components
     extend (config, { isServer, isDev, isClient }) {
       // Ignore all locale files of moment.js, those we want are loaded in plugins/moment.js
@@ -38,9 +38,9 @@ module.exports = {
   },
   loading: { color: '#1e88e5' }, // Customize the progress bar color
   plugins: [
+    { src: '~plugins/session' },
     { src: '~plugins/global-components' },
     { src: '~plugins/ws', ssr: false },
-    { src: '~plugins/session' },
     { src: '~plugins/moment' },
     { src: '~plugins/truncate' },
     { src: '~plugins/cell-values' },
@@ -62,8 +62,8 @@ module.exports = {
     },
   }]],
   axios: {
-    browserBaseURL: config.publicUrl + '/',
-    baseURL: `http://localhost:${config.port}/`,
+    browserBaseURL: config.basePath,
+    // baseURL: `http://localhost:${config.port}/`,
   },
   buildModules: ['@nuxtjs/vuetify', '@nuxtjs/svg'],
   vuetify: {
@@ -85,10 +85,9 @@ module.exports = {
     },
   },
   env: {
-    publicUrl: config.publicUrl,
-    wsPublicUrl: config.wsPublicUrl,
+    mainPublicUrl: config.publicUrl,
+    basePath: config.basePath,
     directoryUrl: config.directoryUrl,
-    sessionDomain: config.sessionDomain,
     adminRole: config.adminRole,
     contribRole: config.contribRole,
     map: config.map,

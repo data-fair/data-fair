@@ -32,7 +32,7 @@ const setResource = asyncWrap(async(req, res, next) => {
   req.application = req.resource = await req.app.get('db').collection('applications')
     .findOne({ id: req.params.applicationId }, { projection: { _id: 0 } })
   if (!req.application) return res.status(404).send('Application configuration not found')
-  findUtils.setResourceLinks(req.application, 'application')
+  findUtils.setResourceLinks(req.application, 'application', req.publicBaseUrl)
   req.resourceType = 'applications'
   req.resourceApiDoc = applicationAPIDocs(req.application)
   next()
@@ -66,7 +66,7 @@ router.get('/:applicationId/manifest.json', setResource, permissions.middleware(
 // prevents opening a browser if the app is installed standalone
 router.get('/:applicationId/login', setResource, (req, res) => {
   res.setHeader('Content-Type', 'text/html')
-  let redirect = encodeURIComponent(`${config.publicUrl}/app/${req.params.applicationId}?`)
+  let redirect = encodeURIComponent(`${req.publicBaseUrl}/app/${req.params.applicationId}?`)
   if (req.application.owner.type === 'organization') redirect += `id_token_org=${encodeURIComponent(req.application.owner.id)}&`
   redirect += 'id_token='
   res.send(loginHtml
@@ -85,16 +85,17 @@ router.all('/:applicationId*', setResource, (req, res, next) => { req.app.get('a
     matchinApplicationKey = applicationKeys && !!applicationKeys.keys.find(k => k.id === req.query.key)
   }
   if (!permissions.can('applications', req.application, 'readConfig', req.user) && !matchinApplicationKey) {
-    return res.redirect(`${config.publicUrl}/app/${req.application.id}/login`)
+    return res.redirect(`${req.publicBaseUrl}/app/${req.application.id}/login`)
   }
 
   // check owner limits
   const limitsPromise = db.collection('limits').findOne({ type: req.application.owner.type, id: req.application.owner.id })
 
   delete req.application.permissions
-  req.application.apiUrl = config.publicUrl + '/api/v1'
+  req.application.apiUrl = req.publicBaseUrl + '/api/v1'
+  // TODO: captureUrl should be on same domain too ?
   req.application.captureUrl = config.captureUrl
-  req.application.wsUrl = config.wsPublicUrl
+  req.application.wsUrl = req.publicWsBaseUrl
   if (req.query.draft === 'true') {
     req.application.configuration = req.application.configurationDraft || req.application.configuration
   }
@@ -119,6 +120,9 @@ router.all('/:applicationId*', setResource, (req, res, next) => { req.app.get('a
   // and so benefit from better caching
   const datasets = req.application.configuration && req.application.configuration.datasets && req.application.configuration.datasets.filter(d => !!d)
   if (datasets && datasets.length) {
+    datasets.filter(d => d.href).forEach(d => {
+      d.href = d.href.replace(config.publicUrl, req.publicBaseUrl)
+    })
     const freshDatasets = await db.collection('datasets')
       .find({ $or: datasets.map(d => ({ id: d.id })) })
       .project({ _id: 0, id: 1, finalizedAt: 1 })
@@ -148,11 +152,11 @@ router.all('/:applicationId*', setResource, (req, res, next) => { req.app.get('a
 
   const headers = {
     'X-Exposed-Url': req.application.exposedUrl,
-    'X-Application-Url': config.publicUrl + '/api/v1/applications/' + req.params.applicationId,
+    'X-Application-Url': req.publicBaseUrl + '/api/v1/applications/' + req.params.applicationId,
     'X-Directory-Url': config.directoryUrl,
-    'X-API-Url': config.publicUrl + '/api/v1',
+    'X-API-Url': req.publicBaseUrl + '/api/v1',
     // This header is deprecated, use X-Application-Url instead and concatenate /config to it
-    'X-Config-Url': config.publicUrl + '/api/v1/applications/' + req.params.applicationId + '/config',
+    'X-Config-Url': req.publicBaseUrl + '/api/v1/applications/' + req.params.applicationId + '/config',
     'accept-encoding': 'identity',
   }
 

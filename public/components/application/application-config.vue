@@ -1,5 +1,5 @@
 <template lang="html">
-  <v-container fluid class="pa-0">
+  <v-container fluid>
     <v-alert
       v-if="!!application.errorMessage"
       type="error"
@@ -46,7 +46,7 @@
               :options="vjsfOptions"
               @change="saveDraft"
             />
-            <v-row class="mt-3">
+            <v-row class="mt-3 mb-0">
               <v-spacer />
               <v-btn
                 :disabled="hasModification || !hasDraft || !!application.errorMessageDraft"

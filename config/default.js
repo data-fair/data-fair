@@ -173,13 +173,14 @@ module.exports = {
     'https://koumoul-dev.github.io/',
     'https://data-fair.github.io/',
     'https://cdn.jsdelivr.net/npm/@koumoul/',
+    'https://cdn.jsdelivr.net/npm/@data-fair/',
   ],
   applications: [{
     url: 'https://koumoul.com/apps/infos-parcelles/2.5/',
   }, {
     url: 'https://koumoul.com/apps/infos-loc/0.9/',
   }, {
-    url: 'https://cdn.jsdelivr.net/npm/@koumoul/data-fair-charts@0.8/dist/',
+    url: 'https://cdn.jsdelivr.net/npm/@data-fair/app-charts@0.10/dist/',
   }, {
     url: 'https://koumoul.com/apps/word-cloud/0.3/',
   }, {

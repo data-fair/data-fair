@@ -1,12 +1,19 @@
 <template>
   <v-app :dark="$vuetify.theme.dark" class="data-fair">
     <layout-dynamic-style html-overflow="scroll" />
-    <layout-navigation-left :nav-context="navContext" />
-    <layout-navigation-top :nav-context="navContext" />
-    <v-main>
-      <nuxt />
-      <layout-notifications />
-    </v-main>
+    <template v-if="isMainDomain">
+      <layout-navigation-left :nav-context="navContext" />
+      <layout-navigation-top :nav-context="navContext" />
+      <v-main>
+        <nuxt />
+        <layout-notifications />
+      </v-main>
+    </template>
+    <v-container v-else>
+      <v-alert type="error">
+        Cette page n'est pas consultable depuis ce domaine.
+      </v-alert>
+    </v-container>
   </v-app>
 </template>
 
@@ -21,6 +28,9 @@
     }),
     computed: {
       ...mapState(['env']),
+      isMainDomain() {
+        return this.env.mainPublicUrl.startsWith(window.location.origin)
+      },
     },
     mounted() {
       if (!this.$vuetify.breakpoint.mobile) this.navContext.drawer = true

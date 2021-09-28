@@ -57,14 +57,16 @@
       refresh() {
         this.width = this.$el.offsetWidth
         const data = {
-          children: this.datasets.results.map(d => ({
-            id: d.id,
-            title: d.title || d.id,
-            size: d.storage.size,
-            tooltip: `${d.title || d.id} - ${Vue.filter('displayBytes')(d.storage.size)} - ${{ public: 'Public', private: 'Privé', protected: 'Protégé' }[d.visibility]}`,
-            to: `/dataset/${d.id}`,
-            color: this.visibilityColor(d.visibility),
-          })),
+          children: this.datasets.results
+            .filter(d => !!d.storage)
+            .map(d => ({
+              id: d.id,
+              title: d.title || d.id,
+              size: d.storage.size,
+              tooltip: `${d.title || d.id} - ${Vue.filter('displayBytes')(d.storage.size)} - ${{ public: 'Public', private: 'Privé', protected: 'Protégé' }[d.visibility]}`,
+              to: `/dataset/${d.id}`,
+              color: this.visibilityColor(d.visibility),
+            })),
         }
         if (this.datasets.count > this.datasets.results.length) {
           const nbOthers = this.datasets.count - this.datasets.results.length

@@ -188,10 +188,10 @@ exports.parametersDoc = (filterFields) => [
   title: 'Identifiant du propriétaire',
 }]))
 
-exports.setResourceLinks = (resource, resourceType) => {
-  resource.href = `${config.publicUrl}/api/v1/${resourceType}s/${resource.id}`
+exports.setResourceLinks = (resource, resourceType, publicUrl = config.publicUrl) => {
+  resource.href = `${publicUrl}/api/v1/${resourceType}s/${resource.id}`
   resource.page = `${config.publicUrl}/${resourceType}/${resource.id}`
-  if (resourceType === 'application') resource.exposedUrl = `${config.publicUrl}/app/${resource.id}`
+  if (resourceType === 'application') resource.exposedUrl = `${publicUrl}/app/${resource.id}`
 }
 
 exports.facetsQuery = (req, facetFields = {}, filterFields, nullFacetFields = []) => {
