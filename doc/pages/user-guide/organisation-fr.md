@@ -5,15 +5,13 @@ updated: 2021-09-20
 description : Créer et gérer son organisation
 published: false
 ---
-Une compte organisation vous permet de travailler à plusieurs sur les même fichiers et visualisations.
-
+Une compte organisation vous permet de travailler à plusieurs sur les même fichiers et visualisations.  
 Un compte personnel peut créer une ou plusieurs organisations en fonction de ses limites.
 
 ### Créer une organisation
 
-Vous pouvez créer une organisation dans l'espace **Mon Compte** accessible par le menu de Data Fair.
-
-Vous pouvez créer une organisation avec le bouton **Créer une organisation**, vous serez alors administrateur de cette nouvelle organisation.
+Les organisations peuvent être créées dans l'espace **Mon Compte** qui accessible par le menu de Data Fair en haut à droit.  
+Cliquez sur le bouton **Créer une organisation** et renseignez le titre et la description de votre organisation, vous serez alors administrateur de cette nouvelle organisation.
 
 Si vous êtes un administrateur de l'organisation, vous pouvez accéder à la [gestion des membres](./user-guide/members). Vous pouvez ainsi inviter des membres, définir leurs rôles et supprimer des membres de votre organisation.
 

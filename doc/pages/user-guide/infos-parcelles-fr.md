@@ -48,7 +48,8 @@ Les boutons d'actions vous permettent d'importer l'application sur un autre site
 #### Menu de configuration
 Le menu de configuration est composé de trois sous-menus : **Sources de données**, **Options de rendu** et **Navigation**.
 
-* Sources des données  
+##### Sources des données  
+
 Dans le menu **Sources de données**, choisissez le jeu de données que vous venez de préparer avec les concepts.
 
 Remarque : Si votre fichier n'est pas disponible dans ce menu, vérifiez que vous avez bien mis à jour les [concepts](./user-guide/concept) **Code parcelle**, **Latitude** et **Longitude** dans votre jeu de données.
@@ -56,11 +57,13 @@ Remarque : Si votre fichier n'est pas disponible dans ce menu, vérifiez que vou
 Lorsque vous avez choisi un jeu de données compatible avec l'application **Infos-parcelles**, votre aperçu de carte s'affiche avec les points de vos données.  
 Pour le moment, les points sont tous de la même couleur et vous n'avez que les données cadastrales par default.  
 
-* Options de rendu
+##### Options de rendu  
+
 Dans le menu **Options de rendu**, renseignez la colonne de votre légende avec le paramètre **Couleur par valeur d'un champ**.  
 Dans le paramètre **Infobulle**, vous pouvez sélectionner plusieurs colonnes pour les afficher lorsque qu'un utilisateur de votre visualisation aura cliqué sur une parcelle.
 
-* Navigation  
+##### Navigation  
+
 Dans le menu **Navigation**, vous pouvez cacher la barre de recherche et activer ou désactiver la géolocalisation.
 
 Lorsque vous avez un aperçu qui vous satisfait, cliquez sur **Enregistrer** pour finaliser votre configuration.  

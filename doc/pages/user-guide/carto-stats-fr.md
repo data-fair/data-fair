@@ -8,7 +8,8 @@ published: false
 application : https://koumoul.com/apps/carto-stats/0.6/
 ---
 
-La visualisation **Carto-stats** permet de projeter des données géolocalisées sur une carte et de pouvoir créer des filtres dynamiques. Vous avez un exemple de cette visualisation sur notre [carte des accidents de vélos](https://opendata.koumoul.com/reuses/cartographie-des-accidents-de-velo/full).
+La visualisation **Carto-stats** permet de projeter des données géolocalisées sur une carte et de pouvoir créer des filtres dynamiques.  
+Vous avez un exemple de cette visualisation sur notre [carte des accidents de vélos](https://opendata.koumoul.com/reuses/cartographie-des-accidents-de-velo/full).
 
 Carto-stats permet de créer des filtres dynamiques et d'avoir les résultats des filtres sur la carte.  
 En comparaison avec [Infos-localisation](./user-guide/infos-localisations), **Carto-stats** sera plus adaptée pour des données volumineuses et **Infos-localisations** sera plus adaptée à des données contenant des champs spéciaux tels que des liens de sites, des images, des descriptions, etc...
@@ -17,8 +18,7 @@ En comparaison avec [Infos-localisation](./user-guide/infos-localisations), **Ca
 ### Configuration
 #### Les concepts
 
-Pour configurer une visualisation **Carto-stats**, votre compte actif contient au mois un jeu de données avec [les concepts](./user-guide/concept)  **Latitude** et **Longitude** d'associés dans son schéma.
-
+Pour configurer une visualisation **Carto-stats**, votre compte actif contient au mois un jeu de données avec [les concepts](./user-guide/concept)  **Latitude** et **Longitude** d'associés dans son schéma.  
 Une fois que vous avez mis à jour le schéma de vos données, vous pouvez visualiser un aperçu de vos données à l'aide du bouton **carte générique**. Vous pouvez ainsi vérifier que vos données sont correctement projetées sur une carte.
 
 ### Créer une visualisation Carto-stats
@@ -27,6 +27,9 @@ Pour réaliser la visualisation, cliquez sur **Visualisations** puis sur **Confi
 
 1. Choisir l'application **Carto-stats**
 2. Entrer le titre de la visualisation
+
+<p>
+</p>
 
 Vous êtes redirigé vers la page de configuration de votre application avec ses différentes sections:
 
@@ -48,8 +51,7 @@ Dans le menu **Sources de données**, vous pouvez choisir le jeu de données que
 
 Remarque : Si votre fichier n'est pas disponible dans ce menu, vérifiez que vous avez bien mis à jour les [concepts](./user-guide/concept) **Latitude** et **Longitude** dans votre jeu de données.
 
-Lorsque vous avez choisi un jeu de données compatible avec l'application **Carto-stats**, votre aperçu de carte s'affiche avec les points de vos données.
-
+Lorsque vous avez choisi un jeu de données compatible avec l'application **Carto-stats**, votre aperçu de carte s'affiche avec les points de vos données.  
 Vous pouvez configurer des filtres dynamiques, des filtres prédéfinis et un slider.
 
 * Les filtres dynamiques vous permettent de choisir des champs qui seront disponibles aux utilisateurs de votre visualisation. Ces utilisateurs pourront utiliser les filtres pour restreindre le nombre de points sur la carte.
@@ -58,10 +60,8 @@ Vous pouvez configurer des filtres dynamiques, des filtres prédéfinis et un sl
 
 #### Options de rendu
 
-Dans le menu **Options de rendu**, vous pouvez personnaliser les fiches disponible sur les marqueurs et votre légende.
-
-Le menu **Infobulle**, vous permet de sélectionner les différents champs à afficher sur les fiches de vos marqueurs.
-
+Dans le menu **Options de rendu**, vous pouvez personnaliser les fiches disponible sur les marqueurs et votre légende.  
+Le menu **Infobulle**, vous permet de sélectionner les différents champs à afficher sur les fiches de vos marqueurs.  
 La **Couleur par valeur d'un champ** défini la colonne utilisée pour votre légende. La palette vous permet de choisir un ensemble de couleurs qui seront associées à vos valeurs de légende.
 
 

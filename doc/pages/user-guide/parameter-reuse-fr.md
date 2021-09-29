@@ -23,6 +23,7 @@ Les filtres statiques permettent de réalisé un filtre en dur sur vos données.
 
 ## Menu graphique
 Le menu de configuration des visualisations graphiques se compose des sections **Sources de données**, **Préparation des données**, **Présentation**.
+
 ![Menu de configuration d'une visualisation graphique](./images/user-guide/Menu-graph.jpg)
 
 ### Préparation des données

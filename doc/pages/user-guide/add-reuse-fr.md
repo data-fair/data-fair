@@ -21,6 +21,7 @@ Cette page est divisée en plusieurs parties:
 * l'**activité** pour suivre les dernières modifications de votre visualisation.
 <p>
 </p>
+
 Sur la droite de la page, les **boutons d'actions** sont disponibles.
 
 ![Menu](./images/user-guide/add-reuse-config.jpg)  

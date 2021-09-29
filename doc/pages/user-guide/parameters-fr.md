@@ -8,6 +8,6 @@ published: false
 Les paramètres d'un compte sont accessibles à partir de la barre de navigation
 
 Paramètres d'un compte :
-* [Licences et téhmatiques](./user-guide/informations)
+* [Licences et thématiques](./user-guide/licences-thematics)
 * [Accès par API](./user-guide/api)
 * [Appels extérieurs (Webhooks)](./user-guide/webhooks)  

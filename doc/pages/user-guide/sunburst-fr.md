@@ -18,13 +18,16 @@ Pour réaliser la visualisation, cliquez sur **Visualisations** puis sur **Confi
 1. Entrer le titre de la visualisation
 2. Choisir l'application **Diagramme Sunburst**
 
+<p>
+</p>
+
 Vous êtes redirigé vers la page de configuration de votre application avec ses différentes sections:
 
-1. Titre de ma visualisation
-2. Informations
-3. Boutons d'actions (consultation, plein écran, ... )
-4. Menu de configuration
-5. Aperçu
+1. Informations
+2. Boutons d'actions (plein écran, intégration sur un site, capture, ... )
+3. Menu de configuration
+4. Aperçu
+
 
 ![Page de configuration](./images/user-guide/sunburst-config.jpg)
 
@@ -35,21 +38,22 @@ Les boutons d'actions vous permettent d'importer l'application sur un autre site
 ### Menu de configuration
 Le menu de configuration est composé de trois sous-menus : **Sources de données**, **Préparation des données** et **Présentation**.
 
+#### Sources de données  
+
 Dans le menu **Sources de données**, choisissez le jeu de données à utiliser.
 
-La source de données est mise à jour et l'aperçu reste, pour le moment, blanc.  
+#### Préparation des données  
 
-Le menu **Préparation des données** permet de renseigner les colonnes que vous souhaitez afficher et d'avoir votre premier rendu.
-
-**Calcul de la valeur** permet de compter le nombre de lignes non nulles d'une colonne pour qu'elle soit représentée ou bien de calculer les sommes des valeurs d'une colonne. Dans notre image nous avons calculer la somme de valeurs sur la colonne **Montant**.
-
+Le menu **Préparation des données** permet de renseigner les colonnes que vous souhaitez afficher et d'avoir votre premier rendu.  
+**Calcul de la valeur** permet de compter le nombre de lignes non nulles d'une colonne pour qu'elle soit représentée ou bien de calculer les sommes des valeurs d'une colonne. Dans notre image nous avons calculer la somme de valeurs sur la colonne **Montant**.  
 Les **Groupes** représentent les niveaux que vous voulez afficher sur votre diagramme sunburst. Dans notre image, nous avons réalisé la visualisation sur 4 niveaux de groupes représentant les 4 premiers niveaux de code NAF.
+
+
+#### Présentation  
 
 Dans le menu **Présentation**, vous pouvez désactiver l'affichage des descendants uniques, modifier la couleur du texte et modifier la couleur de vos catégories.
 
 
-Lorsque vous avez un aperçu qui vous satisfait, cliquer sur **Enregistrer** pour finaliser votre configuration.
-
-Vous pouvez ajouter une description en bas de page et rendre publique votre application.
-
+Lorsque vous avez un aperçu qui vous satisfait, cliquer sur **Enregistrer** pour finaliser votre configuration.  
+Vous pouvez ajouter une description en bas de page et rendre publique votre application.  
 Votre application est configurée et vous pouvez la consulter à l'aide des boutons **consultation** ou **plein écran**.

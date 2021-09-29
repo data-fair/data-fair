@@ -20,13 +20,15 @@ Pour réaliser votre visualisation, cliquez sur **Visualisations** puis sur **Co
 1. Entrer le titre de la visualisation
 2. Choisir l'application **Nuages de mots**
 
+<p>
+</p>
+
 Vous êtes redirigé vers la page de configuration de votre application avec ses différentes sections:
 
-1. Titre de ma visualisation
-2. Informations
-3. Boutons d'actions (consultation, plein écran, ... )
-4. Menu de configuration
-5. Aperçu
+1. Informations
+2. Boutons d'actions (plein écran, intégration sur un site, capture, ... )
+3. Menu de configuration
+4. Aperçu
 
 ![Page de configuration](./images/user-guide/nuages-config.jpg)
 
@@ -37,25 +39,22 @@ Les boutons d'actions vous permettent d'importer l'application sur un autre site
 ### Menu de configuration
 Le menu de configuration est composé de trois sous-menus : **Source de données**, **Préparation des données** et **Présentation**.
 
-Dans le menu **Sources de Données**, vous pouvez choisir le jeu de données que vous voulez utiliser.
+#### Sources de Données
 
-Remarque : Si votre fichier n'est pas disponible dans ce menu, vérifier que vous avez bien mis à jour les [concepts](/documentation/userguide/concept).
-
-Les **Filtres** permettent de restreindre les données affichées dans l'application. Vous pouvez **Restreindre à des valeurs** d'une colonne,  **Restreindre à un intervalle de valeurs** d'une colonne ou **Exclure des valeurs** d'une colonne.
+Dans le menu **Sources de Données**, vous pouvez choisir le jeu de données que vous voulez utiliser.  
+Les **Filtres** permettent de restreindre les données affichées dans l'application.  
+Vous pouvez **Restreindre à des valeurs** d'une colonne,  **Restreindre à un intervalle de valeurs** d'une colonne ou **Exclure des valeurs** d'une colonne.
 
 #### Préparation des données
 
-Dans le menu **Préparation des données**, **Champs textuels** permet de selectionner la ou les colonne(s) que vous souhaitez utiliser dans votre nuage de mots.
-
+Dans le menu **Préparation des données**, **Champs textuels** permet de sélectionner la ou les colonne(s) que vous souhaitez utiliser dans votre nuage de mots.  
 **Type de calcul** vous permet de classer votre texte par mots les plus significatifs, par fréquence ou par une valeur d'une autre colonne.
 
 #### Présentation
 
 Le menu **Présentation** permet de personnaliser votre nuage de mot.  
-
-Le  **Type de palette** permet de choisir un ensemble de couleurs qui seront associées aux valeurs de vos données.  
-Le **Filtre textuel interactif** permet de rendre les mots cliquable, un nouveau nuage de mots sera créé en relation avec le mot sur lequel vous avez cliqué.
-
+Le **Type de palette** permet de choisir un ensemble de couleurs qui seront associées aux valeurs de vos données.  
+Le **Filtre textuel interactif** permet de rendre les mots cliquable, un nouveau nuage de mots sera créé en relation avec le mot sur lequel vous avez cliqué.  
 Dans les **autres options de rendu**, vous permettent de choisir le nombre maximal de mots, la police, la taille minimale et maximale d'un mot, la progression de la taille des mots, les sens de rotation des mots et le type de spirale des mots.
 
 Lorsque vous avez un aperçu qui vous satisfait, cliquez sur **Enregistrer** pour finaliser votre configuration.  

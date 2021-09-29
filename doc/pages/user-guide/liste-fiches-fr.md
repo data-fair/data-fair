@@ -18,6 +18,9 @@ Pour réaliser la visualisation, cliquez sur **Mes visualisations** puis sur **C
 1. Entrer le titre de la visualisation
 2. Choisir l'application **Liste et Fiches**
 
+<p>
+</p>
+
 Vous êtes redirigé vers la page de configuration de votre application avec ses différentes sections:
 
 1. Titre de ma visualisation
@@ -33,12 +36,25 @@ Les **informations** vous donnent un résumé des caractéristiques de votre app
 Les boutons d'actions vous permettent d'importer l'application sur un autre site, de dupliquer l'application, de la supprimer et d'accéder à l'application en plein écran.
 
 #### Menu de configuration
-Le menu de configuration est composé de quatre sous-menus : **Sources de données**, **Fiche miniature**, **Fiche détaillée** et **Recherche**.
+Le menu de configuration est composé de cinq sous-menus : **Données**, **Vignette**, **Fiche détaillée**, **Navigation** et **Affichage**.
 
-Le sous-menu **Sources de données** vous permet de choisir un jeu de données et de définir des **Filtres prédéfinis**. Les **Filtres prédéfinis** permettent de restreindre les données affichées dans l'application. Vous pouvez **Restreindre à des valeurs** d'une colonne,  **Restreindre à un intervalle de valeurs** d'une colonne ou **Exclure des valeurs** d'une colonne.
 
-Le sous-menu **Fiche miniature** permet de choisir les différents champs affichés dans les fiches. Si le jeu de données que vous avez choisi possède les [concepts](./user-guide/concept) **Libellé**, **Image** et **Description**, l'application **Liste et Fiches** va, automatiquement, les afficher dans les fiches.
+##### Données
+
+Le sous-menu **Données** vous permet de choisir un jeu de données et de définir des **Filtres prédéfinis**. Les **Filtres prédéfinis** permettent de restreindre les données affichées dans l'application. Vous pouvez **Restreindre à des valeurs** d'une colonne,  **Restreindre à un intervalle de valeurs** d'une colonne ou **Exclure des valeurs** d'une colonne.
+
+##### Vignette
+
+Le sous-menu **Vignette** permet de choisir les différents champs affichés dans les fiches. Si le jeu de données que vous avez choisi possède les [concepts](./user-guide/concept) **Libellé**, **Image** et **Description**, l'application **Liste et Fiches** va, automatiquement, les afficher dans les fiches.
+
+##### Fiche détaillée
 
 Le sous-menu **Fiche détaillée** permet d'activer les fiches détaillées. Lorsque l'option **Activer les fiches détaillées** est sélectionnée, les fiches deviennent cliquable et vont afficher une fiche plus grande et plus détaillée selon les champs à utiliser que vous aurez choisi.
 
-Le sous-menu **Recherche** permet de désactiver la recherche textuelle et de définir les colonnes qui serviront de filtres dynamiques.
+##### Navigation
+
+Le sous-menu **Navigation** permet de gérer les filtres de votre visualisation. Avec des options de filtres et de tri, les utilisateurs vont pouvoir explorer votre jeu de données plus facilement et dynamiquement.
+
+##### Affichage
+
+Le sous-menu **Affichage** permet de choisir le rendu de l'image sur la vignette. L'image peut être affichée en bannière, en logo ou ne pas afficher l'image.

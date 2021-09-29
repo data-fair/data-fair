@@ -9,17 +9,18 @@ application : https://koumoul.com/apps/data-fair-admin-divs/0.2/
 ---
 
 
-La visualisation **Divisions administratives** permet de réaliser des cartes administratives, thématiques ou choroplèthes. Il s'agit de projeter des données statistiques sur un ensemble de territoires. Il est possible de naviguer entre les niveaux de territoires à l'aide du zoom. Un clic sur un territoire vous permet d'accéder aux données.  
+La visualisation **Divisions administratives** permet de réaliser des cartes administratives, thématiques ou choroplèthes.  
+Il s'agit de projeter des données statistiques sur un ensemble de territoires. Il est possible de naviguer entre les niveaux de territoires à l'aide du zoom. Un clic sur un territoire vous permet d'accéder aux données.  
 Vous avez un exemple de cette visualisation sur notre [carte des résultats aux élections européennes de 2019](https://opendata.koumoul.com/reuses/resultats-aux-elections-europeennes-2019/full).
 
 **Divisions administratives** permet de créer des cartes aux niveaux des communes, des départements et/ou des régions.  
-Les niveaux des EPCI et IRIS sont des évolutions possibles de l'application.
+Les couches de niveaux de territoire EPCI et IRIS sont des évolutions possibles de l'application.
 
 
 ### Configuration
 #### Les concepts
 
-Pour configurer une visualisation **Divisions administratives**, votre compte actif contient au mois un jeu de données avec des [concepts](./user-guide/concept)  **Code Commune**, **Code département** ou **Code région**. Si vos données n'ont qu'une seule colonne contenant des codes INSEE Régions, votre carte ne sera disponible que sur le niveau région. Pour avoir une carte sur les trois niveaux, votre jeu de données devra contenir des colonnes contenant des codes INSEE Commune, des codes INSEE Département et des codes INSEE Région avec chaque concept associé à sa colonne correspondante.
+Pour configurer une visualisation **Divisions administratives**, votre compte actif contient au mois un jeu de données avec des [concepts](./user-guide/concept)  **Code Commune**, **Code département** et/ou **Code région**.
 
 #### Créer une visualisation Divisions administratives
 
@@ -27,6 +28,9 @@ Pour réaliser votre visualisation, cliquez sur **Visualisations** puis sur **Co
 
 1. Entrer le titre de la visualisation
 2. Choisir l'application **Divisions administratives**
+
+<p>
+</p>
 
 Vous êtes redirigé vers la page de configuration de votre application avec ses différentes sections:
 
@@ -43,10 +47,7 @@ Les **informations** vous donnent un résumé des caractéristiques de votre app
 #### Menu de configuration
 Le menu de configuration est composé de quatre sous-menus : **Données**, **Métrique**, **Rendu** et **Navigation**.
 
-Dans le menu **Données**, vous pouvez choisir le jeu de données que vous voulez utiliser.
-
-Remarque : Si votre fichier n'est pas disponible dans ce menu, vérifiez que vous avez bien mis à jour les [concepts](./user-guide/concept).
-
+Dans le menu **Données**, vous pouvez choisir le jeu de données que vous voulez utiliser.  
 Lorsque vous avez choisi un jeu de données compatible avec l'application **Divisions administratives**, un aperçu de carte s'affiche.
 
 ##### Métrique
