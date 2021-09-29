@@ -59,7 +59,9 @@ if (config.mode.includes('server')) {
   if (!basePath.endsWith('/')) basePath += '/'
   app.use('/', (req, res, next) => {
     const u = originalUrl(req)
-    req.publicBaseUrl = u.full ? formatUrl({ protocol: u.protocol, hostname: u.hostname, port: u.port, pathname: basePath.slice(0, -1) }) : config.publicUrl
+    const urlParts = { protocol: u.protocol, hostname: u.hostname, pathname: basePath.slice(0, -1) }
+    if (u.port !== 443 && u.port !== 80) urlParts.port = u.port
+    req.publicBaseUrl = u.full ? formatUrl(urlParts) : config.publicUrl
     debugDomain('req.publicBaseUrl', req.publicBaseUrl)
     req.publicWsBaseUrl = req.publicBaseUrl.replace('http:', 'ws:').replace('https:', 'wss:')
     debugDomain('req.publicWsBaseUrl', req.publicWsBaseUrl)
