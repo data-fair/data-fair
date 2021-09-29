@@ -70,6 +70,7 @@ router.get('/:applicationId/login', setResource, (req, res) => {
   let authUrl = `${req.directoryUrl}/api/auth/password?redirect=${redirect}`
   if (req.application.owner.type === 'organization') authUrl += `org=${encodeURIComponent(req.application.owner.id)}&`
   res.send(loginHtml
+    .replace('{ERROR}', req.query.error ? `<p style="color:red">${req.query.error}</p>` : '')
     .replace('{AUTH_ROUTE}', authUrl)
     .replace('{LOGO}', `${req.directoryUrl}/api/avatars/${req.application.owner.type}/${req.application.owner.id}/avatar.png`),
   )
