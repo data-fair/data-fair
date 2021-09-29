@@ -220,7 +220,7 @@ router.all('/:applicationId*', setResource, (req, res, next) => { req.app.get('a
             callback()
           },
         }))
-        const document = parse5.parse(buffer.toString().replace(/%APPLICATION%/, JSON.stringify(req.application)))
+        const document = parse5.parse(buffer.toString().replace(/%APPLICATION%/, JSON.stringify(req.application, null, 2)))
         const html = document.childNodes.find(c => c.tagName === 'html')
         if (!html) throw new Error('HTML structure is broken, expect html, head and body elements')
         const head = html.childNodes.find(c => c.tagName === 'head')

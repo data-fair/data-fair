@@ -10,7 +10,7 @@
     "report": "nyc report --reporter=html",
     "lint": "eslint --ext js,vue --ignore-path .gitignore .",
     "lint-fix": "eslint --ext js,vue --ignore-path .gitignore --fix .",
-    "dev-server": "NODE_ENV=development nodemon server",
+    "dev-server": "DEBUG=upgrade* NODE_ENV=development nodemon server",
     "dev-client": "NODE_ENV=development nuxt",
     "build": "nuxt build",
     "start": "node server",
