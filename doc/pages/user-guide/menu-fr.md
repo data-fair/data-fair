@@ -7,9 +7,9 @@ description : Menu
 published: false
 ---
 
-Le menu permet principalement de changer de compte actif et d'accéder aux pages **Abonnement**, **Notifications** et **Stockage** du compte actif.
+Le menu permet principalement de changer de compte actif et d'accéder aux pages de **Notifications** et **Stockage** du compte actif.
 
-![Menu](./images/user-guide/menu.jpg)
+![Menu](./images/user-guide/menu.jpg)  
 *Menu déroulant disponible en haut à droite*
 
 Sur l'image ci-dessus, le compte actif est le compte **Koumoul**, il est possible de changer de compte pour passer sur son **compte personnel**.
@@ -25,14 +25,6 @@ Il est aussi possible de supprimer son compte personnel.
 
 ![Compte](./images/user-guide/menu-account.jpg)
 
-### Abonnement
-
-La page **Abonnement** vous permet d'accéder aux caractéristiques de l'abonnement du compte actif, telles que la consommation du mois en cours, les détails du plan de l'abonnement du compte actif, le moyen de paiement ou encore le renouvellement automatique de votre abonnement (cette option est activée par défaut).  
-
-Lorsque vous désactivez le renouvellement automatique, votre plan sera disponible jusqu'à la fin de la période en cours et l'abonnement ne sera pas renouvelé pour la période suivante.
-
- ![Abonnement](./images/user-guide/menu-subscription.jpg)
- *Gérez votre abonnement en toute transparence*
 
 ### Notifications
 

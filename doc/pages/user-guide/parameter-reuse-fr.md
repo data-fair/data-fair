@@ -9,7 +9,7 @@ published: false
 
 Le menu de configuration d'une visualisation est divisé en plusieurs sections.  
 
-La section **Source de données** est commune à tous les menus de configurations et permet de choisir le jeu de données à représenter dans la visualisation.
+La section **Source de données** (ou **Données**) est commune à tous les menus de configurations et permet de choisir le jeu de données à représenter dans la visualisation.
 
 Le bouton **Enregistrer** passe en orange lorsque vous avez modifié la configuration de votre application. Les modifications ne seront pas prises en compte tant que vous n'avez pas appuyé sur le bouton enregistrer.
 
@@ -19,7 +19,7 @@ La **Source de données** permet de choisir le jeu de données que vous voulez u
 Sur certaines configurations, on peut définir des filtres statiques ou des filtres interactifs. Les filtres permettent restreindre les données à certaines valeurs ou d'exclure certaines valeurs. Vous pouvez réaliser un contrôle sur les lignes grâce à ces filtres.
 
 #### Filtres statiques
-Les filtres statiques permettent de réalisé un filtre en dur sur vos données. La visualisation ne va représenter que les données filtrées.
+Les filtres statiques permettent de réalisé un filtre en dur sur vos données.
 
 ## Menu graphique
 Le menu de configuration des visualisations graphiques se compose des sections **Sources de données**, **Préparation des données**, **Présentation**.
@@ -30,13 +30,13 @@ Le menu de configuration des visualisations graphiques se compose des sections *
 Dans cette section, vous pouvez réaliser un control sur les colonnes. Vous allez pouvoir définir quelles sont les colonnes que vous voulez représenter dans votre visualisation.
 
 ### Présentation
-Ce menu vous permet de configurer l'aspect graphique de la visualisation. Vous pouvez notamment modifier les couleurs et définir des filtres interactifs.
+Cette section vous permet de configurer l'aspect graphique de la visualisation. Vous pouvez notamment modifier les couleurs et définir des filtres interactifs.
 
 #### Filtres interactifs
-Les filtres interactifs permettent d'avoir une section de filtre affichée dans votre visualisation. Les utilisateurs de votre visualisation vont pouvoir entrer une valeur dans votre filtre interactif. La visualisation sera dynamiquement modifiée par rapport à la valeur du filtre entrée par le visiteur.
+Les filtres interactifs permettent d'avoir une section de filtre affichée dans votre visualisation. Les utilisateurs de votre visualisation vont pouvoir renseigner une valeur dans votre filtre interactif. La visualisation sera dynamiquement modifiée par rapport à la valeur du filtre.
 
 ## Menu cartographique
-Le menu de configuration des visualisations graphiques se compose des sections **Sources de données**, **Options de rendu**, **Navigation**.
+Le menu de configuration des visualisations cartographiques se compose des sections **Sources de données**, **Options de rendu**, **Navigation**.
 
 ![Menu de configuration d'une visualisation cartographique](./images/user-guide/Menu-carto.jpg)
 

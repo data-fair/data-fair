@@ -16,5 +16,5 @@ Cette page présente un résumé des données et des visualisations configurées
 4. Résumé des visualisations
 
 
-![Dashboard](./images/user-guide/dashboard.jpg)
+![Dashboard](./images/user-guide/dashboard.jpg)  
 *Tableau de bord d'une organisation*

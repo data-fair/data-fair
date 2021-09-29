@@ -18,14 +18,14 @@ L'enrichissement permet d'importer des colonnes d'une base de référence. Il es
 En fonction des données que vous possédez, vous pouvez choisir l'enrichissement qui vous convient et compléter vos données.
 
 
-### Créer vos données de référence
+### Créez vos données de référence
 
 Les jeux de données que vous importez sur Data Fair peuvent devenir des données de références.  
 Il vous est alors possible d'enrichir vos données avec des fichiers que vous avez vous même importé et créer votre base de fichiers de référence.
 
-Pour le moment, seul les supers administrateurs de l'instance peuvent définir un jeu de données comme **Données de référence***.
+Pour le moment, seul les supers administrateurs de l'instance peuvent définir un jeu de données comme **Données de référence**.
 
 N'hésitez pas à [nous contacter](https://koumoul.com/contact) pour tout complément d'information.
 
-![Données de référence](./images/user-guide/enrichment-master-data.jpg)
+![Données de référence](./images/user-guide/enrichment-master-data.jpg)  
 *Croisez vos données avec les données de référence*

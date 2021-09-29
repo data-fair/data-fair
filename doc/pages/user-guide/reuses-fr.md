@@ -16,9 +16,9 @@ Les visualisations sont reparties en plusieurs catégories : les cartes, les gra
 Les visualisations cartographiques vous permettent de projeter vos données géolocalisées sur une carte à l'aide des [concepts](./user-guide/concept) latitude, longitude ou géometrie.
 
 * **Infos-localisations** vous permet de projeter vos données et de créer des fiches sur chaque marqueur. Les fiches peuvent contenir des images, des liens, des descriptions, etc... [Les journées européennes du patrimoine 2019](https://opendata.koumoul.com/reuses/carte-des-evenements-des-journees-europeennes-du-patrimoine-en-france-2019)
-* **Infos-parcelles** vous permet de projeter vos données sur le plan cadastral français. Vous pouvez ajouter une légende selon vos données. [Exemple sur une partie de la base Sitadel](https://opendata.koumoul.com/datasets/sitadel-janvier-sept-metropole-regions)
+* **Infos-parcelles** vous permet de projeter vos données sur le plan cadastral français. Vous pouvez ajouter une légende selon vos données. [Exemple sur une partie de la base MAJIC des parcelles des personnes morales](https://opendata.koumoul.com/reuses/carte-des-parcelles-des-personnes-morales-majic)
 * **Carto-stats** vous permet de projeter vos données liées à des données numériques. [Les accidents de vélo en France](https://opendata.koumoul.com/reuses/cartographie-des-accidents-de-velo)
-* **Divisions administratives** vous permet de projeter des données au niveau de la commune, du département, ou de la région. [Résultats des élections européennes 2019](https://opendata.koumoul.com/reuses/resultats-aux-elections-europeennes-2019)
+* **Divisions administratives** vous permet de projeter des données au niveau de la commune, du département, ou de la région. [Part des élèves dans le privé en France](https://opendata.koumoul.com/reuses/ratio-public-prive-du-nombre-d'eleves-dans-les-ecoles-par-commune)
 * **Géo Shapes** vous permet de projeter des données contenant des formes géométriques telles que des zones de PLU ou des réseaux (énergétiques, routiers). [Zones PLU d'Angers](https://opendata.koumoul.com/reuses/plu-zone-urba-angers-loire-metropole)
 * **Carto temps réel**, développement en cours, cette visualisation vous permettra de représenter des données de capteurs remontées en temps réel (IOT, données de transports, etc...)
 
@@ -40,7 +40,7 @@ Les visualisations textuelles peuvent représenter la majorité de vos données.
 
 ## Visualisations SCDL
 
-Les visualisations SCDL permettent de représenter des données respectant le format du [Socle Commune des Données Locales](http://opendatalocale.net/scdl/) (SCDL). Cette section est en cours de développement. Nous allons fournir une visualisation pour chacun des formats SCDL.
+Les visualisations SCDL permettent de représenter des données respectant le format du [Socle Commune des Données Locales](https://www.opendatafrance.net/scdl/) (SCDL). Cette section est en cours de développement selon les besoins.
 
 * **SCDL-Déliberations** vous permet de visualiser délibérations. [Délibérations de Grand Poitiers](https://opendata.koumoul.com/reuses/deliberations-grand-poitiers)
 * **SCDL-Equiements** vous permet de visualiser les équipements d'un territoire sur une carte. [Les équipements publics de la ville de Rambouillet](https://opendata.koumoul.com/reuses/equipements-publics-de-la-ville-de-rambouillet)
