@@ -62,6 +62,7 @@ if (config.mode.includes('server')) {
     const urlParts = { protocol: u.protocol, hostname: u.hostname, pathname: basePath.slice(0, -1) }
     if (u.port !== 443 && u.port !== 80) urlParts.port = u.port
     req.publicBaseUrl = u.full ? formatUrl(urlParts) : config.publicUrl
+    req.directoryUrl = u.full ? formatUrl({ ...urlParts, pathname: '/simple-directory' }) : config.directoryUrl
     debugDomain('req.publicBaseUrl', req.publicBaseUrl)
     req.publicWsBaseUrl = req.publicBaseUrl.replace('http:', 'ws:').replace('https:', 'wss:')
     debugDomain('req.publicWsBaseUrl', req.publicWsBaseUrl)

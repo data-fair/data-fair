@@ -66,12 +66,12 @@ router.get('/:applicationId/manifest.json', setResource, permissions.middleware(
 // prevents opening a browser if the app is installed standalone
 router.get('/:applicationId/login', setResource, (req, res) => {
   res.setHeader('Content-Type', 'text/html')
-  let redirect = encodeURIComponent(`${req.publicBaseUrl}/app/${req.params.applicationId}?`)
-  if (req.application.owner.type === 'organization') redirect += `id_token_org=${encodeURIComponent(req.application.owner.id)}&`
-  redirect += 'id_token='
+  const redirect = `${req.publicBaseUrl}/app/${req.params.applicationId}`
+  let authUrl = `${req.directoryUrl}/api/auth/password?redirect=${redirect}`
+  if (req.application.owner.type === 'organization') authUrl += `org=${encodeURIComponent(req.application.owner.id)}&`
   res.send(loginHtml
-    .replace('{AUTH_ROUTE}', `${config.directoryUrl}/api/auth/password?redirect=${redirect}`)
-    .replace('{LOGO}', `${config.directoryUrl}/api/avatars/${req.application.owner.type}/${req.application.owner.id}/avatar.png`),
+    .replace('{AUTH_ROUTE}', authUrl)
+    .replace('{LOGO}', `${req.directoryUrl}/api/avatars/${req.application.owner.type}/${req.application.owner.id}/avatar.png`),
   )
 })
 
