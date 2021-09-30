@@ -21,21 +21,21 @@
             <v-list-item-avatar class="ml-0 my-0">
               <v-icon>mdi-pencil</v-icon>
             </v-list-item-avatar>
-            <span>{{ dataset.updatedBy.name }} {{ dataset.updatedAt | moment("DD/MM/YYYY, HH:mm") }}</span>
+            <span>{{ dataset.updatedBy.name }} {{ dataset.updatedAt | moment("lll") }}</span>
           </v-list-item>
 
           <v-list-item v-if="dataset.dataUpdatedAt" title="dernière mise à jour des données">
             <v-list-item-avatar class="ml-0 my-0">
               <v-icon>{{ dataset.isRest ? 'mdi-playlist-edit' : 'mdi-upload' }}</v-icon>
             </v-list-item-avatar>
-            <span>{{ dataset.dataUpdatedBy.name }} {{ dataset.dataUpdatedAt | moment("DD/MM/YYYY, HH:mm") }}</span>
+            <span>{{ dataset.dataUpdatedBy.name }} {{ dataset.dataUpdatedAt | moment("lll") }}</span>
           </v-list-item>
 
           <v-list-item title="création">
             <v-list-item-avatar class="ml-0 my-0">
               <v-icon>mdi-plus-circle-outline</v-icon>
             </v-list-item-avatar>
-            <span>{{ dataset.createdBy.name }} {{ dataset.createdAt | moment("DD/MM/YYYY, HH:mm") }}</span>
+            <span>{{ dataset.createdBy.name }} {{ dataset.createdAt | moment("lll") }}</span>
           </v-list-item>
 
           <v-list-item v-if="dataset.count !== undefined">

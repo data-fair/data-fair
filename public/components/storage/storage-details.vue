@@ -9,20 +9,20 @@
               target="_top"
             >{{ dataset.title || dataset.id }}</a>
             <span v-if="dataset.storage">({{ dataset.storage.size | displayBytes($i18n.locale) }})</span>
-            <span v-else>(pas d'information de stockage)</span>
+            <span v-else v-t="'noInfo'" />
           </v-list-item-title>
           <template v-if="dataset.storage">
             <v-list-item-subtitle v-if="dataset.storage.fileSize">
-              {{ dataset.storage.fileSize | displayBytes($i18n.locale) }} de fichier de données
+              {{ dataset.storage.fileSize | displayBytes($i18n.locale) }} {{ $t('files') }}
             </v-list-item-subtitle>
             <v-list-item-subtitle v-if="dataset.storage.attachmentsSize">
-              {{ dataset.storage.attachmentsSize | displayBytes($i18n.locale) }} de pièces jointes
+              {{ dataset.storage.attachmentsSize | displayBytes($i18n.locale) }} {{ $t('attachments') }}
             </v-list-item-subtitle>
             <v-list-item-subtitle v-if="dataset.storage.collectionSize">
-              {{ dataset.storage.collectionSize | displayBytes($i18n.locale) }} de lignes en base de données
+              {{ dataset.storage.collectionSize | displayBytes($i18n.locale) }} {{ $t('db') }}
             </v-list-item-subtitle>
             <v-list-item-subtitle v-if="dataset.storage.revisionsSize">
-              {{ dataset.storage.revisionsSize | displayBytes($i18n.locale) }} de révisions historisées
+              {{ dataset.storage.revisionsSize | displayBytes($i18n.locale) }} {{ $t('revisions') }}
             </v-list-item-subtitle>
           </template>
         </v-list-item-content>
@@ -34,6 +34,21 @@
     </template>
   </v-list>
 </template>
+
+<i18n lang="yaml">
+fr:
+  noInfo: (pas d'information de stockage)
+  files: de fichier de données
+  attachments: de pièces jointes
+  db: de lignes en base de données
+  revisions: de révisions historisées
+en:
+  noInfo: (no storage information)
+  files: of data files
+  attachments: of attachments
+  db: of lines in database
+  revisions: of revisions histories
+</i18n>
 
 <script>
 

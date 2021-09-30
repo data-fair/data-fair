@@ -24,7 +24,7 @@
                       {{ error.title }} ({{ error.owner.name }})
                     </nuxt-link>
                   </v-list-item-title>
-                  <v-list-item-subtitle>{{ error.event.data }} ({{ error.event.date | moment("DD/MM/YYYY, HH:mm") }})</v-list-item-subtitle>
+                  <v-list-item-subtitle>{{ error.event.data }} ({{ error.event.date | moment("lll") }})</v-list-item-subtitle>
                 </v-list-item-content>
                 <v-list-item-action>
                   <v-btn
@@ -64,7 +64,7 @@
                       {{ error.title }} ({{ error.owner.name }})
                     </nuxt-link>
                   </v-list-item-title>
-                  <v-list-item-subtitle>{{ error.errorMessage }} ({{ error.updatedAt | moment("DD/MM/YYYY, HH:mm") }})</v-list-item-subtitle>
+                  <v-list-item-subtitle>{{ error.errorMessage }} ({{ error.updatedAt | moment("lll") }})</v-list-item-subtitle>
                 </v-list-item-content>
               </v-list-item>
             </v-list>
@@ -93,7 +93,7 @@
                       {{ error.title }} ({{ error.owner.name }})
                     </nuxt-link>
                   </v-list-item-title>
-                  <v-list-item-subtitle>{{ error.errorMessageDraft }} ({{ error.updatedAt | moment("DD/MM/YYYY, HH:mm") }})</v-list-item-subtitle>
+                  <v-list-item-subtitle>{{ error.errorMessageDraft }} ({{ error.updatedAt | moment("lll") }})</v-list-item-subtitle>
                 </v-list-item-content>
               </v-list-item>
             </v-list>

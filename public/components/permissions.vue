@@ -1,14 +1,12 @@
 <template>
   <div>
-    <p>
-      Permettez à d'autres utilisateurs ou aux membres d'autres organisations de consulter cette ressource.
-    </p>
+    <p v-t="'description'" />
 
     <div id="dataset-privacy" style="width:400px">
       <v-switch
         :value="isPublic"
         :disabled="(hasPublicDeps && isPublic) || (hasPrivateParents && !isPublic)"
-        label="Accessible publiquement"
+        :label="$t('publicAccess')"
         @change="switchPublic"
       />
     </div>
@@ -17,23 +15,22 @@
       right
       activator="#dataset-privacy"
     >
-      <span>Vous ne devriez pas rendre cette source privée tant qu'elle est présente dans des visualisations publiques</span>
+      <span v-t="'warningPrivateDataset'" />
     </v-tooltip>
     <v-tooltip
       v-if="hasPrivateParents && !isPublic"
       right
       activator="#dataset-privacy"
     >
-      <span>Vous ne devriez pas rendre cette application publique tant qu'elle utilise des sources de données privées</span>
+      <span v-t="'warningPublicApp'" />
     </v-tooltip>
 
     <v-btn
       id="new-permissions"
+      v-t="'addPermission'"
       color="primary"
       @click="currentPermission = initPermission();addPermissions = true;showDialog = true"
-    >
-      Ajouter des permissions
-    </v-btn>
+    />
     <v-data-table
       v-if="permissions && permissions.length"
       :headers="[{text: 'Portée', sortable: false}, {text: 'Actions', sortable: false}, { text: '', sortable: false }]"
@@ -44,18 +41,11 @@
       <template v-slot:item="{item, index}">
         <tr>
           <td>
-            <div v-if="!item.type">
-              Public
-            </div>
-            <div v-else>
-              {{ (item.type === 'user' ? 'Utilisateur ' : 'Organisation ') + item.name }}
-            </div>
-            <div v-if="item.type === 'organization' && (!item.roles || !item.roles.length)">
-              Tous les rôles
-            </div>
-            <div v-if="item.type === 'organization' && (item.roles && item.roles.length)">
-              Restreint aux rôles : {{ item.roles.join(', ') }}
-            </div>
+            <div v-if="!item.type" v-t="'public'" />
+            <div v-if="item.type === 'user'" v-t="{path: 'userName', args: {name: item.name}}" />
+            <div v-if="item.type === 'organization'" v-t="{path: 'organizationName', args: {name: item.name}}" />
+            <div v-if="item.type === 'organization' && (!item.roles || !item.roles.length)" v-t="'allRoles'" />
+            <div v-if="item.type === 'organization' && (item.roles && item.roles.length)" v-t="{path: 'restrictedRoles', args: {roles: item.roles.join(', ')}}" />
           </td>
           <td>
             <v-list
@@ -109,14 +99,14 @@
       persistent
     >
       <v-card outlined>
-        <v-card-title>Éditer des permissions</v-card-title>
+        <v-card-title v-t="'editPermission'" />
         <v-card-text>
           <v-select
             v-model="currentPermission.type"
-            :items="[{value: null, label: 'Public'}, {value: 'organization', label: 'Organisation'}, {value: 'user', label: 'Utilisateur'}]"
+            :items="[{value: null, label: 'Public'}, {value: 'organization', label: $t('organization')}, {value: 'user', label: $t('user')}]"
             item-text="label"
             item-value="value"
-            label="Portée"
+            :label="$t('scope')"
             required
           />
 
@@ -128,7 +118,7 @@
             :loading="loading"
             item-text="name"
             item-value="id"
-            label="Nom"
+            :label="$t('name')"
             required
             cache-items
             hide-no-data
@@ -139,7 +129,7 @@
             v-if="currentPermission.type === 'organization' && currentPermissionOrganizationRoles.length"
             v-model="currentPermission.roles"
             :items="currentPermissionOrganizationRoles"
-            label="Rôles (tous si aucun coché)"
+            :label="$t('rolesLabel')"
             multiple
           />
 
@@ -148,14 +138,14 @@
             :items="Object.keys(permissionClasses).filter(c => classNames[c]).map(c => ({class: c, title: classNames[c]}))"
             item-text="title"
             item-value="class"
-            label="Actions"
+            :label="$t('actions')"
             multiple
           />
 
           <v-switch
             v-model="expertMode"
             color="primary"
-            label="Mode expert"
+            :label="$t('expertMode')"
           />
 
           <v-select
@@ -164,28 +154,76 @@
             :items="operations"
             item-text="title"
             item-value="id"
-            label="Actions détaillées"
+            :label="$t('detailedActions')"
             multiple
           />
         </v-card-text>
 
         <v-card-actions>
           <v-spacer />
-          <v-btn text @click="showDialog = false">
-            Annuler
-          </v-btn>
           <v-btn
+            v-t="'cancel'"
+            text
+            @click="showDialog = false"
+          />
+          <v-btn
+            v-t="'validate'"
             :disabled="(currentPermission.type && !currentPermission.id) || ((!currentPermission.operations || !currentPermission.operations.length) && (!currentPermission.classes ||!currentPermission.classes.length))"
             color="primary"
             @click="showDialog = false;save()"
-          >
-            Valider
-          </v-btn>
+          />
         </v-card-actions>
       </v-card>
     </v-dialog>
   </div>
 </template>
+
+<i18n lang="yaml">
+fr:
+  description: Permettez à d'autres utilisateurs ou aux membres d'autres organisations d'utiliser cette ressource.
+  publicAccess: Accessible publiquement
+  warningPrivateDataset: Vous ne devriez pas rendre ce jeu de données privé tant qu'il est présent dans des visualisations publiques.
+  warningPublicApp: Vous ne devriez pas rendre cette application publique tant qu'elle utilise des sources de données privées.
+  addPermission: Ajouter des permissions
+  editPermission: Éditer des permissions
+  public: Public
+  organization: Organisation
+  user: Utilisateur
+  organizationName: Organisation {name}
+  userName: Utilisateur {name}
+  rolesLabel: Rôles (tous si aucun coché)
+  allRoles: Tous les rôles
+  restrictedRoles: 'Restreint aux rôles : {roles}'
+  validate: Valider
+  cancel: Annuler
+  scope: Portée
+  detailedActions: Actions détaillées
+  expertMode: Mode expert
+  actions: Actions
+  name: Nom
+en:
+  description: Allow other users or other members of your organizations to use this resource.
+  publicAccess: Publicly accessible
+  warningPrivateDataset: You should not make this dataset private as long as it is used in public visualizations.
+  warningPublicApp: You should not make this visualization public as long as it uses private datasets.
+  addPermission: Add permissions
+  editPermission: Edit permissions
+  public: Public
+  organization: Organization
+  user: User
+  organizationName: Organization {name}
+  userName: User {name}
+  rolesLabel: Roles (all if none is selected)
+  allRoles: All roles
+  restrictedRoles: 'Restricted to roles : {roles}'
+  validate: Validate
+  cancel: Annuler
+  scope: Scope
+  detailedActions: Detailed actions
+  expertMode: Expert mode
+  actions: Actions
+  name: Name
+</i18n>
 
 <script>
   import { mapState } from 'vuex'

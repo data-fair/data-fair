@@ -19,7 +19,7 @@
           &nbsp;{{ line.title }}
         </v-list-item-title>
         <v-list-item-subtitle>
-          modification le {{ line.date | moment("DD/MM/YYYY") }}
+          modification le {{ line.date | moment("L") }}
         </v-list-item-subtitle>
       </v-list-item-content>
     </v-list-item>

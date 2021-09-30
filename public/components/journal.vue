@@ -22,7 +22,7 @@
             </template>
           </td>
           <td class="text-right">
-            {{ item.date | moment("DD/MM/YYYY, HH:mm") }}
+            {{ item.date | moment("lll") }}
           </td>
         </tr>
       </template>

@@ -41,7 +41,7 @@
             <a :href="resourceUrl + '/metadata-attachments/' + attachment.name">{{ attachment.name }} ({{ (attachment.size / 1000).toFixed(2) }} ko)</a>
           </v-card-title>
           <v-card-text>
-            <span>{{ attachment.updatedAt | moment("DD/MM/YYYY, HH:mm") }}</span>
+            <span>{{ attachment.updatedAt | moment("lll") }}</span>
           </v-card-text>
           <v-card-actions v-if="can('writeData')">
             <v-btn

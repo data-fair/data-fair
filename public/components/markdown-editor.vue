@@ -14,6 +14,27 @@
   </v-input>
 </template>
 
+<i18n lang="yaml">
+fr:
+  linkBefore: "[titre du lien"
+  linkAfter: "](adresse du lien)"
+  imageHref: adresse de l'image
+  column: Colonne
+  text: Texte
+  bold: Gras
+  italic: Italique
+  heading: Titre
+en:
+  linkBefore: "[link title"
+  linkAfter: "](link url)"
+  imageHref: image url
+  column: Column
+  text: Text
+  bold: Bold
+  italic: Italic
+  heading: Heading
+</i18n>
+
 <script>
   import 'easymde/dist/easymde.min.css'
   import marked from 'marked/lib/marked'
@@ -38,9 +59,9 @@
         autoDownloadFontAwesome: false,
         spellChecker: false,
         insertTexts: {
-          link: ['[titre du lien', '](adresse du lien)'],
-          image: ['![](', 'adresse de l\'image)'],
-          table: ['', '\n\n| Colonne 1 | Colonne 2 | Colonne 3 |\n| -------- | -------- | -------- |\n| Texte     | Texte     | Texte     |\n\n'],
+          link: [this.$t('linkBefore'), this.$t('linkAfter')],
+          image: ['![](', this.$t('imageHref')],
+          table: ['', `\n\n| ${this.$t('column')} 1 | ${this.$t('column')} 2 | ${this.$t('column')} 3 |\n| -------- | -------- | -------- |\n| ${this.$t('text')}     | ${this.$t('text')}     | ${this.$t('text')}     |\n\n`],
           horizontalRule: ['', '\n\n-----\n\n'],
         },
         // cf https://github.com/Ionaru/easy-markdown-editor/blob/master/src/js/easymde.js#L1380
@@ -49,12 +70,12 @@
                     action: EasyMDE.toggleBold,
                     // className: 'fa fa-bold',
                     className: 'mdi mdi-format-bold',
-                    title: 'Gras',
+                    title: this.$t('bold'),
                   }, {
                     name: 'italic',
                     action: EasyMDE.toggleItalic,
                     className: 'mdi mdi-format-italic',
-                    title: 'Italique',
+                    title: this.$t('italic'),
                   }, /*, {
                     name: 'heading',
                     action: EasyMDE.toggleHeadingSmaller,
@@ -66,12 +87,12 @@
                     name: 'heading-2',
                     action: EasyMDE.toggleHeading2,
                     className: 'mdi mdi-format-title',
-                    title: 'Titre 1',
+                    title: this.$t('heading') + ' 1',
                   }, {
                     name: 'heading-3',
                     action: EasyMDE.toggleHeading3,
                     className: 'mdi mdi-format-title',
-                    title: 'Titre 2',
+                    title: this.$t('heading') + ' 2',
                   },
                   '|',
                   {

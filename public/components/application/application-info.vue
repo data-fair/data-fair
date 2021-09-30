@@ -34,13 +34,13 @@
             <v-list-item-avatar class="ml-0 my-0">
               <v-icon>mdi-pencil</v-icon>
             </v-list-item-avatar>
-            <span>{{ application.updatedBy.name }} {{ application.updatedAt | moment("DD/MM/YYYY, HH:mm") }}</span>
+            <span>{{ application.updatedBy.name }} {{ application.updatedAt | moment("lll") }}</span>
           </v-list-item>
           <v-list-item>
             <v-list-item-avatar class="ml-0 my-0">
               <v-icon>mdi-plus-circle-outline</v-icon>
             </v-list-item-avatar>
-            <span>{{ application.createdBy.name }} {{ application.createdAt | moment("DD/MM/YYYY, HH:mm") }}</span>
+            <span>{{ application.createdBy.name }} {{ application.createdAt | moment("lll") }}</span>
           </v-list-item>
           <v-list-item v-if="dataset">
             <nuxt-link
