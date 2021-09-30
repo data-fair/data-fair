@@ -171,6 +171,7 @@
           </v-list>
         </v-menu>
       </template>
+      <layout-lang-switcher />
     </v-toolbar-items>
   </v-app-bar>
 </template>

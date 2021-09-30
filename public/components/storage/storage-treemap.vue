@@ -63,7 +63,7 @@
               id: d.id,
               title: d.title || d.id,
               size: d.storage.size,
-              tooltip: `${d.title || d.id} - ${Vue.filter('displayBytes')(d.storage.size)} - ${{ public: 'Public', private: 'Privé', protected: 'Protégé' }[d.visibility]}`,
+              tooltip: `${d.title || d.id} - ${Vue.filter('displayBytes')(d.storage.size, this.$i18n.locale)} - ${{ public: 'Public', private: 'Privé', protected: 'Protégé' }[d.visibility]}`,
               to: `/dataset/${d.id}`,
               color: this.visibilityColor(d.visibility),
             })),
@@ -76,7 +76,7 @@
             id: '_others',
             title,
             size,
-            tooltip: `${title} - ${Vue.filter('displayBytes')(size)}`,
+            tooltip: `${title} - ${Vue.filter('displayBytes')(size, this.$i18n.locale)}`,
             color: 'grey',
           })
         }

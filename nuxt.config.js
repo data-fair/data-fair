@@ -52,13 +52,29 @@ module.exports = {
   router: {
     base: config.basePath,
   },
-  modules: ['@digibytes/markdownit', '@nuxtjs/axios', 'cookie-universal-nuxt', ['nuxt-i18n', {
+  modules: ['@digibytes/markdownit', '@nuxtjs/axios', 'cookie-universal-nuxt', ['@nuxtjs/i18n', {
     seo: false,
-    locales: [{ code: 'fr', iso: 'fr-FR' }, { code: 'en', iso: 'es-US' }],
-    defaultLocale: 'fr',
+    locales: config.i18n.locales,
+    defaultLocale: config.i18n.defaultLocale,
+    vueI18nLoader: true,
+    strategy: 'no_prefix',
+    detectBrowserLanguage: {
+      useCookie: true,
+      cookieKey: 'i18n_lang',
+    },
     vueI18n: {
-      fallbackLocale: 'fr',
-      messages: config.i18nMessages,
+      fallbackLocale: config.i18n.defaultLocale,
+      messages: {
+        en: {
+          welcome: 'Welcome',
+        },
+        fr: {
+          welcome: 'Bienvenue',
+        },
+        es: {
+          welcome: 'Bienvenido',
+        },
+      },
     },
   }]],
   axios: {
@@ -110,6 +126,7 @@ module.exports = {
     disableSharing: config.disableSharing,
     disableApplications: config.disableApplications,
     disableRemoteServices: config.disableRemoteServices,
+    i18n: config.i18n,
   },
   head: {
     title: config.brand.title,
