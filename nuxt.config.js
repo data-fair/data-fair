@@ -1,9 +1,7 @@
 const URL = require('url').URL
-const i18n = require('./i18n')
 const fr = require('vuetify/es5/locale/fr').default
 let config = require('config')
 config.basePath = new URL(config.publicUrl + '/').pathname
-config.i18nMessages = i18n.messages
 
 if (process.env.NODE_ENV === 'production') {
   const nuxtConfigInject = require('@koumoul/nuxt-config-inject')
