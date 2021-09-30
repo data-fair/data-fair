@@ -68,7 +68,7 @@ router.get('/:applicationId/login', setResource, (req, res) => {
   res.setHeader('Content-Type', 'text/html')
   const redirect = `${req.publicBaseUrl}/app/${req.params.applicationId}`
   let authUrl = `${req.directoryUrl}/api/auth/password?redirect=${redirect}`
-  if (req.application.owner.type === 'organization') authUrl += `org=${encodeURIComponent(req.application.owner.id)}&`
+  if (req.application.owner.type === 'organization') authUrl += `&org=${encodeURIComponent(req.application.owner.id)}&`
   res.send(loginHtml
     .replace('{ERROR}', req.query.error ? `<p style="color:red">${req.query.error}</p>` : '')
     .replace('{AUTH_ROUTE}', authUrl)
