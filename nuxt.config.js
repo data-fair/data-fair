@@ -52,7 +52,7 @@ module.exports = {
   },
   modules: ['@digibytes/markdownit', '@nuxtjs/axios', 'cookie-universal-nuxt', ['@nuxtjs/i18n', {
     seo: false,
-    locales: config.i18n.locales,
+    locales: config.i18n.locales.split(','),
     defaultLocale: config.i18n.defaultLocale,
     vueI18nLoader: true,
     strategy: 'no_prefix',

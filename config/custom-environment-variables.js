@@ -206,10 +206,7 @@ module.exports = {
     __format: 'json',
   },
   i18n: {
-    locales: {
-      __name: 'I18N_LOCALES',
-      __format: 'json',
-    },
+    locales: 'I18N_LOCALES',
     defaultLocale: 'I18N_DEFAULT_LOCALE',
   },
 }
