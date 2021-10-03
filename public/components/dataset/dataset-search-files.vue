@@ -1,10 +1,8 @@
 <template>
   <v-container fluid class="pa-0">
     <div v-if="notFound">
-      <p>Les données ne sont pas accessibles. Soit le jeu de données n'a pas encore été entièrement traité, soit il y a eu une erreur dans le traitement.</p>
-      <p>
-        Vous pouvez consulter le journal pour en savoir plus.
-      </p>
+      <p v-t="'noData'" />
+      <p v-t="'readJournal'" />
     </div>
     <template v-else-if="data">
       <v-row class="px-3">
@@ -21,7 +19,7 @@
             >
               <v-text-field
                 v-model="query"
-                placeholder="Rechercher"
+                :placeholder="$t('search')"
                 append-icon="mdi-magnify"
                 class="mr-3"
                 outlined
@@ -45,7 +43,7 @@
                 v-model="pagination.itemsPerPage"
                 :items="[10,20,50]"
                 hide-details
-                label="Nombre de lignes"
+                :label="$t('nbLines')"
               />
             </v-col>
             <v-pagination
@@ -79,6 +77,19 @@
     </template>
   </v-container>
 </template>
+
+<i18n lang="yaml">
+fr:
+  noData: Les données ne sont pas accessibles. Soit le jeu de données n'a pas encore été entièrement traité, soit il y a eu une erreur dans le traitement.
+  readJournal: Vous pouvez consulter le journal pour en savoir plus.
+  search: Rechercher
+  nbLines: Nombre de lignes
+en:
+  noData: The data is not accessible. Either the dataset was not yet entirely processed, or there was an error.
+  readJournal: You can check the activity journal to learn more.
+  search: Search
+  nbLines: Number of lines
+</i18n>
 
 <script>
   import { mapState, mapGetters } from 'vuex'

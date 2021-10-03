@@ -30,18 +30,16 @@
         <div>
           <v-btn
             v-if="updated"
+            v-t="'cancelChanges'"
             text
             @click="resetSchema"
-          >
-            Annuler les modifications
-          </v-btn>
+          />
           <v-btn
             v-if="updated"
+            v-t="'apply'"
             color="primary"
             @click="save"
-          >
-            Appliquer
-          </v-btn>
+          />
         </div>
       </v-row>
 
@@ -50,9 +48,9 @@
           <v-select
             v-if="dataset.isRest"
             v-model="primaryKey"
-            label="Clé primaire"
+            :label="$t('primaryKey')"
             :disabled="!!dataset.count || !can('writeDescription')"
-            :messages="dataset.count ? 'La clé primaire ne peut pas être modifiée une fois que des données ont été insérées.' : 'Optionnel. Utilisez une ou plusieurs colonnes du schéma pour construire une clé primaire qui identifiera de manière unique chaque ligne de la donnée.'"
+            :messages="dataset.count ? $t('primaryKeyMsgData') : $t('primaryKeyMsgNoData')"
             :items="notCalculatedProperties.map(p => ({text: p.title || p['x-originalName'] || p.key, value: p.key}))"
             style="max-width: 500px;"
             multiple
@@ -72,9 +70,7 @@
       max-width="500px"
     >
       <v-card outlined>
-        <v-card-title primary-title>
-          Ajouter une propriété
-        </v-card-title>
+        <v-card-title v-t="'addProperty'" primary-title />
         <v-card-text>
           <v-form
             ref="addPropertyForm"
@@ -99,17 +95,42 @@
         </v-card-text>
         <v-card-actions>
           <v-spacer />
-          <v-btn text @click="addPropertyDialog = false">
-            Annuler
-          </v-btn>
-          <v-btn color="primary" @click="addProperty">
-            Valider
-          </v-btn>
+          <v-btn
+            v-t="'cancel'"
+            text
+            @click="addPropertyDialog = false"
+          />
+          <v-btn
+            v-t="'validate'"
+            color="primary"
+            @click="addProperty"
+          />
         </v-card-actions>
       </v-card>
     </v-dialog>
   </v-row>
 </template>
+
+<i18n lang="yaml">
+fr:
+  cancelChanges: Annuler les modifications
+  apply: Appliquer
+  primaryKey: Clé primaire
+  primaryKeyMsgData: La clé primaire ne peut pas être modifiée une fois que des données ont été insérées.
+  primaryKeyMsgNoData: Optionnel. Utilisez une ou plusieurs colonnes du schéma pour construire une clé primaire qui identifiera de manière unique chaque ligne de la donnée.
+  addProperty: Ajouter une propriété
+  cancel: Annuler
+  validate: Valider
+en:
+  cancelChanges: Cancel modifications
+  apply: Apply
+  primaryKey: Clé primaire
+  primaryKeyMsgData: The primary key cannot be changed one data has been inserted.
+  primaryKeyMsgNoData: Optional. Use one or more columns of the schéma to build a primary key that will identify in a unique manner each line of the data.
+  addProperty: Add a property
+  cancel: Cancel
+  validate: Validate
+</i18n>
 
 <script>
   import { mapState, mapActions, mapGetters } from 'vuex'

@@ -1,10 +1,8 @@
 <template>
   <div>
     <div v-if="notFound">
-      <p>Les données ne sont pas accessibles. Soit le jeu de données n'a pas encore été entièrement traité, soit il y a eu une erreur dans le traitement.</p>
-      <p>
-        Vous pouvez consulter le journal pour en savoir plus.
-      </p>
+      <p v-t="'noData'" />
+      <p v-t="'readJournal'" />
     </div>
     <v-row>
       <v-col>
@@ -18,7 +16,7 @@
           >
             <v-text-field
               v-model="query"
-              label="Rechercher"
+              :label="$t('search')"
               append-icon="mdi-magnify"
               class="mr-3"
               style="min-width:150px;"
@@ -85,6 +83,17 @@
     </v-row>
   </div>
 </template>
+
+<i18n lang="yaml">
+fr:
+  search: Rechercher
+  noData: Les données ne sont pas accessibles. Soit le jeu de données n'a pas encore été entièrement traité, soit il y a eu une erreur dans le traitement.
+  readJournal: Vous pouvez consulter le journal pour en savoir plus.
+en:
+  search: Search
+  noData: The data is not accessible. Either the dataset was not yet entirely processed, or there was an error.
+  readJournal: You can check the activity journal to learn more.
+</i18n>
 
 <script>
   import { mapState, mapGetters } from 'vuex'

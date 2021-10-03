@@ -44,7 +44,7 @@ module.exports = {
   },
   brand: {
     logo: null,
-    title: 'DataFair',
+    title: 'Data Fair',
     description: 'Find, Access, Interoperate, Reuse data on the Web',
     url: null,
     embed: null,

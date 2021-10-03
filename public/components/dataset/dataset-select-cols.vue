@@ -16,15 +16,14 @@
       </v-btn>
     </template>
     <v-card>
-      <v-subheader>Colonnes visibles</v-subheader>
+      <v-subheader v-t="'visibleColumns'" />
       <v-card-text class="pt-0">
         <v-btn
+          v-t="'showAll'"
           text
           :disabled="!value.length"
           @click="$emit('input', [])"
-        >
-          tout afficher
-        </v-btn>
+        />
         <v-checkbox
           v-for="header in headers.filter(h => !!h.field)"
           :key="header.value"
@@ -39,6 +38,15 @@
     </v-card>
   </v-menu>
 </template>
+
+<i18n lang="yaml">
+fr:
+  visibleColumns: Colonnes visibles
+  showAll: tout afficher
+en:
+  visibleColumns: Visible columnes
+  showAll: show all
+</i18n>
 
 <script>
   export default {

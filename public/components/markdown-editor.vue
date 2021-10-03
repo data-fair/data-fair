@@ -24,6 +24,8 @@ fr:
   bold: Gras
   italic: Italique
   heading: Titre
+  quote: Citation
+  unorderedList: Liste à puce
 en:
   linkBefore: "[link title"
   linkAfter: "](link url)"
@@ -33,6 +35,8 @@ en:
   bold: Bold
   italic: Italic
   heading: Heading
+  quote: Quote
+  unorderedList: Unordered list
 </i18n>
 
 <script>
@@ -99,13 +103,13 @@ en:
                     name: 'quote',
                     action: EasyMDE.toggleBlockquote,
                     className: 'mdi mdi-format-quote-open',
-                    title: 'Citation',
+                    title: this.$t('quote'),
                   },
                   {
                     name: 'unordered-list',
                     action: EasyMDE.toggleUnorderedList,
                     className: 'mdi mdi-format-list-bulleted',
-                    title: 'Liste à puce',
+                    title: this.$t('unorderedList'),
                   },
                   {
                     name: 'ordered-list',

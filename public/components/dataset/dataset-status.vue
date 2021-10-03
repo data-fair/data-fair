@@ -79,16 +79,12 @@
       >
         <v-row align="center">
           <v-col v-if="dataset.draftReason.key === 'file-new'" class="grow">
-            <p>Le jeu de données a été créé en mode brouillon. Cet état vous permet de travailler son paramétrage.</p>
-            <p class="mb-0">
-              Vérifiez que le fichier a bien été lu, parcourez les 100 premières lignes de la donnée, ajoutez des concepts au schéma, configurez des extensions, etc. Quand vous êtes satisfait, validez le brouillon et le jeu de données sera traité intégralement.
-            </p>
+            <p v-="'draftNew1'" />
+            <p v-t="'draftNew2'" class="mb-0" />
           </v-col>
           <v-col v-else-if="dataset.draftReason.key === 'file-updated'" class="grow">
-            <p>Le jeu de données est passé en mode brouillon suite au chargement d'un nouveau fichier.</p>
-            <p class="mb-0">
-              Vérifiez que le fichier a bien été lu, parcourez les 100 premières lignes de la donnée, etc. Quand vous êtes satisfait, validez le brouillon et le jeu de données sera traité intégralement.
-            </p>
+            <p v-t="'draftUpdated1'" />
+            <p v-t="'draftUpdated2'" class="mb-0" />
           </v-col>
           <v-col v-else class="grow">
             {{ dataset.draftReason.message }}
@@ -96,21 +92,19 @@
           <v-col class="shrink text-center">
             <v-btn
               v-if="dataset.draftReason.key !== 'file-new'"
+              v-t="'cancelDraft'"
               color="warning"
               class="ma-1"
               :disabled="dataset.status !== 'error' && dataset.status !== 'finalized'"
               @click="cancelDraft"
-            >
-              Annuler le brouillon
-            </v-btn>
+            />
             <v-btn
               color="primary"
               class="ma-1"
               :disabled="dataset.status !== 'finalized'"
+              c-t="'validateDraft'"
               @click="validateDraft"
-            >
-              Valider le brouillon
-            </v-btn>
+            />
           </v-col>
           <v-col class="shrink" />
         </v-row>
@@ -118,6 +112,23 @@
     </v-row>
   </v-container>
 </template>
+
+<i18n lang="yaml">
+fr:
+  draftNew1: Le jeu de données a été créé en mode brouillon. Cet état vous permet de travailler son paramétrage.
+  draftNew2: Vérifiez que le fichier a bien été lu, parcourez les 100 premières lignes de la donnée, ajoutez des concepts au schéma, configurez des extensions, etc. Quand vous êtes satisfait, validez le brouillon et le jeu de données sera traité intégralement.
+  draftUpdated1: Le jeu de données est passé en mode brouillon suite au chargement d'un nouveau fichier.
+  draftUpdated2: Vérifiez que le fichier a bien été lu, parcourez les 100 premières lignes de la donnée, etc. Quand vous êtes satisfait, validez le brouillon et le jeu de données sera traité intégralement.
+  cancelDraft: Annuler le brouillon
+  validateDraft: Valider le brouillon
+en:
+  draftNew1: The dataset was created in draft mode. This state allow you to work on its configuration.
+  draftNew2: Check that the file was property read, browse the first 100 lines, add concepts to the schema, configure extensions, etc. When satisfied, walidate the draft and the dataset will be processed entirely.
+  draftUpdated1: The dataset was switched to draft mode following the upload of a new file.
+  draftUpdated2: Check that the file was property read, browse the first 100 lines, etc. When satisfied, walidate the draft and the dataset will be processed entirely.
+  cancelDraft: Cancel the draft
+  validateDraft: Validate the draft
+</i18n>
 
 <script>
   const events = require('~/../shared/events.json').dataset

@@ -36,9 +36,7 @@
         </v-btn>
       </v-toolbar>
       <v-card-text class="px-3">
-        <tutorial-alert id="labels">
-          Saisissez des libellés associés à des valeurs présentes dans la donnée pour améliorer la présentation dans les visualisations.
-        </tutorial-alert>
+        <tutorial-alert id="labels" v-t="'tutorialLabels'" />
 
         <v-form ref="form">
           <v-jsf
@@ -53,6 +51,13 @@
     </v-card>
   </v-dialog>
 </template>
+
+<i18n lang="yaml">
+fr:
+  tutorialLabels: Saisissez des libellés associés à des valeurs présentes dans la donnée pour améliorer la présentation dans les visualisations.
+en:
+  tutorialLabels: Enter some labels associate to values present in the data to improve the display in visualizations.
+</i18n>
 
 <script>
   import { mapState } from 'vuex'

@@ -16,8 +16,7 @@
       </tr>
     </template>
     <template v-slot:top>
-      <div class="text-center">
-        Télécharger le schéma
+      <div v-t="'downloadSchema'" class="text-center">
         <v-menu offset-y tile>
           <template v-slot:activator="{ on }">
             <v-btn
@@ -56,6 +55,13 @@
     </template>
   </v-data-table>
 </template>
+
+<i18n lang="yaml">
+fr:
+  downloadSchema: Télécharger le schéma
+en:
+  downloadSchema: Download the schema
+</i18n>
 
 <script>
   import { mapState, mapGetters } from 'vuex'

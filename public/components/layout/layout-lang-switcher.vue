@@ -1,6 +1,6 @@
 <template lang="html">
   <v-speed-dial
-    v-if="env.i18n.locales.length > 1"
+    v-if="locales.length > 1"
     direction="bottom"
     transition="fade-transition"
   >
@@ -13,13 +13,13 @@
       </v-btn>
     </template>
     <v-btn
-      v-for="locale in env.i18n.locales.filter(l => l !== $i18n.locale)"
+      v-for="locale in locales.filter(l => l !== $i18n.locale)"
       :key="locale"
       fab
       elevation="1"
       small
       nuxt
-      @click="$i18n.setLocale(locale)"
+      @click="setLocale(locale)"
     >
       {{ locale }}
     </v-btn>
@@ -32,9 +32,15 @@
   export default {
     computed: {
       ...mapState(['env']),
+      locales() {
+        return this.env.i18n.locales.split(',')
+      },
     },
-    created() {
-      console.log(this.env.i18n.locales)
+    methods: {
+      setLocale(locale) {
+        this.$i18n.setLocale(locale)
+        window.location.reload()
+      },
     },
   }
 </script>

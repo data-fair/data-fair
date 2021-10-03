@@ -1,4 +1,4 @@
-export default async ({ store, app, env, $vuetify, route }) => {
+export default async ({ store, app, env, $vuetify, route, i18n }) => {
   let publicUrl = window.location.origin + env.basePath
   if (publicUrl.endsWith('/')) publicUrl = publicUrl.substr(0, publicUrl.length - 1)
   store.commit('setAny', {

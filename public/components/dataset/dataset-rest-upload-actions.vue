@@ -7,7 +7,7 @@
         fab
         x-small
         class="mx-2"
-        title="Charger plusieurs lignes depuis un fichier"
+        :title="$t('loadLines')"
         v-on="on"
       >
         <v-icon>mdi-upload</v-icon>
@@ -15,14 +15,12 @@
     </template>
 
     <v-card outlined>
-      <v-card-title primary-title>
-        Charger plusieurs lignes depuis un fichier
-      </v-card-title>
+      <v-card-title v-t="'loadLines'" primary-title />
       <v-card-text>
         <v-form v-model="form">
           <v-file-input
             v-model="file"
-            label="sélectionnez un fichier"
+            :label="$t('selectFile')"
             outlined
             dense
             hide-details
@@ -34,21 +32,35 @@
 
       <v-card-actions>
         <v-spacer />
-        <v-btn text @click="dialog = false">
-          Annuler
-        </v-btn>
         <v-btn
+          v-t="'cancel'"
+          text
+          @click="dialog = false"
+        />
+        <v-btn
+          v-t="'load'"
           :disabled="!form || importing"
           :loading="importing"
           color="primary"
           @click="upload"
-        >
-          Charger
-        </v-btn>
+        />
       </v-card-actions>
     </v-card>
   </v-dialog>
 </template>
+
+<i18n lang="yaml">
+fr:
+  loadLines: Charger plusieurs lignes depuis un fichier
+  selectFile: sélectionnez un fichier
+  cancel: Annuler
+  load: Charger
+en:
+  loadLines: Load multiple lines from a file
+  selectFile: Select a file
+  cancel: Cancel
+  load: Load
+</i18n>
 
 <script>
   export default {
