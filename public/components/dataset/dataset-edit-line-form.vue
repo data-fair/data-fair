@@ -11,10 +11,10 @@
     />
 
     <template v-if="dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')">
-      <p>Chargez un fichier en pièce jointe.</p>
+      <p v-t="'loadAttachment'" />
       <div class="mt-3 mb-3">
         <v-file-input
-          label="sélectionnez un fichier"
+          :label="$t('selectFile')"
           outlined
           dense
           style="max-width: 300px;"
@@ -25,6 +25,15 @@
     </template>
   </v-form>
 </template>
+
+<i18n lang="yaml">
+fr:
+  loadAttachment: Chargez un fichier en pièce jointe.
+  selectFile: sélectionnez un fichier
+en:
+  loadAttachment: Load a file as an attachment
+  selectFile: select a file
+</i18n>
 
 <script>
 

@@ -1,5 +1,6 @@
 <template>
   <div>
+    TEST
     <v-data-table
       v-if="!condensed"
       :headers="headers"
@@ -7,11 +8,13 @@
       hide-default-footer
       class="elevation-1"
     >
-      <template slot="items" slot-scope="props">
-        <td>{{ props.item.type }}</td>
-        <td>{{ props.item.description }}</td>
-        <td>{{ props.item.format || '-' }}</td>
-        <td>{{ props.item.formatsInArchive || '-' }}</td>
+      <template slot="item" slot-scope="props">
+        <tr>
+          <td>{{ props.item.type }}</td>
+          <td>{{ $t(props.item.type.replace('/', '').replace(' ', '')) }}</td>
+          <td>{{ props.item.format || '-' }}</td>
+          <td>{{ props.item.formatsInArchive || '-' }}</td>
+        </tr>
       </template>
     </v-data-table>
     <div v-else>
@@ -20,30 +23,50 @@
   </div>
 </template>
 
+<i18n lang="yaml">
+fr:
+  CSV: Format de fichier textuel pour données tabulaires dans lequel les valeurs sont séparées par des virgules
+  TSV: Format de fichier textuel pour données tabulaires dans lequel les valeurs sont séparées par des tabulations
+  OpenDocument: Format de fichier ouvert pour les applications bureautique de type tableur
+  XLSX: Format de fichier tableur Office Open XML
+  XLS: Format de fichier tableur Excel
+  GeoJSON: Format de données géospatiales simples utilisant la norme JSON
+  KMLKMZ: Format de données géospatiales basé sur le formalisme XML
+  GPX: Format de fichier permettant l'échange de coordonnées GPS
+  ESRIShapefile: Format de fichier pour les systèmes d'informations géographiques
+  iCalendar: Format de données pour les échanges de données de calendrier
+en:
+  CSV: Textual file format for tabular data where values are separated by commas
+  TSB: Textual file format for tabular data where values are separated by tabulations
+  OpenDocument: Open file format for spreadsheet type office applications
+  XLSX: Spreadsheet file format Office Open XML
+  XLS: Excel spreadsheet file format
+  GeoJSON: Format for simple geospatial data using the JSON standard
+  KMLKMZ: Format for geospatial data using the XML standard
+  GPX: File format for exchanging GPS coordinates
+  ESRIShapefile: File format for geographic information systems
+  iCalendar: File format for exchanging calendar contents
+</i18n>
+
 <script>
   const { mapState } = require('vuex')
 
   const formats = [
     {
       type: 'CSV',
-      description: 'Format de fichier de données tabulaires sous forme de valeurs séparées par des virgules',
       format: '.csv',
     }, {
       type: 'TSV',
-      description: 'Format ouvert de texte représentant des données tabulaires sous forme de valeurs séparées par des tabulations',
       format: '.tsv',
     }, {
       type: 'OpenDocument',
-      description: 'Format de fichier ouvert de données pour les applications bureautiques',
       format: '.ods, .fods',
     },
     {
       type: 'XLSX',
-      description: 'Format de fichier tableur Office Open XML',
       format: '.xlsx',
     }, {
       type: 'XLS',
-      description: 'Format de fichier tableur Excel',
       format: '.xls',
       // }, {
       //   type: 'DBF',
@@ -60,25 +83,20 @@
       //   formatsInArchive: ''
     }, {
       type: 'GeoJSON',
-      description: 'Format de de fichier de données géospatiales simples utilisant la norme JSON',
       format: '.geojson',
-      formatsInArchive: '',
     }, {
       type: 'KML/KMZ',
-      description: 'Format destiné à la gestion de l\'affichage de données géospatiales basé sur le formalise XML',
       format: '.kml, .kmz',
     }, {
       type: 'GPX',
-      description: 'Format de fichier permettant l\'échange de coordonnées GPS',
-      format: '.gpx ou .xml',
+      format: '.gpx',
     }, {
       type: 'ESRI Shapefile',
       description: 'Format de fichier pour les systèmes d\'informations géographiques',
-      formatsInArchive: '.shp, .dbf et .shx (.prj optionel)',
+      formatsInArchive: '.shp, .dbf, .shx (.prj optionel)',
     }, {
       type: 'iCalendar',
-      description: 'Format de données pour les échanges de données de calendrier',
-      formatsInArchive: '.ics',
+      format: '.ics',
     },
   ]
 

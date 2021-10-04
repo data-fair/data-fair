@@ -1,19 +1,16 @@
 <template lang="html">
   <v-row>
     <v-col class="my-4">
-      <p v-if="dataset.extensions && !dataset.extensions.length">
-        Étendez votre jeu de données avec de nouvelles colonnes issues de sources de données de référence.
-      </p>
+      <p v-if="dataset.extensions && !dataset.extensions.length" v-t="'message'" />
       <!-- 450 matches the size of the container in the embed page, to prevent overflowing iframe -->
       <v-menu v-model="addExtensionDialog" :max-height="450">
         <template v-slot:activator="{ on }">
           <v-btn
             v-if="can('writeDescription')"
+            v-t="'addExtension'"
             color="primary"
             v-on="on"
-          >
-            Ajouter une extension
-          </v-btn>
+          />
         </template>
 
         <v-list>
@@ -75,9 +72,9 @@
                 :items="selectFields[extension.remoteService + '_' + extension.action].fieldsAndTags"
                 item-value="name"
                 item-text="title"
-                label="Colonnes additionnelles"
+                :label="$t('additionalCols')"
                 multiple
-                placeholder="Toutes les colonnes en sortie"
+                :placeholder="$t('allColsOut')"
                 persistent-hint
                 chips
                 deletable-chips
@@ -88,19 +85,18 @@
               <confirm-menu
                 v-if="can('writeDescription')"
                 yes-color="warning"
-                text="Souhaitez-vous confirmer la suppression ?"
-                tooltip="Supprimer l'extension"
+                :text="$t('confirmDeleteText')"
+                :tooltip="$t('confirmDeleteTooltip')"
                 @confirm="removeExtension(idx)"
               />
               <v-spacer />
               <v-btn
+                v-t="'apply'"
                 color="primary"
                 depressed
                 :disabled="!hasChanges(extension)"
                 @click="applyExtension(idx)"
-              >
-                Appliquer
-              </v-btn>
+              />
             </v-card-actions>
           </v-card>
         </v-col>
@@ -108,6 +104,31 @@
     </v-col>
   </v-row>
 </template>
+
+<i18n lang="yaml">
+fr:
+  message: Étendez votre jeu de données avec de nouvelles colonnes issues de sources de données de référence.
+  addExtension: Ajouter une extension
+  additionalCols: Colonnes additionnelles
+  allColsOut: Toutes les colonnes
+  confirmDeleteTooltip: Supprimer l'extension
+  confirmDeleteText: Souhaitez-vous confirmer la suppression ?
+  apply: Appliquer
+  extensionExists: Cette extension a déjà été configurée
+  missingConcepts: "Il faut associer au moins l'un des concepts suivants à vos colonnes : {concepts}"
+  missingConcept: "Il faut associer le concept suivant à une de vos colonnes : ${concept}"
+en:
+  message: Extend your dataset with new columns taken from master-data sources.
+  addExtensions: Add an extension
+  additionalCols: Additional columns
+  allColsOut: All the columns
+  confirmDeleteTooltip: Delete the extension
+  confirmDeleteText: Do you want to confirm the deletion ?
+  apply: Apply
+  extensionExists: This extension was already configured
+  missingConcepts: "You must tag your columns with at least one of these concepts: {concepts}"
+  missingConcept: "You must tag one of your columns with this concept: ${concept}"
+</i18n>
 
 <script>
   import { mapState, mapActions, mapGetters } from 'vuex'
@@ -145,14 +166,14 @@
             a.output = a.output.filter(f => f.title)
             const extension = { id: service.id + '--' + a.id, remoteService: service.id, action: a }
             if (this.localExtensions.find(e => extension.id === e.remoteService + '--' + e.action)) {
-              extension.disabled = 'Cette extension a déjà été ajoutée'
+              extension.disabled = this.$t('extensionExists')
             }
             if (!extension.action.input.find(i => this.datasetConcepts.has(i.concept))) {
               const missingConcepts = extension.action.input.filter(i => i.concept !== 'http://schema.org/identifier').map(i => this.vocabulary[i.concept] ? this.vocabulary[i.concept].title : 'concept déprécié')
               if (missingConcepts.length > 1) {
-                extension.disabled = `Il faut associer au moins l'un des concepts suivants à vos colonnes : ${missingConcepts.join(', ')}`
+                extension.disabled = this.$t('missingConcepts', { concepts: missingConcepts.join(', ') })
               } else {
-                extension.disabled = `Il faut associer le concept suivant à une de vos colonnes : ${missingConcepts[0]}`
+                extension.disabled = this.$t('missingConceptss', { concept: missingConcepts[0] })
               }
             }
             if (this.newExtension === extension) extension.color = 'primary'

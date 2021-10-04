@@ -12,7 +12,7 @@
             <v-icon>mdi-text-box-outline</v-icon>
           </v-btn>
         </template>
-        <span>Rapport d'enrichissement</span>
+        <span v-t="'extensionReport'" />
       </v-tooltip>
     </template>
 
@@ -31,6 +31,13 @@
     </v-card>
   </v-dialog>
 </template>
+
+<i18n lang="yaml">
+fr:
+  extensionReport: Rapport d'enrichissement
+en:
+  extensionReport: Extension report
+</i18n>
 
 <script>
   import { mapGetters } from 'vuex'
