@@ -31,10 +31,7 @@
                   v-if="!filtered"
                   class="text-h6"
                 >
-                  Vous n'avez pas encore ajouté de jeu de données.
-                  <!--<br>Vous pouvez <nuxt-link :to="localePath('user-guide')">
-                    consulter la documentation
-                  </nuxt-link> pour en savoir plus.-->
+                  {{ $t('noDataset') }}
                   <layout-wrap-svg
                     :source="dataSvg"
                     :color="$vuetify.theme.themes.light.primary"
@@ -42,10 +39,9 @@
                 </div>
                 <div
                   v-else
+                  v-t="'noResult'"
                   class="text-h6"
-                >
-                  Aucun résultat ne correspond aux critères de recherche
-                </div>
+                />
               </v-col>
             </v-row>
           </v-container>
@@ -58,7 +54,7 @@
           <v-row class="px-2">
             <v-col class="py-0">
               <search-filters
-                :filter-labels="{children: 'Jeu de données agrégé'}"
+                :filter-labels="{children: $t('childDataset')}"
                 :filters="filters"
                 :facets="datasets && datasets.facets"
                 type="datasets"
@@ -80,6 +76,17 @@
     </v-col>
   </v-row>
 </template>
+
+<i18n lang="yaml">
+fr:
+  noDataset: Vous n'avez pas encore ajouté de jeu de données.
+  noResult: Aucun résultat ne correspond aux critères de recherche.
+  childDataset: Jeu de données agrégé
+en:
+  noDataset: You haven't created a dataset yet.
+  noResult: No result matches your search criterias.
+  childDataset: Aggregated dataset
+</i18n>
 
 <script>
   const { mapState, mapGetters } = require('vuex')

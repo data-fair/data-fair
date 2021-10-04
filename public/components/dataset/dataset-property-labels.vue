@@ -26,7 +26,7 @@
         dense
         flat
       >
-        <v-toolbar-title>Libellés</v-toolbar-title>
+        <v-toolbar-title v-t="'labels'" />
         <v-spacer />
         <v-btn
           icon
@@ -54,8 +54,10 @@
 
 <i18n lang="yaml">
 fr:
+  labels: Libellés
   tutorialLabels: Saisissez des libellés associés à des valeurs présentes dans la donnée pour améliorer la présentation dans les visualisations.
 en:
+  labels: Labels
   tutorialLabels: Enter some labels associate to values present in the data to improve the display in visualizations.
 </i18n>
 

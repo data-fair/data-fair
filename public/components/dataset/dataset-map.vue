@@ -7,7 +7,7 @@
       solo
       dense
       style="position: absolute;z-index:2;max-width:400px;"
-      label="Rechercher"
+      :label="$t('search')"
       append-icon="mdi-magnify"
       hide-details
       single-line
@@ -17,6 +17,13 @@
     <div id="map" :style="'height:' + mapHeight + 'px'" />
   </v-card>
 </template>
+
+<i18n lang="yaml">
+fr:
+  search: Rechercher
+en:
+  search: Search
+</i18n>
 
 <script>
   import { mapState, mapGetters } from 'vuex'
