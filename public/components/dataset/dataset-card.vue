@@ -19,13 +19,13 @@
             <v-list-item-avatar class="ml-0 my-0">
               <v-icon>mdi-picture-in-picture-bottom-right-outline</v-icon>
             </v-list-item-avatar>
-            <span>Jeu de données virtuel</span>
+            <span v-t="'virtual'" />
           </v-list-item>
           <v-list-item v-if="dataset.isRest">
             <v-list-item-avatar class="ml-0 my-0">
               <v-icon>mdi-all-inclusive</v-icon>
             </v-list-item-avatar>
-            <span>Jeu de données incrémental</span>
+            <span v-t="'inc'" />
           </v-list-item>
           <v-list-item v-if="dataset.file" style="overflow: hidden;">
             <v-list-item-avatar class="ml-0 my-0">
@@ -37,7 +37,7 @@
             <v-list-item-avatar class="ml-0 my-0">
               <v-icon>mdi-view-headline</v-icon>
             </v-list-item-avatar>
-            <span>{{ dataset.count.toLocaleString() }} lignes</span>
+            <span v-t="{path: 'lines', args: {count: dataset.count}}" />
           </v-list-item>
         </v-list>
       </v-card-text>
@@ -67,13 +67,26 @@
             mdi-alert
           </v-icon>
         </template>
-        En erreur
+        {{ $t('error') }}
       </v-tooltip>
       <v-spacer />
       <dataset-btn-table v-if="dataset.finalizedAt" :dataset="dataset" />
     </v-card-actions>
   </v-card>
 </template>
+
+<i18n lang="yaml">
+fr:
+  virtual: Jeu de données virtuel
+  inc: Jeu de données incrémental
+  lines: " | 1 ligne | {count} lignes"
+  error: En erreur
+en:
+  virtual: Virtual dataset
+  inc: Incremental dataset
+  lines: " | 1 line | {count} lines"
+  error: Error status
+</i18n>
 
 <script>
   const marked = require('marked/lib/marked')

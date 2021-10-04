@@ -3,29 +3,26 @@
     <v-row>
       <v-col>
         <template v-if="can('writeData')">
-          <p>Charger un fichier pour créer/modifier une pièce jointe. Le nom de fichier est l'identifiant de la pièce jointe.</p>
+          <p v-t="'message'" />
           <v-file-input
-            label="sélectionnez un fichier"
+            :label="$t('selectFile')"
             outlined
             dense
             style="max-width: 300px;"
             @change="onFileUpload"
           />
           <v-btn
+            v-t="'load file'"
             :disabled="!file || uploading"
             color="primary"
             @click="confirmUpload()"
-          >
-            Charger
-          </v-btn>
+          />
           <v-progress-linear
             v-if="uploading"
             v-model="uploadProgress"
           />
         </template>
-        <p v-else-if="!dataset.attachments || dataset.attachments.length === 0">
-          Aucune pièce jointe chargée pour l'instant.
-        </p>
+        <p v-else-if="!dataset.attachments || dataset.attachments.length === 0" v-t="'noAttachment'" />
       </v-col>
     </v-row>
     <v-row>
@@ -46,11 +43,10 @@
           <v-card-actions v-if="can('writeData')">
             <v-btn
               v-if="attachment.mimetype && attachment.mimetype.startsWith('image/')"
+              v-t="'thumbnail'"
               text
               @click="patchAndCommit({'image': resourceUrl + '/metadata-attachments/' + attachment.name})"
-            >
-              utiliser comme vignette
-            </v-btn>
+            />
             <v-spacer />
             <v-btn
               icon
@@ -65,6 +61,21 @@
     </v-row>
   </v-container>
 </template>
+
+<i18n lang="yaml">
+fr:
+  message: Charger un fichier pour créer/modifier une pièce jointe. Le nom de fichier est l'identifiant de la pièce jointe.
+  selectFile: sélectionnez un fichier
+  load: Charger
+  noAttachment: Aucune pièce jointe chargée pour l'instant.
+  thumbnail: utiliser comme vignette
+en:
+  message: Load a file to create/update an attachment. The file name is used as identifier of the attachment.
+  selectFile: select a file
+  load: Load
+  noAttachment: No attachment uploaded yet.
+  thumbnail: use as a thumbnail
+</i18n>
 
 <script>
   import { mapGetters, mapState, mapActions } from 'vuex'

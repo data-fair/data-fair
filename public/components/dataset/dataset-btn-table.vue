@@ -6,7 +6,7 @@
   >
     <template v-slot:activator="{ on }">
       <v-icon
-        title="Prévisualiser la donnée"
+        :title="$t('preview')"
         v-on="on"
       >
         mdi-table
@@ -28,6 +28,13 @@
     </v-card>
   </v-dialog>
 </template>
+
+<i18n lang="yaml">
+fr:
+  preview: Prévisualiser la donnée
+en:
+  preview: Preview the data
+</i18n>
 
 <script>
   export default {
