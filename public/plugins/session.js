@@ -12,6 +12,21 @@ export default async ({ store, app, env, $vuetify, route }) => {
     cookies: app.$cookies,
     directoryUrl: env.directoryUrl,
   })
+
+  // support opening with active account defined in URL
+  if (route.query.account) {
+    const parts = route.query.account.split(':')
+    if (parts[0] === 'user') {
+      store.dispatch('session/switchOrganization', null)
+    } else {
+      store.dispatch('session/switchOrganization', parts[1])
+    }
+    window.onNuxtReady(() => {
+      const query = { ...route.query }
+      delete query.account
+      app.router.replace({ query })
+    })
+  }
   store.dispatch('session/loop', app.$cookies)
   if (app.$cookies.get('theme_dark') !== undefined) $vuetify.theme.dark = app.$cookies.get('theme_dark')
   if (route.query.dark) $vuetify.theme.dark = route.query.dark === 'true'
