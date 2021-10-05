@@ -1,30 +1,60 @@
 {
   "dataset": {
     "uploaded": {
-      "title": "Chargé (à convertir)"
+      "title": {
+        "fr": "Chargé (à convertir)",
+        "en": "Loaded (waiting conversion)"
+      }
     },
     "loaded": {
-      "title": "Chargé"
+      "title": {
+        "fr": "Chargé",
+        "en": "Loaded"
+      }
     },
     "analyzed": {
-      "title": "Analyse initiale ok"
+      "title": {
+        "fr": "Analyse initiale ok",
+        "en": "Initial analysis ok"
+      }
     },
     "schematized": {
-      "title": "Schéma ok"
+      "title": {
+        "fr": "Schéma ok",
+        "en": "Schema ok"
+      }
     },
     "indexed": {
-      "title": "Indexé"
+      "title": {
+        "fr": "Indexé",
+        "en": "Indexed"
+      }
     },
     "extended": {
-      "title": "Extension ok"
+      "title": {
+        "fr": "Extension ok",
+        "en": "Extended"
+      }
     },
     "finalized": {
-      "title": "Finalisé",
+      "title": {
+        "fr": "Finalisé",
+        "en": "Finalized"
+      },
       "icon": "check"
     },
     "error": {
-      "title": "Erreur",
+      "title": {
+        "fr": "Erreur",
+        "en": "Error"
+      },
       "icon": "error"
+    },
+    "draft": {
+      "title": {
+        "fr": "Brouillon",
+        "en": "Draft"
+      }
     }
   }
 }

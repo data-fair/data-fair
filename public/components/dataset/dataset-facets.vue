@@ -39,7 +39,7 @@
         :label="$t('status')"
         :items="facets.status"
         item-value="value"
-        :item-text="item => item.value && `${statuses.dataset[item.value] ? statuses.dataset[item.value].title : item.value} (${item.count})`"
+        :item-text="item => item.value && `${statuses.dataset[item.value] ? (statuses.dataset[item.value].title[$i18n.locale] || statuses.dataset[item.value].title[$i18n.defaultLocale]) : item.value} (${item.count})`"
         outlined
         dense
         hide-details
