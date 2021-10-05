@@ -10,9 +10,7 @@
       </v-main>
     </template>
     <v-container v-else>
-      <v-alert type="error">
-        Cette page n'est pas consultable depuis ce domaine.
-      </v-alert>
+      <v-alert v-t="'wrongDomain'" type="error" />
     </v-container>
   </v-app>
 </template>
@@ -38,6 +36,13 @@
   }
 
 </script>
+
+<i18n lang="yaml">
+fr:
+  wrongDomain: Cette page n'est pas consultable depuis ce domaine.
+en:
+  wrongDomain: This page cannot be accessed from this domain.
+</i18n>
 
 <style lang="less">
 

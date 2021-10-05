@@ -4,7 +4,7 @@
       <v-select
         v-model="facetsValues.owner"
         multiple
-        label="Propriétaire"
+        :label="$t('owner')"
         :items="facets.owner"
         :item-value="item => `${item.value.type}:${item.value.id}`"
         :item-text="item => `${item.value.name} (${item.count})`"
@@ -20,7 +20,7 @@
       <v-select
         v-model="facetsValues.visibility"
         multiple
-        label="Visibilité"
+        :label="$t('visibility')"
         :items="facets.visibility"
         item-value="value"
         :item-text="item => `${{public: 'Public', private: 'Privé', protected: 'Protégé'}[item.value]} (${item.count})`"
@@ -36,7 +36,7 @@
       <v-select
         v-model="facetsValues.topics"
         multiple
-        label="Thématiques"
+        :label="$t('topics')"
         :items="facets.topics"
         :item-value="item => item.value.id"
         :item-text="item => `${item.value.title} (${item.count})`"
@@ -52,7 +52,7 @@
       <v-select
         v-model="facetsValues.publicationSites"
         multiple
-        label="Portails"
+        :label="$t('portals')"
         :items="facets.publicationSites"
         :item-value="item => item.value || 'null'"
         :item-text="item => publicationSiteText(item)"
@@ -68,7 +68,7 @@
       <v-select
         v-model="facetsValues['base-application']"
         multiple
-        label="Application"
+        :label="$t('app')"
         :items="facets['base-application']"
         :item-value="item => item.value.url"
         :item-text="item => `${item.value.title} ${item.value.version || ''} (${item.count})`"
@@ -81,6 +81,21 @@
     </template>
   </div>
 </template>
+
+<i18n lang="yaml">
+fr:
+  owner: Propriétaire
+  visibility: Visibilité
+  topics: Thématiques
+  portals: Portails
+  app: Application
+en:
+  owner: Owner
+  visibility: Visibility
+  topics: Topics
+  portals: Portals
+  app: Application
+</i18n>
 
 <script>
   import { mapState, mapGetters } from 'vuex'

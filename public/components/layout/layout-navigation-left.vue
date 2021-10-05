@@ -126,8 +126,8 @@
         >
           <v-list-item-action><v-icon>mdi-cog</v-icon></v-list-item-action>
           <v-list-item-content>
-            <v-list-item-title>{{ $t('navigation.params') }}</v-list-item-title>
-            <v-list-item-subtitle>{{ $t('navigation.paramsSub') }}</v-list-item-subtitle>
+            <v-list-item-title>{{ $t('params') }}</v-list-item-title>
+            <v-list-item-subtitle>{{ $t('paramsSub') }}</v-list-item-subtitle>
           </v-list-item-content>
         </v-list-item>
 
@@ -140,8 +140,8 @@
         >
           <v-list-item-action><v-icon>mdi-transit-connection</v-icon></v-list-item-action>
           <v-list-item-content>
-            <v-list-item-title>{{ $t('navigation.catalogs') }}</v-list-item-title>
-            <v-list-item-subtitle>{{ $t('navigation.catalogsSub') }}</v-list-item-subtitle>
+            <v-list-item-title>{{ $t('catalogs') }}</v-list-item-title>
+            <v-list-item-subtitle>{{ $t('catalogsSub') }}</v-list-item-subtitle>
           </v-list-item-content>
         </v-list-item>
 
@@ -185,6 +185,10 @@ fr:
   dashboard: Accueil
   datasets: Jeux de données
   vizs: Visualisations
+  params: Paramètres
+  paramsSub: Licences, thématiques ...
+  catalogs: Catalogues
+  catalogsSub: data.gouv.fr ...
 en:
   admin: Administration
   services: Services
@@ -196,6 +200,10 @@ en:
   dashboard: Dashboard
   datasets: Datasets
   vizs: Visualizations
+  params: Parameters
+  paramsSub: Licenses, topics ...
+  catalogs: Catalogs
+  catalogsSub: data.gouv.fr ...
 </i18n>
 
 <script>

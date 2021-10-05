@@ -10,9 +10,11 @@
       height="2"
     />
     <template v-for="category in categories" v-else>
-      <h3 :key="category" class="text-h6">
-        {{ 'Visualisation de type '+category }}
-      </h3>
+      <h3
+        :key="category"
+        v-t="{path: 'appType', args: {category}}"
+        class="text-h6"
+      />
       <v-row :key="'layout-'+category" class="mt-0 mb-1">
         <v-col
           v-for="baseApp in baseApps.filter(a => a.category === category)"
@@ -31,6 +33,13 @@
     </template>
   </v-container>
 </template>
+
+<i18n lang="yaml">
+fr:
+  appType: "Visualisation de type {category}"
+en:
+  appType: "Visualization of type {category}"
+</i18n>
 
 <script>
   import { mapGetters, mapState } from 'vuex'

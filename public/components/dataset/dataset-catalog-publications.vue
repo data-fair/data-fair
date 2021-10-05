@@ -144,10 +144,7 @@
       </v-card>
     </v-dialog>
 
-    <v-dialog
-      v-model="showRepublishDialog"
-      max-width="500"
-    >
+    <v-dialog v-model="showRepublishDialog" max-width="500">
       <v-card v-if="showRepublishDialog" outlined>
         <v-card-title v-t="'republish'" primary-title />
         <v-card-text v-html="$t('republishMessage')" />
@@ -186,7 +183,7 @@ fr:
   deletionMessage: Voulez vous vraiment supprimer la publication ? La suppression est définitive et les données ne pourront pas être récupérées.<br><br><b>Attention</b> les données seront également supprimées dans le catalogue destinataire de la publication.
   catalog: Catalogue
   addToDataset: Ajouter comme ressource à un jeu de données du catalogue
-  search: Recherchez
+  search: Rechercher
   addToDatasetEmpty: Laissez vide pour créer un nouveau jeu de données dans le catalogue.
   datasetNoMatch: Aucun jeu de données du catalogue ne correspond
   cancel: Annuler
@@ -197,13 +194,13 @@ en:
   message: Publish this dataset onto one or more Open Data catalogs. This publication will make your data easier to find et will allow the Open Data community to interact with you.
   noPublication: There are no publication of this dataset on a catalog yet.
   publish: Publish on a catalog
-  republishMessage: Do you really want to re-publish ?<br><br><b>Warning</b> if you mage changes in the catalog since the last publication they will be lost.
   resourcePublication: Resource associated to the dataset "{dataset}" in the catalog "{catalog}"
   datasetPublication: Dataset published on the catalog "{catalog}"
   waitingDeletion: Waiting for deletion
   waitingPublication: Waiting for publication
   unknownCatalog: This publication references an unknown configuration of catalog ({catalog})
   republish: Re-publish
+  republishMessage: Do you really want to re-publish ?<br><br><b>Warning</b> if you mage changes in the catalog since the last publication they will be lost.
   addPublication: Add a publication
   deletePublication: Delete this publication
   deletionMessage: Do you really want to delete the publication ? The deletion is definitive and the data will not be recoverable.<br><br><b>Warning</b> the data will also be delete in the catalog target of the publication.
@@ -216,7 +213,6 @@ en:
   add: Add
   no: No
   yes: Yes
-
 </i18n>
 
 <script>

@@ -5,7 +5,7 @@
       type="error"
       border="left"
     >
-      <p>Erreur dans la <b>version validée</b></p>
+      <p v-html="$t('validatedError')" />
       <p class="mb-0" v-html="application.errorMessage" />
     </v-alert>
     <no-ssr>
@@ -31,7 +31,7 @@
             :items="availableVersions"
             :item-text="(baseApp => `${baseApp.title} (${baseApp.version})`)"
             item-value="url"
-            label="Changer de version"
+            :label="$t('changeVersion')"
             @change="saveUrlDraft"
           />
           <v-form
@@ -49,20 +49,18 @@
             <v-row class="mt-3 mb-0">
               <v-spacer />
               <v-btn
+                v-t="'validate'"
                 :disabled="hasModification || !hasDraft || !!application.errorMessageDraft"
                 color="accent"
                 type="submit"
-              >
-                Valider
-              </v-btn>
+              />
               <v-btn
+                v-t="'cancel'"
                 :disabled="!hasDraft"
                 color="warning"
                 class="ml-2 mr-3"
                 @click="showCancelDialog = true"
-              >
-                Annuler
-              </v-btn>
+              />
             </v-row>
           </v-form>
         </v-col>
@@ -88,34 +86,51 @@
         max-width="500px"
       >
         <v-card outlined>
-          <v-card-title primary-title>
-            Effacer le brouillon
-          </v-card-title>
+          <v-card-title v-t="'removeDraft'" primary-title />
           <v-card-text>
             <v-alert
+              v-t="'removeDraftWarning'"
               :value="true"
               type="error"
-            >
-              Attention le brouillon sera perdu et l'application reviendra à son état validé précédent.
-            </v-alert>
+            />
           </v-card-text>
           <v-card-actions>
             <v-spacer />
-            <v-btn text @click="showCancelDialog = false">
-              Annuler
-            </v-btn>
             <v-btn
+              v-t="'cancel'"
+              text
+              @click="showCancelDialog = false"
+            />
+            <v-btn
+              v-t="'confirm'"
               color="warning"
               @click="cancelDraft(); showCancelDialog = false;"
-            >
-              Confirmer
-            </v-btn>
+            />
           </v-card-actions>
         </v-card>
       </v-dialog>
     </no-ssr>
   </v-container>
 </template>
+
+<i18n lang="yaml">
+fr:
+  validatedError: Erreur dans la <b>version validée</b>
+  changeVersion: Changer de version
+  validate: Valider
+  cancel: Annuler
+  confirm: Confirmer
+  removeDraft: Effacer le brouillon
+  removeDraftWarning: Attention ! Le brouillon sera perdu et la visualisation reviendra à son état validé précédent.
+en:
+  validatedError: Error in the <b>validated version</b>
+  changeVersion: Change version
+  validate: Validate
+  cancel: Cancel
+  confirm: Confirm
+  removeDraft: Remove draft
+  removeDraftWarning: Warning ! The draft will be lost and the visualization will get back to its previously validated state.
+</i18n>
 
 <script>
   import { mapState, mapActions, mapGetters } from 'vuex'

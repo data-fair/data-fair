@@ -44,7 +44,7 @@
             mdi-alert
           </v-icon>
         </template>
-        En erreur
+        {{ $t('errorState') }}
       </v-tooltip>
       &nbsp;&nbsp;
       <v-tooltip v-if="application.status !== 'configured' && application.status !== 'error'" top>
@@ -53,11 +53,20 @@
             mdi-reload-alert
           </v-icon>
         </template>
-        Brouillon non validé
+        {{ $t('draftState') }}
       </v-tooltip>
     </v-card-actions>
   </v-card>
 </template>
+
+<i18n lang="yaml">
+fr:
+  errorState: En erreur
+  draftState: Brouillon non validé
+en:
+  errorState: Error status
+  draftState: Draft not validated
+</i18n>
 
 <script>
   export default {

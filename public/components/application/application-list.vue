@@ -31,7 +31,7 @@
                   v-if="!filtered"
                   class="text-h6"
                 >
-                  Vous n'avez pas encore configuré de visualisation.
+                  {{ $t('noApp') }}
                   <!--<br>Vous pouvez <nuxt-link :to="localePath('user-guide')">
                     consulter la documentation
                   </nuxt-link> pour en savoir plus.-->
@@ -42,10 +42,9 @@
                 </div>
                 <div
                   v-else
+                  v-t="'noResult'"
                   class="text-h6"
-                >
-                  Aucun résultat ne correspond aux critères de recherche
-                </div>
+                />
               </v-col>
             </v-row>
           </v-container>
@@ -64,14 +63,14 @@
                 mdi-plus-circle
               </v-icon>
             </v-list-item-icon>
-            <v-list-item-title>Configurer une visualisation</v-list-item-title>
+            <v-list-item-title v-t="'configureApp'" />
           </v-list-item>
         </v-list>
         <template v-if="applications">
           <v-row class="px-2">
             <v-col class="py-0">
               <search-filters
-                :filter-labels="{'dataset': 'Jeu de données', 'service': 'Service', 'url': 'Application'}"
+                :filter-labels="{'dataset': $t('dataset'), 'service': $t('service'), 'url': $t('baseApp')}"
                 :filters="filters"
                 :facets="applications && applications.facets"
                 type="applications"
@@ -91,7 +90,7 @@
           color="primary"
           fab
           small
-          title="Configurer une visualisation"
+          :title="$t('configureApp')"
           to="/new-application"
         >
           <v-icon>mdi-plus</v-icon>
@@ -100,6 +99,25 @@
     </v-col>
   </v-row>
 </template>
+
+<i18n lang="yaml">
+fr:
+  noApp: Vous n'avez pas encore configuré de visualisation.
+  noResult: Aucun résultat ne correspond aux critères de recherche
+  configureApp: Configurer une visualisation
+  dataset: Jeu de données
+  service: Service
+  baseApp: Application
+  applicationsCount: "aucune visulisation | 1 visualisation | {count} visualisations"
+en:
+  noApp: You haven't configured any visualization yet.
+  noResult: No result matches your search criterias.
+  configureApp: Configure a visualization
+  dataset: Dataset
+  service: Service
+  baseApp: Application
+  applicationsCount: "no visulization | 1 visualization | {count} visualizations"
+</i18n>
 
 <script>
   const { mapState, mapGetters } = require('vuex')
@@ -184,7 +202,7 @@
           const applications = await this.$axios.$get('api/v1/applications', { params })
           if (append) applications.results.forEach(r => this.applications.results.push(r))
           else this.applications = applications
-          this.$store.dispatch('breadcrumbs', [{ text: `${this.applications.count} visualisation${this.plural ? 's' : ''}` }])
+          this.$store.dispatch('breadcrumbs', [{ text: this.$t('applicationsCount', { count: this.applications.count }) }])
           this.filtered = !!this.filters.q || hasFacetFilter
           this.loading = false
 

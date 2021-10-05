@@ -44,7 +44,7 @@ fr:
   title: Titre
   requiredTitle: le titre est obligatoire, il sea utilisé pour créer un identifiant au nouveau jeu de données
   children: Jeux enfants
-  search: Recherchez
+  search: Rechercher
   create: Créer
   creationError: "Erreur pendant la création du jeu de données virtual :"
 en:

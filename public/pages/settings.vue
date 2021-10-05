@@ -217,7 +217,6 @@
   import eventBus from '~/event-bus'
 
   export default {
-    // middleware: 'auth',
     data: () => ({
       api: null,
       operations: null,

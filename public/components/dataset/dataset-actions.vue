@@ -245,7 +245,7 @@
       max-width="900"
     >
       <v-card outlined>
-        <v-card-title v-t="'changeOwner'" primary-title />
+        <v-card-title v-t="'changeOwnerTitle'" primary-title />
         <v-card-text>
           <owner-pick v-model="newOwner" />
         </v-card-text>
@@ -333,7 +333,7 @@ fr:
   no: Non
   allLinesDeletion: Suppression des lignes du jeu de données
   deleteAllLinesWarning: Voulez vous vraiment supprimer toutes les lignes du jeu de données "{title}" ? La suppression est définitive et les données ne pourront pas être récupérées.
-  changeOwner: Changer le propriétaire du jeu de données
+  changeOwnerTitle: Changer le propriétaire du jeu de données
   cancel: Annuler
   confirm: Confirmer
   load: Charger
@@ -362,7 +362,7 @@ en:
   no: No
   allLinesDeletion: Delete all the lines of the dataset
   deleteAllLinesWarning: Do you really want to delete all the lines of the dataset "{title}" ? Deletion is definitive and data will not be recoverable.
-  changeOwner: Change the owner of the dataset
+  changeOwnerTitle: Change the owner of the dataset
   cancel: Cancel
   confirm: Confirm
   load: Load

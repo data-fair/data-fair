@@ -15,10 +15,13 @@
               <v-icon>mdi-file-image</v-icon>
             </v-list-item-avatar>
             <span>{{ prodBaseApp ? prodBaseApp.title : application.url.split('/').slice(-3,-2).pop() }}</span>
-            &nbsp;<span>- version {{ version }}</span>
+            &nbsp;<span>- {{ $t('version') }} {{ version }}</span>
             <v-spacer />
-            <span v-if="upgradeAvailable" class="accent--text">
-              Version {{ upgradeAvailable.version }} disponible</span>
+            <span
+              v-if="upgradeAvailable"
+              v-t="{path: 'availableVersion', args: {version: upgradeAvailable.version}}"
+              class="accent--text"
+            />
           </v-list-item>
 
           <!--<v-list-item
@@ -59,7 +62,7 @@
             <v-list-item-avatar class="ml-0 my-0">
               <v-icon>mdi-eye</v-icon>
             </v-list-item-avatar>
-            <span>{{ nbSessions }} {{ nbSessions > 1 ? 'sessions actives dans la dernière heure' : 'session active dans la dernière heure' }}</span>
+            <span v-t="{path:'nbSessions', args: {count: nbSessions}}" />
           </v-list-item>
         </v-list>
       </v-sheet>
@@ -98,6 +101,21 @@
   </v-row>
 </template>
 
+<i18n lang="yaml">
+fr:
+  version: version
+  availableVersion: Version {version} disponible
+  nbSessions: "aucune session active dans la dernière heure | 1 session active dans la dernière heure | {count} sessions actives dans la dernière heure"
+  unknown: inconnue
+  test: de test
+en:
+  version: version
+  availableVersion: Version {version} available
+  nbSessions: "no active session in the last hour | 1 active session in the last hour | {count} active sessions in the last hour"
+  unknown: unknown
+  test: test
+</i18n>
+
 <script>
   import { mapState, mapActions, mapGetters } from 'vuex'
   const events = require('~/../shared/events.json').application
@@ -125,8 +143,8 @@
         return dataset
       },
       version() {
-        if (!this.prodBaseApp || !this.prodBaseApp.version) return 'inconnue'
-        else if (this.prodBaseApp.version === 'master' || this.prodBaseApp.version === 'latest') return 'de test'
+        if (!this.prodBaseApp || !this.prodBaseApp.version) return this.$t('unknown')
+        else if (this.prodBaseApp.version === 'master' || this.prodBaseApp.version === 'latest') return this.$t('test')
         else return this.prodBaseApp.version
       },
       upgradeAvailable() {

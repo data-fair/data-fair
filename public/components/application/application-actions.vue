@@ -4,9 +4,7 @@
     dense
     class="list-actions"
   >
-    <v-subheader>
-      ACTIONS
-    </v-subheader>
+    <v-subheader v-t="'actions'" />
     <v-list-item
       :disabled="!can('readConfig')"
       :href="applicationLink"
@@ -17,7 +15,7 @@
           mdi-exit-to-app
         </v-icon>
       </v-list-item-icon>
-      <v-list-item-title>Ouvrir en pleine page</v-list-item-title>
+      <v-list-item-title v-t="'fullPage'" />
     </v-list-item>
 
     <v-list-item
@@ -29,7 +27,7 @@
           mdi-code-tags
         </v-icon>
       </v-list-item-icon>
-      <v-list-item-title>Intégrer dans un site</v-list-item-title>
+      <v-list-item-title v-t="'integrate'" />
     </v-list-item>
 
     <template>
@@ -45,7 +43,7 @@
           </v-icon>
         </v-list-item-icon>
         <v-list-item-content>
-          <v-list-item-title>Voir sur {{ link.title }}</v-list-item-title>
+          <v-list-item-title v-t="{path: 'viewSite', args: {title: link.title}}" />
         </v-list-item-content>
       </v-list-item>
     </template>
@@ -59,7 +57,7 @@
           mdi-camera
         </v-icon>
       </v-list-item-icon>
-      <v-list-item-title>Effectuer une capture</v-list-item-title>
+      <v-list-item-title v-t="'capture'" />
     </v-list-item>
 
     <v-list-item
@@ -72,7 +70,7 @@
         </v-icon>
       </v-list-item-icon>
       <v-list-item-content>
-        <v-list-item-title>Utiliser l'API</v-list-item-title>
+        <v-list-item-title v-t="'useAPI'" />
       </v-list-item-content>
     </v-list-item>
 
@@ -85,7 +83,7 @@
           mdi-delete
         </v-icon>
       </v-list-item-icon>
-      <v-list-item-title>Supprimer</v-list-item-title>
+      <v-list-item-title v-t="'delete'" />
     </v-list-item>
 
     <v-list-item
@@ -97,7 +95,7 @@
           mdi-account
         </v-icon>
       </v-list-item-icon>
-      <v-list-item-title>Changer de propriétaire</v-list-item-title>
+      <v-list-item-title v-t="'changeOwner'" />
     </v-list-item>
 
     <v-dialog v-model="showIntegrationDialog" max-width="1200">
@@ -106,7 +104,7 @@
           dense
           flat
         >
-          <v-toolbar-title>Intégrer dans un site</v-toolbar-title>
+          <v-toolbar-title v-t="'integrate'" />
           <v-spacer />
           <v-btn
             icon
@@ -116,7 +114,7 @@
           </v-btn>
         </v-toolbar>
         <v-card-text v-if="showIntegrationDialog" class="pb-0 px-4">
-          Pour intégrer cette application dans un site vous pouvez copier le code suivant ou un code similaire dans le code source HTML.
+          {{ $t('integrationMsg') }}
           <br>
           <pre>
   &lt;iframe
@@ -145,7 +143,7 @@
           dense
           flat
         >
-          <v-toolbar-title>Effectuer une capture</v-toolbar-title>
+          <v-toolbar-title v-t="'capture'" />
           <v-spacer />
           <v-btn
             icon
@@ -155,7 +153,7 @@
           </v-btn>
         </v-toolbar>
         <v-card-text v-if="showCaptureDialog" class="pb-0 pt-2">
-          <p>Une image statique au format PNG va être créée à partir de cette visualisation.</p>
+          <p v-t="'captureMsg'" />
           <v-text-field
             v-model="captureWidth"
             label="Largeur"
@@ -174,7 +172,7 @@
             icon
             :href="`${env.captureUrl}/api/v1/screenshot?target=${encodeURIComponent(applicationLink)}&width=${captureWidth}&height=${captureHeight}`"
             download
-            title="télécharger la capture"
+            :title="$t('downloadCapture')"
           >
             <v-icon>mdi-download</v-icon>
           </v-btn>
@@ -188,23 +186,20 @@
       max-width="500"
     >
       <v-card outlined>
-        <v-card-title primary-title>
-          Suppression de la visualisation
-        </v-card-title>
-        <v-card-text>
-          Voulez vous vraiment supprimer la visualisation "{{ application.title }}" ? La suppression est définitive et le paramétrage ne pourra pas être récupéré.
-        </v-card-text>
+        <v-card-title v-t="'deleteApp'" primary-title />
+        <v-card-text v-t="{path: 'deleteMsg', args: {title: application.title}}" />
         <v-card-actions>
           <v-spacer />
-          <v-btn text @click="showDeleteDialog = false">
-            Non
-          </v-btn>
           <v-btn
+            v-t="'no'"
+            text
+            @click="showDeleteDialog = false"
+          />
+          <v-btn
+            v-t="'yes'"
             color="warning"
             @click="confirmRemove"
-          >
-            Oui
-          </v-btn>
+          />
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -214,24 +209,23 @@
       max-width="900"
     >
       <v-card outlined>
-        <v-card-title primary-title>
-          Changer le propriétaire de l'application
-        </v-card-title>
+        <v-card-title v-t="'changeOwnerTitle'" primary-title />
         <v-card-text>
           <owner-pick v-model="newOwner" />
         </v-card-text>
         <v-card-actions>
           <v-spacer />
-          <v-btn text @click="showOwnerDialog = false">
-            Annuler
-          </v-btn>
           <v-btn
+            v-t="'cancel'"
+            text
+            @click="showOwnerDialog = false"
+          />
+          <v-btn
+            v-t="'confirm'"
             :disabled="!newOwner"
             color="warning"
             @click="changeOwner(newOwner); showOwnerDialog = false;"
-          >
-            Confirmer
-          </v-btn>
+          />
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -261,6 +255,47 @@
     </v-dialog>
   </v-list>
 </template>
+
+<i18n lang="yaml">
+fr:
+  actions: ACTIONS
+  fullPage: Ouvrir en pleine page
+  integrate: Intégrer dans un site
+  viewSite: Voir sur {title}
+  capture: Effectuer une capture
+  useAPI: Utiliser l'API
+  delete: Supprimer
+  changeOwner: Changer le propriétaire
+  integrationMsg: Pour intégrer cette visualisation dans un site vous pouvez copier le code suivant ou un code similaire dans le code source HTML.
+  captureMsg: Une image statique au format PNG va être créée à partir de cette visualisation.
+  downloadCapture: télécharger la capture
+  deleteApp: Suppression de la visualisation
+  deleteMsg: Voulez vous vraiment supprimer le jeu de données "{title}" ? La suppression est définitive et les données ne pourront pas être récupérées.
+  yes: Oui
+  no: Non
+  changeOwnerTitle: Changer le propriétaire de la visualisation
+  cancel: Annuler
+  confirm: Confirmer
+en:
+  actions: ACTIONS
+  fullPage: Open in a fullscreen
+  integrate: Integrate in a website
+  viewSite: See on {title}
+  capture: Create a screenshot
+  useAPI: Use the API
+  delete: Delete
+  changeOwner: Change owner
+  integrationMsg: To integrate this visualization in a website you can copy the code below or a similar code in your HTML source code.
+  captureMsg: A static image with PNG format will be created based on this visualization.
+  downloadCapture: download the screenshot
+  deleteApp: Deletion of the visualization
+  deleteMsg: Do you really want to delete the visualization "{title}" ? Deletion is definitive and data will not be recoverable.
+  yes: Yes
+  no: No
+  changeOwnerTitle: Change the owner of the visualization
+  cancel: Cancel
+  confirm: Confirm
+</i18n>
 
 <script>
   import { mapState, mapActions, mapGetters } from 'vuex'

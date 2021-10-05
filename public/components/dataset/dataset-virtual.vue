@@ -179,7 +179,7 @@
 
 <i18n lang="yaml">
 fr:
-  search: Recherchez
+  search: Rechercher
   children: Jeux de données agrégés
   addChild: Ajouter un jeu de données
   noChild: Aucun jeu de données agrégé pour l'instant.

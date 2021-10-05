@@ -1,12 +1,8 @@
 <template>
   <v-container fluid>
-    <p v-if="!publicationSites || !publicationSites.length">
-      Vous n'avez pas configuré de portail sur lequel publier cette visualisation.
-    </p>
+    <p v-if="!publicationSites || !publicationSites.length" v-t="'noPublicationSite'" />
     <template v-else>
-      <p>
-        Publiez cette visualisation sur un ou plusieurs de vos portails.
-      </p>
+      <p v-t="'publishThisApp'" />
       <v-row class="px-2">
         <v-card
           tile
@@ -46,6 +42,15 @@
     </template>
   </v-container>
 </template>
+
+<i18n lang="yaml">
+fr:
+  noPublicationSite: Vous n'avez pas configuré de portail sur lequel publier cette visualisation.
+  publishThisApp: Publiez cette visualisation sur un ou plusieurs de vos portails.
+en:
+  noPublicationSite: You haven't configured a portal to publish this visualization on.
+  publishThisApp: Publish this visualization on one or more of your portals.
+</i18n>
 
 <script>
   import { mapState, mapActions } from 'vuex'

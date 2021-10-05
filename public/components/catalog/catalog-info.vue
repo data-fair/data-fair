@@ -36,13 +36,13 @@
     >
       <v-text-field
         v-model="catalog.title"
-        label="Titre"
+        :label="$t('title')"
         :disabled="!can('writeDescription')"
         @change="patch({title: catalog.title})"
       />
       <v-textarea
         v-model="catalog.description"
-        label="Description"
+        :label="$t('description')"
         :disabled="!can('writeDescription')"
         filled
         rows="4"
@@ -52,6 +52,15 @@
     </v-col>
   </v-row>
 </template>
+
+<i18n lang="yaml">
+fr:
+  title: Titre
+  description: Description
+en:
+  title: Title
+  description: Description
+</i18n>
 
 <script>
   import { mapState, mapActions, mapGetters } from 'vuex'

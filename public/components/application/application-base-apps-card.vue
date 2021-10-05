@@ -35,7 +35,7 @@
         />
         <v-card-title :class="{'error--text': baseApp.disabled.length}">
           <h5>
-            <v-icon v-if="!baseApp.public" title="Application à accès restreint">
+            <v-icon v-if="!baseApp.public" :title="$t('restrictedAccess')">
               mdi-security
             </v-icon>&nbsp;{{ baseApp.title }}
           </h5>
@@ -44,6 +44,13 @@
     </template>
   </v-tooltip>
 </template>
+
+<i18n lang="yaml">
+fr:
+  restrictedAccess: Application à accès restreint
+en:
+  restrictedAccess: Application with restricted access
+</i18n>
 
 <script>
   export default {
