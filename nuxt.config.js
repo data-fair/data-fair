@@ -1,5 +1,6 @@
 const URL = require('url').URL
 const fr = require('vuetify/es5/locale/fr').default
+const en = require('vuetify/es5/locale/en').default
 let config = require('config')
 config.basePath = new URL(config.publicUrl + '/').pathname
 
@@ -52,7 +53,7 @@ module.exports = {
   },
   modules: ['@digibytes/markdownit', '@nuxtjs/axios', 'cookie-universal-nuxt', ['@nuxtjs/i18n', {
     seo: false,
-    locales: config.i18n.locales.split(','),
+    locales: ['fr', 'en'],
     defaultLocale: config.i18n.defaultLocale,
     vueI18nLoader: true,
     strategy: 'no_prefix',
@@ -62,17 +63,6 @@ module.exports = {
     },
     vueI18n: {
       fallbackLocale: config.i18n.defaultLocale,
-      messages: {
-        en: {
-          welcome: 'Welcome',
-        },
-        fr: {
-          welcome: 'Bienvenue',
-        },
-        es: {
-          welcome: 'Bienvenido',
-        },
-      },
     },
   }]],
   axios: {
@@ -94,8 +84,8 @@ module.exports = {
       },
     },
     lang: {
-      locales: { fr },
-      current: 'fr',
+      locales: { fr, en },
+      current: config.defaultLocale,
     },
   },
   env: {
