@@ -17,6 +17,7 @@
               fab
               x-small
               class="mx-2"
+              :disabled="dataset.schema.filter(f => !f['x-calculated']).length === 0"
               @click="editedLine = null; showEditLineDialog();"
             >
               <v-icon>mdi-plus</v-icon>

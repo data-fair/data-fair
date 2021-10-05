@@ -10,6 +10,7 @@ const limits = require('./utils/limits')
 const locksUtils = require('./utils/locks')
 const rateLimiting = require('./utils/rate-limiting')
 const datasetUtils = require('./utils/dataset')
+const i18n = require('./utils/i18n')
 const workers = require('./workers')
 const session = require('@koumoul/sd-express')({
   directoryUrl: config.directoryUrl,
@@ -52,6 +53,7 @@ if (config.mode.includes('server')) {
     bodyParser(req, res, next)
   })
   app.use(require('cookie-parser')())
+  app.use(i18n.middleware)
   app.use(session.auth)
 
   // set current baseUrl, i.e. the url of simple-directory on the current user's domain

@@ -15,6 +15,16 @@ const router = express.Router()
 
 const remoteServices = config.remoteServices.map(s => ({ ...s }))
 
+const localizedVocabulary = {}
+for (const locale of ['fr', 'en']) {
+  localizedVocabulary[locale] = vocabulary.map(item => ({
+    ...item,
+    title: item.title[locale] || item.title[config.i18n.defaultLocale] || item.title.fr,
+    description: item.description[locale] || item.description[config.i18n.defaultLocale] || item.description.fr,
+    tag: item.tag[locale] || item.tag[config.i18n.defaultLocale] || item.tag.fr,
+  }))
+}
+
 router.get('/status', status.status)
 router.get('/ping', status.ping)
 
@@ -29,8 +39,7 @@ router.get('/vocabulary', asyncWrap(async (req, res) => {
       .findOne({ type: req.user.activeAccount.type, id: req.user.activeAccount.id }, { projection: { _id: 0, id: 0, type: 0 } })
     privateVocabulary = (settings && settings.privateVocabulary) || []
   }
-
-  res.json(vocabulary.concat(privateVocabulary.map(pv => ({ ...pv, private: true }))))
+  res.json(localizedVocabulary[req.locale].concat(privateVocabulary.map(pv => ({ ...pv, private: true }))))
 }))
 
 router.get('/projections', (req, res) => {
