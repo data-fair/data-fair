@@ -7,7 +7,7 @@
     />
     <v-row v-if="datasets && !loading">
       <v-col>
-        <h3 v-t="{path: 'datasetsCount', args: {count: datasets.count}}" class="text-h4 mb-4" />
+        <h3 class="text-h4 mb-4" v-text="$tc('datasetsCount', datasets.count)" />
         <v-card>
           <v-list three-line>
             <v-list-item
@@ -26,9 +26,9 @@
                   >{{ dataset.title }}</a>
                 </v-list-item-title>
                 <v-list-item-subtitle>
-                  {{ $t('resources', {count: dataset.resources.length}) }} |
-                  {{ $t('harvestable', {count: dataset.nbHarvestable}) }} |
-                  {{ $t('harvested', {count: dataset.nbHarvested}) }}
+                  {{ $tc('resources', dataset.resources.length) }} |
+                  {{ $tc('harvestable', dataset.nbHarvestable) }} |
+                  {{ $tc('harvested', dataset.nbHarvested) }}
                 </v-list-item-subtitle>
               </v-list-item-content>
 

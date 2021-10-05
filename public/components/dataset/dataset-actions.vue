@@ -188,10 +188,10 @@
         <v-card-title v-t="'deleteDataset'" primary-title />
         <v-card-text v-if="nbApplications > 0">
           <v-alert
-            v-t="{path: 'deleteWarning', args: {count: nbApplications}}"
             :value="true"
             type="error"
             outlined
+            v-text="$tc('deleteWarning', nbApplications)"
           />
         </v-card-text>
         <v-card-text v-t="{path: 'deleteMsg', args: {title: dataset.title}}" />
@@ -274,10 +274,10 @@
         <v-card-title v-t="'dataUpdate'" primary-title />
         <v-card-text v-if="nbApplications > 0">
           <v-alert
-            v-t="{path: 'updateWarning', args: {count: nbApplications}}"
             type="error"
             outlined
             :value="true"
+            v-text="$tc('updateWarning', nbApplications)"
           />
         </v-card-text>
         <v-card-text>

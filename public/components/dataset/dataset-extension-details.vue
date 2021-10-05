@@ -3,7 +3,7 @@
     <v-col>
       <h3
         v-if="data.total <= 10000"
-        v-t="{path: 'lines', args: {count: data.total}}"
+        v-text="$tc('lines', data.total)"
       />
       <h3 v-else v-t="{path: 'firstLines', args: {lines: 10000, total: data.total}}" />
       <v-row class="ma-0">

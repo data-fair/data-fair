@@ -36,10 +36,10 @@
         <v-card-title v-t="'deleteTitle'" primary-title />
         <v-card-text v-if="nbPublications > 0">
           <v-alert
-            v-t="{path: 'deleteWarning', args: {count:nbPublications}}"
             :value="nbPublications > 1"
             type="error"
             outlined
+            v-text="$tc('deleteWarning', nbPublications)"
           />
         </v-card-text>
         <v-card-text v-t="{path: 'deleteConfirm', args: {title: catalog.title}}" />

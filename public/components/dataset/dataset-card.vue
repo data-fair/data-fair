@@ -37,7 +37,7 @@
             <v-list-item-avatar class="ml-0 my-0">
               <v-icon>mdi-view-headline</v-icon>
             </v-list-item-avatar>
-            <span v-t="{path: 'lines', args: {count: dataset.count}}" />
+            <span v-text="$tc('lines', dataset.count)" />
           </v-list-item>
         </v-list>
       </v-card-text>
@@ -79,12 +79,12 @@
 fr:
   virtual: Jeu de données virtuel
   inc: Jeu de données incrémental
-  lines: " | 1 ligne | {count} lignes"
+  lines: "aucune ligne | 1 ligne | {count} lignes"
   error: En erreur
 en:
   virtual: Virtual dataset
   inc: Incremental dataset
-  lines: " | 1 line | {count} lines"
+  lines: "no line | 1 line | {count} lines"
   error: Error status
 </i18n>
 

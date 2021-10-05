@@ -62,7 +62,7 @@
             <v-list-item-avatar class="ml-0 my-0">
               <v-icon>mdi-eye</v-icon>
             </v-list-item-avatar>
-            <span v-t="{path:'nbSessions', args: {count: nbSessions}}" />
+            <span v-text="$tc('nbSessions', nbSessions)" />
           </v-list-item>
         </v-list>
       </v-sheet>

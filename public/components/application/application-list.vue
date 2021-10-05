@@ -116,7 +116,7 @@ en:
   dataset: Dataset
   service: Service
   baseApp: Application
-  applicationsCount: "no visulization | 1 visualization | {count} visualizations"
+  applicationsCount: "no visualization | 1 visualization | {count} visualizations"
 </i18n>
 
 <script>
@@ -202,7 +202,7 @@ en:
           const applications = await this.$axios.$get('api/v1/applications', { params })
           if (append) applications.results.forEach(r => this.applications.results.push(r))
           else this.applications = applications
-          this.$store.dispatch('breadcrumbs', [{ text: this.$t('applicationsCount', { count: this.applications.count }) }])
+          this.$store.dispatch('breadcrumbs', [{ text: this.$tc('applicationsCount', this.applications.count) }])
           this.filtered = !!this.filters.q || hasFacetFilter
           this.loading = false
 

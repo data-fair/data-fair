@@ -259,14 +259,14 @@ en:
   datasetsCount: '{count} datasets'
   datasetsCountMessage1: '{link} was already loaded in your space.'
   datasetsCount1: 1 dataset
-  datasetsCountNone: No dataset was loaded in your space for the time being.
+  datasetsCountNone: No dataset was loaded in your space yet.
   storageWithLimit: You use {bytes} out of {bytesLimit} of total available space.
   storageWithoutLimit: You use {bytes} of storage space.
   appsCountMessage: '{link} were already configured in your space.'
   appsCount: '{count} visualizations'
   appsCountMessage1: '{link} was already configured in your space'
   appsCount1: 1 visualization
-  appsCountNone: No visualization was configured in your space for the time being.
+  appsCountNone: No visualization was configured in your space yet.
   baseAppsCount: You have access to {count} applications to configure as many visualizations as you want.
 </i18n>
 

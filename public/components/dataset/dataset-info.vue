@@ -42,14 +42,14 @@
             <v-list-item-avatar class="ml-0 my-0">
               <v-icon>mdi-view-headline</v-icon>
             </v-list-item-avatar>
-            <span v-t="{path: 'lines', args: {count: dataset.count}}" />
+            <span v-text="$tc('lines', dataset.count)" />
           </v-list-item>
 
           <v-list-item v-if="nbVirtualDatasets">
             <v-list-item-avatar class="ml-0 my-0">
               <v-icon>mdi-picture-in-picture-bottom-right-outline</v-icon>
             </v-list-item-avatar>
-            <nuxt-link v-t="{path: 'virtualDatasets', args: {count: nbVirtualDatasets}}" :to="`/datasets?children=${dataset.id}`" />
+            <nuxt-link :to="`/datasets?children=${dataset.id}`" v-text="$tc('virtualDatasets', nbVirtualDatasets)" />
           </v-list-item>
 
           <v-list-item v-if="dataset.isRest">
