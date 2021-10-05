@@ -14,7 +14,7 @@
             </v-icon>
           </td>
           <td>
-            <span>{{ eventTypes[item.type].text }}</span>
+            <span>{{ eventTypes[item.type].text[$i18n.locale] || eventTypes[item.type].text[$i18n.defaultLocale] }}</span>
             <span v-if="item.draft" class="font-weight-thin font-italic ml-4">brouillon</span>
             <template v-if="item.data">
               <br>

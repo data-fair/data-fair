@@ -22,7 +22,6 @@
     Vue.component('draggable', Draggable)
   }
 
-  const events = require('~/../shared/events.json').dataset
   const privateVocabularySchema = require('~/../contract/settings').properties.privateVocabulary
   const wrapperSchema = {
     type: 'object',
@@ -35,7 +34,6 @@
     components: { VJsf },
     props: ['settings'],
     data: () => ({
-      events,
       eventBus,
       wrapperSchema,
       formValid: true,

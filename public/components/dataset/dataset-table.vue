@@ -485,7 +485,7 @@ en:
         if (this.query) params.q = this.query
         if (this.filters.length) {
           try {
-            params.qs = filtersUtils.filters2qs(this.filters)
+            params.qs = filtersUtils.filters2qs(this.filters, this.$i18n.locale)
           } catch (error) {
             this.$nextTick(() => eventBus.$emit('notification', { error }))
           }

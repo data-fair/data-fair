@@ -188,12 +188,10 @@
 <script>
 
   import { mapState } from 'vuex'
-  const events = require('~/../shared/events.json').dataset
 
   export default {
     props: ['settings'],
     data: () => ({
-      events,
       newApiKey: {
         title: null,
         scopes: [],

@@ -22,7 +22,7 @@
               />
             </v-list-item-avatar>
             <span :class="events[journal[0].type].color ? `${events[journal[0].type].color}--text` : ''">
-              {{ events[journal[0].type] && events[journal[0].type].text }}
+              {{ events[journal[0].type] && (events[journal[0].type].text[$i18n.locale] || events[journal[0].type].text[$i18n.defaultLocale]) }}
             </span>
           </v-list-item>
         </template>

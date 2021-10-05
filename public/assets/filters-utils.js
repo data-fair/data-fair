@@ -1,5 +1,5 @@
 
-export function filter2qs(filter) {
+export function filter2qs(filter, locale = 'fr') {
   const key = escape(filter.field.key)
 
   if (!filter.type || filter.type === 'in') {
@@ -15,12 +15,17 @@ export function filter2qs(filter) {
     return `${escape(filter.field.key)}:[${filter.minValue} TO ${filter.maxValue}]`
   } else if (filter.type === 'starts') {
     if ([null, undefined, ''].includes(filter.value)) return null
-    if (filter.value.includes(',')) throw new Error('vous ne pouvez pas appliquer un filtre "commence par" contenant une virgule')
+    if (filter.value.includes(',')) {
+    throw new Error({
+      fr: 'vous ne pouvez pas appliquer un filtre "commence par" contenant une virgule',
+      en: 'You cannot use a filter "startsWith" containing a comma',
+    }[locale])
+}
     return `${key}:${escape(filter.value)}*`
   }
 }
 
-export function filters2qs(filters) {
+export function filters2qs(filters, locale = 'fr') {
   return filters
     .filter(f => !!f)
     .map(filter2qs)

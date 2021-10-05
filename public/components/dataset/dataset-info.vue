@@ -189,14 +189,13 @@ en:
 
 <script>
   const { mapState, mapActions, mapGetters } = require('vuex')
-  const events = require('~/../shared/events.json').dataset
 
   const coordXUri = 'http://data.ign.fr/def/geometrie#coordX'
   const coordYUri = 'http://data.ign.fr/def/geometrie#coordY'
 
   export default {
     data() {
-      return { events, error: null }
+      return { error: null }
     },
     computed: {
       ...mapState(['projections']),

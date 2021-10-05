@@ -118,12 +118,8 @@ en:
 
 <script>
   import { mapState, mapActions, mapGetters } from 'vuex'
-  const events = require('~/../shared/events.json').application
 
   export default {
-    data() {
-      return { events }
-    },
     computed: {
       ...mapState('application', ['application', 'nbSessions', 'journal', 'prodBaseApp']),
       ...mapGetters('application', ['can', 'availableVersions']),
