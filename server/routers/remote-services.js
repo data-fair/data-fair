@@ -274,7 +274,7 @@ async function getAppOwner(req) {
   const referer = req.headers.referer || req.headers.referrer
   debug('Referer URL', referer)
   if (!referer) return null
-  const refererAppId = referer.startsWith(config.publicUrl + '/app/') && referer.replace(config.publicUrl + '/app/', '').split('?')[0].split('/')[0]
+  const refererAppId = referer.startsWith(req.publicBaseUrl + '/app/') && referer.replace(req.publicBaseUrl + '/app/', '').split('?')[0].split('/')[0]
   if (!refererAppId) {
     // console.error(`No application id found for referer=${referer}`)
     return
@@ -329,7 +329,7 @@ router.use('/:remoteServiceId/proxy*', (req, res, next) => { req.app.get('anonym
 
   if (!remoteService) return res.status(404).send('service distant inconnu')
 
-  const headers = { 'x-forwarded-url': `${config.publicUrl}/api/v1/remote-services/${remoteService.id}/proxy/` }
+  const headers = { 'x-forwarded-url': `${req.publicBaseUrl}/api/v1/remote-services/${remoteService.id}/proxy/` }
   if (appOwner) headers['x-consumer'] = JSON.stringify(appOwner)
 
   const options = {
