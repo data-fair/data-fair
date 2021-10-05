@@ -54,7 +54,7 @@ if (config.mode.includes('server')) {
   app.use(require('cookie-parser')())
   app.use(session.auth)
 
-  // set current baseUrl, i.e. the url of simple-directory on the current user's domain
+  // set current baseUrl, i.e. the url of data-fair on the current user's domain
   let basePath = new URL(config.publicUrl).pathname
   if (!basePath.endsWith('/')) basePath += '/'
   app.use('/', (req, res, next) => {

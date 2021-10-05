@@ -149,8 +149,6 @@ router.all('/:applicationId*', setResource, (req, res, next) => { req.app.get('a
     }
   }
 
-  findUtils.setResourceLinks(req.application, 'application')
-
   const headers = {
     'X-Exposed-Url': req.application.exposedUrl,
     'X-Application-Url': req.publicBaseUrl + '/api/v1/applications/' + req.params.applicationId,
