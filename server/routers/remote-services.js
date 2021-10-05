@@ -329,7 +329,7 @@ router.use('/:remoteServiceId/proxy*', (req, res, next) => { req.app.get('anonym
 
   if (!remoteService) return res.status(404).send('service distant inconnu')
 
-  const headers = { 'x-forwarded-url': `${config.publicUrl}/api/v1/remote-services/${remoteService.id}/proxy/` }
+  const headers = { 'x-forwarded-url': `${req.publicBaseUrl}/api/v1/remote-services/${remoteService.id}/proxy/` }
   if (appOwner) headers['x-consumer'] = JSON.stringify(appOwner)
 
   const options = {
