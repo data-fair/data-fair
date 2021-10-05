@@ -85,7 +85,7 @@ router.get('', cacheHeaders.noCache, asyncWrap(async(req, res) => {
   let [results, count, facets] = await Promise.all(mongoQueries)
   results.forEach(r => {
     r.userPermissions = permissions.list('applications', r, req.user)
-    clean(r)
+    clean(r, req.publicBaseUrl)
   })
   facets = findUtils.parseFacets(facets, nullFacetFields)
   res.json({ count, results, facets })
@@ -127,7 +127,7 @@ router.post('', asyncWrap(async(req, res) => {
   application.status = 'created'
 
   await journals.log(req.app, application, { type: 'application-created', href: config.publicUrl + '/application/' + application.id }, 'application')
-  res.status(201).json(clean(application))
+  res.status(201).json(clean(application, req.publicBaseUrl))
 }))
 
 // Shared middleware
