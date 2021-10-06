@@ -1,7 +1,7 @@
 ---
 title: Diagramme de comparaison de proportions
-section: 5
-subsection : 14
+section: 7
+subsection : 2
 updated: 2021-09-20
 description : Diagramme de comparaison de proportions
 published: false
@@ -13,7 +13,7 @@ Elles peuvent être utilisés pour mettre en avant des indicateurs de réalisati
 
 Pour configurer une visualisation **Comparaison de proportions**, choisissez le compte actif sur lequel vous voulez travailler. Votre compte actif contient au mois un jeu de données avec des données textuelles.
 
-### Créer votre carte des zones de chalandise
+### Créer votre diagramme de comparaison de proportions
 
 Pour réaliser votre visualisation, cliquez sur **Visualisations** puis sur **Configuration une visualisation**.
 

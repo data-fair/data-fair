@@ -17,7 +17,7 @@ Les visualisations cartographiques vous permettent de projeter vos données géo
 
 ![Visualisations Carto](./images/user-guide/visu-carto.jpg)
 
-* [Carto-stats](./user-guide/carto-stats)vous permet de projeter vos données liées à des données numériques. [Les accidents de vélo en France](https://opendata.koumoul.com/reuses/cartographie-des-accidents-de-velo)
+* [Carto-stats](./user-guide/carto-stats) vous permet de projeter vos données liées à des données numériques. [Les accidents de vélo en France](https://opendata.koumoul.com/reuses/cartographie-des-accidents-de-velo)
 * [Divisions administratives](./user-guide/div-admin) vous permet de projeter des données au niveau de la commune, du département, ou de la région. [Part des élèves dans le privé en France](https://opendata.koumoul.com/reuses/ratio-public-prive-du-nombre-d'eleves-dans-les-ecoles-par-commune)
 * [Géo Shapes](./user-guide/geo-shapes) vous permet de projeter des données contenant des formes géométriques telles que des zones de PLU ou des réseaux (énergétiques, routiers). [Zones PLU d'Angers](https://opendata.koumoul.com/reuses/plu-zone-urba-angers-loire-metropole)
 * [Infos-parcelles](./user-guide/infos-parcelles) vous permet de projeter vos données sur le plan cadastral français. Vous pouvez ajouter une légende selon vos données. [Exemple sur une partie de la base MAJIC des parcelles des personnes morales](https://opendata.koumoul.com/reuses/carte-des-parcelles-des-personnes-morales-majic)

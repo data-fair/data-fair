@@ -1,7 +1,7 @@
 ---
 title: Infos parcelles
-section: 5
-subsection : 3
+section: 6
+subsection : 4
 updated: 2021-09-20
 description : Projeter vos données sur le plan cadastral français.
 published: false

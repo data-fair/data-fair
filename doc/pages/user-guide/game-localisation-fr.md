@@ -1,7 +1,7 @@
 ---
 title: Jeu de localisation
-section: 5
-subsection : 19
+section: 9
+subsection : 2
 updated: 2021-09-20
 description :  Explorer les données en localisant les points sur une carte.
 published: false

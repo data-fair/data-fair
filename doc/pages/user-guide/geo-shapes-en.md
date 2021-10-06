@@ -1,7 +1,7 @@
 ---
 title: Géo Shapes
-section: 5
-subsection : 13
+section: 6
+subsection : 3
 updated: 2021-09-20
 description : Créer facilement des cartes administratives interactives.
 published: false

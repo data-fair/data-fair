@@ -1,7 +1,7 @@
 ---
 title: Divisions administratives
-section: 5
-subsection : 11
+section: 6
+subsection : 2
 updated: 2021-09-20
 description : Créer facilement des cartes administratives interactives.
 published: false

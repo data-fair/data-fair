@@ -1,7 +1,7 @@
 ---
 title: Réseau de relations
-section: 5
-subsection : 16
+section: 7
+subsection : 6
 updated: 2021-09-20
 description :  Réseau de relations
 published: false

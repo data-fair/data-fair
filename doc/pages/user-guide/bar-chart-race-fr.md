@@ -1,7 +1,7 @@
 ---
 title: Bar Chart Race
-section: 5
-subsection : 9
+section: 7
+subsection : 1
 updated: 2021-09-20
 description : Vos données font la course à la première place
 published: false

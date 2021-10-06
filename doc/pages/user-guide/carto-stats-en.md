@@ -1,7 +1,7 @@
 ---
 title: Carto-stats
-section: 5
-subsection : 10
+section: 6
+subsection : 1
 updated: 2021-09-20
 description : Projeter vos données géolocalisées sur une carte.
 published: false

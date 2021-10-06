@@ -1,7 +1,7 @@
 ---
 title: Zones de chalandise
-section: 5
-subsection : 14
+section: 7
+subsection : 2
 updated: 2021-09-20
 description : Générer des cartes de zones de chalandise
 published: false

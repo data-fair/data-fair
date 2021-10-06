@@ -1,7 +1,7 @@
 ---
 title: Periodic series
-section: 5
-subsection : 17
+section: 7
+subsection : 8
 updated: 2021-09-20
 description :  Visualiser l'évolution de données temporelles sur des graphiques.
 published: false

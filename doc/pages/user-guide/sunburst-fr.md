@@ -1,7 +1,7 @@
 ---
 title: Diagramme Sunburst
-section: 5
-subsection : 6
+section: 7
+subsection : 3
 updated: 2021-09-20
 description : Visualisation interactive de vos données hiérarchiques.
 published: false
