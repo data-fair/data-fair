@@ -15,8 +15,8 @@ La visualisation **Liste et Fiches** vous permet de filtrer, rechercher et explo
 Pour réaliser la visualisation, cliquez sur **Mes visualisations** puis sur **Créer une visualisation**.
 
 
-1. Entrer le titre de la visualisation
-2. Choisir l'application **Liste et Fiches**
+1. Choisir l'application **Liste et Fiches**
+2. Entrer le titre de la visualisation
 
 <p>
 </p>

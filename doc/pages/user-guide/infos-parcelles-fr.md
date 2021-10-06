@@ -29,8 +29,8 @@ Une fois que vous avez mis à jour le schéma de vos données, la prévisualisat
 
 Pour créer une visualisation, vous pouvez aller dans la section **Visualisations** de votre jeu de données ou dans la barre de navigation de Data Fair, cliquez ensuite sur **Configurer une visualisation**.
 
-1. Entrer le titre de la visualisation
-2. Choisir l'application **Infos-parcelles**
+1. Choisir l'application **Infos-parcelles**
+2. Entrer le titre de la visualisation
 
 Vous êtes redirigé vers la page de configuration de votre application avec ses différentes sections:
 

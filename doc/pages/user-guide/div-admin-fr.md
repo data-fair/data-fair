@@ -26,8 +26,8 @@ Pour configurer une visualisation **Divisions administratives**, votre compte ac
 
 Pour réaliser votre visualisation, cliquez sur **Visualisations** puis sur **Configurer une visualisation**.
 
-1. Entrer le titre de la visualisation
-2. Choisir l'application **Divisions administratives**
+1. Choisir l'application **Divisions administratives**
+2. Entrer le titre de la visualisation
 
 <p>
 </p>

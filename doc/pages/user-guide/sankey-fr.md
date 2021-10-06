@@ -25,8 +25,8 @@ Les valeurs des deux colonnes de chaines de caractères, **Pays** et **Candidats
 Pour réaliser la visualisation, cliquez sur **Visualisations** puis sur **Configurer une visualisation**.
 
 
-1. Entrer le titre de la visualisation
-2. Choisir l'application **Diagramme de Sankey**  
+1. Choisir l'application **Diagramme de Sankey**
+2. Entrer le titre de la visualisation
 <p>
 </p>
 

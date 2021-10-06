@@ -12,5 +12,5 @@ Un exemple de catalogue est le catalogue de données ouvertes national [data.gou
 
 En lecture, l’approche est  différente et les connecteurs se comportent plutôt comme des moissonneurs de métadonnées et de données. On peut ainsi pour chaque connecteur paramétrer les fréquences de collecte et les types de sources que l’on souhaite moissonner.
 
-![Catalogue](./images/user-guide/catalogue-data-gouv.jpg)
-*Configurez des catalogues et rendez vos données accessibles sur d'autres plateformes*
+![Catalogue](./images/user-guide/catalogue-data-gouv.jpg)  
+*Configurez des catalogues et rendez vos données accessibles à partir d'autres plateformes*

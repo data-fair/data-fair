@@ -22,7 +22,10 @@ Un clic sur une colonne vous permet d'accéder aux informations de la colonne
 3. Clé, type et cardinalité de la colonne
 4. [Concept](./user-guide/concept) associé à la colonne
 
-Les [concepts](./user-guide/concept) sont des notions connues pour la plateforme et sont utilisés dans les visualisation ou pour l'[enrichissement](./user-guide/enrichment).  
+<p>
+</p>
+
+Les [concepts](./user-guide/concept) sont des notions connues pour la plateforme et sont utilisés dans les Visualisations ou pour l'[enrichissement](./user-guide/enrichment).  
 
 ![schema](./images/user-guide/dataset-schema-edit.jpg)  
 *Visualisez les schémas de vos données et renseignez des concepts pour donner du sens à vos données*
@@ -37,7 +40,7 @@ Plusieurs étapes sont nécessaires pour créer un enrichissement de données :
 2. Choisissez l'extension désirée.
 3. Choisissez les colonnes que vous voulez ajouter et appliquez l'enrichissement
 
-![enrichissement](./images/user-guide/dataset-enrichement.jpg)
+![enrichissement](./images/user-guide/dataset-enrichement.jpg)  
 *Enrichissez vos données pour leur donner encore plus de valeur*
 
 Le jeu de données va être traité et l'état d'avancement peut être visualiser sur les 6 différents états du jeu de données. Une fois l'étape de finalisation terminée votre jeu de données est enrichi.
@@ -92,7 +95,8 @@ Les réutilisations externes seront affichées sur la page du portail du jeu de 
 
 ## Partage
 
-Dans cette section vous pourrez définir les permissions de votre jeu de données, la publication sur vos portails et la publication sur des catalogues externes.
+Dans cette section vous pourrez définir les permissions de votre jeu de données, la publication sur vos portails et la publication sur des catalogues externes. Par défaut, un jeu de donnée est privé.
+
 
 ### Permissions
 L'option **Accessible publiquement** permet de rendre les données publiques ou privées.  
@@ -103,7 +107,12 @@ Les permissions peuvent être définies plus finement à l'aide de l'**Ajout des
 
 ### Portails
 
-La liste de vos portails est disponible dans cette section. Vous pouvez définir sur quel(s) portail(s) vous souhaitez publier votre jeu de données.
+La liste de vos portails est disponible dans cette section.
+
+Les jeux de données peuvent être publiée sur plusieurs portails. Vous pouvez ainsi publier vos données en interne, avoir des retours, puis publier les données sur un portail opendata. Une diffusion de données par étapes sur différents portail permet d'augmenter la qualité des données partagées.  
+Le fait de pouvoir partager sur plusieurs portails permet aussi d'avoir les même données sur tous les portails sans les dupliquer. De plus lorsque les données seront mises à jour, elles le seront pour tous les portails.
+
+![Permissions](./images/user-guide/dataset-partage.jpg)
 
 ### Catalogue
 

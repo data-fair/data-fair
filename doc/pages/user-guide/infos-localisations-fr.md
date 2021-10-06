@@ -33,8 +33,8 @@ Une fois que vous avez mis à jour le schéma de vos données, vous pouvez visua
 Pour réaliser votre visualisation, cliquez sur **Visualisations** puis sur **Configurer une visualisation**.
 
 
-1. Entrer le titre de la visualisation
-2. Choisir l'application **Infos-localisations**
+1. Choisir l'application **Infos-localisations**
+2. Entrer le titre de la visualisation
 
 Vous êtes redirigé vers la page de configuration de votre application avec ses différentes sections:
 

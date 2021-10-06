@@ -15,8 +15,8 @@ Un diagramme **Sunburst** permet de visualiser des données hiérarchiques et pe
 
 Pour réaliser la visualisation, cliquez sur **Visualisations** puis sur **Configuration une visualisation**.
 
-1. Entrer le titre de la visualisation
-2. Choisir l'application **Diagramme Sunburst**
+1. Choisir l'application **Diagramme Sunburst**
+2. Entrer le titre de la visualisation
 
 <p>
 </p>

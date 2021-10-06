@@ -71,7 +71,7 @@ Il est possible de modifier ces deux sections avec du code HTML et CSS.
 
 ###  Editer les pages de contenu
 
-Les pages de contenu permettent de créer différents types de pages : articles, pages thématiques autour de plusieurs jeux de données, pages d'actualités, data storytelling, licences, conditions d'utilisation, etc... Il est ainsi possible de mettre en avant certaines données et de leur donner encore plus de contexte par exemple, ou de faire des tableaux de bord intégrant différentes données.
+Les [pages de contenu](./user-guide/content) permettent de créer différents types de pages : articles, pages thématiques autour de plusieurs jeux de données, pages d'actualités, data storytelling, licences, conditions d'utilisation, etc... Il est ainsi possible de mettre en avant certaines données et de leur donner encore plus de contexte par exemple, ou de faire des tableaux de bord intégrant différentes données.
 
 La création d'une page se fait en 3 étapes : On choisit d'abord le modèle de page, puis on renseigne les différents éléments au moyen d'un formulaire adapté au modèle de page choisi avec une prévisualisation du résultat. Il est possible de préparer des pages en avance et de les publier plus tard. En plus de la saisie de texte libre, il est possible d'intégrer différents types d'éléments : tableau d'un jeu de données, visualisation, liste de jeux de données, intégration de contenu externe, etc...
 

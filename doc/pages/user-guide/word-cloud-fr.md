@@ -8,7 +8,6 @@ published: false
 application : https://koumoul.com/apps/word-cloud/0.3/
 ---
 
-
 La visualisation **Nuages de mots** permet générer des nuages de mots contenant des données textuelles. Vous avez un exemple de cette visualisation sur notre [nuage de prénoms les plus données en 1900](https://opendata.koumoul.com/reuses/prenom-par-annee). Le nombre de naissance est disponible au survole d'un prénom.
 
 Pour configurer une visualisation **Nuages de mots**, choisissez le compte actif sur lequel vous voulez travailler. Votre compte actif contient au mois un jeu de données avec des données textuelles.
@@ -17,8 +16,8 @@ Pour configurer une visualisation **Nuages de mots**, choisissez le compte actif
 
 Pour réaliser votre visualisation, cliquez sur **Visualisations** puis sur **Configuration une visualisation**.
 
-1. Entrer le titre de la visualisation
-2. Choisir l'application **Nuages de mots**
+1. Choisir l'application **Nuages de mots**
+2. Entrer le titre de la visualisation
 
 <p>
 </p>

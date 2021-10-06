@@ -18,7 +18,7 @@ Liste d'événements déclencheurs :
 * Téléchargement d'un jeu de données
 * Création d'un visualisation
 * Erreur sur une visualisation
-* Erreur de publication d'une visualisation sur un catalogue
+* Publication d'une visualisation sur un catalogue
 
 ### Configurer le suivi d'événements pour Google Analytics
 

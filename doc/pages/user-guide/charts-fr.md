@@ -26,8 +26,8 @@ Il s'agit d'une visualisation assez puissante et c'est pour cela que sa configur
 
 Pour réaliser la visualisation, cliquez sur **Visualisations** dans la barre de navigation, puis sur **Configurer une visualisation**.
 
-1. Entrer le titre de la visualisation
-2. Choisir l'application **Graphiques**
+1. Choisir l'application **Graphiques**
+2. Entrer le titre de la visualisation
 
 <p>
 </p>
