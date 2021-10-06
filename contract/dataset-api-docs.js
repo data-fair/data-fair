@@ -17,7 +17,7 @@ const apiRate = (key, label) => {
 const userApiRate = apiRate('user', 'authentifié (session ou clé d\'API)')
 const anonymousApiRate = apiRate('anonymous', 'anonyme')
 
-module.exports = (dataset) => {
+module.exports = (dataset, publicUrl = config.publicUrl) => {
   dataset.schema = dataset.schema || []
   const datasetLineSchema = {
     type: 'object',
@@ -333,8 +333,8 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
   }
 
   const servers = [{
-    url: `${config.publicUrl}/api/v1/datasets/${dataset.id}`,
-    description: `Jeu de données DataFair - ${new URL(config.publicUrl).hostname} - ${dataset.title}`,
+    url: `${publicUrl}/api/v1/datasets/${dataset.id}`,
+    description: `Jeu de données Data Fair - ${new URL(publicUrl).hostname} - ${dataset.title}`,
   }]
 
   const api = {
@@ -343,7 +343,7 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
       title: `API du jeu de données : ${dataset.title || dataset.id}`,
       description,
       version,
-      'x-api-id': `${new URL(config.publicUrl).hostname.replace(/\./g, '-')}-dataset-${dataset.id}`,
+      'x-api-id': `${new URL(publicUrl).hostname.replace(/\./g, '-')}-dataset-${dataset.id}`,
       ...config.info,
     },
     components: {

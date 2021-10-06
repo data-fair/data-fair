@@ -188,7 +188,7 @@ const readDataset = (_acceptedStatuses, noDraft, preserveDraft, ignoreDraft) => 
     }
 
     req.resourceType = 'datasets'
-    req.resourceApiDoc = datasetAPIDocs(req.dataset)
+    req.resourceApiDoc = datasetAPIDocs(req.dataset, req.publicBaseUrl)
 
     if (
       req.dataset.status !== 'draft' &&
