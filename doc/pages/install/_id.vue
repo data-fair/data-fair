@@ -5,7 +5,6 @@
 <script>
   import DocPage from '../../components/DocPage'
 
-  const flatten = require('flat')
   // Webpack way of requiring a bunch of modules at once
   const context = require.context('.', true, /\.md$/)
 
@@ -23,14 +22,6 @@
     return flatVars
   }
   const customEnvVars = flattenVars(require('../../../config/custom-environment-variables'))
-  function escapeHtml(unsafe) {
-    return unsafe
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#039;')
-  }
 
   export default {
     components: { DocPage },
