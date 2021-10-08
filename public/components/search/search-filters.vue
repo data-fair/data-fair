@@ -3,7 +3,7 @@
     <v-row class="mt-1">
       <v-text-field
         v-model="filters.q"
-        placeholder="Rechercher"
+        :placeholder="$t('search')"
         outlined
         dense
         color="primary"
@@ -22,7 +22,7 @@
         <v-card-text class="pa-1">
           <v-switch
             v-model="showShared"
-            label="inclure les resources des autres comptes"
+            :label="$t('showShared')"
             hide-details
             dense
             class="mt-0"
@@ -42,7 +42,7 @@
           text-color="white"
           @click:close="filters[filter] = null;writeParams(filter)"
         >
-          <strong v-if="filter === 'showAll'">Vue administrateur : {{ owners.length ? owners.join(', ') : 'tout voir' }}</strong>
+          <strong v-if="filter === 'showAll'">{{ $t('adminVue') }} {{ owners.length ? owners.join(', ') : 'tout voir' }}</strong>
           <strong v-else>{{ fullFilterLabels[filter] }} : {{ filters[filter] }}</strong>
         </v-chip>
       </template>
@@ -50,13 +50,28 @@
     <v-row v-if="sorts">
       <v-select
         v-model="filters.sort"
+        :label="$t('sortBy')"
         :items="sorts"
         dense
+        class="mt-2"
         @change="writeParams"
       />
     </v-row>
   </v-col>
 </template>
+
+<i18n lang="yaml">
+fr:
+  adminVue: "Vue administrateur :"
+  search: Rechercher
+  showShared: inclure les resources des autres comptes
+  sortBy: trier par
+en:
+  adminVue: "Admin vue :"
+  search: Search
+  showShared: include resources from other accounts
+  sortBy: sort by
+</i18n>
 
 <script>
   import { mapActions, mapState, mapGetters } from 'vuex'

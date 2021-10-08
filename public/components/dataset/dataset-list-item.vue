@@ -21,7 +21,6 @@
         v-if="showOwner"
         :owner="dataset.owner"
       />
-      <visibility :visibility="dataset.visibility" :small="true" />
       <template v-if="dataset.isVirtual">
         <v-icon small style="margin-top:-3px;">
           mdi-picture-in-picture-bottom-right-outline
@@ -47,7 +46,9 @@
         -
         <span v-text="$tc('lines', dataset.count)" />
       </template>
+    </v-list-item-subtitle>
 
+    <v-list-item-action class="my-0">
       <v-tooltip v-if="dataset.status === 'error'" top>
         <template v-slot:activator="{on}">
           <v-icon color="error" v-on="on">
@@ -56,9 +57,11 @@
         </template>
         {{ $t('error') }}
       </v-tooltip>
-    </v-list-item-subtitle>
-
-    <v-list-item-action class="my-0">
+    </v-list-item-action>
+    <v-list-item-action class="my-0 ml-1">
+      <visibility :visibility="dataset.visibility" />
+    </v-list-item-action>
+    <v-list-item-action class="my-0 ml-1">
       <dataset-btn-table :dataset="dataset" />
     </v-list-item-action>
   </v-list-item>

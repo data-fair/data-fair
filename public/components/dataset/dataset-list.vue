@@ -2,33 +2,9 @@
   <v-row>
     <v-col :style="this.$vuetify.breakpoint.lgAndUp ? 'padding-right:256px;' : ''">
       <v-container class="py-0">
-        <v-row v-if="this.$vuetify.breakpoint.lgAndUp">
-          <v-btn
-            v-if="renderMode !== 'list'"
-            fab
-            x-small
-            fixed
-            color="primary"
-            style="right:240px;top:52px;z-index:10;"
-            @click="setRenderMode('list')"
-          >
-            <v-icon>mdi-format-list-bulleted-square</v-icon>
-          </v-btn>
-          <v-btn
-            v-if="renderMode !== 'cards'"
-            fab
-            x-small
-            fixed
-            color="primary"
-            style="right:240px;top:52px;z-index:10;"
-            @click="setRenderMode('cards')"
-          >
-            <v-icon>mdi-cards-variant</v-icon>
-          </v-btn>
-        </v-row>
         <template v-if="datasets">
           <v-row
-            v-if="renderMode === 'cards'"
+            v-if="renderMode === 0"
             v-scroll="onScroll"
             class="resourcesList"
           >
@@ -47,7 +23,7 @@
             </v-col>
           </v-row>
           <v-list
-            v-if="renderMode === 'list'"
+            v-if="renderMode === 1"
             v-scroll="onScroll"
             class="mt-2"
           >
@@ -109,6 +85,21 @@
             </v-col>
           </v-row>
         </template>
+        <v-row class="mr-4">
+          <v-spacer />
+          <v-btn-toggle v-model="renderMode" color="primary">
+            <v-btn small icon>
+              <v-icon small>
+                mdi-view-grid
+              </v-icon>
+            </v-btn>
+            <v-btn small icon>
+              <v-icon small>
+                mdi-format-list-bulleted-square
+              </v-icon>
+            </v-btn>
+          </v-btn-toggle>
+        </v-row>
       </layout-navigation-right>
       <layout-actions-button v-else icon="mdi-plus">
         <template v-slot:actions>
@@ -124,22 +115,22 @@ fr:
   noDataset: Vous n'avez pas encore ajouté de jeu de données.
   noResult: Aucun résultat ne correspond aux critères de recherche.
   childDataset: Jeu de données agrégé
-  sortCreatedAtAsc: Création plus ancienne
-  sortCreatedAtDesc: Création plus récente
-  sortUpdatedAtAsc: Màj plus ancienne
-  sortUpdatedAtDesc: Màj plus récente
-  sortDataUpdatedAtAsc: Données plus ancienne
-  sortDataUpdatedAtDesc: Données plus récente
+  sortCreatedAtAsc: création plus ancienne
+  sortCreatedAtDesc: création plus récente
+  sortUpdatedAtAsc: màj plus ancienne
+  sortUpdatedAtDesc: màj plus récente
+  sortDataUpdatedAtAsc: données plus ancienne
+  sortDataUpdatedAtDesc: données plus récente
 en:
   noDataset: You haven't created a dataset yet.
   noResult: No result matches your search criterias.
   childDataset: Aggregated dataset
-  sortCreatedAtAsc: Creation older
-  sortCreatedAtDesc: Creation newer
-  sortUpdatedAtAsc: Update older
-  sortUpdatedAtDesc: Update newer
-  sortDataUpdatedAtAsc: Data older
-  sortDataUpdatedAtDesc: Data newer
+  sortCreatedAtAsc: creation older
+  sortCreatedAtDesc: creation newer
+  sortUpdatedAtAsc: update older
+  sortUpdatedAtDesc: update newer
+  sortDataUpdatedAtAsc: data older
+  sortDataUpdatedAtDesc: data newer
 </i18n>
 
 <script>
@@ -162,7 +153,7 @@ en:
       },
       lastParams: null,
       dataSvg: require('~/assets/svg/Data Arranging_Two Color.svg?raw'),
-      renderMode: null,
+      renderMode: 1,
     }),
     computed: {
       ...mapState('session', ['user']),
@@ -198,17 +189,17 @@ en:
           this.refresh()
         },
       },
+      renderMode() {
+        localStorage.setItem(this.renderModeKey, this.renderMode)
+      },
     },
     mounted() {
       this.filters = { owner: `${this.activeAccount.type}:${this.activeAccount.id}` }
-      this.renderMode = localStorage.getItem(this.renderModeKey) || 'cards'
+      this.renderMode = Number(localStorage.getItem(this.renderModeKey) || 0)
+      if (isNaN(this.renderMode)) this.renderMode = 0
       this.refresh()
     },
     methods: {
-      setRenderMode(renderMode) {
-        this.renderMode = renderMode
-        localStorage.setItem(this.renderModeKey, this.renderMode)
-      },
       onScroll(e) {
         if (!this.datasets) return
         const se = e.target.scrollingElement
