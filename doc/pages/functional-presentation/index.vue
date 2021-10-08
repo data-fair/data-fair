@@ -1,7 +1,7 @@
 <template lang="html">
   <v-container class="index-page">
     <h2 class="text-h4 my-6">
-      Présentation fonctionnelle
+      {{ $t('functionalPresentation') }}
       <v-btn :to="localePath({name: 'full-functional-presentation'})" icon>
         <v-icon color="primary">
           mdi-printer
@@ -27,6 +27,9 @@
     <!-- {{ sections }} -->
   </v-container>
 </template>
+
+<i18n locale="fr" lang="yaml" src="../../i18n/common-fr.yaml"></i18n>
+<i18n locale="en" lang="yaml" src="../../i18n/common-en.yaml"></i18n>
 
 <script>
   const marked = require('@hackmd/meta-marked')

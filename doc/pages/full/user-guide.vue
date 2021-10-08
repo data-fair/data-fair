@@ -13,17 +13,17 @@
       <h4>
         Version {{ version }}
       </h4>
-      <h1 class="text-h3 grey--text text--darken-3" style="margin-top:200px;">
-        Manuel utilisateur
-      </h1>
+      <h1
+        v-t="'userGuide'"
+        class="text-h3 grey--text text--darken-3"
+        style="margin-top:200px;"
+      />
       <h4 style="margin-top:200px!important;">
         {{ new Date() | moment('DD MMMM YYYY') }}<br>
       </h4>
     </v-col>
     <div class="page-break" />
-    <h2 class="text-h4 my-4 grey--text text--darken-3">
-      Table des matières
-    </h2>
+    <h2 v-t="'tableOfContents'" class="text-h4 my-4 grey--text text--darken-3" />
     <template v-for="(section, i) in sections">
       <h4 v-if="!section.meta.subsection" :key="'st-'+i">
         {{ section.meta.section }} - {{ section.meta.title }}
@@ -64,6 +64,9 @@
     </template>
   </div>
 </template>
+
+<i18n locale="fr" lang="yaml" src="../../i18n/common-fr.yaml"></i18n>
+<i18n locale="en" lang="yaml" src="../../i18n/common-en.yaml"></i18n>
 
 <script>
   const marked = require('@hackmd/meta-marked')

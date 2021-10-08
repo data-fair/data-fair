@@ -16,7 +16,7 @@
                   <v-icon>mdi-information-outline</v-icon>
                 </v-list-item-action> -->
           <v-list-item-title>
-            {{ chapter.title.fr }}
+            {{ chapter.title }}
           </v-list-item-title>
         </v-list-item>
         <template v-for="section in content.filter(c => c.chapter === chapter.id && !c.subsection)">
@@ -75,6 +75,9 @@
   </v-list>
 </template>
 
+<i18n locale="fr" lang="yaml" src="../i18n/common-fr.yaml"></i18n>
+<i18n locale="en" lang="yaml" src="../i18n/common-en.yaml"></i18n>
+
 <script>
   const marked = require('@hackmd/meta-marked')
 
@@ -99,33 +102,23 @@
         return [
           {
             id: 'functional-presentation',
-            title: {
-              fr: 'Présentation fonctionnelle',
-            },
+            title: this.$t('functionalPresentation'),
           },
           {
             id: 'user-guide',
-            title: {
-              fr: 'Manuel utilisateur',
-            },
+            title: this.$t('userGuide'),
           },
           {
             id: 'interoperate',
-            title: {
-              fr: 'Interopérer avec Data Fair',
-            },
+            title: this.$t('interoperate'),
           },
           {
             id: 'technical-architecture',
-            title: {
-              fr: 'Architecture technique',
-            },
+            title: this.$t('architecture'),
           },
           {
             id: 'install',
-            title: {
-              fr: 'Installation et configuration',
-            },
+            title: this.$t('install'),
           },
         ]
       },

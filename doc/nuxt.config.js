@@ -1,6 +1,5 @@
 const config = require('config')
 const dir = require('node-dir')
-const messages = require('../i18n').messages
 
 // Additional dynamic routes for generate
 const routes = dir.files('doc/pages/', { sync: true })
@@ -47,9 +46,9 @@ module.exports = {
       { code: 'en' },
     ],
     defaultLocale: 'fr',
+    vueI18nLoader: true,
     vueI18n: {
       fallbackLocale: 'fr',
-      messages,
     },
   }]],
   buildModules: ['@nuxtjs/vuetify'],

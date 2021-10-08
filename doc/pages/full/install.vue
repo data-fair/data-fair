@@ -70,7 +70,6 @@
   const context = require.context('../install/', true, /\.md$/)
   const version = require('../../../package.json').version
 
-  const flatten = require('flat')
   // Webpack way of requiring a bunch of modules at once
 
   // Used to flatten var definitions from custom-environment-variables.js
@@ -87,14 +86,6 @@
     return flatVars
   }
   const customEnvVars = flattenVars(require('../../../config/custom-environment-variables'))
-  function escapeHtml(unsafe) {
-    return unsafe
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#039;')
-  }
 
   export default {
     layout: 'void',
@@ -114,25 +105,14 @@
           }
         })
         sections[1].html = sections[1].html.replace('{{CONFIG_VARS}}', this.configVars)
-        sections[2].html = sections[2].html.replace('{{I18N_VARS}}', this.i18nVars)
         return sections
       },
       configVars() {
-        let table = `<table><thead><tr><th>${this.$t('pages.install.config.varKey')}</th><th>${this.$t('pages.install.config.varName')}</th><th>${this.$t('pages.install.config.varDesc')}</th><th>${this.$t('pages.install.config.varDefault')}</th></tr></thead><tbody>\n`
+        let table = `<table><thead><tr><th>${this.$t('varKey')}</th><th>${this.$t('varName')}</th><th>${this.$t('varDesc')}</th><th>${this.$t('varDefault')}</th></tr></thead><tbody>\n`
         customEnvVars.forEach(v => {
-          const description = this.$te('pages.install.config.varDescriptions.' + v.key) ? this.$t('pages.install.config.varDescriptions.' + v.key) : ''
+          const description = this.$te('varDescriptions.' + v.key) ? this.$t('varDescriptions.' + v.key) : ''
           table += `<tr><td>${v.key}</td><td>${v.name}</td><td>${description}</td><td>${v.def}</td></tr>\n`
         })
-        table += '</tbody></table>'
-        return table
-      },
-      i18nVars() {
-        const flatMessages = flatten(this.$i18n.messages[this.$i18n.locale], { delimiter: '_' })
-        let table = `<table><thead><tr><th>${this.$t('pages.install.i18n.i18nKey')}</th><th>${this.$t('pages.install.i18n.i18nVar')}</th><th>${this.$t('pages.install.i18n.i18nVal')}</th></tr></thead><tbody>\n`
-        table += Object.keys(flatMessages)
-          .filter(k => k.indexOf('doc_') !== 0)
-          .map(k => `<tr><td>${k.replace(/_/g, '.')}</td><td>I18N_${this.$i18n.locale}_${k}</td><td><pre>${escapeHtml((typeof flatMessages[k] === 'string') ? flatMessages[k] : 'MISSING')}</pre></td></tr>`)
-          .join('\n')
         table += '</tbody></table>'
         return table
       },
@@ -159,6 +139,8 @@
     },
   }
 </script>
+
+<i18n src="../../i18n/config-fr.json" locale="fr"></i18n>
 
 <style>
 pre {

@@ -7,12 +7,11 @@
         </h2>
         <v-alert
           v-if="filledContent.meta && filledContent.meta.published === false"
+          v-t="'constructionWarning'"
           type="warning"
           border="left"
           outlined
-        >
-          Cette page est en chantier et les informations qu'elle contient peuvent ne pas être à jour.
-        </v-alert>
+        />
         <div
           v-show="ready"
           cols="12"
@@ -22,6 +21,9 @@
     </v-row>
   </v-container>
 </template>
+
+<i18n locale="fr" lang="yaml" src="../i18n/common-fr.yaml"></i18n>
+<i18n locale="en" lang="yaml" src="../i18n/common-en.yaml"></i18n>
 
 <script>
   import { mapState } from 'vuex'
