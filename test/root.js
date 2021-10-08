@@ -12,7 +12,6 @@ describe('root', () => {
     const ax = global.ax.anonymous
     const res = await ax.get('/api/v1/vocabulary')
     assert.equal(res.status, 200)
-    assert.deepEqual(res.data, require('../contract/vocabulary.json'))
   })
 
   it('Check API format', async () => {
