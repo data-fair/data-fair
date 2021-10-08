@@ -35,12 +35,11 @@
       <template v-if="initialized">
         <v-btn
           v-if="!user"
+          v-t="'login'"
           depressed
           color="primary"
           @click="login"
-        >
-          Se connecter / S'inscrire
-        </v-btn>
+        />
         <v-menu
           v-else
           offset-y
@@ -66,12 +65,12 @@
                   <img :src="activeAccount.type === 'user' ? `${env.directoryUrl}/api/avatars/user/${user.id}/avatar.png` : `${env.directoryUrl}/api/avatars/organization/${activeAccount.id}/avatar.png`">
                 </v-avatar>
               </v-list-item-avatar>
-              <v-list-item-title>{{ activeAccount.type === 'user' ? 'Compte personnel' : activeAccount.name }}</v-list-item-title>
+              <v-list-item-title>{{ activeAccount.type === 'user' ? $t('personalAccount') : activeAccount.name }}</v-list-item-title>
             </v-list-item>
 
             <v-list-item :to="'/me'" :nuxt="true">
               <v-list-item-action><v-icon>mdi-information-outline</v-icon></v-list-item-action>
-              <v-list-item-title>Mon compte</v-list-item-title>
+              <v-list-item-title v-t="'myAccount'" />
             </v-list-item>
 
             <v-list-item
@@ -80,7 +79,7 @@
               :to="`/subscription`"
             >
               <v-list-item-action><v-icon>mdi-card-account-details</v-icon></v-list-item-action>
-              <v-list-item-title>Abonnement</v-list-item-title>
+              <v-list-item-title v-t="'subscription'" />
             </v-list-item>
             <template v-if="!missingSubscription">
               <v-list-item
@@ -89,7 +88,7 @@
                 :to="`/notifications`"
               >
                 <v-list-item-action><v-icon>mdi-bell-plus</v-icon></v-list-item-action>
-                <v-list-item-title>Notifications</v-list-item-title>
+                <v-list-item-title v-t="'notifications'" />
               </v-list-item>
               <v-list-item
                 v-if="canContrib"
@@ -97,7 +96,7 @@
                 to="/storage"
               >
                 <v-list-item-action><v-icon>mdi-harddisk</v-icon></v-list-item-action>
-                <v-list-item-title>Stockage</v-list-item-title>
+                <v-list-item-title v-t="'storage'" />
               </v-list-item>
             </template>
 
@@ -134,7 +133,7 @@
 
             <template v-if="user.organizations.length">
               <v-divider />
-              <v-subheader>Changer de compte</v-subheader>
+              <v-subheader v-t="'switchAccount'" />
               <v-list-item
                 v-if="activeAccount.type !== 'user'"
                 id="toolbar-menu-switch-user"
@@ -145,7 +144,7 @@
                     <img :src="`${env.directoryUrl}/api/avatars/user/${user.id}/avatar.png`">
                   </v-avatar>
                 </v-list-item-avatar>
-                <v-list-item-title>Compte personnel</v-list-item-title>
+                <v-list-item-title v-t="'personalAccount'" />
               </v-list-item>
               <v-list-item
                 v-for="organization in user.organizations.filter(o => activeAccount.type === 'user' || activeAccount.id !== o.id)"
@@ -166,14 +165,36 @@
             <v-divider />
             <v-list-item @click="logout">
               <v-list-item-action><v-icon>mdi-logout</v-icon></v-list-item-action>
-              <v-list-item-title>Se déconnecter</v-list-item-title>
+              <v-list-item-title v-t="'logout'" />
             </v-list-item>
           </v-list>
         </v-menu>
       </template>
+      <layout-lang-switcher />
     </v-toolbar-items>
   </v-app-bar>
 </template>
+
+<i18n lang="yaml">
+fr:
+  login: Se connecter / S'inscrire
+  logout: Se déconnecter
+  personalAccount: Compte personnel
+  switchAccount: Changer de compte
+  storage: Stockage
+  notifications: Notifications
+  subscription: Abonnement
+  myAccount: Mon compte
+en:
+  login: Login / Sign up
+  logout: Logout
+  personalAccount: Personal account
+  switchAccount: Changer de compte
+  storage: Storage
+  notifications: Notifications
+  subscription: Subscription
+  myAccount: Mon compte
+</i18n>
 
 <script>
   import { mapState, mapGetters, mapActions } from 'vuex'

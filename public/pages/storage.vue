@@ -17,8 +17,8 @@
               <template v-slot:item="{item}">
                 <tr>
                   <td>{{ item.datasets }}</td>
-                  <td>{{ item.storage | displayBytes }}</td>
-                  <td>{{ item.storageLimit | displayBytes }}</td>
+                  <td>{{ item.storage | displayBytes($i18n.locale) }}</td>
+                  <td>{{ item.storageLimit | displayBytes($i18n.locale) }}</td>
                   <td>{{ item.applications }}</td>
                 </tr>
               </template>

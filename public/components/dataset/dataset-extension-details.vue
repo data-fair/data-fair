@@ -1,16 +1,13 @@
 <template lang="html">
   <v-row>
     <v-col>
-      <h3 v-if="data.total <= 10000">
-        Consultez {{ data.total.toLocaleString() }} {{ plural ? `résultats d'extension` : `résultat d'extension` }}
-      </h3>
-      <h3 v-if="data.total > 10000">
-        Consultez {{ plural ? 'les' : 'le' }} {{ (10000).toLocaleString() }} premiers résultats d'extension ({{ data.total.toLocaleString() }} au total)
-      </h3>
+      <h3
+        v-if="data.total <= 10000"
+        v-text="$tc('lines', data.total)"
+      />
+      <h3 v-else v-t="{path: 'firstLines', args: {lines: 10000, total: data.total}}" />
       <v-row class="ma-0">
-        <p v-if="nbErrors === 0">
-          Il n'y a aucune erreur dans le retour de l'extension.
-        </p>
+        <p v-if="nbErrors === 0" v-t="'noError'" />
         <v-col
           lg="3"
           md="4"
@@ -54,7 +51,7 @@
           <v-select
             v-model="pagination.itemsPerPage"
             :items="[5,10,20,50]"
-            label="Nombre de lignes"
+            :label="$t('nbLines')"
           />
         </v-col>
         <v-pagination
@@ -144,6 +141,29 @@
   </v-row>
 </template>
 
+<i18n lang="yaml">
+fr:
+  noError: Il n'y a aucune erreur dans le retour de l'extension.
+  lines: " | Consultez 1 résultat d'extension | Consultez {count} résultats d'extensions"
+  firstLines: Consultez les {lines} premiers résultats d'extension ({total} au total)
+  nbLines: Nombre de lignes
+  allLines: Voir toutes les lignes
+  onlyErrors: Voir uniquement les {nbErrors} lignes en erreur
+  onlyOk: Voir uniquement les {oks} lignes sans erreur
+  errorFetch: Erreur pendant la récupération des données
+  errorCounting: Erreur pendant le comptage des erreurs
+en:
+  noError: There is no error in the extension results
+  lines: " | See 1 extension result | See {count} extension results"
+  firstLines: See the {lines} first results of the extension ({total} total)
+  nbLines: Number of lines
+  allLines: Show all lines
+  onlyErrors: See only the {nbErrors} lines with an error
+  onlyOk: See only the {oks} lines without error
+  errorFetch: Error while fetching data
+  errorCounting: Failure while counting the errors
+</i18n>
+
 <script>
   import eventBus from '~/event-bus'
   const { mapState, mapGetters } = require('vuex')
@@ -168,9 +188,9 @@
       ...mapGetters('dataset', ['resourceUrl', 'remoteServicesMap']),
       errorModes() {
         return [
-          { value: 'all', text: 'Voir toutes les lignes' },
-          { value: 'only', text: `Voir uniquement les ${this.nbErrors} lignes en erreur` },
-          { value: 'hide', text: `Voir uniquement les ${this.nbTotal - this.nbErrors} lignes sans erreur` }]
+          { value: 'all', text: this.$t('allLines') },
+          { value: 'only', text: this.$t('onlyErrors', { nbErrors: this.nbErrors }) },
+          { value: 'hide', text: this.$t('onlyOk', { oks: this.nbTotal - this.nbErrors }) }]
       },
       extension() {
         return this.dataset && this.dataset.extensions.find(e => e.remoteService === this.remoteService && e.action === this.action)
@@ -258,7 +278,7 @@
           this.notFound = false
         } catch (error) {
           if (error.response && error.response.status === 404) this.notFound = true
-          else eventBus.$emit('notification', { error, msg: 'Erreur pendant la récupération des données' })
+          else eventBus.$emit('notification', { error, msg: this.$t('errorFetch') })
         }
         this.loading = false
       },
@@ -268,7 +288,7 @@
           this.nbErrors = (await this.$axios.$get(this.resourceUrl + '/lines', { params: { size: 0, qs: `_exists_:${this.errorField.key}` } })).total
         } catch (error) {
           if (error.response && error.response.status === 404) this.notFound = true
-          else eventBus.$emit('notification', { error, msg: 'Erreur pendant le comptage des erreurs' })
+          else eventBus.$emit('notification', { error, msg: this.$t('errorCounting') })
         }
       },
     },

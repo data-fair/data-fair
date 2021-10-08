@@ -1,11 +1,9 @@
 <template>
   <v-container fluid>
-    <tutorial-alert id="dataset-table">
-      Appliquez des filtres en survolant les valeurs et triez en cliquant sur les entêtes de colonnes. Cliquez sur le bouton en haut à droite pour télécharger dans un fichier le contenu filtré et trié.
-    </tutorial-alert>
+    <tutorial-alert id="dataset-table" v-t="'tutorialFilter'" />
     <v-row v-if="notFound" class="px-3">
       <v-col>
-        <p>Les données ne sont pas accessibles. Soit le jeu de données n'a pas encore été entièrement traité, soit il y a eu une erreur dans le traitement.</p>
+        <p v-t="'noData'" />
       </v-col>
     </v-row>
     <template v-else>
@@ -19,6 +17,7 @@
               fab
               x-small
               class="mx-2"
+              :disabled="dataset.schema.filter(f => !f['x-calculated']).length === 0"
               @click="editedLine = null; showEditLineDialog();"
             >
               <v-icon>mdi-plus</v-icon>
@@ -58,7 +57,7 @@
                 v-model="pagination.itemsPerPage"
                 :items="[10,20,50]"
                 hide-details
-                label="Nombre de lignes"
+                :label="$t('nbLines')"
               />
             </v-col>
             <v-pagination
@@ -153,7 +152,7 @@
                   <v-btn
                     icon
                     color="warning"
-                    title="Supprimer cette ligne"
+                    :title="$t('deleteLine')"
                     @click="editedLine = Object.assign({}, item); deleteLineDialog = true;"
                   >
                     <v-icon>mdi-delete</v-icon>
@@ -161,7 +160,7 @@
                   <v-btn
                     icon
                     color="primary"
-                    title="Éditer cette ligne"
+                    :title="$t('editLine')"
                     @click="editedLine = Object.assign({}, item); showEditLineDialog();"
                   >
                     <v-icon>mdi-pencil</v-icon>
@@ -170,7 +169,7 @@
                     v-if="dataset.rest && dataset.rest.history"
                     icon
                     color="primary"
-                    title="Voir l'historique des révisions de cette ligne"
+                    :title="$t('showRevisions')"
                     @click="showHistoryDialog(item)"
                   >
                     <v-icon>mdi-history</v-icon>
@@ -257,7 +256,7 @@
     >
       <v-card outlined>
         <v-card-title primary-title>
-          {{ editedId ? 'Éditer une ligne' : 'Ajouter une ligne' }}
+          {{ editedId ? $t('editLine') : $t('addLine') }}
         </v-card-title>
         <v-card-text>
           <dataset-edit-line-form
@@ -269,38 +268,43 @@
         </v-card-text>
         <v-card-actions>
           <v-spacer />
-          <v-btn text @click="editLineDialog = false;">
-            Annuler
-          </v-btn>
           <v-btn
+            v-t="'cancel'"
+            text
+            @click="editLineDialog = false"
+          />
+          <v-btn
+            v-t="'save'"
             color="primary"
             :loading="saving"
             @click="saveLine"
-          >
-            Enregistrer
-          </v-btn>
+          />
         </v-card-actions>
       </v-card>
     </v-dialog>
 
     <v-dialog v-model="deleteLineDialog" max-width="500px">
       <v-card outlined>
-        <v-card-title primary-title>
-          Supprimer une ligne
-        </v-card-title>
+        <v-card-title v-t="'deleteLine'" primary-title />
         <v-card-text>
-          <v-alert :value="true" type="error">
-            Attention la donnée de cette ligne sera perdue définitivement.
-          </v-alert>
+          <v-alert
+            v-t="'deleteLineWarning'"
+            :value="true"
+            type="error"
+          />
         </v-card-text>
         <v-card-actions>
           <v-spacer />
-          <v-btn text @click="deleteLineDialog = false">
-            Annuler
-          </v-btn>
-          <v-btn color="warning" @click="deleteLine">
-            Supprimer
-          </v-btn>
+          <v-btn
+            v-t="'cancel'"
+            text
+            @click="deleteLineDialog = false"
+          />
+          <v-btn
+            v-t="'delete'"
+            color="warning"
+            @click="deleteLine"
+          />
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -308,7 +312,7 @@
     <v-dialog v-model="historyDialog" max-width="800px">
       <v-card outlined>
         <v-toolbar dense flat>
-          <v-toolbar-title>Historique des révisions</v-toolbar-title>
+          <v-toolbar-title v-t="'revisionsHistory'" />
           <v-spacer />
           <v-btn icon @click.native="historyDialog = false">
             <v-icon>mdi-close</v-icon>
@@ -319,7 +323,7 @@
             :headers="historyHeaders"
             :items="history.results"
             :server-items-length="history.total"
-            rows-per-page-text="Nombre de révisions"
+            :rows-per-page-text="$t('nbRevisions')"
             :loading="historyLoading"
             :options.sync="historyPagination"
           >
@@ -345,6 +349,37 @@
     </v-dialog>
   </v-container>
 </template>
+
+<i18n lang="yaml">
+fr:
+  noData: Les données ne sont pas accessibles. Soit le jeu de données n'a pas encore été entièrement traité, soit il y a eu une erreur dans le traitement.
+  tutorialFilter: Appliquez des filtres en survolant les valeurs et triez en cliquant sur les entêtes de colonnes. Cliquez sur le bouton en haut à droite pour télécharger dans un fichier le contenu filtré et trié.
+  nbLines: Nombre de lignes
+  showRevisions: Voir l'historique des révisions de cette ligne
+  addLine: Ajouter une ligne
+  editLine: Éditer une ligne
+  save: Enregistrer
+  deleteLine: Supprimer une ligne
+  deleteLineWarning: Attention, la donnée de cette ligne sera perdue définitivement.
+  cancel: Annuler
+  delete: Supprimer
+  revisionsHistory: Historique des révisions
+  nbRevisions: Nombre de révisions
+en:
+  noData: The data is not accessible. Either the dataset was not yet entirely processed, or there was an error.
+  tutorialFilter: Apply filters by hovering the values et sort by clicking on the headers. Click on the button on the top to the right to download in a file the filtered and sorted content.
+  nbLines: Number of lines
+  showRevisions: Show the history
+  addLine: Add a line
+  editLine: Edit a line
+  save: Save
+  deleteLine: Delete a line
+  deleteLineWarning: Warning, the data from the line will be lost definitively
+  cancel: Cancel
+  delete: Delete
+  revisionsHistory: Revisions history
+  nbRevisions: Number of revisions
+</i18n>
 
 <script>
   import { mapState, mapGetters } from 'vuex'
@@ -450,7 +485,7 @@
         if (this.query) params.q = this.query
         if (this.filters.length) {
           try {
-            params.qs = filtersUtils.filters2qs(this.filters)
+            params.qs = filtersUtils.filters2qs(this.filters, this.$i18n.locale)
           } catch (error) {
             this.$nextTick(() => eventBus.$emit('notification', { error }))
           }

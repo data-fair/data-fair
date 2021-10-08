@@ -27,10 +27,10 @@
 
     <v-list :width="500" dense>
       <v-list-item v-if="!notifications">
-        <v-list-item-title>Chargement...</v-list-item-title>
+        <v-list-item-title v-t="'loading'" />
       </v-list-item>
       <v-list-item v-else-if="notifications.length === 0">
-        <v-list-item-title>Aucune notification reçue</v-list-item-title>
+        <v-list-item-title v-t="'noNotif'" />
       </v-list-item>
       <v-list-item-group
         v-else
@@ -46,7 +46,7 @@
         >
           <v-list-item-content>
             <v-list-item-title>{{ notif.title }}</v-list-item-title>
-            <v-list-item-subtitle>{{ notif.date | moment("DD/MM/YYYY, HH:mm") }}</v-list-item-subtitle>
+            <v-list-item-subtitle>{{ notif.date | moment("lll") }}</v-list-item-subtitle>
             <v-list-item-subtitle>{{ notif.body }}</v-list-item-subtitle>
           </v-list-item-content>
           <v-list-item-action>
@@ -57,6 +57,15 @@
     </v-list>
   </v-menu>
 </template>
+
+<i18n lang="yaml">
+fr:
+  loading: Chargement...
+  noNotif: Aucune notification reçue
+en:
+  loading: Loading...
+  noNotif: No notification received
+</i18n>
 
 <script>
   import { mapState } from 'vuex'

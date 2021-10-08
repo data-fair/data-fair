@@ -2,7 +2,7 @@
   <div>
     <v-checkbox
       v-model="patch.public"
-      label="Public"
+      :label="$t('public')"
       @change="$emit('change')"
     />
     <v-autocomplete
@@ -16,13 +16,24 @@
       :clearable="true"
       item-text="name"
       item-value="id"
-      label="Vue restreinte à des organisations"
-      placeholder="Saisissez le nom d'organisation"
+      :label="$t('privateAccess')"
+      :placeholder="$t('searchName')"
       return-object
       @change="$emit('change')"
     />
   </div>
 </template>
+
+<i18n lang="yaml">
+fr:
+  public: Public
+  privateAccess: Vue restreinte à des organisations
+  searchName: Saisissez un nom d'organisation
+en:
+  public: Public
+  privateAccess: Restricted access to some organizations
+  searchName: Search an organization name
+</i18n>
 
 <script>
   import { mapState } from 'vuex'

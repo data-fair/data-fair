@@ -18,13 +18,13 @@
             <v-list-item-avatar class="ml-0 my-0">
               <v-icon>mdi-pencil</v-icon>
             </v-list-item-avatar>
-            <span>{{ catalog.updatedBy.name }} {{ catalog.updatedAt | moment("DD/MM/YYYY, HH:mm") }}</span>
+            <span>{{ catalog.updatedBy.name }} {{ catalog.updatedAt | moment("lll") }}</span>
           </v-list-item>
           <v-list-item>
             <v-list-item-avatar class="ml-0 my-0">
               <v-icon>mdi-plus-circle-outline</v-icon>
             </v-list-item-avatar>
-            <span>{{ catalog.createdBy.name }} {{ catalog.createdAt | moment("DD/MM/YYYY, HH:mm") }}</span>
+            <span>{{ catalog.createdBy.name }} {{ catalog.createdAt | moment("lll") }}</span>
           </v-list-item>
         </v-list>
       </v-sheet>
@@ -36,13 +36,13 @@
     >
       <v-text-field
         v-model="catalog.title"
-        label="Titre"
+        :label="$t('title')"
         :disabled="!can('writeDescription')"
         @change="patch({title: catalog.title})"
       />
       <v-textarea
         v-model="catalog.description"
-        label="Description"
+        :label="$t('description')"
         :disabled="!can('writeDescription')"
         filled
         rows="4"
@@ -52,6 +52,15 @@
     </v-col>
   </v-row>
 </template>
+
+<i18n lang="yaml">
+fr:
+  title: Titre
+  description: Description
+en:
+  title: Title
+  description: Description
+</i18n>
 
 <script>
   import { mapState, mapActions, mapGetters } from 'vuex'

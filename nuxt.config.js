@@ -1,9 +1,8 @@
 const URL = require('url').URL
-const i18n = require('./i18n')
 const fr = require('vuetify/es5/locale/fr').default
+const en = require('vuetify/es5/locale/en').default
 let config = require('config')
 config.basePath = new URL(config.publicUrl + '/').pathname
-config.i18nMessages = i18n.messages
 
 if (process.env.NODE_ENV === 'production') {
   const nuxtConfigInject = require('@koumoul/nuxt-config-inject')
@@ -52,13 +51,18 @@ module.exports = {
   router: {
     base: config.basePath,
   },
-  modules: ['@digibytes/markdownit', '@nuxtjs/axios', 'cookie-universal-nuxt', ['nuxt-i18n', {
+  modules: ['@digibytes/markdownit', '@nuxtjs/axios', 'cookie-universal-nuxt', ['@nuxtjs/i18n', {
     seo: false,
-    locales: [{ code: 'fr', iso: 'fr-FR' }, { code: 'en', iso: 'es-US' }],
-    defaultLocale: 'fr',
+    locales: ['fr', 'en'],
+    defaultLocale: config.i18n.defaultLocale,
+    vueI18nLoader: true,
+    strategy: 'no_prefix',
+    detectBrowserLanguage: {
+      useCookie: true,
+      cookieKey: 'i18n_lang',
+    },
     vueI18n: {
-      fallbackLocale: 'fr',
-      messages: config.i18nMessages,
+      fallbackLocale: config.i18n.defaultLocale,
     },
   }]],
   axios: {
@@ -80,8 +84,8 @@ module.exports = {
       },
     },
     lang: {
-      locales: { fr },
-      current: 'fr',
+      locales: { fr, en },
+      current: config.defaultLocale,
     },
   },
   env: {
@@ -110,6 +114,7 @@ module.exports = {
     disableSharing: config.disableSharing,
     disableApplications: config.disableApplications,
     disableRemoteServices: config.disableRemoteServices,
+    i18n: config.i18n,
   },
   head: {
     title: config.brand.title,

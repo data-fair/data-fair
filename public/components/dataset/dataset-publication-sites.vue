@@ -1,12 +1,8 @@
 <template>
   <v-container fluid>
-    <p v-if="!publicationSites || !publicationSites.length">
-      Vous n'avez pas configuré de portail sur lequel publier ce jeu de données.
-    </p>
+    <p v-if="!publicationSites || !publicationSites.length" v-t="'noPublicationSite'" />
     <template v-else>
-      <p>
-        Publiez ce jeu de données sur un ou plusieurs de vos portails.
-      </p>
+      <p v-t="'publishThisDataset'" />
       <v-row class="px-2">
         <v-card
           tile
@@ -46,6 +42,15 @@
     </template>
   </v-container>
 </template>
+
+<i18n lang="yaml">
+fr:
+  noPublicationSite: Vous n'avez pas configuré de portail sur lequel publier ce jeu de données.
+  publishThisDataset: Publiez ce jeu de données sur un ou plusieurs de vos portails.
+en:
+  noPublicationSite: You haven't configured a portal to publish this dataset on.
+  publishThisDataset: Publish this dataset on one or more of your portals.
+</i18n>
 
 <script>
   import { mapState, mapActions } from 'vuex'

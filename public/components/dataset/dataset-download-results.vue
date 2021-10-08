@@ -12,6 +12,7 @@
     </template>
     <v-sheet>
       <v-alert
+        v-t="'alert1'"
         type="info"
         :value="true"
         tile
@@ -19,10 +20,9 @@
         text
         :icon="false"
         class="mb-0 mt-1"
-      >
-        Ce téléchargement tient compte du tri et de la recherche
-      </v-alert>
+      />
       <v-alert
+        v-t="'alert2'"
         type="warning"
         :value="total > 10000"
         tile
@@ -30,9 +30,7 @@
         text
         :icon="false"
         class="mb-0 mt-1"
-      >
-        Les résultats sont limités aux 10 000 premières lignes
-      </v-alert>
+      />
       <v-list class="pt-0" dense>
         <v-list-item :href="downloadUrls.csv" target="download">
           <v-list-item-avatar :size="30">
@@ -42,7 +40,7 @@
               </v-icon>
             </v-avatar>
           </v-list-item-avatar>
-          <v-list-item-title>format CSV</v-list-item-title>
+          <v-list-item-title v-t="'csv'" />
         </v-list-item>
         <v-list-item :href="downloadUrls.xlsx" target="download">
           <v-list-item-avatar :size="30">
@@ -52,7 +50,7 @@
               </v-icon>
             </v-avatar>
           </v-list-item-avatar>
-          <v-list-item-title>format XLSX</v-list-item-title>
+          <v-list-item-title v-t="'xlsx'" />
         </v-list-item>
         <v-list-item :href="downloadUrls.ods" target="download">
           <v-list-item-avatar :size="30">
@@ -62,7 +60,7 @@
               </v-icon>
             </v-avatar>
           </v-list-item-avatar>
-          <v-list-item-title>format ODS</v-list-item-title>
+          <v-list-item-title v-t="'ods'" />
         </v-list-item>
         <v-list-item
           v-if="dataset.bbox"
@@ -76,12 +74,29 @@
               </v-icon>
             </v-avatar>
           </v-list-item-avatar>
-          <v-list-item-title>Format GeoJSON</v-list-item-title>
+          <v-list-item-title v-t="'geojson'" />
         </v-list-item>
       </v-list>
     </v-sheet>
   </v-menu>
 </template>
+
+<i18n lang="yaml">
+fr:
+  alert1: Ce téléchargement tient compte du tri et de la recherche
+  alert2: Les résultats sont limités aux 10 000 premières lignes
+  csv: format CSV
+  xlsx: format XLSX
+  ods: format ODS
+  geojson: format GeoJSON
+en:
+  alert1: This download takes into consideration the current filters and sorting
+  alert2: The results are limited to the 10,000 first lines
+  csv: CSV format
+  xlsx: XLSX format
+  ods: ODS format
+  geojson: GeoJSON format
+</i18n>
 
 <script>
   import { mapState, mapGetters } from 'vuex'

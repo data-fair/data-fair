@@ -8,9 +8,20 @@
         {{ visibility === 'public' ? 'mdi-lock-open' : 'mdi-lock' }}
       </v-icon>
     </template>
-    {{ {public: 'Public', private: 'Privé', protected: 'Protégé'}[visibility] }}
+    {{ $t(visibility) }}
   </v-tooltip>
 </template>
+
+<i18n lang="yaml">
+fr:
+  public: Public
+  private: Privé
+  protected: Protégé
+en:
+  public: Public
+  private: Private
+  protected: Protected
+</i18n>
 
 <script>
   export default {

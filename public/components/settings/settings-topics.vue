@@ -22,7 +22,6 @@
     Vue.component('draggable', Draggable)
   }
 
-  const events = require('~/../shared/events.json').dataset
   const topicsSchema = require('~/../contract/settings').properties.topics
   const wrapperSchema = {
     type: 'object',
@@ -35,7 +34,6 @@
     components: { VJsf },
     props: ['settings'],
     data: () => ({
-      events,
       eventBus,
       wrapperSchema,
       formValid: true,

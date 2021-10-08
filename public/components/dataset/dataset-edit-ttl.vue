@@ -15,6 +15,7 @@
     </template>
     <v-sheet>
       <v-alert
+        v-t="'alert'"
         type="warning"
         :value="true"
         tile
@@ -22,14 +23,12 @@
         text
         :icon="false"
         class="mb-0 mt-1"
-      >
-        Si vous configurez l'expiration automatique, les lignes supprimées ne pourront pas être récupérées.
-      </v-alert>
+      />
       <v-card-text>
-        <v-checkbox v-model="editTtl.active" label="activer l'expiration automatique" />
+        <v-checkbox v-model="editTtl.active" :label="$t('activate')" />
         <v-select
           v-model="editTtl.prop"
-          label="colonne de date de référence"
+          :label="$t('col')"
           :items="schema.filter(prop => prop.format === 'date-time')"
           item-value="key"
           :item-text="(field) => field.title || field['x-originalName'] || field.key"
@@ -37,21 +36,42 @@
         <v-text-field
           v-model.number="editTtl.delay.value"
           type="number"
-          label="nombre de jours avant expiration depuis la date de référence"
+          :label="$t('days')"
         />
       </v-card-text>
       <v-card-actions>
         <v-spacer />
-        <v-btn text @click="show = false">
-          annuler
-        </v-btn>
-        <v-btn color="warning" @click="change">
-          enregistrer
-        </v-btn>
+        <v-btn
+          v-t="'cancel'"
+          text
+          @click="show = false"
+        />
+        <v-btn
+          v-t="'save'"
+          color="warning"
+          @click="change"
+        />
       </v-card-actions>
     </v-sheet>
   </v-menu>
 </template>
+
+<i18n lang="yaml">
+fr:
+  alert: Si vous configurez l'expiration automatique, les lignes supprimées ne pourront pas être récupérées.
+  activate: activer l'expiration automatique
+  col: colonne de date de référence
+  days: nombre de jours avant expiration depuis la date de référence
+  cancel: annuler
+  save: enregistrer
+en:
+  alert: If you configure automatic expiration, the delete lines will not be recoverable.
+  activate: activate automatic expiration
+  col: column containing the reference date
+  days: number of days from the reference date before expiration
+  cancel: cancel
+  save: Save
+</i18n>
 
 <script>
   export default {

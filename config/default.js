@@ -44,7 +44,7 @@ module.exports = {
   },
   brand: {
     logo: null,
-    title: 'DataFair',
+    title: 'Data Fair',
     description: 'Find, Access, Interoperate, Reuse data on the Web',
     url: null,
     embed: null,
@@ -271,4 +271,8 @@ module.exports = {
     'D/M/YY, H:m:s',
     'YYYY-MM-DDTHH:mm:ss', // shorter iso not accepted by json schema date-time format
   ],
+  i18n: {
+    locales: 'fr,en',
+    defaultLocale: 'fr',
+  },
 }

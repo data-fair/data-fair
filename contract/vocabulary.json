@@ -1,314 +1,620 @@
 [
   {
-    "title": "Libellé",
-    "description": "Un libellé facilement lisible",
+    "title": {
+      "fr": "Libellé",
+      "en": "Label"
+    },
+    "description": {
+      "fr": "Un libellé facilement lisible",
+      "en": "An easily readable label"
+    },
     "identifiers": [
       "http://www.w3.org/2000/01/rdf-schema#label",
       "http://www.bbc.co.uk/ontologies/coreconcepts/label"
     ],
     "type": "string",
-    "tag": "Présentation"
+    "tag": {
+      "fr": "Présentation",
+      "en": "Presentation"
+    }
   },
   {
-    "title": "Description",
-    "description": "Un petit texte descriptif (contenu HTML accepté)",
+    "title": {
+      "fr": "Description",
+      "en": "Description"
+    },
+    "description": {
+      "fr": "Un petit texte descriptif (contenu HTML accepté)",
+      "en": "A short descriptive text (HTML content accepted)"
+    },
     "identifiers": [
       "http://schema.org/description"
     ],
     "type": "string",
-    "tag": "Présentation"
+    "tag": {
+      "fr": "Présentation",
+      "en": "Presentation"
+    }
   },
   {
-    "title": "Image",
-    "description": "Une URL vers une image illustration du document courant",
+    "title": {
+      "fr": "Image",
+      "en": "Image"
+    },
+    "description": {
+      "fr": "Une URL vers une image illustration du document courant",
+      "en": "A URL linking to an image to illustrate current document"
+    },
     "identifiers": [
       "http://schema.org/image"
     ],
     "type": "string",
-    "tag": "Présentation"
+    "tag": {
+      "fr": "Présentation",
+      "en": "Presentation"
+    }
   },
   {
-    "title": "Étiquette",
-    "description": "Une petite chaine de caractère utilisable simplement comme critère de classification des lignes",
+    "title": {
+      "fr": "Étiquette",
+      "en": "Tag"
+    },
+    "description": {
+      "fr": "Une petite chaine de caractère utilisable simplement comme critère de classification des lignes",
+      "en": "A short string used as classification criteria for the lines"
+    },
     "identifiers": [
       "https://schema.org/DefinedTermSet"
     ],
     "type": "string",
-    "tag": "Présentation"
+    "tag": {
+      "fr": "Présentation",
+      "en": "Presentation"
+    }
   },
   {
-    "title": "Adresse",
-    "description": "Une adresse écrite sur une ligne",
+    "title": {
+      "fr": "Adresse",
+      "en": "Address"
+    },
+    "description": {
+      "fr": "Une adresse écrite en une seule chaine de caractère",
+      "en": "An address written in a single string"
+    },
     "identifiers": [
       "http://schema.org/address"
     ],
     "type": "string",
-    "tag": "Adresse"
+    "tag": {
+      "fr": "Adresse",
+      "en": "Address"
+    }
   },
   {
-    "title": "Numéro de rue",
-    "description": "Un numéro de rue, qui peut contenir des mots comme bis ou ter",
+    "title": {
+      "fr": "Numéro de rue",
+      "en": "Street number"
+    },
+    "description": {
+      "fr": "Un numéro de rue, qui peut contenir des mots comme bis ou ter",
+      "en": "A street number than can contain words like bis"
+    },
     "identifiers": [
       "http://www.ontotext.com/proton/protonext#StreetNumber"
     ],
     "type": "string",
-    "tag": "Adresse"
+    "tag": {
+      "fr": "Adresse",
+      "en": "Address"
+    }
   },
   {
-    "title": "Rue ou lieu-dit",
-    "description": "Un nom de rue ou de lieu-dit",
+    "title": {
+      "fr": "Rue ou lieu-dit",
+      "en": "Street or place"
+    },
+    "description": {
+      "fr": "Un nom de rue ou de lieu-dit",
+      "en": "A street or place name"
+    },
     "identifiers": [
       "http://schema.org/streetAddress"
     ],
     "type": "string",
-    "tag": "Adresse"
+    "tag": {
+      "fr": "Adresse",
+      "en": "Address"
+    }
   },
   {
-    "title": "Commune",
-    "description": "Libellé d'une commune",
+    "title": {
+      "fr": "Commune",
+      "en": "City"
+    },
+    "description": {
+      "fr": "Nom d'une commune",
+      "en": "Name of a city"
+    },
     "identifiers": [
       "http://schema.org/City"
     ],
     "type": "string",
-    "tag": "Adresse"
+    "tag": {
+      "fr": "Adresse",
+      "en": "Address"
+    }
   },
   {
-    "title": "Code postal",
-    "description": "Code postal, sur 5 chiffre",
+    "title": {
+      "fr": "Code postal",
+      "en": "Postal code"
+    },
+    "description": {
+      "fr": "Code postal, sur 5 chiffre",
+      "en": "Postal code / zip code"
+    },
     "identifiers": [
       "http://schema.org/postalCode"
     ],
     "type": "string",
-    "tag": "Adresse"
+    "tag": {
+      "fr": "Adresse",
+      "en": "Address"
+    }
   },
   {
-    "title": "Code commune",
-    "description": "Code INSEE de la commune, sur 5 caractères, à ne pas confondre avec le code postal.",
+    "title": {
+      "fr": "Code commune",
+      "en": ""
+    },
+    "description": {
+      "fr": "Code INSEE de la commune, sur 5 caractères, à ne pas confondre avec le code postal.",
+      "en": ""
+    },
     "identifiers": [
       "http://rdf.insee.fr/def/geo#codeCommune"
     ],
     "type": "string",
-    "tag": "Référentiels administratifs français"
+    "tag": {
+      "fr": "Référentiels administratifs français",
+      "en": "French administrative master-data"
+    }
   },
   {
-    "title": "Code département",
-    "description": "Code du département, sur 2 ou 3 caractères",
+    "title": {
+      "fr": "Code département",
+      "en": ""
+    },
+    "description": {
+      "fr": "Code du département, sur 2 ou 3 caractères",
+      "en": ""
+    },
     "identifiers": [
       "http://rdf.insee.fr/def/geo#codeDepartement"
     ],
     "type": "string",
-    "tag": "Référentiels administratifs français"
+    "tag": {
+      "fr": "Référentiels administratifs français",
+      "en": "French administrative master-data"
+    }
   },
   {
-    "title": "Code région",
-    "description": "Code de la région, sur 2 chiffres",
+    "title": {
+      "fr": "Code région",
+      "en": ""
+    },
+    "description": {
+      "fr": "Code de la région, sur 2 chiffres",
+      "en": ""
+    },
     "identifiers": [
       "http://rdf.insee.fr/def/geo#codeRegion"
     ],
     "type": "string",
-    "tag": "Référentiels administratifs français"
+    "tag": {
+      "fr": "Référentiels administratifs français",
+      "en": "French administrative master-data"
+    }
   },
   {
-    "title": "Code EPCI",
-    "description": "Code du regroupement de communes, sur 9 chiffres",
+    "title": {
+      "fr": "Code EPCI",
+      "en": ""
+    },
+    "description": {
+      "fr": "Code du regroupement de communes, sur 9 chiffres",
+      "en": ""
+    },
     "identifiers": [
       "http://rdf.insee.fr/def/geo#EtablissementPublicDeCooperationIntercommunale"
     ],
     "type": "string",
-    "tag": "Référentiels administratifs français"
+    "tag": {
+      "fr": "Référentiels administratifs français",
+      "en": "French administrative master-data"
+    }
   },
   {
-    "title": "Code IRIS",
-    "description": "Code d'une zone dans le découpage infracommunal IRIS",
+    "title": {
+      "fr": "Code IRIS",
+      "en": ""
+    },
+    "description": {
+      "fr": "Code d'une zone dans le découpage infracommunal IRIS",
+      "en": ""
+    },
     "identifiers": [
       "http://rdf.insee.fr/def/geo#codeIRIS"
     ],
     "type": "string",
-    "tag": "Référentiels administratifs français"
+    "tag": {
+      "fr": "Référentiels administratifs français",
+      "en": "French administrative master-data"
+    }
   },
   {
-    "title": "Latitude",
-    "description": "Coordonné géographique qui permet de se situer par rapport à l'équateur",
+    "title": {
+      "fr": "Latitude",
+      "en": "Latitude"
+    },
+    "description": {
+      "fr": "Coordonné géographique qui permet de se situer par rapport à l'équateur",
+      "en": "Geographic coordinate to locate a position compared to the equator"
+    },
     "identifiers": [
       "http://schema.org/latitude",
       "http://www.w3.org/2003/01/geo/wgs84_pos#lat"
     ],
     "type": "number",
-    "tag": "Géographie"
+    "tag": {
+      "fr": "Géographie",
+      "en": "Geography"
+    }
   },
   {
-    "title": "Longitude",
-    "description": "Coordonnée géographique qui permet de se situer par rapport au méridien de Greenwich",
+    "title": {
+      "fr": "Longitude",
+      "en": "Longitude"
+    },
+    "description": {
+      "fr": "Coordonnée géographique qui permet de se situer par rapport au méridien de Greenwich",
+      "en": "Geographic coordinate to locate a position compared to the Prime/Greenwich meridian"
+    },
     "identifiers": [
       "http://schema.org/longitude",
       "http://www.w3.org/2003/01/geo/wgs84_pos#long"
     ],
     "type": "number",
-    "tag": "Géographie"
+    "tag": {
+      "fr": "Géographie",
+      "en": "Geography"
+    }
   },
   {
-    "title": "Latitude / Longitude",
-    "description": "Paire latitude / longitude, séparées par une virgule",
+    "title": {
+      "fr": "Latitude / Longitude",
+      "en": "Latitude / Longitude"
+    },
+    "description": {
+      "fr": "Paire latitude / longitude, séparées par une virgule",
+      "en": "Latitude / longitude tuple, joined by a comma"
+    },
     "identifiers": [
       "http://www.w3.org/2003/01/geo/wgs84_pos#lat_long"
     ],
     "type": "string",
-    "tag": "Géographie"
+    "tag": {
+      "fr": "Géographie",
+      "en": "Geography"
+    }
   },
   {
-    "title": "SIRET",
-    "description": "Le numéro SIRET est un identifiant numérique de 14 chiffres composé du SIREN (9 chiffres) et du NIC (5 chiffres)",
+    "title": {
+      "fr": "SIRET",
+      "en": ""
+    },
+    "description": {
+      "fr": "Le numéro SIRET est un identifiant numérique de 14 chiffres composé du SIREN (9 chiffres) et du NIC (5 chiffres)",
+      "en": ""
+    },
     "identifiers": [
       "http://www.datatourisme.fr/ontology/core/1.0/#siret"
     ],
     "type": "string",
-    "tag": "Référentiels administratifs français"
+    "tag": {
+      "fr": "Référentiels administratifs français",
+      "en": "French administrative master-data"
+    }
   },
   {
-    "title": "SIREN",
-    "description": "Le numéro SIREN est un identifiant numérique d'entreprise (9 chiffres)",
+    "title": {
+      "fr": "SIREN",
+      "en": ""
+    },
+    "description": {
+      "fr": "Le numéro SIREN est un identifiant numérique d'entreprise (9 chiffres)",
+      "en": ""
+    },
     "identifiers": [
       "http://dbpedia.org/ontology/siren"
     ],
     "type": "string",
-    "tag": "Référentiels administratifs français"
+    "tag": {
+      "fr": "Référentiels administratifs français",
+      "en": "French administrative master-data"
+    }
   },
   {
-    "title": "Code APE",
-    "description": "Le code APE (activité principale exercée) permet d'identifier la branche d'activité principale de l'entreprise ou du travailleur indépendant en référence à la nomenclature des activités françaises",
+    "title": {
+      "fr": "Code APE",
+      "en": ""
+    },
+    "description": {
+      "fr": "Le code APE (activité principale exercée) permet d'identifier la branche d'activité principale de l'entreprise ou du travailleur indépendant en référence à la nomenclature des activités françaises",
+      "en": ""
+    },
     "identifiers": [
       "http://www.datatourisme.fr/ontology/core/1.0#apeNaf"
     ],
     "type": "string",
-    "tag": "Référentiels administratifs français"
+    "tag": {
+      "fr": "Référentiels administratifs français",
+      "en": "French administrative master-data"
+    }
   },
   {
-    "title": "Catégorie juridique (niveau 3)",
-    "description": "La catégorie juridique de niveau 3, parfois appelée nature juridique est un code sur 4 caractères numériques. Elle est issue d'une nomenclature de l'état Français.",
+    "title": {
+      "fr": "Catégorie juridique (niveau 3)",
+      "en": ""
+    },
+    "description": {
+      "fr": "La catégorie juridique de niveau 3, parfois appelée nature juridique est un code sur 4 caractères numériques. Elle est issue d'une nomenclature de l'état Français.",
+      "en": ""
+    },
     "identifiers": [
       "http://id.insee.fr/concepts/cj/cjNiveauIII"
     ],
     "type": "string",
-    "tag": "Référentiels administratifs français"
+    "tag": {
+      "fr": "Référentiels administratifs français",
+      "en": "French administrative master-data"
+    }
   },
   {
-    "title": "Date d'évènement",
-    "description": "Date d'un événement ponctuel sans durée définie",
+    "title": {
+      "fr": "Date d'évènement",
+      "en": "Event date"
+    },
+    "description": {
+      "fr": "Date d'un événement ponctuel sans durée définie",
+      "en": "Date of a one-off event without known duration"
+    },
     "identifiers": [
       "http://schema.org/Date",
       "http://purl.org/dc/identifierss/date"
     ],
     "type": "string",
     "format": "date-time",
-    "tag": "Calendrier"
+    "tag": {
+      "fr": "Calendrier",
+      "en": "Calendar"
+    }
   },
   {
-    "title": "Code parcelle",
-    "description": "Le code de la parcelle cadastrale est le numéro unique attribué par le Service du cadastre pour identifier une parcelle cadastrale au niveau national",
+    "title": {
+      "fr": "Code parcelle",
+      "en": ""
+    },
+    "description": {
+      "fr": "Le code de la parcelle cadastrale est le numéro unique attribué par le Service du cadastre pour identifier une parcelle cadastrale au niveau national",
+      "en": ""
+    },
     "identifiers": [
       "http://dbpedia.org/ontology/codeLandRegistry"
     ],
     "type": "string",
-    "tag": "Référentiels administratifs français"
+    "tag": {
+      "fr": "Référentiels administratifs français",
+      "en": "French administrative master-data"
+    }
   },
   {
-    "title": "Géometrie GeoJSON ou WKT",
-    "description": "Une géométrie (point, polygone, ligne, etc.) au format GeoJSON ou WKT.",
+    "title": {
+      "fr": "Géométrie GeoJSON ou WKT",
+      "en": "GeoJSON or WKT geometry"
+    },
+    "description": {
+      "fr": "Une géométrie (point, polygone, ligne, etc.) au format GeoJSON ou WKT.",
+      "en": "A geometry (point, polygon, line, etc.) in the GeoJSON or WKT format"
+    },
     "identifiers": [
       "https://purl.org/geojson/vocab#geometry"
     ],
     "type": "string",
-    "tag": "Géographie"
+    "tag": {
+      "fr": "Géographie",
+      "en": "Geography"
+    }
   },
   {
-    "title": "Document numérique attaché",
-    "description": "Chemin relatif vers un fichier rattaché au jeu de données ou URL vers un fichier hébergé à l'extérieur",
+    "title": {
+      "fr": "Document numérique attaché",
+      "en": "Attachment"
+    },
+    "description": {
+      "fr": "Chemin relatif vers un fichier rattaché au jeu de données ou URL vers un fichier hébergé à l'extérieur",
+      "en": "Relative path to an attached file of the dataset or URL to a file hosted externally"
+    },
     "identifiers": [
       "http://schema.org/DigitalDocument"
     ],
     "type": "string",
-    "tag": "Liens"
+    "tag": {
+      "fr": "Liens",
+      "en": "Links"
+    }
   }, {
-    "title": "Page Web",
-    "description": "URL vers une page Web externe",
+    "title": {
+      "fr": "Page Web",
+      "en": "Web page"
+    },
+    "description": {
+      "fr": "URL d'une page Web externe",
+      "en": "URL of an external Web page"
+    },
     "identifiers": [
       "https://schema.org/WebPage"
     ],
     "type": "string",
-    "tag": "Liens"
+    "tag": {
+      "fr": "Liens",
+      "en": "Links"
+    }
   }, {
-    "title": "Adresse E-mail",
-    "description": "URI de type mailto pour renseigner une adresse de contact",
+    "title": {
+      "fr": "Adresse e-mail",
+      "en": "Email address"
+    },
+    "description": {
+      "fr": "Adresse e-mail ou URI de type mailto",
+      "en": "Email address or mailto URI"
+    },
     "identifiers": [
       "https://www.w3.org/2006/vcard/ns#email"
     ],
     "type": "string",
-    "tag": "Informations de contact"
+    "tag": {
+      "fr": "Informations de contact",
+      "en": "Contact information"
+    }
   }, {
-    "title": "N° de téléphone",
-    "description": "Un numéro de téléphone",
+    "title": {
+      "fr": "N° de téléphone",
+      "en": "Phone number"
+    },
+    "description": {
+      "fr": "Un numéro de téléphone",
+      "en": "A phone number"
+    },
     "identifiers": [
       "https://www.w3.org/2006/vcard/ns#tel"
     ],
     "type": "string",
-    "tag": "Informations de contact"
+    "tag": {
+      "fr": "Informations de contact",
+      "en": "Contact information"
+    }
   },
   {
-    "title": "Coordonnée X",
-    "description": "Coordonnée géographique X (Easting) selon une projection à définir sur le jeu de données. Cette colonne sera utilisé epour calculer les attributs latitude/longitude.",
+    "title": {
+      "fr": "Coordonnée X",
+      "en": "X coordinate"
+    },
+    "description": {
+      "fr": "Coordonnée géographique X (Easting) selon une projection à définir sur le jeu de données. Cette information sera utilisée pour calculer les attributs latitude/longitude.",
+      "en": "Geographic coordinate X (Easting) based on a projection defined on the dataset. This information will be used to calculate latitude/longitude properties."
+    },
     "identifiers": [
       "http://data.ign.fr/def/geometrie#coordX"
     ],
     "type": "number",
-    "tag": "Géographie"
+    "tag": {
+      "fr": "Géographie",
+      "en": "Geography"
+    }
   },
   {
-    "title": "Coordonnée Y",
-    "description": "Coordonnée géographique Y (Northing) selon une projection à définir sur le jeu de données. Cette colonne sera utilisée pour calculer les attributs latitude/longitude.",
+    "title": {
+      "fr": "Coordonnée Y",
+      "en": "Y coordinate"
+    },
+    "description": {
+      "fr": "Coordonnée géographique Y (Northing) selon une projection à définir sur le jeu de données. Cette information sera utilisée pour calculer les attributs latitude/longitude.",
+      "en": "Geographic coordinate Y (Northing) based on a projection defined on the dataset. This information will be used to calculate latitude/longitude properties."
+    },
     "identifiers": [
       "http://data.ign.fr/def/geometrie#coordY"
     ],
     "type": "number",
-    "tag": "Géographie"
+    "tag": {
+      "fr": "Géographie",
+      "en": "Geography"
+    }
   },
   {
-    "title": "Date de début",
-    "description": "Permet de décrire un évènement daté avec un début et une fin",
+    "title": {
+      "fr": "Date de début",
+      "en": "Start date"
+    },
+    "description": {
+      "fr": "Permet de décrire un évènement daté avec un début et une fin",
+      "en": "Used to describe a timed event with a start and end"
+    },
     "identifiers": [
       "https://schema.org/startDate"
     ],
     "type": "string",
     "format": "date-time",
-    "tag": "Calendrier"
+    "tag": {
+      "fr": "Calendrier",
+      "en": "Calendar"
+    }
   },
   {
-    "title": "Date de fin",
-    "description": "Permet de décrire un évènement daté avec un début et une fin",
+    "title": {
+      "fr": "Date de fin",
+      "en": "End date"
+    },
+    "description": {
+      "fr": "Permet de décrire un évènement daté avec un début et une fin",
+      "en": "Used to describe a timed event with a start and end"
+    },
     "identifiers": [
       "https://schema.org/endDate"
     ],
     "type": "string",
     "format": "date-time",
-    "tag": "Calendrier"
+    "tag": {
+      "fr": "Calendrier",
+      "en": "Calendar"
+    }
   },
   {
-    "title": "Date de création",
-    "description": "Date à laquelle a été créée la ressource",
+    "title": {
+      "fr": "Date de création",
+      "en": "Creation date"
+    },
+    "description": {
+      "fr": "Date à laquelle a été créée la ressource",
+      "en": "Date when the resource was created"
+    },
     "identifiers": [
       "http://schema.org/dateCreated",
       "http://purl.org/dc/identifierss/created"
     ],
     "type": "string",
     "format": "date-time",
-    "tag": "Calendrier"
+    "tag": {
+      "fr": "Calendrier",
+      "en": "Calendar"
+    }
   },
   {
-    "title": "Horaires d'ouverture",
-    "description": "Permet de préciser les horaires d'ouverture hebdomadaires d'un établissement.",
+    "title": {
+      "fr": "Horaires d'ouverture",
+      "en": "Opening hours"
+    },
+    "description": {
+      "fr": "Permet de préciser les horaires d'ouverture hebdomadaires d'un établissement.",
+      "en": "Used to get the opening hours of an establishment"
+    },
     "identifiers": [
       "https://schema.org/openingHours"
     ],
     "type": "string",
-    "tag": "Calendrier"
+    "tag": {
+      "fr": "Calendrier",
+      "en": "Calendar"
+    }
   }
 ]

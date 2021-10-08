@@ -5,9 +5,7 @@
     dense
     class="py-0 pr-2"
   >
-    <v-subheader>
-      CONTENU
-    </v-subheader>
+    <v-subheader v-t="'content'" />
     <v-list-item-group v-model="activeIndex" color="primary">
       <v-list-item
         v-for="(section, i) in sections"
@@ -27,6 +25,13 @@
     </v-list-item-group>
   </v-list>
 </template>
+
+<i18n lang="yaml">
+fr:
+  content: CONTENU
+en:
+  content: CONTENT
+</i18n>
 
 <script>
   export default {

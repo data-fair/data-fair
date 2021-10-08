@@ -205,4 +205,8 @@ module.exports = {
     __name: 'DATE_TIME_FORMATS',
     __format: 'json',
   },
+  i18n: {
+    locales: 'I18N_LOCALES',
+    defaultLocale: 'I18N_DEFAULT_LOCALE',
+  },
 }

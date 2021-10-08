@@ -8,15 +8,21 @@
         :options="{context, locale: 'fr'}"
       />
       <v-btn
+        v-t="'save'"
         color="primary"
         class="mt-4"
         @click="validate"
-      >
-        Enregistrer
-      </v-btn>
+      />
     </v-form>
   </v-container>
 </template>
+
+<i18n lang="yaml">
+fr:
+  save: Enregistrer
+en:
+  save Save
+</i18n>
 
 <script>
   import VJsf from '@koumoul/vjsf/lib/VJsf.js'

@@ -19,7 +19,7 @@
       nav
     >
       <v-list-item tile color="admin">
-        <v-list-item-title>Administration</v-list-item-title>
+        <v-list-item-title v-t="'admin'" />
       </v-list-item>
       <v-list-item
         :nuxt="true"
@@ -27,22 +27,22 @@
         :class="routePrefix === 'remote' ? 'v-list-item--active' : ''"
       >
         <v-list-item-action><v-icon>mdi-cloud</v-icon></v-list-item-action>
-        <v-list-item-title>Services</v-list-item-title>
+        <v-list-item-title v-t="'services'" />
       </v-list-item>
 
       <v-list-item :nuxt="true" :to="`/admin/info`">
         <v-list-item-action><v-icon>mdi-information</v-icon></v-list-item-action>
-        <v-list-item-title>Informations du service</v-list-item-title>
+        <v-list-item-title v-t="'serviceInfo'" />
       </v-list-item>
 
       <v-list-item :nuxt="true" :to="`/admin/owners`">
         <v-list-item-action><v-icon>mdi-briefcase</v-icon></v-list-item-action>
-        <v-list-item-title>Propriétaires</v-list-item-title>
+        <v-list-item-title v-t="'owners'" />
       </v-list-item>
 
       <v-list-item :nuxt="true" :to="`/admin/errors`">
         <v-list-item-action><v-icon>mdi-alert</v-icon></v-list-item-action>
-        <v-list-item-title>Erreurs</v-list-item-title>
+        <v-list-item-title v-t="'errors'" />
       </v-list-item>
 
       <v-list-item
@@ -51,12 +51,12 @@
         :to="`/admin/base-apps`"
       >
         <v-list-item-action><v-icon>mdi-apps</v-icon></v-list-item-action>
-        <v-list-item-title>Applications</v-list-item-title>
+        <v-list-item-title v-t="'applications'" />
       </v-list-item>
 
       <v-list-item :nuxt="true" :href="env.directoryUrl + '/admin/users'">
         <v-list-item-action><v-icon>mdi-account-supervisor</v-icon></v-list-item-action>
-        <v-list-item-title>Gestion des comptes</v-list-item-title>
+        <v-list-item-title v-t="'accountsManagement'" />
       </v-list-item>
 
       <template v-if="env.extraAdminNavigationItems">
@@ -81,7 +81,7 @@
           :to="`/`"
         >
           <v-list-item-action><v-icon>mdi-home</v-icon></v-list-item-action>
-          <v-list-item-title>{{ $t('navigation.dashboard') }}</v-list-item-title>
+          <v-list-item-title v-t="'dashboard'" />
         </v-list-item>
 
         <v-list-item
@@ -90,7 +90,7 @@
           :class="routePrefix === 'dataset' ? 'v-list-item--active' : ''"
         >
           <v-list-item-action><v-icon>mdi-database</v-icon></v-list-item-action>
-          <v-list-item-title>{{ $t('navigation.datasets') }}</v-list-item-title>
+          <v-list-item-title v-t="'datasets'" />
         </v-list-item>
 
         <v-list-item
@@ -100,7 +100,7 @@
           :class="routePrefix === 'application' ? 'v-list-item--active' : ''"
         >
           <v-list-item-action><v-icon>mdi-image-multiple</v-icon></v-list-item-action>
-          <v-list-item-title>{{ $t('navigation.viz') }}</v-list-item-title>
+          <v-list-item-title v-t="'vizs'" />
         </v-list-item>
 
         <v-divider class="pb-2" />
@@ -113,7 +113,7 @@
         >
           <v-list-item-action><v-icon>mdi-account-multiple</v-icon></v-list-item-action>
           <v-list-item-content>
-            <v-list-item-title>{{ $t('navigation.org') }}</v-list-item-title>
+            <v-list-item-title v-t="'org'" />
             <v-list-item-subtitle>{{ activeAccount.name }}</v-list-item-subtitle>
           </v-list-item-content>
         </v-list-item>
@@ -126,8 +126,8 @@
         >
           <v-list-item-action><v-icon>mdi-cog</v-icon></v-list-item-action>
           <v-list-item-content>
-            <v-list-item-title>{{ $t('navigation.params') }}</v-list-item-title>
-            <v-list-item-subtitle>{{ $t('navigation.paramsSub') }}</v-list-item-subtitle>
+            <v-list-item-title>{{ $t('params') }}</v-list-item-title>
+            <v-list-item-subtitle>{{ $t('paramsSub') }}</v-list-item-subtitle>
           </v-list-item-content>
         </v-list-item>
 
@@ -140,8 +140,8 @@
         >
           <v-list-item-action><v-icon>mdi-transit-connection</v-icon></v-list-item-action>
           <v-list-item-content>
-            <v-list-item-title>{{ $t('navigation.catalogs') }}</v-list-item-title>
-            <v-list-item-subtitle>{{ $t('navigation.catalogsSub') }}</v-list-item-subtitle>
+            <v-list-item-title>{{ $t('catalogs') }}</v-list-item-title>
+            <v-list-item-subtitle>{{ $t('catalogsSub') }}</v-list-item-subtitle>
           </v-list-item-content>
         </v-list-item>
 
@@ -172,6 +172,39 @@
     </v-footer>
   </v-navigation-drawer>
 </template>
+
+<i18n lang="yaml">
+fr:
+  admin: Administration
+  services: Services
+  serviceInfo: Informations du service
+  owners: Propriétaires
+  errors: Erreurs
+  applications: Applications
+  accountsManagement: Gestion des comptes
+  dashboard: Accueil
+  datasets: Jeux de données
+  vizs: Visualisations
+  params: Paramètres
+  paramsSub: Licences, thématiques ...
+  catalogs: Catalogues
+  catalogsSub: data.gouv.fr ...
+en:
+  admin: Administration
+  services: Services
+  serviceInfo: Service informations
+  owners: Owners
+  errors: Errors
+  applications: Applications
+  accountsManagement: Gestion des comptes
+  dashboard: Dashboard
+  datasets: Datasets
+  vizs: Visualizations
+  params: Parameters
+  paramsSub: Licenses, topics ...
+  catalogs: Catalogs
+  catalogsSub: data.gouv.fr ...
+</i18n>
 
 <script>
   import { mapState, mapGetters } from 'vuex'

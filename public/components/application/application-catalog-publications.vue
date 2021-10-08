@@ -1,21 +1,15 @@
 <template lang="html">
   <v-container fluid>
-    <p>
-      Publiez cette application sur un ou plusieurs catalogues Open Data.
-      Cette publication rendra votre application plus facile à trouver et permettra à la communauté Open Data d'échanger avec vous.
-    </p>
+    <p v-t="'message'" />
 
-    <p v-if="!application.publications.length">
-      Il n'existe pas encore de publication de cette application.
-    </p>
+    <p v-if="!application.publications.length" v-t="'noPublication'" />
 
     <v-btn
       v-if="can('writeDescription')"
+      v-t="'publish'"
       color="primary"
       @click="addPublicationDialog = true"
-    >
-      Publier sur un catalogue
-    </v-btn>
+    />
 
     <v-list
       v-if="application.publications.length"
@@ -26,7 +20,10 @@
         :key="publication.id"
       >
         <v-list-item-content v-if="catalogsById[publication.catalog]">
-          <v-list-item-title>Application publiée sur le catalogue "{{ catalogsById[publication.catalog].title }}"</v-list-item-title>
+          <v-list-item-title>
+            {{ $t('appPublication', {catalog: catalogsById[publication.catalog].title}) }}
+            <span v-if="publication.publishedAt">({{ publication.publishedAt | moment('lll') }})</span>
+          </v-list-item-title>
           <v-list-item-subtitle v-if="publication.status==='published'">
             <a
               :href="publication.targetUrl"
@@ -39,23 +36,17 @@
           >
             {{ publication.error }}
           </v-list-item-subtitle>
-          <v-list-item-subtitle v-else-if="publication.status==='deleted'">
-            En attente de suppression
-          </v-list-item-subtitle>
-          <v-list-item-subtitle v-else>
-            En attente de publication
-          </v-list-item-subtitle>
+          <v-list-item-subtitle v-else-if="publication.status==='deleted'" v-t="'waitingDeletion'" />
+          <v-list-item-subtitle v-else v-t="'waitingPublication'" />
         </v-list-item-content>
-        <v-list-item-content v-else>
-          Cette publication référence une configuration de catalogue inconnue ({{ publication.catalog }}).
-        </v-list-item-content>
+        <v-list-item-content v-else v-t="{path: 'unknownCatalog', args: {catalog: publication.catalog}}" />
         <v-list-item-action>
           <v-row>
             <v-btn
               v-if="can('writeDescription') && ['error', 'published'].includes(publication.status)"
               color="warning"
               icon
-              title="Re-publier"
+              :title="$t('republish')"
               class="mr-4"
               @click="rePublishInd = i; showRepublishDialog = true;"
             >
@@ -65,7 +56,7 @@
               v-if="can('writeDescription')"
               color="warning"
               icon
-              title="Supprimer cette publication"
+              :title="$t('deletePublication')"
               @click="deletePublicationInd = i; showDeleteDialog = true;"
             >
               <v-icon>mdi-delete</v-icon>
@@ -80,9 +71,7 @@
       max-width="700px"
     >
       <v-card outlined>
-        <v-card-title primary-title>
-          Ajout d'une nouvelle publication
-        </v-card-title>
+        <v-card-title v-t="'addPublication'" primary-title />
         <v-card-text v-if="catalogs">
           <v-form v-model="newPublicationValid">
             <v-select
@@ -91,7 +80,7 @@
               :item-text="catalogLabel"
               :rules="[() => !!newPublication.catalog]"
               item-value="id"
-              label="Catalogue"
+              :label="$t('catalog')"
               required
             />
           </v-form>
@@ -99,16 +88,17 @@
 
         <v-card-actions>
           <v-spacer />
-          <v-btn text @click="addPublicationDialog = false">
-            Annuler
-          </v-btn>
           <v-btn
+            v-t="'cancel'"
+            text
+            @click="addPublicationDialog = false"
+          />
+          <v-btn
+            v-t="'add'"
             :disabled="!newPublicationValid"
             color="primary"
             @click="addPublicationDialog = false; addPublication(newPublication)"
-          >
-            Ajouter
-          </v-btn>
+          />
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -118,57 +108,86 @@
       max-width="500"
     >
       <v-card v-if="showDeleteDialog" outlined>
-        <v-card-title primary-title>
-          Suppression d'une publication
-        </v-card-title>
-        <v-card-text>
-          Voulez vous vraiment supprimer la publication ? La suppression est définitive et les données ne pourront pas être récupérées.
-          <br>
-          <br>
-          <b>Attention</b> les données seront également supprimées dans le catalogue destinataire de la publication.
-        </v-card-text>
+        <v-card-title v-t="'deletePublication'" primary-title />
+        <v-card-text v-html="$t('deletionMessage')" />
         <v-card-actions>
           <v-spacer />
-          <v-btn text @click="showDeleteDialog = false">
-            Non
-          </v-btn>
           <v-btn
+            v-t="'no'"
+            text
+            @click="showDeleteDialog = false"
+          />
+          <v-btn
+            v-t="'yes'"
             color="warning"
             @click="showDeleteDialog = false; deletePublication(deletePublicationInd)"
-          >
-            Oui
-          </v-btn>
+          />
         </v-card-actions>
       </v-card>
     </v-dialog>
 
     <v-dialog v-model="showRepublishDialog" max-width="500">
       <v-card v-if="showRepublishDialog" outlined>
-        <v-card-title primary-title>
-          Re-publication
-        </v-card-title>
-        <v-card-text>
-          Voulez vous vraiment effectuer de nouveau la publication ?
-          <br>
-          <br>
-          <b>Attention</b> si vous avez effectué des modifications sur le catalogue depuis la dernière publication elles seront perdues.
-        </v-card-text>
+        <v-card-title v-t="'republish'" primary-title />
+        <v-card-text v-html="$t('republishMessage')" />
         <v-card-actions>
           <v-spacer />
-          <v-btn text @click="showRepublishDialog = false">
-            Non
-          </v-btn>
           <v-btn
+            v-t="'no'"
+            text
+            @click="showRepublishDialog = false"
+          />
+          <v-btn
+            v-t="'yes'"
             color="warning"
             @click="showRepublishDialog = false; rePublish(rePublishInd)"
-          >
-            Oui
-          </v-btn>
+          />
         </v-card-actions>
       </v-card>
     </v-dialog>
   </v-container>
 </template>
+
+<i18n lang="yaml">
+fr:
+  message: Publiez cette visualisation sur un ou plusieurs catalogues Open Data. Cette publication rendra vos données plus faciles à trouver et permettra à la communauté Open Data d'échanger avec vous.
+  noPublication: Il n'existe pas encore de publication de cette visualisation sur un catalogue.
+  publish: Publier sur un catalogue
+  appPublication: Visualisation publiée sur le catalogue "{catalog}"
+  waitingDeletion: En attente de suppression
+  waitingPublication: En attente de publication
+  unknownCatalog: Cette publication référence une configuration de catalogue inconnue ({catalog}).
+  republish: Re-publier
+  republishMessage: Voulez vous vraiment effectuer de nouveau la publication ?<br><br><b>Attention</b> si vous avez effectué des modifications sur le catalogue depuis la dernière publication elles seront perdues.
+  addPublication: Ajout d'une nouvelle publication
+  deletePublication: Supprimer cette publication
+  deletionMessage: Voulez vous vraiment supprimer la publication ? La suppression est définitive et les données ne pourront pas être récupérées.<br><br><b>Attention</b> les données seront également supprimées dans le catalogue destinataire de la publication.
+  catalog: Catalogue
+  search: Rechercher
+  cancel: Annuler
+  add: Ajouter
+  no: Non
+  yes: Oui
+en:
+  message: Publish this dataset onto one or more Open Data catalogs. This publication will make your data easier to find et will allow the Open Data community to interact with you.
+  noPublication: There are no publication of this visualization on a catalog yet.
+  publish: Publish on a catalog
+  appPublication: Visualization published on the catalog "{catalog}"
+  waitingDeletion: Waiting for deletion
+  waitingPublication: Waiting for publication
+  unknownCatalog: This publication references an unknown configuration of catalog ({catalog})
+  republish: Re-publish
+  republishMessage: Do you really want to re-publish ?<br><br><b>Warning</b> if you mage changes in the catalog since the last publication they will be lost.
+  addPublication: Add a publication
+  deletePublication: Delete this publication
+  deletionMessage: Do you really want to delete the publication ? The deletion is definitive and the data will not be recoverable.<br><br><b>Warning</b> the data will also be delete in the catalog target of the publication.
+  catalog: Catalog
+  search: Search
+  cancel: Cancel
+  add: Add
+  no: No
+  yes: Yes
+</i18n>
 
 <script>
   import { mapState, mapGetters, mapActions } from 'vuex'

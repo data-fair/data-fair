@@ -35,9 +35,11 @@
                     :color="$vuetify.theme.themes.light.primary"
                   />
                 </div>
-                <div v-else class="text-h6">
-                  Aucun résultat ne correspond aux critères de recherche
-                </div>
+                <div
+                  v-else
+                  v-t="'noMatch'"
+                  class="text-h6"
+                />
               </v-col>
             </v-row>
           </v-container>
@@ -56,7 +58,7 @@
                 mdi-plus-circle
               </v-icon>
             </v-list-item-icon>
-            <v-list-item-title>Configurer un catalogue</v-list-item-title>
+            <v-list-item-title v-t="'configureCatalog'" />
           </v-list-item>
         </v-list>
         <template v-if="catalogs">
@@ -80,7 +82,7 @@
           color="primary"
           fab
           small
-          title="Configurer un catalogue"
+          :title="$t('configureCatalog')"
           @click="importCatalogSheet = true"
         >
           <v-icon>mdi-plus</v-icon>
@@ -99,6 +101,15 @@
     </v-col>
   </v-row>
 </template>
+
+<i18n lang="yaml">
+fr:
+  noMatch: Aucun résultat ne correspond aux critères de recherche
+  configureCatalog: Configurer un catalogue
+en:
+  noMatch: No result matches your search
+  configureCatalog: Configure a catalog
+</i18n>
 
 <script>
   const { mapState, mapGetters } = require('vuex')

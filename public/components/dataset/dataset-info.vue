@@ -14,51 +14,49 @@
             <v-list-item-avatar class="ml-0 my-0">
               <v-icon>mdi-file</v-icon>
             </v-list-item-avatar>
-            <span>{{ (dataset.remoteFile || dataset.originalFile || dataset.file).name }} {{ ((dataset.remoteFile || dataset.originalFile || dataset.file).size) | displayBytes }}</span>
+            <span>{{ (dataset.remoteFile || dataset.originalFile || dataset.file).name }} {{ ((dataset.remoteFile || dataset.originalFile || dataset.file).size) | displayBytes($i18n.locale) }}</span>
           </v-list-item>
 
-          <v-list-item title="dernière mise à jour des métadonnées">
+          <v-list-item :title="$t('updatedAt')">
             <v-list-item-avatar class="ml-0 my-0">
               <v-icon>mdi-pencil</v-icon>
             </v-list-item-avatar>
-            <span>{{ dataset.updatedBy.name }} {{ dataset.updatedAt | moment("DD/MM/YYYY, HH:mm") }}</span>
+            <span>{{ dataset.updatedBy.name }} {{ dataset.updatedAt | moment("lll") }}</span>
           </v-list-item>
 
-          <v-list-item v-if="dataset.dataUpdatedAt" title="dernière mise à jour des données">
+          <v-list-item v-if="dataset.dataUpdatedAt" :title="$t('dataUpdatedAt')">
             <v-list-item-avatar class="ml-0 my-0">
               <v-icon>{{ dataset.isRest ? 'mdi-playlist-edit' : 'mdi-upload' }}</v-icon>
             </v-list-item-avatar>
-            <span>{{ dataset.dataUpdatedBy.name }} {{ dataset.dataUpdatedAt | moment("DD/MM/YYYY, HH:mm") }}</span>
+            <span>{{ dataset.dataUpdatedBy.name }} {{ dataset.dataUpdatedAt | moment("lll") }}</span>
           </v-list-item>
 
           <v-list-item title="création">
             <v-list-item-avatar class="ml-0 my-0">
               <v-icon>mdi-plus-circle-outline</v-icon>
             </v-list-item-avatar>
-            <span>{{ dataset.createdBy.name }} {{ dataset.createdAt | moment("DD/MM/YYYY, HH:mm") }}</span>
+            <span>{{ dataset.createdBy.name }} {{ dataset.createdAt | moment("lll") }}</span>
           </v-list-item>
 
           <v-list-item v-if="dataset.count !== undefined">
             <v-list-item-avatar class="ml-0 my-0">
               <v-icon>mdi-view-headline</v-icon>
             </v-list-item-avatar>
-            <span>{{ dataset.count.toLocaleString() }} lignes</span>
+            <span v-text="$tc('lines', dataset.count)" />
           </v-list-item>
 
           <v-list-item v-if="nbVirtualDatasets">
             <v-list-item-avatar class="ml-0 my-0">
               <v-icon>mdi-picture-in-picture-bottom-right-outline</v-icon>
             </v-list-item-avatar>
-            <nuxt-link :to="`/datasets?children=${dataset.id}`">
-              {{ nbVirtualDatasets }} jeu{{ nbVirtualDatasets > 1 ? 'x' : '' }} de données virtuel{{ nbVirtualDatasets > 1 ? 's' : '' }}
-            </nuxt-link>
+            <nuxt-link :to="`/datasets?children=${dataset.id}`" v-text="$tc('virtualDatasets', nbVirtualDatasets)" />
           </v-list-item>
 
           <v-list-item v-if="dataset.isRest">
             <v-list-item-avatar class="ml-0 my-0">
               <v-icon>mdi-all-inclusive</v-icon>
             </v-list-item-avatar>
-            <span>Jeu de données incrémental</span>
+            <span v-t="'restDataset'" />
           </v-list-item>
           <v-list-item v-if="dataset.isRest">
             <v-list-item-avatar class="ml-0 my-0">
@@ -66,8 +64,8 @@
                 mdi-delete-restore
               </v-icon>
             </v-list-item-avatar>
-            <span v-if="dataset.rest.ttl.active">Supprimer automatiquement les lignes dont la colonne {{ dataset.rest.ttl.prop }} contient une date dépassée de {{ dataset.rest.ttl.delay.value.toLocaleString() }} jours.</span>
-            <span v-else>pas de politique d'expiration automatique configurée</span>
+            <span v-if="dataset.rest.ttl.active" v-t="{path: 'ttl', args: {col: dataset.rest.ttl.prop, days: dataset.rest.ttl.delay.value}}" />
+            <span v-else v-t="'noTTL'" />
             <dataset-edit-ttl
               v-if="can('writeDescription')"
               :ttl="dataset.rest.ttl"
@@ -84,7 +82,7 @@
         :disabled="!can('writeDescription')"
         item-text="title"
         item-key="href"
-        label="Licence"
+        :label="$t('licence')"
         return-object
         hide-details
         class="mb-3"
@@ -97,7 +95,7 @@
         :disabled="!can('writeDescription')"
         item-text="title"
         item-key="id"
-        label="Thématiques"
+        :label="$t('topics')"
         multiple
         return-object
         hide-details
@@ -111,7 +109,7 @@
         :disabled="!can('writeDescription')"
         item-text="title"
         item-key="code"
-        label="Projection cartographique"
+        :label="$t('projection')"
         return-object
         hide-details
         class="mb-3"
@@ -120,7 +118,7 @@
       <v-text-field
         v-model="dataset.origin"
         :disabled="!can('writeDescription')"
-        label="Provenance"
+        :label="$t('origin')"
         hide-details
         class="mb-3"
         @change="patch({origin: dataset.origin})"
@@ -128,7 +126,7 @@
       <v-text-field
         v-model="dataset.image"
         :disabled="!can('writeDescription')"
-        label="Adresse d'une image utilisée comme vignette"
+        :label="$t('image')"
         hide-details
         class="mb-3"
         @change="patch({image: dataset.image})"
@@ -143,29 +141,61 @@
       <v-text-field
         v-model="dataset.title"
         :disabled="!can('writeDescription')"
-        label="Titre"
+        :label="$t('title')"
         @change="patch({title: dataset.title})"
       />
       <markdown-editor
         v-model="dataset.description"
         :disabled="!can('writeDescription')"
-        label="Description"
+        :label="$t('description')"
         @change="patch({description: dataset.description})"
       />
     </v-col>
   </v-row>
 </template>
 
+<i18n lang="yaml">
+fr:
+  updatedAt: dernière mise à jour des métadonnées
+  dataUpdatedAt: dernière mise à jour des données
+  lines: aucune ligne | 1 ligne | {count} lignes
+  virtualDatasets: pas de jeu de données virtual | 1 jeu de données virtuel | {count} jeux de données virtuels
+  restDataset: Jeu de données incrémental
+  ttl: Supprimer automatiquement les lignes dont la colonne {col} contient une date dépassée de {days} jours.
+  noTTL: pas de politique d'expiration automatique configurée
+  licence: Licence
+  topics: Thématiques
+  projection: Projection cartographique
+  origin: Provenance
+  image: Adresse d'une image utilisée comme vignette
+  title: Titre
+  description: Description
+en:
+  updatedAt: last update of metadata
+  dataUpdatedAt: last update of data
+  lines: no line | 1 line | {count} lines
+  virtualDatasets: no virtual dataset | 1 virtual dataset | {count} virtual datasets
+  restDataset: Incremental dataset
+  ttl: Automatically delete lines whose column {col} contains a date exceeded by {days} days.
+  noTTL: no automatic expiration configured
+  licence: License
+  topics: Topics
+  projection: Map projection
+  origin: Origin
+  image: URL of an image used as thumbnail
+  title: Title
+  description: Description
+</i18n>
+
 <script>
   const { mapState, mapActions, mapGetters } = require('vuex')
-  const events = require('~/../shared/events.json').dataset
 
   const coordXUri = 'http://data.ign.fr/def/geometrie#coordX'
   const coordYUri = 'http://data.ign.fr/def/geometrie#coordY'
 
   export default {
     data() {
-      return { events, error: null }
+      return { error: null }
     },
     computed: {
       ...mapState(['projections']),

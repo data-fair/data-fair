@@ -7,7 +7,7 @@
     >
       Ajouter une clé d'API
     </v-btn>
-    <v-container class="pa-0">
+    <v-container class="pt-0 px-0">
       <v-row>
         <v-col
           v-for="(apiKey, rowIndex) in settings.apiKeys"
@@ -188,12 +188,10 @@
 <script>
 
   import { mapState } from 'vuex'
-  const events = require('~/../shared/events.json').dataset
 
   export default {
     props: ['settings'],
     data: () => ({
-      events,
       newApiKey: {
         title: null,
         scopes: [],

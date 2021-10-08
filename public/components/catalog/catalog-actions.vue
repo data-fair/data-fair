@@ -13,7 +13,7 @@
           mdi-delete
         </v-icon>
       </v-list-item-icon>
-      <v-list-item-title>Supprimer</v-list-item-title>
+      <v-list-item-title v-t="'delete'" />
     </v-list-item>
 
     <v-list-item
@@ -25,7 +25,7 @@
           mdi-account
         </v-icon>
       </v-list-item-icon>
-      <v-list-item-title>Changer de propriétaire</v-list-item-title>
+      <v-list-item-title v-t="'changeOwner'" />
     </v-list-item>
 
     <v-dialog
@@ -33,36 +33,28 @@
       max-width="500"
     >
       <v-card outlined>
-        <v-card-title primary-title>
-          Suppression de la configuration du catalogue
-        </v-card-title>
+        <v-card-title v-t="'deleteTitle'" primary-title />
         <v-card-text v-if="nbPublications > 0">
-          <v-alert
-            :value="nbPublications === 1"
-            type="error"
-            outlined
-          >
-            Attention ! Ce catalogue est référencé dans un lien de publication. Si vous le supprimez ce lien sera invalide.
-          </v-alert>
           <v-alert
             :value="nbPublications > 1"
             type="error"
             outlined
-          >
-            Attention ! Ce catalogue est référencé dans ${nbPublications} liens de publication. Si vous le supprimez ces liens seront invalides.
-          </v-alert>
+            v-text="$tc('deleteWarning', nbPublications)"
+          />
         </v-card-text>
-        <v-card-text>
-          Voulez vous vraiment supprimer la configuration du catalogue "{{ catalog.title }}" ? La suppression est définitive et le paramétrage ne pourra pas être récupéré.
-        </v-card-text>
+        <v-card-text v-t="{path: 'deleteConfirm', args: {title: catalog.title}}" />
         <v-card-actions>
           <v-spacer />
-          <v-btn text @click="showDeleteDialog = false">
-            Non
-          </v-btn>
-          <v-btn color="warning" @click="confirmRemove">
-            Oui
-          </v-btn>
+          <v-btn
+            v-t="'no'"
+            text
+            @click="showDeleteDialog = false"
+          />
+          <v-btn
+            v-t="'yes'"
+            color="warning"
+            @click="confirmRemove"
+          />
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -73,29 +65,53 @@
       outlined
     >
       <v-card>
-        <v-card-title primary-title>
-          Changer le propriétaire du catalogue
-        </v-card-title>
+        <v-card-title v-t="'changeOwnerTitle'" primary-title />
         <v-card-text>
           <owner-pick v-model="newOwner" />
         </v-card-text>
         <v-card-actions>
           <v-spacer />
-          <v-btn text @click="showOwnerDialog = false">
-            Annuler
-          </v-btn>
           <v-btn
+            v-t="'cancel'"
+            text
+            @click="showOwnerDialog = false"
+          />
+          <v-btn
+            v-t="'confirm'"
             :disabled="!newOwner"
             color="warning"
             @click="changeOwner(newOwner); showOwnerDialog = false;"
-          >
-            Confirmer
-          </v-btn>
+          />
         </v-card-actions>
       </v-card>
     </v-dialog>
   </v-list>
 </template>
+
+<i18n lang="yaml">
+fr:
+  delete: Supprimer
+  changeOwner: Changer de propriétaire
+  changeOwnerTitle: Changer le propriétaire du catalogue
+  cancel: Annuler
+  confirm: Confirmer
+  deleteTitle: Suppression de la configuration du catalogue
+  deleteWarning: " | Attention ! Ce catalogue est référencé dans 1 lien de publication. Si vous le supprimez ce lien sera invalide. | Attention ! Ce catalogue est référencé dans {count} liens de publication. Si vous le supprimez ces liens seront invalides."
+  deleteConfirm: Voulez vous vraiment supprimer la configuration du catalogue "{title}" ? La suppression est définitive et le paramétrage ne pourra pas être récupéré.
+  no: Non
+  yes: Oui
+en:
+  delete: Delete
+  changeOwner: Change owner
+  changeOwnerTitle: Change the owner of the catalog
+  cancel: Cancel
+  confirm: Confirm
+  deleteTitle: Delete the catalog's configuraiton
+  deleteWarning: " | Warning ! This catalog is referenced in 1 publication link. If you delete it the link will be broken. | Warning ! This catalog is referenced in {count} publication links. If you delete it the links will be broken."
+  deleteConfirm: Do you really want to delete the catalog configuration "{title}" ? Deletion is definitive and the configuration will not be recoverable.
+  no: No
+  yes: Yes
+</i18n>
 
 <script>
   import { mapState, mapActions, mapGetters } from 'vuex'

@@ -56,7 +56,6 @@ ADD nodemon.json .
 # Adding UI files
 ADD public public
 ADD nuxt.config.js .
-ADD i18n i18n
 ADD config config
 ADD shared shared
 ADD contract contract

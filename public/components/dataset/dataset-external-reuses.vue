@@ -11,16 +11,15 @@
         >
           <template v-slot:activator="{on}">
             <v-btn
+              v-t="'addReuse'"
               color="primary"
               v-on="on"
-            >
-              Ajouter une réutilisation
-            </v-btn>
+            />
           </template>
 
           <v-card outlined>
             <v-toolbar dense flat>
-              <v-toolbar-title>Nouvelle réutilisation externe</v-toolbar-title>
+              <v-toolbar-title v-t="newReuse" />
             </v-toolbar>
             <v-card-text>
               <dataset-external-reuse-form :reuse="newReuse" />
@@ -29,22 +28,21 @@
             <v-divider />
             <v-card-actions>
               <v-spacer />
-              <v-btn text @click.native="dialog = false">
-                Annuler
-              </v-btn>
               <v-btn
+                v-t="'cancel'"
+                text
+                @click.native="dialog = false"
+              />
+              <v-btn
+                v-t="'add'"
                 :disabled="!newReuse.title || !newReuse.link"
                 color="primary"
                 @click.native="addReuse()"
-              >
-                Ajouter
-              </v-btn>
+              />
             </v-card-actions>
           </v-card>
         </v-dialog>
-        <p v-else-if="!(dataset.extras && dataset.extras.externalReuses && dataset.extras.externalReuses.length)">
-          Aucune réutilisation externe déclarée pour l'instant.
-        </p>
+        <p v-else-if="!(dataset.extras && dataset.extras.externalReuses && dataset.extras.externalReuses.length)" v-t="'noReuse'" />
       </v-col>
     </v-row>
     <v-list v-if="dataset.extras && dataset.extras.externalReuses && dataset.extras.externalReuses.length">
@@ -84,7 +82,7 @@
 
               <v-card outlined>
                 <v-toolbar dense flat>
-                  <v-toolbar-title>Editer la réutilisation externe</v-toolbar-title>
+                  <v-toolbar-title v-t="'editReuse'" />
                 </v-toolbar>
                 <v-card-text>
                   <dataset-external-reuse-form :reuse="reuse" />
@@ -93,24 +91,25 @@
                 <v-divider />
                 <v-card-actions>
                   <v-spacer />
-                  <v-btn text @click.native="editDialog[i] = false">
-                    Annuler
-                  </v-btn>
                   <v-btn
+                    v-t="'cancel'"
+                    text
+                    @click.native="editDialog[i] = false"
+                  />
+                  <v-btn
+                    v-t="'save'"
                     :disabled="!reuse.title || !reuse.link"
                     color="primary"
                     @click.native="editReuse(i)"
-                  >
-                    Enregistrer
-                  </v-btn>
+                  />
                 </v-card-actions>
               </v-card>
             </v-dialog>
             <v-spacer />
             <confirm-menu
               yes-color="warning"
-              text="Souhaitez-vous confirmer la suppression ?"
-              tooltip="Supprimer la réutilisation"
+              :text="$t('confirmDeleteText')"
+              :tooltip="$t('confirmDeleteTooltip')"
               @confirm="removeReuse(i)"
             />
           </v-row>
@@ -119,6 +118,29 @@
     </v-list>
   </v-container>
 </template>
+
+<i18n lang="yaml">
+fr:
+  addReuse: Ajouter une réutilisation
+  newReuse: Nouvelle réutilisation externe
+  cancel: Annuler
+  add: Ajouter
+  noReuse: Aucune réutilisation externe déclarée pour l'instant.
+  editReuse: Editer la réutilisation externe
+  save: Enregistrer
+  confirmDeleteTooltip: Supprimer la réutilisation
+  confirmDeleteText: Souhaitez-vous confirmer la suppression ?
+en:
+  addReuse: Add a reuse
+  newReuse: New external reuse
+  cancel: Cancel
+  add: Add
+  noReuse: No external reuse has been declared yet.
+  editReuse: Edit the external reuse
+  save: Save
+  confirmDeleteTooltip: Delete the reuse
+  confirmDeleteText: Do you want to confirm the deletion ?
+</i18n>
 
 <script>
 

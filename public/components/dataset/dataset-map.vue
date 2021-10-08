@@ -7,7 +7,7 @@
       solo
       dense
       style="position: absolute;z-index:2;max-width:400px;"
-      label="Rechercher"
+      :label="$t('search')"
       append-icon="mdi-magnify"
       hide-details
       single-line
@@ -17,6 +17,19 @@
     <div id="map" :style="'height:' + mapHeight + 'px'" />
   </v-card>
 </template>
+
+<i18n lang="yaml">
+fr:
+  search: Rechercher
+  noSession: Pas de session active. Cette erreur peut subvenir si vous utilisez une extension qui bloque les cookies. Les cookies de session sont utilisés par ce service pour protéger notre infrastructure contre les abus.
+  noGeoData: Aucune donnée géographique valide.
+  mapError: "Erreur pendant le rendu de la carte :"
+en:
+  search: Search
+  noSession: No active session. This error can happen if you use an extension that blocks cookies. Session cookies are used by this service to protect the infrastructure from abuse.
+  noGeoData: No valid geo data
+  mapError: "Error while rendering the map:"
+</i18n>
 
 <script>
   import { mapState, mapGetters } from 'vuex'
@@ -126,12 +139,8 @@
             // eventBus.$emit('notification', { error: `Échec d'accès aux tuiles ${error.sourceId}`, msg: 'Erreur pendant le rendu de la carte:' })
           } else if (error.error && error.error.status === 401) {
             eventBus.$emit('notification', {
-              error: `
-      Pas de session active. Cette erreur peut subvenir si vous utilisez une extension qui bloque les cookies.
-
-      Les cookies de session sont utilisés par cette application pour protéger notre infrastructure contre les abus.
-      `,
-              msg: 'Erreur pendant le rendu de la carte:',
+              error: this.$t('noSession'),
+              msg: this.$t('mapError'),
             })
           } else {
             // eventBus.$emit('notification', { error: (error.error && error.error.message) || error, msg: 'Erreur pendant le rendu de la carte:' })
@@ -139,7 +148,7 @@
         })
         const bbox = await this.getBBox()
         if (!bbox) {
-          throw new Error('Aucune donnée géographique valide.')
+          throw new Error(this.$t('noGeoData'))
         }
         this.map.fitBounds(bbox, { duration: 0 })
         this.map.addControl(new mapboxgl.NavigationControl(), 'top-right')

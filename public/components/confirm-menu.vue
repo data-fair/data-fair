@@ -20,16 +20,29 @@
       </v-card-text>
       <v-card-actions>
         <v-spacer />
-        <v-btn text @click="menu = false">
-          Non
-        </v-btn>
-        <v-btn :color="yesColor" @click="$emit('confirm')">
-          Oui
-        </v-btn>
+        <v-btn
+          v-t="'no'"
+          text
+          @click="menu = false"
+        />
+        <v-btn
+          v-t="'yes'"
+          :color="yesColor"
+          @click="$emit('confirm')"
+        />
       </v-card-actions>
     </v-card>
   </v-menu>
 </template>
+
+<i18n lang="yaml">
+fr:
+  yes: Oui
+  no: Non
+en:
+  yes: Yes
+  no: No
+</i18n>
 
 <script>
   export default {

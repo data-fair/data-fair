@@ -2,28 +2,23 @@
   <v-stepper v-model="currentStep">
     <v-stepper-header>
       <v-stepper-step
+        v-t="selectApplication"
         :complete="!!baseApp"
         step="1"
         :editable="!!baseApp"
-      >
-        Sélection de l'application
-      </v-stepper-step>
+      />
       <v-divider />
       <v-stepper-step
+        v-t="'info'"
         :complete="!!title"
         step="2"
         :editable="!!baseApp"
-      >
-        Informations
-      </v-stepper-step>
+      />
     </v-stepper-header>
 
     <v-stepper-items>
       <v-stepper-content step="1">
-        <p>
-          Nous réalisons aussi des <span class="accent--text">applications personnalisées</span> sur demande.
-          N'hésitez pas à <a href="https://koumoul.com/contact" class="">Nous contacter</a> !
-        </p>
+        <p v-html="$t('customApp')" />
         <application-base-apps
           v-if="dataset || !this.$route.query.dataset"
           v-model="baseApp"
@@ -45,26 +40,43 @@
           v-model="title"
           style="max-width: 500px;"
           name="title"
-          label="Titre"
+          :label="$t('title')"
         />
         <v-btn
+          v-t="'save'"
           :disabled="!title"
           color="primary"
           @click.native="createApplication()"
-        >
-          Enregistrer
-        </v-btn>
+        />
         <v-btn
+          v-t="'back'"
           text
           class="ml-2"
           @click.native="currentStep = 2"
-        >
-          Retour
-        </v-btn>
+        />
       </v-stepper-content>
     </v-stepper-items>
   </v-stepper>
 </template>
+
+<i18n lang="yaml">
+fr:
+  selectApplication: Sélection de l'application
+  info: Informations
+  customApp: Koumoul réalise aussi des <span class="accent--text">applications personnalisées</span> sur demande. N'hésitez pas à <a href="https://koumoul.com/contact" class="">nous contacter</a> !
+  title: Titre
+  save: Enregistrer
+  back: Retour
+  creationError: Erreur pendant la création de la visualisation
+en:
+  selectApplication: Application selection
+  info: Informations
+  customApp: Koumoul also creates <span class="accent--text">custom applications</span> on demand. Do not hesitate <a href="https://koumoul.com/contact" class="">contacting us</a> !
+  title: Title
+  save: Save
+  back: Back
+  creationError: Error while creating the visualization
+</i18n>
 
 <script>
   import { mapState, mapGetters } from 'vuex'
@@ -147,7 +159,7 @@
           })
           this.$router.push({ path: `/application/${application.id}` })
         } catch (error) {
-          eventBus.$emit('notification', { error, msg: 'Erreur pendant la création de la visualisation' })
+          eventBus.$emit('notification', { error, msg: this.$t('creationError') })
           this.importing = false
         }
       },

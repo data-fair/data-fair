@@ -7,9 +7,7 @@
     />
     <v-row v-if="datasets && !loading">
       <v-col>
-        <h3 class="text-h4 mb-4">
-          {{ datasets.count }} {{ datasets.count > 1 ? 'jeux de données' : 'jeu de données' }} dans le catalogue
-        </h3>
+        <h3 class="text-h4 mb-4" v-text="$tc('datasetsCount', datasets.count)" />
         <v-card>
           <v-list three-line>
             <v-list-item
@@ -28,10 +26,9 @@
                   >{{ dataset.title }}</a>
                 </v-list-item-title>
                 <v-list-item-subtitle>
-                  Ressources :
-                  {{ dataset.resources.length }} dans le catalogue |
-                  {{ dataset.nbHarvestable }} {{ dataset.nbHarvestable > 1 ? 'importables' : 'importable' }} |
-                  {{ dataset.nbHarvested }} {{ dataset.nbHarvested > 1 ? 'déjà importées' : 'déjà importée' }}
+                  {{ $tc('resources', dataset.resources.length) }} |
+                  {{ $tc('harvestable', dataset.nbHarvestable) }} |
+                  {{ $tc('harvested', dataset.nbHarvested) }}
                 </v-list-item-subtitle>
               </v-list-item-content>
 
@@ -42,7 +39,7 @@
                   class="mr-3"
                   icon
                   ripple
-                  title="Importer les ressources comme jeux de données indexés"
+                  :title="$t('harvest')"
                   @click="harvest(dataset)"
                 >
                   <v-icon>file_download</v-icon>
@@ -55,6 +52,25 @@
     </v-row>
   </v-container>
 </template>
+
+<i18n lang="yaml">
+fr:
+  datasetsCount: " | 1 jeu de données dans le catalogue | {count} jeux de données dans le catalogue"
+  resources: " | 1 ressource dans le catalogue | {count} ressources dans le catalogue"
+  harvestable: "aucune importable | 1 importable | {count} importables"
+  harvested: "aucune déjà importée | 1 déjà importée | {count} déjà importée"
+  harvest: Importer les ressources comme jeux de données locaux
+  fetchError: Erreur pendant la récupération des jeux de données du catalogue
+  importError: Erreur pendant l'import du jeu de données
+en:
+  datasetsCount: " | 1 dataset in the catalog | {count} datasets in the catalog"
+  resources: " | 1 resource in the catalog | {count} resources in the catalog"
+  harvestable: "none harvestable | 1 harvestable | {count} harvestable"
+  harvested: "none harvested | 1 harvested | {count} harvested"
+  harvest: Import the resources as local datasets
+  fetchError: Error while fetching datasets from the catalog
+  importError: Error while importing the dataset
+</i18n>
 
 <script>
   import eventBus from '~/event-bus'
@@ -81,7 +97,7 @@
             d.nbHarvested = (d.resources || []).filter(r => !!r.harvestedDataset).length
           })
         } catch (error) {
-          eventBus.$emit('notification', { error, msg: 'Erreur pendant la récupération des jeux de données du catalogue' })
+          eventBus.$emit('notification', { error, msg: this.$t('fetchError') })
         }
         this.loading = false
       },
@@ -91,7 +107,7 @@
           await this.$axios.$post('api/v1/catalogs/' + this.$route.params.id + '/datasets/' + dataset.id)
           await this.refresh()
         } catch (error) {
-          eventBus.$emit('notification', { error, msg: 'Erreur pendant l\'import du jeu de données' })
+          eventBus.$emit('notification', { error, msg: this.$t('importError') })
           this.loading = false
         }
       },

@@ -4,9 +4,7 @@
     dense
     class="list-actions"
   >
-    <v-subheader v-if="dataFiles && dataFiles.length">
-      TÉLÉCHARGEMENTS
-    </v-subheader>
+    <v-subheader v-if="dataFiles && dataFiles.length" v-t="'downloads'" />
     <v-list-item
       v-for="dataFile in (dataFiles || [])"
       :key="dataFile.key"
@@ -23,9 +21,7 @@
         <v-list-item-title>{{ dataFile.title }}</v-list-item-title>
       </v-list-item-content>
     </v-list-item>
-    <v-subheader>
-      ACTIONS
-    </v-subheader>
+    <v-subheader v-t="'actions'" />
     <v-list-item
       v-if="can('writeData') && !dataset.isRest && !dataset.isVirtual"
       @click="showUploadDialog = true"
@@ -36,7 +32,7 @@
         </v-icon>
       </v-list-item-icon>
       <v-list-item-content>
-        <v-list-item-title>Mettre à jour</v-list-item-title>
+        <v-list-item-title v-t="'update'" />
       </v-list-item-content>
     </v-list-item>
     <v-list-item
@@ -49,7 +45,7 @@
         </v-icon>
       </v-list-item-icon>
       <v-list-item-content>
-        <v-list-item-title>Intégrer dans un site</v-list-item-title>
+        <v-list-item-title v-t="'integrate'" />
       </v-list-item-content>
     </v-list-item>
     <template v-if="!error">
@@ -65,7 +61,7 @@
           </v-icon>
         </v-list-item-icon>
         <v-list-item-content>
-          <v-list-item-title>Voir sur {{ link.title }}</v-list-item-title>
+          <v-list-item-title v-t="{path: 'viewSite', args: {title: link.title}}" />
         </v-list-item-content>
       </v-list-item>
     </template>
@@ -79,7 +75,7 @@
         </v-icon>
       </v-list-item-icon>
       <v-list-item-content>
-        <v-list-item-title>Utiliser l'API</v-list-item-title>
+        <v-list-item-title v-t="'useAPI'" />
       </v-list-item-content>
     </v-list-item>
     <v-list-item v-if="can('delete')" @click="showDeleteDialog = true">
@@ -89,7 +85,7 @@
         </v-icon>
       </v-list-item-icon>
       <v-list-item-content>
-        <v-list-item-title>Supprimer</v-list-item-title>
+        <v-list-item-title v-t="'delete'" />
       </v-list-item-content>
     </v-list-item>
     <v-list-item v-if="dataset.isRest && can('deleteLine')" @click="showDeleteAllLinesDialog = true">
@@ -99,7 +95,7 @@
         </v-icon>
       </v-list-item-icon>
       <v-list-item-content>
-        <v-list-item-title>Supprimer toutes les lignes</v-list-item-title>
+        <v-list-item-title v-t="'deleteAllLines'" />
       </v-list-item-content>
     </v-list-item>
     <v-list-item v-if="can('delete')" @click="showOwnerDialog = true">
@@ -109,7 +105,7 @@
         </v-icon>
       </v-list-item-icon>
       <v-list-item-content>
-        <v-list-item-title>Changer le propriétaire</v-list-item-title>
+        <v-list-item-title v-t="'changeOwner'" />
       </v-list-item-content>
     </v-list-item>
 
@@ -119,7 +115,7 @@
           dense
           flat
         >
-          <v-toolbar-title>Intégrer dans un site</v-toolbar-title>
+          <v-toolbar-title v-t="'integrate'" />
           <v-spacer />
           <v-btn
             icon
@@ -129,13 +125,13 @@
           </v-btn>
         </v-toolbar>
         <v-card-text v-if="showIntegrationDialog" class="pb-0 px-4">
-          Pour intégrer une prévisualisation de ce jeu de données dans un site vous pouvez copier le code suivant ou un code similaire dans le code source HTML.
+          {{ $t('integrationMsg') }}
           <br>
           <v-select
             v-if="dataset.previews && dataset.previews.length > 1"
             v-model="previewId"
             :items="dataset.previews"
-            label="Type de prévisualisation"
+            :label="$t('previewType')"
             item-text="title"
             item-value="id"
             style="max-width: 200px;"
@@ -189,39 +185,28 @@
       max-width="500"
     >
       <v-card outlined>
-        <v-card-title primary-title>
-          Suppression du jeu de données
-        </v-card-title>
+        <v-card-title v-t="'deleteDataset'" primary-title />
         <v-card-text v-if="nbApplications > 0">
           <v-alert
-            :value="nbApplications === 1"
+            :value="true"
             type="error"
             outlined
-          >
-            Attention ! Ce jeu de données est utilisé par une visualisation. Si vous le supprimez cette visualisation ne sera plus fonctionnelle.
-          </v-alert>
-          <v-alert
-            :value="nbApplications > 1"
-            type="error"
-            outlined
-          >
-            Attention ! Ce jeu de données est utilisé par {{ nbApplications }} visualisations. Si vous le supprimez ces visualisations ne seront plus fonctionnelles.
-          </v-alert>
+            v-text="$tc('deleteWarning', nbApplications)"
+          />
         </v-card-text>
-        <v-card-text>
-          Voulez vous vraiment supprimer le jeu de données "{{ dataset.title }}" ? La suppression est définitive et les données ne pourront pas être récupérées.
-        </v-card-text>
+        <v-card-text v-t="{path: 'deleteMsg', args: {title: dataset.title}}" />
         <v-card-actions>
           <v-spacer />
-          <v-btn text @click="showDeleteDialog = false">
-            Non
-          </v-btn>
           <v-btn
+            v-t="'no'"
+            text
+            @click="showDeleteDialog = false"
+          />
+          <v-btn
+            v-t="'yes'"
             color="warning"
             @click="confirmRemove"
-          >
-            Oui
-          </v-btn>
+          />
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -231,23 +216,26 @@
       max-width="500"
     >
       <v-card outlined>
-        <v-card-title primary-title>
-          Suppression des lignes du jeu de données
-        </v-card-title>
+        <v-card-title v-t="'allLinesDeletion'" primary-title />
         <v-card-text>
-          <p>Voulez vous vraiment supprimer toutes les lignes du jeu de données "{{ dataset.title }}" ? La suppression est définitive et les données ne pourront pas être récupérées.</p>
+          <v-alert
+            v-t="{path: 'deleteAllLinesWarning', args: {title: dataset.title}}"
+            type="error"
+            outlined
+          />
         </v-card-text>
         <v-card-actions>
           <v-spacer />
-          <v-btn text @click="showDeleteAllLinesDialog = false">
-            Non
-          </v-btn>
           <v-btn
+            v-t="'yes'"
+            text
+            @click="showDeleteAllLinesDialog = false"
+          />
+          <v-btn
+            v-t="'yes'"
             color="warning"
             @click="confirmDeleteAllLines"
-          >
-            Oui
-          </v-btn>
+          />
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -257,24 +245,23 @@
       max-width="900"
     >
       <v-card outlined>
-        <v-card-title primary-title>
-          Changer le propriétaire du jeu de données
-        </v-card-title>
+        <v-card-title v-t="'changeOwnerTitle'" primary-title />
         <v-card-text>
           <owner-pick v-model="newOwner" />
         </v-card-text>
         <v-card-actions>
           <v-spacer />
-          <v-btn text @click="showOwnerDialog = false">
-            Annuler
-          </v-btn>
           <v-btn
+            v-t="'cancel'"
+            text
+            @click="showOwnerDialog = false"
+          />
+          <v-btn
+            v-t="'confirm'"
             :disabled="!newOwner"
             color="warning"
             @click="changeOwner(newOwner); showOwnerDialog = false;"
-          >
-            Confirmer
-          </v-btn>
+          />
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -284,28 +271,18 @@
       max-width="500"
     >
       <v-card outlined>
-        <v-card-title primary-title>
-          Remplacement des données
-        </v-card-title>
+        <v-card-title v-t="'dataUpdate'" primary-title />
         <v-card-text v-if="nbApplications > 0">
           <v-alert
-            :value="nbApplications === 1"
             type="error"
             outlined
-          >
-            Attention ! Ce jeu de données est utilisé par une application. Si vous modifiez sa structure l'application peut ne plus fonctionner.
-          </v-alert>
-          <v-alert
-            :value="nbApplications > 1"
-            type="error"
-            outlined
-          >
-            Attention ! Ce jeu de données est utilisé par {{ nbApplications }} applications. Si vous modifiez sa structure ces applications peuvent ne plus fonctionner.
-          </v-alert>
+            :value="true"
+            v-text="$tc('updateWarning', nbApplications)"
+          />
         </v-card-text>
         <v-card-text>
           <v-file-input
-            label="sélectionnez un fichier"
+            :label="$t('selectFile')"
             outlined
             dense
             style="max-width: 300px;"
@@ -318,21 +295,83 @@
         </v-card-text>
         <v-card-actions>
           <v-spacer />
-          <v-btn text @click="showUploadDialog = false">
-            Annuler
-          </v-btn>
           <v-btn
+            v-t="'cancel'"
+            text
+            @click="showUploadDialog = false"
+          />
+          <v-btn
+            v-t="'load'"
             :disabled="!file || uploading"
             color="warning"
             @click="confirmUpload"
-          >
-            Charger
-          </v-btn>
+          />
         </v-card-actions>
       </v-card>
     </v-dialog>
   </v-list>
 </template>
+
+<i18n lang="yaml">
+fr:
+  downloads: TÉLÉCHARGEMENTS
+  actions: ACTIONS
+  update: Mettre à jour
+  integrate: Intégrer dans un site
+  viewSite: Voir sur {title}
+  useAPI: Utiliser l'API
+  delete: Supprimer
+  deleteAllLines: Supprimer toutes les lignes
+  changeOwner: Changer le propriétaire
+  integrationMsg: Pour intégrer une prévisualisation de ce jeu de données dans un site vous pouvez copier le code suivant ou un code similaire dans le code source HTML.
+  previewType: Type de prévisualisation
+  deleteDataset: Suppression du jeu de données
+  deleteWarning: " | Attention ! Ce jeu de données est utilisé par une visualisation. Si vous le supprimez cette visualisation ne sera plus fonctionnelle. | Attention ! Ce jeu de données est utilisé par {count} visualisations. Si vous le supprimez ces visualisations ne seront plus fonctionnelles."
+  updateWarning: " | Attention ! Ce jeu de données est utilisé par une visualisation. Si vous modifiez sa structure la visualisation peut ne plus fonctionner. | Attention ! Ce jeu de données est utilisé par {count} visualisations. Si vous modifiez sa structure les visualisations peuvent ne plus fonctionner."
+  deleteMsg: Voulez vous vraiment supprimer le jeu de données "{title}" ? La suppression est définitive et les données ne pourront pas être récupérées.
+  yes: Oui
+  no: Non
+  allLinesDeletion: Suppression des lignes du jeu de données
+  deleteAllLinesWarning: Voulez vous vraiment supprimer toutes les lignes du jeu de données "{title}" ? La suppression est définitive et les données ne pourront pas être récupérées.
+  changeOwnerTitle: Changer le propriétaire du jeu de données
+  cancel: Annuler
+  confirm: Confirmer
+  load: Charger
+  dataUpdate: Remplacement des données
+  selectFile: sélectionnez un fichier
+  fileTooLarge: Le fichier est trop volumineux pour être importé
+  noSpaceLeft: Vous n'avez pas assez d'espace disponible pour ce fichier
+  importError: "Erreur pendant l'import du fichier :"
+en:
+  downloads: DOWNLOADS
+  actions: ACTIONS
+  update: Update
+  integrate: Integrate into a website
+  viewSite: See on {title}
+  useAPI: Use the API
+  delete: Delete
+  deleteAllLines: Delete all lines
+  changeOwner: Change owner
+  integrationMsg: To integrate a preview of this dataset in a website you can copy the code below or a similar code in your HTML source code.
+  previewType: Preview type
+  deleteDataset: Dataset deletion
+  deleteWarning: " | Warning ! This dataset is used by a visualization. If you delete it this visualization will be broken. | Warning ! This dataset is used by {count} visualizations. If you delete it these visualizations will be broken."
+  updateWarning: " | Warning ! This dataset is used by a visualization. If you change its structure this visualization might be broken. | Warning ! This dataset is used by {count} visualizations. If you change its structure these visualizations might be broken."
+  deleteMsg: Do you really want to delete the dataset "{title}" ? Deletion is definitive and data will not be recoverable.
+  yes: Yes
+  no: No
+  allLinesDeletion: Delete all the lines of the dataset
+  deleteAllLinesWarning: Do you really want to delete all the lines of the dataset "{title}" ? Deletion is definitive and data will not be recoverable.
+  changeOwnerTitle: Change the owner of the dataset
+  cancel: Cancel
+  confirm: Confirm
+  load: Load
+  dataUpdate: Replace the data
+  selectFile: select a file
+  fileTooLarge: The file is too large to be imported
+  noSpaceLeft: You don't have enough space left for this file
+  importError: "Failure to import the file :"
+</i18n>
 
 <script>
   import { mapState, mapGetters, mapActions } from 'vuex'
@@ -409,11 +448,11 @@
         } catch (error) {
           const status = error.response && error.response.status
           if (status === 413) {
-            eventBus.$emit('notification', { type: 'error', msg: 'Le fichier est trop volumineux pour être importé' })
+            eventBus.$emit('notification', { type: 'error', msg: this.$t('fileTooLarge') })
           } else if (status === 429) {
-            eventBus.$emit('notification', { type: 'error', msg: 'Le propriétaire sélectionné n\'a pas assez d\'espace disponible pour ce fichier' })
+            eventBus.$emit('notification', { type: 'error', msg: this.$t('noSpaceLeft') })
           } else {
-            eventBus.$emit('notification', { error, msg: 'Erreur pendant l\'import du fichier:' })
+            eventBus.$emit('notification', { error, msg: this.$t('importError') })
           }
         }
         this.uploading = false

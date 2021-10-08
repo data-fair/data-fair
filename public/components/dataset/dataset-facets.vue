@@ -4,7 +4,7 @@
       <v-select
         v-model="facetsValues.owner"
         multiple
-        label="Propriétaire"
+        :label="$t('owner')"
         :items="facets.owner"
         :item-value="item => item.value && `${item.value.type}:${item.value.id}`"
         :item-text="item => item.value && `${item.value.name} (${item.count})`"
@@ -20,7 +20,7 @@
       <v-select
         v-model="facetsValues.visibility"
         multiple
-        label="Visibilité"
+        :label="$t('visibility')"
         :items="facets.visibility"
         item-value="value"
         :item-text="item => item.value && `${{public: 'Public', private: 'Privé', protected: 'Protégé'}[item.value]} (${item.count})`"
@@ -36,10 +36,10 @@
       <v-select
         v-model="facetsValues.status"
         multiple
-        label="État"
+        :label="$t('status')"
         :items="facets.status"
         item-value="value"
-        :item-text="item => item.value && `${statuses.dataset[item.value] ? statuses.dataset[item.value].title : item.value} (${item.count})`"
+        :item-text="item => item.value && `${statuses.dataset[item.value] ? (statuses.dataset[item.value].title[$i18n.locale] || statuses.dataset[item.value].title[$i18n.defaultLocale]) : item.value} (${item.count})`"
         outlined
         dense
         hide-details
@@ -52,7 +52,7 @@
       <v-select
         v-model="facetsValues.topics"
         multiple
-        label="Thématiques"
+        :label="$t('topics')"
         :items="facets.topics"
         :item-value="item => item.value && item.value.id"
         :item-text="item => item.value && `${item.value.title} (${item.count})`"
@@ -68,7 +68,7 @@
       <v-select
         v-model="facetsValues.publicationSites"
         multiple
-        label="Portails"
+        :label="$t('portals')"
         :items="facets.publicationSites"
         :item-value="item => item.value || 'null'"
         :item-text="item => publicationSiteText(item)"
@@ -84,7 +84,7 @@
       <v-select
         v-model="facetsValues.services"
         multiple
-        label="Enrichissement"
+        :label="$t('extensions')"
         :items="facets.services"
         item-value="value"
         :item-text="item => item.value && `${item.value.replace('koumoul-', '').replace('-koumoul', '')} (${item.count})`"
@@ -100,7 +100,7 @@
       <v-select
         v-model="facetsValues.concepts"
         multiple
-        label="Concepts"
+        :label="$t('concepts')"
         :items="facets.concepts.filter(facetItem => vocabulary && vocabulary[facetItem.value])"
         item-value="value"
         :item-text="item => item.value && `${vocabulary && vocabulary[item.value] && vocabulary[item.value].title} (${item.count})`"
@@ -113,6 +113,25 @@
     </template>
   </div>
 </template>
+
+<i18n lang="yaml">
+fr:
+  owner: Propriétaire
+  visibility: Visibilité
+  status: État
+  topics: Thématiques
+  portals: Portails
+  extensions: Enrichissement
+  concepts: Concepts
+en:
+  owner: Owner
+  visibility: Visibility
+  status: Status
+  topics: Topics
+  portals: Portals
+  extension: Extensions
+  concepts: Concepts
+</i18n>
 
 <script>
   import { mapState, mapGetters } from 'vuex'

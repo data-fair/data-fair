@@ -19,7 +19,7 @@
       </v-btn>
     </v-row>
     <v-row v-if="currentProperty == null" class="ma-0">
-      <v-subheader>Cliquez sur un nom de colonne pour afficher ses informations détaillées.</v-subheader>
+      <v-subheader v-t="'detailedInfo'" />
     </v-row>
     <v-expand-transition>
       <v-sheet v-if="currentProperty != null">
@@ -63,11 +63,11 @@
             />
             <v-list dense class="mt-4">
               <v-list-item v-if="currentPropRef.prop['x-extension'] && extensions[currentPropRef.prop['x-extension']]" class="pl-0 font-weight-bold">
-                <span :class="labelClass">Extension : </span>&nbsp;
+                <span :class="labelClass">{{ $t('extension') }}</span>&nbsp;
                 {{ extensions[currentPropRef.prop['x-extension']].title }}
               </v-list-item>
               <v-list-item v-if="currentPropRef.prop['x-originalName']" class="pl-0">
-                <span :class="labelClass">Clé dans la source : </span>&nbsp;
+                <span :class="labelClass">{{ $t('key') }}</span>&nbsp;
                 {{ currentPropRef.prop['x-originalName'] }}
               </v-list-item>
               <v-list-item class="pl-0">
@@ -81,11 +81,11 @@
                 </template>
               </v-list-item>
               <v-list-item v-if="currentPropRef.prop['x-cardinality']" class="pl-0">
-                <span :class="labelClass">Nombre de valeurs distinctes <v-icon title="approximatif dans le cas de données volumineuses" v-text="'mdi-information'" /> : </span>&nbsp;
+                <span :class="labelClass">{{ $t('distinctValues') }} <v-icon :title="$t('distinctValuesHelp')" v-text="'mdi-information'" /> : </span>&nbsp;
                 {{ currentPropRef.prop['x-cardinality'].toLocaleString() }}
               </v-list-item>
               <v-list-item v-if="currentPropRef.prop.enum" class="pl-0">
-                <span :class="labelClass">Valeurs : </span>&nbsp;
+                <span :class="labelClass">{{ $t('values') }}</span>&nbsp;
                 {{ currentPropRef.prop.enum.join(' - ') | truncate(100) }}
               </v-list-item>
             </v-list>
@@ -94,10 +94,10 @@
               v-model="currentPropRef.prop.separator"
               :items="[', ', '; ', ' - ', ' / ']"
               :disabled="!editable || !currentPropRef.editable || dataset.isVirtual"
-              label="Séparateur"
+              :label="$t('sep')"
               persistent-hint
               clearable
-              hint="Ne renseigner que pour les colonnes multivaluées. Ce caractère sera utilisé pour séparer les valeurs."
+              :hint="$t('separatorHelp')"
             />
             <v-autocomplete
               v-model="currentPropRef.prop['x-refersTo']"
@@ -124,17 +124,17 @@
               v-if="dataset.file && dataset.file.mimetype === 'text/csv'"
               v-model="currentPropRef.prop.ignoreDetection"
               :disabled="!editable || !currentPropRef.editable"
-              label="Ignorer la détection de type"
+              :label="$t('ignoreDetection')"
               persistent-hint
-              hint="Si vous cochez cette case la détection automatique de type sera désactivée et la colonne sera traitée comme un simple texte."
+              hint="$t('ignoreDetectionHelp')"
             />
             <v-checkbox
               v-if="dataset.isRest"
               v-model="currentPropRef.prop.readOnly"
               :disabled="!editable || !currentPropRef.editable"
-              label="Lecture seule"
+              :label="$t('readOnly')"
               persistent-hint
-              hint="Si vous cochez cette case la colonne sera affichée en lecture seule dans le formulaire de saisie."
+              :hint="$t('readOnlyHelp')"
             />
             <v-select
               v-if="currentPropRef.prop['x-refersTo'] && availableMasters[currentPropRef.prop['x-refersTo']]"
@@ -142,7 +142,7 @@
               item-text="title"
               :items="availableMasters[currentPropRef.prop['x-refersTo']]"
               :value="currentPropRef.prop['x-master']"
-              label="Valeurs issues d'une donnée de référence"
+              :label="$t('masterData')"
               :clearable="true"
               :return-object="true"
               @input="setMasterData"
@@ -153,6 +153,37 @@
     </v-expand-transition>
   </v-sheet>
 </template>
+
+<i18n lang="yaml">
+fr:
+  detailedInfo: Cliquez sur un nom de colonne pour afficher ses informations détaillées.
+  extension: "Extension : "
+  key: "Clé dans la source : "
+  distinctValues: Nombre de valeurs distinctes
+  distinctValuesHelp: approximatif dans le cas de données volumineuses
+  values: "Valeurs : "
+  sep: Séparateur
+  separatorHelp: Ne renseigner que pour les colonnes multivaluées. Ce caractère sera utilisé pour séparer les valeurs.
+  ignoreDetection: Ignorer la détection de type
+  ignoreDetectionHelp: Si vous cochez cette case la détection automatique de type sera désactivée et la colonne sera traitée comme un simple texte.
+  readOnly: Lecture seule
+  readOnlyHelp: Si vous cochez cette case la colonne sera affichée en lecture seule dans le formulaire de saisie.
+  masterData: Valeurs issues d'une donnée de référence
+en:
+  detailedInfo: Click on a column title to display its detailed information.
+  extension: "Extension: "
+  key: "Key in the source: "
+  distinctValues: Number of istinct values
+  distinctValuesHelp: approximative in the case of a large dataset
+  values: "Values: "
+  sep: Separator
+  separatorHelp: Only provide for multi-values columns. This character will be used to separate the values.
+  ignoreDetection: Ignore type detection
+  ignoreDetectionHelp: If you check this box the automatic detection of type will be siabled and the column will be processed as a simple string.
+  readOnly: Read only
+  readOnlyHelp: If you check this box the column will be rendered as a read only field in the input form.
+  masterData: Values coming from a master-data dataset
+</i18n>
 
 <script>
   import { mapState, mapGetters, mapActions } from 'vuex'
