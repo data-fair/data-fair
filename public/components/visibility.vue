@@ -3,6 +3,7 @@
     <template v-slot:activator="{on}">
       <v-icon
         :color="visibility === 'public' ? 'primary' : 'accent'"
+        :small="small"
         v-on="on"
       >
         {{ visibility === 'public' ? 'mdi-lock-open' : 'mdi-lock' }}
@@ -25,7 +26,7 @@ en:
 
 <script>
   export default {
-    props: ['visibility'],
+    props: ['visibility', 'small'],
   }
 </script>
 

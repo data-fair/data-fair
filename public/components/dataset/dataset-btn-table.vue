@@ -7,6 +7,7 @@
     <template v-slot:activator="{ on }">
       <v-icon
         :title="$t('preview')"
+        :disabled="!dataset.finalizedAt"
         v-on="on"
       >
         mdi-table
@@ -22,7 +23,7 @@
           <v-icon>mdi-close</v-icon>
         </v-btn>
       </v-toolbar>
-      <v-card-text class="pl-4 pr-4 pb-4">
+      <v-card-text class="pa-0">
         <dataset-table v-if="$store.state.dataset.dataset" />
       </v-card-text>
     </v-card>

@@ -2,25 +2,66 @@
   <v-row>
     <v-col :style="this.$vuetify.breakpoint.lgAndUp ? 'padding-right:256px;' : ''">
       <v-container class="py-0">
-        <v-row
-          v-if="datasets"
-          v-scroll="onScroll"
-          class="resourcesList"
-        >
-          <v-col
-            v-for="dataset in datasets.results"
-            :key="dataset.id"
-            cols="12"
-            md="6"
-            lg="4"
+        <v-row v-if="this.$vuetify.breakpoint.lgAndUp">
+          <v-btn
+            v-if="renderMode !== 'list'"
+            fab
+            x-small
+            fixed
+            color="primary"
+            style="right:240px;top:52px;z-index:10;"
+            @click="setRenderMode('list')"
           >
-            <dataset-card
-              :dataset="dataset"
-              :show-topics="datasets.facets.topics.length"
-              :show-owner="filters.owner === null"
-            />
-          </v-col>
+            <v-icon>mdi-format-list-bulleted-square</v-icon>
+          </v-btn>
+          <v-btn
+            v-if="renderMode !== 'cards'"
+            fab
+            x-small
+            fixed
+            color="primary"
+            style="right:240px;top:52px;z-index:10;"
+            @click="setRenderMode('cards')"
+          >
+            <v-icon>mdi-cards-variant</v-icon>
+          </v-btn>
         </v-row>
+        <template v-if="datasets">
+          <v-row
+            v-if="renderMode === 'cards'"
+            v-scroll="onScroll"
+            class="resourcesList"
+          >
+            <v-col
+              v-for="dataset in datasets.results"
+              :key="dataset.id"
+              cols="12"
+              md="6"
+              lg="4"
+            >
+              <dataset-card
+                :dataset="dataset"
+                :show-topics="datasets.facets.topics.length"
+                :show-owner="filters.owner === null"
+              />
+            </v-col>
+          </v-row>
+          <v-list
+            v-if="renderMode === 'list'"
+            v-scroll="onScroll"
+            class="mt-2"
+          >
+            <template v-for="dataset in datasets.results">
+              <dataset-list-item
+                :key="dataset.id"
+                :dataset="dataset"
+                :show-topics="datasets.facets.topics.length"
+                :show-owner="filters.owner === null"
+              />
+              <v-divider :key="dataset.id + '-divider'" />
+            </template>
+          </v-list>
+        </template>
         <search-progress :loading="loading" />
 
         <v-responsive v-if="!hasDatasets" height="auto">
@@ -57,6 +98,7 @@
                 :filter-labels="{children: $t('childDataset')}"
                 :filters="filters"
                 :facets="datasets && datasets.facets"
+                :sorts="sorts"
                 type="datasets"
                 @apply="refresh()"
               />
@@ -82,10 +124,22 @@ fr:
   noDataset: Vous n'avez pas encore ajouté de jeu de données.
   noResult: Aucun résultat ne correspond aux critères de recherche.
   childDataset: Jeu de données agrégé
+  sortCreatedAtAsc: Création plus ancienne
+  sortCreatedAtDesc: Création plus récente
+  sortUpdatedAtAsc: Màj plus ancienne
+  sortUpdatedAtDesc: Màj plus récente
+  sortDataUpdatedAtAsc: Données plus ancienne
+  sortDataUpdatedAtDesc: Données plus récente
 en:
   noDataset: You haven't created a dataset yet.
   noResult: No result matches your search criterias.
   childDataset: Aggregated dataset
+  sortCreatedAtAsc: Creation older
+  sortCreatedAtDesc: Creation newer
+  sortUpdatedAtAsc: Update older
+  sortUpdatedAtDesc: Update newer
+  sortDataUpdatedAtAsc: Data older
+  sortDataUpdatedAtDesc: Data newer
 </i18n>
 
 <script>
@@ -108,6 +162,7 @@ en:
       },
       lastParams: null,
       dataSvg: require('~/assets/svg/Data Arranging_Two Color.svg?raw'),
+      renderMode: null,
     }),
     computed: {
       ...mapState('session', ['user']),
@@ -122,6 +177,19 @@ en:
       hasDatasets() {
         return !this.datasets || this.datasets.count
       },
+      renderModeKey() {
+        return `${this.user.id}:datasets:render-mode`
+      },
+      sorts() {
+        return [
+          { value: 'createdAt:-1', text: this.$t('sortCreatedAtDesc') },
+          { value: 'createdAt:1', text: this.$t('sortCreatedAtAsc') },
+          { value: 'updatedAt:-1', text: this.$t('sortUpdatedAtDesc') },
+          { value: 'updatedAt:1', text: this.$t('sortUpdatedAtAsc') },
+          { value: 'dataUpdatedAt:-1', text: this.$t('sortDataUpdatedAtDesc') },
+          { value: 'dataUpdatedAt:1', text: this.$t('sortDataUpdatedAtAsc') },
+        ]
+      },
     },
     watch: {
       facetsValues: {
@@ -133,9 +201,14 @@ en:
     },
     mounted() {
       this.filters = { owner: `${this.activeAccount.type}:${this.activeAccount.id}` }
+      this.renderMode = localStorage.getItem(this.renderModeKey) || 'cards'
       this.refresh()
     },
     methods: {
+      setRenderMode(renderMode) {
+        this.renderMode = renderMode
+        localStorage.setItem(this.renderModeKey, this.renderMode)
+      },
       onScroll(e) {
         if (!this.datasets) return
         const se = e.target.scrollingElement

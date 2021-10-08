@@ -73,6 +73,7 @@
                 :filter-labels="{'dataset': $t('dataset'), 'service': $t('service'), 'url': $t('baseApp')}"
                 :filters="filters"
                 :facets="applications && applications.facets"
+                :sorts="sorts"
                 type="applications"
                 @apply="refresh()"
               />
@@ -109,6 +110,10 @@ fr:
   service: Service
   baseApp: Application
   applicationsCount: "aucune visulisation | 1 visualisation | {count} visualisations"
+  sortCreatedAtAsc: Création plus ancienne
+  sortCreatedAtDesc: Création plus récente
+  sortUpdatedAtAsc: Màj plus ancienne
+  sortUpdatedAtDesc: Màj plus récente
 en:
   noApp: You haven't configured any visualization yet.
   noResult: No result matches your search criterias.
@@ -117,6 +122,10 @@ en:
   service: Service
   baseApp: Application
   applicationsCount: "no visualization | 1 visualization | {count} visualizations"
+  sortCreatedAtAsc: Creation older
+  sortCreatedAtDesc: Creation newer
+  sortUpdatedAtAsc: Update older
+  sortUpdatedAtDesc: Update newer
 </i18n>
 
 <script>
@@ -151,6 +160,14 @@ en:
       },
       hasApplications() {
         return !this.applications || this.applications.count
+      },
+      sorts() {
+        return [
+          { value: 'createdAt:-1', text: this.$t('sortCreatedAtDesc') },
+          { value: 'createdAt:1', text: this.$t('sortCreatedAtAsc') },
+          { value: 'updatedAt:-1', text: this.$t('sortUpdatedAtDesc') },
+          { value: 'updatedAt:1', text: this.$t('sortUpdatedAtAsc') },
+        ]
       },
     },
     watch: {
@@ -192,9 +209,9 @@ en:
           size: this.size,
           page: this.page,
           select: 'title,description,status,topics,errorMessage',
+          sort: 'createdAt:-1',
           ...fullFilters,
           facets,
-          sort: 'createdAt:-1',
         }
         if (JSON.stringify(params) !== JSON.stringify(this.lastParams)) {
           this.lastParams = params

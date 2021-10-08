@@ -47,6 +47,14 @@
         </v-chip>
       </template>
     </v-row>
+    <v-row v-if="sorts">
+      <v-select
+        v-model="filters.sort"
+        :items="sorts"
+        dense
+        @change="writeParams"
+      />
+    </v-row>
   </v-col>
 </template>
 
@@ -54,7 +62,7 @@
   import { mapActions, mapState, mapGetters } from 'vuex'
 
   export default {
-    props: ['filters', 'filterLabels', 'facets', 'type', 'hideOwners'],
+    props: ['filters', 'filterLabels', 'facets', 'type', 'hideOwners', 'sorts'],
     data: () => ({
       owners: [],
       showShared: null,
@@ -108,6 +116,9 @@
         } else {
           this.$set(this.filters, 'owner', `${this.activeAccount.type}:${this.activeAccount.id}`)
         }
+        if (this.sorts) {
+          this.$set(this.filters, 'sort', this.$route.query.sort || 'createdAt:-1')
+        }
         this.$emit('apply')
       },
       writeParams() {
@@ -119,6 +130,8 @@
         query.shared = '' + this.showShared
         if (this.filters.showAll && this.owners.length) query.owner = this.owners.join(',').replace()
         else delete query.owner
+        if (this.sorts && this.filters.sort) query.sort = this.filters.sort
+        else delete query.sort
         this.$router.push({ query })
         this.searchQuery({ type: this.type, query })
       },

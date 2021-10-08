@@ -12,7 +12,7 @@
             @change="onFileUpload"
           />
           <v-btn
-            v-t="'load file'"
+            v-t="'load'"
             :disabled="!file || uploading"
             color="primary"
             @click="confirmUpload()"
