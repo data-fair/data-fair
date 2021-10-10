@@ -3,6 +3,7 @@ const express = require('express')
 const eventToPromise = require('event-to-promise')
 const originalUrl = require('original-url')
 const { format: formatUrl } = require('url')
+const cors = require('cors')
 const dbUtils = require('./utils/db')
 const esUtils = require('./utils/es')
 const wsUtils = require('./utils/ws')
@@ -52,6 +53,7 @@ if (config.mode.includes('server')) {
     bodyParser(req, res, next)
   })
   app.use(require('cookie-parser')())
+  app.use(cors())
   app.use(session.auth)
 
   // set current baseUrl, i.e. the url of data-fair on the current user's domain
