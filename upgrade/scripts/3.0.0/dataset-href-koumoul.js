@@ -9,7 +9,7 @@ async function fixConfig (db, application, configKey) {
       .filter(d => !!d)
       .filter(d => d.href && d.href.includes('koumoul.com/s/data-fair')).length
   ) {
-    application[configKey].datasets.forEach(dataset => {
+    application[configKey].datasets.filter(d => !!d).forEach(dataset => {
       if (dataset.href) dataset.href = dataset.href.replace('koumoul.com/s/data-fair', 'koumoul.com/data-fair')
     })
     await db.collection('applications').updateOne({ _id: application._id }, { $set: { [configKey]: application[configKey] } })
