@@ -39,7 +39,7 @@ module.exports = {
   plugins: [
     { src: '~plugins/moment' },
   ],
-  modules: [['nuxt-i18n', {
+  modules: [['@nuxtjs/i18n', {
     seo: false,
     locales: [
       { code: 'fr' },
