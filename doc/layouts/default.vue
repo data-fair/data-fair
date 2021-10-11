@@ -78,14 +78,14 @@
           </v-btn>
         </template>
         <v-btn
-          v-for="locale in $i18n.locales.filter(l => l.code !== $i18n.locale)"
-          :key="locale.code"
-          :to="switchLocalePath(locale.code)"
+          v-for="locale in $i18n.locales.filter(l => l !== $i18n.locale)"
+          :key="locale"
+          :to="switchLocalePath(locale)"
           fab
           small
           nuxt
         >
-          {{ locale.code }}
+          {{ locale }}
         </v-btn>
       </v-speed-dial>-->
       <nuxt />

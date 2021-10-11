@@ -8,16 +8,18 @@
         <h2 class="text-h3 font-weight-bold grey--text text--darken-3 mb-4">
           Data Fair
         </h2>
-        <div>
-          <v-btn
-            v-for="locale of $i18n.locales"
-            :key="locale.code"
-            text
-            fab
-            small
-            :to="switchLocalePath(locale.code)"
-            v-text="locale.code"
-          />
+        <div class="mb-4">
+          <client-only>
+            <v-btn
+              v-for="locale of $i18n.locales"
+              :key="locale"
+              text
+              fab
+              small
+              :to="switchLocalePath(locale)"
+              v-text="locale"
+            />
+          </client-only>
         </div>
         <p v-t="'subtitle'" class="text-h5 font-weight-regular grey--text text--darken-1 font-italic" />
         <div>
@@ -59,16 +61,17 @@
       </v-col>
     </v-row>
     <v-row justify="center" class="pb-3">
-      <iframe
-        :width="$vuetify.breakpoint.lgAndUp ? 800 : 560"
-        :height="$vuetify.breakpoint.lgAndUp ? 450 : 315"
-        sandbox="allow-same-origin allow-scripts allow-popups"
-        src="https://videos.koumoul.com/videos/embed/88b39efd-2023-4f5e-84f4-748cb22c56f1?title=0&warningTitle=0&peertubeLink=0&autoplay=1&loop=1"
-        frameborder="0"
-        allowfullscreen
-      />
+      <client-only>
+        <iframe
+          :width="$vuetify.breakpoint.lgAndUp ? 800 : 560"
+          :height="$vuetify.breakpoint.lgAndUp ? 450 : 315"
+          sandbox="allow-same-origin allow-scripts allow-popups"
+          src="https://videos.koumoul.com/videos/embed/88b39efd-2023-4f5e-84f4-748cb22c56f1?title=0&warningTitle=0&peertubeLink=0&autoplay=1&loop=1"
+          frameborder="0"
+          allowfullscreen
+        />
+      </client-only>
     </v-row>
-
     <v-row
       class="my-3 flex-row-reverse"
       align="center"
@@ -172,7 +175,6 @@
       </v-col>
     </v-row>
   </v-container>
-  <!-- </div> -->
 </template>
 
 <i18n lang="yaml">

@@ -40,11 +40,8 @@ module.exports = {
     { src: '~plugins/moment' },
   ],
   modules: [['@nuxtjs/i18n', {
-    seo: false,
-    locales: [
-      { code: 'fr' },
-      { code: 'en' },
-    ],
+    seo: true,
+    locales: ['fr', 'en'],
     defaultLocale: 'fr',
     vueI18nLoader: true,
     vueI18n: {
