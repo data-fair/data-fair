@@ -65,7 +65,7 @@
     </v-app-bar> -->
 
     <v-main>
-      <!--<v-speed-dial
+      <v-speed-dial
         direction="bottom"
         transition="fade-transition"
         absolute
@@ -73,7 +73,11 @@
         right
       >
         <template v-slot:activator>
-          <v-btn icon color="primary">
+          <v-btn
+            icon
+            color="primary"
+            style="font-weight:bold;"
+          >
             {{ $i18n.locale }}
           </v-btn>
         </template>
@@ -81,13 +85,13 @@
           v-for="locale in $i18n.locales.filter(l => l !== $i18n.locale)"
           :key="locale"
           :to="switchLocalePath(locale)"
-          fab
-          small
+          icon
+          style="font-weight:bold;"
           nuxt
         >
           {{ locale }}
         </v-btn>
-      </v-speed-dial>-->
+      </v-speed-dial>
       <nuxt />
     </v-main>
 

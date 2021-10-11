@@ -1,7 +1,7 @@
 <template lang="html">
   <v-container class="index-page">
     <h2 class="text-h4 my-6">
-      Installation et configuration
+      {{ $t('install') }}
       <v-btn :to="localePath({name: 'full-install'})" icon>
         <v-icon color="primary">
           mdi-printer
@@ -28,6 +28,9 @@
   </v-container>
 </template>
 
+<i18n locale="fr" lang="yaml" src="../../i18n/common-fr.yaml"></i18n>
+<i18n locale="en" lang="yaml" src="../../i18n/common-en.yaml"></i18n>
+
 <script>
   const marked = require('@hackmd/meta-marked')
   const context = require.context('./', true, /\.md$/)
@@ -36,7 +39,11 @@
     computed: {
       sections() {
         if (!this.$route) return
-        const sections = context.keys().filter(k => k.includes('-fr.md')).map(k => Object.assign(marked(context(k).default).meta || {}, { id: k.split('/')[1].split('.').shift().replace('-fr', '') }))
+        const sections = context.keys()
+          .filter(k => k.includes(`-${this.$i18n.locale}.md`))
+          .map(k => Object.assign(marked(context(k).default).meta || {}, {
+            id: k.split('/')[1].split('.').shift().replace(`-${this.$i18n.locale}`, ''),
+          }))
         sections.sort((s1, s2) => {
           if (s1.section < s2.section) return -1
           else if (s1.section > s2.section) return 1

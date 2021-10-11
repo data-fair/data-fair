@@ -36,7 +36,11 @@
     computed: {
       sections() {
         if (!this.$route) return
-        const sections = context.keys().filter(k => k.includes('-fr.md')).map(k => Object.assign(marked(context(k).default).meta || {}, { id: k.split('/')[1].split('.').shift().replace('-fr', '') }))
+        const sections = context.keys()
+          .filter(k => k.includes(`-${this.$i18n.locale}.md`))
+          .map(k => Object.assign(marked(context(k).default).meta || {}, {
+            id: k.split('/')[1].split('.').shift().replace(`-${this.$i18n.locale}`, ''),
+          }))
         sections.sort((s1, s2) => {
           if (s1.section < s2.section) return -1
           else if (s1.section > s2.section) return 1

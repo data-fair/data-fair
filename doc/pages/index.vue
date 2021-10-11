@@ -8,19 +8,6 @@
         <h2 class="text-h3 font-weight-bold grey--text text--darken-3 mb-4">
           Data Fair
         </h2>
-        <div class="mb-4">
-          <client-only>
-            <v-btn
-              v-for="locale of $i18n.locales"
-              :key="locale"
-              text
-              fab
-              small
-              :to="switchLocalePath(locale)"
-              v-text="locale"
-            />
-          </client-only>
-        </div>
         <p v-t="'subtitle'" class="text-h5 font-weight-regular grey--text text--darken-1 font-italic" />
         <div>
           <v-btn
