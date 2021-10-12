@@ -462,6 +462,11 @@ module.exports = {
         },
       },
     },
+    isMetaOnly: {
+      type: 'boolean',
+      default: false,
+      description: 'Used to identify datasets without any local data and only some metadata.',
+    },
     topics: {
       type: 'array',
       title: 'Liste de thématiques',

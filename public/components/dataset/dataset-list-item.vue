@@ -35,7 +35,14 @@
         <span v-t="'inc'" />
       </template>
 
-      <template v-if="dataset.file">
+      <template v-if="dataset.isMetaOnly">
+        <v-icon small style="margin-top:-3px;">
+          mdi-information-variant
+        </v-icon>
+        <span v-t="'metaOnly'" />
+      </template>
+
+      <template v-if="dataset.remoteFile || dataset.originalFile || dataset.file">
         <v-icon small style="margin-top:-3px;">
           mdi-file
         </v-icon>
@@ -69,13 +76,15 @@
 
 <i18n lang="yaml">
 fr:
-  virtual: Jeu de données virtuel
-  inc: Jeu de données incrémental
+  virtual: jeu de données virtuel
+  inc: jeu de données incrémental
+  metaOnly: métadonnées seules
   lines: "aucune ligne | 1 ligne | {count} lignes"
   error: En erreur
 en:
-  virtual: Virtual dataset
-  inc: Incremental dataset
+  virtual: virtual dataset
+  inc: incremental dataset
+  metaOnly: metadata only
   lines: "no line | 1 line | {count} lines"
   error: Error status
 </i18n>

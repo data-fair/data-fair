@@ -54,7 +54,24 @@
           <v-list-item-title v-t="'virtual'" />
         </v-list-item>
       </template>
-      <span v-t="'vitualTooltip'" />
+      <span v-t="'virtualTooltip'" />
+    </v-tooltip>
+    <v-tooltip left>
+      <template v-slot:activator="{ on, attrs }">
+        <v-list-item
+          :to="{path: '/new-dataset', query: {type: 'metaOnly'}}"
+          v-bind="attrs"
+          v-on="on"
+        >
+          <v-list-item-icon>
+            <v-icon color="primary">
+              mdi-information-variant
+            </v-icon>
+          </v-list-item-icon>
+          <v-list-item-title v-t="'metaOnly'" />
+        </v-list-item>
+      </template>
+      <span v-t="'metaOnlyTooltip'" />
     </v-tooltip>
   </v-list>
 </template>
@@ -68,6 +85,8 @@ fr:
   incTooltip: Créez un jeu de données dont le contenu sera saisissable directement avec un formulaire en ligne.
   virtual: Virtuel
   virtualTooltip: Créez une vue virtuelle réduite sur un ou plusieurs jeux de données.
+  metaOnly: Métadonnées seules
+  metaOnlyTooltip: Créez un pseudo jeu de données sans donnée locales, uniquement les autres informations, pièces jointes, etc.
 en:
   createDataset: CREATE A DATASET
   file: File
@@ -76,6 +95,8 @@ en:
   incTooltip: Create a dataset whose content will be writable directly through a form.
   virtual: Virtual
   virtualTooltip: Create a restricted virtual vue over one or more datasets.
+  metaOnly: Metadata only
+  metaOnlyTooltip: Create a pseudo dataset without any local data, only other information, attachments, etc.
 </i18n>
 
 <script>

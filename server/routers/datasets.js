@@ -139,6 +139,8 @@ router.get('', cacheHeaders.noCache, asyncWrap(async(req, res) => {
     ids: 'id',
     id: 'id',
     rest: 'isRest',
+    virtual: 'isVirtual',
+    metaOnly: 'isMetaOnly',
   }, filterFields))
   if (req.query.bbox === 'true') {
     query.bbox = { $ne: null }
@@ -522,8 +524,8 @@ router.post('', beforeUpload, checkStorage(true), filesUtils.uploadFile(), files
       const baseId = slug(req.body.title).toLowerCase()
       await datasetUtils.insertWithBaseId(db, dataset, baseId)
     } else if (req.body.isRest) {
-      if (!req.body.title) throw createError(400, 'Un jeu de données REST doit être créé avec un titre')
-      if (attachmentsFile) throw createError(400, 'Un jeu de données REST ne peut pas être créé avec des pièces jointes')
+      if (!req.body.title) throw createError(400, 'Un jeu de données incrémental doit être créé avec un titre')
+      if (attachmentsFile) throw createError(400, 'Un jeu de données incrémental ne peut pas être créé avec des pièces jointes')
       if (!validatePost(req.body)) {
         throw createError(400, JSON.stringify(validatePost.errors))
       }
@@ -537,8 +539,17 @@ router.post('', beforeUpload, checkStorage(true), filesUtils.uploadFile(), files
       await datasetUtils.insertWithBaseId(db, dataset, baseId)
       await restDatasetsUtils.initDataset(db, dataset)
       await db.collection('datasets').updateOne({ id: dataset.id }, { $set: { status: 'analyzed' } })
+    } else if (req.body.isMetaOnly) {
+      if (!req.body.title) throw createError(400, 'Un jeu de données métadonnées doit être créé avec un titre')
+      if (attachmentsFile) throw createError(400, 'Un jeu de données métadonnées ne peut pas être créé avec des pièces jointes')
+      if (!validatePost(req.body)) {
+        throw createError(400, JSON.stringify(validatePost.errors))
+      }
+      dataset = await initNew(db, req)
+      const baseId = slug(req.body.title).toLowerCase()
+      await datasetUtils.insertWithBaseId(db, dataset, baseId)
     } else {
-      throw createError(400, 'Un jeu de données doit être initialisé avec un fichier ou déclaré "virtuel" ou "incrémental"')
+      throw createError(400, 'Un jeu de données doit être initialisé avec un fichier ou déclaré "virtuel" ou "incrémental" ou "métadonnées"')
     }
 
     delete dataset._id
@@ -582,12 +593,14 @@ const updateDataset = asyncWrap(async(req, res) => {
     // After uploadFile, req.files contains the metadata of an uploaded file, and req.body the content of additional text fields
     const datasetFile = req.files.find(f => f.fieldname === 'file' || f.fieldname === 'dataset')
     const attachmentsFile = req.files.find(f => f.fieldname === 'attachments')
-    if (!datasetFile && !req.dataset.isVirtual && !req.dataset.isRest) throw createError(400, 'Un jeu de données doit être initialisé avec un fichier ou déclaré "virtuel" ou "incrémental"')
-    if (datasetFile && (req.dataset.isVirtual || req.dataset.isRest)) throw createError(400, 'Un jeu de données est soit initialisé avec un fichier soit déclaré "virtuel" ou "incrémental"')
+    if (!datasetFile && !req.dataset.isVirtual && !req.dataset.isRest && !req.dataset.isMetaOnly) throw createError(400, 'Un jeu de données doit être initialisé avec un fichier ou déclaré "virtuel" ou "incrémental" ou "métadonnées seules"')
+    if (datasetFile && (req.dataset.isVirtual || req.dataset.isRest || req.dataset.isMetaOnly)) throw createError(400, 'Un jeu de données est soit initialisé avec un fichier soit déclaré "virtuel" ou "incrémental" ou "métadonnées seules"')
     if (req.dataset.isVirtual && !req.dataset.title) throw createError(400, 'Un jeu de données virtuel doit être créé avec un titre')
-    if (req.dataset.isRest && !req.dataset.title) throw createError(400, 'Un jeu de données REST doit être créé avec un titre')
+    if (req.dataset.isRest && !req.dataset.title) throw createError(400, 'Un jeu de données incrémental doit être créé avec un titre')
+    if (req.dataset.isMetaOnly && !req.dataset.title) throw createError(400, 'Un jeu de données métadonnées seules doit être créé avec un titre')
     if (req.dataset.isVirtual && attachmentsFile) throw createError(400, 'Un jeu de données virtuel ne peut pas avoir des pièces jointes')
-    if (req.dataset.isRest && attachmentsFile) throw createError(400, 'Un jeu de données REST ne peut pas être créé avec des pièces jointes')
+    if (req.dataset.isRest && attachmentsFile) throw createError(400, 'Un jeu de données incrémental ne peut pas être créé avec des pièces jointes')
+    if (req.dataset.isMetaOnly && attachmentsFile) throw createError(400, 'Un jeu de données métadonnées seules ne peut pas être créé avec des pièces jointes')
 
     let dataset = req.dataset
     req.body.schema = req.body.schema || dataset.schema || []
@@ -864,7 +877,7 @@ router.get('/:datasetId/lines', readDataset(), applicationKey, permissions.middl
 
   // if vector tile is requested and we dispose of a prerendered mbtiles file, use it
   // otherwise (older dataset, or rest/virtual datasets) we use tile generation from ES results
-  if (!req.dataset.isVirtual && !req.dataset.isRest) {
+  if (!req.dataset.isVirtual && !req.dataset.isRest && !req.dataset.isMetaOnly) {
     const mbtilesPath = datasetUtils.extFileName(req.dataset, 'mbtiles')
     if (vectorTileRequested && !req.query.q && !req.query.qs && await fs.exists(mbtilesPath)) {
       const tile = await tiles.getTile(req.dataset, mbtilesPath, !emptySelect && req.query.select.split(','), ...xyz)

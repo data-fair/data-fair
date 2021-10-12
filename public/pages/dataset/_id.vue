@@ -340,20 +340,20 @@
         if (!this.dataset) return sections
         if (this.dataset.finalizedAt) {
           sections.push({ title: 'Structure', id: 'structure' })
+        }
+        if (this.dataset.finalizedAt || this.dataset.isMetaOnly) {
           sections.push({ title: 'Métadonnées', id: 'metadata' })
         }
         if (this.can('readLines') && this.dataset.finalizedAt) {
           sections.push({ title: 'Données', id: 'data' })
         }
-        if (this.dataset.finalizedAt && !this.dataset.draftReason) {
-          if (!this.env.disableApplications) {
-            sections.push({ title: 'Utilisations', id: 'reuses' })
-          }
-          if (!this.env.disableSharing) {
-            sections.push({ title: 'Partage', id: 'share' })
-          }
+        if (this.dataset.finalizedAt && !this.dataset.draftReason && !this.env.disableApplications) {
+          sections.push({ title: 'Utilisations', id: 'reuses' })
         }
-        if (this.can('readJournal')) {
+        if ((this.dataset.finalizedAt || this.dataset.isMetaOnly) && !this.dataset.draftReason && !this.env.disableSharing) {
+          sections.push({ title: 'Partage', id: 'share' })
+        }
+        if (this.can('readJournal') && !this.dataset.isMetaOnly) {
           sections.push({ title: 'Activité', id: 'activity' })
         }
         return sections

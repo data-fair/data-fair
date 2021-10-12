@@ -813,9 +813,23 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
     },
   }
 
-  if (dataset.isVirtual || dataset.isRest) {
+  if (dataset.isVirtual || dataset.isRest || dataset.isMetaOnly) {
     delete api.paths['/raw']
     delete api.paths['/full']
+    delete api.paths['/data-files']
+  }
+
+  if (dataset.isMetaOnly) {
+    delete api.paths['/lines']
+    delete api.paths['/_refinalize']
+    delete api.paths['/_reindex']
+    delete api.paths['/_diagnose']
+    delete api.paths['/schema']
+    delete api.paths['/words_agg']
+    delete api.paths['/metric_agg']
+    delete api.paths['/values/{field}']
+    delete api.paths['/values_agg']
+    delete api.paths['/'].post
   }
 
   if (textAggProperties.length === 0) {
