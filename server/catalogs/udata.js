@@ -159,46 +159,51 @@ async function addResourceToDataset(catalog, dataset, publication) {
   // TODO: no equivalent of "private" on a resource
   const title = dataset.title
   const datasetUrl = getDatasetUrl(catalog, dataset)
-  const resources = [{
-    title: `${title} - Description des champs`,
-    description: 'Description détaillée et types sémantiques des champs',
-    url: datasetUrl,
-    type: 'documentation',
-    filetype: 'remote',
-    format: 'Page Web',
-    mime: 'text/html',
-    extras: {
-      datafairEmbed: 'fields',
-      datafairOrigin: config.publicUrl,
-      datafairDatasetId: dataset.id,
-    },
-  }, {
-    title: `${title} - Documentation de l'API`,
-    description: 'Documentation interactive de l\'API à destination des développeurs. La description de l\'API utilise la spécification [OpenAPI 3.0.1](https://github.com/OAI/OpenAPI-Specification)',
-    url: datasetUrl,
-    type: 'documentation',
-    filetype: 'remote',
-    format: 'Page Web',
-    mime: 'text/html',
-    extras: {
-      apidocUrl: `${config.publicUrl}/api/v1/datasets/${dataset.id}/api-docs.json`,
-      datafairOrigin: config.publicUrl,
-      datafairDatasetId: dataset.id,
-    },
-  }, {
-    title: `${title} - Consultez les données`,
-    description: `Consultez directement les données dans ${dataset.bbox ? 'une carte interactive' : 'un tableau'}.`,
-    url: datasetUrl,
-    type: 'main',
-    filetype: 'remote',
-    format: 'Page Web',
-    mime: 'text/html',
-    extras: {
-      datafairEmbed: dataset.bbox ? 'map' : 'table',
-      datafairOrigin: config.publicUrl,
-      datafairDatasetId: dataset.id,
-    },
-  }]
+  const resources = []
+  if (!dataset.isMetaOnly) {
+    resources.push({
+      title: `${title} - Description des champs`,
+      description: 'Description détaillée et types sémantiques des champs',
+      url: datasetUrl,
+      type: 'documentation',
+      filetype: 'remote',
+      format: 'Page Web',
+      mime: 'text/html',
+      extras: {
+        datafairEmbed: 'fields',
+        datafairOrigin: config.publicUrl,
+        datafairDatasetId: dataset.id,
+      },
+    })
+    resources.push({
+      title: `${title} - Documentation de l'API`,
+      description: 'Documentation interactive de l\'API à destination des développeurs. La description de l\'API utilise la spécification [OpenAPI 3.0.1](https://github.com/OAI/OpenAPI-Specification)',
+      url: datasetUrl,
+      type: 'documentation',
+      filetype: 'remote',
+      format: 'Page Web',
+      mime: 'text/html',
+      extras: {
+        apidocUrl: `${config.publicUrl}/api/v1/datasets/${dataset.id}/api-docs.json`,
+        datafairOrigin: config.publicUrl,
+        datafairDatasetId: dataset.id,
+      },
+    })
+    resources.push({
+      title: `${title} - Consultez les données`,
+      description: `Consultez directement les données dans ${dataset.bbox ? 'une carte interactive' : 'un tableau'}.`,
+      url: datasetUrl,
+      type: 'main',
+      filetype: 'remote',
+      format: 'Page Web',
+      mime: 'text/html',
+      extras: {
+        datafairEmbed: dataset.bbox ? 'map' : 'table',
+        datafairOrigin: config.publicUrl,
+        datafairDatasetId: dataset.id,
+      },
+    })
+  }
   const catalogDataset = (await axios.get(url.resolve(catalog.url, `api/1/datasets/${publication.addToDataset.id}`),
     { params: { page_size: 1000 }, headers: { 'X-API-KEY': catalog.apiKey } })).data
   if (!catalogDataset) throw new Error(`Le jeu de données ${publication.addToDataset.id} n'existe pas dans le catalogue ${catalog.url}`)
@@ -248,15 +253,9 @@ async function addResourceToDataset(catalog, dataset, publication) {
 async function createOrUpdateDataset(catalog, dataset, publication) {
   debug('Create or update dataset', dataset)
   const datasetUrl = getDatasetUrl(catalog, dataset)
-  const udataDataset = {
-    title: dataset.title,
-    description: dataset.description || dataset.title,
-    private: !dataset.public,
-    extras: {
-      datafairOrigin: config.publicUrl,
-      datafairDatasetId: dataset.id,
-    },
-    resources: [{
+  const resources = []
+  if (!dataset.isMetaOnly) {
+    resources.push({
       title: 'Description des champs',
       description: 'Description détaillée et types sémantiques des champs',
       url: datasetUrl,
@@ -267,7 +266,8 @@ async function createOrUpdateDataset(catalog, dataset, publication) {
       extras: {
         datafairEmbed: 'fields',
       },
-    }, {
+    })
+    resources.push({
       title: 'Documentation de l\'API',
       description: 'Documentation interactive de l\'API à destination des développeurs. La description de l\'API utilise la spécification [OpenAPI 3.0.1](https://github.com/OAI/OpenAPI-Specification)',
       url: datasetUrl,
@@ -278,7 +278,8 @@ async function createOrUpdateDataset(catalog, dataset, publication) {
       extras: {
         apidocUrl: `${config.publicUrl}/api/v1/datasets/${dataset.id}/api-docs.json`,
       },
-    }, {
+    })
+    resources.push({
       title: 'Consultez les données',
       description: `Consultez directement les données dans ${dataset.bbox ? 'une carte interactive' : 'un tableau'}.`,
       url: datasetUrl,
@@ -289,7 +290,17 @@ async function createOrUpdateDataset(catalog, dataset, publication) {
       extras: {
         datafairEmbed: dataset.bbox ? 'map' : 'table',
       },
-    }],
+    })
+  }
+  const udataDataset = {
+    title: dataset.title,
+    description: dataset.description || dataset.title,
+    private: !dataset.public,
+    extras: {
+      datafairOrigin: config.publicUrl,
+      datafairDatasetId: dataset.id,
+    },
+    resources,
   }
   if (dataset.file) {
     udataDataset.resources.push({

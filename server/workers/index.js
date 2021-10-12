@@ -142,7 +142,12 @@ async function iter(app, type) {
         // finalization covers some metadata enrichment, schema cleanup, etc.
         // either extended or there are no extensions to perform
         taskKey = 'finalizer'
-      } else if (resource.status === 'finalized' && !resource.draftReason && resource.publications && resource.publications.find(p => ['waiting', 'deleted'].includes(p.status))) {
+      } else if (
+        (resource.isMetaOnly || resource.status === 'finalized') &&
+        !resource.draftReason &&
+        resource.publications &&
+        resource.publications.find(p => ['waiting', 'deleted'].includes(p.status))
+      ) {
         // dataset that are finalized can be published if requested
         taskKey = 'datasetPublisher'
       } else if (
