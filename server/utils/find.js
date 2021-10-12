@@ -11,7 +11,7 @@ function queryVal(val) {
   return val
 }
 
-exports.query = (req, fieldsMap, globalMode) => {
+exports.query = (req, fieldsMap, globalMode, extraFilters = []) => {
   const query = {}
   if (!req.query) return query
 
@@ -21,7 +21,7 @@ exports.query = (req, fieldsMap, globalMode) => {
     }
   }
 
-  query.$and = []
+  query.$and = extraFilters
 
   // "standard" field mapping for applications/apis/datasets routes
   // @deprecated owner-type and owner-id : we shall use the owner parameter bellow : owner=organization:id1,user:id2,organization:id3
@@ -194,7 +194,7 @@ exports.setResourceLinks = (resource, resourceType, publicUrl = config.publicUrl
   if (resourceType === 'application') resource.exposedUrl = `${publicUrl}/app/${resource.id}`
 }
 
-exports.facetsQuery = (req, facetFields = {}, filterFields, nullFacetFields = []) => {
+exports.facetsQuery = (req, facetFields = {}, filterFields, nullFacetFields = [], extraFilters) => {
   filterFields = filterFields || facetFields
   const facetsQueryParam = req.query.facets
   const pipeline = []
@@ -231,6 +231,11 @@ exports.facetsQuery = (req, facetFields = {}, filterFields, nullFacetFields = []
       }
       if (f !== 'visibility' && visibility.filters(req.query)) {
         facet.push({ $match: { $or: visibility.filters(req.query) } })
+      }
+      if (extraFilters) {
+        for (const extraFilter of extraFilters) {
+          facet.push({ $match: extraFilter })
+        }
       }
 
       // visibility is a special case.. we do a match and count

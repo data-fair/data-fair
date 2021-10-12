@@ -166,6 +166,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la [d
           utils.filterParam('field-format', 'Restreindre sur les formats des colonnes textes'),
           utils.booleanParam('files', 'Restrieindre aux jeux avec fichiers attachés'),
           utils.booleanParam('bbox', 'Restreindre aux jeux géographiques'),
+          utils.booleanParam('queryable', 'Restreindre aux jeux requêtables et utilisables dans des applications'),
           ...utils.paginationParams,
           ...utils.visibilityParams,
         ],

@@ -134,6 +134,14 @@ router.get('', cacheHeaders.noCache, asyncWrap(async(req, res) => {
     topics: 'topics',
   }
   const nullFacetFields = ['publicationSites']
+  const extraFilters = []
+  if (req.query.bbox === 'true') {
+    extraFilters.push({ bbox: { $ne: null } })
+  }
+  if (req.query.queryable === 'true') {
+    extraFilters.push({ isMetaOnly: { $ne: true } })
+    extraFilters.push({ finalizedAt: { $ne: null } })
+  }
   const query = findUtils.query(req, Object.assign({
     filename: 'originalFile.name',
     ids: 'id',
@@ -141,10 +149,7 @@ router.get('', cacheHeaders.noCache, asyncWrap(async(req, res) => {
     rest: 'isRest',
     virtual: 'isVirtual',
     metaOnly: 'isMetaOnly',
-  }, filterFields))
-  if (req.query.bbox === 'true') {
-    query.bbox = { $ne: null }
-  }
+  }, filterFields), null, extraFilters)
   const sort = findUtils.sort(req.query.sort)
   const project = findUtils.project(req.query.select)
   const [skip, size] = findUtils.pagination(req.query)
@@ -153,7 +158,7 @@ router.get('', cacheHeaders.noCache, asyncWrap(async(req, res) => {
     datasets.countDocuments(query),
   ]
   if (req.query.facets) {
-    mongoQueries.push(datasets.aggregate(findUtils.facetsQuery(req, facetFields, filterFields, nullFacetFields)).toArray())
+    mongoQueries.push(datasets.aggregate(findUtils.facetsQuery(req, facetFields, filterFields, nullFacetFields, extraFilters)).toArray())
   }
   let [results, count, facets] = await Promise.all(mongoQueries)
   results.forEach(r => {
