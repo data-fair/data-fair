@@ -68,7 +68,9 @@
           :href="extra.href"
         >
           <v-list-item-action><v-icon>{{ extra.icon }}</v-icon></v-list-item-action>
-          <v-list-item-title>{{ extra.title }}</v-list-item-title>
+          <v-list-item-title>
+            {{ typeof extra.title === 'string' ? extra.title : (extra.title[$i18n.locale] || extra.title[$i18n.defaultLocale]) }}
+          </v-list-item-title>
         </v-list-item>
       </template>
       <v-divider />
@@ -156,9 +158,11 @@
           >
             <v-list-item-action><v-icon>{{ extra.icon }}</v-icon></v-list-item-action>
             <v-list-item-content>
-              <v-list-item-title>{{ extra.title }}</v-list-item-title>
+              <v-list-item-title>
+                {{ typeof extra.title === 'string' ? extra.title : (extra.title[$i18n.locale] || extra.title[$i18n.defaultLocale]) }}
+              </v-list-item-title>
               <v-list-item-subtitle v-if="extra.subtitle">
-                {{ extra.subtitle }}
+                {{ typeof extra.subtitle === 'string' ? extra.subtitle : (extra.subtitle[$i18n.locale] || extra.subtitle[$i18n.defaultLocale]) }}
               </v-list-item-subtitle>
             </v-list-item-content>
           </v-list-item>
@@ -185,6 +189,7 @@ fr:
   dashboard: Accueil
   datasets: Jeux de données
   vizs: Visualisations
+  org: Gestion de l'organisation
   params: Paramètres
   paramsSub: Licences, thématiques ...
   catalogs: Catalogues
@@ -200,6 +205,7 @@ en:
   dashboard: Dashboard
   datasets: Datasets
   vizs: Visualizations
+  org: Manage organization
   params: Parameters
   paramsSub: Licenses, topics ...
   catalogs: Catalogs

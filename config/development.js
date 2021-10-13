@@ -75,8 +75,8 @@ module.exports = {
     settings: 'https://koumoul.com/documentation/userguide/parameters',
     catalogs: 'https://koumoul.com/documentation/userguide/catalogs',
   }, */
-  extraNavigationItems: [{ id: 'test', title: 'Test', iframe: `http://${host}:5600/_dev/extra`, icon: 'mdi-link' }],
-  extraAdminNavigationItems: [{ id: 'test', title: 'Test admin', iframe: 'https://koumoul.com', icon: 'mdi-link' }],
+  extraNavigationItems: [{ id: 'test', title: { fr: 'Test', en: 'Test en' }, iframe: `http://${host}:5600/_dev/extra`, icon: 'mdi-link' }],
+  extraAdminNavigationItems: [{ id: 'test', title: { fr: 'Test admin', en: 'Test admin en' }, iframe: 'https://koumoul.com', icon: 'mdi-link' }],
   disableSharing: false,
   disableApplications: false,
   disableRemoteServices: false,

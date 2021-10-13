@@ -121,6 +121,7 @@ fr:
   sortUpdatedAtDesc: màj plus récente
   sortDataUpdatedAtAsc: données plus ancienne
   sortDataUpdatedAtDesc: données plus récente
+  datasets: aucun jeu de données | 1 jeu de données | {count} jeux de données
 en:
   noDataset: You haven't created a dataset yet.
   noResult: No result matches your search criterias.
@@ -131,6 +132,7 @@ en:
   sortUpdatedAtDesc: update newer
   sortDataUpdatedAtAsc: data older
   sortDataUpdatedAtDesc: data newer
+  datasets: no dataset | 1 dataset | {count} datasets
 </i18n>
 
 <script>
@@ -240,7 +242,7 @@ en:
           const datasets = await this.$axios.$get('api/v1/datasets', { params })
           if (append) datasets.results.forEach(r => this.datasets.results.push(r))
           else this.datasets = datasets
-          this.$store.dispatch('breadcrumbs', [{ text: `${this.datasets.count} ${this.plural ? 'jeux' : 'jeu'} de données` }])
+          this.$store.dispatch('breadcrumbs', [{ text: this.$tc('datasets', datasets.count) }])
           this.filtered = !!this.filters.q || hasFacetFilter
           this.loading = false
         }

@@ -189,11 +189,11 @@ en:
   login: Login / Sign up
   logout: Logout
   personalAccount: Personal account
-  switchAccount: Changer de compte
+  switchAccount: Switch account
   storage: Storage
   notifications: Notifications
   subscription: Subscription
-  myAccount: Mon compte
+  myAccount: My account
 </i18n>
 
 <script>

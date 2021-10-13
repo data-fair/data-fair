@@ -22,17 +22,17 @@
               >
                 <template v-slot:tabs>
                   <v-tab href="#structure-schema">
-                    <v-icon>mdi-table-cog</v-icon>&nbsp;&nbsp;Schéma
+                    <v-icon>mdi-table-cog</v-icon>&nbsp;&nbsp;{{ $t('schema') }}
                   </v-tab>
 
                   <template v-if="can('writeDescription') && dataset.isVirtual">
                     <v-tab href="#structure-virtual">
-                      <v-icon>mdi-picture-in-picture-bottom-right-outline</v-icon>&nbsp;&nbsp;Jeu virtuel
+                      <v-icon>mdi-picture-in-picture-bottom-right-outline</v-icon>&nbsp;&nbsp;{{ $t('virtual') }}
                     </v-tab>
                   </template>
 
                   <v-tab v-if="!env.disableRemoteServices" href="#structure-extensions">
-                    <v-icon>mdi-merge</v-icon>&nbsp;&nbsp;Enrichissement
+                    <v-icon>mdi-merge</v-icon>&nbsp;&nbsp;{{ $t('extension') }}
                   </v-tab>
 
                   <v-tab
@@ -42,15 +42,13 @@
                   >
                     <v-icon color="admin">
                       mdi-star-four-points
-                    </v-icon>&nbsp;&nbsp;Données de référence
+                    </v-icon>&nbsp;&nbsp;{{ $t('masterData') }}
                   </v-tab>
                 </template>
                 <template v-slot:tabs-items>
                   <v-tab-item value="structure-schema">
                     <v-container fluid>
-                      <tutorial-alert id="dataset-add-concepts">
-                        Pensez à renseigner des concepts sur les colonnes. Ces concepts seront utilisés pour proposer des visualisations de données adaptées et des possibilités d'enrichissement.
-                      </tutorial-alert>
+                      <tutorial-alert id="dataset-add-concepts" v-t="'tutorialConcepts'" />
                       <dataset-schema />
                     </v-container>
                   </v-tab-item>
@@ -62,7 +60,7 @@
                   </v-tab-item>
 
                   <v-tab-item value="structure-extensions">
-                    <layout-doc-link tooltip="Consultez la documentation sur l'extension de jeux de données" doc-key="datasetExtend" />
+                    <layout-doc-link :tooltip="$t('docLinkExtend')" doc-key="datasetExtend" />
                     <v-container fluid>
                       <dataset-extensions />
                     </v-container>
@@ -82,26 +80,24 @@
               >
                 <template v-slot:tabs>
                   <v-tab href="#metadata-info">
-                    <v-icon>mdi-information</v-icon>&nbsp;&nbsp;Informations
+                    <v-icon>mdi-information</v-icon>&nbsp;&nbsp;{{ $t('info') }}
                   </v-tab>
 
                   <v-tab v-if="!dataset.draftReason" href="#metadata-attachments">
-                    <v-icon>mdi-attachment</v-icon>&nbsp;&nbsp;Pièces jointes
+                    <v-icon>mdi-attachment</v-icon>&nbsp;&nbsp;{{ $t('attachments') }}
                   </v-tab>
                 </template>
                 <template v-slot:tabs-items>
                   <v-tab-item value="metadata-info">
-                    <layout-doc-link tooltip="Consultez la documentation sur l'édition de jeux de données" doc-key="datasetEdit" />
+                    <layout-doc-link :tooltip="$t('docLinkEdit')" doc-key="datasetEdit" />
                     <v-container fluid class="py-0">
-                      <tutorial-alert id="dataset-configure-meta">
-                        Vous pouvez configurer des licences et des thématiques dans les paramètres.
-                      </tutorial-alert>
+                      <tutorial-alert id="dataset-configure-meta" v-t="'tutorialConfigMeta'" />
                       <dataset-info />
                     </v-container>
                   </v-tab-item>
 
                   <v-tab-item value="metadata-attachments">
-                    <layout-doc-link tooltip="Consultez la documentation sur les pièces jointes des jeux de données" doc-key="datasetAttachments" />
+                    <layout-doc-link :tooltip="$t('docLinkAttachments')" doc-key="datasetAttachments" />
                     <dataset-attachments />
                   </v-tab-item>
                 </template>
@@ -112,28 +108,26 @@
                 svg-no-margin
                 :section="sections.find(s => s.id === 'data')"
               >
-                <template v-slot:title>
-                  Données
-                </template>
+                <template v-slot:title v-t="'data'" />
                 <template v-slot:tabs>
                   <v-tab href="#data-table">
-                    <v-icon>mdi-table</v-icon>&nbsp;&nbsp;Tableau
+                    <v-icon>mdi-table</v-icon>&nbsp;&nbsp;{{ $t('table') }}
                   </v-tab>
 
                   <v-tab v-if="dataset.bbox && !env.disableRemoteServices" href="#data-map">
-                    <v-icon>mdi-map</v-icon>&nbsp;&nbsp;Carte
+                    <v-icon>mdi-map</v-icon>&nbsp;&nbsp;{{ $t('map') }}
                   </v-tab>
 
                   <v-tab v-if="!!dataset.schema.find(f => f['x-refersTo'] === 'https://schema.org/startDate') && !!dataset.schema.find(f => f['x-refersTo'] === 'https://schema.org/endDate' && !!dataset.schema.find(f => f['x-refersTo'] === 'http://www.w3.org/2000/01/rdf-schema#label'))" href="#data-calendar">
-                    <v-icon>mdi-calendar-range</v-icon>&nbsp;&nbsp;Calendrier
+                    <v-icon>mdi-calendar-range</v-icon>&nbsp;&nbsp;{{ $t('calendar') }}
                   </v-tab>
 
                   <v-tab v-if="fileProperty && (!fileProperty['x-capabilities'] || fileProperty['x-capabilities'].indexAttachment !== false)" href="#data-files">
-                    <v-icon>mdi-content-copy</v-icon>&nbsp;&nbsp;Fichiers
+                    <v-icon>mdi-content-copy</v-icon>&nbsp;&nbsp;{{ $t('files') }}
                   </v-tab>
 
                   <v-tab v-if="!!dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/image')" href="#data-thumbnails">
-                    <v-icon>mdi-image</v-icon>&nbsp;&nbsp;Vignettes
+                    <v-icon>mdi-image</v-icon>&nbsp;&nbsp;{{ $t('thumbnails') }}
                   </v-tab>
                 </template>
                 <template v-slot:tabs-items>
@@ -174,16 +168,14 @@
                 svg-no-margin
                 :min-height="140"
               >
-                <template v-slot:title>
-                  Utilisations
-                </template>
+                <template v-slot:title v-t="'uses'" />
                 <template v-slot:tabs>
                   <v-tab href="#reuses-apps">
-                    <v-icon>mdi-image-multiple</v-icon>&nbsp;&nbsp;Visualisations
+                    <v-icon>mdi-image-multiple</v-icon>&nbsp;&nbsp;{{ $t('visualizations') }}
                   </v-tab>
 
                   <v-tab href="#reuses-external">
-                    <v-icon>mdi-open-in-new</v-icon>&nbsp;&nbsp;Réutilisations externes
+                    <v-icon>mdi-open-in-new</v-icon>&nbsp;&nbsp;{{ $t('extReuses') }}
                   </v-tab>
                 </template>
                 <template v-slot:tabs-items>
@@ -202,26 +194,22 @@
                 svg-no-margin
                 :min-height="200"
               >
-                <template v-slot:title>
-                  Partage
-                </template>
+                <template v-slot:title v-t="'share'" />
                 <template v-slot:tabs>
                   <v-tab href="#share-permissions">
-                    <v-icon>mdi-security</v-icon>&nbsp;&nbsp;Permissions
+                    <v-icon>mdi-security</v-icon>&nbsp;&nbsp;{{ $t('permissions') }}
                   </v-tab>
 
                   <v-tab href="#share-publication-sites">
-                    <v-icon>mdi-presentation</v-icon>&nbsp;&nbsp;Portails
+                    <v-icon>mdi-presentation</v-icon>&nbsp;&nbsp;{{ $t('portals') }}
                   </v-tab>
 
                   <v-tab href="#share-publications">
-                    <v-icon>mdi-transit-connection</v-icon>&nbsp;&nbsp;Catalogues
+                    <v-icon>mdi-transit-connection</v-icon>&nbsp;&nbsp;{{ $t('catalogs') }}
                   </v-tab>
                 </template>
                 <template v-slot:tabs-items>
-                  <tutorial-alert id="dataset-share-portal">
-                    Configurez des portails pour mieux partager vos données au public ou en interne.
-                  </tutorial-alert>
+                  <tutorial-alert id="dataset-share-portal" v-t="'tutorialShare'" />
                   <v-tab-item value="share-permissions">
                     <v-container fluid>
                       <permissions
@@ -249,12 +237,10 @@
                 :svg="settingsSvg"
                 :min-height="550"
               >
-                <template v-slot:title>
-                  Activité
-                </template>
+                <template v-slot:title v-t="'activity'" />
                 <template v-slot:tabs>
                   <v-tab v-if="can('readJournal')" href="#activity-journal">
-                    <v-icon>mdi-calendar-text</v-icon>&nbsp;&nbsp;Journal
+                    <v-icon>mdi-calendar-text</v-icon>&nbsp;&nbsp;{{ $t('journal') }}
                   </v-tab>
                 </template>
                 <template v-slot:tabs-items>
@@ -278,7 +264,7 @@
       <dataset-actions :publication-sites="publicationSites" />
       <layout-toc :sections="sections">
         <template v-slot:title="{section}">
-          {{ section.id === 'activity' && taskProgress ? ('Activité - ' + $t('tasks.' + taskProgress.task)) : section.title }}
+          {{ section.id === 'activity' && taskProgress ? ($t('activity') + ' - ' + $t('tasks.' + taskProgress.task)) : section.title }}
         </template>
         <template v-slot:bottom="{section}">
           <v-progress-linear
@@ -298,6 +284,71 @@
     </layout-actions-button>
   </v-row>
 </template>
+
+<i18n lang="yaml">
+fr:
+  schema: Schéma
+  extension: Enrichissement
+  virtual: Jeu virtuel
+  masterData: Données de référence
+  tutorialConcepts: Pensez à renseigner des concepts sur les colonnes. Ces concepts seront utilisés pour proposer des visualisations de données adaptées et des possibilités d'enrichissement.
+  docLinkExtend: Consultez la documentation sur l'extension de jeux de données
+  info: Informations
+  attachments: Pièces jointes
+  docLinkEdit: Consultez la documentation sur l'édition de jeux de données
+  tutorialConfigMeta: Vous pouvez configurer des licences et des thématiques dans les paramètres.
+  docLinkAttachments: Consultez la documentation sur les pièces jointes des jeux de données
+  data: Données
+  table: Tableau
+  map: Carte
+  calendar: Calendrier
+  files: Fichiers
+  thumbnails: Vignettes
+  visualizations: Visualisations
+  extReuses: Réutilisations externes
+  share: Partage
+  permissions: Permissions
+  portals: Portails
+  catalogs: Catalogues
+  tutorialShare: Configurez des portails pour mieux partager vos données au public ou en interne.
+  activity: Activité
+  journal: Journal
+  structure: Structure
+  metadata: Métadonnées
+  uses: Utilisations
+  datasets: jeux de données
+en:
+  schema: Schema
+  extension: Extension
+  virtual: Virtual dataset
+  masterData: Master-data
+  tutorialConcepts: You should assign concepts to your columns. They will be used to help you configure visualizations and data extensions.
+  docLinkExtend: Read the documentation about extending datasets
+  info: Information
+  attachments: Attachments
+  docLinkEdit: Read the documentation about editing datasets
+  tutorialConfigMeta: You can configure licences and topics in the parameters.
+  docLinkAttachments: Read the documentation about dataset attachments
+  data: Data
+  table: Table
+  map: Map
+  calendar: Calendar
+  files: Files
+  thumbnails: Thumbnails
+  visualizations: Visualizations
+  extReuses: External reuses
+  share: Share
+  permissions: Permissions
+  portals: Portals
+  catalogs: Catalogs
+  tutorialShare: Configure portals to better publish your data privately or publicly.
+  activity: Activity
+  journal: Journal
+  structure: Structure
+  metadata: Metadata
+  uses: Uses
+  datasets: datasets
+</i18n>
 
 <script>
   import { mapState, mapActions, mapGetters } from 'vuex'
@@ -339,22 +390,22 @@
         const sections = []
         if (!this.dataset) return sections
         if (this.dataset.finalizedAt) {
-          sections.push({ title: 'Structure', id: 'structure' })
+          sections.push({ title: this.$t('structure'), id: 'structure' })
         }
         if (this.dataset.finalizedAt || this.dataset.isMetaOnly) {
-          sections.push({ title: 'Métadonnées', id: 'metadata' })
+          sections.push({ title: this.$t('metadata'), id: 'metadata' })
         }
         if (this.can('readLines') && this.dataset.finalizedAt) {
-          sections.push({ title: 'Données', id: 'data' })
+          sections.push({ title: this.$t('data'), id: 'data' })
         }
         if (this.dataset.finalizedAt && !this.dataset.draftReason && !this.env.disableApplications) {
-          sections.push({ title: 'Utilisations', id: 'reuses' })
+          sections.push({ title: this.$t('uses'), id: 'reuses' })
         }
         if ((this.dataset.finalizedAt || this.dataset.isMetaOnly) && !this.dataset.draftReason && !this.env.disableSharing) {
-          sections.push({ title: 'Partage', id: 'share' })
+          sections.push({ title: this.$t('share'), id: 'share' })
         }
         if (this.can('readJournal') && !this.dataset.isMetaOnly) {
-          sections.push({ title: 'Activité', id: 'activity' })
+          sections.push({ title: this.$t('activity'), id: 'activity' })
         }
         return sections
       },
@@ -364,7 +415,7 @@
       const path = `/dataset/${this.$route.params.id}`
       if (this.$route.path !== path) return this.$router.push(path)
       if (this.dataset) {
-        this.$store.dispatch('breadcrumbs', [{ text: 'Jeux de données', to: '/datasets' }, { text: this.dataset.title || this.dataset.id }])
+        this.$store.dispatch('breadcrumbs', [{ text: this.$t('datasets'), to: '/datasets' }, { text: this.dataset.title || this.dataset.id }])
         this.subscribe()
       }
     },

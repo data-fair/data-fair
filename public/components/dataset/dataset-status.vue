@@ -121,6 +121,18 @@ fr:
   draftUpdated2: Vérifiez que le fichier a bien été lu, parcourez les 100 premières lignes de la donnée, etc. Quand vous êtes satisfait, validez le brouillon et le jeu de données sera traité intégralement.
   cancelDraft: Annuler le brouillon
   validateDraft: Valider le brouillon
+  loadTitle: Chargement
+  loadDesc: Le fichier est chargé sur le service
+  convertTitle: Conversion
+  convertDesc: Le fichier est converti dans un format qui va faciliter son traitement
+  analysisTitle: Analyse
+  analysisDesc: Analyse des données et détection automatique du schéma associé
+  extensionTitle: Enrichissement
+  extensionDesc: Les données sont enrichies à partir des données de référence
+  indexingTitle: Indexation
+  indexingDesc: Les données sont indexées pour faciliter leur manipulation
+  finalizingTitle: Finalisation
+  finalizingDesc: Derniers traitements avant que le jeu de données ne soit utilisable
 en:
   draftNew1: The dataset was created in draft mode. This state allow you to work on its configuration.
   draftNew2: Check that the file was property read, browse the first 100 lines, add concepts to the schema, configure extensions, etc. When satisfied, walidate the draft and the dataset will be processed entirely.
@@ -128,6 +140,18 @@ en:
   draftUpdated2: Check that the file was property read, browse the first 100 lines, etc. When satisfied, walidate the draft and the dataset will be processed entirely.
   cancelDraft: Cancel the draft
   validateDraft: Validate the draft
+  loadTitle: Loading
+  loadDesc: The file is loaded in the service
+  convertTitle: Conversion
+  convertDesc: The file is converted in a format that will make its processing easier
+  analysisTitle: Analysis
+  analysisDesc: Data analysis and automatic schema detection
+  extensionTitle: Extension
+  extensionDesc: The data is extended using master-data sources
+  indexingTitle: Indexing
+  indexingDesc: The data is indexed to make it easier to handle
+  finalizingTitle: Finalizing
+  finalizingDesc: Last processing step before the dataset is fully usable
 </i18n>
 
 <script>
@@ -139,12 +163,12 @@ en:
       return {
         events,
         steps: [
-          { title: 'Chargement', description: 'Le fichier est chargé sur notre plateforme' },
-          { title: 'Conversion', description: 'Le fichier est converti dans un format qui va faciliter son traitement' },
-          { title: 'Analyse', description: 'Analyse des données et détection automatique du schéma associé' },
-          { title: 'Enrichissement', description: 'Les données sont enrichies à partir des données de référence' },
-          { title: 'Indexation', description: 'Les données sont indexées pour faciliter leur manipulation' },
-          { title: 'Finalisation', description: 'Derniers traitements avant que la source ne soit utilisable', color: 'success' },
+          { title: this.$t('loadTitle'), description: this.$t('loadDesc') },
+          { title: this.$t('convertTitle'), description: this.$t('convertDesc') },
+          { title: this.$t('analysisTitle'), description: this.$t('analysisDesc') },
+          { title: this.$t('extensionTitle'), description: this.$t('extensionDesc') },
+          { title: this.$t('indexingTitle'), description: this.$t('indexingDesc') },
+          { title: this.$t('finalizingTitle'), description: this.$t('finalizingDesc'), color: 'success' },
         ],
         states: ['remote', 'uploaded', 'loaded', 'analyzed', 'extended', 'indexed', 'finalized'],
       }

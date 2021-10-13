@@ -47,7 +47,7 @@
           <v-list-item-content>
             <v-list-item-title>{{ notif.title }}</v-list-item-title>
             <v-list-item-subtitle>{{ notif.date | moment("lll") }}</v-list-item-subtitle>
-            <v-list-item-subtitle>{{ notif.body }}</v-list-item-subtitle>
+            <v-list-item-subtitle>{{ notif.body }} {{ notif }}</v-list-item-subtitle>
           </v-list-item-content>
           <v-list-item-action>
             <owner-short v-if="notif.sender" :owner="notif.sender" />

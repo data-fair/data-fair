@@ -25,15 +25,13 @@
               >
                 <template v-slot:tabs>
                   <v-tab href="#metadata-info">
-                    <v-icon>mdi-information</v-icon>&nbsp;&nbsp;Informations
+                    <v-icon>mdi-information</v-icon>&nbsp;&nbsp;{{ $t('info') }}
                   </v-tab>
                 </template>
                 <template v-slot:tabs-items>
                   <v-tab-item value="metadata-info">
                     <v-container fluid class="pb-0">
-                      <tutorial-alert id="app-configure-meta">
-                        Vous pouvez configurer des thématiques dans les paramètres.
-                      </tutorial-alert>
+                      <tutorial-alert id="app-configure-meta" v-t="'tutorialConfigMeta'" />
                       <application-info />
                     </v-container>
                   </v-tab-item>
@@ -48,7 +46,7 @@
               >
                 <template v-slot:tabs>
                   <v-tab href="#config-config">
-                    <v-icon>mdi-pencil</v-icon>&nbsp;&nbsp;Édition
+                    <v-icon>mdi-pencil</v-icon>&nbsp;&nbsp;{{ $t('edit') }}
                   </v-tab>
                 </template>
                 <template v-slot:tabs-items>
@@ -71,25 +69,23 @@
                 </template>
                 <template v-slot:tabs>
                   <v-tab href="#share-permissions">
-                    <v-icon>mdi-security</v-icon>&nbsp;&nbsp;Permissions
+                    <v-icon>mdi-security</v-icon>&nbsp;&nbsp;{{ $t('permissions') }}
                   </v-tab>
 
                   <v-tab v-if="can('getKeys')" href="#share-links">
-                    <v-icon>mdi-link</v-icon>&nbsp;&nbsp;Lien protégé
+                    <v-icon>mdi-link</v-icon>&nbsp;&nbsp;{{ $t('protectedLink') }}
                   </v-tab>
 
                   <v-tab href="#share-publication-sites">
-                    <v-icon>mdi-presentation</v-icon>&nbsp;&nbsp;Portails
+                    <v-icon>mdi-presentation</v-icon>&nbsp;&nbsp;{{ $t('portals') }}
                   </v-tab>
 
                   <v-tab href="#share-publications">
-                    <v-icon>mdi-transit-connection</v-icon>&nbsp;&nbsp;Catalogues
+                    <v-icon>mdi-transit-connection</v-icon>&nbsp;&nbsp;{{ $t('catalogs') }}
                   </v-tab>
                 </template>
                 <template v-slot:tabs-items>
-                  <tutorial-alert id="app-share-portal">
-                    Configurez des portails pour mieux partager vos données au public ou en interne.
-                  </tutorial-alert>
+                  <tutorial-alert id="app-share-portal" v-t="'tutorialShare'" />
                   <v-tab-item value="share-permissions">
                     <v-container fluid>
                       <permissions
@@ -123,12 +119,10 @@
                 :svg="settingsSvg"
                 :min-height="550"
               >
-                <template v-slot:title>
-                  Activité
-                </template>
+                <template v-slot:title v-t="'activity'" />
                 <template v-slot:tabs>
                   <v-tab v-if="can('readJournal')" href="#activity-journal">
-                    <v-icon>mdi-calendar-text</v-icon>&nbsp;&nbsp;Journal
+                    <v-icon>mdi-calendar-text</v-icon>&nbsp;&nbsp;{{ $t('journal') }}
                   </v-tab>
                 </template>
                 <template v-slot:tabs-items>
@@ -159,6 +153,39 @@
   </v-row>
 </template>
 
+<i18n lang="yaml">
+fr:
+  info: Informations
+  tutorialConfigMeta: Vous pouvez configurer des thématiques dans les paramètres.
+  edit: Édition
+  permissions: Permissions
+  protectedLink: Lien protégé
+  portals: Portails
+  catalogs: Catalogues
+  tutorialShare: Configurez des portails pour mieux partager vos données au public ou en interne.
+  activity: Activité
+  journal: Journal
+  visualizations: visualisations
+  metadata: Métadonnées
+  config: Configuration
+  share: Partage
+en:
+  info: Information
+  tutorialConfigMeta: You can configure topics in the parameters.
+  edit: Edition
+  permissions: Permissions
+  protectedLink: Protected link
+  portals: Portals
+  catalogs: Catalogs
+  tutorialShare: Configure portals to better publish your data privately or publicly.
+  activity: Activity
+  journal: Journal
+  visualizations: visualizations
+  metadata: Metadata
+  config: Configuration
+  share: Share
+</i18n>
+
 <script>
   import { mapState, mapActions, mapGetters } from 'vuex'
 
@@ -187,13 +214,13 @@
       sections() {
         const sections = []
         if (!this.application) return sections
-        sections.push({ title: 'Métadonnées', id: 'metadata' })
-        sections.push({ title: 'Configuration', id: 'config' })
+        sections.push({ title: this.$t('metadata'), id: 'metadata' })
+        sections.push({ title: this.$t('config'), id: 'config' })
         if (!this.env.disableSharing) {
-          sections.push({ title: 'Partage', id: 'share' })
+          sections.push({ title: this.$t('share'), id: 'share' })
         }
         if (this.can('readJournal')) {
-          sections.push({ title: 'Activité', id: 'activity' })
+          sections.push({ title: this.$t('activity'), id: 'activity' })
         }
         return sections
       },
@@ -203,7 +230,7 @@
       const path = `/application/${this.$route.params.id}`
       if (this.$route.path !== path) return this.$router.push(path)
       if (this.application) {
-        this.$store.dispatch('breadcrumbs', [{ text: 'Visualisations', to: '/applications' }, { text: this.application.title || this.application.id }])
+        this.$store.dispatch('breadcrumbs', [{ text: this.$t('visualizations'), to: '/applications' }, { text: this.application.title || this.application.id }])
         this.subscribe()
       }
     },

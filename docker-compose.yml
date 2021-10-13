@@ -59,7 +59,7 @@ services:
       - MAX_AGE=600
 
   notify:
-    image: koumoul/notify:master
+    image: ghcr.io/data-fair/notify:master
     network_mode: host
     environment:
       - PORT=8088
