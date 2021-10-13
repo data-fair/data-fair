@@ -12,23 +12,23 @@
           <v-row align="center">
             <v-col class="text-center">
               <h3 class="text-h4 mb-3 mt-5">
-                {{ $t('pages.applications.title') }}
+                {{ $t('title') }}
               </h3>
               <layout-wrap-svg
                 :source="graphicSvg"
                 :color="$vuetify.theme.themes.light.primary"
               />
               <div class="text-h6">
-                {{ $t('pages.applications.description') }}
+                {{ $t('description') }}
               </div>
               <p class="text-h6 mt-5">
-                {{ $t('common.authrequired') }}
+                {{ $t('authRequired') }}
               </p>
               <v-btn
                 color="primary"
                 @click="login"
               >
-                {{ $t('common.login') }}
+                {{ $t('login') }}
               </v-btn>
             </v-col>
           </v-row>
@@ -37,6 +37,20 @@
     </v-col>
   </v-container>
 </template>
+
+<i18n lang="yaml">
+fr:
+  title: Visualisations
+  description: Vous pouvez configurer des visualisations qui vont utiliser vos jeux de données. Ces visualisations peuvent ensuite être partagées ou intégrées dans d\'autres sites web.',
+  authRequired: Vous devez être authentifié pour utiliser ce service.
+  login: Se connecter / S'inscrire
+
+en:
+  title: Visualizations
+  description: You can configure data visualizations based on your datasets. These visualizations can then be shared and integrated in your websites.
+  authRequired: You must be logged in to use this service.
+  login: Login / Sign up
+</i18n>
 
 <script>
   import { mapState, mapActions, mapGetters } from 'vuex'

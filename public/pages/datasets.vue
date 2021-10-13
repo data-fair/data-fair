@@ -12,23 +12,23 @@
           <v-row align="center">
             <v-col class="text-center">
               <h3 class="text-h4 mb-3 mt-5">
-                {{ $t('pages.datasets.title') }}
+                {{ $t('title') }}
               </h3>
               <layout-wrap-svg
                 :source="dataSvg"
                 :color="$vuetify.theme.themes.light.primary"
               />
               <div class="text-h6">
-                {{ $t('pages.datasets.description') }}
+                {{ $t('description') }}
               </div>
               <p class="text-h6 mt-5">
-                {{ $t('common.authrequired') }}
+                {{ $t('authRequired') }}
               </p>
               <v-btn
                 color="primary"
                 @click="login"
               >
-                {{ $t('common.login') }}
+                {{ $t('login') }}
               </v-btn>
             </v-col>
           </v-row>
@@ -37,6 +37,20 @@
     </v-col>
   </v-container>
 </template>
+
+<i18n lang="yaml">
+fr:
+  title: Jeux de données
+  description: Cet espace vous permet de transformer vos fichiers de données en sources interopérables que vous pouvez mettre à disposition d'autres utilisateurs ou utiliser dans des applications spécifiques.
+  authRequired: Vous devez être authentifié pour utiliser ce service.
+  login: Se connecter / S'inscrire
+
+en:
+  title: Datasets
+  description: This page lets you transform your files into interoperable datasets that you will be able to publish for other users and to use in data visualizations.
+  authRequired: You must be logged in to use this service.
+  login: Login / Sign up
+</i18n>
 
 <script>
   import { mapState, mapActions, mapGetters } from 'vuex'
