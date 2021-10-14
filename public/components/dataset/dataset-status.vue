@@ -99,10 +99,10 @@
               @click="cancelDraft"
             />
             <v-btn
+              v-t="'validateDraft'"
               color="primary"
               class="ma-1"
               :disabled="dataset.status !== 'finalized'"
-              c-t="'validateDraft'"
               @click="validateDraft"
             />
           </v-col>
