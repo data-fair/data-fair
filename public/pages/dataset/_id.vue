@@ -1,5 +1,5 @@
 <template>
-  <v-row v-if="dataset || error" class="my-0">
+  <v-row v-if="user && (dataset || error)" class="my-0">
     <v-col :style="this.$vuetify.breakpoint.lgAndUp ? 'padding-right:256px;' : ''">
       <v-container class="py-0">
         <v-alert
@@ -196,7 +196,7 @@
               >
                 <template v-slot:title v-t="'share'" />
                 <template v-slot:tabs>
-                  <v-tab href="#share-permissions">
+                  <v-tab v-if="can('getPermissions')" href="#share-permissions">
                     <v-icon>mdi-security</v-icon>&nbsp;&nbsp;{{ $t('permissions') }}
                   </v-tab>
 
@@ -317,6 +317,12 @@ fr:
   metadata: Métadonnées
   uses: Utilisations
   datasets: jeux de données
+  tasks:
+    index: indexation
+    extend: extensions
+    analyze: analyse
+    finalize: finalisation
+    convert: conversion
 en:
   schema: Schema
   extension: Extension
@@ -348,6 +354,12 @@ en:
   metadata: Metadata
   uses: Uses
   datasets: datasets
+  tasks:
+    index: indexing
+    extend: extensions
+    analyze: analysis
+    finalize: finalization
+    convert: conversion
 </i18n>
 
 <script>
