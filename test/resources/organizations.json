@@ -1,6 +1,13 @@
 [{
     "id": "KWqAGZ4mG",
     "name": "Fivechat",
+    "departments": [{
+      "id": "dep1",
+      "name": "department 1"
+    }, {
+      "id": "dep2",
+      "name": "department 2"
+    }],
     "members": [{
       "id": "dmeadus0",
       "role": "admin"
@@ -10,6 +17,14 @@
     }, {
       "id": "bhazeldean7",
       "role": "user"
+    }, {
+      "id": "icarlens9",
+      "role": "contrib",
+      "department": "dep2"
+    }, {
+      "id": "ddecruce5",
+      "role": "contrib",
+      "department": "dep1"
     }]
   },
   {

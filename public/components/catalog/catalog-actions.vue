@@ -67,7 +67,7 @@
       <v-card>
         <v-card-title v-t="'changeOwnerTitle'" primary-title />
         <v-card-text>
-          <owner-pick v-model="newOwner" />
+          <owner-pick v-model="newOwner" :current-owner="catalog.owner" />
         </v-card-text>
         <v-card-actions>
           <v-spacer />

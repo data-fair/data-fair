@@ -58,6 +58,7 @@
       </v-row>
     </nuxt-link>
     <v-card-actions class="pl-3">
+      <owner-department :owner="dataset.owner" />
       <owner-short v-if="showOwner" :owner="dataset.owner" />
       &nbsp;&nbsp;
       <visibility :visibility="dataset.visibility" />

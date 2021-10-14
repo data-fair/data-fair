@@ -81,10 +81,12 @@ before('init globals', async () => {
     global.ax.builder('hlalonde3@desdev.cn:passwd').then(ax => { global.ax.hlalonde3 = ax }),
     global.ax.builder('ngernier4@usa.gov:passwd').then(ax => { global.ax.ngernier4 = ax }),
     global.ax.builder('ddecruce5@phpbb.com:passwd').then(ax => { global.ax.ddecruce5 = ax }),
+    global.ax.builder('ddecruce5@phpbb.com:passwd', 'KWqAGZ4mG').then(ax => { global.ax.ddecruce5Org = ax }),
     global.ax.builder('bhazeldean7@cnbc.com:passwd').then(ax => { global.ax.bhazeldean7 = ax }),
     global.ax.builder('bhazeldean7@cnbc.com:passwd', 'KWqAGZ4mG').then(ax => { global.ax.bhazeldean7Org = ax }),
     global.ax.builder('ngernier4@usa.gov:passwd', 'KWqAGZ4mG').then(ax => { global.ax.ngernier4Org = ax }),
     global.ax.builder('icarlens9@independent.co.uk:passwd').then(ax => { global.ax.icarlens9 = ax }),
+    global.ax.builder('icarlens9@independent.co.uk:passwd', 'KWqAGZ4mG').then(ax => { global.ax.icarlens9Org = ax }),
   ])
   debug('init globals ok')
 })

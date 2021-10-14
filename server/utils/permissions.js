@@ -46,8 +46,13 @@ Sélectionnez l'organisation ${req.resource.owner.name} en tant que compte actif
 
 const getOwnerRole = exports.getOwnerRole = (owner, user) => {
   if (!user) return null
+  // user current activeAccount and owner dot not match, the user is not better than anonymous
   if (user.activeAccount.type !== owner.type || user.activeAccount.id !== owner.id) return null
+  // user is implicitly admin of his own resources
   if (user.activeAccount.type === 'user') return config.adminRole
+  // user is in a department but the resource belongs either to no department or to another department
+  // user is implicitly of the lowest role
+  if (user.activeAccount.department && user.activeAccount.department !== owner.department) return config.userRole
   return user.activeAccount.role
 }
 
@@ -117,41 +122,33 @@ exports.filter = function(user) {
     } else {
       if (!user.organization) {
         // user is owner
-        or.push({
-          'owner.type': 'user',
-          'owner.id': user.id,
-        })
+        or.push({ 'owner.type': 'user', 'owner.id': user.id })
       }
       if (user.organization) {
         // user is member of owner organization
-        or.push({
-          'owner.type': 'organization',
-          'owner.id': user.organization.id,
-        })
+        or.push({ 'owner.type': 'organization', 'owner.id': user.organization.id })
       }
 
       if (!user.organization) {
         // user has specific permission to read
-        or.push({
-          permissions: {
-            $elemMatch: { $or: operationFilter, type: 'user', id: user.id },
-          },
-        })
+        or.push({ permissions: { $elemMatch: { $or: operationFilter, type: 'user', id: user.id } } })
       }
       if (user.organization) {
         // user's orga has specific permission to read
-        or.push({
-          permissions: {
-            $elemMatch: {
-              $and: [
-                { $or: operationFilter },
-                { $or: [{ roles: user.organization.role }, { roles: { $size: 0 } }] },
-              ],
-              type: 'organization',
-              id: user.organization.id,
-            },
-          },
-        })
+        const filters = [
+          // check that the permission applies to the current org of the user
+          { type: 'organization', id: user.organization.id },
+          // check that the permission applies to the current operation (through its class or operation id)
+          { $or: operationFilter },
+          // either the permission is not specific to a role or it matches the user's role in the organization
+          { $or: [{ roles: user.organization.role }, { roles: { $size: 0 } }] },
+        ]
+        /* TODO: adapt explicit permissions for organizations with departments
+        if (user.organization.department) {
+          // if the user is in a department only permissions explicitly targetted to his department concern hime
+          filters.push({ departments: user.organization.department })
+        } */
+        or.push({ permissions: { $elemMatch: { $and: filters } } })
       }
     }
   }
