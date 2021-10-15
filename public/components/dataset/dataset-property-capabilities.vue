@@ -35,8 +35,12 @@
         </v-btn>
       </v-toolbar>
       <v-card-text class="px-3 pb-0">
-        <tutorial-alert id="capabilities" v-t="'tutorialCapabilities'" />
-        <tutorial-alert id="capabilities-energy" v-t="'tutorialEnergy'" />
+        <tutorial-alert id="capabilities">
+          {{ $t('tutorialCapabilities') }}
+        </tutorial-alert>
+        <tutorial-alert id="capabilities-energy">
+          {{ $t('tutorialEnergy') }}
+        </tutorial-alert>
 
         <v-form ref="form">
           <v-jsf

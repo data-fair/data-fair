@@ -31,7 +31,9 @@
                 <template v-slot:tabs-items>
                   <v-tab-item value="metadata-info">
                     <v-container fluid class="pb-0">
-                      <tutorial-alert id="app-configure-meta" v-t="'tutorialConfigMeta'" />
+                      <tutorial-alert id="app-configure-meta">
+                        {{ $t('tutorialConfigMeta') }}
+                      </tutorial-alert>
                       <application-info />
                     </v-container>
                   </v-tab-item>
@@ -85,7 +87,9 @@
                   </v-tab>
                 </template>
                 <template v-slot:tabs-items>
-                  <tutorial-alert id="app-share-portal" v-t="'tutorialShare'" />
+                  <tutorial-alert id="app-share-portal">
+                    {{ $t('tutorialShare') }}
+                  </tutorial-alert>
                   <v-tab-item value="share-permissions">
                     <v-container fluid>
                       <permissions

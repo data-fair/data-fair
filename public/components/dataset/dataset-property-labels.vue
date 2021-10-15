@@ -36,7 +36,9 @@
         </v-btn>
       </v-toolbar>
       <v-card-text class="px-3">
-        <tutorial-alert id="labels" v-t="'tutorialLabels'" />
+        <tutorial-alert id="labels">
+          {{ $t('tutorialLabels') }}
+        </tutorial-alert>
 
         <v-form ref="form">
           <v-jsf

@@ -5,8 +5,8 @@
     color="success"
     border="left"
     dense
-    class="my-2"
-    dismissible
+    class="my-2 tutorial-alert"
+    :dismissible="true"
     @input="close"
   >
     <slot />

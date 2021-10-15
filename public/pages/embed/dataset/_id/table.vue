@@ -1,10 +1,10 @@
 <template>
   <v-container fluid class="pa-0">
     <tutorial-alert id="dataset-table">
-      Appliquez des filtres en survolant les valeurs et triez en cliquant sur les entêtes de colonnes. Cliquez sur le bouton en haut à droite pour télécharger dans un fichier le contenu filtré et trié.
+      {{ $t('tutorialFilter') }}
     </tutorial-alert>
     <v-sheet v-if="notFound" class="pa-2">
-      <p>Les données ne sont pas accessibles. Soit le jeu de données n'a pas encore été entièrement traité, soit il y a eu une erreur dans le traitement.</p>
+      <p v-t="'noData'" />
     </v-sheet>
     <template v-else>
       <v-row class="ma-0">
@@ -186,6 +186,15 @@
     </template>
   </v-container>
 </template>
+
+<i18n lang="yaml">
+fr:
+  tutorialFilter: Appliquez des filtres en survolant les valeurs et triez en cliquant sur les entêtes de colonnes. Cliquez sur le bouton en haut à droite pour télécharger dans un fichier le contenu filtré et trié.
+  noData: Les données ne sont pas accessibles. Soit le jeu de données n'a pas encore été entièrement traité, soit il y a eu une erreur dans le traitement.
+en:
+  tutorialFilter: Apply filters by hovering the values et sort by clicking on the headers. Click on the button on the top to the right to download in a file the filtered and sorted content.
+  noData: The data is not accessible. Either the dataset was not yet entirely processed, or there was an error.
+</i18n>
 
 <script>
   import { mapState, mapGetters } from 'vuex'

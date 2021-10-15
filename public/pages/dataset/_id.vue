@@ -48,7 +48,9 @@
                 <template v-slot:tabs-items>
                   <v-tab-item value="structure-schema">
                     <v-container fluid>
-                      <tutorial-alert id="dataset-add-concepts" v-t="'tutorialConcepts'" />
+                      <tutorial-alert id="dataset-add-concepts">
+                        {{ $t('tutorialConcepts') }}
+                      </tutorial-alert>
                       <dataset-schema />
                     </v-container>
                   </v-tab-item>
@@ -91,7 +93,9 @@
                   <v-tab-item value="metadata-info">
                     <layout-doc-link :tooltip="$t('docLinkEdit')" doc-key="datasetEdit" />
                     <v-container fluid class="py-0">
-                      <tutorial-alert id="dataset-configure-meta" v-t="'tutorialConfigMeta'" />
+                      <tutorial-alert id="dataset-configure-meta">
+                        {{ $t('tutorialConfigMeta') }}
+                      </tutorial-alert>
                       <dataset-info />
                     </v-container>
                   </v-tab-item>
@@ -209,7 +213,9 @@
                   </v-tab>
                 </template>
                 <template v-slot:tabs-items>
-                  <tutorial-alert id="dataset-share-portal" v-t="'tutorialShare'" />
+                  <tutorial-alert id="dataset-share-portal">
+                    {{ $t('tutorialShare') }}
+                  </tutorial-alert>
                   <v-tab-item value="share-permissions">
                     <v-container fluid>
                       <permissions
