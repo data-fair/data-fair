@@ -75,7 +75,7 @@ export default () => ({
           .filter(f => !f['x-extension'])
           .filter(f => f['x-refersTo'] !== 'http://schema.org/DigitalDocument')
           // .map(f => ({ ...f, maxLength: 10000 }))
-          .reduce((a, f) => { a[f.key] = { ...f, enum: undefined, key: undefined, ignoreDetection: undefined }; return a }, {}),
+          .reduce((a, f) => { a[f.key] = { ...f, enum: undefined, key: undefined, ignoreDetection: undefined, ignoreIntegerDetection: undefined }; return a }, {}),
       }
     },
     availableMasters(state) {

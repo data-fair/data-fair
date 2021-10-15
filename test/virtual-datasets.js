@@ -93,6 +93,44 @@ describe('virtual datasets', () => {
     assert.ok(res.data.schema.find(f => f.key === 'badKey'))
   })
 
+  it('Compatibility is accepted for integer/number types', async () => {
+    const ax = global.ax.dmeadus
+    const datasetNum = await testUtils.sendDataset('datasets/dataset-number.csv', ax)
+    let datasetInt = await testUtils.sendDataset('datasets/dataset-integer.csv', ax)
+    assert.equal(datasetInt.schema.find(p => p.key === 'num').type, 'integer')
+    try {
+      await ax.post('/api/v1/datasets', {
+        isVirtual: true,
+        title: 'a virtual dataset',
+        virtual: {
+          children: [datasetNum.id, datasetInt.id],
+        },
+        schema: [{ key: 'str' }, { key: 'num' }],
+      })
+      assert.fail()
+    } catch (err) {
+      assert.equal(err.status, 400)
+    }
+
+    datasetInt.schema.find(p => p.key === 'num').ignoreIntegerDetection = true
+    await ax.patch('/api/v1/datasets/' + datasetInt.id, {
+      schema: datasetInt.schema,
+    })
+    datasetInt = await workers.hook('finalizer/' + datasetInt.id)
+    assert.equal(datasetInt.schema.find(p => p.key === 'num').type, 'number')
+
+    const res = await ax.post('/api/v1/datasets', {
+      isVirtual: true,
+      title: 'a virtual dataset',
+      virtual: {
+        children: [datasetNum.id, datasetInt.id],
+      },
+      schema: [{ key: 'str' }, { key: 'num' }],
+    })
+    const virtualDataset = await workers.hook('finalizer/' + res.data.id)
+    assert.equal(virtualDataset.schema.find(p => p.key === 'num').type, 'number')
+  })
+
   it('Check that column restriction is enforced (select, search, aggs)', async () => {
     const ax = global.ax.dmeadus
     const dataset = await testUtils.sendDataset('datasets/dataset1.csv', ax)

@@ -73,12 +73,18 @@ exports.prepareSchema = async (db, dataset) => {
 
     // Some attributes of a a fields have to be homogeneous accross all children
     matchingFields.forEach(f => {
-      if (f.type !== field.type) throw createError(400, `Le champ "${field.key}" a des types contradictoires (${field.type}, ${f.type})`)
-      if (f.separator !== field.separator) throw createError(400, `Le champ "${field.key}" a des séparateurs contradictoires  (${field.separator}, ${f.separator})`)
+      if (f.type !== field.type) {
+        let message = `Le champ "${field.key}" a des types contradictoires (${field.type}, ${f.type}).`
+        if (['number', 'integer'].includes(field.type) && ['number', 'integer'].includes(f.type)) {
+          message += ' Vous pouvez corriger cette incohérence en forçant le traitement des colonnes comme des nombres flottants dans tous les jeux enfants.'
+        }
+        throw createError(400, message)
+      }
+      if (f.separator !== field.separator) throw createError(400, `Le champ "${field.key}" a des séparateurs contradictoires  (${field.separator}, ${f.separator}).`)
       let format = f.format
       if (format === 'uri-reference') format = undefined
-      if (format !== field.format) throw createError(400, `Le champ "${field.key}" a des formats contradictoires (${field.format || 'non défini'}, ${f.format || 'non défini'})`)
-      if (f['x-refersTo'] !== field['x-refersTo']) throw createError(400, `Le champ "${field.key}" a des concepts contradictoires (${field['x-refersTo'] || 'non défini'}, ${f['x-refersTo'] || 'non défini'})`)
+      if (format !== field.format) throw createError(400, `Le champ "${field.key}" a des formats contradictoires (${field.format || 'non défini'}, ${f.format || 'non défini'}).`)
+      if (f['x-refersTo'] !== field['x-refersTo']) throw createError(400, `Le champ "${field.key}" a des concepts contradictoires (${field['x-refersTo'] || 'non défini'}, ${f['x-refersTo'] || 'non défini'}).`)
     })
   })
 

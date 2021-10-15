@@ -10,7 +10,10 @@ exports.sniff = (values, attachmentsPaths = [], existingField) => {
     return { type: 'string', 'x-refersTo': 'http://schema.org/DigitalDocument' }
   }
   if (checkAll(values, val => booleanRegexp.test(val))) return { type: 'boolean' }
-  if (checkAll(values, val => intRegexp.test(val))) return { type: 'integer' }
+  if (checkAll(values, val => intRegexp.test(val))) {
+    if (existingField && existingField.ignoreIntegerDetection) return { type: 'number' }
+    else return { type: 'integer' }
+  }
   if (checkAll(values, val => floatRegexp.test(val))) return { type: 'number' }
   if (checkAll(values, dateTimeSchema)) return { type: 'string', format: 'date-time' }
   if (checkAll(values, dateSchema)) return { type: 'string', format: 'date' }

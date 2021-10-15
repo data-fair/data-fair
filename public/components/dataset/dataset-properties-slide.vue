@@ -126,7 +126,15 @@
               :disabled="!editable || !currentPropRef.editable"
               :label="$t('ignoreDetection')"
               persistent-hint
-              hint="$t('ignoreDetectionHelp')"
+              :hint="$t('ignoreDetectionHelp')"
+            />
+            <v-checkbox
+              v-if="dataset.file && dataset.file.mimetype === 'text/csv' && ['integer', 'number'].includes(currentPropRef.prop.type)"
+              v-model="currentPropRef.prop.ignoreIntegerDetection"
+              :disabled="!editable || !currentPropRef.editable"
+              :label="$t('ignoreIntegerDetection')"
+              persistent-hint
+              :hint="$t('ignoreIntegerDetectionHelp')"
             />
             <v-checkbox
               v-if="dataset.isRest"
@@ -166,6 +174,8 @@ fr:
   separatorHelp: Ne renseigner que pour les colonnes multivaluées. Ce caractère sera utilisé pour séparer les valeurs.
   ignoreDetection: Ignorer la détection de type
   ignoreDetectionHelp: Si vous cochez cette case la détection automatique de type sera désactivée et la colonne sera traitée comme un simple texte.
+  ignoreIntegerDetection: Traiter comme un nombre flottant
+  ignoreIntegerDetectionHelp: Si vous cochez cette case la détection du type "nombre entier" sera désactivée et le nombre sera traité comme un nombre flottant. Cette étape peut être nécessaire pour rendre compatibles des jeux de données avant de les joindre dans un jeu virtuel.
   readOnly: Lecture seule
   readOnlyHelp: Si vous cochez cette case la colonne sera affichée en lecture seule dans le formulaire de saisie.
   masterData: Valeurs issues d'une donnée de référence
@@ -179,7 +189,9 @@ en:
   sep: Separator
   separatorHelp: Only provide for multi-values columns. This character will be used to separate the values.
   ignoreDetection: Ignore type detection
-  ignoreDetectionHelp: If you check this box the automatic detection of type will be siabled and the column will be processed as a simple string.
+  ignoreDetectionHelp: If you check this box the automatic detection of type will be disabled and the column will be processed as a simple string.
+  ignoreIntegerDetection: Handle as a floating number
+  ignoreIntegerDetectionHelp: If you check this box the detection of the type integer will be disabled and column will be processed as a floating number. This step might be necessary to make datasets compatibles before joining them in a virtual dataset.
   readOnly: Read only
   readOnlyHelp: If you check this box the column will be rendered as a read only field in the input form.
   masterData: Values coming from a master-data dataset

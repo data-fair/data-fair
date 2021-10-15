@@ -242,7 +242,7 @@ router.get('/:datasetId/schema', readDataset(), applicationKey, permissions.midd
         .filter(f => !f['x-calculated'])
         .filter(f => !f['x-extension'])
         // .map(f => ({ ...f, maxLength: 10000 }))
-        .reduce((a, f) => { a[f.key] = { ...f, enum: undefined, key: undefined, ignoreDetection: undefined, separator: undefined }; return a }, {}),
+        .reduce((a, f) => { a[f.key] = { ...f, enum: undefined, key: undefined, ignoreDetection: undefined, ignoreIntegerDetection: undefined, separator: undefined }; return a }, {}),
       }
   } else {
     schema.forEach(field => {
@@ -323,6 +323,9 @@ router.patch('/:datasetId', readDataset((patch) => {
     patch.status = 'analyzed'
   } else if (patch.schema && patch.schema.find(f => req.dataset.schema.find(df => df.key === f.key && df.ignoreDetection !== f.ignoreDetection))) {
     // some ignoreDetection param has changed on a field, trigger full analysis / re-indexing
+    patch.status = 'loaded'
+  } else if (patch.schema && patch.schema.find(f => req.dataset.schema.find(df => df.key === f.key && df.ignoreIntegerDetection !== f.ignoreIntegerDetection))) {
+    // some ignoreIntegerDetection param has changed on a field, trigger full analysis / re-indexing
     patch.status = 'loaded'
   } else if (patch.schema) {
     try {
