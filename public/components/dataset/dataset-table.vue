@@ -505,10 +505,10 @@ en:
         if (!this.data.results) return []
         const items = [...this.data.results]
         items.forEach(item => {
-          if (this.deletedLines.find(l => l._id === item._id)) {
+          if (this.deletedLines.find(l => l && l._id === item._id)) {
             item._tmpState = 'deleted'
-          } else if (this.updatedLines.find(l => l._id === item._id)) {
-            Object.assign(item, this.updatedLines.find(l => l._id === item._id))
+          } else if (this.updatedLines.find(l => l && l._id === item._id)) {
+            Object.assign(item, this.updatedLines.find(l => l && l._id === item._id))
             item._tmpState = 'updated'
           } else if ((this.editLineDialog || this.deleteLineDialog) && this.editedLine && (this.editedLine._id === item._id || this.editedId === item._id)) {
             item._tmpState = 'editing'

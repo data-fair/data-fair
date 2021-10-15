@@ -222,10 +222,10 @@ router.get('/:datasetId', readDataset(), applicationKey, permissions.middleware(
 router.get('/:datasetId/schema', readDataset(), applicationKey, permissions.middleware('readDescription', 'read'), cacheHeaders.noCache, (req, res, next) => {
   let schema = req.dataset.schema
   if (req.query.mimeType === 'application/tableschema+json') {
-    // res.setHeader('content-disposition', `attachment; filename="${req.dataset.id}-tableschema.json"`)
+    res.setHeader('content-disposition', `attachment; filename="${req.dataset.id}-tableschema.json"`)
     schema = datasetUtils.tableSchema(schema)
   } else if (req.query.mimeType === 'application/schema+json') {
-    // res.setHeader('content-disposition', `attachment; filename="${req.dataset.id}-schema.json"`)
+    res.setHeader('content-disposition', `attachment; filename="${req.dataset.id}-schema.json"`)
     schema = datasetUtils.jsonSchema(schema)
   } else {
     schema.forEach(field => {
