@@ -411,7 +411,7 @@ describe('virtual datasets', () => {
       virtualDataset = await workers.hook('finalizer/' + virtualDataset.id)
       assert.fail()
     } catch (err) {
-      assert.equal(err.message, 'Le champ "some_date" a des formats contradictoires (non défini, date)')
+      assert.equal(err.message, 'Le champ "some_date" a des formats contradictoires (non défini, date).')
     }
     virtualDataset = (await ax.get('/api/v1/datasets/' + virtualDataset.id)).data
     assert.equal(virtualDataset.status, 'error')
