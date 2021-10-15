@@ -250,14 +250,10 @@ class TransactionStream extends Writable {
 }
 
 const compileSchema = (dataset) => {
-  return ajv.compile({
-    type: 'object',
-    additionalProperties: false,
-    properties: dataset.schema
-      .filter(f => f.key[0] !== '_')
-      .concat([{ key: '_id', type: 'string' }])
-      .reduce((a, b) => { a[b.key] = { ...b, enum: undefined, key: undefined, ignoreDetection: undefined, ignoreIntegerDetection: undefined, separator: undefined }; return a }, {}),
-  })
+  const schema = datasetUtils.jsonSchema(dataset.schema)
+  schema.additionalProperties = false
+  schema.properties._id = { type: 'string' }
+  return ajv.compile(schema)
 }
 
 async function manageAttachment(req, keepExisting) {

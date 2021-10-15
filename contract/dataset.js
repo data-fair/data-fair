@@ -36,6 +36,9 @@ const schema = {
       'x-labels': {
         type: 'object',
       },
+      'x-labelsRestricted': {
+        type: 'boolean',
+      },
       'x-master': {
         type: 'object',
         properties: {

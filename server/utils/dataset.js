@@ -663,3 +663,54 @@ exports.mergeDraft = (dataset) => {
   delete dataset.draft
   return dataset
 }
+
+exports.tableSchema = (schema) => {
+  return {
+    fields: schema.filter(f => !f['x-calculated'])
+    .filter(f => !f['x-extension'])
+    .map(f => {
+      const field = { name: f.key, title: f.title || f['x-originalName'], type: f.type }
+      if (f.description) field.description = f.description
+      // if (f.format) field.format = f.format // commented besause uri-reference format is not in tableschema
+      if (f['x-refersTo']) field.rdfType = f['x-refersTo']
+      return field
+    }),
+  }
+}
+
+const cleanProperty = p => {
+  const cleanProp = { ...p }
+  // we badly named enum from the start, too bad, now we accept this semantic difference with json schema
+  if (cleanProp.enum) {
+    cleanProp.examples = cleanProp.enum
+    delete cleanProp.enum
+  }
+  const labels = cleanProp['x-labels']
+  if (labels) {
+    const values = Object.keys(labels).map(key => ({ title: labels[key], const: key }))
+    if (cleanProp['x-labelsRestricted']) {
+      cleanProp.oneOf = values
+    } else {
+      cleanProp.anyOf = values
+      cleanProp.anyOf.push({})
+    }
+
+    delete cleanProp.examples
+  }
+  delete cleanProp.key
+  delete cleanProp.ignoreDetection
+  delete cleanProp.ignoreIntegerDetection
+  delete cleanProp.separator
+  delete cleanProp.icon
+  return cleanProp
+}
+
+exports.jsonSchema = (schema) => {
+  return {
+    type: 'object',
+    properties: schema
+      .filter(f => !f['x-calculated'])
+      .filter(f => !f['x-extension'])
+      .reduce((a, p) => { a[p.key] = cleanProperty(p); return a }, {}),
+    }
+}

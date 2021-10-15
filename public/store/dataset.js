@@ -16,6 +16,7 @@ export default () => ({
     nbApplications: null,
     nbVirtualDatasets: null,
     dataFiles: null,
+    jsonSchema: null,
     eventStates: {
       'data-updated': 'uploaded',
       'download-end': 'uploaded',
@@ -66,17 +67,6 @@ export default () => ({
     },
     qMode: (state) => {
       return state.dataset && state.dataset.count && state.dataset.count < 10000 ? 'complete' : 'simple'
-    },
-    jsonSchema: (state) => {
-      return state.dataset && {
-        type: 'object',
-        properties: state.dataset.schema
-          .filter(f => !f['x-calculated'])
-          .filter(f => !f['x-extension'])
-          .filter(f => f['x-refersTo'] !== 'http://schema.org/DigitalDocument')
-          // .map(f => ({ ...f, maxLength: 10000 }))
-          .reduce((a, f) => { a[f.key] = { ...f, enum: undefined, key: undefined, ignoreDetection: undefined, ignoreIntegerDetection: undefined }; return a }, {}),
-      }
     },
     availableMasters(state) {
       if (!state.remoteServices) return
@@ -188,6 +178,10 @@ export default () => ({
       const dataFiles = await this.$axios.$get(`api/v1/datasets/${state.datasetId}/data-files`, { params: { draft: state.draftMode } })
       commit('setAny', { dataFiles })
     },
+    async fetchJsonSchema({ commit, state }) {
+      const jsonSchema = await this.$axios.$get(`api/v1/datasets/${state.datasetId}/schema`, { params: { mimeType: 'application/schema+json' } })
+      commit('setAny', { jsonSchema })
+    },
     async setId({ commit, getters, dispatch, state }, { datasetId, draftMode }) {
       dispatch('clear')
       commit('setAny', { datasetId, draftMode })
@@ -223,6 +217,7 @@ export default () => ({
         if (event.type === 'finalize-end') {
           const dataset = await this.$axios.$get(`api/v1/datasets/${state.datasetId}`, { params: { select: 'schema,bbox', draft: 'true' } })
           commit('patch', { schema: dataset.schema, bbox: dataset.bbox, finalizedAt: dataset.finalizedAt })
+          if (state.jsonSchema) dispatch('fetchJsonSchema')
         }
         if (event.type === 'publication') {
           const dataset = await this.$axios.$get(`api/v1/datasets/${state.datasetId}`, { params: { select: 'publications', draft: 'true' } })

@@ -1,5 +1,6 @@
 <template lang="html">
   <v-form
+    v-if="editSchema"
     ref="editLineForm"
     :lazy-validation="true"
   >
@@ -39,7 +40,7 @@ en:
 
   import VJsf from '@koumoul/vjsf/lib/VJsf.js'
   import '@koumoul/vjsf/dist/main.css'
-  import { mapState, mapGetters } from 'vuex'
+  import { mapState } from 'vuex'
   export default {
     components: { VJsf },
     props: ['value', 'selectedCols'],
@@ -60,8 +61,7 @@ en:
       },
     }),
     computed: {
-      ...mapState('dataset', ['dataset', 'lineUploadProgress']),
-      ...mapGetters('dataset', ['jsonSchema']),
+      ...mapState('dataset', ['dataset', 'lineUploadProgress', 'jsonSchema']),
       editSchema() {
         if (!this.selectedCols || !this.selectedCols.length) return this.jsonSchema
         const schema = JSON.parse(JSON.stringify(this.jsonSchema))
@@ -71,9 +71,15 @@ en:
             schema.properties[key]['x-options'] = schema.properties[key]['x-options'] || {}
             schema.properties[key]['x-options'].hideReadOnly = true
           }
+          if (schema.properties[key]['x-refersTo'] === 'http://schema.org/DigitalDocument') {
+            delete schema.properties[key]
+          }
         })
         return schema
       },
+    },
+    created() {
+      if (!this.jsonSchema) this.$store.dispatch('dataset/fetchJsonSchema')
     },
   }
 </script>

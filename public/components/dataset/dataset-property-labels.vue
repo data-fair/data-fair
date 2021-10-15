@@ -6,11 +6,9 @@
   >
     <template #activator="{on, attrs}">
       <v-btn
-        v-if="user.adminMode"
         fab
         small
         depressed
-        color="admin"
         dark
         v-bind="attrs"
         title="libellés"
@@ -40,6 +38,12 @@
           {{ $t('tutorialLabels') }}
         </tutorial-alert>
 
+        <v-checkbox
+          v-if="isRest"
+          v-model="property['x-labelsRestricted']"
+          :label="$t('restricted')"
+        />
+
         <v-form ref="form">
           <v-jsf
             v-if="editLabels"
@@ -58,20 +62,22 @@
 fr:
   labels: Libellés
   tutorialLabels: Saisissez des libellés associés à des valeurs présentes dans la donnée pour améliorer la présentation dans les visualisations.
+  restricted: cochez cette case pour restreindre les futures saisies aux valeurs ci-dessous
 en:
   labels: Labels
   tutorialLabels: Enter some labels associate to values present in the data to improve the display in visualizations.
+  restricted: check this box to restrict future values to the values below
 </i18n>
 
 <script>
-  import { mapState } from 'vuex'
+  import { mapState, mapActions } from 'vuex'
   import VJsf from '@koumoul/vjsf/lib/VJsf.js'
   import '@koumoul/vjsf/dist/main.css'
   import '@koumoul/vjsf/lib/deps/third-party.js'
 
   export default {
     components: { VJsf },
-    props: ['editable', 'property'],
+    props: ['editable', 'property', 'isRest'],
     data() {
       return {
         dialog: false,
@@ -98,6 +104,7 @@ en:
       },
     },
     methods: {
+      ...mapActions('dataset'),
       toggle(show) {
         if (show) {
           this.editLabels = Object.keys(this.property['x-labels'] || {})

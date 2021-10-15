@@ -222,28 +222,11 @@ router.get('/:datasetId', readDataset(), applicationKey, permissions.middleware(
 router.get('/:datasetId/schema', readDataset(), applicationKey, permissions.middleware('readDescription', 'read'), cacheHeaders.noCache, (req, res, next) => {
   let schema = req.dataset.schema
   if (req.query.mimeType === 'application/tableschema+json') {
-    res.setHeader('content-disposition', `attachment; filename="${req.dataset.id}-tableschema.json"`)
-    schema = {
-      fields: schema.filter(f => !f['x-calculated'])
-      .filter(f => !f['x-extension'])
-      .map(f => {
-        const field = { name: f.key, title: f.title || f['x-originalName'], type: f.type }
-        if (f.description) field.description = f.description
-        // if (f.format) field.format = f.format // commented besause uri-reference format is not in tableschema
-        if (f['x-refersTo']) field.rdfType = f['x-refersTo']
-        return field
-      }),
-    }
+    // res.setHeader('content-disposition', `attachment; filename="${req.dataset.id}-tableschema.json"`)
+    schema = datasetUtils.tableSchema(schema)
   } else if (req.query.mimeType === 'application/schema+json') {
-    res.setHeader('content-disposition', `attachment; filename="${req.dataset.id}-schema.json"`)
-    schema = {
-      type: 'object',
-      properties: schema
-        .filter(f => !f['x-calculated'])
-        .filter(f => !f['x-extension'])
-        // .map(f => ({ ...f, maxLength: 10000 }))
-        .reduce((a, f) => { a[f.key] = { ...f, enum: undefined, key: undefined, ignoreDetection: undefined, ignoreIntegerDetection: undefined, separator: undefined }; return a }, {}),
-      }
+    // res.setHeader('content-disposition', `attachment; filename="${req.dataset.id}-schema.json"`)
+    schema = datasetUtils.jsonSchema(schema)
   } else {
     schema.forEach(field => {
       field.label = field.title || field['x-originalName'] || field.key

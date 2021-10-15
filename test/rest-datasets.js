@@ -59,6 +59,12 @@ describe('REST datasets', () => {
     } catch (err) {
       assert.equal(err.status, 404)
     }
+    try {
+      await ax.patch('/api/v1/datasets/rest1/lines/id1', { _i: 10 })
+      assert.fail()
+    } catch (err) {
+      assert.equal(err.status, 400)
+    }
   })
 
   it('Perform CRUD operations in bulks', async () => {
