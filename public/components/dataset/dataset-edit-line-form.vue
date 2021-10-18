@@ -63,10 +63,9 @@ en:
     computed: {
       ...mapState('dataset', ['dataset', 'lineUploadProgress', 'jsonSchema']),
       editSchema() {
-        if (!this.selectedCols || !this.selectedCols.length) return this.jsonSchema
         const schema = JSON.parse(JSON.stringify(this.jsonSchema))
         Object.keys(schema.properties).forEach(key => {
-          if (!this.selectedCols.includes(key)) {
+          if (this.selectedCols && this.selectedCols.length && !this.selectedCols.includes(key)) {
             schema.properties[key].readOnly = true
             schema.properties[key]['x-options'] = schema.properties[key]['x-options'] || {}
             schema.properties[key]['x-options'].hideReadOnly = true
