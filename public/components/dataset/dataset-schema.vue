@@ -35,7 +35,7 @@
             @click="resetSchema"
           />
           <v-btn
-            v-if="updated"
+            v-if="updated && can('writeDescription')"
             v-t="'apply'"
             color="primary"
             @click="save"

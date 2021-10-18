@@ -42,6 +42,7 @@
           v-if="isRest"
           v-model="property['x-labelsRestricted']"
           :label="$t('restricted')"
+          :disabled="!editable"
         />
 
         <v-form ref="form">
