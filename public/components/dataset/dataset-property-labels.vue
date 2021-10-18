@@ -87,7 +87,7 @@ en:
     computed: {
       ...mapState('session', ['user']),
       schema() {
-        const value = { type: 'string', title: 'valeur', 'x-cols': 6 }
+        const value = { type: 'string', title: 'valeur', 'x-cols': 6, 'x-class': 'pr-2' }
         if (this.property.type === 'boolean') value.enum = ['true', 'false']
         if (this.property.enum) value.examples = this.property.enum
         return {
@@ -95,6 +95,7 @@ en:
           title: ' ',
           items: {
             type: 'object',
+            required: ['value'],
             properties: {
               value,
               label: { type: 'string', title: 'libellé', 'x-cols': 6 },
@@ -104,7 +105,6 @@ en:
       },
     },
     methods: {
-      ...mapActions('dataset'),
       toggle(show) {
         if (show) {
           this.editLabels = Object.keys(this.property['x-labels'] || {})
@@ -114,7 +114,10 @@ en:
         }
       },
       apply() {
-        const labels = this.editLabels.reduce((a, item) => { a[item.value] = item.label; return a }, {})
+        const labels = this.editLabels
+          .filter(item => !!item.value)
+          .reduce((a, item) => { a[item.value] = item.label || ''; return a }, {})
+        console.log('labels', labels)
         if (Object.keys(labels).length) this.$set(this.property, 'x-labels', labels)
         else delete this.property['x-labels']
       },
