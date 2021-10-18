@@ -687,7 +687,7 @@ const cleanProperty = p => {
   }
   const labels = cleanProp['x-labels']
   if (labels && Object.keys(labels).length) {
-    const values = Object.keys(labels).map(key => ({ title: labels[key], const: key }))
+    const values = Object.keys(labels).map(key => ({ title: labels[key] || key, const: key }))
     if (cleanProp['x-labelsRestricted']) {
       cleanProp.oneOf = values
     } else {
