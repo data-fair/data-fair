@@ -85,7 +85,7 @@ module.exports = {
     },
     lang: {
       locales: { fr, en },
-      current: config.defaultLocale,
+      current: config.i18n.defaultLocale,
     },
   },
   env: {
