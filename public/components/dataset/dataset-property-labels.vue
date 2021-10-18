@@ -70,7 +70,7 @@ en:
 </i18n>
 
 <script>
-  import { mapState, mapActions } from 'vuex'
+  import { mapState } from 'vuex'
   import VJsf from '@koumoul/vjsf/lib/VJsf.js'
   import '@koumoul/vjsf/dist/main.css'
   import '@koumoul/vjsf/lib/deps/third-party.js'
