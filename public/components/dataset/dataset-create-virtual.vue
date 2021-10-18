@@ -46,7 +46,7 @@ fr:
   children: Jeux enfants
   search: Rechercher
   create: Créer
-  creationError: "Erreur pendant la création du jeu de données virtual :"
+  creationError: "Erreur pendant la création du jeu de données :"
 en:
   message: A virtual dataset is an alternative representation of one or more other datasets. You can use them to create restricted vues of a dataset by applying filters or by selecting a part of the columns. You can also aggregate multiple datasets in a single representation if their schemas are compatible.
   title: Title
@@ -54,7 +54,7 @@ en:
   children: Children datasets
   search: Search
   create: Create
-  creationError: "Error while creating the virtual dataset:"
+  creationError: "Error while creating the dataset:"
 </i18n>
 
 <script>

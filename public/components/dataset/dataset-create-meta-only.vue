@@ -27,13 +27,13 @@ fr:
   title: Titre
   requiredTitle: le titre est obligatoire, il sea utilisé pour créer un identifiant au nouveau jeu de données
   create: Créer
-  creationError: "Erreur pendant la création du jeu de données virtual :"
+  creationError: "Erreur pendant la création du jeu de données :"
 en:
   message: A metadata-only dataset is created empty without data file or schema.
   title: Title
   requiredTitle: the title is required, it will be used to create an id for the new dataset
   create: Create
-  creationError: "Error while creating the virtual dataset:"
+  creationError: "Error while creating the dataset:"
 </i18n>
 
 <script>

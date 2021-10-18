@@ -42,7 +42,7 @@ fr:
   title: Titre
   requiredTitle: le titre est obligatoire, il sea utilisé pour créer un identifiant au nouveau jeu de données
   create: Créer
-  creationError: "Erreur pendant la création du jeu de données virtual :"
+  creationError: "Erreur pendant la création du jeu de données :"
   attachment: Pièce jointe
   history: Conserver un historique complet des révisions des lignes du jeu de données
   attachments: Accepter des pièces jointes
@@ -52,7 +52,7 @@ en:
   title: Title
   requiredTitle: the title is required, it will be used to create an id for the new dataset
   create: Create
-  creationError: "Error while creating the virtual dataset:"
+  creationError: "Error while creating the dataset:"
   attachment: Attachment
   history: Keep a full history of the revisions of the lines of the dataset
   attachments: Accept attachments
