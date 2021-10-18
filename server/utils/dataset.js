@@ -686,7 +686,7 @@ const cleanProperty = p => {
     delete cleanProp.enum
   }
   const labels = cleanProp['x-labels']
-  if (labels) {
+  if (labels && Object.keys(labels).length) {
     const values = Object.keys(labels).map(key => ({ title: labels[key], const: key }))
     if (cleanProp['x-labelsRestricted']) {
       cleanProp.oneOf = values
