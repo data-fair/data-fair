@@ -8,10 +8,10 @@ published: false
 application : https://koumoul.com/apps/data-fair-quizz/0.1/
 ---
 
-La visualisation **Jeu de Quizz** permet de créer un jeu dans lequel il faut faire correspondre des libellés à des descriptions ou images. Vous avez un exemple de cette visualisation sur la [variation de température et comparaison entre climat océanique/continental](https://opendata.koumoul.com/reuses/variation-de-temperature-comparaison-climat-oceanique-et-continental).  
+La visualisation **Jeu de Quizz** permet de créer un jeu dans lequel il faut faire correspondre des libellés à des descriptions ou images. Vous avez un exemple de cette visualisation sur la [quizz sur la fête de la science 2019](https://opendata.koumoul.com/reuses/quizz-fete-de-la-science-2019).  
 Un score est attribué au joueur en fonction du nombre de bonnes réponse et du temps passé pour répondre aux questions.
 
-### Créer votre graphe
+### Créer Quizz
 
 Pour réaliser votre visualisation, cliquez sur **Visualisations** puis sur **Configuration une visualisation**.
 

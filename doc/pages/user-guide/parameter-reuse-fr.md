@@ -9,12 +9,10 @@ published: false
 
 Le menu de configuration d'une visualisation est divisé en plusieurs sections.  
 
-La section **Source de données** (ou **Données**) est commune à tous les menus de configurations et permet de choisir le jeu de données à représenter dans la visualisation.
-
 Le bouton **Enregistrer** passe en orange lorsque vous avez modifié la configuration de votre application. Les modifications ne seront pas prises en compte tant que vous n'avez pas appuyé sur le bouton enregistrer.
 
 ### Source de données
-La **Source de données** permet de choisir le jeu de données que vous voulez utiliser dans notre visualisation.
+La section **Source de données** (ou **Données**) est commune à tous les menus de configurations et permet de choisir le jeu de données à représenter dans la visualisation.
 
 Sur certaines configurations, on peut définir des filtres statiques ou des filtres interactifs. Les filtres permettent restreindre les données à certaines valeurs ou d'exclure certaines valeurs. Vous pouvez réaliser un contrôle sur les lignes grâce à ces filtres.
 

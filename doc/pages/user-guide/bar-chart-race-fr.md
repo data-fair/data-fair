@@ -13,7 +13,7 @@ Vous avez un exemple de cette visualisation sur l'[évolution des salaires selon
 
 ### Prérequis
 
-Les données que vous souhaitez projeter doivent contenir une colonne contenant une temporalité. Dans notre exemple de l'évolution des salaires, la temporalité est en année.
+Les données que vous souhaitez projeter doivent posséder une colonne contenant une temporalité. Dans notre exemple de l'évolution des salaires, la temporalité est en année.
 
 ### Configuration
 #### Créer une visualisation Bar Chart Race

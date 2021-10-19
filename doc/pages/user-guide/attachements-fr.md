@@ -12,11 +12,11 @@ Lorsque vous chargez un jeu de données, il est possible d'associer une archive 
 Pour que votre archive soit correctement associée à votre jeu de données, votre jeu de données et votre archive doivent suivre ces deux règles :
 
 1. votre jeu de donnée doit posséder une colonne contenant les chemins et les noms des fichiers dans l'archive ZIP
-2. le nom de votre fichier zip doit correspondre à la colonne contenant les chemins des fichiers dans l'archive ZIP. Exemple : La colonne dans votre jeu de données s'appelle **Document** votre fichier doit s'appeler **Document.zip**
+2. le nom de votre fichier zip doit correspondre au nom de la colonne contenant les chemins des fichiers dans l'archive ZIP. Exemple : La colonne dans votre jeu de données s'appelle **Document** votre fichier doit s'appeler **Document.zip**
 
 <p>
 </p>
-Dans le schéma de votre jeu de donnés, le concept **Document numérique attaché** sera automatiquement associé à la colonne contenant les noms des fichiers de votre archive ZIP.
+Dans le schéma de votre jeu de données, le concept **Document numérique attaché** sera automatiquement associé à la colonne contenant les noms des fichiers de votre archive ZIP.
 
 Le temps d'indexation des pièces jointes est assez long et il dépendra de la taille de vos pièces jointes.  
 La taille des fichiers dézippé des pièces jointes est comptabilisée dans le quota de stockage de données de votre plan.

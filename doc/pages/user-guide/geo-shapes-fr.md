@@ -3,11 +3,10 @@ title: Géo Shapes
 section: 6
 subsection : 3
 updated: 2021-09-20
-description : Créer facilement des cartes administratives interactives.
+description : Visualiser des données géométriques sur une carte.
 published: false
 application : https://koumoul.com/apps/data-fair-geo-shapes/0.1/
 ---
-
 
 La visualisation **Géo Shapes** permet de visualiser des données géométriques sur une carte. Il est ainsi possible de visualiser des données telles que le zonage du PLU ou des réseaux énergétiques.  
 Vous avez un exemple de cette visualisation sur la [carte des zones du PLU d'Angers Loire Métropole](https://opendata.koumoul.com/reuses/plu-zone-urba-angers-loire-metropole/full).  
@@ -16,7 +15,7 @@ Il est possible de cliquer sur chaque zone pour obtenir plus de détails ou de c
 ### Configuration
 #### Les concepts
 
-Pour configurer une visualisation **Géo Shapes**, votre compte actif contient au mois un jeu de données avec le [concept](./user-guide/concept)  **Géometrie GeoJSON** pour pouvoir projeter vos données sur la visualisation.  
+Pour configurer une visualisation **Géo Shapes**, votre compte actif contient au moins un jeu de données avec le [concept](./user-guide/concept)  **Géometrie GeoJSON** pour pouvoir projeter vos données sur la visualisation.  
 Une fois que vous avez mis à jour le schéma de vos données, vous pouvez visualiser un aperçu de vos données à l'aide du bouton **carte générique**. Vous pouvez ainsi vérifier que vos données sont correctement projetées sur une carte.
 
 #### Créer une visualisation Géo Shapes
@@ -44,6 +43,7 @@ Les **informations** vous donnent un résumé des caractéristiques de votre app
 #### Menu de configuration
 Le menu de configuration est composé de trois sous-menus : **Source de données**, **Option de rendu** et **Navigation**.
 
+##### Source de données
 Dans le menu **Source de données**, vous pouvez choisir le jeu de données que vous voulez utiliser.  
 Lorsque vous avez choisi un jeu de données compatible avec l'application **Géo Shapes**, un aperçu de carte s'affiche.
 

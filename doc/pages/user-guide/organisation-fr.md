@@ -10,12 +10,12 @@ Un compte personnel peut créer une ou plusieurs organisations en fonction de se
 
 ### Créer une organisation
 
-Les organisations peuvent être créées dans l'espace **Mon Compte** qui accessible par le menu de Data Fair en haut à droit.  
+Les organisations peuvent être créées dans l'espace **Mon Compte** qui accessible par le menu de Data Fair en haut à droite.  
 Cliquez sur le bouton **Créer une organisation** et renseignez le titre et la description de votre organisation, vous serez alors administrateur de cette nouvelle organisation.
 
 Si vous êtes un administrateur de l'organisation, vous pouvez accéder à la [gestion des membres](./user-guide/members). Vous pouvez ainsi inviter des membres, définir leurs rôles et supprimer des membres de votre organisation.
 
-## Compte actif
+### Compte actif
 
 Si vous faites partie d'une organisation, vous avez accès à l'espace de travail de l'organisation.
 

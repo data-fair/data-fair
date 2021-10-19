@@ -7,7 +7,7 @@ description : Formats de fichier supportés
 published: false
 ---
 
-Le tableau suivant reprend les formats de fichier supportés par la plateforme :
+Le tableau suivant reprend les formats de fichier supportés par Data Fair :
 
 Type | Description | Format | Format archivé (.zip)
 ----------|---------------------------|--------------------|--------------------

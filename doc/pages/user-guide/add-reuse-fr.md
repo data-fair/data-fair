@@ -44,7 +44,8 @@ Vous pouvez accéder à la dernière version enregistrée avec le mode **Version
 
 ## Partager ma visualisation
 
-Votre visualisation peut être publique ou privée. Par défaut, une visualisation est privée. Il est possible de rendre l'accès à votre visualisation au public avec des données qui sont aussi publiques.  
+Votre visualisation peut être publique ou privée. Par défaut, une visualisation est privée.  
+Il est possible de rendre l'accès à votre visualisation au public avec des données qui sont aussi publiques.  
 
 La section **Lien protégé** vous permet de créer un lien d'accès à une visualisation privée.  
 

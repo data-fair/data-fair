@@ -7,7 +7,8 @@ description : Ajouter un dataset
 published: false
 ---
 
-Vous pouvez créer un jeu de données sur la [page du tableau de bord](https://koumoul.com/s/data-fair/) ou sur la [page des jeux de données](https://koumoul.com/s/data-fair/datasets).
+Vous pouvez créer un jeu de données sur la [page du tableau de bord](./user-guide/dashbord) ou sur la [page des jeux de données](./user-guide/datasets).
+
 Il existe trois jeux de données différents sur Data Fair.
 1. L'import d'un fichier de votre ordinateur
 2. Un jeu incrémental

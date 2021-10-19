@@ -11,7 +11,7 @@ application : https://koumoul.com/apps/data-fair-locate-game/0.1/
 La visualisation **Jeu de localisation** permet de créer un jeu de localisation sur une carte aveugle. Vous avez un exemple de cette visualisation sur la carte de [localisation des capitales du monde](https://opendata.koumoul.com/reuses/localisez-les-capitales-du-monde).  
 Un score est attribué au joueur en fonction de la distance par rapport à la bonne réponse et du temps passé pour répondre aux questions.
 
-### Créer votre graphe
+### Créer votre jeu de localisation
 
 Pour réaliser votre visualisation, cliquez sur **Visualisations** puis sur **Configuration une visualisation**.
 

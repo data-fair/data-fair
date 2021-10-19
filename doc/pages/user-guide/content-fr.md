@@ -1,6 +1,6 @@
 ---
 title: Editer les pages de contenu de son portail
-section: 10
+section: 11
 subsection : 1
 updated: 2021-09-30
 description : Ajouter des pages thématiques sur votre portail
@@ -19,8 +19,8 @@ Cliquez ensuite sur le bouton de **création d'une nouvelle page de contenu**.
 
 Un menu s'affiche vous permettant de renseigner les paramètres de votre page:
 
-* Publiée ou / et Publique
-* Le modèle de la page vous permet de choisir une disposition de page prédefinie.
+* Publiée ou/et Publique
+* Le modèle de la page vous permet de choisir une disposition de page prédéfinie.
 * La disposition dans le menu, en lien direct ou dans un sous-menu
 * Le titre de la page
 * Les thématiques permettent de choisir les différentes thématiques de votre portail abordées sur votre page

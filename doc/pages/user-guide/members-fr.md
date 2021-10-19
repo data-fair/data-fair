@@ -7,7 +7,6 @@ description : Inviter les membres de votre organisation grâce à leur e-mail.
 published: false
 ---
 
-
 Lorsque vous êtes administrateur de votre organisation, la section **Gestion de l'organisation** est accessible dans la barre de navigation de Data Fair.
 
 Sur cette page, vous pouvez gérer les différents membres de votre organisation :

@@ -3,7 +3,7 @@ title: Carto-stats
 section: 6
 subsection : 1
 updated: 2021-09-20
-description : Projeter vos données géolocalisées sur une carte statistique
+description : Projeter vos données géolocalisées sur une carte
 published: false
 application : https://koumoul.com/apps/carto-stats/0.6/
 ---
@@ -19,7 +19,7 @@ En comparaison avec [Infos-localisation](./user-guide/infos-localisations), **Ca
 #### Les concepts
 
 Pour configurer une visualisation **Carto-stats**, votre compte actif contient au mois un jeu de données avec [les concepts](./user-guide/concept)  **Latitude** et **Longitude** d'associés dans son schéma.  
-Une fois que vous avez mis à jour le schéma de vos données, vous pouvez visualiser un aperçu de vos données à l'aide du bouton **carte générique**. Vous pouvez ainsi vérifier que vos données sont correctement projetées sur une carte.
+Une fois que vous avez mis à jour le schéma de vos données, vous pouvez visualiser un aperçu de vos données à l'aide de la **carte générique**. Vous pouvez ainsi vérifier que vos données sont correctement projetées sur une carte.
 
 ### Créer une visualisation Carto-stats
 

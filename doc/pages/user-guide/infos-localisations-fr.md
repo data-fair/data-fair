@@ -13,7 +13,6 @@ La visualisation **Infos-localisations** permet de projeter des données géoloc
 ### Prérequis
 
 Les données que vous souhaitez projeter doivent contenir des latitudes et longitudes.  
-
 La visualisation supporte les projections Lambert 93, Lambert II et le système WGS 84.
 
 ### Configuration
@@ -31,7 +30,6 @@ Une fois que vous avez mis à jour le schéma de vos données, vous pouvez visua
 #### Créer une visualisation Infos-localisation
 
 Pour réaliser votre visualisation, cliquez sur **Visualisations** puis sur **Configurer une visualisation**.
-
 
 1. Choisir l'application **Infos-localisations**
 2. Entrer le titre de la visualisation
@@ -60,8 +58,8 @@ Lorsque vous avez choisi un jeu de données compatible avec l'application **Info
 
 
 #### Rendu
-Dans le menu **Rendu**, choisissez le **Style de carte** qui vous convient le mieux.  
-La **Couleur par valeur d'un champ** défini la colonne utilisée pour les couleurs de votre légende. Choisissez les différentes couleurs que vous voulez associer à vos valeurs de légende.
+Dans le menu **Rendu**, vous pouvez choisir le **Style de carte** qui vous convient le mieux.  
+La **Couleur par valeur d'un champ** défini la colonne utilisée pour les couleurs de votre légende. Vous pouvez définir les différentes couleurs que vous voulez associer à vos valeurs de légende.
 
 Vous pouvez aussi choisir les **Icones par valeur d'un champ** pour définir la colonne utilisée pour les icones dans votre légende. Vous pouvez définir des icones différents pour chaque valeur d'une de vos colonnes
 

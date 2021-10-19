@@ -23,10 +23,9 @@ Pour réaliser la visualisation, cliquez sur **Mes visualisations** puis sur **C
 
 Vous êtes redirigé vers la page de configuration de votre application avec ses différentes sections:
 
-1. Titre de ma visualisation
-2. Informations
-3. Boutons d'actions (consultation, plein écran, ... )
-4. Menu de configuration
+1. Informations
+2. Boutons d'actions (consultation, plein écran, ... )
+3. Menu de configuration
 5. Aperçu
 
 ![Page de configuration](./images/user-guide/liste-et-fiches-config.jpg)

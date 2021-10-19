@@ -28,7 +28,7 @@ Un concept est unique pour un jeu de données, il ne peut être attribué qu'une
 
 ### Liste des concepts
 
-Il est possible de créer des concepts en créant des donnée de référence.  
+Il est possible de créer ses propres concepts et qu'ils soient utilisés dans vos [données de référence](./user-guide/enrichment).  
 Voici la liste par défaut des concepts utilisé par Data Fair :
 
 * **Libellé** : Un libellé facilement lisible
@@ -36,9 +36,9 @@ Voici la liste par défaut des concepts utilisé par Data Fair :
 * **Image** : URL vers une image illustration du document courant
 * **Numéro de rue** : Un numéro de rue, qui peut contenir des mots comme bis ou ter
 * **Rue ou lieu-dit** : Un nom de rue ou de lieu-dit
-* **Adresse** : Une adresse écrite sur une ligne
+* **Adresse** : Une adresse complète écrite sur une ligne
 * **Commune** : Libellé d'une commune
-* **Code postal** : Code postal, sur 5 chiffre
+* **Code postal** : Code postal, sur 5 chiffres
 * **Code commune** : Code INSEE de la commune, sur 5 caractères, à ne pas confondre avec le code postal.
 * **Code département** : Code du département, sur 2 ou 3 caractères
 * **Code région** : Code de la région, sur 2 chiffres

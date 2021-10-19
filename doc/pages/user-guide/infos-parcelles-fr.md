@@ -21,7 +21,7 @@ Si vous n'avez que des identifiants de 14 caractères, il est possible d'[enrich
 
 ### Configuration
 #### Les concepts
-Pour configurer une visualisation **Infos-parcelles**, votre compte actif contient au mois un jeu de données avec [les concepts](./user-guide/concept) **Code parcelle**, **Latitude** et **Longitude** associés dans son schéma.
+Pour configurer une visualisation **Infos-parcelles**, votre compte actif contient au moins un jeu de données avec [les concepts](./user-guide/concept) **Code parcelle**, **Latitude** et **Longitude** associés dans son schéma.
 
 Une fois que vous avez mis à jour le schéma de vos données, la prévisualisation **Carte** est disponible dans la section des **Données**. Vous pouvez ainsi vérifier que vos données sont correctement projetées sur une carte.
 

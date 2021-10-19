@@ -3,7 +3,7 @@ title: Jeu de tri
 section: 9
 subsection : 3
 updated: 2021-09-20
-description :  Explorer les données en localisant les points sur une carte.
+description :  Explorer les données en les triant suivant une valeur numérique.
 published: false
 application : https://koumoul.com/apps/data-fair-sort-game/0.1/
 ---
@@ -11,7 +11,7 @@ application : https://koumoul.com/apps/data-fair-sort-game/0.1/
 La visualisation **Jeu de tri** permet de créer un jeu de classement de vos données selon une valeur numérique. Vous avez un exemple de cette visualisation avec le [classement des meilleurs buteurs de l'Euro](https://opendata.koumoul.com/reuses/classez-les-meilleurs-buteurs-de-l'euro).  
 Un score est attribué au joueur en fonction du nombre de permutations et du temps passé pour arriver à trier les éléments.
 
-### Créer votre graphe
+### Créer votre jeu de tri
 
 Pour réaliser votre visualisation, cliquez sur **Visualisations** puis sur **Configuration une visualisation**.
 

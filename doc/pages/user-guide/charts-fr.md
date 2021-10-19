@@ -79,17 +79,17 @@ Le paramètre **Type de préparation des données** permet de choisir comment vo
 
 2. **Grouper les lignes et les compter** :  
 Cette option permet de grouper les lignes et les compter sur deux niveaux. Le premier niveau correspond à la valeur en abscisse, le second niveau correspond à la légende.
-- **1re niveau de groupes** en abscisse:
+**1re niveau de groupes** en abscisse:
 - **Grouper par** , vous permet de définir la méthode pour grouper les valeurs. Le graphique pourra lire les **valeurs exacte d'une colonne**, définir **intervalles d'une colonne de type date**, définir des **intervalles d'une colonne numérique**
 - **Grouper en fonction de cette colonne** permet de définir la colonne que vous voulez utiliser en abscisse.  
-- **Trier par** permet de choisir une méthode de tri pour la colonne choisie
-- **2ème niveau de groupes** en légende : Ce niveau de groupe est optionnel, il permet de séparer les valeurs quand les données le permettent. On peut par exemple séparer une ligne en plusieurs lignes dans un graphique en lignes ou encore  délimiter différentes sections par barre dans un histogramme.
+- **Trier par** permet de choisir une méthode de tri pour la colonne choisie  
+**2ème niveau de groupes** en légende : Ce niveau de groupe est optionnel, il permet de séparer les valeurs quand les données le permettent. On peut par exemple séparer une ligne en plusieurs lignes dans un graphique en lignes ou encore  délimiter différentes sections par barre dans un histogramme.
 
 <p>
 </p>
 
 3. **Grouper les lignes et calculer des valeurs dans ces groupes** :  
-- **Grouper par** , vous permet de définir la méthode pour grouper les valeurs. Le graphique pourra lire les **valeurs exacte d'une colonne**, définir * **intervalles d'une colonne de type date**, définir des **intervalles d'une colonne numérique**.  
+- **Grouper par** , vous permet de définir la méthode pour grouper les valeurs. Le graphique peut lire les **valeurs exacte d'une colonne**, définir les **intervalles d'une colonne de type date** ou de définir des **intervalles d'une colonne numérique**.  
 - **Grouper en fonction de cette colonne** permet de définir la colonne que vous voulez utiliser en abscisse.  
 - **Trier par** permet de choisir une méthode de tri pour la colonne choisie.  
 - **Type de calcul** possibles : moyenne, valeur minimale, valeur maximale, somme.  

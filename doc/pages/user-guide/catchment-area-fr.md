@@ -9,10 +9,7 @@ application : https://koumoul.com/apps/admin-divs-catchment/0.1/
 ---
 
 
-La visualisation **Zones de Chalandise**, est une carte offrant la possibilité d’identifier des zones de responsabilité ou d’influence d’un établissement, d’une entité ou encore d’une organisation par exemple.
-
-
-Pour configurer une visualisation **Zones de Chalandise**, choisissez le compte actif sur lequel vous voulez travailler. Votre compte actif contient au mois un jeu de données avec des données textuelles.
+La visualisation **Zones de Chalandise**, est une carte offrant la possibilité d’identifier des zones de responsabilité ou d’influence d’un établissement, d’une entité ou encore d’une organisation par exemple. La carte utilise les codes EPCI, commune, département, région à fin de calculer les formes géomtriue en fonction des valeurs d'une colonne.
 
 ### Créer votre carte des zones de chalandise
 

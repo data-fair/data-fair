@@ -25,7 +25,7 @@ Un clic sur une colonne vous permet d'accéder aux informations de la colonne
 <p>
 </p>
 
-Les [concepts](./user-guide/concept) sont des notions connues pour la plateforme et sont utilisés dans les Visualisations ou pour l'[enrichissement](./user-guide/enrichment).  
+Les [concepts](./user-guide/concept) sont des notions connues pour la plateforme et sont utilisés dans les visualisations ou pour l'[enrichissement](./user-guide/enrichment).  
 
 ![schema](./images/user-guide/dataset-schema-edit.jpg)  
 *Visualisez les schémas de vos données et renseignez des concepts pour donner du sens à vos données*
@@ -55,9 +55,9 @@ La section **Métadonnées** est composée des Informations et des Pièces joint
 
 ### Informations
 Dans cette section, vous retrouvez les informations de votre jeu de données, telles que :
-* le titre
-* la description,
-* le nom, l'extension et la taille de votre fichier
+* Le titre
+* La description,
+* Le nom, l'extension et la taille de votre fichier
 * La date de la dernière mise à jour des métadonnées et des données
 * Le nombre de lignes
 * La licence
