@@ -12,6 +12,7 @@ const { Readable, Transform, Writable } = require('stream')
 const moment = require('moment')
 const { crc32 } = require('crc')
 const stableStringify = require('fast-json-stable-stringify')
+const stripBom = require('strip-bom-stream')
 const datasetUtils = require('./dataset')
 const attachmentsUtils = require('./attachments')
 const findUtils = require('./find')
@@ -399,6 +400,7 @@ exports.bulkLines = async (req, res, next) => {
   try {
     await pump(
       inputStream,
+      stripBom(),
       ...parseStreams,
       transactionStream,
     )

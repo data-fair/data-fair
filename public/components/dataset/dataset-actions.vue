@@ -227,7 +227,7 @@
         <v-card-actions>
           <v-spacer />
           <v-btn
-            v-t="'yes'"
+            v-t="'no'"
             text
             @click="showDeleteAllLinesDialog = false"
           />
