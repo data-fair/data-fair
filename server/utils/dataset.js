@@ -698,7 +698,7 @@ const cleanProperty = (p, publicBaseUrl) => {
     delete cleanProp.examples
   }
   if (cleanProp['x-fromUrl'] && publicBaseUrl) {
-    cleanProp['x-fromUrl'].replace(config.publicUrl, publicBaseUrl)
+    cleanProp['x-fromUrl'] = cleanProp['x-fromUrl'].replace(config.publicUrl, publicBaseUrl)
   }
   delete cleanProp.key
   delete cleanProp.ignoreDetection
