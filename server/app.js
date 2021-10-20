@@ -68,7 +68,7 @@ if (config.mode.includes('server')) {
     req.publicBaseUrl = u.full ? formatUrl(urlParts) : config.publicUrl
     req.directoryUrl = u.full ? formatUrl({ ...urlParts, pathname: '/simple-directory' }) : config.directoryUrl
     debugDomain('req.publicBaseUrl', req.publicBaseUrl)
-    req.publicWsBaseUrl = req.publicBaseUrl.replace('http:', 'ws:').replace('https:', 'wss:')
+    req.publicWsBaseUrl = req.publicBaseUrl.replace('http:', 'ws:').replace('https:', 'wss:') + '/'
     debugDomain('req.publicWsBaseUrl', req.publicWsBaseUrl)
     req.publicBasePath = basePath
     debugDomain('req.publicBasePath', req.publicBasePath)
