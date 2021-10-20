@@ -678,7 +678,7 @@ exports.tableSchema = (schema) => {
   }
 }
 
-const cleanProperty = p => {
+const cleanProperty = (p, publicBaseUrl) => {
   const cleanProp = { ...p }
   // we badly named enum from the start, too bad, now we accept this semantic difference with json schema
   if (cleanProp.enum) {
@@ -697,6 +697,9 @@ const cleanProperty = p => {
 
     delete cleanProp.examples
   }
+  if (cleanProp['x-fromUrl'] && publicBaseUrl) {
+    cleanProp['x-fromUrl'].replace(config.publicUrl, publicBaseUrl)
+  }
   delete cleanProp.key
   delete cleanProp.ignoreDetection
   delete cleanProp.ignoreIntegerDetection
@@ -705,12 +708,12 @@ const cleanProperty = p => {
   return cleanProp
 }
 
-exports.jsonSchema = (schema) => {
+exports.jsonSchema = (schema, publicBaseUrl) => {
   return {
     type: 'object',
     properties: schema
       .filter(f => !f['x-calculated'])
       .filter(f => !f['x-extension'])
-      .reduce((a, p) => { a[p.key] = cleanProperty(p); return a }, {}),
+      .reduce((a, p) => { a[p.key] = cleanProperty(p, publicBaseUrl); return a }, {}),
     }
 }

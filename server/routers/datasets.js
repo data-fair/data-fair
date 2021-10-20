@@ -226,7 +226,7 @@ router.get('/:datasetId/schema', readDataset(), applicationKey, permissions.midd
     schema = datasetUtils.tableSchema(schema)
   } else if (req.query.mimeType === 'application/schema+json') {
     res.setHeader('content-disposition', `attachment; filename="${req.dataset.id}-schema.json"`)
-    schema = datasetUtils.jsonSchema(schema)
+    schema = datasetUtils.jsonSchema(schema, req.publicBaseUrl)
   } else {
     schema.forEach(field => {
       field.label = field.title || field['x-originalName'] || field.key
