@@ -1,5 +1,5 @@
 ---
-title: Tableau de bord
+title: Dashboard
 section: 3
 updated: 2021-09-20
 description : Dashboard

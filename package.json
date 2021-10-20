@@ -16,7 +16,7 @@
     "start": "node server",
     "analyze": "nuxt build --analyze",
     "upgrade": "node upgrade",
-    "doc": "nuxt --config-file ${PWD}/doc/nuxt.config.js",
+    "doc": "nuxt --config-file doc/nuxt.config.js",
     "build-doc": "nuxt generate --config-file ${PWD}/doc/nuxt.config.js",
     "serve-doc": "DOC_BASE=/doc-dist/ npm run build-doc && http-server .",
     "postinstall": "patch-package"

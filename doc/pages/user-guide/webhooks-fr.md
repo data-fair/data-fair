@@ -24,7 +24,7 @@ Liste d'événements déclencheurs :
 
 Pour configurer le suivi d'événements pour Google Analytics, il vous faudra posséder un [compte Google Analytics](https://support.google.com/analytics/answer/1008015?hl=fr) avec une propriété configurée et un numéro UA-XXXXXXXX-X configuré pour votre site.
 
-Une fois que vous avez configuré votre compte Google Analytics et que vous disposez de votre numéro UA-XXXXXXXX-X, vous pouvez l'utiliser sur la section **Webhooks** de votre compte Koumoul.
+Une fois que vous avez configuré votre compte Google Analytics et que vous disposez de votre numéro UA-XXXXXXXX-X, vous pouvez l'utiliser sur la section **Webhooks** de votre compte Data Fair.
 
 Lorsque vous êtes sur la page des paramètres, vous pouvez ajouter un 'Appels extérieurs' à l'aide du bouton **+**.
 

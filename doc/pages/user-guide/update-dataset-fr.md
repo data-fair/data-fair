@@ -7,7 +7,7 @@ description : Mettre à jour ses données
 published: false
 ---
 
-La mise à jour d'un jeu de données d'un jeu de données peut être réalisée manuellement sur la [page d'édition du jeu de données](./user-guide/edition-dataset) ou automatisé à l'aide des [traitements périodiques](./user-guide/processing).
+La mise à jour d'un jeu de données peut être réalisée manuellement sur la [page d'édition du jeu de données](./user-guide/edition-dataset) ou peut être automatisé à l'aide des [traitements périodiques](./user-guide/processing).
 
 ### Mise à jour manuelle
 

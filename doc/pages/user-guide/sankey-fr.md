@@ -64,7 +64,7 @@ Le menu **Préparation des données** permet de renseigner les colonnes que vous
 Dans le menu **Présentation**, vous pouvez paramétrer les **Sources** et les **Cibles** pour définir les éléments que vous voulez afficher sur votre diagramme de Sankey.
 
 **Nombre maximal de sources** permet d'avoir plus ou moins d'éléments. Le groupe **Autres** comprend l'ensemble des éléments des données qui ne sont pas affichés individuellement.  
-**Tri** permet de trier les éléments par ordre alphabétique ou bien par ordre décroissant. Si vous avez une catégorie autres, elle sera placée en bas du diagramme lors d'un tri.  
+**Tri** permet de trier les éléments par ordre alphabétique ou bien par ordre décroissant. Si vous avez une catégorie **Autres**, elle sera placée en bas du diagramme lors d'un tri.  
 **Type de la palette de couleurs** et **Nom de la palette de couleurs** permettent de choisir la couleur des éléments.
 
 

@@ -45,9 +45,8 @@ Dans le menu **Sources de données**, choisissez le jeu de données à utiliser.
 #### Préparation des données  
 
 Le menu **Préparation des données** permet de renseigner les colonnes que vous souhaitez afficher et d'avoir votre premier rendu.  
-**Calcul de la valeur** permet de compter le nombre de lignes non nulles d'une colonne pour qu'elle soit représentée ou bien de calculer les sommes des valeurs d'une colonne. Dans notre image nous avons calculer la somme de valeurs sur la colonne **Montant**.  
-Les **Groupes** représentent les niveaux que vous voulez afficher sur votre diagramme sunburst. Dans notre image, nous avons réalisé la visualisation sur 4 niveaux de groupes représentant les 4 premiers niveaux de code NAF.
-
+**Calcul de la valeur** permet de compter le nombre de lignes non nulles d'une colonne pour qu'elle soit représentée ou bien de calculer les sommes des valeurs d'une colonne.  
+Les **Groupes** représentent les niveaux que vous voulez afficher sur votre diagramme sunburst.
 
 #### Présentation  
 

@@ -6,7 +6,6 @@ description : Apprenez comment configurer votre solution pour diffuser vos donn�
 published: false
 ---
 
-
 Data Fair vous permet de présenter vos données dans un portail.  
 Il est possible de configurer **plusieurs portails** pour le même compte.  
 Les portails peuvent être **publics**, pour faire de l'open data, ou bien **privés** pour partager et visualiser les données en interne.  
@@ -40,7 +39,7 @@ L'interface de **configuration d'un portail** est divisée en 5 parties :
 
 La section **Général** vous permet de personnaliser les éléments communs aux différentes pages du portail telles que les couleurs, le logo, l'image principale et le favicon.  
 
-Vous pouvez activer, ou désactiver, l'accès à l'authentification si vous souhaitez que les visiteurs de votre portail puisse se connecter à votre portail ou non (portail open data, portail public avec certaines données en privé, portail privé).
+Vous pouvez activer ou désactive l'authentification sur votre portail (portail open data, portail public avec certaines données en privé, portail privé).
 
 Il est possible d'ajouter plusieurs liens dans le footer.
 
@@ -65,7 +64,6 @@ En ajoutant votre email de contact, la page de **Contact** sera disponible dans 
 Vous permet d'activer un **suivi d'activité** tel que Matomo (Piwik) ou Google Analytics.
 
 #### Paramétrage technique
-
 Le paramétrage technique permet d'un peu plus personnaliser l'entête et le pied de page du portail.  
 Il est possible de modifier ces deux sections avec du code HTML et CSS.
 
