@@ -15,6 +15,7 @@ const routes = dir.files('doc/pages/', { sync: true })
 module.exports = {
   srcDir: 'doc/',
   target: 'static',
+  components: true,
   build: {
     extractCSS: true,
     extend (config, ctx) {

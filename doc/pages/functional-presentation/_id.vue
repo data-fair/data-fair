@@ -12,7 +12,7 @@
     computed: {
       content() {
         if (!this.$route) return
-        const content = context(`./${this.$route.params.id}-fr.md`)
+        const content = context(`./${this.$route.params.id}-${this.$i18n.locale}.md`)
         return content.default
       },
     },
