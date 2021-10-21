@@ -87,7 +87,11 @@
         </template>
         <v-row class="mr-4">
           <v-spacer />
-          <v-btn-toggle v-model="renderMode" color="primary">
+          <v-btn-toggle
+            v-model="renderMode"
+            color="primary"
+            mandatory
+          >
             <v-btn small icon>
               <v-icon small>
                 mdi-view-grid
