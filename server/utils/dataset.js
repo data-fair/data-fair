@@ -700,10 +700,13 @@ const cleanProperty = (p, publicBaseUrl) => {
   if (cleanProp['x-fromUrl'] && publicBaseUrl) {
     cleanProp['x-fromUrl'] = cleanProp['x-fromUrl'].replace(config.publicUrl, publicBaseUrl)
   }
+  if (cleanProp.separator) {
+    cleanProp['x-separator'] = cleanProp.separator
+    delete cleanProp.separator
+  }
   delete cleanProp.key
   delete cleanProp.ignoreDetection
   delete cleanProp.ignoreIntegerDetection
-  delete cleanProp.separator
   delete cleanProp.icon
   return cleanProp
 }
