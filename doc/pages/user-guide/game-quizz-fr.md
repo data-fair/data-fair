@@ -11,7 +11,7 @@ application : https://koumoul.com/apps/data-fair-quizz/0.1/
 La visualisation **Jeu de Quizz** permet de créer un jeu dans lequel il faut faire correspondre des libellés à des descriptions ou images. Vous avez un exemple de cette visualisation sur la [quizz sur la fête de la science 2019](https://opendata.koumoul.com/reuses/quizz-fete-de-la-science-2019).  
 Un score est attribué au joueur en fonction du nombre de bonnes réponse et du temps passé pour répondre aux questions.
 
-### Créer Quizz
+## Créer Quizz
 
 Pour réaliser votre visualisation, cliquez sur **Visualisations** puis sur **Configuration une visualisation**.
 
@@ -34,10 +34,10 @@ Le titre de la visualisation peut être modifié à tout moment.
 Les **informations** vous donnent un résumé des caractéristiques de votre application.  
 Les boutons d'actions vous permettent d'importer l'application sur un autre site, de dupliquer l'application, de la supprimer et d'accéder à l'application en plein écran.
 
-### Menu de configuration
+## Menu de configuration
 Le menu de configuration est composé de deux sous-menus : **Données** et **Présentation**.
 
-#### Données
+### Données
 
 Dans le menu **Données**, vous choisissez le jeu de données que vous voulez utiliser.  
 
@@ -51,7 +51,7 @@ La **longueur minimale du libellé** permet filtrer le champ pour avoir des desc
 Les **Filtres** permettent de restreindre les données affichées dans l'application.  
 Vous pouvez **Restreindre à des valeurs** d'une colonne,  **Restreindre à un intervalle de valeurs** d'une colonne ou **Exclure des valeurs** d'une colonne.
 
-#### Présentation
+### Présentation
 
 Dans le menu **Présentation**, vous définissez la description globale de votre jeu et vous pouvez sélectionner une image de présentation du jeu si vous avez ajouter une image en pièce jointe.
 

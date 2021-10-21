@@ -13,7 +13,7 @@ You have an example of this visualization on our [cloud of most popular names in
 
 To set up a **Word Clouds** visualization, choose the active account you want to work on. Your active account contains at least one dataset with textual data.
 
-### Create your Word Clouds
+## Create your Word Clouds
 Click on **Visualizations** then on **Configure a visualization**.
 
 1. Choose the application **Word Clouds**
@@ -34,22 +34,22 @@ You are redirected to the configuration page of your application with its differ
 The title of the visualization can be changed anytime.  
 The **Informations** section shows a summary of the characteristics of your application.
 
-### Configuration menu
+## Configuration menu
 
 The configuration menu contains three submenus: **Data**, **Preperation** and **Presentation**.  
 
-#### Data
+### Data
 
 In the **Data** menu, you can choose the dataset you want to use.  
 **Filters** are used to restrict the data displayed in the application.  
 You can **Restrict to Values** from a column, **Restrict to Range of Values​​** from a column, or **Exclude Values** from a column.
 
-#### Preperation
+### Preperation
 
 In the **Preperation** menu, **Text fields** allows you to select the column you want to use in your word cloud.  
 **Calculation** allows to classify your text by the most significant words, by frequency or by a value from another column.
 
-#### Presentation
+### Presentation
 
 The **Presentation** menu allows to customize your word cloud.  
 The **Palette** allows to choose a set of colors that will be associated with the values ​​of your data.  

@@ -1,9 +1,9 @@
 ---
 title: Les concepts
 section: 4
-subsection : 5
+subsection: 5
 updated: 2021-09-20
-description : Ajouter du sens à vos données
+description: Ajouter du sens à vos données
 published: false
 ---
 
@@ -18,10 +18,9 @@ La page d'édition d'un jeu de données permet de renseigner les concepts dans l
 4. Concept associé à la colonne
 
 ![Concepts](./images/user-guide/schema-concept.jpg)  
+*Les concepts sont nécessaires lors de la création de certaines visualisations.*
 
 Grace aux concepts, vous pouvez, par exemple, [enrichir](./user-guide/enrichment) vos données pour leur donner encore plus de valeur ou bien projeter vos données sur une carte.
-
-Les concepts sont nécessaires à la représentation de certaines visualisations. Par exemple, vos données pourront être projetées sur une carte que si vous avez associé les concepts **Latitude** et **Longitude** aux colonnes contenant les valeurs latitude et longitude.
 
 Un concept est unique pour un jeu de données, il ne peut être attribué qu'une seule fois à un jeu de données. Par exemple, si le concept **Latitude** est associé à une colonne de votre jeu de données, il ne pourra pas être associé à une autre colonne de votre jeu de données.
 

@@ -11,7 +11,7 @@ application : https://koumoul.com/apps/admin-divs-catchment/0.1/
 
 La visualisation **Zones de Chalandise**, est une carte offrant la possibilité d’identifier des zones de responsabilité ou d’influence d’un établissement, d’une entité ou encore d’une organisation par exemple. La carte utilise les codes EPCI, commune, département, région à fin de calculer les formes géomtriue en fonction des valeurs d'une colonne.
 
-### Créer votre carte des zones de chalandise
+## Créer votre carte des zones de chalandise
 
 Pour réaliser votre visualisation, cliquez sur **Visualisations** puis sur **Configuration une visualisation**.
 
@@ -35,12 +35,12 @@ Le titre de la visualisation peut être modifié à tout moment.
 Les informations vous donnent un résumé des caractéristiques de votre application.  
 Les boutons d'actions vous permettent d'importer l'application sur un autre site, de dupliquer l'application, de la supprimer et d'accéder à l'application en plein écran.
 
-### Menu de configuration
+## Menu de configuration
 
 
 Le menu de configuration est composé de deux sous-menus : **Données** et **Rendu**.
 
-#### Données
+### Données
 
 Dans le menu **Données**, vous pouvez choisir le jeu de données que vous voulez utiliser.  
 La section **Colonne contenant le code du territoire** vous permet de définir la maille du territoire que vous possédez dans vos données (Code IRIS, Code commune, Code EPCI ou Code département).  
@@ -48,6 +48,6 @@ La section **Agréger les valeurs suivant une colonne** vous permet de définir 
 
 Les **Filtres** permettent de restreindre les données affichées dans l'application.
 
-#### Rendu
+### Rendu
 
 Le menu **Rendu** permet de gérer la position initiale, cacher la barre de recherche de position et d'activer la géolocalisation.

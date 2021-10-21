@@ -15,14 +15,12 @@ An example of this visualization is the [bicycle accidents map](https://opendata
 Carto-stats allows to create dynamic filters and to have filtered data on the map.  
 Compared to [Infos-location](./user-guide/infos-localisations), **Carto-stats** will be more suitable for large data and **Info-locations** will be more suitable for data containing special fields such as URL, images, descriptions, ...
 
-### Configuration
-
-#### Concepts
+## Concepts
 
 To configure a **Carto-stats** visualization, your active account contains a monthly dataset with [concepts] (./ user-guide / concept) **Latitude** and **Longitude** of associates in its schema.  
 Once you have updated your data schema, you can preview your data using the **generic map**. YOu can verify that the data is correctly projected on a map.
 
-#### Create a Carto-stats map
+## Create a Carto-stats map
 
 To configure a **Carto-stats** visualization, click on **Visualizations** in the navigation bar, then on **Configure visualization**.  
 
@@ -44,11 +42,11 @@ You are redirected to the configuration page of your application with its differ
 The title of the visualization can be changed anytime.  
 The **Informations** section shows a summary of the characteristics of your application.  
 
-### Configuration menu
+## Configuration menu
 
 The configuration menu contains three submenus : **Sources**, **Preparation** and **Presentation**.  
 
-#### Sources
+### Sources
 
 **Sources** allows to choose a dataset.  
 
@@ -60,7 +58,7 @@ You can configure dynamic filters, predefined filters and a slider.
 * Predefined filters allow to restrict or exclude values ​​in your data. The fields, or values, that you configure in this section will not be available in your visualization.
 * The Slider allows to choose an integer field, such as a **year** field. The user will be able to choose a year value on the slider, the data will be filtered on this year and displayed on the map.
 
-#### Render options
+### Render options
 
 
 In the menu **Render options**, you can customize the cards available on the markers and customize your legend.  
@@ -68,7 +66,7 @@ In the menu **Render options**, you can customize the cards available on the mar
 The **Tooltip** menu allows you to select the different fields to be displayed on the cards of your markers.  
 The **Color by value of a field** defines the column used for your legend. The palette allows to choose a set of colors that will be associated with your legend values.
 
-#### Navigation
+### Navigation
 
 In the **Navigation** menu, you can hide the search bar and set the initial position of the map
 

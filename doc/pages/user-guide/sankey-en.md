@@ -10,18 +10,17 @@ application : https://koumoul.com/apps/sankey/0.5/
 
 A **Sankey** diagram represent data flow and can acces to the information of each flow in one click.
 
-### Prerequisites
+## Prerequisites
 
 
 To configure a **Sankey** diagram, you need a dataset with one column containing numbers (**integer**) and two columns containing strings (**string**).
 
-![Deux colonnes string et une colonne integer](./images/user-guide/sankey-type.jpg)
+![Deux colonnes string et une colonne integer](./images/user-guide/sankey-type.jpg)  
 *Dataset with the columns of type string, Country and Candidates, and one column of type integer, Number_of_voices*
 
 The values ​​of the two columns of character strings, **Country** and **Candidates**, are related to the numerical values ​​of the column of **Number_of_voices**.
 
-### Configuration
-#### Create a Sankey diagram
+## Create a Sankey diagram
 Click on **Visualizations** then on **Configure a visualization**.
 
 
@@ -43,14 +42,14 @@ You are redirected to the configuration page of your application with its differ
 The title of the visualization can be changed anytime.  
 The **Informations** section shows a summary of the characteristics of your application.
 
-#### Configuration menu
+## Configuration menu
 
 The configuration menu contains three submenus: **Data**, **Preperation** and **Presentation**.
-##### Data
+### Data
 
 In the **Data** menu, you can choose the data set you want to use.
 
-#### Preperation
+### Preperation
 
 The **Preperation** menu allows to configure the columns you want to display and have your first rendering.
 

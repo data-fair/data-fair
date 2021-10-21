@@ -1,9 +1,9 @@
 ---
-title: Add a dataset
+title: Import a dataset
 section: 4
-subsection : 1
+subsection: 2
 updated: 2021-09-20
-description : Add a dataset
+description: Import a dataset
 published: false
 ---
 
@@ -65,4 +65,4 @@ For exemple, it is possible to create a view of its municipality or its departme
 As a **virtual dataset** is a portion of a dataset, when the reference dataset is updated, the virtual dataset of the town (or department) will also be updated. The data always remains up to date with respect to the reference data set.
 
 ![Jeu virtuel](./images/user-guide/import-virtuel-valeur.jpg)  
-*Filter or aggregate your datasets*
+*Filter or aggregate your datasets values*

@@ -10,7 +10,7 @@ application : https://koumoul.com/apps/data-fair-relations/0.2/
 
 La visualisation **Réseau de relations** permet générer des graphes dynamiques à partir de deux jeux de données, l'un contenant les nœuds et l'autre contenant les liens. Vous avez un exemple de cette visualisation sur la [relation entre les joueurs de l'équipe de France et leurs clubs](https://opendata.koumoul.com/reuses/relation-entre-les-joueurs-de-l'equipe-de-france-et-leurs-clubs).
 
-### Créer votre graphe
+## Créer votre graphe
 
 Pour réaliser votre visualisation, cliquez sur **Visualisations** puis sur **Configuration une visualisation**.
 
@@ -33,21 +33,21 @@ Le titre de la visualisation peut être modifié à tout moment.
 Les **informations** vous donnent un résumé des caractéristiques de votre application.  
 Les boutons d'actions vous permettent d'importer l'application sur un autre site, de dupliquer l'application, de la supprimer et d'accéder à l'application en plein écran.
 
-### Menu de configuration
+## Menu de configuration
 Le menu de configuration est composé de trois sous-menus : **Données**, **Nœuds** et **Liens**.
 
-#### Données
+### Données
 
 Dans le menu **Données**, vous choisissez le jeu de données que vous voulez utiliser.  
 
-#### Nœuds
+### Nœuds
 
 Le menu **Nœuds** vous permet de personnaliser les deux types de nœuds de votre visualisation.  
 Il est possible de modifier la couleur et l'icone représentant vos types de nœuds.  
 
 Les options permettent de paramétrer l'écartement des nœuds, le calcul réalisé sur les nœuds, la taille minimale et maximale des nœuds ainsi que la taille de la police des nœuds.
 
-#### Liens
+### Liens
 
 Le menu **Liens** permet de configurer la taille la taille minimale et maximale des liens. L'épaisseur des liens correspond à la force entre les différents nœuds.
 

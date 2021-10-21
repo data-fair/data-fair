@@ -1,9 +1,9 @@
 ---
 title: Edit a dataset
 section: 4
-subsection : 2
+subsection: 3
 updated: 2021-09-20
-description : Add metadata to your dataset
+description: Add metadata to your dataset
 published: false
 ---
 
@@ -32,7 +32,7 @@ Clicking on a column allows you to access the column information
 
 [Concepts](./user-guide/concept) are known elements for the platform and are used in visualizations or the [enrichment](./user-guide/enrichment).
 
-![schema](./images/user-guide/dataset-schema-edit.jpg)
+![schema](./images/user-guide/dataset-schema-edit.jpg)  
 *Visualize the schemas of your data and fill in concepts to make sense of your data*  
 
 ### Enrichment  
@@ -45,7 +45,7 @@ Several steps are necessary to create a data enrichment:
 2. Choose the desired extension.  
 3. Choose the columns you want to add and apply the enrichment
 
-![enrichissement](./images/user-guide/dataset-enrichement.jpg)
+![enrichissement](./images/user-guide/dataset-enrichement.jpg)  
 *Enrich your data get even more value*
 
 The dataset will be processed and the progress can be viewed on the 6 different states of the dataset. Once the finalization step is complete, your data set is enriched.  
@@ -95,7 +95,7 @@ In this section, there is a the list of visualizations using your dataset.
 You can quickly navigate between the different visualizations to configure them or create a new visualization.  
 The order of the visualizations can be modified with a simple drag and drop of the visualization cards. This order will be applied on the dataset page of your portals.
 
-![Visualisations](./images/user-guide/dataset-visualisations-edit.jpg)
+![Visualisations](./images/user-guide/dataset-visualisations-edit.jpg)  
 *Configure multiple visualizations to better understand your data*
 
 It is possible to add **External Reuse**.  
@@ -125,7 +125,7 @@ You can thus publish your data to various external catalogs.
 
 The activity log allows you to view the history of the last modifications made to the dataset.  
 
-![Activité](./images/user-guide/dataset-activity.jpg)
+![Activité](./images/user-guide/dataset-activity.jpg)  
 *Latest events in your dataset*
 
 ## Action buttons

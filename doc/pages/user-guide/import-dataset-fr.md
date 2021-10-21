@@ -1,9 +1,9 @@
 ---
 title: Ajouter un jeu de données
 section: 4
-subsection : 1
+subsection: 2
 updated: 2021-09-20
-description : Ajouter un dataset
+description: Ajouter un dataset
 published: false
 ---
 
@@ -62,4 +62,4 @@ Il est ainsi possible de créer une vue de sa commune ou de son département sur
 Comme il s'agit d'une vue, lorsque le jeu de référence sera mis à jour, le jeu virtuel sur la commune (ou le département) sera aussi mis à jour. Les données restent ainsi toujours à jour par rapport au jeu de données référence.
 
 ![Jeu virtuel](./images/user-guide/import-virtuel-valeur.jpg)  
-*Filtrez ou agrégez vos jeux de données*
+*Filtrez ou agrégez les valeurs de vos jeux de données*

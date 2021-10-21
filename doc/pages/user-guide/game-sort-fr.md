@@ -11,7 +11,7 @@ application : https://koumoul.com/apps/data-fair-sort-game/0.1/
 La visualisation **Jeu de tri** permet de créer un jeu de classement de vos données selon une valeur numérique. Vous avez un exemple de cette visualisation avec le [classement des meilleurs buteurs de l'Euro](https://opendata.koumoul.com/reuses/classez-les-meilleurs-buteurs-de-l'euro).  
 Un score est attribué au joueur en fonction du nombre de permutations et du temps passé pour arriver à trier les éléments.
 
-### Créer votre jeu de tri
+## Créer votre jeu de tri
 
 Pour réaliser votre visualisation, cliquez sur **Visualisations** puis sur **Configuration une visualisation**.
 
@@ -34,10 +34,10 @@ Le titre de la visualisation peut être modifié à tout moment.
 Les **informations** vous donnent un résumé des caractéristiques de votre application.  
 Les boutons d'actions vous permettent d'importer l'application sur un autre site, de dupliquer l'application, de la supprimer et d'accéder à l'application en plein écran.
 
-### Menu de configuration
+## Menu de configuration
 Le menu de configuration est composé de deux sous-menus : **Données** et **Présentation**.
 
-#### Données
+### Données
 
 Dans le menu **Données**, vous choisissez le jeu de données que vous voulez utiliser.  
 
@@ -50,7 +50,7 @@ Les **Filtres** permettent de restreindre les données affichées dans l'applica
 Vous pouvez **Restreindre à des valeurs** d'une colonne,  **Restreindre à un intervalle de valeurs** d'une colonne ou **Exclure des valeurs** d'une colonne.
 
 
-#### Présentation
+### Présentation
 
 Dans le menu **Présentation**, vous définissez la description globale de votre jeu et vous pouvez sélectionner une image de présentation du jeu si vous avez ajouter une image en pièce jointe.
 

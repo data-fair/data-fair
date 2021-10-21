@@ -10,7 +10,7 @@ application : https://koumoul.com/apps/periodic-series/0.1/
 
 La visualisation **Periodic series** permet de visualiser une série de données pour comparer son évolution au cours du temps sur une période. Vous avez un exemple de cette visualisation sur la [variation de température et comparaison entre climat océanique/continental](https://opendata.koumoul.com/reuses/variation-de-temperature-comparaison-climat-oceanique-et-continental).
 
-### Créer votre graphe
+## Créer votre graphe
 
 Pour réaliser votre visualisation, cliquez sur **Visualisations** puis sur **Configuration une visualisation**.
 
@@ -33,10 +33,10 @@ Le titre de la visualisation peut être modifié à tout moment.
 Les **informations** vous donnent un résumé des caractéristiques de votre application.  
 Les boutons d'actions vous permettent d'importer l'application sur un autre site, de dupliquer l'application, de la supprimer et d'accéder à l'application en plein écran.
 
-### Menu de configuration
+## Menu de configuration
 Le menu de configuration est composé de deux sous-menus : **Données** et **Rendu**.
 
-#### Données
+### Données
 
 Dans le menu **Données**, vous choisissez le jeu de données que vous voulez utiliser.  
 Les **Filtres** permettent de restreindre les données affichées dans l'application.  
@@ -47,7 +47,7 @@ La **Métrique** permet de réaliser un calcul sur vos données selon la périod
 Le **Champ de la catégorie** permet de choisir la colonne à représenter sur votre visualisation.  
 La section **Transformer la valeur** permet de réaliser un calcul sous forme de formule sur toute les valeurs.  
 
-#### Rendu
+### Rendu
 
 Dans le menu **Rendu**, vous choisissez  la période du graphique et l'unité du graphique.
 

@@ -34,15 +34,15 @@ The **portal configuration** interface is divided into 5 parts:
 ![Configuration portail](./images/user-guide/portal-config.jpg)  
 *Customize your data portals, without code*
 
-### Configuration menu
-#### General
+## Configuration menu
+### General
 
 The **General** section allows you to customize the elements common to the different portal pages such as colors, logo, main image and favicon.  
 You can activate or remove the authentication for your portal (open data portal, public portal with certain data in private, private portal).  
 
 It is possible to add several links in the footer.
 
-#### Home page
+### Home page
 This section allows you to customize the home page.  
 The main image can be displayed as a banner and it is also possible to display a visualization as a banner.  
 
@@ -50,18 +50,18 @@ An editorial text will be displayed by entering a **description**.
 It is possible to display the **key indicators**, the **thematics** and to highlight a visualization on your home page.  
 You can also define the number of datasets and / or visualizations you want to highlight.  
 
-#### Content
+### Content
 The **content** section allows to set the navigation mode on the dataset and visualization pages.  
 You can choose to have infinite scroll navigation or a pagination navigation.
 
-#### Communication & contact
+### Communication & contact
 Allows to enter your website, twitter, Facebook, linkedin, youtube and instagram account.  
 By adding your contact email, the **Contact** page will be available in the navigation bar of your portal.
 
-#### Monitoring
+### Monitoring
 The monitoring allows to configure the **activity tracking** used on your portal such as Matomo (Piwik) or Google Analytics.
 
-#### Technical settings
+### Technical settings
 The technical settings allow you to customize the portal header and footer a little more.  
 It is possible to modify these two sections with HTML and CSS code.
 
@@ -73,7 +73,7 @@ A page is created with 3 steps: First you choose the page template, then you fil
 It is possible to prepare pages and publish them later.  
 In addition to entering free text, it is possible to integrate different types of elements: dataset table, visualizations, list of datasets, integration of external content, etc.  
 
-![Configuration portail](./images/user-guide/portal-contenu.jpg)
+![Configuration portail](./images/user-guide/portal-contenu.jpg)  
 *Customize your portal*
 
 It's possible to chose the acces to the content pages of your portal. Links can be displayed on the navigation bar, or in a scroll menu.  

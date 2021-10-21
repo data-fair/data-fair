@@ -24,8 +24,8 @@ A menu is displayed allowing you to enter the parameters of your page:
 * The page title
 * Thematics
 
-![Configurer votre portail](./images/user-guide/page-contenu-2.jpg)
-*Parameters of this menu can be modified later.**
+![Configurer votre portail](./images/user-guide/page-contenu-2.jpg)  
+*Parameters of this menu can be modified later.*
 
 
 On the image, the content page is called **Land**, has a **thematic** page template, a sub-menu layout and a **Thematic** as block name.

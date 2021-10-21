@@ -1,9 +1,9 @@
 ---
 title: Formats de fichier supportés
 section: 4
-subsection : 6
+subsection: 1
 updated: 2021-09-20
-description : Formats de fichier supportés
+description: Formats de fichier supportés
 published: false
 ---
 
@@ -22,9 +22,10 @@ DIF | Format de fichier texte de données ASCII | .dif | **-**
 GeoJSON | Format de de fichier de données géospatiales simples utilisant la norme JSON | .geojson | **-**
 KML/KMZ | Format destiné à la gestion de l'affichage de données géospatiales basé sur le formalise XML | .kml, .kmz | **-**
 GPX |  Format de fichier permettant l'échange de coordonnées GPS | .gpx ou .xml | **-**
-ESRI Shapefile |  Format de fichier pour les systèmes d'informations géographiques  |**-** | .shp, .dbf et .shx (.prj optionel)
+ESRI Shapefile |  Format de fichier pour les systèmes d'informations géographiques  | **-** | .shp, .dbf et .shx (.prj optionel)
 
-<br></br>
+<p>
+</p>
+
 Pour le moment, seules les données Shapefile peuvent être contenues dans un fichier .zip.  
-
 Si vous avez un besoin différent ou que vous rencontrez un problème de compatibilité, n’hésitez pas à nous [contacter](https://koumoul.com/contact).

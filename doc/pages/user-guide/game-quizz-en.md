@@ -12,7 +12,7 @@ The **Quiz Game** visualization allows to create a game in which labels are matc
 An example of this game is the [quiz on the 2019 science festival](https://opendata.koumoul.com/reuses/quizz-fete-de-la-science-2019).  
 A score is awarded to the player based on the number of correct answers and the time spent answering the questions.
 
-### Quiz game
+## Quiz game
 
 Click on **Visualizations** then on **Configure a visualization**.
 
@@ -35,11 +35,11 @@ You are redirected to the configuration page of your application with its differ
 The title of the visualization can be changed anytime.  
 The **Informations** section shows a summary of the characteristics of your application.
 
-### Configuration menu
+## Configuration menu
 
 The configuration menu contains two submenus: **Data** and **Presentation**.
 
-#### Data
+### Data
 
 In the **Data** menu, you choose the dataset you want to use.
 
@@ -53,7 +53,7 @@ The **minimum label length** allows to filter the **Description, image, or quest
 **Filters** are used to restrict the data displayed in the application.  
 You can **Restrict to Values** from a column, **Restrict to Range of Values​​** from a column, or **Exclude Values​​** from a column
 
-#### Presentation
+### Presentation
 
 In the **Presentation** menu, you define the overall description of your game and you can select a presentation image of the game if you have added an image as an attachment to your data.  
 

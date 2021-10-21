@@ -12,7 +12,7 @@ La visualisation **Nuages de mots** permet générer des nuages de mots contenan
 
 Pour configurer une visualisation **Nuages de mots**, choisissez le compte actif sur lequel vous voulez travailler. Votre compte actif contient au mois un jeu de données avec des données textuelles.
 
-### Créer votre Nuages de mots
+## Créer votre Nuages de mots
 
 Pour réaliser votre visualisation, cliquez sur **Visualisations** puis sur **Configuration une visualisation**.
 
@@ -35,21 +35,21 @@ Le titre de la visualisation peut être modifié à tout moment.
 Les **informations** vous donnent un résumé des caractéristiques de votre application.  
 Les boutons d'actions vous permettent d'importer l'application sur un autre site, de dupliquer l'application, de la supprimer et d'accéder à l'application en plein écran.
 
-### Menu de configuration
+## Menu de configuration
 Le menu de configuration est composé de trois sous-menus : **Source de données**, **Préparation des données** et **Présentation**.
 
-#### Sources de Données
+### Sources de Données
 
 Dans le menu **Sources de Données**, vous pouvez choisir le jeu de données que vous voulez utiliser.  
 Les **Filtres** permettent de restreindre les données affichées dans l'application.  
 Vous pouvez **Restreindre à des valeurs** d'une colonne,  **Restreindre à un intervalle de valeurs** d'une colonne ou **Exclure des valeurs** d'une colonne.
 
-#### Préparation des données
+### Préparation des données
 
 Dans le menu **Préparation des données**, **Champs textuels** permet de sélectionner la ou les colonne(s) que vous souhaitez utiliser dans votre nuage de mots.  
 **Type de calcul** vous permet de classer votre texte par mots les plus significatifs, par fréquence ou par une valeur d'une autre colonne.
 
-#### Présentation
+### Présentation
 
 Le menu **Présentation** permet de personnaliser votre nuage de mot.  
 Le **Type de palette** permet de choisir un ensemble de couleurs qui seront associées aux valeurs de vos données.  

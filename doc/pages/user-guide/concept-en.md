@@ -1,9 +1,9 @@
 ---
 title: Concepts
 section: 4
-subsection : 5
+subsection: 5
 updated: 2021-09-20
-description : Make sens of your data
+description: Make sens of your data
 published: false
 ---
 
@@ -18,8 +18,8 @@ The dataset edition page allows to select the concepts in the **Schema** section
 4. Concept associated with the column
 
 ![Concepts](./images/user-guide/schema-concept.jpg)  
+*Concepts are needed to create of some visualizations.*
 
-Concepts are needed to create of some visualizations.
 
 A concept is unique for a dataset, it can only be attributed once to a dataset. For example, if the **Latitude** concept is associated with a column of your dataset, it cannot be associated with another column.
 

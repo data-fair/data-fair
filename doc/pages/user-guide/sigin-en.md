@@ -15,4 +15,7 @@ Your account allows to access the various features of Data Fair:
 * Represent your data in [interactive visualizations](./user-guide/reuses) (graphics, maps, search engine ...).
 * Share your data in datastories, portals or API.
 
+<p>
+</p>
+
 It is possible to work alone (personal account) or in a group ([organization account](./user-guide/organisation)).

@@ -22,7 +22,7 @@ The **Charts** visualization allows to compare several columns of your data with
 In this visualization, you can aggregate the values of your data.  
 This visualization is a quite powerful, its configuration is more complex than other visualizations.
 
-### Create a chart
+## Create a chart
 
 To configure a **Chart** visualization, click on **Visualizations** in the navigation bar, then on **Configure visualization**.  
 
@@ -39,16 +39,16 @@ You are redirected to the configuration page of your application with its differ
 3. Configuration menu
 4. Preview
 
-![Différentes visualisations](./images/user-guide/Charts-Visu.jpg)
+![Page de configuration](./images/user-guide/charts-config.jpg)
 
 The title of the visualization can be changed anytime.  
 The **Informations** section shows a summary of the characteristics of your application.
 
-### Configuration Menu
+## Configuration Menu
 
 The configuration menu contains five sub-menus: **Data**, **Type**, **Preparation**, **Presentation** and **Navigation**.
 
-#### Data
+### Data
 
 
 The **Data** menu allows to select the columns to display and to have the first preview of your chart.  
@@ -94,11 +94,11 @@ This option allows to group rows and count them on two levels. The first level c
 - **Aggregate** options: average, minimum value, maximum value, sum
 - **Values column** allows to choose the column for the aggregation.
 
-#### Presentation
+### Presentation
 
 This section allows you to choose a color palette to use on your application.
 
-#### Navigation
+### Navigation
 
 This section allows to define different types of interactive filters. The visualization with an interactive filter will be modified according to the values ​​provided in the filters by the visitor.
 

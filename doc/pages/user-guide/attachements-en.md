@@ -1,9 +1,9 @@
 ---
-title: Rows Attachments
+title: Row Attachments
 section: 4
-subsection : 7
+subsection: 7
 updated: 2021-09-20
-description : Rows Attachments
+description: Row Attachments
 published: false
 ---
 

@@ -13,7 +13,7 @@ Elles peuvent être utilisés pour mettre en avant des indicateurs de réalisati
 
 Pour configurer une visualisation **Comparaison de proportions**, choisissez le compte actif sur lequel vous voulez travailler. Votre compte actif contient au mois un jeu de données avec des données textuelles.
 
-### Créer votre diagramme de comparaison de proportions
+## Créer votre diagramme de comparaison de proportions
 
 Pour réaliser votre visualisation, cliquez sur **Visualisations** puis sur **Configuration une visualisation**.
 
@@ -37,12 +37,12 @@ Le titre de la visualisation peut être modifié à tout moment.
 Les informations vous donnent un résumé des caractéristiques de votre application.  
 Les boutons d'actions vous permettent d'importer l'application sur un autre site, de dupliquer l'application, de la supprimer et d'accéder à l'application en plein écran.
 
-### Menu de configuration
+## Menu de configuration
 
 
 Le menu de configuration est composé de deux sous-menus : **Données** et **Rendu**.
 
-#### Données
+### Données
 
 Dans le menu **Données**, vous pouvez choisir le jeu de données que vous voulez utiliser.  
 La section **Champ de la valeur à comparer** vous permet de définir le champ de comparaison des 100 carrés d'une "gaufre".  
@@ -53,6 +53,6 @@ La section **Champ sur lequel calculer la somme** vous permet de définir la col
 
 Les **Filtres** permettent de restreindre les données affichées dans l'application.
 
-#### Rendu
+### Rendu
 
 Le menu **Rendu** permet modifier l'icone d'affichage dans les gaufre et de renseigner les couleurs de différentiation.

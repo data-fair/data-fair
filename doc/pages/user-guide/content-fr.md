@@ -25,7 +25,7 @@ Un menu s'affiche vous permettant de renseigner les paramètres de votre page:
 * Le titre de la page
 * Les thématiques permettent de choisir les différentes thématiques de votre portail abordées sur votre page
 
-![Configurer votre portail](./images/user-guide/page-contenu-2.jpg)
+![Configurer votre portail](./images/user-guide/page-contenu-2.jpg)  
 *Tous les paramètres de ce menu pourrons être modifié par la suite.*
 
 Sur notre image la page de contenu s'appelle **Foncier**, possède un modèle de page **thématique**, une disposition dans un sous-menu et un nom de bloc **Thématiques**.

@@ -9,7 +9,7 @@ published: false
 
 The menu allows to change the active account and access the **Notifications** and **Storage** pages of the account.
 
-![Menu](./images/user-guide/menu.jpg)
+![Menu](./images/user-guide/menu.jpg)  
 *The menu is available at the top right*
 
 In the image above, the active account is the **Koumoul** account. It is possible to switch accounts to your **personal account**.
@@ -23,7 +23,7 @@ The **My Organizations** section displays a summary of the organizations you are
 
 It is also possible to delete your personal account.
 
-![Compte](./images/user-guide/menu-account.jpg)
+![Compte](./images/user-guide/menu-account.jpg)  
 *Manage your personnal account*
 
 ### Notifications
@@ -38,6 +38,5 @@ The bell display the summary of the alerts sent.
 
 ### Storage
 
-The storage page presents a summary of the datasets in your account.
-
+The storage page presents a summary of the datasets in your account.  
 Statistics of account are available such as number of datasets, total space consumed, total space available, and number of views.

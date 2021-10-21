@@ -11,7 +11,7 @@ application : https://koumoul.com/apps/data-fair-locate-game/0.1/
 La visualisation **Jeu de localisation** permet de créer un jeu de localisation sur une carte aveugle. Vous avez un exemple de cette visualisation sur la carte de [localisation des capitales du monde](https://opendata.koumoul.com/reuses/localisez-les-capitales-du-monde).  
 Un score est attribué au joueur en fonction de la distance par rapport à la bonne réponse et du temps passé pour répondre aux questions.
 
-### Créer votre jeu de localisation
+## Créer votre jeu de localisation
 
 Pour réaliser votre visualisation, cliquez sur **Visualisations** puis sur **Configuration une visualisation**.
 
@@ -34,10 +34,10 @@ Le titre de la visualisation peut être modifié à tout moment.
 Les **informations** vous donnent un résumé des caractéristiques de votre application.  
 Les boutons d'actions vous permettent d'importer l'application sur un autre site, de dupliquer l'application, de la supprimer et d'accéder à l'application en plein écran.
 
-### Menu de configuration
+## Menu de configuration
 Le menu de configuration est composé de trois sous-menus : **Données**, **Rendu** et **Présentation**.
 
-#### Données
+### Données
 
 Dans le menu **Données**, vous choisissez le jeu de données que vous voulez utiliser.  
 
@@ -46,10 +46,10 @@ Vous pouvez **Restreindre à des valeurs** d'une colonne,  **Restreindre à un i
 
 Le **Nombre d'éléments** définie le nombre de points à trouver sur la carte.
 
-#### Rendu
+### Rendu
 Le menu **Rendu** vous permet de choisir le style de votre carte, l'icone par défaut des marqueurs, la taille des icones et la position initiale de la carte.
 
-#### Présentation
+### Présentation
 
 Dans le menu **Présentation**, vous définissez la description globale de votre jeu et vous pouvez sélectionner une image de présentation du jeu si vous avez ajouter une image en pièce jointe.
 

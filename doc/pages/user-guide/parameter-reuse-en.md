@@ -8,9 +8,14 @@ published: false
 ---
 The configuration menu of a visualization is divided into several sections.
 
-
-
 The **Save** button turns orange when you modify any element of the configuration of your application.
+
+
+## Menu
+
+The configuration menu contains the **Data**, **Data preparation**, **Presentation** sections.
+
+![Menu de configuration d'une visualisation graphique](./images/user-guide/Menu-graph.jpg)
 
 ### Data
 
@@ -21,12 +26,6 @@ On some configurations, static filters or interactive filters can be defined. Fi
 #### Static filters
 
 Static filters allow you to perform a hard filter on your data.
-
-## Menu
-
-The configuration menu contains the **Data**, **Data preparation**, **Presentation** sections.
-
-![Menu de configuration d'une visualisation graphique](./images/user-guide/Menu-graph.jpg)
 
 ### Data preparation
 

@@ -10,7 +10,7 @@ application : https://koumoul.com/apps/sankey/0.5/
 
 Un diagramme de **Sankey** permet de visualiser des données de flux et d'avoir les informations de chaque flux en un clic.
 
-### Prérequis
+## Prérequis
 
 Pour configurer une visualisation **Sankey**, votre compte actif doit posséder un jeu de données avec une colonne contenant des nombres (**integer**) et deux colonnes contenant des chaines de caractères (**string**).
 
@@ -19,8 +19,8 @@ Pour configurer une visualisation **Sankey**, votre compte actif doit posséder 
 
 Les valeurs des deux colonnes de chaines de caractères, **Pays** et **Candidats**, sont en relations avec les valeurs numériques de la colonne des **Nombre_de_voix**.
 
-### Configuration
-#### Créer un diagramme de Sankey
+
+## Créer un diagramme de Sankey
 
 Pour réaliser la visualisation, cliquez sur **Visualisations** puis sur **Configurer une visualisation**.
 
@@ -43,14 +43,14 @@ Le titre de la visualisation peut être modifié.
 1. Les **informations** vous donnent un résumé des caractéristiques de votre application.  
 2. Les boutons d'actions vous permettent d'importer l'application sur un autre site, de dupliquer l'application, de la supprimer et d'accéder à l'application en plein écran.
 
-#### Menu de configuration
+## Menu de configuration
 Le menu de configuration est composé de trois sous-menus : **Sources de données**, **Préparation des données** et **Présentation**.
 
-##### Sources de données
+### Sources de données
 
 Dans le menu **Sources de données**, vous allez choisir le jeu de données que vous souhaitez utiliser.
 
-##### Préparation des données  
+### Préparation des données  
 
 Le menu **Préparation des données** permet de renseigner les colonnes que vous souhaitez afficher et d'avoir votre premier rendu.
 
@@ -59,7 +59,7 @@ Le menu **Préparation des données** permet de renseigner les colonnes que vous
 **Cible** permet de définir les éléments placés sur la droite du diagramme de Sankey.
 
 
-##### Présentation
+### Présentation
 
 Dans le menu **Présentation**, vous pouvez paramétrer les **Sources** et les **Cibles** pour définir les éléments que vous voulez afficher sur votre diagramme de Sankey.
 

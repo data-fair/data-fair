@@ -12,7 +12,7 @@ The **Localization game** allows to create a game on a blind map. You have an ex
 A score is awarded to the player based on the distance from the correct answer and the time spent answering the questions.  
 
 
-### Create your localization game
+## Create your localization game
 
 Click on **Visualizations** then on **Configure a visualization**.
 
@@ -35,11 +35,11 @@ You are redirected to the configuration page of your application with its differ
 The title of the visualization can be changed anytime.  
 The **Informations** section shows a summary of the characteristics of your application.
 
-### Configuration menu
+## Configuration menu
 
 The configuration menu contains three submenus: **Data**, **Render** and **Presentation**.
 
-#### Data
+### Data
 
 In the **Data** menu, you choose the dataset you want to use.  
 
@@ -49,11 +49,11 @@ You can **Restrict to Values** from a column, **Restrict to Range of Valuesâ€‹â€
 
 The **Number of elements** defines the number of points to find on the map.
 
-#### Render
+### Render
 
 The **Render** menu allows you to choose the style of your map, the default markers icon, the size of the icons and the initial position of the map.
 
-#### Presentation
+### Presentation
 
 In the **Presentation** menu, you define the overall description of your game and you can select a presentation image of the game if you have added an image as an attachment.
 

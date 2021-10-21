@@ -12,7 +12,7 @@ The **Catchment areas** visualization is a map offering the possibility of ident
 The map uses EPCI, municipality, department, region codes to calculate the geometry according to values ​​of a column.
 
 
-### Create your catchment area map
+## Create your catchment area map
 
 To configure a **Catchment areas** visualization, click on **Visualizations** in the navigation bar, then on **Configure visualization**.  
 
@@ -34,19 +34,19 @@ You are redirected to the configuration page of your application with its differ
 The title of the visualization can be changed anytime.  
 The **Informations** section shows a summary of the characteristics of your application.  
 
-### Configuration menu
+## Configuration menu
 
 
 The configuration menu contains two submenus: **Data** and **Render**.  
 
 
-#### Data
+### Data
 
 The **Territory code** section allows to define the ladder of the territory IRIS code, EPCI code, town code  or Department code).  
 The **Aggregate values** section allows to define the field to aggregate your data.  
 **Filters** are used to restrict the data displayed in the application.
 
-#### Render
+### Render
 
 
 The **Render** menu manage the initial position, hide the position search bar and activate geolocation.

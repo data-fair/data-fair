@@ -1,9 +1,9 @@
 ---
 title: Pièces jointes par ligne
 section: 4
-subsection : 7
+subsection: 7
 updated: 2021-09-20
-description : Pièces jointes par ligne
+description: Pièces jointes par ligne
 published: false
 ---
 
@@ -16,6 +16,7 @@ Pour que votre archive soit correctement associée à votre jeu de données, vot
 
 <p>
 </p>
+
 Dans le schéma de votre jeu de données, le concept **Document numérique attaché** sera automatiquement associé à la colonne contenant les noms des fichiers de votre archive ZIP.
 
 Le temps d'indexation des pièces jointes est assez long et il dépendra de la taille de vos pièces jointes.  

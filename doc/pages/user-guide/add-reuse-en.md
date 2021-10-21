@@ -25,6 +25,9 @@ This page is divided into several parts:
 
 On the right of the page, **action buttons** are available.
 
+![Menu](./images/user-guide/add-reuse-config.jpg)  
+*Customize the rendering of your visualization*
+
 ## Configuration menu
 
 The configuration menu consists of different sections which may differ depending on the application.  

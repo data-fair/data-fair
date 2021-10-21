@@ -11,12 +11,12 @@ La visualisation **Bar Chart Race** permet de représenter des données de class
 
 Vous avez un exemple de cette visualisation sur l'[évolution des salaires selon la région entre 1966 et 2010](https://opendata.koumoul.com/reuses/evolution-des-salaires-selon-la-region-entre-1966-et-2010).
 
-### Prérequis
+## Prérequis
 
 Les données que vous souhaitez projeter doivent posséder une colonne contenant une temporalité. Dans notre exemple de l'évolution des salaires, la temporalité est en année.
 
-### Configuration
-#### Créer une visualisation Bar Chart Race
+
+## Créer une visualisation Bar Chart Race
 
 Pour configurer une visualisation **Bar Chart Bace**, cliquez sur **Visualisations** dans la barre de navigation, puis sur **Configurer une visualisation**.
 
@@ -38,12 +38,14 @@ Vous êtes redirigé vers la page de configuration de votre application avec ses
 Le titre de la visualisation peut être modifié.  
 Les **informations** vous donnent un résumé des caractéristiques de votre application.  
 
-#### Menu de configuration
+## Menu de configuration
 Le menu de configuration est composé de trois sous-menus : **Sources de données**, **Préparation des données** et **Présentation**.
 
+### Sources de données
 Le sous-menu **Sources de données** vous permet de choisir un jeu de données et de définir des **Filtres prédéfinis**. Les **Filtres prédéfinis** permettent de restreindre les données affichées dans l'application.  
 Vous pouvez **Restreindre à des valeurs** d'une colonne,  **Restreindre à un intervalle de valeurs** d'une colonne ou **Exclure des valeurs** d'une colonne.
 
+### Préparation des données
 Le sous-menu **Préparation des données** vous permet de définir quelles sont les colonnes que vous allez utiliser dans votre visualisation.
 * **Calcul de la valeur** vous permet de compter les lignes, de faire une somme ou une moyenne sur les valeurs de la colonne.
 * **Colonne** vous permet de choisir la colonne utilisée pour le **Calcul de la valeur**.
@@ -55,4 +57,5 @@ Une fois que toutes les options sont renseignées, vous avez un premier aperçu 
 ![Premier aperçu](./images/user-guide/barchart-preparation.gif)  
 *Evolution du classement des équipes de Ligue 1 saison 2016-2017*
 
+### Présentation
 Le sous-menu **Présentation** vous permet de modifier le **Nombre maximal de barres**, la **Durée en secondes**, la **Largeur des barres**, la **Position des barres**, si la visualisation démarre automatiquement et les couleurs des barres.

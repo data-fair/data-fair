@@ -11,6 +11,13 @@ Le menu de configuration d'une visualisation est divisé en plusieurs sections.
 
 Le bouton **Enregistrer** passe en orange lorsque vous avez modifié la configuration de votre application. Les modifications ne seront pas prises en compte tant que vous n'avez pas appuyé sur le bouton enregistrer.
 
+
+## Menu graphique
+Le menu de configuration des visualisations graphiques se compose des sections **Sources de données**, **Préparation des données**, **Présentation**.
+
+![Menu de configuration d'une visualisation graphique](./images/user-guide/Menu-graph.jpg)
+
+
 ### Source de données
 La section **Source de données** (ou **Données**) est commune à tous les menus de configurations et permet de choisir le jeu de données à représenter dans la visualisation.
 
@@ -18,11 +25,6 @@ Sur certaines configurations, on peut définir des filtres statiques ou des filt
 
 #### Filtres statiques
 Les filtres statiques permettent de réalisé un filtre en dur sur vos données.
-
-## Menu graphique
-Le menu de configuration des visualisations graphiques se compose des sections **Sources de données**, **Préparation des données**, **Présentation**.
-
-![Menu de configuration d'une visualisation graphique](./images/user-guide/Menu-graph.jpg)
 
 ### Préparation des données
 

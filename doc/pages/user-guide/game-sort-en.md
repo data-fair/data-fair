@@ -12,7 +12,7 @@ The **Sort game** allows to create a game of classification of your data accordi
 A score is assigned to the player based on the number of permutations and the time spent sorting the items.
 
 
-### Create your Sort game
+## Create your Sort game
 
 Click on **Visualizations** then on **Configure a visualization**.
 
@@ -35,7 +35,7 @@ You are redirected to the configuration page of your application with its differ
 The title of the visualization can be changed anytime.  
 The **Informations** section shows a summary of the characteristics of your application.
 
-### Configuration menu
+## Configuration menu
 
 The configuration menu contains two submenus: **Data** and **Presentation**.
 

@@ -11,7 +11,7 @@ application : https://koumoul.com/apps/data-fair-proportions/0.2/
 The **Waffle Charts** visualization provide an intuitive overview of proportions in a dataset and the ability to compare them based on different categories / variables.  
 For example, they can be used to highlight indicators of achievement of objectives.
 
-### Create your waffle charts
+## Create your waffle charts
 
 To configure a **Waffle Charts** visualization, click on **Visualizations** in the navigation bar, then on **Configure visualization**.  
 
@@ -33,11 +33,11 @@ You are redirected to the configuration page of your application with its differ
 The title of the visualization can be changed anytime.  
 The **Informations** section shows a summary of the characteristics of your application.
 
-### Configuration menu
+## Configuration menu
 
 The configuration menu contains two submenus: **Data** and **Render**.
 
-#### Data
+### Data
 
 In the **Data** menu, you can choose the data set you want to use.  
 The **Value to compare** section allows to define the comparison field of the 100 squares of a "waffle".  
@@ -48,7 +48,7 @@ The **Calculate Field** section allows to define the column that contains the va
 
 **Filters** are used to restrict the data displayed in the application.
 
-#### Render
+### Render
 
 The **Render** menu is used to modify the displayed icon in the waffles and to choose the colors.
 

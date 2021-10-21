@@ -10,8 +10,7 @@ application : https://koumoul.com/apps/sunburst/0.2/
 
 **Sunburst** diagram allows to visualize hierarchical data and to access to several levels of this data in a few clicks.
 
-### Configuration
-#### Create a Sankey diagram
+## Create a Sankey diagram
 Click on **Visualizations** then on **Configure a visualization**.
 
 
@@ -33,20 +32,20 @@ You are redirected to the configuration page of your application with its differ
 The title of the visualization can be changed anytime.  
 The **Informations** section shows a summary of the characteristics of your application.
 
-#### Configuration menu
+## Configuration menu
 
 The configuration menu contains three submenus: **Data**, **Preperation** and **Presentation**.
 
-#### Data
+### Data
 In the **Data** menu, you can choose the dataset to use.
 
-#### Preperation
+### Preperation
 
 The **Preperation** menu allows to enter the columns you want to display and to have your first rendering.  
 **Calculation** allows to count the number of non-zero rows of a column or to calculate the sums of the values ​​of a column.  
 The **Groups** represent the number of levels you want to display on your sunburst diagram.
 
-#### Presentation
+### Presentation
 
 In the **Presentation** menu, you can turn off the display of unique descendants, change the text color and change the color of your categories.
 

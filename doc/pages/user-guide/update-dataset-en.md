@@ -1,9 +1,9 @@
 ---
 title: Update a dataset
 section: 4
-subsection : 4
+subsection: 4
 updated: 2021-09-20
-description : Update a dataset
+description: Update a dataset
 published: false
 ---
 

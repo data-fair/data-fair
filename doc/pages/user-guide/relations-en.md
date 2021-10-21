@@ -11,7 +11,7 @@ application : https://koumoul.com/apps/data-fair-relations/0.2/
 Network diagram allows to generate dynamic graphs from two datasets, one containing the nodes and the other containing the links between the nodes.  
 An example of this visualization is the [relationship between the players of the France team and their clubs](https://opendata.koumoul.com/reuses/relation-entre-les-joueurs-de-l'equipe-de-france-et-leurs-clubs).
 
-### Create your Network diagram
+## Create your Network diagram
 
 To configure a **Network diagram** visualization, click on **Visualizations** in the navigation bar, then on **Configure visualization**.  
 
@@ -33,20 +33,20 @@ You are redirected to the configuration page of your application with its differ
 The title of the visualization can be changed anytime.  
 The **Informations** section shows a summary of the characteristics of your application.
 
-### Configuration menu
+## Configuration menu
 
 The configuration menu contains three submenus: **Data**, **Nodes** and **Links**.
 
-#### Data
+### Data
 In the **Data** menu, you choose the dataset you want to use.
 
-#### Nodes
+### Nodes
 The **Nodes** menu allows to customize the two types of nodes in your visualization.  
 It is possible to modify the color and the icon representing your nodes.
 
 You can customize the spacing of the nodes, sum or count the rows, the minimum and maximum size of the nodes as well as the size of the font of the nodes.
 
-#### links
+### Links
 
 The **Links** menu allows you to configure the size, minimum and maximum size of links. The thickness of the links corresponds to the force between the different nodes.
 

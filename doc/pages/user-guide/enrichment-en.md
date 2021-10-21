@@ -1,9 +1,9 @@
 ---
 title: Data enrichment
 section: 4
-subsection : 3
+subsection: 6
 updated: 2021-09-20
-description : Data enrichment
+description: Data enrichment
 published: false
 ---
 
@@ -19,7 +19,7 @@ Enrichment allows you to import columns from a reference base. It is possible to
 
 Depending on your data, you can choose an enrichment and complete your data.
 
-### Create your own reference data
+## Create your own reference data
 
 At this time, only **Super Instance Admins** can set a dataset as **Reference Data**.
 

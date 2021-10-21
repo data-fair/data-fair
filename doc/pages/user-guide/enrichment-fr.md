@@ -1,9 +1,9 @@
 ---
 title: Enrichir ses données
 section: 4
-subsection : 3
+subsection: 6
 updated: 2021-09-20
-description : Jointures de données
+description: Jointures de données
 published: false
 ---
 
@@ -18,7 +18,7 @@ L'enrichissement permet d'importer des colonnes d'une base de référence. Il es
 En fonction des données que vous possédez, vous pouvez choisir l'enrichissement qui vous convient et compléter vos données.
 
 
-### Créez vos données de référence
+## Créez vos données de référence
 
 Pour le moment, seul les supers administrateurs de l'instance peuvent définir un jeu de données comme **Données de référence**.
 
@@ -31,7 +31,7 @@ Une fois ces 3 étapes réalisées, il vous est alors possible d'enrichir d'autr
 ### Import et concept
 Lorsque votre jeu de données est créé sur votre compte, il vous faudra associer un concept à la colonne qui va faire la jointure avec les autres jeux de données. Votre colonne devra contenir des codes uniques, tels que des **Codes INSEE** de commune, des **Codes SIRENE** ou des **Codes parcelles**
 
-![Données de référence](./images/user-guide/enrichment-concept.jpg)
+![Données de référence](./images/user-guide/enrichment-concept.jpg)  
 *Une colonne possédant un concept est en gras*
 
 ### Mode super administrateur
@@ -63,5 +63,5 @@ Vous pouvez créer vos propres concepts de valeurs uniques dans la section **Voc
 
 Un concept est défini par son **Identifiant**, son **Titre**, sa **Description** et sa **Catégorie**. L'identifiant et le titre sont obligatoires.
 
-![Données de référence](./images/user-guide/enrichment-vocabulaire.jpg)
+![Données de référence](./images/user-guide/enrichment-vocabulaire.jpg)  
 *Créez vos propres concepts*

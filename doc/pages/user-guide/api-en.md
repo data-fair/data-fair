@@ -13,7 +13,7 @@ API keys allow to use your account's global API for managing datasets, visualiza
 You can create multiple different API keys.  
 Each key has its own label which allows them to be differentiated.
 
-![API-edition](./images/user-guide/api-edit.jpg)
+![API-edition](./images/user-guide/api-edit.jpg)  
 *Access your API*
 
 You can edit or delete your keys.  

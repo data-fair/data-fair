@@ -34,8 +34,8 @@ L'interface de **configuration d'un portail** est divisée en 5 parties :
 ![Configuration portail](./images/user-guide/portal-config.jpg)  
 *Personnalisez vos portails de données, sans avoir besoin de programmer*
 
-### Menu de configuration
-#### Général
+## Menu de configuration
+### Général
 
 La section **Général** vous permet de personnaliser les éléments communs aux différentes pages du portail telles que les couleurs, le logo, l'image principale et le favicon.  
 
@@ -43,7 +43,7 @@ Vous pouvez activer ou désactive l'authentification sur votre portail (portail 
 
 Il est possible d'ajouter plusieurs liens dans le footer.
 
-#### Page d'accueil
+### Page d'accueil
 Cette section permet de personnaliser la page d'accueil.  
 L'image principale peut être affichée en bannière et il est aussi possible de d'afficher une visualisation de diaporama pour obtenir un carrousel d'images.  
 
@@ -51,23 +51,23 @@ Une texte éditorial sera affiché en renseignant une **description**.
 Il est possible d'afficher les **chiffres clés**, les **thématiques** et de mettre en avant une visualisation sur votre page d'accueil.  
 Vous pouvez également de définir le nombre de jeux de données et/ou de visualisations que vous souhaitez mettre en avant.
 
-#### Contenu
+### Contenu
 
 La section de **contenu** vous permet de définir le mode de navigation sur les pages des jeux de données et des visualisation.  
 Vous pouvez choisir d'avoir une navigation en scroll infini ou avec une pagination.
 
-#### Communication & contact
+### Communication & contact
 Vous permet de renseigner votre site web, votre compte twitter, Facebook, linkedin et youtube.  
 En ajoutant votre email de contact, la page de **Contact** sera disponible dans la barre de navigation de votre portail.
 
 #### Suivi d'activité
 Vous permet d'activer un **suivi d'activité** tel que Matomo (Piwik) ou Google Analytics.
 
-#### Paramétrage technique
+### Paramétrage technique
 Le paramétrage technique permet d'un peu plus personnaliser l'entête et le pied de page du portail.  
 Il est possible de modifier ces deux sections avec du code HTML et CSS.
 
-###  Editer les pages de contenu
+##  Editer les pages de contenu
 
 Les [pages de contenu](./user-guide/content) permettent de créer différents types de pages : articles, pages thématiques autour de plusieurs jeux de données, pages d'actualités, data storytelling, licences, conditions d'utilisation, etc... Il est ainsi possible de mettre en avant certaines données et de leur donner encore plus de contexte par exemple, ou de faire des tableaux de bord intégrant différentes données.
 

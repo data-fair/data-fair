@@ -15,4 +15,7 @@ Votre compte vous permet d'accéder aux différentes fonctionnalités de Data Fa
 3. Représenter ses données sous formes de [visualisations interactives](./user-guide/reuses) (graphiques, cartes, moteur de recherches ...).
 4. Partager ses données sous formes de pages (story), de visualisations, de portail ou d'API.  
 
+<p>
+</p>
+
 Il est possible de travailler seul (compte personnel) ou en groupe ([compte organisation](./user-guide/organisation)).
