@@ -1,7 +1,7 @@
 <template>
   <v-row>
     <v-col>
-      <v-row class="px-3 pb-1 ma-0" style="height:44px;">
+      <v-row class="px-3 pb-1 ma-0">
         <h3 v-if="notCalculatedProperties" class="text-h6">
           {{ notCalculatedProperties.length.toLocaleString() }} colonne{{ notCalculatedProperties.length > 1 ? 's' : '' }}
         </h3>
