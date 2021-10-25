@@ -389,9 +389,8 @@ en:
 
         filtersUtils.writeQueryParams(this.filters, query)
 
-        this.$router.push({ query })
-
         if (global.parent) parent.postMessage({ query }, '*')
+        else this.$router.push({ query })
       },
     },
   }
