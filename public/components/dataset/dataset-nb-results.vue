@@ -4,8 +4,12 @@
     class="text-caption"
     style="line-height: 1;"
   >
-    <template v-if="total <= 10000" v-text="$tc('lines', total)" />
-    <template v-else v-t="{path: 'firstLines', args: {lines: 10000, total}}" />
+    <template v-if="total <= 10000">
+      {{ $tc('lines', total) }}
+    </template>
+    <template v-else>
+      {{ $t('firstLines', {lines: 10000, total}) }}
+    </template>
   </div>
 </template>
 
