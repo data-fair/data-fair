@@ -925,7 +925,7 @@ router.get('/:datasetId/lines', readDataset(), applicationKey, permissions.middl
 
   let esResponse
   try {
-    esResponse = await esUtils.search(req.app.get('es'), req.dataset, req.query)
+    esResponse = await esUtils.search(req.app.get('es'), req.dataset, req.query, req.publicBaseUrl)
   } catch (err) {
     await manageESError(req, err)
   }

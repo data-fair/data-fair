@@ -3,6 +3,7 @@ module.exports = {
   port: 8080,
   listenWhenReady: false,
   publicUrl: 'http://localhost:8080',
+  oldPublicUrl: '', // special case when changing path of data-fair
   wsPublicUrl: 'ws://localhost:8080',
   dataDir: '/data',
   sessionDomain: null,

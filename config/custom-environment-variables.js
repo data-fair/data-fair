@@ -2,6 +2,7 @@ module.exports = {
   port: 'PORT',
   mode: 'MODE',
   publicUrl: 'PUBLIC_URL',
+  oldPublicUrl: 'OLD_PUBLIC_URL',
   wsPublicUrl: 'WS_PUBLIC_URL',
   sessionDomain: 'SESSION_DOMAIN',
   directoryUrl: 'DIRECTORY_URL',
