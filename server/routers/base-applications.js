@@ -145,6 +145,7 @@ router.get('', cacheHeaders.noCache, asyncWrap(async(req, res) => {
   const baseApplications = db.collection('base-applications')
   const findPromise = baseApplications
     .find(query)
+    .collation({ locale: 'en' })
     .sort({ title: 1 }).limit(size).skip(skip)
     .toArray()
   const countPromise = baseApplications.countDocuments(query)

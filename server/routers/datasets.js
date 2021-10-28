@@ -154,7 +154,7 @@ router.get('', cacheHeaders.noCache, asyncWrap(async(req, res) => {
   const project = findUtils.project(req.query.select)
   const [skip, size] = findUtils.pagination(req.query)
   const mongoQueries = [
-    size > 0 ? datasets.find(query).limit(size).skip(skip).sort(sort).project(project).toArray() : Promise.resolve([]),
+    size > 0 ? datasets.find(query).collation({ locale: 'en' }).limit(size).skip(skip).sort(sort).project(project).toArray() : Promise.resolve([]),
     datasets.countDocuments(query),
   ]
   if (req.query.facets) {
