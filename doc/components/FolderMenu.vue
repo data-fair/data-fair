@@ -94,13 +94,18 @@
             id: k.split('/')[2].split('.').shift().replace(`-${this.$i18n.locale}`, ''),
           }))
         content.sort((s1, s2) => {
-          if (s1.section < s2.section) return -1
+          if (this.chapters.findIndex(c => c.id === s1.chapter) < this.chapters.findIndex(c => c.id === s2.chapter)) return -1
+          else if (this.chapters.findIndex(c => c.id === s1.chapter) > this.chapters.findIndex(c => c.id === s2.chapter)) return 1
+          else if (s1.section && !s2.section) return -1
+          else if (!s1.section && s2.section) return 1
+          else if (s1.section < s2.section) return -1
           else if (s1.section > s2.section) return 1
-          else {
-            if (s1.subsection < s2.subsection) return -1
-            else return 1
-          }
+          else if (s1.subsection && !s2.subsection) return -1
+          else if (!s1.subsection && s2.subsection) return 1
+          else if (s1.subsection < s2.subsection) return -1
+          else return 1
         })
+        // console.log(content.map(i => (`${i.title} ${i.chapter}/${i.section}/${i.subsection}`)))
         return content
       },
       chapters() {
