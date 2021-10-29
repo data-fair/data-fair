@@ -523,6 +523,27 @@ update,line2,test2,test2`, { headers: { 'content-type': 'text/csv' } })
     assert.equal(lines[2].attr2, 'test2')
   })
 
+  it('Validate bulk actions sent as csv', async () => {
+    const ax = global.ax.dmeadus
+    await ax.post('/api/v1/datasets', {
+      isRest: true,
+      title: 'restcsv',
+      schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }, { key: 'attr3', type: 'boolean' }],
+    })
+    await workers.hook('finalizer/restcsv')
+    try {
+      await ax.post('/api/v1/datasets/restcsv/_bulk_lines', `_id,attrko
+line1,test1
+line2,test1
+line3,test1`, { headers: { 'content-type': 'text/csv' } })
+      assert.fail()
+    } catch (err) {
+      console.log(err.data)
+      assert.equal(err.data.nbErrors, 1)
+      assert.equal(err.data.nbOk, 0)
+    }
+  })
+
   it('Send bulk actions as a gzipped CSV', async () => {
     const ax = global.ax.dmeadus
     await ax.post('/api/v1/datasets', {

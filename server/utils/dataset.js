@@ -176,7 +176,7 @@ exports.dataFiles = async (dataset) => {
 }
 
 // used both by exports.readStream and bulk transactions in rest datasets
-exports.transformFileStreams = (mimeType, schema, fileSchema, fileProps = {}, raw = false) => {
+exports.transformFileStreams = (mimeType, schema, fileSchema, fileProps = {}, raw = false, noExtra = false) => {
   const streams = []
 
   // file is gzipped
@@ -235,6 +235,14 @@ exports.transformFileStreams = (mimeType, schema, fileSchema, fileProps = {}, ra
           return callback(null, chunk)
         }
         const line = {}
+        if (noExtra) {
+          const unknownKey = Object.keys(chunk)
+            .filter(k => k !== '_i')
+            .find(k => !schema.find(p => p['x-originalName'] === k || p.key === k))
+          if (unknownKey) {
+            return callback(new Error(`Colonne ${unknownKey} inconnue.`))
+          }
+        }
         schema.forEach(prop => {
           const fileProp = fileSchema && fileSchema.find(p => p.key === prop.key)
           const value = fieldsSniffer.format(chunk[prop['x-originalName'] || prop.key], prop, fileProp)
