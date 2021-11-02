@@ -47,10 +47,14 @@ ENV NODE_ENV production
 ENV DEBUG db,upgrade*
 WORKDIR /webapp
 ADD LICENSE .
+ADD .yarnrc.yml .
 ADD package.json .
-ADD package-lock.json .
+ADD yarn.lock .
 ADD patches patches
-RUN npm install --production && node-prune
+# adding yarn cache takes a bit of space but speeds up build, remove this line to inverse the trade-off
+# in following versions of the stack we will use the yarn pnp option to prevent creating the node_modules directory
+ADD .yarn .yarn
+RUN yarn
 ADD nodemon.json .
 
 # Adding UI files

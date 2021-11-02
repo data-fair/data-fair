@@ -13,23 +13,27 @@ This project uses the following stack : Mongo, ElasticSearch, NodeJS, Express, V
 
 We use [eslint]() both as a linter an a formatter (thanks to its fix mode). It also works on .vue files thanks to [vue-eslint-plugin](https://github.com/vuejs/eslint-plugin-vue). We strongly suggest integrating these tools in your editor, this [article](https://alligator.io/vuejs/vue-eslint-plugin/) can be useful to configure vue-eslint-plugin in your editor.
 
+This project requires a recent yarn version:
+
+    npm i -g yarn
+
 Install dependencies and launch service dependencies with docker-compose:
 
-    npm install
+    yarn
     docker-compose up -d
 
 Run the 2 development servers with these commands in separate shells:
 
-    npm run dev-server
-    npm run dev-client
+    yarn run dev-server
+    yarn run dev-client
 
 When both servers are ready, go to [http://localhost:5600](http://localhost:5600) and chose an account in `test/resources/users.json` to login with its email.
 
 Test built nuxt distributable in dev:
 
    # first set proxyNuxt to false in config/development.js
-   NODE_ENV=development npm run build
-   npm run dev-server
+   NODE_ENV=development yarn run build
+   yarn run dev-server
 
 
 ## Embedded documentation
@@ -41,8 +45,8 @@ The pages are also linked to the main nuxt project, so that any Simple Directory
 Run the documentation development server:
 
 ```
-npm install
-npm run doc
+yarn
+yarn run doc
 ```
 
 Then open http://localhost:3000/data-fair/
