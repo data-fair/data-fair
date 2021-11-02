@@ -13,16 +13,3 @@
 /dist/
 /nuxt-dist
 /config/local-*
-
-# using yarn is recommended
-package-lock.json
-
-# yarn without using zero-installs mode
-# cf https://yarnpkg.com/getting-started/qa#which-files-should-be-gitignored
-.pnp.*
-.yarn/*
-!.yarn/patches
-!.yarn/plugins
-!.yarn/releases
-!.yarn/sdks
-!.yarn/versions
