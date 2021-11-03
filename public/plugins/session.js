@@ -27,7 +27,10 @@ export default async ({ store, app, env, $vuetify, route, i18n }) => {
       app.router.replace({ query })
     })
   }
-  store.dispatch('session/loop', app.$cookies)
+  // no need to maintain keepalive / readcookie loops in every embedded view
+  if (!route.path.startsWith('/embed/')) {
+    store.dispatch('session/loop', app.$cookies)
+  }
   if (app.$cookies.get('theme_dark') !== undefined) $vuetify.theme.dark = app.$cookies.get('theme_dark')
   if (route.query.dark) $vuetify.theme.dark = route.query.dark === 'true'
   await store.dispatch('fetchLimits')
