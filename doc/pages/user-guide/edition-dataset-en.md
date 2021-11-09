@@ -7,7 +7,6 @@ description: Add metadata to your dataset
 published: false
 ---
 
-
 On the [Datasets page](https://koumoul.com/s/data-fair/datasets), the datasets are represented by a card. To edit a dataset click on the card.  
 
 The edition page contains several sections: structure, metadata, data, visualizations, data sharing, activity, action buttons and content.

@@ -7,7 +7,6 @@ description: Jointures de données
 published: false
 ---
 
-
 L'enrichissement permet d'importer des colonnes d'une base de référence. Il est ainsi possible de croiser ses données avec des données issues de l'open data telles que la base SIRENE, les données INSEE, le cadastre ou la BAN.
 
 * La base SIRENE rassemble les informations économiques et juridiques de plus de 28 Millions d'établissements d'entreprises, dont plus de 11 Millions établissement actifs.
