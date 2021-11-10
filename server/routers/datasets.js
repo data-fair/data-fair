@@ -219,7 +219,7 @@ router.get('/:datasetId', readDataset(), applicationKey, permissions.middleware(
 })
 
 // retrieve only the schema.. Mostly useful for easy select fields
-router.get('/:datasetId/schema', readDataset(), applicationKey, permissions.middleware('readDescription', 'read'), cacheHeaders.noCache, (req, res, next) => {
+router.get('/:datasetId/schema', readDataset(), applicationKey, permissions.middleware('readSchema', 'read'), cacheHeaders.noCache, (req, res, next) => {
   let schema = req.dataset.schema
   if (req.query.mimeType === 'application/tableschema+json') {
     res.setHeader('content-disposition', `attachment; filename="${req.dataset.id}-tableschema.json"`)
@@ -334,7 +334,7 @@ router.patch('/:datasetId', readDataset((patch) => {
 }))
 
 // Change ownership of a dataset
-router.put('/:datasetId/owner', readDataset(), permissions.middleware('delete', 'admin'), asyncWrap(async(req, res) => {
+router.put('/:datasetId/owner', readDataset(), permissions.middleware('changeOwner', 'admin'), asyncWrap(async(req, res) => {
   // Must be able to delete the current dataset, and to create a new one for the new owner to proceed
   if (!req.user.adminMode) {
     if (req.body.type === 'user' && req.body.id !== req.user.id) return res.status(403).send()
@@ -667,7 +667,7 @@ router.post('/:datasetId', attemptInsert, readDataset(['finalized', 'error'], tr
 router.put('/:datasetId', attemptInsert, readDataset(['finalized', 'error'], true), permissions.middleware('writeData', 'write'), checkStorage(true), filesUtils.uploadFile(), filesUtils.fixFormBody(validatePost), updateDataset)
 
 // validate the draft
-router.post('/:datasetId/draft', readDataset(['finalized'], false, true), permissions.middleware('writeData', 'write'), asyncWrap(async (req, res, next) => {
+router.post('/:datasetId/draft', readDataset(['finalized'], false, true), permissions.middleware('validateDraft', 'write'), asyncWrap(async (req, res, next) => {
   const db = req.app.get('db')
   if (!req.dataset.draft) {
     return res.status(409).send('Le jeu de données n\'est pas en état brouillon')
@@ -708,7 +708,7 @@ router.post('/:datasetId/draft', readDataset(['finalized'], false, true), permis
 }))
 
 // cancel the draft
-router.delete('/:datasetId/draft', readDataset(['finalized', 'error'], false, true), permissions.middleware('writeData', 'write'), asyncWrap(async (req, res, next) => {
+router.delete('/:datasetId/draft', readDataset(['finalized', 'error'], false, true), permissions.middleware('cancelDraft', 'write'), asyncWrap(async (req, res, next) => {
   const db = req.app.get('db')
   if (!req.dataset.draft) {
     return res.status(409).send('Le jeu de données n\'est pas en état brouillon')
@@ -766,7 +766,7 @@ router.get('/:datasetId/master-data/single-searchs/:singleSearchId', readDataset
   }
   res.send(result)
 }))
-router.post('/:datasetId/master-data/bulk-searchs/:bulkSearchId', readDataset(), permissions.middleware('readLines', 'read'), asyncWrap(async(req, res) => {
+router.post('/:datasetId/master-data/bulk-searchs/:bulkSearchId', readDataset(), permissions.middleware('bulkSearch', 'read'), asyncWrap(async(req, res) => {
   // no buffering nor caching of this response in the reverse proxy
   res.setHeader('X-Accel-Buffering', 'no')
   await pump(
@@ -1167,7 +1167,7 @@ router.get('/:datasetId/min/:fieldKey', readDataset(), applicationKey, permissio
 }))
 
 // For datasets with attached files
-router.get('/:datasetId/attachments/*', readDataset(), applicationKey, permissions.middleware('downloadOriginalData', 'read'), cacheHeaders.noCache, (req, res, next) => {
+router.get('/:datasetId/attachments/*', readDataset(), applicationKey, permissions.middleware('downloadAttachment', 'read'), cacheHeaders.noCache, (req, res, next) => {
   const filePath = req.params['0']
   if (filePath.includes('..')) return res.status(400).send('Unacceptable attachment path')
   // the transform stream option was patched into "send" module using patch-package
@@ -1175,7 +1175,7 @@ router.get('/:datasetId/attachments/*', readDataset(), applicationKey, permissio
 })
 
 // Direct access to data files
-router.get('/:datasetId/data-files', readDataset(), permissions.middleware('getDataFiles', 'read'), asyncWrap(async(req, res, next) => {
+router.get('/:datasetId/data-files', readDataset(), permissions.middleware('listDataFiles', 'read'), asyncWrap(async(req, res, next) => {
   res.send(await datasetUtils.dataFiles(req.dataset))
 }))
 router.get('/:datasetId/data-files/*', readDataset(), permissions.middleware('downloadDataFile', 'read'), cacheHeaders.noCache, asyncWrap(async(req, res, next) => {

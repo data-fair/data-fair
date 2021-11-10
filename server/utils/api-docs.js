@@ -2,10 +2,10 @@
 exports.operationsClasses = {
   datasets: {
     list: ['list'],
-    read: ['readDescription', 'readLines', 'getGeoAgg', 'getValuesAgg', 'getValues', 'getMetricAgg', 'getWordsAgg', 'downloadOriginalData', 'downloadFullData', 'readApiDoc', 'realtime-transactions', 'readLine', 'readLineRevisions'],
+    read: ['readDescription', 'readSchema', 'readLines', 'getGeoAgg', 'getValuesAgg', 'getValues', 'getMetricAgg', 'getWordsAgg', 'getMinAgg', 'getMaxAgg', 'downloadOriginalData', 'downloadFullData', 'readApiDoc', 'realtime-transactions', 'readLine', 'readLineRevisions', 'bulkSearch'],
     readAdvanced: ['readJournal', 'realtime-journal', 'realtime-task-progress'],
-    write: ['writeDescription', 'writeData', 'createLine', 'updateLine', 'patchLine', 'bulkLines', 'deleteLine'],
-    admin: ['delete', 'getPermissions', 'setPermissions'],
+    write: ['writeDescription', 'writeData', 'createLine', 'updateLine', 'patchLine', 'bulkLines', 'deleteLine', 'validateDraft', 'cancelDraft'],
+    admin: ['delete', 'getPermissions', 'setPermissions', 'changeOwner'],
   },
   applications: {
     list: ['list'],
