@@ -136,7 +136,7 @@ en:
     },
     methods: {
       clickDownload(format) {
-        parent.postMessage({ trackEvent: { action: 'downloadFiltered', label: this.dataset.id } })
+        parent.postMessage({ trackEvent: { action: 'download_filtered', label: `${this.dataset.id} - ${format}` } })
       },
     },
   }
