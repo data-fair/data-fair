@@ -32,7 +32,11 @@
         class="mb-0 mt-1"
       />
       <v-list class="pt-0" dense>
-        <v-list-item :href="downloadUrls.csv" target="download">
+        <v-list-item
+          :href="downloadUrls.csv"
+          target="download"
+          @click="clickDownload('csv')"
+        >
           <v-list-item-avatar :size="30">
             <v-avatar :size="30">
               <v-icon>
@@ -42,7 +46,11 @@
           </v-list-item-avatar>
           <v-list-item-title v-t="'csv'" />
         </v-list-item>
-        <v-list-item :href="downloadUrls.xlsx" target="download">
+        <v-list-item
+          :href="downloadUrls.xlsx"
+          target="download"
+          @click="clickDownload('xlsx')"
+        >
           <v-list-item-avatar :size="30">
             <v-avatar :size="30">
               <v-icon>
@@ -52,7 +60,11 @@
           </v-list-item-avatar>
           <v-list-item-title v-t="'xlsx'" />
         </v-list-item>
-        <v-list-item :href="downloadUrls.ods" target="download">
+        <v-list-item
+          :href="downloadUrls.ods"
+          target="download"
+          @click="clickDownload('ods')"
+        >
           <v-list-item-avatar :size="30">
             <v-avatar :size="30">
               <v-icon>
@@ -66,6 +78,7 @@
           v-if="dataset.bbox"
           :href="downloadUrls.geojson"
           target="download"
+          @click="clickDownload('geojson')"
         >
           <v-list-item-avatar :size="30">
             <v-avatar :size="30">
@@ -119,6 +132,11 @@ en:
           ods: buildURL(this.resourceUrl + '/lines', { ...params, format: 'ods' }),
           geojson: buildURL(this.resourceUrl + '/lines', { ...params, format: 'geojson' }),
         }
+      },
+    },
+    methods: {
+      clickDownload(format) {
+        parent.postMessage({ trackEvent: { action: 'downloadFiltered', label: this.dataset.id } })
       },
     },
   }
