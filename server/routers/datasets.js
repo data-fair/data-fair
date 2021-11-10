@@ -1143,7 +1143,7 @@ router.get('/:datasetId/words_agg', readDataset(), applicationKey, permissions.m
 }))
 
 // Get max value of a field
-router.get('/:datasetId/max/:fieldKey', readDataset(), applicationKey, permissions.middleware('getWordsAgg', 'read'), cacheHeaders.resourceBased, asyncWrap(async(req, res) => {
+router.get('/:datasetId/max/:fieldKey', readDataset(), applicationKey, permissions.middleware('getMaxAgg', 'read'), cacheHeaders.resourceBased, asyncWrap(async(req, res) => {
   if (req.dataset.isVirtual) req.dataset.descendants = await virtualDatasetsUtils.descendants(req.app.get('db'), req.dataset)
   let result
   try {
@@ -1155,7 +1155,7 @@ router.get('/:datasetId/max/:fieldKey', readDataset(), applicationKey, permissio
 }))
 
 // Get min value of a field
-router.get('/:datasetId/min/:fieldKey', readDataset(), applicationKey, permissions.middleware('getWordsAgg', 'read'), cacheHeaders.resourceBased, asyncWrap(async(req, res) => {
+router.get('/:datasetId/min/:fieldKey', readDataset(), applicationKey, permissions.middleware('getMinAgg', 'read'), cacheHeaders.resourceBased, asyncWrap(async(req, res) => {
   if (req.dataset.isVirtual) req.dataset.descendants = await virtualDatasetsUtils.descendants(req.app.get('db'), req.dataset)
   let result
   try {
@@ -1175,10 +1175,10 @@ router.get('/:datasetId/attachments/*', readDataset(), applicationKey, permissio
 })
 
 // Direct access to data files
-router.get('/:datasetId/data-files', readDataset(), permissions.middleware('downloadFullData', 'read'), asyncWrap(async(req, res, next) => {
+router.get('/:datasetId/data-files', readDataset(), permissions.middleware('getDataFiles', 'read'), asyncWrap(async(req, res, next) => {
   res.send(await datasetUtils.dataFiles(req.dataset))
 }))
-router.get('/:datasetId/data-files/*', readDataset(), permissions.middleware('downloadFullData', 'read'), cacheHeaders.noCache, asyncWrap(async(req, res, next) => {
+router.get('/:datasetId/data-files/*', readDataset(), permissions.middleware('downloadDataFile', 'read'), cacheHeaders.noCache, asyncWrap(async(req, res, next) => {
   const filePath = req.params['0']
   if (filePath.includes('..')) return res.status(400).send('Unacceptable data file path')
   webhooks.trigger(req.app.get('db'), 'dataset', req.dataset, { type: 'downloaded' })
@@ -1187,19 +1187,19 @@ router.get('/:datasetId/data-files/*', readDataset(), permissions.middleware('do
 }))
 
 // Special attachments referenced in dataset metadatas
-router.post('/:datasetId/metadata-attachments', readDataset(), permissions.middleware('writeData', 'write'), checkStorage(false), attachments.metadataUpload(), asyncWrap(async(req, res, next) => {
+router.post('/:datasetId/metadata-attachments', readDataset(), permissions.middleware('postMetadataAttachment', 'write'), checkStorage(false), attachments.metadataUpload(), asyncWrap(async(req, res, next) => {
   req.body.size = (await fs.promises.stat(req.file.path)).size
   req.body.updatedAt = moment().toISOString()
   await datasetUtils.updateStorage(req.app.get('db'), req.dataset)
   res.status(200).send(req.body)
 }))
-router.get('/:datasetId/metadata-attachments/*', readDataset(), permissions.middleware('downloadOriginalData', 'read'), cacheHeaders.noCache, (req, res, next) => {
+router.get('/:datasetId/metadata-attachments/*', readDataset(), permissions.middleware('downloadMetadataAttachment', 'read'), cacheHeaders.noCache, (req, res, next) => {
   const filePath = req.params['0']
   if (filePath.includes('..')) return res.status(400).send('Unacceptable attachment path')
   // the transform stream option was patched into "send" module using patch-package
   res.download(path.resolve(datasetUtils.metadataAttachmentsDir(req.dataset), filePath), null, { transformStream: res.throttle('static') })
 })
-router.delete('/:datasetId/metadata-attachments/*', readDataset(), permissions.middleware('writeData', 'write'), asyncWrap(async(req, res, next) => {
+router.delete('/:datasetId/metadata-attachments/*', readDataset(), permissions.middleware('deleteMetadataAttachment', 'write'), asyncWrap(async(req, res, next) => {
   const filePath = req.params['0']
   if (filePath.includes('..')) return res.status(400).send('Unacceptable attachment path')
   await fs.remove(path.join(datasetUtils.metadataAttachmentsDir(req.dataset), filePath))
