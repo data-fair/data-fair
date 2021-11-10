@@ -131,7 +131,13 @@
     },
     "downloaded": {
       "text": {
-        "fr": "Un jeu de données a été téléchargé dans un format fichier",
+        "fr": "Un fichier de données d'un jeu de données a été téléchargé",
+        "en": "A dataset was downloaded in a file format"
+      }
+    },
+    "downloaded-filter": {
+      "text": {
+        "fr": "Des lignes filtrées d'un jeu de données ont été téléchargés dans un format fichier ",
         "en": "A dataset was downloaded in a file format"
       }
     },
