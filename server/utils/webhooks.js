@@ -44,6 +44,7 @@ exports.trigger = async (db, type, resource, event) => {
       }
 
       // Google analytics
+      // DEPRECATED, remove later
       if (webhook.target.type === 'ga') {
         const visitor = ua(webhook.target.params.trackingId)
         visitor.set('appName', webhook.target.params.appName)

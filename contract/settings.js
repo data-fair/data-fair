@@ -93,7 +93,7 @@ module.exports = {
                   },
                 },
               },
-            }, {
+            }, /*, {
               title: 'Google Analytics',
               properties: {
                 type: {
@@ -120,7 +120,7 @@ module.exports = {
                   },
                 },
               },
-            }],
+            } */],
           },
         },
       },
