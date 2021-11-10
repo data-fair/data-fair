@@ -1181,6 +1181,7 @@ router.get('/:datasetId/data-files', readDataset(), permissions.middleware('down
 router.get('/:datasetId/data-files/*', readDataset(), permissions.middleware('downloadFullData', 'read'), cacheHeaders.noCache, asyncWrap(async(req, res, next) => {
   const filePath = req.params['0']
   if (filePath.includes('..')) return res.status(400).send('Unacceptable data file path')
+  webhooks.trigger(req.app.get('db'), 'dataset', req.dataset, { type: 'downloaded' })
   // the transform stream option was patched into "send" module using patch-package
   res.download(path.resolve(datasetUtils.dir(req.dataset), filePath), null, { transformStream: res.throttle('static') })
 }))
