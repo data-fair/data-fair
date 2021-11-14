@@ -730,17 +730,17 @@ function isRest(req, res, next) {
   }
   next()
 }
-router.get('/:datasetId/lines/:lineId', readDataset(), isRest, permissions.middleware('readLine', 'read'), cacheHeaders.noCache, asyncWrap(restDatasetsUtils.readLine))
+router.get('/:datasetId/lines/:lineId', readDataset(), isRest, permissions.middleware('readLine', 'read', 'readDataAPI'), cacheHeaders.noCache, asyncWrap(restDatasetsUtils.readLine))
 router.post('/:datasetId/lines', readDataset(['finalized', 'updated', 'indexed']), isRest, permissions.middleware('createLine', 'write'), checkStorage(false), restDatasetsUtils.uploadAttachment, asyncWrap(restDatasetsUtils.createLine))
 router.put('/:datasetId/lines/:lineId', readDataset(['finalized', 'updated', 'indexed']), isRest, permissions.middleware('updateLine', 'write'), checkStorage(false), restDatasetsUtils.uploadAttachment, asyncWrap(restDatasetsUtils.updateLine))
 router.patch('/:datasetId/lines/:lineId', readDataset(['finalized', 'updated', 'indexed']), isRest, permissions.middleware('patchLine', 'write'), checkStorage(false), restDatasetsUtils.uploadAttachment, asyncWrap(restDatasetsUtils.patchLine))
 router.post('/:datasetId/_bulk_lines', readDataset(['finalized', 'updated', 'indexed']), isRest, permissions.middleware('bulkLines', 'write'), checkStorage(false), restDatasetsUtils.uploadBulk, asyncWrap(restDatasetsUtils.bulkLines))
 router.delete('/:datasetId/lines/:lineId', readDataset(['finalized', 'updated', 'indexed']), isRest, permissions.middleware('deleteLine', 'write'), asyncWrap(restDatasetsUtils.deleteLine))
-router.get('/:datasetId/lines/:lineId/revisions', readDataset(['finalized', 'updated', 'indexed']), isRest, permissions.middleware('readLineRevisions', 'read'), asyncWrap(restDatasetsUtils.readLineRevisions))
+router.get('/:datasetId/lines/:lineId/revisions', readDataset(['finalized', 'updated', 'indexed']), isRest, permissions.middleware('readLineRevisions', 'read', 'readDataAPI'), asyncWrap(restDatasetsUtils.readLineRevisions))
 router.delete('/:datasetId/lines', readDataset(['finalized', 'updated', 'indexed']), isRest, permissions.middleware('deleteLine', 'write'), asyncWrap(restDatasetsUtils.deleteAllLines))
 
 // Specifc routes for datasets with masterData functionalities enabled
-router.get('/:datasetId/master-data/single-searchs/:singleSearchId', readDataset(), permissions.middleware('readLines', 'read'), asyncWrap(async(req, res) => {
+router.get('/:datasetId/master-data/single-searchs/:singleSearchId', readDataset(), permissions.middleware('readLines', 'read', 'readDataAPI'), asyncWrap(async(req, res) => {
   const singleSearch = req.dataset.masterData && req.dataset.masterData.singleSearchs && req.dataset.masterData.singleSearchs.find(ss => ss.id === req.params.singleSearchId)
   if (!singleSearch) return res.status(404).send(`Recherche unitaire "${req.params.singleSearchId}" inconnue`)
 
@@ -792,7 +792,7 @@ async function manageESError(req, err) {
 }
 
 // Read/search data for a dataset
-router.get('/:datasetId/lines', readDataset(), applicationKey, permissions.middleware('readLines', 'read'), cacheHeaders.resourceBased, asyncWrap(async(req, res) => {
+router.get('/:datasetId/lines', readDataset(), applicationKey, permissions.middleware('readLines', 'read', 'readDataAPI'), cacheHeaders.resourceBased, asyncWrap(async(req, res) => {
   if (req.query && req.query.page && req.query.size && req.query.page * req.query.size > 10000) {
     return res.status(404).send('You can only access the first 10 000 elements.')
   }
@@ -1010,7 +1010,7 @@ router.get('/:datasetId/lines', readDataset(), applicationKey, permissions.middl
 }))
 
 // Special geo aggregation
-router.get('/:datasetId/geo_agg', readDataset(), applicationKey, permissions.middleware('getGeoAgg', 'read'), cacheHeaders.resourceBased, asyncWrap(async(req, res) => {
+router.get('/:datasetId/geo_agg', readDataset(), applicationKey, permissions.middleware('getGeoAgg', 'read', 'readDataAPI'), cacheHeaders.resourceBased, asyncWrap(async(req, res) => {
   res.throttleEnd()
   if (req.dataset.isVirtual) req.dataset.descendants = await virtualDatasetsUtils.descendants(req.app.get('db'), req.dataset)
   const db = req.app.get('db')
@@ -1056,7 +1056,7 @@ router.get('/:datasetId/geo_agg', readDataset(), applicationKey, permissions.mid
 }))
 
 // Standard aggregation to group items by value and perform an optional metric calculation on each group
-router.get('/:datasetId/values_agg', readDataset(), applicationKey, permissions.middleware('getValuesAgg', 'read'), cacheHeaders.resourceBased, asyncWrap(async(req, res) => {
+router.get('/:datasetId/values_agg', readDataset(), applicationKey, permissions.middleware('getValuesAgg', 'read', 'readDataAPI'), cacheHeaders.resourceBased, asyncWrap(async(req, res) => {
   res.throttleEnd()
   if (req.dataset.isVirtual) req.dataset.descendants = await virtualDatasetsUtils.descendants(req.app.get('db'), req.dataset)
   const db = req.app.get('db')
@@ -1104,7 +1104,7 @@ router.get('/:datasetId/values_agg', readDataset(), applicationKey, permissions.
 
 // Simpler values list and filter (q is applied only to the selected field, not all fields)
 // mostly useful for selects/autocompletes on values
-router.get('/:datasetId/values/:fieldKey', readDataset(), applicationKey, permissions.middleware('getValues', 'read'), cacheHeaders.resourceBased, asyncWrap(async(req, res) => {
+router.get('/:datasetId/values/:fieldKey', readDataset(), applicationKey, permissions.middleware('getValues', 'read', 'readDataAPI'), cacheHeaders.resourceBased, asyncWrap(async(req, res) => {
   res.throttleEnd()
   if (req.dataset.isVirtual) req.dataset.descendants = await virtualDatasetsUtils.descendants(req.app.get('db'), req.dataset)
   let result
@@ -1117,7 +1117,7 @@ router.get('/:datasetId/values/:fieldKey', readDataset(), applicationKey, permis
 }))
 
 // Simple metric aggregation to calculate some value (sum, avg, etc.)
-router.get('/:datasetId/metric_agg', readDataset(), applicationKey, permissions.middleware('getMetricAgg', 'read'), cacheHeaders.resourceBased, asyncWrap(async(req, res) => {
+router.get('/:datasetId/metric_agg', readDataset(), applicationKey, permissions.middleware('getMetricAgg', 'read', 'readDataAPI'), cacheHeaders.resourceBased, asyncWrap(async(req, res) => {
   res.throttleEnd()
   if (req.dataset.isVirtual) req.dataset.descendants = await virtualDatasetsUtils.descendants(req.app.get('db'), req.dataset)
   let result
@@ -1130,7 +1130,7 @@ router.get('/:datasetId/metric_agg', readDataset(), applicationKey, permissions.
 }))
 
 // Simple words aggregation for significant terms extraction
-router.get('/:datasetId/words_agg', readDataset(), applicationKey, permissions.middleware('getWordsAgg', 'read'), cacheHeaders.resourceBased, asyncWrap(async(req, res) => {
+router.get('/:datasetId/words_agg', readDataset(), applicationKey, permissions.middleware('getWordsAgg', 'read', 'readDataAPI'), cacheHeaders.resourceBased, asyncWrap(async(req, res) => {
   res.throttleEnd()
   if (req.dataset.isVirtual) req.dataset.descendants = await virtualDatasetsUtils.descendants(req.app.get('db'), req.dataset)
   let result
@@ -1143,7 +1143,7 @@ router.get('/:datasetId/words_agg', readDataset(), applicationKey, permissions.m
 }))
 
 // Get max value of a field
-router.get('/:datasetId/max/:fieldKey', readDataset(), applicationKey, permissions.middleware('getMaxAgg', 'read'), cacheHeaders.resourceBased, asyncWrap(async(req, res) => {
+router.get('/:datasetId/max/:fieldKey', readDataset(), applicationKey, permissions.middleware('getMaxAgg', 'read', 'readDataAPI'), cacheHeaders.resourceBased, asyncWrap(async(req, res) => {
   if (req.dataset.isVirtual) req.dataset.descendants = await virtualDatasetsUtils.descendants(req.app.get('db'), req.dataset)
   let result
   try {
@@ -1155,7 +1155,7 @@ router.get('/:datasetId/max/:fieldKey', readDataset(), applicationKey, permissio
 }))
 
 // Get min value of a field
-router.get('/:datasetId/min/:fieldKey', readDataset(), applicationKey, permissions.middleware('getMinAgg', 'read'), cacheHeaders.resourceBased, asyncWrap(async(req, res) => {
+router.get('/:datasetId/min/:fieldKey', readDataset(), applicationKey, permissions.middleware('getMinAgg', 'read', 'readDataAPI'), cacheHeaders.resourceBased, asyncWrap(async(req, res) => {
   if (req.dataset.isVirtual) req.dataset.descendants = await virtualDatasetsUtils.descendants(req.app.get('db'), req.dataset)
   let result
   try {
@@ -1167,7 +1167,7 @@ router.get('/:datasetId/min/:fieldKey', readDataset(), applicationKey, permissio
 }))
 
 // For datasets with attached files
-router.get('/:datasetId/attachments/*', readDataset(), applicationKey, permissions.middleware('downloadAttachment', 'read'), cacheHeaders.noCache, (req, res, next) => {
+router.get('/:datasetId/attachments/*', readDataset(), applicationKey, permissions.middleware('downloadAttachment', 'read', 'readDataFiles'), cacheHeaders.noCache, (req, res, next) => {
   const filePath = req.params['0']
   if (filePath.includes('..')) return res.status(400).send('Unacceptable attachment path')
   // the transform stream option was patched into "send" module using patch-package
@@ -1178,7 +1178,7 @@ router.get('/:datasetId/attachments/*', readDataset(), applicationKey, permissio
 router.get('/:datasetId/data-files', readDataset(), permissions.middleware('listDataFiles', 'read'), asyncWrap(async(req, res, next) => {
   res.send(await datasetUtils.dataFiles(req.dataset))
 }))
-router.get('/:datasetId/data-files/*', readDataset(), permissions.middleware('downloadDataFile', 'read'), cacheHeaders.noCache, asyncWrap(async(req, res, next) => {
+router.get('/:datasetId/data-files/*', readDataset(), permissions.middleware('downloadDataFile', 'read', 'readDataFiles'), cacheHeaders.noCache, asyncWrap(async(req, res, next) => {
   const filePath = req.params['0']
   if (filePath.includes('..')) return res.status(400).send('Unacceptable data file path')
   webhooks.trigger(req.app.get('db'), 'dataset', req.dataset, { type: 'downloaded' })
@@ -1208,14 +1208,14 @@ router.delete('/:datasetId/metadata-attachments/*', readDataset(), permissions.m
 }))
 
 // Download the full dataset in its original form
-router.get('/:datasetId/raw', readDataset(), permissions.middleware('downloadOriginalData', 'read'), cacheHeaders.noCache, (req, res, next) => {
+router.get('/:datasetId/raw', readDataset(), permissions.middleware('downloadOriginalData', 'read', 'readDataFiles'), cacheHeaders.noCache, (req, res, next) => {
   // the transform stream option was patched into "send" module using patch-package
   res.download(datasetUtils.originalFileName(req.dataset), null, { transformStream: res.throttle('static') })
   webhooks.trigger(req.app.get('db'), 'dataset', req.dataset, { type: 'downloaded' })
 })
 
 // Download the dataset in various formats
-router.get('/:datasetId/convert', readDataset(), permissions.middleware('downloadOriginalData', 'read'), cacheHeaders.noCache, (req, res, next) => {
+router.get('/:datasetId/convert', readDataset(), permissions.middleware('downloadOriginalData', 'read', 'readDataFiles'), cacheHeaders.noCache, (req, res, next) => {
   if (!req.query || !req.query.format) {
     // the transform stream option was patched into "send" module using patch-package
     res.download(datasetUtils.fileName(req.dataset), null, { transformStream: res.throttle('static') })
@@ -1227,7 +1227,7 @@ router.get('/:datasetId/convert', readDataset(), permissions.middleware('downloa
 
 // Download the full dataset with extensions
 // TODO use ES scroll functionality instead of file read + extensions
-router.get('/:datasetId/full', readDataset(), permissions.middleware('downloadFullData', 'read'), cacheHeaders.noCache, asyncWrap(async (req, res, next) => {
+router.get('/:datasetId/full', readDataset(), permissions.middleware('downloadFullData', 'read', 'readDataFiles'), cacheHeaders.noCache, asyncWrap(async (req, res, next) => {
   // the transform stream option was patched into "send" module using patch-package
   if (await fs.exists(datasetUtils.fullFileName(req.dataset))) {
     res.download(datasetUtils.fullFileName(req.dataset), null, { transformStream: res.throttle('static') })

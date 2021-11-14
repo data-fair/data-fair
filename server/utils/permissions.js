@@ -6,12 +6,12 @@ const visibilityUtils = require('./visibility')
 const ajv = require('ajv')()
 const validate = ajv.compile(permissionsSchema)
 
-exports.middleware = function(operationId, operationClass) {
+exports.middleware = function(operationId, operationClass, trackingCategory) {
   return function(req, res, next) {
     // these headers can be used to apply other permission/quota/metrics on the gateway
     if (req.resource) res.setHeader('x-resource', JSON.stringify({ type: req.resourceType, id: req.resource.id, title: req.resource.title }))
     if (req.resource && req.resource.owner) res.setHeader('x-owner', JSON.stringify({ type: req.resource.owner.type, id: req.resource.owner.id }))
-    req.operation = { class: operationClass, id: operationId }
+    req.operation = { class: operationClass, id: operationId, track: trackingCategory }
     res.setHeader('x-operation', JSON.stringify(req.operation))
 
     if (req.method === 'GET' && req.bypassPermission) return next()
