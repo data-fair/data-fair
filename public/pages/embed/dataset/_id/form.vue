@@ -47,6 +47,7 @@
       },
       async saveLine() {
         this.saving = true
+        await new Promise(resolve => setTimeout(resolve, 10))
         await this.$store.dispatch('dataset/saveLine', { line: this.line, file: this.file })
         this.saving = false
         this.sent = true
