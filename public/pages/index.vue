@@ -1,6 +1,8 @@
 <template>
   <v-row v-if="initialized" class="home my-0">
-    <v-iframe v-if="missingSubscription" :src="env.subscriptionUrl" />
+    <v-col v-if="missingSubscription">
+      <v-iframe :src="env.subscriptionUrl" />
+    </v-col>
     <v-col v-else :style="this.$vuetify.breakpoint.lgAndUp ? 'padding-right:256px;' : ''">
       <v-container class="py-0">
         <v-responsive v-if="!user">
