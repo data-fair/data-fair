@@ -654,7 +654,7 @@ en:
       },
       async saveLine() {
         this.saving = true
-        await new Promise(resolve => setTimeout(resolve, 10))
+        await new Promise(resolve => setTimeout(resolve, 100))
         const res = await this.$store.dispatch('dataset/saveLine', { line: this.editedLine, file: this.file, id: this.editedId })
         if (this.editedId) this.updatedLines.push(res)
         else this.createdLines.push(res)
