@@ -6,8 +6,14 @@ const visibilityUtils = require('./visibility')
 const ajv = require('ajv')()
 const validate = ajv.compile(permissionsSchema)
 
-exports.middleware = function(operationId, permissionClass) {
+exports.middleware = function(operationId, operationClass, trackingCategory) {
   return function(req, res, next) {
+    // these headers can be used to apply other permission/quota/metrics on the gateway
+    if (req.resource) res.setHeader('x-resource', JSON.stringify({ type: req.resourceType, id: req.resource.id, title: encodeURIComponent(req.resource.title) }))
+    if (req.resource && req.resource.owner) res.setHeader('x-owner', JSON.stringify({ type: req.resource.owner.type, id: req.resource.owner.id }))
+    req.operation = { class: operationClass, id: operationId, track: trackingCategory }
+    res.setHeader('x-operation', JSON.stringify(req.operation))
+
     if (req.method === 'GET' && req.bypassPermission) return next()
     if (!exports.can(req.resourceType, req.resource, operationId, req.user)) {
       res.status(403)
@@ -33,8 +39,8 @@ Sélectionnez l'organisation ${req.resource.owner.name} en tant que compte actif
         return res.send(`${denomination} est accessible uniquement aux utilisateurs autorisés par le propriétaire. Vous n'avez pas les permissions nécessaires pour visualiser les informations.`)
       }
       const operation = apiDocsUtil.operations(req.resourceApiDoc).find(o => o.id === operationId)
-      if (operation) return res.send(`Permission manquante pour l'opération "${operation.title}" ou la catégorie "${permissionClass}".`)
-      return res.send(`Permission manquante pour cette opération ou la catégorie "${permissionClass}".`)
+      if (operation) return res.send(`Permission manquante pour l'opération "${operation.title}" ou la catégorie "${operationClass}".`)
+      return res.send(`Permission manquante pour cette opération ou la catégorie "${operationClass}".`)
     }
 
     // this is stored here to be used by cache headers utils to manage public cache
