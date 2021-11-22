@@ -66,7 +66,7 @@
           :key="i"
         >
           <v-col cols="12">
-            <h4><a :href="resourceUrl + '/attachments/' + item[fileProperty.key]">{{ item[fileProperty.key] }}</a></h4>
+            <h4><a :href="item._attachment_url || item[fileProperty.key]">{{ item[fileProperty.key] }}</a></h4>
             <p
               class="text-body-1"
               v-html="item._highlight['_file.content'].join('... ')"
@@ -96,7 +96,6 @@ en:
   import eventBus from '~/event-bus'
 
   export default {
-    props: ['inititemsPerPage', 'hideitemsPerPage'],
     data: () => ({
       data: null,
       query: null,
@@ -129,22 +128,31 @@ en:
       },
     },
     mounted() {
-      if (this.inititemsPerPage) this.pagination.itemsPerPage = this.inititemsPerPage
       this.refresh()
     },
     methods: {
-      async refresh() {
-        // this.data = {}
+      async refresh(resetPagination) {
+        if (resetPagination) {
+          this.pagination.page = 1
+          return
+        }
+
         const params = {
           size: this.pagination.itemsPerPage,
           page: this.pagination.page,
-          select: [this.fileProperty.key, '_file.content_type', '_file.content_length'].join(','),
+          select: [this.fileProperty.key, '_file.content_type', '_file.content_length', '_attachment_url'].join(','),
           highlight: '_file.content',
           qs: `_exists_:${this.fileProperty.key}`,
           q_mode: this.qMode,
         }
         if (this.query) params.q = this.query
         if (this.dataset.draftReason) params.draft = 'true'
+
+        // prevent triggering multiple times the same request
+        const paramsStr = JSON.stringify(params)
+        if (paramsStr === this.lastParams) return
+        this.lastParams = paramsStr
+
         this.loading = true
         try {
           this.data = await this.$axios.$get(this.resourceUrl + '/lines', { params })

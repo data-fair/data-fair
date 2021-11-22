@@ -128,7 +128,8 @@
                 </v-avatar>
               </template>
               <template v-else-if="digitalDocumentField && digitalDocumentField.key === header.value">
-                <a :href="item._attachment_url">{{ item[header.value] | truncate(50) }}</a>
+                <!-- attachment_url is empty if the value is an external link -->
+                <a :href="item._attachment_url || item[header.value]">{{ item[header.value] | truncate(50) }}</a>
               </template>
               <template v-else-if="webPageField && webPageField.key === header.value">
                 <a
