@@ -8,14 +8,12 @@ const validate = ajv.compile(permissionsSchema)
 
 exports.middleware = function(operationId, operationClass, trackingCategory) {
   return function(req, res, next) {
-    // these headers can be used to apply other permission/quota/metrics on the gateway
-    if (req.resource) res.setHeader('x-resource', JSON.stringify({ type: req.resourceType, id: req.resource.id, title: encodeURIComponent(req.resource.title) }))
-    if (req.resource && req.resource.owner) res.setHeader('x-owner', JSON.stringify({ type: req.resource.owner.type, id: req.resource.owner.id }))
-    req.operation = { class: operationClass, id: operationId, track: trackingCategory }
-    res.setHeader('x-operation', JSON.stringify(req.operation))
-
-    if (req.method === 'GET' && req.bypassPermission) return next()
-    if (!exports.can(req.resourceType, req.resource, operationId, req.user)) {
+    if (
+      exports.can(req.resourceType, req.resource, operationId, req.user) ||
+      (req.method === 'GET' && req.bypassPermission)
+    ) {
+      // nothing to do, user can proceed
+    } else {
       res.status(403)
       const denomination = {
         datasets: 'Le jeu de données',
@@ -45,6 +43,12 @@ Sélectionnez l'organisation ${req.resource.owner.name} en tant que compte actif
 
     // this is stored here to be used by cache headers utils to manage public cache
     req.publicOperation = exports.can(req.resourceType, req.resource, operationId, null)
+
+    // these headers can be used to apply other permission/quota/metrics on the gateway
+    if (req.resource) res.setHeader('x-resource', JSON.stringify({ type: req.resourceType, id: req.resource.id, title: encodeURIComponent(req.resource.title) }))
+    if (req.resource && req.resource.owner) res.setHeader('x-owner', JSON.stringify({ type: req.resource.owner.type, id: req.resource.owner.id }))
+    req.operation = { class: operationClass, id: operationId, track: trackingCategory }
+    res.setHeader('x-operation', JSON.stringify(req.operation))
 
     next()
   }
