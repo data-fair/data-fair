@@ -240,13 +240,9 @@ class TransactionStream extends Writable {
     cb()
   }
 
-  async _final(cb) {
-    try {
-      await this._applyTransactions()
-    } catch (err) {
-      return cb(err)
-    }
-    cb()
+  _final(cb) {
+    // use then syntax cf https://github.com/nodejs/node/issues/39535
+    this._applyTransactions().then(() => cb(), cb)
   }
 }
 

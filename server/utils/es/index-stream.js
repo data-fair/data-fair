@@ -60,26 +60,20 @@ class IndexStream extends Transform {
     callback()
   }
 
-  async _final(callback) {
-    try {
-      await this._sendBulk()
-    } catch (err) {
-      return callback(err)
-    }
-
-    try {
-      await this.options.esClient.indices.refresh({ index: this.options.indexName })
-    } catch (err) {
-      // refresh can take some time on large datasets, try one more time
-      await new Promise(resolve => setTimeout(resolve, 30000))
-      try {
-        await this.options.esClient.indices.refresh({ index: this.options.indexName })
-      } catch (err) {
-        console.error('Failure while refreshing index after indexing', err)
-        return callback(new Error('Échec pendant le rafraichissement de la donnée après indexation.'))
-      }
-    }
-    callback()
+  _final(cb) {
+    this._sendBulk()
+      .then(() => {
+        return this.options.esClient.indices.refresh({ index: this.options.indexName }).catch(() => {
+          // refresh can take some time on large datasets, try one more time
+          return new Promise(resolve => setTimeout(resolve, 30000)).finally(() => {
+            return this.options.esClient.indices.refresh({ index: this.options.indexName }).catch(err => {
+              console.error('Failure while refreshing index after indexing', err)
+              throw new Error('Échec pendant le rafraichissement de la donnée après indexation.')
+            })
+          })
+        })
+      })
+      .then(() => cb(), cb)
   }
 
   async _sendBulk() {
