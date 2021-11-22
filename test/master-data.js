@@ -77,6 +77,8 @@ const geopointProperty = { ...latlonProperty, key: '_geopoint', title: 'Geopoint
 
 describe('Master data management', () => {
   it('should define and use a dataset as master-data remote-service used for extensions', async () => {
+    const ax = global.ax.superadmin
+
     const { remoteService, apiDoc } = await initMaster(
       [siretProperty, { key: 'extra', type: 'string' }],
       [{
@@ -86,13 +88,6 @@ describe('Master data management', () => {
         input: [{ type: 'equals', property: siretProperty }],
       }],
     )
-    const ax = global.ax.superadmin
-
-    const items = [
-      { siret: '82898347800011', extra: 'Extra information' },
-    ]
-    await ax.post('/api/v1/datasets/master/_bulk_lines', items.map(item => ({ _id: item.siret, ...item })))
-
     // the api doc should be extended based on masterData parameters
     const bulkSearchDoc = apiDoc.paths['/master-data/bulk-searchs/siret']
     assert.ok(bulkSearchDoc)
@@ -103,6 +98,10 @@ describe('Master data management', () => {
     assert.equal(remoteService.id, 'localhost-dataset-master')
     assert.equal(remoteService.actions.length, 1)
     assert.equal(remoteService.actions[0].id, 'masterData_bulkSearch_siret')
+
+    const items = [{ siret: '82898347800011', extra: 'Extra information' }]
+    await ax.post('/api/v1/datasets/master/_bulk_lines', items.map(item => ({ _id: item.siret, ...item })))
+    await workers.hook('finalizer/master')
 
     // create slave dataset
     await ax.put('/api/v1/datasets/slave', {
