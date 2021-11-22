@@ -236,7 +236,7 @@ router.patch('/:remoteServiceId', readService, asyncWrap(async(req, res) => {
   }
 
   const patchedService = (await req.app.get('db').collection('remote-services')
-    .findOneAndUpdate({ id: req.params.remoteServiceId }, { $set: mongoEscape.escape(patch, true) }, { returnOriginal: false })).value
+    .findOneAndUpdate({ id: req.params.remoteServiceId }, { $set: mongoEscape.escape(patch, true) }, { returnDocument: 'after' })).value
   res.status(200).json(clean(mongoEscape.unescape(patchedService, req.user)))
 }))
 

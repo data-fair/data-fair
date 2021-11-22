@@ -18,12 +18,9 @@ exports.ensureIndex = async (db, collection, key, options = {}) => {
 
 exports.connect = async () => {
   let client
-  const opts = {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-    // workers generate a lot of opened sockets if we do not change this setting
-    poolSize: config.mode === 'task' ? 1 : 5,
-  }
+  const opts = {}
+  // workers generate a lot of opened sockets if we do not change this setting
+  if (config.mode === 'task') opts.maxPoolSize = 1
   debug('Connecting to mongodb ' + config.mongoUrl)
   try {
     client = await MongoClient.connect(config.mongoUrl, opts)

@@ -45,7 +45,7 @@ async function failSafeInitBaseApp(db, app) {
   try {
     await initBaseApp(db, app)
   } catch (err) {
-    console.error(`Failure to initialize base application ${app.url}`, err.message)
+    console.error(`Failure to initialize base application ${app.url}`, err.stack)
   }
 }
 
@@ -87,7 +87,7 @@ async function initBaseApp(db, app) {
   patch.datasetsFilters = patch.datasetsFilters || []
 
   const storedBaseApp = (await db.collection('base-applications')
-    .findOneAndUpdate({ id: patch.id }, { $set: patch }, { upsert: true, returnOriginal: false })).value
+    .findOneAndUpdate({ id: patch.id }, { $set: patch }, { upsert: true, returnDocument: 'after' })).value
   delete storedBaseApp._id
   storedBaseApp.title = storedBaseApp.title || storedBaseApp.meta.title
   storedBaseApp.description = storedBaseApp.description || storedBaseApp.meta.description
@@ -109,7 +109,7 @@ router.patch('/:id', asyncWrap(async(req, res) => {
   if (!req.user || !req.user.adminMode) return res.status(403).send()
   const patch = req.body
   const storedBaseApp = (await db.collection('base-applications')
-    .findOneAndUpdate({ id: req.params.id }, { $set: patch }, { returnOriginal: false })).value
+    .findOneAndUpdate({ id: req.params.id }, { $set: patch }, { returnDocument: 'after' })).value
   if (!storedBaseApp) return res.status(404).send()
   res.send(storedBaseApp)
 }))

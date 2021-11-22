@@ -54,12 +54,12 @@ exports.get = async (db, consumer, type) => {
 
 exports.incrementConsumption = async (db, consumer, type, inc) => {
   return (await db.collection('limits')
-    .findOneAndUpdate({ type: consumer.type, id: consumer.id }, { $inc: { [`${type}.consumption`]: inc } }, { returnOriginal: false, upsert: true })).value
+    .findOneAndUpdate({ type: consumer.type, id: consumer.id }, { $inc: { [`${type}.consumption`]: inc } }, { returnDocument: 'after', upsert: true })).value
 }
 
 exports.setConsumption = async (db, consumer, type, value) => {
   return (await db.collection('limits')
-    .findOneAndUpdate({ type: consumer.type, id: consumer.id }, { $set: { [`${type}.consumption`]: value } }, { returnOriginal: false, upsert: true })).value
+    .findOneAndUpdate({ type: consumer.type, id: consumer.id }, { $set: { [`${type}.consumption`]: value } }, { returnDocument: 'after', upsert: true })).value
 }
 
 const router = exports.router = express.Router()

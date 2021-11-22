@@ -351,7 +351,7 @@ router.put('/:datasetId/owner', readDataset(), permissions.middleware('changeOwn
     updatedAt: moment().toISOString(),
   }
   const patchedDataset = (await req.app.get('db').collection('datasets')
-    .findOneAndUpdate({ id: req.params.datasetId }, { $set: patch }, { returnOriginal: false })).value
+    .findOneAndUpdate({ id: req.params.datasetId }, { $set: patch }, { returnDocument: 'after' })).value
 
   // Move all files
   try {
@@ -568,7 +568,7 @@ const attemptInsert = asyncWrap(async(req, res, next) => {
   // Try insertion if the user is authorized, in case of conflict go on with the update scenario
   if (permissions.canDoForOwner(newDataset.owner, 'datasets', 'post', req.user, db)) {
     try {
-      await req.app.get('db').collection('datasets').insertOne(newDataset, true)
+      await req.app.get('db').collection('datasets').insertOne(newDataset)
       req.isNewDataset = true
     } catch (err) {
       if (err.code !== 11000) throw err
@@ -690,7 +690,7 @@ router.post('/:datasetId/draft', readDataset(['finalized'], false, true), permis
   delete patch.storage
   const patchedDataset = (await db.collection('datasets').findOneAndUpdate({ id: req.params.datasetId },
     { $set: patch, $unset: { draft: '' } },
-    { returnOriginal: false },
+    { returnDocument: 'after' },
   )).value
   if (req.dataset.prod.originalFile) await fs.remove(datasetUtils.originalFileName(req.dataset.prod))
   if (req.dataset.prod.file) await fs.remove(datasetUtils.fileName(req.dataset.prod))
@@ -715,7 +715,7 @@ router.delete('/:datasetId/draft', readDataset(['finalized', 'error'], false, tr
   }
   await journals.log(req.app, req.dataset, { type: 'draft-cancelled' }, 'dataset')
   const patchedDataset = (await db.collection('datasets')
-    .findOneAndUpdate({ id: req.params.datasetId }, { $unset: { draft: '' } }, { returnOriginal: false })).value
+    .findOneAndUpdate({ id: req.params.datasetId }, { $unset: { draft: '' } }, { returnDocument: 'after' })).value
   await fs.remove(datasetUtils.dir(req.dataset))
   await esUtils.delete(req.app.get('es'), req.dataset)
   await datasetUtils.updateStorage(db, patchedDataset)

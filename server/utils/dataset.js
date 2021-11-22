@@ -570,13 +570,13 @@ exports.reindex = async (db, dataset) => {
   else if (dataset.isRest) patch.status = 'analyzed'
   else if (dataset.originalFile && !baseTypes.has(dataset.originalFile.mimetype)) patch.status = 'uploaded'
   return (await db.collection('datasets')
-    .findOneAndUpdate({ id: dataset.id }, { $set: patch }, { returnOriginal: false })).value
+    .findOneAndUpdate({ id: dataset.id }, { $set: patch }, { returnDocument: 'after' })).value
 }
 
 exports.refinalize = async (db, dataset) => {
   const patch = { status: 'indexed' }
   return (await db.collection('datasets')
-    .findOneAndUpdate({ id: dataset.id }, { $set: patch }, { returnOriginal: false })).value
+    .findOneAndUpdate({ id: dataset.id }, { $set: patch }, { returnDocument: 'after' })).value
 }
 
 // Generate ids and try insertion until there is no conflict on id
