@@ -309,7 +309,6 @@ describe('datasets', () => {
     assert.equal(res.data.originalFile.name, 'dataset-name2.csv')
     assert.equal(res.data.file.name, 'dataset-name2.csv')
     const dataset = await workers.hook('finalizer/dataset-name')
-    console.log(dataset)
     assert.equal(dataset.updatedAt, dataset.dataUpdatedAt)
     assert.notEqual(dataset.updatedAt, dataset.createdAt)
     res = await ax.get('/api/v1/limits/user/dmeadus0')

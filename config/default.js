@@ -117,8 +117,16 @@ module.exports = {
     maxSpreadsheetSize: 50 * 1000 * 1000, // 50mo
   },
   worker: {
+    // base interval for polling the database for new resources to work on
     interval: 500,
-    releaseInterval: 2000,
+    // additional interval when the worker is inactive (no resource found recently)
+    // prevent polling too frequently during slow activity periods
+    inactiveInterval: 4000,
+    // delay of inactivity before we consider the worker as sleeping
+    inactivityDelay: 60000,
+    // interval before releasing the lock on a resource after working on it
+    // mostly useful in case of bug where we iterate on the same resource over and over
+    releaseInterval: 1000,
     concurrency: 4,
     spawnTask: true,
   },

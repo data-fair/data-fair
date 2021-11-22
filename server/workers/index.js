@@ -5,7 +5,7 @@ const locks = require('../utils/locks')
 const journals = require('../utils/journals')
 const datasetUtils = require('../utils/dataset')
 const debug = require('debug')('workers')
-
+const debugLoop = require('debug')('worker-loop')
 const tasks = exports.tasks = {
   downloader: require('./downloader'),
   converter: require('./converter'),
@@ -22,7 +22,7 @@ const tasks = exports.tasks = {
 // resolve functions that will be filled when we will be asked to stop the workers
 // const stopResolves = {}
 let stopped = false
-const currentIters = []
+const promisePool = []
 
 // Hooks for testing
 const hooks = {}
@@ -37,9 +37,9 @@ exports.hook = (key, delay = 10000, message = 'time limit on worker hook') => {
 // clear also for testing
 exports.clear = () => {
   for (let i = 0; i < config.worker.concurrency; i++) {
-    if (currentIters[i]) {
-      currentIters[i].catch(() => {})
-      delete currentIters[i]
+    if (promisePool[i]) {
+      promisePool[i].catch(() => {})
+      delete promisePool[i]
     }
   }
 }
@@ -47,33 +47,76 @@ exports.clear = () => {
 /* eslint no-unmodified-loop-condition: 0 */
 // Run main loop !
 exports.start = async (app) => {
-  debug('start workers with config', config.worker)
+  debugLoop('start worker loop with config', config.worker)
+  const db = app.get('db')
+
+  // initialize empty promise pool
+  for (let i = 0; i < config.worker.concurrency; i++) {
+    promisePool[i] = null
+  }
+  let lastActivity = new Date().getTime()
+
   while (!stopped) {
-    // Maintain max concurrency by checking if there is a free spot in an array of promises
-    for (let i = 0; i < config.worker.concurrency; i++) {
-      if (currentIters[i]) continue
-      currentIters[i] = Promise.all([iter(app, 'dataset'), iter(app, 'application')])
-      currentIters[i].catch(err => console.error('error in worker iter', err))
-      currentIters[i].finally(() => {
-        currentIters[i] = null
-      })
+    const now = new Date().getTime()
+    if ((now - lastActivity) > config.worker.inactivityDelay) {
+      // inactive polling interval
+      debugLoop('the worker is inactive wait extra delay', config.worker.inactiveInterval)
+      await new Promise(resolve => setTimeout(resolve, config.worker.inactiveInterval))
+    } else {
+      // base polling interval
+      await new Promise(resolve => setTimeout(resolve, config.worker.interval))
     }
 
-    await new Promise(resolve => setTimeout(resolve, config.worker.interval))
+    let resource, type
+    // wait for an available spot in the promise pool
+    if (!promisePool.includes(null)) {
+      debugLoop('pool is full, wait for a free spot')
+      await Promise.any(promisePool)
+    }
+    const freeSlot = promisePool.findIndex(p => !p)
+    debugLoop('free slot', freeSlot)
+
+    // once we have a free slot, acquire the next resource to work on
+    resource = await acquireNext(db, 'dataset', typesFilters().dataset)
+    type = 'dataset'
+    if (!resource) {
+      resource = await acquireNext(db, 'application', typesFilters().application)
+      type = 'application'
+    }
+    if (!resource) {
+      continue
+    } else {
+      debugLoop('work on resource', type, resource.id)
+      lastActivity = new Date().getTime()
+    }
+
+    promisePool[freeSlot] = iter(app, resource, type)
+    promisePool[freeSlot].catch(err => console.error('error in worker iter', err))
+    // always empty the slot after the promise is finished
+    promisePool[freeSlot].finally(() => {
+      promisePool[freeSlot] = null
+      // we release the slot right away, but we do not release the lock on the resource
+      // this is to prevent working very fast on the same resource in series
+      debugLoop('release resource after delay', config.worker.releaseInterval)
+      setTimeout(() => locks.release(db, `${type}:${resource.id}`), config.worker.releaseInterval)
+    })
   }
 }
 
 // Stop and wait for all workers to finish their current task
 exports.stop = async () => {
   stopped = true
-  await Promise.all(currentIters.filter(p => !!p))
-  if (config.worker.releaseInterval) await new Promise(resolve => setTimeout(resolve, config.worker.releaseInterval))
+  await Promise.all(promisePool.filter(p => !!p))
+  if (config.worker.releaseInterval) {
+    await new Promise(resolve => setTimeout(resolve, config.worker.releaseInterval))
+  }
 }
 
 // Filters to select eligible datasets or applications for processing
 const typesFilters = () => ({
   application: { 'publications.status': { $in: ['waiting', 'deleted'] } },
   dataset: {
+    isMetaOnly: { $ne: true },
     $or: [
       // fetch next processing steps in usual sequence
       { status: { $nin: ['finalized', 'error', 'draft'] } },
@@ -88,14 +131,11 @@ const typesFilters = () => ({
   },
 })
 
-async function iter(app, type) {
+async function iter(app, resource, type) {
   const db = app.get('db')
-  let resource, taskKey
+  let taskKey
   let stderr = ''
   try {
-    resource = await acquireNext(db, type, typesFilters()[type])
-    if (!resource) return
-
     // if there is something to be done in the draft mode of the dataset, it is prioritary
     if (type === 'dataset' && resource.draft && resource.draft.status !== 'finalized' && resource.draft.status !== 'error') {
       datasetUtils.mergeDraft(resource)
@@ -214,15 +254,6 @@ async function iter(app, type) {
     } else {
       console.warn(`failure in worker ${taskKey} - ${type}`, err)
     }
-  } finally {
-    if (resource) {
-      // we release the worker right away, but we do not release the lock on the dataset
-      // this is to prevent working very fast on the same resource in series
-      setTimeout(() => {
-        locks.release(app.get('db'), `${type}:${resource.id}`)
-      }, config.worker.releaseInterval)
-    }
-    // console.log(`Worker "${worker.eventsPrefix}" released dataset "${dataset.id}"`)
   }
 }
 

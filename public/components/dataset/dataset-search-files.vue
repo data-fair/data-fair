@@ -66,6 +66,7 @@
           :key="i"
         >
           <v-col cols="12">
+            <!-- attachment_url is empty if the value is an external link -->
             <h4><a :href="item._attachment_url || item[fileProperty.key]">{{ item[fileProperty.key] }}</a></h4>
             <p
               class="text-body-1"

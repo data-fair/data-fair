@@ -538,7 +538,6 @@ line2,test1
 line3,test1`, { headers: { 'content-type': 'text/csv' } })
       assert.fail()
     } catch (err) {
-      console.log(err.data)
       assert.equal(err.data.nbErrors, 1)
       assert.equal(err.data.nbOk, 0)
     }
