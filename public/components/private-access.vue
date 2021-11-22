@@ -8,18 +8,18 @@
     <v-autocomplete
       v-if="!patch.public"
       v-model="patch.privateAccess"
-      :items="organizations"
-      :loading="loadingOrganizations"
-      :search-input.sync="searchOrganizations"
+      :items="suggestions"
+      :loading="loading"
+      :search-input.sync="search"
       :filter="() => true"
       :multiple="true"
       :clearable="true"
-      item-text="name"
-      item-value="id"
+      :item-text="(item) => item && `${item.name} (${item.type})`"
+      :item-value="(item) => item && `${item.type}:${item.id}`"
       :label="$t('privateAccess')"
       :placeholder="$t('searchName')"
       return-object
-      @change="$emit('change')"
+      @change="onChange"
     />
   </div>
 </template>
@@ -27,11 +27,11 @@
 <i18n lang="yaml">
 fr:
   public: Public
-  privateAccess: Vue restreinte à des organisations
+  privateAccess: Vue restreinte à des comptes
   searchName: Saisissez un nom d'organisation
 en:
   public: Public
-  privateAccess: Restricted access to some organizations
+  privateAccess: Restricted access to some accounts
   searchName: Search an organization name
 </i18n>
 
@@ -42,35 +42,41 @@ en:
     props: ['patch'],
     data() {
       return {
-        loadingOrganizations: false,
-        searchOrganizations: '',
-        organizations: [],
+        loading: false,
+        search: '',
+        suggestions: [],
       }
     },
     computed: {
       ...mapState(['env']),
     },
     watch: {
-      searchOrganizations() {
-        this.listOrganizations()
+      search() {
+        this.listSuggestions()
       },
     },
     created() {
       this.patch.privateAccess = this.patch.privateAccess || []
+      this.listSuggestions()
     },
     methods: {
-      listOrganizations: async function() {
-        if (this.search && this.search === this.currentEntity.name) return
-
-        this.loadingOrganizations = true
-        if (!this.searchOrganizations || this.searchOrganizations.length < 3) {
-          this.organizations = this.patch.privateAccess
-        } else {
-          this.organizations = this.patch.privateAccess.concat((await this.$axios.$get(this.env.directoryUrl + '/api/organizations', { params: { q: this.searchOrganizations } }))
-            .results.map(r => ({ ...r, type: 'organization' })),
-          )
+      listSuggestions: async function() {
+        if (!this.search || this.search.length < 3) {
+          this.suggestions = this.patch.privateAccess
+          return
         }
-        this.loadingOrganizations = false
+
+        this.loading = true
+        const orgs = (await this.$axios.$get(this.env.directoryUrl + '/api/organizations', { params: { q: this.search } }))
+          .results.map(r => ({ ...r, type: 'organization' }))
+        const users = (await this.$axios.$get(this.env.directoryUrl + '/api/users', { params: { q: this.search } }))
+          .results.map(r => ({ ...r, type: 'user' }))
+        this.suggestions = this.patch.privateAccess.concat(orgs).concat(users)
+        this.loading = false
+      },
+      onChange() {
+        this.search = ''
+        this.$emit('change')
       },
     },
   }
