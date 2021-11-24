@@ -1,22 +1,31 @@
 <template>
   <v-sheet class="properties-slide">
     <v-row class="ma-0">
-      <v-btn
-        v-for="({prop, originalProp, warning}, i) in propertiesRefs"
-        :key="prop.key"
-        style="text-transform: none;"
-        class="ma-0 px-2"
-        :class="{'font-weight-black': !!prop['x-refersTo']}"
-        v-bind="btnProps(prop, originalProp, warning, i, currentProperty === i)"
-        @click="currentProperty = currentProperty === i ? null : i"
+      <draggable
+        :value="propertiesRefs"
+        :disabled="!sortable"
+        ghost-class="property-ghost"
+        @input="sorted => $emit('sort', sorted)"
       >
-        <v-icon
-          small
-          style="margin-right:4px;"
-          v-text="propTypeIcon(prop)"
-        />
-        {{ prop.title || prop['x-originalName'] || prop.key }}
-      </v-btn>
+        <!-- ripple is buggy with draggable -->
+        <v-btn
+          v-for="({prop, originalProp, warning}, i) in propertiesRefs"
+          :key="prop.key"
+          style="text-transform: none;"
+          class="ma-0 px-2"
+          :class="{'font-weight-black': !!prop['x-refersTo']}"
+          v-bind="btnProps(prop, originalProp, warning, i, currentProperty === i)"
+          :ripple="!sortable"
+          @click="currentProperty = currentProperty === i ? null : i"
+        >
+          <v-icon
+            small
+            style="margin-right:4px;"
+            v-text="propTypeIcon(prop)"
+          />
+          {{ prop.title || prop['x-originalName'] || prop.key }}
+        </v-btn>
+      </draggable>
     </v-row>
     <v-row v-if="currentProperty == null" class="ma-0">
       <v-subheader v-t="'detailedInfo'" />
@@ -200,9 +209,12 @@ en:
 
 <script>
   import { mapState, mapGetters, mapActions } from 'vuex'
+  const Draggable = require('vuedraggable')
+
   const datasetSchema = require('~/../contract/dataset.js')
   export default {
-    props: ['propertiesRefs', 'editable'],
+    components: { Draggable },
+    props: ['propertiesRefs', 'editable', 'sortable'],
     data() {
       return {
         datasetSchema,
@@ -296,5 +308,10 @@ en:
   width: 0;
   min-width: 0;
   flex: none;
+}
+
+.v-btn.property-ghost {
+  opacity: 0.5;
+  background-color: #c8ebfb!important;
 }
 </style>

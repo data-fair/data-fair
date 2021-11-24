@@ -58,10 +58,16 @@
         </v-col>
       </v-row>
 
+      <tutorial-alert v-if="can('writeDescription') && dataset.isRest" id="sort-properties">
+        {{ $t('sortProperties') }}
+      </tutorial-alert>
+
       <dataset-properties-slide
         v-if="schema && schema.length"
         :properties-refs="filteredProperties"
         :editable="can('writeDescription')"
+        :sortable="can('writeDescription') && dataset.isRest && !schemaFilter"
+        @sort="applySort"
       />
     </v-col>
 
@@ -73,6 +79,7 @@
         <v-card-title v-t="'addProperty'" primary-title />
         <v-card-text>
           <v-form
+            v-if="addPropertyDialog"
             ref="addPropertyForm"
             :lazy-validation="true"
           >
@@ -121,6 +128,7 @@ fr:
   addProperty: Ajouter une propriété
   cancel: Annuler
   validate: Valider
+  sortProperties: Vous pouvez changer l'ordre des colonnes par glissé-déposé
 en:
   cancelChanges: Cancel modifications
   apply: Apply
@@ -130,6 +138,7 @@ en:
   addProperty: Add a property
   cancel: Cancel
   validate: Validate
+  sortProperties: You can sort the columns by drag and drop
 </i18n>
 
 <script>
@@ -253,7 +262,11 @@ en:
         }
       },
       save() {
-        this.patchAndCommit({ schema: this.schema.map(field => Object.assign({}, field)), primaryKey: [...this.primaryKey] })
+        this.patchAndCommit({ schema: this.schema.map(field => ({ ...field })), primaryKey: [...this.primaryKey] })
+      },
+      applySort(sorted) {
+        this.schema = sorted.map(s => this.schema.find(p => p.key === s.key))
+          .concat(this.schema.filter(p => !sorted.find(s => p.key === s.key)))
       },
       /* onMetadataUpload(e) {
         const reader = new FileReader()

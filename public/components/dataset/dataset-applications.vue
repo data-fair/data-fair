@@ -10,8 +10,9 @@
       <p v-else v-t="'reorder'" />
       <draggable
         :list="applications"
-        :options="dragOptions"
         class="layout row wrap my-0"
+        :disabled="!canContrib"
+        ghost-class="application-ghost"
         @end="changeOrder"
       >
         <v-col
@@ -57,14 +58,6 @@ en:
     computed: {
       ...mapState('dataset', ['dataset', 'applications']),
       ...mapGetters(['canContrib']),
-      dragOptions() {
-        return {
-          animation: 0,
-          group: 'reuses',
-          disabled: false, // TODO: based on permission
-          ghostClass: 'ghost',
-        }
-      },
     },
     methods: {
       changeOrder(order) {
@@ -77,8 +70,8 @@ en:
 </script>
 
 <style lang="css">
-.ghost {
+.application-ghost {
   opacity: 0.5;
-  background: #c8ebfb;
+  background-color: #c8ebfb!important;
 }
 </style>
