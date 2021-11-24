@@ -45,9 +45,11 @@
           :value="notif._id"
         >
           <v-list-item-content>
-            <v-list-item-title>{{ notif.title }}</v-list-item-title>
+            <v-list-item-title>{{ notif.title[$i18.locale] || notif.title[$i18.defaultLocale] || notif.title }}</v-list-item-title>
             <v-list-item-subtitle>{{ notif.date | moment("lll") }}</v-list-item-subtitle>
-            <v-list-item-subtitle>{{ notif.body }} {{ notif }}</v-list-item-subtitle>
+            <v-list-item-subtitle v-if="notif.body">
+              {{ notif.body[$i18.locale] || notif.body[$i18.defaultLocale] || notif.body }}
+            </v-list-item-subtitle>
           </v-list-item-content>
           <v-list-item-action>
             <owner-short v-if="notif.sender" :owner="notif.sender" />
