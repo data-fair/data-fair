@@ -99,7 +99,7 @@ async function initBaseApp(db, app) {
 
 router.post('', asyncWrap(async(req, res) => {
   if (!req.body.url || Object.keys(req.body).length !== 1) {
-    return res.status(400).send(req.__('Initializing a base application only accepts the \"url\" part.'))
+    return res.status(400).send(req.__('Initializing a base application only accepts the "url" part.'))
   }
   const baseApp = config.applications.find(a => a.url === req.body.url) || req.body
   res.send(await initBaseApp(req.app.get('db'), baseApp))
