@@ -31,7 +31,7 @@ const brandEmbed = config.brand.embed && parse5.parseFragment(config.brand.embed
 const setResource = asyncWrap(async(req, res, next) => {
   req.application = req.resource = await req.app.get('db').collection('applications')
     .findOne({ id: req.params.applicationId }, { projection: { _id: 0 } })
-  if (!req.application) return res.status(404).send('Application configuration not found')
+  if (!req.application) return res.status(404).send(req.__('errors.missingApp'))
   findUtils.setResourceLinks(req.application, 'application', req.publicBaseUrl)
   req.resourceType = 'applications'
   req.resourceApiDoc = applicationAPIDocs(req.application)
@@ -138,7 +138,7 @@ router.all('/:applicationId*', setResource, (req, res, next) => { req.app.get('a
   // we await the promises afterwards so that the datasets and baseApp promises were resolved in parallel
   const limits = await limitsPromise
   const baseApp = await baseAppPromise
-  if (!baseApp) return res.status(404).send('Application de base inconnue ou à accès restreint.')
+  if (!baseApp) return res.status(404).send(req.__('errors.missingBaseApp'))
 
   // Remember active sessions
   if (req.session) {
@@ -221,10 +221,10 @@ router.all('/:applicationId*', setResource, (req, res, next) => { req.app.get('a
         }))
         const document = parse5.parse(buffer.toString().replace(/%APPLICATION%/, JSON.stringify(req.application, null, 2)))
         const html = document.childNodes.find(c => c.tagName === 'html')
-        if (!html) throw new Error('HTML structure is broken, expect html, head and body elements')
+        if (!html) throw new Error(req.__('errors.brokenHTML'))
         const head = html.childNodes.find(c => c.tagName === 'head')
         const body = html.childNodes.find(c => c.tagName === 'body')
-        if (!head || !body) throw new Error('HTML structure is broken, expect html, head and body elements')
+        if (!head || !body) throw new Error(req.__('errors.brokenHTML'))
 
         // Data-fair generates a manifest per app
         const manifestUrl = new URL(req.application.exposedUrl).pathname + '/manifest.json'

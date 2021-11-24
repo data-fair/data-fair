@@ -9,6 +9,7 @@ const createError = require('http-errors')
 const Extractor = require('html-extractor')
 const htmlExtractor = new Extractor()
 htmlExtractor.extract = util.promisify(htmlExtractor.extract)
+const i18n = require('i18n')
 const vocabularyArray = require('../../contract/vocabulary')
 const asyncWrap = require('../utils/async-wrap')
 const findUtils = require('../utils/find')
@@ -81,7 +82,7 @@ async function initBaseApp(db, app) {
   }
 
   if (!patch.hasConfigSchema && !(patch.meta && patch.meta['application-name'])) {
-    throw new Error(`La page à l'adresse ${app.url} ne semble pas héberger une application compatible avec ce service.`)
+    throw new Error(i18n.__({ phrase: 'errors.noAppAtUrl', locale: config.i18n.defaultLocale }, { url: app.url }))
   }
 
   patch.datasetsFilters = patch.datasetsFilters || []
@@ -98,7 +99,7 @@ async function initBaseApp(db, app) {
 
 router.post('', asyncWrap(async(req, res) => {
   if (!req.body.url || Object.keys(req.body).length !== 1) {
-    return res.status(400).send('Initializing a base application only accepts the "url" part.')
+    return res.status(400).send(req.__('Initializing a base application only accepts the \"url\" part.'))
   }
   const baseApp = config.applications.find(a => a.url === req.body.url) || req.body
   res.send(await initBaseApp(req.app.get('db'), baseApp))
@@ -181,7 +182,7 @@ router.get('', cacheHeaders.noCache, asyncWrap(async(req, res) => {
       datasetCount = 1
       datasetId = req.query.dataset
       const dataset = await db.collection('datasets').findOne({ id: datasetId, 'owner.type': req.user.activeAccount.type, 'owner.id': req.user.activeAccount.id })
-      if (!dataset) return res.status(404).send(`Jeu de données ${req.query.dataset} est inconnu ou ne vous appartient pas.`)
+      if (!dataset) return res.status(404).send(req.__('errors.missingDataset', { id: datasetId }))
       datasetTypes = (dataset.schema || []).filter(field => !field['x-calculated']).map(field => field.type)
       datasetVocabulary = (dataset.schema || []).map(field => field['x-refersTo']).filter(c => !!c)
       datasetBBox = !!dataset.bbox
@@ -190,15 +191,15 @@ router.get('', cacheHeaders.noCache, asyncWrap(async(req, res) => {
       application.disabled = []
       application.category = application.category || 'autre'
       if (datasetId && (!application.datasetsFilters || !application.datasetsFilters.length)) {
-        application.disabled.push('n\'utilise pas de jeu de données comme source.')
+        application.disabled.push(req.__('appRequire.noDataset'))
       } else {
         const requirements = []
         if (application.datasetsFilters && application.datasetsFilters.length && !datasetCount) {
-          requirements.push('une source de données')
+          requirements.push(req.__('appRequire.aDataset'))
         } else {
           (application.datasetsFilters || []).forEach(filter => {
             if (filter.bbox && !datasetBBox) {
-              requirements.push('des données géolocalisées (concepts latitude/longitude)')
+              requirements.push(req.__('appRequire.geoData'))
             }
             if (filter.concepts) {
               const foundConcepts = []
@@ -208,16 +209,24 @@ router.get('', cacheHeaders.noCache, asyncWrap(async(req, res) => {
                 }
               })
               if (!foundConcepts.length) {
-                requirements.push(`le concept ${filter.concepts.map(concept => vocabulary[concept].title).join(' ou ')}`)
+                if (filter.concepts.length === 1) {
+                  requirements.push(req.__('appRequire.aConcept', { concept: vocabulary[filter.concepts[0]].title }))
+                } else {
+                  requirements.push(req.__('appRequire.oneOfConcepts', { concepts: filter.concepts.map(concept => vocabulary[concept].title).join(res.__('appRequire.orJoin')) }))
+                }
               }
             }
             if (filter['field-type'] && !datasetTypes.find(t => filter['field-type'].includes(t))) {
-              requirements.push(`le type ${filter['field-type'].join(' ou ')}`)
+              if (filter['field-type'].length === 1) {
+                requirements.push(req.__('appRequire.aType', { type: filter['field-type'][0] }))
+              } else {
+                requirements.push(req.__('appRequire.oneOfTypes', { types: filter['field-type'].join(res.__('appRequire.orJoin')) }))
+              }
             }
           })
         }
         if (requirements.length) {
-          application.disabled.push(`nécessite ${requirements.join(' et ')}.`)
+          application.disabled.push(`${req.__('appRequire.requires')}${requirements.join(req.__('appRequire.requiresJoin'))}.`)
         }
       }
     }

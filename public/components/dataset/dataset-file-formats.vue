@@ -1,6 +1,5 @@
 <template>
   <div>
-    TEST
     <v-data-table
       v-if="!condensed"
       :headers="headers"

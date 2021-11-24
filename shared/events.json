@@ -3,157 +3,157 @@
     "error": {
       "icon": "mdi-alert",
       "text": {
-        "fr": "Le service a rencontré une erreur pendant le traitement du jeu de données",
-        "en": "The service failed while processing the dataset"
+        "fr": "le service a rencontré une erreur pendant le traitement du jeu de données",
+        "en": "the service failed while processing the dataset"
       },
       "color": "error"
     },
     "dataset-created": {
       "icon": "mdi-plus-circle-outline",
       "text": {
-        "fr": "Le jeu de données a été créé",
-        "en": "The dataset was create"
+        "fr": "le jeu de données a été créé",
+        "en": "the dataset was create"
       }
     },
     "data-updated": {
       "icon": "mdi-pencil",
       "text": {
-        "fr": "Les données ont été mises à jour",
-        "en": "The data as updated"
+        "fr": "les données ont été mises à jour",
+        "en": "the data as updated"
       }
     },
     "convert-start": {
       "icon": "mdi-file-swap",
       "text": {
-        "fr": "Début de la conversion du fichier",
-        "en": "Start of file conversion"
+        "fr": "début de la conversion du fichier",
+        "en": "start of file conversion"
       }
     },
     "convert-end": {
       "icon": "mdi-file-swap",
       "text": {
-        "fr": "Fin de la conversion du fichier",
-        "en": "End of file conversion"
+        "fr": "fin de la conversion du fichier",
+        "en": "end of file conversion"
       }
     },
     "analyze-start": {
       "icon": "mdi-file-search",
       "text": {
-        "fr": "Début de l'analyse du fichier",
-        "en": "Start of file analysis"
+        "fr": "début de l'analyse du fichier",
+        "en": "start of file analysis"
       }
     },
     "analyze-end": {
       "icon": "mdi-file-search",
       "text": {
-        "fr": "Fin de l'analyse du fichier",
-        "en": "End of file analysis"
+        "fr": "fin de l'analyse du fichier",
+        "en": "end of file analysis"
       }
     },
     "schematize-start": {
       "icon": "mdi-table-of-contents",
       "text": {
-        "fr": "Début de la détection automatique du schéma des données",
-        "en": "Start of automatic schema detection"
+        "fr": "début de la détection automatique du schéma des données",
+        "en": "start of automatic schema detection"
       }
     },
     "schematize-end": {
       "icon": "mdi-table-of-contents",
       "text": {
-        "fr": "Fin de la détection automatique du schéma des données",
-        "en": "End of automatic schema detection"
+        "fr": "fin de la détection automatique du schéma des données",
+        "en": "end of automatic schema detection"
       }
     },
     "index-start": {
       "icon": "mdi-clipboard-text",
       "text": {
-        "fr": "Début de l'indexation des données",
-        "en": "Start of data indexing"
+        "fr": "début de l'indexation des données",
+        "en": "start of data indexing"
       }
     },
     "index-end": {
       "icon": "mdi-clipboard-text",
       "text": {
-        "fr": "Les données sont indexées",
-        "en": "Data is indexed"
+        "fr": "les données sont indexées",
+        "en": "data is indexed"
       }
     },
     "extend-start": {
       "icon": "mdi-merge",
       "text": {
-        "fr": "Début de l'enrichissement des données",
-        "en": "Start of data extension"
+        "fr": "début de l'enrichissement des données",
+        "en": "start of data extension"
       }
     },
     "extend-end": {
       "icon": "mdi-merge",
       "text": {
-        "fr": "Les données sont enrichies",
-        "en": "Data is extended"
+        "fr": "les données sont enrichies",
+        "en": "data is extended"
       }
     },
     "finalize-start": {
       "icon": "mdi-wrench",
       "text": {
-        "fr": "Finalisation du jeu de données",
-        "en": "Finalize the dataset"
+        "fr": "finalisation du jeu de données",
+        "en": "finalize the dataset"
       }
     },
     "finalize-end": {
       "icon": "mdi-check",
       "text": {
-        "fr": "Les données et meta-données sont à jour, le jeu de données est disponible",
-        "en": "Data and metadata are up to date, the dataset is available"
+        "fr": "les données et meta-données sont à jour, le jeu de données est disponible",
+        "en": "data and metadata are up to date, the dataset is available"
       },
       "color": "success"
     },
     "publication": {
       "icon": "mdi-publish",
       "text": {
-        "fr": "Publication du jeu de données vers un catalogue effectuée",
-        "en": "The dataset was published to a catalog"
+        "fr": "publication du jeu de données vers un catalogue effectuée",
+        "en": "the dataset was published to a catalog"
       },
       "color": "success"
     },
     "download-start": {
       "icon": "mdi-file-download",
       "text": {
-        "fr": "Début du chargement des données depuis une adresse distante",
-        "en": "Start downloading the data from a remote URL"
+        "fr": "début du chargement des données depuis une adresse distante",
+        "en": "start downloading the data from a remote URL"
       }
     },
     "download-end": {
       "icon": "mdi-file-download",
       "text": {
-        "fr": "Le fichier de données est chargé et est prêt à être traité",
-        "en": "The data file was downloaded and is ready for processing"
+        "fr": "le fichier de données est chargé et est prêt à être traité",
+        "en": "the data file was downloaded and is ready for processing"
       }
     },
     "downloaded": {
       "text": {
-        "fr": "Un fichier de données d'un jeu de données a été téléchargé",
-        "en": "A dataset was downloaded in a file format"
+        "fr": "un fichier de données d'un jeu de données a été téléchargé",
+        "en": "a dataset was downloaded in a file format"
       }
     },
     "downloaded-filter": {
       "text": {
-        "fr": "Des lignes filtrées d'un jeu de données ont été téléchargés dans un format fichier ",
-        "en": "A dataset was downloaded in a file format"
+        "fr": "des lignes filtrées d'un jeu de données ont été téléchargés dans un format fichier ",
+        "en": "a dataset was downloaded in a file format"
       }
     },
     "draft-validated": {
       "icon": "mdi-file-check",
       "text": {
-        "fr": "Le brouillon du jeu de données a été validé",
-        "en": "The dataset draft was validated"
+        "fr": "le brouillon du jeu de données a été validé",
+        "en": "the dataset draft was validated"
       },
       "color": "primary"
     },
     "draft-cancelled": {
       "icon": "mdi-file-cancel",
       "text": {
-        "fr": "Le brouillon du jeu de données a été annulé",
-        "en": "The dataset draft was cancelled"
+        "fr": "le brouillon du jeu de données a été annulé",
+        "en": "the dataset draft was cancelled"
       },
       "color": "warning"
     }
@@ -162,45 +162,45 @@
     "error": {
       "icon": "mdi-alert",
       "text": {
-        "fr": "La visualisation a été configurée mais n'est pas fonctionnelle",
-        "en": "The visualization was configured but is not usable"
+        "fr": "la visualisation a été configurée mais n'est pas fonctionnelle",
+        "en": "the visualization was configured but is not usable"
       },
       "color": "error"
     },
     "application-created": {
       "icon": "mdi-plus-circle-outline",
       "text": {
-        "fr": "La visualisation a été créée",
-        "en": "The visualization was created"
+        "fr": "la visualisation a été créée",
+        "en": "the visualization was created"
       }
     },
     "publication": {
       "icon": "mdi-publish",
       "text": {
-        "fr": "Publication de l'application vers un catalogue effectuée",
-        "en": "The visualization was published to a catalog"
+        "fr": "publication de l'application vers un catalogue effectuée",
+        "en": "the visualization was published to a catalog"
       }
     },
     "config-updated": {
       "icon": "mdi-pencil",
       "text": {
-        "fr": "La configuration a été mise à jour",
-        "en": "The configuration was updated"
+        "fr": "la configuration a été mise à jour",
+        "en": "the configuration was updated"
       },
       "color": "success"
     },
     "config-draft-updated": {
       "icon": "mdi-pencil",
       "text": {
-        "fr": "Le brouillon de configuration a été mis à jour",
-        "en": "The configuration draft was updated"
+        "fr": "le brouillon de configuration a été mis à jour",
+        "en": "the configuration draft was updated"
       }
     },
     "config-draft-cancelled": {
       "icon": "mdi-delete",
       "text": {
-        "fr": "Le brouillon de configuration a été effacé",
-        "en": "The configuration draft was deleted"
+        "fr": "le brouillon de configuration a été effacé",
+        "en": "the configuration draft was deleted"
       }
     }
   }

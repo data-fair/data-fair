@@ -8,6 +8,7 @@ const util = require('util')
 const unlink = util.promisify(fs.unlink)
 const sanitizeHtml = require('sanitize-html')
 const { nanoid } = require('nanoid')
+const i18n = require('i18n')
 const applicationAPIDocs = require('../../contract/application-api-docs')
 const ajv = require('ajv')()
 const applicationSchema = require('../../contract/application')
@@ -134,7 +135,7 @@ router.post('', asyncWrap(async(req, res) => {
 const readApplication = asyncWrap(async(req, res, next) => {
   req.application = req.resource = await req.app.get('db').collection('applications')
     .findOne({ id: req.params.applicationId }, { projection: { _id: 0 } })
-  if (!req.application) return res.status(404).send('Application configuration not found')
+  if (!req.application) return res.status(404).send(req.__('errors.missingApp'))
   req.resourceType = 'applications'
   req.resourceApiDoc = applicationAPIDocs(req.application)
   next()

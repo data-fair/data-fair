@@ -27,7 +27,7 @@
         return webhooksSchema.items.properties.events.items.oneOf.map(item => 'data-fair:' + item.const).join(',')
       },
       titles() {
-        return webhooksSchema.items.properties.events.items.oneOf.map(item => `"${item.title}"`).join(',')
+        return webhooksSchema.items.properties.events.items.oneOf.map(item => `${item.title}`).join(',')
       },
     },
   }

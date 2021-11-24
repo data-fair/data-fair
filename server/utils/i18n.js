@@ -1,16 +1,10 @@
-const config = require('config')
-const acceptLangParser = require('accept-language-parser')
+const i18n = require('i18n')
 
-const fr = require('../resources/messages-fr.json')
-const messages = {
-  fr,
-  en: { ...fr, ...require('../resources/messages-en.json') },
-}
+i18n.configure({
+  defaultLocale: 'fr',
+  directory: require('path').join(__dirname, '../../server/i18n'),
+  cookie: 'i18n_lang',
+  objectNotation: true,
+})
 
-exports.middleware = (req, res, next) => {
-  const locales = acceptLangParser.parse(req.get('Accept-Language'))
-  const localeCode = req.cookies.i18n_lang || (locales && locales[0] && locales[0].code) || config.i18n.defaultLocale
-  req.locale = localeCode
-  req.messages = messages[localeCode] || messages.fr
-  next()
-}
+exports.middleware = i18n.init

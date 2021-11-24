@@ -1,0 +1,21 @@
+{
+	"errors": {
+		"missingBaseApp": "Application de base inconnue ou à accès restreint.",
+		"missingApp": "Application configuration not found",
+		"brokenHTML": "HTML structure is broken, expect html, head and body elements",
+		"noAppAtUrl": "La page à l'adresse {{url}} ne semble pas héberger une application compatible avec ce service.",
+		"missingDataset": "`Jeu de données {{id}} est inconnu ou ne vous appartient pas.`"
+	},
+	"appRequire": {
+		"noDataset": "n'utilise pas de jeu de données comme source.",
+		"aDataset": "une source de données",
+		"geoData": "des données géolocalisées (concepts latitude/longitude)",
+		"aConcept": "le concept {{concept}}",
+		"oneOfConcepts": "un des concepts {{concepts}}",
+		"aType": "le type {{type}}",
+		"oneOfTypes": "un des types {{types}}",
+    "orJoin": " ou ",
+		"requires": "nécessite ",
+		"requiresJoin": " et "
+	}
+}
