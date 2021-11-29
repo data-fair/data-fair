@@ -181,6 +181,7 @@ en:
       },
       filterableProperties() {
         const props = []
+        // WARNING the warning managmeent is kind of a duplicate of the breaking changes management in server/routers/datasets.js
         if (this.validatedDataset && this.validatedDataset.schema) {
           this.validatedDataset.schema.forEach(vp => {
             if (!vp['x-calculated'] && !this.notCalculatedProperties.find(p => vp.key === p.key)) {
@@ -191,6 +192,7 @@ en:
                 originalProp: vp,
                 editable: false,
                 warning: 'Cette propriété n\'apparait plus dans la nouvelle version du fichier.',
+
               })
             }
           })

@@ -2,9 +2,9 @@
 	"errors": {
 		"missingBaseApp": "Application de base inconnue ou à accès restreint.",
 		"missingApp": "Application configuration not found",
-		"brokenHTML": "HTML structure is broken, expect html, head and body elements",
+		"brokenHTML": "La structure HTML est corrompue, les éléments html, head et body sont requis",
 		"noAppAtUrl": "La page à l'adresse {{url}} ne semble pas héberger une application compatible avec ce service.",
-		"missingDataset": "`Jeu de données {{id}} est inconnu ou ne vous appartient pas.`"
+		"missingDataset": "Le jeu de données {{id}} est inconnu ou ne vous appartient pas."
 	},
 	"appRequire": {
 		"noDataset": "n'utilise pas de jeu de données comme source.",
@@ -17,5 +17,9 @@
     "orJoin": " ou ",
 		"requires": "nécessite ",
 		"requiresJoin": " et "
+	},
+	"breakingChanges": {
+		"missing": "la colonne \"{{key}}\" n'existe plus n'existe plus dans le jeu de données \"{{title}}\"",
+		"type": "la colonne \"{{key}}\" a changé de type dans le jeu de données \"{{title}}\""
 	}
 }

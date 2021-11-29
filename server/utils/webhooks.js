@@ -19,7 +19,7 @@ exports.trigger = async (db, type, resource, event) => {
     topic: { key: `data-fair:${eventKey}:${resource.id}` },
     title: eventType.title,
     // body: event.data || '',
-    body: resource.title || resource.id,
+    body: event.body || resource.title || resource.id,
     urlParams: { id: resource.id },
     visibility: permissions.isPublic(type + 's', resource) ? 'public' : 'private',
   }

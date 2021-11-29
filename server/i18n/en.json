@@ -1,9 +1,25 @@
 {
-	"appRequire.oneOfTypes": "appRequire.oneOfTypes",
-	"appRequire.requires": "appRequire.requires",
-	"appRequire.requiresJoin": "appRequire.requiresJoin",
-	"appRequire.geoData": "appRequire.geoData",
-	"appRequire.aConcept": "appRequire.aConcept",
-	"appRequire.noDataset": "appRequire.noDataset",
-	"test": "test"
+	"errors": {
+		"missingBaseApp": "The base application is unknown or as a restricted access.",
+		"missingApp": "Application configuration not found",
+		"brokenHTML": "HTML structure is broken, expect html, head and body elements",
+		"noAppAtUrl": "The page at URL {{url}} doesn't seem to host an application compatible with this service.",
+		"missingDataset": "The dataset {{id}} is unknown or does not belong to you"
+	},
+	"appRequire": {
+		"noDataset": "does not use a dataset as source.",
+		"aDataset": "a dataset",
+		"geoData": "geolocalized data (latitude/longitude concepts)",
+		"aConcept": "the concept {{concept}}",
+		"oneOfConcepts": "one of the concepts {{concepts}}",
+		"aType": "the type {{type}}",
+		"oneOfTypes": "one of the types {{types}}",
+    "orJoin": " or ",
+		"requires": "requires ",
+		"requiresJoin": " and "
+	},
+	"breakingChanges": {
+		"missing": "the column \"{{key}}\" doesn't exist anymore in the dataset \"{{title}}\"",
+		"type": "the column \"{{key}}\" changed type in the dataset \"{{title}}\""
+	}
 }

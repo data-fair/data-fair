@@ -52,6 +52,9 @@ module.exports = {
                 const: 'dataset-error',
                 title: 'Un jeu de données a rencontré une erreur',
               }, {
+                const: 'dataset-breaking-change',
+                title: 'Un jeu de données rencontre une rupture de compatibilité',
+              }, {
                 const: 'dataset-finalize-end',
                 title: 'Un jeu de données a été finalisé',
               }, {
