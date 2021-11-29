@@ -41,6 +41,7 @@ const thumbor = require('../utils/thumbor')
 const datasetFileSample = require('../utils/dataset-file-sample')
 const { bulkSearchStreams } = require('../utils/master-data')
 const { syncDataset: syncRemoteService } = require('./remote-services')
+const publicationSites = require('../../contract/publication-sites')
 const baseTypes = new Set(['text/csv', 'application/geo+json'])
 
 const router = express.Router()
@@ -324,6 +325,22 @@ router.patch('/:datasetId', readDataset((patch) => {
   } else if (patch.thumbnails || patch.masterData) {
     // just change finalizedAt so that cache is invalidated, but the worker doesn't relly need to work on the dataset
     patch.finalizedAt = (new Date()).toISOString()
+  }
+
+  for (const publicationSite of patch.publicationSites || []) {
+    if (!(req.dataset.publicationSites || []).includes(publicationSite)) {
+      webhooks.trigger(db, 'dataset', req.dataset, { type: `published:${publicationSite}` })
+      for (const topic of patch.topics || req.dataset.topics || []) {
+        webhooks.trigger(db, 'dataset', req.dataset, { type: `published-topic:${publicationSite}:${topic.id}` })
+      }
+    }
+  }
+  for (const topic of patch.topics || []) {
+    if (!(req.dataset.topics || []).find(t => t.id === topic.id)) {
+      for (const publicationSite of patch.publicationSites || req.dataset.publicationSites || []) {
+        webhooks.trigger(db, 'dataset', req.dataset, { type: `published-topic:${publicationSite}:${topic.id}` })
+      }
+    }
   }
 
   await datasetUtils.applyPatch(db, req.dataset, patch)

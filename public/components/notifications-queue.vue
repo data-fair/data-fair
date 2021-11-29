@@ -44,12 +44,12 @@
         <v-list-item
           v-for="notif in notifications"
           :key="notif._id"
-          style="cursor: default"
           :value="notif._id"
           three-line
+          :href="notif.url"
         >
           <v-list-item-content>
-            <v-list-item-title>{{ notif.title[$i18n.locale] || notif.title[$i18n.defaultLocale] || notif.title }}</v-list-item-title>
+            <v-list-item-title>{{ notif.title[$i18n.locale] || notif.title[$i18n.defaultLocale] || notif.title || notif.topic.title }}</v-list-item-title>
             <v-list-item-subtitle>{{ notif.date | moment("lll") }}</v-list-item-subtitle>
             <v-list-item-subtitle v-if="notif.body" :title="notif.body[$i18n.locale] || notif.body[$i18n.defaultLocale] || notif.body">
               {{ notif.body[$i18n.locale] || notif.body[$i18n.defaultLocale] || notif.body }}

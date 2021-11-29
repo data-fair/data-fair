@@ -26,6 +26,11 @@
       class="mb-4 text-h5"
     />
     <v-iframe :src="appsSubscribeUrl" />
+
+    <div v-for="publicationSite of publicationSites" :key="publicationSite.id">
+      <h2 v-t="{path: 'pubsEvents', args: {host: publicationSite.host}}" class="mb-4 text-h5" />
+      <v-iframe :src="publicationSite.subscribeUrl" />
+    </div>
   </v-container>
 </template>
 
@@ -36,6 +41,9 @@ fr:
   datasetsUserEvents: Événements des jeux de données de votre compte personnel
   appsOrgEvents: "Événements des visualisations de l'organisation {name}"
   appsUserEvents: Événements des visualisations de votre compte personnel
+  pubsEvents: "Événements de publication sur le portail {host}"
+  datasetPublished: "Un jeu de données a été publié sur {host}"
+  datasetPublishedTopic: "Un jeu de données a été publié dans la thématique {topic} sur {host}"
 </i18n>
 
 <script>
@@ -48,6 +56,7 @@ fr:
     components: { VIframe },
     data: () => ({
       webhooksSchema,
+      settings: null,
     }),
     computed: {
       ...mapState(['env']),
@@ -68,6 +77,28 @@ fr:
         const urlTemplate = this.env.publicUrl + '/application/{id}'
         return `${this.env.notifyUrl}/embed/subscribe?key=${encodeURIComponent(keysParam)}&title=${encodeURIComponent(titlesParam)}&url-template=${encodeURIComponent(urlTemplate)}&register=false`
       },
+      publicationSites() {
+        if (!this.settings?.publicationSites) return []
+        return this.settings.publicationSites.map(p => {
+          const host = new URL(p.url).host
+          const keys = [`data-fair:dataset-published:${p.type}:${p.id}`]
+          const titles = [this.$t('datasetPublished', { host })]
+          for (const topic of (this.settings.topics || [])) {
+            keys.push(`data-fair:dataset-published-topic:${p.type}:${p.id}:${topic.id}`)
+            titles.push(this.$t('datasetPublishedTopic', { host, topic: topic.title }))
+          }
+          console.log(keys)
+          return {
+            ...p,
+            host,
+            subscribeUrl: `${this.env.notifyUrl}/embed/subscribe?key=${encodeURIComponent(keys.join(','))}&title=${encodeURIComponent(titles.join(','))}&url-template=${encodeURIComponent(p.datasetUrlTemplate)}&register=false`,
+          }
+        })
+      },
+    },
+    async mounted() {
+      this.settings = await this.$axios.$get('api/v1/settings/' + this.activeAccount.type + '/' + this.activeAccount.id)
+      console.log(this.settings)
     },
   }
 </script>

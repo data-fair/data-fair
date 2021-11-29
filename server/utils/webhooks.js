@@ -10,14 +10,16 @@ exports.trigger = async (db, type, resource, event) => {
   const eventKey = resource.draftReason ? `${type}-draft-${event.type}` : `${type}-${event.type}`
   const eventType = settingsSchema.properties.webhooks.items.properties.events.items.oneOf
     .find(eventType => eventType.const === eventKey)
-  if (!eventType) return debug('Unknown webhook event type', type, event.type)
+  if (!eventType && !(event.type.startsWith('published:') || event.type.startsWith('published-topic:'))) {
+    return debug('Unknown webhook event type', type, event.type)
+  }
   // first send notifications before actual webhooks
   const sender = { ...resource.owner }
   delete sender.role
   const notif = {
     sender,
     topic: { key: `data-fair:${eventKey}:${resource.id}` },
-    title: eventType.title,
+    title: eventType ? eventType.title : '',
     // body: event.data || '',
     body: event.body || resource.title || resource.id,
     urlParams: { id: resource.id },
