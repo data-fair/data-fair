@@ -43,6 +43,9 @@ module.exports = {
                 const: 'dataset-dataset-created',
                 title: 'Un nouveau jeu de données a été créé',
               }, {
+                const: 'dataset-draft-data-updated',
+                title: 'Le fichier d\'un jeu de données a été mis à jour en mode brouillon',
+              }, {
                 const: 'dataset-data-updated',
                 title: 'Le fichier d\'un jeu de données a été mis à jour',
               }, {

@@ -3,7 +3,6 @@ const util = require('util')
 const pump = util.promisify(require('pump'))
 const fs = require('fs-extra')
 const { Transform } = require('stream')
-const EventEmitter = require('events')
 const stringify = require('json-stable-stringify')
 const axios = require('./axios')
 const datasetUtils = require('./dataset')
@@ -13,8 +12,6 @@ const { bulkSearchPromise, bulkSearchStreams } = require('./master-data')
 const taskProgress = require('./task-progress')
 
 const debug = require('debug')('extensions')
-
-exports.events = new EventEmitter()
 
 // Apply an extension to a dataset: meaning, query a remote service in batches
 // and add the result either to a "full" file or to the collection in case of a rest dataset
@@ -104,7 +101,7 @@ class RemoteExtensionStream extends Transform {
 
   async _sendBuffer() {
     if (!this.buffer.length) return
-    exports.events.emit('inputs', this.buffer.length)
+    global.events.emit('extension-inputs', this.buffer.length)
 
     for (const extension of this.extensions) {
       debug(`Send req with ${this.buffer.length} items`, this.reqOpts)

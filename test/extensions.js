@@ -7,7 +7,6 @@ const eventToPromise = require('event-to-promise')
 const testUtils = require('./resources/test-utils')
 
 const workers = require('../server/workers')
-const extensionsEvents = require('../server/utils/extensions').events
 describe('Extensions', () => {
   it('Extend dataset using remote service', async function() {
     const ax = global.ax.dmeadus
@@ -434,7 +433,7 @@ koumoul,19 rue de la voie lactée saint avé
           .map(JSON.stringify).join('\n') + '\n'
       })
     await ax.post(`/api/v1/datasets/${dataset.id}/lines`, { address: '19 rue de la voie lactée saint avé' })
-    let inputsEvent = await eventToPromise(extensionsEvents, 'inputs')
+    let inputsEvent = await eventToPromise(global.events, 'extension-inputs')
     assert.equal(inputsEvent, 1)
     dataset = await workers.hook(`finalizer/${dataset.id}`)
     nockScope.done()
@@ -457,7 +456,7 @@ koumoul,19 rue de la voie lactée saint avé
           .map(JSON.stringify).join('\n') + '\n'
       })
     await ax.post(`/api/v1/datasets/${dataset.id}/lines`, { address: 'unknown address' })
-    inputsEvent = await eventToPromise(extensionsEvents, 'inputs')
+    inputsEvent = await eventToPromise(global.events, 'extension-inputs')
     assert.equal(inputsEvent, 1)
     dataset = await workers.hook(`finalizer/${dataset.id}`)
     nockScope.done()

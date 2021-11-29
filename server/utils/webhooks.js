@@ -1,5 +1,6 @@
 const axios = require('axios')
 const config = require('config')
+const { notify } = require('superagent')
 const ua = require('universal-analytics')
 const events = require('../../shared/events.json')
 const notifications = require('./notifications')
@@ -11,15 +12,17 @@ exports.trigger = async (db, type, resource, event) => {
   // first send notifications before actual webhooks
   const sender = { ...resource.owner }
   delete sender.role
+  const prefix = resource.draftReason ? `data-fair:${type}-draft-` : `data-fair:${type}-`
   const notif = {
     sender,
-    topic: { key: `data-fair:${type}-${event.type}:${resource.id}` },
+    topic: { key: `${prefix}${event.type}:${resource.id}` },
     title: eventType.text,
     // body: event.data || '',
     body: resource.title || resource.id,
     urlParams: { id: resource.id },
   }
   if (event.data) notif.body += ' - ' + event.data
+  if (event.draft) notify.body += ' (draft)'
   notifications.send(notif)
 
   const settings = await db.collection('settings').findOne({ id: resource.owner.id, type: resource.owner.type }) || {}

@@ -650,7 +650,10 @@ const updateDataset = asyncWrap(async(req, res) => {
     await db.collection('datasets').replaceOne({ id: req.params.datasetId }, dataset)
     if (req.isNewDataset) await journals.log(req.app, dataset, { type: 'dataset-created' }, 'dataset')
     else if (!dataset.isRest && !dataset.isVirtual) {
-      await journals.log(req.app, dataset, { type: 'data-updated' }, 'dataset')
+      await journals.log(
+        req.app,
+        req.query.draft === 'true' ? datasetUtils.mergeDraft({ ...dataset }) : dataset,
+        { type: 'data-updated' }, 'dataset')
     }
     await datasetUtils.updateStorage(db, req.dataset)
     await syncRemoteService(db, dataset)
@@ -693,8 +696,11 @@ router.post('/:datasetId/draft', readDataset(['finalized'], false, true), permis
     { returnDocument: 'after' },
   )).value
   if (req.dataset.prod.originalFile) await fs.remove(datasetUtils.originalFileName(req.dataset.prod))
-  if (req.dataset.prod.file) await fs.remove(datasetUtils.fileName(req.dataset.prod))
-  if (req.dataset.prod.file) await fs.remove(datasetUtils.fullFileName(req.dataset.prod))
+  if (req.dataset.prod.file) {
+    await fs.remove(datasetUtils.fileName(req.dataset.prod))
+    await fs.remove(datasetUtils.fullFileName(req.dataset.prod))
+    webhooks.trigger(db, 'dataset', patchedDataset, { type: 'data-updated' })
+  }
   await fs.ensureDir(datasetUtils.dir(patchedDataset))
   await fs.move(datasetUtils.originalFileName(req.dataset), datasetUtils.originalFileName(patchedDataset))
   if (await fs.pathExists(datasetUtils.attachmentsDir(req.dataset))) {
@@ -702,6 +708,7 @@ router.post('/:datasetId/draft', readDataset(['finalized'], false, true), permis
     await fs.move(datasetUtils.attachmentsDir(req.dataset), datasetUtils.attachmentsDir(patchedDataset))
   }
   await journals.log(req.app, patchedDataset, { type: 'draft-validated' }, 'dataset')
+
   await esUtils.delete(req.app.get('es'), req.dataset)
   await datasetUtils.updateStorage(db, patchedDataset)
   return res.send(patchedDataset)

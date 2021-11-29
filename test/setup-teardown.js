@@ -122,8 +122,10 @@ beforeEach('scratch data', async () => {
     global.db.collection('locks').deleteMany({}),
     global.db.collection('extensions-cache').deleteMany({}),
     global.db.collection('remote-services').deleteMany({ id: /localhost-dataset-(.*)/ }),
+    global.db.collection('journals').deleteMany({}),
     fs.emptyDir('./data/test'),
   ])
+  global.events.removeAllListeners()
   debug('scratch data ok')
 })
 

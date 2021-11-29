@@ -131,6 +131,10 @@ describe('datasets in draft mode', () => {
   })
 
   it('create a draft when updating the data file', async () => {
+    // listen to all notifications
+    const notifications = []
+    global.events.on('notification', (n) => notifications.push(n))
+
     // Send dataset
     const datasetFd = fs.readFileSync('./test/resources/datasets/dataset1.csv')
     const form = new FormData()
@@ -170,8 +174,66 @@ describe('datasets in draft mode', () => {
     assert.equal(dataset.dataUpdatedAt, dataset.updatedAt)
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
     assert.equal(res.data.total, 5)
-  })
 
+    // the journal kept traces of all changes (draft and not)
+    const journal = (await ax.get(`/api/v1/datasets/${dataset.id}/journal`)).data
+    journal.reverse()
+    assert.equal(journal[0].type, 'dataset-created')
+    assert.equal(journal[1].type, 'analyze-start')
+    assert.equal(journal[2].type, 'analyze-end')
+    assert.equal(journal[3].type, 'index-start')
+    assert.equal(journal[4].type, 'index-end')
+    assert.equal(journal[5].type, 'finalize-start')
+    assert.equal(journal[6].type, 'finalize-end')
+    assert.equal(journal[7].type, 'data-updated')
+    assert.equal(journal[7].draft, true)
+    assert.equal(journal[8].type, 'analyze-start')
+    assert.equal(journal[8].draft, true)
+    assert.equal(journal[9].type, 'analyze-end')
+    assert.equal(journal[9].draft, true)
+    assert.equal(journal[10].type, 'index-start')
+    assert.equal(journal[10].draft, true)
+    assert.equal(journal[11].type, 'index-end')
+    assert.equal(journal[11].draft, true)
+    assert.equal(journal[12].type, 'finalize-start')
+    assert.equal(journal[12].draft, true)
+    assert.equal(journal[13].type, 'finalize-end')
+    assert.equal(journal[13].draft, true)
+    assert.equal(journal[14].type, 'draft-validated')
+    assert.equal(journal[15].type, 'index-start')
+    assert.equal(journal[15].draft, undefined)
+    assert.equal(journal[16].type, 'index-end')
+    assert.equal(journal[16].draft, undefined)
+    assert.equal(journal[17].type, 'finalize-start')
+    assert.equal(journal[17].draft, undefined)
+    assert.equal(journal[18].type, 'finalize-end')
+    assert.equal(journal[18].draft, undefined)
+
+    // the notifications contain the same thing as the journal
+    // but some extra events were triggerred when validating the draft
+    assert.equal(notifications.shift().topic.key, 'data-fair:dataset-dataset-created:dataset1')
+    assert.equal(notifications.shift().topic.key, 'data-fair:dataset-analyze-start:dataset1')
+    assert.equal(notifications.shift().topic.key, 'data-fair:dataset-analyze-end:dataset1')
+    assert.equal(notifications.shift().topic.key, 'data-fair:dataset-index-start:dataset1')
+    assert.equal(notifications.shift().topic.key, 'data-fair:dataset-index-end:dataset1')
+    assert.equal(notifications.shift().topic.key, 'data-fair:dataset-finalize-start:dataset1')
+    assert.equal(notifications.shift().topic.key, 'data-fair:dataset-finalize-end:dataset1')
+    assert.equal(notifications.shift().topic.key, 'data-fair:dataset-draft-data-updated:dataset1')
+    assert.equal(notifications.shift().topic.key, 'data-fair:dataset-draft-analyze-start:dataset1')
+    assert.equal(notifications.shift().topic.key, 'data-fair:dataset-draft-analyze-end:dataset1')
+    assert.equal(notifications.shift().topic.key, 'data-fair:dataset-draft-index-start:dataset1')
+    assert.equal(notifications.shift().topic.key, 'data-fair:dataset-draft-index-end:dataset1')
+    assert.equal(notifications.shift().topic.key, 'data-fair:dataset-draft-finalize-start:dataset1')
+    assert.equal(notifications.shift().topic.key, 'data-fair:dataset-draft-finalize-end:dataset1')
+    assert.equal(notifications.shift().topic.key, 'data-fair:dataset-downloaded:dataset1')
+    assert.equal(notifications.shift().topic.key, 'data-fair:dataset-draft-downloaded:dataset1')
+    assert.equal(notifications.shift().topic.key, 'data-fair:dataset-data-updated:dataset1')
+    assert.equal(notifications.shift().topic.key, 'data-fair:dataset-draft-validated:dataset1')
+    assert.equal(notifications.shift().topic.key, 'data-fair:dataset-index-start:dataset1')
+    assert.equal(notifications.shift().topic.key, 'data-fair:dataset-index-end:dataset1')
+    assert.equal(notifications.shift().topic.key, 'data-fair:dataset-finalize-start:dataset1')
+    assert.equal(notifications.shift().topic.key, 'data-fair:dataset-finalize-end:dataset1')
+  })
   it('create a draft of a large file and index a sample', async () => {
     let content = 'col'
     for (let i = 0; i < 2000; i++) {

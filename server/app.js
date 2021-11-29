@@ -4,6 +4,7 @@ const eventToPromise = require('event-to-promise')
 const originalUrl = require('original-url')
 const { format: formatUrl } = require('url')
 const cors = require('cors')
+const EventEmitter = require('events')
 const dbUtils = require('./utils/db')
 const esUtils = require('./utils/es')
 const wsUtils = require('./utils/ws')
@@ -18,6 +19,9 @@ const session = require('@koumoul/sd-express')({
   privateDirectoryUrl: config.privateDirectoryUrl || config.directoryUrl,
 })
 const debugDomain = require('debug')('domain')
+
+// a global event emitter for testing
+global.events = new EventEmitter()
 
 const app = express()
 let server, wss

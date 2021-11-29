@@ -90,6 +90,7 @@ exports.start = async (app) => {
       lastActivity = new Date().getTime()
     }
 
+    if (stopped) continue
     promisePool[freeSlot] = iter(app, resource, type)
     promisePool[freeSlot].catch(err => console.error('error in worker iter', err))
     // always empty the slot after the promise is finished

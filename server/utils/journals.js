@@ -9,7 +9,11 @@ module.exports.log = async function(app, resource, event, type = 'dataset', noSt
 
     if (!noStoreEvent) {
       await db.collection('journals')
-        .updateOne({ id: resource.id, type, 'owner.type': resource.owner.type, 'owner.id': resource.owner.id }, { $push: { events: event } }, { upsert: true })
+        .updateOne(
+          { id: resource.id, type, 'owner.type': resource.owner.type, 'owner.id': resource.owner.id },
+          { $push: { events: event } },
+          { upsert: true },
+        )
     }
 
     // websockets notifications
