@@ -78,6 +78,16 @@
         <v-list-item-title v-t="'useAPI'" />
       </v-list-item-content>
     </v-list-item>
+    <v-list-item @click="showNotifDialog = true">
+      <v-list-item-icon>
+        <v-icon color="primary">
+          mdi-bell
+        </v-icon>
+      </v-list-item-icon>
+      <v-list-item-content>
+        <v-list-item-title v-t="'notifications'" />
+      </v-list-item-content>
+    </v-list-item>
     <v-list-item v-if="can('delete')" @click="showDeleteDialog = true">
       <v-list-item-icon>
         <v-icon color="warning">
@@ -309,6 +319,34 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
+
+    <v-dialog
+      v-model="showNotifDialog"
+      max-width="500"
+    >
+      <v-card outlined>
+        <v-card-title v-t="'notifications'" primary-title />
+        <v-card-text v-if="nbApplications > 0">
+          <v-alert
+            type="error"
+            outlined
+            :value="true"
+            v-text="$tc('updateWarning', nbApplications)"
+          />
+        </v-card-text>
+        <v-card-text class="py-0 px-3">
+          <v-iframe :src="notifUrl" />
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn
+            v-t="'ok'"
+            color="primary"
+            @click="showNotifDialog = false"
+          />
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </v-list>
 </template>
 
@@ -342,6 +380,8 @@ fr:
   fileTooLarge: Le fichier est trop volumineux pour être importé
   noSpaceLeft: Vous n'avez pas assez d'espace disponible pour ce fichier
   importError: "Erreur pendant l'import du fichier :"
+  notifications: Notifications
+  ok: ok
 en:
   downloads: DOWNLOADS
   actions: ACTIONS
@@ -371,13 +411,19 @@ en:
   fileTooLarge: The file is too large to be imported
   noSpaceLeft: You don't have enough space left for this file
   importError: "Failure to import the file :"
+  notifications: Notifications
+  ok: ok
 </i18n>
 
 <script>
   import { mapState, mapGetters, mapActions } from 'vuex'
+  import 'iframe-resizer/js/iframeResizer'
+  import VIframe from '@koumoul/v-iframe'
   import eventBus from '~/event-bus'
+  const webhooksSchema = require('~/../contract/settings').properties.webhooks
 
   export default {
+    components: { VIframe },
     props: {
       publicationSites: {
         type: Array,
@@ -395,9 +441,11 @@ en:
       newOwner: null,
       showIntegrationDialog: false,
       showAPIDialog: false,
+      showNotifDialog: false,
       previewId: 'table',
     }),
     computed: {
+      ...mapState(['env']),
       ...mapState('dataset', ['dataset', 'nbApplications', 'dataFiles', 'error']),
       ...mapGetters('dataset', ['can', 'resourceUrl']),
       previewLink() {
@@ -413,6 +461,14 @@ en:
             title: site.title || (site.url && site.url.replace('http://', '').replace('https://', '')) || site.id,
           }
         }).filter(ps => !!ps)
+      },
+      notifUrl() {
+        const webhooks = webhooksSchema.items.properties.events.items.oneOf
+          .filter(item => item.const.startsWith('dataset') && item.const !== 'dataset-created')
+        const keysParam = webhooks.map(w => `data-fair:${w.const}:${this.dataset.id}`).join(',')
+        const titlesParam = webhooks.map(w => w.title.replace(/,/g, ' ')).join(',')
+        const urlTemplate = `${this.env.publicUrl}/dataset/${this.dataset.id}`
+        return `${this.env.notifyUrl}/embed/subscribe?key=${encodeURIComponent(keysParam)}&title=${encodeURIComponent(titlesParam)}&url-template=${encodeURIComponent(urlTemplate)}&register=false`
       },
     },
     methods: {
