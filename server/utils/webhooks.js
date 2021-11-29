@@ -17,6 +17,7 @@ exports.trigger = async (db, type, resource, event) => {
     title: eventType.text,
     // body: event.data || '',
     body: resource.title || resource.id,
+    urlParams: { id: resource.id },
   }
   if (event.data) notif.body += ' - ' + event.data
   notifications.send(notif)

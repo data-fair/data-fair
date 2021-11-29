@@ -1,17 +1,46 @@
 <template>
   <v-container>
-    <h2 v-if="activeAccount.type ==='organization'" class="mb-4">
-      Vos notifications pour les événements de l'organisation {{ activeAccount.name }}
-    </h2>
-    <h2 v-else class="mb-4">
-      Vos notifications pour les événements de votre compte personnel
-    </h2>
-    <v-iframe :src="`${env.notifyUrl}/embed/subscribe?key=${encodeURIComponent(keys)}&title=${encodeURIComponent(titles)}`" />
+    <h2 v-t="'devices'" class="text-h5" />
+    <v-iframe :src="`${env.notifyUrl}/embed/devices`" />
+
+    <h2
+      v-if="activeAccount.type ==='organization'"
+      v-t="{path: 'datasetsOrgEvents', args: {name: activeAccount.name}}"
+      class="mb-4 text-h5"
+    />
+    <h2
+      v-else
+      v-t="'datasetsUserEvents'"
+      class="mb-4 text-h5"
+    />
+    <v-iframe :src="datasetsSubscribeUrl" />
+
+    <h2
+      v-if="activeAccount.type ==='organization'"
+      v-t="{path: 'appsOrgEvents', args: {name: activeAccount.name}}"
+      class="mb-4 text-h5"
+    />
+    <h2
+      v-else
+      v-t="'appsUserEvents'"
+      class="mb-4 text-h5"
+    />
+    <v-iframe :src="appsSubscribeUrl" />
   </v-container>
 </template>
 
+<i18n lang="yaml">
+fr:
+  devices: Appareils configurés pour recevoir vos notifications
+  datasetsOrgEvents: "Événements des jeux de données de l'organisation {name}"
+  datasetsUserEvents: Événements des jeux de données de votre compte personnel
+  appsOrgEvents: "Événements des visualisations de l'organisation {name}"
+  appsUserEvents: Événements des visualisations de votre compte personnel
+</i18n>
+
 <script>
   import { mapState, mapGetters } from 'vuex'
+  import 'iframe-resizer/js/iframeResizer'
   import VIframe from '@koumoul/v-iframe'
   const webhooksSchema = require('~/../contract/settings').properties.webhooks
 
@@ -23,11 +52,21 @@
     computed: {
       ...mapState(['env']),
       ...mapGetters('session', ['activeAccount']),
-      keys() {
-        return webhooksSchema.items.properties.events.items.oneOf.map(item => 'data-fair:' + item.const).join(',')
+      datasetsSubscribeUrl() {
+        const webhooks = webhooksSchema.items.properties.events.items.oneOf
+          .filter(item => item.const.startsWith('dataset'))
+        const keysParam = webhooks.map(w => 'data-fair:' + w.const).join(',')
+        const titlesParam = webhooks.map(w => w.title.replace(/,/g, ' ')).join(',')
+        const urlTemplate = this.env.publicUrl + '/dataset/{id}'
+        return `${this.env.notifyUrl}/embed/subscribe?key=${encodeURIComponent(keysParam)}&title=${encodeURIComponent(titlesParam)}&url-template=${encodeURIComponent(urlTemplate)}&register=false`
       },
-      titles() {
-        return webhooksSchema.items.properties.events.items.oneOf.map(item => `${item.title}`).join(',')
+      appsSubscribeUrl() {
+        const webhooks = webhooksSchema.items.properties.events.items.oneOf
+          .filter(item => item.const.startsWith('application'))
+        const keysParam = webhooks.map(w => 'data-fair:' + w.const).join(',')
+        const titlesParam = webhooks.map(w => w.title.replace(/,/g, ' ')).join(',')
+        const urlTemplate = this.env.publicUrl + '/application/{id}'
+        return `${this.env.notifyUrl}/embed/subscribe?key=${encodeURIComponent(keysParam)}&title=${encodeURIComponent(titlesParam)}&url-template=${encodeURIComponent(urlTemplate)}&register=false`
       },
     },
   }

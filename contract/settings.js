@@ -50,7 +50,7 @@ module.exports = {
                 title: 'Un jeu de données a rencontré une erreur',
               }, {
                 const: 'dataset-finalize-end',
-                title: 'Un jeu de données a été finalisé et mis en ligne',
+                title: 'Un jeu de données a été finalisé',
               }, {
                 const: 'dataset-publication',
                 title: 'Un jeu de données a été publié sur un catalogue',
@@ -58,17 +58,14 @@ module.exports = {
                 const: 'dataset-downloaded',
                 title: 'Un jeu de données a été téléchargé dans un format fichier',
               }, {
-                const: 'dataset-downloaded-filter',
-                title: 'Un extrait filtré d\'un jeu de données a été téléchargé dans un format fichier',
-              }, {
                 const: 'application-application-created',
-                title: 'Une nouvelle réutilisation a été créée',
+                title: 'Une nouvelle visualisation a été créée',
               }, {
                 const: 'application-error',
-                title: 'Une réutilisation a rencontré une erreur',
+                title: 'Une visualisation a rencontré une erreur',
               }, {
                 const: 'application-publication',
-                title: 'Une réutilisation a été publiée sur un catalogue',
+                title: 'Une visualisation a été publiée sur un catalogue',
               }],
             },
           },
