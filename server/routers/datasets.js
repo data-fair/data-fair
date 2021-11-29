@@ -41,7 +41,6 @@ const thumbor = require('../utils/thumbor')
 const datasetFileSample = require('../utils/dataset-file-sample')
 const { bulkSearchStreams } = require('../utils/master-data')
 const { syncDataset: syncRemoteService } = require('./remote-services')
-const publicationSites = require('../../contract/publication-sites')
 const baseTypes = new Set(['text/csv', 'application/geo+json'])
 
 const router = express.Router()
