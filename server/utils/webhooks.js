@@ -3,6 +3,7 @@ const config = require('config')
 const ua = require('universal-analytics')
 const settingsSchema = require('../../contract/settings')
 const notifications = require('./notifications')
+const permissions = require('./permissions')
 const debug = require('debug')('webhooks')
 
 exports.trigger = async (db, type, resource, event) => {
@@ -20,6 +21,7 @@ exports.trigger = async (db, type, resource, event) => {
     // body: event.data || '',
     body: resource.title || resource.id,
     urlParams: { id: resource.id },
+    visibility: permissions.isPublic(type + 's', resource) ? 'public' : 'private',
   }
   if (event.data) notif.body += ' - ' + event.data
   notifications.send(notif)
