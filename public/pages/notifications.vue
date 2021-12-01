@@ -27,9 +27,9 @@
     />
     <v-iframe :src="appsSubscribeUrl" />
 
-    <div v-for="publicationSite of publicationSites" :key="publicationSite.id">
-      <h2 v-t="{path: 'pubsEvents', args: {host: publicationSite.host}}" class="mb-4 text-h5" />
-      <v-iframe :src="publicationSite.subscribeUrl" />
+    <div v-for="site of publicationSites" :key="site.id">
+      <h2 v-t="{path: 'pubsEvents', args: {title: site.title || site.url || site.id}}" class="mb-4 text-h5" />
+      <v-iframe :src="site.subscribeUrl" />
     </div>
   </v-container>
 </template>
@@ -41,9 +41,9 @@ fr:
   datasetsUserEvents: Événements des jeux de données de votre compte personnel
   appsOrgEvents: "Événements des visualisations de l'organisation {name}"
   appsUserEvents: Événements des visualisations de votre compte personnel
-  pubsEvents: "Événements de publication sur le portail {host}"
-  datasetPublished: "Un jeu de données a été publié sur {host}"
-  datasetPublishedTopic: "Un jeu de données a été publié dans la thématique {topic} sur {host}"
+  pubsEvents: "Événements de publication sur le portail {title}"
+  datasetPublished: "Un jeu de données a été publié sur {title}"
+  datasetPublishedTopic: "Un jeu de données a été publié dans la thématique {topic} sur {title}"
 </i18n>
 
 <script>
@@ -81,16 +81,14 @@ fr:
       publicationSites() {
         if (!this.settingsPublicationSites || !this.topics) return []
         return this.settingsPublicationSites.map(p => {
-          const host = new URL(p.url).host
           const keys = [`data-fair:dataset-published:${p.type}:${p.id}`]
-          const titles = [this.$t('datasetPublished', { host })]
+          const titles = [this.$t('datasetPublished', { title: p.title || p.url || p.id })]
           for (const topic of (this.topics || [])) {
             keys.push(`data-fair:dataset-published-topic:${p.type}:${p.id}:${topic.id}`)
-            titles.push(this.$t('datasetPublishedTopic', { host, topic: topic.title }))
+            titles.push(this.$t('datasetPublishedTopic', { title: p.title || p.url || p.id, topic: topic.title }))
           }
           return {
             ...p,
-            host,
             subscribeUrl: `${this.env.notifyUrl}/embed/subscribe?key=${encodeURIComponent(keys.join(','))}&title=${encodeURIComponent(titles.join(','))}&url-template=${encodeURIComponent(p.datasetUrlTemplate)}&register=false`,
           }
         })
