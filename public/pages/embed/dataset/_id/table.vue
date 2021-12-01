@@ -212,7 +212,6 @@ en:
         sortBy: [null],
         sortDesc: [false],
       },
-      sort: null,
       notFound: false,
       loading: false,
       lineHeight: 40,
@@ -220,6 +219,7 @@ en:
       filters: [],
       lastParams: null,
       selectedCols: [],
+      ready: false,
     }),
     computed: {
       ...mapState(['vocabulary']),
@@ -311,10 +311,12 @@ en:
         deep: true,
       },
     },
-    mounted() {
+    async mounted() {
       this.readQueryParams()
       this.setItemsPerPage()
-      this.refresh()
+      await this.$nextTick()
+      this.ready = true
+      this.refresh(false, true)
     },
     methods: {
       setItemsPerPage() {
@@ -326,14 +328,16 @@ en:
         this.pagination.itemsPerPage = Math.min(Math.max(nbRows, 4), 50)
         this.filterHeight = height - top
       },
-      async refresh(resetPagination) {
-        this.writeQueryParams()
+      async refresh(resetPagination, initial) {
+        if (!this.ready) return
+        if (!initial) this.writeQueryParams()
         if (resetPagination) {
           this.pagination.page = 1
           // this is debatable
           // but in case of full-text search you can forget that a sort is active
           // and be surprised by counter-intuitive results
           this.pagination.sortBy = [null]
+          this.pagination.sortDesc = [false]
         }
 
         // prevent triggering multiple times the same request
@@ -377,6 +381,11 @@ en:
         const query = this.$route.query
         if (query.cols) this.selectedCols = query.cols.split(',')
         if (query.q) this.query = query.q
+        if (query.sort) {
+          const [sortBy, sortDesc] = query.sort.split(':')
+          this.$set(this.pagination.sortBy, 0, sortBy)
+          this.$set(this.pagination.sortDesc, 0, sortDesc === '-1')
+        }
         this.filters = filtersUtils.readQueryParams(query, this.dataset)
       },
       writeQueryParams() {
@@ -390,7 +399,13 @@ en:
 
         filtersUtils.writeQueryParams(this.filters, query)
 
-        if (global.parent) parent.postMessage({ query }, '*')
+        if (this.pagination.sortBy && this.pagination.sortBy[0]) {
+          query.sort = this.pagination.sortBy[0] + ':' + (this.pagination.sortDesc[0] ? '-1' : '1')
+        } else {
+          delete query.sort
+        }
+
+        if (global.parent && global.parent !== global.self) parent.postMessage({ query }, '*')
         else this.$router.push({ query })
       },
     },
