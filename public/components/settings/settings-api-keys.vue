@@ -1,12 +1,77 @@
 <template>
   <div>
-    <v-btn
-      color="primary"
-      class="mb-3"
-      @click="showDialog = true"
+    <v-menu
+      v-model="createMenu"
+      max-width="700px"
+      :close-on-content-click="false"
     >
-      Ajouter une clé d'API
-    </v-btn>
+      <template #activator="{on, attrs}">
+        <v-btn
+          color="primary"
+          class="mb-3"
+          v-bind="attrs"
+          v-on="on"
+        >
+          Ajouter une clé d'API
+        </v-btn>
+      </template>
+      <v-card data-iframe-height>
+        <v-card-title primary-title>
+          Ajout d'une nouvelle clé d'API
+        </v-card-title>
+        <v-card-text>
+          <v-form v-model="newApiKeyValid">
+            <v-text-field
+              v-model="newApiKey.title"
+              :rules="[v => !!v || '']"
+              label="Titre"
+              required
+              hide-details="auto"
+            />
+            <v-checkbox
+              v-if="user.adminMode"
+              v-model="newApiKey.adminMode"
+              background-color="admin"
+              color="white"
+              dark
+              label="Clé de type super-administrateur "
+              hide-details="auto"
+            />
+            <v-checkbox
+              v-if="user.adminMode && newApiKey.adminMode"
+              v-model="newApiKey.asAccount"
+              background-color="admin"
+              color="white"
+              dark
+              label="Clé permettant de travailler dans le contexte d'autres comptes (nécessaire pour configurer le service de traitements périodiques)"
+              hide-details="auto"
+            />
+            <v-checkbox
+              v-for="scope of scopes"
+              :key="scope.value"
+              v-model="newApiKey.scopes"
+              :label="scope.text"
+              :value="scope.value"
+              :rules="[v => !!v.length || '']"
+              hide-details="auto"
+            />
+          </v-form>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn text @click="createMenu = false">
+            Annuler
+          </v-btn>
+          <v-btn
+            :disabled="!newApiKeyValid"
+            color="primary"
+            @click="addApiKey"
+          >
+            Ajouter
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-menu>
     <v-container class="pt-0 px-0">
       <v-row>
         <v-col
@@ -14,22 +79,18 @@
           :key="rowIndex"
           cols="12"
         >
-          <v-card tile outlined>
-            <v-card-title primary-title>
+          <v-card
+            tile
+            outlined
+          >
+            <v-card-title primary-title class="py-2">
               <h4 class="text-h6">
                 {{ apiKey.title }}
               </h4>
               <v-spacer />
-              <v-btn
-                color="primary"
-                text
-                class="pa-0 ma-0"
-                @click="currentApiKey = rowIndex; showUseDialog = true"
-              >
-                Utiliser
-              </v-btn>
+              <settings-api-key-use-menu :api-key="apiKey" />
             </v-card-title>
-            <v-card-text>
+            <v-card-text class="pb-0">
               <v-alert
                 :value="!!apiKey.clearKey"
                 type="warning"
@@ -51,137 +112,21 @@
               <p v-if="!!apiKey.clearKey">
                 Clé secrète : {{ apiKey.clearKey }}
               </p>
-              <v-subheader>Portée</v-subheader>
-              <p>{{ apiKey.scopes.map(scope => scopes.find(s => s.value === scope).text).join(' - ') }}</p>
+              <p>Portée : {{ apiKey.scopes.map(scope => scopes.find(s => s.value === scope).text).join(' - ') }}</p>
             </v-card-text>
             <v-card-actions>
               <v-spacer />
-              <v-btn
-                icon
-                color="warning"
-                title="Supprimer cette clé d'API"
-                @click="currentApiKey = rowIndex; showDeleteDialog = true"
-              >
-                <v-icon>mdi-delete</v-icon>
-              </v-btn>
+              <confirm-menu
+                yes-color="warning"
+                tooltip="supprimer cette clé d'API"
+                :text="`Voulez vous vraiment supprimer cette clé d'API ? Si des programmes l'utilisent ils cesseront de fonctionner.`"
+                @confirm="removeApiKey(rowIndex)"
+              />
             </v-card-actions>
           </v-card>
         </v-col>
       </v-row>
     </v-container>
-
-    <v-dialog
-      v-model="showDialog"
-      max-width="700px"
-    >
-      <v-card outlined>
-        <v-card-title primary-title>
-          Ajout d'une nouvelle clé d'API
-        </v-card-title>
-        <v-card-text>
-          <v-form v-model="newApiKeyValid">
-            <v-text-field
-              v-model="newApiKey.title"
-              :rules="[v => !!v || '']"
-              label="Titre"
-              required
-            />
-            <v-checkbox
-              v-if="user.adminMode"
-              v-model="newApiKey.adminMode"
-              background-color="admin"
-              color="white"
-              dark
-              label="Clé de type super-administrateur "
-            />
-            <v-checkbox
-              v-if="user.adminMode && newApiKey.adminMode"
-              v-model="newApiKey.asAccount"
-              background-color="admin"
-              color="white"
-              dark
-              label="Clé permettant de travailler dans le contexte d'autres comptes (nécessaire pour configurer le service de traitements périodiques)"
-            />
-            <v-checkbox
-              v-for="scope of scopes"
-              :key="scope.value"
-              v-model="newApiKey.scopes"
-              :label="scope.text"
-              :value="scope.value"
-              :rules="[v => !!v.length || '']"
-            />
-          </v-form>
-        </v-card-text>
-        <v-card-actions>
-          <v-spacer />
-          <v-btn text @click="showDialog = false">
-            Annuler
-          </v-btn>
-          <v-btn
-            :disabled="!newApiKeyValid"
-            color="primary"
-            @click="addApiKey"
-          >
-            Ajouter
-          </v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
-
-    <v-dialog
-      v-model="showDeleteDialog"
-      max-width="700px"
-    >
-      <v-card v-if="showDeleteDialog" outlined>
-        <v-card-title primary-title>
-          Suppression d'une clé d'API
-        </v-card-title>
-        <v-card-text>
-          Voulez vous vraiment supprimer la clé d'API "{{ settings.apiKeys[currentApiKey].title }}" ? La suppression est définitive, si des programmes l'utilisent ils cesseront de fonctionner.
-        </v-card-text>
-        <v-card-actions>
-          <v-spacer />
-          <v-btn text @click="showDeleteDialog = false">
-            Non
-          </v-btn>
-          <v-btn
-            color="warning"
-            @click="showDeleteDialog = false; removeApiKey(currentApiKey)"
-          >
-            Oui
-          </v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
-
-    <v-dialog
-      v-model="showUseDialog"
-      max-width="700px"
-    >
-      <v-card v-if="showUseDialog" outlined>
-        <v-card-title primary-title>
-          Utilisation d'une clé d'API
-        </v-card-title>
-        <v-card-text>
-          <p>
-            Vous pouvez utiliser la clé d'API pour travailler avec <a :to="localePath('api-doc')">l'API HTTP racine de ce service</a> ou avec les APIs indépendantes de chaque entité (jeux de données, applications, services distants, etc.).
-          </p><p>
-            Il suffit de passer le header "x-apiKey" dans votre client HTTP. Par exemple :
-          </p>
-          <pre><code>curl -v -H "x-apiKey: {{ settings.apiKeys[currentApiKey].clearKey || 'XXX' }}" {{ env.publicUrl }}/api/v1/{{ settings.apiKeys[currentApiKey].scopes[0] }}</code></pre>
-        </v-card-text>
-        <v-card-actions>
-          <v-spacer />
-          <v-btn
-            text
-            color="primary"
-            @click="showUseDialog = false"
-          >
-            Ok
-          </v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
   </div>
 </template>
 
@@ -197,7 +142,7 @@
         scopes: [],
       },
       newApiKeyValid: false,
-      showDialog: false,
+      createMenu: false,
       showDeleteDialog: false,
       currentApiKey: null,
       showUseDialog: false,
@@ -210,13 +155,12 @@
     }),
     computed: {
       ...mapState('session', ['user']),
-      ...mapState(['env']),
     },
     methods: {
       addApiKey() {
         const apiKey = Object.assign({}, this.newApiKey)
         this.settings.apiKeys.push(apiKey)
-        this.showDialog = false
+        this.createMenu = false
         this.$emit('updated')
       },
       removeApiKey(rowIndex) {
