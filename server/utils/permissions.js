@@ -51,7 +51,7 @@ Sélectionnez l'organisation ${req.resource.owner.name} en tant que compte actif
     res.setHeader('x-operation', JSON.stringify(req.operation))
     const userHeader = { id: 'anonymous' }
     if (req.user) userHeader.id = req.user.id
-    if (req.user?.activeAccount.type === 'organization')userHeader.org = req.user.activeAccount.id
+    if (req.user.activeAccount.type === 'organization')userHeader.org = req.user.activeAccount.id
     res.setHeader('x-user', JSON.stringify(userHeader))
     next()
   }
