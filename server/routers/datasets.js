@@ -326,23 +326,33 @@ router.patch('/:datasetId', readDataset((patch) => {
     patch.finalizedAt = (new Date()).toISOString()
   }
 
-  for (const publicationSite of patch.publicationSites || []) {
-    if (!(req.dataset.publicationSites || []).includes(publicationSite)) {
-      webhooks.trigger(db, 'dataset', req.dataset, { type: `published:${publicationSite}` })
-      for (const topic of patch.topics || req.dataset.topics || []) {
-        webhooks.trigger(db, 'dataset', req.dataset, { type: `published-topic:${publicationSite}:${topic.id}` })
-      }
-    }
-  }
-  for (const topic of patch.topics || []) {
-    if (!(req.dataset.topics || []).find(t => t.id === topic.id)) {
-      for (const publicationSite of patch.publicationSites || req.dataset.publicationSites || []) {
-        webhooks.trigger(db, 'dataset', req.dataset, { type: `published-topic:${publicationSite}:${topic.id}` })
-      }
-    }
-  }
+  const wasPublic = permissions.isPublic('datasets', req.dataset)
+  const previousPublicationSites = req.dataset.publicationSites || []
+  const previousTopics = req.dataset.topics || []
 
   await datasetUtils.applyPatch(db, req.dataset, patch)
+
+  // send webhooks/notifs based on changes during this patch
+  const isPublic = permissions.isPublic('datasets', req.dataset)
+  const newPublicationSites = req.dataset.publicationSites || []
+  const newTopics = req.dataset.topics || []
+  for (const publicationSite of newPublicationSites) {
+    // send a notification either because the publicationSite was added, or because the visibility changed
+    if (!previousPublicationSites.includes(publicationSite) || (isPublic && !wasPublic)) {
+      webhooks.trigger(db, 'dataset', req.dataset, { type: `published:${publicationSite}` })
+      for (const topic of newTopics) {
+        webhooks.trigger(db, 'dataset', req.dataset, { type: `published-topic:${publicationSite}:${topic.id}` })
+      }
+    }
+  }
+  for (const topic of newTopics) {
+    // send a notification either because the topic was added
+    if (!previousTopics.find(t => t.id === topic.id)) {
+      for (const publicationSite of newPublicationSites) {
+        webhooks.trigger(db, 'dataset', req.dataset, { type: `published-topic:${publicationSite}:${topic.id}` })
+      }
+    }
+  }
 
   await syncRemoteService(db, req.dataset)
 
