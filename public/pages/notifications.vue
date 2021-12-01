@@ -56,7 +56,8 @@ fr:
     components: { VIframe },
     data: () => ({
       webhooksSchema,
-      settings: null,
+      settingsPublicationSites: null,
+      topics: null,
     }),
     computed: {
       ...mapState(['env']),
@@ -78,16 +79,15 @@ fr:
         return `${this.env.notifyUrl}/embed/subscribe?key=${encodeURIComponent(keysParam)}&title=${encodeURIComponent(titlesParam)}&url-template=${encodeURIComponent(urlTemplate)}&register=false`
       },
       publicationSites() {
-        if (!this.settings?.publicationSites) return []
-        return this.settings.publicationSites.map(p => {
+        if (!this.settingsPublicationSites || !this.topics) return []
+        return this.settingsPublicationSites.map(p => {
           const host = new URL(p.url).host
           const keys = [`data-fair:dataset-published:${p.type}:${p.id}`]
           const titles = [this.$t('datasetPublished', { host })]
-          for (const topic of (this.settings.topics || [])) {
+          for (const topic of (this.topics || [])) {
             keys.push(`data-fair:dataset-published-topic:${p.type}:${p.id}:${topic.id}`)
             titles.push(this.$t('datasetPublishedTopic', { host, topic: topic.title }))
           }
-          console.log(keys)
           return {
             ...p,
             host,
@@ -97,8 +97,10 @@ fr:
       },
     },
     async mounted() {
-      this.settings = await this.$axios.$get('api/v1/settings/' + this.activeAccount.type + '/' + this.activeAccount.id)
-      console.log(this.settings)
+      [this.settingsPublicationSites, this.topics] = await Promise.all([
+        this.$axios.$get('api/v1/settings/' + this.activeAccount.type + '/' + this.activeAccount.id + '/publication-sites'),
+        this.$axios.$get('api/v1/settings/' + this.activeAccount.type + '/' + this.activeAccount.id + '/topics'),
+      ])
     },
   }
 </script>
