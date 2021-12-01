@@ -464,7 +464,8 @@ en:
       },
       notifUrl() {
         const webhooks = webhooksSchema.items.properties.events.items.oneOf
-          .filter(item => item.const.startsWith('dataset') && item.const !== 'dataset-created')
+          .filter(item => item.const.startsWith('dataset') && item.const !== 'dataset-dataset-created' && item.const !== 'dataset-error')
+
         const keysParam = webhooks.map(w => `data-fair:${w.const}:${this.dataset.id}`).join(',')
         const titlesParam = webhooks.map(w => w.title.replace(/,/g, ' ')).join(',')
         const urlTemplate = `${this.env.publicUrl}/dataset/${this.dataset.id}`
