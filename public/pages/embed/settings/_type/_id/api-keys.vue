@@ -1,5 +1,5 @@
 <template lang="html">
-  <v-container fluid>
+  <v-container fluid data-iframe-height>
     <settings-api-keys
       v-if="settings"
       :settings="settings"
@@ -11,6 +11,10 @@
 <script>
   import 'iframe-resizer/js/iframeResizer.contentWindow'
   import eventBus from '~/event-bus'
+
+  global.iFrameResizer = {
+    heightCalculationMethod: 'taggedElement',
+  }
 
   export default {
     layout: 'embed',

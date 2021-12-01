@@ -1,5 +1,5 @@
 <template lang="html">
-  <v-container>
+  <v-container data-iframe-height>
     <v-alert v-if="!dataset.isRest" type="error">
       Ces données ne sont pas éditables
     </v-alert>
@@ -30,6 +30,10 @@
 <script>
   import 'iframe-resizer/js/iframeResizer.contentWindow'
   import { mapState } from 'vuex'
+
+  global.iFrameResizer = {
+    heightCalculationMethod: 'taggedElement',
+  }
 
   export default {
     data: () => ({

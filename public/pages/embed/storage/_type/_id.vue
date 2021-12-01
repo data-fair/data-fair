@@ -2,6 +2,7 @@
   <v-container
     v-if="initialized"
     fluid
+    data-iframe-height
   >
     <v-row>
       <v-col>
@@ -21,6 +22,10 @@
 <script>
   import 'iframe-resizer/js/iframeResizer.contentWindow'
   import { mapState } from 'vuex'
+
+  global.iFrameResizer = {
+    heightCalculationMethod: 'taggedElement',
+  }
 
   export default {
     layout: 'embed',
