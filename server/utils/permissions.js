@@ -59,10 +59,14 @@ Sélectionnez l'organisation ${req.resource.owner.name} en tant que compte actif
 
 const getOwnerRole = exports.getOwnerRole = (owner, user) => {
   if (!user) return null
+  // user is implicitly admin of his own resources, even if he is currently switched to an organization
+  if (owner.type === 'user') {
+    if (owner.id === user.id) return config.adminRole
+    return null
+  }
   // user current activeAccount and owner dot not match, the user is not better than anonymous
   if (user.activeAccount.type !== owner.type || user.activeAccount.id !== owner.id) return null
-  // user is implicitly admin of his own resources
-  if (user.activeAccount.type === 'user') return config.adminRole
+
   // user is in a department but the resource belongs either to no department or to another department
   // user is implicitly of the lowest role
   if (user.activeAccount.department && user.activeAccount.department !== owner.department) return config.userRole

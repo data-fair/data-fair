@@ -24,14 +24,6 @@ describe('permissions', () => {
       assert.equal(err.status, 403)
     }
 
-    // the owner user, but with different active account
-    try {
-      await global.ax.dmeadusOrg.get('/api/v1/datasets/' + datasetId + '/api-docs.json')
-      assert.fail()
-    } catch (err) {
-      assert.equal(err.status, 403)
-    }
-
     // User has permissions on operationId
     res = await global.ax.ngernier4.get('/api/v1/datasets/' + datasetId)
     assert.equal(res.status, 200)

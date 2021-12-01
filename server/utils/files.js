@@ -96,7 +96,6 @@ const getFormBody = (body) => {
     .filter(key => typeof body[key] === 'string')
     .filter(key => ['object', 'array'].includes(datasetSchema.properties[key].type))
     .forEach(key => {
-      console.log(body[key])
       if (body[key].trim() === '') {
         delete body[key]
       } else {
