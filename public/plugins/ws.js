@@ -46,6 +46,9 @@ export default ({ store, env }) => {
   const wsPublicUrl = (window.location.origin + env.basePath)
     .replace('http:', 'ws:').replace('https:', 'wss:')
   configureWS(wsPublicUrl)
-  // TODO: the same for notifyUrl ?
-  // if (env.notifyWSUrl) configureWS(env.notifyWSUrl, '-notify')
+
+  // only configure notify websocket in main back-office mode, not multi-domain embeds
+  if (env.notifyWSUrl && new URL(env.notifyWSUrl).hostname === window.location.hostname) {
+    configureWS(env.notifyWSUrl, '-notify')
+  }
 }
