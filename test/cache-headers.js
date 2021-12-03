@@ -25,7 +25,7 @@ describe('Cache headers', () => {
     ])
 
     res = await ax.get('/api/v1/datasets/dataset1/lines')
-    assert.equal(res.headers['cache-control'], 'must-revalidate, private')
+    assert.equal(res.headers['cache-control'], 'must-revalidate, public, max-age=' + config.cache.publicMaxAge)
 
     res = await axAnonymous.get('/api/v1/datasets/dataset1/lines', { params: { finalizedAt: dataset.finalizedAt } })
     assert.equal(res.headers['cache-control'], 'must-revalidate, public, max-age=' + config.cache.timestampedPublicMaxAge)
