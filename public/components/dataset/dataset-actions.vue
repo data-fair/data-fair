@@ -66,7 +66,20 @@
       </v-list-item>
     </template>
     <v-list-item
-      v-if="can('readApiDoc') && !error"
+      v-if="can('readPrivateApiDoc') && !error"
+      @click="showPrivateAPIDialog = true"
+    >
+      <v-list-item-icon>
+        <v-icon color="primary">
+          mdi-api
+        </v-icon>
+      </v-list-item-icon>
+      <v-list-item-content>
+        <v-list-item-title v-t="'usePrivateAPI'" />
+      </v-list-item-content>
+    </v-list-item>
+    <v-list-item
+      v-if="dataset.public && !error"
       @click="showAPIDialog = true"
     >
       <v-list-item-icon>
@@ -185,6 +198,30 @@
           <open-api
             v-if="resourceUrl"
             :url="resourceUrl + '/api-docs.json' + (dataset.draftReason ? '?draft=true' : '')"
+          />
+        </v-card-text>
+      </v-card>
+    </v-dialog>
+
+    <v-dialog v-model="showPrivateAPIDialog" fullscreen>
+      <v-card outlined>
+        <v-toolbar
+          dense
+          flat
+        >
+          <v-toolbar-title />
+          <v-spacer />
+          <v-btn
+            icon
+            @click.native="showPrivateAPIDialog = false"
+          >
+            <v-icon>mdi-close</v-icon>
+          </v-btn>
+        </v-toolbar>
+        <v-card-text v-if="showPrivateAPIDialog">
+          <open-api
+            v-if="resourceUrl"
+            :url="resourceUrl + '/private-api-docs.json' + (dataset.draftReason ? '?draft=true' : '')"
           />
         </v-card-text>
       </v-card>
@@ -357,7 +394,8 @@ fr:
   update: Mettre à jour
   integrate: Intégrer dans un site
   viewSite: Voir sur {title}
-  useAPI: Utiliser l'API
+  useAPI: Utiliser l'API publique
+  usePrivateAPI: Utiliser l'API
   delete: Supprimer
   deleteAllLines: Supprimer toutes les lignes
   changeOwner: Changer le propriétaire
@@ -441,6 +479,7 @@ en:
       newOwner: null,
       showIntegrationDialog: false,
       showAPIDialog: false,
+      showPrivateAPIDialog: false,
       showNotifDialog: false,
       previewId: 'table',
     }),

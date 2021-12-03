@@ -16,6 +16,7 @@ const journals = require('../utils/journals')
 const esUtils = require('../utils/es')
 const filesUtils = require('../utils/files')
 const datasetAPIDocs = require('../../contract/dataset-api-docs')
+const privateDatasetAPIDocs = require('../../contract/dataset-private-api-docs')
 const permissions = require('../utils/permissions')
 const usersUtils = require('../utils/users')
 const datasetUtils = require('../utils/dataset')
@@ -1310,7 +1311,11 @@ router.get('/:datasetId/full', readDataset(), permissions.middleware('downloadFu
 }))
 
 router.get('/:datasetId/api-docs.json', readDataset(), permissions.middleware('readApiDoc', 'read'), cacheHeaders.resourceBased, (req, res) => {
-  res.send(datasetAPIDocs(req.dataset, req.publicBaseUrl))
+  res.send(datasetAPIDocs(req.dataset, req.publicBaseUrl).api)
+})
+
+router.get('/:datasetId/private-api-docs.json', readDataset(), permissions.middleware('readPrivateApiDoc', 'readAdvanced'), cacheHeaders.noCache, (req, res) => {
+  res.send(privateDatasetAPIDocs(req.dataset, req.publicBaseUrl, req.user))
 })
 
 router.get('/:datasetId/journal', readDataset(), permissions.middleware('readJournal', 'read'), cacheHeaders.noCache, asyncWrap(async(req, res) => {

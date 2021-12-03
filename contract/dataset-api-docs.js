@@ -2,11 +2,8 @@ const config = require('config')
 const prettyBytes = require('pretty-bytes')
 const datasetSchema = require('./dataset')
 const datasetPatchSchema = require('./dataset-patch')
-const datasetPost = require('./dataset-post')
 const journalSchema = require('./journal')
 const version = require('../package.json').version
-const permissionsDoc = require('../server/utils/permissions').apiDoc
-const { visibility } = require('../server/utils/visibility')
 const masterData = require('./master-data')
 const utils = require('./utils')
 
@@ -283,54 +280,16 @@ La valeur est une liste de colonnes séparées par des virgules.
     },
   }
 
-  let securitySchemes = {
-    apiKey: {
-      type: 'apiKey',
-      in: 'header',
-      name: 'x-apiKey',
-    },
-    sdCookie: {
-      type: 'apiKey',
-      in: 'cookie',
-      name: 'id_token',
-    },
-  }
-  let security = [{ apiKey: [] }, { sdCookie: [] }]
-
   let description = `
-Cette documentation interactive à destination des développeurs permet de gérer et consommer les ressources du jeu de données "${dataset.title || dataset.id}".
+Cette documentation interactive à destination des développeurs permet de consommer les ressources du jeu de données "${dataset.title || dataset.id}".
 `
-
-  if (dataset.isVirtual) {
-    description += `
-Ce jeu de données est virtuel. C'est à dire qu'il est constitué de redirections vers un ensemble de jeux de données et qu'il n'a pas été créé à partir d'un fichier téléchargeable.
-`
-  }
-
-  if (dataset.isRest) {
-    description += `
-Ce jeu de données est incrémental. C'est à dire qu'il est constitué dynamiquement à partir de lectures / écritures de lignes et qu'il n'a pas été créé à partir d'un fichier téléchargeable.
-`
-  }
 
   description += `
 Pour protéger l'infrastructure de publication de données, les appels sont limités par quelques règles simples :
 
-  - ${userApiRate}
+- ${anonymousApiRate}
+- ${userApiRate}
   `
-
-  if (visibility(dataset) !== 'public') {
-    description += `
-Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous pouvez créer dans les paramètres d'un compte possédant les permissions nécessaires aux opérations que vous souhaitez effectuer.
-`
-  } else {
-    // no need to present complex security schemes if the data is public anyway
-    securitySchemes = {}
-    security = []
-    description += `
-    - ${anonymousApiRate}
-    `
-  }
 
   const servers = [{
     url: `${publicUrl}/api/v1/datasets/${dataset.id}`,
@@ -340,17 +299,17 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
   const api = {
     openapi: '3.0.0',
     info: {
-      title: `API du jeu de données : ${dataset.title || dataset.id}`,
+      title: `API publique du jeu de données : ${dataset.title || dataset.id}`,
       description,
       version,
       'x-api-id': `${new URL(publicUrl).hostname.replace(/\./g, '-')}-dataset-${dataset.id}`,
       ...config.info,
     },
     components: {
-      securitySchemes,
+      securitySchemes: {},
       schemas: { datasetSchema },
     },
-    security,
+    security: [],
     servers,
     paths: {
       '/': {
@@ -367,67 +326,6 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
                   schema: { $ref: '#/components/schemas/datasetSchema' },
                 },
               },
-            },
-          },
-        },
-        patch: {
-          summary: 'Mettre à jour les informations du jeu de données.',
-          operationId: 'writeDescription',
-          'x-permissionClass': 'write',
-          tags: ['Métadonnées'],
-          requestBody: {
-            description: 'Fichier à charger et informations de propriété',
-            required: true,
-            content: {
-              'application/json': {
-                schema: datasetPatchSchema,
-              },
-            },
-          },
-          responses: {
-            200: {
-              description: 'Les informations du jeu de données.',
-              content: {
-                'application/json': {
-                  schema: { $ref: '#/components/schemas/datasetSchema' },
-                },
-              },
-            },
-          },
-        },
-        post: {
-          summary: 'Mettre à jour les données du jeu de données.',
-          operationId: 'writeData',
-          'x-permissionClass': 'write',
-          tags: ['Données'],
-          requestBody: {
-            description: 'Fichier à charger et autres informations',
-            required: true,
-            content: {
-              'multipart/form-data': {
-                schema: datasetPost,
-              },
-            },
-          },
-          responses: {
-            200: {
-              description: 'Métadonnées sur le dataset modifié',
-              content: {
-                'application/json': {
-                  schema: { $ref: '#/components/schemas/datasetSchema' },
-                },
-              },
-            },
-          },
-        },
-        delete: {
-          summary: 'Supprimer le jeu de données.',
-          operationId: 'delete',
-          'x-permissionClass': 'admin',
-          tags: ['Métadonnées'],
-          responses: {
-            204: {
-              description: 'Suppression effectuée',
             },
           },
         },
@@ -759,52 +657,6 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
           },
         },
       },
-      '/_diagnose': {
-        get: {
-          summary: 'Récupérer des informations techniques',
-          tags: ['Administration'],
-          'x-permissionClass': 'superadmin',
-          responses: {
-            200: {
-              description: 'Informations techniques de diagnostic',
-              content: {
-                'application/json': {},
-              },
-            },
-          },
-        },
-      },
-      '/_reindex': {
-        post: {
-          summary: 'Forcer la reindexation',
-          tags: ['Administration'],
-          'x-permissionClass': 'superadmin',
-          responses: {
-            200: {
-              description: 'accusé de réception de la demande reindexation',
-              content: {
-                'application/json': {},
-              },
-            },
-          },
-        },
-      },
-      '/_refinalize': {
-        post: {
-          summary: 'Forcer la re-finalisation',
-          tags: ['Administration'],
-          'x-permissionClass': 'superadmin',
-          responses: {
-            200: {
-              description: 'accusé de réception de la demande re-finalisation',
-              content: {
-                'application/json': {},
-              },
-            },
-          },
-        },
-      },
-      '/permissions': permissionsDoc,
       ...masterData.endpoints(dataset),
     },
     externalDocs: {
@@ -821,15 +673,11 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
 
   if (dataset.isMetaOnly) {
     delete api.paths['/lines']
-    delete api.paths['/_refinalize']
-    delete api.paths['/_reindex']
-    delete api.paths['/_diagnose']
     delete api.paths['/schema']
     delete api.paths['/words_agg']
     delete api.paths['/metric_agg']
     delete api.paths['/values/{field}']
     delete api.paths['/values_agg']
-    delete api.paths['/'].post
   }
 
   if (textAggProperties.length === 0) {
@@ -863,5 +711,5 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
       },
     }
   }
-  return api
+  return { api, datasetPatchSchema, datasetLineSchema, userApiRate, anonymousApiRate }
 }
