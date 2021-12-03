@@ -31,7 +31,7 @@ const router = exports.router = express.Router()
 exports.syncDataset = async (db, dataset) => {
   const id = 'dataset:' + dataset.id
   if (dataset.masterData && ((dataset.masterData.singleSearchs && dataset.masterData.singleSearchs.length) || (dataset.masterData.bulkSearchs && dataset.masterData.bulkSearchs.length))) {
-    const apiDoc = datasetAPIDocs(dataset)
+    const apiDoc = datasetAPIDocs(dataset).api
     const service = initNew({
       id,
       apiDoc,
