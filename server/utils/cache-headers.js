@@ -10,7 +10,7 @@ const createError = require('http-errors')
 exports.resourceBased = (req, res, next) => {
   const dateKey = req.resource.finalizedAt ? 'finalizedAt' : 'updatedAt'
   const date = (new Date(req.resource[dateKey])).toUTCString()
-  const cacheVisibility = (req.publicOperation && !req.user) ? 'public' : 'private'
+  const cacheVisibility = req.publicOperation ? 'public' : 'private'
 
   const ifModifiedSince = req.get('if-modified-since')
   if (ifModifiedSince && date === ifModifiedSince) {

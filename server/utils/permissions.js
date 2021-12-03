@@ -49,10 +49,6 @@ Sélectionnez l'organisation ${req.resource.owner.name} en tant que compte actif
     if (req.resource && req.resource.owner) res.setHeader('x-owner', JSON.stringify({ type: req.resource.owner.type, id: req.resource.owner.id }))
     req.operation = { class: operationClass, id: operationId, track: trackingCategory }
     res.setHeader('x-operation', JSON.stringify(req.operation))
-    const userHeader = { id: 'anonymous' }
-    if (req.user) userHeader.id = req.user.id
-    if (req.user?.activeAccount.type === 'organization')userHeader.org = req.user.activeAccount.id
-    res.setHeader('x-user', JSON.stringify(userHeader))
     next()
   }
 }
