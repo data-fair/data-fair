@@ -1,10 +1,9 @@
 const config = require('config')
 const prettyBytes = require('pretty-bytes')
 const datasetSchema = require('./dataset')
-const datasetPatchSchema = require('./dataset-patch')
-const journalSchema = require('./journal')
 const version = require('../package.json').version
 const masterData = require('./master-data')
+const datasetUtils = require('../server/utils/dataset')
 const utils = require('./utils')
 
 const apiRate = (key, label) => {
@@ -16,19 +15,7 @@ const anonymousApiRate = apiRate('anonymous', 'anonyme')
 
 module.exports = (dataset, publicUrl = config.publicUrl) => {
   dataset.schema = dataset.schema || []
-  const datasetLineSchema = {
-    type: 'object',
-    properties: dataset.schema.reduce((a, f) => {
-      a[f.key] = { ...f }
-      delete a[f.key].key
-      delete a[f.key].ignoreDetection
-      delete a[f.key].separator
-      delete a[f.key].icon
-      a[f.key].title = a[f.key].title || ''
-      a[f.key].description = a[f.key].description || ''
-      return a
-    }, {}),
-  }
+  const datasetLineSchema = datasetUtils.jsonSchema(dataset.schema, publicUrl, true)
 
   const properties = dataset.schema
   const stringProperties = properties
@@ -584,44 +571,6 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
           },
         },
       },
-      '/api-docs.json': {
-        get: {
-          summary: 'Accéder à la documentation de l\'API',
-          operationId: 'readApiDoc',
-          'x-permissionClass': 'read',
-          tags: ['Métadonnées'],
-          responses: {
-            200: {
-              description: 'La documentation de l\'API',
-              content: {
-                'application/json': {
-                  schema: {
-                    type: 'object',
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
-      '/journal': {
-        get: {
-          summary: 'Accéder au journal',
-          operationId: 'readJournal',
-          'x-permissionClass': 'readAdvanced',
-          tags: ['Métadonnées'],
-          responses: {
-            200: {
-              description: 'Le journal.',
-              content: {
-                'application/json': {
-                  schema: journalSchema,
-                },
-              },
-            },
-          },
-        },
-      },
       '/schema': {
         get: {
           summary: 'Récupérer la liste des colonnes filtrable',
@@ -650,6 +599,26 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
                     items: {
                       type: 'object',
                     },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      '/api-docs.json': {
+        get: {
+          summary: 'Accéder à la documentation publique de l\'API',
+          operationId: 'readApiDoc',
+          'x-permissionClass': 'read',
+          tags: ['Métadonnées'],
+          responses: {
+            200: {
+              description: 'La documentation publique de l\'API',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
                   },
                 },
               },
@@ -711,5 +680,5 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
       },
     }
   }
-  return { api, datasetPatchSchema, datasetLineSchema, userApiRate, anonymousApiRate }
+  return { api, userApiRate, anonymousApiRate }
 }

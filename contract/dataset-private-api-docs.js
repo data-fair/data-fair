@@ -1,11 +1,14 @@
 const config = require('config')
 const datasetAPIDocs = require('./dataset-api-docs')
 const datasetPost = require('./dataset-post')
+const journalSchema = require('./journal')
 const { visibility } = require('../server/utils/visibility')
 const permissionsDoc = require('../server/utils/permissions').apiDoc
+const datasetUtils = require('../server/utils/dataset')
+const datasetPatchSchema = require('./dataset-patch')
 
 module.exports = (dataset, publicUrl = config.publicUrl, user) => {
-  const { api, datasetPatchSchema, userApiRate, anonymousApiRate } = datasetAPIDocs(dataset, publicUrl)
+  const { api, userApiRate, anonymousApiRate } = datasetAPIDocs(dataset, publicUrl)
 
   const title = `API privée du jeu de données : ${dataset.title || dataset.id}`
 
@@ -122,59 +125,294 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
     },
   })
 
-  Object.assign(api.paths, {
-    '/_diagnose': {
+  api.paths['/private-api-docs.json'] = {
+    get: {
+      summary: 'Accéder à la documentation privée de l\'API',
+      operationId: 'readPrivateApiDoc',
+      'x-permissionClass': 'readAdvanced',
+      tags: ['Métadonnées'],
+      responses: {
+        200: {
+          description: 'La documentation privée de l\'API',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+              },
+            },
+          },
+        },
+      },
+    },
+  }
+
+  api.paths['/journal'] = {
+    get: {
+      summary: 'Accéder au journal',
+      operationId: 'readJournal',
+      'x-permissionClass': 'readAdvanced',
+      tags: ['Métadonnées'],
+      responses: {
+        200: {
+          description: 'Le journal.',
+          content: {
+            'application/json': {
+              schema: journalSchema,
+            },
+          },
+        },
+      },
+    },
+  }
+
+  if (dataset.isRest) {
+    const readLineSchema = datasetUtils.jsonSchema(dataset.schema, publicUrl, true, false)
+    const writeLineSchema = datasetUtils.jsonSchema(dataset.schema, publicUrl, false, true)
+    const patchLineSchema = datasetUtils.jsonSchema(dataset.schema, publicUrl, false, false)
+    const bulkLineSchema = datasetUtils.jsonSchema(dataset.schema, publicUrl, false, true)
+    bulkLineSchema.properties._action = {
+      type: 'string',
+      title: 'Action',
+      enum: ['create', 'delete', 'update', 'patch'],
+      description: `
+- create: créé la ligne
+- delete: supprime la ligne, nécessite la présence de _id
+- update: remplate la ligne, nécessite la présence de _id
+- patch: modifie la ligne, nécessite la présence de _id
+    `,
+}
+
+    api.paths['/lines/{lineId}'] = {
+      parameters: [{
+        in: 'path',
+        name: 'lineId',
+        description: 'L\'identifiant de la ligne',
+        required: true,
+        schema: {
+          type: 'string',
+        },
+      }],
       get: {
-        summary: 'Récupérer des informations techniques',
-        tags: ['Administration'],
-        'x-permissionClass': 'superadmin',
+        summary: 'Récupérer une ligne de données',
+        operationId: 'readLine',
+        'x-permissionClass': 'read',
+        tags: ['Données incrémentales'],
         responses: {
           200: {
-            description: 'Informations techniques de diagnostic',
+            description: 'Le contenu d\'une ligne de données',
             content: {
-              'application/json': {},
+              'application/json': {
+                schema: readLineSchema,
+              },
             },
           },
         },
       },
-    },
-    '/_reindex': {
+      put: {
+        summary: 'Remplacer une ligne de données',
+        operationId: 'updateLine',
+        'x-permissionClass': 'write',
+        tags: ['Données incrémentales'],
+        requestBody: {
+          description: 'Le contenu d\'une ligne de données',
+          required: true,
+          content: {
+            'application/json': {
+              schema: patchLineSchema,
+            },
+          },
+        },
+        responses: {
+          200: {
+            description: 'La ligne de données modifiée',
+            content: {
+              'application/json': {
+                schema: readLineSchema,
+              },
+            },
+          },
+        },
+      },
+      patch: {
+        summary: 'Modifier une ligne de données',
+        operationId: 'patchLine',
+        'x-permissionClass': 'write',
+        tags: ['Données incrémentales'],
+        requestBody: {
+          description: 'Le contenu partiel d\'une ligne de données',
+          required: true,
+          content: {
+            'application/json': {
+              schema: patchLineSchema,
+            },
+          },
+        },
+        responses: {
+          200: {
+            description: 'La ligne de données après modification',
+            content: {
+              'application/json': {
+                schema: readLineSchema,
+              },
+            },
+          },
+        },
+      },
+      delete: {
+        summary: 'Supprimer une ligne de données',
+        operationId: 'deleteLine',
+        'x-permissionClass': 'write',
+        tags: ['Données incrémentales'],
+        responses: {
+          204: {
+            description: 'La ligne de données a été supprimée',
+          },
+        },
+      },
+    }
+    api.paths['/lines'] = {
       post: {
-        summary: 'Forcer la reindexation',
-        tags: ['Administration'],
-        'x-permissionClass': 'superadmin',
+        summary: 'Ajouter une ligne de données',
+        operationId: 'createLine',
+        'x-permissionClass': 'write',
+        tags: ['Données incrémentales'],
+        requestBody: {
+          description: 'Le contenu d\'une ligne de données',
+          required: true,
+          content: {
+            'application/json': {
+              schema: writeLineSchema,
+            },
+          },
+        },
         responses: {
-          200: {
-            description: 'accusé de réception de la demande reindexation',
+          201: {
+            description: 'La ligne de données ajoutée',
             content: {
-              'application/json': {},
+              'application/json': {
+                schema: readLineSchema,
+              },
             },
           },
         },
       },
-    },
-    '/_refinalize': {
+      delete: {
+        summary: 'Supprimer toutes les lignes de données',
+        operationId: 'deleteAllLines',
+        'x-permissionClass': 'write',
+        tags: ['Données incrémentales'],
+        responses: {
+          204: {
+            description: 'Toutes les lignes de données ont été supprimées',
+          },
+        },
+      },
+    }
+    api.paths['/_bulk_lines'] = {
       post: {
-        summary: 'Forcer la re-finalisation',
-        tags: ['Administration'],
-        'x-permissionClass': 'superadmin',
+        summary: 'Créer/modifier/supprimer de multiples lignes en une seule opération',
+        operationId: 'bulkLines',
+        'x-permissionClass': 'write',
+        tags: ['Données incrémentales'],
+        requestBody: {
+          description: 'Les opérations à appliquer',
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'array',
+                items: bulkLineSchema,
+              },
+            },
+            'application/x-ndjson': {
+              schema: bulkLineSchema,
+            },
+          },
+        },
         responses: {
           200: {
-            description: 'accusé de réception de la demande re-finalisation',
+            description: 'Le résultat des opérations',
             content: {
-              'application/json': {},
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    nbOk: { type: 'integer' },
+                    nbNotModified: { type: 'integer' },
+                    nbErrors: { type: 'integer' },
+                    errors: {
+                      type: 'array',
+                      items: {
+                        type: 'object',
+                        properties: {
+                          line: { type: 'integer' },
+                          error: { type: 'string' },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
             },
           },
         },
       },
-    },
-    '/permissions': permissionsDoc,
-  })
+    }
+  }
+
+  api.paths['/permissions'] = permissionsDoc
+
+  if (!dataset.isMetaOnly && user.adminMode) {
+    Object.assign(api.paths, {
+      '/_diagnose': {
+        get: {
+          summary: 'Récupérer des informations techniques',
+          tags: ['Administration'],
+          'x-permissionClass': 'superadmin',
+          responses: {
+            200: {
+              description: 'Informations techniques de diagnostic',
+              content: {
+                'application/json': {},
+              },
+            },
+          },
+        },
+      },
+      '/_reindex': {
+        post: {
+          summary: 'Forcer la reindexation',
+          tags: ['Administration'],
+          'x-permissionClass': 'superadmin',
+          responses: {
+            200: {
+              description: 'accusé de réception de la demande reindexation',
+              content: {
+                'application/json': {},
+              },
+            },
+          },
+        },
+      },
+      '/_refinalize': {
+        post: {
+          summary: 'Forcer la re-finalisation',
+          tags: ['Administration'],
+          'x-permissionClass': 'superadmin',
+          responses: {
+            200: {
+              description: 'accusé de réception de la demande re-finalisation',
+              content: {
+                'application/json': {},
+              },
+            },
+          },
+        },
+      },
+    })
+  }
 
   if (dataset.isMetaOnly) {
-    delete api.paths['/_refinalize']
-    delete api.paths['/_reindex']
-    delete api.paths['/_diagnose']
     delete api.paths['/'].post
   }
 
