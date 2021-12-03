@@ -34,7 +34,6 @@ const setResource = asyncWrap(async(req, res, next) => {
   if (!req.application) return res.status(404).send(req.__('errors.missingApp'))
   findUtils.setResourceLinks(req.application, 'application', req.publicBaseUrl)
   req.resourceType = 'applications'
-  req.resourceApiDoc = applicationAPIDocs(req.application)
   next()
 })
 

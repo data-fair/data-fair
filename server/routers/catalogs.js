@@ -118,7 +118,6 @@ const readCatalog = asyncWrap(async(req, res, next) => {
   if (!catalog) return res.status(404).send('Catalog not found')
   req.catalog = req.resource = mongoEscape.unescape(catalog, true)
   req.resourceType = 'catalogs'
-  req.resourceApiDoc = catalogAPIDocs(req.catalog)
   next()
 })
 
@@ -189,7 +188,7 @@ router.delete('/:catalogId', readCatalog, permissions.middleware('delete', 'admi
 }))
 
 router.get('/:catalogId/api-docs.json', readCatalog, permissions.middleware('readApiDoc', 'read'), cacheHeaders.resourceBased, (req, res) => {
-  res.send(req.resourceApiDoc)
+  res.send(catalogAPIDocs(req.catalog))
 })
 
 router.get('/:catalogId/datasets', readCatalog, permissions.middleware('readDatasets', 'use'), cacheHeaders.noCache, asyncWrap(async(req, res, next) => {

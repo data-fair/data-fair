@@ -195,7 +195,6 @@ const readDataset = (_acceptedStatuses, noDraft, preserveDraft, ignoreDraft) => 
     }
 
     req.resourceType = 'datasets'
-    req.resourceApiDoc = datasetAPIDocs(req.dataset, req.publicBaseUrl)
 
     if (
       req.dataset.status !== 'draft' &&
@@ -1311,7 +1310,7 @@ router.get('/:datasetId/full', readDataset(), permissions.middleware('downloadFu
 }))
 
 router.get('/:datasetId/api-docs.json', readDataset(), permissions.middleware('readApiDoc', 'read'), cacheHeaders.resourceBased, (req, res) => {
-  res.send(req.resourceApiDoc)
+  res.send(datasetAPIDocs(req.dataset, req.publicBaseUrl))
 })
 
 router.get('/:datasetId/journal', readDataset(), permissions.middleware('readJournal', 'read'), cacheHeaders.noCache, asyncWrap(async(req, res) => {

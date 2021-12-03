@@ -178,7 +178,6 @@ const readService = asyncWrap(async(req, res, next) => {
   if (!service) return res.status(404).send('Remote Api not found')
   req.remoteService = req.resource = mongoEscape.unescape(service, true)
   req.resourceType = 'remote-services'
-  req.resourceApiDoc = remoteServiceAPIDocs(req.remoteService)
   // console.log('read service', new Date().getTime() - req.t0)
   next()
 })
@@ -387,5 +386,5 @@ router.use('/:remoteServiceId/proxy*', (req, res, next) => { req.app.get('anonym
 
 // Anybody can read the API doc
 router.get('/:remoteServiceId/api-docs.json', readService, cacheHeaders.resourceBased, (req, res) => {
-  res.send(req.resourceApiDoc)
+  res.send(remoteServiceAPIDocs(req.remoteService))
 })

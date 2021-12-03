@@ -136,7 +136,6 @@ const readApplication = asyncWrap(async(req, res, next) => {
     .findOne({ id: req.params.applicationId }, { projection: { _id: 0 } })
   if (!req.application) return res.status(404).send(req.__('errors.missingApp'))
   req.resourceType = 'applications'
-  req.resourceApiDoc = applicationAPIDocs(req.application)
   next()
 })
 

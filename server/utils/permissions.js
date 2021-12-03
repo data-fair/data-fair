@@ -36,8 +36,6 @@ Sélectionnez l'organisation ${req.resource.owner.name} en tant que compte actif
       if (operationId === 'readDescription') {
         return res.send(`${denomination} est accessible uniquement aux utilisateurs autorisés par le propriétaire. Vous n'avez pas les permissions nécessaires pour visualiser les informations.`)
       }
-      const operation = apiDocsUtil.operations(req.resourceApiDoc).find(o => o.id === operationId)
-      if (operation) return res.send(`Permission manquante pour l'opération "${operation.title}" ou la catégorie "${operationClass}".`)
       return res.send(`Permission manquante pour cette opération ou la catégorie "${operationClass}".`)
     }
 
