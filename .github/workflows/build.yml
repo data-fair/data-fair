@@ -36,7 +36,7 @@ jobs:
     - run: npm i
     - run: npm run lint
     # - run: npm run build
-    - run: NO_UI=true docker-compose up -d
+    - run: NO_UI=true docker-compose --profile test up -d
     - name: Wait for containers
       uses: jakejarvis/wait-action@master
       with:

@@ -1,6 +1,9 @@
 version: '3'
 services:
   es:
+    profiles:
+      - dev
+      - test
     image: koumoul/data-fair-elasticsearch:7.10.2
     ports:
       - 9200:9200
@@ -10,12 +13,18 @@ services:
     volumes:
       - elasticsearch-data:/usr/share/elasticsearch/data
   mongo:
+    profiles:
+      - dev
+      - test
     image: mongo:4.2
     ports:
       - 27017:27017
     volumes:
       - mongo-data:/data/db
   sd:
+    profiles:
+      - dev
+      - test
     image: koumoul/simple-directory:master
     network_mode: host
     environment:
@@ -37,11 +46,15 @@ services:
       - ./test/resources/organizations.json:/webapp/data/organizations.json
 
   openapi-viewer:
+    profiles:
+      - dev
     image: koumoul/openapi-viewer:1
     ports:
       - 5680:8080
 
   capture:
+    profiles:
+      - dev
     image: koumoul/capture:master
     network_mode: host
     shm_size: '1gb'
@@ -51,6 +64,8 @@ services:
       - PUBLIC_URL=http://localhost:5600/capture
 
   thumbor:
+    profiles:
+      - dev
     image: apsl/thumbor:6.4.2
     network_mode: host
     environment:
@@ -59,6 +74,8 @@ services:
       - MAX_AGE=600
 
   notify:
+    profiles:
+      - dev
     image: ghcr.io/data-fair/notify:master
     network_mode: host
     environment:
