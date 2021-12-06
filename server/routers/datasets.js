@@ -210,7 +210,16 @@ const readDataset = (_acceptedStatuses, noDraft, preserveDraft, ignoreDraft) => 
   throw createError(409, `Le jeu de données n'est pas dans un état permettant l'opération demandée. État courant : ${req.dataset.status}.`)
 })
 
-router.use('/:datasetId/permissions', readDataset(), permissions.router('datasets', 'dataset'))
+router.use('/:datasetId/permissions', readDataset(), permissions.router('datasets', 'dataset', async (req) => {
+  // this callback function is called when the resource becomes public
+  const db = req.app.get('db')
+  for (const publicationSite of req.dataset.publicationSites || []) {
+    webhooks.trigger(db, 'dataset', req.dataset, { type: `published:${publicationSite}` })
+    for (const topic of req.dataset.topics || []) {
+      webhooks.trigger(db, 'dataset', req.dataset, { type: `published-topic:${publicationSite}:${topic.id}` })
+    }
+  }
+}))
 
 // retrieve a dataset by its id
 router.get('/:datasetId', readDataset(), applicationKey, permissions.middleware('readDescription', 'read'), cacheHeaders.noCache, (req, res, next) => {
@@ -326,19 +335,17 @@ router.patch('/:datasetId', readDataset((patch) => {
     patch.finalizedAt = (new Date()).toISOString()
   }
 
-  const wasPublic = permissions.isPublic('datasets', req.dataset)
   const previousPublicationSites = req.dataset.publicationSites || []
   const previousTopics = req.dataset.topics || []
 
   await datasetUtils.applyPatch(db, req.dataset, patch)
 
   // send webhooks/notifs based on changes during this patch
-  const isPublic = permissions.isPublic('datasets', req.dataset)
   const newPublicationSites = req.dataset.publicationSites || []
   const newTopics = req.dataset.topics || []
   for (const publicationSite of newPublicationSites) {
     // send a notification either because the publicationSite was added, or because the visibility changed
-    if (!previousPublicationSites.includes(publicationSite) || (isPublic && !wasPublic)) {
+    if (!previousPublicationSites.includes(publicationSite)) {
       webhooks.trigger(db, 'dataset', req.dataset, { type: `published:${publicationSite}` })
       for (const topic of newTopics) {
         webhooks.trigger(db, 'dataset', req.dataset, { type: `published-topic:${publicationSite}:${topic.id}` })

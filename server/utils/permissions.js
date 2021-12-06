@@ -173,7 +173,7 @@ exports.canDoForOwner = function(owner, resourceType, operationClass, user) {
   return ownerClasses && ownerClasses.includes(operationClass)
 }
 
-module.exports.router = (resourceType, resourceName) => {
+module.exports.router = (resourceType, resourceName, onPublicCallback) => {
   const router = express.Router()
 
   router.get('', exports.middleware('getPermissions', 'admin'), async (req, res, next) => {
@@ -201,6 +201,7 @@ module.exports.router = (resourceType, resourceName) => {
             'publications.status': 'published',
           }, { $set: { 'publications.$.status': 'waiting' } })
         }
+        if (!wasPublic && willBePublic && onPublicCallback) await onPublicCallback(req)
       }
 
       await resources.updateOne({
