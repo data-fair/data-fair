@@ -75,7 +75,7 @@ router.put('/:type/:id', isOwnerAdmin, asyncWrap(async(req, res) => {
     if (!apiKey.id) apiKey.id = nanoid()
 
     if (!apiKey.key) {
-      fullApiKeys[i].clearKey = nanoid()
+      fullApiKeys[i].clearKey = Buffer.from(`${owner.type.slice(0, 1)}:${owner.id}:${nanoid()}`).toString('base64url')
       const hash = crypto.createHash('sha512')
       hash.update(fullApiKeys[i].clearKey)
       fullApiKeys[i].key = apiKey.key = hash.digest('hex')

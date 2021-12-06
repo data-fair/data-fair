@@ -26,7 +26,9 @@
         </p><p>
           Il suffit de passer le header "x-apiKey" dans votre client HTTP. Par exemple :
         </p>
-        <pre><code>curl -v -H "x-apiKey: {{ apiKey.clearKey || 'XXX' }}" {{ env.publicUrl }}/api/v1/{{ apiKey.scopes[0] }}</code></pre>
+        <pre style="white-space: pre-wrap;">
+          <code>curl -v -H "x-apiKey: {{ apiKey.clearKey || 'XXX' }}" {{ env.publicUrl }}/api/v1/{{ apiKey.scopes[0] }}</code>
+        </pre>
       </v-card-text>
       <v-card-actions>
         <v-spacer />
