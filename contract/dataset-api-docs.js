@@ -24,8 +24,6 @@ module.exports = (dataset, publicUrl = config.publicUrl) => {
     .filter(p => !p['x-capabilities'] || p['x-capabilities'].text !== false || p['x-capabilities'].textStandard !== false)
   const textAggProperties = stringProperties
     .filter(p => !p['x-capabilities'] || p['x-capabilities'].textAgg !== false)
-  const stringFilterProperties = dataset.schema
-    .filter(p => !p['x-capabilities'] || p['x-capabilities'].index !== false)
   const stringValuesProperties = dataset.schema
     .filter(p => !p['x-capabilities'] || p['x-capabilities'].index !== false)
   const numberProperties = dataset.schema
@@ -121,23 +119,6 @@ Pour plus d'information voir la documentation [ElasticSearch](https://www.elasti
       style: 'commaDelimited',
     })
   }
-  stringFilterProperties.forEach(prop => {
-    filterParams.push({
-      in: 'query',
-      name: `${prop.key}_in`,
-      description: `
-Un filtre pour restreindre les résultats en fonction d'une liste de valeurs acceptées sur la propriété ${prop.key}.
-    `,
-      schema: {
-        type: 'array',
-        items: {
-          type: 'string',
-          enum: prop.enum,
-        },
-      },
-      style: 'commaDelimited',
-    })
-  })
 
   const hitsParams = [{
     in: 'query',
