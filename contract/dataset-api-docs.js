@@ -366,7 +366,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
             description: 'Afficher une ligne de résultat par valeur distince d\'un champ',
             schema: {
               type: 'string',
-              enum: stringValuesProperties.map(p => p.key),
+              // enum: stringValuesProperties.map(p => p.key), TODO: same thing but can be emptied, supported by openapi viewer ?
             },
           }]),
           responses: {

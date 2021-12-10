@@ -271,6 +271,7 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
       },
     }
     api.paths['/lines'] = {
+      ...api.paths['/lines'],
       post: {
         summary: 'Ajouter une ligne de données',
         operationId: 'createLine',
