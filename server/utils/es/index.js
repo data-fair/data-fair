@@ -15,7 +15,6 @@ exports.wordsAgg = require('./words-agg')
 exports.maxAgg = smallAggs.max
 exports.minAgg = smallAggs.min
 exports.indexStream = require('./index-stream')
-exports.distinctLines = require('./distinct-lines')
 
 exports.init = async () => {
   let node = config.elasticsearch.host

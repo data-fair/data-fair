@@ -360,7 +360,15 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
               default: 1,
               type: 'integer',
             },
-          }, formatParam].concat(filterParams).concat(hitsParams),
+          }, formatParam].concat(filterParams).concat(hitsParams).concat([{
+            in: 'query',
+            name: 'collapse',
+            description: 'Afficher une ligne de résultat par valeur distince d\'un champ',
+            schema: {
+              type: 'string',
+              enum: stringValuesProperties.map(p => p.key),
+            },
+          }]),
           responses: {
             200: {
               description: 'Le résultat de la requête.',

@@ -1037,12 +1037,11 @@ router.get('/:datasetId/lines', readDataset(), applicationKey, permissions.middl
     return res.status(200).send(tile)
   }
 
-  const result = {
-    total: esResponse.hits.total.value,
-    results: esResponse.hits.hits.map(hit => {
-      return esUtils.prepareResultItem(hit, req.dataset, req.query)
-    }),
-  }
+  const result = { total: esResponse.hits.total.value }
+  if (req.query.collapse) result.totalCollapse = esResponse.aggregations.totalCollapse.value
+  result.results = esResponse.hits.hits.map(hit => {
+    return esUtils.prepareResultItem(hit, req.dataset, req.query)
+  })
 
   if (req.query.format === 'csv') {
     res.setHeader('content-disposition', `attachment; filename="${req.dataset.id}.csv"`)
