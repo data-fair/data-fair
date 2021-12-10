@@ -1,3 +1,4 @@
+const config = require('config')
 const fs = require('fs-extra')
 const { Readable } = require('stream')
 const i18nUtils = require('./i18n')
@@ -5,7 +6,6 @@ const icalendar = require('@koumoul/icalendar')
 const moment = require('moment')
 require('moment-timezone')
 const rrule = require('rrule')
-const { config } = require('process')
 const localeTimeZone = moment.tz.guess()
 
 // We want date_only dates to at time 00:00 in the most relevant timezone
@@ -108,7 +108,6 @@ exports.parse = async (filePath) => {
 }
 
 exports.prepareSchema = (dataset, icalInfos) => {
-  console.log('prepare schema')
   dataset.extras = dataset.extras || {}
   dataset.extras.iCalendar = icalInfos
   dataset.timeZone = icalInfos.timeZone
