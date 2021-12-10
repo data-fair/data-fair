@@ -12,7 +12,7 @@ const datasetUtils = require('../utils/dataset')
 const icalendar = require('../utils/icalendar')
 const exec = require('../utils/exec')
 const xlsx = require('../utils/xlsx')
-const vocabulary = require('../../contract/vocabulary')
+const i18nUtils = require('../utils/i18n')
 
 exports.eventsPrefix = 'convert'
 
@@ -76,7 +76,7 @@ exports.process = async function(app, dataset) {
         encoding: 'utf-8',
       }
       if (!dataset.schema.find(f => f.key === 'file')) {
-        const concept = vocabulary.find(c => c.identifiers.includes('http://schema.org/DigitalDocument'))
+        const concept = i18nUtils.vocabulary[config.i18n.defaultLocale]['http://schema.org/DigitalDocument']
         dataset.schema.push({
           key: 'attachment',
           'x-originalName': 'attachment',

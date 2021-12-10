@@ -1,10 +1,11 @@
 const fs = require('fs-extra')
 const { Readable } = require('stream')
-const vocabulary = require('../../contract/vocabulary')
+const i18nUtils = require('./i18n')
 const icalendar = require('@koumoul/icalendar')
 const moment = require('moment')
 require('moment-timezone')
 const rrule = require('rrule')
+const { config } = require('process')
 const localeTimeZone = moment.tz.guess()
 
 // We want date_only dates to at time 00:00 in the most relevant timezone
@@ -107,13 +108,14 @@ exports.parse = async (filePath) => {
 }
 
 exports.prepareSchema = (dataset, icalInfos) => {
+  console.log('prepare schema')
   dataset.extras = dataset.extras || {}
   dataset.extras.iCalendar = icalInfos
   dataset.timeZone = icalInfos.timeZone
   delete icalInfos.timeZone
 
   if (!dataset.schema.find(f => f.key === 'GEO')) {
-    const concept = vocabulary.find(c => c.identifiers.includes('http://www.w3.org/2003/01/geo/wgs84_pos#lat_long'))
+    const concept = i18nUtils.vocabulary[config.i18n.defaultLocale]['http://www.w3.org/2003/01/geo/wgs84_pos#lat_long']
     dataset.schema.push({
       key: 'GEO',
       'x-originalName': 'GEO',
@@ -124,7 +126,7 @@ exports.prepareSchema = (dataset, icalInfos) => {
     })
   }
   if (!dataset.schema.find(f => f.key === 'URL')) {
-    const concept = vocabulary.find(c => c.identifiers.includes('https://schema.org/WebPage'))
+    const concept = i18nUtils.vocabulary[config.i18n.defaultLocale]['https://schema.org/WebPage']
     dataset.schema.push({
       key: 'URL',
       'x-originalName': 'URL',
@@ -135,7 +137,7 @@ exports.prepareSchema = (dataset, icalInfos) => {
     })
   }
   if (!dataset.schema.find(f => f.key === 'DTSTART')) {
-    const concept = vocabulary.find(c => c.identifiers.includes('https://schema.org/startDate'))
+    const concept = i18nUtils.vocabulary[config.i18n.defaultLocale]['https://schema.org/startDate']
     dataset.schema.push({
       key: 'DTSTART',
       'x-originalName': 'DTSTART',
@@ -146,7 +148,7 @@ exports.prepareSchema = (dataset, icalInfos) => {
     })
   }
   if (!dataset.schema.find(f => f.key === 'DTEND')) {
-    const concept = vocabulary.find(c => c.identifiers.includes('https://schema.org/endDate'))
+    const concept = i18nUtils.vocabulary[config.i18n.defaultLocale]['https://schema.org/endDate']
     dataset.schema.push({
       key: 'DTEND',
       'x-originalName': 'DTEND',
@@ -157,7 +159,7 @@ exports.prepareSchema = (dataset, icalInfos) => {
     })
   }
   if (!dataset.schema.find(f => f.key === 'SUMMARY')) {
-    const concept = vocabulary.find(c => c.identifiers.includes('http://www.w3.org/2000/01/rdf-schema#label'))
+    const concept = i18nUtils.vocabulary[config.i18n.defaultLocale]['http://www.w3.org/2000/01/rdf-schema#label']
     dataset.schema.push({
       key: 'SUMMARY',
       'x-originalName': 'SUMMARY',
@@ -168,7 +170,7 @@ exports.prepareSchema = (dataset, icalInfos) => {
     })
   }
   if (!dataset.schema.find(f => f.key === 'DESCRIPTION')) {
-    const concept = vocabulary.find(c => c.identifiers.includes('http://schema.org/description'))
+    const concept = i18nUtils.vocabulary[config.i18n.defaultLocale]['http://schema.org/description']
     dataset.schema.push({
       key: 'DESCRIPTION',
       'x-originalName': 'DESCRIPTION',

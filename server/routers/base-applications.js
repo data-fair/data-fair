@@ -10,15 +10,12 @@ const Extractor = require('html-extractor')
 const htmlExtractor = new Extractor()
 htmlExtractor.extract = util.promisify(htmlExtractor.extract)
 const i18n = require('i18n')
-const vocabularyArray = require('../../contract/vocabulary')
+const i18nUtils = require('../utils/i18n')
 const asyncWrap = require('../utils/async-wrap')
 const findUtils = require('../utils/find')
 const baseAppsUtils = require('../utils/base-apps')
 const cacheHeaders = require('../utils/cache-headers')
 const router = exports.router = express.Router()
-
-const vocabulary = {}
-vocabularyArray.forEach(term => { term.identifiers.forEach(id => { vocabulary[id] = term }) })
 
 // Fill the collection using the default base applications from config
 // and cleanup non-public apps that are not used anywhere
@@ -160,6 +157,7 @@ router.get('', cacheHeaders.noCache, asyncWrap(async(req, res) => {
   // optionally complete informations based on a dataset to guide user in selecting suitable application
   if (req.query.dataset) {
     let datasetBBox, datasetVocabulary, datasetTypes, datasetId, datasetCount
+    const vocabulary = i18nUtils.vocabulary[req.locale]
     if (req.query.dataset === 'any') {
       // match constraints against all datasets of current account
       const filter = { 'owner.type': req.user.activeAccount.type, 'owner.id': req.user.activeAccount.id }
