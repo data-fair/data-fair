@@ -1,6 +1,4 @@
 const assert = require('assert').strict
-const fs = require('fs')
-const FormData = require('form-data')
 const testUtils = require('./resources/test-utils')
 const workers = require('../server/workers')
 
