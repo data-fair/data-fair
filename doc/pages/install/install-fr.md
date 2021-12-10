@@ -15,9 +15,9 @@ Nous proposons une installation simple grâce à l'utilisation de conteneurs [Do
 
 ### Configuration matérielle
 
-Ce service a été testé sous Linux (Ubuntu 16.04), vous pouvez utiliser n'importe quel système Linux compatible avec un démon Docker récent. Le service n'a pas besoin de beaucoup de ressources de calcul, mais plutôt de mémoire et d'entrée sortie. La configuration recommandée est la suivante :
+Ce service a été testé sous Linux (Ubuntu 20.04), vous pouvez utiliser n'importe quel système Linux compatible avec un démon Docker récent. La configuration minimale recommandée est la suivante :
 
- * Au moins 2 coeurs, 4 si les base de données tournent sur la même machine
+ * Au moins 2 coeurs, 4 si les bases de données tournent sur la même machine
  * 4 Go de RAM, 16 si les base données tournent sur la même machine. Cette quantité peut être plus importante si l'on souhaite stocker des volumes importants. Dans ce cas nous conseillons d'installer ElasticSearch sur une autre machine avec plus de mémoire vive, ou de faire un cluster sur plusieurs machines.
  * 50 Go de disque dur, de type SSD. Cette quantité peut être plus importante suivant le volume de données que l'on souhaite gérer.
  * 100 Mbits de bande passante au minimum, que ce soit en montant ou en descendant.
@@ -30,13 +30,13 @@ Nous conseillons aussi d'installer [docker-compose](https://docs.docker.com/comp
 
 ### MongoDB
 
-Le service nécessite MongoDB 3.4 ou supérieur pour persister ses données. MongoDB peut être [installé de différentes manières](https://docs.mongodb.com/v3.4/installation/).
+Le service nécessite MongoDB 4.x pour persister ses données. MongoDB peut être [installé de différentes manières](https://docs.mongodb.com/v4.4/installation/).
 
 **Installer MongoDB manuellement est optionnel**, vous pouvez opter pour une installation globale de tous les services avec Docker (voir plus bas).
 
 ### ElasticSearch
 
-Le service nécessite ElasticSearch 6.0 avec le plugin ingest-attachment. Les instruction d'installation sont [disponibles ici](https://www.elastic.co/guide/en/elasticsearch/reference/6.0/install-elasticsearch.html).
+Le service nécessite ElasticSearch 7.x avec le plugin ingest-attachment. Les instruction d'installation sont [disponibles ici](https://www.elastic.co/guide/en/elasticsearch/reference/6.0/install-elasticsearch.html).
 
 **Installer ElasticSearch manuellement est optionnel**, vous pouvez opter pour une installation globale de tous les services avec Docker (voir plus bas).
 
@@ -84,7 +84,7 @@ services:
   #########################
 
   data-fair:
-    image: koumoul/data-fair:2
+    image: ghcr.io/data-fair/data-fair:3
     restart: always
     volumes:
       - data-fair-data:/webapp/data
@@ -109,7 +109,7 @@ services:
       - SECRET_NOTIFICATIONS=${SECRET}
 
   simple-directory:
-    image: koumoul/simple-directory:1
+    image: koumoul/simple-directory:3
     restart: always
     volumes:
       - simple-directory-security:/webapp/security
@@ -148,7 +148,7 @@ services:
       - DIRECTORY_URL=${PROTOCOL}://${DOMAIN}/simple-directory
 
   notify:
-    image: koumoul/notify:0
+    image: ghcr.io/data-fair/notify:2
     restart: 'always'
     environment:
       - PUBLIC_URL=${PROTOCOL}://${DOMAIN}/notify
@@ -184,7 +184,7 @@ services:
       - discovery.type=single-node
 
   mongo:
-    image: mongo:4.0
+    image: mongo:4.4
     restart: always
     volumes:
       - mongo-data:/data/db
@@ -287,6 +287,26 @@ Cette variante est une solution complète de déploiement sécurisé. En pré-re
   - un nom de domaine configuré pour pointer vers l'adresse de cette machine virtuelle
 
 **À venir**
+
+### Portails
+
+**À venir intégration de data-fair/portals**
+
+### Traitements périodiques
+
+**À venir intégration de data-fair/processings**
+
+### Métriques
+
+**À venir intégration de data-fair/metrics et prometheus**
+
+### Cache
+
+**À venir intégration d'un reverse-proxy avec cache pour alléger la charge sur les ressources publiques de data-fair**
+
+### Backup
+
+**À venir intégration de data-fair/backup**
 
 ### Mises à jour
 
