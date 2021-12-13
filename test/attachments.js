@@ -28,12 +28,14 @@ describe('Attachments', () => {
     assert.equal(dataset.status, 'finalized')
 
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`, {
-      params: { select: 'file,_file.content', highlight: '_file.content', q: 'test' },
+      params: { highlight: '_file.content', q: 'test' },
     })
     assert.equal(res.data.total, 2)
     const odtItem = res.data.results.find(item => item.file === 'test.odt')
     assert.ok(odtItem)
     assert.equal(odtItem['_file.content'], 'This is a test libreoffice file.')
+    res = await ax.get(res.data.results[0]._attachment_url)
+    assert.equal(res.status, 200)
   })
 
   it('Process newly uploaded attachments along with data file', async () => {
