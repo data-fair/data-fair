@@ -508,6 +508,10 @@
           "default": false
         },
         "example": {},
+        "examples": {
+          "type": "array",
+          "items": {}
+        },
         "externalDocs": {
           "$ref": "#/definitions/ExternalDocumentation"
         },

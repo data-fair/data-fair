@@ -232,7 +232,9 @@ describe('datasets', () => {
     res = await ax.get(webhook.href + '/api-docs.json')
     assert.equal(res.status, 200)
     assert.equal(res.data.openapi, '3.0.0')
+    res = await ax.post('/api/v1/_check-api', res.data)
     const datasetId = webhook.href.split('/').pop()
+
     // testing journal, updating data and then journal length again
     wsCli.send(JSON.stringify({ type: 'subscribe', channel: 'datasets/' + datasetId + '/journal' }))
     res = await ax.get('/api/v1/datasets/' + datasetId + '/journal')
