@@ -3,7 +3,7 @@
     <v-col :style="this.$vuetify.breakpoint.lgAndUp ? 'padding-right:256px;' : ''">
       <v-container class="py-0">
         <v-subheader class="px-0 pr-12 mb-2">
-          {{ $t('pages.services.description') }}
+          {{ $t('description') }}
         </v-subheader>
 
         <v-container
@@ -78,6 +78,13 @@
     </v-col>
   </v-row>
 </template>
+
+<i18n lang="yaml">
+fr:
+  description: Cet espace vous permet de gérer les services Web configurés pour l'interopérabilité. Ces services sont généralement utilisés pour proposer des capacités d'enrichissement aux utilisateurs. Un service interopérable peut également être un jeu de données data-fair (local ou distant).
+en:
+  description: This page lets you manage the Web services configured for interoperability. These services are mostly used to propose extentions to the users. An interoperable service can also be a data-fair dataset (local or remote).
+</i18n>
 
 <script>
   const { mapState } = require('vuex')
