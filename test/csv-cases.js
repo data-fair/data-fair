@@ -193,4 +193,13 @@ describe('CSV cases', () => {
     assert.equal(res.data.results[0].appellation, 'Agri...')
     assert.equal(res.data.results[0].r2, undefined)
   })
+
+  it('A CSV with null utf chars', async () => {
+    // better to remove these chars as they can be considered as some end of string by somer parsers
+    const ax = global.ax.dmeadus
+    const dataset = await testUtils.sendDataset('csv-cases/rge-null-chars.csv', ax)
+    let res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines?format=csv`)
+    assert.equal(res.data.split('\n')[5].split('","')[1].length, 20)
+  })
 })
