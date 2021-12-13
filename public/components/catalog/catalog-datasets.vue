@@ -15,7 +15,7 @@
               :key="dataset.id"
             >
               <v-list-item-avatar>
-                <v-icon>{{ dataset.private ? 'lock' : 'public' }}</v-icon>
+                <v-icon>{{ dataset.private ? 'mdi-lock' : 'mdi-public' }}</v-icon>
               </v-list-item-avatar>
 
               <v-list-item-content>
@@ -42,7 +42,7 @@
                   :title="$t('harvest')"
                   @click="harvest(dataset)"
                 >
-                  <v-icon>file_download</v-icon>
+                  <v-icon>mdi-file-download</v-icon>
                 </v-btn>
               </v-list-item-action>
             </v-list-item>
