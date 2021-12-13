@@ -190,23 +190,25 @@ module.exports.router = (resourceType, resourceName, onPublicCallback) => {
     if (!valid) return res.status(400).send('Error in permissions format')
     const resources = req.app.get('db').collection(resourceType)
     try {
+      const resource = await req[resourceName]
+      const wasPublic = exports.isPublic(resourceType, resource)
+      const willBePublic = exports.isPublic(resourceType, { permissions: req.body })
+
       // re-publish to catalogs if public/private was switched
       if (['datasets', 'applications'].includes(resourceType)) {
-        const resource = await resources.findOne({ id: req[resourceName].id })
-        const wasPublic = exports.isPublic(resourceType, resource)
-        const willBePublic = exports.isPublic(resourceType, { permissions: req.body })
         if (wasPublic !== willBePublic) {
-          await resources.updateOne({
-            id: req[resourceName].id,
-            'publications.status': 'published',
-          }, { $set: { 'publications.$.status': 'waiting' } })
+          await resources.updateOne(
+            { id: resource.id, 'publications.status': 'published' },
+            { $set: { 'publications.$.status': 'waiting' } },
+          )
         }
-        if (!wasPublic && willBePublic && onPublicCallback) await onPublicCallback(req)
       }
 
-      await resources.updateOne({
-        id: req[resourceName].id,
-      }, { $set: { permissions: req.body } })
+      await resources.updateOne({ id: resource.id }, { $set: { permissions: req.body } })
+
+      if (!wasPublic && willBePublic && onPublicCallback) {
+        await onPublicCallback(req, { ...resource, permissions: req.body })
+      }
 
       res.status(200).send(req.body)
     } catch (err) {

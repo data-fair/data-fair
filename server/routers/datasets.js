@@ -210,13 +210,13 @@ const readDataset = (_acceptedStatuses, noDraft, preserveDraft, ignoreDraft) => 
   throw createError(409, `Le jeu de données n'est pas dans un état permettant l'opération demandée. État courant : ${req.dataset.status}.`)
 })
 
-router.use('/:datasetId/permissions', readDataset(), permissions.router('datasets', 'dataset', async (req) => {
+router.use('/:datasetId/permissions', readDataset(), permissions.router('datasets', 'dataset', async (req, patchedDataset) => {
   // this callback function is called when the resource becomes public
   const db = req.app.get('db')
-  for (const publicationSite of req.dataset.publicationSites || []) {
-    webhooks.trigger(db, 'dataset', req.dataset, { type: `published:${publicationSite}` })
-    for (const topic of req.dataset.topics || []) {
-      webhooks.trigger(db, 'dataset', req.dataset, { type: `published-topic:${publicationSite}:${topic.id}` })
+  for (const publicationSite of patchedDataset.publicationSites || []) {
+    webhooks.trigger(db, 'dataset', patchedDataset, { type: `published:${publicationSite}` })
+    for (const topic of patchedDataset.topics || []) {
+      webhooks.trigger(db, 'dataset', patchedDataset, { type: `published-topic:${publicationSite}:${topic.id}` })
     }
   }
 }))
