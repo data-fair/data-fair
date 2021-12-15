@@ -58,12 +58,6 @@
             </nuxt-link>
             <dataset-btn-table :dataset="dataset" />
           </v-list-item>
-          <v-list-item v-if="nbSessions !== null">
-            <v-list-item-avatar class="ml-0 my-0">
-              <v-icon>mdi-eye</v-icon>
-            </v-list-item-avatar>
-            <span v-text="$tc('nbSessions', nbSessions)" />
-          </v-list-item>
         </v-list>
       </v-sheet>
       <v-select
@@ -105,13 +99,11 @@
 fr:
   version: version
   availableVersion: Version {version} disponible
-  nbSessions: "aucune session active dans la dernière heure | 1 session active dans la dernière heure | {count} sessions actives dans la dernière heure"
   unknown: inconnue
   test: de test
 en:
   version: version
   availableVersion: Version {version} available
-  nbSessions: "no active session in the last hour | 1 active session in the last hour | {count} active sessions in the last hour"
   unknown: unknown
   test: test
 </i18n>
@@ -121,7 +113,7 @@ en:
 
   export default {
     computed: {
-      ...mapState('application', ['application', 'nbSessions', 'journal', 'prodBaseApp']),
+      ...mapState('application', ['application', 'journal', 'prodBaseApp']),
       ...mapGetters('application', ['can', 'availableVersions']),
       topics() {
         return this.$store.getters.ownerTopics(this.application.owner)

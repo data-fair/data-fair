@@ -75,7 +75,7 @@ router.get('/:applicationId/login', setResource, (req, res) => {
 })
 
 // Proxy for applications
-router.all('/:applicationId*', setResource, (req, res, next) => { req.app.get('anonymSession')(req, res, next) }, asyncWrap(async(req, res, next) => {
+router.all('/:applicationId*', setResource, asyncWrap(async(req, res, next) => {
   const db = req.app.get('db')
 
   let matchinApplicationKey = false
@@ -137,15 +137,6 @@ router.all('/:applicationId*', setResource, (req, res, next) => { req.app.get('a
   const limits = await limitsPromise
   const baseApp = await baseAppPromise
   if (!baseApp) return res.status(404).send(req.__('errors.missingBaseApp'))
-
-  // Remember active sessions
-  if (req.session) {
-    // temporarily empty previous sessions where applications were stored as strings
-    req.session.activeApplications = (req.session.activeApplications || []).filter(a => typeof a === 'object')
-    if (!req.session.activeApplications.find(a => a.id === req.application.id)) {
-      req.session.activeApplications.push({ id: req.application.id, owner: req.application.owner })
-    }
-  }
 
   const headers = {
     'X-Exposed-Url': req.application.exposedUrl,
@@ -252,6 +243,7 @@ router.all('/:applicationId*', setResource, (req, res, next) => { req.app.get('a
           }],
         })
 
+        // make sure the referer is available when calling APIs and remote services from inside applications
         head.childNodes.push({
           nodeName: 'meta',
           tagName: 'meta',

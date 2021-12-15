@@ -347,11 +347,6 @@ router.post('/:applicationId/error', readApplication, permissions.middleware('wr
   res.status(204).send()
 }))
 
-router.get('/:applicationId/active-sessions', readApplication, permissions.middleware('readConfig', 'read'), cacheHeaders.noCache, asyncWrap(async (req, res, next) => {
-  const count = await req.app.get('db').collection('sessions').countDocuments({ 'session.activeApplications.id': req.application.id })
-  return res.send({ count })
-}))
-
 router.get('/:applicationId/capture', readApplication, permissions.middleware('readConfig', 'read'), cacheHeaders.resourceBased, asyncWrap(async(req, res) => {
   const capturePath = await capture.path(req.application)
   if (await fs.pathExists(capturePath)) {

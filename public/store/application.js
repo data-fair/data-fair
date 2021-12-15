@@ -13,7 +13,6 @@ export default () => ({
     journal: [],
     config: null,
     configDraft: null,
-    nbSessions: null,
     datasets: null,
     prodBaseApp: null,
     otherVersions: null,
@@ -68,7 +67,6 @@ export default () => ({
         await dispatch('fetchApplication')
         await Promise.all([
           dispatch('fetchAPI'),
-          dispatch('fetchActiveSessions'),
           dispatch('readConfig'),
           dispatch('fetchProdBaseApp'),
         ])
@@ -115,10 +113,6 @@ export default () => ({
     async fetchJournal({ commit, state }) {
       const journal = await this.$axios.$get(`api/v1/applications/${state.applicationId}/journal`)
       commit('setAny', { journal })
-    },
-    async fetchActiveSessions({ commit, state }) {
-      const activeSessions = await this.$axios.$get(`api/v1/applications/${state.applicationId}/active-sessions`)
-      commit('setAny', { nbSessions: activeSessions.count })
     },
     async setId({ commit, getters, dispatch, state }, applicationId) {
       commit('setAny', { applicationId })

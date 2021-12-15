@@ -269,60 +269,53 @@ router.post('/:remoteServiceId/_update', readService, asyncWrap(async(req, res) 
   res.status(200).json(clean(req.remoteService, req.user))
 }))
 
+// use the current referer url to determine the application that was used to call this remote service
+// We will consume the quota of the owner of the application.
 async function getAppOwner(req) {
   const referer = req.headers.referer || req.headers.referrer
+  if (!referer) return console.warn('remote service proxy called without a referer header')
   debug('Referer URL', referer)
-  if (!referer) return null
+
   const refererAppId = referer.startsWith(req.publicBaseUrl + '/app/') && referer.replace(req.publicBaseUrl + '/app/', '').split('?')[0].split('/')[0]
-  if (!refererAppId) {
-    // console.error(`No application id found for referer=${referer}`)
-    return
-  }
+  if (!refererAppId) return console.warn('remote service proxy called from outside an application page', referer)
   debug('Referer application id', refererAppId)
 
-  if (req.session && req.session.activeApplications) {
-    debug('Anonymous session with active applications', req.session.activeApplications)
-    const refererApp = req.session.activeApplications.find(a => a.id === refererAppId)
-    if (refererApp) return refererApp.owner
-  }
-
   const refererApp = await req.app.get('db').collection('applications').findOne({ id: refererAppId }, { projection: { owner: 1 } })
-  if (refererApp) return refererApp.owner
-  else console.error(`No application found for referer=${referer} id=${refererAppId}`)
+  if (!refererApp) return console.warn(`remote service proxy called from outside a known application referer=${referer} id=${refererAppId}`)
+
+  return refererApp.owner
 }
 
-// Use the proxy as a user with an active session on an application
+// Use the proxy as a user of an application
 // TODO: replace express-request-proxy by a simple use of https.request as done in application proxy
-router.use('/:remoteServiceId/proxy*', (req, res, next) => { req.app.get('anonymSession')(req, res, next) }, asyncWrap(async (req, res, next) => {
-  // only consider a session that truly comes from an application
-  const session = req.session && req.session.activeApplications ? req.session : null
-
-  // Use the anonymous session and the current referer url to determine the application.
-  // that was used to call this remote service. We will consume the quota of the owner of the application.
+router.use('/:remoteServiceId/proxy*', asyncWrap(async (req, res, next) => {
   const appOwner = await getAppOwner(req)
   debug('Referer application owner', appOwner)
 
+  if (!appOwner) {
+    return res.status(400).send('Cette requête ne peut pas être exécutée depuis ailleurs qu\'une visualisation')
+  }
+
   // preventing POST is a simple way to prevent exposing bulk methods through this public proxy
-  if (req.method.toUpperCase() !== 'GET') return res.status(405).send('Seules les opérations de type GET sont autorisées sur cette exposition de service')
+  if (req.method.toUpperCase() !== 'GET') {
+    return res.status(405).send('Seules les opérations de type GET sont autorisées sur cette exposition de service')
+  }
 
   // rate limiting both on number of requests and total size to prevent abuse of this public proxy
   // it is only meant to be used by applications, not scripts
-  const limiterId = (session && session.id) || (req.user && req.user.id) || requestIp.getClientIp(req)
-  const limiters = rateLimiting.remoteServices()
+  const limiterId = requestIp.getClientIp(req)
   try {
-    await Promise.all([limiters.nb.consume(limiterId, 1), limiters.kb.consume(limiterId, 1)])
+    await Promise.all([rateLimiting.remoteServices.nb.consume(limiterId, 1), rateLimiting.remoteServices.kb.consume(limiterId, 1)])
   } catch (err) {
     return res.status(429).send('Trop de traffic dans un interval restreint pour cette exposition de service.')
   }
 
   // for perf, do not use the middleware readService, we want to read only absolutely necessary info
-  const accessFilter = [{ public: true }]
-  if (req.user) {
-    accessFilter.push({ privateAccess: { $elemMatch: { type: req.user.activeAccount.type, id: req.user.activeAccount.id } } })
-  }
-  if (appOwner) {
-    accessFilter.push({ privateAccess: { $elemMatch: { type: appOwner.type, id: appOwner.id } } })
-  }
+  const accessFilter = [
+    { public: true },
+    { privateAccess: { $elemMatch: { type: appOwner.type, id: appOwner.id } } },
+  ]
+
   const remoteService = await req.app.get('db').collection('remote-services')
     .findOne({ id: req.params.remoteServiceId, $or: accessFilter }, { projection: { _id: 0, id: 1, server: 1, apiKey: 1 } })
 
@@ -357,13 +350,13 @@ router.use('/:remoteServiceId/proxy*', (req, res, next) => { req.app.get('anonym
           this.consumed = (this.consumed || 0) + chunk.length
           // for perf do not update rate limiter at every chunk, but only every 100kb
           if (this.consumed > 100000) {
-            limiters.kb.consume(limiterId, this.consumed).catch(() => {})
+            rateLimiting.remoteServices.kb.consume(limiterId, this.consumed).catch(() => {})
             this.consumed = 0
           }
         },
         flush(cb) {
           cb()
-          limiters.kb.consume(limiterId, this.consumed).catch(() => {})
+          rateLimiting.remoteServices.kb.consume(limiterId, this.consumed).catch(() => {})
         },
       }),
     }],

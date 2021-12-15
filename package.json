@@ -92,7 +92,6 @@
     "escape-string-regexp": "^4.0.0",
     "event-to-promise": "^0.8.0",
     "express": "^4.17.1",
-    "express-session": "^1.17.1",
     "fast-clone": "^1.5.13",
     "fast-json-stable-stringify": "^2.1.0",
     "flat": "^5.0.2",

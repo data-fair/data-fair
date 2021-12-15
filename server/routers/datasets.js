@@ -94,7 +94,7 @@ const checkStorage = (overwrite) => asyncWrap(async (req, res, next) => {
   next()
 })
 
-// check if the endpoint is called from an application with an aunauthenticated readOnly application key
+// check if the endpoint is called from an application with an unauthenticated readOnly application key
 const applicationKey = asyncWrap(async (req, res, next) => {
   const referer = req.headers.referer || req.headers.referrer
   if (referer) {

@@ -148,13 +148,6 @@ exports.run = async () => {
 
   if (config.mode.includes('server')) {
     await Promise.all([
-      require('./utils/anonym-session').init(client, db)
-        .then(anonymSession => {
-          // init anonym session on data-fair UI to support using remote services from outside application
-          // for example map embeds
-          app.set('anonymSession', anonymSession)
-          app.use(anonymSession)
-        }),
       require('./utils/capture').init(),
       require('./utils/cache').init(db),
       require('./routers/remote-services').init(db),
@@ -171,10 +164,6 @@ exports.run = async () => {
     })
     app.use(session.auth)
 
-    app.use((req, res, next) => {
-      req.session.activeApplications = req.session.activeApplications || []
-      next()
-    })
     const nuxt = await require('./nuxt')()
     app.set('nuxt', nuxt.instance)
     app.use(nuxt.render)
