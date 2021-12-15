@@ -12,11 +12,11 @@
             >
               <template v-slot:tabs>
                 <v-tab href="#metadata-info">
-                  <v-icon>mdi-information</v-icon>&nbsp;&nbsp;Informations
+                  <v-icon>mdi-information</v-icon>&nbsp;&nbsp;{{ $t('info') }}
                 </v-tab>
 
                 <v-tab href="#metadata-extensions">
-                  <v-icon>mdi-merge</v-icon>&nbsp;&nbsp;Extensions supportées
+                  <v-icon>mdi-merge</v-icon>&nbsp;&nbsp;{{ $t('extensions') }}
                 </v-tab>
               </template>
               <template v-slot:tabs-items>
@@ -42,7 +42,7 @@
             >
               <template v-slot:tabs>
                 <v-tab href="#config-params">
-                  <v-icon>mdi-pencil</v-icon>&nbsp;&nbsp;Paramètres
+                  <v-icon>mdi-pencil</v-icon>&nbsp;&nbsp;{{ $t('params') }}
                 </v-tab>
               </template>
               <template v-slot:tabs-items>
@@ -61,16 +61,16 @@
               :min-height="200"
             >
               <template v-slot:title>
-                Partage
+                {{ $t('share') }}
               </template>
               <template v-slot:tabs>
                 <v-tab href="#share-permissions">
-                  <v-icon>mdi-security</v-icon>&nbsp;&nbsp;Visibilité
+                  <v-icon>mdi-security</v-icon>&nbsp;&nbsp;{{ $t('visibility') }}
                 </v-tab>
               </template>
               <template v-slot:tabs-items>
                 <tutorial-alert id="dataset-share-portal">
-                  Contrôlez l'utilisation de ce service distant par vos utilisateurs.
+                  {{ $t('permissions') }}
                 </tutorial-alert>
                 <v-tab-item value="share-permissions">
                   <v-container fluid>
@@ -96,6 +96,29 @@
   </v-row>
 </template>
 
+<i18n lang="yaml">
+fr:
+  info: Informations
+  extensions: Extensions supportées
+  params: Paramètres
+  visibility: Visibilité
+  permissions: Contrôlez l'utilisation de ce service distant par vos utilisateurs.
+  services: Services
+  metadata: Métadonnées
+  configuration: Configuration
+  share: Partage
+en:
+  info: Informations
+  extensions: Handled extensions
+  params: Parameters
+  visibility: Visibility
+  permissions: Control the use of this service by your users.
+  services: Services
+  metadata: Metadata
+  configuration: Configuration
+  share: Share
+</i18n>
+
 <script>
   import { mapState, mapActions, mapGetters } from 'vuex'
 
@@ -119,9 +142,9 @@
       sections() {
         const sections = []
         if (!this.remoteService) return sections
-        sections.push({ title: 'Métadonnées', id: 'metadata' })
-        sections.push({ title: 'Configuration', id: 'config' })
-        sections.push({ title: 'Partage', id: 'share' })
+        sections.push({ title: this.$t('metadata'), id: 'metadata' })
+        sections.push({ title: this.$t('configuration'), id: 'config' })
+        sections.push({ title: this.$t('share'), id: 'share' })
         return sections
       },
     },
@@ -129,7 +152,7 @@
       // children pages are deprecated
       const path = `/remote-service/${this.$route.params.id}`
       if (this.$route.path !== path) return this.$router.push(path)
-      this.$store.dispatch('breadcrumbs', [{ text: 'Services', to: '/remote-services' }, { text: this.remoteService.title || this.remoteService.id }])
+      this.$store.dispatch('breadcrumbs', [{ text: this.$t('services'), to: '/remote-services' }, { text: this.remoteService.title || this.remoteService.id }])
     },
     methods: {
       ...mapActions('remoteService', ['patch', 'remove', 'refresh']),

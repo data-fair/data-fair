@@ -9,20 +9,20 @@
         <td>
           <v-icon
             v-if="!item.inputCollection || !item.outputCollection"
-            title="Opération unitaire"
+            :title="$t('unitaryOp')"
           >
             mdi-description
           </v-icon>
           <v-icon
             v-if="item.inputCollection && item.outputCollection"
-            title="Opération de masse"
+            :title="$t('bulkOp')"
           >
             mdi-view-list
           </v-icon>
         </td>
         <td>{{ item.summary }}</td>
         <td>
-          <span v-if="!Object.keys(item.input).length">Pas de données en entrée</span>
+          <span v-if="!Object.keys(item.input).length">{{ $t('noInput') }}</span>
           <template v-for="input in item.input">
             <v-chip
               v-if="vocabulary[input.concept]"
@@ -54,13 +54,26 @@
             </v-chip>
           </template>
           <v-chip v-if="nonSemOutputs(item.output)" style="margin:4px 4px;">
-            {{ nonSemOutputs(item.output) }} {{ nonSemOutputs(item.output) > 1 ? 'colonnes sans concepts' : 'colonne sans concept' }}
+            {{ $tc('withoutConcepts', nonSemOutputs(item.output)) }}
           </v-chip>
         </td>
       </tr>
     </template>
   </v-data-table>
 </template>
+
+<i18n lang="yaml">
+fr:
+  unitaryOp: Opération unitaire
+  bulkOp: Opération de masse
+  noInput: Pas de données en entrée
+  withoutConcepts: " | colonne sans concepts | colonnes sans concept"
+en:
+  unitaryOp: Unitary operation
+  bulkOp: Bulk operation
+  noInput: No input data
+  withoutConcepts: " | column without concept | columns without concept"
+</i18n>
 
 <script>
   const { mapState } = require('vuex')

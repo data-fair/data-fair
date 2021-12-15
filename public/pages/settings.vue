@@ -212,6 +212,23 @@
   </v-row>
 </template>
 
+<i18n lang="yaml">
+fr:
+  licences: Licences
+  topics: Thématiques
+  apiKeys: "Clés d'API"
+  webhooks: "Appels extérieurs (Webhooks)"
+  privateVocab: Vocabulaire privé
+  publicationSites: Sites de publication
+en:
+  licences: Licences
+  topics: Topics
+  apiKeys: API keys
+  webhooks: "External requests (Webhooks)"
+  privateVocab: Private vocabulary
+  publicationSites: Publication sites
+</i18n>
+
 <script>
   import { mapState, mapGetters } from 'vuex'
   import eventBus from '~/event-bus'
@@ -248,24 +265,24 @@
       sections() {
         const sections = [{
           id: 'licences',
-          title: 'Licences',
+          title: this.$t('licences'),
         }, {
           id: 'topics',
-          title: 'Thématiques',
+          title: this.$t('topics'),
         }, {
           id: 'api-keys',
-          title: 'Clés d\'API',
+          title: this.$t('apiKeys'),
         }, {
           id: 'webhooks',
-          title: 'Appels extérieurs (Webhooks)',
+          title: this.$t('webhooks'),
         }, {
           id: 'privateVocabulary',
-          title: 'Vocabulaire privé',
+          title: this.$t('privateVocab'),
         }]
         if (this.user.adminMode) {
           sections.push({
             id: 'publicationSites',
-            title: 'Sites de publication',
+            title: this.$t('publicationSites'),
           })
         }
         return sections
@@ -283,12 +300,8 @@
       async init() {
         if (this.activeAccount.type === 'organization') {
           let roles = []
-          try {
-            this.organization = await this.$axios.$get(this.env.directoryUrl + '/api/organizations/' + this.activeAccount.id)
-            roles = await this.$axios.$get(this.env.directoryUrl + '/api/organizations/' + this.activeAccount.id + '/roles')
-          } catch (err) {
-            eventBus.$emit('notification', { type: 'error', msg: 'Erreur pendant la récupération de la liste des rôles de l\'organisation' })
-          }
+          this.organization = await this.$axios.$get(this.env.directoryUrl + '/api/organizations/' + this.activeAccount.id)
+          roles = await this.$axios.$get(this.env.directoryUrl + '/api/organizations/' + this.activeAccount.id + '/roles')
           this.organizationRoles = roles.filter(role => role !== this.env.adminRole)
         }
         this.settings = await this.$axios.$get('api/v1/settings/' + this.activeAccount.type + '/' + this.activeAccount.id)
@@ -309,13 +322,9 @@
         */
       },
       async save(action) {
-        try {
-          this.settings = await this.$axios.$put('api/v1/settings/' + this.activeAccount.type + '/' + this.activeAccount.id, this.settings)
-          eventBus.$emit('notification', 'Les paramètres ont été mis à jour')
-          if (action) this.$store.dispatch(action, this.activeAccount)
-        } catch (error) {
-          eventBus.$emit('notification', { error, msg: 'Erreur pendant la mise à jour des paramètres' })
-        }
+        this.settings = await this.$axios.$put('api/v1/settings/' + this.activeAccount.type + '/' + this.activeAccount.id, this.settings)
+        eventBus.$emit('notification', 'Les paramètres ont été mis à jour')
+        if (action) this.$store.dispatch(action, this.activeAccount)
       },
     },
     head: () => ({

@@ -4,6 +4,15 @@
   </v-container>
 </template>
 
+<i18n lang="yaml">
+fr:
+  apps: Visualisations
+  breadcrumb: Configurer une visualisation
+en:
+  apps: Visualizations
+  breadcrumb: Configure a visualization
+</i18n>
+
 <script>
 
   export default {
@@ -11,7 +20,7 @@
       await store.dispatch('fetchVocabulary')
     },
     created() {
-      this.$store.dispatch('breadcrumbs', [{ text: 'Visualisations', to: '/applications' }, { text: 'Configurer une visualisation' }])
+      this.$store.dispatch('breadcrumbs', [{ text: this.$t('apps'), to: '/applications' }, { text: this.$t('breadcrumb') }])
     },
   }
 </script>

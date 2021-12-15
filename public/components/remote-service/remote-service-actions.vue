@@ -12,7 +12,7 @@
       <v-list-item-icon>
         <v-icon>mdi-information</v-icon>
       </v-list-item-icon>
-      <v-list-item-title>Documentation externe</v-list-item-title>
+      <v-list-item-title>{{ $t('externalDoc') }}</v-list-item-title>
     </v-list-item>
 
     <v-list-item
@@ -24,7 +24,7 @@
         </v-icon>
       </v-list-item-icon>
       <v-list-item-content>
-        <v-list-item-title>Utiliser l'API</v-list-item-title>
+        <v-list-item-title>{{ $t('useAPI') }}</v-list-item-title>
       </v-list-item-content>
     </v-list-item>
 
@@ -38,7 +38,7 @@
           mdi-refresh
         </v-icon>
       </v-list-item-icon>
-      <v-list-item-title>Mettre a jour la description de l'API</v-list-item-title>
+      <v-list-item-title>{{ $t('updateAPI') }}</v-list-item-title>
     </v-list-item>
 
     <v-list-item
@@ -51,7 +51,7 @@
           mdi-delete
         </v-icon>
       </v-list-item-icon>
-      <v-list-item-title>Supprimer</v-list-item-title>
+      <v-list-item-title>{{ $t('delete') }}</v-list-item-title>
     </v-list-item>
 
     <v-dialog
@@ -60,21 +60,21 @@
     >
       <v-card outlined>
         <v-card-title primary-title>
-          Suppression de la configuration du service
+          {{ $t('deleteTitle') }}
         </v-card-title>
         <v-card-text>
-          Voulez vous vraiment supprimer la configuration du service "{{ remoteService.title }}" ? La suppression est définitive et le paramétrage ne pourra pas être récupéré.
+          {{ $t('deleteMsg', {title: remoteService.title}) }}
         </v-card-text>
         <v-card-actions>
           <v-spacer />
           <v-btn text @click="showDeleteDialog = false">
-            Non
+            {{ $t('no') }}
           </v-btn>
           <v-btn
             color="warning"
             @click="confirmRemove"
           >
-            Oui
+            {{ $t('yes') }}
           </v-btn>
         </v-card-actions>
       </v-card>
@@ -105,6 +105,27 @@
     </v-dialog>
   </v-list>
 </template>
+
+<i18n lang="yaml">
+fr:
+  externalDoc: Documentation externe
+  useAPI: Utiliser l'API
+  updateAPI: Mettre a jour la description de l'API
+  delete: Supprimer
+  deleteTitle: Suppression de la configuration du service
+  deleteMsg: Voulez vous vraiment supprimer la configuration du service "{title}" ? La suppression est définitive et le paramétrage ne pourra pas être récupéré.
+  yes: Oui
+  no: Non
+en:
+  externalDoc: External documentation
+  useAPI: Use API
+  updateAPI: Update API description
+  delete: Delete
+  deleteTitle: Delete the service configuration
+  deleteMsg: Do you really want to delete the service configuration "{title}" ? Deletion is definitive.
+  yes: Yes
+  no: No
+</i18n>
 
 <script>
   import { mapState, mapActions, mapGetters } from 'vuex'

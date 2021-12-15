@@ -25,15 +25,14 @@
 
     <div v-if="remoteService.parameters.length">
       <h2 class="text-h6 mt-3 mb-3">
-        Paramètres statiques
+        {{ $t('staticParams') }}
       </h2>
 
       <p>
-        Ces paramètres seront associés à toutes les requêtes émises vers le service au travers de cette exposition.
-        Ils vous permettent par exemple de filtrer la source pour obtenir une spécialisation du service sur un secteur.
+        {{ $t('staticParamsMsg') }}
       </p>
 
-      <p>Les filtres peuvent contenir plusieurs valeurs séparées par des virgules.</p>
+      <p>{{ $t('staticParamsSplit') }}</p>
       <template v-for="operation in operations">
         <div
           v-if="remoteService.parameters.filter(p => p.operationId === operation.id).length"
@@ -54,6 +53,17 @@
     </div>
   </v-container>
 </template>
+
+<i18n lang="yaml">
+fr:
+  staticParams: Paramètres statiques
+  staticParamsMsg: Ces paramètres seront associés à toutes les requêtes émises vers le service au travers de cette exposition. Ils vous permettent par exemple de filtrer la source pour obtenir une spécialisation du service sur un secteur.
+  staticParamsSplit: Les filtres peuvent contenir plusieurs valeurs séparées par des virgules.
+en:
+  staticParams: Static parameters
+  staticParamsMsg: These parameters will be associated to all requests transmitted to the server. They let you filter the source to get a specialized exposition of the service for example.
+  staticParamsSplit: Filters can contain multiple values separated by commas.
+</i18n>
 
 <script>
   import { mapState, mapActions } from 'vuex'

@@ -48,7 +48,7 @@
                 mdi-plus-circle
               </v-icon>
             </v-list-item-icon>
-            <v-list-item-title>Configurer un service</v-list-item-title>
+            <v-list-item-title>{{ $t('configureService') }}</v-list-item-title>
           </v-list-item>
         </v-list>
       </layout-navigation-right>
@@ -59,8 +59,8 @@
           color="primary"
           fab
           small
-          title="Configurer un catalogue"
-          @click="importCatalogSheet = true"
+          :title="$t('configureService')"
+          @click="importServiceSheet = true"
         >
           <v-icon>mdi-plus</v-icon>
         </v-btn>
@@ -82,8 +82,10 @@
 <i18n lang="yaml">
 fr:
   description: Cet espace vous permet de gérer les services Web configurés pour l'interopérabilité. Ces services sont généralement utilisés pour proposer des capacités d'enrichissement aux utilisateurs. Un service interopérable peut également être un jeu de données data-fair (local ou distant).
+  configureService: Configurer un service
 en:
   description: This page lets you manage the Web services configured for interoperability. These services are mostly used to propose extentions to the users. An interoperable service can also be a data-fair dataset (local or remote).
+  configureService: Configure a service
 </i18n>
 
 <script>

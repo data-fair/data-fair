@@ -201,6 +201,8 @@ fr:
   expertMode: Mode expert
   actions: Actions
   name: Nom
+  updateError: Erreur pendant la mise à jour des permissions
+  permissionsUpdated: Les permissions ont été mises à jour
 en:
   description: Allow other users or other members of your organizations to use this resource.
   publicAccess: Publicly accessible
@@ -223,6 +225,8 @@ en:
   expertMode: Expert mode
   actions: Actions
   name: Name
+  updateError: Error while updating permissions
+  permisisons: Permissions were updated
 </i18n>
 
 <script>
@@ -362,10 +366,10 @@ en:
           })
           await this.$axios.$put(this.resourceUrl + '/permissions', this.permissions)
           this.addPermissions = false
-          eventBus.$emit('notification', 'Les permissions ont été mises à jour')
+          eventBus.$emit('notification', this.$t('permissionsUpdated'))
         } catch (error) {
           this.permissions.pop()
-          eventBus.$emit('notification', { error, msg: 'Erreur pendant la mise à jour des permissions:' })
+          eventBus.$emit('notification', { error, msg: this.$t('updateError') })
         }
       },
       removePermission(rowIndex) {

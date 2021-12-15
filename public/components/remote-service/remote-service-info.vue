@@ -29,7 +29,7 @@
             <v-list-item-avatar class="ml-0 my-0">
               <v-icon>mdi-information-variant</v-icon>
             </v-list-item-avatar>
-            <span><a :href="remoteService.apiDoc.info.termsOfService">Terms of Service</a></span>
+            <span><a :href="remoteService.apiDoc.info.termsOfService">{{ $t('termsOfService') }}</a></span>
           </v-list-item>
         </v-list>
       </v-sheet>
@@ -42,14 +42,14 @@
       <v-text-field
         v-model="remoteService.title"
         :disabled="!user.adminMode"
-        label="Titre"
+        :label="$t('title')"
         color="admin"
         @change="patch({title: remoteService.title})"
       />
       <v-textarea
         v-model="remoteService.description"
         :disabled="!user.adminMode"
-        label="Description"
+        :label="$t('description')"
         filled
         rows="5"
         color="admin"
@@ -59,6 +59,17 @@
     </v-col>
   </v-row>
 </template>
+
+<i18n lang="yaml">
+fr:
+  termsOfService: Conditions d'utilisation
+  title: Titre
+  description: Description
+en:
+  termsOfService: Terms of service
+  title: Title
+  description: Description
+</i18n>
 
 <script>
   const { mapState, mapActions } = require('vuex')

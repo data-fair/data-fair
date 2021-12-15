@@ -6,7 +6,7 @@
         step="1"
         editable
       >
-        Sélection du service
+        {{ $t('selectService') }}
       </v-stepper-step>
     </v-stepper-header>
 
@@ -17,12 +17,12 @@
           :items="configurableRemoteServices"
           item-value="url"
           item-text="title"
-          label="Choisissez un service à configurer"
+          :label="$t('choseOne')"
           @input="downloadFromUrl"
         />
         <v-text-field
           v-model="apiDocUrl"
-          label="Ou saisissez une URL de documentation"
+          :label="$t('loadUrl')"
           @change="downloadFromUrl"
         />
         <p
@@ -34,15 +34,30 @@
           color="primary"
           @click.native="importApi()"
         >
-          Enregistrer
+          {{ $t('save') }}
         </v-btn>
         <v-btn text @click.native="$emit('cancel')">
-          Annuler
+          {{ $t('cancel') }}
         </v-btn>
       </v-stepper-content>
     </v-stepper-items>
   </v-stepper>
 </template>
+
+<i18n lang="yaml">
+fr:
+  selectService: Sélection du service
+  choseOne: Choisissez un service à configurer
+  loadUrl: Ou saisissez une URL de documentation d'API
+  save: Enregistrer
+  cancel: Annuler
+en:
+  selectService: Select a service
+  choseOne: Chose a service to configure
+  loadUrl: Or type the URL of a API documentation
+  save: Save
+  cancel: Cancel
+</i18n>
 
 <script>
   import marked from 'marked/lib/marked'

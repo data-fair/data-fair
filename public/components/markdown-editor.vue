@@ -26,6 +26,12 @@ fr:
   heading: Titre
   quote: Citation
   unorderedList: Liste à puce
+  orderedList: Liste numérotée
+  createLink: Créer un lien
+  insertImage: Insérer une image
+  insertTable: Insérer un tableau
+  preview: Aperçu du rendu
+  syntaxDoc: Documentation de la syntaxe
 en:
   linkBefore: "[link title"
   linkAfter: "](link url)"
@@ -37,6 +43,12 @@ en:
   heading: Heading
   quote: Quote
   unorderedList: Unordered list
+  orderedList: Ordered list
+  createLink: Create a link
+  insertImage: Insert an image
+  insertTable: Insert a table
+  preview: Preview
+  syntaxDoc: Syntax documentation
 </i18n>
 
 <script>
@@ -115,33 +127,33 @@ en:
                     name: 'ordered-list',
                     action: EasyMDE.toggleOrderedList,
                     className: 'mdi mdi-format-list-numbered',
-                    title: 'Liste numérotée',
+                    title: this.$t('orderedList'),
                   },
                   '|',
                   {
                     name: 'link',
                     action: EasyMDE.drawLink,
                     className: 'mdi mdi-link',
-                    title: 'Créer un lien',
+                    title: this.$t('createLink'),
                   },
                   {
                     name: 'image',
                     action: EasyMDE.drawImage,
                     className: 'mdi mdi-image',
-                    title: 'Insérer une image',
+                    title: this.$t('insertImage'),
                   },
                   {
                     name: 'table',
                     action: EasyMDE.drawTable,
                     className: 'mdi mdi-table',
-                    title: 'Insérer un tableau',
+                    title: this.$t('insertTable'),
                   },
                   '|',
                   {
                     name: 'preview',
                     action: EasyMDE.togglePreview,
                     className: 'mdi mdi-eye accent--text',
-                    title: 'Aperçu du rendu',
+                    title: this.$t('preview'),
                     noDisable: true,
                   },
                   /* '|',
@@ -164,7 +176,7 @@ en:
                     name: 'guide',
                     action: 'https://simplemde.com/markdown-guide',
                     className: 'mdi mdi-help-circle success--text',
-                    title: 'Documentation de la syntaxe',
+                    title: this.$t('syntaxDoc'),
                     noDisable: true,
                   },
         ],

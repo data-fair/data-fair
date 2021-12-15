@@ -223,6 +223,7 @@
 <i18n lang="yaml">
 fr:
   title: Data Fair
+  breadcrumb: Partage et visualisation de données
   description: Enrichissez et publiez facilement vos données. Vous pouvez les utiliser dans des applications dédiées et les mettre à disposition d'autres personnes en mode ouvert ou privé.
   authRequired: Vous devez être authentifié pour utiliser ce service.
   login: Se connecter / S'inscrire
@@ -233,6 +234,7 @@ fr:
   collaborativeMessageNoOrg: Pour travailler en {collaborativeMode} vous devez créer une organisation. Pour cela rendez vous sur {yourAccountLink}.
   collaborativeMode: mode collaboratif
   yourAccount: votre compte
+  datasets: Jeux de données
   datasetsCountMessage: '{link} ont déjà été créés dans votre espace.'
   datasetsCount: '{count} jeux de données'
   datasetsCountMessage1: '{link} a déjà été créé dans votre espace.'
@@ -240,6 +242,7 @@ fr:
   datasetsCountNone: Aucun jeu de donnée n'a été créé pour l'instant dans votre espace.
   storageWithLimit: Vous utilisez {bytes} sur un total disponible de {bytesLimit}.
   storageWithoutLimit: Vous utilisez {bytes} de stockage.
+  apps: Visualisations
   appsCountMessage: '{link} ont déjà été configurées dans votre espace.'
   appsCount: '{count} visualisations'
   appsCountMessage1: '{link} a déjà été configurée'
@@ -247,6 +250,7 @@ fr:
   appsCountNone: Aucune visualisation n'a été configurée pour l'instant dans votre espace.
   baseAppsCount: Vous avez accès à {count} applications pour configurer autant de visualisations que vous le souhaitez.
 en:
+  breadcrumb: Share and visualize data
   description: Easily enrich and publish your data. You can use it in dedicated applications and make it available to other people both openly or privately.
   authRequired: You must be logged in to use this service.
   login: Login / Sign up
@@ -257,6 +261,7 @@ en:
   collaborativeMessageNoOrg: To work in {collaborativeMode} you must create an organization. To do so please visit {yourAccountLink}.
   collaborativeMode: collaborative mode
   yourAccount: your account
+  datasets: Datasets
   datasetsCountMessage: '{link} were already loaded in your space.'
   datasetsCount: '{count} datasets'
   datasetsCountMessage1: '{link} was already loaded in your space.'
@@ -264,6 +269,7 @@ en:
   datasetsCountNone: No dataset was loaded in your space yet.
   storageWithLimit: You use {bytes} out of {bytesLimit} of total available space.
   storageWithoutLimit: You use {bytes} of storage space.
+  apps: Visualizations
   appsCountMessage: '{link} were already configured in your space.'
   appsCount: '{count} visualizations'
   appsCountMessage1: '{link} was already configured in your space'
@@ -285,13 +291,6 @@ en:
       datasets: null,
       baseApps: null,
       activity: null,
-      headers: [
-        { text: '', value: 'name', sortable: false },
-        { text: 'Nombre de jeux de données', value: 'datasets', sortable: false },
-        { text: 'Espace consommé', value: 'storage', sortable: false },
-        { text: 'Espace total disponible', value: 'storageLimit', sortable: false },
-        { text: 'Nombre d\'applications', value: 'applications', sortable: false },
-      ],
       dataSvg: require('~/assets/svg/Data Arranging_Two Color.svg?raw'),
       graphicSvg: require('~/assets/svg/Graphics and charts_Monochromatic.svg?raw'),
       dataProcessSvg: require('~/assets/svg/Data Process_Two Color.svg?raw'),
@@ -303,14 +302,14 @@ en:
       ...mapGetters('session', ['activeAccount']),
       sections() {
         return [
-          { id: 'datasets', title: 'Jeux de données' },
-          { id: 'apps', title: 'Visualisations' },
+          { id: 'datasets', title: this.$t('datasets') },
+          { id: 'apps', title: this.$t('apps') },
         ]
       },
     },
     async created() {
       if (!this.user) return
-      this.$store.dispatch('breadcrumbs', [{ text: 'Partage et visualisation de données' }])
+      this.$store.dispatch('breadcrumbs', [{ text: this.$t('breadcrumb') }])
 
       this.stats = await this.$axios.$get('api/v1/stats')
 

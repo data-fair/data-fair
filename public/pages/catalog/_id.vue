@@ -69,6 +69,17 @@
   </v-row>
 </template>
 
+<i18n lang="yaml">
+fr:
+  catalogs: Catalogues
+  metadata: Métadonnées
+  import: Imports
+en:
+  catalogs: Catalogs
+  metadata: Metadata
+  import: Imports
+</i18n>
+
 <script>
   import { mapState, mapGetters } from 'vuex'
 
@@ -91,8 +102,8 @@
       sections() {
         const sections = []
         if (!this.catalog) return sections
-        sections.push({ title: 'Métadonnées', id: 'metadata' })
-        sections.push({ title: 'Imports', id: 'import' })
+        sections.push({ title: this.$t('metadata'), id: 'metadata' })
+        sections.push({ title: this.$t('imports'), id: 'import' })
         return sections
       },
     },
@@ -100,7 +111,7 @@
       // children pages are deprecated
       const path = `/catalog/${this.$route.params.id}`
       if (this.$route.path !== path) return this.$router.push(path)
-      if (this.catalog) this.$store.dispatch('breadcrumbs', [{ text: 'Catalogues', to: '/catalogs' }, { text: this.catalog.title || this.catalog.id }])
+      if (this.catalog) this.$store.dispatch('breadcrumbs', [{ text: this.$t('catalogs'), to: '/catalogs' }, { text: this.catalog.title || this.catalog.id }])
     },
   }
 </script>
