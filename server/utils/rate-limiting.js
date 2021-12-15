@@ -1,50 +1,51 @@
 const config = require('config')
-const { RateLimiterMongo, RateLimiterMemory } = require('rate-limiter-flexible')
+const { RateLimiterMemory } = require('rate-limiter-flexible')
 const requestIp = require('request-ip')
 const { ThrottleGroup } = require('stream-throttle')
 const { promisify } = require('util')
 const finished = promisify(require('stream').finished)
 const asyncWrap = require('./async-wrap')
 
-// remote services was implemented first, it does not use throttling only rate limiting
-// this rate limiting is based on a mongodb storage to truly enforce these limits event if data-fair is scaled
-const _remoteServices = {}
-exports.remoteServices = (mongoClient) => {
-  _remoteServices.kb = _remoteServices.kb || new RateLimiterMongo({
-    storeClient: mongoClient,
-    keyPrefix: 'data-fair-rate-limiter-kb',
+// IMPORTANT NOTE: all rate limiting is based on memory only, to be strictly applied when scaling the service
+// load balancing has to be based on a hash of the rate limiting key i.e the origin IP
+// TODO: optional redis or mongo backend ?
+
+// used for public exposition of remote services, it does not use throttling only rate limiting on both data size and number of requests
+// same limits are applied whether used is authenticated or not, the purpose here is simply to ensure
+// that visualizations can used remote services in a reasonnable manner, this is not for API users
+exports.remoteServices = {
+  kb: new RateLimiterMemory({
     points: config.defaultLimits.remoteServiceRate.kb * 1000,
     duration: config.defaultLimits.remoteServiceRate.duration,
-  })
-
-  _remoteServices.nb = new RateLimiterMongo({
-    storeClient: mongoClient,
-    keyPrefix: 'data-fair-rate-limiter-remote-services-nb',
+  }),
+  nb: new RateLimiterMemory({
     points: config.defaultLimits.remoteServiceRate.nb,
     duration: config.defaultLimits.remoteServiceRate.duration,
-  })
-  return _remoteServices
+  }),
 }
 
-// other parts of the API are protected only using in memory restrictions for performance
-const _limiters = {}
-const _throttleGroups = {}
+// other parts of the API are protected using rate-limiting on number of requests and throttling on data size
+// different limits are applied for anonymous or authenticated used
+const limiters = {}
+for (const limitType of ['user', 'anonymous']) {
+  limiters[limitType] = new RateLimiterMemory({
+    points: config.defaultLimits.apiRate[limitType].nb,
+    duration: config.defaultLimits.apiRate[limitType].duration,
+  })
+}
+const throttleGroups = {}
 exports.middleware = asyncWrap(async (req, res, next) => {
     const limitType = req.user && req.user.id ? 'user' : 'anonymous'
     const throttlingId = limitType === 'user' ? req.user.id : requestIp.getClientIp(req)
 
-    _limiters[limitType] = _limiters[limitType] || new RateLimiterMemory({
-      points: config.defaultLimits.apiRate[limitType].nb,
-      duration: config.defaultLimits.apiRate[limitType].duration,
-    })
     try {
-      await _limiters[limitType].consume(throttlingId, 1)
+      await limiters[limitType].consume(throttlingId, 1)
     } catch (err) {
       return res.status(429).send('Trop de traffic dans un interval restreint sur cette API.')
     }
 
     res.throttle = (bandwidthType) => {
-      const groupInfo = _throttleGroups[throttlingId + bandwidthType] = _throttleGroups[throttlingId + bandwidthType] || {
+      const groupInfo = throttleGroups[throttlingId + bandwidthType] = throttleGroups[throttlingId + bandwidthType] || {
         group: new ThrottleGroup({ rate: config.defaultLimits.apiRate[limitType].bandwidth[bandwidthType] }),
         nb: 0,
       }
@@ -52,7 +53,7 @@ exports.middleware = asyncWrap(async (req, res, next) => {
       const throttle = groupInfo.group.throttle()
       finished(throttle).then(() => {
         groupInfo.nb -= 1
-        if (groupInfo.nb === 0) delete _throttleGroups[throttlingId + bandwidthType]
+        if (groupInfo.nb === 0) delete throttleGroups[throttlingId + bandwidthType]
       })
       return throttle
     }

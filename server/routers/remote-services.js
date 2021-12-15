@@ -308,7 +308,7 @@ router.use('/:remoteServiceId/proxy*', (req, res, next) => { req.app.get('anonym
   // rate limiting both on number of requests and total size to prevent abuse of this public proxy
   // it is only meant to be used by applications, not scripts
   const limiterId = (session && session.id) || (req.user && req.user.id) || requestIp.getClientIp(req)
-  const limiters = rateLimiting.remoteServices(req.app.get('mongoClient'))
+  const limiters = rateLimiting.remoteServices()
   try {
     await Promise.all([limiters.nb.consume(limiterId, 1), limiters.kb.consume(limiterId, 1)])
   } catch (err) {
