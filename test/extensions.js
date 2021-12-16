@@ -30,7 +30,7 @@ describe('Extensions', () => {
     assert.equal(res.status, 200)
     dataset = await workers.hook(`finalizer/${dataset.id}`)
     nockScope.done()
-    const extensionKey = '_ext_geocoder-koumoul_postCoords'
+    const extensionKey = '_ext_' + dataset.extensions[0].shortId
     assert.ok(dataset.schema.find(field => field.key === extensionKey + '.lat'))
     assert.ok(dataset.schema.find(field => field.key === extensionKey + '.lon'))
     // A search to check results
@@ -118,7 +118,7 @@ describe('Extensions', () => {
     assert.equal(res.status, 200)
     dataset = await workers.hook(`finalizer/${dataset.id}`)
     nockScope.done()
-    const extensionKey = '_ext_geocoder-koumoul_postCoords'
+    const extensionKey = '_ext_' + dataset.extensions[0].shortId
     assert.ok(dataset.schema.find(field => field.key === extensionKey + '.lat'))
     assert.ok(dataset.schema.find(field => field.key === extensionKey + '.lon'))
     // A search to check results
@@ -163,7 +163,7 @@ describe('Extensions', () => {
     assert.equal(res.status, 200)
     dataset = await workers.hook(`finalizer/${dataset.id}`)
     nockScope.done()
-    const extensionKey = '_ext_geocoder-koumoul_postCoords'
+    const extensionKey = '_ext_' + dataset.extensions[0].shortId
     assert.ok(dataset.schema.find(field => field.key === extensionKey + '.lat'))
     assert.ok(dataset.schema.find(field => field.key === extensionKey + '.lon'))
     // A search to check results
@@ -213,7 +213,7 @@ describe('Extensions', () => {
     assert.equal(res.status, 200)
     dataset = await workers.hook(`finalizer/${dataset.id}`)
     nockScope.done()
-    const extensionKey = '_ext_sirene-koumoul_findEtablissementsBulk'
+    const extensionKey = '_ext_' + dataset.extensions[0].shortId
     assert.ok(dataset.schema.find(field => field.key === extensionKey + '.location.lat'))
     assert.ok(dataset.schema.find(field => field.key === extensionKey + '.location.lon'))
 
@@ -221,7 +221,7 @@ describe('Extensions', () => {
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
     assert.equal(res.data.total, 1)
     assert.equal(res.data.results[0].label, 'koumoul')
-    assert.equal(res.data.results[0]['_ext_sirene-koumoul_findEtablissementsBulk.NOMEN_LONG'], 'KOUMOUL')
+    assert.equal(res.data.results[0][extensionKey + '.NOMEN_LONG'], 'KOUMOUL')
 
     // list generated files
     res = await ax.get(`/api/v1/datasets/${dataset.id}/data-files`)
@@ -406,9 +406,9 @@ koumoul,19 rue de la voie lactée saint avé
     assert.equal(res.status, 200)
     dataset = await workers.hook(`finalizer/${dataset.id}`)
     nockScope.done()
-    const extensionKey = '_ext_sirene-koumoul_findEtablissementsBulk'
+    const extensionKey = '_ext_' + dataset.extensions[0].shortId
     assert.ok(dataset.schema.find(field => field.key === extensionKey + '.location.lat'))
-    const extSiret = dataset.schema.find(field => field.key === '_ext_sirene-koumoul_findEtablissementsBulk.siret')
+    const extSiret = dataset.schema.find(field => field.key === extensionKey + '.siret')
     assert.ok(!extSiret['x-refersTo'])
   })
 
@@ -440,7 +440,7 @@ koumoul,19 rue de la voie lactée saint avé
     // console.log(dataset)
 
     // A search to check results
-    const extensionKey = '_ext_geocoder-koumoul_postCoords'
+    const extensionKey = '_ext_' + dataset.extensions[0].shortId
     const res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
     assert.equal(res.data.total, 1)
     assert.equal(res.data.results[0][extensionKey + '.lat'], 10)

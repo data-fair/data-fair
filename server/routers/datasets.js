@@ -306,6 +306,8 @@ router.patch('/:datasetId', readDataset((patch) => {
 
   patch.updatedAt = moment().toISOString()
   patch.updatedBy = { id: req.user.id, name: req.user.name }
+
+  if (patch.extensions) extensionsShortId(req, patch.extensions, req.dataset.extensions)
   if (patch.extensions || req.dataset.extensions) {
     patch.schema = await extensions.prepareSchema(db, patch.schema || req.dataset.schema, patch.extensions || req.dataset.extensions)
   }
@@ -323,7 +325,6 @@ router.patch('/:datasetId', readDataset((patch) => {
     }
   } else if (patch.extensions) {
     // extensions have changed, trigger full re-indexing
-    extensionsShortId(req, patch.extensions, req.dataset.extensions)
     patch.status = 'analyzed'
   } else if (patch.projection && (!req.dataset.projection || patch.projection.code !== req.dataset.projection.code)) {
     // geo projection has changed, trigger full re-indexing
