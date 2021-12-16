@@ -68,13 +68,16 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Prepare VERSION.json
-      run: 'echo "{\"ref\": \"${{github.ref}}\", \"commit\": \"${{github.sha}}\"}" > VERSION.json'
+    - name: Prepare BUILD.json
+      run: |
+        echo '{"version": "${{github.ref_name}}", "repository": "${{github.server_url}}/${{github.repository}}", "commit": "${{github.sha}}"}' > BUILD.json
+        cat BUILD.json
 
     - name: Build and push docker images
       id: docker_build
       uses: docker/build-push-action@v2
       with:
+        context: .
         push: ${{ github.event_name != 'pull_request' }}
         tags: ${{ steps.docker_meta.outputs.tags }}
         labels: ${{ steps.docker_meta.outputs.labels }}

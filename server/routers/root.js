@@ -11,20 +11,24 @@ const openApiSchema = require('../../contract/openapi-3.1.json')
 const validateApi = ajv.compile(openApiSchema)
 const config = require('config')
 
-let version = require('../../package.json').version
-try { version = require('./VERSION.json') } catch (err) {}
-
 const router = express.Router()
 
 const remoteServices = config.remoteServices.map(s => ({ ...s }))
 
-router.get('/status', status.status)
-router.get('/ping', status.ping)
-
+let info = { version: process.env.NODE_ENV }
+try { info = require('../../BUILD.json') } catch (err) {}
 router.get('/info', (req, res) => {
   if (!req.user) return res.status(401).send()
-  res.send({ name: 'data-fair', version })
+  res.send(info)
 })
+router.get('/admin/info', (req, res) => {
+  if (!req.user) return res.status(401).send()
+  if (!req.user.adminMode) return res.status(403).send()
+  res.send({ ...info, config })
+})
+
+router.get('/status', status.status)
+router.get('/ping', status.ping)
 
 router.get('/api-docs.json', (req, res) => {
   res.json(apiDocs)

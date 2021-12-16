@@ -1,7 +1,5 @@
-const config = require('config')
 const express = require('express')
 const asyncWrap = require('../utils/async-wrap')
-const pjson = require('../../package.json')
 const findUtils = require('../utils/find')
 const baseAppsUtils = require('../utils/base-apps')
 const cacheHeaders = require('../utils/cache-headers')
@@ -15,13 +13,6 @@ router.use(asyncWrap(async (req, res, next) => {
 }))
 
 router.use(cacheHeaders.noCache)
-
-let version = pjson.version
-try { version = require('./VERSION.json') } catch (err) {}
-
-router.get('/info', asyncWrap(async (req, res, next) => {
-  res.send({ name: 'data-fair', version, config })
-}))
 
 router.get('/datasets-errors', asyncWrap(async (req, res, next) => {
   const datasets = req.app.get('db').collection('datasets')
