@@ -4,8 +4,7 @@
 const assert = require('assert').strict
 const workers = require('../server/workers')
 
-const initMaster = async (schema, bulkSearchs) => {
-  const ax = global.ax.superadmin
+const initMaster = async (ax, schema, bulkSearchs) => {
   await ax.put('/api/v1/datasets/master', {
     isRest: true,
     title: 'master',
@@ -17,27 +16,12 @@ const initMaster = async (schema, bulkSearchs) => {
   await workers.hook('finalizer/master')
   const master = (await ax.get('api/v1/datasets/master')).data
 
-  // create api key to use dataset from remote service
-  const res = await ax.put('/api/v1/settings/user/superadmin', { apiKeys: [{ title: 'key1', scopes: ['datasets'] }] })
-  const apiKey = res.data.apiKeys[0].clearKey
-
   const apiDocUrl = master.href + '/api-docs.json'
   const apiDoc = (await ax.get(apiDocUrl)).data
 
-  // declare the master dataset as a remote service based on its api doc
-  const remoteService = (await ax.post('/api/v1/remote-services', {
-    apiDoc,
-    url: apiDocUrl,
-    server: apiDoc.servers[0].url,
-    apiKey: {
-      in: 'header',
-      name: 'x-apiKey',
-      value: apiKey,
-    },
-    public: true,
-  })).data
+  const remoteService = (await global.ax.superadmin.get('/api/v1/remote-services/dataset:master', { params: { showAll: true } })).data
 
-  return { master, apiKey, remoteService, apiDoc }
+  return { master, remoteService, apiDoc }
 }
 
 const siretProperty = {
@@ -80,6 +64,7 @@ describe('Master data management', () => {
     const ax = global.ax.superadmin
 
     const { remoteService, apiDoc } = await initMaster(
+      ax,
       [siretProperty, { key: 'extra', type: 'string' }],
       [{
         id: 'siret',
@@ -95,7 +80,7 @@ describe('Master data management', () => {
     assert.equal(bulkSearchDoc.post.operationId, 'masterData_bulkSearch_siret')
     assert.equal(bulkSearchDoc.post.summary, 'Fetch extra info from siret')
     assert.equal(remoteService.apiDoc.info['x-api-id'], 'localhost-dataset-master')
-    assert.equal(remoteService.id, 'localhost-dataset-master')
+    assert.equal(remoteService.id, 'dataset:master')
     assert.equal(remoteService.actions.length, 1)
     assert.equal(remoteService.actions[0].id, 'masterData_bulkSearch_siret')
 
@@ -118,16 +103,19 @@ describe('Master data management', () => {
     await workers.hook('finalizer/slave')
     await ax.post('/api/v1/datasets/slave/_bulk_lines', [{ siret: '82898347800011' }].map(item => ({ _id: item.siret, ...item })))
     const slave = await workers.hook('finalizer/slave')
-    assert.ok(slave.schema.find(p => p.key === '_ext_localhost-dataset-master_masterData_bulkSearch_siret.extra'))
-    assert.ok(slave.schema.find(p => p.key === '_ext_localhost-dataset-master_masterData_bulkSearch_siret._error'))
-    assert.ok(!slave.schema.find(p => p.key === '_ext_localhost-dataset-master_masterData_bulkSearch_siret.siret'))
+    assert.ok(slave.schema.find(p => p.key === '_ext_siret.extra'))
+    assert.ok(slave.schema.find(p => p.key === '_ext_siret._error'))
+    assert.ok(!slave.schema.find(p => p.key === '_ext_siret.siret'))
     const results = (await ax.get('/api/v1/datasets/slave/lines')).data.results
-    assert.equal(results[0]['_ext_localhost-dataset-master_masterData_bulkSearch_siret.extra'], 'Extra information')
-    assert.ok(!results[0]['_ext_localhost-dataset-master_masterData_bulkSearch_siret.siret'])
+    assert.equal(results[0]['_ext_siret.extra'], 'Extra information')
+    assert.ok(!results[0]['_ext_siret.siret'])
   })
 
   it('not return calculated properties', async () => {
+    const ax = global.ax.superadmin
+
     const { remoteService } = await initMaster(
+      ax,
       [siretProperty, { key: 'extra', type: 'string' }],
       [{
         id: 'siret',
@@ -136,7 +124,6 @@ describe('Master data management', () => {
         input: [{ type: 'equals', property: siretProperty }],
       }],
     )
-    const ax = global.ax.superadmin
 
     // create slave dataset
     await ax.put('/api/v1/datasets/slave', {
@@ -152,14 +139,16 @@ describe('Master data management', () => {
     await workers.hook('finalizer/slave')
     await ax.post('/api/v1/datasets/slave/_bulk_lines', [{ siret: '82898347800011' }].map(item => ({ _id: item.siret, ...item })))
     const slave = await workers.hook('finalizer/slave')
-    assert.ok(slave.schema.find(p => p.key === '_ext_localhost-dataset-master_masterData_bulkSearch_siret.extra'))
-    assert.ok(slave.schema.find(p => p.key === '_ext_localhost-dataset-master_masterData_bulkSearch_siret._error'))
-    assert.ok(slave.schema.find(p => p.key === '_ext_localhost-dataset-master_masterData_bulkSearch_siret.siret'))
-    assert.ok(!slave.schema.find(p => p.key === '_ext_localhost-dataset-master_masterData_bulkSearch_siret._rand'))
+    assert.ok(slave.schema.find(p => p.key === '_ext_siret.extra'))
+    assert.ok(slave.schema.find(p => p.key === '_ext_siret._error'))
+    assert.ok(slave.schema.find(p => p.key === '_ext_siret.siret'))
+    assert.ok(!slave.schema.find(p => p.key === '_ext_siret._rand'))
   })
 
   it('should handle sorting to chose ambiguous result', async () => {
+    const ax = global.ax.superadmin
     await initMaster(
+      ax,
       [siretProperty, { key: 'sortKey', type: 'integer' }, { key: 'extra', type: 'string' }],
       [{
         id: 'siret-sort-asc',
@@ -173,7 +162,6 @@ describe('Master data management', () => {
         sort: '-sortKey',
       }],
     )
-    const ax = global.ax.superadmin
 
     const items = [
       { siret: '82898347800011', sortKey: 3, extra: 'Extra information 3' },
@@ -210,7 +198,9 @@ describe('Master data management', () => {
 })
 
 it('should handle date-in-interval search type', async () => {
+  const ax = global.ax.superadmin
   await initMaster(
+    ax,
     [startProperty, endProperty, { key: 'extra', type: 'string' }],
     [{
       id: 'date-int',
@@ -218,8 +208,6 @@ it('should handle date-in-interval search type', async () => {
       input: [{ type: 'date-in-interval', property: dateProperty }],
     }],
   )
-
-  const ax = global.ax.superadmin
 
   const items = [
     { start: '2021-05-12T14:23:15.178Z', end: '2021-05-15T14:23:15.178Z', extra: 'Extra information 1' },
@@ -244,7 +232,9 @@ it('should handle date-in-interval search type', async () => {
 })
 
 it('should handle geo-distance search type', async () => {
+  const ax = global.ax.superadmin
   await initMaster(
+    ax,
     [latlonProperty, { key: 'extra', type: 'string' }],
     [{
       id: 'geo-dist',
@@ -252,8 +242,6 @@ it('should handle geo-distance search type', async () => {
       input: [{ type: 'geo-distance', distance: 0, property: geopointProperty }],
     }],
   )
-
-  const ax = global.ax.superadmin
 
   const items = [
     { latlon: '-2.7,47.6', extra: 'Extra information 1' },

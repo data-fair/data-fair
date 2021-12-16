@@ -34,7 +34,7 @@ exports.extend = async(app, dataset, extensions) => {
       continue
     }
 
-    const extensionKey = getExtensionKey(remoteService.id, action.id)
+    const extensionKey = getExtensionKey(extension)
     const inputMapping = prepareInputMapping(action, dataset, extensionKey, extension.select)
     const errorKey = action.output.find(o => o.name === '_error') ? '_error' : 'error'
     const idInput = action.input.find(input => input.concept === 'http://schema.org/identifier')
@@ -190,8 +190,9 @@ class RemoteExtensionStream extends Transform {
   }
 }
 
-function getExtensionKey(remoteServiceId, actionId) {
-  return `_ext_${remoteServiceId}_${actionId}`
+function getExtensionKey(extension) {
+  const id = extension.shortId ?? `${extension.remoteService}_${extension.action}`
+  return `_ext_${id}`
 }
 
 // Create a function that will transform items from a dataset into inputs for an action
@@ -235,7 +236,7 @@ exports.prepareSchema = async (db, schema, extensions) => {
     if (!action.input.find(i => i.concept && schema.concat(extensionsFields).find(prop => prop['x-refersTo'] && prop['x-refersTo'] === i.concept))) {
       continue
     }
-    const extensionKey = getExtensionKey(extension.remoteService, extension.action)
+    const extensionKey = getExtensionKey(extension)
     const extensionId = `${extension.remoteService}/${extension.action}`
     const selectFields = extension.select || []
     extensionsFields = extensionsFields.concat(action.output

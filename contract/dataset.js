@@ -370,6 +370,11 @@ module.exports = {
               type: 'string',
             },
           },
+          shortId: {
+            type: 'string',
+            description: 'Id court utiliser comme préfixe pour les ids des champs issus de cette extension.',
+            readOnly: true,
+          },
         },
       },
     },

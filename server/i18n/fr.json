@@ -4,7 +4,8 @@
 		"missingApp": "Application configuration not found",
 		"brokenHTML": "La structure HTML est corrompue, les éléments html, head et body sont requis",
 		"noAppAtUrl": "La page à l'adresse {{url}} ne semble pas héberger une application compatible avec ce service.",
-		"missingDataset": "Le jeu de données {{id}} est inconnu ou ne vous appartient pas."
+		"missingDataset": "Le jeu de données {{id}} est inconnu ou ne vous appartient pas.",
+		"extensionShortIdConflict": "Le jeu de données contient 2 extensions qui sont en conflit sur le préfixe des colonnes étendus."
 	},
 	"appRequire": {
 		"noDataset": "n'utilise pas de jeu de données comme source.",
@@ -14,7 +15,7 @@
 		"oneOfConcepts": "un des concepts {{concepts}}",
 		"aType": "le type {{type}}",
 		"oneOfTypes": "un des types {{types}}",
-    "orJoin": " ou ",
+		"orJoin": " ou ",
 		"requires": "nécessite ",
 		"requiresJoin": " et "
 	},

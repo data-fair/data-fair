@@ -117,6 +117,26 @@ const applicationKey = asyncWrap(async (req, res, next) => {
   next()
 })
 
+// create short ids for extensions that will be used as prefix of the properties ids in the schema
+// try to make something both readable and with little conflict risk (but not 0 risk)
+const extensionsShortId = (req, extensions, oldExtensions = []) => {
+  extensions
+    // do not reprocess already assigned shortIds to prevent compatibility break
+    .filter(e => !e.shortId)
+    // only apply to new extensions to prevent compatibility break
+    .filter(e => !oldExtensions.find(oldE => oldE.remoteService === e.remoteService && oldE.action === e.action))
+    .forEach(e => {
+      let shortId = e.action;
+      ['masterData', 'bulkSearch', 'find', 'bulk'].forEach(term => { shortId = shortId.replace(term, '') });
+      [':', '-', '.'].forEach(char => { shortId = shortId.replace(char, '_') })
+      e.shortId = shortId.replace(/__/g, '_').replace(/^_/, '').replace(/_$/, '')
+    })
+  const shortIds = extensions.filter(e => !!e.shortId).map(e => e.shortId)
+  if (shortIds.length !== [...new Set(shortIds)].length) {
+    throw createError(400, req.__('errors.extensionShortIdConflict'))
+  }
+}
+
 // Get the list of datasets
 router.get('', cacheHeaders.noCache, asyncWrap(async(req, res) => {
   const datasets = req.app.get('db').collection('datasets')
@@ -303,6 +323,7 @@ router.patch('/:datasetId', readDataset((patch) => {
     }
   } else if (patch.extensions) {
     // extensions have changed, trigger full re-indexing
+    extensionsShortId(req, patch.extensions, req.dataset.extensions)
     patch.status = 'analyzed'
   } else if (patch.projection && (!req.dataset.projection || patch.projection.code !== req.dataset.projection.code)) {
     // geo projection has changed, trigger full re-indexing
@@ -414,6 +435,7 @@ const initNew = async (db, req) => {
   dataset.permissions = []
   dataset.schema = dataset.schema || []
   if (dataset.extensions) {
+    extensionsShortId(req, dataset.extensions)
     dataset.schema = await extensions.prepareSchema(db, dataset.schema, dataset.extensions)
   }
   return dataset
@@ -629,6 +651,7 @@ const updateDataset = asyncWrap(async(req, res) => {
     let dataset = req.dataset
     req.body.schema = req.body.schema || dataset.schema || []
     if (req.body.extensions) {
+      extensionsShortId(req, req.body.extensions, dataset.extensions)
       req.body.schema = await extensions.prepareSchema(db, req.body.schema, req.body.extensions)
     }
 
@@ -737,9 +760,7 @@ router.post('/:datasetId/draft', readDataset(['finalized'], false, true), permis
     // WARNING, this functionality is kind of a duplicate of the UI in dataset-schema.vue
     for (const field of req.dataset.prod.schema) {
       if (field['x-calculated']) continue
-      // console.log(field)
       const patchedField = patchedDataset.schema.find(pf => pf.key === field.key)
-      // console.log(patchedField)
       if (!patchedField) {
         webhooks.trigger(db, 'dataset', patchedDataset, {
           type: 'breaking-change',
