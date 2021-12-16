@@ -2,8 +2,8 @@
 	"errors": {
 		"missingBaseApp": "The base application is unknown or as a restricted access.",
 		"missingApp": "Application configuration not found",
-		"brokenHTML": "HTML structure is broken, expect html, head and body elements",
-		"noAppAtUrl": "The page at URL {{url}} doesn't seem to host an application compatible with this service.",
+		"brokenHTML": "HTML structure at URL {{{url}}} is broken, expect html, head and body elements",
+		"noAppAtUrl": "The page at URL {{{url}}} doesn't seem to host an application compatible with this service.",
 		"missingDataset": "The dataset {{id}} is unknown or does not belong to you",
 		"extensionShortIdConflict": "The dataset contains 2 extensions that have a conflict on the prefix of the extended columns."
 	},

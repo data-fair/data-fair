@@ -24,22 +24,24 @@ before('global mocks', () => {
     .get('/api/1/datasets/suggest/?q=test').reply(200, [{ title: 'Test dataset' }])
 
   // fake applications
-  const html = `
+  const html = (name) => `
     <html>
       <head>
-        <meta name="application-name" content="test">
+        <meta name="application-name" content="${name}">
         <script type="text/javascript">window.APPLICATION=%APPLICATION%;</script>
+        <title>Title ${name}</title>
+        <meta name="description" content="Description ${name}">
       </head>
       <body>My app body</body>
     </html>
   `
   nock('http://monapp1.com/')
     .persist()
-    .get('/index.html').query(true).reply(200, html)
+    .get('/index.html').query(true).reply(200, html('test1'))
     .get('/config-schema.json').query(true).reply(200, {})
   nock('http://monapp2.com')
     .persist()
-    .get('/index.html').query(true).reply(200, html)
+    .get('/index.html').query(true).reply(200, html('test2'))
     .get('/config-schema.json').query(true).reply(200, {})
 
   debug('mocks ok')

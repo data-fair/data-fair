@@ -1,4 +1,3 @@
-const util = require('util')
 const url = require('url')
 const config = require('config')
 const express = require('express')
@@ -6,9 +5,7 @@ const axios = require('axios')
 const slug = require('slugify')
 const jsonRefs = require('json-refs')
 const createError = require('http-errors')
-const Extractor = require('html-extractor')
-const htmlExtractor = new Extractor()
-htmlExtractor.extract = util.promisify(htmlExtractor.extract)
+const parse5 = require('parse5')
 const i18n = require('i18n')
 const i18nUtils = require('../utils/i18n')
 const asyncWrap = require('../utils/async-wrap')
@@ -41,19 +38,46 @@ function prepareQuery(query) {
 
 async function failSafeInitBaseApp(db, app) {
   try {
-    await initBaseApp(db, app)
+    await initBaseApp(i18n.__, db, app)
   } catch (err) {
     console.error(`Failure to initialize base application ${app.url}`, err.stack)
   }
 }
 
 // Attempts to init an application's description from a URL
-async function initBaseApp(db, app) {
+async function initBaseApp(__, db, app) {
   if (app.url[app.url.length - 1] !== '/') app.url += '/'
-  const html = (await axios.get(app.url + 'index.html')).data
-  const data = await htmlExtractor.extract(html)
+  const htmlText = (await axios.get(app.url + 'index.html')).data
+  const document = parse5.parse(htmlText)
+  const html = document.childNodes.find(c => c.tagName === 'html')
+  if (!html) throw new Error(__('errors.brokenHTML', { url: app.url }))
+  const defaultLocale = html.attrs?.find(a => a.name === 'lang')?.value || config.i18n.defaultLocale
+  const head = html.childNodes.find(c => c.tagName === 'head')
+  if (!head) throw new Error(__('errors.brokenHTML', { url: app.url }))
+
+  const meta = {}
+  const applicationName = head.childNodes.find(c => c.tagName === 'meta' && c.attrs?.find(a => a.name === 'name' && a.value === 'application-name'))
+  meta['application-name'] = applicationName?.attrs.find(a => a.name === 'content')?.value
+  if (!meta['application-name']) throw new Error(__('errors.noAppAtUrl', { url: app.url }))
+
+  for (const localeMeta of ['description']) {
+    meta[localeMeta] = {}
+    const nodes = head.childNodes.filter(c => c.tagName === 'meta' && c.attrs?.find(a => a.name === 'name' && a.value === localeMeta))
+    for (const node of nodes) {
+      meta[localeMeta][node?.attrs.find(a => a.name === 'lang')?.value || defaultLocale] = node.attrs?.find(a => a.name === 'content')?.value
+    }
+  }
+
+  for (const localeTag of ['title']) {
+    meta[localeTag] = {}
+    const nodes = head.childNodes.filter(c => c.tagName === localeTag)
+    for (const node of nodes) {
+      meta[localeTag][node?.attrs.find(a => a.name === 'lang')?.value || defaultLocale] = node.childNodes?.[0].value
+    }
+  }
+
   const patch = {
-    meta: data.meta,
+    meta,
     id: slug(app.url, { lower: true }),
     ...app,
   }
@@ -62,8 +86,6 @@ async function initBaseApp(db, app) {
     const res = (await axios.get(app.url + 'config-schema.json'))
     if (typeof res.data !== 'object') throw new Error('Invalid json')
     const configSchema = (await jsonRefs.resolveRefs(res.data, { filter: ['local'] })).resolved
-
-    patch.hasConfigSchema = true
 
     // Read the config schema to deduce filters on datasets
     const datasetsItems = (configSchema.properties && configSchema.properties.datasets && configSchema.properties.datasets.items) ||
@@ -74,12 +96,12 @@ async function initBaseApp(db, app) {
     const datasetsQueries = datasetsUrls.map(datasetsUrl => url.parse(datasetsUrl, { parseQueryString: true }).query)
     patch.datasetsFilters = datasetsQueries.map(prepareQuery)
   } catch (err) {
-    patch.hasConfigSchema = false
-    console.error(`Failed to fetch a config schema for application ${app.url}`, err.message)
+    console.log('failure while reading config schema', app.url, err)
+    throw new Error(__('errors.noAppAtUrl', { url: app.url }))
   }
 
   if (!patch.hasConfigSchema && !(patch.meta && patch.meta['application-name'])) {
-    throw new Error(i18n.__({ phrase: 'errors.noAppAtUrl', locale: config.i18n.defaultLocale }, { url: app.url }))
+
   }
 
   patch.datasetsFilters = patch.datasetsFilters || []
@@ -99,7 +121,7 @@ router.post('', asyncWrap(async(req, res) => {
     return res.status(400).send(req.__('Initializing a base application only accepts the "url" part.'))
   }
   const baseApp = config.applications.find(a => a.url === req.body.url) || req.body
-  res.send(await initBaseApp(req.app.get('db'), baseApp))
+  res.send(await initBaseApp(req.__, req.app.get('db'), baseApp))
 }))
 
 router.patch('/:id', asyncWrap(async(req, res) => {

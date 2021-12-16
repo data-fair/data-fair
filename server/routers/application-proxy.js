@@ -210,10 +210,10 @@ router.all('/:applicationId*', setResource, asyncWrap(async(req, res, next) => {
         }))
         const document = parse5.parse(buffer.toString().replace(/%APPLICATION%/, JSON.stringify(req.application, null, 2)))
         const html = document.childNodes.find(c => c.tagName === 'html')
-        if (!html) throw new Error(req.__('errors.brokenHTML'))
+        if (!html) throw new Error(req.__('errors.brokenHTML', { url: cleanApplicationUrl }))
         const head = html.childNodes.find(c => c.tagName === 'head')
         const body = html.childNodes.find(c => c.tagName === 'body')
-        if (!head || !body) throw new Error(req.__('errors.brokenHTML'))
+        if (!head || !body) throw new Error(req.__('errors.brokenHTML', { url: cleanApplicationUrl }))
 
         // Data-fair generates a manifest per app
         const manifestUrl = new URL(req.application.exposedUrl).pathname + '/manifest.json'

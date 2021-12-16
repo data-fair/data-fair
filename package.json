@@ -100,7 +100,6 @@
     "geojson-vt": "^3.2.1",
     "geojson2wkt": "^1.0.0",
     "geolib": "^3.3.1",
-    "html-extractor": "^0.2.2",
     "http-errors": "^1.8.0",
     "i18n": "^0.13.3",
     "iconv-lite": "^0.5.2",
