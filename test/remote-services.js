@@ -59,11 +59,25 @@ describe('remote-services', () => {
     }
   })
 
+  it('Unknown referer', async () => {
+    const ax = global.ax.anonymous
+    try {
+      await ax.get('/api/v1/remote-services/geocoder-koumoul/proxy/coords', { headers: { referer: 'https://test.com' } })
+      assert.fail()
+    } catch (err) {
+      assert.equal(err.status, 400)
+    }
+  })
+
   it('Handle timeout errors from proxied service', async () => {
     const ax = global.ax.superadmin
+
+    // it is necessary to create an application, only applications are allowed to use remote-services' proxies
     nock('http://test.com').get('/geocoder/coord').delay(60000).reply(200, { content: 'ok' })
+    const app = (await ax.post('/api/v1/applications', { url: 'http://monapp1.com/' })).data
+
     try {
-      await ax.get('/api/v1/remote-services/geocoder-koumoul/proxy/coord')
+      await ax.get('/api/v1/remote-services/geocoder-koumoul/proxy/coord', { headers: { referer: app.exposedUrl } })
     } catch (err) {
       assert.equal(err.status, 504)
     }
@@ -72,12 +86,16 @@ describe('remote-services', () => {
   it('Prevent abusing remote service re-exposition', async () => {
     const ax = global.ax.superadmin
 
+    // it is necessary to create an application, only applications are allowed to use remote-services' proxies
+    const app = (await ax.post('/api/v1/applications', { url: 'http://monapp1.com/' })).data
+
     const nockScope = nock('http://test.com').get('/geocoder/coord').reply(200, { content: 'ok' })
-    const res = await ax.get('/api/v1/remote-services/geocoder-koumoul/proxy/coord')
+    const res = await ax.get('/api/v1/remote-services/geocoder-koumoul/proxy/coord', { headers: { referer: app.exposedUrl } })
     assert.equal(res.data.content, 'ok')
+
     nockScope.done()
     try {
-      await ax.post('/api/v1/remote-services/geocoder-koumoul/proxy/coords')
+      await ax.post('/api/v1/remote-services/geocoder-koumoul/proxy/coords', null, { headers: { referer: app.exposedUrl } })
       assert.fail()
     } catch (err) {
       assert.equal(err.status, 405)
@@ -86,7 +104,7 @@ describe('remote-services', () => {
     nock('http://test.com').persist().get('/geocoder/coords').reply(200, { content: Buffer.alloc(50000).toString('hex') })
     try {
       for (let i = 0; i < 4; i++) {
-        await ax.get('/api/v1/remote-services/geocoder-koumoul/proxy/coords')
+        await ax.get('/api/v1/remote-services/geocoder-koumoul/proxy/coords', { headers: { referer: app.exposedUrl } })
       }
       assert.fail()
     } catch (err) {
@@ -96,7 +114,7 @@ describe('remote-services', () => {
     nock('http://test.com').persist().get('/geocoder/coord').reply(200, { content: 'ok' })
     const promises = []
     for (let i = 0; i < 15; i++) {
-      promises.push(ax.get('/api/v1/remote-services/geocoder-koumoul/proxy/coord'))
+      promises.push(ax.get('/api/v1/remote-services/geocoder-koumoul/proxy/coord', { headers: { referer: app.exposedUrl } }))
     }
     try {
       await Promise.all(promises)
