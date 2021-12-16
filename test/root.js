@@ -14,8 +14,22 @@ describe('root', () => {
     assert.equal(res.status, 200)
   })
 
+  it('Get service info', async () => {
+    const ax = global.ax.dmeadus
+    const res = await ax.get('/api/v1/info')
+    assert.equal(res.status, 200)
+    assert.equal(res.data.version, 'test')
+  })
+
+  it('Get service admin info', async () => {
+    const ax = global.ax.superadmin
+    const res = await ax.get('/api/v1/admin/info')
+    assert.equal(res.status, 200)
+    assert.equal(res.data.version, 'test')
+  })
+
   it('Check API format', async () => {
-    const ax = global.ax.anonymous
+    const ax = global.ax.dmeadus
     const api = require('./resources/geocoder-api.json')
     const res = await ax.post('/api/v1/_check-api', api)
     assert.equal(res.status, 200)
