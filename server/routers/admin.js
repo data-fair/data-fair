@@ -20,7 +20,7 @@ let version = pjson.version
 try { version = require('./VERSION.json') } catch (err) {}
 
 router.get('/info', asyncWrap(async (req, res, next) => {
-  res.send({ version, config })
+  res.send({ name: 'data-fair', version, config })
 }))
 
 router.get('/datasets-errors', asyncWrap(async (req, res, next) => {
