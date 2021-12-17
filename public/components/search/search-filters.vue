@@ -31,7 +31,7 @@
         </v-card-text>
       </v-card>
     </v-row>
-    <v-row class="mb-1">
+    <v-row class="mt-3 mb-1">
       <template v-for="filter in Object.keys(fullFilterLabels)">
         <v-chip
           v-if="filters[filter]"
@@ -40,6 +40,7 @@
           small
           color="accent"
           text-color="white"
+          class="mt-1"
           @click:close="filters[filter] = null;writeParams(filter)"
         >
           <strong v-if="filter === 'showAll'">{{ $t('adminVue') }} {{ owners.length ? owners.join(', ') : 'tout voir' }}</strong>

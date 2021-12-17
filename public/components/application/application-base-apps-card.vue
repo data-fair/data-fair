@@ -3,7 +3,9 @@
     top
     content-class="base-app-tooltip"
   >
-    <span v-if="baseApp.description">{{ baseApp.description }}</span>
+    <span v-if="baseApp.description && (baseApp.description[$i18n.locale] || baseApp.description[$i18n.defaultLocale] || baseApp.description.fr)">
+      {{ baseApp.description[$i18n.locale] || baseApp.description[$i18n.defaultLocale] || baseApp.description.fr }}
+    </span>
     <template v-for="(disabled, i) in baseApp.disabled">
       <br :key="'br-' + i">
       <v-alert
@@ -30,14 +32,14 @@
       >
         <v-img
           :src="baseApp.image"
-          :alt="baseApp.title"
+          :alt="baseApp.title[$i18n.locale] || baseApp.title[$i18n.defaultLocale] || baseApp.title.fr"
           aspect-ratio="2.5"
         />
         <v-card-title :class="{'error--text': baseApp.disabled.length}">
           <h5>
             <v-icon v-if="!baseApp.public" :title="$t('restrictedAccess')">
               mdi-security
-            </v-icon>&nbsp;{{ baseApp.title }}
+            </v-icon>&nbsp;{{ baseApp.title[$i18n.locale] || baseApp.title[$i18n.defaultLocale] || baseApp.title.fr }}
           </h5>
         </v-card-title>
       </v-card>

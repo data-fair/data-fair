@@ -184,7 +184,7 @@
                             class="pa-2"
                             dark
                           >
-                            {{ app.title }}
+                            {{ app.title[$i18n.locale] || app.title[$i18n.defaultLocale] || app.title.fr }}
                           </v-sheet>
                           <v-img
                             :src="app.image"
@@ -192,14 +192,14 @@
                             contain
                           />
                           <v-sheet
-                            v-if="app.description"
+                            v-if="app.description[$i18n.locale] || app.description[$i18n.defaultLocale] || app.description.fr"
                             style="position:absolute;bottom:0;left:0;right:0;z-index:1;"
                             flat
                             color="rgba(0, 0, 0, 0.6)"
                             class="pa-2"
                             dark
                           >
-                            {{ app.description }}
+                            {{ app.description[$i18n.locale] || app.description[$i18n.defaultLocale] || app.description.fr }}
                           </v-sheet>
                         </div>
                       </v-carousel-item>

@@ -55,24 +55,40 @@ async function initBaseApp(__, db, app) {
   const head = html.childNodes.find(c => c.tagName === 'head')
   if (!head) throw new Error(__('errors.brokenHTML', { url: app.url }))
 
-  const meta = {}
-  const applicationName = head.childNodes.find(c => c.tagName === 'meta' && c.attrs?.find(a => a.name === 'name' && a.value === 'application-name'))
-  meta['application-name'] = applicationName?.attrs.find(a => a.name === 'content')?.value
-  if (!meta['application-name']) throw new Error(__('errors.noAppAtUrl', { url: app.url }))
-
-  for (const localeMeta of ['description']) {
-    meta[localeMeta] = {}
-    const nodes = head.childNodes.filter(c => c.tagName === 'meta' && c.attrs?.find(a => a.name === 'name' && a.value === localeMeta))
-    for (const node of nodes) {
-      meta[localeMeta][node?.attrs.find(a => a.name === 'lang')?.value || defaultLocale] = node.attrs?.find(a => a.name === 'content')?.value
-    }
+  const meta = { title: {} }
+  for (const node of head.childNodes.filter(c => c.tagName === 'title')) {
+    meta.title[node?.attrs.find(a => a.name === 'lang')?.value || defaultLocale] = node.childNodes?.[0].value
   }
 
-  for (const localeTag of ['title']) {
-    meta[localeTag] = {}
-    const nodes = head.childNodes.filter(c => c.tagName === localeTag)
-    for (const node of nodes) {
-      meta[localeTag][node?.attrs.find(a => a.name === 'lang')?.value || defaultLocale] = node.childNodes?.[0].value
+  const metaTags = ['application-name', 'description', 'keywords', 'vocabulary-accept', 'vocabulary-require', 'thumbnail']
+  const localizedMetaTags = ['description', 'keywords']
+  const multiValuedMetaTags = ['keywords', 'vocabulary-accept', 'vocabulary-require']
+
+  const metaNodes = head.childNodes
+    .filter(c => c.tagName === 'meta')
+    .map(c => ({
+      name: c.attrs.find(a => a.name === 'name')?.value,
+      locale: c.attrs.find(a => a.name === 'lang')?.value || defaultLocale,
+      content: c.attrs.find(a => a.name === 'content')?.value,
+    }))
+    .filter(m => metaTags.includes(m.name))
+
+  for (const metaNode of metaNodes) {
+    if (localizedMetaTags.includes(metaNode.name)) {
+      meta[metaNode.name] = meta[metaNode.name] || {}
+      if (multiValuedMetaTags.includes(metaNode.name)) {
+        meta[metaNode.name][metaNode.locale] = meta[metaNode.name][metaNode.locale] || []
+        if (metaNode.content) meta[metaNode.name][metaNode.locale].push(metaNode.content)
+      } else {
+        meta[metaNode.name][metaNode.locale] = metaNode.content
+      }
+    } else {
+      if (multiValuedMetaTags.includes(metaNode.name)) {
+        meta[metaNode.name] = meta[metaNode.name] || []
+        if (metaNode.content) meta[metaNode.name].push(metaNode.content)
+      } else {
+        meta[metaNode.name] = metaNode.content
+      }
     }
   }
 
@@ -109,10 +125,7 @@ async function initBaseApp(__, db, app) {
   const storedBaseApp = (await db.collection('base-applications')
     .findOneAndUpdate({ id: patch.id }, { $set: patch }, { upsert: true, returnDocument: 'after' })).value
   delete storedBaseApp._id
-  storedBaseApp.title = storedBaseApp.title || storedBaseApp.meta.title
-  storedBaseApp.description = storedBaseApp.description || storedBaseApp.meta.description
-  storedBaseApp.category = storedBaseApp.category || storedBaseApp.meta.category
-  storedBaseApp.documentation = storedBaseApp.documentation || storedBaseApp.meta.documentation
+  baseAppsUtils.clean(storedBaseApp)
   return storedBaseApp
 }
 

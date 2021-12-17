@@ -5,7 +5,7 @@
         <v-row>
           <v-col>
             <h2 class="text-h6">
-              Applications
+              {{ $t('applications') }}
             </h2>
             <v-row>
               <v-col
@@ -16,7 +16,7 @@
                 <v-text-field
                   v-model="q"
                   name="q"
-                  label="Rechercher"
+                  :label="$t('search')"
                   hide-details
                   outlined
                   dense
@@ -35,7 +35,7 @@
                 <v-text-field
                   v-model="urlToAdd"
                   label="Ajouter"
-                  placeholder="Saisissez l'URL d'une nouvelle application"
+                  :placeholder="$t('inputUrl')"
                   @keypress.enter="add"
                 />
               </v-col>
@@ -52,7 +52,7 @@
                   </v-list-item-avatar>
                   <v-list-item-content>
                     <v-list-item-title>
-                      {{ baseApp.title }}
+                      {{ baseApp.title[$i18n.locale] || baseApp.title[$i18n.defaultLocale] || baseApp.title.fr }}
                       <v-chip small dark>
                         {{ baseApp.category || 'autre' }}
                       </v-chip>
@@ -73,12 +73,14 @@
                         mdi-eye-off
                       </v-icon>
                     </v-list-item-title>
-                    <v-list-item-subtitle>{{ baseApp.description }}</v-list-item-subtitle>
                     <v-list-item-subtitle>
-                      <nuxt-link :to="{path: '/applications', query: {url: baseApp.url, showAll: true}}">
-                        {{ baseApp.nbApplications }} application{{ baseApp.nbApplications > 1 ? 's' : '' }}
+                      {{ baseApp.description[$i18n.locale] || baseApp.description[$i18n.defaultLocale] || baseApp.description.fr }}
+                    </v-list-item-subtitle>
+                    <v-list-item-subtitle>
+                      <nuxt-link v-if="baseApp.nbApplications" :to="{path: '/applications', query: {url: baseApp.url, showAll: true}}">
+                        {{ $tc('nbApplications', baseApp.nbApplications) }} -
                       </nuxt-link>
-                      - Jeux de données : {{ baseApp.datasetsFilters }}
+                      {{ $t('datasets') }} : {{ baseApp.datasetsFilters }}
                     </v-list-item-subtitle>
                   </v-list-item-content>
                   <v-list-item-action>
@@ -103,7 +105,7 @@
           <v-card v-if="currentBaseApp" outlined>
             <v-card-title primary-title>
               <h3 class="text-h6 mb-0">
-                Édition de {{ currentBaseApp.title }}
+                {{ $t('edition', {title: currentBaseApp.title}) }}
               </h3>
             </v-card-title>
             <v-card-text>
@@ -116,39 +118,45 @@
                 <v-text-field
                   v-model="patch.applicationName"
                   name="applicationName"
-                  label="Identifiant d'application"
+                  :label="$t('id')"
                 />
                 <v-text-field
                   v-model="patch.version"
                   name="version"
-                  label="Version d'application"
+                  :label="$t('version')"
                 />
-                <v-text-field
-                  v-model="patch.title"
-                  name="title"
-                  label="Titre"
-                />
-                <v-textarea
-                  v-model="patch.description"
-                  name="description"
-                  label="Description"
-                />
+                <template v-for="locale in $i18n.locales">
+                  <v-text-field
+                    :key="'title-' + locale"
+                    v-model="patch.title[locale]"
+                    name="title"
+                    :label="$t('title') + ' ' + locale"
+                  />
+                </template>
+                <template v-for="locale in $i18n.locales">
+                  <v-textarea
+                    :key="'desc-' + locale"
+                    v-model="patch.description[locale]"
+                    name="description"
+                    :label="$t('description') + ' ' + locale"
+                  />
+                </template>
                 <v-text-field
                   v-model="patch.image"
                   name="image"
-                  label="Image"
+                  :label="$t('image')"
                 />
                 <v-select
                   v-model="patch.category"
                   name="category"
-                  label="Catégorie"
+                  :label="$t('category')"
                   clearable
                   :items="env.baseAppsCategories"
                 />
                 <v-text-field
                   v-model="patch.documentation"
                   name="documentation"
-                  label="Documentation"
+                  :label="$t('documentation')"
                 />
                 <private-access :patch="patch" />
               </v-form>
@@ -156,13 +164,13 @@
             <v-card-actions>
               <v-spacer />
               <v-btn text @click="showEditDialog = false">
-                Annuler
+                {{ $t('cancel') }}
               </v-btn>
               <v-btn
                 color="primary"
                 @click="applyPatch(currentBaseApp, patch); showEditDialog = false"
               >
-                Enregistrer
+                {{ $t('save') }}
               </v-btn>
             </v-card-actions>
           </v-card>
@@ -171,6 +179,41 @@
     </v-col>
   </v-row>
 </template>
+
+<i18n lang="yaml">
+fr:
+  search: Rechercher
+  applications: Applications
+  inputUrl: Saisissez l'URL d'une nouvelle application
+  datasets: Jeux de données
+  id: Identifiant d'application
+  version: Version d'application
+  title: Titre
+  description: Description
+  save: Enregistrer
+  cancel: Annuler
+  image: Image
+  category: Catégorie
+  documentation: Documentation
+  edition: "Édition de {title}"
+  nbApplications: "aucune visualisation | 1 visualisation | {count} visualisations"
+en:
+  search: Search
+  applications: Applications
+  inputUrl: Type the URL of a new application
+  datasets: Datasets
+  id: Application id
+  version: Application version
+  title: Title
+  description: Description
+  save: Save
+  cancel: Cancel
+  image: Image
+  category: Category
+  documentation: Documentation
+  edition: "Editing {title}"
+  nbApplications: "no visualization | 1 visualization | {count} visualizations"
+</i18n>
 
 <script>
   import { mapState } from 'vuex'
@@ -196,7 +239,12 @@
     methods: {
       async refresh() {
         this.baseApps = (await this.$axios.$get('api/v1/admin/base-applications', { params: { size: 10000, thumbnail: '40x40', count: true, q: this.q } }))
-          .results.sort((ba1, ba2) => ba1.title.localeCompare(ba2.title))
+          .results.sort((ba1, ba2) => {
+            // the 'fr' was the historical default of data-fair applications
+            const title1 = ba1.title[this.$i18n.locale] || ba1.title[this.$i18n.defaultLocale] || ba1.title.fr || ''
+            const title2 = ba2.title[this.$i18n.locale] || ba2.title[this.$i18n.defaultLocale] || ba2.title.fr || ''
+            return title1.localeCompare(title2)
+          })
       },
       newPatch(baseApp) {
         return {
