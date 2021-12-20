@@ -134,7 +134,7 @@ Exemple: ma_colonne,-ma_colonne2`,
       default: [],
       items: {
         type: 'string',
-        enum: stringValuesProperties.map(p => p.key),
+        enum: stringValuesProperties.length ? stringValuesProperties.map(p => p.key) : undefined,
       },
     },
     style: 'commaDelimited',
@@ -156,7 +156,7 @@ Exemple: ma_colonne,-ma_colonne2`,
       type: 'array',
       items: {
         type: 'string',
-        enum: properties.map(p => p.key),
+        enum: properties.length ? properties.map(p => p.key) : undefined,
       },
     },
     style: 'commaDelimited',
@@ -185,7 +185,7 @@ La valeur est une liste de colonnes séparées par des virgules.
       type: 'array',
       items: {
         type: 'string',
-        enum: textSearchProperties.map(p => p.key),
+        enum: textSearchProperties.length ? textSearchProperties.map(p => p.key) : undefined,
       },
     },
     style: 'commaDelimited',
@@ -232,10 +232,8 @@ La valeur est une liste de colonnes séparées par des virgules.
     description: 'La colonne sur lequel effectuer la calcul de métrique',
     schema: {
       type: 'string',
+      enum: numberProperties.length ? numberProperties.map(p => p.key) : undefined,
     },
-  }
-  if (numberProperties.length) {
-    metricFieldParam.schema.enum = numberProperties.map(p => p.key)
   }
 
   const formatParam = {
@@ -406,7 +404,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
             description: 'La colonne en fonction des valeurs desquelles grouper les lignes du jeu de données',
             schema: {
               type: 'string',
-              enum: stringValuesProperties.map(p => p.key),
+              enum: stringValuesProperties.length ? stringValuesProperties.map(p => p.key) : undefined,
             },
           }, formatParam, metricParam, metricFieldParam, aggSizeParam].concat(filterParams).concat(hitsParams),
           // TODO: document sort param and interval
@@ -437,7 +435,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
             required: true,
             schema: {
               type: 'string',
-              enum: stringValuesProperties.map(p => p.key),
+              enum: stringValuesProperties.length ? stringValuesProperties.map(p => p.key) : undefined,
             },
           }].concat(filterParams),
           // TODO: document sort param and interval
@@ -493,7 +491,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
             required: true,
             schema: {
               type: 'string',
-              enum: textAggProperties.map(p => p.key),
+              enum: textAggProperties.length ? textAggProperties.map(p => p.key) : undefined,
             },
           }, {
             in: 'query',
