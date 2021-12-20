@@ -273,6 +273,7 @@ router.post('/:remoteServiceId/_update', readService, asyncWrap(async(req, res) 
 // We will consume the quota of the owner of the application.
 async function getAppOwner(req) {
   const referer = req.headers.referer || req.headers.referrer
+  // unfortunately this can happen quite a lot when coming from web workers, very restrictive browsers, etc.
   if (!referer) return console.warn('remote service proxy called without a referer header')
   debug('Referer URL', referer)
 
@@ -292,10 +293,6 @@ router.use('/:remoteServiceId/proxy*', asyncWrap(async (req, res, next) => {
   const appOwner = await getAppOwner(req)
   debug('Referer application owner', appOwner)
 
-  if (!appOwner) {
-    return res.status(400).send('Cette requête ne peut pas être exécutée depuis ailleurs qu\'une visualisation')
-  }
-
   // preventing POST is a simple way to prevent exposing bulk methods through this public proxy
   if (req.method.toUpperCase() !== 'GET') {
     return res.status(405).send('Seules les opérations de type GET sont autorisées sur cette exposition de service')
@@ -311,10 +308,8 @@ router.use('/:remoteServiceId/proxy*', asyncWrap(async (req, res, next) => {
   }
 
   // for perf, do not use the middleware readService, we want to read only absolutely necessary info
-  const accessFilter = [
-    { public: true },
-    { privateAccess: { $elemMatch: { type: appOwner.type, id: appOwner.id } } },
-  ]
+  const accessFilter = [{ public: true }]
+  if (appOwner) accessFilter.push({ privateAccess: { $elemMatch: { type: appOwner.type, id: appOwner.id } } })
 
   const remoteService = await req.app.get('db').collection('remote-services')
     .findOne({ id: req.params.remoteServiceId, $or: accessFilter }, { projection: { _id: 0, id: 1, server: 1, apiKey: 1 } })
