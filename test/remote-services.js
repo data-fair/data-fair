@@ -65,7 +65,7 @@ describe('remote-services', () => {
       await ax.get('/api/v1/remote-services/geocoder-koumoul/proxy/coords', { headers: { referer: 'https://test.com' } })
       assert.fail()
     } catch (err) {
-      assert.equal(err.status, 400)
+      assert.equal(err.status, 404)
     }
   })
 
