@@ -126,8 +126,8 @@ const extensionsShortId = (req, extensions, oldExtensions = []) => {
     // only apply to new extensions to prevent compatibility break
     .filter(e => !oldExtensions.find(oldE => oldE.remoteService === e.remoteService && oldE.action === e.action))
     .forEach(e => {
-      let shortId = e.action;
-      ['masterData', 'bulkSearch', 'find', 'bulk'].forEach(term => { shortId = shortId.replace(term, '') });
+      let shortId = e.action.toLowerCase();
+      ['masterdata', 'find', 'bulk', 'search'].forEach(term => { shortId = shortId.replace(term, '') });
       [':', '-', '.'].forEach(char => { shortId = shortId.replace(char, '_') })
       e.shortId = shortId.replace(/__/g, '_').replace(/^_/, '').replace(/_$/, '')
     })
