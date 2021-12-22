@@ -202,7 +202,7 @@ const applyTransactions = async (req, transacs, validate) => {
   }
   if (hasRevisionsBulkOp) await revisionsBulkOp.execute()
 
-  if (req.user) {
+  if (req.user && hasBulkOp) {
     db.collection('datasets').updateOne(
       { id: dataset.id },
       { $set: { dataUpdatedAt: updatedAt.toISOString(), dataUpdatedBy: { id: req.user.id, name: req.user.name } } })
@@ -222,12 +222,12 @@ class TransactionStream extends Writable {
     const results = await applyTransactions(this.options.req, this.transactions, this.options.validate)
     this.transactions = []
     results.forEach(res => {
-      if (res._error) {
+      if (res._error || res._status === 500) {
         this.options.summary.nbErrors += 1
         if (this.options.summary.errors.length < 10) this.options.summary.errors.push({ line: this.i, error: res._error, status: res._status })
       } else {
         this.options.summary.nbOk += 1
-        if (res.status === 304) {
+        if (res._status === 304) {
           this.options.summary.nbNotModified += 1
         }
       }
