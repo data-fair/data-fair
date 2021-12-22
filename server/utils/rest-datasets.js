@@ -51,7 +51,7 @@ const filename = async (req, file, cb) => {
   }
 }
 
-const transactionsPacketsSize = 100
+const transactionsPacketsSize = 1000
 const padISize = (transactionsPacketsSize - 1).toString().length
 // cf https://github.com/puckey/pad-number/blob/master/index.js
 const padI = (i) => {
@@ -110,6 +110,7 @@ const applyTransactions = async (req, transacs, validate) => {
   const datasetCreatedAt = new Date(dataset.createdAt).getTime()
   const updatedAt = new Date()
   const collection = exports.collection(db, dataset)
+  const revisionsCollection = exports.revisionsCollection(db, dataset)
   const history = dataset.rest && dataset.rest.history
   const patchProjection = dataset.schema
           .filter(f => !f['x-calculated'])
@@ -117,7 +118,12 @@ const applyTransactions = async (req, transacs, validate) => {
           .reduce((a, p) => { a[p.key] = 1; return a }, {})
   const results = []
 
+  const bulkOp = collection.initializeUnorderedBulkOp()
+  const revisionsBulkOp = revisionsCollection.initializeUnorderedBulkOp()
+
   let i = 0
+  let hasBulkOp = false
+  let hasRevisionsBulkOp = false
   for (const transac of transacs) {
     let { _action, ...body } = transac
     if (!actions.includes(_action)) throw createError(400, `action "${_action}" is unknown, use one of ${JSON.stringify(actions)}`)
@@ -139,7 +145,8 @@ const applyTransactions = async (req, transacs, validate) => {
       extendedBody._deleted = true
       extendedBody._hash = null
       try {
-        await collection.replaceOne({ _id: body._id }, extendedBody)
+        bulkOp.find({ _id: body._id }).replaceOne(extendedBody)
+        hasBulkOp = true
       } catch (err) {
         result._error = err.message
         result._status = 500
@@ -161,41 +168,50 @@ const applyTransactions = async (req, transacs, validate) => {
       } else {
         extendedBody._hash = crc32(stableStringify(body)).toString(16)
         const filter = { _id: body._id, _hash: { $ne: extendedBody._hash } }
-        try {
-          await collection.replaceOne(filter, extendedBody, { upsert: true })
-        } catch (err) {
-          if (err.code === 11000) {
-            // this conflict means that the hash was unchanged
-            result.status = 304
-          } else {
-            result._error = err.message
-            result._status = 500
-          }
-        }
+        bulkOp.find(filter).upsert().replaceOne(extendedBody)
+        hasBulkOp = true
       }
     }
 
     if (history && !result._error) {
-      const revisionsCollection = exports.revisionsCollection(db, dataset)
       const revision = { ...extendedBody, _action }
       delete revision._needsIndexing
       revision._lineId = revision._id
       delete revision._id
       if (!revision._deleted) delete revision._deleted
-      await revisionsCollection.insertOne(revision)
+      revisionsBulkOp.insert(revision)
+      hasRevisionsBulkOp = true
     }
 
     // disable this systematic broadcasting of transactions, not a good idea when doing large bulk inserts
     // and not really used anyway
     // if (!result._error) await req.app.publish('datasets/' + dataset.id + '/transactions', transac)
-
-    if (req.user) {
-      db.collection('datasets').updateOne(
-        { id: dataset.id },
-        { $set: { dataUpdatedAt: updatedAt.toISOString(), dataUpdatedBy: { id: req.user.id, name: req.user.name } } })
-    }
-
     results.push({ ...result, ...extendedBody })
+  }
+
+  if (hasBulkOp) {
+    try {
+      await bulkOp.execute()
+    } catch (err) {
+      if (!err.writeErrors) throw err
+      for (const writeError of err.writeErrors) {
+        const result = results.find(r => r._id === writeError.err.op.q._id)
+        if (writeError.err.code === 11000) {
+          // this conflict means that the hash was unchanged
+          result._status = 304
+        } else {
+          result._status = 500
+          result._error = writeError.err.errmsg
+        }
+      }
+    }
+  }
+  if (hasRevisionsBulkOp) await revisionsBulkOp.execute()
+
+  if (req.user) {
+    db.collection('datasets').updateOne(
+      { id: dataset.id },
+      { $set: { dataUpdatedAt: updatedAt.toISOString(), dataUpdatedBy: { id: req.user.id, name: req.user.name } } })
   }
 
   return results
@@ -231,7 +247,11 @@ class TransactionStream extends Writable {
     try {
       chunk._action = chunk._action || (chunk._id ? 'update' : 'create')
       delete chunk._i
+      // prevent working twice on a line in the same bulk, this way sequentiality doesn't matter and we can use mongodb unordered bulk
+      if (this.transactions.find(c => c._id === chunk._id)) await this._applyTransactions()
+
       this.transactions.push(chunk)
+
       // WARNING: changing this number has impact on the _i generation logic
       if (this.transactions.length > transactionsPacketsSize) await this._applyTransactions()
     } catch (err) {
@@ -444,7 +464,7 @@ exports.readStreams = async (db, dataset, onlyUpdated, progress) => {
   const count = await collection.countDocuments(filter)
   const inc = 100 / count
   return [
-    collection.find(filter).batchSize(100).stream(),
+    collection.find(filter).batchSize(1000).stream(),
     new Transform({
       objectMode: true,
       async transform(chunk, encoding, cb) {
@@ -491,7 +511,7 @@ exports.markIndexedStream = (db, dataset) => {
             this.bulkOp.find({ _id: chunk._id }).updateOne({ $set: { _needsIndexing: false } })
           }
         }
-        if (this.i === 100) {
+        if (this.i === 1000) {
           await this.bulkOp.execute()
           this.i = 0
           this.bulkOp = null

@@ -438,7 +438,6 @@ describe('REST datasets', () => {
     const collection = restDatasetsUtils.collection(global.db, dataset)
     res = await ax.post('/api/v1/datasets/restidem/_bulk_lines', [
       { _id: 'line1', attr1: 'test1', attr2: 'test1' },
-
     ])
     assert.equal(await collection.countDocuments({ _needsIndexing: true }), 0)
     await workers.hook('finalizer/restidem')
