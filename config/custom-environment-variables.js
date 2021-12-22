@@ -14,7 +14,13 @@ module.exports = {
   privateNotifyUrl: 'PRIVATE_NOTIFY_URL',
   notifyWSUrl: 'NOTIFY_WS_URL',
   subscriptionUrl: 'SUBSCRIPTION_URL',
-  mongoUrl: 'MONGO_URL',
+  mongo: {
+    url: 'MONGO_URL',
+    maxBulkOps: {
+      __name: 'MONGO_MAX_BULK_OPS',
+      __format: 'json',
+    },
+  },
   analytics: {
     __name: 'ANALYTICS',
     __format: 'json',

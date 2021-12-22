@@ -40,6 +40,9 @@ module.exports = {
     concurrency: 1,
     spawnTask: false,
   },
+  mongo: {
+    maxBulkOps: 100,
+  },
   locks: {
     // in seconds
     ttl: 0.1,

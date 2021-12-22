@@ -21,14 +21,14 @@ exports.connect = async () => {
   const opts = {}
   // workers generate a lot of opened sockets if we do not change this setting
   if (config.mode === 'task') opts.maxPoolSize = 1
-  debug('Connecting to mongodb ' + config.mongoUrl)
+  debug('Connecting to mongodb ' + config.mongo.url)
   try {
-    client = await MongoClient.connect(config.mongoUrl, opts)
+    client = await MongoClient.connect(config.mongo.url, opts)
   } catch (err) {
     // 1 retry after 1s
     // solve the quite common case in docker-compose of the service starting at the same time as the db
     await new Promise(resolve => setTimeout(resolve, 1000))
-    client = await MongoClient.connect(config.mongoUrl, opts)
+    client = await MongoClient.connect(config.mongo.url, opts)
   }
   const db = client.db()
   return { db, client }

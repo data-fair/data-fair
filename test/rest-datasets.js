@@ -606,32 +606,33 @@ test2,test2,test3`, { headers: { 'content-type': 'text/csv' } })
     assert.equal(lines[1].attr1, 'test2')
     assert.equal(lines[1].attr3, 'test3')
   })
-})
 
-it('Perform CRUD operations in larger bulk and keep request alive', async () => {
-  const ax = global.ax.dmeadus
-  await ax.put('/api/v1/datasets/rest2', {
-    isRest: true,
-    title: 'restlarge',
-    schema: [{ key: 'attr1', type: 'string' }],
+  it('Perform CRUD operations in larger bulk and keep request alive', async () => {
+    const ax = global.ax.dmeadus
+    await ax.put('/api/v1/datasets/rest2', {
+      isRest: true,
+      title: 'restlarge',
+      schema: [{ key: 'attr1', type: 'string' }],
+    })
+    await workers.hook('finalizer/rest2')
+    const bulkLines = []
+    for (let i = 0; i < 550; i++) {
+      bulkLines.push({ attr1: 'test' + i })
+    }
+    const res = await ax.post('/api/v1/datasets/rest2/_bulk_lines', bulkLines, { responseType: 'stream' })
+    let i = 0
+    await pump(res.data, new Writable({
+      write(chunk, encoding, callback) {
+        i += 1
+        if (i < 6) assert.equal(chunk.toString(), ' ')
+        else {
+          console.log(chunk.toString())
+          const result = JSON.parse(chunk.toString())
+          assert.equal(result.nbOk, 550)
+        }
+        callback()
+      },
+    }))
+    assert.equal(i, 6)
   })
-  await workers.hook('finalizer/rest2')
-  const bulkLines = []
-  for (let i = 0; i < 550; i++) {
-    bulkLines.push({ attr1: 'test' + i })
-  }
-  const res = await ax.post('/api/v1/datasets/rest2/_bulk_lines', bulkLines, { responseType: 'stream' })
-  let i = 0
-  await pump(res.data, new Writable({
-    write(chunk, encoding, callback) {
-      i += 1
-      if (i < 6) assert.equal(chunk.toString(), ' ')
-      else {
-        const result = JSON.parse(chunk.toString())
-        assert.equal(result.nbOk, 550)
-      }
-      callback()
-    },
-  }))
-  assert.equal(i, 6)
 })

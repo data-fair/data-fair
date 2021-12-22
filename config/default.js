@@ -17,7 +17,10 @@ module.exports = {
   notifyWSUrl: null,
   subscriptionUrl: null,
   pluginsDir: './plugins',
-  mongoUrl: 'mongodb://localhost:27017/data-fair-' + (process.env.NODE_ENV || 'development'),
+  mongo: {
+    url: 'mongodb://localhost:27017/data-fair-' + (process.env.NODE_ENV || 'development'),
+    maxBulkOps: 1000,
+  },
   map: {
     // A mapbox style to display geo data
     // style: 'https://free.tilehosting.com/styles/basic/style.json?key=o3lyi2a3gsPOuVB4ZgUv',

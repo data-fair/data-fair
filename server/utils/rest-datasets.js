@@ -51,8 +51,7 @@ const filename = async (req, file, cb) => {
   }
 }
 
-const transactionsPacketsSize = 1000
-const padISize = (transactionsPacketsSize - 1).toString().length
+const padISize = (config.mongo.maxBulkOps - 1).toString().length
 // cf https://github.com/puckey/pad-number/blob/master/index.js
 const padI = (i) => {
   const str = i.toString()
@@ -144,13 +143,8 @@ const applyTransactions = async (req, transacs, validate) => {
     if (_action === 'delete') {
       extendedBody._deleted = true
       extendedBody._hash = null
-      try {
-        bulkOp.find({ _id: body._id }).replaceOne(extendedBody)
-        hasBulkOp = true
-      } catch (err) {
-        result._error = err.message
-        result._status = 500
-      }
+      bulkOp.find({ _id: body._id }).replaceOne(extendedBody)
+      hasBulkOp = true
     } else {
       extendedBody._deleted = false
       if (_action === 'patch') {
@@ -213,7 +207,6 @@ const applyTransactions = async (req, transacs, validate) => {
       { id: dataset.id },
       { $set: { dataUpdatedAt: updatedAt.toISOString(), dataUpdatedBy: { id: req.user.id, name: req.user.name } } })
   }
-
   return results
 }
 
@@ -248,12 +241,12 @@ class TransactionStream extends Writable {
       chunk._action = chunk._action || (chunk._id ? 'update' : 'create')
       delete chunk._i
       // prevent working twice on a line in the same bulk, this way sequentiality doesn't matter and we can use mongodb unordered bulk
-      if (this.transactions.find(c => c._id === chunk._id)) await this._applyTransactions()
+      if (chunk._id && this.transactions.find(c => c._id === chunk._id)) await this._applyTransactions()
 
       this.transactions.push(chunk)
 
       // WARNING: changing this number has impact on the _i generation logic
-      if (this.transactions.length > transactionsPacketsSize) await this._applyTransactions()
+      if (this.transactions.length > config.mongo.maxBulkOps) await this._applyTransactions()
     } catch (err) {
       return cb(err)
     }
@@ -464,7 +457,7 @@ exports.readStreams = async (db, dataset, onlyUpdated, progress) => {
   const count = await collection.countDocuments(filter)
   const inc = 100 / count
   return [
-    collection.find(filter).batchSize(1000).stream(),
+    collection.find(filter).batchSize(100).stream(),
     new Transform({
       objectMode: true,
       async transform(chunk, encoding, cb) {
@@ -511,7 +504,7 @@ exports.markIndexedStream = (db, dataset) => {
             this.bulkOp.find({ _id: chunk._id }).updateOne({ $set: { _needsIndexing: false } })
           }
         }
-        if (this.i === 1000) {
+        if (this.i === config.mongo.maxBulkOps) {
           await this.bulkOp.execute()
           this.i = 0
           this.bulkOp = null
