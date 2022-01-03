@@ -367,7 +367,7 @@ other,address
     // validate the draft
     await ax.post(`/api/v1/datasets/${dataset.id}/draft`)
     dataset = await workers.hook(`finalizer/${dataset.id}`)
-    assert.equal(dataset.schema.length, 13)
+    assert.equal(dataset.schema.length, 11)
 
     // load a file missing the address property
 
@@ -381,7 +381,7 @@ other
     assert.equal(res.status, 200)
     dataset = await workers.hook(`finalizer/${dataset.id}`)
     assert.equal(dataset.extensions.length, 1)
-    assert.equal(dataset.schema.length, 13)
+    assert.equal(dataset.schema.length, 11)
     assert.equal(dataset.draft.extensions.length, 0)
     assert.equal(dataset.draft.schema.length, 4)
   })
