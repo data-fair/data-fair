@@ -10,6 +10,15 @@ const randomSeed = require('random-seed')
 
 const debug = require('debug')('index-stream')
 
+// remove some properties that must not be indexed
+const cleanItem = (item) => {
+  // these properties are only for internal management of rest dataset
+  delete item._hash
+  delete item._needsIndexing
+  delete item._deleted
+  delete item._updatedBy
+}
+
 class IndexStream extends Transform {
   constructor(options) {
     super({ objectMode: true })
@@ -28,7 +37,8 @@ class IndexStream extends Transform {
         const keys = Object.keys(item.doc)
         if (keys.length === 0 || (keys.length === 1 && keys[0] === '_i')) return callback()
         this.body.push({ update: { _index: this.options.indexName, _id: item.id, retry_on_conflict: 3 } })
-        this.body.push({ doc: item.doc })
+        cleanItem(item.doc)
+        this.body.push({ doc: cleanItem(item.doc) })
         this.bulkChars += JSON.stringify(item.doc).length
       } else if (item._deleted) {
         const params = { delete: { _index: this.options.indexName, _id: item._id } }
@@ -36,6 +46,7 @@ class IndexStream extends Transform {
         this.body.push(params)
         this.body.push(item)
       } else {
+        cleanItem(item)
         const params = { index: { _index: this.options.indexName } }
         params.index._id = item._id || (item._i + '')
         delete item._id

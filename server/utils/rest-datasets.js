@@ -138,7 +138,8 @@ const applyTransactions = async (req, transacs, validate) => {
 
     const result = { _id: body._id, _action }
 
-    if (req.user) extendedBody._updatedBy = { id: req.user.id, name: req.user.name }
+    // TODO: add this back based on a setting "rest.storeUpdatedBy" ?
+    // if (req.user) extendedBody._updatedBy = { id: req.user.id, name: req.user.name }
 
     if (_action === 'delete') {
       extendedBody._deleted = true

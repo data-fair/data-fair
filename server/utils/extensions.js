@@ -164,11 +164,11 @@ class RemoteExtensionStream extends Transform {
       }
       if (typeof data === 'object') data = JSON.stringify(data) // axios parses the object when there is only one
       const results = data.split('\n').filter(line => !!line).map(JSON.parse)
-
       for (const result of results) {
         const selectFields = extension.select || []
         const selectedResult = Object.keys(result)
           .filter(key => selectFields.length === 0 || selectFields.includes(key) || key === extension.errorKey)
+          .filter(key => !!this.dataset.schema.find(p => p.key === extension.extensionKey + '.' + key))
           .reduce((a, key) => { a[key] = result[key]; return a }, {})
 
         const i = result[extension.idInput.name]

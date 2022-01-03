@@ -438,15 +438,15 @@ exports.storage = async (db, dataset) => {
     const collection = await restDatasetsUtils.collection(db, dataset)
     const stats = await collection.stats()
     // we remove 100 bytes per line that are not really part of the original payload but added by us:
-    // _updatedAt, _updatedBy, _needsIndexing, and _i.
-    storage.collectionSize = Math.max(0, stats.size - (stats.count * 100))
+    // _updatedAt, _needsIndexing, _hash and _i.
+    storage.collectionSize = Math.max(0, stats.size - (stats.count * 40))
     storage.size += storage.collectionSize
 
     if (dataset.rest && dataset.rest.history) {
       const revisionsCollection = await restDatasetsUtils.revisionsCollection(db, dataset)
       const revisionsStats = await revisionsCollection.stats()
-      // we remove 60 bytes per line that are not really part of the original payload but added by _updatedAt, _needsIndexing, and _i.
-      storage.revisionsSize = Math.max(0, revisionsStats.size - (revisionsStats.count * 60))
+      // we remove 60 bytes per line that are not really part of the original payload but added by _action, _updatedAt, _hash and _i.
+      storage.revisionsSize = Math.max(0, revisionsStats.size - (revisionsStats.count * 40))
       storage.size += storage.revisionsSize
     }
   }
@@ -555,6 +555,7 @@ exports.extendedSchema = (dataset) => {
   }
   if (dataset.isRest) {
     schema.push({ 'x-calculated': true, key: '_updatedAt', type: 'string', format: 'date-time', title: 'Date de mise à jour', description: 'Date de dernière mise à jour de la ligne du jeu de données' })
+    // TODO: add this back based on a setting "rest.storeUpdatedBy" ?
     // schema.push({ 'x-calculated': true, key: '_updatedBy', type: 'object', title: 'Utilisateur de mise à jour', description: 'Utilisateur qui a effectué la e dernière mise à jour de la ligne du jeu de données' })
   }
   schema.push({ 'x-calculated': true, key: '_id', type: 'string', format: 'uri-reference', title: 'Identifiant', description: 'Identifiant unique parmi toutes les lignes du jeu de données' })

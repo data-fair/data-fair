@@ -8,7 +8,15 @@ exports.indexDefinition = (dataset) => {
   const properties = body.mappings.properties = {}
   datasetUtils.extendedSchema(dataset).forEach(jsProp => {
     const esProp = esProperty(jsProp)
-    if (esProp) properties[jsProp.key] = esProp
+    if (esProp) {
+      if (jsProp['x-extension']) {
+        const extKey = jsProp.key.split('.')[0]
+        properties[extKey] = properties[extKey] || { dynamic: 'strict', properties: {} }
+        properties[extKey].properties[jsProp.key.replace(extKey + '.', '')] = esProp
+      } else {
+        properties[jsProp.key] = esProp
+      }
+    }
   })
   return body
 }
@@ -73,7 +81,7 @@ const indexBase = (dataset) => {
         },
       },
     },
-    mappings: { },
+    mappings: { dynamic: 'strict' },
   }
 }
 
