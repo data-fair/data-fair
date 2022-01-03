@@ -54,14 +54,8 @@ exports.esProperty = prop => {
   }
   // Hardcoded calculated properties
   if (prop.key === '_geopoint') esProp = { type: 'geo_point' }
-  if (prop.key === '_geoshape') {
-    if (capabilities.geoShape !== false) esProp = { type: 'geo_shape' }
-    else esProp = { type: 'object', enabled: false }
-  }
-  if (prop.key === '_geocorners') {
-    if (capabilities.geoCorners !== false) esProp = { type: 'geo_point' }
-    else esProp = { type: 'keyword', index: false, doc_values: false }
-  }
+  if (prop.key === '_geoshape') esProp = { type: 'geo_shape' }
+  if (prop.key === '_geocorners') esProp = { type: 'geo_point' }
   if (prop.key === '_i') esProp = { type: 'long' }
   if (prop.key === '_rand') esProp = { type: 'integer' }
   if (prop.key === '_id') return null

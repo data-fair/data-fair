@@ -186,10 +186,12 @@ describe('Properties capabilities', () => {
 
     await ax.patch('/api/v1/datasets/rest-geoshape', {
       schema: [
-        { key: 'geom', type: 'string', 'x-refersTo': 'https://purl.org/geojson/vocab#geometry', 'x-capabilities': { geoShape: false } },
+        { key: 'geom', type: 'string', 'x-refersTo': 'https://purl.org/geojson/vocab#geometry', 'x-capabilities': { geoShape: false, geoCorners: false } },
       ],
     })
-    await workers.hook('finalizer/rest-geoshape')
+    const dataset = await workers.hook('finalizer/rest-geoshape')
+    assert.ok(!dataset.schema.find(p => p.key === '_geoshape'))
+    assert.ok(!dataset.schema.find(p => p.key === '_geocorners'))
 
     res = await ax.get('/api/v1/datasets/rest-geoshape/lines', { params: { geo_distance: '-2.41,47.87,0' } })
     assert.equal(res.data.total, 0)

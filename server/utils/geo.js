@@ -80,8 +80,6 @@ exports.latlon2fields = (dataset, doc) => {
   if (!lat || !lon) return {}
   return {
     _geopoint: lat + ',' + lon,
-    _geoshape: { type: 'Point', coordinates: [Number(lon), Number(lat)] },
-    _geocorners: [lat + ',' + lon],
   }
 }
 
@@ -125,13 +123,18 @@ exports.geometry2fields = async (schema, doc) => {
   // check if simplify is a good idea ? too CPU intensive for our backend ?
   // const simplified = turf.simplify({type: 'Feature', geometry: JSON.parse(doc[prop.key])}, {tolerance: 0.01, highQuality: false})
 
-  const centroid = turf.pointOnFeature(feature)
-  const bboxPolygon = turf.bboxPolygon(turf.bbox(feature))
-  return {
-    _geopoint: centroid.geometry.coordinates[1] + ',' + centroid.geometry.coordinates[0],
-    _geoshape: feature.geometry,
-    _geocorners: bboxPolygon.geometry.coordinates[0].map(c => c[1] + ',' + c[0]),
+  const point = turf.pointOnFeature(feature)
+  const fields = {
+    _geopoint: point.geometry.coordinates[1] + ',' + point.geometry.coordinates[0],
   }
+  if (!prop['x-capabilities'] || prop['x-capabilities'].geoCorners !== false) {
+    const bboxPolygon = turf.bboxPolygon(turf.bbox(feature))
+    fields._geocorners = bboxPolygon.geometry.coordinates[0].map(c => c[1] + ',' + c[0])
+  }
+  if (!prop['x-capabilities'] || prop['x-capabilities'].geoShape !== false) {
+    fields._geoshape = feature.geometry
+  }
+  return fields
 }
 
 exports.result2geojson = esResponse => {
