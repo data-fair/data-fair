@@ -920,10 +920,12 @@ router.get('/:datasetId/lines', readDataset(), applicationKey, permissions.middl
   const emptySelect = !req.query.select
   if (['geojson', 'mvt', 'vt', 'pbf'].includes(req.query.format)) {
     req.query.select = (req.query.select ? req.query.select : tiles.defaultSelect(req.dataset).join(','))
-    if (!req.query.select.includes('_geoshape')) req.query.select += ',_geoshape'
+    if (!req.query.select.includes('_geoshape') && req.dataset.schema.find(p => p.key === '_geoshape')) req.query.select += ',_geoshape'
+    if (!req.query.select.includes('_geoshape')) req.query.select += ',_geopoint'
   }
   if (req.query.format === 'wkt') {
-    req.query.select = '_geoshape'
+    if (req.dataset.schema.find(p => p.key === '_geoshape')) req.query.select = '_geoshape'
+    else req.query.select = '_geopoint'
   }
 
   if (req.dataset.isVirtual) req.dataset.descendants = await virtualDatasetsUtils.descendants(db, req.dataset)

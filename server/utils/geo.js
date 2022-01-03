@@ -143,10 +143,15 @@ exports.result2geojson = esResponse => {
     total: esResponse.hits.total.value,
     features: esResponse.hits.hits.map(hit => {
       const { _geoshape, ...properties } = hit._source
+      let geometry = hit._source._geoshape
+      if (!geometry) {
+        const [lat, lon] = hit._source._geopoint.split(',')
+        geometry = { type: 'Point', coordinates: [Number(lon), Number(lat)] }
+      }
       return {
         type: 'Feature',
         id: hit._id,
-        geometry: hit._source._geoshape,
+        geometry,
         properties: flatten({ ...properties, _id: hit._id }, { safe: true }),
       }
     }),
@@ -177,7 +182,12 @@ exports.result2wkt = esResponse => {
   const geometryCollection = {
     type: 'GeometryCollection',
     geometries: esResponse.hits.hits.map(hit => {
-      return hit._source._geoshape
+      let geometry = hit._source._geoshape
+      if (!geometry) {
+        const [lat, lon] = hit._source._geopoint.split(',')
+        geometry = { type: 'Point', coordinates: [Number(lon), Number(lat)] }
+      }
+      return geometry
     }),
   }
   return geojsonToWKT(geometryCollection)
