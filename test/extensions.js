@@ -491,12 +491,12 @@ other,unknown address
     nockScope.done()
     dataset = await workers.hook(`finalizer/${dataset.id}`)
     assert.equal(dataset.extensions.length, 1)
-    assert.equal(dataset.schema.length, 13)
+    assert.equal(dataset.schema.length, 11)
 
     // if we remove the concept, the extension is removed also
     delete dataset.schema.find(field => field.key === 'adr')['x-refersTo']
     dataset = (await ax.patch(`/api/v1/datasets/${dataset.id}`, { schema: dataset.schema })).data
-    assert.equal(dataset.schema.length, 8)
+    assert.equal(dataset.schema.length, 6)
     /* await workers.hook(`extender/${dataset.id}`)
     dataset = await workers.hook(`finalizer/${dataset.id}`)
     assert.equal(dataset.extensions.length, 0) */
