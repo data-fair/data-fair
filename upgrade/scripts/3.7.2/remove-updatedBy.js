@@ -9,8 +9,8 @@ exports.exec = async (db, debug) => {
     const dataset = await cursor.next()
     debug('work on dataset', dataset.id)
     const collection = restDatasetsUtils.collection(db, dataset)
-    await collection.updateMany({ $unset: { _updatedBy: '' } })
+    await collection.updateMany({}, { $unset: { _updatedBy: '' } })
     const revisionsCollection = restDatasetsUtils.revisionsCollection(db, dataset)
-    await revisionsCollection.updateMany({ $unset: { _updatedBy: '' } })
+    await revisionsCollection.updateMany({}, { $unset: { _updatedBy: '' } })
   }
 }
