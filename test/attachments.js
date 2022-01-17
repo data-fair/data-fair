@@ -65,6 +65,83 @@ describe('Attachments', () => {
     assert.equal(odtItem['_file.content'], 'This is a test libreoffice file.')
   })
 
+  it('Keep attachments when updating data', async () => {
+    const ax = global.ax.cdurning2
+
+    // Send dataset with a CSV and attachments in an archive
+    const form = new FormData()
+    form.append('dataset', fs.readFileSync('./test/resources/datasets/attachments.csv'), 'attachments.csv')
+    form.append('attachments', fs.readFileSync('./test/resources/datasets/files.zip'), 'files.zip')
+    let dataset = (await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })).data
+    dataset = await workers.hook(`finalizer/${dataset.id}`)
+    const attachmentsSize = dataset.storage.attachmentsSize
+
+    const form2 = new FormData()
+    form2.append('dataset', fs.readFileSync('./test/resources/datasets/attachments2.csv'), 'attachments2.csv')
+    await ax.put('/api/v1/datasets/' + dataset.id, form2, { headers: testUtils.formHeaders(form2) })
+    dataset = await workers.hook(`finalizer/${dataset.id}`)
+    assert.equal(dataset.storage.attachmentsSize, attachmentsSize)
+
+    const lines = (await ax.get(`/api/v1/datasets/${dataset.id}/lines`)).data
+    assert.equal(lines.total, 2)
+    assert.equal(lines.results[0]['_file.content'], 'This is a test libreoffice file.')
+  })
+
+  it('Update attachments with data', async () => {
+    const ax = global.ax.cdurning2
+
+    // Send dataset with a CSV and attachments in an archive
+    const form = new FormData()
+    form.append('dataset', fs.readFileSync('./test/resources/datasets/attachments.csv'), 'attachments.csv')
+    form.append('attachments', fs.readFileSync('./test/resources/datasets/files.zip'), 'files.zip')
+    let dataset = (await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })).data
+    dataset = await workers.hook(`finalizer/${dataset.id}`)
+    const attachmentsSize = dataset.storage.attachmentsSize
+
+    const form2 = new FormData()
+    form2.append('dataset', fs.readFileSync('./test/resources/datasets/attachments2.csv'), 'attachments2.csv')
+    form2.append('attachments', fs.readFileSync('./test/resources/datasets/files2.zip'), 'files2.zip')
+    await ax.put('/api/v1/datasets/' + dataset.id, form2, { headers: testUtils.formHeaders(form2) })
+    dataset = await workers.hook(`finalizer/${dataset.id}`)
+    assert.ok(dataset.storage.attachmentsSize < attachmentsSize, 'storage size should be reduced, we replace attachments with a smaller archive')
+
+    const lines = (await ax.get(`/api/v1/datasets/${dataset.id}/lines`)).data
+    assert.equal(lines.total, 2)
+    assert.equal(lines.results[0]['_file.content'], 'This is another test libreoffice file.')
+  })
+
+  it('Update attachments only then data only', async () => {
+    const ax = global.ax.cdurning2
+
+    // Send dataset with a CSV and attachments in an archive
+    const form = new FormData()
+    form.append('dataset', fs.readFileSync('./test/resources/datasets/attachments.csv'), 'attachments.csv')
+    form.append('attachments', fs.readFileSync('./test/resources/datasets/files.zip'), 'files.zip')
+    let dataset = (await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })).data
+    dataset = await workers.hook(`finalizer/${dataset.id}`)
+    const attachmentsSize = dataset.storage.attachmentsSize
+
+    const form2 = new FormData()
+    form2.append('attachments', fs.readFileSync('./test/resources/datasets/files2.zip'), 'files2.zip')
+    await ax.put(`/api/v1/datasets/${dataset.id}`, form2, { headers: testUtils.formHeaders(form2) })
+    try {
+      await workers.hook(`finalizer/${dataset.id}`)
+      assert.fail()
+    } catch (err) {
+      assert.ok(err.message.includes('Valeurs invalides : dir1/test.pdf'))
+    }
+
+    const form3 = new FormData()
+    form3.append('dataset', fs.readFileSync('./test/resources/datasets/attachments2.csv'), 'attachments2.csv')
+    await ax.put('/api/v1/datasets/' + dataset.id, form3, { headers: testUtils.formHeaders(form3) })
+    dataset = await workers.hook(`finalizer/${dataset.id}`)
+    assert.ok(dataset.storage.attachmentsSize < attachmentsSize, 'storage size should be reduced, we replace attachments with a smaller archive')
+
+    const lines = (await ax.get(`/api/v1/datasets/${dataset.id}/lines`)).data
+    assert.equal(lines.total, 2)
+    assert.equal(lines.results[0]['_file.content'], 'This is another test libreoffice file.')
+  })
+
   it('Detect wrong attachment path', async () => {
     const ax = global.ax.cdurning2
 

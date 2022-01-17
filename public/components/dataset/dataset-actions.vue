@@ -306,8 +306,20 @@
             outlined
             dense
             style="max-width: 300px;"
+            :accept="accepted.join(', ')"
             @change="onFileUpload"
           />
+          <template v-if="dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')">
+            <p v-t="'attachmentsMsg'" />
+            <v-file-input
+              :label="$t('selectAttachmentsFile')"
+              outlined
+              dense
+              style="max-width: 300px;"
+              accept=".zip"
+              @change="onAttachmentsFileUpload"
+            />
+          </template>
           <v-progress-linear
             v-if="uploading"
             v-model="uploadProgress"
@@ -322,7 +334,7 @@
           />
           <v-btn
             v-t="'load'"
-            :disabled="!file || uploading"
+            :disabled="!(file || attachmentsFile) || uploading"
             color="warning"
             @click="confirmUpload"
           />
@@ -388,11 +400,13 @@ fr:
   load: Charger
   dataUpdate: Remplacement des données
   selectFile: sélectionnez un fichier
+  selectAttachmentsFile: sélectionnez un fichier zip de pièces jointes
   fileTooLarge: Le fichier est trop volumineux pour être importé
   noSpaceLeft: Vous n'avez pas assez d'espace disponible pour ce fichier
   importError: "Erreur pendant l'import du fichier :"
   notifications: Notifications
   ok: ok
+  attachmentsMsg: Optionnellement vous pouvez charger une archive zip contenant des fichiers à utiliser comme pièces à joindre aux lignes du fichier principal. Dans ce cas le fichier principal doit avoir une colonne qui contient les chemins des pièces jointes dans l'archive.
 en:
   downloads: DOWNLOADS
   actions: ACTIONS
@@ -419,11 +433,13 @@ en:
   load: Load
   dataUpdate: Replace the data
   selectFile: select a file
+  selectAttachmentsFile: select an attachments zip file
   fileTooLarge: The file is too large to be imported
   noSpaceLeft: You don't have enough space left for this file
   importError: "Failure to import the file :"
   notifications: Notifications
   ok: ok
+  attachmentsMsg: Optionally you can load a zip archive containing files to be used as attachments to the lines of the main dataset file. In this case the main data file must have a column that contains paths of the attachments in the archive.
 </i18n>
 
 <script>
@@ -447,6 +463,7 @@ en:
       showUploadDialog: false,
       showOwnerDialog: false,
       file: null,
+      attachmentsFile: null,
       uploading: false,
       uploadProgress: 0,
       newOwner: null,
@@ -457,7 +474,7 @@ en:
       previewId: 'table',
     }),
     computed: {
-      ...mapState(['env']),
+      ...mapState(['env', 'accepted']),
       ...mapState('dataset', ['dataset', 'nbApplications', 'dataFiles', 'error']),
       ...mapGetters('dataset', ['can', 'resourceUrl']),
       previewLink() {
@@ -501,6 +518,9 @@ en:
       onFileUpload(file) {
         this.file = file
       },
+      onAttachmentsFileUpload(file) {
+        this.attachmentsFile = file
+      },
       async confirmUpload() {
         const options = {
           onUploadProgress: (e) => {
@@ -511,7 +531,8 @@ en:
           params: { draft: 'true' },
         }
         const formData = new FormData()
-        formData.append('file', this.file)
+        if (this.file) formData.append('file', this.file)
+        if (this.attachmentsFile) formData.append('attachments', this.attachmentsFile)
 
         this.uploading = true
         try {

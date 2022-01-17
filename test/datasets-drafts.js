@@ -272,6 +272,80 @@ describe('datasets in draft mode', () => {
     assert.equal(res.data.total, 2)
   })
 
+  it('Create a draft with attachments then data uploaded separately', async () => {
+    const ax = global.ax.dmeadus
+
+    // Send dataset with a CSV and attachments in an archive
+    const form = new FormData()
+    form.append('dataset', fs.readFileSync('./test/resources/datasets/attachments.csv'), 'attachments.csv')
+    form.append('attachments', fs.readFileSync('./test/resources/datasets/files.zip'), 'files.zip')
+    let dataset = (await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })).data
+    dataset = await workers.hook(`finalizer/${dataset.id}`)
+
+    // update only the attachments
+    const form2 = new FormData()
+    form2.append('attachments', fs.readFileSync('./test/resources/datasets/files2.zip'), 'files2.zip')
+    await ax.put(`/api/v1/datasets/${dataset.id}`, form2, { headers: testUtils.formHeaders(form2), params: { draft: true } })
+    try {
+      await workers.hook(`finalizer/${dataset.id}`)
+      assert.fail()
+    } catch (err) {
+      assert.ok(err.message.includes('Valeurs invalides : dir1/test.pdf'))
+    }
+
+    // then update the data
+    const form3 = new FormData()
+    form3.append('dataset', fs.readFileSync('./test/resources/datasets/attachments2.csv'), 'attachments2.csv')
+    await ax.put(`/api/v1/datasets/${dataset.id}`, form3, { headers: testUtils.formHeaders(form3), params: { draft: true } })
+    await workers.hook(`finalizer/${dataset.id}`)
+    let lines = (await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { draft: true } })).data
+    assert.equal(lines.total, 2)
+    assert.equal(lines.results[0]['_file.content'], 'This is another test libreoffice file.')
+
+    // finally validate the draft
+    await ax.post(`/api/v1/datasets/${dataset.id}/draft`)
+    dataset = await workers.hook(`finalizer/${dataset.id}`)
+    lines = (await ax.get(`/api/v1/datasets/${dataset.id}/lines`)).data
+    assert.equal(lines.total, 2)
+    assert.equal(lines.results[0]['_file.content'], 'This is another test libreoffice file.')
+  })
+
+  it('Create a draft with data then attachments uploaded separately', async () => {
+    const ax = global.ax.dmeadus
+
+    // Send dataset with a CSV and attachments in an archive
+    const form = new FormData()
+    form.append('dataset', fs.readFileSync('./test/resources/datasets/attachments.csv'), 'attachments.csv')
+    form.append('attachments', fs.readFileSync('./test/resources/datasets/files.zip'), 'files.zip')
+    let dataset = (await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })).data
+    dataset = await workers.hook(`finalizer/${dataset.id}`)
+
+    // update only the data (not the attachments)
+    const form2 = new FormData()
+    form2.append('dataset', fs.readFileSync('./test/resources/datasets/attachments2.csv'), 'attachments2.csv')
+    await ax.put(`/api/v1/datasets/${dataset.id}`, form2, { headers: testUtils.formHeaders(form2), params: { draft: true } })
+    await workers.hook(`finalizer/${dataset.id}`)
+    let lines = (await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { draft: true } })).data
+    assert.equal(lines.total, 2)
+    assert.equal(lines.results[0]['_file.content'], 'This is a test libreoffice file.')
+
+    // the update the attachments
+    const form3 = new FormData()
+    form3.append('attachments', fs.readFileSync('./test/resources/datasets/files2.zip'), 'files2.zip')
+    await ax.put(`/api/v1/datasets/${dataset.id}`, form3, { headers: testUtils.formHeaders(form3), params: { draft: true } })
+    await workers.hook(`finalizer/${dataset.id}`)
+    lines = (await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { draft: true } })).data
+    assert.equal(lines.total, 2)
+    assert.equal(lines.results[0]['_file.content'], 'This is another test libreoffice file.')
+
+    // finally validate the draft
+    await ax.post(`/api/v1/datasets/${dataset.id}/draft`)
+    dataset = await workers.hook(`finalizer/${dataset.id}`)
+    lines = (await ax.get(`/api/v1/datasets/${dataset.id}/lines`)).data
+    assert.equal(lines.total, 2)
+    assert.equal(lines.results[0]['_file.content'], 'This is another test libreoffice file.')
+  })
+
   it('Create a draft of a geo file that requires conversion', async () => {
     if (config.ogr2ogr.skip) {
       return console.log('Skip ogr2ogr test in this environment')

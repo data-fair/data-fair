@@ -164,30 +164,11 @@ en:
       action: null,
       importing: false,
       title: '',
-      accepted: [
-        '.csv',
-        '.geojson',
-        '.gpkg',
-        '.zip',
-        '.ods',
-        '.fods',
-        '.xlsx',
-        '.xls',
-        '.dbf',
-        '.txt',
-        '.dif',
-        '.tsv',
-        '.kml',
-        '.kmz',
-        '.xml',
-        '.gpx',
-        '.ics',
-      ],
     }),
     computed: {
       ...mapState('session', ['user']),
       ...mapGetters('session', ['activeAccount']),
-      ...mapState(['env']),
+      ...mapState(['env', 'accepted']),
       cleanTitle() {
         const trimmed = this.title.trim()
         return trimmed.length > 3 ? trimmed : null

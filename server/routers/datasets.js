@@ -194,15 +194,12 @@ router.get('', cacheHeaders.noCache, asyncWrap(async(req, res) => {
 // Shared middleware to read dataset in db
 // also checks that the dataset is in a state compatible with some action
 // supports waiting a little bit to be a little permissive with the user
-const readDataset = (_acceptedStatuses, noDraft, preserveDraft, ignoreDraft) => asyncWrap(async(req, res, next) => {
+const readDataset = (_acceptedStatuses, preserveDraft, ignoreDraft) => asyncWrap(async(req, res, next) => {
   const acceptedStatuses = typeof _acceptedStatuses === 'function' ? _acceptedStatuses(req.body) : _acceptedStatuses
   for (let i = 0; i < 10; i++) {
     req.dataset = req.resource = await req.app.get('db').collection('datasets')
       .findOne({ id: req.params.datasetId }, { projection: { _id: 0 } })
     if (!req.dataset) return res.status(404).send('Dataset not found')
-    if (noDraft && req.dataset.draft) {
-      throw createError(409, 'Le jeu de données est en mode brouillon, vous devez confirmer ou annuler les changements avant de pouvoir le mettre à jour de nouveau.')
-    }
     // in draft mode the draft is automatically merged and all following operations use dataset.draftReason to adapt
     if (preserveDraft) {
       req.dataset.prod = { ...req.dataset }
@@ -462,10 +459,12 @@ const setFileInfo = async (db, file, attachmentsFile, dataset, draft) => {
     dataUpdatedBy: dataset.updatedBy,
     dataUpdatedAt: dataset.updatedAt,
   }
-  patch.originalFile = {
-    name: file.originalname,
-    size: file.size,
-    mimetype: file.mimetype,
+  if (file) {
+    patch.originalFile = {
+      name: file.originalname,
+      size: file.size,
+      mimetype: file.mimetype,
+    }
   }
 
   if (!dataset.id) {
@@ -508,22 +507,35 @@ const setFileInfo = async (db, file, attachmentsFile, dataset, draft) => {
     }
   }
 
-  if (!baseTypes.has(file.mimetype)) {
+  if (file && !baseTypes.has(file.mimetype)) {
     // we first need to convert the file in a textual format easy to index
     patch.status = 'uploaded'
   } else {
     // The format of the original file is already well suited to workers
     patch.status = 'loaded'
-    patch.file = patch.originalFile
-    const fileName = datasetUtils.fileName({ ...dataset, ...patch })
-    // Try to prevent weird bug with NFS by forcing syncing file before sampling
-    const fd = await fs.open(fileName, 'r')
-    await fs.fsync(fd)
-    await fs.close(fd)
-    const fileSample = await datasetFileSample({ ...dataset, ...patch })
-    debugFiles(`Attempt to detect encoding from ${fileSample.length} first bytes of file ${fileName}`)
-    patch.file.encoding = chardet.detect(fileSample)
-    debugFiles(`Detected encoding ${patch.file.encoding} for file ${fileName}`)
+    if (file) {
+      patch.file = patch.originalFile
+      const fileName = datasetUtils.fileName({ ...dataset, ...patch })
+      // Try to prevent weird bug with NFS by forcing syncing file before sampling
+      const fd = await fs.open(fileName, 'r')
+      await fs.fsync(fd)
+      await fs.close(fd)
+      const fileSample = await datasetFileSample({ ...dataset, ...patch })
+      debugFiles(`Attempt to detect encoding from ${fileSample.length} first bytes of file ${fileName}`)
+      patch.file.encoding = chardet.detect(fileSample)
+      debugFiles(`Detected encoding ${patch.file.encoding} for file ${fileName}`)
+    }
+  }
+
+  if (draft && !file && !await fs.pathExists(datasetUtils.fileName({ ...dataset, ...patch }))) {
+    // this happens if we upload only the attachments, not the data file itself
+    // in this case copy the one from prod
+    await fs.copy(datasetUtils.fileName(dataset), datasetUtils.fileName({ ...dataset, ...patch }))
+  }
+  if (draft && !attachmentsFile && await fs.pathExists(datasetUtils.attachmentsDir(dataset)) && !await fs.pathExists(datasetUtils.attachmentsDir({ ...dataset, ...patch }))) {
+    // this happens if we upload only the main data file and not the attachments
+    // in this case copy the attachments directory from prod
+    await fs.copy(datasetUtils.attachmentsDir(dataset), datasetUtils.attachmentsDir({ ...dataset, ...patch }))
   }
 
   if (attachmentsFile) {
@@ -648,6 +660,7 @@ const attemptInsert = asyncWrap(async(req, res, next) => {
   next()
 })
 const updateDataset = asyncWrap(async(req, res) => {
+  const draft = req.query.draft === 'true'
   req.files = req.files || []
   debugFiles('PUT datasets uploaded some files', req.files)
   try {
@@ -655,7 +668,7 @@ const updateDataset = asyncWrap(async(req, res) => {
     // After uploadFile, req.files contains the metadata of an uploaded file, and req.body the content of additional text fields
     const datasetFile = req.files.find(f => f.fieldname === 'file' || f.fieldname === 'dataset')
     const attachmentsFile = req.files.find(f => f.fieldname === 'attachments')
-    if (!datasetFile && !req.dataset.isVirtual && !req.dataset.isRest && !req.dataset.isMetaOnly) throw createError(400, 'Un jeu de données doit être initialisé avec un fichier ou déclaré "virtuel" ou "incrémental" ou "métadonnées seules"')
+    if (!datasetFile && !attachmentsFile && !req.dataset.isVirtual && !req.dataset.isRest && !req.dataset.isMetaOnly) throw createError(400, 'Un jeu de données doit être initialisé avec un fichier ou déclaré "virtuel" ou "incrémental" ou "métadonnées seules"')
     if (datasetFile && (req.dataset.isVirtual || req.dataset.isRest || req.dataset.isMetaOnly)) throw createError(400, 'Un jeu de données est soit initialisé avec un fichier soit déclaré "virtuel" ou "incrémental" ou "métadonnées seules"')
     if (req.dataset.isVirtual && !req.dataset.title) throw createError(400, 'Un jeu de données virtuel doit être créé avec un titre')
     if (req.dataset.isRest && !req.dataset.title) throw createError(400, 'Un jeu de données incrémental doit être créé avec un titre')
@@ -674,7 +687,7 @@ const updateDataset = asyncWrap(async(req, res) => {
     req.body.updatedBy = { id: req.user.id, name: req.user.name }
     req.body.updatedAt = moment().toISOString()
 
-    if (datasetFile) {
+    if (datasetFile || attachmentsFile) {
       // send header at this point, then asyncWrap keepalive option will keep request alive while we process files
       // TODO: do this in a worker instead ?
       res.writeHeader(req.isNewDataset ? 201 : 200, { 'Content-Type': 'application/json' })
@@ -713,12 +726,12 @@ const updateDataset = asyncWrap(async(req, res) => {
         }
       }
     }
-    if (req.query.draft === 'true') {
+    if (draft) {
+      delete dataset.draftReason
       Object.assign(dataset.draft, req.body)
     } else {
       Object.assign(dataset, req.body)
     }
-
     await db.collection('datasets').replaceOne({ id: req.params.datasetId }, dataset)
     if (req.isNewDataset) await journals.log(req.app, dataset, { type: 'dataset-created' }, 'dataset')
     else if (!dataset.isRest && !dataset.isVirtual) {
@@ -738,11 +751,11 @@ const updateDataset = asyncWrap(async(req, res) => {
     throw err
   }
 }, { keepalive: true })
-router.post('/:datasetId', attemptInsert, readDataset(['finalized', 'error'], true), permissions.middleware('writeData', 'write'), checkStorage(true), filesUtils.uploadFile(), filesUtils.fixFormBody(validatePost), updateDataset)
-router.put('/:datasetId', attemptInsert, readDataset(['finalized', 'error'], true), permissions.middleware('writeData', 'write'), checkStorage(true), filesUtils.uploadFile(), filesUtils.fixFormBody(validatePost), updateDataset)
+router.post('/:datasetId', attemptInsert, readDataset(['finalized', 'error']), permissions.middleware('writeData', 'write'), checkStorage(true), filesUtils.uploadFile(), filesUtils.fixFormBody(validatePost), updateDataset)
+router.put('/:datasetId', attemptInsert, readDataset(['finalized', 'error']), permissions.middleware('writeData', 'write'), checkStorage(true), filesUtils.uploadFile(), filesUtils.fixFormBody(validatePost), updateDataset)
 
 // validate the draft
-router.post('/:datasetId/draft', readDataset(['finalized'], false, true), permissions.middleware('validateDraft', 'write'), asyncWrap(async (req, res, next) => {
+router.post('/:datasetId/draft', readDataset(['finalized'], true), permissions.middleware('validateDraft', 'write'), asyncWrap(async (req, res, next) => {
   const db = req.app.get('db')
   if (!req.dataset.draft) {
     return res.status(409).send('Le jeu de données n\'est pas en état brouillon')
@@ -825,7 +838,7 @@ router.post('/:datasetId/draft', readDataset(['finalized'], false, true), permis
 }))
 
 // cancel the draft
-router.delete('/:datasetId/draft', readDataset(['finalized', 'error'], false, true), permissions.middleware('cancelDraft', 'write'), asyncWrap(async (req, res, next) => {
+router.delete('/:datasetId/draft', readDataset(['finalized', 'error'], true), permissions.middleware('cancelDraft', 'write'), asyncWrap(async (req, res, next) => {
   const db = req.app.get('db')
   if (!req.dataset.draft) {
     return res.status(409).send('Le jeu de données n\'est pas en état brouillon')

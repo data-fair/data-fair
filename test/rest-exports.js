@@ -1,7 +1,7 @@
 const assert = require('assert').strict
 const workers = require('../server/workers')
 
-describe.only('REST datasets exported', () => {
+describe('REST datasets exported', () => {
   it('Configure automatic export of CSV file from REST dataset', async () => {
     const ax = global.ax.dmeadus
     await ax.post('/api/v1/datasets', {
