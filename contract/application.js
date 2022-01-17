@@ -95,6 +95,10 @@ module.exports = {
       type: 'object',
       description: 'An object for extra content from client services of data-fair',
     },
+    preferLargeDisplay: {
+      type: 'boolean',
+      default: false,
+    },
     permissions,
   },
 }
