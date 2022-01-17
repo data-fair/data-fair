@@ -287,4 +287,7 @@ module.exports = {
     locales: 'fr,en',
     defaultLocale: 'fr',
   },
+  exportRestDatasets: {
+    cron: '0 6 * * 0',
+  },
 }

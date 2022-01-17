@@ -82,6 +82,7 @@
     "cookie-universal-nuxt": "^2.1.4",
     "cors": "^2.8.5",
     "crc": "^3.8.0",
+    "cron": "^1.8.2",
     "csv-parser": "^3.0.0",
     "csv-stringify": "^5.5.3",
     "d3-hierarchy": "^2.0.0",

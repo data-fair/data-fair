@@ -211,6 +211,10 @@
                   <v-tab href="#share-publications">
                     <v-icon>mdi-transit-connection</v-icon>&nbsp;&nbsp;{{ $t('catalogs') }}
                   </v-tab>
+
+                  <v-tab v-if="dataset.isRest" href="#share-exports">
+                    <v-icon>mdi-export</v-icon>&nbsp;&nbsp;{{ $t('exports') }}
+                  </v-tab>
                 </template>
                 <template v-slot:tabs-items>
                   <tutorial-alert id="dataset-share-portal">
@@ -234,6 +238,10 @@
 
                   <v-tab-item value="share-publications">
                     <dataset-catalog-publications />
+                  </v-tab-item>
+
+                  <v-tab-item value="share-exports">
+                    <dataset-exports />
                   </v-tab-item>
                 </template>
               </layout-section-tabs>
@@ -310,6 +318,7 @@ fr:
   calendar: Calendrier
   files: Fichiers
   thumbnails: Vignettes
+  exports: Exports
   visualizations: Visualisations
   extReuses: Réutilisations externes
   share: Partage

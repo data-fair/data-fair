@@ -242,10 +242,12 @@ module.exports = {
       type: 'object',
       description: 'All storage space info of this dataset',
       properties: {
+        size: { type: 'integer' },
         fileSize: { type: 'integer' },
         attachmentsSize: { type: 'integer' },
         collectionSize: { type: 'integer' },
         revisionSize: { type: 'integer' },
+        exportedSize: { type: 'integer' },
       },
     },
     createdAt: {
@@ -490,6 +492,22 @@ module.exports = {
           description: 'Define how the thumbnails will be adapted to the size requested by visualizations',
           enum: ['crop', 'smartCrop', 'fitIn'],
           default: 'crop',
+        },
+      },
+    },
+    exports: {
+      type: 'object',
+      properties: {
+        restToCSV: {
+          type: 'object',
+          properties: {
+            active: { type: 'boolean', default: false },
+            nextExport: { type: 'string', format: 'date-time' },
+            lastExports: {
+              type: 'object',
+              date: { type: 'string', format: 'date-time' },
+            },
+          },
         },
       },
     },

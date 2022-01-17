@@ -2,7 +2,7 @@ const csvStringify = require('csv-stringify')
 const { Transform } = require('stream')
 const XLSX = require('xlsx')
 
-exports.result2csv = (dataset, query) => {
+exports.result2csv = (dataset, query = {}) => {
   const select = (query.select && query.select !== '*') ? query.select.split(',') : dataset.schema.filter(f => !f['x-calculated']).map(f => f.key)
   const properties = select.map(key => dataset.schema.find(prop => prop.key === key))
 

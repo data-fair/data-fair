@@ -24,6 +24,9 @@
             <v-list-item-subtitle v-if="dataset.storage.revisionsSize">
               {{ dataset.storage.revisionsSize | displayBytes($i18n.locale) }} {{ $t('revisions') }}
             </v-list-item-subtitle>
+            <v-list-item-subtitle v-if="dataset.storage.exportedSize">
+              {{ dataset.storage.exportedSize | displayBytes($i18n.locale) }} {{ $t('exported') }}
+            </v-list-item-subtitle>
           </template>
         </v-list-item-content>
       </v-list-item>
@@ -42,12 +45,14 @@ fr:
   attachments: de pièces jointes
   db: de lignes en base de données
   revisions: de révisions historisées
+  exported: de fichier exporté
 en:
   noInfo: (no storage information)
   files: of data files
   attachments: of attachments
   db: of lines in database
   revisions: of revisions histories
+  exported: of exported file
 </i18n>
 
 <script>

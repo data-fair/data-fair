@@ -241,9 +241,9 @@ export default () => ({
       try {
         const silent = patch.silent
         delete patch.silent
-        await this.$axios.patch(getters.resourceUrl, patch, { params: { draft: state.draftMode } })
+        const patched = await this.$axios.patch(getters.resourceUrl, patch, { params: { draft: state.draftMode } })
         if (!silent) eventBus.$emit('notification', 'Le jeu de données a été mis à jour.')
-        return true
+        return patched.data
       } catch (error) {
         if (error.status === 409) {
           eventBus.$emit('notification', 'Le jeu de données est en cours de traitement et votre modification n\'a pas pu être appliquée. Veuillez essayer de nouveau un peu plus tard.')
@@ -256,6 +256,15 @@ export default () => ({
     async patchAndCommit({ commit, getters, dispatch }, patch) {
       const patched = await dispatch('patch', patch)
       if (patched) commit('patch', patch)
+    },
+    async patchAndApplyRemoteChange({ commit, getters, dispatch }, patch) {
+      const patched = await dispatch('patch', patch)
+      if (patched) {
+        Object.keys(patch).forEach(k => {
+          patch[k] = patched[k]
+        })
+        commit('patch', patch)
+      }
     },
     async reindex({ state, dispatch }) {
       await this.$axios.$post(`api/v1/datasets/${state.dataset.id}/_reindex`, null, { params: { draft: state.draftMode } })

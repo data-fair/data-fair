@@ -16,6 +16,7 @@ const tasks = exports.tasks = {
   finalizer: require('./finalizer'),
   datasetPublisher: require('./dataset-publisher'),
   ttlManager: require('./ttl-manager'),
+  restExporterCSV: require('./rest-exporter-csv'),
   applicationPublisher: require('./application-publisher'),
 }
 
@@ -128,6 +129,8 @@ const typesFilters = () => ({
       // fetch rest datasets with a TTL to process
       { status: 'finalized', count: { $gt: 0 }, isRest: true, 'rest.ttl.active': true, 'rest.ttl.checkedAt': { $lt: moment().subtract(1, 'hours').toISOString() } },
       { status: 'finalized', count: { $gt: 0 }, isRest: true, 'rest.ttl.active': true, 'rest.ttl.checkedAt': { $exists: false } },
+      // fetch rest datasets with an automatic export to do
+      { status: 'finalized', isRest: true, 'exports.restToCSV.active': true, 'exports.restToCSV.nextExport': { $lt: moment().toISOString() } },
     ],
   },
 })
@@ -198,6 +201,12 @@ async function iter(app, resource, type) {
         (!resource.rest.ttl.checkedAt || resource.rest.ttl.checkedAt < moment().subtract(1, 'hours').toISOString())
       ) {
         taskKey = 'ttlManager'
+      } else if (
+        resource.status === 'finalized' &&
+        resource.isRest && resource?.exports?.restToCSV?.active &&
+        resource.exports.restToCSV.nextExport < moment().toISOString()
+      ) {
+        taskKey = 'restExporterCSV'
       }
     }
     if (!taskKey) return

@@ -302,6 +302,7 @@ async function createOrUpdateDataset(catalog, dataset, publication) {
     },
     resources,
   }
+  // TODO: use data-files ?
   if (dataset.file) {
     udataDataset.resources.push({
       title: `Fichier ${dataset.originalFile.name.split('.').pop()}`,

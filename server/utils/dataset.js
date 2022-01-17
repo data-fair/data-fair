@@ -48,6 +48,10 @@ exports.fullFileName = (dataset) => {
   return path.join(exports.dir(dataset), `${parsed.name}-full${parsed.ext}`)
 }
 
+exports.exportedFileName = (dataset, ext) => {
+  return path.join(exports.dir(dataset), `${dataset.id}-last-export${ext}`)
+}
+
 exports.extFileName = (dataset, ext) => {
   const parsed = path.parse(dataset.originalFile.name)
   return path.join(exports.dir(dataset), `${parsed.name}.${ext}`)
@@ -101,62 +105,76 @@ exports.lsFiles = async (dataset) => {
 }
 
 exports.dataFiles = async (dataset) => {
-  if (dataset.isVirtual || dataset.isRest || dataset.isMetaOnly) return []
+  if (dataset.isVirtual || dataset.isMetaOnly) return []
   const dir = exports.dir(dataset)
-  if (!await fs.exists(dir)) {
-    throw new Error('Le répertoire de données est absent')
+  if (!await fs.pathExists(dir)) {
+    return []
   }
   const files = await fs.readdir(dir)
   const results = []
-  if (!dataset.originalFile) return results
-  if (!files.includes(dataset.originalFile.name)) {
-    console.error('Original data file not found', dir, dataset.originalFile.name)
-  } else {
-    results.push({
-      name: dataset.originalFile.name,
-      key: 'original',
-      title: 'Fichier original',
-      mimetype: dataset.originalFile.mimetype,
-    })
-  }
-  if (!dataset.file) return results
-  if (dataset.file.name !== dataset.originalFile.name) {
-    if (!files.includes(dataset.file.name)) {
-      console.error('Normalized data file not found', dir, dataset.file.name)
+  if (dataset.originalFile) {
+    if (!files.includes(dataset.originalFile.name)) {
+      console.error('Original data file not found', dir, dataset.originalFile.name)
     } else {
       results.push({
-        name: dataset.file.name,
-        key: 'normalized',
-        title: `Fichier normalisé (${dataset.file.mimetype.split('/').pop()})`,
-        mimetype: dataset.file.mimetype,
+        name: dataset.originalFile.name,
+        key: 'original',
+        title: 'Fichier original',
+        mimetype: dataset.originalFile.mimetype,
       })
     }
+    if (!dataset.file) return results
+    if (dataset.file.name !== dataset.originalFile.name) {
+      if (!files.includes(dataset.file.name)) {
+        console.error('Normalized data file not found', dir, dataset.file.name)
+      } else {
+        results.push({
+          name: dataset.file.name,
+          key: 'normalized',
+          title: `Fichier normalisé (${dataset.file.mimetype.split('/').pop()})`,
+          mimetype: dataset.file.mimetype,
+        })
+      }
+    }
+    const parsed = path.parse(dataset.file.name)
+    if (dataset.extensions && !!dataset.extensions.find(e => e.active)) {
+      const name = `${parsed.name}-full${parsed.ext}`
+      if (!files.includes(name)) {
+        console.error('Full data file not found', path.join(dir, name))
+      } else {
+        results.push({
+          name,
+          key: 'full',
+          title: `Fichier étendu (${dataset.file.mimetype.split('/').pop()})`,
+          mimetype: dataset.file.mimetype,
+        })
+      }
+    }
+
+    if (dataset.bbox) {
+      const mbtilesName = `${parsed.name}.mbtiles`
+      if (!files.includes(mbtilesName)) {
+        console.error('Mbtiles data file not found', path.join(dir, mbtilesName))
+      } else {
+        results.push({
+          name: mbtilesName,
+          key: 'mbtiles',
+          title: 'Tuiles cartographiques (mbtiles)',
+          mimetype: 'application/vnd.sqlite3',
+        })
+      }
+    }
   }
-  const parsed = path.parse(dataset.file.name)
-  if (dataset.extensions && !!dataset.extensions.find(e => e.active)) {
-    const name = `${parsed.name}-full${parsed.ext}`
+  if (dataset.isRest && dataset?.exports?.restToCSV?.active && dataset?.exports?.restToCSV?.lastExport) {
+    const name = `${dataset.id}-last-export.csv`
     if (!files.includes(name)) {
-      console.error('Full data file not found', path.join(dir, name))
+      console.error('Exported data file not found', path.join(dir, name))
     } else {
       results.push({
         name,
-        key: 'full',
-        title: `Fichier étendu (${dataset.file.mimetype.split('/').pop()})`,
-        mimetype: dataset.file.mimetype,
-      })
-    }
-  }
-
-  if (dataset.bbox) {
-    const mbtilesName = `${parsed.name}.mbtiles`
-    if (!files.includes(mbtilesName)) {
-      console.error('Mbtiles data file not found', path.join(dir, mbtilesName))
-    } else {
-      results.push({
-        name: mbtilesName,
-        key: 'mbtiles',
-        title: 'Tuiles cartographiques (mbtiles)',
-        mimetype: 'application/vnd.sqlite3',
+        key: 'export-csv',
+        title: 'Fichier exporté (csv)',
+        mimetype: 'text/csv',
       })
     }
   }
@@ -448,6 +466,12 @@ exports.storage = async (db, dataset) => {
       // we remove 60 bytes per line that are not really part of the original payload but added by _action, _updatedAt, _hash and _i.
       storage.revisionsSize = Math.max(0, revisionsStats.size - (revisionsStats.count * 40))
       storage.size += storage.revisionsSize
+    }
+
+    if (await fs.pathExists(exports.exportedFileName(dataset, '.csv'))) {
+      const exportedSize = (await fs.promises.stat(exports.exportedFileName(dataset, '.csv'))).size
+      storage.size += exportedSize
+      storage.exportedSize = exportedSize
     }
   }
   return storage

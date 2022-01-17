@@ -455,8 +455,11 @@ exports.readStreams = async (db, dataset, onlyUpdated, progress) => {
   const collection = exports.collection(db, dataset)
   const filter = {}
   if (onlyUpdated) filter._needsIndexing = true
-  const count = await collection.countDocuments(filter)
-  const inc = 100 / count
+  let inc
+  if (progress) {
+    const count = await collection.countDocuments(filter)
+    inc = 100 / count
+  }
   return [
     collection.find(filter).batchSize(100).stream(),
     new Transform({

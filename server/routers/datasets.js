@@ -12,6 +12,7 @@ const config = require('config')
 const chardet = require('chardet')
 const slug = require('slugify')
 const sanitizeHtml = require('sanitize-html')
+const CronJob = require('cron').CronJob
 const journals = require('../utils/journals')
 const esUtils = require('../utils/es')
 const filesUtils = require('../utils/files')
@@ -316,6 +317,20 @@ router.patch('/:datasetId', readDataset((patch) => {
   if (!patch.publications && req.dataset.publications && req.dataset.publications.length) {
     req.dataset.publications.filter(p => p.status !== 'deleted').forEach(p => { p.status = 'waiting' })
     patch.publications = req.dataset.publications
+  }
+
+  // manage automatic export of REST datasets into files
+  if (patch.exports && patch.exports.restToCSV) {
+    if (patch.exports.restToCSV.active) {
+      const job = new CronJob(config.exportRestDatasets.cron, () => {})
+      patch.exports.restToCSV.nextExport = job.nextDates().toISOString()
+    } else {
+      delete patch.exports.restToCSV.nextExport
+      if (await fs.pathExists(datasetUtils.exportedFileName(req.dataset, '.csv'))) {
+        await fs.remove(datasetUtils.exportedFileName(req.dataset, '.csv'))
+      }
+    }
+    patch.exports.restToCSV.lastExport = req.dataset?.exports?.restToCSV?.lastExport
   }
 
   if (req.dataset.isVirtual) {
