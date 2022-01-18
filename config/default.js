@@ -39,11 +39,11 @@ module.exports = {
   },
   indicesPrefix: 'dataset-' + (process.env.NODE_ENV || 'development'),
   info: {
-    termsOfService: null,
+    termsOfService: '',
     contact: {
-      name: null,
-      url: null,
-      email: null,
+      name: '',
+      url: '',
+      email: '',
     },
   },
   brand: {
