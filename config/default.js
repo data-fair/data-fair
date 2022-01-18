@@ -43,7 +43,7 @@ module.exports = {
     contact: {
       name: '',
       url: '',
-      email: '',
+      // email: '',
     },
   },
   brand: {

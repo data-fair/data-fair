@@ -505,7 +505,9 @@ module.exports = {
             nextExport: { type: 'string', format: 'date-time' },
             lastExports: {
               type: 'object',
-              date: { type: 'string', format: 'date-time' },
+              properties: {
+                date: { type: 'string', format: 'date-time' },
+              },
             },
           },
         },
