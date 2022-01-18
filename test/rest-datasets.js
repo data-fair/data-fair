@@ -32,7 +32,7 @@ describe('REST datasets', () => {
     let res = await ax.post('/api/v1/datasets', {
       isRest: true,
       title: 'rest1',
-      schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }],
+      schema: [{ key: 'attr1', type: 'string', readOnly: true }, { key: 'attr2', type: 'string' }],
     })
     res = await ax.post('/api/v1/datasets/rest1/lines', { attr1: 'test1', attr2: 'test1' })
     assert.equal(res.status, 201)

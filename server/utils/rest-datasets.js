@@ -261,7 +261,7 @@ class TransactionStream extends Writable {
 }
 
 const compileSchema = (dataset) => {
-  const schema = datasetUtils.jsonSchema(dataset.schema)
+  const schema = datasetUtils.jsonSchema(dataset.schema.map(p => ({ ...p, readOnly: false })))
   schema.additionalProperties = false
   schema.properties._id = { type: 'string' }
   return ajv.compile(schema)
