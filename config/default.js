@@ -39,11 +39,11 @@ module.exports = {
   },
   indicesPrefix: 'dataset-' + (process.env.NODE_ENV || 'development'),
   info: {
-    termsOfService: 'https://koumoul.com/platform/term-of-service',
+    termsOfService: null,
     contact: {
-      name: 'Koumoul',
-      url: 'https://koumoul.com',
-      email: 'support@koumoul.com',
+      name: null,
+      url: null,
+      email: null,
     },
   },
   brand: {
