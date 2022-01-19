@@ -173,7 +173,7 @@
           flat
         >
           <v-switch
-            v-if="can('readPrivateApiDoc') && can('readApiDoc')"
+            v-if="dataset.public && can('readPrivateApiDoc') && can('readApiDoc')"
             v-model="publicAPIDoc"
             :label="$t('switchPublicAPIDoc')"
             class="my-3"
