@@ -375,6 +375,9 @@ exports.prepareResultItem = (hit, dataset, query) => {
         return a
       }, {})
   }
+
+  if (query.draft && res._attachment_url) res._attachment_url += '?draft=true'
+
   const imageField = dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/image')
   if (query.thumbnail) {
     if (!imageField) throw createError(400, 'Thumbnail management is only available if the "image" concept is associated to a field of the dataset.')

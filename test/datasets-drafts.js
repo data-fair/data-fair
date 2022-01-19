@@ -249,6 +249,7 @@ describe('datasets in draft mode', () => {
 
     // Send dataset with a CSV and attachments in an archive
     const form = new FormData()
+    form.append('attachmentsAsImage', 'true')
     form.append('dataset', fs.readFileSync('./test/resources/datasets/attachments.csv'), 'attachments.csv')
     form.append('attachments', fs.readFileSync('./test/resources/datasets/files.zip'), 'files.zip')
     let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form), params: { draft: true } })
@@ -260,8 +261,12 @@ describe('datasets in draft mode', () => {
     assert.equal(dataset.status, 'draft')
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { draft: true } })
     assert.equal(res.data.total, 3)
-    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { q: 'test', draft: true } })
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { q: 'test', draft: true, thumbnail: true } })
     assert.equal(res.data.total, 2)
+    assert.ok(res.data.results[0]._attachment_url.endsWith('?draft=true'))
+    assert.equal(res.data.results[0]._attachment_url, res.data.results[0]._thumbnail)
+    res = await ax.get(res.data.results[1]._attachment_url)
+    assert.equal(res.status, 200)
 
     // validate the draft
     await ax.post(`/api/v1/datasets/${dataset.id}/draft`)
