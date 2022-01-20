@@ -7,7 +7,8 @@
       @change="patchAndApplyRemoteChange({ exports: editExports })"
     />
     <v-alert
-      :value="!!(dataset.exports && dataset.exports.restToCSV && dataset.exports.restToCSV.nextExport)"
+      v-if="dataset.exports && dataset.exports.restToCSV && dataset.exports.restToCSV.nextExport"
+      :value="true"
       type="info"
       outlined
       style="display:inline-block;"
