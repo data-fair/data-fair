@@ -217,10 +217,10 @@
                   </v-tab>
                 </template>
                 <template v-slot:tabs-items>
-                  <tutorial-alert id="dataset-share-portal">
-                    {{ $t('tutorialShare') }}
-                  </tutorial-alert>
                   <v-tab-item value="share-permissions">
+                    <tutorial-alert id="dataset-share-portal" class="mx-2">
+                      {{ $t('tutorialShare') }}
+                    </tutorial-alert>
                     <v-container fluid>
                       <permissions
                         v-if="can('getPermissions')"
@@ -233,6 +233,9 @@
                   </v-tab-item>
 
                   <v-tab-item value="share-publication-sites">
+                    <tutorial-alert id="dataset-share-portal" class="mx-2">
+                      {{ $t('tutorialShare') }}
+                    </tutorial-alert>
                     <dataset-publication-sites :publication-sites="publicationSites" />
                   </v-tab-item>
 
