@@ -55,11 +55,11 @@ function clean(publicUrl, dataset, thumbnail = '300x200', draft = false) {
   dataset.description = dataset.description ? sanitizeHtml(dataset.description) : ''
   dataset.previews = datasetUtils.previews(dataset)
   findUtils.setResourceLinks(dataset, 'dataset', publicUrl)
-  if (dataset.image && publicUrl !== config.publicUrl) {
-    dataset.image = dataset.image.replace(config.publicUrl, publicUrl)
-  }
   if (dataset.image && dataset.public) {
     dataset.thumbnail = thumbor.thumbnail(dataset.image, thumbnail)
+  }
+  if (dataset.image && publicUrl !== config.publicUrl) {
+    dataset.image = dataset.image.replace(config.publicUrl, publicUrl)
   }
   return dataset
 }
