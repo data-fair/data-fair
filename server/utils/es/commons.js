@@ -341,9 +341,10 @@ exports.getQueryBBOX = (query) => {
   } else if (query.xyz) {
     bbox = tiles.xyz2bbox(...query.xyz.split(',').map(Number))
   }
-
-  bbox[0] = geo.fixLon(bbox[0])
-  bbox[2] = geo.fixLon(bbox[2])
+  if (bbox) {
+    bbox[0] = geo.fixLon(bbox[0])
+    bbox[2] = geo.fixLon(bbox[2])
+  }
   return bbox
 }
 
