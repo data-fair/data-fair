@@ -120,7 +120,7 @@ Pour plus d'information voir la documentation [ElasticSearch](https://www.elasti
     })
   }
 
-  const hitsParams = [{
+  const hitsParams = (defaultSize = 20, maxSize = 10000) => [{
     in: 'query',
     name: 'sort',
     description: `
@@ -143,9 +143,9 @@ Exemple: ma_colonne,-ma_colonne2`,
     name: 'size',
     description: 'Le nombre de résultats à retourner (taille de la pagination). 20 par défaut.',
     schema: {
-      default: 20,
+      default: defaultSize,
       type: 'integer',
-      maximum: 10000,
+      maximum: maxSize,
     },
   }, {
     in: 'query',
@@ -358,7 +358,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
               default: 1,
               type: 'integer',
             },
-          }, formatParam].concat(filterParams).concat(hitsParams).concat([{
+          }, formatParam].concat(filterParams).concat(hitsParams()).concat([{
             in: 'query',
             name: 'collapse',
             description: 'Afficher une ligne de résultat par valeur distince d\'un champ',
@@ -406,7 +406,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
               type: 'string',
               enum: stringValuesProperties.length ? stringValuesProperties.map(p => p.key) : undefined,
             },
-          }, formatParam, metricParam, metricFieldParam, aggSizeParam].concat(filterParams).concat(hitsParams),
+          }, formatParam, metricParam, metricFieldParam, aggSizeParam].concat(filterParams).concat(hitsParams(0, 100)),
           // TODO: document sort param and interval
           responses: {
             200: {
@@ -651,7 +651,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
         operationId: 'getGeoAgg',
         'x-permissionClass': 'read',
         tags: ['Données'],
-        parameters: [aggSizeParam].concat(filterParams).concat(hitsParams).concat([formatParam]),
+        parameters: [aggSizeParam].concat(filterParams).concat(hitsParams(0, 100)).concat([formatParam]),
         responses: {
           200: {
             description: 'Les informations du jeu de données agrégées spatialement.',
