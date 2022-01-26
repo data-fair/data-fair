@@ -47,7 +47,8 @@ const baseTypes = new Set(['text/csv', 'application/geo+json'])
 
 const router = express.Router()
 
-function clean(publicUrl, dataset, thumbnail = '300x200', draft = false) {
+function clean(publicUrl, dataset, thumbnail, draft = false) {
+  thumbnail = thumbnail || '300x200'
   if (draft) datasetUtils.mergeDraft(dataset)
   dataset.public = permissions.isPublic('datasets', dataset)
   dataset.visibility = visibilityUtils.visibility(dataset)
