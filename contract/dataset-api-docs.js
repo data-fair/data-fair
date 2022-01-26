@@ -402,6 +402,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
             in: 'query',
             name: 'field',
             description: 'La colonne en fonction des valeurs desquelles grouper les lignes du jeu de données',
+            required: true,
             schema: {
               type: 'string',
               enum: stringValuesProperties.length ? stringValuesProperties.map(p => p.key) : undefined,
