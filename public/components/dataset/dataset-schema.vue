@@ -171,7 +171,7 @@ en:
       ...mapGetters('dataset', ['can']),
       updated() {
         return JSON.stringify(this.schema) !== this.originalSchema ||
-          JSON.stringify(this.primaryKey) !== JSON.stringify(this.dataset.primaryKey)
+          JSON.stringify(this.primaryKey || []) !== JSON.stringify(this.dataset.primaryKey || [])
       },
       originalProperties() {
         return JSON.parse(this.originalSchema)
