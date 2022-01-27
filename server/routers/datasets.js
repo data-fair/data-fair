@@ -359,6 +359,14 @@ router.patch('/:datasetId', readDataset((patch) => {
   } else if (patch.schema && patch.schema.find(f => req.dataset.schema.find(df => df.key === f.key && df.ignoreIntegerDetection !== f.ignoreIntegerDetection))) {
     // some ignoreIntegerDetection param has changed on a field, trigger full analysis / re-indexing
     patch.status = 'loaded'
+  } else if (req.dataset.isRest && patch.schema && req.dataset.schema.find(df => !df['x-calculated'] && !df['x-extension'] && !patch.schema.find(f => f.key === df.key))) {
+    // some property was removed in rest dataset, trigger full re-indexing
+    const deleteFields = req.dataset.schema.filter(df => !df['x-calculated'] && !df['x-extension'] && !patch.schema.find(f => f.key === df.key))
+    await restDatasetsUtils.collection(db, req.dataset).updateMany({},
+      { $unset: deleteFields.reduce((a, df) => { a[df.key] = ''; return a }, {}) },
+    )
+    await datasetUtils.updateStorage(db, req.dataset)
+    patch.status = 'analyzed'
   } else if (patch.schema) {
     try {
       // this method will routinely throw errors

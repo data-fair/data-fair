@@ -1,11 +1,14 @@
 <template>
-  <v-menu v-model="menu">
-    <template v-slot:activator="{ on }">
+  <v-menu
+    v-model="menu"
+    max-width="500"
+    left
+  >
+    <template v-slot:activator="{ on, attrs }">
       <v-tooltip top>
         <template v-slot:activator="{ on: onTooltip }">
           <v-btn
-            color="warning"
-            icon
+            v-bind="{...attrs, ...btnProps}"
             v-on="{...onTooltip, ...on}"
           >
             <v-icon>mdi-delete</v-icon>
@@ -58,6 +61,10 @@ en:
       yesColor: {
         type: String,
         default: 'primary',
+      },
+      btnProps: {
+        type: Object,
+        default: () => ({ color: 'warning', icon: true }),
       },
     },
     data() {

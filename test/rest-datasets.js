@@ -635,4 +635,28 @@ test2,test2,test3`, { headers: { 'content-type': 'text/csv' } })
     }))
     assert.equal(i, 6)
   })
+
+  it('Removing a property triggers mongo unset and reindexing', async () => {
+    const ax = global.ax.dmeadus
+    let res = await ax.post('/api/v1/datasets', {
+      isRest: true,
+      title: 'restunset',
+      schema: [{ key: 'attr1', type: 'string', readOnly: true }, { key: 'attr2', type: 'string' }],
+    })
+    res = await ax.post('/api/v1/datasets/restunset/lines', { attr1: 'test1', attr2: 'test1' })
+    assert.equal(res.status, 201)
+    let dataset = await workers.hook('finalizer/restunset')
+    const storage1 = dataset.storage.size
+
+    res = await ax.patch('/api/v1/datasets/restunset', { schema: [{ key: 'attr1', type: 'string', readOnly: true }] })
+
+    await workers.hook('indexer/restunset')
+    dataset = await workers.hook('finalizer/restunset')
+    const storage2 = dataset.storage.size
+    assert.ok(storage2 < storage1)
+
+    res = await ax.get('/api/v1/datasets/restunset/lines')
+    assert.ok(res.data.results[0].attr1)
+    assert.ok(!res.data.results[0].attr2)
+  })
 })

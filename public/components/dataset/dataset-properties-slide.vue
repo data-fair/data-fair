@@ -64,7 +64,19 @@
             />
           </v-col>
           <v-col>
-            <dataset-property-capabilities :property="currentPropRef.prop" :editable="editable && currentPropRef.editable && !dataset.isVirtual" />
+            <confirm-menu
+              v-if="user.adminMode && editable && currentPropRef.editable && dataset.isRest"
+              :property="currentPropRef.prop"
+              :btn-props="{absolute: true, style: 'right: 120px', fab: true, small: true, depressed: true, dark: true, color: 'admin'}"
+              :text="$t('deleteProperty')"
+              :tooltip="$t('deletePropertyTooltip')"
+              yes-color="warning"
+              @confirm="$emit('remove', currentPropRef.prop); currentProperty = null"
+            />
+            <dataset-property-capabilities
+              :property="currentPropRef.prop"
+              :editable="editable && currentPropRef.editable && !dataset.isVirtual"
+            />
             <dataset-property-labels
               v-if="(currentPropRef.prop.type === 'string' && (!currentPropRef.prop.format || currentPropRef.prop.format === 'uri-reference') || currentPropRef.prop.type === 'boolean')"
               :property="currentPropRef.prop"
@@ -189,6 +201,8 @@ fr:
   readOnly: Lecture seule
   readOnlyHelp: Si vous cochez cette case la colonne sera affichée en lecture seule dans le formulaire de saisie.
   masterData: Valeurs issues d'une donnée de référence
+  deleteProperty: Souhaitez vous supprimer cette colonne ? Attention la donnée sera effacée et définitivement perdue !
+  deletePropertyTooltip: Supprimer la colonne
 en:
   detailedInfo: Click on a column title to display its detailed information.
   extension: "Extension: "
@@ -205,6 +219,8 @@ en:
   readOnly: Read only
   readOnlyHelp: If you check this box the column will be rendered as a read only field in the input form.
   masterData: Values coming from a master-data dataset
+  deleteProperty: Do you want to delete this column ? Warning, data will be definitively erased !
+  deletePropertyTooltip: Delete the column
 </i18n>
 
 <script>
@@ -222,6 +238,7 @@ en:
       }
     },
     computed: {
+      ...mapState('session', ['user']),
       ...mapState(['vocabulary', 'vocabularyArray', 'vocabularyItems']),
       ...mapState('dataset', ['dataset', 'remoteServices']),
       ...mapGetters(['propTypeTitle', 'propTypeIcon']),

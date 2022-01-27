@@ -68,6 +68,7 @@
         :editable="can('writeDescription')"
         :sortable="can('writeDescription') && dataset.isRest && !schemaFilter"
         @sort="applySort"
+        @remove="removeProperty"
       />
     </v-col>
 
@@ -174,7 +175,7 @@ en:
           JSON.stringify(this.primaryKey || []) !== JSON.stringify(this.dataset.primaryKey || [])
       },
       originalProperties() {
-        return JSON.parse(this.originalSchema)
+        return this.originalSchema && JSON.parse(this.originalSchema)
       },
       notCalculatedProperties() {
         return this.schema.filter(p => !p['x-calculated'])
@@ -191,8 +192,21 @@ en:
                 prop: vp,
                 originalProp: vp,
                 editable: false,
-                warning: 'Cette propriété n\'apparait plus dans la nouvelle version du fichier.',
-
+                warning: 'Cette colonne n\'apparait plus dans la nouvelle version du fichier.',
+              })
+            }
+          })
+        }
+        if (this.originalProperties && this.dataset.isRest) {
+          this.originalProperties.forEach(vp => {
+            if (!vp['x-calculated'] && !this.notCalculatedProperties.find(p => vp.key === p.key)) {
+              props.push({
+                key: vp.key,
+                search: `${(vp.title || '').toLowerCase()} ${(vp['x-originalName'] || '').toLowerCase()} ${vp.key.toLowerCase()}`,
+                prop: vp,
+                originalProp: vp,
+                editable: false,
+                warning: 'Cette colonne sera supprimée.',
               })
             }
           })
@@ -202,12 +216,12 @@ en:
           let warning
           if (validatedProp) {
             if (validatedProp.type !== p.type) {
-              warning = 'Cette propriété a changé de type dans la nouvelle version du fichier.'
+              warning = 'Cette colonne a changé de type dans la nouvelle version du fichier.'
             }
             const format = (p.format && p.format !== 'uri-reference') ? p.format : null
             const validatedFormat = (validatedProp.format && validatedProp.format !== 'uri-reference') ? validatedProp.format : null
             if (validatedProp.type === 'string' && p.type === 'string' && validatedFormat !== format) {
-              warning = 'Cette propriété a changé de type dans la nouvelle version du fichier.'
+              warning = 'Cette colonne a changé de type dans la nouvelle version du fichier.'
             }
           }
           return {
@@ -262,6 +276,9 @@ en:
           this.schema.push({ key: escapeKey(this.newPropertyKey), ...this.newPropertyType, title: '' })
           this.addPropertyDialog = false
         }
+      },
+      removeProperty(property) {
+        this.schema = this.schema.filter(p => p.key !== property.key)
       },
       save() {
         this.patchAndCommit({ schema: this.schema.map(field => ({ ...field })), primaryKey: [...this.primaryKey] })
