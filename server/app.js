@@ -195,9 +195,11 @@ exports.run = async () => {
 
 exports.stop = async() => {
   if (config.mode.includes('server')) {
-    server.close()
     wss.close()
-    wsUtils.stop()
+    wsUtils.stop(wss)
+    await eventToPromise(wss, 'close')
+    server.close()
+    await eventToPromise(server, 'close')
   }
 
   if (config.mode.includes('worker')) {
@@ -205,6 +207,8 @@ exports.stop = async() => {
     await workers.stop()
   }
 
+  // this timeout is because we can a few small pending operations after worker and server were closed
+  await new Promise(resolve => setTimeout(resolve, 1000))
   await Promise.all([
     app.get('mongoClient').close(),
     app.get('es').close(),

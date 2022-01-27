@@ -78,9 +78,11 @@ exports.start = async (app) => {
     debugLoop('free slot', freeSlot)
 
     // once we have a free slot, acquire the next resource to work on
+    if (stopped) continue
     resource = await acquireNext(db, 'dataset', typesFilters().dataset)
     type = 'dataset'
     if (!resource) {
+      if (stopped) continue
       resource = await acquireNext(db, 'application', typesFilters().application)
       type = 'application'
     }
