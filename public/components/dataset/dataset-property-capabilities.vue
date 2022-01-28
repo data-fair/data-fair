@@ -13,8 +13,6 @@
         dark
         v-bind="attrs"
         :title="$t('technicalConfig')"
-        absolute
-        right
         v-on="on"
       >
         <v-icon>mdi-tune</v-icon>

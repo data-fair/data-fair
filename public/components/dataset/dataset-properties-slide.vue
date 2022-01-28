@@ -64,26 +64,37 @@
             />
           </v-col>
           <v-col>
-            <confirm-menu
-              v-if="user.adminMode && editable && currentPropRef.editable && dataset.isRest"
-              :property="currentPropRef.prop"
-              :btn-props="{absolute: true, style: 'right: 120px', fab: true, small: true, depressed: true, dark: true, color: 'admin'}"
-              :text="$t('deleteProperty')"
-              :tooltip="$t('deletePropertyTooltip')"
-              yes-color="warning"
-              @confirm="$emit('remove', currentPropRef.prop); currentProperty = null"
-            />
-            <dataset-property-capabilities
-              :property="currentPropRef.prop"
-              :editable="editable && currentPropRef.editable && !dataset.isVirtual"
-            />
-            <dataset-property-labels
-              v-if="(currentPropRef.prop.type === 'string' && (!currentPropRef.prop.format || currentPropRef.prop.format === 'uri-reference') || currentPropRef.prop.type === 'boolean')"
-              :property="currentPropRef.prop"
-              :editable="editable && currentPropRef.editable && !dataset.isVirtual"
-              :is-rest="dataset.isRest"
-            />
-            <v-list dense class="mt-4">
+            <v-row v-if="editable && currentPropRef.editable && !dataset.isVirtual" class="ma-0">
+              <v-spacer />
+              <div class="mx-1">
+                <confirm-menu
+                  v-if="user.adminMode && editable && currentPropRef.editable && dataset.isRest"
+                  :property="currentPropRef.prop"
+                  :btn-props="{fab: true, small: true, depressed: true, dark: true, color: 'admin'}"
+                  :title="$t('deletePropertyTitle')"
+                  :text="$t('deletePropertyText')"
+                  :tooltip="$t('deletePropertyTitle')"
+                  yes-color="warning"
+                  alert="error"
+                  @confirm="$emit('remove', currentPropRef.prop); currentProperty = null"
+                />
+              </div>
+              <div class="mx-1">
+                <dataset-property-capabilities
+                  :property="currentPropRef.prop"
+                  :editable="editable && currentPropRef.editable && !dataset.isVirtual"
+                />
+              </div>
+              <div class="mx-1">
+                <dataset-property-labels
+                  v-if="(currentPropRef.prop.type === 'string' && (!currentPropRef.prop.format || currentPropRef.prop.format === 'uri-reference') || currentPropRef.prop.type === 'boolean')"
+                  :property="currentPropRef.prop"
+                  :editable="editable && currentPropRef.editable && !dataset.isVirtual"
+                  :is-rest="dataset.isRest"
+                />
+              </div>
+            </v-row>
+            <v-list dense>
               <v-list-item v-if="currentPropRef.prop['x-extension'] && extensions[currentPropRef.prop['x-extension']]" class="pl-0 font-weight-bold">
                 <span :class="labelClass">{{ $t('extension') }}</span>&nbsp;
                 {{ extensions[currentPropRef.prop['x-extension']].title }}
@@ -201,8 +212,8 @@ fr:
   readOnly: Lecture seule
   readOnlyHelp: Si vous cochez cette case la colonne sera affichée en lecture seule dans le formulaire de saisie.
   masterData: Valeurs issues d'une donnée de référence
-  deleteProperty: Souhaitez vous supprimer cette colonne ? Attention la donnée sera effacée et définitivement perdue !
-  deletePropertyTooltip: Supprimer la colonne
+  deletePropertyTitle: Supprimer la colonne
+  deletePropertyText: Souhaitez vous supprimer cette colonne ? Attention la donnée sera effacée et définitivement perdue !
 en:
   detailedInfo: Click on a column title to display its detailed information.
   extension: "Extension: "
@@ -219,8 +230,8 @@ en:
   readOnly: Read only
   readOnlyHelp: If you check this box the column will be rendered as a read only field in the input form.
   masterData: Values coming from a master-data dataset
-  deleteProperty: Do you want to delete this column ? Warning, data will be definitively erased !
-  deletePropertyTooltip: Delete the column
+  deletePropertyTitle: Delete the column
+  deletePropertyText: Do you want to delete this column ? Warning, data will be definitively erased !
 </i18n>
 
 <script>

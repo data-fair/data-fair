@@ -12,8 +12,6 @@
         dark
         v-bind="attrs"
         title="libellés"
-        absolute
-        style="right:60px;"
         v-on="on"
       >
         <v-icon>mdi-tag-text-outline</v-icon>

@@ -5,21 +5,29 @@
     left
   >
     <template v-slot:activator="{ on, attrs }">
-      <v-tooltip top>
-        <template v-slot:activator="{ on: onTooltip }">
-          <v-btn
-            v-bind="{...attrs, ...btnProps}"
-            v-on="{...onTooltip, ...on}"
-          >
-            <v-icon>mdi-delete</v-icon>
-          </v-btn>
-        </template>
-        <span>{{ tooltip }}</span>
-      </v-tooltip>
+      <v-btn
+        v-bind="{...attrs, ...btnProps}"
+        :title="tooltip"
+        v-on="on"
+      >
+        <v-icon>mdi-delete</v-icon>
+      </v-btn>
     </template>
     <v-card>
+      <v-card-title v-if="title" primary-title>
+        {{ title }}
+      </v-card-title>
       <v-card-text>
-        {{ text }}
+        <v-alert
+          v-if="alert"
+          :type="alert"
+          outlined
+        >
+          {{ text }}
+        </v-alert>
+        <template v-else>
+          {{ text }}
+        </template>
       </v-card-text>
       <v-card-actions>
         <v-spacer />
@@ -50,6 +58,10 @@ en:
 <script>
   export default {
     props: {
+      title: {
+        type: String,
+        default: '',
+      },
       text: {
         type: String,
         default: 'Souhaitez-vous confirmer cette opération ?',
@@ -65,6 +77,10 @@ en:
       btnProps: {
         type: Object,
         default: () => ({ color: 'warning', icon: true }),
+      },
+      alert: {
+        type: String,
+        default: '',
       },
     },
     data() {
