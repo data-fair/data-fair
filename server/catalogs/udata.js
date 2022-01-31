@@ -18,7 +18,7 @@ exports.httpParams = async (catalog) => {
 
 exports.getDataset = async (catalog, datasetId) => {
   const dataset = (await axios.get(url.resolve(catalog.url, 'api/1/datasets/' + datasetId), { headers: { 'X-API-KEY': catalog.apiKey } })).data
-  return prepareDatasetFromCatalog(dataset)
+  return prepareDatasetFromCatalog(catalog, dataset)
 }
 
 exports.listDatasets = async (catalog, params = {}) => {
@@ -32,7 +32,7 @@ exports.listDatasets = async (catalog, params = {}) => {
   }
   return {
     count: datasets.length,
-    results: datasets.map(prepareDatasetFromCatalog),
+    results: datasets.map(d => prepareDatasetFromCatalog(catalog, d)),
   }
 }
 
@@ -70,7 +70,7 @@ exports.publishApplication = async (catalog, application, publication, datasets)
     type: 'application',
     url: appUrl || `${config.publicUrl}/app/${application.id}`,
     extras: {
-      datafairOrigin: config.publicUrl,
+      datafairOrigin: catalog.dataFairBaseUrl || config.publicUrl,
       datafairApplicationId: application.id,
     },
     datasets: udataDatasets.map(d => ({ id: d.id })),
@@ -118,7 +118,7 @@ exports.deleteApplication = async (catalog, application, publication) => {
   }
 }
 
-function prepareDatasetFromCatalog(d) {
+function prepareDatasetFromCatalog(catalog, d) {
   const dataset = {
     id: d.id,
     createdAt: d.created_at,
@@ -136,7 +136,7 @@ function prepareDatasetFromCatalog(d) {
         url: r.url,
         size: r.fileSize,
       }
-      if (r.extras && r.extras.datafairOrigin === config.publicUrl) {
+      if (r.extras && (r.extras.datafairOrigin === config.publicUrl || r.extras.datafairOrigin === catalog.dataFairBaseUrl)) {
         resource.datafairDatasetId = r.extras.datafairDatasetId
       }
       return resource
@@ -171,7 +171,7 @@ async function addResourceToDataset(catalog, dataset, publication) {
       mime: 'text/html',
       extras: {
         datafairEmbed: 'fields',
-        datafairOrigin: config.publicUrl,
+        datafairOrigin: catalog.dataFairBaseUrl || config.publicUrl,
         datafairDatasetId: dataset.id,
       },
     })
@@ -184,8 +184,8 @@ async function addResourceToDataset(catalog, dataset, publication) {
       format: 'Page Web',
       mime: 'text/html',
       extras: {
-        apidocUrl: `${config.publicUrl}/api/v1/datasets/${dataset.id}/api-docs.json`,
-        datafairOrigin: config.publicUrl,
+        apidocUrl: `${catalog.dataFairBaseUrl || config.publicUrl}/api/v1/datasets/${dataset.id}/api-docs.json`,
+        datafairOrigin: catalog.dataFairBaseUrl || config.publicUrl,
         datafairDatasetId: dataset.id,
       },
     })
@@ -199,7 +199,7 @@ async function addResourceToDataset(catalog, dataset, publication) {
       mime: 'text/html',
       extras: {
         datafairEmbed: dataset.bbox ? 'map' : 'table',
-        datafairOrigin: config.publicUrl,
+        datafairOrigin: catalog.dataFairBaseUrl || config.publicUrl,
         datafairDatasetId: dataset.id,
       },
     })
@@ -214,13 +214,13 @@ async function addResourceToDataset(catalog, dataset, publication) {
     resources.push({
       title: `${title}`,
       description: `Téléchargez le fichier complet au format ${dataset.originalFile.name.split('.').pop()}.`,
-      url: `${config.publicUrl}/api/v1/datasets/${dataset.id}/raw`,
+      url: `${catalog.dataFairBaseUrl || config.publicUrl}/api/v1/datasets/${dataset.id}/raw`,
       type: 'main',
       filetype: 'remote',
       filesize: dataset.originalFile.size,
       mime: dataset.originalFile.mimetype,
       extras: {
-        datafairOrigin: config.publicUrl,
+        datafairOrigin: catalog.dataFairBaseUrl || config.publicUrl,
         datafairDatasetId: dataset.id,
       },
     })
@@ -243,7 +243,7 @@ async function addResourceToDataset(catalog, dataset, publication) {
   // Cleanup previous ones
   for (const existingResource of catalogDataset.resources) {
     existingResource.extras = existingResource.extras || {}
-    if (existingResource.extras.datafairOrigin === config.publicUrl && existingResource.extras.datafairDatasetId === dataset.id) {
+    if ((existingResource.extras.datafairOrigin === config.publicUrl || existingResource.extras.datafairOrigin === catalog.dataFairBaseUrl) && existingResource.extras.datafairDatasetId === dataset.id) {
       await axios.delete(url.resolve(catalog.url, `api/1/datasets/${publication.addToDataset.id}/resources/${existingResource.id}/`),
         { headers: { 'X-API-KEY': catalog.apiKey } })
     }
@@ -276,7 +276,7 @@ async function createOrUpdateDataset(catalog, dataset, publication) {
       format: 'Page Web',
       mime: 'text/html',
       extras: {
-        apidocUrl: `${config.publicUrl}/api/v1/datasets/${dataset.id}/api-docs.json`,
+        apidocUrl: `${catalog.dataFairBaseUrl || config.publicUrl}/api/v1/datasets/${dataset.id}/api-docs.json`,
       },
     })
     resources.push({
@@ -297,7 +297,7 @@ async function createOrUpdateDataset(catalog, dataset, publication) {
     description: dataset.description || dataset.title,
     private: !dataset.public,
     extras: {
-      datafairOrigin: config.publicUrl,
+      datafairOrigin: catalog.dataFairBaseUrl || config.publicUrl,
       datafairDatasetId: dataset.id,
     },
     resources,
@@ -307,7 +307,7 @@ async function createOrUpdateDataset(catalog, dataset, publication) {
     udataDataset.resources.push({
       title: `Fichier ${dataset.originalFile.name.split('.').pop()}`,
       description: `Téléchargez le fichier complet au format ${dataset.originalFile.name.split('.').pop()}.`,
-      url: `${config.publicUrl}/api/v1/datasets/${dataset.id}/raw`,
+      url: `${catalog.dataFairBaseUrl || config.publicUrl}/api/v1/datasets/${dataset.id}/raw`,
       type: 'main',
       filetype: 'remote',
       filesize: dataset.originalFile.size,
@@ -317,7 +317,7 @@ async function createOrUpdateDataset(catalog, dataset, publication) {
       udataDataset.resources.push({
         title: `Fichier ${dataset.file.name.split('.').pop()}`,
         description: `Téléchargez le fichier complet au format ${dataset.file.name.split('.').pop()}.`,
-        url: `${config.publicUrl}/api/v1/datasets/${dataset.id}/convert`,
+        url: `${catalog.dataFairBaseUrl || config.publicUrl}/api/v1/datasets/${dataset.id}/convert`,
         type: 'main',
         filetype: 'remote',
         filesize: dataset.file.size,

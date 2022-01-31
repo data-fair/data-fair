@@ -33,6 +33,15 @@
       :disabled="!!catalog.createdAt && !can('writeDescription')"
       @change="$emit('change', {applicationUrlTemplate: catalog.applicationUrlTemplate})"
     />
+    <v-text-field
+      v-model="catalog.dataFairBaseUrl"
+      :label="$t('dataFairBaseUrl')"
+      :hint="$t('dataFairBaseUrlHelp')"
+      class="mb-4"
+      persistent-hint
+      :disabled="!!catalog.createdAt && !can('writeDescription')"
+      @change="$emit('change', {dataFairBaseUrl: catalog.dataFairBaseUrl})"
+    />
     <v-autocomplete
       v-if="catalogType && catalogType.searchOrganization"
       v-model="catalog.organization"
@@ -63,6 +72,8 @@ fr:
   datasetUrlTemplateHelp: "Laissez vide pour créer automatiquement un lien vers la page du jeu de données dans cette instance data-fair. Renseignez pour pointer vers une autre page publique. Par exemple 'https://test.com/datasets/{id}'."
   applicationUrlTemplate: Format du lien vers la page d'une visualisation
   applicationUrlTemplateHelp: "Laissez vide pour créer automatiquement un lien vers la page de la visualisation dans cette instance data-fair. Renseignez pour pointer vers une autre page publique. Par exemple 'https://test.com/reuses/{id}'."
+  dataFairBaseUrl: URL du service de données
+  dataFairBaseUrlHelp: "Laissez vide pour utiliser l'exposition principale de ce service, renseignez pour faire passer les utilisateurs par un autre nom de domaine. Par exemple 'https://test.com/data-fair'"
   org: Organisation
   orgHelp: Laissez vide pour travailler sur un compte personnel. Sinon utilisez l'identifiant d'une organisation dans laquelle vous avez le droit d'écriture.
   search: Rechercher

@@ -78,6 +78,9 @@ module.exports = {
     applicationUrlTemplate: {
       type: 'string',
     },
+    dataFairBaseUrl: {
+      type: 'string',
+    },
     extras: {
       type: 'object',
       description: 'An object for extra content from client services of data-fair',
