@@ -1,53 +1,89 @@
-FROM node:16.13.0-alpine3.13
-MAINTAINER "contact@koumoul.com"
+######################################################
+# Stage: install prepair that depends on gdal and cgal
+FROM node:16.13.2-alpine3.14 AS prepair
 
-RUN apk add --no-cache --update python3 make g++ unzip curl git
+RUN apk add --no-cache curl cmake make g++ linux-headers
+RUN apk add --no-cache gdal gdal-dev
+RUN apk add --no-cache boost-dev gmp gmp-dev mpfr-dev
+RUN apk add --no-cache libressl3.3-libcrypto
+
+# build CGAL (not yet oresent in alpine repos)
+WORKDIR /tmp
+RUN curl -L https://github.com/CGAL/cgal/releases/download/releases%2FCGAL-4.14/CGAL-4.14.tar.xz -o cgal.tar.xz
+RUN tar -xf cgal.tar.xz
+WORKDIR /tmp/CGAL-4.14
+RUN cmake -D CMAKE_BUILD_TYPE=Release .
+RUN make
+RUN make install
+
+# build prepair from source
+WORKDIR /tmp
+RUN curl -L https://github.com/tudelft3d/prepair/archive/v0.7.1.tar.gz -o prepair.tar.gz
+RUN tar -xzf prepair.tar.gz
+WORKDIR /tmp/prepair-0.7.1
+RUN cmake -D CMAKE_BUILD_TYPE=Release .
+RUN make
+RUN mv prepair /usr/bin/prepair
+
+RUN prepair --help
+
+
+######################################################
+# Stage: install tippecanoe to generate mbtiles files
+FROM node:16.13.2-alpine3.14 AS tippecanoe
+
+RUN apk add --no-cache python3 make g++ bash git 
+RUN apk add --no-cache sqlite-dev zlib-dev
+
+WORKDIR /tmp
+RUN git clone https://github.com/mapbox/tippecanoe.git
+WORKDIR /tmp/tippecanoe
+RUN make -j
+RUN make install
+
+RUN tippecanoe --help
+
+############################
+# Stage: nodejs dependencies
+FROM node:16.13.2-alpine3.14 AS nodedeps
+
+RUN apk add --no-cache python3 make g++ curl
 RUN ln -s /usr/bin/python3 /usr/bin/python
+RUN apk add --no-cache sqlite-dev
 
 # Install node-prune to reduce size of node_modules
 RUN curl -sfL https://install.goreleaser.com/github.com/tj/node-prune.sh | sh -s -- -b /usr/local/bin
 
-# install libraries for geographic data manipulations
-# cf https://github.com/appropriate/docker-postgis/pull/97/commits/9fbb21cf5866be05459a6a7794c329b40bdb1b37
-RUN mkdir /prepair
-WORKDIR /tmp
-RUN apk add --no-cache --virtual .build-deps cmake linux-headers boost-dev gmp gmp-dev mpfr-dev && \
-    apk add --no-cache libressl3.1-libcrypto && \
-    apk add --no-cache --virtual .gdal-build-deps --repository http://dl-cdn.alpinelinux.org/alpine/edge/testing gdal-dev && \
-    apk add --no-cache gdal proj && \
-    curl -L https://github.com/CGAL/cgal/releases/download/releases%2FCGAL-4.12/CGAL-4.12.tar.xz -o cgal.tar.xz && \
-    tar -xf cgal.tar.xz && \
-    rm cgal.tar.xz && \
-    cd CGAL-4.12 && \
-    cmake -D CMAKE_BUILD_TYPE=Release . && \
-    make && \
-    make install && \
-    cd .. && \
-    rm -rf CGAL-4.12 && \
-    curl -L https://github.com/tudelft3d/prepair/archive/v0.7.1.tar.gz -o prepair.tar.gz && \
-    tar -xzf prepair.tar.gz && \
-    rm prepair.tar.gz && \
-    cd prepair-0.7.1 && \
-    cmake -D CMAKE_BUILD_TYPE=Release . && \
-    make && \
-    mv prepair /prepair/prepair && \
-    cd .. && \
-    rm -rf prepair-0.7.1 && \
-    apk del .build-deps .gdal-build-deps
-RUN test -f /usr/lib/libproj.so.20
-RUN ln -s /usr/lib/libproj.so.20 /usr/lib/libproj.so
+ENV NODE_ENV production
+WORKDIR /webapp
+ADD package.json .
+ADD package-lock.json .
+ADD patches patches
+RUN npm install --production
+RUN node-prune
 
-# install tippecanoe to generate mbtiles files
-RUN apk add --no-cache --virtual .tippe-deps bash sqlite-dev zlib-dev && \
-    git clone https://github.com/mapbox/tippecanoe.git && \
-    cd tippecanoe && \
-    make -j && \
-    make install && \
-    cd .. && \
-    rm -rf tippecanoe && \
-    apk del .tippe-deps
 
-RUN alias python=python3
+##################################
+# Stage: main nodejs service stage
+
+FROM node:16.13.2-alpine3.14
+MAINTAINER "contact@koumoul.com"
+
+# these are also geodeps, but we need to install them here as they pull many dependencies
+RUN apk add --no-cache gmp gdal-tools
+COPY --from=prepair /usr/bin/prepair /usr/bin/prepair
+COPY --from=prepair /usr/local/lib/libCGAL.so.13 /usr/local/lib/libCGAL.so.13
+COPY --from=prepair /usr/lib/libmpfr.so.6 /usr/lib/libmpfr.so.6
+RUN ln -s /usr/lib/libproj.so.21.1.2 /usr/lib/libproj.so
+RUN test -f /usr/lib/libproj.so
+COPY --from=tippecanoe /usr/local/bin/tippecanoe /usr/local/bin/tippecanoe
+COPY --from=nodedeps /webapp/node_modules node_modules
+
+# check that geo execs actually load
+RUN prepair --help
+RUN tippecanoe --help
+
+RUN apk add unzip
 
 ENV NODE_ENV production
 ENV DEBUG db,upgrade*
@@ -56,7 +92,6 @@ ADD LICENSE .
 ADD package.json .
 ADD package-lock.json .
 ADD patches patches
-RUN npm install --production && node-prune
 ADD nodemon.json .
 
 # Adding UI files

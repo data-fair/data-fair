@@ -224,7 +224,7 @@ const prepair = async (feature) => {
     // const wkt = wktParser.convert(feature.geometry)
     tmpFile = await tmp.file({ postfix: '.geojson' })
     await writeFile(tmpFile.fd, JSON.stringify(feature))
-    const repaired = await exec(`../prepair/prepair --ogr '${tmpFile.path}'`, { maxBuffer: 100000000 })
+    const repaired = await exec(`prepair --ogr '${tmpFile.path}'`, { maxBuffer: 100000000 })
     feature.geometry = wktToGeoJSON(repaired.stdout)
     return feature
   } catch (err) {
