@@ -13,6 +13,23 @@ exports.getCSV = async (filePath) => {
 
   if (!json || json.length < 2) throw new Error('La première feuille du classeur dans le fichier ne contient pas de table.')
 
+  const hasTime = {}
+
+  // first loop on dates to check if there is a need for date-time format or if date is enough
+  for (let r = 0; r < json.length; r++) {
+    for (let c = 0; c < json[r].length; c++) {
+      const cellRef = XLSX.utils.encode_cell({ c, r })
+      const cell = worksheet[cellRef]
+
+      if (cell && cell.t && cell.t === 'd') {
+        delete cell.w
+        delete cell.z
+        XLSX.utils.format_cell(cell, null, { dateNF: 'YYYY-MM-DD HH:mm:ss' })
+        if (cell.w.split(' ')[1] !== '00:00:00' && !cell.v.toISOString().endsWith('T00:00:00.000Z')) hasTime[c] = true
+      }
+    }
+  }
+
   // fix dates
   for (let r = 0; r < json.length; r++) {
     for (let c = 0; c < json[r].length; c++) {
@@ -23,7 +40,7 @@ exports.getCSV = async (filePath) => {
         // cf https://github.com/SheetJS/sheetjs/issues/134#issuecomment-288323169
         delete cell.w
         delete cell.z
-        XLSX.utils.format_cell(cell, null, { dateNF: 'YYYY-MM-DD' })
+        XLSX.utils.format_cell(cell, null, { dateNF: hasTime[c] ? 'YYYY-MM-DD HH:mm:ss' : 'YYYY-MM-DD' })
         json[r][c] = cell.w
       }
     }

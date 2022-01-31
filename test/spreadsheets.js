@@ -35,4 +35,11 @@ describe('Spreadsheets conversions', () => {
     assert.equal(dates[1], '2019-03-20')
     assert.equal(dates[2], '2018-04-05')
   })
+
+  it('should manage another XLSX file created by excel', async () => {
+    const csv = await xlsx.getCSV('test/resources/datasets/date-time.xlsx')
+    const dates = csv.split('\n').map(line => line.split(',')[1])
+    assert.equal(dates[1], '2050-01-01 00:00:00')
+    assert.equal(dates[2], '2050-01-01 01:00:00')
+  })
 })
