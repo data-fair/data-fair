@@ -99,9 +99,9 @@
                 <span :class="labelClass">{{ $t('extension') }}</span>&nbsp;
                 {{ extensions[currentPropRef.prop['x-extension']].title }}
               </v-list-item>
-              <v-list-item v-if="currentPropRef.prop['x-originalName']" class="pl-0">
+              <v-list-item class="pl-0">
                 <span :class="labelClass">{{ $t('key') }}</span>&nbsp;
-                {{ currentPropRef.prop['x-originalName'] }}
+                {{ currentPropRef.prop['x-originalName'] || currentPropRef.prop.key }}
               </v-list-item>
               <v-list-item class="pl-0">
                 <span :class="labelClass">Type :</span>&nbsp;
