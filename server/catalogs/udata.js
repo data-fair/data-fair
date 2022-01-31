@@ -161,7 +161,7 @@ async function addResourceToDataset(catalog, dataset, publication) {
   const datasetUrl = getDatasetUrl(catalog, dataset)
   const resources = []
   if (!dataset.isMetaOnly) {
-    resources.push({
+    /* resources.push({
       title: `${title} - Description des champs`,
       description: 'Description détaillée et types sémantiques des champs',
       url: datasetUrl,
@@ -188,7 +188,7 @@ async function addResourceToDataset(catalog, dataset, publication) {
         datafairOrigin: catalog.dataFairBaseUrl || config.publicUrl,
         datafairDatasetId: dataset.id,
       },
-    })
+    }) */
     resources.push({
       title: `${title} - Consultez les données`,
       description: `Consultez directement les données dans ${dataset.bbox ? 'une carte interactive' : 'un tableau'}.`,
@@ -209,7 +209,7 @@ async function addResourceToDataset(catalog, dataset, publication) {
   if (!catalogDataset) throw new Error(`Le jeu de données ${publication.addToDataset.id} n'existe pas dans le catalogue ${catalog.url}`)
   // matchingResource will be defined if the dataset in data-fair was originally created from a ressource of the catalog's dataset
   // we use it to prevent create a duplicate
-  const matchingResource = dataset.remoteFile ? catalogDataset.resources.find(r => r.url === dataset.remoteFile.url) : null
+  /* const matchingResource = dataset.remoteFile ? catalogDataset.resources.find(r => r.url === dataset.remoteFile.url) : null
   if (!matchingResource && dataset.file) {
     resources.push({
       title: `${title}`,
@@ -224,7 +224,7 @@ async function addResourceToDataset(catalog, dataset, publication) {
         datafairDatasetId: dataset.id,
       },
     })
-  }
+  } */
 
   // Create new resources
   try {
