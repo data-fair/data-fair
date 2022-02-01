@@ -51,17 +51,12 @@ RUN apk add --no-cache python3 make g++ curl
 RUN ln -s /usr/bin/python3 /usr/bin/python
 RUN apk add --no-cache sqlite-dev
 
-# Install node-prune to reduce size of node_modules
-RUN curl -sfL https://install.goreleaser.com/github.com/tj/node-prune.sh | sh -s -- -b /usr/local/bin
-
 ENV NODE_ENV production
 WORKDIR /webapp
 ADD package.json .
 ADD package-lock.json .
 ADD patches patches
 RUN npm install --production
-RUN node-prune
-
 
 ##################################
 # Stage: main nodejs service stage
