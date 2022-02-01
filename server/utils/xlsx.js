@@ -1,9 +1,46 @@
 const fs = require('fs-extra')
 const XLSX = require('xlsx')
+const Excel = require('exceljs')
 const csvStr = require('csv-stringify/lib/sync')
+const csvParse = require('csv-parse/lib/sync')
 
 exports.getCSV = async (filePath) => {
   const data = await fs.readFile(filePath)
+  const workbook = new Excel.Workbook()
+  await workbook.xlsx.load(data)
+
+  // fallback to previous implementation
+  if (!workbook.worksheets?.length) return await getCSVOld(data)
+
+  const rawCSV = (await workbook.csv.writeBuffer({ dateUTC: true })).toString()
+  const json = csvParse(rawCSV, { columns: true })
+
+  // loop on dates to check if there is a need for date-time format or if date is enough
+  const hasSimpleDate = {}
+  for (const row of json) {
+    for (const key in row) {
+      if (hasSimpleDate[key] === false) continue
+      if (row[key]) {
+        const date = new Date(row[key])
+        if (date instanceof Date && !isNaN(date)) {
+          if (!row[key].endsWith('T00:00:00Z')) hasSimpleDate[key] = false
+          else if (hasSimpleDate[key] !== false) hasSimpleDate[key] = true
+        } else {
+          hasSimpleDate[key] = false
+        }
+      }
+    }
+  }
+  for (const row of json) {
+    for (const key in row) {
+      if (hasSimpleDate[key]) row[key] = row[key].replace('T00:00:00Z', '')
+    }
+  }
+  return csvStr(json, { header: true })
+}
+
+// previous implementation using xlsx module.. kept around as a fallback and for ODS format
+const getCSVOld = async (data) => {
   const workbook = XLSX.read(data, { cellDates: true })
   const worksheet = workbook.Sheets[workbook.SheetNames[0]]
 
