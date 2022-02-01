@@ -69,8 +69,13 @@ module.exports = {
     browserBaseURL: config.basePath,
     // baseURL: `http://localhost:${config.port}/`,
   },
-  buildModules: ['@nuxtjs/vuetify', '@nuxtjs/svg'],
+  buildModules: [
+    '@nuxtjs/vuetify',
+    '@nuxtjs/svg',
+    ['@nuxtjs/google-fonts', { download: true, display: 'swap', families: { Nunito: [100, 300, 400, 500, 700, 900] } }],
+  ],
   vuetify: {
+    customVariables: ['~assets/variables.scss'],
     theme: {
       dark: config.theme.dark,
       themes: {
@@ -78,11 +83,8 @@ module.exports = {
         dark: { ...config.theme.colors, ...config.theme.darkColors },
       },
     },
-    defaultAssets: {
-      font: {
-        family: 'Nunito',
-      },
-    },
+    treeShake: true,
+    defaultAssets: false,
     lang: {
       locales: { fr, en },
       current: config.i18n.defaultLocale,
@@ -128,10 +130,13 @@ module.exports = {
     link: [],
     style: [],
   },
+  css: [
+    '@mdi/font/css/materialdesignicons.min.css',
+  ],
 }
 
 if (config.theme.cssUrl) {
-  module.exports.head.link.push({ rel: 'stylesheet', href: config.theme.cssUrl })
+  module.exports.css.push(config.theme.cssUrl)
 }
 
 if (config.theme.cssText) {

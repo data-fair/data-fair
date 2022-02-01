@@ -13,3 +13,6 @@
 /dist/
 /nuxt-dist
 /config/local-*
+
+public/assets/css/
+public/assets/fonts/
