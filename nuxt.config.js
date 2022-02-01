@@ -137,7 +137,7 @@ module.exports = {
 }
 
 if (config.theme.cssUrl) {
-  module.exports.css.push(config.theme.cssUrl)
+  module.exports.head.link.push({ rel: 'stylesheet', href: config.theme.cssUrl })
 }
 
 if (config.theme.cssText) {
