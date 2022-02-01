@@ -69,6 +69,8 @@ RUN node-prune
 FROM node:16.13.2-alpine3.14
 MAINTAINER "contact@koumoul.com"
 
+WORKDIR /webapp
+
 # these are also geodeps, but we need to install them here as they pull many dependencies
 RUN apk add --no-cache gmp gdal-tools
 COPY --from=prepair /usr/bin/prepair /usr/bin/prepair
@@ -87,7 +89,6 @@ RUN apk add unzip
 
 ENV NODE_ENV production
 ENV DEBUG db,upgrade*
-WORKDIR /webapp
 ADD LICENSE .
 ADD package.json .
 ADD package-lock.json .
