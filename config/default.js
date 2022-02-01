@@ -284,6 +284,7 @@ module.exports = {
     'YYYY-MM-DDTHH:mm:ss', // shorter iso not accepted by json schema date-time format
     'YYYY-MM-DD HH:mm:ss', // shorter iso not accepted by json schema date-time format
   ],
+  defaultTimeZone: 'Europe/Paris',
   i18n: {
     locales: 'fr,en',
     defaultLocale: 'fr',

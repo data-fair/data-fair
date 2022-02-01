@@ -1,6 +1,6 @@
 const Ajv = require('ajv')
 const ajv = new Ajv()
-const moment = require('moment')
+const moment = require('moment-timezone')
 const config = require('config')
 
 exports.sniff = (values, attachmentsPaths = [], existingField) => {
@@ -35,8 +35,12 @@ exports.format = (value, prop, fileProp) => {
     else return null
   }
   if (prop.type === 'string' && prop.format === 'date-time' && fileProp && fileProp.dateTimeFormat) {
-    const date = moment(value, fileProp.dateTimeFormat, true)
-    if (date.isValid()) return date.toISOString()
+    const timeZone = prop.timeZone || config.defaultTimeZone
+    const date = moment.tz(value, fileProp.dateTimeFormat, true, timeZone) // the boolean is for strict mode
+    // format will store the timezone info, it is a richer info than always storing with Z suffix
+    // when showing the date it is preferred to use moment "parseZone" and show the data in the original time zone
+    // instead of moving to the user's time zone
+    if (date.isValid()) return date.format()
     else return null
   }
   if (prop.type === 'string') return value.trim()

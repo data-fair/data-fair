@@ -117,6 +117,7 @@ module.exports = {
     disableApplications: config.disableApplications,
     disableRemoteServices: config.disableRemoteServices,
     i18n: config.i18n,
+    defaultTimeZone: config.defaultTimeZone,
   },
   head: {
     title: config.brand.title,

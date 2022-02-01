@@ -41,5 +41,8 @@ describe('Spreadsheets conversions', () => {
     const dates = csv.split('\n').map(line => line.split(',')[1])
     assert.equal(dates[1], '2050-01-01 00:00:00')
     assert.equal(dates[2], '2050-01-01 01:00:00')
+    // WARNING: rounding problem hard to get rid of
+    // see https://github.com/SheetJS/sheetjs/issues/1212
+    assert.equal(dates[3], '2050-01-01 02:00:00')
   })
 })

@@ -75,6 +75,7 @@ const fileSchema = {
       separator: { type: ['string', 'null'] },
       dateFormat: { type: ['string', 'null'] },
       dateTimeFormat: { type: ['string', 'null'] },
+      timeZone: { type: ['string', 'null'] },
     },
   },
 }

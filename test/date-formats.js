@@ -58,7 +58,26 @@ describe('Date formats', () => {
     assert.equal(dateProp.dateTimeFormat, 'YYYY-MM-DDTHH:mm:ss')
 
     const results = (await ax.get(`/api/v1/datasets/${dataset.id}/lines`)).data.results
-    assert.equal(results[0].datetime, new Date('2021-02-23T10:27:50').toISOString())
+    assert.equal(results[0].datetime, '2021-02-23T10:27:50+01:00')
+  })
+
+  it('Accept another date-time format and configure timezone', async function() {
+    const ax = global.ax.dmeadus
+    const dataset = await testUtils.sendDataset('datasets/date-time.csv', ax)
+    const dateProp = dataset.file.schema.find(p => p.key === 'Horodatage')
+    assert.equal(dateProp.type, 'string')
+    assert.equal(dateProp.format, 'date-time')
+    assert.equal(dateProp.dateTimeFormat, 'YYYY-MM-DD HH:mm:ss')
+
+    let results = (await ax.get(`/api/v1/datasets/${dataset.id}/lines`)).data.results
+    assert.equal(results[0].Horodatage, '2050-01-01T00:00:00+01:00')
+
+    dataset.schema.find(field => field.key === 'Horodatage').timeZone = 'Pacific/Honolulu'
+    await ax.patch(`/api/v1/datasets/${dataset.id}`, { schema: dataset.schema })
+    await workers.hook(`finalizer/${dataset.id}`)
+
+    results = (await ax.get(`/api/v1/datasets/${dataset.id}/lines`)).data.results
+    assert.equal(results[0].Horodatage, '2050-01-01T00:00:00-10:00')
   })
 
   it('Accept formatted date in geojson', async () => {
