@@ -60,7 +60,7 @@ en:
 </i18n>
 
 <script>
-  import marked from 'marked/lib/marked'
+  import { marked } from 'marked'
   import { mapState } from 'vuex'
   import eventBus from '~/event-bus'
 

@@ -90,12 +90,10 @@ en:
 </i18n>
 
 <script>
-  const marked = require('marked/lib/marked')
 
   export default {
     props: ['dataset', 'showTopics', 'showOwner'],
     data: () => ({
-      marked,
       hover: false,
     }),
   }

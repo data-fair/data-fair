@@ -102,7 +102,6 @@ en:
 </i18n>
 
 <script>
-  import marked from 'marked/lib/marked'
   import { mapState } from 'vuex'
   import eventBus from '~/event-bus'
 
@@ -113,7 +112,6 @@ en:
       owner: null,
       catalogUrl: null,
       configurableCatalogs: [],
-      marked,
       catalog: {},
       importing: false,
       catalogTypes: [],

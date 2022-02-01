@@ -26,7 +26,7 @@
 </template>
 
 <script>
-  const marked = require('marked/lib/marked')
+  import { marked } from 'marked'
 
   export default {
     components: { },

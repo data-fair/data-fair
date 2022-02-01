@@ -26,7 +26,7 @@
   "author": "",
   "license": "AGPL-3.0-only",
   "devDependencies": {
-    "@hackmd/meta-marked": "^0.4.4",
+    "@hackmd/meta-marked": "^0.5.0",
     "@koumoul/gh-pages-multi": "^0.7.1",
     "babel-eslint": "^10.1.0",
     "coveralls": "^3.1.0",
@@ -44,7 +44,6 @@
   },
   "dependencies": {
     "@alloc/quick-lru": "^5.2.0",
-    "@digibytes/markdownit": "^1.2.2",
     "@elastic/elasticsearch": "^7.10.0",
     "@koumoul/express-request-proxy": "^2.3.0",
     "@koumoul/icalendar": "^0.7.3",
@@ -117,7 +116,7 @@
     "less-loader": "^6.2.0",
     "lucene-query-parser": "^1.2.0",
     "mapbox-gl": "^1.13.0",
-    "marked": "^2.0.0",
+    "marked": "^4.0.12",
     "material-design-icons-iconfont": "^5.0.1",
     "memoize": "^0.1.1",
     "memoizee": "^0.4.14",

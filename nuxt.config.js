@@ -20,7 +20,7 @@ module.exports = {
   build: {
     // cache: true,
     publicPath: config.basePath + '_nuxt/',
-    transpile: [/@koumoul/, 'easymde', 'marked'], // Necessary for "à la carte" import of vuetify components
+    transpile: [/@koumoul/, 'easymde'], // Necessary for "à la carte" import of vuetify components
     extend (config, { isServer, isDev, isClient }) {
       // Ignore all locale files of moment.js, those we want are loaded in plugins/moment.js
       config.plugins.push(new webpack.IgnorePlugin(/^\.\/locale$/, /moment$/))
@@ -51,7 +51,7 @@ module.exports = {
   router: {
     base: config.basePath,
   },
-  modules: ['@digibytes/markdownit', '@nuxtjs/axios', 'cookie-universal-nuxt', ['@nuxtjs/i18n', {
+  modules: ['@nuxtjs/axios', 'cookie-universal-nuxt', ['@nuxtjs/i18n', {
     seo: false,
     locales: ['fr', 'en'],
     defaultLocale: config.i18n.defaultLocale,
