@@ -40,7 +40,7 @@
             v-model="formValid"
             @submit="validateDraft"
           >
-            <v-jsf
+            <lazy-v-jsf
               v-model="editConfig"
               :schema="draftSchema"
               :options="vjsfOptions"
@@ -135,15 +135,12 @@ en:
 <script>
   import { mapState, mapActions, mapGetters } from 'vuex'
   import dotProp from 'dot-prop'
-  import VJsf from '@koumoul/vjsf/lib/VJsf.js'
-  import '@koumoul/vjsf/lib/deps/third-party.js'
-  import '@koumoul/vjsf/dist/main.css'
   import 'iframe-resizer/js/iframeResizer'
   import VIframe from '@koumoul/v-iframe'
   import eventBus from '~/event-bus'
 
   export default {
-    components: { VJsf, VIframe },
+    components: { VIframe },
     props: ['roDataset'],
     data() {
       return {

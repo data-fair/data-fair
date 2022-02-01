@@ -44,7 +44,7 @@
         />
 
         <v-form ref="form">
-          <v-jsf
+          <lazy-v-jsf
             v-if="editLabels"
             v-model="editLabels"
             :schema="schema"
@@ -70,12 +70,8 @@ en:
 
 <script>
   import { mapState } from 'vuex'
-  import VJsf from '@koumoul/vjsf/lib/VJsf.js'
-  import '@koumoul/vjsf/dist/main.css'
-  import '@koumoul/vjsf/lib/deps/third-party.js'
 
   export default {
-    components: { VJsf },
     props: ['editable', 'property', 'isRest'],
     data() {
       return {

@@ -4,7 +4,7 @@
     ref="editLineForm"
     :lazy-validation="true"
   >
-    <v-jsf
+    <lazy-v-jsf
       :value="value"
       :schema="editSchema"
       :options="vjsfOptions"
@@ -38,11 +38,8 @@ en:
 
 <script>
 
-  import VJsf from '@koumoul/vjsf/lib/VJsf.js'
-  import '@koumoul/vjsf/dist/main.css'
   import { mapState } from 'vuex'
   export default {
-    components: { VJsf },
     props: ['value', 'selectedCols'],
     data: () => ({
       vjsfOptions: {

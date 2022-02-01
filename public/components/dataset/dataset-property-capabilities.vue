@@ -41,7 +41,7 @@
         </tutorial-alert>
 
         <v-form ref="form">
-          <v-jsf
+          <lazy-v-jsf
             v-if="editCapabilities"
             v-model="editCapabilities"
             :schema="schema"
@@ -67,13 +67,9 @@ en:
 
 <script>
   import { mapState } from 'vuex'
-  import VJsf from '@koumoul/vjsf/lib/VJsf.js'
-  import '@koumoul/vjsf/dist/main.css'
-  import '@koumoul/vjsf/lib/deps/third-party.js'
 
   const capabilitiesSchema = require('~/../contract/capabilities.js')
   export default {
-    components: { VJsf },
     props: ['editable', 'property'],
     data() {
       return {

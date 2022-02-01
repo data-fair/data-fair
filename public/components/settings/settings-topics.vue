@@ -1,7 +1,7 @@
 <template>
   <div>
     <v-form v-model="formValid">
-      <v-jsf
+      <lazy-v-jsf
         v-model="wrapper"
         :schema="wrapperSchema"
         :options="opts"
@@ -13,8 +13,6 @@
 
 <script>
   import Vue from 'vue'
-  import VJsf from '@koumoul/vjsf/lib/VJsf.js'
-  import '@koumoul/vjsf/dist/main.css'
   import eventBus from '~/event-bus'
 
   if (process.browser) {
@@ -31,7 +29,6 @@
   }
 
   export default {
-    components: { VJsf },
     props: ['settings'],
     data: () => ({
       eventBus,
