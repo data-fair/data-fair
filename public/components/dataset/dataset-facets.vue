@@ -69,7 +69,7 @@
         v-model="facetsValues.publicationSites"
         multiple
         :label="$t('portals')"
-        :items="facets.publicationSites"
+        :items="facets.publicationSites.filter(item => !item.value || (activeAccountPublicationSitesById && activeAccountPublicationSitesById[item.value]))"
         :item-value="item => item.value || 'null'"
         :item-text="item => publicationSiteText(item)"
         outlined
@@ -148,12 +148,14 @@ en:
     },
     methods: {
       publicationSiteText(item) {
-        let title = item.value
+        let title
         if (item.value === null) title = 'aucun'
         else {
           const publicationSite = this.activeAccountPublicationSitesById && this.activeAccountPublicationSitesById[item.value]
           if (publicationSite) {
             title = publicationSite.title || publicationSite.url || publicationSite.id
+          } else {
+            return null
           }
         }
         return `${title} (${item.count})`

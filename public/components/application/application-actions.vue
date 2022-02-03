@@ -325,7 +325,7 @@ en:
         if (!this.application.publicationSites) return []
         return this.application.publicationSites.map(dps => {
           const site = this.publicationSites.find(site => dps === `${site.type}:${site.id}`)
-          if (!site) return null
+          if (!site?.applicationUrlTemplate) return null
           return {
             url: site.applicationUrlTemplate.replace('{id}', this.application.id),
             title: site.title || (site.url && site.url.replace('http://', '').replace('https://', '')) || site.id,

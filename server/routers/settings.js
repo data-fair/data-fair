@@ -152,6 +152,9 @@ router.delete('/:type/:id/publication-sites/:siteType/:siteId', isOwnerAdmin, as
   const valid = validate(settings)
   if (!valid) return res.status(400).send(validate.errors)
   await db.collection('settings').replaceOne(owner, settings, { upsert: true })
+  const ref = `${req.params.siteType}:${req.params.siteId}`
+  await db.collection('datasets').updateMany({ publicationSites: ref }, { $pull: { publicationSites: ref } })
+  await db.collection('applications').updateMany({ publicationSites: ref }, { $pull: { publicationSites: ref } })
   res.status(200).send(req.body)
 }))
 

@@ -484,7 +484,7 @@ en:
         if (!this.dataset.publicationSites) return []
         return this.dataset.publicationSites.map(dps => {
           const site = this.publicationSites.find(site => dps === `${site.type}:${site.id}`)
-          if (!site) return null
+          if (!site?.datasetUrlTemplate) return null
           return {
             url: site.datasetUrlTemplate.replace('{id}', this.dataset.id),
             title: site.title || (site.url && site.url.replace('http://', '').replace('https://', '')) || site.id,

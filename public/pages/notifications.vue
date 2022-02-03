@@ -87,9 +87,11 @@ fr:
             keys.push(`data-fair:dataset-published-topic:${p.type}:${p.id}:${topic.id}`)
             titles.push(this.$t('datasetPublishedTopic', { title: p.title || p.url || p.id, topic: topic.title }))
           }
+          let subscribeUrl = `${this.env.notifyUrl}/embed/subscribe?key=${encodeURIComponent(keys.join(','))}&title=${encodeURIComponent(titles.join(','))}&register=false`
+          if (p.datasetUrlTemplate) subscribeUrl += `&url-template=${encodeURIComponent(p.datasetUrlTemplate)}`
           return {
             ...p,
-            subscribeUrl: `${this.env.notifyUrl}/embed/subscribe?key=${encodeURIComponent(keys.join(','))}&title=${encodeURIComponent(titles.join(','))}&url-template=${encodeURIComponent(p.datasetUrlTemplate)}&register=false`,
+            subscribeUrl,
           }
         })
       },
