@@ -146,6 +146,7 @@ router.all('/:applicationId*', setResource, asyncWrap(async(req, res, next) => {
     // This header is deprecated, use X-Application-Url instead and concatenate /config to it
     'X-Config-Url': req.publicBaseUrl + '/api/v1/applications/' + req.params.applicationId + '/config',
     'accept-encoding': 'identity',
+    'cache-control': 'max-age=0',
   }
 
   // merge incoming an target URL elements
