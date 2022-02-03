@@ -4,12 +4,10 @@ const fs = require('fs')
 const path = require('path')
 const https = require('https')
 const http = require('http')
-const CacheableRequest = require('cacheable-request')
+const axios = require('../utils/axios')
 const parse5 = require('parse5')
-const { Writable } = require('stream')
 const pump = require('util').promisify(require('pump'))
 const CacheableLookup = require('cacheable-lookup')
-const QuickLRU = require('@alloc/quick-lru')
 const asyncWrap = require('../utils/async-wrap')
 const findUtils = require('../utils/find')
 const permissions = require('../utils/permissions')
@@ -19,9 +17,6 @@ const router = module.exports = express.Router()
 // const debug = require('debug')('application-proxy')
 
 const cacheableLookup = new CacheableLookup()
-const requestStorage = new QuickLRU({ maxSize: 1000 })
-const cacheableRequestHTTP = new CacheableRequest(http.request, requestStorage)
-const cacheableRequestHTTPS = new CacheableRequest(https.request, requestStorage)
 
 const loginHtml = fs.readFileSync(path.join(__dirname, '../resources/login.html'), 'utf8')
 
@@ -72,6 +67,46 @@ router.get('/:applicationId/login', setResource, (req, res) => {
     .replace('{AUTH_ROUTE}', authUrl)
     .replace('{LOGO}', `${req.directoryUrl}/api/avatars/${req.application.owner.type}/${req.application.owner.id}/avatar.png`),
   )
+})
+
+const htmlCache = {}
+const fetchHTML = async (cleanApplicationUrl, targetUrl) => {
+  const cacheEntry = htmlCache[cleanApplicationUrl]
+  try {
+    // search params should not be interpreted by the static application server
+    delete targetUrl.search
+    const headers = {}
+    if (cacheEntry?.etag) headers['If-None-Match'] = cacheEntry.etag
+    if (cacheEntry?.lastModified) headers['If-Modified-Since'] = cacheEntry.lastModified
+    const res = await axios.get(targetUrl.href, {
+      headers,
+      validateStatus: function (status) {
+        return status === 200 || status === 304
+      },
+    })
+    if (res.status === 304) {
+      return cacheEntry.content
+    } else {
+      htmlCache[cleanApplicationUrl] = {
+        content: res.data,
+        etag: res.headers.etag,
+        lastModified: res.headers['last-modified'],
+        fetchedAt: new Date(),
+      }
+      return res.data
+    }
+  } catch (err) {
+    console.error('failure to fetch HTML from application', err)
+    if (cacheEntry) return cacheEntry.content
+    throw err
+    // in case of failure, serve from simple cache
+  }
+}
+// for debug only
+router.get('/_htmlcache', (req, res, next) => {
+  if (!req.user) return res.status(401)
+  if (!req.user.adminMode) return res.status(403)
+  return res.send(htmlCache)
 })
 
 // Proxy for applications
@@ -138,17 +173,6 @@ router.all('/:applicationId*', setResource, asyncWrap(async(req, res, next) => {
   const baseApp = await baseAppPromise
   if (!baseApp) return res.status(404).send(req.__('errors.missingBaseApp'))
 
-  const headers = {
-    'X-Exposed-Url': req.application.exposedUrl,
-    'X-Application-Url': req.publicBaseUrl + '/api/v1/applications/' + req.params.applicationId,
-    'X-Directory-Url': config.directoryUrl,
-    'X-API-Url': req.publicBaseUrl + '/api/v1',
-    // This header is deprecated, use X-Application-Url instead and concatenate /config to it
-    'X-Config-Url': req.publicBaseUrl + '/api/v1/applications/' + req.params.applicationId + '/config',
-    'accept-encoding': 'identity',
-    'cache-control': 'max-age=0',
-  }
-
   // merge incoming an target URL elements
   const incomingUrl = new URL('http://host' + req.url)
   const targetUrl = new URL(cleanApplicationUrl)
@@ -158,17 +182,80 @@ router.all('/:applicationId*', setResource, asyncWrap(async(req, res, next) => {
   targetUrl.pathname = path.join(targetUrl.pathname, extraPath)
   targetUrl.search = incomingUrl.searchParams
 
+  if (extraPath !== '/index.html') {
+    // TODO: check the logs in production, if this line never appears then we can cleanup the code
+    console.warn('serving anything else thant /index.html from application-proxy is deprecated', targetUrl.href)
+    return await deprecatedProxy(cleanApplicationUrl, targetUrl, req, res)
+  }
+  const rawHtml = await fetchHTML(cleanApplicationUrl, targetUrl)
+
+  const document = parse5.parse(rawHtml.replace(/%APPLICATION%/, JSON.stringify(req.application, null, 2)))
+  const html = document.childNodes.find(c => c.tagName === 'html')
+  if (!html) throw new Error(req.__('errors.brokenHTML'))
+  const head = html.childNodes.find(c => c.tagName === 'head')
+  const body = html.childNodes.find(c => c.tagName === 'body')
+  if (!head || !body) throw new Error(req.__('errors.brokenHTML'))
+
+  // Data-fair generates a manifest per app
+  const manifestUrl = new URL(req.application.exposedUrl).pathname + '/manifest.json'
+  const manifest = head.childNodes.find(c => c.attrs && c.attrs.find(a => a.name === 'rel' && a.value === 'manifest'))
+  if (manifest) {
+    manifest.attrs.find(a => a.name === 'href').value = manifestUrl
+  } else {
+    head.childNodes.push({
+      nodeName: 'link',
+      tagName: 'link',
+      attrs: [
+        { name: 'rel', value: 'manifest' },
+        { name: 'crossorigin', value: 'use-credentials' },
+        { name: 'href', value: manifestUrl },
+      ],
+    })
+  }
+
+  // Data-fair also generates a basic service-workers configuration per app
+  head.childNodes.push({
+    nodeName: 'script',
+    tagName: 'script',
+    attrs: [{ name: 'type', value: 'text/javascript' }],
+    childNodes: [{
+      nodeName: '#text',
+      value: serviceWorkers.register(req.application),
+    }],
+  })
+
+  // make sure the referer is available when calling APIs and remote services from inside applications
+  head.childNodes.push({
+    nodeName: 'meta',
+    tagName: 'meta',
+    attrs: [
+      { name: 'name', value: 'referrer' },
+      { name: 'content', value: 'same-origin' },
+    ],
+  })
+
+  // add a brand logo somewhere over the applications
+  const hideBrand = (limits && limits.hide_brand && limits.hide_brand.limit) || config.defaultLimits.hideBrand
+  if (brandEmbed && !hideBrand) {
+    brandEmbed.childNodes.forEach(childNode => body.childNodes.push(childNode))
+  }
+
+  res.set('cache-control', 'private, max-age=0, must-revalidate')
+  res.set('pragma', 'no-cache')
+  res.send(parse5.serialize(document))
+}))
+
+const deprecatedProxy = async (cleanApplicationUrl, targetUrl, req, res) => {
   const options = {
     host: targetUrl.host,
     port: targetUrl.port,
     protocol: targetUrl.protocol,
     path: targetUrl.pathname + targetUrl.hash + targetUrl.search,
     timeout: config.remoteTimeout,
-    headers,
     lookup: cacheableLookup.lookup,
   }
   await new Promise((resolve, reject) => {
-    const cacheAppReq = (targetUrl.protocol === 'http:' ? cacheableRequestHTTP : cacheableRequestHTTPS)(options, async (appRes) => {
+    const cacheAppReq = (targetUrl.protocol === 'http:' ? http.request : https.request)(options, async (appRes) => {
       try {
         if (appRes.statusCode === 301 || appRes.statusCode === 302) {
           const location = appRes.headers.location
@@ -185,84 +272,14 @@ router.all('/:applicationId*', setResource, asyncWrap(async(req, res, next) => {
         if (!contentType || targetUrl.pathname.endsWith('.html')) {
           contentType = 'text/html; charset=utf-8'
         }
-        res.set('content-type', contentType)
+        res.set('content-type', contentType);
 
-        // first some requests that must be forwarded directly
-        if (
-          appRes.statusCode !== 200 || // Do not attempt to transform errors or redirects
-          (appRes.headers['content-encoding'] && appRes.headers['content-encoding'] !== 'identity') || // Do not transform compressed content
-          (!contentType.startsWith('text/html'))// only transform html content
-        ) {
-          ['content-type', 'content-length', 'pragma', 'cache-control', 'expires', 'last-modified'].forEach(header => {
+        ['content-type', 'content-length', 'pragma', 'cache-control', 'expires', 'last-modified'].forEach(header => {
             if (appRes.headers[header]) res.set(header, appRes.headers[header])
           })
           res.status(appRes.statusCode)
           await pump(appRes, res)
           return resolve()
-        }
-
-        // all that follows is only applied to simple textual html content, we enrich it
-        let buffer
-        await pump(appRes, new Writable({
-          write(chunk, encoding, callback) {
-            buffer = buffer ? Buffer.concat([buffer, chunk]) : chunk
-            callback()
-          },
-        }))
-        const document = parse5.parse(buffer.toString().replace(/%APPLICATION%/, JSON.stringify(req.application, null, 2)))
-        const html = document.childNodes.find(c => c.tagName === 'html')
-        if (!html) throw new Error(req.__('errors.brokenHTML'))
-        const head = html.childNodes.find(c => c.tagName === 'head')
-        const body = html.childNodes.find(c => c.tagName === 'body')
-        if (!head || !body) throw new Error(req.__('errors.brokenHTML'))
-
-        // Data-fair generates a manifest per app
-        const manifestUrl = new URL(req.application.exposedUrl).pathname + '/manifest.json'
-        const manifest = head.childNodes.find(c => c.attrs && c.attrs.find(a => a.name === 'rel' && a.value === 'manifest'))
-        if (manifest) {
-          manifest.attrs.find(a => a.name === 'href').value = manifestUrl
-        } else {
-          head.childNodes.push({
-            nodeName: 'link',
-            tagName: 'link',
-            attrs: [
-              { name: 'rel', value: 'manifest' },
-              { name: 'crossorigin', value: 'use-credentials' },
-              { name: 'href', value: manifestUrl },
-            ],
-          })
-        }
-
-        // Data-fair also generates a basic service-workers configuration per app
-        head.childNodes.push({
-          nodeName: 'script',
-          tagName: 'script',
-          attrs: [{ name: 'type', value: 'text/javascript' }],
-          childNodes: [{
-            nodeName: '#text',
-            value: serviceWorkers.register(req.application),
-          }],
-        })
-
-        // make sure the referer is available when calling APIs and remote services from inside applications
-        head.childNodes.push({
-          nodeName: 'meta',
-          tagName: 'meta',
-          attrs: [
-            { name: 'name', value: 'referrer' },
-            { name: 'content', value: 'same-origin' },
-          ],
-        })
-
-        // add a brand logo somewhere over the applications
-        const hideBrand = (limits && limits.hide_brand && limits.hide_brand.limit) || config.defaultLimits.hideBrand
-        if (brandEmbed && !hideBrand) {
-          brandEmbed.childNodes.forEach(childNode => body.childNodes.push(childNode))
-        }
-
-        res.set('cache-control', 'private, max-age=0, must-revalidate')
-        res.set('pragma', 'no-cache')
-        res.send(parse5.serialize(document))
       } catch (err) {
         reject(err)
       }
@@ -274,4 +291,4 @@ router.all('/:applicationId*', setResource, asyncWrap(async(req, res, next) => {
       req.end()
     })
   })
-}))
+}

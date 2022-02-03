@@ -1,5 +1,5 @@
 const config = require('config')
-const axios = require('axios').create()
+const axios = require('./axios')
 const debug = require('debug')('notifications')
 
 exports.send = async (notification) => {

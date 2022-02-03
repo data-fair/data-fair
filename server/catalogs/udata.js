@@ -1,6 +1,6 @@
 const config = require('config')
 const url = require('url')
-const axios = require('axios')
+const axios = require('../utils/axios')
 const debug = require('debug')('catalogs:udata')
 exports.title = 'uData'
 exports.description = 'Customizable and skinnable social platform dedicated to (open)data.'

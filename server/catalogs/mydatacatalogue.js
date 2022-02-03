@@ -1,5 +1,5 @@
 const url = require('url')
-const axios = require('axios')
+const axios = require('../utils/axios')
 
 exports.title = 'Mydatacatalogue'
 exports.description = 'Outil de cartographie et de catalogage de vos données'
