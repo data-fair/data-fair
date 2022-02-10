@@ -184,7 +184,7 @@ router.all('/:applicationId*', setResource, asyncWrap(async(req, res, next) => {
 
   if (extraPath !== '/index.html') {
     // TODO: check the logs in production, if this line never appears then we can cleanup the code
-    console.warn('serving anything else thant /index.html from application-proxy is deprecated', targetUrl.href)
+    console.warn('serving anything else than /index.html from application-proxy is deprecated', targetUrl.href)
     return await deprecatedProxy(cleanApplicationUrl, targetUrl, req, res)
   }
   const rawHtml = await fetchHTML(cleanApplicationUrl, targetUrl)
