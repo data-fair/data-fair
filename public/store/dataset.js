@@ -235,7 +235,7 @@ export default () => ({
         eventBus.$emit('unsubscribe', getters.journalChannel)
         eventBus.$emit('unsubscribe', getters.taskProgressChannel)
       }
-      commit('setAny', { datasetId: null, dataset: null, api: null, journal: [], showTableCard: null })
+      commit('setAny', { datasetId: null, dataset: null, api: null, journal: [], showTableCard: null, remoteServices: null })
     },
     async patch({ commit, getters, dispatch, state }, patch) {
       try {
@@ -287,9 +287,10 @@ export default () => ({
       commit('addJournalEvent', event)
     },
     async fetchRemoteServices({ getters, commit, state }) {
+      if (state.remoteServices) return
       let remoteServices = []
       const data = await this.$axios.$get('api/v1/remote-services', {
-        params: { size: 100, privateAccess: `${state.dataset.owner.type}:${state.dataset.owner.id}` },
+        params: { size: 1000, privateAccess: `${state.dataset.owner.type}:${state.dataset.owner.id}` },
       })
       remoteServices = data.results
       commit('setAny', { remoteServices })
