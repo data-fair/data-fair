@@ -122,7 +122,7 @@
                 {{ currentPropRef.prop.enum.join(' - ') | truncate(100) }}
               </v-list-item>
             </v-list>
-            <template v-if="currentPropRef.prop.type === 'string' && currentFileProp.dateTimeFormat">
+            <template v-if="currentPropRef.prop.type === 'string' && currentFileProp && currentFileProp.dateTimeFormat">
               <lazy-time-zone-select
                 v-model="currentPropRef.prop.timeZone"
                 :disabled="!editable || !currentPropRef.editable || dataset.isVirtual"
