@@ -42,4 +42,18 @@ describe('Spreadsheets conversions', () => {
     assert.equal(dates[1], '2050-01-01T00:00:00Z')
     assert.equal(dates[2], '2050-01-01T01:00:00Z')
   })
+
+  it('should manage a sparse XLSX file', async () => {
+    const ax = global.ax.dmeadus
+    const dataset = await testUtils.sendDataset('datasets/sparse.xlsx', ax)
+    const res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
+    assert.equal(res.status, 200)
+    assert.equal(res.data.total, 4)
+    assert.equal(res.data.results[0].col1, 'a')
+    assert.equal(res.data.results[1].col1, 'd')
+    assert.equal(res.data.results[1].col2, 'e')
+    assert.equal(res.data.results[2].col1, 'f')
+    assert.equal(res.data.results[2].col3, 'g')
+    assert.equal(res.data.results[3].col1, 'h')
+  })
 })

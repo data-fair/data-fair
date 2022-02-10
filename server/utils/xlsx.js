@@ -12,8 +12,8 @@ exports.getCSV = async (filePath) => {
   // fallback to previous implementation
   if (!workbook.worksheets?.length) return await getCSVOld(data)
 
-  const rawCSV = (await workbook.csv.writeBuffer({ dateUTC: true })).toString()
-  const json = csvParse(rawCSV, { columns: true })
+  const rawCSV = (await workbook.csv.writeBuffer({ dateUTC: true, formatterOptions: { quoteColumns: true } })).toString()
+  const json = csvParse(rawCSV, { columns: true, relax_column_count: true })
 
   // loop on dates to check if there is a need for date-time format or if date is enough
   const hasSimpleDate = {}
