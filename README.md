@@ -27,9 +27,11 @@ When both servers are ready, go to [http://localhost:5600](http://localhost:5600
 
 Test built nuxt distributable in dev:
 
-   # first set proxyNuxt to false in config/development.js
-   NODE_ENV=development npm run build
-   npm run dev-server
+```
+# first set proxyNuxt to false in config/development.js
+NODE_ENV=development npm run build
+npm run dev-server
+```
 
 Run test suite:
 
