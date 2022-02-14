@@ -1,279 +1,270 @@
 <template>
-  <v-row v-if="user && (dataset || error)" class="my-0">
+  <v-row v-if="dataset" class="my-0">
     <v-col :style="this.$vuetify.breakpoint.lgAndUp ? 'padding-right:256px;' : ''">
       <v-container class="py-0">
-        <v-alert
-          v-if="error"
-          type="error"
-          outlined
-        >
-          {{ error.data }}
-        </v-alert>
-        <template v-else>
-          <v-row class="dataset">
-            <v-col>
-              <dataset-status />
+        <v-row class="dataset">
+          <v-col>
+            <dataset-status />
 
-              <layout-section-tabs
-                :min-height="180"
-                :svg="buildingSvg"
-                svg-no-margin
-                :section="sections.find(s => s.id === 'structure')"
-              >
-                <template v-slot:tabs>
-                  <v-tab href="#structure-schema">
-                    <v-icon>mdi-table-cog</v-icon>&nbsp;&nbsp;{{ $t('schema') }}
-                  </v-tab>
+            <layout-section-tabs
+              :min-height="180"
+              :svg="buildingSvg"
+              svg-no-margin
+              :section="sections.find(s => s.id === 'structure')"
+            >
+              <template v-slot:tabs>
+                <v-tab href="#structure-schema">
+                  <v-icon>mdi-table-cog</v-icon>&nbsp;&nbsp;{{ $t('schema') }}
+                </v-tab>
 
-                  <template v-if="can('writeDescription') && dataset.isVirtual">
-                    <v-tab href="#structure-virtual">
-                      <v-icon>mdi-picture-in-picture-bottom-right-outline</v-icon>&nbsp;&nbsp;{{ $t('virtual') }}
-                    </v-tab>
-                  </template>
-
-                  <v-tab v-if="!env.disableRemoteServices" href="#structure-extensions">
-                    <v-icon>mdi-merge</v-icon>&nbsp;&nbsp;{{ $t('extension') }}
-                  </v-tab>
-
-                  <v-tab
-                    v-if="user.adminMode && !dataset.draftReason"
-                    href="#structure-masterdata"
-                    class="admin--text"
-                  >
-                    <v-icon color="admin">
-                      mdi-star-four-points
-                    </v-icon>&nbsp;&nbsp;{{ $t('masterData') }}
+                <template v-if="can('writeDescription') && dataset.isVirtual">
+                  <v-tab href="#structure-virtual">
+                    <v-icon>mdi-picture-in-picture-bottom-right-outline</v-icon>&nbsp;&nbsp;{{ $t('virtual') }}
                   </v-tab>
                 </template>
-                <template v-slot:tabs-items>
-                  <v-tab-item value="structure-schema">
-                    <v-container fluid>
-                      <tutorial-alert id="dataset-add-concepts">
-                        {{ $t('tutorialConcepts') }}
-                      </tutorial-alert>
-                      <dataset-schema />
-                    </v-container>
-                  </v-tab-item>
 
-                  <v-tab-item value="structure-virtual">
-                    <v-container fluid>
-                      <dataset-virtual />
-                    </v-container>
-                  </v-tab-item>
+                <v-tab v-if="!env.disableRemoteServices" href="#structure-extensions">
+                  <v-icon>mdi-merge</v-icon>&nbsp;&nbsp;{{ $t('extension') }}
+                </v-tab>
 
-                  <v-tab-item value="structure-extensions">
-                    <layout-doc-link :tooltip="$t('docLinkExtend')" doc-key="datasetExtend" />
-                    <v-container fluid>
-                      <dataset-extensions />
-                    </v-container>
-                  </v-tab-item>
-
-                  <v-tab-item value="structure-masterdata">
-                    <dataset-master-data />
-                  </v-tab-item>
-                </template>
-              </layout-section-tabs>
-
-              <layout-section-tabs
-                :min-height="390"
-                :svg="checklistSvg"
-                svg-no-margin
-                :section="sections.find(s => s.id === 'metadata')"
-              >
-                <template v-slot:tabs>
-                  <v-tab href="#metadata-info">
-                    <v-icon>mdi-information</v-icon>&nbsp;&nbsp;{{ $t('info') }}
-                  </v-tab>
-
-                  <v-tab v-if="!dataset.draftReason" href="#metadata-attachments">
-                    <v-icon>mdi-attachment</v-icon>&nbsp;&nbsp;{{ $t('attachments') }}
-                  </v-tab>
-                </template>
-                <template v-slot:tabs-items>
-                  <v-tab-item value="metadata-info">
-                    <layout-doc-link :tooltip="$t('docLinkEdit')" doc-key="datasetEdit" />
-                    <v-container fluid class="py-0">
-                      <tutorial-alert id="dataset-configure-meta">
-                        {{ $t('tutorialConfigMeta') }}
-                      </tutorial-alert>
-                      <dataset-info />
-                    </v-container>
-                  </v-tab-item>
-
-                  <v-tab-item value="metadata-attachments">
-                    <layout-doc-link :tooltip="$t('docLinkAttachments')" doc-key="datasetAttachments" />
-                    <dataset-attachments />
-                  </v-tab-item>
-                </template>
-              </layout-section-tabs>
-
-              <layout-section-tabs
-                :svg="dataSvg"
-                svg-no-margin
-                :section="sections.find(s => s.id === 'data')"
-              >
-                <template v-slot:title v-t="'data'" />
-                <template v-slot:tabs>
-                  <v-tab href="#data-table">
-                    <v-icon>mdi-table</v-icon>&nbsp;&nbsp;{{ $t('table') }}
-                  </v-tab>
-
-                  <v-tab v-if="dataset.bbox && !env.disableRemoteServices" href="#data-map">
-                    <v-icon>mdi-map</v-icon>&nbsp;&nbsp;{{ $t('map') }}
-                  </v-tab>
-
-                  <v-tab v-if="!!dataset.schema.find(f => f['x-refersTo'] === 'https://schema.org/startDate') && !!dataset.schema.find(f => f['x-refersTo'] === 'https://schema.org/endDate' && !!dataset.schema.find(f => f['x-refersTo'] === 'http://www.w3.org/2000/01/rdf-schema#label'))" href="#data-calendar">
-                    <v-icon>mdi-calendar-range</v-icon>&nbsp;&nbsp;{{ $t('calendar') }}
-                  </v-tab>
-
-                  <v-tab v-if="fileProperty && (!fileProperty['x-capabilities'] || fileProperty['x-capabilities'].indexAttachment !== false)" href="#data-files">
-                    <v-icon>mdi-content-copy</v-icon>&nbsp;&nbsp;{{ $t('files') }}
-                  </v-tab>
-
-                  <v-tab v-if="!!dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/image')" href="#data-thumbnails">
-                    <v-icon>mdi-image</v-icon>&nbsp;&nbsp;{{ $t('thumbnails') }}
-                  </v-tab>
-                </template>
-                <template v-slot:tabs-items>
-                  <v-tab-item value="data-table">
-                    <dataset-table />
-                  </v-tab-item>
-
-                  <v-tab-item value="data-map">
-                    <v-container fluid class="pa-0">
-                      <dataset-map v-if="dataset.bbox" fixed-height="600" />
-                    </v-container>
-                  </v-tab-item>
-
-                  <v-tab-item value="data-calendar">
-                    <v-container fluid class="pa-0">
-                      <dataset-calendar />
-                    </v-container>
-                  </v-tab-item>
-
-                  <v-tab-item value="data-files">
-                    <v-container fluid class="pa-0">
-                      <dataset-search-files />
-                    </v-container>
-                  </v-tab-item>
-
-                  <v-tab-item value="data-thumbnails">
-                    <v-container fluid>
-                      <dataset-thumbnails-opts v-if="can('writeDescription')" />
-                      <dataset-thumbnails />
-                    </v-container>
-                  </v-tab-item>
-                </template>
-              </layout-section-tabs>
-
-              <layout-section-tabs
-                :section="sections.find(s => s.id === 'reuses')"
-                :svg="chartSvg"
-                svg-no-margin
-                :min-height="140"
-              >
-                <template v-slot:title v-t="'uses'" />
-                <template v-slot:tabs>
-                  <v-tab href="#reuses-apps">
-                    <v-icon>mdi-image-multiple</v-icon>&nbsp;&nbsp;{{ $t('visualizations') }}
-                  </v-tab>
-
-                  <v-tab href="#reuses-external">
-                    <v-icon>mdi-open-in-new</v-icon>&nbsp;&nbsp;{{ $t('extReuses') }}
-                  </v-tab>
-                </template>
-                <template v-slot:tabs-items>
-                  <v-tab-item value="reuses-apps">
-                    <dataset-applications />
-                  </v-tab-item>
-
-                  <v-tab-item value="reuses-external">
-                    <dataset-external-reuses />
-                  </v-tab-item>
-                </template>
-              </layout-section-tabs>
-              <layout-section-tabs
-                :section="sections.find(s => s.id === 'share')"
-                :svg="shareSvg"
-                svg-no-margin
-                :min-height="200"
-              >
-                <template v-slot:title v-t="'share'" />
-                <template v-slot:tabs>
-                  <v-tab v-if="can('getPermissions')" href="#share-permissions">
-                    <v-icon>mdi-security</v-icon>&nbsp;&nbsp;{{ $t('permissions') }}
-                  </v-tab>
-
-                  <v-tab href="#share-publication-sites">
-                    <v-icon>mdi-presentation</v-icon>&nbsp;&nbsp;{{ $t('portals') }}
-                  </v-tab>
-
-                  <v-tab href="#share-publications">
-                    <v-icon>mdi-transit-connection</v-icon>&nbsp;&nbsp;{{ $t('catalogs') }}
-                  </v-tab>
-
-                  <v-tab v-if="dataset.isRest" href="#share-exports">
-                    <v-icon>mdi-export</v-icon>&nbsp;&nbsp;{{ $t('exports') }}
-                  </v-tab>
-                </template>
-                <template v-slot:tabs-items>
-                  <v-tab-item value="share-permissions">
-                    <tutorial-alert id="dataset-share-portal" class="mx-2">
-                      {{ $t('tutorialShare') }}
+                <v-tab
+                  v-if="user.adminMode && !dataset.draftReason"
+                  href="#structure-masterdata"
+                  class="admin--text"
+                >
+                  <v-icon color="admin">
+                    mdi-star-four-points
+                  </v-icon>&nbsp;&nbsp;{{ $t('masterData') }}
+                </v-tab>
+              </template>
+              <template v-slot:tabs-items>
+                <v-tab-item value="structure-schema">
+                  <v-container fluid>
+                    <tutorial-alert id="dataset-add-concepts">
+                      {{ $t('tutorialConcepts') }}
                     </tutorial-alert>
-                    <v-container fluid>
-                      <permissions
-                        v-if="can('getPermissions')"
-                        :resource="dataset"
-                        :resource-url="resourceUrl"
-                        :api="api"
-                        :has-public-deps="hasPublicApplications"
-                      />
-                    </v-container>
-                  </v-tab-item>
+                    <dataset-schema />
+                  </v-container>
+                </v-tab-item>
 
-                  <v-tab-item value="share-publication-sites">
-                    <tutorial-alert id="dataset-share-portal" class="mx-2">
-                      {{ $t('tutorialShare') }}
+                <v-tab-item value="structure-virtual">
+                  <v-container fluid>
+                    <dataset-virtual />
+                  </v-container>
+                </v-tab-item>
+
+                <v-tab-item value="structure-extensions">
+                  <layout-doc-link :tooltip="$t('docLinkExtend')" doc-key="datasetExtend" />
+                  <v-container fluid>
+                    <dataset-extensions />
+                  </v-container>
+                </v-tab-item>
+
+                <v-tab-item value="structure-masterdata">
+                  <dataset-master-data />
+                </v-tab-item>
+              </template>
+            </layout-section-tabs>
+
+            <layout-section-tabs
+              :min-height="390"
+              :svg="checklistSvg"
+              svg-no-margin
+              :section="sections.find(s => s.id === 'metadata')"
+            >
+              <template v-slot:tabs>
+                <v-tab href="#metadata-info">
+                  <v-icon>mdi-information</v-icon>&nbsp;&nbsp;{{ $t('info') }}
+                </v-tab>
+
+                <v-tab v-if="!dataset.draftReason" href="#metadata-attachments">
+                  <v-icon>mdi-attachment</v-icon>&nbsp;&nbsp;{{ $t('attachments') }}
+                </v-tab>
+              </template>
+              <template v-slot:tabs-items>
+                <v-tab-item value="metadata-info">
+                  <layout-doc-link :tooltip="$t('docLinkEdit')" doc-key="datasetEdit" />
+                  <v-container fluid class="py-0">
+                    <tutorial-alert id="dataset-configure-meta">
+                      {{ $t('tutorialConfigMeta') }}
                     </tutorial-alert>
-                    <dataset-publication-sites :publication-sites="publicationSites" />
-                  </v-tab-item>
+                    <dataset-info />
+                  </v-container>
+                </v-tab-item>
 
-                  <v-tab-item value="share-publications">
-                    <dataset-catalog-publications />
-                  </v-tab-item>
+                <v-tab-item value="metadata-attachments">
+                  <layout-doc-link :tooltip="$t('docLinkAttachments')" doc-key="datasetAttachments" />
+                  <dataset-attachments />
+                </v-tab-item>
+              </template>
+            </layout-section-tabs>
 
-                  <v-tab-item value="share-exports">
-                    <dataset-exports />
-                  </v-tab-item>
-                </template>
-              </layout-section-tabs>
+            <layout-section-tabs
+              :svg="dataSvg"
+              svg-no-margin
+              :section="sections.find(s => s.id === 'data')"
+            >
+              <template v-slot:title v-t="'data'" />
+              <template v-slot:tabs>
+                <v-tab href="#data-table">
+                  <v-icon>mdi-table</v-icon>&nbsp;&nbsp;{{ $t('table') }}
+                </v-tab>
 
-              <layout-section-tabs
-                :section="sections.find(s => s.id === 'activity')"
-                :svg="settingsSvg"
-                :min-height="550"
-              >
-                <template v-slot:title v-t="'activity'" />
-                <template v-slot:tabs>
-                  <v-tab v-if="can('readJournal')" href="#activity-journal">
-                    <v-icon>mdi-calendar-text</v-icon>&nbsp;&nbsp;{{ $t('journal') }}
-                  </v-tab>
-                </template>
-                <template v-slot:tabs-items>
-                  <v-tab-item value="activity-journal">
-                    <v-container fluid class="pa-0">
-                      <journal
-                        :journal="journal"
-                        type="dataset"
-                      />
-                    </v-container>
-                  </v-tab-item>
-                </template>
-              </layout-section-tabs>
-            </v-col>
-          </v-row>
-        </template>
+                <v-tab v-if="dataset.bbox && !env.disableRemoteServices" href="#data-map">
+                  <v-icon>mdi-map</v-icon>&nbsp;&nbsp;{{ $t('map') }}
+                </v-tab>
+
+                <v-tab v-if="!!dataset.schema.find(f => f['x-refersTo'] === 'https://schema.org/startDate') && !!dataset.schema.find(f => f['x-refersTo'] === 'https://schema.org/endDate' && !!dataset.schema.find(f => f['x-refersTo'] === 'http://www.w3.org/2000/01/rdf-schema#label'))" href="#data-calendar">
+                  <v-icon>mdi-calendar-range</v-icon>&nbsp;&nbsp;{{ $t('calendar') }}
+                </v-tab>
+
+                <v-tab v-if="fileProperty && (!fileProperty['x-capabilities'] || fileProperty['x-capabilities'].indexAttachment !== false)" href="#data-files">
+                  <v-icon>mdi-content-copy</v-icon>&nbsp;&nbsp;{{ $t('files') }}
+                </v-tab>
+
+                <v-tab v-if="!!dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/image')" href="#data-thumbnails">
+                  <v-icon>mdi-image</v-icon>&nbsp;&nbsp;{{ $t('thumbnails') }}
+                </v-tab>
+              </template>
+              <template v-slot:tabs-items>
+                <v-tab-item value="data-table">
+                  <dataset-table />
+                </v-tab-item>
+
+                <v-tab-item value="data-map">
+                  <v-container fluid class="pa-0">
+                    <dataset-map v-if="dataset.bbox" fixed-height="600" />
+                  </v-container>
+                </v-tab-item>
+
+                <v-tab-item value="data-calendar">
+                  <v-container fluid class="pa-0">
+                    <dataset-calendar />
+                  </v-container>
+                </v-tab-item>
+
+                <v-tab-item value="data-files">
+                  <v-container fluid class="pa-0">
+                    <dataset-search-files />
+                  </v-container>
+                </v-tab-item>
+
+                <v-tab-item value="data-thumbnails">
+                  <v-container fluid>
+                    <dataset-thumbnails-opts v-if="can('writeDescription')" />
+                    <dataset-thumbnails />
+                  </v-container>
+                </v-tab-item>
+              </template>
+            </layout-section-tabs>
+
+            <layout-section-tabs
+              :section="sections.find(s => s.id === 'reuses')"
+              :svg="chartSvg"
+              svg-no-margin
+              :min-height="140"
+            >
+              <template v-slot:title v-t="'uses'" />
+              <template v-slot:tabs>
+                <v-tab href="#reuses-apps">
+                  <v-icon>mdi-image-multiple</v-icon>&nbsp;&nbsp;{{ $t('visualizations') }}
+                </v-tab>
+
+                <v-tab href="#reuses-external">
+                  <v-icon>mdi-open-in-new</v-icon>&nbsp;&nbsp;{{ $t('extReuses') }}
+                </v-tab>
+              </template>
+              <template v-slot:tabs-items>
+                <v-tab-item value="reuses-apps">
+                  <dataset-applications />
+                </v-tab-item>
+
+                <v-tab-item value="reuses-external">
+                  <dataset-external-reuses />
+                </v-tab-item>
+              </template>
+            </layout-section-tabs>
+            <layout-section-tabs
+              :section="sections.find(s => s.id === 'share')"
+              :svg="shareSvg"
+              svg-no-margin
+              :min-height="200"
+            >
+              <template v-slot:title v-t="'share'" />
+              <template v-slot:tabs>
+                <v-tab v-if="can('getPermissions')" href="#share-permissions">
+                  <v-icon>mdi-security</v-icon>&nbsp;&nbsp;{{ $t('permissions') }}
+                </v-tab>
+
+                <v-tab href="#share-publication-sites">
+                  <v-icon>mdi-presentation</v-icon>&nbsp;&nbsp;{{ $t('portals') }}
+                </v-tab>
+
+                <v-tab href="#share-publications">
+                  <v-icon>mdi-transit-connection</v-icon>&nbsp;&nbsp;{{ $t('catalogs') }}
+                </v-tab>
+
+                <v-tab v-if="dataset.isRest" href="#share-exports">
+                  <v-icon>mdi-export</v-icon>&nbsp;&nbsp;{{ $t('exports') }}
+                </v-tab>
+              </template>
+              <template v-slot:tabs-items>
+                <v-tab-item value="share-permissions">
+                  <tutorial-alert id="dataset-share-portal" class="mx-2">
+                    {{ $t('tutorialShare') }}
+                  </tutorial-alert>
+                  <v-container fluid>
+                    <permissions
+                      v-if="can('getPermissions')"
+                      :resource="dataset"
+                      :resource-url="resourceUrl"
+                      :api="api"
+                      :has-public-deps="hasPublicApplications"
+                    />
+                  </v-container>
+                </v-tab-item>
+
+                <v-tab-item value="share-publication-sites">
+                  <tutorial-alert id="dataset-share-portal" class="mx-2">
+                    {{ $t('tutorialShare') }}
+                  </tutorial-alert>
+                  <dataset-publication-sites :publication-sites="publicationSites" />
+                </v-tab-item>
+
+                <v-tab-item value="share-publications">
+                  <dataset-catalog-publications />
+                </v-tab-item>
+
+                <v-tab-item value="share-exports">
+                  <dataset-exports />
+                </v-tab-item>
+              </template>
+            </layout-section-tabs>
+
+            <layout-section-tabs
+              :section="sections.find(s => s.id === 'activity')"
+              :svg="settingsSvg"
+              :min-height="550"
+            >
+              <template v-slot:title v-t="'activity'" />
+              <template v-slot:tabs>
+                <v-tab v-if="can('readJournal')" href="#activity-journal">
+                  <v-icon>mdi-calendar-text</v-icon>&nbsp;&nbsp;{{ $t('journal') }}
+                </v-tab>
+              </template>
+              <template v-slot:tabs-items>
+                <v-tab-item value="activity-journal">
+                  <v-container fluid class="pa-0">
+                    <journal
+                      :journal="journal"
+                      type="dataset"
+                    />
+                  </v-container>
+                </v-tab-item>
+              </template>
+            </layout-section-tabs>
+          </v-col>
+        </v-row>
       </v-container>
     </v-col>
 
@@ -404,7 +395,7 @@ en:
     }),
     computed: {
       ...mapState(['env']),
-      ...mapState('dataset', ['dataset', 'api', 'journal', 'error', 'taskProgress']),
+      ...mapState('dataset', ['dataset', 'api', 'journal', 'taskProgress']),
       ...mapGetters('dataset', ['resourceUrl', 'can', 'hasPublicApplications']),
       ...mapState('session', ['user']),
       ...mapGetters('session', ['activeAccount']),

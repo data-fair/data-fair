@@ -32,7 +32,6 @@ export default () => ({
       'finalize-end': 'finalized',
       error: 'error',
     },
-    error: null, // error in initial info fetching
     lineUploadProgress: 0,
     showTableCard: null,
     draftMode: null,
@@ -113,20 +112,14 @@ export default () => ({
   },
   actions: {
     async fetchInfo({ commit, dispatch, getters }) {
-      commit('setAny', { error: null })
-      try {
-        await dispatch('fetchDataset')
-        await Promise.all([
-          dispatch('fetchApplications'),
-          dispatch('fetchVirtuals'),
-          dispatch('fetchApiDoc'),
-          dispatch('fetchDataFiles'),
-        ])
-        if (getters.can('readJournal')) await dispatch('fetchJournal')
-      } catch (error) {
-        if (error.response) commit('setAny', { error: error.response })
-        console.log(error)
-      }
+      await dispatch('fetchDataset')
+      await Promise.all([
+        dispatch('fetchApplications'),
+        dispatch('fetchVirtuals'),
+        dispatch('fetchApiDoc'),
+        dispatch('fetchDataFiles'),
+      ])
+      if (getters.can('readJournal')) await dispatch('fetchJournal')
     },
     async fetchDataset({ commit, state }) {
       const dataset = await this.$axios.$get(`api/v1/datasets/${state.datasetId}`, { params: { draft: state.draftMode } })

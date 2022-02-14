@@ -16,7 +16,6 @@ export default () => ({
     datasets: null,
     prodBaseApp: null,
     otherVersions: null,
-    error: null, // error in initial info fetching
   },
   getters: {
     resourceUrl: (state, getters, rootState) => state.applicationId ? rootState.env.publicUrl + '/api/v1/applications/' + state.applicationId : null,
@@ -62,21 +61,15 @@ export default () => ({
   },
   actions: {
     async fetchInfo({ commit, dispatch, getters, state }) {
-      commit('setAny', { error: null })
-      try {
-        await dispatch('fetchApplication')
-        await Promise.all([
-          dispatch('fetchAPI'),
-          dispatch('readConfig'),
-          dispatch('fetchProdBaseApp'),
-        ])
-        await dispatch('fetchOtherVersions')
-        if (getters.can('readJournal')) await dispatch('fetchJournal')
-        await dispatch('fetchDatasets')
-      } catch (error) {
-        if (error.response) commit('setAny', { error: error.response })
-        console.log(error)
-      }
+      await dispatch('fetchApplication')
+      await Promise.all([
+        dispatch('fetchAPI'),
+        dispatch('readConfig'),
+        dispatch('fetchProdBaseApp'),
+      ])
+      await dispatch('fetchOtherVersions')
+      if (getters.can('readJournal')) await dispatch('fetchJournal')
+      await dispatch('fetchDatasets')
     },
     async fetchApplication({ commit, state }) {
       const application = await this.$axios.$get(`api/v1/applications/${state.applicationId}`)

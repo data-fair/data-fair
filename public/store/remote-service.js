@@ -22,15 +22,11 @@ export default () => ({
   },
   actions: {
     async fetchInfo({ commit, dispatch, getters, rootState }) {
-      try {
-        const remoteService = await this.$axios.$get(getters.resourceUrl)
-        remoteService.parameters = remoteService.parameters || []
-        commit('setAny', { remoteService })
-        const api = await this.$axios.$get(getters.resourceUrl + '/api-docs.json')
-        commit('setAny', { api })
-      } catch (error) {
-        eventBus.$emit('notification', { error, msg: 'Erreur pendant la récupération de la définition de l\'API:' })
-      }
+      const remoteService = await this.$axios.$get(getters.resourceUrl)
+      remoteService.parameters = remoteService.parameters || []
+      commit('setAny', { remoteService })
+      const api = await this.$axios.$get(getters.resourceUrl + '/api-docs.json')
+      commit('setAny', { api })
     },
     async setId({ commit, getters, dispatch, state }, remoteServiceId) {
       commit('setAny', { remoteServiceId })

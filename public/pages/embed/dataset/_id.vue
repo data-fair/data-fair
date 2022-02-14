@@ -9,8 +9,13 @@
     middleware: 'dynamic-theme',
     layout: 'embed',
     async fetch({ store, params, route }) {
-      await store.dispatch('dataset/setId', { datasetId: route.params.id })
-      await store.dispatch('fetchVocabulary', route.params.id)
+      try {
+        await store.dispatch('dataset/setId', { datasetId: route.params.id })
+        await store.dispatch('fetchVocabulary', route.params.id)
+      } catch (err) {
+        // in embed mode we prefer a blank page rather than showing an error
+        console.error(err)
+      }
     },
     computed: {
       ...mapState('dataset', ['dataset']),
