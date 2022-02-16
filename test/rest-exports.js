@@ -37,5 +37,20 @@ describe('REST datasets exported', () => {
 "attr1","attr2"
 "test1","test1"
 "test2","test2"`.trim())
+
+    // same content but fresh as a superadmin
+    await ax.post('/api/v1/datasets/rest/_bulk_lines', [
+      { attr1: 'test3', attr2: 'test3' },
+    ])
+
+    assert.rejects(ax.get('/api/v1/datasets/rest/raw'), (err) => {
+      assert.equal(err.status, 404)
+      return true
+    })
+
+    const freshCSV = (await global.ax.superadmin.get('/api/v1/datasets/rest/raw')).data
+    const lines = freshCSV.split('\n')
+    assert.equal(lines[0], '"_id","attr1","attr2"')
+    assert.ok(lines[3].endsWith(',"test3","test3"'))
   })
 })

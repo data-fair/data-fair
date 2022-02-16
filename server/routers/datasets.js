@@ -1116,7 +1116,7 @@ router.get('/:datasetId/lines', readDataset(), applicationKey, permissions.middl
     res.setHeader('content-disposition', `attachment; filename="${req.dataset.id}.csv"`)
     // add BOM for excel, cf https://stackoverflow.com/a/17879474
     res.write('\ufeff')
-    const csvStreams = outputs.result2csv(req.dataset, req.query, result)
+    const csvStreams = outputs.result2csv(req.dataset, req.query)
     const streamPromise = pump(
       ...csvStreams,
       res.throttle('dynamic'),
@@ -1356,21 +1356,33 @@ router.delete('/:datasetId/metadata-attachments/*', readDataset(), permissions.m
 }))
 
 // Download the full dataset in its original form
-router.get('/:datasetId/raw', readDataset(), permissions.middleware('downloadOriginalData', 'read', 'readDataFiles'), cacheHeaders.noCache, (req, res, next) => {
+router.get('/:datasetId/raw', readDataset(), permissions.middleware('downloadOriginalData', 'read', 'readDataFiles'), cacheHeaders.noCache, asyncWrap(async (req, res, next) => {
+  // a special case for superadmins.. handy but quite dangerous for the db load
+  if (req.dataset.isRest && req.user.adminMode) {
+    req.query.select = req.query.select || ['_id'].concat(req.dataset.schema.filter(f => !f['x-calculated']).map(f => f.key)).join(',')
+    res.setHeader('content-disposition', `attachment; filename="${req.dataset.id}.csv"`)
+    // add BOM for excel, cf https://stackoverflow.com/a/17879474
+    res.write('\ufeff')
+    await pump(
+      ...await restDatasetsUtils.readStreams(req.app.get('db'), req.dataset),
+      ...outputs.result2csv(req.dataset, req.query),
+      res,
+    )
+    return
+  }
+  if (!req.dataset.originalFile) return res.status(404).send('Ce jeu de données ne contient pas de fichier de données')
   // the transform stream option was patched into "send" module using patch-package
   res.download(datasetUtils.originalFileName(req.dataset), null, { transformStream: res.throttle('static') })
   webhooks.trigger(req.app.get('db'), 'dataset', req.dataset, { type: 'downloaded' })
-})
+}))
 
 // Download the dataset in various formats
 router.get('/:datasetId/convert', readDataset(), permissions.middleware('downloadOriginalData', 'read', 'readDataFiles'), cacheHeaders.noCache, (req, res, next) => {
-  if (!req.query || !req.query.format) {
-    // the transform stream option was patched into "send" module using patch-package
-    res.download(datasetUtils.fileName(req.dataset), null, { transformStream: res.throttle('static') })
-    webhooks.trigger(req.app.get('db'), 'dataset', req.dataset, { type: 'downloaded' })
-  } else {
-    res.status(400).send(`Format ${req.query.format} is not supported.`)
-  }
+  if (!req.dataset.file) return res.status(404).send('Ce jeu de données ne contient pas de fichier de données')
+
+  // the transform stream option was patched into "send" module using patch-package
+  res.download(datasetUtils.fileName(req.dataset), null, { transformStream: res.throttle('static') })
+  webhooks.trigger(req.app.get('db'), 'dataset', req.dataset, { type: 'downloaded' })
 })
 
 // Download the full dataset with extensions

@@ -21,6 +21,17 @@
         <v-list-item-title>{{ dataFile.title }}</v-list-item-title>
       </v-list-item-content>
     </v-list-item>
+    <v-list-item v-if="dataset.isRest && user && user.adminMode" :href="resourceUrl + '/raw'">
+      <v-list-item-icon>
+        <v-icon color="admin">
+          mdi-progress-download
+        </v-icon>
+      </v-list-item-icon>
+      <v-list-item-content>
+        <v-list-item-title>{{ $t('downloadRawRest') }}</v-list-item-title>
+        <v-list-item-subtitle>{{ $t('downloadRawRestSubtitle') }}</v-list-item-subtitle>
+      </v-list-item-content>
+    </v-list-item>
     <v-subheader v-t="'actions'" />
     <v-list-item
       v-if="can('writeData') && !dataset.isRest && !dataset.isVirtual && !dataset.isMetaOnly"
@@ -375,6 +386,8 @@
 <i18n lang="yaml">
 fr:
   downloads: TÉLÉCHARGEMENTS
+  downloadRawRest: Export frais
+  downloadRawRestSubtitle: attention charge importante
   actions: ACTIONS
   update: Mettre à jour
   integrate: Intégrer dans un site
@@ -409,6 +422,8 @@ fr:
   attachmentsMsg: Optionnellement vous pouvez charger une archive zip contenant des fichiers à utiliser comme pièces à joindre aux lignes du fichier principal. Dans ce cas le fichier principal doit avoir une colonne qui contient les chemins des pièces jointes dans l'archive.
 en:
   downloads: DOWNLOADS
+  downloadRawRest: Fresh export
+  downloadRawRestSubtitle: Beware important load
   actions: ACTIONS
   update: Update
   integrate: Integrate into a website
@@ -475,6 +490,7 @@ en:
     }),
     computed: {
       ...mapState(['env', 'accepted']),
+      ...mapState('session', ['user']),
       ...mapState('dataset', ['dataset', 'nbApplications', 'dataFiles', 'error']),
       ...mapGetters('dataset', ['can', 'resourceUrl']),
       previewLink() {
