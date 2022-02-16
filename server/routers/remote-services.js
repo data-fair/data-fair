@@ -317,7 +317,7 @@ router.use('/:remoteServiceId/proxy*', asyncWrap(async (req, res, next) => {
   if (!remoteService) return res.status(404).send('service distant inconnu')
 
   const headers = { 'x-forwarded-url': `${req.publicBaseUrl}/api/v1/remote-services/${remoteService.id}/proxy/` }
-  if (appOwner) headers['x-consumer'] = JSON.stringify(appOwner)
+  // if (appOwner) headers['x-consumer'] = JSON.stringify(appOwner)
 
   const options = {
     url: remoteService.server + '*',

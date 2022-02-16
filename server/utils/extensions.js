@@ -111,7 +111,7 @@ class RemoteExtensionStream extends Transform {
         headers: {
           Accept: 'application/x-ndjson',
           'Content-Type': 'application/x-ndjson',
-          'x-consumer': JSON.stringify(this.dataset.owner),
+          // 'x-consumer': JSON.stringify(this.dataset.owner),
         },
         params: {},
         responseType: 'text',
