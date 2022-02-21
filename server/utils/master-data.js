@@ -61,7 +61,7 @@ exports.bulkSearchStreams = async (db, es, dataset, contentType, bulkSearchId, s
   let lineIndex = 0
   return [
     ioStream.parser(),
-    batchStream(100),
+    batchStream(1000),
     new Transform({
       async transform(lines, encoding, callback) {
         const queries = lines.map(line => ({

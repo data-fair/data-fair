@@ -132,26 +132,29 @@ class RemoteExtensionStream extends Transform {
         input[extension.idInput.name] = i
         inputs.push(input)
       }
+
+      const localMasterData = extension.remoteService.server.startsWith(`${config.publicUrl}/api/v1/datasets/`)
+
+      // TODO: no need to use a cache in the special case of a locale master-data dataset ?
       const inputCacheKeys = inputs.map(input => stringify([input, extension.select || []]))
       const extensionCacheKey = extension.remoteService + '/' + extension.action
       // first get previous results from cache
       for (let i = 0; i < inputs.length; i++) {
         if (Object.keys(inputs[i]).length === 1) continue
-        const { value } = await this.db.collection('extensions-cache')
-          .findOneAndUpdate({ extensionKey: extensionCacheKey, input: inputCacheKeys[i] }, { $set: { lastUsed: new Date() } })
-        if (value) this.buffer[i][extension.extensionKey] = value.output
+        let cachedValue
+        if (!localMasterData) {
+          cachedValue = (await this.db.collection('extensions-cache')
+            .findOneAndUpdate({ extensionKey: extensionCacheKey, input: inputCacheKeys[i] }, { $set: { lastUsed: new Date() } })).value
+        }
+
+        if (cachedValue) this.buffer[i][extension.extensionKey] = cachedValue.output
         else opts.data += JSON.stringify(inputs[i]) + '\n'
       }
       if (!opts.data) continue
 
       // query the missing results using HTTP or request to remote service or local stream to local service
       let data
-      if (
-        extension.remoteService.server.startsWith(`${config.publicUrl}/api/v1/datasets/`) &&
-        extension.remoteService.privateAccess &&
-        extension.remoteService.privateAccess.find(pa => pa.type === this.dataset.owner.type) &&
-        extension.remoteService.privateAccess.find(pa => pa.id === this.dataset.owner.id)
-      ) {
+      if (localMasterData) {
         const masterDatasetId = extension.remoteService.server.replace(`${config.publicUrl}/api/v1/datasets/`, '')
         const masterDataset = await this.db.collection('datasets').findOne({ id: masterDatasetId, 'owner.type': this.dataset.owner.type, 'owner.id': this.dataset.owner.id })
         if (!masterDataset) throw new Error('dataset de données de référence inconnu ' + masterDatasetId)
@@ -174,12 +177,14 @@ class RemoteExtensionStream extends Transform {
 
         const i = result[extension.idInput.name]
         this.buffer[i][extension.extensionKey] = selectedResult
-        await this.db.collection('extensions-cache')
-          .replaceOne(
-            { extensionKey: extensionCacheKey, input: inputCacheKeys[i] },
-            { extensionKey: extensionCacheKey, input: inputCacheKeys[i], lastUsed: new Date(), output: selectedResult },
-            { upsert: true },
-          )
+        if (!localMasterData) {
+          await this.db.collection('extensions-cache')
+            .replaceOne(
+              { extensionKey: extensionCacheKey, input: inputCacheKeys[i] },
+              { extensionKey: extensionCacheKey, input: inputCacheKeys[i], lastUsed: new Date(), output: selectedResult },
+              { upsert: true },
+            )
+        }
       }
     }
 
