@@ -276,14 +276,14 @@ exports.transformFileStreams = (mimeType, schema, fileSchema, fileProps = {}, ra
     streams.push(new Transform({
       objectMode: true,
       transform(feature, encoding, callback) {
-        const item = { ...feature.properties }
+        const item = flatten({ ...feature.properties }, { safe: true })
         if (feature.id) item.id = feature.id
         item.geometry = feature.geometry
 
         const line = { _i: this.i = (this.i || 0) + 1 }
         schema.forEach(prop => {
           const fileProp = fileSchema && fileSchema.find(p => p.key === prop.key)
-          const value = fieldsSniffer.format(item[prop['x-originalName']], prop, fileProp)
+          const value = fieldsSniffer.format(item[prop['x-originalName'] || prop.key], prop, fileProp)
           if (value !== null) line[prop.key] = value
         })
         callback(null, line)
@@ -355,8 +355,6 @@ exports.writeExtendedStreams = async (db, dataset) => {
     // add BOM for excel, cf https://stackoverflow.com/a/17879474
     writeStream.write('\ufeff')
 
-    // if we don't use the original name, readStream will not match the keys
-    // transforms.push(csvStringify({ columns: relevantSchema.map(field => field.title || field['x-originalName'] || field.key), header: true }))
     transforms.push(new Transform({
       transform(chunk, encoding, callback) {
         const flatChunk = flatten(chunk, { safe: true })

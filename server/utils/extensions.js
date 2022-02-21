@@ -34,7 +34,7 @@ exports.extend = async(app, dataset, extensions) => {
       continue
     }
 
-    const extensionKey = getExtensionKey(extension)
+    const extensionKey = getExtensionKey(extension, dataset.schema)
     const inputMapping = prepareInputMapping(action, dataset, extensionKey, extension.select)
     const errorKey = action.output.find(o => o.name === '_error') ? '_error' : 'error'
     const idInput = action.input.find(input => input.concept === 'http://schema.org/identifier')
@@ -133,11 +133,12 @@ class RemoteExtensionStream extends Transform {
         inputs.push(input)
       }
       const inputCacheKeys = inputs.map(input => stringify([input, extension.select || []]))
+      const extensionCacheKey = extension.remoteService + '/' + extension.action
       // first get previous results from cache
       for (let i = 0; i < inputs.length; i++) {
         if (Object.keys(inputs[i]).length === 1) continue
         const { value } = await this.db.collection('extensions-cache')
-          .findOneAndUpdate({ extensionKey: extension.extensionKey, input: inputCacheKeys[i] }, { $set: { lastUsed: new Date() } })
+          .findOneAndUpdate({ extensionKey: extensionCacheKey, input: inputCacheKeys[i] }, { $set: { lastUsed: new Date() } })
         if (value) this.buffer[i][extension.extensionKey] = value.output
         else opts.data += JSON.stringify(inputs[i]) + '\n'
       }
@@ -175,8 +176,8 @@ class RemoteExtensionStream extends Transform {
         this.buffer[i][extension.extensionKey] = selectedResult
         await this.db.collection('extensions-cache')
           .replaceOne(
-            { extensionKey: extension.extensionKey, input: inputCacheKeys[i] },
-            { extensionKey: extension.extensionKey, input: inputCacheKeys[i], lastUsed: new Date(), output: selectedResult },
+            { extensionKey: extensionCacheKey, input: inputCacheKeys[i] },
+            { extensionKey: extensionCacheKey, input: inputCacheKeys[i], lastUsed: new Date(), output: selectedResult },
             { upsert: true },
           )
       }
@@ -190,9 +191,16 @@ class RemoteExtensionStream extends Transform {
   }
 }
 
-function getExtensionKey(extension) {
-  const id = extension.shortId ?? `${extension.remoteService}_${extension.action}`
-  return `_ext_${id}`
+function getExtensionKey(extension, schema) {
+  if (extension.shortId) {
+    if (schema.find(p => !p['x-extension'] && p.key === extension.shortId)) {
+      // only prefix with _ext if there is a risk of conflict
+      return '_ext_' + extension.shortId
+    } else {
+      return extension.shortId
+    }
+  }
+  return `_ext_${extension.remoteService}_${extension.action}`
 }
 
 // Create a function that will transform items from a dataset into inputs for an action
@@ -236,7 +244,7 @@ exports.prepareSchema = async (db, schema, extensions) => {
     if (!action.input.find(i => i.concept && schema.concat(extensionsFields).find(prop => prop['x-refersTo'] && prop['x-refersTo'] === i.concept))) {
       continue
     }
-    const extensionKey = getExtensionKey(extension)
+    const extensionKey = getExtensionKey(extension, schema)
     const extensionId = `${extension.remoteService}/${extension.action}`
     const selectFields = extension.select || []
     extensionsFields = extensionsFields.concat(action.output
@@ -250,7 +258,6 @@ exports.prepareSchema = async (db, schema, extensions) => {
         if (existingField) return existingField
         const field = {
           key,
-          'x-originalName': output.name,
           'x-extension': extensionId,
           title: output.title,
           description: output.description,

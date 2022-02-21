@@ -153,13 +153,11 @@ describe('Attachments', () => {
     const dataset = res.data
     assert.equal(res.status, 201)
 
-    try {
-      await workers.hook(`finalizer/${dataset.id}`)
-      assert.fail()
-    } catch (err) {
+    await assert.rejects(workers.hook(`finalizer/${dataset.id}`), (err) => {
       assert.ok(err.message.includes('une colonne semble contenir des chemins'))
       assert.ok(err.message.includes('Valeurs invalides : BADFILE.txt'))
-    }
+      return true
+    })
   })
 
   it('Detect missing attachment paths', async () => {

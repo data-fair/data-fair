@@ -130,13 +130,18 @@ const extensionsShortId = (req, extensions, oldExtensions = []) => {
   extensions
     // do not reprocess already assigned shortIds to prevent compatibility break
     .filter(e => !e.shortId)
-    // only apply to new extensions to prevent compatibility break
-    .filter(e => !oldExtensions.find(oldE => oldE.remoteService === e.remoteService && oldE.action === e.action))
     .forEach(e => {
-      let shortId = e.action.toLowerCase();
-      ['masterdata', 'find', 'bulk', 'search'].forEach(term => { shortId = shortId.replace(term, '') });
-      [':', '-', '.'].forEach(char => { shortId = shortId.replace(char, '_') })
-      e.shortId = shortId.replace(/__/g, '_').replace(/^_/, '').replace(/_$/, '')
+      const oldExtension = oldExtensions.find(oldE => oldE.remoteService === e.remoteService && oldE.action === e.action)
+      if (oldExtension) {
+        if (oldExtension.shortId) e.shortId = oldExtension.shortId
+      } else {
+        // only apply to new extensions to prevent compatibility break
+        let shortId = e.action.toLowerCase();
+        ['masterdata', 'find', 'bulk', 'search'].forEach(term => { shortId = shortId.replace(term, '') });
+        [':', '-', '.'].forEach(char => { shortId = shortId.replace(char, '_') })
+        if (shortId.startsWith('post')) shortId = shortId.replace('post', '')
+        e.shortId = shortId.replace(/__/g, '_').replace(/^_/, '').replace(/_$/, '')
+      }
     })
   const shortIds = extensions.filter(e => !!e.shortId).map(e => e.shortId)
   if (shortIds.length !== [...new Set(shortIds)].length) {
