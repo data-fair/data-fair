@@ -16,6 +16,7 @@ Avant de réaliser une mise à jour manuelle, vérifiez le schéma de vos donné
 La mise à jour s'effectue à l'aide du bouton d'action **Mettre à jour** sur la [page d'édition du jeu de données](./user-guide/edition-dataset) que vous souhaitez mettre à jour.  
 Il suffira de choisir le nouveau fichier à charger sur votre ordinateur pour mettre à jour votre jeu de données sur Data Fair.
 
+
 Le fichier va être soumis aux 6 étapes de traitement :
 
 1. Le **chargement**, qui représente la barre de progression.
@@ -27,5 +28,17 @@ Le fichier va être soumis aux 6 étapes de traitement :
 
 <p>
 </p>
+
+![Visualisations Carto](./images/user-guide/update.png)
+
+Lorsque la finalisation est terminée, le jeu de données passe en état "bouillon".  
+
+Il est alors possible de vérifier la structure du schéma d'ajouter des concepts aux **nouvelles colonnes** et de consulter les 100 premières lignes du nouveau fichier.  
+Les nouvelles colonnes seront affichées en rouge.  
+Vous pouvez **annuler la mise à jour** du fichier si le schéma ne correspond pas à ce que vous désirez.
+
+Après avoir réaliser les vérification de schéma et de donner, le bouton **Valider le brouillon** permet de lancer la dernière étape de la mise à jour.
+
+Le fichier sera à nouveaux soumis aux 6 étapes de traitement.  
 Lorsque la finalisation est terminée, le jeu de données passe en état "disponible".  
 Il peut alors être édité, enrichi et utilisé dans les visualisations.

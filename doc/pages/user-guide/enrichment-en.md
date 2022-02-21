@@ -11,10 +11,10 @@ published: false
 Enrichment allows you to import columns from a reference base. It is possible to cross-reference its data with data from open data such as the SIRENE database, INSEE data, the cadastre or the BAN.
 
 
-* The SIRENE database brings together economic and legal information from more than 28 million french business establishments, including more than 11 million active establishments.
-* INSEE data makes it possible to retrieve various informations on french administrative divisions (municipalities, departments, regions)
-* The cadastre provides access to the various information concerning the plots. In particular, you can geocode plot codes or obtain the areas of your parcel on the french territory.
-* The NAB is the French National Address Base. It allows you to geolocate addresses or find addresses from coordinates.
+* The **SIRENE** database brings together economic and legal information from more than 28 million french business establishments, including more than 11 million active establishments.
+* **INSEE** data makes it possible to retrieve various informations on french administrative divisions (municipalities, departments, regions)
+* The **cadastre** provides access to the various information concerning the plots. In particular, you can geocode plot codes or obtain the areas of your parcel on the french territory.
+* The NAB is the **French National Address Base**. It allows you to geolocate addresses or find addresses from coordinates.
 
 
 Depending on your data, you can choose an enrichment and complete your data.

@@ -6,7 +6,7 @@ description : Visualizations
 published: false
 ---
 
-The services connected to Data Fair allow to present your data in dynamic visualizations and to make it more accessible.  
+The services connected to Data Fair allow to present your data in **dynamic visualizations** and to make it more **accessible**.  
 You can create as many visualizations as you want.
 
 The visualizations are divided into several categories: maps, graphics, textual visualizations, etc.

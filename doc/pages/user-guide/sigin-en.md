@@ -6,7 +6,7 @@ description : Connect to Data Fair
 published: false
 ---
 
-Data Fair allows to enhance your data and share it internally or in opendata.  
+Data Fair allows to **enhance your data and share it internally or in opendata.**  
 
 Your account allows to access the various features of Data Fair:
 

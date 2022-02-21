@@ -6,7 +6,7 @@ description : Connectez vous sur Data Fair
 published: false
 ---
 
-Data Fair permet de valoriser ses données et de les partager en interne ou en opendata.
+Data Fair permet de **valoriser ses données et de les partager en interne ou en opendata.**
 
 Votre compte vous permet d'accéder aux différentes fonctionnalités de Data Fair :
 

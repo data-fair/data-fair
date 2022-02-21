@@ -39,4 +39,4 @@ The bell display the summary of the alerts sent.
 ### Storage
 
 The storage page presents a summary of the datasets in your account.  
-Statistics of account are available such as number of datasets, total space consumed, total space available, and number of views.
+**Statistics** of account are available such as number of datasets, total space consumed, total space available, and number of views.

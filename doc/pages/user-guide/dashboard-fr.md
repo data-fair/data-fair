@@ -6,7 +6,7 @@ description : Dashboard
 published: false
 ---
 
-Le tableau de bord de votre compte [compte actif](./user-guide/organisation) est accessible à l'aide de la barre de navigation.
+Le **tableau de bord** de votre compte [compte actif](./user-guide/organisation) est accessible à l'aide de la barre de navigation.
 
 Cette page présente un résumé des données et des visualisations configurées sur votre espace.
 

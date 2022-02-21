@@ -8,7 +8,7 @@ published: true
 ---
 
 
-Toutes les fonctionnalités de Data Fair sont exposées aux niveaux de l'API. Celle ci peut être appelée en dehors du portail, mais pour les accès restreints il faut passer par l'utilisation d'une clé d'API. Les différentes utilisations possibles de l'API sont décrites plus en détails dans [cette section](./interoperate/api).
+Toutes les fonctionnalités de Data Fair sont exposées aux niveaux de l'API. Celle ci peut être appelée en dehors du portail, mais pour les accès restreints il faut passer par l'utilisation d'une **clé d'API**. Les différentes utilisations possibles de l'API sont décrites plus en détails dans [cette section](./interoperate/api).
 
 ![Clé d'api](./images/functional-presentation//ajout-api.jpg)
 

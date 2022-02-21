@@ -17,8 +17,11 @@ In order for your zip file to be correctly associated with your dataset, your da
 <p>
 </p>
 
+![PJ-1](./images/user-guide/piece-jointe-1.jpg)
+
 In the **Schema** section of your dataset, the concept **Attached digital document** will be automatically associated with the column containing the names of the files of your ZIP archive.
 
+![PJ-2](./images/user-guide/piece-jointe-2.jpg)
 
 The attachment indexing time can be long and will depend on the size of your attachments files.   
 The unzipped files size is counted in your data storage quota.  

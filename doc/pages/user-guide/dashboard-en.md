@@ -6,7 +6,7 @@ description : Dashboard
 published: false
 ---
 
-The dashboard of your [active account](./user-guide/organisation) is accessible using the navigation bar.
+The **dashboard** of your [active account](./user-guide/organisation) is accessible using the navigation bar.
 
 
 The dashboard page is a summary of the datasets and visualizations configured on your space.  

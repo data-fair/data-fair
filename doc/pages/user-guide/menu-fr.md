@@ -40,6 +40,6 @@ Un clic sur la cloche permet d'accéder au résumé des alertes envoyées.
 ### Stockage
 La page de stockage présente un résumé des jeux présents sur le compte actif.
 
-Des statistiques de votre compte sont disponibles telles que le nombre de jeux de données, l'espace total consommé, l'espace total disponible et le nombre de visualisation.
+Des **statistiques** de votre compte sont disponibles telles que le nombre de jeux de données, l'espace total consommé, l'espace total disponible et le nombre de visualisation.
 
 Un détail par jeu de données est présenté sous forme de tableau.

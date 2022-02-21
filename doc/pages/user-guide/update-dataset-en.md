@@ -27,5 +27,17 @@ The file will be submitted to 6 processing steps:
 
 <p>
 </p>
+
+![Visualisations Carto](./images/user-guide/update.png)
+
+When the finalization is complete, the dataset goes into "draft".
+
+Draft mode allows to check the structure of the schema to add concepts to the **new columns** and to consult the first 100 lines of the new file.  
+New columns will be displayed in red.  
+You can **cancel** the update if the schema does not match what you want.
+
+After performing the schema verification and giving, the **Validate draft** button allows you to launch the last stage of the update.
+
+The file will again be subjected to the 6 processing steps.  
 When finalization is complete, the dataset goes to "available" state.  
 It can then be edited, enriched and used in visualizations.

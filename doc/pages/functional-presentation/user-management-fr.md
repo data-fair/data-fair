@@ -7,15 +7,15 @@ description : Gestion des utilisateurs
 published: true
 ---
 
-Par défaut, il existe quatres rôles différents : utilisateur, contributeur, administrateur et super administrateur.
+Par défaut, il existe quatre rôles différents : utilisateur, contributeur, administrateur et super administrateur.
 
-Les super administrateurs de la plateforme peuvent gérer l'ensemble des organisations et des membres de la plateforme. Ils peuvent aussi configurer le portail de données et gérer les traitements périodiques.
+Les **super administrateurs** de la plateforme peuvent gérer l'ensemble des organisations et des membres de la plateforme. Ils peuvent aussi configurer le portail de données et gérer les traitements périodiques.
 
 Les administrateurs d’une organisation peuvent gérer les membres :
 
-* Inviter de nouveaux membres par e-mail
-* Changer les rôles des membres
-* Exclure un membre
+* **Inviter** de nouveaux membres par e-mail
+* **Changer** les rôles des membres
+* **Exclure** un membre
 
 Permissions par défaut des différents rôles d’une organisation :
 

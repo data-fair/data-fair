@@ -17,7 +17,11 @@ Pour que votre archive soit correctement associée à votre jeu de données, vot
 <p>
 </p>
 
+![PJ-1](./images/user-guide/piece-jointe-1.jpg)
+
 Dans le schéma de votre jeu de données, le concept **Document numérique attaché** sera automatiquement associé à la colonne contenant les noms des fichiers de votre archive ZIP.
+
+![PJ-2](./images/user-guide/piece-jointe-2.png)
 
 Le temps d'indexation des pièces jointes est assez long et il dépendra de la taille de vos pièces jointes.  
 La taille des fichiers dézippé des pièces jointes est comptabilisée dans le quota de stockage de données de votre plan.

@@ -7,7 +7,7 @@ description : Gestion des alertes
 published: false
 ---
 
-Les utilisateurs enregistrés peuvent paramétrer différentes alertes email ou navigateur. Une liste d’alertes par défaut est présentée dans la catégorie **Notifications**.
+Les utilisateurs enregistrés peuvent paramétrer différentes **alertes** email ou navigateur. Une liste d’alertes par défaut est présentée dans la catégorie **Notifications**.
 
 ![Activer ses notifications](./images/functional-presentation/notify-1.jpeg)
 

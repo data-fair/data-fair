@@ -16,10 +16,10 @@ Une fois connecté les utilisateurs peuvent personnaliser leur compte.
 Il est possible de :
 * définir un avatar
 * définir le prénom et le prénom  
-* définir la date d'aniversaire
-* renouveller le mot de passe
+* définir la date d'anniversaire
+* renouveler le mot de passe
 * relier son compte à un compte github, linkedin, google ou facebook
-* visualiser les differentes organisations de son compte et le role pour chacune des organisations
+* visualiser les différentes organisations de son compte et le rôle pour chacune des organisations
 * visualiser le nombre d'organisation créées et le nombre d'organisation maximale pour le compte.
 * créer une nouvelle organisation
 * supprimer son compte
