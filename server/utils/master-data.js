@@ -2,6 +2,7 @@ const { Readable, Transform, Writable } = require('stream')
 const createError = require('http-errors')
 const mimeTypeStream = require('mime-type-stream')
 const virtualDatasetsUtils = require('./virtual-datasets')
+const batchStream = require('./batch-stream')
 const esUtils = require('./es')
 const pump = require('util').promisify(require('pump'))
 
@@ -57,38 +58,48 @@ exports.bulkSearchStreams = async (db, es, dataset, contentType, bulkSearchId, s
 
   const ioStream = mimeTypeStream(contentType) || mimeTypeStream('application/json')
 
-  let i = 0
+  let lineIndex = 0
   return [
     ioStream.parser(),
+    batchStream(100),
     new Transform({
-      async transform(line, encoding, callback) {
-        const current = i
-        i += 1
+      async transform(lines, encoding, callback) {
+        const queries = lines.map(line => ({
+          select,
+            sort: bulkSearch.sort,
+            ...paramsBuilder(line),
+            size: 1,
+        }))
+        let esResponse
         try {
-          let esResponse
-          try {
-            esResponse = await esUtils.search(es, dataset, {
-              select,
-              sort: bulkSearch.sort,
-              ...paramsBuilder(line),
-              size: 1,
-            })
-          } catch (err) {
-            console.error(`elasticsearch query error ${dataset.id}`, err)
-            const message = esUtils.errorMessage(err)
-            throw createError(err.status, message)
+          esResponse = await esUtils.multiSearch(es, dataset, queries)
+        } catch (err) {
+          console.error(`master-data multisearch query error ${dataset.id}`, err)
+          const message = esUtils.errorMessage(err)
+          return callback(createError(err.status, message))
+        }
+        for (const i in esResponse.responses) {
+          const line = lines[i]
+          const lineKey = line._key || lineIndex
+          lineIndex += 1
+          const response = esResponse.responses[i]
+
+          if (response.error) {
+            console.error(`master-data item query error ${dataset.id}`, response.error)
+            this.push({ _key: lineKey, _error: esUtils.errorMessage(response.error) })
+            continue
           }
-          if (esResponse.hits.hits.length === 0) {
-            throw new Error('La donnée de référence ne contient pas de ligne correspondante.')
+          if (response.hits.hits.length === 0) {
+            this.push({ _key: lineKey, _error: 'La donnée de référence ne contient pas de ligne correspondante.' })
+            continue
           }
-          const responseLine = esResponse.hits.hits[0]._source
+          const responseLine = response.hits.hits[0]._source
           Object.keys(responseLine).forEach(k => {
             if (k.startsWith('_')) delete responseLine[k]
           })
-          callback(null, { ...responseLine, _key: line._key || current })
-        } catch (err) {
-          callback(null, { _key: line._key || current, _error: err.message })
+          this.push({ ...responseLine, _key: lineKey })
         }
+        callback()
       },
       objectMode: true,
     }),

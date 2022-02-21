@@ -14,7 +14,7 @@
       :filter="() => true"
       :multiple="true"
       :clearable="true"
-      :item-text="(item) => item && `${item.name} (${item.type})`"
+      :item-text="(item) => item && `${item.name || item.id} (${item.type})`"
       :item-value="(item) => item && `${item.type}:${item.id}`"
       :label="$t('privateAccess')"
       :placeholder="$t('searchName')"

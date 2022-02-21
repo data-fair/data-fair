@@ -37,7 +37,7 @@ exports.syncDataset = async (db, dataset) => {
       apiDoc,
       url: `${config.publicUrl}/api/v1/datasets/${dataset.id}/api-docs.json`,
       server: apiDoc.servers && apiDoc.servers.length && apiDoc.servers[0].url,
-      privateAccess: [{ type: dataset.owner.type, id: dataset.owner.id }],
+      privateAccess: [{ type: dataset.owner.type, id: dataset.owner.id, name: dataset.owner.name }],
     })
     if (!validate(service)) throw createError(400, JSON.stringify(validate.errors))
     await db.collection('remote-services').replaceOne({ id }, mongoEscape.escape(service, true), { upsert: true })
