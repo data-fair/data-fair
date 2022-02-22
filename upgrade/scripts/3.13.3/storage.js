@@ -7,7 +7,16 @@ exports.exec = async (db, debug) => {
   const cursor = db.collection('datasets').find({})
   while (await cursor.hasNext()) {
     const dataset = await cursor.next()
-    await datasetUtils.updateStaticStorage(db, dataset)
-    await datasetUtils.updateDynamicStorage(db, esClient, esUtils.aliasName(dataset), dataset)
+    debug('update storage info of dataset', dataset.id)
+    await db.collection('datasets')
+      .updateOne({ id: dataset.id }, { $set: { storage: {} } })
+    debug('static', await datasetUtils.updateStaticStorage(db, dataset))
+    if (dataset.isVirtual || dataset.isMetaOnly) continue
+    try {
+      debug('dynamic', await datasetUtils.updateDynamicStorage(db, esClient, esUtils.aliasName(dataset), dataset))
+    } catch (err) {
+      if (err.statusCode !== 404) throw err
+      else debug('no ES index for dataset', dataset.id)
+    }
   }
 }

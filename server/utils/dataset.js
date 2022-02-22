@@ -413,36 +413,36 @@ exports.sampleValues = async (dataset) => {
 
 exports.staticStorage = async (db, dataset) => {
   const files = await exports.lsFiles(dataset, true)
-  const staticParts = []
+  const parts = []
   let attachmentsSize = 0
   let metadataAttachmentsSize = 0
   for (const file of files) {
     if (file.absolutePath.startsWith(exports.attachmentsDir(dataset) + '/')) attachmentsSize += file.size
     else if (file.absolutePath.startsWith(exports.metadataAttachmentsDir(dataset) + '/')) metadataAttachmentsSize += file.size
-    else staticParts.push({ name: file.path, size: file.size })
+    else parts.push({ name: file.path, size: file.size })
   }
-  if (attachmentsSize) staticParts.push({ name: 'attachments', size: attachmentsSize })
-  if (metadataAttachmentsSize) staticParts.push({ name: 'metadata-attachments', size: metadataAttachmentsSize })
+  if (attachmentsSize) parts.push({ name: 'attachments', size: attachmentsSize })
+  if (metadataAttachmentsSize) parts.push({ name: 'metadata-attachments', size: metadataAttachmentsSize })
 
   if (dataset.isRest) {
     const collection = await restDatasetsUtils.collection(db, dataset)
     const stats = await collection.stats()
-    staticParts.push({ name: 'rest-lines', size: stats.size })
+    parts.push({ name: 'rest-lines', size: stats.size })
 
     if (dataset.rest && dataset.rest.history) {
       const revisionsCollection = await restDatasetsUtils.revisionsCollection(db, dataset)
       const revisionsStats = await revisionsCollection.stats()
-      staticParts.push({ name: 'rest-revisions', size: revisionsStats.size })
+      parts.push({ name: 'rest-revisions', size: revisionsStats.size })
     }
   }
 
   if (dataset.draft && dataset.draft.draftReason) {
     const draftFiles = await exports.lsFiles(exports.mergeDraft({ ...dataset }), true)
     const draftSize = draftFiles.reduce((a, df) => a + df.size, 0)
-    staticParts.push({ name: 'draft-files', size: draftSize })
+    parts.push({ name: 'draft-files', size: draftSize })
   }
 
-  return staticParts
+  return parts.sort((p1, p2) => p2.size - p1.size)
 }
 
 exports.dynamicStorage = async (esClient, indexName, dataset) => {
@@ -459,7 +459,7 @@ exports.dynamicStorage = async (esClient, indexName, dataset) => {
 
   const size = (await esClient.indices.stats({ index: indexName })).body._all.primaries.store.size_in_bytes
   parts.push({ name: dataset.draftReason ? 'draft-index' : 'index', size })
-  return parts
+  return parts.sort((p1, p2) => p2.size - p1.size)
 }
 
 exports.totalStorage = async (db, owner, key = 'dynamicSize') => {
@@ -485,6 +485,7 @@ exports.updateStaticStorage = async (db, dataset, deleted = false) => {
       .updateOne({ id: dataset.id }, { $set: { 'storage.staticParts': parts, 'storage.staticSize': size } })
   }
   await limits.setConsumption(db, dataset.owner, 'store_static_bytes', await exports.totalStorage(db, dataset.owner, 'staticSize'))
+  return { parts, size }
 }
 exports.updateDynamicStorage = async (db, esClient, indexName, dataset) => {
   const parts = await exports.dynamicStorage(esClient, indexName, dataset)
@@ -492,6 +493,7 @@ exports.updateDynamicStorage = async (db, esClient, indexName, dataset) => {
   await db.collection('datasets')
     .updateOne({ id: dataset.id }, { $set: { 'storage.dynamicParts': parts, 'storage.dynamicSize': size } })
   await limits.setConsumption(db, dataset.owner, 'store_bytes', await exports.totalStorage(db, dataset.owner, 'dynamicSize'))
+  return { parts, size }
 }
 
 exports.remainingDynamicStorage = async (db, owner) => {

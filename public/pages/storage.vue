@@ -17,8 +17,10 @@
               <template v-slot:item="{item}">
                 <tr>
                   <td>{{ item.datasets }}</td>
-                  <td>{{ item.storage | displayBytes($i18n.locale) }}</td>
-                  <td>{{ item.storageLimit | displayBytes($i18n.locale) }}</td>
+                  <td>{{ item.staticStorage | displayBytes($i18n.locale) }}</td>
+                  <td>{{ item.staticStorageLimit | displayBytes($i18n.locale) }}</td>
+                  <td>{{ item.dynamicStorage | displayBytes($i18n.locale) }}</td>
+                  <td>{{ item.dynamicStorageLimit | displayBytes($i18n.locale) }}</td>
                   <td>{{ item.applications }}</td>
                 </tr>
               </template>
@@ -51,8 +53,10 @@
       stats: null,
       headers: [
         { text: 'Nombre de jeux de données', value: 'datasets', sortable: false },
-        { text: 'Espace consommé', value: 'storage', sortable: false },
-        { text: 'Espace total disponible', value: 'storageLimit', sortable: false },
+        { text: 'Stockage statique consommé', value: 'staticStorage', sortable: false },
+        { text: 'Stockage statique disponible', value: 'staticStorageLimit', sortable: false },
+        { text: 'Stockage dynamique consommé', value: 'dynamicStorage', sortable: false },
+        { text: 'Stockage dynamique disponible', value: 'dynamicStorageLimit', sortable: false },
         { text: 'Nombre de visualisations', value: 'applications', sortable: false },
       ],
     }),
@@ -66,7 +70,7 @@
     },
     async created() {
       if (!this.authorized) return
-      this.datasets = (await this.$axios.$get('api/v1/datasets', { params: { size: 10000, owner: `${this.activeAccount.type}:${this.activeAccount.id}`, select: 'id,title,storage', sort: 'storage.size:-1' } })).results
+      this.datasets = (await this.$axios.$get('api/v1/datasets', { params: { size: 10000, owner: `${this.activeAccount.type}:${this.activeAccount.id}`, select: 'id,title,storage', sort: 'storage.staticSize:-1' } })).results
       this.stats = await this.$axios.$get('api/v1/stats')
     },
   }
