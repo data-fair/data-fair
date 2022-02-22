@@ -1,9 +1,10 @@
 const FormData = require('form-data')
 const assert = require('assert').strict
-const testUtils = require('./resources/test-utils')
 const config = require('config')
+const testUtils = require('./resources/test-utils')
+const workers = require('../server/workers')
 
-const baseLimit = { store_bytes: { limit: 300000, consumption: 0 }, lastUpdate: new Date().toISOString() }
+const baseLimit = { store_bytes: { limit: 300000, consumption: 0 }, store_static_bytes: { limit: 300000, consumption: 0 }, lastUpdate: new Date().toISOString() }
 
 describe('limits', () => {
   it('Manage a user storage limit', async () => {
@@ -14,6 +15,10 @@ describe('limits', () => {
     form.append('file', Buffer.alloc(150000), 'dataset.csv')
     let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
     assert.equal(res.status, 201)
+
+    assert.rejects(workers.hook('fianlizer/dataset'), () => {
+      return true
+    })
 
     // Send dataset applying default limits
     form = new FormData()
@@ -42,8 +47,8 @@ describe('limits', () => {
 
     res = await ax.get('/api/v1/limits/user/dmeadus0')
     assert.equal(res.status, 200)
-    assert.equal(res.data.store_bytes.limit, 300000)
-    assert.equal(res.data.store_bytes.consumption, 250000)
+    assert.equal(res.data.store_static_bytes.limit, 300000)
+    assert.equal(res.data.store_static_bytes.consumption, 250000)
   })
 
   it('A user cannot change limits', async () => {

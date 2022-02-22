@@ -346,15 +346,13 @@ describe('REST datasets', () => {
       { _id: 'line3', attr1: 'test1', attr2: 'test1' },
       { _id: 'line4', attr1: 'test1', attr2: 'test1' },
     ])
-    await workers.hook('finalizer/rest7')
+    const dataset = await workers.hook('finalizer/rest7')
 
-    let res = await ax.get('/api/v1/stats')
-    assert.equal(res.status, 200)
-    assert.ok(res.data.storage > 350)
-    const storageSize = res.data.storage
-    res = await ax.get('/api/v1/datasets/rest7')
-    assert.equal(res.data.storage.size, storageSize)
-    assert.equal(res.data.storage.collectionSize, storageSize)
+    const stats = (await ax.get('/api/v1/stats')).data
+    assert.ok(stats.staticStorage > 350)
+    assert.ok(stats.dynamicStorage > 200)
+    assert.equal(dataset.storage.staticSize, stats.staticStorage)
+    assert.equal(dataset.storage.dynamicSize, stats.dynamicStorage)
   })
 
   it('Activate the history mode', async () => {
@@ -368,21 +366,19 @@ describe('REST datasets', () => {
     res = await ax.post('/api/v1/datasets/resthist/lines', { _id: 'id1', attr1: 'test1', attr2: 'test1' })
     assert.equal(res.data._id, 'id1')
     res = await ax.patch('/api/v1/datasets/resthist/lines/id1', { attr1: 'test2' })
-    await workers.hook('finalizer/resthist')
+    const dataset = await workers.hook('finalizer/resthist')
     res = await ax.get('/api/v1/datasets/resthist/lines/id1/revisions')
     assert.equal(res.data.results[0]._id, 'id1')
     assert.equal(res.data.results[0].attr1, 'test2')
     assert.equal(res.data.results[1]._id, 'id1')
     assert.equal(res.data.results[1].attr1, 'test1')
 
-    res = await ax.get('/api/v1/stats')
-    assert.ok(res.data.storage > 280)
-    const storageSize = res.data.storage
-    res = await ax.get('/api/v1/datasets/resthist')
-    assert.equal(res.data.storage.size, storageSize)
-    assert.ok(res.data.storage.collectionSize > 80)
-    assert.ok(res.data.storage.revisionsSize > 160)
-    assert.equal(res.data.storage.revisionsSize + res.data.storage.collectionSize, storageSize)
+    const stats = (await ax.get('/api/v1/stats')).data
+
+    assert.equal(dataset.storage.dynamicSize, stats.dynamicStorage)
+    assert.equal(dataset.storage.staticSize, stats.staticStorage)
+    assert.ok(dataset.storage.staticParts.find(sp => sp.name === 'rest-lines').size > 80)
+    assert.ok(dataset.storage.staticParts.find(sp => sp.name === 'rest-revisions').size > 160)
   })
 
   it('Apply a TTL on some date-field', async () => {
@@ -626,7 +622,6 @@ test2,test2,test3`, { headers: { 'content-type': 'text/csv' } })
         i += 1
         if (i < 6) assert.equal(chunk.toString(), ' ')
         else {
-          console.log(chunk.toString())
           const result = JSON.parse(chunk.toString())
           assert.equal(result.nbOk, 550)
         }
@@ -643,17 +638,18 @@ test2,test2,test3`, { headers: { 'content-type': 'text/csv' } })
       title: 'restunset',
       schema: [{ key: 'attr1', type: 'string', readOnly: true }, { key: 'attr2', type: 'string' }],
     })
+    await workers.hook('finalizer/restunset')
     res = await ax.post('/api/v1/datasets/restunset/lines', { attr1: 'test1', attr2: 'test1' })
     assert.equal(res.status, 201)
     let dataset = await workers.hook('finalizer/restunset')
-    const storage1 = dataset.storage.size
+    const storage1 = dataset.storage
 
     res = await ax.patch('/api/v1/datasets/restunset', { schema: [{ key: 'attr1', type: 'string', readOnly: true }] })
 
-    await workers.hook('indexer/restunset')
     dataset = await workers.hook('finalizer/restunset')
-    const storage2 = dataset.storage.size
-    assert.ok(storage2 < storage1)
+    const storage2 = dataset.storage
+    assert.ok(storage2.staticSize < storage1.staticSize)
+    assert.ok(storage2.dynamicSize <= storage1.dynamicSize)
 
     res = await ax.get('/api/v1/datasets/restunset/lines')
     assert.ok(res.data.results[0].attr1)

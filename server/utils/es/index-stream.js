@@ -102,7 +102,7 @@ class IndexStream extends Transform {
       // Use the ingest plugin to parse attached files
       if (this.options.attachments) bulkOpts.pipeline = 'attachment'
       const res = (await this.options.esClient.bulk(bulkOpts)).body
-      debug('Bulk sent OK ')
+      debug('Bulk sent OK')
       res.items.forEach((item, i) => {
         const _id = (item.index && item.index._id) || (item.update && item.update._id) || (item.delete && item.delete._id)
         const line = this.options.updateMode ? bodyClone[(i * 2) + 1].doc : bodyClone[(i * 2) + 1]

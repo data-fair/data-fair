@@ -63,6 +63,11 @@ describe('datasets in draft mode', () => {
     assert.equal(dataset.draft.status, 'finalized')
     assert.ok(dataset.draft.bbox)
 
+    // draft files are counted in storage
+    assert.equal(dataset.storage.staticSize, 151)
+    assert.ok(dataset.storage.staticParts.find(sp => sp.name === 'draft-files'))
+    assert.ok(dataset.storage.dynamicParts.find(sp => sp.name === 'draft-index'))
+
     // reuploading in draft mode is not permitted
     const datasetFd2 = fs.readFileSync('./test/resources/datasets/bad-format.csv')
     const form2 = new FormData()
@@ -164,6 +169,14 @@ describe('datasets in draft mode', () => {
     assert.ok(res.data.startsWith('id,adr,some date,loc'))
     res = await ax.get(`/api/v1/datasets/${dataset.id}/raw`, { params: { draft: true } })
     assert.ok(res.data.startsWith('id,adr,somedate,employees'))
+
+    // current and draft files are both counted in storage
+    console.log(dataset.storage)
+    assert.ok(dataset.storage.staticParts.find(sp => sp.name === 'draft-files'))
+    assert.ok(dataset.storage.staticParts.find(sp => sp.name === 'dataset1.csv'))
+    assert.ok(dataset.storage.dynamicParts.find(sp => sp.name === 'draft-index'))
+    assert.ok(dataset.storage.dynamicParts.find(sp => sp.name === 'index'))
+    assert.ok(dataset.storage.dynamicParts.find(sp => sp.name === 'index').size > dataset.storage.dynamicParts.find(sp => sp.name === 'draft-index').size)
 
     // validate the draft
     await ax.post(`/api/v1/datasets/${dataset.id}/draft`)

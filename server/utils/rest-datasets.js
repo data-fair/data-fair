@@ -318,7 +318,7 @@ exports.createLine = async (req, res, next) => {
   if (line._error) return res.status(line._status).send(line._error)
   await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { status: 'updated' } })
   res.status(201).send(cleanLine(line))
-  datasetUtils.updateStorage(db, req.dataset)
+  datasetUtils.updateStaticStorage(db, req.dataset)
 }
 
 exports.deleteLine = async (req, res, next) => {
@@ -327,7 +327,7 @@ exports.deleteLine = async (req, res, next) => {
   if (line._error) return res.status(line._status).send(line._error)
   await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { status: 'updated' } })
   res.status(204).send()
-  datasetUtils.updateStorage(db, req.dataset)
+  datasetUtils.updateStaticStorage(db, req.dataset)
 }
 
 exports.updateLine = async (req, res, next) => {
@@ -337,7 +337,7 @@ exports.updateLine = async (req, res, next) => {
   if (line._error) return res.status(line._status).send(line._error)
   await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { status: 'updated' } })
   res.status(200).send(cleanLine(line))
-  datasetUtils.updateStorage(db, req.dataset)
+  datasetUtils.updateStaticStorage(db, req.dataset)
 }
 
 exports.patchLine = async (req, res, next) => {
@@ -347,7 +347,7 @@ exports.patchLine = async (req, res, next) => {
   if (line._error) return res.status(line._status).send(line._error)
   await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { status: 'updated' } })
   res.status(200).send(cleanLine(line))
-  datasetUtils.updateStorage(db, req.dataset)
+  datasetUtils.updateStaticStorage(db, req.dataset)
 }
 
 exports.deleteAllLines = async (req, res, next) => {
@@ -358,7 +358,7 @@ exports.deleteAllLines = async (req, res, next) => {
   await esUtils.switchAlias(esClient, req.dataset, indexName)
   await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { status: 'updated' } })
   res.status(204).send()
-  datasetUtils.updateStorage(db, req.dataset)
+  datasetUtils.updateStaticStorage(db, req.dataset)
 }
 
 exports.bulkLines = async (req, res, next) => {
@@ -424,7 +424,7 @@ exports.bulkLines = async (req, res, next) => {
   }
   res.write(JSON.stringify(summary, null, 2))
   res.end()
-  datasetUtils.updateStorage(db, req.dataset)
+  datasetUtils.updateStaticStorage(db, req.dataset)
 
   for (const key in req.files) {
     for (const file of req.files[key]) {

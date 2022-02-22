@@ -54,6 +54,13 @@ exports.process = async function(app, dataset) {
   const errorsSummary = indexStream.errorsSummary()
   if (errorsSummary) await journals.log(app, dataset, { type: 'error', data: errorsSummary })
 
+  if (indexStream.i) {
+    await datasetUtils.updateDynamicStorage(db, esClient, indexName, dataset)
+    if (await datasetUtils.remainingDynamicStorage(db, dataset.owner) === 0) {
+      throw new Error('Vous avez atteint la limite de votre espace de stockage dynamique.')
+    }
+  }
+
   const result = {
     status: 'indexed',
     schema: datasetUtils.cleanSchema(dataset),

@@ -7,8 +7,9 @@ module.exports = {
     embed: '<div>application embed</div>',
   },
   defaultLimits: {
-    totalStorage: 200000,
-    datasetStorage: 160000,
+    totalDynamicStorage: 4000000,
+    totalStaticStorage: 200000,
+    datasetStaticStorage: 160000,
     remoteServiceRate: {
       duration: 1,
       nb: 10,

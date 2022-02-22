@@ -302,7 +302,7 @@ describe('datasets', () => {
     let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
     await workers.hook('finalizer/dataset-name')
     res = await ax.get('/api/v1/limits/user/dmeadus0')
-    assert.equal(res.data.store_bytes.consumption, 151)
+    assert.ok(res.data.store_bytes.consumption > 150)
     assert.deepEqual(await fs.readdir('data/test/user/dmeadus0/datasets/dataset-name/'), ['dataset-name.csv'])
 
     const form2 = new FormData()
@@ -314,7 +314,7 @@ describe('datasets', () => {
     assert.equal(dataset.updatedAt, dataset.dataUpdatedAt)
     assert.notEqual(dataset.updatedAt, dataset.createdAt)
     res = await ax.get('/api/v1/limits/user/dmeadus0')
-    assert.equal(res.data.store_bytes.consumption, 151)
+    assert.ok(res.data.store_bytes.consumption > 150)
     assert.deepEqual(await fs.readdir('data/test/user/dmeadus0/datasets/dataset-name/'), ['dataset-name2.csv'])
   })
 

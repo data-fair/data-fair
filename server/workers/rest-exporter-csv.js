@@ -39,7 +39,7 @@ exports.process = async function(app, dataset) {
   patch.exports.restToCSV.nextExport = job.nextDates().toISOString()
 
   await datasetUtils.applyPatch(db, dataset, patch)
-  await datasetUtils.updateStorage(db, dataset)
+  await datasetUtils.updateStaticStorage(db, dataset)
 
   debug('done')
 }

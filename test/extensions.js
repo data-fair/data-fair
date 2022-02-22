@@ -228,7 +228,7 @@ describe('Extensions', () => {
     assert.equal(res.status, 200)
     assert.ok(res.data.find(file => file.key === 'original'))
     assert.ok(res.data.find(file => file.key === 'full'))
-    assert.equal(dataset.storage.fileSize, res.data.find(file => file.key === 'full').size)
+    assert.equal(dataset.storage.staticSize, res.data.find(file => file.key === 'full').size + res.data.find(file => file.key === 'original').size)
     assert.equal(res.data.length, 2)
     res = await ax.get(`/api/v1/datasets/${dataset.id}/full`)
     assert.equal(res.data.trim(), `label,siret,_etablissements.location.lat,_etablissements.location.lon,_etablissements.bodacc.capital,_etablissements.TEFET,_etablissements.NOMEN_LONG
@@ -552,7 +552,8 @@ other,unknown address
     assert.equal(res.status, 200)
     assert.ok(res.data.find(file => file.key === 'original'))
     assert.ok(res.data.find(file => file.key === 'full'))
-    assert.equal(dataset.storage.fileSize, res.data.find(file => file.key === 'full').size)
+    assert.equal(dataset.storage.staticSize, res.data.find(file => file.key === 'full').size + res.data.find(file => file.key === 'original').size)
+
     assert.equal(res.data.length, 2)
     res = await ax.get(`/api/v1/datasets/${dataset.id}/full`)
     assert.equal(res.data.type, 'FeatureCollection')
