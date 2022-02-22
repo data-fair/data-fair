@@ -102,13 +102,20 @@ describe('Master data management', () => {
     })
     await workers.hook('finalizer/slave')
     await ax.post('/api/v1/datasets/slave/_bulk_lines', [{ siret: '82898347800011' }].map(item => ({ _id: item.siret, ...item })))
-    const slave = await workers.hook('finalizer/slave')
+    let slave = await workers.hook('finalizer/slave')
     assert.ok(slave.schema.find(p => p.key === '_siret.extra'))
     assert.ok(slave.schema.find(p => p.key === '_siret._error'))
     assert.ok(!slave.schema.find(p => p.key === '_siret.siret'))
     const results = (await ax.get('/api/v1/datasets/slave/lines')).data.results
     assert.equal(results[0]['_siret.extra'], 'Extra information')
     assert.ok(!results[0]['_siret.siret'])
+
+    // patching the dataset to remove extension
+    await ax.patch('/api/v1/datasets/slave', {
+      extensions: [],
+    })
+    slave = await workers.hook('finalizer/slave')
+    console.log(slave)
   })
 
   it('not return calculated properties', async () => {

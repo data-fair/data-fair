@@ -170,11 +170,7 @@ en:
             }
             if (!extension.action.input.find(i => this.datasetConcepts.has(i.concept))) {
               const missingConcepts = extension.action.input.filter(i => i.concept !== 'http://schema.org/identifier').map(i => this.vocabulary[i.concept] ? this.vocabulary[i.concept].title : 'concept déprécié')
-              if (missingConcepts.length > 1) {
-                extension.disabled = this.$t('missingConcepts', { concepts: missingConcepts.join(', ') })
-              } else {
-                extension.disabled = this.$t('missingConceptss', { concept: missingConcepts[0] })
-              }
+              extension.disabled = this.$t('missingConcepts', { concepts: missingConcepts.join(', ') })
             }
             if (this.newExtension === extension) extension.color = 'primary'
             if (this.localExtensions.find(e => extension.id === e.remoteService + '--' + e.action)) extension.color = 'green'

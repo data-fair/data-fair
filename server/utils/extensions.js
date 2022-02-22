@@ -34,7 +34,7 @@ exports.extend = async(app, dataset, extensions) => {
       continue
     }
 
-    const extensionKey = getExtensionKey(extension, dataset.schema)
+    const extensionKey = exports.getExtensionKey(extension)
     const inputMapping = prepareInputMapping(action, dataset, extensionKey, extension.select)
     const errorKey = action.output.find(o => o.name === '_error') ? '_error' : 'error'
     const idInput = action.input.find(input => input.concept === 'http://schema.org/identifier')
@@ -198,7 +198,7 @@ class RemoteExtensionStream extends Transform {
   }
 }
 
-function getExtensionKey(extension, schema) {
+exports.getExtensionKey = (extension) => {
   if (extension.propertyPrefix) return extension.propertyPrefix
   // deprecated
   if (extension.shortId) return '_ext_' + extension.shortId
@@ -247,7 +247,7 @@ exports.prepareSchema = async (db, schema, extensions) => {
     if (!action.input.find(i => i.concept && schema.concat(extensionsFields).find(prop => prop['x-refersTo'] && prop['x-refersTo'] === i.concept))) {
       continue
     }
-    const extensionKey = getExtensionKey(extension, schema)
+    const extensionKey = exports.getExtensionKey(extension)
     const extensionId = `${extension.remoteService}/${extension.action}`
     const selectFields = extension.select || []
     extensionsFields = extensionsFields.concat(action.output
@@ -263,7 +263,7 @@ exports.prepareSchema = async (db, schema, extensions) => {
         const originalName = extension.propertyPrefix ? key : output.name
         const field = {
           key,
-          // 'x-originalName': originalName,
+          'x-originalName': originalName,
           'x-extension': extensionId,
           title: output.title,
           description: output.description,

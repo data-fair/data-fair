@@ -128,18 +128,18 @@ const applicationKey = asyncWrap(async (req, res, next) => {
 // try to make something both readable and with little conflict risk (but not 0 risk)
 const prepareExtensions = (req, extensions, oldExtensions = []) => {
   extensions
-    // do not reprocess already assigned shortIds to prevent compatibility break
-    .filter(e => !e.shortId)
+    .filter(e => !e.shortId && !e.propertyPrefix)
     .forEach(e => {
       const oldExtension = oldExtensions.find(oldE => oldE.remoteService === e.remoteService && oldE.action === e.action)
       if (oldExtension) {
+        // do not reprocess already assigned shortIds / propertyPrefixes to prevent compatibility break
         if (oldExtension.shortId) e.shortId = oldExtension.shortId
         if (oldExtension.propertyPrefix) e.propertyPrefix = oldExtension.propertyPrefix
       } else {
         // only apply to new extensions to prevent compatibility break
         let propertyPrefix = e.action.toLowerCase();
         ['masterdata', 'find', 'bulk', 'search'].forEach(term => { propertyPrefix = propertyPrefix.replace(term, '') });
-        [':', '-', '.'].forEach(char => { propertyPrefix = propertyPrefix.replace(char, '_') })
+        [':', '-', '.', ' '].forEach(char => { propertyPrefix = propertyPrefix.replace(char, '_') })
         if (propertyPrefix.startsWith('post')) propertyPrefix = propertyPrefix.replace('post', '')
         e.propertyPrefix = propertyPrefix.replace(/__/g, '_').replace(/^_/, '').replace(/_$/, '')
         e.propertyPrefix = '_' + e.propertyPrefix
@@ -353,6 +353,12 @@ router.patch('/:datasetId', readDataset((patch) => {
   } else if (patch.extensions) {
     // extensions have changed, trigger full re-indexing
     patch.status = 'analyzed'
+    if (req.dataset.isRest && req.dataset.extensions) {
+      const removedExtensions = req.dataset.extensions.filter(e => !patch.extensions.find(pe => e.remoteService === pe.remoteService && e.action === pe.action))
+      await restDatasetsUtils.collection(db, req.dataset).updateMany({},
+        { $unset: removedExtensions.reduce((a, re) => { a[extensions.getExtensionKey(re)] = ''; return a }, {}) },
+      )
+    }
   } else if (patch.projection && (!req.dataset.projection || patch.projection.code !== req.dataset.projection.code)) {
     // geo projection has changed, trigger full re-indexing
     patch.status = 'analyzed'
