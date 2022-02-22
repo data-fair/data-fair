@@ -126,7 +126,7 @@ const applicationKey = asyncWrap(async (req, res, next) => {
 
 // create short ids for extensions that will be used as prefix of the properties ids in the schema
 // try to make something both readable and with little conflict risk (but not 0 risk)
-const extensionsShortId = (req, extensions, oldExtensions = []) => {
+const prepareExtensions = (req, extensions, oldExtensions = []) => {
   extensions
     // do not reprocess already assigned shortIds to prevent compatibility break
     .filter(e => !e.shortId)
@@ -134,17 +134,21 @@ const extensionsShortId = (req, extensions, oldExtensions = []) => {
       const oldExtension = oldExtensions.find(oldE => oldE.remoteService === e.remoteService && oldE.action === e.action)
       if (oldExtension) {
         if (oldExtension.shortId) e.shortId = oldExtension.shortId
+        if (oldExtension.propertyPrefix) e.propertyPrefix = oldExtension.propertyPrefix
       } else {
         // only apply to new extensions to prevent compatibility break
-        let shortId = e.action.toLowerCase();
-        ['masterdata', 'find', 'bulk', 'search'].forEach(term => { shortId = shortId.replace(term, '') });
-        [':', '-', '.'].forEach(char => { shortId = shortId.replace(char, '_') })
-        if (shortId.startsWith('post')) shortId = shortId.replace('post', '')
-        e.shortId = shortId.replace(/__/g, '_').replace(/^_/, '').replace(/_$/, '')
+        let propertyPrefix = e.action.toLowerCase();
+        ['masterdata', 'find', 'bulk', 'search'].forEach(term => { propertyPrefix = propertyPrefix.replace(term, '') });
+        [':', '-', '.'].forEach(char => { propertyPrefix = propertyPrefix.replace(char, '_') })
+        if (propertyPrefix.startsWith('post')) propertyPrefix = propertyPrefix.replace('post', '')
+        e.propertyPrefix = propertyPrefix.replace(/__/g, '_').replace(/^_/, '').replace(/_$/, '')
+        e.propertyPrefix = '_' + e.propertyPrefix
+
+        // TODO: also check if there is a conflict with an existing calculate property ?
       }
     })
-  const shortIds = extensions.filter(e => !!e.shortId).map(e => e.shortId)
-  if (shortIds.length !== [...new Set(shortIds)].length) {
+  const propertyPrefixes = extensions.filter(e => !!e.propertyPrefix).map(e => e.propertyPrefix)
+  if (propertyPrefixes.length !== [...new Set(propertyPrefixes)].length) {
     throw createError(400, req.__('errors.extensionShortIdConflict'))
   }
 }
@@ -316,7 +320,7 @@ router.patch('/:datasetId', readDataset((patch) => {
   patch.updatedAt = moment().toISOString()
   patch.updatedBy = { id: req.user.id, name: req.user.name }
 
-  if (patch.extensions) extensionsShortId(req, patch.extensions, req.dataset.extensions)
+  if (patch.extensions) prepareExtensions(req, patch.extensions, req.dataset.extensions)
   if (patch.extensions || req.dataset.extensions) {
     patch.schema = await extensions.prepareSchema(db, patch.schema || req.dataset.schema, patch.extensions || req.dataset.extensions)
   }
@@ -470,7 +474,7 @@ const initNew = async (db, req) => {
   dataset.permissions = []
   dataset.schema = dataset.schema || []
   if (dataset.extensions) {
-    extensionsShortId(req, dataset.extensions)
+    prepareExtensions(req, dataset.extensions)
     dataset.schema = await extensions.prepareSchema(db, dataset.schema, dataset.extensions)
   }
   return dataset
@@ -702,7 +706,7 @@ const updateDataset = asyncWrap(async(req, res) => {
     let dataset = req.dataset
     req.body.schema = req.body.schema || dataset.schema || []
     if (req.body.extensions) {
-      extensionsShortId(req, req.body.extensions, dataset.extensions)
+      prepareExtensions(req, req.body.extensions, dataset.extensions)
       req.body.schema = await extensions.prepareSchema(db, req.body.schema, req.body.extensions)
     }
 

@@ -375,8 +375,12 @@ module.exports = {
           },
           shortId: {
             type: 'string',
-            description: 'Id court utiliser comme préfixe pour les ids des champs issus de cette extension.',
+            description: 'Id court (déprécié)',
             readOnly: true,
+          },
+          propertyPrefix: {
+            type: 'string',
+            description: 'Chaine à utiliser comme préfixe des clés de champs issus de cette extension',
           },
         },
       },

@@ -103,12 +103,12 @@ describe('Master data management', () => {
     await workers.hook('finalizer/slave')
     await ax.post('/api/v1/datasets/slave/_bulk_lines', [{ siret: '82898347800011' }].map(item => ({ _id: item.siret, ...item })))
     const slave = await workers.hook('finalizer/slave')
-    assert.ok(slave.schema.find(p => p.key === '_ext_siret.extra'))
-    assert.ok(slave.schema.find(p => p.key === '_ext_siret._error'))
-    assert.ok(!slave.schema.find(p => p.key === '_ext_siret.siret'))
+    assert.ok(slave.schema.find(p => p.key === '_siret.extra'))
+    assert.ok(slave.schema.find(p => p.key === '_siret._error'))
+    assert.ok(!slave.schema.find(p => p.key === '_siret.siret'))
     const results = (await ax.get('/api/v1/datasets/slave/lines')).data.results
-    assert.equal(results[0]['_ext_siret.extra'], 'Extra information')
-    assert.ok(!results[0]['_ext_siret.siret'])
+    assert.equal(results[0]['_siret.extra'], 'Extra information')
+    assert.ok(!results[0]['_siret.siret'])
   })
 
   it('not return calculated properties', async () => {
@@ -139,10 +139,10 @@ describe('Master data management', () => {
     await workers.hook('finalizer/slave')
     await ax.post('/api/v1/datasets/slave/_bulk_lines', [{ siret: '82898347800011' }].map(item => ({ _id: item.siret, ...item })))
     const slave = await workers.hook('finalizer/slave')
-    assert.ok(slave.schema.find(p => p.key === '_ext_siret.extra'))
-    assert.ok(slave.schema.find(p => p.key === '_ext_siret._error'))
-    assert.ok(slave.schema.find(p => p.key === '_ext_siret.siret'))
-    assert.ok(!slave.schema.find(p => p.key === '_ext_siret._rand'))
+    assert.ok(slave.schema.find(p => p.key === '_siret.extra'))
+    assert.ok(slave.schema.find(p => p.key === '_siret._error'))
+    assert.ok(slave.schema.find(p => p.key === '_siret.siret'))
+    assert.ok(!slave.schema.find(p => p.key === '_siret._rand'))
   })
 
   it('should handle sorting to chose ambiguous result', async () => {

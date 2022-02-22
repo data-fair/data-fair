@@ -551,7 +551,7 @@ const latlonUri = 'http://www.w3.org/2003/01/geo/wgs84_pos#lat_long'
 
 exports.extendedSchema = (dataset) => {
   exports.cleanSchema(dataset)
-  const schema = dataset.schema.filter(f => f.key.startsWith('_ext_') || !f.key.startsWith('_'))
+  const schema = dataset.schema.filter(f => f['x-extension'] || !f.key.startsWith('_'))
   const documentProperty = dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')
   if (documentProperty) {
     if (!documentProperty['x-capabilities'] || documentProperty['x-capabilities'].indexAttachment !== false) {

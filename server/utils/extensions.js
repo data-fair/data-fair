@@ -143,6 +143,7 @@ class RemoteExtensionStream extends Transform {
         if (Object.keys(inputs[i]).length === 1) continue
         let cachedValue
         if (!localMasterData) {
+          // TODO: read cached values in a bulk read ?
           cachedValue = (await this.db.collection('extensions-cache')
             .findOneAndUpdate({ extensionKey: extensionCacheKey, input: inputCacheKeys[i] }, { $set: { lastUsed: new Date() } })).value
         }
@@ -178,6 +179,7 @@ class RemoteExtensionStream extends Transform {
         const i = result[extension.idInput.name]
         this.buffer[i][extension.extensionKey] = selectedResult
         if (!localMasterData) {
+          // TODO: do this in bulk ?
           await this.db.collection('extensions-cache')
             .replaceOne(
               { extensionKey: extensionCacheKey, input: inputCacheKeys[i] },
@@ -197,14 +199,10 @@ class RemoteExtensionStream extends Transform {
 }
 
 function getExtensionKey(extension, schema) {
-  if (extension.shortId) {
-    if (schema.find(p => !p['x-extension'] && p.key === extension.shortId)) {
-      // only prefix with _ext if there is a risk of conflict
-      return '_ext_' + extension.shortId
-    } else {
-      return extension.shortId
-    }
-  }
+  if (extension.propertyPrefix) return extension.propertyPrefix
+  // deprecated
+  if (extension.shortId) return '_ext_' + extension.shortId
+  // also deprecated
   return `_ext_${extension.remoteService}_${extension.action}`
 }
 
@@ -261,8 +259,11 @@ exports.prepareSchema = async (db, schema, extensions) => {
         const key = extensionKey + '.' + output.name
         const existingField = schema.find(field => field.key === key)
         if (existingField) return existingField
+        // this is for compatibility, new extensions should always have propertyPrefix
+        const originalName = extension.propertyPrefix ? key : output.name
         const field = {
           key,
+          // 'x-originalName': originalName,
           'x-extension': extensionId,
           title: output.title,
           description: output.description,
