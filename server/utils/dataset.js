@@ -311,11 +311,9 @@ exports.readStreams = async (db, dataset, raw = false, full = false, ignoreDraft
       },
     }))
   }
-  streams = streams.concat([
-    stripBom(),
-    iconv.decodeStream(dataset.file.encoding),
-    ...exports.transformFileStreams(dataset.file.mimetype, dataset.schema, dataset.file.schema, full ? {} : dataset.file.props, raw),
-  ])
+  streams.push(stripBom())
+  if (!full) streams.push(iconv.decodeStream(dataset.file.encoding))
+  streams = streams.concat(exports.transformFileStreams(dataset.file.mimetype, dataset.schema, dataset.file.schema, full ? {} : dataset.file.props, raw))
 
   // manage interruption in case of draft mode
   const limit = (dataset.draftReason && !ignoreDraftLimit) ? 100 : -1

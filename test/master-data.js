@@ -3,6 +3,7 @@
 
 const assert = require('assert').strict
 const workers = require('../server/workers')
+const testUtils = require('./resources/test-utils')
 
 const initMaster = async (ax, schema, bulkSearchs) => {
   await ax.put('/api/v1/datasets/master', {
@@ -102,7 +103,7 @@ describe('Master data management', () => {
     })
     await workers.hook('finalizer/slave')
     await ax.post('/api/v1/datasets/slave/_bulk_lines', [{ siret: '82898347800011' }].map(item => ({ _id: item.siret, ...item })))
-    let slave = await workers.hook('finalizer/slave')
+    const slave = await workers.hook('finalizer/slave')
     assert.ok(slave.schema.find(p => p.key === '_siret.extra'))
     assert.ok(slave.schema.find(p => p.key === '_siret._error'))
     assert.ok(!slave.schema.find(p => p.key === '_siret.siret'))
@@ -114,8 +115,49 @@ describe('Master data management', () => {
     await ax.patch('/api/v1/datasets/slave', {
       extensions: [],
     })
-    slave = await workers.hook('finalizer/slave')
-    console.log(slave)
+    await workers.hook('finalizer/slave')
+  })
+
+  it('should extend a geojson file from a master-data dataset', async () => {
+    const ax = global.ax.superadmin
+
+    const { remoteService } = await initMaster(
+      ax,
+      [siretProperty, { key: 'extra', type: 'string' }, { key: 'Dénomination', type: 'string' }],
+      [{
+        id: 'siret',
+        title: 'Fetch extra info from siret',
+        description: '',
+        input: [{ type: 'equals', property: siretProperty }],
+      }],
+    )
+    const items = [{ siret: '82898347800011', extra: 'Extra information', Dénomination: 'Dénomination string' }]
+    await ax.post('/api/v1/datasets/master/_bulk_lines', items.map(item => ({ _id: item.siret, ...item })))
+    await workers.hook('finalizer/master')
+
+    // create another slave from a geojson file
+    let geojsonSlave = await testUtils.sendDataset('datasets/dataset-siret-extensions.geojson', ax)
+    geojsonSlave.schema.find(field => field.key === 'siret')['x-refersTo'] = 'http://www.datatourisme.fr/ontology/core/1.0/#siret'
+    let res = await ax.patch(`/api/v1/datasets/${geojsonSlave.id}`, {
+      schema: geojsonSlave.schema,
+      extensions: [{
+        active: true,
+        remoteService: remoteService.id,
+        action: 'masterData_bulkSearch_siret',
+        select: ['extra', 'Dénomination'],
+      }],
+    })
+    assert.equal(res.status, 200)
+    geojsonSlave = await workers.hook(`finalizer/${geojsonSlave.id}`)
+    res = await ax.get(`/api/v1/datasets/${geojsonSlave.id}/full`)
+    assert.equal(res.data.type, 'FeatureCollection')
+    assert.equal(res.data.features.length, 1)
+    assert.equal(res.data.features[0].properties.label, 'koumoul')
+    assert.equal(res.data.features[0].properties._siret.extra, 'Extra information')
+    assert.equal(res.data.features[0].properties._siret.Dénomination, 'Dénomination string')
+    const results = (await ax.get(`/api/v1/datasets/${geojsonSlave.id}/lines`)).data.results
+    assert.equal(results[0]['_siret.extra'], 'Extra information')
+    assert.equal(results[0]['_siret.Dénomination'], 'Dénomination string')
   })
 
   it('not return calculated properties', async () => {
