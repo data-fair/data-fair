@@ -8,6 +8,7 @@ exports.exec = async (db, debug) => {
   while (await cursor.hasNext()) {
     const dataset = await cursor.next()
     debug('update storage info of dataset', dataset.id)
+    await datasetUtils.updateNbDatasets(db, dataset.owner)
     await db.collection('datasets')
       .updateOne({ id: dataset.id }, { $set: { storage: {} } })
     debug('static', await datasetUtils.updateStaticStorage(db, dataset))

@@ -4,7 +4,12 @@ const config = require('config')
 const testUtils = require('./resources/test-utils')
 const workers = require('../server/workers')
 
-const baseLimit = { store_bytes: { limit: 300000, consumption: 0 }, store_static_bytes: { limit: 300000, consumption: 0 }, lastUpdate: new Date().toISOString() }
+const baseLimit = {
+  store_bytes: { limit: 300000, consumption: 0 },
+  store_static_bytes: { limit: 300000, consumption: 0 },
+  nb_datasets: { limit: 10, consumption: 0 },
+  lastUpdate: new Date().toISOString(),
+}
 
 describe('limits', () => {
   it('Manage a user storage limit', async () => {
@@ -32,6 +37,8 @@ describe('limits', () => {
 
     // define a higher limit
     res = await ax.post('/api/v1/limits/user/dmeadus0', baseLimit, { params: { key: config.secretKeys.limits } })
+
+    // test storage size limit
     form = new FormData()
     form.append('file', Buffer.alloc(100000), 'dataset.csv')
     res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
@@ -44,6 +51,15 @@ describe('limits', () => {
     } catch (err) {
       assert.equal(err.status, 429)
     }
+
+    // test nb datasets size limit
+    for (let i = 0; i < 8; i++) {
+      await ax.post('/api/v1/datasets', { title: 'rest-dataset', isRest: true })
+    }
+    assert.rejects(ax.post('/api/v1/datasets', { title: 'rest-dataset', isRest: true }), (err) => {
+      assert.equal(err.status, 429)
+      return true
+    })
 
     res = await ax.get('/api/v1/limits/user/dmeadus0')
     assert.equal(res.status, 200)

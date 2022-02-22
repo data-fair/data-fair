@@ -10,6 +10,7 @@ module.exports = {
     totalDynamicStorage: 4000000,
     totalStaticStorage: 200000,
     datasetStaticStorage: 160000,
+    nbDatasets: 4,
     remoteServiceRate: {
       duration: 1,
       nb: 10,

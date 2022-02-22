@@ -114,6 +114,10 @@ module.exports = {
       __name: 'DEFAULT_LIMITS_DATASET_STATIC_STORAGE',
       __format: 'json',
     },
+    nbDatasets: {
+      __name: 'DEFAULT_LIMITS_NB_DATASETS',
+      __format: 'json',
+    },
     maxSpreadsheetSize: {
       __name: 'DEFAULT_LIMITS_MAX_SPREADSHEET_SIZE',
       __format: 'json',

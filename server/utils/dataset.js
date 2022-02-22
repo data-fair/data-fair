@@ -495,6 +495,10 @@ exports.updateDynamicStorage = async (db, esClient, indexName, dataset) => {
   await limits.setConsumption(db, dataset.owner, 'store_bytes', await exports.totalStorage(db, dataset.owner, 'dynamicSize'))
   return { parts, size }
 }
+exports.updateNbDatasets = async (db, owner) => {
+  const count = await db.collection('datasets').countDocuments({ 'owner.type': owner.type, 'owner.id': owner.id })
+  await limits.setConsumption(db, owner, 'nb_datasets', count)
+}
 
 exports.remainingDynamicStorage = async (db, owner) => {
   const limits = await db.collection('limits')
@@ -510,6 +514,14 @@ exports.remainingStaticStorage = async (db, owner) => {
   const limit = (limits && limits.store_static_bytes && ![undefined, null].includes(limits.store_static_bytes.limit)) ? limits.store_static_bytes.limit : config.defaultLimits.totalStaticStorage
   if (limit === -1) return -1
   const consumption = (limits && limits.store_static_bytes && limits.store_static_bytes.consumption) || 0
+  return Math.max(0, limit - consumption)
+}
+exports.remainingNbDatasets = async (db, owner) => {
+  const limits = await db.collection('limits')
+    .findOne({ type: owner.type, id: owner.id })
+  const limit = (limits && limits.nb_datasets && ![undefined, null].includes(limits.nb_datasets.limit)) ? limits.nb_datasets.limit : config.defaultLimits.nbDatasets
+  if (limit === -1) return -1
+  const consumption = (limits && limits.nb_datasets && limits.nb_datasets.consumption) || 0
   return Math.max(0, limit - consumption)
 }
 

@@ -587,7 +587,11 @@ const setFileInfo = async (db, file, attachmentsFile, dataset, draft) => {
 // Create a dataset by uploading data
 const beforeUpload = asyncWrap(async(req, res, next) => {
   if (!req.user) return res.status(401).send()
-  if (!permissions.canDoForOwner(usersUtils.owner(req), 'datasets', 'post', req.user, req.app.get('db'))) return res.sendStatus(403)
+  const owner = usersUtils.owner(req)
+  if (!permissions.canDoForOwner(owner, 'datasets', 'post', req.user, req.app.get('db'))) return res.sendStatus(403)
+  if (await datasetUtils.remainingNbDatasets(req.app.get('db'), owner) === 0) {
+    return res.status(429).send('Vous avez atteint votre nombre maximal de jeux de données autorisés.')
+  }
   next()
 })
 router.post('', beforeUpload, checkStorage(true), filesUtils.uploadFile(), filesUtils.fixFormBody(validatePost), asyncWrap(async(req, res) => {
@@ -662,6 +666,7 @@ router.post('', beforeUpload, checkStorage(true), filesUtils.uploadFile(), files
 
     delete dataset._id
 
+    await datasetUtils.updateNbDatasets(req.app.get('db'), dataset.owner)
     await journals.log(req.app, dataset, { type: 'dataset-created', href: config.publicUrl + '/dataset/' + dataset.id }, 'dataset')
     await syncRemoteService(db, dataset)
     res.status(201).send(clean(req.publicBaseUrl, dataset, null, req.query.draft === 'true'))
@@ -687,6 +692,10 @@ const attemptInsert = asyncWrap(async(req, res, next) => {
     try {
       await req.app.get('db').collection('datasets').insertOne(newDataset)
       req.isNewDataset = true
+      if (await datasetUtils.remainingNbDatasets(req.app.get('db'), newDataset.owner) === 0) {
+        return res.status(429, 'Vous avez atteint votre nombre maximal de jeux de données autorisés.')
+      }
+      await datasetUtils.updateNbDatasets(req.app.get('db'), newDataset.owner)
     } catch (err) {
       if (err.code !== 11000) throw err
     }
