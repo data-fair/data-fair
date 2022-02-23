@@ -5,7 +5,7 @@ updated: 2020-12-09
 description : Introduction
 published: true
 ---
-**Data Fair** et son écosystème permettent de mettre en œuvre une plateforme de partage (interne ou opendata) et de visualisation de données. Cette plateforme peut être à destination du grand public, qui peut accéder aux données au travers de visualisations interactives adaptées, aussi bien qu’à un public plus expert qui peut accéder aux données au travers des APIs.  
+**Data Fair** et son écosystème permettent de mettre en œuvre une plateforme de partage de données (interne ou opendata) et de visualisations. Cette plateforme peut être à destination du grand public, qui peut accéder aux données au travers de visualisations interactives adaptées, aussi bien qu’à un public plus expert qui peut accéder aux données au travers des APIs.  
 Le mot **FAIR** fait référence à de la donnée [« Facile à trouver, Accessible, Interopérable et Réutilisable »](https://fr.wikipedia.org/wiki/Fair_data).
 
 Les **jeux de données** chargés sur la plateforme sont indexés. L’indexation d’un jeu de données augmente considérablement sa réutilisabilité et permet de réaliser des recherches textuelles dans des données volumineuses de plusieurs millions d’enregistrements ou dans les visualisations des données.
@@ -32,12 +32,12 @@ Les trois concepts centraux sont : les **jeux de données**, les **services dist
 
 Les **jeux de données** sont créés par les utilisateurs en chargeant des fichiers : le service stocke le fichier, l'analyse et déduit un schéma de données. Les données sont ensuite indexées suivant ce schéma et peuvent être requêtées au travers d'une API Web propre.  
 
-L'utilisateur peut sémantiser les champs des **jeux de données**, par exemple en déterminant qu'une colonne contenant des données sur 5 chiffres est un champ de type Code Postal. Cette sémantisation permet 2 choses : les données peuvent être enrichies et servir à certains traitements si on dispose des **services distants** appropriés, et les données peuvent être utilisées dans des **applications** adaptées à leurs concepts.
+L'utilisateur peut sémantiser les champs des **jeux de données**, par exemple en déterminant qu'une colonne contenant des données sur 5 chiffres est un champ de type Code Postal. Cette sémantisation permet 2 choses : les **données peuvent être enrichies** et servir à certains traitements si on dispose des **services distants** appropriés, et les données **peuvent être utilisées dans des applications** adaptées à leurs concepts.
 
 En complément des **jeux de données** basés fichiers, Data Fair permet également de créer des **jeux de données** incrémentaux qui sont éditables en temps réel et des **jeux de données** virtuels qui sont des vues configurable d'un ou plusieurs **jeux de données**.
 
 Les **services distants** mettent à disposition des fonctionnalités sous forme d'APIs Web externes à Data Fair qui respectent les règles d’interopérabilité d’OpenAPI 3.0.  
-Un des objectifs de Data Fair est de permettre à des non informaticiens d'utiliser facilement des APIs tierces avec leurs propres données. Il y a 2 manières d'exploiter les **services distants** : l'utilisateur peut les utiliser pour ajouter en temps différé des colonnes à ses **jeux de données** (exemple géocodage) et les **applications** peuvent les exploiter en temps réel (exemple fonds de carte).
+Un des objectifs de Data Fair est de permettre à des non informaticiens d'utiliser facilement des APIs tierces avec leurs propres données. Il y a 2 manières d'exploiter les **services distants** : l'utilisateur peut les utiliser pour ajouter en temps différé des colonnes à ses **jeux de données** (exemple : géocodage) et les **applications** peuvent les exploiter en temps réel (exemple : fonds de carte).
 
 Les **services distants**, connectés sur une instance Data Fair, ne sont pas gérés par les utilisateurs directement mais plutôt mis à leur disposition par les administrateurs.
 

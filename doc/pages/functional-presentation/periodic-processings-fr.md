@@ -12,6 +12,8 @@ Les traitements périodiques se différencient des connecteurs de catalogues sur
 * Un traitement est limité à un ensemble réduit de sources en entrée et en sortie. Typiquement il peut récupérer des données à un endroit, et des métadonnées à un autre, et déverser les données dans une source de la plateforme.
 * Les fréquences de collecte peuvent être plus élevées : on peut collecter les données avec quelques secondes d’intervalle, ce qui est adapté à la publication des **données IOT**.
 
+<p>
+</p>
 
 Les traitements périodiques se configurent en renseignant le type de source (Données IOT, fichiers issus de facturation, …), le jeu de données correspondant dans la plateforme et la fréquence de collecte.
 

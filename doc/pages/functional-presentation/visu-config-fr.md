@@ -17,7 +17,7 @@ Un aperçu donne un rendu de la visualisation. Lorsque l’on réalise des modif
 
 Par défaut, une visualisation est privée. Elle peut être rendue publique par la suite. Dans tous les cas, il est recommandé de renseigner une description. Cette description sera visible sur la page de consultation de la visualisation.
 
-La solution proposée offre une grande variété de visualisations en constante progression.
+Data Fair offre une grande variété de visualisations en constante progression.
 
 ![Differentes visualisations](./images/functional-presentation/valorisations.jpg)
 

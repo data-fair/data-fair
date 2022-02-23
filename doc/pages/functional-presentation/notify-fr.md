@@ -13,4 +13,4 @@ Les utilisateurs enregistrés peuvent paramétrer différentes **alertes** email
 
 Lorsqu’une notification est déclenchée, une pastille colorée est présente sur la cloche en haut à droite. Un clic sur la cloche permet d'accéder à un résumé des alertes précédemment envoyées.
 
-![Liste des alertes](./images/functional-presentation/notify-2.jpg)
+![Liste des alertes](./images/functional-presentation/notify-back.png)

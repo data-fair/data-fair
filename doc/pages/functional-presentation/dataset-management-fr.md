@@ -32,7 +32,7 @@ Après cette étape, les données sont consultables à minima dans un tableau et
 
 La page d’édition d’un jeu de données permet de travailler la présentation et la réutilisabilité de ce jeu. Cette page permet de modifier le titre du jeu de données, mettre à jour les données, compléter le schéma des données, sémantiser les données pour qu'elles soient réutilisables dans des visualisations ou pour pouvoir être enrichies via des services complémentaires.
 
-### Schéma des données
+#### Schéma des données
 
 La page d'édition d'un jeu de données permet, entre autres, de renseigner les concepts dans la section **Schéma des données**.  
 Les concepts sont des notions connues pour la plateforme. Ils permettent d'**augmenter la réutilisabilité** de vos données et de faire le lien entre vos données et les fonctionnalités de la plateforme.
@@ -47,7 +47,7 @@ Les concepts sont nécessaires à la représentation de certaines visualisations
 
 Dans la section des **Schéma de données**, on peut renseigner des libellés sur chacun des champs. Ces libellés sont utilisés dans la vue tableau et dans les différentes visualisations du jeu de données.
 
-### Enrichissement des données
+#### Enrichissement des données
 
 Il est possible d'enrichir vos données avec des données issues de l'open data telles que la base **SIRENE**, le **cadastre**, les **données INSEE et la BAN**.  
 * La base SIRENE rassemble les informations économiques et juridiques de plus de 28 Millions d'établissements d'entreprises, dont plus de 11 Millions actifs.
@@ -57,7 +57,7 @@ Il est possible d'enrichir vos données avec des données issues de l'open data 
 
 En fonction des données que vous possédez, vous pouvez choisir l'enrichissement qui vous convient et ainsi donner plus de valeur à vos données.
 
-### Permissions de partage de données
+#### Permissions de partage de données
 
 Un administrateur peut contrôler finement les permissions d’**accès aux données**. En fonction du rôle attribué à un utilisateur, celui-ci à le droit d'accéder, de lire ou/et de modifier le contenu de la source.
 
@@ -67,7 +67,7 @@ On peut ainsi donner le rôle d’**user** à un groupe de personnes et définir
 
 Il est aussi possible de gérer les permissions plus finement et de donner les droits à un seul ou plusieurs utilisateurs. La liste des personnes ayant des permissions sur un jeu de données est disponible dans la page d’édition de ce jeu.
 
-### Journal du jeu de données
+#### Journal du jeu de données
 
 Le journal d’un jeu de données permet de vérifier l’**historique des modifications** sur le jeu de données.
 
@@ -75,7 +75,7 @@ Le journal d’un jeu de données permet de vérifier l’**historique des modif
 
 Le journal permet la **traçabilité** des modifications des jeux de données, des paramètres et des habilitations.
 
-### Pièces jointes
+#### Pièces jointes
 
 Il est possible d’associer des pièces jointes à chaque ligne d’un jeu de données. Cela se fait en associant une archive au format zip qui contient les fichiers à associer. Il faut aussi qu’il y ait dans le jeu de données une colonne contenant les noms des fichiers à associer à chaque ligne. Deux types de fichiers peuvent être liés aux lignes : des images (png, jpg, …) ou des documents (pdf, docx, xlsx, …). Dans le cas des documents, ils sont indexés **fulltext** par la plateforme et les recherches tiennent compte du contenu de ces documents.
 

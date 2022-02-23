@@ -17,6 +17,9 @@ Les administrateurs d’une organisation peuvent gérer les membres :
 * **Changer** les rôles des membres
 * **Exclure** un membre
 
+<p>
+</p>
+
 Permissions par défaut des différents rôles d’une organisation :
 
 | Actions                              | Utilisateur | Contributeur | Administrateur |
@@ -24,7 +27,7 @@ Permissions par défaut des différents rôles d’une organisation :
 | Ajout d'un jeu de données            |             |       x      |        x       |
 | Lecture d'un jeu de données          |      x      |       x      |        x       |
 | Modification d'un jeu de données     |             |       x      |        x       |
-| Administration de'un jeu de données  |             |              |        x       |
+| Administration d'un jeu de données  |             |              |        x       |
 | Ajout d'une visualisation            |             |       x      |        x       |
 | Lecture d'une visualisation          |      x      |       x      |        x       |
 | Edition d'une visualisation          |             |       x      |        x       |

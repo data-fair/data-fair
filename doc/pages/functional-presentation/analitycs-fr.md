@@ -12,7 +12,7 @@ Il est possible d'utiliser **Matomo Analytics** (ancienne piwik) ou **Google Ana
 
 ### Matomo Analytics
 Les statistiques sous [Matomo Analytics](https://fr.matomo.org/) sont disponibles sous différentes formes : tableaux, graphiques et cartes. En sélectionnant les différentes représentations des statistiques, il est possible de personnaliser ses tableaux de bord.  
-Il est également possible d'**anonymiser les données** et d’enregistrer les parcours utilisateurs tout en étant en conformité avec les recommandations de la CNIL.
+Il est également possible d'**anonymiser les données** et d’enregistrer les parcours utilisateurs tout en étant en conformité avec les recommandations de la [CNIL](https://www.cnil.fr/professionnel).
 
 ![Matomo](./images/functional-presentation/matomo.jpg)
 
@@ -35,10 +35,12 @@ Les statistiques sous [Google Analytics](https://analytics.google.com/) sont aus
 
 ### Configuration
 
-La configuration du système de suivi des utilisateurs se compose en deux points.
-1. Configuration du système de suivi sur le portail
+La configuration du système de suivi des utilisateurs se compose en deux points.  
+1. Configuration du système de suivi sur le portail  
 2. Configuration des événements
 
+<p>
+</p>
 
 **Configuration du système de suivi sur le portail**
 

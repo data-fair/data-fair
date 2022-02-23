@@ -14,7 +14,7 @@ La page de données permet d’accéder aux sources de données et de pouvoir ef
 
 Le portail de données a un design responsive et son affichage est adapté à une grande diversité de terminaux, permettant une utilisation sur **poste fixe ou mobile**.
 
-Une **mire d’authentification** est accessible sur toutes les pages du portail pour pouvoir se connecter ou créer un compte. Le compte permet d'acceder aux données privées selon ses droits. Si le portail est sur un autre nom de domaine que Data Fair, il n'est plus possible de s'authentifier au travers de celui-ci et la mire n’apparaît plus : le portail est dans ce cas destiné à de l'open data.
+Une **mire d’authentification** est accessible sur toutes les pages du portail pour pouvoir se connecter ou créer un compte. Le compte permet d'accéder aux données privées selon ses droits. Si le portail est sur un autre nom de domaine que Data Fair, il n'est plus possible de s'authentifier au travers de celui-ci et la mire n’apparaît plus : le portail est dans ce cas destiné à de l'open data.
 
 Le footer permet d'intégrer différents liens tels que les conditions d’utilisation, la page de contact et le site institutionnel entre autres.
 

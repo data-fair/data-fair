@@ -7,15 +7,15 @@ description : Gestion des alertes
 published: false
 ---
 
-Les utilisateurs enregistrés peuvent **s'abonner** à différents événements d'un jeu de données ou à une thématique :
-
-* Mise à jour d'un jeu de données
-* Mise à jour des métadonnées
-* Ajout d'un jeu de données
-* Ajout d'une réutilisation
+Les utilisateurs enregistrés peuvent **s'abonner** à l'ajout d'un jeu de données sur le portail ou dans une thématique en particulier :
 
 ![Notification](./images/functional-presentation/notifiy-pf-1.png)
 
-Les alertes seront visible à l'aide de la cloche de la barre de navigation et un **email d'alerte** sera envoyé.
+Il est aussi possible de s'abonner à la mise à jour d'un jeu de données en particulier à l'aide de la cloche sur sa page de présentation.
+
+
+![jeu de donnees](./images/functional-presentation/notifiy-pf-3.png)
+
+Les alertes seront visibles sur la cloche de la barre de navigation et un **email d'alerte** sera envoyé sur l'adresse de votre compte.
 
 ![Cloche](./images/functional-presentation/notifiy-pf-2.png)

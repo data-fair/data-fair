@@ -131,7 +131,7 @@ The activity log allows you to view the history of the last modifications made t
 
 On the right of the edit page you have access to several action buttons:
 * **Original file**, allows you to download the original file
-* **Enriched file **, allows you to download the file with all the new columns that you added thanks to the [enrichissement](./user-guide/enrichment) in CSV format.
+* **Enriched file**, allows you to download the file with all the new columns that you added thanks to the [enrichissement](./user-guide/enrichment) in CSV format.
 * **Update**, allows you to modify the dataset loaded on your account with a new one from your computer.
 * **Integrate on a site**, allows access to the HTML code to integrate the table or the data map to an external site.
 * **View on the data portal**, allows access to the page on your portal. If you have published the dataset on more than one portal, there will be various links.
