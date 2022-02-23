@@ -43,6 +43,8 @@ fr:
   attachments: fichiers joints
   metadata-attachments: pièces jointes aux métadonnées
   draft-index: index brouillon
+  rest-lines: lignes de données
+  rest-revisions: historique des lignes de données
 en:
   static: of static data
   dynamic: of dynamic data
@@ -50,6 +52,8 @@ en:
   attachments: attached files
   metadata-attachments: metadata attachments
   draft-index: draft index
+  rest-lines: data lines
+  rest-revisions: history of data lines
 </i18n>
 
 <script>
