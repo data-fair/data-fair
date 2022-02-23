@@ -597,10 +597,21 @@ test2,test2,test2
 test2,test2,test3`, { headers: { 'content-type': 'text/csv' } })
     dataset = await workers.hook('finalizer/restkey')
     assert.equal(dataset.count, 2)
-    const lines = (await ax.get('/api/v1/datasets/restkey/lines', { params: { sort: '_i' } })).data.results
+    let lines = (await ax.get('/api/v1/datasets/restkey/lines', { params: { sort: '_i' } })).data.results
     assert.equal(lines[0].attr1, 'test1')
+    // lines 2 and 3 of the CSV ha the same primary key, so 3 overwrote 2
     assert.equal(lines[1].attr1, 'test2')
     assert.equal(lines[1].attr3, 'test3')
+
+    // the primary key can also be used to delete lines
+    await ax.post('/api/v1/datasets/restkey/_bulk_lines', [
+      { _action: 'delete', attr1: 'test1', attr2: 'test1' },
+    ])
+    dataset = await workers.hook('finalizer/restkey')
+    assert.equal(dataset.count, 1)
+    lines = (await ax.get('/api/v1/datasets/restkey/lines', { params: { sort: '_i' } })).data.results
+    assert.equal(lines[0].attr1, 'test2')
+    assert.equal(lines[0].attr3, 'test3')
   })
 
   it('Perform CRUD operations in larger bulk and keep request alive', async () => {
