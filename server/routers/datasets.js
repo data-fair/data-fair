@@ -73,17 +73,15 @@ const checkStorage = (overwrite) => asyncWrap(async (req, res, next) => {
   const estimatedContentSize = contentLength - 210
 
   const owner = req.dataset ? req.dataset.owner : usersUtils.owner(req)
-  const datasetLimit = config.defaultLimits.datasetStaticStorage
+  const datasetLimit = config.defaultLimits.datasetStorage
   if (datasetLimit !== -1 && datasetLimit < estimatedContentSize) throw createError(413, 'Dataset size exceeds the authorized limit')
-  const remainingDynamicStorage = await datasetUtils.remainingDynamicStorage(req.app.get('db'), owner)
-  if (remainingDynamicStorage === 0) throw new Error('Vous avez atteint la limite de votre espace de stockage dynamique.')
-  let remainingStaticStorage = await datasetUtils.remainingStaticStorage(req.app.get('db'), owner)
-  if (remainingStaticStorage !== -1) {
+  let remainingStorage = await datasetUtils.remainingStorage(req.app.get('db'), owner)
+  if (remainingStorage !== -1) {
     if (overwrite && req.dataset && req.dataset.storage) {
       // ignore the size of the dataset we are overwriting
-      remainingStaticStorage += req.dataset.storage.size
+      remainingStorage += req.dataset.storage.size
     }
-    if ((remainingStaticStorage - estimatedContentSize) <= 0) {
+    if ((remainingStorage - estimatedContentSize) <= 0) {
       try {
         await pump(
           req,
@@ -385,7 +383,7 @@ router.patch('/:datasetId', readDataset((patch) => {
     await restDatasetsUtils.collection(db, req.dataset).updateMany({},
       { $unset: deleteFields.reduce((a, df) => { a[df.key] = ''; return a }, {}) },
     )
-    await datasetUtils.updateStaticStorage(db, req.dataset)
+    await datasetUtils.updateStorage(db, req.dataset)
     patch.status = 'analyzed'
   } else if (patch.schema) {
     try {
@@ -622,7 +620,7 @@ router.post('', beforeUpload, checkStorage(true), filesUtils.uploadFile(), files
         throw err
       }
       await db.collection('datasets').insertOne(dataset)
-      await datasetUtils.updateStaticStorage(db, dataset)
+      await datasetUtils.updateStorage(db, dataset)
     } else if (req.body.isVirtual) {
       if (!req.body.title) throw createError(400, 'Un jeu de données virtuel doit être créé avec un titre')
       if (attachmentsFile) throw createError(400, 'Un jeu de données virtuel ne peut pas avoir de pièces jointes')
@@ -783,7 +781,7 @@ const updateDataset = asyncWrap(async(req, res) => {
         req.query.draft === 'true' ? datasetUtils.mergeDraft({ ...dataset }) : dataset,
         { type: 'data-updated' }, 'dataset')
     }
-    await datasetUtils.updateStaticStorage(db, dataset)
+    await datasetUtils.updateStorage(db, req.dataset)
     await syncRemoteService(db, dataset)
     res.status(req.isNewDataset ? 201 : 200).send(clean(req.publicBaseUrl, dataset, null, req.query.draft === 'true'))
   } catch (err) {
@@ -876,7 +874,7 @@ router.post('/:datasetId/draft', readDataset(['finalized'], true), permissions.m
   await journals.log(req.app, patchedDataset, { type: 'draft-validated' }, 'dataset')
 
   await esUtils.delete(req.app.get('es'), req.dataset)
-  await datasetUtils.updateStaticStorage(db, patchedDataset)
+  await datasetUtils.updateStorage(db, patchedDataset)
   return res.send(patchedDataset)
 }))
 
@@ -891,7 +889,7 @@ router.delete('/:datasetId/draft', readDataset(['finalized', 'error'], true), pe
     .findOneAndUpdate({ id: req.params.datasetId }, { $unset: { draft: '' } }, { returnDocument: 'after' })).value
   await fs.remove(datasetUtils.dir(req.dataset))
   await esUtils.delete(req.app.get('es'), req.dataset)
-  await datasetUtils.updateStaticStorage(db, patchedDataset)
+  await datasetUtils.updateStorage(db, patchedDataset)
   return res.send(patchedDataset)
 }))
 
@@ -1364,7 +1362,7 @@ router.get('/:datasetId/data-files/*', readDataset(), permissions.middleware('do
 router.post('/:datasetId/metadata-attachments', readDataset(), permissions.middleware('postMetadataAttachment', 'write'), checkStorage(false), attachments.metadataUpload(), asyncWrap(async(req, res, next) => {
   req.body.size = (await fs.promises.stat(req.file.path)).size
   req.body.updatedAt = moment().toISOString()
-  await datasetUtils.updateStaticStorage(req.app.get('db'), req.dataset)
+  await datasetUtils.updateStorage(req.app.get('db'), req.dataset)
   res.status(200).send(req.body)
 }))
 router.get('/:datasetId/metadata-attachments/*', readDataset(), permissions.middleware('downloadMetadataAttachment', 'read'), cacheHeaders.noCache, (req, res, next) => {
@@ -1377,7 +1375,7 @@ router.delete('/:datasetId/metadata-attachments/*', readDataset(), permissions.m
   const filePath = req.params['0']
   if (filePath.includes('..')) return res.status(400).send('Unacceptable attachment path')
   await fs.remove(path.join(datasetUtils.metadataAttachmentsDir(req.dataset), filePath))
-  await datasetUtils.updateStaticStorage(req.app.get('db'), req.dataset)
+  await datasetUtils.updateStorage(req.app.get('db'), req.dataset)
   res.status(204).send()
 }))
 

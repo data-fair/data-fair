@@ -98,20 +98,12 @@ module.exports = {
     __format: 'json',
   },
   defaultLimits: {
-    totalDynamicStorage: {
-      __name: 'DEFAULT_LIMITS_TOTAL_DYNAMIC_STORAGE',
+    totalStorage: {
+      __name: 'DEFAULT_LIMITS_TOTAL_STORAGE',
       __format: 'json',
     },
-    totalStaticStorage: {
-      __name: 'DEFAULT_LIMITS_TOTAL_STATIC_STORAGE',
-      __format: 'json',
-    },
-    datasetDynamicStorage: {
-      __name: 'DEFAULT_LIMITS_DATASET_DYNAMIC_STORAGE',
-      __format: 'json',
-    },
-    datasetStaticStorage: {
-      __name: 'DEFAULT_LIMITS_DATASET_STATIC_STORAGE',
+    datasetStorage: {
+      __name: 'DEFAULT_LIMITS_DATASET_STORAGE',
       __format: 'json',
     },
     nbDatasets: {

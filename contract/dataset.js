@@ -243,28 +243,12 @@ module.exports = {
       type: 'object',
       description: 'All storage space info of this dataset',
       properties: {
-        dynamicSize: { type: 'integer' },
-        dynamicParts: {
-          type: 'array',
-          items: {
-            type: 'object',
-            properties: {
-              name: { type: 'string' },
-              size: { type: 'integer' },
-            },
-          },
-        },
-        staticSize: { type: 'integer' },
-        staticParts: {
-          type: 'array',
-          items: {
-            type: 'object',
-            properties: {
-              name: { type: 'string' },
-              size: { type: 'integer' },
-            },
-          },
-        },
+        size: { type: 'integer' },
+        fileSize: { type: 'integer' },
+        attachmentsSize: { type: 'integer' },
+        collectionSize: { type: 'integer' },
+        revisionSize: { type: 'integer' },
+        exportedSize: { type: 'integer' },
       },
     },
     createdAt: {

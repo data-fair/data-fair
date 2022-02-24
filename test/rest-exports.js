@@ -27,8 +27,8 @@ describe('REST datasets exported', () => {
     const dataset = await workers.hook('restExporterCSV/rest')
     assert.ok(!!dataset.exports.restToCSV.lastExport)
     assert.ok(dataset.exports.restToCSV.nextExport !== nextExport)
-    assert.equal(dataset.storage.staticParts.find(sp => sp.name === 'rest-last-export.csv').size, 48)
-    assert.equal(dataset.storage.staticSize, dataset.storage.staticParts.find(sp => sp.name === 'rest-last-export.csv').size + dataset.storage.staticParts.find(sp => sp.name === 'rest-lines').size)
+    assert.equal(dataset.storage.exportedSize, 48)
+    assert.equal(dataset.storage.size, dataset.storage.exportedSize + dataset.storage.collectionSize)
 
     const dataFiles = (await ax.get(`/api/v1/datasets/${dataset.id}/data-files`)).data
     assert.equal(dataFiles.length, 1)

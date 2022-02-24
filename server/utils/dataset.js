@@ -81,19 +81,27 @@ exports.lsMetadataAttachments = async (dataset) => {
   return files
 }
 
-exports.lsFiles = async (dataset, keepAbsolute = false) => {
-  const datasetDir = exports.dir(dataset)
-  if (!await fs.pathExists(datasetDir)) return []
-  const files = (await dir.promiseFiles(datasetDir))
-    .map(f => ({ absolutePath: f }))
-  for (const file of files) {
-    const stats = await fs.stat(file.absolutePath)
-    file.path = path.relative(datasetDir, file.absolutePath)
-    if (!keepAbsolute) delete file.absolutePath
-    file.size = stats.size
-    file.updatedAt = stats.mtime
+exports.lsFiles = async (dataset) => {
+  const infos = {}
+  if (dataset.file) {
+    const filePath = exports.fileName(dataset)
+    infos.file = { filePath, size: (await fs.promises.stat(filePath)).size }
   }
-  return files
+  if (dataset.originalFile) {
+    const filePath = exports.originalFileName(dataset)
+    infos.originalFile = { filePath, size: (await fs.promises.stat(filePath)).size }
+  }
+  if (dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')) {
+    const dirPath = exports.attachmentsDir(dataset)
+    const paths = await exports.lsAttachments(dataset)
+    const files = []
+    for (const p of paths) {
+      const filePath = path.join(dirPath, p)
+      files.push({ filePath, size: (await fs.promises.stat(filePath)).size })
+    }
+    infos.extractedFiles = { nb: files.length, files }
+  }
+  return infos
 }
 
 exports.dataFiles = async (dataset) => {
@@ -411,109 +419,87 @@ exports.sampleValues = async (dataset) => {
   return sampleValues
 }
 
-exports.staticStorage = async (db, dataset) => {
-  const files = await exports.lsFiles(dataset, true)
-  const parts = []
-  let attachmentsSize = 0
-  let metadataAttachmentsSize = 0
-  for (const file of files) {
-    if (file.absolutePath.startsWith(exports.attachmentsDir(dataset) + '/')) attachmentsSize += file.size
-    else if (file.absolutePath.startsWith(exports.metadataAttachmentsDir(dataset) + '/')) metadataAttachmentsSize += file.size
-    else parts.push({ name: file.path, size: file.size })
+exports.storage = async (db, dataset) => {
+  const storage = {
+    size: 0,
   }
-  if (attachmentsSize) parts.push({ name: 'attachments', size: attachmentsSize })
-  if (metadataAttachmentsSize) parts.push({ name: 'metadata-attachments', size: metadataAttachmentsSize })
-
+  if (!dataset.draftReason && dataset.file && await fs.pathExists(exports.fullFileName(dataset))) {
+    const fullSize = (await fs.promises.stat(exports.fullFileName(dataset))).size
+    storage.size += fullSize
+    storage.fileSize = fullSize
+  } else {
+    if (dataset.originalFile && dataset.originalFile.size) {
+      storage.size += dataset.originalFile.size
+      storage.fileSize = dataset.originalFile.size
+    } else if (dataset.file && dataset.file.size) {
+      storage.size += dataset.file.size
+      storage.fileSize = dataset.file.size
+    }
+  }
+  const attachments = await exports.lsAttachments(dataset)
+  for (const attachment of attachments) {
+    const attachmentSize = (await fs.promises.stat(path.join(exports.attachmentsDir(dataset), attachment))).size
+    storage.size += attachmentSize
+    storage.attachmentsSize = (storage.attachmentsSize || 0) + attachmentSize
+  }
+  const metaAttachments = await exports.lsMetadataAttachments(dataset)
+  for (const attachment of metaAttachments) {
+    const attachmentSize = (await fs.promises.stat(path.join(exports.metadataAttachmentsDir(dataset), attachment))).size
+    storage.size += attachmentSize
+    storage.attachmentsSize = (storage.attachmentsSize || 0) + attachmentSize
+  }
   if (dataset.isRest) {
     const collection = await restDatasetsUtils.collection(db, dataset)
     const stats = await collection.stats()
-    parts.push({ name: 'rest-lines', size: stats.size })
+    // we remove 100 bytes per line that are not really part of the original payload but added by us:
+    // _updatedAt, _needsIndexing, _hash and _i.
+    storage.collectionSize = Math.max(0, stats.size - (stats.count * 40))
+    storage.size += storage.collectionSize
 
     if (dataset.rest && dataset.rest.history) {
       const revisionsCollection = await restDatasetsUtils.revisionsCollection(db, dataset)
       const revisionsStats = await revisionsCollection.stats()
-      parts.push({ name: 'rest-revisions', size: revisionsStats.size })
+      // we remove 60 bytes per line that are not really part of the original payload but added by _action, _updatedAt, _hash and _i.
+      storage.revisionsSize = Math.max(0, revisionsStats.size - (revisionsStats.count * 40))
+      storage.size += storage.revisionsSize
+    }
+
+    if (await fs.pathExists(exports.exportedFileName(dataset, '.csv'))) {
+      const exportedSize = (await fs.promises.stat(exports.exportedFileName(dataset, '.csv'))).size
+      storage.size += exportedSize
+      storage.exportedSize = exportedSize
     }
   }
-
-  if (dataset.draft && dataset.draft.draftReason) {
-    const draftFiles = await exports.lsFiles(exports.mergeDraft({ ...dataset }), true)
-    const draftSize = draftFiles.reduce((a, df) => a + df.size, 0)
-    parts.push({ name: 'draft-files', size: draftSize })
-  }
-
-  return parts.sort((p1, p2) => p2.size - p1.size)
+  return storage
 }
 
-exports.dynamicStorage = async (esClient, indexName, dataset) => {
-  const parts = []
-  if (dataset.draftReason) {
-    // we just indexed a draft but we want info from current index too
-    try {
-      const size = (await esClient.indices.stats({ index: esUtils.aliasName({ ...dataset, draftReason: null }) })).body._all.primaries.store.size_in_bytes
-      parts.push({ name: 'index', size })
-    } catch (err) {
-      if (err.statusCode !== 404) throw err
-    }
-  }
-
-  const size = (await esClient.indices.stats({ index: indexName })).body._all.primaries.store.size_in_bytes
-  parts.push({ name: dataset.draftReason ? 'draft-index' : 'index', size })
-  return parts.sort((p1, p2) => p2.size - p1.size)
-}
-
-exports.totalStorage = async (db, owner, key = 'dynamicSize') => {
+exports.totalStorage = async (db, owner) => {
   const aggQuery = [
     { $match: { 'owner.type': owner.type, 'owner.id': owner.id } },
-    { $project: { 'storage.dynamicSize': 1, 'storage.staticSize': 1 } },
-    {
-      $group: {
-        _id: null,
-        totalSize: { $sum: '$storage.' + key },
-      },
-    }]
+    { $project: { 'storage.size': 1 } },
+    { $group: { _id: null, totalSize: { $sum: '$storage.size' } } },
+  ]
   const res = await db.collection('datasets').aggregate(aggQuery).toArray()
   return (res[0] && res[0].totalSize) || 0
 }
 
 // After a change that might impact consumed storage, we store the value
-exports.updateStaticStorage = async (db, dataset, deleted = false) => {
-  const parts = await exports.staticStorage(db, dataset)
-  const size = parts.reduce((a, p) => a + p.size, 0)
-  if (!deleted) {
-    await db.collection('datasets')
-      .updateOne({ id: dataset.id }, { $set: { 'storage.staticParts': parts, 'storage.staticSize': size } })
-  }
-  await limits.setConsumption(db, dataset.owner, 'store_static_bytes', await exports.totalStorage(db, dataset.owner, 'staticSize'))
-  return { parts, size }
+exports.updateStorage = async (db, dataset, deleted = false) => {
+  if (!deleted) await db.collection('datasets').updateOne({ id: dataset.id }, { $set: { storage: await exports.storage(db, dataset) } })
+  await limits.setConsumption(db, dataset.owner, 'store_bytes', await exports.totalStorage(db, dataset.owner))
 }
-exports.updateDynamicStorage = async (db, esClient, indexName, dataset) => {
-  const parts = await exports.dynamicStorage(esClient, indexName, dataset)
-  const size = parts.reduce((a, p) => a + p.size, 0)
-  await db.collection('datasets')
-    .updateOne({ id: dataset.id }, { $set: { 'storage.dynamicParts': parts, 'storage.dynamicSize': size } })
-  await limits.setConsumption(db, dataset.owner, 'store_bytes', await exports.totalStorage(db, dataset.owner, 'dynamicSize'))
-  return { parts, size }
-}
+
 exports.updateNbDatasets = async (db, owner) => {
   const count = await db.collection('datasets').countDocuments({ 'owner.type': owner.type, 'owner.id': owner.id })
   await limits.setConsumption(db, owner, 'nb_datasets', count)
 }
 
-exports.remainingDynamicStorage = async (db, owner) => {
+exports.remainingStorage = async (db, owner) => {
   const limits = await db.collection('limits')
     .findOne({ type: owner.type, id: owner.id })
-  const limit = (limits && limits.store_bytes && ![undefined, null].includes(limits.store_bytes.limit)) ? limits.store_bytes.limit : config.defaultLimits.totalDynamicStorage
+  const limit = (limits && limits.store_bytes && ![undefined, null].includes(limits.store_bytes.limit)) ? limits.store_bytes.limit : config.defaultLimits.totalStorage
   if (limit === -1) return -1
   const consumption = (limits && limits.store_bytes && limits.store_bytes.consumption) || 0
-  return Math.max(0, limit - consumption)
-}
-exports.remainingStaticStorage = async (db, owner) => {
-  const limits = await db.collection('limits')
-    .findOne({ type: owner.type, id: owner.id })
-  const limit = (limits && limits.store_static_bytes && ![undefined, null].includes(limits.store_static_bytes.limit)) ? limits.store_static_bytes.limit : config.defaultLimits.totalStaticStorage
-  if (limit === -1) return -1
-  const consumption = (limits && limits.store_static_bytes && limits.store_static_bytes.consumption) || 0
   return Math.max(0, limit - consumption)
 }
 exports.remainingNbDatasets = async (db, owner) => {
@@ -693,7 +679,7 @@ exports.delete = async (db, es, dataset) => {
     } catch (err) {
       console.error('Error while deleting dataset indexes and alias', err)
     }
-    await exports.updateStaticStorage(db, dataset, true)
+    await exports.updateStorage(db, dataset, true)
   }
 }
 

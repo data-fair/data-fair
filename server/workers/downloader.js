@@ -32,10 +32,8 @@ exports.process = async function(app, dataset) {
   }
 
   // Manage file size
-  const remainingStaticStorage = await datasetUtils.remainingStaticStorage(app.get('db'), dataset.owner)
-  if (remainingStaticStorage === 0) throw new Error('Vous avez atteint la limite de votre espace de stockage statique.')
-  const remainingDynamicStorage = await datasetUtils.remainingDynamicStorage(app.get('db'), dataset.owner)
-  if (remainingDynamicStorage === 0) throw new Error('Vous avez atteint la limite de votre espace de stockage dynamique.')
+  const remainingStorage = await datasetUtils.remainingStorage(app.get('db'), dataset.owner)
+  if (remainingStorage === 0) throw new Error('Vous avez atteint la limite de votre espace de stockage.')
 
   const fileName = datasetUtils.originalFileName({ ...dataset, ...patch })
   await pump(
@@ -55,5 +53,5 @@ exports.process = async function(app, dataset) {
     patch.file.encoding = chardet.detect(fileSample)
   }
   await datasetUtils.applyPatch(db, dataset, patch)
-  await datasetUtils.updateStaticStorage(app.get('db'), dataset)
+  await datasetUtils.updateStorage(app.get('db'), dataset)
 }

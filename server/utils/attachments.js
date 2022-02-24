@@ -66,7 +66,7 @@ const metadataUpload = multer({
       const estimatedFileSize = contentLength - 210
       const attachmentLimit = config.defaultLimits.attachmentStorage
       if (attachmentLimit !== -1 && attachmentLimit < estimatedFileSize) throw createError(413, 'Attachment size exceeds the authorized limit')
-      let remainingStorage = await datasetUtils.remainingStaticStorage(req.app.get('db'), req.dataset.owner)
+      let remainingStorage = await datasetUtils.remainingStorage(req.app.get('db'), req.dataset.owner)
       if (remainingStorage !== -1) {
         // Ignore the size of the attachment we are overwriting
         const existingAttachment = (req.dataset.attachments || []).find(a => a.name === file.originalname)

@@ -15,10 +15,8 @@ async function ownerStats(db, owner) {
   const limits = await db.collection('limits')
     .findOne({ type: owner.type, id: owner.id })
   return {
-    dynamicStorage: await datasetUtils.totalStorage(db, owner, 'dynamicSize'),
-    dynamicStorageLimit: limits && limits.store_bytes && (limits.store_bytes.limit !== undefined) ? limits.store_bytes.limit : config.defaultLimits.totalDynamicStorage,
-    staticStorage: await datasetUtils.totalStorage(db, owner, 'staticSize'),
-    staticStorageLimit: limits && limits.store_bytes && (limits.store_static_bytes.limit !== undefined) ? limits.store_static_bytes.limit : config.defaultLimits.totalStaticStorage,
+    storage: await datasetUtils.totalStorage(db, owner),
+    storageLimit: limits && limits.store_bytes && (limits.store_bytes.limit !== undefined) ? limits.store_bytes.limit : config.defaultLimits.totalStorage,
     datasets: await ownerCount(db, 'datasets', owner),
     applications: await ownerCount(db, 'applications', owner),
   }

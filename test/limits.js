@@ -1,12 +1,11 @@
 const FormData = require('form-data')
 const assert = require('assert').strict
-const config = require('config')
 const testUtils = require('./resources/test-utils')
 const workers = require('../server/workers')
+const config = require('config')
 
 const baseLimit = {
   store_bytes: { limit: 300000, consumption: 0 },
-  store_static_bytes: { limit: 300000, consumption: 0 },
   nb_datasets: { limit: 10, consumption: 0 },
   lastUpdate: new Date().toISOString(),
 }
@@ -63,8 +62,8 @@ describe('limits', () => {
 
     res = await ax.get('/api/v1/limits/user/dmeadus0')
     assert.equal(res.status, 200)
-    assert.equal(res.data.store_static_bytes.limit, 300000)
-    assert.equal(res.data.store_static_bytes.consumption, 250000)
+    assert.equal(res.data.store_bytes.limit, 300000)
+    assert.equal(res.data.store_bytes.consumption, 250000)
   })
 
   it('A user cannot change limits', async () => {

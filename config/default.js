@@ -76,11 +76,9 @@ module.exports = {
   defaultLimits: {
     // Maximum storage space per user or organization
     // -1 for unlimited storage
-    totalDynamicStorage: -1,
-    totalStaticStorage: -1,
+    totalStorage: -1,
     // Maximum storage space for 1 dataset
-    datasetStaticStorage: -1,
-    datasetDynamicStorage: -1,
+    datasetStorage: -1,
     // maximum number of datasets
     nbDatasets: -1,
     // Maximum storage space for 1 attachment
