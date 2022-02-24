@@ -69,11 +69,10 @@ describe('CSV cases', () => {
 
   it('A CSV with wrong number of separators in a line', async () => {
     const ax = global.ax.dmeadus
-    try {
-      await testUtils.sendDataset('csv-cases/dataset-bad-separators.csv', ax)
-    } catch (err) {
+    assert.rejects(testUtils.sendDataset('csv-cases/dataset-bad-separators.csv', ax), (err) => {
       assert.ok(err.message.includes('format est probablement invalide'))
-    }
+      return true
+    })
   })
 
   it('A CSV with lots of empty values', async () => {
