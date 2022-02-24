@@ -62,15 +62,15 @@
             .map(d => ({
               id: d.id,
               title: d.title || d.id,
-              size: d.storage.staticSize,
-              tooltip: `${d.title || d.id} - ${Vue.filter('displayBytes')(d.storage.staticSize, this.$i18n.locale)} - ${{ public: 'Public', private: 'Privé', protected: 'Protégé' }[d.visibility]}`,
+              size: d.storage.size,
+              tooltip: `${d.title || d.id} - ${Vue.filter('displayBytes')(d.storage.size, this.$i18n.locale)} - ${{ public: 'Public', private: 'Privé', protected: 'Protégé' }[d.visibility]}`,
               to: `/dataset/${d.id}`,
               color: this.visibilityColor(d.visibility),
             })),
         }
         if (this.datasets.count > this.datasets.results.length) {
           const nbOthers = this.datasets.count - this.datasets.results.length
-          const size = this.stats.storage - this.datasets.results.reduce((a, d) => a + d.storage.staticSize, 0)
+          const size = this.stats.storage - this.datasets.results.reduce((a, d) => a + d.storage.size, 0)
           const title = nbOthers === 1 ? '1 autre jeu de donnée' : nbOthers.toLocaleString() + ' autres jeux de données'
           data.children.push({
             id: '_others',

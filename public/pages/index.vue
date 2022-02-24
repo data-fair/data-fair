@@ -93,17 +93,17 @@
                     </i18n>
                   </span>
                   <span v-else v-t="'datasetsCountNone'" />
-                  <i18n v-if="stats.staticStorageLimit && stats.staticStorageLimit !== -1" path="storageWithLimit">
+                  <i18n v-if="stats.storageLimit && stats.storageLimit !== -1" path="storageWithLimit">
                     <template #bytes>
-                      {{ stats.staticStorage | displayBytes($i18n.locale) }}
+                      {{ stats.storage | displayBytes($i18n.locale) }}
                     </template>
                     <template #bytesLimit>
-                      {{ stats.staticStorageLimit | displayBytes($i18n.locale) }}
+                      {{ stats.storageLimit | displayBytes($i18n.locale) }}
                     </template>
                   </i18n>
                   <i18n v-else path="storageWithoutLimit">
                     <template #bytes>
-                      {{ stats.staticStorage | displayBytes($i18n.locale) }}
+                      {{ stats.storage | displayBytes($i18n.locale) }}
                     </template>
                   </i18n>
                 </p>
@@ -319,7 +319,7 @@ en:
       })
 
       this.datasets = await this.$axios.$get('api/v1/datasets', {
-        params: { size: 11, owner: owner, select: 'id,title,storage', sort: 'storage.staticSize:-1' },
+        params: { size: 11, owner: owner, select: 'id,title,storage', sort: 'storage.size:-1' },
       })
 
       this.baseApps = (await this.$axios.$get('api/v1/base-applications', {

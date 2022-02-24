@@ -8,21 +8,24 @@
               :href="dataset.page"
               target="_top"
             >{{ dataset.title || dataset.id }}</a>
+            <span v-if="dataset.storage">({{ dataset.storage.size | displayBytes($i18n.locale) }})</span>
+            <span v-else v-t="'noInfo'" />
           </v-list-item-title>
           <template v-if="dataset.storage">
-            <v-list-item-subtitle v-if="dataset.storage">
-              <b>{{ dataset.storage.staticSize | displayBytes($i18n.locale) }} {{ $t('static') }} :</b>
-              <template v-for="(part, i) in dataset.storage.staticParts">
-                <span :key="'static-size-part-' + i">{{ $t(part.name) }} ({{ part.size | displayBytes($i18n.locale) }})</span>
-                <span v-if="i < dataset.storage.staticParts.length - 1" :key="'static-size-sep-' + i"> - </span>
-              </template>
+            <v-list-item-subtitle v-if="dataset.storage.fileSize">
+              {{ dataset.storage.fileSize | displayBytes($i18n.locale) }} {{ $t('files') }}
             </v-list-item-subtitle>
-            <v-list-item-subtitle v-if="dataset.storage.dynamicSize">
-              <b>{{ dataset.storage.dynamicSize | displayBytes($i18n.locale) }} {{ $t('dynamic') }} :</b>
-              <template v-for="(part, i) in dataset.storage.dynamicParts">
-                <span :key="'dynamic-size-part-' + i">{{ $t(part.name) }} ({{ part.size | displayBytes($i18n.locale) }})</span>
-                <span v-if="i < dataset.storage.dynamicParts.length - 1" :key="'dynamic-size-sep-' + i"> - </span>
-              </template>
+            <v-list-item-subtitle v-if="dataset.storage.attachmentsSize">
+              {{ dataset.storage.attachmentsSize | displayBytes($i18n.locale) }} {{ $t('attachments') }}
+            </v-list-item-subtitle>
+            <v-list-item-subtitle v-if="dataset.storage.collectionSize">
+              {{ dataset.storage.collectionSize | displayBytes($i18n.locale) }} {{ $t('db') }}
+            </v-list-item-subtitle>
+            <v-list-item-subtitle v-if="dataset.storage.revisionsSize">
+              {{ dataset.storage.revisionsSize | displayBytes($i18n.locale) }} {{ $t('revisions') }}
+            </v-list-item-subtitle>
+            <v-list-item-subtitle v-if="dataset.storage.exportedSize">
+              {{ dataset.storage.exportedSize | displayBytes($i18n.locale) }} {{ $t('exported') }}
             </v-list-item-subtitle>
           </template>
         </v-list-item-content>
@@ -37,23 +40,20 @@
 
 <i18n lang="yaml">
 fr:
-  static: de données statiques
-  dynamic: de données dynamiques
-  draft-files: fichiers brouillons
-  attachments: fichiers joints
-  metadata-attachments: pièces jointes aux métadonnées
-  draft-index: index brouillon
-  rest-lines: lignes de données
-  rest-revisions: historique des lignes de données
+  noInfo: (pas d'information de stockage)
+  files: de fichier de données
+  attachments: de pièces jointes
+  db: de lignes en base de données
+  revisions: de révisions historisées
+  exported: de fichier exporté
 en:
-  static: of static data
-  dynamic: of dynamic data
-  draft-files: draft files
-  attachments: attached files
-  metadata-attachments: metadata attachments
-  draft-index: draft index
-  rest-lines: data lines
-  rest-revisions: history of data lines
+  noInfo: (no storage information)
+  files: of data files
+  attachments: of attachments
+  db: of lines in database
+  revisions: of revisions histories
+  exported: of exported file
+
 </i18n>
 
 <script>
