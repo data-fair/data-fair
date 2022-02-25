@@ -223,7 +223,8 @@ exports.prepareQuery = (dataset, query) => {
     }
   })
   if (query.qs) {
-    checkQuery(queryParser.parse(query.qs), dataset.schema)
+    // lucene-query-parser as a bug where it doesn't accept escaped quotes inside quotes
+    checkQuery(queryParser.parse(query.qs.replace('\\"', '')), dataset.schema)
     must.push({ query_string: { query: query.qs, fields: searchFields } })
   }
   if (query.q) {
@@ -455,4 +456,32 @@ exports.errorMessage = (err) => {
     }
   }
   return parts.join(' - ')
+}
+
+// cf https://github.com/joeybaker/lucene-escape-query/blob/master/index.js
+exports.escapeFilter = (val) => {
+  if (typeof val !== 'string') return val
+  return [].map.call(val, (char) => {
+    if (char === '+' ||
+      char === '-' ||
+      char === '&' ||
+      char === '|' ||
+      char === '!' ||
+      char === '(' ||
+      char === ')' ||
+      char === '{' ||
+      char === '}' ||
+      char === '[' ||
+      char === ']' ||
+      char === '^' ||
+      char === '"' ||
+      char === '~' ||
+      char === '*' ||
+      char === '?' ||
+      char === ':' ||
+      char === '\\' ||
+      char === '/'
+    ) return '\\' + char
+    else return char
+  }).join('')
 }

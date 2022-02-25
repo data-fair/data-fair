@@ -36,7 +36,7 @@ exports.bulkSearchStreams = async (db, es, dataset, contentType, bulkSearchId, s
         throw createError(400, `la propriété en entrée ${input.property.key} est obligatoire`)
       }
       if (input.type === 'equals') {
-        qs.push(`${input.property.key}:"${line[input.property.key]}"`)
+        qs.push(`${esUtils.escapeFilter(input.property.key)}:"${esUtils.escapeFilter(line[input.property.key])}"`)
       } else if (input.type === 'date-in-interval') {
         const startDate = dataset.schema.find(p => p['x-refersTo'] === 'https://schema.org/startDate')
         const endDate = dataset.schema.find(p => p['x-refersTo'] === 'https://schema.org/endDate')
@@ -72,6 +72,7 @@ exports.bulkSearchStreams = async (db, es, dataset, contentType, bulkSearchId, s
         }))
         let esResponse
         try {
+          console.log(queries)
           esResponse = await esUtils.multiSearch(es, dataset, queries)
         } catch (err) {
           console.error(`master-data multisearch query error ${dataset.id}`, err)
