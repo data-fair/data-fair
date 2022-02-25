@@ -1,8 +1,7 @@
 const express = require('express')
-const config = require('config')
-const datasetUtils = require('../utils/dataset')
 const asyncWrap = require('../utils/async-wrap')
 const cacheHeaders = require('../utils/cache-headers')
+const limitsUtils = require('../utils/limits')
 
 const router = module.exports = express.Router()
 
@@ -12,12 +11,9 @@ router.get('', cacheHeaders.noCache, asyncWrap(async(req, res) => {
 }))
 
 async function ownerStats(db, owner) {
-  const limits = await db.collection('limits')
-    .findOne({ type: owner.type, id: owner.id })
+  const limits = await limitsUtils.getLimits(db, owner)
   return {
-    storage: await datasetUtils.totalStorage(db, owner),
-    storageLimit: limits && limits.store_bytes && (limits.store_bytes.limit !== undefined) ? limits.store_bytes.limit : config.defaultLimits.totalStorage,
-    datasets: await ownerCount(db, 'datasets', owner),
+    limits,
     applications: await ownerCount(db, 'applications', owner),
   }
 }

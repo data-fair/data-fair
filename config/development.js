@@ -19,6 +19,8 @@ module.exports = {
   // subscriptionUrl: 'https://staging-koumoul.com/s/customers/embed/subscription',
   defaultLimits: {
     totalStorage: 1000000000,
+    totalIndexed: 1000000000,
+    nbDatasets: 100,
     // datasetStorage: -1,
   },
   locks: {

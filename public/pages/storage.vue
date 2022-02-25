@@ -16,10 +16,25 @@
             >
               <template v-slot:item="{item}">
                 <tr>
-                  <td>{{ item.datasets }}</td>
-                  <td>{{ item.storage | displayBytes($i18n.locale) }}</td>
-                  <td>{{ item.storageLimit | displayBytes($i18n.locale) }}</td>
-                  <td>{{ item.applications }}</td>
+                  <td>
+                    {{ item.limits.nb_datasets.consumption.toLocaleString() }}
+                    <template v-if="item.limits.nb_datasets.limit !== -1">
+                      / {{ item.limits.nb_datasets.limit.toLocaleString() }} autorisés
+                    </template>
+                  </td>
+                  <td>
+                    {{ item.limits.store_bytes.consumption | displayBytes($i18n.locale) }}
+                    <template v-if="item.limits.store_bytes.limit !== -1">
+                      / {{ item.limits.store_bytes.limit | displayBytes($i18n.locale) }} autorisé
+                    </template>
+                  </td>
+                  <td>
+                    {{ item.limits.indexed_bytes.consumption | displayBytes($i18n.locale) }}
+                    <template v-if="item.limits.indexed_bytes.limit !== -1">
+                      / {{ item.limits.indexed_bytes.limit | displayBytes($i18n.locale) }} autorisé
+                    </template>
+                  </td>
+                  <td>{{ item.applications.toLocaleString() }}</td>
                 </tr>
               </template>
             </v-data-table>
@@ -51,8 +66,8 @@
       stats: null,
       headers: [
         { text: 'Nombre de jeux de données', value: 'datasets', sortable: false },
-        { text: 'Espace consommé', value: 'storage', sortable: false },
-        { text: 'Espace total disponible', value: 'storageLimit', sortable: false },
+        { text: 'Espace de stockage', value: 'storage', sortable: false },
+        { text: 'Données indexées', value: 'storageLimit', sortable: false },
         { text: 'Nombre de visualisations', value: 'applications', sortable: false },
       ],
     }),

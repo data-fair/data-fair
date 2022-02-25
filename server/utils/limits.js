@@ -39,10 +39,15 @@ exports.getLimits = async (db, consumer) => {
       name: consumer.name || consumer.id,
       lastUpdate: now.toISOString(),
       defaults: true,
-      ...config.anonymousLimits,
     }
     await coll.insertOne(limits)
   }
+  limits.store_bytes = limits.store_bytes || { consumption: 0 }
+  if ([undefined, null].includes(limits.store_bytes.limit)) limits.store_bytes.limit = config.defaultLimits.totalStorage
+  limits.indexed_bytes = limits.indexed_bytes || { consumption: 0 }
+  if ([undefined, null].includes(limits.indexed_bytes.limit)) limits.indexed_bytes.limit = config.defaultLimits.totalIndexed
+  limits.nb_datasets = limits.nb_datasets || { consumption: 0 }
+  if ([undefined, null].includes(limits.nb_datasets.limit)) limits.nb_datasets.limit = config.defaultLimits.nbDatasets
   return limits
 }
 
@@ -54,7 +59,7 @@ exports.get = async (db, consumer, type) => {
   return res
 }
 
-const calculateRemainingLimit = (limits, key, defaultLimit) => {
+const calculateRemainingLimit = (limits, key) => {
   const limit = (limits && limits[key] && ![undefined, null].includes(limits[key].limit)) ? limits[key].limit : defaultLimit
   if (limit === -1) return -1
   const consumption = (limits && limits[key] && limits[key].consumption) || 0
@@ -62,11 +67,11 @@ const calculateRemainingLimit = (limits, key, defaultLimit) => {
 }
 
 exports.remaining = async (db, consumer) => {
-  const limits = await db.collection('limits').findOne({ type: consumer.type, id: consumer.id })
+  const limits = await exports.getLimits(db, consumer)
   return {
-    storage: calculateRemainingLimit(limits, 'store_bytes', config.defaultLimits.totalStorage),
-    indexed: calculateRemainingLimit(limits, 'indexed_bytes', config.defaultLimits.totalIndexed),
-    nbDatasets: calculateRemainingLimit(limits, 'nb_datasets', config.defaultLimits.nbDatasets),
+    storage: calculateRemainingLimit(limits, 'store_bytes'),
+    indexed: calculateRemainingLimit(limits, 'indexed_bytes'),
+    nbDatasets: calculateRemainingLimit(limits, 'nb_datasets'),
   }
 }
 

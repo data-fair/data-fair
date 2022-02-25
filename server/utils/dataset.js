@@ -480,7 +480,7 @@ exports.storage = async (db, dataset) => {
   storage.size += storage.attachments.size
   const documentProperty = dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')
   if (documentProperty && (!documentProperty['x-capabilities'] || documentProperty['x-capabilities'].indexAttachment !== false)) {
-    storage.indexed += storage.attachmentsSize
+    storage.indexed.size += storage.attachments.size
     storage.indexedParts += 'attachments'
   }
 
@@ -497,18 +497,20 @@ exports.storage = async (db, dataset) => {
 exports.totalStorage = async (db, owner) => {
   const aggQuery = [
     { $match: { 'owner.type': owner.type, 'owner.id': owner.id } },
-    { $project: { 'storage.size': 1 } },
-    { $group: { _id: null, totalSize: { $sum: '$storage.size' } } },
+    { $project: { 'storage.size': 1, 'storage.indexed.size': 1 } },
+    { $group: { _id: null, size: { $sum: '$storage.size' }, indexed: { $sum: '$storage.indexed.size' } } },
   ]
   const res = await db.collection('datasets').aggregate(aggQuery).toArray()
-  return (res[0] && res[0].totalSize) || 0
+  return { size: (res[0] && res[0].size) || 0, indexed: (res[0] && res[0].indexed) || 0 }
 }
 
 // After a change that might impact consumed storage, we store the value
 exports.updateStorage = async (db, dataset, deleted = false) => {
   if (dataset.draftReason) console.log(new Error('updateStorage should not be called on a draft dataset'))
   if (!deleted) await db.collection('datasets').updateOne({ id: dataset.id }, { $set: { storage: await exports.storage(db, dataset) } })
-  await limits.setConsumption(db, dataset.owner, 'store_bytes', await exports.totalStorage(db, dataset.owner))
+  const totalStorage = await exports.totalStorage(db, dataset.owner)
+  await limits.setConsumption(db, dataset.owner, 'store_bytes', totalStorage.size)
+  await limits.setConsumption(db, dataset.owner, 'indexed_bytes', totalStorage.indexed)
 }
 
 exports.updateNbDatasets = async (db, owner) => {
