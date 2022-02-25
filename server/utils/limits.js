@@ -40,7 +40,11 @@ exports.getLimits = async (db, consumer) => {
       lastUpdate: now.toISOString(),
       defaults: true,
     }
-    await coll.insertOne(limits)
+    try {
+      await coll.insertOne(limits)
+    } catch (err) {
+      if (err.code !== 11000) throw err
+    }
   }
   limits.store_bytes = limits.store_bytes || { consumption: 0 }
   if ([undefined, null].includes(limits.store_bytes.limit)) limits.store_bytes.limit = config.defaultLimits.totalStorage
