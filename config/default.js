@@ -77,8 +77,10 @@ module.exports = {
     // Maximum storage space per user or organization
     // -1 for unlimited storage
     totalStorage: -1,
+    totalIndexed: -1,
     // Maximum storage space for 1 dataset
     datasetStorage: -1,
+    datasetIndexed: -1,
     // maximum number of datasets
     nbDatasets: -1,
     // Maximum storage space for 1 attachment

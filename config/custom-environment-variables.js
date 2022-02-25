@@ -102,8 +102,16 @@ module.exports = {
       __name: 'DEFAULT_LIMITS_TOTAL_STORAGE',
       __format: 'json',
     },
+    totalIndexed: {
+      __name: 'DEFAULT_LIMITS_TOTAL_INDEXED',
+      __format: 'json',
+    },
     datasetStorage: {
       __name: 'DEFAULT_LIMITS_DATASET_STORAGE',
+      __format: 'json',
+    },
+    datasetIndexed: {
+      __name: 'DEFAULT_LIMITS_DATASET_INDEXED',
       __format: 'json',
     },
     nbDatasets: {

@@ -34,6 +34,7 @@ const cache = require('../utils/cache')
 const cacheHeaders = require('../utils/cache-headers')
 const webhooks = require('../utils/webhooks')
 const outputs = require('../utils/outputs')
+const limits = require('../utils/limits')
 const datasetPatchSchema = require('../../contract/dataset-patch')
 const validatePatch = ajv.compile(datasetPatchSchema)
 const datasetPostSchema = require('../../contract/dataset-post')
@@ -65,7 +66,7 @@ function clean(publicUrl, dataset, thumbnail, draft = false) {
   return dataset
 }
 
-const checkStorage = (overwrite) => asyncWrap(async (req, res, next) => {
+const checkStorage = (overwrite, indexed = false) => asyncWrap(async (req, res, next) => {
   if (process.env.NO_STORAGE_CHECK === 'true') return next()
   if (!req.get('Content-Length')) throw createError(411, 'Content-Length is mandatory')
   const contentLength = Number(req.get('Content-Length'))
@@ -73,30 +74,36 @@ const checkStorage = (overwrite) => asyncWrap(async (req, res, next) => {
   const estimatedContentSize = contentLength - 210
 
   const owner = req.dataset ? req.dataset.owner : usersUtils.owner(req)
-  const datasetLimit = config.defaultLimits.datasetStorage
-  if (datasetLimit !== -1 && datasetLimit < estimatedContentSize) throw createError(413, 'Dataset size exceeds the authorized limit')
-  let remainingStorage = await datasetUtils.remainingStorage(req.app.get('db'), owner)
-  if (remainingStorage !== -1) {
-    if (overwrite && req.dataset && req.dataset.storage) {
-      // ignore the size of the dataset we are overwriting
-      remainingStorage += req.dataset.storage.size
+  if (config.defaultLimits.datasetStorage !== -1 && config.defaultLimits.datasetStorage < estimatedContentSize) {
+    throw createError(413, 'Vous avez atteint la limite de votre espace de stockage pour ce jeu de données.')
+  }
+  if (config.defaultLimits.datasetIndexed !== -1 && config.defaultLimits.datasetIndexed < estimatedContentSize) {
+    throw createError(413, 'Vous dépassez la taille de données indexées autorisée pour ce jeu de données.')
+  }
+  const remaining = await limits.remaining(req.app.get('db'), owner)
+  if (overwrite && req.dataset && req.dataset.storage) {
+    // ignore the size of the dataset we are overwriting
+    if (remaining.storage !== -1) remaining.storage += req.dataset.storage.size
+    if (remaining.indexed !== -1) remaining.indexed += req.dataset.storage.size
+  }
+  const storageOk = remaining.storage === -1 || ((remaining.storage - estimatedContentSize) >= 0)
+  const indexedOk = !indexed || remaining.indexed === -1 || ((remaining.indexed - estimatedContentSize) >= 0)
+  if (!storageOk || !indexedOk) {
+    try {
+      await pump(
+        req,
+        new Writable({
+          write(chunk, encoding, callback) {
+          // do nothing wa just want to drain the request
+            callback()
+          },
+        }),
+      )
+    } catch (err) {
+      console.error('Failure to drain request that was rejected for exceeding storage limit', err)
     }
-    if ((remainingStorage - estimatedContentSize) <= 0) {
-      try {
-        await pump(
-          req,
-          new Writable({
-            write(chunk, encoding, callback) {
-            // do nothing wa just want to drain the request
-              callback()
-            },
-          }),
-        )
-      } catch (err) {
-        console.error('Failure to drain request that was rejected for exceeding storage limit', err)
-      }
-      throw createError(429, 'Vous avez atteint la limite de votre espace de stockage.')
-    }
+    if (!storageOk) throw createError(429, 'Vous avez atteint la limite de votre espace de stockage.')
+    if (!indexedOk) throw createError(429, 'Vous avez atteint la limite de votre espace de données indexées.')
   }
   next()
 })
@@ -587,12 +594,12 @@ const beforeUpload = asyncWrap(async(req, res, next) => {
   if (!req.user) return res.status(401).send()
   const owner = usersUtils.owner(req)
   if (!permissions.canDoForOwner(owner, 'datasets', 'post', req.user, req.app.get('db'))) return res.sendStatus(403)
-  if (await datasetUtils.remainingNbDatasets(req.app.get('db'), owner) === 0) {
+  if ((await limits.remaining(req.app.get('db'), owner)).nbDatasets === 0) {
     return res.status(429).send('Vous avez atteint votre nombre maximal de jeux de données autorisés.')
   }
   next()
 })
-router.post('', beforeUpload, checkStorage(true), filesUtils.uploadFile(), filesUtils.fixFormBody(validatePost), asyncWrap(async(req, res) => {
+router.post('', beforeUpload, checkStorage(true, true), filesUtils.uploadFile(), filesUtils.fixFormBody(validatePost), asyncWrap(async(req, res) => {
   req.files = req.files || []
   debugFiles('POST datasets uploaded some files', req.files)
   try {
@@ -690,7 +697,7 @@ const attemptInsert = asyncWrap(async(req, res, next) => {
     try {
       await req.app.get('db').collection('datasets').insertOne(newDataset)
       req.isNewDataset = true
-      if (await datasetUtils.remainingNbDatasets(req.app.get('db'), newDataset.owner) === 0) {
+      if ((await limits.remaining(req.app.get('db'), newDataset.owner)).nbDatasets === 0) {
         return res.status(429, 'Vous avez atteint votre nombre maximal de jeux de données autorisés.')
       }
       await datasetUtils.updateNbDatasets(req.app.get('db'), newDataset.owner)
@@ -792,8 +799,8 @@ const updateDataset = asyncWrap(async(req, res) => {
     throw err
   }
 }, { keepalive: true })
-router.post('/:datasetId', attemptInsert, readDataset(['finalized', 'error']), permissions.middleware('writeData', 'write'), checkStorage(true), filesUtils.uploadFile(), filesUtils.fixFormBody(validatePost), updateDataset)
-router.put('/:datasetId', attemptInsert, readDataset(['finalized', 'error']), permissions.middleware('writeData', 'write'), checkStorage(true), filesUtils.uploadFile(), filesUtils.fixFormBody(validatePost), updateDataset)
+router.post('/:datasetId', attemptInsert, readDataset(['finalized', 'error']), permissions.middleware('writeData', 'write'), checkStorage(true, true), filesUtils.uploadFile(), filesUtils.fixFormBody(validatePost), updateDataset)
+router.put('/:datasetId', attemptInsert, readDataset(['finalized', 'error']), permissions.middleware('writeData', 'write'), checkStorage(true, true), filesUtils.uploadFile(), filesUtils.fixFormBody(validatePost), updateDataset)
 
 // validate the draft
 router.post('/:datasetId/draft', readDataset(['finalized'], true), permissions.middleware('validateDraft', 'write'), asyncWrap(async (req, res, next) => {

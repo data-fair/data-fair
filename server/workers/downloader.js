@@ -32,8 +32,9 @@ exports.process = async function(app, dataset) {
   }
 
   // Manage file size
-  const remainingStorage = await datasetUtils.remainingStorage(app.get('db'), dataset.owner)
-  if (remainingStorage === 0) throw new Error('Vous avez atteint la limite de votre espace de stockage.')
+  const remaining = await datasetUtils.remainingStorage(app.get('db'), dataset.owner)
+  if (remaining.storage === 0) throw new Error('Vous avez atteint la limite de votre espace de stockage.')
+  if (remaining.indexed === 0) throw new Error('Vous avez atteint la limite de votre espace de données indexées.')
 
   const fileName = datasetUtils.originalFileName({ ...dataset, ...patch })
   await pump(

@@ -54,6 +54,22 @@ exports.get = async (db, consumer, type) => {
   return res
 }
 
+const calculateRemainingLimit = (limits, key, defaultLimit) => {
+  const limit = (limits && limits[key] && ![undefined, null].includes(limits[key].limit)) ? limits[key].limit : defaultLimit
+  if (limit === -1) return -1
+  const consumption = (limits && limits[key] && limits[key].consumption) || 0
+  return Math.max(0, limit - consumption)
+}
+
+exports.remaining = async (db, consumer) => {
+  const limits = await db.collection('limits').findOne({ type: consumer.type, id: consumer.id })
+  return {
+    storage: calculateRemainingLimit(limits, 'store_bytes', config.defaultLimits.totalStorage),
+    indexed: calculateRemainingLimit(limits, 'indexed_bytes', config.defaultLimits.totalIndexed),
+    nbDatasets: calculateRemainingLimit(limits, 'nb_datasets', config.defaultLimits.nbDatasets),
+  }
+}
+
 exports.incrementConsumption = async (db, consumer, type, inc) => {
   return (await db.collection('limits')
     .findOneAndUpdate({ type: consumer.type, id: consumer.id }, { $inc: { [`${type}.consumption`]: inc } }, { returnDocument: 'after', upsert: true })).value

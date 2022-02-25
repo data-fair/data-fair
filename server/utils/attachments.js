@@ -5,6 +5,7 @@ const config = require('config')
 const createError = require('http-errors')
 const mime = require('mime-types')
 const datasetUtils = require('./dataset')
+const limits = require('./limits')
 const exec = require('./exec')
 const debug = require('debug')('attachments')
 
@@ -66,13 +67,13 @@ const metadataUpload = multer({
       const estimatedFileSize = contentLength - 210
       const attachmentLimit = config.defaultLimits.attachmentStorage
       if (attachmentLimit !== -1 && attachmentLimit < estimatedFileSize) throw createError(413, 'Attachment size exceeds the authorized limit')
-      let remainingStorage = await datasetUtils.remainingStorage(req.app.get('db'), req.dataset.owner)
-      if (remainingStorage !== -1) {
+      const remaining = await limits.remaining(req.app.get('db'), req.dataset.owner)
+      if (remaining.storage !== -1) {
         // Ignore the size of the attachment we are overwriting
         const existingAttachment = (req.dataset.attachments || []).find(a => a.name === file.originalname)
-        if (existingAttachment) remainingStorage += existingAttachment.size
-        remainingStorage = Math.max(0, remainingStorage - estimatedFileSize)
-        if (remainingStorage === 0) throw createError(429, 'Vous avez atteint la limite de votre espace de stockage.')
+        if (existingAttachment) remaining.storage += existingAttachment.size
+        remaining.storage = Math.max(0, remaining.storage - estimatedFileSize)
+        if (remaining.storage === 0) throw createError(429, 'Vous avez atteint la limite de votre espace de stockage.')
       }
       // mime type is broken on windows it seems.. detect based on extension instead
       const mimeType = mime.lookup(file.originalname)

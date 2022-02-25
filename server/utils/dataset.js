@@ -516,23 +516,6 @@ exports.updateNbDatasets = async (db, owner) => {
   await limits.setConsumption(db, owner, 'nb_datasets', count)
 }
 
-exports.remainingStorage = async (db, owner) => {
-  const limits = await db.collection('limits')
-    .findOne({ type: owner.type, id: owner.id })
-  const limit = (limits && limits.store_bytes && ![undefined, null].includes(limits.store_bytes.limit)) ? limits.store_bytes.limit : config.defaultLimits.totalStorage
-  if (limit === -1) return -1
-  const consumption = (limits && limits.store_bytes && limits.store_bytes.consumption) || 0
-  return Math.max(0, limit - consumption)
-}
-exports.remainingNbDatasets = async (db, owner) => {
-  const limits = await db.collection('limits')
-    .findOne({ type: owner.type, id: owner.id })
-  const limit = (limits && limits.nb_datasets && ![undefined, null].includes(limits.nb_datasets.limit)) ? limits.nb_datasets.limit : config.defaultLimits.nbDatasets
-  if (limit === -1) return -1
-  const consumption = (limits && limits.nb_datasets && limits.nb_datasets.consumption) || 0
-  return Math.max(0, limit - consumption)
-}
-
 exports.mergeFileSchema = (dataset) => {
   dataset.schema = dataset.schema || []
   // Remove fields present in the stored schema, when absent from the raw file schema and not coming from extension
