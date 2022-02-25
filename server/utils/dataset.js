@@ -123,45 +123,46 @@ exports.dataFiles = async (dataset) => {
         mimetype: dataset.originalFile.mimetype,
       })
     }
-    if (!dataset.file) return results
-    if (dataset.file.name !== dataset.originalFile.name) {
-      if (!files.includes(dataset.file.name)) {
-        console.error('Normalized data file not found', dir, dataset.file.name)
-      } else {
-        results.push({
-          name: dataset.file.name,
-          key: 'normalized',
-          title: `Fichier normalisé (${dataset.file.mimetype.split('/').pop()})`,
-          mimetype: dataset.file.mimetype,
-        })
+    if (dataset.file) {
+      if (dataset.file.name !== dataset.originalFile.name) {
+        if (!files.includes(dataset.file.name)) {
+          console.error('Normalized data file not found', dir, dataset.file.name)
+        } else {
+          results.push({
+            name: dataset.file.name,
+            key: 'normalized',
+            title: `Fichier normalisé (${dataset.file.mimetype.split('/').pop()})`,
+            mimetype: dataset.file.mimetype,
+          })
+        }
       }
-    }
-    const parsed = path.parse(dataset.file.name)
-    if (dataset.extensions && !!dataset.extensions.find(e => e.active)) {
-      const name = `${parsed.name}-full${parsed.ext}`
-      if (!files.includes(name)) {
-        console.error('Full data file not found', path.join(dir, name))
-      } else {
-        results.push({
-          name,
-          key: 'full',
-          title: `Fichier étendu (${dataset.file.mimetype.split('/').pop()})`,
-          mimetype: dataset.file.mimetype,
-        })
+      const parsed = path.parse(dataset.file.name)
+      if (dataset.extensions && !!dataset.extensions.find(e => e.active)) {
+        const name = `${parsed.name}-full${parsed.ext}`
+        if (!files.includes(name)) {
+          console.error('Full data file not found', path.join(dir, name))
+        } else {
+          results.push({
+            name,
+            key: 'full',
+            title: `Fichier étendu (${dataset.file.mimetype.split('/').pop()})`,
+            mimetype: dataset.file.mimetype,
+          })
+        }
       }
-    }
 
-    if (dataset.bbox) {
-      const mbtilesName = `${parsed.name}.mbtiles`
-      if (!files.includes(mbtilesName)) {
-        console.error('Mbtiles data file not found', path.join(dir, mbtilesName))
-      } else {
-        results.push({
-          name: mbtilesName,
-          key: 'mbtiles',
-          title: 'Tuiles cartographiques (mbtiles)',
-          mimetype: 'application/vnd.sqlite3',
-        })
+      if (dataset.bbox) {
+        const mbtilesName = `${parsed.name}.mbtiles`
+        if (!files.includes(mbtilesName)) {
+          console.error('Mbtiles data file not found', path.join(dir, mbtilesName))
+        } else {
+          results.push({
+            name: mbtilesName,
+            key: 'mbtiles',
+            title: 'Tuiles cartographiques (mbtiles)',
+            mimetype: 'application/vnd.sqlite3',
+          })
+        }
       }
     }
   }
@@ -181,7 +182,7 @@ exports.dataFiles = async (dataset) => {
 
   for (const result of results) {
     const stats = await fs.stat(path.join(exports.dir(dataset), result.name))
-    result.size = stats.size || 0
+    result.size = stats.size
     result.updatedAt = stats.mtime
     let url = `${config.publicUrl}/api/v1/datasets/${dataset.id}/data-files/${result.name}`
     if (dataset.draftReason) {
