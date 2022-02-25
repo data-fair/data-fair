@@ -16,6 +16,7 @@ const schema = {
     lastUpdate: { type: 'string', format: 'date-time' },
     defaults: { type: 'boolean', title: 'these limits were defined using default values only, not specifically defined' },
     store_bytes: limitTypeSchema,
+    indexed_bytes: limitTypeSchema,
     nb_datasets: limitTypeSchema,
     hide_brand: limitTypeSchema,
   },

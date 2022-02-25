@@ -4,6 +4,7 @@ const permissions = require('./permissions')
 const topic = require('./topic')
 const masterData = require('./master-data')
 const capabilities = require('./capabilities')
+const dataFiles = require('./data-files')
 const publicationSchema = JSON.parse(JSON.stringify(require('./publication')))
 
 publicationSchema.properties.addToDataset = {
@@ -244,11 +245,48 @@ module.exports = {
       description: 'All storage space info of this dataset',
       properties: {
         size: { type: 'integer' },
-        fileSize: { type: 'integer' },
-        attachmentsSize: { type: 'integer' },
-        collectionSize: { type: 'integer' },
-        revisionSize: { type: 'integer' },
-        exportedSize: { type: 'integer' },
+        indexed: {
+          type: 'object',
+          properties: {
+            size: { type: 'integer' },
+            parts: {
+              type: 'array',
+              items: {
+                type: 'string',
+                enum: ['collection', 'original-file', 'normalized-file', 'full-file', 'attachments'],
+              },
+            },
+          },
+        },
+        attachments: {
+          type: 'object',
+          properties: {
+            count: { type: 'integer' },
+            size: { type: 'integer' },
+          },
+        },
+        metadataAttachments: {
+          type: 'object',
+          properties: {
+            count: { type: 'integer' },
+            size: { type: 'integer' },
+          },
+        },
+        collection: {
+          type: 'object',
+          properties: {
+            count: { type: 'integer' },
+            size: { type: 'integer' },
+          },
+        },
+        revisions: {
+          type: 'object',
+          properties: {
+            count: { type: 'integer' },
+            size: { type: 'integer' },
+          },
+        },
+        dataFiles,
       },
     },
     createdAt: {

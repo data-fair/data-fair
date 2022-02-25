@@ -354,7 +354,8 @@ describe('REST datasets', () => {
     const storageSize = res.data.storage
     res = await ax.get('/api/v1/datasets/rest7')
     assert.equal(res.data.storage.size, storageSize)
-    assert.equal(res.data.storage.collectionSize, storageSize)
+    assert.equal(res.data.storage.indexed.size, storageSize)
+    assert.equal(res.data.storage.collection.size, storageSize)
   })
 
   it('Activate the history mode', async () => {
@@ -380,9 +381,9 @@ describe('REST datasets', () => {
     const storageSize = res.data.storage
     res = await ax.get('/api/v1/datasets/resthist')
     assert.equal(res.data.storage.size, storageSize)
-    assert.ok(res.data.storage.collectionSize > 80)
-    assert.ok(res.data.storage.revisionsSize > 160)
-    assert.equal(res.data.storage.revisionsSize + res.data.storage.collectionSize, storageSize)
+    assert.ok(res.data.storage.collection.size > 80)
+    assert.ok(res.data.storage.revisions.size > 160)
+    assert.equal(res.data.storage.revisions.size + res.data.storage.collection.size, storageSize)
   })
 
   it('Apply a TTL on some date-field', async () => {

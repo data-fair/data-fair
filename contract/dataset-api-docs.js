@@ -3,6 +3,7 @@ const prettyBytes = require('pretty-bytes')
 const datasetSchema = require('./dataset')
 const version = require('../package.json').version
 const masterData = require('./master-data')
+const dataFiles = require('./data-files')
 const datasetUtils = require('../server/utils/dataset')
 const utils = require('./utils')
 
@@ -307,37 +308,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
               description: 'Le résultat de la requête.',
               content: {
                 'application/json': {
-                  schema: {
-                    type: 'array',
-                    description: 'Le tableau de résultats.',
-                    items: {
-                      type: 'object',
-                      properties: {
-                        key: {
-                          type: 'string',
-                        },
-                        size: {
-                          type: 'number',
-                        },
-                        name: {
-                          type: 'string',
-                        },
-                        mimetype: {
-                          type: 'string',
-                        },
-                        updatedAt: {
-                          type: 'string',
-                          format: 'date-time',
-                        },
-                        title: {
-                          type: 'string',
-                        },
-                        url: {
-                          type: 'string',
-                        },
-                      },
-                    },
-                  },
+                  schema: dataFiles,
                 },
               },
             },

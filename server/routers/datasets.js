@@ -781,7 +781,7 @@ const updateDataset = asyncWrap(async(req, res) => {
         req.query.draft === 'true' ? datasetUtils.mergeDraft({ ...dataset }) : dataset,
         { type: 'data-updated' }, 'dataset')
     }
-    await datasetUtils.updateStorage(db, req.dataset)
+    await datasetUtils.updateStorage(db, dataset)
     await syncRemoteService(db, dataset)
     res.status(req.isNewDataset ? 201 : 200).send(clean(req.publicBaseUrl, dataset, null, req.query.draft === 'true'))
   } catch (err) {

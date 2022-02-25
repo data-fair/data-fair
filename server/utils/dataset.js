@@ -422,54 +422,75 @@ exports.sampleValues = async (dataset) => {
 exports.storage = async (db, dataset) => {
   const storage = {
     size: 0,
+    dataFiles: await exports.dataFiles(dataset),
+    indexed: { size: 0, parts: [] },
+    attachments: { size: 0, count: 0 },
+    metadataAttachments: { size: 0, count: 0 },
   }
-  if (!dataset.draftReason && dataset.file && await fs.pathExists(exports.fullFileName(dataset))) {
-    const fullSize = (await fs.promises.stat(exports.fullFileName(dataset))).size
-    storage.size += fullSize
-    storage.fileSize = fullSize
-  } else {
-    if (dataset.originalFile && dataset.originalFile.size) {
-      storage.size += dataset.originalFile.size
-      storage.fileSize = dataset.originalFile.size
-    } else if (dataset.file && dataset.file.size) {
-      storage.size += dataset.file.size
-      storage.fileSize = dataset.file.size
+  storage.dataFiles.forEach(df => delete df.url)
+
+  // storage used by data-files
+  const dataFilesObj = storage.dataFiles.reduce((obj, df) => { obj[df.key] = df; return obj }, {})
+  for (const dataFile of storage.dataFiles) {
+    storage.size += dataFile.size
+  }
+  if (dataFilesObj.full) {
+    storage.indexed = {
+      size: dataFilesObj.full.size,
+      parts: ['full-file'],
+    }
+  } else if (dataFilesObj.normalized) {
+    storage.indexed = {
+      size: dataFilesObj.normalized.size,
+      parts: ['normalized-file'],
+    }
+  } else if (dataFilesObj.original) {
+    storage.indexed = {
+      size: dataFilesObj.original.size,
+      parts: ['original-file'],
     }
   }
-  const attachments = await exports.lsAttachments(dataset)
-  for (const attachment of attachments) {
-    const attachmentSize = (await fs.promises.stat(path.join(exports.attachmentsDir(dataset), attachment))).size
-    storage.size += attachmentSize
-    storage.attachmentsSize = (storage.attachmentsSize || 0) + attachmentSize
-  }
-  const metaAttachments = await exports.lsMetadataAttachments(dataset)
-  for (const attachment of metaAttachments) {
-    const attachmentSize = (await fs.promises.stat(path.join(exports.metadataAttachmentsDir(dataset), attachment))).size
-    storage.size += attachmentSize
-    storage.attachmentsSize = (storage.attachmentsSize || 0) + attachmentSize
-  }
+
+  // storage used by mongodb collections
   if (dataset.isRest) {
     const collection = await restDatasetsUtils.collection(db, dataset)
     const stats = await collection.stats()
-    // we remove 100 bytes per line that are not really part of the original payload but added by us:
-    // _updatedAt, _needsIndexing, _hash and _i.
-    storage.collectionSize = Math.max(0, stats.size - (stats.count * 40))
-    storage.size += storage.collectionSize
+    storage.collection = { size: stats.size, count: stats.count }
+    storage.size += storage.collection.size
+    storage.indexed = {
+      size: storage.collection.size,
+      parts: ['collection'],
+    }
 
     if (dataset.rest && dataset.rest.history) {
       const revisionsCollection = await restDatasetsUtils.revisionsCollection(db, dataset)
       const revisionsStats = await revisionsCollection.stats()
       // we remove 60 bytes per line that are not really part of the original payload but added by _action, _updatedAt, _hash and _i.
-      storage.revisionsSize = Math.max(0, revisionsStats.size - (revisionsStats.count * 40))
-      storage.size += storage.revisionsSize
-    }
-
-    if (await fs.pathExists(exports.exportedFileName(dataset, '.csv'))) {
-      const exportedSize = (await fs.promises.stat(exports.exportedFileName(dataset, '.csv'))).size
-      storage.size += exportedSize
-      storage.exportedSize = exportedSize
+      storage.revisions = { size: revisionsStats.size, count: revisionsStats.count }
+      storage.size += storage.revisions.size
     }
   }
+
+  // storage used by attachments
+  const attachments = await exports.lsAttachments(dataset)
+  for (const attachment of attachments) {
+    storage.attachments.size += (await fs.promises.stat(path.join(exports.attachmentsDir(dataset), attachment))).size
+    storage.attachments.count++
+  }
+  storage.size += storage.attachments.size
+  const documentProperty = dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')
+  if (documentProperty && (!documentProperty['x-capabilities'] || documentProperty['x-capabilities'].indexAttachment !== false)) {
+    storage.indexed += storage.attachmentsSize
+    storage.indexedParts += 'attachments'
+  }
+
+  // storage used by metadata attachments
+  const metadataAttachments = await exports.lsMetadataAttachments(dataset)
+  for (const metadataAttachment of metadataAttachments) {
+    storage.metadataAttachments.size += (await fs.promises.stat(path.join(exports.metadataAttachmentsDir(dataset), metadataAttachment))).size
+    storage.metadataAttachments.count++
+  }
+  storage.size += storage.metadataAttachments.size
   return storage
 }
 
@@ -485,6 +506,7 @@ exports.totalStorage = async (db, owner) => {
 
 // After a change that might impact consumed storage, we store the value
 exports.updateStorage = async (db, dataset, deleted = false) => {
+  if (dataset.draftReason) console.log(new Error('updateStorage should not be called on a draft dataset'))
   if (!deleted) await db.collection('datasets').updateOne({ id: dataset.id }, { $set: { storage: await exports.storage(db, dataset) } })
   await limits.setConsumption(db, dataset.owner, 'store_bytes', await exports.totalStorage(db, dataset.owner))
 }

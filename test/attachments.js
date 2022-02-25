@@ -74,13 +74,13 @@ describe('Attachments', () => {
     form.append('attachments', fs.readFileSync('./test/resources/datasets/files.zip'), 'files.zip')
     let dataset = (await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })).data
     dataset = await workers.hook(`finalizer/${dataset.id}`)
-    const attachmentsSize = dataset.storage.attachmentsSize
+    const attachmentsSize = dataset.storage.attachments.size
 
     const form2 = new FormData()
     form2.append('dataset', fs.readFileSync('./test/resources/datasets/attachments2.csv'), 'attachments2.csv')
     await ax.put('/api/v1/datasets/' + dataset.id, form2, { headers: testUtils.formHeaders(form2) })
     dataset = await workers.hook(`finalizer/${dataset.id}`)
-    assert.equal(dataset.storage.attachmentsSize, attachmentsSize)
+    assert.equal(dataset.storage.attachments.size, attachmentsSize)
 
     const lines = (await ax.get(`/api/v1/datasets/${dataset.id}/lines`)).data
     assert.equal(lines.total, 2)
@@ -96,14 +96,14 @@ describe('Attachments', () => {
     form.append('attachments', fs.readFileSync('./test/resources/datasets/files.zip'), 'files.zip')
     let dataset = (await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })).data
     dataset = await workers.hook(`finalizer/${dataset.id}`)
-    const attachmentsSize = dataset.storage.attachmentsSize
+    const attachmentsSize = dataset.storage.attachments.size
 
     const form2 = new FormData()
     form2.append('dataset', fs.readFileSync('./test/resources/datasets/attachments2.csv'), 'attachments2.csv')
     form2.append('attachments', fs.readFileSync('./test/resources/datasets/files2.zip'), 'files2.zip')
     await ax.put('/api/v1/datasets/' + dataset.id, form2, { headers: testUtils.formHeaders(form2) })
     dataset = await workers.hook(`finalizer/${dataset.id}`)
-    assert.ok(dataset.storage.attachmentsSize < attachmentsSize, 'storage size should be reduced, we replace attachments with a smaller archive')
+    assert.ok(dataset.storage.attachments.size < attachmentsSize, 'storage size should be reduced, we replace attachments with a smaller archive')
 
     const lines = (await ax.get(`/api/v1/datasets/${dataset.id}/lines`)).data
     assert.equal(lines.total, 2)
@@ -119,7 +119,7 @@ describe('Attachments', () => {
     form.append('attachments', fs.readFileSync('./test/resources/datasets/files.zip'), 'files.zip')
     let dataset = (await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })).data
     dataset = await workers.hook(`finalizer/${dataset.id}`)
-    const attachmentsSize = dataset.storage.attachmentsSize
+    const attachmentsSize = dataset.storage.attachments.size
 
     const form2 = new FormData()
     form2.append('attachments', fs.readFileSync('./test/resources/datasets/files2.zip'), 'files2.zip')
@@ -135,7 +135,7 @@ describe('Attachments', () => {
     form3.append('dataset', fs.readFileSync('./test/resources/datasets/attachments2.csv'), 'attachments2.csv')
     await ax.put('/api/v1/datasets/' + dataset.id, form3, { headers: testUtils.formHeaders(form3) })
     dataset = await workers.hook(`finalizer/${dataset.id}`)
-    assert.ok(dataset.storage.attachmentsSize < attachmentsSize, 'storage size should be reduced, we replace attachments with a smaller archive')
+    assert.ok(dataset.storage.attachments.size < attachmentsSize, 'storage size should be reduced, we replace attachments with a smaller archive')
 
     const lines = (await ax.get(`/api/v1/datasets/${dataset.id}/lines`)).data
     assert.equal(lines.total, 2)
