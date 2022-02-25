@@ -14,9 +14,9 @@
           </v-list-item-title>
           <template v-if="dataset.storage">
             <v-list-item-subtitle v-if="dataset.storageParts.length">
-              <template v-for="(part, i) in dataset.storageParts">
-                <span :key="'storage-part-' + i">{{ part.size | displayBytes($i18n.locale) }} {{ $t(part.key) }}</span>
-                <span v-if="i < dataset.storageParts.length - 1" :key="'storage-part-sep-' + i"> - </span>
+              <template v-for="(part, j) in dataset.storageParts">
+                <span :key="'storage-part-' + j">{{ part.size | displayBytes($i18n.locale) }} {{ $t(part.key) }}</span>
+                <span v-if="j < dataset.storageParts.length - 1" :key="'storage-part-sep-' + j"> - </span>
               </template>
             </v-list-item-subtitle>
           </template>

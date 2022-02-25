@@ -60,7 +60,7 @@ exports.get = async (db, consumer, type) => {
 }
 
 const calculateRemainingLimit = (limits, key) => {
-  const limit = (limits && limits[key] && ![undefined, null].includes(limits[key].limit)) ? limits[key].limit : defaultLimit
+  const limit = limits && limits[key] && limits[key].limit
   if (limit === -1) return -1
   const consumption = (limits && limits[key] && limits[key].consumption) || 0
   return Math.max(0, limit - consumption)
