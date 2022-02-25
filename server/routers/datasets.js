@@ -1444,6 +1444,9 @@ router.get('/:datasetId/journal', readDataset(), permissions.middleware('readJou
   if (!journal) return res.send([])
   delete journal.owner
   journal.events.reverse()
+  journal.events.forEach(e => {
+    if (e.data) e.data = sanitizeHtml(e.data)
+  })
   res.json(journal.events)
 }))
 
