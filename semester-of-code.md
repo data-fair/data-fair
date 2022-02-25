@@ -2,7 +2,7 @@
 
 ## Le projet
 
-Data Fair est un projet open source permettant de construire une plateforme Web d'exploitation, de partage et de visualisation de données.
+[Data Fair](https://data-fair.github.io/3/) est un projet open source permettant de construire une plateforme Web d'exploitation, de partage et de visualisation de données.
 
 Un usage particulièrement intéressant est la construction de portails open data (voir [data.ademe.fr](data.ademe.fr) et [data.gouv.ci](data.gouv.ci) à titre d'exemples). Mais le projet peut aussi être utilisé en interne par toutes sortes d'organisations dont les administrations publiques françaises.
 
