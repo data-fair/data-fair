@@ -181,7 +181,7 @@ exports.dataFiles = async (dataset) => {
 
   for (const result of results) {
     const stats = await fs.stat(path.join(exports.dir(dataset), result.name))
-    result.size = stats.size
+    result.size = stats.size || 0
     result.updatedAt = stats.mtime
     let url = `${config.publicUrl}/api/v1/datasets/${dataset.id}/data-files/${result.name}`
     if (dataset.draftReason) {
@@ -511,6 +511,7 @@ exports.updateStorage = async (db, dataset, deleted = false) => {
   const totalStorage = await exports.totalStorage(db, dataset.owner)
   await limits.setConsumption(db, dataset.owner, 'store_bytes', totalStorage.size)
   await limits.setConsumption(db, dataset.owner, 'indexed_bytes', totalStorage.indexed)
+  return totalStorage
 }
 
 exports.updateNbDatasets = async (db, owner) => {

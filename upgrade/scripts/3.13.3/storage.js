@@ -9,6 +9,6 @@ exports.exec = async (db, debug) => {
     await datasetUtils.updateNbDatasets(db, dataset.owner)
     await db.collection('datasets')
       .updateOne({ id: dataset.id }, { $set: { storage: {} } })
-    debug('static', await datasetUtils.updateStorage(db, dataset))
+    console.log(await datasetUtils.updateStorage(db, dataset))
   }
 }
