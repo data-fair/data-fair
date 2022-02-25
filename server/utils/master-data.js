@@ -72,7 +72,6 @@ exports.bulkSearchStreams = async (db, es, dataset, contentType, bulkSearchId, s
         }))
         let esResponse
         try {
-          console.log(queries)
           esResponse = await esUtils.multiSearch(es, dataset, queries)
         } catch (err) {
           console.error(`master-data multisearch query error ${dataset.id}`, err)

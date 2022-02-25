@@ -817,8 +817,7 @@ router.post('/:datasetId/draft', readDataset(['finalized'], true), permissions.m
     patch.dataUpdatedAt = patch.updatedAt
     patch.dataUpdatedBy = patch.updatedBy
   }
-  if (!baseTypes.has(req.dataset.originalFile.mimetype)) patch.status = 'uploaded'
-  else patch.status = 'analyzed'
+  delete patch.status
   delete patch.finalizedAt
   delete patch.draftReason
   delete patch.count
@@ -878,11 +877,17 @@ router.post('/:datasetId/draft', readDataset(['finalized'], true), permissions.m
     await fs.remove(datasetUtils.attachmentsDir(patchedDataset))
     await fs.move(datasetUtils.attachmentsDir(req.dataset), datasetUtils.attachmentsDir(patchedDataset))
   }
-  await journals.log(req.app, patchedDataset, { type: 'draft-validated' }, 'dataset')
+
+  const statusPatch = { status: baseTypes.has(req.dataset.originalFile.mimetype) ? 'analyzed' : 'uploaded' }
+  const statusPatchedDataset = (await db.collection('datasets').findOneAndUpdate({ id: req.params.datasetId },
+    { $set: statusPatch },
+    { returnDocument: 'after' },
+  )).value
+  await journals.log(req.app, statusPatchedDataset, { type: 'draft-validated' }, 'dataset')
 
   await esUtils.delete(req.app.get('es'), req.dataset)
-  await datasetUtils.updateStorage(db, patchedDataset)
-  return res.send(patchedDataset)
+  await datasetUtils.updateStorage(db, statusPatchedDataset)
+  return res.send(statusPatchedDataset)
 }))
 
 // cancel the draft
