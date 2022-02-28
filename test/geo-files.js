@@ -116,6 +116,7 @@ describe('geo files support', () => {
     assert.equal(dataset.file.name, 'stations.geojson')
 
     assert.equal(dataset.storage.dataFiles.length, 2)
+    assert.equal(dataset.storage.attachments.size, 0)
   })
 
   it('Process shapefile dataset where zip file has different name from contents', async () => {

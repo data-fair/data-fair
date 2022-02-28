@@ -77,4 +77,5 @@ exports.process = async function(app, dataset) {
   }
 
   await datasetUtils.applyPatch(db, dataset, patch)
+  if (!dataset.draftReason) await datasetUtils.updateStorage(db, dataset, false, true)
 }
