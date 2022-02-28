@@ -16,6 +16,7 @@
             <v-list-item-subtitle v-if="dataset.storageParts.length">
               <template v-for="(part, j) in dataset.storageParts">
                 <span :key="'storage-part-' + j">{{ part.size | displayBytes($i18n.locale) }} {{ $t(part.key) }}</span>
+                <span v-if="part.indexed" :key="'storage-part-indexed-' + j">({{ $t('indexed') }})</span>
                 <span v-if="j < dataset.storageParts.length - 1" :key="'storage-part-sep-' + j"> - </span>
               </template>
             </v-list-item-subtitle>
@@ -33,24 +34,26 @@
 <i18n lang="yaml">
 fr:
   noInfo: (pas d'information de stockage)
-  original: fichier original
-  normalized: fichier converti
-  full: fichier enrichi
-  export-csv: fichier exporté
+  original-file: fichier original
+  normalized-file: fichier converti
+  full-file: fichier enrichi
+  export-csv-file: fichier exporté
   attachments: de pièces jointes
   metadata-attachments: pièces jointes aux méta-données
   collection: lignes en base de données
   revisions: révisions historisées
+  indexed: indexé
 
 en:
   noInfo: (no storage information)
-  original: original file
-  normalized: converted file
-  full: extended file
-  export-csv: exported file
+  original-file: original file
+  normalized-file: converted file
+  full-file: extended file
+  export-csv-file: exported file
   attachments: attachments
   collection: lines in database
   revisions: revisions
+  indexed: indexed
 
 </i18n>
 
@@ -64,11 +67,16 @@ en:
       ...mapState(['env']),
       fullDatasets() {
         return (this.datasets || []).map(dataset => {
-          const storageParts = [...dataset.storage.dataFiles]
+          const storageParts = dataset.storage.dataFiles.map(df => ({ ...df, key: df.key + '-file' }))
           if (dataset.storage.attachments) storageParts.push({ key: 'attachments', size: dataset.storage.attachments.size })
           if (dataset.storage.metadataAttachments) storageParts.push({ key: 'metadata-attachments', size: dataset.storage.metadataAttachments.size })
           if (dataset.storage.collection) storageParts.push({ key: 'collection', size: dataset.storage.collection.size })
           if (dataset.storage.revisions) storageParts.push({ key: 'revisions', size: dataset.storage.revisions.size })
+          storageParts.forEach(sp => {
+            if (dataset.storage.indexed && dataset.storage.indexed.parts && dataset.storage.indexed.parts.includes(sp.key)) {
+              sp.indexed = true
+            }
+          })
           return {
             ...dataset,
             link: (this.urlTemplate || `${this.env.publicUrl}/dataset/{id}`).replace('{id}', dataset.id),
