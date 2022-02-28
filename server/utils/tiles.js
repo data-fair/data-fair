@@ -1,24 +1,10 @@
-const config = require('config')
 const geojsonvt = require('geojson-vt')
-const path = require('path')
-const fs = require('fs-extra')
 const vtpbf = require('vt-pbf')
 const Pbf = require('pbf')
-const flatten = require('flat')
 const { gunzip } = require('zlib')
 const memoize = require('memoizee')
 const MBTiles = require('@mapbox/mbtiles')
-const { Transform } = require('stream')
 const VectorTile = require('@mapbox/vector-tile').VectorTile
-const pump = require('util').promisify(require('pump'))
-const tmp = require('tmp-promise')
-const JSONStream = require('JSONStream')
-const datasetUtils = require('./dataset')
-const geoUtils = require('./geo')
-const debug = require('debug')('tiles')
-
-const dataDir = path.resolve(config.dataDir)
-const exec = require('./exec')
 
 function tile2long(x, z) {
   return (x / Math.pow(2, z) * 360 - 180)

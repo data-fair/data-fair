@@ -997,8 +997,7 @@ router.get('/:datasetId/lines', readDataset(), applicationKey, permissions.middl
   }
 
   // if the output format is geo make sure geoshape is present
-  // also manage a default content for geo tiles that is the same as the one used to build mbtiles when possible
-  const emptySelect = !req.query.select
+  // also manage a default content for geo tiles
   if (['geojson', 'mvt', 'vt', 'pbf'].includes(req.query.format)) {
     req.query.select = (req.query.select ? req.query.select : tiles.defaultSelect(req.dataset).join(','))
     if (!req.query.select.includes('_geoshape') && req.dataset.schema.find(p => p.key === '_geoshape')) req.query.select += ',_geoshape'

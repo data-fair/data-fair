@@ -1,7 +1,6 @@
 // Finalize dataset for publication
 const esUtils = require('../utils/es')
 const geoUtils = require('../utils/geo')
-const tilesUtils = require('../utils/tiles')
 const datasetUtils = require('../utils/dataset')
 const attachmentsUtils = require('../utils/attachments')
 const virtualDatasetsUtils = require('../utils/virtual-datasets')

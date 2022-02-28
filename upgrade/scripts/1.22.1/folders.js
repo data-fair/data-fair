@@ -2,7 +2,6 @@ const fs = require('fs-extra')
 const config = require('config')
 const path = require('path')
 const datasetUtils = require('../../../server/utils/dataset')
-const tilesUtils = require('../../../server/utils/tiles')
 const esUtils = require('../../../server/utils/es')
 
 exports.description = 'Dataset files are now stored in separate folders.'
