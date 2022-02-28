@@ -64,6 +64,13 @@ describe('limits', () => {
     assert.equal(res.status, 200)
     assert.equal(res.data.store_bytes.limit, 300000)
     assert.equal(res.data.store_bytes.consumption, 250000)
+    assert.equal(res.data.nb_datasets.limit, 10)
+    assert.equal(res.data.nb_datasets.consumption, 10)
+
+    // delete a dataset and check nb_datasets
+    await ax.delete('/api/v1/datasets/rest-dataset-8')
+    res = await ax.get('/api/v1/limits/user/dmeadus0')
+    assert.equal(res.data.nb_datasets.consumption, 9)
   })
 
   it('A user cannot change limits', async () => {
