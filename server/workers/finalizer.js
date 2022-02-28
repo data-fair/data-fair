@@ -38,6 +38,8 @@ exports.process = async function(app, dataset) {
   const cardinalityProps = dataset.schema
     .filter(prop => !prop.key.startsWith('_'))
     .filter(prop => prop['x-refersTo'] !== 'https://purl.org/geojson/vocab#geometry')
+    .filter(prop => prop['x-refersTo'] !== 'http://schema.org/latitude')
+    .filter(prop => prop['x-refersTo'] !== 'http://schema.org/longitude')
     .filter(prop => !prop['x-capabilities'] || prop['x-capabilities'].values !== false)
 
   let nbSteps = cardinalityProps.length + 1
@@ -48,28 +50,29 @@ exports.process = async function(app, dataset) {
 
   for (const prop of cardinalityProps) {
     debug(`Calculate cardinality of field ${prop.key}`)
-    const aggResult = await esUtils.valuesAgg(es, queryableDataset, { field: prop.key, agg_size: '50', precision_threshold: 3000 })
-    prop['x-cardinality'] = aggResult.total_values
+    const cardAggResult = await esUtils.valuesAgg(es, queryableDataset, { field: prop.key, agg_size: '0', precision_threshold: 3000 })
+    prop['x-cardinality'] = cardAggResult.total_values
     debug(`Cardinality of field ${prop.key} is ${prop['x-cardinality']}`)
+    delete prop.enum
     // store a list of values if the cardinality is not too large and
-    let setEnum = aggResult.total_values > 0 && aggResult.total_values <= 50
+    let setEnum = cardAggResult.total_values > 0 && cardAggResult.total_values <= 50
     // cardinality is not too close to overall count
     // also if the cell is not too sparse
     if (setEnum) {
-      const totalWithValue = aggResult.aggs.reduce((t, item) => { t += item.total; return t }, 0)
+      // this could be merged with the previous call to valuesAgg, but it is better to separate for performance on large datasets
+      const valuesAggResult = await esUtils.valuesAgg(es, queryableDataset, { field: prop.key, agg_size: '50', precision_threshold: 0 })
+      const totalWithValue = valuesAggResult.aggs.reduce((t, item) => { t += item.total; return t }, 0)
       // cardinality is not too close to overall count
-      if (aggResult.total_values > totalWithValue / 2) setEnum = false
+      if (cardAggResult.total_values > totalWithValue / 2) setEnum = false
       // also if the cell is not too sparse
-      if (totalWithValue <= aggResult.total / 5) setEnum = false
-    }
-    if (setEnum) {
-      debug(`Set enum of field ${prop.key}`)
-      prop.enum = aggResult.aggs.map(a => a.value).filter(v => {
-        if (typeof v === 'string') return !!v.trim()
-        else return true
-      })
-    } else {
-      delete prop.enum
+      if (totalWithValue <= valuesAggResult.total / 5) setEnum = false
+      if (setEnum) {
+        debug(`Set enum of field ${prop.key}`)
+        prop.enum = valuesAggResult.aggs.map(a => a.value).filter(v => {
+          if (typeof v === 'string') return !!v.trim()
+          else return true
+        })
+      }
     }
     await progress()
   }

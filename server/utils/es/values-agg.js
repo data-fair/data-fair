@@ -48,7 +48,7 @@ module.exports = async (client, dataset, query, addGeoData) => {
     // TODO: also accept ranges expressed in the interval parameter to use range aggregations instead of histogram
   }
   // number after which we accept that cardinality is approximative
-  const precisionThreshold = Number(query.precision_threshold || '40000')
+  const precisionThreshold = Number(query.precision_threshold ?? '40000')
 
   // number of hit results inside the last level of aggregation
   const size = query.size ? Number(query.size) : 0
@@ -60,11 +60,13 @@ module.exports = async (client, dataset, query, addGeoData) => {
   esQuery.size = 0
   let currentAggLevel = esQuery.aggs = {}
   for (let i = 0; i < valuesFields.length; i++) {
-    currentAggLevel.values = {
-      [aggTypes[i]]: {
-        field: valuesFields[i],
-        size: aggSizes[i],
-      },
+    if (aggSizes[i] !== 0) {
+      currentAggLevel.values = {
+        [aggTypes[i]]: {
+          field: valuesFields[i],
+          size: aggSizes[i],
+        },
+      }
     }
     if (intervals[i] !== 'value') {
       currentAggLevel.values[aggTypes[i]].interval = intervals[i]
@@ -72,7 +74,7 @@ module.exports = async (client, dataset, query, addGeoData) => {
     }
 
     // cardinality is meaningful only on the strict values aggregation
-    if (aggTypes[i] === 'terms') {
+    if (aggTypes[i] === 'terms' && precisionThreshold !== 0) {
       currentAggLevel.card = {
         cardinality: {
           field: valuesFields[i],
@@ -82,19 +84,21 @@ module.exports = async (client, dataset, query, addGeoData) => {
     }
 
     // manage sorting
-    currentAggLevel.values[aggTypes[i]].order = parseOrder(sorts[i], fields, dataset.schema)
-    if (query.metric && query.metric_field) {
-      if (!fields.includes(query.metric_field)) {
-        throw createError(400, `Impossible d'agréger sur le champ ${query.metric_field}, il n'existe pas dans le jeu de données.`)
-      }
+    if (currentAggLevel.values) {
+      currentAggLevel.values[aggTypes[i]].order = parseOrder(sorts[i], fields, dataset.schema)
+      if (query.metric && query.metric_field) {
+        if (!fields.includes(query.metric_field)) {
+          throw createError(400, `Impossible d'agréger sur le champ ${query.metric_field}, il n'existe pas dans le jeu de données.`)
+        }
 
-      currentAggLevel.values[aggTypes[i]].order.push({ metric: 'desc' })
-      currentAggLevel.values.aggs = {}
-      currentAggLevel.values.aggs.metric = {
-        [query.metric]: { field: query.metric_field },
+        currentAggLevel.values[aggTypes[i]].order.push({ metric: 'desc' })
+        currentAggLevel.values.aggs = {}
+        currentAggLevel.values.aggs.metric = {
+          [query.metric]: { field: query.metric_field },
+        }
       }
+      currentAggLevel.values[aggTypes[i]].order.push({ _count: 'desc' })
     }
-    currentAggLevel.values[aggTypes[i]].order.push({ _count: 'desc' })
 
     // Prepare next nested level
     if (valuesFields[i + 1] || addGeoData) {
@@ -136,6 +140,7 @@ const prepareValuesAggResponse = (esResponse, fields, dataset, query) => {
 
 const recurseAggResponse = (response, aggRes, dataset, query) => {
   if (aggRes.card) response.total_values = aggRes.card.value
+  if (!aggRes.values) return response
   response.total_other = aggRes.values.sum_other_doc_count
   if (aggRes.values.buckets.length > 10000) {
     throw createError(400, 'Résultats d\'aggrégation trop nombreux. Abandon.')
