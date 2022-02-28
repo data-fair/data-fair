@@ -475,6 +475,7 @@ router.put('/:datasetId/owner', readDataset(), permissions.middleware('changeOwn
 router.delete('/:datasetId', readDataset(null, null, null, true), permissions.middleware('delete', 'admin'), asyncWrap(async(req, res) => {
   await datasetUtils.delete(req.app.get('db'), req.app.get('es'), req.dataset)
   await syncRemoteService(req.app.get('db'), { ...req.dataset, masterData: null })
+  await datasetUtils.updateNbDatasets(req.app.get('db'), req.dataset.owner)
   res.sendStatus(204)
 }))
 
