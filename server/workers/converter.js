@@ -7,6 +7,8 @@ const ogr2ogr = require('ogr2ogr')
 const util = require('util')
 const pump = util.promisify(require('pump'))
 const csvStringify = require('csv-stringify')
+const tmp = require('tmp-promise')
+const dir = require('node-dir')
 const { displayBytes } = require('../utils/bytes')
 const datasetUtils = require('../utils/dataset')
 const icalendar = require('../utils/icalendar')
@@ -49,13 +51,15 @@ exports.process = async function(app, dataset) {
   const db = app.get('db')
   const originalFilePath = datasetUtils.originalFileName(dataset)
   const baseName = path.parse(dataset.originalFile.name).name
+  const tmpDir = (await tmp.dir()).path
 
   let isShapefile = false
   if (archiveTypes.has(dataset.originalFile.mimetype)) {
-    const dirName = datasetUtils.attachmentsDir(dataset)
-    debug('decompress', dataset.originalFile.mimetype, originalFilePath, dirName)
-    await decompress(dataset.originalFile.mimetype, originalFilePath, dirName)
-    const files = await datasetUtils.lsAttachments(dataset)
+    debug('decompress', dataset.originalFile.mimetype, originalFilePath, tmpDir)
+    await decompress(dataset.originalFile.mimetype, originalFilePath, tmpDir)
+    const files = (await dir.promiseFiles(tmpDir))
+      .map(f => path.relative(tmpDir, f))
+      .filter(p => path.basename(p).toLowerCase() !== 'thumbs.db')
     const fileNames = files.map(f => path.parse(f))
 
     // Check if this archive is actually a shapefile source
@@ -65,6 +69,10 @@ exports.process = async function(app, dataset) {
         fileNames.find(f => f.name === shpFile.name && f.ext.toLowerCase().endsWith('.dbf'))) {
       isShapefile = true
     } else {
+      if (await fs.pathExists(datasetUtils.attachmentsDir(dataset))) {
+        throw new Error('Vous avez chargé un fichier zip comme fichier de données principal, mais il y a également des pièces jointes chargées.')
+      }
+      await fs.move(tmpDir, datasetUtils.attachmentsDir(dataset))
       const csvFilePath = path.join(datasetUtils.dir(dataset), baseName + '.csv')
       // Either there is a data.csv in this archive and we use it as the main source for data related to the files, or we create it
       const csvContent = 'file\n' + files.map(f => `"${f}"`).join('\n') + '\n'
@@ -142,12 +150,11 @@ exports.process = async function(app, dataset) {
       mimetype: 'application/geo+json',
       encoding: 'utf-8',
     }
-
-    // TODO: this is bit weird, what if we have a shapefile AND attachments ?
-    if (isShapefile) await fs.remove(datasetUtils.attachmentsDir(dataset))
   } else {
     // TODO: throw error ?
   }
+
+  await fs.remove(tmpDir)
 
   dataset.status = 'loaded'
 
