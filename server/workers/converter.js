@@ -151,6 +151,6 @@ exports.process = async function(app, dataset) {
   const patch = { status: dataset.status, file: dataset.file, schema: dataset.schema }
   if (dataset.timeZone) patch.timeZone = dataset.timeZone
 
-  await datasetUtils.updateStorage(app.get('db'), dataset, false, true)
   await datasetUtils.applyPatch(db, dataset, patch)
+  if (!dataset.draftReason) await datasetUtils.updateStorage(db, dataset, false, true)
 }

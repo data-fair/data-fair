@@ -507,7 +507,10 @@ exports.totalStorage = async (db, owner) => {
 
 // After a change that might impact consumed storage, we store the value
 exports.updateStorage = async (db, dataset, deleted = false, checkRemaining = false) => {
-  if (dataset.draftReason) console.log(new Error('updateStorage should not be called on a draft dataset'))
+  if (dataset.draftReason) {
+    console.log(new Error('updateStorage should not be called on a draft dataset'))
+    return
+  }
   if (!deleted) await db.collection('datasets').updateOne({ id: dataset.id }, { $set: { storage: await exports.storage(db, dataset) } })
   const totalStorage = await exports.totalStorage(db, dataset.owner)
   await limits.setConsumption(db, dataset.owner, 'store_bytes', totalStorage.size)

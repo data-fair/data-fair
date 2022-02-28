@@ -7,7 +7,7 @@ RUN apk add --no-cache gdal gdal-dev
 RUN apk add --no-cache boost-dev gmp gmp-dev mpfr-dev
 RUN apk add --no-cache libressl3.3-libcrypto
 
-# build CGAL (not yet oresent in alpine repos)
+# build CGAL (not yet present in alpine repos)
 WORKDIR /tmp
 RUN curl -L https://github.com/CGAL/cgal/releases/download/releases%2FCGAL-4.14/CGAL-4.14.tar.xz -o cgal.tar.xz
 RUN tar -xf cgal.tar.xz
