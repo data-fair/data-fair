@@ -459,16 +459,19 @@ exports.storage = async (db, dataset) => {
   }
 
   // storage used by attachments
-  const attachments = await exports.lsAttachments(dataset)
-  for (const attachment of attachments) {
-    storage.attachments.size += (await fs.promises.stat(path.join(exports.attachmentsDir(dataset), attachment))).size
-    storage.attachments.count++
-  }
-  storage.size += storage.attachments.size
   const documentProperty = dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')
-  if (documentProperty && (!documentProperty['x-capabilities'] || documentProperty['x-capabilities'].indexAttachment !== false)) {
-    storage.indexed.size += storage.attachments.size
-    storage.indexedParts += 'attachments'
+  if (documentProperty) {
+    const attachments = await exports.lsAttachments(dataset)
+    for (const attachment of attachments) {
+      storage.attachments.size += (await fs.promises.stat(path.join(exports.attachmentsDir(dataset), attachment))).size
+      storage.attachments.count++
+    }
+    storage.size += storage.attachments.size
+
+    if (!documentProperty['x-capabilities'] || documentProperty['x-capabilities'].indexAttachment !== false) {
+      storage.indexed.size += storage.attachments.size
+      storage.indexedParts += 'attachments'
+    }
   }
 
   // storage used by metadata attachments
@@ -497,7 +500,13 @@ exports.updateStorage = async (db, dataset, deleted = false, checkRemaining = fa
     console.log(new Error('updateStorage should not be called on a draft dataset'))
     return
   }
-  if (!deleted) await db.collection('datasets').updateOne({ id: dataset.id }, { $set: { storage: await exports.storage(db, dataset) } })
+  if (!deleted) {
+    await db.collection('datasets').updateOne({ id: dataset.id }, {
+      $set: {
+        storage: await exports.storage(db, dataset),
+      },
+    })
+  }
   const totalStorage = await exports.totalStorage(db, dataset.owner)
   await limits.setConsumption(db, dataset.owner, 'store_bytes', totalStorage.size)
   await limits.setConsumption(db, dataset.owner, 'indexed_bytes', totalStorage.indexed)

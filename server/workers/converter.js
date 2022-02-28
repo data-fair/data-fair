@@ -142,6 +142,9 @@ exports.process = async function(app, dataset) {
       mimetype: 'application/geo+json',
       encoding: 'utf-8',
     }
+
+    // TODO: this is bit weird, what if we have a shapefile AND attachments ?
+    if (isShapefile) await fs.remove(datasetUtils.attachmentsDir(dataset))
   } else {
     // TODO: throw error ?
   }
