@@ -185,12 +185,6 @@ module.exports = {
       __format: 'json',
     },
   },
-  tippecanoe: {
-    skip: {
-      __name: 'TIPPECANOE_SKIP',
-      __format: 'json',
-    },
-  },
   ogr2ogr: {
     skip: {
       __name: 'OGR2OGR_SKIP',

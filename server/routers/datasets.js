@@ -1051,26 +1051,6 @@ router.get('/:datasetId/lines', readDataset(), applicationKey, permissions.middl
     cacheHash = hash
   }
 
-  // if vector tile is requested and we dispose of a prerendered mbtiles file, use it
-  // otherwise (older dataset, or rest/virtual datasets) we use tile generation from ES results
-  if (!req.dataset.isVirtual && !req.dataset.isRest && !req.dataset.isMetaOnly) {
-    const mbtilesPath = datasetUtils.extFileName(req.dataset, 'mbtiles')
-    if (vectorTileRequested && !req.query.q && !req.query.qs && await fs.exists(mbtilesPath)) {
-      const tile = await tiles.getTile(req.dataset, mbtilesPath, !emptySelect && req.query.select.split(','), ...xyz)
-      if (tile) {
-        res.type('application/x-protobuf')
-        res.setHeader('x-tilesmode', 'mbtiles')
-        res.throttleEnd('static')
-        if (!config.cache.disabled) cache.set(db, cacheHash, new mongodb.Binary(tile))
-        return res.status(200).send(tile)
-      } else if (tile === null) {
-        res.setHeader('x-tilesmode', 'mbtiles')
-        // 204 = no-content, better than 404
-        return res.status(204).send()
-      }
-    }
-  }
-
   if (vectorTileRequested) {
     res.setHeader('x-tilesmode', 'es')
 

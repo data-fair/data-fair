@@ -67,9 +67,6 @@ module.exports = {
     href: 'https://app.dawizz.fr/mydatacatalogue/',
   }],
   proxyNuxt: true,
-  tippecanoe: {
-    docker: true,
-  },
   /* doc: {
     datasetEdit: 'https://koumoul.com/documentation/userguide/edition-dataset',
     datasetExtend: 'https://koumoul.com/documentation/userguide/enrichment',

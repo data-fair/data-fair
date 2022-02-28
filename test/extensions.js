@@ -133,12 +133,7 @@ describe('Extensions', () => {
     assert.ok(res.data.find(file => file.key === 'original'))
     assert.ok(res.data.find(file => file.key === 'normalized'))
     assert.ok(res.data.find(file => file.key === 'full'))
-    if (process.env.TIPPECANOE_SKIP !== 'true') {
-      assert.ok(res.data.find(file => file.key === 'mbtiles'))
-      assert.equal(res.data.length, 4)
-    } else {
-      assert.equal(res.data.length, 3)
-    }
+    assert.equal(res.data.length, 3)
   })
 
   it('Extend dataset with different csv parser opts', async function() {

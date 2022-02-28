@@ -49,7 +49,7 @@ exports.exec = async (db, debug) => {
     }
   }
 
-  debug('loop on datasets to create extended and vector tile files')
+  debug('loop on datasets to create extended files')
   cursor = db.collection('datasets').find({})
   while (await cursor.hasNext()) {
     const dataset = await cursor.next()
@@ -65,15 +65,6 @@ exports.exec = async (db, debug) => {
         await datasetUtils.writeFullFile(db, es, dataset)
       } catch (err) {
         console.error('Failure to create extended file', paths.newFullFile, err)
-      }
-    }
-
-    if (dataset.bbox && !dataset.isRest && !dataset.isVirtual && !(await fs.exists(paths.newMbtilesFile))) {
-      debug('prepare geo files', paths.newMbtilesFile)
-      try {
-        await tilesUtils.prepareMbtiles(dataset, db, es)
-      } catch (err) {
-        console.error('Failure to create mbtiles file', paths.newFullFile, err)
       }
     }
 

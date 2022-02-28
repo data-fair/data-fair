@@ -132,17 +132,6 @@ exports.process = async function(app, dataset) {
 
   await datasetUtils.applyPatch(db, dataset, result)
 
-  // manage mbtiles
-  if (!dataset.isRest && !dataset.isVirtual) {
-    if (dataset.bbox) {
-      debug('prepare mbtiles')
-      await tilesUtils.prepareMbtiles(dataset, db, es)
-    } else {
-      debug('delete geo files')
-      await tilesUtils.deleteMbtiles(dataset)
-    }
-  }
-
   // Remove attachments if the schema does not refer to their existence
   if (!dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')) {
     await attachmentsUtils.removeAll(dataset)

@@ -150,20 +150,6 @@ exports.dataFiles = async (dataset) => {
           })
         }
       }
-
-      if (dataset.bbox) {
-        const mbtilesName = `${parsed.name}.mbtiles`
-        if (!files.includes(mbtilesName)) {
-          console.error('Mbtiles data file not found', path.join(dir, mbtilesName))
-        } else {
-          results.push({
-            name: mbtilesName,
-            key: 'mbtiles',
-            title: 'Tuiles cartographiques (mbtiles)',
-            mimetype: 'application/vnd.sqlite3',
-          })
-        }
-      }
     }
   }
   if (dataset.isRest && dataset?.exports?.restToCSV?.active && dataset?.exports?.restToCSV?.lastExport) {

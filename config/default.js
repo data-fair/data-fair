@@ -247,13 +247,6 @@ module.exports = {
   disableApplications: false,
   disableRemoteServices: false,
   proxyNuxt: false,
-  tippecanoe: {
-    skip: false,
-    minFeatures: 2000,
-    docker: false,
-    // args: ['-zg', '--extend-zooms-if-still-dropping', '--drop-fraction-as-needed', '--detect-shared-borders', '-r1'],
-    args: ['-zg', '--extend-zooms-if-still-dropping', '--drop-densest-as-needed', '--detect-shared-borders', '-r1'],
-  },
   ogr2ogr: {
     skip: false,
     timeout: 360000, // 6 minutes

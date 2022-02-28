@@ -76,9 +76,4 @@ module.exports = {
     title: 'Sirene',
     url: 'http://test.com/sirene/api-docs.json',
   }],
-  tippecanoe: {
-    skip: false,
-    minFeatures: 2,
-    docker: true,
-  },
 }

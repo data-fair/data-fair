@@ -27,22 +27,6 @@ RUN mv prepair /usr/bin/prepair
 
 RUN prepair --help
 
-
-######################################################
-# Stage: install tippecanoe to generate mbtiles files
-FROM node:16.13.2-alpine3.14 AS tippecanoe
-
-RUN apk add --no-cache python3 make g++ bash git 
-RUN apk add --no-cache sqlite-dev zlib-dev
-
-WORKDIR /tmp
-RUN git clone https://github.com/mapbox/tippecanoe.git
-WORKDIR /tmp/tippecanoe
-RUN make -j
-RUN make install
-
-RUN tippecanoe --help
-
 ############################
 # Stage: nodejs dependencies
 FROM node:16.13.2-alpine3.14 AS nodedeps
@@ -73,12 +57,10 @@ COPY --from=prepair /usr/local/lib/libCGAL.so.13 /usr/local/lib/libCGAL.so.13
 COPY --from=prepair /usr/lib/libmpfr.so.6 /usr/lib/libmpfr.so.6
 RUN ln -s /usr/lib/libproj.so.21.1.2 /usr/lib/libproj.so
 RUN test -f /usr/lib/libproj.so
-COPY --from=tippecanoe /usr/local/bin/tippecanoe /usr/local/bin/tippecanoe
 COPY --from=nodedeps /webapp/node_modules node_modules
 
 # check that geo execs actually load
 RUN prepair --help
-RUN tippecanoe --help
 
 RUN apk add unzip
 
