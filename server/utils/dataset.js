@@ -506,12 +506,17 @@ exports.totalStorage = async (db, owner) => {
 }
 
 // After a change that might impact consumed storage, we store the value
-exports.updateStorage = async (db, dataset, deleted = false) => {
+exports.updateStorage = async (db, dataset, deleted = false, checkRemaining = false) => {
   if (dataset.draftReason) console.log(new Error('updateStorage should not be called on a draft dataset'))
   if (!deleted) await db.collection('datasets').updateOne({ id: dataset.id }, { $set: { storage: await exports.storage(db, dataset) } })
   const totalStorage = await exports.totalStorage(db, dataset.owner)
   await limits.setConsumption(db, dataset.owner, 'store_bytes', totalStorage.size)
   await limits.setConsumption(db, dataset.owner, 'indexed_bytes', totalStorage.indexed)
+  if (checkRemaining) {
+    const remaining = await limits.remaining(db, dataset.owner)
+    if (remaining.storage === 0) throw createError(429, 'Vous avez atteint la limite de votre espace de stockage.')
+    if (remaining.indexed === 0) throw createError(429, 'Vous avez atteint la limite de votre espace de données indexées.')
+  }
   return totalStorage
 }
 

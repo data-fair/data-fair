@@ -114,6 +114,8 @@ describe('geo files support', () => {
     const dataset = await workers.hook('converter')
     assert.equal(dataset.status, 'loaded')
     assert.equal(dataset.file.name, 'stations.geojson')
+
+    assert.equal(dataset.storage.dataFiles.length, 2)
   })
 
   it('Process shapefile dataset where zip file has different name from contents', async () => {

@@ -53,6 +53,6 @@ exports.process = async function(app, dataset) {
     const fileSample = await datasetFileSample(dataset)
     patch.file.encoding = chardet.detect(fileSample)
   }
+  await datasetUtils.updateStorage(app.get('db'), dataset, false, true)
   await datasetUtils.applyPatch(db, dataset, patch)
-  await datasetUtils.updateStorage(app.get('db'), dataset)
 }
