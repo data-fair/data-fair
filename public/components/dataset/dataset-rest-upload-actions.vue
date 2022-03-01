@@ -1,5 +1,9 @@
 <template>
-  <v-dialog v-model="dialog" max-width="500px">
+  <v-dialog
+    v-model="dialog"
+    max-width="500px"
+    persistent
+  >
     <template #activator="{on, attrs}">
       <v-btn
         v-bind="attrs"
@@ -17,7 +21,32 @@
     <v-card outlined>
       <v-card-title v-t="'loadLines'" primary-title />
       <v-card-text>
-        <v-form v-model="form">
+        <template v-if="result">
+          <p v-if="result.nbOk">
+            {{ $t('resultOk', {nb: result.nbOk.toLocaleString()}) }}
+          </p>
+          <p v-if="result.nbNotModified">
+            {{ $t('resultNotModified', {nb: result.nbNotModified.toLocaleString()}) }}
+          </p>
+          <v-alert
+            v-if="result.nbErrors"
+            type="error"
+            :value="true"
+            outlined
+          >
+            {{ $t('resultErrors', {nb: result.nbErrors.toLocaleString()}) }}
+            <ul>
+              <li v-for="(error, i) in result.errors" :key="i">
+                <span v-if="error.line !== -1">{{ $t('line') }}{{ error.line }}</span>{{ error.error }}
+              </li>
+            </ul>
+          </v-alert>
+        </template>
+        <v-form
+          v-else
+          v-model="form"
+          @submit="upload"
+        >
           <v-file-input
             v-model="file"
             :label="$t('selectFile')"
@@ -33,17 +62,28 @@
       <v-card-actions>
         <v-spacer />
         <v-btn
-          v-t="'cancel'"
-          text
-          @click="dialog = false"
-        />
-        <v-btn
-          v-t="'load'"
+          v-if="result"
+          v-t="'ok'"
           :disabled="!form || importing"
           :loading="importing"
           color="primary"
-          @click="upload"
+          @click="dialog=false"
         />
+        <template v-else>
+          <v-btn
+            v-t="'cancel'"
+            text
+            :disabled="importing"
+            @click="dialog = false"
+          />
+          <v-btn
+            v-t="'load'"
+            :disabled="!form || importing"
+            :loading="importing"
+            color="primary"
+            @click="upload"
+          />
+        </template>
       </v-card-actions>
     </v-card>
   </v-dialog>
@@ -55,11 +95,19 @@ fr:
   selectFile: sélectionnez un fichier
   cancel: Annuler
   load: Charger
+  ok: Ok
+  resultOk: "{nb} ligne(s) OK"
+  resultNotModified: "{nb} ligne(s) sans modification"
+  resultErrors: "{nb} erreur(s)"
 en:
   loadLines: Load multiple lines from a file
   selectFile: Select a file
   cancel: Cancel
   load: Load
+  ok: Ok
+  resultOk: "{nb} OK line(s)"
+  resultNotModified: "{nb} line(s) without modifications"
+  resultErrors: "{nb} error(s)"
 </i18n>
 
 <script>
@@ -70,15 +118,31 @@ en:
       dialog: false,
       file: null,
       importing: false,
+      result: null,
     }),
+    watch: {
+      dialog() {
+        this.result = null
+        this.file = null
+        this.importing = false
+      },
+    },
     methods: {
-      async upload() {
+      async upload(e) {
+        if (e) e.preventDefault()
         const formData = new FormData()
         formData.append('actions', this.file)
         this.importing = true
-        await this.$axios.$post(`api/v1/datasets/${this.dataset.id}/_bulk_lines`, formData)
+        try {
+          this.result = await this.$axios.$post(`api/v1/datasets/${this.dataset.id}/_bulk_lines`, formData)
+        } catch (error) {
+          if (typeof (error.response && error.response.data) === 'object') {
+            this.result = error.response.data
+          } else {
+            throw error
+          }
+        }
         this.importing = false
-        this.dialog = false
       },
     },
   }
