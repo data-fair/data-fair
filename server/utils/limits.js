@@ -18,8 +18,8 @@ const schema = {
     store_bytes: limitTypeSchema,
     indexed_bytes: limitTypeSchema,
     nb_datasets: limitTypeSchema,
-    hide_brand: limitTypeSchema,
-  },
+    hide_brand: limitTypeSchema
+  }
 }
 const validate = ajv.compile(schema)
 
@@ -38,7 +38,7 @@ exports.getLimits = async (db, consumer) => {
       id: consumer.id,
       name: consumer.name || consumer.id,
       lastUpdate: now.toISOString(),
-      defaults: true,
+      defaults: true
     }
     try {
       await coll.insertOne(limits)
@@ -75,7 +75,7 @@ exports.remaining = async (db, consumer) => {
   return {
     storage: calculateRemainingLimit(limits, 'store_bytes'),
     indexed: calculateRemainingLimit(limits, 'indexed_bytes'),
-    nbDatasets: calculateRemainingLimit(limits, 'nb_datasets'),
+    nbDatasets: calculateRemainingLimit(limits, 'nb_datasets')
   }
 }
 

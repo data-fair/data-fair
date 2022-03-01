@@ -1,5 +1,8 @@
 <template>
-  <v-container fluid class="py-0">
+  <v-container
+    fluid
+    class="py-0"
+  >
     <v-row>
       <v-col>
         <v-dialog
@@ -9,7 +12,7 @@
           style="margin-right:160px"
           persistent
         >
-          <template v-slot:activator="{on}">
+          <template #activator="{on}">
             <v-btn
               v-t="'addReuse'"
               color="primary"
@@ -18,7 +21,10 @@
           </template>
 
           <v-card outlined>
-            <v-toolbar dense flat>
+            <v-toolbar
+              dense
+              flat
+            >
               <v-toolbar-title v-t="newReuse" />
             </v-toolbar>
             <v-card-text>
@@ -42,11 +48,17 @@
             </v-card-actions>
           </v-card>
         </v-dialog>
-        <p v-else-if="!(dataset.extras && dataset.extras.externalReuses && dataset.extras.externalReuses.length)" v-t="'noReuse'" />
+        <p
+          v-else-if="!(dataset.extras && dataset.extras.externalReuses && dataset.extras.externalReuses.length)"
+          v-t="'noReuse'"
+        />
       </v-col>
     </v-row>
     <v-list v-if="dataset.extras && dataset.extras.externalReuses && dataset.extras.externalReuses.length">
-      <v-list-item v-for="(reuse, i) in dataset.extras.externalReuses" :key="i">
+      <v-list-item
+        v-for="(reuse, i) in dataset.extras.externalReuses"
+        :key="i"
+      >
         <!-- <v-list-item-avatar size="80">
           <v-layout column>
             <span>{{ attachment.name.split('.').pop().toUpperCase() }}</span>
@@ -68,7 +80,7 @@
               :width="$vuetify.breakpoint.mdAndUp ? $vuetify.breakpoint.width/2 : $vuetify.breakpoint.width-20"
               persistent
             >
-              <template v-slot:activator="{on}">
+              <template #activator="{on}">
                 <v-btn
                   color="primary"
                   icon
@@ -81,7 +93,10 @@
               </template>
 
               <v-card outlined>
-                <v-toolbar dense flat>
+                <v-toolbar
+                  dense
+                  flat
+                >
                   <v-toolbar-title v-t="'editReuse'" />
                 </v-toolbar>
                 <v-card-text>
@@ -144,46 +159,46 @@ en:
 
 <script>
 
-  const { mapState, mapGetters } = require('vuex')
+const { mapState, mapGetters } = require('vuex')
 
-  export default {
-    data: function() {
-      return {
-        dialog: null,
-        editDialog: { },
-        newReuse: {
-          type: 'link',
-        },
+export default {
+  data: function () {
+    return {
+      dialog: null,
+      editDialog: { },
+      newReuse: {
+        type: 'link'
       }
+    }
+  },
+  computed: {
+    ...mapState('dataset', ['dataset']),
+    ...mapGetters('dataset', ['can'])
+  },
+  created () {
+    this.dataset.extras = this.dataset.extras || {}
+    this.dataset.extras.externalReuses = this.dataset.extras.externalReuses || []
+  },
+  methods: {
+    async addReuse () {
+      this.dataset.extras.externalReuses.push(this.newReuse)
+      await this.updateExternalReuses()
+      this.newReuse = {
+        type: 'link'
+      }
+      this.dialog = false
     },
-    computed: {
-      ...mapState('dataset', ['dataset']),
-      ...mapGetters('dataset', ['can']),
+    async editReuse (i) {
+      this.editDialog[i] = false
+      await this.updateExternalReuses()
     },
-    created() {
-      this.dataset.extras = this.dataset.extras || {}
-      this.dataset.extras.externalReuses = this.dataset.extras.externalReuses || []
+    async removeReuse (idx) {
+      this.dataset.extras.externalReuses.splice(idx, 1)
+      await this.updateExternalReuses()
     },
-    methods: {
-      async addReuse() {
-        this.dataset.extras.externalReuses.push(this.newReuse)
-        await this.updateExternalReuses()
-        this.newReuse = {
-          type: 'link',
-        }
-        this.dialog = false
-      },
-      async editReuse(i) {
-        this.editDialog[i] = false
-        await this.updateExternalReuses()
-      },
-      async removeReuse(idx) {
-        this.dataset.extras.externalReuses.splice(idx, 1)
-        await this.updateExternalReuses()
-      },
-      async updateExternalReuses() {
-        await this.$store.dispatch('dataset/patch', { extras: this.dataset.extras })
-      },
-    },
+    async updateExternalReuses () {
+      await this.$store.dispatch('dataset/patch', { extras: this.dataset.extras })
+    }
   }
+}
 </script>

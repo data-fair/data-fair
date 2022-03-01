@@ -7,7 +7,7 @@ describe('Sorting', () => {
     await ax.post('/api/v1/datasets', {
       isRest: true,
       title: 'restsort1',
-      schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'integer' }],
+      schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'integer' }]
     })
 
     await ax.post('/api/v1/datasets/restsort1/lines', { attr1: 'aaa', attr2: 1 })

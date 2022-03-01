@@ -7,7 +7,10 @@
       hide-default-footer
       class="elevation-1"
     >
-      <template slot="item" slot-scope="props">
+      <template
+        slot="item"
+        slot-scope="props"
+      >
         <tr>
           <td>{{ props.item.type }}</td>
           <td>{{ $t(props.item.type.replace('/', '').replace(' ', '')) }}</td>
@@ -48,72 +51,72 @@ en:
 </i18n>
 
 <script>
-  const { mapState } = require('vuex')
+const { mapState } = require('vuex')
 
-  const formats = [
-    {
-      type: 'CSV',
-      format: '.csv',
-    }, {
-      type: 'TSV',
-      format: '.tsv',
-    }, {
-      type: 'OpenDocument',
-      format: '.ods, .fods',
-    },
-    {
-      type: 'XLSX',
-      format: '.xlsx',
-    }, {
-      type: 'XLS',
-      format: '.xls',
-      // }, {
-      //   type: 'DBF',
-      //   description: `Format de fichier de base de données DBase`,
-      //   format: '.dbf'
-      // }, {
-      //   type: 'TXT',
-      //   description: `Format de fichier texte qui ne contient qu'une suite de caractères`,
-      //   format: '.txt'
-      // }, {
-      //   type: 'DIF',
-      //   description: `Format de fichier texte de données ASCII`,
-      //   format: '.dif',
-      //   formatsInArchive: ''
-    }, {
-      type: 'GeoJSON',
-      format: '.geojson',
-    }, {
-      type: 'KML/KMZ',
-      format: '.kml, .kmz',
-    }, {
-      type: 'GPX',
-      format: '.gpx',
-    }, {
-      type: 'ESRI Shapefile',
-      description: 'Format de fichier pour les systèmes d\'informations géographiques',
-      formatsInArchive: '.shp, .dbf, .shx (.prj optionel)',
-    }, {
-      type: 'iCalendar',
-      format: '.ics',
-    },
-  ]
-
-  export default {
-    props: ['condensed'],
-    data: () => ({
-      dialog: null,
-      formats,
-      headers: [
-        { text: 'Type', sortable: false, value: 'type' },
-        { text: 'Description', sortable: false, value: 'description' },
-        { text: 'Format', sortable: false, value: 'format' },
-        { text: 'Format archivé (.zip)', sortable: false, value: 'formatsInArchive' },
-      ],
-    }),
-    computed: {
-      ...mapState(['env']),
-    },
+const formats = [
+  {
+    type: 'CSV',
+    format: '.csv'
+  }, {
+    type: 'TSV',
+    format: '.tsv'
+  }, {
+    type: 'OpenDocument',
+    format: '.ods, .fods'
+  },
+  {
+    type: 'XLSX',
+    format: '.xlsx'
+  }, {
+    type: 'XLS',
+    format: '.xls'
+    // }, {
+    //   type: 'DBF',
+    //   description: `Format de fichier de base de données DBase`,
+    //   format: '.dbf'
+    // }, {
+    //   type: 'TXT',
+    //   description: `Format de fichier texte qui ne contient qu'une suite de caractères`,
+    //   format: '.txt'
+    // }, {
+    //   type: 'DIF',
+    //   description: `Format de fichier texte de données ASCII`,
+    //   format: '.dif',
+    //   formatsInArchive: ''
+  }, {
+    type: 'GeoJSON',
+    format: '.geojson'
+  }, {
+    type: 'KML/KMZ',
+    format: '.kml, .kmz'
+  }, {
+    type: 'GPX',
+    format: '.gpx'
+  }, {
+    type: 'ESRI Shapefile',
+    description: 'Format de fichier pour les systèmes d\'informations géographiques',
+    formatsInArchive: '.shp, .dbf, .shx (.prj optionel)'
+  }, {
+    type: 'iCalendar',
+    format: '.ics'
   }
+]
+
+export default {
+  props: ['condensed'],
+  data: () => ({
+    dialog: null,
+    formats,
+    headers: [
+      { text: 'Type', sortable: false, value: 'type' },
+      { text: 'Description', sortable: false, value: 'description' },
+      { text: 'Format', sortable: false, value: 'format' },
+      { text: 'Format archivé (.zip)', sortable: false, value: 'formatsInArchive' }
+    ]
+  }),
+  computed: {
+    ...mapState(['env'])
+  }
+}
 
 </script>

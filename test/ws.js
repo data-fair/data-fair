@@ -3,7 +3,7 @@ const WebSocket = require('ws')
 const eventToPromise = require('event-to-promise')
 const config = require('config')
 
-async function receive(cli) {
+async function receive (cli) {
   const res = await eventToPromise(cli, 'message')
   return JSON.parse(res.data)
 }

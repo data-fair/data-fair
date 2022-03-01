@@ -1,8 +1,11 @@
 <template lang="html">
   <v-row class="my-0">
-    <v-col :style="this.$vuetify.breakpoint.lgAndUp ? 'padding-right:256px;' : ''">
+    <v-col :style="$vuetify.breakpoint.lgAndUp ? 'padding-right:256px;' : ''">
       <v-container class="py-0">
-        <layout-doc-link tooltip="Consultez la documentation sur les paramètres" doc-key="settings" />
+        <layout-doc-link
+          tooltip="Consultez la documentation sur les paramètres"
+          doc-key="settings"
+        />
         <v-row v-if="initialized">
           <v-col>
             <!--<v-subheader>{{ $t('pages.settings.description') }}</v-subheader>-->
@@ -46,15 +49,21 @@
                 :svg="qualitySvg"
                 :section="sections.find(s => s.id === 'licences')"
               >
-                <template v-slot:extension>
+                <template #extension>
                   <p>
                     Définissez des licences pour clarifier les utilisations possibles des jeux de données que vous diffusez.
                   </p>
                 </template>
-                <template v-slot:tabs-items>
-                  <v-container fluid class="py-1">
+                <template #tabs-items>
+                  <v-container
+                    fluid
+                    class="py-1"
+                  >
                     <v-row>
-                      <v-col cols="12" md="6">
+                      <v-col
+                        cols="12"
+                        md="6"
+                      >
                         <settings-licenses
                           v-if="settings"
                           :settings="settings"
@@ -71,7 +80,7 @@
                 svg-no-margin
                 :section="sections.find(s => s.id === 'topics')"
               >
-                <template v-slot:extension>
+                <template #extension>
                   <p v-if="env.disableApplications">
                     Les thématiques sont une manière simple d'organiser vos jeux de données.
                   </p>
@@ -79,10 +88,16 @@
                     Les thématiques sont une manière simple d'organiser vos jeux de données et vos visualisations.
                   </p>
                 </template>
-                <template v-slot:tabs-items>
-                  <v-container fluid class="py-1">
+                <template #tabs-items>
+                  <v-container
+                    fluid
+                    class="py-1"
+                  >
                     <v-row>
-                      <v-col cols="12" md="6">
+                      <v-col
+                        cols="12"
+                        md="6"
+                      >
                         <settings-topics
                           v-if="settings"
                           :settings="settings"
@@ -99,16 +114,22 @@
                 svg-no-margin
                 :section="sections.find(s => s.id === 'api-keys')"
               >
-                <template v-slot:extension>
+                <template #extension>
                   <p>
                     Les clés d'API sont un moyen d'utiliser l'API de data-fair de manière sécurisée.
                     Il s'agit d'une configuration technique pour personne avertie.
                   </p>
                 </template>
-                <template v-slot:tabs-items>
-                  <v-container fluid class="py-1">
+                <template #tabs-items>
+                  <v-container
+                    fluid
+                    class="py-1"
+                  >
                     <v-row>
-                      <v-col cols="12" md="6">
+                      <v-col
+                        cols="12"
+                        md="6"
+                      >
                         <settings-api-keys
                           v-if="settings"
                           :settings="settings"
@@ -125,16 +146,22 @@
                 svg-no-margin
                 :section="sections.find(s => s.id === 'webhooks')"
               >
-                <template v-slot:extension>
+                <template #extension>
                   <p>
                     Les <i>webhooks</i> sont un moyen de lier d'autres services Web à des événements internes à ce service de diffusion de données (créations, mises à jour, etc.).
                     Il s'agit d'une configuration technique pour personne avertie.
                   </p>
                 </template>
-                <template v-slot:tabs-items>
-                  <v-container fluid class="py-1">
+                <template #tabs-items>
+                  <v-container
+                    fluid
+                    class="py-1"
+                  >
                     <v-row>
-                      <v-col cols="12" md="6">
+                      <v-col
+                        cols="12"
+                        md="6"
+                      >
                         <settings-webhooks
                           v-if="settings"
                           :settings="settings"
@@ -151,18 +178,21 @@
                 svg-no-margin
                 :section="sections.find(s => s.id === 'privateVocabulary')"
               >
-                <template v-slot:extension>
+                <template #extension>
                   <p>
                     Le <i>vocabulaire privé</i> vous permet d'étendre la liste des concepts avec lesquels pour pouvez annoter les colonnes de vos jeux de données.
                   </p>
                 </template>
-                <template v-slot:tabs-items>
+                <template #tabs-items>
                   <v-container fluid>
                     <v-alert type="warning">
                       Attention, si vous supprimez ou changez l'identifiant d'un concept référencé dans des jeux de données vous pouvez causer des dysfonctionnements.
                     </v-alert>
                     <v-row>
-                      <v-col cols="12" md="6">
+                      <v-col
+                        cols="12"
+                        md="6"
+                      >
                         <settings-private-vocabulary
                           v-if="settings"
                           :settings="settings"
@@ -180,16 +210,22 @@
                 :section="sections.find(s => s.id === 'publicationSites')"
                 :admin="true"
               >
-                <template v-slot:extension>
+                <template #extension>
                   <p>
                     Les <i>sites de publication</i> sont les sites externes à data-fair qui peuvent exposer ses ressources (jeux de données et visualisations).
                     Cette liste de sites est normalement gérée automatiquement par le projet data-fair-portals.
                   </p>
                 </template>
-                <template v-slot:tabs-items>
-                  <v-container fluid class="py-1">
+                <template #tabs-items>
+                  <v-container
+                    fluid
+                    class="py-1"
+                  >
                     <v-row>
-                      <v-col cols="12" md="6">
+                      <v-col
+                        cols="12"
+                        md="6"
+                      >
                         <settings-publication-sites
                           v-if="settings"
                           :settings="settings"
@@ -206,7 +242,7 @@
         </v-row>
       </v-container>
     </v-col>
-    <layout-navigation-right v-if="this.$vuetify.breakpoint.lgAndUp">
+    <layout-navigation-right v-if="$vuetify.breakpoint.lgAndUp">
       <layout-toc :sections="sections" />
     </layout-navigation-right>
   </v-row>
@@ -230,86 +266,89 @@ en:
 </i18n>
 
 <script>
-  import { mapState, mapGetters } from 'vuex'
-  import eventBus from '~/event-bus'
+import { mapState, mapGetters } from 'vuex'
+import eventBus from '~/event-bus'
 
-  export default {
-    data: () => ({
-      api: null,
-      operations: null,
-      organizationRoles: [],
-      organization: {},
-      settings: null,
-      ready: false,
-      qualitySvg: require('~/assets/svg/Quality Check_Monochromatic.svg?raw'),
-      flagsSvg: require('~/assets/svg/Crossed flags_Two Color.svg?raw'),
-      securitysSvg: require('~/assets/svg/Security_Two Color.svg?raw'),
-      wwwSvg: require('~/assets/svg/World wide web_Two Color.svg?raw'),
-      uiSvg: require('~/assets/svg/User Interface _Two Color.svg?raw'),
-      checklistSvg: require('~/assets/svg/Checklist_Two Color.svg?raw'),
-    }),
-    computed: {
-      ...mapState('session', ['user', 'initialized']),
-      ...mapGetters('session', ['activeAccount']),
-      ...mapState(['env']),
-      authorized() {
-        if (!this.user) return false
-        if (this.activeAccount.type === 'user' && this.activeAccount.id !== this.user.id) return false
-        if (this.activeAccount.type === 'organization') {
-          const organization = this.user.organizations.find(o => o.id === this.activeAccount.id)
-          if (!organization) return false
-          if (organization.role !== this.env.adminRole) return false
-        }
-        return true
-      },
-      sections() {
-        const sections = [{
-          id: 'licences',
-          title: this.$t('licences'),
-        }, {
-          id: 'topics',
-          title: this.$t('topics'),
-        }, {
-          id: 'api-keys',
-          title: this.$t('apiKeys'),
-        }, {
-          id: 'webhooks',
-          title: this.$t('webhooks'),
-        }, {
-          id: 'privateVocabulary',
-          title: this.$t('privateVocab'),
-        }]
-        if (this.user.adminMode) {
-          sections.push({
-            id: 'publicationSites',
-            title: this.$t('publicationSites'),
-          })
-        }
-        return sections
-      },
+export default {
+  data: () => ({
+    api: null,
+    operations: null,
+    organizationRoles: [],
+    organization: {},
+    settings: null,
+    ready: false,
+    qualitySvg: require('~/assets/svg/Quality Check_Monochromatic.svg?raw'),
+    flagsSvg: require('~/assets/svg/Crossed flags_Two Color.svg?raw'),
+    securitysSvg: require('~/assets/svg/Security_Two Color.svg?raw'),
+    wwwSvg: require('~/assets/svg/World wide web_Two Color.svg?raw'),
+    uiSvg: require('~/assets/svg/User Interface _Two Color.svg?raw'),
+    checklistSvg: require('~/assets/svg/Checklist_Two Color.svg?raw')
+  }),
+  head: () => ({
+    title: 'Paramètres'
+  }),
+  computed: {
+    ...mapState('session', ['user', 'initialized']),
+    ...mapGetters('session', ['activeAccount']),
+    ...mapState(['env']),
+    authorized () {
+      if (!this.user) return false
+      if (this.activeAccount.type === 'user' && this.activeAccount.id !== this.user.id) return false
+      if (this.activeAccount.type === 'organization') {
+        const organization = this.user.organizations.find(o => o.id === this.activeAccount.id)
+        if (!organization) return false
+        if (organization.role !== this.env.adminRole) return false
+      }
+      return true
     },
-    watch: {
-      authorized: {
-        handler() {
-          if (this.authorized) this.init()
-        },
-        immediate: true,
+    sections () {
+      const sections = [{
+        id: 'licences',
+        title: this.$t('licences')
+      }, {
+        id: 'topics',
+        title: this.$t('topics')
+      }, {
+        id: 'api-keys',
+        title: this.$t('apiKeys')
+      }, {
+        id: 'webhooks',
+        title: this.$t('webhooks')
+      }, {
+        id: 'privateVocabulary',
+        title: this.$t('privateVocab')
+      }]
+      if (this.user.adminMode) {
+        sections.push({
+          id: 'publicationSites',
+          title: this.$t('publicationSites')
+        })
+      }
+      return sections
+    }
+  },
+  watch: {
+    authorized: {
+      handler () {
+        if (this.authorized) this.init()
       },
-    },
-    methods: {
-      async init() {
-        if (this.activeAccount.type === 'organization') {
-          let roles = []
-          this.organization = await this.$axios.$get(this.env.directoryUrl + '/api/organizations/' + this.activeAccount.id)
-          roles = await this.$axios.$get(this.env.directoryUrl + '/api/organizations/' + this.activeAccount.id + '/roles')
-          this.organizationRoles = roles.filter(role => role !== this.env.adminRole)
-        }
-        this.settings = await this.$axios.$get('api/v1/settings/' + this.activeAccount.type + '/' + this.activeAccount.id)
-        this.$set(this.settings, 'operationsPermissions', this.settings.operationsPermissions || {})
-        this.$set(this.settings, 'webhooks', this.settings.webhooks || [])
-        this.$set(this.settings, 'apiKeys', this.settings.apiKeys || [])
-        this.$set(this.settings, 'licenses', this.settings.licenses || [])
-        /*
+      immediate: true
+    }
+  },
+  methods: {
+    async init () {
+      if (this.activeAccount.type === 'organization') {
+        let roles = []
+        this.organization = await this.$axios.$get(this.env.directoryUrl + '/api/organizations/' + this.activeAccount.id)
+        roles = await this.$axios.$get(this.env.directoryUrl + '/api/organizations/' + this.activeAccount.id + '/roles')
+        this.organizationRoles = roles.filter(role => role !== this.env.adminRole)
+      }
+      this.settings = await this.$axios.$get('api/v1/settings/' + this.activeAccount.type + '/' + this.activeAccount.id)
+      this.$set(this.settings, 'operationsPermissions', this.settings.operationsPermissions || {})
+      this.$set(this.settings, 'webhooks', this.settings.webhooks || [])
+      this.$set(this.settings, 'apiKeys', this.settings.apiKeys || [])
+      this.$set(this.settings, 'licenses', this.settings.licenses || [])
+      /*
         this.api = await this.$axios.$get('api/v1/api-docs.json')
         this.operations = (this.api && [].concat(...Object.keys(this.api.paths).map(path => Object.keys(this.api.paths[path]).map(method => ({
           id: this.api.paths[path][method].operationId,
@@ -320,17 +359,14 @@ en:
           this.$set(this.settings.operationsPermissions, operation.id, this.settings.operationsPermissions[operation.id] || [])
         })
         */
-      },
-      async save(action) {
-        this.settings = await this.$axios.$put('api/v1/settings/' + this.activeAccount.type + '/' + this.activeAccount.id, this.settings)
-        eventBus.$emit('notification', 'Les paramètres ont été mis à jour')
-        if (action) this.$store.dispatch(action, this.activeAccount)
-      },
     },
-    head: () => ({
-      title: 'Paramètres',
-    }),
+    async save (action) {
+      this.settings = await this.$axios.$put('api/v1/settings/' + this.activeAccount.type + '/' + this.activeAccount.id, this.settings)
+      eventBus.$emit('notification', 'Les paramètres ont été mis à jour')
+      if (action) this.$store.dispatch(action, this.activeAccount)
+    }
   }
+}
 </script>
 
 <style lang="css">

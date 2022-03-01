@@ -86,12 +86,12 @@ before('init globals', async () => {
     global.ax.builder('bhazeldean7@cnbc.com:passwd', 'KWqAGZ4mG').then(ax => { global.ax.bhazeldean7Org = ax }),
     global.ax.builder('ngernier4@usa.gov:passwd', 'KWqAGZ4mG').then(ax => { global.ax.ngernier4Org = ax }),
     global.ax.builder('icarlens9@independent.co.uk:passwd').then(ax => { global.ax.icarlens9 = ax }),
-    global.ax.builder('icarlens9@independent.co.uk:passwd', 'KWqAGZ4mG').then(ax => { global.ax.icarlens9Org = ax }),
+    global.ax.builder('icarlens9@independent.co.uk:passwd', 'KWqAGZ4mG').then(ax => { global.ax.icarlens9Org = ax })
   ])
   debug('init globals ok')
 })
 
-before('scratch all', async() => {
+before('scratch all', async () => {
   debug('scratch all')
   await global.db.dropDatabase()
   await fs.remove('./data/test')
@@ -123,7 +123,7 @@ beforeEach('scratch data', async () => {
     global.db.collection('extensions-cache').deleteMany({}),
     global.db.collection('remote-services').deleteMany({ id: /localhost-dataset-(.*)/ }),
     global.db.collection('journals').deleteMany({}),
-    fs.emptyDir('./data/test'),
+    fs.emptyDir('./data/test')
   ])
   global.events.removeAllListeners()
   debug('scratch data ok')
@@ -133,7 +133,7 @@ after('stop app', async () => {
   debug('stop app')
   await Promise.race([
     new Promise(resolve => setTimeout(resolve, 5000)),
-    app.stop(),
+    app.stop()
   ])
   debug('stop app ok')
 })

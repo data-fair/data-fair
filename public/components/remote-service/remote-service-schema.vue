@@ -4,7 +4,7 @@
     hide-default-header
     hide-default-footer
   >
-    <template v-slot:item="{item}">
+    <template #item="{item}">
       <tr v-if="vocabulary">
         <td>
           <v-icon
@@ -53,7 +53,10 @@
               {{ vocabulary[output.concept].title }}
             </v-chip>
           </template>
-          <v-chip v-if="nonSemOutputs(item.output)" style="margin:4px 4px;">
+          <v-chip
+            v-if="nonSemOutputs(item.output)"
+            style="margin:4px 4px;"
+          >
             {{ $tc('withoutConcepts', nonSemOutputs(item.output)) }}
           </v-chip>
         </td>
@@ -76,26 +79,26 @@ en:
 </i18n>
 
 <script>
-  const { mapState } = require('vuex')
+const { mapState } = require('vuex')
 
-  export default {
-    data: () => ({
-      actions: {
-        'http://schema.org/SearchAction': 'Recherche',
-        'http://schema.org/ReadAction': 'Lecture',
-        'http://schema.org/CheckAction': 'Vérification',
-      },
-    }),
-    computed: {
-      ...mapState('remoteService', ['remoteService']),
-      ...mapState(['vocabulary']),
-    },
-    methods: {
-      nonSemOutputs(output) {
-        return output.filter(output => !this.vocabulary[output.concept] && !output.name.startsWith('_')).length
-      },
-    },
+export default {
+  data: () => ({
+    actions: {
+      'http://schema.org/SearchAction': 'Recherche',
+      'http://schema.org/ReadAction': 'Lecture',
+      'http://schema.org/CheckAction': 'Vérification'
+    }
+  }),
+  computed: {
+    ...mapState('remoteService', ['remoteService']),
+    ...mapState(['vocabulary'])
+  },
+  methods: {
+    nonSemOutputs (output) {
+      return output.filter(output => !this.vocabulary[output.concept] && !output.name.startsWith('_')).length
+    }
   }
+}
 </script>
 
 <style lang="css">

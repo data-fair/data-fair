@@ -1,8 +1,11 @@
 <template>
-  <v-dialog v-model="dialog" :fullscreen="true">
-    <template v-slot:activator="{ on }">
+  <v-dialog
+    v-model="dialog"
+    :fullscreen="true"
+  >
+    <template #activator="{ on }">
       <v-tooltip top>
-        <template v-slot:activator="{ on: onTooltip }">
+        <template #activator="{ on: onTooltip }">
           <v-btn
             color="primary"
             icon
@@ -17,15 +20,24 @@
     </template>
 
     <v-card outlined>
-      <v-toolbar dense flat>
+      <v-toolbar
+        dense
+        flat
+      >
         {{ remoteServicesMap[extension.remoteService] && remoteServicesMap[extension.remoteService].actions[extension.action].summary }}
         <v-spacer />
-        <v-btn icon @click.native="dialog = false">
+        <v-btn
+          icon
+          @click.native="dialog = false"
+        >
           <v-icon>mdi-close</v-icon>
         </v-btn>
       </v-toolbar>
       <v-card-text>
-        <dataset-extension-details :remote-service="extension.remoteService" :action="extension.action" />
+        <dataset-extension-details
+          :remote-service="extension.remoteService"
+          :action="extension.action"
+        />
       </v-card-text>
       <v-divider />
     </v-card>
@@ -40,20 +52,20 @@ en:
 </i18n>
 
 <script>
-  import { mapGetters } from 'vuex'
+import { mapGetters } from 'vuex'
 
-  export default {
-    props: ['extension', 'disabled'],
-    data() {
-      return {
-        dialog: false,
-      }
-    },
-    computed: {
-      ...mapGetters('dataset', ['remoteServicesMap']),
+export default {
+  props: ['extension', 'disabled'],
+  data () {
+    return {
+      dialog: false
+    }
+  },
+  computed: {
+    ...mapGetters('dataset', ['remoteServicesMap'])
 
-    },
   }
+}
 </script>
 
 <style lang="css" scoped>

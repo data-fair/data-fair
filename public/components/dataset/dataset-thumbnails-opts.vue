@@ -1,6 +1,9 @@
 <template>
   <v-form>
-    <p v-t="'message'" class="mb-6" />
+    <p
+      v-t="'message'"
+      class="mb-6"
+    />
     <v-select
       v-model="editThumbnails.resizeMode"
       style="max-width: 300px;"
@@ -23,27 +26,27 @@ en:
 </i18n>
 
 <script>
-  const { mapState, mapActions } = require('vuex')
+const { mapState, mapActions } = require('vuex')
 
-  export default {
-    data: () => ({
-      editThumbnails: null,
-    }),
-    computed: {
-      ...mapState('dataset', ['dataset']),
-    },
-    watch: {
-      'dataset.thumbnails': {
-        immediate: true,
-        handler() {
-          this.editThumbnails = JSON.parse(JSON.stringify(this.dataset.thumbnails || {}))
-        },
-      },
-    },
-    methods: {
-      ...mapActions('dataset', ['patchAndCommit']),
-    },
+export default {
+  data: () => ({
+    editThumbnails: null
+  }),
+  computed: {
+    ...mapState('dataset', ['dataset'])
+  },
+  watch: {
+    'dataset.thumbnails': {
+      immediate: true,
+      handler () {
+        this.editThumbnails = JSON.parse(JSON.stringify(this.dataset.thumbnails || {}))
+      }
+    }
+  },
+  methods: {
+    ...mapActions('dataset', ['patchAndCommit'])
   }
+}
 </script>
 
 <style lang="css" scoped>

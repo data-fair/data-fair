@@ -10,10 +10,10 @@ module.exports = (remoteService) => {
     openapi: '3.1.0',
     info: Object.assign({}, remoteService.apiDoc.info, {
       title: `API du service distant : ${remoteService.title || remoteService.id}`,
-      description: remoteService.description,
+      description: remoteService.description
     }),
     servers: [{
-      url: `${config.publicUrl}/api/v1/remote-services/${remoteService.id}`,
+      url: `${config.publicUrl}/api/v1/remote-services/${remoteService.id}`
     }],
     components: {
       schemas: (remoteService.apiDoc.components && remoteService.apiDoc.components.schemas) || {},
@@ -21,14 +21,14 @@ module.exports = (remoteService) => {
         sdCookie: {
           type: 'apiKey',
           in: 'cookie',
-          name: 'id_token',
+          name: 'id_token'
         },
         siCookie: {
           type: 'apiKey',
           in: 'cookie',
-          name: 'session_id',
-        },
-      },
+          name: 'session_id'
+        }
+      }
     },
     security: [{ siCookie: [] }, { sdCookie: [] }],
     paths: {
@@ -43,11 +43,11 @@ module.exports = (remoteService) => {
               description: 'Les informations de configuration du service distant.',
               content: {
                 'application/json': {
-                  schema: remoteServiceSchema,
-                },
-              },
-            },
-          },
+                  schema: remoteServiceSchema
+                }
+              }
+            }
+          }
         },
         patch: {
           summary: 'Mettre à jour les informations de configuration du service distant.',
@@ -59,20 +59,20 @@ module.exports = (remoteService) => {
             required: true,
             content: {
               'application/json': {
-                schema: remoteServicePatchSchema,
-              },
-            },
+                schema: remoteServicePatchSchema
+              }
+            }
           },
           responses: {
             200: {
               description: 'Les informations de configuration du service distant',
               content: {
                 'application/json': {
-                  schema: remoteServiceSchema,
-                },
-              },
-            },
-          },
+                  schema: remoteServiceSchema
+                }
+              }
+            }
+          }
         },
         delete: {
           summary: 'Pour supprimer cette configuration du service distant',
@@ -81,10 +81,10 @@ module.exports = (remoteService) => {
           tags: ['Configuration'],
           responses: {
             204: {
-              description: 'Aucun contenu',
-            },
-          },
-        },
+              description: 'Aucun contenu'
+            }
+          }
+        }
       },
       '/_update': {
         get: {
@@ -97,12 +97,12 @@ module.exports = (remoteService) => {
               description: 'Les informations de configuration du service distant',
               content: {
                 'application/json': {
-                  schema: remoteServiceSchema,
-                },
-              },
-            },
-          },
-        },
+                  schema: remoteServiceSchema
+                }
+              }
+            }
+          }
+        }
       },
       '/api-docs.json': {
         get: {
@@ -116,26 +116,26 @@ module.exports = (remoteService) => {
               content: {
                 'application/json': {
                   schema: {
-                    type: 'object',
-                  },
-                },
-              },
-            },
-          },
-        },
+                    type: 'object'
+                  }
+                }
+              }
+            }
+          }
+        }
       },
-      '/permissions': permissionsDoc,
+      '/permissions': permissionsDoc
     },
     externalDocs: {
       description: 'Documentation sur Github',
-      url: 'https://data-fair.github.io',
+      url: 'https://data-fair.github.io'
     },
     definitions: {
       API: {
         type: 'object',
-        description: 'Open API v3 compliant documentation',
-      },
-    },
+        description: 'Open API v3 compliant documentation'
+      }
+    }
   }
   const apiPaths = Object.keys(remoteService.apiDoc.paths).reduce((a, path) => {
     a['/proxy' + path] = JSON.parse(JSON.stringify(remoteService.apiDoc.paths[path]))

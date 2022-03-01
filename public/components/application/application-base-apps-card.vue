@@ -35,7 +35,10 @@
         />
         <v-card-title :class="{'error--text': baseApp.disabled.length}">
           <h5>
-            <v-icon v-if="!baseApp.public" :title="$t('restrictedAccess')">
+            <v-icon
+              v-if="!baseApp.public"
+              :title="$t('restrictedAccess')"
+            >
               mdi-security
             </v-icon>&nbsp;{{ baseApp.title }}
           </h5>
@@ -53,12 +56,12 @@ en:
 </i18n>
 
 <script>
-  export default {
-    props: ['baseApp', 'selected'],
-    data: () => ({
-      hover: false,
-    }),
-  }
+export default {
+  props: ['baseApp', 'selected'],
+  data: () => ({
+    hover: false
+  })
+}
 </script>
 
 <style lang="css" scoped>

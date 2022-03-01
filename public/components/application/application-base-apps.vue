@@ -9,13 +9,19 @@
       color="primary"
       height="2"
     />
-    <template v-for="category in categories" v-else>
+    <template
+      v-for="category in categories"
+      v-else
+    >
       <h3
         :key="category"
         v-t="{path: 'appType', args: {category}}"
         class="text-h6"
       />
-      <v-row :key="'layout-'+category" class="mt-0 mb-1">
+      <v-row
+        :key="'layout-'+category"
+        class="mt-0 mb-1"
+      >
         <v-col
           v-for="baseApp in baseApps.filter(a => a.category === category)"
           :key="baseApp.id"
@@ -42,41 +48,41 @@ en:
 </i18n>
 
 <script>
-  import { mapGetters, mapState } from 'vuex'
+import { mapGetters, mapState } from 'vuex'
 
-  export default {
-    props: ['dataset', 'value'],
-    data: () => ({
-      baseApps: null,
-      loading: true,
-    }),
-    computed: {
-      ...mapState(['env', 'vocabulary']),
-      ...mapGetters('session', ['activeAccount']),
-      categories() {
-        return this.env.baseAppsCategories.concat('autre')
-          .filter(c => this.baseApps && this.baseApps.filter(b => b.category === c).length)
-      },
-    },
-    watch: {
-      dataset() {
-        this.refresh()
-      },
-    },
-    async created() {
+export default {
+  props: ['dataset', 'value'],
+  data: () => ({
+    baseApps: null,
+    loading: true
+  }),
+  computed: {
+    ...mapState(['env', 'vocabulary']),
+    ...mapGetters('session', ['activeAccount']),
+    categories () {
+      return this.env.baseAppsCategories.concat('autre')
+        .filter(c => this.baseApps && this.baseApps.filter(b => b.category === c).length)
+    }
+  },
+  watch: {
+    dataset () {
       this.refresh()
-    },
-    methods: {
-      async refresh() {
-        this.loading = true
-        const params = {
-          size: 1000,
-          privateAccess: this.activeAccount.type + ':' + this.activeAccount.id,
-          dataset: this.dataset ? this.dataset.id : 'any',
-        }
-        this.baseApps = (await this.$axios.get('api/v1/base-applications', { params })).data.results
-        this.loading = false
-      },
-    },
+    }
+  },
+  async created () {
+    this.refresh()
+  },
+  methods: {
+    async refresh () {
+      this.loading = true
+      const params = {
+        size: 1000,
+        privateAccess: this.activeAccount.type + ':' + this.activeAccount.id,
+        dataset: this.dataset ? this.dataset.id : 'any'
+      }
+      this.baseApps = (await this.$axios.get('api/v1/base-applications', { params })).data.results
+      this.loading = false
+    }
   }
+}
 </script>

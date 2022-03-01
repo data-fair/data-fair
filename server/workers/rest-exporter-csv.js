@@ -10,7 +10,7 @@ const outputs = require('../utils/outputs')
 const datasetUtils = require('../utils/dataset')
 const dataDir = path.resolve(config.dataDir)
 
-exports.process = async function(app, dataset) {
+exports.process = async function (app, dataset) {
   const debug = require('debug')(`worker:rest-exporter-csv:${dataset.id}`)
   const db = app.get('db')
   const date = new Date()
@@ -24,7 +24,7 @@ exports.process = async function(app, dataset) {
     await pump(
       ...await restUtils.readStreams(db, dataset),
       ...outputs.result2csv(dataset),
-      fs.createWriteStream(tmpFile),
+      fs.createWriteStream(tmpFile)
     )
 
     const exportedFile = datasetUtils.exportedFileName(dataset, '.csv')

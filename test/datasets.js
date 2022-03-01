@@ -326,7 +326,7 @@ describe('datasets', () => {
       await ax.put(`/api/v1/datasets/${dataset.id}/owner`, {
         type: 'organization',
         id: 'anotherorg',
-        name: 'Test',
+        name: 'Test'
       })
       assert.fail()
     } catch (err) {
@@ -337,7 +337,7 @@ describe('datasets', () => {
       await ax.put(`/api/v1/datasets/${dataset.id}/owner`, {
         type: 'user',
         id: 'anotheruser',
-        name: 'Test',
+        name: 'Test'
       })
       assert.fail()
     } catch (err) {
@@ -347,7 +347,7 @@ describe('datasets', () => {
     await ax.put(`/api/v1/datasets/${dataset.id}/owner`, {
       type: 'organization',
       id: 'KWqAGZ4mG',
-      name: 'Fivechat',
+      name: 'Fivechat'
     })
 
     try {

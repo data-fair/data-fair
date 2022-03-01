@@ -7,29 +7,29 @@
 </template>
 
 <script>
-  import 'iframe-resizer/js/iframeResizer.contentWindow'
-  import { mapActions, mapState } from 'vuex'
+import 'iframe-resizer/js/iframeResizer.contentWindow'
+import { mapActions, mapState } from 'vuex'
 
-  global.iFrameResizer = {
-    heightCalculationMethod: 'taggedElement',
-  }
+global.iFrameResizer = {
+  heightCalculationMethod: 'taggedElement'
+}
 
-  export default {
-    computed: {
-      ...mapState('dataset', ['dataset']),
-    },
-    watch: {
-      dataset: {
-        handler() {
-          if (this.dataset) {
-            this.fetchRemoteServices()
-          }
-        },
-        immediate: true,
+export default {
+  computed: {
+    ...mapState('dataset', ['dataset'])
+  },
+  watch: {
+    dataset: {
+      handler () {
+        if (this.dataset) {
+          this.fetchRemoteServices()
+        }
       },
-    },
-    methods: {
-      ...mapActions('dataset', ['fetchRemoteServices']),
-    },
+      immediate: true
+    }
+  },
+  methods: {
+    ...mapActions('dataset', ['fetchRemoteServices'])
   }
+}
 </script>

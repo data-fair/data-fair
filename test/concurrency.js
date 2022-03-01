@@ -15,7 +15,7 @@ describe('concurrency', () => {
     // define a higher limit
     await ax.post('/api/v1/limits/user/dmeadus0', {
       store_bytes: { limit: 100000000, consumption: 0 },
-      lastUpdate: new Date().toISOString(),
+      lastUpdate: new Date().toISOString()
     }, { params: { key: config.secretKeys.limits } })
 
     const sendDataset = async (i) => {

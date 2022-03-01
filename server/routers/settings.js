@@ -24,7 +24,7 @@ router.use('/:type/:id', (req, res, next) => {
   next()
 })
 
-function isOwnerAdmin(req, res, next) {
+function isOwnerAdmin (req, res, next) {
   if (!req.user) return res.status(401).send()
   if (!req.user.adminMode && permissions.getOwnerRole({ type: req.params.type, id: req.params.id }, req.user) !== 'admin') {
     return res.sendStatus(403)
@@ -32,7 +32,7 @@ function isOwnerAdmin(req, res, next) {
   next()
 }
 
-function isOwnerMember(req, res, next) {
+function isOwnerMember (req, res, next) {
   if (!req.user) return res.status(401).send()
   if (!req.user.adminMode && !permissions.getOwnerRole({ type: req.params.type, id: req.params.id }, req.user)) {
     return res.sendStatus(403)
@@ -41,7 +41,7 @@ function isOwnerMember(req, res, next) {
 }
 
 // read settings as owner
-router.get('/:type/:id', isOwnerAdmin, cacheHeaders.noCache, asyncWrap(async(req, res) => {
+router.get('/:type/:id', isOwnerAdmin, cacheHeaders.noCache, asyncWrap(async (req, res) => {
   const settings = req.app.get('db').collection('settings')
 
   const result = await settings
@@ -59,7 +59,7 @@ const fillSettings = (owner, user, settings) => {
 }
 
 // update settings as owner
-router.put('/:type/:id', isOwnerAdmin, asyncWrap(async(req, res) => {
+router.put('/:type/:id', isOwnerAdmin, asyncWrap(async (req, res) => {
   const db = req.app.get('db')
   const owner = { type: req.params.type, id: req.params.id }
   fillSettings(owner, req.user, req.body)
@@ -96,17 +96,17 @@ router.put('/:type/:id', isOwnerAdmin, asyncWrap(async(req, res) => {
 }))
 
 // Get topics list as owner
-router.get('/:type/:id/topics', isOwnerMember, asyncWrap(async(req, res) => {
+router.get('/:type/:id/topics', isOwnerMember, asyncWrap(async (req, res) => {
   const settings = req.app.get('db').collection('settings')
   const result = await settings.findOne({
     type: req.params.type,
-    id: req.params.id,
+    id: req.params.id
   })
   res.status(200).send((result && result.topics) || [])
 }))
 
 // Get publication sites as owner (see all) or other use (only public)
-router.get('/:type/:id/publication-sites', isOwnerMember, asyncWrap(async(req, res) => {
+router.get('/:type/:id/publication-sites', isOwnerMember, asyncWrap(async (req, res) => {
   const db = req.app.get('db')
   const owner = { type: req.params.type, id: req.params.id }
   const settings = await db.collection('settings').findOne(owner, { projection: { _id: 0 } })
@@ -118,7 +118,7 @@ router.get('/:type/:id/publication-sites', isOwnerMember, asyncWrap(async(req, r
   res.status(200).send(publicationSites)
 }))
 // create/update publication sites as owner (used by data-fair-portals to sync portals)
-router.post('/:type/:id/publication-sites', isOwnerAdmin, asyncWrap(async(req, res) => {
+router.post('/:type/:id/publication-sites', isOwnerAdmin, asyncWrap(async (req, res) => {
   const db = req.app.get('db')
   const owner = { type: req.params.type, id: req.params.id }
   let settings = await db.collection('settings').findOne(owner, { projection: { _id: 0 } })
@@ -139,7 +139,7 @@ router.post('/:type/:id/publication-sites', isOwnerAdmin, asyncWrap(async(req, r
   res.status(200).send(req.body)
 }))
 // delete publication sites as owner (used by data-fair-portals to sync portals)
-router.delete('/:type/:id/publication-sites/:siteType/:siteId', isOwnerAdmin, asyncWrap(async(req, res) => {
+router.delete('/:type/:id/publication-sites/:siteType/:siteId', isOwnerAdmin, asyncWrap(async (req, res) => {
   const db = req.app.get('db')
   const owner = { type: req.params.type, id: req.params.id }
   let settings = await db.collection('settings').findOne(owner, { projection: { _id: 0 } })
@@ -159,11 +159,11 @@ router.delete('/:type/:id/publication-sites/:siteType/:siteId', isOwnerAdmin, as
 }))
 
 // Get licenses list as anyone
-router.get('/:type/:id/licenses', cacheHeaders.noCache, asyncWrap(async(req, res) => {
+router.get('/:type/:id/licenses', cacheHeaders.noCache, asyncWrap(async (req, res) => {
   const settings = req.app.get('db').collection('settings')
   const result = await settings.findOne({
     type: req.params.type,
-    id: req.params.id,
+    id: req.params.id
   })
   res.status(200).send([].concat(config.licenses, (result && result.licenses) || []))
 }))

@@ -6,14 +6,14 @@ module.exports = {
     id: {
       type: 'string',
       readOnly: true,
-      'x-display': 'hidden',
+      'x-display': 'hidden'
     },
     title: {
-      type: 'string',
+      type: 'string'
     },
     color: {
       type: 'string',
-      'x-display': 'color-picker',
-    },
-  },
+      'x-display': 'color-picker'
+    }
+  }
 }

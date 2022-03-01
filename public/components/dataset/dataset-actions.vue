@@ -4,7 +4,10 @@
     dense
     class="list-actions"
   >
-    <v-subheader v-if="dataFiles && dataFiles.length" v-t="'downloads'" />
+    <v-subheader
+      v-if="dataFiles && dataFiles.length"
+      v-t="'downloads'"
+    />
     <v-list-item
       v-for="dataFile in (dataFiles || [])"
       :key="dataFile.key"
@@ -21,7 +24,10 @@
         <v-list-item-title>{{ dataFile.title }}</v-list-item-title>
       </v-list-item-content>
     </v-list-item>
-    <v-list-item v-if="dataset.isRest && user && user.adminMode" :href="resourceUrl + '/raw'">
+    <v-list-item
+      v-if="dataset.isRest && user && user.adminMode"
+      :href="resourceUrl + '/raw'"
+    >
       <v-list-item-icon>
         <v-icon color="admin">
           mdi-progress-download
@@ -99,7 +105,10 @@
         <v-list-item-title v-t="'notifications'" />
       </v-list-item-content>
     </v-list-item>
-    <v-list-item v-if="can('delete')" @click="showDeleteDialog = true">
+    <v-list-item
+      v-if="can('delete')"
+      @click="showDeleteDialog = true"
+    >
       <v-list-item-icon>
         <v-icon color="warning">
           mdi-delete
@@ -109,7 +118,10 @@
         <v-list-item-title v-t="'delete'" />
       </v-list-item-content>
     </v-list-item>
-    <v-list-item v-if="dataset.isRest && can('deleteLine')" @click="showDeleteAllLinesDialog = true">
+    <v-list-item
+      v-if="dataset.isRest && can('deleteLine')"
+      @click="showDeleteAllLinesDialog = true"
+    >
       <v-list-item-icon>
         <v-icon color="warning">
           mdi-delete-sweep
@@ -119,7 +131,10 @@
         <v-list-item-title v-t="'deleteAllLines'" />
       </v-list-item-content>
     </v-list-item>
-    <v-list-item v-if="can('delete')" @click="showOwnerDialog = true">
+    <v-list-item
+      v-if="can('delete')"
+      @click="showOwnerDialog = true"
+    >
       <v-list-item-icon>
         <v-icon color="warning">
           mdi-account
@@ -130,7 +145,10 @@
       </v-list-item-content>
     </v-list-item>
 
-    <v-dialog v-model="showIntegrationDialog" max-width="1200">
+    <v-dialog
+      v-model="showIntegrationDialog"
+      max-width="1200"
+    >
       <v-card outlined>
         <v-toolbar
           dense
@@ -145,7 +163,10 @@
             <v-icon>mdi-close</v-icon>
           </v-btn>
         </v-toolbar>
-        <v-card-text v-if="showIntegrationDialog" class="pb-0 px-4">
+        <v-card-text
+          v-if="showIntegrationDialog"
+          class="pb-0 px-4"
+        >
           {{ $t('integrationMsg') }}
           <br>
           <v-select
@@ -177,7 +198,10 @@
       </v-card>
     </v-dialog>
 
-    <v-dialog v-model="showAPIDialog" fullscreen>
+    <v-dialog
+      v-model="showAPIDialog"
+      fullscreen
+    >
       <v-card outlined>
         <v-toolbar
           dense
@@ -216,7 +240,10 @@
       max-width="500"
     >
       <v-card outlined>
-        <v-card-title v-t="'deleteDataset'" primary-title />
+        <v-card-title
+          v-t="'deleteDataset'"
+          primary-title
+        />
         <v-card-text v-if="nbApplications > 0">
           <v-alert
             :value="true"
@@ -247,7 +274,10 @@
       max-width="500"
     >
       <v-card outlined>
-        <v-card-title v-t="'allLinesDeletion'" primary-title />
+        <v-card-title
+          v-t="'allLinesDeletion'"
+          primary-title
+        />
         <v-card-text>
           <v-alert
             v-t="{path: 'deleteAllLinesWarning', args: {title: dataset.title}}"
@@ -276,9 +306,15 @@
       max-width="900"
     >
       <v-card outlined>
-        <v-card-title v-t="'changeOwnerTitle'" primary-title />
+        <v-card-title
+          v-t="'changeOwnerTitle'"
+          primary-title
+        />
         <v-card-text>
-          <owner-pick v-model="newOwner" :current-owner="dataset.owner" />
+          <owner-pick
+            v-model="newOwner"
+            :current-owner="dataset.owner"
+          />
         </v-card-text>
         <v-card-actions>
           <v-spacer />
@@ -302,7 +338,10 @@
       max-width="500"
     >
       <v-card outlined>
-        <v-card-title v-t="'dataUpdate'" primary-title />
+        <v-card-title
+          v-t="'dataUpdate'"
+          primary-title
+        />
         <v-card-text v-if="nbApplications > 0">
           <v-alert
             type="error"
@@ -358,7 +397,10 @@
       max-width="500"
     >
       <v-card outlined>
-        <v-card-title v-t="'notifications'" primary-title />
+        <v-card-title
+          v-t="'notifications'"
+          primary-title
+        />
         <v-card-text v-if="nbApplications > 0">
           <v-alert
             type="error"
@@ -458,116 +500,116 @@ en:
 </i18n>
 
 <script>
-  import { mapState, mapGetters, mapActions } from 'vuex'
-  import 'iframe-resizer/js/iframeResizer'
-  import VIframe from '@koumoul/v-iframe'
-  import eventBus from '~/event-bus'
-  const webhooksSchema = require('~/../contract/settings').properties.webhooks
+import { mapState, mapGetters, mapActions } from 'vuex'
+import 'iframe-resizer/js/iframeResizer'
+import VIframe from '@koumoul/v-iframe'
+import eventBus from '~/event-bus'
+const webhooksSchema = require('~/../contract/settings').properties.webhooks
 
-  export default {
-    components: { VIframe },
-    props: {
-      publicationSites: {
-        type: Array,
-        default: () => [],
-      },
+export default {
+  components: { VIframe },
+  props: {
+    publicationSites: {
+      type: Array,
+      default: () => []
+    }
+  },
+  data: () => ({
+    showDeleteDialog: false,
+    showDeleteAllLinesDialog: false,
+    showUploadDialog: false,
+    showOwnerDialog: false,
+    file: null,
+    attachmentsFile: null,
+    uploading: false,
+    uploadProgress: 0,
+    newOwner: null,
+    showIntegrationDialog: false,
+    showAPIDialog: false,
+    publicAPIDoc: true,
+    showNotifDialog: false,
+    previewId: 'table'
+  }),
+  computed: {
+    ...mapState(['env', 'accepted']),
+    ...mapState('session', ['user']),
+    ...mapState('dataset', ['dataset', 'nbApplications', 'dataFiles', 'error']),
+    ...mapGetters('dataset', ['can', 'resourceUrl']),
+    previewLink () {
+      return this.dataset && this.dataset.previews.find(p => p.id === this.previewId).href
     },
-    data: () => ({
-      showDeleteDialog: false,
-      showDeleteAllLinesDialog: false,
-      showUploadDialog: false,
-      showOwnerDialog: false,
-      file: null,
-      attachmentsFile: null,
-      uploading: false,
-      uploadProgress: 0,
-      newOwner: null,
-      showIntegrationDialog: false,
-      showAPIDialog: false,
-      publicAPIDoc: true,
-      showNotifDialog: false,
-      previewId: 'table',
-    }),
-    computed: {
-      ...mapState(['env', 'accepted']),
-      ...mapState('session', ['user']),
-      ...mapState('dataset', ['dataset', 'nbApplications', 'dataFiles', 'error']),
-      ...mapGetters('dataset', ['can', 'resourceUrl']),
-      previewLink() {
-        return this.dataset && this.dataset.previews.find(p => p.id === this.previewId).href
-      },
-      publicationSitesLinks() {
-        if (!this.dataset.publicationSites) return []
-        return this.dataset.publicationSites.map(dps => {
-          const site = this.publicationSites.find(site => dps === `${site.type}:${site.id}`)
-          if (!site?.datasetUrlTemplate) return null
-          return {
-            url: site.datasetUrlTemplate.replace('{id}', this.dataset.id),
-            title: site.title || (site.url && site.url.replace('http://', '').replace('https://', '')) || site.id,
-          }
-        }).filter(ps => !!ps)
-      },
-      notifUrl() {
-        const webhooks = webhooksSchema.items.properties.events.items.oneOf
-          .filter(item => item.const.startsWith('dataset') && item.const !== 'dataset-dataset-created' && item.const !== 'dataset-error')
-
-        const keysParam = webhooks.map(w => `data-fair:${w.const}:${this.dataset.id}`).join(',')
-        const titlesParam = webhooks.map(w => w.title.replace(/,/g, ' ')).join(',')
-        const urlTemplate = `${this.env.publicUrl}/dataset/${this.dataset.id}`
-        return `${this.env.notifyUrl}/embed/subscribe?key=${encodeURIComponent(keysParam)}&title=${encodeURIComponent(titlesParam)}&url-template=${encodeURIComponent(urlTemplate)}&register=false`
-      },
-    },
-    created() {
-      if (this.can('readPrivateApiDoc')) this.publicAPIDoc = false
-    },
-    methods: {
-      ...mapActions('dataset', ['remove', 'changeOwner']),
-      async confirmRemove() {
-        this.showDeleteDialog = false
-        await this.remove()
-        this.$router.push({ path: '/datasets' })
-      },
-      async confirmDeleteAllLines() {
-        this.showDeleteAllLinesDialog = false
-        await this.$axios.$delete(`api/v1/datasets/${this.dataset.id}/lines`)
-      },
-      onFileUpload(file) {
-        this.file = file
-      },
-      onAttachmentsFileUpload(file) {
-        this.attachmentsFile = file
-      },
-      async confirmUpload() {
-        const options = {
-          onUploadProgress: (e) => {
-            if (e.lengthComputable) {
-              this.uploadProgress = (e.loaded / e.total) * 100
-            }
-          },
-          params: { draft: 'true' },
+    publicationSitesLinks () {
+      if (!this.dataset.publicationSites) return []
+      return this.dataset.publicationSites.map(dps => {
+        const site = this.publicationSites.find(site => dps === `${site.type}:${site.id}`)
+        if (!site?.datasetUrlTemplate) return null
+        return {
+          url: site.datasetUrlTemplate.replace('{id}', this.dataset.id),
+          title: site.title || (site.url && site.url.replace('http://', '').replace('https://', '')) || site.id
         }
-        const formData = new FormData()
-        if (this.file) formData.append('file', this.file)
-        if (this.attachmentsFile) formData.append('attachments', this.attachmentsFile)
-
-        this.uploading = true
-        try {
-          await this.$axios.$put('api/v1/datasets/' + this.dataset.id, formData, options)
-          this.showUploadDialog = false
-        } catch (error) {
-          const status = error.response && error.response.status
-          if (status === 413) {
-            eventBus.$emit('notification', { type: 'error', msg: this.$t('fileTooLarge') })
-          } else if (status === 429) {
-            eventBus.$emit('notification', { type: 'error', msg: this.$t('noSpaceLeft') })
-          } else {
-            eventBus.$emit('notification', { error, msg: this.$t('importError') })
-          }
-        }
-        this.uploading = false
-      },
+      }).filter(ps => !!ps)
     },
+    notifUrl () {
+      const webhooks = webhooksSchema.items.properties.events.items.oneOf
+        .filter(item => item.const.startsWith('dataset') && item.const !== 'dataset-dataset-created' && item.const !== 'dataset-error')
+
+      const keysParam = webhooks.map(w => `data-fair:${w.const}:${this.dataset.id}`).join(',')
+      const titlesParam = webhooks.map(w => w.title.replace(/,/g, ' ')).join(',')
+      const urlTemplate = `${this.env.publicUrl}/dataset/${this.dataset.id}`
+      return `${this.env.notifyUrl}/embed/subscribe?key=${encodeURIComponent(keysParam)}&title=${encodeURIComponent(titlesParam)}&url-template=${encodeURIComponent(urlTemplate)}&register=false`
+    }
+  },
+  created () {
+    if (this.can('readPrivateApiDoc')) this.publicAPIDoc = false
+  },
+  methods: {
+    ...mapActions('dataset', ['remove', 'changeOwner']),
+    async confirmRemove () {
+      this.showDeleteDialog = false
+      await this.remove()
+      this.$router.push({ path: '/datasets' })
+    },
+    async confirmDeleteAllLines () {
+      this.showDeleteAllLinesDialog = false
+      await this.$axios.$delete(`api/v1/datasets/${this.dataset.id}/lines`)
+    },
+    onFileUpload (file) {
+      this.file = file
+    },
+    onAttachmentsFileUpload (file) {
+      this.attachmentsFile = file
+    },
+    async confirmUpload () {
+      const options = {
+        onUploadProgress: (e) => {
+          if (e.lengthComputable) {
+            this.uploadProgress = (e.loaded / e.total) * 100
+          }
+        },
+        params: { draft: 'true' }
+      }
+      const formData = new FormData()
+      if (this.file) formData.append('file', this.file)
+      if (this.attachmentsFile) formData.append('attachments', this.attachmentsFile)
+
+      this.uploading = true
+      try {
+        await this.$axios.$put('api/v1/datasets/' + this.dataset.id, formData, options)
+        this.showUploadDialog = false
+      } catch (error) {
+        const status = error.response && error.response.status
+        if (status === 413) {
+          eventBus.$emit('notification', { type: 'error', msg: this.$t('fileTooLarge') })
+        } else if (status === 429) {
+          eventBus.$emit('notification', { type: 'error', msg: this.$t('noSpaceLeft') })
+        } else {
+          eventBus.$emit('notification', { error, msg: this.$t('importError') })
+        }
+      }
+      this.uploading = false
+    }
   }
+}
 </script>
 
 <style lang="css" scoped>

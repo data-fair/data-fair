@@ -3,7 +3,10 @@
     <tutorial-alert id="dataset-table">
       {{ $t('tutorialFilter') }}
     </tutorial-alert>
-    <v-row v-if="notFound" class="px-3">
+    <v-row
+      v-if="notFound"
+      class="px-3"
+    >
       <v-col>
         <p v-t="'noData'" />
       </v-col>
@@ -24,7 +27,10 @@
             >
               <v-icon>mdi-plus</v-icon>
             </v-btn>
-            <dataset-rest-upload-actions v-if="dataset.isRest && can('writeData')" :dataset="dataset" />
+            <dataset-rest-upload-actions
+              v-if="dataset.isRest && can('writeData')"
+              :dataset="dataset"
+            />
           </v-row>
           <v-row>
             <v-col
@@ -70,8 +76,14 @@
               :total-visible="$vuetify.breakpoint.lgAndUp ? 7 : 5"
               class="mx-4"
             />
-            <dataset-select-cols v-model="selectedCols" :headers="headers" />
-            <dataset-download-results :params="downloadParams" :total="data.total" />
+            <dataset-select-cols
+              v-model="selectedCols"
+              :headers="headers"
+            />
+            <dataset-download-results
+              :params="downloadParams"
+              :total="data.total"
+            />
           </v-row>
         </v-col>
       </v-row>
@@ -91,7 +103,7 @@
         hide-default-footer
         hide-default-header
       >
-        <template v-slot:header>
+        <template #header>
           <thead class="v-data-table-header">
             <tr>
               <th
@@ -106,8 +118,11 @@
                   bottom
                   style="margin-right: 8px;"
                 >
-                  <template v-slot:activator="{ on }">
-                    <v-icon small v-on="on">
+                  <template #activator="{ on }">
+                    <v-icon
+                      small
+                      v-on="on"
+                    >
                       mdi-information
                     </v-icon>
                   </template>
@@ -133,7 +148,7 @@
             </tr>
           </thead>
         </template>
-        <template v-slot:item="{item}">
+        <template #item="{item}">
           <v-progress-linear
             v-if="item._tmpState"
             style="position: absolute;opacity: 0.2;"
@@ -149,7 +164,10 @@
               class="pr-0 pl-4"
               :style="`height: 40px`"
             >
-              <div v-if="header.value === '_actions'" style="min-width:120px;">
+              <div
+                v-if="header.value === '_actions'"
+                style="min-width:120px;"
+              >
                 <template v-if="!item._tmpState">
                   <v-btn
                     icon
@@ -206,7 +224,10 @@
                 >{{ item[header.value] | truncate(50) }}</a>
               </template>
               <template v-else>
-                <div v-if="header.field.type === 'string' && header.field.separator" :style="`max-height: 40px; min-width: ${Math.min((item[header.value] + '').length, 50) * 6}px;`">
+                <div
+                  v-if="header.field.type === 'string' && header.field.separator"
+                  :style="`max-height: 40px; min-width: ${Math.min((item[header.value] + '').length, 50) * 6}px;`"
+                >
                   <v-chip-group
                     v-if="item[header.value]"
                     style="max-width:500px;"
@@ -214,7 +235,7 @@
                   >
                     <v-hover
                       v-for="(value, i) in item[header.value].split(header.field.separator).map(v => v.trim())"
-                      v-slot:default="{ hover }"
+                      v-slot="{ hover }"
                       :key="i"
                     >
                       <v-chip
@@ -230,7 +251,10 @@
                     </v-hover>
                   </v-chip-group>
                 </div>
-                <v-hover v-else v-slot:default="{ hover }">
+                <v-hover
+                  v-else
+                  v-slot="{ hover }"
+                >
                   <div :style="`position: relative; max-height: 40px; min-width: ${Math.min((item[header.value] + '').length, 50) * 6}px;`">
                     <span>{{ item[header.value] | cellValues(header.field) }}</span>
                     <v-btn
@@ -286,9 +310,15 @@
       </v-card>
     </v-dialog>
 
-    <v-dialog v-model="deleteLineDialog" max-width="500px">
+    <v-dialog
+      v-model="deleteLineDialog"
+      max-width="500px"
+    >
       <v-card outlined>
-        <v-card-title v-t="'deleteLine'" primary-title />
+        <v-card-title
+          v-t="'deleteLine'"
+          primary-title
+        />
         <v-card-text>
           <v-alert
             v-t="'deleteLineWarning'"
@@ -312,16 +342,28 @@
       </v-card>
     </v-dialog>
 
-    <v-dialog v-model="historyDialog" max-width="800px">
+    <v-dialog
+      v-model="historyDialog"
+      max-width="800px"
+    >
       <v-card outlined>
-        <v-toolbar dense flat>
+        <v-toolbar
+          dense
+          flat
+        >
           <v-toolbar-title v-t="'revisionsHistory'" />
           <v-spacer />
-          <v-btn icon @click.native="historyDialog = false">
+          <v-btn
+            icon
+            @click.native="historyDialog = false"
+          >
             <v-icon>mdi-close</v-icon>
           </v-btn>
         </v-toolbar>
-        <v-card-text v-if="history" class="pa-0">
+        <v-card-text
+          v-if="history"
+          class="pa-0"
+        >
           <v-data-table
             :headers="historyHeaders"
             :items="history.results"
@@ -330,7 +372,7 @@
             :loading="historyLoading"
             :options.sync="historyPagination"
           >
-            <template v-slot:item="{item}">
+            <template #item="{item}">
               <tr>
                 <td
                   v-for="header in historyHeaders"
@@ -385,303 +427,304 @@ en:
 </i18n>
 
 <script>
-  import { mapState, mapGetters } from 'vuex'
-  import eventBus from '~/event-bus'
-  const filtersUtils = require('~/assets/filters-utils')
+import { mapState, mapGetters } from 'vuex'
+import eventBus from '~/event-bus'
+const filtersUtils = require('~/assets/filters-utils')
 
-  export default {
-    data: () => ({
-      data: {},
-      query: null,
-      pagination: {
-        page: 1,
-        itemsPerPage: 10,
-        sortBy: [null],
-        sortDesc: [false],
-      },
-      notFound: false,
-      loading: false,
-      editLineDialog: false,
-      editedLine: null,
-      editedId: null,
-      deleteLineDialog: false,
-      file: null,
-      uploadProgress: 0,
-      historyLine: null,
-      historyDialog: false,
-      history: null,
-      historyLoading: false,
-      historyPagination: {
-        page: 1,
-        itemsPerPage: 10,
-      },
-      filters: [],
-      createdLines: [],
-      updatedLines: [],
-      deletedLines: [],
-      saving: false,
-      lastParams: null,
-      selectedCols: [],
-    }),
-    computed: {
-      ...mapState(['vocabulary']),
-      ...mapState('session', ['user']),
-      ...mapState('dataset', ['dataset']),
-      ...mapGetters('dataset', ['resourceUrl', 'can', 'qMode']),
-      headers() {
-        const fieldsHeaders = this.dataset.schema
-          .filter(field => !field['x-calculated'] || field.key === '_updatedAt')
-          .map(field => ({
-            text: field.title || field['x-originalName'] || field.key,
-            value: field.key,
-            sortable:
+export default {
+  data: () => ({
+    data: {},
+    query: null,
+    pagination: {
+      page: 1,
+      itemsPerPage: 10,
+      sortBy: [null],
+      sortDesc: [false]
+    },
+    notFound: false,
+    loading: false,
+    editLineDialog: false,
+    editedLine: null,
+    editedId: null,
+    deleteLineDialog: false,
+    file: null,
+    uploadProgress: 0,
+    historyLine: null,
+    historyDialog: false,
+    history: null,
+    historyLoading: false,
+    historyPagination: {
+      page: 1,
+      itemsPerPage: 10
+    },
+    filters: [],
+    createdLines: [],
+    updatedLines: [],
+    deletedLines: [],
+    saving: false,
+    lastParams: null,
+    selectedCols: []
+  }),
+  computed: {
+    ...mapState(['vocabulary']),
+    ...mapState('session', ['user']),
+    ...mapState('dataset', ['dataset']),
+    ...mapGetters('dataset', ['resourceUrl', 'can', 'qMode']),
+    headers () {
+      const fieldsHeaders = this.dataset.schema
+        .filter(field => !field['x-calculated'] || field.key === '_updatedAt')
+        .map(field => ({
+          text: field.title || field['x-originalName'] || field.key,
+          value: field.key,
+          sortable:
               (!field['x-capabilities'] || field['x-capabilities'].values !== false) && (
                 (field.type === 'string' && field['x-refersTo'] !== 'https://purl.org/geojson/vocab#geometry') ||
                 field.type === 'number' ||
                 field.type === 'integer'
               ),
-            filterable: (!field['x-capabilities'] || field['x-capabilities'].index !== false) && field['x-refersTo'] !== 'https://purl.org/geojson/vocab#geometry',
-            tooltip: field.description || (field['x-refersTo'] && this.vocabulary && this.vocabulary[field['x-refersTo']] && this.vocabulary[field['x-refersTo']].description),
-            field,
-          }))
+          filterable: (!field['x-capabilities'] || field['x-capabilities'].index !== false) && field['x-refersTo'] !== 'https://purl.org/geojson/vocab#geometry',
+          tooltip: field.description || (field['x-refersTo'] && this.vocabulary && this.vocabulary[field['x-refersTo']] && this.vocabulary[field['x-refersTo']].description),
+          field
+        }))
 
-        if (this.imageField) {
-          fieldsHeaders.unshift({ text: '', value: '_thumbnail' })
-        }
-        if (this.dataset.isRest && this.can('writeData')) {
-          fieldsHeaders.unshift({ text: '', value: '_actions' })
-        }
-        return fieldsHeaders
-      },
-      selectedHeaders() {
-        if (this.selectedCols.length === 0) return this.headers
-        return this.headers.filter(h => !h.field || this.selectedCols.includes(h.value))
-      },
-      historyHeaders() {
-        const historyHeaders = this.headers
-          .map(h => ({ ...h, sortable: false }))
-          .filter(h => !h.value.startsWith('_'))
-        historyHeaders.unshift({ text: 'Date de la révision', value: '_updatedAt', sortable: false })
-        return historyHeaders
-      },
-      imageField() {
-        return this.dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/image')
-      },
-      digitalDocumentField() {
-        return this.dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')
-      },
-      webPageField() {
-        return this.dataset.schema.find(f => f['x-refersTo'] === 'https://schema.org/WebPage')
-      },
-      params() {
-        const params = {
-          size: this.pagination.itemsPerPage,
-          page: this.pagination.page,
-          q_mode: this.qMode,
-        }
-        // truncate on server side for performance, but not for editabled rest datasets
-        if (!this.dataset.isRest) params.truncate = 50
-        if (this.imageField) params.thumbnail = '40x40'
-        if (this.pagination.sortBy[0]) {
-          params.sort = (this.pagination.sortDesc[0] ? '-' : '') + this.pagination.sortBy[0]
-        }
-        if (this.query) params.q = this.query
-        if (this.filters.length) {
-          try {
-            params.qs = filtersUtils.filters2qs(this.filters, this.$i18n.locale)
-          } catch (error) {
-            this.$nextTick(() => eventBus.$emit('notification', { error }))
-          }
-        }
-
-        if (this.dataset.finalizedAt) params.finalizedAt = this.dataset.finalizedAt
-        if (this.dataset.draftReason) params.draft = 'true'
-        return params
-      },
-      downloadParams() {
-        if (this.selectedCols.length === 0) return this.params
-        return { ...this.params, select: this.selectedCols.join(',') }
-      },
-      items() {
-        if (!this.data.results) return []
-        const items = [...this.data.results]
-        items.forEach(item => {
-          if (this.deletedLines.find(l => l && l._id === item._id)) {
-            item._tmpState = 'deleted'
-          } else if (this.updatedLines.find(l => l && l._id === item._id)) {
-            Object.assign(item, this.updatedLines.find(l => l && l._id === item._id))
-            item._tmpState = 'updated'
-          } else if ((this.editLineDialog || this.deleteLineDialog) && this.editedLine && (this.editedLine._id === item._id || this.editedId === item._id)) {
-            item._tmpState = 'editing'
-          } else {
-            item._tmpState = null
-          }
-        })
-        this.createdLines.forEach(l => {
-          items.unshift({ _tmpState: 'created', ...l })
-        })
-        if (this.pagination.sortBy[0] === '_updatedAt') {
-          if (this.pagination.sortDesc[0]) items.sort((a, b) => -a._updatedAt.localeCompare(b._updatedAt))
-          else items.sort((a, b) => a._updatedAt.localeCompare(b._updatedAt))
-        }
-
-        return items
-      },
-      filtersStorageKey() {
-        return `${this.user.id}:dataset:${this.dataset.id}:table-filters`
-      },
-      selectedColsStorageKey() {
-        return `${this.user.id}:dataset:${this.dataset.id}:table-selected-cols`
-      },
-    },
-    watch: {
-      async 'dataset.schema'() {
-        await this.refresh(true)
-        this.createdLines = []
-        this.updatedLines = []
-        this.deletedLines = []
-      },
-      pagination: {
-        handler () {
-          this.refresh()
-        },
-        deep: true,
-      },
-      historyPagination: {
-        handler () {
-          if (this.historyLine) this.refreshHistory()
-        },
-        deep: true,
-      },
-      filters: {
-        handler () {
-          localStorage.setItem(this.filtersStorageKey, JSON.stringify(this.filters))
-          this.refresh(true)
-        },
-        deep: true,
-      },
-      selectedCols: {
-        handler () {
-          localStorage.setItem(this.selectedColsStorageKey, JSON.stringify(this.selectedCols))
-        },
-        deep: true,
-      },
-    },
-    mounted() {
-      const storedFilters = localStorage.getItem(this.filtersStorageKey)
-      if (storedFilters) this.filters = JSON.parse(storedFilters)
-      const storedSelectedCols = localStorage.getItem(this.selectedColsStorageKey)
-      if (storedSelectedCols) this.selectedCols = JSON.parse(storedSelectedCols)
-      if (this.dataset.schema.find(p => p.key === '_updatedAt')) {
-        this.pagination.sortBy = ['_updatedAt']
-        this.pagination.sortDesc = [true]
+      if (this.imageField) {
+        fieldsHeaders.unshift({ text: '', value: '_thumbnail' })
       }
-      this.refresh()
+      if (this.dataset.isRest && this.can('writeData')) {
+        fieldsHeaders.unshift({ text: '', value: '_actions' })
+      }
+      return fieldsHeaders
     },
-    methods: {
-      async refresh(resetPagination) {
-        if (resetPagination) {
-          this.pagination.page = 1
-          // this is debatable
-          // but in case of full-text search you can forget that a sort is active
-          // and be surprised by counter-intuitive results
-          this.pagination.sortBy = [null]
-        }
-
-        // prevent triggering multiple times the same request
-        const paramsStr = JSON.stringify(this.params)
-        if (paramsStr === this.lastParams) return
-        this.lastParams = paramsStr
-
-        // this.data = {}
-        this.loading = true
-        try {
-          this.data = await this.$axios.$get(this.resourceUrl + '/lines', { params: this.params })
-          this.notFound = false
-        } catch (error) {
-          if (error.response && error.response.status === 404) this.notFound = true
-          else eventBus.$emit('notification', { error, msg: 'Erreur pendant la récupération des données' })
-        }
-        this.loading = false
-      },
-      orderBy(header) {
-        if (!header.sortable) return
-        if (this.pagination.sortBy[0] === header.value) {
-          this.$set(this.pagination.sortDesc, 0, !this.pagination.sortDesc[0])
-        } else {
-          this.$set(this.pagination.sortBy, 0, header.value)
-          this.$set(this.pagination.sortDesc, 0, true)
-        }
-      },
-      showEditLineDialog() {
-        if (!this.editedLine) {
-          this.editedId = null
-          this.file = null
-          this.editedLine = {}
-          this.dataset.schema.filter(f => !f['x-calculated']).forEach(f => {
-            this.$set(this.editedLine, f.key, null)
-          })
-        } else {
-          this.editedId = this.editedLine._id
-        }
-        this.uploadProgress = 0
-        this.editLineDialog = true
-      },
-      showHistoryDialog(line) {
-        this.historyLine = line
-        this.history = null
-        this.historyDialog = true
-        this.historyPagination.page = 1
-
-        this.refreshHistory()
-      },
-      async refreshHistory() {
-        this.historyLoading = true
-        try {
-          this.history = await this.$axios.$get(`${this.resourceUrl}/lines/${this.historyLine._id}/revisions`, {
-            params: {
-              page: this.historyPagination.page,
-              size: this.historyPagination.itemsPerPage,
-            },
-          })
-        } catch (error) {
-          eventBus.$emit('notification', { error, msg: 'Erreur pendant la récupération de l\'historique de la ligne\'' })
-        }
-        this.historyLoading = false
-      },
-      onFileUpload(file) {
-        this.file = file
-      },
-      async saveLine() {
-        this.saving = true
-        await new Promise(resolve => setTimeout(resolve, 100))
-        const res = await this.$store.dispatch('dataset/saveLine', { line: this.editedLine, file: this.file, id: this.editedId })
-        if (this.editedId) this.updatedLines.push(res)
-        else this.createdLines.push(res)
-        this.saving = false
-        this.editLineDialog = false
-      },
-      async deleteLine() {
-        try {
-          await this.$axios.$delete(this.resourceUrl + '/lines/' + this.editedLine._id)
-          this.deleteLineDialog = false
-          this.deletedLines.push(this.editedLine)
-        } catch (error) {
-          if (error.response && error.response.status === 404) this.notFound = true
-          else eventBus.$emit('notification', { error, msg: 'Erreur pendant la suppression de la ligne\'' })
-        }
-      },
-      addFilter(key, filter) {
-        if (typeof filter !== 'object') filter = { type: 'in', values: [filter] }
-        filter.field = this.dataset.schema.find(f => f.key === key)
-        this.filters = this.filters.filter(f => !(f.field.key === key))
-        this.filters.push(filter)
-      },
-      isFilterable(value) {
-        if (value === undefined || value === null || value === '') return false
-        if (typeof value === 'string' && (value.length > 200 || value.startsWith('{'))) return false
-        return true
-      },
+    selectedHeaders () {
+      if (this.selectedCols.length === 0) return this.headers
+      return this.headers.filter(h => !h.field || this.selectedCols.includes(h.value))
     },
+    historyHeaders () {
+      const historyHeaders = this.headers
+        .map(h => ({ ...h, sortable: false }))
+        .filter(h => !h.value.startsWith('_'))
+      historyHeaders.unshift({ text: 'Date de la révision', value: '_updatedAt', sortable: false })
+      return historyHeaders
+    },
+    imageField () {
+      return this.dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/image')
+    },
+    digitalDocumentField () {
+      return this.dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')
+    },
+    webPageField () {
+      return this.dataset.schema.find(f => f['x-refersTo'] === 'https://schema.org/WebPage')
+    },
+    params () {
+      const params = {
+        size: this.pagination.itemsPerPage,
+        page: this.pagination.page,
+        q_mode: this.qMode
+      }
+      // truncate on server side for performance, but not for editabled rest datasets
+      if (!this.dataset.isRest) params.truncate = 50
+      if (this.imageField) params.thumbnail = '40x40'
+      if (this.pagination.sortBy[0]) {
+        params.sort = (this.pagination.sortDesc[0] ? '-' : '') + this.pagination.sortBy[0]
+      }
+      if (this.query) params.q = this.query
+      if (this.filters.length) {
+        try {
+          params.qs = filtersUtils.filters2qs(this.filters, this.$i18n.locale)
+        } catch (error) {
+          // eslint-disable-next-line vue/no-async-in-computed-properties
+          this.$nextTick(() => eventBus.$emit('notification', { error }))
+        }
+      }
+
+      if (this.dataset.finalizedAt) params.finalizedAt = this.dataset.finalizedAt
+      if (this.dataset.draftReason) params.draft = 'true'
+      return params
+    },
+    downloadParams () {
+      if (this.selectedCols.length === 0) return this.params
+      return { ...this.params, select: this.selectedCols.join(',') }
+    },
+    items () {
+      if (!this.data.results) return []
+      const items = [...this.data.results]
+      items.forEach(item => {
+        if (this.deletedLines.find(l => l && l._id === item._id)) {
+          item._tmpState = 'deleted'
+        } else if (this.updatedLines.find(l => l && l._id === item._id)) {
+          Object.assign(item, this.updatedLines.find(l => l && l._id === item._id))
+          item._tmpState = 'updated'
+        } else if ((this.editLineDialog || this.deleteLineDialog) && this.editedLine && (this.editedLine._id === item._id || this.editedId === item._id)) {
+          item._tmpState = 'editing'
+        } else {
+          item._tmpState = null
+        }
+      })
+      this.createdLines.forEach(l => {
+        items.unshift({ _tmpState: 'created', ...l })
+      })
+      if (this.pagination.sortBy[0] === '_updatedAt') {
+        if (this.pagination.sortDesc[0]) items.sort((a, b) => -a._updatedAt.localeCompare(b._updatedAt))
+        else items.sort((a, b) => a._updatedAt.localeCompare(b._updatedAt))
+      }
+
+      return items
+    },
+    filtersStorageKey () {
+      return `${this.user.id}:dataset:${this.dataset.id}:table-filters`
+    },
+    selectedColsStorageKey () {
+      return `${this.user.id}:dataset:${this.dataset.id}:table-selected-cols`
+    }
+  },
+  watch: {
+    async 'dataset.schema' () {
+      await this.refresh(true)
+      this.createdLines = []
+      this.updatedLines = []
+      this.deletedLines = []
+    },
+    pagination: {
+      handler () {
+        this.refresh()
+      },
+      deep: true
+    },
+    historyPagination: {
+      handler () {
+        if (this.historyLine) this.refreshHistory()
+      },
+      deep: true
+    },
+    filters: {
+      handler () {
+        localStorage.setItem(this.filtersStorageKey, JSON.stringify(this.filters))
+        this.refresh(true)
+      },
+      deep: true
+    },
+    selectedCols: {
+      handler () {
+        localStorage.setItem(this.selectedColsStorageKey, JSON.stringify(this.selectedCols))
+      },
+      deep: true
+    }
+  },
+  mounted () {
+    const storedFilters = localStorage.getItem(this.filtersStorageKey)
+    if (storedFilters) this.filters = JSON.parse(storedFilters)
+    const storedSelectedCols = localStorage.getItem(this.selectedColsStorageKey)
+    if (storedSelectedCols) this.selectedCols = JSON.parse(storedSelectedCols)
+    if (this.dataset.schema.find(p => p.key === '_updatedAt')) {
+      this.pagination.sortBy = ['_updatedAt']
+      this.pagination.sortDesc = [true]
+    }
+    this.refresh()
+  },
+  methods: {
+    async refresh (resetPagination) {
+      if (resetPagination) {
+        this.pagination.page = 1
+        // this is debatable
+        // but in case of full-text search you can forget that a sort is active
+        // and be surprised by counter-intuitive results
+        this.pagination.sortBy = [null]
+      }
+
+      // prevent triggering multiple times the same request
+      const paramsStr = JSON.stringify(this.params)
+      if (paramsStr === this.lastParams) return
+      this.lastParams = paramsStr
+
+      // this.data = {}
+      this.loading = true
+      try {
+        this.data = await this.$axios.$get(this.resourceUrl + '/lines', { params: this.params })
+        this.notFound = false
+      } catch (error) {
+        if (error.response && error.response.status === 404) this.notFound = true
+        else eventBus.$emit('notification', { error, msg: 'Erreur pendant la récupération des données' })
+      }
+      this.loading = false
+    },
+    orderBy (header) {
+      if (!header.sortable) return
+      if (this.pagination.sortBy[0] === header.value) {
+        this.$set(this.pagination.sortDesc, 0, !this.pagination.sortDesc[0])
+      } else {
+        this.$set(this.pagination.sortBy, 0, header.value)
+        this.$set(this.pagination.sortDesc, 0, true)
+      }
+    },
+    showEditLineDialog () {
+      if (!this.editedLine) {
+        this.editedId = null
+        this.file = null
+        this.editedLine = {}
+        this.dataset.schema.filter(f => !f['x-calculated']).forEach(f => {
+          this.$set(this.editedLine, f.key, null)
+        })
+      } else {
+        this.editedId = this.editedLine._id
+      }
+      this.uploadProgress = 0
+      this.editLineDialog = true
+    },
+    showHistoryDialog (line) {
+      this.historyLine = line
+      this.history = null
+      this.historyDialog = true
+      this.historyPagination.page = 1
+
+      this.refreshHistory()
+    },
+    async refreshHistory () {
+      this.historyLoading = true
+      try {
+        this.history = await this.$axios.$get(`${this.resourceUrl}/lines/${this.historyLine._id}/revisions`, {
+          params: {
+            page: this.historyPagination.page,
+            size: this.historyPagination.itemsPerPage
+          }
+        })
+      } catch (error) {
+        eventBus.$emit('notification', { error, msg: 'Erreur pendant la récupération de l\'historique de la ligne\'' })
+      }
+      this.historyLoading = false
+    },
+    onFileUpload (file) {
+      this.file = file
+    },
+    async saveLine () {
+      this.saving = true
+      await new Promise(resolve => setTimeout(resolve, 100))
+      const res = await this.$store.dispatch('dataset/saveLine', { line: this.editedLine, file: this.file, id: this.editedId })
+      if (this.editedId) this.updatedLines.push(res)
+      else this.createdLines.push(res)
+      this.saving = false
+      this.editLineDialog = false
+    },
+    async deleteLine () {
+      try {
+        await this.$axios.$delete(this.resourceUrl + '/lines/' + this.editedLine._id)
+        this.deleteLineDialog = false
+        this.deletedLines.push(this.editedLine)
+      } catch (error) {
+        if (error.response && error.response.status === 404) this.notFound = true
+        else eventBus.$emit('notification', { error, msg: 'Erreur pendant la suppression de la ligne\'' })
+      }
+    },
+    addFilter (key, filter) {
+      if (typeof filter !== 'object') filter = { type: 'in', values: [filter] }
+      filter.field = this.dataset.schema.find(f => f.key === key)
+      this.filters = this.filters.filter(f => !(f.field.key === key))
+      this.filters.push(filter)
+    },
+    isFilterable (value) {
+      if (value === undefined || value === null || value === '') return false
+      if (typeof value === 'string' && (value.length > 200 || value.startsWith('{'))) return false
+      return true
+    }
   }
+}
 </script>

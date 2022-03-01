@@ -59,7 +59,10 @@
         </v-card-text>
         <v-card-actions>
           <v-spacer />
-          <v-btn text @click="createMenu = false">
+          <v-btn
+            text
+            @click="createMenu = false"
+          >
             Annuler
           </v-btn>
           <v-btn
@@ -83,7 +86,10 @@
             tile
             outlined
           >
-            <v-card-title primary-title class="py-2">
+            <v-card-title
+              primary-title
+              class="py-2"
+            >
               <h4 class="text-h6">
                 {{ apiKey.title }}
               </h4>
@@ -132,41 +138,41 @@
 
 <script>
 
-  import { mapState } from 'vuex'
+import { mapState } from 'vuex'
 
-  export default {
-    props: ['settings'],
-    data: () => ({
-      newApiKey: {
-        title: null,
-        scopes: [],
-      },
-      newApiKeyValid: false,
-      createMenu: false,
-      showDeleteDialog: false,
-      currentApiKey: null,
-      showUseDialog: false,
-      scopes: [
-        { value: 'datasets', text: 'Gestion des jeux de données' },
-        { value: 'applications', text: 'Gestion des visualisations' },
-        { value: 'catalogs', text: 'Gestion des connecteurs aux catalogues' },
-        { value: 'stats', text: 'Récupération d\'informations statistiques' },
-      ],
-    }),
-    computed: {
-      ...mapState('session', ['user']),
+export default {
+  props: ['settings'],
+  data: () => ({
+    newApiKey: {
+      title: null,
+      scopes: []
     },
-    methods: {
-      addApiKey() {
-        const apiKey = Object.assign({}, this.newApiKey)
-        this.settings.apiKeys.push(apiKey)
-        this.createMenu = false
-        this.$emit('updated')
-      },
-      removeApiKey(rowIndex) {
-        this.settings.apiKeys.splice(rowIndex, 1)
-        this.$emit('updated')
-      },
+    newApiKeyValid: false,
+    createMenu: false,
+    showDeleteDialog: false,
+    currentApiKey: null,
+    showUseDialog: false,
+    scopes: [
+      { value: 'datasets', text: 'Gestion des jeux de données' },
+      { value: 'applications', text: 'Gestion des visualisations' },
+      { value: 'catalogs', text: 'Gestion des connecteurs aux catalogues' },
+      { value: 'stats', text: 'Récupération d\'informations statistiques' }
+    ]
+  }),
+  computed: {
+    ...mapState('session', ['user'])
+  },
+  methods: {
+    addApiKey () {
+      const apiKey = Object.assign({}, this.newApiKey)
+      this.settings.apiKeys.push(apiKey)
+      this.createMenu = false
+      this.$emit('updated')
     },
+    removeApiKey (rowIndex) {
+      this.settings.apiKeys.splice(rowIndex, 1)
+      this.$emit('updated')
+    }
   }
+}
 </script>

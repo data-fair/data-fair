@@ -1,9 +1,15 @@
 <template>
-  <v-container fluid class="pa-0">
+  <v-container
+    fluid
+    class="pa-0"
+  >
     <tutorial-alert id="dataset-table">
       {{ $t('tutorialFilter') }}
     </tutorial-alert>
-    <v-sheet v-if="notFound" class="pa-2">
+    <v-sheet
+      v-if="notFound"
+      class="pa-2"
+    >
       <p v-t="'noData'" />
     </v-sheet>
     <template v-else>
@@ -32,7 +38,10 @@
           cols="12"
           class="pb-0"
         >
-          <v-row justify="end" class="pr-3">
+          <v-row
+            justify="end"
+            class="pr-3"
+          >
             <v-spacer v-if="$vuetify.breakpoint.xs" />
             <v-pagination
               v-if="data.total"
@@ -43,20 +52,32 @@
               style="width: auto"
             />
             <v-spacer v-if="$vuetify.breakpoint.xs" />
-            <dataset-select-cols v-model="selectedCols" :headers="headers" />
-            <dataset-download-results :params="downloadParams" :total="data.total" />
+            <dataset-select-cols
+              v-model="selectedCols"
+              :headers="headers"
+            />
+            <dataset-download-results
+              :params="downloadParams"
+              :total="data.total"
+            />
           </v-row>
         </v-col>
       </v-row>
 
-      <v-row v-if="filters.length" class="ma-0">
+      <v-row
+        v-if="filters.length"
+        class="ma-0"
+      >
         <v-col class="pb-1 pt-2 pl-0">
           <dataset-filters v-model="filters" />
         </v-col>
       </v-row>
       <v-row class="ma-0">
         <v-col class="pl-0 pb-1 pt-2">
-          <dataset-nb-results :total="data.total" class="ml-3" />
+          <dataset-nb-results
+            :total="data.total"
+            class="ml-3"
+          />
         </v-col>
       </v-row>
       <v-data-table
@@ -68,7 +89,7 @@
         hide-default-header
         hide-default-footer
       >
-        <template v-slot:header>
+        <template #header>
           <thead class="v-data-table-header">
             <tr>
               <th
@@ -83,8 +104,11 @@
                   bottom
                   style="margin-right: 8px;"
                 >
-                  <template v-slot:activator="{ on }">
-                    <v-icon small v-on="on">
+                  <template #activator="{ on }">
+                    <v-icon
+                      small
+                      v-on="on"
+                    >
                       mdi-information
                     </v-icon>
                   </template>
@@ -110,7 +134,7 @@
             </tr>
           </thead>
         </template>
-        <template v-slot:item="{item}">
+        <template #item="{item}">
           <tr>
             <td
               v-for="header in selectedHeaders"
@@ -139,7 +163,10 @@
                 >{{ item[header.value] | truncate(50) }}</a>
               </template>
               <template v-else>
-                <div v-if="header.field.type === 'string' && header.field.separator" :style="`max-height: 40px; min-width: ${Math.min((item[header.value] + '').length, 50) * 6}px;`">
+                <div
+                  v-if="header.field.type === 'string' && header.field.separator"
+                  :style="`max-height: 40px; min-width: ${Math.min((item[header.value] + '').length, 50) * 6}px;`"
+                >
                   <v-chip-group
                     v-if="item[header.value]"
                     style="max-width:500px;"
@@ -147,7 +174,7 @@
                   >
                     <v-hover
                       v-for="(value, i) in item[header.value].split(header.field.separator).map(v => v.trim())"
-                      v-slot:default="{ hover }"
+                      v-slot="{ hover }"
                       :key="i"
                     >
                       <v-chip
@@ -163,7 +190,10 @@
                     </v-hover>
                   </v-chip-group>
                 </div>
-                <v-hover v-else v-slot:default="{ hover }">
+                <v-hover
+                  v-else
+                  v-slot="{ hover }"
+                >
                   <div :style="`position: relative; max-height: 40px; min-width: ${Math.min((item[header.value] + '').length, 50) * 6}px;`">
                     <span>{{ item[header.value] | cellValues(header.field) }}</span>
                     <v-btn
@@ -198,218 +228,219 @@ en:
 </i18n>
 
 <script>
-  import { mapState, mapGetters } from 'vuex'
-  import eventBus from '~/event-bus'
-  const filtersUtils = require('~/assets/filters-utils')
+import { mapState, mapGetters } from 'vuex'
+import eventBus from '~/event-bus'
+const filtersUtils = require('~/assets/filters-utils')
 
-  export default {
-    data: () => ({
-      data: {},
-      query: null,
-      pagination: {
-        page: 1,
-        itemsPerPage: 5,
-        sortBy: [null],
-        sortDesc: [false],
-      },
-      notFound: false,
-      loading: false,
-      lineHeight: 40,
-      filterHeight: 500,
-      filters: [],
-      lastParams: null,
-      selectedCols: [],
-      ready: false,
-    }),
-    computed: {
-      ...mapState(['vocabulary']),
-      ...mapState('dataset', ['dataset']),
-      ...mapGetters('dataset', ['resourceUrl', 'qMode']),
-      headers() {
-        const fieldsHeaders = this.dataset.schema
-          .filter(field => !field['x-calculated'])
-          .map(field => ({
-            text: field.title || field['x-originalName'] || field.key,
-            value: field.key,
-            sortable:
+export default {
+  data: () => ({
+    data: {},
+    query: null,
+    pagination: {
+      page: 1,
+      itemsPerPage: 5,
+      sortBy: [null],
+      sortDesc: [false]
+    },
+    notFound: false,
+    loading: false,
+    lineHeight: 40,
+    filterHeight: 500,
+    filters: [],
+    lastParams: null,
+    selectedCols: [],
+    ready: false
+  }),
+  computed: {
+    ...mapState(['vocabulary']),
+    ...mapState('dataset', ['dataset']),
+    ...mapGetters('dataset', ['resourceUrl', 'qMode']),
+    headers () {
+      const fieldsHeaders = this.dataset.schema
+        .filter(field => !field['x-calculated'])
+        .map(field => ({
+          text: field.title || field['x-originalName'] || field.key,
+          value: field.key,
+          sortable:
               (!field['x-capabilities'] || field['x-capabilities'].values !== false) && (
                 (field.type === 'string' && field['x-refersTo'] !== 'https://purl.org/geojson/vocab#geometry') ||
                 field.type === 'number' ||
                 field.type === 'integer'
               ),
-            filterable: (!field['x-capabilities'] || field['x-capabilities'].index !== false) && field['x-refersTo'] !== 'https://purl.org/geojson/vocab#geometry',
-            tooltip: field.description || (field['x-refersTo'] && this.vocabulary && this.vocabulary[field['x-refersTo']] && this.vocabulary[field['x-refersTo']].description),
-            field,
-          }))
+          filterable: (!field['x-capabilities'] || field['x-capabilities'].index !== false) && field['x-refersTo'] !== 'https://purl.org/geojson/vocab#geometry',
+          tooltip: field.description || (field['x-refersTo'] && this.vocabulary && this.vocabulary[field['x-refersTo']] && this.vocabulary[field['x-refersTo']].description),
+          field
+        }))
 
-        if (this.imageField) {
-          fieldsHeaders.unshift({ text: '', value: '_thumbnail' })
-        }
-        return fieldsHeaders
-      },
-      selectedHeaders() {
-        if (this.selectedCols.length === 0) return this.headers
-        return this.headers.filter(h => !h.field || this.selectedCols.includes(h.value))
-      },
-      imageField() {
-        return this.dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/image')
-      },
-      digitalDocumentField() {
-        return this.dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')
-      },
-      webPageField() {
-        return this.dataset.schema.find(f => f['x-refersTo'] === 'https://schema.org/WebPage')
-      },
-      params() {
-        const params = {
-          size: this.pagination.itemsPerPage,
-          page: this.pagination.page,
-          q_mode: this.qMode,
-          truncate: 50,
-        }
-        if (this.imageField) params.thumbnail = '40x40'
-        if (this.pagination.sortBy[0]) {
-          params.sort = (this.pagination.sortDesc[0] ? '-' : '') + this.pagination.sortBy[0]
-        }
-        if (this.query) params.q = this.query
-        if (this.filters.length) {
-          try {
-            params.qs = filtersUtils.filters2qs(this.filters, this.$i18n.locale)
-          } catch (error) {
-            this.$nextTick(() => eventBus.$emit('notification', { error }))
-          }
-        }
-        if (this.dataset.finalizedAt) params.finalizedAt = this.dataset.finalizedAt
-        return params
-      },
-      downloadParams() {
-        if (this.selectedCols.length === 0) return this.params
-        return { ...this.params, select: this.selectedCols.join(',') }
-      },
+      if (this.imageField) {
+        fieldsHeaders.unshift({ text: '', value: '_thumbnail' })
+      }
+      return fieldsHeaders
     },
-    watch: {
-      'dataset.schema'() {
+    selectedHeaders () {
+      if (this.selectedCols.length === 0) return this.headers
+      return this.headers.filter(h => !h.field || this.selectedCols.includes(h.value))
+    },
+    imageField () {
+      return this.dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/image')
+    },
+    digitalDocumentField () {
+      return this.dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')
+    },
+    webPageField () {
+      return this.dataset.schema.find(f => f['x-refersTo'] === 'https://schema.org/WebPage')
+    },
+    params () {
+      const params = {
+        size: this.pagination.itemsPerPage,
+        page: this.pagination.page,
+        q_mode: this.qMode,
+        truncate: 50
+      }
+      if (this.imageField) params.thumbnail = '40x40'
+      if (this.pagination.sortBy[0]) {
+        params.sort = (this.pagination.sortDesc[0] ? '-' : '') + this.pagination.sortBy[0]
+      }
+      if (this.query) params.q = this.query
+      if (this.filters.length) {
+        try {
+          params.qs = filtersUtils.filters2qs(this.filters, this.$i18n.locale)
+        } catch (error) {
+          // eslint-disable-next-line vue/no-async-in-computed-properties
+          this.$nextTick(() => eventBus.$emit('notification', { error }))
+        }
+      }
+      if (this.dataset.finalizedAt) params.finalizedAt = this.dataset.finalizedAt
+      return params
+    },
+    downloadParams () {
+      if (this.selectedCols.length === 0) return this.params
+      return { ...this.params, select: this.selectedCols.join(',') }
+    }
+  },
+  watch: {
+    'dataset.schema' () {
+      this.refresh(true)
+    },
+    pagination: {
+      handler () {
+        this.refresh()
+      },
+      deep: true
+    },
+    filters: {
+      handler () {
+        this.setItemsPerPage()
         this.refresh(true)
       },
-      pagination: {
-        handler () {
-          this.refresh()
-        },
-        deep: true,
-      },
-      filters: {
-        handler () {
-          this.setItemsPerPage()
-          this.refresh(true)
-        },
-        deep: true,
-      },
-      selectedCols: {
-        handler () {
-          this.writeQueryParams()
-        },
-        deep: true,
-      },
+      deep: true
     },
-    async mounted() {
-      this.readQueryParams()
-      this.setItemsPerPage()
-      await this.$nextTick()
-      this.ready = true
-      this.refresh(false, true)
+    selectedCols: {
+      handler () {
+        this.writeQueryParams()
+      },
+      deep: true
+    }
+  },
+  async mounted () {
+    this.readQueryParams()
+    this.setItemsPerPage()
+    await this.$nextTick()
+    this.ready = true
+    this.refresh(false, true)
+  },
+  methods: {
+    setItemsPerPage () {
+      // adapt number of lines to window height
+      const height = window.innerHeight
+      let top = this.$vuetify.breakpoint.xs ? 150 : 100
+      if (this.filters.length) top += 28
+      const nbRows = Math.floor(Math.max(height - top, 120) / (this.lineHeight + 2))
+      this.pagination.itemsPerPage = Math.min(Math.max(nbRows, 4), 50)
+      this.filterHeight = height - top
     },
-    methods: {
-      setItemsPerPage() {
-        // adapt number of lines to window height
-        const height = window.innerHeight
-        let top = this.$vuetify.breakpoint.xs ? 150 : 100
-        if (this.filters.length) top += 28
-        const nbRows = Math.floor(Math.max(height - top, 120) / (this.lineHeight + 2))
-        this.pagination.itemsPerPage = Math.min(Math.max(nbRows, 4), 50)
-        this.filterHeight = height - top
-      },
-      async refresh(resetPagination, initial) {
-        if (!this.ready) return
-        if (!initial) this.writeQueryParams()
-        if (resetPagination) {
-          this.pagination.page = 1
-          // this is debatable
-          // but in case of full-text search you can forget that a sort is active
-          // and be surprised by counter-intuitive results
-          this.pagination.sortBy = [null]
-          this.pagination.sortDesc = [false]
-        }
+    async refresh (resetPagination, initial) {
+      if (!this.ready) return
+      if (!initial) this.writeQueryParams()
+      if (resetPagination) {
+        this.pagination.page = 1
+        // this is debatable
+        // but in case of full-text search you can forget that a sort is active
+        // and be surprised by counter-intuitive results
+        this.pagination.sortBy = [null]
+        this.pagination.sortDesc = [false]
+      }
 
-        // prevent triggering multiple times the same request
-        const paramsStr = JSON.stringify(this.params)
-        if (paramsStr === this.lastParams) return
-        this.lastParams = paramsStr
+      // prevent triggering multiple times the same request
+      const paramsStr = JSON.stringify(this.params)
+      if (paramsStr === this.lastParams) return
+      this.lastParams = paramsStr
 
-        // this.data = {}
-        this.loading = true
-        try {
-          this.data = await this.$axios.$get(this.resourceUrl + '/lines', { params: this.params })
-          // console.log('data', this.data)
-          this.notFound = false
-        } catch (error) {
-          if (error.status === 404) this.notFound = true
-          else eventBus.$emit('notification', { error, msg: 'Erreur pendant la récupération des données' })
-        }
-        this.loading = false
-      },
-      orderBy(header) {
-        if (!header.sortable) return
-        if (this.pagination.sortBy[0] === header.value) {
-          this.$set(this.pagination.sortDesc, 0, !this.pagination.sortDesc[0])
-        } else {
-          this.$set(this.pagination.sortBy, 0, header.value)
-          this.$set(this.pagination.sortDesc, 0, true)
-        }
-      },
-      addFilter(key, filter) {
-        if (typeof filter !== 'object') filter = { type: 'in', values: [filter] }
-        filter.field = this.dataset.schema.find(f => f.key === key)
-        this.filters = this.filters.filter(f => !(f.field.key === key))
-        this.filters.push(filter)
-      },
-      isFilterable(value) {
-        if (value === undefined || value === null || value === '') return false
-        if (typeof value === 'string' && (value.length > 200 || value.startsWith('{'))) return false
-        return true
-      },
-      readQueryParams() {
-        const query = this.$route.query
-        if (query.cols) this.selectedCols = query.cols.split(',')
-        if (query.q) this.query = query.q
-        if (query.sort) {
-          const [sortBy, sortDesc] = query.sort.split(':')
-          this.$set(this.pagination.sortBy, 0, sortBy)
-          this.$set(this.pagination.sortDesc, 0, sortDesc === '-1')
-        }
-        this.filters = filtersUtils.readQueryParams(query, this.dataset)
-      },
-      writeQueryParams() {
-        const query = { ...this.$route.query }
-
-        if (this.selectedCols.length) query.cols = this.selectedCols.join(',')
-        else delete query.cols
-
-        if (this.query) query.q = this.query
-        else delete query.q
-
-        filtersUtils.writeQueryParams(this.filters, query)
-
-        if (this.pagination.sortBy && this.pagination.sortBy[0]) {
-          query.sort = this.pagination.sortBy[0] + ':' + (this.pagination.sortDesc[0] ? '-1' : '1')
-        } else {
-          delete query.sort
-        }
-
-        if (global.parent && global.parent !== global.self) parent.postMessage({ query }, '*')
-        else this.$router.push({ query })
-      },
+      // this.data = {}
+      this.loading = true
+      try {
+        this.data = await this.$axios.$get(this.resourceUrl + '/lines', { params: this.params })
+        // console.log('data', this.data)
+        this.notFound = false
+      } catch (error) {
+        if (error.status === 404) this.notFound = true
+        else eventBus.$emit('notification', { error, msg: 'Erreur pendant la récupération des données' })
+      }
+      this.loading = false
     },
+    orderBy (header) {
+      if (!header.sortable) return
+      if (this.pagination.sortBy[0] === header.value) {
+        this.$set(this.pagination.sortDesc, 0, !this.pagination.sortDesc[0])
+      } else {
+        this.$set(this.pagination.sortBy, 0, header.value)
+        this.$set(this.pagination.sortDesc, 0, true)
+      }
+    },
+    addFilter (key, filter) {
+      if (typeof filter !== 'object') filter = { type: 'in', values: [filter] }
+      filter.field = this.dataset.schema.find(f => f.key === key)
+      this.filters = this.filters.filter(f => !(f.field.key === key))
+      this.filters.push(filter)
+    },
+    isFilterable (value) {
+      if (value === undefined || value === null || value === '') return false
+      if (typeof value === 'string' && (value.length > 200 || value.startsWith('{'))) return false
+      return true
+    },
+    readQueryParams () {
+      const query = this.$route.query
+      if (query.cols) this.selectedCols = query.cols.split(',')
+      if (query.q) this.query = query.q
+      if (query.sort) {
+        const [sortBy, sortDesc] = query.sort.split(':')
+        this.$set(this.pagination.sortBy, 0, sortBy)
+        this.$set(this.pagination.sortDesc, 0, sortDesc === '-1')
+      }
+      this.filters = filtersUtils.readQueryParams(query, this.dataset)
+    },
+    writeQueryParams () {
+      const query = { ...this.$route.query }
+
+      if (this.selectedCols.length) query.cols = this.selectedCols.join(',')
+      else delete query.cols
+
+      if (this.query) query.q = this.query
+      else delete query.q
+
+      filtersUtils.writeQueryParams(this.filters, query)
+
+      if (this.pagination.sortBy && this.pagination.sortBy[0]) {
+        query.sort = this.pagination.sortBy[0] + ':' + (this.pagination.sortDesc[0] ? '-1' : '1')
+      } else {
+        delete query.sort
+      }
+
+      if (global.parent && global.parent !== global.self) parent.postMessage({ query }, '*')
+      else this.$router.push({ query })
+    }
   }
+}
 </script>
 
 <style>

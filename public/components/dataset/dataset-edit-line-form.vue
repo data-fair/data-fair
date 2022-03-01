@@ -38,47 +38,47 @@ en:
 
 <script>
 
-  import { mapState } from 'vuex'
-  export default {
-    props: ['value', 'selectedCols'],
-    data: () => ({
-      vjsfOptions: {
-        locale: 'fr',
-        removeAdditionalProperties: true,
-        textareaProps: {
-          outlined: true,
-        },
-        arrayItemCardProps: {
-          outlined: true,
-          tile: true,
-        },
-        dialogCardProps: {
-          outlined: true,
-        },
+import { mapState } from 'vuex'
+export default {
+  props: ['value', 'selectedCols'],
+  data: () => ({
+    vjsfOptions: {
+      locale: 'fr',
+      removeAdditionalProperties: true,
+      textareaProps: {
+        outlined: true
       },
-    }),
-    computed: {
-      ...mapState('dataset', ['dataset', 'lineUploadProgress', 'jsonSchema']),
-      editSchema() {
-        if (!this.jsonSchema) return
-        const schema = JSON.parse(JSON.stringify(this.jsonSchema))
-        Object.keys(schema.properties).forEach(key => {
-          if (this.selectedCols && this.selectedCols.length && !this.selectedCols.includes(key)) {
-            schema.properties[key].readOnly = true
-            schema.properties[key]['x-options'] = schema.properties[key]['x-options'] || {}
-            schema.properties[key]['x-options'].hideReadOnly = true
-          }
-          if (schema.properties[key]['x-refersTo'] === 'http://schema.org/DigitalDocument') {
-            delete schema.properties[key]
-          }
-        })
-        return schema
+      arrayItemCardProps: {
+        outlined: true,
+        tile: true
       },
-    },
-    created() {
-      if (!this.jsonSchema) this.$store.dispatch('dataset/fetchJsonSchema')
-    },
+      dialogCardProps: {
+        outlined: true
+      }
+    }
+  }),
+  computed: {
+    ...mapState('dataset', ['dataset', 'lineUploadProgress', 'jsonSchema']),
+    editSchema () {
+      if (!this.jsonSchema) return
+      const schema = JSON.parse(JSON.stringify(this.jsonSchema))
+      Object.keys(schema.properties).forEach(key => {
+        if (this.selectedCols && this.selectedCols.length && !this.selectedCols.includes(key)) {
+          schema.properties[key].readOnly = true
+          schema.properties[key]['x-options'] = schema.properties[key]['x-options'] || {}
+          schema.properties[key]['x-options'].hideReadOnly = true
+        }
+        if (schema.properties[key]['x-refersTo'] === 'http://schema.org/DigitalDocument') {
+          delete schema.properties[key]
+        }
+      })
+      return schema
+    }
+  },
+  created () {
+    if (!this.jsonSchema) this.$store.dispatch('dataset/fetchJsonSchema')
   }
+}
 </script>
 
 <style lang="css" scoped>

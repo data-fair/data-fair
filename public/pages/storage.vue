@@ -14,7 +14,7 @@
               :items="stats ? [stats] : []"
               hide-default-footer
             >
-              <template v-slot:item="{item}">
+              <template #item="{item}">
                 <tr>
                   <td>
                     {{ item.limits.nb_datasets.consumption.toLocaleString() }}
@@ -43,7 +43,10 @@
           <h2 class="my-2">
             Détail par jeu de données
           </h2>
-          <storage-details v-if="datasets" :datasets="datasets" />
+          <storage-details
+            v-if="datasets"
+            :datasets="datasets"
+          />
           <v-progress-linear
             v-else
             :height="2"
@@ -58,33 +61,33 @@
 </template>
 
 <script>
-  import { mapState, mapGetters } from 'vuex'
+import { mapState, mapGetters } from 'vuex'
 
-  export default {
-    data: () => ({
-      datasets: null,
-      stats: null,
-      headers: [
-        { text: 'Nombre de jeux de données', value: 'datasets', sortable: false },
-        { text: 'Espace de stockage', value: 'storage', sortable: false },
-        { text: 'Données indexées', value: 'storageLimit', sortable: false },
-        { text: 'Nombre de visualisations', value: 'applications', sortable: false },
-      ],
-    }),
-    computed: {
-      ...mapState(['env']),
-      ...mapState('session', ['user', 'initialized']),
-      ...mapGetters('session', ['activeAccount']),
-      authorized() {
-        return !!this.user
-      },
-    },
-    async created() {
-      if (!this.authorized) return
-      this.datasets = (await this.$axios.$get('api/v1/datasets', { params: { size: 10000, owner: `${this.activeAccount.type}:${this.activeAccount.id}`, select: 'id,title,storage', sort: 'storage.size:-1' } })).results
-      this.stats = await this.$axios.$get('api/v1/stats')
-    },
+export default {
+  data: () => ({
+    datasets: null,
+    stats: null,
+    headers: [
+      { text: 'Nombre de jeux de données', value: 'datasets', sortable: false },
+      { text: 'Espace de stockage', value: 'storage', sortable: false },
+      { text: 'Données indexées', value: 'storageLimit', sortable: false },
+      { text: 'Nombre de visualisations', value: 'applications', sortable: false }
+    ]
+  }),
+  computed: {
+    ...mapState(['env']),
+    ...mapState('session', ['user', 'initialized']),
+    ...mapGetters('session', ['activeAccount']),
+    authorized () {
+      return !!this.user
+    }
+  },
+  async created () {
+    if (!this.authorized) return
+    this.datasets = (await this.$axios.$get('api/v1/datasets', { params: { size: 10000, owner: `${this.activeAccount.type}:${this.activeAccount.id}`, select: 'id,title,storage', sort: 'storage.size:-1' } })).results
+    this.stats = await this.$axios.$get('api/v1/stats')
   }
+}
 </script>
 
 <style lang="css">

@@ -81,7 +81,7 @@ exports.latlon2fields = (dataset, doc) => {
 
   if (!lat || !lon) return {}
   return {
-    _geopoint: lat + ',' + lon,
+    _geopoint: lat + ',' + lon
   }
 }
 
@@ -127,7 +127,7 @@ exports.geometry2fields = async (schema, doc) => {
 
   const point = pointOnFeature(feature)
   const fields = {
-    _geopoint: point.geometry.coordinates[1] + ',' + point.geometry.coordinates[0],
+    _geopoint: point.geometry.coordinates[1] + ',' + point.geometry.coordinates[0]
   }
   if (!prop['x-capabilities'] || prop['x-capabilities'].geoCorners !== false) {
     const polygon = bboxPolygon(turfBbox(feature))
@@ -154,9 +154,9 @@ exports.result2geojson = esResponse => {
         type: 'Feature',
         id: hit._id,
         geometry,
-        properties: flatten({ ...properties, _id: hit._id }, { safe: true }),
+        properties: flatten({ ...properties, _id: hit._id }, { safe: true })
       }
-    }),
+    })
   }
 }
 
@@ -171,12 +171,12 @@ exports.aggs2geojson = aggsResult => {
         id: agg.value,
         geometry: {
           type: 'Point',
-          coordinates: [centroid.lon, centroid.lat],
+          coordinates: [centroid.lon, centroid.lat]
         },
         bbox,
-        properties,
+        properties
       }
-    }),
+    })
   }
 }
 
@@ -190,7 +190,7 @@ exports.result2wkt = esResponse => {
         geometry = { type: 'Point', coordinates: [Number(lon), Number(lat)] }
       }
       return geometry
-    }),
+    })
   }
   return geojsonToWKT(geometryCollection)
 }

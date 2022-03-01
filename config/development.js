@@ -20,12 +20,12 @@ module.exports = {
   defaultLimits: {
     totalStorage: 1000000000,
     totalIndexed: 1000000000,
-    nbDatasets: 1000,
+    nbDatasets: 1000
     // datasetStorage: -1,
   },
   locks: {
     // in seconds
-    ttl: 4,
+    ttl: 4
   },
   /* For virtual box debugging
   publicUrl: 'http://10.0.2.2:5600',
@@ -34,37 +34,37 @@ module.exports = {
   */
   secretKeys: {
     identities: 'dev_secret',
-    notifications: 'secret-notifications',
+    notifications: 'secret-notifications'
   },
   cache: {
-    disabled: true,
+    disabled: true
   },
   worker: {
-    spawnTask: false,
+    spawnTask: false
   },
   browserLogLevel: 'debug',
   remoteServices: [{
     title: 'Données Entreprises',
-    url: 'https://koumoul.com/s/sirene/api-docs.json',
+    url: 'https://koumoul.com/s/sirene/api-docs.json'
   }, {
     title: 'Géocoder',
-    url: 'https://koumoul.com/s/geocoder/api/v1/api-docs.json',
+    url: 'https://koumoul.com/s/geocoder/api/v1/api-docs.json'
   }, {
     title: 'Cadastre',
-    url: 'https://koumoul.com/s/cadastre/api-docs.json',
+    url: 'https://koumoul.com/s/cadastre/api-docs.json'
   }, {
     title: 'Divisions administratives',
-    url: 'https://koumoul.com/s/insee-mapping/api/v1/api-docs.json',
+    url: 'https://koumoul.com/s/insee-mapping/api/v1/api-docs.json'
   }, {
     title: 'Service de données cartographiques',
-    url: 'https://koumoul.com/s/tileserver/api/v1/api-docs.json',
+    url: 'https://koumoul.com/s/tileserver/api/v1/api-docs.json'
   }],
   catalogs: [{
     title: 'Data.gouv.fr',
-    href: 'https://www.data.gouv.fr',
+    href: 'https://www.data.gouv.fr'
   }, {
     title: 'Mydatacatalogue',
-    href: 'https://app.dawizz.fr/mydatacatalogue/',
+    href: 'https://app.dawizz.fr/mydatacatalogue/'
   }],
   proxyNuxt: false,
   /* doc: {
@@ -78,5 +78,5 @@ module.exports = {
   extraAdminNavigationItems: [{ id: 'test', title: { fr: 'Test admin', en: 'Test admin en' }, iframe: 'https://koumoul.com', icon: 'mdi-link' }],
   disableSharing: false,
   disableApplications: false,
-  disableRemoteServices: false,
+  disableRemoteServices: false
 }

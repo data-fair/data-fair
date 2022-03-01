@@ -32,7 +32,7 @@ describe('REST datasets', () => {
     let res = await ax.post('/api/v1/datasets', {
       isRest: true,
       title: 'rest1',
-      schema: [{ key: 'attr1', type: 'string', readOnly: true }, { key: 'attr2', type: 'string' }],
+      schema: [{ key: 'attr1', type: 'string', readOnly: true }, { key: 'attr2', type: 'string' }]
     })
     res = await ax.post('/api/v1/datasets/rest1/lines', { attr1: 'test1', attr2: 'test1' })
     assert.equal(res.status, 201)
@@ -72,7 +72,7 @@ describe('REST datasets', () => {
     await ax.put('/api/v1/datasets/rest2', {
       isRest: true,
       title: 'rest2',
-      schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }],
+      schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }]
     })
     await workers.hook('finalizer/rest2')
     let res = await ax.post('/api/v1/datasets/rest2/_bulk_lines', [
@@ -82,7 +82,7 @@ describe('REST datasets', () => {
       { _id: 'line4', attr1: 'test1', attr2: 'test1' },
       { _action: 'delete', _id: 'line2' },
       { _action: 'patch', _id: 'line3', attr1: 'test2' },
-      { _action: 'update', _id: 'line4', attr1: 'test2', attr2: 'test2' },
+      { _action: 'update', _id: 'line4', attr1: 'test2', attr2: 'test2' }
     ])
     assert.equal(res.data.nbOk, 7)
     assert.equal(res.data.nbCreated, 4)
@@ -108,14 +108,14 @@ describe('REST datasets', () => {
     await ax.put('/api/v1/datasets/rest3', {
       isRest: true,
       title: 'rest3',
-      schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }],
+      schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }]
     })
     let dataset = await workers.hook('finalizer/rest3')
     let res = await ax.post('/api/v1/datasets/rest3/_bulk_lines', [
       { _id: 'line1', attr1: 'test1', attr2: 'test1' },
       { _id: 'line2', attr1: 'test1', attr2: 'test1' },
       { _id: 'line3', attr1: 'test1', attr2: 'test1' },
-      { _id: 'line4', attr1: 'test1', attr2: 'test1' },
+      { _id: 'line4', attr1: 'test1', attr2: 'test1' }
     ])
     dataset = await workers.hook('finalizer/rest3')
     assert.ok(dataset.schema.find(f => f.key === '_id'))
@@ -137,7 +137,7 @@ describe('REST datasets', () => {
 
     res = await ax.post('/api/v1/datasets/rest3/_bulk_lines', [
       { _action: 'delete', _id: 'line1' },
-      { _action: 'patch', _id: 'line2', attr1: 'test2' },
+      { _action: 'patch', _id: 'line2', attr1: 'test2' }
     ])
     assert.equal(await collection.countDocuments({ _needsIndexing: true }), 2)
 
@@ -158,7 +158,7 @@ describe('REST datasets', () => {
     await ax.put('/api/v1/datasets/rest4', {
       isRest: true,
       title: 'rest4',
-      schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }],
+      schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }]
     })
     await workers.hook('finalizer/rest4')
     try {
@@ -191,7 +191,7 @@ describe('REST datasets', () => {
 
     const res = await ax.post('/api/v1/datasets/rest4/_bulk_lines', [
       { _id: 'line1', attr1: 'test' },
-      { _id: 'line1', attr1: 111 },
+      { _id: 'line1', attr1: 111 }
     ])
 
     assert.equal(res.data.nbOk, 1)
@@ -201,15 +201,15 @@ describe('REST datasets', () => {
     assert.ok(res.data.errors[0].error)
   })
 
-  it('Send attachment with multipart request', async function() {
+  it('Send attachment with multipart request', async function () {
     const ax = global.ax.dmeadus
     let res = await ax.post('/api/v1/datasets', {
       isRest: true,
       title: 'rest5',
       schema: [
         { key: 'attr1', type: 'integer' },
-        { key: 'attachmentPath', type: 'string', 'x-refersTo': 'http://schema.org/DigitalDocument' },
-      ],
+        { key: 'attachmentPath', type: 'string', 'x-refersTo': 'http://schema.org/DigitalDocument' }
+      ]
     })
     const dataset = res.data
     await workers.hook('finalizer/rest5')
@@ -242,8 +242,8 @@ describe('REST datasets', () => {
       title: 'rest6',
       schema: [
         { key: 'attr1', type: 'string' },
-        { key: 'attachmentPath', type: 'string', 'x-refersTo': 'http://schema.org/DigitalDocument' },
-      ],
+        { key: 'attachmentPath', type: 'string', 'x-refersTo': 'http://schema.org/DigitalDocument' }
+      ]
     })
     const dataset = res.data
     await workers.hook('finalizer/rest6')
@@ -254,7 +254,7 @@ describe('REST datasets', () => {
     form.append('attachments', attachmentsContent, 'files.zip')
     form.append('actions', Buffer.from(JSON.stringify([
       { _id: 'line1', attr1: 'test1', attachmentPath: 'test.odt' },
-      { _id: 'line2', attr1: 'test1', attachmentPath: 'dir1/test.pdf' },
+      { _id: 'line2', attr1: 'test1', attachmentPath: 'dir1/test.pdf' }
     ]), 'utf8'), 'actions.json')
     res = await ax.post('/api/v1/datasets/rest6/_bulk_lines', form, { headers: testUtils.formHeaders(form) })
     assert.equal(res.status, 200)
@@ -289,8 +289,8 @@ describe('REST datasets', () => {
         { key: 'os', type: 'string' },
         { key: 'collection', type: 'string' },
         { key: 'resourceId', type: 'string' },
-        { key: 'operation', type: 'string' },
-      ],
+        { key: 'operation', type: 'string' }
+      ]
     })
     await workers.hook('finalizer/restndjson')
 
@@ -314,8 +314,8 @@ describe('REST datasets', () => {
       title: 'restndjson',
       schema: [
         { key: 'ip', type: 'string' },
-        { key: 'date', type: 'string', format: 'date-time' },
-      ],
+        { key: 'date', type: 'string', format: 'date-time' }
+      ]
     })
     await workers.hook('finalizer/restndjson')
 
@@ -340,13 +340,13 @@ describe('REST datasets', () => {
     await ax.post('/api/v1/datasets', {
       isRest: true,
       title: 'rest7',
-      schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }],
+      schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }]
     })
     await ax.post('/api/v1/datasets/rest7/_bulk_lines', [
       { _id: 'line1', attr1: 'test1', attr2: 'test1' },
       { _id: 'line2', attr1: 'test1', attr2: 'test1' },
       { _id: 'line3', attr1: 'test1', attr2: 'test1' },
-      { _id: 'line4', attr1: 'test1', attr2: 'test1' },
+      { _id: 'line4', attr1: 'test1', attr2: 'test1' }
     ])
     await workers.hook('finalizer/rest7')
 
@@ -366,7 +366,7 @@ describe('REST datasets', () => {
       isRest: true,
       title: 'resthist',
       rest: { history: true },
-      schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }],
+      schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }]
     })
     res = await ax.post('/api/v1/datasets/resthist/lines', { _id: 'id1', attr1: 'test1', attr2: 'test1' })
     assert.equal(res.data._id, 'id1')
@@ -399,11 +399,11 @@ describe('REST datasets', () => {
           prop: 'attr2',
           delay: {
             value: 1,
-            unit: 'days',
-          },
-        },
-       },
-      schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string', format: 'date-time' }],
+            unit: 'days'
+          }
+        }
+      },
+      schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string', format: 'date-time' }]
     })
     await workers.hook('finalizer/restttl')
     await ax.post('/api/v1/datasets/restttl/lines', { attr1: 'test1', attr2: moment().subtract(3, 'days').toISOString() })
@@ -425,14 +425,14 @@ describe('REST datasets', () => {
     await ax.put('/api/v1/datasets/restidem', {
       isRest: true,
       title: 'restidem',
-      schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }],
+      schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }]
     })
     await workers.hook('finalizer/restidem')
     let res = await ax.post('/api/v1/datasets/restidem/_bulk_lines', [
       { _id: 'line1', attr1: 'test1', attr2: 'test1' },
       { _id: 'line2', attr1: 'test1', attr2: 'test1' },
       { _id: 'line3', attr1: 'test1', attr2: 'test1' },
-      { _id: 'line4', attr1: 'test1', attr2: 'test1' },
+      { _id: 'line4', attr1: 'test1', attr2: 'test1' }
     ])
     let dataset = await workers.hook('finalizer/restidem')
     res = await ax.get('/api/v1/datasets/restidem/lines')
@@ -440,21 +440,21 @@ describe('REST datasets', () => {
 
     const collection = restDatasetsUtils.collection(global.db, dataset)
     res = await ax.post('/api/v1/datasets/restidem/_bulk_lines', [
-      { _id: 'line1', attr1: 'test1', attr2: 'test1' },
+      { _id: 'line1', attr1: 'test1', attr2: 'test1' }
     ])
     assert.equal(await collection.countDocuments({ _needsIndexing: true }), 0)
     await workers.hook('finalizer/restidem')
 
     res = await ax.post('/api/v1/datasets/restidem/_bulk_lines', [
       { _id: 'line1', attr1: 'test1', attr2: 'test1' },
-      { _action: 'delete', _id: 'line2' },
+      { _action: 'delete', _id: 'line2' }
     ])
     assert.equal(await collection.countDocuments({ _needsIndexing: true }), 1)
     await workers.hook('finalizer/restidem')
 
     res = await ax.post('/api/v1/datasets/restidem/_bulk_lines', [
       { _action: 'patch', _id: 'line3', attr1: 'test2' },
-      { _action: 'patch', _id: 'line4', attr1: 'test1' },
+      { _action: 'patch', _id: 'line4', attr1: 'test1' }
     ])
     assert.equal(await collection.countDocuments({ _needsIndexing: true }), 1)
     dataset = await workers.hook('finalizer/restidem')
@@ -466,14 +466,14 @@ describe('REST datasets', () => {
     await ax.post('/api/v1/datasets', {
       isRest: true,
       title: 'restdel',
-      schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }],
+      schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }]
     })
     let dataset = await workers.hook('finalizer/restdel')
     await ax.post('/api/v1/datasets/restdel/_bulk_lines', [
       { _id: 'line1', attr1: 'test1', attr2: 'test1' },
       { _id: 'line2', attr1: 'test1', attr2: 'test1' },
       { _id: 'line3', attr1: 'test1', attr2: 'test1' },
-      { _id: 'line4', attr1: 'test1', attr2: 'test1' },
+      { _id: 'line4', attr1: 'test1', attr2: 'test1' }
     ])
     const collection = restDatasetsUtils.collection(global.db, dataset)
     dataset = await workers.hook('finalizer/restdel')
@@ -490,7 +490,7 @@ describe('REST datasets', () => {
     await ax.post('/api/v1/datasets', {
       isRest: true,
       title: 'restcsv',
-      schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }, { key: 'attr3', type: 'boolean' }],
+      schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }, { key: 'attr3', type: 'boolean' }]
     })
     let dataset = await workers.hook('finalizer/restcsv')
     await ax.post('/api/v1/datasets/restcsv/_bulk_lines', `_id,attr1,attr2,attr3
@@ -530,7 +530,7 @@ update,line2,test2,test2`, { headers: { 'content-type': 'text/csv' } })
     await ax.post('/api/v1/datasets', {
       isRest: true,
       title: 'restcsv',
-      schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }, { key: 'attr3', type: 'boolean' }],
+      schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }, { key: 'attr3', type: 'boolean' }]
     })
     await workers.hook('finalizer/restcsv')
     try {
@@ -550,7 +550,7 @@ line3,test1`, { headers: { 'content-type': 'text/csv' } })
     await ax.post('/api/v1/datasets', {
       isRest: true,
       title: 'restgzcsv',
-      schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }],
+      schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }]
     })
     let dataset = await workers.hook('finalizer/restgzcsv')
     await ax.post('/api/v1/datasets/restgzcsv/_bulk_lines', zlib.gzipSync(`_id,attr1,attr2
@@ -570,7 +570,7 @@ line2,test1,test1`), { headers: { 'content-type': 'text/csv+gzip' } })
     await ax.post('/api/v1/datasets', {
       isRest: true,
       title: 'restcsvgz',
-      schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }],
+      schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }]
     })
     let dataset = await workers.hook('finalizer/restcsvgz')
 
@@ -595,7 +595,7 @@ line2,test1,test1`), { headers: { 'content-type': 'text/csv+gzip' } })
       isRest: true,
       title: 'restkey',
       schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }, { key: 'attr3', type: 'string' }],
-      primaryKey: ['attr1', 'attr2'],
+      primaryKey: ['attr1', 'attr2']
     })
     let dataset = await workers.hook('finalizer/restkey')
     await ax.post('/api/v1/datasets/restkey/_bulk_lines', `attr1,attr2,attr3
@@ -612,7 +612,7 @@ test2,test2,test3`, { headers: { 'content-type': 'text/csv' } })
 
     // the primary key can also be used to delete lines
     await ax.post('/api/v1/datasets/restkey/_bulk_lines', [
-      { _action: 'delete', attr1: 'test1', attr2: 'test1' },
+      { _action: 'delete', attr1: 'test1', attr2: 'test1' }
     ])
     dataset = await workers.hook('finalizer/restkey')
     assert.equal(dataset.count, 1)
@@ -626,7 +626,7 @@ test2,test2,test3`, { headers: { 'content-type': 'text/csv' } })
     await ax.put('/api/v1/datasets/rest2', {
       isRest: true,
       title: 'restlarge',
-      schema: [{ key: 'attr1', type: 'string' }],
+      schema: [{ key: 'attr1', type: 'string' }]
     })
     await workers.hook('finalizer/rest2')
     const bulkLines = []
@@ -636,7 +636,7 @@ test2,test2,test3`, { headers: { 'content-type': 'text/csv' } })
     const res = await ax.post('/api/v1/datasets/rest2/_bulk_lines', bulkLines, { responseType: 'stream' })
     let i = 0
     await pump(res.data, new Writable({
-      write(chunk, encoding, callback) {
+      write (chunk, encoding, callback) {
         i += 1
         if (i < 6) assert.equal(chunk.toString(), ' ')
         else {
@@ -644,7 +644,7 @@ test2,test2,test3`, { headers: { 'content-type': 'text/csv' } })
           assert.equal(result.nbOk, 550)
         }
         callback()
-      },
+      }
     }))
     assert.equal(i, 6)
   })
@@ -654,7 +654,7 @@ test2,test2,test3`, { headers: { 'content-type': 'text/csv' } })
     let res = await ax.post('/api/v1/datasets', {
       isRest: true,
       title: 'restunset',
-      schema: [{ key: 'attr1', type: 'string', readOnly: true }, { key: 'attr2', type: 'string' }],
+      schema: [{ key: 'attr1', type: 'string', readOnly: true }, { key: 'attr2', type: 'string' }]
     })
     res = await ax.post('/api/v1/datasets/restunset/lines', { attr1: 'test1', attr2: 'test1' })
     assert.equal(res.status, 201)

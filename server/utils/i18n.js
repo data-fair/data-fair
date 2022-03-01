@@ -7,7 +7,7 @@ i18n.configure({
   defaultLocale,
   directory: require('path').join(__dirname, '../../server/i18n'),
   cookie: 'i18n_lang',
-  objectNotation: true,
+  objectNotation: true
 })
 
 exports.middleware = i18n.init
@@ -19,7 +19,7 @@ i18n.getLocales().forEach(locale => {
     ...concept,
     title: concept.title[locale] || concept.title[defaultLocale],
     description: concept.description[locale] || concept.description[defaultLocale],
-    tag: concept.tag[locale] || concept.tag[defaultLocale],
+    tag: concept.tag[locale] || concept.tag[defaultLocale]
   }))
   exports.vocabulary[locale] = {}
   exports.vocabularyArray[locale].forEach(concept => {

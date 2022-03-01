@@ -12,17 +12,17 @@
 </template>
 
 <script>
-  const { mapGetters } = require('vuex')
+const { mapGetters } = require('vuex')
 
-  export default {
-    props: {
-      // defined here as the css rules from default and embed layout are loaded in the same chunk
-      htmlOverflow: { type: String, default: 'auto' },
-    },
-    computed: {
-      ...mapGetters(['lightPrimary5', 'darkPrimary5']),
-    },
+export default {
+  props: {
+    // defined here as the css rules from default and embed layout are loaded in the same chunk
+    htmlOverflow: { type: String, default: 'auto' }
+  },
+  computed: {
+    ...mapGetters(['lightPrimary5', 'darkPrimary5'])
   }
+}
 </script>
 
 <style lang="css" scoped>

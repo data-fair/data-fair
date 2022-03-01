@@ -4,7 +4,7 @@ const testUtils = require('./resources/test-utils')
 const workers = require('../server/workers')
 
 describe('Date formats', () => {
-  it('Detect and parse usual french date formats', async function() {
+  it('Detect and parse usual french date formats', async function () {
     const ax = global.ax.dmeadus
     const dataset = await testUtils.sendDataset('datasets/date-formats.csv', ax)
     assert.equal(dataset.schema.filter(f => !f['x-calculated']).length, 4)
@@ -22,7 +22,7 @@ describe('Date formats', () => {
     assert.ok(res.data.results[2].datetimefr.startsWith('2021-01-15T'))
   })
 
-  it('Detect ISO date in a version of the file, then update format in next version', async function() {
+  it('Detect ISO date in a version of the file, then update format in next version', async function () {
     const ax = global.ax.dmeadus
     let form = new FormData()
     form.append('file', 'str,date\nstrval,2021-01-22', 'dataset.csv')
@@ -46,7 +46,7 @@ describe('Date formats', () => {
     assert.equal(dateProp.dateFormat, undefined)
   })
 
-  it('Accept ISO date without Z or timezone suffix', async function() {
+  it('Accept ISO date without Z or timezone suffix', async function () {
     const ax = global.ax.dmeadus
     const form = new FormData()
     form.append('file', 'str,datetime\nstrval,2021-02-23T10:27:50', 'dataset.csv')
@@ -61,7 +61,7 @@ describe('Date formats', () => {
     assert.equal(results[0].datetime, '2021-02-23T10:27:50+01:00')
   })
 
-  it('Accept another date-time format and configure timezone', async function() {
+  it('Accept another date-time format and configure timezone', async function () {
     const ax = global.ax.dmeadus
     const dataset = await testUtils.sendDataset('datasets/date-time.csv', ax)
     const dateProp = dataset.file.schema.find(p => p.key === 'Horodatage')
@@ -85,19 +85,19 @@ describe('Date formats', () => {
     form.append('file', JSON.stringify({
       type: 'FeatureCollection',
       features: [
-          {
-              type: 'Feature',
-              id: 'id1',
-              geometry: {
-                  type: 'LineString',
-                  coordinates: [[102.0, 0.0], [103.0, 1.0], [104.0, 0.0], [105.0, 1.0]],
-              },
-              properties: {
-                  date: '2018/01/01',
-              },
+        {
+          type: 'Feature',
+          id: 'id1',
+          geometry: {
+            type: 'LineString',
+            coordinates: [[102.0, 0.0], [103.0, 1.0], [104.0, 0.0], [105.0, 1.0]]
           },
-        ],
-      }), 'geojson-example.geojson')
+          properties: {
+            date: '2018/01/01'
+          }
+        }
+      ]
+    }), 'geojson-example.geojson')
     const ax = global.ax.dmeadus
     const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
     assert.equal(res.status, 201)

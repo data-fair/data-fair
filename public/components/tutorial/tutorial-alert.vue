@@ -14,24 +14,24 @@
 </template>
 
 <script>
-  export default {
-    props: { id: { type: String, required: true } },
-    data: () => ({
-      show: false,
-    }),
-    mounted() {
-      if (global.localStorage) {
-        if (global.localStorage['closed-tutorial-' + this.id] !== 'true') {
-          this.show = true
-        }
+export default {
+  props: { id: { type: String, required: true } },
+  data: () => ({
+    show: false
+  }),
+  mounted () {
+    if (global.localStorage) {
+      if (global.localStorage['closed-tutorial-' + this.id] !== 'true') {
+        this.show = true
       }
-    },
-    methods: {
-      close() {
-        global.localStorage['closed-tutorial-' + this.id] = 'true'
-      },
-    },
+    }
+  },
+  methods: {
+    close () {
+      global.localStorage['closed-tutorial-' + this.id] = 'true'
+    }
   }
+}
 </script>
 
 <style lang="css" scoped>

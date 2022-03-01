@@ -35,7 +35,7 @@ exports.removeAll = async (dataset) => {
 }
 
 const metadataStorage = multer.diskStorage({
-  destination: async function(req, file, cb) {
+  destination: async function (req, file, cb) {
     try {
       const dir = datasetUtils.metadataAttachmentsDir(req.dataset)
       await fs.ensureDir(dir)
@@ -52,12 +52,12 @@ const metadataStorage = multer.diskStorage({
     } catch (err) {
       cb(err)
     }
-  },
+  }
 })
 
 const metadataUpload = multer({
   storage: metadataStorage,
-  fileFilter: async function fileFilter(req, file, cb) {
+  fileFilter: async function fileFilter (req, file, cb) {
     try {
       // manage disk storage quota
       if (!req.get('Content-Length')) throw createError(411, 'Content-Length is mandatory')
@@ -85,7 +85,7 @@ const metadataUpload = multer({
       debug('File rejected', err)
       cb(err)
     }
-  },
+  }
 })
 
 exports.metadataUpload = () => metadataUpload.single('attachment')

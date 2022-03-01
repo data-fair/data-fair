@@ -49,7 +49,7 @@ describe('Applications', () => {
     let res = await ax.post('/api/v1/applications', { url: 'http://monapp1.com/' })
     const appId = res.data.id
     res = await ax.put('/api/v1/applications/' + appId + '/config', {
-      datasets: [{ href: config.publicUrl + '/api/v1/datasets/111' }],
+      datasets: [{ href: config.publicUrl + '/api/v1/datasets/111' }]
     })
     assert.equal(res.status, 200)
     res = await ax.get('/api/v1/applications/' + appId + '/config')

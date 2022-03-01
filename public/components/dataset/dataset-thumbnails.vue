@@ -62,7 +62,10 @@
                 :height="thumbnailHeight"
                 :contain="dataset.thumbnails && dataset.thumbnails.resizeMode === 'fitIn'"
               />
-              <v-card-title v-if="labelField || descriptionField" primary-title>
+              <v-card-title
+                v-if="labelField || descriptionField"
+                primary-title
+              >
                 <div>
                   <h3
                     v-if="labelField"
@@ -96,85 +99,85 @@ en:
 </i18n>
 
 <script>
-  import { mapState, mapGetters } from 'vuex'
-  import eventBus from '~/event-bus'
+import { mapState, mapGetters } from 'vuex'
+import eventBus from '~/event-bus'
 
-  export default {
-    props: ['inititemsPerPage', 'hideitemsPerPage'],
-    data: () => ({
-      data: {},
-      query: null,
-      pagination: {
-        page: 1,
-        itemsPerPage: 10,
-      },
-      notFound: false,
-      loading: false,
-      maxThumbnailWidth: 300,
-      thumbnailHeight: 200,
-    }),
-    computed: {
-      ...mapState('dataset', ['dataset']),
-      ...mapGetters('dataset', ['resourceUrl', 'qMode']),
-      plural() {
-        return this.data.total > 1
-      },
-      imageField() {
-        return this.dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/image')
-      },
-      labelField() {
-        return this.dataset.schema.find(f => f['x-refersTo'] === 'http://www.w3.org/2000/01/rdf-schema#label')
-      },
-      descriptionField() {
-        return this.dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org')
-      },
+export default {
+  props: ['inititemsPerPage', 'hideitemsPerPage'],
+  data: () => ({
+    data: {},
+    query: null,
+    pagination: {
+      page: 1,
+      itemsPerPage: 10
     },
-    watch: {
-      'dataset.schema'() {
-        this.refresh()
-      },
-      'dataset.thumbnails'() {
-        this.refresh()
-      },
-      pagination: {
-        handler () {
-          this.refresh()
-        },
-        deep: true,
-      },
+    notFound: false,
+    loading: false,
+    maxThumbnailWidth: 300,
+    thumbnailHeight: 200
+  }),
+  computed: {
+    ...mapState('dataset', ['dataset']),
+    ...mapGetters('dataset', ['resourceUrl', 'qMode']),
+    plural () {
+      return this.data.total > 1
     },
-    mounted() {
-      if (this.inititemsPerPage) this.pagination.itemsPerPage = this.inititemsPerPage
+    imageField () {
+      return this.dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/image')
+    },
+    labelField () {
+      return this.dataset.schema.find(f => f['x-refersTo'] === 'http://www.w3.org/2000/01/rdf-schema#label')
+    },
+    descriptionField () {
+      return this.dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org')
+    }
+  },
+  watch: {
+    'dataset.schema' () {
       this.refresh()
     },
-    methods: {
-      async refresh() {
-        const select = []
-        if (this.imageField) select.push(this.imageField.key)
-        if (this.labelField) select.push(this.labelField.key)
-        if (this.descriptionField) select.push(this.descriptionField.key)
-
-        const params = {
-          size: this.pagination.itemsPerPage,
-          page: this.pagination.page,
-          select: select.join(','),
-          thumbnail: `${this.maxThumbnailWidth}x${this.thumbnailHeight}`,
-          q_mode: this.qMode,
-        }
-        if (this.query) params.q = this.query
-        if (this.dataset.draftReason) params.draft = 'true'
-        this.loading = true
-        try {
-          this.data = await this.$axios.$get(this.resourceUrl + '/lines', { params })
-          this.notFound = false
-        } catch (error) {
-          if (error.response && error.response.status === 404) this.notFound = true
-          else eventBus.$emit('notification', { error, msg: 'Erreur pendant la récupération des données' })
-        }
-        this.loading = false
-      },
+    'dataset.thumbnails' () {
+      this.refresh()
     },
+    pagination: {
+      handler () {
+        this.refresh()
+      },
+      deep: true
+    }
+  },
+  mounted () {
+    if (this.inititemsPerPage) this.pagination.itemsPerPage = this.inititemsPerPage
+    this.refresh()
+  },
+  methods: {
+    async refresh () {
+      const select = []
+      if (this.imageField) select.push(this.imageField.key)
+      if (this.labelField) select.push(this.labelField.key)
+      if (this.descriptionField) select.push(this.descriptionField.key)
+
+      const params = {
+        size: this.pagination.itemsPerPage,
+        page: this.pagination.page,
+        select: select.join(','),
+        thumbnail: `${this.maxThumbnailWidth}x${this.thumbnailHeight}`,
+        q_mode: this.qMode
+      }
+      if (this.query) params.q = this.query
+      if (this.dataset.draftReason) params.draft = 'true'
+      this.loading = true
+      try {
+        this.data = await this.$axios.$get(this.resourceUrl + '/lines', { params })
+        this.notFound = false
+      } catch (error) {
+        if (error.response && error.response.status === 404) this.notFound = true
+        else eventBus.$emit('notification', { error, msg: 'Erreur pendant la récupération des données' })
+      }
+      this.loading = false
+    }
   }
+}
 </script>
 
 <style lang="less">

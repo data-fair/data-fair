@@ -8,7 +8,7 @@ const fieldsSniffer = require('../utils/fields-sniffer')
 
 exports.eventsPrefix = 'analyze'
 
-exports.process = async function(app, dataset) {
+exports.process = async function (app, dataset) {
   const debug = require('debug')(`worker:csv-analyzer:${dataset.id}`)
   debug('extract file sample')
   const db = app.get('db')
@@ -26,7 +26,7 @@ exports.process = async function(app, dataset) {
   dataset.file.schema = sniffResult.labels
     .map((field, i) => ({
       key: fieldsSniffer.escapeKey(field),
-      'x-originalName': field.replace(/""/g, '"').replace(/^"/, '').replace(/"$/, ''),
+      'x-originalName': field.replace(/""/g, '"').replace(/^"/, '').replace(/"$/, '')
     }))
     // do not keep columns with empty string as header
     .filter(field => !!field.key)
@@ -41,7 +41,7 @@ exports.process = async function(app, dataset) {
     linesDelimiter: sniffResult.linesDelimiter,
     fieldsDelimiter: sniffResult.fieldsDelimiter,
     escapeChar: sniffResult.escapeChar,
-    quote: sniffResult.quote,
+    quote: sniffResult.quote
   }
 
   // get a random sampling to test values type on fewer elements
@@ -73,7 +73,7 @@ exports.process = async function(app, dataset) {
   const patch = {
     status: 'analyzed',
     file: dataset.file,
-    schema: dataset.schema,
+    schema: dataset.schema
   }
 
   await datasetUtils.applyPatch(db, dataset, patch)

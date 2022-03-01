@@ -22,28 +22,40 @@
         :owner="dataset.owner"
       />
       <template v-if="dataset.isVirtual">
-        <v-icon small style="margin-top:-3px;">
+        <v-icon
+          small
+          style="margin-top:-3px;"
+        >
           mdi-picture-in-picture-bottom-right-outline
         </v-icon>
         <span v-t="'virtual'" />
       </template>
 
       <template v-if="dataset.isRest">
-        <v-icon small style="margin-top:-3px;">
+        <v-icon
+          small
+          style="margin-top:-3px;"
+        >
           mdi-all-inclusive
         </v-icon>
         <span v-t="'inc'" />
       </template>
 
       <template v-if="dataset.isMetaOnly">
-        <v-icon small style="margin-top:-3px;">
+        <v-icon
+          small
+          style="margin-top:-3px;"
+        >
           mdi-information-variant
         </v-icon>
         <span v-t="'metaOnly'" />
       </template>
 
       <template v-if="dataset.remoteFile || dataset.originalFile || dataset.file">
-        <v-icon small style="margin-top:-3px;">
+        <v-icon
+          small
+          style="margin-top:-3px;"
+        >
           mdi-file
         </v-icon>
         <span>{{ (dataset.remoteFile || dataset.originalFile || dataset.file).name | truncate(40,4) }} {{ ((dataset.remoteFile || dataset.originalFile || dataset.file).size) | displayBytes($i18n.locale) }}</span>
@@ -56,9 +68,15 @@
     </v-list-item-subtitle>
 
     <v-list-item-action class="my-0">
-      <v-tooltip v-if="dataset.status === 'error'" top>
-        <template v-slot:activator="{on}">
-          <v-icon color="error" v-on="on">
+      <v-tooltip
+        v-if="dataset.status === 'error'"
+        top
+      >
+        <template #activator="{on}">
+          <v-icon
+            color="error"
+            v-on="on"
+          >
             mdi-alert
           </v-icon>
         </template>
@@ -90,12 +108,12 @@ en:
 </i18n>
 
 <script>
-  export default {
-    props: ['dataset', 'showTopics', 'showOwner'],
-    data: () => ({
-      hover: false,
-    }),
-  }
+export default {
+  props: ['dataset', 'showTopics', 'showOwner'],
+  data: () => ({
+    hover: false
+  })
+}
 </script>
 
 <style lang="css" scoped>

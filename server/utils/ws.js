@@ -25,7 +25,7 @@ exports.stop = async () => {
   if (cursor) await cursor.close()
 }
 
-async function channel(db) {
+async function channel (db) {
   const collection = (await db.listCollections({ name: 'messages' }).toArray())[0]
   if (!collection) await db.createCollection('messages', { capped: true, size: 100000, max: 1000 })
   return db.collection('messages')
@@ -88,7 +88,7 @@ exports.initServer = async (wss, db, session) => {
   })
 
   // standard ping/pong used to detect lost connections
-  setInterval(function ping() {
+  setInterval(function ping () {
     if (stopped) return
     wss.clients.forEach(ws => {
       if (ws.isAlive === false) return ws.terminate()

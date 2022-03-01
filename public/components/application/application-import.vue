@@ -20,7 +20,7 @@
       <v-stepper-content step="1">
         <p v-html="$t('customApp')" />
         <application-base-apps
-          v-if="dataset || !this.$route.query.dataset"
+          v-if="dataset || !$route.query.dataset"
           v-model="baseApp"
           :dataset="dataset"
           @input="currentStep = 2; title = dataset ? dataset.title + ' - ' + baseApp.title : baseApp.title"
@@ -79,90 +79,90 @@ en:
 </i18n>
 
 <script>
-  import { mapState, mapGetters } from 'vuex'
-  import eventBus from '~/event-bus'
+import { mapState, mapGetters } from 'vuex'
+import eventBus from '~/event-bus'
 
-  export default {
-    props: ['initApp'],
-    async fetch() {
-      if (this.$route.query.dataset) {
-        await this.getDataset(this.$route.query.dataset)
+export default {
+  props: ['initApp'],
+  data: () => ({
+    currentStep: null,
+    datasetModel: null,
+    noDataset: false,
+    dataset: null,
+    baseApp: null,
+    applicationUrl: null,
+    configurableApplications: [],
+    importing: false,
+    title: null
+  }),
+  async fetch () {
+    if (this.$route.query.dataset) {
+      await this.getDataset(this.$route.query.dataset)
+    }
+  },
+  computed: {
+    ...mapState('session', ['user']),
+    ...mapGetters('session', ['activeAccount']),
+    ...mapState(['env']),
+    vjsfOptions () {
+      return {
+        context: { owner: this.activeAccount },
+        locale: 'fr',
+        rootDisplay: 'expansion-panels',
+        // rootDisplay: 'tabs',
+        expansionPanelsProps: {
+          value: 0,
+          hover: true
+        },
+        dialogProps: {
+          maxWidth: 500,
+          overlayOpacity: 0 // better when inside an iframe
+        }
+      }
+    }
+  },
+  watch: {
+    datasetModel () {
+      if (!this.datasetModel) this.dataset = null
+      else {
+        this.getDataset(this.datasetModel.id)
+        this.noDataset = false
       }
     },
-    data: () => ({
-      currentStep: null,
-      datasetModel: null,
-      noDataset: false,
-      dataset: null,
-      baseApp: null,
-      applicationUrl: null,
-      configurableApplications: [],
-      importing: false,
-      title: null,
-    }),
-    computed: {
-      ...mapState('session', ['user']),
-      ...mapGetters('session', ['activeAccount']),
-      ...mapState(['env']),
-      vjsfOptions() {
-        return {
-          context: { owner: this.activeAccount },
-          locale: 'fr',
-          rootDisplay: 'expansion-panels',
-          // rootDisplay: 'tabs',
-          expansionPanelsProps: {
-            value: 0,
-            hover: true,
-          },
-          dialogProps: {
-            maxWidth: 500,
-            overlayOpacity: 0, // better when inside an iframe
-          },
-        }
-      },
+    noDataset () {
+      if (this.noDataset) this.datasetModel = null
     },
-    watch: {
-      datasetModel() {
-        if (!this.datasetModel) this.dataset = null
-        else {
-          this.getDataset(this.datasetModel.id)
-          this.noDataset = false
-        }
-      },
-      noDataset() {
-        if (this.noDataset) this.datasetModel = null
-      },
-      dataset() {
-        this.baseApp = null
-      },
+    dataset () {
+      this.baseApp = null
+    }
+  },
+  methods: {
+    async getDataset (id) {
+      this.dataset = await this.$axios.$get(`api/v1/datasets/${id}`)
     },
-    methods: {
-      async getDataset(id) {
-        this.dataset = await this.$axios.$get(`api/v1/datasets/${id}`)
-      },
-      async createApplication() {
-        this.importing = true
-        try {
-          const configurationDraft = {}
-          if (this.dataset) {
-            configurationDraft.datasets = [{
-              href: this.dataset.href,
-              title: this.dataset.title,
-              id: this.dataset.id,
-              schema: this.dataset.schema,
-            }]
-          }
-          const application = await this.$axios.$post('api/v1/applications', {
-            url: this.baseApp.url,
-            title: this.title,
-            configurationDraft,
-          })
-          this.$router.push({ path: `/application/${application.id}` })
-        } catch (error) {
-          eventBus.$emit('notification', { error, msg: this.$t('creationError') })
-          this.importing = false
+    async createApplication () {
+      this.importing = true
+      try {
+        const configurationDraft = {}
+        if (this.dataset) {
+          configurationDraft.datasets = [{
+            href: this.dataset.href,
+            title: this.dataset.title,
+            id: this.dataset.id,
+            schema: this.dataset.schema
+          }]
         }
-      },
-    },
+        const application = await this.$axios.$post('api/v1/applications', {
+          url: this.baseApp.url,
+          title: this.title,
+          configurationDraft
+        })
+        this.$router.push({ path: `/application/${application.id}` })
+      } catch (error) {
+        eventBus.$emit('notification', { error, msg: this.$t('creationError') })
+        this.importing = false
+      }
+    }
   }
+}
 </script>

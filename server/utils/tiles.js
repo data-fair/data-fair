@@ -6,12 +6,12 @@ const memoize = require('memoizee')
 const MBTiles = require('@mapbox/mbtiles')
 const VectorTile = require('@mapbox/vector-tile').VectorTile
 
-function tile2long(x, z) {
+function tile2long (x, z) {
   return (x / Math.pow(2, z) * 360 - 180)
 }
 
-function tile2lat(y, z) {
-  var n = Math.PI - 2 * Math.PI * y / Math.pow(2, z)
+function tile2lat (y, z) {
+  const n = Math.PI - 2 * Math.PI * y / Math.pow(2, z)
   return (180 / Math.PI * Math.atan(0.5 * (Math.exp(n) - Math.exp(-n))))
 }
 
@@ -34,12 +34,12 @@ exports.geojson2pbf = (geojson, xyz) => {
 }
 
 const selectInVT = (data, select) => {
-  var tile = new VectorTile(new Pbf(data))
-  for (var layerName in tile.layers) {
-    var layer = tile.layers[layerName]
+  const tile = new VectorTile(new Pbf(data))
+  for (const layerName in tile.layers) {
+    const layer = tile.layers[layerName]
     const updatedFeatures = []
-    for (var i = 0; i < layer.length; i++) {
-      var feature = layer.feature(i)
+    for (let i = 0; i < layer.length; i++) {
+      const feature = layer.feature(i)
       for (const key of Object.keys(feature.properties)) {
         if (!select.includes(key)) delete feature.properties[key]
       }
@@ -52,7 +52,7 @@ const selectInVT = (data, select) => {
 }
 
 // finalizedAt is only here to invalidate memoize cache
-async function getMbtiles(mbtilesPath, finalizedAt) {
+async function getMbtiles (mbtilesPath, finalizedAt) {
   return new Promise((resolve, reject) => {
     // eslint-disable-next-line no-new
     new MBTiles(`${mbtilesPath}?mode=ro`, (err, mbtiles) => {
@@ -72,9 +72,9 @@ const memoizedGetMbtiles = memoize(getMbtiles, {
   max: 200,
   maxAge: 10000,
   preFetch: true,
-  dispose(res) {
+  dispose (res) {
     res.mbtiles.close()
-  },
+  }
 })
 
 exports.getTile = async (dataset, mbtilesPath, select, x, y, z) => {

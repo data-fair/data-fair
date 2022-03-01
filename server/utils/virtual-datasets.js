@@ -4,7 +4,7 @@ const createError = require('http-errors')
 // blacklisted fields are fields that are present in a grandchild but not re-exposed
 // by the child.. it must not be possible to access those fields in the case
 // of another child having the same key
-async function childrenSchemas(db, owner, children, blackListedFields) {
+async function childrenSchemas (db, owner, children, blackListedFields) {
   let schemas = []
   for (const childId of children) {
     const child = await db.collection('datasets')
@@ -15,8 +15,8 @@ async function childrenSchemas(db, owner, children, blackListedFields) {
           // or completely public for the "read" opeations classes
           // we could try to manage intermediate cases, but it would be complicated
           { 'owner.id': owner.id, 'owner.type': owner.type },
-          { permissions: { $elemMatch: { classes: 'read', type: null, id: null } } },
-        ],
+          { permissions: { $elemMatch: { classes: 'read', type: null, id: null } } }
+        ]
       }, { isVirtual: 1, virtual: 1, schema: 1 })
     if (!child) continue
     if (child.isVirtual) {
@@ -102,13 +102,13 @@ exports.descendants = async (db, dataset, extraProperties) => {
   const project = {
     'descendants.id': 1,
     'descendants.isVirtual': 1,
-    'descendants.virtual': 1,
+    'descendants.virtual': 1
   }
   if (extraProperties) extraProperties.forEach(p => { project['descendants.' + p] = 1 })
   const res = await db.collection('datasets').aggregate([{
     $match: {
-      id: dataset.id,
-    },
+      id: dataset.id
+    }
   }, {
     $graphLookup: {
       from: 'datasets',
@@ -123,12 +123,12 @@ exports.descendants = async (db, dataset, extraProperties) => {
           // or completely public for the "read" opeations classes
           // we could try to manage intermediate cases, but it would be complicated
           { 'owner.id': dataset.owner.id, 'owner.type': dataset.owner.type },
-          { permissions: { $elemMatch: { classes: 'read', type: null, id: null } } },
-        ],
-      },
-    },
+          { permissions: { $elemMatch: { classes: 'read', type: null, id: null } } }
+        ]
+      }
+    }
   }, {
-    $project: project,
+    $project: project
   }]).toArray()
   if (!res[0]) return []
   const virtualDescendantsWithFilters = res[0].descendants

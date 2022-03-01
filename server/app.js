@@ -16,7 +16,7 @@ const i18n = require('./utils/i18n')
 const workers = require('./workers')
 const session = require('@koumoul/sd-express')({
   directoryUrl: config.directoryUrl,
-  privateDirectoryUrl: config.privateDirectoryUrl || config.directoryUrl,
+  privateDirectoryUrl: config.privateDirectoryUrl || config.directoryUrl
 })
 const debugDomain = require('debug')('domain')
 
@@ -139,7 +139,7 @@ exports.run = async () => {
 
   await Promise.all([
     dbUtils.init(db),
-    esUtils.init().then(es => app.set('es', es)),
+    esUtils.init().then(es => app.set('es', es))
   ])
   app.set('db', db)
   app.set('mongoClient', client)
@@ -153,7 +153,7 @@ exports.run = async () => {
       require('./routers/remote-services').init(db),
       require('./routers/base-applications').init(db),
       limits.init(db),
-      wsUtils.initServer(wss, db, session),
+      wsUtils.initServer(wss, db, session)
     ])
     // At this stage the server is ready to respond to API requests
     app.set('api-ready', true)
@@ -193,7 +193,7 @@ exports.run = async () => {
   return app
 }
 
-exports.stop = async() => {
+exports.stop = async () => {
   if (config.mode.includes('server')) {
     wss.close()
     wsUtils.stop(wss)
@@ -211,6 +211,6 @@ exports.stop = async() => {
   await new Promise(resolve => setTimeout(resolve, 1000))
   await Promise.all([
     app.get('mongoClient').close(),
-    app.get('es').close(),
+    app.get('es').close()
   ])
 }

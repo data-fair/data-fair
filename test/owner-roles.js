@@ -167,7 +167,7 @@ describe('owner roles', () => {
       type: 'organization',
       id: 'KWqAGZ4mG',
       name: 'Fivechat',
-      department: 'dep1',
+      department: 'dep1'
     })
 
     // admin in org without department restriction -> ok for read and write

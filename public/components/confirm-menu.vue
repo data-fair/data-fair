@@ -4,7 +4,7 @@
     max-width="500"
     left
   >
-    <template v-slot:activator="{ on, attrs }">
+    <template #activator="{ on, attrs }">
       <v-btn
         v-bind="{...attrs, ...btnProps}"
         :title="tooltip"
@@ -14,7 +14,10 @@
       </v-btn>
     </template>
     <v-card>
-      <v-card-title v-if="title" primary-title>
+      <v-card-title
+        v-if="title"
+        primary-title
+      >
         {{ title }}
       </v-card-title>
       <v-card-text>
@@ -56,37 +59,37 @@ en:
 </i18n>
 
 <script>
-  export default {
-    props: {
-      title: {
-        type: String,
-        default: '',
-      },
-      text: {
-        type: String,
-        default: 'Souhaitez-vous confirmer cette opération ?',
-      },
-      tooltip: {
-        type: String,
-        default: '',
-      },
-      yesColor: {
-        type: String,
-        default: 'primary',
-      },
-      btnProps: {
-        type: Object,
-        default: () => ({ color: 'warning', icon: true }),
-      },
-      alert: {
-        type: String,
-        default: '',
-      },
+export default {
+  props: {
+    title: {
+      type: String,
+      default: ''
     },
-    data() {
-      return { menu: false }
+    text: {
+      type: String,
+      default: 'Souhaitez-vous confirmer cette opération ?'
     },
+    tooltip: {
+      type: String,
+      default: ''
+    },
+    yesColor: {
+      type: String,
+      default: 'primary'
+    },
+    btnProps: {
+      type: Object,
+      default: () => ({ color: 'warning', icon: true })
+    },
+    alert: {
+      type: String,
+      default: ''
+    }
+  },
+  data () {
+    return { menu: false }
   }
+}
 </script>
 
 <style lang="css" scoped>

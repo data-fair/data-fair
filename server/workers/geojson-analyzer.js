@@ -12,7 +12,7 @@ exports.eventsPrefix = 'analyze'
 
 // This writable stream will receive geojson features, take samples and and deduce a dataset schema
 class AnalyzerWritable extends Writable {
-  constructor(options) {
+  constructor (options) {
     super({ objectMode: true })
     this.options = options
     this.samples = {}
@@ -20,11 +20,11 @@ class AnalyzerWritable extends Writable {
       type: 'string',
       key: 'geometry',
       'x-originalName': 'geometry',
-      'x-refersTo': 'https://purl.org/geojson/vocab#geometry',
+      'x-refersTo': 'https://purl.org/geojson/vocab#geometry'
     }]
   }
 
-  _write(feature, encoding, callback) {
+  _write (feature, encoding, callback) {
     const properties = feature.properties || {}
     if (feature.id) properties.id = feature.id
     for (const property in properties) {
@@ -38,21 +38,21 @@ class AnalyzerWritable extends Writable {
     callback()
   }
 
-  _final(callback) {
+  _final (callback) {
     for (const property in this.samples) {
       const key = fieldsSniffer.escapeKey(property)
       const existingField = this.options.existingSchema.find(f => f.key === key)
       this.schema.push({
         key,
         'x-originalName': property,
-        ...fieldsSniffer.sniff(this.samples[property], this.options.attachments, existingField),
+        ...fieldsSniffer.sniff(this.samples[property], this.options.attachments, existingField)
       })
     }
     callback()
   }
 }
 
-exports.process = async function(app, dataset) {
+exports.process = async function (app, dataset) {
   const db = app.get('db')
   const attachments = await datasetUtils.lsAttachments(dataset)
   const analyzer = new AnalyzerWritable({ attachments, existingSchema: dataset.schema || [] })
@@ -60,7 +60,7 @@ exports.process = async function(app, dataset) {
     fs.createReadStream(datasetUtils.fileName(dataset)),
     iconv.decodeStream(dataset.file.encoding),
     JSONStream.parse('features.*'),
-    analyzer,
+    analyzer
   )
 
   dataset.status = 'analyzed'
@@ -72,7 +72,7 @@ exports.process = async function(app, dataset) {
   const patch = {
     status: 'analyzed',
     file: dataset.file,
-    schema: dataset.schema,
+    schema: dataset.schema
   }
 
   await datasetUtils.applyPatch(db, dataset, patch)

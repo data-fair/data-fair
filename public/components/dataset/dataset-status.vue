@@ -1,5 +1,8 @@
 <template lang="html">
-  <v-container fluid class="pa-0">
+  <v-container
+    fluid
+    class="pa-0"
+  >
     <v-row>
       <v-col class="pa-0">
         <template v-if="(dataset.isVirtual || dataset.isRest) && journal">
@@ -7,7 +10,10 @@
             v-if="journal[0] && dataset.status !== 0"
             :class="`pa-2 event-${journal[0].type}`"
           >
-            <v-list-item-avatar v-if="['finalize-end', 'publication', 'error'].includes(journal[0].type)" class="ml-0 my-0">
+            <v-list-item-avatar
+              v-if="['finalize-end', 'publication', 'error'].includes(journal[0].type)"
+              class="ml-0 my-0"
+            >
               <v-icon :color="events[journal[0].type].color || 'primary'">
                 {{ events[journal[0].type].icon }}
               </v-icon>
@@ -36,7 +42,10 @@
         >
           <v-stepper-header>
             <template v-for="(step, i) in steps">
-              <v-divider v-if="i>0" :key="'d'+i" />
+              <v-divider
+                v-if="i>0"
+                :key="'d'+i"
+              />
               <v-stepper-step
                 :key="i"
                 :rules="[() => stateFromStatus(dataset.status) !== i+1 || dataset.status !== 'error']"
@@ -45,7 +54,7 @@
                 :color="stateFromStatus(dataset.status) === i+1 ? 'accent' : (step.color || 'primary')"
               >
                 <v-tooltip top>
-                  <template v-slot:activator="{on}">
+                  <template #activator="{on}">
                     <span v-on="on">{{ step.title }}</span>
                   </template>
                   {{ step.description }}
@@ -71,22 +80,40 @@
         <v-icon>mdi-play</v-icon>
       </v-btn>
     </v-alert>
-    <v-row v-if="dataset.draftReason" class="px-2">
+    <v-row
+      v-if="dataset.draftReason"
+      class="px-2"
+    >
       <v-alert
         type="info"
         style="width: 100%"
         outlined
       >
         <v-row align="center">
-          <v-col v-if="dataset.draftReason.key === 'file-new'" class="grow">
+          <v-col
+            v-if="dataset.draftReason.key === 'file-new'"
+            class="grow"
+          >
             <p v-="'draftNew1'" />
-            <p v-t="'draftNew2'" class="mb-0" />
+            <p
+              v-t="'draftNew2'"
+              class="mb-0"
+            />
           </v-col>
-          <v-col v-else-if="dataset.draftReason.key === 'file-updated'" class="grow">
+          <v-col
+            v-else-if="dataset.draftReason.key === 'file-updated'"
+            class="grow"
+          >
             <p v-t="'draftUpdated1'" />
-            <p v-t="'draftUpdated2'" class="mb-0" />
+            <p
+              v-t="'draftUpdated2'"
+              class="mb-0"
+            />
           </v-col>
-          <v-col v-else class="grow">
+          <v-col
+            v-else
+            class="grow"
+          >
             {{ dataset.draftReason.message }}
           </v-col>
           <v-col class="shrink text-center">
@@ -155,41 +182,41 @@ en:
 </i18n>
 
 <script>
-  const events = require('~/../shared/events.json').dataset
-  const { mapState, mapActions } = require('vuex')
+const events = require('~/../shared/events.json').dataset
+const { mapState, mapActions } = require('vuex')
 
-  export default {
-    data() {
-      return {
-        events,
-        steps: [
-          { title: this.$t('loadTitle'), description: this.$t('loadDesc') },
-          { title: this.$t('convertTitle'), description: this.$t('convertDesc') },
-          { title: this.$t('analysisTitle'), description: this.$t('analysisDesc') },
-          { title: this.$t('extensionTitle'), description: this.$t('extensionDesc') },
-          { title: this.$t('indexingTitle'), description: this.$t('indexingDesc') },
-          { title: this.$t('finalizingTitle'), description: this.$t('finalizingDesc'), color: 'success' },
-        ],
-        states: ['remote', 'uploaded', 'loaded', 'analyzed', 'extended', 'indexed', 'finalized'],
+export default {
+  data () {
+    return {
+      events,
+      steps: [
+        { title: this.$t('loadTitle'), description: this.$t('loadDesc') },
+        { title: this.$t('convertTitle'), description: this.$t('convertDesc') },
+        { title: this.$t('analysisTitle'), description: this.$t('analysisDesc') },
+        { title: this.$t('extensionTitle'), description: this.$t('extensionDesc') },
+        { title: this.$t('indexingTitle'), description: this.$t('indexingDesc') },
+        { title: this.$t('finalizingTitle'), description: this.$t('finalizingDesc'), color: 'success' }
+      ],
+      states: ['remote', 'uploaded', 'loaded', 'analyzed', 'extended', 'indexed', 'finalized']
+    }
+  },
+  computed: {
+    ...mapState(['projections']),
+    ...mapState('dataset', ['dataset', 'journal', 'eventStates'])
+  },
+  methods: {
+    ...mapActions('dataset', ['patch', 'validateDraft', 'cancelDraft']),
+    stateFromStatus (status) {
+      if (status === 'updated-extended') status = 'extended'
+      if (status !== 'error') return this.states.indexOf(status) + 1
+      else {
+        const idx = (this.journal || []).findIndex(e => e.type === 'error')
+        if (idx < 0) return 0
+        return this.states.indexOf(this.eventStates[this.journal[idx + 1].type]) + 1
       }
-    },
-    computed: {
-      ...mapState(['projections']),
-      ...mapState('dataset', ['dataset', 'journal', 'eventStates']),
-    },
-    methods: {
-      ...mapActions('dataset', ['patch', 'validateDraft', 'cancelDraft']),
-      stateFromStatus(status) {
-        if (status === 'updated-extended') status = 'extended'
-        if (status !== 'error') return this.states.indexOf(status) + 1
-        else {
-          const idx = (this.journal || []).findIndex(e => e.type === 'error')
-          if (idx < 0) return 0
-          return this.states.indexOf(this.eventStates[this.journal[idx + 1].type]) + 1
-        }
-      },
-    },
+    }
   }
+}
 </script>
 
 <style lang="css">

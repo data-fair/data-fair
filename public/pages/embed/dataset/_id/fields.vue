@@ -5,11 +5,11 @@
 </template>
 
 <script>
-  import 'iframe-resizer/js/iframeResizer.contentWindow'
+import 'iframe-resizer/js/iframeResizer.contentWindow'
 
-  global.iFrameResizer = {
-    heightCalculationMethod: 'taggedElement',
-  }
+global.iFrameResizer = {
+  heightCalculationMethod: 'taggedElement'
+}
 
-  export default {}
+export default {}
 </script>

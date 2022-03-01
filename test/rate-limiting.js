@@ -22,7 +22,7 @@ describe('rate limiting', () => {
 
     const dataset = await testUtils.sendDataset(tmpFile.path, ax)
     await ax.put('/api/v1/datasets/' + dataset.id + '/permissions', [
-      { classes: ['read'] },
+      { classes: ['read'] }
     ])
     assert.ok(dataset.file.size > 100000, 'content should be larger than 100KB')
 

@@ -19,26 +19,26 @@ module.exports = {
   build: {
     extractCSS: true,
     extend (config, ctx) {
-        config.module.rules.push({
-          enforce: 'pre',
-          test: /\.md$/,
-          loader: 'raw-loader',
-          exclude: /(node_modules)/,
-        })
-      },
-   },
+      config.module.rules.push({
+        enforce: 'pre',
+        test: /\.md$/,
+        loader: 'raw-loader',
+        exclude: /(node_modules)/
+      })
+    }
+  },
   generate: {
     dir: 'doc-dist',
-    routes,
+    routes
   },
   loading: { color: '#1e88e5' }, // Customize the progress bar color
   router: { base: process.env.DOC_BASE || '/' },
   env: {
     theme: config.theme,
-    publicUrl: config.publicUrl,
+    publicUrl: config.publicUrl
   },
   plugins: [
-    { src: '~plugins/moment' },
+    { src: '~plugins/moment' }
   ],
   modules: [['@nuxtjs/i18n', {
     seo: true,
@@ -46,21 +46,21 @@ module.exports = {
     defaultLocale: 'fr',
     vueI18nLoader: true,
     vueI18n: {
-      fallbackLocale: 'fr',
-    },
+      fallbackLocale: 'fr'
+    }
   }]],
   buildModules: ['@nuxtjs/vuetify'],
   vuetify: {
     theme: {
       themes: {
-        light: config.theme.colors,
-      },
+        light: config.theme.colors
+      }
     },
     defaultAssets: {
       font: {
-        family: 'Nunito',
-      },
-    },
+        family: 'Nunito'
+      }
+    }
   },
   head: {
     title: 'Data Fair',
@@ -68,11 +68,11 @@ module.exports = {
       { charset: 'utf-8' },
       { name: 'viewport', content: 'width=device-width, initial-scale=1' },
       { hid: 'application', name: 'application-name', content: 'DataFair' },
-      { hid: 'description', name: 'description', content: 'DataFair - Documentation' },
+      { hid: 'description', name: 'description', content: 'DataFair - Documentation' }
     ],
     link: [
       { rel: 'stylesheet', href: 'https://fonts.googleapis.com/css?family=Nunito:300,400,500,700,400italic|Material+Icons' },
-      { rel: 'icon', type: 'image/x-icon', href: 'favicon.ico' },
-    ],
-  },
+      { rel: 'icon', type: 'image/x-icon', href: 'favicon.ico' }
+    ]
+  }
 }

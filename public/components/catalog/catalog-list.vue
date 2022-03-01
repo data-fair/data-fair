@@ -1,6 +1,6 @@
 <template>
   <v-row>
-    <v-col :style="this.$vuetify.breakpoint.lgAndUp ? 'padding-right:256px;' : ''">
+    <v-col :style="$vuetify.breakpoint.lgAndUp ? 'padding-right:256px;' : ''">
       <v-container class="py-0">
         <v-subheader class="px-0 pr-12 mb-2">
           {{ $t('description') }}
@@ -23,11 +23,17 @@
         </v-row>
         <search-progress :loading="loading" />
 
-        <v-responsive v-if="!hasCatalogs" height="auto">
+        <v-responsive
+          v-if="!hasCatalogs"
+          height="auto"
+        >
           <v-container class="fill-height">
             <v-row align="center">
               <v-col class="text-center">
-                <div v-if="!filtered" class="text-h6">
+                <div
+                  v-if="!filtered"
+                  class="text-h6"
+                >
                   {{ $t('pages.catalogs.description') }}
                   <!--<br>
                   Vous n'avez pas encore ajouté de connecteur vers des catalogues externes.-->
@@ -50,7 +56,7 @@
         </v-responsive>
       </v-container>
 
-      <layout-navigation-right v-if="this.$vuetify.breakpoint.lgAndUp">
+      <layout-navigation-right v-if="$vuetify.breakpoint.lgAndUp">
         <v-list
           v-if="canAdmin"
           dense
@@ -80,7 +86,10 @@
         </template>
       </layout-navigation-right>
 
-      <div v-else class="actions-buttons">
+      <div
+        v-else
+        class="actions-buttons"
+      >
         <v-btn
           v-if="canAdmin"
           color="primary"
@@ -118,81 +127,81 @@ en:
 </i18n>
 
 <script>
-  const { mapState, mapGetters } = require('vuex')
+const { mapState, mapGetters } = require('vuex')
 
-  export default {
-    data() {
-      return {
-        catalogs: null,
-        page: 1,
-        loading: true,
-        filters: {},
-        filtered: false,
-        importCatalogSheet: !!this.$route.query.import,
-        lastParams: null,
-        wwwSvg: require('~/assets/svg/World wide web_Two Color.svg?raw'),
+export default {
+  data () {
+    return {
+      catalogs: null,
+      page: 1,
+      loading: true,
+      filters: {},
+      filtered: false,
+      importCatalogSheet: !!this.$route.query.import,
+      lastParams: null,
+      wwwSvg: require('~/assets/svg/World wide web_Two Color.svg?raw')
+    }
+  },
+  computed: {
+    ...mapState('session', ['user']),
+    ...mapGetters('session', ['activeAccount']),
+    ...mapState(['env']),
+    ...mapGetters(['canAdmin']),
+    plural () {
+      return this.catalogs.count > 1
+    },
+    size () {
+      return { xs: 12, sm: 12, md: 12, lg: 15, xl: 24 }[this.$vuetify.breakpoint.name]
+    },
+    hasCatalogs () {
+      return !this.catalogs || this.catalogs.count
+    },
+    importCatalog () {
+      return this.$route.query.import
+    }
+  },
+  created () {
+    this.filters = { owner: `${this.activeAccount.type}:${this.activeAccount.id}` }
+    this.refresh()
+  },
+  methods: {
+    onScroll (e) {
+      if (!this.datasets) return
+      const se = e.target.scrollingElement
+      if (se.clientHeight + se.scrollTop > se.scrollHeight - 140 && this.datasets.results.length < this.datasets.count) {
+        this.refresh(true)
       }
     },
-    computed: {
-      ...mapState('session', ['user']),
-      ...mapGetters('session', ['activeAccount']),
-      ...mapState(['env']),
-      ...mapGetters(['canAdmin']),
-      plural() {
-        return this.catalogs.count > 1
-      },
-      size() {
-        return { xs: 12, sm: 12, md: 12, lg: 15, xl: 24 }[this.$vuetify.breakpoint.name]
-      },
-      hasCatalogs() {
-        return !this.catalogs || this.catalogs.count
-      },
-      importCatalog() {
-        return this.$route.query.import
-      },
-    },
-    created() {
-      this.filters = { owner: `${this.activeAccount.type}:${this.activeAccount.id}` }
-      this.refresh()
-    },
-    methods: {
-      onScroll(e) {
-        if (!this.datasets) return
-        const se = e.target.scrollingElement
-        if (se.clientHeight + se.scrollTop > se.scrollHeight - 140 && this.datasets.results.length < this.datasets.count) {
+    async refresh (append) {
+      if (append) this.page += 1
+      else this.page = 1
+      const params = {
+        size: this.size,
+        page: this.page,
+        select: 'title,description',
+        ...this.filters,
+        facets: 'owner',
+        sort: 'createdAt:-1'
+      }
+      if (JSON.stringify(params) !== JSON.stringify(this.lastParams)) {
+        this.lastParams = params
+        this.loading = true
+        const catalogs = await this.$axios.$get('api/v1/catalogs', { params })
+        if (append) catalogs.results.forEach(r => this.catalogs.results.push(r))
+        else this.catalogs = catalogs
+        this.$store.dispatch('breadcrumbs', [{ text: `${this.catalogs.count} ${this.plural ? 'catalogues configurés' : 'catalogue configuré'}` }])
+        this.filtered = this.filters.q !== undefined
+        this.loading = false
+
+        // if the page is too large for the user to trigger a scroll we append results immediately
+        await this.$nextTick()
+        await this.$nextTick()
+        const html = document.getElementsByTagName('html')
+        if (html[0].scrollHeight === html[0].clientHeight && this.catalogs.results.length < this.catalogs.count) {
           this.refresh(true)
         }
-      },
-      async refresh(append) {
-        if (append) this.page += 1
-        else this.page = 1
-        const params = {
-          size: this.size,
-          page: this.page,
-          select: 'title,description',
-          ...this.filters,
-          facets: 'owner',
-          sort: 'createdAt:-1',
-        }
-        if (JSON.stringify(params) !== JSON.stringify(this.lastParams)) {
-          this.lastParams = params
-          this.loading = true
-          const catalogs = await this.$axios.$get('api/v1/catalogs', { params })
-          if (append) catalogs.results.forEach(r => this.catalogs.results.push(r))
-          else this.catalogs = catalogs
-          this.$store.dispatch('breadcrumbs', [{ text: `${this.catalogs.count} ${this.plural ? 'catalogues configurés' : 'catalogue configuré'}` }])
-          this.filtered = this.filters.q !== undefined
-          this.loading = false
-
-          // if the page is too large for the user to trigger a scroll we append results immediately
-          await this.$nextTick()
-          await this.$nextTick()
-          const html = document.getElementsByTagName('html')
-          if (html[0].scrollHeight === html[0].clientHeight && this.catalogs.results.length < this.catalogs.count) {
-            this.refresh(true)
-          }
-        }
-      },
-    },
+      }
+    }
   }
+}
 </script>

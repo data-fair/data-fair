@@ -16,8 +16,8 @@ describe('API keys', () => {
     const res = await global.ax.dmeadus.put('/api/v1/settings/user/dmeadus0', {
       apiKeys: [
         { title: 'key1', scopes: ['stats'] },
-        { title: 'key2', scopes: ['datasets'] },
-      ],
+        { title: 'key2', scopes: ['datasets'] }
+      ]
     })
     assert.equal(res.data.name, 'Danna Meadus')
     const key1 = res.data.apiKeys[0].clearKey
@@ -48,8 +48,8 @@ describe('API keys', () => {
   it('Create and use an organization level api key', async () => {
     const res = await global.ax.dmeadusOrg.put('/api/v1/settings/organization/KWqAGZ4mG', {
       apiKeys: [
-        { title: 'key1', scopes: ['datasets'] },
-      ],
+        { title: 'key1', scopes: ['datasets'] }
+      ]
     })
     assert.equal(res.data.name, 'Fivechat')
     const key1 = res.data.apiKeys[0].clearKey

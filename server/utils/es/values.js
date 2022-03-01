@@ -21,10 +21,10 @@ module.exports = async (client, dataset, fieldKey, query) => {
         size,
         order: {
           // alphabetical order by default
-          _key: 'asc',
-        },
-      },
-    },
+          _key: 'asc'
+        }
+      }
+    }
   }
 
   if (q) {
@@ -35,17 +35,17 @@ module.exports = async (client, dataset, fieldKey, query) => {
         fields: [`${fieldKey}`, `${fieldKey}.text`, `${fieldKey}.text_standard`],
         analyze_wildcard: true,
         lenient: true,
-        default_operator: 'and',
-      },
+        default_operator: 'and'
+      }
     })
     // top hit relevance order in case of a filter
     esQuery.aggs.values.terms.order = [{ max_score: 'desc' }, { _count: 'desc' }, { _key: 'asc' }]
     esQuery.aggs.values.aggs = {
       max_score: {
         max: {
-          script: '_score',
-        },
-      },
+          script: '_score'
+        }
+      }
     }
   }
   if (q) query.sort = '_key'

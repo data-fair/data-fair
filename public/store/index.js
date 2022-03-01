@@ -16,7 +16,7 @@ const propertyTypes = [
   { type: 'string', format: 'date-time', title: 'Date et heure', icon: 'mdi-clock-outline' },
   { type: 'integer', title: 'Nombre entier', icon: 'mdi-numeric' },
   { type: 'number', title: 'Nombre', icon: 'mdi-numeric' },
-  { type: 'boolean', title: 'Booléen', icon: 'mdi-checkbox-marked-circle-outline' },
+  { type: 'boolean', title: 'Booléen', icon: 'mdi-checkbox-marked-circle-outline' }
 ]
 
 export default () => {
@@ -26,7 +26,7 @@ export default () => {
       remoteService: remoteService(),
       application: application(),
       catalog: catalog(),
-      session: sessionStoreBuilder(),
+      session: sessionStoreBuilder()
     },
     state: {
       vocabulary: null,
@@ -60,8 +60,8 @@ export default () => {
         '.kmz',
         '.xml',
         '.gpx',
-        '.ics',
-      ],
+        '.ics'
+      ]
     },
     getters: {
       ownerLicenses: (state) => (owner) => {
@@ -101,67 +101,67 @@ export default () => {
         }
         return propertyTypes.find(p => p.type === prop.type).icon
       },
-      canContrib(state, getters) {
+      canContrib (state, getters) {
         const activeAccount = getters['session/activeAccount']
         if (!activeAccount) return false
         if (activeAccount.type === 'user') return true
         const role = state.session.user.organization.role
         return role === state.env.adminRole || role === state.env.contribRole
       },
-      canAdmin(state, getters) {
+      canAdmin (state, getters) {
         const activeAccount = getters['session/activeAccount']
         if (!activeAccount) return false
         if (activeAccount.type === 'user') return true
         const role = state.session.user.organization.role
         return role === state.env.adminRole
       },
-      missingSubscription(state) {
+      missingSubscription (state) {
         return !!(state.limits && state.limits.defaults && state.env.subscriptionUrl)
       },
-      lightPrimary5(state) {
+      lightPrimary5 (state) {
         return tinycolor(state.env.theme.colors.primary).brighten(5).toHexString()
       },
-      lightPrimary10(state) {
+      lightPrimary10 (state) {
         return tinycolor(state.env.theme.colors.primary).brighten(10).toHexString()
       },
-      darkPrimary5(state) {
+      darkPrimary5 (state) {
         return tinycolor(state.env.theme.colors.primary).darken(5).toHexString()
       },
-      darkPrimary10(state) {
+      darkPrimary10 (state) {
         return tinycolor(state.env.theme.colors.primary).darken(10).toHexString()
       },
-      lightAccent10(state) {
+      lightAccent10 (state) {
         return tinycolor(state.env.theme.colors.accent).brighten(10).toHexString()
       },
-      darkAccent10(state) {
+      darkAccent10 (state) {
         return tinycolor(state.env.theme.colors.accent).darken(10).toHexString()
-      },
+      }
     },
     mutations: {
-      setAny(state, params) {
+      setAny (state, params) {
         Object.assign(state, params)
       },
-      ownerLicenses(state, payload) {
+      ownerLicenses (state, payload) {
         Vue.set(state.licenses, payload.owner.type + '/' + payload.owner.id, payload.licenses)
       },
-      ownerTopics(state, payload) {
+      ownerTopics (state, payload) {
         Vue.set(state.topics, payload.owner.type + '/' + payload.owner.id, payload.topics)
       },
-      ownerPublicationSites(state, payload) {
+      ownerPublicationSites (state, payload) {
         Vue.set(state.publicationSites, payload.owner.type + '/' + payload.owner.id, payload.publicationSites)
       },
-      setSearchQuery(state, { type, query }) {
+      setSearchQuery (state, { type, query }) {
         Vue.set(state.searchQueries, type, query)
-      },
+      }
     },
     actions: {
-      async fetchLimits({ getters, commit }) {
+      async fetchLimits ({ getters, commit }) {
         const activeAccount = getters['session/activeAccount']
         if (!activeAccount) return
         const limits = await this.$axios.$get(`api/v1/limits/${activeAccount.type}/${activeAccount.id}`)
         commit('setAny', { limits })
       },
-      async fetchVocabulary({ state, commit }, force = false) {
+      async fetchVocabulary ({ state, commit }, force = false) {
         if (state.vocabulary && !force) return
         const vocabulary = {}
         const vocabularyArray = await this.$axios.$get('api/v1/vocabulary')
@@ -190,32 +190,32 @@ export default () => {
         })
         commit('setAny', { vocabularyItems })
       },
-      async fetchProjections({ state, commit }) {
+      async fetchProjections ({ state, commit }) {
         if (state.projections) return
         const projections = await this.$axios.$get('api/v1/projections')
         commit('setAny', { projections })
       },
-      async fetchLicenses({ getters, state, commit }, owner) {
+      async fetchLicenses ({ getters, state, commit }, owner) {
         if (getters.ownerLicenses(owner)) return
         const licenses = await this.$axios.$get('api/v1/settings/' + owner.type + '/' + owner.id + '/licenses')
         commit('ownerLicenses', { owner, licenses })
       },
-      async fetchTopics({ getters, state, commit }, owner) {
+      async fetchTopics ({ getters, state, commit }, owner) {
         if (getters.ownerTopics(owner)) return
         const topics = await this.$axios.$get('api/v1/settings/' + owner.type + '/' + owner.id + '/topics')
         commit('ownerTopics', { owner, topics })
       },
-      async fetchPublicationSites({ getters, state, commit }, owner) {
+      async fetchPublicationSites ({ getters, state, commit }, owner) {
         if (getters.ownerPublicationSites(owner)) return
         const publicationSites = await this.$axios.$get('api/v1/settings/' + owner.type + '/' + owner.id + '/publication-sites')
         commit('ownerPublicationSites', { owner, publicationSites })
       },
-      searchQuery({ commit }, params) {
+      searchQuery ({ commit }, params) {
         commit('setSearchQuery', params)
       },
-      breadcrumbs({ commit }, breadcrumbItems) {
+      breadcrumbs ({ commit }, breadcrumbItems) {
         commit('setAny', { breadcrumbItems, breadcrumbsRouteName: this.$router.currentRoute.name })
-      },
-    },
+      }
+    }
   })
 }

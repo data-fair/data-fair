@@ -9,7 +9,7 @@ module.exports = (application) => {
     openapi: '3.1.0',
     info: Object.assign({
       title: `Intégration de l'application : ${application.title || application.id}`,
-      version: version,
+      version: version
     }, config.info),
     components: {
       schemas: { applicationSchema, journalSchema },
@@ -17,18 +17,18 @@ module.exports = (application) => {
         apiKey: {
           type: 'apiKey',
           in: 'header',
-          name: 'x-apiKey',
+          name: 'x-apiKey'
         },
         sdCookie: {
           type: 'apiKey',
           in: 'cookie',
-          name: 'id_token',
-        },
-      },
+          name: 'id_token'
+        }
+      }
     },
     security: [{ apiKey: [] }, { sdCookie: [] }],
     servers: [{
-      url: `${config.publicUrl}/api/v1/applications/${application.id}`,
+      url: `${config.publicUrl}/api/v1/applications/${application.id}`
     }],
     paths: {
       '/': {
@@ -42,11 +42,11 @@ module.exports = (application) => {
               description: 'Les informations de configuration de l\'application.',
               content: {
                 'application/json': {
-                  schema: { $ref: '#/components/schemas/applicationSchema' },
-                },
-              },
-            },
-          },
+                  schema: { $ref: '#/components/schemas/applicationSchema' }
+                }
+              }
+            }
+          }
         },
         patch: {
           summary: 'Mettre à jour la description de l\'application.',
@@ -58,20 +58,20 @@ module.exports = (application) => {
             required: true,
             content: {
               'application/json': {
-                schema: { $ref: '#/components/schemas/applicationSchema' },
-              },
-            },
+                schema: { $ref: '#/components/schemas/applicationSchema' }
+              }
+            }
           },
           responses: {
             200: {
               description: 'Les informations de configuration de l\'application',
               content: {
                 'application/json': {
-                  schema: { $ref: '#/components/schemas/applicationSchema' },
-                },
-              },
-            },
-          },
+                  schema: { $ref: '#/components/schemas/applicationSchema' }
+                }
+              }
+            }
+          }
         },
         delete: {
           summary: 'Pour supprimer cette configuration de l\'application',
@@ -80,10 +80,10 @@ module.exports = (application) => {
           tags: ['Configuration'],
           responses: {
             204: {
-              description: 'Aucun contenu',
-            },
-          },
-        },
+              description: 'Aucun contenu'
+            }
+          }
+        }
       },
       '/config': {
         get: {
@@ -97,12 +97,12 @@ module.exports = (application) => {
               content: {
                 'application/json': {
                   schema: {
-                    type: 'object',
-                  },
-                },
-              },
-            },
-          },
+                    type: 'object'
+                  }
+                }
+              }
+            }
+          }
         },
         put: {
           summary: 'Mettre à jour le paramétrage de l\'application.',
@@ -115,10 +115,10 @@ module.exports = (application) => {
             content: {
               'application/json': {
                 schema: {
-                  type: 'object',
-                },
-              },
-            },
+                  type: 'object'
+                }
+              }
+            }
           },
           responses: {
             200: {
@@ -126,13 +126,13 @@ module.exports = (application) => {
               content: {
                 'application/json': {
                   schema: {
-                    type: 'object',
-                  },
-                },
-              },
-            },
-          },
-        },
+                    type: 'object'
+                  }
+                }
+              }
+            }
+          }
+        }
       },
       '/api-docs.json': {
         get: {
@@ -146,13 +146,13 @@ module.exports = (application) => {
               content: {
                 'application/json': {
                   schema: {
-                    type: 'object',
-                  },
-                },
-              },
-            },
-          },
-        },
+                    type: 'object'
+                  }
+                }
+              }
+            }
+          }
+        }
       },
       '/journal': {
         get: {
@@ -165,12 +165,12 @@ module.exports = (application) => {
               description: 'Le journal.',
               content: {
                 'application/json': {
-                  schema: { $ref: '#/components/schemas/journalSchema' },
-                },
-              },
-            },
-          },
-        },
+                  schema: { $ref: '#/components/schemas/journalSchema' }
+                }
+              }
+            }
+          }
+        }
       },
       '/capture': {
         get: {
@@ -182,18 +182,18 @@ module.exports = (application) => {
             200: {
               description: 'La capture',
               content: {
-                'image/png': {},
-              },
-            },
-          },
-        },
+                'image/png': {}
+              }
+            }
+          }
+        }
       },
-      '/permissions': permissionsDoc,
+      '/permissions': permissionsDoc
     },
     externalDocs: {
       description: 'Documentation sur Github',
-      url: 'https://data-fair.github.io',
-    },
+      url: 'https://data-fair.github.io'
+    }
   }
   return api
 }

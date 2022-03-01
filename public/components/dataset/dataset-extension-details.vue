@@ -5,9 +5,15 @@
         v-if="data.total <= 10000"
         v-text="$tc('lines', data.total)"
       />
-      <h3 v-else v-t="{path: 'firstLines', args: {lines: 10000, total: data.total}}" />
+      <h3
+        v-else
+        v-t="{path: 'firstLines', args: {lines: 10000, total: data.total}}"
+      />
       <v-row class="ma-0">
-        <p v-if="nbErrors === 0" v-t="'noError'" />
+        <p
+          v-if="nbErrors === 0"
+          v-t="'noError'"
+        />
         <v-col
           lg="3"
           md="4"
@@ -74,7 +80,7 @@
         hide-default-header
         hide-default-footer
       >
-        <template v-slot:header>
+        <template #header>
           <tr style="height: 30px;border-bottom: 2px solid rgba(0,0,0,0.24);">
             <th
               :colspan="inputFields.length"
@@ -105,8 +111,11 @@
                 bottom
                 style="margin-right: 8px;"
               >
-                <template v-slot:activator="{ on }">
-                  <v-icon small v-on="on">
+                <template #activator="{ on }">
+                  <v-icon
+                    small
+                    v-on="on"
+                  >
                     mdi-information
                   </v-icon>
                 </template>
@@ -125,7 +134,7 @@
             </th>
           </tr>
         </template>
-        <template v-slot:item="{item}">
+        <template #item="{item}">
           <tr :style="!!item[errorField.key] ? 'background-color: #FFCDD2' : ''">
             <td
               v-for="(header, i) in headers"
@@ -165,134 +174,134 @@ en:
 </i18n>
 
 <script>
-  import eventBus from '~/event-bus'
-  const { mapState, mapGetters } = require('vuex')
+import eventBus from '~/event-bus'
+const { mapState, mapGetters } = require('vuex')
 
-  export default {
-    props: ['remoteService', 'action'],
-    data: () => ({
-      data: {},
-      query: null,
-      pagination: {
-        page: 1,
-        itemsPerPage: 5,
-        sortBy: '',
-        descending: false,
-      },
-      loading: false,
-      errorMode: 'all',
-      nbErrors: null,
-    }),
-    computed: {
-      ...mapState('dataset', ['dataset']),
-      ...mapGetters('dataset', ['resourceUrl', 'remoteServicesMap']),
-      errorModes() {
-        return [
-          { value: 'all', text: this.$t('allLines') },
-          { value: 'only', text: this.$t('onlyErrors', { nbErrors: this.nbErrors }) },
-          { value: 'hide', text: this.$t('onlyOk', { oks: this.nbTotal - this.nbErrors }) }]
-      },
-      extension() {
-        return this.dataset && this.dataset.extensions.find(e => e.remoteService === this.remoteService && e.action === this.action)
-      },
-      remoteServiceObj() {
-        return this.remoteServicesMap[this.remoteService]
-      },
-      actionObj() {
-        return this.remoteServiceObj && this.remoteServiceObj.actions[this.action]
-      },
-      inputFields() {
-        if (!this.actionObj) return
-        return this.dataset.schema
-          .filter(f => f['x-extension'] !== `${this.remoteService}/${this.action}`)
-          .filter(f => f['x-refersTo'] && this.actionObj.input.find(i => i.concept === f['x-refersTo']))
-      },
-      outputFields() {
-        if (!this.actionObj) return
-        return this.dataset.schema
-          .filter(f => f['x-extension'] === `${this.remoteService}/${this.action}`)
-      },
-      errorField() {
-        return this.outputFields && this.outputFields.find(f => f['x-originalName'] === 'error' || f['x-originalName'] === '_error')
-      },
-      selectFields() {
-        if (!this.inputFields || !this.outputFields) return
-        return this.inputFields.concat(this.outputFields)
-      },
-      headers() {
-        return this.selectFields && this.selectFields
-          .map(field => ({
-            text: field.title || field['x-originalName'] || field.key,
-            sortable: field.type === 'string' || field.type === 'number' || field.type === 'integer',
-            value: field.key,
-          }))
-      },
-      plural() {
-        return this.data.total > 1
-      },
+export default {
+  props: ['remoteService', 'action'],
+  data: () => ({
+    data: {},
+    query: null,
+    pagination: {
+      page: 1,
+      itemsPerPage: 5,
+      sortBy: '',
+      descending: false
     },
-    watch: {
-      selectFields: {
-        handler() {
-          if (this.selectFields) {
-            this.init()
-            this.refresh()
-          }
-        },
-        immediate: true,
-      },
-      pagination: {
-        handler () {
+    loading: false,
+    errorMode: 'all',
+    nbErrors: null
+  }),
+  computed: {
+    ...mapState('dataset', ['dataset']),
+    ...mapGetters('dataset', ['resourceUrl', 'remoteServicesMap']),
+    errorModes () {
+      return [
+        { value: 'all', text: this.$t('allLines') },
+        { value: 'only', text: this.$t('onlyErrors', { nbErrors: this.nbErrors }) },
+        { value: 'hide', text: this.$t('onlyOk', { oks: this.nbTotal - this.nbErrors }) }]
+    },
+    extension () {
+      return this.dataset && this.dataset.extensions.find(e => e.remoteService === this.remoteService && e.action === this.action)
+    },
+    remoteServiceObj () {
+      return this.remoteServicesMap[this.remoteService]
+    },
+    actionObj () {
+      return this.remoteServiceObj && this.remoteServiceObj.actions[this.action]
+    },
+    inputFields () {
+      if (!this.actionObj) return
+      return this.dataset.schema
+        .filter(f => f['x-extension'] !== `${this.remoteService}/${this.action}`)
+        .filter(f => f['x-refersTo'] && this.actionObj.input.find(i => i.concept === f['x-refersTo']))
+    },
+    outputFields () {
+      if (!this.actionObj) return
+      return this.dataset.schema
+        .filter(f => f['x-extension'] === `${this.remoteService}/${this.action}`)
+    },
+    errorField () {
+      return this.outputFields && this.outputFields.find(f => f['x-originalName'] === 'error' || f['x-originalName'] === '_error')
+    },
+    selectFields () {
+      if (!this.inputFields || !this.outputFields) return
+      return this.inputFields.concat(this.outputFields)
+    },
+    headers () {
+      return this.selectFields && this.selectFields
+        .map(field => ({
+          text: field.title || field['x-originalName'] || field.key,
+          sortable: field.type === 'string' || field.type === 'number' || field.type === 'integer',
+          value: field.key
+        }))
+    },
+    plural () {
+      return this.data.total > 1
+    }
+  },
+  watch: {
+    selectFields: {
+      handler () {
+        if (this.selectFields) {
+          this.init()
           this.refresh()
-        },
-        deep: true,
+        }
       },
-      errorMode() {
+      immediate: true
+    },
+    pagination: {
+      handler () {
         this.refresh()
       },
+      deep: true
     },
-    methods: {
-      orderBy(header) {
-        if (!header.sortable) return
-        if (this.pagination.sortBy === header.value) {
-          this.pagination.descending = !this.pagination.descending
-        } else {
-          this.pagination.sortBy = header.value
-          this.pagination.descending = true
-        }
-      },
-      async refresh() {
-        if (!this.errorField) return
-        const params = {
-          size: this.pagination.itemsPerPage,
-          page: this.pagination.page,
-        }
-        if (this.pagination.sortBy) params.sort = (this.pagination.descending ? '-' : '') + this.pagination.sortBy
-        if (this.query) params.q = this.query
-        if (this.errorMode === 'only') params.qs = `_exists_:${this.errorField.key}`
-        if (this.errorMode === 'hide') params.qs = `!(_exists_:${this.errorField.key})`
-        params.select = this.selectFields.map(f => f.key).join(',')
-        this.loading = true
-        try {
-          this.data = await this.$axios.$get(this.resourceUrl + '/lines', { params })
-          this.notFound = false
-        } catch (error) {
-          if (error.response && error.response.status === 404) this.notFound = true
-          else eventBus.$emit('notification', { error, msg: this.$t('errorFetch') })
-        }
-        this.loading = false
-      },
-      async init() {
-        try {
-          this.nbTotal = (await this.$axios.$get(this.resourceUrl + '/lines', { params: { size: 0 } })).total
-          this.nbErrors = (await this.$axios.$get(this.resourceUrl + '/lines', { params: { size: 0, qs: `_exists_:${this.errorField.key}` } })).total
-        } catch (error) {
-          if (error.response && error.response.status === 404) this.notFound = true
-          else eventBus.$emit('notification', { error, msg: this.$t('errorCounting') })
-        }
-      },
+    errorMode () {
+      this.refresh()
+    }
+  },
+  methods: {
+    orderBy (header) {
+      if (!header.sortable) return
+      if (this.pagination.sortBy === header.value) {
+        this.pagination.descending = !this.pagination.descending
+      } else {
+        this.pagination.sortBy = header.value
+        this.pagination.descending = true
+      }
     },
+    async refresh () {
+      if (!this.errorField) return
+      const params = {
+        size: this.pagination.itemsPerPage,
+        page: this.pagination.page
+      }
+      if (this.pagination.sortBy) params.sort = (this.pagination.descending ? '-' : '') + this.pagination.sortBy
+      if (this.query) params.q = this.query
+      if (this.errorMode === 'only') params.qs = `_exists_:${this.errorField.key}`
+      if (this.errorMode === 'hide') params.qs = `!(_exists_:${this.errorField.key})`
+      params.select = this.selectFields.map(f => f.key).join(',')
+      this.loading = true
+      try {
+        this.data = await this.$axios.$get(this.resourceUrl + '/lines', { params })
+        this.notFound = false
+      } catch (error) {
+        if (error.response && error.response.status === 404) this.notFound = true
+        else eventBus.$emit('notification', { error, msg: this.$t('errorFetch') })
+      }
+      this.loading = false
+    },
+    async init () {
+      try {
+        this.nbTotal = (await this.$axios.$get(this.resourceUrl + '/lines', { params: { size: 0 } })).total
+        this.nbErrors = (await this.$axios.$get(this.resourceUrl + '/lines', { params: { size: 0, qs: `_exists_:${this.errorField.key}` } })).total
+      } catch (error) {
+        if (error.response && error.response.status === 404) this.notFound = true
+        else eventBus.$emit('notification', { error, msg: this.$t('errorCounting') })
+      }
+    }
   }
+}
 </script>
 
 <style lang="css">

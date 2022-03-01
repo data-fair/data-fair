@@ -10,17 +10,17 @@ module.exports = {
         required: ['href'],
         properties: {
           href: {
-            type: 'string',
+            type: 'string'
           },
           key: {
             type: 'string',
-            description: 'Not the id of the dataset, but a key inside this configuration object to define the role of the dataset in this context.',
+            description: 'Not the id of the dataset, but a key inside this configuration object to define the role of the dataset in this context.'
           },
           name: {
-            type: 'string',
-          },
-        },
-      },
-    },
-  },
+            type: 'string'
+          }
+        }
+      }
+    }
+  }
 }

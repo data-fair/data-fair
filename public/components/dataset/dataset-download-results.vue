@@ -1,6 +1,9 @@
 <template>
-  <v-menu offset-y tile>
-    <template v-slot:activator="{ on }">
+  <v-menu
+    offset-y
+    tile
+  >
+    <template #activator="{ on }">
       <v-btn
         color="primary"
         icon
@@ -31,7 +34,10 @@
         :icon="false"
         class="mb-0 mt-1"
       />
-      <v-list class="pt-0" dense>
+      <v-list
+        class="pt-0"
+        dense
+      >
         <v-list-item
           :href="downloadUrls.csv"
           target="download"
@@ -112,34 +118,34 @@ en:
 </i18n>
 
 <script>
-  import { mapState, mapGetters } from 'vuex'
-  import buildURL from 'axios/lib/helpers/buildURL'
-  export default {
-    props: ['params', 'total'],
-    computed: {
-      ...mapState('dataset', ['dataset']),
-      ...mapGetters('dataset', ['resourceUrl']),
-      downloadUrls() {
-        const params = {
-          ...this.params,
-          size: 10000,
-          page: 1,
-        }
-        delete params.truncate
-        return {
-          csv: buildURL(this.resourceUrl + '/lines', { ...params, format: 'csv' }),
-          xlsx: buildURL(this.resourceUrl + '/lines', { ...params, format: 'xlsx' }),
-          ods: buildURL(this.resourceUrl + '/lines', { ...params, format: 'ods' }),
-          geojson: buildURL(this.resourceUrl + '/lines', { ...params, format: 'geojson' }),
-        }
-      },
-    },
-    methods: {
-      clickDownload(format) {
-        parent.postMessage({ trackEvent: { action: 'download_filtered', label: `${this.dataset.id} - ${format}` } })
-      },
-    },
+import { mapState, mapGetters } from 'vuex'
+import buildURL from 'axios/lib/helpers/buildURL'
+export default {
+  props: ['params', 'total'],
+  computed: {
+    ...mapState('dataset', ['dataset']),
+    ...mapGetters('dataset', ['resourceUrl']),
+    downloadUrls () {
+      const params = {
+        ...this.params,
+        size: 10000,
+        page: 1
+      }
+      delete params.truncate
+      return {
+        csv: buildURL(this.resourceUrl + '/lines', { ...params, format: 'csv' }),
+        xlsx: buildURL(this.resourceUrl + '/lines', { ...params, format: 'xlsx' }),
+        ods: buildURL(this.resourceUrl + '/lines', { ...params, format: 'ods' }),
+        geojson: buildURL(this.resourceUrl + '/lines', { ...params, format: 'geojson' })
+      }
+    }
+  },
+  methods: {
+    clickDownload (format) {
+      parent.postMessage({ trackEvent: { action: 'download_filtered', label: `${this.dataset.id} - ${format}` } })
+    }
   }
+}
 </script>
 
 <style lang="css" scoped>

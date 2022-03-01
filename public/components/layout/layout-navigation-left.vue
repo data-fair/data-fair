@@ -18,7 +18,10 @@
       style="background-image: none;"
       nav
     >
-      <v-list-item tile color="admin">
+      <v-list-item
+        tile
+        color="admin"
+      >
         <v-list-item-title v-t="'admin'" />
       </v-list-item>
       <v-list-item
@@ -30,17 +33,26 @@
         <v-list-item-title v-t="'services'" />
       </v-list-item>
 
-      <v-list-item :nuxt="true" :to="`/admin/info`">
+      <v-list-item
+        :nuxt="true"
+        :to="`/admin/info`"
+      >
         <v-list-item-action><v-icon>mdi-information</v-icon></v-list-item-action>
         <v-list-item-title v-t="'serviceInfo'" />
       </v-list-item>
 
-      <v-list-item :nuxt="true" :to="`/admin/owners`">
+      <v-list-item
+        :nuxt="true"
+        :to="`/admin/owners`"
+      >
         <v-list-item-action><v-icon>mdi-briefcase</v-icon></v-list-item-action>
         <v-list-item-title v-t="'owners'" />
       </v-list-item>
 
-      <v-list-item :nuxt="true" :to="`/admin/errors`">
+      <v-list-item
+        :nuxt="true"
+        :to="`/admin/errors`"
+      >
         <v-list-item-action><v-icon>mdi-alert</v-icon></v-list-item-action>
         <v-list-item-title v-t="'errors'" />
       </v-list-item>
@@ -54,7 +66,10 @@
         <v-list-item-title v-t="'applications'" />
       </v-list-item>
 
-      <v-list-item :nuxt="true" :href="env.directoryUrl + '/admin/users'">
+      <v-list-item
+        :nuxt="true"
+        :href="env.directoryUrl + '/admin/users'"
+      >
         <v-list-item-action><v-icon>mdi-account-supervisor</v-icon></v-list-item-action>
         <v-list-item-title v-t="'accountsManagement'" />
       </v-list-item>
@@ -170,9 +185,15 @@
       </template>
     </v-list>
 
-    <v-footer absolute color="transparent">
+    <v-footer
+      absolute
+      color="transparent"
+    >
       <v-spacer />
-      <span class="text-caption"><a href="https://data-fair.github.io/2/" style="color: white;">Powered by Data Fair</a></span>
+      <span class="text-caption"><a
+        href="https://data-fair.github.io/2/"
+        style="color: white;"
+      >Powered by Data Fair</a></span>
     </v-footer>
   </v-navigation-drawer>
 </template>
@@ -213,24 +234,24 @@ en:
 </i18n>
 
 <script>
-  import { mapState, mapGetters } from 'vuex'
-  export default {
-    props: ['navContext'],
-    computed: {
-      ...mapState(['env']),
-      ...mapState('session', ['user']),
-      ...mapGetters(['canAdmin', 'canContrib', 'missingSubscription', 'lightPrimary5', 'darkPrimary5']),
-      ...mapGetters('session', ['activeAccount']),
-      routePrefix() {
-        return this.$route && this.$route.name && this.$route.name.split('-')[0]
-      },
-      style() {
-        if (this.$vuetify.theme.dark) {
-          return 'background: linear-gradient(90deg, #363636 0%, #272727 100%);'
-        } else {
-          return `background: linear-gradient(90deg, ${this.darkPrimary5} 0%, ${this.lightPrimary5} 100%);`
-        }
-      },
+import { mapState, mapGetters } from 'vuex'
+export default {
+  props: ['navContext'],
+  computed: {
+    ...mapState(['env']),
+    ...mapState('session', ['user']),
+    ...mapGetters(['canAdmin', 'canContrib', 'missingSubscription', 'lightPrimary5', 'darkPrimary5']),
+    ...mapGetters('session', ['activeAccount']),
+    routePrefix () {
+      return this.$route && this.$route.name && this.$route.name.split('-')[0]
     },
+    style () {
+      if (this.$vuetify.theme.dark) {
+        return 'background: linear-gradient(90deg, #363636 0%, #272727 100%);'
+      } else {
+        return `background: linear-gradient(90deg, ${this.darkPrimary5} 0%, ${this.lightPrimary5} 100%);`
+      }
+    }
   }
+}
 </script>

@@ -52,7 +52,7 @@ router.get('/projections', (req, res) => {
 // Check an Api documentation format
 router.post('/_check-api', (req, res, next) => {
   if (!req.user) return res.status(401).send()
-  var valid = validateApi(req.body)
+  const valid = validateApi(req.body)
   if (!valid) return res.status(400).send(validateApi.errors)
   res.sendStatus(200)
 })

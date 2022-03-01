@@ -12,12 +12,12 @@ publicationSchema.properties.addToDataset = {
   description: 'Fill this object to create a new resource (or community resource) to an existing dataset. If empty a new dataset will be created.',
   properties: {
     id: {
-      type: 'string',
+      type: 'string'
     },
     title: {
-      type: 'string',
-    },
-  },
+      type: 'string'
+    }
+  }
 }
 
 const schema = {
@@ -35,32 +35,32 @@ const schema = {
       'x-calculated': { type: 'boolean' },
       'x-capabilities': capabilities,
       'x-labels': {
-        type: 'object',
+        type: 'object'
       },
       'x-labelsRestricted': {
-        type: 'boolean',
+        type: 'boolean'
       },
       'x-master': {
         type: 'object',
         properties: {
           id: {
-            type: 'string',
+            type: 'string'
           },
           title: {
-            type: 'string',
+            type: 'string'
           },
           remoteService: {
             type: 'string',
-            description: "L'identifiant du service distant utilisé pour l'enrichissement",
+            description: "L'identifiant du service distant utilisé pour l'enrichissement"
           },
           action: {
             type: 'string',
-            description: "L'identifiant de l'action du service distant à utiliser pour l'enrichissement",
-          },
-        },
-      },
-    },
-  },
+            description: "L'identifiant de l'action du service distant à utiliser pour l'enrichissement"
+          }
+        }
+      }
+    }
+  }
 }
 
 const fileSchema = {
@@ -76,9 +76,9 @@ const fileSchema = {
       separator: { type: ['string', 'null'] },
       dateFormat: { type: ['string', 'null'] },
       dateTimeFormat: { type: ['string', 'null'] },
-      timeZone: { type: ['string', 'null'] },
-    },
-  },
+      timeZone: { type: ['string', 'null'] }
+    }
+  }
 }
 
 module.exports = {
@@ -88,27 +88,27 @@ module.exports = {
   properties: {
     id: {
       type: 'string',
-      description: 'Identifier of the dataset',
+      description: 'Identifier of the dataset'
     },
     href: {
       type: 'string',
-      description: 'Readonly field. The URL where this resource can be fetched',
+      description: 'Readonly field. The URL where this resource can be fetched'
     },
     page: {
       type: 'string',
-      description: 'Readonly field. The URL where this resource can be viewed in the UI',
+      description: 'Readonly field. The URL where this resource can be viewed in the UI'
     },
     title: {
       type: 'string',
-      description: 'Short title of the dataset',
+      description: 'Short title of the dataset'
     },
     description: {
       type: 'string',
-      description: 'Detailed description of the dataset',
+      description: 'Detailed description of the dataset'
     },
     image: {
       type: 'string',
-      description: 'URL d\'une image, illustration du jeu de données',
+      description: 'URL d\'une image, illustration du jeu de données'
     },
     file: {
       type: 'object',
@@ -117,20 +117,20 @@ module.exports = {
       properties: {
         name: {
           type: 'string',
-          description: 'Name of the file that was used to create or update this dataset',
+          description: 'Name of the file that was used to create or update this dataset'
         },
         size: {
           type: 'number',
-          description: 'Size of the file on disk',
+          description: 'Size of the file on disk'
         },
         encoding: {
           type: 'string',
-          description: 'Encoding of the file',
+          description: 'Encoding of the file'
         },
         mimetype: {
           type: 'string',
           enum: ['text/csv'],
-          description: 'Mime type of the file',
+          description: 'Mime type of the file'
         },
         schema: fileSchema,
         props: {
@@ -139,23 +139,23 @@ module.exports = {
           properties: {
             numLines: {
               type: 'number',
-              description: 'Number of lines this file has.',
+              description: 'Number of lines this file has.'
             },
             linesDelimiter: {
               type: 'string',
-              description: 'New line character or characters (can be \r\n))',
+              description: 'New line character or characters (can be \r\n))'
             },
             fieldsDelimiter: {
               type: 'string',
-              description: 'Fields delimiter',
+              description: 'Fields delimiter'
             },
             escapeChar: {
               type: 'string',
-              description: 'Character used to escape string',
-            },
-          },
-        },
-      },
+              description: 'Character used to escape string'
+            }
+          }
+        }
+      }
     },
     originalFile: {
       type: 'object',
@@ -164,18 +164,18 @@ module.exports = {
       properties: {
         name: {
           type: 'string',
-          description: 'Name of the file that was used to create or update this dataset',
+          description: 'Name of the file that was used to create or update this dataset'
         },
         size: {
           type: 'number',
-          description: 'Size of the file on disk',
+          description: 'Size of the file on disk'
         },
         mimetype: {
           type: 'string',
           enum: ['text/csv'],
-          description: 'Mime type of the file',
-        },
-      },
+          description: 'Mime type of the file'
+        }
+      }
     },
     attachments: {
       type: 'array',
@@ -186,31 +186,31 @@ module.exports = {
         properties: {
           name: {
             type: 'string',
-            description: 'Name of the file that was used to create or update this attachment',
+            description: 'Name of the file that was used to create or update this attachment'
           },
           title: {
             type: 'string',
-            description: 'Short title of the attachment',
+            description: 'Short title of the attachment'
           },
           description: {
             type: 'string',
-            description: 'Short description of this attachment',
+            description: 'Short description of this attachment'
           },
           size: {
             type: 'number',
-            description: 'Size of the file on disk',
+            description: 'Size of the file on disk'
           },
           mimetype: {
             type: 'string',
-            description: 'Mime type of the file',
+            description: 'Mime type of the file'
           },
           updatedAt: {
             type: 'string',
             description: 'Date of the last update for this attachment',
-            format: 'date-time',
-          },
-        },
-      },
+            format: 'date-time'
+          }
+        }
+      }
     },
     remoteFile: {
       type: 'object',
@@ -219,26 +219,26 @@ module.exports = {
       properties: {
         name: {
           type: 'string',
-          description: 'Name of the remote file that was used to create or update this dataset',
+          description: 'Name of the remote file that was used to create or update this dataset'
         },
         url: {
           type: 'string',
-          description: 'Url from where the file can be fetched',
+          description: 'Url from where the file can be fetched'
         },
         catalog: {
           type: 'string',
-          description: 'Identifiant du catalogue d\'origine',
+          description: 'Identifiant du catalogue d\'origine'
         },
         size: {
           type: 'number',
-          description: 'Size of the file on disk',
+          description: 'Size of the file on disk'
         },
         mimetype: {
           type: 'string',
           enum: ['text/csv'],
-          description: 'Mime type of the file',
-        },
-      },
+          description: 'Mime type of the file'
+        }
+      }
     },
     storage: {
       type: 'object',
@@ -253,89 +253,89 @@ module.exports = {
               type: 'array',
               items: {
                 type: 'string',
-                enum: ['collection', 'original-file', 'normalized-file', 'full-file', 'attachments'],
-              },
-            },
-          },
+                enum: ['collection', 'original-file', 'normalized-file', 'full-file', 'attachments']
+              }
+            }
+          }
         },
         attachments: {
           type: 'object',
           properties: {
             count: { type: 'integer' },
-            size: { type: 'integer' },
-          },
+            size: { type: 'integer' }
+          }
         },
         metadataAttachments: {
           type: 'object',
           properties: {
             count: { type: 'integer' },
-            size: { type: 'integer' },
-          },
+            size: { type: 'integer' }
+          }
         },
         collection: {
           type: 'object',
           properties: {
             count: { type: 'integer' },
-            size: { type: 'integer' },
-          },
+            size: { type: 'integer' }
+          }
         },
         revisions: {
           type: 'object',
           properties: {
             count: { type: 'integer' },
-            size: { type: 'integer' },
-          },
+            size: { type: 'integer' }
+          }
         },
-        dataFiles,
-      },
+        dataFiles
+      }
     },
     createdAt: {
       type: 'string',
       description: 'Creation date of this dataset',
-      format: 'date-time',
+      format: 'date-time'
     },
     createdBy: eventBy,
     updatedAt: {
       type: 'string',
       description: 'Date of the last metadata update for this dataset',
-      format: 'date-time',
+      format: 'date-time'
     },
     updatedBy: eventBy,
     dataUpdatedAt: {
       type: 'string',
       description: 'Date of the last update for this dataset',
-      format: 'date-time',
+      format: 'date-time'
     },
     dataUpdatedBy: eventBy,
     finalizedAt: {
       type: 'string',
       description: 'Date of the last finalization for this dataset',
-      format: 'date-time',
+      format: 'date-time'
     },
     owner,
     status: {
       type: 'string',
       enum: ['remote', 'uploaded', 'loaded', 'analyzed', 'schematized', 'indexed', 'extended', 'finalized', 'error'],
-      description: 'The processing steps of a dataset.',
+      description: 'The processing steps of a dataset.'
     },
     primaryKey: {
       type: 'array',
       description: 'List of properties of the schema used as unique primary key for each line',
       items: {
-        type: 'string',
-      },
+        type: 'string'
+      }
     },
     schema,
     count: {
       type: 'number',
-      description: 'The number of indexed documents of a dataset',
+      description: 'The number of indexed documents of a dataset'
     },
     bbox: {
       type: 'array',
       description: 'The spatial coverage of this dataset, in bounding box format.',
       items: {
-        type: 'number',
-      },
+        type: 'number'
+      }
     },
     timePeriod: {
       type: 'object',
@@ -343,29 +343,29 @@ module.exports = {
       properties: {
         startDate: {
           type: 'string',
-          format: 'date-time',
+          format: 'date-time'
         },
         endDate: {
           type: 'string',
-          format: 'date-time',
-        },
-      },
+          format: 'date-time'
+        }
+      }
     },
     timeZone: {
       type: 'string',
-      description: 'The original time zone of the calendar.',
+      description: 'The original time zone of the calendar.'
     },
     projection: {
       type: 'object',
       description: 'The cartographic projection of this dataset. Refers to the list of supported projections in contract/projections.json',
       properties: {
         title: {
-          type: 'string',
+          type: 'string'
         },
         code: {
-          type: 'string',
-        },
-      },
+          type: 'string'
+        }
+      }
     },
     license: {
       type: 'object',
@@ -374,17 +374,17 @@ module.exports = {
       properties: {
         title: {
           type: 'string',
-          description: 'Short title for the license',
+          description: 'Short title for the license'
         },
         href: {
           type: 'string',
-          description: 'The URL where the license can be read',
-        },
-      },
+          description: 'The URL where the license can be read'
+        }
+      }
     },
     origin: {
       type: 'string',
-      description: 'The URL where the original data can be found',
+      description: 'The URL where the original data can be found'
     },
     extensions: {
       type: 'array',
@@ -394,62 +394,62 @@ module.exports = {
         properties: {
           active: {
             type: 'boolean',
-            description: 'Toggle on and off the extension',
+            description: 'Toggle on and off the extension'
           },
           remoteService: {
             type: 'string',
-            description: "L'identifiant du service distant utilisé pour l'enrichissement",
+            description: "L'identifiant du service distant utilisé pour l'enrichissement"
           },
           action: {
             type: 'string',
-            description: "L'identifiant de l'action du service distant à utiliser pour l'enrichissement",
+            description: "L'identifiant de l'action du service distant à utiliser pour l'enrichissement"
           },
           select: {
             type: 'array',
             description: 'La liste des colonnes à sélectionner dans le retour du service distant. Toutes les colonnes si absent ou vide.',
             items: {
-              type: 'string',
-            },
+              type: 'string'
+            }
           },
           shortId: {
             type: 'string',
             description: 'Id court (déprécié)',
-            readOnly: true,
+            readOnly: true
           },
           propertyPrefix: {
             type: 'string',
-            description: 'Chaine à utiliser comme préfixe des clés de champs issus de cette extension',
-          },
-        },
-      },
+            description: 'Chaine à utiliser comme préfixe des clés de champs issus de cette extension'
+          }
+        }
+      }
     },
     masterData: masterData.schema,
     publications: {
       type: 'array',
       description: 'References to all the catalogs the dataset metadata is published too',
-      items: publicationSchema,
+      items: publicationSchema
     },
     publicationSites: {
       type: 'array',
       description: 'References to all sites the dataset is exposed in.',
       items: {
-        type: 'string',
-      },
+        type: 'string'
+      }
     },
     hasFiles: {
       type: 'boolean',
       default: false,
-      description: 'true when the dataset has attached files',
+      description: 'true when the dataset has attached files'
     },
     attachmentsAsImage: {
       type: 'boolean',
       default: false,
-      description: 'Set to true to use attached files as illustrations of the line',
+      description: 'Set to true to use attached files as illustrations of the line'
     },
     isVirtual: {
       type: 'boolean',
       default: false,
-      description: 'Used to identify virtual datasets. A virtual datasets does not have data, only references to other datasets.',
+      description: 'Used to identify virtual datasets. A virtual datasets does not have data, only references to other datasets.'
     },
     virtual: {
       type: 'object',
@@ -460,8 +460,8 @@ module.exports = {
           type: 'array',
           description: 'Array of ids of the children datasets',
           items: {
-            type: 'string',
-          },
+            type: 'string'
+          }
         },
         filters: {
           type: 'array',
@@ -472,23 +472,23 @@ module.exports = {
             properties: {
               key: {
                 type: 'string',
-                description: 'Key of the field in the schema',
+                description: 'Key of the field in the schema'
               },
               values: {
                 type: 'array',
                 items: {
-                  type: 'string',
-                },
-              },
-            },
-          },
-        },
-      },
+                  type: 'string'
+                }
+              }
+            }
+          }
+        }
+      }
     },
     isRest: {
       type: 'boolean',
       default: false,
-      description: 'Used to identify REST datasets. A REST dataset is not created from a data file, but instead is based on a dynamic collection in a database.',
+      description: 'Used to identify REST datasets. A REST dataset is not created from a data file, but instead is based on a dynamic collection in a database.'
     },
     rest: {
       type: 'object',
@@ -497,7 +497,7 @@ module.exports = {
         history: {
           type: 'boolean',
           default: false,
-          description: 'Set to true to let data-fair store revisions of the lines in the dataset.',
+          description: 'Set to true to let data-fair store revisions of the lines in the dataset.'
         },
         ttl: {
           type: 'object',
@@ -509,23 +509,23 @@ module.exports = {
               type: 'object',
               properties: {
                 value: { type: 'integer', default: 0 },
-                unit: { type: 'string', enum: ['hours', 'days', 'weeks', 'months'], default: 'days' },
-              },
-            },
-          },
-        },
-      },
+                unit: { type: 'string', enum: ['hours', 'days', 'weeks', 'months'], default: 'days' }
+              }
+            }
+          }
+        }
+      }
     },
     isMetaOnly: {
       type: 'boolean',
       default: false,
-      description: 'Used to identify datasets without any local data and only some metadata.',
+      description: 'Used to identify datasets without any local data and only some metadata.'
     },
     topics: {
       type: 'array',
       title: 'Liste de thématiques',
       'x-itemTitle': 'title',
-      items: topic,
+      items: topic
     },
     thumbnails: {
       type: 'object',
@@ -534,9 +534,9 @@ module.exports = {
           type: 'string',
           description: 'Define how the thumbnails will be adapted to the size requested by visualizations',
           enum: ['crop', 'smartCrop', 'fitIn'],
-          default: 'crop',
-        },
-      },
+          default: 'crop'
+        }
+      }
     },
     exports: {
       type: 'object',
@@ -549,16 +549,16 @@ module.exports = {
             lastExports: {
               type: 'object',
               properties: {
-                date: { type: 'string', format: 'date-time' },
-              },
-            },
-          },
-        },
-      },
+                date: { type: 'string', format: 'date-time' }
+              }
+            }
+          }
+        }
+      }
     },
     extras: {
       type: 'object',
-      description: 'An object for extra content from client services of data-fair',
+      description: 'An object for extra content from client services of data-fair'
     },
     permissions,
     previews: {
@@ -569,11 +569,11 @@ module.exports = {
         properties: {
           id: { type: 'string' },
           title: { type: 'string' },
-          href: { type: 'string' },
-        },
-      },
-    },
-  },
+          href: { type: 'string' }
+        }
+      }
+    }
+  }
 }
 
 const draftKeys = ['schema', 'description', 'title', 'license', 'origin', 'extensions', 'publications', 'publicationSites', 'virtual', 'rest', 'extras', 'attachmentsAsImage', 'projection', 'attachments', 'topics', 'thumbnails', 'masterData', 'primaryKey']
@@ -590,20 +590,20 @@ module.exports.properties.draft = {
       properties: {
         key: {
           type: 'string',
-          enum: ['manual', 'file-new', 'file-updated'],
+          enum: ['manual', 'file-new', 'file-updated']
         },
         message: {
-          type: 'string',
+          type: 'string'
         },
         details: {
           type: 'array',
           items: {
-            type: 'string',
-          },
-        },
-      },
-    },
-  },
+            type: 'string'
+          }
+        }
+      }
+    }
+  }
 }
 draftKeys.forEach(k => {
   module.exports.properties.draft.properties[k] = module.exports.properties[k]

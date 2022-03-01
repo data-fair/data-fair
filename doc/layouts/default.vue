@@ -72,7 +72,7 @@
         top
         right
       >
-        <template v-slot:activator>
+        <template #activator>
           <v-btn
             icon
             color="primary"
@@ -103,11 +103,11 @@
 </template>
 
 <script>
-  import FolderMenu from '~/components/FolderMenu'
+import FolderMenu from '~/components/FolderMenu'
 
-  export default {
-    components: { FolderMenu },
-  }
+export default {
+  components: { FolderMenu }
+}
 
 </script>
 

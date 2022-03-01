@@ -15,7 +15,7 @@ const debug = require('debug')('extensions')
 
 // Apply an extension to a dataset: meaning, query a remote service in batches
 // and add the result either to a "full" file or to the collection in case of a rest dataset
-exports.extend = async(app, dataset, extensions) => {
+exports.extend = async (app, dataset, extensions) => {
   const db = app.get('db')
   const es = app.get('es')
   const detailedExtensions = []
@@ -59,7 +59,7 @@ exports.extend = async(app, dataset, extensions) => {
   await pump(
     ...inputStreams,
     new RemoteExtensionStream({ extensions: detailedExtensions, dataset, db, es }),
-    ...writeStreams,
+    ...writeStreams
   )
   const filePath = writeStreams[writeStreams.length - 1].path
   if (filePath) await fs.move(filePath, datasetUtils.fullFileName(dataset), { overwrite: true })
@@ -69,7 +69,7 @@ exports.extend = async(app, dataset, extensions) => {
 
 // Perform HTTP requests to a remote service to extend data
 class RemoteExtensionStream extends Transform {
-  constructor({ extensions, dataset, db, es }) {
+  constructor ({ extensions, dataset, db, es }) {
     super({ objectMode: true })
     this.i = 0
     this.dataset = dataset
@@ -79,7 +79,7 @@ class RemoteExtensionStream extends Transform {
     this.buffer = []
   }
 
-  async _transform(item, encoding, callback) {
+  async _transform (item, encoding, callback) {
     try {
       this.i += 1
       this.buffer.push(item)
@@ -90,7 +90,7 @@ class RemoteExtensionStream extends Transform {
     }
   }
 
-  async _flush(callback) {
+  async _flush (callback) {
     try {
       await this._sendBuffer()
       callback()
@@ -99,7 +99,7 @@ class RemoteExtensionStream extends Transform {
     }
   }
 
-  async _sendBuffer() {
+  async _sendBuffer () {
     if (!this.buffer.length) return
     global.events.emit('extension-inputs', this.buffer.length)
 
@@ -110,12 +110,12 @@ class RemoteExtensionStream extends Transform {
         url: extension.remoteService.server + extension.action.operation.path,
         headers: {
           Accept: 'application/x-ndjson',
-          'Content-Type': 'application/x-ndjson',
+          'Content-Type': 'application/x-ndjson'
           // 'x-consumer': JSON.stringify(this.dataset.owner),
         },
         params: {},
         responseType: 'text',
-        data: '',
+        data: ''
       }
       // TODO handle query & cookie header types
       if (extension.remoteService.apiKey && extension.remoteService.apiKey.in === 'header' && extension.remoteService.apiKey.value) {
@@ -162,7 +162,7 @@ class RemoteExtensionStream extends Transform {
         const bulkSearchId = extension.action.id.replace('masterData_bulkSearch_', '')
         data = await bulkSearchPromise(
           await bulkSearchStreams(this.db, this.es, masterDataset, 'application/x-ndjson', bulkSearchId, opts.params.select),
-          opts.data,
+          opts.data
         )
       } else {
         data = (await axios(opts)).data
@@ -184,7 +184,7 @@ class RemoteExtensionStream extends Transform {
             .replaceOne(
               { extensionKey: extensionCacheKey, input: inputCacheKeys[i] },
               { extensionKey: extensionCacheKey, input: inputCacheKeys[i], lastUsed: new Date(), output: selectedResult },
-              { upsert: true },
+              { upsert: true }
             )
         }
       }
@@ -207,14 +207,14 @@ exports.getExtensionKey = (extension) => {
 }
 
 // Create a function that will transform items from a dataset into inputs for an action
-function prepareInputMapping(action, dataset, extensionKey, selectFields) {
+function prepareInputMapping (action, dataset, extensionKey, selectFields) {
   const fieldMappings = action.input.map(input => {
     const field = dataset.schema.find(f =>
       f['x-refersTo'] === input.concept &&
       f['x-refersTo'] !== 'http://schema.org/identifier' &&
-      f.key.indexOf(extensionKey) !== 0,
+      f.key.indexOf(extensionKey) !== 0
     )
-    if (field) return [field.key, input.name, field]
+    return field && [field.key, input.name, field]
   }).filter(i => i)
   return async (item) => {
     const mappedItem = {}
@@ -267,7 +267,7 @@ exports.prepareSchema = async (db, schema, extensions) => {
           'x-extension': extensionId,
           title: output.title,
           description: output.description,
-          type: output.type || 'string',
+          type: output.type || 'string'
         }
         // only keep the concept if it does not conflict with existing property
         if (output.concept && !schema.find(f => !f['x-extension'] && f['x-refersTo'] === output.concept)) {
@@ -284,7 +284,7 @@ exports.prepareSchema = async (db, schema, extensions) => {
       'x-extension': extensionId,
       title: (errorField && errorField.title) || 'Erreur d\'enrichissement',
       description: (errorField && errorField.description) || 'Une erreur lors de la récupération des informations depuis un service distant',
-      'x-calculated': true,
+      'x-calculated': true
     })
   }
   return schema.filter(field => !field['x-extension']).concat(extensionsFields)

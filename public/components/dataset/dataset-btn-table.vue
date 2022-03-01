@@ -4,7 +4,7 @@
     :fullscreen="$vuetify.breakpoint.smAndDown"
     max-width="1200"
   >
-    <template v-slot:activator="{ on }">
+    <template #activator="{ on }">
       <v-icon
         :title="$t('preview')"
         :disabled="!dataset.finalizedAt"
@@ -14,12 +14,18 @@
       </v-icon>
     </template>
     <v-card v-if="dialog">
-      <v-toolbar dense flat>
+      <v-toolbar
+        dense
+        flat
+      >
         <v-toolbar-title class="font-weight-bold">
           {{ dataset.title }}
         </v-toolbar-title>
         <v-spacer />
-        <v-btn icon @click.native="dialog = false">
+        <v-btn
+          icon
+          @click.native="dialog = false"
+        >
           <v-icon>mdi-close</v-icon>
         </v-btn>
       </v-toolbar>
@@ -38,17 +44,17 @@ en:
 </i18n>
 
 <script>
-  export default {
-    props: ['dataset'],
-    data: () => ({
-      dialog: false,
-    }),
-    watch: {
-      dialog() {
-        if (this.dialog) this.$store.dispatch('dataset/setId', { datasetId: this.dataset.id })
-      },
-    },
+export default {
+  props: ['dataset'],
+  data: () => ({
+    dialog: false
+  }),
+  watch: {
+    dialog () {
+      if (this.dialog) this.$store.dispatch('dataset/setId', { datasetId: this.dataset.id })
+    }
   }
+}
 </script>
 
 <style lang="css" scoped>

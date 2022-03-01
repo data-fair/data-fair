@@ -1,6 +1,9 @@
 <template>
   <div class="container">
-    <v-row justify="center" class="mt-8">
+    <v-row
+      justify="center"
+      class="mt-8"
+    >
       <v-alert
         v-if="error.statusCode !== 401"
         type="error"
@@ -15,16 +18,16 @@
 </template>
 
 <script>
-  import { mapState } from 'vuex'
+import { mapState } from 'vuex'
 
-  export default {
-    props: ['error'],
-    computed: {
-      ...mapState('session', ['user']),
-    },
-    mounted() {
-      if (this.error.statusCode === 401) this.$store.dispatch('session/login')
-      if (!this.user && this.error.statusCode === 403) this.$store.dispatch('session/login')
-    },
+export default {
+  props: ['error'],
+  computed: {
+    ...mapState('session', ['user'])
+  },
+  mounted () {
+    if (this.error.statusCode === 401) this.$store.dispatch('session/login')
+    if (!this.user && this.error.statusCode === 403) this.$store.dispatch('session/login')
   }
+}
 </script>

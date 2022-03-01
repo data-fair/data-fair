@@ -30,34 +30,34 @@ en:
 </i18n>
 
 <script>
-  import { mapState, mapGetters, mapActions } from 'vuex'
+import { mapState, mapGetters, mapActions } from 'vuex'
 
-  export default {
-    data: () => ({
-      editExports: null,
-    }),
-    computed: {
-      ...mapState('dataset', ['dataset']),
-      ...mapGetters('dataset', ['can']),
-    },
-    watch: {
-      'dataset.exports': {
-        immediate: true,
-        handler() {
-          const editExports = JSON.parse(JSON.stringify(this.dataset.exports || {}))
-          editExports.restToCSV = editExports.restToCSV || {}
-          editExports.restToCSV.active = editExports.restToCSV.active || false
-          this.editExports = editExports
-        },
-      },
-    },
-    created() {
+export default {
+  data: () => ({
+    editExports: null
+  }),
+  computed: {
+    ...mapState('dataset', ['dataset']),
+    ...mapGetters('dataset', ['can'])
+  },
+  watch: {
+    'dataset.exports': {
+      immediate: true,
+      handler () {
+        const editExports = JSON.parse(JSON.stringify(this.dataset.exports || {}))
+        editExports.restToCSV = editExports.restToCSV || {}
+        editExports.restToCSV.active = editExports.restToCSV.active || false
+        this.editExports = editExports
+      }
+    }
+  },
+  created () {
 
-    },
-    methods: {
-      ...mapActions('dataset', ['patchAndApplyRemoteChange']),
-    },
+  },
+  methods: {
+    ...mapActions('dataset', ['patchAndApplyRemoteChange'])
   }
+}
 </script>
 
 <style>

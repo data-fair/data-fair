@@ -1,6 +1,6 @@
 <template>
   <v-row>
-    <v-col :style="this.$vuetify.breakpoint.lgAndUp ? 'padding-right:256px;' : ''">
+    <v-col :style="$vuetify.breakpoint.lgAndUp ? 'padding-right:256px;' : ''">
       <v-container class="py-0">
         <v-row
           v-if="applications"
@@ -23,7 +23,10 @@
         </v-row>
         <search-progress :loading="loading" />
 
-        <v-responsive v-if="!hasApplications" height="auto">
+        <v-responsive
+          v-if="!hasApplications"
+          height="auto"
+        >
           <v-container class="fill-height">
             <v-row align="center">
               <v-col class="text-center">
@@ -51,7 +54,7 @@
         </v-responsive>
       </v-container>
 
-      <layout-navigation-right v-if="this.$vuetify.breakpoint.lgAndUp">
+      <layout-navigation-right v-if="$vuetify.breakpoint.lgAndUp">
         <v-list
           v-if="canContrib"
           dense
@@ -85,7 +88,10 @@
           </v-row>
         </template>
       </layout-navigation-right>
-      <div v-else class="actions-buttons">
+      <div
+        v-else
+        class="actions-buttons"
+      >
         <v-btn
           v-if="canContrib"
           color="primary"
@@ -129,109 +135,109 @@ en:
 </i18n>
 
 <script>
-  const { mapState, mapGetters } = require('vuex')
+const { mapState, mapGetters } = require('vuex')
 
-  export default {
-    data: () => ({
-      applications: null,
-      page: 1,
-      loading: true,
-      filters: {},
-      filtered: false,
-      facetsValues: {
-        visibility: [],
-        'base-application': [],
-        topics: [],
-        publicationSites: [],
-      },
-      lastParams: null,
-      graphicSvg: require('~/assets/svg/Graphics and charts_Monochromatic.svg?raw'),
-    }),
-    computed: {
-      ...mapState('session', ['user']),
-      ...mapGetters('session', ['activeAccount']),
-      ...mapState(['env']),
-      ...mapGetters(['canContrib']),
-      plural() {
-        return this.applications.count > 1
-      },
-      size() {
-        return { xs: 12, sm: 12, md: 12, lg: 15, xl: 24 }[this.$vuetify.breakpoint.name]
-      },
-      hasApplications() {
-        return !this.applications || this.applications.count
-      },
-      sorts() {
-        return [
-          { value: 'createdAt:-1', text: this.$t('sortCreatedAtDesc') },
-          { value: 'createdAt:1', text: this.$t('sortCreatedAtAsc') },
-          { value: 'updatedAt:-1', text: this.$t('sortUpdatedAtDesc') },
-          { value: 'updatedAt:1', text: this.$t('sortUpdatedAtAsc') },
-        ]
-      },
+export default {
+  data: () => ({
+    applications: null,
+    page: 1,
+    loading: true,
+    filters: {},
+    filtered: false,
+    facetsValues: {
+      visibility: [],
+      'base-application': [],
+      topics: [],
+      publicationSites: []
     },
-    watch: {
-      facetsValues: {
-        deep: true,
-        handler() {
-          this.refresh()
-        },
-      },
+    lastParams: null,
+    graphicSvg: require('~/assets/svg/Graphics and charts_Monochromatic.svg?raw')
+  }),
+  computed: {
+    ...mapState('session', ['user']),
+    ...mapGetters('session', ['activeAccount']),
+    ...mapState(['env']),
+    ...mapGetters(['canContrib']),
+    plural () {
+      return this.applications.count > 1
     },
-    mounted() {
-      this.filters = { owner: `${this.activeAccount.type}:${this.activeAccount.id}` }
-      this.refresh()
+    size () {
+      return { xs: 12, sm: 12, md: 12, lg: 15, xl: 24 }[this.$vuetify.breakpoint.name]
     },
-    methods: {
-      onScroll(e) {
-        if (!this.applications) return
-        const se = e.target.scrollingElement
-        if (se.clientHeight + se.scrollTop > se.scrollHeight - 140 && this.applications.results.length < this.applications.count) {
+    hasApplications () {
+      return !this.applications || this.applications.count
+    },
+    sorts () {
+      return [
+        { value: 'createdAt:-1', text: this.$t('sortCreatedAtDesc') },
+        { value: 'createdAt:1', text: this.$t('sortCreatedAtAsc') },
+        { value: 'updatedAt:-1', text: this.$t('sortUpdatedAtDesc') },
+        { value: 'updatedAt:1', text: this.$t('sortUpdatedAtAsc') }
+      ]
+    }
+  },
+  watch: {
+    facetsValues: {
+      deep: true,
+      handler () {
+        this.refresh()
+      }
+    }
+  },
+  mounted () {
+    this.filters = { owner: `${this.activeAccount.type}:${this.activeAccount.id}` }
+    this.refresh()
+  },
+  methods: {
+    onScroll (e) {
+      if (!this.applications) return
+      const se = e.target.scrollingElement
+      if (se.clientHeight + se.scrollTop > se.scrollHeight - 140 && this.applications.results.length < this.applications.count) {
+        this.refresh(true)
+      }
+    },
+    async refresh (append) {
+      const fullFilters = { ...this.filters }
+      let hasFacetFilter = false
+      Object.entries(this.facetsValues).forEach(([facetKey, facetValues]) => {
+        if (this.filters.owner !== null && facetKey === 'owner') return
+        const facetFilter = facetValues && facetValues.join(',')
+        if (facetFilter) {
+          hasFacetFilter = true
+          fullFilters[facetKey] = facetFilter
+        }
+      })
+      if (append) this.page += 1
+      else this.page = 1
+      let facets = 'visibility,base-application,topics,publicationSites'
+      if (this.filters.owner === null) facets += ',owner'
+      const params = {
+        size: this.size,
+        page: this.page,
+        select: 'title,description,status,topics,errorMessage',
+        sort: 'createdAt:-1',
+        ...fullFilters,
+        facets
+      }
+      if (JSON.stringify(params) !== JSON.stringify(this.lastParams)) {
+        this.lastParams = params
+        this.loading = true
+        const applications = await this.$axios.$get('api/v1/applications', { params })
+        if (append) applications.results.forEach(r => this.applications.results.push(r))
+        else this.applications = applications
+        this.$store.dispatch('breadcrumbs', [{ text: this.$tc('applicationsCount', this.applications.count) }])
+        this.filtered = !!this.filters.q || hasFacetFilter
+        this.loading = false
+
+        // if the page is too large for the user to trigger a scroll we append results immediately
+        await this.$nextTick()
+        await this.$nextTick()
+        const html = document.getElementsByTagName('html')
+        if (html[0].scrollHeight === html[0].clientHeight && this.applications.results.length < this.applications.count) {
           this.refresh(true)
         }
-      },
-      async refresh(append) {
-        const fullFilters = { ...this.filters }
-        let hasFacetFilter = false
-        Object.entries(this.facetsValues).forEach(([facetKey, facetValues]) => {
-          if (this.filters.owner !== null && facetKey === 'owner') return
-          const facetFilter = facetValues && facetValues.join(',')
-          if (facetFilter) {
-            hasFacetFilter = true
-            fullFilters[facetKey] = facetFilter
-          }
-        })
-        if (append) this.page += 1
-        else this.page = 1
-        let facets = 'visibility,base-application,topics,publicationSites'
-        if (this.filters.owner === null) facets += ',owner'
-        const params = {
-          size: this.size,
-          page: this.page,
-          select: 'title,description,status,topics,errorMessage',
-          sort: 'createdAt:-1',
-          ...fullFilters,
-          facets,
-        }
-        if (JSON.stringify(params) !== JSON.stringify(this.lastParams)) {
-          this.lastParams = params
-          this.loading = true
-          const applications = await this.$axios.$get('api/v1/applications', { params })
-          if (append) applications.results.forEach(r => this.applications.results.push(r))
-          else this.applications = applications
-          this.$store.dispatch('breadcrumbs', [{ text: this.$tc('applicationsCount', this.applications.count) }])
-          this.filtered = !!this.filters.q || hasFacetFilter
-          this.loading = false
-
-          // if the page is too large for the user to trigger a scroll we append results immediately
-          await this.$nextTick()
-          await this.$nextTick()
-          const html = document.getElementsByTagName('html')
-          if (html[0].scrollHeight === html[0].clientHeight && this.applications.results.length < this.applications.count) {
-            this.refresh(true)
-          }
-        }
-      },
-    },
+      }
+    }
   }
+}
 </script>

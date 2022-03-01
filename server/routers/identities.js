@@ -96,7 +96,7 @@ router.get('/:type/:id/report', asyncWrap(async (req, res) => {
   const collections = [{ id: 'remote-services', title: 'Configurations de services' }, { id: 'applications', title: 'Configurations d\'applications' }, { id: 'datasets', title: 'Jeux de données' }]
   const report = {
     owns: [],
-    hasPermissions: [],
+    hasPermissions: []
   }
   for (const c of collections) {
     const collection = req.app.get('db').collection(c.id)

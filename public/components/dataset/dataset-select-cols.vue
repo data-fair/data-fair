@@ -5,7 +5,7 @@
     :close-on-content-click="false"
     max-height="500"
   >
-    <template v-slot:activator="{ on }">
+    <template #activator="{ on }">
       <v-btn
         icon
         large
@@ -49,9 +49,9 @@ en:
 </i18n>
 
 <script>
-  export default {
-    props: ['value', 'headers'],
-  }
+export default {
+  props: ['value', 'headers']
+}
 </script>
 
 <style lang="css" scoped>

@@ -110,7 +110,7 @@ describe('workers', () => {
     assert.equal(dataset.publications[0].targetUrl, 'http://test-catalog.com/datasets/my-dataset')
   })
 
-  it('Run tasks in children processes', async function() {
+  it('Run tasks in children processes', async function () {
     config.worker.spawnTask = true
     const datasetFd = fs.readFileSync('./test/resources/datasets/dataset1.csv')
     const form = new FormData()
@@ -126,7 +126,7 @@ describe('workers', () => {
     config.worker.spawnTask = false
   })
 
-  it('Manage failure in children processes', async function() {
+  it('Manage failure in children processes', async function () {
     config.worker.spawnTask = true
     const datasetFd = fs.readFileSync('./test/resources/geo/geojson-broken.geojson')
     const form = new FormData()

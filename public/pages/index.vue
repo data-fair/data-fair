@@ -1,15 +1,24 @@
 <template>
-  <v-row v-if="initialized" class="home my-0">
+  <v-row
+    v-if="initialized"
+    class="home my-0"
+  >
     <v-col v-if="missingSubscription">
       <v-iframe :src="env.subscriptionUrl" />
     </v-col>
-    <v-col v-else :style="this.$vuetify.breakpoint.lgAndUp ? 'padding-right:256px;' : ''">
+    <v-col
+      v-else
+      :style="$vuetify.breakpoint.lgAndUp ? 'padding-right:256px;' : ''"
+    >
       <v-container class="py-0">
         <v-responsive v-if="!user">
           <v-container class="fill-height">
             <v-row align="center">
               <v-col class="text-center">
-                <h3 v-t="'title'" class="text-h4 mb-3 mt-5" />
+                <h3
+                  v-t="'title'"
+                  class="text-h4 mb-3 mt-5"
+                />
                 <layout-wrap-svg
                   :source="dataProcessSvg"
                   :color="$vuetify.theme.themes.light.primary"
@@ -19,7 +28,10 @@
                   v-t="'description'"
                   class="text-h6"
                 />
-                <p v-t="'authRequired'" class="text-h6 mt-5" />
+                <p
+                  v-t="'authRequired'"
+                  class="text-h6 mt-5"
+                />
                 <v-btn
                   v-t="'login'"
                   color="primary"
@@ -39,7 +51,10 @@
                 {{ $t('userSpace', {name: activeAccount.name}) }}
               </template>
             </h2>
-            <p v-if="activeAccount.type ==='organization'" v-html="$t('organizationRole', {role: user.organizations.find(o => o.id===activeAccount.id).role})" />
+            <p
+              v-if="activeAccount.type ==='organization'"
+              v-html="$t('organizationRole', {role: user.organizations.find(o => o.id===activeAccount.id).role})"
+            />
             <p v-else-if="user.organizations.length">
               <v-icon color="warning">
                 mdi-alert
@@ -49,7 +64,10 @@
                   <strong v-t="'collaborativeMode'" />
                 </template>
                 <template #yourAccountLink>
-                  <nuxt-link v-t="'yourAccount'" to="/me" />
+                  <nuxt-link
+                    v-t="'yourAccount'"
+                    to="/me"
+                  />
                 </template>
               </i18n>
             </p>
@@ -59,7 +77,10 @@
                   <strong v-t="'collaborativeMode'" />
                 </template>
                 <template #yourAccountLink>
-                  <nuxt-link v-t="'yourAccount'" to="/me" />
+                  <nuxt-link
+                    v-t="'yourAccount'"
+                    to="/me"
+                  />
                 </template>
               </i18n>
             </p>
@@ -72,7 +93,7 @@
               svg-no-margin
               :section="sections.find(s => s.id === 'datasets')"
             >
-              <template v-slot:extension>
+              <template #extension>
                 <p v-if="stats && datasets">
                   <span v-if="datasets.count > 1">
                     <i18n path="datasetsCountMessage">
@@ -92,8 +113,14 @@
                       </template>
                     </i18n>
                   </span>
-                  <span v-else v-t="'datasetsCountNone'" />
-                  <i18n v-if="stats.storageLimit && stats.storageLimit !== -1" path="storageWithLimit">
+                  <span
+                    v-else
+                    v-t="'datasetsCountNone'"
+                  />
+                  <i18n
+                    v-if="stats.storageLimit && stats.storageLimit !== -1"
+                    path="storageWithLimit"
+                  >
                     <template #bytes>
                       {{ stats.storage | displayBytes($i18n.locale) }}
                     </template>
@@ -101,15 +128,21 @@
                       {{ stats.storageLimit | displayBytes($i18n.locale) }}
                     </template>
                   </i18n>
-                  <i18n v-else path="storageWithoutLimit">
+                  <i18n
+                    v-else
+                    path="storageWithoutLimit"
+                  >
                     <template #bytes>
                       {{ stats.storage | displayBytes($i18n.locale) }}
                     </template>
                   </i18n>
                 </p>
               </template>
-              <template v-slot:tabs-items>
-                <v-container fluid class="py-0 px-2">
+              <template #tabs-items>
+                <v-container
+                  fluid
+                  class="py-0 px-2"
+                >
                   <v-row>
                     <v-col
                       cols="12"
@@ -140,29 +173,38 @@
               :svg="graphicSvg"
               :section="sections.find(s => s.id === 'apps')"
             >
-              <template v-slot:extension>
+              <template #extension>
                 <p v-if="stats">
-                  <i18n v-if="stats.applications > 1" path="appsCountMessage">
+                  <i18n
+                    v-if="stats.applications > 1"
+                    path="appsCountMessage"
+                  >
                     <template #link>
                       <nuxt-link to="/applications">
                         {{ $t('appsCount', {count: $n(stats.applications)}) }}
                       </nuxt-link>
                     </template>
                   </i18n>
-                  <i18n v-else-if="stats.applications=== 1" path="appsCountMessage1">
+                  <i18n
+                    v-else-if="stats.applications=== 1"
+                    path="appsCountMessage1"
+                  >
                     <template #link>
                       <nuxt-link to="/applications">
                         {{ $t('appsCount1') }}
                       </nuxt-link>
                     </template>
                   </i18n>
-                  <span v-else v-t="'appsCountNone'" />
+                  <span
+                    v-else
+                    v-t="'appsCountNone'"
+                  />
                   <span v-if="baseApps">
                     {{ $t('baseAppsCount', {count: $n(baseApps.length)}) }}
                   </span>
                 </p>
               </template>
-              <template v-slot:tabs-items>
+              <template #tabs-items>
                 <v-container fluid>
                   <v-row v-if="baseApps">
                     <v-spacer />
@@ -214,8 +256,11 @@
       </v-container>
     </v-col>
 
-    <layout-navigation-right v-if="this.$vuetify.breakpoint.lgAndUp">
-      <activity v-if="activity" :activity="activity" />
+    <layout-navigation-right v-if="$vuetify.breakpoint.lgAndUp">
+      <activity
+        v-if="activity"
+        :activity="activity"
+      />
     </layout-navigation-right>
   </v-row>
 </template>
@@ -279,57 +324,57 @@ en:
 </i18n>
 
 <script>
-  import 'iframe-resizer/js/iframeResizer'
-  import VIframe from '@koumoul/v-iframe'
+import 'iframe-resizer/js/iframeResizer'
+import VIframe from '@koumoul/v-iframe'
 
-  const { mapState, mapActions, mapGetters } = require('vuex')
+const { mapState, mapActions, mapGetters } = require('vuex')
 
-  export default {
-    components: { VIframe },
-    data: () => ({
-      stats: null,
-      datasets: null,
-      baseApps: null,
-      activity: null,
-      dataSvg: require('~/assets/svg/Data Arranging_Two Color.svg?raw'),
-      graphicSvg: require('~/assets/svg/Graphics and charts_Monochromatic.svg?raw'),
-      dataProcessSvg: require('~/assets/svg/Data Process_Two Color.svg?raw'),
-    }),
-    computed: {
-      ...mapState('session', ['user', 'initialized']),
-      ...mapState(['env']),
-      ...mapGetters(['missingSubscription']),
-      ...mapGetters('session', ['activeAccount']),
-      sections() {
-        return [
-          { id: 'datasets', title: this.$t('datasets') },
-          { id: 'apps', title: this.$t('apps') },
-        ]
-      },
-    },
-    async created() {
-      if (!this.user) return
-      this.$store.dispatch('breadcrumbs', [{ text: this.$t('breadcrumb') }])
+export default {
+  components: { VIframe },
+  data: () => ({
+    stats: null,
+    datasets: null,
+    baseApps: null,
+    activity: null,
+    dataSvg: require('~/assets/svg/Data Arranging_Two Color.svg?raw'),
+    graphicSvg: require('~/assets/svg/Graphics and charts_Monochromatic.svg?raw'),
+    dataProcessSvg: require('~/assets/svg/Data Process_Two Color.svg?raw')
+  }),
+  computed: {
+    ...mapState('session', ['user', 'initialized']),
+    ...mapState(['env']),
+    ...mapGetters(['missingSubscription']),
+    ...mapGetters('session', ['activeAccount']),
+    sections () {
+      return [
+        { id: 'datasets', title: this.$t('datasets') },
+        { id: 'apps', title: this.$t('apps') }
+      ]
+    }
+  },
+  async created () {
+    if (!this.user) return
+    this.$store.dispatch('breadcrumbs', [{ text: this.$t('breadcrumb') }])
 
-      this.stats = await this.$axios.$get('api/v1/stats')
+    this.stats = await this.$axios.$get('api/v1/stats')
 
-      const owner = `${this.activeAccount.type}:${this.activeAccount.id}`
-      this.activity = await this.$axios.$get('api/v1/activity', {
-        params: { size: 8, owner },
-      })
+    const owner = `${this.activeAccount.type}:${this.activeAccount.id}`
+    this.activity = await this.$axios.$get('api/v1/activity', {
+      params: { size: 8, owner }
+    })
 
-      this.datasets = await this.$axios.$get('api/v1/datasets', {
-        params: { size: 11, owner: owner, select: 'id,title,storage', sort: 'storage.size:-1' },
-      })
+    this.datasets = await this.$axios.$get('api/v1/datasets', {
+      params: { size: 11, owner: owner, select: 'id,title,storage', sort: 'storage.size:-1' }
+    })
 
-      this.baseApps = (await this.$axios.$get('api/v1/base-applications', {
-        params: { size: 10000, privateAccess: owner, select: 'title,image' },
-      })).results
-    },
-    methods: {
-      ...mapActions('session', ['login']),
-    },
+    this.baseApps = (await this.$axios.$get('api/v1/base-applications', {
+      params: { size: 10000, privateAccess: owner, select: 'title,image' }
+    })).results
+  },
+  methods: {
+    ...mapActions('session', ['login'])
   }
+}
 </script>
 
 <style lang="css">

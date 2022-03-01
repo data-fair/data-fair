@@ -13,7 +13,10 @@
     >
       <layout-brand-title />
     </v-list>
-    <v-divider v-if="!$vuetify.breakpoint.mobile" vertical />
+    <v-divider
+      v-if="!$vuetify.breakpoint.mobile"
+      vertical
+    />
     <v-toolbar-items v-if="!navContext.drawer">
       <v-btn
         text
@@ -31,7 +34,10 @@
     />
     <v-spacer />
     <v-toolbar-items>
-      <notifications-queue v-if="user && env.notifyUrl" :notify-url="env.notifyUrl" />
+      <notifications-queue
+        v-if="user && env.notifyUrl"
+        :notify-url="env.notifyUrl"
+      />
       <template v-if="initialized">
         <v-btn
           v-if="!user"
@@ -46,7 +52,7 @@
           nudge-left
           max-height="510"
         >
-          <template v-slot:activator="{on}">
+          <template #activator="{on}">
             <v-btn
               text
               class="px-0"
@@ -58,7 +64,10 @@
             </v-btn>
           </template>
 
-          <v-list outlined class="pb-0">
+          <v-list
+            outlined
+            class="pb-0"
+          >
             <v-list-item disabled>
               <v-list-item-avatar class="ml-0 my-0">
                 <v-avatar :size="36">
@@ -68,7 +77,10 @@
               <v-list-item-title>{{ activeAccount.type === 'user' ? $t('personalAccount') : activeAccount.name }}</v-list-item-title>
             </v-list-item>
 
-            <v-list-item :to="'/me'" :nuxt="true">
+            <v-list-item
+              :to="'/me'"
+              :nuxt="true"
+            >
               <v-list-item-action><v-icon>mdi-information-outline</v-icon></v-list-item-action>
               <v-list-item-title v-t="'myAccount'" />
             </v-list-item>
@@ -117,7 +129,10 @@
               </v-list-item>
             </template>
 
-            <v-list-item v-if="env.darkModeSwitch" dense>
+            <v-list-item
+              v-if="env.darkModeSwitch"
+              dense
+            >
               <v-list-item-action><v-icon>mdi-weather-night</v-icon></v-list-item-action>
               <v-list-item-title style="overflow: visible;">
                 <v-switch
@@ -197,32 +212,32 @@ en:
 </i18n>
 
 <script>
-  import { mapState, mapGetters, mapActions } from 'vuex'
+import { mapState, mapGetters, mapActions } from 'vuex'
 
-  export default {
-    props: ['navContext'],
-    computed: {
-      ...mapState(['env', 'breadcrumbItems', 'breadcrumbsRouteName']),
-      ...mapState('session', ['user', 'initialized']),
-      ...mapGetters(['canAdmin', 'canContrib', 'missingSubscription']),
-      ...mapGetters('session', ['activeAccount']),
+export default {
+  props: ['navContext'],
+  computed: {
+    ...mapState(['env', 'breadcrumbItems', 'breadcrumbsRouteName']),
+    ...mapState('session', ['user', 'initialized']),
+    ...mapGetters(['canAdmin', 'canContrib', 'missingSubscription']),
+    ...mapGetters('session', ['activeAccount'])
+  },
+  methods: {
+    ...mapActions('session', ['logout', 'login', 'switchOrganization']),
+    reload () {
+      window.location.reload()
     },
-    methods: {
-      ...mapActions('session', ['logout', 'login', 'switchOrganization']),
-      reload() {
-        window.location.reload()
-      },
-      setDarkCookie(value) {
-        const maxAge = 60 * 60 * 24 * 100 // 100 days
-        this.$cookies.set('theme_dark', '' + value, { path: '/', domain: this.env.sessionDomain, maxAge })
-        this.reload()
-      },
-      setAdminMode(value) {
-        const redirect = value ? null : this.env.publicUrl
-        this.$store.dispatch('session/setAdminMode', { value, redirect })
-      },
+    setDarkCookie (value) {
+      const maxAge = 60 * 60 * 24 * 100 // 100 days
+      this.$cookies.set('theme_dark', '' + value, { path: '/', domain: this.env.sessionDomain, maxAge })
+      this.reload()
     },
+    setAdminMode (value) {
+      const redirect = value ? null : this.env.publicUrl
+      this.$store.dispatch('session/setAdminMode', { value, redirect })
+    }
   }
+}
 </script>
 
 <style lang="css">

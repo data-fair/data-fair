@@ -6,7 +6,7 @@ const stat = util.promisify(fs.stat)
 const open = util.promisify(fs.open)
 const read = util.promisify(fs.read)
 
-module.exports = async function(dataset) {
+module.exports = async function (dataset) {
   const fileName = datasetUtils.fileName(dataset)
   const st = await stat(fileName)
   const fd = await open(fileName, 'r')

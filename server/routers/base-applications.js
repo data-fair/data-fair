@@ -25,7 +25,7 @@ exports.init = async (db) => {
 }
 
 // Auto removal of deprecated apps used in 0 configs
-async function clean(db) {
+async function clean (db) {
   const baseApps = await db.collection('base-applications').find({ deprecated: true }).limit(10000).toArray()
   for (const baseApp of baseApps) {
     const nbApps = await db.collection('applications').countDocuments({ url: baseApp.url })
@@ -33,13 +33,13 @@ async function clean(db) {
   }
 }
 
-function prepareQuery(query) {
+function prepareQuery (query) {
   return Object.keys(query)
     .filter(key => !['skip', 'size', 'q', 'status', 'select'].includes(key))
     .reduce((a, key) => { a[key] = query[key].split(','); return a }, {})
 }
 
-async function failSafeInitBaseApp(db, app) {
+async function failSafeInitBaseApp (db, app) {
   try {
     await initBaseApp(db, app)
   } catch (err) {
@@ -48,14 +48,14 @@ async function failSafeInitBaseApp(db, app) {
 }
 
 // Attempts to init an application's description from a URL
-async function initBaseApp(db, app) {
+async function initBaseApp (db, app) {
   if (app.url[app.url.length - 1] !== '/') app.url += '/'
   const html = (await axios.get(app.url + 'index.html')).data
   const data = await htmlExtractor.extract(html)
   const patch = {
     meta: data.meta,
     id: slug(app.url, { lower: true }),
-    ...app,
+    ...app
   }
 
   try {
@@ -90,7 +90,7 @@ async function initBaseApp(db, app) {
   return storedBaseApp
 }
 
-router.post('', asyncWrap(async(req, res) => {
+router.post('', asyncWrap(async (req, res) => {
   if (!req.body.url || Object.keys(req.body).length !== 1) {
     return res.status(400).send(req.__('Initializing a base application only accepts the "url" part.'))
   }
@@ -98,7 +98,7 @@ router.post('', asyncWrap(async(req, res) => {
   res.send(await initBaseApp(req.app.get('db'), baseApp))
 }))
 
-router.patch('/:id', asyncWrap(async(req, res) => {
+router.patch('/:id', asyncWrap(async (req, res) => {
   const db = req.app.get('db')
   if (!req.user || !req.user.adminMode) return res.status(403).send()
   const patch = req.body
@@ -109,7 +109,7 @@ router.patch('/:id', asyncWrap(async(req, res) => {
 }))
 
 // Get the list. Non admin users can only see the public and non deprecated ones.
-router.get('', cacheHeaders.noCache, asyncWrap(async(req, res) => {
+router.get('', cacheHeaders.noCache, asyncWrap(async (req, res) => {
   const db = req.app.get('db')
   const query = { $and: [{ deprecated: { $ne: true } }] }
   const accessFilter = []
@@ -160,14 +160,14 @@ router.get('', cacheHeaders.noCache, asyncWrap(async(req, res) => {
       datasetCount = await db.collection('datasets').countDocuments(filter)
       datasetBBox = !!(await db.collection('datasets').countDocuments({ $and: [{ bbox: { $ne: null } }, filter] }))
       const facet = {
-                 types: [{ $match: { 'schema.x-calculated': { $ne: true } } }, { $group: { _id: { type: '$schema.type' } } }],
-                 concepts: [{ $group: { _id: { concept: '$schema.x-refersTo' } } }],
-               }
+        types: [{ $match: { 'schema.x-calculated': { $ne: true } } }, { $group: { _id: { type: '$schema.type' } } }],
+        concepts: [{ $group: { _id: { concept: '$schema.x-refersTo' } } }]
+      }
       const facetResults = await db.collection('datasets').aggregate([
-          { $match: filter },
-          { $project: { 'schema.type': 1, 'schema.x-refersTo': 1, 'schema.x-calculated': 1 } },
-          { $unwind: '$schema' },
-          { $facet: facet }]).toArray()
+        { $match: filter },
+        { $project: { 'schema.type': 1, 'schema.x-refersTo': 1, 'schema.x-calculated': 1 } },
+        { $unwind: '$schema' },
+        { $facet: facet }]).toArray()
 
       datasetTypes = facetResults[0].types.map(t => t._id.type)
       datasetVocabulary = facetResults[0].concepts.map(t => t._id.concept).filter(c => !!c)

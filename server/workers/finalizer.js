@@ -8,7 +8,7 @@ const taskProgress = require('../utils/task-progress')
 
 exports.eventsPrefix = 'finalize'
 
-exports.process = async function(app, dataset) {
+exports.process = async function (app, dataset) {
   const debug = require('debug')(`worker:finalizer:${dataset.id}`)
 
   const db = app.get('db')
@@ -106,7 +106,7 @@ exports.process = async function(app, dataset) {
     }, { startDate: limitValues[0], endDate: limitValues[0] })
     result.timePeriod = {
       startDate: new Date(timePeriod.startDate).toISOString(),
-      endDate: new Date(timePeriod.endDate).toISOString(),
+      endDate: new Date(timePeriod.endDate).toISOString()
     }
     await progress()
   }

@@ -13,7 +13,7 @@ cacheableLookup.install(httpsAgent)
 
 module.exports = axios.create({
   httpAgent,
-  httpsAgent,
+  httpsAgent
 })
 
 module.exports.interceptors.response.use(response => response, error => {

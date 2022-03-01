@@ -19,7 +19,7 @@ const i18nUtils = require('../utils/i18n')
 exports.eventsPrefix = 'convert'
 
 const archiveTypes = exports.archiveTypes = new Set([
-  'application/zip', // .zip
+  'application/zip' // .zip
   /* 'application/x-7z-compressed', // .7z
   'application/x-bzip', // .bzip
   'application/x-bzip2', // .bzip2
@@ -32,21 +32,21 @@ const tabularTypes = exports.tabularTypes = new Set([
   'application/vnd.ms-excel', // xls
   'application/dbase', // dbf
   'text/plain', // txt, dif
-  'text/tab-separated-values', // tsv
+  'text/tab-separated-values' // tsv
 ])
 const geographicalTypes = exports.geographicalTypes = new Set([
   'application/vnd.google-earth.kml+xml', // kml
   'application/vnd.google-earth.kmz', // kmz
   'application/gpx+xml', // gpx or xml ?
-  'application/geopackage+sqlite3', // gpkg
+  'application/geopackage+sqlite3' // gpkg
 ])
 const calendarTypes = exports.calendarTypes = new Set(['text/calendar'])
 
-async function decompress(mimetype, filePath, dirPath) {
+async function decompress (mimetype, filePath, dirPath) {
   if (mimetype === 'application/zip') await exec('unzip', ['-o', '-q', filePath, '-d', dirPath])
 }
 
-exports.process = async function(app, dataset) {
+exports.process = async function (app, dataset) {
   const debug = require('debug')(`worker:converter:${dataset.id}`)
   const db = app.get('db')
   const originalFilePath = datasetUtils.originalFileName(dataset)
@@ -81,7 +81,7 @@ exports.process = async function(app, dataset) {
         name: path.parse(dataset.originalFile.name).name + '.csv',
         size: await fs.stat(csvFilePath).size,
         mimetype: 'text/csv',
-        encoding: 'utf-8',
+        encoding: 'utf-8'
       }
       if (!dataset.schema.find(f => f.key === 'file')) {
         const concept = i18nUtils.vocabulary[config.i18n.defaultLocale]['http://schema.org/DigitalDocument']
@@ -91,7 +91,7 @@ exports.process = async function(app, dataset) {
           type: 'string',
           title: concept.title,
           description: concept.description,
-          'x-refersTo': 'http://schema.org/DigitalDocument',
+          'x-refersTo': 'http://schema.org/DigitalDocument'
         })
       }
     }
@@ -107,13 +107,13 @@ exports.process = async function(app, dataset) {
     await pump(
       eventsStream,
       csvStringify({ columns: ['DTSTART', 'DTEND', 'SUMMARY', 'LOCATION', 'CATEGORIES', 'STATUS', 'DESCRIPTION', 'TRANSP', 'SEQUENCE', 'GEO', 'URL'], header: true }),
-      fs.createWriteStream(filePath),
+      fs.createWriteStream(filePath)
     )
     dataset.file = {
       name: path.parse(dataset.originalFile.name).name + '.csv',
       size: await fs.stat(filePath).size,
       mimetype: 'text/csv',
-      encoding: 'utf-8',
+      encoding: 'utf-8'
     }
     icalendar.prepareSchema(dataset, infos)
   } else if (tabularTypes.has(dataset.originalFile.mimetype)) {
@@ -127,7 +127,7 @@ exports.process = async function(app, dataset) {
       name: path.parse(dataset.originalFile.name).name + '.csv',
       size: await fs.stat(filePath).size,
       mimetype: 'text/csv',
-      encoding: 'utf-8',
+      encoding: 'utf-8'
     }
   } else if (isShapefile || geographicalTypes.has(dataset.originalFile.mimetype)) {
     if (config.ogr2ogr.skip) {
@@ -148,7 +148,7 @@ exports.process = async function(app, dataset) {
       name: path.parse(dataset.originalFile.name).name + '.geojson',
       size: await fs.stat(filePath).size,
       mimetype: 'application/geo+json',
-      encoding: 'utf-8',
+      encoding: 'utf-8'
     }
   } else {
     // TODO: throw error ?

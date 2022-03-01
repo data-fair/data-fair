@@ -1,7 +1,10 @@
 <template lang="html">
   <v-row class="dataset-virtual">
     <v-col>
-      <h2 v-t="'children'" class="text-h6" />
+      <h2
+        v-t="'children'"
+        class="text-h6"
+      />
 
       <v-autocomplete
         :items="datasets || []"
@@ -37,8 +40,11 @@
           :items-per-page="1000"
           height="300"
         >
-          <template slot="no-data" v-t="'noChild'" />
-          <template v-slot:item="{item, index}">
+          <template
+            slot="no-data"
+            v-t="'noChild'"
+          />
+          <template #item="{item, index}">
             <tr v-if="childrenById[item]">
               <td class="py-2">
                 <div class="subheading">
@@ -76,9 +82,15 @@
         </v-data-table>
       </v-card>
 
-      <h2 v-t="'selectedColumns'" class="text-h6 mt-4" />
+      <h2
+        v-t="'selectedColumns'"
+        class="text-h6 mt-4"
+      />
 
-      <p v-if="dataset.schema.filter(f => !f['x-calculated']).length === 0" v-t="'noColumn'" />
+      <p
+        v-if="dataset.schema.filter(f => !f['x-calculated']).length === 0"
+        v-t="'noColumn'"
+      />
       <v-list
         v-else
         three-line
@@ -119,7 +131,7 @@
                 dense
                 @change="saveFilters"
               >
-                <template v-slot:selection="data">
+                <template #selection="data">
                   <v-chip
                     close
                     small
@@ -147,8 +159,14 @@
         v-model="deleteChildDialog"
         max-width="500px"
       >
-        <v-card v-if="childrenById[dataset.virtual.children[currentChild]]" outlined>
-          <v-card-title v-t="'deleteTitle'" primary-title />
+        <v-card
+          v-if="childrenById[dataset.virtual.children[currentChild]]"
+          outlined
+        >
+          <v-card-title
+            v-t="'deleteTitle'"
+            primary-title
+          />
           <v-card-text>
             <v-alert
               v-t="'deleteWarning'"
@@ -209,108 +227,108 @@ en:
 </i18n>
 
 <script>
-  import { mapState, mapGetters, mapActions } from 'vuex'
-  const Draggable = require('vuedraggable')
+import { mapState, mapGetters, mapActions } from 'vuex'
+const Draggable = require('vuedraggable')
 
-  export default {
-    components: { Draggable },
-    data() {
-      return {
-        datasets: null,
-        loadingDatasets: false,
-        search: '',
-        childrenById: {},
-        schemasById: {},
-        deleteChildDialog: false,
-        currentChild: null,
-        valuesByKey: {},
-        loadingChildren: false,
+export default {
+  components: { Draggable },
+  data () {
+    return {
+      datasets: null,
+      loadingDatasets: false,
+      search: '',
+      childrenById: {},
+      schemasById: {},
+      deleteChildDialog: false,
+      currentChild: null,
+      valuesByKey: {},
+      loadingChildren: false
+    }
+  },
+  computed: {
+    ...mapState('dataset', ['dataset']),
+    ...mapGetters('dataset', ['can']),
+    existingFields () {
+      return this.dataset.schema.map(f => f.key)
+    },
+    filtersByKey () {
+      return this.dataset.virtual.filters.reduce((a, f) => {
+        a[f.key] = f
+        return a
+      }, {})
+    }
+  },
+  watch: {
+    search: {
+      immediate: true,
+      handler () {
+        this.searchDatasets()
       }
     },
-    computed: {
-      ...mapState('dataset', ['dataset']),
-      ...mapGetters('dataset', ['can']),
-      existingFields() {
-        return this.dataset.schema.map(f => f.key)
-      },
-      filtersByKey() {
-        return this.dataset.virtual.filters.reduce((a, f) => {
-          a[f.key] = f
-          return a
-        }, {})
-      },
+    'dataset.schema': {
+      immediate: true,
+      handler () {
+        if (!this.dataset || !this.dataset.virtual) return
+        this.dataset.virtual.filters = this.dataset.virtual.filters || []
+        this.dataset.schema.forEach(field => {
+          if (!this.dataset.virtual.filters.find(filter => filter.key === field.key)) {
+            this.dataset.virtual.filters.push({ key: field.key, values: [] })
+          }
+        })
+        this.dataset.virtual.filters = this.dataset.virtual.filters.filter(f => {
+          return this.dataset.schema.find(field => field.key === f.key)
+        })
+      }
+    }
+  },
+  mounted () {
+    this.fetchChildren()
+  },
+  methods: {
+    ...mapActions('dataset', ['patchAndCommit', 'fetchInfo']),
+    async fetchChildren () {
+      this.loadingChildren = true
+      const res = await this.$axios.$get('api/v1/datasets', {
+        params: { size: 1000, select: 'id,title,schema', id: this.dataset.virtual.children.join(',') }
+      })
+      // remove children that do not exist anymore
+      this.dataset.virtual.children = this.dataset.virtual.children.filter(child => res.results.find(d => d.id === child))
+      this.childrenById = res.results.reduce((a, d) => { a[d.id] = d; return a }, {})
+      this.loadingChildren = false
     },
-    watch: {
-      search: {
-        immediate: true,
-        handler() {
-          this.searchDatasets()
-        },
-      },
-      'dataset.schema': {
-        immediate: true,
-        handler() {
-          if (!this.dataset || !this.dataset.virtual) return
-          this.dataset.virtual.filters = this.dataset.virtual.filters || []
-          this.dataset.schema.forEach(field => {
-            if (!this.dataset.virtual.filters.find(filter => filter.key === field.key)) {
-              this.dataset.virtual.filters.push({ key: field.key, values: [] })
-            }
-          })
-          this.dataset.virtual.filters = this.dataset.virtual.filters.filter(f => {
-            return this.dataset.schema.find(field => field.key === f.key)
-          })
-        },
-      },
+    async searchDatasets () {
+      this.loadingDatasets = true
+      const res = await this.$axios.$get('api/v1/datasets', {
+        params: { q: this.search, size: 20, select: 'id,title', status: 'finalized', owner: `${this.dataset.owner.type}:${this.dataset.owner.id}` }
+      })
+      this.datasets = res.results
+        .filter(d => d.id !== this.dataset.id && !this.dataset.virtual.children.includes(d.id))
+      this.loadingDatasets = false
     },
-    mounted() {
+    async addChild (child) {
+      await this.patchAndCommit({ virtual: { ...this.dataset.virtual, children: this.dataset.virtual.children.concat([child]) } })
       this.fetchChildren()
     },
-    methods: {
-      ...mapActions('dataset', ['patchAndCommit', 'fetchInfo']),
-      async fetchChildren() {
-        this.loadingChildren = true
-        const res = await this.$axios.$get('api/v1/datasets', {
-          params: { size: 1000, select: 'id,title,schema', id: this.dataset.virtual.children.join(',') },
-        })
-        // remove children that do not exist anymore
-        this.dataset.virtual.children = this.dataset.virtual.children.filter(child => res.results.find(d => d.id === child))
-        this.childrenById = res.results.reduce((a, d) => { a[d.id] = d; return a }, {})
-        this.loadingChildren = false
-      },
-      async searchDatasets() {
-        this.loadingDatasets = true
-        const res = await this.$axios.$get('api/v1/datasets', {
-          params: { q: this.search, size: 20, select: 'id,title', status: 'finalized', owner: `${this.dataset.owner.type}:${this.dataset.owner.id}` },
-        })
-        this.datasets = res.results
-          .filter(d => d.id !== this.dataset.id && !this.dataset.virtual.children.includes(d.id))
-        this.loadingDatasets = false
-      },
-      async addChild(child) {
-        await this.patchAndCommit({ virtual: { ...this.dataset.virtual, children: this.dataset.virtual.children.concat([child]) } })
-        this.fetchChildren()
-      },
-      async deleteChild(i) {
-        this.dataset.virtual.children.splice(i, 1)
-        await this.patchAndCommit({ virtual: { ...this.dataset.virtual } })
-        this.fetchInfo()
-      },
-      async saveSchema() {
-        await this.patchAndCommit({ schema: this.dataset.schema })
-      },
-      async saveFilters() {
-        await this.patchAndCommit({ virtual: { ...this.dataset.virtual, filters: this.dataset.virtual.filters } })
-      },
-      async addField(field) {
-        const prop = { key: field.key, title: field.title, type: field.type, format: field.format }
-        await this.patchAndCommit({ schema: this.dataset.schema.concat(prop) })
-      },
-      async deleteField(field) {
-        await this.patchAndCommit({ schema: this.dataset.schema.filter(f => f.key !== field.key) })
-      },
+    async deleteChild (i) {
+      this.dataset.virtual.children.splice(i, 1)
+      await this.patchAndCommit({ virtual: { ...this.dataset.virtual } })
+      this.fetchInfo()
     },
+    async saveSchema () {
+      await this.patchAndCommit({ schema: this.dataset.schema })
+    },
+    async saveFilters () {
+      await this.patchAndCommit({ virtual: { ...this.dataset.virtual, filters: this.dataset.virtual.filters } })
+    },
+    async addField (field) {
+      const prop = { key: field.key, title: field.title, type: field.type, format: field.format }
+      await this.patchAndCommit({ schema: this.dataset.schema.concat(prop) })
+    },
+    async deleteField (field) {
+      await this.patchAndCommit({ schema: this.dataset.schema.filter(f => f.key !== field.key) })
+    }
   }
+}
 </script>
 
 <style lang="css">

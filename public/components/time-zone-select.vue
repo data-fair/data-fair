@@ -21,32 +21,32 @@ en:
 </i18n>
 
 <script>
-  const timeZones = require('timezones.json')
+const timeZones = require('timezones.json')
 
-  export default {
-    props: ['value', 'disabled'],
-    data() {
-      return { timeZones }
+export default {
+  props: ['value', 'disabled'],
+  data () {
+    return { timeZones }
+  },
+  computed: {
+    utcs () {
+      const utcs = []
+      for (const tz of timeZones) {
+        for (const utc of tz.utc) utcs.push(utc)
+      }
+      return utcs
     },
-    computed: {
-      utcs() {
-        const utcs = []
-        for (const tz of timeZones) {
-          for (const utc of tz.utc) utcs.push(utc)
-        }
-        return utcs
-      },
-      defaultTimeZone() {
-        return process.env.defaultTimeZone
-      },
-    },
-    methods: {
-      input(v) {
-        console.log('V', v)
-        this.$emit('input', v)
-      },
-    },
+    defaultTimeZone () {
+      return process.env.defaultTimeZone
+    }
+  },
+  methods: {
+    input (v) {
+      console.log('V', v)
+      this.$emit('input', v)
+    }
   }
+}
 </script>
 
 <style>

@@ -67,7 +67,10 @@
         </v-card-text>
         <v-card-actions>
           <v-spacer />
-          <v-btn text @click="showDeleteDialog = false">
+          <v-btn
+            text
+            @click="showDeleteDialog = false"
+          >
             {{ $t('no') }}
           </v-btn>
           <v-btn
@@ -80,7 +83,10 @@
       </v-card>
     </v-dialog>
 
-    <v-dialog v-model="showAPIDialog" fullscreen>
+    <v-dialog
+      v-model="showAPIDialog"
+      fullscreen
+    >
       <v-card outlined>
         <v-toolbar
           dense
@@ -128,27 +134,27 @@ en:
 </i18n>
 
 <script>
-  import { mapState, mapActions, mapGetters } from 'vuex'
+import { mapState, mapActions, mapGetters } from 'vuex'
 
-  export default {
-    data: () => ({
-      showDeleteDialog: false,
-      showAPIDialog: false,
-    }),
-    computed: {
-      ...mapState('session', ['user']),
-      ...mapState('remoteService', ['remoteService']),
-      ...mapGetters('remoteService', ['resourceUrl']),
-    },
-    methods: {
-      ...mapActions('remoteService', ['remove', 'refresh']),
-      async confirmRemove() {
-        this.showDeleteDialog = false
-        await this.remove()
-        this.$router.push({ path: '/remote-services' })
-      },
-    },
+export default {
+  data: () => ({
+    showDeleteDialog: false,
+    showAPIDialog: false
+  }),
+  computed: {
+    ...mapState('session', ['user']),
+    ...mapState('remoteService', ['remoteService']),
+    ...mapGetters('remoteService', ['resourceUrl'])
+  },
+  methods: {
+    ...mapActions('remoteService', ['remove', 'refresh']),
+    async confirmRemove () {
+      this.showDeleteDialog = false
+      await this.remove()
+      this.$router.push({ path: '/remote-services' })
+    }
   }
+}
 </script>
 
 <style>

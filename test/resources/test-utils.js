@@ -8,7 +8,7 @@ exports.formHeaders = (form) => {
   return headers
 }
 
-exports.sendDataset = async(fileName, ax, opts) => {
+exports.sendDataset = async (fileName, ax, opts) => {
   const datasetFd = fs.readFileSync(path.resolve('./test/resources/', fileName))
   const form = new FormData()
   form.append('file', datasetFd, fileName)

@@ -30,23 +30,21 @@
       <v-list-item-title v-t="'integrate'" />
     </v-list-item>
 
-    <template>
-      <v-list-item
-        v-for="link in publicationSitesLinks"
-        :key="link.url"
-        :href="link.url"
-        target="_blank"
-      >
-        <v-list-item-icon>
-          <v-icon color="primary">
-            mdi-open-in-new
-          </v-icon>
-        </v-list-item-icon>
-        <v-list-item-content>
-          <v-list-item-title v-t="{path: 'viewSite', args: {title: link.title}}" />
-        </v-list-item-content>
-      </v-list-item>
-    </template>
+    <v-list-item
+      v-for="link in publicationSitesLinks"
+      :key="link.url"
+      :href="link.url"
+      target="_blank"
+    >
+      <v-list-item-icon>
+        <v-icon color="primary">
+          mdi-open-in-new
+        </v-icon>
+      </v-list-item-icon>
+      <v-list-item-content>
+        <v-list-item-title v-t="{path: 'viewSite', args: {title: link.title}}" />
+      </v-list-item-content>
+    </v-list-item>
 
     <v-list-item
       v-if="can('writeConfig')"
@@ -98,7 +96,10 @@
       <v-list-item-title v-t="'changeOwner'" />
     </v-list-item>
 
-    <v-dialog v-model="showIntegrationDialog" max-width="1200">
+    <v-dialog
+      v-model="showIntegrationDialog"
+      max-width="1200"
+    >
       <v-card outlined>
         <v-toolbar
           dense
@@ -113,7 +114,10 @@
             <v-icon>mdi-close</v-icon>
           </v-btn>
         </v-toolbar>
-        <v-card-text v-if="showIntegrationDialog" class="pb-0 px-4">
+        <v-card-text
+          v-if="showIntegrationDialog"
+          class="pb-0 px-4"
+        >
           {{ $t('integrationMsg') }}
           <br>
           <pre>
@@ -152,7 +156,10 @@
             <v-icon>mdi-close</v-icon>
           </v-btn>
         </v-toolbar>
-        <v-card-text v-if="showCaptureDialog" class="pb-0 pt-2">
+        <v-card-text
+          v-if="showCaptureDialog"
+          class="pb-0 pt-2"
+        >
           <p v-t="'captureMsg'" />
           <v-text-field
             v-model="captureWidth"
@@ -186,7 +193,10 @@
       max-width="500"
     >
       <v-card outlined>
-        <v-card-title v-t="'deleteApp'" primary-title />
+        <v-card-title
+          v-t="'deleteApp'"
+          primary-title
+        />
         <v-card-text v-t="{path: 'deleteMsg', args: {title: application.title}}" />
         <v-card-actions>
           <v-spacer />
@@ -209,9 +219,15 @@
       max-width="900"
     >
       <v-card outlined>
-        <v-card-title v-t="'changeOwnerTitle'" primary-title />
+        <v-card-title
+          v-t="'changeOwnerTitle'"
+          primary-title
+        />
         <v-card-text>
-          <owner-pick v-model="newOwner" :current-owner="application.owner" />
+          <owner-pick
+            v-model="newOwner"
+            :current-owner="application.owner"
+          />
         </v-card-text>
         <v-card-actions>
           <v-spacer />
@@ -230,7 +246,10 @@
       </v-card>
     </v-dialog>
 
-    <v-dialog v-model="showAPIDialog" fullscreen>
+    <v-dialog
+      v-model="showAPIDialog"
+      fullscreen
+    >
       <v-card outlined>
         <v-toolbar
           dense
@@ -298,50 +317,50 @@ en:
 </i18n>
 
 <script>
-  import { mapState, mapActions, mapGetters } from 'vuex'
+import { mapState, mapActions, mapGetters } from 'vuex'
 
-  export default {
-    props: {
-      publicationSites: {
-        type: Array,
-        default: () => [],
-      },
-    },
-    data: () => ({
-      showDeleteDialog: false,
-      showIntegrationDialog: false,
-      showCaptureDialog: false,
-      showOwnerDialog: false,
-      showAPIDialog: false,
-      newOwner: null,
-      captureWidth: 800,
-      captureHeight: 450,
-    }),
-    computed: {
-      ...mapState(['env']),
-      ...mapState('application', ['application', 'api']),
-      ...mapGetters('application', ['resourceUrl', 'can', 'applicationLink']),
-      publicationSitesLinks() {
-        if (!this.application.publicationSites) return []
-        return this.application.publicationSites.map(dps => {
-          const site = this.publicationSites.find(site => dps === `${site.type}:${site.id}`)
-          if (!site?.applicationUrlTemplate) return null
-          return {
-            url: site.applicationUrlTemplate.replace('{id}', this.application.id),
-            title: site.title || (site.url && site.url.replace('http://', '').replace('https://', '')) || site.id,
-          }
-        }).filter(ps => !!ps)
-      },
-    },
-    methods: {
-      ...mapActions('application', ['setId', 'patch', 'remove', 'clear', 'changeOwner', 'subscribe']),
-      async confirmRemove() {
-        this.showDeleteDialog = false
-        await this.remove()
-        this.$router.push({ path: '/applications' })
-      },
-    },
+export default {
+  props: {
+    publicationSites: {
+      type: Array,
+      default: () => []
+    }
+  },
+  data: () => ({
+    showDeleteDialog: false,
+    showIntegrationDialog: false,
+    showCaptureDialog: false,
+    showOwnerDialog: false,
+    showAPIDialog: false,
+    newOwner: null,
+    captureWidth: 800,
+    captureHeight: 450
+  }),
+  computed: {
+    ...mapState(['env']),
+    ...mapState('application', ['application', 'api']),
+    ...mapGetters('application', ['resourceUrl', 'can', 'applicationLink']),
+    publicationSitesLinks () {
+      if (!this.application.publicationSites) return []
+      return this.application.publicationSites.map(dps => {
+        const site = this.publicationSites.find(site => dps === `${site.type}:${site.id}`)
+        if (!site?.applicationUrlTemplate) return null
+        return {
+          url: site.applicationUrlTemplate.replace('{id}', this.application.id),
+          title: site.title || (site.url && site.url.replace('http://', '').replace('https://', '')) || site.id
+        }
+      }).filter(ps => !!ps)
+    }
+  },
+  methods: {
+    ...mapActions('application', ['setId', 'patch', 'remove', 'clear', 'changeOwner', 'subscribe']),
+    async confirmRemove () {
+      this.showDeleteDialog = false
+      await this.remove()
+      this.$router.push({ path: '/applications' })
+    }
   }
+}
 </script>
 
 <style>

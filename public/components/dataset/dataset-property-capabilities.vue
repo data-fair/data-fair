@@ -66,66 +66,66 @@ en:
 </i18n>
 
 <script>
-  import { mapState } from 'vuex'
+import { mapState } from 'vuex'
 
-  const capabilitiesSchema = require('~/../contract/capabilities.js')
-  export default {
-    props: ['editable', 'property'],
-    data() {
-      return {
-        dialog: false,
-        editCapabilities: null,
+const capabilitiesSchema = require('~/../contract/capabilities.js')
+export default {
+  props: ['editable', 'property'],
+  data () {
+    return {
+      dialog: false,
+      editCapabilities: null
+    }
+  },
+  computed: {
+    ...mapState('session', ['user']),
+    relevantCapabilities () {
+      const type = this.property.ignoreDetection ? 'string' : this.property.type
+      if (type === 'number' || type === 'integer') {
+        return ['index', 'textStandard', 'values']
+      } else if (type === 'boolean') {
+        return ['index', 'textStandard', 'values']
+      } else if (type === 'string' && (this.property.format === 'date' || this.property.format === 'date-time')) {
+        return ['index', 'textStandard', 'values']
+      } else if (this.property['x-refersTo'] === 'https://purl.org/geojson/vocab#geometry') {
+        return ['geoShape']
+      } else if (this.property['x-refersTo'] === 'http://schema.org/DigitalDocument') {
+        return ['indexAttachment']
+      } else if (type === 'string') {
+        return ['index', 'text', 'textStandard', 'textAgg', 'values', 'insensitive']
+      }
+      return []
+    },
+    schema () {
+      const schema = JSON.parse(JSON.stringify(capabilitiesSchema))
+      Object.keys(schema.properties).forEach(key => {
+        if (!this.relevantCapabilities.includes(key)) delete schema.properties[key]
+      })
+      return schema
+    },
+    context () {
+      return {}
+    }
+  },
+  methods: {
+    toggle (show) {
+      if (show) {
+        this.editCapabilities = this.property['x-capabilities'] ? { ...this.property['x-capabilities'] } : {}
+      } else {
+        this.editCapabilities = null
       }
     },
-    computed: {
-      ...mapState('session', ['user']),
-      relevantCapabilities() {
-        const type = this.property.ignoreDetection ? 'string' : this.property.type
-        if (type === 'number' || type === 'integer') {
-          return ['index', 'textStandard', 'values']
-        } else if (type === 'boolean') {
-          return ['index', 'textStandard', 'values']
-        } else if (type === 'string' && (this.property.format === 'date' || this.property.format === 'date-time')) {
-          return ['index', 'textStandard', 'values']
-        } else if (this.property['x-refersTo'] === 'https://purl.org/geojson/vocab#geometry') {
-          return ['geoShape']
-        } else if (this.property['x-refersTo'] === 'http://schema.org/DigitalDocument') {
-          return ['indexAttachment']
-        } else if (type === 'string') {
-          return ['index', 'text', 'textStandard', 'textAgg', 'values', 'insensitive']
-        }
-        return []
-      },
-      schema() {
-        const schema = JSON.parse(JSON.stringify(capabilitiesSchema))
-        Object.keys(schema.properties).forEach(key => {
-          if (!this.relevantCapabilities.includes(key)) delete schema.properties[key]
-        })
-        return schema
-      },
-      context() {
-        return {}
-      },
-    },
-    methods: {
-      toggle(show) {
-        if (show) {
-          this.editCapabilities = this.property['x-capabilities'] ? { ...this.property['x-capabilities'] } : {}
-        } else {
-          this.editCapabilities = null
-        }
-      },
-      apply() {
-        const capabilities = { ...this.editCapabilities }
-        // we only keep the values that were toggled to false
-        for (const key in capabilities) {
-          if (capabilities[key] === true) delete capabilities[key]
-        }
-        if (Object.keys(capabilities).length) this.$set(this.property, 'x-capabilities', capabilities)
-        else delete this.property['x-capabilities']
-      },
-    },
+    apply () {
+      const capabilities = { ...this.editCapabilities }
+      // we only keep the values that were toggled to false
+      for (const key in capabilities) {
+        if (capabilities[key] === true) delete capabilities[key]
+      }
+      if (Object.keys(capabilities).length) this.$set(this.property, 'x-capabilities', capabilities)
+      else delete this.property['x-capabilities']
+    }
   }
+}
 </script>
 
 <style>

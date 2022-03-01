@@ -55,7 +55,7 @@ exports.listDatasets = async (db, catalog, params) => {
       resource.harvestable = files.allowedTypes.has(resource.mime)
       const harvestedDataset = await db.collection('datasets').findOne({
         'remoteFile.url': resource.url,
-        'remoteFile.catalog': catalog.id,
+        'remoteFile.catalog': catalog.id
       }, { projection: { id: 1 } })
       if (harvestedDataset) resource.harvestedDataset = harvestedDataset.id
     }
@@ -73,7 +73,7 @@ exports.harvestDataset = async (catalog, datasetId, app) => {
   for (const resource of harvestableResources) {
     const harvestedDataset = await app.get('db').collection('datasets').findOne({
       'remoteFile.url': resource.url,
-      'remoteFile.catalog': catalog.id,
+      'remoteFile.catalog': catalog.id
     }, { projection: { id: 1 } })
     if (harvestedDataset) continue
 
@@ -89,19 +89,19 @@ exports.harvestDataset = async (catalog, datasetId, app) => {
         url: resource.url,
         catalog: catalog.id,
         size: resource.size,
-        mimetype: resource.mime,
+        mimetype: resource.mime
       },
       publications: [{
         catalog: catalog.id,
         status: 'waiting',
         targetUrl: dataset.page,
-        addToDataset: { id: dataset.id, title: dataset.title },
+        addToDataset: { id: dataset.id, title: dataset.title }
       }],
       createdBy: { id: catalog.owner.id, name: catalog.owner.name },
       createdAt: date,
       updatedBy: { id: catalog.owner.id, name: catalog.owner.name },
       updatedAt: date,
-      status: 'imported',
+      status: 'imported'
     }
     await app.get('db').collection('datasets').insertOne(newDataset)
     await journals.log(app, newDataset, { type: 'dataset-created', href: config.publicUrl + '/dataset/' + newDataset.id }, 'dataset')
@@ -117,7 +117,7 @@ exports.suggestOrganizations = async (type, url, q) => {
   return connector.suggestOrganizations(url, q)
 }
 
-exports.processPublications = async function(app, type, resource) {
+exports.processPublications = async function (app, type, resource) {
   const db = app.get('db')
   const resourcesCollection = db.collection(type + 's')
   const catalogsCollection = db.collection('catalogs')
@@ -127,14 +127,14 @@ exports.processPublications = async function(app, type, resource) {
 
   const processedPublication = resource.publications.find(p => ['waiting', 'deleted'].includes(p.status))
 
-  async function setResult(error, nonBlocking) {
+  async function setResult (error, nonBlocking) {
     const patch = {}
 
     if ((!error || nonBlocking) && processedPublication.status === 'deleted') {
       // Deletion worked
       return resourcesCollection.updateOne(
         { id: resource.id },
-        { $pull: { publications: { id: processedPublication.id } } },
+        { $pull: { publications: { id: processedPublication.id } } }
       )
     }
 
@@ -153,7 +153,7 @@ exports.processPublications = async function(app, type, resource) {
     if (Object.keys(patch).length) {
       await resourcesCollection.updateOne(
         { id: resource.id, 'publications.id': processedPublication.id },
-        { $set: patch },
+        { $set: patch }
       )
     }
   }
@@ -163,14 +163,14 @@ exports.processPublications = async function(app, type, resource) {
   if (!catalog) {
     await journals.log(app, resource, {
       type: 'error',
-      data: `Une publication fait référence à un catalogue inexistant (${processedPublication.id})`,
+      data: `Une publication fait référence à un catalogue inexistant (${processedPublication.id})`
     }, type)
     return setResult('Catalogue inexistant', true)
   }
   if (catalog.owner.type !== resource.owner.type || catalog.owner.id !== resource.owner.id) {
     await journals.log(app, resource, {
       type: 'error',
-      data: `Une publication fait référence à un catalogue qui n'appartient pas au propriétaire de la resource à publier (${processedPublication.id})`,
+      data: `Une publication fait référence à un catalogue qui n'appartient pas au propriétaire de la resource à publier (${processedPublication.id})`
     }, type)
     return setResult('Le catalogue n\'appartient pas au propriétaire de la resource à publier', true)
   }
@@ -204,7 +204,7 @@ exports.processPublications = async function(app, type, resource) {
   }
 }
 
-async function getApplicationDatasets(db, app) {
+async function getApplicationDatasets (db, app) {
   app.configuration = app.configuration || {}
   const datasetReferences = (app.configuration.datasets || []).filter(d => !!d).map(d => d.href);
   ['datasetUrl', 'networksDatasetUrl', 'networksMembersDatasetUrl'].forEach(k => {

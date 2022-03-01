@@ -10,8 +10,8 @@ module.exports = async (client, dataset, query) => {
   esQuery.size = 0
   esQuery.aggs = {
     metric: {
-      [query.metric]: { field: query.metric_field },
-    },
+      [query.metric]: { field: query.metric_field }
+    }
   }
   const esResponse = (await client.search({ index: aliasName(dataset), body: esQuery })).body
   return { total: esResponse.hits.total.value, metric: esResponse.aggregations.metric.value }

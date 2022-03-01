@@ -17,7 +17,7 @@ const getPaths = (dataset) => {
     newDir: path.join(ownerDir, 'datasets', dataset.id),
     newFullFile: parsedOriginalFile && path.join(ownerDir, 'datasets', dataset.id, `${parsedOriginalFile.name}-full${parsedOriginalFile.ext}`),
     newMbtilesFile: parsedOriginalFile && path.join(ownerDir, 'datasets', dataset.id, `${parsedOriginalFile.name}.mbtiles`),
-    markerFile: path.join(config.dataDir, 'tmp', `upgrade-marker-${dataset.id}.txt`),
+    markerFile: path.join(config.dataDir, 'tmp', `upgrade-marker-${dataset.id}.txt`)
   }
 }
 

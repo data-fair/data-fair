@@ -1,6 +1,6 @@
 <template>
   <v-row>
-    <v-col :style="this.$vuetify.breakpoint.lgAndUp ? 'padding-right:256px;' : ''">
+    <v-col :style="$vuetify.breakpoint.lgAndUp ? 'padding-right:256px;' : ''">
       <v-container class="py-0">
         <template v-if="datasets">
           <v-row
@@ -40,7 +40,10 @@
         </template>
         <search-progress :loading="loading" />
 
-        <v-responsive v-if="!hasDatasets" height="auto">
+        <v-responsive
+          v-if="!hasDatasets"
+          height="auto"
+        >
           <v-container class="fill-height">
             <v-row align="center">
               <v-col class="text-center">
@@ -65,7 +68,7 @@
         </v-responsive>
       </v-container>
 
-      <layout-navigation-right v-if="this.$vuetify.breakpoint.lgAndUp">
+      <layout-navigation-right v-if="$vuetify.breakpoint.lgAndUp">
         <dataset-list-actions />
         <template v-if="datasets">
           <v-row class="px-2">
@@ -92,12 +95,18 @@
             color="primary"
             mandatory
           >
-            <v-btn small icon>
+            <v-btn
+              small
+              icon
+            >
               <v-icon small>
                 mdi-view-grid
               </v-icon>
             </v-btn>
-            <v-btn small icon>
+            <v-btn
+              small
+              icon
+            >
               <v-icon small>
                 mdi-format-list-bulleted-square
               </v-icon>
@@ -105,8 +114,11 @@
           </v-btn-toggle>
         </v-row>
       </layout-navigation-right>
-      <layout-actions-button v-else icon="mdi-plus">
-        <template v-slot:actions>
+      <layout-actions-button
+        v-else
+        icon="mdi-plus"
+      >
+        <template #actions>
           <dataset-list-actions />
         </template>
       </layout-actions-button>
@@ -140,124 +152,124 @@ en:
 </i18n>
 
 <script>
-  const { mapState, mapGetters } = require('vuex')
+const { mapState, mapGetters } = require('vuex')
 
-  export default {
-    data: () => ({
-      datasets: null,
-      page: 1,
-      loading: true,
-      filters: {},
-      filtered: false,
-      facetsValues: {
-        status: [],
-        visibility: [],
-        services: [],
-        concepts: [],
-        topics: [],
-        publicationSites: [],
-      },
-      lastParams: null,
-      dataSvg: require('~/assets/svg/Data Arranging_Two Color.svg?raw'),
-      renderMode: null,
-    }),
-    computed: {
-      ...mapState('session', ['user']),
-      ...mapGetters('session', ['activeAccount']),
-      ...mapState(['env']),
-      plural() {
-        return this.datasets.count > 1
-      },
-      size() {
-        return { xs: 12, sm: 12, md: 12, lg: 15, xl: 24 }[this.$vuetify.breakpoint.name]
-      },
-      hasDatasets() {
-        return !this.datasets || this.datasets.count
-      },
-      renderModeKey() {
-        return `${this.user.id}:datasets:render-mode`
-      },
-      sorts() {
-        return [
-          { value: 'createdAt:-1', text: this.$t('sortCreatedAtDesc') },
-          { value: 'createdAt:1', text: this.$t('sortCreatedAtAsc') },
-          { value: 'updatedAt:-1', text: this.$t('sortUpdatedAtDesc') },
-          { value: 'updatedAt:1', text: this.$t('sortUpdatedAtAsc') },
-          { value: 'dataUpdatedAt:-1', text: this.$t('sortDataUpdatedAtDesc') },
-          { value: 'dataUpdatedAt:1', text: this.$t('sortDataUpdatedAtAsc') },
-        ]
-      },
+export default {
+  data: () => ({
+    datasets: null,
+    page: 1,
+    loading: true,
+    filters: {},
+    filtered: false,
+    facetsValues: {
+      status: [],
+      visibility: [],
+      services: [],
+      concepts: [],
+      topics: [],
+      publicationSites: []
     },
-    watch: {
-      facetsValues: {
-        deep: true,
-        handler() {
-          this.refresh()
-        },
-      },
-      renderMode(newValue, oldValue) {
-        localStorage.setItem(this.renderModeKey, this.renderMode)
-        if (oldValue !== null) this.refresh()
-      },
+    lastParams: null,
+    dataSvg: require('~/assets/svg/Data Arranging_Two Color.svg?raw'),
+    renderMode: null
+  }),
+  computed: {
+    ...mapState('session', ['user']),
+    ...mapGetters('session', ['activeAccount']),
+    ...mapState(['env']),
+    plural () {
+      return this.datasets.count > 1
     },
-    mounted() {
-      this.filters = { owner: `${this.activeAccount.type}:${this.activeAccount.id}` }
-      this.renderMode = Number(localStorage.getItem(this.renderModeKey) || 0)
-      if (isNaN(this.renderMode)) this.renderMode = 0
-      this.refresh()
+    size () {
+      return { xs: 12, sm: 12, md: 12, lg: 15, xl: 24 }[this.$vuetify.breakpoint.name]
     },
-    methods: {
-      onScroll(e) {
-        if (!this.datasets) return
-        const se = e.target.scrollingElement
-        if (se.clientHeight + se.scrollTop > se.scrollHeight - 140 && this.datasets.results.length < this.datasets.count) {
-          this.refresh(true)
-        }
-      },
-      async refresh(append) {
-        const fullFilters = { ...this.filters }
-        let hasFacetFilter = false
-        Object.entries(this.facetsValues).forEach(([facetKey, facetValues]) => {
-          if (this.filters.owner !== null && facetKey === 'owner') return
-          /* const facetFilter = Object.entries(facetValues)
+    hasDatasets () {
+      return !this.datasets || this.datasets.count
+    },
+    renderModeKey () {
+      return `${this.user.id}:datasets:render-mode`
+    },
+    sorts () {
+      return [
+        { value: 'createdAt:-1', text: this.$t('sortCreatedAtDesc') },
+        { value: 'createdAt:1', text: this.$t('sortCreatedAtAsc') },
+        { value: 'updatedAt:-1', text: this.$t('sortUpdatedAtDesc') },
+        { value: 'updatedAt:1', text: this.$t('sortUpdatedAtAsc') },
+        { value: 'dataUpdatedAt:-1', text: this.$t('sortDataUpdatedAtDesc') },
+        { value: 'dataUpdatedAt:1', text: this.$t('sortDataUpdatedAtAsc') }
+      ]
+    }
+  },
+  watch: {
+    facetsValues: {
+      deep: true,
+      handler () {
+        this.refresh()
+      }
+    },
+    renderMode (newValue, oldValue) {
+      localStorage.setItem(this.renderModeKey, this.renderMode)
+      if (oldValue !== null) this.refresh()
+    }
+  },
+  mounted () {
+    this.filters = { owner: `${this.activeAccount.type}:${this.activeAccount.id}` }
+    this.renderMode = Number(localStorage.getItem(this.renderModeKey) || 0)
+    if (isNaN(this.renderMode)) this.renderMode = 0
+    this.refresh()
+  },
+  methods: {
+    onScroll (e) {
+      if (!this.datasets) return
+      const se = e.target.scrollingElement
+      if (se.clientHeight + se.scrollTop > se.scrollHeight - 140 && this.datasets.results.length < this.datasets.count) {
+        this.refresh(true)
+      }
+    },
+    async refresh (append) {
+      const fullFilters = { ...this.filters }
+      let hasFacetFilter = false
+      Object.entries(this.facetsValues).forEach(([facetKey, facetValues]) => {
+        if (this.filters.owner !== null && facetKey === 'owner') return
+        /* const facetFilter = Object.entries(facetValues)
             .filter(([facetValue, valueActive]) => valueActive)
             .map(([facetValue]) => facetValue).join(',') */
-          const facetFilter = facetValues && facetValues.join(',')
-          if (facetFilter) {
-            hasFacetFilter = true
-            fullFilters[facetKey] = facetFilter
-          }
-        })
-        if (append) this.page += 1
-        else this.page = 1
-        let facets = 'status,visibility,services,concepts,topics,publicationSites'
-        if (this.filters.owner === null) facets += ',owner'
-        const params = {
-          size: this.size,
-          page: this.page,
-          select: 'title,description,status,topics,isVirtual,isRest,isMetaOnly,file,remoteFile,originalFile,count,finalizedAt',
-          facets,
-          sort: 'createdAt:-1',
-          ...fullFilters,
+        const facetFilter = facetValues && facetValues.join(',')
+        if (facetFilter) {
+          hasFacetFilter = true
+          fullFilters[facetKey] = facetFilter
         }
-        if (JSON.stringify(params) !== JSON.stringify(this.lastParams)) {
-          this.lastParams = params
-          this.loading = true
-          const datasets = await this.$axios.$get('api/v1/datasets', { params })
-          if (append) datasets.results.forEach(r => this.datasets.results.push(r))
-          else this.datasets = datasets
-          this.$store.dispatch('breadcrumbs', [{ text: this.$tc('datasets', datasets.count) }])
-          this.filtered = !!this.filters.q || hasFacetFilter
-          this.loading = false
-        }
-        // if the page is too large for the user to trigger a scroll we append results immediately
-        await this.$nextTick()
-        await this.$nextTick()
-        const html = document.getElementsByTagName('html')
-        if (html[0].scrollHeight === html[0].clientHeight && this.datasets.results.length < this.datasets.count) {
-          this.refresh(true)
-        }
-      },
-    },
+      })
+      if (append) this.page += 1
+      else this.page = 1
+      let facets = 'status,visibility,services,concepts,topics,publicationSites'
+      if (this.filters.owner === null) facets += ',owner'
+      const params = {
+        size: this.size,
+        page: this.page,
+        select: 'title,description,status,topics,isVirtual,isRest,isMetaOnly,file,remoteFile,originalFile,count,finalizedAt',
+        facets,
+        sort: 'createdAt:-1',
+        ...fullFilters
+      }
+      if (JSON.stringify(params) !== JSON.stringify(this.lastParams)) {
+        this.lastParams = params
+        this.loading = true
+        const datasets = await this.$axios.$get('api/v1/datasets', { params })
+        if (append) datasets.results.forEach(r => this.datasets.results.push(r))
+        else this.datasets = datasets
+        this.$store.dispatch('breadcrumbs', [{ text: this.$tc('datasets', datasets.count) }])
+        this.filtered = !!this.filters.q || hasFacetFilter
+        this.loading = false
+      }
+      // if the page is too large for the user to trigger a scroll we append results immediately
+      await this.$nextTick()
+      await this.$nextTick()
+      const html = document.getElementsByTagName('html')
+      if (html[0].scrollHeight === html[0].clientHeight && this.datasets.results.length < this.datasets.count) {
+        this.refresh(true)
+      }
+    }
   }
+}
 </script>

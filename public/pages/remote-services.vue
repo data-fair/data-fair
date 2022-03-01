@@ -1,5 +1,8 @@
 <template>
-  <v-container fluid class="px-0">
+  <v-container
+    fluid
+    class="px-0"
+  >
     <remote-service-list v-if="user" />
     <!-- Anonymous: show jumbotron -->
     <v-col
@@ -44,14 +47,14 @@ en:
 </i18n>
 
 <script>
-  import { mapState, mapActions } from 'vuex'
+import { mapState, mapActions } from 'vuex'
 
-  export default {
-    computed: {
-      ...mapState('session', ['user', 'initialized']),
-    },
-    methods: {
-      ...mapActions('session', ['login']),
-    },
+export default {
+  computed: {
+    ...mapState('session', ['user', 'initialized'])
+  },
+  methods: {
+    ...mapActions('session', ['login'])
   }
+}
 </script>

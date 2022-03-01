@@ -1,6 +1,9 @@
 <template>
   <v-col>
-    <p v-t="'message'" class="mt-3" />
+    <p
+      v-t="'message'"
+      class="mt-3"
+    />
     <v-form
       ref="form"
       v-model="valid"
@@ -58,47 +61,47 @@ en:
 </i18n>
 
 <script>
-  import { mapState, mapGetters } from 'vuex'
-  import eventBus from '~/event-bus'
+import { mapState, mapGetters } from 'vuex'
+import eventBus from '~/event-bus'
 
-  export default {
-    data: () => ({
-      valid: false,
-      currentStep: null,
-      title: '',
-      children: [],
-      loadingDatasets: false,
-      search: '',
-      datasets: [],
-    }),
-    computed: {
-      ...mapState('session', ['user']),
-      ...mapState(['env']),
-      ...mapGetters('session', ['activeAccount']),
+export default {
+  data: () => ({
+    valid: false,
+    currentStep: null,
+    title: '',
+    children: [],
+    loadingDatasets: false,
+    search: '',
+    datasets: []
+  }),
+  computed: {
+    ...mapState('session', ['user']),
+    ...mapState(['env']),
+    ...mapGetters('session', ['activeAccount'])
+  },
+  watch: {
+    search () {
+      this.searchDatasets()
+    }
+  },
+  methods: {
+    async searchDatasets () {
+      this.loadingDatasets = true
+      const res = await this.$axios.$get('api/v1/datasets', {
+        params: { q: this.search, size: 20, select: 'id,title', status: 'finalized', owner: `${this.activeAccount.type}:${this.activeAccount.id}` }
+      })
+      this.datasets = this.children.concat(res.results.filter(d => !this.children.find(c => c.id === d.id)))
+      this.loadingDatasets = false
     },
-    watch: {
-      search() {
-        this.searchDatasets()
-      },
-    },
-    methods: {
-      async searchDatasets() {
-        this.loadingDatasets = true
-        const res = await this.$axios.$get('api/v1/datasets', {
-          params: { q: this.search, size: 20, select: 'id,title', status: 'finalized', owner: `${this.activeAccount.type}:${this.activeAccount.id}` },
-        })
-        this.datasets = this.children.concat(res.results.filter(d => !this.children.find(c => c.id === d.id)))
-        this.loadingDatasets = false
-      },
-      async validate() {
-        if (!this.$refs.form.validate()) return
-        try {
-          const dataset = await this.$axios.$post('api/v1/datasets', { isVirtual: true, title: this.title, virtual: { children: this.children.map(c => c.id) } })
-          this.$router.push({ path: `/dataset/${dataset.id}` })
-        } catch (error) {
-          eventBus.$emit('notification', { error, msg: this.$t('creationError') })
-        }
-      },
-    },
+    async validate () {
+      if (!this.$refs.form.validate()) return
+      try {
+        const dataset = await this.$axios.$post('api/v1/datasets', { isVirtual: true, title: this.title, virtual: { children: this.children.map(c => c.id) } })
+        this.$router.push({ path: `/dataset/${dataset.id}` })
+      } catch (error) {
+        eventBus.$emit('notification', { error, msg: this.$t('creationError') })
+      }
+    }
   }
+}
 </script>

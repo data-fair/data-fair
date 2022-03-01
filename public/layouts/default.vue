@@ -1,5 +1,8 @@
 <template>
-  <v-app :dark="$vuetify.theme.dark" class="data-fair">
+  <v-app
+    :dark="$vuetify.theme.dark"
+    class="data-fair"
+  >
     <layout-dynamic-style html-overflow="scroll" />
     <template v-if="isMainDomain">
       <layout-navigation-left :nav-context="navContext" />
@@ -10,30 +13,33 @@
       </v-main>
     </template>
     <v-container v-else>
-      <v-alert v-t="'wrongDomain'" type="error" />
+      <v-alert
+        v-t="'wrongDomain'"
+        type="error"
+      />
     </v-container>
   </v-app>
 </template>
 
 <script>
-  const { mapState } = require('vuex')
+const { mapState } = require('vuex')
 
-  export default {
-    data: () => ({
-      navContext: {
-        drawer: false,
-      },
-    }),
-    computed: {
-      ...mapState(['env']),
-      isMainDomain() {
-        return this.env.mainPublicUrl.startsWith(window.location.origin)
-      },
-    },
-    mounted() {
-      if (!this.$vuetify.breakpoint.mobile) this.navContext.drawer = true
-    },
+export default {
+  data: () => ({
+    navContext: {
+      drawer: false
+    }
+  }),
+  computed: {
+    ...mapState(['env']),
+    isMainDomain () {
+      return this.env.mainPublicUrl.startsWith(window.location.origin)
+    }
+  },
+  mounted () {
+    if (!this.$vuetify.breakpoint.mobile) this.navContext.drawer = true
   }
+}
 
 </script>
 

@@ -18,7 +18,7 @@ if (require.main === module) {
 }
 
 // chose the proper scripts to execute, then run them
-async function main() {
+async function main () {
   const { db, client } = await dbUtils.connect()
 
   const services = db.collection('services')
@@ -45,12 +45,12 @@ async function main() {
 }
 
 // Walk the scripts directories
-async function listScripts() {
+async function listScripts () {
   const dirs = fs.readdirSync(scriptsRoot).sort()
   return dirs.map(dir => {
     return {
       version: dir,
-      names: fs.readdirSync(path.join(scriptsRoot, dir)),
+      names: fs.readdirSync(path.join(scriptsRoot, dir))
     }
   })
 }

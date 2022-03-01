@@ -10,7 +10,10 @@
         <v-list dense>
           <owner-list-item :owner="dataset.owner" />
 
-          <v-list-item v-if="dataset.file" style="overflow: hidden;">
+          <v-list-item
+            v-if="dataset.file"
+            style="overflow: hidden;"
+          >
             <v-list-item-avatar class="ml-0 my-0">
               <v-icon>mdi-file</v-icon>
             </v-list-item-avatar>
@@ -24,7 +27,10 @@
             <span>{{ dataset.updatedBy.name }} {{ dataset.updatedAt | moment("lll") }}</span>
           </v-list-item>
 
-          <v-list-item v-if="dataset.dataUpdatedAt" :title="$t('dataUpdatedAt')">
+          <v-list-item
+            v-if="dataset.dataUpdatedAt"
+            :title="$t('dataUpdatedAt')"
+          >
             <v-list-item-avatar class="ml-0 my-0">
               <v-icon>{{ dataset.isRest ? 'mdi-playlist-edit' : 'mdi-upload' }}</v-icon>
             </v-list-item-avatar>
@@ -49,7 +55,10 @@
             <v-list-item-avatar class="ml-0 my-0">
               <v-icon>mdi-picture-in-picture-bottom-right-outline</v-icon>
             </v-list-item-avatar>
-            <nuxt-link :to="`/datasets?children=${dataset.id}`" v-text="$tc('virtualDatasets', nbVirtualDatasets)" />
+            <nuxt-link
+              :to="`/datasets?children=${dataset.id}`"
+              v-text="$tc('virtualDatasets', nbVirtualDatasets)"
+            />
           </v-list-item>
 
           <v-list-item v-if="dataset.isRest">
@@ -64,8 +73,14 @@
                 mdi-delete-restore
               </v-icon>
             </v-list-item-avatar>
-            <span v-if="dataset.rest.ttl.active" v-t="{path: 'ttl', args: {col: dataset.rest.ttl.prop, days: dataset.rest.ttl.delay.value}}" />
-            <span v-else v-t="'noTTL'" />
+            <span
+              v-if="dataset.rest.ttl.active"
+              v-t="{path: 'ttl', args: {col: dataset.rest.ttl.prop, days: dataset.rest.ttl.delay.value}}"
+            />
+            <span
+              v-else
+              v-t="'noTTL'"
+            />
             <dataset-edit-ttl
               v-if="can('writeDescription')"
               :ttl="dataset.rest.ttl"
@@ -188,64 +203,64 @@ en:
 </i18n>
 
 <script>
-  const { mapState, mapActions, mapGetters } = require('vuex')
+const { mapState, mapActions, mapGetters } = require('vuex')
 
-  const coordXUri = 'http://data.ign.fr/def/geometrie#coordX'
-  const coordYUri = 'http://data.ign.fr/def/geometrie#coordY'
+const coordXUri = 'http://data.ign.fr/def/geometrie#coordX'
+const coordYUri = 'http://data.ign.fr/def/geometrie#coordY'
 
-  export default {
-    data() {
-      return { error: null }
+export default {
+  data () {
+    return { error: null }
+  },
+  computed: {
+    ...mapState(['projections']),
+    ...mapState('dataset', ['dataset', 'nbVirtualDatasets']),
+    ...mapState('session', ['user']),
+    ...mapGetters('dataset', ['can', 'resourceUrl']),
+    licenses () {
+      return this.$store.getters.ownerLicenses(this.dataset.owner)
     },
-    computed: {
-      ...mapState(['projections']),
-      ...mapState('dataset', ['dataset', 'nbVirtualDatasets']),
-      ...mapState('session', ['user']),
-      ...mapGetters('dataset', ['can', 'resourceUrl']),
-      licenses() {
-        return this.$store.getters.ownerLicenses(this.dataset.owner)
-      },
-      topics() {
-        return this.$store.getters.ownerTopics(this.dataset.owner)
-      },
-      editProjection() {
-        return !!(this.dataset && this.dataset.schema &&
+    topics () {
+      return this.$store.getters.ownerTopics(this.dataset.owner)
+    },
+    editProjection () {
+      return !!(this.dataset && this.dataset.schema &&
           this.dataset.schema.find(p => p['x-refersTo'] === coordXUri) &&
           this.dataset.schema.find(p => p['x-refersTo'] === coordYUri))
-      },
+    }
+  },
+  watch: {
+    licenses () {
+      if (!this.dataset.license) return
+      // Matching object reference, so that the select components works
+      this.dataset.license = this.licenses.find(l => l.href === this.dataset.license.href)
     },
-    watch: {
-      licenses() {
-        if (!this.dataset.license) return
-        // Matching object reference, so that the select components works
-        this.dataset.license = this.licenses.find(l => l.href === this.dataset.license.href)
-      },
-      projections() {
-        if (!this.dataset.projection) return
-        // Matching object reference, so that the select components works
-        this.dataset.projection = this.projections.find(l => l.code === this.dataset.projection.code)
-      },
-    },
-    async mounted() {
-      if (this.dataset) {
-        this.$store.dispatch('fetchLicenses', this.dataset.owner)
-        this.$store.dispatch('fetchTopics', this.dataset.owner)
-      }
-      if (this.editProjection) this.$store.dispatch('fetchProjections')
+    projections () {
+      if (!this.dataset.projection) return
+      // Matching object reference, so that the select components works
+      this.dataset.projection = this.projections.find(l => l.code === this.dataset.projection.code)
+    }
+  },
+  async mounted () {
+    if (this.dataset) {
+      this.$store.dispatch('fetchLicenses', this.dataset.owner)
+      this.$store.dispatch('fetchTopics', this.dataset.owner)
+    }
+    if (this.editProjection) this.$store.dispatch('fetchProjections')
 
-      // Ping the data endpoint to check that index is available
-      try {
-        if (!this.dataset.isMetaOnly) {
-          this.data = await this.$axios.$get(this.resourceUrl + '/lines', { params: { size: 0, draft: !!this.dataset.draftReason } })
-        }
-      } catch (err) {
-        // Do nothing, error should be added to the journal
+    // Ping the data endpoint to check that index is available
+    try {
+      if (!this.dataset.isMetaOnly) {
+        this.data = await this.$axios.$get(this.resourceUrl + '/lines', { params: { size: 0, draft: !!this.dataset.draftReason } })
       }
-    },
-    methods: {
-      ...mapActions('dataset', ['patch', 'reindex']),
-    },
+    } catch (err) {
+      // Do nothing, error should be added to the journal
+    }
+  },
+  methods: {
+    ...mapActions('dataset', ['patch', 'reindex'])
   }
+}
 </script>
 
 <style lang="css">

@@ -1,6 +1,9 @@
 <template>
   <v-col>
-    <p v-t="'message'" class="mt-3" />
+    <p
+      v-t="'message'"
+      class="mt-3"
+    />
     <v-form
       ref="form"
       v-model="valid"
@@ -64,36 +67,36 @@ en:
 </i18n>
 
 <script>
-  import { mapState } from 'vuex'
-  import eventBus from '~/event-bus'
+import { mapState } from 'vuex'
+import eventBus from '~/event-bus'
 
-  export default {
-    data: () => ({
-      valid: false,
-      title: '',
-      rest: {
-        history: false,
-      },
-      attachments: false,
-      attachmentsAsImage: false,
-    }),
-    computed: {
-      ...mapState('session', ['user']),
-      ...mapState(['env']),
+export default {
+  data: () => ({
+    valid: false,
+    title: '',
+    rest: {
+      history: false
     },
-    methods: {
-      async validate(e) {
-        if (e) e.preventDefault()
-        if (!this.$refs.form.validate()) return
-        try {
-          const schema = []
-          if (this.attachments) schema.push({ key: 'attachmentPath', type: 'string', title: this.$t('attachment'), 'x-refersTo': 'http://schema.org/DigitalDocument' })
-          const dataset = await this.$axios.$post('api/v1/datasets', { isRest: true, title: this.title, rest: this.rest, schema, attachmentsAsImage: this.attachmentsAsImage })
-          this.$router.push({ path: `/dataset/${dataset.id}` })
-        } catch (error) {
-          eventBus.$emit('notification', { error, msg: this.$t('creationError') })
-        }
-      },
-    },
+    attachments: false,
+    attachmentsAsImage: false
+  }),
+  computed: {
+    ...mapState('session', ['user']),
+    ...mapState(['env'])
+  },
+  methods: {
+    async validate (e) {
+      if (e) e.preventDefault()
+      if (!this.$refs.form.validate()) return
+      try {
+        const schema = []
+        if (this.attachments) schema.push({ key: 'attachmentPath', type: 'string', title: this.$t('attachment'), 'x-refersTo': 'http://schema.org/DigitalDocument' })
+        const dataset = await this.$axios.$post('api/v1/datasets', { isRest: true, title: this.title, rest: this.rest, schema, attachmentsAsImage: this.attachmentsAsImage })
+        this.$router.push({ path: `/dataset/${dataset.id}` })
+      } catch (error) {
+        eventBus.$emit('notification', { error, msg: this.$t('creationError') })
+      }
+    }
   }
+}
 </script>

@@ -5,12 +5,12 @@ export default async ({ store, app, env, $vuetify, route, i18n }) => {
     env: {
       ...env,
       // reconstruct this env var that we used to have but lost when implementing multi-domain exposition
-      publicUrl,
-    },
+      publicUrl
+    }
   })
   store.dispatch('session/init', {
     cookies: app.$cookies,
-    directoryUrl: env.directoryUrl,
+    directoryUrl: env.directoryUrl
   })
 
   // support opening with active account defined in URL

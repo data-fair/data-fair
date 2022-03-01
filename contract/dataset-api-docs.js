@@ -41,8 +41,8 @@ module.exports = (dataset, publicUrl = config.publicUrl) => {
   Pour plus d'information voir la documentation [ElasticSearch](https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-simple-query-string-query.html) correspondante.
     `,
     schema: {
-      type: 'string',
-    },
+      type: 'string'
+    }
   }, {
     in: 'query',
     name: 'q_mode',
@@ -56,8 +56,8 @@ module.exports = (dataset, publicUrl = config.publicUrl) => {
     schema: {
       type: 'string',
       default: 'simple',
-      enum: ['simple', 'complete'],
-    },
+      enum: ['simple', 'complete']
+    }
   }, {
     in: 'query',
     name: 'qs',
@@ -69,8 +69,8 @@ Exemple: ma_colonne:"du texte" AND ma_colonne2:valeur
 Pour plus d'information voir la documentation [ElasticSearch](https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-query-string-query.html) correspondante.
   `,
     schema: {
-      type: 'string',
-    },
+      type: 'string'
+    }
   }]
   if (dataset.bbox && dataset.bbox.length === 4) {
     filterParams.push({
@@ -80,10 +80,10 @@ Pour plus d'information voir la documentation [ElasticSearch](https://www.elasti
       schema: {
         type: 'array',
         items: {
-          type: 'string',
-        },
+          type: 'string'
+        }
       },
-      style: 'commaDelimited',
+      style: 'commaDelimited'
     })
     filterParams.push({
       in: 'query',
@@ -96,10 +96,10 @@ Pour plus d'information voir la documentation [ElasticSearch](https://www.elasti
       schema: {
         type: 'array',
         items: {
-          type: 'string',
-        },
+          type: 'string'
+        }
       },
-      style: 'commaDelimited',
+      style: 'commaDelimited'
     })
     filterParams.push({
       in: 'query',
@@ -114,10 +114,10 @@ Pour plus d'information voir la documentation [ElasticSearch](https://www.elasti
       schema: {
         type: 'array',
         items: {
-          type: 'string',
-        },
+          type: 'string'
+        }
       },
-      style: 'commaDelimited',
+      style: 'commaDelimited'
     })
   }
 
@@ -135,10 +135,10 @@ Exemple: ma_colonne,-ma_colonne2`,
       default: [],
       items: {
         type: 'string',
-        enum: stringValuesProperties.length ? stringValuesProperties.map(p => p.key) : undefined,
-      },
+        enum: stringValuesProperties.length ? stringValuesProperties.map(p => p.key) : undefined
+      }
     },
-    style: 'commaDelimited',
+    style: 'commaDelimited'
   }, {
     in: 'query',
     name: 'size',
@@ -146,8 +146,8 @@ Exemple: ma_colonne,-ma_colonne2`,
     schema: {
       default: defaultSize,
       type: 'integer',
-      maximum: maxSize,
-    },
+      maximum: maxSize
+    }
   }, {
     in: 'query',
     name: 'select',
@@ -157,10 +157,10 @@ Exemple: ma_colonne,-ma_colonne2`,
       type: 'array',
       items: {
         type: 'string',
-        enum: properties.length ? properties.map(p => p.key) : undefined,
-      },
+        enum: properties.length ? properties.map(p => p.key) : undefined
+      }
     },
-    style: 'commaDelimited',
+    style: 'commaDelimited'
   }, {
     in: 'query',
     name: 'thumbnail',
@@ -172,8 +172,8 @@ Pour que ce paramètre soit accepté le concept "Image" doit être associé à u
 La valeur du paramètre est la dimension passée sous la form largeurxhauteur (300x200 par exemple) où un 0 sur la largeur ou la hauteur signifie que l'autre valeur est prise en compte et les proportions conservées.
     `,
     schema: {
-      type: 'string',
-    },
+      type: 'string'
+    }
   }, {
     in: 'query',
     name: 'highlight',
@@ -186,10 +186,10 @@ La valeur est une liste de colonnes séparées par des virgules.
       type: 'array',
       items: {
         type: 'string',
-        enum: textSearchProperties.length ? textSearchProperties.map(p => p.key) : undefined,
-      },
+        enum: textSearchProperties.length ? textSearchProperties.map(p => p.key) : undefined
+      }
     },
-    style: 'commaDelimited',
+    style: 'commaDelimited'
   }, {
     in: 'query',
     name: 'sampling',
@@ -202,8 +202,8 @@ La valeur est une liste de colonnes séparées par des virgules.
     schema: {
       type: 'string',
       enum: ['neighbors', 'max'],
-      default: 'neighbors',
-    },
+      default: 'neighbors'
+    }
   }]
 
   const aggSizeParam = {
@@ -213,8 +213,8 @@ La valeur est une liste de colonnes séparées par des virgules.
     schema: {
       default: 20,
       type: 'integer',
-      maximum: 10000,
-    },
+      maximum: 10000
+    }
   }
 
   const metricParam = {
@@ -223,8 +223,8 @@ La valeur est une liste de colonnes séparées par des virgules.
     description: 'La métrique à appliquer',
     schema: {
       type: 'string',
-      enum: ['avg', 'sum', 'min', 'max'],
-    },
+      enum: ['avg', 'sum', 'min', 'max']
+    }
   }
 
   const metricFieldParam = {
@@ -233,8 +233,8 @@ La valeur est une liste de colonnes séparées par des virgules.
     description: 'La colonne sur lequel effectuer la calcul de métrique',
     schema: {
       type: 'string',
-      enum: numberProperties.length ? numberProperties.map(p => p.key) : undefined,
-    },
+      enum: numberProperties.length ? numberProperties.map(p => p.key) : undefined
+    }
   }
 
   const formatParam = {
@@ -243,8 +243,8 @@ La valeur est une liste de colonnes séparées par des virgules.
     description: 'Le format de la donnée. json par défaut, pbf pour tuiles vectorielles, geojson et wkt pour formats géographiques.',
     schema: {
       default: 'json',
-      enum: ['json'].concat(dataset.bbox && dataset.bbox.length === 4 ? ['pbf', 'geojson', 'wkt'] : []),
-    },
+      enum: ['json'].concat(dataset.bbox && dataset.bbox.length === 4 ? ['pbf', 'geojson', 'wkt'] : [])
+    }
   }
 
   let description = `
@@ -260,7 +260,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
 
   const servers = [{
     url: `${publicUrl}/api/v1/datasets/${dataset.id}`,
-    description: `Jeu de données Data Fair - ${new URL(publicUrl).hostname} - ${dataset.title}`,
+    description: `Jeu de données Data Fair - ${new URL(publicUrl).hostname} - ${dataset.title}`
   }]
 
   const api = {
@@ -270,11 +270,11 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
       description,
       version,
       'x-api-id': `${new URL(publicUrl).hostname.replace(/\./g, '-')}-dataset-${dataset.id}`,
-      ...config.info,
+      ...config.info
     },
     components: {
       securitySchemes: {},
-      schemas: { datasetSchema },
+      schemas: { datasetSchema }
     },
     security: [],
     servers,
@@ -290,12 +290,12 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
               description: 'Les informations du jeu de données.',
               content: {
                 'application/json': {
-                  schema: { $ref: '#/components/schemas/datasetSchema' },
-                },
-              },
-            },
-          },
-        },
+                  schema: { $ref: '#/components/schemas/datasetSchema' }
+                }
+              }
+            }
+          }
+        }
       },
       '/data-files': {
         get: {
@@ -308,12 +308,12 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
               description: 'Le résultat de la requête.',
               content: {
                 'application/json': {
-                  schema: dataFiles,
-                },
-              },
-            },
-          },
-        },
+                  schema: dataFiles
+                }
+              }
+            }
+          }
+        }
       },
       '/lines': {
         get: {
@@ -327,16 +327,16 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
             description: 'Le numéro de la page (indice de la pagination). Débute à 1.',
             schema: {
               default: 1,
-              type: 'integer',
-            },
+              type: 'integer'
+            }
           }, formatParam].concat(filterParams).concat(hitsParams()).concat([{
             in: 'query',
             name: 'collapse',
             description: 'Afficher une ligne de résultat par valeur distince d\'un champ',
             schema: {
-              type: 'string',
+              type: 'string'
               // enum: stringValuesProperties.map(p => p.key), TODO: same thing but can be emptied, supported by openapi viewer ?
-            },
+            }
           }]),
           responses: {
             200: {
@@ -348,20 +348,20 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
                     properties: {
                       total: {
                         type: 'integer',
-                        description: 'Le nombre total de résultat si on ignore la pagination',
+                        description: 'Le nombre total de résultat si on ignore la pagination'
                       },
                       results: {
                         type: 'array',
                         description: 'Le tableau de résultats.',
-                        items: datasetLineSchema,
-                      },
-                    },
-                  },
-                },
-              },
-            },
-          },
-        },
+                        items: datasetLineSchema
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
       },
       '/values_agg': {
         get: {
@@ -376,8 +376,8 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
             required: true,
             schema: {
               type: 'string',
-              enum: stringValuesProperties.length ? stringValuesProperties.map(p => p.key) : undefined,
-            },
+              enum: stringValuesProperties.length ? stringValuesProperties.map(p => p.key) : undefined
+            }
           }, formatParam, metricParam, metricFieldParam, aggSizeParam].concat(filterParams).concat(hitsParams(0, 100)),
           // TODO: document sort param and interval
           responses: {
@@ -386,13 +386,13 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
               content: {
                 'application/json': {
                   schema: {
-                    type: 'object',
-                  },
-                },
-              },
-            },
-          },
-        },
+                    type: 'object'
+                  }
+                }
+              }
+            }
+          }
+        }
       },
       '/values/{field}': {
         get: {
@@ -407,8 +407,8 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
             required: true,
             schema: {
               type: 'string',
-              enum: stringValuesProperties.length ? stringValuesProperties.map(p => p.key) : undefined,
-            },
+              enum: stringValuesProperties.length ? stringValuesProperties.map(p => p.key) : undefined
+            }
           }].concat(filterParams),
           // TODO: document sort param and interval
           responses: {
@@ -417,13 +417,13 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
               content: {
                 'application/json': {
                   schema: {
-                    type: 'array',
-                  },
-                },
-              },
-            },
-          },
-        },
+                    type: 'array'
+                  }
+                }
+              }
+            }
+          }
+        }
       },
       '/metric_agg': {
         get: {
@@ -434,7 +434,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
           parameters: [
             Object.assign({}, metricParam, { required: true }),
             Object.assign({}, metricFieldParam, { required: true }),
-            aggSizeParam,
+            aggSizeParam
           ].concat(filterParams),
           responses: {
             200: {
@@ -442,13 +442,13 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
               content: {
                 'application/json': {
                   schema: {
-                    type: 'object',
-                  },
-                },
-              },
-            },
-          },
-        },
+                    type: 'object'
+                  }
+                }
+              }
+            }
+          }
+        }
       },
       '/words_agg': {
         get: {
@@ -463,8 +463,8 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
             required: true,
             schema: {
               type: 'string',
-              enum: textAggProperties.length ? textAggProperties.map(p => p.key) : undefined,
-            },
+              enum: textAggProperties.length ? textAggProperties.map(p => p.key) : undefined
+            }
           }, {
             in: 'query',
             name: 'analysis',
@@ -472,8 +472,8 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
             schema: {
               type: 'string',
               default: 'lang',
-              enum: ['lang', 'standard'],
-            },
+              enum: ['lang', 'standard']
+            }
           }].concat(filterParams),
           // TODO: document sort param and interval
           responses: {
@@ -482,13 +482,13 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
               content: {
                 'application/json': {
                   schema: {
-                    type: 'object',
-                  },
-                },
-              },
-            },
-          },
-        },
+                    type: 'object'
+                  }
+                }
+              }
+            }
+          }
+        }
       },
       '/raw': {
         get: {
@@ -502,13 +502,13 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
               content: {
                 'text/csv': {
                   schema: {
-                    type: 'string',
-                  },
-                },
-              },
-            },
-          },
-        },
+                    type: 'string'
+                  }
+                }
+              }
+            }
+          }
+        }
       },
       '/full': {
         get: {
@@ -522,13 +522,13 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
               content: {
                 'text/csv': {
                   schema: {
-                    type: 'string',
-                  },
-                },
-              },
-            },
-          },
-        },
+                    type: 'string'
+                  }
+                }
+              }
+            }
+          }
+        }
       },
       '/schema': {
         get: {
@@ -544,9 +544,9 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
               name: 'enum',
               description: 'Restreindre aux colonnes ayant une énumération de valeurs (moins de 50 valeurs distinctes)',
               schema: {
-                type: 'boolean',
-              },
-            },
+                type: 'boolean'
+              }
+            }
           ],
           responses: {
             200: {
@@ -556,14 +556,14 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
                   schema: {
                     type: 'array',
                     items: {
-                      type: 'object',
-                    },
-                  },
-                },
-              },
-            },
-          },
-        },
+                      type: 'object'
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
       },
       '/api-docs.json': {
         get: {
@@ -577,20 +577,20 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
               content: {
                 'application/json': {
                   schema: {
-                    type: 'object',
-                  },
-                },
-              },
-            },
-          },
-        },
+                    type: 'object'
+                  }
+                }
+              }
+            }
+          }
+        }
       },
-      ...masterData.endpoints(dataset),
+      ...masterData.endpoints(dataset)
     },
     externalDocs: {
       description: 'Documentation sur Github',
-      url: 'https://data-fair.github.io',
-    },
+      url: 'https://data-fair.github.io'
+    }
   }
 
   if (dataset.isVirtual || dataset.isRest || dataset.isMetaOnly) {
@@ -630,13 +630,13 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
             content: {
               'application/json': {
                 schema: {
-                  type: 'object',
-                },
-              },
-            },
-          },
-        },
-      },
+                  type: 'object'
+                }
+              }
+            }
+          }
+        }
+      }
     }
   }
   return { api, userApiRate, anonymousApiRate }

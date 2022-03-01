@@ -7,7 +7,7 @@ const findUtils = require('../utils/find')
 
 const router = module.exports = express.Router()
 
-router.get('', asyncWrap(async(req, res) => {
+router.get('', asyncWrap(async (req, res) => {
   const db = req.app.get('db')
   const query = findUtils.query(req, {})
   const size = findUtils.pagination(req.query)[1]
@@ -15,7 +15,7 @@ router.get('', asyncWrap(async(req, res) => {
     db.collection('datasets')
       .find(query).limit(size).sort({ updatedAt: -1 }).project({ id: 1, _id: 0, title: 1, updatedAt: 1 }).toArray(),
     db.collection('applications')
-      .find(query).limit(size).sort({ updatedAt: -1 }).project({ id: 1, _id: 0, title: 1, updatedAt: 1 }).toArray(),
+      .find(query).limit(size).sort({ updatedAt: -1 }).project({ id: 1, _id: 0, title: 1, updatedAt: 1 }).toArray()
   ])
 
   datasets.forEach(d => { d.type = 'dataset' })
@@ -31,6 +31,6 @@ router.get('', asyncWrap(async(req, res) => {
     .slice(0, size)
 
   res.send({
-    results,
+    results
   })
 }))

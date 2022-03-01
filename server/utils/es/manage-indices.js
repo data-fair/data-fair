@@ -21,7 +21,7 @@ exports.indexDefinition = (dataset) => {
   return body
 }
 
-function indexPrefix(dataset) {
+function indexPrefix (dataset) {
   return `${aliasName(dataset)}-${crypto.createHash('sha1').update(dataset.id).digest('hex').slice(0, 12)}`
 }
 
@@ -69,19 +69,19 @@ const indexBase = (dataset) => {
       index: {
         'mapping.total_fields.limit': 3000,
         number_of_shards: nbShards,
-        number_of_replicas: config.elasticsearch.nbReplicas,
+        number_of_replicas: config.elasticsearch.nbReplicas
       },
       analysis: {
         normalizer: {
           // sorting ignores case and diacritics variations
           insensitive_normalizer: {
             type: 'custom',
-            filter: ['lowercase', 'asciifolding'],
-          },
-        },
-      },
+            filter: ['lowercase', 'asciifolding']
+          }
+        }
+      }
     },
-    mappings: { dynamic: 'strict' },
+    mappings: { dynamic: 'strict' }
   }
 }
 
@@ -96,6 +96,6 @@ exports.datasetInfos = async (client, dataset) => {
     aliasName: aliasName(dataset),
     indexPrefix: indexPrefix(dataset),
     indices,
-    alias,
+    alias
   }
 }

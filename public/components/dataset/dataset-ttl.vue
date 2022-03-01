@@ -12,9 +12,9 @@ en:
 </i18n>
 
 <script>
-  export default {
-    props: ['value'],
-  }
+export default {
+  props: ['value']
+}
 </script>
 
 <style lang="css" scoped>

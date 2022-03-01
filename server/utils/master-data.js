@@ -12,11 +12,11 @@ exports.bulkSearchPromise = async (streams, data) => {
     Readable.from([data]),
     ...streams,
     new Writable({
-      write(chunk, encoding, callback) {
+      write (chunk, encoding, callback) {
         buffers.push(chunk)
         callback()
-      },
-    }),
+      }
+    })
   )
   return Buffer.concat(buffers).toString()
 }
@@ -63,12 +63,12 @@ exports.bulkSearchStreams = async (db, es, dataset, contentType, bulkSearchId, s
     ioStream.parser(),
     batchStream(1000),
     new Transform({
-      async transform(lines, encoding, callback) {
+      async transform (lines, encoding, callback) {
         const queries = lines.map(line => ({
           select,
-            sort: bulkSearch.sort,
-            ...paramsBuilder(line),
-            size: 1,
+          sort: bulkSearch.sort,
+          ...paramsBuilder(line),
+          size: 1
         }))
         let esResponse
         try {
@@ -101,8 +101,8 @@ exports.bulkSearchStreams = async (db, es, dataset, contentType, bulkSearchId, s
         }
         callback()
       },
-      objectMode: true,
+      objectMode: true
     }),
-    ioStream.serializer(),
+    ioStream.serializer()
   ]
 }

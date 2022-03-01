@@ -5,7 +5,7 @@ const visibility = require('./visibility')
 
 // Util functions shared accross the main find (GET on collection) endpoints
 
-function queryVal(val) {
+function queryVal (val) {
   if (val === 'true') return true
   if (val === 'false') return false
   return val
@@ -17,7 +17,7 @@ exports.query = (req, fieldsMap, globalMode, extraFilters = []) => {
 
   if (req.query.q) {
     query.$text = {
-      $search: req.query.q,
+      $search: req.query.q
     }
   }
 
@@ -28,7 +28,7 @@ exports.query = (req, fieldsMap, globalMode, extraFilters = []) => {
   Object.assign(fieldsMap, {
     'owner-type': 'owner.type',
     'owner-id': 'owner.id',
-    status: 'status',
+    status: 'status'
   })
   Object.keys(fieldsMap).filter(name => req.query[name] !== undefined).forEach(name => {
     const values = req.query[name].split(',').map(queryVal)
@@ -157,8 +157,8 @@ exports.parametersDoc = (filterFields) => [
     required: false,
     schema: {
       default: 10,
-      type: 'integer',
-    },
+      type: 'integer'
+    }
   },
   {
     in: 'query',
@@ -167,8 +167,8 @@ exports.parametersDoc = (filterFields) => [
     required: false,
     schema: {
       default: 0,
-      type: 'integer',
-    },
+      type: 'integer'
+    }
   },
   {
     in: 'query',
@@ -177,15 +177,15 @@ exports.parametersDoc = (filterFields) => [
     required: false,
     schema: {
       default: 1,
-      type: 'string',
-    },
-  },
+      type: 'string'
+    }
+  }
 ].concat(filterFields.concat([{
   param: 'owner-type',
-  title: 'Type de propriétaire (user ou organization)',
+  title: 'Type de propriétaire (user ou organization)'
 }, {
   param: 'owner-id',
-  title: 'Identifiant du propriétaire',
+  title: 'Identifiant du propriétaire'
 }]))
 
 exports.setResourceLinks = (resource, resourceType, publicUrl = config.publicUrl) => {
@@ -203,17 +203,17 @@ exports.facetsQuery = (req, facetFields = {}, filterFields, nullFacetFields = []
     pipeline.push({
       $match: {
         $text: {
-          $search: req.query.q,
-        },
-      },
+          $search: req.query.q
+        }
+      }
     })
   }
 
   // Apply as early as possible the permissions filter
   pipeline.push({
     $match: {
-      $or: permissions.filter(req.user, req.query.public === 'true', req.query.private === 'true'),
-    },
+      $or: permissions.filter(req.user, req.query.public === 'true', req.query.private === 'true')
+    }
   })
 
   const fields = facetsQueryParam && facetsQueryParam.length && facetsQueryParam.split(',')
@@ -251,8 +251,8 @@ exports.facetsQuery = (req, facetFields = {}, filterFields, nullFacetFields = []
       if (f === 'base-application') {
         facet.push({
           $lookup: {
-            from: 'base-applications', localField: 'url', foreignField: 'url', as: 'base-application',
-          },
+            from: 'base-applications', localField: 'url', foreignField: 'url', as: 'base-application'
+          }
         })
         facet.push({ $unwind: '$base-application' })
         facet.push({ $group: { _id: { [f]: '$base-application', id: '$id' } } })
@@ -260,8 +260,8 @@ exports.facetsQuery = (req, facetFields = {}, filterFields, nullFacetFields = []
         facet.push({
           $unwind: {
             path: '$' + (facetFields[f] || f).split('.').shift(),
-            preserveNullAndEmptyArrays: nullFacetFields.includes(f),
-          },
+            preserveNullAndEmptyArrays: nullFacetFields.includes(f)
+          }
         })
         if (f === 'owner') facet.push({ $project: { 'owner.role': 0 } })
         facet.push({ $group: { _id: { [f]: '$' + (facetFields[f] || f), id: '$id' } } })
@@ -307,8 +307,8 @@ exports.parseFacets = (facets, nullFacetFields = []) => {
           value: {
             url: r._id.url,
             version: r._id.version || (r._id.meta && r._id.meta.version),
-            title: r._id.title || (r._id.meta && r._id.meta.title),
-          },
+            title: r._id.title || (r._id.meta && r._id.meta.title)
+          }
         }))
     } else {
       res[k] = values

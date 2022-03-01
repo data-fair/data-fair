@@ -1,6 +1,12 @@
 <template>
-  <v-list dense class="list-actions">
-    <v-subheader v-if="activity.results.length" class="pl-4">
+  <v-list
+    dense
+    class="list-actions"
+  >
+    <v-subheader
+      v-if="activity.results.length"
+      class="pl-4"
+    >
       ACTIVITÉ
     </v-subheader>
     <v-list-item
@@ -10,10 +16,16 @@
     >
       <v-list-item-content>
         <v-list-item-title>
-          <v-icon v-if="line.type === 'dataset'" small>
+          <v-icon
+            v-if="line.type === 'dataset'"
+            small
+          >
             mdi-database
           </v-icon>
-          <v-icon v-if="line.type === 'application'" small>
+          <v-icon
+            v-if="line.type === 'application'"
+            small
+          >
             mdi-image-multiple
           </v-icon>
           &nbsp;{{ line.title }}
@@ -27,11 +39,11 @@
 </template>
 
 <script>
-  export default {
-    props: {
-      activity: { type: Object },
-    },
+export default {
+  props: {
+    activity: { type: Object, required: true }
   }
+}
 </script>
 
 <style lang="css" scoped>

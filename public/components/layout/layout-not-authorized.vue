@@ -3,7 +3,10 @@
     <v-container class="fill-height">
       <v-row align="center">
         <v-col class="text-center">
-          <div v-t="'noAuthorized'" class="text-h6" />
+          <div
+            v-t="'noAuthorized'"
+            class="text-h6"
+          />
         </v-col>
       </v-row>
     </v-container>
@@ -18,7 +21,7 @@ en:
 </i18n>
 
 <script>
-  export default { }
+export default { }
 </script>
 
 <style lang="css" scoped>

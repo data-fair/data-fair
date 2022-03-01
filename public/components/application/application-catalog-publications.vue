@@ -2,7 +2,10 @@
   <v-container fluid>
     <p v-t="'message'" />
 
-    <p v-if="!application.publications.length" v-t="'noPublication'" />
+    <p
+      v-if="!application.publications.length"
+      v-t="'noPublication'"
+    />
 
     <v-btn
       v-if="can('writeDescription')"
@@ -36,10 +39,19 @@
           >
             {{ publication.error }}
           </v-list-item-subtitle>
-          <v-list-item-subtitle v-else-if="publication.status==='deleted'" v-t="'waitingDeletion'" />
-          <v-list-item-subtitle v-else v-t="'waitingPublication'" />
+          <v-list-item-subtitle
+            v-else-if="publication.status==='deleted'"
+            v-t="'waitingDeletion'"
+          />
+          <v-list-item-subtitle
+            v-else
+            v-t="'waitingPublication'"
+          />
         </v-list-item-content>
-        <v-list-item-content v-else v-t="{path: 'unknownCatalog', args: {catalog: publication.catalog}}" />
+        <v-list-item-content
+          v-else
+          v-t="{path: 'unknownCatalog', args: {catalog: publication.catalog}}"
+        />
         <v-list-item-action>
           <v-row>
             <v-btn
@@ -71,7 +83,10 @@
       max-width="700px"
     >
       <v-card outlined>
-        <v-card-title v-t="'addPublication'" primary-title />
+        <v-card-title
+          v-t="'addPublication'"
+          primary-title
+        />
         <v-card-text v-if="catalogs">
           <v-form v-model="newPublicationValid">
             <v-select
@@ -107,8 +122,14 @@
       v-model="showDeleteDialog"
       max-width="500"
     >
-      <v-card v-if="showDeleteDialog" outlined>
-        <v-card-title v-t="'deletePublication'" primary-title />
+      <v-card
+        v-if="showDeleteDialog"
+        outlined
+      >
+        <v-card-title
+          v-t="'deletePublication'"
+          primary-title
+        />
         <v-card-text v-html="$t('deletionMessage')" />
         <v-card-actions>
           <v-spacer />
@@ -126,9 +147,18 @@
       </v-card>
     </v-dialog>
 
-    <v-dialog v-model="showRepublishDialog" max-width="500">
-      <v-card v-if="showRepublishDialog" outlined>
-        <v-card-title v-t="'republish'" primary-title />
+    <v-dialog
+      v-model="showRepublishDialog"
+      max-width="500"
+    >
+      <v-card
+        v-if="showRepublishDialog"
+        outlined
+      >
+        <v-card-title
+          v-t="'republish'"
+          primary-title
+        />
         <v-card-text v-html="$t('republishMessage')" />
         <v-card-actions>
           <v-spacer />
@@ -190,68 +220,68 @@ en:
 </i18n>
 
 <script>
-  import { mapState, mapGetters, mapActions } from 'vuex'
-  import eventBus from '~/event-bus'
+import { mapState, mapGetters, mapActions } from 'vuex'
+import eventBus from '~/event-bus'
 
-  export default {
-    data() {
-      return {
-        addPublicationDialog: false,
-        newPublicationValid: false,
-        newPublication: {
-          catalog: null,
-          status: 'waiting',
-        },
-        deletePublicationInd: null,
-        showDeleteDialog: false,
-        rePublishInd: null,
-        showRepublishDialog: false,
-        catalogs: [],
-      }
+export default {
+  data () {
+    return {
+      addPublicationDialog: false,
+      newPublicationValid: false,
+      newPublication: {
+        catalog: null,
+        status: 'waiting'
+      },
+      deletePublicationInd: null,
+      showDeleteDialog: false,
+      rePublishInd: null,
+      showRepublishDialog: false,
+      catalogs: []
+    }
+  },
+  computed: {
+    ...mapState(['env']),
+    ...mapState('application', ['application']),
+    ...mapGetters('application', ['can', 'journalChannel']),
+    catalogsById () {
+      return this.catalogs.reduce((a, c) => { a[c.id] = c; return a }, {})
+    }
+  },
+  async created () {
+    const params = { owner: this.application.owner.type + ':' + this.application.owner.id }
+    this.catalogs = (await this.$axios.$get('api/v1/catalogs', { params })).results
+    eventBus.$on(this.journalChannel, this.onJournalEvent)
+  },
+  async destroyed () {
+    eventBus.$off(this.journalChannel, this.onJournalEvent)
+  },
+  methods: {
+    ...mapActions('application', ['patch', 'fetchInfo']),
+    onJournalEvent (event) {
+      if (event.type === 'publication') this.fetchInfo()
     },
-    computed: {
-      ...mapState(['env']),
-      ...mapState('application', ['application']),
-      ...mapGetters('application', ['can', 'journalChannel']),
-      catalogsById() {
-        return this.catalogs.reduce((a, c) => { a[c.id] = c; return a }, {})
-      },
+    addPublication (publication) {
+      this.application.publications.push(publication)
+      this.patch({ publications: this.application.publications })
     },
-    async created() {
-      const params = { owner: this.application.owner.type + ':' + this.application.owner.id }
-      this.catalogs = (await this.$axios.$get('api/v1/catalogs', { params })).results
-      eventBus.$on(this.journalChannel, this.onJournalEvent)
+    deletePublication (publicationInd) {
+      const publication = this.application.publications[publicationInd]
+      publication.status = 'deleted'
+      this.patch({ publications: this.application.publications })
     },
-    async destroyed() {
-      eventBus.$off(this.journalChannel, this.onJournalEvent)
+    rePublish (publicationInd) {
+      const publication = this.application.publications[publicationInd]
+      publication.status = 'waiting'
+      this.patch({ publications: this.application.publications })
     },
-    methods: {
-      ...mapActions('application', ['patch', 'fetchInfo']),
-      onJournalEvent(event) {
-        if (event.type === 'publication') this.fetchInfo()
-      },
-      addPublication(publication) {
-        this.application.publications.push(publication)
-        this.patch({ publications: this.application.publications })
-      },
-      deletePublication(publicationInd) {
-        const publication = this.application.publications[publicationInd]
-        publication.status = 'deleted'
-        this.patch({ publications: this.application.publications })
-      },
-      rePublish(publicationInd) {
-        const publication = this.application.publications[publicationInd]
-        publication.status = 'waiting'
-        this.patch({ publications: this.application.publications })
-      },
-      catalogLabel(catalog) {
-        if (!catalog) return 'catalogue inconnu'
-        let label = `${catalog.title} - ${catalog.url}`
-        if (catalog.organization && catalog.organization.id) label += ` (${catalog.organization.name})`
-        return label
-      },
-    },
+    catalogLabel (catalog) {
+      if (!catalog) return 'catalogue inconnu'
+      let label = `${catalog.title} - ${catalog.url}`
+      if (catalog.organization && catalog.organization.id) label += ` (${catalog.organization.name})`
+      return label
+    }
   }
+}
 
 </script>
 

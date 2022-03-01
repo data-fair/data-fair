@@ -8,21 +8,21 @@
 </template>
 
 <script>
-  export default {
-    layout: 'embed',
-    mounted() {
-      console.log('extra1')
-      if (this.$route.query.to && this.$route.query.to !== this.$route.path) {
-        return this.$router.replace(this.$route.query.to)
-      }
-      parent.postMessage({ to: this.$route.path })
-      parent.postMessage({
-        breadcrumbs: [{
-          text: 'Extra page',
-        }],
-      })
-    },
+export default {
+  layout: 'embed',
+  mounted () {
+    console.log('extra1')
+    if (this.$route.query.to && this.$route.query.to !== this.$route.path) {
+      return this.$router.replace(this.$route.query.to)
+    }
+    parent.postMessage({ to: this.$route.path })
+    parent.postMessage({
+      breadcrumbs: [{
+        text: 'Extra page'
+      }]
+    })
   }
+}
 </script>
 
 <style lang="css" scoped>

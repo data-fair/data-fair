@@ -1,7 +1,13 @@
 <template>
   <v-col>
-    <p v-t="'message'" class="mt-3" />
-    <v-form ref="form" v-model="valid">
+    <p
+      v-t="'message'"
+      class="mt-3"
+    />
+    <v-form
+      ref="form"
+      v-model="valid"
+    >
       <v-text-field
         v-model="title"
         :required="true"
@@ -37,33 +43,33 @@ en:
 </i18n>
 
 <script>
-  import { mapState } from 'vuex'
-  import eventBus from '~/event-bus'
+import { mapState } from 'vuex'
+import eventBus from '~/event-bus'
 
-  export default {
-    data: () => ({
-      valid: false,
-      title: '',
-      rest: {
-        history: false,
-      },
-      attachments: false,
-      attachmentsAsImage: false,
-    }),
-    computed: {
-      ...mapState('session', ['user']),
-      ...mapState(['env']),
+export default {
+  data: () => ({
+    valid: false,
+    title: '',
+    rest: {
+      history: false
     },
-    methods: {
-      async validate() {
-        if (!this.$refs.form.validate()) return
-        try {
-          const dataset = await this.$axios.$post('api/v1/datasets', { isMetaOnly: true, title: this.title })
-          this.$router.push({ path: `/dataset/${dataset.id}` })
-        } catch (error) {
-          eventBus.$emit('notification', { error, msg: this.$t('creationError') })
-        }
-      },
-    },
+    attachments: false,
+    attachmentsAsImage: false
+  }),
+  computed: {
+    ...mapState('session', ['user']),
+    ...mapState(['env'])
+  },
+  methods: {
+    async validate () {
+      if (!this.$refs.form.validate()) return
+      try {
+        const dataset = await this.$axios.$post('api/v1/datasets', { isMetaOnly: true, title: this.title })
+        this.$router.push({ path: `/dataset/${dataset.id}` })
+      } catch (error) {
+        eventBus.$emit('notification', { error, msg: this.$t('creationError') })
+      }
+    }
   }
+}
 </script>

@@ -17,7 +17,7 @@ const tasks = exports.tasks = {
   datasetPublisher: require('./dataset-publisher'),
   ttlManager: require('./ttl-manager'),
   restExporterCSV: require('./rest-exporter-csv'),
-  applicationPublisher: require('./application-publisher'),
+  applicationPublisher: require('./application-publisher')
 }
 
 // resolve functions that will be filled when we will be asked to stop the workers
@@ -132,12 +132,12 @@ const typesFilters = () => ({
       { status: 'finalized', count: { $gt: 0 }, isRest: true, 'rest.ttl.active': true, 'rest.ttl.checkedAt': { $lt: moment().subtract(1, 'hours').toISOString() } },
       { status: 'finalized', count: { $gt: 0 }, isRest: true, 'rest.ttl.active': true, 'rest.ttl.checkedAt': { $exists: false } },
       // fetch rest datasets with an automatic export to do
-      { status: 'finalized', isRest: true, 'exports.restToCSV.active': true, 'exports.restToCSV.nextExport': { $lt: moment().toISOString() } },
-    ],
-  },
+      { status: 'finalized', isRest: true, 'exports.restToCSV.active': true, 'exports.restToCSV.nextExport': { $lt: moment().toISOString() } }
+    ]
+  }
 })
 
-async function iter(app, resource, type) {
+async function iter (app, resource, type) {
   const db = app.get('db')
   let taskKey
   let stderr = ''
@@ -183,7 +183,7 @@ async function iter(app, resource, type) {
           taskKey = 'indexer'
         }
       } else if (resource.status === 'extended') {
-          taskKey = 'indexer'
+        taskKey = 'indexer'
       } else if (resource.status === 'indexed') {
         // finalization covers some metadata enrichment, schema cleanup, etc.
         // either extended or there are no extensions to perform
@@ -269,7 +269,7 @@ async function iter(app, resource, type) {
   }
 }
 
-async function acquireNext(db, type, filter) {
+async function acquireNext (db, type, filter) {
   // Random sort prevents from insisting on the same failed dataset again and again
   const cursor = db.collection(type + 's').aggregate([{ $match: filter }, { $sample: { size: 100 } }])
   while (await cursor.hasNext()) {

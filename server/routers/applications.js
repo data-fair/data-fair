@@ -30,7 +30,7 @@ const cacheHeaders = require('../utils/cache-headers')
 
 const router = module.exports = express.Router()
 
-function clean(application, publicUrl) {
+function clean (application, publicUrl) {
   application.public = permissions.isPublic('applications', application)
   application.visibility = visibilityUtils.visibility(application)
 
@@ -43,7 +43,7 @@ function clean(application, publicUrl) {
 }
 
 // Get the list of applications
-router.get('', cacheHeaders.noCache, asyncWrap(async(req, res) => {
+router.get('', cacheHeaders.noCache, asyncWrap(async (req, res) => {
   const applications = req.app.get('db').collection('applications')
 
   if (req.query.dataset &&
@@ -61,23 +61,23 @@ router.get('', cacheHeaders.noCache, asyncWrap(async(req, res) => {
     'base-application': 'url',
     dataset: 'configuration.datasets.href',
     topics: 'topics.id',
-    publicationSites: 'publicationSites',
+    publicationSites: 'publicationSites'
   }
   const facetFields = {
     ...filterFields,
-    topics: 'topics',
+    topics: 'topics'
   }
   const nullFacetFields = ['publicationSites']
   const query = findUtils.query(req, Object.assign({
     ids: 'id',
-    id: 'id',
+    id: 'id'
   }, filterFields))
   const sort = findUtils.sort(req.query.sort)
   const project = findUtils.project(req.query.select, ['configuration', 'configurationDraft'])
   const [skip, size] = findUtils.pagination(req.query)
   const mongoQueries = [
     size > 0 ? applications.find(query).collation({ locale: 'en' }).limit(size).skip(skip).sort(sort).project(project).toArray() : Promise.resolve([]),
-    applications.countDocuments(query),
+    applications.countDocuments(query)
   ]
   if (req.query.facets) {
     mongoQueries.push(applications.aggregate(findUtils.facetsQuery(req, facetFields, filterFields, nullFacetFields)).toArray())
@@ -102,7 +102,7 @@ const initNew = (req) => {
 }
 
 // Create an application configuration
-router.post('', asyncWrap(async(req, res) => {
+router.post('', asyncWrap(async (req, res) => {
   const application = initNew(req)
   if (!permissions.canDoForOwner(application.owner, 'applications', 'post', req.user)) return res.status(403).send()
   if (!validate(application)) return res.status(400).send(validate.errors)
@@ -131,7 +131,7 @@ router.post('', asyncWrap(async(req, res) => {
 }))
 
 // Shared middleware
-const readApplication = asyncWrap(async(req, res, next) => {
+const readApplication = asyncWrap(async (req, res, next) => {
   req.application = req.resource = await req.app.get('db').collection('applications')
     .findOne({ id: req.params.applicationId }, { projection: { _id: 0 } })
   if (!req.application) return res.status(404).send(req.__('errors.missingApp'))
@@ -148,7 +148,7 @@ router.get('/:applicationId', readApplication, permissions.middleware('readDescr
 })
 
 // PUT used to create or update
-const attemptInsert = asyncWrap(async(req, res, next) => {
+const attemptInsert = asyncWrap(async (req, res, next) => {
   const newApplication = initNew(req)
   newApplication.id = req.params.applicationId
   if (!validate(newApplication)) return res.status(400).send(validate.errors)
@@ -165,7 +165,7 @@ const attemptInsert = asyncWrap(async(req, res, next) => {
   }
   next()
 })
-router.put('/:applicationId', attemptInsert, readApplication, permissions.middleware('writeDescription', 'write'), asyncWrap(async(req, res) => {
+router.put('/:applicationId', attemptInsert, readApplication, permissions.middleware('writeDescription', 'write'), asyncWrap(async (req, res) => {
   const newApplication = req.body
   // preserve all readonly properties, the rest is overwritten
   Object.keys(req.application).forEach(key => {
@@ -181,9 +181,9 @@ router.put('/:applicationId', attemptInsert, readApplication, permissions.middle
 }))
 
 // Update an application configuration
-router.patch('/:applicationId', readApplication, permissions.middleware('writeDescription', 'write'), asyncWrap(async(req, res) => {
+router.patch('/:applicationId', readApplication, permissions.middleware('writeDescription', 'write'), asyncWrap(async (req, res) => {
   const patch = req.body
-  var valid = validatePatch(patch)
+  const valid = validatePatch(patch)
   if (!valid) return res.status(400).send(validatePatch.errors)
 
   // Retry previously failed publications
@@ -204,7 +204,7 @@ router.patch('/:applicationId', readApplication, permissions.middleware('writeDe
 }))
 
 // Change ownership of an application
-router.put('/:applicationId/owner', readApplication, permissions.middleware('delete', 'admin'), asyncWrap(async(req, res) => {
+router.put('/:applicationId/owner', readApplication, permissions.middleware('delete', 'admin'), asyncWrap(async (req, res) => {
   // Must be able to delete the current application, and to create a new one for the new owner to proceed
   if (!permissions.canDoForOwner(req.body, 'applications', 'post', req.user)) return res.sendStatus(403)
   const patchedApp = (await req.app.get('db').collection('applications')
@@ -213,7 +213,7 @@ router.put('/:applicationId/owner', readApplication, permissions.middleware('del
 }))
 
 // Delete an application configuration
-router.delete('/:applicationId', readApplication, permissions.middleware('delete', 'admin'), asyncWrap(async(req, res) => {
+router.delete('/:applicationId', readApplication, permissions.middleware('delete', 'admin'), asyncWrap(async (req, res) => {
   await req.app.get('db').collection('applications').deleteOne({ id: req.params.applicationId })
   await req.app.get('db').collection('journals').deleteOne({ type: 'application', id: req.params.applicationId })
   await req.app.get('db').collection('applications-keys').deleteOne({ _id: req.application.id })
@@ -232,23 +232,23 @@ router.get('/:applicationId/config', readApplication, permissions.middleware('re
 router.get('/:applicationId/configuration', readApplication, permissions.middleware('readConfig', 'read'), cacheHeaders.resourceBased, getConfig)
 
 // Update only the configuration part of the application
-const writeConfig = asyncWrap(async(req, res) => {
+const writeConfig = asyncWrap(async (req, res) => {
   const valid = validateConfiguration(req.body)
   if (!valid) return res.status(400).send(validateConfiguration.errors)
   await req.app.get('db').collection('applications').updateOne(
     { id: req.params.applicationId },
     {
       $unset: {
-        errorMessage: '',
+        errorMessage: ''
       },
       $set: {
         configuration: req.body,
         updatedAt: moment().toISOString(),
         updatedBy: { id: req.user.id, name: req.user.name },
         lastConfigured: moment().toISOString(),
-        status: 'configured',
-      },
-    },
+        status: 'configured'
+      }
+    }
   )
   await journals.log(req.app, req.application, { type: 'config-updated' }, 'application')
   capture.screenshot(req)
@@ -268,15 +268,15 @@ router.put('/:applicationId/configuration-draft', readApplication, permissions.m
     { id: req.params.applicationId },
     {
       $unset: {
-        errorMessageDraft: '',
+        errorMessageDraft: ''
       },
       $set: {
         configurationDraft: req.body,
         updatedAt: moment().toISOString(),
         updatedBy: { id: req.user.id, name: req.user.name },
-        status: 'configured-draft',
-      },
-    },
+        status: 'configured-draft'
+      }
+    }
   )
   await journals.log(req.app, req.application, { type: 'config-draft-updated' }, 'application')
   res.status(200).json(req.body)
@@ -287,14 +287,14 @@ router.delete('/:applicationId/configuration-draft', readApplication, permission
     {
       $unset: {
         configurationDraft: '',
-        errorMessageDraft: '',
+        errorMessageDraft: ''
       },
       $set: {
         updatedAt: moment().toISOString(),
         updatedBy: { id: req.user.id, name: req.user.name },
-        status: req.application.configuration ? 'configured' : 'created',
-      },
-    },
+        status: req.application.configuration ? 'configured' : 'created'
+      }
+    }
   )
   await journals.log(req.app, req.application, { type: 'config-draft-cancelled' }, 'application')
   res.status(200).json(req.body)
@@ -316,10 +316,10 @@ router.get('/:applicationId/status', readApplication, permissions.middleware('re
   res.send(req.application.status)
 })
 
-router.get('/:applicationId/journal', readApplication, permissions.middleware('readJournal', 'read'), cacheHeaders.noCache, asyncWrap(async(req, res) => {
+router.get('/:applicationId/journal', readApplication, permissions.middleware('readJournal', 'read'), cacheHeaders.noCache, asyncWrap(async (req, res) => {
   const journal = await req.app.get('db').collection('journals').findOne({
     type: 'application',
-    id: req.params.applicationId,
+    id: req.params.applicationId
   })
   if (!journal) return res.send([])
   delete journal.owner
@@ -328,7 +328,7 @@ router.get('/:applicationId/journal', readApplication, permissions.middleware('r
 }))
 
 // Used by applications to declare an error
-router.post('/:applicationId/error', readApplication, permissions.middleware('writeConfig', 'write'), cacheHeaders.noCache, asyncWrap(async(req, res) => {
+router.post('/:applicationId/error', readApplication, permissions.middleware('writeConfig', 'write'), cacheHeaders.noCache, asyncWrap(async (req, res) => {
   if (!req.body.message) return res.status(400).send('Attribut "message" obligatoire')
 
   const referer = req.headers.referer || req.headers.referrer
@@ -347,7 +347,7 @@ router.post('/:applicationId/error', readApplication, permissions.middleware('wr
   res.status(204).send()
 }))
 
-router.get('/:applicationId/capture', readApplication, permissions.middleware('readConfig', 'read'), cacheHeaders.resourceBased, asyncWrap(async(req, res) => {
+router.get('/:applicationId/capture', readApplication, permissions.middleware('readConfig', 'read'), cacheHeaders.resourceBased, asyncWrap(async (req, res) => {
   const capturePath = await capture.path(req.application)
   if (await fs.pathExists(capturePath)) {
     res.sendFile(capturePath)
@@ -357,11 +357,11 @@ router.get('/:applicationId/capture', readApplication, permissions.middleware('r
 }))
 
 // keys for readonly access to application
-router.get('/:applicationId/keys', readApplication, permissions.middleware('getKeys', 'admin'), cacheHeaders.resourceBased, asyncWrap(async(req, res) => {
+router.get('/:applicationId/keys', readApplication, permissions.middleware('getKeys', 'admin'), cacheHeaders.resourceBased, asyncWrap(async (req, res) => {
   const applicationKeys = await req.app.get('db').collection('applications-keys').findOne({ _id: req.application.id })
   res.send((applicationKeys && applicationKeys.keys) || [])
 }))
-router.post('/:applicationId/keys', readApplication, permissions.middleware('setKeys', 'admin'), cacheHeaders.resourceBased, asyncWrap(async(req, res) => {
+router.post('/:applicationId/keys', readApplication, permissions.middleware('setKeys', 'admin'), cacheHeaders.resourceBased, asyncWrap(async (req, res) => {
   const valid = validateKeys(req.body)
   if (!valid) return res.status(400).send(validateKeys.errors)
   req.body.forEach((key) => {

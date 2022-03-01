@@ -22,7 +22,7 @@ exports.trigger = async (db, type, resource, event) => {
     // body: event.data || '',
     body: event.body || resource.title || resource.id,
     urlParams: { id: resource.id },
-    visibility: permissions.isPublic(type + 's', resource) ? 'public' : 'private',
+    visibility: permissions.isPublic(type + 's', resource) ? 'public' : 'private'
   }
   if (event.data) notif.body += ' - ' + event.data
   notifications.send(notif)
@@ -42,7 +42,7 @@ exports.trigger = async (db, type, resource, event) => {
         await axios.post(webhook.target.params.url, {
           text,
           href,
-          event: event.type,
+          event: event.type
         })
       }
     } catch (err) {

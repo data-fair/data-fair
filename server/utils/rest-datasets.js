@@ -21,7 +21,7 @@ const esUtils = require('../utils/es')
 
 const actions = ['create', 'update', 'patch', 'delete']
 
-function cleanLine(line) {
+function cleanLine (line) {
   delete line._needsIndexing
   delete line._deleted
   delete line._action
@@ -59,11 +59,11 @@ const padI = (i) => {
 }
 
 exports.uploadAttachment = multer({
-  storage: multer.diskStorage({ destination, filename }),
+  storage: multer.diskStorage({ destination, filename })
 }).single('attachment')
 
 exports.uploadBulk = multer({
-  storage: multer.diskStorage({ destination, filename }),
+  storage: multer.diskStorage({ destination, filename })
 }).fields([{ name: 'attachments', maxCount: 1 }, { name: 'actions', maxCount: 1 }])
 
 exports.collection = (db, dataset) => {
@@ -85,14 +85,14 @@ exports.initDataset = async (db, dataset) => {
   const revisionsCollection = exports.revisionsCollection(db, dataset)
   await Promise.all([
     collection.createIndex({ _needsIndexing: 1 }),
-    revisionsCollection.createIndex({ _lineId: 1, _updatedAt: -1 }, { unique: true }),
+    revisionsCollection.createIndex({ _lineId: 1, _updatedAt: -1 }, { unique: true })
   ])
 }
 
 exports.deleteDataset = async (db, dataset) => {
   await Promise.all([
     exports.collection(db, dataset).drop(),
-    exports.revisionsCollection(db, dataset).drop(),
+    exports.revisionsCollection(db, dataset).drop()
   ])
 }
 
@@ -112,9 +112,9 @@ const applyTransactions = async (req, transacs, validate) => {
   const revisionsCollection = exports.revisionsCollection(db, dataset)
   const history = dataset.rest && dataset.rest.history
   const patchProjection = dataset.schema
-          .filter(f => !f['x-calculated'])
-          .filter(f => !f['x-extension'])
-          .reduce((a, p) => { a[p.key] = 1; return a }, {})
+    .filter(f => !f['x-calculated'])
+    .filter(f => !f['x-extension'])
+    .reduce((a, p) => { a[p.key] = 1; return a }, {})
   const results = []
 
   const bulkOp = collection.initializeUnorderedBulkOp()
@@ -216,14 +216,14 @@ const applyTransactions = async (req, transacs, validate) => {
 }
 
 class TransactionStream extends Writable {
-  constructor(options) {
+  constructor (options) {
     super({ objectMode: true })
     this.options = options
     this.i = 0
     this.transactions = []
   }
 
-  async _applyTransactions() {
+  async _applyTransactions () {
     const { results, bulkOpResult } = await applyTransactions(this.options.req, this.transactions, this.options.validate)
     this.transactions = []
     if (bulkOpResult) {
@@ -248,7 +248,7 @@ class TransactionStream extends Writable {
     this.emit('batch')
   }
 
-  async _write(chunk, encoding, cb) {
+  async _write (chunk, encoding, cb) {
     try {
       chunk._action = chunk._action || (chunk._id ? 'update' : 'create')
       delete chunk._i
@@ -265,7 +265,7 @@ class TransactionStream extends Writable {
     cb()
   }
 
-  _final(cb) {
+  _final (cb) {
     // use then syntax cf https://github.com/nodejs/node/issues/39535
     this._applyTransactions().then(() => cb(), cb)
   }
@@ -278,7 +278,7 @@ const compileSchema = (dataset) => {
   return ajv.compile(schema)
 }
 
-async function manageAttachment(req, keepExisting) {
+async function manageAttachment (req, keepExisting) {
   if (req.is('multipart/form-data')) {
     // When taken from form-data everything is string.. convert to actual types
     req.dataset.schema
@@ -423,7 +423,7 @@ exports.bulkLines = async (req, res, next) => {
       inputStream,
       stripBom(),
       ...parseStreams,
-      transactionStream,
+      transactionStream
     )
     await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { status: 'updated' } })
   } catch (err) {
@@ -453,7 +453,7 @@ exports.readLineRevisions = async (req, res, next) => {
   const [skip, size] = findUtils.pagination(req.query)
   const [total, results] = await Promise.all([
     revisionsCollection.countDocuments(filter),
-    revisionsCollection.find(filter).sort({ _updatedAt: -1 }).skip(skip).limit(size).toArray(),
+    revisionsCollection.find(filter).sort({ _updatedAt: -1 }).skip(skip).limit(size).toArray()
   ])
   results.forEach(r => {
     r._id = r._lineId
@@ -475,13 +475,13 @@ exports.readStreams = async (db, dataset, onlyUpdated, progress) => {
     collection.find(filter).batchSize(100).stream(),
     new Transform({
       objectMode: true,
-      async transform(chunk, encoding, cb) {
+      async transform (chunk, encoding, cb) {
         if (progress) progress(inc)
         // now _i should always be defined, but keep the OR for retro-compatibility
         chunk._i = chunk._i || chunk._updatedAt.getTime()
         cb(null, chunk)
-      },
-    }),
+      }
+    })
   ]
 }
 
@@ -489,14 +489,14 @@ exports.writeExtendedStreams = (db, dataset) => {
   const collection = exports.collection(db, dataset)
   return [new Writable({
     objectMode: true,
-    async write(item, encoding, cb) {
+    async write (item, encoding, cb) {
       try {
         await collection.replaceOne({ _id: item._id }, item)
         cb()
       } catch (err) {
         cb(err)
       }
-    },
+    }
   })]
 }
 
@@ -504,7 +504,7 @@ exports.markIndexedStream = (db, dataset) => {
   const collection = exports.collection(db, dataset)
   return new Writable({
     objectMode: true,
-    async write(chunk, encoding, cb) {
+    async write (chunk, encoding, cb) {
       try {
         this.i = this.i || 0
         this.bulkOp = this.bulkOp || collection.initializeUnorderedBulkOp()
@@ -529,14 +529,14 @@ exports.markIndexedStream = (db, dataset) => {
         cb(err)
       }
     },
-    async final(cb) {
+    async final (cb) {
       try {
         if (this.i) await this.bulkOp.execute()
         cb()
       } catch (err) {
         cb(err)
       }
-    },
+    }
   })
 }
 
@@ -553,7 +553,7 @@ exports.applyTTL = async (app, dataset) => {
   await pump(
     new Readable({
       objectMode: true,
-      async read() {
+      async read () {
         if (this.reading) return
         this.reading = true
         try {
@@ -563,10 +563,10 @@ exports.applyTTL = async (app, dataset) => {
             size: 1,
             body: {
               query: {
-                query_string: { query },
+                query_string: { query }
               },
-              _source: false,
-            },
+              _source: false
+            }
           })
           while (body.hits.hits.length) {
             body.hits.hits.forEach(hit => this.push(hit))
@@ -576,15 +576,15 @@ exports.applyTTL = async (app, dataset) => {
         } catch (err) {
           this.emit('error', err)
         }
-      },
+      }
     }),
     new Transform({
       objectMode: true,
-      async transform(hit, encoding, callback) {
+      async transform (hit, encoding, callback) {
         return callback(null, { _action: 'delete', _id: hit._id })
-      },
+      }
     }),
-    new TransactionStream({ req: { app, dataset }, summary }),
+    new TransactionStream({ req: { app, dataset }, summary })
   )
   const patch = { 'rest.ttl.checkedAt': new Date().toISOString() }
   if (summary.nbOk) patch.status = 'updated'

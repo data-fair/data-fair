@@ -1,5 +1,8 @@
 <template>
-  <v-container fluid class="px-0">
+  <v-container
+    fluid
+    class="px-0"
+  >
     <dataset-list v-if="user" />
     <!-- Anonymous: show jumbotron -->
     <v-col
@@ -53,27 +56,27 @@ en:
 </i18n>
 
 <script>
-  import { mapState, mapActions, mapGetters } from 'vuex'
+import { mapState, mapActions, mapGetters } from 'vuex'
 
-  export default {
-    data: () => ({
-      dataSvg: require('~/assets/svg/Data Arranging_Two Color.svg?raw'),
-    }),
-    computed: {
-      ...mapState(['env']),
-      ...mapState('session', ['user', 'initialized']),
-      ...mapGetters(['canContrib']),
-      ...mapGetters('session', ['activeAccount']),
-    },
-    created() {
-      this.fetchVocabulary()
-      if (this.activeAccount) {
-        this.fetchPublicationSites(this.activeAccount)
-      }
-    },
-    methods: {
-      ...mapActions('session', ['login']),
-      ...mapActions(['fetchVocabulary', 'fetchPublicationSites']),
-    },
+export default {
+  data: () => ({
+    dataSvg: require('~/assets/svg/Data Arranging_Two Color.svg?raw')
+  }),
+  computed: {
+    ...mapState(['env']),
+    ...mapState('session', ['user', 'initialized']),
+    ...mapGetters(['canContrib']),
+    ...mapGetters('session', ['activeAccount'])
+  },
+  created () {
+    this.fetchVocabulary()
+    if (this.activeAccount) {
+      this.fetchPublicationSites(this.activeAccount)
+    }
+  },
+  methods: {
+    ...mapActions('session', ['login']),
+    ...mapActions(['fetchVocabulary', 'fetchPublicationSites'])
   }
+}
 </script>

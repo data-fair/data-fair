@@ -1,5 +1,5 @@
 
-export function filter2qs(filter, locale = 'fr') {
+export function filter2qs (filter, locale = 'fr') {
   const key = escape(filter.field.key)
 
   if (!filter.type || filter.type === 'in') {
@@ -16,16 +16,16 @@ export function filter2qs(filter, locale = 'fr') {
   } else if (filter.type === 'starts') {
     if ([null, undefined, ''].includes(filter.value)) return null
     if (filter.value.includes(',')) {
-    throw new Error({
-      fr: 'vous ne pouvez pas appliquer un filtre "commence par" contenant une virgule',
-      en: 'You cannot use a filter "startsWith" containing a comma',
-    }[locale])
-}
+      throw new Error({
+        fr: 'vous ne pouvez pas appliquer un filtre "commence par" contenant une virgule',
+        en: 'You cannot use a filter "startsWith" containing a comma'
+      }[locale])
+    }
     return `${key}:${escape(filter.value)}*`
   }
 }
 
-export function filters2qs(filters, locale = 'fr') {
+export function filters2qs (filters, locale = 'fr') {
   return filters
     .filter(f => !!f)
     .map(filter2qs)
@@ -62,7 +62,7 @@ const escape = (val) => {
   }).join('')
 }
 
-export function writeQueryParams(filters, query) {
+export function writeQueryParams (filters, query) {
   Object.keys(query).filter(key => key.endsWith('_in')).forEach(key => delete query[key])
   filters.filter(f => f.type === 'in').forEach(f => {
     query[f.field.key + '_in'] = JSON.stringify(f.values).slice(1, -1)
@@ -73,20 +73,20 @@ export function writeQueryParams(filters, query) {
   })
 }
 
-export function readQueryParams(query, dataset) {
+export function readQueryParams (query, dataset) {
   const filters = []
   Object.keys(query).filter(key => key.endsWith('_in')).forEach(key => {
     filters.push({
       type: 'in',
       field: dataset.schema.find(p => p.key === key.slice(0, -3)),
-      values: JSON.parse(`[${query[key]}]`),
+      values: JSON.parse(`[${query[key]}]`)
     })
   })
   Object.keys(query).filter(key => key.endsWith('_starts')).forEach(key => {
     filters.push({
       type: 'starts',
       field: dataset.schema.find(p => p.key === key.slice(0, -7)),
-      value: query[key],
+      value: query[key]
     })
   })
   return filters

@@ -8,8 +8,8 @@ const body = {
   type: 'object',
   additionalProperties: false,
   properties: {
-    ...datasetPatch.properties,
-  },
+    ...datasetPatch.properties
+  }
 }
 postKeys.forEach(k => {
   body.properties[k] = dataset.properties[k]
@@ -23,11 +23,11 @@ module.exports = {
     body,
     file: {
       type: 'string',
-      format: 'binary',
+      format: 'binary'
     },
     attachments: {
       type: 'string',
-      format: 'binary',
-    },
-  },
+      format: 'binary'
+    }
+  }
 }

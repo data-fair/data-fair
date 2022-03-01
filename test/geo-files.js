@@ -61,7 +61,7 @@ describe('geo files support', () => {
       title: 'Code région',
       type: 'string',
       ignoreDetection: true,
-      'x-refersTo': 'http://rdf.insee.fr/def/geo#codeRegion',
+      'x-refersTo': 'http://rdf.insee.fr/def/geo#codeRegion'
     }]))
     const ax = global.ax.dmeadus
     const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })

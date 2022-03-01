@@ -11,7 +11,7 @@ const taskProgress = require('../utils/task-progress')
 
 exports.eventsPrefix = 'index'
 
-exports.process = async function(app, dataset) {
+exports.process = async function (app, dataset) {
   const debug = require('debug')(`worker:indexer:${dataset.id}`)
 
   if (dataset.isVirtual) throw new Error('Un jeu de données virtuel ne devrait pas passer par l\'étape indexation.')
@@ -47,7 +47,7 @@ exports.process = async function(app, dataset) {
     const extended = dataset.extensions && dataset.extensions.find(e => e.active)
     if (!extended) await fs.remove(datasetUtils.fullFileName(dataset))
     readStreams = await datasetUtils.readStreams(db, dataset, false, extended, false, progress)
-    writeStream = new Writable({ objectMode: true, write(chunk, encoding, cb) { cb() } })
+    writeStream = new Writable({ objectMode: true, write (chunk, encoding, cb) { cb() } })
   }
   await pump(...readStreams, indexStream, writeStream)
   debug('index stream ok')
@@ -56,7 +56,7 @@ exports.process = async function(app, dataset) {
 
   const result = {
     status: 'indexed',
-    schema: datasetUtils.cleanSchema(dataset),
+    schema: datasetUtils.cleanSchema(dataset)
   }
   if (dataset.status === 'updated' || dataset.status === 'extended-updated') {
     result.count = await restDatasetsUtils.count(db, dataset)

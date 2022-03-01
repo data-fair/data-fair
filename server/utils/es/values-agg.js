@@ -64,8 +64,8 @@ module.exports = async (client, dataset, query, addGeoData) => {
       currentAggLevel.values = {
         [aggTypes[i]]: {
           field: valuesFields[i],
-          size: aggSizes[i],
-        },
+          size: aggSizes[i]
+        }
       }
     }
     if (intervals[i] !== 'value') {
@@ -78,8 +78,8 @@ module.exports = async (client, dataset, query, addGeoData) => {
       currentAggLevel.card = {
         cardinality: {
           field: valuesFields[i],
-          precision_threshold: precisionThreshold,
-        },
+          precision_threshold: precisionThreshold
+        }
       }
     }
 
@@ -94,7 +94,7 @@ module.exports = async (client, dataset, query, addGeoData) => {
         currentAggLevel.values[aggTypes[i]].order.push({ metric: 'desc' })
         currentAggLevel.values.aggs = {}
         currentAggLevel.values.aggs.metric = {
-          [query.metric]: { field: query.metric_field },
+          [query.metric]: { field: query.metric_field }
         }
       }
       currentAggLevel.values[aggTypes[i]].order.push({ _count: 'desc' })
@@ -132,7 +132,7 @@ const prepareValuesAggResponse = (esResponse, fields, dataset, query) => {
   const response = {
     total: esResponse.hits.total.value,
     took: esResponse.took,
-    timed_out: esResponse.timed_out,
+    timed_out: esResponse.timed_out
   }
   recurseAggResponse(response, esResponse.aggregations, dataset, query)
   return response
@@ -149,7 +149,7 @@ const recurseAggResponse = (response, aggRes, dataset, query) => {
     const aggItem = {
       total: b.doc_count,
       value: b.key_as_string || b.key,
-      results: b.topHits ? b.topHits.hits.hits.map(hit => prepareResultItem(hit, dataset, query)) : [],
+      results: b.topHits ? b.topHits.hits.hits.map(hit => prepareResultItem(hit, dataset, query)) : []
     }
     if (b.metric) {
       aggItem.metric = b.metric.value

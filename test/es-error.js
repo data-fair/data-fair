@@ -4,7 +4,7 @@ const testUtils = require('./resources/test-utils')
 const { aliasName, errorMessage } = require('../server/utils/es/commons')
 
 describe('Extensions', () => {
-  it('Extend dataset using remote service', async function() {
+  it('Extend dataset using remote service', async function () {
     const ax = global.ax.dmeadus
     const dataset = await testUtils.sendDataset('datasets/dataset1.csv', ax)
     await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
@@ -31,14 +31,14 @@ describe('Extensions', () => {
     }
   })
 
-  it('Extract message from another ES error', function() {
+  it('Extract message from another ES error', function () {
     const message = errorMessage({
       error: {
         root_cause: [{ type: 'remote_transport_exception', reason: '[master5][10.0.11.177:9300][indices:admin/create]' }],
         type: 'illegal_argument_exception',
-        reason: 'Validation Failed: 1: this action would add [2] total shards, but this cluster currently has [3456]/[3000] maximum shards open;',
+        reason: 'Validation Failed: 1: this action would add [2] total shards, but this cluster currently has [3456]/[3000] maximum shards open;'
       },
-      status: 400,
+      status: 400
     })
     assert.equal(message, 'Validation Failed: 1: this action would add [2] total shards, but this cluster currently has [3456]/[3000] maximum shards open; - [master5][10.0.11.177:9300][indices:admin/create]')
   })

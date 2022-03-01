@@ -60,7 +60,7 @@ exports.escapeKey = (key) => {
   return key
 }
 
-function checkAll(values, check, param, throwIfAlmost) {
+function checkAll (values, check, param, throwIfAlmost) {
   const definedValues = [...values]
     .filter(v => !!v)
     .map(v => v.trim())

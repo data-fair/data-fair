@@ -29,7 +29,7 @@ router.get('/datasets-errors', asyncWrap(async (req, res, next) => {
     { $unwind: '$journal' },
     { $match: { 'journal.type': 'dataset' } },
     { $addFields: { event: { $arrayElemAt: ['$journal.events', -1] } } },
-    { $project: { id: 1, title: 1, description: 1, updatedAt: 1, owner: 1, event: 1 } },
+    { $project: { id: 1, title: 1, description: 1, updatedAt: 1, owner: 1, event: 1 } }
   ]).toArray()
 
   const [count, results] = await Promise.all([datasets.countDocuments(query), aggregatePromise])
@@ -67,36 +67,36 @@ router.get('/applications-draft-errors', asyncWrap(async (req, res, next) => {
   res.send({ count, results })
 }))
 
-router.get('/owners', asyncWrap(async(req, res) => {
+router.get('/owners', asyncWrap(async (req, res) => {
   const limits = req.app.get('db').collection('limits')
   const [skip, size] = findUtils.pagination(req.query)
   const query = {}
   if (req.query.q) query.$text = { $search: req.query.q }
 
   const agg = [{
-    $match: query,
+    $match: query
   }, {
-    $sort: { name: 1 },
+    $sort: { name: 1 }
   }, {
-    $skip: skip,
+    $skip: skip
   }, {
-    $limit: size,
+    $limit: size
   }, {
     // imperfect.. we should do a lookup on both owner.id and owner.type
     $lookup: {
       from: 'datasets',
       localField: 'id',
       foreignField: 'owner.id',
-      as: 'datasets',
-    },
+      as: 'datasets'
+    }
   }, {
     // imperfect.. we should do a lookup on both owner.id and owner.type
     $lookup: {
       from: 'applications',
       localField: 'id',
       foreignField: 'owner.id',
-      as: 'applications',
-    },
+      as: 'applications'
+    }
   }, {
     $project: {
       id: 1,
@@ -105,8 +105,8 @@ router.get('/owners', asyncWrap(async(req, res) => {
       nbDatasets: { $size: '$datasets' },
       nbApplications: { $size: '$applications' },
       consumption: 1,
-      storage: 1,
-    },
+      storage: 1
+    }
   }]
 
   const aggPromise = limits.aggregate(agg).toArray()
@@ -114,7 +114,7 @@ router.get('/owners', asyncWrap(async(req, res) => {
   res.send({ count, results })
 }))
 
-router.get('/base-applications', asyncWrap(async(req, res) => {
+router.get('/base-applications', asyncWrap(async (req, res) => {
   const baseApps = req.app.get('db').collection('base-applications')
   const [skip, size] = findUtils.pagination(req.query)
   const query = {}
@@ -122,20 +122,20 @@ router.get('/base-applications', asyncWrap(async(req, res) => {
   if (req.query.q) query.$text = { $search: req.query.q }
 
   const agg = [{
-    $match: query,
+    $match: query
   }, {
-    $sort: { public: -1 },
+    $sort: { public: -1 }
   }, {
-    $skip: skip,
+    $skip: skip
   }, {
-    $limit: size,
+    $limit: size
   }, {
     $lookup: {
       from: 'applications',
       localField: 'url',
       foreignField: 'url',
-      as: 'applications',
-    },
+      as: 'applications'
+    }
   }, {
     $project: {
       id: 1,
@@ -152,8 +152,8 @@ router.get('/base-applications', asyncWrap(async(req, res) => {
       privateAccess: 1,
       nbApplications: { $size: '$applications' },
       servicesFilters: 1,
-      datasetsFilters: 1,
-    },
+      datasetsFilters: 1
+    }
   }]
 
   const aggPromise = baseApps.aggregate(agg).toArray()

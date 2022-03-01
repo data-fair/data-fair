@@ -134,34 +134,34 @@ en:
 </i18n>
 
 <script>
-  import { mapState, mapGetters } from 'vuex'
-  import statuses from '../../../shared/statuses.json'
+import { mapState, mapGetters } from 'vuex'
+import statuses from '../../../shared/statuses.json'
 
-  export default {
-    props: ['facets', 'facetsValues'],
-    data() {
-      return { statuses, visibleFacet: 'visibility' }
-    },
-    computed: {
-      ...mapState(['vocabulary', 'env']),
-      ...mapGetters(['activeAccountPublicationSitesById']),
-    },
-    methods: {
-      publicationSiteText(item) {
-        let title
-        if (item.value === null) title = 'aucun'
-        else {
-          const publicationSite = this.activeAccountPublicationSitesById && this.activeAccountPublicationSitesById[item.value]
-          if (publicationSite) {
-            title = publicationSite.title || publicationSite.url || publicationSite.id
-          } else {
-            return null
-          }
+export default {
+  props: ['facets', 'facetsValues'],
+  data () {
+    return { statuses, visibleFacet: 'visibility' }
+  },
+  computed: {
+    ...mapState(['vocabulary', 'env']),
+    ...mapGetters(['activeAccountPublicationSitesById'])
+  },
+  methods: {
+    publicationSiteText (item) {
+      let title
+      if (item.value === null) title = 'aucun'
+      else {
+        const publicationSite = this.activeAccountPublicationSitesById && this.activeAccountPublicationSitesById[item.value]
+        if (publicationSite) {
+          title = publicationSite.title || publicationSite.url || publicationSite.id
+        } else {
+          return null
         }
-        return `${title} (${item.count})`
-      },
-    },
+      }
+      return `${title} (${item.count})`
+    }
   }
+}
 </script>
 
 <style lang="less">

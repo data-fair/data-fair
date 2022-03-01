@@ -1,5 +1,8 @@
 <template>
-  <v-stepper v-model="currentStep" class="elevation-0">
+  <v-stepper
+    v-model="currentStep"
+    class="elevation-0"
+  >
     <v-stepper-header>
       <v-stepper-step
         v-t="'stepFile'"
@@ -14,7 +17,10 @@
         step="2"
       />
       <v-divider />
-      <v-stepper-step v-t="'stepAction'" step="3" />
+      <v-stepper-step
+        v-t="'stepAction'"
+        step="3"
+      />
     </v-stepper-header>
 
     <v-stepper-items>
@@ -50,7 +56,10 @@
           @click.native="currentStep = 2"
         />
 
-        <h3 v-t="'formats'" class="text-h6 mt-4" />
+        <h3
+          v-t="'formats'"
+          class="text-h6 mt-4"
+        />
         <dataset-file-formats />
       </v-stepper-content>
       <v-stepper-content step="2">
@@ -150,96 +159,96 @@ en:
 </i18n>
 
 <script>
-  import { mapState, mapGetters } from 'vuex'
-  import eventBus from '~/event-bus'
+import { mapState, mapGetters } from 'vuex'
+import eventBus from '~/event-bus'
 
-  export default {
-    data: () => ({
-      file: null,
-      attachment: null,
-      attachmentsAsImage: false,
-      currentStep: null,
-      uploadProgress: 0,
-      actions: [],
-      action: null,
-      importing: false,
-      title: '',
-    }),
-    computed: {
-      ...mapState('session', ['user']),
-      ...mapGetters('session', ['activeAccount']),
-      ...mapState(['env', 'accepted']),
-      cleanTitle() {
-        const trimmed = this.title.trim()
-        return trimmed.length > 3 ? trimmed : null
-      },
+export default {
+  data: () => ({
+    file: null,
+    attachment: null,
+    attachmentsAsImage: false,
+    currentStep: null,
+    uploadProgress: 0,
+    actions: [],
+    action: null,
+    importing: false,
+    title: ''
+  }),
+  computed: {
+    ...mapState('session', ['user']),
+    ...mapGetters('session', ['activeAccount']),
+    ...mapState(['env', 'accepted']),
+    cleanTitle () {
+      const trimmed = this.title.trim()
+      return trimmed.length > 3 ? trimmed : null
+    }
+  },
+  watch: {
+    async currentStep () {
+      if (this.currentStep === 3) {
+        let existingDatasets
+        if (this.cleanTitle) {
+          existingDatasets = { results: [] }
+        } else {
+          existingDatasets = await this.$axios.$get('api/v1/datasets', { params: { filename: this.file.name, owner: `${this.activeAccount.type}:${this.activeAccount.id}` } })
+        }
+        this.actions = [{ type: 'create', title: this.$t('createDataset') }, ...existingDatasets.results.map(d => ({
+          type: 'update',
+          id: d.id,
+          title: this.$t('updateDataset', { title: d.title })
+        }))]
+        this.action = this.actions[0]
+      }
+    }
+  },
+  methods: {
+    onFileUpload (file) {
+      this.file = file
     },
-    watch: {
-      async currentStep() {
-        if (this.currentStep === 3) {
-          let existingDatasets
-          if (this.cleanTitle) {
-            existingDatasets = { results: [] }
-          } else {
-            existingDatasets = await this.$axios.$get('api/v1/datasets', { params: { filename: this.file.name, owner: `${this.activeAccount.type}:${this.activeAccount.id}` } })
+    onAttachmentUpload (file) {
+      this.attachment = file
+    },
+    async importData () {
+      const options = {
+        onUploadProgress: (e) => {
+          if (e.lengthComputable) {
+            this.uploadProgress = (e.loaded / e.total) * 100
           }
-          this.actions = [{ type: 'create', title: this.$t('createDataset') }, ...existingDatasets.results.map(d => ({
-            type: 'update',
-            id: d.id,
-            title: this.$t('updateDataset', { title: d.title }),
-          }))]
-          this.action = this.actions[0]
-        }
-      },
-    },
-    methods: {
-      onFileUpload(file) {
-        this.file = file
-      },
-      onAttachmentUpload(file) {
-        this.attachment = file
-      },
-      async importData() {
-        const options = {
-          onUploadProgress: (e) => {
-            if (e.lengthComputable) {
-              this.uploadProgress = (e.loaded / e.total) * 100
-            }
-          },
-          params: {},
-        }
-        const formData = new FormData()
+        },
+        params: {}
+      }
+      const formData = new FormData()
 
-        formData.append('dataset', this.file)
-        if (this.attachment) {
-          formData.append('attachments', this.attachment)
-          if (this.attachmentsAsImage) formData.append('attachmentsAsImage', true)
+      formData.append('dataset', this.file)
+      if (this.attachment) {
+        formData.append('attachments', this.attachment)
+        if (this.attachmentsAsImage) formData.append('attachmentsAsImage', true)
+      }
+      if (this.cleanTitle) formData.append('title', this.cleanTitle)
+      this.importing = true
+      try {
+        let dataset
+        if (this.action.type === 'create') {
+          if (this.file.size > 100000) options.params.draft = 'true'
+          dataset = await this.$axios.$post('api/v1/datasets', formData, options)
+        } else {
+          options.params.draft = 'true'
+          dataset = await this.$axios.$post('api/v1/datasets/' + this.action.id, formData, options)
         }
-        if (this.cleanTitle) formData.append('title', this.cleanTitle)
-        this.importing = true
-        try {
-          let dataset
-          if (this.action.type === 'create') {
-            if (this.file.size > 100000) options.params.draft = 'true'
-            dataset = await this.$axios.$post('api/v1/datasets', formData, options)
-          } else {
-            options.params.draft = 'true'
-            dataset = await this.$axios.$post('api/v1/datasets/' + this.action.id, formData, options)
-          }
-          if (dataset.error) throw new Error(dataset.error)
-          this.$router.push({ path: `/dataset/${dataset.id}` })
-        } catch (error) {
-          const status = error.response && error.response.status
-          if (status === 413) {
-            eventBus.$emit('notification', { type: 'error', msg: this.$t('fileTooLarge') })
-          } else if (status === 429) {
-            eventBus.$emit('notification', { type: 'error', msg: this.$t('noSpaceLeft') })
-          } else {
-            eventBus.$emit('notification', { error, msg: this.$t('importError') })
-          }
-          this.importing = false
+        if (dataset.error) throw new Error(dataset.error)
+        this.$router.push({ path: `/dataset/${dataset.id}` })
+      } catch (error) {
+        const status = error.response && error.response.status
+        if (status === 413) {
+          eventBus.$emit('notification', { type: 'error', msg: this.$t('fileTooLarge') })
+        } else if (status === 429) {
+          eventBus.$emit('notification', { type: 'error', msg: this.$t('noSpaceLeft') })
+        } else {
+          eventBus.$emit('notification', { error, msg: this.$t('importError') })
         }
-      },
-    },
+        this.importing = false
+      }
+    }
   }
+}
 </script>

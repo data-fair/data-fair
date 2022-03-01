@@ -98,31 +98,31 @@ en:
 </i18n>
 
 <script>
-  import { mapState, mapGetters } from 'vuex'
+import { mapState, mapGetters } from 'vuex'
 
-  export default {
-    props: ['facets', 'facetsValues'],
-    data() {
-      return { visibleFacet: 'visibility' }
-    },
-    computed: {
-      ...mapState(['vocabulary', 'env']),
-      ...mapGetters(['activeAccountPublicationSitesById']),
-    },
-    methods: {
-      publicationSiteText(item) {
-        let title = item.value
-        if (item.value === null) title = 'aucun'
-        else {
-          const publicationSite = this.activeAccountPublicationSitesById && this.activeAccountPublicationSitesById[item.value]
-          if (publicationSite) {
-            title = publicationSite.title || publicationSite.url || publicationSite.id
-          }
+export default {
+  props: ['facets', 'facetsValues'],
+  data () {
+    return { visibleFacet: 'visibility' }
+  },
+  computed: {
+    ...mapState(['vocabulary', 'env']),
+    ...mapGetters(['activeAccountPublicationSitesById'])
+  },
+  methods: {
+    publicationSiteText (item) {
+      let title = item.value
+      if (item.value === null) title = 'aucun'
+      else {
+        const publicationSite = this.activeAccountPublicationSitesById && this.activeAccountPublicationSitesById[item.value]
+        if (publicationSite) {
+          title = publicationSite.title || publicationSite.url || publicationSite.id
         }
-        return `${title} (${item.count})`
-      },
-    },
+      }
+      return `${title} (${item.count})`
+    }
   }
+}
 </script>
 
 <style lang="less">

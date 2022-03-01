@@ -72,17 +72,17 @@ en:
 </i18n>
 
 <script>
-  const { mapState, mapActions } = require('vuex')
+const { mapState, mapActions } = require('vuex')
 
-  export default {
-    computed: {
-      ...mapState('session', ['user']),
-      ...mapState('remoteService', ['remoteService']),
-    },
-    methods: {
-      ...mapActions('remoteService', ['patch']),
-    },
+export default {
+  computed: {
+    ...mapState('session', ['user']),
+    ...mapState('remoteService', ['remoteService'])
+  },
+  methods: {
+    ...mapActions('remoteService', ['patch'])
   }
+}
 </script>
 
 <style lang="css">

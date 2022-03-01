@@ -1,5 +1,8 @@
 <template>
-  <v-container fluid class="pa-0">
+  <v-container
+    fluid
+    class="pa-0"
+  >
     <div v-if="notFound">
       <p v-t="'noData'" />
       <p v-t="'readJournal'" />
@@ -93,79 +96,79 @@ en:
 </i18n>
 
 <script>
-  import { mapState, mapGetters } from 'vuex'
-  import eventBus from '~/event-bus'
+import { mapState, mapGetters } from 'vuex'
+import eventBus from '~/event-bus'
 
-  export default {
-    data: () => ({
-      data: null,
-      query: null,
-      pagination: {
-        page: 1,
-        itemsPerPage: 10,
-      },
-      notFound: false,
-      loading: false,
-    }),
-    computed: {
-      ...mapState('dataset', ['dataset']),
-      ...mapGetters('dataset', ['resourceUrl', 'qMode']),
-      fileProperty() {
-        return this.dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')
-      },
-      plural() {
-        return this.data.total > 1
-      },
+export default {
+  data: () => ({
+    data: null,
+    query: null,
+    pagination: {
+      page: 1,
+      itemsPerPage: 10
     },
-    watch: {
-      'dataset.schema'() {
-        this.refresh()
-      },
-      pagination: {
-        handler () {
-          this.refresh()
-        },
-        deep: true,
-      },
+    notFound: false,
+    loading: false
+  }),
+  computed: {
+    ...mapState('dataset', ['dataset']),
+    ...mapGetters('dataset', ['resourceUrl', 'qMode']),
+    fileProperty () {
+      return this.dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')
     },
-    mounted() {
+    plural () {
+      return this.data.total > 1
+    }
+  },
+  watch: {
+    'dataset.schema' () {
       this.refresh()
     },
-    methods: {
-      async refresh(resetPagination) {
-        if (resetPagination) {
-          this.pagination.page = 1
-          return
-        }
-
-        const params = {
-          size: this.pagination.itemsPerPage,
-          page: this.pagination.page,
-          select: [this.fileProperty.key, '_file.content_type', '_file.content_length', '_attachment_url'].join(','),
-          highlight: '_file.content',
-          qs: `_exists_:${this.fileProperty.key}`,
-          q_mode: this.qMode,
-        }
-        if (this.query) params.q = this.query
-        if (this.dataset.draftReason) params.draft = 'true'
-
-        // prevent triggering multiple times the same request
-        const paramsStr = JSON.stringify(params)
-        if (paramsStr === this.lastParams) return
-        this.lastParams = paramsStr
-
-        this.loading = true
-        try {
-          this.data = await this.$axios.$get(this.resourceUrl + '/lines', { params })
-          this.notFound = false
-        } catch (error) {
-          if (error.response && error.response.status === 404) this.notFound = true
-          else eventBus.$emit('notification', { error, msg: 'Erreur pendant la récupération des données' })
-        }
-        this.loading = false
+    pagination: {
+      handler () {
+        this.refresh()
       },
-    },
+      deep: true
+    }
+  },
+  mounted () {
+    this.refresh()
+  },
+  methods: {
+    async refresh (resetPagination) {
+      if (resetPagination) {
+        this.pagination.page = 1
+        return
+      }
+
+      const params = {
+        size: this.pagination.itemsPerPage,
+        page: this.pagination.page,
+        select: [this.fileProperty.key, '_file.content_type', '_file.content_length', '_attachment_url'].join(','),
+        highlight: '_file.content',
+        qs: `_exists_:${this.fileProperty.key}`,
+        q_mode: this.qMode
+      }
+      if (this.query) params.q = this.query
+      if (this.dataset.draftReason) params.draft = 'true'
+
+      // prevent triggering multiple times the same request
+      const paramsStr = JSON.stringify(params)
+      if (paramsStr === this.lastParams) return
+      this.lastParams = paramsStr
+
+      this.loading = true
+      try {
+        this.data = await this.$axios.$get(this.resourceUrl + '/lines', { params })
+        this.notFound = false
+      } catch (error) {
+        if (error.response && error.response.status === 404) this.notFound = true
+        else eventBus.$emit('notification', { error, msg: 'Erreur pendant la récupération des données' })
+      }
+      this.loading = false
+    }
   }
+}
 </script>
 
 <style lang="less">

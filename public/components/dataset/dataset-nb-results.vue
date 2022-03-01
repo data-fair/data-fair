@@ -24,14 +24,14 @@ en:
 </i18n>
 
 <script>
-  export default {
-    props: ['total'],
-    computed: {
-      plural() {
-        return this.total > 1
-      },
-    },
+export default {
+  props: ['total'],
+  computed: {
+    plural () {
+      return this.total > 1
+    }
   }
+}
 </script>
 
 <style lang="css" scoped>

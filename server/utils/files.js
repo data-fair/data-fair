@@ -11,14 +11,14 @@ const fallbackMimeTypes = {
   dbf: 'application/dbase',
   dif: 'text/plain',
   fods: 'application/vnd.oasis.opendocument.spreadsheet',
-  gpkg: 'application/geopackage+sqlite3',
+  gpkg: 'application/geopackage+sqlite3'
 }
 const debug = require('debug')('files')
 
 const { tabularTypes, geographicalTypes, archiveTypes, calendarTypes } = require('../workers/converter')
 
 const storage = multer.diskStorage({
-  destination: async function(req, file, cb) {
+  destination: async function (req, file, cb) {
     try {
       if (req.dataset) {
         req.uploadDir = datasetUtils.dir({ ...req.dataset, draftReason: req.query.draft === 'true' })
@@ -36,7 +36,7 @@ const storage = multer.diskStorage({
       cb(err)
     }
   },
-  filename: async function(req, file, cb) {
+  filename: async function (req, file, cb) {
     try {
       if (file.fieldname === 'attachments') {
         // creating empty file before streaming seems to fix some weird bugs with NFS
@@ -50,7 +50,7 @@ const storage = multer.diskStorage({
     } catch (err) {
       cb(err)
     }
-  },
+  }
 })
 
 const allowedTypes = exports.allowedTypes = new Set(['text/csv', 'application/geo+json', ...tabularTypes, ...geographicalTypes, ...archiveTypes, ...calendarTypes])
@@ -58,10 +58,10 @@ const allowedTypes = exports.allowedTypes = new Set(['text/csv', 'application/ge
 exports.uploadFile = () => {
   return multer({
     limits: {
-      files: 2, // no more than the dataset file + attachments archive
+      files: 2 // no more than the dataset file + attachments archive
     },
     storage,
-    fileFilter: async function fileFilter(req, file, cb) {
+    fileFilter: async function fileFilter (req, file, cb) {
       try {
         debug('Accept file ?', file.originalname)
         // mime type is broken on windows it seems.. detect based on extension instead
@@ -80,7 +80,7 @@ exports.uploadFile = () => {
         debug('File rejected', err)
         cb(err)
       }
-    },
+    }
   }).any()
 }
 

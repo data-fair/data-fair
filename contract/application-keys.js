@@ -7,9 +7,9 @@ module.exports = {
       id: {
         type: 'string',
         readOnly: true,
-        'x-display': 'hidden',
+        'x-display': 'hidden'
       },
-      title: { type: 'string' },
-    },
-  },
+      title: { type: 'string' }
+    }
+  }
 }

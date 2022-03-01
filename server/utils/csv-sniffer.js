@@ -69,13 +69,13 @@ exports.sniff = async (sample) => {
         let i = 0
         const parsePromise = pump(parser, new Writable({
           objectMode: true,
-          write(chunk, encoding, callback) {
+          write (chunk, encoding, callback) {
             i++
             if (i > 1000) return callback()
             if (previousChunk) checkChunk(previousChunk)
             previousChunk = chunk
             callback()
-          },
+          }
         }))
         parser.write(sample)
         parser.end()

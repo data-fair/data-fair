@@ -10,7 +10,7 @@ const datasetUtils = require('../utils/dataset')
 
 exports.eventsPrefix = 'download'
 
-exports.process = async function(app, dataset) {
+exports.process = async function (app, dataset) {
   const debug = require('debug')(`worker:downloader:${dataset.id}`)
 
   const db = app.get('db')
@@ -19,7 +19,7 @@ exports.process = async function(app, dataset) {
   patch.originalFile = {
     name: dataset.remoteFile.name,
     mimetype: dataset.remoteFile.mimetype,
-    size: dataset.remoteFile.size,
+    size: dataset.remoteFile.size
   }
 
   let catalogHttpParams = {}
@@ -39,7 +39,7 @@ exports.process = async function(app, dataset) {
   const fileName = datasetUtils.originalFileName({ ...dataset, ...patch })
   await pump(
     request({ ...catalogHttpParams, method: 'GET', url: dataset.remoteFile.url }),
-    fs.createWriteStream(fileName),
+    fs.createWriteStream(fileName)
   )
   debug(`Successfully downloaded file ${fileName}`)
 

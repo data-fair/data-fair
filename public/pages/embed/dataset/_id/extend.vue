@@ -1,9 +1,12 @@
 <template lang="html">
-  <v-container fluid style="min-height: 500px">
+  <v-container
+    fluid
+    style="min-height: 500px"
+  >
     <dataset-extensions />
   </v-container>
 </template>
 
 <script>
-  export default {}
+export default {}
 </script>

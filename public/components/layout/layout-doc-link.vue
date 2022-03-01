@@ -3,7 +3,7 @@
     v-if="!!href"
     left
   >
-    <template v-slot:activator="{on}">
+    <template #activator="{on}">
       <v-btn
         icon
         :href="href"
@@ -19,26 +19,26 @@
 </template>
 
 <script>
-  import { mapState } from 'vuex'
-  export default {
-    props: ['tooltip', 'docKey', 'docHref', 'offset'],
-    computed: {
-      ...mapState(['env']),
-      href() {
-        return this.docHref || (this.docKey && this.env.doc[this.docKey])
-      },
-      style() {
-        let style = 'position: absolute;'
-        if (this.offset === 'bottom') style += ' top: 60px;'
-        else style += ' top: 8px;'
-
-        if (this.offset === 'left') style += 'right: 60px;'
-        else style += ' right: 8px;'
-
-        return style
-      },
+import { mapState } from 'vuex'
+export default {
+  props: ['tooltip', 'docKey', 'docHref', 'offset'],
+  computed: {
+    ...mapState(['env']),
+    href () {
+      return this.docHref || (this.docKey && this.env.doc[this.docKey])
     },
+    style () {
+      let style = 'position: absolute;'
+      if (this.offset === 'bottom') style += ' top: 60px;'
+      else style += ' top: 8px;'
+
+      if (this.offset === 'left') style += 'right: 60px;'
+      else style += ' right: 8px;'
+
+      return style
+    }
   }
+}
 </script>
 
 <style lang="css" scoped>

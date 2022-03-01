@@ -60,7 +60,10 @@
         </v-card-text>
         <v-card-actions>
           <v-spacer />
-          <v-btn text @click="showDialog = false">
+          <v-btn
+            text
+            @click="showDialog = false"
+          >
             Annuler
           </v-btn>
           <v-btn
@@ -78,27 +81,27 @@
 
 <script>
 
-  export default {
-    props: ['settings'],
-    data: () => ({
-      newLicense: {
-        title: null,
-        href: null,
-      },
-      newLicenseValid: false,
-      showDialog: false,
-    }),
-    methods: {
-      addLicense() {
-        const license = Object.assign({}, this.newLicense)
-        this.settings.licenses.push(license)
-        this.showDialog = false
-        this.$emit('license-updated')
-      },
-      removeLicense(rowIndex) {
-        this.settings.licenses.splice(rowIndex, 1)
-        this.$emit('license-updated')
-      },
+export default {
+  props: ['settings'],
+  data: () => ({
+    newLicense: {
+      title: null,
+      href: null
     },
+    newLicenseValid: false,
+    showDialog: false
+  }),
+  methods: {
+    addLicense () {
+      const license = Object.assign({}, this.newLicense)
+      this.settings.licenses.push(license)
+      this.showDialog = false
+      this.$emit('license-updated')
+    },
+    removeLicense (rowIndex) {
+      this.settings.licenses.splice(rowIndex, 1)
+      this.$emit('license-updated')
+    }
   }
+}
 </script>

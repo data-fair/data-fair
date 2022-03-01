@@ -4,7 +4,7 @@
     v-model="show"
     :close-on-content-click="false"
   >
-    <template v-slot:activator="{on}">
+    <template #activator="{on}">
       <v-btn
         icon
         color="warning"
@@ -25,7 +25,10 @@
         class="mb-0 mt-1"
       />
       <v-card-text>
-        <v-checkbox v-model="editTtl.active" :label="$t('activate')" />
+        <v-checkbox
+          v-model="editTtl.active"
+          :label="$t('activate')"
+        />
         <v-select
           v-model="editTtl.prop"
           :label="$t('col')"
@@ -74,28 +77,28 @@ en:
 </i18n>
 
 <script>
-  export default {
-    props: ['ttl', 'schema'],
-    data: () => ({
-      show: false,
-      editTtl: null,
-    }),
-    watch: {
-      ttl: {
-        immediate: true,
-        handler() {
-          this.editTtl = JSON.parse(JSON.stringify(this.ttl))
-        },
-      },
-    },
-    methods: {
-      change() {
-        this.editTtl.delay.value = this.editTtl.delay.value || 0
-        this.$emit('change', this.editTtl)
-        this.show = false
-      },
-    },
+export default {
+  props: ['ttl', 'schema'],
+  data: () => ({
+    show: false,
+    editTtl: null
+  }),
+  watch: {
+    ttl: {
+      immediate: true,
+      handler () {
+        this.editTtl = JSON.parse(JSON.stringify(this.ttl))
+      }
+    }
+  },
+  methods: {
+    change () {
+      this.editTtl.delay.value = this.editTtl.delay.value || 0
+      this.$emit('change', this.editTtl)
+      this.show = false
+    }
   }
+}
 </script>
 
 <style lang="css" scoped>

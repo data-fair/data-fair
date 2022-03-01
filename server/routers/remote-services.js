@@ -37,7 +37,7 @@ exports.syncDataset = async (db, dataset) => {
       apiDoc,
       url: `${config.publicUrl}/api/v1/datasets/${dataset.id}/api-docs.json`,
       server: apiDoc.servers && apiDoc.servers.length && apiDoc.servers[0].url,
-      privateAccess: [{ type: dataset.owner.type, id: dataset.owner.id, name: dataset.owner.name }],
+      privateAccess: [{ type: dataset.owner.type, id: dataset.owner.id, name: dataset.owner.name }]
     })
     if (!validate(service)) throw createError(400, JSON.stringify(validate.errors))
     await db.collection('remote-services').replaceOne({ id }, mongoEscape.escape(service, true), { upsert: true })
@@ -47,7 +47,7 @@ exports.syncDataset = async (db, dataset) => {
 }
 
 // Create default services for the data-fair instance
-exports.init = async(db) => {
+exports.init = async (db) => {
   const remoteServices = db.collection('remote-services')
   const existingServices = await remoteServices.find({ owner: { $exists: false } }).limit(1000).project({ url: 1, id: 1 }).toArray()
 
@@ -71,7 +71,7 @@ exports.init = async(db) => {
     server: apisDict[s.url].servers && apisDict[s.url].servers.length && apisDict[s.url].servers[0].url,
     actions: computeActions(apisDict[s.url]),
     public: true,
-    privateAccess: [],
+    privateAccess: []
   }, true)).filter(s => !existingServices.find(es => es.id === s.id))
   if (servicesToInsert.length) await remoteServices.insertMany(servicesToInsert)
 }
@@ -92,7 +92,7 @@ const computeActions = (apiDoc) => {
   return actions
 }
 
-function clean(remoteService, user) {
+function clean (remoteService, user) {
   delete remoteService._id
   if (remoteService.apiKey && remoteService.apiKey.value) remoteService.apiKey.value = '**********'
   if (!user || !user.adminMode) delete remoteService.privateAccess
@@ -102,14 +102,14 @@ function clean(remoteService, user) {
 
 // Get the list of remote-services
 // Accessible to anybody
-router.get('', cacheHeaders.noCache, asyncWrap(async(req, res) => {
+router.get('', cacheHeaders.noCache, asyncWrap(async (req, res) => {
   const remoteServices = req.app.get('db').collection('remote-services')
   const query = findUtils.query(req, {
     'input-concepts': 'actions.input.concept',
     'output-concepts': 'actions.output.concept',
     'api-id': 'apiDoc.info.x-api-id',
     ids: 'id',
-    id: 'id',
+    id: 'id'
   }, true)
 
   delete req.query.owner
@@ -119,7 +119,7 @@ router.get('', cacheHeaders.noCache, asyncWrap(async(req, res) => {
   const [skip, size] = findUtils.pagination(req.query)
   const mongoQueries = [
     size > 0 ? remoteServices.find(query).collation({ locale: 'en' }).limit(size).skip(skip).sort(sort).project(project).toArray() : Promise.resolve([]),
-    remoteServices.countDocuments(query),
+    remoteServices.countDocuments(query)
   ]
   if (req.query.facets) {
     mongoQueries.push(remoteServices.aggregate(findUtils.facetsQuery(req, {})).toArray())
@@ -143,7 +143,7 @@ const initNew = (body) => {
 }
 
 // Create a remote Api as super admin
-router.post('', asyncWrap(async(req, res) => {
+router.post('', asyncWrap(async (req, res) => {
   if (!req.user) return res.status(401).send()
   if (!req.user.adminMode) return res.status(403).send()
   // if title is set, we build id from it
@@ -171,7 +171,7 @@ router.post('', asyncWrap(async(req, res) => {
 }))
 
 // Shared middleware
-const readService = asyncWrap(async(req, res, next) => {
+const readService = asyncWrap(async (req, res, next) => {
   req.t0 = new Date().getTime()
   const service = await req.app.get('db').collection('remote-services')
     .findOne({ id: req.params.remoteServiceId }, { projection: { _id: 0 } })
@@ -192,7 +192,7 @@ router.get('/:remoteServiceId', readService, cacheHeaders.resourceBased, (req, r
 })
 
 // PUT used to create or update as super admin
-const attemptInsert = asyncWrap(async(req, res, next) => {
+const attemptInsert = asyncWrap(async (req, res, next) => {
   if (!req.user) return res.status(401).send()
   if (!req.user.adminMode) return res.status(403).send()
 
@@ -202,7 +202,7 @@ const attemptInsert = asyncWrap(async(req, res, next) => {
 
   next()
 })
-router.put('/:remoteServiceId', attemptInsert, readService, asyncWrap(async(req, res) => {
+router.put('/:remoteServiceId', attemptInsert, readService, asyncWrap(async (req, res) => {
   const newService = req.body
   // preserve all readonly properties, the rest is overwritten
   Object.keys(req.remoteService).forEach(key => {
@@ -220,12 +220,12 @@ router.put('/:remoteServiceId', attemptInsert, readService, asyncWrap(async(req,
 }))
 
 // Update a remote service configuration as super admin
-router.patch('/:remoteServiceId', readService, asyncWrap(async(req, res) => {
+router.patch('/:remoteServiceId', readService, asyncWrap(async (req, res) => {
   if (!req.user) return res.status(401).send()
   if (!req.user.adminMode) return res.status(403).send()
 
   const patch = req.body
-  var valid = validatePatch(patch)
+  const valid = validatePatch(patch)
   if (!valid) return res.status(400).send(validatePatch.errors)
 
   patch.updatedAt = moment().toISOString()
@@ -240,38 +240,38 @@ router.patch('/:remoteServiceId', readService, asyncWrap(async(req, res) => {
 }))
 
 // Delete a remoteService as super admin
-router.delete('/:remoteServiceId', readService, asyncWrap(async(req, res) => {
+router.delete('/:remoteServiceId', readService, asyncWrap(async (req, res) => {
   if (!req.user) return res.status(401).send()
   if (!req.user.adminMode) return res.status(403).send()
   await req.app.get('db').collection('remote-services').deleteOne({
-    id: req.params.remoteServiceId,
+    id: req.params.remoteServiceId
   })
   res.sendStatus(204)
 }))
 
 // Force update of API definition as super admin
-router.post('/:remoteServiceId/_update', readService, asyncWrap(async(req, res) => {
+router.post('/:remoteServiceId/_update', readService, asyncWrap(async (req, res) => {
   if (!req.user) return res.status(401).send()
   if (!req.user.adminMode) return res.status(403).send()
 
   if (!req.remoteService.url) return res.sendStatus(204)
 
   const reponse = await axios.get(req.remoteService.url)
-  var valid = validateOpenApi(reponse.data)
+  const valid = validateOpenApi(reponse.data)
   if (!valid) return res.status(400).send(validateOpenApi.errors)
   req.remoteService.updatedAt = moment().toISOString()
   req.remoteService.updatedBy = { id: req.user.id, name: req.user.name }
   req.remoteService.apiDoc = reponse.data
   req.remoteService.actions = computeActions(req.remoteService.apiDoc)
   await req.app.get('db').collection('remote-services').replaceOne({
-    id: req.params.remoteServiceId,
+    id: req.params.remoteServiceId
   }, mongoEscape.escape(req.remoteService, true))
   res.status(200).json(clean(req.remoteService, req.user))
 }))
 
 // use the current referer url to determine the application that was used to call this remote service
 // We will consume the quota of the owner of the application.
-async function getAppOwner(req) {
+async function getAppOwner (req) {
   const referer = req.headers.referer || req.headers.referrer
   // unfortunately this can happen quite a lot when coming from web workers, very restrictive browsers, etc.
   if (!referer) return console.warn('remote service proxy called without a referer header')
@@ -340,7 +340,7 @@ router.use('/:remoteServiceId/proxy*', asyncWrap(async (req, res, next) => {
         return resp.statusCode === 200
       },
       transform: () => new Transform({
-        transform(chunk, encoding, cb) {
+        transform (chunk, encoding, cb) {
           cb(null, chunk)
           this.consumed = (this.consumed || 0) + chunk.length
           // for perf do not update rate limiter at every chunk, but only every 100kb
@@ -349,12 +349,12 @@ router.use('/:remoteServiceId/proxy*', asyncWrap(async (req, res, next) => {
             this.consumed = 0
           }
         },
-        flush(cb) {
+        flush (cb) {
           cb()
           rateLimiting.remoteServices.kb.consume(limiterId, this.consumed).catch(() => {})
-        },
-      }),
-    }],
+        }
+      })
+    }]
   }
   // TODO handle query & cookie header types
   if (remoteService.apiKey && remoteService.apiKey.in === 'header' && remoteService.apiKey.value) {

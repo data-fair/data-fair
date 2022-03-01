@@ -11,14 +11,14 @@
 </template>
 
 <script>
-  import { mapState } from 'vuex'
+import { mapState } from 'vuex'
 
-  export default {
-    props: ['owner'],
-    computed: {
-      ...mapState(['env']),
-    },
+export default {
+  props: ['owner'],
+  computed: {
+    ...mapState(['env'])
   }
+}
 </script>
 
 <style lang="css" scoped>

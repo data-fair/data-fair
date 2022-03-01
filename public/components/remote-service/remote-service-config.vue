@@ -66,49 +66,49 @@ en:
 </i18n>
 
 <script>
-  import { mapState, mapActions } from 'vuex'
+import { mapState, mapActions } from 'vuex'
 
-  export default {
-    data: () => ({
-      restrictions: [],
-    }),
-    computed: {
-      ...mapState('remoteService', ['remoteService']),
-      api() {
-        return this.remoteService.apiDoc
-      },
-      operations() {
-        return (this.api && [].concat(...Object.keys(this.api.paths).map(path => Object.keys(this.api.paths[path]).map(method => ({
-          id: this.api.paths[path][method].operationId,
-          title: this.api.paths[path][method].summary,
-          parameters: this.api.paths[path][method].parameters || [],
-        }))))) || []
-      },
+export default {
+  data: () => ({
+    restrictions: []
+  }),
+  computed: {
+    ...mapState('remoteService', ['remoteService']),
+    api () {
+      return this.remoteService.apiDoc
     },
-    watch: {
-      operations() {
-        this.setRestrictions()
-      },
-    },
-    created() {
-      this.remoteService.apiKey = this.remoteService.apiKey || { in: 'header' }
+    operations () {
+      return (this.api && [].concat(...Object.keys(this.api.paths).map(path => Object.keys(this.api.paths[path]).map(method => ({
+        id: this.api.paths[path][method].operationId,
+        title: this.api.paths[path][method].summary,
+        parameters: this.api.paths[path][method].parameters || []
+      }))))) || []
+    }
+  },
+  watch: {
+    operations () {
       this.setRestrictions()
-    },
-    methods: {
-      ...mapActions('remoteService', ['patch']),
-      setRestrictions() {
-        this.operations.forEach(operation => {
-          operation.parameters.filter(p => !!p['x-refersTo'] && p.in === 'query').forEach(param => {
-            let staticParam = this.remoteService.parameters.find(p => p.operationId === operation.id && p.name === param.name)
-            if (!staticParam) {
-              staticParam = { operationId: operation.id, name: param.name, value: '' }
-              this.remoteService.parameters.push(staticParam)
-            }
-            staticParam['x-refersTo'] = param['x-refersTo']
-            staticParam.title = param.title || param.description
-          })
+    }
+  },
+  created () {
+    this.remoteService.apiKey = this.remoteService.apiKey || { in: 'header' }
+    this.setRestrictions()
+  },
+  methods: {
+    ...mapActions('remoteService', ['patch']),
+    setRestrictions () {
+      this.operations.forEach(operation => {
+        operation.parameters.filter(p => !!p['x-refersTo'] && p.in === 'query').forEach(param => {
+          let staticParam = this.remoteService.parameters.find(p => p.operationId === operation.id && p.name === param.name)
+          if (!staticParam) {
+            staticParam = { operationId: operation.id, name: param.name, value: '' }
+            this.remoteService.parameters.push(staticParam)
+          }
+          staticParam['x-refersTo'] = param['x-refersTo']
+          staticParam.title = param.title || param.description
         })
-      },
-    },
+      })
+    }
   }
+}
 </script>

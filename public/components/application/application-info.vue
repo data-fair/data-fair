@@ -7,7 +7,10 @@
       order-md="2"
     >
       <v-sheet style="background: transparent;">
-        <v-list dense style="background: transparent;">
+        <v-list
+          dense
+          style="background: transparent;"
+        >
           <owner-list-item :owner="application.owner" />
 
           <v-list-item>
@@ -109,43 +112,43 @@ en:
 </i18n>
 
 <script>
-  import { mapState, mapActions, mapGetters } from 'vuex'
+import { mapState, mapActions, mapGetters } from 'vuex'
 
-  export default {
-    computed: {
-      ...mapState('application', ['application', 'journal', 'prodBaseApp']),
-      ...mapGetters('application', ['can', 'availableVersions']),
-      topics() {
-        return this.$store.getters.ownerTopics(this.application.owner)
-      },
-      dataset() {
-        let dataset
-        if (this.application.configuration && this.application.configuration.datasets && this.application.configuration.datasets.length) {
-          dataset = JSON.parse(JSON.stringify(this.application.configuration.datasets[0]))
-        } else if (this.application.configurationDraft && this.application.configurationDraft.datasets && this.application.configurationDraft.datasets.length) {
-          dataset = JSON.parse(JSON.stringify(this.application.configurationDraft.datasets[0]))
-        }
-        if (dataset && !dataset.id) {
-          dataset.id = dataset.href.split('/').pop()
-        }
-        return dataset
-      },
-      version() {
-        if (!this.prodBaseApp || !this.prodBaseApp.version) return this.$t('unknown')
-        else if (this.prodBaseApp.version === 'master' || this.prodBaseApp.version === 'latest') return this.$t('test')
-        else return this.prodBaseApp.version
-      },
-      upgradeAvailable() {
-        return this.availableVersions && this.availableVersions.length && this.availableVersions[0].version !== this.prodBaseApp.version && this.availableVersions[0]
-      },
+export default {
+  computed: {
+    ...mapState('application', ['application', 'journal', 'prodBaseApp']),
+    ...mapGetters('application', ['can', 'availableVersions']),
+    topics () {
+      return this.$store.getters.ownerTopics(this.application.owner)
     },
-    mounted() {
-      this.$store.dispatch('fetchTopics', this.application.owner)
+    dataset () {
+      let dataset
+      if (this.application.configuration && this.application.configuration.datasets && this.application.configuration.datasets.length) {
+        dataset = JSON.parse(JSON.stringify(this.application.configuration.datasets[0]))
+      } else if (this.application.configurationDraft && this.application.configurationDraft.datasets && this.application.configurationDraft.datasets.length) {
+        dataset = JSON.parse(JSON.stringify(this.application.configurationDraft.datasets[0]))
+      }
+      if (dataset && !dataset.id) {
+        dataset.id = dataset.href.split('/').pop()
+      }
+      return dataset
     },
-    methods: {
-      ...mapActions('application', ['patch']),
+    version () {
+      if (!this.prodBaseApp || !this.prodBaseApp.version) return this.$t('unknown')
+      else if (this.prodBaseApp.version === 'master' || this.prodBaseApp.version === 'latest') return this.$t('test')
+      else return this.prodBaseApp.version
     },
+    upgradeAvailable () {
+      return this.availableVersions && this.availableVersions.length && this.availableVersions[0].version !== this.prodBaseApp.version && this.availableVersions[0]
+    }
+  },
+  mounted () {
+    this.$store.dispatch('fetchTopics', this.application.owner)
+  },
+  methods: {
+    ...mapActions('application', ['patch'])
   }
+}
 </script>
 
 <style lang="css">

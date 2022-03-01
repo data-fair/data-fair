@@ -7,7 +7,7 @@ const debug = require('debug')('capture')
 
 const captureUrl = config.privateCaptureUrl || config.captureUrl
 
-exports.init = async() => {
+exports.init = async () => {
   await fs.ensureDir(path.resolve(config.dataDir, 'captures'))
 }
 
@@ -31,11 +31,11 @@ exports.screenshot = async (req) => {
       url: screenShortUrl,
       qs: {
         target: appUrl,
-        type: 'gif',
+        type: 'gif'
       },
       headers: {
-        Cookie: cookieText,
-      },
+        Cookie: cookieText
+      }
     }
 
     try {

@@ -48,7 +48,10 @@
         rows="4"
         @change="patch({description: catalog.description})"
       />
-      <catalog-config-form :catalog="catalog" @change="changes => patch(changes)" />
+      <catalog-config-form
+        :catalog="catalog"
+        @change="changes => patch(changes)"
+      />
     </v-col>
   </v-row>
 </template>
@@ -63,17 +66,17 @@ en:
 </i18n>
 
 <script>
-  import { mapState, mapActions, mapGetters } from 'vuex'
+import { mapState, mapActions, mapGetters } from 'vuex'
 
-  export default {
-    computed: {
-      ...mapState('catalog', ['catalog']),
-      ...mapGetters('catalog', ['can']),
-    },
-    methods: {
-      ...mapActions('catalog', ['patch']),
-    },
+export default {
+  computed: {
+    ...mapState('catalog', ['catalog']),
+    ...mapGetters('catalog', ['can'])
+  },
+  methods: {
+    ...mapActions('catalog', ['patch'])
   }
+}
 </script>
 
 <style lang="css">

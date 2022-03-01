@@ -22,7 +22,7 @@ const loginHtml = fs.readFileSync(path.join(__dirname, '../resources/login.html'
 
 const brandEmbed = config.brand.embed && parse5.parseFragment(config.brand.embed)
 
-const setResource = asyncWrap(async(req, res, next) => {
+const setResource = asyncWrap(async (req, res, next) => {
   req.application = req.resource = await req.app.get('db').collection('applications')
     .findOne({ id: req.params.applicationId }, { projection: { _id: 0 } })
   if (!req.application) return res.status(404).send(req.__('errors.missingApp'))
@@ -31,7 +31,7 @@ const setResource = asyncWrap(async(req, res, next) => {
   next()
 })
 
-router.get('/:applicationId/manifest.json', setResource, permissions.middleware('readConfig', 'read'), asyncWrap(async(req, res) => {
+router.get('/:applicationId/manifest.json', setResource, permissions.middleware('readConfig', 'read'), asyncWrap(async (req, res) => {
   const cleanApplicationUrl = req.application.url.replace(/\/$/, '')
   res.setHeader('Content-Type', 'application/manifest+json')
   res.send({
@@ -48,9 +48,9 @@ router.get('/:applicationId/manifest.json', setResource, permissions.middleware(
       return {
         sizes,
         type: 'image/png',
-        src: thumbor.thumbnail(cleanApplicationUrl + '/icon.png', sizes),
+        src: thumbor.thumbnail(cleanApplicationUrl + '/icon.png', sizes)
       }
-    }),
+    })
   })
 }))
 
@@ -65,7 +65,7 @@ router.get('/:applicationId/login', setResource, (req, res) => {
   res.send(loginHtml
     .replace('{ERROR}', req.query.error ? `<p style="color:red">${req.query.error}</p>` : '')
     .replace('{AUTH_ROUTE}', authUrl)
-    .replace('{LOGO}', `${req.directoryUrl}/api/avatars/${req.application.owner.type}/${req.application.owner.id}/avatar.png`),
+    .replace('{LOGO}', `${req.directoryUrl}/api/avatars/${req.application.owner.type}/${req.application.owner.id}/avatar.png`)
   )
 })
 
@@ -82,7 +82,7 @@ const fetchHTML = async (cleanApplicationUrl, targetUrl) => {
       headers,
       validateStatus: function (status) {
         return status === 200 || status === 304
-      },
+      }
     })
     if (res.status === 304) {
       return cacheEntry.content
@@ -91,7 +91,7 @@ const fetchHTML = async (cleanApplicationUrl, targetUrl) => {
         content: res.data,
         etag: res.headers.etag,
         lastModified: res.headers['last-modified'],
-        fetchedAt: new Date(),
+        fetchedAt: new Date()
       }
       return res.data
     }
@@ -110,7 +110,7 @@ router.get('/_htmlcache', (req, res, next) => {
 })
 
 // Proxy for applications
-router.all('/:applicationId*', setResource, asyncWrap(async(req, res, next) => {
+router.all('/:applicationId*', setResource, asyncWrap(async (req, res, next) => {
   const db = req.app.get('db')
 
   let matchinApplicationKey = false
@@ -141,7 +141,7 @@ router.all('/:applicationId*', setResource, asyncWrap(async(req, res, next) => {
   // check that the user can access the base appli
   const accessFilter = [
     { public: true },
-    { privateAccess: { $elemMatch: { type: req.application.owner.type, id: req.application.owner.id } } },
+    { privateAccess: { $elemMatch: { type: req.application.owner.type, id: req.application.owner.id } } }
   ]
   const baseAppPromise = db.collection('base-applications')
     .findOne({ url: applicationUrl, $or: accessFilter }, { projection: { id: 1 } })
@@ -208,8 +208,8 @@ router.all('/:applicationId*', setResource, asyncWrap(async(req, res, next) => {
       attrs: [
         { name: 'rel', value: 'manifest' },
         { name: 'crossorigin', value: 'use-credentials' },
-        { name: 'href', value: manifestUrl },
-      ],
+        { name: 'href', value: manifestUrl }
+      ]
     })
   }
 
@@ -220,8 +220,8 @@ router.all('/:applicationId*', setResource, asyncWrap(async(req, res, next) => {
     attrs: [{ name: 'type', value: 'text/javascript' }],
     childNodes: [{
       nodeName: '#text',
-      value: serviceWorkers.register(req.application),
-    }],
+      value: serviceWorkers.register(req.application)
+    }]
   })
 
   // make sure the referer is available when calling APIs and remote services from inside applications
@@ -230,8 +230,8 @@ router.all('/:applicationId*', setResource, asyncWrap(async(req, res, next) => {
     tagName: 'meta',
     attrs: [
       { name: 'name', value: 'referrer' },
-      { name: 'content', value: 'same-origin' },
-    ],
+      { name: 'content', value: 'same-origin' }
+    ]
   })
 
   // add a brand logo somewhere over the applications
@@ -252,7 +252,7 @@ const deprecatedProxy = async (cleanApplicationUrl, targetUrl, req, res) => {
     protocol: targetUrl.protocol,
     path: targetUrl.pathname + targetUrl.hash + targetUrl.search,
     timeout: config.remoteTimeout,
-    lookup: cacheableLookup.lookup,
+    lookup: cacheableLookup.lookup
   }
   await new Promise((resolve, reject) => {
     const cacheAppReq = (targetUrl.protocol === 'http:' ? http.request : https.request)(options, async (appRes) => {
@@ -275,11 +275,11 @@ const deprecatedProxy = async (cleanApplicationUrl, targetUrl, req, res) => {
         res.set('content-type', contentType);
 
         ['content-type', 'content-length', 'pragma', 'cache-control', 'expires', 'last-modified'].forEach(header => {
-            if (appRes.headers[header]) res.set(header, appRes.headers[header])
-          })
-          res.status(appRes.statusCode)
-          await pump(appRes, res)
-          return resolve()
+          if (appRes.headers[header]) res.set(header, appRes.headers[header])
+        })
+        res.status(appRes.statusCode)
+        await pump(appRes, res)
+        return resolve()
       } catch (err) {
         reject(err)
       }

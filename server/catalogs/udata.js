@@ -32,7 +32,7 @@ exports.listDatasets = async (catalog, params = {}) => {
   }
   return {
     count: datasets.length,
-    results: datasets.map(d => prepareDatasetFromCatalog(catalog, d)),
+    results: datasets.map(d => prepareDatasetFromCatalog(catalog, d))
   }
 }
 
@@ -71,9 +71,9 @@ exports.publishApplication = async (catalog, application, publication, datasets)
     url: appUrl || `${config.publicUrl}/app/${application.id}`,
     extras: {
       datafairOrigin: catalog.dataFairBaseUrl || config.publicUrl,
-      datafairApplicationId: application.id,
+      datafairApplicationId: application.id
     },
-    datasets: udataDatasets.map(d => ({ id: d.id })),
+    datasets: udataDatasets.map(d => ({ id: d.id }))
   }
   if (catalog.organization && catalog.organization.id) {
     udataReuse.organization = { id: catalog.organization.id }
@@ -118,7 +118,7 @@ exports.deleteApplication = async (catalog, application, publication) => {
   }
 }
 
-function prepareDatasetFromCatalog(catalog, d) {
+function prepareDatasetFromCatalog (catalog, d) {
   const dataset = {
     id: d.id,
     createdAt: d.created_at,
@@ -134,13 +134,13 @@ function prepareDatasetFromCatalog(catalog, d) {
         mime: r.mime,
         title: r.title,
         url: r.url,
-        size: r.fileSize,
+        size: r.fileSize
       }
       if (r.extras && (r.extras.datafairOrigin === config.publicUrl || r.extras.datafairOrigin === catalog.dataFairBaseUrl)) {
         resource.datafairDatasetId = r.extras.datafairDatasetId
       }
       return resource
-    }),
+    })
   }
   if (d.extras && d.extras.datafairOrigin === config.publicUrl) {
     dataset.datafairDatasetId = d.extras.datafairDatasetId
@@ -148,14 +148,14 @@ function prepareDatasetFromCatalog(catalog, d) {
   return dataset
 }
 
-function getDatasetUrl(catalog, dataset) {
+function getDatasetUrl (catalog, dataset) {
   if (catalog.datasetUrlTemplate) {
     return catalog.datasetUrlTemplate.replace('{id}', dataset.id)
   }
   return `${config.publicUrl}/dataset/${dataset.id}`
 }
 
-async function addResourceToDataset(catalog, dataset, publication) {
+async function addResourceToDataset (catalog, dataset, publication) {
   // TODO: no equivalent of "private" on a resource
   const title = dataset.title
   const datasetUrl = getDatasetUrl(catalog, dataset)
@@ -200,8 +200,8 @@ async function addResourceToDataset(catalog, dataset, publication) {
       extras: {
         datafairEmbed: dataset.bbox ? 'map' : 'table',
         datafairOrigin: catalog.dataFairBaseUrl || config.publicUrl,
-        datafairDatasetId: dataset.id,
-      },
+        datafairDatasetId: dataset.id
+      }
     })
   }
   const catalogDataset = (await axios.get(url.resolve(catalog.url, `api/1/datasets/${publication.addToDataset.id}`),
@@ -250,7 +250,7 @@ async function addResourceToDataset(catalog, dataset, publication) {
   }
 }
 
-async function createOrUpdateDataset(catalog, dataset, publication) {
+async function createOrUpdateDataset (catalog, dataset, publication) {
   debug('Create or update dataset', dataset)
   const datasetUrl = getDatasetUrl(catalog, dataset)
   const resources = []
@@ -264,8 +264,8 @@ async function createOrUpdateDataset(catalog, dataset, publication) {
       format: 'Page Web',
       mime: 'text/html',
       extras: {
-        datafairEmbed: 'fields',
-      },
+        datafairEmbed: 'fields'
+      }
     })
     resources.push({
       title: 'Documentation de l\'API',
@@ -276,8 +276,8 @@ async function createOrUpdateDataset(catalog, dataset, publication) {
       format: 'Page Web',
       mime: 'text/html',
       extras: {
-        apidocUrl: `${catalog.dataFairBaseUrl || config.publicUrl}/api/v1/datasets/${dataset.id}/api-docs.json`,
-      },
+        apidocUrl: `${catalog.dataFairBaseUrl || config.publicUrl}/api/v1/datasets/${dataset.id}/api-docs.json`
+      }
     })
     resources.push({
       title: 'Consultez les données',
@@ -288,8 +288,8 @@ async function createOrUpdateDataset(catalog, dataset, publication) {
       format: 'Page Web',
       mime: 'text/html',
       extras: {
-        datafairEmbed: dataset.bbox ? 'map' : 'table',
-      },
+        datafairEmbed: dataset.bbox ? 'map' : 'table'
+      }
     })
   }
   const udataDataset = {
@@ -298,9 +298,9 @@ async function createOrUpdateDataset(catalog, dataset, publication) {
     private: !dataset.public,
     extras: {
       datafairOrigin: catalog.dataFairBaseUrl || config.publicUrl,
-      datafairDatasetId: dataset.id,
+      datafairDatasetId: dataset.id
     },
-    resources,
+    resources
   }
   // TODO: use data-files ?
   if (dataset.file) {
@@ -311,7 +311,7 @@ async function createOrUpdateDataset(catalog, dataset, publication) {
       type: 'main',
       filetype: 'remote',
       filesize: dataset.originalFile.size,
-      mime: dataset.originalFile.mimetype,
+      mime: dataset.originalFile.mimetype
     })
     if (dataset.file.mimetype !== dataset.originalFile.mimetype) {
       udataDataset.resources.push({
@@ -321,7 +321,7 @@ async function createOrUpdateDataset(catalog, dataset, publication) {
         type: 'main',
         filetype: 'remote',
         filesize: dataset.file.size,
-        mime: dataset.file.mimetype,
+        mime: dataset.file.mimetype
       })
     }
   }
@@ -361,7 +361,7 @@ async function createOrUpdateDataset(catalog, dataset, publication) {
   }
 }
 
-async function deleteResourceFromDataset(catalog, dataset, publication) {
+async function deleteResourceFromDataset (catalog, dataset, publication) {
   const udataDataset = publication.result
   // The dataset was never really created in udata
   if (!udataDataset) return
@@ -378,7 +378,7 @@ async function deleteResourceFromDataset(catalog, dataset, publication) {
   }
 }
 
-async function deleteDataset(catalog, dataset, publication) {
+async function deleteDataset (catalog, dataset, publication) {
   const udataDataset = publication.result
   // The dataset was never really created in udata
   if (!udataDataset) return

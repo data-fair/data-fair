@@ -69,55 +69,55 @@ en:
 </i18n>
 
 <script>
-  import { mapState } from 'vuex'
+import { mapState } from 'vuex'
 
-  export default {
-    props: ['editable', 'property', 'isRest'],
-    data() {
+export default {
+  props: ['editable', 'property', 'isRest'],
+  data () {
+    return {
+      dialog: false,
+      editLabels: null
+    }
+  },
+  computed: {
+    ...mapState('session', ['user']),
+    schema () {
+      const value = { type: 'string', title: 'valeur', 'x-cols': 6, 'x-class': 'pr-2' }
+      if (this.property.type === 'boolean') value.enum = ['true', 'false']
+      if (this.property.enum) value.examples = this.property.enum
       return {
-        dialog: false,
-        editLabels: null,
+        type: 'array',
+        title: ' ',
+        items: {
+          type: 'object',
+          required: ['value'],
+          properties: {
+            value,
+            label: { type: 'string', title: 'libellé', 'x-cols': 6 }
+          }
+        }
+      }
+    }
+  },
+  methods: {
+    toggle (show) {
+      if (show) {
+        this.editLabels = Object.keys(this.property['x-labels'] || {})
+          .map(key => ({ value: key, label: this.property['x-labels'][key] }))
+      } else {
+        this.editLabels = null
       }
     },
-    computed: {
-      ...mapState('session', ['user']),
-      schema() {
-        const value = { type: 'string', title: 'valeur', 'x-cols': 6, 'x-class': 'pr-2' }
-        if (this.property.type === 'boolean') value.enum = ['true', 'false']
-        if (this.property.enum) value.examples = this.property.enum
-        return {
-          type: 'array',
-          title: ' ',
-          items: {
-            type: 'object',
-            required: ['value'],
-            properties: {
-              value,
-              label: { type: 'string', title: 'libellé', 'x-cols': 6 },
-            },
-          },
-        }
-      },
-    },
-    methods: {
-      toggle(show) {
-        if (show) {
-          this.editLabels = Object.keys(this.property['x-labels'] || {})
-            .map(key => ({ value: key, label: this.property['x-labels'][key] }))
-        } else {
-          this.editLabels = null
-        }
-      },
-      apply() {
-        const labels = this.editLabels
-          .filter(item => !!item.value)
-          .reduce((a, item) => { a[item.value] = item.label || ''; return a }, {})
-        console.log('labels', labels)
-        if (Object.keys(labels).length) this.$set(this.property, 'x-labels', labels)
-        else delete this.property['x-labels']
-      },
-    },
+    apply () {
+      const labels = this.editLabels
+        .filter(item => !!item.value)
+        .reduce((a, item) => { a[item.value] = item.label || ''; return a }, {})
+      console.log('labels', labels)
+      if (Object.keys(labels).length) this.$set(this.property, 'x-labels', labels)
+      else delete this.property['x-labels']
+    }
   }
+}
 </script>
 
 <style>

@@ -18,59 +18,59 @@ module.exports = {
     url: 'MONGO_URL',
     maxBulkOps: {
       __name: 'MONGO_MAX_BULK_OPS',
-      __format: 'json',
-    },
+      __format: 'json'
+    }
   },
   analytics: {
     __name: 'ANALYTICS',
-    __format: 'json',
+    __format: 'json'
   },
   elasticsearch: {
     host: 'ES_HOST',
     defaultAnalyzer: 'ES_DEFAULT_ANALYZER',
     maxBulkLines: {
       __name: 'ES_MAX_BULK_LINES',
-      __format: 'json',
+      __format: 'json'
     },
     maxBulkChars: {
       __name: 'ES_MAX_BULK_CHARS',
-      __format: 'json',
+      __format: 'json'
     },
     maxShardSize: {
       __name: 'ES_MAX_SHARD_SIZE',
-      __format: 'json',
+      __format: 'json'
     },
     nbReplicas: {
       __name: 'ES_NB_REPLICAS',
-      __format: 'json',
-    },
+      __format: 'json'
+    }
   },
   defaultRemoteKey: {
-    value: 'DEFAULT_REMOTE_KEY',
+    value: 'DEFAULT_REMOTE_KEY'
   },
   secretKeys: {
     identities: 'SECRET_IDENTITIES',
     limits: 'SECRET_LIMITS',
     notifications: 'SECRET_NOTIFICATIONS',
-    masterData: 'SECRET_MASTER_DATA',
+    masterData: 'SECRET_MASTER_DATA'
   },
   globalWebhooks: {
     consumption: {
       __name: 'WEBHOOKS_CONSUMPTION',
-      __format: 'json',
-    },
+      __format: 'json'
+    }
   },
   brand: {
     logo: 'BRAND_LOGO',
     title: 'BRAND_TITLE',
     description: 'BRAND_DESCRIPTION',
     url: 'BRAND_URL',
-    embed: 'BRAND_EMBED',
+    embed: 'BRAND_EMBED'
   },
   theme: {
     dark: {
       __name: 'THEME_DARK',
-      __format: 'json',
+      __format: 'json'
     },
     colors: {
       primary: 'THEME_PRIMARY',
@@ -79,7 +79,7 @@ module.exports = {
       error: 'THEME_ERROR',
       info: 'THEME_INFO',
       success: 'THEME_SUCCESS',
-      warning: 'THEME_WARNING',
+      warning: 'THEME_WARNING'
     },
     darkColors: {
       primary: 'THEME_DARK_PRIMARY',
@@ -88,139 +88,139 @@ module.exports = {
       error: 'THEME_DARK_ERROR',
       info: 'THEME_DARK_INFO',
       success: 'THEME_DARK_SUCCESS',
-      warning: 'THEME_DARK_WARNING',
+      warning: 'THEME_DARK_WARNING'
     },
     cssUrl: 'THEME_CSS_URL',
-    cssText: 'THEME_CSS_TEXT',
+    cssText: 'THEME_CSS_TEXT'
   },
   darkModeSwitch: {
     __name: 'DARK_MODE_SWITCH',
-    __format: 'json',
+    __format: 'json'
   },
   defaultLimits: {
     totalStorage: {
       __name: 'DEFAULT_LIMITS_TOTAL_STORAGE',
-      __format: 'json',
+      __format: 'json'
     },
     totalIndexed: {
       __name: 'DEFAULT_LIMITS_TOTAL_INDEXED',
-      __format: 'json',
+      __format: 'json'
     },
     datasetStorage: {
       __name: 'DEFAULT_LIMITS_DATASET_STORAGE',
-      __format: 'json',
+      __format: 'json'
     },
     datasetIndexed: {
       __name: 'DEFAULT_LIMITS_DATASET_INDEXED',
-      __format: 'json',
+      __format: 'json'
     },
     nbDatasets: {
       __name: 'DEFAULT_LIMITS_NB_DATASETS',
-      __format: 'json',
+      __format: 'json'
     },
     maxSpreadsheetSize: {
       __name: 'DEFAULT_LIMITS_MAX_SPREADSHEET_SIZE',
-      __format: 'json',
-    },
+      __format: 'json'
+    }
   },
   worker: {
     interval: {
       __name: 'WORKER_INTERVAL',
-      __format: 'json',
+      __format: 'json'
     },
     concurrency: {
       __name: 'WORKER_CONCURRENCY',
-      __format: 'json',
+      __format: 'json'
     },
     spawnTask: {
       __name: 'WORKER_SPAWN_TASK',
-      __format: 'json',
-    },
+      __format: 'json'
+    }
   },
   browserLogLevel: 'BROWSER_LOG_LEVEL',
   listenWhenReady: {
     __name: 'LISTEN_WHEN_READY',
-    __format: 'json',
+    __format: 'json'
   },
   thumbor: {
     url: 'THUMBOR_URL',
-    key: 'THUMBOR_KEY',
+    key: 'THUMBOR_KEY'
   },
   applications: {
     __name: 'APPLICATIONS',
-    __format: 'json',
+    __format: 'json'
   },
   applicationsDirectories: {
     __name: 'APPLICATIONS_DIRECTORIES',
-    __format: 'json',
+    __format: 'json'
   },
   baseAppsCategories: {
     __name: 'BASE_APPS_CATEGORIES',
-    __format: 'json',
+    __format: 'json'
   },
   remoteServices: {
     __name: 'REMOTE_SERVICES',
-    __format: 'json',
+    __format: 'json'
   },
   catalogs: {
     __name: 'CATALOGS',
-    __format: 'json',
+    __format: 'json'
   },
   disableSharing: {
     __name: 'DISABLE_SHARING',
-    __format: 'json',
+    __format: 'json'
   },
   disableApplications: {
     __name: 'DISABLE_APPLICATIONS',
-    __format: 'json',
+    __format: 'json'
   },
   disableRemoteServices: {
     __name: 'DISABLE_REMOTE_SERVICES',
-    __format: 'json',
+    __format: 'json'
   },
   info: {
     termsOfService: 'INFO_TOS',
     contact: {
       __name: 'INFO_CONTACT',
-      __format: 'json',
-    },
+      __format: 'json'
+    }
   },
   ogr2ogr: {
     skip: {
       __name: 'OGR2OGR_SKIP',
-      __format: 'json',
+      __format: 'json'
     },
     timeout: {
       __name: 'OGR2OGR_TIMEOUT',
-      __format: 'json',
-    },
+      __format: 'json'
+    }
   },
   doc: {
     datasetEdit: 'DOC_DATASET_EDIT',
     datasetExtend: 'DOC_DATASET_EXTEND',
     datasetAttachments: 'DOC_DATASET_ATTACHMENTS',
     settings: 'DOC_SETTINGS',
-    catalogs: 'DOC_CATALOGS',
+    catalogs: 'DOC_CATALOGS'
   },
   extraNavigationItems: {
     __name: 'EXTRA_NAV_ITEMS',
-    __format: 'json',
+    __format: 'json'
   },
   extraAdminNavigationItems: {
     __name: 'EXTRA_ADMIN_NAV_ITEMS',
-    __format: 'json',
+    __format: 'json'
   },
   dateFormats: {
     __name: 'DATE_FORMATS',
-    __format: 'json',
+    __format: 'json'
   },
   dateTimeFormats: {
     __name: 'DATE_TIME_FORMATS',
-    __format: 'json',
+    __format: 'json'
   },
   defaultTimeZone: 'DEFAULT_TIME_ZONE',
   i18n: {
     locales: 'I18N_LOCALES',
-    defaultLocale: 'I18N_DEFAULT_LOCALE',
-  },
+    defaultLocale: 'I18N_DEFAULT_LOCALE'
+  }
 }

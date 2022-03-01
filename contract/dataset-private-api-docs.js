@@ -16,47 +16,47 @@ module.exports = (dataset, publicUrl = config.publicUrl, user) => {
 Cette documentation interactive à destination des développeurs permet de gérer et consommer les ressources du jeu de données "${dataset.title || dataset.id}".
 `
 
-    if (dataset.isVirtual) {
-      description += `
+  if (dataset.isVirtual) {
+    description += `
 Ce jeu de données est virtuel. C'est à dire qu'il est constitué de redirections vers un ensemble de jeux de données et qu'il n'a pas été créé à partir d'un fichier téléchargeable.
 `
-    }
+  }
 
-    if (dataset.isRest) {
-      description += `
+  if (dataset.isRest) {
+    description += `
 Ce jeu de données est incrémental. C'est à dire qu'il est constitué dynamiquement à partir de lectures / écritures de lignes et qu'il n'a pas été créé à partir d'un fichier téléchargeable.
 `
-    }
+  }
 
-    description += `
+  description += `
 Pour protéger l'infrastructure de publication de données, les appels sont limités par quelques règles simples :
   
 - ${userApiRate}
 `
 
-    if (visibility(dataset) !== 'public') {
-      description += `
+  if (visibility(dataset) !== 'public') {
+    description += `
 Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous pouvez créer dans les paramètres du compte.
 `
-    } else {
-      description += `
+  } else {
+    description += `
 - ${anonymousApiRate}
 `
-    }
+  }
 
-    api.components.securitySchemes = {
-      apiKey: {
-        type: 'apiKey',
-        in: 'header',
-        name: 'x-apiKey',
-      },
-      sdCookie: {
-        type: 'apiKey',
-        in: 'cookie',
-        name: 'id_token',
-      },
+  api.components.securitySchemes = {
+    apiKey: {
+      type: 'apiKey',
+      in: 'header',
+      name: 'x-apiKey'
+    },
+    sdCookie: {
+      type: 'apiKey',
+      in: 'cookie',
+      name: 'id_token'
     }
-    api.security = [{ apiKey: [] }, { sdCookie: [] }]
+  }
+  api.security = [{ apiKey: [] }, { sdCookie: [] }]
 
   Object.assign(api.info, { title, description })
   api.info.description = description
@@ -72,20 +72,20 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
         required: true,
         content: {
           'application/json': {
-            schema: datasetPatchSchema,
-          },
-        },
+            schema: datasetPatchSchema
+          }
+        }
       },
       responses: {
         200: {
           description: 'Les informations du jeu de données.',
           content: {
             'application/json': {
-              schema: { $ref: '#/components/schemas/datasetSchema' },
-            },
-          },
-        },
-      },
+              schema: { $ref: '#/components/schemas/datasetSchema' }
+            }
+          }
+        }
+      }
     },
     post: {
       summary: 'Mettre à jour les données du jeu de données.',
@@ -97,20 +97,20 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
         required: true,
         content: {
           'multipart/form-data': {
-            schema: datasetPost,
-          },
-        },
+            schema: datasetPost
+          }
+        }
       },
       responses: {
         200: {
           description: 'Métadonnées sur le dataset modifié',
           content: {
             'application/json': {
-              schema: { $ref: '#/components/schemas/datasetSchema' },
-            },
-          },
-        },
-      },
+              schema: { $ref: '#/components/schemas/datasetSchema' }
+            }
+          }
+        }
+      }
     },
     delete: {
       summary: 'Supprimer le jeu de données.',
@@ -119,10 +119,10 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
       tags: ['Métadonnées'],
       responses: {
         204: {
-          description: 'Suppression effectuée',
-        },
-      },
-    },
+          description: 'Suppression effectuée'
+        }
+      }
+    }
   })
 
   api.paths['/private-api-docs.json'] = {
@@ -137,13 +137,13 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
           content: {
             'application/json': {
               schema: {
-                type: 'object',
-              },
-            },
-          },
-        },
-      },
-    },
+                type: 'object'
+              }
+            }
+          }
+        }
+      }
+    }
   }
 
   api.paths['/journal'] = {
@@ -157,12 +157,12 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
           description: 'Le journal.',
           content: {
             'application/json': {
-              schema: journalSchema,
-            },
-          },
-        },
-      },
-    },
+              schema: journalSchema
+            }
+          }
+        }
+      }
+    }
   }
 
   if (dataset.isRest) {
@@ -179,8 +179,8 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
 - delete: supprime la ligne, nécessite la présence de _id
 - update: remplate la ligne, nécessite la présence de _id
 - patch: modifie la ligne, nécessite la présence de _id
-    `,
-}
+    `
+    }
 
     api.paths['/lines/{lineId}'] = {
       parameters: [{
@@ -189,8 +189,8 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
         description: 'L\'identifiant de la ligne',
         required: true,
         schema: {
-          type: 'string',
-        },
+          type: 'string'
+        }
       }],
       get: {
         summary: 'Récupérer une ligne de données',
@@ -202,11 +202,11 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
             description: 'Le contenu d\'une ligne de données',
             content: {
               'application/json': {
-                schema: readLineSchema,
-              },
-            },
-          },
-        },
+                schema: readLineSchema
+              }
+            }
+          }
+        }
       },
       put: {
         summary: 'Remplacer une ligne de données',
@@ -218,20 +218,20 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
           required: true,
           content: {
             'application/json': {
-              schema: patchLineSchema,
-            },
-          },
+              schema: patchLineSchema
+            }
+          }
         },
         responses: {
           200: {
             description: 'La ligne de données modifiée',
             content: {
               'application/json': {
-                schema: readLineSchema,
-              },
-            },
-          },
-        },
+                schema: readLineSchema
+              }
+            }
+          }
+        }
       },
       patch: {
         summary: 'Modifier une ligne de données',
@@ -243,20 +243,20 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
           required: true,
           content: {
             'application/json': {
-              schema: patchLineSchema,
-            },
-          },
+              schema: patchLineSchema
+            }
+          }
         },
         responses: {
           200: {
             description: 'La ligne de données après modification',
             content: {
               'application/json': {
-                schema: readLineSchema,
-              },
-            },
-          },
-        },
+                schema: readLineSchema
+              }
+            }
+          }
+        }
       },
       delete: {
         summary: 'Supprimer une ligne de données',
@@ -265,10 +265,10 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
         tags: ['Données incrémentales'],
         responses: {
           204: {
-            description: 'La ligne de données a été supprimée',
-          },
-        },
-      },
+            description: 'La ligne de données a été supprimée'
+          }
+        }
+      }
     }
     api.paths['/lines'] = {
       ...api.paths['/lines'],
@@ -282,20 +282,20 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
           required: true,
           content: {
             'application/json': {
-              schema: writeLineSchema,
-            },
-          },
+              schema: writeLineSchema
+            }
+          }
         },
         responses: {
           201: {
             description: 'La ligne de données ajoutée',
             content: {
               'application/json': {
-                schema: readLineSchema,
-              },
-            },
-          },
-        },
+                schema: readLineSchema
+              }
+            }
+          }
+        }
       },
       delete: {
         summary: 'Supprimer toutes les lignes de données',
@@ -304,10 +304,10 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
         tags: ['Données incrémentales'],
         responses: {
           204: {
-            description: 'Toutes les lignes de données ont été supprimées',
-          },
-        },
-      },
+            description: 'Toutes les lignes de données ont été supprimées'
+          }
+        }
+      }
     }
     api.paths['/_bulk_lines'] = {
       post: {
@@ -322,13 +322,13 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
             'application/json': {
               schema: {
                 type: 'array',
-                items: bulkLineSchema,
-              },
+                items: bulkLineSchema
+              }
             },
             'application/x-ndjson': {
-              schema: bulkLineSchema,
-            },
-          },
+              schema: bulkLineSchema
+            }
+          }
         },
         responses: {
           200: {
@@ -347,17 +347,17 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
                         type: 'object',
                         properties: {
                           line: { type: 'integer' },
-                          error: { type: 'string' },
-                        },
-                      },
-                    },
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
+                          error: { type: 'string' }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     }
   }
 
@@ -374,11 +374,11 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
             200: {
               description: 'Informations techniques de diagnostic',
               content: {
-                'application/json': {},
-              },
-            },
-          },
-        },
+                'application/json': {}
+              }
+            }
+          }
+        }
       },
       '/_reindex': {
         post: {
@@ -389,11 +389,11 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
             200: {
               description: 'accusé de réception de la demande reindexation',
               content: {
-                'application/json': {},
-              },
-            },
-          },
-        },
+                'application/json': {}
+              }
+            }
+          }
+        }
       },
       '/_refinalize': {
         post: {
@@ -404,12 +404,12 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
             200: {
               description: 'accusé de réception de la demande re-finalisation',
               content: {
-                'application/json': {},
-              },
-            },
-          },
-        },
-      },
+                'application/json': {}
+              }
+            }
+          }
+        }
+      }
     })
   }
 

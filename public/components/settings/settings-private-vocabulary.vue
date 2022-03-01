@@ -12,43 +12,43 @@
 </template>
 
 <script>
-  import Vue from 'vue'
-  import eventBus from '~/event-bus'
+import Vue from 'vue'
+import eventBus from '~/event-bus'
 
-  if (process.browser) {
-    const Draggable = require('vuedraggable')
-    Vue.component('draggable', Draggable)
-  }
+if (process.browser) {
+  const Draggable = require('vuedraggable')
+  Vue.component('Draggable', Draggable)
+}
 
-  const privateVocabularySchema = require('~/../contract/settings').properties.privateVocabulary
-  const wrapperSchema = {
-    type: 'object',
-    properties: {
-      privateVocabulary: privateVocabularySchema,
-    },
+const privateVocabularySchema = require('~/../contract/settings').properties.privateVocabulary
+const wrapperSchema = {
+  type: 'object',
+  properties: {
+    privateVocabulary: privateVocabularySchema
   }
+}
 
-  export default {
-    props: ['settings'],
-    data: () => ({
-      eventBus,
-      wrapperSchema,
-      formValid: true,
-      wrapper: {
-        privateVocabulary: [],
-      },
-    }),
-    created() {
-      this.wrapper.privateVocabulary = JSON.parse(JSON.stringify(this.settings.privateVocabulary || []))
-    },
-    methods: {
-      async change() {
-        await new Promise(resolve => setTimeout(resolve, 10))
-        if (this.$refs.form.validate()) {
-          this.settings.privateVocabulary = JSON.parse(JSON.stringify(this.wrapper.privateVocabulary))
-          this.$emit('updated')
-        }
-      },
-    },
+export default {
+  props: ['settings'],
+  data: () => ({
+    eventBus,
+    wrapperSchema,
+    formValid: true,
+    wrapper: {
+      privateVocabulary: []
+    }
+  }),
+  created () {
+    this.wrapper.privateVocabulary = JSON.parse(JSON.stringify(this.settings.privateVocabulary || []))
+  },
+  methods: {
+    async change () {
+      await new Promise(resolve => setTimeout(resolve, 10))
+      if (this.$refs.form.validate()) {
+        this.settings.privateVocabulary = JSON.parse(JSON.stringify(this.wrapper.privateVocabulary))
+        this.$emit('updated')
+      }
+    }
   }
+}
 </script>

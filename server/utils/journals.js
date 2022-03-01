@@ -1,7 +1,7 @@
 const moment = require('moment')
 const webhooks = require('./webhooks')
 
-module.exports.log = async function(app, resource, event, type = 'dataset', noStoreEvent) {
+module.exports.log = async function (app, resource, event, type = 'dataset', noStoreEvent) {
   try {
     const db = app.get('db')
     event.date = moment().toISOString()
@@ -12,7 +12,7 @@ module.exports.log = async function(app, resource, event, type = 'dataset', noSt
         .updateOne(
           { id: resource.id, type, 'owner.type': resource.owner.type, 'owner.id': resource.owner.id },
           { $push: { events: event } },
-          { upsert: true },
+          { upsert: true }
         )
     }
 

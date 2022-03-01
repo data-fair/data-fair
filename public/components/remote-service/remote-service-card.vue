@@ -32,15 +32,15 @@
 </template>
 
 <script>
-  import { marked } from 'marked'
+import { marked } from 'marked'
 
-  export default {
-    props: ['remoteService'],
-    data: () => ({
-      marked,
-      hover: false,
-    }),
-  }
+export default {
+  props: ['remoteService'],
+  data: () => ({
+    marked,
+    hover: false
+  })
+}
 </script>
 
 <style lang="css" scoped>

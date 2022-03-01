@@ -1,6 +1,6 @@
 <template>
   <v-row v-if="application">
-    <v-col :style="this.$vuetify.breakpoint.lgAndUp ? 'padding-right:256px;' : ''">
+    <v-col :style="$vuetify.breakpoint.lgAndUp ? 'padding-right:256px;' : ''">
       <v-container class="py-0">
         <layout-doc-link
           v-if="prodBaseApp"
@@ -15,14 +15,17 @@
               svg-no-margin
               :section="sections.find(s => s.id === 'metadata')"
             >
-              <template v-slot:tabs>
+              <template #tabs>
                 <v-tab href="#metadata-info">
                   <v-icon>mdi-information</v-icon>&nbsp;&nbsp;{{ $t('info') }}
                 </v-tab>
               </template>
-              <template v-slot:tabs-items>
+              <template #tabs-items>
                 <v-tab-item value="metadata-info">
-                  <v-container fluid class="pb-0">
+                  <v-container
+                    fluid
+                    class="pb-0"
+                  >
                     <tutorial-alert id="app-configure-meta">
                       {{ $t('tutorialConfigMeta') }}
                     </tutorial-alert>
@@ -38,14 +41,17 @@
               svg-no-margin
               :section="sections.find(s => s.id === 'config')"
             >
-              <template v-slot:tabs>
+              <template #tabs>
                 <v-tab href="#config-config">
                   <v-icon>mdi-pencil</v-icon>&nbsp;&nbsp;{{ $t('edit') }}
                 </v-tab>
               </template>
-              <template v-slot:tabs-items>
+              <template #tabs-items>
                 <v-tab-item value="config-config">
-                  <v-container fluid class="pa-0">
+                  <v-container
+                    fluid
+                    class="pa-0"
+                  >
                     <application-config />
                   </v-container>
                 </v-tab-item>
@@ -58,15 +64,18 @@
               svg-no-margin
               :min-height="250"
             >
-              <template v-slot:title>
+              <template #title>
                 Partage
               </template>
-              <template v-slot:tabs>
+              <template #tabs>
                 <v-tab href="#share-permissions">
                   <v-icon>mdi-security</v-icon>&nbsp;&nbsp;{{ $t('permissions') }}
                 </v-tab>
 
-                <v-tab v-if="can('getKeys')" href="#share-links">
+                <v-tab
+                  v-if="can('getKeys')"
+                  href="#share-links"
+                >
                   <v-icon>mdi-link</v-icon>&nbsp;&nbsp;{{ $t('protectedLink') }}
                 </v-tab>
 
@@ -78,7 +87,7 @@
                   <v-icon>mdi-transit-connection</v-icon>&nbsp;&nbsp;{{ $t('catalogs') }}
                 </v-tab>
               </template>
-              <template v-slot:tabs-items>
+              <template #tabs-items>
                 <tutorial-alert id="app-share-portal">
                   {{ $t('tutorialShare') }}
                 </tutorial-alert>
@@ -115,15 +124,24 @@
               :svg="settingsSvg"
               :min-height="550"
             >
-              <template v-slot:title v-t="'activity'" />
-              <template v-slot:tabs>
-                <v-tab v-if="can('readJournal')" href="#activity-journal">
+              <template
+                #title
+                v-t="'activity'"
+              />
+              <template #tabs>
+                <v-tab
+                  v-if="can('readJournal')"
+                  href="#activity-journal"
+                >
                   <v-icon>mdi-calendar-text</v-icon>&nbsp;&nbsp;{{ $t('journal') }}
                 </v-tab>
               </template>
-              <template v-slot:tabs-items>
+              <template #tabs-items>
                 <v-tab-item value="activity-journal">
-                  <v-container fluid class="pa-0">
+                  <v-container
+                    fluid
+                    class="pa-0"
+                  >
                     <journal
                       :journal="journal"
                       type="application"
@@ -136,12 +154,12 @@
         </v-row>
       </v-container>
     </v-col>
-    <layout-navigation-right v-if="this.$vuetify.breakpoint.lgAndUp">
+    <layout-navigation-right v-if="$vuetify.breakpoint.lgAndUp">
       <application-actions :publication-sites="publicationSites" />
       <layout-toc :sections="sections" />
     </layout-navigation-right>
     <layout-actions-button v-else>
-      <template v-slot:actions>
+      <template #actions>
         <application-actions :publication-sites="publicationSites" />
       </template>
     </layout-actions-button>
@@ -182,57 +200,57 @@ en:
 </i18n>
 
 <script>
-  import { mapState, mapActions, mapGetters } from 'vuex'
+import { mapState, mapActions, mapGetters } from 'vuex'
 
-  export default {
-    async fetch({ store, params, route }) {
-      store.dispatch('application/clear')
-      await store.dispatch('application/setId', route.params.id)
-      if (store.state.application.application) {
-        await store.dispatch('fetchPublicationSites', store.state.application.application.owner)
+export default {
+  data: () => ({
+    checklistSvg: require('~/assets/svg/Checklist_Two Color.svg?raw'),
+    creativeSvg: require('~/assets/svg/Creative Process_Two Color.svg?raw'),
+    shareSvg: require('~/assets/svg/Share_Two Color.svg?raw'),
+    settingsSvg: require('~/assets/svg/Settings_Monochromatic.svg?raw')
+  }),
+  async fetch ({ store, params, route }) {
+    store.dispatch('application/clear')
+    await store.dispatch('application/setId', route.params.id)
+    if (store.state.application.application) {
+      await store.dispatch('fetchPublicationSites', store.state.application.application.owner)
+    }
+  },
+  computed: {
+    ...mapState(['env']),
+    ...mapState('application', ['application', 'api', 'journal', 'prodBaseApp']),
+    ...mapGetters('application', ['resourceUrl', 'can', 'applicationLink', 'hasPrivateDatasets']),
+    publicationSites () {
+      if (!this.application) return []
+      return this.$store.getters.ownerPublicationSites(this.application.owner)
+    },
+    sections () {
+      const sections = []
+      if (!this.application) return sections
+      sections.push({ title: this.$t('metadata'), id: 'metadata' })
+      sections.push({ title: this.$t('config'), id: 'config' })
+      if (!this.env.disableSharing) {
+        sections.push({ title: this.$t('share'), id: 'share' })
       }
-    },
-    data: () => ({
-      checklistSvg: require('~/assets/svg/Checklist_Two Color.svg?raw'),
-      creativeSvg: require('~/assets/svg/Creative Process_Two Color.svg?raw'),
-      shareSvg: require('~/assets/svg/Share_Two Color.svg?raw'),
-      settingsSvg: require('~/assets/svg/Settings_Monochromatic.svg?raw'),
-    }),
-    computed: {
-      ...mapState(['env']),
-      ...mapState('application', ['application', 'api', 'journal', 'prodBaseApp']),
-      ...mapGetters('application', ['resourceUrl', 'can', 'applicationLink', 'hasPrivateDatasets']),
-      publicationSites() {
-        if (!this.application) return []
-        return this.$store.getters.ownerPublicationSites(this.application.owner)
-      },
-      sections() {
-        const sections = []
-        if (!this.application) return sections
-        sections.push({ title: this.$t('metadata'), id: 'metadata' })
-        sections.push({ title: this.$t('config'), id: 'config' })
-        if (!this.env.disableSharing) {
-          sections.push({ title: this.$t('share'), id: 'share' })
-        }
-        if (this.can('readJournal')) {
-          sections.push({ title: this.$t('activity'), id: 'activity' })
-        }
-        return sections
-      },
-    },
-    created() {
-      // children pages are deprecated
-      const path = `/application/${this.$route.params.id}`
-      if (this.$route.path !== path) return this.$router.push(path)
-      if (this.application) {
-        this.$store.dispatch('breadcrumbs', [{ text: this.$t('visualizations'), to: '/applications' }, { text: this.application.title || this.application.id }])
-        this.subscribe()
+      if (this.can('readJournal')) {
+        sections.push({ title: this.$t('activity'), id: 'activity' })
       }
-    },
-    methods: {
-      ...mapActions('application', ['patch', 'subscribe']),
-    },
+      return sections
+    }
+  },
+  created () {
+    // children pages are deprecated
+    const path = `/application/${this.$route.params.id}`
+    if (this.$route.path !== path) return this.$router.push(path)
+    if (this.application) {
+      this.$store.dispatch('breadcrumbs', [{ text: this.$t('visualizations'), to: '/applications' }, { text: this.application.title || this.application.id }])
+      this.subscribe()
+    }
+  },
+  methods: {
+    ...mapActions('application', ['patch', 'subscribe'])
   }
+}
 </script>
 
 <style>

@@ -11,13 +11,13 @@
 </template>
 
 <script>
-  export default {
-    computed: {
-      resourceUrl() {
-        return this.$store.state.env.publicUrl + '/api/v1/api-docs.json'
-      },
-    },
+export default {
+  computed: {
+    resourceUrl () {
+      return this.$store.state.env.publicUrl + '/api/v1/api-docs.json'
+    }
   }
+}
 </script>
 
 <style lang="css">

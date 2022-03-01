@@ -11,7 +11,7 @@
       :disabled="!!catalog.createdAt && !can('writeDescription')"
       @change="changeApiKey"
     >
-      <template v-slot:message>
+      <template #message>
         <span v-html="$t('apiKeyHelp', {url: catalog.url})" />
       </template>
     </v-text-field>
@@ -93,39 +93,39 @@ en:
 </i18n>
 
 <script>
-  import { mapGetters } from 'vuex'
+import { mapGetters } from 'vuex'
 
-  export default {
-    props: ['catalog', 'catalogType'],
-    data() {
-      return {
-        organizations: [],
-        searchOrganizations: '',
-        organizationsLoading: false,
-      }
-    },
-    computed: {
-      ...mapGetters('catalog', ['can']),
-    },
-    watch: {
-      async searchOrganizations() {
-        if (!this.searchOrganizations || this.searchOrganizations === (this.catalog.organization && this.catalog.organization.name)) return
-        this.organizationsLoading = true
-        this.organizations = (await this.$axios.$get('api/v1/catalogs/_organizations', { params: { type: this.catalog.type, url: this.catalog.url, q: this.searchOrganizations } })).results
-        this.organizationsLoading = false
-      },
-    },
-    created() {
-      if (this.catalog.organization && this.catalog.organization) {
-        this.organizations = [this.catalog.organization]
-      }
-    },
-    methods: {
-      changeApiKey() {
-        if (this.catalog.apiKey && this.catalog.apiKey !== '**********') this.$emit('change', { apiKey: this.catalog.apiKey })
-      },
-    },
+export default {
+  props: ['catalog', 'catalogType'],
+  data () {
+    return {
+      organizations: [],
+      searchOrganizations: '',
+      organizationsLoading: false
+    }
+  },
+  computed: {
+    ...mapGetters('catalog', ['can'])
+  },
+  watch: {
+    async searchOrganizations () {
+      if (!this.searchOrganizations || this.searchOrganizations === (this.catalog.organization && this.catalog.organization.name)) return
+      this.organizationsLoading = true
+      this.organizations = (await this.$axios.$get('api/v1/catalogs/_organizations', { params: { type: this.catalog.type, url: this.catalog.url, q: this.searchOrganizations } })).results
+      this.organizationsLoading = false
+    }
+  },
+  created () {
+    if (this.catalog.organization && this.catalog.organization) {
+      this.organizations = [this.catalog.organization]
+    }
+  },
+  methods: {
+    changeApiKey () {
+      if (this.catalog.apiKey && this.catalog.apiKey !== '**********') this.$emit('change', { apiKey: this.catalog.apiKey })
+    }
   }
+}
 </script>
 
 <style lang="css">

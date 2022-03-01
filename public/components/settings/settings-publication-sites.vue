@@ -12,43 +12,43 @@
 </template>
 
 <script>
-  import Vue from 'vue'
-  import eventBus from '~/event-bus'
+import Vue from 'vue'
+import eventBus from '~/event-bus'
 
-  if (process.browser) {
-    const Draggable = require('vuedraggable')
-    Vue.component('draggable', Draggable)
-  }
+if (process.browser) {
+  const Draggable = require('vuedraggable')
+  Vue.component('Draggable', Draggable)
+}
 
-  const publicationSitesSchema = require('~/../contract/settings').properties.publicationSites
-  const wrapperSchema = {
-    type: 'object',
-    properties: {
-      publicationSites: publicationSitesSchema,
-    },
+const publicationSitesSchema = require('~/../contract/settings').properties.publicationSites
+const wrapperSchema = {
+  type: 'object',
+  properties: {
+    publicationSites: publicationSitesSchema
   }
+}
 
-  export default {
-    props: ['settings'],
-    data: () => ({
-      eventBus,
-      wrapperSchema,
-      formValid: true,
-      wrapper: {
-        publicationSites: [],
-      },
-    }),
-    created() {
-      this.wrapper.publicationSites = JSON.parse(JSON.stringify(this.settings.publicationSites || []))
-    },
-    methods: {
-      async change() {
-        await new Promise(resolve => setTimeout(resolve, 10))
-        if (this.$refs.form.validate()) {
-          this.settings.publicationSites = JSON.parse(JSON.stringify(this.wrapper.publicationSites))
-          this.$emit('updated')
-        }
-      },
-    },
+export default {
+  props: ['settings'],
+  data: () => ({
+    eventBus,
+    wrapperSchema,
+    formValid: true,
+    wrapper: {
+      publicationSites: []
+    }
+  }),
+  created () {
+    this.wrapper.publicationSites = JSON.parse(JSON.stringify(this.settings.publicationSites || []))
+  },
+  methods: {
+    async change () {
+      await new Promise(resolve => setTimeout(resolve, 10))
+      if (this.$refs.form.validate()) {
+        this.settings.publicationSites = JSON.parse(JSON.stringify(this.wrapper.publicationSites))
+        this.$emit('updated')
+      }
+    }
   }
+}
 </script>

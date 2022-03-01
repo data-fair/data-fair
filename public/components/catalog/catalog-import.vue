@@ -102,53 +102,53 @@ en:
 </i18n>
 
 <script>
-  import { mapState } from 'vuex'
-  import eventBus from '~/event-bus'
+import { mapState } from 'vuex'
+import eventBus from '~/event-bus'
 
-  export default {
-    props: ['initCatalog'],
-    data: () => ({
-      currentStep: null,
-      owner: null,
-      catalogUrl: null,
-      configurableCatalogs: [],
-      catalog: {},
-      importing: false,
-      catalogTypes: [],
-    }),
-    computed: {
-      ...mapState('session', ['user']),
-      ...mapState(['env']),
-    },
-    async mounted() {
-      this.configurableCatalogs = await this.$axios.$get('api/v1/configurable-catalogs')
-      this.catalogTypes = await this.$axios.$get('api/v1/catalogs/_types')
-      if (this.initCatalog) {
-        this.catalogUrl = this.initCatalog
-        this.initFromUrl()
+export default {
+  props: ['initCatalog'],
+  data: () => ({
+    currentStep: null,
+    owner: null,
+    catalogUrl: null,
+    configurableCatalogs: [],
+    catalog: {},
+    importing: false,
+    catalogTypes: []
+  }),
+  computed: {
+    ...mapState('session', ['user']),
+    ...mapState(['env'])
+  },
+  async mounted () {
+    this.configurableCatalogs = await this.$axios.$get('api/v1/configurable-catalogs')
+    this.catalogTypes = await this.$axios.$get('api/v1/catalogs/_types')
+    if (this.initCatalog) {
+      this.catalogUrl = this.initCatalog
+      this.initFromUrl()
+    }
+  },
+  methods: {
+    async initFromUrl () {
+      this.catalog = {}
+      if (!this.catalogUrl) return
+      try {
+        this.catalog = await this.$axios.$post('api/v1/catalogs/_init', null, { params: { url: this.catalogUrl } })
+      } catch (error) {
+        eventBus.$emit('notification', { error, msg: this.$t('fetchError') })
       }
     },
-    methods: {
-      async initFromUrl() {
-        this.catalog = {}
-        if (!this.catalogUrl) return
-        try {
-          this.catalog = await this.$axios.$post('api/v1/catalogs/_init', null, { params: { url: this.catalogUrl } })
-        } catch (error) {
-          eventBus.$emit('notification', { error, msg: this.$t('fetchError') })
-        }
-      },
-      async importCatalog() {
-        if (!this.$refs['config-form'].validate()) return
-        this.importing = true
-        try {
-          const catalog = await this.$axios.$post('api/v1/catalogs', this.catalog)
-          this.$router.push({ path: `/catalog/${catalog.id}` })
-        } catch (error) {
-          eventBus.$emit('notification', { error, msg: this.$t('importError') })
-          this.importing = false
-        }
-      },
-    },
+    async importCatalog () {
+      if (!this.$refs['config-form'].validate()) return
+      this.importing = true
+      try {
+        const catalog = await this.$axios.$post('api/v1/catalogs', this.catalog)
+        this.$router.push({ path: `/catalog/${catalog.id}` })
+      } catch (error) {
+        eventBus.$emit('notification', { error, msg: this.$t('importError') })
+        this.importing = false
+      }
+    }
   }
+}
 </script>

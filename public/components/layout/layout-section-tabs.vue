@@ -24,7 +24,7 @@
           {{ section.title }}
         </slot>
       </v-toolbar-title>
-      <template v-slot:extension>
+      <template #extension>
         <slot name="extension">
           <v-tabs
             v-model="tab"
@@ -33,11 +33,14 @@
           >
             <slot name="tabs">
               <v-tab
-                v-for="tab in section.children"
-                :key="tab.id"
-                :href="`#${section.id}-${tab.id}`"
+                v-for="child in section.children"
+                :key="child.id"
+                :href="`#${section.id}-${child.id}`"
               >
-                <v-icon v-if="tab.icon" v-text="tab.icon" />&nbsp;&nbsp;{{ tab.title }}
+                <v-icon
+                  v-if="child.icon"
+                  v-text="child.icon"
+                />&nbsp;&nbsp;{{ child.title }}
               </v-tab>
             </slot>
           </v-tabs>
@@ -58,58 +61,58 @@
 </template>
 
 <script>
-  export default {
-    props: {
-      minHeight: { type: Number },
-      defaultTab: { type: String },
-      texture: { type: String },
-      svg: { type: String },
-      svgNoMargin: { type: Boolean },
-      section: { type: Object },
-      admin: { type: Boolean, default: false },
+export default {
+  props: {
+    minHeight: { type: Number, default: null },
+    defaultTab: { type: String, default: null },
+    texture: { type: String, default: null },
+    svg: { type: String, default: null },
+    svgNoMargin: { type: Boolean, default: false },
+    section: { type: Object, required: true },
+    admin: { type: Boolean, default: false }
+  },
+  data: () => ({
+    tab: null
+  }),
+  computed: {
+    style () {
+      if (!this.tab || !this.minHeight) return ''
+      return `min-height: ${92 + this.minHeight}px;`
     },
-    data: () => ({
-      tab: null,
-    }),
-    computed: {
-      style() {
-        if (!this.tab || !this.minHeight) return ''
-        return `min-height: ${92 + this.minHeight}px;`
-      },
-      toolbarColor() {
-        if (this.admin) return 'admin'
-        return this.$vuetify.theme.dark ? 'transparent' : 'grey lighten-4'
-      },
-      toolbarStyle() {
-        let css = ''
-        if (this.svg) css += 'padding-left: 160px;'
-        if (this.texture) {
-          // const textureUrl = `${process.env.publicUrl}/textures/${this.texture}/${this.texture}.png`
-          const textureUrl = `https://www.transparenttextures.com/patterns/${this.texture}.png`
-          css += `background-repeat: repeat; background-image: url("${textureUrl}");`
-        }
-        return css
-      },
-      svgStyle() {
-        if (!this.svg) return
-        let style = 'position: absolute;'
-        if (this.svgNoMargin) {
-          style += 'height: 110px;left: 4px;top:0px;'
-        } else {
-          style += 'height: 94px;left: 12px;top:8px;'
-        }
-        return style
-      },
+    toolbarColor () {
+      if (this.admin) return 'admin'
+      return this.$vuetify.theme.dark ? 'transparent' : 'grey lighten-4'
     },
-    created() {
-      if (this.defaultTab) this.tab = this.defaultTab
+    toolbarStyle () {
+      let css = ''
+      if (this.svg) css += 'padding-left: 160px;'
+      if (this.texture) {
+        // const textureUrl = `${process.env.publicUrl}/textures/${this.texture}/${this.texture}.png`
+        const textureUrl = `https://www.transparenttextures.com/patterns/${this.texture}.png`
+        css += `background-repeat: repeat; background-image: url("${textureUrl}");`
+      }
+      return css
     },
-    methods: {
-      toggle() {
-        if (this.tab) this.tab = null
-      },
-    },
+    svgStyle () {
+      if (!this.svg) return
+      let style = 'position: absolute;'
+      if (this.svgNoMargin) {
+        style += 'height: 110px;left: 4px;top:0px;'
+      } else {
+        style += 'height: 94px;left: 12px;top:8px;'
+      }
+      return style
+    }
+  },
+  created () {
+    if (this.defaultTab) this.tab = this.defaultTab
+  },
+  methods: {
+    toggle () {
+      if (this.tab) this.tab = null
+    }
   }
+}
 </script>
 
 <style lang="css">

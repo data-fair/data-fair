@@ -5,7 +5,7 @@
       left
       :close-on-content-click="false"
     >
-      <template v-slot:activator="{on}">
+      <template #activator="{on}">
         <v-btn
           fab
           small
@@ -21,11 +21,11 @@
 </template>
 
 <script>
-  export default {
-    props: {
-      icon: { type: String, default: 'mdi-dots-vertical' },
-    },
+export default {
+  props: {
+    icon: { type: String, default: 'mdi-dots-vertical' }
   }
+}
 </script>
 
 <style lang="css" scoped>

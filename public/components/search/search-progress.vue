@@ -12,9 +12,9 @@
 </template>
 
 <script>
-  export default {
-    props: ['loading'],
-  }
+export default {
+  props: ['loading']
+}
 </script>
 
 <style lang="css">

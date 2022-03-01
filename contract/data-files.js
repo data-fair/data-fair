@@ -5,27 +5,27 @@ module.exports = {
     type: 'object',
     properties: {
       key: {
-        type: 'string',
+        type: 'string'
       },
       size: {
-        type: 'number',
+        type: 'number'
       },
       name: {
-        type: 'string',
+        type: 'string'
       },
       mimetype: {
-        type: 'string',
+        type: 'string'
       },
       updatedAt: {
         type: 'string',
-        format: 'date-time',
+        format: 'date-time'
       },
       title: {
-        type: 'string',
+        type: 'string'
       },
       url: {
-        type: 'string',
-      },
-    },
-  },
+        type: 'string'
+      }
+    }
+  }
 }

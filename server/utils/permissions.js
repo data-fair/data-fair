@@ -6,8 +6,8 @@ const visibilityUtils = require('./visibility')
 const ajv = require('ajv')()
 const validate = ajv.compile(permissionsSchema)
 
-exports.middleware = function(operationId, operationClass, trackingCategory) {
-  return function(req, res, next) {
+exports.middleware = function (operationId, operationClass, trackingCategory) {
+  return function (req, res, next) {
     if (
       exports.can(req.resourceType, req.resource, operationId, req.user) ||
       (req.method === 'GET' && req.bypassPermission)
@@ -18,7 +18,7 @@ exports.middleware = function(operationId, operationClass, trackingCategory) {
       const denomination = {
         datasets: 'Le jeu de données',
         applications: 'L\'application',
-        catalogs: 'Le connecteur',
+        catalogs: 'Le connecteur'
       }[req.resourceType]
       if (req.user && operationId === 'readDescription' && denomination) {
         if (req.resource.owner.type === 'user' && req.user.id === req.resource.owner.id) {
@@ -90,14 +90,14 @@ const matchPermission = (owner, permission, user) => {
 }
 
 // resource can be an application, a dataset or an remote service
-exports.can = function(resourceType, resource, operationId, user) {
+exports.can = function (resourceType, resource, operationId, user) {
   if (user && user.adminMode) return true
   const userPermissions = exports.list(resourceType, resource, user)
   return !!userPermissions.includes(operationId)
 }
 
 // list operations a user can do with a resource
-exports.list = function(resourceType, resource, user) {
+exports.list = function (resourceType, resource, user) {
   const operationsClasses = apiDocsUtil.operationsClasses[resourceType]
   const ownerClasses = getOwnerClasses(resource.owner, user, resourceType)
   if (ownerClasses) return [].concat(...ownerClasses.map(cl => operationsClasses[cl]))
@@ -107,7 +107,7 @@ exports.list = function(resourceType, resource, user) {
 
 // resource is public if there are public permissions for all operations of the classes 'read' and 'use'
 // list is not here as someone can set a resource publicly usable but not appearing in lists
-exports.isPublic = function(resourceType, resource) {
+exports.isPublic = function (resourceType, resource) {
   const operationsClasses = apiDocsUtil.operationsClasses[resourceType]
   const permissionOperations = p => (p.operations || []).concat(...(p.classes || []).map(c => operationsClasses[c]))
   const publicOperations = new Set([].concat(operationsClasses.read || [], operationsClasses.use || []))
@@ -122,7 +122,7 @@ exports.isPublic = function(resourceType, resource) {
 
 // Manage filters for datasets, applications and remote services
 // this filter ensures that nobody can list something they are not permitted to list
-exports.filter = function(user) {
+exports.filter = function (user) {
   const operationFilter = [{ operations: 'list' }, { classes: 'list' }]
   const or = [visibilityUtils.publicFilter]
 
@@ -152,7 +152,7 @@ exports.filter = function(user) {
           // check that the permission applies to the current operation (through its class or operation id)
           { $or: operationFilter },
           // either the permission is not specific to a role or it matches the user's role in the organization
-          { $or: [{ roles: user.organization.role }, { roles: { $size: 0 } }] },
+          { $or: [{ roles: user.organization.role }, { roles: { $size: 0 } }] }
         ]
         /* TODO: adapt explicit permissions for organizations with departments
         if (user.organization.department) {
@@ -168,7 +168,7 @@ exports.filter = function(user) {
 
 // Only operationId level : it is used only for creation of resources and
 // setting screen only set creation permissions at operationId level
-exports.canDoForOwner = function(owner, resourceType, operationClass, user) {
+exports.canDoForOwner = function (owner, resourceType, operationClass, user) {
   const ownerClasses = getOwnerClasses(owner, user, resourceType)
   return ownerClasses && ownerClasses.includes(operationClass)
 }
@@ -199,7 +199,7 @@ module.exports.router = (resourceType, resourceName, onPublicCallback) => {
         if (wasPublic !== willBePublic) {
           await resources.updateOne(
             { id: resource.id, 'publications.status': 'published' },
-            { $set: { 'publications.$.status': 'waiting' } },
+            { $set: { 'publications.$.status': 'waiting' } }
           )
         }
       }
@@ -230,11 +230,11 @@ module.exports.apiDoc = {
         description: 'Liste des permissions',
         content: {
           'application/json': {
-            schema: permissionsSchema,
-          },
-        },
-      },
-    },
+            schema: permissionsSchema
+          }
+        }
+      }
+    }
   },
   put: {
     summary: 'Définir la liste des permissions.',
@@ -246,19 +246,19 @@ module.exports.apiDoc = {
       required: true,
       content: {
         'application/json': {
-          schema: permissionsSchema,
-        },
-      },
+          schema: permissionsSchema
+        }
+      }
     },
     responses: {
       200: {
         description: 'Liste des permissions',
         content: {
           'application/json': {
-            schema: permissionsSchema,
-          },
-        },
-      },
-    },
-  },
+            schema: permissionsSchema
+          }
+        }
+      }
+    }
+  }
 }

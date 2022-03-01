@@ -7,19 +7,19 @@
 </template>
 
 <script>
-  import 'iframe-resizer/js/iframeResizer.contentWindow'
-  const { mapState } = require('vuex')
+import 'iframe-resizer/js/iframeResizer.contentWindow'
+const { mapState } = require('vuex')
 
-  global.iFrameResizer = {
-    heightCalculationMethod: 'taggedElement',
-  }
+global.iFrameResizer = {
+  heightCalculationMethod: 'taggedElement'
+}
 
-  export default {
-    computed: {
-      ...mapState('dataset', ['journal']),
-    },
-    mounted() {
-      this.$store.dispatch('dataset/subscribe')
-    },
+export default {
+  computed: {
+    ...mapState('dataset', ['journal'])
+  },
+  mounted () {
+    this.$store.dispatch('dataset/subscribe')
   }
+}
 </script>

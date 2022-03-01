@@ -7,7 +7,10 @@
     />
     <v-row v-if="datasets && !loading">
       <v-col>
-        <h3 class="text-h4 mb-4" v-text="$tc('datasetsCount', datasets.count)" />
+        <h3
+          class="text-h4 mb-4"
+          v-text="$tc('datasetsCount', datasets.count)"
+        />
         <v-card>
           <v-list three-line>
             <v-list-item
@@ -73,44 +76,44 @@ en:
 </i18n>
 
 <script>
-  import eventBus from '~/event-bus'
-  const { mapState } = require('vuex')
+import eventBus from '~/event-bus'
+const { mapState } = require('vuex')
 
-  export default {
-    data: () => ({
-      datasets: null,
-      loading: false,
-    }),
-    computed: {
-      ...mapState(['env']),
+export default {
+  data: () => ({
+    datasets: null,
+    loading: false
+  }),
+  computed: {
+    ...mapState(['env'])
+  },
+  mounted () {
+    this.refresh()
+  },
+  methods: {
+    async refresh () {
+      this.loading = true
+      try {
+        this.datasets = await this.$axios.$get('api/v1/catalogs/' + this.$route.params.id + '/datasets')
+        this.datasets.results.forEach(d => {
+          d.nbHarvestable = (d.resources || []).filter(r => r.harvestable).length
+          d.nbHarvested = (d.resources || []).filter(r => !!r.harvestedDataset).length
+        })
+      } catch (error) {
+        eventBus.$emit('notification', { error, msg: this.$t('fetchError') })
+      }
+      this.loading = false
     },
-    mounted() {
-      this.refresh()
-    },
-    methods: {
-      async refresh() {
-        this.loading = true
-        try {
-          this.datasets = await this.$axios.$get('api/v1/catalogs/' + this.$route.params.id + '/datasets')
-          this.datasets.results.forEach(d => {
-            d.nbHarvestable = (d.resources || []).filter(r => r.harvestable).length
-            d.nbHarvested = (d.resources || []).filter(r => !!r.harvestedDataset).length
-          })
-        } catch (error) {
-          eventBus.$emit('notification', { error, msg: this.$t('fetchError') })
-        }
+    async harvest (dataset) {
+      this.loading = true
+      try {
+        await this.$axios.$post('api/v1/catalogs/' + this.$route.params.id + '/datasets/' + dataset.id)
+        await this.refresh()
+      } catch (error) {
+        eventBus.$emit('notification', { error, msg: this.$t('importError') })
         this.loading = false
-      },
-      async harvest(dataset) {
-        this.loading = true
-        try {
-          await this.$axios.$post('api/v1/catalogs/' + this.$route.params.id + '/datasets/' + dataset.id)
-          await this.refresh()
-        } catch (error) {
-          eventBus.$emit('notification', { error, msg: this.$t('importError') })
-          this.loading = false
-        }
-      },
-    },
+      }
+    }
   }
+}
 </script>

@@ -1,5 +1,5 @@
 export default {
-  setLevel(level) {
+  setLevel (level) {
     if (level === 'debug') {
       this.activeDebug = true
       this.activeWarn = true
@@ -14,15 +14,15 @@ export default {
     }
     this.debug('Log level set to ', level)
   },
-  debug() {
+  debug () {
     if (!this.activeDebug) return
     console.log.apply(console, arguments)
   },
-  warn() {
+  warn () {
     if (!this.activeWarn) return
     console.warn.apply(console, arguments)
   },
-  error() {
+  error () {
     console.error.apply(console, arguments)
-  },
+  }
 }

@@ -16,7 +16,10 @@
         Utiliser
       </v-btn>
     </template>
-    <v-card v-if="menu" outlined>
+    <v-card
+      v-if="menu"
+      outlined
+    >
       <v-card-title primary-title>
         Utilisation d'une clé d'API
       </v-card-title>
@@ -45,19 +48,19 @@
 </template>
 
 <script>
-  import { mapState } from 'vuex'
+import { mapState } from 'vuex'
 
-  export default {
-    props: {
-      apiKey: { type: Object, required: true },
-    },
-    data() {
-      return { menu: false }
-    },
-    computed: {
-      ...mapState(['env']),
-    },
+export default {
+  props: {
+    apiKey: { type: Object, required: true }
+  },
+  data () {
+    return { menu: false }
+  },
+  computed: {
+    ...mapState(['env'])
   }
+}
 </script>
 
 <style>

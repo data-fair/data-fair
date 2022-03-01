@@ -8,7 +8,7 @@ const testUtils = require('./resources/test-utils')
 
 const workers = require('../server/workers')
 describe('Extensions', () => {
-  it('Extend dataset using remote service', async function() {
+  it('Extend dataset using remote service', async function () {
     const ax = global.ax.dmeadus
     // Initial dataset with addresses
     let dataset = await testUtils.sendDataset('datasets/dataset-extensions.csv', ax)
@@ -25,7 +25,7 @@ describe('Extensions', () => {
     dataset.schema.find(field => field.key === 'adr')['x-refersTo'] = 'http://schema.org/address'
     let res = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
       schema: dataset.schema,
-      extensions: [{ active: true, remoteService: 'geocoder-koumoul', action: 'postCoords' }],
+      extensions: [{ active: true, remoteService: 'geocoder-koumoul', action: 'postCoords' }]
     })
     assert.equal(res.status, 200)
     dataset = await workers.hook(`finalizer/${dataset.id}`)
@@ -96,7 +96,7 @@ describe('Extensions', () => {
     assert.equal(res.data.length, 2)
   })
 
-  it('Extend dataset that was previouly converted', async function() {
+  it('Extend dataset that was previouly converted', async function () {
     const ax = global.ax.dmeadus
     // Initial dataset with addresses
     let dataset = await testUtils.sendDataset('datasets/dataset-extensions.xlsx', ax)
@@ -113,7 +113,7 @@ describe('Extensions', () => {
     dataset.schema.find(field => field.key === 'adr')['x-refersTo'] = 'http://schema.org/address'
     let res = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
       schema: dataset.schema,
-      extensions: [{ active: true, remoteService: 'geocoder-koumoul', action: 'postCoords' }],
+      extensions: [{ active: true, remoteService: 'geocoder-koumoul', action: 'postCoords' }]
     })
     assert.equal(res.status, 200)
     dataset = await workers.hook(`finalizer/${dataset.id}`)
@@ -136,7 +136,7 @@ describe('Extensions', () => {
     assert.equal(res.data.length, 3)
   })
 
-  it('Extend dataset with different csv parser opts', async function() {
+  it('Extend dataset with different csv parser opts', async function () {
     const ax = global.ax.dmeadus
     // Initial dataset with addresses
     let dataset = await testUtils.sendDataset('datasets/dataset-extensions2.csv', ax)
@@ -153,7 +153,7 @@ describe('Extensions', () => {
     dataset.schema.find(field => field.key === 'adr')['x-refersTo'] = 'http://schema.org/address'
     let res = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
       schema: dataset.schema,
-      extensions: [{ active: true, remoteService: 'geocoder-koumoul', action: 'postCoords' }],
+      extensions: [{ active: true, remoteService: 'geocoder-koumoul', action: 'postCoords' }]
     })
     assert.equal(res.status, 200)
     dataset = await workers.hook(`finalizer/${dataset.id}`)
@@ -168,7 +168,7 @@ describe('Extensions', () => {
     assert.equal(res.data.results[0][extensionKey + '.lon'], 10)
   })
 
-  it('Extend dataset using another remote service', async function() {
+  it('Extend dataset using another remote service', async function () {
     const ax = global.ax.dmeadus
     // Initial dataset with addresses
     let dataset = await testUtils.sendDataset('datasets/dataset-siret-extensions.csv', ax)
@@ -186,7 +186,7 @@ describe('Extensions', () => {
           NOMEN_LONG: 'KOUMOUL',
           'location.lon': '-2.748514',
           'location.lat': '47.687173',
-          key: inputs[0].key,
+          key: inputs[0].key
         }) + '\n'
       })
     dataset.schema.find(field => field.key === 'siret')['x-refersTo'] = 'http://www.datatourisme.fr/ontology/core/1.0/#siret'
@@ -201,9 +201,9 @@ describe('Extensions', () => {
           'bodacc.capital',
           'TEFET',
           'location.lat',
-          'location.lon',
-        ],
-      }],
+          'location.lon'
+        ]
+      }]
     })
     assert.equal(res.status, 200)
     dataset = await workers.hook(`finalizer/${dataset.id}`)
@@ -251,7 +251,7 @@ other,unknown address
     nock('http://test.com').post('/geocoder/coords').reply(500, 'some error')
     res = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
       schema: dataset.schema,
-      extensions: [{ active: true, remoteService: 'geocoder-koumoul', action: 'postCoords' }],
+      extensions: [{ active: true, remoteService: 'geocoder-koumoul', action: 'postCoords' }]
     })
     assert.equal(res.status, 200)
     try {
@@ -303,7 +303,7 @@ empty,
     dataset.schema.find(field => field.key === 'adr')['x-refersTo'] = 'http://schema.org/address'
     res = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
       schema: dataset.schema,
-      extensions: [{ active: true, remoteService: 'geocoder-koumoul', action: 'postCoords' }],
+      extensions: [{ active: true, remoteService: 'geocoder-koumoul', action: 'postCoords' }]
     })
     assert.equal(res.status, 200)
     await workers.hook('finalizer')
@@ -332,7 +332,7 @@ koumoul,19 rue de la voie lactée saint avé
     dataset.schema.find(field => field.key === 'adr')['x-refersTo'] = 'http://schema.org/address'
     res = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
       schema: dataset.schema,
-      extensions: [{ active: true, remoteService: 'geocoder-koumoul', action: 'postCoords' }],
+      extensions: [{ active: true, remoteService: 'geocoder-koumoul', action: 'postCoords' }]
     })
     assert.equal(res.status, 200)
     await workers.hook('finalizer')
@@ -346,7 +346,7 @@ koumoul,19 rue de la voie lactée saint avé
     // deactivate extension
     res = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
       schema: dataset.schema,
-      extensions: [{ active: false, remoteService: 'geocoder-koumoul', action: 'postCoords' }],
+      extensions: [{ active: false, remoteService: 'geocoder-koumoul', action: 'postCoords' }]
     })
     assert.equal(res.status, 200)
     await workers.hook('finalizer')
@@ -381,7 +381,7 @@ koumoul,19 rue de la voie lactée saint avé
           NOMEN_LONG: 'KOUMOUL',
           'location.lon': '-2.748514',
           'location.lat': '47.687173',
-          key: inputs[0].key,
+          key: inputs[0].key
         }) + '\n'
       })
     dataset.schema.find(field => field.key === 'siret')['x-refersTo'] = 'http://www.datatourisme.fr/ontology/core/1.0/#siret'
@@ -397,9 +397,9 @@ koumoul,19 rue de la voie lactée saint avé
           'bodacc.capital',
           'TEFET',
           'location.lat',
-          'location.lon',
-        ],
-      }],
+          'location.lon'
+        ]
+      }]
     })
     assert.equal(res.status, 200)
     dataset = await workers.hook(`finalizer/${dataset.id}`)
@@ -417,7 +417,7 @@ koumoul,19 rue de la voie lactée saint avé
       isRest: true,
       title: 'rest-extension',
       schema: [{ key: 'address', type: 'string', 'x-refersTo': 'http://schema.org/address' }],
-      extensions: [{ active: true, remoteService: 'geocoder-koumoul', action: 'postCoords' }],
+      extensions: [{ active: true, remoteService: 'geocoder-koumoul', action: 'postCoords' }]
     })).data
     await workers.hook(`finalizer/${dataset.id}`)
 
@@ -483,7 +483,7 @@ other,unknown address
     })
     res = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
       schema: dataset.schema,
-      extensions: [{ active: true, remoteService: 'geocoder-koumoul', action: 'postCoords' }],
+      extensions: [{ active: true, remoteService: 'geocoder-koumoul', action: 'postCoords' }]
     })
     await workers.hook(`extender/${dataset.id}`)
     nockScope.done()
@@ -500,7 +500,7 @@ other,unknown address
     assert.equal(dataset.extensions.length, 0) */
   })
 
-  it('Extend geojson dataset', async function() {
+  it('Extend geojson dataset', async function () {
     const ax = global.ax.dmeadus
     // Initial dataset with addresses
     let dataset = await testUtils.sendDataset('datasets/dataset-siret-extensions.geojson', ax)
@@ -516,7 +516,7 @@ other,unknown address
         assert.deepEqual(Object.keys(inputs[0]), ['siret', 'key'])
         return JSON.stringify({
           NOMEN_LONG: 'KOUMOUL',
-          key: inputs[0].key,
+          key: inputs[0].key
         }) + '\n'
       })
     dataset.schema.find(field => field.key === 'siret')['x-refersTo'] = 'http://www.datatourisme.fr/ontology/core/1.0/#siret'
@@ -529,9 +529,9 @@ other,unknown address
         select: [
           'NOMEN_LONG',
           'bodacc.capital',
-          'TEFET',
-        ],
-      }],
+          'TEFET'
+        ]
+      }]
     })
     assert.equal(res.status, 200)
     dataset = await workers.hook(`finalizer/${dataset.id}`)

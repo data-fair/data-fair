@@ -30,12 +30,12 @@ export default () => ({
       'index-end': 'indexed',
       'finalize-start': 'indexed',
       'finalize-end': 'finalized',
-      error: 'error',
+      error: 'error'
     },
     lineUploadProgress: 0,
     showTableCard: null,
     draftMode: null,
-    taskProgress: null,
+    taskProgress: null
   },
   getters: {
     resourceUrl: (state, getters, rootState) => state.datasetId ? rootState.env.publicUrl + '/api/v1/datasets/' + state.datasetId : null,
@@ -67,7 +67,7 @@ export default () => ({
     qMode: (state) => {
       return state.dataset && state.dataset.count && state.dataset.count < 10000 ? 'complete' : 'simple'
     },
-    availableMasters(state) {
+    availableMasters (state) {
       if (!state.remoteServices) return
       const masters = {}
       state.remoteServices.forEach(service => {
@@ -84,44 +84,44 @@ export default () => ({
               action: a.id,
               'x-fromUrl': service.server + a.operation.path + '?q={q}',
               'x-itemKey': keyOutput.name,
-              'x-itemTitle': labelOutput && labelOutput.name,
+              'x-itemTitle': labelOutput && labelOutput.name
             }
             masters[keyOutput.concept] = masters[keyOutput.concept] || []
             masters[keyOutput.concept].push(master)
-        })
+          })
       })
       return masters
-    },
+    }
   },
   mutations: {
-    setAny(state, params) {
+    setAny (state, params) {
       for (const key in params) {
         Vue.set(state, key, params[key])
       }
     },
-    patch(state, patch) {
+    patch (state, patch) {
       for (const key in patch) {
         Vue.set(state.dataset, key, patch[key])
       }
     },
-    addJournalEvent(state, event) {
+    addJournalEvent (state, event) {
       if (!state.journal.find(e => e.date === event.date)) {
         state.journal.unshift(event)
       }
-    },
+    }
   },
   actions: {
-    async fetchInfo({ commit, dispatch, getters }) {
+    async fetchInfo ({ commit, dispatch, getters }) {
       await dispatch('fetchDataset')
       await Promise.all([
         dispatch('fetchApplications'),
         dispatch('fetchVirtuals'),
         dispatch('fetchApiDoc'),
-        dispatch('fetchDataFiles'),
+        dispatch('fetchDataFiles')
       ])
       if (getters.can('readJournal')) await dispatch('fetchJournal')
     },
-    async fetchDataset({ commit, state }) {
+    async fetchDataset ({ commit, state }) {
       const dataset = await this.$axios.$get(`api/v1/datasets/${state.datasetId}`, { params: { draft: state.draftMode } })
       const extensions = (dataset.extensions || []).map(ext => {
         ext.error = ext.error || ''
@@ -146,7 +146,7 @@ export default () => ({
         commit('setAny', { validatedDataset: null })
       }
     },
-    async fetchApplications({ commit, state }) {
+    async fetchApplications ({ commit, state }) {
       const apps = await this.$axios.$get('api/v1/applications', { params: { dataset: state.dataset.id, size: 10000, select: 'id,title' } })
       if (state.dataset.extras && state.dataset.extras.reuses) {
         const ordered = state.dataset.extras.reuses.map(id => apps.results.find(a => a.id === id)).filter(a => a)
@@ -155,32 +155,32 @@ export default () => ({
       }
       commit('setAny', { nbApplications: apps.count, applications: apps.results })
     },
-    async fetchVirtuals({ commit, state }) {
+    async fetchVirtuals ({ commit, state }) {
       const virtuals = await this.$axios.$get('api/v1/datasets', { params: { children: state.dataset.id, size: 0 } })
       commit('setAny', { nbVirtualDatasets: virtuals.count })
     },
-    async fetchApiDoc({ commit, state }) {
+    async fetchApiDoc ({ commit, state }) {
       const api = await this.$axios.$get(`api/v1/datasets/${state.datasetId}/api-docs.json`, { params: { draft: state.draftMode } })
       commit('setAny', { api })
     },
-    async fetchJournal({ commit, state }) {
+    async fetchJournal ({ commit, state }) {
       const journal = await this.$axios.$get(`api/v1/datasets/${state.datasetId}/journal`, { params: { draft: state.draftMode } })
       commit('setAny', { journal })
     },
-    async fetchDataFiles({ commit, state }) {
+    async fetchDataFiles ({ commit, state }) {
       const dataFiles = await this.$axios.$get(`api/v1/datasets/${state.datasetId}/data-files`, { params: { draft: state.draftMode } })
       commit('setAny', { dataFiles })
     },
-    async fetchJsonSchema({ commit, state }) {
+    async fetchJsonSchema ({ commit, state }) {
       const jsonSchema = await this.$axios.$get(`api/v1/datasets/${state.datasetId}/schema`, { params: { mimeType: 'application/schema+json' } })
       commit('setAny', { jsonSchema })
     },
-    async setId({ commit, getters, dispatch, state }, { datasetId, draftMode }) {
+    async setId ({ commit, getters, dispatch, state }, { datasetId, draftMode }) {
       dispatch('clear')
       commit('setAny', { datasetId, draftMode })
       await dispatch('fetchInfo')
     },
-    subscribe({ getters, dispatch, state, commit }) {
+    subscribe ({ getters, dispatch, state, commit }) {
       eventBus.$emit('subscribe', getters.journalChannel)
       eventBus.$on(getters.journalChannel, async event => {
         if (event.type.endsWith('-start')) commit('setAny', { taskProgress: { task: event.type.replace('-start', '') } })
@@ -223,14 +223,14 @@ export default () => ({
         commit('setAny', { taskProgress })
       })
     },
-    clear({ commit, state, getters }) {
+    clear ({ commit, state, getters }) {
       if (state.datasetId) {
         eventBus.$emit('unsubscribe', getters.journalChannel)
         eventBus.$emit('unsubscribe', getters.taskProgressChannel)
       }
       commit('setAny', { datasetId: null, dataset: null, api: null, journal: [], showTableCard: null, remoteServices: null })
     },
-    async patch({ commit, getters, dispatch, state }, patch) {
+    async patch ({ commit, getters, dispatch, state }, patch) {
       try {
         const silent = patch.silent
         delete patch.silent
@@ -246,11 +246,11 @@ export default () => ({
         return false
       }
     },
-    async patchAndCommit({ commit, getters, dispatch }, patch) {
+    async patchAndCommit ({ commit, getters, dispatch }, patch) {
       const patched = await dispatch('patch', patch)
       if (patched) commit('patch', patch)
     },
-    async patchAndApplyRemoteChange({ commit, getters, dispatch }, patch) {
+    async patchAndApplyRemoteChange ({ commit, getters, dispatch }, patch) {
       const patched = await dispatch('patch', patch)
       if (patched) {
         Object.keys(patch).forEach(k => {
@@ -259,16 +259,16 @@ export default () => ({
         commit('patch', patch)
       }
     },
-    async reindex({ state, dispatch }) {
+    async reindex ({ state, dispatch }) {
       await this.$axios.$post(`api/v1/datasets/${state.dataset.id}/_reindex`, null, { params: { draft: state.draftMode } })
     },
-    async cancelDraft({ state, dispatch }) {
+    async cancelDraft ({ state, dispatch }) {
       await this.$axios.$delete(`api/v1/datasets/${state.dataset.id}/draft`)
     },
-    async validateDraft({ state, dispatch }) {
+    async validateDraft ({ state, dispatch }) {
       await this.$axios.$post(`api/v1/datasets/${state.dataset.id}/draft`)
     },
-    async remove({ state, getters, dispatch }) {
+    async remove ({ state, getters, dispatch }) {
       try {
         await this.$axios.delete(getters.resourceUrl)
         eventBus.$emit('notification', `Le jeu de données ${state.dataset.title || state.dataset.id} a été supprimé`)
@@ -276,19 +276,19 @@ export default () => ({
         eventBus.$emit('notification', { error, msg: 'Erreur pendant la suppression du jeu de données' })
       }
     },
-    addJournalEvent({ commit }, event) {
+    addJournalEvent ({ commit }, event) {
       commit('addJournalEvent', event)
     },
-    async fetchRemoteServices({ getters, commit, state }) {
+    async fetchRemoteServices ({ getters, commit, state }) {
       if (state.remoteServices) return
       let remoteServices = []
       const data = await this.$axios.$get('api/v1/remote-services', {
-        params: { size: 1000, privateAccess: `${state.dataset.owner.type}:${state.dataset.owner.id}` },
+        params: { size: 1000, privateAccess: `${state.dataset.owner.type}:${state.dataset.owner.id}` }
       })
       remoteServices = data.results
       commit('setAny', { remoteServices })
     },
-    async changeOwner({ commit, state }, owner) {
+    async changeOwner ({ commit, state }, owner) {
       try {
         await this.$axios.$put(`api/v1/datasets/${state.dataset.id}/owner`, owner)
         commit('patch', { owner })
@@ -297,13 +297,13 @@ export default () => ({
         eventBus.$emit('notification', { error, msg: 'Erreur pendant le changement de propriétaire' })
       }
     },
-    async saveLine({ commit, state, getters }, { file, line, id }) {
+    async saveLine ({ commit, state, getters }, { file, line, id }) {
       const options = {
         onUploadProgress: (e) => {
           if (e.lengthComputable) {
             state.lineUploadProgress = (e.loaded / e.total) * 100
           }
-        },
+        }
       }
       const formData = new FormData()
       if (file) formData.append('attachment', file)
@@ -322,6 +322,6 @@ export default () => ({
         eventBus.$emit('notification', { error, msg: 'Erreur pendant l\'enregistrement de la ligne\'' })
       }
       state.lineUploadProgress = 0
-    },
-  },
+    }
+  }
 })

@@ -12,8 +12,8 @@ exports.exec = async (db, debug) => {
       name: quotas.name,
       store_bytes: {
         limit: quotas.storage,
-        consumption: quotas.consumption && quotas.consumption.storage,
-      },
+        consumption: quotas.consumption && quotas.consumption.storage
+      }
     }
     await db.collection('limits').insertOne(newLimit)
   }

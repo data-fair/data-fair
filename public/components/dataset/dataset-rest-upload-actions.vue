@@ -19,7 +19,10 @@
     </template>
 
     <v-card outlined>
-      <v-card-title v-t="'loadLines'" primary-title />
+      <v-card-title
+        v-t="'loadLines'"
+        primary-title
+      />
       <v-card-text>
         <template v-if="result">
           <p v-if="result.nbOk">
@@ -42,7 +45,10 @@
           >
             {{ $t('resultErrors', {nb: result.nbErrors.toLocaleString()}) }}
             <ul>
-              <li v-for="(error, i) in result.errors" :key="i">
+              <li
+                v-for="(error, i) in result.errors"
+                :key="i"
+              >
                 <span v-if="error.line !== -1">{{ $t('line') }}{{ error.line }}</span>{{ error.error }}
               </li>
             </ul>
@@ -121,41 +127,41 @@ en:
 </i18n>
 
 <script>
-  export default {
-    props: ['dataset'],
-    data: () => ({
-      form: false,
-      dialog: false,
-      file: null,
-      importing: false,
-      result: null,
-    }),
-    watch: {
-      dialog() {
-        this.result = null
-        this.file = null
-        this.importing = false
-      },
-    },
-    methods: {
-      async upload(e) {
-        if (e) e.preventDefault()
-        const formData = new FormData()
-        formData.append('actions', this.file)
-        this.importing = true
-        try {
-          this.result = await this.$axios.$post(`api/v1/datasets/${this.dataset.id}/_bulk_lines`, formData)
-        } catch (error) {
-          if (typeof (error.response && error.response.data) === 'object') {
-            this.result = error.response.data
-          } else {
-            throw error
-          }
+export default {
+  props: ['dataset'],
+  data: () => ({
+    form: false,
+    dialog: false,
+    file: null,
+    importing: false,
+    result: null
+  }),
+  watch: {
+    dialog () {
+      this.result = null
+      this.file = null
+      this.importing = false
+    }
+  },
+  methods: {
+    async upload (e) {
+      if (e) e.preventDefault()
+      const formData = new FormData()
+      formData.append('actions', this.file)
+      this.importing = true
+      try {
+        this.result = await this.$axios.$post(`api/v1/datasets/${this.dataset.id}/_bulk_lines`, formData)
+      } catch (error) {
+        if (typeof (error.response && error.response.data) === 'object') {
+          this.result = error.response.data
+        } else {
+          throw error
         }
-        this.importing = false
-      },
-    },
+      }
+      this.importing = false
+    }
   }
+}
 </script>
 
 <style lang="css" scoped>

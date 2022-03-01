@@ -26,14 +26,14 @@ module.exports = async (client, dataset, query) => {
     // not for exhaustivity. So using a sample is alright
     sample: {
       sampler: {
-        shard_size: 1000,
+        shard_size: 1000
       },
       aggregations: {
         words: {
-          [aggType]: { field, size },
-        },
-      },
-    },
+          [aggType]: { field, size }
+        }
+      }
+    }
   }
 
   if (aggType === 'signifant_text') {
@@ -53,15 +53,15 @@ module.exports = async (client, dataset, query) => {
     results: buckets.map((bucket, i) => ({
       word: words[i],
       total: bucket.doc_count,
-      score: bucket.score,
-    })),
+      score: bucket.score
+    }))
   }
 }
 
 // significant_text does not "unstem"
 // it is suggested that the highlight logic is the closest there is to satisfying this need
 // so we search for the analyzed term in the documents, get highlights and get the most frequest highlighted piece of text
-async function unstem(client, dataset, field, key) {
+async function unstem (client, dataset, field, key) {
   const res = (await client.search({
     index: aliasName(dataset),
     body: {
@@ -72,9 +72,9 @@ async function unstem(client, dataset, field, key) {
         fields: { [field]: {} },
         fragment_size: 1,
         pre_tags: '<>',
-        post_tags: '<>',
-      },
-    },
+        post_tags: '<>'
+      }
+    }
   })).body
 
   const words = {}

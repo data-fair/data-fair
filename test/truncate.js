@@ -8,11 +8,11 @@ describe('truncate', () => {
     await ax.post('/api/v1/datasets', {
       isRest: true,
       title: 'truncate1',
-      schema: [{ key: 'str', type: 'string' }],
+      schema: [{ key: 'str', type: 'string' }]
     })
     await ax.post('/api/v1/datasets/truncate1/_bulk_lines', [
       { str: 'bla' },
-      { str: 'blablabla' },
+      { str: 'blablabla' }
     ])
     await workers.hook('indexer/truncate1')
     const res = await ax.get('/api/v1/datasets/truncate1/lines', { params: { truncate: '4', sort: '_i' } })

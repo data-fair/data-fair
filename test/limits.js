@@ -7,7 +7,7 @@ const config = require('config')
 const baseLimit = {
   store_bytes: { limit: 300000, consumption: 0 },
   nb_datasets: { limit: 10, consumption: 0 },
-  lastUpdate: new Date().toISOString(),
+  lastUpdate: new Date().toISOString()
 }
 
 describe('limits', () => {

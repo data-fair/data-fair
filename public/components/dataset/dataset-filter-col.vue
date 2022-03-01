@@ -61,31 +61,31 @@
 </template>
 
 <script>
-  export default {
-    props: ['field', 'filterHeight'],
-    data() {
-      return { showMenu: false, equals: '', startsWith: '' }
+export default {
+  props: ['field', 'filterHeight'],
+  data () {
+    return { showMenu: false, equals: '', startsWith: '' }
+  },
+  computed: {
+    showEnum () {
+      return this.field.enum && this.field['x-cardinality'] > 1
     },
-    computed: {
-      showEnum() {
-        return this.field.enum && this.field['x-cardinality'] > 1
-      },
-      showEquals() {
-        return !this.showEnum && this.field.type === 'string' && (!this.field.format || this.field.format === 'uri-reference')
-      },
-      showStartsWith() {
-        return this.field.type === 'string' && (!this.field.format || this.field.format === 'uri-reference')
-      },
+    showEquals () {
+      return !this.showEnum && this.field.type === 'string' && (!this.field.format || this.field.format === 'uri-reference')
     },
-    methods: {
-      emitFilter(filter) {
-        this.$emit('filter', filter)
-        this.showMenu = false
-        this.equals = ''
-        this.startsWith = ''
-      },
-    },
+    showStartsWith () {
+      return this.field.type === 'string' && (!this.field.format || this.field.format === 'uri-reference')
+    }
+  },
+  methods: {
+    emitFilter (filter) {
+      this.$emit('filter', filter)
+      this.showMenu = false
+      this.equals = ''
+      this.startsWith = ''
+    }
   }
+}
 </script>
 
 <style>

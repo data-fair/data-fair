@@ -30,7 +30,7 @@ exports.dir = (dataset) => {
     dataset.owner.type,
     dataset.owner.id,
     dataset.draftReason ? 'datasets-drafts' : 'datasets',
-    dataset.id,
+    dataset.id
   ]
   return path.join(...parts)
 }
@@ -120,7 +120,7 @@ exports.dataFiles = async (dataset) => {
         name: dataset.originalFile.name,
         key: 'original',
         title: 'Fichier original',
-        mimetype: dataset.originalFile.mimetype,
+        mimetype: dataset.originalFile.mimetype
       })
     }
     if (dataset.file) {
@@ -132,7 +132,7 @@ exports.dataFiles = async (dataset) => {
             name: dataset.file.name,
             key: 'normalized',
             title: `Fichier normalisé (${dataset.file.mimetype.split('/').pop()})`,
-            mimetype: dataset.file.mimetype,
+            mimetype: dataset.file.mimetype
           })
         }
       }
@@ -146,7 +146,7 @@ exports.dataFiles = async (dataset) => {
             name,
             key: 'full',
             title: `Fichier étendu (${dataset.file.mimetype.split('/').pop()})`,
-            mimetype: dataset.file.mimetype,
+            mimetype: dataset.file.mimetype
           })
         }
       }
@@ -161,7 +161,7 @@ exports.dataFiles = async (dataset) => {
         name,
         key: 'export-csv',
         title: 'Fichier exporté (csv)',
-        mimetype: 'text/csv',
+        mimetype: 'text/csv'
       })
     }
   }
@@ -197,19 +197,19 @@ exports.transformFileStreams = (mimeType, schema, fileSchema, fileProps = {}, ra
       separator: fileProps.fieldsDelimiter || ',',
       escape: fileProps.escapeChar || '"',
       quote: fileProps.quote || fileProps.escapeChar || '"',
-      newline: fileProps.linesDelimiter || '\n',
+      newline: fileProps.linesDelimiter || '\n'
     }
 
     streams.push(csv(parserOpts))
     // reject empty lines (parsing failures from csv-parser)
     streams.push(new Transform({
       objectMode: true,
-      transform(item, encoding, callback) {
+      transform (item, encoding, callback) {
         const hasContent = Object.keys(item).reduce((a, b) => a || ![undefined, '\n', '\r', '\r\n'].includes(item[b]), false)
         item._i = this.i = (this.i || 0) + 1
         if (hasContent) callback(null, item)
         else callback()
-      },
+      }
     }))
 
     // small local cache for perf
@@ -218,7 +218,7 @@ exports.transformFileStreams = (mimeType, schema, fileSchema, fileProps = {}, ra
     // Fix the objects based on schema
     streams.push(new Transform({
       objectMode: true,
-      transform(chunk, encoding, callback) {
+      transform (chunk, encoding, callback) {
         if (raw) {
           if (fileSchema) {
             const unknownKey = Object.keys(chunk)
@@ -255,14 +255,14 @@ exports.transformFileStreams = (mimeType, schema, fileSchema, fileProps = {}, ra
         })
         line._i = chunk._i
         callback(null, line)
-      },
+      }
     }))
   } else if (mimeType === 'application/geo+json') {
     streams.push(JSONStream.parse('features.*'))
     // transform geojson features into raw data items
     streams.push(new Transform({
       objectMode: true,
-      transform(feature, encoding, callback) {
+      transform (feature, encoding, callback) {
         const item = flatten({ ...feature.properties }, { safe: true })
         if (feature.id) item.id = feature.id
         item.geometry = feature.geometry
@@ -274,7 +274,7 @@ exports.transformFileStreams = (mimeType, schema, fileSchema, fileProps = {}, ra
           if (value !== null) line[prop.key] = value
         })
         callback(null, line)
-      },
+      }
     }))
   } else {
     throw createError(400, 'mime-type is not supported ' + mimeType)
@@ -292,10 +292,10 @@ exports.readStreams = async (db, dataset, raw = false, full = false, ignoreDraft
   if (progress) {
     const { size } = await fs.stat(fileName)
     streams.push(new Transform({
-      transform(chunk, encoding, callback) {
+      transform (chunk, encoding, callback) {
         progress((chunk.length / size) * 100)
         callback(null, chunk)
-      },
+      }
     }))
   }
   streams.push(stripBom())
@@ -307,7 +307,7 @@ exports.readStreams = async (db, dataset, raw = false, full = false, ignoreDraft
   if (limit !== -1) {
     streams.push(new Transform({
       objectMode: true,
-      transform(item, encoding, callback) {
+      transform (item, encoding, callback) {
         this.i = (this.i || 0) + 1
         if (this.i > limit) return callback()
         callback(null, item)
@@ -317,7 +317,7 @@ exports.readStreams = async (db, dataset, raw = false, full = false, ignoreDraft
           streams[0].unpipe()
           streams[1].end()
         }
-      },
+      }
     }))
   }
 
@@ -341,21 +341,21 @@ exports.writeExtendedStreams = async (db, dataset) => {
     writeStream.write('\ufeff')
 
     transforms.push(new Transform({
-      transform(chunk, encoding, callback) {
+      transform (chunk, encoding, callback) {
         const flatChunk = flatten(chunk, { safe: true })
         callback(null, relevantSchema.map(field => flatChunk[field.key]))
       },
-      objectMode: true,
+      objectMode: true
     }))
     transforms.push(csvStringify({ columns: relevantSchema.map(field => field['x-originalName'] || field.key), header: true }))
   } else if (dataset.file.mimetype === 'application/geo+json') {
     transforms.push(new Transform({
-      transform(chunk, encoding, callback) {
+      transform (chunk, encoding, callback) {
         const { geometry, ...properties } = chunk
         const feature = { type: 'Feature', properties, geometry: JSON.parse(geometry) }
         callback(null, feature)
       },
-      objectMode: true,
+      objectMode: true
     }))
     transforms.push(JSONStream.stringify(`{
   "type": "FeatureCollection",
@@ -378,7 +378,7 @@ exports.sampleValues = async (dataset) => {
   const streams = await exports.readStreams(null, dataset, true, false, true)
   await pump(...streams, new Writable({
     objectMode: true,
-    write(chunk, encoding, callback) {
+    write (chunk, encoding, callback) {
       if (stopped) return callback()
 
       let finished = true
@@ -400,7 +400,7 @@ exports.sampleValues = async (dataset) => {
         streams[0].unpipe()
         streams[1].end()
       }
-    },
+    }
   }))
   if (currentLine === 0) throw new Error('Èchec de l\'échantillonage des données')
   return sampleValues
@@ -412,7 +412,7 @@ exports.storage = async (db, dataset) => {
     dataFiles: await exports.dataFiles(dataset),
     indexed: { size: 0, parts: [] },
     attachments: { size: 0, count: 0 },
-    metadataAttachments: { size: 0, count: 0 },
+    metadataAttachments: { size: 0, count: 0 }
   }
   storage.dataFiles.forEach(df => delete df.url)
 
@@ -424,17 +424,17 @@ exports.storage = async (db, dataset) => {
   if (dataFilesObj.full) {
     storage.indexed = {
       size: dataFilesObj.full.size,
-      parts: ['full-file'],
+      parts: ['full-file']
     }
   } else if (dataFilesObj.normalized) {
     storage.indexed = {
       size: dataFilesObj.normalized.size,
-      parts: ['normalized-file'],
+      parts: ['normalized-file']
     }
   } else if (dataFilesObj.original) {
     storage.indexed = {
       size: dataFilesObj.original.size,
-      parts: ['original-file'],
+      parts: ['original-file']
     }
   }
 
@@ -446,7 +446,7 @@ exports.storage = async (db, dataset) => {
     storage.size += storage.collection.size
     storage.indexed = {
       size: storage.collection.size,
-      parts: ['collection'],
+      parts: ['collection']
     }
 
     if (dataset.rest && dataset.rest.history) {
@@ -488,7 +488,7 @@ exports.totalStorage = async (db, owner) => {
   const aggQuery = [
     { $match: { 'owner.type': owner.type, 'owner.id': owner.id } },
     { $project: { 'storage.size': 1, 'storage.indexed.size': 1 } },
-    { $group: { _id: null, size: { $sum: '$storage.size' }, indexed: { $sum: '$storage.indexed.size' } } },
+    { $group: { _id: null, size: { $sum: '$storage.size' }, indexed: { $sum: '$storage.indexed.size' } } }
   ]
   const res = await db.collection('datasets').aggregate(aggQuery).toArray()
   return { size: (res[0] && res[0].size) || 0, indexed: (res[0] && res[0].indexed) || 0 }
@@ -503,8 +503,8 @@ exports.updateStorage = async (db, dataset, deleted = false, checkRemaining = fa
   if (!deleted) {
     await db.collection('datasets').updateOne({ id: dataset.id }, {
       $set: {
-        storage: await exports.storage(db, dataset),
-      },
+        storage: await exports.storage(db, dataset)
+      }
     })
   }
   const totalStorage = await exports.totalStorage(db, dataset.owner)
@@ -722,14 +722,14 @@ exports.mergeDraft = (dataset) => {
 exports.tableSchema = (schema) => {
   return {
     fields: schema.filter(f => !f['x-calculated'])
-    .filter(f => !f['x-extension'])
-    .map(f => {
-      const field = { name: f.key, title: f.title || f['x-originalName'], type: f.type }
-      if (f.description) field.description = f.description
-      // if (f.format) field.format = f.format // commented besause uri-reference format is not in tableschema
-      if (f['x-refersTo']) field.rdfType = f['x-refersTo']
-      return field
-    }),
+      .filter(f => !f['x-extension'])
+      .map(f => {
+        const field = { name: f.key, title: f.title || f['x-originalName'], type: f.type }
+        if (f.description) field.description = f.description
+        // if (f.format) field.format = f.format // commented besause uri-reference format is not in tableschema
+        if (f['x-refersTo']) field.rdfType = f['x-refersTo']
+        return field
+      })
   }
 }
 
@@ -779,6 +779,6 @@ exports.jsonSchema = (schema, publicBaseUrl, keepReadOnly = false, writableId = 
   }
   return {
     type: 'object',
-    properties,
+    properties
   }
 }

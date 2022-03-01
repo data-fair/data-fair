@@ -10,7 +10,7 @@ const config = require('config')
 const maxDuration = 60 * 60 * 1000
 const start = new Date().getTime()
 
-async function main() {
+async function main () {
   const { db } = await require('../server/utils/db').connect()
   const es = await require('../server/utils/es').init()
   const indexes = (await es.cat.indices({ index: `${config.indicesPrefix}-*`, format: 'json' })).body

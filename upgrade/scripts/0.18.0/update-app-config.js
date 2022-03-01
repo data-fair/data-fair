@@ -18,15 +18,15 @@ exports.exec = async (db, debug) => {
         {
           $set: {
             'configuration.datasets': conf.datasets,
-            'configuration.remoteServices': conf.remoteServices,
-          },
-        },
+            'configuration.remoteServices': conf.remoteServices
+          }
+        }
       )
     }
   }
 }
 
-function ensureDataset(conf, oldKey, newKey, debug) {
+function ensureDataset (conf, oldKey, newKey, debug) {
   conf.datasets = conf.datasets || []
   if (conf[oldKey] && !conf.datasets.find(d => d.href === conf[oldKey])) {
     conf.datasets.push({ href: conf[oldKey], key: newKey })
@@ -34,7 +34,7 @@ function ensureDataset(conf, oldKey, newKey, debug) {
   }
 }
 
-function ensureRemoteService(conf, oldKey, newKey, debug) {
+function ensureRemoteService (conf, oldKey, newKey, debug) {
   conf.remoteServices = conf.remoteServices || []
   if (conf[oldKey] && !conf.remoteServices.find(d => d.href === conf[oldKey])) {
     conf.remoteServices.push({ href: conf[oldKey], key: newKey })

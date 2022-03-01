@@ -18,7 +18,7 @@
       v-html="notification.errorMsg"
     />
 
-    <template v-slot:action="{ }">
+    <template #action="{ }">
       <v-btn
         icon
         @click.native="showSnackbar = false"
@@ -30,33 +30,33 @@
 </template>
 
 <script>
-  import eventBus from '~/event-bus'
+import eventBus from '~/event-bus'
 
-  export default {
-    data() {
-      return {
-        notification: null,
-        showSnackbar: false,
+export default {
+  data () {
+    return {
+      notification: null,
+      showSnackbar: false
+    }
+  },
+  created () {
+    eventBus.$on('notification', async notif => {
+      if (this.showSnackbar) {
+        this.showSnackbar = false
+        await new Promise(resolve => setTimeout(resolve, 300))
       }
-    },
-    created() {
-      eventBus.$on('notification', async notif => {
-        if (this.showSnackbar) {
-          this.showSnackbar = false
-          await new Promise(resolve => setTimeout(resolve, 300))
-        }
 
-        if (typeof notif === 'string') notif = { msg: notif }
-        if (notif.error) {
-          notif.type = 'error'
-          notif.errorMsg = (notif.error.response && (notif.error.response.data || notif.error.response.status)) || notif.error.message || notif.error
-        }
-        notif.type = notif.type || 'default'
-        this.notification = notif
-        this.showSnackbar = true
-      })
-    },
+      if (typeof notif === 'string') notif = { msg: notif }
+      if (notif.error) {
+        notif.type = 'error'
+        notif.errorMsg = (notif.error.response && (notif.error.response.data || notif.error.response.status)) || notif.error.message || notif.error
+      }
+      notif.type = notif.type || 'default'
+      this.notification = notif
+      this.showSnackbar = true
+    })
   }
+}
 </script>
 
 <style lang="less">

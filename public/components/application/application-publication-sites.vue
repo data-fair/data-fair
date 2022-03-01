@@ -1,6 +1,9 @@
 <template>
   <v-container fluid>
-    <p v-if="!publicationSites || !publicationSites.length" v-t="'noPublicationSite'" />
+    <p
+      v-if="!publicationSites || !publicationSites.length"
+      v-t="'noPublicationSite'"
+    />
     <template v-else>
       <p v-t="'publishThisApp'" />
       <v-row class="px-2">
@@ -9,13 +12,19 @@
           outlined
           style="min-width: 400px;"
         >
-          <v-list class="py-0" two-line>
+          <v-list
+            class="py-0"
+            two-line
+          >
             <v-list-item
               v-for="(site,i) in publicationSites"
               :key="i"
             >
               <v-list-item-action>
-                <v-checkbox :input-value="application.publicationSites.includes(`${site.type}:${site.id}`)" @change="toggle(site)" />
+                <v-checkbox
+                  :input-value="application.publicationSites.includes(`${site.type}:${site.id}`)"
+                  @change="toggle(site)"
+                />
               </v-list-item-action>
 
               <v-list-item-content>
@@ -30,7 +39,10 @@
                   <a :href="site.url">{{ site.title || site.url || site.id }}</a>
                 </v-list-item-title>
                 <v-list-item-subtitle>
-                  <a v-if="site.applicationUrlTemplate && application.publicationSites.includes(`${site.type}:${site.id}`)" :href="site.applicationUrlTemplate.replace('{id}', application.id)">
+                  <a
+                    v-if="site.applicationUrlTemplate && application.publicationSites.includes(`${site.type}:${site.id}`)"
+                    :href="site.applicationUrlTemplate.replace('{id}', application.id)"
+                  >
                     {{ site.applicationUrlTemplate.replace('{id}', application.id) }}
                   </a>
                 </v-list-item-subtitle>
@@ -70,33 +82,33 @@ en:
 </i18n>
 
 <script>
-  import { mapState, mapActions } from 'vuex'
-  export default {
-    props: {
-      publicationSites: {
-        type: Array,
-        default: () => [],
-      },
-    },
-    data: () => ({
-      selected: [],
-    }),
-    computed: {
-      ...mapState('application', ['application']),
-    },
-    methods: {
-      ...mapActions('application', ['patch', 'patchAndCommit']),
-      toggle(site) {
-        const key = `${site.type}:${site.id}`
-        if (this.application.publicationSites.includes(key)) {
-          this.application.publicationSites = this.application.publicationSites.filter(s => s !== key)
-        } else {
-          this.application.publicationSites.push(key)
-        }
-        this.patch({ publicationSites: this.application.publicationSites })
-      },
-    },
+import { mapState, mapActions } from 'vuex'
+export default {
+  props: {
+    publicationSites: {
+      type: Array,
+      default: () => []
+    }
+  },
+  data: () => ({
+    selected: []
+  }),
+  computed: {
+    ...mapState('application', ['application'])
+  },
+  methods: {
+    ...mapActions('application', ['patch', 'patchAndCommit']),
+    toggle (site) {
+      const key = `${site.type}:${site.id}`
+      if (this.application.publicationSites.includes(key)) {
+        this.application.publicationSites = this.application.publicationSites.filter(s => s !== key)
+      } else {
+        this.application.publicationSites.push(key)
+      }
+      this.patch({ publicationSites: this.application.publicationSites })
+    }
   }
+}
 </script>
 
 <style lang="css" scoped>

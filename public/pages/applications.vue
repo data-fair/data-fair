@@ -1,5 +1,8 @@
 <template>
-  <v-container fluid class="px-0">
+  <v-container
+    fluid
+    class="px-0"
+  >
     <application-list v-if="user" />
     <!-- Anonymous: show jumbotron -->
     <v-col
@@ -53,30 +56,30 @@ en:
 </i18n>
 
 <script>
-  import { mapState, mapActions, mapGetters } from 'vuex'
+import { mapState, mapActions, mapGetters } from 'vuex'
 
-  export default {
-    data() {
-      return {
-        importApplicationSheet: !!this.$route.query.import,
-        graphicSvg: require('~/assets/svg/Graphics and charts_Monochromatic.svg?raw'),
-      }
-    },
-    computed: {
-      ...mapState('session', ['user', 'initialized']),
-      ...mapGetters('session', ['activeAccount']),
-      importApp() {
-        return this.$route.query.import
-      },
-    },
-    created() {
-      if (this.activeAccount) {
-        this.fetchPublicationSites(this.activeAccount)
-      }
-    },
-    methods: {
-      ...mapActions('session', ['login']),
-      ...mapActions(['fetchPublicationSites']),
-    },
+export default {
+  data () {
+    return {
+      importApplicationSheet: !!this.$route.query.import,
+      graphicSvg: require('~/assets/svg/Graphics and charts_Monochromatic.svg?raw')
+    }
+  },
+  computed: {
+    ...mapState('session', ['user', 'initialized']),
+    ...mapGetters('session', ['activeAccount']),
+    importApp () {
+      return this.$route.query.import
+    }
+  },
+  created () {
+    if (this.activeAccount) {
+      this.fetchPublicationSites(this.activeAccount)
+    }
+  },
+  methods: {
+    ...mapActions('session', ['login']),
+    ...mapActions(['fetchPublicationSites'])
   }
+}
 </script>

@@ -1,6 +1,9 @@
 <template>
   <v-container>
-    <v-row align="center" class="pt-6 pb-3">
+    <v-row
+      align="center"
+      class="pt-6 pb-3"
+    >
       <v-col
         class="text-center"
         cols="12"
@@ -8,7 +11,10 @@
         <h2 class="text-h3 font-weight-bold grey--text text--darken-3 mb-4">
           Data Fair
         </h2>
-        <p v-t="'subtitle'" class="text-h5 font-weight-regular grey--text text--darken-1 font-italic" />
+        <p
+          v-t="'subtitle'"
+          class="text-h5 font-weight-regular grey--text text--darken-1 font-italic"
+        />
         <div>
           <v-btn
             href="https://github.com/sponsors/koumoul-dev"
@@ -47,7 +53,10 @@
         </div>
       </v-col>
     </v-row>
-    <v-row justify="center" class="pb-3">
+    <v-row
+      justify="center"
+      class="pb-3"
+    >
       <client-only>
         <iframe
           :width="$vuetify.breakpoint.lgAndUp ? 800 : 560"
@@ -68,7 +77,10 @@
         sm="12"
         v-html="$t('sectionDatasets')"
       />
-      <v-col md="6" sm="12">
+      <v-col
+        md="6"
+        sm="12"
+      >
         <v-img
           :aspect-ratio="2"
           alt="Accès par API"
@@ -78,13 +90,19 @@
       </v-col>
     </v-row>
 
-    <v-row class="my-3" align="center">
+    <v-row
+      class="my-3"
+      align="center"
+    >
       <v-col
         md="6"
         sm="12"
         v-html="$t('sectionExtend')"
       />
-      <v-col md="6" sm="12">
+      <v-col
+        md="6"
+        sm="12"
+      >
         <v-img
           :aspect-ratio="2"
           alt="Accès par API"
@@ -103,7 +121,10 @@
         sm="12"
         v-html="$t('sectionVisualize')"
       />
-      <v-col md="6" sm="12">
+      <v-col
+        md="6"
+        sm="12"
+      >
         <v-img
           :aspect-ratio="2"
           alt="Accès par API"
@@ -113,13 +134,19 @@
       </v-col>
     </v-row>
 
-    <v-row class="my-3" align="center">
+    <v-row
+      class="my-3"
+      align="center"
+    >
       <v-col
         md="6"
         sm="12"
         v-html="$t('sectionShare')"
       />
-      <v-col md="6" sm="12">
+      <v-col
+        md="6"
+        sm="12"
+      >
         <v-img
           :aspect-ratio="2"
           alt="Accès par API"
@@ -139,7 +166,10 @@
         cols="6"
         xl="4"
       >
-        <v-card outlined :href="sponsor.link">
+        <v-card
+          outlined
+          :href="sponsor.link"
+        >
           <v-row class="ma-0 pt-2 px-3">
             <v-img
               color="blue"
@@ -226,40 +256,40 @@ en:
 </i18n>
 
 <script>
-  export default {
-    data() {
-      return {
-        sponsors: [
-          {
-            name: 'Koumoul',
-            description: {
-              fr: 'Visualisez, exploitez et partagez vos données en quelques clics !',
-              en: 'Visualize, explore and share your data in a few clicks !',
-            },
-            img: 'https://koumoul.com/static/logo-slogan.png',
-            link: 'https://koumoul.com',
-            thanks: {
-              fr: 'Koumoul développe l\'écosystème Data Fair et l\'héberge comme service en ligne.',
-              en: 'Koumoul develops the Data Fair ecosystem and hosts it as an online service.',
-            },
+export default {
+  data () {
+    return {
+      sponsors: [
+        {
+          name: 'Koumoul',
+          description: {
+            fr: 'Visualisez, exploitez et partagez vos données en quelques clics !',
+            en: 'Visualize, explore and share your data in a few clicks !'
           },
-          {
-            name: 'Dawizz',
-            description: {
-              fr: 'Outil de cartographie et de catalogage de vos données.',
-              en: 'A tool for mapping and cataloging your data.',
-            },
-            img: 'https://www.dawizz.fr/wp-content/uploads/2018/04/logo-Dawizz-all-about-your-data-home.png',
-            link: 'https://dawizz.fr',
-            thanks: {
-              fr: 'Dawizz intègre Data Fair dans sa plateforme et soutient son développement.',
-              en: 'Dawizz uses Data Fair inside its platform and supports its development',
-            },
+          img: 'https://koumoul.com/static/logo-slogan.png',
+          link: 'https://koumoul.com',
+          thanks: {
+            fr: 'Koumoul développe l\'écosystème Data Fair et l\'héberge comme service en ligne.',
+            en: 'Koumoul develops the Data Fair ecosystem and hosts it as an online service.'
+          }
+        },
+        {
+          name: 'Dawizz',
+          description: {
+            fr: 'Outil de cartographie et de catalogage de vos données.',
+            en: 'A tool for mapping and cataloging your data.'
           },
-        ],
-      }
-    },
+          img: 'https://www.dawizz.fr/wp-content/uploads/2018/04/logo-Dawizz-all-about-your-data-home.png',
+          link: 'https://dawizz.fr',
+          thanks: {
+            fr: 'Dawizz intègre Data Fair dans sa plateforme et soutient son développement.',
+            en: 'Dawizz uses Data Fair inside its platform and supports its development'
+          }
+        }
+      ]
+    }
   }
+}
 </script>
 
 <style>

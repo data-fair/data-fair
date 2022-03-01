@@ -1,6 +1,6 @@
 <template lang="html">
   <v-row class="my-0">
-    <v-col :style="this.$vuetify.breakpoint.lgAndUp ? 'padding-right:256px;' : ''">
+    <v-col :style="$vuetify.breakpoint.lgAndUp ? 'padding-right:256px;' : ''">
       <v-container class="py-0">
         <p v-if="datasetsErrors && datasetsErrors.count === 0">
           Aucun jeu de données en erreur
@@ -105,25 +105,25 @@
 </template>
 
 <script>
-  export default {
-    data() {
-      return { datasetsErrors: null, applicationsErrors: null, applicationsDraftErrors: null }
+export default {
+  data () {
+    return { datasetsErrors: null, applicationsErrors: null, applicationsDraftErrors: null }
+  },
+  async mounted () {
+    this.refresh()
+  },
+  methods: {
+    async refresh () {
+      this.datasetsErrors = await this.$axios.$get('api/v1/admin/datasets-errors', { params: { size: 1000 } })
+      this.applicationsErrors = await this.$axios.$get('api/v1/admin/applications-errors', { params: { size: 1000 } })
+      this.applicationsDraftErrors = await this.$axios.$get('api/v1/admin/applications-draft-errors', { params: { size: 1000 } })
     },
-    async mounted() {
+    async reindex (datasetId) {
+      await this.$axios.$post(`api/v1/datasets/${datasetId}/_reindex`)
       this.refresh()
-    },
-    methods: {
-      async refresh() {
-        this.datasetsErrors = await this.$axios.$get('api/v1/admin/datasets-errors', { params: { size: 1000 } })
-        this.applicationsErrors = await this.$axios.$get('api/v1/admin/applications-errors', { params: { size: 1000 } })
-        this.applicationsDraftErrors = await this.$axios.$get('api/v1/admin/applications-draft-errors', { params: { size: 1000 } })
-      },
-      async reindex(datasetId) {
-        await this.$axios.$post(`api/v1/datasets/${datasetId}/_reindex`)
-        this.refresh()
-      },
-    },
+    }
   }
+}
 </script>
 
 <style lang="css">

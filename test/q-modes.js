@@ -9,7 +9,7 @@ describe('query modes', () => {
     await ax.put('/api/v1/datasets/qmodes', {
       isRest: true,
       title: 'qmodes',
-      schema: [{ key: 'content', type: 'string' }],
+      schema: [{ key: 'content', type: 'string' }]
     })
     let dataset = await workers.hook('finalizer/qmodes')
     const items = {
@@ -17,7 +17,7 @@ describe('query modes', () => {
       t2: 'prefixsuite',
       t3: 'configurations Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt configurations ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit configurer anim id est laborum.',
       p1: 'phrase 1 mot1 mot2 mot3 mot4',
-      p2: 'phrase 2 mot1 mot3 mot2 mot4',
+      p2: 'phrase 2 mot1 mot3 mot2 mot4'
     }
     let res = await ax.post('/api/v1/datasets/qmodes/_bulk_lines', Object.keys(items).map(key => ({ _id: key, content: items[key] })))
     dataset = await workers.hook('finalizer/qmodes')
@@ -44,8 +44,8 @@ describe('query modes', () => {
         params: {
           q: 'configuration'.substring(0, i + 1),
           q_mode: 'complete',
-          highlight: 'content',
-        },
+          highlight: 'content'
+        }
       })
       assert.ok(res.data.results[0]._highlight.content[0].includes('"highlighted"'))
       assert.equal(res.data.total, 1)

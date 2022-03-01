@@ -21,15 +21,15 @@ if (process.env.NODE_ENV !== 'production' || isBuilding) {
       dark: config.theme.dark,
       themes: {
         light: config.theme.colors,
-        dark: { ...config.theme.colors, ...config.theme.darkColors },
-      },
+        dark: { ...config.theme.colors, ...config.theme.darkColors }
+      }
     },
     treeShake: true,
     defaultAssets: false,
     lang: {
       locales: { fr, en },
-      current: config.i18n.defaultLocale,
-    },
+      current: config.i18n.defaultLocale
+    }
   }
 }
 
@@ -57,7 +57,7 @@ module.exports = {
           name: '[path][name].[ext]',
         },
       }) */
-    },
+    }
   },
   loading: { color: '#1e88e5' }, // Customize the progress bar color
   plugins: [
@@ -70,10 +70,10 @@ module.exports = {
     { src: '~plugins/display-bytes' },
     { src: '~plugins/logger', ssr: false },
     { src: '~plugins/analytics', ssr: false },
-    { src: '~plugins/polyfill', ssr: false },
+    { src: '~plugins/polyfill', ssr: false }
   ],
   router: {
-    base: config.basePath,
+    base: config.basePath
   },
   modules: ['@nuxtjs/axios', 'cookie-universal-nuxt', ['@nuxtjs/i18n', {
     seo: false,
@@ -83,24 +83,22 @@ module.exports = {
     strategy: 'no_prefix',
     detectBrowserLanguage: {
       useCookie: true,
-      cookieKey: 'i18n_lang',
+      cookieKey: 'i18n_lang'
     },
     vueI18n: {
-      fallbackLocale: config.i18n.defaultLocale,
-    },
+      fallbackLocale: config.i18n.defaultLocale
+    }
   }]],
   axios: {
-    browserBaseURL: config.basePath,
+    browserBaseURL: config.basePath
     // baseURL: `http://localhost:${config.port}/`,
   },
   buildModules: [
     '@nuxtjs/vuetify',
     '@nuxtjs/svg',
-    ['@nuxtjs/google-fonts', { download: true, display: 'swap', families: { Nunito: [100, 300, 400, 500, 700, 900] } }],
+    ['@nuxtjs/google-fonts', { download: true, display: 'swap', families: { Nunito: [100, 300, 400, 500, 700, 900] } }]
   ],
-  vuetify: {
-    optionsPath: './vuetify.options.js',
-  },
+  vuetify: vuetifyOptions,
   env: {
     mainPublicUrl: config.publicUrl,
     basePath: config.basePath,
@@ -128,7 +126,7 @@ module.exports = {
     disableApplications: config.disableApplications,
     disableRemoteServices: config.disableRemoteServices,
     i18n: config.i18n,
-    defaultTimeZone: config.defaultTimeZone,
+    defaultTimeZone: config.defaultTimeZone
   },
   head: {
     title: config.brand.title,
@@ -137,14 +135,14 @@ module.exports = {
       { name: 'viewport', content: 'width=device-width, initial-scale=1' },
       { hid: 'application', name: 'application-name', content: config.brand.title },
       { hid: 'description', name: 'description', content: config.brand.description },
-      { hid: 'robots', name: 'robots', content: 'noindex' },
+      { hid: 'robots', name: 'robots', content: 'noindex' }
     ],
     link: [],
-    style: [],
+    style: []
   },
   css: [
-    '@mdi/font/css/materialdesignicons.min.css',
-  ],
+    '@mdi/font/css/materialdesignicons.min.css'
+  ]
 }
 
 if (config.theme.cssUrl) {

@@ -6,7 +6,7 @@ exports.schema = {
       type: 'array',
       title: 'Recherches unitaires',
       'x-slots': {
-        before: 'Les recherches unitaires sont utilisables pour récupérer plusieurs lignes du jeu de données de référence à partir d\'une recherche sur 1 critère. Elles servent notamment à construire des champs de recherche dans les formulaires d\'édition de ligne des jeux incrémentaux.',
+        before: 'Les recherches unitaires sont utilisables pour récupérer plusieurs lignes du jeu de données de référence à partir d\'une recherche sur 1 critère. Elles servent notamment à construire des champs de recherche dans les formulaires d\'édition de ligne des jeux incrémentaux.'
       },
       'x-class': 'mb-4',
       'x-options': { editMode: 'dialog' },
@@ -22,15 +22,15 @@ exports.schema = {
             title: 'Propriété à retourner',
             'x-fromData': 'context.propertiesWithConcepts',
             'x-itemTitle': 'title',
-            'x-itemKey': 'key',
+            'x-itemKey': 'key'
           },
           label: {
             type: 'object',
             title: 'Propriété utilisée pour représenter les résultats',
             'x-fromData': 'context.stringProperties',
             'x-itemTitle': 'title',
-            'x-itemKey': 'key',
-          },
+            'x-itemKey': 'key'
+          }
           /* input: {
             type: 'array',
             title: 'Propriétés utilisées pour la recherche',
@@ -50,14 +50,14 @@ exports.schema = {
               },
             },
           }, */
-        },
-      },
+        }
+      }
     },
     bulkSearchs: {
       type: 'array',
       title: 'Recherches en masse',
       'x-slots': {
-        before: 'Les recherches en masse sont utilisables pour enrichir des données de multiples lignes avec 1 résultat par ligne.',
+        before: 'Les recherches en masse sont utilisables pour enrichir des données de multiples lignes avec 1 résultat par ligne.'
       },
       'x-class': 'mt-4',
       'x-options': { editMode: 'dialog' },
@@ -85,9 +85,9 @@ exports.schema = {
                     title: 'Propriété comparée',
                     'x-fromData': 'context.propertiesWithConcepts',
                     'x-itemTitle': 'title',
-                    'x-itemKey': 'key',
-                  },
-                },
+                    'x-itemKey': 'key'
+                  }
+                }
               }, {
                 title: 'Date dans l\'interval',
                 'x-if': 'context.hasDateIntervalConcepts',
@@ -100,10 +100,10 @@ exports.schema = {
                       'x-refersTo': { type: 'string', const: 'http://schema.org/Date' },
                       key: { type: 'string', const: '_date' },
                       type: { type: 'string', const: 'string' },
-                      format: { type: 'string', const: 'date-time' },
-                    },
-                  },
-                },
+                      format: { type: 'string', const: 'date-time' }
+                    }
+                  }
+                }
               }, {
                 title: 'Coordonnée géographique à une distance',
                 'x-if': 'context.dataset.bbox',
@@ -112,7 +112,7 @@ exports.schema = {
                   distance: {
                     type: 'integer',
                     title: 'Distance',
-                    default: 0,
+                    default: 0
                   },
                   property: {
                     type: 'object',
@@ -120,12 +120,12 @@ exports.schema = {
                     properties: {
                       'x-refersTo': { type: 'string', const: 'http://www.w3.org/2003/01/geo/wgs84_pos#lat_long' },
                       key: { type: 'string', const: '_geopoint' },
-                      type: { type: 'string', const: 'string' },
-                    },
-                  },
-                },
-              }],
-            },
+                      type: { type: 'string', const: 'string' }
+                    }
+                  }
+                }
+              }]
+            }
           },
           sort: {
             type: 'string',
@@ -135,12 +135,12 @@ Le tri à effectuer sous forme d'une liste de clés de colonnes séparées par d
 
 Par défaut le tri est ascendant, si un nom de colonne est préfixé par un "-" alors le tri sera descendant.
 
-Exemple: ma_colonne,-ma_colonne2`,
-          },
-        },
-      },
-    },
-  },
+Exemple: ma_colonne,-ma_colonne2`
+          }
+        }
+      }
+    }
+  }
 }
 
 exports.endpoints = (dataset) => {
@@ -153,23 +153,23 @@ exports.endpoints = (dataset) => {
       a[f.key] = {
         ...f,
         title: f.title || f['x-originalName'] || f.key,
-        description: f.description || '',
+        description: f.description || ''
       }
       delete a[f.key].key
       delete a[f.key].ignoreDetection
       delete a[f.key].separator
       delete a[f.key].icon
       return a
-    }, {}),
+    }, {})
   }
   datasetLineSchema.properties._key = {
     title: 'Identifiant de la ligne de requête',
     type: 'string',
-    'x-refersTo': 'http://schema.org/identifier',
+    'x-refersTo': 'http://schema.org/identifier'
   }
   datasetLineSchema.properties._error = {
     type: 'string',
-    title: 'Erreur de récupération de données de référence',
+    title: 'Erreur de récupération de données de référence'
   }
 
   const properties = outputProperties.map(p => p.key)
@@ -179,18 +179,18 @@ exports.endpoints = (dataset) => {
       output: {
         type: 'string',
         title: 'Propriété à retourner',
-        'x-refersTo': singleSearch.output['x-refersTo'],
+        'x-refersTo': singleSearch.output['x-refersTo']
       },
       _score: {
         type: 'number',
-        title: 'Pertinence du résultat',
-      },
+        title: 'Pertinence du résultat'
+      }
     }
     if (singleSearch.label && singleSearch.label.key) {
       properties.label = {
         type: 'string',
         title: 'Propriété utilisée pour représenter les résultats',
-        'x-refersTo': 'http://www.w3.org/2000/01/rdf-schema#label',
+        'x-refersTo': 'http://www.w3.org/2000/01/rdf-schema#label'
       }
     }
     endpoints[`/master-data/single-searchs/${singleSearch.id}`] = {
@@ -206,16 +206,16 @@ exports.endpoints = (dataset) => {
           name: 'q',
           description: 'La recherche textuelle à effectuer',
           schema: {
-            type: 'string',
-          },
+            type: 'string'
+          }
         }, {
           in: 'query',
           name: 'size',
           description: 'Nombre de résultats candidats à retourner',
           schema: {
             type: 'integer',
-            default: 20,
-          },
+            default: 20
+          }
         }],
         responses: {
           200: {
@@ -224,13 +224,13 @@ exports.endpoints = (dataset) => {
               'application/json': {
                 schema: {
                   type: 'object',
-                  properties,
-                },
-              },
-            },
-          },
-        },
-      },
+                  properties
+                }
+              }
+            }
+          }
+        }
+      }
     }
   }
 
@@ -249,7 +249,7 @@ exports.endpoints = (dataset) => {
     inputProperties._key = {
       description: 'Identifiant de la ligne de requête',
       type: 'string',
-      'x-refersTo': 'http://schema.org/identifier',
+      'x-refersTo': 'http://schema.org/identifier'
     }
 
     endpoints[`/master-data/bulk-searchs/${bulkSearch.id}`] = {
@@ -269,10 +269,10 @@ exports.endpoints = (dataset) => {
             type: 'array',
             items: {
               type: 'string',
-              enum: properties,
-            },
+              enum: properties
+            }
           },
-          style: 'commaDelimited',
+          style: 'commaDelimited'
         }],
         requestBody: {
           description: 'Ensemble de filtres à appliquer',
@@ -282,32 +282,32 @@ exports.endpoints = (dataset) => {
               schema: {
                 title: 'Filtre pour une ligne',
                 type: 'object',
-                properties: inputProperties,
-              },
-            },
-          },
+                properties: inputProperties
+              }
+            }
+          }
         },
         responses: {
           200: {
             description: 'Réponse en cas de succès de la requête',
             content: {
               'application/x-ndjson': {
-                schema: datasetLineSchema,
-              },
-            },
+                schema: datasetLineSchema
+              }
+            }
           },
           400: {
             description: 'Mauvais formattage de la requête',
             content: {
               'application/json': {
                 schema: {
-                  type: 'string',
-                },
-              },
-            },
-          },
-        },
-      },
+                  type: 'string'
+                }
+              }
+            }
+          }
+        }
+      }
     }
   }
   return endpoints

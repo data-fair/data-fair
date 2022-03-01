@@ -2,7 +2,10 @@
   <div>
     <p v-t="'description'" />
 
-    <div id="dataset-privacy" style="width:400px">
+    <div
+      id="dataset-privacy"
+      style="width:400px"
+    >
       <v-switch
         :value="isPublic"
         :disabled="(hasPublicDeps && isPublic) || (hasPrivateParents && !isPublic)"
@@ -38,14 +41,29 @@
       hide-default-footer
       class="elevation-1 mt-3"
     >
-      <template v-slot:item="{item, index}">
+      <template #item="{item, index}">
         <tr>
           <td>
-            <div v-if="!item.type" v-t="'public'" />
-            <div v-if="item.type === 'user'" v-t="{path: 'userName', args: {name: item.name}}" />
-            <div v-if="item.type === 'organization'" v-t="{path: 'organizationName', args: {name: item.name}}" />
-            <div v-if="item.type === 'organization' && (!item.roles || !item.roles.length)" v-t="'allRoles'" />
-            <div v-if="item.type === 'organization' && (item.roles && item.roles.length)" v-t="{path: 'restrictedRoles', args: {roles: item.roles.join(', ')}}" />
+            <div
+              v-if="!item.type"
+              v-t="'public'"
+            />
+            <div
+              v-if="item.type === 'user'"
+              v-t="{path: 'userName', args: {name: item.name}}"
+            />
+            <div
+              v-if="item.type === 'organization'"
+              v-t="{path: 'organizationName', args: {name: item.name}}"
+            />
+            <div
+              v-if="item.type === 'organization' && (!item.roles || !item.roles.length)"
+              v-t="'allRoles'"
+            />
+            <div
+              v-if="item.type === 'organization' && (item.roles && item.roles.length)"
+              v-t="{path: 'restrictedRoles', args: {roles: item.roles.join(', ')}}"
+            />
           </td>
           <td>
             <v-list
@@ -60,10 +78,16 @@
                 >
                   <v-list-item-content>
                     <v-row style="width:100%">
-                      <v-col cols="3" class="py-0">
+                      <v-col
+                        cols="3"
+                        class="py-0"
+                      >
                         {{ classNames[permClass] }}
                       </v-col>
-                      <v-col cols="9" class="py-0">
+                      <v-col
+                        cols="9"
+                        class="py-0"
+                      >
                         <span v-if="(item.classes || []).includes(permClass)" />
                         <span v-else>{{ classOperations.filter(o => (item.operations || []).find(oid => o.id && o.id === oid)).map(o => o.title).join(' - ') }}</span>
                       </v-col>
@@ -230,169 +254,169 @@ en:
 </i18n>
 
 <script>
-  import { mapState } from 'vuex'
-  import eventBus from '~/event-bus'
+import { mapState } from 'vuex'
+import eventBus from '~/event-bus'
 
-  export default {
-    props: ['resource', 'resourceUrl', 'api', 'hasPublicDeps', 'hasPrivateParents'],
-    data: () => ({
-      permissions: [],
-      currentPermission: {},
-      currentPermissionIdx: {},
-      currentPermissionOrganizationRoles: [],
-      currentEntity: {},
-      users: [],
-      organizations: [],
-      showDialog: false,
-      search: null,
-      loading: false,
-      classNames: {
-        list: 'Lister',
-        read: 'Lecture',
-        // readAdvanced: 'Lecture informations détaillées',
-        // write: 'Ecriture',
-        // admin: 'Administration',
-        use: 'Utiliser le service',
-      },
-      expertMode: false,
-      addPermissions: false,
-    }),
-    computed: {
-      ...mapState('session', ['user']),
-      ...mapState(['env']),
-      permissionClasses() {
-        const classes = {
-          list: [{
-            id: 'list',
-            title: 'Lister la ressource',
-            class: 'list',
-          }],
-        }
-        if (this.api) {
-          Object.keys(this.api.paths).forEach(path => Object.keys(this.api.paths[path]).forEach(method => {
-            const permClass = this.api.paths[path][method]['x-permissionClass']
-            classes[permClass] = (classes[permClass] || []).concat({
-              id: this.api.paths[path][method].operationId,
-              title: this.api.paths[path][method].summary,
-              class: permClass,
-            })
-          }))
-        }
-        return classes
-      },
-      operations() {
-        return [].concat(...Object.keys(this.permissionClasses).filter(c => this.classNames[c]).map(c => [{ header: this.classNames[c] }].concat(this.permissionClasses[c])))
-      },
-      isPublic() {
-        return !!this.permissions.find(p => !p.type && p.classes && p.classes.includes('read') && p.classes.includes('list'))
-      },
+export default {
+  props: ['resource', 'resourceUrl', 'api', 'hasPublicDeps', 'hasPrivateParents'],
+  data: () => ({
+    permissions: [],
+    currentPermission: {},
+    currentPermissionIdx: {},
+    currentPermissionOrganizationRoles: [],
+    currentEntity: {},
+    users: [],
+    organizations: [],
+    showDialog: false,
+    search: null,
+    loading: false,
+    classNames: {
+      list: 'Lister',
+      read: 'Lecture',
+      // readAdvanced: 'Lecture informations détaillées',
+      // write: 'Ecriture',
+      // admin: 'Administration',
+      use: 'Utiliser le service'
     },
-    watch: {
-      'currentPermission.type'() {
-        if (this.currentPermission.type === null) {
-          delete this.currentPermission.id
-          delete this.currentPermission.name
-          delete this.currentPermission.roles
-        } else {
-          this.currentPermission.id = this.currentPermission.id || null
-          this.currentPermission.roles = this.currentPermission.roles || []
-        }
-      },
-      'currentEntity.id': async function(id) {
-        this.currentPermission.id = this.currentEntity.id
-        this.currentPermission.name = this.currentEntity.name
-        if (this.currentPermission.type === 'organization' && id) {
-          if ((this.resource.owner.type === 'organization' && this.resource.owner.id === id) || (this.resource.owner.type === 'user' && this.user.organizations.find(o => o.id === id))) {
-            const roles = await this.$axios.$get(this.env.directoryUrl + '/api/organizations/' + id + '/roles')
-            this.currentPermissionOrganizationRoles = roles.filter(role => role !== this.env.adminRole)
-          } else {
-            this.currentPermissionOrganizationRoles = []
-          }
-        }
-      },
-      'currentPermission.classes'(classes) {
-        if (classes && classes.includes('list') && !classes.includes('read')) {
-          classes.push('read')
-        }
-      },
-      'currentPermission.operations'(operations) {
-        if (operations && operations.includes('list') && !operations.includes('readDescription')) {
-          operations.push('readDescription')
-        }
-      },
-      search: async function() {
-        if (this.search && this.search === this.currentEntity.name) return
-
-        this.loading = true
-        if (this.currentPermission && this.currentPermission.type === 'organization') {
-          this.users = []
-          if (!this.search || this.search.length < 3) this.organizations = []
-          else this.organizations = (await this.$axios.$get(this.env.directoryUrl + '/api/organizations', { params: { q: this.search } })).results
-        } else {
-          this.organizations = []
-          if (!this.search || this.search.length < 3) this.users = []
-          else this.users = (await this.$axios.$get(this.env.directoryUrl + '/api/users', { params: { q: this.search } })).results
-        }
-
-        this.loading = false
-      },
-    },
-    async mounted() {
-      const permissions = await this.$axios.$get(this.resourceUrl + '/permissions')
-      permissions.forEach(p => {
-        if (!p.type) p.type = null
-      })
-      this.permissions = permissions
-    },
-    methods: {
-      async switchPublic() {
-        if (this.isPublic) {
-          this.addPermissions = false
-          this.currentPermission = {}
-          this.permissions = this.permissions.filter(p => !(!p.type && p.classes && p.classes.includes('read') && p.classes.includes('list')))
-        } else {
-          this.addPermissions = true
-          this.currentPermission = { operations: [], classes: ['read', 'list'] }
-        }
-        this.save()
-      },
-      async save() {
-        if (this.addPermissions) this.permissions.push((this.currentPermission))
-        else if (this.currentPermission) this.permissions[this.currentPermissionIdx] = this.currentPermission
-        try {
-          this.permissions.forEach(permission => {
-            if (!permission.type) delete permission.type
-            if (!permission.id) delete permission.id
+    expertMode: false,
+    addPermissions: false
+  }),
+  computed: {
+    ...mapState('session', ['user']),
+    ...mapState(['env']),
+    permissionClasses () {
+      const classes = {
+        list: [{
+          id: 'list',
+          title: 'Lister la ressource',
+          class: 'list'
+        }]
+      }
+      if (this.api) {
+        Object.keys(this.api.paths).forEach(path => Object.keys(this.api.paths[path]).forEach(method => {
+          const permClass = this.api.paths[path][method]['x-permissionClass']
+          classes[permClass] = (classes[permClass] || []).concat({
+            id: this.api.paths[path][method].operationId,
+            title: this.api.paths[path][method].summary,
+            class: permClass
           })
-          await this.$axios.$put(this.resourceUrl + '/permissions', this.permissions)
-          this.addPermissions = false
-          eventBus.$emit('notification', this.$t('permissionsUpdated'))
-        } catch (error) {
-          this.permissions.pop()
-          eventBus.$emit('notification', { error, msg: this.$t('updateError') })
-        }
-      },
-      removePermission(rowIndex) {
-        this.permissions.splice(rowIndex, 1)
-        this.save()
-      },
-      initPermission() {
-        return {
-          type: 'organization',
-          id: null,
-          roles: [],
-          operations: [],
-          classes: [],
-        }
-      },
-      editPermission(permission, idx) {
-        this.currentEntity = { id: permission.id, name: permission.name }
-        if (permission.type === 'organization') this.organizations = [this.currentEntity]
-        if (permission.type === 'user') this.users = [this.currentEntity]
-        this.currentPermissionIdx = idx
-        this.currentPermission = JSON.parse(JSON.stringify(permission))
-        if (this.currentPermission.operations && this.currentPermission.operations.length) this.expertMode = true
-      },
+        }))
+      }
+      return classes
     },
+    operations () {
+      return [].concat(...Object.keys(this.permissionClasses).filter(c => this.classNames[c]).map(c => [{ header: this.classNames[c] }].concat(this.permissionClasses[c])))
+    },
+    isPublic () {
+      return !!this.permissions.find(p => !p.type && p.classes && p.classes.includes('read') && p.classes.includes('list'))
+    }
+  },
+  watch: {
+    'currentPermission.type' () {
+      if (this.currentPermission.type === null) {
+        delete this.currentPermission.id
+        delete this.currentPermission.name
+        delete this.currentPermission.roles
+      } else {
+        this.currentPermission.id = this.currentPermission.id || null
+        this.currentPermission.roles = this.currentPermission.roles || []
+      }
+    },
+    'currentEntity.id': async function (id) {
+      this.currentPermission.id = this.currentEntity.id
+      this.currentPermission.name = this.currentEntity.name
+      if (this.currentPermission.type === 'organization' && id) {
+        if ((this.resource.owner.type === 'organization' && this.resource.owner.id === id) || (this.resource.owner.type === 'user' && this.user.organizations.find(o => o.id === id))) {
+          const roles = await this.$axios.$get(this.env.directoryUrl + '/api/organizations/' + id + '/roles')
+          this.currentPermissionOrganizationRoles = roles.filter(role => role !== this.env.adminRole)
+        } else {
+          this.currentPermissionOrganizationRoles = []
+        }
+      }
+    },
+    'currentPermission.classes' (classes) {
+      if (classes && classes.includes('list') && !classes.includes('read')) {
+        classes.push('read')
+      }
+    },
+    'currentPermission.operations' (operations) {
+      if (operations && operations.includes('list') && !operations.includes('readDescription')) {
+        operations.push('readDescription')
+      }
+    },
+    search: async function () {
+      if (this.search && this.search === this.currentEntity.name) return
+
+      this.loading = true
+      if (this.currentPermission && this.currentPermission.type === 'organization') {
+        this.users = []
+        if (!this.search || this.search.length < 3) this.organizations = []
+        else this.organizations = (await this.$axios.$get(this.env.directoryUrl + '/api/organizations', { params: { q: this.search } })).results
+      } else {
+        this.organizations = []
+        if (!this.search || this.search.length < 3) this.users = []
+        else this.users = (await this.$axios.$get(this.env.directoryUrl + '/api/users', { params: { q: this.search } })).results
+      }
+
+      this.loading = false
+    }
+  },
+  async mounted () {
+    const permissions = await this.$axios.$get(this.resourceUrl + '/permissions')
+    permissions.forEach(p => {
+      if (!p.type) p.type = null
+    })
+    this.permissions = permissions
+  },
+  methods: {
+    async switchPublic () {
+      if (this.isPublic) {
+        this.addPermissions = false
+        this.currentPermission = {}
+        this.permissions = this.permissions.filter(p => !(!p.type && p.classes && p.classes.includes('read') && p.classes.includes('list')))
+      } else {
+        this.addPermissions = true
+        this.currentPermission = { operations: [], classes: ['read', 'list'] }
+      }
+      this.save()
+    },
+    async save () {
+      if (this.addPermissions) this.permissions.push((this.currentPermission))
+      else if (this.currentPermission) this.permissions[this.currentPermissionIdx] = this.currentPermission
+      try {
+        this.permissions.forEach(permission => {
+          if (!permission.type) delete permission.type
+          if (!permission.id) delete permission.id
+        })
+        await this.$axios.$put(this.resourceUrl + '/permissions', this.permissions)
+        this.addPermissions = false
+        eventBus.$emit('notification', this.$t('permissionsUpdated'))
+      } catch (error) {
+        this.permissions.pop()
+        eventBus.$emit('notification', { error, msg: this.$t('updateError') })
+      }
+    },
+    removePermission (rowIndex) {
+      this.permissions.splice(rowIndex, 1)
+      this.save()
+    },
+    initPermission () {
+      return {
+        type: 'organization',
+        id: null,
+        roles: [],
+        operations: [],
+        classes: []
+      }
+    },
+    editPermission (permission, idx) {
+      this.currentEntity = { id: permission.id, name: permission.name }
+      if (permission.type === 'organization') this.organizations = [this.currentEntity]
+      if (permission.type === 'user') this.users = [this.currentEntity]
+      this.currentPermissionIdx = idx
+      this.currentPermission = JSON.parse(JSON.stringify(permission))
+      if (this.currentPermission.operations && this.currentPermission.operations.length) this.expertMode = true
+    }
   }
+}
 </script>

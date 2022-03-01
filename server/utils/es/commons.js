@@ -111,7 +111,7 @@ exports.parseOrder = (sortStr, fields, schema) => {
 
 // Check that a query_string query (lucene syntax)
 // does not try to use fields outside the current schema
-function checkQuery(query, schema, esFields) {
+function checkQuery (query, schema, esFields) {
   if (!esFields) {
     esFields = ['<implicit>']
     schema.forEach(prop => {
@@ -258,7 +258,7 @@ exports.prepareQuery = (dataset, query) => {
     .filter(k => k.endsWith('_in'))
     .map(key => ({
       key: key.slice(0, key.length - 3),
-      values: query[key].split(','),
+      values: query[key].split(',')
     }))
     .forEach(inFilter => {
       const prop = dataset.schema.find(p => p.key === inFilter.key)
@@ -267,8 +267,8 @@ exports.prepareQuery = (dataset, query) => {
       }
       filter.push({
         terms: {
-          [inFilter.key]: inFilter.values,
-        },
+          [inFilter.key]: inFilter.values
+        }
       })
     })
 
@@ -289,10 +289,10 @@ exports.prepareQuery = (dataset, query) => {
           relation: 'intersects',
           shape: {
             type: 'envelope',
-            coordinates: [[esBoundingBox.left, esBoundingBox.top], [esBoundingBox.right, esBoundingBox.bottom]],
-          },
-        },
-      },
+            coordinates: [[esBoundingBox.left, esBoundingBox.top], [esBoundingBox.right, esBoundingBox.bottom]]
+          }
+        }
+      }
     })
   }
 
@@ -309,10 +309,10 @@ exports.prepareQuery = (dataset, query) => {
             relation: 'contains',
             shape: {
               type: 'point',
-              coordinates: [lon, lat],
-            },
-          },
-        },
+              coordinates: [lon, lat]
+            }
+          }
+        }
       })
     } else {
       // TODO: use _geoshape after upgrading ES
@@ -323,8 +323,8 @@ exports.prepareQuery = (dataset, query) => {
       filter.push({
         geo_distance: {
           distance,
-          _geopoint: { lat, lon },
-        },
+          _geopoint: { lat, lon }
+        }
       })
     }
   }

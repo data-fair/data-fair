@@ -4,7 +4,7 @@
     direction="bottom"
     transition="fade-transition"
   >
-    <template v-slot:activator>
+    <template #activator>
       <v-btn
         depressed
         style="height: 100% !important;border-radius: 0;"
@@ -27,22 +27,22 @@
 </template>
 
 <script>
-  import { mapState } from 'vuex'
+import { mapState } from 'vuex'
 
-  export default {
-    computed: {
-      ...mapState(['env']),
-      locales() {
-        return this.env.i18n.locales.split(',')
-      },
-    },
-    methods: {
-      setLocale(locale) {
-        this.$i18n.setLocale(locale)
-        window.location.reload()
-      },
-    },
+export default {
+  computed: {
+    ...mapState(['env']),
+    locales () {
+      return this.env.i18n.locales.split(',')
+    }
+  },
+  methods: {
+    setLocale (locale) {
+      this.$i18n.setLocale(locale)
+      window.location.reload()
+    }
   }
+}
 </script>
 
 <style lang="css">

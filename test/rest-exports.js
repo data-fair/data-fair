@@ -7,12 +7,12 @@ describe('REST datasets exported', () => {
     await ax.post('/api/v1/datasets', {
       isRest: true,
       title: 'rest',
-      schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }],
+      schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }]
     })
     await workers.hook('finalizer/rest')
     await ax.post('/api/v1/datasets/rest/_bulk_lines', [
       { attr1: 'test1', attr2: 'test1' },
-      { attr1: 'test2', attr2: 'test2' },
+      { attr1: 'test2', attr2: 'test2' }
     ])
     await workers.hook('finalizer/rest')
     const patched = (await ax.patch('/api/v1/datasets/rest', { exports: { restToCSV: { active: true } } })).data
@@ -43,7 +43,7 @@ describe('REST datasets exported', () => {
 
     // same content but fresh as a superadmin
     await ax.post('/api/v1/datasets/rest/_bulk_lines', [
-      { attr1: 'test3', attr2: 'test3' },
+      { attr1: 'test3', attr2: 'test3' }
     ])
 
     await assert.rejects(ax.get('/api/v1/datasets/rest/raw'), (err) => {

@@ -53,40 +53,40 @@ en:
 </i18n>
 
 <script>
-  import { mapState, mapGetters } from 'vuex'
+import { mapState, mapGetters } from 'vuex'
 
-  export default {
-    data() {
-      return {
-        applicationKeys: null,
-        loading: false,
-      }
+export default {
+  data () {
+    return {
+      applicationKeys: null,
+      loading: false
+    }
+  },
+  computed: {
+    ...mapState(['env']),
+    ...mapState('application', ['application']),
+    ...mapGetters('application', ['can', 'applicationLink']),
+    protectedLink () {
+      if (!this.applicationKeys || !this.applicationKeys.length) return
+      return this.applicationLink + '?key=' + this.applicationKeys[0].id
+    }
+  },
+  async created () {
+    this.applicationKeys = await this.$axios.$get('api/v1/applications/' + this.application.id + '/keys')
+  },
+  methods: {
+    async addLink () {
+      this.loading = true
+      this.applicationKeys = await this.$axios.$post('api/v1/applications/' + this.application.id + '/keys', this.applicationKeys.concat([{ title: this.$t('protectedLink') }]))
+      this.loading = false
     },
-    computed: {
-      ...mapState(['env']),
-      ...mapState('application', ['application']),
-      ...mapGetters('application', ['can', 'applicationLink']),
-      protectedLink() {
-        if (!this.applicationKeys || !this.applicationKeys.length) return
-        return this.applicationLink + '?key=' + this.applicationKeys[0].id
-      },
-    },
-    async created() {
-      this.applicationKeys = await this.$axios.$get('api/v1/applications/' + this.application.id + '/keys')
-    },
-    methods: {
-      async addLink() {
-        this.loading = true
-        this.applicationKeys = await this.$axios.$post('api/v1/applications/' + this.application.id + '/keys', this.applicationKeys.concat([{ title: this.$t('protectedLink') }]))
-        this.loading = false
-      },
-      async deleteLink() {
-        this.loading = true
-        this.applicationKeys = await this.$axios.$post('api/v1/applications/' + this.application.id + '/keys', [])
-        this.loading = false
-      },
-    },
+    async deleteLink () {
+      this.loading = true
+      this.applicationKeys = await this.$axios.$post('api/v1/applications/' + this.application.id + '/keys', [])
+      this.loading = false
+    }
   }
+}
 
 </script>
 

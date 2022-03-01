@@ -10,14 +10,23 @@
             >{{ dataset.title || dataset.id }}</a>
             <span v-if="dataset.storage"> - <b>{{ dataset.storage.size | displayBytes($i18n.locale) }}</b> de stockage</span>
             <span v-if="dataset.storage && dataset.storage.indexed"> - <b>{{ dataset.storage.indexed.size | displayBytes($i18n.locale) }}</b> de données indexées</span>
-            <span v-if="!dataset.storage" v-t="'noInfo'" />
+            <span
+              v-if="!dataset.storage"
+              v-t="'noInfo'"
+            />
           </v-list-item-title>
           <template v-if="dataset.storage">
             <v-list-item-subtitle v-if="dataset.storageParts.length">
               <template v-for="(part, j) in dataset.storageParts">
                 <span :key="'storage-part-' + j">{{ part.size | displayBytes($i18n.locale) }} {{ $t(part.key) }}</span>
-                <span v-if="part.indexed" :key="'storage-part-indexed-' + j">({{ $t('indexed') }})</span>
-                <span v-if="j < dataset.storageParts.length - 1" :key="'storage-part-sep-' + j"> - </span>
+                <span
+                  v-if="part.indexed"
+                  :key="'storage-part-indexed-' + j"
+                >({{ $t('indexed') }})</span>
+                <span
+                  v-if="j < dataset.storageParts.length - 1"
+                  :key="'storage-part-sep-' + j"
+                > - </span>
               </template>
             </v-list-item-subtitle>
           </template>
@@ -59,33 +68,33 @@ en:
 
 <script>
 
-  import { mapState } from 'vuex'
+import { mapState } from 'vuex'
 
-  export default {
-    props: ['datasets', 'urlTemplate'],
-    computed: {
-      ...mapState(['env']),
-      fullDatasets() {
-        return (this.datasets || []).map(dataset => {
-          const storageParts = dataset.storage.dataFiles.map(df => ({ ...df, key: df.key + '-file' }))
-          if (dataset.storage.attachments) storageParts.push({ key: 'attachments', size: dataset.storage.attachments.size })
-          if (dataset.storage.metadataAttachments) storageParts.push({ key: 'metadata-attachments', size: dataset.storage.metadataAttachments.size })
-          if (dataset.storage.collection) storageParts.push({ key: 'collection', size: dataset.storage.collection.size })
-          if (dataset.storage.revisions) storageParts.push({ key: 'revisions', size: dataset.storage.revisions.size })
-          storageParts.forEach(sp => {
-            if (dataset.storage.indexed && dataset.storage.indexed.parts && dataset.storage.indexed.parts.includes(sp.key)) {
-              sp.indexed = true
-            }
-          })
-          return {
-            ...dataset,
-            link: (this.urlTemplate || `${this.env.publicUrl}/dataset/{id}`).replace('{id}', dataset.id),
-            storageParts: storageParts.filter(sp => !!sp.size),
+export default {
+  props: ['datasets', 'urlTemplate'],
+  computed: {
+    ...mapState(['env']),
+    fullDatasets () {
+      return (this.datasets || []).map(dataset => {
+        const storageParts = dataset.storage.dataFiles.map(df => ({ ...df, key: df.key + '-file' }))
+        if (dataset.storage.attachments) storageParts.push({ key: 'attachments', size: dataset.storage.attachments.size })
+        if (dataset.storage.metadataAttachments) storageParts.push({ key: 'metadata-attachments', size: dataset.storage.metadataAttachments.size })
+        if (dataset.storage.collection) storageParts.push({ key: 'collection', size: dataset.storage.collection.size })
+        if (dataset.storage.revisions) storageParts.push({ key: 'revisions', size: dataset.storage.revisions.size })
+        storageParts.forEach(sp => {
+          if (dataset.storage.indexed && dataset.storage.indexed.parts && dataset.storage.indexed.parts.includes(sp.key)) {
+            sp.indexed = true
           }
         })
-      },
-    },
+        return {
+          ...dataset,
+          link: (this.urlTemplate || `${this.env.publicUrl}/dataset/{id}`).replace('{id}', dataset.id),
+          storageParts: storageParts.filter(sp => !!sp.size)
+        }
+      })
+    }
   }
+}
 </script>
 
 <style lang="css" scoped>

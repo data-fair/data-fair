@@ -6,7 +6,7 @@
       hide-default-header
       class="journal"
     >
-      <template v-slot:item="{item}">
+      <template #item="{item}">
         <tr :class="`event-${item.type} ${eventTypes[item.type].color ? eventTypes[item.type].color + '--text' : ''}`">
           <td>
             <v-icon :color="eventTypes[item.type].color || 'default'">
@@ -15,10 +15,16 @@
           </td>
           <td>
             <span>{{ eventTypes[item.type].text[$i18n.locale] || eventTypes[item.type].text[$i18n.defaultLocale] }}</span>
-            <span v-if="item.draft" class="font-weight-thin font-italic ml-4">brouillon</span>
+            <span
+              v-if="item.draft"
+              class="font-weight-thin font-italic ml-4"
+            >brouillon</span>
             <template v-if="item.data">
               <br>
-              <p class="mb-0" v-html="item.data" />
+              <p
+                class="mb-0"
+                v-html="item.data"
+              />
             </template>
           </td>
           <td class="text-right">
@@ -31,14 +37,14 @@
 </template>
 
 <script>
-  const events = require('../../shared/events.json')
+const events = require('../../shared/events.json')
 
-  export default {
-    props: ['journal', 'type'],
-    data() {
-      return { eventTypes: events[this.type] }
-    },
+export default {
+  props: ['journal', 'type'],
+  data () {
+    return { eventTypes: events[this.type] }
   }
+}
 </script>
 
 <style lang="css">

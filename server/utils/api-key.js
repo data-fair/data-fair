@@ -24,7 +24,7 @@ module.exports = (scope) => {
       req.user = {
         id: apiKey.id,
         name: apiKey.title,
-        isApiKey: true,
+        isApiKey: true
       }
       if (account.type === 'user') {
         req.user.organizations = []
@@ -40,7 +40,7 @@ module.exports = (scope) => {
         id: settings.id,
         name: apiKey.title,
         adminMode: !!apiKey.adminMode,
-        isApiKey: true,
+        isApiKey: true
       }
       if (settings.type === 'user') {
         req.user.organizations = []

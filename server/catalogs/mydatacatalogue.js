@@ -42,12 +42,12 @@ exports.harvestDataset = async (catalog, datasetId, req) => {
   throw new Error('La récupération d\'une définition de jeu de données depuis Mydacatalogue n\'est pas disponible')
 }
 
-function datasetPageDesc(dataset) {
+function datasetPageDesc (dataset) {
   const desc = dataset.description ? dataset.description + '\n\n' : ''
   return desc + 'Cette source possède un jeu de données consultable dans l\'onglet "Données".'
 }
 
-async function createNewDataset(catalog, dataset, publication) {
+async function createNewDataset (catalog, dataset, publication) {
   const source = {
     id: `df-${dataset.id}`, // maybe weird to impose an id, but MDC is not very good with undefined ids
     title: dataset.title || (dataset.file && dataset.file.name),
@@ -58,8 +58,8 @@ async function createNewDataset(catalog, dataset, publication) {
     recordCount: dataset.count || 0,
     dataFairDatasetId: dataset.id,
     tags: {
-      keyword: [{ id: 'data-fair', title: 'Données Data Fair', type: 'keyword' }],
-    },
+      keyword: [{ id: 'data-fair', title: 'Données Data Fair', type: 'keyword' }]
+    }
   }
   try {
     const res = await axios.post(url.resolve(catalog.url, 'api/v1/sources'), source, { headers: { 'x-apiKey': catalog.apiKey } })

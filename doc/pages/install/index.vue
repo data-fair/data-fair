@@ -8,7 +8,10 @@
         </v-icon>
       </v-btn>-->
     </h2>
-    <toc :context="context" name="install" />
+    <toc
+      :context="context"
+      name="install"
+    />
   </v-container>
 </template>
 
@@ -16,9 +19,9 @@
 <i18n locale="en" lang="yaml" src="../../i18n/common-en.yaml"></i18n>
 
 <script>
-  const context = require.context('./', true, /\.md$/)
+const context = require.context('./', true, /\.md$/)
 
-  export default {
-    data: () => ({ context }),
-  }
+export default {
+  data: () => ({ context })
+}
 </script>

@@ -1,6 +1,6 @@
 <template>
   <v-tooltip top>
-    <template v-slot:activator="{on}">
+    <template #activator="{on}">
       <v-icon
         :color="visibility === 'public' ? 'primary' : 'accent'"
         :small="small"
@@ -25,9 +25,9 @@ en:
 </i18n>
 
 <script>
-  export default {
-    props: ['visibility', 'small'],
-  }
+export default {
+  props: ['visibility', 'small']
+}
 </script>
 
 <style lang="css" scoped>

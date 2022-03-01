@@ -33,7 +33,10 @@
       max-width="500"
     >
       <v-card outlined>
-        <v-card-title v-t="'deleteTitle'" primary-title />
+        <v-card-title
+          v-t="'deleteTitle'"
+          primary-title
+        />
         <v-card-text v-if="nbPublications > 0">
           <v-alert
             :value="nbPublications > 1"
@@ -65,9 +68,15 @@
       outlined
     >
       <v-card>
-        <v-card-title v-t="'changeOwnerTitle'" primary-title />
+        <v-card-title
+          v-t="'changeOwnerTitle'"
+          primary-title
+        />
         <v-card-text>
-          <owner-pick v-model="newOwner" :current-owner="catalog.owner" />
+          <owner-pick
+            v-model="newOwner"
+            :current-owner="catalog.owner"
+          />
         </v-card-text>
         <v-card-actions>
           <v-spacer />
@@ -114,27 +123,27 @@ en:
 </i18n>
 
 <script>
-  import { mapState, mapActions, mapGetters } from 'vuex'
+import { mapState, mapActions, mapGetters } from 'vuex'
 
-  export default {
-    data: () => ({
-      showDeleteDialog: false,
-      showOwnerDialog: false,
-      newOwner: null,
-    }),
-    computed: {
-      ...mapState('catalog', ['catalog', 'nbPublications']),
-      ...mapGetters('catalog', ['can']),
-    },
-    methods: {
-      ...mapActions('catalog', ['patch', 'remove', 'changeOwner']),
-      async confirmRemove() {
-        this.showDeleteDialog = false
-        await this.remove()
-        this.$router.push({ path: '/catalogs' })
-      },
-    },
+export default {
+  data: () => ({
+    showDeleteDialog: false,
+    showOwnerDialog: false,
+    newOwner: null
+  }),
+  computed: {
+    ...mapState('catalog', ['catalog', 'nbPublications']),
+    ...mapGetters('catalog', ['can'])
+  },
+  methods: {
+    ...mapActions('catalog', ['patch', 'remove', 'changeOwner']),
+    async confirmRemove () {
+      this.showDeleteDialog = false
+      await this.remove()
+      this.$router.push({ path: '/catalogs' })
+    }
   }
+}
 </script>
 
 <style lang="css" scoped>

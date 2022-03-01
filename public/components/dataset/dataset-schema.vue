@@ -2,7 +2,10 @@
   <v-row>
     <v-col>
       <v-row class="px-3 pb-1 ma-0">
-        <h3 v-if="notCalculatedProperties" class="text-h6">
+        <h3
+          v-if="notCalculatedProperties"
+          class="text-h6"
+        >
           {{ notCalculatedProperties.length.toLocaleString() }} colonne{{ notCalculatedProperties.length > 1 ? 's' : '' }}
         </h3>
         <v-btn
@@ -43,7 +46,10 @@
         </div>
       </v-row>
 
-      <v-row v-if="notCalculatedProperties && notCalculatedProperties.length" class="mt-0 mb-2">
+      <v-row
+        v-if="notCalculatedProperties && notCalculatedProperties.length"
+        class="mt-0 mb-2"
+      >
         <v-col class="pt-0">
           <v-select
             v-if="dataset.isRest"
@@ -58,7 +64,10 @@
         </v-col>
       </v-row>
 
-      <tutorial-alert v-if="can('writeDescription') && dataset.isRest" id="sort-properties">
+      <tutorial-alert
+        v-if="can('writeDescription') && dataset.isRest"
+        id="sort-properties"
+      >
         {{ $t('sortProperties') }}
       </tutorial-alert>
 
@@ -77,7 +86,10 @@
       max-width="500px"
     >
       <v-card outlined>
-        <v-card-title v-t="'addProperty'" primary-title />
+        <v-card-title
+          v-t="'addProperty'"
+          primary-title
+        />
         <v-card-text>
           <v-form
             v-if="addPropertyDialog"
@@ -143,151 +155,151 @@ en:
 </i18n>
 
 <script>
-  import { mapState, mapActions, mapGetters } from 'vuex'
+import { mapState, mapActions, mapGetters } from 'vuex'
 
-  // WARNING: this code is duplicated in field-sniffer.js
-  const escapeKey = (key) => {
-    key = key.replace(/\.|\s|\$|;|,|:|!/g, '_').replace(/"/g, '')
-    // prefixing by _ is reserved to fields calculated by data-fair
-    while (key.startsWith('_')) {
-      key = key.slice(1)
-    }
-    return key
+// WARNING: this code is duplicated in field-sniffer.js
+const escapeKey = (key) => {
+  key = key.replace(/\.|\s|\$|;|,|:|!/g, '_').replace(/"/g, '')
+  // prefixing by _ is reserved to fields calculated by data-fair
+  while (key.startsWith('_')) {
+    key = key.slice(1)
   }
+  return key
+}
 
-  export default {
-    data: () => ({
-      schema: [],
-      schemaFilter: '',
-      editField: null,
-      originalSchema: null,
-      addPropertyDialog: false,
-      newPropertyKey: null,
-      newPropertyType: null,
-      primaryKey: null,
-    }),
-    computed: {
-      ...mapState(['vocabulary', 'propertyTypes']),
-      ...mapState('dataset', ['dataset', 'validatedDataset']),
-      ...mapGetters('dataset', ['can']),
-      updated() {
-        return JSON.stringify(this.schema) !== this.originalSchema ||
+export default {
+  data: () => ({
+    schema: [],
+    schemaFilter: '',
+    editField: null,
+    originalSchema: null,
+    addPropertyDialog: false,
+    newPropertyKey: null,
+    newPropertyType: null,
+    primaryKey: null
+  }),
+  computed: {
+    ...mapState(['vocabulary', 'propertyTypes']),
+    ...mapState('dataset', ['dataset', 'validatedDataset']),
+    ...mapGetters('dataset', ['can']),
+    updated () {
+      return JSON.stringify(this.schema) !== this.originalSchema ||
           JSON.stringify(this.primaryKey || []) !== JSON.stringify(this.dataset.primaryKey || [])
-      },
-      originalProperties() {
-        return this.originalSchema && JSON.parse(this.originalSchema)
-      },
-      notCalculatedProperties() {
-        return this.schema.filter(p => !p['x-calculated'])
-      },
-      filterableProperties() {
-        const props = []
-        // WARNING the warning managmeent is kind of a duplicate of the breaking changes management in server/routers/datasets.js
-        if (this.validatedDataset && this.validatedDataset.schema) {
-          this.validatedDataset.schema.forEach(vp => {
-            if (!vp['x-calculated'] && !this.notCalculatedProperties.find(p => vp.key === p.key)) {
-              props.push({
-                key: vp.key,
-                search: `${(vp.title || '').toLowerCase()} ${(vp['x-originalName'] || '').toLowerCase()} ${vp.key.toLowerCase()}`,
-                prop: vp,
-                originalProp: vp,
-                editable: false,
-                warning: 'Cette colonne n\'apparait plus dans la nouvelle version du fichier.',
-              })
-            }
-          })
-        }
-        if (this.originalProperties && this.dataset.isRest) {
-          this.originalProperties.forEach(vp => {
-            if (!vp['x-calculated'] && !this.notCalculatedProperties.find(p => vp.key === p.key)) {
-              props.push({
-                key: vp.key,
-                search: `${(vp.title || '').toLowerCase()} ${(vp['x-originalName'] || '').toLowerCase()} ${vp.key.toLowerCase()}`,
-                prop: vp,
-                originalProp: vp,
-                editable: false,
-                warning: 'Cette colonne sera supprimée.',
-              })
-            }
-          })
-        }
-        return props.concat(this.notCalculatedProperties.map(p => {
-          const validatedProp = this.validatedDataset && this.validatedDataset.schema && this.validatedDataset.schema.find(vp => vp.key === p.key)
-          let warning
-          if (validatedProp) {
-            if (validatedProp.type !== p.type) {
-              warning = 'Cette colonne a changé de type dans la nouvelle version du fichier.'
-            }
-            const format = (p.format && p.format !== 'uri-reference') ? p.format : null
-            const validatedFormat = (validatedProp.format && validatedProp.format !== 'uri-reference') ? validatedProp.format : null
-            if (validatedProp.type === 'string' && p.type === 'string' && validatedFormat !== format) {
-              warning = 'Cette colonne a changé de type dans la nouvelle version du fichier.'
-            }
-          }
-          return {
-            key: p.key,
-            search: `${(p.title || '').toLowerCase()} ${(p['x-originalName'] || '').toLowerCase()} ${p.key.toLowerCase()}`,
-            prop: p,
-            originalProp: this.originalProperties.find(op => op.key === p.key),
-            validatedProp,
-            editable: !p['x-extension'],
-            warning,
-          }
-        }))
-      },
-      filteredProperties() {
-        const filter = this.schemaFilter && this.schemaFilter.toLowerCase()
-        return this.filterableProperties
-          .filter(fp => !filter || (fp.search.includes(filter) || JSON.stringify(fp.prop) !== JSON.stringify(fp.originalProp)))
-      },
     },
-    watch: {
-      'dataset.schema'() {
-        this.initSchema()
-      },
+    originalProperties () {
+      return this.originalSchema && JSON.parse(this.originalSchema)
     },
-    mounted() {
-      if (this.dataset) {
-        this.initSchema()
+    notCalculatedProperties () {
+      return this.schema.filter(p => !p['x-calculated'])
+    },
+    filterableProperties () {
+      const props = []
+      // WARNING the warning managmeent is kind of a duplicate of the breaking changes management in server/routers/datasets.js
+      if (this.validatedDataset && this.validatedDataset.schema) {
+        this.validatedDataset.schema.forEach(vp => {
+          if (!vp['x-calculated'] && !this.notCalculatedProperties.find(p => vp.key === p.key)) {
+            props.push({
+              key: vp.key,
+              search: `${(vp.title || '').toLowerCase()} ${(vp['x-originalName'] || '').toLowerCase()} ${vp.key.toLowerCase()}`,
+              prop: vp,
+              originalProp: vp,
+              editable: false,
+              warning: 'Cette colonne n\'apparait plus dans la nouvelle version du fichier.'
+            })
+          }
+        })
+      }
+      if (this.originalProperties && this.dataset.isRest) {
+        this.originalProperties.forEach(vp => {
+          if (!vp['x-calculated'] && !this.notCalculatedProperties.find(p => vp.key === p.key)) {
+            props.push({
+              key: vp.key,
+              search: `${(vp.title || '').toLowerCase()} ${(vp['x-originalName'] || '').toLowerCase()} ${vp.key.toLowerCase()}`,
+              prop: vp,
+              originalProp: vp,
+              editable: false,
+              warning: 'Cette colonne sera supprimée.'
+            })
+          }
+        })
+      }
+      return props.concat(this.notCalculatedProperties.map(p => {
+        const validatedProp = this.validatedDataset && this.validatedDataset.schema && this.validatedDataset.schema.find(vp => vp.key === p.key)
+        let warning
+        if (validatedProp) {
+          if (validatedProp.type !== p.type) {
+            warning = 'Cette colonne a changé de type dans la nouvelle version du fichier.'
+          }
+          const format = (p.format && p.format !== 'uri-reference') ? p.format : null
+          const validatedFormat = (validatedProp.format && validatedProp.format !== 'uri-reference') ? validatedProp.format : null
+          if (validatedProp.type === 'string' && p.type === 'string' && validatedFormat !== format) {
+            warning = 'Cette colonne a changé de type dans la nouvelle version du fichier.'
+          }
+        }
+        return {
+          key: p.key,
+          search: `${(p.title || '').toLowerCase()} ${(p['x-originalName'] || '').toLowerCase()} ${p.key.toLowerCase()}`,
+          prop: p,
+          originalProp: this.originalProperties.find(op => op.key === p.key),
+          validatedProp,
+          editable: !p['x-extension'],
+          warning
+        }
+      }))
+    },
+    filteredProperties () {
+      const filter = this.schemaFilter && this.schemaFilter.toLowerCase()
+      return this.filterableProperties
+        .filter(fp => !filter || (fp.search.includes(filter) || JSON.stringify(fp.prop) !== JSON.stringify(fp.originalProp)))
+    }
+  },
+  watch: {
+    'dataset.schema' () {
+      this.initSchema()
+    }
+  },
+  mounted () {
+    if (this.dataset) {
+      this.initSchema()
+    }
+  },
+  methods: {
+    ...mapActions('dataset', ['patchAndCommit', 'fetchRemoteServices']),
+    initSchema () {
+      const originalSchema = JSON.stringify(this.dataset && this.dataset.schema)
+      if (this.originalSchema === originalSchema) return
+      this.originalSchema = originalSchema
+      this.schema = this.dataset.schema.map(field => Object.assign({}, field))
+      this.dataset.primaryKey = this.dataset.primaryKey || []
+      this.primaryKey = this.dataset.primaryKey.filter(k => !!this.schema.find(p => p.key === k))
+      this.dataset.extensions = this.dataset.extensions || []
+      this.fetchRemoteServices()
+    },
+    resetSchema () {
+      this.schema = JSON.parse(this.originalSchema)
+    },
+    setEditField (key) {
+      this.editField = key
+      // cf https://learn.jquery.com/using-jquery-core/faq/how-do-i-select-an-element-by-an-id-that-has-characters-used-in-css-notation/
+      this.$nextTick(() => document.querySelector('#description-' + key.replace(/(:|\.|\[|\]|,|=|@)/g, '\\$1')).focus())
+    },
+    addProperty () {
+      if (this.$refs.addPropertyForm.validate()) {
+        this.schema.push({ key: escapeKey(this.newPropertyKey), ...this.newPropertyType, title: '' })
+        this.addPropertyDialog = false
       }
     },
-    methods: {
-      ...mapActions('dataset', ['patchAndCommit', 'fetchRemoteServices']),
-      initSchema() {
-        const originalSchema = JSON.stringify(this.dataset && this.dataset.schema)
-        if (this.originalSchema === originalSchema) return
-        this.originalSchema = originalSchema
-        this.schema = this.dataset.schema.map(field => Object.assign({}, field))
-        this.dataset.primaryKey = this.dataset.primaryKey || []
-        this.primaryKey = this.dataset.primaryKey.filter(k => !!this.schema.find(p => p.key === k))
-        this.dataset.extensions = this.dataset.extensions || []
-        this.fetchRemoteServices()
-      },
-      resetSchema() {
-        this.schema = JSON.parse(this.originalSchema)
-      },
-      setEditField(key) {
-        this.editField = key
-        // cf https://learn.jquery.com/using-jquery-core/faq/how-do-i-select-an-element-by-an-id-that-has-characters-used-in-css-notation/
-        this.$nextTick(() => document.querySelector('#description-' + key.replace(/(:|\.|\[|\]|,|=|@)/g, '\\$1')).focus())
-      },
-      addProperty() {
-        if (this.$refs.addPropertyForm.validate()) {
-          this.schema.push({ key: escapeKey(this.newPropertyKey), ...this.newPropertyType, title: '' })
-          this.addPropertyDialog = false
-        }
-      },
-      removeProperty(property) {
-        this.schema = this.schema.filter(p => p.key !== property.key)
-      },
-      save() {
-        this.patchAndCommit({ schema: this.schema.map(field => ({ ...field })), primaryKey: [...this.primaryKey] })
-      },
-      applySort(sorted) {
-        this.schema = sorted.map(s => this.schema.find(p => p.key === s.key))
-          .concat(this.schema.filter(p => !sorted.find(s => p.key === s.key)))
-      },
-      /* onMetadataUpload(e) {
+    removeProperty (property) {
+      this.schema = this.schema.filter(p => p.key !== property.key)
+    },
+    save () {
+      this.patchAndCommit({ schema: this.schema.map(field => ({ ...field })), primaryKey: [...this.primaryKey] })
+    },
+    applySort (sorted) {
+      this.schema = sorted.map(s => this.schema.find(p => p.key === s.key))
+        .concat(this.schema.filter(p => !sorted.find(s => p.key === s.key)))
+    }
+    /* onMetadataUpload(e) {
         const reader = new FileReader()
         reader.onload = (event) => {
           const infos = JSON.parse(event.target.result)
@@ -303,8 +315,8 @@ en:
         }
         reader.readAsText(e.target.files[0])
       }, */
-    },
   }
+}
 </script>
 
 <style lang="less">

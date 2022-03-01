@@ -1,6 +1,6 @@
 <template lang="html">
   <v-row class="my-0">
-    <v-col :style="this.$vuetify.breakpoint.lgAndUp ? 'padding-right:256px;' : ''">
+    <v-col :style="$vuetify.breakpoint.lgAndUp ? 'padding-right:256px;' : ''">
       <v-container class="py-0">
         <h2 class="text-h6">
           Propriétaires
@@ -58,19 +58,19 @@
 </template>
 
 <script>
-  export default {
-    data() {
-      return { owners: null, q: null }
-    },
-    async mounted() {
-      this.refresh()
-    },
-    methods: {
-      async refresh() {
-        this.owners = await this.$axios.$get('api/v1/admin/owners', { params: { size: 1000, q: this.q } })
-      },
-    },
+export default {
+  data () {
+    return { owners: null, q: null }
+  },
+  async mounted () {
+    this.refresh()
+  },
+  methods: {
+    async refresh () {
+      this.owners = await this.$axios.$get('api/v1/admin/owners', { params: { size: 1000, q: this.q } })
+    }
   }
+}
 </script>
 
 <style lang="css">

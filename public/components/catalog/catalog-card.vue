@@ -6,7 +6,10 @@
     @mouseenter="hover = true"
     @mouseleave="hover = false"
   >
-    <nuxt-link :to="`/catalog/${catalog.id}`" style="text-decoration:none">
+    <nuxt-link
+      :to="`/catalog/${catalog.id}`"
+      style="text-decoration:none"
+    >
       <v-card-title class="font-weight-bold">
         <span style="white-space: nowrap;overflow: hidden;text-overflow: ellipsis;">
           {{ catalog.title || catalog.id }}
@@ -26,16 +29,16 @@
 </template>
 
 <script>
-  import { marked } from 'marked'
+import { marked } from 'marked'
 
-  export default {
-    components: { },
-    props: ['catalog'],
-    data: () => ({
-      marked,
-      hover: false,
-    }),
-  }
+export default {
+  components: { },
+  props: ['catalog'],
+  data: () => ({
+    marked,
+    hover: false
+  })
+}
 </script>
 
 <style lang="css" scoped>

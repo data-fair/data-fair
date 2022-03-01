@@ -5,8 +5,14 @@
     class="pr-0"
   >
     <v-list-item-avatar class="brand-logo">
-      <img v-if="env.brand.logo" :src="env.brand.logo">
-      <img v-else src="~/assets/logo.png">
+      <img
+        v-if="env.brand.logo"
+        :src="env.brand.logo"
+      >
+      <img
+        v-else
+        src="~/assets/logo.png"
+      >
     </v-list-item-avatar>
     <v-list-item-title v-if="!$vuetify.breakpoint.mobile">
       <h1 class="text-h5 font-weight-bold">
@@ -17,12 +23,12 @@
 </template>
 
 <script>
-  import { mapState } from 'vuex'
-  export default {
-    computed: {
-      ...mapState(['env']),
-    },
+import { mapState } from 'vuex'
+export default {
+  computed: {
+    ...mapState(['env'])
   }
+}
 </script>
 
 <style lang="css">

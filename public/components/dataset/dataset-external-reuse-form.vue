@@ -1,21 +1,36 @@
 <template>
   <v-form>
-    <v-text-field v-model="reuse.title" :label="$t('title')" />
+    <v-text-field
+      v-model="reuse.title"
+      :label="$t('title')"
+    />
     <v-textarea
       v-model="reuse.description"
       :label="$t('description')"
       rows="3"
     />
-    <v-select v-model="reuse.type" :items="[{text: $t('link'), value:'link'}, {text: $t('iframe'), value:'embed'}]" />
-    <v-text-field v-model="reuse.link" :label="$t('url')" />
+    <v-select
+      v-model="reuse.type"
+      :items="[{text: $t('link'), value:'link'}, {text: $t('iframe'), value:'embed'}]"
+    />
+    <v-text-field
+      v-model="reuse.link"
+      :label="$t('url')"
+    />
     <template v-if="reuse.type === 'embed'">
-      <v-checkbox v-model="reuse.fixedHeight" :label="$t('fixedHeight')" />
+      <v-checkbox
+        v-model="reuse.fixedHeight"
+        :label="$t('fixedHeight')"
+      />
       <v-text-field
         v-if="reuse.fixedHeight"
         v-model.number="reuse.height"
         :label="$t('height')"
       />
-      <p v-else v-html="$t('resizerMessage')" />
+      <p
+        v-else
+        v-html="$t('resizerMessage')"
+      />
     </template>
   </v-form>
 </template>
@@ -42,9 +57,9 @@ en:
 </i18n>
 
 <script>
-  export default {
-    props: ['reuse'],
-  }
+export default {
+  props: ['reuse']
+}
 </script>
 
 <style lang="css" scoped>

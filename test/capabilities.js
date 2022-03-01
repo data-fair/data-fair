@@ -10,14 +10,14 @@ describe('Properties capabilities', () => {
     let res = await ax.post('/api/v1/datasets', {
       isRest: true,
       title: 'rest-insensitive',
-      schema: [{ key: 'str1', type: 'string' }],
+      schema: [{ key: 'str1', type: 'string' }]
     })
     await workers.hook('finalizer/rest-insensitive')
     res = await ax.post('/api/v1/datasets/rest-insensitive/_bulk_lines', [
       { str1: 'test3' },
       { str1: 'test2' },
       { str1: 'test1' },
-      { str1: 'Test2' },
+      { str1: 'Test2' }
     ])
     await workers.hook('finalizer/rest-insensitive')
     res = await ax.get('/api/v1/datasets/rest-insensitive/lines', { params: { sort: 'str1' } })
@@ -34,14 +34,14 @@ describe('Properties capabilities', () => {
     let res = await ax.post('/api/v1/datasets', {
       isRest: true,
       title: 'rest-values',
-      schema: [{ key: 'str1', type: 'string', 'x-capabilities': { insensitive: false } }],
+      schema: [{ key: 'str1', type: 'string', 'x-capabilities': { insensitive: false } }]
     })
     await workers.hook('finalizer/rest-values')
     res = await ax.post('/api/v1/datasets/rest-values/_bulk_lines', [
       { str1: 'test3' },
       { str1: 'test2' },
       { str1: 'test1' },
-      { str1: 'Test2' },
+      { str1: 'Test2' }
     ])
     await workers.hook('finalizer/rest-values')
     res = await ax.get('/api/v1/datasets/rest-values/lines', { params: { sort: 'str1' } })
@@ -72,14 +72,14 @@ describe('Properties capabilities', () => {
     let res = await ax.post('/api/v1/datasets', {
       isRest: true,
       title: 'rest-textagg',
-      schema: [{ key: 'str1', type: 'string' }],
+      schema: [{ key: 'str1', type: 'string' }]
     })
     await workers.hook('finalizer/rest-textagg')
     res = await ax.post('/api/v1/datasets/rest-textagg/_bulk_lines', [
       { str1: 'test3' },
       { str1: 'test2' },
       { str1: 'test1' },
-      { str1: 'Test2' },
+      { str1: 'Test2' }
     ])
     await workers.hook('finalizer/rest-textagg')
     res = await ax.get('/api/v1/datasets/rest-textagg/words_agg', { params: { field: 'str1' } })
@@ -101,14 +101,14 @@ describe('Properties capabilities', () => {
     let res = await ax.post('/api/v1/datasets', {
       isRest: true,
       title: 'rest-index',
-      schema: [{ key: 'str1', type: 'string' }],
+      schema: [{ key: 'str1', type: 'string' }]
     })
     await workers.hook('finalizer/rest-index')
     res = await ax.post('/api/v1/datasets/rest-index/_bulk_lines', [
       { str1: 'test3' },
       { str1: 'test2' },
       { str1: 'test1' },
-      { str1: 'Test2' },
+      { str1: 'Test2' }
     ])
     await workers.hook('finalizer/rest-index')
     res = await ax.get('/api/v1/datasets/rest-index/lines', { params: { qs: 'str1:test3' } })
@@ -139,12 +139,12 @@ describe('Properties capabilities', () => {
     let res = await ax.post('/api/v1/datasets', {
       isRest: true,
       title: 'rest-text',
-      schema: [{ key: 'str1', type: 'string' }],
+      schema: [{ key: 'str1', type: 'string' }]
     })
     await workers.hook('finalizer/rest-text')
     res = await ax.post('/api/v1/datasets/rest-text/_bulk_lines', [
       { str1: 'ceci est une phrase pour tester' },
-      { str1: 'ceci est un autre test' },
+      { str1: 'ceci est un autre test' }
     ])
     await workers.hook('finalizer/rest-text')
     res = await ax.get('/api/v1/datasets/rest-text/lines', { params: { q: 'test' } })
@@ -170,12 +170,12 @@ describe('Properties capabilities', () => {
     let res = await ax.post('/api/v1/datasets', {
       isRest: true,
       title: 'rest-geoshape',
-      schema: [{ key: 'geom', type: 'string', 'x-refersTo': 'https://purl.org/geojson/vocab#geometry' }],
+      schema: [{ key: 'geom', type: 'string', 'x-refersTo': 'https://purl.org/geojson/vocab#geometry' }]
     })
     await workers.hook('finalizer/rest-geoshape')
     res = await ax.post('/api/v1/datasets/rest-geoshape/_bulk_lines', [
       { geom: JSON.stringify({ type: 'Polygon', coordinates: [[[-2.42, 47.86], [-2.38, 47.86], [-2.38, 47.88], [-2.42, 47.88], [-2.42, 47.86]]] }) },
-      { geom: JSON.stringify({ type: 'Point', coordinates: [-2.40, 47.89] }) },
+      { geom: JSON.stringify({ type: 'Point', coordinates: [-2.40, 47.89] }) }
     ])
     await workers.hook('finalizer/rest-geoshape')
 
@@ -186,8 +186,8 @@ describe('Properties capabilities', () => {
 
     await ax.patch('/api/v1/datasets/rest-geoshape', {
       schema: [
-        { key: 'geom', type: 'string', 'x-refersTo': 'https://purl.org/geojson/vocab#geometry', 'x-capabilities': { geoShape: false, geoCorners: false } },
-      ],
+        { key: 'geom', type: 'string', 'x-refersTo': 'https://purl.org/geojson/vocab#geometry', 'x-capabilities': { geoShape: false, geoCorners: false } }
+      ]
     })
     const dataset = await workers.hook('finalizer/rest-geoshape')
     assert.ok(!dataset.schema.find(p => p.key === '_geoshape'))
@@ -217,8 +217,8 @@ describe('Properties capabilities', () => {
 
     await ax.patch(`/api/v1/datasets/${dataset.id}`, {
       schema: [
-        { key: 'attachment', type: 'string', 'x-refersTo': 'http://schema.org/DigitalDocument', 'x-capabilities': { indexAttachment: false } },
-      ],
+        { key: 'attachment', type: 'string', 'x-refersTo': 'http://schema.org/DigitalDocument', 'x-capabilities': { indexAttachment: false } }
+      ]
     })
     dataset = await workers.hook(`finalizer/${dataset.id}`)
     assert.equal(dataset.schema.find(p => p.key === '_file.content'), undefined)

@@ -8,7 +8,7 @@ describe('Enum of actual values in schema', () => {
     await ax.put('/api/v1/datasets/rest2', {
       isRest: true,
       title: 'rest2',
-      schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }, { key: 'attr3', type: 'string' }],
+      schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }, { key: 'attr3', type: 'string' }]
     })
     await workers.hook('finalizer/rest2')
     await ax.post('/api/v1/datasets/rest2/_bulk_lines', [
@@ -22,7 +22,7 @@ describe('Enum of actual values in schema', () => {
       { attr1: 'test2', attr2: 'test8' },
       { attr1: 'test2', attr2: 'test9' },
       { attr1: 'test2', attr2: 'test9' },
-      { attr1: '', attr2: 'test10' },
+      { attr1: '', attr2: 'test10' }
     ])
     const dataset = await workers.hook('finalizer/rest2')
     const attr1 = dataset.schema.find(p => p.key === 'attr1')

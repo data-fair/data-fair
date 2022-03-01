@@ -22,7 +22,10 @@
             v-model="uploadProgress"
           />
         </template>
-        <p v-else-if="!dataset.attachments || dataset.attachments.length === 0" v-t="'noAttachment'" />
+        <p
+          v-else-if="!dataset.attachments || dataset.attachments.length === 0"
+          v-t="'noAttachment'"
+        />
       </v-col>
     </v-row>
     <v-row>
@@ -78,65 +81,65 @@ en:
 </i18n>
 
 <script>
-  import { mapGetters, mapState, mapActions } from 'vuex'
-  import eventBus from '~/event-bus'
+import { mapGetters, mapState, mapActions } from 'vuex'
+import eventBus from '~/event-bus'
 
-  export default {
-    data: () => ({
-      file: null,
-      uploading: false,
-      uploadProgress: 0,
-    }),
-    computed: {
-      ...mapGetters('dataset', ['can', 'resourceUrl']),
-      ...mapState('dataset', ['dataset']),
+export default {
+  data: () => ({
+    file: null,
+    uploading: false,
+    uploadProgress: 0
+  }),
+  computed: {
+    ...mapGetters('dataset', ['can', 'resourceUrl']),
+    ...mapState('dataset', ['dataset'])
+  },
+  methods: {
+    ...mapActions('dataset', ['patchAndCommit']),
+    onFileUpload (file) {
+      this.file = file
     },
-    methods: {
-      ...mapActions('dataset', ['patchAndCommit']),
-      onFileUpload(file) {
-        this.file = file
-      },
-      async confirmUpload() {
-        const options = {
-          onUploadProgress: (e) => {
-            if (e.lengthComputable) {
-              this.uploadProgress = (e.loaded / e.total) * 100
-            }
-          },
+    async confirmUpload () {
+      const options = {
+        onUploadProgress: (e) => {
+          if (e.lengthComputable) {
+            this.uploadProgress = (e.loaded / e.total) * 100
+          }
         }
-        const formData = new FormData()
-        formData.append('attachment', this.file)
+      }
+      const formData = new FormData()
+      formData.append('attachment', this.file)
 
-        this.uploading = true
-        try {
-          const newAttachment = await this.$axios.$post('api/v1/datasets/' + this.dataset.id + '/metadata-attachments', formData, options)
-          const attachments = this.dataset.attachments || []
-          const existingAttachment = attachments.find(a => a.name === newAttachment.name)
-          if (existingAttachment) {
-            Object.assign(existingAttachment, newAttachment)
-          } else {
-            attachments.push(newAttachment)
-          }
-          await this.patchAndCommit({ attachments })
-        } catch (error) {
-          const status = error.response && error.response.status
-          if (status === 413) {
-            eventBus.$emit('notification', { type: 'error', msg: 'Le fichier est trop volumineux pour être importé' })
-          } else if (status === 429) {
-            eventBus.$emit('notification', { type: 'error', msg: 'Le propriétaire n\'a pas assez d\'espace disponible pour ce fichier' })
-          } else {
-            eventBus.$emit('notification', { error, msg: 'Erreur pendant l\'import du fichier:' })
-          }
+      this.uploading = true
+      try {
+        const newAttachment = await this.$axios.$post('api/v1/datasets/' + this.dataset.id + '/metadata-attachments', formData, options)
+        const attachments = this.dataset.attachments || []
+        const existingAttachment = attachments.find(a => a.name === newAttachment.name)
+        if (existingAttachment) {
+          Object.assign(existingAttachment, newAttachment)
+        } else {
+          attachments.push(newAttachment)
         }
-        this.uploading = false
-      },
-      async deleteAttachment(attachment) {
-        await this.$axios.$delete('api/v1/datasets/' + this.dataset.id + '/metadata-attachments/' + attachment.name)
-        const attachments = (this.dataset.attachments || []).filter(a => a.name !== attachment.name)
         await this.patchAndCommit({ attachments })
-      },
+      } catch (error) {
+        const status = error.response && error.response.status
+        if (status === 413) {
+          eventBus.$emit('notification', { type: 'error', msg: 'Le fichier est trop volumineux pour être importé' })
+        } else if (status === 429) {
+          eventBus.$emit('notification', { type: 'error', msg: 'Le propriétaire n\'a pas assez d\'espace disponible pour ce fichier' })
+        } else {
+          eventBus.$emit('notification', { error, msg: 'Erreur pendant l\'import du fichier:' })
+        }
+      }
+      this.uploading = false
     },
+    async deleteAttachment (attachment) {
+      await this.$axios.$delete('api/v1/datasets/' + this.dataset.id + '/metadata-attachments/' + attachment.name)
+      const attachments = (this.dataset.attachments || []).filter(a => a.name !== attachment.name)
+      await this.patchAndCommit({ attachments })
+    }
   }
+}
 </script>
 
 <style lang="css">

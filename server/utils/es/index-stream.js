@@ -20,7 +20,7 @@ const cleanItem = (item) => {
 }
 
 class IndexStream extends Transform {
-  constructor(options) {
+  constructor (options) {
     super({ objectMode: true })
     this.options = options
     this.body = []
@@ -29,7 +29,7 @@ class IndexStream extends Transform {
     this.erroredItems = []
   }
 
-  async _transform(item, encoding, callback) {
+  async _transform (item, encoding, callback) {
     try {
       let warning
       if (this.options.updateMode) {
@@ -71,7 +71,7 @@ class IndexStream extends Transform {
     callback()
   }
 
-  _final(cb) {
+  _final (cb) {
     this._sendBulk()
       .then(() => {
         return this.options.esClient.indices.refresh({ index: this.options.indexName }).catch(() => {
@@ -87,7 +87,7 @@ class IndexStream extends Transform {
       .then(() => cb(), cb)
   }
 
-  async _sendBulk() {
+  async _sendBulk () {
     if (this.body.length === 0) return
     debug(`Send ${this.body.length} lines to bulk indexing`)
     const bodyClone = [].concat(this.body)
@@ -96,7 +96,7 @@ class IndexStream extends Transform {
       // ES does not want the doc along with a delete instruction,
       // but we put it in body anyway for our outgoing/reporting logic
       body: this.body.filter(line => !line._deleted),
-      timeout: '4m',
+      timeout: '4m'
     }
     try {
       // Use the ingest plugin to parse attached files
@@ -113,7 +113,7 @@ class IndexStream extends Transform {
           .map((item, i) => ({
             _i: (this.options.updateMode ? bodyClone[(i * 2) + 1].doc : bodyClone[(i * 2) + 1])._i,
             error: (item.index && item.index.error) || (item.update && item.update.error),
-            input: this.body[(i * 2) + 1],
+            input: this.body[(i * 2) + 1]
           }))
           .filter(item => !!item.error)
           .forEach(item => this.erroredItems.push(item))
@@ -126,7 +126,7 @@ class IndexStream extends Transform {
     }
   }
 
-  errorsSummary() {
+  errorsSummary () {
     if (!this.erroredItems.length) return null
     const leftOutErrors = this.erroredItems.length - 3
     let msg = `${Math.round(100 * (this.erroredItems.length / this.i))}% des lignes sont en erreur.\n<br>`

@@ -6,7 +6,7 @@
   >
     <v-subheader v-t="'createDataset'" />
     <v-tooltip left>
-      <template v-slot:activator="{ on, attrs }">
+      <template #activator="{ on, attrs }">
         <v-list-item
           :to="{path: '/new-dataset', query: {type: 'file'}}"
           v-bind="attrs"
@@ -23,7 +23,7 @@
       <span v-t="'fileTooltip'" />
     </v-tooltip>
     <v-tooltip left>
-      <template v-slot:activator="{ on, attrs }">
+      <template #activator="{ on, attrs }">
         <v-list-item
           :to="{path: '/new-dataset', query: {type: 'rest'}}"
           v-bind="attrs"
@@ -40,7 +40,7 @@
       <span v-t="'incTooltip'" />
     </v-tooltip>
     <v-tooltip left>
-      <template v-slot:activator="{ on, attrs }">
+      <template #activator="{ on, attrs }">
         <v-list-item
           :to="{path: '/new-dataset', query: {type: 'virtual'}}"
           v-bind="attrs"
@@ -57,7 +57,7 @@
       <span v-t="'virtualTooltip'" />
     </v-tooltip>
     <v-tooltip left>
-      <template v-slot:activator="{ on, attrs }">
+      <template #activator="{ on, attrs }">
         <v-list-item
           :to="{path: '/new-dataset', query: {type: 'metaOnly'}}"
           v-bind="attrs"
@@ -100,13 +100,13 @@ en:
 </i18n>
 
 <script>
-  const { mapGetters } = require('vuex')
+const { mapGetters } = require('vuex')
 
-  export default {
-    computed: {
-      ...mapGetters(['canContrib']),
-    },
+export default {
+  computed: {
+    ...mapGetters(['canContrib'])
   }
+}
 </script>
 
 <style lang="css" scoped>

@@ -6,10 +6,10 @@ module.exports = (catalog) => {
   const api = {
     openapi: '3.1.0',
     info: {
-      title: `Intégration du catalogue : ${catalog.url}`,
+      title: `Intégration du catalogue : ${catalog.url}`
     },
     servers: [{
-      url: `${config.publicUrl}/api/v1/catalogs/${catalog.id}`,
+      url: `${config.publicUrl}/api/v1/catalogs/${catalog.id}`
     }],
     components: {
       schemas: { catalogSchema },
@@ -17,14 +17,14 @@ module.exports = (catalog) => {
         apiKey: {
           type: 'apiKey',
           in: 'header',
-          name: 'x-apiKey',
+          name: 'x-apiKey'
         },
         sdCookie: {
           type: 'apiKey',
           in: 'cookie',
-          name: 'id_token',
-        },
-      },
+          name: 'id_token'
+        }
+      }
     },
     security: [{ apiKey: [] }, { sdCookie: [] }],
     paths: {
@@ -39,11 +39,11 @@ module.exports = (catalog) => {
               description: 'Les informations de configuration du catalogue.',
               content: {
                 'application/json': {
-                  schema: { $ref: '#/components/schemas/catalogSchema' },
-                },
-              },
-            },
-          },
+                  schema: { $ref: '#/components/schemas/catalogSchema' }
+                }
+              }
+            }
+          }
         },
         patch: {
           summary: 'Mettre à jour les informations de configuration du catalogue.',
@@ -55,20 +55,20 @@ module.exports = (catalog) => {
             required: true,
             content: {
               'application/json': {
-                schema: { $ref: '#/components/schemas/catalogSchema' },
-              },
-            },
+                schema: { $ref: '#/components/schemas/catalogSchema' }
+              }
+            }
           },
           responses: {
             200: {
               description: 'Les informations de configuration du catalogue',
               content: {
                 'application/json': {
-                  schema: { $ref: '#/components/schemas/catalogSchema' },
-                },
-              },
-            },
-          },
+                  schema: { $ref: '#/components/schemas/catalogSchema' }
+                }
+              }
+            }
+          }
         },
         delete: {
           summary: 'Pour supprimer cette configuration du catalogue',
@@ -77,17 +77,17 @@ module.exports = (catalog) => {
           tags: ['Configuration'],
           responses: {
             204: {
-              description: 'Aucun contenu',
-            },
-          },
-        },
+              description: 'Aucun contenu'
+            }
+          }
+        }
       },
-      '/permissions': permissionsDoc,
+      '/permissions': permissionsDoc
     },
     externalDocs: {
       description: 'Documentation sur Github',
-      url: 'https://data-fair.github.io',
-    },
+      url: 'https://data-fair.github.io'
+    }
   }
   return api
 }

@@ -6,8 +6,8 @@ async function fixConfig (db, application, configKey) {
   if (application[configKey] &&
      application[configKey].datasets &&
      application[configKey].datasets
-      .filter(d => !!d)
-      .filter(d => d.href && d.href.includes('koumoul.com/s/data-fair')).length
+       .filter(d => !!d)
+       .filter(d => d.href && d.href.includes('koumoul.com/s/data-fair')).length
   ) {
     application[configKey].datasets.filter(d => !!d).forEach(dataset => {
       if (dataset.href) dataset.href = dataset.href.replace('koumoul.com/s/data-fair', 'koumoul.com/data-fair')
