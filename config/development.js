@@ -66,7 +66,7 @@ module.exports = {
     title: 'Mydatacatalogue',
     href: 'https://app.dawizz.fr/mydatacatalogue/',
   }],
-  proxyNuxt: true,
+  proxyNuxt: false,
   /* doc: {
     datasetEdit: 'https://koumoul.com/documentation/userguide/edition-dataset',
     datasetExtend: 'https://koumoul.com/documentation/userguide/enrichment',

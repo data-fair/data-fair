@@ -1,6 +1,4 @@
 const config = require('config')
-const { Nuxt } = require('nuxt')
-const nuxtConfig = require('../nuxt.config.js')
 
 module.exports = async () => {
   if (config.proxyNuxt) {
@@ -10,6 +8,9 @@ module.exports = async () => {
     // no UI during tests
     return { render: (req, res, next) => next() }
   } else {
+    const { Nuxt } = require('nuxt-start')
+    const nuxtConfig = require('../nuxt.config.js')
+
     // Prepare nuxt for rendering and serving UI
     nuxtConfig.dev = false
     const nuxt = new Nuxt(nuxtConfig)

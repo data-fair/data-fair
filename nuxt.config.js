@@ -36,6 +36,7 @@ if (process.env.NODE_ENV !== 'production' || isBuilding) {
 const webpack = require('webpack')
 
 module.exports = {
+  telemetry: false,
   ssr: false,
   components: true,
   srcDir: 'public/',
