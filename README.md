@@ -37,6 +37,10 @@ Run test suite:
 
     npm run test
 
+Test building the docker image:
+
+    docker build --network=host .
+
 ## Embedded documentation
 
 Documentation is maintained in ./doc as a small separate nuxt project. Its content is built and pushed on gitlab-pages by the Travis build.

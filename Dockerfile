@@ -57,7 +57,8 @@ ADD package.json .
 ADD package-lock.json .
 ADD patches patches
 # use clean-modules on the same line as npm ci to be lighter in the cache
-RUN npm ci && ./node_modules/.bin/clean-modules --yes --exclude exceljs/lib/doc/ --exclude "**/*.mustache"
+RUN npm ci && \
+    ./node_modules/.bin/clean-modules --yes --exclude exceljs/lib/doc/ --exclude mocha/lib/test.js --exclude "**/*.mustache"
 
 # Adding UI files
 ADD public public
