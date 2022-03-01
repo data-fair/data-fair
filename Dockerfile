@@ -90,7 +90,8 @@ ADD nodemon.json .
 
 # Cleanup and reduce size of node_modules directory
 RUN npm prune --production
-RUN clean-modules --yes
+RUN clean-modules --yes --exclude exceljs/lib/doc/
+RUN test -d node_modules/exceljs/lib/doc/
 RUN rm -rf public
 RUN rm -f package.json
 RUN rm -f package-lock.json
