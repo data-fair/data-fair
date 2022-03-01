@@ -115,4 +115,5 @@ USER node
 VOLUME /data
 EXPOSE 8080
 
-CMD ["node", "--max-http-header-size", "64000", "server"]
+RUN apk add --no-cache dumb-init
+CMD ["dumb-init", "node", "--max-http-header-size", "64000", "server"]
