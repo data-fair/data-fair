@@ -25,8 +25,14 @@
           <p v-if="result.nbOk">
             {{ $t('resultOk', {nb: result.nbOk.toLocaleString()}) }}
           </p>
+          <p v-if="result.nbCreated">
+            {{ $t('resultCreated', {nb: result.nbCreated.toLocaleString()}) }}
+          </p>
           <p v-if="result.nbNotModified">
             {{ $t('resultNotModified', {nb: result.nbNotModified.toLocaleString()}) }}
+          </p>
+          <p v-if="result.nbDeleted">
+            {{ $t('resultDeleted', {nb: result.nbDeleted.toLocaleString()}) }}
           </p>
           <v-alert
             v-if="result.nbErrors"
@@ -99,6 +105,8 @@ fr:
   resultOk: "{nb} ligne(s) OK"
   resultNotModified: "{nb} ligne(s) sans modification"
   resultErrors: "{nb} erreur(s)"
+  resultCreated: "{nb} ligne(s) créée(s)"
+  resultDeleted: "{nb} ligne(s) supprimées(s)"
 en:
   loadLines: Load multiple lines from a file
   selectFile: Select a file
@@ -108,6 +116,8 @@ en:
   resultOk: "{nb} OK line(s)"
   resultNotModified: "{nb} line(s) without modifications"
   resultErrors: "{nb} error(s)"
+  resultCreated: "{nb} created line(s)"
+  resultDeleted: "{nb} deleted line(s)"
 </i18n>
 
 <script>

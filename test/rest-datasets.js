@@ -85,6 +85,8 @@ describe('REST datasets', () => {
       { _action: 'update', _id: 'line4', attr1: 'test2', attr2: 'test2' },
     ])
     assert.equal(res.data.nbOk, 7)
+    assert.equal(res.data.nbCreated, 4)
+    assert.equal(res.data.nbDeleted, 1)
 
     try {
       await ax.get('/api/v1/datasets/rest2/lines/line2')

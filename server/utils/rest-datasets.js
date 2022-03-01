@@ -119,10 +119,11 @@ const applyTransactions = async (req, transacs, validate) => {
 
   const bulkOp = collection.initializeUnorderedBulkOp()
   const revisionsBulkOp = revisionsCollection.initializeUnorderedBulkOp()
-
+  let bulkOpResult
   let i = 0
   let hasBulkOp = false
   let hasRevisionsBulkOp = false
+  const bulkOpMatchingResults = []
   for (const transac of transacs) {
     let { _action, ...body } = transac
     if (!actions.includes(_action)) throw createError(400, `action "${_action}" is unknown, use one of ${JSON.stringify(actions)}`)
@@ -181,16 +182,19 @@ const applyTransactions = async (req, transacs, validate) => {
     // disable this systematic broadcasting of transactions, not a good idea when doing large bulk inserts
     // and not really used anyway
     // if (!result._error) await req.app.publish('datasets/' + dataset.id + '/transactions', transac)
-    results.push({ ...result, ...extendedBody })
+    const fullResult = { ...result, ...extendedBody }
+    results.push(fullResult)
+    if (fullResult._status !== 400) bulkOpMatchingResults.push(fullResult)
   }
 
   if (hasBulkOp) {
     try {
-      await bulkOp.execute()
+      bulkOpResult = (await bulkOp.execute()).result
     } catch (err) {
       if (!err.writeErrors) throw err
+      bulkOpResult = err.result
       for (const writeError of err.writeErrors) {
-        const result = results.find(r => r._id === writeError.err.op.q._id)
+        const result = bulkOpMatchingResults[writeError.err.index]
         if (writeError.err.code === 11000) {
           // this conflict means that the hash was unchanged
           result._status = 304
@@ -208,7 +212,7 @@ const applyTransactions = async (req, transacs, validate) => {
       { id: dataset.id },
       { $set: { dataUpdatedAt: updatedAt.toISOString(), dataUpdatedBy: { id: req.user.id, name: req.user.name } } })
   }
-  return results
+  return { results, bulkOpResult }
 }
 
 class TransactionStream extends Writable {
@@ -220,8 +224,12 @@ class TransactionStream extends Writable {
   }
 
   async _applyTransactions() {
-    const results = await applyTransactions(this.options.req, this.transactions, this.options.validate)
+    const { results, bulkOpResult } = await applyTransactions(this.options.req, this.transactions, this.options.validate)
     this.transactions = []
+    if (bulkOpResult) {
+      this.options.summary.nbCreated += bulkOpResult.nUpserted
+      this.options.summary.nbCreated += bulkOpResult.nInserted
+    }
     results.forEach(res => {
       if (res._error || res._status === 500) {
         this.options.summary.nbErrors += 1
@@ -230,6 +238,9 @@ class TransactionStream extends Writable {
         this.options.summary.nbOk += 1
         if (res._status === 304) {
           this.options.summary.nbNotModified += 1
+        }
+        if (res._deleted) {
+          this.options.summary.nbDeleted += 1
         }
       }
       this.i += 1
@@ -314,7 +325,7 @@ exports.createLine = async (req, res, next) => {
   const _action = req.body._id ? 'update' : 'create'
   req.body._id = req.body._id || getLineId(req.body, req.dataset) || nanoid()
   await manageAttachment(req, false)
-  const line = (await applyTransactions(req, [{ _action, ...req.body }], compileSchema(req.dataset)))[0]
+  const line = (await applyTransactions(req, [{ _action, ...req.body }], compileSchema(req.dataset))).results[0]
   if (line._error) return res.status(line._status).send(line._error)
   await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { status: 'updated' } })
   res.status(201).send(cleanLine(line))
@@ -323,7 +334,7 @@ exports.createLine = async (req, res, next) => {
 
 exports.deleteLine = async (req, res, next) => {
   const db = req.app.get('db')
-  const line = (await applyTransactions(req, [{ _action: 'delete', _id: req.params.lineId }], compileSchema(req.dataset)))[0]
+  const line = (await applyTransactions(req, [{ _action: 'delete', _id: req.params.lineId }], compileSchema(req.dataset))).results[0]
   if (line._error) return res.status(line._status).send(line._error)
   await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { status: 'updated' } })
   res.status(204).send()
@@ -333,7 +344,7 @@ exports.deleteLine = async (req, res, next) => {
 exports.updateLine = async (req, res, next) => {
   const db = req.app.get('db')
   await manageAttachment(req, false)
-  const line = (await applyTransactions(req, [{ _action: 'update', _id: req.params.lineId, ...req.body }], compileSchema(req.dataset)))[0]
+  const line = (await applyTransactions(req, [{ _action: 'update', _id: req.params.lineId, ...req.body }], compileSchema(req.dataset))).results[0]
   if (line._error) return res.status(line._status).send(line._error)
   await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { status: 'updated' } })
   res.status(200).send(cleanLine(line))
@@ -343,7 +354,7 @@ exports.updateLine = async (req, res, next) => {
 exports.patchLine = async (req, res, next) => {
   const db = req.app.get('db')
   await manageAttachment(req, true)
-  const line = (await applyTransactions(req, [{ _action: 'patch', _id: req.params.lineId, ...req.body }], compileSchema(req.dataset)))[0]
+  const line = (await applyTransactions(req, [{ _action: 'patch', _id: req.params.lineId, ...req.body }], compileSchema(req.dataset))).results[0]
   if (line._error) return res.status(line._status).send(line._error)
   await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { status: 'updated' } })
   res.status(200).send(cleanLine(line))
@@ -392,7 +403,7 @@ exports.bulkLines = async (req, res, next) => {
     const contentType = req.get('Content-Type') && req.get('Content-Type').split(';')[0]
     parseStreams = datasetUtils.transformFileStreams(contentType || 'application/json', transactionSchema, null, {}, false, true)
   }
-  const summary = { nbOk: 0, nbNotModified: 0, nbErrors: 0, errors: [] }
+  const summary = { nbOk: 0, nbNotModified: 0, nbErrors: 0, nbCreated: 0, nbModified: 0, nbDeleted: 0, errors: [] }
   const transactionStream = new TransactionStream({ req, validate, summary })
 
   // we try both to have a HTTP failure if the transactions are clearly badly formatted
