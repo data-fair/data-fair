@@ -105,6 +105,8 @@ RUN rm -rf data
 FROM nativedeps
 MAINTAINER "contact@koumoul.com"
 
+RUN apk add --no-cache dumb-init
+
 # configure node webapp environment
 COPY --from=builder /webapp /webapp
 WORKDIR /webapp
@@ -114,5 +116,4 @@ USER node
 VOLUME /data
 EXPOSE 8080
 
-RUN apk add --no-cache dumb-init
 CMD ["dumb-init", "node", "--max-http-header-size", "64000", "server"]
