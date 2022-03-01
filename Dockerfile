@@ -35,6 +35,8 @@ RUN apk add --no-cache python3 make g++ curl
 RUN ln -s /usr/bin/python3 /usr/bin/python
 RUN apk add --no-cache sqlite-dev
 
+RUN npm install -g clean-modules@2.0.4
+
 ENV NODE_ENV production
 WORKDIR /webapp
 ADD package.json .
@@ -52,40 +54,51 @@ ADD contract contract
 # Build UI
 RUN npm run build
 
+# Reduce size of node_modules directory
+RUN clean-modules --yes
+
 ##################################
 # Stage: main nodejs service stage
 
 FROM node:16.13.2-alpine3.14
 MAINTAINER "contact@koumoul.com"
 
-WORKDIR /webapp
-
-# these are also geodeps, but we need to install them here as they pull many dependencies
-RUN apk add --no-cache gmp gdal-tools
+# Manage installation of geo utils
 COPY --from=prepair /usr/bin/prepair /usr/bin/prepair
 COPY --from=prepair /usr/local/lib/libCGAL.so.13 /usr/local/lib/libCGAL.so.13
 COPY --from=prepair /usr/lib/libmpfr.so.6 /usr/lib/libmpfr.so.6
+# these are also geodeps, but we need to install them here as they pull many dependencies
+RUN apk add --no-cache gmp gdal-tools
 RUN ln -s /usr/lib/libproj.so.21.1.2 /usr/lib/libproj.so
 RUN test -f /usr/lib/libproj.so
-COPY --from=builder /webapp/node_modules node_modules
-COPY --from=builder /webapp/nuxt-dist nuxt-dist
-COPY --from=builder /webapp/nuxt.config.js nuxt.config.js
-
 # check that geo execs actually load
 RUN prepair --help
 
 RUN apk add unzip
 
+# configure node webapp environment
+COPY --from=builder /webapp/node_modules node_modules
+WORKDIR /webapp
 ENV NODE_ENV production
 ENV DEBUG db,upgrade*
-ADD LICENSE .
-ADD nodemon.json .
+USER node
+
+# Adding UI files
+COPY --from=builder /webapp/nuxt-dist nuxt-dist
+ADD nuxt.config.js .
+ADD config config
+ADD shared shared
+ADD contract contract
 
 # Adding server files
 ADD server server
 ADD scripts scripts
 ADD upgrade upgrade
+
+# Adding licence, manifests, etc.
 ADD README.md BUILD.json* ./
+ADD LICENSE .
+ADD nodemon.json .
 
 VOLUME /data
 EXPOSE 8080
