@@ -27,43 +27,11 @@ RUN mv prepair /usr/bin/prepair
 
 RUN prepair --help
 
-############################
-# Stage: nodejs dependencies
-FROM node:16.13.2-alpine3.14 AS builder
+############################################################################################################
+# Stage: prepare a base image with all native utils pre-installed, used both by builder and definitive image
 
-RUN apk add --no-cache python3 make g++ curl
-RUN ln -s /usr/bin/python3 /usr/bin/python
-RUN apk add --no-cache sqlite-dev
+FROM node:16.13.2-alpine3.14 AS nativedeps
 
-RUN npm install -g clean-modules@2.0.4
-
-ENV NODE_ENV production
-WORKDIR /webapp
-ADD package.json .
-ADD package-lock.json .
-ADD patches patches
-RUN npm ci --production
-
-# Adding UI files
-ADD public public
-ADD nuxt.config.js .
-ADD config config
-ADD shared shared
-ADD contract contract
-
-# Build UI
-RUN npm run build
-
-# Reduce size of node_modules directory
-RUN clean-modules --yes
-
-##################################
-# Stage: main nodejs service stage
-
-FROM node:16.13.2-alpine3.14
-MAINTAINER "contact@koumoul.com"
-
-# Manage installation of geo utils
 # these are also geodeps, but we need to install them here as they pull many dependencies
 RUN apk add --no-cache gmp gdal-tools
 COPY --from=prepair /usr/bin/prepair /usr/bin/prepair
@@ -76,30 +44,73 @@ RUN prepair --help
 
 RUN apk add unzip
 
-# configure node webapp environment
+############################
+# Stage: nodejs dependencies
+FROM nativedeps AS builder
+
+RUN apk add --no-cache python3 make g++ curl bash
+RUN ln -s /usr/bin/python3 /usr/bin/python
+RUN apk add --no-cache sqlite-dev
+
+RUN npm install -g clean-modules@2.0.4
+
 WORKDIR /webapp
-COPY --from=builder /webapp/node_modules node_modules
-ENV NODE_ENV production
-ENV DEBUG db,upgrade*
-USER node
+ADD package.json .
+ADD package-lock.json .
+ADD patches patches
+RUN npm ci
 
 # Adding UI files
-COPY --from=builder /webapp/nuxt-dist nuxt-dist
+ADD public public
 ADD nuxt.config.js .
 ADD config config
 ADD shared shared
 ADD contract contract
+
+# Build UI
+ENV NODE_ENV production
+RUN npm run build
 
 # Adding server files
 ADD server server
 ADD scripts scripts
 ADD upgrade upgrade
 
+# Check quality
+ADD .eslintrc.js .eslintrc.js
+ADD .gitignore .gitignore
+RUN npm run lint
+ADD test test
+RUN npm run test
+
 # Adding licence, manifests, etc.
 ADD README.md BUILD.json* ./
 ADD LICENSE .
 ADD nodemon.json .
 
+# Cleanup and reduce size of node_modules directory
+RUN npm prune --production
+RUN clean-modules --yes
+RUN rm -rf public
+RUN rm -f package.json
+RUN rm -f package-lock.json
+RUN rm -rf patches
+RUN rm -rf test
+RUN rm -f .eslintrc.js
+RUN rm -rf data
+
+##################################
+# Stage: main nodejs service stage
+
+FROM nativedeps
+MAINTAINER "contact@koumoul.com"
+
+# configure node webapp environment
+COPY --from=builder /webapp /webapp
+WORKDIR /webapp
+ENV NODE_ENV production
+ENV DEBUG db,upgrade*
+USER node
 VOLUME /data
 EXPOSE 8080
 
