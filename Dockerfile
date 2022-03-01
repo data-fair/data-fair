@@ -29,7 +29,7 @@ RUN prepair --help
 
 ############################
 # Stage: nodejs dependencies
-FROM node:16.13.2-alpine3.14 AS nodedeps
+FROM node:16.13.2-alpine3.14 AS builder
 
 RUN apk add --no-cache python3 make g++ curl
 RUN ln -s /usr/bin/python3 /usr/bin/python
@@ -41,6 +41,16 @@ ADD package.json .
 ADD package-lock.json .
 ADD patches patches
 RUN npm ci --production
+
+# Adding UI files
+ADD public public
+ADD nuxt.config.js .
+ADD config config
+ADD shared shared
+ADD contract contract
+
+# Build UI
+RUN npm run build
 
 ##################################
 # Stage: main nodejs service stage
@@ -57,7 +67,9 @@ COPY --from=prepair /usr/local/lib/libCGAL.so.13 /usr/local/lib/libCGAL.so.13
 COPY --from=prepair /usr/lib/libmpfr.so.6 /usr/lib/libmpfr.so.6
 RUN ln -s /usr/lib/libproj.so.21.1.2 /usr/lib/libproj.so
 RUN test -f /usr/lib/libproj.so
-COPY --from=nodedeps /webapp/node_modules node_modules
+COPY --from=builder /webapp/node_modules node_modules
+COPY --from=builder /webapp/nuxt-dist nuxt-dist
+COPY --from=builder /webapp/nuxt.config.js nuxt.config.js
 
 # check that geo execs actually load
 RUN prepair --help
@@ -67,18 +79,7 @@ RUN apk add unzip
 ENV NODE_ENV production
 ENV DEBUG db,upgrade*
 ADD LICENSE .
-ADD package.json .
-ADD package-lock.json .
-ADD patches patches
 ADD nodemon.json .
-
-# Adding UI files
-ADD public public
-ADD nuxt.config.js .
-ADD config config
-ADD shared shared
-ADD contract contract
-RUN npm run build
 
 # Adding server files
 ADD server server
