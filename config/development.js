@@ -20,7 +20,7 @@ module.exports = {
   defaultLimits: {
     totalStorage: 1000000000,
     totalIndexed: 1000000000,
-    nbDatasets: 100,
+    nbDatasets: 1000,
     // datasetStorage: -1,
   },
   locks: {
