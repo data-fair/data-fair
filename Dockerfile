@@ -93,7 +93,6 @@ RUN npm prune --production
 RUN clean-modules --yes --exclude exceljs/lib/doc/
 RUN test -d node_modules/exceljs/lib/doc/
 RUN rm -rf public
-RUN rm -f package.json
 RUN rm -f package-lock.json
 RUN rm -rf patches
 RUN rm -rf test

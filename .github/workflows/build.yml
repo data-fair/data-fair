@@ -20,7 +20,7 @@ jobs:
     - name: Cache docker images (for docker-compose and for building)
       uses: satackey/action-docker-layer-caching@v0.0.11
 
-    - name: Run test dependencies (mongo and elasticsearch)
+    - name: Run test dependencies
       run: |
         NO_UI=true docker-compose --profile test up -d
         docker ps
