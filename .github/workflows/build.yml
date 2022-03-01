@@ -17,9 +17,8 @@ jobs:
     - name: Checkout git repository
       uses: actions/checkout@v2
     
-    - name: Cache docker images (for docker-compose and for building)
-      uses: satackey/action-docker-layer-caching@v0.0.11
-
+    # no need to work on a cache here, it is not faster than pulling
+    # instead work on moving to some images hosted on ghcr.io, it is the fastest
     - name: Run test dependencies
       run: |
         NO_UI=true docker-compose --profile test up -d
@@ -62,6 +61,8 @@ jobs:
         labels: ${{ steps.docker_meta.outputs.labels }}
         allow: network.host
         network: host
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
     
     - name: Stop test dependencies
       run: docker-compose stop
