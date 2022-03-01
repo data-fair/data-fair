@@ -69,8 +69,11 @@ describe('CSV cases', () => {
 
   it('A CSV with wrong number of separators in a line', async () => {
     const ax = global.ax.dmeadus
-    assert.rejects(testUtils.sendDataset('csv-cases/dataset-bad-separators.csv', ax), (err) => {
-      assert.ok(err.message.includes('format est probablement invalide'))
+    await assert.rejects(testUtils.sendDataset('csv-cases/dataset-bad-separators.csv', ax), (err) => {
+      if (!err.message.includes('format est probablement invalide')) {
+        console.error('wrong error message in csv-case', err)
+        assert.fail(`error message should contain "format est probablement invalide", instead got "${err.message}"`)
+      }
       return true
     })
   })

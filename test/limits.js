@@ -20,7 +20,7 @@ describe('limits', () => {
     let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
     assert.equal(res.status, 201)
 
-    assert.rejects(workers.hook('fianlizer/dataset'), () => {
+    await assert.rejects(workers.hook('finalizer/dataset'), () => {
       return true
     })
 
@@ -55,7 +55,7 @@ describe('limits', () => {
     for (let i = 0; i < 8; i++) {
       await ax.post('/api/v1/datasets', { title: 'rest-dataset', isRest: true })
     }
-    assert.rejects(ax.post('/api/v1/datasets', { title: 'rest-dataset', isRest: true }), (err) => {
+    await assert.rejects(ax.post('/api/v1/datasets', { title: 'rest-dataset', isRest: true }), (err) => {
       assert.equal(err.status, 429)
       return true
     })

@@ -46,7 +46,7 @@ describe('REST datasets exported', () => {
       { attr1: 'test3', attr2: 'test3' },
     ])
 
-    assert.rejects(ax.get('/api/v1/datasets/rest/raw'), (err) => {
+    await assert.rejects(ax.get('/api/v1/datasets/rest/raw'), (err) => {
       assert.equal(err.status, 404)
       return true
     })
