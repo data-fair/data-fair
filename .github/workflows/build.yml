@@ -23,7 +23,7 @@ jobs:
     - name: Run test dependencies (mongo and elasticsearch)
       run: |
         NO_UI=true docker-compose --profile test up -d
-        run: docker ps
+        docker ps
 
     - name: Prepare docker image tags
       id: docker_meta
