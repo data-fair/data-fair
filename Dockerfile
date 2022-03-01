@@ -40,7 +40,7 @@ WORKDIR /webapp
 ADD package.json .
 ADD package-lock.json .
 ADD patches patches
-RUN npm install --production
+RUN npm ci --production
 
 ##################################
 # Stage: main nodejs service stage

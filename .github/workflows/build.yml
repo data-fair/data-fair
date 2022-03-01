@@ -33,7 +33,7 @@ jobs:
           ${{ runner.os }}-build-
           ${{ runner.os }}-
 
-    - run: npm i
+    - run: npm ci --prefer-offline
     - run: npm run lint
     # - run: npm run build
     - run: NO_UI=true docker-compose --profile test up -d
