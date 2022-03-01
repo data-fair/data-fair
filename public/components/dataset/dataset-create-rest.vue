@@ -1,7 +1,11 @@
 <template>
   <v-col>
     <p v-t="'message'" class="mt-3" />
-    <v-form ref="form" v-model="valid">
+    <v-form
+      ref="form"
+      v-model="valid"
+      @submit="validate"
+    >
       <v-text-field
         v-model="title"
         :required="true"
@@ -78,7 +82,8 @@ en:
       ...mapState(['env']),
     },
     methods: {
-      async validate() {
+      async validate(e) {
+        if (e) e.preventDefault()
         if (!this.$refs.form.validate()) return
         try {
           const schema = []
