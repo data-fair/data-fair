@@ -33,5 +33,7 @@ export default async ({ store, app, env, $vuetify, route, i18n }) => {
   }
   if (app.$cookies.get('theme_dark') !== undefined) $vuetify.theme.dark = app.$cookies.get('theme_dark')
   if (route.query.dark) $vuetify.theme.dark = route.query.dark === 'true'
+  $vuetify.theme.themes.light.admin = env.theme.colors.admin
+  $vuetify.theme.themes.dark.admin = env.theme.darkColors.admin || env.theme.colors.admin
   await store.dispatch('fetchLimits')
 }

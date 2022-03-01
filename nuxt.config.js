@@ -1,13 +1,36 @@
 const URL = require('url').URL
-const fr = require('vuetify/es5/locale/fr').default
-const en = require('vuetify/es5/locale/en').default
 let config = require('config')
 config.basePath = new URL(config.publicUrl + '/').pathname
 
+const isBuilding = process.argv.slice(-1)[0] === 'build'
+
 if (process.env.NODE_ENV === 'production') {
   const nuxtConfigInject = require('@koumoul/nuxt-config-inject')
-  if (process.argv.slice(-1)[0] === 'build') config = nuxtConfigInject.prepare(config)
+  if (isBuilding) config = nuxtConfigInject.prepare(config)
   else nuxtConfigInject.replace(config, ['nuxt-dist/**/*', 'public/static/**/*'])
+}
+
+let vuetifyOptions = {}
+
+if (process.env.NODE_ENV !== 'production' || isBuilding) {
+  const fr = require('vuetify/es5/locale/fr').default
+  const en = require('vuetify/es5/locale/en').default
+  vuetifyOptions = {
+    customVariables: ['~assets/variables.scss'],
+    theme: {
+      dark: config.theme.dark,
+      themes: {
+        light: config.theme.colors,
+        dark: { ...config.theme.colors, ...config.theme.darkColors },
+      },
+    },
+    treeShake: true,
+    defaultAssets: false,
+    lang: {
+      locales: { fr, en },
+      current: config.i18n.defaultLocale,
+    },
+  }
 }
 
 const webpack = require('webpack')
@@ -75,20 +98,7 @@ module.exports = {
     ['@nuxtjs/google-fonts', { download: true, display: 'swap', families: { Nunito: [100, 300, 400, 500, 700, 900] } }],
   ],
   vuetify: {
-    customVariables: ['~assets/variables.scss'],
-    theme: {
-      dark: config.theme.dark,
-      themes: {
-        light: config.theme.colors,
-        dark: { ...config.theme.colors, ...config.theme.darkColors },
-      },
-    },
-    treeShake: true,
-    defaultAssets: false,
-    lang: {
-      locales: { fr, en },
-      current: config.i18n.defaultLocale,
-    },
+    optionsPath: './vuetify.options.js',
   },
   env: {
     mainPublicUrl: config.publicUrl,

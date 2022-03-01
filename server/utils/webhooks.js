@@ -1,6 +1,5 @@
 const axios = require('../utils/axios')
 const config = require('config')
-const ua = require('universal-analytics')
 const settingsSchema = require('../../contract/settings')
 const notifications = require('./notifications')
 const permissions = require('./permissions')
@@ -44,23 +43,6 @@ exports.trigger = async (db, type, resource, event) => {
           text,
           href,
           event: event.type,
-        })
-      }
-
-      // Google analytics
-      // DEPRECATED, remove later
-      if (webhook.target.type === 'ga') {
-        const visitor = ua(webhook.target.params.trackingId)
-        visitor.set('appName', webhook.target.params.appName)
-        visitor.set('appVersion', webhook.target.params.appVersion)
-
-        await new Promise((resolve, reject) => {
-          let label = resource.title
-          if (event.data) label += '\n\n' + event.data
-          visitor.event(type, eventType.title, label, err => {
-            if (err) reject(err)
-            else resolve()
-          })
         })
       }
     } catch (err) {

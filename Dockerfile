@@ -52,14 +52,12 @@ RUN apk add --no-cache python3 make g++ curl
 RUN ln -s /usr/bin/python3 /usr/bin/python
 RUN apk add --no-cache sqlite-dev
 
-RUN npm install -g clean-modules@2.0.4
-
 WORKDIR /webapp
 ADD package.json .
 ADD package-lock.json .
 ADD patches patches
 # use clean-modules on the same line as npm ci to be lighter in the cache
-RUN npm ci && clean-modules --yes --exclude exceljs/lib/doc/ --exclude "**/*.mustache"
+RUN npm ci && ./node_modules/.bin/clean-modules --yes --exclude exceljs/lib/doc/ --exclude "**/*.mustache"
 
 # Adding UI files
 ADD public public

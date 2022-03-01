@@ -1,6 +1,8 @@
 const util = require('util')
 const fs = require('fs')
-const turf = require('@turf/turf')
+const pointOnFeature = require('@turf/point-on-feature').default
+const bboxPolygon = require('@turf/bbox-polygon').default
+const turfBbox = require('@turf/bbox').default
 const rewind = require('@turf/rewind').default
 const cleanCoords = require('@turf/clean-coords').default
 const kinks = require('@turf/kinks').default
@@ -123,13 +125,13 @@ exports.geometry2fields = async (schema, doc) => {
   // check if simplify is a good idea ? too CPU intensive for our backend ?
   // const simplified = turf.simplify({type: 'Feature', geometry: JSON.parse(doc[prop.key])}, {tolerance: 0.01, highQuality: false})
 
-  const point = turf.pointOnFeature(feature)
+  const point = pointOnFeature(feature)
   const fields = {
     _geopoint: point.geometry.coordinates[1] + ',' + point.geometry.coordinates[0],
   }
   if (!prop['x-capabilities'] || prop['x-capabilities'].geoCorners !== false) {
-    const bboxPolygon = turf.bboxPolygon(turf.bbox(feature))
-    fields._geocorners = bboxPolygon.geometry.coordinates[0].map(c => c[1] + ',' + c[0])
+    const polygon = bboxPolygon(turfBbox(feature))
+    fields._geocorners = polygon.geometry.coordinates[0].map(c => c[1] + ',' + c[0])
   }
   if (!prop['x-capabilities'] || prop['x-capabilities'].geoShape !== false) {
     fields._geoshape = feature.geometry
