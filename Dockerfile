@@ -42,7 +42,7 @@ RUN test -f /usr/lib/libproj.so
 # check that geo execs actually load
 RUN prepair --help
 
-RUN apk add unzip
+RUN apk add --no-cache unzip
 
 ############################
 # Stage: nodejs dependencies

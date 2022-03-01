@@ -67,6 +67,7 @@ jobs:
         cache-from: type=gha
         cache-to: type=gha,mode=max
         allow: network.host
+        network: host
     
     - run: docker-compose stop
 
