@@ -76,7 +76,6 @@ ADD scripts scripts
 ADD upgrade upgrade
 
 # Check quality
-ADD .eslintrc.js .eslintrc.js
 ADD .gitignore .gitignore
 RUN npm run lint
 ADD test test
@@ -93,7 +92,6 @@ RUN rm -rf public
 RUN rm -f package-lock.json
 RUN rm -rf patches
 RUN rm -rf test
-RUN rm -f .eslintrc.js
 RUN rm -rf data
 
 ##################################
