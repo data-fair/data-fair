@@ -14,22 +14,18 @@ jobs:
         node-version: [16.13.x]
         # See supported Node.js release schedule at https://nodejs.org/en/about/releases/
     steps:
-    - run: echo $GITHUB_REF
-    - uses: actions/checkout@v2
-    - uses: actions/setup-node@v1
-      with:
-        node-version: ${{ matrix.node-version }}
-
-    - run: NO_UI=true docker-compose --profile test up -d
-    - name: Wait for containers
-      uses: jakejarvis/wait-action@master
-      with:
-        time: '15s'
-    - run: docker ps
+    - name: Checkout git repository
+      uses: actions/checkout@v2
     
-    # - run: npm run coveralls
+    - name: Cache docker images (for docker-compose and for building)
+      uses: satackey/action-docker-layer-caching@v0.0.11
 
-    - name: Docker meta
+    - name: Run test dependencies (mongo and elasticsearch)
+      run: |
+        NO_UI=true docker-compose --profile test up -d
+        run: docker ps
+
+    - name: Prepare docker image tags
       id: docker_meta
       uses: crazy-max/ghaction-docker-meta@v1
       with:
@@ -39,8 +35,6 @@ jobs:
             {{major}}.{{minor}}
             {{major}}
 
-    - name: Set up QEMU
-      uses: docker/setup-qemu-action@v1
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v1
       with:
@@ -66,12 +60,11 @@ jobs:
         push: ${{ github.event_name != 'pull_request' }}
         tags: ${{ steps.docker_meta.outputs.tags }}
         labels: ${{ steps.docker_meta.outputs.labels }}
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
         allow: network.host
         network: host
     
-    - run: docker-compose stop
+    - name: Stop test dependencies
+      run: docker-compose stop
 
     - name: Image digest
       run: echo ${{ steps.docker_build.outputs.digest }}
