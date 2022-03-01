@@ -42,7 +42,6 @@ module.exports = {
   srcDir: 'public/',
   buildDir: 'nuxt-dist',
   build: {
-    // cache: true,
     publicPath: config.basePath + '_nuxt/',
     transpile: [/@koumoul/, 'easymde'], // Necessary for "à la carte" import of vuetify components
     extend (config, { isServer, isDev, isClient }) {
@@ -94,10 +93,16 @@ module.exports = {
     // baseURL: `http://localhost:${config.port}/`,
   },
   buildModules: [
+    'nuxt-webpack-optimisations',
     '@nuxtjs/vuetify',
     '@nuxtjs/svg',
     ['@nuxtjs/google-fonts', { download: true, display: 'swap', families: { Nunito: [100, 300, 400, 500, 700, 900] } }]
   ],
+  webpackOptimisations: {
+    // hard source is the riskiest, if you have issues don't enable it
+    hardSourcePlugin: process.env.NODE_ENV === 'development',
+    parallelPlugin: process.env.NODE_ENV === 'development'
+  },
   vuetify: vuetifyOptions,
   env: {
     mainPublicUrl: config.publicUrl,

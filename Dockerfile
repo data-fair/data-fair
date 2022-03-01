@@ -88,12 +88,16 @@ ADD LICENSE .
 ADD nodemon.json .
 
 # Cleanup /webapp so it can be copied by next stage
+RUN du -sh *
 RUN npm prune --production
+RUN rm -rf node_modules/.cache
 RUN rm -rf public
+RUN rm -rf dist
 RUN rm -f package-lock.json
 RUN rm -rf patches
 RUN rm -rf test
 RUN rm -rf data
+RUN du -sh *
 
 ##################################
 # Stage: main nodejs service stage
