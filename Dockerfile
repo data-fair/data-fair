@@ -48,7 +48,7 @@ RUN apk add --no-cache unzip
 # Stage: nodejs dependencies
 FROM nativedeps AS builder
 
-RUN apk add --no-cache python3 make g++ curl bash
+RUN apk add --no-cache python3 make g++ curl
 RUN ln -s /usr/bin/python3 /usr/bin/python
 RUN apk add --no-cache sqlite-dev
 
