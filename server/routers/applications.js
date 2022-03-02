@@ -319,7 +319,9 @@ router.get('/:applicationId/status', readApplication, permissions.middleware('re
 router.get('/:applicationId/journal', readApplication, permissions.middleware('readJournal', 'read'), cacheHeaders.noCache, asyncWrap(async (req, res) => {
   const journal = await req.app.get('db').collection('journals').findOne({
     type: 'application',
-    id: req.params.applicationId
+    id: req.application.id,
+    'owner.type': req.application.owner.type,
+    'owner.id': req.application.owner.id
   })
   if (!journal) return res.send([])
   delete journal.owner

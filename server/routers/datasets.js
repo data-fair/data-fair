@@ -1424,7 +1424,9 @@ router.get('/:datasetId/private-api-docs.json', readDataset(), permissions.middl
 router.get('/:datasetId/journal', readDataset(), permissions.middleware('readJournal', 'read'), cacheHeaders.noCache, asyncWrap(async (req, res) => {
   const journal = await req.app.get('db').collection('journals').findOne({
     type: 'dataset',
-    id: req.params.datasetId
+    id: req.params.datasetId,
+    'owner.type': req.dataset.owner.type,
+    'owner.id': req.dataset.owner.id
   })
   if (!journal) return res.send([])
   delete journal.owner
