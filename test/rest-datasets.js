@@ -17,14 +17,17 @@ describe('REST datasets', () => {
     let res = await ax.post('/api/v1/datasets', { isRest: true, title: 'a rest dataset' })
     assert.equal(res.status, 201)
     assert.equal(res.data.id, 'a-rest-dataset')
+    await workers.hook('finalizer/' + res.data.id)
 
     res = await ax.post('/api/v1/datasets', { isRest: true, title: 'a rest dataset' })
     assert.equal(res.status, 201)
     assert.equal(res.data.id, 'a-rest-dataset-2')
+    await workers.hook('finalizer/' + res.data.id)
 
     res = await ax.put('/api/v1/datasets/restdataset3', { isRest: true, title: 'a rest dataset' })
     assert.equal(res.status, 201)
     assert.equal(res.data.id, 'restdataset3')
+    await workers.hook('finalizer/' + res.data.id)
   })
 
   it('Perform CRUD operations on REST datasets', async () => {
@@ -54,18 +57,15 @@ describe('REST datasets', () => {
     assert.equal(res.data.attr1, 'test3')
     assert.equal(res.data.attr2, 'test2')
     await ax.delete('/api/v1/datasets/rest1/lines/id1')
-    try {
-      await ax.get('/api/v1/datasets/rest1/lines/id1')
-      assert.fail()
-    } catch (err) {
+    await workers.hook('finalizer/rest1')
+    await assert.rejects(ax.get('/api/v1/datasets/rest1/lines/id1'), (err) => {
       assert.equal(err.status, 404)
-    }
-    try {
-      await ax.patch('/api/v1/datasets/rest1/lines/id1', { _i: 10 })
-      assert.fail()
-    } catch (err) {
+      return true
+    })
+    await assert.rejects(ax.patch('/api/v1/datasets/rest1/lines/id1', { _i: 10 }), (err) => {
       assert.equal(err.status, 400)
-    }
+      return true
+    })
   })
 
   it('Perform CRUD operations in bulks', async () => {
@@ -85,6 +85,7 @@ describe('REST datasets', () => {
       { _action: 'patch', _id: 'line3', attr1: 'test2' },
       { _action: 'update', _id: 'line4', attr1: 'test2', attr2: 'test2' }
     ])
+    await workers.hook('finalizer/rest2')
     assert.equal(res.data.nbOk, 7)
     assert.equal(res.data.nbCreated, 4)
     assert.equal(res.data.nbDeleted, 1)
@@ -221,10 +222,10 @@ describe('REST datasets', () => {
     form.append('attachment', attachmentContent, 'dir1/test.pdf')
     form.append('attr1', 10)
     res = await ax.post('/api/v1/datasets/rest5/lines', form, { headers: testUtils.formHeaders(form) })
-    await workers.hook('finalizer/rest5')
     assert.equal(res.status, 201)
     assert.ok(res.data._id)
     assert.equal(res.data.attachmentPath, `${res.data._id}/test.pdf`)
+    await workers.hook('finalizer/rest5')
     const ls = await datasetUtils.lsAttachments(dataset)
     assert.equal(ls.length, 1)
     assert.equal(ls[0], res.data.attachmentPath)
@@ -260,10 +261,10 @@ describe('REST datasets', () => {
     res = await ax.post('/api/v1/datasets/rest6/_bulk_lines', form, { headers: testUtils.formHeaders(form) })
     assert.equal(res.status, 200)
     assert.equal(res.data.nbOk, 2)
+    await workers.hook('finalizer/rest6')
     const ls = await datasetUtils.lsAttachments(dataset)
     assert.equal(ls.length, 2)
 
-    await workers.hook('finalizer/rest6')
     res = await ax.get('/api/v1/datasets/rest6/lines')
     assert.equal(res.data.total, 2)
     assert.equal(res.data.results.find(l => l._id === 'line1')['_file.content'], 'This is a test libreoffice file.')
@@ -323,15 +324,12 @@ describe('REST datasets', () => {
     // Create a line with an attached file
     const form = new FormData()
     form.append('actions', await fs.readFile('test/resources/rest/access.log.ndjson'), 'actions.ndjson')
-    try {
-      await ax.post('/api/v1/datasets/restndjson/_bulk_lines', form, { headers: testUtils.formHeaders(form) })
-      assert.fail()
-    } catch (err) {
+    await assert.rejects(ax.post('/api/v1/datasets/restndjson/_bulk_lines', form, { headers: testUtils.formHeaders(form) }), (err) => {
       assert.equal(err.status, 400)
       assert.equal(err.data.nbErrors, 20)
       assert.equal(err.data.nbOk, 0)
-    }
-
+      return true
+    })
     assert.equal((await fs.readdir('data/test/tmp')).length, 0)
   })
 
@@ -446,8 +444,8 @@ describe('REST datasets', () => {
     res = await ax.post('/api/v1/datasets/restidem/_bulk_lines', [
       { _id: 'line1', attr1: 'test1', attr2: 'test1' }
     ])
-    assert.equal(await collection.countDocuments({ _needsIndexing: true }), 0)
     await workers.hook('finalizer/restidem')
+    assert.equal(await collection.countDocuments({ _needsIndexing: true }), 0)
 
     res = await ax.post('/api/v1/datasets/restidem/_bulk_lines', [
       { _id: 'line1', attr1: 'test1', attr2: 'test1' },
@@ -479,13 +477,13 @@ describe('REST datasets', () => {
       { _id: 'line3', attr1: 'test1', attr2: 'test1' },
       { _id: 'line4', attr1: 'test1', attr2: 'test1' }
     ])
-    const collection = restDatasetsUtils.collection(global.db, dataset)
     dataset = await workers.hook('finalizer/restdel')
     assert.equal(dataset.count, 4)
 
     await ax.delete('/api/v1/datasets/restdel/lines')
     dataset = await workers.hook('finalizer/restdel')
     assert.equal(dataset.count, 0)
+    const collection = restDatasetsUtils.collection(global.db, dataset)
     assert.equal(await collection.countDocuments({}), 0)
   })
 
@@ -537,16 +535,14 @@ update,line2,test2,test2`, { headers: { 'content-type': 'text/csv' } })
       schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }, { key: 'attr3', type: 'boolean' }]
     })
     await workers.hook('finalizer/restcsv')
-    try {
-      await ax.post('/api/v1/datasets/restcsv/_bulk_lines', `_id,attrko
-line1,test1
-line2,test1
-line3,test1`, { headers: { 'content-type': 'text/csv' } })
-      assert.fail()
-    } catch (err) {
+    await assert.rejects(ax.post('/api/v1/datasets/restcsv/_bulk_lines', `_id,attrko
+    line1,test1
+    line2,test1
+    line3,test1`, { headers: { 'content-type': 'text/csv' } }), (err) => {
       assert.equal(err.data.nbErrors, 1)
       assert.equal(err.data.nbOk, 0)
-    }
+      return true
+    })
   })
 
   it('Send bulk actions as a gzipped CSV', async () => {

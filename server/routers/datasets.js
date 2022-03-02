@@ -223,7 +223,7 @@ const lockDataset = (_shouldLock = true) => asyncWrap(async (req, res, next) => 
     const lockKey = `dataset:${req.params.datasetId}`
     const ack = await locks.acquire(db, lockKey)
     if (ack) {
-      res.on('finish', () => locks.release(db, lockKey).catch(err => console.error('failure to release dataset lock', err)))
+      res.on('close', () => locks.release(db, lockKey).catch(err => console.error('failure to release dataset lock', err)))
       return next()
     } else {
       // dataset found but locked : we cannot safely work on it, wait a little while before failing
@@ -652,7 +652,7 @@ router.post('', beforeUpload, checkStorage(true, true), filesUtils.uploadFile(),
       }
       const lockKey = `dataset:${dataset.id}`
       const ack = await locks.acquire(db, lockKey)
-      if (ack) res.on('finish', () => locks.release(db, lockKey).catch(err => console.error('failure to release dataset lock', err)))
+      if (ack) res.on('close', () => locks.release(db, lockKey).catch(err => console.error('failure to release dataset lock', err)))
       await db.collection('datasets').insertOne(dataset)
       await datasetUtils.updateStorage(db, dataset)
     } else if (req.body.isVirtual) {

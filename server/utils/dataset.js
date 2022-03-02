@@ -637,7 +637,7 @@ exports.insertWithBaseId = async (db, dataset, baseId, res) => {
       const lockKey = `dataset:${dataset.id}`
       const ack = await locks.acquire(db, lockKey)
       if (ack) {
-        res.on('finish', () => locks.release(db, lockKey).catch(err => console.error('failure to release dataset lock', err)))
+        res.on('close', () => locks.release(db, lockKey).catch(err => console.error('failure to release dataset lock', err)))
         await db.collection('datasets').insertOne(dataset)
         insertOk = true
         break
