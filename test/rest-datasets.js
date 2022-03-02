@@ -221,6 +221,7 @@ describe('REST datasets', () => {
     form.append('attachment', attachmentContent, 'dir1/test.pdf')
     form.append('attr1', 10)
     res = await ax.post('/api/v1/datasets/rest5/lines', form, { headers: testUtils.formHeaders(form) })
+    await workers.hook('finalizer/rest5')
     assert.equal(res.status, 201)
     assert.ok(res.data._id)
     assert.equal(res.data.attachmentPath, `${res.data._id}/test.pdf`)
@@ -228,7 +229,6 @@ describe('REST datasets', () => {
     assert.equal(ls.length, 1)
     assert.equal(ls[0], res.data.attachmentPath)
 
-    await workers.hook('finalizer/rest5')
     res = await ax.get('/api/v1/datasets/rest5/lines')
     assert.equal(res.data.total, 1)
     assert.equal(res.data.results[0]['_file.content'], 'This is a test pdf file.')
