@@ -33,8 +33,6 @@ if (process.env.NODE_ENV !== 'production' || isBuilding) {
   }
 }
 
-const webpack = require('webpack')
-
 module.exports = {
   telemetry: false,
   ssr: false,
@@ -45,17 +43,9 @@ module.exports = {
     publicPath: config.basePath + '_nuxt/',
     transpile: [/@koumoul/, 'easymde'], // Necessary for "à la carte" import of vuetify components
     extend (config, { isServer, isDev, isClient }) {
+      const webpack = require('webpack')
       // Ignore all locale files of moment.js, those we want are loaded in plugins/moment.js
       config.plugins.push(new webpack.IgnorePlugin(/^\.\/locale$/, /moment$/))
-
-      // Loader for sounds
-      /* config.module.rules.push({
-        test: /\.(ogg|mp3|wav|mpe?g)$/i,
-        loader: 'file-loader',
-        options: {
-          name: '[path][name].[ext]',
-        },
-      }) */
     }
   },
   loading: { color: '#1e88e5' }, // Customize the progress bar color
