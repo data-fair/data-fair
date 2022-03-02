@@ -112,19 +112,23 @@ before('start app', async function () {
 beforeEach('scratch data', async () => {
   debug('scratch data')
   await workers.clear()
-  await Promise.all([
-    global.es.indices.delete({ index: 'dataset-test-*', ignore_unavailable: true }).catch(err => { console.log(err) }),
-    global.db.collection('datasets').deleteMany({}),
-    global.db.collection('applications').deleteMany({}),
-    global.db.collection('catalogs').deleteMany({}),
-    global.db.collection('limits').deleteMany({}),
-    global.db.collection('settings').deleteMany({}),
-    global.db.collection('locks').deleteMany({}),
-    global.db.collection('extensions-cache').deleteMany({}),
-    global.db.collection('remote-services').deleteMany({ id: /localhost-dataset-(.*)/ }),
-    global.db.collection('journals').deleteMany({}),
-    fs.emptyDir('./data/test')
-  ])
+  try {
+    await Promise.all([
+      global.es.indices.delete({ index: 'dataset-test-*', ignore_unavailable: true }).catch(err => { console.log(err) }),
+      global.db.collection('datasets').deleteMany({}),
+      global.db.collection('applications').deleteMany({}),
+      global.db.collection('catalogs').deleteMany({}),
+      global.db.collection('limits').deleteMany({}),
+      global.db.collection('settings').deleteMany({}),
+      global.db.collection('locks').deleteMany({}),
+      global.db.collection('extensions-cache').deleteMany({}),
+      global.db.collection('remote-services').deleteMany({ id: /localhost-dataset-(.*)/ }),
+      global.db.collection('journals').deleteMany({}),
+      fs.emptyDir('./data/test')
+    ])
+  } catch (err) {
+    console.warn('error while scratching data before test', err)
+  }
   global.events.removeAllListeners()
   debug('scratch data ok')
 })

@@ -37,8 +37,13 @@ exports.hook = (key, delay = 10000, message = 'time limit on worker hook') => {
 }
 // clear also for testing
 exports.clear = async () => {
-  await Promise.all(promisePool.filter(p => !!p))
   hooks = {}
+  try {
+    await Promise.all(promisePool.filter(p => !!p))
+  } catch (err) {
+    // nothing : we left it pending in tests, we must not care about the result
+    console.log('error when clearing worker promise pull', err)
+  }
 }
 
 /* eslint no-unmodified-loop-condition: 0 */
@@ -146,8 +151,9 @@ async function iter (app, resource, type) {
     // REST datasets trigger too many events
     let noStoreEvent = false
     if (type === 'dataset' && resource.isRest && resource.finalizedAt) {
-      const lastEvent = (await db.collection('journals')
-        .findOne({ id: resource.id, type, 'owner.type': resource.owner.type, 'owner.id': resource.owner.id }, { projection: { events: { $slice: -1 } } })).events[0]
+      const journal = (await db.collection('journals')
+        .findOne({ id: resource.id, type, 'owner.type': resource.owner.type, 'owner.id': resource.owner.id }, { projection: { events: { $slice: -1 } } }))
+      const lastEvent = journal && journal.events[0]
       if (lastEvent && lastEvent.type === 'finalize-end') noStoreEvent = true
     }
 

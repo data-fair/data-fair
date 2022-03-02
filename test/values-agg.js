@@ -13,7 +13,7 @@ describe('values aggs', () => {
     const ax = global.ax.dmeadus
     let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
     assert.equal(res.status, 201)
-    await workers.hook('finalizer')
+    await workers.hook('finalizer/' + res.data.id)
 
     // Simple value aggregation
     res = await ax.get('/api/v1/datasets/dataset/values_agg?field=id')

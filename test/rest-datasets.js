@@ -343,6 +343,7 @@ describe('REST datasets', () => {
       title: 'rest7',
       schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }]
     })
+    await workers.hook('finalizer/rest7')
     await ax.post('/api/v1/datasets/rest7/_bulk_lines', [
       { _id: 'line1', attr1: 'test1', attr2: 'test1' },
       { _id: 'line2', attr1: 'test1', attr2: 'test1' },
@@ -371,6 +372,7 @@ describe('REST datasets', () => {
     })
     res = await ax.post('/api/v1/datasets/resthist/lines', { _id: 'id1', attr1: 'test1', attr2: 'test1' })
     assert.equal(res.data._id, 'id1')
+    await workers.hook('finalizer/resthist')
     res = await ax.patch('/api/v1/datasets/resthist/lines/id1', { attr1: 'test2' })
     await workers.hook('finalizer/resthist')
     res = await ax.get('/api/v1/datasets/resthist/lines/id1/revisions')
@@ -657,9 +659,10 @@ test2,test2,test3`, { headers: { 'content-type': 'text/csv' } })
       title: 'restunset',
       schema: [{ key: 'attr1', type: 'string', readOnly: true }, { key: 'attr2', type: 'string' }]
     })
+    let dataset = await workers.hook('finalizer/restunset')
     res = await ax.post('/api/v1/datasets/restunset/lines', { attr1: 'test1', attr2: 'test1' })
     assert.equal(res.status, 201)
-    let dataset = await workers.hook('finalizer/restunset')
+    dataset = await workers.hook('finalizer/restunset')
     const storage1 = dataset.storage.size
 
     res = await ax.patch('/api/v1/datasets/restunset', { schema: [{ key: 'attr1', type: 'string', readOnly: true }] })

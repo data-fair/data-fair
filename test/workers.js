@@ -72,16 +72,14 @@ describe('workers', () => {
     const form2 = new FormData()
     form2.append('file', datasetFd2, 'dataset.csv')
     await ax.post('/api/v1/datasets/' + dataset.id, form2, { headers: testUtils.formHeaders(form2) })
-    try {
-      dataset = await workers.hook('indexer')
-      assert.fail()
-    } catch (err) {
-      res = await ax.get('/api/v1/datasets/' + dataset.id + '/journal')
-      assert.equal(res.status, 200)
-      assert.equal(res.data[0].type, 'error')
-      // Check that there is an error message in the journal
-      assert.ok(res.data[0].data.startsWith('100% des lignes sont en erreur'))
-    }
+    await assert.rejects(workers.hook('indexer'), () => {
+      return true
+    })
+    res = await ax.get('/api/v1/datasets/' + dataset.id + '/journal')
+    assert.equal(res.status, 200)
+    assert.equal(res.data[0].type, 'error')
+    // Check that there is an error message in the journal
+    assert.ok(res.data[0].data.startsWith('100% des lignes sont en erreur'))
   })
 
   it('Publish a dataset after finalization', async () => {

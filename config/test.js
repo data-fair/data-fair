@@ -35,7 +35,7 @@ module.exports = {
     }
   },
   worker: {
-    interval: 10,
+    interval: 1,
     inactiveInterval: 0,
     releaseInterval: 0,
     concurrency: 1,
@@ -49,8 +49,8 @@ module.exports = {
     ttl: 0.1
   },
   datasetStateRetries: {
-    nb: 4,
-    interval: 10
+    nb: 10,
+    interval: 40
   },
   defaultRemoteKey: {
     in: 'header',
