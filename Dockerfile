@@ -82,11 +82,6 @@ RUN npm run lint
 ADD test test
 RUN npm run test
 
-# Adding licence, manifests, etc.
-ADD README.md BUILD.json* ./
-ADD LICENSE .
-ADD nodemon.json .
-
 # Cleanup /webapp so it can be copied by next stage
 RUN du -sh *
 RUN npm prune --production
@@ -107,8 +102,14 @@ MAINTAINER "contact@koumoul.com"
 
 RUN apk add --no-cache dumb-init
 
-# configure node webapp environment
 COPY --from=builder /webapp /webapp
+
+# Adding licence, manifests, etc.
+ADD README.md BUILD.json* ./
+ADD LICENSE .
+ADD nodemon.json .
+
+# configure node webapp environment
 WORKDIR /webapp
 ENV NODE_ENV production
 ENV DEBUG db,upgrade*
