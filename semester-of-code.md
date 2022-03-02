@@ -22,4 +22,6 @@ Une partie du socle technique de Data Fair connait une évolution importante : l
 
 Data Fair utilise les iframes pour proposer des visualisations de données fortement découplées avec les sites dans lesquelles elles sont intégrées. En complément de cette approche, qui n'est pas remise en question, nous souhaitons explorer la possibilité d'utiliser la spécification [Web Components](https://developer.mozilla.org/fr/docs/Web/Web_Components) pour proposer des composants graphiques réutilisables plus légers et plus souples.
 
-Dans tous cas vous travaillerez sur des sujets techniques en étroite collaboration avec une petite équipe de mainteneurs constituée de développeurs full-stack.
+L'utilisation de Data Fair croît et avec elle la taille des serveurs, les volumes de données qui transitent sur internet et le nombre de rendus de pages dans les navigateurs des utilisateurs. Soucieux de maitriser l'impact environnemental du projet, nous souhaitons estimer la consommation carbone associée à cette activité et identifier les leviers les plus efficaces pour la limiter sans dégrader le service rendu. Cette démarche implique en premier lieu une veille poussée sur le sujet et un travail sur les outils de suivi intégrés au projet.
+
+Dans tous les cas vous travaillerez sur des sujets techniques et en étroite collaboration avec une petite équipe de mainteneurs constituée de développeurs full-stack.
