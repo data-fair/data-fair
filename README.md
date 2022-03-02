@@ -39,7 +39,11 @@ Run test suite:
 
 Test building the docker image:
 
-    docker build --network=host .
+```
+docker build --network=host -t data-fair-dev .
+// don't expect the following line to work fully, it will be missing service dependencies, etc.
+docker run --network=host --env PORT=8081 data-fair-dev
+```
 
 ## Embedded documentation
 

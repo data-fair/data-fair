@@ -112,7 +112,10 @@ COPY --from=builder /webapp /webapp
 WORKDIR /webapp
 ENV NODE_ENV production
 ENV DEBUG db,upgrade*
-USER node
+# the following line would be a good practice
+# unfortunately it is a problem to activate now that the service was already deployed
+# with volumes belonging to root
+#USER node
 VOLUME /data
 EXPOSE 8080
 
