@@ -67,20 +67,16 @@ describe('datasets in draft mode', () => {
     const datasetFd2 = fs.readFileSync('./test/resources/datasets/bad-format.csv')
     const form2 = new FormData()
     form2.append('file', datasetFd2, 'dataset.csv')
-    try {
-      await ax.post('/api/v1/datasets/' + dataset.id, form2, { headers: testUtils.formHeaders(form2) })
-      assert.fail()
-    } catch (err) {
+    await assert.rejects(ax.post('/api/v1/datasets/' + dataset.id, form2, { headers: testUtils.formHeaders(form2) }), (err) => {
       assert.equal(err.status, 409)
-    }
+      return true
+    })
 
     // querying for lines is not yet possible
-    try {
-      await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
-      assert.fail()
-    } catch (err) {
+    await assert.rejects(ax.get(`/api/v1/datasets/${dataset.id}/lines`), (err) => {
       assert.equal(err.status, 409)
-    }
+      return true
+    })
     // except in draft mode
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { draft: true } })
     assert.equal(res.data.total, 2)
@@ -291,12 +287,13 @@ describe('datasets in draft mode', () => {
     const form2 = new FormData()
     form2.append('attachments', fs.readFileSync('./test/resources/datasets/files2.zip'), 'files2.zip')
     await ax.put(`/api/v1/datasets/${dataset.id}`, form2, { headers: testUtils.formHeaders(form2), params: { draft: true } })
-    try {
-      await workers.hook(`finalizer/${dataset.id}`)
-      assert.fail()
-    } catch (err) {
-      assert.ok(err.message.includes('Valeurs invalides : dir1/test.pdf'))
-    }
+    await assert.rejects(workers.hook(`finalizer/${dataset.id}`), (err) => {
+      if (!err.message.includes('Valeurs invalides : dir1/test.pdf')) {
+        console.error('wrong error message in error', err)
+        assert.fail(`error message should contain "Valeurs invalides : dir1/test.pdf", instead got "${err.message}"`)
+      }
+      return true
+    })
 
     // then update the data
     const form3 = new FormData()

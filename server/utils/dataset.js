@@ -21,6 +21,7 @@ const restDatasetsUtils = require('./rest-datasets')
 const vocabulary = require('../../contract/vocabulary')
 const limits = require('./limits')
 const esUtils = require('./es')
+const locks = require('./locks')
 const baseTypes = new Set(['text/csv', 'application/geo+json'])
 const dataDir = path.resolve(config.dataDir)
 
@@ -627,19 +628,25 @@ exports.refinalize = async (db, dataset) => {
 }
 
 // Generate ids and try insertion until there is no conflict on id
-exports.insertWithBaseId = async (db, dataset, baseId) => {
+exports.insertWithBaseId = async (db, dataset, baseId, res) => {
   dataset.id = baseId
   let insertOk = false
   let i = 1
   while (!insertOk) {
     try {
-      await db.collection('datasets').insertOne(dataset)
-      insertOk = true
+      const lockKey = `dataset:${dataset.id}`
+      const ack = await locks.acquire(db, lockKey)
+      if (ack) {
+        res.on('finish', () => locks.release(db, lockKey).catch(err => console.error('failure to release dataset lock', err)))
+        await db.collection('datasets').insertOne(dataset)
+        insertOk = true
+        break
+      }
     } catch (err) {
       if (err.code !== 11000) throw err
-      i += 1
-      dataset.id = `${baseId}-${i}`
     }
+    i += 1
+    dataset.id = `${baseId}-${i}`
   }
 }
 

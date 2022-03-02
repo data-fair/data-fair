@@ -111,7 +111,7 @@ before('start app', async function () {
 
 beforeEach('scratch data', async () => {
   debug('scratch data')
-  workers.clear()
+  await workers.clear()
   await Promise.all([
     global.es.indices.delete({ index: 'dataset-test-*', ignore_unavailable: true }).catch(err => { console.log(err) }),
     global.db.collection('datasets').deleteMany({}),

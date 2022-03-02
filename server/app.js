@@ -176,9 +176,10 @@ exports.run = async () => {
   }
 
   if (config.mode.includes('worker')) {
-    await locksUtils.init(db)
     workers.start(app)
   }
+
+  await locksUtils.init(db)
 
   // special mode: run the process to execute a single worker tasks
   // for  extra resiliency to fatal memory exceptions
@@ -203,9 +204,10 @@ exports.stop = async () => {
   }
 
   if (config.mode.includes('worker')) {
-    locksUtils.stop()
     await workers.stop()
   }
+
+  await locksUtils.stop(app.get('db'))
 
   // this timeout is because we can a few small pending operations after worker and server were closed
   await new Promise(resolve => setTimeout(resolve, 1000))

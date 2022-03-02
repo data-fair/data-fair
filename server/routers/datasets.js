@@ -35,6 +35,7 @@ const cacheHeaders = require('../utils/cache-headers')
 const webhooks = require('../utils/webhooks')
 const outputs = require('../utils/outputs')
 const limits = require('../utils/limits')
+const locks = require('../utils/locks')
 const datasetPatchSchema = require('../../contract/dataset-patch')
 const validatePatch = ajv.compile(datasetPatchSchema)
 const datasetPostSchema = require('../../contract/dataset-post')
@@ -213,13 +214,32 @@ router.get('', cacheHeaders.noCache, asyncWrap(async (req, res) => {
   res.json({ count, results, facets })
 }))
 
+// Shared middleware to apply a lock on the modified resource
+const lockDataset = (_shouldLock = true) => asyncWrap(async (req, res, next) => {
+  const db = req.app.get('db')
+  const shouldLock = typeof _shouldLock === 'function' ? _shouldLock(req.body) : _shouldLock
+  if (!shouldLock) return next()
+  for (let i = 0; i < config.datasetStateRetries.nb; i++) {
+    const lockKey = `dataset:${req.params.datasetId}`
+    const ack = await locks.acquire(db, lockKey)
+    if (ack) {
+      res.on('finish', () => locks.release(db, lockKey).catch(err => console.error('failure to release dataset lock', err)))
+      return next()
+    } else {
+      // dataset found but locked : we cannot safely work on it, wait a little while before failing
+      await new Promise(resolve => setTimeout(resolve, config.datasetStateRetries.interval))
+    }
+  }
+  throw createError(409, 'Le jeu de données n\'est pas dans un état permettant l\'opération demandée.')
+})
 // Shared middleware to read dataset in db
 // also checks that the dataset is in a state compatible with some action
 // supports waiting a little bit to be a little permissive with the user
 const readDataset = (_acceptedStatuses, preserveDraft, ignoreDraft) => asyncWrap(async (req, res, next) => {
+  const db = req.app.get('db')
   const acceptedStatuses = typeof _acceptedStatuses === 'function' ? _acceptedStatuses(req.body) : _acceptedStatuses
-  for (let i = 0; i < 10; i++) {
-    req.dataset = req.resource = await req.app.get('db').collection('datasets')
+  for (let i = 0; i < config.datasetStateRetries.nb; i++) {
+    req.dataset = req.resource = await db.collection('datasets')
       .findOne({ id: req.params.datasetId }, { projection: { _id: 0 } })
     if (!req.dataset) return res.status(404).send('Dataset not found')
     // in draft mode the draft is automatically merged and all following operations use dataset.draftReason to adapt
@@ -236,7 +256,6 @@ const readDataset = (_acceptedStatuses, preserveDraft, ignoreDraft) => asyncWrap
     }
 
     req.resourceType = 'datasets'
-
     if (
       req.dataset.status !== 'draft' &&
       (req.isNewDataset || !acceptedStatuses || acceptedStatuses.includes(req.dataset.status))
@@ -245,7 +264,7 @@ const readDataset = (_acceptedStatuses, preserveDraft, ignoreDraft) => asyncWrap
     if (req.dataset.status === 'draft' && ignoreDraft) return next()
 
     // dataset found but not in proper state.. wait a little while
-    await new Promise(resolve => setTimeout(resolve, 400))
+    await new Promise(resolve => setTimeout(resolve, config.datasetStateRetries.interval))
   }
   throw createError(409, `Le jeu de données n'est pas dans un état permettant l'opération demandée. État courant : ${req.dataset.status}.`)
 })
@@ -296,7 +315,9 @@ router.get('/:datasetId/schema', readDataset(), applicationKey, permissions.midd
 })
 
 // Update a dataset's metadata
-router.patch('/:datasetId', readDataset((patch) => {
+router.patch('/:datasetId', lockDataset((patch) => {
+  return !!(patch.schema || patch.virtual || patch.extensions || patch.publications || patch.projection)
+}), readDataset((patch) => {
   // accept different statuses of the dataset depending on the content of the patch
   if (patch.schema || patch.virtual || patch.extensions || patch.publications || patch.projection) {
     return ['finalized', 'error']
@@ -362,9 +383,11 @@ router.patch('/:datasetId', readDataset((patch) => {
     patch.status = 'analyzed'
     if (req.dataset.isRest && req.dataset.extensions) {
       const removedExtensions = req.dataset.extensions.filter(e => !patch.extensions.find(pe => e.remoteService === pe.remoteService && e.action === pe.action))
-      await restDatasetsUtils.collection(db, req.dataset).updateMany({},
-        { $unset: removedExtensions.reduce((a, re) => { a[extensions.getExtensionKey(re)] = ''; return a }, {}) }
-      )
+      if (removedExtensions.length) {
+        await restDatasetsUtils.collection(db, req.dataset).updateMany({},
+          { $unset: removedExtensions.reduce((a, re) => { a[extensions.getExtensionKey(re)] = ''; return a }, {}) }
+        )
+      }
     }
   } else if (patch.projection && (!req.dataset.projection || patch.projection.code !== req.dataset.projection.code)) {
     // geo projection has changed, trigger full re-indexing
@@ -494,7 +517,7 @@ const initNew = async (db, req) => {
   return dataset
 }
 
-const setFileInfo = async (db, file, attachmentsFile, dataset, draft) => {
+const setFileInfo = async (db, file, attachmentsFile, dataset, draft, res) => {
   const patch = {
     dataUpdatedBy: dataset.updatedBy,
     dataUpdatedAt: dataset.updatedAt
@@ -613,7 +636,7 @@ router.post('', beforeUpload, checkStorage(true, true), filesUtils.uploadFile(),
     if (datasetFile) {
       if (req.body.isVirtual) throw createError(400, 'Un jeu de données virtuel ne peut pas être initialisé avec un fichier')
       // TODO: do this in a worker instead ?
-      const datasetPromise = setFileInfo(db, datasetFile, attachmentsFile, await initNew(db, req), req.query.draft === 'true')
+      const datasetPromise = setFileInfo(db, datasetFile, attachmentsFile, await initNew(db, req), req.query.draft === 'true', res)
       await Promise.race([datasetPromise, new Promise(resolve => setTimeout(resolve, 5000))])
       // send header at this point, if we are not finished processing files
       // asyncWrap keepalive option will keep request alive
@@ -627,6 +650,9 @@ router.post('', beforeUpload, checkStorage(true, true), filesUtils.uploadFile(),
         res.send({ error: err.message })
         throw err
       }
+      const lockKey = `dataset:${dataset.id}`
+      const ack = await locks.acquire(db, lockKey)
+      if (ack) res.on('finish', () => locks.release(db, lockKey).catch(err => console.error('failure to release dataset lock', err)))
       await db.collection('datasets').insertOne(dataset)
       await datasetUtils.updateStorage(db, dataset)
     } else if (req.body.isVirtual) {
@@ -640,7 +666,7 @@ router.post('', beforeUpload, checkStorage(true, true), filesUtils.uploadFile(),
       dataset.schema = await virtualDatasetsUtils.prepareSchema(db, dataset)
       dataset.status = 'indexed'
       const baseId = slug(req.body.title).toLowerCase()
-      await datasetUtils.insertWithBaseId(db, dataset, baseId)
+      await datasetUtils.insertWithBaseId(db, dataset, baseId, res)
     } else if (req.body.isRest) {
       if (!req.body.title) throw createError(400, 'Un jeu de données incrémental doit être créé avec un titre')
       if (attachmentsFile) throw createError(400, 'Un jeu de données incrémental ne peut pas être créé avec des pièces jointes')
@@ -654,7 +680,7 @@ router.post('', beforeUpload, checkStorage(true, true), filesUtils.uploadFile(),
       // but this way everything will be initialized (journal, index)
       dataset.status = 'analyzed'
       const baseId = slug(req.body.title).toLowerCase()
-      await datasetUtils.insertWithBaseId(db, dataset, baseId)
+      await datasetUtils.insertWithBaseId(db, dataset, baseId, res)
       await restDatasetsUtils.initDataset(db, dataset)
       await db.collection('datasets').updateOne({ id: dataset.id }, { $set: { status: 'analyzed' } })
     } else if (req.body.isMetaOnly) {
@@ -665,7 +691,7 @@ router.post('', beforeUpload, checkStorage(true, true), filesUtils.uploadFile(),
       }
       dataset = await initNew(db, req)
       const baseId = slug(req.body.title).toLowerCase()
-      await datasetUtils.insertWithBaseId(db, dataset, baseId)
+      await datasetUtils.insertWithBaseId(db, dataset, baseId, res)
     } else {
       throw createError(400, 'Un jeu de données doit être initialisé avec un fichier ou déclaré "virtuel" ou "incrémental" ou "métadonnées"')
     }
@@ -742,7 +768,7 @@ const updateDataset = asyncWrap(async (req, res) => {
       res.writeHeader(req.isNewDataset ? 201 : 200, { 'Content-Type': 'application/json' })
       res.write(' ')
 
-      dataset = await setFileInfo(db, datasetFile, attachmentsFile, { ...dataset, ...req.body }, req.query.draft === 'true')
+      dataset = await setFileInfo(db, datasetFile, attachmentsFile, { ...dataset, ...req.body }, req.query.draft === 'true', res)
       if (req.query.skipAnalysis === 'true') req.body.status = 'analyzed'
     } else if (dataset.isVirtual) {
       const { isVirtual, updatedBy, updatedAt, ...patch } = req.body
@@ -789,8 +815,10 @@ const updateDataset = asyncWrap(async (req, res) => {
         req.query.draft === 'true' ? datasetUtils.mergeDraft({ ...dataset }) : dataset,
         { type: 'data-updated' }, 'dataset')
     }
-    await datasetUtils.updateStorage(db, dataset)
-    await syncRemoteService(db, dataset)
+    await Promise.all([
+      datasetUtils.updateStorage(db, dataset),
+      syncRemoteService(db, dataset)
+    ])
     res.status(req.isNewDataset ? 201 : 200).send(clean(req.publicBaseUrl, dataset, null, req.query.draft === 'true'))
   } catch (err) {
     // Wrapped the whole thing in a try/catch to remove files in case of failure
@@ -800,11 +828,11 @@ const updateDataset = asyncWrap(async (req, res) => {
     throw err
   }
 }, { keepalive: true })
-router.post('/:datasetId', attemptInsert, readDataset(['finalized', 'error']), permissions.middleware('writeData', 'write'), checkStorage(true, true), filesUtils.uploadFile(), filesUtils.fixFormBody(validatePost), updateDataset)
-router.put('/:datasetId', attemptInsert, readDataset(['finalized', 'error']), permissions.middleware('writeData', 'write'), checkStorage(true, true), filesUtils.uploadFile(), filesUtils.fixFormBody(validatePost), updateDataset)
+router.post('/:datasetId', lockDataset(), attemptInsert, readDataset(['finalized', 'error']), permissions.middleware('writeData', 'write'), checkStorage(true, true), filesUtils.uploadFile(), filesUtils.fixFormBody(validatePost), updateDataset)
+router.put('/:datasetId', lockDataset(), attemptInsert, readDataset(['finalized', 'error']), permissions.middleware('writeData', 'write'), checkStorage(true, true), filesUtils.uploadFile(), filesUtils.fixFormBody(validatePost), updateDataset)
 
 // validate the draft
-router.post('/:datasetId/draft', readDataset(['finalized'], true), permissions.middleware('validateDraft', 'write'), asyncWrap(async (req, res, next) => {
+router.post('/:datasetId/draft', lockDataset(), readDataset(['finalized'], true), permissions.middleware('validateDraft', 'write'), asyncWrap(async (req, res, next) => {
   const db = req.app.get('db')
   if (!req.dataset.draft) {
     return res.status(409).send('Le jeu de données n\'est pas en état brouillon')
@@ -892,7 +920,7 @@ router.post('/:datasetId/draft', readDataset(['finalized'], true), permissions.m
 }))
 
 // cancel the draft
-router.delete('/:datasetId/draft', readDataset(['finalized', 'error'], true), permissions.middleware('cancelDraft', 'write'), asyncWrap(async (req, res, next) => {
+router.delete('/:datasetId/draft', lockDataset(), readDataset(['finalized', 'error'], true), permissions.middleware('cancelDraft', 'write'), asyncWrap(async (req, res, next) => {
   const db = req.app.get('db')
   if (!req.dataset.draft) {
     return res.status(409).send('Le jeu de données n\'est pas en état brouillon')

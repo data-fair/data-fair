@@ -35,7 +35,7 @@ module.exports = {
     }
   },
   worker: {
-    interval: 100,
+    interval: 10,
     inactiveInterval: 0,
     releaseInterval: 0,
     concurrency: 1,
@@ -47,6 +47,10 @@ module.exports = {
   locks: {
     // in seconds
     ttl: 0.1
+  },
+  datasetStateRetries: {
+    nb: 4,
+    interval: 10
   },
   defaultRemoteKey: {
     in: 'header',

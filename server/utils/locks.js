@@ -1,6 +1,10 @@
 const { nanoid } = require('nanoid')
 const config = require('config')
+const debug = require('debug')('locks')
+
 const pid = nanoid()
+
+debug('locks with pid', pid)
 
 let interval
 exports.init = async db => {
@@ -19,11 +23,13 @@ exports.init = async db => {
   }, (config.locks.ttl / 2) * 1000)
 }
 
-exports.stop = () => {
+exports.stop = async (db) => {
   clearInterval(interval)
+  await db.collection('locks').deleteMany({ pid })
 }
 
 exports.acquire = async (db, _id) => {
+  debug('acquire', _id)
   const locks = db.collection('locks')
   try {
     await locks.insertOne({ _id, pid })
@@ -33,15 +39,17 @@ exports.acquire = async (db, _id) => {
       await locks.deleteOne({ _id, pid })
       throw err
     }
+    debug('acquire ok', _id)
     return true
   } catch (err) {
     if (err.code !== 11000) throw err
     // duplicate means the lock was already acquired
+    debug('acquire ko', _id)
     return false
   }
 }
 
 exports.release = async (db, _id) => {
-  const locks = db.collection('locks')
-  await locks.deleteOne({ _id, pid })
+  debug('release', _id)
+  await db.collection('locks').deleteOne({ _id, pid })
 }

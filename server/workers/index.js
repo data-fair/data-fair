@@ -26,7 +26,7 @@ let stopped = false
 const promisePool = []
 
 // Hooks for testing
-const hooks = {}
+let hooks = {}
 exports.hook = (key, delay = 10000, message = 'time limit on worker hook') => {
   const promise = new Promise((resolve, reject) => {
     hooks[key] = { resolve, reject }
@@ -36,13 +36,9 @@ exports.hook = (key, delay = 10000, message = 'time limit on worker hook') => {
   return Promise.race([promise, timeoutPromise])
 }
 // clear also for testing
-exports.clear = () => {
-  for (let i = 0; i < config.worker.concurrency; i++) {
-    if (promisePool[i]) {
-      promisePool[i].catch(() => {})
-      delete promisePool[i]
-    }
-  }
+exports.clear = async () => {
+  await Promise.all(promisePool.filter(p => !!p))
+  hooks = {}
 }
 
 /* eslint no-unmodified-loop-condition: 0 */

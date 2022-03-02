@@ -34,6 +34,7 @@ describe('REST datasets', () => {
       title: 'rest1',
       schema: [{ key: 'attr1', type: 'string', readOnly: true }, { key: 'attr2', type: 'string' }]
     })
+    await workers.hook('finalizer/rest1')
     res = await ax.post('/api/v1/datasets/rest1/lines', { attr1: 'test1', attr2: 'test1' })
     assert.equal(res.status, 201)
     assert.ok(res.data._id)

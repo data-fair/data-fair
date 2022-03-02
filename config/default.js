@@ -161,6 +161,10 @@ module.exports = {
     // in seconds
     ttl: 60
   },
+  datasetStateRetries: {
+    nb: 10,
+    interval: 400
+  },
   cache: {
     // set cache-control max-age for public GET endpoints (in seconds)
     publicMaxAge: 20,
