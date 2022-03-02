@@ -131,9 +131,6 @@ module.exports = {
     inactiveInterval: 4000,
     // delay of inactivity before we consider the worker as sleeping
     inactivityDelay: 60000,
-    // interval before releasing the lock on a resource after working on it
-    // mostly useful in case of bug where we iterate on the same resource over and over
-    releaseInterval: 1000,
     concurrency: 4,
     spawnTask: true
   },
@@ -162,8 +159,8 @@ module.exports = {
     ttl: 60
   },
   datasetStateRetries: {
-    nb: 10,
-    interval: 400
+    interval: 400,
+    nb: 10
   },
   cache: {
     // set cache-control max-age for public GET endpoints (in seconds)

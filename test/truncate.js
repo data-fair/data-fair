@@ -10,6 +10,7 @@ describe('truncate', () => {
       title: 'truncate1',
       schema: [{ key: 'str', type: 'string' }]
     })
+    await workers.hook('finalizer/truncate1')
     await ax.post('/api/v1/datasets/truncate1/_bulk_lines', [
       { str: 'bla' },
       { str: 'blablabla' }

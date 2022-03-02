@@ -100,10 +100,6 @@ exports.start = async (app) => {
     // always empty the slot after the promise is finished
     promisePool[freeSlot].finally(() => {
       promisePool[freeSlot] = null
-      // we release the slot right away, but we do not release the lock on the resource
-      // this is to prevent working very fast on the same resource in series
-      debugLoop('release resource after delay', config.worker.releaseInterval)
-      setTimeout(() => locks.release(db, `${type}:${resource.id}`), config.worker.releaseInterval)
     })
   }
 }
@@ -112,9 +108,6 @@ exports.start = async (app) => {
 exports.stop = async () => {
   stopped = true
   await Promise.all(promisePool.filter(p => !!p))
-  if (config.worker.releaseInterval) {
-    await new Promise(resolve => setTimeout(resolve, config.worker.releaseInterval))
-  }
 }
 
 // Filters to select eligible datasets or applications for processing
@@ -233,14 +226,12 @@ async function iter (app, resource, type) {
     }
 
     const newResource = await app.get('db').collection(type + 's').findOne({ id: resource.id })
+    if (task.eventsPrefix && newResource) {
+      await journals.log(app, resource.draftReason ? datasetUtils.mergeDraft({ ...newResource }) : newResource, { type: task.eventsPrefix + '-end' }, type, noStoreEvent)
+    }
+    await locks.release(db, `${type}:${resource.id}`)
     if (hooks[taskKey]) hooks[taskKey].resolve(JSON.parse(JSON.stringify(newResource)))
     if (hooks[taskKey + '/' + resource.id]) hooks[taskKey + '/' + resource.id].resolve(JSON.parse(JSON.stringify(newResource)))
-    if (task.eventsPrefix && newResource) {
-      if (resource.draftReason) {
-        datasetUtils.mergeDraft(newResource)
-      }
-      await journals.log(app, newResource, { type: task.eventsPrefix + '-end' }, type, noStoreEvent)
-    }
   } catch (err) {
     // Build back the original error message from the stderr of the child process
     const errorMessage = []
@@ -262,11 +253,13 @@ async function iter (app, resource, type) {
       await journals.log(app, resource, { type: 'error', data: errorMessage.join('\n') }, type)
       await app.get('db').collection(type + 's').updateOne({ id: resource.id }, { $set: { [resource.draftReason ? 'draft.status' : 'status']: 'error' } })
       resource.status = 'error'
+      await locks.release(db, `${type}:${resource.id}`)
       if (hooks[taskKey]) hooks[taskKey].reject({ resource, message: errorMessage.join('\n') })
       if (hooks[taskKey + '/' + resource.id]) hooks[taskKey + '/' + resource.id].reject({ resource, message: errorMessage.join('\n') })
       if (hooks['finalizer/' + resource.id]) hooks['finalizer/' + resource.id].reject({ resource, message: errorMessage.join('\n') })
     } else {
       console.warn(`failure in worker ${taskKey} - ${type}`, err)
+      await locks.release(db, `${type}:${resource.id}`)
     }
   }
 }

@@ -370,6 +370,7 @@ describe('REST datasets', () => {
       rest: { history: true },
       schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }]
     })
+    await workers.hook('finalizer/resthist')
     res = await ax.post('/api/v1/datasets/resthist/lines', { _id: 'id1', attr1: 'test1', attr2: 'test1' })
     assert.equal(res.data._id, 'id1')
     await workers.hook('finalizer/resthist')
