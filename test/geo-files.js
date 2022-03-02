@@ -74,7 +74,7 @@ describe('geo files support', () => {
   })
 
   it('Log error for geojson with broken feature', async () => {
-  // Send dataset
+    // Send dataset
     const datasetFd = fs.readFileSync('./test/resources/geo/geojson-broken.geojson')
     const form = new FormData()
     form.append('file', datasetFd, 'geojson-example.geojson')

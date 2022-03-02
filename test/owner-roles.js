@@ -5,7 +5,7 @@ describe('owner roles', () => {
   it('user can do everything in his own account', async () => {
     const dataset = (await global.ax.dmeadus.post('/api/v1/datasets', { isRest: true, title: 'A dataset' })).data
     assert.equal(dataset.owner.name, 'Danna Meadus')
-    await workers.hook('indexer/' + dataset.id)
+    await workers.hook('finalizer/' + dataset.id)
     await global.ax.dmeadus.get(`/api/v1/datasets/${dataset.id}`)
     await global.ax.dmeadus.get(`/api/v1/datasets/${dataset.id}/lines`)
     await global.ax.dmeadus.get(`/api/v1/datasets/${dataset.id}/permissions`)
@@ -22,7 +22,7 @@ describe('owner roles', () => {
   it('organization admin can do everything', async () => {
     const dataset = (await global.ax.dmeadusOrg.post('/api/v1/datasets', { isRest: true, title: 'A dataset' })).data
     assert.equal(dataset.owner.name, 'Fivechat')
-    await workers.hook('indexer/' + dataset.id)
+    await workers.hook('finalizer/' + dataset.id)
     await global.ax.dmeadusOrg.get(`/api/v1/datasets/${dataset.id}`)
     await global.ax.dmeadusOrg.get(`/api/v1/datasets/${dataset.id}/lines`)
     await global.ax.dmeadusOrg.delete(`/api/v1/datasets/${dataset.id}`)
@@ -41,7 +41,7 @@ describe('owner roles', () => {
     // can create a dataset and use it, but not delete it or administrate it
     const dataset = (await global.ax.ngernier4Org.post('/api/v1/datasets', { isRest: true, title: 'A dataset' })).data
     assert.equal(dataset.owner.name, 'Fivechat')
-    await workers.hook('indexer/' + dataset.id)
+    await workers.hook('finalizer/' + dataset.id)
     await global.ax.ngernier4Org.get(`/api/v1/datasets/${dataset.id}`)
     await global.ax.ngernier4Org.get(`/api/v1/datasets/${dataset.id}/lines`)
     try {
@@ -77,58 +77,44 @@ describe('owner roles', () => {
   })
 
   it('organization user has even more limited capabilities', async () => {
-    try {
-      await global.ax.bhazeldean7Org.post('/api/v1/datasets', { isRest: true, title: 'A dataset' })
-      assert.fail()
-    } catch (err) {
+    await assert.rejects(global.ax.bhazeldean7Org.post('/api/v1/datasets', { isRest: true, title: 'A dataset' }), (err) => {
       assert.equal(err.status, 403)
-    }
+      return true
+    })
     const dataset = (await global.ax.dmeadusOrg.post('/api/v1/datasets', { isRest: true, title: 'A dataset' })).data
     assert.equal(dataset.owner.name, 'Fivechat')
-    await workers.hook('indexer/' + dataset.id)
+    await workers.hook('finalizer/' + dataset.id)
     await global.ax.bhazeldean7Org.get(`/api/v1/datasets/${dataset.id}`)
     await global.ax.bhazeldean7Org.get(`/api/v1/datasets/${dataset.id}/lines`)
-    try {
-      await global.ax.bhazeldean7Org.get(`/api/v1/datasets/${dataset.id}/permissions`)
-      assert.fail()
-    } catch (err) {
+    await assert.rejects(global.ax.bhazeldean7Org.get(`/api/v1/datasets/${dataset.id}/permissions`), (err) => {
       assert.equal(err.status, 403)
-    }
-    try {
-      await global.ax.bhazeldean7Org.get(`/api/v1/datasets/${dataset.id}/journal`)
-      assert.fail()
-    } catch (err) {
+      return true
+    })
+    await assert.rejects(global.ax.bhazeldean7Org.get(`/api/v1/datasets/${dataset.id}/journal`), (err) => {
       assert.equal(err.status, 403)
-    }
-    try {
-      await global.ax.bhazeldean7Org.delete(`/api/v1/datasets/${dataset.id}`)
-      assert.fail()
-    } catch (err) {
+      return true
+    })
+    await assert.rejects(global.ax.bhazeldean7Org.delete(`/api/v1/datasets/${dataset.id}`), (err) => {
       assert.equal(err.status, 403)
-    }
+      return true
+    })
 
-    try {
-      await global.ax.bhazeldean7Org.post('/api/v1/datasets', { isRest: true, title: 'A dataset' })
-      assert.fail()
-    } catch (err) {
+    await assert.rejects(global.ax.bhazeldean7Org.post('/api/v1/datasets', { isRest: true, title: 'A dataset' }), (err) => {
       assert.equal(err.status, 403)
-    }
+      return true
+    })
     const application = (await global.ax.dmeadusOrg.post('/api/v1/applications', { title: 'An application', url: 'http://monapp1.com/' })).data
     await global.ax.bhazeldean7Org.get(`/api/v1/applications/${application.id}`)
-    try {
-      await global.ax.bhazeldean7Org.delete(`/api/v1/applications/${application.id}`)
-      assert.fail()
-    } catch (err) {
+    await assert.rejects(global.ax.bhazeldean7Org.delete(`/api/v1/applications/${application.id}`), (err) => {
       assert.equal(err.status, 403)
-    }
+      return true
+    })
 
     // cannot create a catalog
-    try {
-      await global.ax.bhazeldean7Org.post('/api/v1/catalogs', {})
-      assert.fail()
-    } catch (err) {
+    await assert.rejects(global.ax.bhazeldean7Org.post('/api/v1/catalogs', {}), (err) => {
       assert.equal(err.status, 403)
-    }
+      return true
+    })
   })
 
   it('departments can be used to restrict contrib capabilities', async () => {
@@ -140,27 +126,21 @@ describe('owner roles', () => {
     await global.ax.dmeadusOrg.get(`/api/v1/datasets/${dataset.id}`)
     await global.ax.dmeadusOrg.patch(`/api/v1/datasets/${dataset.id}`, { description: 'desc' })
     // outside user -> ko
-    try {
-      await global.ax.ddecruce5.get(`/api/v1/datasets/${dataset.id}`)
-      assert.fail()
-    } catch (err) {
+    await assert.rejects(global.ax.ddecruce5.get(`/api/v1/datasets/${dataset.id}`), (err) => {
       assert.equal(err.status, 403)
-    }
+      return true
+    })
     // contrib from any department is demoted to user as long as the resource does not belong to any department
     await global.ax.icarlens9Org.get(`/api/v1/datasets/${dataset.id}`)
-    try {
-      await global.ax.icarlens9Org.patch(`/api/v1/datasets/${dataset.id}`, { description: 'desc' })
-      assert.fail()
-    } catch (err) {
+    await assert.rejects(global.ax.icarlens9Org.patch(`/api/v1/datasets/${dataset.id}`, { description: 'desc' }), (err) => {
       assert.equal(err.status, 403)
-    }
+      return true
+    })
     await global.ax.ddecruce5Org.get(`/api/v1/datasets/${dataset.id}`)
-    try {
-      await global.ax.ddecruce5Org.patch(`/api/v1/datasets/${dataset.id}`, { description: 'desc' })
-      assert.fail()
-    } catch (err) {
+    await assert.rejects(global.ax.ddecruce5Org.patch(`/api/v1/datasets/${dataset.id}`, { description: 'desc' }), (err) => {
       assert.equal(err.status, 403)
-    }
+      return true
+    })
 
     // switch ownership to a specific department
     await global.ax.dmeadusOrg.put(`/api/v1/datasets/${dataset.id}/owner`, {
@@ -178,12 +158,10 @@ describe('owner roles', () => {
     await global.ax.ddecruce5Org.patch(`/api/v1/datasets/${dataset.id}`, { description: 'desc' })
     // contrib from wrong department -> read ok, write ko
     await global.ax.icarlens9Org.get(`/api/v1/datasets/${dataset.id}`)
-    try {
-      await global.ax.icarlens9Org.patch(`/api/v1/datasets/${dataset.id}`, { description: 'desc' })
-      assert.fail()
-    } catch (err) {
+    await assert.rejects(global.ax.icarlens9Org.patch(`/api/v1/datasets/${dataset.id}`, { description: 'desc' }), (err) => {
       assert.equal(err.status, 403)
-    }
+      return true
+    })
   })
 
   it('department restriction is automatically applied', async () => {
