@@ -69,7 +69,8 @@ ADD contract contract
 
 # Build UI
 ENV NODE_ENV production
-RUN npm run build
+RUN npm run build && \
+    rm -rf dist
 
 # Adding server files
 ADD server server
@@ -87,7 +88,6 @@ RUN du -sh *
 RUN npm prune --production
 RUN rm -rf node_modules/.cache
 RUN rm -rf public
-RUN rm -rf dist
 RUN rm -f package-lock.json
 RUN rm -rf patches
 RUN rm -rf test
