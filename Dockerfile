@@ -83,16 +83,9 @@ RUN npm run lint
 ADD test test
 RUN npm run test
 
-# Cleanup /webapp so it can be copied by next stage
-RUN du -sh *
+# Cleanup /webapp/node_modules so it can be copied by next stage
 RUN npm prune --production
 RUN rm -rf node_modules/.cache
-RUN rm -rf public
-RUN rm -f package-lock.json
-RUN rm -rf patches
-RUN rm -rf test
-RUN rm -rf data
-RUN du -sh *
 
 ##################################
 # Stage: main nodejs service stage
@@ -102,7 +95,17 @@ MAINTAINER "contact@koumoul.com"
 
 RUN apk add --no-cache dumb-init
 
-COPY --from=builder /webapp /webapp
+WORKDIR /webapp
+
+# We could copy /webapp whole, but this is better for layering / efficient cache use
+COPY --from=builder /webapp/node_modules /webapp/node_modules
+COPY --from=builder /webapp/package.json /webapp/package.json
+COPY --from=builder /webapp/nuxt-dist /webapp/nuxt-dist
+ADD nuxt.config.js nuxt.config.js
+ADD server server
+ADD config config
+ADD shared shared
+ADD contract contract
 
 # Adding licence, manifests, etc.
 ADD README.md BUILD.json* ./
@@ -110,7 +113,6 @@ ADD LICENSE .
 ADD nodemon.json .
 
 # configure node webapp environment
-WORKDIR /webapp
 ENV NODE_ENV production
 ENV DEBUG db,upgrade*
 # the following line would be a good practice
