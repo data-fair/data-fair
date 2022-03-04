@@ -44,8 +44,8 @@ RUN prepair --help
 
 RUN apk add --no-cache unzip
 
-############################
-# Stage: nodejs dependencies
+######################################
+# Stage: nodejs dependencies and build
 FROM nativedeps AS builder
 
 RUN apk add --no-cache python3 make g++ curl
@@ -89,7 +89,6 @@ RUN rm -rf node_modules/.cache
 
 ##################################
 # Stage: main nodejs service stage
-
 FROM nativedeps
 MAINTAINER "contact@koumoul.com"
 
@@ -103,6 +102,8 @@ COPY --from=builder /webapp/package.json /webapp/package.json
 COPY --from=builder /webapp/nuxt-dist /webapp/nuxt-dist
 ADD nuxt.config.js nuxt.config.js
 ADD server server
+ADD scripts scripts
+ADD upgrade upgrade
 ADD config config
 ADD shared shared
 ADD contract contract
