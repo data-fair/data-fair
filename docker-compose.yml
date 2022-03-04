@@ -4,7 +4,7 @@ services:
     profiles:
       - dev
       - test
-    image: koumoul/data-fair-elasticsearch:7.10.2
+    image: ghcr.io/data-fair/elasticsearch:7.17.1
     ports:
       - 9200:9200
       - 9300:9300
