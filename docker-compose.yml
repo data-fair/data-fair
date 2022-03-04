@@ -25,7 +25,7 @@ services:
     profiles:
       - dev
       - test
-    image: koumoul/simple-directory:master
+    image: ghcr.io/data-fair/simple-directory:master
     network_mode: host
     environment:
       - DEBUG=webhooks
