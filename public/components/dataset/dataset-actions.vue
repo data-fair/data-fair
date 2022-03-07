@@ -457,7 +457,6 @@ fr:
   selectFile: sélectionnez un fichier
   selectAttachmentsFile: sélectionnez un fichier zip de pièces jointes
   fileTooLarge: Le fichier est trop volumineux pour être importé
-  noSpaceLeft: Vous n'avez pas assez d'espace disponible pour ce fichier
   importError: "Erreur pendant l'import du fichier :"
   notifications: Notifications
   ok: ok
@@ -492,7 +491,6 @@ en:
   selectFile: select a file
   selectAttachmentsFile: select an attachments zip file
   fileTooLarge: The file is too large to be imported
-  noSpaceLeft: You don't have enough space left for this file
   importError: "Failure to import the file :"
   notifications: Notifications
   ok: ok
@@ -600,8 +598,6 @@ export default {
         const status = error.response && error.response.status
         if (status === 413) {
           eventBus.$emit('notification', { type: 'error', msg: this.$t('fileTooLarge') })
-        } else if (status === 429) {
-          eventBus.$emit('notification', { type: 'error', msg: this.$t('noSpaceLeft') })
         } else {
           eventBus.$emit('notification', { error, msg: this.$t('importError') })
         }
