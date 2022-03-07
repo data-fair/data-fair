@@ -94,6 +94,15 @@ describe('Extensions', () => {
     assert.ok(res.data.find(file => file.key === 'original'))
     assert.ok(res.data.find(file => file.key === 'full'))
     assert.equal(res.data.length, 2)
+
+    // remove the extension
+    res = await ax.patch(`/api/v1/datasets/${dataset.id}`, { extensions: [] })
+    assert.equal(res.status, 200)
+    await workers.hook(`finalizer/${dataset.id}`)
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/data-files`)
+    assert.equal(res.status, 200)
+    assert.ok(res.data.find(file => file.key === 'original'))
+    assert.ok(!res.data.find(file => file.key === 'full'))
   })
 
   it('Extend dataset that was previouly converted', async function () {

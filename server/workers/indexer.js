@@ -36,6 +36,14 @@ exports.process = async function (app, dataset) {
   const attachments = !!dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')
   const indexStream = es.indexStream({ esClient, indexName, dataset, attachments })
 
+  if (!dataset.extensions || dataset.extensions.filter(e => e.active).length === 0) {
+    if (dataset.file && await fs.pathExists(datasetUtils.fullFileName(dataset))) {
+      debug('Delete previously extended file')
+      await fs.remove(datasetUtils.fullFileName(dataset))
+      if (!dataset.draftReason) await datasetUtils.updateStorage(db, dataset, false, true)
+    }
+  }
+
   debug('Run index stream')
   let readStreams, writeStream
   const progress = taskProgress(app, dataset.id, exports.eventsPrefix, 100)

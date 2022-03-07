@@ -387,6 +387,7 @@ router.patch('/:datasetId', lockDataset((patch) => {
         await restDatasetsUtils.collection(db, req.dataset).updateMany({},
           { $unset: removedExtensions.reduce((a, re) => { a[extensions.getExtensionKey(re)] = ''; return a }, {}) }
         )
+        await datasetUtils.updateStorage(db, req.dataset)
       }
     }
   } else if (patch.projection && (!req.dataset.projection || patch.projection.code !== req.dataset.projection.code)) {
