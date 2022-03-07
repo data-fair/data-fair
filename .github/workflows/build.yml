@@ -8,10 +8,6 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        node-version: [16.13.x]
-        # See supported Node.js release schedule at https://nodejs.org/en/about/releases/
     steps:
     - name: Checkout git repository
       uses: actions/checkout@v2

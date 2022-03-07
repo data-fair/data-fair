@@ -98,7 +98,6 @@ WORKDIR /webapp
 
 # We could copy /webapp whole, but this is better for layering / efficient cache use
 COPY --from=builder /webapp/node_modules /webapp/node_modules
-COPY --from=builder /webapp/package.json /webapp/package.json
 COPY --from=builder /webapp/nuxt-dist /webapp/nuxt-dist
 ADD nuxt.config.js nuxt.config.js
 ADD server server
@@ -109,6 +108,7 @@ ADD shared shared
 ADD contract contract
 
 # Adding licence, manifests, etc.
+ADD package.json .
 ADD README.md BUILD.json* ./
 ADD LICENSE .
 ADD nodemon.json .

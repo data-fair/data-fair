@@ -169,6 +169,7 @@ exports.filter = function (user) {
 // Only operationId level : it is used only for creation of resources and
 // setting screen only set creation permissions at operationId level
 exports.canDoForOwner = function (owner, resourceType, operationClass, user) {
+  if (user && user.adminMode) return true
   const ownerClasses = getOwnerClasses(owner, user, resourceType)
   return ownerClasses && ownerClasses.includes(operationClass)
 }
