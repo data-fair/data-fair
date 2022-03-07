@@ -101,13 +101,13 @@ describe('Catalogs', () => {
     const catalog = { url: 'http://test-catalog2.com', title: 'Test catalog', apiKey: 'apiKey', type: 'udata' }
     let res = await ax.post('/api/v1/catalogs', catalog)
     assert.equal(res.status, 201)
-    assert.equal(res.data.id, 'test-catalog2.com')
+    assert.equal(res.data.id, 'test-catalog2com')
     res = await ax.post('/api/v1/catalogs', catalog)
     assert.equal(res.status, 201)
-    assert.equal(res.data.id, 'test-catalog2.com-2')
+    assert.equal(res.data.id, 'test-catalog2com-2')
     res = await ax.post('/api/v1/catalogs', catalog)
     assert.equal(res.status, 201)
-    assert.equal(res.data.id, 'test-catalog2.com-3')
+    assert.equal(res.data.id, 'test-catalog2com-3')
   })
 
   it('Use PUT to create', async () => {
