@@ -93,7 +93,7 @@ router.post('', asyncWrap(async (req, res) => {
   if (!validate(catalog)) return res.status(400).send(validate.errors)
 
   // Generate ids and try insertion until there is no conflict on id
-  const baseId = slug(catalog.url.replace('https://', '').replace('http://', ''), { lower: true })
+  const baseId = slug(catalog.url.replace('https://', '').replace('http://', ''), { lower: true, strict: true })
   catalog.id = baseId
   let insertOk = false
   let i = 1

@@ -532,7 +532,7 @@ const setFileInfo = async (db, file, attachmentsFile, dataset, draft, res) => {
 
   if (!dataset.id) {
     const baseTitle = dataset.title || path.parse(file.originalname).name.replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, ' ').split(/\s+/).join(' ')
-    const baseId = slug(baseTitle, { lower: true })
+    const baseId = slug(baseTitle, { lower: true, strict: true })
     dataset.id = baseId
     dataset.title = baseTitle
     let i = 1; let dbExists = false; let fileExists = false

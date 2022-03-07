@@ -80,7 +80,7 @@ exports.harvestDataset = async (catalog, datasetId, app) => {
     const date = moment().toISOString()
     const fileName = path.basename(url.parse(resource.url).pathname)
     const newDataset = {
-      id: `${catalog.id}-${slug(dataset.title, { lower: true })}-${slug(resource.title.split('.').shift(), { lower: true })}`,
+      id: `${catalog.id}-${slug(dataset.title, { lower: true, strict: true })}-${slug(resource.title.split('.').shift(), { lower: true, strict: true })}`,
       title: resource.title.split('.').shift(),
       owner: catalog.owner,
       permissions: [],

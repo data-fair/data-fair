@@ -110,7 +110,7 @@ router.post('', asyncWrap(async (req, res) => {
   // Generate ids and try insertion until there is no conflict on id
   const toks = application.url.split('/').filter(part => !!part)
   const lastUrlPart = toks[toks.length - 1]
-  const baseId = application.id || slug(application.title || application.applicationName || lastUrlPart, { lower: true })
+  const baseId = application.id || slug(application.title || application.applicationName || lastUrlPart, { lower: true, strict: true })
   application.id = baseId
   let insertOk = false
   let i = 1

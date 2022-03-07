@@ -54,7 +54,7 @@ async function initBaseApp (db, app) {
   const data = await htmlExtractor.extract(html)
   const patch = {
     meta: data.meta,
-    id: slug(app.url, { lower: true }),
+    id: slug(app.url, { lower: true, strict: true }),
     ...app
   }
 

@@ -147,12 +147,12 @@ router.post('', asyncWrap(async (req, res) => {
   if (!req.user) return res.status(401).send()
   if (!req.user.adminMode) return res.status(403).send()
   // if title is set, we build id from it
-  if (req.body.title && !req.body.id) req.body.id = slug(req.body.title, { lower: true })
+  if (req.body.title && !req.body.id) req.body.id = slug(req.body.title, { lower: true, strict: true })
   const service = initNew(req.body)
   if (!validate(service)) return res.status(400).send(validate.errors)
 
   // Generate ids and try insertion until there is no conflict on id
-  const baseId = service.id || slug(service.apiDoc.info['x-api-id'], { lower: true })
+  const baseId = service.id || slug(service.apiDoc.info['x-api-id'], { lower: true, strict: true })
   service.id = baseId
   let insertOk = false
   let i = 1

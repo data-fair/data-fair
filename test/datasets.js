@@ -127,11 +127,11 @@ describe('datasets', () => {
     const ax = global.ax.dmeadus
     const form = new FormData()
     form.append('file', datasetFd, 'dataset1.csv')
-    form.append('title', 'My title')
+    form.append('title', 'My title\'')
     const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
     assert.equal(res.status, 201)
     assert.equal(res.data.id, 'my-title')
-    assert.equal(res.data.title, 'My title')
+    assert.equal(res.data.title, 'My title\'')
     await workers.hook('finalizer/' + res.data.id)
   })
 
