@@ -2,6 +2,9 @@
 // by another (or the same) data-fair instance
 
 const assert = require('assert').strict
+
+const config = require('config')
+
 const workers = require('../server/workers')
 const testUtils = require('./resources/test-utils')
 
@@ -153,6 +156,49 @@ describe('Master data management', () => {
     await workers.hook('finalizer/slave')
     const results = (await ax.get('/api/v1/datasets/slave/lines')).data.results
     assert.equal(results[0]['_siret.extra'], 'Extra information')
+  })
+
+  it('manage query syntax errors', async () => {
+    config.worker.spawnTask = true
+
+    const ax = global.ax.superadmin
+
+    const { remoteService } = await initMaster(
+      ax,
+      [siretProperty, { key: 'extra', type: 'string' }],
+      [{
+        id: 'siret',
+        title: 'Fetch extra info from siret',
+        description: '',
+        input: [{ type: 'equals', property: siretProperty }]
+      }]
+    )
+
+    const items = [{ siret: 'TEST"SIRET*', extra: 'Extra information' }]
+    await ax.post('/api/v1/datasets/master/_bulk_lines', items.map(item => ({ _id: item.siret, ...item })))
+    await workers.hook('finalizer/master')
+
+    // create slave dataset
+    await ax.put('/api/v1/datasets/slave', {
+      isRest: true,
+      title: 'slave',
+      schema: [siretProperty],
+      extensions: [{
+        active: true,
+        remoteService: remoteService.id,
+        action: 'masterData_bulkSearch_siret',
+        select: ['extra']
+      }]
+    })
+    await workers.hook('finalizer/slave')
+    await ax.post('/api/v1/datasets/slave/_bulk_lines', [{ siret: 'test " failure' }].map(item => ({ _id: item.siret, ...item })))
+    await assert.rejects(workers.hook('finalizer/slave'), (err) => {
+      assert.ok(err.message.startsWith('Impossible d\'effectuer cette recherche'))
+      return true
+    })
+    const journal = (await ax.get('/api/v1/datasets/slave/journal')).data
+    assert.ok(journal[0].data.startsWith('Impossible d\'effectuer cette recherche'))
+    config.worker.spawnTask = false
   })
 
   it('should extend a geojson file from a master-data dataset', async () => {

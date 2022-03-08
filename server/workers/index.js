@@ -134,7 +134,7 @@ const typesFilters = () => ({
 async function iter (app, resource, type) {
   const db = app.get('db')
   let taskKey
-  let stderr = ''
+  let lastStderr = ''
   try {
     // if there is something to be done in the draft mode of the dataset, it is prioritary
     if (type === 'dataset' && resource.draft && resource.draft.status !== 'finalized' && resource.draft.status !== 'error') {
@@ -215,10 +215,13 @@ async function iter (app, resource, type) {
     if (config.worker.spawnTask) {
       // Run a task in a dedicated child process for  extra resiliency to fatal memory exceptions
       const spawnPromise = spawn('node', ['server', taskKey, type, resource.id], { env: { ...process.env, DEBUG: '', MODE: 'task', DATASET_DRAFT: '' + !!resource.draftReason } })
-      spawnPromise.childProcess.stdout.on('data', data => debug('[spawned task stdout] ' + data))
+      spawnPromise.childProcess.stdout.on('data', data => {
+        lastStderr = ''
+        debug('[spawned task stdout] ' + data)
+      })
       spawnPromise.childProcess.stderr.on('data', data => {
         debug('[spawned task stderr] ' + data)
-        stderr += data
+        lastStderr += data
       })
       await spawnPromise
     } else {
@@ -235,8 +238,8 @@ async function iter (app, resource, type) {
   } catch (err) {
     // Build back the original error message from the stderr of the child process
     const errorMessage = []
-    if (stderr) {
-      stderr.split('\n')
+    if (lastStderr) {
+      lastStderr.split('\n')
         .filter(line => !!line)
         .filter(line => !line.includes('Warning:'))
         .filter(line => !line.includes('--trace-warnings'))

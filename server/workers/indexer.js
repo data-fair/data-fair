@@ -12,6 +12,10 @@ const taskProgress = require('../utils/task-progress')
 exports.eventsPrefix = 'index'
 
 exports.process = async function (app, dataset) {
+  if (process.env.NODE_ENV === 'test' && dataset.id === 'trigger-test-error') {
+    throw new Error('This is a test error')
+  }
+
   const debug = require('debug')(`worker:indexer:${dataset.id}`)
 
   if (dataset.isVirtual) throw new Error('Un jeu de données virtuel ne devrait pas passer par l\'étape indexation.')

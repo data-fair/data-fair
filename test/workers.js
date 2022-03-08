@@ -124,7 +124,7 @@ describe('workers', () => {
     config.worker.spawnTask = false
   })
 
-  it('Manage failure in children processes', async function () {
+  it('Manage expected failure in children processes', async function () {
     config.worker.spawnTask = true
     const datasetFd = fs.readFileSync('./test/resources/geo/geojson-broken.geojson')
     const form = new FormData()
@@ -133,16 +133,25 @@ describe('workers', () => {
     let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
     assert.equal(res.status, 201)
     const dataset = res.data
-    try {
-      await workers.hook(`indexer/${dataset.id}`)
-      assert.fail()
-    } catch (err) {
-      // Check that there is an error message in the journal
-      res = await ax.get('/api/v1/datasets/' + dataset.id + '/journal')
-      assert.equal(res.status, 200)
-      assert.equal(res.data[0].type, 'error')
-      assert.ok(res.data[0].data.includes('100% des lignes sont en erreur'))
-    }
+    await assert.rejects(workers.hook(`indexer/${dataset.id}`), () => true)
+    // Check that there is an error message in the journal
+    res = await ax.get('/api/v1/datasets/' + dataset.id + '/journal')
+    assert.equal(res.status, 200)
+    assert.equal(res.data[0].type, 'error')
+    assert.ok(res.data[0].data.includes('100% des lignes sont en erreur'))
+    config.worker.spawnTask = false
+  })
+
+  it('Manage unexpected failure in children processes', async function () {
+    config.worker.spawnTask = true
+    const ax = global.ax.dmeadus
+    let res = await ax.post('/api/v1/datasets', { isRest: true, title: 'trigger test error' })
+    await assert.rejects(workers.hook('indexer/trigger-test-error'), () => true)
+    // Check that there is an error message in the journal
+    res = await ax.get('/api/v1/datasets/trigger-test-error/journal')
+    assert.equal(res.status, 200)
+    assert.equal(res.data[0].type, 'error')
+    assert.equal(res.data[0].data, 'This is a test error')
     config.worker.spawnTask = false
   })
 })
