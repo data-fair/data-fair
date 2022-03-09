@@ -18,6 +18,7 @@ const attachmentsUtils = require('./attachments')
 const findUtils = require('./find')
 const fieldsSniffer = require('./fields-sniffer')
 const esUtils = require('../utils/es')
+const { doc } = require('../../config/custom-environment-variables')
 
 const actions = ['create', 'update', 'patch', 'delete']
 
@@ -215,6 +216,8 @@ const applyTransactions = async (req, transacs, validate) => {
   return { results, bulkOpResult }
 }
 
+const baseSummary = { nbOk: 0, nbNotModified: 0, nbErrors: 0, nbCreated: 0, nbModified: 0, nbDeleted: 0, errors: [] }
+
 class TransactionStream extends Writable {
   constructor (options) {
     super({ objectMode: true })
@@ -337,6 +340,7 @@ exports.deleteLine = async (req, res, next) => {
   const line = (await applyTransactions(req, [{ _action: 'delete', _id: req.params.lineId }], compileSchema(req.dataset))).results[0]
   if (line._error) return res.status(line._status).send(line._error)
   await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { status: 'updated' } })
+  // TODO: delete the attachment if it is the primary key ?
   res.status(204).send()
   datasetUtils.updateStorage(db, req.dataset)
 }
@@ -403,7 +407,7 @@ exports.bulkLines = async (req, res, next) => {
     const contentType = req.get('Content-Type') && req.get('Content-Type').split(';')[0]
     parseStreams = datasetUtils.transformFileStreams(contentType || 'application/json', transactionSchema, null, {}, false, true)
   }
-  const summary = { nbOk: 0, nbNotModified: 0, nbErrors: 0, nbCreated: 0, nbModified: 0, nbDeleted: 0, errors: [] }
+  const summary = { ...baseSummary }
   const transactionStream = new TransactionStream({ req, validate, summary })
 
   // we try both to have a HTTP failure if the transactions are clearly badly formatted
@@ -438,10 +442,48 @@ exports.bulkLines = async (req, res, next) => {
   datasetUtils.updateStorage(db, req.dataset)
 
   for (const key in req.files) {
+    if (key === 'attachments') continue
     for (const file of req.files[key]) {
       await fs.unlink(file.path)
     }
   }
+}
+
+exports.syncAttachmentsLines = async (req, res, next) => {
+  const db = req.app.get('db')
+  const dataset = req.dataset
+  const validate = compileSchema(req.dataset)
+
+  const pathField = req.dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')
+  if (!pathField) {
+    throw createError(400, 'Le schéma ne prévoit pas de pièce jointe')
+  }
+  if (!dataset.primaryKey || !dataset.primaryKey.length === 1 || dataset.primaryKey[0] !== pathField.key) {
+    throw createError(400, 'Le schéma ne définit par le chemin de la pièce jointe comme clé primaire')
+  }
+
+  const files = await datasetUtils.lsAttachments(dataset)
+  const toDelete = await exports.collection(db, dataset)
+    .find({ [pathField.key]: { $nin: files } })
+    .limit(10000).project({ [pathField.key]: 1 }).toArray()
+
+  const filesStream = new Readable({ objectMode: true })
+  for (const file of files) {
+    filesStream.push({ [pathField.key]: file })
+  }
+  for (const doc of toDelete) {
+    filesStream.push({ ...doc, _action: 'delete' })
+  }
+  filesStream.push(null)
+
+  const summary = { ...baseSummary }
+  const transactionStream = new TransactionStream({ req, validate, summary })
+  await pump(filesStream, transactionStream)
+
+  await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { status: 'updated' } })
+  await datasetUtils.updateStorage(db, req.dataset)
+
+  res.send(summary)
 }
 
 exports.readLineRevisions = async (req, res, next) => {
@@ -549,7 +591,7 @@ exports.count = (db, dataset, filter) => {
 exports.applyTTL = async (app, dataset) => {
   const es = app.get('es')
   const query = `${dataset.rest.ttl.prop}:[* TO ${moment().subtract(dataset.rest.ttl.delay.value, dataset.rest.ttl.delay.unit).toISOString()}]`
-  const summary = { nbOk: 0, nbErrors: 0, errors: [] }
+  const summary = { ...baseSummary }
   await pump(
     new Readable({
       objectMode: true,

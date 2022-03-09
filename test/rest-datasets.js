@@ -1,3 +1,4 @@
+const path = require('path')
 const fs = require('fs-extra')
 const FormData = require('form-data')
 const moment = require('moment')
@@ -268,6 +269,64 @@ describe('REST datasets', () => {
     res = await ax.get('/api/v1/datasets/rest6/lines')
     assert.equal(res.data.total, 2)
     assert.equal(res.data.results.find(l => l._id === 'line1')['_file.content'], 'This is a test libreoffice file.')
+  })
+
+  it('Synchronize all lines with the content of the attachments directory', async () => {
+    const ax = await global.ax.ngernier4
+    let res = await ax.post('/api/v1/datasets', {
+      isRest: true,
+      title: 'restsync',
+      schema: [
+        { key: 'attachmentPath', type: 'string', 'x-refersTo': 'http://schema.org/DigitalDocument' }
+      ],
+      primaryKey: ['attachmentPath']
+    })
+    let dataset = res.data
+    await workers.hook('finalizer/restsync')
+
+    // Create a line with an attached file
+    const form = new FormData()
+    const attachmentsContent = fs.readFileSync('./test/resources/datasets/files.zip')
+    form.append('attachments', attachmentsContent, 'files.zip')
+    form.append('actions', Buffer.from(JSON.stringify([]), 'utf8'), 'actions.json')
+
+    res = await ax.post('/api/v1/datasets/restsync/_bulk_lines', form, {
+      headers: testUtils.formHeaders(form),
+      params: { lock: 'true' }
+    })
+    assert.equal(res.status, 200)
+    dataset = await workers.hook('finalizer/restsync')
+    const ls = await datasetUtils.lsAttachments(dataset)
+    assert.equal(ls.length, 2)
+
+    res = await ax.get('/api/v1/datasets/restsync/lines')
+    assert.equal(res.data.total, 0)
+
+    // should create 2 lines for the 2 uploaded attachments
+    res = await ax.post('/api/v1/datasets/restsync/_sync_attachments_lines', null, { params: { lock: 'true' } })
+    assert.equal(res.status, 200)
+    assert.equal(res.data.nbCreated, 2)
+    dataset = await workers.hook('finalizer/restsync')
+    res = await ax.get('/api/v1/datasets/restsync/lines')
+    assert.equal(res.data.total, 2)
+
+    // second sync should do noting
+    res = await ax.post('/api/v1/datasets/restsync/_sync_attachments_lines', null, { params: { lock: 'true' } })
+
+    assert.equal(res.status, 200)
+    assert.equal(res.data.nbCreated, 0)
+    assert.equal(res.data.nbNotModified, 2)
+    dataset = await workers.hook('finalizer/restsync')
+
+    // remove a file a resync, we sould have 1 line
+    await fs.remove(path.join(datasetUtils.attachmentsDir(dataset), 'test.odt'))
+    res = await ax.post('/api/v1/datasets/restsync/_sync_attachments_lines', null, { params: { lock: 'true' } })
+    assert.equal(res.status, 200)
+    assert.equal(res.data.nbCreated, 0)
+    assert.equal(res.data.nbDeleted, 1)
+    dataset = await workers.hook('finalizer/restsync')
+    res = await ax.get('/api/v1/datasets/restsync/lines')
+    assert.equal(res.data.total, 1)
   })
 
   it('Send bulk requests in ndjson file', async () => {
