@@ -30,9 +30,6 @@
     "env": {
       "node": true
     },
-    "plugins": [
-      "no-only-tests"
-    ],
     "extends": [
       "plugin:vue/essential",
       "eslint:recommended",

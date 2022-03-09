@@ -79,8 +79,8 @@ ADD upgrade upgrade
 
 # Check quality
 ADD .gitignore .gitignore
-RUN npm run lint
 ADD test test
+RUN npm run lint
 RUN npm run test
 
 # Cleanup /webapp/node_modules so it can be copied by next stage
