@@ -8,6 +8,7 @@ const testUtils = require('./resources/test-utils')
 
 const workers = require('../server/workers')
 const esUtils = require('../server/utils/es')
+const dataset = require('../contract/dataset')
 
 // Prepare mock for outgoing HTTP requests
 nock('http://test-catalog.com').persist()
@@ -460,5 +461,19 @@ other
     assert.equal(dataset.schema.length, 11)
     assert.equal(dataset.draft.extensions.length, 0)
     assert.equal(dataset.draft.schema.length, 4)
+  })
+
+  it.only('Delete a dataset in draft state', async () => {
+    const ax = global.ax.dmeadus
+
+    // Send dataset
+    const datasetFd = fs.readFileSync('./test/resources/datasets/dataset1.csv')
+    const form = new FormData()
+    form.append('file', datasetFd, 'dataset.csv')
+    let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form), params: { draft: true } })
+    assert.equal(res.status, 201)
+    const dataset = await workers.hook('finalizer/' + res.data.id)
+
+    res = await ax.delete('/api/v1/datasets/' + dataset.id)
   })
 })
