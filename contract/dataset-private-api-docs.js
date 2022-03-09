@@ -387,7 +387,7 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
           'x-permissionClass': 'superadmin',
           responses: {
             200: {
-              description: 'accusé de réception de la demande reindexation',
+              description: 'accusé de réception de la demande de reindexation',
               content: {
                 'application/json': {}
               }
@@ -402,7 +402,7 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
           'x-permissionClass': 'superadmin',
           responses: {
             200: {
-              description: 'accusé de réception de la demande re-finalisation',
+              description: 'accusé de réception de la demande de re-finalisation',
               content: {
                 'application/json': {}
               }
@@ -411,6 +411,23 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
         }
       }
     })
+  }
+  if (dataset.isRest && user.adminMode) {
+    api.paths['/_sync_attachments_lines'] = {
+      post: {
+        summary: 'Re-synchroniser les lignes du jeux de données avec les pièces jointes présentes',
+        tags: ['Administration'],
+        'x-permissionClass': 'superadmin',
+        responses: {
+          200: {
+            description: 'accusé de réception de la demande re-synchronisation',
+            content: {
+              'application/json': {}
+            }
+          }
+        }
+      }
+    }
   }
 
   if (dataset.isMetaOnly) {
