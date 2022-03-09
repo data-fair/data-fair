@@ -463,7 +463,7 @@ other
     assert.equal(dataset.draft.schema.length, 4)
   })
 
-  it.only('Delete a dataset in draft state', async () => {
+  it('Delete a dataset in draft state', async () => {
     const ax = global.ax.dmeadus
 
     // Send dataset
