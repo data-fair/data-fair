@@ -6,7 +6,7 @@ description : Datasets
 published: false
 ---
 
-Sur Data Fair, un jeu de données correspond à un [fichier](./user-guide/file-formats) que vous avez chargé ou à un [jeu virtuel ou un jeu incrémental](./user-guide/import-dataset) dont vous avez renseigné les meta-données.  
+Sur Data Fair, un jeu de données correspond à un [fichier](./user-guide/file-formats) que vous avez chargé ou à un [jeu virtuel ou un jeu éditable](./user-guide/import-dataset) dont vous avez renseigné les meta-données.  
 Par défaut, toutes les données que vous chargez sont privées, il n'y a que le compte sur lequel vous avez chargé les données qui a accès aux données.
 
 Vous pouvez travailler à plusieurs sur des jeux de données en utilisant une [organisation](./user-guide/organisation).

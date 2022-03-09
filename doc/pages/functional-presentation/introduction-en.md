@@ -34,7 +34,7 @@ The three central concepts are: **datasets**, **remote services** and **applicat
 
 The user can semanticize the fields of the **data sets**, for example by determining that a column containing data on 5 digits is a field of the Postal Code type. This semantization allows 2 things: the **data can be enriched** and used for certain processing if the appropriate **remote services** are available, and the data **can be used in applications** adapted to their concepts.
 
-In addition to file-based **datasets**, Data Fair also allows the creation of incremental **datasets** which are editable in real time and also virtual **datasets** which are configurable views of one or various **datasets**.
+In addition to file-based **datasets**, Data Fair also allows the creation of editable **datasets** which are editable in real time and also virtual **datasets** which are configurable views of one or various **datasets**.
 
 **Remote Services** provide functionality in the form of Web APIs external to Data Fair that comply with OpenAPI 3.0 interoperability rules.
 One of Data Fair's goals is to allow non-IT people to easily use third-party APIs with their own data. There are 2 ways to exploit **remote services**: the user can use them to add columns to his **datasets** in delayed time (eg geocoding) and **applications** can exploit them in real time (eg map backgrounds).

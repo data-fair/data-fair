@@ -46,7 +46,7 @@ Ce mode est disponible dans le menu en haut à droite sur Data Fair.
 Le jeu de donnée importé avec ses concepts renseignés peut servir de donnée de référence pour des **recherches unitaires** ou/et pour des **enrichissements en masse**.  
 
 Les **recherches unitaires** vont vous permettre de valider un code dans vos [jeux de données incrémentaux](./user-guide/import-dataset).  
-Si votre jeu de données incrémental possède le même concept qu'un de vos jeux de données référence, lorsque qu'une valeur sera renseigné pour cette colonne, l'utilisateur aura des propositions valides de ce concept.
+Si votre jeu de données éditable possède le même concept qu'un de vos jeux de données référence, lorsque qu'une valeur sera renseigné pour cette colonne, l'utilisateur aura des propositions valides de ce concept.
 
 Les **enrichissements en masse** vont vous permettre de réaliser une jointure à froid et d'importer des colonnes du jeu de référence vers votre jeu de données.
 

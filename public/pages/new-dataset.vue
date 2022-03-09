@@ -15,13 +15,13 @@ fr:
   datasets: Jeux de données
   file: Importer un fichier
   virtual: Créer un jeu virtuel
-  rest: Créer un jeu incrémental
+  rest: Créer un jeu éditable
   metaOnly: Créer un jeu de métadonnées seules
 en:
   datasets: Datasets
   file: Import a file
   virtual: Create a virtual dataset
-  rest: Create an incremental dataset
+  rest: Create an editable dataset
   metaOnly: Create a metadata only dataset
 </i18n>
 

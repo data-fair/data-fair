@@ -81,7 +81,7 @@ fr:
   createDataset: CRÉER UN JEU DE DONNÉES
   file: Fichier
   fileTooltip: Chargez un fichier parmi les nombreux formats supportés.
-  inc: Incrémental
+  inc: Éditable
   incTooltip: Créez un jeu de données dont le contenu sera saisissable directement avec un formulaire en ligne.
   virtual: Virtuel
   virtualTooltip: Créez une vue virtuelle réduite sur un ou plusieurs jeux de données.
@@ -91,7 +91,7 @@ en:
   createDataset: CREATE A DATASET
   file: File
   fileTooltip: Load a file among the many supported formats.
-  inc: Incremental
+  inc: Editable
   incTooltip: Create a dataset whose content will be writable directly through a form.
   virtual: Virtual
   virtualTooltip: Create a restricted virtual vue over one or more datasets.

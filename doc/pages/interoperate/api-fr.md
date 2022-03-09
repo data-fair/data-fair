@@ -82,9 +82,9 @@ export DATASET_ID=identifiant que vous venez de recevoir
 
 Si vous visitez la page de ce jeu de données vous verrez un onglet "Fichiers" supplémentaire qui permet de lister les pièces jointes et d'effectuer des recherches dans leur contenu. En effectuant une requête basique sur le jeu de données vous pouvez constater l'ajout de champs \_file.\* qui sont issus de l'analyse du contenu des pièces jointes.
 
-### Jeu de données incrémental
+### Jeu de données éditable
 
-Créez un jeu de données incrémental vide avec un schéma minimaliste. Notez l'attribut "isRest" qui est la condition pour créer ce type de jeu de données :
+Créez un jeu de données éditable vide avec un schéma minimaliste. Notez l'attribut "isRest" qui est la condition pour créer ce type de jeu de données :
 
 ```sh
 curl -v --header "x-apiKey: $API_KEY" --header "Content-Type: application/json" $Data Fair_URL/api/v1/datasets --data '{
@@ -120,9 +120,9 @@ Vérifiez la donnée :
 curl -v --header "x-apiKey: $API_KEY" $Data Fair_URL/api/v1/datasets/$DATASET_ID/lines
 ```
 
-### Jeu de données incrémental avec pièces jointes
+### Jeu de données éditable avec pièces jointes
 
-Créez un jeu de données incrémental vide avec un schéma qui contient un champ type *pièces jointes* :
+Créez un jeu de données éditable vide avec un schéma qui contient un champ type *pièces jointes* :
 
 ```sh
 curl -v --header "x-apiKey: $API_KEY" --header "Content-Type: application/json" $Data Fair_URL/api/v1/datasets --data '{

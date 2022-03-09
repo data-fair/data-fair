@@ -669,8 +669,8 @@ router.post('', beforeUpload, checkStorage(true, true), filesUtils.uploadFile(),
       const baseId = slug(req.body.title).toLowerCase()
       await datasetUtils.insertWithBaseId(db, dataset, baseId, res)
     } else if (req.body.isRest) {
-      if (!req.body.title) throw createError(400, 'Un jeu de données incrémental doit être créé avec un titre')
-      if (attachmentsFile) throw createError(400, 'Un jeu de données incrémental ne peut pas être créé avec des pièces jointes')
+      if (!req.body.title) throw createError(400, 'Un jeu de données éditable doit être créé avec un titre')
+      if (attachmentsFile) throw createError(400, 'Un jeu de données éditable ne peut pas être créé avec des pièces jointes')
       if (!validatePost(req.body)) {
         throw createError(400, JSON.stringify(validatePost.errors))
       }
@@ -694,7 +694,7 @@ router.post('', beforeUpload, checkStorage(true, true), filesUtils.uploadFile(),
       const baseId = slug(req.body.title).toLowerCase()
       await datasetUtils.insertWithBaseId(db, dataset, baseId, res)
     } else {
-      throw createError(400, 'Un jeu de données doit être initialisé avec un fichier ou déclaré "virtuel" ou "incrémental" ou "métadonnées"')
+      throw createError(400, 'Un jeu de données doit être initialisé avec un fichier ou déclaré "virtuel" ou "éditable" ou "métadonnées"')
     }
 
     delete dataset._id
@@ -744,13 +744,13 @@ const updateDataset = asyncWrap(async (req, res) => {
     // After uploadFile, req.files contains the metadata of an uploaded file, and req.body the content of additional text fields
     const datasetFile = req.files.find(f => f.fieldname === 'file' || f.fieldname === 'dataset')
     const attachmentsFile = req.files.find(f => f.fieldname === 'attachments')
-    if (!datasetFile && !attachmentsFile && !req.dataset.isVirtual && !req.dataset.isRest && !req.dataset.isMetaOnly) throw createError(400, 'Un jeu de données doit être initialisé avec un fichier ou déclaré "virtuel" ou "incrémental" ou "métadonnées seules"')
-    if (datasetFile && (req.dataset.isVirtual || req.dataset.isRest || req.dataset.isMetaOnly)) throw createError(400, 'Un jeu de données est soit initialisé avec un fichier soit déclaré "virtuel" ou "incrémental" ou "métadonnées seules"')
+    if (!datasetFile && !attachmentsFile && !req.dataset.isVirtual && !req.dataset.isRest && !req.dataset.isMetaOnly) throw createError(400, 'Un jeu de données doit être initialisé avec un fichier ou déclaré "virtuel" ou "éditable" ou "métadonnées seules"')
+    if (datasetFile && (req.dataset.isVirtual || req.dataset.isRest || req.dataset.isMetaOnly)) throw createError(400, 'Un jeu de données est soit initialisé avec un fichier soit déclaré "virtuel" ou "éditable" ou "métadonnées seules"')
     if (req.dataset.isVirtual && !req.dataset.title) throw createError(400, 'Un jeu de données virtuel doit être créé avec un titre')
-    if (req.dataset.isRest && !req.dataset.title) throw createError(400, 'Un jeu de données incrémental doit être créé avec un titre')
+    if (req.dataset.isRest && !req.dataset.title) throw createError(400, 'Un jeu de données éditable doit être créé avec un titre')
     if (req.dataset.isMetaOnly && !req.dataset.title) throw createError(400, 'Un jeu de données métadonnées seules doit être créé avec un titre')
     if (req.dataset.isVirtual && attachmentsFile) throw createError(400, 'Un jeu de données virtuel ne peut pas avoir des pièces jointes')
-    if (req.dataset.isRest && attachmentsFile) throw createError(400, 'Un jeu de données incrémental ne peut pas être créé avec des pièces jointes')
+    if (req.dataset.isRest && attachmentsFile) throw createError(400, 'Un jeu de données éditable ne peut pas être créé avec des pièces jointes')
     if (req.dataset.isMetaOnly && attachmentsFile) throw createError(400, 'Un jeu de données métadonnées seules ne peut pas être créé avec des pièces jointes')
 
     let dataset = req.dataset

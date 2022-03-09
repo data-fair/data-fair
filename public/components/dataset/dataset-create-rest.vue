@@ -45,7 +45,7 @@
 
 <i18n lang="yaml">
 fr:
-  message: Un jeu de données incrémental est créé vide sans fichier de données et sans schéma. C'est vous qui allez éditer son schéma et éditer ses lignes de données par la suite.
+  message: Un jeu de données éditable est créé vide sans fichier de données et sans schéma. C'est vous qui allez éditer son schéma et éditer ses lignes de données par la suite.
   title: Titre
   requiredTitle: le titre est obligatoire, il sea utilisé pour créer un identifiant au nouveau jeu de données
   create: Créer
@@ -55,7 +55,7 @@ fr:
   attachments: Accepter des pièces jointes
   attachmentsAsImage: Traiter les pièces jointes comme des images
 en:
-  message: An incremental dataset is created empty without data file or schema. You will edit the schema and the data lines afterward.
+  message: An editable dataset is created empty without data file or schema. You will edit the schema and the data lines afterward.
   title: Title
   requiredTitle: the title is required, it will be used to create an id for the new dataset
   create: Create

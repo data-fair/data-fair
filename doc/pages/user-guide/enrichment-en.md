@@ -48,8 +48,8 @@ This mode is available in the menu at the top right on Data Fair.
 
 The imported datasets with concepts can be used as reference data for **unitary searches** or / and for **mass enrichments**.  
 
-The **unit searches** will allow to validate a code in your [incremental datasets](./user-guide/import-dataset).  
-If your incremental dataset has the same concept as one of your reference datasets, when a value is filled in this column, the user will have valid propositions of this concept.
+The **unit searches** will allow to validate a code in your [editable datasets](./user-guide/import-dataset).  
+If your editable dataset has the same concept as one of your reference datasets, when a value is filled in this column, the user will have valid propositions of this concept.
 
 
 The **mass enrichments** will allow to perform a join and import columns from the reference data to your dataset.

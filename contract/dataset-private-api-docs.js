@@ -24,7 +24,7 @@ Ce jeu de données est virtuel. C'est à dire qu'il est constitué de redirectio
 
   if (dataset.isRest) {
     description += `
-Ce jeu de données est incrémental. C'est à dire qu'il est constitué dynamiquement à partir de lectures / écritures de lignes et qu'il n'a pas été créé à partir d'un fichier téléchargeable.
+Ce jeu de données est éditable. C'est à dire qu'il est constitué dynamiquement à partir de lectures / écritures de lignes et qu'il n'a pas été créé à partir d'un fichier téléchargeable.
 `
   }
 
@@ -196,7 +196,7 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
         summary: 'Récupérer une ligne de données',
         operationId: 'readLine',
         'x-permissionClass': 'read',
-        tags: ['Données incrémentales'],
+        tags: ['Données éditablees'],
         responses: {
           200: {
             description: 'Le contenu d\'une ligne de données',
@@ -212,7 +212,7 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
         summary: 'Remplacer une ligne de données',
         operationId: 'updateLine',
         'x-permissionClass': 'write',
-        tags: ['Données incrémentales'],
+        tags: ['Données éditablees'],
         requestBody: {
           description: 'Le contenu d\'une ligne de données',
           required: true,
@@ -237,7 +237,7 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
         summary: 'Modifier une ligne de données',
         operationId: 'patchLine',
         'x-permissionClass': 'write',
-        tags: ['Données incrémentales'],
+        tags: ['Données éditablees'],
         requestBody: {
           description: 'Le contenu partiel d\'une ligne de données',
           required: true,
@@ -262,7 +262,7 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
         summary: 'Supprimer une ligne de données',
         operationId: 'deleteLine',
         'x-permissionClass': 'write',
-        tags: ['Données incrémentales'],
+        tags: ['Données éditablees'],
         responses: {
           204: {
             description: 'La ligne de données a été supprimée'
@@ -276,7 +276,7 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
         summary: 'Ajouter une ligne de données',
         operationId: 'createLine',
         'x-permissionClass': 'write',
-        tags: ['Données incrémentales'],
+        tags: ['Données éditablees'],
         requestBody: {
           description: 'Le contenu d\'une ligne de données',
           required: true,
@@ -301,7 +301,7 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
         summary: 'Supprimer toutes les lignes de données',
         operationId: 'deleteAllLines',
         'x-permissionClass': 'write',
-        tags: ['Données incrémentales'],
+        tags: ['Données éditablees'],
         responses: {
           204: {
             description: 'Toutes les lignes de données ont été supprimées'
@@ -314,7 +314,7 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
         summary: 'Créer/modifier/supprimer de multiples lignes en une seule opération',
         operationId: 'bulkLines',
         'x-permissionClass': 'write',
-        tags: ['Données incrémentales'],
+        tags: ['Données éditablees'],
         requestBody: {
           description: 'Les opérations à appliquer',
           required: true,

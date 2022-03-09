@@ -12,7 +12,7 @@ You can create a dataset on the [dashbord](./user-guide/dashbord) or on the [dat
 Three differents datasets on Data Fair.  
 
 1. Upload a file from your computer
-2. An incremental dataset
+2. An editable dataset
 3. A virtual dataset
 
 ### Upload a file
@@ -39,14 +39,14 @@ When finalization is complete, the dataset state is set to "available". It can t
 
 ### Incremental dataset  
 
-An **incremental dataset** is an empty editable dataset created without a data file.  
+An **editable dataset** is an empty editable dataset created without a data file.  
 You will be able to define the columns of the dataset and then add the rows from Data Fair.
 
 Each column is defined by its label and its type.
 
-The schema of your **incremental dataset** is defined when you have filled in all the columns of your dataset.
+The schema of your **editable dataset** is defined when you have filled in all the columns of your dataset.
 
-![Choix de l'application](./images/user-guide/import-schema-incremental.jpg)  
+![Choix de l'application](./images/user-guide/import-schema-editable.jpg)  
 *Add columns to create your editable dataset*
 
 

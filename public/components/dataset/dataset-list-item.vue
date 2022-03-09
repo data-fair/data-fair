@@ -95,13 +95,13 @@
 <i18n lang="yaml">
 fr:
   virtual: jeu de données virtuel
-  inc: jeu de données incrémental
+  inc: jeu de données éditable
   metaOnly: métadonnées seules
   lines: "aucune ligne | 1 ligne | {count} lignes"
   error: En erreur
 en:
   virtual: virtual dataset
-  inc: incremental dataset
+  inc: editable dataset
   metaOnly: metadata only
   lines: "no line | 1 line | {count} lines"
   error: Error status

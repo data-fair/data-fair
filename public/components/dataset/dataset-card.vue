@@ -106,12 +106,12 @@
 <i18n lang="yaml">
 fr:
   virtual: Jeu de données virtuel
-  inc: Jeu de données incrémental
+  inc: Jeu de données éditable
   lines: "aucune ligne | 1 ligne | {count} lignes"
   error: En erreur
 en:
   virtual: Virtual dataset
-  inc: Incremental dataset
+  inc: Editable dataset
   lines: "no line | 1 line | {count} lines"
   error: Error status
 </i18n>

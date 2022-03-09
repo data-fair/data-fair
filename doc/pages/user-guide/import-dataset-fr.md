@@ -11,7 +11,7 @@ Vous pouvez créer un jeu de données sur la [page du tableau de bord](./user-gu
 
 Il existe trois jeux de données différents sur Data Fair.
 1. L'import d'un fichier de votre ordinateur
-2. Un jeu incrémental
+2. Un jeu éditable
 3. Un jeu virtuel
 
 ### Import d'un fichier
@@ -37,15 +37,15 @@ Pour qu'il soit utilisable, l'étape 6 de finalisation doit être validée :
 Lorsque la finalisation est terminée, le jeu de données passe en état "disponible". Il peut alors être [édité](./user-guide/edition-dataset), enrichi et utilisé dans les différentes visualisations.  
 La plus part des visualisations utilisent [des concepts](./user-guide/concept) tels que les concepts **Latitude** et **Longitude** pour une visualisation cartographique.
 
-### Jeu incrémental
+### Jeu éditable
 
-Un **jeu de données incrémental** est un jeu de données vide, il est créé sans fichier de données.  
+Un **jeu de données éditable** est un jeu de données vide, il est créé sans fichier de données.  
 Vous allez pouvoir définir les colonnes du jeu de données puis ajouter les lignes à partir de Data Fair.
 
 Chaque colonne est caractérisée par son libellé et son type.
-Le schéma de votre **jeu de données incrémental** est défini lorsque vous avez renseigné l'ensemble des colonnes de votre jeu de données.
+Le schéma de votre **jeu de données éditable** est défini lorsque vous avez renseigné l'ensemble des colonnes de votre jeu de données.
 
-![Choix de l'application](./images/user-guide/import-schema-incremental.jpg)  
+![Choix de l'application](./images/user-guide/import-schema-editable.jpg)  
 *Ajoutez des colonnes et créez votre propre jeu de données*
 
 Vous pouvez ensuite ajouter des lignes à votre jeu de données que ce soit par un formulaire sur une page de votre site, de votre portail ou par la section **Données** dans l'édition du jeu de données.

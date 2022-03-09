@@ -13,11 +13,11 @@ The datasets are represented in the form of sheets on the platform. A card has a
 
 ### Data formats
 
-There are several types of datasets on the platform, files, incremental datasets, virtual datasets.
+There are several types of datasets on the platform, files, editable datasets, virtual datasets.
 
 * The **file datasets** correspond to data files loaded on the platform. Several file formats are supported such as CSV, TSV, XLS, TXT, GeoJson, KML, ESRI Shapefile, …
 
-* **Incremental datasets** are data stored in the database and are more suitable for data that changes regularly. They are updated by API and are well suited for IOT data for example.
+* **Editable datasets** are data stored in the database and are more suitable for data that changes regularly. They are updated by API and are well suited for IOT data for example.
 
 * **Virtual datasets** correspond to views of one or serveral datasets. They allow more advanced access control. For example, they can be used to create a public view, restricted to some rows or columns, of a more complete data set that remains private.
 

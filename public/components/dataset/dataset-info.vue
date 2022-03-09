@@ -175,7 +175,7 @@ fr:
   dataUpdatedAt: dernière mise à jour des données
   lines: aucune ligne | 1 ligne | {count} lignes
   virtualDatasets: pas de jeu de données virtual | 1 jeu de données virtuel | {count} jeux de données virtuels
-  restDataset: Jeu de données incrémental
+  restDataset: Jeu de données éditable
   ttl: Supprimer automatiquement les lignes dont la colonne {col} contient une date dépassée de {days} jours.
   noTTL: pas de politique d'expiration automatique configurée
   licence: Licence
@@ -190,7 +190,7 @@ en:
   dataUpdatedAt: last update of data
   lines: no line | 1 line | {count} lines
   virtualDatasets: no virtual dataset | 1 virtual dataset | {count} virtual datasets
-  restDataset: Incremental dataset
+  restDataset: Editable dataset
   ttl: Automatically delete lines whose column {col} contains a date exceeded by {days} days.
   noTTL: no automatic expiration configured
   licence: License

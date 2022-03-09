@@ -7,7 +7,7 @@ published: false
 ---
 
 
-On Data Fair, a dataset corresponds to an uploaded [file](./user-guide/file-formats) or an [incremental or virutal source](./user-guide/import-dataset) whith metadata filled in.
+On Data Fair, a dataset corresponds to an uploaded [file](./user-guide/file-formats) or an [editable or virutal source](./user-guide/import-dataset) whith metadata filled in.
 
 By default, all uploaded data is private on your account.  
 You can work with your team using an [organization](./user-guide/organisation) account.
