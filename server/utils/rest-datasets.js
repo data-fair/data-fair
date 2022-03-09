@@ -18,7 +18,6 @@ const attachmentsUtils = require('./attachments')
 const findUtils = require('./find')
 const fieldsSniffer = require('./fields-sniffer')
 const esUtils = require('../utils/es')
-const { doc } = require('../../config/custom-environment-variables')
 
 const actions = ['create', 'update', 'patch', 'delete']
 
