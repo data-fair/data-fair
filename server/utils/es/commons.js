@@ -123,9 +123,11 @@ function checkQuery (query, schema, esFields) {
     try {
       query = queryParser.parse(query)
     } catch (err) {
-      throw createError(400, `Impossible d'effectuer cette recherche, la syntaxe du paramètre "qs" n'est pas respectées :
-  - requête : ${query}
-  - erreur : "${err.message}"`)
+      throw createError(400, `<p>Impossible d'effectuer cette recherche, la syntaxe du paramètre "qs" n'est pas respectées :</p>
+ <ul>
+  <li>requête : ${query}</li>
+  <li>erreur : ${err.message}</li>
+</ul>`)
     }
   }
   if (!esFields) {
