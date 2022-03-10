@@ -193,11 +193,11 @@ describe('Master data management', () => {
     await workers.hook('finalizer/slave')
     await ax.post('/api/v1/datasets/slave/_bulk_lines', [{ siret: 'test " failure' }].map(item => ({ _id: item.siret, ...item })))
     await assert.rejects(workers.hook('finalizer/slave'), (err) => {
-      assert.ok(err.message.startsWith('Impossible d\'effectuer cette recherche'))
+      assert.ok(err.message.includes('Impossible d\'effectuer cette recherche'))
       return true
     })
     const journal = (await ax.get('/api/v1/datasets/slave/journal')).data
-    assert.ok(journal[0].data.startsWith('Impossible d\'effectuer cette recherche'))
+    assert.ok(journal[0].data.includes('Impossible d\'effectuer cette recherche'))
     config.worker.spawnTask = false
   })
 
