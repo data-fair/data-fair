@@ -117,7 +117,7 @@ function checkQuery (query, schema, esFields) {
     if (process.env.NODE_ENV === 'test' && query === '(siret:"test \\" failure")') {
       // special test case to check error management
     } else {
-      query = query.replace('\\"', '')
+      query = query.replace(/\\"/g, '')
     }
 
     try {
