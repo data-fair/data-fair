@@ -13,6 +13,7 @@ const locksUtils = require('./utils/locks')
 const rateLimiting = require('./utils/rate-limiting')
 const datasetUtils = require('./utils/dataset')
 const i18n = require('./utils/i18n')
+const expectType = require('./utils/expect-type')
 const workers = require('./workers')
 const session = require('@koumoul/sd-express')({
   directoryUrl: config.directoryUrl,
@@ -51,7 +52,7 @@ if (config.mode.includes('server')) {
     })
   }
 
-  const bodyParser = require('body-parser').json({ limit: '1000kb' })
+  const bodyParser = express.json({ limit: '1000kb' })
   app.use((req, res, next) => {
     // routes with _bulk are streamed, others are parsed as JSON
     if (req.url.split('/').pop().indexOf('_bulk') === 0) return next()
@@ -61,6 +62,9 @@ if (config.mode.includes('server')) {
   app.use(i18n.middleware)
   app.use(cors())
   app.use(session.auth)
+
+  // TODO: we could make this better targetted but more verbose by adding it to all routes
+  app.use(expectType(['application/json', 'application/x-ndjson', 'multipart/form-data', 'text/csv', 'text/csv+gzip']))
 
   // set current baseUrl, i.e. the url of data-fair on the current user's domain
   let basePath = new URL(config.publicUrl).pathname

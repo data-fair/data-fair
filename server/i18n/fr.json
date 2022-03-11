@@ -5,7 +5,8 @@
 		"brokenHTML": "La structure HTML est corrompue, les éléments html, head et body sont requis",
 		"noAppAtUrl": "La page à l'adresse {{url}} ne semble pas héberger une application compatible avec ce service.",
 		"missingDataset": "Le jeu de données {{id}} est inconnu ou ne vous appartient pas.",
-		"extensionShortIdConflict": "Le jeu de données contient 2 extensions qui sont en conflit sur le préfixe des colonnes étendus."
+		"extensionShortIdConflict": "Le jeu de données contient 2 extensions qui sont en conflit sur le préfixe des colonnes étendus.",
+		"badContentType": "Cette API attend un header content-type compatible, le plus souvent application/json."
 	},
 	"appRequire": {
 		"noDataset": "n'utilise pas de jeu de données comme source.",

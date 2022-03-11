@@ -5,7 +5,8 @@
 		"brokenHTML": "HTML structure is broken, expect html, head and body elements",
 		"noAppAtUrl": "The page at URL {{url}} doesn't seem to host an application compatible with this service.",
 		"missingDataset": "The dataset {{id}} is unknown or does not belong to you",
-		"extensionShortIdConflict": "The dataset contains 2 extensions that have a conflict on the prefix of the extended columns."
+		"extensionShortIdConflict": "The dataset contains 2 extensions that have a conflict on the prefix of the extended columns.",
+		"badContentType": "This API expects a compatible content-type header, most often application/json"
 	},
 	"appRequire": {
 		"noDataset": "does not use a dataset as source.",

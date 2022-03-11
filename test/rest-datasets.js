@@ -69,6 +69,21 @@ describe('REST datasets', () => {
     })
   })
 
+  it('Reject properly json missing content-type', async () => {
+    const ax = global.ax.dmeadus
+    await ax.post('/api/v1/datasets', {
+      isRest: true,
+      title: 'restjson',
+      schema: [{ key: 'attr1', type: 'string', readOnly: true }, { key: 'attr2', type: 'string' }]
+    })
+    await workers.hook('finalizer/restjson')
+    await assert.rejects(ax.post('/api/v1/datasets/restjson/lines', JSON.stringify({ attr1: 'test1', attr2: 'test1' })), (err) => {
+      assert.equal(err.status, 415)
+      assert.equal(err.data, 'Cette API attend un header content-type compatible, le plus souvent application/json.')
+      return true
+    })
+  })
+
   it('Perform CRUD operations in bulks', async () => {
     const ax = global.ax.dmeadus
     await ax.put('/api/v1/datasets/rest2', {
