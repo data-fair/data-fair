@@ -310,6 +310,9 @@ router.get('/:datasetId/schema', readDataset(), applicationKey, permissions.midd
     if (req.query.enum === 'true') {
       schema = schema.filter(field => !!field.enum)
     }
+    if (req.query.calculated === 'false') {
+      schema = schema.filter(field => !field['x-calculated'])
+    }
   }
   res.status(200).send(schema)
 })

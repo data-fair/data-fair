@@ -546,6 +546,14 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
               schema: {
                 type: 'boolean'
               }
+            },
+            {
+              in: 'query',
+              name: 'calculated',
+              description: 'Restreindre aux colonnes qui ne sont pas calculées (issues du fichier d\'origine)',
+              schema: {
+                type: 'boolean'
+              }
             }
           ],
           responses: {
