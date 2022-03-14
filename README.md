@@ -35,7 +35,9 @@ npm run dev-server
 
 Run test suite:
 
-    npm run test
+```
+npm run test
+```
 
 Test building the docker image:
 

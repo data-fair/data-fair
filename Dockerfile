@@ -1,6 +1,6 @@
 ######################################################
 # Stage: install prepair that depends on gdal and cgal
-FROM node:16.13.2-alpine3.14 AS prepair
+FROM node:16.13.2-alpine3.14 AS geodeps
 
 RUN apk add --no-cache curl cmake make g++ linux-headers
 RUN apk add --no-cache gdal gdal-dev
@@ -34,15 +34,16 @@ FROM node:16.13.2-alpine3.14 AS nativedeps
 
 # these are also geodeps, but we need to install them here as they pull many dependencies
 RUN apk add --no-cache gmp gdal-tools
-COPY --from=prepair /usr/bin/prepair /usr/bin/prepair
-COPY --from=prepair /usr/local/lib/libCGAL.so.13 /usr/local/lib/libCGAL.so.13
-COPY --from=prepair /usr/lib/libmpfr.so.6 /usr/lib/libmpfr.so.6
+RUN test -f /usr/bin/ogr2ogr
+COPY --from=geodeps /usr/bin/prepair /usr/bin/prepair
+COPY --from=geodeps /usr/local/lib/libCGAL.so.13 /usr/local/lib/libCGAL.so.13
+COPY --from=geodeps /usr/lib/libmpfr.so.6 /usr/lib/libmpfr.so.6
 RUN ln -s /usr/lib/libproj.so.21.1.2 /usr/lib/libproj.so
 RUN test -f /usr/lib/libproj.so
 # check that geo execs actually load
 RUN prepair --help
 
-RUN apk add --no-cache unzip
+RUN apk add --no-cache unzip dumb-init
 
 ######################################
 # Stage: nodejs dependencies and build
@@ -84,15 +85,13 @@ RUN npm run lint
 RUN npm run test
 
 # Cleanup /webapp/node_modules so it can be copied by next stage
-RUN npm prune --production
-RUN rm -rf node_modules/.cache
+RUN npm prune --production && \
+    rm -rf node_modules/.cache
 
 ##################################
 # Stage: main nodejs service stage
 FROM nativedeps
 MAINTAINER "contact@koumoul.com"
-
-RUN apk add --no-cache dumb-init
 
 WORKDIR /webapp
 

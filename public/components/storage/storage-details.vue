@@ -75,7 +75,7 @@ export default {
   computed: {
     ...mapState(['env']),
     fullDatasets () {
-      return (this.datasets || []).map(dataset => {
+      return (this.datasets || []).filter(dataset => !!dataset.storage).map(dataset => {
         const storageParts = dataset.storage.dataFiles.map(df => ({ ...df, key: df.key + '-file' }))
         if (dataset.storage.attachments) storageParts.push({ key: 'attachments', size: dataset.storage.attachments.size })
         if (dataset.storage.metadataAttachments) storageParts.push({ key: 'metadata-attachments', size: dataset.storage.metadataAttachments.size })
