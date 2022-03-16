@@ -70,7 +70,10 @@
       type="error"
       outlined
     >
-      {{ journal[0].data }}
+      <p
+        class="mb-0"
+        v-html="journal[0].data"
+      />
       <v-btn
         icon
         title="Relancer"
