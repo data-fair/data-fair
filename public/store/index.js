@@ -145,6 +145,11 @@ export default () => {
         Vue.set(state.licenses, payload.owner.type + '/' + payload.owner.id, payload.licenses)
       },
       ownerTopics (state, payload) {
+        if (payload.topics) {
+          for (const topic of payload.topics) {
+            if (topic.icon) delete topic.icon.svg
+          }
+        }
         Vue.set(state.topics, payload.owner.type + '/' + payload.owner.id, payload.topics)
       },
       ownerPublicationSites (state, payload) {

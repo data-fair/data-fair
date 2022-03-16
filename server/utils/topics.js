@@ -3,7 +3,9 @@
 exports.updateTopics = async (db, owner, oldTopics, newTopics) => {
   for (const topic of newTopics) {
     const filter = { 'owner.type': owner.type, 'owner.id': owner.id, 'topics.id': topic.id }
-    const patch = { $set: { 'topics.$': topic } }
+    const topicReference = JSON.parse(JSON.stringify(topic))
+    if (topicReference.icon) delete topicReference.icon.svg
+    const patch = { $set: { 'topics.$': topicReference } }
     await db.collection('datasets').updateMany(filter, patch)
     await db.collection('applications').updateMany(filter, patch)
   }
