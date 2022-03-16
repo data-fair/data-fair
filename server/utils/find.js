@@ -115,7 +115,7 @@ exports.sort = (sortStr) => {
   return sort
 }
 
-exports.pagination = (query, defaultSize = 10) => {
+exports.pagination = (query, defaultSize = 12) => {
   let size = defaultSize
   if (query && query.size && !isNaN(parseInt(query.size))) {
     size = parseInt(query.size)
