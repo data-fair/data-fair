@@ -210,7 +210,6 @@ describe('datasets in draft mode', () => {
     assert.equal(notifications.shift().topic.key, 'data-fair:dataset-dataset-created:dataset1')
     assert.equal(notifications.shift().topic.key, 'data-fair:dataset-finalize-end:dataset1')
     assert.equal(notifications.shift().topic.key, 'data-fair:dataset-draft-data-updated:dataset1')
-    assert.equal(notifications.shift().topic.key, 'data-fair:dataset-downloaded:dataset1')
     assert.equal(notifications.shift().topic.key, 'data-fair:dataset-data-updated:dataset1')
     // console.log(notifications.shift())
     assert.equal(notifications.shift().topic.key, 'data-fair:dataset-breaking-change:dataset1')

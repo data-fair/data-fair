@@ -1132,7 +1132,6 @@ router.get('/:datasetId/lines', readDataset(), applicationKey, permissions.middl
     geojson.bbox = (await bboxPromise).bbox
     res.setHeader('content-disposition', `attachment; filename="${req.dataset.id}.geojson"`)
     res.throttleEnd()
-    webhooks.trigger(req.app.get('db'), 'dataset', req.dataset, { type: 'downloaded-filter' })
     return res.status(200).send(geojson)
   }
 
@@ -1140,7 +1139,6 @@ router.get('/:datasetId/lines', readDataset(), applicationKey, permissions.middl
     const wkt = geo.result2wkt(esResponse)
     res.setHeader('content-disposition', `attachment; filename="${req.dataset.id}.wkt"`)
     res.throttleEnd()
-    webhooks.trigger(req.app.get('db'), 'dataset', req.dataset, { type: 'downloaded-filter' })
     return res.status(200).send(wkt)
   }
 
@@ -1181,7 +1179,6 @@ router.get('/:datasetId/lines', readDataset(), applicationKey, permissions.middl
     }
     csvStreams[0].end()
     await streamPromise
-    webhooks.trigger(req.app.get('db'), 'dataset', req.dataset, { type: 'downloaded-filter' })
     return
   }
 
@@ -1190,7 +1187,6 @@ router.get('/:datasetId/lines', readDataset(), applicationKey, permissions.middl
     const sheet = outputs.results2sheet(req.dataset, req.query, result.results)
     res.setHeader('content-disposition', `attachment; filename="${req.dataset.id}.xlsx"`)
     res.status(200).send(sheet)
-    webhooks.trigger(req.app.get('db'), 'dataset', req.dataset, { type: 'downloaded-filter' })
     return
   }
   if (req.query.format === 'ods') {
@@ -1198,7 +1194,6 @@ router.get('/:datasetId/lines', readDataset(), applicationKey, permissions.middl
     const sheet = outputs.results2sheet(req.dataset, req.query, result.results, 'ods')
     res.setHeader('content-disposition', `attachment; filename="${req.dataset.id}.ods"`)
     res.status(200).send(sheet)
-    webhooks.trigger(req.app.get('db'), 'dataset', req.dataset, { type: 'downloaded-filter' })
     return
   }
 
@@ -1378,7 +1373,6 @@ router.get('/:datasetId/data-files', readDataset(), permissions.middleware('list
 router.get('/:datasetId/data-files/*', readDataset(), permissions.middleware('downloadDataFile', 'read', 'readDataFiles'), cacheHeaders.noCache, asyncWrap(async (req, res, next) => {
   const filePath = req.params['0']
   if (filePath.includes('..')) return res.status(400).send('Unacceptable data file path')
-  webhooks.trigger(req.app.get('db'), 'dataset', req.dataset, { type: 'downloaded' })
   // the transform stream option was patched into "send" module using patch-package
   res.download(path.resolve(datasetUtils.dir(req.dataset), filePath), null, { transformStream: res.throttle('static') })
 }))
@@ -1422,7 +1416,6 @@ router.get('/:datasetId/raw', readDataset(), permissions.middleware('downloadOri
   if (!req.dataset.originalFile) return res.status(404).send('Ce jeu de données ne contient pas de fichier de données')
   // the transform stream option was patched into "send" module using patch-package
   res.download(datasetUtils.originalFileName(req.dataset), null, { transformStream: res.throttle('static') })
-  webhooks.trigger(req.app.get('db'), 'dataset', req.dataset, { type: 'downloaded' })
 }))
 
 // Download the dataset in various formats
@@ -1431,7 +1424,6 @@ router.get('/:datasetId/convert', readDataset(), permissions.middleware('downloa
 
   // the transform stream option was patched into "send" module using patch-package
   res.download(datasetUtils.fileName(req.dataset), null, { transformStream: res.throttle('static') })
-  webhooks.trigger(req.app.get('db'), 'dataset', req.dataset, { type: 'downloaded' })
 })
 
 // Download the full dataset with extensions
@@ -1443,7 +1435,6 @@ router.get('/:datasetId/full', readDataset(), permissions.middleware('downloadFu
   } else {
     res.download(datasetUtils.fileName(req.dataset), null, { transformStream: res.throttle('static') })
   }
-  webhooks.trigger(req.app.get('db'), 'dataset', req.dataset, { type: 'downloaded' })
 }))
 
 router.get('/:datasetId/api-docs.json', readDataset(), permissions.middleware('readApiDoc', 'read'), cacheHeaders.resourceBased, (req, res) => {

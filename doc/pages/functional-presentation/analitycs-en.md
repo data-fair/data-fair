@@ -58,12 +58,9 @@ You can define **which events** you want to track in your analytics:
 * A dataset encountered an error
 * A dataset has been finalized and is online
 * A dataset has been published to a catalog
-*
-A dataset has been downloaded in a file format
 * A new reuse has been created
 * A reuse encountered an error
 * A reuse has been published on a catalog
 * A dataset file has been updated
-* A filtered extract of a dataset has been downloaded in a file format
 
 ![Configuration](./images/functional-presentation/config-GA-2.jpg)

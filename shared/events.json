@@ -126,19 +126,7 @@
       "icon": "mdi-file-download",
       "text": {
         "fr": "le fichier de données est chargé et est prêt à être traité",
-        "en": "the data file was downloaded and is ready for processing"
-      }
-    },
-    "downloaded": {
-      "text": {
-        "fr": "un fichier de données d'un jeu de données a été téléchargé",
-        "en": "a dataset was downloaded in a file format"
-      }
-    },
-    "downloaded-filter": {
-      "text": {
-        "fr": "des lignes filtrées d'un jeu de données ont été téléchargés dans un format fichier ",
-        "en": "a dataset was downloaded in a file format"
+        "en": "the data file was loaded and is ready for processing"
       }
     },
     "draft-validated": {

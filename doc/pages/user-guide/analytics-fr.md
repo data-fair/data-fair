@@ -46,11 +46,9 @@ Vous pouvez définir quels événements vous souhaitez suivre dans vos analytics
 * Un jeu de données a rencontré une erreur
 * Un jeu de données a été finalisé et mis en ligne
 * Un jeu de données a été publié sur un catalogue
-* Un jeu de données a été téléchargé dans un format fichier
 * Une nouvelle réutilisation a été créée
 * Une réutilisation a rencontré une erreur
 * Une réutilisation a été publiée sur un catalogue
 * Le fichier d'un jeu de données a été mis à jour
-* Un extrait filtré d'un jeu de données a été téléchargé dans un format fichier
 
 ![Configuration](./images/user-guide/config-GA-2.jpg)

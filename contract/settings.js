@@ -61,9 +61,6 @@ module.exports = {
                 const: 'dataset-publication',
                 title: 'Un jeu de données a été publié sur un catalogue'
               }, {
-                const: 'dataset-downloaded',
-                title: 'Un jeu de données a été téléchargé dans un format fichier'
-              }, {
                 const: 'application-application-created',
                 title: 'Une nouvelle visualisation a été créée'
               }, {
