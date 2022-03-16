@@ -74,14 +74,16 @@
         class="mb-0"
         v-html="journal[0].data"
       />
-      <v-btn
-        icon
-        title="Relancer"
-        color="primary"
-        @click="patch({})"
-      >
-        <v-icon>mdi-play</v-icon>
-      </v-btn>
+      <template #append>
+        <v-btn
+          icon
+          title="Relancer"
+          color="primary"
+          @click="patch({})"
+        >
+          <v-icon>mdi-play</v-icon>
+        </v-btn>
+      </template>
     </v-alert>
     <v-row
       v-if="dataset.draftReason"
