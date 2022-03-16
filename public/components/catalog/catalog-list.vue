@@ -34,7 +34,7 @@
                   v-if="!filtered"
                   class="text-h6"
                 >
-                  {{ $t('pages.catalogs.description') }}
+                  {{ $t('description') }}
                   <!--<br>
                   Vous n'avez pas encore ajouté de connecteur vers des catalogues externes.-->
                   <!--<br>Vous pouvez <nuxt-link :to="localePath('user-guide')">
