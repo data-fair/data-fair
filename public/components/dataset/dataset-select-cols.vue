@@ -24,16 +24,26 @@
           :disabled="!value.length"
           @click="$emit('input', [])"
         />
-        <v-checkbox
-          v-for="header in headers.filter(h => !!h.field)"
-          :key="header.value"
-          :value="header.value"
-          :label="header.text"
-          :input-value="value"
-          dense
-          hide-details
-          @change="newValue => $emit('input', newValue)"
-        />
+        <template v-for="(header, i) in fieldHeaders">
+          <v-checkbox
+            v-if="header.field['x-group'] && header.field['x-group'] !== (fieldHeaders[i - 1] && fieldHeaders[i - 1].field && fieldHeaders[i - 1].field['x-group'])"
+            :key="'group-' + header.value"
+            :label="header.field['x-group']"
+            dense
+            hide-details
+            @change="value => toggleGroup(header.field['x-group'], value)"
+          />
+          <v-checkbox
+            :key="header.value"
+            :value="header.value"
+            :label="header.text"
+            :input-value="value"
+            dense
+            hide-details
+            :class="{'ml-3': !!header.field['x-group']}"
+            @change="newValue => $emit('input', newValue)"
+          />
+        </template>
       </v-card-text>
     </v-card>
   </v-menu>
@@ -50,7 +60,31 @@ en:
 
 <script>
 export default {
-  props: ['value', 'headers']
+  props: ['value', 'headers'],
+  computed: {
+    fieldHeaders () {
+      return this.headers.filter(h => !!h.field)
+    }
+  },
+  methods: {
+    toggleGroup (group, value) {
+      if (value) {
+        const newValue = [...this.value]
+        for (const header of this.fieldHeaders) {
+          if (header.field['x-group'] === group && !this.value.includes(header.value)) {
+            newValue.push(header.value)
+          }
+        }
+        this.$emit('input', newValue)
+      } else {
+        const newValue = this.value.filter(v => {
+          const header = this.fieldHeaders.find(fh => fh.value === v)
+          return header.field['x-group'] !== group
+        })
+        this.$emit('input', newValue)
+      }
+    }
+  }
 }
 </script>
 

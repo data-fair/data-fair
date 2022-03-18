@@ -47,24 +47,45 @@
             </v-alert>
           </v-col>
         </v-row>
-        <v-row>
+        <v-row class="pt-2">
           <v-col>
             <v-text-field
               v-model="currentPropRef.prop.title"
               :placeholder="currentPropRef.prop['x-originalName'] || ' '"
               label="Libellé"
               :disabled="!editable || !currentPropRef.editable"
+              outlined
+              dense
               hide-details
+              class="mb-3"
             />
             <v-textarea
               v-model="currentPropRef.prop.description"
-              class="pt-2"
               label="Description"
               :disabled="!editable || !currentPropRef.editable"
-              hide-details
-              rows="7"
+              rows="6"
               filled
+              dense
+              outlined
+              hide-details
+              class="mb-3"
             />
+            <v-combobox
+              v-model="currentPropRef.prop['x-group']"
+              :disabled="!editable || !currentPropRef.editable || dataset.isVirtual"
+              :items="groups"
+              :label="$t('group')"
+              persistent-hint
+              :hint="$t('groupHelp')"
+              dense
+              outlined
+              hide-details
+              class="mb-3"
+            >
+              <template #append-outer>
+                <help-tooltip>{{ $t('groupHelp') }}</help-tooltip>
+              </template>
+            </v-combobox>
           </v-col>
           <v-col>
             <v-row
@@ -100,7 +121,10 @@
                 />
               </div>
             </v-row>
-            <v-list dense>
+            <v-list
+              dense
+              class="pt-0 labels-list"
+            >
               <v-list-item
                 v-if="currentPropRef.prop['x-extension'] && extensions[currentPropRef.prop['x-extension']]"
                 class="pl-0 font-weight-bold"
@@ -126,11 +150,9 @@
                 v-if="currentPropRef.prop['x-cardinality']"
                 class="pl-0"
               >
-                <span :class="labelClass">{{ $t('distinctValues') }} <v-icon
-                  :title="$t('distinctValuesHelp')"
-                  v-text="'mdi-information'"
-                /> : </span>&nbsp;
+                <span :class="labelClass">{{ $t('distinctValues') }} : </span>&nbsp;
                 {{ currentPropRef.prop['x-cardinality'].toLocaleString() }}
+                <help-tooltip>{{ $t('distinctValuesHelp') }}</help-tooltip>
               </v-list-item>
               <v-list-item
                 v-if="currentPropRef.prop.enum"
@@ -146,24 +168,13 @@
                 :disabled="!editable || !currentPropRef.editable || dataset.isVirtual"
               />
             </template>
-            <v-select
-              v-if="currentPropRef.prop.type === 'string'"
-              v-model="currentPropRef.prop.separator"
-              :items="[', ', '; ', ' - ', ' / ']"
-              :disabled="!editable || !currentPropRef.editable || dataset.isVirtual"
-              :label="$t('sep')"
-              persistent-hint
-              clearable
-              :hint="$t('separatorHelp')"
-            />
             <v-autocomplete
               v-model="currentPropRef.prop['x-refersTo']"
               :items="vocabularyItems.filter(item => filterVocabulary(item))"
               :disabled="!editable || !currentPropRef.editable || dataset.isVirtual"
-              label="Concept"
+              :label="$t('concept')"
               :clearable="true"
-              persistent-hint
-              :hint="currentPropRef.prop['x-refersTo'] ? vocabulary[currentPropRef.prop['x-refersTo']] && vocabulary[currentPropRef.prop['x-refersTo']].description : 'Les concepts des colonnes sont utilisés pour améliorer le traitement de la donnée et sa visualisation.'"
+              hide-details
             >
               <template #item="data">
                 <template v-if="typeof data.item !== 'object'">
@@ -176,31 +187,59 @@
                   </v-list-item-content>
                 </template>
               </template>
+              <template #append-outer>
+                <help-tooltip>{{ (currentPropRef.prop['x-refersTo'] && vocabulary[currentPropRef.prop['x-refersTo']] && vocabulary[currentPropRef.prop['x-refersTo']].description) || $t('conceptHelp') }}</help-tooltip>
+              </template>
             </v-autocomplete>
+            <v-select
+              v-if="currentPropRef.prop.type === 'string'"
+              v-model="currentPropRef.prop.separator"
+              :items="[', ', '; ', ' - ', ' / ']"
+              :disabled="!editable || !currentPropRef.editable || dataset.isVirtual"
+              :label="$t('sep')"
+              hide-details
+              clearable
+            >
+              <template #append-outer>
+                <help-tooltip>{{ $t('separatorHelp') }}</help-tooltip>
+              </template>
+            </v-select>
             <v-checkbox
               v-if="dataset.file && dataset.file.mimetype === 'text/csv'"
               v-model="currentPropRef.prop.ignoreDetection"
               :disabled="!editable || !currentPropRef.editable"
               :label="$t('ignoreDetection')"
-              persistent-hint
-              :hint="$t('ignoreDetectionHelp')"
-            />
+              hide-details
+              dense
+            >
+              <template #append>
+                <help-tooltip>{{ $t('ignoreDetectionHelp') }}</help-tooltip>
+              </template>
+            </v-checkbox>
             <v-checkbox
               v-if="dataset.file && dataset.file.mimetype === 'text/csv' && ['integer', 'number'].includes(currentPropRef.prop.type)"
               v-model="currentPropRef.prop.ignoreIntegerDetection"
               :disabled="!editable || !currentPropRef.editable"
               :label="$t('ignoreIntegerDetection')"
-              persistent-hint
-              :hint="$t('ignoreIntegerDetectionHelp')"
-            />
+              hide-details
+              dense
+            >
+              <template #append>
+                <help-tooltip>{{ $t('ignoreIntegerDetectionHelp') }}</help-tooltip>
+              </template>
+            </v-checkbox>
             <v-checkbox
               v-if="dataset.isRest"
               v-model="currentPropRef.prop.readOnly"
               :disabled="!editable || !currentPropRef.editable"
               :label="$t('readOnly')"
-              persistent-hint
-              :hint="$t('readOnlyHelp')"
-            />
+              hide-details
+              dense
+            >
+              <template #append>
+                <help-tooltip>{{ $t('readOnlyHelp') }}</help-tooltip>
+              </template>
+            </v-checkbox>
             <v-select
               v-if="currentPropRef.prop['x-refersTo'] && availableMasters[currentPropRef.prop['x-refersTo']]"
               item-value="id"
@@ -210,6 +249,8 @@
               :label="$t('masterData')"
               :clearable="true"
               :return-object="true"
+              dense
+              hide-details
               @input="setMasterData"
             />
           </v-col>
@@ -229,6 +270,10 @@ fr:
   values: "Valeurs : "
   sep: Séparateur
   separatorHelp: Ne renseigner que pour les colonnes multivaluées. Ce caractère sera utilisé pour séparer les valeurs.
+  concept: Concept
+  conceptHelp: Les concepts des colonnes améliorent le traitement de la donnée et sa visualisation.
+  group: Groupe
+  groupHelp: Les groupes aident à la sélection de colonnes. Particulièrement utile quand il y a de nombreuses colonnes.
   ignoreDetection: Ignorer la détection de type
   ignoreDetectionHelp: Si vous cochez cette case la détection automatique de type sera désactivée et la colonne sera traitée comme un simple texte.
   ignoreIntegerDetection: Traiter comme un nombre flottant
@@ -247,6 +292,10 @@ en:
   values: "Values: "
   sep: Separator
   separatorHelp: Only provide for multi-values columns. This character will be used to separate the values.
+  concept: Concept
+  conceptHelp: The concepts improve data processing and visualization.
+  group: Groupe
+  groupHelp: Groups help selecting columns. Particularly useful whan there are many columns.
   ignoreDetection: Ignore type detection
   ignoreDetectionHelp: If you check this box the automatic detection of type will be disabled and the column will be processed as a simple string.
   ignoreIntegerDetection: Handle as a floating number
@@ -302,6 +351,10 @@ export default {
           }
           return a
         }, {})
+    },
+    groups () {
+      const groupsArray = this.propertiesRefs.map(pr => pr.prop['x-group']).filter(g => !!g)
+      return [...new Set(groupsArray)]
     }
   },
   watch: {
@@ -365,5 +418,9 @@ export default {
 .v-btn.property-ghost {
   opacity: 0.5;
   background-color: #c8ebfb!important;
+}
+
+.labels-list .v-list-item {
+  min-height: 30px;
 }
 </style>

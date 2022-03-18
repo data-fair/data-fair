@@ -31,6 +31,7 @@ const schema = {
       type: { type: 'string' },
       format: { type: ['string', 'null'] },
       'x-originalName': { type: ['string', 'null'] },
+      'x-group': { type: 'string' },
       'x-refersTo': { type: ['string', 'null'] },
       'x-calculated': { type: 'boolean' },
       'x-capabilities': capabilities,
