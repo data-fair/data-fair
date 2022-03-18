@@ -91,6 +91,7 @@
     "tableschema": "^1.12.4",
     "timezones.json": "^1.6.0",
     "tinycolor2": "^1.4.2",
+    "vue-clamp": "^0.4.0",
     "vue-moment": "^4.1.0",
     "vuedraggable": "^2.24.3"
   },
@@ -178,7 +179,7 @@
     "tmp-promise": "^2.1.1",
     "truncate-middle": "^1.0.6",
     "vt-pbf": "3.1.1",
-    "xlsx": "^0.18.0",
-    "ws": "^7.4.1"
+    "ws": "^7.4.1",
+    "xlsx": "^0.18.0"
   }
 }

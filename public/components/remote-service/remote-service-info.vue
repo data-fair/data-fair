@@ -46,14 +46,11 @@
         color="admin"
         @change="patch({title: remoteService.title})"
       />
-      <v-textarea
+      <markdown-editor
         v-model="remoteService.description"
         :disabled="!user.adminMode"
         :label="$t('description')"
-        filled
-        rows="5"
-        color="admin"
-        hide-details
+        :easymde-config="{minHeight: '150px'}"
         @change="patch({description: remoteService.description})"
       />
     </v-col>

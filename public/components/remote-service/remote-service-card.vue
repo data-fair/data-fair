@@ -1,21 +1,24 @@
 <template>
   <v-card
-    height="100%"
     :to="`/remote-service/${remoteService.id}`"
     outlined
     tile
-    :elevation="hover ? 4 : 0"
-    @mouseenter="hover = true"
-    @mouseleave="hover = false"
+    hover
   >
     <v-card-title class="font-weight-bold">
       {{ remoteService.title || remoteService.id }}
     </v-card-title>
     <v-card-text
-      style="min-height:60px"
-      class="pb-0"
-      v-html="marked($options.filters.truncate(remoteService.description || '', 200))"
-    />
+      style="height:170px"
+      class="py-0"
+    >
+      <v-clamp
+        :max-height="170"
+        class="card-desc170"
+        autoresize
+        v-html="remoteService.description"
+      />
+    </v-card-text>
     <v-card-actions>
       <visibility :visibility="remoteService.public ? 'public' : 'protected'" />
       <template v-if="!remoteService.public && remoteService.privateAccess">
@@ -32,16 +35,25 @@
 </template>
 
 <script>
-import { marked } from 'marked'
+import VClamp from 'vue-clamp'
 
 export default {
+  components: { VClamp },
   props: ['remoteService'],
   data: () => ({
-    marked,
     hover: false
   })
 }
 </script>
 
 <style lang="css" scoped>
+.card-desc170:before {
+  content:'';
+  width:100%;
+  height:82px;
+  position:absolute;
+  left:0;
+  top:160px;
+  background:linear-gradient(transparent 0, white);
+}
 </style>

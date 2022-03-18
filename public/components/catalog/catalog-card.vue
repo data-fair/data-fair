@@ -1,45 +1,57 @@
 <template>
   <v-card
+    :to="`/catalog/${catalog.id}`"
     outlined
     tile
-    :elevation="hover ? 4 : 0"
-    @mouseenter="hover = true"
-    @mouseleave="hover = false"
+    hover
   >
-    <nuxt-link
-      :to="`/catalog/${catalog.id}`"
-      style="text-decoration:none"
+    <v-card-title class="font-weight-bold">
+      <span style="white-space: nowrap;overflow: hidden;text-overflow: ellipsis;">
+        {{ catalog.title || catalog.id }}
+      </span>
+    </v-card-title>
+    <v-card-text
+      style="height:170px"
+      class="py-0"
     >
-      <v-card-title class="font-weight-bold">
-        <span style="white-space: nowrap;overflow: hidden;text-overflow: ellipsis;">
-          {{ catalog.title || catalog.id }}
-        </span>
-      </v-card-title>
-      <v-divider />
-      <v-card-text
-        style="min-height:60px;max-height:160px;overflow:hidden;margin-bottom:40px;"
-        v-html="marked($options.filters.truncate(catalog.description || '', 200))"
+      <v-clamp
+        :max-height="170"
+        class="card-desc170"
+        autoresize
+        v-html="catalog.description"
       />
-    </nuxt-link>
-    <v-card-actions style="position:absolute; bottom: 0px;width:100%;">
-      <!--<owner-short :owner="catalog.owner" />-->
+    </v-card-text>
+    <v-card-actions>
+      <owner-department :owner="catalog.owner" />
+      <owner-short
+        v-if="showOwner"
+        :owner="catalog.owner"
+      />
       <v-spacer />
     </v-card-actions>
   </v-card>
 </template>
 
 <script>
-import { marked } from 'marked'
+import VClamp from 'vue-clamp'
 
 export default {
-  components: { },
-  props: ['catalog'],
+  components: { VClamp },
+  props: ['catalog', 'showOwner'],
   data: () => ({
-    marked,
     hover: false
   })
 }
 </script>
 
 <style lang="css" scoped>
+.card-desc170:before {
+  content:'';
+  width:100%;
+  height:82px;
+  position:absolute;
+  left:0;
+  top:160px;
+  background:linear-gradient(transparent 0, white);
+}
 </style>

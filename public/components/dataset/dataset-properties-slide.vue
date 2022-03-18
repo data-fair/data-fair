@@ -48,46 +48,12 @@
           </v-col>
         </v-row>
         <v-row class="pt-2">
-          <v-col>
-            <v-text-field
-              v-model="currentPropRef.prop.title"
-              :placeholder="currentPropRef.prop['x-originalName'] || ' '"
-              label="Libellé"
-              :disabled="!editable || !currentPropRef.editable"
-              outlined
-              dense
-              hide-details
-              class="mb-3"
-            />
-            <v-textarea
-              v-model="currentPropRef.prop.description"
-              label="Description"
-              :disabled="!editable || !currentPropRef.editable"
-              rows="6"
-              filled
-              dense
-              outlined
-              hide-details
-              class="mb-3"
-            />
-            <v-combobox
-              v-model="currentPropRef.prop['x-group']"
-              :disabled="!editable || !currentPropRef.editable || dataset.isVirtual"
-              :items="groups"
-              :label="$t('group')"
-              persistent-hint
-              :hint="$t('groupHelp')"
-              dense
-              outlined
-              hide-details
-              class="mb-3"
-            >
-              <template #append-outer>
-                <help-tooltip>{{ $t('groupHelp') }}</help-tooltip>
-              </template>
-            </v-combobox>
-          </v-col>
-          <v-col>
+          <v-col
+            cols="12"
+            md="6"
+            lg="5"
+            order-md="2"
+          >
             <v-row
               v-if="editable && currentPropRef.editable && !dataset.isVirtual"
               class="ma-0"
@@ -175,6 +141,7 @@
               :label="$t('concept')"
               :clearable="true"
               hide-details
+              class="mb-3"
             >
               <template #item="data">
                 <template v-if="typeof data.item !== 'object'">
@@ -198,6 +165,7 @@
               :disabled="!editable || !currentPropRef.editable || dataset.isVirtual"
               :label="$t('sep')"
               hide-details
+              class="mb-3"
               clearable
             >
               <template #append-outer>
@@ -254,6 +222,53 @@
               @input="setMasterData"
             />
           </v-col>
+          <v-col
+            cols="12"
+            md="6"
+            lg="7"
+            order-md="1"
+          >
+            <v-text-field
+              v-model="currentPropRef.prop.title"
+              :placeholder="currentPropRef.prop['x-originalName'] || ' '"
+              :label="$t('label')"
+              :disabled="!editable || !currentPropRef.editable"
+              outlined
+              dense
+              hide-details
+              class="mb-3"
+            >
+              <template #append-outer>
+                <help-tooltip>{{ $t('labelHelp') }}</help-tooltip>
+              </template>
+            </v-text-field>
+            <markdown-editor
+              v-model="currentPropRef.prop.description"
+              :label="$t('description')"
+              :disabled="!editable || !currentPropRef.editable"
+              :easymde-config="{minHeight: '150px'}"
+            >
+              <template #append>
+                <help-tooltip>{{ $t('descriptionHelp') }}</help-tooltip>
+              </template>
+            </markdown-editor>
+            <v-combobox
+              v-model="currentPropRef.prop['x-group']"
+              :disabled="!editable || !currentPropRef.editable || dataset.isVirtual"
+              :items="groups"
+              :label="$t('group')"
+              persistent-hint
+              :hint="$t('groupHelp')"
+              dense
+              outlined
+              hide-details
+              class="mb-3"
+            >
+              <template #append-outer>
+                <help-tooltip>{{ $t('groupHelp') }}</help-tooltip>
+              </template>
+            </v-combobox>
+          </v-col>
         </v-row>
       </v-sheet>
     </v-expand-transition>
@@ -265,6 +280,10 @@ fr:
   detailedInfo: Cliquez sur un nom de colonne pour afficher ses informations détaillées.
   extension: "Extension : "
   key: "Clé dans la source : "
+  label: Libellé
+  labelHelp: Libellé court de la colonne utilisé dans toutes les visualisations de données, la clé sera utilisée si vous laissez cette information vide.
+  description: Description
+  descriptionHelp: Un contenu markdown ou HTML qui sera utilisé pour décrire cette colonne aux utilisateurs des visualisations de données et de la documentations d'API.
   distinctValues: Nombre de valeurs distinctes
   distinctValuesHelp: approximatif dans le cas de données volumineuses
   values: "Valeurs : "
@@ -287,6 +306,10 @@ en:
   detailedInfo: Click on a column title to display its detailed information.
   extension: "Extension: "
   key: "Key in the source: "
+  label: Label
+  labelHelp: Short label of the column used in all data visualizations, the key will be used if you leave this empty.
+  description: Description
+  descriptionHelp: A markdown or HTML content that will be used to describe this column to the users of data visualisations and API documentations.
   distinctValues: Number of istinct values
   distinctValuesHelp: approximative in the case of a large dataset
   values: "Values: "

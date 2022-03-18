@@ -10,7 +10,8 @@ export default {
   middleware: 'dynamic-theme',
   async fetch ({ store, params, route }) {
     try {
-      await store.dispatch('dataset/setId', { datasetId: route.params.id })
+      const html = route.path.endsWith('/fields') || route.path.endsWith('/table')
+      await store.dispatch('dataset/setId', { datasetId: route.params.id, html })
       await store.dispatch('fetchVocabulary', route.params.id)
     } catch (err) {
       // in embed mode we prefer a blank page rather than showing an error

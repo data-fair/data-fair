@@ -78,7 +78,6 @@
         v-if="showOwner"
         :owner="dataset.owner"
       />
-      &nbsp;&nbsp;
       <visibility :visibility="dataset.visibility" />
       <v-tooltip
         v-if="dataset.status === 'error'"

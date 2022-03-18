@@ -152,11 +152,16 @@
       md="6"
       lg="7"
       order-md="1"
+      class="pt-5"
     >
       <v-text-field
         v-model="dataset.title"
         :disabled="!can('writeDescription')"
         :label="$t('title')"
+        outlined
+        dense
+        hide-details
+        class="mb-3"
         @change="patch({title: dataset.title})"
       />
       <markdown-editor

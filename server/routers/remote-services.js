@@ -3,6 +3,8 @@ const express = require('express')
 const moment = require('moment')
 const slug = require('slugify')
 const soasLoader = require('soas')
+const marked = require('marked')
+const sanitizeHtml = require('sanitize-html')
 const axios = require('../utils/axios')
 const requestProxy = require('@koumoul/express-request-proxy')
 const remoteServiceAPIDocs = require('../../contract/remote-service-api-docs')
@@ -92,10 +94,14 @@ const computeActions = (apiDoc) => {
   return actions
 }
 
-function clean (remoteService, user) {
+function clean (remoteService, user, html = false) {
   delete remoteService._id
   if (remoteService.apiKey && remoteService.apiKey.value) remoteService.apiKey.value = '**********'
   if (!user || !user.adminMode) delete remoteService.privateAccess
+  if (remoteService.description) {
+    if (html) remoteService.description = marked.parse(remoteService.description)
+    remoteService.description = sanitizeHtml(remoteService.description)
+  }
   findUtils.setResourceLinks(remoteService, 'remote-service')
   return remoteService
 }
@@ -125,7 +131,7 @@ router.get('', cacheHeaders.noCache, asyncWrap(async (req, res) => {
     mongoQueries.push(remoteServices.aggregate(findUtils.facetsQuery(req, {})).toArray())
   }
   let [results, count, facets] = await Promise.all(mongoQueries)
-  results.forEach(r => clean(r, req.user))
+  results.forEach(r => clean(r, req.user, req.query.html === 'true'))
   facets = findUtils.parseFacets(facets)
   res.json({ count, results: results.map(result => mongoEscape.unescape(result, true)), facets })
 }))
@@ -188,7 +194,7 @@ router.get('/:remoteServiceId', readService, cacheHeaders.resourceBased, (req, r
   if (!req.user) return res.status(401).send()
   if (!req.user.adminMode) return res.status(403).send()
 
-  res.status(200).send(clean(req.remoteService, req.user))
+  res.status(200).send(clean(req.remoteService, req.user, req.query.html === 'true'))
 })
 
 // PUT used to create or update as super admin

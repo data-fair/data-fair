@@ -7,6 +7,7 @@ const path = require('path')
 const util = require('util')
 const unlink = util.promisify(fs.unlink)
 const sanitizeHtml = require('sanitize-html')
+const marked = require('marked')
 const { nanoid } = require('nanoid')
 const applicationAPIDocs = require('../../contract/application-api-docs')
 const ajv = require('ajv')()
@@ -30,13 +31,17 @@ const cacheHeaders = require('../utils/cache-headers')
 
 const router = module.exports = express.Router()
 
-function clean (application, publicUrl) {
+function clean (application, publicUrl, html = false) {
   application.public = permissions.isPublic('applications', application)
   application.visibility = visibilityUtils.visibility(application)
 
   delete application.permissions
   delete application._id
   delete application.configuration
+  if (application.description) {
+    if (html) application.description = marked.parse(application.description)
+    application.description = sanitizeHtml(application.description)
+  }
   application.description = application.description ? sanitizeHtml(application.description) : ''
   findUtils.setResourceLinks(application, 'application', publicUrl)
   return application
@@ -85,7 +90,7 @@ router.get('', cacheHeaders.noCache, asyncWrap(async (req, res) => {
   let [results, count, facets] = await Promise.all(mongoQueries)
   results.forEach(r => {
     r.userPermissions = permissions.list('applications', r, req.user)
-    clean(r, req.publicBaseUrl)
+    clean(r, req.publicBaseUrl, req.query.html === 'true')
   })
   facets = findUtils.parseFacets(facets, nullFacetFields)
   res.json({ count, results, facets })
@@ -144,7 +149,7 @@ router.use('/:applicationId/permissions', readApplication, permissions.router('a
 // retrieve a application by its id
 router.get('/:applicationId', readApplication, permissions.middleware('readDescription', 'read'), cacheHeaders.noCache, (req, res, next) => {
   req.application.userPermissions = permissions.list('applications', req.application, req.user)
-  res.status(200).send(clean(req.application, req.publicBaseUrl))
+  res.status(200).send(clean(req.application, req.publicBaseUrl, req.query.html === 'true'))
 })
 
 // PUT used to create or update
@@ -305,7 +310,7 @@ router.get('/:applicationId/base-application', readApplication, permissions.midd
   const baseApplications = db.collection('base-applications')
   const baseApp = await baseApplications.findOne({ url: req.application.url })
   if (!baseApp) return res.status(404).send('No base application matching ' + req.application.url)
-  res.send(baseAppsUtils.clean(baseApp, req.publicBaseUrl))
+  res.send(baseAppsUtils.clean(baseApp, req.publicBaseUrl, req.query.html === 'true'))
 }))
 
 router.get('/:applicationId/api-docs.json', readApplication, permissions.middleware('readApiDoc', 'read'), cacheHeaders.resourceBased, (req, res) => {

@@ -18,7 +18,10 @@
             md="6"
             lg="4"
           >
-            <catalog-card :catalog="catalog" />
+            <catalog-card
+              :catalog="catalog"
+              :show-owner="filters.owner === null"
+            />
           </v-col>
         </v-row>
         <search-progress :loading="loading" />
@@ -181,7 +184,8 @@ export default {
         select: 'title,description',
         ...this.filters,
         facets: 'owner',
-        sort: 'createdAt:-1'
+        sort: 'createdAt:-1',
+        html: 'true'
       }
       if (JSON.stringify(params) !== JSON.stringify(this.lastParams)) {
         this.lastParams = params

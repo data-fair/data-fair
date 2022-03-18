@@ -1,5 +1,6 @@
 <template>
   <v-data-table
+    class="dataset-schema-view"
     :headers="headers"
     :items="dataset.schema.filter(f => !f['x-calculated'])"
     :server-items-length="dataset.schema.filter(f => !f['x-calculated']).length"
@@ -12,7 +13,7 @@
         <td>{{ item.title || item['x-originalName'] || item.key }}</td>
         <td>{{ item.format || item.type }}</td>
         <td>{{ vocabulary && vocabulary[item['x-refersTo']] && vocabulary[item['x-refersTo']].title }}</td>
-        <td>{{ item.description || (vocabulary && vocabulary[item['x-refersTo']] && vocabulary[item['x-refersTo']].description) }}</td>
+        <td v-html="item.description || (vocabulary && vocabulary[item['x-refersTo']] && vocabulary[item['x-refersTo']].description)" />
       </tr>
     </template>
     <template #top>
@@ -108,3 +109,9 @@ export default {
   }
 }
 </script>
+
+<style>
+.dataset-schema-view td p:last-child {
+  margin-bottom: 0;
+}
+</style>

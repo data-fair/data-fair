@@ -35,7 +35,8 @@ export default () => ({
     lineUploadProgress: 0,
     showTableCard: null,
     draftMode: null,
-    taskProgress: null
+    taskProgress: null,
+    html: false
   },
   getters: {
     resourceUrl: (state, getters, rootState) => state.datasetId ? rootState.env.publicUrl + '/api/v1/datasets/' + state.datasetId : null,
@@ -122,7 +123,7 @@ export default () => ({
       if (getters.can('readJournal')) await dispatch('fetchJournal')
     },
     async fetchDataset ({ commit, state }) {
-      const dataset = await this.$axios.$get(`api/v1/datasets/${state.datasetId}`, { params: { draft: state.draftMode } })
+      const dataset = await this.$axios.$get(`api/v1/datasets/${state.datasetId}`, { params: { draft: state.draftMode, html: state.html } })
       const extensions = (dataset.extensions || []).map(ext => {
         ext.error = ext.error || ''
         ext.progress = ext.progress || 0
@@ -175,9 +176,9 @@ export default () => ({
       const jsonSchema = await this.$axios.$get(`api/v1/datasets/${state.datasetId}/schema`, { params: { mimeType: 'application/schema+json' } })
       commit('setAny', { jsonSchema })
     },
-    async setId ({ commit, getters, dispatch, state }, { datasetId, draftMode }) {
+    async setId ({ commit, getters, dispatch, state }, { datasetId, draftMode, html }) {
       dispatch('clear')
-      commit('setAny', { datasetId, draftMode })
+      commit('setAny', { datasetId, draftMode, html })
       await dispatch('fetchInfo')
     },
     subscribe ({ getters, dispatch, state, commit }) {

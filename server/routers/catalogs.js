@@ -1,6 +1,7 @@
 const express = require('express')
 const moment = require('moment')
 const slug = require('slugify')
+const marked = require('marked')
 const sanitizeHtml = require('sanitize-html')
 const catalogAPIDocs = require('../../contract/catalog-api-docs')
 const mongoEscape = require('mongo-escape')
@@ -19,11 +20,14 @@ const cacheHeaders = require('../utils/cache-headers')
 
 const router = module.exports = express.Router()
 
-function clean (catalog) {
+function clean (catalog, html = false) {
   catalog.public = permissions.isPublic('catalogs', catalog)
   delete catalog.permissions
   if (catalog.apiKey) catalog.apiKey = '**********'
-  catalog.description = catalog.description ? sanitizeHtml(catalog.description) : ''
+  if (catalog.description) {
+    if (html) catalog.description = marked.parse(catalog.description)
+    catalog.description = sanitizeHtml(catalog.description)
+  }
   findUtils.setResourceLinks(catalog, 'catalog')
   return catalog
 }
@@ -70,7 +74,7 @@ router.get('', cacheHeaders.noCache, asyncWrap(async (req, res) => {
   let [results, count, facets] = await Promise.all(mongoQueries)
   results.forEach(r => {
     r.userPermissions = permissions.list('catalogs', r, req.user)
-    clean(r)
+    clean(r, req.query.html === 'true')
   })
   facets = findUtils.parseFacets(facets)
   res.json({ count, results: results.map(result => mongoEscape.unescape(result, true)), facets })
@@ -126,7 +130,7 @@ router.use('/:catalogId/permissions', readCatalog, permissions.router('catalogs'
 // retrieve a catalog by its id
 router.get('/:catalogId', readCatalog, permissions.middleware('readDescription', 'read'), cacheHeaders.resourceBased, (req, res, next) => {
   req.catalog.userPermissions = permissions.list('catalogs', req.catalog, req.user)
-  res.status(200).send(clean(req.catalog))
+  res.status(200).send(clean(req.catalog, req.query.html === 'true'))
 })
 
 // PUT used to create or update

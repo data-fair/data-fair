@@ -40,12 +40,11 @@
         :disabled="!can('writeDescription')"
         @change="patch({title: catalog.title})"
       />
-      <v-textarea
+      <markdown-editor
         v-model="catalog.description"
-        :label="$t('description')"
         :disabled="!can('writeDescription')"
-        filled
-        rows="4"
+        :label="$t('description')"
+        :easymde-config="{minHeight: '150px'}"
         @change="patch({description: catalog.description})"
       />
       <catalog-config-form

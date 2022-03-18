@@ -5,6 +5,9 @@
     :disabled="disabled"
     class="markdown-editor"
   >
+    <template #append>
+      <slot name="append" />
+    </template>
     <v-card
       v-if="!disabled"
       outlined
@@ -68,7 +71,8 @@ export default {
   props: {
     value: { type: String, default: '' },
     label: { type: String, default: '' },
-    disabled: { type: Boolean, default: false }
+    disabled: { type: Boolean, default: false },
+    easymdeConfig: { type: Object, default: () => {} }
   },
   async mounted () {
     if (this.disabled) return
@@ -188,7 +192,8 @@ export default {
         title: this.$t('syntaxDoc'),
         noDisable: true
       }
-      ]
+      ],
+      ...this.easymdeConfig
     }
     this.easymde = new EasyMDE(config)
 

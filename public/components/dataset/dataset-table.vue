@@ -12,7 +12,7 @@
       </v-col>
     </v-row>
     <template v-else>
-      <v-row>
+      <v-row class="pb-2">
         <v-col class="pb-0">
           <v-row class="px-3 ma-0">
             <dataset-nb-results :total="data.total" />
@@ -113,21 +113,13 @@
                 nowrap
                 @click="orderBy(header)"
               >
-                <v-tooltip
+                <help-tooltip
                   v-if="header.tooltip"
-                  bottom
-                  style="margin-right: 8px;"
+                  small
+                  orientation="bottom"
                 >
-                  <template #activator="{ on }">
-                    <v-icon
-                      small
-                      v-on="on"
-                    >
-                      mdi-information
-                    </v-icon>
-                  </template>
-                  <span>{{ header.tooltip }}</span>
-                </v-tooltip>
+                  <div v-html="header.tooltip" />
+                </help-tooltip>
                 <span>
                   {{ header.text }}
                 </span>

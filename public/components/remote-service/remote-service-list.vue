@@ -142,6 +142,7 @@ export default {
           page: this.page,
           select: 'title,description,public,privateAccess',
           showAll: 'true',
+          html: 'true',
           ...this.filters
         }
       })

@@ -99,21 +99,13 @@
                 nowrap
                 @click="orderBy(header)"
               >
-                <v-tooltip
+                <help-tooltip
                   v-if="header.tooltip"
-                  bottom
-                  style="margin-right: 8px;"
+                  small
+                  orientation="bottom"
                 >
-                  <template #activator="{ on }">
-                    <v-icon
-                      small
-                      v-on="on"
-                    >
-                      mdi-information
-                    </v-icon>
-                  </template>
-                  <span>{{ header.tooltip }}</span>
-                </v-tooltip>
+                  <div v-html="header.tooltip" />
+                </help-tooltip>
                 <span>
                   {{ header.text }}
                 </span>
@@ -230,9 +222,11 @@ en:
 <script>
 import { mapState, mapGetters } from 'vuex'
 import eventBus from '~/event-bus'
+import helpTooltip from '../../../../components/help-tooltip.vue'
 const filtersUtils = require('~/assets/filters-utils')
 
 export default {
+  components: { helpTooltip },
   data: () => ({
     data: {},
     query: null,
