@@ -208,6 +208,19 @@
                 <help-tooltip>{{ $t('readOnlyHelp') }}</help-tooltip>
               </template>
             </v-checkbox>
+            <v-checkbox
+              v-if="currentPropRef.prop.type === 'string' && !currentPropRef.prop.type.format && currentPropRef.prop['x-refersTo'] !== 'http://schema.org/description'"
+              :input-value="isFormatted(currentPropRef.prop)"
+              :disabled="!editable || !currentPropRef.editable"
+              :label="$t('formatted')"
+              hide-details
+              dense
+              @change="value => toggleFormatted(currentPropRef.prop, value)"
+            >
+              <template #append>
+                <help-tooltip>{{ $t('formattedHelp') }}</help-tooltip>
+              </template>
+            </v-checkbox>
             <v-select
               v-if="currentPropRef.prop['x-refersTo'] && availableMasters[currentPropRef.prop['x-refersTo']]"
               item-value="id"
@@ -291,6 +304,8 @@ fr:
   separatorHelp: Ne renseigner que pour les colonnes multivaluées. Ce caractère sera utilisé pour séparer les valeurs.
   concept: Concept
   conceptHelp: Les concepts des colonnes améliorent le traitement de la donnée et sa visualisation.
+  formatted: Formaté
+  formattedHelp: Si vous cochez cette case la colonne pourra contenir du markdown ou du HTML et les visualisations en tiendront compte.
   group: Groupe
   groupHelp: Les groupes aident à la sélection de colonnes. Particulièrement utile quand il y a de nombreuses colonnes.
   ignoreDetection: Ignorer la détection de type
@@ -317,6 +332,8 @@ en:
   separatorHelp: Only provide for multi-values columns. This character will be used to separate the values.
   concept: Concept
   conceptHelp: The concepts improve data processing and visualization.
+  formatted: Formatted
+  formattedHelp: If you check this box the column will be able to contain markdown or HTML content that will be displayed as such by visualizations.
   group: Groupe
   groupHelp: Groups help selecting columns. Particularly useful whan there are many columns.
   ignoreDetection: Ignore type detection
@@ -422,6 +439,13 @@ export default {
         if (masterData['x-itemTitle']) this.currentPropRef.prop['x-itemTitle'] = masterData['x-itemTitle']
         this.currentPropRef.prop['x-itemsProp'] = 'results'
       }
+    },
+    isFormatted (prop) {
+      return prop['x-display'] === 'markdown'
+    },
+    toggleFormatted (prop, value) {
+      if (value) this.$set(prop, 'x-display', 'markdown')
+      else delete prop['x-display']
     }
   }
 }

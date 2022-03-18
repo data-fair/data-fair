@@ -271,7 +271,7 @@
 
     <v-dialog
       v-model="editLineDialog"
-      max-width="500px"
+      max-width="600px"
     >
       <v-card outlined>
         <v-card-title primary-title>
@@ -720,3 +720,9 @@ export default {
   }
 }
 </script>
+
+<style>
+.formatted-text-value p:last-child {
+  margin-bottom: 0;
+}
+</style>

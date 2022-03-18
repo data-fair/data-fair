@@ -59,6 +59,9 @@ const schema = {
             description: "L'identifiant de l'action du service distant à utiliser pour l'enrichissement"
           }
         }
+      },
+      'x-display': {
+        type: 'string'
       }
     }
   }

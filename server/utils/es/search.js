@@ -11,12 +11,13 @@ module.exports = async (client, dataset, query, publicBaseUrl) => {
 
   const esResponse = (await client.search({ index: aliasName(dataset), body: esQuery })).body
 
-  esResponse.hits.hits.forEach(hit => {
+  for (const hit of esResponse.hits.hits) {
+    // TODO: move this to prepareResultItems
     if (hit._source && hit._source._attachment_url) {
       if (config.oldPublicUrl) hit._source._attachment_url = hit._source._attachment_url.replace(config.oldPublicUrl, config.publicUrl)
       if (publicBaseUrl) hit._source._attachment_url = hit._source._attachment_url.replace(config.publicUrl, publicBaseUrl)
     }
-  })
+  }
 
   return esResponse
 }

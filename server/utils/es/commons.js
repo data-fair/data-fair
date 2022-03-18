@@ -6,6 +6,7 @@ const flatten = require('flat')
 const queryParser = require('lucene-query-parser')
 const sanitizeHtml = require('sanitize-html')
 const truncateMiddle = require('truncate-middle')
+const marked = require('marked')
 const thumbor = require('../thumbor')
 const tiles = require('../tiles')
 const geo = require('../geo')
@@ -405,10 +406,17 @@ exports.prepareResultItem = (hit, dataset, query) => {
       res._thumbnail = ignoreThumbor ? res[imageField.key] : thumbor.thumbnail(res[imageField.key], query.thumbnail, dataset.thumbnails)
     }
   }
-  // Description can be used as html content in some applications, we must sanitize it for XSS prevention
+  // format markdown and sanitize it for XSS prevention
+  // either using x-display=markdown info or implicitly for description
   const descriptionField = dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/description')
-  if (descriptionField && res[descriptionField.key]) {
-    res[descriptionField.key] = sanitizeHtml(res[descriptionField.key])
+  console.log('prepare', query.html)
+  if (query.html === 'true') {
+    for (const field of dataset.schema) {
+      if ((field['x-display'] === 'markdown' || field === descriptionField) && res[field.key]) {
+        res[field.key] = marked.parse(res[field.key]).trim()
+        res[field.key] = sanitizeHtml(res[field.key])
+      }
+    }
   }
 
   // Truncate string results for faster previews

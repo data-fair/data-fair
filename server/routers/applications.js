@@ -39,7 +39,7 @@ function clean (application, publicUrl, html = false) {
   delete application._id
   delete application.configuration
   if (application.description) {
-    if (html) application.description = marked.parse(application.description)
+    if (html) application.description = marked.parse(application.description).trim()
     application.description = sanitizeHtml(application.description)
   }
   application.description = application.description ? sanitizeHtml(application.description) : ''

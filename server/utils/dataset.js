@@ -771,6 +771,8 @@ const cleanProperty = (p, publicBaseUrl, writableId) => {
   if (cleanProp['x-extension']) cleanProp.readOnly = true
   if (writableId && cleanProp.key === '_id') delete cleanProp.readOnly
 
+  if (p['x-refersTo'] === 'http://schema.org/description') cleanProp['x-display'] = 'markdown'
+
   delete cleanProp.key
   delete cleanProp.ignoreDetection
   delete cleanProp.ignoreIntegerDetection

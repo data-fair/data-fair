@@ -11,7 +11,8 @@ Vue.use(Vuex)
 
 const propertyTypes = [
   { type: 'string', title: 'Texte', icon: 'mdi-text-short' },
-  { type: 'string', maxLength: 100000, title: 'Texte long', icon: 'mdi-text-subject' },
+  { type: 'string', 'x-display': 'textarea', title: 'Texte long', icon: 'mdi-text-subject' },
+  { type: 'string', 'x-display': 'markdown', title: 'Texte long formatté', icon: 'mdi-text-subject' },
   { type: 'string', format: 'date', title: 'Date', icon: 'mdi-calendar' },
   { type: 'string', format: 'date-time', title: 'Date et heure', icon: 'mdi-clock-outline' },
   { type: 'integer', title: 'Nombre entier', icon: 'mdi-numeric' },

@@ -99,7 +99,7 @@ function clean (remoteService, user, html = false) {
   if (remoteService.apiKey && remoteService.apiKey.value) remoteService.apiKey.value = '**********'
   if (!user || !user.adminMode) delete remoteService.privateAccess
   if (remoteService.description) {
-    if (html) remoteService.description = marked.parse(remoteService.description)
+    if (html) remoteService.description = marked.parse(remoteService.description).trim()
     remoteService.description = sanitizeHtml(remoteService.description)
   }
   findUtils.setResourceLinks(remoteService, 'remote-service')

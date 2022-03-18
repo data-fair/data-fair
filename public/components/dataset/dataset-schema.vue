@@ -106,7 +106,7 @@
               v-model="newPropertyType"
               :items="propertyTypes"
               :item-text="item => item.title"
-              :item-value="item => `${item.type}${item.format}${item.maxLength}`"
+              :item-value="item => `${item.type}${item.format || item['x-display']}`"
               :rules="[v => !!v || '']"
               return-object
               label="Type"

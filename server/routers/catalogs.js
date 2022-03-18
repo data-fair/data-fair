@@ -25,7 +25,7 @@ function clean (catalog, html = false) {
   delete catalog.permissions
   if (catalog.apiKey) catalog.apiKey = '**********'
   if (catalog.description) {
-    if (html) catalog.description = marked.parse(catalog.description)
+    if (html) catalog.description = marked.parse(catalog.description).trim()
     catalog.description = sanitizeHtml(catalog.description)
   }
   findUtils.setResourceLinks(catalog, 'catalog')

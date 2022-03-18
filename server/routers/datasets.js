@@ -57,13 +57,13 @@ function clean (publicUrl, dataset, thumbnail, html = false, draft = false) {
   dataset.visibility = visibilityUtils.visibility(dataset)
   delete dataset.permissions
   if (dataset.description) {
-    if (html) dataset.description = marked.parse(dataset.description)
+    if (html) dataset.description = marked.parse(dataset.description).trim()
     dataset.description = sanitizeHtml(dataset.description)
   }
   if (dataset.schema) {
     for (const field of dataset.schema) {
       field.description = field.description || ''
-      if (html) field.description = marked.parse(field.description)
+      if (html) field.description = marked.parse(field.description).trim()
       field.description = sanitizeHtml(field.description)
     }
   }
@@ -1135,7 +1135,7 @@ router.get('/:datasetId/lines', readDataset(), applicationKey, permissions.middl
 
   let esResponse
   try {
-    esResponse = await esUtils.search(req.app.get('es'), req.dataset, req.query, req.publicBaseUrl)
+    esResponse = await esUtils.search(req.app.get('es'), req.dataset, req.query, req.publicBaseUrl, req.query.html === 'true')
   } catch (err) {
     await manageESError(req, err)
   }

@@ -24,8 +24,8 @@
       "en": "Description"
     },
     "description": {
-      "fr": "Un petit texte descriptif (contenu HTML accepté)",
-      "en": "A short descriptive text (HTML content accepted)"
+      "fr": "Un petit texte descriptif (contenu markdown et HTML accepté)",
+      "en": "A short descriptive text (markdown and HTML content accepted)"
     },
     "identifiers": [
       "http://schema.org/description"
