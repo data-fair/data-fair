@@ -22,7 +22,7 @@ describe('markdown contents management', () => {
     assert.equal(res.data.schema[0].description, '<p>This is a <strong>markdown</strong> description.</p>')
     res = await ax.get('/api/v1/datasets', { params: { html: true } })
     assert.equal(res.data.results[0].description, '<p>This is a <strong>markdown</strong> description.</p>')
-    assert.equal(res.data.results[0].schema[0].description, '<p>This is a <strong>markdown</strong> description.</p>\n')
+    assert.equal(res.data.results[0].schema[0].description, '<p>This is a <strong>markdown</strong> description.</p>')
   })
 
   it('Get application description as HTML', async () => {
