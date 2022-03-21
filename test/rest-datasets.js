@@ -142,10 +142,10 @@ describe('REST datasets', () => {
     assert.equal(res.data.total, 4)
 
     // check that _i is incremental and unique even inside the same bulk
-    assert.ok(res.data.results[0]._i.toString().endsWith('00'))
-    assert.ok(res.data.results[1]._i.toString().endsWith('01'))
-    assert.ok(res.data.results[2]._i.toString().endsWith('02'))
-    assert.ok(res.data.results[3]._i.toString().endsWith('03'))
+    assert.ok(res.data.results[0]._i.toString().endsWith('03'))
+    assert.ok(res.data.results[1]._i.toString().endsWith('02'))
+    assert.ok(res.data.results[2]._i.toString().endsWith('01'))
+    assert.ok(res.data.results[3]._i.toString().endsWith('00'))
 
     // Patch one through db query to check that it won't processed
     // we must be sure that the whole dataset is not reindexed each time, only the diffs
