@@ -172,7 +172,7 @@ exports.prepareQuery = (dataset, query) => {
   } else {
     esQuery.from = (query.page ? Number(query.page) - 1 : 0) * esQuery.size
   }
-  if (esQuery.from * config.elasticsearch.maxPageSize) throw createError(400, `"size * page" cannot be more than ${config.elasticsearch.maxPageSize}`)
+  if (esQuery.from * esQuery.size > config.elasticsearch.maxPageSize) throw createError(400, `"size * page" cannot be more than ${config.elasticsearch.maxPageSize}`)
 
   // Select fields to return
   const fields = dataset.schema.map(f => f.key)
