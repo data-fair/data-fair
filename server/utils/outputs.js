@@ -14,7 +14,7 @@ exports.result2csv = (dataset, query = {}) => {
       }
     }),
     // quoted_string to prevent bugs with strings containing \r or other edge cases
-    csvStringify({ columns: properties.map(field => field['x-originalName'] || field.key), header: true, quoted_string: true }),
+    csvStringify({ columns: properties.map(field => field['x-originalName'] || field.key), header: query.header !== 'false', quoted_string: true }),
     new Transform({
       transform (item, encoding, callback) {
         // escape special null char (see test/resources/csv-cases/rge-null-chars.csv)

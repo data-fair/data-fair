@@ -133,7 +133,8 @@ module.exports = {
       { hid: 'robots', name: 'robots', content: 'noindex' }
     ],
     link: [],
-    style: []
+    style: [],
+    script: [{ src: 'https://cdn.jsdelivr.net/npm/web-streams-polyfill@2.0.2/dist/ponyfill.min.js' }]
   },
   css: [
     '@mdi/font/css/materialdesignicons.min.css'

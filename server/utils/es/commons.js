@@ -166,12 +166,13 @@ exports.prepareQuery = (dataset, query) => {
 
   // Pagination
   esQuery.size = query.size ? Number(query.size) : 12
-  if (esQuery.size > 10000) throw createError(400, '"size" cannot be more than 10000')
+  if (esQuery.size > config.elasticsearch.maxPageSize) throw createError(400, `"size" cannot be more than ${config.elasticsearch.maxPageSize}`)
   if (query.after) {
     esQuery.search_after = JSON.parse(`[${query.after}]`)
   } else {
     esQuery.from = (query.page ? Number(query.page) - 1 : 0) * esQuery.size
   }
+  if (esQuery.from * config.elasticsearch.maxPageSize) throw createError(400, `"size * page" cannot be more than ${config.elasticsearch.maxPageSize}`)
 
   // Select fields to return
   const fields = dataset.schema.map(f => f.key)

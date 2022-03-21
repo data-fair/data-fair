@@ -35,7 +35,8 @@ module.exports = {
     maxBulkChars: 200000,
     requestTimeout: 240000, // same as timeout in bulk indexing requests
     maxShardSize: 10000000000, // 10go
-    nbReplicas: 1
+    nbReplicas: 1,
+    maxPageSize: 10000
   },
   indicesPrefix: 'dataset-' + (process.env.NODE_ENV || 'development'),
   info: {

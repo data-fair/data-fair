@@ -1023,10 +1023,6 @@ async function manageESError (req, err) {
 
 // Read/search data for a dataset
 router.get('/:datasetId/lines', readDataset(), applicationKey, permissions.middleware('readLines', 'read', 'readDataAPI'), cacheHeaders.resourceBased, asyncWrap(async (req, res) => {
-  if (req.query && req.query.page && req.query.size && req.query.page * req.query.size > 10000) {
-    return res.status(404).send('You can only access the first 10 000 elements.')
-  }
-
   const db = req.app.get('db')
 
   // used later to count items in a tile or tile's neighbor
@@ -1071,7 +1067,7 @@ router.get('/:datasetId/lines', readDataset(), applicationKey, permissions.middl
   let xyz
   if (vectorTileRequested) {
     // default is 20 for other format, but we want filled tiles by default
-    req.query.size = req.query.size || '10000'
+    req.query.size = req.query.size || config.elasticsearch.maxPageSize + ''
     // sorting by rand provides more homogeneous distribution in tiles
     req.query.sort = req.query.sort || '_rand'
     if (!req.query.xyz) return res.status(400).send('xyz parameter is required for vector tile format.')
@@ -1100,8 +1096,7 @@ router.get('/:datasetId/lines', readDataset(), applicationKey, permissions.middl
   if (vectorTileRequested) {
     res.setHeader('x-tilesmode', 'es')
 
-    const requestedSize = req.query.size ? Number(req.query.size) : 20
-    if (requestedSize > 10000) throw createError(400, '"size" cannot be more than 10000')
+    const requestedSize = Number(req.query.size)
     if (sampling === 'neighbors') {
       // count docs in neighboring tiles to perform intelligent sampling
       try {

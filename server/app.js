@@ -106,6 +106,11 @@ if (config.mode.includes('server')) {
   })
   app.use('/app', require('./routers/application-proxy'))
 
+  // self hosting of streamsaver man in the middle service worker
+  // see https://github.com/jimmywarting/StreamSaver.js/issues/183
+  app.use('/streamsaver/mitm.html', express.static('node_modules/streamsaver/mitm.html'))
+  app.use('/streamsaver/sw.js', express.static('node_modules/streamsaver/sw.js'))
+
   // Error management
   app.use((err, req, res, next) => {
     if (err.name === 'UnauthorizedError') {

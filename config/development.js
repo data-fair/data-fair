@@ -78,5 +78,8 @@ module.exports = {
   extraAdminNavigationItems: [{ id: 'test', title: { fr: 'Test admin', en: 'Test admin en' }, iframe: 'https://koumoul.com', icon: 'mdi-link' }],
   disableSharing: false,
   disableApplications: false,
-  disableRemoteServices: false
+  disableRemoteServices: false,
+  elasticsearch: {
+    maxPageSize: 10000
+  }
 }

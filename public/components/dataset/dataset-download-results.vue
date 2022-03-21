@@ -1,7 +1,9 @@
 <template>
   <v-menu
+    v-model="menu"
     offset-y
     tile
+    :close-on-content-click="false"
   >
     <template #activator="{ on }">
       <v-btn
@@ -19,11 +21,39 @@
         type="info"
         :value="true"
         tile
-        dense
         text
         :icon="false"
         class="mb-0 mt-1"
       />
+      <v-list
+        v-if="total > 10000"
+        class="py-0"
+        dense
+      >
+        <v-list-item
+          target="download"
+          @click="downloadLargeCSV"
+        >
+          <v-list-item-avatar :size="30">
+            <v-avatar :size="30">
+              <v-icon>
+                mdi-file-delimited-outline
+              </v-icon>
+            </v-avatar>
+          </v-list-item-avatar>
+          <v-list-item-title v-t="'csv'" />
+        </v-list-item>
+        <div style="height:4px;width:100%;">
+          <v-progress-linear
+            v-if="largeCsvLoading"
+            :buffer-value="largeCsvBufferValue"
+            :value="largeCsvValue"
+            stream
+            height="4"
+            style="margin:0;"
+          />
+        </div>
+      </v-list>
       <v-alert
         v-t="'alert2'"
         type="warning"
@@ -39,6 +69,7 @@
         dense
       >
         <v-list-item
+          v-if="total <= 1000"
           :href="downloadUrls.csv"
           target="download"
           @click="clickDownload('csv')"
@@ -102,15 +133,15 @@
 
 <i18n lang="yaml">
 fr:
-  alert1: Ce téléchargement tient compte du tri et de la recherche
-  alert2: Les résultats sont limités aux 10 000 premières lignes
+  alert1: Ces téléchargements tiennent compte du tri et de la recherche
+  alert2: Les formats suivants sont limités aux 10 000 premières lignes
   csv: format CSV
   xlsx: format XLSX
   ods: format ODS
   geojson: format GeoJSON
 en:
-  alert1: This download takes into consideration the current filters and sorting
-  alert2: The results are limited to the 10,000 first lines
+  alert1: These downloads take into consideration the current filters and sorting
+  alert2: The next formats are limited to the 10,000 first lines
   csv: CSV format
   xlsx: XLSX format
   ods: ODS format
@@ -120,9 +151,21 @@ en:
 <script>
 import { mapState, mapGetters } from 'vuex'
 import buildURL from 'axios/lib/helpers/buildURL'
+import streamSaver from 'streamsaver'
+const LinkHeader = require('http-link-header')
+
 export default {
   props: ['params', 'total'],
+  data () {
+    return {
+      menu: true,
+      largeCsvLoading: false,
+      largeCsvBufferValue: 0,
+      largeCsvValue: 0
+    }
+  },
   computed: {
+    ...mapState(['env']),
     ...mapState('dataset', ['dataset']),
     ...mapGetters('dataset', ['resourceUrl']),
     downloadUrls () {
@@ -141,8 +184,33 @@ export default {
     }
   },
   methods: {
+    async downloadLargeCSV () {
+      streamSaver.mitm = `${this.env.publicUrl}/streamsaver/mitm.html`
+
+      const fileStream = streamSaver.createWriteStream(`${this.dataset.id}.csv`)
+      const writer = fileStream.getWriter()
+      this.largeCsvLoading = true
+      const nbChunks = Math.ceil(this.total / 10000)
+      let nextUrl = this.downloadUrls.csv
+      for (let chunk = 0; chunk < nbChunks; chunk++) {
+        this.largeCsvBufferValue = ((chunk + 1) / nbChunks) * 100
+        const { data, headers } = await this.$axios.get(nextUrl)
+        const next = new URL(LinkHeader.parse(headers.link).rel('next')[0].uri)
+        next.searchParams.set('header', false)
+        nextUrl = next.href
+        writer.write(new TextEncoder().encode(data))
+        this.largeCsvValue = ((chunk + 1) / nbChunks) * 100
+      }
+      writer.close()
+
+      this.clickDownload('csv')
+    },
     clickDownload (format) {
       parent.postMessage({ trackEvent: { action: 'download_filtered', label: `${this.dataset.id} - ${format}` } })
+      this.menu = false
+      this.largeCsvLoading = false
+      this.largeCsvBufferValue = 0
+      this.largeCsvValue = 0
     }
   }
 }
