@@ -409,7 +409,6 @@ exports.prepareResultItem = (hit, dataset, query) => {
   // format markdown and sanitize it for XSS prevention
   // either using x-display=markdown info or implicitly for description
   const descriptionField = dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/description')
-  console.log('prepare', query.html)
   if (query.html === 'true') {
     for (const field of dataset.schema) {
       if ((field['x-display'] === 'markdown' || field === descriptionField) && res[field.key]) {

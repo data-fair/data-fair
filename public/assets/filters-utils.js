@@ -63,18 +63,33 @@ const escape = (val) => {
 }
 
 export function writeQueryParams (filters, query) {
+  Object.keys(query).filter(key => key.endsWith('_eq')).forEach(key => delete query[key])
+  filters.filter(f => f.type === 'in' && f.values.length === 1).forEach(f => {
+    query[f.field.key + '_eq'] = f.values[0]
+  })
   Object.keys(query).filter(key => key.endsWith('_in')).forEach(key => delete query[key])
-  filters.filter(f => f.type === 'in').forEach(f => {
+  filters.filter(f => f.type === 'in' && f.values.length > 1).forEach(f => {
     query[f.field.key + '_in'] = JSON.stringify(f.values).slice(1, -1)
   })
   Object.keys(query).filter(key => key.endsWith('_starts')).forEach(key => delete query[key])
   filters.filter(f => f.type === 'starts').forEach(f => {
     query[f.field.key + '_starts'] = f.value
   })
+  Object.keys(query).filter(key => key.endsWith('_interval')).forEach(key => delete query[key])
+  filters.filter(f => f.type === 'interval').forEach(f => {
+    query[f.field.key + '_interval'] = JSON.stringify([f.minValue || '*', f.maxValue || '*']).slice(1, -1)
+  })
 }
 
 export function readQueryParams (query, dataset) {
   const filters = []
+  Object.keys(query).filter(key => key.endsWith('_eq')).forEach(key => {
+    filters.push({
+      type: 'in',
+      field: dataset.schema.find(p => p.key === key.slice(0, -3)),
+      values: [query[key]]
+    })
+  })
   Object.keys(query).filter(key => key.endsWith('_in')).forEach(key => {
     filters.push({
       type: 'in',
@@ -87,6 +102,15 @@ export function readQueryParams (query, dataset) {
       type: 'starts',
       field: dataset.schema.find(p => p.key === key.slice(0, -7)),
       value: query[key]
+    })
+  })
+  Object.keys(query).filter(key => key.endsWith('_interval')).forEach(key => {
+    const values = JSON.parse(`[${query[key]}]`)
+    filters.push({
+      type: 'interval',
+      field: dataset.schema.find(p => p.key === key.slice(0, -9)),
+      minValue: values[0],
+      maxValue: values[0]
     })
   })
   return filters

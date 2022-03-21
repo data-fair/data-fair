@@ -19,10 +19,7 @@
         @click:close="removeFilter(i)"
         @click="toggle"
       >
-        {{ filter.field.title || filter.field['x-originalName'] || filter.field.key }}
-        :
-        {{ filter.values || [filter.value] | cellValues(filter.field) }}
-        {{ filter.type === 'starts' ? '*' : '' }}
+        {{ label(filter) }}
       </v-chip>
     </v-slide-item>
   </v-slide-group>
@@ -42,6 +39,26 @@ export default {
       this.currentFilter = i - 1
       this.value.splice(i, 1)
       this.$emit('input', this.value)
+    },
+    label (filter) {
+      const field = filter.field.title || filter.field['x-originalName'] || filter.field.key
+      let operator = 'égal à'
+      if (filter.type === 'starts') operator = 'commence par'
+      let value = this.$root.$options.filters.cellValues(filter.values || filter.value, filter.field)
+      if (filter.type === 'interval') {
+        if (filter.minValue === '*') {
+          operator = 'inférieur ou égal à'
+          value = this.$root.$options.filters.cellValues(filter.maxValue, filter.field)
+        } else if (filter.maxValue === '*') {
+          operator = 'supérieur ou égal à'
+          value = this.$root.$options.filters.cellValues(filter.minValue, filter.field)
+        } else {
+          operator = 'compris entre'
+          value = this.$root.$options.filters.cellValues(filter.minValue, filter.field) +
+            ' et ' + this.$root.$options.filters.cellValues(filter.maxValue, filter.field)
+        }
+      }
+      return `${field} ${operator} ${value}`
     }
   }
 }
