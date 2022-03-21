@@ -152,8 +152,6 @@ en:
 import { mapState, mapGetters } from 'vuex'
 import buildURL from 'axios/lib/helpers/buildURL'
 import streamSaver from 'streamsaver'
-import { WritableStream } from 'web-streams-polyfill/ponyfill'
-streamSaver.WritableStream = WritableStream
 const LinkHeader = require('http-link-header')
 
 export default {
@@ -187,11 +185,14 @@ export default {
   },
   methods: {
     async downloadLargeCSV () {
+      this.largeCsvLoading = true
+
+      const { WritableStream } = await import('web-streams-polyfill/ponyfill')
+      streamSaver.WritableStream = WritableStream
       streamSaver.mitm = `${this.env.publicUrl}/streamsaver/mitm.html`
 
       const fileStream = streamSaver.createWriteStream(`${this.dataset.id}.csv`)
       const writer = fileStream.getWriter()
-      this.largeCsvLoading = true
       const nbChunks = Math.ceil(this.total / 10000)
       let nextUrl = this.downloadUrls.csv
       for (let chunk = 0; chunk < nbChunks; chunk++) {
