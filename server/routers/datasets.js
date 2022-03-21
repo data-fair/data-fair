@@ -14,6 +14,7 @@ const slug = require('slugify')
 const sanitizeHtml = require('sanitize-html')
 const CronJob = require('cron').CronJob
 const marked = require('marked')
+const LinkHeader = require('http-link-header')
 const journals = require('../utils/journals')
 const esUtils = require('../utils/es')
 const filesUtils = require('../utils/files')
@@ -1139,6 +1140,21 @@ router.get('/:datasetId/lines', readDataset(), applicationKey, permissions.middl
   } catch (err) {
     await manageESError(req, err)
   }
+
+  // manage pagination based on search_after, cd https://www.elastic.co/guide/en/elasticsearch/reference/current/paginate-search-results.html
+  let nextLinkURL
+  const lastHit = esResponse.hits.hits[esResponse.hits.hits.length - 1]
+  if (lastHit) {
+    nextLinkURL = new URL(`${req.publicBaseUrl}/api/v1/datasets/${req.dataset.id}/lines`)
+    Object.keys(req.query).filter(key => key !== 'page').forEach(key => {
+      nextLinkURL.searchParams.set(key, req.query[key])
+    })
+    nextLinkURL.searchParams.set('after', JSON.stringify(lastHit.sort).slice(1, -1))
+    const link = new LinkHeader()
+    link.set({ rel: 'next', uri: nextLinkURL.href })
+    res.set('Link', link.toString())
+  }
+
   if (req.query.format === 'geojson') {
     const geojson = geo.result2geojson(esResponse)
     geojson.bbox = (await bboxPromise).bbox
@@ -1166,6 +1182,7 @@ router.get('/:datasetId/lines', readDataset(), applicationKey, permissions.middl
   }
 
   const result = { total: esResponse.hits.total.value }
+  if (nextLinkURL) result.next = nextLinkURL.href
   if (req.query.collapse) result.totalCollapse = esResponse.aggregations.totalCollapse.value
   result.results = esResponse.hits.hits.map(hit => {
     return esUtils.prepareResultItem(hit, req.dataset, req.query)

@@ -121,7 +121,7 @@ Pour plus d'information voir la documentation [ElasticSearch](https://www.elasti
     })
   }
 
-  const hitsParams = (defaultSize = 20, maxSize = 10000) => [{
+  const hitsParams = (defaultSize = 12, maxSize = 10000) => [{
     in: 'query',
     name: 'sort',
     description: `
@@ -142,7 +142,7 @@ Exemple: ma_colonne,-ma_colonne2`,
   }, {
     in: 'query',
     name: 'size',
-    description: 'Le nombre de résultats à retourner (taille de la pagination). 20 par défaut.',
+    description: `Le nombre de résultats à retourner (taille de la pagination). ${defaultSize} par défaut.`,
     schema: {
       default: defaultSize,
       type: 'integer',

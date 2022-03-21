@@ -165,9 +165,13 @@ exports.prepareQuery = (dataset, query) => {
   esQuery.track_total_hits = true
 
   // Pagination
-  esQuery.size = query.size ? Number(query.size) : 20
+  esQuery.size = query.size ? Number(query.size) : 12
   if (esQuery.size > 10000) throw createError(400, '"size" cannot be more than 10000')
-  esQuery.from = (query.page ? Number(query.page) - 1 : 0) * esQuery.size
+  if (query.after) {
+    esQuery.search_after = JSON.parse(`[${query.after}]`)
+  } else {
+    esQuery.from = (query.page ? Number(query.page) - 1 : 0) * esQuery.size
+  }
 
   // Select fields to return
   const fields = dataset.schema.map(f => f.key)
@@ -190,8 +194,10 @@ exports.prepareQuery = (dataset, query) => {
   // implicitly sort by score after other criteria
   if (!esQuery.sort.find(s => !!s._score) && query.q) esQuery.sort.push('_score')
   // every other things equal, sort by original line order
+  // this is very important as it provides a tie-breaker for search_after pagination
   if (fields.includes('_updatedAt')) {
     if (!esQuery.sort.find(s => !!s._updatedAt)) esQuery.sort.push({ _updatedAt: 'desc' })
+    if (!esQuery.sort.find(s => !!s._i)) esQuery.sort.push({ _i: 'desc' })
   } else {
     if (!esQuery.sort.find(s => !!s._i)) esQuery.sort.push('_i')
   }
