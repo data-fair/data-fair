@@ -194,6 +194,7 @@ describe('datasets', () => {
     form.append('file', datasetFd, 'yet-a-dataset.csv')
     res = await ax.post('/api/v1/datasets/my-dataset-id', form, { headers: testUtils.formHeaders(form) })
     assert.equal(res.status, 200)
+    await workers.hook('finalizer/my-dataset-id')
   })
 
   it('Reject some other pre-filled attributes', async () => {
