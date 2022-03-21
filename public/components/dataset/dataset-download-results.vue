@@ -152,13 +152,15 @@ en:
 import { mapState, mapGetters } from 'vuex'
 import buildURL from 'axios/lib/helpers/buildURL'
 import streamSaver from 'streamsaver'
+import { WritableStream } from 'web-streams-polyfill/ponyfill'
+streamSaver.WritableStream = WritableStream
 const LinkHeader = require('http-link-header')
 
 export default {
   props: ['params', 'total'],
   data () {
     return {
-      menu: true,
+      menu: false,
       largeCsvLoading: false,
       largeCsvBufferValue: 0,
       largeCsvValue: 0
