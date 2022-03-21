@@ -32,6 +32,7 @@
       >
         <v-list-item
           target="download"
+          :disabled="largeCsvLoading"
           @click="downloadLargeCSV"
         >
           <v-list-item-avatar :size="30">
@@ -62,14 +63,14 @@
         dense
         text
         :icon="false"
-        class="mb-0 mt-1"
+        class="my-0"
       />
       <v-list
         class="pt-0"
         dense
       >
         <v-list-item
-          v-if="total <= 1000"
+          v-if="total <= 10000"
           :href="downloadUrls.csv"
           target="download"
           @click="clickDownload('csv')"
