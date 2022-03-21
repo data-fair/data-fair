@@ -1,7 +1,7 @@
 const assert = require('assert').strict
 const testUtils = require('./resources/test-utils')
 
-describe('datasets', () => {
+describe('topics', () => {
   it('Search and apply facets', async () => {
     const ax = global.ax.dmeadus
 
@@ -20,6 +20,14 @@ describe('datasets', () => {
     await ax.patch('/api/v1/datasets/' + dataset2.id, { topics })
     res = await ax.get('/api/v1/datasets', { params: { facets: 'topics' } })
     assert.equal(res.data.count, 2)
+    assert.equal(res.data.facets.topics.length, 2)
+    assert.equal(res.data.facets.topics[0].count, 2)
+    assert.equal(res.data.facets.topics[0].value.id, topics[0].id)
+    assert.equal(res.data.facets.topics[1].count, 1)
+    assert.equal(res.data.facets.topics[1].value.id, topics[1].id)
+
+    res = await ax.get('/api/v1/datasets', { params: { facets: 'topics', topics: topics[1].id } })
+    assert.equal(res.data.count, 1)
     assert.equal(res.data.facets.topics.length, 2)
     assert.equal(res.data.facets.topics[0].count, 2)
     assert.equal(res.data.facets.topics[0].value.id, topics[0].id)

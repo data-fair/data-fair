@@ -21,7 +21,7 @@ exports.query = (req, fieldsMap, globalMode, extraFilters = []) => {
     }
   }
 
-  query.$and = extraFilters
+  query.$and = [...extraFilters]
 
   // "standard" field mapping for applications/apis/datasets routes
   // @deprecated owner-type and owner-id : we shall use the owner parameter bellow : owner=organization:id1,user:id2,organization:id3
