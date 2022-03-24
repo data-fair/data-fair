@@ -29,6 +29,7 @@
         v-if="total > 10000"
         class="py-0"
         dense
+        style="position:relative"
       >
         <v-list-item
           target="download"
@@ -44,6 +45,18 @@
           </v-list-item-avatar>
           <v-list-item-title v-t="'csv'" />
         </v-list-item>
+        <v-btn
+          v-if="largeCsvLoading"
+          icon
+          :title="$t('cancel')"
+          color="warning"
+          absolute
+          right
+          style="position:absolute;top:6px;right:8px;"
+          @click="cancelLargeCsv"
+        >
+          <v-icon>mdi-cancel</v-icon>
+        </v-btn>
         <div style="height:4px;width:100%;">
           <v-progress-linear
             v-if="largeCsvLoading"
@@ -140,6 +153,7 @@ fr:
   xlsx: format XLSX
   ods: format ODS
   geojson: format GeoJSON
+  cancel: Annuler
 en:
   alert1: These downloads take into consideration the current filters and sorting
   alert2: The next formats are limited to the 10,000 first lines
@@ -147,12 +161,14 @@ en:
   xlsx: XLSX format
   ods: ODS format
   geojson: GeoJSON format
+  cancel: Cancel
 </i18n>
 
 <script>
 import { mapState, mapGetters } from 'vuex'
 import buildURL from 'axios/lib/helpers/buildURL'
 import streamSaver from 'streamsaver'
+import eventBus from '~/event-bus'
 const LinkHeader = require('http-link-header')
 
 export default {
@@ -162,7 +178,8 @@ export default {
       menu: false,
       largeCsvLoading: false,
       largeCsvBufferValue: 0,
-      largeCsvValue: 0
+      largeCsvValue: 0,
+      largeCsvCancelled: false
     }
   },
   computed: {
@@ -186,35 +203,58 @@ export default {
   },
   methods: {
     async downloadLargeCSV () {
+      this.largeCsvCancelled = false
       this.largeCsvLoading = true
+      try {
+        const { WritableStream } = await import('web-streams-polyfill/ponyfill')
+        streamSaver.WritableStream = WritableStream
+        streamSaver.mitm = `${this.env.publicUrl}/streamsaver/mitm.html`
+        this.fileStream = streamSaver.createWriteStream(`${this.dataset.id}.csv`)
+        this.writer = this.fileStream.getWriter()
+        const nbChunks = Math.ceil(this.total / 10000)
+        let nextUrl = this.downloadUrls.csv
+        for (let chunk = 0; chunk < nbChunks; chunk++) {
+          if (this.largeCsvCancelled) break
+          this.largeCsvBufferValue = ((chunk + 1) / nbChunks) * 100
+          let res
+          try {
+            res = await this.$axios.get(nextUrl)
+          } catch (err) {
+            // 1 retry after 10s for network resilience, short service interruption, etc
+            await new Promise(resolve => setTimeout(resolve, 10000))
+            res = await this.$axios.get(nextUrl)
+          }
 
-      const { WritableStream } = await import('web-streams-polyfill/ponyfill')
-      streamSaver.WritableStream = WritableStream
-      streamSaver.mitm = `${this.env.publicUrl}/streamsaver/mitm.html`
-
-      const fileStream = streamSaver.createWriteStream(`${this.dataset.id}.csv`)
-      const writer = fileStream.getWriter()
-      const nbChunks = Math.ceil(this.total / 10000)
-      let nextUrl = this.downloadUrls.csv
-      for (let chunk = 0; chunk < nbChunks; chunk++) {
-        this.largeCsvBufferValue = ((chunk + 1) / nbChunks) * 100
-        const { data, headers } = await this.$axios.get(nextUrl)
-        const next = new URL(LinkHeader.parse(headers.link).rel('next')[0].uri)
-        next.searchParams.set('header', false)
-        nextUrl = next.href
-        writer.write(new TextEncoder().encode(data))
-        this.largeCsvValue = ((chunk + 1) / nbChunks) * 100
+          const { data, headers } = res
+          const next = new URL(LinkHeader.parse(headers.link).rel('next')[0].uri)
+          next.searchParams.set('header', false)
+          nextUrl = next.href
+          await this.writer.write(new TextEncoder().encode(data))
+          this.largeCsvValue = ((chunk + 1) / nbChunks) * 100
+        }
+        if (!this.largeCsvCancelled) {
+          this.writer.close()
+          this.clickDownload('csv')
+        }
+      } catch (error) {
+        if (!this.largeCsvCancelled && !!error) eventBus.$emit('notification', { error })
       }
-      writer.close()
-
-      this.clickDownload('csv')
+      this.largeCsvLoading = false
+      this.largeCsvCancelled = false
+      this.largeCsvBufferValue = 0
+      this.largeCsvValue = 0
+    },
+    /* cancel works, but the next download stays in pending state I don't know why */
+    async cancelLargeCsv () {
+      this.largeCsvCancelled = true
+      if (this.writer) {
+        this.writer.releaseLock()
+        this.fileStream.abort()
+      }
     },
     clickDownload (format) {
       parent.postMessage({ trackEvent: { action: 'download_filtered', label: `${this.dataset.id} - ${format}` } })
       this.menu = false
-      this.largeCsvLoading = false
-      this.largeCsvBufferValue = 0
-      this.largeCsvValue = 0
     }
   }
 }
