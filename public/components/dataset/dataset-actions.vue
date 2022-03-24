@@ -106,6 +106,23 @@
       </v-list-item-content>
     </v-list-item>
     <v-list-item
+      v-if="user.adminMode"
+      color="admin"
+      @click="showWebhooksDialog = true"
+    >
+      <v-list-item-icon>
+        <v-icon color="admin">
+          mdi-webhook
+        </v-icon>
+      </v-list-item-icon>
+      <v-list-item-content>
+        <v-list-item-title
+          v-t="'webhooks'"
+          class="admin--text"
+        />
+      </v-list-item-content>
+    </v-list-item>
+    <v-list-item
       v-if="can('delete')"
       @click="showDeleteDialog = true"
     >
@@ -397,29 +414,46 @@
       max-width="500"
     >
       <v-card outlined>
-        <v-card-title
-          v-t="'notifications'"
-          primary-title
-        />
-        <v-card-text v-if="nbApplications > 0">
-          <v-alert
-            type="error"
-            outlined
-            :value="true"
-            v-text="$tc('updateWarning', nbApplications)"
-          />
-        </v-card-text>
+        <v-toolbar
+          dense
+          flat
+        >
+          <v-toolbar-title v-t="'notification'" />
+          <v-spacer />
+          <v-btn
+            icon
+            @click.native="showNotifDialog = false"
+          >
+            <v-icon>mdi-close</v-icon>
+          </v-btn>
+        </v-toolbar>
         <v-card-text class="py-0 px-3">
           <v-iframe :src="notifUrl" />
         </v-card-text>
-        <v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <v-dialog
+      v-model="showWebhooksDialog"
+      max-width="500"
+    >
+      <v-card outlined>
+        <v-toolbar
+          dense
+          flat
+        >
+          <v-toolbar-title v-t="'webhooks'" />
           <v-spacer />
           <v-btn
-            v-t="'ok'"
-            color="primary"
-            @click="showNotifDialog = false"
-          />
-        </v-card-actions>
+            icon
+            @click.native="showWebhooksDialog = false"
+          >
+            <v-icon>mdi-close</v-icon>
+          </v-btn>
+        </v-toolbar>
+        <v-card-text class="py-0 px-3">
+          <v-iframe :src="webhooksUrl" />
+        </v-card-text>
       </v-card>
     </v-dialog>
   </v-list>
@@ -459,6 +493,7 @@ fr:
   fileTooLarge: Le fichier est trop volumineux pour être importé
   importError: "Erreur pendant l'import du fichier :"
   notifications: Notifications
+  webhooks: Webhooks
   ok: ok
   attachmentsMsg: Optionnellement vous pouvez charger une archive zip contenant des fichiers à utiliser comme pièces à joindre aux lignes du fichier principal. Dans ce cas le fichier principal doit avoir une colonne qui contient les chemins des pièces jointes dans l'archive.
 en:
@@ -493,6 +528,7 @@ en:
   fileTooLarge: The file is too large to be imported
   importError: "Failure to import the file :"
   notifications: Notifications
+  webhooks: Webhooks
   ok: ok
   attachmentsMsg: Optionally you can load a zip archive containing files to be used as attachments to the lines of the main dataset file. In this case the main data file must have a column that contains paths of the attachments in the archive.
 </i18n>
@@ -526,6 +562,7 @@ export default {
     showAPIDialog: false,
     publicAPIDoc: true,
     showNotifDialog: false,
+    showWebhooksDialog: false,
     previewId: 'table'
   }),
   computed: {
@@ -554,7 +591,17 @@ export default {
       const keysParam = webhooks.map(w => `data-fair:${w.const}:${this.dataset.id}`).join(',')
       const titlesParam = webhooks.map(w => w.title.replace(/,/g, ' ')).join(',')
       const urlTemplate = `${this.env.publicUrl}/dataset/${this.dataset.id}`
-      return `${this.env.notifyUrl}/embed/subscribe?key=${encodeURIComponent(keysParam)}&title=${encodeURIComponent(titlesParam)}&url-template=${encodeURIComponent(urlTemplate)}&register=false`
+      const sender = `${this.dataset.owner.type}:${this.dataset.owner.id}`
+      return `${this.env.notifyUrl}/embed/subscribe?key=${encodeURIComponent(keysParam)}&title=${encodeURIComponent(titlesParam)}&url-template=${encodeURIComponent(urlTemplate)}&sender=${encodeURIComponent(sender)}&register=false`
+    },
+    webhooksUrl () {
+      const webhooks = webhooksSchema.items.properties.events.items.oneOf
+        .filter(item => item.const === 'dataset-data-updated')
+
+      const keysParam = webhooks.map(w => `data-fair:${w.const}:${this.dataset.id}`).join(',')
+      const titlesParam = webhooks.map(w => w.title.replace(/,/g, ' ')).join(',')
+      const sender = `${this.dataset.owner.type}:${this.dataset.owner.id}`
+      return `${this.env.notifyUrl}/embed/subscribe-webhooks?key=${encodeURIComponent(keysParam)}&title=${encodeURIComponent(titlesParam)}&sender=${encodeURIComponent(sender)}`
     }
   },
   created () {
