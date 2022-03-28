@@ -120,6 +120,7 @@
                   v-if="header.field && header.filterable"
                   :max-height="filterHeight"
                   :field="header.field"
+                  :filters="filters"
                   @filter="f => addFilter(header.value, f)"
                 />
               </th>
