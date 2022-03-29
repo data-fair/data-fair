@@ -21,7 +21,7 @@
       <v-divider />
       <v-img
         :src="`${application.href}/capture`"
-        :aspect-ratio="800 / 450"
+        :aspect-ratio="1050 / 450"
       />
       <v-divider />
       <v-row

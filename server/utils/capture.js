@@ -22,7 +22,8 @@ exports.screenshot = async (req) => {
 
   try {
     const screenShortUrl = (captureUrl + '/api/v1/screenshot')
-    const appUrl = `${config.publicUrl}/app/${req.application.id}`
+    // the thumbnail query param can be used by the application to render something adapted to the context
+    const appUrl = `${config.publicUrl}/app/${req.application.id}?thumbnail=true`
     const cookieText = Object.keys(req.cookies).map(c => `${c}=${req.cookies[c]}`).join('; ')
     debug(`Screenshot ${screenShortUrl}?target=${appUrl} - ${cookieText}`)
     let res
@@ -31,7 +32,9 @@ exports.screenshot = async (req) => {
       url: screenShortUrl,
       qs: {
         target: appUrl,
-        type: 'gif'
+        type: 'gif', // will return a gif if the application supports an animation mode, png otherwise
+        width: 1050, // 21/9 resolution
+        height: 450
       },
       headers: {
         Cookie: cookieText
