@@ -3,9 +3,13 @@ const { Transform } = require('stream')
 const XLSX = require('xlsx')
 
 // cf https://stackoverflow.com/a/57673262
+const val2string = (val) => {
+  val = val ?? ''
+  return typeof val.toLocaleString === 'function' ? val.toLocaleString() : val + ''
+}
 function fitToColumn (arrayOfArray) {
   // get maximum character of each column
-  return arrayOfArray[0].map((a, i) => ({ wch: Math.min(100, Math.max(...arrayOfArray.map(a2 => a2[i] ? a2[i].toString().length : 0))) }))
+  return arrayOfArray[0].map((a, i) => ({ wch: Math.min(100, Math.max(...arrayOfArray.map(a2 => val2string(a2[i]).length))) }))
 }
 
 exports.result2csv = (dataset, query = {}) => {
