@@ -187,7 +187,6 @@
           </v-btn>
         </template>
       </v-text-field>
-
       <v-date-picker
         v-if="editDate === 'gte'"
         v-model="gte"
@@ -240,7 +239,7 @@ export default {
       return this.field.type === 'integer' || this.field.type === 'number'
     },
     showDateCompare () {
-      return this.field.type === 'string' && this.field.format === 'date'
+      return this.field.type === 'string' && (this.field.format === 'date' || this.field.format === 'date-time')
     }
   },
   methods: {
