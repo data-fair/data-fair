@@ -25,7 +25,7 @@ exports.screenshot = async (req) => {
     // the thumbnail query param can be used by the application to render something adapted to the context
     const appUrl = `${config.publicUrl}/app/${req.application.id}?thumbnail=true`
     const cookieText = Object.keys(req.cookies).map(c => `${c}=${req.cookies[c]}`).join('; ')
-    debug(`Screenshot ${screenShortUrl}?target=${appUrl} - ${cookieText}`)
+    debug(`Screenshot ${screenShortUrl}?target=${encodeURIComponent(appUrl)} - ${cookieText}`)
     let res
     const reqOpts = {
       method: 'GET',

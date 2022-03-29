@@ -391,7 +391,7 @@
 <i18n lang="yaml">
 fr:
   noData: Les données ne sont pas accessibles. Soit le jeu de données n'a pas encore été entièrement traité, soit il y a eu une erreur dans le traitement.
-  tutorialFilter: Appliquez des filtres en survolant les valeurs et triez en cliquant sur les entêtes de colonnes. Cliquez sur le bouton en haut à droite pour télécharger dans un fichier le contenu filtré et trié.
+  tutorialFilter: Appliquez des filtres depuis les entêtes de colonnes et en survolant les valeurs. Triez en cliquant sur les entêtes de colonnes. Cliquez sur le bouton en haut à droite pour télécharger dans un fichier le contenu filtré et trié.
   nbLines: Nombre de lignes
   showRevisions: Voir l'historique des révisions de cette ligne
   addLine: Ajouter une ligne
@@ -405,7 +405,7 @@ fr:
   nbRevisions: Nombre de révisions
 en:
   noData: The data is not accessible. Either the dataset was not yet entirely processed, or there was an error.
-  tutorialFilter: Apply filters by hovering the values et sort by clicking on the headers. Click on the button on the top to the right to download in a file the filtered and sorted content.
+  tutorialFilter: Apply filters from the headers and by hovering the values. Sort by clicking on the headers. Click on the button on the top to the right to download in a file the filtered and sorted content.
   nbLines: Number of lines
   showRevisions: Show the history
   addLine: Add a line

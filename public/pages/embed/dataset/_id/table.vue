@@ -3,7 +3,10 @@
     fluid
     class="pa-0"
   >
-    <tutorial-alert id="dataset-table">
+    <tutorial-alert
+      id="dataset-table"
+      style="position:absolute;bottom: 0px;z-index:1;left: 50%;transform: translate(-50%, 0);"
+    >
       {{ $t('tutorialFilter') }}
     </tutorial-alert>
     <v-sheet
@@ -194,7 +197,7 @@
                       fab
                       x-small
                       color="primary"
-                      style="right: -10px;top: 50%;transform: translate(0, -50%);"
+                      style="right: 0px;top: 50%;transform: translate(0, -50%);"
                       absolute
                       @click="addFilter(header.value, item[header.value])"
                     >
@@ -213,10 +216,10 @@
 
 <i18n lang="yaml">
 fr:
-  tutorialFilter: Appliquez des filtres en survolant les valeurs et triez en cliquant sur les entêtes de colonnes. Cliquez sur le bouton en haut à droite pour télécharger dans un fichier le contenu filtré et trié.
+  tutorialFilter: Appliquez des filtres depuis les entêtes de colonnes et en survolant les valeurs. Triez en cliquant sur les entêtes de colonnes. Cliquez sur le bouton en haut à droite pour télécharger dans un fichier le contenu filtré et trié.
   noData: Les données ne sont pas accessibles. Soit le jeu de données n'a pas encore été entièrement traité, soit il y a eu une erreur dans le traitement.
 en:
-  tutorialFilter: Apply filters by hovering the values et sort by clicking on the headers. Click on the button on the top to the right to download in a file the filtered and sorted content.
+  tutorialFilter: Apply filters from the headers and by hovering the values. Sort by clicking on the headers. Click on the button on the top to the right to download in a file the filtered and sorted content.
   noData: The data is not accessible. Either the dataset was not yet entirely processed, or there was an error.
 </i18n>
 
