@@ -1208,14 +1208,14 @@ router.get('/:datasetId/lines', readDataset(), applicationKey, permissions.middl
 
   if (req.query.format === 'xlsx') {
     res.throttleEnd()
-    const sheet = outputs.results2sheet(req.dataset, req.query, result.results)
+    const sheet = outputs.results2sheet(req, result.results)
     res.setHeader('content-disposition', `attachment; filename="${req.dataset.id}.xlsx"`)
     res.status(200).send(sheet)
     return
   }
   if (req.query.format === 'ods') {
     res.throttleEnd()
-    const sheet = outputs.results2sheet(req.dataset, req.query, result.results, 'ods')
+    const sheet = outputs.results2sheet(req, result.results, 'ods')
     res.setHeader('content-disposition', `attachment; filename="${req.dataset.id}.ods"`)
     res.status(200).send(sheet)
     return

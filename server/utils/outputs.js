@@ -2,6 +2,12 @@ const csvStringify = require('csv-stringify')
 const { Transform } = require('stream')
 const XLSX = require('xlsx')
 
+// cf https://stackoverflow.com/a/57673262
+function fitToColumn (arrayOfArray) {
+  // get maximum character of each column
+  return arrayOfArray[0].map((a, i) => ({ wch: Math.min(100, Math.max(...arrayOfArray.map(a2 => a2[i] ? a2[i].toString().length : 0))) }))
+}
+
 exports.result2csv = (dataset, query = {}) => {
   const select = (query.select && query.select !== '*') ? query.select.split(',') : dataset.schema.filter(f => !f['x-calculated']).map(f => f.key)
   const properties = select.map(key => dataset.schema.find(prop => prop.key === key))
@@ -24,28 +30,57 @@ exports.result2csv = (dataset, query = {}) => {
   ]
 }
 
-exports.results2sheet = (dataset, query, results, bookType) => {
+exports.results2sheet = (req, results, bookType) => {
+  const { query, dataset, __ } = req
   const select = (query.select && query.select !== '*') ? query.select.split(',') : dataset.schema.filter(f => !f['x-calculated']).map(f => f.key)
   const properties = select.map(key => dataset.schema.find(prop => prop.key === key))
-  const header = properties.map(field => field['x-originalName'] || field.key)
-  const dateProperties = properties.filter(p => p.format === 'date' || p.format === 'date-time')
+  const dateProperties = properties
+    .filter(p => p.format === 'date' || p.format === 'date-time')
+    .map(prop => prop.key)
 
-  const lines = results.map(result => {
-    const line = {}
-    properties.forEach(prop => {
-      line[prop['x-originalName'] || prop.key] = result[prop.key]
-    })
-    dateProperties.forEach(dateProp => {
-      if (result[dateProp.key]) line[dateProp['x-originalName'] || dateProp.key] = new Date(result[dateProp.key])
-    })
-    return line
-  })
-
-  const sheet = XLSX.utils.json_to_sheet(lines, { header, cellDates: true })
   const workbook = XLSX.utils.book_new()
   workbook.Props = {}
   workbook.Props.Title = dataset.title
-  XLSX.utils.book_append_sheet(workbook, sheet, dataset.id.slice(0, 31))
+
+  // data sheet
+  const dataArray = [properties.map(prop => prop['x-originalName'] || prop.key)]
+  for (const result of results) {
+    dataArray.push(properties.map(prop => {
+      let value = result[prop.key]
+      if (value && dateProperties.includes(prop.key)) value = new Date(value)
+      return value
+    }))
+  }
+  const dataSheet = XLSX.utils.aoa_to_sheet(dataArray, { cellDates: true })
+  dataSheet['!cols'] = fitToColumn(dataArray)
+  XLSX.utils.book_append_sheet(workbook, dataSheet, __('sheets.data'))
+
+  // metadata sheet
+  const metadataArray = [
+    [__('sheets.id'), dataset.id],
+    [__('sheets.title'), dataset.title],
+    [__('sheets.owner'), dataset.owner.name],
+    [__('sheets.dataUpdatedAt'), dataset.dataUpdatedAt],
+    [__('sheets.count'), dataset.count + '']
+  ]
+  const metadataSheet = XLSX.utils.aoa_to_sheet(metadataArray, { cellDates: true })
+  metadataSheet['!cols'] = fitToColumn(metadataArray)
+  XLSX.utils.book_append_sheet(workbook, metadataSheet, __('sheets.dataset'))
+
+  // query sheet
+  const url = new URL(req.publicBaseUrl + req.originalUrl)
+  url.searchParams.delete('finalizedAt')
+  const queryArray = [
+    [__('sheets.url'), url.href],
+    [__('sheets.select'), query.select || '*'],
+    [__('sheets.sort'), query.sort],
+    [__('sheets.q'), query.q],
+    [__('sheets.qs'), query.qs]
+  ]
+  const querySheet = XLSX.utils.aoa_to_sheet(queryArray, { cellDates: true })
+  querySheet['!cols'] = fitToColumn(queryArray)
+  XLSX.utils.book_append_sheet(workbook, querySheet, __('sheets.query'))
+
   const result = XLSX.write(workbook, { type: 'buffer', cellDates: true, bookType, compression: true })
   return result
 }

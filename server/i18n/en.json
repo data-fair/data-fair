@@ -23,5 +23,20 @@
 	"breakingChanges": {
 		"missing": "the column \"{{key}}\" doesn't exist anymore in the dataset \"{{title}}\"",
 		"type": "the column \"{{key}}\" changed type in the dataset \"{{title}}\""
+	},
+	"sheets": {
+		"data": "data",
+		"dataset": "dataset",
+		"query": "query",
+		"id": "id",
+		"title": "title",
+		"owner": "owner",
+		"dataUpdatedAt": "data updated at",
+		"count": "total line count",
+		"url": "url",
+		"select": "selected columns",
+		"sort": "sort",
+		"q": "text search",
+		"qs": "structured filter"
 	}
 }

@@ -23,5 +23,22 @@
 	"breakingChanges": {
 		"missing": "la colonne \"{{key}}\" n'existe plus n'existe plus dans le jeu de données \"{{title}}\"",
 		"type": "la colonne \"{{key}}\" a changé de type dans le jeu de données \"{{title}}\""
-	}
+	},
+	"sheets": {
+		"data": "données",
+		"dataset": "jeu de données",
+		"query": "requête",
+		"id": "identifiant",
+		"title": "titre",
+		"owner": "propriétaire",
+		"dataUpdatedAt": "mise à jour des données",
+		"count": "nombre total de lignes",
+		"url": "url",
+		"select": "colonnes sélectionnées",
+		"sort": "tri",
+		"q": "recherche textuelle",
+		"qs": "filtre structuré"
+	},
+	"data": "data",
+	"dataset": "dataset"
 }
