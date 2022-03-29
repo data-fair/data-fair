@@ -47,6 +47,7 @@ const thumbor = require('../utils/thumbor')
 const datasetFileSample = require('../utils/dataset-file-sample')
 const { bulkSearchStreams } = require('../utils/master-data')
 const { syncDataset: syncRemoteService } = require('./remote-services')
+const { query } = require('express')
 const baseTypes = new Set(['text/csv', 'application/geo+json'])
 
 const router = express.Router()
@@ -325,6 +326,20 @@ router.get('/:datasetId/schema', readDataset(), applicationKey, permissions.midd
     }
     if (req.query.calculated === 'false') {
       schema = schema.filter(field => !field['x-calculated'])
+    }
+    if (req.query.capability) {
+      schema = schema.filter(field => {
+        if (field['x-capabilities'] && field['x-capabilities'][req.query.capability] === false) return false
+        if (field.key === '_id') return false
+        if (req.query.capability.startsWith('text') && field.type !== 'string') return false
+        if (req.query.capability === 'insensitive' && field.type !== 'string') return false
+        if (field.type === 'string' && (field.format === 'date' || field.format === 'date-time')) {
+          if (req.query.capability === 'text') return false
+          if (req.query.capability === 'textAgg') return false
+          if (req.query.capability === 'insensitive') return false
+        }
+        return true
+      })
     }
   }
   res.status(200).send(schema)
