@@ -5,7 +5,6 @@ const eventToPromise = require('event-to-promise')
 const WebSocket = require('ws')
 const config = require('config')
 const testUtils = require('./resources/test-utils')
-
 const workers = require('../server/workers')
 
 const { validate } = require('tableschema')

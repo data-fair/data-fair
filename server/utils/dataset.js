@@ -533,6 +533,8 @@ exports.mergeFileSchema = (dataset) => {
     .filter(field => !dataset.schema.find(f => f.key === field.key))
     .map(field => {
       const { dateFormat, dateTimeFormat, ...f } = field
+      // manage default capabilities
+      if (field.type === 'string' && !field.format) f['x-capabilities'] = { textAgg: false }
       return f
     })
   dataset.schema = dataset.schema.concat(newFields)

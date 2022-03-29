@@ -67,7 +67,7 @@ describe('Properties capabilities', () => {
     }
   })
 
-  it('Disable text agg', async () => {
+  it('Enable text agg', async () => {
     const ax = global.ax.dmeadus
     let res = await ax.post('/api/v1/datasets', {
       isRest: true,
