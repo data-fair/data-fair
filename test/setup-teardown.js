@@ -111,7 +111,10 @@ before('start app', async function () {
 
 beforeEach('scratch data', async () => {
   debug('scratch data')
-  await workers.clear()
+  await Promise.race([
+    new Promise(resolve => setTimeout(resolve, 5000)),
+    workers.clear()
+  ])
   try {
     await Promise.all([
       global.es.indices.delete({ index: 'dataset-test-*', ignore_unavailable: true }).catch(err => { console.log(err) }),
