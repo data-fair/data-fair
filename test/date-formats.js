@@ -61,6 +61,20 @@ describe('Date formats', () => {
     assert.equal(results[0].datetime, '2021-02-23T10:27:50+01:00')
   })
 
+  it('Accept date detected as ISO by JS but not by elasticsearch', async function () {
+    const ax = global.ax.dmeadus
+    const form = new FormData()
+    form.append('file', 'str,datetime\nstrval,1961-02-13 00:00:00+00:00', 'dataset.csv')
+    const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
+    const dataset = await workers.hook(`finalizer/${res.data.id}`)
+    const dateProp = dataset.file.schema.find(p => p.key === 'datetime')
+    assert.equal(dateProp.type, 'string')
+    assert.equal(dateProp.format, 'date-time')
+
+    const results = (await ax.get(`/api/v1/datasets/${dataset.id}/lines`)).data.results
+    assert.equal(results[0].datetime, '1961-02-13T00:00:00+00:00')
+  })
+
   it('Accept another date-time format and configure timezone', async function () {
     const ax = global.ax.dmeadus
     const dataset = await testUtils.sendDataset('datasets/date-time.csv', ax)

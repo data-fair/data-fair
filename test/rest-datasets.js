@@ -619,6 +619,21 @@ update,line2,test2,test2`, { headers: { 'content-type': 'text/csv' } })
     })
   })
 
+  it('Accept date detected as ISO by JS but not by elasticsearch in bulk CSV', async function () {
+    const ax = global.ax.dmeadus
+    await ax.post('/api/v1/datasets', {
+      isRest: true,
+      title: 'restcsv',
+      schema: [{ key: 'attr1', type: 'string', format: 'date-time' }]
+    })
+    await workers.hook('finalizer/restcsv')
+    const res = await ax.post('/api/v1/datasets/restcsv/_bulk_lines', `_id,attr1
+    line1,1961-02-13 00:00:00+00:00`, { headers: { 'content-type': 'text/csv' } })
+    assert.equal(res.data.nbErrors, 0)
+    assert.equal(res.data.nbOk, 1)
+    return true
+  })
+
   it('Send bulk actions as a gzipped CSV', async () => {
     const ax = global.ax.dmeadus
     await ax.post('/api/v1/datasets', {
