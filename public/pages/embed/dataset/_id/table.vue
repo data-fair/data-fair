@@ -149,14 +149,14 @@
               </template>
               <template v-else-if="digitalDocumentField && digitalDocumentField.key === header.value">
                 <!-- attachment_url is empty if the value is an external link -->
-                <a :href="item._attachment_url || item[header.value]">{{ item[header.value] | truncate(50) }}</a>
+                <a :href="item._attachment_url || item[header.value]">{{ item[header.value] | truncate(truncate) }}</a>
               </template>
               <template v-else-if="webPageField && webPageField.key === header.value">
                 <a
                   v-if="item[header.value]"
                   target="_blank"
                   :href="item[header.value]"
-                >{{ item[header.value] | truncate(50) }}</a>
+                >{{ item[header.value] | truncate(truncate) }}</a>
               </template>
               <template v-else>
                 <div
@@ -288,12 +288,15 @@ export default {
     webPageField () {
       return this.dataset.schema.find(f => f['x-refersTo'] === 'https://schema.org/WebPage')
     },
+    truncate () {
+      return this.$vuetify.breakpoint.mdAndUp ? 50 : 30
+    },
     params () {
       const params = {
         size: this.pagination.itemsPerPage,
         page: this.pagination.page,
         q_mode: this.qMode,
-        truncate: 50
+        truncate: this.truncate
       }
       if (this.imageField) params.thumbnail = '40x40'
       if (this.pagination.sortBy[0]) {

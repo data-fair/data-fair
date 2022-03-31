@@ -172,6 +172,7 @@
               :min-height="400"
               :svg="graphicSvg"
               :section="sections.find(s => s.id === 'apps')"
+              :extension-height="$vuetify.breakpoint.mdAndUp ? 48 : 80"
             >
               <template #extension>
                 <p v-if="stats">
