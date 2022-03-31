@@ -631,6 +631,7 @@ update,line2,test2,test2`, { headers: { 'content-type': 'text/csv' } })
     line1,1961-02-13 00:00:00+00:00`, { headers: { 'content-type': 'text/csv' } })
     assert.equal(res.data.nbErrors, 0)
     assert.equal(res.data.nbOk, 1)
+    await workers.hook('finalizer/restcsv')
     return true
   })
 

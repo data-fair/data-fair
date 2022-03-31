@@ -43,7 +43,7 @@ exports.format = (value, prop, fileProp) => {
     if (date.isValid()) return date.format()
     else return null
   }
-  if (prop.type === 'string' && prop.format === 'date-time' && fileProp && !fileProp.dateTimeFormat) {
+  if (prop.type === 'string' && prop.format === 'date-time' && !(fileProp && fileProp.dateTimeFormat)) {
     if (value[10] !== 'T') value = value.substring(0, 10) + 'T' + value.substring(11)
   }
   if (prop.type === 'string') return value.trim()
