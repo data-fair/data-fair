@@ -537,6 +537,51 @@ describe('REST datasets', () => {
     assert.equal(dataset.count, 3)
   })
 
+  it('Applying the exact same data twice in history mode should not duplicate revisions', async () => {
+    const ax = await global.ax.hlalonde3
+    await ax.post('/api/v1/datasets', {
+      isRest: true,
+      title: 'resthistidem',
+      rest: { history: true },
+      schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }]
+    })
+    const dataset = await workers.hook('finalizer/resthistidem')
+    await ax.post('/api/v1/datasets/resthistidem/_bulk_lines', [
+      { _id: 'line1', attr1: 'test1', attr2: 'test1' },
+      { _id: 'line2', attr1: 'test1', attr2: 'test1' }
+    ])
+    await workers.hook('finalizer/resthistidem')
+    let res = await ax.get('/api/v1/datasets/resthistidem/lines/line1/revisions')
+    assert.equal(res.data.total, 1)
+    res = await ax.get('/api/v1/datasets/resthistidem/lines/line2/revisions')
+    assert.equal(res.data.total, 1)
+
+    // 1 in 2 lines is changed
+    await ax.post('/api/v1/datasets/resthistidem/_bulk_lines', [
+      { _action: 'patch', _id: 'line1', attr1: 'test2' },
+      { _action: 'patch', _id: 'line2', attr1: 'test1' }
+    ])
+    const collection = restDatasetsUtils.collection(global.db, dataset)
+    assert.equal(await collection.countDocuments({ _needsIndexing: true }), 1)
+    await workers.hook('finalizer/resthistidem')
+    res = await ax.get('/api/v1/datasets/resthistidem/lines/line1/revisions')
+    assert.equal(res.data.total, 2)
+    res = await ax.get('/api/v1/datasets/resthistidem/lines/line2/revisions')
+    assert.equal(res.data.total, 1)
+
+    // no line is actually changed
+    await ax.post('/api/v1/datasets/resthistidem/_bulk_lines', [
+      { _action: 'patch', _id: 'line1', attr1: 'test2' },
+      { _action: 'patch', _id: 'line2', attr1: 'test1' }
+    ])
+    assert.equal(await collection.countDocuments({ _needsIndexing: true }), 0)
+    await workers.hook('finalizer/resthistidem')
+    res = await ax.get('/api/v1/datasets/resthistidem/lines/line1/revisions')
+    assert.equal(res.data.total, 2)
+    res = await ax.get('/api/v1/datasets/resthistidem/lines/line2/revisions')
+    assert.equal(res.data.total, 1)
+  })
+
   it('Delete all lines from a rest dataset', async () => {
     const ax = global.ax.dmeadus
     await ax.post('/api/v1/datasets', {

@@ -118,12 +118,11 @@ const applyTransactions = async (req, transacs, validate) => {
   const results = []
 
   const bulkOp = collection.initializeUnorderedBulkOp()
-  const revisionsBulkOp = revisionsCollection.initializeUnorderedBulkOp()
   let bulkOpResult
   let i = 0
   let hasBulkOp = false
-  let hasRevisionsBulkOp = false
   const bulkOpMatchingResults = []
+  const bulkOpMatchingRevisions = []
   for (const transac of transacs) {
     let { _action, ...body } = transac
     if (!actions.includes(_action)) throw createError(400, `action "${_action}" is unknown, use one of ${JSON.stringify(actions)}`)
@@ -169,22 +168,22 @@ const applyTransactions = async (req, transacs, validate) => {
       }
     }
 
-    if (history && !result._error) {
-      const revision = { ...extendedBody, _action }
-      delete revision._needsIndexing
-      revision._lineId = revision._id
-      delete revision._id
-      if (!revision._deleted) delete revision._deleted
-      revisionsBulkOp.insert(revision)
-      hasRevisionsBulkOp = true
-    }
-
     // disable this systematic broadcasting of transactions, not a good idea when doing large bulk inserts
     // and not really used anyway
     // if (!result._error) await req.app.publish('datasets/' + dataset.id + '/transactions', transac)
     const fullResult = { ...result, ...extendedBody }
     results.push(fullResult)
-    if (fullResult._status !== 400) bulkOpMatchingResults.push(fullResult)
+    if (fullResult._status !== 400) {
+      bulkOpMatchingResults.push(fullResult)
+      if (history) {
+        const revision = { ...extendedBody, _action }
+        delete revision._needsIndexing
+        revision._lineId = revision._id
+        delete revision._id
+        if (!revision._deleted) delete revision._deleted
+        bulkOpMatchingRevisions.push(revision)
+      }
+    }
   }
 
   if (hasBulkOp) {
@@ -195,6 +194,7 @@ const applyTransactions = async (req, transacs, validate) => {
       bulkOpResult = err.result
       for (const writeError of err.writeErrors) {
         const result = bulkOpMatchingResults[writeError.err.index]
+        delete bulkOpMatchingRevisions[writeError.err.index]
         if (writeError.err.code === 11000) {
           // this conflict means that the hash was unchanged
           result._status = 304
@@ -205,7 +205,18 @@ const applyTransactions = async (req, transacs, validate) => {
       }
     }
   }
-  if (hasRevisionsBulkOp) await revisionsBulkOp.execute()
+  if (history) {
+    const revisionsBulkOp = revisionsCollection.initializeUnorderedBulkOp()
+    let hasRevisionsBulkOp = false
+    for (const revision of bulkOpMatchingRevisions) {
+      if (!revision) continue
+      hasRevisionsBulkOp = true
+      revisionsBulkOp.insert(revision)
+    }
+    if (hasRevisionsBulkOp) {
+      await revisionsBulkOp.execute()
+    }
+  }
 
   if (req.user && hasBulkOp) {
     db.collection('datasets').updateOne(
