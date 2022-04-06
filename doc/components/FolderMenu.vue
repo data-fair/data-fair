@@ -93,6 +93,7 @@ export default {
       const content = context.keys()
         .filter(k => {
           if (k.startsWith('./install')) return true
+          if (k.startsWith('./interoperate')) return true
           return k.includes(`-${this.$i18n.locale}.md`)
         })
         .map(k => Object.assign(marked(context(k).default).meta || {}, {
@@ -125,12 +126,12 @@ export default {
           title: this.$t('userGuide')
         },
         {
-          id: 'interoperate',
-          title: this.$t('interoperate')
-        },
-        {
           id: 'technical-architecture',
           title: this.$t('architecture')
+        },
+        {
+          id: 'interoperate',
+          title: this.$t('interoperate')
         },
         {
           id: 'install',

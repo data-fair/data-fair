@@ -19,6 +19,13 @@
           border="left"
           outlined
         />
+        <v-alert
+          v-if="onlyFrench && $i18n.locale !== 'fr'"
+          v-t="'onlyFrench'"
+          type="warning"
+          border="left"
+          outlined
+        />
         <div
           v-show="ready"
           cols="12"
@@ -39,7 +46,7 @@ const marked = require('@hackmd/meta-marked')
 require('highlight.js/styles/github.css')
 
 export default {
-  props: ['content', 'onlyEnglish'],
+  props: ['content', 'onlyEnglish', 'onlyFrench'],
   data: () => ({ ready: false }),
   computed: {
     ...mapState(['env']),

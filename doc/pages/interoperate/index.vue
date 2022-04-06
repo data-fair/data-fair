@@ -11,6 +11,7 @@
     <toc
       :context="context"
       name="interoperate"
+      :ignore-locale="true"
     />
   </v-container>
 </template>
