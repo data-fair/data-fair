@@ -1,9 +1,13 @@
 <template lang="html">
-  <doc-page :content="content" />
+  <doc-page
+    :content="content"
+    :only-english="true"
+  />
 </template>
 
 <script>
 import DocPage from '../../components/DocPage'
+const flatten = require('flat')
 
 // Webpack way of requiring a bunch of modules at once
 const context = require.context('.', true, /\.md$/)
@@ -21,7 +25,35 @@ function flattenVars (vars, flatVars = [], prefix = '') {
   })
   return flatVars
 }
+
 const customEnvVars = flattenVars(require('../../../config/custom-environment-variables'))
+
+const varDescriptions = flatten({
+  mode: 'Use this parameter to run both the Web server and the dataset processing loop or run them separately. Pissible values: "server_worker", "server", "worker".',
+  publicUrl: '<b>IMPORTANT.</b> The URL where the server will be exposed. For example https://koumoul.com/s/data-fair',
+  wsPublicUrl: '<b>IMPORTANT.</b> The URL where the Web socket server will be exposed. For example wss://koumoul.com/s/data-fair',
+  directoryUrl: '<b>IMPORTANT.</b> The URL where the user management service will be exposed. For example https://koumoul.com/s/simple-directory',
+  mongoUrl: 'The full connexion chain to the mongodb database.',
+  analytics: 'JSON configuration of analytics, matches the "modules" part of the configuration for this library <a href="https://github.com/koumoul-dev/vue-multianalytics#modules">vue-multianalytics</a>',
+  elasticsearch: {
+    maxBulkLines: 'Maximum number of lines when sending indexing in bulk into ElasticSearch.',
+    maxBulkChars: 'Maximum number of chars when sending indexing in bulk into ElasticSearch.'
+  },
+  defaultRemoteKey: {
+    value: 'Default API key to use when calling remote services.'
+  },
+  brand: {
+    logo: 'A link to an image with your logo.',
+    title: 'The name of your organization or another name for the service.',
+    url: 'A link to use on the top left logo.'
+  },
+  worker: {
+    concurrency: 'Number of tasks processes in parallel. Tasks are all asynchronous processings on datasets (file format analysis, indexing, extending, etc.)'
+  },
+  i18n: {
+    locales: 'List of locales split by commas'
+  }
+})
 
 export default {
   components: { DocPage },
@@ -32,9 +64,9 @@ export default {
       return content.default.replace('{{CONFIG_VARS}}', this.configVars)
     },
     configVars () {
-      let table = `<table><thead><tr><th>${this.$t('varKey')}</th><th>${this.$t('varName')}</th><th>${this.$t('varDesc')}</th><th>${this.$t('varDefault')}</th></tr></thead><tbody>\n`
+      let table = '<table><thead><tr><th>Key in config file</th><th>Env variable</th><th>Description</th><th>Default value</th></tr></thead><tbody>\n'
       customEnvVars.forEach(v => {
-        const description = this.$te('varDescriptions.' + v.key) ? this.$t('varDescriptions.' + v.key) : ''
+        const description = varDescriptions[v.key] || ''
         table += `<tr><td>${v.key}</td><td>${v.name}</td><td>${description}</td><td>${v.def}</td></tr>\n`
       })
       table += '</tbody></table>'
@@ -43,5 +75,3 @@ export default {
   }
 }
 </script>
-
-<i18n src="../../i18n/config-fr.json" locale="fr"></i18n>

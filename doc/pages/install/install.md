@@ -6,21 +6,20 @@ description : Installation
 published: false
 ---
 
-Cette application expose des services Web et interopère avec d'autres applications du même type. Pour comprendre comment *Data Fair* fonctionne, vous pouvez aller voir la [description technique](https://data-fair.github.io/2/about/technical-overview).
+A complete Data Fair installation is constitued of multiple Web services, to understand how it works please read about the [technical architecture](../technical-architecture/).
 
-Nous proposons une installation simple grâce à l'utilisation de conteneurs [Docker](https://docker.com) basés sur [l'image](https://github.com/data-fair/data-fair/pkgs/container/data-fair) que nous mettons à disposition. Le service peut être installé hors Docker, nous vous conseillons dans ce cas de regarder la documentation pour les développeurs directement dans le [répertoire du projet](https://github.com/data-fair/data-fair).
-
+The recommended installation is based on [Docker](https://docker.com) containers, and [this image](https://github.com/data-fair/data-fair/pkgs/container/data-fair) in particular.
 
 ## Prérequis
 
 ### Configuration matérielle
 
-Ce service a été testé sous Linux (Ubuntu 20.04), vous pouvez utiliser n'importe quel système Linux compatible avec un démon Docker récent. La configuration minimale recommandée est la suivante :
+This documentation was written using Linux (Ubuntu 20.04), but any Linux running a recent Docker service should work the same. Minimal recommended configuration is as follow:
 
- * Au moins 2 coeurs, 4 si les bases de données tournent sur la même machine
- * 4 Go de RAM, 16 si les base données tournent sur la même machine. Cette quantité peut être plus importante si l'on souhaite stocker des volumes importants. Dans ce cas nous conseillons d'installer ElasticSearch sur une autre machine avec plus de mémoire vive, ou de faire un cluster sur plusieurs machines.
- * 50 Go de disque dur, de type SSD. Cette quantité peut être plus importante suivant le volume de données que l'on souhaite gérer.
- * 100 Mbits de bande passante au minimum, que ce soit en montant ou en descendant.
+ * At least 2 cores, 4 is better if mongodb and elasticsearch are deployed too
+ * 4 Gb of memory, 16 if mongodb and elasticsearch are deployed too
+ * 50 Gb of SSD hard drivede type SSD
+ * 100 Mbits of up and down bandwidth
 
 ### Docker
 
