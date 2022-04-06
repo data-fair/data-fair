@@ -1,0 +1,142 @@
+version: '3'
+services:
+
+  #########################
+  # Reverse proxy
+  #########################
+
+  nginx:
+    image: jonasal/nginx-certbot:3.1.2-nginx1.21.6-alpine
+    restart: always
+    volumes:
+      - ./default.conf:/etc/nginx/user_conf.d/default.conf:ro
+      - nginx-cache:/var/cache/nginx/data-fair
+      - nginx-letsencrypt:/etc/letsencrypt
+    environment:
+      - CERTBOT_EMAIL=${CONTACT_EMAIL}
+    ports:
+      - 80:80
+      - 443:443
+    
+  #########################
+  # HTTP services
+  #########################
+
+  data-fair:
+    image: ghcr.io/data-fair/data-fair:3
+    restart: always
+    volumes:
+      - data-fair-data:/webapp/data
+    depends_on:
+      - mongo
+      - elasticsearch
+    environment:
+      - DEBUG=upgrade*
+      - PUBLIC_URL=${BASE_URL}/data-fair
+      - DIRECTORY_URL=${BASE_URL}/simple-directory
+      - PRIVATE_DIRECTORY_URL=http://simple-directory:8080
+      - OPENAPI_VIEWER_URL=${BASE_URL}/api-doc/
+      - THUMBOR_URL=${BASE_URL}/thumbor/
+      - THUMBOR_KEY=${SECRET}
+      - CAPTURE_URL=${BASE_URL}/capture/
+      - NOTIFY_URL=${BASE_URL}/notify
+      - MONGO_URL=mongodb://mongo:27017/data-fair
+      - ES_HOST=elasticsearch:9200
+      - SECRET_IDENTITIES=${SECRET}
+      - SECRET_NOTIFICATIONS=${SECRET}
+
+  simple-directory:
+    image: ghcr.io/data-fair/simple-directory:3
+    restart: always
+    volumes:
+      - simple-directory-security:/webapp/security
+    depends_on:
+      - mongo
+    environment:
+      - PUBLIC_URL=${BASE_URL}/simple-directory
+      - STORAGE_MONGO_URL=mongodb://mongo:27017/simple-directory
+      - ADMINS=${ADMINS}
+      - HOME_PAGE=${BASE_URL}
+      - CONTACT=${CONTACT_EMAIL}
+      - MAILS_TRANSPORT=${MAILS_TRANSPORT}
+      - MAILS_FROM=${CONTACT_EMAIL}
+      - MAILDEV_ACTIVE=${MAILDEV_ACTIVE}
+      - MAILDEV_URL=${BASE_URL}/mails/
+      - SECRET_SENDMAILS=${SECRET}
+      - ROLES_DEFAULTS=["admin","contrib","user"]
+      - PASSWORDLESS=false
+      - USER_SELF_DELETE=true
+
+  openapi-viewer:
+    image: koumoul/openapi-viewer:1
+    restart: 'always'
+
+  capture:
+    image: koumoul/capture:1
+    restart: 'always'
+    shm_size: '1gb'
+    environment:
+      - PUBLIC_URL=${BASE_URL}/capture
+      - DIRECTORY_URL=${BASE_URL}/simple-directory
+      - PRIVATE_DIRECTORY_URL=http://simple-directory:8080
+
+  notify:
+    image: ghcr.io/data-fair/notify:2
+    restart: 'always'
+    depends_on:
+      - mongo
+    environment:
+      - PUBLIC_URL=${BASE_URL}/notify
+      - DIRECTORY_URL=${BASE_URL}/simple-directory
+      - PRIVATE_DIRECTORY_URL=http://simple-directory:8080
+      - OPENAPI_VIEWER_URL=${BASE_URL}/api-doc/
+      - MONGO_URL=mongodb://mongo:27017/notify
+      - SECRET_IDENTITIES=${SECRET}
+      - SECRET_NOTIFICATIONS=${SECRET}
+      - SECRET_SENDMAILS=${SECRET}
+
+  thumbor:
+    image: apsl/thumbor:6.7.0
+    restart: 'always'
+    volumes:
+      - thumbor-data:/data
+    environment:
+      - SECURITY_KEY=${SECRET}
+      - STORAGE_EXPIRATION_SECONDS=600
+      - MAX_AGE=600
+
+  #########################
+  # Dependencies
+  #########################
+
+  elasticsearch:
+    image: ghcr.io/data-fair/elasticsearch:7.17.1
+    restart: always
+    volumes:
+      - elasticsearch-data:/usr/share/elasticsearch/data
+    environment:
+      - discovery.type=single-node
+
+  mongo:
+    image: mongo:4.4
+    restart: always
+    volumes:
+      - mongo-data:/data/db
+
+volumes:
+  data-fair-data:
+    driver: local
+  data-fair-portals-data:
+    driver: local
+  simple-directory-security:
+    driver: local
+  thumbor-data:
+    driver: local
+  elasticsearch-data:
+    driver: local
+  mongo-data:
+    driver: local
+  nginx-cache:
+    driver: local
+  nginx-letsencrypt:
+    driver: local

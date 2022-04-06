@@ -10,310 +10,70 @@ A complete Data Fair installation is constitued of multiple Web services, to und
 
 The recommended installation is based on [Docker](https://docker.com) containers, and [this image](https://github.com/data-fair/data-fair/pkgs/container/data-fair) in particular.
 
-## Prérequis
+## Requisites
 
-### Configuration matérielle
+### Hardware setup
 
 This documentation was written using Linux (Ubuntu 20.04), but any Linux running a recent Docker service should work the same. Minimal recommended configuration is as follow:
 
  * At least 2 cores, 4 is better if mongodb and elasticsearch are deployed too
  * 4 Gb of memory, 16 if mongodb and elasticsearch are deployed too
- * 50 Gb of SSD hard drivede type SSD
+ * 50 Gb of SSD hard drive
  * 100 Mbits of up and down bandwidth
 
 ### Docker
 
-Installez Docker en suivant la [documentation officielle](https://docs.docker.com/engine/installation/) très complète.
+Install Docker following the [official documentation](https://docs.docker.com/engine/installation/).
 
-Nous conseillons aussi d'installer [docker-compose](https://docs.docker.com/compose/install/) pour une vision plus claire de la configuration.
+To use the standard installation recipes install Docker Compose following the [official documentation](https://docs.docker.com/compose/install/).
 
 ### MongoDB
 
-Le service nécessite MongoDB 4.x pour persister ses données. MongoDB peut être [installé de différentes manières](https://docs.mongodb.com/v4.4/installation/).
+Data Fair requires MongoDB 4.x. It can be [installed in various ways](https://docs.mongodb.com/v4.4/installation/).
 
-**Installer MongoDB manuellement est optionnel**, vous pouvez opter pour une installation globale de tous les services avec Docker (voir plus bas).
+**Manual installation of MongoDB is optional**, you can install it alongside Data Fair Web services using the Docker Compose recipes below.
 
 ### ElasticSearch
 
-Le service nécessite ElasticSearch 7.x avec le plugin ingest-attachment. Les instruction d'installation sont [disponibles ici](https://www.elastic.co/guide/en/elasticsearch/reference/6.0/install-elasticsearch.html).
-
-**Installer ElasticSearch manuellement est optionnel**, vous pouvez opter pour une installation globale de tous les services avec Docker (voir plus bas).
-
-### Annuaire d'utilisateurs
-
-Le service nécessite [Simple Directory](https://koumoul-dev.github.io/simple-directory/) pour sa gestion des comptes.
-
-**Installer Simple Directory individuellement est optionnel**, vous pouvez opter pour une installation globale de tous les services avec Docker (voir plus bas).
-
-## Installation recommandée
-
-Pour une installation avec docker-compose vous devez créer un fichier `docker-compose.yml`. Ci-dessous un exemple qui lance non seulement le service data-fair, mais aussi toutes ses dépendances et un proxy HTTP en frontal. Cet exemple peut être assez complet pour une mise en production simple sur une machine, nous allons détailler son paramétrage dans les sections suivantes:
-
-```yaml
-version: '3'
-services:
-
-  #########################
-  # Dynamic reverse proxy
-  #########################
-
-  traefik:
-    image: traefik:1.7
-    command:
-      - "--docker.exposedbydefault=false"
-      - "--forwardingtimeouts.dialtimeout=5m"
-    restart: always
-    ports:
-      - 80:80
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-
-  redirect-root:
-    image: cusspvz/redirect
-    restart: always
-    labels:
-      - "traefik.enable=true"
-      - "traefik.frontend.rule=Path:/"
-    environment:
-      - REDIRECT=${PROTOCOL}://${DOMAIN}/data-fair
-      - REDIRECT_TYPE=redirect
-
-  #########################
-  # HTTP services
-  #########################
-
-  data-fair:
-    image: ghcr.io/data-fair/data-fair:3
-    restart: always
-    volumes:
-      - data-fair-data:/webapp/data
-    labels:
-      - "traefik.enable=true"
-      - "traefik.frontend.rule=PathPrefixStrip:/data-fair/"
-    environment:
-      - DEBUG=upgrade*
-      - PUBLIC_URL=${PROTOCOL}://${DOMAIN}/data-fair
-      - WS_PUBLIC_URL=wss://${DOMAIN}/data-fair
-      - DIRECTORY_URL=${PROTOCOL}://${DOMAIN}/simple-directory
-      - PRIVATE_DIRECTORY_URL=http://simple-directory:8080
-      - OPENAPI_VIEWER_URL=${PROTOCOL}://${DOMAIN}/api-doc/
-      - THUMBOR_URL=${PROTOCOL}://${DOMAIN}/thumbor/
-      - THUMBOR_KEY=${SECRET}
-      - CAPTURE_URL=${PROTOCOL}://${DOMAIN}/capture/
-      - NOTIFY_URL=${PROTOCOL}://${DOMAIN}/notify
-      - NOTIFY_WS_URL=wss://${DOMAIN}/notify
-      - MONGO_URL=mongodb://mongo:27017/data-fair
-      - ES_HOST=elasticsearch:9200
-      - SECRET_IDENTITIES=${SECRET}
-      - SECRET_NOTIFICATIONS=${SECRET}
-
-  simple-directory:
-    image: koumoul/simple-directory:3
-    restart: always
-    volumes:
-      - simple-directory-security:/webapp/security
-    labels:
-      - "traefik.enable=true"
-      - "traefik.main.frontend.rule=PathPrefixStrip:/simple-directory"
-      - "traefik.main.port=8080"
-      - "traefik.maildev.frontend.rule=PathPrefixStrip:/mails"
-      - "traefik.maildev.port=1080"
-      - "traefik.maildev.frontend.auth.basic.users=${MAILDEV_BASIC}"
-    environment:
-      - PUBLIC_URL=${PROTOCOL}://${DOMAIN}/simple-directory
-      - STORAGE_MONGO_URL=mongodb://mongo:27017/simple-directory
-      - ADMINS=${ADMINS}
-      - HOME_PAGE=${PROTOCOL}://${DOMAIN}
-      - MAILS_TRANSPORT=${MAILS_TRANSPORT}
-      - MAILDEV_ACTIVE=${MAILDEV}
-      - MAILDEV_URL=${PROTOCOL}://${DOMAIN}/mails/
-      - I18N_LOCALES=["fr"]
-      - PASSWORDLESS=false
-      - USER_SELF_DELETE=true
-
-  openapi-viewer:
-    image: koumoul/openapi-viewer:1
-    restart: 'always'
-    labels:
-      - "traefik.enable=true"
-      - "traefik.frontend.rule=PathPrefixStrip:/api-doc/"
-
-  capture:
-    image: koumoul/capture:1
-    restart: 'always'
-    shm_size: '1gb'
-    environment:
-      - PUBLIC_URL=${PROTOCOL}://${DOMAIN}/capture
-      - DIRECTORY_URL=${PROTOCOL}://${DOMAIN}/simple-directory
-
-  notify:
-    image: ghcr.io/data-fair/notify:2
-    restart: 'always'
-    environment:
-      - PUBLIC_URL=${PROTOCOL}://${DOMAIN}/notify
-      - WS_PUBLIC_URL=wss://${DOMAIN}/notify
-      - DIRECTORY_URL=${PROTOCOL}://${DOMAIN}/simple-directory
-      - OPENAPI_VIEWER_URL=${PROTOCOL}://${DOMAIN}/api-doc/
-      - MONGO_URL=mongodb://mongo:27017/notify
-      - SECRET_IDENTITIES=${SECRET}
-      - SECRET_NOTIFICATIONS=${SECRET}
-      - SECRET_SENDMAILS=${SECRET}
-
-  thumbor:
-    image: apsl/thumbor:6.4.2
-    restart: 'always'
-    environment:
-      - SECURITY_KEY=${SECRET}
-      - STORAGE_EXPIRATION_SECONDS=600
-      - MAX_AGE=600
-    labels:
-      - "traefik.enable=true"
-      - "traefik.frontend.rule=PathPrefixStrip:/thumbor/"
-
-  #########################
-  # Dependencies
-  #########################
-
-  elasticsearch:
-    image: koumoul/data-fair-elasticsearch:7.10.2
-    restart: always
-    volumes:
-      - elasticsearch-data:/usr/share/elasticsearch/data
-    environment:
-      - discovery.type=single-node
+Data Fair requires ElasticSearch 7.x with the ingest-attachment plugin. See [installation instructions here](https://www.elastic.co/guide/en/elasticsearch/reference/6.0/install-elasticsearch.html).
 
-  mongo:
-    image: mongo:4.4
-    restart: always
-    volumes:
-      - mongo-data:/data/db
+**Manual installation of ElasticSearch is optional**, you can install it alongside Data Fair Web services using the Docker Compose recipes below.
 
-volumes:
-  data-fair-data:
-  simple-directory-security:
-  elasticsearch-data:
-  mongo-data:
+## Recipe 1 : simple local installation
 
-```
+This recipe runs Data Fair and its most important dependencies locally on your computer.
 
-Récupérer les dernières versions des images compatibles:
+  - download files [data-fair.env](../install-resources/local/data-fair.env), [default.conf](../install-resources/local/default.conf) and [docker-compose.yaml](../install-resources/local/docker-compose.yaml) next to each other in a directory.
+  - run `docker-compose --env-file data-fair.env up -d` in the directory
+  - check that all containers are up with `docker-compose ps`
+  - you should be able to open [http://localhost](http://localhost)
+  - the superadmin user is *admin@test.com* on the login page you can click on *Renew the password* then on *Open the development mail box* to define its password then use it to login
 
-```sh
-docker-compose pull
-```
+## Recipe 2 : full installation
 
-Préparez un fichier `.env` à côté du fichier `docker-compose.yml`:
+This recipe can run Data Fair on a virtual machine exposed to the internet.
 
-```sh
-# quelques variables d'environnement nécessaires
-export ADMINS='["alban.mouton@koumoul.com"]'
-export SECRET=type some random string here
-```
+  - download files [data-fair.env](../install-resources/full/data-fair.env), [default.conf](../install-resources/full/default.conf) and [docker-compose.yaml](../install-resources/full/docker-compose.yaml) next to each other in a directory.
+  - carefully read and edit the *.env* file
+  - edit the line *server_name* in default.conf
+  - run `docker-compose --env-file data-fair.env up -d` in the directory
+  - check that all containers are up with `docker-compose ps`
+  - you should be able to open data-fair in your browser using the name of the machine
 
-La suite du contenu du fichier `.env` est discutée dans les sous-sections suivantes.
+This recipe completes the previous one in many ways that you can chose to use or not. These improvements are detailed below.
 
-### Variante 1 : HTTP local avec envoi de mail virtuel
+### Mails transport configuration
 
-Cette variante est utile pour se faire la main sur la logique de déploiement et tester.
+By changing the MAILS_TRANSPORT and MAILDEV_ACTIVE variables you can switch from the temporary maildev solution to a proper mail transport. Please note that this element of the configuration should be managed quite early as it is unsafe to expose maildev to the internet.
 
-Créez une paire identifiant / mot de passe pour la protection de la boite mail locale:
+### HTTPS using letsencrypt certificate
 
-```sh
-htpasswd -nbm user passwd
-```
+The nginx reverse proxy is configured to expose every services over the HTTPS, this will improve security. The certificate provider is letsencrypt and the certificate is automatically generated which requires that the domain name and the machine are available from the internet.
 
-Puis copiez son contenu dans le fichier `.env`:
+The related changes are the use of another image for the nginx container (jonasal/nginx-certbot), the new volume nginx-letsencrypt, variable BASE_URL in the .env file that should and all the beginning of the server block in default.conf.
 
-```sh
-MAILDEV_BASIC="résultat de htpasswd"
-MAILDEV=true
-PROTOCOL=http
-DOMAIN=localhost
-```
+### Reverse proxy cache
 
-Lancez les services:
+The nginx reverse proxy is configured to act as a cache for Data Fair, this will improve response times and limit the load on the service. It is mostly important when exposing Data Fair to the internet and creating public datasets.
 
-```sh
-docker-compose up -d --force-recreate
-```
-
-Vérifiez l'état des services:
-
-```sh
-docker-compose ps
-```
-
-Quand tous les services sont "Up" et "healthy" vous pouvez accéder à [http://localhost](http://localhost).
-Pour créer des comptes vous aurez besoin d'accéder à la boite mail virtuelle [http://localhost/mails](http://localhost/mails) protégée par identifiant = user et mot de passe = passwd.
-
-### Variante 2 : HTTP sur une machine privée et envoi de mails
-
-Cette variante peut suffire pour un usage en intranet par exemple.
-
-Vous pouvez suivre les instructions précédentes. Mais les variables d'environnement sont différentes.
-
-La variable MAILS_TRANSPORT attend un objet JSON de configuration compatible avec la librairie [nodemailer](https://nodemailer.com/smtp/)
-
-Modifiez le contenu du fichier `.env`:
-
-```sh
-ADMINS='["alban.mouton@koumoul.com"]'
-MAILDEV=false
-PROTOCOL=http
-DOMAIN="nom de la machine"
-MAILS_TRANSPORT='{"service": "Mailgun", "auth": {...}}'
-```
-
-Lancez les services:
-
-```sh
-docker-compose up -d --force-recreate
-```
-
-Vérifiez l'état des services:
-
-```sh
-docker-compose ps
-```
-
-Et accédez sur "http://nom de la machine".
-
-### Variante 3 : HTTPS sur un serveur
-
-Cette variante est une solution complète de déploiement sécurisé. En pré-requis minimal il faut:
-
-  - une machine virtuelle sur internet sécurisée (firewall, etc.) et disposant d'un démon docker
-  - un nom de domaine configuré pour pointer vers l'adresse de cette machine virtuelle
-
-**À venir**
-
-### Portails
-
-**À venir intégration de data-fair/portals**
-
-### Traitements périodiques
-
-**À venir intégration de data-fair/processings**
-
-### Métriques
-
-**À venir intégration de data-fair/metrics et prometheus**
-
-### Cache
-
-**À venir intégration d'un reverse-proxy avec cache pour alléger la charge sur les ressources publiques de data-fair**
-
-### Backup
-
-**À venir intégration de data-fair/backup**
-
-### Mises à jour
-
-La mise à jour s'effectue en lançant les 2 commandes suivantes :
-
-```sh
-docker-compose pull
-docker-compose up -d
-```
-
-Pour plus d'informations sur les commandes disponibles, vous pouvez [consulter la documentation](https://docs.docker.com/compose/).
+The related changes are the definition of data-fair-cache in default.conf and the new volume nginx-cache in docker-compose.yaml.

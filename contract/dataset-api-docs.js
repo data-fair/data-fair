@@ -422,7 +422,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
           // TODO: document sort param and interval
           responses: {
             200: {
-              description: 'Les informations du jeu de données agrégées par valeurs d\'une colonne.',
+              description: 'Les valeurs d\'une colonne.',
               content: {
                 'application/json': {
                   schema: {

@@ -9,6 +9,7 @@
 /public/pages/interoperate
 /public/pages/user-guide
 /doc-dist
+/doc/static/install/*/data
 .cache-require-paths.json
 /dist/
 /nuxt-dist
