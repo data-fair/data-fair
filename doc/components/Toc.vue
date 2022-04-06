@@ -30,12 +30,15 @@
 const marked = require('@hackmd/meta-marked')
 
 export default {
-  props: ['context', 'name'],
+  props: ['context', 'name', 'ignoreLocale'],
   computed: {
     sections () {
       if (!this.$route) return
       const sections = this.context.keys()
-        .filter(k => k.includes(`-${this.$i18n.locale}.md`))
+        .filter(k => {
+          if (this.ignoreLocale) return true
+          return k.includes(`-${this.$i18n.locale}.md`)
+        })
         .map(k => Object.assign(marked(this.context(k).default).meta || {}, {
           id: k.split('/')[1].split('.').shift().replace(`-${this.$i18n.locale}`, '')
         }))

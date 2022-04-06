@@ -11,6 +11,7 @@
     <toc
       :context="context"
       name="install"
+      :ignore-locale="true"
     />
   </v-container>
 </template>

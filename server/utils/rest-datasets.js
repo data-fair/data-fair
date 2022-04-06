@@ -194,7 +194,7 @@ const applyTransactions = async (req, transacs, validate) => {
       bulkOpResult = err.result
       for (const writeError of err.writeErrors) {
         const result = bulkOpMatchingResults[writeError.err.index]
-        delete bulkOpMatchingRevisions[writeError.err.index]
+        if (history) delete bulkOpMatchingRevisions[writeError.err.index]
         if (writeError.err.code === 11000) {
           // this conflict means that the hash was unchanged
           result._status = 304

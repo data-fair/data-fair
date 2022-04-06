@@ -91,7 +91,10 @@ export default {
       if (!this.$route) return
       const context = require.context('../pages/', true, /\.md$/)
       const content = context.keys()
-        .filter(k => k.includes(`-${this.$i18n.locale}.md`))
+        .filter(k => {
+          if (k.startsWith('./install')) return true
+          return k.includes(`-${this.$i18n.locale}.md`)
+        })
         .map(k => Object.assign(marked(context(k).default).meta || {}, {
           chapter: k.split('/')[1],
           id: k.split('/')[2].split('.').shift().replace(`-${this.$i18n.locale}`, '')
