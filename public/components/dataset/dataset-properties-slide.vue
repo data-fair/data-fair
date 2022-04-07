@@ -16,7 +16,7 @@
           :class="{'font-weight-black': !!prop['x-refersTo']}"
           v-bind="btnProps(prop, originalProp, warning, i, currentProperty === i)"
           :ripple="!sortable"
-          @click="currentProperty = currentProperty === i ? null : i"
+          @click="switchProperty(i)"
         >
           <v-icon
             small
@@ -33,258 +33,257 @@
     >
       <v-subheader v-t="'detailedInfo'" />
     </v-row>
-    <v-expand-transition>
-      <v-sheet v-if="currentProperty != null">
-        <v-row v-if="currentPropRef.warning">
-          <v-col class="mt-4 pa-0">
-            <v-alert
-              type="warning"
-              dense
-              outlined
-              class="mb-0"
-            >
-              {{ currentPropRef.warning }}
-            </v-alert>
-          </v-col>
-        </v-row>
-        <v-row class="pt-2">
-          <v-col
-            cols="12"
-            md="6"
-            lg="5"
-            order-md="2"
+    <v-sheet v-if="currentProperty != null">
+      <v-row v-if="currentPropRef.warning">
+        <v-col class="mt-4 pa-0">
+          <v-alert
+            type="warning"
+            dense
+            outlined
+            class="mb-0"
           >
-            <v-row
-              v-if="editable && currentPropRef.editable && !dataset.isVirtual"
-              class="ma-0"
-            >
-              <v-spacer />
-              <div class="mx-1">
-                <confirm-menu
-                  v-if="user.adminMode && editable && currentPropRef.editable && dataset.isRest"
-                  :property="currentPropRef.prop"
-                  :btn-props="{fab: true, small: true, depressed: true, dark: true, color: 'admin'}"
-                  :title="$t('deletePropertyTitle')"
-                  :text="$t('deletePropertyText')"
-                  :tooltip="$t('deletePropertyTitle')"
-                  yes-color="warning"
-                  alert="error"
-                  @confirm="$emit('remove', currentPropRef.prop); currentProperty = null"
-                />
-              </div>
-              <div class="mx-1">
-                <dataset-property-capabilities
-                  :property="currentPropRef.prop"
-                  :editable="editable && currentPropRef.editable && !dataset.isVirtual"
-                />
-              </div>
-              <div class="mx-1">
-                <dataset-property-labels
-                  v-if="(currentPropRef.prop.type === 'string' && (!currentPropRef.prop.format || currentPropRef.prop.format === 'uri-reference') || currentPropRef.prop.type === 'boolean')"
-                  :property="currentPropRef.prop"
-                  :editable="editable && currentPropRef.editable && !dataset.isVirtual"
-                  :is-rest="dataset.isRest"
-                />
-              </div>
-            </v-row>
-            <v-list
-              dense
-              class="pt-0 labels-list"
-            >
-              <v-list-item
-                v-if="currentPropRef.prop['x-extension'] && extensions[currentPropRef.prop['x-extension']]"
-                class="pl-0 font-weight-bold"
-              >
-                <span :class="labelClass">{{ $t('extension') }}</span>&nbsp;
-                {{ extensions[currentPropRef.prop['x-extension']].title }}
-              </v-list-item>
-              <v-list-item class="pl-0">
-                <span :class="labelClass">{{ $t('key') }}</span>&nbsp;
-                {{ currentPropRef.prop['x-originalName'] || currentPropRef.prop.key }}
-              </v-list-item>
-              <v-list-item class="pl-0">
-                <span :class="labelClass">Type :</span>&nbsp;
-                {{ propTypeTitle(currentPropRef.prop) }}
-                <template v-if="currentFileProp && currentFileProp.dateFormat">
-                  ({{ currentFileProp.dateFormat }})
-                </template>
-                <template v-if="currentFileProp && currentFileProp.dateTimeFormat">
-                  ({{ currentFileProp.dateTimeFormat }})
-                </template>
-              </v-list-item>
-              <v-list-item
-                v-if="currentPropRef.prop['x-cardinality']"
-                class="pl-0"
-              >
-                <span :class="labelClass">{{ $t('distinctValues') }} : </span>&nbsp;
-                {{ currentPropRef.prop['x-cardinality'].toLocaleString() }}
-                <help-tooltip>{{ $t('distinctValuesHelp') }}</help-tooltip>
-              </v-list-item>
-              <v-list-item
-                v-if="currentPropRef.prop.enum"
-                class="pl-0"
-              >
-                <span :class="labelClass">{{ $t('values') }}</span>&nbsp;
-                {{ currentPropRef.prop.enum.join(' - ') | truncate(100) }}
-              </v-list-item>
-            </v-list>
-            <template v-if="currentPropRef.prop.type === 'string' && currentFileProp && currentFileProp.dateTimeFormat">
-              <lazy-time-zone-select
-                v-model="currentPropRef.prop.timeZone"
-                :disabled="!editable || !currentPropRef.editable || dataset.isVirtual"
+            {{ currentPropRef.warning }}
+          </v-alert>
+        </v-col>
+      </v-row>
+      <v-row class="pt-2">
+        <v-col
+          cols="12"
+          md="6"
+          lg="5"
+          order-md="2"
+        >
+          <v-row
+            v-if="editable && currentPropRef.editable && !dataset.isVirtual"
+            class="ma-0"
+          >
+            <v-spacer />
+            <div class="mx-1">
+              <confirm-menu
+                v-if="user.adminMode && editable && currentPropRef.editable && dataset.isRest"
+                :property="currentPropRef.prop"
+                :btn-props="{fab: true, small: true, depressed: true, dark: true, color: 'admin'}"
+                :title="$t('deletePropertyTitle')"
+                :text="$t('deletePropertyText')"
+                :tooltip="$t('deletePropertyTitle')"
+                yes-color="warning"
+                alert="error"
+                @confirm="$emit('remove', currentPropRef.prop); currentProperty = null"
               />
-            </template>
-            <v-autocomplete
-              v-model="currentPropRef.prop['x-refersTo']"
-              :items="vocabularyItems.filter(item => filterVocabulary(item))"
-              :disabled="!editable || !currentPropRef.editable || dataset.isVirtual"
-              :label="$t('concept')"
-              :clearable="true"
-              hide-details
-              class="mb-3"
-            >
-              <template #item="data">
-                <template v-if="typeof data.item !== 'object'">
-                  <v-list-item-content>{{ data.item }}</v-list-item-content>
-                </template>
-                <template v-else>
-                  <v-list-item-content>
-                    <v-list-item-title>{{ data.item.text }}</v-list-item-title>
-                    <v-list-item-subtitle>{{ data.item.description }}</v-list-item-subtitle>
-                  </v-list-item-content>
-                </template>
-              </template>
-              <template #append-outer>
-                <help-tooltip>{{ (currentPropRef.prop['x-refersTo'] && vocabulary[currentPropRef.prop['x-refersTo']] && vocabulary[currentPropRef.prop['x-refersTo']].description) || $t('conceptHelp') }}</help-tooltip>
-              </template>
-            </v-autocomplete>
-            <v-select
-              v-if="currentPropRef.prop.type === 'string'"
-              v-model="currentPropRef.prop.separator"
-              :items="[', ', '; ', ' - ', ' / ']"
-              :disabled="!editable || !currentPropRef.editable || dataset.isVirtual"
-              :label="$t('sep')"
-              hide-details
-              class="mb-3"
-              clearable
-            >
-              <template #append-outer>
-                <help-tooltip>{{ $t('separatorHelp') }}</help-tooltip>
-              </template>
-            </v-select>
-            <v-checkbox
-              v-if="dataset.file && dataset.file.mimetype === 'text/csv'"
-              v-model="currentPropRef.prop.ignoreDetection"
-              :disabled="!editable || !currentPropRef.editable"
-              :label="$t('ignoreDetection')"
-              hide-details
-              dense
-            >
-              <template #append>
-                <help-tooltip>{{ $t('ignoreDetectionHelp') }}</help-tooltip>
-              </template>
-            </v-checkbox>
-            <v-checkbox
-              v-if="dataset.file && dataset.file.mimetype === 'text/csv' && ['integer', 'number'].includes(currentPropRef.prop.type)"
-              v-model="currentPropRef.prop.ignoreIntegerDetection"
-              :disabled="!editable || !currentPropRef.editable"
-              :label="$t('ignoreIntegerDetection')"
-              hide-details
-              dense
-            >
-              <template #append>
-                <help-tooltip>{{ $t('ignoreIntegerDetectionHelp') }}</help-tooltip>
-              </template>
-            </v-checkbox>
-            <v-checkbox
-              v-if="dataset.isRest"
-              v-model="currentPropRef.prop.readOnly"
-              :disabled="!editable || !currentPropRef.editable"
-              :label="$t('readOnly')"
-              hide-details
-              dense
-            >
-              <template #append>
-                <help-tooltip>{{ $t('readOnlyHelp') }}</help-tooltip>
-              </template>
-            </v-checkbox>
-            <v-checkbox
-              v-if="currentPropRef.prop.type === 'string' && !currentPropRef.prop.type.format && currentPropRef.prop['x-refersTo'] !== 'http://schema.org/description'"
-              :input-value="isFormatted(currentPropRef.prop)"
-              :disabled="!editable || !currentPropRef.editable"
-              :label="$t('formatted')"
-              hide-details
-              dense
-              @change="value => toggleFormatted(currentPropRef.prop, value)"
-            >
-              <template #append>
-                <help-tooltip>{{ $t('formattedHelp') }}</help-tooltip>
-              </template>
-            </v-checkbox>
-            <v-select
-              v-if="currentPropRef.prop['x-refersTo'] && availableMasters[currentPropRef.prop['x-refersTo']]"
-              item-value="id"
-              item-text="title"
-              :items="availableMasters[currentPropRef.prop['x-refersTo']]"
-              :value="currentPropRef.prop['x-master']"
-              :label="$t('masterData')"
-              :clearable="true"
-              :return-object="true"
-              dense
-              hide-details
-              @input="setMasterData"
-            />
-          </v-col>
-          <v-col
-            cols="12"
-            md="6"
-            lg="7"
-            order-md="1"
+            </div>
+            <div class="mx-1">
+              <dataset-property-capabilities
+                :property="currentPropRef.prop"
+                :editable="editable && currentPropRef.editable && !dataset.isVirtual"
+              />
+            </div>
+            <div class="mx-1">
+              <dataset-property-labels
+                v-if="(currentPropRef.prop.type === 'string' && (!currentPropRef.prop.format || currentPropRef.prop.format === 'uri-reference') || currentPropRef.prop.type === 'boolean')"
+                :property="currentPropRef.prop"
+                :editable="editable && currentPropRef.editable && !dataset.isVirtual"
+                :is-rest="dataset.isRest"
+              />
+            </div>
+          </v-row>
+          <v-list
+            dense
+            class="pt-0 labels-list"
           >
-            <v-text-field
-              v-model="currentPropRef.prop.title"
-              :placeholder="currentPropRef.prop['x-originalName'] || ' '"
-              :label="$t('label')"
-              :disabled="!editable || !currentPropRef.editable"
-              outlined
-              dense
-              hide-details
-              class="mb-3"
+            <v-list-item
+              v-if="currentPropRef.prop['x-extension'] && extensions[currentPropRef.prop['x-extension']]"
+              class="pl-0 font-weight-bold"
             >
-              <template #append-outer>
-                <help-tooltip>{{ $t('labelHelp') }}</help-tooltip>
+              <span :class="labelClass">{{ $t('extension') }}</span>&nbsp;
+              {{ extensions[currentPropRef.prop['x-extension']].title }}
+            </v-list-item>
+            <v-list-item class="pl-0">
+              <span :class="labelClass">{{ $t('key') }}</span>&nbsp;
+              {{ currentPropRef.prop['x-originalName'] || currentPropRef.prop.key }}
+            </v-list-item>
+            <v-list-item class="pl-0">
+              <span :class="labelClass">Type :</span>&nbsp;
+              {{ propTypeTitle(currentPropRef.prop) }}
+              <template v-if="currentFileProp && currentFileProp.dateFormat">
+                ({{ currentFileProp.dateFormat }})
               </template>
-            </v-text-field>
-            <markdown-editor
-              v-model="currentPropRef.prop.description"
-              :label="$t('description')"
-              :disabled="!editable || !currentPropRef.editable"
-              :easymde-config="{minHeight: '150px'}"
+              <template v-if="currentFileProp && currentFileProp.dateTimeFormat">
+                ({{ currentFileProp.dateTimeFormat }})
+              </template>
+            </v-list-item>
+            <v-list-item
+              v-if="currentPropRef.prop['x-cardinality']"
+              class="pl-0"
             >
-              <template #append>
-                <help-tooltip>{{ $t('descriptionHelp') }}</help-tooltip>
-              </template>
-            </markdown-editor>
-            <v-combobox
-              v-model="currentPropRef.prop['x-group']"
+              <span :class="labelClass">{{ $t('distinctValues') }} : </span>&nbsp;
+              {{ currentPropRef.prop['x-cardinality'].toLocaleString() }}
+              <help-tooltip>{{ $t('distinctValuesHelp') }}</help-tooltip>
+            </v-list-item>
+            <v-list-item
+              v-if="currentPropRef.prop.enum"
+              class="pl-0"
+            >
+              <span :class="labelClass">{{ $t('values') }}</span>&nbsp;
+              {{ currentPropRef.prop.enum.join(' - ') | truncate(100) }}
+            </v-list-item>
+          </v-list>
+          <template v-if="currentPropRef.prop.type === 'string' && currentFileProp && currentFileProp.dateTimeFormat">
+            <lazy-time-zone-select
+              v-model="currentPropRef.prop.timeZone"
               :disabled="!editable || !currentPropRef.editable || dataset.isVirtual"
-              :items="groups"
-              :label="$t('group')"
-              persistent-hint
-              :hint="$t('groupHelp')"
-              dense
-              outlined
-              hide-details
-              class="mb-3"
-            >
-              <template #append-outer>
-                <help-tooltip>{{ $t('groupHelp') }}</help-tooltip>
+            />
+          </template>
+          <v-autocomplete
+            v-model="currentPropRef.prop['x-refersTo']"
+            :items="vocabularyItems.filter(item => filterVocabulary(item))"
+            :disabled="!editable || !currentPropRef.editable || dataset.isVirtual"
+            :label="$t('concept')"
+            :clearable="true"
+            hide-details
+            class="mb-3"
+          >
+            <template #item="data">
+              <template v-if="typeof data.item !== 'object'">
+                <v-list-item-content>{{ data.item }}</v-list-item-content>
               </template>
-            </v-combobox>
-          </v-col>
-        </v-row>
-      </v-sheet>
-    </v-expand-transition>
+              <template v-else>
+                <v-list-item-content>
+                  <v-list-item-title>{{ data.item.text }}</v-list-item-title>
+                  <v-list-item-subtitle>{{ data.item.description }}</v-list-item-subtitle>
+                </v-list-item-content>
+              </template>
+            </template>
+            <template #append-outer>
+              <help-tooltip>{{ (currentPropRef.prop['x-refersTo'] && vocabulary[currentPropRef.prop['x-refersTo']] && vocabulary[currentPropRef.prop['x-refersTo']].description) || $t('conceptHelp') }}</help-tooltip>
+            </template>
+          </v-autocomplete>
+          <v-select
+            v-if="currentPropRef.prop.type === 'string'"
+            v-model="currentPropRef.prop.separator"
+            :items="[', ', '; ', ' - ', ' / ']"
+            :disabled="!editable || !currentPropRef.editable || dataset.isVirtual"
+            :label="$t('sep')"
+            hide-details
+            class="mb-3"
+            clearable
+          >
+            <template #append-outer>
+              <help-tooltip>{{ $t('separatorHelp') }}</help-tooltip>
+            </template>
+          </v-select>
+          <v-checkbox
+            v-if="dataset.file && dataset.file.mimetype === 'text/csv'"
+            v-model="currentPropRef.prop.ignoreDetection"
+            :disabled="!editable || !currentPropRef.editable"
+            :label="$t('ignoreDetection')"
+            hide-details
+            dense
+          >
+            <template #append>
+              <help-tooltip>{{ $t('ignoreDetectionHelp') }}</help-tooltip>
+            </template>
+          </v-checkbox>
+          <v-checkbox
+            v-if="dataset.file && dataset.file.mimetype === 'text/csv' && ['integer', 'number'].includes(currentPropRef.prop.type)"
+            v-model="currentPropRef.prop.ignoreIntegerDetection"
+            :disabled="!editable || !currentPropRef.editable"
+            :label="$t('ignoreIntegerDetection')"
+            hide-details
+            dense
+          >
+            <template #append>
+              <help-tooltip>{{ $t('ignoreIntegerDetectionHelp') }}</help-tooltip>
+            </template>
+          </v-checkbox>
+          <v-checkbox
+            v-if="dataset.isRest"
+            v-model="currentPropRef.prop.readOnly"
+            :disabled="!editable || !currentPropRef.editable"
+            :label="$t('readOnly')"
+            hide-details
+            dense
+          >
+            <template #append>
+              <help-tooltip>{{ $t('readOnlyHelp') }}</help-tooltip>
+            </template>
+          </v-checkbox>
+          <v-checkbox
+            v-if="currentPropRef.prop.type === 'string' && !currentPropRef.prop.type.format && currentPropRef.prop['x-refersTo'] !== 'http://schema.org/description'"
+            :input-value="isFormatted(currentPropRef.prop)"
+            :disabled="!editable || !currentPropRef.editable"
+            :label="$t('formatted')"
+            hide-details
+            dense
+            @change="value => toggleFormatted(currentPropRef.prop, value)"
+          >
+            <template #append>
+              <help-tooltip>{{ $t('formattedHelp') }}</help-tooltip>
+            </template>
+          </v-checkbox>
+          <v-select
+            v-if="currentPropRef.prop['x-refersTo'] && availableMasters[currentPropRef.prop['x-refersTo']]"
+            item-value="id"
+            item-text="title"
+            :items="availableMasters[currentPropRef.prop['x-refersTo']]"
+            :value="currentPropRef.prop['x-master']"
+            :label="$t('masterData')"
+            :clearable="true"
+            :return-object="true"
+            dense
+            hide-details
+            @input="setMasterData"
+          />
+        </v-col>
+        <v-col
+          cols="12"
+          md="6"
+          lg="7"
+          order-md="1"
+        >
+          <v-text-field
+            v-model="currentPropRef.prop.title"
+            :placeholder="currentPropRef.prop['x-originalName'] || ' '"
+            :label="$t('label')"
+            :disabled="!editable || !currentPropRef.editable"
+            outlined
+            dense
+            hide-details
+            class="mb-3"
+            autofocus
+          >
+            <template #append-outer>
+              <help-tooltip>{{ $t('labelHelp') }}</help-tooltip>
+            </template>
+          </v-text-field>
+          <markdown-editor
+            v-model="currentPropRef.prop.description"
+            :label="$t('description')"
+            :disabled="!editable || !currentPropRef.editable"
+            :easymde-config="{minHeight: '150px'}"
+          >
+            <template #append>
+              <help-tooltip>{{ $t('descriptionHelp') }}</help-tooltip>
+            </template>
+          </markdown-editor>
+          <v-combobox
+            v-model="currentPropRef.prop['x-group']"
+            :disabled="!editable || !currentPropRef.editable || dataset.isVirtual"
+            :items="groups"
+            :label="$t('group')"
+            persistent-hint
+            :hint="$t('groupHelp')"
+            dense
+            outlined
+            hide-details
+            class="mb-3"
+          >
+            <template #append-outer>
+              <help-tooltip>{{ $t('groupHelp') }}</help-tooltip>
+            </template>
+          </v-combobox>
+        </v-col>
+      </v-row>
+    </v-sheet>
   </v-sheet>
 </template>
 
@@ -408,7 +407,7 @@ export default {
   methods: {
     ...mapActions('dataset', ['fetchRemoteServices', 'patch']),
     btnProps (prop, originalProp, warning, i, active) {
-      if (active) return { color: 'primary', dark: true, outlined: true, small: true }
+      if (active) return { color: 'primary', dark: true, depressed: true, small: true }
       if (warning) return { color: 'warning', dark: true, text: true, small: true }
       if (this.editable && JSON.stringify(prop) !== JSON.stringify(originalProp)) {
         return { color: 'accent', dark: true, text: true, small: true }
@@ -446,6 +445,15 @@ export default {
     toggleFormatted (prop, value) {
       if (value) this.$set(prop, 'x-display', 'markdown')
       else delete prop['x-display']
+    },
+    async switchProperty (i) {
+      if (this.currentProperty === i) {
+        this.currentProperty = null
+      } else {
+        this.currentProperty = null
+        await this.$nextTick()
+        this.currentProperty = i
+      }
     }
   }
 }
