@@ -117,3 +117,7 @@ The related changes are:
   - a new location rule in default.conf
   - the new *log_format* and *access_log* rules in default.conf
   - the new variables EXTRA_NAV_ITEMS and EXTRA_ADMIN_NAV_ITEMS in data-fair.env and the *data-fair* service
+
+### Backup
+
+**TODO**
