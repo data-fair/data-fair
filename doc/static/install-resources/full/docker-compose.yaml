@@ -26,7 +26,7 @@ services:
     image: ghcr.io/data-fair/data-fair:3
     restart: ${RESTART}
     volumes:
-      - data-fair-data:/webapp/data
+      - data-fair-data:/data
     depends_on:
       - mongo
       - elasticsearch
@@ -53,7 +53,7 @@ services:
     image: ghcr.io/data-fair/data-fair:3
     restart: ${RESTART}
     volumes:
-      - data-fair-data:/webapp/data
+      - data-fair-data:/data
     depends_on:
       - mongo
       - elasticsearch
@@ -93,6 +93,7 @@ services:
       - MAILDEV_ACTIVE=${MAILDEV_ACTIVE}
       - MAILDEV_URL=${BASE_URL}/mails/
       - SECRET_SENDMAILS=${SECRET}
+      - SECRET_IDENTITIES=${SECRET}
       - ROLES_DEFAULTS=["admin","contrib","user"]
       - PASSWORDLESS=false
       - USER_SELF_DELETE=true
@@ -113,6 +114,7 @@ services:
       - THUMBOR_KEY=${SECRET}
       - OPENAPIVIEWER_URL=${BASE_URL}/api-doc/
       - MONGO_HOST=mongo
+      - SECRET_IDENTITIES=${SECRET}
 
   processings:
     image: ghcr.io/data-fair/processings:1
@@ -132,6 +134,7 @@ services:
       - MONGO_HOST=mongo
       - DATA_FAIR_ADMIN_MODE=true
       - DATA_FAIR_API_KEY=${DATA_FAIR_ADMIN_API_KEY}
+      - SECRET_IDENTITIES=${SECRET}
 
   processings-worker:
     image: ghcr.io/data-fair/processings:1
@@ -151,6 +154,16 @@ services:
       - MONGO_HOST=mongo
       - DATA_FAIR_ADMIN_MODE=true
       - DATA_FAIR_API_KEY=${DATA_FAIR_ADMIN_API_KEY}
+
+  metrics:
+    image: ghcr.io/data-fair/metrics:0
+    restart: always
+    environment:
+      - PUBLIC_URL=${BASE_URL}/metrics
+      - DIRECTORY_URL=${BASE_URL}/simple-directory
+      - PRIVATE_DIRECTORY_URL=http://simple-directory:8080
+      - MONGO_URL=mongodb://mongo:27017/processings
+      - SYSLOG_SECRET=syslog_secret
 
   openapi-viewer:
     image: koumoul/openapi-viewer:1

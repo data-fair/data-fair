@@ -21,7 +21,7 @@ services:
     image: ghcr.io/data-fair/data-fair:3
     restart: ${RESTART}
     volumes:
-      - data-fair-data:/webapp/data
+      - data-fair-data:/data
     depends_on:
       - mongo
       - elasticsearch

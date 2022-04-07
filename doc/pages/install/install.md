@@ -90,7 +90,7 @@ The *data-fair* service has a new MODE=server variable and there is a new servic
 
 ### Portals
 
-Portals is a companion service to Data Fair that lets you create private or open data portals using Data Fair as a backend.
+Portals is a companion service to Data Fair that lets you create private or open data portals using Data Fair as a backend. Look at the new left navigation items (as normal user and as super admin).
 
 The related changes are:
   - the new service *portals*
@@ -100,10 +100,20 @@ The related changes are:
 
 ### Processings
 
-Processings is a companion service to Data Fair that lets you define and run tasks based on plugins published on npm.
+Processings is a companion service to Data Fair that lets you define and run tasks based on plugins published on npm. Look at the new left navigation items (as normal user and as super admin).
 
 The related changes are:
   - the new services *processings* and *processings-worker*
   - the new volume *processings-data*
   - a new location rule in default.conf
+  - the new variables EXTRA_NAV_ITEMS and EXTRA_ADMIN_NAV_ITEMS in data-fair.env and the *data-fair* service
+
+### Metrics
+
+Metrics is a companion service to Data Fair that can receive logs over UDP from the reverse proxy to store aggregated usage metrics of your datasets. Look at the new left navigation item.
+
+The related changes are:
+  - the new service *metrics*
+  - a new location rule in default.conf
+  - the new *log_format* and *access_log* rules in default.conf
   - the new variables EXTRA_NAV_ITEMS and EXTRA_ADMIN_NAV_ITEMS in data-fair.env and the *data-fair* service
