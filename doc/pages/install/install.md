@@ -58,9 +58,11 @@ This recipe can run Data Fair on a virtual machine exposed to the internet.
   - edit the line *server_name* in default.conf
   - run `docker-compose --env-file data-fair.env up -d` in the directory
   - check that all containers are up with `docker-compose ps`
-  - you should be able to open data-fair in your browser using the name of the machine
+  - check that the reverse proxy is attempting to create a certificate with `docker-compose logs nginx`
+  - you should be able to open data-fair in your browser using your domain name
 
-This recipe completes the previous one in many ways that you can chose to use or not. These improvements are detailed below.
+
+This recipe completes the previous one in many ways that you can chose to use or not by tinkering with the files. These improvements are detailed below.
 
 ### Mails transport configuration
 
