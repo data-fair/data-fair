@@ -23,7 +23,9 @@ export default {
     ...mapState(['env']),
     iframeUrl () {
       const extra = this.env.extraNavigationItems.find(e => e.id === this.$route.params.id)
-      return extra && extra.iframe
+      let url = extra && extra.iframe
+      if (url && url.startsWith('/')) url = window.location.origin + url
+      return url
     }
   },
   watch: {
