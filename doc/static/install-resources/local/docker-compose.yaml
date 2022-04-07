@@ -7,7 +7,7 @@ services:
 
   nginx:
     image: nginx:1.21.6-alpine
-    restart: always
+    restart: ${RESTART}
     volumes:
       - ./default.conf:/etc/nginx/conf.d/default.conf:ro
     ports:
@@ -19,7 +19,7 @@ services:
 
   data-fair:
     image: ghcr.io/data-fair/data-fair:3
-    restart: always
+    restart: ${RESTART}
     volumes:
       - data-fair-data:/webapp/data
     depends_on:
@@ -42,7 +42,7 @@ services:
 
   simple-directory:
     image: ghcr.io/data-fair/simple-directory:3
-    restart: always
+    restart: ${RESTART}
     volumes:
       - simple-directory-security:/webapp/security
     depends_on:
@@ -103,7 +103,7 @@ services:
 
   elasticsearch:
     image: ghcr.io/data-fair/elasticsearch:7.17.1
-    restart: always
+    restart: ${RESTART}
     volumes:
       - elasticsearch-data:/usr/share/elasticsearch/data
     environment:
@@ -111,14 +111,12 @@ services:
 
   mongo:
     image: mongo:4.4
-    restart: always
+    restart: ${RESTART}
     volumes:
       - mongo-data:/data/db
 
 volumes:
   data-fair-data:
-    driver: local
-  data-fair-portals-data:
     driver: local
   simple-directory-security:
     driver: local

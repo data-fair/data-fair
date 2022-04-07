@@ -7,7 +7,7 @@ services:
 
   nginx:
     image: jonasal/nginx-certbot:3.1.2-nginx1.21.6-alpine
-    restart: always
+    restart: ${RESTART}
     volumes:
       - ./default.conf:/etc/nginx/user_conf.d/default.conf:ro
       - nginx-cache:/var/cache/nginx/data-fair
@@ -24,13 +24,14 @@ services:
 
   data-fair:
     image: ghcr.io/data-fair/data-fair:3
-    restart: always
+    restart: ${RESTART}
     volumes:
       - data-fair-data:/webapp/data
     depends_on:
       - mongo
       - elasticsearch
     environment:
+      - MODE=server
       - DEBUG=upgrade*
       - PUBLIC_URL=${BASE_URL}/data-fair
       - DIRECTORY_URL=${BASE_URL}/simple-directory
@@ -40,20 +41,49 @@ services:
       - THUMBOR_KEY=${SECRET}
       - CAPTURE_URL=${BASE_URL}/capture/
       - NOTIFY_URL=${BASE_URL}/notify
+      - PRIVATE_NOTIFY_URL=http://notify:8080
       - MONGO_URL=mongodb://mongo:27017/data-fair
       - ES_HOST=elasticsearch:9200
       - SECRET_IDENTITIES=${SECRET}
       - SECRET_NOTIFICATIONS=${SECRET}
+      - EXTRA_NAV_ITEMS=${EXTRA_NAV_ITEMS}
+      - EXTRA_ADMIN_NAV_ITEMS=${EXTRA_ADMIN_NAV_ITEMS}
+
+  data-fair-worker:
+    image: ghcr.io/data-fair/data-fair:3
+    restart: ${RESTART}
+    volumes:
+      - data-fair-data:/webapp/data
+    depends_on:
+      - mongo
+      - elasticsearch
+    environment:
+      - MODE=worker
+      - DEBUG=upgrade*
+      - PUBLIC_URL=${BASE_URL}/data-fair
+      - DIRECTORY_URL=${BASE_URL}/simple-directory
+      - PRIVATE_DIRECTORY_URL=http://simple-directory:8080
+      - OPENAPI_VIEWER_URL=${BASE_URL}/api-doc/
+      - THUMBOR_URL=${BASE_URL}/thumbor/
+      - THUMBOR_KEY=${SECRET}
+      - CAPTURE_URL=${BASE_URL}/capture/
+      - NOTIFY_URL=${BASE_URL}/notify
+      - PRIVATE_NOTIFY_URL=http://notify:8080
+      - MONGO_URL=mongodb://mongo:27017/data-fair
+      - ES_HOST=elasticsearch:9200
+      - SECRET_NOTIFICATIONS=${SECRET}
 
   simple-directory:
     image: ghcr.io/data-fair/simple-directory:3
-    restart: always
+    restart: ${RESTART}
     volumes:
       - simple-directory-security:/webapp/security
     depends_on:
       - mongo
     environment:
       - PUBLIC_URL=${BASE_URL}/simple-directory
+      - NOTIFY_URL=${BASE_URL}/notify
+      - PRIVATE_NOTIFY_URL=http://notify:8080
       - STORAGE_MONGO_URL=mongodb://mongo:27017/simple-directory
       - ADMINS=${ADMINS}
       - HOME_PAGE=${BASE_URL}
@@ -66,6 +96,61 @@ services:
       - ROLES_DEFAULTS=["admin","contrib","user"]
       - PASSWORDLESS=false
       - USER_SELF_DELETE=true
+
+  portals:
+    image: ghcr.io/data-fair/portals:1
+    restart: always
+    volumes:
+      - portals-data:/webapp/data
+    environment:
+      - PUBLIC_URL=${BASE_URL}/portals
+      - DIRECTORY_URL=${BASE_URL}/simple-directory
+      - PRIVATE_DIRECTORY_URL=http://simple-directory:8080
+      - DATAFAIR_URL=${BASE_URL}/data-fair
+      - NOTIFY_URL=${BASE_URL}/notify
+      - PRIVATE_NOTIFY_URL=http://notify:8080
+      - THUMBOR_URL=${BASE_URL}/thumbor
+      - THUMBOR_KEY=${SECRET}
+      - OPENAPIVIEWER_URL=${BASE_URL}/api-doc/
+      - MONGO_HOST=mongo
+
+  processings:
+    image: ghcr.io/data-fair/processings:1
+    restart: always
+    volumes:
+      - processings-data:/data
+    environment:
+      - MODE=server
+      - PUBLIC_URL=${BASE_URL}/processings
+      - DIRECTORY_URL=${BASE_URL}/simple-directory
+      - PRIVATE_DIRECTORY_URL=http://simple-directory:8080
+      - DATAFAIR_URL=${BASE_URL}/data-fair
+      - NOTIFY_URL=${BASE_URL}/notify
+      - PRIVATE_NOTIFY_URL=http://notify:8080
+      - OPENAPIVIEWER_URL=${BASE_URL}/api-doc/
+      - MAILS_TRANSPORT=${MAILS_TRANSPORT}
+      - MONGO_HOST=mongo
+      - DATA_FAIR_ADMIN_MODE=true
+      - DATA_FAIR_API_KEY=${DATA_FAIR_ADMIN_API_KEY}
+
+  processings-worker:
+    image: ghcr.io/data-fair/processings:1
+    restart: always
+    volumes:
+      - processings-data:/data
+    environment:
+      - MODE=worker
+      - PUBLIC_URL=${BASE_URL}/processings
+      - DIRECTORY_URL=${BASE_URL}/simple-directory
+      - PRIVATE_DIRECTORY_URL=http://simple-directory:8080
+      - DATAFAIR_URL=${BASE_URL}/data-fair
+      - NOTIFY_URL=${BASE_URL}/notify
+      - PRIVATE_NOTIFY_URL=http://notify:8080
+      - OPENAPIVIEWER_URL=${BASE_URL}/api-doc/
+      - MAILS_TRANSPORT=${MAILS_TRANSPORT}
+      - MONGO_HOST=mongo
+      - DATA_FAIR_ADMIN_MODE=true
+      - DATA_FAIR_API_KEY=${DATA_FAIR_ADMIN_API_KEY}
 
   openapi-viewer:
     image: koumoul/openapi-viewer:1
@@ -111,7 +196,7 @@ services:
 
   elasticsearch:
     image: ghcr.io/data-fair/elasticsearch:7.17.1
-    restart: always
+    restart: ${RESTART}
     volumes:
       - elasticsearch-data:/usr/share/elasticsearch/data
     environment:
@@ -119,16 +204,18 @@ services:
 
   mongo:
     image: mongo:4.4
-    restart: always
+    restart: ${RESTART}
     volumes:
       - mongo-data:/data/db
 
 volumes:
   data-fair-data:
     driver: local
-  data-fair-portals-data:
-    driver: local
   simple-directory-security:
+    driver: local
+  portals-data:
+    driver: local
+  processings-data:
     driver: local
   thumbor-data:
     driver: local

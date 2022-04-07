@@ -70,10 +70,40 @@ By changing the MAILS_TRANSPORT and MAILDEV_ACTIVE variables you can switch from
 
 The nginx reverse proxy is configured to expose every services over the HTTPS, this will improve security. The certificate provider is letsencrypt and the certificate is automatically generated which requires that the domain name and the machine are available from the internet.
 
-The related changes are the use of another image for the nginx container (jonasal/nginx-certbot), the new volume nginx-letsencrypt, variable BASE_URL in the .env file that should and all the beginning of the server block in default.conf.
+The related changes are:
+  - the use of another image for the nginx container (jonasal/nginx-certbot)
+  - the new volume nginx-letsencrypt
+  - variable BASE_URL in data-fair.env
+  - the whole beginning of the server block in default.conf.
 
 ### Reverse proxy cache
 
 The nginx reverse proxy is configured to act as a cache for Data Fair, this will improve response times and limit the load on the service. It is mostly important when exposing Data Fair to the internet and creating public datasets.
 
-The related changes are the definition of data-fair-cache in default.conf and the new volume nginx-cache in docker-compose.yaml.
+The related changes are:
+  - the definition of data-fair-cache in default.conf
+  - the new volume nginx-cache in docker-compose.yaml
+
+### Server / worker separation
+
+The *data-fair* service has a new MODE=server variable and there is a new service *data-fair-worker*. This will improve the responsiveness of the HTTP server when there is heavy work going on in the worker (files parsing, etc).
+
+### Portals
+
+Portals is a companion service to Data Fair that lets you create private or open data portals using Data Fair as a backend.
+
+The related changes are:
+  - the new service *portals*
+  - the new volume *portals-data*
+  - a new location rule in default.conf
+  - the new variables EXTRA_NAV_ITEMS and EXTRA_ADMIN_NAV_ITEMS in data-fair.env and the *data-fair* service
+
+### Processings
+
+Processings is a companion service to Data Fair that lets you define and run tasks based on plugins published on npm.
+
+The related changes are:
+  - the new services *processings* and *processings-worker*
+  - the new volume *processings-data*
+  - a new location rule in default.conf
+  - the new variables EXTRA_NAV_ITEMS and EXTRA_ADMIN_NAV_ITEMS in data-fair.env and the *data-fair* service

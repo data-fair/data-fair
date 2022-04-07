@@ -40,7 +40,7 @@ module.exports = {
   srcDir: 'public/',
   buildDir: 'nuxt-dist',
   build: {
-    // always the same url to fetch static resource, event in multi-domain mode
+    // always the same url to fetch static resource, even in multi-domain mode
     publicPath: config.publicUrl + '/_nuxt/',
     transpile: [/@koumoul/, 'easymde'], // Necessary for "à la carte" import of vuetify components
     extend (config, { isServer, isDev, isClient }) {
