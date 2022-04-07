@@ -61,7 +61,7 @@ export default {
     content () {
       if (!this.$route) return
       const content = context(`./${this.$route.params.id}.md`) || context(`./${this.$route.params.id}.md`)
-      return content.default.replace('{{CONFIG_VARS}}', this.configVars)
+      return content.default.replace('{{CONFIG_VARS}}', this.configVars).replace(/{{DOC_BASE}}/g, this.$router.options.base)
     },
     configVars () {
       let table = '<table><thead><tr><th>Key in config file</th><th>Env variable</th><th>Description</th><th>Default value</th></tr></thead><tbody>\n'
