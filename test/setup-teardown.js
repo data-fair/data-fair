@@ -77,6 +77,7 @@ before('init globals', async () => {
     global.ax.builder('cdurning2@desdev.cn:passwd').then(ax => { global.ax.cdurning2 = ax }),
     global.ax.builder('alone@no.org:passwd').then(ax => { global.ax.alone = ax }),
     global.ax.builder('superadmin@test.com:superpasswd:adminMode').then(ax => { global.ax.superadmin = ax }),
+    global.ax.builder('superadmin@test.com:superpasswd').then(ax => { global.ax.superadminPersonal = ax }),
     global.ax.builder('alban.mouton@koumoul.com:passwd:adminMode').then(ax => { global.ax.alban = ax }),
     global.ax.builder('hlalonde3@desdev.cn:passwd').then(ax => { global.ax.hlalonde3 = ax }),
     global.ax.builder('ngernier4@usa.gov:passwd').then(ax => { global.ax.ngernier4 = ax }),

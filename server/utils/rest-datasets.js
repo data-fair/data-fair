@@ -132,7 +132,7 @@ const applyTransactions = async (req, transacs, validate) => {
 
     const extendedBody = { ...body }
     extendedBody._needsIndexing = true
-    extendedBody._updatedAt = updatedAt
+    extendedBody._updatedAt = body._updatedAt ? new Date(body._updatedAt) : updatedAt
     extendedBody._i = Number((updatedAt.getTime() - datasetCreatedAt) + padI(i))
     i++
 
@@ -284,10 +284,12 @@ class TransactionStream extends Writable {
   }
 }
 
-const compileSchema = (dataset) => {
+const compileSchema = (dataset, adminMode) => {
   const schema = datasetUtils.jsonSchema(dataset.schema.map(p => ({ ...p, readOnly: false })))
   schema.additionalProperties = false
   schema.properties._id = { type: 'string' }
+  // super-admins can set _updatedAt and so rewrite history
+  if (adminMode) schema.properties._updatedAt = { type: 'string', format: 'date-time' }
   return ajv.compile(schema)
 }
 
@@ -338,7 +340,7 @@ exports.createLine = async (req, res, next) => {
   const _action = req.body._id ? 'update' : 'create'
   req.body._id = req.body._id || getLineId(req.body, req.dataset) || nanoid()
   await manageAttachment(req, false)
-  const line = (await applyTransactions(req, [{ _action, ...req.body }], compileSchema(req.dataset))).results[0]
+  const line = (await applyTransactions(req, [{ _action, ...req.body }], compileSchema(req.dataset, req.user.adminMode))).results[0]
   if (line._error) return res.status(line._status).send(line._error)
   await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { status: 'updated' } })
   res.status(201).send(cleanLine(line))
@@ -347,7 +349,7 @@ exports.createLine = async (req, res, next) => {
 
 exports.deleteLine = async (req, res, next) => {
   const db = req.app.get('db')
-  const line = (await applyTransactions(req, [{ _action: 'delete', _id: req.params.lineId }], compileSchema(req.dataset))).results[0]
+  const line = (await applyTransactions(req, [{ _action: 'delete', _id: req.params.lineId }], compileSchema(req.dataset, req.user.adminMode))).results[0]
   if (line._error) return res.status(line._status).send(line._error)
   await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { status: 'updated' } })
   // TODO: delete the attachment if it is the primary key ?
@@ -358,7 +360,7 @@ exports.deleteLine = async (req, res, next) => {
 exports.updateLine = async (req, res, next) => {
   const db = req.app.get('db')
   await manageAttachment(req, false)
-  const line = (await applyTransactions(req, [{ _action: 'update', _id: req.params.lineId, ...req.body }], compileSchema(req.dataset))).results[0]
+  const line = (await applyTransactions(req, [{ _action: 'update', _id: req.params.lineId, ...req.body }], compileSchema(req.dataset, req.user.adminMode))).results[0]
   if (line._error) return res.status(line._status).send(line._error)
   await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { status: 'updated' } })
   res.status(200).send(cleanLine(line))
@@ -368,7 +370,7 @@ exports.updateLine = async (req, res, next) => {
 exports.patchLine = async (req, res, next) => {
   const db = req.app.get('db')
   await manageAttachment(req, true)
-  const line = (await applyTransactions(req, [{ _action: 'patch', _id: req.params.lineId, ...req.body }], compileSchema(req.dataset))).results[0]
+  const line = (await applyTransactions(req, [{ _action: 'patch', _id: req.params.lineId, ...req.body }], compileSchema(req.dataset, req.user.adminMode))).results[0]
   if (line._error) return res.status(line._status).send(line._error)
   await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { status: 'updated' } })
   res.status(200).send(cleanLine(line))
@@ -388,7 +390,7 @@ exports.deleteAllLines = async (req, res, next) => {
 
 exports.bulkLines = async (req, res, next) => {
   const db = req.app.get('db')
-  const validate = compileSchema(req.dataset)
+  const validate = compileSchema(req.dataset, req.user.adminMode)
 
   // no buffering nor caching of this response in the reverse proxy
   res.setHeader('X-Accel-Buffering', 'no')
@@ -462,7 +464,7 @@ exports.bulkLines = async (req, res, next) => {
 exports.syncAttachmentsLines = async (req, res, next) => {
   const db = req.app.get('db')
   const dataset = req.dataset
-  const validate = compileSchema(req.dataset)
+  const validate = compileSchema(req.dataset, req.user.adminMode)
 
   const pathField = req.dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')
   if (!pathField) {

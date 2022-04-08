@@ -464,6 +464,48 @@ describe('REST datasets', () => {
     assert.equal(res.data.storage.revisions.size + res.data.storage.collection.size, storageSize)
   })
 
+  it('Force _updatedAt value to fill existing history', async () => {
+    const ax = await global.ax.superadminPersonal
+    const axAdmin = await global.ax.superadmin
+    await ax.post('/api/v1/datasets', {
+      isRest: true,
+      title: 'resthistfill',
+      rest: { history: true },
+      schema: [{ key: 'attr1', type: 'string' }]
+    })
+    await workers.hook('finalizer/resthistfill')
+    // _updatedAt is normally rejected, accepted only as superadmin
+    await assert.rejects(ax.post('/api/v1/datasets/resthistfill/lines',
+      { _id: 'id1', attr1: 'test-old', _updatedAt: moment().subtract(1, 'day').toISOString() }), (err) => {
+      assert.equal(err.status, 400)
+      return true
+    })
+    const older = moment().subtract(2, 'day').toISOString()
+    await axAdmin.post('/api/v1/datasets/resthistfill/lines',
+      { _id: 'id1', attr1: 'test-older', _updatedAt: older })
+    const old = moment().subtract(1, 'day').toISOString()
+    await axAdmin.post('/api/v1/datasets/resthistfill/lines',
+      { _id: 'id1', attr1: 'test-old', _updatedAt: old })
+    await workers.hook('finalizer/resthistfill')
+    const lines = (await ax.get('/api/v1/datasets/resthistfill/lines')).data.results
+    assert.equal(lines.length, 1)
+    assert.equal(lines[0]._updatedAt, old)
+
+    await axAdmin.post('/api/v1/datasets/resthistfill/lines',
+      { _id: 'id1', attr1: 'test-now' })
+    await workers.hook('finalizer/resthistfill')
+    const newLines = (await ax.get('/api/v1/datasets/resthistfill/lines')).data.results
+    assert.equal(newLines.length, 1)
+    assert.ok(newLines[0]._updatedAt > old)
+
+    const history = (await ax.get('/api/v1/datasets/resthistfill/lines/id1/revisions')).data.results
+    assert.equal(history[2].attr1, 'test-older')
+    assert.equal(history[2]._updatedAt, older)
+    assert.equal(history[1].attr1, 'test-old')
+    assert.equal(history[1]._updatedAt, old)
+    assert.equal(history[0].attr1, 'test-now')
+  })
+
   it('Apply a TTL on some date-field', async () => {
     const ax = await global.ax.hlalonde3
     await ax.post('/api/v1/datasets', {
