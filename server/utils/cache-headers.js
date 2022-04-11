@@ -18,6 +18,14 @@ exports.resourceBased = (req, res, next) => {
   }
   res.setHeader('Last-Modified', date)
 
+  if (cacheVisibility === 'public') {
+    // accept buffering and caching of this response in the reverse proxy
+    res.setHeader('X-Accel-Buffering', 'yes')
+  } else {
+    // no buffering nor caching of this response in the reverse proxy
+    res.setHeader('X-Accel-Buffering', 'no')
+  }
+
   // finalizedAt passed as query parameter is used to timestamp the query and
   // make it compatible with a longer caching, only for datasets
   if (req.query.finalizedAt) {
@@ -32,8 +40,6 @@ exports.resourceBased = (req, res, next) => {
     } else {
       res.setHeader('Expires', '-1')
       res.setHeader('Cache-Control', 'must-revalidate, private')
-      // no buffering nor caching of this response in the reverse proxy
-      res.setHeader('X-Accel-Buffering', 'no')
     }
   }
 
