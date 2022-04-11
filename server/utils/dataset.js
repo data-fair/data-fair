@@ -489,10 +489,10 @@ exports.totalStorage = async (db, owner) => {
   const aggQuery = [
     { $match: { 'owner.type': owner.type, 'owner.id': owner.id } },
     { $project: { 'storage.size': 1, 'storage.indexed.size': 1 } },
-    { $group: { _id: null, size: { $sum: '$storage.size' }, indexed: { $sum: '$storage.indexed.size' } } }
+    { $group: { _id: null, size: { $sum: '$storage.size' }, indexed: { $sum: '$storage.indexed.size' }, count: { $sum: 1 } } }
   ]
   const res = await db.collection('datasets').aggregate(aggQuery).toArray()
-  return { size: (res[0] && res[0].size) || 0, indexed: (res[0] && res[0].indexed) || 0 }
+  return { size: (res[0] && res[0].size) || 0, indexed: (res[0] && res[0].indexed) || 0, count: (res[0] && res[0].count) || 0 }
 }
 
 // After a change that might impact consumed storage, we store the value

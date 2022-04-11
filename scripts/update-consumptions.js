@@ -8,6 +8,7 @@ async function main () {
     console.log(`reinit consumption of ${limit.type} / ${limit.id}`, totalStorage)
     await limits.setConsumption(db, limit, 'store_bytes', totalStorage.size)
     await limits.setConsumption(db, limit, 'indexed_bytes', totalStorage.indexed)
+    await limits.setConsumption(db, limit, 'nb_datasets', totalStorage.count)
   }
 }
 
