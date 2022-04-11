@@ -1,10 +1,13 @@
 const dbUtils = require('../server/utils/db')
 const datasetUtils = require('../server/utils/dataset')
+const limits = require('../server/utils/limits')
 async function main () {
   const { db } = await dbUtils.connect()
-  const quotas = await db.collection('quotas').find({}).limit(10000).toArray()
-  for (const quota of quotas) {
-    await datasetUtils.updateStorageSize(db, quota)
+  for await (const limit of db.collection('limits').find({})) {
+    const totalStorage = await datasetUtils.totalStorage(db, limit)
+    console.log(`reinit consumption of ${limit.type} / ${limit.id}`, totalStorage)
+    await limits.setConsumption(db, limit, 'store_bytes', totalStorage.size)
+    await limits.setConsumption(db, limit, 'indexed_bytes', totalStorage.indexed)
   }
 }
 
