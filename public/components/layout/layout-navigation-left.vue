@@ -191,7 +191,7 @@
     >
       <v-spacer />
       <span class="text-caption"><a
-        href="https://data-fair.github.io/2/"
+        href="https://data-fair.github.io/3/"
         style="color: white;"
       >Powered by Data Fair</a></span>
     </v-footer>
