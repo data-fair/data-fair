@@ -6,7 +6,7 @@ exports.clean = (baseApp, thumbnail, html = false) => {
   baseApp.applicationName = baseApp.applicationName || baseApp.meta['application-name']
   baseApp.version = baseApp.version || baseApp.meta.version
   baseApp.description = baseApp.description || baseApp.meta.description || ''
-  if (html) baseApp.description = marked(baseApp.description)
+  if (html) baseApp.description = marked.parse(baseApp.description)
   baseApp.image = baseApp.image || baseApp.url + 'thumbnail.png'
   baseApp.thumbnail = thumbor.thumbnail(baseApp.image, thumbnail || '300x200')
   return baseApp
