@@ -267,7 +267,7 @@
           </markdown-editor>
           <v-combobox
             v-model="currentPropRef.prop['x-group']"
-            :disabled="!editable || !currentPropRef.editable || dataset.isVirtual"
+            :disabled="!editable || !currentPropRef.editable"
             :items="groups"
             :label="$t('group')"
             persistent-hint
