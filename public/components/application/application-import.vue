@@ -52,7 +52,7 @@
           v-t="'back'"
           text
           class="ml-2"
-          @click.native="currentStep = 2"
+          @click.native="currentStep = 1"
         />
       </v-stepper-content>
     </v-stepper-items>
