@@ -216,19 +216,32 @@ describe('Properties capabilities', () => {
     const form = new FormData()
     form.append('dataset', fs.readFileSync('./test/resources/datasets/attachments.csv'), 'attachments.csv')
     form.append('attachments', fs.readFileSync('./test/resources/datasets/files.zip'), 'files.zip')
-    const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
+    let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
     let dataset = res.data
     assert.equal(res.status, 201)
 
     dataset = await workers.hook(`finalizer/${dataset.id}`)
+    // _file.content is searchable
     assert.ok(dataset.schema.find(p => p.key === '_file.content'))
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { q: 'libreoffice' } })
+    assert.equal(res.data.total, 1)
+    // attachments are counted in indexed storage
+    assert.equal(dataset.storage.indexed.size, dataset.storage.size)
+    assert.equal(dataset.storage.indexed.parts.length, 2)
 
     await ax.patch(`/api/v1/datasets/${dataset.id}`, {
       schema: [
         { key: 'attachment', type: 'string', 'x-refersTo': 'http://schema.org/DigitalDocument', 'x-capabilities': { indexAttachment: false } }
       ]
     })
+
     dataset = await workers.hook(`finalizer/${dataset.id}`)
+    // _file.content is no longer searchable
     assert.equal(dataset.schema.find(p => p.key === '_file.content'), undefined)
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { q: 'libreoffice' } })
+    assert.equal(res.data.total, 0)
+    // attachments are no longer counted in indexed storage
+    assert.ok(dataset.storage.indexed.size < dataset.storage.size)
+    assert.equal(dataset.storage.indexed.parts.length, 1)
   })
 })

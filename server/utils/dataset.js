@@ -471,7 +471,7 @@ exports.storage = async (db, dataset) => {
 
     if (!documentProperty['x-capabilities'] || documentProperty['x-capabilities'].indexAttachment !== false) {
       storage.indexed.size += storage.attachments.size
-      storage.indexedParts += 'attachments'
+      storage.indexed.parts.push('attachments')
     }
   }
 
