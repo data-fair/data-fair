@@ -13,7 +13,7 @@
           <v-row class="px-3">
             <dataset-nb-results :total="data.total" />
           </v-row>
-          <v-row>
+          <v-row class="mr-0">
             <v-col
               lg="3"
               md="4"
@@ -35,20 +35,15 @@
               />
             </v-col>
             <v-spacer />
-            <v-col
+            <v-select
               v-show="$vuetify.breakpoint.mdAndUp"
-              xl="1"
-              lg="1"
-              md="2"
-              class="pt-0"
-            >
-              <v-select
-                v-model="pagination.itemsPerPage"
-                :items="[10,20,50]"
-                hide-details
-                :label="$t('nbLines')"
-              />
-            </v-col>
+              v-model="pagination.itemsPerPage"
+              :items="[{value: 10},{value: 20},{value:50}]"
+              :item-text="item => (item.value + ' ' + $t('lines'))"
+              hide-details
+              dense
+              style="max-width: 120px;"
+            />
             <v-pagination
               v-if="data.total > pagination.itemsPerPage"
               v-model="pagination.page"
@@ -87,12 +82,12 @@ fr:
   noData: Les données ne sont pas accessibles. Soit le jeu de données n'a pas encore été entièrement traité, soit il y a eu une erreur dans le traitement.
   readJournal: Vous pouvez consulter le journal pour en savoir plus.
   search: Rechercher
-  nbLines: Nombre de lignes
+  lines: lignes
 en:
   noData: The data is not accessible. Either the dataset was not yet entirely processed, or there was an error.
   readJournal: You can check the activity journal to learn more.
   search: Search
-  nbLines: Number of lines
+  lines: lines
 </i18n>
 
 <script>

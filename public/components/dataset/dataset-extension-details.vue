@@ -3,7 +3,7 @@
     <v-col>
       <h3
         v-if="data.total <= 10000"
-        v-text="$tc('lines', data.total)"
+        v-text="$tc('linesCount', data.total)"
       />
       <h3
         v-else
@@ -28,7 +28,7 @@
           />
         </v-col>
       </v-row>
-      <v-row>
+      <v-row class="mr-0">
         <v-col
           lg="3"
           md="4"
@@ -48,18 +48,15 @@
           />
         </v-col>
         <v-spacer />
-        <v-col
+        <v-select
           v-show="$vuetify.breakpoint.mdAndUp"
-          xl="1"
-          lg="1"
-          md="2"
-        >
-          <v-select
-            v-model="pagination.itemsPerPage"
-            :items="[5,10,20,50]"
-            :label="$t('nbLines')"
-          />
-        </v-col>
+          v-model="pagination.itemsPerPage"
+          :items="[{value: 5}, {value: 10},{value: 20},{value:50}]"
+          :item-text="item => (item.value + ' ' + $t('lines'))"
+          hide-details
+          dense
+          style="max-width: 120px;"
+        />
         <v-pagination
           v-if="data.total > pagination.itemsPerPage"
           v-model="pagination.page"
@@ -153,9 +150,9 @@
 <i18n lang="yaml">
 fr:
   noError: Il n'y a aucune erreur dans le retour de l'extension.
-  lines: " | Consultez 1 résultat d'extension | Consultez {count} résultats d'extensions"
+  linesCount: " | Consultez 1 résultat d'extension | Consultez {count} résultats d'extensions"
   firstLines: Consultez les {lines} premiers résultats d'extension ({total} au total)
-  nbLines: Nombre de lignes
+  lines: lignes
   allLines: Voir toutes les lignes
   onlyErrors: Voir uniquement les {nbErrors} lignes en erreur
   onlyOk: Voir uniquement les {oks} lignes sans erreur
@@ -163,9 +160,9 @@ fr:
   errorCounting: Erreur pendant le comptage des erreurs
 en:
   noError: There is no error in the extension results
-  lines: " | See 1 extension result | See {count} extension results"
+  linesCount: " | See 1 extension result | See {count} extension results"
   firstLines: See the {lines} first results of the extension ({total} total)
-  nbLines: Number of lines
+  lines: lines
   allLines: Show all lines
   onlyErrors: See only the {nbErrors} lines with an error
   onlyOk: See only the {oks} lines without error

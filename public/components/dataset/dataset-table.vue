@@ -32,7 +32,7 @@
               :dataset="dataset"
             />
           </v-row>
-          <v-row>
+          <v-row class="mr-0">
             <v-col
               lg="3"
               md="4"
@@ -54,20 +54,16 @@
               />
             </v-col>
             <v-spacer />
-            <v-col
+
+            <v-select
               v-show="$vuetify.breakpoint.mdAndUp"
-              xl="1"
-              lg="1"
-              md="2"
-              class="pt-0"
-            >
-              <v-select
-                v-model="pagination.itemsPerPage"
-                :items="[10,20,50]"
-                hide-details
-                :label="$t('nbLines')"
-              />
-            </v-col>
+              v-model="pagination.itemsPerPage"
+              :items="[{value: 10},{value: 20},{value:50}]"
+              :item-text="item => (item.value + ' ' + $t('lines'))"
+              hide-details
+              dense
+              style="max-width: 120px;"
+            />
             <v-pagination
               v-if="data.total > pagination.itemsPerPage"
               v-model="pagination.page"
@@ -368,7 +364,7 @@
 fr:
   noData: Les données ne sont pas accessibles. Soit le jeu de données n'a pas encore été entièrement traité, soit il y a eu une erreur dans le traitement.
   tutorialFilter: Appliquez des filtres depuis les entêtes de colonnes et en survolant les valeurs. Triez en cliquant sur les entêtes de colonnes. Cliquez sur le bouton en haut à droite pour télécharger dans un fichier le contenu filtré et trié.
-  nbLines: Nombre de lignes
+  lines: lignes
   showRevisions: Voir l'historique des révisions de cette ligne
   addLine: Ajouter une ligne
   editLine: Éditer une ligne
@@ -381,7 +377,7 @@ fr:
 en:
   noData: The data is not accessible. Either the dataset was not yet entirely processed, or there was an error.
   tutorialFilter: Apply filters from the headers and by hovering the values. Sort by clicking on the headers. Click on the button on the top to the right to download in a file the filtered and sorted content.
-  nbLines: Number of lines
+  lines: lines
   showRevisions: Show the history
   addLine: Add a line
   editLine: Edit a line
