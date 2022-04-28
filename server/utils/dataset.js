@@ -242,11 +242,11 @@ exports.transformFileStreams = (mimeType, schema, fileSchema, fileProps = {}, ra
         }
         const line = {}
         if (noExtra) {
-          const unknownKey = Object.keys(chunk)
+          const unknownKeys = Object.keys(chunk)
             .filter(k => k !== '_i')
-            .find(k => !schema.find(p => p['x-originalName'] === k || p.key === k))
-          if (unknownKey) {
-            return callback(new Error(`Colonne ${unknownKey} inconnue.`))
+            .filter(k => !schema.find(p => p['x-originalName'] === k || p.key === k))
+          if (unknownKeys.length) {
+            return callback(createError(400, `Colonnes inconnues ${unknownKeys.join(', ')}`))
           }
         }
         schema.forEach(prop => {

@@ -474,7 +474,7 @@ exports.bulkLines = async (req, res, next) => {
     await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { status: 'updated' } })
   } catch (err) {
     if (firstBatch) {
-      res.writeHeader(500, { 'Content-Type': 'application/json' })
+      res.writeHeader(err.statusCode || 500, { 'Content-Type': 'application/json' })
     }
     summary.nbErrors += 1
     summary.errors.push({ line: -1, error: err.message })
