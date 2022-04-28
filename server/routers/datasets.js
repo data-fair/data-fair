@@ -403,6 +403,11 @@ router.patch('/:datasetId', lockDataset((patch) => {
     patch.exports.restToCSV.lastExport = req.dataset?.exports?.restToCSV?.lastExport
   }
 
+  // apply new configuration to rest dataset revisions collection
+  if (req.dataset.isRest && patch.rest) {
+    await restDatasetsUtils.applyHistoryTTL(db, { ...req.dataset, rest: patch.rest })
+  }
+
   if (req.dataset.isVirtual) {
     if (patch.schema || patch.virtual) {
       patch.schema = await virtualDatasetsUtils.prepareSchema(db, { ...req.dataset, ...patch })
@@ -979,7 +984,8 @@ router.put('/:datasetId/lines/:lineId', readDataset(['finalized', 'updated', 'in
 router.patch('/:datasetId/lines/:lineId', readDataset(['finalized', 'updated', 'indexed', 'error']), isRest, permissions.middleware('patchLine', 'write'), checkStorage(false), restDatasetsUtils.uploadAttachment, asyncWrap(restDatasetsUtils.patchLine))
 router.post('/:datasetId/_bulk_lines', lockDataset((body, query) => query.lock === 'true'), readDataset(['finalized', 'updated', 'indexed', 'error']), isRest, permissions.middleware('bulkLines', 'write'), checkStorage(false), restDatasetsUtils.uploadBulk, asyncWrap(restDatasetsUtils.bulkLines))
 router.delete('/:datasetId/lines/:lineId', readDataset(['finalized', 'updated', 'indexed', 'error']), isRest, permissions.middleware('deleteLine', 'write'), asyncWrap(restDatasetsUtils.deleteLine))
-router.get('/:datasetId/lines/:lineId/revisions', readDataset(['finalized', 'updated', 'indexed', 'error']), isRest, permissions.middleware('readLineRevisions', 'read', 'readDataAPI'), asyncWrap(restDatasetsUtils.readLineRevisions))
+router.get('/:datasetId/lines/:lineId/revisions', readDataset(['finalized', 'updated', 'indexed', 'error']), isRest, permissions.middleware('readLineRevisions', 'read', 'readDataAPI'), asyncWrap(restDatasetsUtils.readRevisions))
+router.get('/:datasetId/revisions', readDataset(['finalized', 'updated', 'indexed', 'error']), isRest, permissions.middleware('readRevisions', 'read', 'readDataAPI'), asyncWrap(restDatasetsUtils.readRevisions))
 router.delete('/:datasetId/lines', readDataset(['finalized', 'updated', 'indexed', 'error']), isRest, permissions.middleware('deleteAllLines', 'write'), asyncWrap(restDatasetsUtils.deleteAllLines))
 router.post('/:datasetId/_sync_attachments_lines', lockDataset((body, query) => query.lock === 'true'), readDataset(['finalized', 'updated', 'indexed', 'error']), isRest, permissions.middleware('bulkLines', 'write'), asyncWrap(restDatasetsUtils.syncAttachmentsLines))
 

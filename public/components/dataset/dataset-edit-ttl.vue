@@ -3,6 +3,9 @@
     v-if="editTtl"
     v-model="show"
     :close-on-content-click="false"
+    max-width="400"
+    left
+    offset-y
   >
     <template #activator="{on}">
       <v-btn
@@ -13,9 +16,9 @@
         <v-icon>mdi-pencil</v-icon>
       </v-btn>
     </template>
-    <v-sheet>
+    <v-card>
       <v-alert
-        v-t="'alert'"
+        v-t="revisions ? 'alertRevisions' : 'alert'"
         type="warning"
         :value="true"
         tile
@@ -30,6 +33,7 @@
           :label="$t('activate')"
         />
         <v-select
+          v-if="!revisions"
           v-model="editTtl.prop"
           :label="$t('col')"
           :items="schema.filter(prop => prop.format === 'date-time')"
@@ -38,6 +42,8 @@
         />
         <v-text-field
           v-model.number="editTtl.delay.value"
+          outlined
+          dense
           type="number"
           :label="$t('days')"
         />
@@ -55,30 +61,32 @@
           @click="change"
         />
       </v-card-actions>
-    </v-sheet>
+    </v-card>
   </v-menu>
 </template>
 
 <i18n lang="yaml">
 fr:
   alert: Si vous configurez l'expiration automatique, les lignes supprimées ne pourront pas être récupérées.
+  alertRevisions: Si vous configurez l'expiration automatique des révisions, les informations supprimées ne pourront pas être récupérées.
   activate: activer l'expiration automatique
   col: colonne de date de référence
-  days: nombre de jours avant expiration depuis la date de référence
+  days: nombre de jours avant expiration
   cancel: annuler
   save: enregistrer
 en:
-  alert: If you configure automatic expiration, the delete lines will not be recoverable.
+  alert: If you configure automatic expiration, the deleted lines will not be recoverable.
+  alertRevisions: If you configure automatic expiration of revisions, the deleted data will not be recoverable.
   activate: activate automatic expiration
   col: column containing the reference date
-  days: number of days from the reference date before expiration
+  days: number of days before expiration
   cancel: cancel
   save: Save
 </i18n>
 
 <script>
 export default {
-  props: ['ttl', 'schema'],
+  props: ['ttl', 'schema', 'revisions'],
   data: () => ({
     show: false,
     editTtl: null

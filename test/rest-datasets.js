@@ -462,6 +462,38 @@ describe('REST datasets', () => {
     assert.ok(res.data.storage.collection.size > 80)
     assert.ok(res.data.storage.revisions.size > 160)
     assert.equal(res.data.storage.revisions.size + res.data.storage.collection.size, storageSize)
+
+    // delete a line, its history should still be available
+    res = await ax.delete('/api/v1/datasets/resthist/lines/id1')
+    await workers.hook('finalizer/resthist')
+    res = await ax.get('/api/v1/datasets/resthist/lines/id1/revisions')
+    assert.equal(res.data.results.length, 3)
+    assert.equal(res.data.results[0]._action, 'delete')
+  })
+
+  it('Store history with at least primary key info', async () => {
+    const ax = await global.ax.hlalonde3
+    let res = await ax.post('/api/v1/datasets', {
+      isRest: true,
+      title: 'resthistprimary',
+      rest: { history: true },
+      primaryKey: ['attr1', 'attr2'],
+      schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }]
+    })
+    await workers.hook('finalizer/resthistprimary')
+    const line = (await ax.post('/api/v1/datasets/resthistprimary/lines', { attr1: 'test1', attr2: 'test2' })).data
+    assert.ok(line._id)
+    await workers.hook('finalizer/resthistprimary')
+
+    // delete a line, its history should still be available and contain the primary key info
+    res = await ax.delete('/api/v1/datasets/resthistprimary/lines/' + line._id)
+    await workers.hook('finalizer/resthistprimary')
+    res = await ax.get('/api/v1/datasets/resthistprimary/revisions')
+    assert.equal(res.data.results.length, 2)
+    assert.equal(res.data.results[0]._action, 'delete')
+    assert.equal(res.data.results[0]._id, line._id)
+    assert.equal(res.data.results[0].attr1, 'test1')
+    assert.equal(res.data.results[0].attr2, 'test2')
   })
 
   it('Force _updatedAt value to fill existing history', async () => {
@@ -504,6 +536,42 @@ describe('REST datasets', () => {
     assert.equal(history[1].attr1, 'test-old')
     assert.equal(history[1]._updatedAt, old)
     assert.equal(history[0].attr1, 'test-now')
+  })
+
+  it('Define a TTL on revisions in history', async () => {
+    const ax = await global.ax.hlalonde3
+
+    let res = await ax.post('/api/v1/datasets', {
+      isRest: true,
+      title: 'resthistttl',
+      rest: { history: true, historyTTL: { active: true, delay: { value: 2, unit: 'days' } } },
+      schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }]
+    })
+    const dataset = await workers.hook('finalizer/resthistttl')
+    res = await ax.post('/api/v1/datasets/resthistttl/lines', { _id: 'id1', attr1: 'test1', attr2: 'test1' })
+    assert.equal(res.data._id, 'id1')
+    await workers.hook('finalizer/resthistttl')
+    res = await ax.patch('/api/v1/datasets/resthistttl/lines/id1', { attr1: 'test2' })
+    await workers.hook('finalizer/resthistttl')
+    res = await ax.get('/api/v1/datasets/resthistttl/lines/id1/revisions')
+    assert.equal(res.data.results[0]._id, 'id1')
+    assert.equal(res.data.results[0].attr1, 'test2')
+    assert.equal(res.data.results[1]._id, 'id1')
+    assert.equal(res.data.results[1].attr1, 'test1')
+
+    const revisionsCollection = restDatasetsUtils.revisionsCollection(global.db, dataset)
+    let indexes = await revisionsCollection.listIndexes().toArray()
+    assert.equal(indexes.length, 3)
+    const index = indexes.find(i => i.name === 'history-ttl')
+    assert.ok(index)
+    assert.equal(index.expireAfterSeconds, 2 * 24 * 60 * 60)
+
+    // disable TTL
+    dataset.rest.historyTTL = { active: false }
+    res = await ax.patch('/api/v1/datasets/resthistttl', { rest: dataset.rest })
+    indexes = await revisionsCollection.listIndexes().toArray()
+    assert.equal(indexes.length, 2)
+    assert.ok(!indexes.find(i => i.name === 'history-ttl'))
   })
 
   it('Apply a TTL on some date-field', async () => {

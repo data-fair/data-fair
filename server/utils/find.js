@@ -128,6 +128,8 @@ exports.pagination = (query, defaultSize = 12) => {
     skip = (parseInt(query.page) - 1) * size
   }
 
+  if ((size + skip) > 10000) throw createError(400, '"size + skip" cannot be more than 10000')
+
   return [skip, size]
 }
 

@@ -138,6 +138,7 @@ export default () => ({
       if (dataset.isRest) {
         dataset.rest = dataset.rest || {}
         dataset.rest.ttl = dataset.rest.ttl || { active: false, prop: '_updatedAt', delay: { value: 30, unit: 'days' } }
+        dataset.rest.historyTTL = dataset.rest.historyTTL || { active: false, delay: { value: 30, unit: 'days' } }
       }
       commit('setAny', { dataset })
       if (dataset.draftReason && dataset.draftReason.key === 'file-updated') {

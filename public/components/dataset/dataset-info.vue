@@ -69,7 +69,10 @@
           </v-list-item>
           <v-list-item v-if="dataset.isRest">
             <v-list-item-avatar class="ml-0 my-0">
-              <v-icon :disabled="!dataset.rest.ttl.active">
+              <v-icon
+                :disabled="!dataset.rest.ttl.active"
+                color="warning"
+              >
                 mdi-delete-restore
               </v-icon>
             </v-list-item-avatar>
@@ -182,7 +185,7 @@ fr:
   virtualDatasets: pas de jeu de données virtual | 1 jeu de données virtuel | {count} jeux de données virtuels
   restDataset: Jeu de données éditable
   ttl: Supprimer automatiquement les lignes dont la colonne {col} contient une date dépassée de {days} jours.
-  noTTL: pas de politique d'expiration automatique configurée
+  noTTL: pas de politique d'expiration des lignes configurée
   licence: Licence
   topics: Thématiques
   projection: Projection cartographique
@@ -197,7 +200,7 @@ en:
   virtualDatasets: no virtual dataset | 1 virtual dataset | {count} virtual datasets
   restDataset: Editable dataset
   ttl: Automatically delete lines whose column {col} contains a date exceeded by {days} days.
-  noTTL: no automatic expiration configured
+  noTTL: no automatic expiration of lines configured
   licence: License
   topics: Topics
   projection: Map projection

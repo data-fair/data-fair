@@ -13,6 +13,9 @@ const moment = require('moment')
 const { crc32 } = require('crc')
 const stableStringify = require('fast-json-stable-stringify')
 const stripBom = require('strip-bom-stream')
+const dayjs = require('dayjs')
+const duration = require('dayjs/plugin/duration')
+dayjs.extend(duration)
 const datasetUtils = require('./dataset')
 const attachmentsUtils = require('./attachments')
 const findUtils = require('./find')
@@ -87,6 +90,21 @@ exports.initDataset = async (db, dataset) => {
     collection.createIndex({ _needsIndexing: 1 }),
     revisionsCollection.createIndex({ _lineId: 1, _updatedAt: -1 }, { unique: true })
   ])
+  await exports.applyHistoryTTL(db, dataset)
+}
+
+exports.applyHistoryTTL = async (db, dataset) => {
+  const revisionsCollection = exports.revisionsCollection(db, dataset)
+  if (dataset.rest.historyTTL && dataset.rest.historyTTL.active && dataset.rest.historyTTL.delay && dataset.rest.historyTTL.delay.value) {
+    const expireAfterSeconds = dayjs.duration(dataset.rest.historyTTL.delay.value, dataset.rest.historyTTL.delay.unit || 'days').asSeconds()
+    await revisionsCollection.createIndex({ _updatedAt: 1 }, { expireAfterSeconds, name: 'history-ttl' })
+  } else {
+    try {
+      await revisionsCollection.dropIndex('history-ttl')
+    } catch (err) {
+      if (err.codeName !== 'IndexNotFound') throw err
+    }
+  }
 }
 
 exports.deleteDataset = async (db, dataset) => {
@@ -101,6 +119,15 @@ const getLineId = (line, dataset) => {
     const primaryKey = dataset.primaryKey.map(p => line[p])
     return Buffer.from(JSON.stringify(primaryKey).slice(2, -2)).toString('hex')
   }
+}
+// make sure that the primary properties are present
+// even when they were not given and only _id was given
+const fillPrimaryKeyFromId = (line, dataset) => {
+  if (!dataset.primaryKey || !dataset.primaryKey.length) return
+  const primaryKey = JSON.parse('["' + Buffer.from(line._id, 'hex') + '"]')
+  dataset.primaryKey.forEach((key, i) => {
+    if (!(key in line)) line[key] = primaryKey[i]
+  })
 }
 
 const applyTransactions = async (req, transacs, validate) => {
@@ -178,6 +205,7 @@ const applyTransactions = async (req, transacs, validate) => {
       if (history) {
         const revision = { ...extendedBody, _action }
         delete revision._needsIndexing
+        fillPrimaryKeyFromId(revision, dataset)
         revision._lineId = revision._id
         delete revision._id
         if (!revision._deleted) delete revision._deleted
@@ -498,12 +526,12 @@ exports.syncAttachmentsLines = async (req, res, next) => {
   res.send(summary)
 }
 
-exports.readLineRevisions = async (req, res, next) => {
+exports.readRevisions = async (req, res, next) => {
   if (!req.dataset.rest || !req.dataset.rest.history) {
     return res.status(400).send('L\'historisation des lignes n\'est pas activée pour ce jeu de données.')
   }
   const revisionsCollection = exports.revisionsCollection(req.app.get('db'), req.dataset)
-  const filter = { _lineId: req.params.lineId }
+  const filter = req.params.lineId ? { _lineId: req.params.lineId } : {}
   const [skip, size] = findUtils.pagination(req.query)
   const [total, results] = await Promise.all([
     revisionsCollection.countDocuments(filter),

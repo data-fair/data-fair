@@ -181,17 +181,17 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
 - patch: modifie la ligne, nécessite la présence de _id
     `
     }
-
+    const lineId = {
+      in: 'path',
+      name: 'lineId',
+      description: 'L\'identifiant de la ligne',
+      required: true,
+      schema: {
+        type: 'string'
+      }
+    }
     api.paths['/lines/{lineId}'] = {
-      parameters: [{
-        in: 'path',
-        name: 'lineId',
-        description: 'L\'identifiant de la ligne',
-        required: true,
-        schema: {
-          type: 'string'
-        }
-      }],
+      parameters: [lineId],
       get: {
         summary: 'Récupérer une ligne de données',
         operationId: 'readLine',
@@ -349,6 +349,61 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
                           line: { type: 'integer' },
                           error: { type: 'string' }
                         }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    if (dataset.rest.history) {
+      api.paths['/revisions'] = {
+        get: {
+          summary: 'Récupérer les révisions de lignes triées du plus récent au plus ancien',
+          operationId: 'readRevisions',
+          'x-permissionClass': 'read',
+          tags: ['Données éditables'],
+          responses: {
+            200: {
+              description: 'Les révisions',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      results: {
+                        type: 'array',
+                        items: bulkLineSchema
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+      api.paths['/lines/{lineId}/revisions'] = {
+        get: {
+          parameters: [lineId],
+          summary: 'Récupérer les révisions d\'une ligne triées du plus récent au plus ancien',
+          operationId: 'readLineRevisions',
+          'x-permissionClass': 'read',
+          tags: ['Données éditables'],
+          responses: {
+            200: {
+              description: 'Les révisions',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      results: {
+                        type: 'array',
+                        items: bulkLineSchema
                       }
                     }
                   }

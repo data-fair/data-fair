@@ -354,34 +354,10 @@
           </v-btn>
         </v-toolbar>
         <v-card-text
-          v-if="history"
+          v-if="historyDialog"
           class="pa-0"
         >
-          <v-data-table
-            :headers="historyHeaders"
-            :items="history.results"
-            :server-items-length="history.total"
-            :rows-per-page-text="$t('nbRevisions')"
-            :loading="historyLoading"
-            :options.sync="historyPagination"
-          >
-            <template #item="{item}">
-              <tr>
-                <td
-                  v-for="header in historyHeaders"
-                  :key="header.value"
-                  class="pr-0 pl-4"
-                >
-                  <template v-if="header.value === '_updatedAt'">
-                    {{ new Date(item._updatedAt).toLocaleString() }}
-                  </template>
-                  <template v-else>
-                    {{ ((item[header.value] === undefined || item[header.value] === null ? '' : item[header.value]) + '') | truncate(50) }}
-                  </template>
-                </td>
-              </tr>
-            </template>
-          </v-data-table>
+          <dataset-history :line="historyLine" />
         </v-card-text>
       </v-card>
     </v-dialog>
@@ -402,7 +378,6 @@ fr:
   cancel: Annuler
   delete: Supprimer
   revisionsHistory: Historique des révisions
-  nbRevisions: Nombre de révisions
 en:
   noData: The data is not accessible. Either the dataset was not yet entirely processed, or there was an error.
   tutorialFilter: Apply filters from the headers and by hovering the values. Sort by clicking on the headers. Click on the button on the top to the right to download in a file the filtered and sorted content.
@@ -416,7 +391,6 @@ en:
   cancel: Cancel
   delete: Delete
   revisionsHistory: Revisions history
-  nbRevisions: Number of revisions
 </i18n>
 
 <script>
@@ -444,12 +418,6 @@ export default {
     uploadProgress: 0,
     historyLine: null,
     historyDialog: false,
-    history: null,
-    historyLoading: false,
-    historyPagination: {
-      page: 1,
-      itemsPerPage: 10
-    },
     filters: [],
     createdLines: [],
     updatedLines: [],
@@ -491,13 +459,6 @@ export default {
     selectedHeaders () {
       if (this.selectedCols.length === 0) return this.headers
       return this.headers.filter(h => !h.field || this.selectedCols.includes(h.value))
-    },
-    historyHeaders () {
-      const historyHeaders = this.headers
-        .map(h => ({ ...h, sortable: false }))
-        .filter(h => !h.value.startsWith('_'))
-      historyHeaders.unshift({ text: 'Date de la révision', value: '_updatedAt', sortable: false })
-      return historyHeaders
     },
     imageField () {
       return this.dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/image')
@@ -583,12 +544,6 @@ export default {
       },
       deep: true
     },
-    historyPagination: {
-      handler () {
-        if (this.historyLine) this.refreshHistory()
-      },
-      deep: true
-    },
     filters: {
       handler () {
         localStorage.setItem(this.filtersStorageKey, JSON.stringify(this.filters))
@@ -665,25 +620,7 @@ export default {
     },
     showHistoryDialog (line) {
       this.historyLine = line
-      this.history = null
       this.historyDialog = true
-      this.historyPagination.page = 1
-
-      this.refreshHistory()
-    },
-    async refreshHistory () {
-      this.historyLoading = true
-      try {
-        this.history = await this.$axios.$get(`${this.resourceUrl}/lines/${this.historyLine._id}/revisions`, {
-          params: {
-            page: this.historyPagination.page,
-            size: this.historyPagination.itemsPerPage
-          }
-        })
-      } catch (error) {
-        eventBus.$emit('notification', { error, msg: 'Erreur pendant la récupération de l\'historique de la ligne\'' })
-      }
-      this.historyLoading = false
     },
     onFileUpload (file) {
       this.file = file

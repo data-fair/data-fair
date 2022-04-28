@@ -498,11 +498,6 @@ module.exports = {
       type: 'object',
       description: 'A configuration object dedicated to REST datasets.',
       properties: {
-        history: {
-          type: 'boolean',
-          default: false,
-          description: 'Set to true to let data-fair store revisions of the lines in the dataset.'
-        },
         ttl: {
           type: 'object',
           properties: {
@@ -511,6 +506,26 @@ module.exports = {
             checkedAt: { type: 'string', format: 'date-time', readOnly: true },
             delay: {
               type: 'object',
+              properties: {
+                value: { type: 'integer', default: 0 },
+                unit: { type: 'string', enum: ['hours', 'days', 'weeks', 'months'], default: 'days' }
+              }
+            }
+          }
+        },
+        history: {
+          type: 'boolean',
+          default: false,
+          description: 'Set to true to let data-fair store revisions of the lines in the dataset.'
+        },
+        historyTTL: {
+          type: 'object',
+          additionalProperties: false,
+          properties: {
+            active: { type: 'boolean' },
+            delay: {
+              type: 'object',
+              additionalProperties: false,
               properties: {
                 value: { type: 'integer', default: 0 },
                 unit: { type: 'string', enum: ['hours', 'days', 'weeks', 'months'], default: 'days' }
