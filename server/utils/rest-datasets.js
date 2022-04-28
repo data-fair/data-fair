@@ -254,7 +254,7 @@ const applyTransactions = async (req, transacs, validate) => {
   return { results, bulkOpResult }
 }
 
-const baseSummary = { nbOk: 0, nbNotModified: 0, nbErrors: 0, nbCreated: 0, nbModified: 0, nbDeleted: 0, errors: [] }
+const initSummary = () => ({ nbOk: 0, nbNotModified: 0, nbErrors: 0, nbCreated: 0, nbModified: 0, nbDeleted: 0, errors: [] })
 
 class TransactionStream extends Writable {
   constructor (options) {
@@ -274,7 +274,9 @@ class TransactionStream extends Writable {
     results.forEach(res => {
       if (res._error || res._status === 500) {
         this.options.summary.nbErrors += 1
-        if (this.options.summary.errors.length < 10) this.options.summary.errors.push({ line: this.i, error: res._error, status: res._status })
+        if (this.options.summary.errors.length < 10) {
+          this.options.summary.errors.push({ line: this.i, error: res._error, status: res._status })
+        }
       } else {
         this.options.summary.nbOk += 1
         if (res._status === 304) {
@@ -447,7 +449,7 @@ exports.bulkLines = async (req, res, next) => {
     const contentType = req.get('Content-Type') && req.get('Content-Type').split(';')[0]
     parseStreams = datasetUtils.transformFileStreams(contentType || 'application/json', transactionSchema, null, {}, false, true)
   }
-  const summary = { ...baseSummary }
+  const summary = initSummary()
   const transactionStream = new TransactionStream({ req, validate, summary })
 
   // we try both to have a HTTP failure if the transactions are clearly badly formatted
@@ -516,7 +518,7 @@ exports.syncAttachmentsLines = async (req, res, next) => {
   }
   filesStream.push(null)
 
-  const summary = { ...baseSummary }
+  const summary = initSummary()
   const transactionStream = new TransactionStream({ req, validate, summary })
   await pump(filesStream, transactionStream)
 
@@ -631,7 +633,7 @@ exports.count = (db, dataset, filter) => {
 exports.applyTTL = async (app, dataset) => {
   const es = app.get('es')
   const query = `${dataset.rest.ttl.prop}:[* TO ${moment().subtract(dataset.rest.ttl.delay.value, dataset.rest.ttl.delay.unit).toISOString()}]`
-  const summary = { ...baseSummary }
+  const summary = initSummary()
   await pump(
     new Readable({
       objectMode: true,
