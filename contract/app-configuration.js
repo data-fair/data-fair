@@ -18,6 +18,27 @@ module.exports = {
           },
           name: {
             type: 'string'
+          },
+          applicationKeyPermissions: {
+            type: 'object',
+            description: 'The permissions that should be applied to users accessing this dataset through a protecte application key of this application',
+            default: { classes: ['read'] },
+            properties: {
+              operations: {
+                type: 'array',
+                items: {
+                  type: 'string',
+                  description: 'API operation that can be used'
+                }
+              },
+              classes: {
+                type: 'array',
+                items: {
+                  type: 'string',
+                  description: 'API permission classes that can be used'
+                }
+              }
+            }
           }
         }
       }

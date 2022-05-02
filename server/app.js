@@ -172,6 +172,7 @@ exports.run = async () => {
       else next()
     })
     app.use(session.auth)
+    app.set('session', session)
 
     const nuxt = await require('./nuxt')()
     app.set('nuxt', nuxt.instance)

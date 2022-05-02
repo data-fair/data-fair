@@ -10,7 +10,8 @@ exports.middleware = function (operationId, operationClass, trackingCategory) {
   return function (req, res, next) {
     if (
       exports.can(req.resourceType, req.resource, operationId, req.user) ||
-      (req.method === 'GET' && req.bypassPermission)
+      (req.bypassPermissions && req.bypassPermissions.operations && req.bypassPermissions.operations.includes(operationId)) ||
+      (req.bypassPermissions && req.bypassPermissions.classes && req.bypassPermissions.classes.includes(operationClass))
     ) {
       // nothing to do, user can proceed
     } else {
@@ -36,7 +37,7 @@ Sélectionnez l'organisation ${req.resource.owner.name} en tant que compte actif
       if (operationId === 'readDescription') {
         return res.send(`${denomination} est accessible uniquement aux utilisateurs autorisés par le propriétaire. Vous n'avez pas les permissions nécessaires pour visualiser les informations.`)
       }
-      return res.send(`Permission manquante pour cette opération ou la catégorie "${operationClass}".`)
+      return res.send(`Permission manquante pour l'opération "${operationId}" ou la catégorie "${operationClass}".`)
     }
 
     // this is stored here to be used by cache headers utils to manage public cache

@@ -68,3 +68,8 @@ exports.middleware = asyncWrap(async (req, res, next) => {
   }
   next()
 })
+
+exports.postApplicationKey = new RateLimiterMemory({
+  points: 1,
+  duration: 60
+})

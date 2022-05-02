@@ -121,6 +121,7 @@ beforeEach('scratch data', async () => {
       global.es.indices.delete({ index: 'dataset-test-*', ignore_unavailable: true }).catch(err => { console.log(err) }),
       global.db.collection('datasets').deleteMany({}),
       global.db.collection('applications').deleteMany({}),
+      global.db.collection('applications-keys').deleteMany({}),
       global.db.collection('catalogs').deleteMany({}),
       global.db.collection('limits').deleteMany({}),
       global.db.collection('settings').deleteMany({}),

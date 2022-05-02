@@ -46,6 +46,7 @@ const debugFiles = require('debug')('files')
 const thumbor = require('../utils/thumbor')
 const datasetFileSample = require('../utils/dataset-file-sample')
 const { bulkSearchStreams } = require('../utils/master-data')
+const applicationKey = require('../utils/application-key')
 const { syncDataset: syncRemoteService } = require('./remote-services')
 const baseTypes = new Set(['text/csv', 'application/geo+json'])
 
@@ -118,29 +119,6 @@ const checkStorage = (overwrite, indexed = false) => asyncWrap(async (req, res, 
     }
     if (!storageOk) throw createError(429, 'Vous avez atteint la limite de votre espace de stockage.')
     if (!indexedOk) throw createError(429, 'Vous avez atteint la limite de votre espace de données indexées.')
-  }
-  next()
-})
-
-// check if the endpoint is called from an application with an unauthenticated readOnly application key
-const applicationKey = asyncWrap(async (req, res, next) => {
-  const referer = req.headers.referer || req.headers.referrer
-  if (referer) {
-    const refererUrl = new URL(referer)
-    const key = refererUrl && refererUrl.searchParams && refererUrl.searchParams.get('key')
-    if (key) {
-      const applicationKeys = await req.app.get('db').collection('applications-keys').findOne({ 'keys.id': key })
-      if (applicationKeys) {
-        const filter = {
-          id: applicationKeys._id,
-          'owner.type': req.dataset.owner.type,
-          'owner.id': req.dataset.owner.id,
-          'configuration.datasets.href': `${config.publicUrl}/api/v1/datasets/${req.dataset.id}`
-        }
-        const matchingApplication = await req.app.get('db').collection('applications').count(filter)
-        if (matchingApplication) req.bypassPermission = true
-      }
-    }
   }
   next()
 })
@@ -980,7 +958,7 @@ function isRest (req, res, next) {
   next()
 }
 router.get('/:datasetId/lines/:lineId', readDataset(), isRest, permissions.middleware('readLine', 'read', 'readDataAPI'), cacheHeaders.noCache, asyncWrap(restDatasetsUtils.readLine))
-router.post('/:datasetId/lines', readDataset(['finalized', 'updated', 'indexed', 'error']), isRest, permissions.middleware('createLine', 'write'), checkStorage(false), restDatasetsUtils.uploadAttachment, asyncWrap(restDatasetsUtils.createLine))
+router.post('/:datasetId/lines', readDataset(['finalized', 'updated', 'indexed', 'error']), isRest, applicationKey, permissions.middleware('createLine', 'write'), checkStorage(false), restDatasetsUtils.uploadAttachment, asyncWrap(restDatasetsUtils.createLine))
 router.put('/:datasetId/lines/:lineId', readDataset(['finalized', 'updated', 'indexed', 'error']), isRest, permissions.middleware('updateLine', 'write'), checkStorage(false), restDatasetsUtils.uploadAttachment, asyncWrap(restDatasetsUtils.updateLine))
 router.patch('/:datasetId/lines/:lineId', readDataset(['finalized', 'updated', 'indexed', 'error']), isRest, permissions.middleware('patchLine', 'write'), checkStorage(false), restDatasetsUtils.uploadAttachment, asyncWrap(restDatasetsUtils.patchLine))
 router.post('/:datasetId/_bulk_lines', lockDataset((body, query) => query.lock === 'true'), readDataset(['finalized', 'updated', 'indexed', 'error']), isRest, permissions.middleware('bulkLines', 'write'), checkStorage(false), restDatasetsUtils.uploadBulk, asyncWrap(restDatasetsUtils.bulkLines))
