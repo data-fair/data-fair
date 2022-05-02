@@ -122,8 +122,12 @@ export default {
           title: this.$t('functionalPresentation')
         },
         {
-          id: 'user-guide',
-          title: this.$t('userGuide')
+          id: 'user-guide-backoffice',
+          title: this.$t('userGuideBack')
+        },
+        {
+          id: 'user-guide-frontoffice',
+          title: this.$t('userGuideFront')
         },
         {
           id: 'technical-architecture',
