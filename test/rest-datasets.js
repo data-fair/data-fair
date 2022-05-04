@@ -454,6 +454,25 @@ describe('REST datasets', () => {
     assert.equal(res.data.results[1]._id, 'id1')
     assert.equal(res.data.results[1].attr1, 'test1')
 
+    // paginate in history
+    res = await ax.get('/api/v1/datasets/resthist/lines/id1/revisions', { params: { size: 1 } })
+    assert.equal(res.data.total, 2)
+    assert.equal(res.data.results.length, 1)
+    assert.ok(res.data.next)
+    assert.equal(res.data.results[0]._id, 'id1')
+    assert.equal(res.data.results[0].attr1, 'test2')
+    res = await ax.get(res.data.next)
+    assert.equal(res.data.total, 2)
+    assert.equal(res.data.results.length, 1)
+    assert.ok(res.data.next)
+    assert.equal(res.data.results[0]._id, 'id1')
+    assert.equal(res.data.results[0].attr1, 'test1')
+    res = await ax.get(res.data.next)
+    assert.equal(res.data.total, 2)
+    assert.equal(res.data.results.length, 0)
+    assert.ok(!res.data.next)
+
+    // revisions collection is part of storage consumption
     res = await ax.get('/api/v1/stats')
     const storageSize = res.data.limits.store_bytes.consumption
     assert.ok(storageSize > 280)

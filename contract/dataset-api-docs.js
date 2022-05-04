@@ -18,6 +18,19 @@ module.exports = (dataset, publicUrl = config.publicUrl) => {
   dataset.schema = dataset.schema || []
   const datasetLineSchema = datasetUtils.jsonSchema(dataset.schema, publicUrl, true)
 
+  const bulkLineSchema = datasetUtils.jsonSchema(dataset.schema, publicUrl, false, true)
+  bulkLineSchema.properties._action = {
+    type: 'string',
+    title: 'Action',
+    enum: ['create', 'delete', 'update', 'patch'],
+    description: `
+- create: créé la ligne
+- delete: supprime la ligne, nécessite la présence de _id
+- update: remplate la ligne, nécessite la présence de _id
+- patch: modifie la ligne, nécessite la présence de _id
+    `
+  }
+
   const properties = dataset.schema
   const stringProperties = properties
     .filter(p => !p['x-calculated'] && p.type === 'string' && (!p.format || p.format === 'uri-reference'))
@@ -333,7 +346,15 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
           parameters: [{
             in: 'query',
             name: 'page',
-            description: 'Le numéro de la page (indice de la pagination). Débute à 1.',
+            description: 'Le numéro de la page (indice de la pagination). Débute à 1. Pour paginer sur de gros volumes de données utilisez plutôt le paramètre after.',
+            schema: {
+              default: 1,
+              type: 'integer'
+            }
+          }, {
+            in: 'query',
+            name: 'after',
+            description: 'Pagination en profondeur. Automatiquement renseigné par la propriété next du résultat de la requête précédente.',
             schema: {
               default: 1,
               type: 'integer'
@@ -363,6 +384,10 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
                         type: 'array',
                         description: 'Le tableau de résultats.',
                         items: datasetLineSchema
+                      },
+                      next: {
+                        type: 'string',
+                        description: 'URL pour continuer la pagination'
                       }
                     }
                   }
@@ -656,5 +681,72 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
       }
     }
   }
-  return { api, userApiRate, anonymousApiRate }
+
+  if (dataset.rest.history) {
+    const size = hitsParams().find(p => p.name === 'size')
+    const before = {
+      in: 'query',
+      name: 'before',
+      description: 'Pagination pour remonter dans l\'historique. Automatiquement renseigné par la propriété next du résultat de la requête précédente.',
+      schema: {
+        default: 1,
+        type: 'integer'
+      }
+    }
+    const revisionsResponses = {
+      200: {
+        description: 'Les révisions',
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object',
+              properties: {
+                total: {
+                  type: 'integer',
+                  description: 'Le nombre total de résultat si on ignore la pagination'
+                },
+                results: {
+                  type: 'array',
+                  items: bulkLineSchema
+                },
+                next: {
+                  type: 'string',
+                  description: 'URL pour continuer la pagination'
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    api.paths['/revisions'] = {
+      get: {
+        parameters: [size, before],
+        summary: 'Récupérer les révisions de lignes triées du plus récent au plus ancien',
+        operationId: 'readRevisions',
+        'x-permissionClass': 'read',
+        tags: ['Données éditables'],
+        responses: revisionsResponses
+      }
+    }
+    api.paths['/lines/{lineId}/revisions'] = {
+      get: {
+        parameters: [{
+          in: 'path',
+          name: 'lineId',
+          description: 'L\'identifiant de la ligne',
+          required: true,
+          schema: {
+            type: 'string'
+          }
+        }, size, before],
+        summary: 'Récupérer les révisions d\'une ligne triées du plus récent au plus ancien',
+        operationId: 'readLineRevisions',
+        'x-permissionClass': 'read',
+        tags: ['Données éditables'],
+        responses: revisionsResponses
+      }
+    }
+  }
+  return { api, userApiRate, anonymousApiRate, bulkLineSchema }
 }

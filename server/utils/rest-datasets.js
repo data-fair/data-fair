@@ -13,6 +13,7 @@ const moment = require('moment')
 const { crc32 } = require('crc')
 const stableStringify = require('fast-json-stable-stringify')
 const stripBom = require('strip-bom-stream')
+const LinkHeader = require('http-link-header')
 const dayjs = require('dayjs')
 const duration = require('dayjs/plugin/duration')
 dayjs.extend(duration)
@@ -88,7 +89,8 @@ exports.initDataset = async (db, dataset) => {
   const revisionsCollection = exports.revisionsCollection(db, dataset)
   await Promise.all([
     collection.createIndex({ _needsIndexing: 1 }),
-    revisionsCollection.createIndex({ _lineId: 1, _updatedAt: -1 }, { unique: true })
+    revisionsCollection.createIndex({ _lineId: 1, _i: -1 }),
+    collection.createIndex({ _i: -1 }, { unique: true })
   ])
   await exports.applyHistoryTTL(db, dataset)
 }
@@ -160,7 +162,7 @@ const applyTransactions = async (req, transacs, validate) => {
     const extendedBody = { ...body }
     extendedBody._needsIndexing = true
     extendedBody._updatedAt = body._updatedAt ? new Date(body._updatedAt) : updatedAt
-    extendedBody._i = Number((updatedAt.getTime() - datasetCreatedAt) + padI(i))
+    extendedBody._i = Number((new Date(extendedBody._updatedAt).getTime() - datasetCreatedAt) + padI(i))
     i++
 
     const result = { _id: body._id, _action }
@@ -534,16 +536,34 @@ exports.readRevisions = async (req, res, next) => {
   }
   const revisionsCollection = exports.revisionsCollection(req.app.get('db'), req.dataset)
   const filter = req.params.lineId ? { _lineId: req.params.lineId } : {}
-  const [skip, size] = findUtils.pagination(req.query)
+  const countFilter = { ...filter }
+  if (req.query.before) filter._i = { $lt: parseInt(req.query.before) }
+  // eslint-disable-next-line no-unused-vars
+  const [_, size] = findUtils.pagination(req.query)
   const [total, results] = await Promise.all([
-    revisionsCollection.countDocuments(filter),
-    revisionsCollection.find(filter).sort({ _updatedAt: -1 }).skip(skip).limit(size).toArray()
+    revisionsCollection.countDocuments(countFilter),
+    revisionsCollection.find(filter).sort({ _i: -1 }).limit(size).toArray()
   ])
   results.forEach(r => {
     r._id = r._lineId
     delete r._lineId
   })
-  res.send({ total, results })
+
+  const response = { total, results }
+
+  if (size && results.length === size) {
+    const nextLinkURL = new URL(`${req.publicBaseUrl}${req.originalUrl}`)
+    Object.keys(req.query).filter(key => key !== 'page').forEach(key => {
+      nextLinkURL.searchParams.set(key, req.query[key])
+    })
+    nextLinkURL.searchParams.set('before', results[results.length - 1]._i)
+    const link = new LinkHeader()
+    link.set({ rel: 'next', uri: nextLinkURL.href })
+    res.set('Link', link.toString())
+    response.next = nextLinkURL.href
+  }
+
+  res.send(response)
 }
 
 exports.readStreams = async (db, dataset, onlyUpdated, progress) => {

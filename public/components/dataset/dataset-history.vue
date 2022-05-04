@@ -11,14 +11,7 @@
         dense
         style="max-width: 120px;"
         class="mr-2"
-      />
-      <v-pagination
-        v-if="history && history.total > pagination.itemsPerPage"
-        v-model="pagination.page"
-        circle
-        :length="Math.ceil(Math.min(history.total, 10000 - pagination.itemsPerPage) / pagination.itemsPerPage)"
-        :total-visible="$vuetify.breakpoint.lgAndUp ? 7 : 5"
-        class="mx-4"
+        @change="history=null;fetch()"
       />
       <v-btn
         fab
@@ -81,6 +74,20 @@
         </tr>
       </template>
     </v-data-table>
+    <v-row
+      v-if="history && history.next"
+      justify="center"
+      class="ma-0"
+    >
+      <v-btn
+        text
+        color="primary"
+        :loading="loading"
+        @click="fetch"
+      >
+        {{ $t('fetchMore') }}
+      </v-btn>
+    </v-row>
   </div>
 </template>
 
@@ -92,6 +99,7 @@ fr:
   created: Création
   deleted: Suppression
   edited: Édition
+  fetchMore: Voir plus
 en:
   nbRevisions: Number of revisions
   updatedAt: Date
@@ -99,6 +107,7 @@ en:
   create: Created
   delete: Deleted
   edit: Edited
+  fetchMore: See more
 </i18n>
 
 <script>
@@ -111,7 +120,6 @@ export default {
       history: null,
       loading: false,
       pagination: {
-        page: 1,
         itemsPerPage: 10
       }
     }
@@ -137,27 +145,20 @@ export default {
       return headers
     }
   },
-  watch: {
-    pagination: {
-      handler () {
-        this.refresh()
-      },
-      deep: true
-    }
-  },
   mounted () {
-    this.refresh()
+    this.fetch()
   },
   methods: {
-    async refresh () {
+    async fetch () {
       this.loading = true
       const revisionsUrl = this.line ? `${this.resourceUrl}/lines/${this.line._id}/revisions` : `${this.resourceUrl}/revisions`
-      this.history = await this.$axios.$get(revisionsUrl, {
-        params: {
-          page: this.pagination.page,
-          size: this.pagination.itemsPerPage
-        }
-      })
+      if (!this.history) {
+        this.history = await this.$axios.$get(revisionsUrl, { params: { size: this.pagination.itemsPerPage } })
+      } else if (this.history.next) {
+        const history = await this.$axios.$get(this.history.next)
+        this.history.next = history.next
+        this.history.results = this.history.results.concat(history.results)
+      }
       this.loading = false
     }
   }
