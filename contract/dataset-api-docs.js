@@ -682,7 +682,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
     }
   }
 
-  if (dataset.rest.history) {
+  if (dataset.rest && dataset.rest.history) {
     const size = hitsParams().find(p => p.name === 'size')
     const before = {
       in: 'query',
