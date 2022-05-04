@@ -8,16 +8,14 @@ on:
 jobs:
   publish-doc:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        node-version: [16.x]
     steps:
       - run: echo $GITHUB_REF
       - uses: actions/checkout@v2
       - uses: actions/setup-node@v1
         with:
-          node-version: ${{ matrix.node-version }}
-      - run: npm i
+          node-version: '16'
+          cache: 'npm'
+      - run: npm i --no-audit
       - run: |
           export MAJOR=$(./node_modules/.bin/semver-extract --major --branch $GITHUB_REF)
           echo "MAJOR=$MAJOR"
