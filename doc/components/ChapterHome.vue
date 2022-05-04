@@ -3,7 +3,7 @@
     <h2 class="text-h4 my-6">
       {{ $t(chapter) }}
       <v-btn
-        :to="localePath({name: 'full-id', params: {id: chapter}})"
+        :to="localePath({name: 'full-id', params: {id: chapter}, query: {print: true}})"
         icon
       >
         <v-icon color="primary">
@@ -19,6 +19,13 @@
       >
         <nuxt-link :to="localePath({name: `${chapter}-id`, params: {id: section.id}})">
           {{ i + 1 }} - {{ section.title }}
+          <v-icon
+            v-if="!section.published"
+            color="error"
+            small
+          >
+            mdi-alert
+          </v-icon>
         </nuxt-link>
         <ul
           style="list-style-type: none;"
@@ -34,6 +41,13 @@
               class="text-h6"
             >
               {{ i + 1 }}.{{ j + 1 }} - {{ subsection.title }}
+              <v-icon
+                v-if="!subsection.published"
+                color="error"
+                small
+              >
+                mdi-alert
+              </v-icon>
             </nuxt-link>
           </li>
         </ul>
@@ -66,7 +80,7 @@ export default {
             content
           }
         })
-      console.log(sections)
+        .filter(section => section.published || !process.env.hideDraft)
       sections.sort((s1, s2) => {
         if (s1.section < s2.section) return -1
         else if (s1.section > s2.section) return 1

@@ -34,7 +34,8 @@ module.exports = {
   loading: { color: '#1e88e5' }, // Customize the progress bar color
   router: { base: process.env.DOC_BASE || '/' },
   env: {
-    theme: config.theme
+    theme: config.theme,
+    hideDraft: (process.env.HIDE_DRAFT === 'true') || (process.env.GITHUB_REF_NAME && process.env.GITHUB_REF_NAME !== 'master')
   },
   plugins: [
     { src: '~plugins/moment' }

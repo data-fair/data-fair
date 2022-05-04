@@ -1,5 +1,8 @@
 <template lang="html">
-  <div class="full-chapter">
+  <div
+    class="full-chapter"
+    :class="{'print-mode': $route.query.print === 'true'}"
+  >
     <!-- 1rst title page -->
     <v-col class="mt-6 pt-6 text-center">
       <v-img
@@ -28,7 +31,7 @@
     <!-- TOC -->
     <v-row
       justify="center"
-      class="mt-6"
+      class="mt-4"
     >
       <div>
         <h2
@@ -40,14 +43,28 @@
             v-if="!section.subsection"
             :key="'st-'+i"
           >
-            {{ section.section }} - {{ section.title }}
+            <a :href="'#' + section.id">{{ section.section }} - {{ section.title }}</a>
+            <v-icon
+              v-if="!section.published"
+              color="error"
+              small
+            >
+              mdi-alert
+            </v-icon>
           </h4>
           <h5
             v-else
             :key="'st-'+i"
             class="ml-3"
           >
-            {{ section.section }}.{{ section.subsection }} - {{ section.title }}
+            <a :href="'#' + section.id">{{ section.section }}.{{ section.subsection }} - {{ section.title }}</a>
+            <v-icon
+              v-if="!section.published"
+              color="error"
+              small
+            >
+              mdi-alert
+            </v-icon>
           </h5>
         </template>
       </div>
@@ -62,17 +79,33 @@
       />
       <h2
         v-if="!section.subsection"
+        :id="section.id"
         :key="'t-'+i"
         class="text-h4 my-4 grey--text text--darken-3 section-title"
       >
         {{ section.section }} - {{ section.title }}
+        <v-icon
+          v-if="!section.published"
+          color="error"
+          small
+        >
+          mdi-alert
+        </v-icon>
       </h2>
       <h3
         v-else
+        :id="section.id"
         :key="'t-'+i"
         class="text-h5 my-4 grey--text text--darken-3 section-title subsection-title"
       >
         {{ section.section }}.{{ section.subsection }} - {{ section.title }}
+        <v-icon
+          v-if="!section.published"
+          color="error"
+          small
+        >
+          mdi-alert
+        </v-icon>
       </h3>
       <doc-page
         :key="'page-'+i"
@@ -117,11 +150,12 @@ export default {
         .map(k => {
           const content = context(k).default
           return {
-            id: k.split('/')[1].split('.').shift().replace(`-${this.$i18n.locale}`, ''),
+            id: k.split('/').pop().split('.').shift().replace(`-${this.$i18n.locale}`, ''),
             ...marked(context(k).default).meta,
             content
           }
         })
+        .filter(section => section.published || !process.env.hideDraft)
       sections.sort((s1, s2) => {
         if (s1.section < s2.section) return -1
         else if (s1.section > s2.section) return 1
@@ -131,6 +165,13 @@ export default {
         }
       })
       return sections
+    }
+  },
+  async mounted () {
+    if (this.$route.query.print === 'true') {
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      window.print()
+      this.$router.go(-1)
     }
   }
 }
@@ -150,6 +191,15 @@ export default {
 
 h2,h3,h4,h5 {
   break-after: avoid;
+}
+
+.full-chapter.print-mode {
+  visibility: hidden;
+}
+@media print {
+  .full-chapter.print-mode {
+    visibility: visible;
+  }
 }
 
 </style>

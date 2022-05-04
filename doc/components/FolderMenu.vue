@@ -101,6 +101,7 @@ export default {
           chapter: k.split('/')[1],
           id: k.split('/')[2].split('.').shift().replace(`-${this.$i18n.locale}`, '')
         }))
+        .filter(section => section.published || !process.env.hideDraft)
       content.sort((s1, s2) => {
         if (this.chapters.findIndex(c => c.id === s1.chapter) < this.chapters.findIndex(c => c.id === s2.chapter)) return -1
         else if (this.chapters.findIndex(c => c.id === s1.chapter) > this.chapters.findIndex(c => c.id === s2.chapter)) return 1
