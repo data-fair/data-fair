@@ -26,25 +26,32 @@
     <div class="page-break" />
 
     <!-- TOC -->
-    <h2
-      v-t="'tableOfContents'"
-      class="text-h4 my-4 grey--text text--darken-3"
-    />
-    <template v-for="(section, i) in sections">
-      <h4
-        v-if="!section.subsection"
-        :key="'st-'+i"
-      >
-        {{ section.section }} - {{ section.title }}
-      </h4>
-      <h5
-        v-else
-        :key="'st-'+i"
-        class="ml-3"
-      >
-        {{ section.section }}.{{ section.subsection }} - {{ section.title }}
-      </h5>
-    </template>
+    <v-row
+      justify="center"
+      class="mt-6"
+    >
+      <div>
+        <h2
+          v-t="'tableOfContents'"
+          class="text-h4 my-4 grey--text text--darken-3"
+        />
+        <template v-for="(section, i) in sections">
+          <h4
+            v-if="!section.subsection"
+            :key="'st-'+i"
+          >
+            {{ section.section }} - {{ section.title }}
+          </h4>
+          <h5
+            v-else
+            :key="'st-'+i"
+            class="ml-3"
+          >
+            {{ section.section }}.{{ section.subsection }} - {{ section.title }}
+          </h5>
+        </template>
+      </div>
+    </v-row>
     <div class="page-break" />
 
     <template v-for="(section, i) in sections">
