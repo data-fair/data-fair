@@ -68,7 +68,6 @@ export default {
   computed: {
     sections () {
       if (!this.$route) return
-      console.log(context.keys(), this.chapter, context.keys().filter(k => k.includes(`/${this.chapter}/`)))
       const sections = context.keys()
         .filter(k => k.includes(`/${this.chapter}/`))
         .filter(k => this.ignoreLocale || k.includes(`-${this.$i18n.locale}.md`))

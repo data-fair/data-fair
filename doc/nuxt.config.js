@@ -6,10 +6,14 @@ const routes = dir.files('doc/pages/', { sync: true })
   .filter(f => f.endsWith('.md'))
   .map(f => {
     f = f.replace('.md', '').replace('doc/pages/', '')
-    const dashInd = f.lastIndexOf('-')
-    const key = f.slice(0, dashInd)
-    const lang = f.slice(dashInd + 1, f.length)
-    return lang === 'fr' ? `/${key}` : `/${lang}/${key}`
+    for (const lang of ['fr', 'en']) {
+      if (f.endsWith(`-${lang}`)) {
+        const p = f.replace(`-${lang}`, '')
+        if (lang === 'fr') return p
+        return `/${lang}/${p}`
+      }
+    }
+    return f
   })
 
 module.exports = {

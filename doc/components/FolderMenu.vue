@@ -114,7 +114,6 @@ export default {
         else if (s1.subsection < s2.subsection) return -1
         else return 1
       })
-      // console.log(content.map(i => (`${i.title} ${i.chapter}/${i.section}/${i.subsection}`)))
       return content
     },
     chapters () {
