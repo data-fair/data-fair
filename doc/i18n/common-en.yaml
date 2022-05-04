@@ -1,9 +1,9 @@
 tableOfContents: Table of contents
-functionalPresentation: Functional presentation
+functional-presentation: Functional presentation
 interoperate: Interoperate
-architecture: Technical architecture
-userGuideBack: User guide back-office
-userGuideFront: User guide front-office
+technical-architecture: Technical architecture
+user-guide-backoffice: User guide back-office
+user-guide-frontoffice: User guide front-office
 constructionWarning: This page is in construction and the information it contains can be outdated.
 install: Install and configure
 onlyEnglish:

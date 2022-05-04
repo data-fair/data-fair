@@ -1,9 +1,9 @@
 tableOfContents: Table des matières
-functionalPresentation: Présentation fonctionnelle
+functional-presentation: Présentation fonctionnelle
 interoperate: Interopérer
-architecture: Architecture technique
-userGuideBack: Manuel utilisateur back-office
-userGuideFront: Manuel utilisateur front-office
+technical-architecture: Architecture technique
+user-guide-backoffice: Manuel utilisateur back-office
+user-guide-frontoffice: Manuel utilisateur front-office
 constructionWarning: Cette page est en chantier et les informations qu'elle contient peuvent ne pas être à jour.
 install: Installation et configuration
 onlyEnglish: Cette page est disponible uniquement en anglais.

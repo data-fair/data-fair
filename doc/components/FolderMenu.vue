@@ -94,6 +94,7 @@ export default {
         .filter(k => {
           if (k.startsWith('./install')) return true
           if (k.startsWith('./interoperate')) return true
+          if (k.startsWith('./technical-architecture')) return true
           return k.includes(`-${this.$i18n.locale}.md`)
         })
         .map(k => Object.assign(marked(context(k).default).meta || {}, {
@@ -119,19 +120,19 @@ export default {
       return [
         {
           id: 'functional-presentation',
-          title: this.$t('functionalPresentation')
+          title: this.$t('functional-presentation')
         },
         {
           id: 'user-guide-backoffice',
-          title: this.$t('userGuideBack')
+          title: this.$t('user-guide-backoffice')
         },
         {
           id: 'user-guide-frontoffice',
-          title: this.$t('userGuideFront')
+          title: this.$t('user-guide-frontoffice')
         },
         {
           id: 'technical-architecture',
-          title: this.$t('architecture')
+          title: this.$t('technical-architecture')
         },
         {
           id: 'interoperate',

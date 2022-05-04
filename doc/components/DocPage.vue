@@ -2,7 +2,10 @@
   <v-container class="doc-page">
     <v-row>
       <v-col>
-        <h2 class="display1 my-4">
+        <h2
+          v-if="!hideTitle"
+          class="display1 my-4"
+        >
           {{ (filledContent.meta && filledContent.meta.title) || $route.params.id }}
         </h2>
         <v-alert
@@ -46,7 +49,7 @@ const marked = require('@hackmd/meta-marked')
 require('highlight.js/styles/github.css')
 
 export default {
-  props: ['content', 'onlyEnglish', 'onlyFrench'],
+  props: ['content', 'onlyEnglish', 'onlyFrench', 'hideTitle'],
   data: () => ({ ready: false }),
   computed: {
     ...mapState(['env']),
