@@ -673,16 +673,9 @@ exports.previews = (dataset) => {
 
 exports.delete = async (db, es, dataset) => {
   try {
-    await fs.remove(exports.dir({ ...dataset, draftReason: null }))
+    await fs.remove(exports.dir(dataset))
   } catch (err) {
-    console.error('Error while deleting dataset directory', err)
-  }
-  if (dataset.draft) {
-    try {
-      await fs.remove(exports.dir({ ...dataset, ...dataset.draft }))
-    } catch (err) {
-      console.error('Error while deleting dataset draft directory', err)
-    }
+    console.error('Error while deleting dataset draft directory', err)
   }
   if (dataset.isRest) {
     try {
@@ -692,15 +685,19 @@ exports.delete = async (db, es, dataset) => {
     }
   }
 
-  await db.collection('datasets').deleteOne({ id: dataset.id })
-  await db.collection('journals').deleteOne({ type: 'dataset', id: dataset.id })
+  if (!dataset.draftReason) {
+    await db.collection('datasets').deleteOne({ id: dataset.id })
+    await db.collection('journals').deleteOne({ type: 'dataset', id: dataset.id })
+  }
   if (!dataset.isVirtual) {
     try {
       await esUtils.delete(es, dataset)
     } catch (err) {
       console.error('Error while deleting dataset indexes and alias', err)
     }
-    await exports.updateStorage(db, dataset, true)
+    if (!dataset.draftReason) {
+      await exports.updateStorage(db, dataset, true)
+    }
   }
 }
 

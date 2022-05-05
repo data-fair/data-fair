@@ -48,6 +48,7 @@ const datasetFileSample = require('../utils/dataset-file-sample')
 const { bulkSearchStreams } = require('../utils/master-data')
 const applicationKey = require('../utils/application-key')
 const { syncDataset: syncRemoteService } = require('./remote-services')
+const dataset = require('../../contract/dataset')
 const baseTypes = new Set(['text/csv', 'application/geo+json'])
 
 const router = express.Router()
@@ -510,8 +511,11 @@ router.put('/:datasetId/owner', readDataset(), permissions.middleware('changeOwn
 }))
 
 // Delete a dataset
-router.delete('/:datasetId', readDataset(null, null, true), permissions.middleware('delete', 'admin'), asyncWrap(async (req, res) => {
+router.delete('/:datasetId', readDataset(null, true, true), permissions.middleware('delete', 'admin'), asyncWrap(async (req, res) => {
   await datasetUtils.delete(req.app.get('db'), req.app.get('es'), req.dataset)
+  if (req.dataset.draftReason && req.dataset.prod && req.dataset.prod.status !== 'draft') {
+    await datasetUtils.delete(req.app.get('db'), req.app.get('es'), req.dataset.prod)
+  }
   await syncRemoteService(req.app.get('db'), { ...req.dataset, masterData: null })
   await datasetUtils.updateNbDatasets(req.app.get('db'), req.dataset.owner)
   res.sendStatus(204)
@@ -930,6 +934,7 @@ router.post('/:datasetId/draft', lockDataset(), readDataset(['finalized'], true)
   await journals.log(req.app, statusPatchedDataset, { type: 'draft-validated' }, 'dataset')
 
   await esUtils.delete(req.app.get('es'), req.dataset)
+  await fs.remove(datasetUtils.dir(req.dataset))
   await datasetUtils.updateStorage(db, statusPatchedDataset)
   return res.send(statusPatchedDataset)
 }))

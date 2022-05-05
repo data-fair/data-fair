@@ -1,5 +1,5 @@
 const assert = require('assert').strict
-const fs = require('fs')
+const fs = require('fs-extra')
 const nock = require('nock')
 const FormData = require('form-data')
 const config = require('config')
@@ -82,11 +82,13 @@ describe('datasets in draft mode', () => {
     assert.equal(res.data.total, 2)
 
     // validate the draft
+    assert.ok(await fs.pathExists(`data/test/user/dmeadus0/datasets-drafts/${dataset.id}`))
     await ax.post(`/api/v1/datasets/${dataset.id}/draft`)
     dataset = await workers.hook('finalizer')
     assert.equal(dataset.status, 'finalized')
     assert.equal(dataset.count, 2)
     assert.ok(dataset.bbox)
+    assert.ok(!await fs.pathExists(`data/test/user/dmeadus0/datasets-drafts/${dataset.id}`))
 
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { draft: true } })
     assert.equal(res.data.total, 2)
@@ -124,6 +126,10 @@ describe('datasets in draft mode', () => {
     assert.equal(journal[14].draft, undefined)
     assert.equal(journal[15].type, 'finalize-end')
     assert.equal(journal[15].draft, undefined)
+
+    assert.ok(await fs.pathExists(`data/test/user/dmeadus0/datasets/${dataset.id}`))
+    res = await ax.delete('/api/v1/datasets/' + dataset.id)
+    assert.ok(!await fs.pathExists(`data/test/user/dmeadus0/datasets/${dataset.id}`))
   })
 
   it('create a draft when updating the data file', async () => {
@@ -472,6 +478,9 @@ other
     assert.equal(res.status, 201)
     const dataset = await workers.hook('finalizer/' + res.data.id)
 
+    assert.ok(await fs.pathExists('data/test/user/dmeadus0/datasets-drafts/dataset'))
+    assert.ok(!await fs.pathExists('data/test/user/dmeadus0/datasets/dataset'))
     res = await ax.delete('/api/v1/datasets/' + dataset.id)
+    assert.ok(!await fs.pathExists('data/test/user/dmeadus0/datasets-drafts/dataset'))
   })
 })
