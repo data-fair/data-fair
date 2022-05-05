@@ -193,6 +193,10 @@ h2,h3,h4,h5 {
   break-after: avoid;
 }
 
+.v-alert {
+  break-after: avoid;
+}
+
 .full-chapter.print-mode {
   visibility: hidden;
 }
