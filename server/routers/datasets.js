@@ -1043,7 +1043,7 @@ router.get('/:datasetId/lines', readDataset(), applicationKey, permissions.middl
   if (['geojson', 'mvt', 'vt', 'pbf'].includes(req.query.format)) {
     req.query.select = (req.query.select ? req.query.select : tiles.defaultSelect(req.dataset).join(','))
     if (!req.query.select.includes('_geoshape') && req.dataset.schema.find(p => p.key === '_geoshape')) req.query.select += ',_geoshape'
-    if (!req.query.select.includes('_geoshape')) req.query.select += ',_geopoint'
+    if (!req.query.select.includes('_geopoint')) req.query.select += ',_geopoint'
   }
   if (req.query.format === 'wkt') {
     if (req.dataset.schema.find(p => p.key === '_geoshape')) req.query.select = '_geoshape'

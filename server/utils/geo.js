@@ -133,9 +133,7 @@ exports.geometry2fields = async (schema, doc) => {
     const polygon = bboxPolygon(turfBbox(feature))
     fields._geocorners = polygon.geometry.coordinates[0].map(c => c[1] + ',' + c[0])
   }
-  if (!prop['x-capabilities'] || prop['x-capabilities'].geoShape !== false) {
-    fields._geoshape = feature.geometry
-  }
+  fields._geoshape = feature.geometry
   return fields
 }
 
@@ -144,10 +142,10 @@ exports.result2geojson = esResponse => {
     type: 'FeatureCollection',
     total: esResponse.hits.total.value,
     features: esResponse.hits.hits.map(hit => {
-      const { _geoshape, ...properties } = hit._source
-      let geometry = hit._source._geoshape
+      const { _geoshape, _geopoint, ...properties } = hit._source
+      let geometry = _geoshape
       if (!geometry) {
-        const [lat, lon] = hit._source._geopoint.split(',')
+        const [lat, lon] = _geopoint.split(',')
         geometry = { type: 'Point', coordinates: [Number(lon), Number(lat)] }
       }
       return {

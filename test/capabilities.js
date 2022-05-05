@@ -198,8 +198,15 @@ describe('Properties capabilities', () => {
       ]
     })
     const dataset = await workers.hook('finalizer/rest-geoshape')
-    assert.ok(!dataset.schema.find(p => p.key === '_geoshape'))
+    const geoShapeProp = dataset.schema.find(p => p.key === '_geoshape')
+    assert.ok(geoShapeProp)
+    assert.equal(geoShapeProp['x-capabilities'].geoShape, false)
     assert.ok(!dataset.schema.find(p => p.key === '_geocorners'))
+    const diagnostic = (await global.ax.superadmin('/api/v1/datasets/rest-geoshape/_diagnose')).data
+    const indexDefinition = Object.values(diagnostic.esInfos.indices[0].definition.body)[0]
+    assert.equal(indexDefinition.mappings.properties._geoshape.enabled, false)
+    assert.equal(indexDefinition.mappings.properties.geom.index, false)
+    assert.ok(!indexDefinition.mappings.properties.geom.fields)
 
     res = await ax.get('/api/v1/datasets/rest-geoshape/lines', { params: { geo_distance: '-2.41,47.87,0' } })
     assert.equal(res.data.total, 0)

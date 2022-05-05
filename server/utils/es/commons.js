@@ -50,16 +50,27 @@ exports.esProperty = prop => {
   // Do not index geometry, it will be copied and simplified in _geoshape
   if (prop['x-refersTo'] === 'https://purl.org/geojson/vocab#geometry') {
     // Geometry can be passed serialized in a string, or as an object
-    if (prop.type === 'string') esProp.index = false
-    else esProp.enabled = false
+    if (prop.type === 'string') {
+      esProp = { type: 'keyword', index: false, doc_values: false }
+    } else {
+      esProp = { enabled: false }
+    }
   }
   // Hardcoded calculated properties
   if (prop.key === '_geopoint') esProp = { type: 'geo_point' }
-  if (prop.key === '_geoshape') esProp = { type: 'geo_shape' }
+  if (prop.key === '_geoshape') {
+    // if geometry is present, _geoshape will always be here too, but maybe not fully indexed dependeing on capabilities
+    if (!prop['x-capabilities'] || prop['x-capabilities'].geoShape !== false) {
+      esProp = { type: 'geo_shape' }
+    } else {
+      esProp = { enabled: false }
+    }
+  }
   if (prop.key === '_geocorners') esProp = { type: 'geo_point' }
   if (prop.key === '_i') esProp = { type: 'long' }
   if (prop.key === '_rand') esProp = { type: 'integer' }
   if (prop.key === '_id') return null
+
   return esProp
 }
 
