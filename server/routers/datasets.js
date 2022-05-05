@@ -1121,6 +1121,15 @@ router.get('/:datasetId/lines', readDataset(), applicationKey, permissions.middl
           const sampleRate = requestedSize / Math.max(requestedSize, maxCount)
           const sizeFilter = mainCount * sampleRate
           req.query.size = Math.min(sizeFilter, requestedSize)
+
+          // only add _geoshape to tile if it is not going to be huge
+          // otherwise features will be shown as points
+          if (req.dataset.storage && req.dataset.storage.indexed && req.dataset.count) {
+            const meanFeatureSize = Math.round(req.dataset.storage.indexed.size / req.dataset.count)
+            const expectedTileSize = meanFeatureSize * maxCount
+            // arbitrary limit at 50mo
+            if (expectedTileSize > (50 * 1000 * 1000)) req.query.select = req.query.select.replace(',_geoshape', '')
+          }
         }
       } catch (err) {
         await manageESError(req, err)
