@@ -2,7 +2,6 @@
 title: Home page
 section: 2
 subsection : 1
-updated: 2020-12-09
 description : Home page
 published: true
 ---

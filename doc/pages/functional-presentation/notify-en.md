@@ -1,16 +1,21 @@
 ---
-title: Alerts
-section: 3
-subsection : 10
-updated: 2020-12-09
-description : Alert management
-published: false
+title: Portal notification
+section: 2
+subsection : 8
+description : Portal notification
+published: true
 ---
 
-Registered users can set different email or browser **alerts**. A list of default alerts is presented in the **Notifications** category.
+Registered users can **subscribe** and be notified when dataset is added to the portal or in a particular theme:
 
-![Activer ses notifications](./images/functional-presentation/notify-1.jpeg)
+![Notification](./images/functional-presentation/notifiy-pf-1.png)
 
-When a notification is triggered, a colored dot is present on the bell at the top right. Clicking on the bell provides access to a summary of previously sent alerts.
 
-![Liste des alertes](./images/functional-presentation/notify-back.png)
+It is also possible to subscribe to the update of a particular dataset using the bell on its presentation page.
+
+
+![jeu de donnees](./images/functional-presentation/notifiy-pf-3.png)
+
+Notifications will be visible on the bell in the navigation bar and a **notification email** will be sent to your account email address.
+
+![Cloche](./images/functional-presentation/notifiy-pf-2.png)

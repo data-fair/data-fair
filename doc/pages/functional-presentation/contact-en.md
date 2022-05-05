@@ -1,9 +1,9 @@
 ---
-title: API Acces
+title: Contact form
 section: 2
-subsection : 9
-description : APIs and global integration
-published: true
+subsection : 10
+description : Contact form
+published: false
 ---
 
 All features of data management, cataloging, user management and statistics are available through **documented Rest APIs**.

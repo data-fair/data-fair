@@ -2,7 +2,6 @@
 title: Page d’accueil
 section: 2
 subsection : 1
-updated: 2020-12-09
 description : Page d’accueil
 published: true
 ---
@@ -16,4 +15,4 @@ Pour les visiteurs réguliers, des sections présentent les **derniers jeux de d
 
 Il est possible de personnaliser quels éléments sont affichés sur cette page, d'afficher une bannière plutôt qu'un texte éditorialisé ou même d'utiliser un visualisation à la place de la bannière ! Cette dernière option permet d'avoir un **caroussel avec des liens de navigation**.
 
-![Page d’accueil](./images/functional-presentation/acceuil.jpg)
+

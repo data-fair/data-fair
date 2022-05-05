@@ -1,9 +1,8 @@
 ---
-title: List of data visualizations
+title: Visualizations catalog
 section: 2
 subsection : 4
-updated: 2020-12-09
-description : List of data visualizations
+description : Visualizations catalog
 published: true
 ---
 Like datasets, a catalog page of visualizations is available with a **search engine** and tools to filter or sort visualizations.

@@ -1,7 +1,6 @@
 ---
 title: Introduction
 section: 1
-updated: 2020-12-09
 description : Introduction
 published: true
 ---

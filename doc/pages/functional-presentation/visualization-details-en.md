@@ -1,9 +1,8 @@
 ---
-title: Introducing a Data Visualization
+title: Data Visualization
 section: 2
 subsection : 5
-updated: 2020-12-09
-description : Introducing a Data Visualization
+description : Data Visualization
 published: true
 ---
 Each visualization is presented through a **dedicated page** which allows to add context, a title and description, and different actions. It is possible to access the full-screen visualization and retrieve an HTML code that allows the visualization to be embedded in another website.

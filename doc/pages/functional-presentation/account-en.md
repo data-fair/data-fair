@@ -1,9 +1,8 @@
 ---
-title: User Login
+title: User Account
 section: 2
 subsection : 7
-updated: 2020-12-09
-description : User Logins
+description : User Accounts
 published: true
 ---
 Users can log in with a password and email or using an existing external account such as a Gmail account via the oAuth2 protocol.
