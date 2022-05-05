@@ -1065,7 +1065,7 @@ router.get('/:datasetId/lines', readDataset(), applicationKey, permissions.middl
 
   let xyz
   if (vectorTileRequested) {
-    // default is 20 for other format, but we want filled tiles by default
+    // default is smaller (see es/commons) for other format, but we want filled tiles by default
     req.query.size = req.query.size || config.elasticsearch.maxPageSize + ''
     // sorting by rand provides more homogeneous distribution in tiles
     req.query.sort = req.query.sort || '_rand'
@@ -1165,7 +1165,7 @@ router.get('/:datasetId/lines', readDataset(), applicationKey, permissions.middl
   }
 
   if (vectorTileRequested) {
-    const tile = tiles.geojson2pbf(geo.result2geojson(esResponse), xyz)
+    const tile = await tiles.geojson2pbf(geo.result2geojson(esResponse), xyz)
     // 204 = no-content, better than 404
     if (!tile) return res.status(204).send()
     res.type('application/x-protobuf')
@@ -1258,7 +1258,7 @@ router.get('/:datasetId/geo_agg', readDataset(), applicationKey, permissions.mid
 
   if (vectorTileRequested) {
     if (!req.query.xyz) return res.status(400).send('xyz parameter is required for vector tile format.')
-    const tile = tiles.geojson2pbf(geo.aggs2geojson(result), req.query.xyz.split(',').map(Number))
+    const tile = await tiles.geojson2pbf(geo.aggs2geojson(result), req.query.xyz.split(',').map(Number))
     // 204 = no-content, better than 404
     if (!tile) return res.status(204).send()
     res.type('application/x-protobuf')
@@ -1305,7 +1305,7 @@ router.get('/:datasetId/values_agg', readDataset(), applicationKey, permissions.
 
   if (vectorTileRequested) {
     if (!req.query.xyz) return res.status(400).send('xyz parameter is required for vector tile format.')
-    const tile = tiles.geojson2pbf(geo.aggs2geojson(result), req.query.xyz.split(',').map(Number))
+    const tile = await tiles.geojson2pbf(geo.aggs2geojson(result), req.query.xyz.split(',').map(Number))
     // 204 = no-content, better than 404
     if (!tile) return res.status(204).send()
     res.type('application/x-protobuf')
