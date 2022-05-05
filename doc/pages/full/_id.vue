@@ -169,7 +169,7 @@ export default {
   },
   async mounted () {
     if (this.$route.query.print === 'true') {
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      await new Promise(resolve => setTimeout(resolve, 2000))
       window.print()
       this.$router.go(-1)
     }
