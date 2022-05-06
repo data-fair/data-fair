@@ -1,7 +1,7 @@
 ---
-title: Portail de données
+title: Portail de données (Front Office)
 section: 2
-description : Portail de données
+description : Portail de données (Front Office)
 published: true
 ---
 

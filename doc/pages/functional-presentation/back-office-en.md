@@ -1,7 +1,6 @@
 ---
 title: Back Office
 section: 3
-updated: 2020-12-09
 description : Back Office
 published: true
 ---

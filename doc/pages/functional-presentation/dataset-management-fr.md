@@ -1,82 +1,66 @@
 ---
 title: Gestion des jeux de données
 section: 3
-subsection : 2
-updated: 2020-12-09
+subsection : 1
 description : Gestion des jeux de données
-published: false
+published: true
 ---
 
-Les jeux de données sont représentés sous formes de fiches sur la plateforme. Une fiche possède un titre et des informations relatives aux données. Les informations comprennent le nom du fichier, sa taille, le nombre de lignes et les thématiques des données. L'icône du propriétaire des données et l’état de publication sont aussi disponibles sur chaque fiche.
+Les jeux de données permettent de mettre à disposition de l'utilisateur des données, ainsi que des informations sur les données (métadonnées) comme la licence associée aux données, la date de mise à jour, le propriétaire des données ...
 
-![Fiche d'un jeu de données](./images/functional-presentation/jeu-2.jpg)
+<!-- ![Fiche d'un jeu de données](./images/functional-presentation/jeu-2.jpg) -->
 
-### Types de données
+### Types de jeux de données
 
-Il existe plusieurs types de jeux de données sur la plateforme, les fichiers, les jeux de données incrémentaux, les jeux de données virtuels.
+Il existe plusieurs types de jeux de données sur la plateforme, les fichiers, les jeux de données incrémentaux, les jeux de données virtuels et des jeux de données externes.
 
-* Les **jeux de données fichiers** correspondent à des données sous format tabulaire ou cartographique chargés sur la plateforme. Plusieurs formats de fichiers sont supportés tels que le CSV, TSV, XLS, TXT,GeoJson, KML, ESRI Shapefile, …
+* Les **jeux de données fichiers** correspondent à des données sous format tabulaire ou cartographique chargés sur la plateforme. Plusieurs formats de fichiers sont supportés tels que le CSV, TSV, OpenDocument, XLS, XLSX, GeoJson, KML, KMZ, ESRI Shapefile, GPX et iCalendar. Suivant les besoins de nouveaux formats de fichiers sont régulièrement ajoutés. Quand un fichier est chargé, il est converti dans un format plus standard en interne, puis analysé automatiquement pour déterminer le schéma du jeu de données. Le contributeur peut ensuite modifier ce schéma, par exemple déterminer qu'une colonne aura sa donnée indexée en tant que chaine de caractère plutot que nombre entier.
 
-* Les **jeux de données incrémentaux** sont des données stockées en base et sont plutôt adaptés à des données qui évoluent régulièrement. Ils sont mis à jour par API et sont bien adaptés pour des données IOT par exemple.
+* Les **jeux de données incrémentaux** sont des données stockées en base et sont plutôt adaptés à des données qui évoluent régulièrement, ou mises à jour par des personnes métier qui veulent juste modifier quelques lignes. La création de ce type de jeu de données se fait en éditant son schéma de données : on défini chaque colonne et son type. Pour des données produites par des systèmes informatiques (données IOT par exemple), ces jeux de données sont généralement mis à jour par API. Dans le cas de mises à jour manuelles par des agents, ils sont mis à jour via un formulaire de saisie.
 
-* Les **jeux de données virtuels** correspondent à des vues d’un ou plusieurs jeux de données. Ils permettent d’avoir un contrôle d’accès plus poussé. Ils peuvent par exemple servir à créer une vue publique, restreinte à certaines lignes et certaines colonnes, d’un jeu de données plus complet qui reste privé.
+* Les **jeux de données virtuels** correspondent à des vues d’un ou plusieurs jeux de données. Ils permettent d’avoir un contrôle d’accès plus poussé. Ils peuvent par exemple servir à créer une vue publique, restreinte à certaines lignes et certaines colonnes, d’un jeu de données plus complet qui reste privé. On peut par exemple restreindre un jeu de données national à un seul département. L'autre cas d'usage de ce type de jeu de données est d'opérer avec des données millesimées ou territorialisées : on peut ainsi publier des données chaque année via un fichier qui a toujours le même format puis faire une vue qui regroupe les différentes années.
 
-### Ajout d’un jeu de données
-Il est possible d'importer différentes sources de données sur Data Fair. On peut déjà importer des fichiers directement depuis son ordinateur. Il sera bientôt possible d'importer des données depuis des sources externes comme Airtable ou Google drive.
+* Les **jeux de données externes** n'ont pas de données indexées sur la plateforme. Ils permettent de renseigner des métadonnées (titre, description, licence, ...) et d'y associer des données dans des formats qui ne sont pas exploitables par la plateforme (PDF, Archive Zip, ...) ou de cataloguer des données présentes sur d'autres plateforme en renseignant un lien dans la description.
 
-Une fois les données chargées, elles sont converties dans un format plus standard en interne, puis analysées automatiquement pour déterminer le schéma du jeu de données. Les données sont ensuite indexées puis éventuellement enrichies avec d'autres données externes. Des derniers traitements sont effectués pour calculer des propriétés liées aux données (cardinalités des champs, bornes géographiques, ...) puis le jeu de données est disponible pour pouvoir être édité ou utilisé.
+### Schéma des données
 
-Après cette étape, les données sont consultables à minima dans un tableau et sont triables et filtrable. Si les concepts de **Latitude** et **Longitude** sont renseignés dans le schéma, les données sont aussi consultable dans une carte. Si elles ont un concept **Images**, une galerie est générée.
+La plateforme supporte l'indexation de données tabulaires. Chaque jeu de données (excepté les jeux de données externes) possède un schéma qui est la description des différentes colonnes (ou champs) qui le composent. A minima, chaque colonne a un identifiant et un type, mais il est possible de renseigner des informations complémentaires.
 
-### Edition d’un jeu de données
+Un libellé et une description permettent d'avoir des entêtes de colonne plus lisibles et compréhensibles. Le champ peut avoir un groupe qui permet de le retrouver plus rapidement quand il y a beaucoup de colonnes. Si le champ est de type texte, on peut opter pour du formatage riche : il sera alors possible de mettre du HTML ou Markdown dans ce champ. Le champ peut également être défini comme étant multi-valué, dans ce cas on spécifie le séparateur utilisé dans la colonne entre les différentes valeurs.
 
-La page d’édition d’un jeu de données permet de travailler la présentation et la réutilisabilité de ce jeu. Cette page permet de modifier le titre du jeu de données, mettre à jour les données, compléter le schéma des données, sémantiser les données pour qu'elles soient réutilisables dans des visualisations ou pour pouvoir être enrichies via des services complémentaires.
+<img src="./images/functional-presentation/schema.jpg"
+     height="300" style="margin:40px auto;" />
 
-#### Schéma des données
+Le dernier élément qui peut être renseigné, et qui a une importance considérable, est le **type métier** associé au champ. Cela se fait en sélectionnant un **concept issu d'un thésaurus**. Il y a une base de concepts communs à toute la plateforme, et il est possible de **rajouter ses propres concepts**. Ceux-ci sont en général liés à du vocabulaire issu du Web Sémantique, le concept de code postal a par exemple l'identifiant `http://schema.org/postalCode`.
 
-La page d'édition d'un jeu de données permet, entre autres, de renseigner les concepts dans la section **Schéma des données**.  
-Les concepts sont des notions connues pour la plateforme. Ils permettent d'**augmenter la réutilisabilité** de vos données et de faire le lien entre vos données et les fonctionnalités de la plateforme.
+Ce typage métier **augmente la réutibilisabilité** des données et permet 2 choses au sein de la plateforme : **l'enrichissement à partir d'autres données**, et la proposition de **visualisations adaptées** (en simplifiant le paramétrage de celles-ci) : les concepts *latitude* et *longitude* permettent par exemple de paramétrer des cartes avec des marqueurs.
 
-![Schéma d'un jeu de données](./images/functional-presentation/schema.jpg)
+### Métadonnées et pièces jointes
 
+La page d’édition d’un jeu de données permet de modifier les différente métadonnées de ce jeu. Il est possible de modifier le titre et la description, de définir une **licence d'utilisation** et d'associer des **thématiques**. Les listes de licences et thématiques utilisables sont communes à toute l'organisation et peuvent être éditées par les administrateurs.
 
-A l’aide des concepts, vous pouvez par exemple **enrichir vos données** pour leur donner encore plus de valeur ou bien projeter vos données sur une carte.
-Un concept est unique à une colonne d'un jeu de données. Vous ne pouvez pas avoir deux colonnes différentes avec le même concept pour un jeu de données.
+Il est possible d’associer des **pièces jointes à chaque ligne** d’un jeu de données. Cela se fait en associant une archive au format zip qui contient les fichiers à associer. Il faut aussi qu’il y ait dans le jeu de données une colonne contenant les noms des fichiers à associer à chaque ligne. Deux types de fichiers peuvent être liés aux lignes : des images (png, jpg, ...) ou des documents (pdf, docx, xlsx, ...). Dans le cas des documents, ils peuvent être indexés **fulltext** par la plateforme pour que les recherches tiennent compte du contenu de ces documents.
 
-Les concepts sont nécessaires à la représentation de certaines visualisations. Par exemple, vos données ne pourront pas être projetées sur une carte si vous n'avez pas associé les concepts **Latitude** et **Longitude** aux colonnes qui contiennent les valeurs latitude et longitude.
+Les pièces jointes peuvent aussi être **directement attachées à un jeu de données**. On peut par exemple ajouter des fichiers de documentation ou des métadonnées riches. On peut également s'en servir pour publier des données qui ne peuvent pas être indexées par la plateforme dans le cas d'un jeu de données de type *externe*.
 
-Dans la section des **Schéma de données**, on peut renseigner des libellés sur chacun des champs. Ces libellés sont utilisés dans la vue tableau et dans les différentes visualisations du jeu de données.
+### Données maitre et enrichissement
 
-#### Enrichissement des données
+Certaines données peuvent être utilisées à différents endroits et dans différents processus par les organisations. Il est possible de définir un jeu de données comme étant des **données maitre** (master-data en anglais). Ce sont des données qui font référence à des concepts particulier, et la plateforme met à disposition de toutes les organisation des données maitre.
 
-Il est possible d'enrichir vos données avec des données issues de l'open data telles que la base **SIRENE**, le **cadastre**, les **données INSEE et la BAN**.  
-* La base SIRENE rassemble les informations économiques et juridiques de plus de 28 Millions d'établissements d'entreprises, dont plus de 11 Millions actifs.
-* Le cadastre permet d'avoir accès aux différentes informations concernant les parcelles. Vous pouvez notamment géocoder des codes parcelles ou encore obtenir les surfaces de vos parcelles.
-* Les données INSEE permettent de récupérer diverses informations sur les divisions administrative (communes, départements, régions)
-* La BAN est la Base d'Adresse Nationale. Elle permet de géolocaliser des adresses ou de trouver des adresses à partir de coordonnées.
+Les données de la **base Sirene** sont rattachées aux concepts de *code siren*, *code siret* et *code APE* par exemple. Il y a également des données mises à disposition à partir du **cadastre** (via des *code parcelle*) ou des données de l'INSEE (via les *code commune*, *code département*, ...). Il y a enfin des données d'adresses, issues de la **BAN**, qui permettent de faire du géocodage. De nouvelles données de référence sont régulièrement ajoutées à la plateforme, et chaque organisation peut elle même créer ses propres jeux de données pivots !
 
-En fonction des données que vous possédez, vous pouvez choisir l'enrichissement qui vous convient et ainsi donner plus de valeur à vos données.
+Ces données maitre sont d'une grande valeur, car elles permettent de **compléter facilement les autres données**. Dans le cadre des formulaire de saisie des jeux incrémentaux, on peut faire référence à des données maitres en assignant un concept à un certain champ, et le **formulaire proposera une liste de valeur** (avec un moteur de recherche si elle est grande) pour sélectionner ce qui sera mis dans le champ. Il est ainsi possible de contraindre la saisie dans un champ et de s'assurer que les valeurs dedans soient toutes valides suivant certaines règles métier !
 
-#### Permissions de partage de données
+La deuxième possibilité pour compléter les données est de mettre en place des **enrichissements** : des colonnes sont alors automatiquement ajoutées au jeu de données et les valeurs renseignées à partir des valeurs d'une ou plusieurs autres colonnes. Par exemple des colonnes qui ont les concepts *numéro de rue*, *libellé de rue* et *code postal* peuvent être complétées par les données d'adresse et être géocodées, ce qui permet de rajouter les colonnes *latitude* et *longitude* et ainsi de projeter les données sur une carte. Quand les données sont mises à jour, les enrichissements sont automatiquement mis à jour, et un jeu de données peut avoir plusieurs enrichissements provenant de données maitres différentes.
 
-Un administrateur peut contrôler finement les permissions d’**accès aux données**. En fonction du rôle attribué à un utilisateur, celui-ci à le droit d'accéder, de lire ou/et de modifier le contenu de la source.
+### Permissions et publication des données
 
-![Persmissions d'un jeu de données](./images/functional-presentation/permissions.jpg)
+Un administrateur peut contrôler finement les permissions d’**accès aux données**. Les données sont de base *privées*, c'est à dire que seuls les membres de l'organisation authentifiés peuvent les consulter. Il est possible de rendre les données *publiques*, dans ce cas tout le monde, y compris les utilisateurs non-enregistrés, pourra y accéder. On peut également définir des droits d'accès à certains utilisateurs ou des organisations partenaires. Un mode avancé permet de définir les permissions pour chaque point d'accès de l'API d'un jeu de données : on peut par exemple rendre l'accès aux métadonnées public alors que l'accès aux données reste restreint.
 
-On peut ainsi donner le rôle d’**user** à un groupe de personnes et définir s’ils peuvent accéder et lire une ressource de la plateforme.
+<img src="./images/functional-presentation/permissions.jpg"
+     height="300" style="margin:40px auto;" />
 
-Il est aussi possible de gérer les permissions plus finement et de donner les droits à un seul ou plusieurs utilisateurs. La liste des personnes ayant des permissions sur un jeu de données est disponible dans la page d’édition de ce jeu.
+Quand un jeu de données vient d'être créé, il n'est pas de base disponibles dans les différents portails de données de l'organisation. Il doit d'abord être publié dans un ou plusieurs portails. Dans le cadre de portails opendata, le jeu de données doit aussi avoir une permission d'accès public en plsu d'être publié. Ce mécanisme de publication permet de mettre facilement en place un environnement pour *recetter* les données : il suffit de créer uun portail de données de *préproduction* et d'y publier les jeux de données en cours de consolidation. La "mise en production" des données pourra alors être faite en débubliant le jeu de données du portail de *préproduction* pour le publier sur un ou plusieur portails en *production*.
 
-#### Journal du jeu de données
+Il est aussi possible de publier un jeu de données sur des portails ou catalogues de données externes à la plateforme, cela est décris plus en détails à la section sur les *connecteurs de catalogues*.
 
-Le journal d’un jeu de données permet de vérifier l’**historique des modifications** sur le jeu de données.
-
-![Journal d'un jeu de données](./images/functional-presentation/journal.jpg)
-
-Le journal permet la **traçabilité** des modifications des jeux de données, des paramètres et des habilitations.
-
-#### Pièces jointes
-
-Il est possible d’associer des pièces jointes à chaque ligne d’un jeu de données. Cela se fait en associant une archive au format zip qui contient les fichiers à associer. Il faut aussi qu’il y ait dans le jeu de données une colonne contenant les noms des fichiers à associer à chaque ligne. Deux types de fichiers peuvent être liés aux lignes : des images (png, jpg, …) ou des documents (pdf, docx, xlsx, …). Dans le cas des documents, ils sont indexés **fulltext** par la plateforme et les recherches tiennent compte du contenu de ces documents.
-
-Les pièces jointes peuvent aussi être directement attachées à un jeu de données. On peut par exemple ajouter des fichiers de documentation ou des métadonnées riches.
