@@ -4,7 +4,7 @@ section: 7
 subsection : 2
 updated: 2021-09-20
 description : Diagramme de comparaison de proportions
-published: false
+published: true
 application : https://koumoul.com/apps/data-fair-proportions/0.2/
 ---
 

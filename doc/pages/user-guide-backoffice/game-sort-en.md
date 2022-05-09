@@ -4,7 +4,7 @@ section: 9
 subsection : 3
 updated: 2021-09-20
 description :  Data exploration in a sort game
-published: false
+published: true
 application : https://koumoul.com/apps/data-fair-sort-game/0.1/
 ---
 

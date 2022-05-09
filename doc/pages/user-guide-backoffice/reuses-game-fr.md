@@ -3,7 +3,7 @@ title: Visualisations de jeux
 section: 9
 updated: 2021-09-20
 description : Visualisations
-published: false
+published: true
 ---
 
 Les visualisations jeux présentent vos données sous forme de mini-jeux. La gamification permet d'explorer les données sous forme de challenge. Les visiteurs vont pouvoir tester leurs connaissances sur les données.

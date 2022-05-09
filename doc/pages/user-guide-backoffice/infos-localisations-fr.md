@@ -4,7 +4,7 @@ section: 6
 subsection : 5
 updated: 2021-09-20
 description : Projeter vos données géolocalisées sur une carte avec des marqueurs personnalisés
-published: false
+published: true
 application : https://koumoul.com/apps/infos-loc/0.9/
 ---
 

@@ -3,7 +3,7 @@ title: Visualisations cartographiques
 section: 6
 updated: 2021-09-20
 description : Visualisations cartographiques
-published: false
+published: true
 ---
 
 Les visualisations cartographiques vous permettent de projeter vos données géolocalisées sur une carte à l'aide des [concepts](./user-guide-backoffice/concept) latitude, longitude ou géométrie.

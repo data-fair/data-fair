@@ -4,7 +4,7 @@ section: 4
 subsection: 3
 updated: 2021-09-20
 description: Ajouter les metadonnées à votre jeu de données
-published: false
+published: true
 ---
 
 Les jeux de données sont représentés par une fiche. L'édition d'une jeu de données est accessible en cliquant sur cette fiche.

@@ -4,7 +4,7 @@ section: 4
 subsection: 4
 updated: 2021-09-20
 description: Mettre à jour ses données
-published: false
+published: true
 ---
 
 La mise à jour d'un jeu de données peut être réalisée manuellement sur la [page d'édition du jeu de données](./user-guide-backoffice/edition-dataset) ou peut être automatisé à l'aide des [traitements périodiques](./user-guide-backoffice/processing).

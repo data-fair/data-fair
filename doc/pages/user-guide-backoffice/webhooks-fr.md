@@ -4,7 +4,7 @@ section: 12
 subsection: 3
 updated: 2021-09-20
 description : Rester informés de la vie de ses données
-published: false
+published: true
 ---
 
 Les **Webhooks** permettent de synchroniser des systèmes informatiques. On peut ainsi obtenir des messages lors de mises à jour ou ajouts de données par exemple.

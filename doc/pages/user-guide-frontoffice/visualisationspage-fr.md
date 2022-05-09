@@ -3,7 +3,7 @@ title: Page des visualisations
 section: 4
 updated: 2022-04-25
 description : Accéder aux visualisations du portail
-published: false
+published: true
 ---
 
 La page de visualisations vous permet d'accéder à l'ensemble des visualisations du portail.  

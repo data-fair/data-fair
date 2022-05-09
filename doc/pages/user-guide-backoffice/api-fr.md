@@ -4,7 +4,7 @@ section: 12
 subsection: 2
 updated: 2021-09-20
 description : Accéder aux données par API. Gérer ses différentes clés d'API facilement.
-published: false
+published: true
 ---
 Sur la page des paramètres vous retrouvez la section des **Clés d'API**.  
 Les clés d'API permettent d'utiliser l'API globale de votre compte pour la gestion des jeux de données, des visualisations, des catalogues ou la récupération d'informations statistiques.

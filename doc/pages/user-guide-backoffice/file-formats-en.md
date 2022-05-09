@@ -4,7 +4,7 @@ section: 4
 subsection: 1
 updated: 2021-09-20
 description: Supported file formats
-published: false
+published: true
 ---
 
 The following table shows the file formats supported by Data Fair:

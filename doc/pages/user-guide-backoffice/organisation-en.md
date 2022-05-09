@@ -3,7 +3,7 @@ title: Organization
 section: 10
 updated: 2021-09-20
 description : Create and manage your organization
-published: false
+published: true
 ---
 
 An organization account allows to work together on the same datasets and visualizations with various persons.  

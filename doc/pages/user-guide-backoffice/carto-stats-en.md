@@ -4,7 +4,7 @@ section: 6
 subsection : 1
 updated: 2021-09-20
 description : Project your geolocated data on a map.
-published: false
+published: true
 application : https://koumoul.com/apps/carto-stats/0.6/
 ---
 

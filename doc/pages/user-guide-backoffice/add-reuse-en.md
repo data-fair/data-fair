@@ -4,7 +4,7 @@ section: 5
 subsection : 1
 updated: 2021-09-20
 description : Create interactives visualizations
-published: false
+published: true
 ---
 Interactive visualizations present and explore your data in a fun way.
 

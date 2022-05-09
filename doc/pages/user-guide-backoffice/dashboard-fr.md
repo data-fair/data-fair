@@ -3,7 +3,7 @@ title: Tableau de bord
 section: 3
 updated: 2021-09-20
 description : Dashboard
-published: false
+published: true
 ---
 
 Le **tableau de bord** de votre compte [compte actif](./user-guide-backoffice/organisation) est accessible à l'aide de la barre de navigation.

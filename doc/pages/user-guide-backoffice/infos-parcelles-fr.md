@@ -4,7 +4,7 @@ section: 6
 subsection : 4
 updated: 2021-09-20
 description : Projeter vos données sur le plan cadastral français.
-published: false
+published: true
 application : https://koumoul.com/apps/infos-parcelles/2.4/
 ---
 

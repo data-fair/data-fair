@@ -4,7 +4,7 @@ section: 9
 subsection : 2
 updated: 2021-09-20
 description :  Explore the data by locating points on a map.
-published: false
+published: true
 application : https://koumoul.com/apps/data-fair-locate-game/0.1/
 ---
 

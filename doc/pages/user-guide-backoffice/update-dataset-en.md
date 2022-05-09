@@ -4,7 +4,7 @@ section: 4
 subsection: 4
 updated: 2021-09-20
 description: Update a dataset
-published: false
+published: true
 ---
 
 Updating a dataset can be done manually on the [dataset edition page](./user-guide-backoffice/edition-dataset)  or can be automated with [periodic processing](./user-guide-backoffice/processing).

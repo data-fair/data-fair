@@ -4,7 +4,7 @@ section: 4
 subsection: 3
 updated: 2021-09-20
 description: Add metadata to your dataset
-published: false
+published: true
 ---
 
 Datasets are represented by a card. To edit a dataset click on the card.  

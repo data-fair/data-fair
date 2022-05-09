@@ -3,7 +3,7 @@ title: Navigate in Data Fair
 section: 2
 updated: 2021-09-20
 description : An intuitive interface
-published: false
+published: true
 ---
 
 The **Data Fair** interface allows to present your data in the form of APIs, data portal and interactive visualizations **without any code**.

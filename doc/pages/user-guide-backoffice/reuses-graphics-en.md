@@ -3,7 +3,7 @@ title: Graphic visualizations
 section: 7
 updated: 2021-09-20
 description : Graphic visualizations
-published: false
+published: true
 ---
 
 Graphic visualizations allow to represent your data on different perspective visualizations.

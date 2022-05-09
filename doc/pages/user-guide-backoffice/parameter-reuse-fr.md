@@ -4,7 +4,7 @@ section: 5
 subsection : 2
 updated: 2021-09-20
 description : Configurer ses visualisations en quelques minutes
-published: false
+published: true
 ---
 
 Le menu de configuration d'une visualisation est divisé en plusieurs sections.  

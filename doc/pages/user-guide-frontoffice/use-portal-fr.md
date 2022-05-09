@@ -3,7 +3,7 @@ title: Utiliser le portail
 section: 1
 updated: 2022-04-25
 description : Découvrez les fonctionnalités d'un portail
-published: false
+published: true
 ---
 
 Le portail de données permet au visiteurs d'accéder rapidement aux données.

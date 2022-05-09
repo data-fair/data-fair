@@ -3,7 +3,7 @@ title: Textual visualizations
 section: 9
 updated: 2021-09-20
 description : Textual visualizations
-published: false
+published: true
 ---
 
 Textual visualizations can represent the majority of your data.

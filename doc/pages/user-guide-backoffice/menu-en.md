@@ -4,7 +4,7 @@ section: 2
 subsection : 1
 updated: 2021-09-20
 description : Menu
-published: false
+published: true
 ---
 
 The menu allows to change the active account and access the **Notifications** and **Storage** pages of the account.

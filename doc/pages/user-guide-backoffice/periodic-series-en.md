@@ -4,7 +4,7 @@ section: 7
 subsection : 8
 updated: 2021-09-20
 description :  Graphs on evolution of temporal data.
-published: false
+published: true
 application : https://koumoul.com/apps/periodic-series/0.1/
 ---
 

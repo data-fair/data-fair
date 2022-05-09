@@ -4,7 +4,7 @@ section: 6
 subsection : 5
 updated: 2021-09-20
 description : Project your geolocated data on a map with custom markers
-published: false
+published: true
 application : https://koumoul.com/apps/infos-loc/0.9/
 ---
 

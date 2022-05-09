@@ -3,7 +3,7 @@ title: Page de contenu
 section: 5
 updated: 2022-04-25
 description : Pages thématiques
-published: false
+published: true
 ---
 
 Les pages de contenus sont disponibles dans la barre de navigation sous forma de lien direct vers la page ou de sous menus.  
@@ -24,7 +24,7 @@ Les  blocs sont composées d'un titre, d'une description, une visualisation et l
 ### Pages libres
 
 Les pages libres sont moins structurées que les pages thématiques et sont plus facilement personnalisables.
-  
+
 ![page des données](./images/user-guide-frontoffice/libre.png)
 
 Les pages libres permettent d'afficher plus de contenu différents et de modifier plus facilement les composants de la page.

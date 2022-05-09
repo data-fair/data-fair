@@ -3,7 +3,7 @@ title: Dashboard
 section: 3
 updated: 2021-09-20
 description : Dashboard
-published: false
+published: true
 ---
 
 The **dashboard** of your [active account](./user-guide-backoffice/organisation) is accessible using the navigation bar.

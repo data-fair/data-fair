@@ -4,7 +4,7 @@ section: 11
 subsection : 1
 updated: 2021-09-30
 description : Ajouter des pages thématiques sur votre portail
-published: false
+published: true
 ---
 
 Les pages de contenu permettent de mettre en avant certaines données, d'écrire des articles, de faire du data storytelling, ou encore de présenter une licence sur votre portail.

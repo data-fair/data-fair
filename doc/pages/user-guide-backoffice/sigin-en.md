@@ -3,7 +3,7 @@ title: Getting started with Data Fair
 section: 1
 updated: 2021-09-20
 description : Connect to Data Fair
-published: false
+published: true
 ---
 
 Data Fair allows to **enhance your data and share it internally or in opendata.**  

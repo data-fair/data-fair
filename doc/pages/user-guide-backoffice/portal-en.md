@@ -3,7 +3,7 @@ title: Configure your data portal
 section: 11
 updated: 2021-09-20
 description : Configure your data portal for Open Data or to private share.
-published: false
+published: true
 ---
 
 Data Fair allows to present your data in a portal.  

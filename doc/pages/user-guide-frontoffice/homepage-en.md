@@ -3,7 +3,7 @@ title: Home page
 section: 2
 updated: 2022-04-25
 description : Explore the portal
-published: false
+published: true
 ---
 
 The home page provides an overview of the data present on the data portal.  

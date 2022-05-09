@@ -4,7 +4,7 @@ section: 6
 subsection : 2
 updated: 2021-09-20
 description : Create interactive administrative maps
-published: false
+published: true
 application : https://koumoul.com/apps/data-fair-admin-divs/0.2/
 ---
 

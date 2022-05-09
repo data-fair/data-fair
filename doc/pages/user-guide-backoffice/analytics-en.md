@@ -4,7 +4,7 @@ section: 11
 subsection : 2
 updated: 2021-11-09
 description : Configure your analytics
-published: false
+published: true
 ---
 
 There are 2 steps in the  configuration of the user tracking system

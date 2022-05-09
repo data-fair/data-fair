@@ -3,7 +3,7 @@ title: Page d'accueil
 section: 2
 updated: 2022-04-25
 description : Découvrez les données du portail
-published: false
+published: true
 ---
 
 La page d'accueil permet d'avoir un aperçu des données présentes sur le portail de données.  

@@ -4,7 +4,7 @@ section: 7
 subsection : 1
 updated: 2021-09-20
 description : Data racing for first place
-published: false
+published: true
 application : https://koumoul.com/apps/bar-chart-race/0.2/
 ---
 

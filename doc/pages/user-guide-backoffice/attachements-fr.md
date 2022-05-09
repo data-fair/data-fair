@@ -4,7 +4,7 @@ section: 4
 subsection: 7
 updated: 2021-09-20
 description: Pièces jointes par ligne
-published: false
+published: true
 ---
 
 Lorsque vous chargez un jeu de données, il est possible d'associer une archive zip contenant des fichiers PDF, JPG, etc... à votre jeu de données. Ces fichiers pourront être utilisés dans les applications.
@@ -17,7 +17,7 @@ Pour que votre archive soit correctement associée à votre jeu de données, vot
 <p>
 </p>
 
-![PJ-1](./images/user-guide-backoffice/piece-jointe-1.jpg)
+![PJ-1](./images/user-guide-backoffice/piece-jointe-1.png)
 
 Dans le schéma de votre jeu de données, le concept **Document numérique attaché** sera automatiquement associé à la colonne contenant les noms des fichiers de votre archive ZIP.
 

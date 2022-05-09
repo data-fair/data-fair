@@ -4,7 +4,7 @@ section: 8
 subsection : 2
 updated: 2021-09-20
 description : Generate word clouds
-published: false
+published: true
 application : https://koumoul.com/apps/word-cloud/0.3/
 ---
 

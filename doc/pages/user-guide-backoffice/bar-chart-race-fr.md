@@ -4,7 +4,7 @@ section: 7
 subsection : 1
 updated: 2021-09-20
 description : Vos données font la course à la première place
-published: false
+published: true
 application : https://koumoul.com/apps/bar-chart-race/0.2/
 ---
 La visualisation **Bar Chart Race** permet de représenter des données de classement à travers le temps.

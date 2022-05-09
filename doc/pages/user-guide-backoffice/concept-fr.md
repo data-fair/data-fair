@@ -4,7 +4,7 @@ section: 4
 subsection: 5
 updated: 2021-09-20
 description: Donnez du sens à vos données
-published: false
+published: true
 ---
 
 Les concepts sont des notions connues pour la plateforme. Les concepts vont donner du sens à vos données.  

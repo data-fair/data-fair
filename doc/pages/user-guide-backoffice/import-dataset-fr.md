@@ -4,7 +4,7 @@ section: 4
 subsection: 2
 updated: 2021-09-20
 description: Ajouter un dataset
-published: false
+published: true
 ---
 
 Vous pouvez créer un jeu de données sur la [page du tableau de bord](./user-guide-backoffice/dashboard) ou sur la [page des jeux de données](./user-guide-backoffice/datasets).

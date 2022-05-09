@@ -3,7 +3,7 @@ title: Gamification
 section: 9
 updated: 2021-09-20
 description : Gamification
-published: false
+published: true
 ---
 
 Game visualizations present your data in mini-games. Gamification challenge your visitors, they will be able to test their knowledge and learn about your data.

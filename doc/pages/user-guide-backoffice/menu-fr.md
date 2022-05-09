@@ -4,7 +4,7 @@ section: 2
 subsection : 1
 updated: 2021-09-20
 description : Menu
-published: false
+published: true
 ---
 
 Le menu permet principalement de changer de compte actif et d'accéder aux pages de **Notifications** et **Stockage** du compte actif.

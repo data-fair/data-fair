@@ -4,7 +4,7 @@ section: 11
 subsection : 1
 updated: 2021-09-30
 description : Add thematic pages to your portal
-published: false
+published: true
 ---
 
 Content pages allow to highlight data, write articles, do data storytelling or even describe a license on your portal.  

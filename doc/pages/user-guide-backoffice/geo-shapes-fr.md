@@ -4,7 +4,7 @@ section: 6
 subsection : 3
 updated: 2021-09-20
 description : Visualiser des données géométriques sur une carte.
-published: false
+published: true
 application : https://koumoul.com/apps/data-fair-geo-shapes/0.1/
 ---
 

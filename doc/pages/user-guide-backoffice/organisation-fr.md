@@ -3,7 +3,7 @@ title: Organisation
 section: 10
 updated: 2021-09-20
 description : Créer et gérer son organisation
-published: false
+published: true
 ---
 Une compte organisation vous permet de travailler à plusieurs sur les même fichiers et visualisations.  
 Un compte personnel peut créer une ou plusieurs organisations en fonction de ses limites.

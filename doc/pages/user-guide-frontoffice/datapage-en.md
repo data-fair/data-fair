@@ -3,7 +3,7 @@ title: Data page
 section: 3
 updated: 2022-04-25
 description : Access portal data
-published: false
+published: true
 ---
 
 The data page gives you access to all of the portal's data.  

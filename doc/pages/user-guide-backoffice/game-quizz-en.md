@@ -4,7 +4,7 @@ section: 9
 subsection : 1
 updated: 2021-09-20
 description :  Data exploration with quiz questions.
-published: false
+published: true
 application : https://koumoul.com/apps/data-fair-quizz/0.1/
 ---
 

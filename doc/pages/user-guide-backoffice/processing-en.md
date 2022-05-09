@@ -3,7 +3,7 @@ title: Periodic processings
 section: 14
 updated: 2021-09-20
 description : Process and update your data frequently
-published: false
+published: true
 ---
 
 **Periodic processing** allows to fetch data, transform it and publish it on the platform.  

@@ -4,7 +4,7 @@ section: 10
 subsection : 1
 updated: 2021-09-20
 description : Invite members in your organization through their email.
-published: false
+published: true
 ---
 
 As an administrator of your organization, the **Organization management** section is accessible in the Data Fair navigation bar.

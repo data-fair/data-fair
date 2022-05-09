@@ -3,7 +3,7 @@ title: Visualisations graphiques
 section: 7
 updated: 2021-09-20
 description : Visualisations
-published: false
+published: true
 ---
 
 Les visualisations graphiques vous permettent de représenter vos données sous différents angles.

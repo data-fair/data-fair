@@ -3,7 +3,7 @@ title: Visualizations page
 section: 4
 updated: 2022-04-25
 description : Access portal visualizations
-published: false
+published: true
 ---
 
 The visualizations page gives you access to all of the portal's visualizations.  

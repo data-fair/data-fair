@@ -4,7 +4,7 @@ section: 11
 subsection : 2
 updated: 2021-11-09
 description : Configurer le système de suivi de votre portail
-published: false
+published: true
 ---
 
 La configuration du système de suivi des utilisateurs se compose en deux points.

@@ -4,7 +4,7 @@ section: 7
 subsection : 5
 updated: 2021-09-20
 description :  View networks
-published: false
+published: true
 application : https://koumoul.com/apps/data-fair-networks/0.1/
 ---
 

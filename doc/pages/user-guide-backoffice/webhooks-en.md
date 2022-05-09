@@ -4,7 +4,7 @@ section: 12
 subsection: 3
 updated: 2021-09-20
 description : Keep informed on your data
-published: false
+published: true
 ---
 
 **Webhooks** are used to synchronize computer systems. It is possible to send messages during updates on data for example.

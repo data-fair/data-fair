@@ -3,7 +3,7 @@ title: Traitements périodiques
 section: 14
 updated: 2021-09-20
 description : Automatisation de vos données à l'aide des traitements périodiques
-published: false
+published: true
 ---
 
 Les **traitements périodiques** vont chercher des données à certains endroits, les transforment et les publient sur la plateforme.

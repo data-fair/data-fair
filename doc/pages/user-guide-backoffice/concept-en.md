@@ -4,7 +4,7 @@ section: 4
 subsection: 5
 updated: 2021-09-20
 description: Make sens of your data
-published: false
+published: true
 ---
 
 The concepts are known elements for the platform. Your data is more explicit.  

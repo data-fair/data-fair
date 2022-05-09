@@ -4,7 +4,7 @@ section: 6
 subsection : 6
 updated: 2021-09-20
 description : Generate catchment area maps
-published: false
+published: true
 application : https://koumoul.com/apps/admin-divs-catchment/0.1/
 ---
 

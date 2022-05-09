@@ -3,7 +3,7 @@ title: Catalogues
 section: 13
 updated: 2021-09-20
 description : Diffusez ou importez des données de différents catalogues.
-published: false
+published: true
 ---
 Les connecteurs permettent d’interagir avec d’autres plateformes ou services de données, en lecture comme en écriture.
 

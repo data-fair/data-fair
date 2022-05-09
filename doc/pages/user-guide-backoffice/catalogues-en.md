@@ -3,7 +3,7 @@ title: Catalogs
 section: 13
 updated: 2021-09-20
 description : Broadcast or import data from catalogs.
-published: false
+published: true
 ---
 Connectors allow you to interact, read and write, with other platforms or data services.
 

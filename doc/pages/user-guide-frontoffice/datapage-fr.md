@@ -3,7 +3,7 @@ title: Page des données
 section: 3
 updated: 2022-04-25
 description : Accéder aux données du portail
-published: false
+published: true
 ---
 
 La page de données vous permet d'accéder à l'ensemble des données du portail.

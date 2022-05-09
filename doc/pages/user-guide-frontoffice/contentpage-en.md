@@ -3,7 +3,7 @@ title: Content page
 section: 5
 updated: 2022-04-25
 description : Thematic pages
-published: false
+published: true
 ---
 
 Content pages are available in the navigation bar as a direct link to the page or as submenus.  

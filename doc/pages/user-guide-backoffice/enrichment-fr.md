@@ -4,7 +4,7 @@ section: 4
 subsection: 6
 updated: 2021-09-20
 description: Jointures de données
-published: false
+published: true
 ---
 
 L'enrichissement permet d'importer des colonnes d'une base de référence. Il est ainsi possible de croiser ses données avec des données issues de l'open data telles que la base SIRENE, les données INSEE, le cadastre ou la BAN.

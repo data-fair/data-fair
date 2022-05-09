@@ -4,7 +4,7 @@ section: 7
 subsection : 4
 updated: 2021-09-20
 description : View your information flows.
-published: false
+published: true
 application : https://koumoul.com/apps/sankey/0.5/
 ---
 

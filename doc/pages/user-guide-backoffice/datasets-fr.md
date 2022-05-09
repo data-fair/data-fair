@@ -3,7 +3,7 @@ title: Jeu de données
 section: 4
 updated: 2021-09-20
 description : Datasets
-published: false
+published: true
 ---
 
 Sur Data Fair, un jeu de données correspond à un [fichier](./user-guide-backoffice/file-formats) que vous avez chargé ou à un [jeu virtuel ou un jeu éditable](./user-guide-backoffice/import-dataset) dont vous avez renseigné les meta-données.  

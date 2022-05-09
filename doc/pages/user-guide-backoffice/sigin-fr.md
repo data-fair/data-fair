@@ -3,7 +3,7 @@ title: Premiers pas avec Data Fair
 section: 1
 updated: 2021-09-20
 description : Connectez vous sur Data Fair
-published: false
+published: true
 ---
 
 Data Fair permet de **valoriser ses données et de les partager en interne ou en opendata.**

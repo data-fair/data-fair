@@ -4,7 +4,7 @@ section: 4
 subsection: 2
 updated: 2021-09-20
 description: Import a dataset
-published: false
+published: true
 ---
 
 You can create a dataset on the [dashbord](./user-guide-backoffice/dashboard) or on the [datasets](./user-guide-backoffice/datasets) pages.

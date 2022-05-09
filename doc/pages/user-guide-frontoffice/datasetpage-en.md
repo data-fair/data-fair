@@ -4,7 +4,7 @@ section: 3
 subsection : 1
 updated: 2022-04-25
 description : Access portal data
-published: false
+published: true
 ---
 
 The page of a dataset is composed of several elements:

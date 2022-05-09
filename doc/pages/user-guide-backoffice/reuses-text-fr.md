@@ -3,7 +3,7 @@ title: Visualisations textuelles
 section: 8
 updated: 2021-09-20
 description : Visualisations
-published: false
+published: true
 ---
 
 Les visualisations textuelles peuvent représenter la majorité de vos données.

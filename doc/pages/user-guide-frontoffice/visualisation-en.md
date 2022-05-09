@@ -4,7 +4,7 @@ section: 4
 subsection : 1
 updated: 2022-04-25
 description : Access the visualisation on a full page
-published: false
+published: true
 ---
 
 The page of a dataset is composed of several elements:  

@@ -3,7 +3,7 @@ title: Visualisations
 section: 5
 updated: 2021-09-20
 description : Visualisations
-published: false
+published: true
 ---
 
 Les services complétant Data Fair permettent de présenter vos données dans des **visualisations dynamiques** et ainsi rendre vos données plus **accessibles**.  

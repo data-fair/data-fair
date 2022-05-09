@@ -4,7 +4,7 @@ section: 5
 subsection : 1
 updated: 2021-09-20
 description : Comment créer des visualisations interactives pour mettre en valeur ses données
-published: false
+published: true
 ---
 Les visualisations interactives permettent de présenter et d'explorer vos données de manière ludique.   
 

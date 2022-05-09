@@ -3,7 +3,7 @@ title: Visualizations
 section: 5
 updated: 2021-09-20
 description : Visualizations
-published: false
+published: true
 ---
 
 The services connected to Data Fair allow to present your data in **dynamic visualizations** and to make it more **accessible**.  

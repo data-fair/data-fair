@@ -4,7 +4,7 @@ section: 12
 subsection: 1
 updated: 2021-09-20
 description : Ajouter et gérer les licences et thématiques de votre portail
-published: false
+published: true
 ---
 Sur la page des paramètres vous retrouvez les sections des **Licences** et des **Thématiques**.  
 

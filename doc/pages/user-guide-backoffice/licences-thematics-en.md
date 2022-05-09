@@ -4,7 +4,7 @@ section: 12
 subsection: 1
 updated: 2021-09-20
 description : Add and manage the licenses and thematics of your portal
-published: false
+published: true
 ---
 
 On the settings page you will find the **Licenses** and **Themes** sections.

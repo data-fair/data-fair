@@ -4,7 +4,7 @@ section: 4
 subsection : 1
 updated: 2022-04-25
 description : Accéder à la page de visualisation du portail
-published: false
+published: true
 ---
 
 La page d'un jeu de données est composé de plusieurs éléments :

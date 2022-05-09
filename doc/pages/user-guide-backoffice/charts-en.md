@@ -4,7 +4,7 @@ section: 7
 subsection : 7
 updated: 2021-09-20
 description : Histograms, lines, areas, radar ... visualize your data in interactive charts!
-published: false
+published: true
 application : https://cdn.jsdelivr.net/npm/@koumoul/data-fair-charts@0.9/dist/
 ---
 

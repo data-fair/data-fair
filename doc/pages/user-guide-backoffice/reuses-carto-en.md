@@ -3,7 +3,7 @@ title: Map visualizations
 section: 6
 updated: 2021-09-20
 description : Map visualizations
-published: false
+published: true
 ---
 
 Map visualizations allow to project your geographic data on a map using [concepts](./user-guide-backoffice/concept) latitude, longitude or geometry.

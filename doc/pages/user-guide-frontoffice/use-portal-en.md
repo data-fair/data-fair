@@ -3,7 +3,7 @@ title: Use the portal
 section: 1
 updated: 2022-04-25
 description : Check the functionalities of a portal
-published: false
+published: true
 ---
 
 The data portal allows visitors to quickly access data.  
