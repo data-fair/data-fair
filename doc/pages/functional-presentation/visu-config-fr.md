@@ -25,14 +25,15 @@ Plusieurs applications permettent d'afficher des données géolocalisées. *Info
 
 D'autres applications sont adaptées aux données territorialisées, ce sont les données possédant des code territoire : code commune, département ou même code parcelles. *Infos parcelles* permet de projeter les données sur le **plan cadastral** français. *Cartographie territoriale multi-niveaux* affiche une **carte choroplèthe** des terrtoires allant de l'IRIS à la région et est adaptée à présenter des données comme les résultats d'élections ou d'autres indicateurs. *Zones de chalandise* permet de **fusionner les géométries des territoires** pour avoir des zones de couverture, par exemple le perimètre d'action des gendarmeries.
 
-#### Visualisations graphiques
-Dès que les données possèdent des colonnes avec des types numériques, il est possible de paramétrer pour elles des visualisations graphiques. 
+#### Visualisations en diagrammes
+Dès que les données possèdent des colonnes avec des types numériques, il est possible de paramétrer pour elles des visualisations en diagrammes. *Graphiques divers* permet de faire différents type de graphiques communs : **histogrammes, lignes, aires, camemberts**, ... *Diagramme de Sankey* est adapté à la **visualisation de flux**. *Graphique en radar* permet de comparer les lignes de données sur **différents critères**. *Comparaison de proportions* produit des diagrammes en gaufre, pour par exemple comparer la répartitions des éléments suivant différentes catégories.
 
-* **Diagramme de Sankey** : Visualiser ses données de flux.
-* **Diagramme Sunburst** : Visualiser ses données hiérarchiques.
-* **Bar chart race** : Visualiser ses données de classement à travers le temps.
-* **Charts** : Visualiser ses données dans différents type de graphiques, tels que des histogrammes, des graphiques d'aires, de lignes, etc…
-* **Relations et graphes/réseaux** : visualiser des données avec des noeuds, des liens ou des réseaux.
+*Graphes / Réseaux* et *Réseau de relations* permettent de faire des **graphes**, dans le premiers cas en utilisant des nœuds et des liens, et dans le second cas en se basant sur 2 critères dans 2 colonnes différentes d'un jeu de données. Pour les **données hiérarchiques**, 2 visualisations sont disponibles : *Treemap* et *Diagramme Sunburst*, et sont bien adaptée pour visualiser des données de budget ou d'allocation d'aides.
+
+#### Visualisations temporelles
+Les données ayant des concepts liés aux dates peuvent être visualisées avec des visualisation temporelles. Certaines sont interactives, comme *Séries temporelles* qui permet de comparer des **courbes au cours du temps** (décès liés au covid par exemple), ou *Diagramme Timeline*  et *Calendrier* pour visualiser les données ayant des dates de début et dates de fin.
+
+D'autres visualisation temporelles sont animées : elles possède un bouton lecture et l'utilisateur peut les regarder de manière passive. Ces visualisations sont intéressantes pour les réseaux sociaux car elles permettent d'augmenter l'engagement des autres utilisateurs, qui n'ont pas a cliquer sur le lien pour voir le résultat. *Bar chart race* permet de voir des courses de barres horizontales et est adapté quand il y a un **nombre important d'éléments qui ont la valeur maximale**, par exemple pour voir le prénom le plus donné au cours du temps. *Periodic Series* permet d'analyser les **données cycliques** pour voir comment elle se comportent d'une période sur une autre (par exemple des températures ou du trafic de véhicules).
 
 #### Visualisations textuelles
 
@@ -40,13 +41,17 @@ Dès que les données possèdent des colonnes avec des types numériques, il est
 * **Nuage de mots** : Générer son propre nuage de mots à partir d’une analyse du contenu de la source.
 
 #### Gamification
+En plus des visualisations de données "traditionnelles", il est possible de configurer des mini-jeux. Le jeu est l'un des **meilleurs moyens d'apprentissage** et permet de mémoriser certaines choses sans parfois même s’en rendre compte. Cela permet de rendre les données **plus attractives**, favorise l'engagement des utilisateurs qui peuvent réessayer les jeux plusieurs fois jusqu'à avoir un bon score et **augmenter la visibilité des données** sur les réseaux sociaux via les mécanismes de partage de scores et de "mise au défi".
+
+*Jeu de localisation* est destiné aux données géolocalisées et demande a placer des éléments sur une carte. *Jeu de Quizz* permet de réaliser un questionnaire a choix multiples. *Jeu de tri* demande à l'utilisateur de trier des données par glisser / déposer pour les classer suivant un certain critère, par exemple pour trier des aliments en fonction de leur empreinte carbone. Tous ces jeux prennent en compte le temps dans le calcul du score, pour éviter la "triche" et inciter l'utilisateur a mémoriser les bonnes réponses par essai / erreur.
 
 #### Autre types de visualisations
+Certaines visualisations sont compliquées à classer et nous les mentionnons ici. *Diaporama* permet d'afficher des données ayant des **images en pièces-jointes**. *Formulaire de saisie* offre la possibilité de collecter des retour directement stockés dans un jeu de données, de faire du **crowd sourcing** ou d'offrir une interface de mise à jour des données plus légère que l'intégralité du back-office pour une personne qui ne serait responsable de la mise à jour que d'un jeu de données.
 
-
+Il y a aussi des visualisation qui sont **adaptées à certains schémas de données**, comme les *délibérations* ou les *équipements* publiés suivant les schémas du **Socle Commun des Données Locales (SCDL)**.
 
 ### Permissions et publication des visualisations
 
 Les mécanismes de permission et de publication des visualisations sont les même que pour les jeux de données. Par défaut, une visualisation est privée. Elle peut être rendue publique par la suite. Dans tous les cas, il est recommandé de renseigner une description. Cette description est visible sur la page de consultation de la visualisation, mais aussi sur la page du jeu de données associé.
 
-Il est aussi possible de partager une visualisation privée avec des utilisateurs non authentifiés. Cela se fait en générant un lien de partage qui contient un code secret. Toute personne connaissant ce lien peut accéder à la visualisation, même si les données qu'elle utilise sont privées. Si le lien est compromis, il peut être supprimé puis régénéré avec un code secret différent. Cela permet d'embarquer des visualisations dans des sites privés, sans avoir à créer un ou plusieurs comptes utilsateur et transmettre des identifiants d'accès.
+Il est aussi possible de partager une visualisation privée avec des utilisateurs non authentifiés. Cela se fait en générant un lien de partage qui contient un code secret. Toute personne connaissant ce lien peut accéder à la visualisation, même si les données qu'elle utilise sont privées. Si le lien est compromis, il peut être supprimé puis régénéré avec un code secret différent. Cela permet d'embarquer des visualisations dans des sites privés, sans avoir à créer un ou plusieurs comptes utilisateur et transmettre des identifiants d'accès.
