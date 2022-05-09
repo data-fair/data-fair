@@ -26,14 +26,41 @@
         />
         <template v-for="(header, i) in fieldHeaders">
           <v-checkbox
-            v-if="header.field['x-group'] && header.field['x-group'] !== (fieldHeaders[i - 1] && fieldHeaders[i - 1].field && fieldHeaders[i - 1].field['x-group'])"
+            v-if="isFirstInGroup(i)"
             :key="'group-' + header.value"
             :label="header.field['x-group']"
             dense
             hide-details
             @change="value => toggleGroup(header.field['x-group'], value)"
-          />
+          >
+            <template #append>
+              <v-btn
+                v-if="isFirstInGroup(i) && !foldedGroups[header.field['x-group']]"
+                :key="'fold-down-' + header.value"
+                icon
+                style="margin-top:-8px;"
+                @click="$set(foldedGroups, header.field['x-group'], true)"
+              >
+                <v-icon>
+                  mdi-menu-down
+                </v-icon>
+              </v-btn>
+              <v-btn
+                v-if="isFirstInGroup(i) && foldedGroups[header.field['x-group']]"
+                :key="'fold-down-' + header.value"
+                icon
+                style="margin-top:-8px;"
+                @click="$set(foldedGroups, header.field['x-group'], false)"
+              >
+                <v-icon>
+                  mdi-menu-left
+                </v-icon>
+              </v-btn>
+            </template>
+          </v-checkbox>
+
           <v-checkbox
+            v-show="!foldedGroups[header.field['x-group']]"
             :key="header.value"
             :value="header.value"
             :label="header.text"
@@ -61,6 +88,9 @@ en:
 <script>
 export default {
   props: ['value', 'headers'],
+  data () {
+    return { foldedGroups: {} }
+  },
   computed: {
     fieldHeaders () {
       return this.headers.filter(h => !!h.field)
@@ -83,6 +113,10 @@ export default {
         })
         this.$emit('input', newValue)
       }
+    },
+    isFirstInGroup (i) {
+      const previousGroup = this.fieldHeaders[i - 1] && this.fieldHeaders[i - 1].field && this.fieldHeaders[i - 1].field['x-group']
+      return this.fieldHeaders[i].field['x-group'] && this.fieldHeaders[i].field['x-group'] !== previousGroup
     }
   }
 }
