@@ -48,7 +48,6 @@ const datasetFileSample = require('../utils/dataset-file-sample')
 const { bulkSearchStreams } = require('../utils/master-data')
 const applicationKey = require('../utils/application-key')
 const { syncDataset: syncRemoteService } = require('./remote-services')
-const dataset = require('../../contract/dataset')
 const baseTypes = new Set(['text/csv', 'application/geo+json'])
 
 const router = express.Router()
