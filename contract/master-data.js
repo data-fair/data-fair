@@ -284,6 +284,20 @@ exports.endpoints = (dataset) => {
                 type: 'object',
                 properties: inputProperties
               }
+            },
+            'application/json': {
+              schema: {
+                title: 'Filtre pour une ligne',
+                type: 'object',
+                properties: inputProperties
+              }
+            },
+            'text/csv': {
+              schema: {
+                title: 'Filtre pour une ligne',
+                type: 'object',
+                properties: inputProperties
+              }
             }
           }
         },
@@ -292,6 +306,12 @@ exports.endpoints = (dataset) => {
             description: 'Réponse en cas de succès de la requête',
             content: {
               'application/x-ndjson': {
+                schema: datasetLineSchema
+              },
+              'application/json': {
+                schema: datasetLineSchema
+              },
+              'text/csv': {
                 schema: datasetLineSchema
               }
             }
