@@ -266,7 +266,7 @@
             </template>
           </markdown-editor>
           <v-combobox
-            v-model="currentPropRef.prop['x-group']"
+            :value="currentPropRef.prop['x-group']"
             :disabled="!editable || !currentPropRef.editable"
             :items="groups"
             :label="$t('group')"
@@ -276,6 +276,9 @@
             outlined
             hide-details
             class="mb-3"
+            clearable
+            hide-selected
+            @update:search-input="v => currentPropRef.prop['x-group'] = v || ''"
           >
             <template #append-outer>
               <help-tooltip>{{ $t('groupHelp') }}</help-tooltip>
