@@ -208,7 +208,7 @@
             </template>
           </v-checkbox>
           <v-checkbox
-            v-if="currentPropRef.prop.type === 'string' && !currentPropRef.prop.type.format && currentPropRef.prop['x-refersTo'] !== 'http://schema.org/description'"
+            v-if="currentPropRef.prop.type === 'string' && !currentPropRef.prop.format && currentPropRef.prop['x-refersTo'] !== 'http://schema.org/description'"
             :input-value="isFormatted(currentPropRef.prop)"
             :disabled="!editable || !currentPropRef.editable"
             :label="$t('formatted')"
