@@ -32,6 +32,8 @@ describe('Date formats', () => {
     assert.equal(dateProp.type, 'string')
     assert.equal(dateProp.format, 'date')
     assert.equal(dateProp.dateFormat, undefined)
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
+    assert.equal(res.data.results[0].date, '2021-01-22')
 
     form = new FormData()
     form.append('file', 'str,date\nstrval,28/11/1983', 'dataset.csv')
@@ -44,6 +46,25 @@ describe('Date formats', () => {
     // date input formatting does not belong to dataset.schema, but only dataset.file.schema
     dateProp = dataset.schema.find(p => p.key === 'date')
     assert.equal(dateProp.dateFormat, undefined)
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
+    assert.equal(res.data.results[0].date, '1983-11-28')
+  })
+
+  it('Detect date format while ignoring whitespace', async function () {
+    const ax = global.ax.dmeadus
+    const form = new FormData()
+    let data = 'periode;source;elec_3;elec_6;elec_tt;gaz_b0;gaz_b1;gaz_b2i;gaz_tt;propane;fod_c1;essence;ars;sp95;sp98;gazole;gplc;vap_t100;vap_t110;bois_vrac;bois_sac;brent;ipe;dollar;charbon;pet_brut_e;pet_brut_d;pet_raf_e;elec_exp;PEG_gaz_2022;PEG_gaz_2023;PEG_gaz_2024;PEG_gaz_2025;Baseload_elec_2022;Baseload_elec_2023;Baseload_elec_2024;Baseload_elec_2025;Prix_tonne_CO2'
+    data += '\n\r\t01/07/2021;AAA;;;;;;;;;;;;;;;;;;;;;;;;;;;;11,11;11,11;11,11;;;;;;'
+    form.append('file', data, 'dataset.csv')
+    let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form), params: { draft: true } })
+    let dataset = await workers.hook(`finalizer/${res.data.id}`)
+    dataset = (await ax.get(`/api/v1/datasets/${dataset.id}`, { params: { draft: true } })).data
+    const dateProp = dataset.file.schema.find(p => p.key === 'periode')
+    assert.equal(dateProp.type, 'string')
+    assert.equal(dateProp.format, 'date')
+    assert.equal(dateProp.dateFormat, 'D/M/YYYY')
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { draft: true } })
+    assert.equal(res.data.results[0].periode, '2021-07-01')
   })
 
   it('Accept ISO date without Z or timezone suffix', async function () {
