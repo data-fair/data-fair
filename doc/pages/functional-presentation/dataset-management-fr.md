@@ -60,7 +60,17 @@ Un administrateur peut contrôler finement les permissions d’**accès aux donn
 <img src="./images/functional-presentation/permissions.jpg"
      height="300" style="margin:40px auto;" />
 
-Quand un jeu de données vient d'être créé, il n'est pas de base disponibles dans les différents portails de données de l'organisation. Il doit d'abord être publié dans un ou plusieurs portails. Dans le cadre de portails opendata, le jeu de données doit aussi avoir une permission d'accès public en plsu d'être publié. Ce mécanisme de publication permet de mettre facilement en place un environnement pour *recetter* les données : il suffit de créer uun portail de données de *préproduction* et d'y publier les jeux de données en cours de consolidation. La "mise en production" des données pourra alors être faite en débubliant le jeu de données du portail de *préproduction* pour le publier sur un ou plusieur portails en *production*.
+Quand un jeu de données vient d'être créé, il n'est pas de base disponible dans les différents portails de données de l'organisation. Il doit d'abord être **publié dans un ou plusieurs portails**. Dans le cadre de portails opendata, le jeu de données doit aussi avoir une permission d'accès public en plus d'être publié.
+
+Ce mécanisme de publication permet de travailler de manière agile pour la publication d’un jeu de données : on peut par exemple avoir un **portail de recette** sur lequel on publie les jeux de données que l’on souhaite ouvrir prochainement, en les accompagnant de visualisations.
+
+Les visualisations peuvent mettre en avant un problème dans les données ou une mauvaise structuration de celle-ci, problème qui peut être vu par plusieurs personnes car les données sont déjà publiées sur un portail. Une fois que l’on atteint la **qualité de publication souhaitée**, on dé-publie le jeu de données du portail de recette et on le publie sur un ou plusieurs portails de production.
+
+<img src="./images/functional-presentation/portail-publication.jpg"
+     height="300" style="margin:40px auto;" />
 
 Il est aussi possible de publier un jeu de données sur des portails ou catalogues de données externes à la plateforme, cela est décris plus en détails à la section sur les *connecteurs de catalogues*.
+
+
+
 

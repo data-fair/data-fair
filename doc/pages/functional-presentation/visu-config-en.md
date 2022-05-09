@@ -1,8 +1,7 @@
 ---
 title: Configure visualizations
 section: 3
-subsection : 3
-updated: 2020-12-09
+subsection : 2
 description : Configure visualizations
 published: false
 ---
