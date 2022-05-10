@@ -1,8 +1,7 @@
 ---
 title: Catalog connectors
 section: 3
-subsection : 7
-updated: 2020-12-09
+subsection : 6
 description : Catalog connectors
 published: true
 ---
