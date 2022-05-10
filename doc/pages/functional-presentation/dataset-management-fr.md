@@ -29,7 +29,7 @@ La plateforme supporte l'indexation de données tabulaires. Chaque jeu de donné
 Un libellé et une description permettent d'avoir des entêtes de colonne plus lisibles et compréhensibles. Le champ peut avoir un groupe qui permet de le retrouver plus rapidement quand il y a beaucoup de colonnes. Si le champ est de type texte, on peut opter pour du formatage riche : il sera alors possible de mettre du HTML ou Markdown dans ce champ. Le champ peut également être défini comme étant multi-valué, dans ce cas on spécifie le séparateur utilisé dans la colonne entre les différentes valeurs.
 
 <img src="./images/functional-presentation/schema.jpg"
-     height="300" style="margin:40px auto;" />
+     height="300" style="margin:20px auto;" />
 
 Le dernier élément qui peut être renseigné, et qui a une importance considérable, est le **type métier** associé au champ. Cela se fait en sélectionnant un **concept issu d'un thésaurus**. Il y a une base de concepts communs à toute la plateforme, et il est possible de **rajouter ses propres concepts**. Ceux-ci sont en général liés à du vocabulaire issu du Web Sémantique, le concept de code postal a par exemple l'identifiant `http://schema.org/postalCode`.
 
@@ -58,7 +58,7 @@ La deuxième possibilité pour compléter les données est de mettre en place de
 Un administrateur peut contrôler finement les permissions d’**accès aux données**. Les données sont de base *privées*, c'est à dire que seuls les membres de l'organisation authentifiés peuvent les consulter. Il est possible de rendre les données *publiques*, dans ce cas tout le monde, y compris les utilisateurs non-enregistrés, pourra y accéder. On peut également définir des droits d'accès à certains utilisateurs ou des organisations partenaires. Un mode avancé permet de définir les permissions pour chaque point d'accès de l'API d'un jeu de données : on peut par exemple rendre l'accès aux métadonnées public alors que l'accès aux données reste restreint.
 
 <img src="./images/functional-presentation/permissions.jpg"
-     height="300" style="margin:40px auto;" />
+     height="300" style="margin:20px auto;" />
 
 Quand un jeu de données vient d'être créé, il n'est pas de base disponible dans les différents portails de données de l'organisation. Il doit d'abord être **publié dans un ou plusieurs portails**. Dans le cadre de portails opendata, le jeu de données doit aussi avoir une permission d'accès public en plus d'être publié.
 
@@ -67,6 +67,6 @@ Ce mécanisme de publication permet de travailler de manière agile pour la publ
 Les visualisations peuvent mettre en avant un problème dans les données ou une mauvaise structuration de celle-ci, problème qui peut être vu par plusieurs personnes car les données sont déjà publiées sur un portail. Une fois que l’on atteint la **qualité de publication souhaitée**, on dé-publie le jeu de données du portail de recette et on le publie sur un ou plusieurs portails de production.
 
 <img src="./images/functional-presentation/portail-publication.jpg"
-     height="300" style="margin:40px auto;" />
+     height="300" style="margin:20px auto;" />
 
 Il est aussi possible de publier un jeu de données sur des portails ou catalogues de données externes à la plateforme, cela est décris plus en détails à la section sur les *connecteurs de catalogues*.

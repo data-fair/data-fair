@@ -13,7 +13,7 @@ Pour limiter les problématiques liées au RGPD, un **minimum de données est co
 La création de compte se fait en renseignant un email et un mot de passe, et il y a aussi la possibilité de  passer par un compte Gmail, Facebook, LinkedIn ou Github via le **protocole oAuth2**. Un mécanisme de renouvellement de mot de passe est disponible pour les utilisateurs ayant perdu celui-ci ou désirant le changer.
 
 <img src="./images/functional-presentation/connexion.jpg"
-     height="200" style="margin:20px auto;" />
+     height="160" style="margin:15px auto;" />
 
 Les utilisateurs qui créent des comptes par eux même ont leur données stockées dans des bases de données. Leur mot de passe est encrypté avec sels et multiple hachage pour garantir une sécurité maximale. Il y a des règles de saisie de mot de passe pour éviter d'en avoir de facilement trouvables.
 
