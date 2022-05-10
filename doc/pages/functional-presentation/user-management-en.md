@@ -1,8 +1,7 @@
 ---
 title: User Management
 section: 3
-subsection : 6
-updated: 2020-12-09
+subsection : 4
 description : User Management
 published: true
 ---

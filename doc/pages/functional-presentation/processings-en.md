@@ -1,8 +1,7 @@
 ---
 title: Periodic processings
 section: 3
-subsection : 8
-updated: 2020-12-09
+subsection : 5
 description : Periodic processings
 published: true
 ---

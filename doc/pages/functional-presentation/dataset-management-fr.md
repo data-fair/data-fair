@@ -37,7 +37,7 @@ Ce typage métier **augmente la réutibilisabilité** des données et permet 2 c
 
 ### Métadonnées et pièces jointes
 
-La page d’édition d’un jeu de données permet de modifier les différente métadonnées de ce jeu. Il est possible de modifier le titre et la description, de définir une **licence d'utilisation** et d'associer des **thématiques**. Les listes de licences et thématiques utilisables sont communes à toute l'organisation et peuvent être éditées par les administrateurs.
+Certaines métadonnées sont préremplies, commes les dates de mise à jour des métadonnées ou des données, et l'utilisateur les a crée ou modifié. La page d’édition d’un jeu de données permet de modifier les différente métadonnées de ce jeu. Il est possible de modifier le titre et la description, de définir une **licence d'utilisation** et d'associer des **thématiques**. Les listes de licences et thématiques utilisables sont communes à toute l'organisation et peuvent être éditées par les administrateurs.
 
 Il est possible d’associer des **pièces jointes à chaque ligne** d’un jeu de données. Cela se fait en associant une archive au format zip qui contient les fichiers à associer. Il faut aussi qu’il y ait dans le jeu de données une colonne contenant les noms des fichiers à associer à chaque ligne. Deux types de fichiers peuvent être liés aux lignes : des images (png, jpg, ...) ou des documents (pdf, docx, xlsx, ...). Dans le cas des documents, ils peuvent être indexés **fulltext** par la plateforme pour que les recherches tiennent compte du contenu de ces documents.
 

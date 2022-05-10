@@ -5,7 +5,7 @@ subsection : 5
 description : Consultation d’une visualisation
 published: true
 ---
-Chaque visualisation est présentée au travers d’une **page dédiée** ce qui permet de lui associer du contexte, titre et description, et différentes actions. Il est possible d’accéder à la visualisation en plein écran et de récupérer un code HTML qui permet d’embarquer la visualisation dans un autre site web.
+Chaque visualisation est présentée au travers d’une **page dédiée** ce qui permet de lui associer du contexte, titre et description, et différentes actions. Il est possible d’accéder à la visualisation en plein écran (les visualisations sont consultables aussi bien sur **poste fixe que smartphone**) et de récupérer un code HTML qui permet d’embarquer la visualisation dans un autre site web.
 
 <img src="./images/functional-presentation/detail-visualisation.jpg"
      height="500" style="margin:20px auto;" />
