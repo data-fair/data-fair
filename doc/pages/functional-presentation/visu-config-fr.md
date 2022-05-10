@@ -14,7 +14,7 @@ Les visualisations peuvent être configurées grâce à une interface graphique 
 <img src="./images/functional-presentation/configuration-visu.jpg"
      height="400" style="margin:40px auto;" />
 
-Un aperçu donne un rendu de la visualisation. Lorsque l’on réalise des modifications sur le menu de configuration, elles sont directement représentées sur l'aperçu. Il est ainsi possible de modifier et tester rapidement différents rendus de la visualisation, en **mode brouillon**. Lorsque le rendu est satisfaissant, l’enregistrement permet de valider les modifications réalisées. Les modifications sont alors visibles sur toutes les publications de la visualisation.
+Un aperçu donne un rendu de la visualisation. Lorsque l’on réalise des modifications sur le menu de configuration, elles sont directement représentées sur l'aperçu. Il est ainsi possible de modifier et tester rapidement différents rendus de la visualisation, en **mode brouillon**. Lorsque le rendu est satisfaisant, l’enregistrement permet de valider les modifications réalisées. Les modifications sont alors visibles sur toutes les publications de la visualisation.
 
 ### Types de visualisations
 Data Fair offre une grande variété de visualisations en constante progression, il y a ce jour près d'une **trentaine de visualisations différentes**. ([Cette section](./interoperate/applications) décrit en détails la manière de les créer).
@@ -27,7 +27,7 @@ Data Fair offre une grande variété de visualisations en constante progression,
 
 Plusieurs applications permettent d'afficher des données géolocalisées. *Infos localisations* permet d'afficher des **marqueurs** qui présentent au clic une **fiche détaillée**, éventuellement accompagnée d'une image. *Carto stats* affiche les données sous forme de **cercles colorés et proportionnels** à une donnée dans une colonne, elle se prête bien à la visualisation d'un **grand nombre de points**. *Géo shapes* est quand à elle adaptée à l'affichage de **géométrie complexes**, par exemple un réseau routier ou un PLU.
 
-D'autres applications sont adaptées aux données territorialisées, ce sont les données possédant des code territoire : code commune, département ou même code parcelles. *Infos parcelles* permet de projeter les données sur le **plan cadastral** français. *Cartographie territoriale multi-niveaux* affiche une **carte choroplèthe** des terrtoires allant de l'IRIS à la région et est adaptée à présenter des données comme les résultats d'élections ou d'autres indicateurs. *Zones de chalandise* permet de **fusionner les géométries des territoires** pour avoir des zones de couverture, par exemple le perimètre d'action des gendarmeries.
+D'autres applications sont adaptées aux données territorialisées, ce sont les données possédant des code territoire : code commune, département ou même code parcelles. *Infos parcelles* permet de projeter les données sur le **plan cadastral** français. *Cartographie territoriale multi-niveaux* affiche une **carte choroplèthe** des territoires allant de l'IRIS à la région et est adaptée à présenter des données comme les résultats d'élections ou d'autres indicateurs. *Zones de chalandise* permet de **fusionner les géométries des territoires** pour avoir des zones de couverture, par exemple le périmètre d'action des gendarmeries.
 
 #### Visualisations en diagrammes
 

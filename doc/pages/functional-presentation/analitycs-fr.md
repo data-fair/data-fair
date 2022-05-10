@@ -45,7 +45,7 @@ La configuration du système de suivi des utilisateurs se compose en deux points
 **Configuration du système de suivi sur le portail**
 
 Ce point de configuration est disponible sur la configuration du portail.
-Pour **Google Analytics** vous aurez besoin du *numero d'identifiant* et pour **Matomo analytics**, vous aurez besoin de l'*url du tracker* et de l'*identifiant de votre site*.
+Pour **Google Analytics** vous aurez besoin du *numéro d'identifiant* et pour **Matomo analytics**, vous aurez besoin de l'*url du tracker* et de l'*identifiant de votre site*.
 
 ![Configuration](./images/functional-presentation/config-GA-1.jpg)
 
@@ -53,7 +53,7 @@ Pour **Google Analytics** vous aurez besoin du *numero d'identifiant* et pour **
 **Configuration des événements**
 Ce point de configuration est disponible dans les paramètres de Data Fair à la catégorie *Appels exterieurs (webhooks)*.
 
-Vous pouvez définir **quels événements** vous souhaitez suivre dans vos analytics :
+Vous pouvez définir **quels événements** vous souhaitez suivre dans vos Analytics :
 * Un nouveau jeu de données a été créé
 * Un jeu de données a rencontré une erreur
 * Un jeu de données a été finalisé et mis en ligne

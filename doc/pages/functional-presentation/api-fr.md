@@ -6,7 +6,7 @@ description : APIs proposées et intégration globale
 published: true
 ---
 
-L’ensemble des fonctionnalités de la plateforme est disponible au travers d’**APIs Rest documentées**. Ces APIs peuvent être appelée en dehors du portail, mais pour les accès restreints il faut passer par l'utilisation d'une **clé d'API**. Lors de l’ajout d’une clé d’api, il est possible de restreindre l’accès à une seule fonction. Il est ensuite possible de restreindre l’accès à une IP ou à un nom de domaine précis.
+L’ensemble des fonctionnalités de la plateforme est disponible au travers d’**APIs Rest documentées**. Ces APIs peuvent être appelées en dehors du portail, mais pour les accès restreints il faut passer par l'utilisation d'une **clé d'API**. Lors de l’ajout d’une clé d’api, il est possible de restreindre l’accès à une seule fonction. Il est ensuite possible de restreindre l’accès à une IP ou à un nom de domaine précis.
 
 La documentation des APIs est réalisée en suivant la spécification **OpenAPI 3.0**. Cela permet une documentation claire et compréhensible au travers d’une documentation interactive. La prise en main des APIs par les développeurs est ainsi plus rapide.
 
