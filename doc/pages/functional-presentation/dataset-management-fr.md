@@ -1,8 +1,8 @@
 ---
-title: Gestion des jeux de données
+title: Administration des jeux de données
 section: 3
 subsection : 1
-description : Gestion des jeux de données
+description : Administration des jeux de données
 published: true
 ---
 
@@ -70,7 +70,3 @@ Les visualisations peuvent mettre en avant un problème dans les données ou une
      height="300" style="margin:40px auto;" />
 
 Il est aussi possible de publier un jeu de données sur des portails ou catalogues de données externes à la plateforme, cela est décris plus en détails à la section sur les *connecteurs de catalogues*.
-
-
-
-
