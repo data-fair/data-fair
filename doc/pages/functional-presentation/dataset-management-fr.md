@@ -18,7 +18,7 @@ Il existe plusieurs types de jeux de données sur la plateforme, les fichiers, l
 
 * Les **jeux de données incrémentaux** sont des données stockées en base et sont plutôt adaptés à des données qui évoluent régulièrement, ou mises à jour par des personnes métier qui veulent juste modifier quelques lignes. La création de ce type de jeu de données se fait en éditant son schéma de données : on défini chaque colonne et son type. Pour des données produites par des systèmes informatiques (données IOT par exemple), ces jeux de données sont généralement mis à jour par API. Dans le cas de mises à jour manuelles par des agents, ils sont mis à jour via un formulaire de saisie.
 
-* Les **jeux de données virtuels** correspondent à des vues d’un ou plusieurs jeux de données. Ils permettent d’avoir un contrôle d’accès plus poussé. Ils peuvent par exemple servir à créer une vue publique, restreinte à certaines lignes et certaines colonnes, d’un jeu de données plus complet qui reste privé. On peut par exemple restreindre un jeu de données national à un seul département. L'autre cas d'usage de ce type de jeu de données est d'opérer avec des données millésimées ou territorialisées : on peut ainsi publier des données chaque année via un fichier qui a toujours le même format puis faire une vue qui regroupe les différentes années.
+* Les **jeux de données virtuels** correspondent à des vues d’un ou plusieurs jeux de données. Ils permettent d’avoir un contrôle d’accès plus poussé. Ils peuvent par exemple servir à créer une vue publique, restreinte à certaines lignes et certaines colonnes, d’un jeu de données plus complet qui reste privé. Cela permet aussi de faire de l'anonymisation de données. On peut par exemple restreindre un jeu de données national à un seul département. L'autre cas d'usage de ce type de jeu de données est d'opérer avec des données millésimées ou territorialisées : on peut ainsi publier des données chaque année via un fichier qui a toujours le même format puis faire une vue qui regroupe les différentes années.
 
 * Les **jeux de données externes** n'ont pas de données indexées sur la plateforme. Ils permettent de renseigner des métadonnées (titre, description, licence, ...) et d'y associer des données dans des formats qui ne sont pas exploitables par la plateforme (PDF, Archive Zip, ...) ou de cataloguer des données présentes sur d'autres plateforme en renseignant un lien dans la description.
 
@@ -70,3 +70,7 @@ Les visualisations peuvent mettre en avant un problème dans les données ou une
      height="300" style="margin:20px auto;" />
 
 Il est aussi possible de publier un jeu de données sur des portails ou catalogues de données externes à la plateforme, cela est décris plus en détails à la section sur les *connecteurs de catalogues*.
+
+### Journal des événements
+
+Chaque étape du traitement d'un jeu de données laisse des traces dans le journal associé. On peut ainsi voir combien de temps ont duré les différentes actions ou les erreurs remontées.
