@@ -55,15 +55,7 @@ module.exports = {
       fallbackLocale: 'fr'
     }
   }]],
-  buildModules: [
-    'nuxt-webpack-optimisations',
-    '@nuxtjs/vuetify'
-  ],
-  webpackOptimisations: {
-    // hard source is the riskiest, if you have issues don't enable it
-    hardSourcePlugin: process.env.NODE_ENV === 'development',
-    parallelPlugin: process.env.NODE_ENV === 'development'
-  },
+  buildModules: ['@nuxtjs/vuetify'],
   vuetify: {
     theme: {
       themes: {

@@ -5,7 +5,7 @@ description : Portail de données (Front Office)
 published: true
 ---
 
-Les utilisateurs des données accèdent à la plateforme au travers **d'un ou plusieurs portails de données** dédiés à différents cas d'usage. Il peut y avoir, par exemple, un portail de données publiques (opendata), un portail pour les données internes et un portail de *préproduction* présentant les données en cours de consolidation ou qui ne sont pas encore prête à être publiées.
+Les utilisateurs des données accèdent à la plateforme au travers **d'un ou plusieurs portails de données** dédiés à différents cas d'usage. Il peut y avoir, par exemple, un portail de données publiques (opendata), un portail pour les données internes et un portail de *préproduction* présentant les données en cours de consolidation ou qui ne sont pas encore prêtes à être publiées.
 
 Un portail de données est composé de différentes pages (accueil, contact, ...), de moteurs de  **recherche multicritères**, de jeux de données, de visualisations et de pages de contenu (actualités, thématiques, contributeurs, démarche, ...). Il est possible de présenter des chiffres clés et **d'éditorialiser des contenus** mis en avant.
 

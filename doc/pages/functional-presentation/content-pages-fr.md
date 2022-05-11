@@ -6,7 +6,7 @@ description : Pages de contenus
 published: true
 ---
 
-Les **pages de contenus** permettent de créer différents type de pages : articles, pages thématiques autour de plusieurs jeux de données, pages d'actualités, data storytelling, licences, conditions d'utilisation, ...  Il est ainsi possible de **mettre en avant certaines données** et de leur donner encore plus de contexte, ou de faire des tableaux de bord intégrants différentes données.
+Les **pages de contenus** peuvent être de différents types : articles, pages thématiques autour de plusieurs jeux de données, pages d'actualités, data storytelling, licences, conditions d'utilisation, ...  Il est ainsi possible de **mettre en avant certaines données** et de leur donner encore plus de contexte, ou de faire des tableaux de bord intégrants différentes données.
 
 En plus de la saisie de texte libre, il est possible d'intégrer différents types d'éléments : tableau d'un jeu de données, visualisation, liste de jeux de données, intégration de contenus externe, ...
 

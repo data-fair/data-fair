@@ -15,6 +15,6 @@ La création de compte se fait en renseignant un email et un mot de passe, et il
 <img src="./images/functional-presentation/connexion.jpg"
      height="160" style="margin:15px auto;" />
 
-Les utilisateurs qui créent des comptes par eux même ont leur données stockées dans des bases de données. Leur mot de passe est encrypté avec sels et multiple hachage pour garantir une sécurité maximale. Il y a des règles de saisie de mot de passe pour éviter d'en avoir de facilement trouvables.
+Les utilisateurs qui créent des comptes par eux même ont leur données stockées dans des bases de données. Leur mot de passe est encrypté avec sels et multiple hachage pour garantir une sécurité maximale. Il y a des règles de saisie pour empêcher la création de mots de passe faibles.
 
 Il est également possible de configurer une connexion à un annuaire d'utilisateur externe au travers du protocole LDAP.

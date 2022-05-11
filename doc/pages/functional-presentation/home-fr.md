@@ -13,4 +13,4 @@ Dans le cadre d'une démarche de communication, il est également possible d'aff
 
 Pour les visiteurs réguliers, des sections présentent les **derniers jeux de données ajoutés** ainsi que les dernières visualisations réalisées, avec une navigation rapide pour voir plus en détails ces nouveaux contenus.
 
-Il est possible de personnaliser quels éléments sont affichés sur cette page, d'afficher une bannière plutôt qu'un texte éditorialisé ou même d'utiliser une visualisation à la place de la bannière ! Cette dernière option permet d'avoir un **carrousel avec des liens de navigation**.
+Il est possible de personnaliser quels éléments sont affichés sur cette page, d'afficher une bannière plutôt qu'un texte éditorialisé ou même d'utiliser une visualisation à la place de la bannière ! Cette dernière option permet de présenter un **carrousel avec des liens de navigation**.

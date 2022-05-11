@@ -29,9 +29,9 @@ La configuration se fait grâce au *numero d'identifiant*. Les statistiques sous
 
 ### Utilisation des APIs
 
-Dans la mesure ou Data Fair et les différents services associés utilisent beaucoup les mécanismes de cache pour améliorer les temps d'accès aux ressources, des statistiques précises d'utilisation des différents points d'accès de la plateforme doivent être extraits avec un service spécifique.
+Dans la mesure ou Data Fair et les différents services associés utilisent beaucoup les mécanismes de cache pour améliorer les temps d'accès aux ressources, les statistiques précises d'utilisation des différents points d'accès de la plateforme ne peuvent être collectées que par un service spécifique associé au reverse-proxy de la plateforme.
 
-Dans un souci de **respect du RGPD**, les données collectées sont anonymisées et agrégées à la journée. On peut accéder à des statistiques pour chaque jeu de données : **nombre d'appels d'API et nombre de téléchargements**. Les métriques sont aggrégées par groupes d'utilisateurs (organisation propriétaire, utilisateurs authentifiés externes, anonymes, ...) ou par domaine d'appel. Des chiffres clés sont présentés sur la période demandée, avec une comparaison sur la période précédente, ce qui permet de voir l'utilisation de certaines données augmente ou diminue.
+Dans un souci de **respect du RGPD**, les données collectées sont anonymisées et agrégées à la journée. On peut accéder à des statistiques pour chaque jeu de données : **nombre d'appels d'API et nombre de téléchargements**. Les métriques sont aggrégées par groupes d'utilisateurs (organisation propriétaire, utilisateurs authentifiés externes, anonymes, ...) ou par domaine d'appel. Des chiffres clés sont présentés sur la période demandée, avec une comparaison sur la période précédente, ce qui permet de voir si l'utilisation de certaines données augmente ou diminue.
 
 <img src="./images/functional-presentation/metrics.jpg"
      height="500" style="margin:40px auto;" />

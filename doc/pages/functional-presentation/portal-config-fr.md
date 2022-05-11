@@ -8,7 +8,7 @@ published: true
 
 ### Paramétrage des portails
 
-Data Fair permet de configurer plusieurs portails de données qui sont des lieux de publication des jeux de données, visualisations et pages de contenus que les utilisateurs vont pouvoir consulter. Il peut y avoir **des portails pour différents cas d'usage** : opendata, partage de données en interne, partage avec des partenaire, données en cours de consolidation (portail de préproduction), ...
+Data Fair permet de configurer plusieurs portails de données qui sont des lieux de publication des jeux de données, visualisations et pages de contenus que les utilisateurs vont pouvoir consulter. Il peut y avoir **des portails pour différents cas d'usage** : opendata, partage de données en interne, partage avec des partenaires, données en cours de consolidation (portail de préproduction), ...
 
 Tout comme pour les visualisations de données, la configuration d'un portail de données se fait **de manière graphique** en deux temps : on travaille sur un brouillon que l'on publie ensuite en version courante. La *version courante* est la version qui est présentée aux différents visiteurs de votre portail, ce qui permet de mettre à jour le portail sans impacter les utilisateurs tant que l'on n'a pas validé le brouillon. **Aucune connaissance en HTML ou CSS** n'est requise et un portail s'administre à la manière d'un CMS comme Wordpress.
 
@@ -21,7 +21,7 @@ Il est possible de renseigner un compte [Google Analytics ou Matomo (ex Piwik)](
 
 ### Édition des pages de contenus
 
-Les pages de contenu permettent de créer différents type de pages : articles, pages thématiques autour de plusieurs jeux de données, pages d'actualités, data storytelling, licences, conditions d'utilisation, ...  
+Les pages de contenu sont de différents types : articles, pages thématiques autour de plusieurs jeux de données, pages d'actualités, data storytelling, licences, conditions d'utilisation, ...  
 Il est ainsi possible de **mettre en avant certaines données** et de leur donner encore plus de contexte par exemple, ou de faire des **tableaux de bord** intégrants différentes données.
 
 <img src="./images/functional-presentation/foncier-edit.jpg"

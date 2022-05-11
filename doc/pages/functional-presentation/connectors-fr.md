@@ -12,7 +12,7 @@ En **écriture**, l’idée est de pouvoir pousser des métadonnées dans d’au
 
 Le fait de pousser les métadonnées vers un catalogue plutôt que de se faire moissonner par lui offre plusieurs avantages dont le fait de propager immédiatement les modifications. De plus, si il y a des modification de l'API de Data Fair, le connecteur continuera de fonctionner alors qu'un moissonneur pourrait devenir inopérant.
 
-Les connecteurs peuvent éventuellement pousser les données vers ces catalogues mais il est préférable d’éviter cela à cause des problèmes de duplication et synchronisation de données. Comme mentionné précédemment, les données sont indexée de manière très performante avec Data Fair et il est préférable de requêter les données directement à partir des APIs qu'il offre.
+Les connecteurs peuvent éventuellement pousser les données vers ces catalogues mais il est préférable d’éviter cela à cause des problèmes de duplication et synchronisation de données. Comme mentionné précédemment, les données sont indexées de manière très performante avec Data Fair et il est préférable de requêter les données directement à partir des APIs qu'il offre.
 
 <img src="./images/functional-presentation/catalogues.jpg"
      height="200" style="margin:40px auto;" />
