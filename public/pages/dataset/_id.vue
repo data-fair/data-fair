@@ -134,7 +134,10 @@
                   <v-icon>mdi-table</v-icon>&nbsp;&nbsp;{{ $t('table') }}
                 </v-tab>
 
-                <v-tab href="#data-revisions">
+                <v-tab
+                  v-if="dataset.rest && dataset.rest.history"
+                  href="#data-revisions"
+                >
                   <v-icon>mdi-history</v-icon>&nbsp;&nbsp;{{ $t('revisions') }}
                 </v-tab>
 
