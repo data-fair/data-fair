@@ -18,7 +18,7 @@
         x-small
         color="primary"
         class="mt-2 mr-1"
-        @click="refresh()"
+        @click="history=null;fetch()"
       >
         <v-icon>mdi-refresh</v-icon>
       </v-btn>
