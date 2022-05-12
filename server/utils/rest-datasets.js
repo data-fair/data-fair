@@ -118,7 +118,7 @@ exports.deleteDataset = async (db, dataset) => {
 
 const getLineId = (line, dataset) => {
   if (dataset.primaryKey && dataset.primaryKey.length) {
-    const primaryKey = dataset.primaryKey.map(p => line[p])
+    const primaryKey = dataset.primaryKey.map(p => line[p] + '')
     return Buffer.from(JSON.stringify(primaryKey).slice(2, -2)).toString('hex')
   }
 }
