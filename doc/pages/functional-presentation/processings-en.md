@@ -6,20 +6,15 @@ description : Periodic processings
 published: true
 ---
 
-Periodic processing **fetch** data from certain places, **transform** it and **publish** it on the platform..
+Periodic processing will **find** data in certain places, **transform** it and **import** it on the platform. They are made in the form of open source plugins, and the list of available treatments is constantly evolving.
 
-Periodic processing differs from catalog connectors on several points:
-* A processing is limited to a reduced set of input and output sources. Typically it can retrieve data from one place, and metadata from another, and dump the data into a platform source.
-* The collection frequencies can be higher: data can be collected with a few seconds interval, which is suitable for the publication of **IOT data**.
+For example, the *download-file* plugin, which is quite generic, covers several use cases: this processing will look for files in one place to publish them on the platform. It is able to access files via **ftp, sftp or http(s)** protocols. It generally works following data processing carried out by ETLs who submit their results in the form of files that can be accessed remotely.
 
-<p>
-</p>
+Each plugin has its own settings (access code, data set to update, ...) but all processing has the same scheduling options. Processes can be triggered every hour, day, week, month or be set to be triggered manually.
 
-Periodic processing is configured by entering the type of source (IOT data, files from billing, etc.), the corresponding data set in the platform and the frequency of collection.
+It is possible to generate an API key specific to the process to create a **webhook allowing it to be triggered**: a process in an ETL can for example create a file on a shared space then call the url of the webhook to that the import processing is triggered.
+
 
 ![Collecteurs](./images/functional-presentation/collecteurs.jpg)
 
-
-It is also possible to have the **success status** of the last processing for each collector, as well as to access detailed logs of the last data collections. Periodic jobs can also be used for daily, weekly, etc. updates.
-
-It is possible to add **new periodic processing** by following the instructions in [this section](./interoperate/collectors).
+A contributor can access the **success status** of the different executions of a job, as well as the detailed logs of its executions. He can subscribe to processing notifications to be informed when a processing fails, or when alerts are present in the logs.

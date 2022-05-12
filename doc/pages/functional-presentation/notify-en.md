@@ -6,16 +6,13 @@ description : Portal notification
 published: true
 ---
 
-Registered users can **subscribe** and be notified when dataset is added to the portal or in a particular theme:
+Notifications allow registered users to receive alerts in the portal or by email when certain events occur. Alerts are visible on the bell in the navigation bar and if the user has chosen it, he can receive an **email alert**.
 
-![Notification](./images/functional-presentation/notifiy-pf-1.png)
-
-
-It is also possible to subscribe to the update of a particular dataset using the bell on its presentation page.
+<img src="./images/functional-presentation/notifiy-pf-2.png"
+     height="180" style="margin:15px auto;" />
 
 
-![jeu de donnees](./images/functional-presentation/notifiy-pf-3.png)
+Users can **subscribe** to the addition of a dataset on the portal or in a particular theme. It is also possible to subscribe to the update of a particular dataset.
 
-Notifications will be visible on the bell in the navigation bar and a **notification email** will be sent to your account email address.
-
-![Cloche](./images/functional-presentation/notifiy-pf-2.png)
+<img src="./images/functional-presentation/notifiy-pf-3.png"
+     height="180" style="margin:15px auto;" />

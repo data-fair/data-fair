@@ -20,6 +20,7 @@ Les administrateurs d’une organisation peuvent gérer les membres :
 * **Changer** les rôles des membres
 * **Exclure** un membre
 
+<p></p>
 Permissions par défaut des différents rôles d’une organisation :
 
 | Actions                              | Utilisateur | Contributeur | Administrateur |

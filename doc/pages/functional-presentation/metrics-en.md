@@ -6,65 +6,32 @@ description : Usage metrics
 published: true
 ---
 
-Analytics let you measure the statistics of frequentation of the platform.  
-It is possible to use **Matomo Analytics** (old piwik) or **Google Analytics** as a tracking system.
+There are two modules to track the use of the platform. The first is **analytics** and corresponds to the monitoring of user journeys on the data portal. This allows you to see which pages are consulted, where the users come from, the time they spend on the pages, ... The second corresponds to **measurements of API consumption** and allows you to see how the platform is used by other information systems or external sites.
 
-### Matomo Analytics
-[Matomo Analytics](https://fr.matomo.org/) displays statistics in various visualizations: tables, graphs and maps. By selecting the different representations of statistics, it is possible to customize its dashboards.  
-It is also possible to **anonymize the data** and record user journeys while complying with the recommendations of the [CNIL](https://www.cnil.fr/professionnel).
+### Analytics
 
-![Matomo](./images/functional-presentation/matomo.jpg)
+It is possible to use **Matomo Analytics** (formerly Piwik) or **Google Analytics** as a tracking system. This is done simply by configuring the data portal by filling in a few fields in a form.
 
-It is possible to process personal data by activating the following features:
-* **Right of access**: visitors can have access to their personal data
-* **Right to portability**: visitor data may be retrieved in a machine-readable format
-* **Right to be forgotten**: respect for the privacy of users by deleting their personal data
-* **Right to withdraw consent**: visitors can revoke their consent at any time
-* **Right to object**: visitors can easily opt out of being tracked
-* **Anonymization features**: in one click, it is possible to anonymize personal data such as IP addresses, location and many more
-* **Support for the "Do Not Track" functionality of browsers**: use of web browser settings regarding privacy settings
-* **Delete historical data**: this data is automatically deleted from the database
-* **Anonymization of historical data**: this data can be kept by anonymizing it.
+#### Matomo Analytics
 
-### Google Analytics
+The configuration is done with the *url of the tracker* and the *id of your site*. The statistics under [Matomo Analytics](https://fr.matomo.org/) are available in different forms: tables, graphs and maps. By selecting the different representations of statistics, it is possible to customize its dashboards. It is also possible to **anonymise data** and record user paths while complying with the recommendations of the [CNIL](https://www.cnil.fr/professionnel).
 
-The statistics under [Google Analytics](https://analytics.google.com/) are also available in different visualizations: tables, graphs and maps. It is also possible to customize its dashboards.
+<img src="./images/functional-presentation/matomo.jpg"
+     height="300" style="margin:40px auto;" />
 
-![Google Analytics](./images/functional-presentation/google-analytics.jpg)
+#### Google Analytics
 
-### Configuration
+The configuration is done using the *ID number*. The statistics under [Google Analytics](https://analytics.google.com/) are also available in different forms: tables, graphs and maps. It is also possible to customize its dashboards.
 
-The configuration of the user tracking system consists of two points.  
-1. Configure the tracking system on the portal  
-2. Configure events
-
-<p>
-</p>
-
-**Configure the tracking system on the portal**
-
-This process is available on the portal configuration.  
-For **Google Analytics** you will need the *id number* and for **Matomo analytics** you will need the *tracker url* and *your site ID*.
-
-![Configuration](./images/functional-presentation/config-GA-1.jpg)
+<img src="./images/functional-presentation/google-analytics.jpg"
+     height="300" style="margin:40px auto;" />
 
 
-**Configure events**
-This process is available in the Data Fair settings in the *Outside calls (webhooks)* category.
+### APIs
 
-You can define **which events** you want to track in your analytics:
-* A new dataset has been created
-* A dataset encountered an error
-* A dataset has been finalized and is online
-* A dataset has been published to a catalog
-* A new reuse has been created
-* A reuse encountered an error
-* A reuse has been published on a catalog
-* A dataset file has been updated
+Data Fair and the various associated services make extensive use of cache mechanisms to improve access times to resources, the precise statistics of use of the various access points of the platform can only be collected by a service associated with the platform's reverse-proxy.
 
-![Configuration](./images/functional-presentation/config-GA-2.jpg)
+Regarding the **compliance with the GDPR**, the data collected is anonymized and aggregated on a daily basis. You can access statistics for each dataset: **number of API calls and number of downloads**. The metrics are aggregated by user groups (owner organization, external authenticated users, anonymous, ...) or by call domain. Key figures are presented for the period requested, with a comparison to the previous period, which makes it possible to see whether the use of certain data is increasing or decreasing.
 
-
-Data Fair and the various associated services make extensive use of cache mechanisms to improve access times to resources, so precise statistics on the use of the various access points of the platform can only be extracted afterwards. A module allows to extract **usage statistics** of APIs from the HTTP logs of services such as Nginx.
-
-API access logs are published on Data Fair as a private dataset. Dataset can be used for consultation like another dataset, we can make visualizations on it and it is planned to create a content page presenting different views of this data in the form of a dashboard.
+<img src="./images/functional-presentation/metrics.jpg"
+     height="500" style="margin:40px auto;" />

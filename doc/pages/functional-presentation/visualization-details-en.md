@@ -5,10 +5,11 @@ subsection : 5
 description : Data Visualization
 published: true
 ---
-Each visualization is presented through a **dedicated page** which allows to add context, a title and description, and different actions. It is possible to access the full-screen visualization and retrieve an HTML code that allows the visualization to be embedded in another website.
+Each visualization is presented through a **dedicated page** which allows it to be associated with context, title and description, as well as to offer different actions to the user. It is possible to access the visualization in full screen (the visualizations can be consulted both on **desktop and smartphone**) and to recover an HTML code which allows the visualization to be embedded in another website.
 
-As with datasets pages, there are various buttons at the bottom of the page to **share** the visualization page on various social networks (Facebook, Twitter, Linkedin, etc.).
+<img src="./images/functional-presentation/detail-visualisation.jpg"
+     height="500" style="margin:20px auto;" />
 
-The visualization page has **enriched metadata** which allows better indexing by search engines and display of a thumbnail on social networks.
+Just like for the datasets, there are different buttons at the bottom of the page to **share** the visualization page on different social networks (Facebook, Twitter, Linkedin, ...).
 
-![Détails d'une visualisation](./images/functional-presentation/detail-visualisation.jpg)
+The visualization page has **enriched metadata** which allows better indexing by search engines and the display of a thumbnail on social networks.

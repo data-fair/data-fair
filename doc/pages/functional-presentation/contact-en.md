@@ -6,16 +6,6 @@ description : Contact form
 published: false
 ---
 
-All features of data management, cataloging, user management and statistics are available through **documented Rest APIs**.
+To collect comments, requests or questions from users, a contact form can be made available by simply setting the contact email address. This address is not visible on the form page to avoid being collected by malicious sites.
 
-API documentation is done following the **OpenAPI 3.0** specification. This allows clear and understandable documentation through interactive documentation. Developers can quickly acces and handle the API's.
-
-Another benefit of using this specification is increased **interoperability**, with some computer systems (e.g. API gateways) being able to understand this specification.
-
-
-![API](./images/functional-presentation/api.jpg)
-
-
-The different possible uses of the API are described in more detail in [this section](./interoperate/api)..
-
-It is possible to use the API to **harvest data from a portal**. For example, the site https://www.opendatarchives.fr/ regularly harvests data from the portal https://data.ademe.fr/ powered by Data Fair.
+There are also protection mechanisms in place to prevent form submission by robots.

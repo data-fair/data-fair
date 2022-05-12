@@ -5,7 +5,6 @@ description : Back Office
 published: true
 ---
 
-The **back office** allows to manage different elements on the platform: dataset, visualizations, portal configuration, organization members, permissions, catalog's connectors (input or output) and periodic data collectors.
+The **back office** allows you to manage different elements on the platform: data, visualizations, portals, members of organizations, permissions, connectors to other data catalogs (input or output) and periodic treatments. It also provides access to operating metrics
 
-
-![Page d'accueil Data FAIR](./images/functional-presentation/back-office.jpg)
+Access to the back office is of course restricted to authenticated users, in particular to users with administrator or contributor roles.

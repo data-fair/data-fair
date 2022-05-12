@@ -5,24 +5,13 @@ description : Data portal
 published: true
 ---
 
-**Portals** allow Data Fair users to present datasets and visualizations.
+Data users access the platform through **one or more data portals** dedicated to different use cases. There may be, for example, a portal for public data (opendata), a portal for internal data and a *pre-production* portal showing data that is being consolidated or not yet ready for publication.
 
-A data portal consists of a home page, a page that lists data, a page that lists visualizations, and content pages.  
-The home page presents key figures, the last elements added as well as featured content.  
-The data page provides access to data sources and the ability to perform **multi-criteria searches**, while the visualizations page provides quick access to the different visualizations.
+A data portal is made up of different pages (home, contact, etc.), **multi-criteria search engines**, data sets, visualizations and content pages (news, themes, contributors, approach, ...). It is possible to present key figures and **editorialize content** highlighted.
 
-The data portal has a responsive design and its display is suitable for a wide variety of terminals, allowing use on **fixed or mobile workstations**.
+The data portal has a **responsive design** and its display is suitable for a wide variety of terminals, allowing use on **fixed or mobile workstations**. It is possible to configure different elements to personalize the portal as much as possible (title and description, choice of main and secondary colors, logo, favicone and welcome image, links in the footer, etc.).
 
-An **authentication screen** is accessible on all the pages of the portal to be able to connect or create an account. The account allows access to private data according to its rights. If the portal is on a domain name other than Data Fair, it is no longer possible to authenticate through it and the pattern no longer appears: the portal is in this case intended for open date.
+An **authentication screen** is accessible on all the pages of the portal to be able to connect or create an account. The account allows access to private data according to its rights in the case of internal portals, and to subscribe to **notifications** on data sets.
 
-The footer allows to integrate various links such as the conditions of use, the contact page and the institutional site, among others.
-
-The **portal is configurable**, the configuration points are as follows:
-
-* Title and Description
-* Choice of main and secondary colors
-* Logo, favicone and home image
-* View portal key figures (number of datasets, records and visualizations)
-* Choice of visualization highlighted
-* Show data, visualizations and contact page links in navigation bar
-* Show the latest datasets and visualizations added on the homepage
+<img src="./images/functional-presentation/portal.jpg"
+     height="450" style="margin:20px auto;" />

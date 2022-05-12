@@ -5,22 +5,17 @@ subsection : 7
 description : User Accounts
 published: true
 ---
-Users can log in with a password and email or using an existing external account such as a Gmail account via the oAuth2 protocol.
 
-![Connexion](./images/functional-presentation/connexion.jpg)
+If the data portal is public, there is no obligation to create an account to use it. Users can, if they wish, create an account to **subscribe to notifications** and create **API keys** to use the APIs with fewer restrictions. In the case where the portal is private, users will need an account, but they will also need authorizations given by an administrator of the organization owning the portal.
 
 
-Once logged in, users can personalize their account.
+To limit GDPR-related issues, a **minimum amount of data is collected** and the only data required is the user's email. He can enter a first and last name if he wishes, or put a pseudonym instead. If the user does not log in to their account for 3 years, it is automatically deleted. Users can also **delete their account** using a button, without having to make a request by email or otherwise.
 
-It is possible to :
-* set an avatar
-* set first and last name  
-* set birthday
-* renew password
-* link your account to a github, linkedin, google or facebook account
-* view the different organizations in their account and the role for each of the organizations
-* view the number of organizations created and the maximum number of organizations for the account
-* create a new organization
-* delete his account
+Account creation is done by entering an email and a password, and there is also the possibility of going through a Gmail, Facebook, LinkedIn or Github account via the **oAuth2 protocol**. A password renewal mechanism is available for users who have lost it or wish to change it.
 
-![Compte](./images/functional-presentation/compte.jpg)
+<img src="./images/functional-presentation/connexion.jpg"
+     height="160" style="margin:15px auto;" />
+
+Users who create accounts by themselves have their data stored in databases. Their password is encrypted with salts and multiple hashes to guarantee maximum security. There are input rules to prevent the creation of weak passwords.
+
+It is also possible to configure a connection to an external user directory through the LDAP protocol.
