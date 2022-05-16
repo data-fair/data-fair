@@ -13,11 +13,12 @@ exports.getCSV = async (filePath) => {
   if (!workbook.worksheets?.length) return await getCSVOld(data)
 
   const rawCSV = (await workbook.csv.writeBuffer({ dateUTC: true, formatterOptions: { quoteColumns: true } })).toString()
-  const json = csvParse(rawCSV, { columns: true, relax_column_count: true })
+  const json = csvParse(rawCSV, { relax_column_count: true })
 
   // loop on dates to check if there is a need for date-time format or if date is enough
   const hasSimpleDate = {}
-  for (const row of json) {
+  for (let i = 1; i < json.length; i++) {
+    const row = json[i]
     for (const key in row) {
       if (hasSimpleDate[key] === false) continue
       if (row[key]) {
@@ -31,12 +32,13 @@ exports.getCSV = async (filePath) => {
       }
     }
   }
-  for (const row of json) {
+  for (let i = 1; i < json.length; i++) {
+    const row = json[i]
     for (const key in row) {
       if (hasSimpleDate[key]) row[key] = row[key].replace('T00:00:00Z', '')
     }
   }
-  return csvStr(json, { header: true })
+  return csvStr(json)
 }
 
 // previous implementation using xlsx module.. kept around as a fallback and for ODS format

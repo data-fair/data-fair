@@ -46,6 +46,7 @@ describe('Spreadsheets conversions', () => {
   it('should manage a sparse XLSX file', async () => {
     const ax = global.ax.dmeadus
     const dataset = await testUtils.sendDataset('datasets/sparse.xlsx', ax)
+    assert.equal(dataset.schema.filter(p => p.key.startsWith('col')).length, 6)
     const res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
     assert.equal(res.status, 200)
     assert.equal(res.data.total, 4)
@@ -55,5 +56,6 @@ describe('Spreadsheets conversions', () => {
     assert.equal(res.data.results[2].col1, 'f')
     assert.equal(res.data.results[2].col3, 'g')
     assert.equal(res.data.results[3].col1, 'h')
+    assert.equal(res.data.results[2].col5, 'i')
   })
 })
