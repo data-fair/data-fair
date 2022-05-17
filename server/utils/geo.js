@@ -142,10 +142,11 @@ exports.result2geojson = esResponse => {
     type: 'FeatureCollection',
     total: esResponse.hits.total.value,
     features: esResponse.hits.hits.map(hit => {
-      const { _geoshape, _geopoint, ...properties } = hit._source
+      const { _geoshape, ...properties } = hit._source
       let geometry = _geoshape
       if (!geometry) {
-        const [lat, lon] = _geopoint.split(',')
+        const [lat, lon] = properties._geopoint.split(',')
+        delete properties._geopoint
         geometry = { type: 'Point', coordinates: [Number(lon), Number(lat)] }
       }
       return {
