@@ -7,6 +7,7 @@
     <template #activator>
       <v-btn
         depressed
+        color="transparent"
         style="height: 100% !important;border-radius: 0;"
       >
         {{ $i18n.locale }}

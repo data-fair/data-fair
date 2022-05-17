@@ -2,12 +2,14 @@
   <v-app-bar
     app
     flat
+    outlined
     dense
     clipped-left
     class="px-0 main-app-bar"
+    style="border-left: none;    border-right: none;    border-top: none;"
   >
     <v-list
-      :style="$vuetify.breakpoint.mobile ? '' : 'width: 255px;'"
+      :style="$vuetify.breakpoint.mobile ? '' : 'width: 256px;'"
       class="py-0"
       color="transparent"
     >

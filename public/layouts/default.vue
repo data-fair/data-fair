@@ -107,4 +107,11 @@ iframe {
 .v-list.list-actions .v-list-item .v-list-item__icon {
   margin-right: 16px;
 }
+
+.theme--dark.v-tabs-items {
+  background-color: transparent!important;
+}
+.v-application.theme--dark .v-main {
+  background-color: #1E1E1E;
+}
 </style>

@@ -122,7 +122,7 @@ export default {
 </script>
 
 <style lang="css">
-.section-tabs-light .section-active{
+.section-tabs-light .section-active {
   background: linear-gradient(90deg, rgba(255,255,255,1) 0%, rgba(245,245,245,1) 30%);
 }
 </style>

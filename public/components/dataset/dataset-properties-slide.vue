@@ -1,5 +1,8 @@
 <template>
-  <v-sheet class="properties-slide">
+  <v-sheet
+    class="properties-slide"
+    color="transparent"
+  >
     <v-row class="ma-0">
       <draggable
         :value="propertiesRefs"

@@ -47,7 +47,7 @@
                 outlined
                 dense
                 hide-details
-                style="min-width:150px;"
+                style="min-width:150px;top:-10px;"
                 @input="qMode === 'complete' && refresh(true)"
                 @keyup.enter.native="refresh(true)"
                 @click:append="refresh(true)"
