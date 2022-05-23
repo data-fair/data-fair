@@ -2,31 +2,31 @@
   <v-container>
     <h2
       v-t="'devices'"
-      class="my-4 text-h5"
+      class="mt-8 mb-2 text-h5"
     />
     <v-iframe :src="`${env.notifyUrl}/embed/devices`" />
 
     <h2
       v-if="activeAccount.type ==='organization'"
       v-t="{path: 'datasetsOrgEvents', args: {name: activeAccount.name}}"
-      class="my-4 text-h5"
+      class="mt-8 mb-2 text-h5"
     />
     <h2
       v-else
       v-t="'datasetsUserEvents'"
-      class="my-4 text-h5"
+      class="mt-8 mb-2 text-h5"
     />
     <v-iframe :src="datasetsSubscribeUrl" />
 
     <h2
       v-if="activeAccount.type ==='organization'"
       v-t="{path: 'appsOrgEvents', args: {name: activeAccount.name}}"
-      class="my-4 text-h5"
+      class="mt-8 mb-2 text-h5"
     />
     <h2
       v-else
       v-t="'appsUserEvents'"
-      class="my-4 text-h5"
+      class="mt-8 mb-2 text-h5"
     />
     <v-iframe :src="appsSubscribeUrl" />
 
@@ -36,7 +36,7 @@
     >
       <h2
         v-t="{path: 'pubsEvents', args: {title: site.title || site.url || site.id}}"
-        class="my-4 text-h5"
+        class="mt-8 mb-2 text-h5"
       />
       <v-iframe :src="site.subscribeUrl" />
     </div>
