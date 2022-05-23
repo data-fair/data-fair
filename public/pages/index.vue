@@ -8,7 +8,7 @@
     </v-col>
     <v-col
       v-else
-      :style="$vuetify.breakpoint.lgAndUp ? 'padding-right:256px;' : ''"
+      :style="(user && $vuetify.breakpoint.lgAndUp) ? 'padding-right:256px;' : ''"
     >
       <v-container class="py-0">
         <v-responsive v-if="!user">

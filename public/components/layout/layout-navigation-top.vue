@@ -6,7 +6,7 @@
     dense
     clipped-left
     class="px-0 main-app-bar"
-    style="border-left: none;    border-right: none;    border-top: none;"
+    style="border-left: none; border-right: none; border-top: none;"
   >
     <v-list
       :style="$vuetify.breakpoint.mobile ? '' : 'width: 256px;'"

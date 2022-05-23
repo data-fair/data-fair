@@ -111,7 +111,4 @@ iframe {
 .theme--dark.v-tabs-items {
   background-color: transparent!important;
 }
-.v-application.theme--dark .v-main {
-  background-color: #1E1E1E;
-}
 </style>

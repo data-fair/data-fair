@@ -28,7 +28,7 @@ services:
     image: ghcr.io/data-fair/simple-directory:master
     network_mode: host
     environment:
-      - DEBUG=webhooks
+      - DEBUG=webhooks,auth
       - ADMINS=["alban.mouton@koumoul.com", "superadmin@test.com"]
       - 'IDENTITIES_WEBHOOKS=[{"base": "http://localhost:5600/api/v1/identities", "key": "dev_secret"}]'
       - PUBLIC_URL=http://localhost:5600/simple-directory

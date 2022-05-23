@@ -240,16 +240,17 @@ export default {
   computed: {
     ...mapState(['env']),
     ...mapState('session', ['user']),
-    ...mapGetters(['canAdmin', 'canContrib', 'missingSubscription', 'lightPrimary5', 'darkPrimary5']),
+    ...mapGetters(['canAdmin', 'canContrib', 'missingSubscription', 'lightPrimary5', 'lightPrimary10', 'darkPrimary5', 'darkPrimary10']),
     ...mapGetters('session', ['activeAccount']),
     routePrefix () {
       return this.$route && this.$route.name && this.$route.name.split('-')[0]
     },
     style () {
       if (this.$vuetify.theme.dark) {
-        return 'background: linear-gradient(90deg, #363636 0%, #272727 100%);'
+        // return 'background: linear-gradient(90deg, #363636 0%, #272727 100%);'
+        return `background: linear-gradient(90deg,  ${this.lightPrimary5} 0%, ${this.darkPrimary10} 8%, #272727 100%);`
       } else {
-        return `background: linear-gradient(90deg, ${this.darkPrimary5} 0%, ${this.lightPrimary5} 100%);`
+        return `background: linear-gradient(90deg, ${this.lightPrimary5} 0%, ${this.darkPrimary10} 8%, ${this.lightPrimary5} 100%);`
       }
     }
   }

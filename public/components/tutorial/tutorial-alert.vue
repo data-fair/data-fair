@@ -3,10 +3,11 @@
     v-model="show"
     type="info"
     color="success"
-    border="left"
     dense
+    border="left"
     class="my-2 tutorial-alert"
     :dismissible="true"
+    :outlined="$vuetify.theme.dark"
     @input="close"
   >
     <slot />

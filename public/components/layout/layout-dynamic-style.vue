@@ -8,6 +8,10 @@
     .v-btn.primary {
     background: linear-gradient(90deg, {{ lightPrimary5 }} 0%, {{ darkPrimary5 }} 100%);
     }
+    .navigation-left {
+    border-top: 1px solid {{ darkPrimary10 }} !important;
+    border-right: 1px solid {{ darkPrimary10 }} !important;
+    }
   </component>
 </template>
 
@@ -20,7 +24,7 @@ export default {
     htmlOverflow: { type: String, default: 'auto' }
   },
   computed: {
-    ...mapGetters(['lightPrimary5', 'darkPrimary5'])
+    ...mapGetters(['lightPrimary5', 'darkPrimary5', 'darkPrimary10'])
   }
 }
 </script>
