@@ -2,31 +2,31 @@
   <v-container>
     <h2
       v-t="'devices'"
-      class="text-h5"
+      class="my-4 text-h5"
     />
     <v-iframe :src="`${env.notifyUrl}/embed/devices`" />
 
     <h2
       v-if="activeAccount.type ==='organization'"
       v-t="{path: 'datasetsOrgEvents', args: {name: activeAccount.name}}"
-      class="mb-4 text-h5"
+      class="my-4 text-h5"
     />
     <h2
       v-else
       v-t="'datasetsUserEvents'"
-      class="mb-4 text-h5"
+      class="my-4 text-h5"
     />
     <v-iframe :src="datasetsSubscribeUrl" />
 
     <h2
       v-if="activeAccount.type ==='organization'"
       v-t="{path: 'appsOrgEvents', args: {name: activeAccount.name}}"
-      class="mb-4 text-h5"
+      class="my-4 text-h5"
     />
     <h2
       v-else
       v-t="'appsUserEvents'"
-      class="mb-4 text-h5"
+      class="my-4 text-h5"
     />
     <v-iframe :src="appsSubscribeUrl" />
 
@@ -36,7 +36,7 @@
     >
       <h2
         v-t="{path: 'pubsEvents', args: {title: site.title || site.url || site.id}}"
-        class="mb-4 text-h5"
+        class="my-4 text-h5"
       />
       <v-iframe :src="site.subscribeUrl" />
     </div>
@@ -96,7 +96,7 @@ export default {
           keys.push(`data-fair:dataset-published-topic:${p.type}:${p.id}:${topic.id}`)
           titles.push(this.$t('datasetPublishedTopic', { title: p.title || p.url || p.id, topic: topic.title }))
         }
-        let subscribeUrl = `${this.env.notifyUrl}/embed/subscribe?key=${encodeURIComponent(keys.join(','))}&title=${encodeURIComponent(titles.join(','))}&register=false`
+        let subscribeUrl = `${this.env.notifyUrl}/embed/subscribe?key=${encodeURIComponent(keys.join(','))}&title=${encodeURIComponent(titles.join(','))}&register=false&header=no`
         if (p.datasetUrlTemplate) subscribeUrl += `&url-template=${encodeURIComponent(p.datasetUrlTemplate)}`
         return {
           ...p,
