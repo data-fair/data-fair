@@ -93,7 +93,7 @@ fr:
   storage: Stockage
   notifications: Notifications
   subscription: Abonnement
-  myAccount: Mon compte
+  myAccount: Informations personnelles
 en:
   login: Login / Sign up
   logout: Logout
@@ -102,7 +102,7 @@ en:
   storage: Storage
   notifications: Notifications
   subscription: Subscription
-  myAccount: My account
+  myAccount: Personal info
 </i18n>
 
 <script>

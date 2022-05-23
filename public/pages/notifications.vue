@@ -77,7 +77,7 @@ export default {
       const keysParam = webhooks.map(w => 'data-fair:' + w.const).join(',')
       const titlesParam = webhooks.map(w => w.title.replace(/,/g, ' ')).join(',')
       const urlTemplate = this.env.publicUrl + '/dataset/{id}'
-      return `${this.env.notifyUrl}/embed/subscribe?key=${encodeURIComponent(keysParam)}&title=${encodeURIComponent(titlesParam)}&url-template=${encodeURIComponent(urlTemplate)}&register=false`
+      return `${this.env.notifyUrl}/embed/subscribe?key=${encodeURIComponent(keysParam)}&title=${encodeURIComponent(titlesParam)}&url-template=${encodeURIComponent(urlTemplate)}&register=false&header=no`
     },
     appsSubscribeUrl () {
       const webhooks = webhooksSchema.items.properties.events.items.oneOf
@@ -85,7 +85,7 @@ export default {
       const keysParam = webhooks.map(w => 'data-fair:' + w.const).join(',')
       const titlesParam = webhooks.map(w => w.title.replace(/,/g, ' ')).join(',')
       const urlTemplate = this.env.publicUrl + '/application/{id}'
-      return `${this.env.notifyUrl}/embed/subscribe?key=${encodeURIComponent(keysParam)}&title=${encodeURIComponent(titlesParam)}&url-template=${encodeURIComponent(urlTemplate)}&register=false`
+      return `${this.env.notifyUrl}/embed/subscribe?key=${encodeURIComponent(keysParam)}&title=${encodeURIComponent(titlesParam)}&url-template=${encodeURIComponent(urlTemplate)}&register=false&header=no`
     },
     publicationSites () {
       if (!this.settingsPublicationSites || !this.topics) return []
