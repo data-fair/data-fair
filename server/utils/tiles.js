@@ -23,9 +23,7 @@ exports.xyz2bbox = (x, y, z) => {
 
 exports.geojson2pbf = async (geojson, xyz) => {
   if (!geojson || !geojson.features || !geojson.features.length) return null
-  console.log(JSON.stringify(geojson).length)
   const buf = Buffer.from(await geojson2pbfPiscina.run({ geojson, xyz }))
-  console.log(buf.length)
   return buf
 }
 

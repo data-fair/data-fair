@@ -252,7 +252,7 @@ async function iter (app, resource, type) {
     }
 
     if (resource) {
-      console.warn(`failure in worker ${taskKey} - ${type} / ${resource.id}`, err)
+      console.warn(`failure in worker ${taskKey} - ${type} / ${resource.id}`, err, errorMessage)
       await journals.log(app, resource, { type: 'error', data: errorMessage.join('\n') }, type)
       await app.get('db').collection(type + 's').updateOne({ id: resource.id }, { $set: { [resource.draftReason ? 'draft.status' : 'status']: 'error' } })
       resource.status = 'error'
