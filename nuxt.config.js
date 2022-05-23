@@ -54,6 +54,7 @@ module.exports = {
     { src: '~plugins/session' },
     { src: '~plugins/global-components' },
     { src: '~plugins/ws', ssr: false },
+    { src: '~plugins/color' },
     { src: '~plugins/moment' },
     { src: '~plugins/truncate' },
     { src: '~plugins/cell-values' },

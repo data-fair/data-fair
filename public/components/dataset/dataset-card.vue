@@ -63,7 +63,7 @@
             :key="topic.id"
             small
             outlined
-            :color="topic.color || 'default'"
+            :color="$readableColor(topic.color, $vuetify.theme.dark) || 'default'"
             class="ml-2"
             style="font-weight: bold"
           >

@@ -1,6 +1,6 @@
 import Vue from 'vue'
 import Vuex from 'vuex'
-import { sessionStoreBuilder } from '@koumoul/sd-vue/src'
+import { sessionStoreBuilder } from '@data-fair/sd-vue/src'
 import dataset from './dataset'
 import remoteService from './remote-service'
 import application from './application'
@@ -76,8 +76,10 @@ export default () => {
       },
       activeAccountPublicationSitesById: (state, getters) => {
         const activeAccount = getters['session/activeAccount']
-        return activeAccount && state.publicationSites[activeAccount.type + '/' + activeAccount.id]
-          .reduce((a, ps) => { a[ps.type + ':' + ps.id] = ps; return a }, {})
+        if (!activeAccount) return {}
+        const publicationSites = state.publicationSites[activeAccount.type + '/' + activeAccount.id]
+        if (!publicationSites) return {}
+        return publicationSites.reduce((a, ps) => { a[ps.type + ':' + ps.id] = ps; return a }, {})
       },
       searchQuery: (state) => (type) => {
         const searchQuery = Object.assign({}, state.searchQueries[type])

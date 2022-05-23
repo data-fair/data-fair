@@ -47,9 +47,9 @@
     }
   },
   "devDependencies": {
+    "@data-fair/sd-vue": "1.4.1-beta.4",
     "@hackmd/meta-marked": "^0.5.0",
     "@koumoul/gh-pages-multi": "^0.7.1",
-    "@koumoul/sd-vue": "1.3.0",
     "@koumoul/v-iframe": "^0.5.6",
     "@koumoul/vjsf": "^2.11.3",
     "@koumoul/vue-multianalytics": "^1.10.1",
