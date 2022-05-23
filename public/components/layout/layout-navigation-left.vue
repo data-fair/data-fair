@@ -240,7 +240,7 @@ export default {
   computed: {
     ...mapState(['env']),
     ...mapState('session', ['user']),
-    ...mapGetters(['canAdmin', 'canContrib', 'missingSubscription', 'lightPrimary5', 'lightPrimary10', 'darkPrimary5', 'darkPrimary10']),
+    ...mapGetters(['canAdmin', 'canContrib', 'missingSubscription', 'lightPrimary5', 'lightPrimary10', 'darkPrimary5', 'darkPrimary10', 'darkPrimary20']),
     ...mapGetters('session', ['activeAccount']),
     routePrefix () {
       return this.$route && this.$route.name && this.$route.name.split('-')[0]
@@ -248,9 +248,9 @@ export default {
     style () {
       if (this.$vuetify.theme.dark) {
         // return 'background: linear-gradient(90deg, #363636 0%, #272727 100%);'
-        return `background: linear-gradient(90deg,  ${this.lightPrimary5} 0%, ${this.darkPrimary10} 8%, #272727 100%);`
+        return `background: linear-gradient(90deg,  ${this.env.theme.colors.primary} 0%, ${this.darkPrimary20} 100%);`
       } else {
-        return `background: linear-gradient(90deg, ${this.lightPrimary5} 0%, ${this.darkPrimary10} 8%, ${this.lightPrimary5} 100%);`
+        return `background: linear-gradient(90deg, ${this.darkPrimary20} 0%, ${this.env.theme.colors.primary} 100%);`
       }
     }
   }

@@ -133,6 +133,12 @@ export default () => {
       darkPrimary10 (state) {
         return tinycolor(state.env.theme.colors.primary).darken(10).toHexString()
       },
+      darkPrimary20 (state) {
+        return tinycolor(state.env.theme.colors.primary).darken(20).toHexString()
+      },
+      darkPrimary40 (state) {
+        return tinycolor(state.env.theme.colors.primary).darken(40).toHexString()
+      },
       lightAccent10 (state) {
         return tinycolor(state.env.theme.colors.accent).brighten(10).toHexString()
       },
