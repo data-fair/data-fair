@@ -3,6 +3,7 @@
     <v-text-field
       v-if="dataset"
       v-model="query"
+      light
       class="mt-2 ml-2 mx-2"
       solo
       dense
@@ -262,5 +263,6 @@ export default {
 .mapboxgl-popup-content {
   max-height: 300px;
   overflow-y: scroll;
+  color: rgba(0, 0, 0, 0.87) !important;
 }
 </style>
