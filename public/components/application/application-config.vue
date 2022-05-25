@@ -78,6 +78,7 @@
           class="pl-0"
         >
           <v-card
+            light
             class="pa-0"
             outlined
             :style="!!application.errorMessageDraft ? `border-color: ${$vuetify.theme.themes.light.warning};` : ''"
