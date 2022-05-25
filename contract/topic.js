@@ -22,7 +22,7 @@ module.exports = {
       'x-fromUrl': 'https://koumoul.com/s/data-fair/api/v1/datasets/icons-mdi-latest/lines?q={q}',
       'x-itemKey': 'name',
       'x-itemTitle': 'name',
-      'x-itemIcon': 'svg',
+      'x-itemIcon': 'name',
       'x-itemsProp': 'results',
       properties: {
         name: {
