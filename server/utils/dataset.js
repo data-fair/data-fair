@@ -685,10 +685,9 @@ exports.delete = async (db, es, dataset) => {
     }
   }
 
-  if (!dataset.draftReason) {
-    await db.collection('datasets').deleteOne({ id: dataset.id })
-    await db.collection('journals').deleteOne({ type: 'dataset', id: dataset.id })
-  }
+  await db.collection('datasets').deleteOne({ id: dataset.id })
+  await db.collection('journals').deleteOne({ type: 'dataset', id: dataset.id })
+
   if (!dataset.isVirtual) {
     try {
       await esUtils.delete(es, dataset)

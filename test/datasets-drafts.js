@@ -482,5 +482,9 @@ other
     assert.ok(!await fs.pathExists('data/test/user/dmeadus0/datasets/dataset'))
     res = await ax.delete('/api/v1/datasets/' + dataset.id)
     assert.ok(!await fs.pathExists('data/test/user/dmeadus0/datasets-drafts/dataset'))
+    await assert.rejects(ax.get(`/api/v1/datasets/${dataset.id}`), (err) => {
+      assert.equal(err.status, 404)
+      return true
+    })
   })
 })
