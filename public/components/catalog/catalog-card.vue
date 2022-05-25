@@ -52,6 +52,11 @@ export default {
   position:absolute;
   left:0;
   top:160px;
+}
+.theme--light .card-desc170:before {
   background:linear-gradient(transparent 0, white);
+}
+.theme--dark .card-desc170:before {
+  background:linear-gradient(transparent 0, #1E1E1E);
 }
 </style>
