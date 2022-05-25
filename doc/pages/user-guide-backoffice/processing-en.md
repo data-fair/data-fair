@@ -13,6 +13,18 @@ Periodic processing differs from [catalog connectors](./user-guide-backoffice/ca
 
 * Processing are limited to a small set of input and output sources. Typically, it can retrieve data in one place, metadata in another, and dump the data into a Data Fair source.
 * **Collection frequencies can be higher**: Data can be collected with a few seconds intervals, which is suitable for publishing IOT data.
+* Periodic processing can only be configured by a platform administrator. Please [contact us](https://koumoul.com/contact) if you are interested in periodic treatment.
 
 ![Traitements périodiques](./images/user-guide-backoffice/processings.jpg)  
-*Collect, transform and publish your data automatically*
+*Collectez, transformez et publiez vos données automatiquement*
+
+Periodic processing includes several configuration elements:
+
+* Active or not active
+* The time step: Monthly, weekly, daily or hourly
+* The action: Create a new dataset or Update an existing dataset
+* Parameters: allow, for example, to delete uploaded data used for periodic processing
+<p> </p>
+The execution history is available and errors are reported in this log.
+
+![Traitements périodiques](./images/user-guide-backoffice/processings-2.jpg)  
