@@ -159,8 +159,6 @@ describe('Master data management', () => {
   })
 
   it('manage query syntax errors', async () => {
-    config.worker.spawnTask = true
-
     const ax = global.ax.superadmin
 
     const { remoteService } = await initMaster(
@@ -198,7 +196,6 @@ describe('Master data management', () => {
     })
     const journal = (await ax.get('/api/v1/datasets/slave/journal')).data
     assert.ok(journal[0].data.includes('Impossible d\'effectuer cette recherche'))
-    config.worker.spawnTask = false
   })
 
   it('should extend a geojson file from a master-data dataset', async () => {
