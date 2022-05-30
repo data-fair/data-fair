@@ -7,6 +7,7 @@ const flatten = require('flat')
 const datasetUtils = require('../dataset')
 const geoUtils = require('../geo')
 const randomSeed = require('random-seed')
+const { nanoid } = require('nanoid')
 
 const debug = require('debug')('index-stream')
 
@@ -48,7 +49,8 @@ class IndexStream extends Transform {
       } else {
         cleanItem(item)
         const params = { index: { _index: this.options.indexName } }
-        params.index._id = item._id || (item._i + '')
+        // nanoid will prevent risks of collision even when assembling in virtual datasets
+        params.index._id = item._id || nanoid()
         delete item._id
         this.body.push(params)
         warning = await applyCalculations(this.options.dataset, item)
