@@ -3,8 +3,6 @@
 
 const assert = require('assert').strict
 
-const config = require('config')
-
 const workers = require('../server/workers')
 const testUtils = require('./resources/test-utils')
 
