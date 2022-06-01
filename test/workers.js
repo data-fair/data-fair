@@ -72,9 +72,7 @@ describe('workers', () => {
     const form2 = new FormData()
     form2.append('file', datasetFd2, 'dataset.csv')
     await ax.post('/api/v1/datasets/' + dataset.id, form2, { headers: testUtils.formHeaders(form2) })
-    await assert.rejects(workers.hook('indexer'), () => {
-      return true
-    })
+    await assert.rejects(workers.hook('indexer'), () => true)
     res = await ax.get('/api/v1/datasets/' + dataset.id + '/journal')
     assert.equal(res.status, 200)
     assert.equal(res.data[0].type, 'error')

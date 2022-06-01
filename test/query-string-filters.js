@@ -46,10 +46,7 @@ describe('query modes', () => {
     assert.equal(res.data.total, 0)
     res = await ax.get('/api/v1/datasets/qsfilters/lines', { params: { qs: 'str2:"test 1"' } })
     assert.equal(res.data.total, 0)
-    await assert.rejects(ax.get('/api/v1/datasets/qsfilters/lines', { params: { qs: 'unknownstr:"test 1"' } }), (err) => {
-      assert.equal(err.status, 400)
-      return true
-    })
+    await assert.rejects(ax.get('/api/v1/datasets/qsfilters/lines', { params: { qs: 'unknownstr:"test 1"' } }), err => err.status === 400)
 
     // strict equality with escaped special chars
     res = await ax.get('/api/v1/datasets/qsfilters/lines', { params: { qs: 'str1:"special \\" char"' } })
@@ -60,10 +57,7 @@ describe('query modes', () => {
     assert.equal(res.data.total, 1)
 
     // wrong syntax, return a useful error
-    await assert.rejects(ax.get('/api/v1/datasets/qsfilters/lines', { params: { qs: 'str1:"special " char "' } }), err => {
-      assert.equal(err.status, 400)
-      return true
-    })
+    await assert.rejects(ax.get('/api/v1/datasets/qsfilters/lines', { params: { qs: 'str1:"special " char "' } }), err => err.status === 400)
 
     // TODO: add examples using multi-fields indexing, lowercase, etc ?
   })

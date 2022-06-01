@@ -77,10 +77,7 @@ describe('owner roles', () => {
   })
 
   it('organization user has even more limited capabilities', async () => {
-    await assert.rejects(global.ax.bhazeldean7Org.post('/api/v1/datasets', { isRest: true, title: 'A dataset' }), (err) => {
-      assert.equal(err.status, 403)
-      return true
-    })
+    await assert.rejects(global.ax.bhazeldean7Org.post('/api/v1/datasets', { isRest: true, title: 'A dataset' }), err => err.status === 403)
     const dataset = (await global.ax.dmeadusOrg.post('/api/v1/datasets', { isRest: true, title: 'A dataset' })).data
     assert.equal(dataset.owner.name, 'Fivechat')
     await workers.hook('finalizer/' + dataset.id)

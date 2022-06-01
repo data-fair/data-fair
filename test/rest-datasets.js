@@ -59,14 +59,8 @@ describe('REST datasets', () => {
     assert.equal(res.data.attr2, 'test2')
     await ax.delete('/api/v1/datasets/rest1/lines/id1')
     await workers.hook('finalizer/rest1')
-    await assert.rejects(ax.get('/api/v1/datasets/rest1/lines/id1'), (err) => {
-      assert.equal(err.status, 404)
-      return true
-    })
-    await assert.rejects(ax.patch('/api/v1/datasets/rest1/lines/id1', { _i: 10 }), (err) => {
-      assert.equal(err.status, 400)
-      return true
-    })
+    await assert.rejects(ax.get('/api/v1/datasets/rest1/lines/id1'), err => err.status === 404)
+    await assert.rejects(ax.patch('/api/v1/datasets/rest1/lines/id1', { _i: 10 }), err => err.status === 400)
   })
 
   it('Reject properly json missing content-type', async () => {
@@ -526,11 +520,9 @@ describe('REST datasets', () => {
     })
     await workers.hook('finalizer/resthistfill')
     // _updatedAt is normally rejected, accepted only as superadmin
-    await assert.rejects(ax.post('/api/v1/datasets/resthistfill/lines',
-      { _id: 'id1', attr1: 'test-old', _updatedAt: moment().subtract(1, 'day').toISOString() }), (err) => {
-      assert.equal(err.status, 400)
-      return true
-    })
+    await assert.rejects(
+      ax.post('/api/v1/datasets/resthistfill/lines', { _id: 'id1', attr1: 'test-old', _updatedAt: moment().subtract(1, 'day').toISOString() }),
+      err => err.status === 400)
     const older = moment().subtract(2, 'day').toISOString()
     await axAdmin.post('/api/v1/datasets/resthistfill/lines',
       { _id: 'id1', attr1: 'test-older', _updatedAt: older })
