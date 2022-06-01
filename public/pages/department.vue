@@ -1,7 +1,7 @@
 <template>
   <v-iframe
     v-if="authorized"
-    :src="`${env.directoryUrl}/organization/${activeAccount.id}?embed=true&redirect=${encodeURIComponent(env.publicUrl)}`"
+    :src="`${env.directoryUrl}/organization/${activeAccount.id}/department/${activeAccount.department}?embed=true&redirect=${encodeURIComponent(env.publicUrl)}`"
   />
   <layout-not-authorized v-else />
 </template>
@@ -24,7 +24,7 @@ export default {
         const organization = this.user.organizations.find(o => o.id === this.activeAccount.id)
         if (!organization) return false
         if (organization.role !== this.env.adminRole) return false
-        if (organization.department) return false
+        if (!organization.department) return false
       }
       return true
     }

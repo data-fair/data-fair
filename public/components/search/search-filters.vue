@@ -21,7 +21,7 @@
       >
         <v-card-text class="pa-1">
           <v-switch
-            v-model="showShared"
+            v-model="filters.shared"
             :label="$t('showShared')"
             hide-details
             dense
@@ -32,7 +32,7 @@
       </v-card>
     </v-row>
     <v-row class="mb-1">
-      <template v-for="filter in Object.keys(fullFilterLabels)">
+      <template v-for="filter in Object.keys(filterLabels)">
         <v-chip
           v-if="filters[filter]"
           :key="filter"
@@ -42,8 +42,7 @@
           text-color="white"
           @click:close="filters[filter] = null;writeParams(filter)"
         >
-          <strong v-if="filter === 'showAll'">{{ $t('adminVue') }} {{ owners.length ? owners.join(', ') : 'tout voir' }}</strong>
-          <strong v-else>{{ fullFilterLabels[filter] }} : {{ filters[filter] }}</strong>
+          <strong>{{ filterLabels[filter] }} : {{ filters[filter] }}</strong>
         </v-chip>
       </template>
     </v-row>
@@ -77,60 +76,33 @@ en:
 import { mapActions, mapState, mapGetters } from 'vuex'
 
 export default {
-  props: ['filters', 'filterLabels', 'facets', 'type', 'hideOwners', 'sorts'],
+  props: ['filters', 'filterLabels', 'type', 'hideOwners', 'sorts'],
   data: () => ({
-    owners: [],
-    showShared: null
+    owners: []
   }),
   computed: {
     ...mapState('session', ['user']),
-    ...mapGetters('session', ['activeAccount']),
-    fullFilterLabels () {
-      return {
-        ...this.filterLabels,
-        showAll: 'Tout voir'
-      }
-    },
-    ownerCount () {
-      if (!this.facets) return {}
-      if (this.hideOwners) return {}
-      const others = this.facets.owner.filter(o => (o.value.type === 'user' && (!this.user || o.value.id !== this.user.id)) || (o.value.type === 'organization' && (!this.user || !this.user.organizations || !this.user.organizations.map(o => o.id).includes(o.value.id))))
-      const counts = { others: others.map(f => f.count).reduce((total, count) => total + count, 0) }
-      if (this.user) {
-        const userCount = this.facets.owner.find(o => o.value.type === 'user' && o.value.id === this.user.id)
-        if (userCount) Object.assign(counts, { ['user:' + this.user.id]: userCount.count });
-        (this.user.organizations || []).forEach(orga => {
-          const orgaCount = this.facets.owner.filter(o => o.value.type === 'organization' && o.value.id === orga.id).reduce((acc, val) => acc + val.count, 0)
-          if (orgaCount) Object.assign(counts, { ['organization:' + orga.id]: orgaCount })
-        })
-      }
-      return counts
-    }
+    ...mapGetters('session', ['activeAccount'])
   },
   watch: {
     '$route' () {
       this.readParams()
     }
   },
-  created () {
+  mounted () {
     this.readParams()
   },
   methods: {
     ...mapActions(['searchQuery']),
     readParams () {
-      Object.keys(this.fullFilterLabels).forEach(key => {
+      Object.keys(this.filterLabels).forEach(key => {
         this.$set(this.filters, key, this.$route.query[key])
       })
       this.$set(this.filters, 'q', this.$route.query.q)
-      this.showShared = this.$route.query.shared === 'true'
       if (this.$route.query.owner) {
         this.owners = this.$route.query.owner.split(',')
-        if (this.user) this.$set(this.filters, 'owner', this.$route.query.owner.replace('others', '-user:' + this.user.id + ',' + this.user.organizations.map(o => '-organization:' + o.id).join(',')))
-      } else if (this.showShared) {
-        this.$set(this.filters, 'owner', null)
-      } else {
-        this.$set(this.filters, 'owner', `${this.activeAccount.type}:${this.activeAccount.id}`)
       }
+      this.$set(this.filters, 'shared', this.$route.query.shared === 'true')
       if (this.sorts) {
         this.$set(this.filters, 'sort', this.$route.query.sort || 'createdAt:-1')
       }
@@ -142,8 +114,9 @@ export default {
         if (![null, undefined, '', true].includes(this.filters[key])) query[key] = '' + this.filters[key]
         else delete query[key]
       })
-      query.shared = '' + this.showShared
-      if (this.filters.showAll && this.owners.length) query.owner = this.owners.join(',').replace()
+      if (this.filters.shared) query.shared = 'true'
+      else delete query.shared
+      if (this.owners.length) query.owner = this.owners.join(',').replace()
       else delete query.owner
       if (this.sorts && this.filters.sort) query.sort = this.filters.sort
       else delete query.sort

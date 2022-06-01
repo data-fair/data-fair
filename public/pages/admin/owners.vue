@@ -38,11 +38,11 @@
                       <span v-if="owner.storage !== undefined">pour une limite à {{ parseFloat((owner.storage / 1000).toFixed(2)).toLocaleString() }} ko</span>
                     </v-list-item-subtitle>
                     <v-list-item-subtitle>
-                      <nuxt-link :to="{path: '/datasets', query: {owner: `${owner.type}:${owner.id}`, showAll: true}}">
+                      <nuxt-link :to="{path: '/datasets', query: {owner: `${owner.type}:${owner.id}`}}">
                         {{ owner.nbDatasets }} jeux de données
                       </nuxt-link>
                       -
-                      <nuxt-link :to="{path: '/applications', query: {owner: `${owner.type}:${owner.id}`, showAll: true}}">
+                      <nuxt-link :to="{path: '/applications', query: {owner: `${owner.type}:${owner.id}`}}">
                         {{ owner.nbApplications }} applications
                       </nuxt-link>
                     </v-list-item-subtitle>

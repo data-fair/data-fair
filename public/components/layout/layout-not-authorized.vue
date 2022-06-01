@@ -4,7 +4,7 @@
       <v-row align="center">
         <v-col class="text-center">
           <div
-            v-t="'noAuthorized'"
+            v-t="'notAuthorized'"
             class="text-h6"
           />
         </v-col>
@@ -15,9 +15,9 @@
 
 <i18n lang="yaml">
 fr:
-  notAuthorized: Vous n'êtes pas autorisé à voir le contenu de cette page. Si vous avez besoin de connaitres ces informations, veuillez contacter un administrateur de celle ci.
+  notAuthorized: Vous n'êtes pas autorisé à voir le contenu de cette page. Si vous avez besoin de connaitres ces informations, veuillez contacter un administrateur.
 en:
-  notAuthorized: You are not authorized to see the content of this page. If you need to access this data please contact its administrator.
+  notAuthorized: You are not authorized to see the content of this page. If you need to access this data please contact an administrator.
 </i18n>
 
 <script>

@@ -63,8 +63,7 @@ const getOwnerRole = exports.getOwnerRole = (owner, user) => {
   if (user.activeAccount.type !== owner.type || user.activeAccount.id !== owner.id) return null
 
   // user is in a department but the resource belongs either to no department or to another department
-  // user is implicitly of the lowest role
-  if (user.activeAccount.department && user.activeAccount.department !== owner.department) return config.userRole
+  if (user.activeAccount.department && user.activeAccount.department !== owner.department) return null
   return user.activeAccount.role
 }
 
@@ -136,9 +135,13 @@ exports.filter = function (user) {
         // user is owner
         or.push({ 'owner.type': 'user', 'owner.id': user.id })
       }
-      if (user.organization) {
+      if (user.organization && !user.organization.department) {
         // user is member of owner organization
         or.push({ 'owner.type': 'organization', 'owner.id': user.organization.id })
+      }
+      if (user.organization && user.organization.department) {
+        // user is member of owner organization
+        or.push({ 'owner.type': 'organization', 'owner.id': user.organization.id, 'owner.department': user.organization.department })
       }
 
       if (!user.organization) {

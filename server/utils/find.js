@@ -42,12 +42,12 @@ exports.query = (req, fieldsMap, globalMode, extraFilters = []) => {
     query.$and.push({ $or: or })
   })
 
-  const showAll = req.query.showAll === 'true'
-  if (showAll && !req.user.adminMode) throw createError(400, 'Only super admins can override permissions filter with showAll parameter')
-
   if (globalMode) {
     // in global mode (remote services and base-applications) the resources do not have a owner
-    // they are managed by superadmin and theu are shared by public / privateAccess attributes
+    // they are managed by superadmin and then are shared by public / privateAccess attributes
+
+    const showAll = req.query.showAll === 'true'
+    if (showAll && !req.user.adminMode) throw createError(400, 'Only super admins can override permissions filter with showAll parameter')
 
     const accessFilter = []
     if (!showAll) {
@@ -71,38 +71,41 @@ exports.query = (req, fieldsMap, globalMode, extraFilters = []) => {
   } else {
     // in normal mode (datasets and applications) the visibility is determined from the owner and permissions
 
-    if (!showAll) {
-      query.$and.push({ $or: permissions.filter(req.user) })
-    }
+    query.$and.push({ $or: permissions.filter(req.user) })
+
     if (visibility.filters(req.query)) {
       query.$and.push({ $or: visibility.filters(req.query) })
     }
     if (req.query.owner) {
       delete query['owner.type']
       delete query['owner.id']
-      query.$and.push({ $or: exports.ownerFilters(req.query) })
+      query.$and = query.$and.concat(exports.ownerFilters(req.query, req.user && req.user.activeAccount))
+    }
+    if (req.query.shared === 'false' && req.user) {
+      const accountFilter = { 'owner.type': req.user.activeAccount.type, 'owner.id': req.user.activeAccount.id }
+      if (req.user.activeAccount.department) accountFilter['owner.department'] = req.user.activeAccount.department
+      query.$and.push(accountFilter)
     }
   }
   if (!query.$and.length) delete query.$and
   return query
 }
 
-exports.ownerFilters = (reqQuery) => {
-  const ownerTypes = {}
-  reqQuery.owner.split(',').forEach(owner => {
-    const [t, id] = owner.split(':')
-    ownerTypes[t] = ownerTypes[t] || []
-    ownerTypes[t].push(id)
+exports.ownerFilters = (reqQuery, activeAccount) => {
+  const or = []
+  const nor = []
+  reqQuery.owner.split(',').forEach(ownerStr => {
+    const [typ, id, dep] = ownerStr.split(':')
+    const filter = { 'owner.type': typ.replace('-', ''), 'owner.id': id }
+    if (dep) filter['owner.department'] = dep
+    else filter['owner.department'] = { $exists: false }
+    if (typ.startsWith('-')) nor.push(filter)
+    else or.push(filter)
   })
-  let ownerFilters = ['user', 'organization'].filter(t => ownerTypes[t]).map(t => ({ 'owner.type': t, 'owner.id': { $in: ownerTypes[t] } }))
-  if (ownerTypes['-user'] || ownerTypes['-organization']) {
-    ownerFilters = ownerFilters.concat(['-user', '-organization'].map(t => {
-      const f = { 'owner.type': t.substring(1) }
-      if (ownerTypes[t]) f['owner.id'] = { $nin: ownerTypes[t] }
-      return f
-    }))
-  }
-  return ownerFilters
+  const and = []
+  if (or.length) and.push({ $or: or })
+  if (nor.length) and.push({ $nor: nor })
+  return and
 }
 
 exports.sort = (sortStr) => {
@@ -214,9 +217,14 @@ exports.facetsQuery = (req, facetFields = {}, filterFields, nullFacetFields = []
   // Apply as early as possible the permissions filter
   pipeline.push({
     $match: {
-      $or: permissions.filter(req.user, req.query.public === 'true', req.query.private === 'true')
+      $or: permissions.filter(req.user)
     }
   })
+  if (req.query.shared === 'false' && req.user) {
+    const accountFilter = { 'owner.type': req.user.activeAccount.type, 'owner.id': req.user.activeAccount.id }
+    if (req.user.activeAccount.department) accountFilter['owner.department'] = req.user.activeAccount.department
+    pipeline.push({ $match: accountFilter })
+  }
 
   const fields = facetsQueryParam && facetsQueryParam.length && facetsQueryParam.split(',')
     .filter(f => facetFields[f] || f === 'owner' || f === 'visibility')
@@ -228,8 +236,8 @@ exports.facetsQuery = (req, facetFields = {}, filterFields, nullFacetFields = []
       Object.keys(filterFields).filter(name => req.query[name] !== undefined && name !== f).forEach(name => {
         facet.push({ $match: { [filterFields[name]]: { $in: req.query[name].split(',') } } })
       })
-      if (f !== 'owner' && req.query.owner) {
-        facet.push({ $match: { $or: exports.ownerFilters(req.query) } })
+      if (req.query.owner && f !== 'owner') {
+        facet.push({ $match: { $and: exports.ownerFilters(req.query, req.user && req.user.activeAccount) } })
       }
       if (f !== 'visibility' && visibility.filters(req.query)) {
         facet.push({ $match: { $or: visibility.filters(req.query) } })
@@ -273,6 +281,7 @@ exports.facetsQuery = (req, facetFields = {}, filterFields, nullFacetFields = []
       facet.push({ $sortByCount: '$' + f })
       facets[f] = facet
     })
+    console.log(facets.owner)
     pipeline.push({ $facet: facets })
     /* pipeline.push({
       $facet: Object.assign({}, ...fields.map(f => ({

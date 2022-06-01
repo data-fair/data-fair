@@ -73,7 +73,7 @@ export default {
       }
       if (this.datasets.count > this.datasets.results.length) {
         const nbOthers = this.datasets.count - this.datasets.results.length
-        const size = this.stats.storage - this.datasets.results.reduce((a, d) => a + d.storage.size, 0)
+        const size = this.stats.limits.store_bytes.consumption - this.datasets.results.reduce((a, d) => a + d.storage.size, 0)
         const title = nbOthers === 1 ? '1 autre jeu de donnée' : nbOthers.toLocaleString() + ' autres jeux de données'
         data.children.push({
           id: '_others',

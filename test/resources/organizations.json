@@ -25,6 +25,10 @@
       "id": "ddecruce5",
       "role": "contrib",
       "department": "dep1"
+    }, {
+      "id": "hlalonde3",
+      "role": "admin",
+      "department": "dep1"
     }]
   },
   {

@@ -70,24 +70,25 @@
 
       <layout-navigation-right v-if="$vuetify.breakpoint.lgAndUp">
         <dataset-list-actions />
-        <template v-if="datasets">
-          <v-row class="px-2">
-            <v-col class="py-0">
-              <search-filters
-                :filter-labels="{children: $t('childDataset')}"
-                :filters="filters"
-                :facets="datasets && datasets.facets"
-                :sorts="sorts"
-                type="datasets"
-                @apply="refresh()"
-              />
-              <dataset-facets
-                :facets="datasets.facets"
-                :facets-values="facetsValues"
-              />
-            </v-col>
-          </v-row>
-        </template>
+
+        <v-row class="px-2">
+          <v-col class="py-0">
+            <search-filters
+              :filter-labels="{children: $t('childDataset')}"
+              :filters="filters"
+              :sorts="sorts"
+              type="datasets"
+              @apply="filtersInitialized=true; refresh()"
+            />
+            <dataset-facets
+              v-if="datasets"
+              :facets="datasets.facets"
+              :facets-values="facetsValues"
+              :show-shared="filters.shared"
+            />
+          </v-col>
+        </v-row>
+
         <v-row class="mr-4">
           <v-spacer />
           <v-btn-toggle
@@ -171,7 +172,8 @@ export default {
     },
     lastParams: null,
     dataSvg: require('~/assets/svg/Data Arranging_Two Color.svg?raw'),
-    renderMode: null
+    renderMode: null,
+    filtersInitialized: false
   }),
   computed: {
     ...mapState('session', ['user']),
@@ -213,7 +215,6 @@ export default {
     }
   },
   mounted () {
-    this.filters = { owner: `${this.activeAccount.type}:${this.activeAccount.id}` }
     this.renderMode = Number(localStorage.getItem(this.renderModeKey) || 0)
     if (isNaN(this.renderMode)) this.renderMode = 0
     this.refresh()
@@ -227,13 +228,10 @@ export default {
       }
     },
     async refresh (append) {
+      if (!this.filtersInitialized) return
       const fullFilters = { ...this.filters }
       let hasFacetFilter = false
       Object.entries(this.facetsValues).forEach(([facetKey, facetValues]) => {
-        if (this.filters.owner !== null && facetKey === 'owner') return
-        /* const facetFilter = Object.entries(facetValues)
-            .filter(([facetValue, valueActive]) => valueActive)
-            .map(([facetValue]) => facetValue).join(',') */
         const facetFilter = facetValues && facetValues.join(',')
         if (facetFilter) {
           hasFacetFilter = true
@@ -242,8 +240,7 @@ export default {
       })
       if (append) this.page += 1
       else this.page = 1
-      let facets = 'status,visibility,services,concepts,topics,publicationSites'
-      if (this.filters.owner === null) facets += ',owner'
+      const facets = 'status,visibility,services,concepts,topics,publicationSites,owner'
       const params = {
         size: this.size,
         page: this.page,
@@ -262,12 +259,14 @@ export default {
         this.filtered = !!this.filters.q || hasFacetFilter
         this.loading = false
       }
-      // if the page is too large for the user to trigger a scroll we append results immediately
-      await this.$nextTick()
-      await this.$nextTick()
-      const html = document.getElementsByTagName('html')
-      if (html[0].scrollHeight === html[0].clientHeight && this.datasets.results.length < this.datasets.count) {
-        this.refresh(true)
+      if (this.datasets) {
+        // if the page is too large for the user to trigger a scroll we append results immediately
+        await this.$nextTick()
+        await this.$nextTick()
+        const html = document.getElementsByTagName('html')
+        if (html[0].scrollHeight === html[0].clientHeight && this.datasets.results.length < this.datasets.count) {
+          this.refresh(true)
+        }
       }
     }
   }

@@ -92,6 +92,14 @@
     </v-list>
 
     <v-list nav>
+      <v-list-item
+        v-if="canAdmin && env.subscriptionUrl"
+        :nuxt="true"
+        :to="`/subscription`"
+      >
+        <v-list-item-action><v-icon>mdi-card-account-details</v-icon></v-list-item-action>
+        <v-list-item-title v-t="'subscription'" />
+      </v-list-item>
       <template v-if="!missingSubscription">
         <v-list-item
           :nuxt="true"
@@ -123,7 +131,7 @@
         <v-divider class="pb-2" />
 
         <v-list-item
-          v-if="activeAccount && activeAccount.type === 'organization' && user.organization.role === 'admin'"
+          v-if="activeAccount && activeAccount.type === 'organization' && user.organization.role === 'admin' && !user.organization.department"
           :nuxt="true"
           dense
           :to="`/organization`"
@@ -132,6 +140,19 @@
           <v-list-item-content>
             <v-list-item-title v-t="'org'" />
             <v-list-item-subtitle>{{ activeAccount.name }}</v-list-item-subtitle>
+          </v-list-item-content>
+        </v-list-item>
+
+        <v-list-item
+          v-if="activeAccount && activeAccount.type === 'organization' && user.organization.role === 'admin' && user.organization.department"
+          :nuxt="true"
+          dense
+          :to="`/department`"
+        >
+          <v-list-item-action><v-icon>mdi-account-multiple</v-icon></v-list-item-action>
+          <v-list-item-content>
+            <v-list-item-title v-t="'dep'" />
+            <v-list-item-subtitle>{{ activeAccount.name }} / {{ user.organization.department }}</v-list-item-subtitle>
           </v-list-item-content>
         </v-list-item>
 
@@ -160,6 +181,16 @@
             <v-list-item-title>{{ $t('catalogs') }}</v-list-item-title>
             <v-list-item-subtitle>{{ $t('catalogsSub') }}</v-list-item-subtitle>
           </v-list-item-content>
+        </v-list-item>
+
+        <v-list-item
+          v-if="canContrib"
+          :nuxt="true"
+          dense
+          to="/storage"
+        >
+          <v-list-item-action><v-icon>mdi-harddisk</v-icon></v-list-item-action>
+          <v-list-item-title v-t="'storage'" />
         </v-list-item>
 
         <template v-if="env.extraNavigationItems && user">
@@ -211,10 +242,13 @@ fr:
   datasets: Jeux de données
   vizs: Visualisations
   org: Gestion de l'organisation
+  dep: Gestion du département
   params: Paramètres
   paramsSub: Licences, thématiques ...
   catalogs: Catalogues
   catalogsSub: data.gouv.fr ...
+  storage: Stockage
+  subscription: Abonnement
 en:
   admin: Administration
   services: Services
@@ -227,10 +261,13 @@ en:
   datasets: Datasets
   vizs: Visualizations
   org: Manage organization
+  dep: Manage department
   params: Parameters
   paramsSub: Licenses, topics ...
   catalogs: Catalogs
   catalogsSub: data.gouv.fr ...
+  storage: Storage
+  subscription: Subscription
 </i18n>
 
 <script>

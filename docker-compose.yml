@@ -32,6 +32,8 @@ services:
       - ADMINS=["alban.mouton@koumoul.com", "superadmin@test.com"]
       - 'IDENTITIES_WEBHOOKS=[{"base": "http://localhost:5600/api/v1/identities", "key": "dev_secret"}]'
       - PUBLIC_URL=http://localhost:5600/simple-directory
+      - NOTIFY_URL=http://localhost:5600/notify
+      - PRIVATE_NOTIFY_URL=http://notify:8088
       - MAILDEV_ACTIVE=true
       - STORAGE_TYPE=file
       #- STORAGE_TYPE=mongo
@@ -42,6 +44,7 @@ services:
       - AUTHRATELIMIT_ATTEMPTS=200
       - DEFAULT_MAX_CREATED_ORGS=10
       - ANONYMOUS_ACTION_NOT_BEFORE=1s
+      - MANAGE_DEPARTMENTS=true
     volumes:
       - ./test/resources/users.json:/webapp/data/users.json
       - ./test/resources/organizations.json:/webapp/data/organizations.json

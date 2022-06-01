@@ -40,12 +40,19 @@
             </v-data-table>
           </v-sheet>
 
+          <storage-treemap
+            v-if="stats && datasets"
+            :stats="stats"
+            :datasets="{count: datasets.count, results: datasets.results.slice(0, 15)}"
+            class="mt-2"
+          />
+
           <h2 class="my-2">
             Détail par jeu de données
           </h2>
           <storage-details
             v-if="datasets"
-            :datasets="datasets"
+            :datasets="datasets.results"
           />
           <v-progress-linear
             v-else
@@ -84,7 +91,7 @@ export default {
   },
   async created () {
     if (!this.authorized) return
-    this.datasets = (await this.$axios.$get('api/v1/datasets', { params: { size: 10000, owner: `${this.activeAccount.type}:${this.activeAccount.id}`, select: 'id,title,storage', sort: 'storage.size:-1' } })).results
+    this.datasets = (await this.$axios.$get('api/v1/datasets', { params: { size: 10000, owner: `${this.activeAccount.type}:${this.activeAccount.id}`, select: 'id,title,storage', sort: 'storage.size:-1' } }))
     this.stats = await this.$axios.$get('api/v1/stats')
   }
 }

@@ -73,7 +73,10 @@
       </v-row>
     </nuxt-link>
     <v-card-actions class="pl-3">
-      <owner-department :owner="dataset.owner" />
+      <owner-department
+        v-if="showOwner || !activeAccount.department"
+        :owner="dataset.owner"
+      />
       <owner-short
         v-if="showOwner"
         :owner="dataset.owner"
@@ -116,12 +119,16 @@ en:
 </i18n>
 
 <script>
+import { mapGetters } from 'vuex'
 
 export default {
   props: ['dataset', 'showTopics', 'showOwner'],
   data: () => ({
     hover: false
-  })
+  }),
+  computed: {
+    ...mapGetters('session', ['activeAccount'])
+  }
 }
 </script>
 

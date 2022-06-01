@@ -51,14 +51,6 @@
           <v-list-item-title v-t="'myAccount'" />
         </v-list-item>
 
-        <v-list-item
-          v-if="canAdmin && env.subscriptionUrl"
-          :nuxt="true"
-          :to="`/subscription`"
-        >
-          <v-list-item-action><v-icon>mdi-card-account-details</v-icon></v-list-item-action>
-          <v-list-item-title v-t="'subscription'" />
-        </v-list-item>
         <template v-if="!missingSubscription">
           <v-list-item
             v-if="env.notifyUrl"
@@ -67,14 +59,6 @@
           >
             <v-list-item-action><v-icon>mdi-bell-plus</v-icon></v-list-item-action>
             <v-list-item-title v-t="'notifications'" />
-          </v-list-item>
-          <v-list-item
-            v-if="canContrib"
-            :nuxt="true"
-            to="/storage"
-          >
-            <v-list-item-action><v-icon>mdi-harddisk</v-icon></v-list-item-action>
-            <v-list-item-title v-t="'storage'" />
           </v-list-item>
         </template>
         <v-divider />
@@ -90,18 +74,14 @@ fr:
   logout: Se déconnecter
   personalAccount: Compte personnel
   switchAccount: Changer de compte
-  storage: Stockage
   notifications: Notifications
-  subscription: Abonnement
   myAccount: Informations personnelles
 en:
   login: Login / Sign up
   logout: Logout
   personalAccount: Personal account
   switchAccount: Switch account
-  storage: Storage
   notifications: Notifications
-  subscription: Subscription
   myAccount: Personal info
 </i18n>
 
