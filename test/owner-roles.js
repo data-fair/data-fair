@@ -126,22 +126,12 @@ describe('owner roles', () => {
     await global.ax.dmeadusOrg.get(`/api/v1/datasets/${dataset.id}`)
     await global.ax.dmeadusOrg.patch(`/api/v1/datasets/${dataset.id}`, { description: 'desc' })
     // outside user -> ko
-    await assert.rejects(global.ax.ddecruce5.get(`/api/v1/datasets/${dataset.id}`), (err) => {
-      assert.equal(err.status, 403)
-      return true
-    })
-    // contrib from any department is demoted to user as long as the resource does not belong to any department
-    await global.ax.icarlens9Org.get(`/api/v1/datasets/${dataset.id}`)
-    await assert.rejects(global.ax.icarlens9Org.patch(`/api/v1/datasets/${dataset.id}`, { description: 'desc' }), (err) => {
-      assert.equal(err.status, 403)
-      return true
-    })
-    await global.ax.ddecruce5Org.get(`/api/v1/datasets/${dataset.id}`)
-    await assert.rejects(global.ax.ddecruce5Org.patch(`/api/v1/datasets/${dataset.id}`, { description: 'desc' }), (err) => {
-      assert.equal(err.status, 403)
-      return true
-    })
-
+    await assert.rejects(global.ax.ddecruce5.get(`/api/v1/datasets/${dataset.id}`), err => err.status === 403)
+    // contrib from any department does not have owner privilege if the resource does not belong to any department
+    await assert.rejects(global.ax.icarlens9Org.get(`/api/v1/datasets/${dataset.id}`), err => err.status === 403)
+    await assert.rejects(global.ax.icarlens9Org.patch(`/api/v1/datasets/${dataset.id}`, { description: 'desc' }), err => err.status === 403)
+    await assert.rejects(global.ax.ddecruce5Org.get(`/api/v1/datasets/${dataset.id}`), err => err.status === 403)
+    await assert.rejects(global.ax.ddecruce5Org.patch(`/api/v1/datasets/${dataset.id}`, { description: 'desc' }), err => err.status === 403)
     // switch ownership to a specific department
     await global.ax.dmeadusOrg.put(`/api/v1/datasets/${dataset.id}/owner`, {
       type: 'organization',
@@ -150,18 +140,15 @@ describe('owner roles', () => {
       department: 'dep1'
     })
 
-    // admin in org without department restriction -> ok for read and write
+    // admin in org without department restriction -> ok
     await global.ax.dmeadusOrg.get(`/api/v1/datasets/${dataset.id}`)
     await global.ax.dmeadusOrg.patch(`/api/v1/datasets/${dataset.id}`, { description: 'desc' })
-    // contrib from right department -> ok for read and write
+    // contrib from right department -> ok
     await global.ax.ddecruce5Org.get(`/api/v1/datasets/${dataset.id}`)
     await global.ax.ddecruce5Org.patch(`/api/v1/datasets/${dataset.id}`, { description: 'desc' })
-    // contrib from wrong department -> read ok, write ko
-    await global.ax.icarlens9Org.get(`/api/v1/datasets/${dataset.id}`)
-    await assert.rejects(global.ax.icarlens9Org.patch(`/api/v1/datasets/${dataset.id}`, { description: 'desc' }), (err) => {
-      assert.equal(err.status, 403)
-      return true
-    })
+    // contrib from wrong department -> ko
+    await assert.rejects(global.ax.icarlens9Org.get(`/api/v1/datasets/${dataset.id}`), err => err.status === 403)
+    await assert.rejects(global.ax.icarlens9Org.patch(`/api/v1/datasets/${dataset.id}`, { description: 'desc' }), err => err.status === 403)
   })
 
   it('department restriction is automatically applied', async () => {
