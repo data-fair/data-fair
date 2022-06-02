@@ -45,6 +45,7 @@ services:
       - DEFAULT_MAX_CREATED_ORGS=10
       - ANONYMOUS_ACTION_NOT_BEFORE=1s
       - MANAGE_DEPARTMENTS=true
+      - LIST_ENTITIES_MODE=admin
     volumes:
       - ./test/resources/users.json:/webapp/data/users.json
       - ./test/resources/organizations.json:/webapp/data/organizations.json

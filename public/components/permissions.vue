@@ -29,6 +29,7 @@
     </v-tooltip>
 
     <v-btn
+      v-if="user.adminMode"
       id="new-permissions"
       v-t="'addPermission'"
       color="primary"
@@ -75,6 +76,7 @@
                 <v-list-item
                   v-if="((item.classes || []).includes(permClass)) || classOperations.filter(o => (item.operations || []).includes(o.id)).length"
                   :key="permClass"
+                  class="pa-0"
                 >
                   <v-list-item-content>
                     <v-row style="width:100%">
@@ -99,6 +101,7 @@
           </td>
           <td class="text-right">
             <v-btn
+              v-if="user.adminMode"
               icon
               color="warning"
               @click="editPermission(item, index);showDialog = true"
@@ -106,6 +109,7 @@
               <v-icon>mdi-pencil</v-icon>
             </v-btn>
             <v-btn
+              v-if="user.adminMode"
               icon
               color="warning"
               @click="removePermission(index)"
