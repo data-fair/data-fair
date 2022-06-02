@@ -3,8 +3,8 @@ const config = require('config')
 const testUtils = require('./resources/test-utils')
 const { aliasName, errorMessage } = require('../server/utils/es/commons')
 
-describe('Extensions', () => {
-  it('Extend dataset using remote service', async function () {
+describe('Elasticsearch errors management', () => {
+  it('Extract simple message from a full ES error', async function () {
     const ax = global.ax.dmeadus
     const dataset = await testUtils.sendDataset('datasets/dataset1.csv', ax)
     await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
@@ -19,7 +19,7 @@ describe('Extensions', () => {
       await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
       assert.fail()
     } catch (err) {
-      assert.equal(err.status, 500)
+      assert.equal(err.status, 404)
       assert.ok(err.data.startsWith('no such index'))
     }
 
