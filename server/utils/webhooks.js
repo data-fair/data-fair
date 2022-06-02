@@ -15,7 +15,6 @@ exports.trigger = async (db, type, resource, event) => {
   // first send notifications before actual webhooks
   const sender = { ...resource.owner }
   delete sender.role
-  delete sender.department
   const notif = {
     sender,
     topic: { key: `data-fair:${eventKey}:${resource.id}` },
