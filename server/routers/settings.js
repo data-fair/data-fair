@@ -34,7 +34,7 @@ function isOwnerAdmin (req, res, next) {
 
 function isOwnerMember (req, res, next) {
   if (!req.user) return res.status(401).send()
-  if (!req.user.adminMode && !permissions.getOwnerRole({ type: req.params.type, id: req.params.id }, req.user)) {
+  if (!req.user.adminMode && (req.user.activeAccount.type !== req.params.type || req.user.activeAccount.id !== req.params.id)) {
     return res.sendStatus(403)
   }
   next()
