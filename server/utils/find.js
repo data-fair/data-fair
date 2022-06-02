@@ -281,7 +281,6 @@ exports.facetsQuery = (req, facetFields = {}, filterFields, nullFacetFields = []
       facet.push({ $sortByCount: '$' + f })
       facets[f] = facet
     })
-    console.log(facets.owner)
     pipeline.push({ $facet: facets })
     /* pipeline.push({
       $facet: Object.assign({}, ...fields.map(f => ({
